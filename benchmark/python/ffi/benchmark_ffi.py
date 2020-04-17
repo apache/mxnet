@@ -81,6 +81,7 @@ def prepare_workloads():
     OpArgMngr.add_workload("linalg.pinv", pool['2x3x3'], pool['1'], hermitian=False)
     OpArgMngr.add_workload("linalg.solve", pool['1x1'], pool['1'])
     OpArgMngr.add_workload("linalg.tensorinv", pool['1x1'], ind=2)
+    OpArgMngr.add_workload("linalg.norm", pool['3x3'])
     OpArgMngr.add_workload("linalg.tensorsolve", pool['1x1x1'], pool['1x1x1'], (2, 0, 1))
     OpArgMngr.add_workload("split", pool['3x3'], (0, 1, 2), axis=1)
     OpArgMngr.add_workload("argmax", pool['3x2'], axis=-1)
