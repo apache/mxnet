@@ -22,8 +22,8 @@ FROM centos:7
 
 WORKDIR /work/deps
 
-COPY install/centos7_base.sh /work/
-RUN /work/centos7_base.sh
+COPY install/centos7_core.sh /work/
+RUN /work/centos7_core.sh
 
 COPY install/centos7_scala.sh /work/
 RUN /work/centos7_scala.sh
