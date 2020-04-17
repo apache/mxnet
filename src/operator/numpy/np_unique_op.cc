@@ -375,6 +375,7 @@ NNVM_REGISTER_OP(_npi_unique)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "The input array")
 .add_arguments(NumpyUniqueParam::__FIELDS__());
 
