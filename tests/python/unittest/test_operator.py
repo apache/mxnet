@@ -9937,6 +9937,49 @@ def test_elemwise_sum_for_gradient_accumulation():
         assert stored_grad['write'] == stored_grad['add']
         assert stored_grad['write'] == 2 * nrepeat
 
+def test_elementwise_ops_on_misaligned_input():
+    a = mx.nd.array([1,2,3,4], dtype='float16')
+    b = mx.nd.array([1,2,3,4], dtype='float16')
+
+    c = a[1:3]
+    d = b[1:3]
+    # Note: testing just elemwise_add since all elemwise_ops
+    #       share the implementation
+    mx.nd.elemwise_add(c, d, out=c)
+    mx.nd.waitall()
+
+    a = mx.nd.array([1,2,3,4], dtype='float16')
+    b = mx.nd.array([1,2,3,4], dtype='float16')
+
+    c = a[0:3]
+    d = b[0:3]
+    mx.nd.elemwise_add(c, d, out=c)
+    mx.nd.waitall()
+    assert a[3].asscalar() == 4.0
+
+def test_broadcast_ops_on_misaligned_input():
+    a = mx.nd.array([1,2,3,4,5,6,7,8])
+    b = mx.nd.array([1,2,3,4,5,6,7,8])
+    c = a[1:7].reshape((3,2))
+    d = b[1:3]
+    e = mx.nd.arange(7)
+    f = e[1:].reshape((3,2))
+    mx.nd.broadcast_add(c, d, out=f)
+    expected = np.array([[4,6],[6,8],[8,10]])
+    mx.nd.waitall()
+    assert_almost_equal(f, expected)
+
+    a = mx.nd.array([1,2,3,4,5,6,7,8])
+    b = mx.nd.array([1,2,3,4,5,6,7,8])
+
+    c = a[1:7].reshape((3,2))
+    d = b[1:4].reshape((3,1))
+    e = mx.nd.arange(7)
+    f = e[1:].reshape((3,2))
+    mx.nd.broadcast_add(c, d, out=f)
+    expected = np.array([[4,5],[7,8],[10,11]])
+    mx.nd.waitall()
+    assert_almost_equal(f, expected)
 
 if __name__ == '__main__':
     import nose
