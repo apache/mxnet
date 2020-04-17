@@ -36,6 +36,9 @@ namespace mxnet {
 namespace common {
 namespace cuda {
 
+/* \brief Helper class that enables storing multiple values of type DType
+          as 1 value of type LType.
+*/
 template <typename DType, typename LType>
 class VectorizedStorage {
  public:
@@ -49,6 +52,11 @@ class VectorizedStorage {
   } scratch_;
 };
 
+/* \brief Helper class that enables accessing multiple values of type DType
+          as 1 value of type LType. Additional aligned template argument
+          allows performance optimizations if the pointer and the size of
+          the allocation is aligned to sizeof(LType) / sizeof(DType) elements.
+*/
 template <typename DType, typename LType, bool aligned = false>
 class VectorizedAccessor {
  public:
@@ -61,36 +69,44 @@ class VectorizedAccessor {
   int alignment_;
   index_t n_elems_;
 
-  MSHADOW_XINLINE VectorizedAccessor(DType* ptr, const index_t N) {
+  MSHADOW_XINLINE VectorizedAccessor(DType* ptr, const index_t size) {
     unaligned_ptr_ = ptr;
     if (aligned) {
       alignment_ = 0;
       aligned_ptr_ = reinterpret_cast<LType*>(ptr);
-      n_elems_ = (N + storage_.nvec - 1) / storage_.nvec;
+      n_elems_ = (size + storage_.nvec - 1) / storage_.nvec;
     } else {
       size_t ptr_as_number = reinterpret_cast<size_t>(ptr);
       alignment_ = (ptr_as_number % sizeof(LType)) / sizeof(DType);
       aligned_ptr_ = reinterpret_cast<LType*>(ptr - alignment_);
-      n_elems_ = (N + alignment_ + storage_.nvec - 1) / storage_.nvec;
+      n_elems_ = (size + alignment_ + storage_.nvec - 1) / storage_.nvec;
     }
   }
 
+  /* \brief Alignment of the input pointer in elements. */
   MSHADOW_XINLINE int alignment() const {
     return alignment_;
   }
 
+  /* \brief Access to separate elements. */
   MSHADOW_XINLINE DType* separate() {
     return storage_.scratch_.separate;
   }
 
+  /* \brief Number of elements stored. */
   MSHADOW_XINLINE constexpr int nvec() const {
     return storage_.nvec;
   }
 
+  /* \brief Number of aligned elements that span the entire input tensor. */
   MSHADOW_XINLINE index_t num_aligned_elements() const {
     return n_elems_;
   }
 
+  /* \brief Load values from the input.
+     \param id Aligned index of the element.
+     \param N size of the tensor.
+  */
   MSHADOW_XINLINE void load(const index_t id, const index_t N) {
     if (aligned) {
       storage_.scratch_.aligned = aligned_ptr_[id];
@@ -111,6 +127,7 @@ class VectorizedAccessor {
   }
 };
 
+/* \brief Class used for vectorized read-only access. */
 template <typename DType, typename LType, bool aligned = false>
 class VectorizedLoader : public VectorizedAccessor<const DType, const LType, aligned> {
  public:
@@ -119,6 +136,7 @@ class VectorizedLoader : public VectorizedAccessor<const DType, const LType, ali
   }
 };
 
+/* \brief Class used for vectorized writable access. */
 template <typename DType, typename LType, bool aligned = false>
 class VectorizedStorer : public VectorizedAccessor<DType, LType, aligned> {
  public:
@@ -126,6 +144,10 @@ class VectorizedStorer : public VectorizedAccessor<DType, LType, aligned> {
     VectorizedAccessor<DType, LType, aligned>(ptr, N) {
   }
 
+  /* \brief Store values to the output.
+     \param id Aligned index of the element.
+     \param N size of the tensor.
+  */
   MSHADOW_XINLINE void store(const index_t id, const index_t N) {
     if (aligned) {
       this->aligned_ptr_[id] = this->storage_.scratch_.aligned;
@@ -149,9 +171,9 @@ class VectorizedStorer : public VectorizedAccessor<DType, LType, aligned> {
 namespace {
 
 enum class Alignment {
-  SAME_ALIGNED,
-  SAME_UNALIGNED,
-  DIFFERENT
+  SAME_ALIGNED,  // All tensors aligned
+  SAME_UNALIGNED,  // All tensors have the same misalignment
+  DIFFERENT  // Tensors have different alignment
 };
 
 template <typename LType, typename DType>
@@ -160,6 +182,11 @@ int CalcAlignment(const DType* ptr) {
   return ptr_as_number % sizeof(LType);
 }
 
+/* \brief Check alignment of the inputs and outputs when cast to LType*.
+   \param params Structuce containing arrays with inputs' and outputs' pointers
+   \param lead_dim Leading dimension of the tensors.
+   \param other_dim The size of the other dimensions of the tensors.
+*/
 template <typename LType, typename DType, typename Params>
 Alignment CheckAlignment(const Params& params, const index_t lead_dim, const index_t other_dim) {
   int align = -1;
@@ -204,6 +231,14 @@ constexpr int vectorized_kernel_thread_num = 512;
 
 }  // namespace
 
+/* \brief Helper launcher function for the vectorized kernels. Checks for alignment of the
+          input and output tensors and launches a proper template.
+   \param lead_dim Leading dimension of the tensors.
+   \param other_dim The size of the other dimensions.
+   \param s Stream which should be used for launching the kernel.
+   \param params Input parameters to the kernel. Needs to contain at least 2 arrays of DType*:
+                 inputs and outputs, which contain input and output pointers.
+*/
 template <typename DType, typename LType, typename Kernel>
 void VectorizedKernelLauncher(const index_t lead_dim,
                               const index_t other_dim,
