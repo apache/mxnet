@@ -399,8 +399,8 @@ __device__ inline VectorType<DType, nvec> load_slice(const DType * input, const 
   strides[ndim-1] = 1;
   #pragma unroll
   for (int dim = ndim-1; dim >=0; dim--) {
-    if (begin[dim] < 0) begin[dim] = shape[dim] - begin[dim];
-    if (end[dim] < 0) end[dim] = shape[dim] - end[dim];
+    if (begin[dim] < 0) begin[dim] = shape[dim] + begin[dim];
+    if (end[dim] < 0) end[dim] = shape[dim] + end[dim];
     if (end[dim] == INT_MAX) end[dim] = shape[dim];
     if (dim > 0) {
       ref_strides[dim-1] = ref_strides[dim] * (end[dim] - begin[dim]);
@@ -442,8 +442,8 @@ __device__ inline VectorType<DType, nvec> fast_load_slice(const DType * input,
   strides[ndim-1] = 1;
   #pragma unroll
   for (int dim = ndim-1; dim >=0; dim--) {
-    if (begin[dim] < 0) begin[dim] = shape[dim] - begin[dim];
-    if (end[dim] < 0) end[dim] = shape[dim] - end[dim];
+    if (begin[dim] < 0) begin[dim] = shape[dim] + begin[dim];
+    if (end[dim] < 0) end[dim] = shape[dim] + end[dim];
     if (end[dim] == INT_MAX) end[dim] = shape[dim];
     if (dim > 0) {
       ref_strides[dim-1] = ref_strides[dim] * (end[dim] - begin[dim]);
