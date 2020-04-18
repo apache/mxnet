@@ -202,6 +202,7 @@ def windows_build(args):
             if ret != 0:
                 build_try += 1
                 logging.info("{} build(s) have failed".format(build_try))
+                sys.exit(1)
             else:
                 logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
                 logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))

@@ -27,6 +27,7 @@
 #include <mxnet/io.h>
 #include <mxnet/base.h>
 #include <mxnet/resource.h>
+#include <numeric>
 #include "../common/utils.h"
 #include "./iter_batchloader.h"
 #include "./iter_prefetcher.h"

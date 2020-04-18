@@ -101,7 +101,7 @@ def _dataset_transform_first_fn(x):
 def test_recordimage_dataset_with_data_loader_multiworker():
     recfile = prepare_record()
     dataset = gluon.data.vision.ImageRecordDataset(recfile)
-    loader = gluon.data.DataLoader(dataset, 1, num_workers=5, try_nopython=True)
+    loader = gluon.data.DataLoader(dataset, 1, num_workers=5, try_nopython=False)
 
     for i, (x, y) in enumerate(loader):
         assert x.shape[0] == 1 and x.shape[3] == 3
@@ -109,7 +109,7 @@ def test_recordimage_dataset_with_data_loader_multiworker():
 
     # with transform
     dataset = gluon.data.vision.ImageRecordDataset(recfile).transform(_dataset_transform_fn)
-    loader = gluon.data.DataLoader(dataset, 1, num_workers=5, try_nopython=False)
+    loader = gluon.data.DataLoader(dataset, 1, num_workers=5, try_nopython=True)
 
     for i, (x, y) in enumerate(loader):
         assert x.shape[0] == 1 and x.shape[3] == 3
@@ -117,7 +117,7 @@ def test_recordimage_dataset_with_data_loader_multiworker():
 
     # with transform_first
     dataset = gluon.data.vision.ImageRecordDataset(recfile).transform_first(_dataset_transform_first_fn)
-    loader = gluon.data.DataLoader(dataset, 1, num_workers=5, try_nopython=False)
+    loader = gluon.data.DataLoader(dataset, 1, num_workers=5, try_nopython=None)
 
     for i, (x, y) in enumerate(loader):
         assert x.shape[0] == 1 and x.shape[3] == 3
