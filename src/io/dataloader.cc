@@ -123,7 +123,7 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
       profiler::CustomOpProfiler::Get()->OnCustomBegin("MXThreadedDataLoaderGetItems");
     }
     #pragma omp parallel for num_threads(param_.num_workers)
-    for (size_t i = 0; i < real_batch_size; ++i) {
+    for (int i = 0; i < real_batch_size; ++i) {
       omp_exc_.Run([&] {
         auto idx = idx_ptrs[i];
         CHECK(datasets_[i % param_.num_workers]->GetItem(idx, &inputs[i]))

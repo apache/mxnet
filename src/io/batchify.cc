@@ -150,7 +150,7 @@ class StackBatchify : public BatchifyFunction {
         }
         MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
           _Pragma("omp parallel for num_threads(bs)")
-          for (size_t j = 0; j < bs; ++j) {
+          for (int j = 0; j < bs; ++j) {
             omp_exc_.Run([&] {
               // inputs[j][i].WaitToRead();
               DType *ptr = (*outputs)[i].data().dptr<DType>();
@@ -275,7 +275,7 @@ class PadBatchify : public BatchifyFunction {
           DType *ptr = (*outputs)[i].data().dptr<DType>();
           auto asize = ashape.Size();
           _Pragma("omp parallel for num_threads(bs)")
-          for (size_t j = 0; j < bs; ++j) {
+          for (int j = 0; j < bs; ++j) {
             using namespace mshadow::expr;
             auto compact_shapes = CompactShapes(ashape, inputs[j][i].shape());
             // inputs[j][i].WaitToRead();
