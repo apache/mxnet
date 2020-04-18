@@ -235,6 +235,32 @@ class UnaryOp : public OpBase {
     }
   }
 
+  template<typename OP>
+  static void Compute_(const nnvm::NodeAttrs& attrs,
+                       mshadow::Stream<cpu>* s,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs) {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        if (inputs[0].Size() != 0) {
+          mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, cpu>::Launch(
+            s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
+        }
+      });
+    });
+  }
+
+#if MXNET_USE_CUDA
+  template<typename OP>
+  static void Compute_(const nnvm::NodeAttrs& attrs,
+                       mshadow::Stream<gpu>* s,
+                       const std::vector<TBlob>& inputs,
+                       const std::vector<OpReqType>& req,
+                       const std::vector<TBlob>& outputs);
+
+#endif
+
   template<typename xpu, typename OP>
   static void Compute(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
@@ -242,14 +268,7 @@ class UnaryOp : public OpBase {
                       const std::vector<OpReqType>& req,
                       const std::vector<TBlob>& outputs) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        if (inputs[0].Size() != 0) {
-          mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
-            s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
-        }
-      });
-    });
+    Compute_<OP>(attrs, s, inputs, req, outputs);
   }
 
   template<typename xpu, typename OP>
@@ -343,23 +362,6 @@ class UnaryOp : public OpBase {
     }
   }
 #endif
-
-  template<typename xpu, typename op>
-  static void ComputeWithHalf2(const nnvm::NodeAttrs &attrs,
-                               const OpContext &ctx,
-                               const std::vector<TBlob> &inputs,
-                               const std::vector<OpReqType> &req,
-                               const std::vector<TBlob> &outputs) {
-    using namespace mshadow;
-    using namespace mxnet_op;
-    Stream<xpu> *s = ctx.get_stream<xpu>();
-    CHECK_EQ(inputs.size(), 1U);
-    CHECK_EQ(outputs.size(), 1U);
-    MSHADOW_TYPE_SWITCH_WITH_HALF2(outputs[0].type_flag_, DType, {
-      Kernel<op, xpu>::Launch(s, outputs[0].Size(),
-                              outputs[0].dptr<DType>(), inputs[0].dptr<DType>());
-    });
-  }
 
   template<typename xpu>
   static void IdentityCompute(const nnvm::NodeAttrs& attrs,
@@ -876,5 +878,9 @@ void NumpyNanToNumOpBackward(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
+
+#ifdef __CUDACC__
+#include "elemwise_unary_op.cuh"
+#endif
 
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_UNARY_OP_H_

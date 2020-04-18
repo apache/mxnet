@@ -9894,6 +9894,84 @@ def test_elemwise_sum_for_gradient_accumulation():
         assert stored_grad['write'] == stored_grad['add']
         assert stored_grad['write'] == 2 * nrepeat
 
+@with_seed()
+def test_elementwise_ops_on_misaligned_input():
+    a = mx.nd.array([1,2,3,4], dtype='float16')
+    b = mx.nd.array([1,2,3,4], dtype='float16')
+
+    c = a[1:3]
+    d = b[1:3]
+    # Note: testing just elemwise_add since all elemwise_ops
+    #       share the implementation
+    mx.nd.elemwise_add(c, d, out=c)
+    mx.nd.waitall()
+
+    a = mx.nd.array([1,2,3,4], dtype='float16')
+    b = mx.nd.array([1,2,3,4], dtype='float16')
+
+    c = a[0:3]
+    d = b[0:3]
+    mx.nd.elemwise_add(c, d, out=c)
+    mx.nd.waitall()
+    assert a[3].asscalar() == 4.0
+
+@with_seed()
+def test_broadcast_ops_on_misaligned_input():
+    dtypes = ['float16', 'float32', 'float64']
+    lead_dims = [2,3,4,6,10]
+
+    for dtype in dtypes:
+        for lead_dim in lead_dims:
+            for both_ways in [False, True]:
+                shape = list(rand_shape_2d()) + [lead_dim]
+                small_shape = [shape[0], 1, lead_dim]
+                if both_ways:
+                    # Broadcast in both ways [1, K, L] x [M, 1, L]
+                    big_shape = [1, shape[1], lead_dim]
+                else:
+                    big_shape = shape
+                size = np.product(shape)
+                small_size = np.product(small_shape)
+                big_size = np.product(big_shape)
+                a = mx.nd.arange(5000)
+                b = mx.nd.arange(5000)
+                e = mx.nd.arange(5000)
+                c = a[1:big_size + 1].reshape(big_shape)
+                d = b[1:small_size + 1].reshape(small_shape)
+                f = e[1:size + 1].reshape(shape)
+                mx.nd.broadcast_add(c, d, out=f)
+                expected = c.asnumpy() + d.asnumpy()
+                mx.nd.waitall()
+                assert_almost_equal(f, expected)
+
+@with_seed()
+def test_broadcast_ops_on_misaligned_input_oneside():
+    dtypes = ['float16', 'float32', 'float64']
+    lead_dims = [2,3,4,6,10]
+
+    for dtype in dtypes:
+        for lead_dim in lead_dims:
+            for both_ways in [False, True]:
+                shape = list(rand_shape_2d()) + [lead_dim]
+                small_shape = [shape[0], shape[1], 1]
+                if both_ways:
+                    # Broadcast in both ways [1, K, L] x [M, 1, 1]
+                    big_shape = [1, shape[1], lead_dim]
+                else:
+                    big_shape = shape
+                size = np.product(shape)
+                small_size = np.product(small_shape)
+                big_size = np.product(big_shape)
+                a = mx.nd.arange(5000)
+                b = mx.nd.arange(5000)
+                e = mx.nd.arange(5000)
+                c = a[1:big_size + 1].reshape(big_shape)
+                d = b[1:small_size + 1].reshape(small_shape)
+                f = e[1:size + 1].reshape(shape)
+                mx.nd.broadcast_add(c, d, out=f)
+                expected = c.asnumpy() + d.asnumpy()
+                mx.nd.waitall()
+                assert_almost_equal(f, expected)
 
 if __name__ == '__main__':
     import nose
