@@ -22,6 +22,8 @@
 
 utils = load('ci/Jenkinsfile_utils.groovy')
 
+max_activity_timeout = 30
+
 // mxnet libraries
 mx_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_lib_cython = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, python/mxnet/_cy3/*.so, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_ffi/_cy3/*.so'
@@ -46,20 +48,26 @@ mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.
 // Python 3
 def python3_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu', false)
+    timeout(time: max_activity_timeout, activity: true) {
+      utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu', false)
+    }
   }
 }
 
 // Python 3
 def python3_ut_asan(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_asan', false)
+    timeout(time: max_activity_timeout, activity: true) {
+      utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_asan', false)
+    }
   }
 }
 
 def python3_ut_mkldnn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_mkldnn', false)
+    timeout(time: max_activity_timeout, activity: true) {
+      utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_mkldnn', false)
+    }
   }
 }
 
@@ -68,20 +76,26 @@ def python3_ut_mkldnn(docker_container_name) {
 // Python 3
 def python3_gpu_ut(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu', true)
+    timeout(time: max_activity_timeout, activity: true) {
+      utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu', true)
+    }
   }
 }
 
 // Python 3 NOCUDNN
 def python3_gpu_ut_nocudnn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu_nocudnn', true)
+    timeout(time: max_activity_timeout, activity: true) {
+      utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu_nocudnn', true)
+    }
   }
 }
 
 def python3_gpu_ut_cython(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu_cython', true)
+    timeout(time: max_activity_timeout, activity: true) {
+      utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_gpu_cython', true)
+    }
   }
 }
 
