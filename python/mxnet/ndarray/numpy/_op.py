@@ -4536,7 +4536,9 @@ def maximum(x1, x2, out=None, **kwargs):
     -------
     out : mxnet.numpy.ndarray or scalar
         The maximum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
-    return _ufunc_helper(x1, x2, _npi.maximum, _np.maximum, _npi.maximum_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.maximum(x1, x2, out=out)
+    return _api_internal.maximum(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4576,7 +4578,9 @@ def minimum(x1, x2, out=None, **kwargs):
     -------
     out : mxnet.numpy.ndarray or scalar
         The minimum of x1 and x2, element-wise. This is a scalar if both x1 and x2 are scalars."""
-    return _ufunc_helper(x1, x2, _npi.minimum, _np.minimum, _npi.minimum_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.minimum(x1, x2, out=out)
+    return _api_internal.minimum(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6612,7 +6616,9 @@ def equal(x1, x2, out=None):
     >>> np.equal(1, np.ones(1))
     array([ True])
     """
-    return _ufunc_helper(x1, x2, _npi.equal, _np.equal, _npi.equal_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.equal(x1, x2, out=out)
+    return _api_internal.equal(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6644,7 +6650,10 @@ def not_equal(x1, x2, out=None):
     >>> np.not_equal(1, np.ones(1))
     array([False])
     """
-    return _ufunc_helper(x1, x2, _npi.not_equal, _np.not_equal, _npi.not_equal_scalar, None, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.not_equal(x1, x2, out=out)
+    return _api_internal.not_equal(x1, x2, out)
+
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6709,7 +6718,9 @@ def less(x1, x2, out=None):
     >>> np.less(1, np.ones(1))
     array([False])
     """
-    return _ufunc_helper(x1, x2, _npi.less, _np.less, _npi.less_scalar, _npi.greater_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.less(x1, x2, out=out)
+    return _api_internal.less(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6741,8 +6752,10 @@ def greater_equal(x1, x2, out=None):
     >>> np.greater_equal(1, np.ones(1))
     array([True])
     """
-    return _ufunc_helper(x1, x2, _npi.greater_equal, _np.greater_equal, _npi.greater_equal_scalar,
-                         _npi.less_equal_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.greater_equal(x1, x2, out=out)
+    return _api_internal.greater_equal(x1, x2, out)
+
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6774,8 +6787,9 @@ def less_equal(x1, x2, out=None):
     >>> np.less_equal(1, np.ones(1))
     array([True])
     """
-    return _ufunc_helper(x1, x2, _npi.less_equal, _np.less_equal, _npi.less_equal_scalar,
-                         _npi.greater_equal_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.less_equal(x1, x2, out=out)
+    return _api_internal.less_equal(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
