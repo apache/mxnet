@@ -41,7 +41,10 @@ core_logic: {
 
   utils.parallel_stage('Tests', [
     custom_steps.test_centos7_python3_cpu(),
-    custom_steps.test_centos7_scala_cpu()
+    custom_steps.test_centos7_scala_cpu(),
+    custom_steps.test_static_scala_cpu(),
+    custom_steps.test_static_python_cpu(),
+    custom_steps.test_static_python_cpu_cmake(),
   ])
 }
 ,
