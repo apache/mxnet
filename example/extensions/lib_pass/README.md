@@ -28,40 +28,34 @@ This custom graph pass feature enables users to write custom model modification 
 
 ### Have MXNet Ready
 
-The custom pass feature was merged recently and is not available in versions of MXNet prior to v1.7.0. To use the feature now, please install MXNet either by installing the nightly pip wheel or compiling from source. For running the following example, it doesn’t matter if it is a CUDA, MKLDNN or plain MXNet build; the custom pass doesn’t interact with the execution of other native MXNet features. 
+The custom pass feature was merged recently and is not available in versions of MXNet prior to v2.0. To use the feature now, please install MXNet either by installing the nightly pip wheel or compiling from source. For running the following example, it doesn’t matter if it is a CUDA, MKLDNN or plain MXNet build; the custom pass doesn’t interact with the execution of other native MXNet features. 
 
 ### Run An Example
 
-You can start getting familiar with custom passes by running an example provided in the **example/extensions/lib_pass** directory. This example just copies the input graph to the output. Go to the **lib_subgraph** directory and follow these steps:
+You can start getting familiar with custom passes by running an example provided in the **example/extensions/lib_pass** directory. The `myPass` example just copies the input graph to the output. Go to the **lib_pass** directory and follow these steps:
 
 1. Run `make`. The Makefile will generate the dynamic library **libpass_lib.so** which is compiled from the `pass_lib.cc` file. This is the library you are going to load that contains everything for the custom pass.
-2. Run `python test_pass.py`. It’ll first load the above library, find the components, register them in the MXNet backend, then execute the pass on the model and execute the operators like a regular MXNet operator and output the result. Below is the output when running the `python test_pass.py` command. Notice that it loads 1 pass: myPass.
+2. Run `python test_pass.py`. It’ll first load the above library, find the components, register them in the MXNet backend, then execute the pass on the model and execute the operators like a regular MXNet operator and output the result. Below is the output when running the `python test_pass.py` command. Notice that it loads 2 passes: myPass and jsonPass.
 
 ```
 [10:38:03] src/c_api/c_api.cc:286: Found 0 operators in library
 [10:38:03] src/c_api/c_api.cc:785: Found 0 partitioners in library
-[07:14:00] src/c_api/c_api.cc:887: Found 1 graph passes in library
-[07:14:00] src/c_api/c_api.cc:902:       Graph Pass [0] myPass```
+[07:14:00] src/c_api/c_api.cc:887: Found 2 graph passes in library
+[07:14:00] src/c_api/c_api.cc:902:       Graph Pass [0] myPass
+[07:14:00] src/c_api/c_api.cc:902:       Graph Pass [1] jsonPass
+```
 
 ### Basic Files For Custom Pass Library
-
 * **lib_pass/pass_lib.cc**: This file has a source code implementation of all required components to make a custom pass, it also shows registration of them so that they can be loaded by MXNet.
-
 * **lib_pass/Makefile**: This file compiles the source code to a dynamic shared library, with a header file `include/mxnet/lib_api.h` from MXNet source code. Currently the custom pass is compatible with C++11 onwards.
-
 * **lib_pass/test_pass.py**: This file calls `mx.library.load(‘libpass_lib.so’)` to load the library containing the custom components, executes the pass on the model using the `optimize_for` API, and prints outputs of the forward passes. The outputs should be the same as the regular MXNet forward pass without running the pass.
-
 * **include/mxnet/lib_api.h**: This file from MXNet source code is the single header file needed to include all necessary data types and function prototypes for writing a custom library. You can either specify the include path in the `Makefile`, or copy the header file over to `example/extensions/lib_pass` folder. Note that apart from this header, the custom library is independent of MXNet source.
-
 ## Writing Custom Pass Library
-
 To build your own library containing a custom pass, compose a C++ source file like `mypass_lib.cc`, include `lib_api.h` header file, and write your custom pass with these essential functions:
 - `initialize` - Library Initialization Function
 - `REGISTER_PASS` - Pass Registration Macro
 - `graphPass` - Pass Implementation
-
 Then compile it to the `mypass_lib.so` dynamic library using the following command:
-
 ```bash
 g++ -shared -fPIC -std=c++11 mypass_lib.cc -o libmypass_lib.so -I ../../../include/mxnet
 ```
@@ -72,14 +66,11 @@ Finally, you can write a Python script to load the library and execute your pass
 import mxnet as mx
 mx.library.load(‘libmypass_lib.so’)
 sym, _, _ = mx.model.load_checkpoint('mymodel', 0) 
-
 # Symbol/Module flow
 sym2 = sym.optimize_for("myPass")
-
 # Gluon flow 1
 sym_block = nn.SymbolBlock(sym, inputs)
 sym_block.hybridize(backend='myPass')
-
 # Gluon flow 2
 sym_block = nn.SymbolBlock(sym, inputs)
 sym_block.optimize_for(x, backend='myPass')
@@ -138,7 +129,10 @@ There are several essential building blocks for making a custom pass:
             MXReturnValue graphPass(
                 const std::string& in_graph,
                 const std::string** out_graph,
-                std::unordered_map<std::string, std::string>& options)
+                const std::unordered_map<std::string, std::string>& options,
+                const std::unordered_map<std::string, MXTensor>& args,
+                const std::unordered_map<std::string, MXTensor>& aux,
+                const PassResource& res)
 
 * [REGISTER_PASS(my_pass_name)](./pass_lib.cc#L41):
     * This macro registers the custom pass and its properties to MXNet by its name. The argument to `setBody` is the `graphPass` function.
@@ -148,7 +142,20 @@ There are several essential building blocks for making a custom pass:
 
 Let’s take a closer look at those registry functions:
 
-* **graphPass**: This function takes three arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. The 2nd argument is a pointer to a pointer of a JSON model string. It is expected users will dereference and assign the address of their output string allocated with `new` and `delete` will be called on it automatically. The last argument is the map of options specified by the user. Users can pass custom options to the pass and they are passed to this function in the `options` map. 
+* **graphPass**: This function takes six arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. The 2nd argument is a pointer to a pointer of a JSON model string. It is expected users will dereference and assign the address of their output string allocated with `new` and `delete` will be called on it automatically. The third argument is the map of options specified by the user. Users can pass custom options to the pass and they are passed to this function in the `options` map. The fourth and fifth arguments are the named tensor mapping for the args and aux params for the model. They will contain the model params if the user provides them to the `optimize_for` API. The last argument is the `PassResource` object for memory allocation and other utilities. The details of `PassResource` are covered in the section below
+
+### Pass Resource
+
+Some graph passes require allocating new NDArrays to add/replace model params. The `alloc_arg` and `alloc_aux` APIs enabling allocating new NDArrays and integrating them with the user-provide args and aux params. Both APIs have the following signature:
+
+```
+    MXTensor* alloc_xxx(const std::string& name,
+                        const std::vector<int64_t>& shapes,
+                        const MXContext &ctx,
+                        MXDType dtype)
+```
+
+If the `name` provided matches the name of an existing param it replaces the previous one. Otherwise it adds a new param to the appropriate arg/aux set.
 
 ### Parsing a JSON string
 

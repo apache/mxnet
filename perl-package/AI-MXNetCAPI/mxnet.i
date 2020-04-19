@@ -1636,7 +1636,13 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    NDArrayHandle* in,
                                    const mx_uint in,
                                    const char** keys,
-                                   const char** vals);
+                                   const char** vals
+                                   int* new_args_cnt,
+                                   NDArrayHandle** new_args_handle,
+                                   char*** new_arg_names_handle,
+                                   int* new_aux_cnt,
+                                   NDArrayHandle** new_aux_handle,
+                                   char*** new_aux_names_handle);
 
 //--------------------------------------------
 // Part 4: Executor interface
