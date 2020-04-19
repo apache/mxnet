@@ -1446,6 +1446,7 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
 
+    # pylint: disable=too-many-locals
     def optimize_for(self, backend, args=None, aux=None, ctx=None, **kwargs):
         """Partitions current symbol and optimizes it for a given backend,
         returns new partitioned symbol.
@@ -1506,7 +1507,7 @@ class Symbol(SymbolBase):
         new_aux_size = ctypes.c_uint()
         new_aux_names = ctypes.POINTER(ctypes.c_char_p)()
         new_aux_handle = ctypes.POINTER(NDArrayHandle)()
-        
+
         key_list = []
         val_list = []
         for key, val in kwargs.items():
