@@ -1524,16 +1524,35 @@ class Symbol(SymbolBase):
                                              c_str_array(key_list),
                                              c_str_array(val_list),
                                              ctypes.byref(new_args_size),
-                                             ctypes.byref(new_arg_names),
                                              ctypes.byref(new_args_handle),
+                                             ctypes.byref(new_arg_names),
                                              ctypes.byref(new_aux_size),
-                                             ctypes.byref(new_aux_names),
-                                             ctypes.byref(new_aux_handle)))
-        for i in range(new_args_size.value):
-            args[py_str(new_arg_names[i])] = NDArray(NDArrayHandle(new_args_handle[i]))
-        for i in range(new_aux_size.value):
-            aux[py_str(new_aux_names[i])] = NDArray(NDArrayHandle(new_aux_handle[i]))
-        
+                                             ctypes.byref(new_aux_handle),
+                                             ctypes.byref(new_aux_names)))
+        arg_names = self.list_arguments()
+        if isinstance(args, dict):
+            for i in range(new_args_size.value):
+                args[py_str(new_arg_names[i])] = NDArray(NDArrayHandle(new_args_handle[i]))
+        elif isinstance(args, list):
+            for i in range(new_args_size.value):
+                name = py_str(new_arg_names[i])
+                if name in arg_names:
+                    idx = arg_names.index(name)
+                    args[idx] = NDArray(NDArrayHandle(new_args_handle[i]))
+                else:
+                    args.append(NDArray(NDArrayHandle(new_args_handle[i])))
+        aux_names = self.list_auxiliary_states()
+        if isinstance(aux, dict):
+            for i in range(new_aux_size.value):
+                aux[py_str(new_aux_names[i])] = NDArray(NDArrayHandle(new_aux_handle[i]))
+        elif isinstance(aux, list):
+            for i in range(new_aux_size.value):
+                name = py_str(new_aux_names[i])
+                if name in aux_names:
+                    idx = aux_names.index(name)
+                    aux[idx] = NDArray(NDArrayHandle(new_aux_handle[i]))
+                else:
+                    aux.append(NDArray(NDArrayHandle(new_aux_handle[i])))
         return Symbol(out)
 
 

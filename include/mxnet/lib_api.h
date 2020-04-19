@@ -464,8 +464,8 @@ class PassResource {
                std::unordered_map<std::string, MXTensor>* new_aux,
                nd_malloc_t nd_malloc, const void* nd_alloc)
     : new_args_(new_args), new_aux_(new_aux), nd_malloc_(nd_malloc), nd_alloc_(nd_alloc) {}
-  MXTensor* alloc_arg(std::string& name, const std::vector<int64_t>& shapes,
-                      MXContext &ctx, MXDType dtype) {
+  MXTensor* alloc_arg(const std::string& name, const std::vector<int64_t>& shapes,
+                      const MXContext &ctx, MXDType dtype) const {
     void* data;
     nd_malloc_(nd_alloc_, shapes.data(), shapes.size(), ctx.dev_type.c_str(), ctx.dev_id,
                (int)dtype, name.c_str(), 1, &data);
@@ -473,8 +473,8 @@ class PassResource {
     (*new_args_)[name] = tensor;
     return &(new_args_->at(name));
   }
-  MXTensor* alloc_aux(std::string& name, const std::vector<int64_t>& shapes,
-                      MXContext &ctx, MXDType dtype) {
+  MXTensor* alloc_aux(const std::string& name, const std::vector<int64_t>& shapes,
+                      const MXContext &ctx, MXDType dtype) const {
     void* data;
     nd_malloc_(nd_alloc_, shapes.data(), shapes.size(), ctx.dev_type.c_str(), ctx.dev_id,
                (int)dtype, name.c_str(), 0, &data);

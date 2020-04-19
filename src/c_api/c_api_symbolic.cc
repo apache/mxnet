@@ -1472,25 +1472,37 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     std::vector<NDArray*> new_aux = g.GetAttr<std::vector<NDArray*>>("new_aux");
     std::vector<std::string> new_arg_names = g.GetAttr<std::vector<std::string>>("new_arg_names");
     std::vector<std::string> new_aux_names = g.GetAttr<std::vector<std::string>>("new_aux_names");
-    *new_args_ptr = const_cast<NDArray**>(g.GetAttr<std::vector<NDArray*>>("new_args").data());
-    *new_aux_ptr = const_cast<NDArray**>(g.GetAttr<std::vector<NDArray*>>("new_aux").data());
+    g.attrs.erase("new_args");
+    g.attrs.erase("new_aux");
+    g.attrs.erase("new_arg_names");
+    g.attrs.erase("new_aux_names");
 
-    std::vector<char*>* new_arg_cstr = new std::vector<char*>();
-    for(auto& s : new_arg_names) {
-      char* tmp = new char[s.length()];
+    NDArray** new_arg_arr = new NDArray*[new_arg_names.size()];
+    NDArray** new_aux_arr = new NDArray*[new_aux_names.size()];
+    char** new_arg_cstr = new char*[new_arg_names.size()];
+    char** new_aux_cstr = new char*[new_aux_names.size()];
+    for(unsigned i=0; i<new_arg_names.size(); i++) {
+      new_arg_arr[i] = new_args[i];
+      std::string& s = new_arg_names[i];
+      char* tmp = new char[s.length()+1];
       s.copy(tmp,s.length());
-      new_arg_cstr->push_back(tmp);
+      tmp[s.length()] = '\0';
+      new_arg_cstr[i] = tmp;
     }
-    std::vector<char*>* new_aux_cstr = new std::vector<char*>();
-    for(auto& s : new_aux_names) {
-      char* tmp = new char[s.length()];
+    for(unsigned i=0; i<new_aux_names.size(); i++) {
+      new_aux_arr[i] = new_aux[i];
+      std::string& s = new_aux_names[i];
+      char* tmp = new char[s.length()+1];
       s.copy(tmp,s.length());
-      new_aux_cstr->push_back(tmp);
+      tmp[s.length()] = '\0';
+      new_aux_cstr[i] = tmp;
     }
-    *new_args_cnt = new_arg_cstr->size();
-    *new_aux_cnt = new_aux_cstr->size();
-    *new_arg_names_handle = new_arg_cstr->data();
-    *new_aux_names_handle = new_aux_cstr->data();    
+    *new_args_cnt = new_arg_names.size();
+    *new_aux_cnt = new_aux_names.size();
+    *new_arg_names_handle = new_arg_cstr;
+    *new_aux_names_handle = new_aux_cstr;
+    *new_args_ptr = new_arg_arr;
+    *new_aux_ptr = new_aux_arr;
   } else {
     // cannot find graph pass or subgraph backend registered in this name
     LOG(ERROR) << "Error optimizing for backend '" << backend_name << "' cannot be found";

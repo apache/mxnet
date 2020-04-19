@@ -54,6 +54,11 @@ MXReturnValue jsonPass(const std::string& in_graph, const std::string** out_grap
   for (auto kv : options)
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
 
+  // add test arg/aux
+  
+  MXTensor* arg_ = res.alloc_arg("test_arg",{1},MXContext::CPU(0),kFloat32);
+  MXTensor* aux_ = res.alloc_aux("test_aux",{1},MXContext::CPU(0),kFloat32);
+  
   // convert json string to json object
   JsonParser parser;
   JsonVal json_val = parser.parse_to_json(in_graph);

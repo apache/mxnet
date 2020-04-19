@@ -60,7 +60,8 @@ def test_model(pass_name):
     print('-------------------------------')
     print('Testing pass "%s" with shapes/types' % pass_name)
     arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
-    mysym2 = sym.optimize_for("myPass",arg_array)
+    aux = []
+    mysym2 = sym.optimize_for(pass_name,arg_array,aux)
     print(mysym2.tojson())
     exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
     out2 = exe2.forward()
@@ -69,7 +70,7 @@ def test_model(pass_name):
     # without propogating shapes/types
     print('-------------------------------')
     print('Testing pass "%s" without shapes/types' % pass_name)
-    mysym3 = sym.optimize_for("myPass", myOpt='yello')
+    mysym3 = sym.optimize_for(pass_name, myOpt='yello')
     exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
     out3 = exe3.forward()
     print(out3)
@@ -80,7 +81,7 @@ def test_model(pass_name):
     inputs = [a,b]
     sym_block = nn.SymbolBlock(sym, inputs)
     sym_block.initialize()
-    sym_block.hybridize(backend='myPass')
+    sym_block.hybridize(backend=pass_name)
     out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     print(out4)
     
@@ -90,7 +91,7 @@ def test_model(pass_name):
     inputs = [a,b]
     sym_block2 = nn.SymbolBlock(sym, inputs)
     sym_block2.initialize()
-    sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend='myPass')
+    sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend=pass_name)
     sym_block2.export('modified')
 
 test_model('myPass')
