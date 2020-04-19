@@ -1095,7 +1095,7 @@ void registerPasses(void *lib, int verbose) {
       std::vector<size_t> arg_verIDs, aux_verIDs;
       std::vector<const char*> arg_dev_type, aux_dev_type;
       std::vector<int> arg_dev_id, aux_dev_id;
-      
+
       // convert input args
       for (size_t i=0; i < in_arg_names.size(); i++) {
         arg_names.push_back(in_arg_names[i].c_str());
@@ -1149,7 +1149,7 @@ void registerPasses(void *lib, int verbose) {
 
       std::vector<std::string> new_arg_names, new_aux_names;
       std::vector<NDArray*> new_args, new_aux;
-      
+
       // create lambda that captures stream & resource objects
       // this temp workspace holds memory allocated by custom library via OpResource
       auto ndarray_alloc = [&](const mxnet::TShape &shape, Context ctx, int dtype,
@@ -1172,23 +1172,23 @@ void registerPasses(void *lib, int verbose) {
       auto ndarray_malloc = [](const void* _ndarray_alloc, const int64_t* shapes, int num_shapes,
                                const char* dev_str, int dev_id, int dtype, const char* name,
                                int isArg, void** data) {
-        mxnet::TShape shape(num_shapes,0);
-        for(int i=0; i<num_shapes; i++)
+        mxnet::TShape shape(num_shapes, 0);
+        for (int i = 0; i < num_shapes; i++)
           shape[i] = shapes[i];
         int dev_type = -1;
-        if(strcmp(dev_str,"cpu") == 0)
+        if (strcmp(dev_str, "cpu") == 0)
           dev_type = kCPU;
         else
           dev_type = kGPU;
         Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
-      
+
         // cast the void* argument to the type for the cpu_alloc lambda function
         const alloc_type_ndarray* ndalloc = static_cast<const alloc_type_ndarray*>(_ndarray_alloc);
         // call cpu_alloc to actually allocate memory and return the pointer
-        NDArray* arr = (*ndalloc)(shape,ctx,dtype,name,isArg);
+        NDArray* arr = (*ndalloc)(shape, ctx, dtype, name, isArg);
         *data = arr->data().dptr_;
       };
-      
+
       char* out_json;
       CHECK(callGraphPass(pass_fp, in_json.c_str(), &out_json, opt_keys.data(),
                           opt_vals.data(), opt_keys.size(), pass_name,
@@ -1209,7 +1209,7 @@ void registerPasses(void *lib, int verbose) {
       out_graph.attrs["new_arg_names"] = std::make_shared<nnvm::any>(new_arg_names);
       out_graph.attrs["new_aux"] = std::make_shared<nnvm::any>(new_aux);
       out_graph.attrs["new_aux_names"] = std::make_shared<nnvm::any>(new_aux_names);
-      
+
       callFree(out_json);
       return out_graph;
     };

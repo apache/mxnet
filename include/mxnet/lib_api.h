@@ -238,7 +238,7 @@ enum MXStorageType {
  * dev_id is the device index where the tensor locates
  */
 struct MXContext {
-  explicit MXContext() : dev_type("error"), dev_id(-1) {}
+  MXContext() : dev_type("error"), dev_id(-1) {}
   explicit MXContext(std::string dev_type_, int dev_id_)
     : dev_type(dev_type_), dev_id(dev_id_) {}
   explicit MXContext(const char* dev_type_, int dev_id_)
@@ -468,7 +468,7 @@ class PassResource {
                       const MXContext &ctx, MXDType dtype) const {
     void* data;
     nd_malloc_(nd_alloc_, shapes.data(), shapes.size(), ctx.dev_type.c_str(), ctx.dev_id,
-               (int)dtype, name.c_str(), 1, &data);
+               dtype, name.c_str(), 1, &data);
     MXTensor tensor(data, shapes, dtype, 0, ctx, kDefaultStorage);
     (*new_args_)[name] = tensor;
     return &(new_args_->at(name));
@@ -477,11 +477,12 @@ class PassResource {
                       const MXContext &ctx, MXDType dtype) const {
     void* data;
     nd_malloc_(nd_alloc_, shapes.data(), shapes.size(), ctx.dev_type.c_str(), ctx.dev_id,
-               (int)dtype, name.c_str(), 0, &data);
+               dtype, name.c_str(), 0, &data);
     MXTensor tensor(data, shapes, dtype, 0, ctx, kDefaultStorage);
     (*new_aux_)[name] = tensor;
     return &(new_aux_->at(name));
   }
+
  private:
   std::unordered_map<std::string, MXTensor>* new_args_;
   std::unordered_map<std::string, MXTensor>* new_aux_;

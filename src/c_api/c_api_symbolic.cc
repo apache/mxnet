@@ -1379,7 +1379,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
 
   NDArray ***new_args_ptr = reinterpret_cast<NDArray***>(new_args_handle);
   NDArray ***new_aux_ptr = reinterpret_cast<NDArray***>(new_aux_handle);
-   
+
   if (args_len || aux_len) {
     NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
     NDArray **in_aux_ptr = reinterpret_cast<NDArray**>(in_aux_handle);
@@ -1481,19 +1481,19 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     NDArray** new_aux_arr = new NDArray*[new_aux_names.size()];
     char** new_arg_cstr = new char*[new_arg_names.size()];
     char** new_aux_cstr = new char*[new_aux_names.size()];
-    for(unsigned i=0; i<new_arg_names.size(); i++) {
+    for (unsigned i = 0; i < new_arg_names.size(); i++) {
       new_arg_arr[i] = new_args[i];
       std::string& s = new_arg_names[i];
       char* tmp = new char[s.length()+1];
-      s.copy(tmp,s.length());
+      s.copy(tmp, s.length());
       tmp[s.length()] = '\0';
       new_arg_cstr[i] = tmp;
     }
-    for(unsigned i=0; i<new_aux_names.size(); i++) {
+    for (unsigned i = 0; i < new_aux_names.size(); i++) {
       new_aux_arr[i] = new_aux[i];
       std::string& s = new_aux_names[i];
       char* tmp = new char[s.length()+1];
-      s.copy(tmp,s.length());
+      s.copy(tmp, s.length());
       tmp[s.length()] = '\0';
       new_aux_cstr[i] = tmp;
     }
