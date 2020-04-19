@@ -1155,7 +1155,7 @@ void registerPasses(void *lib, int verbose) {
       auto ndarray_alloc = [&](const mxnet::TShape &shape, Context ctx, int dtype,
                                std::string name, bool isArg) {
         NDArray* arr = new NDArray(shape, ctx, dtype);
-        if(isArg) {
+        if (isArg) {
           new_args.push_back(arr);
           new_arg_names.push_back(name);
         } else {
