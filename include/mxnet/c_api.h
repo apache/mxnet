@@ -2226,7 +2226,13 @@ MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    NDArrayHandle* in_aux_handle,
                                    const mx_uint num_options,
                                    const char** keys,
-                                   const char** vals);
+                                   const char** vals,
+                                   int* new_args_cnt,
+                                   NDArrayHandle** new_args_handle,
+                                   char*** new_arg_names_handle,
+                                   int* new_aux_cnt,
+                                   NDArrayHandle** new_aux_handle,
+                                   char*** new_aux_names_handle);
 
 
 //--------------------------------------------

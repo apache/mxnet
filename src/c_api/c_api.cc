@@ -210,7 +210,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   // create lambda that allocates memory for sparse and
   // returns allocated arrays for data, indices and indptr.
   auto sparse_alloc = [&](int index, int indices_len, int idxptr_len,
-                           void** data, int64_t** indices, int64_t** indptr) {
+                          void** data, int64_t** indices, int64_t** indptr) {
     if (idxptr_len == 0) {
       // Row Sparse
       outputs[index].CheckAndAlloc({mshadow::Shape1(indices_len)});
@@ -1147,6 +1147,48 @@ void registerPasses(void *lib, int verbose) {
       // convert graph to string
       std::string in_json = nnvm::pass::SaveJSON(g);
 
+      std::vector<std::string> new_arg_names, new_aux_names;
+      std::vector<NDArray*> new_args, new_aux;
+      
+      // create lambda that captures stream & resource objects
+      // this temp workspace holds memory allocated by custom library via OpResource
+      auto ndarray_alloc = [&](const mxnet::TShape &shape, Context ctx, int dtype,
+                               std::string name, bool isArg) {
+        NDArray* arr = new NDArray(shape, ctx, dtype);
+        if(isArg) {
+          new_args.push_back(arr);
+          new_arg_names.push_back(name);
+        } else {
+          new_aux.push_back(arr);
+          new_aux_names.push_back(name);
+        }
+        return arr;
+      };
+
+      // create no-capture lambda so that we can cast it to function pointer
+      // lambda with captures cannot be cast to function pointer and pass to lib_api.h
+      // this needs to be a lambda function so that we can do the decltype cast
+      typedef decltype(ndarray_alloc) alloc_type_ndarray;
+      auto ndarray_malloc = [](const void* _ndarray_alloc, const int64_t* shapes, int num_shapes,
+                               const char* dev_str, int dev_id, int dtype, const char* name,
+                               int isArg, void** data) {
+        mxnet::TShape shape(num_shapes,0);
+        for(int i=0; i<num_shapes; i++)
+          shape[i] = shapes[i];
+        int dev_type = -1;
+        if(strcmp(dev_str,"cpu") == 0)
+          dev_type = kCPU;
+        else
+          dev_type = kGPU;
+        Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+      
+        // cast the void* argument to the type for the cpu_alloc lambda function
+        const alloc_type_ndarray* ndalloc = static_cast<const alloc_type_ndarray*>(_ndarray_alloc);
+        // call cpu_alloc to actually allocate memory and return the pointer
+        NDArray* arr = (*ndalloc)(shape,ctx,dtype,name,isArg);
+        *data = arr->data().dptr_;
+      };
+      
       char* out_json;
       CHECK(callGraphPass(pass_fp, in_json.c_str(), &out_json, opt_keys.data(),
                           opt_vals.data(), opt_keys.size(), pass_name,
@@ -1156,12 +1198,18 @@ void registerPasses(void *lib, int verbose) {
                           arg_dev_id.data(), aux_names.data(), aux_names.size(),
                           aux_data.data(), aux_shapes.data(), aux_dims.data(),
                           aux_types.data(), aux_verIDs.data(),
-                          aux_dev_type.data(), aux_dev_id.data()))
+                          aux_dev_type.data(), aux_dev_id.data(),
+                          ndarray_malloc, &ndarray_alloc))
       << "Error calling graph pass for '" << pass_name << "'";
 
       std::string out_string(out_json);
       nnvm::Graph out_graph = nnvm::pass::LoadJSON(out_string);
 
+      out_graph.attrs["new_args"] = std::make_shared<nnvm::any>(new_args);
+      out_graph.attrs["new_arg_names"] = std::make_shared<nnvm::any>(new_arg_names);
+      out_graph.attrs["new_aux"] = std::make_shared<nnvm::any>(new_aux);
+      out_graph.attrs["new_aux_names"] = std::make_shared<nnvm::any>(new_aux_names);
+      
       callFree(out_json);
       return out_graph;
     };

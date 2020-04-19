@@ -1500,6 +1500,13 @@ class Symbol(SymbolBase):
             ctx = current_context()
         assert isinstance(ctx, Context)
 
+        new_args_size = ctypes.c_uint()
+        new_arg_names = ctypes.POINTER(ctypes.c_char_p)()
+        new_args_handle = ctypes.POINTER(NDArrayHandle)()
+        new_aux_size = ctypes.c_uint()
+        new_aux_names = ctypes.POINTER(ctypes.c_char_p)()
+        new_aux_handle = ctypes.POINTER(NDArrayHandle)()
+        
         key_list = []
         val_list = []
         for key, val in kwargs.items():
@@ -1515,7 +1522,18 @@ class Symbol(SymbolBase):
                                              aux_handle,
                                              mx_uint(len(key_list)),
                                              c_str_array(key_list),
-                                             c_str_array(val_list)))
+                                             c_str_array(val_list),
+                                             ctypes.byref(new_args_size),
+                                             ctypes.byref(new_arg_names),
+                                             ctypes.byref(new_args_handle),
+                                             ctypes.byref(new_aux_size),
+                                             ctypes.byref(new_aux_names),
+                                             ctypes.byref(new_aux_handle)))
+        for i in range(new_args_size.value):
+            args[py_str(new_arg_names[i])] = NDArray(NDArrayHandle(new_args_handle[i]))
+        for i in range(new_aux_size.value):
+            aux[py_str(new_aux_names[i])] = NDArray(NDArrayHandle(new_aux_handle[i]))
+        
         return Symbol(out)
 
 

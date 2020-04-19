@@ -237,10 +237,20 @@ enum MXStorageType {
  * dev_type is string repr of supported context, currently only "cpu" and "gpu"
  * dev_id is the device index where the tensor locates
  */
-typedef struct {
+struct MXContext {
+  explicit MXContext() : dev_type("error"), dev_id(-1) {}
+  explicit MXContext(std::string dev_type_, int dev_id_)
+    : dev_type(dev_type_), dev_id(dev_id_) {}
+  explicit MXContext(const char* dev_type_, int dev_id_)
+    : dev_type(dev_type_), dev_id(dev_id_) {}
+  static MXContext CPU() { return MXContext("cpu", 0); }
+  static MXContext GPU() { return MXContext("gpu", 0); }
+  static MXContext CPU(int dev_id) { return MXContext("cpu", dev_id); }
+  static MXContext GPU(int dev_id) { return MXContext("gpu", dev_id); }
+
   std::string dev_type;
   int dev_id;
-} MXContext;
+};
 
 enum MXReturnValue {
   MX_FAIL = 0,
@@ -429,6 +439,10 @@ struct MXTensor {
 typedef void* (*xpu_malloc_t)(void*, int);
 /*! \brief sparse alloc function to allocate memory inside Forward/Backward functions */
 typedef void (*sparse_malloc_t)(void*, int, int, int, void**, int64_t**, int64_t**);
+/*! \brief resource malloc function to allocate ndarrays for graph passes */
+typedef void (*nd_malloc_t)(const void* _ndarray_alloc, const int64_t* shapes, int num_shapes,
+                            const char* dev_str, int dev_id, int dtype, const char* name,
+                            int isArg, void** data);
 /*! \brief GPU stream pointer, is void* when not compiled with CUDA */
 #if defined(__NVCC__)
   typedef cudaStream_t mx_stream_t;
@@ -443,6 +457,37 @@ typedef std::mt19937 mx_cpu_rand_t;
 /* Each thread should generate random number unique sequence out of different states */
 #define MX_NUM_CPU_RANDOM_STATES 1024
 #define MX_NUM_GPU_RANDOM_STATES 32768
+
+class PassResource {
+ public:
+  PassResource(std::unordered_map<std::string, MXTensor>* new_args,
+               std::unordered_map<std::string, MXTensor>* new_aux,
+               nd_malloc_t nd_malloc, const void* nd_alloc)
+    : new_args_(new_args), new_aux_(new_aux), nd_malloc_(nd_malloc), nd_alloc_(nd_alloc) {}
+  MXTensor* alloc_arg(std::string& name, const std::vector<int64_t>& shapes,
+                      MXContext &ctx, MXDType dtype) {
+    void* data;
+    nd_malloc_(nd_alloc_, shapes.data(), shapes.size(), ctx.dev_type.c_str(), ctx.dev_id,
+               (int)dtype, name.c_str(), 1, &data);
+    MXTensor tensor(data, shapes, dtype, 0, ctx, kDefaultStorage);
+    (*new_args_)[name] = tensor;
+    return &(new_args_->at(name));
+  }
+  MXTensor* alloc_aux(std::string& name, const std::vector<int64_t>& shapes,
+                      MXContext &ctx, MXDType dtype) {
+    void* data;
+    nd_malloc_(nd_alloc_, shapes.data(), shapes.size(), ctx.dev_type.c_str(), ctx.dev_id,
+               (int)dtype, name.c_str(), 0, &data);
+    MXTensor tensor(data, shapes, dtype, 0, ctx, kDefaultStorage);
+    (*new_aux_)[name] = tensor;
+    return &(new_aux_->at(name));
+  }
+ private:
+  std::unordered_map<std::string, MXTensor>* new_args_;
+  std::unordered_map<std::string, MXTensor>* new_aux_;
+  nd_malloc_t nd_malloc_;
+  const void* nd_alloc_;
+};
 
 /*!
  * \brief provide resource APIs memory allocation mechanism to Forward/Backward functions
@@ -938,7 +983,8 @@ class CustomOp {
 typedef MXReturnValue (*graphPass_t)(const std::string& in_graph, const std::string** out_graph,
                                      const std::unordered_map<std::string, std::string>& options,
                                      const std::unordered_map<std::string, MXTensor>& args,
-                                     const std::unordered_map<std::string, MXTensor>& aux);
+                                     const std::unordered_map<std::string, MXTensor>& aux,
+                                     const PassResource& res);
 
 /*!
  * \brief An abstract class for graph passes
@@ -1274,7 +1320,8 @@ typedef int (*passCallGraphPass_t)(graphPass_t graphPass, const char *in_graph,
                                    void* const* aux_data, const int64_t* const* aux_shapes,
                                    const int* aux_dims, const int* aux_types,
                                    const size_t* aux_IDs, const char* const* aux_dev_type,
-                                   const int* aux_dev_id);
+                                   const int* aux_dev_id, nd_malloc_t nd_malloc,
+                                   const void* nd_alloc);
 
 #define MXLIB_INITIALIZE_STR "initialize"
 typedef int (*initialize_t)(int version);
@@ -1480,7 +1527,7 @@ extern "C" {
       // Dense representation.
       if (instypes[i] == 0) {
         inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                            inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
+                            inIDs[i], MXContext(indev_type[i], indev_id[i]), kDefaultStorage);
       } else {
         // Sparse representation.
         MXStorageType type;
@@ -1493,7 +1540,8 @@ extern "C" {
                            in_indices_shapes[i], in_indptr[i], in_indptr_shapes[i]);
         }
         inputs[i].setTensor(reinterpret_cast<void*>(&in_sparse[i]), (MXDType)intypes[i],
-                            inshapes[i], indims[i], inIDs[i], {indev_type[i], indev_id[i]}, type);
+                            inshapes[i], indims[i], inIDs[i],
+                            MXContext(indev_type[i], indev_id[i]), type);
       }
     }
 
@@ -1505,7 +1553,7 @@ extern "C" {
       // Dense representation.
       if (outstypes[i] == 0) {
         outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                            outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
+                             outIDs[i], MXContext(outdev_type[i], outdev_id[i]), kDefaultStorage);
       } else {
         // Sparse representation.
         MXStorageType type;
@@ -1519,8 +1567,8 @@ extern "C" {
                             out_indices_shapes[i], out_indptr[i], out_indptr_shapes[i]);
         }
         outputs[i].setTensor(reinterpret_cast<void*>(&out_sparse[i]), (MXDType)outtypes[i],
-                            outshapes[i], outdims[i], outIDs[i], {outdev_type[i],
-                            outdev_id[i]}, type);
+                             outshapes[i], outdims[i], outIDs[i],
+                             MXContext(outdev_type[i], outdev_id[i]), type);
       }
     }
 
@@ -1596,7 +1644,7 @@ extern "C" {
       if (instypes[i] == 0) {
         // Dense representation.
         inputs[i].setTensor(indata[i], (MXDType)intypes[i], inshapes[i], indims[i],
-                            inIDs[i], {indev_type[i], indev_id[i]}, kDefaultStorage);
+                            inIDs[i], MXContext(indev_type[i], indev_id[i]), kDefaultStorage);
       } else {
         // Sparse representation.
         MXStorageType type;
@@ -1609,8 +1657,8 @@ extern "C" {
                            in_indices_shapes[i], in_indptr[i], in_indptr_shapes[i]);
         }
         inputs[i].setTensor(reinterpret_cast<void*>(&in_sparse[i]), (MXDType)intypes[i],
-                            inshapes[i], indims[i], inIDs[i], {indev_type[i],
-                            indev_id[i]}, type);
+                            inshapes[i], indims[i], inIDs[i],
+                            MXContext(indev_type[i], indev_id[i]), type);
       }
     }
 
@@ -1623,7 +1671,7 @@ extern "C" {
       if (outstypes[i] == 0) {
         // Dense representation.
         outputs[i].setTensor(outdata[i], (MXDType)outtypes[i], outshapes[i], outdims[i],
-                             outIDs[i], {outdev_type[i], outdev_id[i]}, kDefaultStorage);
+                             outIDs[i], MXContext(outdev_type[i], outdev_id[i]), kDefaultStorage);
       } else {
         // Sparse representation.
         MXStorageType type;
@@ -1637,8 +1685,8 @@ extern "C" {
                             out_indices_shapes[i], out_indptr[i], out_indptr_shapes[i]);
         }
         outputs[i].setTensor(reinterpret_cast<void*>(&out_sparse[i]), (MXDType)outtypes[i],
-                             outshapes[i], outdims[i], outIDs[i], {outdev_type[i],
-                             outdev_id[i]}, type);
+                             outshapes[i], outdims[i], outIDs[i],
+                             MXContext(outdev_type[i], outdev_id[i]), type);
       }
     }
 
@@ -1792,7 +1840,7 @@ extern "C" {
         shapes.push_back(arg_shapes[i][j]);
 
       MXTensor tensor(arg_data[i], shapes, (MXDType)arg_types[i],
-            arg_IDs[i], {arg_dev_type[i], arg_dev_id[i]});
+                      arg_IDs[i], MXContext(arg_dev_type[i], arg_dev_id[i]));
       args[arg_names[i]] = tensor;
     }
     // create a map of named tensors for aux
@@ -1803,7 +1851,7 @@ extern "C" {
         shapes.push_back(aux_shapes[i][j]);
 
       MXTensor tensor(aux_data[i], shapes, (MXDType)aux_types[i],
-            aux_IDs[i], {aux_dev_type[i], aux_dev_id[i]});
+                      aux_IDs[i], MXContext(aux_dev_type[i], aux_dev_id[i]));
       aux[aux_names[i]] = tensor;
     }
 
@@ -1861,7 +1909,8 @@ extern "C" {
                                 void* const* aux_data, const int64_t* const* aux_shapes,
                                 const int* aux_dims, const int* aux_types,
                                 const size_t* aux_IDs, const char* const* aux_dev_type,
-                                const int* aux_dev_id) {
+                                const int* aux_dev_id, nd_malloc_t nd_malloc,
+                                const void* nd_alloc) {
     std::string graph_json(json);
     const std::string* out_graph = nullptr;
     // create map of attributes from list
@@ -1877,7 +1926,7 @@ extern "C" {
         shapes.push_back(arg_shapes[i][j]);
 
       MXTensor tensor(arg_data[i], shapes, (MXDType)arg_types[i],
-            arg_IDs[i], {arg_dev_type[i], arg_dev_id[i]});
+                      arg_IDs[i], MXContext(arg_dev_type[i], arg_dev_id[i]));
       args[arg_names[i]] = tensor;
     }
     // create a map of named tensors for aux
@@ -1888,11 +1937,13 @@ extern "C" {
         shapes.push_back(aux_shapes[i][j]);
 
       MXTensor tensor(aux_data[i], shapes, (MXDType)aux_types[i],
-            aux_IDs[i], {aux_dev_type[i], aux_dev_id[i]});
+                      aux_IDs[i], MXContext(aux_dev_type[i], aux_dev_id[i]));
       aux[aux_names[i]] = tensor;
     }
 
-    MXReturnValue retval = graphPass(graph_json, &out_graph, opts, args, aux);
+    std::unordered_map<std::string, MXTensor> new_args, new_aux;
+    PassResource res(&new_args, &new_aux, nd_malloc, nd_alloc);
+    MXReturnValue retval = graphPass(graph_json, &out_graph, opts, args, aux, res);
     if (!retval) return retval;
 
     if (out_graph == nullptr) {

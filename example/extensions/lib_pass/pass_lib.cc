@@ -32,7 +32,8 @@
 MXReturnValue myPass(const std::string& in_graph, const std::string** out_graph,
                      const std::unordered_map<std::string, std::string>& options,
                      const std::unordered_map<std::string, MXTensor>& args,
-                     const std::unordered_map<std::string, MXTensor>& aux) {
+                     const std::unordered_map<std::string, MXTensor>& aux,
+                     const PassResource& res) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }
@@ -48,7 +49,8 @@ REGISTER_PASS(myPass)
 MXReturnValue jsonPass(const std::string& in_graph, const std::string** out_graph,
                        const std::unordered_map<std::string, std::string>& options,
                        const std::unordered_map<std::string, MXTensor>& args,
-                       const std::unordered_map<std::string, MXTensor>& aux) {
+                       const std::unordered_map<std::string, MXTensor>& aux,
+                       const PassResource& res) {
   for (auto kv : options)
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
 

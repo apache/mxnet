@@ -1359,7 +1359,13 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
                          NDArrayHandle* in_aux_handle,
                          const mx_uint num_options,
                          const char** keys,
-                         const char** vals) {
+                         const char** vals,
+                         int* new_args_cnt,
+                         NDArrayHandle** new_args_handle,
+                         char*** new_arg_names_handle,
+                         int* new_aux_cnt,
+                         NDArrayHandle** new_aux_handle,
+                         char*** new_aux_names_handle) {
   // create copy of input symbol
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
@@ -1370,6 +1376,10 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   const auto& mutable_nodes = indexed_graph.mutable_input_nodes();
   std::vector<std::string> input_names = sym->ListInputNames(nnvm::Symbol::kAll);
   size_t num_forward_inputs = input_names.size();
+
+  NDArray ***new_args_ptr = reinterpret_cast<NDArray***>(new_args_handle);
+  NDArray ***new_aux_ptr = reinterpret_cast<NDArray***>(new_aux_handle);
+   
   if (args_len || aux_len) {
     NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
     NDArray **in_aux_ptr = reinterpret_cast<NDArray**>(in_aux_handle);
@@ -1457,6 +1467,30 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     g.attrs["options_map"] = std::make_shared<nnvm::any>(options_map);
     g.attrs["pass_name"] = std::make_shared<nnvm::any>(backend_name);
     g = ApplyPass(std::move(g), backend_name);
+
+    std::vector<NDArray*> new_args = g.GetAttr<std::vector<NDArray*>>("new_args");
+    std::vector<NDArray*> new_aux = g.GetAttr<std::vector<NDArray*>>("new_aux");
+    std::vector<std::string> new_arg_names = g.GetAttr<std::vector<std::string>>("new_arg_names");
+    std::vector<std::string> new_aux_names = g.GetAttr<std::vector<std::string>>("new_aux_names");
+    *new_args_ptr = const_cast<NDArray**>(g.GetAttr<std::vector<NDArray*>>("new_args").data());
+    *new_aux_ptr = const_cast<NDArray**>(g.GetAttr<std::vector<NDArray*>>("new_aux").data());
+
+    std::vector<char*>* new_arg_cstr = new std::vector<char*>();
+    for(auto& s : new_arg_names) {
+      char* tmp = new char[s.length()];
+      s.copy(tmp,s.length());
+      new_arg_cstr->push_back(tmp);
+    }
+    std::vector<char*>* new_aux_cstr = new std::vector<char*>();
+    for(auto& s : new_aux_names) {
+      char* tmp = new char[s.length()];
+      s.copy(tmp,s.length());
+      new_aux_cstr->push_back(tmp);
+    }
+    *new_args_cnt = new_arg_cstr->size();
+    *new_aux_cnt = new_aux_cstr->size();
+    *new_arg_names_handle = new_arg_cstr->data();
+    *new_aux_names_handle = new_aux_cstr->data();    
   } else {
     // cannot find graph pass or subgraph backend registered in this name
     LOG(ERROR) << "Error optimizing for backend '" << backend_name << "' cannot be found";
