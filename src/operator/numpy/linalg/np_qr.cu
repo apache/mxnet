@@ -34,6 +34,9 @@ namespace op {
 NNVM_REGISTER_OP(_npi_qr)
 .set_attr<FCompute>("FCompute<gpu>", NumpyLaQrForward<gpu>);
 
+NNVM_REGISTER_OP(_backward_npi_qr)
+.set_attr<FCompute>("FCompute<gpu>", NumpyLaQrBackward<gpu>);
+
 #endif
 
 }  // namespace op

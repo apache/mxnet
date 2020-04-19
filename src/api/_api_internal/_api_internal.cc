@@ -43,6 +43,16 @@ MXNET_REGISTER_GLOBAL("_Integer")
     }
 });
 
+MXNET_REGISTER_GLOBAL("_Float")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+    using namespace runtime;
+    if (args[0].type_code() == kDLFloat) {
+      *ret = Float(args[0].operator double());
+    } else {
+      LOG(FATAL) << "only accept float";
+    }
+});
+
 MXNET_REGISTER_GLOBAL("_ADT")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
     using namespace runtime;

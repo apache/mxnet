@@ -30,8 +30,8 @@ libmxnet = 'build/libmxnet.so'
 licenses = 'licenses/*'
 
 // libmxnet dependencies
-mx_deps = ''
-mx_native_deps = ''
+mx_deps = 'build/3rdparty/openmp/runtime/src/libomp.so'
+mx_native_deps = 'build/3rdparty/openmp/runtime/src/libomp.so'
 
 // library type
 // either static or dynamic - depending on how it links to its dependencies

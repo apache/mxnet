@@ -23,7 +23,40 @@ from . import _op as _mx_sym_np
 from . import _internal as _npi
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
-           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq']
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank']
+
+
+def matrix_rank(M, tol=None, hermitian=False):
+    """
+    Return matrix rank of array using SVD method
+
+    Rank of the array is the number of singular values of the array that are
+    greater than `tol`.
+
+    Parameters
+    M : {(M,), (..., M, N)} _Symbol
+        Input vector or stack of matrices.
+    tol : (...) _Symbol, float, optional
+        Threshold below which SVD values are considered zero. If `tol` is
+        None, and ``S`` is an array with singular values for `M`, and
+        ``eps`` is the epsilon value for datatype of ``S``, then `tol` is
+        set to ``S.max() * max(M.shape) * eps``.
+    hermitian : bool, optional
+        If True, `M` is assumed to be Hermitian (symmetric if real-valued),
+        enabling a more efficient method for finding singular values.
+        Defaults to False.
+
+    Returns
+    -------
+    rank : (...) _Symbol
+        Rank of M.
+    """
+    finfo_eps_32 = _np.finfo(_np.float32).eps
+    finfo_eps_64 = _np.finfo(_np.float64).eps
+    if tol is None:
+        return _npi.matrix_rank_none_tol(M, finfo_eps_32, finfo_eps_64, hermitian)
+    else:
+        return _npi.matrix_rank(M, tol, hermitian)
 
 
 def lstsq(a, b, rcond='warn'):
@@ -81,12 +114,14 @@ def lstsq(a, b, rcond='warn'):
     If `b` is a matrix, then all array results are returned as matrices.
     """
     new_default = False
+    finfo_eps_32 = _np.finfo(_np.float32).eps
+    finfo_eps_64 = _np.finfo(_np.float64).eps
     if rcond is None:
-        rcond = _np.finfo(_np.float64).eps
+        rcond = 1
         new_default = True
     if rcond == "warn":
         rcond = -1
-    x, residuals, rank, s = _npi.lstsq(a, b, rcond=rcond, new_default=new_default)
+    x, residuals, rank, s = _npi.lstsq(a, b, rcond=rcond, finfoEps32=finfo_eps_32, finfoEps64=finfo_eps_64, new_default=new_default)  # pylint: disable=line-too-long
     return (x, residuals, rank, s)
 
 
@@ -289,18 +324,18 @@ def norm(x, ord=None, axis=None, keepdims=False):
                         if row_axis > col_axis:
                             row_axis -= 1
                     if ord == 'inf':
-                        return _mx_sym_np.sum(_symbol.abs(x), axis=col_axis, keepdims=keepdims).max(axis=row_axis, keepdims=keepdims)  # pylint: disable=line-too-long
+                        return _npi.sum(_symbol.abs(x), axis=col_axis, keepdims=keepdims).max(axis=row_axis, keepdims=keepdims)  # pylint: disable=line-too-long
                     else:
-                        return _mx_sym_np.sum(_symbol.abs(x), axis=col_axis, keepdims=keepdims).min(axis=row_axis, keepdims=keepdims)  # pylint: disable=line-too-long
+                        return _npi.sum(_symbol.abs(x), axis=col_axis, keepdims=keepdims).min(axis=row_axis, keepdims=keepdims)  # pylint: disable=line-too-long
                 if ord in [1, -1]:
                     row_axis, col_axis = axis
                     if not keepdims:
                         if row_axis < col_axis:
                             col_axis -= 1
                     if ord == 1:
-                        return _mx_sym_np.sum(_symbol.abs(x), axis=row_axis, keepdims=keepdims).max(axis=col_axis, keepdims=keepdims)  # pylint: disable=line-too-long
+                        return _npi.sum(_symbol.abs(x), axis=row_axis, keepdims=keepdims).max(axis=col_axis, keepdims=keepdims)  # pylint: disable=line-too-long
                     elif ord == -1:
-                        return _mx_sym_np.sum(_symbol.abs(x), axis=row_axis, keepdims=keepdims).min(axis=col_axis, keepdims=keepdims)  # pylint: disable=line-too-long
+                        return _npi.sum(_symbol.abs(x), axis=row_axis, keepdims=keepdims).min(axis=col_axis, keepdims=keepdims)  # pylint: disable=line-too-long
                 if ord in [2, -2]:
                     return _npi.norm(x, ord=ord, axis=axis, keepdims=keepdims, flag=0)
                 if ord is None:

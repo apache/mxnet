@@ -20,7 +20,7 @@ test: test.cu
 test_tblob: test_tblob.cc
 
 $(BIN) :
-	$(CXX) $(CFLAGS) -std=c++0x -o $@ $(filter %.cpp %.o %.c %.cc, $^)  $(LDFLAGS)
+	$(CXX) $(CFLAGS) -std=c++17 -o $@ $(filter %.cpp %.o %.c %.cc, $^)  $(LDFLAGS)
 
 $(OBJ) :
 	$(CXX) -c $(CFLAGS) -o $@ $(firstword $(filter %.cpp %.c, $^) )
