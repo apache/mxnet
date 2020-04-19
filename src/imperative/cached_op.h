@@ -649,6 +649,7 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
+  size_t BwdOriginalInput(const std::vector<size_t>& input_map, size_t new_i);
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;

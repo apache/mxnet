@@ -317,9 +317,10 @@ bool CachedOp::SetBackwardGraph(
     if (info->bwd_input_eid[i] == kEidNotExist) {
       continue;
     }
-    shapes[info->bwd_input_eid[i]] = inputs[i]->shape();
-    dtypes[info->bwd_input_eid[i]] = inputs[i]->dtype();
-    stypes[info->bwd_input_eid[i]] = inputs[i]->storage_type();
+    size_t oi = BwdOriginalInput(info->input_map, i);
+    shapes[info->bwd_input_eid[i]] = inputs[oi]->shape();
+    dtypes[info->bwd_input_eid[i]] = inputs[oi]->dtype();
+    stypes[info->bwd_input_eid[i]] = inputs[oi]->storage_type();
   }
 
   std::pair<uint32_t, uint32_t> node_range, entry_range;
@@ -850,6 +851,7 @@ void CachedOp::DynamicBackward(
     auto& state = state_ptr.get_state<CachedOpState>();
     std::lock_guard<std::mutex> lock(state.mutex);
     state.info.fwd_graph = runtime.info.fwd_graph;
+    state.info.input_map = runtime.info.input_map;
     SetBackwardGraph(&state.info, reqs, inputs);
     runtime.info.full_graph = state.info.full_graph;
     runtime.info.bwd_input_eid = state.info.bwd_input_eid;
@@ -872,7 +874,7 @@ void CachedOp::DynamicBackward(
     if (runtime.info.bwd_input_eid[i] == kEidNotExist) {
       continue;
     }
-    arrays[runtime.info.bwd_input_eid[i]] = inputs[i];
+    arrays[runtime.info.bwd_input_eid[i]] = inputs[BwdOriginalInput(runtime.info.input_map, i)];
   }
   for (size_t i = 0, j = num_forward_outputs; i < reqs.size(); ++i) {
     if (reqs[i] == kNullOp) continue;
@@ -949,10 +951,8 @@ void CachedOp::StaticBackward(
   auto& arrays = state.arrays_with_in_out;
   for (size_t i = 0; i < state.info.bwd_input_eid.size(); ++i) {
     auto eid = state.info.bwd_input_eid[i];
-    if (eid == kEidNotExist) {
-      continue;
-    }
-    if (state.dynamic_entries[eid]) arrays[eid] = inputs[i];
+    if (eid == kEidNotExist || !state.dynamic_entries[eid]) continue;
+    arrays[eid] = inputs[BwdOriginalInput(state.info.input_map, i)];
   }
 
   if (config_.static_shape) {
@@ -1288,6 +1288,13 @@ void CachedOpParamParser(nnvm::NodeAttrs* attrs) {
       flags.emplace_back(attr.first, attr.second);
     attrs->parsed = CachedOpPtr(new CachedOp(sym, flags));
   }
+}
+
+size_t CachedOp::BwdOriginalInput(const std::vector<size_t>& input_map, size_t new_i) {
+  CHECK_GE(input_map.size(), bwd_in_dep_.size());
+  if (new_i >= bwd_ograd_dep_.size() && new_i < bwd_ograd_dep_.size() + bwd_in_dep_.size())
+    return bwd_ograd_dep_.size() + input_map[new_i - bwd_ograd_dep_.size()];
+  return new_i;
 }
 
 NNVM_REGISTER_OP(_CachedOp)
