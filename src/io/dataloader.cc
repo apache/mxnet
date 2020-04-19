@@ -109,7 +109,7 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     if (!has_next) return false;
     auto samples = sampler_->Value();
     auto batch_size = samples.data[0].shape().Size();
-    auto real_batch_size = batch_size - samples.num_batch_padd;
+    int real_batch_size = batch_size - samples.num_batch_padd;
     const int64_t *idx_ptr = static_cast<int64_t*>(
         samples.data[0].data().dptr_);
     std::vector<int64_t> idx_ptrs;
