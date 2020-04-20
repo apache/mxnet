@@ -32,9 +32,9 @@ def get_pipeline(mxnet_variant) {
 // The environment corresponds to the docker files in the 'docker' directory
 def get_environment(mxnet_variant) {
   if (mxnet_variant.startsWith("cu")) {
-    return "publish.centos7_gpu_${mxnet_variant}"
+    return "centos7_gpu_${mxnet_variant}"
   }
-  return "publish.centos7_cpu"
+  return "centos7_cpu"
 }
 
 

@@ -983,6 +983,7 @@ sanity_check() {
 # $2 -> python_cmd: The python command to use to execute the tests, python or python3
 cd_unittest_ubuntu() {
     set -ex
+    source /opt/rh/rh-python35/enable
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
@@ -1094,6 +1095,9 @@ unittest_ubuntu_tensorrt_gpu() {
 # need to separte it from unittest_ubuntu_python3_gpu()
 unittest_ubuntu_python3_quantization_gpu() {
     set -ex
+    if [ -f /etc/redhat-release ]; then
+        source /opt/rh/rh-python35/enable
+    fi
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
@@ -1107,6 +1111,7 @@ unittest_ubuntu_python3_quantization_gpu() {
 unittest_centos7_cpu_scala() {
     set -ex
     source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-maven35/enable
     cd /work/mxnet
     scala_prepare
     cd scala-package
@@ -1240,19 +1245,19 @@ unittest_ubuntu_cpu_julia10() {
 
 unittest_centos7_cpu() {
     set -ex
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-python35/enable
     cd /work/mxnet
-    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
-    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
+    python -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_unittest.xml --verbose tests/python/unittest
+    python -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_train.xml --verbose tests/python/train
 }
 
 unittest_centos7_gpu() {
     set -ex
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-python35/enable
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python3.6 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
+    python3 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
 integrationtest_ubuntu_cpu_onnx() {
@@ -1942,6 +1947,7 @@ build_static_libmxnet() {
     set -ex
     pushd .
     source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-python35/enable
     export USE_SYSTEM_CUDA=1
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
@@ -1953,6 +1959,7 @@ cd_package_pypi() {
     set -ex
     pushd .
     source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-python35/enable
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
     popd
@@ -1961,8 +1968,9 @@ cd_package_pypi() {
 # Sanity checks wheel file
 cd_integration_test_pypi() {
     set -ex
-    local python_cmd=${1:?"This function requires a python command as the first argument"}
-    local gpu_enabled=${2:-"false"}
+    source /opt/rh/rh-python35/enable
+
+    local gpu_enabled=${1:-"false"}
 
     local test_conv_params=''
     local mnist_params=''
@@ -2008,6 +2016,7 @@ build_static_scala_cpu() {
     export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
     export mxnet_variant=cpu
     source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-maven35/enable
     ./ci/publish/scala/build.sh
     popd
 }
@@ -2017,16 +2026,18 @@ build_static_python_cpu() {
     pushd .
     export mxnet_variant=cpu
     source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-python35/enable
     ./ci/publish/python/build.sh
     popd
 }
 
-build_static_python_cu101() {
+build_static_python_cu92() {
     set -ex
     pushd .
-    export mxnet_variant=cu101
+    export mxnet_variant=cu92
     export USE_SYSTEM_CUDA=1
     source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-python35/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -2037,17 +2048,19 @@ build_static_python_cpu_cmake() {
     export mxnet_variant=cpu
     export CMAKE_STATICBUILD=1
     source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-python35/enable
     ./ci/publish/python/build.sh
     popd
 }
 
-build_static_python_cu101_cmake() {
+build_static_python_cu92_cmake() {
     set -ex
     pushd .
-    export mxnet_variant=cu101
+    export mxnet_variant=cu92
     export CMAKE_STATICBUILD=1
     export USE_SYSTEM_CUDA=1
     source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-python35/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -2057,6 +2070,7 @@ publish_scala_build() {
     pushd .
     scala_prepare
     source /opt/rh/devtoolset-7/enable
+    source /opt/rh/rh-maven35/enable
     export USE_SYSTEM_CUDA=1
     ./ci/publish/scala/build.sh
     popd
