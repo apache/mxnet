@@ -143,13 +143,6 @@ def test_gluon_uniform():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    # Test kl
-    for shape in shapes:
-        low = np.random.uniform(-1, 1, shape)
-        high = low + np.random.uniform(0.5, 1.5, shape)
-        dist1 = mgp.Uniform(low, high)
-        _test_zero_kl(dist1, shape)
-
 
 @with_seed()
 @use_np
@@ -220,13 +213,6 @@ def test_gluon_normal():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    # Test kl
-    for shape in shapes:
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        dist1 = mgp.Normal(loc, scale)
-        _test_zero_kl(dist1, shape)
-
 
 @with_seed()
 @use_np
@@ -296,13 +282,6 @@ def test_gluon_laplace():
                         scale.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
-
-    # Test kl
-    for shape in shapes:
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        dist1 = mgp.Laplace(loc, scale)
-        _test_zero_kl(dist1, shape)
 
 
 @with_seed()
@@ -385,13 +364,6 @@ def test_gluon_cauchy():
                         scale.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
-
-    # Test kl
-    for shape in shapes:
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        dist1 = mgp.Cauchy(loc, scale)
-        _test_zero_kl(dist1, shape)
 
 
 @with_seed()
@@ -491,12 +463,6 @@ def test_gluon_poisson():
         np_out = ss.poisson(mu=rate.asnumpy()).logpmf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
-
-    # Test kl
-    for shape in shapes:
-        rate = np.random.uniform(0.5, 1.5, shape)
-        dist1 = mgp.Poisson(rate)
-        _test_zero_kl(dist1, shape)
 
 
 @with_seed()
@@ -680,11 +646,7 @@ def test_gluon_exponential():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    # Test kl
-    for shape in shapes:
-        s = np.random.uniform(size=shape)
-        dist1 = mgp.Exponential(scale=s)
-        _test_zero_kl(dist1, shape)
+    
 
 
 @with_seed()
@@ -820,12 +782,7 @@ def test_gluon_pareto():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    # Test kl
-    for shape in shapes:
-        alpha = np.random.uniform(size=shape)
-        scale = np.random.uniform(size=shape)
-        dist1 = mgp.Pareto(scale=scale, alpha=alpha)    
-        _test_zero_kl(dist1, shape)
+    
 
 
 @with_seed()
@@ -1014,15 +971,7 @@ def test_gluon_fisher_snedecor():
                                 rtol=1e-3, use_broadcast=False)
 
     # TODO: Test kl
-    for shape in shapes:
-        alpha = np.random.uniform(size=shape)
-        scale = np.random.uniform(size=shape)
-        dist1 = mgp.Pareto(scale=scale, alpha=alpha)    
-        dist2 = mgp.Pareto(scale=scale, alpha=alpha)   
-        mx_out = mgp.kl_divergence(dist1, dist2).asnumpy()
-        np_out = _np.zeros(shape)
-        assert_almost_equal(mx_out, np_out, atol=1e-4,
-                            rtol=1e-3, use_broadcast=False)
+    
 
 
 @with_seed()
@@ -2012,6 +1961,52 @@ def test_independent():
                     net.hybridize()
                 mx_out = net(logit, samples)
                 assert mx_out.shape == batch_shape
+
+
+@with_seed()
+@use_np
+def test_gluon_kl():
+    shapes = [(), (1,), (2, 3), 6]
+    for shape in shapes:
+        low = np.random.uniform(-1, 1, shape)
+        high = low + np.random.uniform(0.5, 1.5, shape)
+        dist1 = mgp.Uniform(low, high)
+        _test_zero_kl(dist1, shape)
+    
+    for shape in shapes:
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        dist1 = mgp.Normal(loc, scale)
+        _test_zero_kl(dist1, shape)
+    
+    for shape in shapes:
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        dist1 = mgp.Laplace(loc, scale)
+        _test_zero_kl(dist1, shape)
+    
+    for shape in shapes:
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        dist1 = mgp.Cauchy(loc, scale)
+        _test_zero_kl(dist1, shape)
+    
+    for shape in shapes:
+        rate = np.random.uniform(0.5, 1.5, shape)
+        dist1 = mgp.Poisson(rate)
+        _test_zero_kl(dist1, shape)
+
+    for shape in shapes:
+        s = np.random.uniform(size=shape)
+        dist1 = mgp.Exponential(scale=s)
+        _test_zero_kl(dist1, shape)
+
+    for shape in shapes:
+        alpha = np.random.uniform(size=shape)
+        scale = np.random.uniform(size=shape)
+        dist1 = mgp.Pareto(scale=scale, alpha=alpha)    
+        _test_zero_kl(dist1, shape)
+
 
 @with_seed()
 @use_np
