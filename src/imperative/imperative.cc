@@ -455,7 +455,7 @@ std::vector<NDArray*> Imperative::Backward(
 
   Graph g_graph = pass::MXGradient(
       graph, graph.outputs, xs, ograd_entries,
-      exec::AggregateGradient, nullptr, nullptr,
+      exec::AggregateGradient, nullptr,
       zero_ops, "_copy");
   CHECK_EQ(g_graph.outputs.size(), xs.size());
   for (const auto& e : g_graph.outputs) {

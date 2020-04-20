@@ -302,28 +302,15 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   }
 }
 
-template<typename ValueType>
-inline ValueType get_node_attr(
-    const nnvm::Node& node,
-    const std::string& key, ValueType default_value) {
-  auto it = node.attrs.dict.find(key);
-  if (it == node.attrs.dict.end()) {
-    return default_value;
-  } else {
-    ValueType ret;
-    dmlc::parameter::FieldEntry<ValueType> e;
-    e.Init(key, &ret, ret);
-    e.Set(&ret, it->second);
-    return ret;
-  }
-}
 
 /*!
  * \brief Create the graph for backward pass.
  * This is triggered by both simple_bind and bind flows.
  */
 nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
-                                         const std::vector<OpReqType>& grad_req_types) {
+                                         const std::vector<OpReqType>& grad_req_types,
+                                         const ShapeVector& in_arg_shapes,
+                                         const nnvm::DTypeVector& in_arg_dtypes) {
   using nnvm::ObjectPtr;
   using nnvm::NodeEntry;
   // initial information
@@ -356,19 +343,28 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
     }
   }
 
-  int do_mirror = dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0);
-  auto need_mirror = [do_mirror](const nnvm::Node& node) -> int {
-    if (node.is_variable()) return 0;
-    const std::string& type = node.attrs.op->name;
-    if (type == "Dropout") return false;
-    if (get_node_attr(node, "__force_mirroring__", false)) return true;
-    if (do_mirror == 0) return false;
-    if (type == "Convolution") return false;
-    if (type == "FullyConnected") return false;
-    if (type == "Concat") return false;
-    if (type == "SoftmaxOutput") return false;
-    return true;
-  };
+  std::function<int(const nnvm::Node&)> need_mirror =
+      [](const nnvm::Node& node) -> int {
+        if (node.is_variable()) return false;
+        const std::string& type = node.attrs.op->name;
+        if (type == "Dropout") return false;
+        // We follow the hidden key attribute "force_mirroring" if it is
+        // explicitly set.
+        auto iter = node.attrs.dict.find("__force_mirroring__");
+        if (iter != node.attrs.dict.end()) {
+          bool do_mirror;
+          dmlc::parameter::FieldEntry<bool> e;
+          e.Init("__force_mirroring__", &do_mirror, do_mirror);
+          e.Set(&do_mirror, iter->second);
+          return do_mirror;
+        }
+        if (type == "Embedding") return false;
+        if (type == "Convolution") return false;
+        if (type == "FullyConnected") return false;
+        if (type == "Concat") return false;
+        if (type == "SoftmaxOutput") return false;
+        return true;
+      };
 
   std::vector<const nnvm::Op*> zero_ops;
   zero_ops.push_back(nnvm::Op::Get("zeros_like"));
@@ -377,8 +373,12 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   // take gradient
   nnvm::Graph g_grad = nnvm::pass::MXGradient(
       g, symbol.outputs, xs, head_grad_entry_,
-      AggregateGradient, need_mirror, nullptr,
-      zero_ops, "_copy");
+      AggregateGradient,
+      (dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0) ||
+       dmlc::GetEnv("MXNET_MEMORY_OPT", 0)) ? need_mirror : nullptr,
+      zero_ops, "_copy",
+      in_arg_shapes, in_arg_dtypes);
+
   CHECK_EQ(g_grad.outputs.size(), xs.size());
   for (const auto &e : g_grad.outputs) {
     g.outputs.push_back(e);
@@ -414,8 +414,37 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   std::vector<Context> aux_state_ctxes(aux_states.size());
   std::transform(aux_states.begin(), aux_states.end(), aux_state_ctxes.begin(), get_ctx1);
 
+  // Record the shapes and data types of the input arguments in the source graph
+  // (i.e., the graph prior to the Gradient pass). Such information is need by
+  // the backward mirroring algorithm for shape and data type inference.
+  nnvm::Graph src;
+  src.outputs = symbol.outputs;
+  const nnvm::IndexedGraph& src_idx = src.indexed_graph();
+  const std::unordered_set<uint32_t>& src_mutable_nodes = src_idx.mutable_input_nodes();
+  size_t src_arg_top = 0, src_aux_top = 0;
+  ShapeVector src_arg_shapes;
+  nnvm::DTypeVector src_arg_dtypes;
+  const size_t src_num_forward_inputs = symbol.ListInputs(nnvm::Symbol::kAll).size();
+
+  for (size_t i = 0; i < src_num_forward_inputs; ++i) {
+    const uint32_t nid = src_idx.input_nodes().at(i);
+
+    if (src_mutable_nodes.count(nid)) {
+      CHECK_LT(src_aux_top, aux_states.size());
+      src_arg_shapes.push_back(aux_states[src_aux_top].shape());
+      src_arg_dtypes.push_back(aux_states[src_aux_top].dtype());
+      ++src_aux_top;
+    } else {
+      CHECK_LT(src_arg_top, in_args.size());
+      src_arg_shapes.push_back(in_args[src_arg_top].shape());
+      src_arg_dtypes.push_back(in_args[src_arg_top].dtype());
+      ++src_arg_top;
+    }
+  }
+
   nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, in_arg_ctxes,
-                            arg_grad_ctxes, aux_state_ctxes, grad_req_types);
+                            arg_grad_ctxes, aux_state_ctxes, grad_req_types,
+                            src_arg_shapes, src_arg_dtypes);
 
   // create arg_shapes and arg_dtypes for shape and type inferences
   const auto& idx = g.indexed_graph();
@@ -811,8 +840,34 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          std::unordered_map<std::string, NDArray>* shared_buffer,
                          Executor* shared_exec,
                          const nnvm::NodeEntryMap<NDArray>& feed_dict) {
+  // Record the shapes and data types of the input arguments in the source graph
+  // (i.e., the graph prior to the Gradient pass). Such information is need by
+  // the backward mirroring algorithm for shape and data type inference.
+  nnvm::Graph src;
+  src.outputs = symbol.outputs;
+  const nnvm::IndexedGraph& src_idx = src.indexed_graph();
+  ShapeVector src_arg_shapes(src_idx.input_nodes().size(), TShape());
+  nnvm::DTypeVector src_arg_dtypes(src_idx.input_nodes().size(), -1);
+  const size_t src_num_forward_inputs = symbol.ListInputs(nnvm::Symbol::kAll).size();
+
+  for (size_t i = 0; i < src_num_forward_inputs; ++i) {
+    const uint32_t nid = src_idx.input_nodes().at(i);
+    const std::string& name = src_idx[nid].source->attrs.name;
+    std::unordered_map<std::string, TShape>::const_iterator
+        arg_shape_iter = arg_shape_map.find(name);
+    std::unordered_map<std::string, int>::const_iterator
+        arg_dtype_iter = arg_dtype_map.find(name);
+    if (arg_shape_iter != arg_shape_map.end()) {
+      src_arg_shapes[i] = arg_shape_iter->second;
+    }
+    if (arg_dtype_iter != arg_dtype_map.end()) {
+      src_arg_dtypes[i] = arg_dtype_iter->second;
+    }
+  }
+
   nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, in_arg_ctxes, arg_grad_ctxes,
-                            aux_state_ctxes, grad_req_types);
+                            aux_state_ctxes, grad_req_types,
+                            src_arg_shapes, src_arg_dtypes);
 
   // The following code of shape and dtype inferences and argument
   // initialization is for simple_bind only. Regular bind operation
@@ -1007,9 +1062,12 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
                                const std::vector<Context>& in_arg_ctxes,
                                const std::vector<Context>& arg_grad_ctxes,
                                const std::vector<Context>& aux_state_ctxes,
-                               const std::vector<OpReqType>& grad_req_types) {
+                               const std::vector<OpReqType>& grad_req_types,
+                               const ShapeVector& in_arg_shapes,
+                               const nnvm::DTypeVector& in_arg_dtypes) {
   // setup gradient
-  nnvm::Graph g = InitFullGraph(symbol, grad_req_types);
+  nnvm::Graph g = InitFullGraph(symbol, grad_req_types,
+                                in_arg_shapes, in_arg_dtypes);
 
 #if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
   if (default_ctx.dev_mask() == Context::kGPU && dmlc::GetEnv("MXNET_USE_FUSION", true)) {

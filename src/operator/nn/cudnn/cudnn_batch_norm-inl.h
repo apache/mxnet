@@ -123,13 +123,15 @@ class CuDNNBatchNormOp {
         Tensor<gpu, 1, DTypeParam> save_inv_var =
           out_data[cudnnbatchnorm::kInvVar]
           .get_with_shape<gpu, 1, DTypeParam>(Shape1(shape_[1]), s);
-        // If the lock on the auxiliary states is set,
-        // then this implies that the preceding call is also a `Forward()` call,
-        // which further indicates that we are in the backward mirroring mode,
-        // and therefore update to the auxiliary states is disabled.
-        // This is done by setting the `momentum` to `1` (or `factor` to `0`).
-        float factor = (dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0) && internal_aux_states_lock_) ?
-            0 : (1 - param_.momentum);
+        // If the lock on the auxiliary states is set, then this implies that
+        // the preceding call is also a `Forward()` call, which further
+        // indicates that we are in the backward mirroring mode, and therefore
+        // update to the auxiliary states is disabled. This is done by setting
+        // the `momentum` to `1` (or `factor` to `0`).
+        float factor = ((dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0) ||
+                         dmlc::GetEnv("MXNET_MEMORY_OPT", 0))
+                        && internal_aux_states_lock_) ?
+                       0 : (1 - param_.momentum);
         CUDNN_CALL(cudnnBatchNormalizationForwardTraining(s->dnn_handle_,
                                                           mode,
                                                           &a,
