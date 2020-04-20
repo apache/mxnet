@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+def max_time = 30
 
 def buildJobs = [
     'centos-cpu',
@@ -38,22 +38,24 @@ def buildJobs = [
 
 
 stage("full-build") {
-    // get the base path by removing build and branch portions
-    def jobPath = JOB_NAME.split('/')
-    def pipelineName = jobPath[0..jobPath.size()-3].join('/')
-    def sanityDone = false
-    while (!sanityDone) {
-        try {
-            println("Attempting to run sanity build...")
-            build job: pipelineName + "/sanity/" + BRANCH_NAME, wait: true
-            sanityDone = true
-        } catch (hudson.AbortException e) {
-            println("Job doesn't yet exist, waiting for Jenkins to find job..")
-            sleep(5)
+    timeout(time: max_time, unit: 'MINUTES') {
+        // get the base path by removing build and branch portions
+        def jobPath = JOB_NAME.split('/')
+        def pipelineName = jobPath[0..jobPath.size()-3].join('/')
+        def sanityDone = false
+        while (!sanityDone) {
+            try {
+                println("Attempting to run sanity build...")
+                build job: pipelineName + "/sanity/" + BRANCH_NAME, wait: true
+                sanityDone = true
+            } catch (hudson.AbortException e) {
+                println("Job doesn't yet exist, waiting for Jenkins to find job..")
+                sleep(5)
+            }
         }
-    }
-    buildJobs.each { subJob ->
-        build job: pipelineName + "/" + subJob + "/" + BRANCH_NAME, wait: false
+        buildJobs.each { subJob ->
+            build job: pipelineName + "/" + subJob + "/" + BRANCH_NAME, wait: false
+        }
     }
 }
 
