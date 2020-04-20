@@ -1784,8 +1784,9 @@ def test_op_hook_output_names():
         output_names = []
 
         def mon_callback(node_name, opr_name, arr):
-            output_names.append(py_str(node_name))
-            opr_names.append(py_str(opr_name))
+            output_names.append(node_name)
+            opr_names.append(opr_name)
+            assert isinstance(arr, mx.nd.NDArray)
 
         block.register_op_hook(mon_callback, monitor_all)
         if not inputs:
