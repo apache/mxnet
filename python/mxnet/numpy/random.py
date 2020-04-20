@@ -17,14 +17,14 @@
 
 """Namespace for ops used in imperative programming."""
 
-from __future__ import absolute_import
 from ..ndarray import numpy as _mx_nd_np
 
 
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "multivariate_normal",
-           "logistic", "gumbel",
+           "logistic", "gumbel", "f",
+           "laplace",
            "shuffle", "randn", "gamma", "beta", "chisquare", "exponential", "lognormal",
-           "weibull", "pareto", "power"]
+           "weibull", "pareto", "power", "rayleigh"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -270,10 +270,8 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
 
 def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from a logistic distribution.
-
     Samples are drawn from a logistic distribution with specified
     parameters, loc (location or mean, also median), and scale (>0).
-
     Parameters
     ----------
     loc : float or array_like of floats, optional
@@ -290,23 +288,18 @@ def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
         Device context of output, default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
-
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the parameterized logistic distribution.
-
     Examples
     --------
     Draw samples from the distribution:
-
     >>> loc, scale = 10, 1
     >>> s = np.random.logistic(loc, scale, 10000)
     >>> import matplotlib.pyplot as plt
     >>> count, bins, ignored = plt.hist(s, bins=50)
-
     #   plot against distribution
-
     >>> def logist(x, loc, scale):
     ...     return np.exp((loc-x)/scale)/(scale*(1+np.exp((loc-x)/scale))**2)
     >>> lgst_val = logist(bins, loc, scale)
@@ -318,10 +311,8 @@ def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
 
 def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from a Gumbel distribution.
-
     Draw samples from a Gumbel distribution with specified location and
     scale.
-
     Parameters
     ----------
     loc : float or array_like of floats, optional
@@ -338,32 +329,25 @@ def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
         Device context of output, default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
-
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the parameterized Gumbel distribution.
-
     Examples
     --------
     Draw samples from the distribution:
-
     >>> mu, beta = 0, 0.1 # location and scale
     >>> s = np.random.gumbel(mu, beta, 1000)
-
     Display the histogram of the samples, along with
     the probability density function:
-
     >>> import matplotlib.pyplot as plt
     >>> count, bins, ignored = plt.hist(s, 30, density=True)
     >>> plt.plot(bins, (1/beta)*np.exp(-(bins - mu)/beta)
     ...          * np.exp( -np.exp( -(bins - mu) /beta) ),
     ...          linewidth=2, color='r')
     >>> plt.show()
-
     Show how an extreme value distribution can arise from a Gaussian process
     and compare to a Gaussian:
-
     >>> means = []
     >>> maxima = []
     >>> for i in range(0,1000) :
@@ -559,6 +543,31 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     return _mx_nd_np.random.choice(a, size, replace, p, ctx, out)
 
 
+def rayleigh(scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Rayleigh distribution.
+    The :math:`\chi` and Weibull distributions are generalizations of the
+    Rayleigh.
+    Parameters
+    ----------
+    scale : float, optional
+        Scale, also equals the mode. Must be non-negative. Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output, default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Rayleigh distribution.
+    """
+    return _mx_nd_np.random.rayleigh(scale, size, ctx, out)
+
+
 def rand(*size, **kwargs):
     r"""Random values in a given shape.
 
@@ -588,7 +597,6 @@ def rand(*size, **kwargs):
 
 def exponential(scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from an exponential distribution.
-
     Parameters
     ----------
     scale : float or array_like of floats
@@ -603,7 +611,6 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
         Device context of output, default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
-
     Returns
     -------
     out : ndarray or scalar
@@ -612,10 +619,9 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
     return _mx_nd_np.random.exponential(scale, size=size, ctx=ctx, out=out)
 
 
-def weibull(a, size=None):
+def weibull(a, size=None, ctx=None, out=None):
     r"""Draw samples from a 1-parameter Weibull distribution with given parameter a
     via inversion.
-
     Parameters
     ----------
     a : float or array_like of floats
@@ -633,33 +639,27 @@ def weibull(a, size=None):
     --------
     >>> np.random.weibull(a=5)
     array(0.9553641)
-
     >>> np.random.weibull(a=5, size=[2,3])
     array([[1.0466299 , 1.1320982 , 0.98415005],
           [1.1430776 , 0.9532727 , 1.1344457 ]])
-
     >>> np.random.weibull(a=np.array([2,3])
     array([0.98843634, 1.0125613 ])
-
     The Weibull distribution is one of a class of Generalized Extreme
     Value (GEV) distributions. This class includes the Gumbel and Frechet
     distributions.
-
     The probability density for the Weibull distribution is
     f(x) = \frac{a}{\lambda}(\frac{x}{\lambda})^{a-1}e^{-(x/\lambda)^a},
     where a is the shape and \lambda the scale. The generated 1-parameter Weibull
     sample has the scale parameter \lambda = 1.
-
     The Weibull distribution is commonly used in reliability engineering to
     model time to failure, in modeling particle sizes, in information retrieval
     to model dwell time on pages, in quantitative finance to model risk etc.
     """
-    return _mx_nd_np.random.weibull(a, size)
+    return _mx_nd_np.random.weibull(a, size=size, ctx=ctx, out=out)
 
 
-def pareto(a, size=None):
+def pareto(a, size=None, ctx=None, out=None):
     r"""Draw samples from a Pareto II or Lomax distribution with specified shape a.
-
     Parameters
     ----------
     a : float or array_like of floats
@@ -669,12 +669,10 @@ def pareto(a, size=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``a`` is a scalar. Otherwise,
         ``np.array(a).size`` samples are drawn.
-
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the Pareto distribution.
-
     Examples
     --------
     >>> np.random.pareto(a=5)
@@ -684,17 +682,15 @@ def pareto(a, size=None):
             [0.0311172 , 0.12911797, 0.03370714]])
     >>> np.random.pareto(a=np.array([2,3])
     array([0.26636696, 0.15685666])
-
     The probability density for the Pareto distribution is f(x) = \frac{am^a}{x^{a+1}}
     where a is the shape and m the scale. Here m is assumed 1. The Pareto distribution
     is a power law distribution. Pareto created it to describe the wealth in the economy.
     """
-    return _mx_nd_np.random.pareto(a, size)
+    return _mx_nd_np.random.pareto(a, size=size, ctx=ctx, out=out)
 
 
-def power(a, size=None):
+def power(a, size=None, ctx=None, out=None):
     r"""Draw samples in [0, 1] from a power distribution with given parameter a.
-
     Parameters
     ----------
     a : float or array_like of floats
@@ -704,12 +700,10 @@ def power(a, size=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``a`` is a scalar. Otherwise,
         ``np.array(a).size`` samples are drawn.
-
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the power distribution.
-
     Examples
     --------
     >>> np.random.power(a=5)
@@ -719,12 +713,11 @@ def power(a, size=None):
            [0.9078098 , 0.87819266, 0.730635]])
     >>> np.random.power(a=np.array([2,3])
     array([0.7499419 , 0.88894516])
-
     The probability density function is f(x; a) = ax^{a-1}, 0 \le x \le 1, a>0.
     The power distribution is just the inverse of the Pareto distribution and
     a special case of the Beta distribution.
     """
-    return _mx_nd_np.random.power(a, size)
+    return _mx_nd_np.random.power(a, size=size, ctx=ctx, out=out)
 
 
 def shuffle(x):
@@ -846,6 +839,68 @@ def beta(a, b, size=None, dtype=None, ctx=None):
     return _mx_nd_np.random.beta(a, b, size=size, dtype=dtype, ctx=ctx)
 
 
+def f(dfnum, dfden, size=None, ctx=None):
+    r"""Draw samples from an F distribution.
+
+    Samples are drawn from an F distribution with specified parameters,
+    `dfnum` (degrees of freedom in numerator) and `dfden` (degrees of
+    freedom in denominator), where both parameters must be greater than
+    zero.
+
+    The random variate of the F distribution (also known as the
+    Fisher distribution) is a continuous probability distribution
+    that arises in ANOVA tests, and is the ratio of two chi-square
+    variates.
+
+    Parameters
+    ----------
+    dfnum : float or ndarray of floats
+        Degrees of freedom in numerator, must be > 0.
+    dfden : float or ndarray of float
+        Degrees of freedom in denominator, must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``dfnum`` and ``dfden`` are both scalars.
+        Otherwise, ``np.broadcast(dfnum, dfden).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Fisher distribution.
+
+    Examples
+    --------
+    An example from Glantz[1], pp 47-40:
+
+    Two groups, children of diabetics (25 people) and children from people
+    without diabetes (25 controls). Fasting blood glucose was measured,
+    case group had a mean value of 86.1, controls had a mean value of
+    82.2. Standard deviations were 2.09 and 2.49 respectively. Are these
+    data consistent with the null hypothesis that the parents diabetic
+    status does not affect their children's blood glucose levels?
+    Calculating the F statistic from the data gives a value of 36.01.
+
+    Draw samples from the distribution:
+
+    >>> dfnum = 1. # between group degrees of freedom
+    >>> dfden = 48. # within groups degrees of freedom
+    >>> s = np.random.f(dfnum, dfden, 1000)
+
+    The lower bound for the top 1% of the samples is :
+
+    >>> np.sort(s)[-10]
+    7.61988120985 # random
+
+    So there is about a 1% chance that the F statistic will exceed 7.62,
+    the measured value is 36, so the null hypothesis is rejected at the 1%
+    level.
+    """
+    return _mx_nd_np.random.f(dfnum, dfden, size=size, ctx=ctx)
+
+
 def chisquare(df, size=None, dtype=None, ctx=None):
     r"""
     chisquare(df, size=None, dtype=None, ctx=None)
@@ -954,3 +1009,33 @@ def randn(*size, **kwargs):
     for s in size:
         output_shape += (s,)
     return _mx_nd_np.random.normal(0, 1, size=output_shape, **kwargs)
+
+def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    r"""Draw random samples from a Laplace distribution.
+
+    Samples are distributed according to a Laplace distribution parametrized
+    by *loc* (mean) and *scale* (the exponential decay).
+
+    Parameters
+    ----------
+    loc : float, The position of the distribution peak.
+
+    scale : float, the exponential decay.
+
+    size : int or tuple of ints, optional. Output shape.
+        If the given shape is, e.g., (m, n, k), then m * n * k samples are drawn.
+        Default is None, in which case a single value is returned.
+
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray
+        Drawn samples from the parameterized Laplace distribution.
+    """
+    return _mx_nd_np.random.laplace(loc, scale, size, dtype, ctx, out)

@@ -178,8 +178,7 @@ void BatchNormForwardImpl(mshadow::Stream<cpu> *,
       }
       if (IsBNWriting(req[batchnorm::kData])) {
         ForEachFast(inputData, outputData, channel,
-                    [thisWeight, thisBias, thisMean, thisInvstd](const DType *in_data,
-                                                                 DType *out_data) {
+                    [thisBias, thisMean, thisInvstd](const DType *in_data, DType *out_data) {
                       *out_data = static_cast<DType>(
                         ((*in_data - thisMean) * thisInvstd) + thisBias);
                     });
@@ -330,7 +329,7 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
       : param.axis);
   CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param.axis;
 
-  const int channelCount = dshape[channelAxis];
+  const index_t channelCount = dshape[channelAxis];
 
   if (!mxnet::ndim_is_known(dshape)) {
     return false;
@@ -394,11 +393,14 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
                            const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  bool fuse_relu = false;
   if (SupportMKLDNNBN(inputs[0], param)) {
-      MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
-      MKLDNNRun(MKLDNNBatchNormForward<float>, attrs, ctx, inputs, req, outputs);
-      MKLDNN_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
-      return;
+    MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
+    MKLDNN_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
+        MKLDNNBatchNormForward<DTYPE>(attrs, ctx, inputs, req, outputs, fuse_relu);
+    });
+    MKLDNN_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
+    return;
   }
   FallBackCompute(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
 }
@@ -409,9 +411,10 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
                                const std::vector<OpReqType> &req,
                                const std::vector<NDArray> &outputs) {
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  bool fuse_relu = false;
   if (SupportMKLDNNBN(inputs[0], param)) {
       MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-      MKLDNNRun(MKLDNNBatchNormBackward<float>, attrs, ctx, inputs, req, outputs);
+      MKLDNNBatchNormBackward<float>(attrs, ctx, inputs, req, outputs, fuse_relu);
       MKLDNN_OPCHECK_RUN(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
       return;
   }

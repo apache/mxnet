@@ -50,7 +50,8 @@ Hence, in this utility, we will build the functionality to allow users and devel
 Provided you have MXNet installed (any version >= 1.5.1), all you need to use opperf utility is to add path to your cloned MXNet repository to the PYTHONPATH.
 
 Note: 
-To install MXNet, refer [Installing MXNet page](https://mxnet.apache.org/versions/master/install/index.html)
+1. Currently, opperf utility requires a cloned mxnet repo. It isn't supported on PyPi binary yet. [Work in Progress]
+2. To install MXNet, refer [Installing MXNet page](https://mxnet.apache.org/versions/master/install/index.html)
 
 ```
 export PYTHONPATH=$PYTHONPATH:/path/to/incubator-mxnet/
@@ -71,6 +72,11 @@ python incubator-mxnet/benchmark/opperf/opperf.py --output-format json --output-
 2. **ctx** : `cpu` or `gpu`. By default, cpu on CPU machine, gpu(0) on GPU machine. You can override and set the global context for all operator benchmarks. Example: --ctx gpu(2).
 
 3. **dtype** : By default, `float32`. You can override and set the global dtype for all operator benchmarks. Example: --dtype float64.
+
+4. **profiler** : `native` or `python`. By default, 'native'. You can override and set the global profiler for all operator benchmarks. Example: --profiler 'python'.
+Native profiler uses MXNet C++ based built-in profiler. Python profiler uses Python package time. Generally, native profiler is used by developers and python profiler is used by users.
+
+5. **int64-tensor** : `on` or `off`. By default, 'off'. You can override and set the large tensor flag to ON. Example: --int64-tensor ON
 
 ## Usecase 2 - Run benchmarks for all the operators in a specific category
 
@@ -117,6 +123,7 @@ add_res = run_performance_test(nd.add, run_backward=True, dtype='float32', ctx=m
                                inputs=[{"lhs": (1024, 1024),
                                         "rhs": (1024, 1024)}],
                                warmup=10, runs=25)
+print(add_res)
 ```
 
 Output for the above benchmark run, on a CPU machine, would look something like below:
@@ -143,6 +150,7 @@ add_res = run_performance_test([nd.add, nd.subtract], run_backward=True, dtype='
                                inputs=[{"lhs": (1024, 1024),
                                         "rhs": (1024, 1024)}],
                                warmup=10, runs=25)
+print(add_res)
 ```
 
 Output for the above benchmark run, on a CPU machine, would look something like below:
@@ -193,7 +201,7 @@ By default, MXNet profiler is used as the profiler engine.
 
 All contributions are welcome. Below is the list of desired features:
 
-1. Cover all MXNet operators.
+1. ~~Cover all MXNet operators~~.
 2. Enhance MXNet profiler with additional APIs to programmatically fetch and process profiler data.
 3. Integration with CI/CD system to run operator benchmarks for PR builds, nightly builds.
 4. Dashboards and other modes of presentation of results for analyzing and planning tasks such as operator performance improvements.

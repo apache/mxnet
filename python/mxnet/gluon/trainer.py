@@ -25,6 +25,7 @@ from ..model import _create_kvstore, _create_sparse_kvstore
 from .parameter import ParameterDict, Parameter
 from ..kvstore import KVStore
 
+
 class Trainer(object):
     """Applies an `Optimizer` on a set of Parameters. Trainer should
     be used together with `autograd`.
@@ -60,9 +61,11 @@ class Trainer(object):
         Arguments would then be {'type':'2bit', 'threshold':0.5}
         See mxnet.KVStore.set_gradient_compression method for more details on gradient compression.
     update_on_kvstore : bool, default None
-        Whether to perform parameter updates on kvstore. If None, then trainer will choose the more
-        suitable option depending on the type of kvstore. If the `update_on_kvstore` argument is
-        provided, environment variable `MXNET_UPDATE_ON_KVSTORE` will be ignored.
+        Whether to perform parameter updates on kvstore. If None and optimizer.aggregate_num <= 1,
+        then trainer will choose the more suitable option depending on the type of kvstore.
+        If None and optimizer.aggregate_num > 1, `update_on_kvstore` is set to False.
+        If the `update_on_kvstore` argument is provided,
+        environment variable `MXNET_UPDATE_ON_KVSTORE` will be ignored.
 
     Properties
     ----------
@@ -103,6 +106,12 @@ class Trainer(object):
         optimizer_params = optimizer_params if optimizer_params else {}
         self._init_optimizer(optimizer, optimizer_params)
         self._scale = self._optimizer.rescale_grad
+        if self._optimizer.aggregate_num > 1 and update_on_kvstore is not None:
+            if update_on_kvstore:
+                raise ValueError("Cannot set update_on_kvstore=True "
+                                 "when optimizer.aggregate_num > 1.")
+        if update_on_kvstore is None and self._optimizer.aggregate_num > 1:
+            update_on_kvstore = False
         self._kvstore_params = {'kvstore': kvstore, 'update_on_kvstore': update_on_kvstore}
         self._kv_initialized = False
         self._kvstore = None
@@ -457,8 +466,8 @@ class Trainer(object):
         if not (self._kvstore and self._update_on_kvstore):
             for updater, upd in zip(self._updaters, updates):
                 if upd:
-                    i, w, g = zip(*upd)
-                    updater(i, w, g)
+                    i, g, w = zip(*upd)
+                    updater(i, g, w)
 
     def save_states(self, fname):
         """Saves trainer states (e.g. optimizer, momentum) to a file.

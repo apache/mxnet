@@ -1125,6 +1125,7 @@ def test_np_multinomial():
 @unittest.skipUnless(is_op_runnable(), "Comparison ops can only run on either CPU instances, or GPU instances with"
                                        " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
+@unittest.skip("NumpyBooleanAssignForwardCPU broken: https://github.com/apache/incubator-mxnet/issues/17990")
 def test_np_ndarray_boolean_indexing():
     def test_single_bool_index():
         # adapted from numpy's test_indexing.py
@@ -1194,6 +1195,24 @@ def test_np_ndarray_boolean_indexing():
         assert same(a[0, b].asnumpy(), _np_a[0, _np_b])
         assert same(a[b, 1].asnumpy(), _np_a[_np_b, 1])
 
+        a = np.arange(12).reshape(4,3)
+        b = np.array([1.,2.,3.])
+        _np_a = a.asnumpy()
+        _np_b = b.asnumpy()
+        assert same(a[:, b > 2].shape, _np_a[:, _np_b > 2].shape)
+        assert same(a[:, b > 2].asnumpy(), _np_a[:, _np_b > 2])
+
+        a = np.array([[1,2,3],[3,4,5]])
+        _np_a = a.asnumpy()
+        assert same(a[:,a[1,:] > 0].shape, _np_a[:,_np_a[1,: ] > 0].shape)
+        assert same(a[:,a[1,:] > 0].asnumpy(), _np_a[:,_np_a[1,: ] > 0])
+
+        a = np.ones((3,2), dtype='bool')
+        b = np.array([1,2,3])
+        _np_a = a.asnumpy()
+        _np_b = b.asnumpy()
+        assert same(a[b > 1].asnumpy(), _np_a[_np_b > 1])
+
     def test_boolean_indexing_assign():
         # test boolean indexing assign
         shape = (3, 2, 3)
@@ -1208,11 +1227,11 @@ def test_np_ndarray_boolean_indexing():
         np_data[np_mask] = 1
         mx_data[mx_mask] = 1
         assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
-        # not supported at this moment
-        # only support boolean array at the end of the idces when it is mixed with integers
-        # np_data[np_mask, 1] = 2
-        # mx_data[mx_mask, 1] = 2
-        # assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+        np_data[np_mask, 1] = 2
+        mx_data[mx_mask, 1] = 2
+        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
         np_data[np_mask, :] = 3
         mx_data[mx_mask, :] = 3
         assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
@@ -1225,6 +1244,14 @@ def test_np_ndarray_boolean_indexing():
         assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
         np_data[:, np_mask] = 6
         mx_data[:, mx_mask] = 6
+        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+        np_data[0, True, True, np_mask] = 7
+        mx_data[0, True, True, mx_mask] = 7
+        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+
+        np_data[False, 1] = 8
+        mx_data[False, 1] = 8
         assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
     def test_boolean_indexing_autograd():

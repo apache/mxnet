@@ -607,7 +607,7 @@ void ReattachGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
 }
 
 /*!
- * \brief Replace a set of nodes belonging to the same subgraph with a subgrpah node
+ * \brief Replace a set of nodes belonging to the same subgraph with a subgraph node
  * and keep the subgraph in the subgraph node.
  */
 void CreateSubgraphNode(nnvm::Graph* g,
@@ -640,6 +640,7 @@ void CreateSubgraphNode(nnvm::Graph* g,
     sym.outputs[i] = *output_map[i][0];
   }
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
+  subg_prop->InitSubgraphInputs(&input_entries, &orig_input_entries);
   nnvm::ObjectPtr n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);
   // CreateSubgraphNode returns NULL if subgraph property determines that subgraph is sub-optimal
   // In that case, subgraph node is not created and graph is not modified
@@ -759,7 +760,7 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
       LOG(INFO) << "The graph has no attribute of subgraph_property attached. "
                    "The original graph is returned.";
     }
-    return g;
+    return std::move(g);
   }
   using namespace sg;
 
@@ -796,7 +797,7 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
       AdjustSubgraphNode(&g, subgraph_nodes[i], subgraph_selectors[i], i);
     }
   }
-  return g;
+  return std::move(g);
 }
 
 NNVM_REGISTER_PASS(BuildSubgraph)

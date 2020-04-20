@@ -289,7 +289,7 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 
   if (SupportMKLDNNTranspose(param, inputs[0]) && req[0] == kWriteTo) {
-    MKLDNNTransposeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNTransposeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(Transpose<cpu>, attrs, ctx, inputs, req, outputs);
@@ -1038,6 +1038,7 @@ Example::
 
 NNVM_REGISTER_OP(_split_v2)
 .add_alias("_npi_split")
+.add_alias("_npi_array_split")
 .describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 Example::
    x  = [[[ 1.]

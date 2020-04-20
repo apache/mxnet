@@ -127,6 +127,10 @@ template<int dim, typename DType>
 inline void Copy(Tensor<cpu, dim, DType> _dst,
                  const Tensor<cpu, dim, DType> &_src,
                  Stream<cpu> *stream) {
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
   CHECK_EQ(_dst.shape_, _src.shape_)
       << "Copy:shape mismatch:" << _dst.shape_ << " vs " << _src.shape_;
   if (_dst.CheckContiguous() && _src.CheckContiguous()) {
@@ -138,6 +142,7 @@ inline void Copy(Tensor<cpu, dim, DType> _dst,
       memcpy(dst[y].dptr_, src[y].dptr_, sizeof(DType) * dst.size(1));
     }
   }
+#pragma GCC diagnostic pop
 }
 
 template<typename Saver, typename R, int dim,
@@ -498,9 +503,10 @@ template<bool clip, typename IndexType, typename DType>
 inline void AddTakeGrad(Tensor<cpu, 2, DType> dst,
                         const Tensor<cpu, 1, IndexType>& index,
                         const Tensor<cpu, 2, DType> &src) {
-  const int K = dst.shape_[0];
+  const index_t K = dst.shape_[0];
+  const index_t C = dst.shape_[1];
   for (index_t y = 0; y < index.size(0); ++y) {
-    int j = index[y];
+    index_t j = index[y];
     if (clip) {
       if (j <= 0) j = 0;
       else if (j >= K) j = K - 1;
@@ -508,7 +514,9 @@ inline void AddTakeGrad(Tensor<cpu, 2, DType> dst,
       j %= K;
       if (j < 0) j += K;
     }
-    dst[j] += src[y];
+    for (index_t i = 0; i < C; ++i) {
+      dst[j][i] += src[y][i];
+    }
   }
 }
 

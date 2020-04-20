@@ -19,13 +19,16 @@
 #ifndef MXNET_PROFILER_STORAGE_PROFILER_H_
 #define MXNET_PROFILER_STORAGE_PROFILER_H_
 
+#include <mxnet/libinfo.h>
 #include <mxnet/storage.h>
 #include <string>
+#include <tuple>
 #include <vector>
+#include <unordered_map>
 #include "./profiler.h"
 
 namespace mxnet {
-namespace storage {
+namespace profiler {
 
 /*!
  * \brief Storage allocation/deallocation profiling via ProfileCounters
@@ -106,7 +109,95 @@ class DeviceStorageProfiler {
   std::vector<std::shared_ptr<profiler::ProfileCounter>> mem_counters_;
 };
 
-}  // namespace storage
+#if MXNET_USE_CUDA
+
+/*!
+ * \brief GPU storage allocation/deallocation profiling
+ */
+class GpuDeviceStorageProfiler {
+ public:
+  /*! \brief get the global instance to record an allocation entry */
+  static GpuDeviceStorageProfiler* Get();
+  /*!
+   * \brief Similar functions to the `DeviceStorageProfiler` methods above.
+   *        However, in the case of the `GpuDeviceStorageProfiler`, we are 
+   *        recording extra piece of information on the actual allocation size
+   *        and whether the allocation is a reuse or not.
+   */
+  void OnAlloc(const Storage::Handle &handle,
+               const size_t actual_size, const bool reuse) {
+    if (handle.size > 0) {
+      profiler::Profiler *prof = profiler::Profiler::Get();
+      if (prof->IsProfiling(profiler::Profiler::kMemory)) {
+#ifdef _MSC_VER
+        gpu_mem_alloc_entries_[handle.dptr] = AllocEntry{
+            handle.profiler_scope,
+            handle.name,
+            handle.size,
+            handle.ctx.dev_id,
+            actual_size, reuse};
+#else
+        gpu_mem_alloc_entries_[handle.dptr] = {
+            handle.profiler_scope,
+            handle.name,
+            handle.size,
+            handle.ctx.dev_id,
+            actual_size, reuse};
+#endif
+      }
+    }
+  }
+
+  void OnFree(const Storage::Handle &handle) {
+    if (handle.size > 0) {
+      profiler::Profiler *prof = profiler::Profiler::Get();
+      if (prof->IsProfiling(profiler::Profiler::kMemory)) {
+        // In case of bug which tries to free first
+        if (gpu_mem_alloc_entries_.find(handle.dptr) !=
+            gpu_mem_alloc_entries_.end()) {
+          gpu_mem_alloc_entries_.erase(handle.dptr);
+        }
+      }
+    }
+  }
+
+  void UpdateStorageInfo(const Storage::Handle &handle) {
+    if (handle.size > 0) {
+      profiler::Profiler *prof = profiler::Profiler::Get();
+      if (prof->IsProfiling(profiler::Profiler::kMemory)) {
+        auto entry_iter = gpu_mem_alloc_entries_.find(handle.dptr);
+        if (entry_iter != gpu_mem_alloc_entries_.end()) {
+          entry_iter->second.profiler_scope = handle.profiler_scope;
+          entry_iter->second.name = handle.name;
+        }
+      }
+    }
+  }
+
+  /*! \brief set the dumping filename */
+  void SetConfig(const std::string& filename_prefix) {
+    filename_prefix_ = filename_prefix;
+  }
+  /*! \brief dump the allocation entries to file */
+  void DumpProfile() const;
+
+ private:
+  std::string filename_prefix_ = "gpu_memory_profile";
+  /*! \brief Dynamically-sized dictionary of memory profile counters */
+  struct AllocEntry {
+    std::string profiler_scope;  // profiler scope of the storage handle
+    std::string name;            // name of the storage handle
+    size_t requested_size;       // requested size of the storage handle
+    int dev_id;                  // device ID of the storage handle
+    size_t actual_size;          // actual allocation size
+    bool reuse;                  // whether the allocation is a reuse
+  };
+  std::unordered_map<void*, AllocEntry> gpu_mem_alloc_entries_;
+};
+
+#endif  // MXNET_USE_CUDA
+
+}  // namespace profiler
 }  // namespace mxnet
 
 #endif  // MXNET_PROFILER_STORAGE_PROFILER_H_

@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """TensorBoard functions that can be used to log various status during epoch."""
-from __future__ import absolute_import
 
 import logging
 

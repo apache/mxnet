@@ -17,10 +17,7 @@
 """general utility functions"""
 
 import ctypes
-import os
-import sys
 import functools
-import itertools
 import inspect
 import threading
 
@@ -37,16 +34,6 @@ _np_ufunc_default_kwargs = {
 
 _set_np_shape_logged = False
 _set_np_array_logged = False
-
-
-def makedirs(d):
-    """Create directories recursively if they don't exist. os.makedirs(exist_ok=True) is not
-    available in Python2"""
-    if sys.version_info[0] < 3:
-        from distutils.dir_util import mkpath
-        mkpath(d)
-    else:
-        os.makedirs(d, exist_ok=True)  # pylint: disable=unexpected-keyword-arg
 
 
 def get_gpu_count():
@@ -240,17 +227,6 @@ def np_shape(active=True):
     return _NumpyShapeScope(active)
 
 
-def wraps_safely(wrapped, assigned=functools.WRAPPER_ASSIGNMENTS):
-    """This function is safe version of `functools.wraps` in Python2 which skips wrapping functions
-    for the attributes that do not exist."""
-    if sys.version_info[0] > 2:
-        return functools.wraps(wrapped)
-    else:
-        return functools.wraps(wrapped,
-                               assigned=itertools.ifilter(
-                                   functools.partial(hasattr, wrapped), assigned))
-
-
 def use_np_shape(func):
     """A decorator wrapping a function or class with activated NumPy-shape semantics.
     When `func` is a function, this ensures that the execution of the function is scoped with NumPy
@@ -315,7 +291,7 @@ def use_np_shape(func):
                 setattr(func, name, use_np_shape(method))
         return func
     elif callable(func):
-        @wraps_safely(func)
+        @functools.wraps(func)
         def _with_np_shape(*args, **kwargs):
             with np_shape(active=True):
                 return func(*args, **kwargs)
@@ -499,7 +475,7 @@ def use_np_array(func):
                 setattr(func, name, use_np_array(method))
         return func
     elif callable(func):
-        @wraps_safely(func)
+        @functools.wraps(func)
         def _with_np_array(*args, **kwargs):
             with np_array(active=True):
                 return func(*args, **kwargs)
@@ -620,7 +596,7 @@ def wrap_np_unary_func(func):
     Function
         A function wrapped with proper error handling.
     """
-    @wraps_safely(func)
+    @functools.wraps(func)
     def _wrap_np_unary_func(x, out=None, **kwargs):
         if len(kwargs) != 0:
             for key, value in kwargs.items():
@@ -653,7 +629,7 @@ def wrap_np_binary_func(func):
     Function
         A function wrapped with proper error handling.
     """
-    @wraps_safely(func)
+    @functools.wraps(func)
     def _wrap_np_binary_func(x1, x2, out=None, **kwargs):
         if len(kwargs) != 0:
             for key, value in kwargs.items():
@@ -669,6 +645,93 @@ def wrap_np_binary_func(func):
                     raise TypeError("{} {} not understood".format(key, value))
         return func(x1, x2, out=out)
     return _wrap_np_binary_func
+
+
+# pylint: disable=exec-used
+def numpy_fallback(func):
+    """decorator for falling back to offical numpy for a specific function"""
+    def get_ctx(ctx, new_ctx):
+        if ctx is None:
+            return new_ctx
+        else:
+            if new_ctx is None:
+                new_ctx = ctx
+            assert ctx == new_ctx, "inconsistent context %s and %s" % (str(ctx), str(new_ctx))
+            return ctx
+
+    def _as_official_np_array(object):
+        ctx = None
+        if hasattr(object, 'asnumpy'):
+            return object.asnumpy(), object.ctx
+        elif isinstance(object, (list, tuple)):
+            tmp = []
+            for arr in object:
+                new_arr, new_ctx = _as_official_np_array(arr)
+                ctx = get_ctx(ctx, new_ctx)
+                tmp.append(new_arr)
+            return object.__class__(tmp), ctx
+        elif isinstance(object, dict):
+            tmp = {}
+            for k, v in object.items():
+                new_v, new_ctx = _as_official_np_array(v)
+                ctx = get_ctx(ctx, new_ctx)
+                tmp[k] = new_v
+            return tmp, ctx
+        else:
+            return object, None
+
+    from .ndarray import from_numpy
+    from .numpy import array
+    from .context import current_context
+    def _as_mx_np_array(object, ctx=current_context()):
+        import numpy as _np
+        if isinstance(object, _np.ndarray):
+            try:
+                ret = from_numpy(object).as_np_ndarray()
+            except ValueError:
+                ret = array(object, dtype=object.dtype, ctx=ctx)
+            return (ret if ('cpu' in str(ctx)) else ret.as_in_ctx(ctx))
+        elif isinstance(object, (list, tuple)):
+            tmp = [_as_mx_np_array(arr, ctx) for arr in object]
+            return object.__class__(tmp)
+        elif isinstance(object, dict):
+            return {k:_as_mx_np_array(v, ctx) for k, v in object}
+        else:
+            return object
+
+    import re
+    func_name = func.__name__
+    func_doc = func.__doc__
+    func_source = inspect.getsource(func)
+    func_source = re.sub(r'np\.', 'onp.', func_source)
+    func_source = func_source.split('\n')[1:]
+    indentation = func_source[0].find('def')
+    if indentation == -1:
+        raise ValueError("should wrap a function")
+    stripped = []
+    for line in func_source:
+        stripped.append(line[indentation:])
+    stripped.insert(1, '    import numpy as onp')
+    func_source = '\n'.join(stripped)
+    local = {}
+    exec(func_source, None, local)
+    func = local[func_name]
+    func.__doc__ = func_doc
+
+    @functools.wraps(func)
+    def _fallback_to_official_np(*args, **kwargs):
+        # for every ndarray input, fallback
+        new_args, ctx0 = _as_official_np_array(args)
+        new_kwargs, ctx1 = _as_official_np_array(kwargs)
+        ctx = get_ctx(ctx0, ctx1)
+        ret = func(*new_args, **new_kwargs)
+        if ret is None:
+            raise ValueError("Only functions with return values are allowed to use this decorator")
+        ret = _as_mx_np_array(ret, ctx=ctx)
+        return ret
+
+    return _fallback_to_official_np
+# pylint: enable=exec-used
 
 
 def _set_np_array(active):

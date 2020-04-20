@@ -31,6 +31,7 @@
 #include <string>
 #include <vector>
 #include <cmath>
+#include <unordered_map>
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -56,6 +57,13 @@ struct NumpyExponentialParam : public dmlc::Parameter<NumpyExponentialParam> {
       DMLC_DECLARE_FIELD(ctx).set_default("cpu").describe(
         "Context of output, in format [cpu|gpu|cpu_pinned](n)."
         " Only used for imperative calls.");
+  }
+    void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream scale_s, size_s;
+    scale_s << scale;
+    size_s << size;
+    (*dict)["scale"] = scale_s.str();
+    (*dict)["size"] = size_s.str();
   }
 };
 
@@ -145,12 +153,12 @@ void NumpyExponentialForward(const nnvm::NodeAttrs &attrs,
 }
 
 template<typename xpu, int ndim, typename DType>
-inline void ScalarExponentialReparamBackwardImpl(const OpContext& ctx,
-                                                 const std::vector<TBlob>& inputs,
-                                                 const std::vector<OpReqType>& req,
-                                                 const std::vector<TBlob>& outputs,
-                                                 const mxnet::TShape& new_ishape,
-                                                 const mxnet::TShape& new_oshape) {
+inline void ExponentialReparamBackwardImpl(const OpContext& ctx,
+                                           const std::vector<TBlob>& inputs,
+                                           const std::vector<OpReqType>& req,
+                                           const std::vector<TBlob>& outputs,
+                                           const mxnet::TShape& new_ishape,
+                                           const mxnet::TShape& new_oshape) {
   using namespace mshadow;
   using namespace mshadow::expr;
   using namespace broadcast;
@@ -191,7 +199,7 @@ void ExponentialReparamBackward(const nnvm::NodeAttrs& attrs,
                          &new_ishape, &new_ishape, &new_oshape);
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(ndim, NDim, {
-        ScalarExponentialReparamBackwardImpl<xpu, NDim, DType>(
+        ExponentialReparamBackwardImpl<xpu, NDim, DType>(
           ctx, inputs, req, outputs, new_ishape, new_oshape);
       });
     });

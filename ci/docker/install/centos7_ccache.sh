@@ -23,18 +23,17 @@ set -ex
 
 pushd .
 
-yum -y install autoconf
-yum -y install asciidoc
+yum -y install autoconf libb2-devel libzstd-devel gperf
 
 mkdir -p /work/deps
 cd /work/deps
 
-git clone --recursive -b v3.4.2 https://github.com/ccache/ccache.git
-
+git clone --recursive https://github.com/ccache/ccache.git
 cd ccache
+git checkout v3.7.9
 
 ./autogen.sh
-./configure
+./configure --disable-man
 make -j$(nproc)
 make install
 
@@ -42,4 +41,3 @@ cd /work/deps
 rm -rf /work/deps/ccache
 
 popd
-

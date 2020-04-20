@@ -17,7 +17,6 @@
 
 """Namespace for operators used in Gluon dispatched by F=symbol."""
 
-from __future__ import absolute_import
 from ...context import current_context
 from ..numpy import _internal as _npi
 
@@ -166,18 +165,22 @@ def uniform_n(low=0.0, high=1.0, batch_shape=None, dtype=None, ctx=None):
         ctx = current_context()
     if batch_shape == ():
         batch_shape = None
-    if input_type == (True, True):
-        return _npi.uniform_n(low, high, low=None, high=None, size=batch_shape,
-                              ctx=ctx, dtype=dtype)
-    elif input_type == (False, True):
-        return _npi.uniform_n(high, low=low, high=None, size=batch_shape,
-                              ctx=ctx, dtype=dtype)
-    elif input_type == (True, False):
-        return _npi.uniform_n(low, low=None, high=high, size=batch_shape,
-                              ctx=ctx, dtype=dtype)
     else:
-        return _npi.uniform_n(low=low, high=high, size=batch_shape,
-                              ctx=ctx, dtype=dtype)
+        if isinstance(batch_shape, int):
+            batch_shape = (batch_shape,)
+        batch_shape = (-2,) + batch_shape
+    if input_type == (True, True):
+        return _npi.uniform(low, high, low=None, high=None, size=batch_shape,
+                            ctx=ctx, dtype=dtype)
+    elif input_type == (False, True):
+        return _npi.uniform(high, low=low, high=None, size=batch_shape,
+                            ctx=ctx, dtype=dtype)
+    elif input_type == (True, False):
+        return _npi.uniform(low, low=None, high=high, size=batch_shape,
+                            ctx=ctx, dtype=dtype)
+    else:
+        return _npi.uniform(low=low, high=high, size=batch_shape,
+                            ctx=ctx, dtype=dtype)
 
 
 def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, ctx=None):
@@ -253,15 +256,19 @@ def normal_n(loc=0.0, scale=1.0, batch_shape=None, dtype=None, ctx=None):
         ctx = current_context()
     if batch_shape == ():
         batch_shape = None
-    if input_type == (True, True):
-        return _npi.normal_n(loc, scale, loc=None, scale=None, size=batch_shape,
-                             ctx=ctx, dtype=dtype)
-    elif input_type == (False, True):
-        return _npi.normal_n(scale, loc=loc, scale=None, size=batch_shape,
-                             ctx=ctx, dtype=dtype)
-    elif input_type == (True, False):
-        return _npi.normal_n(loc, loc=None, scale=scale, size=batch_shape,
-                             ctx=ctx, dtype=dtype)
     else:
-        return _npi.normal_n(loc=loc, scale=scale, size=batch_shape,
-                             ctx=ctx, dtype=dtype)
+        if isinstance(batch_shape, int):
+            batch_shape = (batch_shape,)
+        batch_shape = (-2,) + batch_shape
+    if input_type == (True, True):
+        return _npi.normal(loc, scale, loc=None, scale=None, size=batch_shape,
+                           ctx=ctx, dtype=dtype)
+    elif input_type == (False, True):
+        return _npi.normal(scale, loc=loc, scale=None, size=batch_shape,
+                           ctx=ctx, dtype=dtype)
+    elif input_type == (True, False):
+        return _npi.normal(loc, loc=None, scale=scale, size=batch_shape,
+                           ctx=ctx, dtype=dtype)
+    else:
+        return _npi.normal(loc=loc, scale=scale, size=batch_shape,
+                           ctx=ctx, dtype=dtype)

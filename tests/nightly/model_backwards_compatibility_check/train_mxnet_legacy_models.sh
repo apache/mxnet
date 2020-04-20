@@ -26,14 +26,14 @@ run_models() {
 	echo "Running training files and preparing models"
 	echo '=========================='
   export MXNET_ENFORCE_DETERMINISM=1
-	python model_backwards_compat_train.py
+	python3 model_backwards_compat_train.py
 	echo '=========================='
 }
 
 install_mxnet() {
 	version=$1
 	echo "Installing MXNet "$version
-	pip install mxnet==$version --user
+	pip3 install mxnet==$version --user
 }
 
 ## Cuts the string and gives only the major version part.

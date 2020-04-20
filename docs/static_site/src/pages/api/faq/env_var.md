@@ -358,6 +358,14 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Values: 0(false) or 1(true) ```(default=1)```
   - This variable controls whether to use the MKL-DNN backend in fused RNN operator for CPU context. There are two fusion implementations of RNN operator in MXNet. The MKL-DNN implementation has a better performance than the naive one, but the latter is more stable in the backward operation currently.
 
+* MXNET_FC_TRUE_FP16
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - If this variable is set to true, MXNet will perform fp16 accumulation when using cuBLAS and input datatype is set to float16. This could increase the speed of the computation, but might result in loss of accuracy. This makes this setting useful mainly for inference usecases.
+
+* MXNET_RNN_USE_WEIGHT_CACHE
+  - Values: 0(false) or 1(true) ```(default=0)```
+  - If this variable is set, MXNet will ignore the altering of the version of NDArray which is the input parameter of the RNN operator. In Gluon API, there is a `_rnn_param_concat` operator concatenating the weights and bias of RNN into a single parameter tensor that changes the version number. Since the values of the parameters are invariant in inference pass, the RNN operator could ignore the altering of the version to escape much overhead from re-initializing the parameters.
+
 Settings for Minimum Memory Usage
 ---------------------------------
 - Make sure ```min(MXNET_EXEC_NUM_TEMP, MXNET_GPU_WORKER_NTHREADS) = 1```

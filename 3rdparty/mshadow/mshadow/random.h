@@ -14,14 +14,7 @@
 #include "./base.h"
 #include "./tensor.h"
 #include "./tensor_container.h"
-
-#if MSHADOW_IN_CXX11
-#include <random>  // use cxx11 random by default
-#endif
-
-#if _MSC_VER
-#define rand_r(x) rand()
-#endif
+#include <random>
 
 
 namespace mshadow {
@@ -52,16 +45,14 @@ class Random<cpu, DType> {
    * \param seed seed of prng
    */
   inline void Seed(int seed) {
-#if MSHADOW_IN_CXX11
     rnd_engine_.seed(seed);
-#endif
-    this->rseed_ = static_cast<unsigned>(seed);
+    this->rseed_ = static_cast<uint64_t>(seed);
   }
   /*!
    * \brief get random seed used in random generator
    * \return seed in unsigned
    */
-  inline unsigned GetSeed() const {
+  inline uint64_t GetSeed() const {
     return rseed_;
   }
   /*!
@@ -70,9 +61,6 @@ class Random<cpu, DType> {
    */
   inline void set_stream(Stream<cpu> *stream) {
   }
-
-// These samplers are only avail in C++11.
-#if MSHADOW_IN_CXX11
 
   /*!
    * \brief get some random integer
@@ -226,7 +214,6 @@ class Random<cpu, DType> {
                return static_cast<DType>(dist_poisson(rnd_engine_));});
     }
   }
-#endif
 
   /*!
    * \brief return a temporal expression storing standard gaussian random variables
@@ -270,98 +257,10 @@ class Random<cpu, DType> {
   }
 
  private:
-#if MSHADOW_IN_CXX11
   /*! \brief use c++11 random engine. */
   std::mt19937 rnd_engine_;
   /*! \brief random number seed used in random engine */
-  unsigned rseed_;
-
-#else
-
-  /*! \brief random number seed used by PRNG */
-  unsigned rseed_;
-  // functions
-  template<int dim>
-  inline void SampleUniform(Tensor<cpu, dim, DType> *dst,
-                            DType a = 0.0f, DType b = 1.0f) {
-    if (dst->CheckContiguous()) {
-      this->GenUniform(dst->dptr_, dst->shape_.Size(), a, b);
-    } else {
-      Tensor<cpu, 2, DType> mat = dst->FlatTo2D();
-      for (index_t i = 0; i < mat.size(0); ++i) {
-        this->GenUniform(mat[i].dptr_, mat.size(1), a, b);
-      }
-    }
-  }
-  template<int dim>
-  inline void SampleGaussian(Tensor<cpu, dim, DType> *dst,
-                             DType mu = 0.0f, DType sigma = 1.0f) {
-    if (sigma <= 0.0f) {
-      *dst = mu; return;
-    }
-    if (dst->CheckContiguous()) {
-      this->GenGaussian(dst->dptr_, dst->shape_.Size(), mu, sigma);
-    } else {
-      Tensor<cpu, 2, DType> mat = dst->FlatTo2D();
-      for (index_t i = 0; i < mat.size(0); ++i) {
-        this->GenGaussian(mat[i].dptr_, mat.size(1), mu, sigma);
-      }
-    }
-  }
-  inline void GenUniform(float *dptr, index_t size, float a, float b) {
-    for (index_t j = 0; j < size; ++j) {
-      dptr[j] = static_cast<float>(RandNext()) * (b - a) + a;
-    }
-  }
-  inline void GenUniform(double *dptr, index_t size, double a, double b) {
-    for (index_t j = 0; j < size; ++j) {
-      dptr[j] = static_cast<double>(RandNext()) * (b - a) + a;
-    }
-  }
-  inline void GenGaussian(float *dptr, index_t size, float mu, float sigma) {
-    this->GenGaussianX(dptr, size, mu, sigma);
-  }
-  inline void GenGaussian(double *dptr, index_t size, double mu, double sigma) {
-    this->GenGaussianX(dptr, size, mu, sigma);
-  }
-  inline void GenGaussianX(DType *dptr, index_t size, DType mu, DType sigma) {
-    DType g1 = 0.0f, g2 = 0.0f;
-    for (index_t j = 0; j < size; ++j) {
-      if ((j & 1) == 0) {
-        this->SampleNormal2D(&g1, &g2);
-        dptr[j] = mu + g1 * sigma;
-      } else {
-        dptr[j] = mu + g2 * sigma;
-      }
-    }
-  }
-  /*! \brief get next random number from rand */
-  inline DType RandNext(void) {
-    return static_cast<DType>(rand_r(&rseed_)) /
-        (static_cast<DType>(RAND_MAX) + 1.0f);
-  }
-  /*! \brief return a real numer uniform in (0,1) */
-  inline DType RandNext2(void) {
-    return (static_cast<DType>(rand_r(&rseed_)) + 1.0f) /
-        (static_cast<DType>(RAND_MAX) + 2.0f);
-  }
-  /*!
-   * \brief sample iid xx,yy ~N(0,1)
-   * \param xx first  gaussian output
-   * \param yy second gaussian output
-   */
-  inline void SampleNormal2D(DType *xx_, DType *yy_) {
-    DType &xx = *xx_, &yy = *yy_;
-    DType x, y, s;
-    do {
-      x = 2.0f * RandNext2() - 1.0f;
-      y = 2.0f * RandNext2() - 1.0f;
-      s = x * x + y * y;
-    } while (s >= 1.0f || s == 0.0f);
-    DType t = std::sqrt(-2.0f * std::log(s) / s);
-    xx = x * t; yy = y * t;
-  }
-#endif
+  uint64_t rseed_;
   /*! \brief temporal space used to store random numbers */
   TensorContainer<cpu, 1, DType> buffer_;
 };  // class Random<cpu, DType>
@@ -404,7 +303,15 @@ class Random<gpu, DType> {
     // Now set the seed.
     curandStatus_t status;
     status = curandSetPseudoRandomGeneratorSeed(gen_, static_cast<uint64_t>(seed));
+    this->rseed_ = static_cast<uint64_t>(seed);
     CHECK_EQ(status, CURAND_STATUS_SUCCESS) << "Set CURAND seed failed.";
+  }
+  /*!
+    * \brief get random seed used in random generator
+    * \return seed in unsigned
+    */
+  inline uint64_t GetSeed() const {
+    return rseed_;
   }
   /*!
    * \brief get a set of random integers
@@ -466,6 +373,7 @@ class Random<gpu, DType> {
   uniform(Shape<dim> shape);
 
  private:
+  uint64_t rseed_;
   inline void GenGaussian(float *dptr, size_t size, float mu, float sigma) {
     curandStatus_t status;
     status = curandGenerateNormal(gen_, dptr, size, mu, sigma);

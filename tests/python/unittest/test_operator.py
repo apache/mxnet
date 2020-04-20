@@ -4806,11 +4806,14 @@ def test_cast_float32_to_float16():
                     fp32_val, model_fp16_val, np_fp16_val)
 
     check_cast(mx.sym.Cast, input_np, expected_output)
-    check_cast(mx.sym.amp_cast, input_np, expected_output)
+    if default_context().device_type == 'gpu':
+        check_cast(mx.sym.amp_cast, input_np, expected_output)
 
 
 @with_seed()
 def test_amp_multicast():
+    if default_context().device_type == 'cpu':
+        return
     x = mx.sym.Variable('x', dtype=np.float16)
     y = mx.sym.Variable('y', dtype=np.float32)
     z = mx.sym.Variable('z', dtype=np.float16)
@@ -7130,6 +7133,36 @@ def test_dropout():
         # check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
         # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
+@with_seed()
+def test_dropout_reproducibility():
+    info = np.iinfo(np.int32)
+    seed1 = np.random.randint(info.min, info.max)
+    seed2 = np.random.randint(info.min, info.max)
+    data = mx.nd.ones((100, 100), ctx=default_context())
+    dropout = mx.gluon.nn.Dropout(0.5)
+    mx.random.seed(seed1)
+    with mx.autograd.record():
+        result1 = dropout(data)
+        result2 = dropout(result1)
+
+    mx.random.seed(seed2)
+    with mx.autograd.record():
+        result3 = dropout(data)
+        result4 = dropout(result3)
+
+    mx.random.seed(seed1)
+    with mx.autograd.record():
+        result5 = dropout(data)
+        result6 = dropout(result5)
+
+    assert_almost_equal(result1.asnumpy(), result5.asnumpy())
+    assert_almost_equal(result2.asnumpy(), result6.asnumpy())
+    with assert_raises(AssertionError):
+        assert_almost_equal(result1.asnumpy(), result2.asnumpy())
+    with assert_raises(AssertionError):
+        assert_almost_equal(result1.asnumpy(), result3.asnumpy())
+    with assert_raises(AssertionError):
+        assert_almost_equal(result2.asnumpy(), result4.asnumpy())
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
 @with_seed()
@@ -8393,6 +8426,19 @@ def test_ravel():
       check_symbolic_forward(b, location={'a': data}, expected=[ravel_npy])
       c = mx.sym.unravel_index(a, shape=shape2)
       check_symbolic_forward(c, location={'a': ravel_npy}, expected=[data])
+
+
+@with_seed()
+def test_unravel_index():
+    unravel_shape = (2, 10)
+    unravel_size = np.prod(unravel_shape)
+    for shape in [(10,), (2, 10), (3, 4, 5)]:
+        a = np.random.randint(0, unravel_size, size=shape)
+        b = np.stack(np.unravel_index(a, shape=unravel_shape), 0)
+        a_mx = mx.nd.array(a)
+        b_mx = mx.nd.unravel_index(a_mx, shape=unravel_shape)
+        assert_array_equal(b, b_mx.asnumpy())
+
 
 def test_context_num_gpus():
     try:
@@ -9872,6 +9918,103 @@ def test_im2col_col2im():
         pad         = 1
     )
 
+def test_elemwise_sum_for_gradient_accumulation():
+    for nrepeat in range(1, 10):
+        stored_grad = dict()
+        for grad_req in ['write', 'add']:
+            a = mx.nd.array([1])
+            b = mx.nd.array([2])
+            if grad_req == 'write':
+                a.attach_grad(grad_req='write')
+            elif grad_req == 'add':
+                a.attach_grad(grad_req='add')
+            a.grad[:] = 0
+            with mx.autograd.record():
+                for _ in range(nrepeat):
+                    b = b * a
+                b.backward()
+            stored_grad[grad_req] = a.grad.asscalar()
+        assert stored_grad['write'] == stored_grad['add']
+        assert stored_grad['write'] == 2 * nrepeat
+
+@with_seed()
+def test_elementwise_ops_on_misaligned_input():
+    a = mx.nd.array([1,2,3,4], dtype='float16')
+    b = mx.nd.array([1,2,3,4], dtype='float16')
+
+    c = a[1:3]
+    d = b[1:3]
+    # Note: testing just elemwise_add since all elemwise_ops
+    #       share the implementation
+    mx.nd.elemwise_add(c, d, out=c)
+    mx.nd.waitall()
+
+    a = mx.nd.array([1,2,3,4], dtype='float16')
+    b = mx.nd.array([1,2,3,4], dtype='float16')
+
+    c = a[0:3]
+    d = b[0:3]
+    mx.nd.elemwise_add(c, d, out=c)
+    mx.nd.waitall()
+    assert a[3].asscalar() == 4.0
+
+@with_seed()
+def test_broadcast_ops_on_misaligned_input():
+    dtypes = ['float16', 'float32', 'float64']
+    lead_dims = [2,3,4,6,10]
+
+    for dtype in dtypes:
+        for lead_dim in lead_dims:
+            for both_ways in [False, True]:
+                shape = list(rand_shape_2d()) + [lead_dim]
+                small_shape = [shape[0], 1, lead_dim]
+                if both_ways:
+                    # Broadcast in both ways [1, K, L] x [M, 1, L]
+                    big_shape = [1, shape[1], lead_dim]
+                else:
+                    big_shape = shape
+                size = np.product(shape)
+                small_size = np.product(small_shape)
+                big_size = np.product(big_shape)
+                a = mx.nd.arange(5000)
+                b = mx.nd.arange(5000)
+                e = mx.nd.arange(5000)
+                c = a[1:big_size + 1].reshape(big_shape)
+                d = b[1:small_size + 1].reshape(small_shape)
+                f = e[1:size + 1].reshape(shape)
+                mx.nd.broadcast_add(c, d, out=f)
+                expected = c.asnumpy() + d.asnumpy()
+                mx.nd.waitall()
+                assert_almost_equal(f, expected)
+
+@with_seed()
+def test_broadcast_ops_on_misaligned_input_oneside():
+    dtypes = ['float16', 'float32', 'float64']
+    lead_dims = [2,3,4,6,10]
+
+    for dtype in dtypes:
+        for lead_dim in lead_dims:
+            for both_ways in [False, True]:
+                shape = list(rand_shape_2d()) + [lead_dim]
+                small_shape = [shape[0], shape[1], 1]
+                if both_ways:
+                    # Broadcast in both ways [1, K, L] x [M, 1, 1]
+                    big_shape = [1, shape[1], lead_dim]
+                else:
+                    big_shape = shape
+                size = np.product(shape)
+                small_size = np.product(small_shape)
+                big_size = np.product(big_shape)
+                a = mx.nd.arange(5000)
+                b = mx.nd.arange(5000)
+                e = mx.nd.arange(5000)
+                c = a[1:big_size + 1].reshape(big_shape)
+                d = b[1:small_size + 1].reshape(small_shape)
+                f = e[1:size + 1].reshape(shape)
+                mx.nd.broadcast_add(c, d, out=f)
+                expected = c.asnumpy() + d.asnumpy()
+                mx.nd.waitall()
+                assert_almost_equal(f, expected)
 
 if __name__ == '__main__':
     import nose

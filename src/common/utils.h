@@ -31,6 +31,7 @@
 #include <nnvm/node.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
+#include <mxnet/storage.h>
 #include <mxnet/op_attr_types.h>
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
@@ -696,6 +697,11 @@ constexpr size_t MaxIntegerValue<mshadow::half::half_t>() {
   return size_t(2) << 10;
 }
 
+template <>
+constexpr size_t MaxIntegerValue<mshadow::bfloat::bf16_t>() {
+  return size_t(2) << 14;
+}
+
 MSHADOW_XINLINE int ilog2ul(size_t a) {
   int k = 1;
   while (a >>= 1) ++k;
@@ -726,8 +732,10 @@ inline NDArray InitZeros(const NDArrayStorageType stype, const mxnet::TShape &sh
 /*!
  * \brief Helper to add a NDArray of zeros to a std::vector.
  */
-inline void EmplaceBackZeros(const NDArrayStorageType stype, const mxnet::TShape &shape,
-                             const Context &ctx, const int dtype,
+inline void EmplaceBackZeros(const NDArrayStorageType stype,
+                             const mxnet::TShape &shape,
+                             const Context &ctx,
+                             const int dtype,
                              std::vector<NDArray> *vec) {
   // NDArray with default storage
   if (stype == kDefaultStorage) {
@@ -752,7 +760,12 @@ inline void ParallelCopy(DType* dst, const DType* src, index_t size) {
       dst[i] = src[i];
     }
   } else {
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
     std::memcpy(dst, src, sizeof(DType) * size);
+#pragma GCC diagnostic pop
   }
 }
 
@@ -903,6 +916,19 @@ inline int np_binary_out_infer_type(const int type1, const int type2) {
     return mshadow::kInt32;
   }
   return get_more_precise_type(type1, type2);
+}
+
+inline const std::string
+NodeAttrsGetProfilerScope(const nnvm::NodeAttrs& attrs) {
+  // obtain the profiler scope name, if assigned previously
+  std::string profiler_scope = MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR;
+  const std::unordered_map<std::string, std::string>& node_attrs_dict = attrs.dict;
+  const std::unordered_map<std::string, std::string>::const_iterator
+      profiler_scope_iter  = node_attrs_dict.find("__profiler_scope__");
+  if (profiler_scope_iter != node_attrs_dict.end()) {
+    profiler_scope = profiler_scope_iter->second;
+  }
+  return profiler_scope;
 }
 
 }  // namespace common

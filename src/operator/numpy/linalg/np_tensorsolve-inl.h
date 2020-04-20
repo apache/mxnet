@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include "../../operator_common.h"
 #include "../../mshadow_op.h"
 #include "../../tensor/la_op.h"
@@ -45,6 +46,11 @@ struct TensorsolveParam : public dmlc::Parameter<TensorsolveParam> {
     DMLC_DECLARE_FIELD(a_axes)
     .set_default(mxnet::Tuple<int>())
     .describe("Tuple of ints, optional. Axes in a to reorder to the right, before inversion.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_axes_s;
+    a_axes_s << a_axes;
+    (*dict)["a_axes"] = a_axes_s.str();
   }
 };
 
