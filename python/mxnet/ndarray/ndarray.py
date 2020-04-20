@@ -1097,7 +1097,7 @@ fixed-size items.
         if isinstance(idx, NDArray):
             if idx.dtype != idx_dtype:
                 idx = idx.astype(idx_dtype)
-            return idx.as_in_context(ctx)
+            return idx.as_in_ctx(ctx)
         elif isinstance(idx, (np.ndarray, list, tuple)):
             return array(idx, ctx, idx_dtype)
         elif isinstance(idx, integer_types):
