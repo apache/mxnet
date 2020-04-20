@@ -323,7 +323,7 @@ void EighOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob& v = outputs[1];
   const char UPLO = nnvm::get<EighParam>(attrs.parsed).UPLO;
 
-  if (kNullOp == req[0] && kNullOp == req[0]) { return; }
+  if (kNullOp == req[0]) { return; }
   // Zero-size output, no need to launch kernel
   if (0U == a.Size()) { return; }
 
