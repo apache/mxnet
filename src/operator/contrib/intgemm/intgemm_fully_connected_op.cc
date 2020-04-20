@@ -141,23 +141,6 @@ bool IntgemmFullyConnectedOpType(const nnvm::NodeAttrs& attrs,
   return ((*in_attrs)[0] == mshadow::kInt8 || (*in_attrs)[0] == mshadow::kFloat32);
 }
 
-namespace {
-
-// This is used to free because AlignedVector does not have Reset.
-class FreeMe {
- public:
-  FreeMe() : mem_(nullptr) {}
-  ~FreeMe() { std::free(mem_); }
-  void Reset(int8_t *with) {
-    std::free(mem_);
-    mem_ = with;
-  }
- private:
-  int8_t *mem_;
-};
-
-}  // namespace
-
 void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
                           const OpContext& ctx,
                           const std::vector<TBlob>& inputs,
@@ -200,17 +183,15 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
   float out_float_multiplier = *inputs[2].dptr<float>();
 
   int8_t *A_quant;
-  // TODO(kpuatamazon) report this memory consumption?
-  FreeMe A_quant_store;
+  mshadow::Tensor<cpu, 1, int8_t> A_quant_store;
   if (A.type_flag_ == mshadow::kFloat32) {
     const float *A_raw = A.dptr<float>();
     // Quantize A for the user.
     // Future: allow scale to be passed in? Should the induced scale be an output?
     float scale = 127.0 / ::intgemm::MaxAbsolute(A_raw, A_raw + A.shape_.Size());
     out_float_multiplier /= scale;
-    A_quant = static_cast<int8_t*>(aligned_alloc(64, A.shape_.Size()));
-    CHECK(A_quant);
-    A_quant_store.Reset(A_quant);
+    A_quant_store = ctx.requested[0].get_space_typed<cpu, 1, int8_t>(mshadow::Shape1(A.shape_.Size()), ctx.get_stream<cpu>());
+    A_quant = A_quant_store.dptr_;
     ::intgemm::Int8::PrepareA(A_raw, A_quant, scale, A_rows, inner);
   } else {
     CHECK_EQ(A.type_flag_, mshadow::kInt8);
@@ -265,6 +246,10 @@ The out_type can be int32 or float32.  Bias must have the same type.
     return params.no_bias ?
       std::vector<std::string>{"data", "weight", "scaling"} :
       std::vector<std::string>{"data", "weight", "scaling", "bias"};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<mxnet::FInferShape>("FInferShape", IntgemmFullyConnectedOpShape)
 .set_attr<nnvm::FInferType>("FInferType", IntgemmFullyConnectedOpType)
