@@ -31,6 +31,7 @@
 #include <mxnet/operator.h>
 #include <mxnet/storage.h>
 #include <algorithm>
+#include <random>
 #include <map>
 #include <vector>
 #include <string>
@@ -293,23 +294,24 @@ void RNNForwardTraining(DType* ws,
                         DType* hy_ptr,
                         DType* cy_ptr,
                         const float dropout,
-                        int mode) {
+                        int mode,
+                        std::mt19937 &rnd_engine) {  // NOLINT(runtime/references)
   switch (mode) {
     case rnn_enum::kLstm:
       LstmForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
                                  batch_size, input_size, state_size, x_ptr, hx_ptr, cx_ptr,
-                                 w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, dropout);
+                                 w_ptr, b_ptr, y_ptr, hy_ptr, cy_ptr, dropout, rnd_engine);
       break;
     case rnn_enum::kGru:
       GruForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
                                 batch_size, input_size, state_size, x_ptr, hx_ptr,
-                                w_ptr, y_ptr, hy_ptr, dropout);
+                                w_ptr, y_ptr, hy_ptr, dropout, rnd_engine);
       break;
     case rnn_enum::kRnnTanh:
     case rnn_enum::kRnnRelu:
       VanillaRNNForwardTraining<DType>(ws, rs, state_outputs, num_layers, direction, seq_length,
                                        batch_size, input_size, state_size, x_ptr, hx_ptr,
-                                       w_ptr, y_ptr, hy_ptr, dropout, mode);
+                                       w_ptr, y_ptr, hy_ptr, dropout, mode, rnd_engine);
       break;
     default:
       LOG(FATAL) << "unknown RNN mode " << mode;
@@ -842,7 +844,8 @@ class RNNOp {
     }
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
 
-    if (ctx_.dev_type == kCPU) {
+#if !defined(__CUDACC__)  // cuda doesn't support C++17
+    if constexpr (std::is_same<xpu, cpu>::value) {
       int projection_size = 0;
       if (param_.projection_size.has_value()) {
         projection_size = param_.projection_size.value();
@@ -860,6 +863,9 @@ class RNNOp {
       DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.data().dptr_);
 
       if (ctx.is_train || ctx.need_grad) {
+        mshadow::Random<cpu, unsigned> *prnd = ctx.requested[0].get_random<xpu, unsigned int>(s);
+        std::mt19937 &rnd_engine = prnd->GetRndEngine();
+
         // allocate reserve space
         if (param_.projection_size.has_value()) {
           LOG(FATAL) << "No training support for LSTM with projection on CPU currently.";
@@ -894,7 +900,8 @@ class RNNOp {
                                   hy_ptr,
                                   cy_ptr,
                                   param_.p,
-                                  param_.mode);
+                                  param_.mode,
+                                  rnd_engine);
       } else {
         RNNForwardInference<DType>(work_cpu_space,
                                    param_.state_outputs,
@@ -916,6 +923,7 @@ class RNNOp {
                                    param_.mode);
       }
     }
+#endif
   }
 
   void Backward(const OpContext &ctx,
@@ -1336,8 +1344,13 @@ class RNNOp {
 
       // Create Dropout descriptors
       if (param_.p > 0) {
+         Random<xpu, unsigned> *prnd = ctx.requested[2].get_random<xpu, unsigned>(s);
+         uint64_t rng_seed = prnd->GetSeed();
+         // reset dropout descriptor if rng seed changed.
+         bool reset = seed_ != rng_seed;
+         seed_ = rng_seed;
          ctx.requested[rnn_enum::kCuDNNDropoutDescSpace].get_cudnn_dropout_desc
-            (&dropout_desc_, s, 1.0f - param_.p, seed_);
+            (&dropout_desc_, s, 1.0f - param_.p, seed_, reset);
       }
       // Only update the probability by passing in a null dropout_states ptr
       DType* dropout_states = nullptr;
@@ -1495,7 +1508,7 @@ class RNNOp {
   cudnnRNNInputMode_t input_mode_;
   cudnnDropoutDescriptor_t dropout_desc_;
   Storage::Handle reserve_space_;
-  uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
+  uint64_t seed_;  // NOLINT(runtime/threadsafe_fn)
   size_t workspace_byte_, reserve_space_byte_;
   int workspace_size_;
   std::vector<cudnnTensorDescriptor_t> x_desc_vec_, y_desc_vec_, dx_desc_vec_, dy_desc_vec_;

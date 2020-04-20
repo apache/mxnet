@@ -180,9 +180,11 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
     const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
     if (param.p != 0 && 1.0f - param.p > 0) {
       request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
+      request.emplace_back(ResourceRequest::kRandom);
     }
 #endif
   } else {
+    request.emplace_back(ResourceRequest::kRandom);
 #if MXNET_USE_MKLDNN == 1
     request.emplace_back(ResourceRequest::kTempSpace);
 #endif
@@ -196,9 +198,7 @@ inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
                                   DispatchMode* dispatch_mode,
                                   std::vector<int> *in_attrs,
                                   std::vector<int> *out_attrs) {
-  const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
-  const bool support_mkldnn_rnn =
-      !param.projection_size.has_value() && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1);
+  const bool support_mkldnn_rnn = dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1);
   return MKLDNNStorageType(attrs, dev_mask, support_mkldnn_rnn,
                            dispatch_mode, in_attrs, out_attrs);
 }
@@ -245,7 +245,7 @@ static OpStatePtr CreateRNNState(const nnvm::NodeAttrs &attrs,
   }
 
 #if MXNET_USE_MKLDNN == 1
-  if (ctx.dev_type == kCPU && SupportMKLDNNRnn(param, in_types[rnn_enum::kData])) {
+  if (ctx.dev_type == kCPU && SupportMKLDNNRnn(in_types[rnn_enum::kData])) {
     const mxnet::TShape& data_shape = in_shapes[rnn_enum::kData];
     state = OpStatePtr::Create<MKLDNNRnnOp>(param, data_shape[0],
         data_shape[1], data_shape[2]);

@@ -1605,6 +1605,14 @@ struct ClipParam : public dmlc::Parameter<ClipParam> {
     DMLC_DECLARE_FIELD(a_max)
     .describe("Maximum value");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_min_s, a_max_s;
+    a_min_s << a_min;
+    a_max_s << a_max;
+    (*dict)["a_min"] = a_min_s.str();
+    (*dict)["a_max"] = a_max_s.str();
+  }
 };
 
 
@@ -1916,6 +1924,11 @@ struct TileParam : public dmlc::Parameter<TileParam> {
                 " If reps has length d, the result will have dimension of max(d, a.ndim);"
                 " If a.ndim < d, a is promoted to be d-dimensional by prepending new axes."
                 " If a.ndim > d, reps is promoted to a.ndim by pre-pending 1's to it.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream reps_s;
+    reps_s << reps;
+    (*dict)["reps"] = reps_s.str();
   }
 };
 

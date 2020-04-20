@@ -35,10 +35,20 @@ yum -y install protobuf-devel
 yum -y install zeromq-devel
 yum -y install openssl-devel
 yum -y install gcc-c++-4.8.*
+yum -y install gcc-gfortran
 yum -y install make
 yum -y install wget
 yum -y install unzip
 yum -y install ninja-build
+yum -y install automake
+yum -y install autoconf
+yum -y install libtool
+yum -y install patchelf
+yum -y install pandoc
+
+# gcc7
+yum -y install centos-release-scl
+yum -y install devtoolset-7
 
 # Centos 7 only provides ninja-build
 ln -s /usr/bin/ninja-build /usr/bin/ninja

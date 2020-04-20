@@ -963,7 +963,8 @@ void CachedOp::StaticBackward(
       auto entry = state.info.grad_graph.outputs[iter->second];
       if (!idx.exist(entry.node.get())) continue;
       auto eid = idx.entry_id(entry);
-      if (!arrays[eid]->IsSame(*outputs[iter->second]) ||
+      if ((!arrays[eid]->IsSame(*outputs[iter->second]) &&
+            state.array_reqs[eid] != kNullOp) ||
           !(state.array_reqs[eid] == reqs[iter->second])) {
         match = false;
         state.array_reqs[eid] = reqs[iter->second];

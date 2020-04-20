@@ -70,7 +70,8 @@ def get_docker_binary(use_nvidia_docker: bool) -> str:
     return "nvidia-docker" if use_nvidia_docker else "docker"
 
 
-def build_docker(platform: str, docker_binary: str, registry: str, num_retries: int, no_cache: bool) -> str:
+def build_docker(platform: str, docker_binary: str, registry: str, num_retries: int, no_cache: bool,
+                 cache_intermediate: bool = False) -> str:
     """
     Build a container for the given platform
     :param platform: Platform
@@ -104,6 +105,8 @@ def build_docker(platform: str, docker_binary: str, registry: str, num_retries: 
            "--build-arg", "GROUP_ID={}".format(os.getgid())]
     if no_cache:
         cmd.append("--no-cache")
+    if cache_intermediate:
+        cmd.append("--rm=false")
     elif registry:
         cmd.extend(["--cache-from", tag])
     cmd.extend(["-t", tag, get_dockerfiles_path()])
@@ -330,6 +333,9 @@ def main() -> int:
     parser.add_argument("--no-cache", action="store_true",
                         help="passes --no-cache to docker build")
 
+    parser.add_argument("--cache-intermediate", action="store_true",
+                        help="passes --rm=false to docker build")
+
     parser.add_argument("-e", "--environment", nargs="*", default=[],
                         help="Environment variables for the docker container. "
                         "Specify with a list containing either names or name=value")
@@ -361,7 +367,8 @@ def main() -> int:
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
             build_docker(platform=platform, docker_binary=docker_binary, registry=args.docker_registry,
-                         num_retries=args.docker_build_retries, no_cache=args.no_cache)
+                         num_retries=args.docker_build_retries, no_cache=args.no_cache,
+                         cache_intermediate=args.cache_intermediate)
         else:
             logging.info("Skipping docker build step.")
 

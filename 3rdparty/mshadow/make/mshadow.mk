@@ -149,13 +149,13 @@ else
 endif
 
 ifeq ($(USE_DIST_PS),1)
-MSHADOW_CFLAGS += -DMSHADOW_DIST_PS=1 -std=c++11 \
+MSHADOW_CFLAGS += -DMSHADOW_DIST_PS=1 -std=c++17 \
 	-I$(PS_PATH)/src -I$(PS_THIRD_PATH)/include
 PS_LIB = $(addprefix $(PS_PATH)/build/, libps.a libps_main.a) \
 	$(addprefix $(PS_THIRD_PATH)/lib/, libgflags.a libzmq.a libprotobuf.a \
 	libglog.a libz.a libsnappy.a)
 	# -L$(PS_THIRD_PATH)/lib -lgflags -lzmq -lprotobuf -lglog -lz -lsnappy
-MSHADOW_NVCCFLAGS += --std=c++11
+MSHADOW_NVCCFLAGS += --std=c++14
 else
 	MSHADOW_CFLAGS+= -DMSHADOW_DIST_PS=0
 endif
