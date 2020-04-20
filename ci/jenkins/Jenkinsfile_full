@@ -41,7 +41,17 @@ stage("full-build") {
     // get the base path by removing build and branch portions
     def jobPath = JOB_NAME.split('/')
     def pipelineName = jobPath[0..jobPath.size()-3].join('/')
-    build job: pipelineName + "/sanity/" + BRANCH_NAME, wait: true
+    def sanityDone = false
+    while (!sanityDone) {
+        try {
+            println("Attempting to run sanity build...")
+            build job: pipelineName + "/sanity/" + BRANCH_NAME, wait: true
+            sanityDone = true
+        } catch (hudson.AbortException e) {
+            println("Job doesn't yet exist, waiting for Jenkins to find job..")
+            sleep(5)
+        }
+    }
     buildJobs.each { subJob ->
         build job: pipelineName + "/" + subJob + "/" + BRANCH_NAME, wait: false
     }
