@@ -73,7 +73,7 @@ MXReturnValue forwardGPU(const std::unordered_map<std::string, std::string>& att
   float* out_data = outputs->at(0).data<float>();
 
   mx_stream_t cuda_stream = res.get_cuda_stream();
-  int64_t N = inputs[0].size();
+  int64_t N = inputs->at(0).size();
   int num_block = (N + NumThreadPerBlock - 1) / NumThreadPerBlock;
 
   relu_gpu_forward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(out_data, in_data, N);
@@ -90,7 +90,7 @@ MXReturnValue backwardGPU(const std::unordered_map<std::string, std::string>& at
   float* in_grad = outputs->at(0).data<float>();
 
   mx_stream_t cuda_stream = res.get_cuda_stream();
-  int64_t N = inputs[0].size();
+  int64_t N = inputs->at(0).size();
   int num_block = (N + NumThreadPerBlock - 1) / NumThreadPerBlock;
   relu_gpu_backward<<<num_block,NumThreadPerBlock,0,cuda_stream>>>(in_grad, out_grad, in_data, N);
 
