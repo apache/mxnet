@@ -508,6 +508,28 @@ class TopKAccuracy(EvalMetric):
             self.num_inst += num_samples
 
 
+def predict_with_threshold(pred, threshold=0.5):
+    """Do thresholding of predictions in binaray and multilabel cases.
+    
+    Parameters
+    ----------
+    preds : ndarray
+        predictions in shape of (batch_size, ...) or (batch_size, ..., num_categories)
+
+    preds : float or ndarray
+        threshold（s) in shape of float or (num_categories)
+    """
+    if isinstance(threshold, float):
+        return pred > threshold
+    elif isinstance(threshold, numpy.ndarray) or isinstance(threshold, ndarray.ndarray.NDArray):
+        num_classes = pred.shape[-1]
+        assert threshold.shape[-1] == num_classes, \
+                "shape mismatch: %s vs. %s"%(pred.shape[-1], threshold.shape[-1])
+        return pred > threshold        
+    else:
+        raise ValueError("{} is a wrong type for threshold!".format(type(threshold)))
+    
+    
 class _BinaryClassificationMetrics(object):
     """Private container class for classification metric statistics.
 
@@ -620,13 +642,6 @@ class _BinaryClassificationMetrics(object):
         return self.false_negatives + self.false_positives + \
                self.true_negatives + self.true_positives
 
-    @property
-    def accuracy(self):
-        if self.total_examples > 0:
-            return float(self.true_positives + self.true_negatives) / self.total_examples
-        else:
-            return 0.
-
     def reset_stats(self):
         self.false_positives = 0
         self.false_negatives = 0
@@ -680,7 +695,7 @@ class F1(EvalMetric):
     """
 
     def __init__(self, name='f1',
-                 output_names=None, label_names=None, threshold=0.5, average="macro"):
+                 output_names=None, label_names=None, threshold=0.5, average="micro"):
         self.average = average
         self.metrics = _BinaryClassificationMetrics(threshold=threshold)
         EvalMetric.__init__(self, name=name,
@@ -765,7 +780,7 @@ class Fbeta(F1):
     """
 
     def __init__(self, name='fbeta',
-                 output_names=None, label_names=None, beta=1, threshold=0.5, average="macro"):
+                 output_names=None, label_names=None, beta=1, threshold=0.5, average="micro"):
         super(Fbeta, self).__init__(name=name,
                             output_names=output_names, label_names=label_names, 
                             threshold=threshold, average=average)
@@ -774,7 +789,7 @@ class Fbeta(F1):
 
 @register
 class BinaryAccuracy(EvalMetric):
-    """Computes the accuracy of a binary classification problem.
+    """Computes the accuracy of a binary or multilabel classification problem.
 
     Parameters
     ----------
@@ -786,7 +801,7 @@ class BinaryAccuracy(EvalMetric):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
-    threshold : float, default 0.5
+    threshold : float or ndarray, default 0.5
         threshold for deciding whether the predictions are positive or negative.
 
     Examples
@@ -801,7 +816,7 @@ class BinaryAccuracy(EvalMetric):
 
     def __init__(self, name='binary_accuracy',
                  output_names=None, label_names=None, threshold=0.5):
-        self.metrics = _BinaryClassificationMetrics(threshold=threshold)
+        self.threshold = threshold
         EvalMetric.__init__(self, name=name,
                             output_names=output_names, label_names=label_names)
 
@@ -811,24 +826,27 @@ class BinaryAccuracy(EvalMetric):
         Parameters
         ----------
         labels : list of `NDArray`
-            The labels of the data.
+            Each label denotes positive/negative for each class.
 
         preds : list of `NDArray`
-            Predicted values.
+            Each prediction value is a confidence value of being positive for each class.
         """
         labels, preds = check_label_shapes(labels, preds, True)
 
-        for label, pred in zip(labels, preds):
-            self.metrics.update_binary_stats(label, pred)
+        for label, pred_label in zip(labels, preds):
+            pred_label = predict_with_threshold(pred_label, self.threshold)
+            
+            pred_label = pred_label.asnumpy().astype('int32')
+            label = label.asnumpy().astype('int32')
+            # flatten before checking shapes to avoid shape miss match
+            label = label.flat
+            pred_label = pred_label.flat
 
-        self.sum_metric = self.metrics.accuracy * self.metrics.total_examples
-        self.num_inst = self.metrics.total_examples
+            check_label_shapes(label, pred_label)
 
-    def reset(self):
-        """Resets the internal evaluation result to initial state."""
-        self.sum_metric = 0.
-        self.num_inst = 0
-        self.metrics.reset_stats()
+            num_correct = (pred_label == label).sum()
+            self.sum_metric += num_correct
+            self.num_inst += len(pred_label)
        
         
 @register
