@@ -734,7 +734,7 @@ def compile_windows_gpu_mkldnn() {
 }
 
 def test_static_scala_cpu() {
-  return ['Static build CPU 14.04 Scala' : {
+  return ['Static build CPU CentOS7 Scala' : {
     node(NODE_LINUX_CPU) {
         ws('workspace/ut-publish-scala-cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
