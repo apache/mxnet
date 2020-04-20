@@ -26,10 +26,6 @@
 
 namespace mxnet {
 
-bool is_recording() {
-  return Imperative::Get()->is_recording();
-}
-
 void SetInOut(std::vector<NDArray*>* ndinputs,
               std::vector<NDArray*>* ndoutputs,
               int num_inputs,
