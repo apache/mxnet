@@ -233,8 +233,12 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             load_index[i] = 1;
         } else {
             std::string op_name = source->op()->name;
-            if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
+            bool is_broadcast_op = fusion::broadcast_ops.find(op_name) != fusion::broadcast_ops.end();
+            if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end() || is_broadcast_op) {
                 load_index[node.inputs[0].node_id] = 0;
+                if (is_broadcast_op) {
+                    load_index[node.inputs[1].node_id] = 0;
+                }
             }
         }
     }
@@ -253,7 +257,9 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         CHECK_EQ(outputs[i], 1);
       } else {
         std::string op_name = source->op()->name;
-        if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
+        bool is_broadcast_op = fusion::broadcast_ops.find(op_name) != fusion::broadcast_ops.end();
+        if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end() ||
+            is_broadcast_op) {
           int node_id = node.inputs[0].node_id;
           const uint32_t input_entry_id = g.entry_id(node.inputs[0]);
           const auto& shape = node_shapes[input_entry_id];
@@ -309,7 +315,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           };
           std::string begin;
           std::string end;
-          if (op_name == "broadcast_like" || op_name == "slice_like") {
+          if (op_name == "broadcast_like" || op_name == "slice_like" || is_broadcast_op) {
             uint32_t like_id = g.entry_id(i, 0);
             begin = build_tuple(0, "0", "0");
             std::string extra_var_name = "extra_" + std::to_string(like_id) + "_shape";
@@ -347,6 +353,16 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
                   "," + end + ", offset);\n";
           CHECK_EQ(outputs[i], 1);
           variables[{i, 0}] = vec_name;
+          if (is_broadcast_op) {
+              int node_id_arg2 = node.inputs[1].node_id;
+              const auto& var_name_arg2 = g[node_id_arg2].source->attrs.name;
+              const auto vec_name_arg2 = "vec_" + var_name_arg2 + "_" + std::to_string(i);;
+              load_index[node_id_arg2] = 0;
+              code += "const auto " + vec_name_arg2 + " = op::" + slice_func + "<nvec>(" +
+                      var_name_arg2 + ", " + var_name_arg2 + "_shape," + begin +
+                      "," + end + ", offset);\n";
+              variables[{i, 1}] = vec_name_arg2;
+          }
           continue;
         }
       }
@@ -403,6 +419,17 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           continue;
         }
 
+        if (fusion::broadcast_ops.find(op_name) != fusion::broadcast_ops.end()) {
+          const std::string& op_desc = fusion::broadcast_ops.at(op_name);
+          code += "const auto " + var_name + " = op::load(" + variables[{i, 0}] + ".x[j]);\n";
+          std::string var_name_arg2 = "temp" + std::to_string(temp_name_counter++);
+          code += "const auto " + var_name_arg2 + " = op::load(" + variables[{i, 1}] + ".x[j]);\n";
+          std::string var_result = "temp" + std::to_string(temp_name_counter++);
+          code += "const auto " + var_result + " = op::" + op_desc + "(" + var_name + ", "
+                  + var_name_arg2 + ");\n";
+          variables[{i, 0}] = var_result;
+          continue;
+        }
 
         // Special cases with variable number
         // of inputs/outputs, listed in

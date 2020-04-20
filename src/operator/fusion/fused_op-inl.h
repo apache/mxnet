@@ -239,6 +239,10 @@ const std::map<std::string, std::string> slice_ops = {
   {"broadcast_like"   , ""},
 };
 
+const std::map<std::string, std::string> broadcast_ops = {
+  {"broadcast_add"   , "add"}
+};
+
 const std::vector<std::string> variable_io_ops = {
   "add_n",
   "_backward_Activation",

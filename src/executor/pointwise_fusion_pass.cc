@@ -105,6 +105,8 @@ namespace {
       }
       return true;
     }
+    if (broadcast_ops.count(op_name))
+      return true;
     return false;
   }
 
