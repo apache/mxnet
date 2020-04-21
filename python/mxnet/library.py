@@ -20,16 +20,20 @@
 import ctypes
 import sys
 import os
-from .base import _LIB, check_call, MXNetError, _init_op_module
+from .base import _LIB, check_call, MXNetError, _init_op_module, mx_uint
 from .ndarray.register import _make_ndarray_function
 from .symbol.register import _make_symbol_function
 
-def load(path):
+def load(path, verbose=True):
     """Loads library dynamically.
 
     Parameters
     ---------
-    path : Path to library .so/.dll file
+    path : string
+        Path to library .so/.dll file
+
+    verbose : boolean
+        defaults to True, set to False to avoid printing library info
 
     Returns
     ---------
@@ -46,9 +50,10 @@ def load(path):
     if not file_ext in ['.so', '.dll']:
         raise MXNetError("load path %s is NOT a library file" % path)
 
+    verbose_val = 1 if verbose else 0
     byt_obj = path.encode('utf-8')
     chararr = ctypes.c_char_p(byt_obj)
-    check_call(_LIB.MXLoadLib(chararr))
+    check_call(_LIB.MXLoadLib(chararr, mx_uint(verbose_val)))
 
     #regenerate operators
     _init_op_module('mxnet', 'ndarray', _make_ndarray_function)
