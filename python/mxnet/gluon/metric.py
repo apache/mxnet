@@ -509,7 +509,7 @@ class TopKAccuracy(EvalMetric):
 
 
 def predict_with_threshold(pred, threshold=0.5):
-    """Do thresholding of predictions in binaray and multilabel cases.
+    """Do thresholding of predictions in binary and multilabel cases.
     
     Parameters
     ----------
@@ -529,8 +529,12 @@ def predict_with_threshold(pred, threshold=0.5):
     else:
         raise ValueError("{} is a wrong type for threshold!".format(type(threshold)))
     
+
+def one_hot(x, m):
+    return (numpy.arange(m)==x[:,None]).astype('int32')
     
-class _BinaryClassificationMetrics(object):
+        
+class _ClassificationMetrics(object):
     """Private container class for classification metric statistics.
 
     True/false positive and true/false negative counts are sufficient statistics for various classification metrics.
@@ -539,6 +543,10 @@ class _BinaryClassificationMetrics(object):
     
     Parameters
     ----------
+    class_type : str, default "binary"
+        "binary": f1 for binary classification.
+        "multiclass": f1 for multiclassification problem.
+        "multilabel": f1 for multilabel classification.      
     beta : float, default 1
         weight of precision in harmonic mean. 
     threshold : float, default 0.5
@@ -546,15 +554,23 @@ class _BinaryClassificationMetrics(object):
         
     """
 
-    def __init__(self, threshold=0.5, beta=1):
+    def __init__(self, class_type="binary", threshold=0.5, beta=1):
+        self.class_type = class_type
         self.threshold = threshold
         self.beta = beta
-        self.true_positives = 0
-        self.false_negatives = 0
-        self.false_positives = 0
-        self.true_negatives = 0
+        self.reset_stats()
 
-    def update_binary_stats(self, label, pred):
+    def _set(self, num):
+        if self.num_classes is None:
+            self.num_classes = num
+            self.true_positives = numpy.zeros(num)
+            self.false_negatives = numpy.zeros(num)
+            self.false_positives = numpy.zeros(num)
+            self.true_negatives = numpy.zeros(num)
+        else:
+            assert self.num_classes == num, "Input number of classes has changed from {} to {}".format(self.num_classes, num)
+            
+    def update_stats(self, label, pred):
         """Update various binary classification counts for a single (label, pred) pair.
 
         Parameters
@@ -567,31 +583,46 @@ class _BinaryClassificationMetrics(object):
         """
         pred = pred.asnumpy()
         label = label.asnumpy().astype('int32')
-        if len(pred.shape) == 1: # assume each value refers to confidence(positive)
-            pass
-        elif pred.shape[-1] > 2:
-            raise ValueError("%s currently only supports binary classification."
-                             % self.__class__.__name__)
-        elif pred.shape[-1] == 1: # classify positive when confidence(positive) > threshold
-            pred = pred.flat
+        if self.class_type == "binary":
+            self._set(1)
+            if len(numpy.unique(label)) > 2:
+                raise ValueError("Wrong label for binary classification.")
+            if pred.shape == label.shape:
+                pass
+            elif pred.shape[-1] > 2:
+                raise ValueError("The shape of prediction {} is wrong for binary classification.".format(pred.shape))
+            elif pred.shape[-1] == 2:
+                pred = pred.reshape(-1, 2)[:, 1]     
+            pred_label = predict_with_threshold(pred, self.threshold).flat
+            label = label.flat
+            
+        elif self.class_type == "multiclass":
+            num = pred.shape[-1]
+            self._set(num)
+            assert label.max() < num, "pred contains fewer classes than label!"
+            pred_label = one_hot(pred.argmax(axis=-1).reshape(-1), num)         
+            label = one_hot(label.reshape(-1), num)
+            
+        elif self.class_type == "multilabel":
+            num = pred.shape[-1]
+            self._set(num)
+            assert pred.shape == label.shape, "The shape of label should be same as that of prediction for multilabel classification."
+            pred_label = predict_with_threshold(pred, self.threshold).reshape(-1, num)
+            label = label.reshape(-1, num)
         else:
-            pred = pred.reshape(-1, 2)[:, 1] 
-        pred_label = pred > self.threshold 
-        label = label.flat
-        
+            raise ValueError("Wrong class_type {}! Only supports ['binary', 'multiclass', 'multilabel']".format(self.class_type))
+            
         check_label_shapes(label, pred_label)
-        if len(numpy.unique(label)) > 2:
-            raise ValueError("%s currently only supports binary classification."
-                             % self.__class__.__name__)
+        
         pred_true = (pred_label == 1)
         pred_false = 1 - pred_true
         label_true = (label == 1)
         label_false = 1 - label_true
 
-        true_pos = (pred_true * label_true).sum()
-        false_pos = (pred_true * label_false).sum()
-        false_neg = (pred_false * label_true).sum()
-        true_neg = (pred_false * label_false).sum()
+        true_pos = (pred_true * label_true).sum(0)
+        false_pos = (pred_true * label_false).sum(0)
+        false_neg = (pred_false * label_true).sum(0)
+        true_neg = (pred_false * label_false).sum(0)
         self.true_positives += true_pos
         self.false_positives += false_pos
         self.false_negatives += false_neg
@@ -599,25 +630,44 @@ class _BinaryClassificationMetrics(object):
 
     @property
     def precision(self):
-        if self.true_positives + self.false_positives > 0:
-            return float(self.true_positives) / (self.true_positives + self.false_positives)
+        if self.num_classes is not None:
+            return self.true_positives / numpy.maximum(self.true_positives + self.false_positives, 1e-12)
         else:
             return 0.
 
+    @property
+    def global_precision(self):
+        if self.num_classes is not None:
+            return self.true_positives.sum() / numpy.maximum(self.true_positives.sum() + self.false_positives.sum(), 1e-12)
+        else:
+            return 0.
+            
     @property
     def recall(self):
-        if self.true_positives + self.false_negatives > 0:
-            return float(self.true_positives) / (self.true_positives + self.false_negatives)
+        if self.num_classes is not None:
+            return self.true_positives / numpy.maximum(self.true_positives + self.false_negatives, 1e-12)
         else:
             return 0.
 
     @property
-    def fscore(self):
-        if self.precision + self.recall > 0:
-            return (1 + self.beta ** 2) * self.precision * self.recall / (self.beta ** 2 * self.precision + self.recall)
+    def global_recall(self):
+        if self.num_classes is not None:
+            return self.true_positives.sum() / numpy.maximum(self.true_positives.sum() + self.false_negatives.sum(), 1e-12)
         else:
             return 0.
+            
+    @property
+    def fscore(self):
+        return (1 + self.beta ** 2) * self.precision * self.recall / numpy.maximum(self.beta ** 2 * self.precision + self.recall, 1e-12)
 
+    @property
+    def global_fscore(self):
+        if self.global_precision + self.global_recall > 0:
+            return (1 + self.beta ** 2) * self.global_precision * self.global_recall / \
+                (self.beta ** 2 * self.global_precision + self.global_recall)
+        else:
+            return 0.
+            
     def matthewscc(self):
         """Calculate the Matthew's Correlation Coefficent"""
         if not self.total_examples:
@@ -639,14 +689,17 @@ class _BinaryClassificationMetrics(object):
 
     @property
     def total_examples(self):
-        return self.false_negatives + self.false_positives + \
-               self.true_negatives + self.true_positives
+        if self.num_classes is None:
+            return 0
+        return self.false_negatives[0] + self.false_positives[0] + \
+               self.true_negatives[0] + self.true_positives[0]
 
     def reset_stats(self):
-        self.false_positives = 0
-        self.false_negatives = 0
-        self.true_positives = 0
-        self.true_negatives = 0
+        self.num_classes = None
+        self.true_positives = None
+        self.false_negatives = None
+        self.false_positives = None
+        self.true_negatives = None
 
 
 @register
@@ -677,12 +730,17 @@ class F1(EvalMetric):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
+    class_type : str, default "binary"
+        "binary": f1 for binary classification.
+        "multiclass": f1 for multiclassification problem.
+        "multilabel": f1 for multilabel classification.        
     threshold : float, default 0.5
         threshold for postive confidence value.
-    average : str, default 'macro'
+    average : str, default 'micro'
         Strategy to be used for aggregating across mini-batches.
-            "macro": average the F1 scores for each batch.
-            "micro": compute a single F1 score across all batches.
+            "macro": Calculate metrics for each label and return unweighted mean of f1.
+            "micro": Calculate metrics globally by counting the total true positives, false negatives and false positives.
+            None: Return f1 scores for each class (numpy.ndarray) . 
 
     Examples
     --------
@@ -695,9 +753,9 @@ class F1(EvalMetric):
     """
 
     def __init__(self, name='f1',
-                 output_names=None, label_names=None, threshold=0.5, average="micro"):
+                 output_names=None, label_names=None, class_type="binary", threshold=0.5, average="micro"):
         self.average = average
-        self.metrics = _BinaryClassificationMetrics(threshold=threshold)
+        self.metrics = _ClassificationMetrics(class_type=class_type, threshold=threshold)
         EvalMetric.__init__(self, name=name,
                             output_names=output_names, label_names=label_names)
 
@@ -715,16 +773,16 @@ class F1(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            self.metrics.update_binary_stats(label, pred)
+            self.metrics.update_stats(label, pred)
 
-        if self.average == "macro":
-            self.sum_metric += self.metrics.fscore
-            self.num_inst += 1
-            self.metrics.reset_stats()
+        if self.average == "micro":
+            self.sum_metric = self.metrics.global_fscore * self.metrics.total_examples   
+        elif self.average == "macro":
+            self.sum_metric = self.metrics.fscore.mean() * self.metrics.total_examples  
         else:
-            self.sum_metric = self.metrics.fscore * self.metrics.total_examples
-            self.num_inst = self.metrics.total_examples
-
+            self.sum_metric = self.metrics.fscore * self.metrics.total_examples  
+        self.num_inst = self.metrics.total_examples   
+          
     def reset(self):
         """Resets the internal evaluation result to initial state."""
         self.sum_metric = 0.
@@ -760,14 +818,19 @@ class Fbeta(F1):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
+    class_type : str, default "binary"
+        "binary": f1 for binary classification.
+        "multiclass": f1 for multiclassification problem.
+        "multilabel": f1 for multilabel classification.      
     beta : float, default 1
-        weight of precision in harmonic mean. 
+        weight of precision in harmonic mean.   
     threshold : float, default 0.5
-        threshold for deciding whether the predictions are positive or negative.
-    average : str, default 'macro'
+        threshold for postive confidence value.
+    average : str, default 'micro'
         Strategy to be used for aggregating across mini-batches.
-            "macro": average the F1 scores for each batch.
-            "micro": compute a single F1 score across all batches.
+            "macro": Calculate metrics for each label and return unweighted mean of f1.
+            "micro": Calculate metrics globally by counting the total true positives, false negatives and false positives.
+            None: Return f1 scores for each class. 
 
     Examples
     --------
@@ -780,11 +843,11 @@ class Fbeta(F1):
     """
 
     def __init__(self, name='fbeta',
-                 output_names=None, label_names=None, beta=1, threshold=0.5, average="micro"):
+                 output_names=None, label_names=None, class_type="binary", beta=1, threshold=0.5, average="micro"):
         super(Fbeta, self).__init__(name=name,
                             output_names=output_names, label_names=label_names, 
-                            threshold=threshold, average=average)
-        self.metrics = _BinaryClassificationMetrics(threshold=threshold, beta=beta)
+                            class_type=class_type, threshold=threshold, average=average)
+        self.metrics = _ClassificationMetrics(class_type=class_type, threshold=threshold, beta=beta)
         
 
 @register
@@ -910,7 +973,7 @@ class MCC(EvalMetric):
 
     def __init__(self, name='mcc',
                  output_names=None, label_names=None):
-        self._metrics = _BinaryClassificationMetrics()
+        self._metrics = _ClassificationMetrics()
         EvalMetric.__init__(self, name=name,
                             output_names=output_names, label_names=label_names)
 
@@ -928,7 +991,7 @@ class MCC(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            self._metrics.update_binary_stats(label, pred)
+            self._metrics.update_stats(label, pred)
 
         self.sum_metric = self._metrics.matthewscc() * self._metrics.total_examples
         self.num_inst = self._metrics.total_examples
