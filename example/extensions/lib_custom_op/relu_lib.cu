@@ -105,14 +105,14 @@ MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& att
 }
 
 MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attrs,
-                        const std::vector<int>& intypes,
+                        std::vector<int>& intypes,
                         std::vector<int>* outtypes) {
   outtypes->at(0) = intypes[0];
   return MX_SUCCESS;
 }
 
 MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& attrs,
-                         const std::vector<std::vector<unsigned int>>& inshapes,
+                         std::vector<std::vector<unsigned int>>& inshapes,
                          std::vector<std::vector<unsigned int>>* outshapes) {
   outshapes->at(0) = inshapes[0];
   return MX_SUCCESS;
@@ -259,7 +259,7 @@ REGISTER_OP(my_noisy_relu)
 .setBackward(backwardGPU, "gpu");
 
 MXReturnValue initialize(int version) {
-  if (version >= 10400) {
+  if (version >= 10700) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {

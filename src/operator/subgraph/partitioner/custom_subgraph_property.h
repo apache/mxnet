@@ -331,7 +331,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     // check if supportedOps was registered
     if (supported_ops_ && call_supported_ops_) {
       // setup array of subgraph IDs for each node
-      std::vector<int> supported_node_IDs(indexed_graph.num_nodes(), -1);
+      std::vector<int> supported_node_IDs(indexed_graph.num_nodes(), -2);
       int *ids = supported_node_IDs.data();
       // call supportedOps
       CHECK(call_supported_ops_(supported_ops_, json, supported_node_IDs.size(), ids,

@@ -22,13 +22,13 @@ Custom Graph Pass Example and Tutorial
 
 Adding custom graph passes in MXNet used to require deep understanding of the MXNet backend, including nnvm pass registration and other internal classes, followed by recompiling MXNet from source. This feature allows adding custom graph passes by dynamically loading external libraries at runtime.
 
-This custom graph pass feature enables users to write custom model modification strategies without compiling against all of MXNet header files and dependencies. When a library containing custom passes is loaded dynamically, the components found in the library will be re-registered in MXNet so that users can use those natively just like other built-in components.
+This custom graph pass feature enables users to write custom model modification strategies without compiling against all of MXNet header files and dependencies. When a library containing custom passes is loaded dynamically, the components found in the library will be registered in MXNet so that users can use those natively just like other built-in components.
 
 ## Getting Started
 
 ### Have MXNet Ready
 
-The custom pass feature was merged recently and is not available in versions of MXNet prior to v2.0. To use the feature now, please install MXNet either by installing the nightly pip wheel or compiling from source. For running the following example, it doesn’t matter if it is a CUDA, MKLDNN or plain MXNet build; the custom pass doesn’t interact with the execution of other native MXNet features. 
+To run the following example, the build type of MXNet doesn’t matter since the custom pass doesn’t interact with the execution of other native MXNet features. Note that if you want to use your custom pass with models running on GPU, you still need an MXNet CUDA build. 
 
 ### Run An Example
 
@@ -84,7 +84,7 @@ APIs in MXNet are available in both Symbol and Gluon APIs. For the Symbol API, t
 optimize_for(backend, args=None, aux=None, ctx=None, **kwargs)
 ```
 
-The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to partition the model for. The `args` and `aux` arguments are optional and take a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before executing the graph pass. The `ctx` argument is optional and takes a device context to infer storage types. It also takes any other user-specified options that will be passed to the backend APIs.
+The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to use to optimize the model. The `args` and `aux` arguments are optional and take a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before executing the graph pass. The `ctx` argument is optional and takes a device context to infer storage types. It also takes any other user-specified options that will be passed to the backend APIs.
 
 For the Gluon API, the `hybridize` API can be called on HybridBlocks to execute a graph pass on the internal CachedOp Symbol.
 
@@ -103,14 +103,14 @@ optimize_for(x, backend=None, backend_opts=None, **kwargs)
 When the `optimize_for` API is called on a HybridBlock it runs the graph pass immediately. This lets users export the modified model without running a complete forward pass.
 
 ```
-block.optimize_for(x, backend='myPart')
-block.export('partitioned')
+block.optimize_for(x, backend='myPass')
+block.export('optimized')
 ```
 
 But you can also use `optimize_for` in place of `hybridize` and run inference immediately after too.
 
 ```
-block.optimize_for(x, backend='myPart')
+block.optimize_for(x, backend='myPass')
 block(x)
 ```
 

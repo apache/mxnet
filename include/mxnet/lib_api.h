@@ -22,7 +22,11 @@
  * \file lib_api.h
  * \brief APIs to interact with libraries
  * This API specifies function prototypes to
- * register custom ops for library authors
+ * register custom ops, partitioner, and passes
+ * for library authors
+ * See example/extension/lib_custom_op/README.md
+ * See example/extension/lib_subgraph/README.md
+ * See example/extension/lib_pass/README.md
  */
 
 #ifndef MXNET_LIB_API_H_
@@ -45,7 +49,7 @@
 #endif
 
 /* Make sure to update the version number everytime you make changes */
-#define MX_LIBRARY_VERSION 6
+#define MX_LIBRARY_VERSION 7
 
 /*!
  * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
@@ -868,15 +872,15 @@ typedef MXReturnValue (*parseAttrs_t)(const std::unordered_map<std::string,
                                       int* num_inputs, int* num_outputs);
 typedef MXReturnValue (*inferType_t)(const std::unordered_map<std::string,
                                                                std::string>& attributes,
-                                     const std::vector<int>& in_types,
+                                     std::vector<int>* in_types,
                                      std::vector<int>* out_types);
 typedef MXReturnValue (*inferSType_t)(const std::unordered_map<std::string,
                                                                std::string>& attributes,
-                                      const std::vector<int>& in_storage_types,
+                                      std::vector<int>* in_storage_types,
                                       std::vector<int>* out_storage_types);
 typedef MXReturnValue (*inferShape_t)(const std::unordered_map<std::string,
                                                                std::string>& attributes,
-                                      const std::vector<std::vector<unsigned int> >& in_shapes,
+                                      std::vector<std::vector<unsigned int> >* in_shapes,
                                       std::vector<std::vector<unsigned int> >* out_shapes);
 typedef MXReturnValue (*mutateInputs_t)(const std::unordered_map<std::string,
                                                                  std::string>& attributes,
@@ -1184,6 +1188,7 @@ typedef int (*opCallParseAttrs_t)(parseAttrs_t parseAttrs, const char* const* ke
 typedef int (*opCallInferShape_t)(inferShape_t inferShape, const char* const* keys,
                                   const char* const* vals, int num,
                                   unsigned int** inshapes, int* indims, int num_in,
+                                  unsigned int*** mod_inshapes, int** mod_indims,
                                   unsigned int*** outshapes, int** outdims, int num_out);
 
 #define MXLIB_OPCALLINFERTYPE_STR "_opCallInferType"
@@ -1399,6 +1404,7 @@ extern "C" {
   MX_INT_RET _opCallInferShape(inferShape_t inferShape, const char* const* keys,
                                const char* const* vals, int num,
                                unsigned int** inshapes, int* indims, int num_in,
+                               unsigned int*** mod_inshapes, int** mod_indims,
                                unsigned int*** outshapes, int** outdims, int num_out) {
     // create map of attributes from list
     std::unordered_map<std::string, std::string> attrs;
@@ -1417,8 +1423,21 @@ extern "C" {
     // create a vector of shapes for outputs
     std::vector<std::vector<unsigned int> > out_shapes(num_out);
 
-    int retval = inferShape(attrs, in_shapes, &out_shapes);
+    int retval = inferShape(attrs, &in_shapes, &out_shapes);
     if (!retval) return retval;
+
+    // allocate space for modified input dims, shape
+    *mod_indims = static_cast<int*>(malloc (num_in * sizeof(int)));
+    *mod_inshapes = static_cast<unsigned**>(malloc (num_in * sizeof(unsigned*)));
+
+    // copy modified input shapes
+    for (int i = 0; i < num_in; i++) {
+      (*mod_indims)[i] = in_shapes[i].size();
+      (*mod_inshapes)[i] = static_cast<unsigned*>(malloc ((*mod_indims)[i] * sizeof(unsigned)));
+      for (int j = 0; j < (*mod_indims)[i]; j++) {
+        (*mod_inshapes)[i][j] = in_shapes[i][j];
+      }
+    }
 
     // allocate space for output dims, shape
     *outdims = static_cast<int*>(malloc (num_out * sizeof(int)));
@@ -1428,7 +1447,7 @@ extern "C" {
     for (int i = 0; i < num_out; i++) {
       (*outdims)[i] = out_shapes[i].size();
       (*outshapes)[i] = static_cast<unsigned*>(malloc ((*outdims)[i] * sizeof(unsigned)));
-      for (int j = 0; j < indims[i]; j++) {
+      for (int j = 0; j < (*outdims)[i]; j++) {
         (*outshapes)[i][j] = out_shapes[i][j];
       }
     }
@@ -1455,10 +1474,14 @@ extern "C" {
     // create a vector of types for outputs
     std::vector<int> out_types(num_out, -1);
 
-    int retval = inferType(attrs, in_types, &out_types);
+    int retval = inferType(attrs, &in_types, &out_types);
     if (!retval)
       return retval;
 
+    // copy modified input types
+    for (int i = 0; i < num_in; i++) {
+      intypes[i] = in_types[i];
+    }
     // copy output types
     for (int i = 0; i < num_out; i++) {
       outtypes[i] = out_types[i];
@@ -1486,11 +1509,15 @@ extern "C" {
     // create a vector of types for outputs
     std::vector<int> out_stypes(num_out, -1);
 
-    int retval = inferSType(attrs, in_stypes, &out_stypes);
+    int retval = inferSType(attrs, &in_stypes, &out_stypes);
 
     if (!retval)
       return retval;
 
+    // copy modified input storage types
+    for (int i = 0; i < num_in; i++) {
+      instypes[i] = in_stypes[i];
+    }
     // copy output storage types
     for (int i = 0; i < num_out; i++) {
       outstypes[i] = out_stypes[i];

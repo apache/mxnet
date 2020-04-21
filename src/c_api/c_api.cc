@@ -538,15 +538,42 @@ void registerOperators(void *lib, int verbose) {
         }
       }
 
+      // modified input shapes will be allocated by infer shape function
+      uint32_t** mod_inshapes = nullptr;
+      int* mod_indims = nullptr;
       // output shapes will be allocated by infer shape function
       uint32_t** outshapes = nullptr;
       int* outdims = nullptr;
 
       CHECK(callInferShape(shape_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                            inshapes.data(), indims.data(), in_shape->size(),
+                           &mod_inshapes, &mod_indims,
                            &outshapes, &outdims, out_shape->size()))
       << "Error calling InferShape for custom operator '" << name_str << "'";
 
+      std::vector<uint32_t*> in_shapes(in_shape->size());
+      // determine amount of memory needed to store all the modified input shapes
+      buff_size = 0;
+      for (unsigned i = 0; i < in_shape->size(); i++) {
+        buff_size += mod_indims[i];
+      }
+
+      // copy modified input shapes from custom op memory to MXNet memory
+      std::vector<uint32_t> mod_inbuff(buff_size);
+      ptr = mod_inbuff.data();
+      for (unsigned i = 0; i < in_shape->size(); ++i) {
+        in_shapes[i] = ptr;
+        for (int j = 0; j < mod_indims[i]; ++j, ++ptr) {
+          *ptr = static_cast<uint32_t>(mod_inshapes[i][j]);
+        }
+      }
+
+      // assign modified input shapes to ShapeVector
+      for (unsigned i = 0; i < in_shape->size(); ++i) {
+        SHAPE_ASSIGN_CHECK(*in_shape, i,
+                           mxnet::TShape(in_shapes[i], in_shapes[i]+mod_indims[i]));
+      }
+      
       std::vector<uint32_t*> out_shapes(out_shape->size());
       // determine amount of memory needed to store all the output shapes
       buff_size = 0;
@@ -571,6 +598,12 @@ void registerOperators(void *lib, int verbose) {
       }
 
       // free memory used by custom op to allocate shapes/dims
+      callFree(mod_indims);
+      for (unsigned i = 0; i < in_shape->size(); i++) {
+        callFree(mod_inshapes[i]);
+      }
+      callFree(mod_inshapes);
+
       callFree(outdims);
       for (unsigned i = 0; i < out_shape->size(); i++) {
         callFree(outshapes[i]);
@@ -602,6 +635,10 @@ void registerOperators(void *lib, int verbose) {
                            outtypes.data(), out_type->size()))
       << "Error calling InferType for custom operator '" << name_str << "'";
 
+      // copy and assign modified input types from custom op to MXNet memory
+      for (size_t i = 0; i < in_type->size(); i++) {
+        TYPE_ASSIGN_CHECK(*in_type, i, intypes[i]);
+      }
       // copy and assign output types from custom op to MXNet memory
       for (size_t i = 0; i < out_type->size(); i++) {
         TYPE_ASSIGN_CHECK(*out_type, i, outtypes[i]);
@@ -667,6 +704,10 @@ void registerOperators(void *lib, int verbose) {
                              outstypes.data(), out_stypes->size()))
         << "Error calling InferSType for custom operator '" << name_str << "'";
 
+        // copy and assign modified input storage types from custom op to MXNet memory.
+        for (size_t i = 0; i < in_stypes->size(); i++) {
+          STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, instypes[i]);
+        }
         // copy and assign output storage types from custom op to MXNet memory.
         for (size_t i = 0; i < out_stypes->size(); i++) {
           STORAGE_TYPE_ASSIGN_CHECK(*out_stypes, i, outstypes[i]);

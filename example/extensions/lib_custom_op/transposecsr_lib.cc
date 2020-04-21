@@ -97,7 +97,7 @@ MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& att
 }
 
 MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attrs,
-                        const std::vector<int>& intypes,
+                        std::vector<int>& intypes,
                         std::vector<int>* outtypes) {
   // validate inputs
   if (intypes.size() != 1) {
@@ -114,7 +114,7 @@ MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attr
 }
 
 MXReturnValue inferSType(const std::unordered_map<std::string, std::string>& attrs,
-                         const std::vector<int>& instypes,
+                         std::vector<int>& instypes,
                          std::vector<int>* outstypes) {
   if (instypes[0] != kCSRStorage) {
     std::cout << "Expected storage type is kCSRStorage" << std::endl;
@@ -125,7 +125,7 @@ MXReturnValue inferSType(const std::unordered_map<std::string, std::string>& att
 }
 
 MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& attrs,
-                         const std::vector<std::vector<unsigned int>>& inshapes,
+                         std::vector<std::vector<unsigned int>>& inshapes,
                          std::vector<std::vector<unsigned int>>* outshapes) {
   // validate inputs
   if (inshapes.size() != 1) {
@@ -190,7 +190,7 @@ REGISTER_OP(my_state_transposecsr)
 .setCreateOpState(createOpState, "cpu");
 
 MXReturnValue initialize(int version) {
-  if (version >= 10400) {
+  if (version >= 10700) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {

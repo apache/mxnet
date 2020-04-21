@@ -94,7 +94,7 @@ REGISTER_PASS(jsonPass)
 .setBody(jsonPass);
 
 MXReturnValue initialize(int version) {
-  if (version >= 10400) {
+  if (version >= 10700) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {

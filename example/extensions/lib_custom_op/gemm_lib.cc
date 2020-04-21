@@ -123,7 +123,7 @@ MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& att
 }
 
 MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attrs,
-                        const std::vector<int> &intypes,
+                        std::vector<int> &intypes,
                         std::vector<int> *outtypes) {
   // validate inputs
   if (intypes.size() != 2) {
@@ -142,7 +142,7 @@ MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attr
 }
 
 MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& attrs,
-                         const std::vector<std::vector<unsigned int>>& inshapes,
+                         std::vector<std::vector<unsigned int>>& inshapes,
                          std::vector<std::vector<unsigned int>>* outshapes) {
   // validate inputs
   if (inshapes.size() != 2) {
@@ -226,7 +226,7 @@ REGISTER_OP(state_gemm)
 .setCreateOpState(createOpState, "cpu");
 
 MXReturnValue initialize(int version) {
-  if (version >= 10400) {
+  if (version >= 10700) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {
