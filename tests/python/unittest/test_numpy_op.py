@@ -2434,6 +2434,10 @@ def test_np_binary_funcs():
                          [lambda y, x1, x2: x2 / y]),
         'ldexp': (-3, 3, [None], None, [[_np.int32]]),
     }
+    if is_op_runnable():
+        funcs['logical_and'] = (-100, 100, [None], None, [[_np.float32, _np.float64]])
+        funcs['logical_or'] = (-100, 100, [None], None, [[_np.float32, _np.float64]])
+        funcs['logical_xor'] = (-100, 100, [None], None, [[_np.float32, _np.float64]])
     shape_pairs = [((3, 2), (3, 2)),
                    ((3, 2), (3, 1)),
                    ((3, 1), (3, 0)),

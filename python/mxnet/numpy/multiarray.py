@@ -66,6 +66,7 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
            'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
+           'logical_and', 'logical_or', 'logical_xor',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'round_', 'arctan2', 'hypot',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
            'unique', 'lcm', 'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
@@ -77,7 +78,6 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal']
 
 __all__ += fallback.__all__
-
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -8545,6 +8545,111 @@ def less(x1, x2, out=None):
     array([False])
     """
     return _mx_nd_np.less(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def logical_and(x1, x2, out=None):
+    r"""
+    Compute the truth value of x1 AND x2 element-wise.
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Logical AND is applied to the elements of `x1` and `x2`.
+        If ``x1.shape != x2.shape``, they must be broadcastable to a common
+        shape (which becomes the shape of the output).
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    Returns
+    -------
+    y : ndarray or bool
+        Boolean result of the logical AND operation applied to the elements
+        of `x1` and `x2`; the shape is determined by broadcasting.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    logical_or, logical_not, logical_xor, bitwise_or
+    Examples
+    --------
+    >>> np.logical_and(True, False)
+    False
+    >>> np.logical_and(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
+    array([False,  True])
+    """
+    return _mx_nd_np.logical_and(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def logical_or(x1, x2, out=None):
+    r"""
+    Compute the truth value of x1 OR x2 element-wise.
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Logical OR is applied to the elements of `x1` and `x2`.
+        If ``x1.shape != x2.shape``, they must be broadcastable to a common
+        shape (which becomes the shape of the output).
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    Returns
+    -------
+    y : ndarray or bool
+        Boolean result of the logical OR operation applied to the elements
+        of `x1` and `x2`; the shape is determined by broadcasting.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    logical_and, logical_not, logical_xor, bitwise_or
+    Examples
+    --------
+    >>> np.logical_or(True, False)
+    True
+    >>> np.logical_or(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
+    array([True,  True])
+    """
+    return _mx_nd_np.logical_or(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def logical_xor(x1, x2, out=None):
+    r"""
+    Compute the truth value of x1 XOR x2 element-wise.
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Logical XOR is applied to the elements of `x1` and `x2`.
+        If ``x1.shape != x2.shape``, they must be broadcastable to a common
+        shape (which becomes the shape of the output).
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    Returns
+    -------
+    y : ndarray or bool
+        Boolean result of the logical XOR operation applied to the elements
+        of `x1` and `x2`; the shape is determined by broadcasting.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    logical_and, logical_not, logical_or, bitwise_or
+    Examples
+    --------
+    >>> np.logical_xor(True, False)
+    True
+    >>> np.logical_xor(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
+    array([ True, False])
+    """
+    return _mx_nd_np.logical_xor(x1, x2, out)
 
 
 @set_module('mxnet.numpy')

@@ -42,7 +42,10 @@ _TVM_OPS = [
     'less',
     'less_equal',
     'greater',
-    'greater_equal'
+    'greater_equal',
+    'logical_and',
+    'logical_or',
+    'logical_xor',
 ]
 
 
@@ -1968,6 +1971,23 @@ def _add_workload_less_equal(array_pool):
     # OpArgMngr.add_workload('less_equal', np.array([np.nan]), np.array([np.nan]))
 
 
+def _add_workload_logical_and(array_pool):
+    OpArgMngr.add_workload('logical_and', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
+    OpArgMngr.add_workload('logical_and', np.array([False, False, True, True], dtype=np.bool),
+                           np.array([False, True, False, True], dtype=np.bool))
+
+def _add_workload_logical_or(array_pool):
+    OpArgMngr.add_workload('logical_or', np.array([0, 1, 2, 4, 2], dtype=np.bool), np.array([-2, 5, 1, 4, 3], dtype=np.bool))
+    OpArgMngr.add_workload('logical_or', np.array([False, False, True, True], dtype=np.bool),
+                           np.array([False, True, False, True], dtype=np.bool))
+
+
+def _add_workload_logical_xor(array_pool):
+    OpArgMngr.add_workload('logical_xor', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
+    OpArgMngr.add_workload('logical_xor', np.array([False, False, True, True], dtype=np.bool),
+                           np.array([False, True, False, True], dtype=np.bool))
+
+
 def _add_workload_where():
     c = np.ones(53).astype(bool)
     d = np.ones_like(c)
@@ -3040,6 +3060,9 @@ def _prepare_workloads():
     _add_workload_greater_equal(array_pool)
     _add_workload_less(array_pool)
     _add_workload_less_equal(array_pool)
+    _add_workload_logical_and(array_pool)
+    _add_workload_logical_or(array_pool)
+    _add_workload_logical_xor(array_pool)
     _add_workload_where()
     _add_workload_shape()
     _add_workload_diff()
