@@ -563,7 +563,11 @@ class OpResource {
 #define MX_STR_SHAPE "__ext_shape__"
 
 /* \brief get shape value from list of shapes string
- * format: [[1]] or [[1],[2,3]], returns "[1]" or "[2,3]"
+ *
+ * Examples:
+ *
+ * getShapeAt("[[1]]", 0) returns "[1]"
+ * getShapeAt("[[1],[2,3]]", 1) returns "[2,3]"
  */
 std::string getShapeAt(const std::string& shape, unsigned index) {
   int idx = 1;  // start at 1 to skip the first square bracket [
@@ -576,7 +580,11 @@ std::string getShapeAt(const std::string& shape, unsigned index) {
 }
 
 /* \brief get dtype value from list of dtypes string
- * format: [1] or [1,2], returns "1" or "2"
+ *
+ * Examples:
+ *
+ * getDtypeAt("[1]", 0) returns "1"
+ * getDtypeAt("[1,2]", 1) returns "2" 
  */
 std::string getDtypeAt(const std::string& dtype, unsigned index) {
   // find the beginning of the output dtype for the particular output index
