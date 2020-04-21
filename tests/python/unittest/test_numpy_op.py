@@ -649,6 +649,16 @@ def test_np_sum():
         def hybrid_forward(self, F, a, *args, **kwargs):
             return F.np.sum(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
 
+    class TestSumConv(HybridBlock):
+        def __init__(self, axis=None, dtype=None, keepdims=False):
+            super(TestSumConv, self).__init__()
+            self._axis = axis
+            self._dtype = dtype
+            self._keepdims = keepdims
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return a.sum(axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+
     def is_int(dtype):
         return 'int' in dtype
 
@@ -669,8 +679,10 @@ def test_np_sum():
             continue
         # test gluon
         test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims)
+        test_sum_conv = TestSumConv(axis=axis, dtype=dtype, keepdims=keepdims)
         if hybridize:
             test_sum.hybridize()
+            test_sum_conv.hybridize()
         if is_int(itype):
             x = _np.random.randint(-128, 128, shape, dtype=itype)
             x = np.array(x)
@@ -684,16 +696,24 @@ def test_np_sum():
         if itype == 'bool':
             if is_op_runnable() and (not is_windows):  # special handling of boolean ndarray
                 y = test_sum(x)
+                y_conv = test_sum_conv(x)
                 assert y.dtype == expected_ret.dtype
                 assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-4, atol=1e-5,
+                                    use_broadcast=False)
+                assert y_conv.dtype == expected_ret.dtype
+                assert_almost_equal(y_conv.asnumpy(), expected_ret, rtol=1e-4, atol=1e-5,
                                     use_broadcast=False)
             continue
 
         x.attach_grad()
         with mx.autograd.record():
             y = test_sum(x)
+            y_conv = test_sum_conv(x)
         assert y.shape == expected_ret.shape
         assert_almost_equal(y.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
+                            atol=1e-5 if dtype == 'float16' else 1e-5, use_broadcast=False)
+        assert y_conv.shape == expected_ret.shape
+        assert_almost_equal(y_conv.asnumpy(), expected_ret, rtol=1e-3 if dtype == 'float16' else 1e-3,
                             atol=1e-5 if dtype == 'float16' else 1e-5, use_broadcast=False)
         y.backward()
         assert same(x.grad.asnumpy(), _np.ones(shape=x.shape, dtype=x.dtype))
