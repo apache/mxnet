@@ -519,7 +519,7 @@ def test_quantized_fc():
 
 @with_seed()
 def test_quantized_rnn():
-    def check_quantized_rnn(num_layers, bidirectional, seq_len, batch_size, input_dim, state_dim):
+    def check_quantized_rnn(num_layers, bidirectional, seq_len, batch_size, input_dim, state_dim, projection_dim=None):
         if is_test_for_gpu():
             print('skipped testing test_quantized_rnn for gpu since it is not supported yet')
             return
@@ -534,6 +534,7 @@ def test_quantized_rnn():
                               bidirectional=bidirectional,
                               state_outputs=True,
                               state_size=state_dim,
+                              projection_size=projection_dim,
                               mode='lstm',
                               name='rnn')
         arg_shapes, _, _ = rnn_fp32.infer_shape(data=data_shape)
@@ -559,6 +560,7 @@ def test_quantized_rnn():
                                                 bidirectional=bidirectional,
                                                 state_outputs=True,
                                                 state_size=state_dim,
+                                                projection_size=projection_dim,
                                                 mode='lstm',
                                                 name='qrnn')
         qarg_names = rnn_int8.list_arguments()
@@ -575,10 +577,15 @@ def test_quantized_rnn():
         qoutput = rnn_int8_exe.forward()[0]
 
         mse = np.mean((output.asnumpy() - qoutput.asnumpy())**2)
-        assert mse < 0.001
+        if projection_dim:
+            assert mse < 2
+        else:
+            assert mse < 0.001
 
     check_quantized_rnn(1, False, 5, 2, 16, 16)
     check_quantized_rnn(1, True, 5, 2, 16, 16)
+    check_quantized_rnn(1, False, 5, 2, 16, 16, 8)
+    check_quantized_rnn(1, True, 5, 2, 16, 16, 8)
 
 
 @with_seed()

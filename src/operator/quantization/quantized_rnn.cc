@@ -92,7 +92,9 @@ bool QuantizedRnnShape(const nnvm::NodeAttrs& attrs,
   const dim_t directions = param.bidirectional ? 2 : 1;
   const dim_t total_lyrs = directions * param.num_layers;
   const dim_t state_size = param.state_size;
-  SHAPE_ASSIGN_CHECK(*in_shape, quantized_rnn::kState, Shape3(total_lyrs, batch_size, state_size));
+  const dim_t iter_size  = param.projection_size.has_value() ?
+      param.projection_size.value() : state_size;
+  SHAPE_ASSIGN_CHECK(*in_shape, quantized_rnn::kState, Shape3(total_lyrs, batch_size, iter_size));
   if (param.mode == rnn_enum::kLstm)
     SHAPE_ASSIGN_CHECK(*in_shape, quantized_rnn::kStateCell,
         Shape3(total_lyrs, batch_size, state_size));
@@ -109,9 +111,9 @@ bool QuantizedRnnShape(const nnvm::NodeAttrs& attrs,
     SHAPE_ASSIGN_CHECK(*in_shape, i, Shape1(1));
 
   out_shape->clear();
-  out_shape->push_back({dshape[0], batch_size, directions * state_size});  // output dim: [T, N, C]
+  out_shape->push_back({dshape[0], batch_size, directions * iter_size});  // output dim: [T, N, C]
   if (param.state_outputs) {
-    out_shape->push_back({total_lyrs, batch_size, state_size});    // state dim: [L*D, N, C]
+    out_shape->push_back({total_lyrs, batch_size, iter_size});    // state dim: [L*D, N, C]
     if (param.mode == rnn_enum::kLstm)
       out_shape->push_back({total_lyrs, batch_size, state_size});  // cell dim: [L*D, N, C]
   }
@@ -216,6 +218,9 @@ OpStatePtr CreateQuantizedRnnState(const nnvm::NodeAttrs& attrs,
     const mxnet::TShape& data_shape = in_shapes[quantized_rnn::kData];
     state = OpStatePtr::Create<MKLDNNQuantizedRnnOp>(attrs, data_shape[0],
         data_shape[1], data_shape[2]);
+  } else {
+    LOG(FATAL) << "MKLDNN quantized rnn operator only supports inputs in U8 type and weight"
+        " in FP32 type.";
   }
 #else
   LOG(FATAL) << "Quantized RNN operator relies on MKL-DNN library."

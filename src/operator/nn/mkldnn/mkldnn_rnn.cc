@@ -81,7 +81,11 @@ void MKLDNNRnnLayerParam::SetDims() {
 
   workspace_size = tz_volume(weight_layer_dims) + tz_volume(weight_iter_dims) +
       tz_volume(bias_dims);
-  if (proj_size > 0) workspace_size += tz_volume(weight_proj_dims);
+  if (proj_size > 0) {
+    workspace_size += tz_volume(weight_proj_dims);
+    //* NOTE: Quantized Op needs one more projection weights in ldio format.
+    if (quantized) workspace_size += tz_volume(weight_proj_dims);
+  }
   reserve_size = 0;
 }
 
@@ -134,10 +138,10 @@ MKLDNNRnnFullParam MKLDNNRnnFullParamParser(const NodeAttrs& attrs, const int se
 
   // Set dims, workspace size, state_outputs, quantized and enable_u8_output flag
   for (auto& layer_param : layer_params) {
-    layer_param.SetDims();
     layer_param.state_outputs = rnn_param.state_outputs;
     layer_param.quantized = full_param.mkldnn_param.quantized;
     layer_param.enable_u8_output = true;
+    layer_param.SetDims();
   }
   // Quantized RNN operator produces kFloat32 outputs.
   if (full_param.mkldnn_param.quantized) layer_params.back().enable_u8_output = false;
@@ -210,7 +214,6 @@ RnnPrimitive GetRnnFwdPrim(const MKLDNNRnnLayerParam &layer_param,
       layer_param.state_dims, iter_dtype, tag::ldnc) : memory::desc();
   auto dst_cell_desc = layer_param.state_outputs ? memory::desc(
       layer_param.cell_dims, iter_dtype, tag::ldnc) : memory::desc();
-
 
   auto fwd = RnnPrimitive();
   switch (mode) {
@@ -433,6 +436,10 @@ void MKLDNNRnnForward::ReorderWeights() {
       };
     ReorderWithAttr(*weights_layer_r_, *weights_layer_);
     ReorderWithAttr(*weights_iter_r_, *weights_iter_);
+    if (param_.proj_size > 0) {
+      MKLDNNMemoryReorder(*weights_proj_r_, *weights_proj_io_);
+      ReorderWithAttr(*weights_proj_io_, *weights_proj_);
+    }
   } else {
     MKLDNNMemoryReorder(*weights_layer_r_, *weights_layer_);
     MKLDNNMemoryReorder(*weights_iter_r_, *weights_iter_);
@@ -518,12 +525,14 @@ void MKLDNNRnnForward::SetWeightsMem(void *w_ptr, void *b_ptr,
   const auto mkldnn_dtype = get_mkldnn_type(dtype);
   const size_t dtype_bytes = mshadow::mshadow_sizeof(dtype);
 
-  const size_t buffer_bytes = this->GetSize()  // byte number of the buffer
+  size_t buffer_bytes = this->GetSize()  // byte number of the buffer
       + (param_.workspace_size + param_.reserve_size) * dtype_bytes
       + kMKLDNNAlign * 7;     // Add margin for alignment of seven times allocation for the
                               // dnnl memory handlers, i.e. weights_layer_, weights_iter_,
                               // weights_proj_, bias_, weights_layer_r_, weights_iter_r_,
                               // and weights_proj_r_.
+  if (param_.quantized && param_.proj_size > 0)
+    buffer_bytes += kMKLDNNAlign;  // Quantized Op needs another one for weights_proj_io_.
   if (mem_mgr_.Size() < buffer_bytes) mem_mgr_.Init(buffer_bytes, this->ctx_);
 
   const bool use_proj = (param_.proj_size > 0);
@@ -554,6 +563,10 @@ void MKLDNNRnnForward::SetWeightsMem(void *w_ptr, void *b_ptr,
   if (use_proj && weights_proj_r_ == nullptr) {
     weights_proj_r_ = mem_mgr_.Alloc(
         {param_.weight_proj_dims, mkldnn_dtype, format_tag::ldoi});
+  }
+  if (param_.quantized && use_proj && weights_proj_io_ == nullptr) {
+    weights_proj_io_ = mem_mgr_.Alloc(
+        {param_.weight_proj_dims, mkldnn_dtype, format_tag::ldio});
   }
 
   // convert void* to char* for arithmetic operations
@@ -1034,9 +1047,9 @@ void MKLDNNRnnOp::Forward(const OpContext &ctx,
   }
 
   if (dmlc::GetEnv("MXNET_RNN_USE_WEIGHT_CACHE", 0) && !initialized_) {
-    LOG(INFO) << "The current weight of RNN is assumed to be fixed and cached during "
+    common::LogOnce("The current weight of RNN is assumed to be fixed and cached during "
         "the whole inference pipeline. Please set MXNET_RNN_USE_WEIGHT_CACHE=0, if "
-        "the weight changed at runtime.";
+        "the weight changed at runtime.");
   }
   // Check if weights NDArray was changed. If so, reset initialized_
   if (!is_training && fwd_inf_vec_.size() > 0
