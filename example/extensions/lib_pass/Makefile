@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,27 +15,10 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# coding: utf-8
-# pylint: disable=arguments-differ
+all: pass_lib
 
-# This test checks if dynamic loading of library into MXNet is successful
+pass_lib:
+	g++ -shared -fPIC -std=c++11 pass_lib.cc -o libpass_lib.so -I ../../../include/mxnet
 
-import mxnet as mx
-import os
-
-# test loading library
-if (os.name=='posix'):
-    path = os.path.abspath('libinit_lib.so')
-    mx.library.load(path)
-elif (os.name=='nt'):
-    path = os.path.abspath('libinit_lib.dll')
-    mx.library.load(path)
-
-# test loading library with verbose=False
-if (os.name=='posix'):
-    path = os.path.abspath('libinit_lib.so')
-    mx.library.load(path, False)
-elif (os.name=='nt'):
-    path = os.path.abspath('libinit_lib.dll')
-    mx.library.load(path, False)
-    
+clean:
+	rm -rf libpass_lib.so

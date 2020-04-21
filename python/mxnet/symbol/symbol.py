@@ -1445,6 +1445,7 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
 
+    # pylint: disable=too-many-locals
     def optimize_for(self, backend, args=None, aux=None, ctx=None, **kwargs):
         """Partitions current symbol and optimizes it for a given backend,
         returns new partitioned symbol.
@@ -1499,6 +1500,13 @@ class Symbol(SymbolBase):
             ctx = current_context()
         assert isinstance(ctx, Context)
 
+        new_args_size = ctypes.c_uint()
+        new_arg_names = ctypes.POINTER(ctypes.c_char_p)()
+        new_args_handle = ctypes.POINTER(NDArrayHandle)()
+        new_aux_size = ctypes.c_uint()
+        new_aux_names = ctypes.POINTER(ctypes.c_char_p)()
+        new_aux_handle = ctypes.POINTER(NDArrayHandle)()
+
         key_list = []
         val_list = []
         for key, val in kwargs.items():
@@ -1514,7 +1522,37 @@ class Symbol(SymbolBase):
                                              aux_handle,
                                              mx_uint(len(key_list)),
                                              c_str_array(key_list),
-                                             c_str_array(val_list)))
+                                             c_str_array(val_list),
+                                             ctypes.byref(new_args_size),
+                                             ctypes.byref(new_args_handle),
+                                             ctypes.byref(new_arg_names),
+                                             ctypes.byref(new_aux_size),
+                                             ctypes.byref(new_aux_handle),
+                                             ctypes.byref(new_aux_names)))
+        arg_names = self.list_arguments()
+        if isinstance(args, dict):
+            for i in range(new_args_size.value):
+                args[py_str(new_arg_names[i])] = NDArray(NDArrayHandle(new_args_handle[i]))
+        elif isinstance(args, list):
+            for i in range(new_args_size.value):
+                name = py_str(new_arg_names[i])
+                if name in arg_names:
+                    idx = arg_names.index(name)
+                    args[idx] = NDArray(NDArrayHandle(new_args_handle[i]))
+                else:
+                    args.append(NDArray(NDArrayHandle(new_args_handle[i])))
+        aux_names = self.list_auxiliary_states()
+        if isinstance(aux, dict):
+            for i in range(new_aux_size.value):
+                aux[py_str(new_aux_names[i])] = NDArray(NDArrayHandle(new_aux_handle[i]))
+        elif isinstance(aux, list):
+            for i in range(new_aux_size.value):
+                name = py_str(new_aux_names[i])
+                if name in aux_names:
+                    idx = aux_names.index(name)
+                    aux[idx] = NDArray(NDArrayHandle(new_aux_handle[i]))
+                else:
+                    aux.append(NDArray(NDArrayHandle(new_aux_handle[i])))
         return Symbol(out)
 
 
