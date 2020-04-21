@@ -82,7 +82,7 @@ rnn_weights_qparams_t GetMKLDNNRnnWeightsQParams(
     }
     if (use_proj) {
       #pragma omp parallel for num_threads(nthreads)
-      for (index_t i = 0; i < static_cast<index_t>(wh_size0); ++i) {
+      for (index_t i = 0; i < static_cast<index_t>(wr_size); ++i) {
         fake_wr[i] = MaxAbs(wr[i], wr[i + w_size0]);
       }
     }
