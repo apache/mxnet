@@ -52,7 +52,11 @@ class HalfNormal(TransformedDistribution):
 
     @property
     def scale(self):
-        return self._base_dist._scale
+        return self._base_dist.scale
+
+    @property
+    def loc(self):
+        return self._base_dist.loc
 
     @property
     def mean(self):

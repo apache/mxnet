@@ -70,8 +70,8 @@ def _test_zero_kl(p, shape):
     """
     mx_out = mgp.kl_divergence(p, p).asnumpy()
     np_out = _np.zeros(shape)
-    assert_almost_equal(mx_out, np_out, atol=1e-4,
-                        rtol=1e-3, use_broadcast=False)
+    assert_almost_equal(mx_out, np_out, atol=1e-3,
+                        rtol=1e-2, use_broadcast=False)
 
 
 @with_seed()
@@ -523,12 +523,6 @@ def test_gluon_geometric():
         np_out = ss.geom(prob.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                         rtol=1e-3, use_broadcast=False)
-
-    # Test kl
-    for shape in shapes:
-        prob = np.random.uniform(size=shape)
-        dist1 = mgp.Geometric(prob=prob)
-        _test_zero_kl(dist1, shape)
 
 
 @with_seed()
@@ -1724,7 +1718,6 @@ def test_gluon_mvn():
                 assert_almost_equal(mx_out_t, ss_out, atol=1e-4,
                         rtol=1e-3, use_broadcast=False)
 
-    # TODO: Test kl
 
 
 @with_seed()
@@ -1788,8 +1781,6 @@ def test_gluon_half_normal():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False) 
     
-    # TODO: Test kl
-
 
 @with_seed()
 @use_np
@@ -2007,6 +1998,28 @@ def test_gluon_kl():
         dist1 = mgp.Pareto(scale=scale, alpha=alpha)    
         _test_zero_kl(dist1, shape)
 
+    for shape in shapes:
+        scale = np.random.uniform(0.5, 1.5, shape)
+        dist = mgp.HalfNormal(scale=scale)
+        _test_zero_kl(dist, shape)
+
+    for shape in shapes:
+        prob = np.random.uniform(size=shape)
+        dist1 = mgp.Geometric(prob=prob)
+        _test_zero_kl(dist1, shape)
+
+    event_shapes = [3, 5, 10]
+    loc_shapes = [(), (2,), (4, 2)]
+    cov_shapes = [(), (2,), (4, 2)]
+    for loc_shape, cov_shape, event_shape in itertools.product(loc_shapes, cov_shapes, event_shapes):
+        loc = np.random.randn(*(loc_shape + (event_shape,)))
+        _s = np.random.randn(*(cov_shape + (event_shape, event_shape)))
+        sigma = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(event_shape)
+        dist = mgp.MultivariateNormal(loc, cov=sigma)
+        desired_shape = (loc + sigma[..., 0]).shape[:-1]
+        _test_zero_kl(dist, desired_shape)
+
+        
 
 @with_seed()
 @use_np

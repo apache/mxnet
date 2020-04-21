@@ -222,6 +222,7 @@ def _kl_exponential_exponential(p, q):
     t1 = -F.np.log(scale_ratio)
     return t1 + scale_ratio - 1
 
+
 @register_kl(Pareto, Pareto)
 def _kl_pareto_pareto(p, q):
     F = p.F
@@ -233,6 +234,7 @@ def _kl_pareto_pareto(p, q):
     # TODO: Handle out-of-support value
     # result[p.support.lower_bound < q.support.lower_bound] = inf
     return result
+
 
 @register_kl(Gumbel, Gumbel)
 def _kl_gumbel_gumbel(p, q):
@@ -246,3 +248,36 @@ def _kl_gumbel_gumbel(p, q):
     t2 = ct1 * _euler_gamma
     t3 = F.np.exp(ct2 + lgamma(1 + ct1) - ct3)
     return t1 + t2 + t3 - (1 + _euler_gamma)
+
+
+@register_kl(HalfNormal, HalfNormal)
+def _kl_halfNormal_halfNormal(p, q):
+    F = p.F
+    var_ratio = (p.scale / q.scale) ** 2
+    t1 = ((p.loc - q.loc) / q.scale) ** 2
+    return 0.5 * (var_ratio + t1 - 1 - F.np.log(var_ratio))
+
+
+@register_kl(MultivariateNormal, MultivariateNormal)
+def _kl_mvn_mvn(p, q):
+    F = p.F
+    log_det = (lambda mvn: 
+        F.np.log(
+            F.np.diagonal(mvn.scale_tril, axis1=-2, axis2=-1)
+        ).sum(-1)
+    )
+    # log(det(\Sigma_1) / det(\Sigma_2))
+    term1 = log_det(q) - log_det(p)
+
+    # tr(inv(\Sigma_2) * \Sigma_1)
+    term2 = F.np.trace(F.np.matmul(q.precision, p.cov), axis1=-2, axis2=-1)
+
+    # (\mu_2 - \mu_1).T * inv(\Sigma_2) * (\mu_2 - \mu_1)
+    diff = q.loc - p.loc
+    term3 = F.np.einsum(
+            '...i,...i->...',
+            diff,
+            F.np.einsum('...jk,...j->...k', q.precision, diff)  # Batch matrix vector multiply
+            ) * -0.5
+    n = F.np.ones_like(diff).sum(-1)
+    return 0.5 * (term1 + term2 + term3 - n)
