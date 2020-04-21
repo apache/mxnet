@@ -105,16 +105,16 @@ MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& att
 }
 
 MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attrs,
-                        std::vector<int>& intypes,
+                        std::vector<int>* intypes,
                         std::vector<int>* outtypes) {
-  outtypes->at(0) = intypes[0];
+  outtypes->at(0) = intypes->at(0);
   return MX_SUCCESS;
 }
 
 MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& attrs,
-                         std::vector<std::vector<unsigned int>>& inshapes,
+                         std::vector<std::vector<unsigned int>>* inshapes,
                          std::vector<std::vector<unsigned int>>* outshapes) {
-  outshapes->at(0) = inshapes[0];
+  outshapes->at(0) = inshapes->at(0);
   return MX_SUCCESS;
 }
 

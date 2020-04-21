@@ -573,7 +573,7 @@ void registerOperators(void *lib, int verbose) {
         SHAPE_ASSIGN_CHECK(*in_shape, i,
                            mxnet::TShape(in_shapes[i], in_shapes[i]+mod_indims[i]));
       }
-      
+
       std::vector<uint32_t*> out_shapes(out_shape->size());
       // determine amount of memory needed to store all the output shapes
       buff_size = 0;

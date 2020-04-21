@@ -97,44 +97,44 @@ MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& att
 }
 
 MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attrs,
-                        std::vector<int>& intypes,
+                        std::vector<int>* intypes,
                         std::vector<int>* outtypes) {
   // validate inputs
-  if (intypes.size() != 1) {
+  if (intypes->size() != 1) {
     std::cout << "Expected 1 inputs to inferType" << std::endl;
     return MX_FAIL;
   }
-  if (intypes[0] != kFloat32) {
+  if (intypes->at(0) != kFloat32) {
     std::cout << "Expected input to have float32 type" << std::endl;
     return MX_FAIL;
   }
 
-  outtypes->at(0) = intypes[0];
+  outtypes->at(0) = intypes->at(0);
   return MX_SUCCESS;
 }
 
 MXReturnValue inferSType(const std::unordered_map<std::string, std::string>& attrs,
-                         std::vector<int>& instypes,
+                         std::vector<int>* instypes,
                          std::vector<int>* outstypes) {
-  if (instypes[0] != kCSRStorage) {
+  if (instypes->at(0) != kCSRStorage) {
     std::cout << "Expected storage type is kCSRStorage" << std::endl;
     return MX_FAIL;
   }
-  outstypes->at(0) = instypes[0];
+  outstypes->at(0) = instypes->at(0);
   return MX_SUCCESS;
 }
 
 MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& attrs,
-                         std::vector<std::vector<unsigned int>>& inshapes,
+                         std::vector<std::vector<unsigned int>>* inshapes,
                          std::vector<std::vector<unsigned int>>* outshapes) {
   // validate inputs
-  if (inshapes.size() != 1) {
+  if (inshapes->size() != 1) {
     std::cout << "Expected 1 inputs to inferShape" << std::endl;
     return MX_FAIL;
   }
 
-  outshapes->at(0).push_back(inshapes[0][1]);
-  outshapes->at(0).push_back(inshapes[0][0]);
+  outshapes->at(0).push_back(inshapes->at(0)[1]);
+  outshapes->at(0).push_back(inshapes->at(0)[0]);
   return MX_SUCCESS;
 }
 

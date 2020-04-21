@@ -123,41 +123,41 @@ MXReturnValue parseAttrs(const std::unordered_map<std::string, std::string>& att
 }
 
 MXReturnValue inferType(const std::unordered_map<std::string, std::string>& attrs,
-                        std::vector<int> &intypes,
+                        std::vector<int> *intypes,
                         std::vector<int> *outtypes) {
   // validate inputs
-  if (intypes.size() != 2) {
+  if (intypes->size() != 2) {
     std::cout << "Expected 2 inputs to inferType" << std::endl;
     return MX_FAIL;
   }
-  for (unsigned i = 0; i < intypes.size(); i++) {
-    if (intypes[i] != kFloat32) {
+  for (unsigned i = 0; i < intypes->size(); i++) {
+    if (intypes->at(i) != kFloat32) {
       std::cout << "Expected input " << i << " to have float32 type" << std::endl;
       return MX_FAIL;
     }
   }
 
-  outtypes->at(0) = intypes[0];
+  outtypes->at(0) = intypes->at(0);
   return MX_SUCCESS;
 }
 
 MXReturnValue inferShape(const std::unordered_map<std::string, std::string>& attrs,
-                         std::vector<std::vector<unsigned int>>& inshapes,
+                         std::vector<std::vector<unsigned int>>* inshapes,
                          std::vector<std::vector<unsigned int>>* outshapes) {
   // validate inputs
-  if (inshapes.size() != 2) {
+  if (inshapes->size() != 2) {
     std::cout << "Expected 2 inputs to inferShape" << std::endl;
     return MX_FAIL;
   }
-  if (inshapes[0].size() != 2 || inshapes[1].size() != 2) {
+  if (inshapes->at(0).size() != 2 || inshapes->at(1).size() != 2) {
     std::cout << "Expected 2D matrices for both inputs to inferShape" << std::endl;
     return MX_FAIL;
   }
 
-  unsigned n = inshapes[0][0];
-  unsigned k = inshapes[0][1];
-  unsigned kk = inshapes[1][0];
-  unsigned m = inshapes[1][1];
+  unsigned n = inshapes->at(0)[0];
+  unsigned k = inshapes->at(0)[1];
+  unsigned kk = inshapes->at(1)[0];
+  unsigned m = inshapes->at(1)[1];
   if (k != kk) {
     std::cout << "Exected first input axis 1 equals to second input axis 0" << std::endl;
     return MX_FAIL;
