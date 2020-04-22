@@ -16,6 +16,7 @@
 # under the License.
 
 import mxnet as mx
+mx.npx.set_np()
 import numpy as np
 import scipy
 from scipy.stats import pearsonr
@@ -352,7 +353,7 @@ def test_pcc():
     # * order
     # * batch size
     # * update frequency
-    labels = [ [ i ] for i in labels[0] ]
+    labels = [ [ i.reshape(-1) ] for i in labels[0] ]
     labels.reverse()
     preds = [ [ i.reshape((1, -1)) ] for i in preds[0] ]
     preds.reverse()

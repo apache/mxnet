@@ -22,7 +22,8 @@
 import math
 from collections import OrderedDict
 
-import numpy
+from .. import numpy
+from ..util import use_np
 
 from ..base import numeric_types, string_types
 from .. import ndarray
@@ -359,6 +360,7 @@ class CompositeEvalMetric(EvalMetric):
 
 @register
 @alias('acc')
+@use_np
 class Accuracy(EvalMetric):
     """Computes accuracy classification score.
 
@@ -414,11 +416,11 @@ class Accuracy(EvalMetric):
         for label, pred_label in zip(labels, preds):
             if pred_label.shape != label.shape:
                 pred_label = ndarray.argmax(pred_label, axis=self.axis)
-            pred_label = pred_label.asnumpy().astype('int32')
-            label = label.asnumpy().astype('int32')
+            pred_label = pred_label.as_np_ndarray().astype('int32')
+            label = label.as_np_ndarray().astype('int32')
             # flatten before checking shapes to avoid shape miss match
-            label = label.flat
-            pred_label = pred_label.flat
+            label = label.reshape(-1)
+            pred_label = pred_label.reshape(-1)
 
             check_label_shapes(label, pred_label)
 
@@ -429,6 +431,7 @@ class Accuracy(EvalMetric):
 
 @register
 @alias('top_k_accuracy', 'top_k_acc')
+@use_np
 class TopKAccuracy(EvalMetric):
     """Computes top k predictions accuracy.
 
@@ -491,19 +494,19 @@ class TopKAccuracy(EvalMetric):
             # we do not care about the order of top k elements. It is
             # much faster, which is important since that computation is
             # single-threaded due to Python GIL.
-            pred_label = numpy.argpartition(pred_label.asnumpy().astype('float32'), -self.top_k)
-            label = label.asnumpy().astype('int32')
+            pred_label = numpy.argpartition(pred_label.as_np_ndarray().astype('float32'), -self.top_k)
+            label = label.as_np_ndarray().astype('int32')
             check_label_shapes(label, pred_label)
             num_samples = pred_label.shape[0]
             num_dims = len(pred_label.shape)
             if num_dims == 1:
-                num_correct = (pred_label.flat == label.flat).sum()
+                num_correct = (pred_label.reshape(-1) == label.reshape(-1)).sum()
                 self.sum_metric += num_correct
             elif num_dims == 2:
                 num_classes = pred_label.shape[1]
                 top_k = min(num_classes, self.top_k)
                 for j in range(top_k):
-                    num_correct = (pred_label[:, num_classes - 1 - j].flat == label.flat).sum()
+                    num_correct = (pred_label[:, num_classes - 1 - j].reshape(-1) == label.reshape(-1)).sum()
                     self.sum_metric += num_correct
             self.num_inst += num_samples
 
@@ -530,10 +533,11 @@ def predict_with_threshold(pred, threshold=0.5):
         raise ValueError("{} is a wrong type for threshold!".format(type(threshold)))
     
 
-def one_hot(x, m):
-    return (numpy.arange(m)==x[:,None]).astype('int32')
+def one_hot(idx, num):
+    return (numpy.arange(num).astype(idx) == idx[:,None]).astype('int32')
     
-        
+
+@use_np        
 class _ClassificationMetrics(object):
     """Private container class for classification metric statistics.
 
@@ -581,8 +585,8 @@ class _ClassificationMetrics(object):
         pred : `NDArray`
             Predicted values.
         """
-        pred = pred.asnumpy()
-        label = label.asnumpy().astype('int32')
+        pred = pred.as_np_ndarray()
+        label = label.as_np_ndarray().astype('int32')
         if self.class_type == "binary":
             self._set(1)
             if len(numpy.unique(label)) > 2:
@@ -593,8 +597,8 @@ class _ClassificationMetrics(object):
                 raise ValueError("The shape of prediction {} is wrong for binary classification.".format(pred.shape))
             elif pred.shape[-1] == 2:
                 pred = pred.reshape(-1, 2)[:, 1]     
-            pred_label = predict_with_threshold(pred, self.threshold).flat
-            label = label.flat
+            pred_label = predict_with_threshold(pred, self.threshold).reshape(-1)
+            label = label.reshape(-1)
             
         elif self.class_type == "multiclass":
             num = pred.shape[-1]
@@ -615,9 +619,9 @@ class _ClassificationMetrics(object):
         check_label_shapes(label, pred_label)
         
         pred_true = (pred_label == 1)
-        pred_false = 1 - pred_true
+        pred_false = (pred_label == 0)
         label_true = (label == 1)
-        label_false = 1 - label_true
+        label_false = (label == 0)
 
         true_pos = (pred_true * label_true).sum(0)
         false_pos = (pred_true * label_false).sum(0)
@@ -668,7 +672,7 @@ class _ClassificationMetrics(object):
         else:
             return 0.
             
-    def matthewscc(self):
+    def binary_matthewscc(self):
         """Calculate the Matthew's Correlation Coefficent"""
         if not self.total_examples:
             return 0.
@@ -703,6 +707,7 @@ class _ClassificationMetrics(object):
 
 
 @register
+@use_np
 class F1(EvalMetric):
     """Computes the F1 score of a binary classification problem.
 
@@ -791,6 +796,7 @@ class F1(EvalMetric):
 
 
 @register
+@use_np
 class Fbeta(F1):
     """Computes the Fbeta score of a binary classification problem.
 
@@ -851,6 +857,7 @@ class Fbeta(F1):
         
 
 @register
+@use_np
 class BinaryAccuracy(EvalMetric):
     """Computes the accuracy of a binary or multilabel classification problem.
 
@@ -899,11 +906,11 @@ class BinaryAccuracy(EvalMetric):
         for label, pred_label in zip(labels, preds):
             pred_label = predict_with_threshold(pred_label, self.threshold)
             
-            pred_label = pred_label.asnumpy().astype('int32')
-            label = label.asnumpy().astype('int32')
+            pred_label = pred_label.as_np_ndarray().astype('int32')
+            label = label.as_np_ndarray().astype('int32')
             # flatten before checking shapes to avoid shape miss match
-            label = label.flat
-            pred_label = pred_label.flat
+            label = label.reshape(-1)
+            pred_label = pred_label.reshape(-1)
 
             check_label_shapes(label, pred_label)
 
@@ -913,6 +920,7 @@ class BinaryAccuracy(EvalMetric):
        
         
 @register
+@use_np
 class MCC(EvalMetric):
     """Computes the Matthews Correlation Coefficient of a binary classification problem.
 
@@ -993,7 +1001,7 @@ class MCC(EvalMetric):
         for label, pred in zip(labels, preds):
             self._metrics.update_stats(label, pred)
 
-        self.sum_metric = self._metrics.matthewscc() * self._metrics.total_examples
+        self.sum_metric = self._metrics.binary_matthewscc() * self._metrics.total_examples
         self.num_inst = self._metrics.total_examples
 
     def reset(self):
@@ -1112,6 +1120,7 @@ class Perplexity(EvalMetric):
 
 
 @register
+@use_np
 class MAE(EvalMetric):
     """Computes Mean Absolute Error (MAE) loss.
 
@@ -1160,8 +1169,8 @@ class MAE(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.asnumpy()
-            pred = pred.asnumpy()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray()
 
             num_inst = label.shape[0]
             mae = numpy.abs(label - pred).reshape(num_inst, -1).mean(axis=-1).sum()
@@ -1171,6 +1180,7 @@ class MAE(EvalMetric):
 
 
 @register
+@use_np
 class MSE(EvalMetric):
     """Computes Mean Squared Error (MSE) loss.
 
@@ -1218,8 +1228,8 @@ class MSE(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.asnumpy()
-            pred = pred.asnumpy()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray()
 
             num_inst = label.shape[0]
             mse = ((label - pred)**2.0).reshape(num_inst, -1).mean(axis=-1).sum()
@@ -1229,6 +1239,7 @@ class MSE(EvalMetric):
 
 
 @register
+@use_np
 class RMSE(MSE):
     """Computes Root Mean Squred Error (RMSE) loss.
 
@@ -1270,6 +1281,7 @@ class RMSE(MSE):
 
 
 @register
+@use_np
 class MeanPairwiseDistance(EvalMetric):
     """Computes Mean Pairwise Distance.
 
@@ -1320,8 +1332,8 @@ class MeanPairwiseDistance(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.asnumpy()
-            pred = pred.asnumpy()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray()
 
             label = label.reshape(label.shape[0], -1)
             pred = pred.reshape(pred.shape[0], -1)
@@ -1335,6 +1347,7 @@ class MeanPairwiseDistance(EvalMetric):
             
 
 @register
+@use_np
 class MeanCosineSimilarity(EvalMetric):
     """Computes Mean Cosine Similarity.
 
@@ -1385,8 +1398,8 @@ class MeanCosineSimilarity(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.asnumpy()
-            pred = pred.asnumpy()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray()
 
             if len(label.shape) == 1:
                 label = label.reshape(1, label.shape[0])
@@ -1398,13 +1411,14 @@ class MeanCosineSimilarity(EvalMetric):
             n_l = numpy.linalg.norm(label, axis=-1)
             sim = sim / numpy.maximum(n_l * n_p, self.eps)
             sim = sim.sum()
-            num_inst = numpy.prod(label.shape[:-1])
+            num_inst = len(label.reshape(-1, label.shape[-1])) # numpy.prod(label.shape[:-1]) is not supported
             self.sum_metric += sim
             self.num_inst += num_inst
 
             
 @register
 @alias('ce')
+@use_np
 class CrossEntropy(EvalMetric):
     """Computes Cross Entropy loss.
 
@@ -1461,10 +1475,10 @@ class CrossEntropy(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.asnumpy()
-            pred = pred.asnumpy()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray()
 
-            label = label.ravel()
+            label = label.reshape(-1)
             assert label.shape[0] == pred.shape[0]
 
             prob = pred[numpy.arange(label.shape[0]), numpy.int64(label)]
@@ -1474,6 +1488,7 @@ class CrossEntropy(EvalMetric):
 
 @register
 @alias('nll_loss')
+@use_np
 class NegativeLogLikelihood(EvalMetric):
     """Computes the negative log-likelihood loss.
 
@@ -1530,10 +1545,10 @@ class NegativeLogLikelihood(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.asnumpy()
-            pred = pred.asnumpy()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray()
 
-            label = label.ravel()
+            label = label.reshape(-1)
             num_examples = pred.shape[0]
             assert label.shape[0] == num_examples, (label.shape[0], num_examples)
             prob = pred[numpy.arange(num_examples, dtype=numpy.int64), numpy.int64(label)]
@@ -1544,6 +1559,7 @@ class NegativeLogLikelihood(EvalMetric):
 
 @register
 @alias('pearsonr')
+@use_np
 class PearsonCorrelation(EvalMetric):
     """Computes Pearson correlation.
 
@@ -1616,8 +1632,8 @@ class PearsonCorrelation(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
         for label, pred in zip(labels, preds):
             check_label_shapes(label, pred, False, True)
-            label = label.asnumpy().ravel().astype(numpy.float64)
-            pred = pred.asnumpy().ravel().astype(numpy.float64)
+            label = label.as_np_ndarray().reshape(-1).astype(numpy.float64)
+            pred = pred.as_np_ndarray().reshape(-1).astype(numpy.float64)
 
             self.num_inst += 1
             self._label_nums, self._mean_l, self._sse_l = \
@@ -1635,6 +1651,7 @@ class PearsonCorrelation(EvalMetric):
         return (self.name, pearsonr)
 
 @register
+@use_np
 class PCC(EvalMetric):
     """PCC is a multiclass equivalent for the Matthews correlation coefficient derived
     from a discrete solution to the Pearson correlation coefficient.
@@ -1706,7 +1723,8 @@ class PCC(EvalMetric):
         cov_yy = numpy.sum(y * (n - y))
         if cov_xx == 0 or cov_yy == 0:
             return float('nan')
-        i = cmat.diagonal()
+        # i = cmat.diagonal() # mxnet.numpy.ndarray.diagonal() is currently not available.
+        i = cmat[numpy.arange(self.k), numpy.arange(self.k)]
         cov_xy = numpy.sum(i * n - x * y)
         return cov_xy / (cov_xx * cov_yy) ** 0.5
 
@@ -1725,13 +1743,13 @@ class PCC(EvalMetric):
 
         # update the confusion matrix
         for label, pred in zip(labels, preds):
-            label = label.astype('int32', copy=False).asnumpy()
-            pred = pred.asnumpy()
+            label = label.astype('int32', copy=False).as_np_ndarray()
+            pred = pred.as_np_ndarray()
             if pred.shape != label.shape:
-                pred = pred.argmax(axis=1)
+                pred = pred.argmax(axis=1).astype(label, copy=False)
             else:
                 pred = pred.astype('int32', copy=False)
-            n = max(pred.max(), label.max())
+            n = int(max(pred.max(), label.max()))
             if n >= self.k:
                 self._grow(n + 1 - self.k)
             bcm = numpy.zeros((self.k, self.k))
@@ -1800,6 +1818,7 @@ class Caffe(Loss):
 
 
 @register
+@use_np
 class CustomMetric(EvalMetric):
     """Computes a customized evaluation metric.
 
@@ -1863,8 +1882,8 @@ class CustomMetric(EvalMetric):
             labels, preds = check_label_shapes(labels, preds, True)
 
         for pred, label in zip(preds, labels):
-            label = label.asnumpy()
-            pred = pred.asnumpy()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray()
 
             reval = self._feval(label, pred)
             if isinstance(reval, tuple):
