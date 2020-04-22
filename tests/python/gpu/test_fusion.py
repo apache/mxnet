@@ -241,6 +241,23 @@ def check_leakyrelu_ops():
     print("Checking fusion of LeakyReLU:gelu")
     check_fused_symbol(mx.sym.LeakyReLU(a+b, act_type='gelu'), a=arr1, b=arr2)
 
+def check_broadcast_ops():
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    arr1 = mx.random.uniform(shape=(8,8,2,3))
+    arr2 = mx.random.uniform(shape=(1,1,1,3))
+    arr3 = mx.random.uniform(shape=(1,3))
+
+    # Testing brodcast_add
+    print("Checking fusion of broadcast_add")
+    bcast_test = a + mx.sym.broadcast_add(a,b) + a
+    check_fused_symbol(bcast_test, a=arr1, b=arr2)
+    check_fused_symbol(bcast_test, a=arr1, b=arr3)
+    bcast_test =  a + mx.sym.broadcast_add(b,a) + a
+    check_fused_symbol(bcast_test, a=arr1, b=arr3)
+    bcast_test =  a + mx.sym.broadcast_add(a,a) + a
+    check_fused_symbol(bcast_test, a=arr1, b=arr3)
+
 
 @with_seed()
 def test_fusion():
@@ -248,6 +265,7 @@ def test_fusion():
     check_binary_ops()
     check_other_ops()
     check_leakyrelu_ops()
+    check_broadcast_ops()
 
 @with_seed()
 def test_fusion_compiler_cache():
