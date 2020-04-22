@@ -391,24 +391,36 @@ __device__ inline VectorType<DType, nvec> global_load_index(const DType * input,
   }
 }
 
-template <int nvec, typename DType, int ndim>
-__device__ inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>& shape,
-                                                     Shape<ndim> begin, Shape<ndim> end,
+template <int nvec, typename DType, int ndim_input, int ndim_ref>
+__device__ inline VectorType<DType, nvec> load_slice(const DType * input,
+                                                     const Shape<ndim_input>& shape,
+                                                     Shape<ndim_ref> begin,
+                                                     Shape<ndim_ref> end,
                                                      int offset) {
   int idx[nvec];
 
-  Shape<ndim> ref_strides;
-  Shape<ndim> strides;
-  ref_strides[ndim-1] = 1;
-  strides[ndim-1] = 1;
+  Shape<ndim_ref> ref_strides;
+  Shape<ndim_ref> strides;
+  ref_strides[ndim_ref-1] = 1;
+  strides[ndim_ref-1] = 1;
+
+  // expand input dims if required
+  Shape<ndim_ref> input_shape;
+  int ndims_diff = ndim_ref - ndim_input;
   #pragma unroll
-  for (int dim = ndim-1; dim >=0; dim--) {
-    if (begin[dim] < 0) begin[dim] = shape[dim] + begin[dim];
-    if (end[dim] < 0) end[dim] = shape[dim] + end[dim];
-    if (end[dim] == INT_MAX) end[dim] = shape[dim];
+  for (int dim = ndim_ref-1; dim >=0; dim--) {
+      input_shape[dim] = (dim >= ndims_diff) ? shape[dim - ndims_diff] : 1;
+  }
+  input_shape.size = shape.size;
+
+  #pragma unroll
+  for (int dim = ndim_ref-1; dim >=0; dim--) {
+    if (begin[dim] < 0) begin[dim] = input_shape[dim] + begin[dim];
+    if (end[dim] < 0) end[dim] = input_shape[dim] + end[dim];
+    if (end[dim] == INT_MAX) end[dim] = input_shape[dim];
     if (dim > 0) {
       ref_strides[dim-1] = ref_strides[dim] * (end[dim] - begin[dim]);
-      strides[dim-1] = strides[dim] * shape[dim];
+      strides[dim-1] = strides[dim] * input_shape[dim];
     }
   }
   #pragma unroll
@@ -416,9 +428,9 @@ __device__ inline VectorType<DType, nvec> load_slice(const DType * input, const 
     idx[j] = 0;
     int ref_idx = offset + j;
     #pragma unroll
-    for (int dim = 0; dim < ndim; dim++) {
+    for (int dim = 0; dim < ndim_ref; dim++) {
        int stride = ref_strides[dim];
-       if (shape[dim] > 1) {
+       if (input_shape[dim] > 1) {
          idx[j] += (ref_idx / stride + begin[dim]) * strides[dim];
        }
        ref_idx = ref_idx % stride;
@@ -432,38 +444,48 @@ __device__ inline VectorType<DType, nvec> load_slice(const DType * input, const 
   return ret;
 }
 
-template <int nvec, typename DType, int ndim>
+template <int nvec, typename DType, int ndim_input, int ndim_ref>
 __device__ inline VectorType<DType, nvec> fast_load_slice(const DType * input,
-                                                          const Shape<ndim>& shape,
-                                                          Shape<ndim> begin,
-                                                          Shape<ndim> end,
+                                                          const Shape<ndim_input>& shape,
+                                                          Shape<ndim_ref> begin,
+                                                          Shape<ndim_ref> end,
                                                           int offset) {
   int idx = 0;
 
-  Shape<ndim> ref_strides;
-  Shape<ndim> strides;
-  ref_strides[ndim-1] = 1;
-  strides[ndim-1] = 1;
+  Shape<ndim_ref> ref_strides;
+  Shape<ndim_ref> strides;
+  ref_strides[ndim_ref-1] = 1;
+  strides[ndim_ref-1] = 1;
+
+  // expand input dims if required
+  Shape<ndim_ref> input_shape;
+  int ndims_diff = ndim_ref - ndim_input;
   #pragma unroll
-  for (int dim = ndim-1; dim >=0; dim--) {
-    if (begin[dim] < 0) begin[dim] = shape[dim] + begin[dim];
-    if (end[dim] < 0) end[dim] = shape[dim] + end[dim];
-    if (end[dim] == INT_MAX) end[dim] = shape[dim];
+  for (int dim = ndim_ref-1; dim >=0; dim--) {
+      input_shape[dim] = (dim >= ndims_diff) ? shape[dim - ndims_diff] : 1;
+  }
+  input_shape.size = shape.size;
+
+  #pragma unroll
+  for (int dim = ndim_ref-1; dim >=0; dim--) {
+    if (begin[dim] < 0) begin[dim] = input_shape[dim] + begin[dim];
+    if (end[dim] < 0) end[dim] = input_shape[dim] + end[dim];
+    if (end[dim] == INT_MAX) end[dim] = input_shape[dim];
     if (dim > 0) {
       ref_strides[dim-1] = ref_strides[dim] * (end[dim] - begin[dim]);
-      strides[dim-1] = strides[dim] * shape[dim];
+      strides[dim-1] = strides[dim] * input_shape[dim];
     }
   }
   int ref_idx = offset;
   #pragma unroll
-  for (int dim = 0; dim < ndim; dim++) {
+  for (int dim = 0; dim < ndim_ref; dim++) {
      int stride = ref_strides[dim];
-     if (shape[dim] > 1) {
+     if (input_shape[dim] > 1) {
        idx += (ref_idx / stride + begin[dim]) * strides[dim];
      }
      ref_idx = ref_idx % stride;
   }
-  return global_load_index<nvec>(input, idx, shape);
+  return global_load_index<nvec, DType, ndim_ref>(input, idx, input_shape);
 }
 
 template <int nvec, typename DType, int ndim>
