@@ -10775,72 +10775,22 @@ def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-man
            [10, 10, 10, 10, 10, 10, 10],
            [10, 10, 10, 10, 10, 10, 10]])
     """
-    if not _np.asarray(pad_width).dtype.kind == 'i':
-        raise TypeError('`pad_width` must be of integral type.')
-    if not isinstance(pad_width, tuple):
-        raise TypeError("`pad_width` must be tuple.")
-    if mode == "linear_ramp":
-        raise ValueError("mode {'linear_ramp'} is not supported.")
-    if mode == "wrap":
-        raise ValueError("mode {'wrap'} is not supported.")
-    if mode == "median":
-        raise ValueError("mode {'median'} is not supported.")
-    if mode == "mean":
-        raise ValueError("mode {'mean'} is not supported.")
-    if mode == "empty":
-        raise ValueError("mode {'empty'} is not supported.")
-    if callable(mode):
-        raise ValueError("mode {'<function>'} is not supported.")
-
-    allowedkwargs = {
-        'constant': ['constant_values'],
-        'edge': [],
-        'linear_ramp': ['end_values'],
-        'maximum': ['stat_length'],
-        'mean': ['stat_length'],
-        'median': ['stat_length'],
-        'minimum': ['stat_length'],
-        'reflect': ['reflect_type'],
-        'symmetric': ['reflect_type'],
-        'wrap': [],
-        }
-
-    if isinstance(mode, _np.compat.basestring):
-        # Make sure have allowed kwargs appropriate for mode
-        for key in kwargs:
-            if key not in allowedkwargs[mode]:
-                raise ValueError('%s keyword not in allowed keywords %s' %(key, allowedkwargs[mode]))
-
-    unsupported_kwargs = set(kwargs) - set(allowedkwargs[mode])
-    if unsupported_kwargs:
-        raise ValueError("unsupported keyword arguments for mode '{}': {}"
-                         .format(mode, unsupported_kwargs))
     if mode == "constant":
         values = kwargs.get("constant_values", 0)
-        if isinstance(values, tuple):
-            raise TypeError("unsupported constant_values type: {'tuple'}.")
         return _mx_nd_np.pad(x, pad_width, mode='constant', constant_values=values)
     elif mode == "symmetric":
         values = kwargs.get("reflect_type", "even")
-        if values != "even" and values is not None:
-            raise ValueError("unsupported reflect_type '{}'".format(values))
         return _mx_nd_np.pad(x, pad_width, mode='symmetric', reflect_type="even")
     elif mode == "edge":
         return _mx_nd_np.pad(x, pad_width, mode='edge')
     elif mode == "reflect":
         values = kwargs.get("reflect_type", "even")
-        if values != "even" and values is not None:
-            raise ValueError("unsupported reflect_type '{}'".format(values))
         return _mx_nd_np.pad(x, pad_width, mode='reflect', reflect_type="even")
     elif mode == "maximum":
         values = kwargs.get("stat_length", None)
-        if values is not None:
-            raise ValueError("unsupported stat_length '{}'".format(values))
         return _mx_nd_np.pad(x, pad_width, mode='maximum')
     elif mode == "minimum":
         values = kwargs.get("stat_length", None)
-        if values is not None:
-            raise ValueError("unsupported stat_length '{}'".format(values))
         return _mx_nd_np.pad(x, pad_width, mode='minimum')
     return _mx_nd_np.pad(x, pad_width, mode='constant', constant_values=0)
 
