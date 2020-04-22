@@ -980,7 +980,7 @@ sanity_check() {
 # $1 -> mxnet_variant: The variant of the libmxnet.so library
 cd_unittest_ubuntu() {
     set -ex
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
@@ -1091,7 +1091,7 @@ unittest_ubuntu_tensorrt_gpu() {
 unittest_ubuntu_python3_quantization_gpu() {
     set -ex
     if [ -f /etc/redhat-release ]; then
-        source /opt/rh/rh-python35/enable
+        source /opt/rh/rh-python36/enable
     fi
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
@@ -1240,7 +1240,7 @@ unittest_ubuntu_cpu_julia10() {
 
 unittest_centos7_cpu() {
     set -ex
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
     cd /work/mxnet
     python -m pytest --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
     python -m pytest --durations=50 --cov-report xml:tests_train.xml --verbose tests/python/train
@@ -1248,7 +1248,7 @@ unittest_centos7_cpu() {
 
 unittest_centos7_gpu() {
     set -ex
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=10
@@ -1914,7 +1914,7 @@ build_static_libmxnet() {
     set -ex
     pushd .
     source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
     export USE_SYSTEM_CUDA=1
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
@@ -1926,7 +1926,7 @@ cd_package_pypi() {
     set -ex
     pushd .
     source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
     popd
@@ -1935,7 +1935,7 @@ cd_package_pypi() {
 # Sanity checks wheel file
 cd_integration_test_pypi() {
     set -ex
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
 
     local gpu_enabled=${1:-"false"}
 
@@ -1991,7 +1991,7 @@ build_static_python_cpu() {
     pushd .
     export mxnet_variant=cpu
     source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -2002,7 +2002,7 @@ build_static_python_cu92() {
     export mxnet_variant=cu92
     export USE_SYSTEM_CUDA=1
     source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -2013,7 +2013,7 @@ build_static_python_cpu_cmake() {
     export mxnet_variant=cpu
     export CMAKE_STATICBUILD=1
     source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
 }
@@ -2025,7 +2025,7 @@ build_static_python_cu92_cmake() {
     export CMAKE_STATICBUILD=1
     export USE_SYSTEM_CUDA=1
     source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-python35/enable
+    source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
 }

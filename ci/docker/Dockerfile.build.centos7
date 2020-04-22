@@ -51,7 +51,7 @@ RUN yum -y check-update || true && \
         protobuf-devel \
         # CentOS Software Collections https://www.softwarecollections.org
         devtoolset-7 \
-        rh-python35 \
+        rh-python36 \
         rh-maven35 \
         # Libraries
         # Provide clbas headerfiles
@@ -71,7 +71,7 @@ RUN yum -y check-update || true && \
 
 # Make GCC7, Python 3.5 and Maven 3.3 Software Collections available by default
 # during build and runtime of this container
-SHELL [ "/usr/bin/scl", "enable", "devtoolset-7", "rh-python35", "rh-maven35" ]
+SHELL [ "/usr/bin/scl", "enable", "devtoolset-7", "rh-python36", "rh-maven35" ]
 
 # Install minimum required cmake version
 RUN cd /usr/local/src && \
@@ -101,7 +101,8 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
     pytest-timeout==1.3.4 \
     mock==2.0.0 \
     onnx==1.5.0 \
-    protobuf==3.5.2
+    protobuf==3.5.2 \
+    tabulate==0.7.5
 
 
 ARG USER_ID=0
