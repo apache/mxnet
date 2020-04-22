@@ -86,6 +86,7 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     :param registry: Dockerhub registry name
     :param num_retries: Number of retries to build the docker image
     :param no_cache: pass no-cache to docker to rebuild the images
+    :param cache_intermediate: cache intermediate steps while building the docker image
     :return: Id of the top level image
     """
     tag = get_docker_tag(platform=platform, registry=registry)
