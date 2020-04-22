@@ -21,6 +21,11 @@ version: "3.4"
 # For simplicity, only the centos7_cpu is commented. But the comments apply to
 # all other services as well.
 services:
+  ###################################################################################################
+  # Dockerfile.build.centos7 based images used for building on CentOS7. On
+  # CentOS7, we respectively test the oldest supported toolchain and dependency
+  # versions
+  ###################################################################################################
   centos7_cpu:
     # The resulting image will be named build.centos7_cpu:latest and will be
     # pushed to mxnetci under this name
@@ -82,3 +87,10 @@ services:
       cache_from:
         - build.centos7_gpu_cu102:latest
         - mxnetci/build.centos7_gpu_cu102:latest
+  ###################################################################################################
+  # Dockerfile.build.ubuntu based images. On Ubuntu we test more recent
+  # toolchain and dependency versions compared to CentOS7. We attempt to update
+  # the Ubuntu base image every 6 months, following the Ubuntu release cycle,
+  # and testing the dependencies in their version provided by the respective
+  # Ubuntu release.
+  ###################################################################################################
