@@ -51,6 +51,20 @@ URLS = {
         'https://s3.amazonaws.com/download.onnx/models/opset_8/inception_v2.tar.gz'
 }
 
+PyTorch_models = {
+    'alexnet':
+        'https://onnx-mxnet.s3.amazonaws.com/model-zoo/PT_ONNX_models/alexnet.onnx',
+    'resnet18':
+        'https://onnx-mxnet.s3.amazonaws.com/model-zoo/PT_ONNX_models/resnet18.onnx',
+    'squeezenet1_0':
+        'https://onnx-mxnet.s3.amazonaws.com/model-zoo/PT_ONNX_models/squeezenet1_0.onnx',
+    'vgg16':
+        'https://onnx-mxnet.s3.amazonaws.com/model-zoo/PT_ONNX_models/vgg16.onnx',
+    'densenet161':
+        'https://onnx-mxnet.s3.amazonaws.com/model-zoo/PT_ONNX_models/densenet161.onnx',
+}
+
+
 test_model_path = "https://s3.amazonaws.com/onnx-mxnet/test_model.onnx"
 
 def get_test_files(name):
@@ -87,18 +101,29 @@ def get_test_files(name):
     return model_path, inputs, outputs
 
 
+def get_pytorch_onnx_models(name):
+    return download(PyTorch_models.get(name), dirname=CURR_PATH.__str__())
+
+
 def forward_pass(sym, arg, aux, data_names, input_data):
     """ Perform forward pass on given data"""
-    # create module
-    mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
-    mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)], label_shapes=None)
-    mod.set_params(arg_params=arg, aux_params=aux,
-                   allow_missing=True, allow_extra=True)
-    # run inference
-    batch = namedtuple('Batch', ['data'])
-    mod.forward(batch([mx.nd.array(input_data)]), is_train=False)
+    if input_data is not None:
+        # create module
+        mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(),
+                            label_names=None)
+        mod.bind(for_training=False, data_shapes=[(data_names[0], input_data.shape)],
+                 label_shapes=None)
+        mod.set_params(arg_params=arg, aux_params=aux,
+                       allow_missing=True, allow_extra=True)
+        # run inference
+        batch = namedtuple('Batch', ['data'])
+        mod.forward(batch([mx.nd.array(input_data)]), is_train=False)
 
-    return mod.get_outputs()[0].asnumpy()
+        return mod.get_outputs()[0].asnumpy()
+    else:
+        exe = sym.bind(mx.cpu(0), args=arg, aux_states=aux)
+        exe.forward(is_train=False)
+        return exe.outputs[0].asnumpy()
 
 
 class TestModel(unittest.TestCase):
@@ -107,25 +132,60 @@ class TestModel(unittest.TestCase):
     Therefore edit test_models to add more tests.
     """
     def test_import_export(self):
-        def get_model_results(modelpath):
-            symbol, args, aux = onnx_mxnet.import_model(modelpath)
+        def get_model_results(modelpath, inputs, outputs):
+            symbol, args, auxs = onnx_mxnet.import_model(modelpath)
 
             data = onnx_mxnet.get_model_metadata(modelpath)
             data_names = [input_name[0] for input_name in data.get('input_tensor_data')]
 
             result = []
-            for input_data, output_data in zip(inputs, outputs):
-                output = forward_pass(symbol, args, aux, data_names, input_data)
+            if inputs and outputs:
+                for input_data, output_data in zip(inputs, outputs):
+                    output = forward_pass(symbol, args, auxs, data_names, input_data)
+                    result.append(output)
+            else:
+                params = {}
+                params.update(args)
+                params.update(auxs)
+                inputs = {n: tuple(s) for n, s in zip([n for n in symbol.list_inputs() if n not in params],
+                                                      [input_shape])}
+                # Add params and their shape to list of inputs
+                inputs.update({n: v.shape for n, v in params.items() if n in symbol.list_inputs()})
+
+                data_forward = []
+                data_names = []
+                for arg in symbol.list_arguments():
+                    data_names.append(arg)
+                    data_forward.append(mx.nd.array(mx.nd.random_normal(shape=inputs[arg])))
+
+                aux_names = []
+                aux_forward = []
+                for aux in symbol.list_auxiliary_states():
+                    aux_names.append(aux)
+                    aux_forward.append(mx.nd.array(mx.nd.random_normal(shape=inputs[aux])))
+
+                arguments = dict(zip(data_names, data_forward))
+                auxiliary = dict(zip(aux_names, aux_forward))
+
+                output = forward_pass(symbol, arguments, auxiliary, data_names, None)
                 result.append(output)
-            return symbol, args, aux, result, data
+
+            return symbol, args, auxs, result, data
+
 
         for test in test_cases:
             model_name, input_shape, output_shape = test
             with self.subTest(model_name):
-                model_path, inputs, outputs = get_test_files(model_name)
-                logging.info("Translating " + model_name + " from ONNX model zoo to MXNet")
+                if model_name in PyTorch_models:
+                    model_path = get_pytorch_onnx_models(model_name)
+                    inputs = outputs = None
+                    logging.info("Translating " + model_name + " from PyTorch to MXNet")
+                else:
+                    model_path, inputs, outputs = get_test_files(model_name)
+                    logging.info("Translating " + model_name + " from ONNX model zoo to MXNet")
 
-                sym, arg_params, aux_params, expected_result, _ = get_model_results(model_path)
+                sym, arg_params, aux_params, expected_result, _ =\
+                    get_model_results(model_path, inputs, outputs)
 
                 params = {}
                 params.update(arg_params)
@@ -138,7 +198,8 @@ class TestModel(unittest.TestCase):
                 logging.info("Translating converted model from mxnet to ONNX")
                 converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32, onnx_file)
 
-                sym, arg_params, aux_params, actual_result, metadata = get_model_results(converted_model_path)
+                sym, arg_params, aux_params, actual_result, metadata =\
+                    get_model_results(converted_model_path, inputs, outputs)
 
                 assert len(metadata) == 2
                 assert metadata.get('input_tensor_data')
@@ -170,7 +231,14 @@ test_cases = [
     ("bvlc_reference_caffenet", (1, 3, 224, 224), (1, 1000)),
     ("bvlc_reference_rcnn_ilsvrc13", (1, 3, 224, 224), (1, 200)),
     ("inception_v1", (1, 3, 224, 224), (1, 1000)),
-    ("inception_v2", (1, 3, 224, 224), (1, 1000))
+    ("inception_v2", (1, 3, 224, 224), (1, 1000)),
+
+    # PyTorch models
+    ('alexnet', (1, 3, 224, 224), (1, 1000)),
+    ('resnet18', (1, 3, 224, 224), (1, 1000)),
+    ('squeezenet1_0', (1, 3, 224, 224), (1, 1000)),
+    ('vgg16', (1, 3, 224, 224), (1, 1000)),
+    ('densenet161', (1, 3, 224, 224), (1, 1000))
 ]
 
 
