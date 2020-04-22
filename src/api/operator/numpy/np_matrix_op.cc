@@ -144,9 +144,13 @@ MXNET_REGISTER_API("_npi.split")
   if (args[1].type_code() == kDLInt) {
     param.indices = TShape(0, 0);
     param.sections = args[1].operator int();
+    int index = param.axis;
+    while (index < 0) {
+      index += inputs[0]->shape().ndim();
+    }
     CHECK_GT(param.sections, 0)
       << "ValueError: number sections must be larger than 0";
-    CHECK_EQ(inputs[0]->shape()[param.axis] % param.sections, 0)
+    CHECK_EQ(inputs[0]->shape()[index] % param.sections, 0)
       << "ValueError: array split does not result in an equal division";
   } else {
     TShape t = TShape(args[1].operator ObjectRef());

@@ -3901,8 +3901,6 @@ def split(ary, indices_or_sections, axis=0):
         If `indices_or_sections` is given as an integer, but
         a split does not result in equal division.
     """
-    while axis < 0:
-        axis += len(ary.shape)
     if isinstance(indices_or_sections, set):
         indices_or_sections = list(indices_or_sections)
     return list(_api_internal.split(ary, indices_or_sections, axis))
