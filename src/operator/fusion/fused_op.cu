@@ -265,7 +265,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           const uint32_t input_entry_id = g.entry_id(node.inputs[0]);
           const auto& shape = node_shapes[input_entry_id];
           int ndim = shape.ndim();
-          if (is_broadcast_op){
+          if (is_broadcast_op) {
               const uint32_t input_entry_id_arg2 = g.entry_id(node.inputs[1]);
               const auto& shape_arg2 = node_shapes[input_entry_id_arg2];
               if (shape_arg2.ndim() > ndim) ndim = shape_arg2.ndim();
