@@ -22,6 +22,7 @@ import mxnet as mx
 import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
+from common import with_seed
 from mxnet.test_utils import *
 from common import with_seed, assert_raises_cudnn_not_satisfied
 import unittest
@@ -334,6 +335,7 @@ def test_multibox_prior_op():
     boxes = Y.reshape((h, w, 5, 4))
     assert_allclose(boxes.asnumpy()[250, 250, 0, :], np.array([-0.948249,  0.362671,  1.636436,  0.530377]), atol=1e-5, rtol=1e-5)
 
+
 def test_box_encode_op():
     anchors = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
     refs = mx.nd.array([[0.1, 0.2, 0.3, 0.4], [0.5, 0.6, 0.7, 0.8]]).reshape((1, -1, 4))
@@ -443,6 +445,29 @@ def test_modulated_deformable_convolution():
                             rtol, atol = 1.0, 1e-2
                         else:
                             rtol, atol = 0.05, 1e-3
+
+
+@with_seed()
+def test_constant():
+    def constant_testcases(value, dtype='float32'):
+        net = mx.sym.contrib.constant(value=value)
+        js = net.tojson()
+        net = mx.sym.load_json(js)
+        exe = net.bind(default_context(), {})
+        exe.forward(is_train=True)
+        assert_almost_equal(exe.outputs[0].asnumpy(), value, rtol=1e-3, atol=1e-3)
+        exe.backward()
+
+    test_cases = [
+        [(-1, 2)],
+        [9216],
+        [(3,5,1,-1)],
+        [()],
+        [(2, 3, 5, 5),  'int64'],
+        [(-5.5, 10.2, 3.7), 'float32']]
+
+    for test_case in test_cases:
+        constant_testcases(*test_case)
 
 
 if __name__ == '__main__':

@@ -274,7 +274,9 @@ test_cases = [
     ("test_random_normal", mx.sym.random_normal, "RandomNormal", [],
      {'shape': (2, 2), 'loc': 0, 'scale': 1}, False, {'modify': {'loc': 'mean'}}, False, True),
     ("test_random_uniform", mx.sym.random_uniform, "RandomUniform", [],
-     {'shape': (2, 2), 'low': 0.5, 'high': 1.0}, False, {}, False, True)
+     {'shape': (2, 2), 'low': 0.5, 'high': 1.0}, False, {}, False, True),
+    ("test_constant", mx.sym.contrib.constant, "Constant", [],
+     {'value': (-1, 2)}, False, {}, False, True)
 ]
 
 test_scalar_ops = ['Add', 'Sub', 'rSub' 'Mul', 'Div', 'Pow']
