@@ -127,3 +127,26 @@ services:
       cache_from:
         - build.ubuntu_build_cuda:latest
         - mxnetci/build.ubuntu_build_cuda:latest
+  ###################################################################################################
+  # Dockerfile.publish.test based images used for testing binary artifacts on minimal systems.
+  ###################################################################################################
+  publish.test.centos7_cpu:
+    image: publish.test.centos7_cpu:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.publish.test.centos7
+      args:
+        BASE_IMAGE: centos:7
+      cache_from:
+        - publish.test.centos7_cpu:latest
+        - mxnetci/publish.test.centos7_cpu:latest
+  publish.test.centos7_gpu:
+    image: publish.test.centos7_gpu:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.publish.test.centos7
+      args:
+        BASE_IMAGE: nvidia/cuda:9.2-cudnn7-devel-centos7
+      cache_from:
+        - publish.test.centos7_gpu:latest
+        - mxnetci/publish.test.centos7_gpu:latest

@@ -2030,6 +2030,7 @@ publish_scala_test() {
     set -ex
     pushd .
     scala_prepare
+    source /opt/rh/rh-maven35/enable
     ./ci/publish/scala/test.sh
     popd
 }

@@ -1,4 +1,5 @@
-# -*- mode: dockerfile -*-
+#!/usr/bin/env bash
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,30 +16,19 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to build and run MXNet on CentOS 7 for CPU
 
-FROM nvidia/cuda:9.2-cudnn7-devel-centos7
+# Add user in order to make sure the assumed user the container is running under
+# actually exists inside the container to avoid problems like missing home dir
 
-WORKDIR /work/deps
+set -ex
 
-COPY install/centos7_scala.sh /work/
-RUN /work/centos7_scala.sh
-
-# Install runtime dependencies for publish tests
-# - make is used to run tests ci/publish/scala/test.sh
-# - unzip is used to run org.apache.mxnetexamples.neuralstyle.NeuralStyleSuite
-# - gcc to provide libgomp.so.1 (may want to drop this in the future and ship
-#   inside jar)
-RUN yum -y check-update || true && \
-    yum install -y make gcc unzip && \
-    yum clean all
-
-ARG USER_ID=0
-COPY install/centos7_adduser.sh /work/
-RUN /work/centos7_adduser.sh
-
-ENV PYTHONPATH=./python/
-WORKDIR /work/mxnet
-
-COPY runtime_functions.sh /work/
+# Add user in order to make sure the assumed user the container is running under
+# actually exists inside the container to avoid problems like missing home dir
+if [[ "$USER_ID" -gt 0 ]]; then
+    # -no-log-init required due to https://github.com/moby/moby/issues/5419
+    useradd -m --no-log-init --uid $USER_ID --system jenkins_slave
+    # By default, docker creates all WORK_DIRs with root owner
+    mkdir /work/mxnet
+    mkdir /work/build
+    chown -R jenkins_slave /work/
+fi

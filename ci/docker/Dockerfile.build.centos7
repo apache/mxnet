@@ -106,19 +106,9 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
     protobuf==3.5.2 \
     tabulate==0.7.5
 
-
 ARG USER_ID=0
-# Add user in order to make sure the assumed user the container is running under
-# actually exists inside the container to avoid problems like missing home dir
-RUN if [[ "$USER_ID" -gt 0 ]]; then \
-        # -no-log-init required due to https://github.com/moby/moby/issues/5419
-        useradd -m --no-log-init --uid $USER_ID --system jenkins_slave; \
-        usermod -aG wheel jenkins_slave; \
-        # By default, docker creates all WORK_DIRs with root owner
-        mkdir /work/mxnet; \
-        mkdir /work/build; \
-        chown -R jenkins_slave /work/; \
-    fi
+COPY install/docker_filepermissions.sh /work/
+RUN /work/docker_filepermissions.sh
 
 ENV PYTHONPATH=./python/
 WORKDIR /work/mxnet
