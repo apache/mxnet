@@ -539,6 +539,64 @@ struct AccType<mshadow::half::half_t> {
     LOG(FATAL) << "Unknown type enum " << type;            \
   }
 
+#define MXNET_IDX_TYPE_SWITCH(type, DType, ...)   \
+  switch (type) {                                          \
+  case mshadow::kFloat32:                                  \
+    {                                                      \
+      typedef float DType;                                 \
+      LOG(FATAL) << "This operation only supports "        \
+                    "index types (int32 or int64), "       \
+                    "not float32";                         \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat64:                                  \
+    {                                                      \
+      typedef double DType;                                \
+      LOG(FATAL) << "This operation only supports "        \
+                    "index types (int32 or int64), "       \
+                    "not float64";                         \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kFloat16:                                  \
+    {                                                      \
+      typedef mshadow::half::half_t DType;                 \
+      LOG(FATAL) << "This operation only supports "        \
+                    "index types (int32 or int64), "       \
+                    "not float16";                         \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kUint8:                                    \
+    {                                                      \
+      typedef uint8_t DType;                               \
+      LOG(FATAL) << "This operation only supports "        \
+                    "index types (int32 or int64), "       \
+                    "not uint8";                           \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt8:                                     \
+    {                                                      \
+      typedef int8_t DType;                                \
+      LOG(FATAL) << "This operation only supports "        \
+                    "index types (int32 or int64), "       \
+                    "not int8";                            \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt32:                                    \
+    {                                                      \
+      typedef int32_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  case mshadow::kInt64:                                    \
+    {                                                      \
+      typedef int64_t DType;                               \
+      {__VA_ARGS__}                                        \
+    }                                                      \
+    break;                                                 \
+  default:                                                 \
+    LOG(FATAL) << "Unknown type enum " << type;            \
+  }
+
 #define MXNET_LOAD_TYPE_SWITCH(type, DType, ...)           \
   switch (type) {                                          \
   case mshadow::kFloat32:                                  \

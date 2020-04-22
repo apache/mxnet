@@ -50,31 +50,46 @@ void IndexArrayForwardGPU(const nnvm::NodeAttrs &attrs,
     const mxnet::Tuple<int>& axes = param.axes.value();
     const int naxes = axes.ndim();
 
-    std::vector<int64_t> index_products = IndexArrayComputeIndexProducts(inshape);
+    MXNET_IDX_TYPE_SWITCH(param.dtype, DType, {
+      std::vector<DType> index_products = IndexArrayComputeIndexProducts<DType>(inshape);
 
-    std::vector<int64_t> cpu_workspace(2 * naxes);
-    IndexArrayBuildSelectedAxesWorkspace(axes, index_products, cpu_workspace.data(), ndim);
+      std::vector<DType> cpu_workspace(2 * naxes);
+      IndexArrayBuildSelectedAxesWorkspace(axes, index_products, cpu_workspace.data(), ndim);
 
-    Tensor<gpu, 1, int64_t> workspace =
-        ctx.requested[0].get_space_typed<gpu, 1, int64_t>(Shape1(2 * naxes), s);
+      Tensor<gpu, 1, DType> workspace =
+          ctx.requested[0].get_space_typed<gpu, 1, DType>(Shape1(2 * naxes), s);
 
-    CUDA_CALL(cudaMemcpyAsync(workspace.dptr_, cpu_workspace.data(), sizeof(int64_t) * (2 * naxes),
-                              cudaMemcpyHostToDevice, stream));
+      CUDA_CALL(cudaMemcpyAsync(workspace.dptr_, cpu_workspace.data(), sizeof(DType) * (2 * naxes),
+                           cudaMemcpyHostToDevice, stream));
 
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<IndexArrayKernel<req_type>, gpu>::Launch(s, in_data.Size(),
-          out_data.dptr<int64_t>(), naxes, workspace.dptr_);
+      // Assumes param.target_axis is -1 or 0.
+      const ptrdiff_t index_axis_offset = param.target_axis == -1 ? naxes : 1;
+      const ptrdiff_t target_axis_offset = param.target_axis == -1 ? 1: in_data.Size();
+
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<IndexArrayKernel<req_type>, gpu>::Launch(s, in_data.Size(),
+            out_data.dptr<DType>(), naxes, index_axis_offset, target_axis_offset, workspace.dptr_);
+      });
     });
   } else {
     Tensor<gpu, 1, dim_t> workspace =
         ctx.requested[0].get_space_typed<gpu, 1, dim_t>(Shape1(ndim), s);
 
     CUDA_CALL(cudaMemcpyAsync(workspace.dptr_, inshape.data(), sizeof(dim_t) * ndim,
-                              cudaMemcpyHostToDevice, stream));
+        cudaMemcpyHostToDevice, stream));
 
-    MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-      Kernel<IndexArrayDefaultKernel<req_type>, gpu>::Launch(s, in_data.Size(),
-          out_data.dptr<int64_t>(), ndim, workspace.dptr_);
+    // Assumes param.target_axis is -1 or 0.
+    const ptrdiff_t index_axis_offset = param.target_axis == -1 ? ndim : 1;
+    const ptrdiff_t target_axis_offset = param.target_axis == -1 ? 1: in_data.Size();
+
+    MXNET_IDX_TYPE_SWITCH(param.dtype, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+        Kernel<IndexArrayDefaultKernel<req_type>, gpu>::Launch(s, in_data.Size(),
+                                                               out_data.dptr<DType>(), ndim,
+                                                               index_axis_offset,
+                                                               target_axis_offset,
+                                                               workspace.dptr_);
+      });
     });
   }
 }
