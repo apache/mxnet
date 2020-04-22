@@ -94,3 +94,36 @@ services:
   # and testing the dependencies in their version provided by the respective
   # Ubuntu release.
   ###################################################################################################
+  ubuntu_cpu:
+    image: build.ubuntu_cpu:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu
+      target: base
+      args:
+        BASE_IMAGE: ubuntu:18.04
+      cache_from:
+        - build.ubuntu_cpu:latest
+        - mxnetci/build.ubuntu_cpu:latest
+  ubuntu_gpu_cu101:
+    image: build.ubuntu_gpu_cu101:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu
+      target: gpuwithcompatenv
+      args:
+        BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+      cache_from:
+        - build.ubuntu_gpu_cu101:latest
+        - mxnetci/build.ubuntu_gpu_cu101:latest
+  ubuntu_build_cuda:
+    image: build.ubuntu_build_cuda:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu
+      target: gpuwithcudaruntimelibs
+      args:
+        BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
+      cache_from:
+        - build.ubuntu_build_cuda:latest
+        - mxnetci/build.ubuntu_build_cuda:latest
