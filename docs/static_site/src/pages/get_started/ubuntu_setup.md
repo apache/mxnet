@@ -76,7 +76,7 @@ sudo ldconfig
 
 It is recommended that you review the general [build from source](build_from_source.html) instructions before continuing.
 
-**note**: Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler.
+**Note**: Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler.
 
 On Ubuntu versions 16.04 or later, you need the following dependencies:
 

@@ -61,7 +61,7 @@ not support macOS.
 
 ## Build the MXNet shared library from source
 
-**note**: Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler.
+**Note**: Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler.
 
 On OS X, you need the following dependencies:
 
