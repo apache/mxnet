@@ -186,7 +186,7 @@ MXNET_REGISTER_API("_npi.prod")
   // outputs
   NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = out != nullptr;
+  int num_outputs = 1;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (out) {
     *ret = PythonArg(5);
