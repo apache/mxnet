@@ -22,6 +22,7 @@ $env:PYTHONPATH=join-path $pwd.Path windows_package\python
 $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 $env:MXNET_SUBGRAPH_VERBOSE=0
 $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
+$env:MXNET_GPU_MEM_POOL_TYPE="Unpooled"
 
 C:\Python37\Scripts\pip install -r ci\docker\install\requirements
 C:\Python37\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_unittest.xml tests\python\unittest

@@ -927,6 +927,7 @@ cd_unittest_ubuntu() {
     export MXNET_ENABLE_CYTHON=0
     export CD_JOB=1 # signal this is a CD run so any unecessary tests can be skipped
     export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export MXNET_GPU_MEM_POOL_TYPE=Unpooled
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
 
@@ -985,6 +986,7 @@ unittest_ubuntu_python3_gpu() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export MXNET_GPU_MEM_POOL_RESERVE=100
     pytest -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -998,6 +1000,7 @@ unittest_ubuntu_python3_gpu_cython() {
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
     export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export MXNET_GPU_MEM_POOL_RESERVE=100
     check_cython
     pytest -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
 }
@@ -1010,6 +1013,7 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     export CUDNN_OFF_TEST_ONLY=true
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export MXNET_GPU_MEM_POOL_RESERVE=100
     pytest -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
 }
 
@@ -1022,8 +1026,10 @@ unittest_ubuntu_tensorrt_gpu() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export MXNET_GPU_MEM_POOL_TYPE=Unpooled
     python3 tests/python/tensorrt/lenet5_train.py
-    pytest -n 4 --durations=50 --cov-report xml:tests_trt_gpu.xml --verbose --capture=no tests/python/tensorrt/
+    pytest -n 4 --durations=50 --cov-report xml:tests_trt_gpu.xml --verbose --capture=no tests/python/tensorrt/test_ops.py
+    pytest -k 'not test_ops' --durations=50 --cov-report xml:tests_trt_gpu.xml --cov-append --verbose --capture=no tests/python/tensorrt/
 }
 
 # quantization gpu currently only runs on P3 instances
@@ -1040,6 +1046,7 @@ unittest_ubuntu_python3_quantization_gpu() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export MXNET_GPU_MEM_POOL_TYPE=Unpooled
     pytest -n 4 --durations=50 --cov-report xml:tests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
@@ -1192,6 +1199,7 @@ unittest_centos7_gpu() {
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=10
+    export MXNET_GPU_MEM_POOL_RESERVE=100
     python3 -m pytest -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
 }
 
