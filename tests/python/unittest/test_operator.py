@@ -4541,6 +4541,7 @@ def test_order():
                 expected=[gt_topk(dat=a_npy, axis=1, ret_typ="mask", k=3,
                     is_ascend=True)])
 
+
 @with_seed()
 def test_blockgrad():
     a = mx.sym.Variable('a')
