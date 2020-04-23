@@ -640,14 +640,18 @@ def test_np_kron():
 @use_np
 def test_np_sum():
     class TestSum(HybridBlock):
-        def __init__(self, axis=None, dtype=None, keepdims=False):
+        def __init__(self, axis=None, dtype=None, keepdims=False, instance_method=False):
             super(TestSum, self).__init__()
             self._axis = axis
             self._dtype = dtype
             self._keepdims = keepdims
+            self._instance_method = instance_method
 
         def hybrid_forward(self, F, a, *args, **kwargs):
-            return F.np.sum(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+            if self._instance_method:
+                return a.sum(axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
+            else:
+                return F.np.sum(a, axis=self._axis, dtype=self._dtype, keepdims=self._keepdims)
 
     def is_int(dtype):
         return 'int' in dtype
@@ -661,14 +665,15 @@ def test_np_sum():
     axes = ([i for i in range(in_data_dim)] + [(), None])
     itypes = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64', 'bool']
     dtypes = ['float16', 'float32', 'float64', 'int8', 'int32', 'int64']
-    combinations = itertools.product(flags, flags, axes, itypes, dtypes, shapes)
-    for hybridize, keepdims, axis, itype, dtype, shape in combinations:
+    instance_methods = [False, True]
+    combinations = itertools.product(flags, flags, axes, itypes, dtypes, shapes, instance_methods)
+    for hybridize, keepdims, axis, itype, dtype, shape, instance_method in combinations:
         if (is_int(dtype) and not is_int(itype)) or (is_windows and is_int(itype))\
                 or (itype == 'bool' and\
                     (dtype not in ('float32', 'float64', 'int32', 'int64') or is_windows)):
             continue
         # test gluon
-        test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims)
+        test_sum = TestSum(axis=axis, dtype=dtype, keepdims=keepdims, instance_method=instance_method)
         if hybridize:
             test_sum.hybridize()
         if is_int(itype):
