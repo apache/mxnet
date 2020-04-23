@@ -463,6 +463,7 @@ def test_symbol_block_fp16():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_large_models():
     ctx = default_context()
     # Create model

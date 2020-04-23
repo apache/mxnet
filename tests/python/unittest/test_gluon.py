@@ -2477,6 +2477,7 @@ def test_reshape_batchnorm():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2501,6 +2502,7 @@ def test_slice_batchnorm():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_batchnorm_slice_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2552,6 +2554,7 @@ def test_reshape_batchnorm_reshape_batchnorm():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_batchnorm_reshape_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
@@ -2635,6 +2638,7 @@ def test_reshape_pooling2d():
         check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_pooling2d():
     # transpose shape to bring feature dimension 'c' from 2nd position to last
     def transpose(shape):
@@ -2709,6 +2713,7 @@ def test_reshape_pooling2d_reshape_pooling2d():
             check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_pooling2d_slice_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2782,6 +2787,7 @@ def test_slice_pooling2d_reshape_pooling2d():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_pooling2d_slice_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2821,6 +2827,7 @@ def test_reshape_pooling2d_slice_pooling2d():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
@@ -2840,6 +2847,7 @@ def test_reshape_deconv():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2859,6 +2867,7 @@ def test_slice_deconv():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_deconv_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
@@ -2882,6 +2891,7 @@ def test_reshape_deconv_reshape_deconv():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_deconv_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2905,6 +2915,7 @@ def test_slice_deconv_slice_deconv():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_deconv_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
@@ -2930,6 +2941,7 @@ def test_reshape_deconv_slice_deconv():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_deconv_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
@@ -2954,6 +2966,7 @@ def test_slice_deconv_reshape_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_reshape_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act, shape, **kwargs):
@@ -2975,6 +2988,7 @@ def test_reshape_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act, slice, **kwargs):
@@ -2997,6 +3011,7 @@ def test_slice_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_reshape_activation_reshape_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, shape, **kwargs):
@@ -3024,6 +3039,7 @@ def test_reshape_activation_reshape_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_activation_slice_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, slice, **kwargs):
@@ -3051,6 +3067,7 @@ def test_slice_activation_slice_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_reshape_activation_slice_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, shape, slice, **kwargs):
@@ -3080,6 +3097,7 @@ def test_reshape_activation_slice_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_activation_reshape_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, shape, slice, **kwargs):
@@ -3108,6 +3126,7 @@ def test_slice_activation_reshape_activation():
             check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_np_shape_parameters():
     class Foo(gluon.Block):
         def __init__(self, **kwargs):

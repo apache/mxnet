@@ -931,7 +931,8 @@ cd_unittest_ubuntu() {
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
 
-    pytest -n 4 --durations=50 --verbose tests/python/unittest
+    pytest -m 'not serial' -n 4 --durations=50 --verbose tests/python/unittest
+    pytest -m 'serial' --durations=50 --verbose tests/python/unittest
     pytest -n 4 --durations=50 --verbose tests/python/quantization
 
     # https://github.com/apache/incubator-mxnet/issues/11801
@@ -940,7 +941,8 @@ cd_unittest_ubuntu() {
     # fi
 
     if [[ ${mxnet_variant} = cu* ]]; then
-        pytest -n 4 --durations=50 --verbose tests/python/gpu
+        pytest -m 'not serial' -n 4 --durations=50 --verbose tests/python/gpu
+        pytest -m 'serial' --durations=50 --verbose tests/python/gpu
 
         # Adding these here as CI doesn't test all CUDA environments
         pytest -n 4 example/image-classification/test_score.py
@@ -961,7 +963,8 @@ unittest_ubuntu_python3_cpu() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    pytest -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -n 4 --durations=50 --cov-report xml:tests_quantization.xml --verbose tests/python/quantization
 }
 
@@ -973,7 +976,8 @@ unittest_ubuntu_python3_cpu_mkldnn() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    pytest -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -n 4 --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
 }
 
@@ -986,8 +990,9 @@ unittest_ubuntu_python3_gpu() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export MXNET_GPU_MEM_POOL_RESERVE=100
-    pytest -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    export MXNET_GPU_MEM_POOL_TYPE=Unpooled
+    pytest -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
 unittest_ubuntu_python3_gpu_cython() {
@@ -1000,9 +1005,10 @@ unittest_ubuntu_python3_gpu_cython() {
     export MXNET_ENABLE_CYTHON=1
     export MXNET_ENFORCE_CYTHON=1
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export MXNET_GPU_MEM_POOL_RESERVE=100
+    export MXNET_GPU_MEM_POOL_TYPE=Unpooled
     check_cython
-    pytest -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    pytest -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
 unittest_ubuntu_python3_gpu_nocudnn() {
@@ -1013,8 +1019,9 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     export CUDNN_OFF_TEST_ONLY=true
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export MXNET_GPU_MEM_POOL_RESERVE=100
-    pytest -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    export MXNET_GPU_MEM_POOL_TYPE=Unpooled
+    pytest -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
 unittest_ubuntu_tensorrt_gpu() {
@@ -1189,7 +1196,8 @@ unittest_centos7_cpu() {
     set -ex
     source /opt/rh/rh-python36/enable
     cd /work/mxnet
-    python -m pytest -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    python -m pytest -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    python -m pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     python -m pytest -n 4 --durations=50 --cov-report xml:tests_train.xml --verbose tests/python/train
 }
 
@@ -1199,8 +1207,9 @@ unittest_centos7_gpu() {
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export MXNET_GPU_MEM_POOL_RESERVE=100
-    python3 -m pytest -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    export MXNET_GPU_MEM_POOL_TYPE=Unpooled
+    pytest -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
 integrationtest_ubuntu_cpu_onnx() {
@@ -1316,7 +1325,8 @@ test_ubuntu_cpu_python3() {
     cd /work/mxnet/python
     pip3 install -e .
     cd /work/mxnet
-    python3 -m pytest -n 4 --durations=50 --verbose tests/python/unittest
+    python3 -m pytest -m 'not serial' -n 4 --durations=50 --verbose tests/python/unittest
+    python3 -m pytest -m 'serial' --durations=50 --verbose tests/python/unittest
 
     popd
 }

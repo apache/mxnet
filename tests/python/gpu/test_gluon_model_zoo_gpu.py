@@ -39,6 +39,7 @@ def download_data():
         'http://data.mxnet.io/data/val-5k-256.rec', VAL_DATA)
 
 @with_seed()
+@pytest.mark.serial
 @pytest.mark.parametrize('model_name', ['resnet50_v1', 'vgg19_bn', 'alexnet', 'densenet201', 'squeezenet1.0', 'mobilenet0.25'])
 def test_inference(model_name):
     batch_size = 10
@@ -101,6 +102,7 @@ def get_nn_model(name):
 # on 2/16/2018 that was not reproducible.  Problem could be timing related or
 # based on non-deterministic algo selection.
 @with_seed()
+@pytest.mark.serial
 def test_training():
     # We use network models without dropout for testing.
     # TODO(zhengda) mobilenet can't pass this test even without MKLDNN.

@@ -2289,6 +2289,8 @@ def test_np_unary_funcs():
 
 @with_seed()
 @use_np
+@retry(3)
+@pytest.mark.serial
 def test_np_mixedType_unary_funcs():
     class TestMixedUnary(HybridBlock):
         def __init__(self, func):
@@ -2336,6 +2338,7 @@ def test_np_mixedType_unary_funcs():
     shapes = [i for i in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]];
     for func, func_data in funcs.items():
         for dtype, shape in itertools.product(dtypes, shapes):
+            print(func, dtype, shape)
             rtol = 1e-2 if dtype == np.float16 else 1e-3
             atol = 1e-4 if dtype == np.float16 else 1e-5
             ref_grad, low, high = func_data
@@ -2384,6 +2387,7 @@ def test_np_mixedType_unary_funcs():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_bitwise_not():
     def check_unary_func(func, ref_grad, shape, low, high):
         class TestUnary(HybridBlock):
@@ -2444,6 +2448,7 @@ def test_np_bitwise_not():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_binary_funcs():
     def check_binary_func(func, lshape, rshape, low, high, lgrads, rgrads=None, alltypes=None):
         class TestBinary(HybridBlock):
@@ -2583,6 +2588,7 @@ def test_np_binary_funcs():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_mixed_precision_binary_funcs():
     itypes = [np.bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
@@ -2683,6 +2689,7 @@ def test_np_mixed_precision_binary_funcs():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_boolean_binary_funcs():
     def check_boolean_binary_func(func, mx_x1, mx_x2):
         class TestBooleanBinary(HybridBlock):
@@ -2865,6 +2872,7 @@ def test_np_atleast_nd():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_arange():
     configs = [
         (1, 10, 2),
@@ -2928,6 +2936,7 @@ def test_np_arange():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_insert():
     class TestInsert(HybridBlock):
         def __init__(self, obj, axis=None):
@@ -4883,6 +4892,7 @@ def test_np_repeat():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_linalg_norm():
     class TestLinalgNorm(HybridBlock):
         def __init__(self, ord=None, axis=None, keepdims=False):
@@ -5551,6 +5561,7 @@ def test_np_linalg_solve():
         check_solve(mx_out, a, b)
 
 
+@pytest.mark.serial
 def test_np_linalg_tensorinv():
     class TestTensorinv(HybridBlock):
         def __init__(self, ind=2):
@@ -5653,6 +5664,7 @@ def test_np_linalg_tensorinv():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_linalg_tensorsolve():
     class TestTensorsolve(HybridBlock):
         def __init__(self, axes):
@@ -5883,6 +5895,7 @@ def test_np_linalg_lstsq():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_linalg_matrix_rank():
     class TestMatrixRank(HybridBlock):
         def __init__(self, hermitian):
@@ -7238,7 +7251,7 @@ def test_np_tril_indices():
 
 
 @with_seed()
-@use_np   
+@use_np
 def test_np_fill_diagonal():
     class TestFillDiagonal(HybridBlock):
         def __init__(self, val, wrap=False):
@@ -7829,6 +7842,7 @@ def test_np_true_divide():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_column_stack():
     class TestColumnStack(HybridBlock):
         def __init__(self):
@@ -8447,6 +8461,7 @@ def test_np_diag():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_diagonal():
     class TestDiagonal(HybridBlock):
         def __init__(self, k=0, axis1=0, axis2=1):
@@ -8525,6 +8540,7 @@ def test_np_diagonal():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_nan_to_num():
     def take_ele_grad(ele):
         if _np.isinf(ele) or _np.isnan(ele):
@@ -8627,6 +8643,7 @@ def test_np_nan_to_num():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_unary_bool_funcs():
     def check_unary_func(func):
         class TestUnary(HybridBlock):
@@ -9182,6 +9199,7 @@ def test_np_empty_like():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_cross():
     class TestNumpyCross(HybridBlock):
         def __init__(self, axisa=-1, axisb=-1, axisc=-1, axis=None):

@@ -25,6 +25,7 @@ from mxnet.test_utils import assert_almost_equal
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet import nd
+import pytest
 
 def network_structure_1():
     data1 = mx.sym.var('data1', shape=(2, 3, 10, 10))
@@ -419,6 +420,7 @@ def test_subgraph_backend_gluon_v2():
     check_subgraph_backend_gluon('default_v2')
 
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridSequential.
+@pytest.mark.serial
 def test_subgraph_backend_gluon_ext1():
     def get_net():
         net = nn.HybridSequential()  # Here we use the class HybridSequential.
@@ -451,6 +453,7 @@ def test_subgraph_backend_gluon_ext1():
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridBlock.
+@pytest.mark.serial
 def test_subgraph_backend_gluon_ext2():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):

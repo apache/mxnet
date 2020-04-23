@@ -24,6 +24,7 @@ import platform
 import itertools
 import numpy as _np
 import unittest
+import pytest
 from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
@@ -3240,6 +3241,7 @@ def check_interoperability(op_list):
 @with_seed()
 @use_np
 @with_array_function_protocol
+@pytest.mark.serial
 def test_np_memory_array_function():
     ops = [_np.shares_memory, _np.may_share_memory]
     for op in ops:
@@ -3253,6 +3255,7 @@ def test_np_memory_array_function():
 @with_seed()
 @use_np
 @with_array_function_protocol
+@pytest.mark.serial
 def test_np_array_function_protocol():
     check_interoperability(_NUMPY_ARRAY_FUNCTION_LIST)
 
@@ -3260,12 +3263,14 @@ def test_np_array_function_protocol():
 @with_seed()
 @use_np
 @with_array_ufunc_protocol
+@pytest.mark.serial
 def test_np_array_ufunc_protocol():
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
 
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_fallback_ops():
     op_list = np.fallback.__all__ + ['linalg.{}'.format(op_name) for op_name in np.fallback_linalg.__all__]
     check_interoperability(op_list)

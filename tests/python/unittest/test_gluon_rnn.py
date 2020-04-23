@@ -22,7 +22,7 @@ import copy
 from itertools import product
 from functools import partial
 from numpy.testing import assert_allclose
-import unittest
+import pytest
 from mxnet.test_utils import almost_equal, assert_almost_equal
 from common import assert_raises_cudnn_not_satisfied, with_seed
 
@@ -72,6 +72,7 @@ def test_lstm():
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
+@pytest.mark.serial
 def test_lstmp():
     hidden_size, projection_size = 512, 256
     rtol, atol = 1e-4, 1e-4
@@ -152,6 +153,7 @@ def test_lstmp():
         check_rnn_states(fused_states, stack_states, num_layers, True)
 
 
+@pytest.mark.serial
 def test_lstm_forget_bias():
     forget_bias = 2.0
     stack = gluon.rnn.SequentialRNNCell()
@@ -229,6 +231,7 @@ def test_residual():
     assert np.array_equal(outputs[1].asnumpy(), expected_outputs)
 
 
+@pytest.mark.serial
 def test_residual_bidirectional():
     cell = gluon.rnn.ResidualCell(
             gluon.rnn.BidirectionalCell(
@@ -643,7 +646,7 @@ def test_rnn_layers_fp32():
     run_rnn_layers('float32', 'float32')
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@unittest.skipIf(mx.context.num_gpus() == 0, "RNN FP16 only implemented for GPU for now")
+@pytest.mark.skipif(mx.context.num_gpus() == 0, reason="RNN FP16 only implemented for GPU for now")
 def test_rnn_layers_fp16():
     run_rnn_layers('float16', 'float32', mx.gpu())
 
