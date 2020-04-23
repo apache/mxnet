@@ -1,4 +1,3 @@
-# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,36 +14,14 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Dockerfile to test MXNet on Ubuntu 20.04 ARMv7 CPU
 
-FROM arm32v7/ubuntu:20.04
+import mxnet as mx
+from mxnet.test_utils import set_default_context
+import os
+import sys
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '../unittest'))
+from common import setup_module, teardown_module
+from test_tvm_op import *
 
-WORKDIR /usr/local
-
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
-    python3 \
-    python3-pip \
-    python3-numpy \
-    python3-scipy \
-    python3-requests \
- && rm -rf /var/lib/apt/lists/*
-
-
-# Python dependencies
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir \
-    pytest==5.3.5 \
-    pytest-env==0.6.2 \
-    pytest-cov==2.8.1 \
-    pytest-xdist==1.31.0 \
-    pytest-timeout==1.3.4 \
-    mock==2.0.0
-
-ARG USER_ID=0
-ARG GROUP_ID=0
-COPY install/ubuntu_adduser.sh /work/
-RUN /work/ubuntu_adduser.sh
-
-COPY runtime_functions.sh /work/
-WORKDIR /work/mxnet
+set_default_context(mx.gpu(0))

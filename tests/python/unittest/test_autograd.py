@@ -20,7 +20,7 @@ import mxnet.ndarray as nd
 from mxnet.ndarray import zeros_like
 from mxnet.autograd import *
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 from mxnet.test_utils import EnvManager
 
 
@@ -467,7 +467,3 @@ def test_gradient():
     dx.backward()
     assert abs(x.grad.asscalar() - 2.71828175) < 1e-7
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

@@ -23,7 +23,7 @@ import os
 import pickle as pkl
 import random
 import functools
-from nose.tools import assert_raises, raises
+import pytest
 from common import with_seed, assertRaises, TemporaryDirectory
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal, assert_exception
@@ -1341,7 +1341,7 @@ def test_ndarray_fluent():
     check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
 
 
-@raises(ValueError)
+@pytest.mark.xfail(raises=ValueError)
 def test_bool_ambiguous():
     bool(mx.nd.ones((2,3,4)))
 
@@ -1603,10 +1603,10 @@ def test_ndarray_indexing():
                   # Test basic indexing with newaxis
                   (None, False),
                   ((1, None, -2, 3, -4), False),
-                  ((1, slice(2, 5), None), False), 
-                  ((slice(None), slice(1, 4), None, slice(2, 3)), False), 
-                  ((slice(1, 3), slice(1, 3), slice(1, 3), slice(1, 3), None), False), 
-                  ((slice(1, 3), slice(1, 3), None, slice(1, 3), slice(1, 3)), False), 
+                  ((1, slice(2, 5), None), False),
+                  ((slice(None), slice(1, 4), None, slice(2, 3)), False),
+                  ((slice(1, 3), slice(1, 3), slice(1, 3), slice(1, 3), None), False),
+                  ((slice(1, 3), slice(1, 3), None, slice(1, 3), slice(1, 3)), False),
                   ((None, slice(1, 2), 3, None), False),
                   ((1, None, 2, 3, None, None, 4), False),
                   # Advanced indexing
@@ -2062,7 +2062,3 @@ def test_load_saved_gpu_array_when_no_gpus_are_present():
     # but there are no GPUs
     array.__setstate__(ndarray_state)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

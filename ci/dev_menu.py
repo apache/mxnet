@@ -105,8 +105,8 @@ def provision_virtualenv(venv_path=DEFAULT_PYENV):
         # Install MXNet python bindigs
         check_call([pip, 'install', '--upgrade', '--force-reinstall', '-e', 'python'])
         # Install test dependencies
-        check_call([pip, 'install', '--upgrade', '--force-reinstall', '-r', os.path.join('tests',
-            'requirements.txt')])
+        check_call([pip, 'install', '--upgrade', '--force-reinstall', '-r',
+                    os.path.join('ci', 'docker', 'install', 'requirements')])
     else:
         logging.warn("Can't find pip: '%s' not found", pip)
 
@@ -119,7 +119,7 @@ COMMANDS = OrderedDict([
         provision_virtualenv,
     ]),
     ('[Local] Python Unit tests',
-        "./py3_venv/bin/nosetests -v tests/python/unittest/"
+        "pytest -v tests/python/unittest/"
     ),
     ('[Docker] Build the MXNet binary - outputs to "lib/"',
         "ci/build.py --platform ubuntu_cpu_lite /work/runtime_functions.sh build_ubuntu_cpu_docs"),

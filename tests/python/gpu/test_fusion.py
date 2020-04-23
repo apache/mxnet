@@ -337,6 +337,3 @@ def test_fusion_reshape_executor():
     out = f.forward(is_train=False, data1=data, data2=data)
     assert out[0].sum().asscalar() == 150
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

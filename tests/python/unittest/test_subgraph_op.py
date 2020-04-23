@@ -41,7 +41,7 @@ def network_structure_2():
     ret1 = mx.sym.cos(ret)
     ret2 = mx.sym.sin(ret)
     ret = ret1 + ret2
-    return (ret, ['data'], [(2, 3, 10, 10)]) 
+    return (ret, ['data'], [(2, 3, 10, 10)])
 
 def network_structure_3():
     # this tests whether the partitioned sym can distinguish in_args and aux_states
@@ -74,7 +74,7 @@ def network_structure_6():
     data3 = mx.sym.sin(data2)
     conv = mx.sym.Convolution(data=data1, weight=data3, kernel=(2, 2), num_filter=1)
     return (conv, ['data1'], [(3, 3, 10, 10)])
-        
+
 def network_structure_7():
     # in this graph, the subgraph node and the other two external nodes form a cycle
     data = mx.sym.Variable('data', shape=(1,))
@@ -85,7 +85,7 @@ def network_structure_7():
     ret = ret1 + ret2
     return (ret, ['data'], [(1,)])
 
-def get_graphs(): 
+def get_graphs():
     return [
             (network_structure_1(), ['Convolution']),
             (network_structure_2(), ['exp', 'sin', '_Plus', 'elemwise_add', '_plus']),
@@ -271,7 +271,7 @@ def check_subgraph_exe5(sym, subgraph_backend, op_names):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
 def check_subgraph_exe6(sym, subgraph_backend, op_names):
-    """Call optimize_for to trigger graph partitioning with shapes/types, then simple_bind 
+    """Call optimize_for to trigger graph partitioning with shapes/types, then simple_bind
     and compare results of the partitioned sym and the original sym."""
     # simple_bind
     exe1 = sym.simple_bind(ctx=mx.current_context(), grad_req='null')
@@ -340,17 +340,17 @@ def check_subgraph_exe8(sym, subgraph_backend, op_names):
 
     exe2 = part_sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe2.forward()
-    
+
     # compare outputs
     outputs1 = exe1.outputs
     outputs2 = exe2.outputs
     assert len(outputs1) == len(outputs2)
     for i in range(len(outputs1)):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
-    
+
 def check_subgraph_exe9(sym, subgraph_backend, op_names):
-    """Call hybridize() to partition the graph, and then compare results of the partitioned 
-    sym and the original sym. Here do an inference before hybridizing with the subgraph_backend 
+    """Call hybridize() to partition the graph, and then compare results of the partitioned
+    sym and the original sym. Here do an inference before hybridizing with the subgraph_backend
     which means we'll pass shapes/types"""
     # create Gluon block for given symbol
     inputs = [mx.sym.var(i, dtype=mx_real_t) for i in sym[1]]
@@ -487,6 +487,3 @@ def test_subgraph_backend_gluon_ext2():
     for i in range(len(outputs1)):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
