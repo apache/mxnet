@@ -376,7 +376,7 @@ __device__ inline VectorType<DType, nvec> load_index(const DType * input, int i,
   }
 }
 
-template <int nvec, typename DType, int ndim>
+template <int nvec, int ndim, typename DType>
 __device__ inline VectorType<DType, nvec> global_load_index(const DType * input, int i,
                                                             const Shape<ndim> &shape) {
   if (i < shape.size) {
@@ -391,7 +391,7 @@ __device__ inline VectorType<DType, nvec> global_load_index(const DType * input,
   }
 }
 
-template <int nvec, typename DType, int ndim_input, int ndim_ref>
+template <int nvec, int ndim_ref, int ndim_input, typename DType>
 __device__ inline VectorType<DType, nvec> load_slice(const DType * input,
                                                      const Shape<ndim_input>& shape,
                                                      Shape<ndim_ref> begin,
@@ -444,7 +444,7 @@ __device__ inline VectorType<DType, nvec> load_slice(const DType * input,
   return ret;
 }
 
-template <int nvec, typename DType, int ndim_input, int ndim_ref>
+template <int nvec, int ndim_ref, int ndim_input, typename DType>
 __device__ inline VectorType<DType, nvec> fast_load_slice(const DType * input,
                                                           const Shape<ndim_input>& shape,
                                                           Shape<ndim_ref> begin,
@@ -485,7 +485,7 @@ __device__ inline VectorType<DType, nvec> fast_load_slice(const DType * input,
      }
      ref_idx = ref_idx % stride;
   }
-  return global_load_index<nvec, DType, ndim_ref>(input, idx, input_shape);
+  return global_load_index<nvec, ndim_ref>(input, idx, input_shape);
 }
 
 template <int nvec, typename DType, int ndim>

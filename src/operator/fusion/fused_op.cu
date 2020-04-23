@@ -213,6 +213,8 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   std::map<std::pair<int, int>, std::string> variables;
   std::map<int, int> load_index;
   bool check_shapes_compile = true;
+  bool is_slice_op;
+  bool is_broadcast_op;
 
   std::vector<uint32_t> outputs(g.num_nodes());
 
@@ -233,9 +235,9 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             load_index[i] = 1;
         } else {
             std::string op_name = source->op()->name;
-            bool is_broadcast_op = fusion::broadcast_ops.find(op_name) !=
-                                   fusion::broadcast_ops.end();
-            if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end() || is_broadcast_op) {
+            is_slice_op = fusion::slice_ops.find(op_name) != fusion::slice_ops.end();
+            is_broadcast_op = fusion::broadcast_ops.find(op_name) != fusion::broadcast_ops.end();
+            if ( is_slice_op || is_broadcast_op ) {
                 load_index[node.inputs[0].node_id] = 0;
                 if (is_broadcast_op) {
                     load_index[node.inputs[1].node_id] = 0;
@@ -258,9 +260,9 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         CHECK_EQ(outputs[i], 1);
       } else {
         std::string op_name = source->op()->name;
-        bool is_broadcast_op = fusion::broadcast_ops.find(op_name) != fusion::broadcast_ops.end();
-        if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end() ||
-            is_broadcast_op) {
+        is_slice_op = fusion::slice_ops.find(op_name) != fusion::slice_ops.end();
+        is_broadcast_op = fusion::broadcast_ops.find(op_name) != fusion::broadcast_ops.end();
+        if ( is_slice_op || is_broadcast_op ) {
           int node_id = node.inputs[0].node_id;
           const uint32_t input_entry_id = g.entry_id(node.inputs[0]);
           const auto& shape = node_shapes[input_entry_id];
@@ -272,7 +274,6 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           }
           const auto& var_name = g[node_id].source->attrs.name;
           const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
-          load_index[node_id] = 0;
           auto parse_tuple = [](const std::string& input, const std::string def) {
             std::string out = input;
             replaceString(&out, "(", "{");
@@ -350,14 +351,12 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
               }
             }
           }
-          const int input_type = node_dtypes[input_entry_id];
           std::string slice_func = "load_slice";
           if (!check_shapes) {
             slice_func = "fast_" + slice_func;
           }
           code += "const auto " + vec_name + " = op::" + slice_func + "<nvec," +
-                  mshadowTypeToString(input_type) + "," + std::to_string(shape.ndim()) +
-                  "," + std::to_string(ndim) + ">(" + var_name + ", " + var_name +
+                  std::to_string(ndim) + ">(" + var_name + ", " + var_name +
                   "_shape," + begin + "," + end + ", offset);\n";
           CHECK_EQ(outputs[i], 1);
           variables[{i, 0}] = vec_name;
@@ -368,14 +367,9 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
               const auto& var_name_arg2 = g[node_id_arg2].source->attrs.name;
               const auto vec_name_arg2 = "vec_" + var_name_arg2 + "_" + std::to_string(i);
               if (input_entry_id_arg2 != input_entry_id) {
-                  const int input_type_arg2 = node_dtypes[input_entry_id_arg2];
-                  const auto& shape_arg2 = node_shapes[input_entry_id_arg2];
-                  load_index[node_id_arg2] = 0;
                   code += "const auto " + vec_name_arg2 + " = op::" + slice_func + "<nvec," +
-                          mshadowTypeToString(input_type_arg2) + "," +
-                          std::to_string(shape_arg2.ndim()) + "," + std::to_string(ndim) +
-                          ">(" + var_name_arg2 + ", " + var_name_arg2 + "_shape," + begin +
-                          "," + end + ", offset);\n";
+                          std::to_string(ndim) + ">(" + var_name_arg2 + ", " + var_name_arg2 +
+                          "_shape," + begin + "," + end + ", offset);\n";
               }
               variables[{i, 1}] = vec_name_arg2;
               variables[{node_id_arg2, 0}] = vec_name_arg2;
@@ -400,14 +394,13 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
 
   code += "for (int j = 0; j < nvec; j++ ) {\n";
 
-  // first perform loads, since a var may be required in differenc places
   for (size_t i = 0; i < g.num_nodes(); ++i) {
     const auto& node = g[i];
     const auto* source = node.source;
     if (source != nullptr) {
+      std::string var_name = "temp" + std::to_string(temp_name_counter++);
       if (source->is_variable()) {
         if (load_index[i]) {
-            std::string var_name = "temp" + std::to_string(temp_name_counter++);
             code += "const auto " + var_name + " = op::load(vec_" +
                     variables[{i, 0}] + ".x[j]);\n";
             CHECK_EQ(outputs[i], 1);
@@ -415,156 +408,139 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         }
       } else {
         std::string op_name = source->op()->name;
-        if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
-          std::string var_name = "temp" + std::to_string(temp_name_counter++);
-          code += "const auto " + var_name + " = op::load(" + variables[{i, 0}] + ".x[j]);\n";
-          variables[{i, 0}] = var_name;
-          variables[{node.inputs[0].node_id, 0}] = var_name;
+        if (fusion::ops_desc.find(op_name) != fusion::ops_desc.end()) {
+          const std::vector<std::vector<std::string>>& op_descs =
+            fusion::ops_desc.at(op_name);
+          CHECK_EQ(outputs[i], op_descs.size());
+          size_t count = 0;
+          for (const auto& op_desc : op_descs) {
+            var_name = "temp" + std::to_string(temp_name_counter++);
+            const std::string& fmt = ParseOpDescription(op_desc, variables, node);
+            code += "const auto " + var_name + " = " + fmt + ";\n";
+            variables[{i, count}] = var_name;
+            ++count;
+          }
           continue;
         }
-        if (fusion::broadcast_ops.find(op_name) != fusion::broadcast_ops.end()) {
-          std::string var_name = "temp" + std::to_string(temp_name_counter++);
+
+        is_slice_op = fusion::slice_ops.find(op_name) != fusion::slice_ops.end();
+        if (is_slice_op) {
+          code += "const auto " + var_name + " = op::load(" + variables[{i, 0}] + ".x[j]);\n";
+          variables[{i, 0}] = var_name;
+          continue;
+        }
+
+        is_broadcast_op = fusion::broadcast_ops.find(op_name) != fusion::broadcast_ops.end();
+        if (is_broadcast_op) {
           code += "const auto " + var_name + " = op::load(" + variables[{i, 0}] + ".x[j]);\n";
           std::string var_name_arg2 = "temp" + std::to_string(temp_name_counter++);
           code += "const auto " + var_name_arg2 + " = op::load(" + variables[{i, 1}] + ".x[j]);\n";
+          const std::string& op_desc = fusion::broadcast_ops.at(op_name);
+          std::string var_name_result = "temp" + std::to_string(temp_name_counter++);
+          code += "const auto " + var_name_result + " = op::" + op_desc + "(" +
+                   var_name + ", " + var_name_arg2 + ");\n";
           variables[{node.inputs[0].node_id, 0}] = var_name;
           variables[{node.inputs[1].node_id, 0}] = var_name_arg2;
+          variables[{i, 0}] = var_name_result;
           continue;
         }
+
+        // Special cases with variable number
+        // of inputs/outputs, listed in
+        // fusion::variable_io_ops
+        if (op_name == "add_n") {
+          CHECK_EQ(outputs[i], 1);
+          const auto& arg = variables[{node.inputs[0].node_id, node.inputs[0].index}];
+          code += "auto " + var_name + " = " + arg + ";\n";
+          for (size_t inp = 1; inp < node.inputs.size(); ++inp) {
+            const auto& temp_arg = variables[{node.inputs[inp].node_id, node.inputs[inp].index}];
+            code += var_name + " = op::add(" + var_name + ", " + temp_arg + ");\n";
+          }
+          variables[{i, 0}] = var_name;
+          continue;
+        }
+
+        if (op_name == "_backward_Activation") {
+          CHECK_EQ(outputs[i], 1);
+          std::string act_type = node.source->attrs.dict.at("act_type");
+          std::string rhs, lhs;
+          rhs = variables[{node.inputs[0].node_id, node.inputs[0].index}];
+          if (act_type == "relu" ||
+              act_type == "sigmoid" ||
+              act_type == "tanh") {
+            lhs = variables[{node.inputs[1].node_id, node.inputs[1].index}];
+          } else {
+            lhs = variables[{node.inputs[2].node_id, node.inputs[2].index}];
+          }
+          code += "const auto " + var_name + " = op::backward_" + act_type +
+                  "(" + lhs + ", " + rhs + ");\n";
+
+          variables[{i, 0}] = var_name;
+          continue;
+        }
+
+        if (op_name == "amp_multicast" || op_name == "_backward_amp_multicast") {
+          CHECK_EQ(outputs[i], node.inputs.size());
+          for (size_t counter = 0; counter < outputs[i]; ++counter) {
+            const auto& input = node.inputs[counter];
+            var_name = "temp" + std::to_string(temp_name_counter++);
+            const auto& arg = variables[{input.node_id, input.index}];
+            code += "const auto " + var_name + " = " + arg + ";\n";
+            variables[{i, counter}] = var_name;
+          }
+          continue;
+        }
+
+        if (op_name == "_backward_cast") {
+          CHECK_EQ(outputs[i], 1);
+          const int output_type = node_dtypes[g.entry_id(i, 0)];
+          const auto& arg = variables[{node.inputs[0].node_id, node.inputs[0].index}];
+          code += "const auto " + var_name + " = op::cast<" + mshadowTypeToString(output_type) +
+                  ">(" + arg + ");\n";
+          variables[{i, 0}] = var_name;
+          continue;
+        }
+
+        // LeakyReLU, look for act_type
+        if (op_name == "LeakyReLU") {
+            std::string act_type = node.source->attrs.dict.at("act_type");
+            const std::vector<std::vector<std::string>>& op_descs =
+                fusion::LeakyReLU_ops.at(act_type);
+            if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_ops.end()) {
+              CHECK_EQ(outputs[i], op_descs.size());
+              size_t count = 0;
+              for (const auto& op_desc : op_descs) {
+                var_name = "temp" + std::to_string(temp_name_counter++);
+                const std::string& fmt = ParseOpDescription(op_desc, variables, node);
+                code += "const auto " + var_name + " = " + fmt + ";\n";
+                variables[{i, count}] = var_name;
+                ++count;
+              }
+              continue;
+            }
+        }
+        if (op_name == "_backward_LeakyReLU") {
+            std::string act_type = node.source->attrs.dict.at("act_type");
+            const std::vector<std::vector<std::string>>& op_descs =
+                fusion::LeakyReLU_bwd_ops.at(act_type);
+            if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_bwd_ops.end()) {
+              CHECK_EQ(outputs[i], op_descs.size());
+              size_t count = 0;
+              for (const auto& op_desc : op_descs) {
+                var_name = "temp" + std::to_string(temp_name_counter++);
+                const std::string& fmt = ParseOpDescription(op_desc, variables, node);
+                code += "const auto " + var_name + " = " + fmt + ";\n";
+                variables[{i, count}] = var_name;
+                ++count;
+              }
+              continue;
+            }
+        }
+
+        LOG(FATAL) << "Unrecognized op " + op_name;
       }
     } else {
       LOG(FATAL) << "Encountered node with NULL source.";
-    }
-  }
-
-  for (size_t i = 0; i < g.num_nodes(); ++i) {
-    const auto& node = g[i];
-    const auto* source = node.source;
-    if (source != nullptr && !source->is_variable()) {
-      std::string var_name = "temp" + std::to_string(temp_name_counter++);
-      std::string op_name = source->op()->name;
-      if (fusion::ops_desc.find(op_name) != fusion::ops_desc.end()) {
-        const std::vector<std::vector<std::string>>& op_descs =
-          fusion::ops_desc.at(op_name);
-        CHECK_EQ(outputs[i], op_descs.size());
-        size_t count = 0;
-        for (const auto& op_desc : op_descs) {
-          var_name = "temp" + std::to_string(temp_name_counter++);
-          const std::string& fmt = ParseOpDescription(op_desc, variables, node);
-          code += "const auto " + var_name + " = " + fmt + ";\n";
-          variables[{i, count}] = var_name;
-          ++count;
-        }
-        continue;
-      }
-
-      if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
-          continue;
-      }
-
-      if (fusion::broadcast_ops.find(op_name) != fusion::broadcast_ops.end()) {
-        const std::string& op_desc = fusion::broadcast_ops.at(op_name);
-        std::string var_name_input0 = variables[{node.inputs[0].node_id, 0}];
-        std::string var_name_input1 = variables[{node.inputs[1].node_id, 0}];
-        code += "const auto " + var_name + " = op::" + op_desc + "(" +
-                var_name_input0 + ", " + var_name_input1 + ");\n";
-        variables[{i, 0}] = var_name;
-        continue;
-      }
-
-      // Special cases with variable number
-      // of inputs/outputs, listed in
-      // fusion::variable_io_ops
-      if (op_name == "add_n") {
-        CHECK_EQ(outputs[i], 1);
-        const auto& arg = variables[{node.inputs[0].node_id, node.inputs[0].index}];
-        code += "auto " + var_name + " = " + arg + ";\n";
-        for (size_t inp = 1; inp < node.inputs.size(); ++inp) {
-          const auto& temp_arg = variables[{node.inputs[inp].node_id, node.inputs[inp].index}];
-          code += var_name + " = op::add(" + var_name + ", " + temp_arg + ");\n";
-        }
-        variables[{i, 0}] = var_name;
-        continue;
-      }
-
-      if (op_name == "_backward_Activation") {
-        CHECK_EQ(outputs[i], 1);
-        std::string act_type = node.source->attrs.dict.at("act_type");
-        std::string rhs, lhs;
-        rhs = variables[{node.inputs[0].node_id, node.inputs[0].index}];
-        if (act_type == "relu" ||
-            act_type == "sigmoid" ||
-            act_type == "tanh") {
-          lhs = variables[{node.inputs[1].node_id, node.inputs[1].index}];
-        } else {
-          lhs = variables[{node.inputs[2].node_id, node.inputs[2].index}];
-        }
-        code += "const auto " + var_name + " = op::backward_" + act_type +
-                "(" + lhs + ", " + rhs + ");\n";
-
-        variables[{i, 0}] = var_name;
-        continue;
-      }
-
-      if (op_name == "amp_multicast" || op_name == "_backward_amp_multicast") {
-        CHECK_EQ(outputs[i], node.inputs.size());
-        for (size_t counter = 0; counter < outputs[i]; ++counter) {
-          const auto& input = node.inputs[counter];
-          var_name = "temp" + std::to_string(temp_name_counter++);
-          const auto& arg = variables[{input.node_id, input.index}];
-          code += "const auto " + var_name + " = " + arg + ";\n";
-          variables[{i, counter}] = var_name;
-        }
-        continue;
-      }
-
-      if (op_name == "_backward_cast") {
-        CHECK_EQ(outputs[i], 1);
-        const int output_type = node_dtypes[g.entry_id(i, 0)];
-        const auto& arg = variables[{node.inputs[0].node_id, node.inputs[0].index}];
-        code += "const auto " + var_name + " = op::cast<" + mshadowTypeToString(output_type) +
-                ">(" + arg + ");\n";
-        variables[{i, 0}] = var_name;
-        continue;
-      }
-
-      // LeakyReLU, look for act_type
-      if (op_name == "LeakyReLU") {
-          std::string act_type = node.source->attrs.dict.at("act_type");
-          const std::vector<std::vector<std::string>>& op_descs =
-              fusion::LeakyReLU_ops.at(act_type);
-          if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_ops.end()) {
-            CHECK_EQ(outputs[i], op_descs.size());
-            size_t count = 0;
-            for (const auto& op_desc : op_descs) {
-              var_name = "temp" + std::to_string(temp_name_counter++);
-              const std::string& fmt = ParseOpDescription(op_desc, variables, node);
-              code += "const auto " + var_name + " = " + fmt + ";\n";
-              variables[{i, count}] = var_name;
-              ++count;
-            }
-            continue;
-          }
-      }
-      if (op_name == "_backward_LeakyReLU") {
-          std::string act_type = node.source->attrs.dict.at("act_type");
-          const std::vector<std::vector<std::string>>& op_descs =
-              fusion::LeakyReLU_bwd_ops.at(act_type);
-          if (fusion::LeakyReLU_ops.find(act_type) != fusion::LeakyReLU_bwd_ops.end()) {
-            CHECK_EQ(outputs[i], op_descs.size());
-            size_t count = 0;
-            for (const auto& op_desc : op_descs) {
-              var_name = "temp" + std::to_string(temp_name_counter++);
-              const std::string& fmt = ParseOpDescription(op_desc, variables, node);
-              code += "const auto " + var_name + " = " + fmt + ";\n";
-              variables[{i, count}] = var_name;
-              ++count;
-            }
-            continue;
-          }
-      }
-
-      LOG(FATAL) << "Unrecognized op " + op_name;
     }
   }
 
@@ -581,7 +557,6 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   counter = 0;
 
   for (const auto& entry : g.outputs()) {
-    const std::string& var = variables[{entry.node_id, entry.index}];
     if (req[counter] == kWriteTo || req[counter] == kWriteInplace) {
       const auto var_name = "output" + std::to_string(counter);
       code += "op::store_index(vec_" + var_name + ", i, " + var_name + ", " +
