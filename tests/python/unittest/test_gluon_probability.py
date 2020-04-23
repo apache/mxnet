@@ -1248,7 +1248,7 @@ def test_gluon_binomial():
                 assert_almost_equal(mx_out, np_out, atol=1e-4,
                                     rtol=1e-3, use_broadcast=False)
 
-    # TODO: Test kl
+    # TODO: Test kl, to be implemented
 
 
 @with_seed()
