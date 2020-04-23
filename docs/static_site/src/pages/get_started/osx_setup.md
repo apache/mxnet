@@ -97,7 +97,7 @@ build without Cuda, change `set(USE_CUDA ON CACHE TYPE "Build with CUDA
 support")` to `set(USE_CUDA OFF CACHE TYPE "Build with CUDA support")`.
 
 For a GPU-enabled build make sure you have installed the [CUDA dependencies
-first](#cuda-dependencies)). When building a GPU-enabled build on a machine
+first](#cuda-dependencies). When building a GPU-enabled build on a machine
 without GPU, MXNet build can't autodetect your GPU architecture and will target
 all available GPU architectures. Please set the `MXNET_CUDA_ARCH` variable in
 `config.cmake` to your desired cuda architecture to speed up the build.
@@ -159,7 +159,7 @@ package installed.
 
 ### Install the MXNet Package for C++
 
-Refer to the [C++ Package setup guide](c_plus_plus).
+Refer to the [C++ Package setup guide](cpp_setup).
 <hr>
 
 
@@ -246,6 +246,24 @@ After you build the shared library, run the following command from the MXNet sou
     perl Makefile.PL INSTALL_BASE=${HOME}/perl5
     make install
 ```
+
+### Install the MXNet Package for Java
+
+**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial]({{'/api/java/docs/tutorials/mxnet_java_on_intellij'|relative_url}}) instead of these instructions.
+
+To install Maven, please refer to [Maven setup guide](java_setup.html). After Maven is setup, you may simply run the following from the MXNet scala-package folder:
+
+```bash
+mvn install
+```
+
+This will install both the Java Inference API and the required MXNet-Scala package.
+
+
+
+
+Refer to the [C++ Package setup guide](c_plus_plus).
+<hr>
 
 ## Contributions
 

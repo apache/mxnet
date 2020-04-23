@@ -27,7 +27,6 @@ permalink: /get_started/build_from_source
 
 This document explains how to build MXNet from source code.
 
-**For Java/Scala/Clojure, please follow [this guide instead](scala_setup)**
 
 ## Overview
 
@@ -36,6 +35,7 @@ Building from source follows this general two-step flow of building the shared l
 1. Build the MXNet shared library, `libmxnet.so`.
     * [Clone the repository](#clone-the-mxnet-project)
     * [Prerequisites](#prerequisites)
+        * [Compiler requirement](#compiler-requirement)
         * [Math library selection](#math-library-selection)
         * [Install GPU software](#install-gpu-software)
         * [Install optional software](#install-optional-software)
@@ -88,6 +88,9 @@ cd mxnet
 ## Prerequisites
 
 The following sections will help you decide which specific prerequisites you need to install.
+
+#### Compiler Requirement
+MXNet 1.6 requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler
 
 #### Math Library Selection
 It is useful to consider your math library selection prior to your other prerequisites.

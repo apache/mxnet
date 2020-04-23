@@ -117,7 +117,7 @@ series of `set(name value CACHE TYPE "Description")` entries. You can change the
 values of the respective `value`.
 
 For a GPU-enabled build make sure you have installed the [CUDA dependencies
-first](#cuda-dependencies)). When building a GPU-enabled build on a machine
+first](#cuda-dependencies). When building a GPU-enabled build on a machine
 without GPU, MXNet build can't autodetect your GPU architecture and will target
 all available GPU architectures. Please set the `MXNET_CUDA_ARCH` variable in
 `config.cmake` to your desired cuda architecture to speed up the build.
@@ -189,7 +189,7 @@ pip install --user graphviz==0.8.4 jupyter
 
 ### Install the MXNet Package for C++
 
-Refer to the [C++ Package setup guide](c_plus_plus).
+Refer to the [C++ Package setup guide](cpp_setup).
 <hr>
 
 
