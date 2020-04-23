@@ -177,21 +177,19 @@ MXNET_REGISTER_API("_npi.prod")
   } else {
     param.initial = args[4].operator double();
   }
-  attrs.op = op;
   attrs.parsed = std::move(param);
+  attrs.op = op;
   SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
-  // inputs
-  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_inputs = 1;
-  // outputs
-  NDArray* out = args[5].operator mxnet::NDArray*();
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  NDArray* out = args[4].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
-  int num_outputs = 1;
+  int num_outputs = out != nullptr;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (out) {
-    *ret = PythonArg(5);
+    *ret = PythonArg(4);
   } else {
-    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+    *ret = ndoutputs[0];
   }
 });
 
