@@ -1018,6 +1018,36 @@ MSHADOW_XINLINE double gammaln_grad::Map<double>(double a) {
   return special_functions::cephes::psi<double>(a);
 }
 
+/***** digamma ******/
+
+struct digamma : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // default implementation using floating precision
+    return DType(special_functions::cephes::psi<float>(a));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double digamma::Map<double>(double a) {
+  return special_functions::cephes::psi<double>(a);
+}
+
+/***** trigamma ******/
+
+struct trigamma : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // default implementation using floating precision
+    return DType(special_functions::trigamma<float>(a));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double trigamma::Map<double>(double a) {
+  return special_functions::trigamma<double>(a);
+}
+
 /* Smooth L1 Loss is a loss specific for R-CNN franchise training
  * Smooth L1 Loss function:
  * f(x) = 0.5 * (sigma * x) ^ 2,     |x| < 1 / sigma^2
