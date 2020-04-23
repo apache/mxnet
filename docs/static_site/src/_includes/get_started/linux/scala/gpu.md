@@ -1,6 +1,6 @@
 You can use the Maven packages defined in the following dependency to include MXNet in
 your Scala
-project. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for
+project. Please refer to the <a href="/scala_setup.html">MXNet-Scala setup guide</a> for
 a detailed set
 of instructions to help you with the setup process.
 
