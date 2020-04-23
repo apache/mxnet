@@ -10797,7 +10797,7 @@ def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-man
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
-def prod(a, axis=None, dtype=None, keepdims=False, initial=None, out=None): # pylint: disable=too-many-arguments
+def prod(a, axis=None, dtype=None, out=None, keepdims=False, initial=None): # pylint: disable=too-many-arguments
     """
     Return the product of array elements over a given axis.
 
@@ -10872,7 +10872,7 @@ def prod(a, axis=None, dtype=None, keepdims=False, initial=None, out=None): # py
     >>> np.prod([1, 2], initial=5)
     10
     """
-    return _mx_nd_np.prod(a, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial, out=out)
+    return _npi.prod(a, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial, out=out)
 
 
 # pylint: disable=redefined-outer-name

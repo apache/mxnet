@@ -182,12 +182,12 @@ MXNET_REGISTER_API("_npi.prod")
   SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
   int num_inputs = 1;
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
-  NDArray* out = args[4].operator mxnet::NDArray*();
+  NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (out) {
-    *ret = PythonArg(4);
+    *ret = PythonArg(5);
   } else {
     *ret = ndoutputs[0];
   }
