@@ -10872,7 +10872,7 @@ def prod(a, axis=None, dtype=None, out=None, keepdims=False, initial=None): # py
     >>> np.prod([1, 2], initial=5)
     10
     """
-    return _npi.prod(a, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial, out=out)
+    return _mx_nd_np.prod(a, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial, out=out)
 
 
 # pylint: disable=redefined-outer-name
