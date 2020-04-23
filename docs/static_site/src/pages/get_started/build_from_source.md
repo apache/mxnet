@@ -90,7 +90,7 @@ cd mxnet
 The following sections will help you decide which specific prerequisites you need to install.
 
 #### Compiler Requirement
-MXNet 1.6 requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler
+Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler
 
 #### Math Library Selection
 It is useful to consider your math library selection prior to your other prerequisites.

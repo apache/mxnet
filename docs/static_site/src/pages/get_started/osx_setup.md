@@ -26,7 +26,7 @@ permalink: /get_started/osx_setup
 
 The following installation instructions are for building MXNet from source. For
 instructions to build MXNet from source on other platforms, see the general
-[Build From Source guide](build_from_source).
+[Build From Source guide](build_from_source.html).
 
 Instead of building from source, you can install a binary version of MXNet. For
 that, please follow the information at [Get Started](get_started).
@@ -60,6 +60,8 @@ not support macOS.
 
 
 ## Build the MXNet shared library from source
+
+**note**: Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler.
 
 On OS X, you need the following dependencies:
 
@@ -103,7 +105,7 @@ all available GPU architectures. Please set the `MXNET_CUDA_ARCH` variable in
 `config.cmake` to your desired cuda architecture to speed up the build.
 
 To (optionally) build with MKL math library, please install MKL first based on
-the guide in [Math Library Selection](build_from_source#math-library-selection).
+the guide in [Math Library Selection](build_from_source.html#math-library-selection).
 
 **Step 3:** Build MXNet core shared library.
 
@@ -159,7 +161,7 @@ package installed.
 
 ### Install the MXNet Package for C++
 
-Refer to the [C++ Package setup guide](cpp_setup).
+Refer to the [C++ Package setup guide](cpp_setup.html).
 <hr>
 
 
@@ -202,16 +204,16 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 	Pkg.add("MXNet")
 ```
 
-For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation]({{'/api/julia'|relative_url}}).
+For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](/api/julia.html).
 
 
 ### Install the MXNet Package for Scala
 
 To use the MXNet-Scala package, you can acquire the Maven package as a dependency.
 
-Further information is in the [MXNet-Scala Setup Instructions](scala_setup).
+Further information is in the [MXNet-Scala Setup Instructions](scala_setup.html).
 
-If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial]({{'/api/scala/docs/tutorials/mxnet_scala_on_intellij'|relative_url}}) instead.
+If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](/api/scala/docs/tutorials/mxnet_scala_on_intellij.html) instead.
 
 ### Install the MXNet Package for Perl
 
@@ -249,7 +251,7 @@ After you build the shared library, run the following command from the MXNet sou
 
 ### Install the MXNet Package for Java
 
-**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial]({{'/api/java/docs/tutorials/mxnet_java_on_intellij'|relative_url}}) instead of these instructions.
+**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial](/api/java/docs/tutorials/mxnet_java_on_intellij.html) instead of these instructions.
 
 To install Maven, please refer to [Maven setup guide](java_setup.html). After Maven is setup, you may simply run the following from the MXNet scala-package folder:
 
@@ -258,11 +260,6 @@ mvn install
 ```
 
 This will install both the Java Inference API and the required MXNet-Scala package.
-
-
-
-
-Refer to the [C++ Package setup guide](c_plus_plus).
 <hr>
 
 ## Contributions

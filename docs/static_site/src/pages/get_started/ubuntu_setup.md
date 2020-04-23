@@ -74,7 +74,9 @@ sudo ldconfig
 
 ## Build the MXNet shared library from source
 
-It is recommended that you review the general [build from source](build_from_source) instructions before continuing.
+It is recommended that you review the general [build from source](build_from_source.html) instructions before continuing.
+
+**note**: Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler.
 
 On Ubuntu versions 16.04 or later, you need the following dependencies:
 
@@ -123,7 +125,7 @@ all available GPU architectures. Please set the `MXNET_CUDA_ARCH` variable in
 `config.cmake` to your desired cuda architecture to speed up the build.
 
 To (optionally) build with MKL math library, please install MKL first based on
-the guide in [Math Library Selection](build_from_source#math-library-selection).
+the guide in [Math Library Selection](build_from_source.html#math-library-selection).
 
 **Step 3:** Build MXNet core shared library.
 
@@ -189,7 +191,7 @@ pip install --user graphviz==0.8.4 jupyter
 
 ### Install the MXNet Package for C++
 
-Refer to the [C++ Package setup guide](cpp_setup).
+Refer to the [C++ Package setup guide](cpp_setup.html).
 <hr>
 
 
@@ -300,7 +302,7 @@ julia --color=yes --project=./ -e \
 ```
 
 For more details about installing and using MXNet with Julia, see the
-[MXNet Julia documentation]({{'/api/julia'|relative_url}}).
+[MXNet Julia documentation](/api/julia.html).
 
 <hr>
 
@@ -409,20 +411,20 @@ You should see the following output:
 
 To use the MXNet-Scala package, you can acquire the Maven package as a dependency.
 
-Further information is in the [MXNet-Scala Setup Instructions](scala_setup).
+Further information is in the [MXNet-Scala Setup Instructions](scala_setup.html).
 
 If you use IntelliJ or a similar IDE, you may want to follow the
-[MXNet-Scala on IntelliJ tutorial]({{'/api/scala/docs/tutorials/mxnet_scala_on_intellij'|relative_url}}) instead.
+[MXNet-Scala on IntelliJ tutorial](/api/scala/docs/tutorials/mxnet_scala_on_intellij.html) instead.
 <hr>
 
 ### Install the MXNet Package for Java
 
 To use the MXNet-Java package, you can acquire the Maven package as a dependency.
 
-Further information is in the [MXNet-Java Setup Instructions](java_setup).
+Further information is in the [MXNet-Java Setup Instructions](java_setup.html).
 
 If you use IntelliJ or a similar IDE, you may want to follow the
-[MXNet-Java on IntelliJ tutorial]({{'/api/java/docs/tutorials/mxnet_java_on_intellij'|relative_url}}) instead.
+[MXNet-Java on IntelliJ tutorial](/api/java/docs/tutorials/mxnet_java_on_intellij.html) instead.
 <hr>
 
 ## Contributions
