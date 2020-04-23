@@ -36,7 +36,7 @@ core_logic: {
   utils.parallel_stage('Sanity Check', [
     custom_steps.sanity_lint(),
     custom_steps.sanity_rat_license()
-  ])    
+  ])
 }
 ,
 failure_handler: {
