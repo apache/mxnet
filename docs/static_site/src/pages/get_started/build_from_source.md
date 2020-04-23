@@ -221,7 +221,7 @@ make -j"$(nproc)"
 ```
 - Run test_nccl.py script as follows. The test should complete. It does not produce any output.
 ``` bash
-nosetests --verbose tests/python/gpu/test_nccl.py
+pytest --verbose tests/python/gpu/test_nccl.py
 ```
 
 **Recommendation to get the best performance out of NCCL:**

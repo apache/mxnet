@@ -31,7 +31,7 @@ from mxnet.test_utils import assert_almost_equal, download_model
 from mxnet.contrib.amp import amp
 from mxnet.base import NDArrayHandle, py_str
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 
 @with_seed()
 def test_predictor_with_dtype():
@@ -122,7 +122,3 @@ def test_predictor_amp():
                                                                          cast_optional_params=True)
     compare_module_cpredict(result_sym, result_arg_params, result_aux_params, monitor_callback=True)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

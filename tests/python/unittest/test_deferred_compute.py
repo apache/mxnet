@@ -19,11 +19,11 @@ import functools
 import operator
 
 import numpy as np
-from nose.tools import raises
 
 import mxnet as mx
 import mxnet._deferred_compute as dc
 from mxnet.base import MXNetError
+import pytest
 
 
 def _all_same(arrays1, arrays2, message=''):
@@ -213,7 +213,7 @@ def test_dc_subset_of_output():
     _all_assert_dc(_dc_simple_setup, f)
 
 
-@raises(MXNetError)  # Should raise NotImplementedError https://github.com/apache/incubator-mxnet/issues/17522
+@pytest.mark.xfail(raises=MXNetError)  # Should raise NotImplementedError https://github.com/apache/incubator-mxnet/issues/17522
 def test_dc_inplace():
     def f(a, *, nd):
         a[:5] = 0
@@ -245,7 +245,7 @@ def test_dc_get_symbol_called_twice():
     assert sym2.list_inputs() == ['a']
 
 
-@raises(MXNetError)  # Should raise ValueError https://github.com/apache/incubator-mxnet/issues/17522
+@pytest.mark.xfail(raises=MXNetError)  # Should raise ValueError https://github.com/apache/incubator-mxnet/issues/17522
 def test_dc_set_variable_called_twice():
     a = mx.np.arange(10)
     dc.set_variable(a, mx.sym.var('a'))
@@ -342,7 +342,7 @@ def test_dc_simple_boolean_indexing():
         _assert_dc(setup, f, mode=mode)
 
 
-@raises(TypeError)  # Advanced indexing
+@pytest.mark.xfail(raises=TypeError)  # Advanced indexing
 def test_dc_list_indexing():
     def f(a, *, nd):
         assert nd is mx.np
@@ -352,7 +352,7 @@ def test_dc_list_indexing():
         _assert_dc(_dc_simple_setup, f, mode=mode)
 
 
-@raises(TypeError)  # Advanced indexing
+@pytest.mark.xfail(raises=TypeError)  # Advanced indexing
 def test_dc_numpy_indexing():
     def f(a, *, nd):
         assert nd is mx.np
@@ -430,7 +430,7 @@ def test_dc_hybridblock():
         _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
 
 
-@raises(RuntimeError)
+@pytest.mark.xfail(raises=RuntimeError)
 def test_dc_hybridblock_deferred_init_no_infer_shape():
     class MyBlock(mx.gluon.HybridBlock):
         def __init__(self, *, prefix=None, params=None):
@@ -496,7 +496,7 @@ def test_dc_hybridblock_dynamic_shape():
         _assert_dc_gluon(setup, net, numpy=True)
 
 
-@raises(RuntimeError)
+@pytest.mark.xfail(raises=RuntimeError)
 def test_dc_hybridblock_symbolblock():
     model = mx.gluon.nn.HybridSequential()
     model.add(mx.gluon.nn.Dense(128, activation='tanh'))
@@ -530,7 +530,3 @@ def test_dc_hybridblock_symbolblock():
 
     _all_same([out], [out_hybrid])
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

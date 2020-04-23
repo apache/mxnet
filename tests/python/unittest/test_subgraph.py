@@ -21,7 +21,7 @@ import numpy as np
 import mxnet as mx
 import copy
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 from mxnet.gluon.model_zoo.vision import get_model
 
 def make_subgraph(subg, *args):
@@ -190,6 +190,3 @@ def test_subgraph_with_customOp():
     c.bind(mx.cpu(), {'a': inp}).forward()
     mx.nd.waitall()
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

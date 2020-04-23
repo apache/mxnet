@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+max_time = 240
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -35,11 +35,13 @@ utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
     custom_steps.compile_centos7_gpu()
-  ]) 
-  
+  ])
+
   utils.parallel_stage('Tests', [
-    custom_steps.test_centos7_python3_gpu()
-  ]) 
+    custom_steps.test_centos7_python3_gpu(),
+    custom_steps.test_static_python_gpu(),
+    custom_steps.test_static_python_gpu_cmake(),
+  ])
 }
 ,
 failure_handler: {

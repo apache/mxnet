@@ -1151,9 +1151,9 @@ def test_cond():
                     ]
                 )
 
-class TestRNNLayer(gluon.HybridBlock):
+class RNNLayer(gluon.HybridBlock):
     def __init__(self, cell_type, hidden_size, prefix=None, params=None):
-        super(TestRNNLayer, self).__init__(prefix=prefix, params=params)
+        super(RNNLayer, self).__init__(prefix=prefix, params=params)
         self.cell = cell_type(hidden_size, prefix='rnn_')
 
     def hybrid_forward(self, F, inputs, states):
@@ -1166,7 +1166,7 @@ def check_contrib_rnn(cell_type, num_states):
     rnn_data = mx.nd.normal(loc=0, scale=1, shape=(5, batch_size, 50))
     state_shape = (batch_size, hidden_size)
     states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(num_states)]
-    layer = TestRNNLayer(cell_type, hidden_size)
+    layer = RNNLayer(cell_type, hidden_size)
     layer.initialize(ctx=default_context())
     res1 = layer(rnn_data, states)
     params1 = layer.collect_params()
@@ -1184,7 +1184,7 @@ def check_contrib_rnn(cell_type, num_states):
             {'static_alloc': True},
             {'static_alloc': True, 'static_shape': True} ]
     for config in configs:
-        layer = TestRNNLayer(cell_type, hidden_size)
+        layer = RNNLayer(cell_type, hidden_size)
         layer.initialize(ctx=default_context())
         layer.hybridize(**config)
         res2 = layer(rnn_data, states)
@@ -2168,6 +2168,3 @@ def test_foreach_with_unkown_dim():
     _, output_shape, _ = outs.infer_shape_partial()
     assert_allclose((0, 3, 32, 32), output_shape[0])
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

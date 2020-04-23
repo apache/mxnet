@@ -29,7 +29,7 @@ except ImportError:
     import mock
 import mxnet as mx
 import requests
-from nose.tools import raises
+import pytest
 
 
 class MockResponse(requests.Response):
@@ -40,7 +40,7 @@ class MockResponse(requests.Response):
         self.raw = io.BytesIO(content.encode('utf-8'))
 
 
-@raises(Exception)
+@pytest.mark.xfail(raises=Exception)
 @mock.patch(
     'requests.get', mock.Mock(side_effect=requests.exceptions.ConnectionError))
 def test_download_retries():

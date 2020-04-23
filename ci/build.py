@@ -29,6 +29,7 @@ import argparse
 import glob
 import pprint
 import re
+import os
 import shutil
 import signal
 import subprocess
@@ -36,8 +37,14 @@ from itertools import chain
 from subprocess import check_call, check_output
 from typing import *
 
+import yaml
+
 from safe_docker_run import SafeDockerClient
 from util import *
+
+# NOTE: Temporary whitelist used until all Dockerfiles are refactored for docker compose
+DOCKER_COMPOSE_WHITELIST = ('centos7_cpu', 'centos7_gpu_cu92', 'centos7_gpu_cu100',
+                            'centos7_gpu_cu101', 'centos7_gpu_cu102')
 
 
 def get_dockerfiles_path():
@@ -55,6 +62,11 @@ def get_platforms(path: str = get_dockerfiles_path()) -> List[str]:
 
 def get_docker_tag(platform: str, registry: str) -> str:
     """:return: docker tag to be used for the container"""
+    if platform in DOCKER_COMPOSE_WHITELIST:
+        with open("docker/docker-compose.yml", "r") as f:
+            compose_config = yaml.load(f.read(), yaml.SafeLoader)
+            return compose_config["services"][platform]["image"]
+
     platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
     if not registry:
         registry = "mxnet_local"
@@ -66,47 +78,57 @@ def get_dockerfile(platform: str, path=get_dockerfiles_path()) -> str:
     return os.path.join(path, "Dockerfile.{0}".format(platform))
 
 
-def get_docker_binary(use_nvidia_docker: bool) -> str:
-    return "nvidia-docker" if use_nvidia_docker else "docker"
-
-
-def build_docker(platform: str, docker_binary: str, registry: str, num_retries: int, no_cache: bool) -> str:
+def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
+                 cache_intermediate: bool = False) -> str:
     """
     Build a container for the given platform
     :param platform: Platform
-    :param docker_binary: docker binary to use (docker/nvidia-docker)
     :param registry: Dockerhub registry name
     :param num_retries: Number of retries to build the docker image
     :param no_cache: pass no-cache to docker to rebuild the images
     :return: Id of the top level image
     """
     tag = get_docker_tag(platform=platform, registry=registry)
-    logging.info("Building docker container tagged '%s' with %s", tag, docker_binary)
-    #
-    # We add a user with the same group as the executing non-root user so files created in the
-    # container match permissions of the local user. Same for the group.
-    #
-    # These variables are used in the docker files to create user and group with these ids.
-    # see: docker/install/ubuntu_adduser.sh
-    #
-    # cache-from is needed so we use the cached images tagged from the remote via
-    # docker pull see: docker_cache.load_docker_cache
-    #
-    # This also prevents using local layers for caching: https://github.com/moby/moby/issues/33002
-    # So to use local caching, we should omit the cache-from by using --no-dockerhub-cache argument to this
-    # script.
-    #
-    # This doesn't work with multi head docker files.
-    #
-    cmd = [docker_binary, "build",
-           "-f", get_dockerfile(platform),
-           "--build-arg", "USER_ID={}".format(os.getuid()),
-           "--build-arg", "GROUP_ID={}".format(os.getgid())]
-    if no_cache:
-        cmd.append("--no-cache")
-    elif registry:
-        cmd.extend(["--cache-from", tag])
-    cmd.extend(["-t", tag, get_dockerfiles_path()])
+
+    # Case 1: docker-compose
+    if platform in DOCKER_COMPOSE_WHITELIST:
+        logging.info('Building docker container tagged \'%s\' based on ci/docker/docker-compose.yml', tag)
+        # We add a user with the same group as the executing non-root user so files created in the
+        # container match permissions of the local user. Same for the group.
+        cmd = ['docker-compose', '-f', 'docker/docker-compose.yml', 'build',
+               "--build-arg", "USER_ID={}".format(os.getuid()),
+               "--build-arg", "GROUP_ID={}".format(os.getgid())]
+        if cache_intermediate:
+            cmd.append('--no-rm')
+        cmd.append(platform)
+    else:  # Case 2: Deprecated way, will be removed
+        # We add a user with the same group as the executing non-root user so files created in the
+        # container match permissions of the local user. Same for the group.
+        #
+        # These variables are used in the docker files to create user and group with these ids.
+        # see: docker/install/ubuntu_adduser.sh
+        #
+        # cache-from is needed so we use the cached images tagged from the remote via
+        # docker pull see: docker_cache.load_docker_cache
+        #
+        # This also prevents using local layers for caching: https://github.com/moby/moby/issues/33002
+        # So to use local caching, we should omit the cache-from by using --no-dockerhub-cache argument to this
+        # script.
+        #
+        # This doesn't work with multi head docker files.
+        logging.info("Building docker container tagged '%s'", tag)
+        cmd = ["docker", "build",
+               "-f", get_dockerfile(platform),
+               "--build-arg", "USER_ID={}".format(os.getuid()),
+               "--build-arg", "GROUP_ID={}".format(os.getgid())]
+        if no_cache:
+            cmd.append("--no-cache")
+        if cache_intermediate:
+            cmd.append("--rm=false")
+        elif registry:
+            cmd.extend(["--cache-from", tag])
+        cmd.extend(["-t", tag, get_dockerfiles_path()])
+
 
     @retry(subprocess.CalledProcessError, tries=num_retries)
     def run_cmd():
@@ -114,21 +136,22 @@ def build_docker(platform: str, docker_binary: str, registry: str, num_retries: 
         check_call(cmd)
 
     run_cmd()
+
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
-    image_id = _get_local_image_id(docker_binary=docker_binary, docker_tag=tag)
+    image_id = _get_local_image_id(docker_tag=tag)
     if not image_id:
         raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
     return image_id
 
 
-def _get_local_image_id(docker_binary, docker_tag):
+def _get_local_image_id(docker_tag):
     """
     Get the image id of the local docker layer with the passed tag
     :param docker_tag: docker tag
     :return: Image id as string or None if tag does not exist
     """
-    cmd = [docker_binary, "images", "-q", docker_tag]
+    cmd = ["docker", "images", "-q", docker_tag]
     image_id_b = check_output(cmd)
     image_id = image_id_b.decode('utf-8').strip()
     if not image_id:
@@ -193,7 +216,7 @@ def container_run(docker_client: SafeDockerClient,
 
     # Equivalent command
     docker_cmd_list = [
-        get_docker_binary(nvidia_runtime),
+        "nvidia-docker" if nvidia_runtime else "docker",
         'run',
         "--cap-add",
         "SYS_PTRACE", # Required by ASAN
@@ -330,6 +353,9 @@ def main() -> int:
     parser.add_argument("--no-cache", action="store_true",
                         help="passes --no-cache to docker build")
 
+    parser.add_argument("--cache-intermediate", action="store_true",
+                        help="passes --rm=false to docker build")
+
     parser.add_argument("-e", "--environment", nargs="*", default=[],
                         help="Environment variables for the docker container. "
                         "Specify with a list containing either names or name=value")
@@ -346,7 +372,6 @@ def main() -> int:
     args = parser.parse_args()
 
     command = list(chain(*args.command))
-    docker_binary = get_docker_binary(args.nvidiadocker)
     docker_client = SafeDockerClient()
 
     environment = dict([(e.split('=')[:2] if '=' in e else (e, os.environ[e]))
@@ -357,11 +382,12 @@ def main() -> int:
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-        if args.docker_registry:
+        if args.docker_registry and platform not in DOCKER_COMPOSE_WHITELIST:
+            # Caching logic for Dockerfiles not yet refactored with compose
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
-            build_docker(platform=platform, docker_binary=docker_binary, registry=args.docker_registry,
-                         num_retries=args.docker_build_retries, no_cache=args.no_cache)
+            build_docker(platform=platform, registry=args.docker_registry, num_retries=args.docker_build_retries,
+                         no_cache=args.no_cache, cache_intermediate=args.cache_intermediate)
         else:
             logging.info("Skipping docker build step.")
 
@@ -403,8 +429,8 @@ def main() -> int:
         for platform in platforms:
             tag = get_docker_tag(platform=platform, registry=args.docker_registry)
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-            build_docker(platform, docker_binary=docker_binary, registry=args.docker_registry,
-                         num_retries=args.docker_build_retries, no_cache=args.no_cache)
+            build_docker(platform, registry=args.docker_registry, num_retries=args.docker_build_retries,
+                         no_cache=args.no_cache)
             if args.build_only:
                 continue
             shutil.rmtree(buildir(), ignore_errors=True)

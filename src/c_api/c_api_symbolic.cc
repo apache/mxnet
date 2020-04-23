@@ -1359,7 +1359,13 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
                          NDArrayHandle* in_aux_handle,
                          const mx_uint num_options,
                          const char** keys,
-                         const char** vals) {
+                         const char** vals,
+                         int* new_args_cnt,
+                         NDArrayHandle** new_args_handle,
+                         char*** new_arg_names_handle,
+                         int* new_aux_cnt,
+                         NDArrayHandle** new_aux_handle,
+                         char*** new_aux_names_handle) {
   // create copy of input symbol
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
@@ -1370,6 +1376,10 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   const auto& mutable_nodes = indexed_graph.mutable_input_nodes();
   std::vector<std::string> input_names = sym->ListInputNames(nnvm::Symbol::kAll);
   size_t num_forward_inputs = input_names.size();
+
+  NDArray ***new_args_ptr = reinterpret_cast<NDArray***>(new_args_handle);
+  NDArray ***new_aux_ptr = reinterpret_cast<NDArray***>(new_aux_handle);
+
   if (args_len || aux_len) {
     NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
     NDArray **in_aux_ptr = reinterpret_cast<NDArray**>(in_aux_handle);
@@ -1440,14 +1450,62 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   for (mx_uint i = 0; i < num_options; ++i)
     options_map.emplace_back(keys[i], vals[i]);
 
-  const auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend(backend_name);
-  const auto& subgraph_prop_list = backend->GetSubgraphProperties();
-  for (auto property : subgraph_prop_list) {
-    property->PrePartition(g, options_map);
-    g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
-    g = ApplyPass(std::move(g), "BuildSubgraph");
-    g.attrs.erase("subgraph_property");
-    property->PostPartition(g);
+  if (mxnet::op::SubgraphBackendRegistry::Get()->backend_map_.count(backend_name) > 0) {
+    // use subgraph backend
+    const auto backend = mxnet::op::SubgraphBackendRegistry
+                                      ::Get()->GetSubgraphBackend(backend_name);
+    const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+    for (auto property : subgraph_prop_list) {
+      property->PrePartition(g, options_map);
+      g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
+      g = ApplyPass(std::move(g), "BuildSubgraph");
+      g.attrs.erase("subgraph_property");
+      property->PostPartition(g);
+    }
+  } else if (dmlc::Registry<nnvm::PassFunctionReg>::Find(backend_name) != nullptr) {
+    // use graph pass
+    g.attrs["options_map"] = std::make_shared<nnvm::any>(options_map);
+    g.attrs["pass_name"] = std::make_shared<nnvm::any>(backend_name);
+    g = ApplyPass(std::move(g), backend_name);
+
+    std::vector<NDArray*> new_args = g.GetAttr<std::vector<NDArray*>>("new_args");
+    std::vector<NDArray*> new_aux = g.GetAttr<std::vector<NDArray*>>("new_aux");
+    std::vector<std::string> new_arg_names = g.GetAttr<std::vector<std::string>>("new_arg_names");
+    std::vector<std::string> new_aux_names = g.GetAttr<std::vector<std::string>>("new_aux_names");
+    g.attrs.erase("new_args");
+    g.attrs.erase("new_aux");
+    g.attrs.erase("new_arg_names");
+    g.attrs.erase("new_aux_names");
+
+    NDArray** new_arg_arr = new NDArray*[new_arg_names.size()];
+    NDArray** new_aux_arr = new NDArray*[new_aux_names.size()];
+    char** new_arg_cstr = new char*[new_arg_names.size()];
+    char** new_aux_cstr = new char*[new_aux_names.size()];
+    for (unsigned i = 0; i < new_arg_names.size(); i++) {
+      new_arg_arr[i] = new_args[i];
+      std::string& s = new_arg_names[i];
+      char* tmp = new char[s.length()+1];
+      s.copy(tmp, s.length());
+      tmp[s.length()] = '\0';
+      new_arg_cstr[i] = tmp;
+    }
+    for (unsigned i = 0; i < new_aux_names.size(); i++) {
+      new_aux_arr[i] = new_aux[i];
+      std::string& s = new_aux_names[i];
+      char* tmp = new char[s.length()+1];
+      s.copy(tmp, s.length());
+      tmp[s.length()] = '\0';
+      new_aux_cstr[i] = tmp;
+    }
+    *new_args_cnt = new_arg_names.size();
+    *new_aux_cnt = new_aux_names.size();
+    *new_arg_names_handle = new_arg_cstr;
+    *new_aux_names_handle = new_aux_cstr;
+    *new_args_ptr = new_arg_arr;
+    *new_aux_ptr = new_aux_arr;
+  } else {
+    // cannot find graph pass or subgraph backend registered in this name
+    LOG(ERROR) << "Error optimizing for backend '" << backend_name << "' cannot be found";
   }
   s->outputs = g.outputs;
   *ret_sym_handle = s;

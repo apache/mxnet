@@ -18,7 +18,7 @@
 # pylint: skip-file
 import mxnet as mx
 from common import models
-from nose.tools import *
+import pytest
 
 def test_mlp2_infer_shape():
     # Build MLP
@@ -36,7 +36,7 @@ def test_mlp2_infer_shape():
     for k, v in true_shapes.items():
         assert arg_shape_dict[k] == v
 
-@raises(mx.MXNetError)
+@pytest.mark.xfail(raises=mx.MXNetError)
 def test_mlp2_infer_error():
     # Test shape inconsistent case
     out = models.mlp2()
@@ -246,6 +246,3 @@ def test_where_partial_shape():
         _, result, _ = where_op.infer_shape_partial(cond=(-1,), x=(2, 2), y=(2, 2))
         assert result == [None]
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

@@ -299,7 +299,9 @@ void MKLDNNFCBackward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
     MKLDNNStream::Get()->RegisterPrimArgs(
         mkldnn::inner_product_backward_weights(ipBwdWeights_pd), args);
     CommitOutput(in_grad[fullc::kWeight], in_grad_weight);
-    CommitOutput(in_grad[fullc::kBias], in_grad_bias);
+    if (!param.no_bias) {
+      CommitOutput(in_grad[fullc::kBias], in_grad_bias);
+    }
   }
   if (req[fullc::kData]) {
     mkldnn::inner_product_backward_data::primitive_desc ipBwdData_pd = GetFCBwdData(

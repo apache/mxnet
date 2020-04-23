@@ -196,6 +196,3 @@ def test_adamw():
     for nElem in range(6):
         run_adamw_test(nElem+1)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -43,6 +43,3 @@ def test_from_dlpack_backward_compatibility():
     z = from_dlpack_old(y)
     assert_almost_equal(x.asnumpy(), z.asnumpy(), rtol=1e-5, atol=1e-5)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

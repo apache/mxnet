@@ -55,7 +55,7 @@ from . import fallback
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'all', 'any', 'broadcast_to',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod', 'power', 'bitwise_not',
-           'delete',
+           'delete', 'trace', 'transpose',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
            'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
@@ -66,18 +66,18 @@ __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'amax', 'amin', 'max', 'min',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'insert',
            'indices', 'copysign', 'ravel', 'unravel_index', 'diag_indices_from', 'hanning', 'hamming', 'blackman',
+           'logical_and', 'logical_or', 'logical_xor',
            'flip', 'flipud', 'fliplr', 'around', 'round', 'round_', 'arctan2', 'hypot',
            'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad',
-           'unique', 'lcm', 'tril', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'kron',
-           'equal', 'not_equal', 'interp',
+           'unique', 'lcm', 'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer',
+           'cross', 'kron', 'equal', 'not_equal', 'interp',
            'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum', 'true_divide', 'nonzero',
            'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d', 'resize', 'matmul',
            'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite', 'polyval', 'where', 'bincount',
            'atleast_1d', 'atleast_2d', 'atleast_3d',
-           'pad', 'cumsum', 'rollaxis', 'diag', 'diagonal']
+           'pad', 'cumsum', 'sum', 'rollaxis', 'diag', 'diagonal']
 
 __all__ += fallback.__all__
-
 
 # Return code for dispatching indexing function call
 _NDARRAY_UNSUPPORTED_INDEXING = -1
@@ -1730,13 +1730,10 @@ class ndarray(NDArray):
         """
         raise AttributeError('mxnet.numpy.ndarray object has no attribute expand_dims')
 
-    def tile(self, *args, **kwargs):
-        """Convenience fluent method for :py:func:`tile`.
-
-        The arguments are the same as for :py:func:`tile`, with
-        this array as data.
-        """
-        raise AttributeError('mxnet.numpy.ndarray object has no attribute tile')
+    def tile(self, reps):  # pylint: disable=arguments-differ
+        """Construct an array by repeating A the number of times given by reps.
+        Refer to `mxnet.numpy.tile` for full documentation."""
+        return tile(self, reps=reps)
 
     def transpose(self, *axes):  # pylint: disable=arguments-differ
         """Permute the dimensions of an array."""
@@ -1747,7 +1744,7 @@ class ndarray(NDArray):
                 axes = axes[0]
             elif axes[0] is None:
                 axes = None
-        return _mx_np_op.transpose(self, axes=axes)
+        return transpose(self, axes=axes)
 
     def flip(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`flip`.
@@ -5477,7 +5474,7 @@ def tile(A, reps):
     >>> np.tile(b, 2)
     array([[1., 2., 1., 2.],
            [3., 4., 3., 4.]])
-    >>> np.(b, (2, 1))
+    >>> np.tile(b, (2, 1))
     array([[1., 2.],
            [3., 4.],
            [1., 2.],
@@ -5497,6 +5494,96 @@ def tile(A, reps):
 
     """
     return _mx_nd_np.tile(A, reps)
+
+
+@set_module('mxnet.numpy')
+def trace(a, offset=0, axis1=0, axis2=1, out=None):
+    """
+    Return the sum along diagonals of the array.
+    If `a` is 2-D, the sum along its diagonal with the given offset
+    is returned, i.e., the sum of elements ``a[i,i+offset]`` for all i.
+    If `a` has more than two dimensions, then the axes specified by axis1 and
+    axis2 are used to determine the 2-D sub-arrays whose traces are returned.
+    The shape of the resulting array is the same as that of `a` with `axis1`
+    and `axis2` removed.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array, from which the diagonals are taken.
+    offset : int, optional
+        Offset of the diagonal from the main diagonal. Can be both positive
+        and negative. Defaults to 0.
+    axis1, axis2 : int, optional
+        Axes to be used as the first and second axis of the 2-D sub-arrays
+        from which the diagonals should be taken. Defaults are the first two
+        axes of `a`.
+    out : ndarray, optional
+        Array into which the output is placed. It must be of the right shape
+        and right type to hold the output.
+
+    Returns
+    -------
+    sum_along_diagonals : ndarray
+        If `a` is 2-D, the sum along the diagonal is returned.  If `a` has
+        larger dimensions, then an array of sums along diagonals is returned.
+
+    Examples
+    --------
+    >>> a = np.array([[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+    >>> np.trace(a)
+    array(3.)
+    >>> a = np.arange(8).reshape((2, 2, 2))
+    >>> np.trace(a)
+    array([6., 8.])
+    >>> a = np.arange(24).reshape((2, 2, 2, 3))
+    >>> np.trace(a).shape
+    (2, 3)
+    """
+    return _mx_nd_np.trace(a, offset, axis1, axis2, out)
+
+
+@set_module('mxnet.numpy')
+def transpose(a, axes=None):
+    """
+    Permute the dimensions of an array.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input array.
+    axes : list of ints, optional
+        By default, reverse the dimensions,
+        otherwise permute the axes according to the values given.
+
+    Returns
+    -------
+    p : ndarray
+        a with its axes permuted.
+
+    Notes
+    -----
+    This function differs from the original `numpy.transpose
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.transpose.html>`_ in
+    the following way(s):
+
+    - only ndarray is accepted as valid input, python iterables are not supported
+    - the operator always returns an `ndarray` that does not share the memory with the input
+
+    Examples
+    --------
+    >>> x = np.arange(4).reshape((2,2))
+    >>> x
+    array([[0., 1.],
+           [2., 3.]])
+    >>> np.transpose(x)
+    array([[0., 2.],
+           [1., 3.]])
+    >>> x = np.ones((1, 2, 3))
+    >>> np.transpose(x, (1, 0, 2)).shape
+    (2, 1, 3)
+    """
+    return _mx_nd_np.transpose(a, axes)
 
 
 @set_module('mxnet.numpy')
@@ -5614,6 +5701,31 @@ def tril_indices(n, k=0, m=None):
 
 
 # pylint: disable=redefined-outer-name
+@set_module('mxnet.numpy')
+def triu(m, k=0):
+    r"""
+    Upper triangle of an array.
+
+    Return a copy of a matrix with the elements below the `k`-th diagonal
+    zeroed.
+
+    Please refer to the documentation for `tril` for further details.
+
+    See Also
+    --------
+    tril : lower triangle of an array
+
+    Examples
+    --------
+    >>> np.triu(np.array([[1,2,3],[4,5,6],[7,8,9],[10,11,12]]), -1)
+    array([[ 1,  2,  3],
+           [ 4,  5,  6],
+           [ 0,  8,  9],
+           [ 0,  0, 12]])
+    """
+    return _mx_nd_np.triu(m, k)
+
+
 @set_module('mxnet.numpy')
 def arange(start, stop=None, step=1, dtype=None, ctx=None):
     """Return evenly spaced values within a given interval.
@@ -7096,7 +7208,7 @@ def std(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
     >>> np.std(a, dtype=np.float64)
     array(0.45, dtype=float64)
     """
-    return _npi.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+    return _mx_nd_np.std(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
 # pylint: enable=redefined-outer-name
 
 
@@ -7217,7 +7329,7 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
     >>> ((1-0.55)**2 + (0.1-0.55)**2)/2
     0.2025
     """
-    return _npi.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
+    return _mx_nd_np.var(a, axis=axis, dtype=dtype, ddof=ddof, keepdims=keepdims, out=out)
 
 
 # pylint: disable=redefined-outer-name
@@ -7380,6 +7492,7 @@ def ravel(x, order='C'):
     return _mx_nd_np.ravel(x, order)
 
 
+@set_module('mxnet.numpy')
 def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-name
     """
     Converts a flat index or array of flat indices into a tuple of coordinate arrays.
@@ -7410,6 +7523,7 @@ def unravel_index(indices, shape, order='C'): # pylint: disable=redefined-outer-
     return _mx_nd_np.unravel_index(indices, shape, order=order)
 
 
+@set_module('mxnet.numpy')
 def flatnonzero(a):
     r"""
     Return indices that are non-zero in the flattened version of a.
@@ -7449,6 +7563,7 @@ def flatnonzero(a):
     return _mx_nd_np.flatnonzero(a)
 
 
+@set_module('mxnet.numpy')
 def diag_indices_from(arr):
     """
     This returns a tuple of indices that can be used to access the main diagonal of an array
@@ -8258,6 +8373,47 @@ def ldexp(x1, x2, out=None, **kwargs):
 
 
 @set_module('mxnet.numpy')
+def vdot(a, b):
+    r"""
+    Return the dot product of two vectors.
+    Note that `vdot` handles multidimensional arrays differently than `dot`:
+    it does *not* perform a matrix product, but flattens input arguments
+    to 1-D vectors first. Consequently, it should only be used for vectors.
+
+    Parameters
+    ----------
+    a : ndarray
+        First argument to the dot product.
+    b : ndarray
+        Second argument to the dot product.
+
+    Returns
+    -------
+    output : ndarray
+        Dot product of `a` and `b`.
+
+    See Also
+    --------
+    dot : Return the dot product without using the complex conjugate of the
+        first argument.
+
+    Examples
+    --------
+    Note that higher-dimensional arrays are flattened!
+
+    >>> a = np.array([[1, 4], [5, 6]])
+    >>> b = np.array([[4, 1], [2, 2]])
+    >>> np.vdot(a, b)
+    array(30.)
+    >>> np.vdot(b, a)
+    array(30.)
+    >>> 1*4 + 4*1 + 5*2 + 6*2
+    30
+    """
+    return tensordot(a.flatten(), b.flatten(), 1)
+
+
+@set_module('mxnet.numpy')
 def inner(a, b):
     r"""Inner product of two arrays.
     Ordinary inner product of vectors for 1-D arrays (without complex
@@ -8370,24 +8526,128 @@ def outer(a, b):
 
 
 @set_module('mxnet.numpy')
+def cross(a, b, axisa=-1, axisb=-1, axisc=-1, axis=None): # pylint: disable=too-many-arguments
+    """
+    Return the cross product of two (arrays of) vectors.
+
+    The cross product of `a` and `b` in :math:`R^3` is a vector perpendicular
+    to both `a` and `b`.  If `a` and `b` are arrays of vectors, the vectors
+    are defined by the last axis of `a` and `b` by default, and these axes
+    can have dimensions 2 or 3.  Where the dimension of either `a` or `b` is
+    2, the third component of the input vector is assumed to be zero and the
+    cross product calculated accordingly.  In cases where both input vectors
+    have dimension 2, the z-component of the cross product is returned.
+
+    Parameters
+    ----------
+    a : ndarray
+        Components of the first vector(s).
+    b : ndarray
+        Components of the second vector(s).
+    axisa : int, optional
+        Axis of `a` that defines the vector(s).  By default, the last axis.
+    axisb : int, optional
+        Axis of `b` that defines the vector(s).  By default, the last axis.
+    axisc : int, optional
+        Axis of `c` containing the cross product vector(s).  Ignored if
+        both input vectors have dimension 2, as the return is scalar.
+        By default, the last axis.
+    axis : int, optional
+        If defined, the axis of `a`, `b` and `c` that defines the vector(s)
+        and cross product(s).  Overrides `axisa`, `axisb` and `axisc`.
+
+    Returns
+    -------
+    c : ndarray
+        Vector cross product(s).
+
+    Raises
+    ------
+    ValueError
+        When the dimension of the vector(s) in `a` and/or `b` does not
+        equal 2 or 3.
+
+    Notes
+    -----
+    Supports full broadcasting of the inputs.
+
+    Examples
+    --------
+    Vector cross-product.
+
+    >>> x = np.array([1., 2., 3.])
+    >>> y = np.array([4., 5., 6.])
+    >>> np.cross(x, y)
+    array([-3.,  6., -3.])
+
+    One vector with dimension 2.
+
+    >>> x = np.array([1., 2.])
+    >>> y = np.array([4., 5., 6.])
+    >>> np.cross(x, y)
+    array([12., -6., -3.])
+
+    Equivalently:
+
+    >>> x = np.array([1., 2., 0.])
+    >>> y = np.array([4., 5., 6.])
+    >>> np.cross(x, y)
+    array([12., -6., -3.])
+
+    Both vectors with dimension 2.
+
+    >>> x = np.array([1., 2.])
+    >>> y = np.array([4., 5.])
+    >>> np.cross(x, y)
+    array(-3.)
+
+    Multiple vector cross-products. Note that the direction of the cross
+    product vector is defined by the `right-hand rule`.
+
+    >>> x = np.array([[1., 2., 3.], [4., 5., 6.]])
+    >>> y = np.array([[4., 5., 6.], [1., 2., 3.]])
+    >>> np.cross(x, y)
+    array([[-3.,  6., -3.],
+           [ 3., -6.,  3.]])
+
+    The orientation of `c` can be changed using the `axisc` keyword.
+
+    >>> np.cross(x, y, axisc=0)
+    array([[-3.,  3.],
+           [ 6., -6.],
+           [-3.,  3.]])
+
+    Change the vector definition of `x` and `y` using `axisa` and `axisb`.
+
+    >>> x = np.array([[1., 2., 3.], [4., 5., 6.], [7., 8., 9.]])
+    >>> y = np.array([[7., 8., 9.], [4., 5., 6.], [1., 2., 3.]])
+    >>> np.cross(x, y)
+    array([[ -6.,  12.,  -6.],
+           [  0.,   0.,   0.],
+           [  6., -12.,   6.]])
+    >>> np.cross(x, y, axisa=0, axisb=0)
+    array([[-24.,  48., -24.],
+           [-30.,  60., -30.],
+           [-36.,  72., -36.]])
+    """
+    return _mx_nd_np.cross(a, b, axisa=axisa, axisb=axisb, axisc=axisc, axis=axis)
+
+
+@set_module('mxnet.numpy')
 def kron(a, b):
     r"""
     Kronecker product of two arrays.
     Computes the Kronecker product, a composite array made of blocks of the
     second array scaled by the first.
-
     Parameters
     ----------
     a, b : ndarray
-
     Returns
     -------
     out : ndarray
-
     See Also
     --------
     outer : The outer product
-
     Notes
     -----
     The function assumes that the number of dimensions of `a` and `b`
@@ -8403,7 +8663,6 @@ def kron(a, b):
         [[ a[0,0]*b,   a[0,1]*b,  ... , a[0,-1]*b  ],
         [  ...                              ...   ],
         [ a[-1,0]*b,  a[-1,1]*b, ... , a[-1,-1]*b ]]
-
     Examples
     --------
     >>> np.kron([1,10,100], [5,6,7])
@@ -8412,47 +8671,6 @@ def kron(a, b):
     array([  5,  50, 500,   6,  60, 600,   7,  70, 700])
     """
     return _mx_nd_np.kron(a, b)
-
-
-@set_module('mxnet.numpy')
-def vdot(a, b):
-    r"""
-    Return the dot product of two vectors.
-    Note that `vdot` handles multidimensional arrays differently than `dot`:
-    it does *not* perform a matrix product, but flattens input arguments
-    to 1-D vectors first. Consequently, it should only be used for vectors.
-
-    Parameters
-    ----------
-    a : ndarray
-        First argument to the dot product.
-    b : ndarray
-        Second argument to the dot product.
-
-    Returns
-    -------
-    output : ndarray
-        Dot product of `a` and `b`.
-
-    See Also
-    --------
-    dot : Return the dot product without using the complex conjugate of the
-        first argument.
-
-    Examples
-    --------
-    Note that higher-dimensional arrays are flattened!
-
-    >>> a = np.array([[1, 4], [5, 6]])
-    >>> b = np.array([[4, 1], [2, 2]])
-    >>> np.vdot(a, b)
-    array(30.)
-    >>> np.vdot(b, a)
-    array(30.)
-    >>> 1*4 + 4*1 + 5*2 + 6*2
-    30
-    """
-    return tensordot(a.flatten(), b.flatten(), 1)
 
 
 @set_module('mxnet.numpy')
@@ -8581,6 +8799,111 @@ def less(x1, x2, out=None):
     array([False])
     """
     return _mx_nd_np.less(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def logical_and(x1, x2, out=None):
+    r"""
+    Compute the truth value of x1 AND x2 element-wise.
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Logical AND is applied to the elements of `x1` and `x2`.
+        If ``x1.shape != x2.shape``, they must be broadcastable to a common
+        shape (which becomes the shape of the output).
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    Returns
+    -------
+    y : ndarray or bool
+        Boolean result of the logical AND operation applied to the elements
+        of `x1` and `x2`; the shape is determined by broadcasting.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    logical_or, logical_not, logical_xor, bitwise_or
+    Examples
+    --------
+    >>> np.logical_and(True, False)
+    False
+    >>> np.logical_and(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
+    array([False,  True])
+    """
+    return _mx_nd_np.logical_and(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def logical_or(x1, x2, out=None):
+    r"""
+    Compute the truth value of x1 OR x2 element-wise.
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Logical OR is applied to the elements of `x1` and `x2`.
+        If ``x1.shape != x2.shape``, they must be broadcastable to a common
+        shape (which becomes the shape of the output).
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    Returns
+    -------
+    y : ndarray or bool
+        Boolean result of the logical OR operation applied to the elements
+        of `x1` and `x2`; the shape is determined by broadcasting.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    logical_and, logical_not, logical_xor, bitwise_or
+    Examples
+    --------
+    >>> np.logical_or(True, False)
+    True
+    >>> np.logical_or(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
+    array([True,  True])
+    """
+    return _mx_nd_np.logical_or(x1, x2, out)
+
+
+@set_module('mxnet.numpy')
+@wrap_np_binary_func
+def logical_xor(x1, x2, out=None):
+    r"""
+    Compute the truth value of x1 XOR x2 element-wise.
+    Parameters
+    ----------
+    x1, x2 : array_like
+        Logical XOR is applied to the elements of `x1` and `x2`.
+        If ``x1.shape != x2.shape``, they must be broadcastable to a common
+        shape (which becomes the shape of the output).
+    out : ndarray, None, or tuple of ndarray and None, optional
+        A location into which the result is stored. If provided, it must have
+        a shape that the inputs broadcast to. If not provided or `None`,
+        a freshly-allocated array is returned. A tuple (possible only as a
+        keyword argument) must have length equal to the number of outputs.
+    Returns
+    -------
+    y : ndarray or bool
+        Boolean result of the logical XOR operation applied to the elements
+        of `x1` and `x2`; the shape is determined by broadcasting.
+        This is a scalar if both `x1` and `x2` are scalars.
+    See Also
+    --------
+    logical_and, logical_not, logical_or, bitwise_or
+    Examples
+    --------
+    >>> np.logical_xor(True, False)
+    True
+    >>> np.logical_xor(np.array([True, True], dtype='bool'), np.array([False, True], dtype='bool'))
+    array([ True, False])
+    """
+    return _mx_nd_np.logical_xor(x1, x2, out)
 
 
 @set_module('mxnet.numpy')
@@ -10801,3 +11124,98 @@ def diagonal(a, offset=0, axis1=0, axis2=1):
             [1, 7]])
     """
     return _mx_nd_np.diagonal(a, offset=offset, axis1=axis1, axis2=axis2)
+
+
+# pylint: disable=redefined-outer-name, too-many-arguments
+@set_module('mxnet.numpy')
+def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None):
+    r"""
+    Sum of array elements over a given axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : None or int, optional
+        Axis or axes along which a sum is performed.  The default,
+        axis=None, will sum all of the elements of the input array.  If
+        axis is negative it counts from the last to the first axis.
+    dtype : dtype, optional
+        The type of the returned array and of the accumulator in which the
+        elements are summed. The default type is float32.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the input array.
+
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `sum` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-classes `sum` method does not implement `keepdims` any
+        exceptions will be raised.
+    initial: Currently only supports None as input, optional
+        Starting value for the sum.
+        Currently not implemented. Please use ``None`` as input or skip this argument.
+    out : ndarray or None, optional
+        Alternative output array in which to place the result. It must have
+        the same shape and dtype as the expected output.
+
+    Returns
+    -------
+    sum_along_axis : ndarray
+        An ndarray with the same shape as `a`, with the specified
+        axis removed. If an output array is specified, a reference to
+        `out` is returned.
+
+    Notes
+    -----
+    - Input type does not support Python native iterables.
+    - "out" param: cannot perform auto type change. out ndarray's dtype must be the same as the expected output.
+    - "initial" param is not supported yet. Please use None as input.
+    - Arithmetic is modular when using integer types, and no error is raised on overflow.
+    - The sum of an empty array is the neutral element 0:
+
+    >>> a = np.empty(1)
+    >>> np.sum(a)
+    array(0.)
+
+    This function differs from the original `numpy.sum
+    <https://docs.scipy.org/doc/numpy/reference/generated/numpy.sum.html>`_ in
+    the following aspects:
+
+    - Input type does not support Python native iterables(list, tuple, ...).
+    - "out" param: cannot perform auto type cast. out ndarray's dtype must be the same as the expected output.
+    - "initial" param is not supported yet. Please use ``None`` as input or skip it.
+
+    Examples
+    --------
+    >>> a = np.array([0.5, 1.5])
+    >>> np.sum(a)
+    array(2.)
+    >>> a = np.array([0.5, 0.7, 0.2, 1.5])
+    >>> np.sum(a, dtype=np.int32)
+    array(2, dtype=int32)
+    >>> a = np.array([[0, 1], [0, 5]])
+    >>> np.sum(a)
+    array(6.)
+    >>> np.sum(a, axis=0)
+    array([0., 6.])
+    >>> np.sum(a, axis=1)
+    array([1., 5.])
+
+    With output ndarray:
+
+    >>> a = np.array([[0, 1], [0, 5]])
+    >>> b = np.ones((2,), dtype=np.float32)
+    >>> np.sum(a, axis = 0, out=b)
+    array([0., 6.])
+    >>> b
+    array([0., 6.])
+
+    If the accumulator is too small, overflow occurs:
+
+    >>> np.ones(128, dtype=np.int8).sum(dtype=np.int8)
+    array(-128, dtype=int8)
+    """
+    return _mx_nd_np.sum(a, axis=axis, dtype=dtype, out=out, keepdims=keepdims, initial=initial, where=where)
+# pylint: enable=redefined-outer-name, too-many-arguments

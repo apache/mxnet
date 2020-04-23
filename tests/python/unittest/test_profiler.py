@@ -263,7 +263,7 @@ def test_aggregate_stats_sorting():
         for domain_name, domain in target_dict['Time'].items():
             lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
             check_ascending(lst, ascending)
-        # Memory items do not have stat 'Total' 
+        # Memory items do not have stat 'Total'
         if sort_by != 'total':
             for domain_name, domain in target_dict['Memory'].items():
                 lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
@@ -372,7 +372,7 @@ def check_custom_operator_profiling_multiple_custom_ops_output(debug_str):
 
 def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
     class MyAdd(mx.operator.CustomOp):
-        def forward(self, is_train, req, in_data, out_data, aux):        
+        def forward(self, is_train, req, in_data, out_data, aux):
             self.assign(out_data[0], req[0], in_data[0] + 1)
 
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
@@ -610,7 +610,3 @@ def test_gpu_memory_profiler_gluon():
                row['Attribute Name'] == "<unk>:":
                 assert False, "Unknown allocation entry has been encountered"
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

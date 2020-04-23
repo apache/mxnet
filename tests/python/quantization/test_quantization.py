@@ -353,6 +353,10 @@ def test_quantized_elemwise_mul():
         if is_test_for_native_cpu():
             print('skipped testing quantized_elemwise_mul for native cpu since it is not supported yet')
             return
+        if is_test_for_mkldnn():
+            print('skipped testing quantized_elemwise_mul for mkldnn due to '
+                  'https://github.com/apache/incubator-mxnet/issues/18034')
+            return
         elif qtype != 'int8':
             print('skipped testing quantized_elemwise_mul for not supported data type')
             return
@@ -1253,7 +1257,3 @@ def test_get_optimal_thresholds():
         assert 'layer1' in th_dict
         assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

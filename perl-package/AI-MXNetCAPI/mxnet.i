@@ -1627,16 +1627,22 @@ int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle *out);
  * \param vals values corresponding to keys
  */
 int MXOptimizeForBackend(SymbolHandle sym_handle,
-                                   const char* in,
-                                   const int dev_type,
-                                   SymbolHandle* in,
-                                   const mx_uint in,
-                                   NDArrayHandle* in,
-                                   const mx_uint in,
-                                   NDArrayHandle* in,
-                                   const mx_uint in,
-                                   const char** keys,
-                                   const char** vals);
+                         const char* in,
+                         const int dev_type,
+                         SymbolHandle* in,
+                         const mx_uint in,
+                         NDArrayHandle* in,
+                         const mx_uint in,
+                         NDArrayHandle* in,
+                         const mx_uint in,
+                         const char** keys,
+                         const char** vals,
+                         int* new_args_cnt,
+                         NDArrayHandle** new_args_handle,
+                         char*** new_arg_names_handle,
+                         int* new_aux_cnt,
+                         NDArrayHandle** new_aux_handle,
+                         char*** new_aux_names_handle);
 
 //--------------------------------------------
 // Part 4: Executor interface

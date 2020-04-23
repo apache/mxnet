@@ -407,7 +407,3 @@ def test_single_array_input():
     rmse.get()
     _, rmse_res = rmse.get()
     np.testing.assert_almost_equal(rmse_res, 0.1)
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

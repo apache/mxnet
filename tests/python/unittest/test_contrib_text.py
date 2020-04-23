@@ -792,7 +792,3 @@ def test_get_and_pretrain_file_names():
 
     assertRaises(KeyError, text.embedding.get_pretrained_file_names, 'unknown$$')
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
