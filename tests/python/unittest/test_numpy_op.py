@@ -8948,6 +8948,7 @@ def test_np_bincount():
 
 @with_seed()
 @use_np
+@pytest.mark.skip(reason='Test hangs. Tracked in #18144')
 def test_np_empty_like():
     class TestEmptyLike(HybridBlock):
         def __init__(self, dtype, order, subok):
