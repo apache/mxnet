@@ -8,7 +8,7 @@ a detailed set of instructions to help you with the setup process.
 
 {% highlight html %}
 <dependency>
-	<groupId>org.apache.mxnet</groupId>
-	<artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
 </dependency>
 {% endhighlight %}

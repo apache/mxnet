@@ -6,7 +6,7 @@ Please refer to the [MXNet-Clojure setup guide](https://github.com/apache/incuba
 
 {% highlight html %}
 <dependency>
-	<groupId>org.apache.mxnet.contrib.clojure</groupId>
-	<artifactId>clojure-mxnet-linux-cpu</artifactId>
+    <groupId>org.apache.mxnet.contrib.clojure</groupId>
+    <artifactId>clojure-mxnet-linux-cpu</artifactId>
 </dependency>
 {% endhighlight %}

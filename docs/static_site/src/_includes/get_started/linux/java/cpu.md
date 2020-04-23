@@ -10,7 +10,7 @@ instructions to help you with the setup process.
 
 {% highlight html %}
 <dependency>
-	<groupId>org.apache.mxnet</groupId>
+    <groupId>org.apache.mxnet</groupId>
     <artifactId>mxnet-full_2.11-linux-x86_64-cpu</artifactId>
     <version>[1.5.0, )</version>
 </dependency>
