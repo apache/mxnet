@@ -287,10 +287,8 @@ def assign_each2(input1, input2, function):
     return output
 
 # For testing Large Tensors having total size > 2^32 elements
-def create_2d_tensor(rows, columns, dtype=np.int64, ctx=None):
-    if ctx == None:
-        ctx = mx.cpu()
-    a = mx.nd.arange(0, rows, dtype=dtype, ctx=ctx).reshape(rows, 1)
+def create_2d_tensor(rows, columns, dtype=np.int64):
+    a = mx.nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
     b = mx.nd.broadcast_to(a, shape=(a.shape[0], columns))
     return b
 
