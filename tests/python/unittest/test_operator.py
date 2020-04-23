@@ -3927,28 +3927,27 @@ def test_norm():
                                                        rtol=1e-1, atol=1e-3, dtype=backward_dtype)
 
 
-def test_layer_norm():
-    for enforce_safe_acc in ["1", "0"]:
-        os.environ["MXNET_SAFE_ACCUMULATION"] = enforce_safe_acc
-        for dtype, forward_check_eps, backward_check_eps in zip([np.float16, np.float32, np.float64],
-                                                                [1E-2, 1E-3, 1E-4],
-                                                                [1E-2, 1E-3, 1E-4]):
-            if dtype != np.float16:
-                in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10), (128 * 32, 512)], [True, True, False]
-            else:
-                in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10)], [True, True]  # large input + fp16 does not pass the forward check
-            for in_shape, finite_grad_check in zip(in_shape_l, finite_grad_check_l):
-                for axis in range(-len(in_shape), len(in_shape)):
-                    for eps in [1E-2, 1E-3]:
-                        if dtype == np.float16:
-                            npy_grad_check = False
-                        else:
-                            npy_grad_check = True
-                        check_layer_normalization(in_shape, axis, eps, dtype=dtype,
-                                                  forward_check_eps=forward_check_eps,
-                                                  backward_check_eps=backward_check_eps,
-                                                  npy_grad_check=npy_grad_check,
-                                                  finite_grad_check=finite_grad_check)
+@pytest.mark.parametrize('enforce_safe_acc', ['1', '0'])
+@pytest.mark.parametrize('dtype,forward_check_eps,backward_check_eps,in_shape_l,finite_grad_check_l', [
+    (np.float16, 1E-2, 1E-2, [(10, 6, 5), (10, 10)], [True, True]),
+    (np.float32, 1E-3, 1E-3, [(10, 6, 5), (10, 10), (128 * 32, 512)], [True, True, False]),
+    (np.float64, 1E-4, 1E-4, [(10, 6, 5), (10, 10), (128 * 32, 512)], [True, True, False])
+])
+def test_layer_norm(enforce_safe_acc, dtype, forward_check_eps, backward_check_eps,
+                    in_shape_l, finite_grad_check_l):
+    os.environ["MXNET_SAFE_ACCUMULATION"] = enforce_safe_acc
+    for in_shape, finite_grad_check in zip(in_shape_l, finite_grad_check_l):
+        for axis in range(-len(in_shape), len(in_shape)):
+            for eps in [1E-2, 1E-3]:
+                if dtype == np.float16:
+                    npy_grad_check = False
+                else:
+                    npy_grad_check = True
+                check_layer_normalization(in_shape, axis, eps, dtype=dtype,
+                                          forward_check_eps=forward_check_eps,
+                                          backward_check_eps=backward_check_eps,
+                                          npy_grad_check=npy_grad_check,
+                                          finite_grad_check=finite_grad_check)
 
 
 # Numpy Implementation of Sequence Ops

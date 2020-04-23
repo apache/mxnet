@@ -25,7 +25,7 @@ import unittest
 import pytest
 import math
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown_module
+from common import setup_module, with_seed, teardown_module, retry
 
 @with_seed()
 def test_learning_rate():
@@ -668,6 +668,7 @@ class PySparseFtrl(mx.optimizer.Optimizer):
 
 
 @with_seed()
+@retry(3)
 def test_ftrl():
     opt1 = mx.optimizer.Ftrl
     opt2 = mx.optimizer.Ftrl
