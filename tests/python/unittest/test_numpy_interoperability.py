@@ -757,6 +757,8 @@ def _add_workload_tril():
                         [np.inf, 1, 1]])
         OpArgMngr.add_workload('tril', arr)
         OpArgMngr.add_workload('tril', np.zeros((3, 3), dtype=dt))
+    assertRaises(TypeError, np.tril, 10)
+    assertRaises(TypeError, np.tril, 2, 10)
 
 
 def _add_workload_triu():
@@ -774,6 +776,8 @@ def _add_workload_triu():
                         [np.inf, 1, 1]])
         OpArgMngr.add_workload('triu', arr)
         OpArgMngr.add_workload('triu', np.zeros((3, 3), dtype=dt))
+    assertRaises(TypeError, np.triu, 10)
+    assertRaises(TypeError, np.triu, 2, 10)
 
 
 def _add_workload_einsum():
@@ -2989,6 +2993,7 @@ def _prepare_workloads():
     _add_workload_linalg_multi_dot()
     _add_workload_trace()
     _add_workload_tril()
+    _add_workload_triu()
     _add_workload_outer()
     _add_workload_kron()
     _add_workload_meshgrid()

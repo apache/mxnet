@@ -2068,6 +2068,8 @@ def tril(m, k=0):
            [ 7.,  8.,  0.],
            [10., 11., 12.]])
     """
+    if isinstance(m, numeric_types):
+        raise TypeError("tril() missing 1 required positional argument: 'm'")
     return _api_internal.tril(m, k)
 
 
@@ -2093,6 +2095,8 @@ def triu(m, k=0):
            [ 0,  8,  9],
            [ 0,  0, 12]])
     """
+    if isinstance(m, numeric_types):
+        raise TypeError("triu() missing 1 required positional argument: 'm'")
     return _api_internal.triu(m, k)
 
 

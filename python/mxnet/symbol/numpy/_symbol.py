@@ -2196,6 +2196,8 @@ def tril(m, k=0):
     --------
     triu : same thing, only for the upper triangle
     """
+    if not isinstance(m, Symbol):
+        raise TypeError("tril() missing 1 required positional argument: 'm'")
     return _npi.tril(m, k)
 
 
@@ -2223,6 +2225,8 @@ def triu(m, k=0):
     --------
     tril : same thing, only for the lower triangle
     """
+    if not isinstance(m, Symbol):
+        raise TypeError("triu() missing 1 required positional argument: 'm'")
     return _npi.triu(m, k)
 
 
