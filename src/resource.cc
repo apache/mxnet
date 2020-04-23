@@ -428,14 +428,14 @@ void* Resource::get_host_space_internal(size_t size) const {
 void Resource::get_cudnn_dropout_desc(
     cudnnDropoutDescriptor_t *dropout_desc,
     mshadow::Stream<gpu> *stream,
-    const float dropout, uint64_t seed, bool reset,
+    const float dropout, uint64_t seed,
     const std::string &name) const {
 
   CHECK_EQ(req.type, ResourceRequest::kCuDNNDropoutDesc);
   auto state_space = static_cast<resource::SpaceAllocator*>(ptr_);
   CHECK_EQ(state_space->ctx.dev_id, stream->dev_id)
     << "The device id of cuDNN dropout state space doesn't match that from stream.";
-  if (!state_space->handle.size || reset) {
+  if (!state_space->handle.size) {
     // not initialized yet.
     size_t dropout_state_size;
     CUDNN_CALL(cudnnDropoutGetStatesSize(stream->dnn_handle_, &dropout_state_size));
