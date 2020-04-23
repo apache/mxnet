@@ -531,10 +531,7 @@ build_ubuntu_gpu_clang10_werror() {
     # Can be deleted on Cuda 11
     export CXXFLAGS="-I/usr/local/thrust"
 
-    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CXX=clang++-10 CC=clang-10 cmake \
-       -DCMAKE_AR=/usr/local/bin/ar \
-       -DCMAKE_RANLIB=/usr/local/bin/ranlib \
        -DUSE_CUDA=ON \
        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
@@ -723,10 +720,7 @@ build_ubuntu_gpu_tensorrt() {
 build_ubuntu_gpu_mkldnn() {
     set -ex
     cd /work/build
-    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CC=gcc-7 CXX=g++-7 cmake \
-        -DCMAKE_AR=/usr/local/bin/ar \
-        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
@@ -740,10 +734,7 @@ build_ubuntu_gpu_mkldnn() {
 build_ubuntu_gpu_mkldnn_nocudnn() {
     set -ex
     cd /work/build
-    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CC=gcc-7 CXX=g++-7 cmake \
-        -DCMAKE_AR=/usr/local/bin/ar \
-        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
@@ -758,10 +749,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
     cd /work/build
-    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CC=gcc-7 CXX=g++-7 cmake \
-        -DCMAKE_AR=/usr/local/bin/ar \
-        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
@@ -820,10 +808,7 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
 build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
     set -ex
     cd /work/build
-    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CC=gcc-7 CXX=g++-7 cmake \
-        -DCMAKE_AR=/usr/local/bin/ar \
-        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=OFF \
