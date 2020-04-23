@@ -234,9 +234,10 @@ MXNET_DLL const char *MXGetLastError();
 /*!
  * \brief Load library dynamically
  * \param path to the library .so file
+ * \param 0 for quiet, 1 for verbose
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXLoadLib(const char *path);
+MXNET_DLL int MXLoadLib(const char *path, unsigned verbose);
 
 /*!
  * \brief Get list of features supported on the runtime
@@ -2176,7 +2177,13 @@ MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    NDArrayHandle* in_aux_handle,
                                    const mx_uint num_options,
                                    const char** keys,
-                                   const char** vals);
+                                   const char** vals,
+                                   int* new_args_cnt,
+                                   NDArrayHandle** new_args_handle,
+                                   char*** new_arg_names_handle,
+                                   int* new_aux_cnt,
+                                   NDArrayHandle** new_aux_handle,
+                                   char*** new_aux_names_handle);
 
 
 //--------------------------------------------

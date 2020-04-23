@@ -752,7 +752,6 @@ int _SimpleBindImpl(SymbolHandle symbol_handle,
                               &arg_grad_vec, &aux_state_vec,
                               use_shared_buffer ? &shared_buffer_map : nullptr,
                               reinterpret_cast<Executor*>(shared_exec_handle));
-
   // copy ndarray ptrs to ret->handles so that front end
   // can access them
   ret->ret_handles.clear();
