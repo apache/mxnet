@@ -1,0 +1,61 @@
+// -*- mode: groovy -*-
+
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+//
+// Jenkins pipeline
+// See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
+
+// timeout in minutes
+def max_time = 30
+
+def buildJobs = [
+    'centos-cpu',
+    'centos-gpu',
+    'clang',
+    'edge',
+    'miscellaneous',
+    'unix-cpu',
+    'unix-gpu',
+    'website',
+    'windows-cpu',
+    'windows-gpu'
+]
+
+
+stage("full-build") {
+    timeout(time: max_time, unit: 'MINUTES') {
+        // get the base path by removing build and branch portions
+        def jobPath = JOB_NAME.split('/')
+        def pipelineName = jobPath[0..jobPath.size()-3].join('/')
+        def sanityDone = false
+        while (!sanityDone) {
+            try {
+                println("Attempting to run sanity build...")
+                build job: pipelineName + "/sanity/" + BRANCH_NAME, wait: true
+                sanityDone = true
+            } catch (hudson.AbortException e) {
+                println("Job doesn't yet exist, waiting for Jenkins to find job..")
+                sleep(5)
+            }
+        }
+        buildJobs.each { subJob ->
+            build job: pipelineName + "/" + subJob + "/" + BRANCH_NAME, wait: false
+        }
+    }
+}
+
