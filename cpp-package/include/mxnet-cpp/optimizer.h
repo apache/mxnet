@@ -27,6 +27,7 @@
 #ifndef MXNET_CPP_OPTIMIZER_H_
 #define MXNET_CPP_OPTIMIZER_H_
 
+#include <dmlc/strtonum.h>
 #include <map>
 #include <vector>
 #include <string>
@@ -84,7 +85,7 @@ class Optimizer {
   Optimizer *SetLRScheduler(std::unique_ptr<LRScheduler> lrScheduler) {
     CHECK(lrScheduler);
     lrScheduler_ = std::move(lrScheduler);
-    lrScheduler_->SetLR(std::stof(params_["lr"]));
+    lrScheduler_->SetLR(dmlc::stof(params_["lr"]));
     return this;
   }
   /*!

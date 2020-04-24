@@ -26,6 +26,7 @@
 #ifndef MXNET_CPP_OPTIMIZER_HPP_
 #define MXNET_CPP_OPTIMIZER_HPP_
 
+#include <dmlc/strtonum.h>
 #include <algorithm>
 #include <utility>
 #include <numeric>
@@ -116,11 +117,11 @@ inline float Optimizer::GetLR_(int index) {
   if (nullptr != lrScheduler_) {
     return lrScheduler_->GetLR(num_update_);
   }
-  return std::stof(params_["lr"]);
+  return dmlc::stof(params_["lr"]);
 }
 
 inline float Optimizer::GetWD_(int index) {
-  float wd = std::stof(params_["wd"]);
+  float wd = dmlc::stof(params_["wd"]);
   return wd;
 }
 
@@ -362,9 +363,9 @@ inline void AdamOptimizer::Update(int index, NDArray weight, NDArray grad) {
   auto values = GetParamValues_();
   CHECK_EQ(keys.size(), values.size());
 
-  float lr = std::stof(params_["lr"]);
-  float b1 = std::stof(params_["beta1"]);
-  float b2 = std::stof(params_["beta2"]);
+  float lr = dmlc::stof(params_["lr"]);
+  float b1 = dmlc::stof(params_["beta1"]);
+  float b2 = dmlc::stof(params_["beta2"]);
   float t = count_[index];
   float coef1 = 1.0f - std::pow(b1, t);
   float coef2 = 1.0f - std::pow(b2, t);
@@ -407,15 +408,15 @@ inline void AdaGradOptimizer::Update(int index, NDArray weight, NDArray grad) {
     CreateState_(index, weight);
   }
 
-  float eps = std::stof(params_["eps"]);
+  float eps = dmlc::stof(params_["eps"]);
   float lr = GetLR_(index);
   float wd = GetWD_(index);
   UpdateCount_(index);
   if (params_.count("rescale_grad") > 0) {
-    grad *= std::stof(params_["rescale_grad"]);
+    grad *= dmlc::stof(params_["rescale_grad"]);
   }
   if (params_.count("clip_gradient") > 0) {
-    _clip(grad, std::stof(params_["clip_gradient"]));
+    _clip(grad, dmlc::stof(params_["clip_gradient"]));
   }
   auto& history = *history_[index];
   history += grad * grad;
@@ -448,16 +449,16 @@ inline void AdaDeltaOptimizer::Update(int index, NDArray weight, NDArray grad) {
     CreateState_(index, weight);
   }
 
-  float rho = std::stof(params_["rho"]);
-  float epsilon = std::stof(params_["epsilon"]);
+  float rho = dmlc::stof(params_["rho"]);
+  float epsilon = dmlc::stof(params_["epsilon"]);
   float wd = GetWD_(index);
   UpdateCount_(index);
 
   if (params_.count("rescale_grad") > 0) {
-    grad *= std::stof(params_["rescale_grad"]);
+    grad *= dmlc::stof(params_["rescale_grad"]);
   }
   if (params_.count("clip_gradient") > 0) {
-    _clip(grad, std::stof(params_["clip_gradient"]));
+    _clip(grad, dmlc::stof(params_["clip_gradient"]));
   }
 
   auto& acc_g = *acc_g_[index];
