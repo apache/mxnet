@@ -19,7 +19,7 @@
 
 import numpy as _np
 from . import _symbol
-from . import _op as _mx_sym_np
+from . import _op as _mx_sym_np  # pylint: disable=unused-import
 from . import _internal as _npi
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
