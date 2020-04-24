@@ -1511,7 +1511,7 @@ void GruBackward(DType* ws,
       if (dhy_l)
         dhy_l = dhy_l - D * N * H;
       y_l = y_l - T * N * H * D;
-      y_tmp = y_l;
+      y_tmp = y_tmp - T * N * H * D;
       if (l == 1) {
         wx_l = wx_l - (inputsize + H) * H * 3 * D;
         wh_l = wx_l + inputsize * 3 * H;
