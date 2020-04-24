@@ -66,11 +66,11 @@ def push(mxnet_variant) {
   ws("workspace/python_pypi/${mxnet_variant}/${env.BUILD_NUMBER}") {
     // publish package to pypi
     if (mxnet_variant in pypi_releases) {
-      sh "./ci/docker/runtime_functions.sh cd_pypi_publish"
+      sh "python3 ./ci/docker/runtime_functions.sh cd_pypi_publish"
     } else {
       echo "Temporarily skipping publishing PyPI package for '${mxnet_variant}'."
     }
-    sh "./ci/docker/runtime_functions.sh cd_s3_publish"
+    sh "python3 ./ci/docker/runtime_functions.sh cd_s3_publish"
   }
 }
 
