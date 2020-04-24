@@ -50,13 +50,6 @@ def python3_ut(docker_container_name) {
   }
 }
 
-// Python 3
-def python3_ut_asan(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_asan', false)
-  }
-}
-
 def python3_ut_mkldnn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_mkldnn', false)
@@ -573,7 +566,10 @@ def compile_unix_asan_cpu() {
         ws('workspace/build-cpu-asan') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_asan', false)
+            // TODO(leezu) ubuntu_nightly_cpu temporarily used ASAN tests fail
+            // with Ubuntu 18.04 used on ubuntu_cpu image. ubuntu_nightly_cpu
+            // still uses Ubuntu 16.04
+            utils.docker_run('ubuntu_nightly_cpu', 'build_ubuntu_cpu_cmake_asan', false)
             utils.pack_lib('cpu_asan', mx_lib_cpp_examples_cpu)
           }
         }
@@ -1726,7 +1722,10 @@ def misc_asan_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu-asan') {
             utils.unpack_and_init('cpu_asan', mx_lib_cpp_examples_cpu)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_asan', false)
+            // TODO(leezu) ubuntu_nightly_cpu temporarily used ASAN tests fail
+            // with Ubuntu 18.04 used on ubuntu_cpu image. ubuntu_nightly_cpu
+            // still uses Ubuntu 16.04
+            utils.docker_run('ubuntu_nightly_cpu', 'integrationtest_ubuntu_cpu_asan', false)
         }
       }
     }]
