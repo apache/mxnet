@@ -29,7 +29,7 @@ instructions to build MXNet from source on other platforms, see the general
 [Build From Source guide](build_from_source.html).
 
 Instead of building from source, you can install a binary version of MXNet. For
-that, please follow the information at [Get Started](get_started).
+that, please follow the information at [Get Started](/).
 
 Building MXNet from source is a two-step process:
 

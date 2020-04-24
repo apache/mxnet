@@ -26,11 +26,10 @@ permalink: /get_started/ubuntu_setup
 
 The following installation instructions are for building MXNet from source on
 computers running **Ubuntu 16.04** or higher. For instructions to build MXNet
-from source on other platforms, see the general [Build From Source
-guide](build_from_source).
+from source on other platforms, see the general [Build From Source guide](build_from_source.html).
 
 Instead of building from source, you can install a binary version of MXNet. For
-that, please follow the information at [Get Started](get_started).
+that, please follow the information at [Get Started]().
 
 Building MXNet from source is a two-step process:
 

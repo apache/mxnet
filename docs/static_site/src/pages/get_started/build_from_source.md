@@ -317,7 +317,7 @@ ninja -v
 ## Installing MXNet Language Bindings
 After building MXNet's shared library, you can install other language bindings.
 
-**NOTE:** The C++ API binding must be built when you build MXNet from source. See [Build MXNet with C++]({{'/api/cpp'|relative_url}}).
+**NOTE:** The C++ API binding must be built when you build MXNet from source. See [Build MXNet with C++]({{'/api/cpp.html'|relative_url}}).
 
 The following table provides links to each language binding by operating system:
 
