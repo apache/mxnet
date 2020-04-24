@@ -247,12 +247,16 @@ def check_broadcast_ops():
     arr1 = mx.random.uniform(shape=(8,8,2,3))
     arr2 = mx.random.uniform(shape=(1,1,1,3))
     arr3 = mx.random.uniform(shape=(1,3))
+    arr4 = mx.random.uniform(shape=(8,1,2,1))
+    arr5 = mx.random.uniform(shape=(8,1,3))
 
     # Testing brodcast_add
     print("Checking fusion of broadcast_add")
     bcast_test = a + mx.sym.broadcast_add(a,b) + a
     check_fused_symbol(bcast_test, a=arr1, b=arr2)
     check_fused_symbol(bcast_test, a=arr1, b=arr3)
+    check_fused_symbol(bcast_test, a=arr1, b=arr4)
+    check_fused_symbol(bcast_test, a=arr1, b=arr5)
     bcast_test =  a + mx.sym.broadcast_add(b,a) + a
     check_fused_symbol(bcast_test, a=arr1, b=arr3)
     bcast_test =  a + mx.sym.broadcast_add(a,a) + a
