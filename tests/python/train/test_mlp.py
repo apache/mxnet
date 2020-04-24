@@ -79,7 +79,7 @@ def test_mlp():
     py = np.argmax(prob, axis=1)
     acc1 = float(np.sum(py == y)) / len(y)
     logging.info('final accuracy = %f', acc1)
-    assert(acc1 > 0.95)
+    assert(acc1 > 0.94)
 
     # predict internal featuremaps
     internals = softmax.get_internals()
