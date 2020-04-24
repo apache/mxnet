@@ -30,6 +30,7 @@
 #include "../tvmop/op_module.h"
 #endif  // MXNET_USE_TVM_OP
 
+#include <dmlc/strtonum.h>
 #include "../tensor/elemwise_binary_broadcast_op.h"
 #include "../tensor/elemwise_binary_scalar_op.h"
 
@@ -225,7 +226,7 @@ struct TVMBinaryBroadcastScalarCompute {
   .set_num_inputs(1)                                                                        \
   .set_num_outputs(1)                                                                       \
   .set_attr_parser([](NodeAttrs* attrs) {                                                   \
-    attrs->parsed = std::stod(attrs->dict["scalar"]);                                       \
+    attrs->parsed = dmlc::stod(attrs->dict["scalar"]);                                       \
   })                                                                                        \
   .set_attr<nnvm::FListInputNames>("FListInputNames",                                       \
   [](const NodeAttrs& attrs) {                                                              \

@@ -23,6 +23,7 @@
  * \brief CPU Implementation of true_divide operator.
  */
 
+#include <dmlc/strtonum.h>
 #include "./np_true_divide-inl.h"
 
 namespace mxnet {
@@ -88,7 +89,7 @@ NNVM_REGISTER_OP(_npi_true_divide_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
+    attrs->parsed = dmlc::stod(attrs->dict["scalar"]);
   })
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", TrueDivideType<1>)
@@ -111,7 +112,7 @@ NNVM_REGISTER_OP(_npi_rtrue_divide_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
-  attrs->parsed = std::stod(attrs->dict["scalar"]);
+  attrs->parsed = dmlc::stod(attrs->dict["scalar"]);
   })
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", TrueDivideType<1>)

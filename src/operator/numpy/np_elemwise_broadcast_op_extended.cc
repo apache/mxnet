@@ -23,6 +23,7 @@
  * \brief CPU Implementation of extended functions for elementwise numpy binary broadcast operator.
  */
 
+#include <dmlc/strtonum.h>
 #include "../../common/utils.h"
 #include "./np_elemwise_broadcast_op.h"
 
@@ -34,7 +35,7 @@ namespace op {
   .set_num_inputs(1)                                                \
   .set_num_outputs(1)                                               \
   .set_attr_parser([](NodeAttrs* attrs) {                           \
-      attrs->parsed = std::stod(attrs->dict["scalar"]);             \
+      attrs->parsed = dmlc::stod(attrs->dict["scalar"]);             \
     })                                                              \
   .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>) \
   .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)  \
@@ -87,7 +88,7 @@ NNVM_REGISTER_OP(_npi_lcm_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
+    attrs->parsed = dmlc::stod(attrs->dict["scalar"]);
   })
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
@@ -175,7 +176,7 @@ NNVM_REGISTER_OP(_npi_bitwise_xor_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
+    attrs->parsed = dmlc::stod(attrs->dict["scalar"]);
   })
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
@@ -192,7 +193,7 @@ NNVM_REGISTER_OP(_npi_bitwise_or_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
+    attrs->parsed = dmlc::stod(attrs->dict["scalar"]);
   })
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseIntType<1, 1>)
@@ -275,13 +276,13 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(_npi_rarctan2_scalar)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_arctan2_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>",
                     BinaryScalarOp::Backward<cpu, mshadow_op::arctan2_grad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rarctan2_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>",
                     BinaryScalarOp::Backward<cpu, mshadow_op::arctan2_rgrad>);
 
@@ -363,12 +364,12 @@ NNVM_REGISTER_OP(_backward_npi_ldexp)
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_ldexp_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::ldexp_grad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_backward_npi_rldexp_scalar)
 .add_argument("scalar", "float", "scalar value")
-.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = std::stod(attrs->dict["scalar"]); })
+.set_attr_parser([](NodeAttrs *attrs) { attrs->parsed = dmlc::stod(attrs->dict["scalar"]); })
 .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::Backward<cpu, mshadow_op::rldexp_grad>);
 
 }  // namespace op

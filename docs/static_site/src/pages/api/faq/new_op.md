@@ -204,7 +204,7 @@ Simple arguments can be parsed like
 NNVM_REGISTER_OP(scalar_op)
 .set_attr_parser(
   [](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
+    attrs->parsed = dmlc::stod(attrs->dict["scalar"]);
   })
 ```
 
