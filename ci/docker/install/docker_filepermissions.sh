@@ -17,9 +17,18 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+# Add user in order to make sure the assumed user the container is running under
+# actually exists inside the container to avoid problems like missing home dir
 
 set -ex
 
-echo "jenkins_slave  ALL=(ALL)       NOPASSWD: ALL" >> /etc/sudoers
+# Add user in order to make sure the assumed user the container is running under
+# actually exists inside the container to avoid problems like missing home dir
+if [[ "$USER_ID" -gt 0 ]]; then
+    # -no-log-init required due to https://github.com/moby/moby/issues/5419
+    useradd -m --no-log-init --uid $USER_ID --system jenkins_slave
+    # By default, docker creates all WORK_DIRs with root owner
+    mkdir /work/mxnet
+    mkdir /work/build
+    chown -R jenkins_slave /work/
+fi

@@ -531,10 +531,7 @@ build_ubuntu_gpu_clang10_werror() {
     # Can be deleted on Cuda 11
     export CXXFLAGS="-I/usr/local/thrust"
 
-    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CXX=clang++-10 CC=clang-10 cmake \
-       -DCMAKE_AR=/usr/local/bin/ar \
-       -DCMAKE_RANLIB=/usr/local/bin/ranlib \
        -DUSE_CUDA=ON \
        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
@@ -723,10 +720,7 @@ build_ubuntu_gpu_tensorrt() {
 build_ubuntu_gpu_mkldnn() {
     set -ex
     cd /work/build
-    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CC=gcc-7 CXX=g++-7 cmake \
-        -DCMAKE_AR=/usr/local/bin/ar \
-        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
@@ -740,10 +734,7 @@ build_ubuntu_gpu_mkldnn() {
 build_ubuntu_gpu_mkldnn_nocudnn() {
     set -ex
     cd /work/build
-    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CC=gcc-7 CXX=g++-7 cmake \
-        -DCMAKE_AR=/usr/local/bin/ar \
-        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
@@ -758,10 +749,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
 build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
     cd /work/build
-    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CC=gcc-7 CXX=g++-7 cmake \
-        -DCMAKE_AR=/usr/local/bin/ar \
-        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=ON \
@@ -820,10 +808,7 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
 build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
     set -ex
     cd /work/build
-    # Set CMAKE_AR and CMAKE_RANLIB due to Ubuntu 16.04 default binutils 4GB limitation
     CC=gcc-7 CXX=g++-7 cmake \
-        -DCMAKE_AR=/usr/local/bin/ar \
-        -DCMAKE_RANLIB=/usr/local/bin/ranlib \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_TVM_OP=OFF \
@@ -1410,21 +1395,6 @@ nightly_test_rat_check() {
         echo "SUCCESS: There are no files with an Unknown License.";
     fi
     popd
-}
-
-#Checks MXNet for Compilation Warnings
-nightly_test_compilation_warning() {
-    set -ex
-    export PYTHONPATH=./python/
-    ./tests/nightly/compilation_warnings/compilation_warnings.sh
-}
-
-#Checks the MXNet Installation Guide - currently checks pip, build from source and virtual env on cpu and gpu
-nightly_test_installation() {
-    set -ex
-    # The run_test_installation_docs.sh expects the path to index.md and the first and last line numbers of the index.md file
-    # First execute the test script and then call the method specified by the Jenkinsfile - ${1}
-    source ./tests/jenkins/run_test_installation_docs.sh docs/install/index.md 1 1686; ${1}
 }
 
 # Runs Imagenet inference
@@ -2045,6 +2015,7 @@ publish_scala_test() {
     set -ex
     pushd .
     scala_prepare
+    source /opt/rh/rh-maven35/enable
     ./ci/publish/scala/test.sh
     popd
 }
