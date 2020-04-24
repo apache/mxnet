@@ -4470,6 +4470,7 @@ def test_np_randn():
 
 @with_seed()
 @use_np
+@pytest.mark.skip(reason='Test hangs. Tracked in #18144')
 def test_np_multivariate_normal():
     class TestMultivariateNormal(HybridBlock):
         def __init__(self, size=None):
@@ -8266,6 +8267,7 @@ def test_np_column_stack():
 
 @with_seed()
 @use_np
+@pytest.mark.skip(reason='Test hangs. Tracked in #18144')
 def test_np_resize():
     class TestResize(HybridBlock):
         def __init__(self, new_shape):
@@ -8602,13 +8604,13 @@ def test_np_unary_bool_funcs():
             mx_out_imperative = getattr(mx.np, func)(mx_data)
             assert_almost_equal(mx_out_imperative.asnumpy(), np_out, rtol, atol)
             # if `out` is given and dtype == np.bool
-            mx_x = np.empty_like(mx_data).astype(np.bool)
+            mx_x = np.ones_like(mx_data).astype(np.bool)
             np_x = mx_x.asnumpy()
             getattr(mx.np, func)(mx_data, mx_x)
             np_func(np_data, np_x)
             assert_almost_equal(mx_out_imperative .asnumpy(), np_out, rtol, atol)
             # if `out` is given but dtype mismatches
-            mx_y = np.empty_like(mx_data)
+            mx_y = np.ones_like(mx_data)
             assertRaises(TypeError, getattr(np, func), mx_data, out=mx_y)
 
             assertRaises(NotImplementedError, getattr(np, func), mx_data, where=False)
@@ -8830,6 +8832,7 @@ def test_np_expand_dims():
 
 @with_seed()
 @use_np
+@pytest.mark.skip(reason='Test hangs. Tracked in #18144')
 def test_np_unravel_index():
     class TestUnravel_index(HybridBlock):
         def __init__(self, shape, order='C') :
