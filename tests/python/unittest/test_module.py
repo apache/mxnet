@@ -22,7 +22,7 @@ from mxnet.test_utils import *
 import numpy as np
 from functools import reduce
 from mxnet.module.executor_group import DataParallelExecutorGroup
-from common import setup_module, with_seed, assertRaises, teardown
+from common import setup_module, with_seed, assertRaises, teardown_module
 from collections import namedtuple
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, "../train"))
@@ -1029,7 +1029,3 @@ def test_module_init_optimizer():
     mod2.init_optimizer(optimizer=opt)
     assert mod2._optimizer.idx2name == get_module_idx2name(mod2)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -31,8 +31,8 @@ import numpy as _np
 import mxnet as mx
 from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
-from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, use_np
-from common import with_seed
+from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, use_np
+from common import with_seed, retry
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
@@ -173,7 +173,3 @@ def test_np_laplace():
             generator_mx_np = lambda x: np.random.laplace(loc, scale, size=x, ctx=ctx, dtype=dtype).asnumpy()
             verify_generator(generator=generator_mx_np, buckets=buckets, probs=probs, nsamples=samples, nrepeat=trials)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

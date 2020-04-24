@@ -21,6 +21,7 @@
  * \file np_elemwise_unary_op_basic.cu
  * \brief GPU Implementation of numpy unary functions.
  */
+#include "../tensor/elemwise_unary_op.h"
 #include "../tensor/elemwise_binary_op.h"
 
 namespace mxnet {
@@ -39,6 +40,10 @@ NNVM_REGISTER_OP(_np_copy)
   NNVM_REGISTER_OP(__name$)                                               \
   .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, __kernel$>)
 
+#define MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(__name$, __kernel$)  \
+  NNVM_REGISTER_OP(__name$)                                                     \
+  .set_attr<FCompute>("FCompute<gpu>", UnaryOp::ComputeMixedType<gpu, __kernel$>)
+
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_negative, mshadow_op::negation);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_reciprocal, mshadow_op::reciprocal);
@@ -47,37 +52,37 @@ MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_absolute, mshadow_op::abs);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_sign, mshadow_op::sign);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_rint, mshadow_op::rint);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_rint, mshadow_op::rint);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_ceil, mshadow_op::ceil);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_ceil, mshadow_op::ceil);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_floor, mshadow_op::floor);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_floor, mshadow_op::floor);
 
 NNVM_REGISTER_OP(_npi_bitwise_not)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::ComputeInt<gpu, mshadow_op::bitwise_not>);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_trunc, mshadow_op::trunc);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_trunc, mshadow_op::trunc);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_fix, mshadow_op::fix);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_fix, mshadow_op::fix);
 
 MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_square, mshadow_op::square);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_sqrt, mshadow_op::square_root);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_sqrt, mshadow_op::square_root);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_cbrt, mshadow_op::cube_root);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_cbrt, mshadow_op::cube_root);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_exp, mshadow_op::exp);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_exp, mshadow_op::exp);
 
 NNVM_REGISTER_OP(_npi_log)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::log>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::ComputeMixedType<gpu, mshadow_op::log>);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_log10, mshadow_op::log10);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_log10, mshadow_op::log10);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_log2, mshadow_op::log2);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_log2, mshadow_op::log2);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_log1p, mshadow_op::log1p);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_log1p, mshadow_op::log1p);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_expm1, mshadow_op::expm1);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_expm1, mshadow_op::expm1);
 
 NNVM_REGISTER_OP(_npi_logical_not)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::ComputeLogic<gpu, mshadow_op::np_logical_not>);
@@ -97,33 +102,33 @@ NNVM_REGISTER_OP(_npi_isneginf)
 NNVM_REGISTER_OP(_npi_isfinite)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::ComputeLogic<gpu, mshadow_op::isfinite>);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_sin, mshadow_op::sin);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_sin, mshadow_op::sin);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_cos, mshadow_op::cos);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_cos, mshadow_op::cos);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_tan, mshadow_op::tan);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_tan, mshadow_op::tan);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arcsin, mshadow_op::arcsin);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_arcsin, mshadow_op::arcsin);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arccos, mshadow_op::arccos);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_arccos, mshadow_op::arccos);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arctan, mshadow_op::arctan);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_arctan, mshadow_op::arctan);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_degrees, mshadow_op::degrees);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_degrees, mshadow_op::degrees);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_radians, mshadow_op::radians);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_radians, mshadow_op::radians);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_sinh, mshadow_op::sinh);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_sinh, mshadow_op::sinh);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_cosh, mshadow_op::cosh);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_cosh, mshadow_op::cosh);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_tanh, mshadow_op::tanh);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_tanh, mshadow_op::tanh);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arcsinh, mshadow_op::arcsinh);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_arcsinh, mshadow_op::arcsinh);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arccosh, mshadow_op::arccosh);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_arccosh, mshadow_op::arccosh);
 
-MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(_npi_arctanh, mshadow_op::arctanh);
+MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY_GPU(_npi_arctanh, mshadow_op::arctanh);
 
 NNVM_REGISTER_OP(_npi_around)
 .set_attr<FCompute>("FCompute<gpu>", AroundOpForward<gpu>);
@@ -133,6 +138,95 @@ NNVM_REGISTER_OP(_npi_nan_to_num)
 
 NNVM_REGISTER_OP(_npi_backward_nan_to_num)
 .set_attr<FCompute>("FCompute<gpu>", NumpyNanToNumOpBackward<gpu>);
+
+NNVM_REGISTER_OP(_backward_npi_exp)
+.set_attr<FCompute>("FCompute<gpu>",
+                    ElemwiseBinaryOp::MixedUnaryBackwardUseInOutCompute<gpu,
+                    op::mshadow_op::mul>);
+
+NNVM_REGISTER_OP(_backward_npi_log)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::log_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_log10)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+gpu, unary_bwd<mshadow_op::log10_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_log2)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::log2_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_log1p)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::log1p_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_expm1)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::exp> >);
+
+NNVM_REGISTER_OP(_backward_npi_sqrt)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInOutCompute<
+  gpu, unary_bwd<mshadow_op::square_root_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_cbrt)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInOutCompute<
+  gpu, unary_bwd<mshadow_op::cube_root_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_sin)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::sin_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_cos)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::cos_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_tan)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInOutCompute<
+  gpu, unary_bwd<mshadow_op::tan_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_arcsin)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::arcsin_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_arccos)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::arccos_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_arctan)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::arctan_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_degrees)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::degrees_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_radians)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::radians_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_cosh)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::cosh_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_sinh)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::sinh_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_tanh)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInOutCompute<
+  gpu, unary_bwd<mshadow_op::tanh_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_arcsinh)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::arcsinh_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_arccosh)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::arccosh_grad> >);
+
+NNVM_REGISTER_OP(_backward_npi_arctanh)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
+  gpu, unary_bwd<mshadow_op::arctanh_grad> >);
 
 }  // namespace op
 }  // namespace mxnet

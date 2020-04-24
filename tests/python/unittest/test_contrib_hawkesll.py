@@ -154,8 +154,3 @@ def test_hawkesll_backward_single_mark():
 
     assert np.allclose(beta.grad.asnumpy().sum(), -0.05371582)
 
-
-if __name__ == "__main__":
-    import nose
-
-    nose.runmodule()

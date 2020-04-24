@@ -61,7 +61,3 @@ def test_tvm_bridge():
                       "float32", "float64"]:
             check(tgt, dtype)
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

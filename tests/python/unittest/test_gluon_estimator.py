@@ -20,13 +20,13 @@
 import sys
 import unittest
 import warnings
+import pytest
 
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.gluon.contrib.estimator import *
 from mxnet.gluon.contrib.estimator.event_handler import *
-from nose.tools import assert_raises
 
 
 def _get_test_network(params=None):
@@ -70,12 +70,12 @@ def test_fit():
     est.fit(train_data=dataloader,
             epochs=num_epochs)
 
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=dataiter,
                 epochs=num_epochs)
 
     # Input NDArray
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=[mx.nd.ones(shape=(10, 3))],
                 epochs=num_epochs)
 
@@ -107,12 +107,12 @@ def test_validation():
     val_metrics = est.val_metrics
     validation_handler = ValidationHandler(val_data=dataloader, eval_fn=est.evaluate)
 
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=dataiter,
                 val_data=dataiter,
                 epochs=num_epochs)
     # Input NDArray
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=[mx.nd.ones(shape=(10, 3))],
                 val_data=[mx.nd.ones(shape=(10, 3))],
                 epochs=num_epochs)
@@ -180,7 +180,7 @@ def test_trainer():
 
     # input invalid trainer
     trainer = 'sgd'
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est = Estimator(net=net,
                         loss=loss,
                         train_metrics=acc,
@@ -215,7 +215,7 @@ def test_metric():
     est.fit(train_data=train_data,
             epochs=num_epochs)
     # input invalid metric
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est = Estimator(net=net,
                         loss=loss,
                         train_metrics='acc',
@@ -238,7 +238,7 @@ def test_loss():
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     # input invalid loss
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est = Estimator(net=net,
                         loss='mse',
                         train_metrics=acc,
@@ -264,13 +264,13 @@ def test_context():
                     train_metrics=metrics,
                     context=ctx)
     # input invalid context
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est = Estimator(net=net,
                         loss=loss,
                         train_metrics=metrics,
                         context='cpu')
 
-    with assert_raises(AssertionError):
+    with pytest.raises(AssertionError):
         est = Estimator(net=net,
                         loss=loss,
                         train_metrics=metrics,
@@ -360,7 +360,7 @@ def test_default_handlers():
     # handler with mixed metrics, some handler use metrics prepared by estimator
     # some handler use metrics user prepared
     logging = LoggingHandler(metrics=[mx.gluon.metric.RMSE("val acc")])
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
 
     # test handler order
@@ -394,7 +394,7 @@ def test_val_net():
                     val_loss=val_loss,
                     val_net=val_net)
 
-    with assert_raises(RuntimeError):
+    with pytest.raises(RuntimeError):
         est.fit(train_data=dataloader,
                 val_data=dataloader,
                 epochs=num_epochs)

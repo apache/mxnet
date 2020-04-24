@@ -53,12 +53,8 @@ export MXNET_ENGINE_INFO=false
 export PYTHONPATH=${PWD}/python
 
 echo "BUILD python_test"
-nosetests --verbose tests/python/unittest
-nosetests --verbose tests/python/train
-
-echo "BUILD python3_test"
-nosetests3 --verbose tests/python/unittest
-nosetests3 --verbose tests/python/train
+pytest --verbose tests/python/unittest
+pytest --verbose tests/python/train
 
 #echo "BUILD julia_test"
 #export MXNET_HOME="${PWD}"

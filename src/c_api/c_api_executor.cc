@@ -752,7 +752,6 @@ int _SimpleBindImpl(SymbolHandle symbol_handle,
                               &arg_grad_vec, &aux_state_vec,
                               use_shared_buffer ? &shared_buffer_map : nullptr,
                               reinterpret_cast<Executor*>(shared_exec_handle));
-
   // copy ndarray ptrs to ret->handles so that front end
   // can access them
   ret->ret_handles.clear();
@@ -809,7 +808,7 @@ int _SimpleBindImpl(SymbolHandle symbol_handle,
       ret->ret_vec_charp.push_back(ret->ret_vec_str.back().c_str());
     }
     *shared_buffer_len = shared_buffer_map.size();
-    *updated_shared_buffer_handle_list = &(ret->ret_handles[nd_idx]);
+    *updated_shared_buffer_handle_list = &(ret->ret_handles.at(nd_idx));
     *updated_shared_buffer_name_list = &(ret->ret_vec_charp[0]);
   }
 

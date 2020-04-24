@@ -230,11 +230,24 @@ def check_other_ops():
     arr2 = mx.random.uniform(shape=(2,2,2,3))
     check_fused_symbol(mx.sym.broadcast_like(a, b, lhs_axes=[0], rhs_axes=[0]), a=arr1, b=arr2)
 
+def check_leakyrelu_ops():
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    shape = rand_shape_2d()
+    arr1 = mx.random.uniform(shape=shape)
+    arr2 = mx.random.uniform(shape=shape)
+
+    # Testing gelu
+    print("Checking fusion of LeakyReLU:gelu")
+    check_fused_symbol(mx.sym.LeakyReLU(a+b, act_type='gelu'), a=arr1, b=arr2)
+
+
 @with_seed()
 def test_fusion():
     check_unary_ops()
     check_binary_ops()
     check_other_ops()
+    check_leakyrelu_ops()
 
 @with_seed()
 def test_fusion_compiler_cache():
@@ -324,6 +337,3 @@ def test_fusion_reshape_executor():
     out = f.forward(is_train=False, data1=data, data2=data)
     assert out[0].sum().asscalar() == 150
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -210,7 +210,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   // create lambda that allocates memory for sparse and
   // returns allocated arrays for data, indices and indptr.
   auto sparse_alloc = [&](int index, int indices_len, int idxptr_len,
-                           void** data, int64_t** indices, int64_t** indptr) {
+                          void** data, int64_t** indices, int64_t** indptr) {
     if (idxptr_len == 0) {
       // Row Sparse
       outputs[index].CheckAndAlloc({mshadow::Shape1(indices_len)});
@@ -321,28 +321,7 @@ void CustomFComputeDispatcher(const std::string op_name,
   }
 }
 
-/*!
- * \brief Loads dynamic custom library and initializes it
- * \param path library path
- */
-int MXLoadLib(const char *path) {
-  API_BEGIN();
-  void *lib = LibraryInitializer::Get()->lib_load(path);
-  if (!lib)
-    LOG(FATAL) << "Unable to load library";
-
-  // check that library and MXNet use same version of library API
-  opVersion_t opVersion = get_func<opVersion_t>(lib, const_cast<char*>(MXLIB_OPVERSION_STR));
-  int libVersion =  opVersion();
-  if (MX_LIBRARY_VERSION != libVersion)
-    LOG(FATAL) << "Library version (" << libVersion << ") does not match MXNet version ("
-               << MX_LIBRARY_VERSION << ")";
-
-  // initialize library by passing MXNet version
-  initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
-  if (!initialize(static_cast<int>(MXNET_VERSION)))
-    LOG(FATAL) << "Library failed to initialize";
-
+void registerOperators(void *lib, int verbose) {
   // get C type interface functions
   opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
 
@@ -370,16 +349,10 @@ int MXLoadLib(const char *path) {
   opCallFStatefulComp_t callFStatefulComp =
     get_func<opCallFStatefulComp_t>(lib, const_cast<char*>(MXLIB_OPCALLFSTATEFULCOMP_STR));
 
-  partCallSupportedOps_t callSupportedOps =
-    get_func<partCallSupportedOps_t>(lib, const_cast<char*>(MXLIB_PARTCALLSUPPORTEDOPS_STR));
-
-  partCallReviewSubgraph_t callReviewSubgraph =
-    get_func<partCallReviewSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLREVIEWSUBGRAPH_STR));
-
   // get number of operators registered in the library
   opRegSize_t opRegSize = get_func<opRegSize_t>(lib, const_cast<char*>(MXLIB_OPREGSIZE_STR));
   int numOps = opRegSize();
-  LOG(INFO) << "Found " << numOps << " operators in library";
+  if (verbose) LOG(INFO) << "Found " << numOps << " operators in library";
 
   /*
    * Get all custom operators implementation from custom library
@@ -444,8 +417,8 @@ int MXLoadLib(const char *path) {
       CHECK(createop_map.size() != 0) << "Error loading '" << name
                             << "' custom subgraph op, CreateOpState function was not set.";
     }
-    LOG(INFO) << "\tOp[" << i << "] " << name;
-    if (isSubgraphOp) LOG(INFO) << "\t\tisSubgraphOp";
+    if (verbose) LOG(INFO) << "\tOp[" << i << "] " << name;
+    if (verbose && isSubgraphOp) LOG(INFO) << "\t\tisSubgraphOp";
     std::string name_str(name);
 
     /*
@@ -565,14 +538,41 @@ int MXLoadLib(const char *path) {
         }
       }
 
+      // modified input shapes will be allocated by infer shape function
+      uint32_t** mod_inshapes = nullptr;
+      int* mod_indims = nullptr;
       // output shapes will be allocated by infer shape function
       uint32_t** outshapes = nullptr;
       int* outdims = nullptr;
 
       CHECK(callInferShape(shape_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                            inshapes.data(), indims.data(), in_shape->size(),
+                           &mod_inshapes, &mod_indims,
                            &outshapes, &outdims, out_shape->size()))
       << "Error calling InferShape for custom operator '" << name_str << "'";
+
+      std::vector<uint32_t*> in_shapes(in_shape->size());
+      // determine amount of memory needed to store all the modified input shapes
+      buff_size = 0;
+      for (unsigned i = 0; i < in_shape->size(); i++) {
+        buff_size += mod_indims[i];
+      }
+
+      // copy modified input shapes from custom op memory to MXNet memory
+      std::vector<uint32_t> mod_inbuff(buff_size);
+      ptr = mod_inbuff.data();
+      for (unsigned i = 0; i < in_shape->size(); ++i) {
+        in_shapes[i] = ptr;
+        for (int j = 0; j < mod_indims[i]; ++j, ++ptr) {
+          *ptr = static_cast<uint32_t>(mod_inshapes[i][j]);
+        }
+      }
+
+      // assign modified input shapes to ShapeVector
+      for (unsigned i = 0; i < in_shape->size(); ++i) {
+        SHAPE_ASSIGN_CHECK(*in_shape, i,
+                           mxnet::TShape(in_shapes[i], in_shapes[i]+mod_indims[i]));
+      }
 
       std::vector<uint32_t*> out_shapes(out_shape->size());
       // determine amount of memory needed to store all the output shapes
@@ -598,6 +598,12 @@ int MXLoadLib(const char *path) {
       }
 
       // free memory used by custom op to allocate shapes/dims
+      callFree(mod_indims);
+      for (unsigned i = 0; i < in_shape->size(); i++) {
+        callFree(mod_inshapes[i]);
+      }
+      callFree(mod_inshapes);
+
       callFree(outdims);
       for (unsigned i = 0; i < out_shape->size(); i++) {
         callFree(outshapes[i]);
@@ -629,6 +635,10 @@ int MXLoadLib(const char *path) {
                            outtypes.data(), out_type->size()))
       << "Error calling InferType for custom operator '" << name_str << "'";
 
+      // copy and assign modified input types from custom op to MXNet memory
+      for (size_t i = 0; i < in_type->size(); i++) {
+        TYPE_ASSIGN_CHECK(*in_type, i, intypes[i]);
+      }
       // copy and assign output types from custom op to MXNet memory
       for (size_t i = 0; i < out_type->size(); i++) {
         TYPE_ASSIGN_CHECK(*out_type, i, outtypes[i]);
@@ -694,6 +704,10 @@ int MXLoadLib(const char *path) {
                              outstypes.data(), out_stypes->size()))
         << "Error calling InferSType for custom operator '" << name_str << "'";
 
+        // copy and assign modified input storage types from custom op to MXNet memory.
+        for (size_t i = 0; i < in_stypes->size(); i++) {
+          STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, instypes[i]);
+        }
         // copy and assign output storage types from custom op to MXNet memory.
         for (size_t i = 0; i < out_stypes->size(); i++) {
           STORAGE_TYPE_ASSIGN_CHECK(*out_stypes, i, outstypes[i]);
@@ -938,12 +952,41 @@ int MXLoadLib(const char *path) {
     }
     regOp.add_argument("data", "NDArray[]", "Source inputs");
   }
+}
+
+void registerPartitioners(void *lib, int verbose) {
+  // get C type interface functions
+  opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
+
+  partCallSupportedOps_t callSupportedOps =
+    get_func<partCallSupportedOps_t>(lib, const_cast<char*>(MXLIB_PARTCALLSUPPORTEDOPS_STR));
+
+  partCallCreateSelector_t callCreateSelector =
+    get_func<partCallCreateSelector_t>(lib, const_cast<char*>(MXLIB_PARTCALLCREATESELECTOR_STR));
+
+  partCallSelect_t callSelect =
+    get_func<partCallSelect_t>(lib, const_cast<char*>(MXLIB_PARTCALLSELECT_STR));
+
+  partCallSelectInput_t callSelectInput =
+    get_func<partCallSelectInput_t>(lib, const_cast<char*>(MXLIB_PARTCALLSELECTINPUT_STR));
+
+  partCallSelectOutput_t callSelectOutput =
+    get_func<partCallSelectOutput_t>(lib, const_cast<char*>(MXLIB_PARTCALLSELECTOUTPUT_STR));
+
+  partCallFilter_t callFilter =
+    get_func<partCallFilter_t>(lib, const_cast<char*>(MXLIB_PARTCALLFILTER_STR));
+
+  partCallReset_t callReset =
+    get_func<partCallReset_t>(lib, const_cast<char*>(MXLIB_PARTCALLRESET_STR));
+
+  partCallReviewSubgraph_t callReviewSubgraph =
+    get_func<partCallReviewSubgraph_t>(lib, const_cast<char*>(MXLIB_PARTCALLREVIEWSUBGRAPH_STR));
 
   // get number of partitioners registered in the library
   partRegSize_t partRegSize = get_func<partRegSize_t>(lib,
                                                       const_cast<char*>(MXLIB_PARTREGSIZE_STR));
   int numParts = partRegSize();
-  LOG(INFO) << "Found " << numParts << " partitioners in library";
+  if (verbose) LOG(INFO) << "Found " << numParts << " partitioners in library";
 
   /*
    * Get all custom partitioners implementation from custom library
@@ -959,7 +1002,7 @@ int MXLoadLib(const char *path) {
     CHECK(count > 0) << "Error loading '" << name
                      << "' custom partitioner, no strategies defined";
     std::string name_str(name);
-    LOG(INFO) << "\tPartitioner[" << i << "] " << name;
+    if (verbose) LOG(INFO) << "\tPartitioner[" << i << "] " << name;
 
     mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_BACKEND__(name);
 
@@ -967,26 +1010,283 @@ int MXLoadLib(const char *path) {
       const char* strategy;
       // function pointers holding implementation from custom library
       supportedOps_t supportedOps_fp = nullptr;
+      createSelector_t createSelector_fp = nullptr;
       reviewSubgraph_t reviewSubgraph_fp = nullptr;
       // name of subgraph op
       const char* op_name = nullptr;
 
-    // get custom partitioner strategy from the dynamic library
-      partRegGet(i, j, &strategy, &supportedOps_fp, &reviewSubgraph_fp, &op_name);
+      // get custom partitioner strategy from the dynamic library
+      partRegGet(i, j, &strategy, &supportedOps_fp, &createSelector_fp,
+                 &reviewSubgraph_fp, &op_name);
       // validate custom partitioner functions from the dynamic library
-      CHECK(supportedOps_fp != nullptr) << "Error loading '" << name
-                                        << "' custom partitioner strategy '" << strategy
-                                        << "', supportedOps function was not set.";
+      if (supportedOps_fp == nullptr && createSelector_fp == nullptr)
+        LOG(ERROR) << "Error loading '" << name << "' custom partitioner strategy '"
+                   << strategy << "', must implement supportedOps or createSelector";
       std::string strategy_str(strategy);
       std::string op_name_str(op_name);
-      LOG(INFO) << "\t\tStrategy[" << j << "] " << strategy_str
-                << " subgraphOp: '" << op_name_str << "'";
+      if (verbose) LOG(INFO) << "\t\tStrategy[" << j << "] " << strategy_str
+                             << " subgraphOp: '" << op_name_str << "'";
       mxnet::op::SubgraphBackendRegistry::Get()->__REGISTER_CUSTOM_PROPERTY__
         (name_str, std::make_shared<mxnet::op::CustomSubgraphProperty>
-          (strategy_str, callSupportedOps, supportedOps_fp,
-           callReviewSubgraph, reviewSubgraph_fp, callFree, op_name_str));
+         (strategy_str, callSupportedOps, supportedOps_fp, callCreateSelector,
+          createSelector_fp, callSelect, callSelectInput, callSelectOutput,
+          callFilter, callReset, callReviewSubgraph, reviewSubgraph_fp, callFree,
+          op_name_str));
     }
   }
+}
+
+void registerPasses(void *lib, int verbose) {
+  // get C type interface functions
+  opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
+
+  passCallGraphPass_t callGraphPass =
+    get_func<passCallGraphPass_t>(lib, const_cast<char*>(MXLIB_PASSCALLGRAPHPASS_STR));
+
+  // get number of passes registered in the library
+  partRegSize_t passRegSize = get_func<passRegSize_t>(lib,
+                                                      const_cast<char*>(MXLIB_PASSREGSIZE_STR));
+  int numPasses = passRegSize();
+  if (verbose) LOG(INFO) << "Found " << numPasses << " graph passes in library";
+
+  /*
+   * Get all custom pass implementation from custom library
+   * loop and register each pass in the library to NNVM
+   */
+  passRegGet_t passRegGet = get_func<passRegGet_t>(lib, const_cast<char*>(MXLIB_PASSREGGET_STR));
+  for (int i = 0; i < numPasses; i++) {
+    const char* name;
+    // function pointers holding implementation from custom library
+    graphPass_t pass_fp = nullptr;
+
+    // main function to get custom pass implemenation from the custom library
+    passRegGet(i, &pass_fp, &name);
+
+    if (verbose) LOG(INFO) << "\tGraph Pass [" << i << "] " << name;
+
+    auto pass_lambda = [=] (nnvm::Graph&& g) {
+      // get pass name
+      const char* pass_name = g.GetAttr<const char*>("pass_name");
+      // get options
+      const std::vector<std::pair<std::string, std::string>>& options_map =
+            g.GetAttr<const std::vector<std::pair<std::string, std::string>>>("options_map");
+      // convert options_map_ to char* to pass to backend library
+      std::vector<const char*> opt_keys, opt_vals;
+      for (auto& kv : options_map) {
+        opt_keys.push_back(kv.first.c_str());
+        opt_vals.push_back(kv.second.c_str());
+      }
+
+      // get input args and arg names
+      std::vector<std::string> in_arg_names = g.GetAttr<std::vector<std::string>>("in_arg_names");
+      std::vector<std::string> in_aux_names = g.GetAttr<std::vector<std::string>>("in_aux_names");
+      NDArray **in_args_ptr = g.GetAttr<NDArray**>("in_args");
+      NDArray **in_aux_ptr = g.GetAttr<NDArray**>("in_aux");
+
+      // get shapes/types
+      mxnet::ShapeVector shapes;
+      if (g.HasAttr("shape"))
+        shapes = g.GetAttr<mxnet::ShapeVector>("shape");
+      std::vector<int> dtypes;
+      if (g.HasAttr("dtype"))
+        dtypes = g.GetAttr<std::vector<int> >("dtype");
+      g.attrs.clear();
+      const nnvm::IndexedGraph& indexed_graph = g.indexed_graph();
+
+      // set shape attrs for each node in the graph
+      if (shapes.size() > 0) {
+        for (unsigned nid = 0; nid < indexed_graph.num_nodes(); nid++) {
+          nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
+          std::stringstream ss;
+          ss << "[";
+          // set the output shapes for this node
+          for (unsigned oid = 0; oid < node->num_outputs(); oid++) {
+            const uint32_t out_entry_id = indexed_graph.entry_id(nid, oid);
+            mxnet::TShape& shape = shapes[out_entry_id];
+            ss << shape;
+            if (oid < node->num_outputs()-1) ss << ",";
+          }
+          ss << "]";
+          node->attrs.dict[MX_STR_SHAPE] = ss.str();
+        }
+      }
+      // set dtype attrs for each node in the graph
+      if (dtypes.size() > 0) {
+        for (unsigned nid = 0; nid < indexed_graph.num_nodes(); nid++) {
+          nnvm::Node* node = const_cast<nnvm::Node*>(indexed_graph[nid].source);
+          std::stringstream ss;
+          ss << "[";
+          // set the output dtypes for this node
+          for (unsigned oid = 0; oid < node->num_outputs(); oid++) {
+            const uint32_t out_entry_id = indexed_graph.entry_id(nid, oid);
+            int dtype = dtypes[out_entry_id];
+            ss << dtype;
+            if (oid < node->num_outputs()-1) ss << ",";
+          }
+          ss << "]";
+          node->attrs.dict[MX_STR_DTYPE] = ss.str();
+        }
+      }
+
+      std::vector<const char*> arg_names, aux_names;
+      std::vector<void*> arg_data, aux_data;
+      std::vector<const int64_t*> arg_shapes, aux_shapes;
+      std::vector<int> arg_dims, aux_dims;
+      std::vector<int> arg_types, aux_types;
+      std::vector<size_t> arg_verIDs, aux_verIDs;
+      std::vector<const char*> arg_dev_type, aux_dev_type;
+      std::vector<int> arg_dev_id, aux_dev_id;
+
+      // convert input args
+      for (size_t i=0; i < in_arg_names.size(); i++) {
+        arg_names.push_back(in_arg_names[i].c_str());
+        const NDArray &in_arg = *(in_args_ptr[i]);
+
+#if MXNET_USE_MKLDNN == 1
+        // reorder data if in MKLDNN format
+        if (in_arg.IsMKLDNNData()) {
+          in_arg.Reorder2DefaultAsync();
+          in_arg.WaitToRead();
+        }
+#endif
+
+        // pull out parts of NDArray to send to backend
+        arg_data.push_back(in_arg.data().dptr_);
+        arg_shapes.push_back(in_arg.shape().data());
+        arg_dims.push_back(in_arg.shape().ndim());
+        arg_types.push_back(in_arg.dtype());
+        arg_verIDs.push_back(in_arg.version());
+        const char* arg_ctx_str = in_arg.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+        arg_dev_type.push_back(arg_ctx_str);
+        arg_dev_id.push_back(in_arg.ctx().real_dev_id());
+      }
+
+      // convert input aux
+      for (size_t i=0; i < in_aux_names.size(); i++) {
+        aux_names.push_back(in_aux_names[i].c_str());
+        const auto &in_aux = *(in_aux_ptr[i]);
+
+#if MXNET_USE_MKLDNN == 1
+        // reorder data if in MKLDNN format
+        if (in_aux.IsMKLDNNData()) {
+          in_aux.Reorder2DefaultAsync();
+          in_aux.WaitToRead();
+        }
+#endif
+
+        // pull out parts of NDArray to send to backend
+        aux_data.push_back(in_aux.data().dptr_);
+        aux_shapes.push_back(in_aux.shape().data());
+        aux_dims.push_back(in_aux.shape().ndim());
+        aux_types.push_back(in_aux.dtype());
+        aux_verIDs.push_back(in_aux.version());
+        const char* aux_ctx_str = in_aux.ctx().dev_mask() == Context::kCPU ? "cpu" : "gpu";
+        aux_dev_type.push_back(aux_ctx_str);
+        aux_dev_id.push_back(in_aux.ctx().real_dev_id());
+      }
+
+      // convert graph to string
+      std::string in_json = nnvm::pass::SaveJSON(g);
+
+      std::vector<std::string> new_arg_names, new_aux_names;
+      std::vector<NDArray*> new_args, new_aux;
+
+      // create lambda that captures stream & resource objects
+      // this temp workspace holds memory allocated by custom library via OpResource
+      auto ndarray_alloc = [&](const mxnet::TShape &shape, Context ctx, int dtype,
+                               std::string name, bool isArg) {
+        NDArray* arr = new NDArray(shape, ctx, dtype);
+        if (isArg) {
+          new_args.push_back(arr);
+          new_arg_names.push_back(name);
+        } else {
+          new_aux.push_back(arr);
+          new_aux_names.push_back(name);
+        }
+        return arr;
+      };
+
+      // create no-capture lambda so that we can cast it to function pointer
+      // lambda with captures cannot be cast to function pointer and pass to lib_api.h
+      // this needs to be a lambda function so that we can do the decltype cast
+      typedef decltype(ndarray_alloc) alloc_type_ndarray;
+      auto ndarray_malloc = [](const void* _ndarray_alloc, const int64_t* shapes, int num_shapes,
+                               const char* dev_str, int dev_id, int dtype, const char* name,
+                               int isArg, void** data) {
+        mxnet::TShape shape(num_shapes, 0);
+        for (int i = 0; i < num_shapes; i++)
+          shape[i] = shapes[i];
+        int dev_type = -1;
+        if (strcmp(dev_str, "cpu") == 0)
+          dev_type = kCPU;
+        else
+          dev_type = kGPU;
+        Context ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id);
+
+        // cast the void* argument to the type for the cpu_alloc lambda function
+        const alloc_type_ndarray* ndalloc = static_cast<const alloc_type_ndarray*>(_ndarray_alloc);
+        // call cpu_alloc to actually allocate memory and return the pointer
+        NDArray* arr = (*ndalloc)(shape, ctx, dtype, name, isArg);
+        *data = arr->data().dptr_;
+      };
+
+      char* out_json;
+      CHECK(callGraphPass(pass_fp, in_json.c_str(), &out_json, opt_keys.data(),
+                          opt_vals.data(), opt_keys.size(), pass_name,
+                          arg_names.data(), arg_names.size(), arg_data.data(),
+                          arg_shapes.data(), arg_dims.data(), arg_types.data(),
+                          arg_verIDs.data(), arg_dev_type.data(),
+                          arg_dev_id.data(), aux_names.data(), aux_names.size(),
+                          aux_data.data(), aux_shapes.data(), aux_dims.data(),
+                          aux_types.data(), aux_verIDs.data(),
+                          aux_dev_type.data(), aux_dev_id.data(),
+                          ndarray_malloc, &ndarray_alloc))
+      << "Error calling graph pass for '" << pass_name << "'";
+
+      std::string out_string(out_json);
+      nnvm::Graph out_graph = nnvm::pass::LoadJSON(out_string);
+
+      out_graph.attrs["new_args"] = std::make_shared<nnvm::any>(new_args);
+      out_graph.attrs["new_arg_names"] = std::make_shared<nnvm::any>(new_arg_names);
+      out_graph.attrs["new_aux"] = std::make_shared<nnvm::any>(new_aux);
+      out_graph.attrs["new_aux_names"] = std::make_shared<nnvm::any>(new_aux_names);
+
+      callFree(out_json);
+      return out_graph;
+    };
+
+    nnvm::PassFunctionReg& pass = dmlc::Registry<nnvm::PassFunctionReg>::Get()->__REGISTER__(name);
+    pass.set_body(pass_lambda);
+    pass.set_change_graph(true);
+  }
+}
+
+/*!
+ * \brief Loads dynamic custom library and initializes it
+ * \param path library path
+ */
+int MXLoadLib(const char *path, unsigned verbose) {
+  API_BEGIN();
+  void *lib = LibraryInitializer::Get()->lib_load(path);
+  if (!lib)
+    LOG(FATAL) << "Unable to load library";
+
+  // check that library and MXNet use same version of library API
+  opVersion_t opVersion = get_func<opVersion_t>(lib, const_cast<char*>(MXLIB_OPVERSION_STR));
+  int libVersion =  opVersion();
+  if (MX_LIBRARY_VERSION != libVersion)
+    LOG(FATAL) << "Library version (" << libVersion << ") does not match MXNet version ("
+               << MX_LIBRARY_VERSION << ")";
+
+  // initialize library by passing MXNet version
+  initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
+  if (!initialize(static_cast<int>(MXNET_VERSION)))
+    LOG(FATAL) << "Library failed to initialize";
+
+  // find ops, partitioners, and passes in library
+  registerOperators(lib, verbose);
+  registerPartitioners(lib, verbose);
+  registerPasses(lib, verbose);
   API_END();
 }
 

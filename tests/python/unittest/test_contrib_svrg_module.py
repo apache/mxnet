@@ -307,7 +307,3 @@ def test_fit():
     estimated_mse = 1e-5
     assert metric.get()[1] < estimated_mse
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

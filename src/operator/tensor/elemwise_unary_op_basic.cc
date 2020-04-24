@@ -296,6 +296,7 @@ NNVM_REGISTER_OP(_backward_reshape)
 
 MXNET_OPERATOR_REGISTER_UNARY(BlockGrad)
 MXNET_ADD_SPARSE_OP_ALIAS(stop_gradient)
+.add_alias("_npx_stop_gradient")
 .add_alias("stop_gradient")
 .describe(R"code(Stops gradient computation.
 

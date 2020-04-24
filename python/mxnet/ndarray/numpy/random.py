@@ -242,24 +242,13 @@ def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
     out : ndarray or scalar
         Drawn samples from the parameterized logistic distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
-    if input_type == (True, True):
-        return _npi.logistic(loc, scale, loc=None, scale=None, size=size,
-                             ctx=ctx, out=out)
-    elif input_type == (False, True):
-        return _npi.logistic(scale, loc=loc, scale=None, size=size,
-                             ctx=ctx, out=out)
-    elif input_type == (True, False):
-        return _npi.logistic(loc, loc=None, scale=scale, size=size,
-                             ctx=ctx, out=out)
-    else:
-        return _npi.logistic(loc=loc, scale=scale, size=size,
-                             ctx=ctx, out=out)
+    return _api_internal.logistic(loc, scale, size, ctx, out)
 
 
 def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
@@ -290,24 +279,13 @@ def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
     out : ndarray or scalar
         Drawn samples from the parameterized Gumbel distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
-    if input_type == (True, True):
-        return _npi.gumbel(loc, scale, loc=None, scale=None, size=size,
-                           ctx=ctx, out=out)
-    elif input_type == (False, True):
-        return _npi.gumbel(scale, loc=loc, scale=None, size=size,
-                           ctx=ctx, out=out)
-    elif input_type == (True, False):
-        return _npi.gumbel(loc, loc=None, scale=scale, size=size,
-                           ctx=ctx, out=out)
-    else:
-        return _npi.gumbel(loc=loc, scale=scale, size=size,
-                           ctx=ctx, out=out)
+    return _api_internal.gumbel(loc, scale, size, ctx, out)
 
 
 def multinomial(n, pvals, size=None):
@@ -387,17 +365,13 @@ def rayleigh(scale=1.0, size=None, ctx=None, out=None):
     out : ndarray or scalar
         Drawn samples from the parameterized Rayleigh distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    tensor_type_name = np_ndarray
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
-    is_tensor = isinstance(scale, tensor_type_name)
-    if is_tensor:
-        return _npi.rayleigh(scale, scale=None, size=size, ctx=ctx, out=out)
-    else:
-        return _npi.rayleigh(scale=scale, size=size, ctx=ctx, out=out)
+    return _api_internal.rayleigh(scale, size, ctx, out)
 
 
 def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
@@ -570,18 +544,13 @@ def exponential(scale=1.0, size=None, ctx=None, out=None):
     out : ndarray or scalar
         Drawn samples from the parameterized exponential distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    tensor_type_name = np_ndarray
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
-    is_tensor = isinstance(scale, tensor_type_name)
-    if is_tensor:
-        return _npi.exponential(scale, scale=None, size=size,
-                                ctx=ctx, out=out)
-    else:
-        return _npi.exponential(scale=scale, size=size, ctx=ctx, out=out)
+    return _api_internal.exponential(scale, size, ctx, out)
 
 
 def weibull(a, size=None, ctx=None, out=None):
@@ -626,17 +595,13 @@ def weibull(a, size=None, ctx=None, out=None):
     model time to failure, in modeling particle sizes, in information retrieval
     to model dwell time on pages, in quantitative finance to model risk etc.
     """
-    from ...numpy import ndarray as np_ndarray
-    tensor_type_name = np_ndarray
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
-    is_tensor = isinstance(a, tensor_type_name)
-    if is_tensor:
-        return _npi.weibull(a, a=None, size=size, ctx=ctx, out=out)
-    else:
-        return _npi.weibull(a=a, size=size, ctx=ctx, out=out)
+    return _api_internal.weibull(a, size, ctx, out)
 
 
 def pareto(a, size=None, ctx=None, out=None):
@@ -671,20 +636,16 @@ def pareto(a, size=None, ctx=None, out=None):
     where a is the shape and m the scale. Here m is assumed 1. The Pareto distribution
     is a power law distribution. Pareto created it to describe the wealth in the economy.
     """
-    from ...numpy import ndarray as np_ndarray
-    tensor_type_name = np_ndarray
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
-    is_tensor = isinstance(a, tensor_type_name)
-    if is_tensor:
-        return _npi.pareto(a, a=None, size=size, ctx=ctx, out=out)
-    else:
-        return _npi.pareto(a=a, size=size, ctx=ctx, out=out)
+    return _api_internal.pareto(a, size, ctx, out)
 
 
-def power(a, size=None):
+def power(a, size=None, ctx=None, out=None):
     r"""Draw samples in [0, 1] from a power distribution with given parameter a.
 
     Parameters
@@ -716,15 +677,13 @@ def power(a, size=None):
     The power distribution is just the inverse of the Pareto distribution and
     a special case of the Beta distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    tensor_type_name = np_ndarray
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
-    is_tensor = isinstance(a, tensor_type_name)
-    if is_tensor:
-        return _npi.powerd(a, a=None, size=size)
-    else:
-        return _npi.powerd(a=a, size=size)
+    return _api_internal.powerd(a, size, ctx, out)
 
 
 def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
@@ -1031,7 +990,7 @@ def shuffle(x):
            [3., 4., 5.],
            [0., 1., 2.]])
     """
-    _npi.shuffle(x, out=x)
+    _api_internal.shuffle(x, x)
 
 
 def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):

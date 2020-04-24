@@ -444,7 +444,3 @@ def test_modulated_deformable_convolution():
                         else:
                             rtol, atol = 0.05, 1e-3
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

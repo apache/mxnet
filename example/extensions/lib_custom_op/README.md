@@ -22,15 +22,13 @@ C++ Custom Operator Example and Tutorial
 
 Adding new operators in MXNet requires understanding of MXNet backend operator registration and recompiling of MXNet with all its dependencies. Users can use the old Python custom operator to add new operators, but it is slow, complicated and has poor adoption rate. So our approach for adding custom operators is to enable dynamic loading of C++ custom operators compiled in external libraries at runtime.
 
-Custom operators (CustomOp) enable users to write new operators without compiling against all of MXNet header files and dependencies. When a library containing custom operators is loaded dynamically, the operators found in the library will be re-registered in MXNet so that users can call those operators natively just like other built-in operators.
+Custom operators (CustomOp) enable users to write new operators without compiling against all of MXNet header files and dependencies. When a library containing custom operators is loaded dynamically, the operators found in the library will be registered in MXNet so that users can call those operators natively just like other built-in operators.
 
 ## Getting Started
 
 ### Have MXNet Ready
 
-Custom Operator support was merged (#15921, #17270) and is not available in versions of MXNet prior to v1.7.0.
-To access the feature now, please install MXNet by compiling from source using master or using the previously mentioned commits, downloading one of the nightly builds, or from a release of MXNet 1.7.0+.
-For running the following example, it doesn’t matter if it is a CUDA, MKLDNN or plain MXNet build; the custom operator doesn’t interact with the execution of other native MXNet operators.
+To run the following example, the build type of MXNet doesn’t matter since the custom operator doesn’t interact with the execution of other native MXNet operators.
 Note that if you want to run GPU examples and write your custom operators running on GPU, you still need an MXNet CUDA build.
 
 ### Run An Example
@@ -117,8 +115,7 @@ There are several required building blocks for making a custom operator:
 
 ```c++
     MXReturnValue parseAttrs(
-        std::map<std::string,
-        std::string> attrs,
+        const std::unordered_map<std::string, std::string>& attrs,
         int* num_in,
         int* num_out)
 ```
@@ -129,9 +126,9 @@ There are several required building blocks for making a custom operator:
 
 ```c++
     MXReturnValue inferType(
-        std::map<std::string, std::string> attrs,
-        std::vector<int> &intypes,
-        std::vector<int> &outtypes)
+        const std::unordered_map<std::string, std::string>& attrs,
+        std::vector<int>* intypes,
+        std::vector<int>* outtypes)
 ```
 
 * [inferShape](./gemm_lib.cc#L143):
@@ -139,9 +136,9 @@ There are several required building blocks for making a custom operator:
 
 ```c++
     MXReturnValue inferShape(
-        std::map<std::string, std::string> attrs,
-        std::vector<std::vector<unsigned int>> &inshapes,
-        std::vector<std::vector<unsigned int>> &outshapes)
+        const std::unordered_map<std::string, std::string>& attrs,
+        std::vector<std::vector<unsigned int>>* inshapes,
+        std::vector<std::vector<unsigned int>>* outshapes)
 ```
 
 * [forward](./gemm_lib.cc#L56):
@@ -149,10 +146,10 @@ There are several required building blocks for making a custom operator:
 
 ```c++
     MXReturnValue forward(
-        std::map<std::string, std::string> attrs,
-        std::vector<MXTensor> inputs,
-        std::vector<MXTensor> outputs,
-        OpResource res)
+        const std::unordered_map<std::string, std::string>& attrs,
+        std::vector<MXTensor>* inputs,
+        std::vector<MXTensor>* outputs,
+        const OpResource& res)
 ```
 
 Also there are some optional functions you can specify:
@@ -162,10 +159,21 @@ Also there are some optional functions you can specify:
 
 ```c++
     MXReturnValue backward(
-        std::map<std::string, std::string> attrs,
-        std::vector<MXTensor> inputs,
-        std::vector<MXTensor> outputs,
-        OpResource res)
+        const std::unordered_map<std::string, std::string>& attrs,
+        std::vector<MXTensor>* inputs,
+        std::vector<MXTensor>* outputs,
+        const OpResource& res)
+```
+
+* [inferSType](./transposecsr_lib.cc#168) - Storage Type Inference:
+    * This function specifies how the custom operator infers storage types for inputs and outputs.
+
+```c++
+    MXReturnValue inferSType(
+        const std::unordered_map<std::string, std::string>& attrs,
+        std::vector<MXTensor>* inputs,
+        std::vector<MXTensor>* outputs,
+        const OpResource& res)
 ```
 
 * [mutateInputs](./gemm_lib.cc#L214) - Specify mutable input:
@@ -173,8 +181,8 @@ Also there are some optional functions you can specify:
 
 ```c++
     MXReturnValue mutateInputs(
-        std::map<std::string, std::string> attrs,
-        std::vector<int> &input_indices)
+        const std::unordered_map<std::string, std::string>& attrs,
+        std::vector<int>* input_indices)
 ```
 
 After specifying those functions, register the custom opeartor with MXNet:
@@ -198,6 +206,9 @@ Let’s take a closer look at those registry functions:
 If the number of input and output tensors are fixed, you can use hard-coded numbers. Otherwise you can get the user-specified attributes to determine the number of inputs and outputs.
 
 * **inferType**: This function takes three arguments. The 1st argument is the attributes (same as above). The 2nd argument is the a list of input data types corresponding to the input tensors. The 3rd argument is the placeholder for output tensor data types you need to assign.
+For example, if this operator has one input and one output, and data type doesn’t change, then you can do `outtypes[0] = intypes[0]` to populate the data type.
+
+* **inferSType**: This function takes three arguments. The 1st argument is the attributes (same as above). The 2nd argument is the a list of input storage types corresponding to the input tensors. The 3rd argument is the placeholder for output storage types you need to assign.
 For example, if this operator has one input and one output, and data type doesn’t change, then you can do `outtypes[0] = intypes[0]` to populate the data type.
 
 * **inferShape**: This function is similar to the `inferType` function, except it is used for populating the output data shapes. You need to figure out the shapes of each output tensors for this computation.
@@ -285,7 +296,7 @@ As a result, you don’t need to call `cudaMemcpy` to move the tensor data to th
     }
 ```
 
-Note that the `cuda_stream` object used for launching kernels is passed from MXNet backend via `OpResource` object. See below for details of `Operator Resource`.
+Note that the `cuda_stream` object used for launching kernels is passed from MXNet backend via `OpResource` object. See below for details of `Operator Resource`. You need to compile the `lib_api.h` header file with `nvcc` if you plan to create a custom GPU operator to enable the GPU support in the APIs.  
 Also, `in_data` and `out_data` are pointers to the tensor data allocated on the GPU, so you can pass them directly to your CUDA kernel.
 
 At this point all the attribute functions for each operator (`parseAttrs`, `inferShape`, etc.) run on the CPU, including the `forwardGPU` function. The only part that will actually run on the GPU is the launched CUDA kernel function.

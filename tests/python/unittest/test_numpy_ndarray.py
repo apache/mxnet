@@ -21,12 +21,13 @@ from __future__ import division
 import itertools
 import os
 import unittest
+import pytest
 import numpy as _np
 import mxnet as mx
 from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
-from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, retry, use_np
-from common import with_seed, TemporaryDirectory
+from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, use_np
+from common import with_seed, retry, TemporaryDirectory
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
@@ -623,7 +624,7 @@ def test_formatting():
     if str(context)[:3] != 'gpu':
         test_0d()
         test_nd_format()
-        test_nd_no_format() 
+        test_nd_no_format()
     # if the program is running in GPU, the formatted string would be appended with context notation
     # for exmpale, if a = np.array([np.pi]), the return value of '{}'.format(a) is '[3.1415927] @gpu(0)'
 
@@ -1125,6 +1126,7 @@ def test_np_multinomial():
 @unittest.skipUnless(is_op_runnable(), "Comparison ops can only run on either CPU instances, or GPU instances with"
                                        " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
+@unittest.skip("NumpyBooleanAssignForwardCPU broken: https://github.com/apache/incubator-mxnet/issues/17990")
 def test_np_ndarray_boolean_indexing():
     def test_single_bool_index():
         # adapted from numpy's test_indexing.py
@@ -1237,7 +1239,7 @@ def test_np_ndarray_boolean_indexing():
 
         mx_mask = np.array([[False,True, True],[False, True,False]],dtype=np.bool)
         np_mask = mx_mask.asnumpy()
-        
+
         np_data[0, np_mask] = 5
         mx_data[0, mx_mask] = 5
         assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
@@ -1315,7 +1317,3 @@ def test_np_ndarray_pickle():
             a_load = pickle.load(f)
         same(a.asnumpy(), a_load.asnumpy())
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

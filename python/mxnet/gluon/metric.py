@@ -640,7 +640,7 @@ class _ClassificationMetrics(object):
             return 0.
 
     @property
-    def global_precision(self):
+    def micro_precision(self):
         if self.num_classes is not None:
             return self.true_positives.sum() / numpy.maximum(self.true_positives.sum() + self.false_positives.sum(), 1e-12)
         else:
@@ -654,7 +654,7 @@ class _ClassificationMetrics(object):
             return 0.
 
     @property
-    def global_recall(self):
+    def micro_recall(self):
         if self.num_classes is not None:
             return self.true_positives.sum() / numpy.maximum(self.true_positives.sum() + self.false_negatives.sum(), 1e-12)
         else:
@@ -665,10 +665,10 @@ class _ClassificationMetrics(object):
         return (1 + self.beta ** 2) * self.precision * self.recall / numpy.maximum(self.beta ** 2 * self.precision + self.recall, 1e-12)
 
     @property
-    def global_fscore(self):
-        if self.global_precision + self.global_recall > 0:
-            return (1 + self.beta ** 2) * self.global_precision * self.global_recall / \
-                (self.beta ** 2 * self.global_precision + self.global_recall)
+    def micro_fscore(self):
+        if self.micro_precision + self.micro_recall > 0:
+            return (1 + self.beta ** 2) * self.micro_precision * self.micro_recall / \
+                (self.beta ** 2 * self.micro_precision + self.micro_recall)
         else:
             return 0.
             
@@ -781,7 +781,7 @@ class F1(EvalMetric):
             self.metrics.update_stats(label, pred)
 
         if self.average == "micro":
-            self.sum_metric = self.metrics.global_fscore * self.metrics.total_examples   
+            self.sum_metric = self.metrics.micro_fscore * self.metrics.total_examples   
         elif self.average == "macro":
             self.sum_metric = self.metrics.fscore.mean() * self.metrics.total_examples  
         else:

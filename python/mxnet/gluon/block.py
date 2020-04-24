@@ -27,7 +27,7 @@ import re
 from collections import OrderedDict, defaultdict
 import numpy as np
 
-from ..base import mx_real_t, MXNetError
+from ..base import mx_real_t, MXNetError, NDArrayHandle, py_str
 from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc
 from ..symbol.numpy import _symbol as np_symbol
 from ..symbol import Symbol
@@ -722,9 +722,13 @@ class Block(object):
         Parameters
         ----------
         callback : function
-            Takes a string and a NDArrayHandle.
+            Function called to inspect the values of the intermediate outputs
+            of blocks after hybridization. It takes 3 parameters:
+            name of the tensor being inspected (str)
+            name of the operator producing or consuming that tensor (str)
+            tensor being inspected (NDArray).
         monitor_all : bool, default False
-            If true, monitor both input and output, otherwise monitor output only.
+            If True, monitor both input and output, otherwise monitor output only.
         """
         for cld in self._children.values():
             cld.register_op_hook(callback, monitor_all)
@@ -1285,14 +1289,27 @@ class HybridBlock(Block):
         Parameters
         ----------
         callback : function
-            Takes a string and a NDArrayHandle.
+            Function called to inspect the values of the intermediate outputs
+            of blocks after hybridization. It takes 3 parameters:
+            name of the tensor being inspected (str)
+            name of the operator producing or consuming that tensor (str)
+            tensor being inspected (NDArray).
         monitor_all : bool, default False
-            If true, monitor both input and output, otherwise monitor output only.
+            If True, monitor both input and output, otherwise monitor output only.
         """
-        self._callback = callback
+        def c_callback(name, op_name, array):
+            """wrapper for user callback"""
+            import ctypes
+            array = ctypes.cast(array, NDArrayHandle)
+            array = NDArray(array, writable=False)
+            name = py_str(name)
+            op_name = py_str(op_name)
+            callback(name, op_name, array)
+
+        self._callback = c_callback
         self._monitor_all = monitor_all
         for cld in self._children.values():
-            cld._callback = callback
+            cld._callback = c_callback
             cld._monitor_all = monitor_all
 
     def __call__(self, x, *args):

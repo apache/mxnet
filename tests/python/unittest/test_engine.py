@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import nose
 import mxnet as mx
 import os
 import unittest
@@ -70,8 +69,3 @@ def test_engine_openmp_after_fork():
             print("Child omp max threads: {}".format(omp_max_threads))
             assert omp_max_threads == 1
 
-
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

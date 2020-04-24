@@ -19,11 +19,55 @@
 
 import numpy as _np
 from . import _op as _mx_nd_np
-from . import _internal as _npi
 from . import _api_internal
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
-           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq']
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank']
+
+
+def matrix_rank(M, tol=None, hermitian=False):
+    """
+    Return matrix rank of array using SVD method
+
+    Rank of the array is the number of singular values of the array that are
+    greater than `tol`.
+
+    Parameters
+    M : {(M,), (..., M, N)} ndarray
+        Input vector or stack of matrices.
+    tol : (...) ndarray, float, optional
+        Threshold below which SVD values are considered zero. If `tol` is
+        None, and ``S`` is an array with singular values for `M`, and
+        ``eps`` is the epsilon value for datatype of ``S``, then `tol` is
+        set to ``S.max() * max(M.shape) * eps``.
+    hermitian : bool, optional
+        If True, `M` is assumed to be Hermitian (symmetric if real-valued),
+        enabling a more efficient method for finding singular values.
+        Defaults to False.
+
+    Returns
+    -------
+    rank : (...) ndarray
+        Rank of M.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> np.matrix_rank(np.eye(4)) # Full rank matrix
+    4
+    >>> I=np.eye(4); I[-1,-1] = 0. # rank deficient matrix
+    >>> np.matrix_rank(I)
+    3
+    >>> np.matrix_rank(np.ones((4,))) # 1 dimension - rank 1 unless all 0
+    1
+    >>> np.matrix_rank(np.zeros((4,)))
+    0
+    """
+    finfo_eps_32 = _np.finfo(_np.float32).eps
+    finfo_eps_64 = _np.finfo(_np.float64).eps
+    if hermitian is True:
+        raise NotImplementedError("hermitian is not supported yet...")
+    return _api_internal.matrix_rank(M, tol, hermitian, finfo_eps_32, finfo_eps_64)
 
 
 def lstsq(a, b, rcond='warn'):
@@ -94,13 +138,9 @@ def lstsq(a, b, rcond='warn'):
     >>> m, c
     (1.0 -0.95) # may vary
     """
-    new_default = False
-    if rcond is None:
-        rcond = _np.finfo(a.dtype).eps
-        new_default = True
-    if rcond == "warn":
-        rcond = -1
-    x, residuals, rank, s = _npi.lstsq(a, b, rcond=rcond, new_default=new_default)
+    finfo_eps_32 = _np.finfo(_np.float32).eps
+    finfo_eps_64 = _np.finfo(_np.float64).eps
+    x, residuals, rank, s = _api_internal.lstsq(a, b, rcond, finfo_eps_32, finfo_eps_64)
     return (x, residuals, rank, s)
 
 
@@ -289,7 +329,7 @@ def norm(x, ord=None, axis=None, keepdims=False):
     (array(3.7416573), array(11.224973))
     """
     if axis is None and ord is None:
-        return _npi.norm(x, ord=2, axis=None, keepdims=keepdims, flag=-2)
+        return _api_internal.norm(x, 2, None, keepdims, -2)
     if axis is None or isinstance(axis, (int, tuple)):  # pylint: disable=too-many-nested-blocks
         if axis is not None:
             if isinstance(axis, int):
@@ -314,23 +354,23 @@ def norm(x, ord=None, axis=None, keepdims=False):
                     elif ord == -1:
                         return _mx_nd_np.sum(_mx_nd_np.abs(x), axis=row_axis, keepdims=keepdims).min(axis=col_axis, keepdims=keepdims)  # pylint: disable=line-too-long
                 if ord in [2, -2]:
-                    return _npi.norm(x, ord=ord, axis=axis, keepdims=keepdims, flag=0)
+                    return _api_internal.norm(x, ord, axis, keepdims, 0)
                 if ord is None:
-                    return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
+                    return _api_internal.norm(x, 2, axis, keepdims, 1)
         if ord == 'inf':
             return _mx_nd_np.max(_mx_nd_np.abs(x), axis=axis, keepdims=keepdims)
         elif ord == '-inf':
             return _mx_nd_np.min(_mx_nd_np.abs(x), axis=axis, keepdims=keepdims)
         elif ord is None:
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
+            return _api_internal.norm(x, 2, axis, keepdims, 1)
         elif ord == 2:
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=-1)
+            return _api_internal.norm(x, 2, axis, keepdims, -1)
         elif ord == 'nuc':
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=2)
+            return _api_internal.norm(x, 2, axis, keepdims, 2)
         elif ord in ['fro', 'f']:
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
+            return _api_internal.norm(x, 2, axis, keepdims, 1)
         else:
-            return _npi.norm(x, ord=ord, axis=axis, keepdims=keepdims, flag=-1)
+            return _api_internal.norm(x, ord, axis, keepdims, -1)
     else:
         raise TypeError("'axis' must be None, an integer or a tuple of integers.")
 # pylint: enable=too-many-return-statements
@@ -525,7 +565,7 @@ def qr(a, mode='reduced'):
     """
     if mode is not None and mode != 'reduced':
         raise NotImplementedError("Only default mode='reduced' is implemented.")
-    return tuple(_npi.qr(a))
+    return tuple(_api_internal.qr(a))
 
 
 def inv(a):
