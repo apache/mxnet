@@ -7199,6 +7199,51 @@ def test_np_tril_indices():
 
 
 @with_seed()
+@use_np   
+def test_np_fill_diagonal():
+    class TestFillDiagonal(HybridBlock):
+        def __init__(self, val, wrap=False):
+            super(TestFillDiagonal, self).__init__()
+            self._val = val
+            self._wrap= wrap
+
+        def hybrid_forward(self, F, x):
+            return F.np.fill_diagonal(x, val=self._val, wrap=self._wrap)
+
+    configs = [
+        ((10, 10), 2),
+        ((10, 10), -2),
+        ((4, 10), -2),
+        ((10, 4), 2),
+        ((10, 10), [-2, 2]),
+        ((10, 10), [-2, 2]),
+        ((10, 5), [-2, 2, -1, -3]),
+        ((100, 50), [-2, 2, -1, -3]),
+        ((1000, 500), [-2, 2, -1, -3]),
+        ((5, 10), [-2, 2, -1, -3]),
+        ((50, 100), [-2, 2, -1, -3]),
+        ((500, 1000), [-2, 2, -1, -3]),
+        ((4, 4, 4), 2),
+        ((4, 4, 4, 4), 2),
+        ((4, 4, 4, 4, 4), [-1, 2]),
+        ((4, 4, 4, 4, 4, 4, 4, 4), 2),
+        ((5, 5, 5, 5, 5, 5, 5, 5), [-1, 2, -2]),
+        ((6, 6, 6, 6, 6, 6, 6, 6), 2),
+        ((7, 7, 7, 7, 7, 7, 7, 7), [-1, 2, -2]),
+    ]
+    dtypes = ['int8', 'int32', 'int64', 'float16', 'float32', 'float64']
+    for dtype in dtypes:
+        for config in configs:
+            for wrap in [False, True]:
+                np_data = _np.ones(config[0]).astype(dtype)
+                mx_data = np.array(np_data, dtype=dtype)
+                test_filldiagonal = TestFillDiagonal(config[1], wrap)
+                test_filldiagonal(mx_data)
+                _np.fill_diagonal(np_data, config[1], wrap)
+                assert same(np_data, mx_data.asnumpy())
+
+
+@with_seed()
 @use_np
 def test_np_moveaxis():
     class TestMoveaxis(HybridBlock):
