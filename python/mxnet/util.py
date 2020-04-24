@@ -36,6 +36,12 @@ _set_np_shape_logged = False
 _set_np_array_logged = False
 
 
+def set_default_context(ctx):
+    """Set default context."""
+    from .context import Context
+    Context._default_ctx.value = ctx
+
+
 def get_gpu_count():
     size = ctypes.c_int()
     check_call(_LIB.MXGetGPUCount(ctypes.byref(size)))
