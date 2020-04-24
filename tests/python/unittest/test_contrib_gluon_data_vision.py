@@ -54,27 +54,23 @@ def _generate_objects():
 
 class TestImage(unittest.TestCase):
     IMAGES_URL = "http://data.mxnet.io/data/test_images.tar.gz"
-    IMAGES = []
-    IMAGES_DIR = None
 
-    @classmethod
-    def setupClass(cls):
-        cls.IMAGES_DIR = tempfile.mkdtemp()
-        cls.IMAGES = _get_data(cls.IMAGES_URL, cls.IMAGES_DIR)
-        print("Loaded {} images".format(len(cls.IMAGES)))
+    def setUp(self):
+        self.IMAGES_DIR = tempfile.mkdtemp()
+        self.IMAGES = _get_data(self.IMAGES_URL, self.IMAGES_DIR)
+        print("Loaded {} images".format(len(self.IMAGES)))
 
-    @classmethod
-    def teardownClass(cls):
-        if cls.IMAGES_DIR:
-            print("cleanup {}".format(cls.IMAGES_DIR))
-            shutil.rmtree(cls.IMAGES_DIR)
+    def tearDown(self):
+        if self.IMAGES_DIR:
+            print("cleanup {}".format(self.IMAGES_DIR))
+            shutil.rmtree(self.IMAGES_DIR)
 
     def test_imageiter(self):
-        im_list = [[np.random.randint(0, 5), x] for x in TestImage.IMAGES]
+        im_list = [[np.random.randint(0, 5), x] for x in self.IMAGES]
         os.makedirs('./data', exist_ok=True)
         fname = './data/test_imageiter.lst'
         file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x])
-                        for k, x in enumerate(TestImage.IMAGES)]
+                        for k, x in enumerate(self.IMAGES)]
         with open(fname, 'w') as f:
             for line in file_list:
                 f.write(line + '\n')
@@ -102,7 +98,7 @@ class TestImage(unittest.TestCase):
                         pass
 
     def test_image_bbox_iter(self):
-        im_list = [_generate_objects() + [x] for x in TestImage.IMAGES]
+        im_list = [_generate_objects() + [x] for x in self.IMAGES]
         det_iter = mx.gluon.contrib.data.vision.ImageBboxDataLoader(2, (3, 300, 300), imglist=im_list, path_root='')
         for _ in range(3):
             for _ in det_iter:
@@ -117,7 +113,7 @@ class TestImage(unittest.TestCase):
         # test file list with last batch handle
         os.makedirs('./data', exist_ok=True)
         fname = './data/test_imagedetiter.lst'
-        im_list = [[k] + _generate_objects() + [x] for k, x in enumerate(TestImage.IMAGES)]
+        im_list = [[k] + _generate_objects() + [x] for k, x in enumerate(self.IMAGES)]
         with open(fname, 'w') as f:
             for line in im_list:
                 line = '\t'.join([str(k) for k in line])
@@ -140,7 +136,7 @@ class TestImage(unittest.TestCase):
     def test_bbox_augmenters(self):
         # only test if all augmenters will work
         # TODO(Joshua Zhang): verify the augmenter outputs
-        im_list = [_generate_objects() + [x] for x in TestImage.IMAGES]
+        im_list = [_generate_objects() + [x] for x in self.IMAGES]
         det_iter = mx.gluon.contrib.data.vision.ImageBboxDataLoader(2, (3, 300, 300), imglist=im_list, path_root='',
             rand_crop=1, rand_pad=1, rand_gray=0.1, rand_mirror=True, mean=True,
             std=[1.1, 1.03, 1.05], brightness=0.1, contrast=0.1, saturation=0.1,
