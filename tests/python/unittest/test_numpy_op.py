@@ -2213,6 +2213,37 @@ def test_np_unary_funcs():
 
     funcs = {
         'absolute' : (lambda x: -1. * (x < 0) + (x > 0), -1.0, 1.0),
+        'logical_not' : (None, -1.0, 1.0),
+        'negative' : (lambda x: -1. * _np.ones(x.shape), -1.0, 1.0),
+        'reciprocal' : (lambda x: -1. / (x ** 2), 0.01, 1.0),
+        'sign' : (None, -1.0, 1.0),
+        'square' : (lambda x: 2.0 * x, -1.0, 1.0),
+    }
+    if has_tvm_ops():
+        funcs['rad2deg'] = (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0)
+        funcs['deg2rad'] = (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0)
+    ndim = random.choice([2, 3, 4])
+    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
+    for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
+        for func, func_data in funcs.items():
+            ref_grad, low, high = func_data
+            check_unary_func(func, ref_grad, shape, low, high)
+
+
+@with_seed()
+@use_np
+def test_np_mixedType_unary_funcs():
+    class TestMixedUnary(HybridBlock):
+        def __init__(self, func):
+            super(TestMixedUnary, self).__init__()
+            self._func = func
+
+        def hybrid_forward(self, F, a, *args, **kwargs):
+            return getattr(F.np, self._func)(a)
+
+    import math
+
+    funcs = {
         'cbrt' : (lambda x: 1. / (3. * _np.cbrt(x) ** 2), -1.0, 1.0),
         'ceil' : (None, -10.0, 10.0),
         'exp' : (lambda x: _np.exp(x), -1.0, 1.0),
@@ -2223,13 +2254,8 @@ def test_np_unary_funcs():
         'log10' : (lambda x: 1.0 / (x * _np.log(10)), 0.1, 10.0),
         'log1p' : (lambda x: 1.0 / (1.0 + x), -0.9, 5.0),
         'log2' : (lambda x: 1.0 / (x * _np.log(2)), 0.1, 2.0),
-        'logical_not' : (None, -1.0, 1.0),
-        'negative' : (lambda x: -1. * _np.ones(x.shape), -1.0, 1.0),
-        'reciprocal' : (lambda x: -1. / (x ** 2), 0.01, 1.0),
         'rint' : (None, -5.0, 5.0),
-        'sign' : (None, -1.0, 1.0),
         'sqrt' : (lambda x: 0.5 / _np.sqrt(x), 0.001, 10.0),
-        'square' : (lambda x: 2.0 * x, -1.0, 1.0),
         'trunc' : (None, -5.0, 5.0),
         'sin' : (lambda x: _np.cos(x), -1.0, 1.0),
         'cos' : (lambda x: -_np.sin(x), -1.0, 1.0),
@@ -2246,15 +2272,57 @@ def test_np_unary_funcs():
         'arccosh' : (lambda x: 1./(x**2 - 1.)**(1./2.), 2.0, 5.0),
         'arctanh' : (lambda x: -1./(x**2 - 1.), -0.99, 0.99)
     }
-    if has_tvm_ops():
-        funcs['rad2deg'] = (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0)
-        funcs['deg2rad'] = (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0)
+
+    dtypes = ['float16', 'float32', 'float64', 'int8', 'uint8', 'int32', 'int64', 'bool']
     ndim = random.choice([2, 3, 4])
-    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
-    for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
-        for func, func_data in funcs.items():
+    i = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
+    shapes = [i for i in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]];
+    for func, func_data in funcs.items():
+        for dtype, shape in itertools.product(dtypes, shapes):
+            rtol = 1e-2 if dtype == np.float16 else 1e-3
+            atol = 1e-4 if dtype == np.float16 else 1e-5
             ref_grad, low, high = func_data
-            check_unary_func(func, ref_grad, shape, low, high)
+            # get rid of warning: divide by zero
+            if((func=='log' or func=='log10' or func=='log2') and
+                (dtype=='int8' or dtype=='uint8' or dtype=='int32' or
+                dtype=='int64')):
+                low = 1
+            if (func=='arctanh' and dtype=='bool'):
+                continue
+            np_func = getattr(_np, func)
+            mx_func = TestMixedUnary(func)
+            np_test_data = _np.random.uniform(low, high, shape).astype(dtype)
+            mx_test_data = np.array(np_test_data)
+            for hybridize in [True, False]:
+                if hybridize:
+                    mx_func.hybridize()
+                if ref_grad:
+                    mx_test_data.attach_grad()
+                np_out = np_func(np_test_data)
+                with mx.autograd.record():
+                    y = mx_func(mx_test_data)
+                assert y.shape == np_out.shape
+                assert_almost_equal(y.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+                if np_out.dtype == np.bool_:
+                    assert y.dtype == np.bool_
+
+                if ref_grad and (dtype == 'float16' or dtype == 'float32' or dtype == 'float64'):
+                    y.backward()
+                    assert_almost_equal(mx_test_data.grad.asnumpy(), ref_grad(np_test_data), rtol=1e-1, atol=1e-2, equal_nan=True)
+
+            np_out = getattr(_np, func)(np_test_data)
+            mx_out = getattr(mx.np, func)(mx_test_data)
+            assert mx_out.shape == np_out.shape
+            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
+
+            assertRaises(NotImplementedError, getattr(np, func), mx_test_data, where=False)
+            assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  subok=False)
+            assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  dtype=_np.int8)
+            assertRaises(TypeError, getattr(np, func), mx_test_data,  dtype="abcdefg")
+            assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  casting='safe')
+            assertRaises(TypeError, getattr(np, func), mx_test_data,  casting='mxnet')
+            assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  order='C')
+            assertRaises(NotImplementedError, getattr(np, func), mx_test_data,  order='mxnet')
 
 
 @with_seed()
