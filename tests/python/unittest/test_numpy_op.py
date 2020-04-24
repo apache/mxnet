@@ -3908,7 +3908,8 @@ def test_npx_special_unary_func():
         'erf' : (lambda x: 2.0 / math.sqrt(math.pi) * _np.exp(-(x ** 2)), 0.5, 0.5),
         'erfinv' : (lambda x: 0.5 * math.sqrt(math.pi) * _np.exp(scipy_special.erfinv(x) ** 2), 0.5, 0.5),
         'gamma' : (lambda x: scipy_special.gamma(x) * scipy_special.psi(x), 0.5, 0.5),
-        'gammaln' : (lambda x: scipy_special.psi(x), 0.5, 0.5)
+        'gammaln' : (lambda x: scipy_special.psi(x), 0.5, 0.5),
+        'digamma' : (lambda x: scipy_special.polygamma(1, x), 0.5, 0.5)
     }
     ndim = random.choice([2, 3, 4])
     shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
