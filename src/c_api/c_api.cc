@@ -1273,15 +1273,16 @@ int MXLoadLib(const char *path, unsigned verbose) {
 
   // check that library and MXNet use same version of library API
   opVersion_t opVersion = get_func<opVersion_t>(lib, const_cast<char*>(MXLIB_OPVERSION_STR));
-  int libVersion =  opVersion();
+  int libVersion = opVersion();
   if (MX_LIBRARY_VERSION != libVersion)
-    LOG(FATAL) << "Library version (" << libVersion << ") does not match MXNet version ("
-               << MX_LIBRARY_VERSION << ")";
+    LOG(FATAL) << "Loaded library version (ver " << libVersion
+               << ") does not match MXNet supported library version (ver "
+               << MX_LIBRARY_VERSION << "). Please update your lib_api.h";
 
   // initialize library by passing MXNet version
   initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
   if (!initialize(static_cast<int>(MXNET_VERSION)))
-    LOG(FATAL) << "Library failed to initialize";
+    LOG(FATAL) << "Library failed to initialize. Please check library initialization function";
 
   // find ops, partitioners, and passes in library
   registerOperators(lib, verbose);

@@ -20,13 +20,10 @@
 /*!
  * Copyright (c) 2019 by Contributors
  * \file lib_api.h
- * \brief APIs to interact with libraries
- * This API specifies function prototypes to
- * register custom ops, partitioner, and passes
- * for library authors
- * See example/extension/lib_custom_op/README.md
- * See example/extension/lib_subgraph/README.md
- * See example/extension/lib_pass/README.md
+ * \brief APIs to write extension libraries
+ * This API specifies function prototypes to register
+ * C++ custom operators, partitioner, and graph passes
+ * See example/extension/ for details
  */
 
 #ifndef MXNET_LIB_API_H_
@@ -48,7 +45,7 @@
   #include <curand_kernel.h>
 #endif
 
-/* Make sure to update the version number everytime you make changes */
+/* Make sure to update the extension API version number everytime you make changes */
 #define MX_LIBRARY_VERSION 7
 
 /*!
@@ -584,7 +581,7 @@ std::string getShapeAt(const std::string& shape, unsigned index) {
  * Examples:
  *
  * getDtypeAt("[1]", 0) returns "1"
- * getDtypeAt("[1,2]", 1) returns "2" 
+ * getDtypeAt("[1,2]", 1) returns "2"
  */
 std::string getDtypeAt(const std::string& dtype, unsigned index) {
   // find the beginning of the output dtype for the particular output index
