@@ -1,1 +1,1 @@
-MXNet-Perl for Windows is not yet available.
+MXNet Perl API for Windows is not yet available.

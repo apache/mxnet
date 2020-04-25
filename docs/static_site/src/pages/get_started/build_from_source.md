@@ -112,18 +112,18 @@ The following lists show this order by library and `cmake` switch.
 
 For desktop platforms (x86_64):
 
-1. MKL-DNN (submodule) | `USE_MKLDNN`
-2. MKL | `USE_MKL_IF_AVAILABLE`
-3. MKLML (downloaded) | `USE_MKLML`
-4. Apple Accelerate | `USE_APPLE_ACCELERATE_IF_AVAILABLE` | Mac only
-5. OpenBLAS | `BLAS` | Options: Atlas, Open, MKL, Apple
+1. MKL-DNN (submodule), `USE_MKLDNN`
+2. MKL, `USE_MKL_IF_AVAILABLE`
+3. MKLML (downloaded), `USE_MKLML`
+4. Apple Accelerate (Mac only), `USE_APPLE_ACCELERATE_IF_AVAILABLE`
+5. OpenBLAS, `BLAS`
 
 Note: If `USE_MKL_IF_AVAILABLE` is set to False then MKLML and MKL-DNN will be disabled as well for configuration
 backwards compatibility.
 
 For embedded platforms (all other and if cross compiled):
 
-1. OpenBLAS | `BLAS` | Options: Atlas, Open, MKL, Apple
+1. OpenBLAS, `BLAS`
 
 You can set the BLAS library explicitly by setting the BLAS variable to:
 
@@ -173,6 +173,7 @@ unpredictable.
 
 If you want to run MXNet with GPUs, you must install [NVDIA CUDA and cuDNN](https://developer.nvidia.com/cuda-downloads).
 
+After installation, run nvidia-smi to verify cuda is available on your machine.
 
 #### Install Optional Software
 
