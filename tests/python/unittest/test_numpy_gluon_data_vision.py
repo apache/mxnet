@@ -406,7 +406,3 @@ def test_bbox_crop():
     im_out, im_bbox = transform(img, bbox)
     assert im_out.shape == (3, 3, 3)
     assert im_bbox[0][2] == 3
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

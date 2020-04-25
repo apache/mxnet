@@ -24,8 +24,6 @@ import shutil
 import tempfile
 import unittest
 
-from nose.tools import raises
-
 def _get_data(url, dirname):
     import os, tarfile
     download(url, dirname=dirname, overwrite=False)
