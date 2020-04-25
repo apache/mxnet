@@ -534,7 +534,7 @@ def predict_with_threshold(pred, threshold=0.5):
     
 
 def one_hot(idx, num):
-    return (numpy.arange(num).astype(idx) == idx[:,None]).astype('int32')
+    return (numpy.arange(num).astype(idx) == idx[:, None]).astype('int32')
     
 
 @use_np        
@@ -572,7 +572,8 @@ class _ClassificationMetrics(object):
             self.false_positives = numpy.zeros(num)
             self.true_negatives = numpy.zeros(num)
         else:
-            assert self.num_classes == num, "Input number of classes has changed from {} to {}".format(self.num_classes, num)
+            assert self.num_classes == num, \
+                "Input number of classes has changed from {} to {}".format(self.num_classes, num)
             
     def update_stats(self, label, pred):
         """Update various binary classification counts for a single (label, pred) pair.
@@ -610,11 +611,13 @@ class _ClassificationMetrics(object):
         elif self.class_type == "multilabel":
             num = pred.shape[-1]
             self._set(num)
-            assert pred.shape == label.shape, "The shape of label should be same as that of prediction for multilabel classification."
+            assert pred.shape == label.shape, \
+                "The shape of label should be same as that of prediction for multilabel classification."
             pred_label = predict_with_threshold(pred, self.threshold).reshape(-1, num)
             label = label.reshape(-1, num)
         else:
-            raise ValueError("Wrong class_type {}! Only supports ['binary', 'multiclass', 'multilabel']".format(self.class_type))
+            raise ValueError(
+                "Wrong class_type {}! Only supports ['binary', 'multiclass', 'multilabel']".format(self.class_type))
             
         check_label_shapes(label, pred_label)
         
@@ -642,7 +645,8 @@ class _ClassificationMetrics(object):
     @property
     def micro_precision(self):
         if self.num_classes is not None:
-            return self.true_positives.sum() / numpy.maximum(self.true_positives.sum() + self.false_positives.sum(), 1e-12)
+            return self.true_positives.sum() / \
+                numpy.maximum(self.true_positives.sum() + self.false_positives.sum(), 1e-12)
         else:
             return 0.
             
@@ -656,13 +660,15 @@ class _ClassificationMetrics(object):
     @property
     def micro_recall(self):
         if self.num_classes is not None:
-            return self.true_positives.sum() / numpy.maximum(self.true_positives.sum() + self.false_negatives.sum(), 1e-12)
+            return self.true_positives.sum() / \
+                numpy.maximum(self.true_positives.sum() + self.false_negatives.sum(), 1e-12)
         else:
             return 0.
             
     @property
     def fscore(self):
-        return (1 + self.beta ** 2) * self.precision * self.recall / numpy.maximum(self.beta ** 2 * self.precision + self.recall, 1e-12)
+        return (1 + self.beta ** 2) * self.precision * self.recall / \
+            numpy.maximum(self.beta ** 2 * self.precision + self.recall, 1e-12)
 
     @property
     def micro_fscore(self):
@@ -744,7 +750,7 @@ class F1(EvalMetric):
     average : str, default 'micro'
         Strategy to be used for aggregating across mini-batches.
             "macro": Calculate metrics for each label and return unweighted mean of f1.
-            "micro": Calculate metrics globally by counting the total true positives, false negatives and false positives.
+            "micro": Calculate metrics globally by counting the total TP, FN and FP.
             None: Return f1 scores for each class (numpy.ndarray) . 
 
     Examples
@@ -835,7 +841,7 @@ class Fbeta(F1):
     average : str, default 'micro'
         Strategy to be used for aggregating across mini-batches.
             "macro": Calculate metrics for each label and return unweighted mean of f1.
-            "micro": Calculate metrics globally by counting the total true positives, false negatives and false positives.
+            "micro": Calculate metrics globally by counting the total TP, FN and FP.
             None: Return f1 scores for each class. 
 
     Examples
@@ -850,9 +856,9 @@ class Fbeta(F1):
 
     def __init__(self, name='fbeta',
                  output_names=None, label_names=None, class_type="binary", beta=1, threshold=0.5, average="micro"):
-        super(Fbeta, self).__init__(name=name,
-                            output_names=output_names, label_names=label_names, 
-                            class_type=class_type, threshold=threshold, average=average)
+        super(Fbeta, self).__init__(
+            name=name, output_names=output_names, label_names=label_names, 
+            class_type=class_type, threshold=threshold, average=average)
         self.metrics = _ClassificationMetrics(class_type=class_type, threshold=threshold, beta=beta)
         
 
