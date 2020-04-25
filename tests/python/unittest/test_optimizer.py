@@ -506,6 +506,7 @@ def test_sparse_adam():
 
 
 @with_seed()
+@retry(3)
 def test_adamax():
     opt1 = mx.optimizer.Adamax
     opt2 = mx.optimizer.Adamax

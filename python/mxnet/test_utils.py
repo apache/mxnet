@@ -1803,8 +1803,10 @@ def get_cifar10():
             (not os.path.exists('data/cifar/test.rec')) or \
             (not os.path.exists('data/cifar/train.lst')) or \
             (not os.path.exists('data/cifar/test.lst')):
-        zip_file_path = download('http://data.mxnet.io/mxnet/data/cifar10.zip',
-                                 dirname='data')
+        url = 'http://data.mxnet.io/mxnet/data/cifar10.zip'
+        sha1 = 'b9ac287012f2dad9dfb49d8271c39ecdd7db376c'
+        zip_file_path = mx.gluon.utils.download(url, path='data', sha1_hash=sha1,
+                                                verify_ssl=False)
         with zipfile.ZipFile(zip_file_path) as zf:
             zf.extractall('data')
 
