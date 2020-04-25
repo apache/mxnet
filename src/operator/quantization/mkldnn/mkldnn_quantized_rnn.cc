@@ -94,7 +94,11 @@ std::vector<float> GetMKLDNNRnnWeightsQParams(const MKLDNNRnnFullParam& full_par
       }
       for (index_t go = 0; go < gates_nblks; ++go) {
         float tmp = w_max[go];
+        //* NOTES: min/max reductions were supported since OpenMP 3.1, which was released in
+        //  Jul 2011 (hence the version number).
+        #if _OPENMP >= 201107
         #pragma omp parallel for reduction(max : tmp) num_threads(nthreads)
+        #endif
         for (index_t i = 0; i < state_size; ++i) {
           tmp = Max(goi_max[go * state_size + i], tmp);
         }
