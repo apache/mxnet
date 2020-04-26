@@ -22,7 +22,7 @@ __all__ = ['Gamma']
 
 from .exp_family import ExponentialFamily
 from .constraint import Real, Positive
-from .utils import getF, sample_n_shape_converter, gammaln
+from .utils import getF, sample_n_shape_converter, gammaln, digamma
 
 class Gamma(ExponentialFamily):
     # TODO: Implement implicit reparameterization gradient for Gamma.
@@ -72,8 +72,11 @@ class Gamma(ExponentialFamily):
         return self.shape * (self.scale ** 2)
 
     def entropy(self):
-        # TODO: require computing derivative of gammaln(shape)
-        raise NotImplementedError
+        F = self.F
+        lgamma = gammaln(F)
+        dgamma = digamma(F)
+        return (self.shape + F.np.log(self.scale) + lgamma(self.shape) + 
+                (1 - self.shape) * dgamma(self.shape))
 
     @property
     def _natural_params(self):

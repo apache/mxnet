@@ -27,6 +27,18 @@ import numpy as onp
 import scipy.special as sc
 from .... import nd, sym, np
 
+def digamma(F):
+    """Unified digamma interface for both scalar and tensor
+    """
+    def compute(value):
+        """Return digamma(value)
+        """
+        if isinstance(value, Number):
+            return sc.digamma(value, dtype='float32')
+        return F.npx.digamma(value)
+    return compute
+
+
 def gammaln(F):
     """Unified gammaln interface for both scalar and tensor
     """

@@ -26,7 +26,7 @@ from mxnet.gluon.probability import StochasticBlock, StochasticSequential
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import use_np, assert_almost_equal, set_default_context
 import numpy as _np
-from common import (setup_module, with_seed, assertRaises, teardown,
+from common import (setup_module, with_seed, assertRaises,
                     assert_raises_cudnn_not_satisfied)
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
@@ -806,9 +806,9 @@ def test_gluon_gamma():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    # Test `mean` and `var`
+    # Test `mean`, `var` and `entropy`
     for shape, hybridize in itertools.product(shapes, [True, False]):
-        for func in ['mean', 'variance']:
+        for func in ['mean', 'variance', 'entropy']:
             alpha = np.random.uniform(0.5, 1.5, shape)
             scale = np.random.uniform(0.5, 1.5, shape)
             net = TestGamma(func)
@@ -818,8 +818,10 @@ def test_gluon_gamma():
             ss_gamma = ss.gamma(a=alpha.asnumpy(), loc=0, scale=scale.asnumpy())
             if func == 'mean':
                 np_out = ss_gamma.mean()
-            else:
+            elif func == 'variance':
                 np_out = ss_gamma.var()
+            else:
+                np_out = ss_gamma.entropy()
             assert_almost_equal(mx_out, np_out, atol=1e-4,
                                 rtol=1e-3, use_broadcast=False)
 
