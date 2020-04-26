@@ -20,8 +20,9 @@ import mxnet as mx
 import numpy as np
 import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
-from common import setup_module, with_seed, assertRaises, teardown
+from common import setup_module, with_seed, assertRaises, teardown_module
 from mxnet.base import py_str, MXNetError
+import pytest
 
 shape = (4, 4)
 keys = [5, 7, 11]
@@ -139,6 +140,7 @@ def test_list_kv_pair():
         check_list_kv_pair(init_kv_with_str(), str_keys, stype)
 
 
+@pytest.mark.skip(reason='Skipped due to segfault. Tracked in #18098')
 @with_seed()
 def test_aggregator():
     """aggregate value on muliple devices"""
@@ -175,6 +177,7 @@ def test_aggregator():
 
 
 @with_seed()
+@pytest.mark.skip(reason='Skipped due to segfault. Tracked in #18098')
 def test_sparse_aggregator():
     """aggregate sparse ndarray on muliple devices"""
     def check_sparse_aggregator(sparse_pull):
@@ -344,6 +347,3 @@ def test_invalid_pull():
         check_invalid_key_types_single(kvs[i], single_keys[1 - i])
         check_invalid_key_types_list(kvs[i], list_keys[1 - i])
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

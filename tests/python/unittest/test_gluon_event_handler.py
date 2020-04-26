@@ -34,7 +34,7 @@ try:
 except ImportError:
     from io import StringIO
 
-class TestAxisArrayDataset(Dataset):
+class AxisArrayDataset(Dataset):
     def __init__(self, * args):
         self._length = len(args[1])
         self._data = []
@@ -50,7 +50,7 @@ class TestAxisArrayDataset(Dataset):
     def __len__(self):
         return self._length
 
-class TestHandler(EpochEnd):
+class Handler(EpochEnd):
     def __init__(self):
         pass
 
@@ -73,7 +73,7 @@ def _get_test_data(in_size=32):
 def _get_batch_axis_test_data(in_size=32):
     data = nd.ones((100, in_size))
     label = nd.zeros((1, in_size))
-    data_arr = TestAxisArrayDataset(data, label)
+    data_arr = AxisArrayDataset(data, label)
     return mx.gluon.data.DataLoader(data_arr, batch_size=8)
 
 def test_checkpoint_handler():
@@ -264,8 +264,8 @@ def test_logging_interval():
     info_len = 0
     for info in log_info_list:
         match = re.match(
-            '(\[Epoch \d+\]\[Batch \d+\]\[Samples \d+\] time\/interval: \d+.\d+s' +
-            ' training accuracy: \d+.\d+)', info)
+            r'(\[Epoch \d+\]\[Batch \d+\]\[Samples \d+\] time\/interval: \d+.\d+s' +
+            r' training accuracy: \d+.\d+)', info)
         if match:
             info_len += 1
 
@@ -287,8 +287,8 @@ def test_logging_interval():
     info_len = 0
     for info in log_info_list:
         match = re.match(
-            '(\[Epoch \d+\]\[Batch \d+\]\[Samples \d+\] time\/interval: \d+.\d+s' +
-            ' training accuracy: \d+.\d+)', info)
+            r'(\[Epoch \d+\]\[Batch \d+\]\[Samples \d+\] time\/interval: \d+.\d+s' +
+            r' training accuracy: \d+.\d+)', info)
         if match:
             info_len += 1
 
@@ -319,7 +319,7 @@ def test_validation_handler():
     est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
     val_handler = ValidationHandler(val_data=test_data,
                                     eval_fn=est.evaluate,
-                                    event_handlers=TestHandler())
+                                    event_handlers=Handler())
 
     est.fit(train_data=test_data, val_data=test_data,
             event_handlers=[val_handler], epochs=2)

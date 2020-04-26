@@ -26,7 +26,6 @@ import platform
 import mxnet as mx
 import scipy.stats as ss
 import scipy.special as scipy_special
-from nose.tools import assert_raises
 from mxnet import np, npx
 from mxnet.base import MXNetError
 from mxnet.test_utils import assert_almost_equal, use_np, set_default_context
@@ -109,7 +108,3 @@ def test_np_fallback_decorator():
     # does not support functions with no return values
     assertRaises(ValueError, empty_ret_func)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

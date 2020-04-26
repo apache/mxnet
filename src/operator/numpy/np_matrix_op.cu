@@ -29,7 +29,7 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_np_transpose)
+NNVM_REGISTER_OP(_npi_transpose)
 .set_attr<FCompute>("FCompute<gpu>", NumpyTranspose<gpu>);
 
 NNVM_REGISTER_OP(_np_reshape)
@@ -71,7 +71,10 @@ NNVM_REGISTER_OP(_npi_column_stack)
 NNVM_REGISTER_OP(_backward_np_column_stack)
 .set_attr<FCompute>("FCompute<gpu>", NumpyColumnStackBackward<gpu>);
 
-NNVM_REGISTER_OP(_np_roll)
+NNVM_REGISTER_OP(_npi_tril_indices)
+.set_attr<FCompute>("FCompute<gpu>", TrilindicesOpForward<gpu>);
+
+NNVM_REGISTER_OP(_npi_roll)
 .set_attr<FCompute>("FCompute<gpu>", NumpyRollCompute<gpu>);
 
 template<>
@@ -112,6 +115,12 @@ NNVM_REGISTER_OP(_backward_npi_flip)
 NNVM_REGISTER_OP(_np_moveaxis)
 .set_attr<FCompute>("FCompute<gpu>", NumpyMoveaxisCompute<gpu>);
 
+NNVM_REGISTER_OP(_npi_rollaxis)
+.set_attr<FCompute>("FCompute<gpu>", NumpyRollaxisCompute<gpu>);
+
+NNVM_REGISTER_OP(_npi_rollaxis_backward)
+.set_attr<FCompute>("FCompute<gpu>", NumpyRollaxisBackward<gpu>);
+
 NNVM_REGISTER_OP(_npi_rot90)
 .set_attr<FCompute>("FCompute<gpu>", NumpyRot90Compute<gpu>);
 
@@ -127,16 +136,16 @@ NNVM_REGISTER_OP(_npi_dsplit)
 NNVM_REGISTER_OP(_npx_reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
-NNVM_REGISTER_OP(_np_diag)
+NNVM_REGISTER_OP(_npi_diag)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_np_diag)
+NNVM_REGISTER_OP(_backward_npi_diag)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagOpBackward<gpu>);
 
-NNVM_REGISTER_OP(_np_diagonal)
+NNVM_REGISTER_OP(_npi_diagonal)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagonalOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_np_diagonal)
+NNVM_REGISTER_OP(_backward_npi_diagonal)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagonalOpBackward<gpu>);
 
 NNVM_REGISTER_OP(_np_diagflat)

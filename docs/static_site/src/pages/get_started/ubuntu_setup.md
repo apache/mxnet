@@ -134,6 +134,9 @@ cmake -GNinja ..
 cmake --build .
 ```
 
+Specify `cmake -DCMAKE_BUILD_TYPE=Debug -GNinja ..` if you wish to build the
+Debug version.
+
 Specify `cmake --build . --parallel N` to set the number of parallel compilation
 jobs. Default is derived from CPUs available.
 

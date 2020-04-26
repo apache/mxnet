@@ -149,7 +149,7 @@ def _test_last_batch_handle(data, labels=None, is_image=False):
         batch_count_list = [40, 39, 39]
     else:
         batch_count_list = [8, 7, 7]
-    
+
     for idx in range(len(last_batch_handle_list)):
         dataiter = mx.io.NDArrayIter(
             data, labels, 128, False, last_batch_handle=last_batch_handle_list[idx])
@@ -168,7 +168,7 @@ def _test_last_batch_handle(data, labels=None, is_image=False):
                        labelcount[int(label[i])] += 1
             else:
                 assert not batch.label, 'label is not empty list'
-            # keep the last batch of 'pad' to be used later 
+            # keep the last batch of 'pad' to be used later
             # to test first batch of roll_over in second iteration
             batch_count += 1
             if last_batch_handle_list[idx] == 'pad' and \
@@ -243,7 +243,7 @@ def test_NDArrayIter_h5py():
     with h5py.File('ndarraytest.h5') as f:
         f.create_dataset('data', data=data)
         f.create_dataset('label', data=labels)
-        
+
         _test_last_batch_handle(f['data'], f['label'])
         _test_last_batch_handle(f['data'], [])
         _test_last_batch_handle(f['data'])
@@ -285,7 +285,7 @@ def test_NDArrayIter_csr():
                      {'data': train_data}, dns, batch_size)
     except ImportError:
         pass
-    
+
     # scipy.sparse.csr_matrix with shuffle
     csr_iter = iter(mx.io.NDArrayIter({'data': train_data}, dns, batch_size,
                                       shuffle=True, last_batch_handle='discard'))
@@ -411,16 +411,15 @@ def test_LibSVMIter():
 
 
 def test_DataBatch():
-    from nose.tools import ok_
     from mxnet.io import DataBatch
     import re
     batch = DataBatch(data=[mx.nd.ones((2, 3))])
-    ok_(re.match(
-        'DataBatch: data shapes: \[\(2L?, 3L?\)\] label shapes: None', str(batch)))
+    assert re.match(
+        r'DataBatch: data shapes: \[\(2L?, 3L?\)\] label shapes: None', str(batch))
     batch = DataBatch(data=[mx.nd.ones((2, 3)), mx.nd.ones(
         (7, 8))], label=[mx.nd.ones((4, 5))])
-    ok_(re.match(
-        'DataBatch: data shapes: \[\(2L?, 3L?\), \(7L?, 8L?\)\] label shapes: \[\(4L?, 5L?\)\]', str(batch)))
+    assert re.match(
+        r'DataBatch: data shapes: \[\(2L?, 3L?\), \(7L?, 8L?\)\] label shapes: \[\(4L?, 5L?\)\]', str(batch))
 
 
 def test_CSVIter():
@@ -462,7 +461,7 @@ def test_ImageRecordIter_seed_augmentation():
         are the equal.
         """
         for batch1, batch2 in zip_longest(dataiter1, dataiter2):
-            
+
             # ensure iterators contain the same number of batches
             # zip_longest will return None if on of the iterators have run out of batches
             assert batch1 and batch2, 'The iterators do not contain the same number of batches'
@@ -533,7 +532,7 @@ def test_ImageRecordIter_seed_augmentation():
         random_h=10,
         max_shear_ratio=2,
         seed_aug=seed_aug)
-    
+
     assert_dataiter_items_equals(dataiter1, dataiter2)
 
     # check whether to get different images after change seed_aug
@@ -573,7 +572,7 @@ def test_ImageRecordIter_seed_augmentation():
         data_shape=(3, 28, 28),
         batch_size=3,
         seed_aug=seed_aug)
-    
+
     assert_dataiter_items_equals(dataiter1, dataiter2)
 
 if __name__ == "__main__":

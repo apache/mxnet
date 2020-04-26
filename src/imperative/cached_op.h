@@ -300,7 +300,7 @@ void SetInputIndices(const nnvm::Graph& fwd_graph,
   const auto& indexed_graph = fwd_graph.indexed_graph();
   if (data_indices->ndim() || param_indices.ndim()) {
     CHECK_EQ(data_indices->ndim() + param_indices.ndim(),
-             indexed_graph.input_nodes().size());
+             static_cast<const int>(indexed_graph.input_nodes().size()));
   } else {
     std::vector<uint32_t> tmp;
     tmp.reserve(indexed_graph.input_nodes().size());
@@ -366,7 +366,7 @@ class CachedOp {
   CachedOp(
       const nnvm::Symbol& sym,
       const std::vector<std::pair<std::string, std::string> >& flags);
-  ~CachedOp();
+  virtual ~CachedOp();
   uint32_t num_inputs() const {
     return fwd_graph_.indexed_graph().input_nodes().size();
   }

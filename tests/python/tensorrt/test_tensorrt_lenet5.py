@@ -116,6 +116,3 @@ def test_tensorrt_inference():
         """Absolute diff. between MXNet & TensorRT accuracy (%f) exceeds threshold (%f):
            MXNet = %f, TensorRT = %f""" % (absolute_accuracy_diff, epsilon, mx_pct, trt_pct)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

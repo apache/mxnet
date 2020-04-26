@@ -295,6 +295,66 @@ def test_batchnorm():
     for stype in stypes:
         check_batchnorm_training(stype)
 
+@with_seed()
+def test_batchnorm_relu_fusion():
+    def check_batchnorm_relu_fusion(shape):
+        x = mx.sym.Variable('x')
+        in_data = mx.nd.random.normal(shape=shape)
+        grad_out = mx.nd.random.uniform(0, 1, shape)
+        bn = mx.sym.BatchNorm(data=x, fix_gamma=False)
+        relu = mx.sym.Activation(data=bn, act_type='relu', name='relu')
+        exe = relu.simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
+        exe.arg_arrays[0][:] = in_data
+        exe.forward(is_train=True)
+        exe.backward(grad_out)
+        no_fuse_outputs = exe.outputs
+        no_fuse_grads = exe.grad_arrays
+
+        bnrelu = mx.sym.contrib.BatchNormWithReLU(data=x, fix_gamma=False)
+        exe_fuse = bnrelu.simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
+        exe_fuse.arg_arrays[0][:] = in_data
+        exe_fuse.forward(is_train=True)
+        exe_fuse.backward(grad_out)
+        fuse_outputs = exe_fuse.outputs
+        fuse_grads = exe_fuse.grad_arrays
+
+        for i in range(len(no_fuse_outputs)):
+            assert_almost_equal(no_fuse_outputs[i], fuse_outputs[i])
+        for i in range(len(no_fuse_grads)):
+            assert_almost_equal(no_fuse_grads[i], fuse_grads[i])
+
+    def check_batchnorm_relu_fusion_gluon(shape):
+        class BNNet(gluon.HybridBlock):
+            def __init__(self, fuse_relu):
+                super(BNNet, self).__init__()
+                self.fuse_relu = fuse_relu
+                with self.name_scope():
+                    if self.fuse_relu:
+                        self.bn = gluon.nn.BatchNormReLU()
+                    else:
+                        self.bn = gluon.nn.BatchNorm()
+                    self.relu = gluon.nn.Activation('relu')
+
+            def forward(self, x):
+                y = self.bn(x)
+                if not self.fuse_relu:
+                    y = self.relu(y)
+                return y
+        fused_net = BNNet(fuse_relu=True)
+        unfused_net = BNNet(fuse_relu=False)
+        fused_net.collect_params().initialize()
+        unfused_net.collect_params().initialize()
+        in_data = mx.nd.random.normal(shape=shape)
+        no_fuse_outputs = unfused_net.forward(in_data)
+        fuse_outputs = fused_net.forward(in_data)
+
+        for i in range(len(no_fuse_outputs)):
+            assert_almost_equal(no_fuse_outputs[i], fuse_outputs[i])
+
+    check_batchnorm_relu_fusion((1, 3, 224, 224))
+    check_batchnorm_relu_fusion((8, 3, 224, 224))
+    check_batchnorm_relu_fusion_gluon((1, 3, 224, 224))
+    check_batchnorm_relu_fusion_gluon((8, 3, 224, 224))
 
 @with_seed()
 def test_softmax():
@@ -316,15 +376,17 @@ def test_softmax():
 @with_seed()
 def test_pooling():
     def check_pooling_training(stype):
-        for shape in [(3, 3, 10), (3, 3, 20, 20)]:
+        for shape in [(3, 3, 10), (3, 3, 20, 20), (3, 3, 10, 20, 20)]:
             data_tmp = np.random.normal(-0.1, 0.1, size=shape)
             data = mx.symbol.Variable('data', stype=stype)
             in_location = [mx.nd.array(data_tmp).tostype(stype)]
 
             if np.array(shape).shape[0] == 3:
-                test = mx.symbol.Pooling(data=data, kernel=(3,), stride=(2), pool_type='avg')
+                test = mx.symbol.Pooling(data=data, kernel=(3), stride=(2), pool_type='avg')
             elif np.array(shape).shape[0] == 4:
                 test = mx.symbol.Pooling(data=data, kernel=(3, 3), stride=(2, 2), pool_type='avg')
+            elif np.array(shape).shape[0] == 5:
+                test = mx.symbol.Pooling(data=data, kernel=(3, 3, 3), stride=(2, 2, 2), pool_type='avg')
             else:
                 return 0
             check_numeric_gradient(test, in_location, numeric_eps=1e-2, rtol=0.16, atol=1e-4)
@@ -358,7 +420,7 @@ def test_activation():
 @with_seed()
 def test_convolution():
     def check_convolution_training(stype):
-        for shape in [(3, 3, 10), (3, 3, 10, 10)]:
+        for shape in [(3, 3, 10), (3, 3, 10, 10), (3, 3, 10, 10, 10)]:
             data_tmp = np.random.normal(-0.1, 1, size=shape)
             data = mx.symbol.Variable('data', stype=stype)
 
@@ -368,6 +430,9 @@ def test_convolution():
             elif np.array(shape).shape[0] == 4:
                 test = mx.symbol.Convolution(data=data, kernel=(3, 3), stride=(2, 2), num_filter=4)
                 weight_tmp = np.random.normal(-0.1, 0.1, size=(4, 3, 3, 3))
+            elif np.array(shape).shape[0] == 5:
+                test = mx.symbol.Convolution(data=data, kernel=(3, 3, 3), stride=(2, 2, 2), num_filter=4)
+                weight_tmp = np.random.normal(-0.1, 0.1, size=(4, 3, 3, 3, 3))
             else:
                 return 0
             bias_tmp = np.random.normal(0.1, 0.1, size=(4,))
@@ -637,6 +702,3 @@ def test_elemwise_add():
     for stype in stypes:
         check_elemwise_add_training(stype)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

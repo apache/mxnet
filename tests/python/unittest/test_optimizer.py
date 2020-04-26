@@ -22,10 +22,10 @@ import mxnet as mx
 import mxnet.lr_scheduler as lr_scheduler
 from mxnet import gluon
 import unittest
-from nose.tools import raises
+import pytest
 import math
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 
 @with_seed()
 def test_learning_rate():
@@ -44,7 +44,7 @@ def test_learning_rate():
     assert o3.learning_rate == 1024
 
 
-@raises(UserWarning)
+@pytest.mark.xfail(raises=UserWarning)
 @with_seed()
 def test_learning_rate_expect_user_warning():
     lr_s = lr_scheduler.FactorScheduler(step=1)
@@ -284,7 +284,7 @@ def test_lars():
 def test_lamb():
     opt1 = mx.optimizer.LAMB
     opt2 = mx.optimizer.LAMB
-    
+
     shapes = [(3, 4, 5), (10, 4), (7,)]
     beta1_options = [{}, {'beta1': 0.5}]
     beta2_options = [{}, {'beta2': 0.8}]
@@ -712,9 +712,10 @@ def test_sparse_ftrl():
             if (dtype == np.float16 and
                     ('multi_precision' not in kwarg or not kwarg['multi_precision'])):
                 continue
+            rtol, atol = (1e-3, 1e-3) if dtype is np.float16 else (1e-4, 1e-4)
             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shapes,
                               dtype, w_stype='row_sparse', g_stype='row_sparse',
-                              rtol=1e-4, atol=1e-4)
+                              rtol=rtol, atol=atol)
 
 
 @with_seed()
@@ -951,9 +952,4 @@ def test_cosine_scheduler():
     np.testing.assert_almost_equal(cosine_sched(0), base_lr)
     np.testing.assert_almost_equal(cosine_sched(steps), final_lr)
     assert (cosine_sched(500) > 1.5)
-
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
 

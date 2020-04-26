@@ -19,8 +19,9 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon.model_zoo.vision import get_model
 import sys
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 import multiprocessing
+import pytest
 
 
 def eprint(*args, **kwargs):
@@ -55,6 +56,7 @@ def parallel_download(model_name):
     print(type(model))
 
 @with_seed()
+@pytest.mark.skip(reason='MXNet is not yet safe for forking. Tracked in #17782.')
 def test_parallel_download():
     processes = []
     name = 'mobilenetv2_0.25'
@@ -66,6 +68,3 @@ def test_parallel_download():
     for p in processes:
         p.join()
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -22,16 +22,18 @@
 
 set -ex
 
-apt-get update || true
-# Install clang 3.9 (the same version as in XCode 8.*) and 6.0 (latest major release)
+# Install clang 3.9 (the same version as in XCode 8.*) and 10 (latest major release)
 wget -qO - http://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
     apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-3.9 main" && \
     apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-6.0 main" && \
+    apt-add-repository "deb http://apt.llvm.org/xenial/ llvm-toolchain-xenial-10 main" && \
     apt-get update && \
-    apt-get install -y clang-3.9 clang-6.0 clang-tidy-6.0 && \
+    apt-get install -y clang-3.9 clang-6.0 clang-10 clang-tidy-6.0 && \
     clang-3.9 --version && \
-    clang-6.0 --version
+    clang-6.0 --version && \
+    clang-10 --version
 
+# TODO(leezu) switch to clang-tidy 10
 # Use llvm's master version of run-clang-tidy.py.  This version has mostly minor updates, but
 # importantly will properly return a non-zero exit code when an error is reported in clang-tidy.
 # Please remove the below if we install a clang version higher than 6.0.

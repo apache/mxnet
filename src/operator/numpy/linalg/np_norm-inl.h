@@ -28,6 +28,8 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <limits>
+#include <string>
+#include <sstream>
 #include <cmath>
 #include "../../tensor/la_op.h"
 #include "../../tensor/la_op-inl.h"
@@ -233,6 +235,22 @@ struct NumpyNormParam : public dmlc::Parameter<NumpyNormParam> {
     .describe("Mapping relations between ord and flag."
     "ord:  None,  'fro', 'nuc', 'inf'  '-inf'."
     "flag:  0 ,    1,      2,    3,      4. ");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream oss_axis, oss_ord, oss_keepdims, oss_flag;
+    if (axis.has_value()) {
+      oss_axis << axis.value();
+    } else {
+      oss_axis << axis;
+    }
+    (*dict)["axis"] = oss_axis.str();
+    oss_ord << ord;
+    (*dict)["ord"] = oss_ord.str();
+    oss_keepdims << keepdims;
+    (*dict)["keepdims"] = oss_keepdims.str();
+    oss_flag << flag;
+    (*dict)["flag"] = oss_flag.str();
   }
 };
 

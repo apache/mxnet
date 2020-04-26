@@ -27,7 +27,7 @@ from mxnet.test_utils import assert_almost_equal, set_default_context
 from mxnet.test_utils import almost_equal, same
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import assertRaises, setup_module, with_seed, teardown
+from common import assertRaises, setup_module, with_seed, teardown_module
 from test_gluon_data_vision import test_to_tensor, test_normalize, test_crop_resize
 
 set_default_context(mx.gpu(0))
