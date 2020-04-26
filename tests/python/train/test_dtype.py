@@ -23,6 +23,7 @@ import numpy as np
 import os, pickle, gzip
 import logging
 from mxnet.test_utils import get_cifar10
+import tempfile
 
 batch_size = 128
 
@@ -39,13 +40,14 @@ def get_net():
     return softmax
 
 # check data
-get_cifar10()
+path = tempfile.mkdtemp()
+get_cifar10(path)
 
 def get_iterator_uint8(kv):
     data_shape = (3, 28, 28)
 
     train = mx.io.ImageRecordUInt8Iter(
-        path_imgrec = "data/cifar/train.rec",
+        path_imgrec = os.path.join(path, 'cifar', 'train.rec'),
         data_shape  = data_shape,
         batch_size  = batch_size,
         rand_crop   = True,
@@ -55,7 +57,7 @@ def get_iterator_uint8(kv):
     train = mx.io.PrefetchingIter(train)
 
     val = mx.io.ImageRecordUInt8Iter(
-        path_imgrec = "data/cifar/test.rec",
+        path_imgrec = os.path.join(path, 'cifar', 'test.rec'),
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
@@ -69,7 +71,7 @@ def get_iterator_uint8_with_param(kv, ctx):
     data_shape = (3, 28, 28)
 
     train = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/train.rec",
+        path_imgrec = os.path.join(path, 'cifar', 'train.rec'),
         data_shape  = data_shape,
         batch_size  = batch_size,
         rand_crop   = True,
@@ -81,7 +83,7 @@ def get_iterator_uint8_with_param(kv, ctx):
     train = mx.io.PrefetchingIter(train)
 
     val = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/test.rec",
+        path_imgrec = os.path.join(path, 'cifar', 'test.rec'),
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
@@ -97,7 +99,7 @@ def get_iterator_int8(kv):
     data_shape = (3, 28, 28)
 
     train = mx.io.ImageRecordInt8Iter(
-        path_imgrec = "data/cifar/train.rec",
+        path_imgrec = os.path.join(path, 'cifar', 'train.rec'),
         data_shape  = data_shape,
         batch_size  = batch_size,
         rand_crop   = True,
@@ -107,7 +109,7 @@ def get_iterator_int8(kv):
     train = mx.io.PrefetchingIter(train)
 
     val = mx.io.ImageRecordInt8Iter(
-        path_imgrec = "data/cifar/test.rec",
+        path_imgrec = os.path.join(path, 'cifar', 'test.rec'),
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
@@ -121,7 +123,7 @@ def get_iterator_int8_with_param(kv, ctx):
     data_shape = (3, 28, 28)
 
     train = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/train.rec",
+        path_imgrec = os.path.join(path, 'cifar', 'train.rec'),
         data_shape  = data_shape,
         batch_size  = batch_size,
         rand_crop   = True,
@@ -133,7 +135,7 @@ def get_iterator_int8_with_param(kv, ctx):
     train = mx.io.PrefetchingIter(train)
 
     val = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/test.rec",
+        path_imgrec = os.path.join(path, 'cifar', 'test.rec'),
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,
@@ -149,8 +151,8 @@ def get_iterator_float32(kv):
     data_shape = (3, 28, 28)
 
     train = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/train.rec",
-        mean_img    = "data/cifar/mean.bin",
+        path_imgrec = os.path.join(path, 'cifar', 'train.rec'),
+        mean_img=os.path.join(path, 'cifar', 'mean.bin'),
         data_shape  = data_shape,
         batch_size  = batch_size,
         rand_crop   = True,
@@ -160,8 +162,8 @@ def get_iterator_float32(kv):
     train = mx.io.PrefetchingIter(train)
 
     val = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/test.rec",
-        mean_img    = "data/cifar/mean.bin",
+        path_imgrec = os.path.join(path, 'cifar', 'test.rec'),
+        mean_img=os.path.join(path, 'cifar', 'mean.bin'),
         rand_crop   = False,
         rand_mirror = False,
         data_shape  = data_shape,

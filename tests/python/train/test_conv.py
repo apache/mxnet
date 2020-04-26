@@ -23,6 +23,7 @@ from mxnet.test_utils import get_mnist_ubyte
 import numpy as np
 import os, pickle, gzip, argparse
 import logging
+import tempfile
 
 def get_model(use_gpu):
     # symbol net
@@ -52,18 +53,19 @@ def get_model(use_gpu):
 
 def get_iters():
     # check data
-    get_mnist_ubyte()
+    path = tempfile.mkdtemp()
+    get_mnist_ubyte(path)
 
     batch_size = 100
     train_dataiter = mx.io.MNISTIter(
-            image="data/train-images-idx3-ubyte",
-            label="data/train-labels-idx1-ubyte",
+            image=os.path.join(path, 'train-images-idx3-ubyte'),
+            label=os.path.join(path, 'train-labels-idx1-ubyte'),
             data_shape=(1, 28, 28),
             label_name='sm_label',
             batch_size=batch_size, shuffle=True, flat=False, silent=False, seed=10)
     val_dataiter = mx.io.MNISTIter(
-            image="data/t10k-images-idx3-ubyte",
-            label="data/t10k-labels-idx1-ubyte",
+            image=os.path.join(path, 't10k-images-idx3-ubyte'),
+            label=os.path.join(path, 't10k-labels-idx1-ubyte'),
             data_shape=(1, 28, 28),
             label_name='sm_label',
             batch_size=batch_size, shuffle=True, flat=False, silent=False)

@@ -21,6 +21,7 @@ import numpy as np
 import os, sys
 import pickle as pickle
 import logging
+import tempfile
 from mxnet.test_utils import get_mnist_ubyte
 
 # symbol net
@@ -41,17 +42,18 @@ num_epoch = 4
 prefix = './mlp'
 
 #check data
-get_mnist_ubyte()
+path = tempfile.mkdtemp()
+get_mnist_ubyte(path)
 
 train_dataiter = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
+        image=os.path.join(path, 'train-images-idx3-ubyte'),
+        label=os.path.join(path, 'train-labels-idx1-ubyte'),
         data_shape=(784,),
         label_name='sm_label',
         batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
 val_dataiter = mx.io.MNISTIter(
-        image="data/t10k-images-idx3-ubyte",
-        label="data/t10k-labels-idx1-ubyte",
+        image=os.path.join(path, 't10k-images-idx3-ubyte'),
+        label=os.path.join(path, 't10k-labels-idx1-ubyte'),
         data_shape=(784,),
         label_name='sm_label',
         batch_size=batch_size, shuffle=True, flat=True, silent=False)

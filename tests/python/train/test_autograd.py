@@ -24,6 +24,8 @@ from mxnet.gluon import nn
 from mxnet.test_utils import get_mnist_ubyte
 import numpy as np
 import logging
+import os
+import tempfile
 from mxnet import autograd
 logging.basicConfig(level=logging.DEBUG)
 
@@ -36,18 +38,19 @@ def get_net():
     net.add(nn.Dense(10, prefix='fc3_'))
     return net
 
-get_mnist_ubyte()
+path = tempfile.mkdtemp()
+get_mnist_ubyte(path)
 
 batch_size = 100
 train_data = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
+        image=os.path.join(path, 'train-images-idx3-ubyte'),
+        label=os.path.join(path, 'train-labels-idx1-ubyte'),
         data_shape=(784,),
         label_name='sm_label',
         batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
 val_data = mx.io.MNISTIter(
-        image="data/t10k-images-idx3-ubyte",
-        label="data/t10k-labels-idx1-ubyte",
+        image=os.path.join(path, 't10k-images-idx3-ubyte'),
+        label=os.path.join(path, 't10k-labels-idx1-ubyte'),
         data_shape=(784,),
         label_name='sm_label',
         batch_size=batch_size, shuffle=True, flat=True, silent=False)

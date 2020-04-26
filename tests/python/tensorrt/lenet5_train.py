@@ -21,6 +21,7 @@
 import os
 import mxnet as mx
 import numpy as np
+import tempfile
 
 def get_iters(mnist, batch_size):
     """Get MNIST iterators."""
@@ -90,7 +91,8 @@ if __name__ == '__main__':
     params_file = '%s/%s-%04d.params' % (model_dir, model_name, num_epochs)
 
     if not (os.path.exists(model_file) and os.path.exists(params_file)):
-        mnist = mx.test_utils.get_mnist()
+        path = tempfile.mkdtemp()
+        mnist = mx.test_utils.get_mnist(path)
 
         _, _, _, all_test_labels = get_iters(mnist, batch_size)
 

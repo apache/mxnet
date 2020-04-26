@@ -18,6 +18,7 @@
 import os
 import numpy as np
 import mxnet as mx
+import tempfile
 from ctypes.util import find_library
 
 def check_tensorrt_installation():
@@ -85,7 +86,8 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
 def test_tensorrt_inference():
     """Run LeNet-5 inference comparison between MXNet and TensorRT."""
     check_tensorrt_installation()
-    mnist = mx.test_utils.get_mnist()
+    path = tempfile.mkdtemp()
+    mnist = mx.test_utils.get_mnist(path)
     num_epochs = 10
     batch_size = 128
     model_name = 'lenet5'

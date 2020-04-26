@@ -25,13 +25,14 @@ import os
 import gzip
 import pickle as pickle
 import time
+import tempfile
 try:
     import h5py
 except ImportError:
     h5py = None
 import sys
 from common import assertRaises
-import unittest
+import pytest
 try:
     from itertools import izip_longest as zip_longest
 except:
@@ -40,12 +41,13 @@ except:
 
 def test_MNISTIter():
     # prepare data
-    get_mnist_ubyte()
+    path = tempfile.mkdtemp()
+    get_mnist_ubyte(path)
 
     batch_size = 100
     train_dataiter = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
+        image=os.path.join(path, 'train-images-idx3-ubyte'),
+        label=os.path.join(path, 'train-labels-idx1-ubyte'),
         data_shape=(784,),
         batch_size=batch_size, shuffle=1, flat=1, silent=0, seed=10)
     # test_loop
@@ -69,10 +71,11 @@ def test_MNISTIter():
 
 
 def test_Cifar10Rec():
-    get_cifar10()
+    path = tempfile.mkdtemp()
+    get_cifar10(path)
     dataiter = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
+        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
         rand_crop=False,
         and_mirror=False,
         shuffle=False,
@@ -92,36 +95,38 @@ def test_Cifar10Rec():
     for i in range(10):
         assert(labelcount[i] == 5000)
 
-def test_inter_methods_in_augmenter():
-    def test_Cifar10Rec():
-        get_cifar10()
-        for inter_method in [0,1,2,3,4,9,10]:
-            dataiter = mx.io.ImageRecordIter(
-                path_imgrec="data/cifar/train.rec",
-                mean_img="data/cifar/cifar10_mean.bin",
-                max_rotate_angle=45,
-                inter_method=inter_method)
-            for batch in dataiter:
-                pass
+@pytest.mark.parametrize('inter_method', [0,1,2,3,4,9,10])
+def test_inter_methods_in_augmenter(inter_method):
+    path = tempfile.mkdtemp()
+    get_cifar10(path)
+    dataiter = mx.io.ImageRecordIter(
+        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
+        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
+        max_rotate_angle=45,
+        data_shape=(3, 28, 28),
+        batch_size=100,
+        inter_method=inter_method)
+    for batch in dataiter:
+        pass
 
+@pytest.mark.xfail(raises=MXNetError)
 def test_image_iter_exception():
-    def check_cifar10_exception():
-        get_cifar10()
-        dataiter = mx.io.ImageRecordIter(
-            path_imgrec="data/cifar/train.rec",
-            mean_img="data/cifar/cifar10_mean.bin",
-            rand_crop=False,
-            and_mirror=False,
-            shuffle=False,
-            data_shape=(5, 28, 28),
-            batch_size=100,
-            preprocess_threads=4,
-            prefetch_buffer=1)
-        labelcount = [0 for i in range(10)]
-        batchcount = 0
-        for batch in dataiter:
-            pass
-    assertRaises(MXNetError, check_cifar10_exception)
+    path = tempfile.mkdtemp()
+    get_cifar10(path)
+    dataiter = mx.io.ImageRecordIter(
+        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
+        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
+        rand_crop=False,
+        and_mirror=False,
+        shuffle=False,
+        data_shape=(5, 28, 28),
+        batch_size=100,
+        preprocess_threads=4,
+        prefetch_buffer=1)
+    labelcount = [0 for i in range(10)]
+    batchcount = 0
+    for batch in dataiter:
+        pass
 
 def _init_NDArrayIter_data(data_type, is_image=False):
     if is_image:
@@ -451,7 +456,8 @@ def test_CSVIter():
         check_CSVIter_synthetic(dtype=dtype)
 
 def test_ImageRecordIter_seed_augmentation():
-    get_cifar10()
+    path = tempfile.mkdtemp()
+    get_cifar10(path)
     seed_aug = 3
 
     def assert_dataiter_items_equals(dataiter1, dataiter2):
@@ -500,8 +506,8 @@ def test_ImageRecordIter_seed_augmentation():
 
     # check whether to get constant images after fixing seed_aug
     dataiter1 = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
+        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
@@ -517,8 +523,8 @@ def test_ImageRecordIter_seed_augmentation():
         seed_aug=seed_aug)
 
     dataiter2 = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
+        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
@@ -538,8 +544,8 @@ def test_ImageRecordIter_seed_augmentation():
     # check whether to get different images after change seed_aug
     dataiter1.reset()
     dataiter2 = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
+        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
@@ -558,31 +564,19 @@ def test_ImageRecordIter_seed_augmentation():
 
     # check whether seed_aug changes the iterator behavior
     dataiter1 = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
+        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
         seed_aug=seed_aug)
 
     dataiter2 = mx.io.ImageRecordIter(
-        path_imgrec="data/cifar/train.rec",
-        mean_img="data/cifar/cifar10_mean.bin",
+        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
+        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
         shuffle=False,
         data_shape=(3, 28, 28),
         batch_size=3,
         seed_aug=seed_aug)
 
     assert_dataiter_items_equals(dataiter1, dataiter2)
-
-if __name__ == "__main__":
-    test_NDArrayIter()
-    if h5py:
-        test_NDArrayIter_h5py()
-    test_MNISTIter()
-    test_Cifar10Rec()
-    test_LibSVMIter()
-    test_NDArrayIter_csr()
-    test_CSVIter()
-    test_ImageRecordIter_seed_augmentation()
-    test_image_iter_exception()
