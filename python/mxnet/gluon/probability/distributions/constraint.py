@@ -99,8 +99,7 @@ class Boolean(Constraint):
     def check(self, value):
         F = getF(value)
         err_msg = "Constraint violated: {} should be either 0 or 1.".format(value)
-        # FIXME: replace bitwise_or with logical_or instead
-        condition = F.np.bitwise_or(value == 0, value == 1)
+        condition = value == 0 | value == 1
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
@@ -118,8 +117,7 @@ class Interval(Constraint):
         F = getF(value)
         err_msg = "Constraint violated: {} should be >= {} and <= {}.".format(
             value, self._lower_bound, self._upper_bound)
-        # FIXME: replace bitwise_and with logical_and
-        condition = F.np.bitwise_and(value >= self._lower_bound, value <= self._upper_bound)
+        condition = (value >= self._lower_bound) & (value <= self._upper_bound)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
@@ -137,8 +135,7 @@ class OpenInterval(Constraint):
         F = getF(value)
         err_msg = "Constraint violated: {} should be > {} and < {}.".format(
             value, self._lower_bound, self._upper_bound)
-        # FIXME: replace bitwise_and with logical_and
-        condition = F.np.bitwise_and(value > self._lower_bound, value < self._upper_bound)
+        condition = (value > self._lower_bound) & (value < self._upper_bound)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
@@ -156,8 +153,7 @@ class HalfOpenInterval(Constraint):
         F = getF(value)
         err_msg = "Constraint violated: {} should be >= {} and < {}.".format(
             value, self._lower_bound, self._upper_bound)
-        # FIXME: replace bitwise_and with logical_and
-        condition = F.np.bitwise_and(value >= self._lower_bound, value < self._upper_bound)
+        condition = (value >= self._lower_bound) & (value < self._upper_bound)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
@@ -175,11 +171,8 @@ class IntegerInterval(Constraint):
         F = getF(value)
         err_msg = "Constraint violated: {} should be integer and be >= {} and <= {}.".format(
             value, self._lower_bound, self._upper_bound)
-        # FIXME: replace bitwise_and with logical_and
         condition = value % 1 == 0
-        condition = F.np.bitwise_and(condition,
-                                     F.np.bitwise_and(value >= self._lower_bound,
-                                                      value <= self._upper_bound))
+        condition = condition & (value >= self._lower_bound) & (value <= self._upper_bound)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
@@ -197,11 +190,8 @@ class IntegerOpenInterval(Constraint):
         F = getF(value)
         err_msg = "Constraint violated: {} should be integer and be > {} and < {}.".format(
             value, self._lower_bound, self._upper_bound)
-        # FIXME: replace bitwise_and with logical_and
         condition = value % 1 == 0
-        condition = F.np.bitwise_and(condition,
-                                     F.np.bitwise_and(value > self._lower_bound,
-                                                      value < self._upper_bound))
+        condition = condition & (value > self._lower_bound) & (value < self._upper_bound)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
@@ -219,11 +209,8 @@ class IntegerHalfOpenInterval(Constraint):
         F = getF(value)
         err_msg = "Constraint violated: {} should be integer and be >= {} and < {}.".format(
             value, self._lower_bound, self._upper_bound)
-        # FIXME: replace bitwise_and with logical_and
         condition = value % 1 == 0
-        condition = F.np.bitwise_and(condition,
-                                     F.np.bitwise_and(value >= self._lower_bound,
-                                                      value < self._upper_bound))
+        condition = condition & (value >= self._lower_bound) & (value < self._upper_bound)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
@@ -352,9 +339,8 @@ class IntegerLessThan(Constraint):
         F = getF(value)
         err_msg = "Constraint violated: {} should be integer and be less than {}".format(
             value, self._upper_bound)
-        # FIXME: replace bitwise_and with logical_and
         condition = value % 1 == 0
-        condition = F.np.bitwise_and(condition, value < self._upper_bound)
+        condition = condition & (value < self._upper_bound)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
@@ -371,9 +357,8 @@ class IntegerLessThanEq(Constraint):
         F = getF(value)
         err_msg = "Constraint violated: {} should be integer and" \
                   " be less than or equal to {}".format(value, self._upper_bound)
-        # FIXME: replace bitwise_and with logical_and
         condition = value % 1 == 0
-        condition = F.np.bitwise_and(condition, value <= self._upper_bound)
+        condition = condition & (value <= self._upper_bound)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
@@ -419,9 +404,8 @@ class Simplex(Constraint):
         F = getF(value)
         err_msg = "Constraint violated: {} should be >= 0 and" \
                   " its rightmost dimension should sum up to 1".format(value)
-        # FIXME: replace bitwise_and with logical_and
         condition = F.all(value >= 0, axis=-1)
-        condition = F.np.bitwise_and(condition, (value.sum(-1) - 1).abs() < 1e-6)
+        condition = condition & ((value.sum(-1) - 1).abs() < 1e-6)
         _value = F.npx.constraint_check(condition, err_msg) * value
         return _value
 
