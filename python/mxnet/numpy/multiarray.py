@@ -10775,24 +10775,7 @@ def pad(x, pad_width=None, mode="constant", **kwargs): # pylint: disable=too-man
            [10, 10, 10, 10, 10, 10, 10],
            [10, 10, 10, 10, 10, 10, 10]])
     """
-    if mode == "constant":
-        values = kwargs.get("constant_values", 0)
-        return _mx_nd_np.pad(x, pad_width, mode='constant', constant_values=values)
-    elif mode == "symmetric":
-        values = kwargs.get("reflect_type", "even")
-        return _mx_nd_np.pad(x, pad_width, mode='symmetric', reflect_type="even")
-    elif mode == "edge":
-        return _mx_nd_np.pad(x, pad_width, mode='edge')
-    elif mode == "reflect":
-        values = kwargs.get("reflect_type", "even")
-        return _mx_nd_np.pad(x, pad_width, mode='reflect', reflect_type="even")
-    elif mode == "maximum":
-        values = kwargs.get("stat_length", None)
-        return _mx_nd_np.pad(x, pad_width, mode='maximum')
-    elif mode == "minimum":
-        values = kwargs.get("stat_length", None)
-        return _mx_nd_np.pad(x, pad_width, mode='minimum')
-    return _mx_nd_np.pad(x, pad_width, mode='constant', constant_values=0)
+    return _mx_nd_np.pad(x, pad_width=pad_width, mode=mode, **kwargs)
 
 
 # pylint: disable=redefined-outer-name
