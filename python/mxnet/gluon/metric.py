@@ -164,11 +164,9 @@ class EvalMetric(object):
         else:
             res = self.sum_metric / self.num_inst
             if isinstance(res, numpy.ndarray) and len(res.shape) == 0:
-                """
-                currently calling ' c = mxnet.numpy.array([1,2,3]).sum() ' would get
-                ' array(6.) ', a ndarray with shape ()
-                In this case, returning a 'float' in .get() is more explicit.
-                """
+                # currently calling ' c = mxnet.numpy.array([1,2,3]).sum() ' would get
+                # ' array(6.) ', a ndarray with shape ()
+                # In this case, returning a 'float' in .get() is more explicit.
                 res = res.item()
             return (self.name, res)
 
@@ -432,7 +430,7 @@ class Accuracy(EvalMetric):
 
             check_label_shapes(label, pred_label)
 
-            num_correct = (pred_label == label).sum()
+            num_correct = (pred_label == label).sum().astype('float64')
             self.sum_metric += num_correct
             self.num_inst += len(pred_label)
 
@@ -509,19 +507,19 @@ class TopKAccuracy(EvalMetric):
             num_dims = len(pred_label.shape)
             if num_dims == 1:
                 num_correct = (pred_label.reshape(-1) == label.reshape(-1)).sum()
-                self.sum_metric += num_correct
+                self.sum_metric += num_correct.astype('float64')
             elif num_dims == 2:
                 num_classes = pred_label.shape[1]
                 top_k = min(num_classes, self.top_k)
                 for j in range(top_k):
                     num_correct = (pred_label[:, num_classes - 1 - j].reshape(-1) == label.reshape(-1)).sum()
-                    self.sum_metric += num_correct
+                    self.sum_metric += num_correct.astype('float64')
             self.num_inst += num_samples
 
 
 def predict_with_threshold(pred, threshold=0.5):
     """Do thresholding of predictions in binary and multilabel cases.
-    
+
     Parameters
     ----------
     preds : ndarray
@@ -532,38 +530,38 @@ def predict_with_threshold(pred, threshold=0.5):
     """
     if isinstance(threshold, float):
         return pred > threshold
-    elif isinstance(threshold, numpy.ndarray) or isinstance(threshold, ndarray.ndarray.NDArray):
+    elif isinstance(threshold, (numpy.ndarray, ndarray.ndarray.NDArray)):
         num_classes = pred.shape[-1]
         assert threshold.shape[-1] == num_classes, \
                 "shape mismatch: %s vs. %s"%(pred.shape[-1], threshold.shape[-1])
-        return pred > threshold        
+        return pred > threshold
     else:
         raise ValueError("{} is a wrong type for threshold!".format(type(threshold)))
-    
+
 
 def one_hot(idx, num):
     return (numpy.arange(num).astype(idx) == idx[:, None]).astype('int32')
-    
 
-@use_np        
+
+@use_np
 class _ClassificationMetrics(object):
     """Private container class for classification metric statistics.
 
     True/false positive and true/false negative counts are sufficient statistics for various classification metrics.
     This class provides the machinery to track those statistics across mini-batches of
     (label, prediction) pairs.
-    
+
     Parameters
     ----------
     class_type : str, default "binary"
         "binary": f1 for binary classification.
         "multiclass": f1 for multiclassification problem.
-        "multilabel": f1 for multilabel classification.      
+        "multilabel": f1 for multilabel classification.
     beta : float, default 1
-        weight of precision in harmonic mean. 
+        weight of precision in harmonic mean.
     threshold : float, default 0.5
         threshold for deciding whether the predictions are positive or negative.
-        
+
     """
 
     def __init__(self, class_type="binary", threshold=0.5, beta=1):
@@ -575,14 +573,14 @@ class _ClassificationMetrics(object):
     def _set(self, num):
         if self.num_classes is None:
             self.num_classes = num
-            self.true_positives = numpy.zeros(num)
-            self.false_negatives = numpy.zeros(num)
-            self.false_positives = numpy.zeros(num)
-            self.true_negatives = numpy.zeros(num)
+            self.true_positives = numpy.zeros(num, dtype='float64')
+            self.false_negatives = numpy.zeros(num, dtype='float64')
+            self.false_positives = numpy.zeros(num, dtype='float64')
+            self.true_negatives = numpy.zeros(num, dtype='float64')
         else:
             assert self.num_classes == num, \
                 "Input number of classes has changed from {} to {}".format(self.num_classes, num)
-            
+
     def update_stats(self, label, pred):
         """Update various binary classification counts for a single (label, pred) pair.
 
@@ -605,17 +603,17 @@ class _ClassificationMetrics(object):
             elif pred.shape[-1] > 2:
                 raise ValueError("The shape of prediction {} is wrong for binary classification.".format(pred.shape))
             elif pred.shape[-1] == 2:
-                pred = pred.reshape(-1, 2)[:, 1]     
+                pred = pred.reshape(-1, 2)[:, 1]
             pred_label = predict_with_threshold(pred, self.threshold).reshape(-1)
             label = label.reshape(-1)
-            
+
         elif self.class_type == "multiclass":
             num = pred.shape[-1]
             self._set(num)
             assert label.max() < num, "pred contains fewer classes than label!"
-            pred_label = one_hot(pred.argmax(axis=-1).reshape(-1), num)         
+            pred_label = one_hot(pred.argmax(axis=-1).reshape(-1), num)
             label = one_hot(label.reshape(-1), num)
-            
+
         elif self.class_type == "multilabel":
             num = pred.shape[-1]
             self._set(num)
@@ -626,9 +624,9 @@ class _ClassificationMetrics(object):
         else:
             raise ValueError(
                 "Wrong class_type {}! Only supports ['binary', 'multiclass', 'multilabel']".format(self.class_type))
-            
+
         check_label_shapes(label, pred_label)
-        
+
         pred_true = (pred_label == 1)
         pred_false = (pred_label == 0)
         label_true = (label == 1)
@@ -657,7 +655,7 @@ class _ClassificationMetrics(object):
                 numpy.maximum(self.true_positives.sum() + self.false_positives.sum(), 1e-12)
         else:
             return 0.
-            
+
     @property
     def recall(self):
         if self.num_classes is not None:
@@ -672,7 +670,7 @@ class _ClassificationMetrics(object):
                 numpy.maximum(self.true_positives.sum() + self.false_negatives.sum(), 1e-12)
         else:
             return 0.
-            
+
     @property
     def fscore(self):
         return (1 + self.beta ** 2) * self.precision * self.recall / \
@@ -685,7 +683,7 @@ class _ClassificationMetrics(object):
                 (self.beta ** 2 * self.micro_precision + self.micro_recall)
         else:
             return 0.
-            
+
     def binary_matthewscc(self):
         """Calculate the Matthew's Correlation Coefficent"""
         if not self.total_examples:
@@ -752,14 +750,14 @@ class F1(EvalMetric):
     class_type : str, default "binary"
         "binary": f1 for binary classification.
         "multiclass": f1 for multiclassification problem.
-        "multilabel": f1 for multilabel classification.        
+        "multilabel": f1 for multilabel classification.
     threshold : float, default 0.5
         threshold for postive confidence value.
     average : str, default 'micro'
         Strategy to be used for aggregating across mini-batches.
             "macro": Calculate metrics for each label and return unweighted mean of f1.
             "micro": Calculate metrics globally by counting the total TP, FN and FP.
-            None: Return f1 scores for each class (numpy.ndarray) . 
+            None: Return f1 scores for each class (numpy.ndarray) .
 
     Examples
     --------
@@ -795,13 +793,13 @@ class F1(EvalMetric):
             self.metrics.update_stats(label, pred)
 
         if self.average == "micro":
-            self.sum_metric = self.metrics.micro_fscore * self.metrics.total_examples   
+            self.sum_metric = self.metrics.micro_fscore * self.metrics.total_examples
         elif self.average == "macro":
-            self.sum_metric = self.metrics.fscore.mean() * self.metrics.total_examples  
+            self.sum_metric = self.metrics.fscore.mean() * self.metrics.total_examples
         else:
-            self.sum_metric = self.metrics.fscore * self.metrics.total_examples  
-        self.num_inst = self.metrics.total_examples   
-          
+            self.sum_metric = self.metrics.fscore * self.metrics.total_examples
+        self.num_inst = self.metrics.total_examples
+
     def reset(self):
         """Resets the internal evaluation result to initial state."""
         self.sum_metric = 0.
@@ -841,16 +839,16 @@ class Fbeta(F1):
     class_type : str, default "binary"
         "binary": f1 for binary classification.
         "multiclass": f1 for multiclassification problem.
-        "multilabel": f1 for multilabel classification.      
+        "multilabel": f1 for multilabel classification.
     beta : float, default 1
-        weight of precision in harmonic mean.   
+        weight of precision in harmonic mean.
     threshold : float, default 0.5
         threshold for postive confidence value.
     average : str, default 'micro'
         Strategy to be used for aggregating across mini-batches.
             "macro": Calculate metrics for each label and return unweighted mean of f1.
             "micro": Calculate metrics globally by counting the total TP, FN and FP.
-            None: Return f1 scores for each class. 
+            None: Return f1 scores for each class.
 
     Examples
     --------
@@ -865,10 +863,10 @@ class Fbeta(F1):
     def __init__(self, name='fbeta',
                  output_names=None, label_names=None, class_type="binary", beta=1, threshold=0.5, average="micro"):
         super(Fbeta, self).__init__(
-            name=name, output_names=output_names, label_names=label_names, 
+            name=name, output_names=output_names, label_names=label_names,
             class_type=class_type, threshold=threshold, average=average)
         self.metrics = _ClassificationMetrics(class_type=class_type, threshold=threshold, beta=beta)
-        
+
 
 @register
 @use_np
@@ -919,7 +917,7 @@ class BinaryAccuracy(EvalMetric):
 
         for label, pred_label in zip(labels, preds):
             pred_label = predict_with_threshold(pred_label, self.threshold)
-            
+
             pred_label = pred_label.as_np_ndarray().astype('int32')
             label = label.as_np_ndarray().astype('int32')
             # flatten before checking shapes to avoid shape miss match
@@ -928,11 +926,11 @@ class BinaryAccuracy(EvalMetric):
 
             check_label_shapes(label, pred_label)
 
-            num_correct = (pred_label == label).sum()
+            num_correct = (pred_label == label).sum().astype('float64')
             self.sum_metric += num_correct
             self.num_inst += len(pred_label)
-       
-        
+
+
 @register
 @use_np
 class MCC(EvalMetric):
@@ -1065,7 +1063,7 @@ class MAE(EvalMetric):
                  output_names=None, label_names=None):
         super(MAE, self).__init__(
             name, output_names=output_names, label_names=label_names)
-        
+
     def update(self, labels, preds):
         """Updates the internal evaluation result.
 
@@ -1085,7 +1083,7 @@ class MAE(EvalMetric):
 
             num_inst = label.shape[0]
             mae = numpy.abs(label - pred).reshape(num_inst, -1).mean(axis=-1).sum()
-                
+
             self.sum_metric += mae
             self.num_inst += num_inst
 
@@ -1124,7 +1122,7 @@ class MSE(EvalMetric):
                  output_names=None, label_names=None):
         super(MSE, self).__init__(
             name, output_names=output_names, label_names=label_names)
-        
+
     def update(self, labels, preds):
         """Updates the internal evaluation result.
 
@@ -1144,7 +1142,7 @@ class MSE(EvalMetric):
 
             num_inst = label.shape[0]
             mse = ((label - pred)**2.0).reshape(num_inst, -1).mean(axis=-1).sum()
-            
+
             self.sum_metric += mse
             self.num_inst += num_inst
 
@@ -1183,12 +1181,12 @@ class RMSE(MSE):
                  output_names=None, label_names=None):
         super(RMSE, self).__init__(
             name, output_names=output_names, label_names=label_names)
-        
+
     def get(self):
         if self.num_inst == 0:
             return (self.name, float('nan'))
         else:
-            return (self.name, math.sqrt(self.sum_metric / self.num_inst))           
+            return (self.name, math.sqrt(self.sum_metric / self.num_inst))
 
 
 @register
@@ -1228,7 +1226,7 @@ class MeanPairwiseDistance(EvalMetric):
         super(MeanPairwiseDistance, self).__init__(
             name, output_names=output_names, label_names=label_names)
         self.p = p
-       
+
     def update(self, labels, preds):
         """Updates the internal evaluation result.
 
@@ -1255,7 +1253,7 @@ class MeanPairwiseDistance(EvalMetric):
 
             self.sum_metric += dis
             self.num_inst += num_inst
-            
+
 
 @register
 @use_np
@@ -1265,9 +1263,9 @@ class MeanCosineSimilarity(EvalMetric):
     The mean cosine similarity is given by
 
     .. math::
-        cos\_sim(label, pred) = \frac{{label}.{pred}}{max(||label||.||pred||, eps)}
+        cos_sim(label, pred) = \frac{{label}.{pred}}{max(||label||.||pred||, eps)}
     (calculating on the last dimension of label and pred.)
-    
+
     Parameters
     ----------
     name : str
@@ -1280,6 +1278,7 @@ class MeanCosineSimilarity(EvalMetric):
         By default include all labels.
     eps : float, default 1e-8
         small vale to avoid division by zero.
+
     Examples
     --------
     >>> predicts = [mx.nd.array([[1., 0.], [1., 1.]])]
@@ -1294,7 +1293,7 @@ class MeanCosineSimilarity(EvalMetric):
         super(MeanCosineSimilarity, self).__init__(
             name, output_names=output_names, label_names=label_names)
         self.eps = eps
-        
+
     def update(self, labels, preds):
         """Updates the internal evaluation result.
 
@@ -1326,7 +1325,7 @@ class MeanCosineSimilarity(EvalMetric):
             self.sum_metric += sim
             self.num_inst += num_inst
 
-            
+
 @register
 @alias('ce')
 @use_np
@@ -1465,7 +1464,7 @@ class Perplexity(CrossEntropy):
     def __init__(self, ignore_label=None, axis=-1, name='perplexity',
                  output_names=None, label_names=None):
         super(Perplexity, self).__init__(
-            name=name, ignore_label=ignore_label, axis=axis, 
+            name=name, ignore_label=ignore_label, axis=axis,
             output_names=output_names, label_names=label_names)
 
     def get(self):
@@ -1591,7 +1590,7 @@ class PearsonCorrelation(EvalMetric):
         self._pred_nums = 0
         self._label_nums = 0
         self._conv = 0
-        
+
         self.num_inst = 0
         self.sum_metric = 0.0
 
@@ -1741,7 +1740,7 @@ class PCC(EvalMetric):
             n = int(max(pred.max(), label.max()))
             if n >= self.k:
                 self._grow(n + 1 - self.k)
-            bcm = numpy.zeros((self.k, self.k))
+            bcm = numpy.zeros((self.k, self.k), dtype='float64')
             for i, j in zip(pred, label):
                 bcm[i, j] += 1
             self.lcm += bcm
@@ -1754,7 +1753,7 @@ class PCC(EvalMetric):
     def reset(self):
         """Resets the internal evaluation result to initial state."""
         self.num_inst = 0.
-        self.lcm = numpy.zeros((self.k, self.k))
+        self.lcm = numpy.zeros((self.k, self.k), dtype='float64')
 
 
 @register
