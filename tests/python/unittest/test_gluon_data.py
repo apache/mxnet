@@ -23,7 +23,7 @@ import numpy as np
 import random
 from mxnet import gluon
 import platform
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 from mxnet.gluon.data import DataLoader
 import mxnet.ndarray as nd
 from mxnet import context
@@ -269,6 +269,7 @@ def test_multi_worker_dataloader_release_pool():
     if os.name == 'nt':
         print('Skip for windows since spawn on windows is too expensive.')
         return
+
     for _ in range(10):
         A = np.random.rand(999, 2000)
         D = mx.gluon.data.DataLoader(A, batch_size=8, num_workers=8)
@@ -381,7 +382,3 @@ def test_dataloader_scope():
 
     assert item is not None
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -25,7 +25,6 @@ import collections
 import ctypes
 import itertools
 import mxnet.contrib.amp as amp
-from nose.tools import assert_raises
 from mxnet.test_utils import set_default_context, download_model, same_symbol_structure, assert_almost_equal_with_err, rand_shape_nd
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
@@ -55,7 +54,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
         the relative threshold
     atol: float
         the absolute threshold
-    etol: float 
+    etol: float
         The error rate threshold, allow a small amount of value not consistent between bf16 and fp32
     """
     if not isinstance(data_shape, tuple):
@@ -105,7 +104,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
             exe_bf16.arg_dict[arg_name][:] = arg_params_fp32[arg_name]
         else:
             exe_bf16.arg_dict[arg_name][:] = mx.nd.amp_cast(arg_params_fp32[arg_name], dtype=bfloat16)
-    
+
     for aux_name in aux_names:
         if bf16_use_fp32_params:
             exe_bf16.aux_dict[aux_name][:] = aux_params_fp32[aux_name]
@@ -126,8 +125,8 @@ def test_bf16_bn():
     bn_fp32 = mx.sym.BatchNorm(data_sym_fp32, **bn_params)
 
     bn_bf16 = mx.sym.BatchNorm(data_sym_bf16, **bn_params)
-    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(3, 32, 28, 28), bf16_use_fp32_params=True, etol=1e-3)
-    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(32, 16, 64, 64), bf16_use_fp32_params=True, etol=1e-3)
+    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(3, 32, 28, 28), bf16_use_fp32_params=True, etol=1e-2)
+    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(32, 16, 64, 64), bf16_use_fp32_params=True, etol=1e-2)
 
 @with_seed()
 def test_bf16_conv():
@@ -169,7 +168,7 @@ def test_bf16_pooling():
     pool_conventions = ["full", "valid"]
     for new_params in itertools.product(data_shapes, pool_types, pool_conventions):
         pool_params.update({"pool_type": new_params[1], "pooling_convention": new_params[2]})
-        
+
         data_sym_fp32 = mx.sym.Variable(name='data')
         data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
         pool_fp32 = mx.sym.Pooling(data_sym_fp32, **pool_params)
@@ -230,7 +229,7 @@ def test_bf16_abs():
         data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
         sym_fp32 = mx.sym.abs(data_sym_fp32)
         sym_bf16 = mx.sym.abs(data_sym_bf16)
-        
+
         check_operator_accuracy(sym_fp32, sym_bf16, data_shape, bf16_use_fp32_params=True)
 
 @with_seed()
@@ -278,13 +277,10 @@ def test_bf16_fallback():
     bn_params = {"eps": 2e-05, "fix_gamma": False, "use_global_stats": True, "name": "bn"}
     bn_fp32 = mx.sym.BatchNorm(data_sym_fp32, **bn_params)
     bn_bf16=mx.sym.BatchNorm(data_sym_bf16, **bn_params)
-    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(3, 32, 28, 28, 3), bf16_use_fp32_params=True, etol=1e-3)
+    check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(3, 32, 28, 28, 3), bf16_use_fp32_params=True, etol=1e-2)
 
     conv_params = {"kernel": (3, 3, 3), "num_filter": 128, "pad": (1, 1, 1), "stride": (1, 1, 1), "no_bias": True, "name": "conv"}
     conv_fp32 = mx.sym.Convolution(data_sym_fp32, **conv_params)
     conv_bf16 = mx.sym.Convolution(data_sym_bf16, **conv_params)
     check_operator_accuracy(sym_fp32=conv_fp32, sym_bf16=conv_bf16, data_shape=(3, 32, 28, 28, 4), bf16_use_fp32_params=False)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

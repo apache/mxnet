@@ -762,6 +762,17 @@ struct backward_grad {
   }
 };
 
+template<typename OP, int req>
+struct mixed_type_unary_op {
+  typedef OP Operation;
+
+  /*! \brief input is one tensor */
+  template<typename OType, typename IType>
+  MSHADOW_XINLINE static void Map(index_t i, OType *out, const IType *in) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(OType(in[i])));
+  }
+};
+
 /*! \brief Binary op backward gradient OP wrapper (tuned) */
 template<typename GRAD_OP>
 struct backward_grad_tuned : public backward_grad<GRAD_OP>, public tunable {

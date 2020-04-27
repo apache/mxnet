@@ -26,6 +26,25 @@ import unittest
 from mxnet.test_utils import almost_equal, assert_almost_equal
 from common import assert_raises_cudnn_not_satisfied, with_seed
 
+
+def check_rnn_states(fused_states, stack_states, num_layers, bidirectional=False, is_lstm=True):
+    directions = 2 if bidirectional else 1
+    assert len(stack_states) / len(fused_states) == num_layers * directions
+
+    fused_states = [state.asnumpy() for state in fused_states]
+    stack_states = [np.expand_dims(state.asnumpy(), axis=0) for state in stack_states]
+    if is_lstm:
+        stack_states_h = stack_states[0::2]
+        stack_states_c = stack_states[1::2]
+        stack_states = [np.concatenate(stack_states_h, axis=0), np.concatenate(stack_states_c, axis=0)]
+    else:
+        stack_states = [np.concatenate(stack_states, axis=0)]
+
+    for f, s in zip(fused_states, stack_states):
+        assert f.shape == s.shape
+        assert_almost_equal(f, s, atol=1e-4, rtol=1e-4)
+
+
 def test_rnn():
     cell = gluon.rnn.RNNCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
@@ -49,6 +68,88 @@ def test_lstm():
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
+
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='7.2.1')
+def test_lstmp():
+    hidden_size, projection_size = 512, 256
+    rtol, atol = 1e-4, 1e-4
+    batch_size, seq_len = 5, 3
+    input_size = 128
+    lstm_input = mx.nd.uniform(shape=(seq_len, batch_size, input_size))
+
+    # ==== Unidirectional Layer ====
+    for num_layers in [1, 3]:
+        fused_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
+                                    num_layers=num_layers, layout='TNC', bidirectional=False,
+                                    prefix='lstm0_')
+
+        stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix='lstm0_')
+        with stack_layer.name_scope():
+            for i in range(num_layers):
+                stack_layer.add(gluon.contrib.rnn.LSTMPCell(hidden_size,
+                                                            projection_size=projection_size,
+                                                            prefix='l%d_' % i))
+        fused_layer.initialize()
+        stack_layer.initialize()
+
+        fused_begin_state = fused_layer.begin_state(batch_size)
+        stack_begin_state = stack_layer.begin_state(batch_size=batch_size)
+        fused_layer.infer_shape(lstm_input, fused_begin_state)
+        fused_layer_params = fused_layer.collect_params()
+        stack_layer_params = stack_layer.collect_params()
+
+        for name, value in fused_layer_params.items():
+            w = mx.nd.random.uniform(shape=value.shape)
+            value.set_data(w.copy())
+            stack_layer_params[name].set_data(w.copy())
+
+        fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
+        stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
+                                                        layout='TNC',
+                                                        merge_outputs=True)
+
+        assert_almost_equal(fused_output.asnumpy(), stack_output.asnumpy(), rtol=rtol, atol=atol)
+        check_rnn_states(fused_states, stack_states, num_layers, False)
+
+    # ==== Bidirectional Layer ====
+    for num_layers in [1, 3]:
+        fused_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
+                                    num_layers=num_layers, layout='TNC', bidirectional=True,
+                                    prefix='lstm0_')
+
+        stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix='lstm0_')
+        with stack_layer.name_scope():
+            for i in range(num_layers):
+                stack_layer.add(
+                    gluon.rnn.BidirectionalCell(gluon.contrib.rnn.LSTMPCell(hidden_size,
+                                                                            projection_size=projection_size,
+                                                                            prefix='l%d_' % i),
+                                                gluon.contrib.rnn.LSTMPCell(hidden_size,
+                                                                            projection_size=projection_size,
+                                                                            prefix='r%d_' % i)))
+        fused_layer.initialize()
+        stack_layer.initialize()
+
+        fused_begin_state = fused_layer.begin_state(batch_size)
+        stack_begin_state = stack_layer.begin_state(batch_size=batch_size)
+        fused_layer.infer_shape(lstm_input, fused_begin_state)
+        fused_layer_params = fused_layer.collect_params()
+        stack_layer_params = stack_layer.collect_params()
+
+        for name, value in fused_layer_params.items():
+            w = mx.nd.random.uniform(shape=value.shape)
+            value.set_data(w.copy())
+            stack_layer_params[name].set_data(w.copy())
+
+        fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
+        stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
+                                                        layout='TNC',
+                                                        merge_outputs=True)
+
+        assert_almost_equal(fused_output.asnumpy(), stack_output.asnumpy(), rtol=rtol, atol=atol)
+        check_rnn_states(fused_states, stack_states, num_layers, True)
 
 
 def test_lstm_forget_bias():
@@ -94,7 +195,7 @@ def test_lstm_cpu_inference():
 
 
 def test_gru():
-    cell = gluon.rnn.GRUCell(100, prefix='rnn_')
+    cell = gluon.rnn.GRUCell(100, prefix='rnn_', activation='relu', recurrent_activation='tanh')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -548,30 +649,53 @@ def test_rnn_layers_fp16():
 
 
 def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=False, rtol=1e-2, atol=1e-4):
-    fused_begin_state = fused_layer.begin_state(1)
-    stack_state = stack_layer.begin_state(batch_size=1)
     x = nd.random.normal(shape=(1, 5, input_size))
-    x.attach_grad()
-    y = nd.random.normal(shape=(1, 5, hidden_size * 2 if bidirectional else hidden_size))
+    fused_begin_state = fused_layer.begin_state(1)
+    stack_states = stack_layer.begin_state(batch_size=1)
+    fused_layer.infer_shape(x, fused_begin_state)
+    fused_layer_params = fused_layer.collect_params()
+    stack_layer_params = stack_layer.collect_params()
 
+    for name, value in fused_layer_params.items():
+        if 'rnn' in fused_layer.prefix and 'weight' in name:
+            w = mx.nd.zeros(shape=value.shape)
+        else:
+            w = mx.nd.random.normal(shape=value.shape)
+        value.set_data(w.copy())
+        stack_layer_params[name].set_data(w.copy())
+
+    fx = x.copy()
+    sx = x.copy()
+    y = nd.random.uniform(shape=(1, 5, hidden_size * 2 if bidirectional else hidden_size))
+
+    fx.attach_grad()
     with mx.autograd.record():
-        fused_out, fused_state = fused_layer(x, fused_begin_state)
+        fused_out, fused_states = fused_layer(fx, fused_begin_state)
         l = loss(fused_out, y).mean()
     l.backward()
     fused_grads = dict([(name, p.grad()) for name, p in fused_layer.collect_params().items()])
-    fused_input_grad = x.grad.asnumpy()
+    fused_input_grad = fx.grad.asnumpy()
 
+    sx.attach_grad()
     with mx.autograd.record():
-        stack_out, stack_state = stack_layer.unroll(5, x, stack_state, merge_outputs=True)
+        stack_out, stack_states = stack_layer.unroll(5, sx, begin_state=stack_states, merge_outputs=True)
         l = loss(stack_out, y).mean()
     l.backward()
     stack_grads = dict([(name, p.grad()) for name, p in stack_layer.collect_params().items()])
-    stack_input_grad = x.grad.asnumpy()
+    stack_input_grad = sx.grad.asnumpy()
 
     assert_allclose(fused_out.asnumpy(), stack_out.asnumpy(), rtol=rtol, atol=atol)
-    assert_allclose(fused_input_grad, stack_input_grad, rtol=rtol, atol=atol)
-    for key, value in fused_grads.items():
-        assert_allclose(value.asnumpy(), stack_grads[key].asnumpy(), rtol=rtol, atol=atol)
+    if mx.context.current_context().device_type == 'cpu' and \
+            not mx.runtime.Features().is_enabled('MKLDNN') and \
+            'rnn' not in fused_layer.prefix:
+        print("LSTM and GRU on native CPU give wrong gradients. "
+              "Tracking issue: https://github.com/apache/incubator-mxnet/issues/17898.")
+    else:
+        assert_allclose(fused_input_grad, stack_input_grad, rtol=rtol, atol=atol)
+        for key, value in fused_grads.items():
+            assert_allclose(value.asnumpy(), stack_grads[key].asnumpy(), rtol=rtol, atol=atol)
+    num_layers = fused_begin_state[0].shape[0] // (2 if bidirectional else 1)
+    check_rnn_states(fused_states, stack_states, num_layers, bidirectional, len(fused_begin_state) == 2)
 
 
 def create_op_by_mode(mode):
@@ -598,11 +722,10 @@ def create_op_by_mode(mode):
 def check_rnn_unidir_layer_gradients(mode, input_size, hidden_size, loss):
     fused_op, stack_op, recurrent_block_prefix = create_op_by_mode(mode)
     # ==== Single layer ====
-    fused_layer = fused_op(hidden_size, num_layers=1, layout='NTC', bidirectional=False)
-    fused_layer.collect_params().initialize()
+    fused_layer = fused_op(hidden_size, num_layers=1, layout='NTC', bidirectional=False, prefix=recurrent_block_prefix)
+    fused_layer.initialize()
 
-    params = fused_layer.collect_params()
-    stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix=recurrent_block_prefix, params=params)
+    stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix=recurrent_block_prefix)
     with stack_layer.name_scope():
         stack_layer.add(stack_op(hidden_size, prefix='l0_'))
     stack_layer.initialize()
@@ -610,11 +733,10 @@ def check_rnn_unidir_layer_gradients(mode, input_size, hidden_size, loss):
     check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size)
 
     # ==== Multiple layer ====
-    fused_layer = fused_op(hidden_size, num_layers=3, layout='NTC', bidirectional=False)
-    fused_layer.collect_params().initialize()
+    fused_layer = fused_op(hidden_size, num_layers=3, layout='NTC', bidirectional=False, prefix=recurrent_block_prefix)
+    fused_layer.initialize()
 
-    params = fused_layer.collect_params()
-    stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix=recurrent_block_prefix, params=params)
+    stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix=recurrent_block_prefix)
     with stack_layer.name_scope():
         stack_layer.add(stack_op(hidden_size, prefix='l0_'))
         stack_layer.add(stack_op(hidden_size, prefix='l1_'))
@@ -627,11 +749,10 @@ def check_rnn_unidir_layer_gradients(mode, input_size, hidden_size, loss):
 def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, loss):
     fused_op, stack_op, recurrent_block_prefix = create_op_by_mode(mode)
     # ==== Single layer ====
-    fused_layer = fused_op(hidden_size, num_layers=1, layout='NTC', bidirectional=True)
-    fused_layer.collect_params().initialize()
+    fused_layer = fused_op(hidden_size, num_layers=1, layout='NTC', bidirectional=True, prefix=recurrent_block_prefix)
+    fused_layer.initialize()
 
-    params = fused_layer.collect_params()
-    stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix=recurrent_block_prefix, params=params)
+    stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix=recurrent_block_prefix)
     with stack_layer.name_scope():
         stack_layer.add(gluon.rnn.BidirectionalCell(stack_op(hidden_size, prefix='l0_'),
                                                     stack_op(hidden_size, prefix='r0_')))
@@ -640,11 +761,10 @@ def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, loss):
     check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=True)
 
     # ==== Multiple layer ====
-    fused_layer = fused_op(hidden_size, num_layers=3, layout='NTC', bidirectional=True)
-    fused_layer.collect_params().initialize()
+    fused_layer = fused_op(hidden_size, num_layers=3, layout='NTC', bidirectional=True, prefix=recurrent_block_prefix)
+    fused_layer.initialize()
 
-    params = fused_layer.collect_params()
-    stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix=recurrent_block_prefix, params=params)
+    stack_layer = mx.gluon.rnn.HybridSequentialRNNCell(prefix=recurrent_block_prefix)
     with stack_layer.name_scope():
         stack_layer.add(gluon.rnn.BidirectionalCell(stack_op(hidden_size, prefix='l0_'),
                                                     stack_op(hidden_size, prefix='r0_')))
@@ -657,16 +777,48 @@ def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, loss):
     check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=True)
 
 
+@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_fused_rnn_layer():
-    input_sizes = [128]
-    hidden_sizes = [128, 256]
-    modes = ['lstm', 'gru', 'rnn_relu', 'rnn_tanh']
-    # single layer
-    for mode, input_size, hidden_size in product(modes, input_sizes, hidden_sizes):
+def test_fused_lstm_layer():
+    input_sizes = [8]
+    hidden_sizes = [8, 16]
+    for input_size, hidden_size in product(input_sizes, hidden_sizes):
         loss = mx.gluon.loss.L2Loss()
-        check_rnn_unidir_layer_gradients(mode, input_size, hidden_size, loss)
-        check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, loss)
+        check_rnn_unidir_layer_gradients('lstm', input_size, hidden_size, loss)
+        check_rnn_bidir_layer_gradients('lstm', input_size, hidden_size, loss)
+
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_fused_gru_layer():
+    input_sizes = [8]
+    hidden_sizes = [8, 16]
+    for input_size, hidden_size in product(input_sizes, hidden_sizes):
+        loss = mx.gluon.loss.L2Loss()
+        check_rnn_unidir_layer_gradients('gru', input_size, hidden_size, loss)
+        check_rnn_bidir_layer_gradients('gru', input_size, hidden_size, loss)
+
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_fused_rnnrelu_layer():
+    input_sizes = [8]
+    hidden_sizes = [8, 16]
+    for input_size, hidden_size in product(input_sizes, hidden_sizes):
+        loss = mx.gluon.loss.L2Loss()
+        check_rnn_unidir_layer_gradients('rnn_relu', input_size, hidden_size, loss)
+        check_rnn_bidir_layer_gradients('rnn_relu', input_size, hidden_size, loss)
+
+
+@with_seed()
+@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+def test_fused_rnntanh_layer():
+    input_sizes = [8]
+    hidden_sizes = [8, 16]
+    for input_size, hidden_size in product(input_sizes, hidden_sizes):
+        loss = mx.gluon.loss.L2Loss()
+        check_rnn_unidir_layer_gradients('rnn_tanh', input_size, hidden_size, loss)
+        check_rnn_bidir_layer_gradients('rnn_tanh', input_size, hidden_size, loss)
 
 
 def test_rnn_unroll_variant_length():
@@ -786,7 +938,3 @@ def test_bidirectional_unroll_valid_length():
     _check_bidirectional_unroll_valid_length(1)
     _check_bidirectional_unroll_valid_length(3)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -17,7 +17,7 @@
 
 from mxnet.test_utils import *
 from mxnet.base import MXNetError
-from common import setup_module, with_seed, teardown, assertRaises
+from common import setup_module, with_seed, teardown_module, assertRaises
 import random
 import warnings
 
@@ -2346,6 +2346,3 @@ def test_reshape_backward_fallback():
 
     assert_almost_equal(grad_w_nd.asnumpy(), expected_grad_nd)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -1,5 +1,5 @@
 rcpplint:
-	3rdparty/dmlc-core/scripts/lint.py mxnet-rcpp ${LINT_LANG} R-package/src
+	./3rdparty/dmlc-core/scripts/lint.py mxnet-rcpp all R-package/src
 
 rpkg:
 	mkdir -p R-package/inst/libs

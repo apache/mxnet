@@ -23,14 +23,14 @@ import multiprocessing as mp
 import mxnet as mx
 import numpy as np
 import unittest
-from nose.tools import assert_raises
+import pytest
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.base import MXNetError
 from mxnet import autograd
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied
+from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied
 from common import run_in_spawned_process
 from test_operator import *
 from test_numpy_ndarray import *
@@ -46,7 +46,6 @@ from test_ndarray import *
 from test_subgraph_op import *
 from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
-from test_tvm_op import *
 from test_contrib_optimizer import test_adamw
 
 set_default_context(mx.gpu(0))
@@ -1342,7 +1341,7 @@ def test_bilinear_resize_op():
     check_consistency(sym, ctx_list)
 
     sym = mx.sym.contrib.BilinearResize2D(data, height=10, width=5, align_corners=False)
-    check_consistency(sym, ctx_list)    
+    check_consistency(sym, ctx_list)
 
     sym = mx.sym.contrib.BilinearResize2D(data, None, scale_height=2, scale_width=0.5, mode='odd_scale', align_corners=True)
     check_consistency(sym, ctx_list)
@@ -2274,7 +2273,7 @@ def test_kernel_error_checking():
 
 def test_incorrect_gpu():
     # Try setting dev_id to a really big number
-    assert_raises(MXNetError, mx.nd.ones, (2,2), ctx=mx.gpu(100001))
+    pytest.raises(MXNetError, mx.nd.ones, (2,2), ctx=mx.gpu(100001))
 
 @with_seed()
 def test_batchnorm_backwards_notrain():
@@ -2526,7 +2525,7 @@ def run_math(op, shape, dtype="float32", check_value=True):
 def test_math():
     ops = ['log', 'erf', 'square']
     check_value= True
-    shape_lst = [[1000], [100,1000], [10,100,100], [10,100,100,100]] 
+    shape_lst = [[1000], [100,1000], [10,100,100], [10,100,100,100]]
     dtypes = ["float32", "float64"]
     for shape in shape_lst:
         for dtype in dtypes:
@@ -2548,6 +2547,3 @@ def test_arange_like_dtype():
         for v in out:
             assert v.dtype == t
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

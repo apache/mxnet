@@ -10,9 +10,16 @@ jobs:
         uses: actions/checkout@v2
       - name: Install Dependencies
         run: |
-          brew install nasm automake ninja libtool
+          brew install nasm automake ninja libtool cmake pkgconfig protobuf hdf5 zlib
+          python3 -m pip install --user -r ci/docker/install/requirements
       - name: Build project
         run: |
           git --version
           clang --version
           CMAKE_STATICBUILD=1 ./tools/staticbuild/build.sh cpu
+      - name: Setup Python
+        run: |
+          python3 -m pip install --user -e python
+      - name: Test project
+        run: |
+          python3 -m pytest --durations=50 --verbose tests/python/unittest/ -k 'not (test_subgraph or test_custom_op or test_recordimage_dataset_with_data_loader_multiworker or test_multi_worker or test_multi_worker_shape or test_multi_worker_forked_data_loader or test_multi_worker_dataloader_release_pool)'

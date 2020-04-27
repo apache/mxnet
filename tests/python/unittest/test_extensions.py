@@ -27,6 +27,7 @@ from mxnet.gluon import nn
 from mxnet.base import MXNetError
 from mxnet.test_utils import download, is_cd_run, assert_almost_equal, default_context
 
+base_path = os.path.join(os.path.dirname(__file__), "../../..")
 def check_platform():
     return platform.machine() not in ['x86_64', 'AMD64']
 
@@ -38,8 +39,8 @@ def test_custom_op():
         lib = 'libcustomop_lib.so'
         if os.path.exists(lib):
             fname = lib
-        elif os.path.exists('build/'+lib):
-            fname = 'build/'+lib
+        elif os.path.exists(os.path.join(base_path,'build/'+lib)):
+            fname = os.path.join(base_path,'build/'+lib)
         else:
             raise MXNetError("library %s not found " % lib)
     elif (os.name=='nt'):
@@ -104,9 +105,9 @@ def test_subgraph():
         if os.path.exists(lib):
             # plain make build, when run in the CI
             fname = lib
-        elif os.path.exists('build/'+lib):
+        elif os.path.exists(os.path.join(base_path, 'build/'+lib)):
             # plain cmake build when run in the CI
-            fname = 'build/'+lib
+            fname = os.path.join(base_path, 'build/'+lib)
         else:
             raise MXNetError("library %s not found " % lib)
     elif (os.name=='nt'):
@@ -166,3 +167,17 @@ def test_subgraph():
     out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out4[0].asnumpy(), rtol=1e-3, atol=1e-3)
+
+    # Gluon Hybridize partitioning with shapes/types
+    sym_block2 = nn.SymbolBlock(sym, [a,b])
+    sym_block2.initialize()
+    a_data = mx.nd.ones((3,2))
+    b_data = mx.nd.ones((3,2))
+    sym_block2.optimize_for(a_data, b_data, backend='myProp')
+    sym_block2.export('optimized')
+    sym_block3 = nn.SymbolBlock.imports('optimized-symbol.json',['a','b'],
+                                        'optimized-0000.params')
+
+    out5 = sym_block3(a_data, b_data)
+    # check that result matches one executed by MXNet
+    assert_almost_equal(out[0].asnumpy(), out5[0].asnumpy(), rtol=1e-3, atol=1e-3)

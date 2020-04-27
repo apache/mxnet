@@ -136,6 +136,9 @@ def check_unary_ops():
     for act_type in ['relu', 'sigmoid', 'tanh', 'softrelu', 'softsign']:
         announce_check("Activation(act_type='{}')".format(act_type))
         check_fused_symbol(mx.sym.Activation(a, act_type=act_type), a=arr)
+        if act_type == 'softrelu':
+            # Check that softrelu implementation doesn't overflow on large inputs
+            check_fused_symbol(mx.sym.Activation(a, act_type=act_type), a=1000 * arr)
 
     # Cast requires dtype
     for dtype in ['float16', 'float32', 'float64', 'int32']:
@@ -188,7 +191,10 @@ def check_other_ops():
     b = mx.sym.Variable('b')
     c = mx.sym.Variable('c')
     shape = rand_shape_2d()
-    shape = (5,) + shape
+    shape = list((5,) + shape)
+    # Make sure there is at least 2 elements for the test with negative indices
+    shape[1] += 1
+    shape[2] += 1
     arr1 = mx.random.uniform(shape=shape)
     arr2 = mx.random.uniform(shape=shape)
     arr3 = mx.random.uniform(shape=shape)
@@ -197,12 +203,23 @@ def check_other_ops():
 
     check_fused_symbol(mx.sym.slice_axis(a, axis=0, begin=1, end=4), a=arr1)
 
+    # Testing handling of negative axis
+    check_fused_symbol(mx.sym.slice_axis(a, axis=-3, begin=1, end=4), a=arr1)
+
     begin = (random.randint(0, shape[0]-1),
              random.randint(0, shape[1]-1),
              random.randint(0, shape[2]-1))
     end = (random.randint(begin[0]+1, shape[0]),
            random.randint(begin[1]+1, shape[1]),
            random.randint(begin[2]+1, shape[2]))
+    check_fused_symbol(mx.sym.slice(a, begin=begin, end=end), a=arr1)
+
+    begin = (random.randint(-shape[0], -2),
+             random.randint(-shape[1], -2),
+             random.randint(-shape[2], -2))
+    end = (random.randint(begin[0]+1, -1),
+           random.randint(begin[1]+1, -1),
+           random.randint(begin[2]+1, -1))
     check_fused_symbol(mx.sym.slice(a, begin=begin, end=end), a=arr1)
 
     arr1 = mx.random.uniform(shape=(2,3,4,5))
@@ -213,11 +230,24 @@ def check_other_ops():
     arr2 = mx.random.uniform(shape=(2,2,2,3))
     check_fused_symbol(mx.sym.broadcast_like(a, b, lhs_axes=[0], rhs_axes=[0]), a=arr1, b=arr2)
 
+def check_leakyrelu_ops():
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    shape = rand_shape_2d()
+    arr1 = mx.random.uniform(shape=shape)
+    arr2 = mx.random.uniform(shape=shape)
+
+    # Testing gelu
+    print("Checking fusion of LeakyReLU:gelu")
+    check_fused_symbol(mx.sym.LeakyReLU(a+b, act_type='gelu'), a=arr1, b=arr2)
+
+
 @with_seed()
 def test_fusion():
     check_unary_ops()
     check_binary_ops()
     check_other_ops()
+    check_leakyrelu_ops()
 
 @with_seed()
 def test_fusion_compiler_cache():
@@ -307,6 +337,3 @@ def test_fusion_reshape_executor():
     out = f.forward(is_train=False, data1=data, data2=data)
     assert out[0].sum().asscalar() == 150
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

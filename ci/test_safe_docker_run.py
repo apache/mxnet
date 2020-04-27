@@ -420,8 +420,3 @@ class TestSafeDockerRun(unittest.TestCase):
 
             # The container should no longer exist
             assert get_container(container_name) is None
-
-
-if __name__ == '__main__':
-    import nose
-    nose.main()

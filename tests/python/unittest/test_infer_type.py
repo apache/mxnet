@@ -20,7 +20,6 @@ import mxnet as mx
 import numpy as np
 from common import models, with_seed
 from mxnet import autograd
-from nose.tools import *
 from mxnet.test_utils import assert_almost_equal
 
 @with_seed()
@@ -52,7 +51,3 @@ def test_infer_multiout_op2():
         test64.backward()
     assert_almost_equal(data64.grad.asnumpy(), data32.grad.asnumpy(), atol=1e-5, rtol=1e-5)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

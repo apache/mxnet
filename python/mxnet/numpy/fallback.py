@@ -20,7 +20,10 @@
 
 import numpy as onp
 
+
 __all__ = [
+    '__version__',
+    '_NoValue',
     'allclose',
     'alltrue',
     'apply_along_axis',
@@ -37,8 +40,8 @@ __all__ = [
     'cov',
     'digitize',
     'divmod',
+    'dtype',
     'extract',
-    'flatnonzero',
     'float_power',
     'frexp',
     'heaviside',
@@ -47,7 +50,6 @@ __all__ = [
     'histogramdd',
     'i0',
     'in1d',
-    'interp',
     'intersect1d',
     'isclose',
     'isin',
@@ -87,7 +89,6 @@ __all__ = [
     'rate',
     'real',
     'result_type',
-    'rollaxis',
     'roots',
     'searchsorted',
     'select',
@@ -107,6 +108,8 @@ __all__ = [
     'vander',
 ]
 
+__version__ = onp.__version__
+_NoValue = onp._NoValue
 allclose = onp.allclose
 alltrue = onp.alltrue
 apply_along_axis = onp.apply_along_axis
@@ -123,8 +126,8 @@ count_nonzero = onp.count_nonzero
 cov = onp.cov
 digitize = onp.digitize
 divmod = onp.divmod
+dtype = onp.dtype
 extract = onp.extract
-flatnonzero = onp.flatnonzero
 float_power = onp.float_power
 frexp = onp.frexp
 heaviside = onp.heaviside
@@ -133,7 +136,6 @@ histogram_bin_edges = onp.histogram_bin_edges
 histogramdd = onp.histogramdd
 i0 = onp.i0
 in1d = onp.in1d
-interp = onp.interp
 intersect1d = onp.intersect1d
 isclose = onp.isclose
 isin = onp.isin
@@ -177,7 +179,6 @@ pv = onp.pv
 rate = onp.rate
 real = onp.real
 result_type = onp.result_type
-rollaxis = onp.rollaxis
 roots = onp.roots
 searchsorted = onp.searchsorted
 select = onp.select

@@ -27,18 +27,18 @@
 #  Next modify the according entries, and then compile by
 #
 #  $ mkdir build; cd build
-#  $ cmake -C ../config.cmake ..
-#  $ cmake --build . --parallel 8
+#  $ cmake  ..
+#  $ cmake --build .
 #
-# You can increase the --parallel 8 argument to match the number of processor
-# cores of your computer.
+# Specify `cmake --build . --parallel N` to set the number of parallel compilation jobs.
+# Default is derived from CPUs available.
 #
 #-------------------------------------------------------------------------------
 
 #---------------------------------------------
 # Common libraries
 #---------------------------------------------
-set(BLAS "apple" CACHE STRING "BLAS Vendor")
+set(USE_BLAS "apple" CACHE STRING "BLAS Vendor")
 
 set(USE_OPENCV ON CACHE BOOL "Build with OpenCV support")
 set(OPENCV_ROOT "" CACHE BOOL "OpenCV install path. Supports autodetection.")
@@ -62,8 +62,6 @@ set(USE_TVM_OP OFF CACHE BOOL "Enable use of TVM operator build system.")
 # set(CMAKE_CXX_COMPILER "" CACHE BOOL "C++ compiler")
 # set(CMAKE_CUDA_COMPILER "" CACHE BOOL "Cuda compiler (nvcc)")
 
-# Uncomment the following line to compile with debug information
-# set(CMAKE_BUILD_TYPE Debug CACHE STRING "CMake build type")
 
 #---------------------------------------------
 # CPU instruction sets: The support is autodetected if turned ON

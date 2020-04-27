@@ -16,9 +16,48 @@
 # under the License.
 """Optimizer API of MXNet."""
 
-from . import optimizer, contrib
+from . import (optimizer, contrib, updater, utils, sgd,
+               sgld, signum, dcasgd, nag, adagrad,
+               adadelta, adam, adamax, nadam, ftrl,
+               ftml, lars, lamb, rmsprop)
 # pylint: disable=wildcard-import
 from .optimizer import *
-# pylint: enable=wildcard-import
 
-__all__ = optimizer.__all__ + ['contrib']
+from .updater import *
+
+from .utils import *
+
+from .sgd import *
+
+from .sgld import *
+
+from .signum import *
+
+from .dcasgd import *
+
+from .nag import *
+
+from .adagrad import *
+
+from .adadelta import *
+
+from .adam import *
+
+from .adamax import *
+
+from .nadam import *
+
+from .ftrl import *
+
+from .ftml import *
+
+from .lars import *
+
+from .lamb import *
+
+from .rmsprop import *
+
+__all__ = optimizer.__all__ + updater.__all__ + ['contrib'] + sgd.__all__ + sgld.__all__ \
+          + signum.__all__ + dcasgd.__all__ + nag.__all__ + adagrad.__all__ + adadelta.__all__ \
+          + adam.__all__ + adamax.__all__ + nadam.__all__ + ftrl.__all__ + ftml.__all__ \
+          + lars.__all__ + lamb.__all__ + rmsprop.__all__

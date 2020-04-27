@@ -756,24 +756,6 @@ def assert_exception(f, exception_type, *args, **kwargs):
     except exception_type:
         return
 
-def retry(n):
-    """Retry n times before failing for stochastic test cases."""
-    assert n > 0
-    def decorate(f):
-        """Decorate a test case."""
-        def wrapper(*args, **kwargs):
-            """Wrapper for tests function."""
-            for _ in range(n):
-                try:
-                    f(*args, **kwargs)
-                except AssertionError as e:
-                    err = e
-                    continue
-                return
-            raise err
-        return wrapper
-    return decorate
-
 
 def simple_forward(sym, ctx=None, is_train=False, **inputs):
     """A simple forward function for a symbol.
@@ -2268,6 +2250,7 @@ def verify_generator(generator, buckets, probs, nsamples=1000000, nrepeat=5, suc
                                 str(buckets), str(probs)))
     return cs_ret_l
 
+
 def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
     """Compare ndarray tuple."""
     if t1 is None or t2 is None:
@@ -2280,11 +2263,14 @@ def compare_ndarray_tuple(t1, t2, rtol=None, atol=None):
         assert_almost_equal(t1, t2, rtol=rtol, atol=atol)
 
 
-def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='default',
-                      rtol=1e-4, atol=1e-5, compare_states=True, ntensors=1):
+def compare_optimizer(opt1, opt2, shapes, dtype, w_stype='default', g_stype='default',
+                      rtol=1e-4, atol=1e-5, compare_states=True):
     """Compare opt1 and opt2."""
-    if not isinstance(shape, list):
-        assert(ntensors == 1)
+
+    w1_list, w2_list = [], []
+    g1_list, g2_list = [], []
+    s1_list, s2_list = [], []
+    for i, shape in enumerate(shapes):
         if w_stype == 'default':
             w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
             w1 = w2.copyto(default_context())
@@ -2301,37 +2287,77 @@ def compare_optimizer(opt1, opt2, shape, dtype, w_stype='default', g_stype='defa
             g1 = g2.copyto(default_context()).tostype('default')
         else:
             raise Exception("type not supported yet")
+        s1 = opt1.create_state_multi_precision(i, w1)
+        s2 = opt2.create_state_multi_precision(i, w2)
 
-        state1 = opt1.create_state_multi_precision(0, w1)
-        state2 = opt2.create_state_multi_precision(0, w2)
         if compare_states:
-            compare_ndarray_tuple(state1, state2)
+            compare_ndarray_tuple(s1, s2)
 
-        opt1.update_multi_precision(0, w1, g1, state1)
-        opt2.update_multi_precision(0, w2, g2, state2)
+        w1_list.append(w1)
+        w2_list.append(w2)
+        g1_list.append(g1)
+        g2_list.append(g2)
+        s1_list.append(s1)
+        s2_list.append(s2)
+
+    indices = list(range(len(shapes)))
+    opt1.update_multi_precision(indices, w1_list, g1_list, s1_list)
+    opt2.update_multi_precision(indices, w2_list, g2_list, s2_list)
+    if compare_states:
+        compare_ndarray_tuple(tuple(s1_list), tuple(s2_list), rtol=rtol, atol=atol)
+    compare_ndarray_tuple(tuple(w1_list), tuple(w2_list), rtol=rtol, atol=atol)
+
+
+def compare_optimizer_noise_seeded(opt1, opt2, shapes, dtype, noise_seed,
+                                   w_stype='default', g_stype='default',
+                                   rtol=1e-4, atol=1e-5, compare_states=True):
+    """Compare opt1 and opt2 with the added functionality that the seed for generating random noise
+    in the SGLD optimizer update is set so that the same noise is used in opt1 and opt2.
+
+    """
+    w1_list, w2_list = [], []
+    g1_list, g2_list = [], []
+    s1_list, s2_list = [], []
+    for i, shape in enumerate(shapes):
+        if w_stype == 'default':
+            w2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+            w1 = w2.copyto(default_context())
+        elif w_stype in ('row_sparse', 'csr'):
+            w2 = rand_ndarray(shape, w_stype, density=1, dtype=dtype)
+            w1 = w2.copyto(default_context()).tostype('default')
+        else:
+            raise Exception("type not supported yet")
+        if g_stype == 'default':
+            g2 = mx.random.uniform(shape=shape, ctx=default_context(), dtype=dtype)
+            g1 = g2.copyto(default_context())
+        elif g_stype in ('row_sparse', 'csr'):
+            g2 = rand_ndarray(shape, g_stype, dtype=dtype)
+            g1 = g2.copyto(default_context()).tostype('default')
+        else:
+            raise Exception("type not supported yet")
+        s1 = opt1.create_state_multi_precision(i, w1)
+        s2 = opt2.create_state_multi_precision(i, w2)
+
         if compare_states:
-            compare_ndarray_tuple(state1, state2, rtol=rtol, atol=atol)
-        assert_almost_equal(w1, w2, rtol=rtol, atol=atol)
-    else:
-        # test multi-tensor: Opt1 single-tensor reference, Opt2 multi-tensor
-        from copy import deepcopy
-        w1, g1 = [], []
-        for s in shape:
-            w1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
-            g1.append(mx.random.uniform(shape=s, ctx=default_context(), dtype=dtype))
-        w1 = tuple(w1)
-        w2 = deepcopy(w1)
-        g1 = tuple(g1)
-        g2 = deepcopy(g1)
-        state2 = [opt2.create_state_multi_precision(0, w2[i]) for i in range(ntensors)]
+            compare_ndarray_tuple(s1, s2)
 
-        opt2.update_multi_precision(list(range(ntensors)), w2, g2, state2)
-        for i in range(ntensors):
-            state1 = opt1.create_state_multi_precision(i, w1[i])
-            opt1.update_multi_precision(i, w1[i], g1[i], state1)
-            if compare_states:
-                compare_ndarray_tuple(state1, state2[i], rtol, atol)
-            compare_ndarray_tuple(w1[i], w2[i], rtol, atol)
+        w1_list.append(w1)
+        w2_list.append(w2)
+        g1_list.append(g1)
+        g2_list.append(g2)
+        s1_list.append(s1)
+        s2_list.append(s2)
+
+    indices = list(range(len(shapes)))
+    # set seed for Gaussian noise replication
+    mx.random.seed(noise_seed)
+    opt1.update_multi_precision(indices, w1_list, g1_list, s1_list)
+    mx.random.seed(noise_seed)
+    opt2.update_multi_precision(indices, w2_list, g2_list, s2_list)
+    if compare_states:
+        compare_ndarray_tuple(tuple(s1_list), tuple(s2_list), rtol=rtol, atol=atol)
+    compare_ndarray_tuple(tuple(w1_list), tuple(w2_list), rtol=rtol, atol=atol)
+
 
 def same_symbol_structure(sym1, sym2):
     """Compare two symbols to check if they have the same computation graph structure.

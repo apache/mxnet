@@ -224,6 +224,14 @@ const std::map<std::string, std::vector<std::vector<std::string>>> ops_desc = {
                                           {"(% * % / op::hypot(%, %))", "_0", "_2", "_1", "_2"}}}
 };
 
+// LeakyReLU ops: based on "act_type" attribute
+const std::map<std::string, std::vector<std::vector<std::string>>> LeakyReLU_ops = {
+  {"gelu"                              , {{"op::gelu(%)", "_0"}}},
+};
+const std::map<std::string, std::vector<std::vector<std::string>>> LeakyReLU_bwd_ops = {
+  {"gelu"                              , {{"op::backward_gelu(%, %)", "_1", "_0"}}},
+};
+
 const std::map<std::string, std::string> slice_ops = {
   {"slice_axis"   , ""},
   {"slice"   , ""},
@@ -391,8 +399,8 @@ __device__ inline VectorType<DType, nvec> load_slice(const DType * input, const 
   strides[ndim-1] = 1;
   #pragma unroll
   for (int dim = ndim-1; dim >=0; dim--) {
-    if (begin[dim] < 0) begin[dim] = shape[dim] - begin[dim];
-    if (end[dim] < 0) end[dim] = shape[dim] - end[dim];
+    if (begin[dim] < 0) begin[dim] = shape[dim] + begin[dim];
+    if (end[dim] < 0) end[dim] = shape[dim] + end[dim];
     if (end[dim] == INT_MAX) end[dim] = shape[dim];
     if (dim > 0) {
       ref_strides[dim-1] = ref_strides[dim] * (end[dim] - begin[dim]);
@@ -434,8 +442,8 @@ __device__ inline VectorType<DType, nvec> fast_load_slice(const DType * input,
   strides[ndim-1] = 1;
   #pragma unroll
   for (int dim = ndim-1; dim >=0; dim--) {
-    if (begin[dim] < 0) begin[dim] = shape[dim] - begin[dim];
-    if (end[dim] < 0) end[dim] = shape[dim] - end[dim];
+    if (begin[dim] < 0) begin[dim] = shape[dim] + begin[dim];
+    if (end[dim] < 0) end[dim] = shape[dim] + end[dim];
     if (end[dim] == INT_MAX) end[dim] = shape[dim];
     if (dim > 0) {
       ref_strides[dim-1] = ref_strides[dim] * (end[dim] - begin[dim]);
@@ -543,6 +551,14 @@ __device__ inline DType relu(const DType val) {
   return val > 0 ? val : 0;
 }
 
+const float SQRT_2 = 1.4142135623730950488016887242096;
+// compatible with mshadow_op.h version
+template <typename DType>
+__device__ inline DType gelu(const DType val) {
+  return DType(0.5f * static_cast<float>(val) *
+               (1.0f + erf(static_cast<float>(val) / SQRT_2)));
+}
+
 template <typename DType>
 __device__ inline DType sigmoid(const DType val) {
   return 1.f/(1 + expf(-val));
@@ -550,7 +566,10 @@ __device__ inline DType sigmoid(const DType val) {
 
 template <typename DType>
 __device__ inline DType softrelu(const DType val) {
-  return logf(1 + expf(val));
+  // Avoid overflow of exp for large inputs.
+  // The threshold 20 is chosen such that softrelu(a) = a
+  // for a > 20 using floating precision.
+  return val > 20 ? val : logf(1 + expf(val));
 }
 
 template <typename DType>
@@ -982,6 +1001,13 @@ __device__ inline DTypeGrad backward_smooth_l1(const DType val, const DType2 sca
   } else {
     return bsq * val * grad;
   }
+}
+
+// compatible with mshadow_op.h version
+template <typename DType, typename DTypeGrad>
+__device__ inline DTypeGrad backward_gelu(const DType val, const DTypeGrad grad) {
+  return grad * DType(0.5f * (1.0f + erf(static_cast<float>(val) / SQRT_2) +
+                static_cast<float>(val) * backward_erf(static_cast<float>(val) / SQRT_2, 1.0f) / SQRT_2));
 }
 
 }  // namespace op

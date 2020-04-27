@@ -21,17 +21,17 @@ import tempfile
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
-from mxnet.base import py_str
+from mxnet.base import py_str, MXNetError
 from mxnet.test_utils import assert_almost_equal
 from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
 import mxnet.numpy as _mx_np
-from common import (setup_module, with_seed, assertRaises, teardown,
+from common import (setup_module, with_seed, assertRaises, teardown_module,
                     assert_raises_cudnn_not_satisfied)
 import numpy as np
 from numpy.testing import assert_array_equal
-from nose.tools import raises, assert_raises
+import pytest
 from copy import deepcopy
 import warnings
 import json
@@ -54,12 +54,12 @@ def test_parameter():
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
 
 @with_seed()
-@raises(AssertionError)
+@pytest.mark.xfail(raises=AssertionError)
 def test_invalid_parameter_stype():
     p = gluon.Parameter('weight', shape=(10, 10), stype='invalid')
 
 @with_seed()
-@raises(AssertionError)
+@pytest.mark.xfail(raises=AssertionError)
 def test_invalid_parameter_grad_stype():
     p = gluon.Parameter('weight', shape=(10, 10), grad_stype='invalid')
 
@@ -424,7 +424,7 @@ def test_symbol_block():
     assert np.dtype(prediction.dtype) == np.dtype(np.float32)
 
 @with_seed()
-@raises(AssertionError)
+@pytest.mark.xfail(raises=AssertionError)
 def test_sparse_symbol_block():
     data = mx.sym.var('data')
     weight = mx.sym.var('weight', stype='row_sparse')
@@ -434,7 +434,7 @@ def test_sparse_symbol_block():
     net = gluon.SymbolBlock(out, data)
 
 @with_seed()
-@raises(RuntimeError)
+@pytest.mark.xfail(raises=RuntimeError)
 def test_sparse_hybrid_block():
     params = gluon.ParameterDict('net_')
     params.get('weight', shape=(5,5), stype='row_sparse', dtype='float32')
@@ -501,17 +501,17 @@ def test_hybrid_block_none_args():
         foo = FooNested()
         if do_hybridize:
             foo.hybridize()
-        assert_raises(ValueError, foo, None, None)
+        pytest.raises(ValueError, foo, None, None)
 
     # Make sure the ValueError is correctly raised
     foo = FooNested()
     foo.hybridize()
     foo(None, mx.nd.ones((10,)))  # Pass for the first time to initialize the cached op
-    assert_raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.nd.ones((10,))))
+    pytest.raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.nd.ones((10,))))
     foo = FooNested()
-    assert_raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.sym.var('a')))
+    pytest.raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.sym.var('a')))
     foo = FooNested()
-    assert_raises(ValueError, lambda: foo(mx.sym.var('a'), mx.nd.ones((10,))))
+    pytest.raises(ValueError, lambda: foo(mx.sym.var('a'), mx.nd.ones((10,))))
 
     # Test the case of the default values
     foo1 = FooDefault()
@@ -529,7 +529,7 @@ def test_hybrid_block_none_args():
     out1 = foo1(mx.nd.ones((10,)), None)
     out2 = foo1(mx.nd.ones((10,)))
     assert_almost_equal(out1.asnumpy(), out2.asnumpy())
-    assert_raises(ValueError, lambda: foo1(mx.nd.ones((10,)), mx.nd.ones((10,))))
+    pytest.raises(ValueError, lambda: foo1(mx.nd.ones((10,)), mx.nd.ones((10,))))
 
 
 @with_seed()
@@ -567,13 +567,13 @@ def test_hybrid_block_hybrid_no_hybrid():
     # 4. Allow mixing of cpu_pinned and cpu
     foo_hybrid = FooHybrid()
     foo_hybrid.hybridize()
-    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), 1))
+    pytest.raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), 1))
     foo_hybrid = FooHybrid()
     foo_hybrid.hybridize()
-    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), mx.sym.var('a')))
+    pytest.raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,)), mx.sym.var('a')))
     foo_hybrid = FooHybrid()
     foo_hybrid.hybridize()
-    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.cpu(1)),
+    pytest.raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.cpu(1)),
                                                  mx.nd.ones((10,), ctx=mx.cpu(2))))
 
 
@@ -894,7 +894,13 @@ def test_instancenorm():
 def test_layernorm():
     layer = nn.LayerNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))
-
+    # Check for the case of error raising
+    for hybridize in [False, True]:
+        layer = nn.LayerNorm(in_channels=10)
+        layer.initialize()
+        if hybridize:
+            layer.hybridize()
+        pytest.raises(MXNetError, lambda: layer(mx.nd.ones((2, 11))))
 
 @with_seed()
 def test_groupnorm():
@@ -1017,7 +1023,7 @@ def test_block_attr_hidden():
     b.a = 1
 
 
-@raises(TypeError)
+@pytest.mark.xfail(raises=TypeError)
 @with_seed()
 def test_block_attr_block():
     b = gluon.Block()
@@ -1027,7 +1033,7 @@ def test_block_attr_block():
     b.b = (2,)
 
 
-@raises(TypeError)
+@pytest.mark.xfail(raises=TypeError)
 @with_seed()
 def test_block_attr_param():
     b = gluon.Block()
@@ -1185,7 +1191,9 @@ def test_export():
     data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out = model(data)
 
-    model.export('gluon')
+    symbol_filename, params_filename = model.export('gluon')
+    assert symbol_filename == 'gluon-symbol.json'
+    assert params_filename == 'gluon-0000.params'
 
     module = mx.mod.Module.load('gluon', 0, label_names=None, context=ctx)
     module.bind(data_shapes=[('data', data.shape)])
@@ -1776,8 +1784,9 @@ def test_op_hook_output_names():
         output_names = []
 
         def mon_callback(node_name, opr_name, arr):
-            output_names.append(py_str(node_name))
-            opr_names.append(py_str(opr_name))
+            output_names.append(node_name)
+            opr_names.append(opr_name)
+            assert isinstance(arr, mx.nd.NDArray)
 
         block.register_op_hook(mon_callback, monitor_all)
         if not inputs:
@@ -1877,7 +1886,7 @@ def test_summary():
     net3.summary(mx.nd.ones((80, 32, 5)), begin_state)
 
     net.hybridize()
-    assert_raises(AssertionError, net.summary, mx.nd.ones((32, 3, 224, 224)))
+    pytest.raises(AssertionError, net.summary, mx.nd.ones((32, 3, 224, 224)))
 
 
 @with_seed()
@@ -3206,6 +3215,3 @@ def test_reqs_switching_training_inference():
 
     mx.test_utils.assert_almost_equal(grad1, grad2)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

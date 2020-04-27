@@ -28,6 +28,8 @@
 #include <mxnet/operator_util.h>
 #include <vector>
 #include <limits>
+#include <string>
+#include <sstream>
 #include <cmath>
 #include "../../tensor/la_op.h"
 #include "../../tensor/la_op-inl.h"
@@ -71,6 +73,10 @@ struct nrmlp {
   /*! \brief do stable reduction into dst */
   template<typename AType, typename DType>
   MSHADOW_XINLINE void Reduce(volatile AType& sum_of_powers, volatile DType src, volatile DType& scale) { // NOLINT(*)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#endif
     if (src != 0) {
       DType src_abs = abs::Map(src);
       if (scale < src_abs) {
@@ -81,6 +87,7 @@ struct nrmlp {
         sum_of_powers = sum_of_powers + AType(lp_power(static_cast<double>(src_abs / scale), lp));
       }
     }
+#pragma GCC diagnostic pop
   }
 
   /*! \brief combine the results of two reducers */
@@ -111,9 +118,14 @@ struct nrmlp {
   /*! \brief finalize reduction result */
   template<typename DType>
   MSHADOW_XINLINE void Finalize(volatile DType& sum_of_powers, volatile DType& scale) { // NOLINT(*)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 7
+#pragma GCC diagnostic ignored "-Wint-in-bool-context"
+#endif
     if (lp != 0.0) {
       sum_of_powers = scale * DType(lp_power(static_cast<double>(sum_of_powers), 1.0 / lp));
     }
+#pragma GCC diagnostic pop
   }
 
   /*!
@@ -223,6 +235,22 @@ struct NumpyNormParam : public dmlc::Parameter<NumpyNormParam> {
     .describe("Mapping relations between ord and flag."
     "ord:  None,  'fro', 'nuc', 'inf'  '-inf'."
     "flag:  0 ,    1,      2,    3,      4. ");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream oss_axis, oss_ord, oss_keepdims, oss_flag;
+    if (axis.has_value()) {
+      oss_axis << axis.value();
+    } else {
+      oss_axis << axis;
+    }
+    (*dict)["axis"] = oss_axis.str();
+    oss_ord << ord;
+    (*dict)["ord"] = oss_ord.str();
+    oss_keepdims << keepdims;
+    (*dict)["keepdims"] = oss_keepdims.str();
+    oss_flag << flag;
+    (*dict)["flag"] = oss_flag.str();
   }
 };
 

@@ -1,3 +1,20 @@
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
 #---------------------------------------------------------------------------------------
 #  mshadow configuration script
 #
@@ -149,13 +166,13 @@ else
 endif
 
 ifeq ($(USE_DIST_PS),1)
-MSHADOW_CFLAGS += -DMSHADOW_DIST_PS=1 -std=c++11 \
+MSHADOW_CFLAGS += -DMSHADOW_DIST_PS=1 -std=c++17 \
 	-I$(PS_PATH)/src -I$(PS_THIRD_PATH)/include
 PS_LIB = $(addprefix $(PS_PATH)/build/, libps.a libps_main.a) \
 	$(addprefix $(PS_THIRD_PATH)/lib/, libgflags.a libzmq.a libprotobuf.a \
 	libglog.a libz.a libsnappy.a)
 	# -L$(PS_THIRD_PATH)/lib -lgflags -lzmq -lprotobuf -lglog -lz -lsnappy
-MSHADOW_NVCCFLAGS += --std=c++11
+MSHADOW_NVCCFLAGS += --std=c++14
 else
 	MSHADOW_CFLAGS+= -DMSHADOW_DIST_PS=0
 endif

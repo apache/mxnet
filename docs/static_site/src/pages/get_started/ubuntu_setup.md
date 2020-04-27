@@ -130,12 +130,15 @@ the guide in [Math Library Selection](build_from_source#math-library-selection).
 ```bash
 rm -rf build
 mkdir -p build && cd build
-cmake -GNinja -C ../config.cmake ..
-cmake --build . --parallel 8
+cmake -GNinja ..
+cmake --build .
 ```
 
-You can increase the `--parallel 8` argument to match the number of processor
-cores of your computer.
+Specify `cmake -DCMAKE_BUILD_TYPE=Debug -GNinja ..` if you wish to build the
+Debug version.
+
+Specify `cmake --build . --parallel N` to set the number of parallel compilation
+jobs. Default is derived from CPUs available.
 
 After a successful build, you will find the `libmxnet.so` in the `build` folder
 in your MXNet project root. `libmxnet.so` is required to install language

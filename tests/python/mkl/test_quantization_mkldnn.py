@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.join(curr_path, '../quantization'))
 from test_quantization import *
 
 if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+    import pytest
+    pytest.main()
     del os.environ['ENABLE_MKLDNN_QUANTIZATION_TEST']
     del os.environ['MXNET_SUBGRAPH_BACKEND']
