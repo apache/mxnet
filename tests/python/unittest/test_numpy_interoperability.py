@@ -757,8 +757,9 @@ def _add_workload_tril():
                         [np.inf, 1, 1]])
         OpArgMngr.add_workload('tril', arr)
         OpArgMngr.add_workload('tril', np.zeros((3, 3), dtype=dt))
-    assertRaises(TypeError, np.tril, 10)
-    assertRaises(TypeError, np.tril, 2, 10)
+    import mxnet as mx
+    assertRaises(mx.MXNetError, np.tril, 10)
+    assertRaises(mx.MXNetError, np.tril, 2, 10)
 
 
 def _add_workload_triu():
@@ -776,8 +777,6 @@ def _add_workload_triu():
                         [np.inf, 1, 1]])
         OpArgMngr.add_workload('triu', arr)
         OpArgMngr.add_workload('triu', np.zeros((3, 3), dtype=dt))
-    assertRaises(TypeError, np.triu, 10)
-    assertRaises(TypeError, np.triu, 2, 10)
 
 
 def _add_workload_einsum():
