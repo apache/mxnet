@@ -196,7 +196,8 @@ inline size_t GetRNNWorkspaceSize(index_t seq_length,
       size = seq_length * batch_size * hidden_size * (4 + direction) +  // wx*x + inter-y
           batch_size * hidden_size * 6 +                                // wh*h + h + c
           seq_length * hidden_size * 8 +                   // Used in Backward, Δbx, Δbh
-          seq_length * batch_size * hidden_size * (direction - 1 ? direction : 0); // temporary dy in backward computation for bidirectional layers
+          // temporary dy in backward computation for bidirectional layers
+          seq_length * batch_size * hidden_size * (direction - 1 ? direction : 0);
       break;
     case rnn_enum::kGru:
       // Differs with Lstm, the outputs of three gates are also held in memory

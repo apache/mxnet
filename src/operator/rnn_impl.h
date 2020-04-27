@@ -597,7 +597,8 @@ void LstmBackward(DType* ws,
                                      dhy_cur_ptr, dcy_cur_ptr, w_cur_ptr, dw_cur_ptr, db_cur_ptr,
                                      req_data, req_params, req_state, req_statecell);
 
-      dy_tmp_ptr = loop_iter++ % 2 ? dy_tmp_ptr - y_size : dy_tmp_ptr + y_size; // prevent overwritting dy while calculation dx in left2right layer
+      // Prevent overwritting dy while calculating dx in left2right layer
+      dy_tmp_ptr = loop_iter++ % 2 ? dy_tmp_ptr - y_size : dy_tmp_ptr + y_size;
     }
     if (dropout > 0.0f && i > 0 && req_data != kNullOp) {
       dropout_random = dropout_random - T * N * D * H;
