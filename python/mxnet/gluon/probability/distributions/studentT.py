@@ -23,7 +23,7 @@ __all__ = ['StudentT']
 from .distribution import Distribution
 from .constraint import Real, Positive
 from .chi2 import Chi2 
-from .utils import getF, gammaln, sample_n_shape_converter
+from .utils import getF, gammaln, digamma, sample_n_shape_converter
 from numpy import nan, inf, pi
 
 # FIXME: Implement entropy
@@ -86,3 +86,14 @@ class StudentT(Distribution):
             F.np.log(self.scale) - 0.5 * F.np.log(df * pi)
             -0.5 * (df + 1) * F.np.log1p(value ** 2 / df)
         )
+
+    def entropy(self):
+        F = self.F
+        lgamma = gammaln(F)
+        dgamma = digamma(F)
+        log_fn = F.np.log
+        lbeta = lgamma(0.5 * self.df) + lgamma(0.5) - lgamma(0.5 * (self.df + 1))
+        return (log_fn(self.scale) +
+                0.5 * (self.df + 1) *
+                (dgamma(0.5 * (self.df + 1)) - dgamma(0.5 * self.df)) +
+                0.5 * log_fn(self.df) + lbeta)

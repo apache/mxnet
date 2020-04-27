@@ -1021,9 +1021,9 @@ def test_gluon_student_t():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    # Test `mean` and `var`
+    # Test `mean`, `var` and `entropy`
     for shape, hybridize in itertools.product(shapes, [False, True]):
-        for func in ['mean', 'variance']:
+        for func in ['mean', 'variance', 'entropy']:
             loc = np.zeros(shape)
             scale = np.random.uniform(0.5, 1.5, shape)
             df = np.random.uniform(3, 4, shape)
@@ -1034,8 +1034,10 @@ def test_gluon_student_t():
             ss_f = ss.t(loc=0, scale=scale.asnumpy(), df=df.asnumpy())
             if func == 'mean':
                 np_out = ss_f.mean()
-            else:
+            elif func == 'variance':
                 np_out = ss_f.var()
+            else:
+                np_out = ss_f.entropy()
             assert_almost_equal(mx_out, np_out, atol=1e-4,
                                 rtol=1e-3, use_broadcast=False)
 
