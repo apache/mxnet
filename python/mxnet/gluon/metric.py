@@ -162,7 +162,15 @@ class EvalMetric(object):
         if self.num_inst == 0:
             return (self.name, float('nan'))
         else:
-            return (self.name, self.sum_metric / self.num_inst)
+            res = self.sum_metric / self.num_inst
+            if isinstance(res, numpy.ndarray) and len(res.shape) == 0:
+                """
+                currently calling ' c = mxnet.numpy.array([1,2,3]).sum() ' would get
+                ' array(6.) ', a ndarray with shape ()
+                In this case, returning a 'float' in .get() is more explicit.
+                """
+                res = res.item()
+            return (self.name, res)
 
     def get_name_value(self):
         """Returns zipped name and value pairs.
@@ -590,7 +598,7 @@ class _ClassificationMetrics(object):
         label = label.as_np_ndarray().astype('int32')
         if self.class_type == "binary":
             self._set(1)
-            if len(numpy.unique(label)) > 2:
+            if label.max() > 1:
                 raise ValueError("Wrong label for binary classification.")
             if pred.shape == label.shape:
                 pass
@@ -1017,109 +1025,6 @@ class MCC(EvalMetric):
         self._metrics.reset_stats()
 
 
-@register
-class Perplexity(EvalMetric):
-    """Computes perplexity.
-
-    Perplexity is a measurement of how well a probability distribution
-    or model predicts a sample. A low perplexity indicates the model
-    is good at predicting the sample.
-
-    The perplexity of a model q is defined as
-
-    .. math::
-        b^{\\big(-\\frac{1}{N} \\sum_{i=1}^N \\log_b q(x_i) \\big)}
-        = \\exp \\big(-\\frac{1}{N} \\sum_{i=1}^N \\log q(x_i)\\big)
-
-    where we let `b = e`.
-
-    :math:`q(x_i)` is the predicted value of its ground truth
-    label on sample :math:`x_i`.
-
-    For example, we have three samples :math:`x_1, x_2, x_3` and their labels
-    are :math:`[0, 1, 1]`.
-    Suppose our model predicts :math:`q(x_1) = p(y_1 = 0 | x_1) = 0.3`
-    and :math:`q(x_2) = 1.0`,
-    :math:`q(x_3) = 0.6`. The perplexity of model q is
-    :math:`exp\\big(-(\\log 0.3 + \\log 1.0 + \\log 0.6) / 3\\big) = 1.77109762852`.
-
-    Parameters
-    ----------
-    ignore_label : int or None
-        Index of invalid label to ignore when
-        counting. By default, sets to -1.
-        If set to `None`, it will include all entries.
-    axis : int (default -1)
-        The axis from prediction that was used to
-        compute softmax. By default use the last
-        axis.
-    name : str
-        Name of this metric instance for display.
-    output_names : list of str, or None
-        Name of predictions that should be used when updating with update_dict.
-        By default include all predictions.
-    label_names : list of str, or None
-        Name of labels that should be used when updating with update_dict.
-        By default include all labels.
-
-    Examples
-    --------
-    >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
-    >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> perp = mx.gluon.metric.Perplexity(ignore_label=None)
-    >>> perp.update(labels, predicts)
-    >>> print perp.get()
-    ('Perplexity', 1.7710976285155853)
-    """
-    def __init__(self, ignore_label, axis=-1, name='perplexity',
-                 output_names=None, label_names=None):
-        super(Perplexity, self).__init__(
-            name, ignore_label=ignore_label,
-            output_names=output_names, label_names=label_names)
-        self.ignore_label = ignore_label
-        self.axis = axis
-
-    def update(self, labels, preds):
-        """Updates the internal evaluation result.
-
-        Parameters
-        ----------
-        labels : list of `NDArray`
-            The labels of the data.
-
-        preds : list of `NDArray`
-            Predicted values.
-        """
-        assert len(labels) == len(preds)
-        loss = 0.
-        num = 0
-        for label, pred in zip(labels, preds):
-            assert label.size == pred.size/pred.shape[-1], \
-                "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
-            label = label.as_in_context(pred.context).reshape((label.size,))
-            pred = ndarray.pick(pred, label.astype(dtype='int32'), axis=self.axis)
-            if self.ignore_label is not None:
-                ignore = (label == self.ignore_label).astype(pred.dtype)
-                num -= ndarray.sum(ignore).asscalar()
-                pred = pred*(1-ignore) + ignore
-            loss -= ndarray.sum(ndarray.log(ndarray.maximum(1e-10, pred))).asscalar()
-            num += pred.size
-        self.sum_metric += loss
-        self.num_inst += num
-
-    def get(self):
-        """Returns the current evaluation result.
-
-        Returns
-        -------
-        Tuple of (str, float)
-            Representing name of the metric and evaluation result.
-        """
-        if self.num_inst == 0:
-            return (self.name, float('nan'))
-        else:
-            return (self.name, math.exp(self.sum_metric/self.num_inst))
-
 ####################
 # REGRESSION METRICS
 ####################
@@ -1439,9 +1344,13 @@ class CrossEntropy(EvalMetric):
 
     Parameters
     ----------
-    eps : float
-        Cross Entropy loss is undefined for predicted value is 0 or 1,
-        so predicted values are added with the small constant.
+    ignore_label : int or None, default None
+        Index of invalid label to ignore when
+        counting. By default, sets to -1.
+        If set to `None`, it will include all entries.
+    axis : int (default -1)
+        The axis from prediction that was used to
+        compute softmax. By default use the last axis.
     name : str
         Name of this metric instance for display.
     output_names : list of str, or None
@@ -1460,12 +1369,12 @@ class CrossEntropy(EvalMetric):
     >>> print ce.get()
     ('cross-entropy', 0.57159948348999023)
     """
-    def __init__(self, eps=1e-12, name='cross-entropy',
+    def __init__(self, ignore_label=None, axis=-1, name='cross-entropy',
                  output_names=None, label_names=None):
         super(CrossEntropy, self).__init__(
-            name, eps=eps,
-            output_names=output_names, label_names=label_names)
-        self.eps = eps
+            name, output_names=output_names, label_names=label_names)
+        self.ignore_label = ignore_label
+        self.axis = axis
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -1480,17 +1389,91 @@ class CrossEntropy(EvalMetric):
         """
         labels, preds = check_label_shapes(labels, preds, True)
 
+        loss = 0.
+        num = 0
         for label, pred in zip(labels, preds):
+            assert label.size == pred.size/pred.shape[-1], \
+                "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
+            label = label.as_in_context(pred.context).reshape((label.size,))
+            pred = ndarray.pick(pred, label.astype(dtype='int32'), axis=self.axis)
             label = label.as_np_ndarray()
             pred = pred.as_np_ndarray()
+            if self.ignore_label is not None:
+                ignore = (label == self.ignore_label).astype(pred.dtype)
+                num -= ignore.sum()
+                pred = pred * (1 - ignore) + ignore
+            loss -= numpy.log(numpy.maximum(1e-12, pred)).sum()
+            num += pred.size
+        self.sum_metric += loss
+        self.num_inst += num
 
-            label = label.reshape(-1)
-            assert label.shape[0] == pred.shape[0]
 
-            prob = pred[numpy.arange(label.shape[0]), numpy.int64(label)]
-            cross_entropy = (-numpy.log(prob + self.eps)).sum()
-            self.sum_metric += cross_entropy
-            self.num_inst += label.shape[0]
+@register
+@use_np
+class Perplexity(CrossEntropy):
+    """Computes perplexity.
+
+    Perplexity is a measurement of how well a probability distribution
+    or model predicts a sample. A low perplexity indicates the model
+    is good at predicting the sample.
+
+    The perplexity of a model q is defined as
+
+    .. math::
+        b^{\\big(-\\frac{1}{N} \\sum_{i=1}^N \\log_b q(x_i) \\big)}
+        = \\exp \\big(-\\frac{1}{N} \\sum_{i=1}^N \\log q(x_i)\\big)
+
+    where we let `b = e`.
+
+    :math:`q(x_i)` is the predicted value of its ground truth
+    label on sample :math:`x_i`.
+
+    For example, we have three samples :math:`x_1, x_2, x_3` and their labels
+    are :math:`[0, 1, 1]`.
+    Suppose our model predicts :math:`q(x_1) = p(y_1 = 0 | x_1) = 0.3`
+    and :math:`q(x_2) = 1.0`,
+    :math:`q(x_3) = 0.6`. The perplexity of model q is
+    :math:`exp\\big(-(\\log 0.3 + \\log 1.0 + \\log 0.6) / 3\\big) = 1.77109762852`.
+
+    Parameters
+    ----------
+    ignore_label : int or None, default None
+        Index of invalid label to ignore when
+        counting. By default, sets to -1.
+        If set to `None`, it will include all entries.
+    axis : int (default -1)
+        The axis from prediction that was used to
+        compute softmax. By default use the last axis.
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
+    Examples
+    --------
+    >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
+    >>> labels   = [mx.nd.array([0, 1, 1])]
+    >>> perp = mx.gluon.metric.Perplexity(ignore_label=None)
+    >>> perp.update(labels, predicts)
+    >>> print perp.get()
+    ('Perplexity', 1.7710976285155853)
+    """
+    def __init__(self, ignore_label=None, axis=-1, name='perplexity',
+                 output_names=None, label_names=None):
+        super(Perplexity, self).__init__(
+            name=name, ignore_label=ignore_label, axis=axis, 
+            output_names=output_names, label_names=label_names)
+
+    def get(self):
+        if self.num_inst == 0:
+            return (self.name, float('nan'))
+        else:
+            return (self.name, math.exp(self.sum_metric/self.num_inst))
+
 
 @register
 @alias('nll_loss')
@@ -1654,7 +1637,7 @@ class PearsonCorrelation(EvalMetric):
 
         n = self._label_nums
         pearsonr = self._conv / ((n-1) * numpy.sqrt(self._sse_p / (n - 1)) * numpy.sqrt(self._sse_l / (n - 1)))
-        return (self.name, pearsonr)
+        return (self.name, float(pearsonr))
 
 @register
 @use_np

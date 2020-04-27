@@ -36,7 +36,7 @@ def test_metrics():
     check_metric('acc', axis=0)
     check_metric('f1')
     check_metric('mcc')
-    check_metric('perplexity', -1)
+    check_metric('perplexity', axis=-1)
     check_metric('pearsonr')
     check_metric('pcc')
     check_metric('nll_loss')
@@ -60,7 +60,7 @@ def test_acc():
     metric.update([label], [pred])
     _, acc = metric.get()
     expected_acc = (np.argmax(pred, axis=1) == label).sum().asscalar() / label.size
-    assert acc == expected_acc
+    np.testing.assert_almost_equal(acc, expected_acc)
 
 def test_acc_2d_label():
     # label maybe provided in 2d arrays in custom data iterator
@@ -71,7 +71,7 @@ def test_acc_2d_label():
     _, acc = metric.get()
     expected_acc = (np.argmax(pred, axis=1).asnumpy() == label.asnumpy().ravel()).sum() / \
                    float(label.asnumpy().ravel().size)
-    assert acc == expected_acc
+    np.testing.assert_almost_equal(acc, expected_acc)
 
 def test_loss_update():
     pred = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
@@ -181,7 +181,7 @@ def test_multilabel_f1():
     macroF1.update([label], [pred])
     microF1.update([label], [pred])
     assert macroF1.get()[1] == 0.5 # one class is 1.0, the other is 0. (divided by 0)
-    assert microF1.get()[1] == 2.0 / 3 
+    np.testing.assert_almost_equal(microF1.get()[1], 2.0 / 3)  
     macroF1.reset()
     microF1.reset()
 
@@ -244,10 +244,10 @@ def test_perplexity():
     label = mx.nd.array([0, 1, 1])
     p = pred.asnumpy()[np.arange(label.size), label.asnumpy().astype('int32')]
     perplexity_expected = np.exp(-np.log(p).sum()/label.size)
-    metric = mx.gluon.metric.create('perplexity', -1)
+    metric = mx.gluon.metric.create('perplexity', axis=-1)
     metric.update([label], [pred])
     _, perplexity = metric.get()
-    assert perplexity == perplexity_expected
+    np.testing.assert_almost_equal(perplexity, perplexity_expected)
 
 def test_pearsonr():
     pred1 = mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])
@@ -383,3 +383,7 @@ def test_single_array_input():
     rmse.get()
     _, rmse_res = rmse.get()
     np.testing.assert_almost_equal(rmse_res, 0.1)
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
