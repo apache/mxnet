@@ -566,7 +566,6 @@ void LstmBackward(DType* ws,
   const index_t cell_size = N * H;
   const index_t y_size = T * N * H * D;
   DType* dy_tmp_ptr = ws2 + T * cell_size * 4 + cell_size * 3;
-  int loop_iter = 0;
   for (int i = L - 1; i >= 0; --i) {
     const index_t input_size = i ? H * D : I;
     const index_t w_size = i ? w_size2 : w_size1;
@@ -598,7 +597,8 @@ void LstmBackward(DType* ws,
                                      req_data, req_params, req_state, req_statecell);
 
       // Prevent overwritting dy while calculating dx in left2right layer
-      dy_tmp_ptr = loop_iter++ % 2 ? dy_tmp_ptr - y_size : dy_tmp_ptr + y_size;
+      const int loop_iteration = (L - 1) - i;
+      dy_tmp_ptr = loop_iteration % 2 ? dy_tmp_ptr - y_size : dy_tmp_ptr + y_size;
     }
     if (dropout > 0.0f && i > 0 && req_data != kNullOp) {
       dropout_random = dropout_random - T * N * D * H;
