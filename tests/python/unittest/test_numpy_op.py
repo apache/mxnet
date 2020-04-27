@@ -1558,6 +1558,44 @@ def test_npx_batch_norm():
                             data_grad_req,
                             gamma_grad_req, beta_grad_req)
 
+@with_seed()
+@use_np
+def test_npx_softmax():
+    class TestSoftmax(HybridBlock):
+        def __init__(self, axis):
+            super(TestSoftmax, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.npx.softmax(a, axis=axis)
+
+    def np_softmax(x, axis=-1):
+        if (x.shape[axis] == 0):
+            return _np.sum(x, axis=axis, keepdims=True)
+        x = x - _np.max(x, axis=axis, keepdims=True)
+        x = _np.exp(x)
+        x /= _np.sum(x, axis=axis, keepdims=True)
+        return x
+
+    # only testing 0-size shaped inputs here, other input cases have been tested in test_opeartor.py
+    for hybridize in [True, False]:
+        for shape in [(3, 0, 4), (0, 0)]:
+            mx_a = np.random.uniform(size=shape)
+            mx_a.attach_grad()
+            for axis in range(-len(shape), len(shape)):
+                test_softmax = TestSoftmax(axis)
+                if hybridize:
+                    test_softmax.hybridize()
+
+                with mx.autograd.record():
+                    mx_out = test_softmax(mx_a)
+
+                np_out = np_softmax(mx_a.asnumpy(), axis)
+                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, equal_nan=True)
+
+                mx_out.backward()
+                assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape), rtol=1e-3, atol=1e-5)
+
 
 @with_seed()
 @use_np
