@@ -25,6 +25,7 @@
 #define MXNET_OPERATOR_TENSOR_INDEX_ADD_INL_H_
 
 #include <vector>
+#include <algorithm>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 
@@ -74,14 +75,14 @@ struct IndexAddForwardKernel {
                                   const int ind_ndim, const int* ind_vec,
                                   const int req) {
     size_t id = 0;
-    for(int dim = 0; dim < ind_ndim; ++dim) {
+    for (int dim = 0; dim < ind_ndim; ++dim) {
       id += a_pre_stride[dim] * ind_vec[dim * ind_num + i];
     }
     id *= a_tail_size;
     for (int _i = 0; _i < a_tail_size; ++_i) {
       mshadow::Shape<NDim> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
       mshadow::Shape<NDim> val_id;
-      for (int _j = 0; _j < NDim; ++ _j) {
+      for (int _j = 0; _j < NDim; ++_j) {
         val_id[_j] = (val_shape[_j] == 1) ? 0 : a_tail_id[_j];
       }
       val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
@@ -99,14 +100,14 @@ struct IndexAddForwardKernel {
                                   const size_t a_tail_size, const int ind_num,
                                   const int ind_ndim, const int* ind_vec) {
     size_t id = 0;
-    for(int dim = 0; dim < ind_ndim; ++dim) {
+    for (int dim = 0; dim < ind_ndim; ++dim) {
       id += a_pre_stride[dim] * ind_vec[dim * ind_num + i];
     }
     id *= a_tail_size;
     for (int _i = 0; _i < a_tail_size; ++_i) {
       mshadow::Shape<NDim> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
       mshadow::Shape<NDim> val_id;
-      for (int _j = 0; _j < NDim; ++ _j) {
+      for (int _j = 0; _j < NDim; ++_j) {
         val_id[_j] = (val_shape[_j] == 1) ? 0 : a_tail_id[_j];
       }
       val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
@@ -147,7 +148,7 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
   int a_ndim = a.shape_.ndim();
   int val_ndim = inputs[1].shape_.ndim();
   if (val_ndim == 0) {
-    val.shape_= Shape1(1);
+    val.shape_ = Shape1(1);
     val_ndim = 1;
   }
   int ind_ndim = param.ind.ndim();
@@ -165,7 +166,9 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
   // check 'ind' data legality
   for (int p_dim = 0; p_dim < ind_ndim; ++p_dim) {
     // broadcast check
-    CHECK((param.ind[p_dim].ndim() == ind_num) || (param.ind[p_dim].ndim() == 1) || (param.ind[p_dim].ndim() == 0))
+    CHECK((param.ind[p_dim].ndim() == ind_num) ||
+          (param.ind[p_dim].ndim() == 1) ||
+          (param.ind[p_dim].ndim() == 0))
       << "IndexError: shape mismatch: indexing arrays could not be broadcast together"
       << " with shapes (" << ind_num << ",) (" << param.ind[p_dim].ndim() << ",)";
     if (param.ind[p_dim].ndim() == 0) {
@@ -173,7 +176,7 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
       return;
     }
     // bounds check
-    for(int p_num = 0; p_num < param.ind[p_dim].ndim(); ++p_num) {
+    for (int p_num = 0; p_num < param.ind[p_dim].ndim(); ++p_num) {
       CHECK_LE(param.ind[p_dim][p_num], a.shape_[p_dim])
         << "IndexError: index " << param.ind[p_dim][p_num]
         << " is out of bounds for axis " << p_dim
@@ -200,7 +203,7 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
   size_t vec_size = ind_ndim * ind_num;
   std::vector<int>vec_ind(vec_size);
   for (int p_dim = 0; p_dim < ind_ndim; ++p_dim) {
-    for(int p_num = 0; p_num < ind_num; ++p_num) {
+    for (int p_num = 0; p_num < ind_num; ++p_num) {
       vec_ind[p_dim * ind_num + p_num] = param.ind[p_dim].ndim() == 1 ?
                                          param.ind[p_dim][0] :
                                          param.ind[p_dim][p_num];
@@ -233,10 +236,10 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
                                                      vec_ind.data(), req[0]);
       });
     });
-  });         
+  });   
 }
 
 }   // namespace op
 }   // namespace mxnet
 
-#endif  // MXNET_OPERATOR_TENSOR_HISTOGRAM_INL_H_
+#endif  // MXNET_OPERATOR_TENSOR_INDEX_ADD_INL_H_

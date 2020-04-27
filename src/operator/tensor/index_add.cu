@@ -43,8 +43,8 @@ void IndexAddForwardImpl(mshadow::Stream<xpu> *s,
                         const int req) {
   using namespace mxnet_op;
   using namespace mshadow;
-  int * d_ind_vec;  
-  cudaMalloc((void**)&d_ind_vec, sizeof(int) * ind_ndim * ind_num);  
+  int * d_ind_vec;
+  cudaMalloc(reinterpret_cast<void**>(&d_ind_vec), sizeof(int) * ind_ndim * ind_num);
   cudaMemcpy(d_ind_vec, ind_vec, sizeof(int) * ind_ndim * ind_num, cudaMemcpyHostToDevice);
   Kernel<IndexAddForwardKernel<DType, VType, NDim>, xpu>::Launch(
                                               s, ind_num, out, val,
