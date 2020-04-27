@@ -22,9 +22,8 @@ __all__ = ['Beta']
 
 from .exp_family import ExponentialFamily
 from .constraint import UnitInterval, Positive
-from .utils import getF, sample_n_shape_converter, gammaln
+from .utils import getF, sample_n_shape_converter, gammaln, digamma
 
-# FIXME: Implement `entropy()`.
 class Beta(ExponentialFamily):
     has_grad = False
     support = UnitInterval()
@@ -67,3 +66,13 @@ class Beta(ExponentialFamily):
         b = self.beta
         lgamma_term = lgamma(a + b) - lgamma(a) - lgamma(b)
         return (a - 1) * log(value) + (b - 1) * log(1 - value) + lgamma_term
+
+    def entropy(self):
+        F = self.F
+        lgamma = gammaln(F)
+        dgamma = digamma(F)
+        a = self.alpha
+        b = self.beta
+        lgamma_term = lgamma(a + b) - lgamma(a) - lgamma(b)
+        return (-lgamma_term - (a - 1) * dgamma(a) - (b - 1) * dgamma(b) + 
+                (a + b - 2) * dgamma(a + b))

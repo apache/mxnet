@@ -22,7 +22,7 @@ __all__ = ['Dirichlet']
 
 from .exp_family import ExponentialFamily
 from .constraint import Positive, Simplex
-from .utils import getF, gammaln
+from .utils import getF, gammaln, digamma
 
 # FIXME: Implement `entropy()`.
 class Dirichlet(ExponentialFamily):
@@ -64,5 +64,14 @@ class Dirichlet(ExponentialFamily):
     @property
     def variance(self):
         a = self.alpha
-        s = a.sum(-1, True)
+        s = a.sum(-1, keepdims=True)
         return a * (s - a) / ((s + 1) * s ** 2)
+
+    def entropy(self):
+        F = self.F
+        lgamma = gammaln(F)
+        dgamma = digamma(F)
+        a0 = self.alpha.sum(-1)
+        log_B_alpha = lgamma(self.alpha).sum(-1) - lgamma(a0)
+        return (log_B_alpha + (self.alpha - 1).sum(-1) * dgamma(a0) -
+                ((self.alpha - 1) * dgamma(self.alpha)).sum(-1))

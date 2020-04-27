@@ -859,6 +859,7 @@ def test_gluon_dirichlet():
                             rtol=1e-3, use_broadcast=False)
 
     # Test log_prob
+    # Scipy does not support batch `alpha`, thus we skip multi-dimensional batch_shape case.
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes[:1]):
         for hybridize in [True, False]:
             desired_shape = (batch_shape if batch_shape is not None else ()) + (event_shape,)
@@ -871,6 +872,26 @@ def test_gluon_dirichlet():
             np_out = ss.dirichlet(alpha=alpha.asnumpy()).logpdf(np_samples)
             assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
+
+    # Test `mean`, `var` and `entropy`
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes[:1]):
+        for hybridize in [False]:
+            for func in ['mean', 'variance', 'entropy']:
+                desired_shape = (batch_shape if batch_shape is not None else ()) + (event_shape,)
+                alpha = np.random.uniform(size=desired_shape)
+                net = TestDirichlet(func)
+                if hybridize:
+                    net.hybridize()
+                mx_out = net(alpha).asnumpy()
+                ss_dir = ss.dirichlet(alpha=alpha.asnumpy())
+                if func == 'mean':
+                    np_out = ss_dir.mean()
+                elif func == 'variance':
+                    np_out = ss_dir.var()
+                else:
+                    np_out = ss_dir.entropy()
+                assert_almost_equal(mx_out, np_out, atol=1e-4,
+                                    rtol=1e-3, use_broadcast=False)
 
     # TODO: Test kl
 
@@ -902,9 +923,9 @@ def test_gluon_beta():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    # Test `mean` and `var`
+    # Test `mean`, `var` and `entropy`
     for shape, hybridize in itertools.product(shapes, [True, False]):
-        for func in ['mean', 'variance']:
+        for func in ['mean', 'variance', 'entropy']:
             alpha = np.random.uniform(0.5, 1.5, shape)
             beta = np.random.uniform(0.5, 1.5, shape)
             net = TestBeta(func)
@@ -914,8 +935,10 @@ def test_gluon_beta():
             ss_beta = ss.beta(alpha.asnumpy(), beta.asnumpy())
             if func == 'mean':
                 np_out = ss_beta.mean()
-            else:
+            elif func == 'variance':
                 np_out = ss_beta.var()
+            else:
+                np_out = ss_beta.entropy()
             assert_almost_equal(mx_out, np_out, atol=1e-4,
                                 rtol=1e-3, use_broadcast=False)
 
