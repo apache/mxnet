@@ -602,44 +602,35 @@ def check_layer_forward(layer, dshape):
     mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
 
 @with_seed()
-def test_conv():
-    layers1d = [
-        nn.Conv1D(16, 3, in_channels=4),
-        nn.Conv1D(16, 3, groups=2, in_channels=4),
-        nn.Conv1D(16, 3, strides=3, groups=2, in_channels=4),
-        ]
-    for layer in layers1d:
-        check_layer_forward(layer, (1, 4, 10))
+@pytest.mark.parametrize('layer,shape', [
+    (nn.Conv1D(16, 3, in_channels=4), (1, 4, 10)),
+    (nn.Conv1D(16, 3, groups=2, in_channels=4), (1, 4, 10)),
+    (nn.Conv1D(16, 3, strides=3, groups=2, in_channels=4), (1, 4, 10)),
+    (nn.Conv2D(16, (3, 4), in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (5, 4), in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), groups=2, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), strides=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), dilation=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), padding=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv3D(16, (1, 8, 4), in_channels=4, activation='relu'), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, (5, 4, 3), in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, (3, 3, 3), groups=2, in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, 4, strides=4, in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, (3, 3, 3), padding=4, in_channels=4), (1, 4, 10, 10, 10)),
+])
+def test_conv(layer, shape):
+    check_layer_forward(layer, shape)
 
-
-    layers2d = [
-        nn.Conv2D(16, (3, 4), in_channels=4),
-        nn.Conv2D(16, (5, 4), in_channels=4),
-        nn.Conv2D(16, (3, 4), groups=2, in_channels=4),
-        nn.Conv2D(16, (3, 4), strides=4, in_channels=4),
-        nn.Conv2D(16, (3, 4), dilation=4, in_channels=4),
-        nn.Conv2D(16, (3, 4), padding=4, in_channels=4),
-        ]
-    for layer in layers2d:
-        check_layer_forward(layer, (1, 4, 20, 20))
-
-
-    layers3d = [
-        nn.Conv3D(16, (1, 8, 4), in_channels=4, activation='relu'),
-        nn.Conv3D(16, (5, 4, 3), in_channels=4),
-        nn.Conv3D(16, (3, 3, 3), groups=2, in_channels=4),
-        nn.Conv3D(16, 4, strides=4, in_channels=4),
-        nn.Conv3D(16, (3, 3, 3), padding=4, in_channels=4),
-        ]
-    for layer in layers3d:
-        check_layer_forward(layer, (1, 4, 10, 10, 10))
-
-
-    layer = nn.Conv2D(16, (3, 3), layout='NHWC', in_channels=4)
-    # check_layer_forward(layer, (1, 10, 10, 4))
-
-    layer = nn.Conv3D(16, (3, 3, 3), layout='NDHWC', in_channels=4)
-    # check_layer_forward(layer, (1, 10, 10, 10, 4))
+@with_seed()
+@pytest.mark.parametrize('layer,shape', [
+    (nn.Conv2D(16, (3, 3), layout='NHWC', in_channels=4), (1, 10, 10, 4)),
+    # (nn.Conv3D(16, (3, 3, 3), layout='NDHWC', in_channels=4), (1, 10, 10, 10, 4)),
+])
+@pytest.mark.skipif(mx.context.current_context().device_type!='gpu' or
+                    not mx.runtime.Features().is_enabled('CUDNN'),
+                    reason='nhwc/ndhwc layout is only supported with CUDNN.')
+def test_conv_nhwc(layer, shape):
+    check_layer_forward(layer, shape)
 
 
 @with_seed()

@@ -1340,7 +1340,7 @@ unittest_ubuntu_python3_arm() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python3 -m pytest -n 4 --verbose tests/python/unittest/test_engine.py
+    python3 -m pytest -n 2 --verbose tests/python/unittest/test_engine.py
 }
 
 # Functions that run the nightly Tests:

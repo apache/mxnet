@@ -152,15 +152,16 @@ def test_conv_deconv_2d(op, kernel, stride, pad, group, layout, no_bias):
           kernel, stride, pad, group, layout, no_bias))
     kwargs = {'weight': weight, 'kernel': kernel, 'stride': stride, 'layout': layout,
               'pad': pad, 'num_filter': num_filter, 'no_bias': no_bias}
+    arg_params_shapes = {'weight': weight_shape}
     if not no_bias:
-        bias_shape = (num_filter,)
+        arg_params_shapes['bias'] = (num_filter,)
         bias = mx.sym.Variable('bias')
         kwargs['bias'] = bias
     sym = op(data, **kwargs)
 
     if layout == 'NCHW':
         check_single_sym(sym, {'data': data_shape},
-                         {'weight': weight_shape, 'bias': bias_shape},
+                         arg_params_shapes,
                          rtol_fp32=rtol_fp32, atol_fp32=atol_fp32,
                          rtol_fp16=rtol_fp16, atol_fp16=atol_fp16)
     else:

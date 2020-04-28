@@ -5306,7 +5306,25 @@ def test_np_linalg_cholesky():
 
 @with_seed()
 @use_np
-def test_np_linalg_inv():
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('shape', [
+    (0, 0),
+    (4, 4),
+    (2, 2),
+    (1, 1),
+    (2, 1, 1),
+    (0, 1, 1),
+    (6, 1, 1),
+    (2, 3, 3, 3),
+    (4, 2, 1, 1),
+    (0, 5, 3, 3),
+    (5, 0, 0, 0),
+    (3, 3, 0, 0),
+    (3, 5, 5),
+])
+@retry(3)
+def test_np_linalg_inv(hybridize, dtype, shape):
     class TestInverse(HybridBlock):
         def __init__(self):
             super(TestInverse, self).__init__()
@@ -6362,6 +6380,7 @@ def test_np_linalg_det():
 
 @with_seed()
 @use_np
+@retry(3)
 @pytest.mark.parametrize('grad_req', ['write', 'add', 'null'])
 @pytest.mark.parametrize('dtype', [_np.float32, _np.float64])
 @pytest.mark.parametrize('hybridize', [True, False])
@@ -6374,6 +6393,7 @@ def test_np_linalg_det():
     (2, 2, 2, 2, 2),
     (1, 1)
 ])
+@pytest.mark.xfail('win' in sys.platform, reason="Flaky test even with very high tolerance, tracked in #18184")
 def test_np_linalg_slogdet(a_shape, grad_req, dtype, hybridize):
     class TestSlogdet(HybridBlock):
         def __init__(self):

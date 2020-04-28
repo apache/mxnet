@@ -32,6 +32,7 @@ sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
 from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err
 import itertools
+import pytest
 
 OP_NAME='op_name'
 QUANTIZED_OP_NAME='quantized_op_name'
@@ -385,7 +386,19 @@ def conv_add2(no_bias, data_shape):
   return sum, attr
 
 # conv + bn + act fusion case
-def conv_bn_act(no_bias, data_shape, alg):
+@with_seed()
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('alg,quantize', [
+    ("relu", True),
+    ("sigmoid", True),
+    ("tanh", True),
+    ("softrelu", True),
+    ("relu6", True),
+    ("leakyrelu", True),
+    ("gelu", True)
+])
+@pytest.mark.parametrize('no_bias', [True, False])
+def test_pos_conv_bn_act(no_bias, data_shape, alg, quantize):
   attr = {'conv': {'with_bn': 'true', 'with_act': 'true'}}
   data, weight = head_symbol(data_shape)
   conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
@@ -399,10 +412,22 @@ def conv_bn_act(no_bias, data_shape, alg):
     relu = mx.symbol.LeakyReLU(data=bn1, act_type='gelu')
   else:
     relu = mx.symbol.Activation(data=bn1, name=alg, act_type=alg)
-  return relu, attr
+  check_fusion(relu, data_shape, attr, check_quantization=quantize)
 
 # conv + bn + add + act fusion case
-def conv_bn_sum_act(no_bias, data_shape, alg):
+@with_seed()
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('alg,quantize', [
+    ("relu", True),
+    ("sigmoid", True),
+    ("tanh", True),
+    ("softrelu", True),
+    ("relu6", False),
+    ("leakyrelu", True),
+    ("gelu", False)
+])
+@pytest.mark.parametrize('no_bias', [True, False])
+def test_pos_conv_bn_sum_act(no_bias, data_shape, alg, quantize):
   attr = {'conv': {'with_sum': 'true', 'with_postsum_act': 'true', 'with_bn': 'true'}}
   data, weight = head_symbol(data_shape)
   conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
@@ -419,7 +444,7 @@ def conv_bn_sum_act(no_bias, data_shape, alg):
     relu = mx.symbol.LeakyReLU(data=sum1, act_type='gelu')
   else:
     relu = mx.symbol.Activation(data=sum1, name=alg, act_type=alg)
-  return relu, attr
+  check_fusion(relu, data_shape, attr, check_quantization=quantize)
 
 # single concat case
 def single_concat(data_shape, input_num, dim):
@@ -750,126 +775,92 @@ def test_pos_conv_add2():
     check_fusion(net, data_shape, attrs)
 
 @with_seed()
-def test_pos_conv_bn_act():
-  act_list = {"relu": True,
-              "sigmoid": True,
-              "tanh": True,
-              "softrelu": True,
-              "relu6": True,
-              "leakyrelu": True,
-              "gelu": True}
-  for data_shape in DATA_SHAPE:
-    for (alg, quantize) in act_list.items():
-      net, attrs = conv_bn_act(False, data_shape, alg)
-      check_fusion(net, data_shape, attrs, check_quantization=quantize)
-      net, attrs = conv_bn_act(True, data_shape, alg)
-      check_fusion(net, data_shape, attrs, check_quantization=quantize)
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+def test_pos_single_concat(data_shape, out_type):
+    net = single_concat(data_shape, 2, -1)
+    check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
+    check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
+    net = single_concat(data_shape, 2, 1)
+    check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
+    check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
+    net = single_concat(data_shape, 4, 2)
+    check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
+    check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
+    net = single_concat(data_shape, 4, 3)
+    check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
+    check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
+    net = single_concat_pos_neg(data_shape)
+    check_quantize(net, data_shape, out_type, name='', check_calibration=False)
 
 @with_seed()
-def test_pos_conv_bn_sum_act():
-  act_list = {"relu": True,
-              "sigmoid": True,
-              "tanh": True,
-              "softrelu": True,
-              "relu6": False,
-              "leakyrelu": True,
-              "gelu": False}
-  for data_shape in DATA_SHAPE:
-    for (alg, quantize) in act_list.items():
-      net, attrs = conv_bn_sum_act(False, data_shape, alg)
-      check_fusion(net, data_shape, attrs, check_quantization=quantize)
-      net, attrs = conv_bn_sum_act(True, data_shape, alg)
-      check_fusion(net, data_shape, attrs, check_quantization=quantize)
-
-@with_seed()
-def test_pos_single_concat():
-  for data_shape in DATA_SHAPE:
-    for out_type in ('int8', 'auto'):
-      net = single_concat(data_shape, 2, -1)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
-      net = single_concat(data_shape, 2, 1)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
-      net = single_concat(data_shape, 4, 2)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
-      net = single_concat(data_shape, 4, 3)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
-      net = single_concat_pos_neg(data_shape)
-      check_quantize(net, data_shape, out_type, name='', check_calibration=False)
-
-@with_seed()
-def test_pos_concat_scale_align():
-  for data_shape in DATA_SHAPE:
-    for out_type in ('int8', 'auto'):
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+def test_pos_concat_scale_align(data_shape, out_type):
       net = concat_scale_align(data_shape)
       check_quantize(net, data_shape, out_type, check_calibration=True, check_scale_align=True)
       check_quantize(net, data_shape, out_type, check_calibration=True, check_scale_align=True, gluon_forward=True)
 
 @with_seed()
-def test_mobilenetv2_struct():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_mobilenetv2_struct(data_shape):
       net, attrs = mobilenetv2_struct(data_shape)
       check_fusion(net, data_shape, attrs, out_types=['int8', 'auto'])
 
 @with_seed()
-def test_neg_conv_bn():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_neg_conv_bn(data_shape):
     syms, attrs, excluded_attrs = neg_conv_bn(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-def test_neg_conv_relu():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_neg_conv_relu(data_shape):
     syms, attrs, excluded_attrs = neg_conv_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-def test_neg_conv_add():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_neg_conv_add(data_shape):
     syms, attrs, excluded_attrs = neg_conv_add(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-def test_neg_conv_bn_relu():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_neg_conv_bn_relu(data_shape):
     syms, attrs, excluded_attrs = neg_conv_bn_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-def test_neg_conv_bn_add_relu():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_neg_conv_bn_add_relu(data_shape):
     syms, attrs, excluded_attrs = neg_conv_bn_add_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-def test_single_fc():
-  for dshape, no_bias, flatten in itertools.product(DATA_SHAPE, [True, False], [True, False]):
-    syms, attrs = single_fc(no_bias, dshape, flatten)
-    if flatten is True:
-      check_fusion(syms, dshape, attrs, check_quantization=True)
-    else:
-      check_fusion(syms, dshape, attrs, check_quantization=False)
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('flatten', [True, False])
+def test_single_fc(data_shape, no_bias, flatten):
+    syms, attrs = single_fc(no_bias, data_shape, flatten)
+    check_fusion(syms, data_shape, attrs, check_quantization=flatten)
 
 @with_seed()
-def test_fc_eltwise():
-  for dshape, no_bias, flatten, alg in itertools.product(DATA_SHAPE,
-                                                        [True, False],
-                                                        [True, False],
-                                                        fc_post_ops_list):
-    syms, attrs = fc_eltwise(no_bias, dshape, flatten, alg)
-    if flatten is True:
-      check_fusion(syms, dshape, attrs, check_quantization=True)
-    else:
-      check_fusion(syms, dshape, attrs, check_quantization=False)
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('flatten', [True, False])
+@pytest.mark.parametrize('alg', fc_post_ops_list)
+def test_fc_eltwise(data_shape, no_bias, flatten, alg):
+    syms, attrs = fc_eltwise(no_bias, data_shape, flatten, alg)
+    check_fusion(syms, data_shape, attrs, check_quantization=flatten)
 
 @with_seed()
-def test_neg_fc_relu():
-  for dshape, no_bias, flatten in itertools.product(DATA_SHAPE, [True, False], [True, False]):
-    syms, attrs, excluded_attrs = neg_fc_relu(no_bias, dshape, flatten)
-    check_neg_fusion(syms, attrs, excluded_attrs, dshape, name='fc')
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('flatten', [True, False])
+def test_neg_fc_relu(data_shape, no_bias, flatten):
+    syms, attrs, excluded_attrs = neg_fc_relu(no_bias, data_shape, flatten)
+    check_neg_fusion(syms, attrs, excluded_attrs, data_shape, name='fc')
 
 def test_float64_fallback():
     sym = mx.sym.FullyConnected(
@@ -893,7 +884,16 @@ def test_float64_fallback():
     ex.outputs[0].wait_to_read()
 
 
-def helper_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max):
+@with_seed()
+@pytest.mark.parametrize('data_min,data_max,weight_min,weight_max', [
+    (-1, 1, 0, 0),
+    (-1, 1, -1e-6, +1e-6),
+    (0, 0, 1, 1),
+    (-1e-6, +1e-6, -1, 1),
+    (-1e-6, +1e-6, -1e-6, +1e-6),
+    (0, 0, 0, 0)
+])
+def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max):
   data_shape = (1, 32, 2, 2)
   data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
   weight = mx.symbol.Variable('weight', dtype='float32')
@@ -938,7 +938,16 @@ def helper_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_m
   assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
                                rtol=1e-2, atol=1e-2, etol=0.01)
 
-def helper_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
+@with_seed()
+@pytest.mark.parametrize('data_min,data_max,weight_min,weight_max', [
+    (-1, 1, 0, 0),
+    (-1, 1, -1e-6, +1e-6),
+    (0, 0, 1, 1),
+    (-1e-6, +1e-6, -1, 1),
+    (-1e-6, +1e-6, -1e-6, +1e-6),
+    (0, 0, 0, 0)
+])
+def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
   data_shape = (1, 32)
   data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
   weight = mx.symbol.Variable('weight', dtype='float32')
@@ -981,21 +990,4 @@ def helper_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max
   qex.outputs[0].wait_to_read()
   assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
                                rtol=1e-2, atol=1e-2, etol=0.01)
-
-@with_seed()
-def test_quantized_conv_bias_overflow():
-    helper_quantized_conv_bias_overflow(-1, 1, 0, 0)
-    helper_quantized_conv_bias_overflow(-1, 1, -1e-6, +1e-6)
-    helper_quantized_conv_bias_overflow(0, 0, 1, 1)
-    helper_quantized_conv_bias_overflow(-1e-6, +1e-6, -1, 1)
-    helper_quantized_conv_bias_overflow(-1e-6, +1e-6, -1e-6, +1e-6)
-    helper_quantized_conv_bias_overflow(0, 0, 0, 0)
-
-def test_quantized_fc_bias_overflow():
-    helper_quantized_fc_bias_overflow(-1, 1, 0, 0)
-    helper_quantized_fc_bias_overflow(-1, 1, -1e-6, +1e-6)
-    helper_quantized_fc_bias_overflow(0, 0, 1, 1)
-    helper_quantized_fc_bias_overflow(-1e-6, +1e-6, -1, 1)
-    helper_quantized_fc_bias_overflow(-1e-6, +1e-6, -1e-6, +1e-6)
-    helper_quantized_fc_bias_overflow(0, 0, 0, 0)
 
