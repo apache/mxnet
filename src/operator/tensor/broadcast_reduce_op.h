@@ -1077,55 +1077,38 @@ struct broadcast_kernel {
   }
 };
 
+namespace
+{
+  struct shape_and_stride {
+    int32_t in_stride[MXNET_SPECIAL_MAX_NDIM];
+    int32_t out_stride[MXNET_SPECIAL_MAX_NDIM];
+    int32_t input_shape[MXNET_SPECIAL_MAX_NDIM];
+    int32_t output_shape[MXNET_SPECIAL_MAX_NDIM];
+  };
+}
+
 template<typename OP>
 struct broadcast_kernel_gpu {
   template<typename IType, typename OType>
   MSHADOW_XINLINE static void Map(int32_t i,
                                   IType *input,
                                   OType *output,
-                                  const int32_t *input_shape,
-                                  const int32_t *output_shape,
-                                  const int32_t *in_stride,
-                                  const int32_t *out_stride,
+                                  const struct shape_and_stride aux_data,
                                   const OpReqType req,
                                   const int32_t ndim) {
     int32_t idx = i;
     int32_t in_idx = i;
+#pragma unroll 4
     for (int32_t iter = ndim - 1; iter >= 0; --iter) {
-      int32_t dim_idx = idx % output_shape[iter];
-      if (input_shape[iter] != 1) {
-        in_idx += dim_idx * (in_stride[iter] - out_stride[iter]);
+      int32_t dim_idx = idx % aux_data.output_shape[iter];
+      if (aux_data.input_shape[iter] != 1) {
+        in_idx += dim_idx * (aux_data.in_stride[iter] - aux_data.out_stride[iter]);
       } else {
-        in_idx -= dim_idx * out_stride[iter];
+        in_idx -= dim_idx * aux_data.out_stride[iter];
       }
-      idx /= output_shape[iter];
+      idx /= aux_data.output_shape[iter];
     }
     KERNEL_ASSIGN(output[i], req, OP::Map(input[in_idx]));
-  }
-};
-
-template<int req>
-struct compute_offset {
-  MSHADOW_XINLINE static void Map(int32_t i,
-                                  int32_t *in_stride,
-                                  int32_t *out_stride,
-                                  int32_t *input_shape,
-                                  int32_t *output_shape,
-                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape,
-                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> dst_shape,
-                                  const int32_t ndim) {
-    int32_t iter = ndim - 1;
-    out_stride[iter] = 1;
-    in_stride[iter] = 1;
-    input_shape[iter] = (int32_t)in_shape[iter];
-    output_shape[iter] = (int32_t)dst_shape[iter];
-    iter--;
-    for (; iter >= 0; --iter) {
-      out_stride[iter] = out_stride[iter+1] * dst_shape[iter+1];
-      in_stride[iter] = in_stride[iter+1] * in_shape[iter+1];
-      input_shape[iter] = (int32_t)in_shape[iter];
-      output_shape[iter] = (int32_t)dst_shape[iter];
-    }
   }
 };
 
@@ -1155,31 +1138,28 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
           out_shape[i] = 1;
         }
       }
+      struct shape_and_stride aux_data;
+      int32_t iter = dst_shape.ndim() - 1;
+      aux_data.out_stride[iter] = 1;
+      aux_data.in_stride[iter] = 1;
+      aux_data.input_shape[iter] = (int32_t)in_shape[iter];
+      aux_data.output_shape[iter] = (int32_t)out_shape[iter];
+      iter--;
+#pragma unroll 4
+      for (; iter >= 0; --iter) {
+        aux_data.out_stride[iter] = aux_data.out_stride[iter+1] * out_shape[iter+1];
+        aux_data.in_stride[iter] = aux_data.in_stride[iter+1] * in_shape[iter+1];
+        aux_data.input_shape[iter] = (int32_t)in_shape[iter];
+        aux_data.output_shape[iter] = (int32_t)out_shape[iter];
+      }
       if (dst_shape.ndim() == 2) {
         Tensor<xpu, 2, OType> out =
           outputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
         Tensor<xpu, 2, IType> data =
           inputs[0].get_with_shape<xpu, 2, IType>(src_shape.get<2>(), s);
-        if (ctx.run_ctx.get_ctx().dev_type == Context::kGPU) {
-          mshadow::Tensor<xpu, 1, char> workspace =
-              ctx.requested.at(0).get_space_typed<xpu, 1, char>
-              (mshadow::Shape1(sizeof(int32_t) * dst_shape.ndim() * 4), s);
-          char* workspace_curr_ptr = workspace.dptr_;
-          int32_t* out_stride = reinterpret_cast<int32_t*>(workspace_curr_ptr);
-          int32_t* in_stride =
-            reinterpret_cast<int32_t*>(workspace_curr_ptr +
-            sizeof(int32_t) * dst_shape.ndim());
-          int32_t* input_shape =
-            reinterpret_cast<int32_t*>(workspace_curr_ptr +
-            sizeof(int32_t) * dst_shape.ndim() * 2);
-          int32_t* output_shape =
-            reinterpret_cast<int32_t*>(workspace_curr_ptr +
-            sizeof(int32_t) * dst_shape.ndim() * 3);
-          Kernel<compute_offset<1>, xpu>::Launch(s, 1, in_stride, out_stride,
-            input_shape, output_shape, in_shape, out_shape, dst_shape.ndim());
+        if(ctx.run_ctx.get_ctx().dev_type == Context::kGPU){
           Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
-            s, out.shape_.Size(), data.dptr_, out.dptr_, input_shape, output_shape,
-            in_stride, out_stride, req[0], 2);
+            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
         } else {
           Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
             s, out.shape_.Size(), data.dptr_, out.dptr_, in_shape, out_shape, req[0], 2);
@@ -1190,26 +1170,9 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
           outputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
         Tensor<xpu, ndim, IType> data =
           inputs[0].get_with_shape<xpu, ndim, IType>(src_shape.get<ndim>(), s);
-        if (ctx.run_ctx.get_ctx().dev_type == Context::kGPU) {
-          mshadow::Tensor<xpu, 1, char> workspace =
-              ctx.requested.at(0).get_space_typed<xpu, 1, char>
-              (mshadow::Shape1(sizeof(int32_t) * dst_shape.ndim() * 4), s);
-          char* workspace_curr_ptr = workspace.dptr_;
-          int32_t* out_stride = reinterpret_cast<int32_t*>(workspace_curr_ptr);
-          int32_t* in_stride =
-            reinterpret_cast<int32_t*>(workspace_curr_ptr +
-            sizeof(int32_t) * dst_shape.ndim());
-          int32_t* input_shape =
-            reinterpret_cast<int32_t*>(workspace_curr_ptr +
-            sizeof(int32_t) * dst_shape.ndim() * 2);
-          int32_t* output_shape =
-            reinterpret_cast<int32_t*>(workspace_curr_ptr +
-            sizeof(int32_t) * dst_shape.ndim() * 3);
-          Kernel<compute_offset<1>, xpu>::Launch(s, 1, in_stride, out_stride,
-            input_shape, output_shape, in_shape, out_shape, dst_shape.ndim());
+        if(ctx.run_ctx.get_ctx().dev_type == Context::kGPU){
           Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
-            s, out.shape_.Size(), data.dptr_, out.dptr_, input_shape, output_shape,
-            in_stride, out_stride, req[0], ndim);
+            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
         } else {
           Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
             s, out.shape_.Size(), data.dptr_, out.dptr_, in_shape, out_shape, req[0], ndim);
