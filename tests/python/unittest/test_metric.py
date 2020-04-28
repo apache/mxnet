@@ -16,7 +16,7 @@
 # under the License.
 
 import mxnet as mx
-mx.npx.set_np()
+from mxnet.test_utils import use_np
 import numpy as np
 import scipy
 from scipy.stats import pearsonr
@@ -159,11 +159,11 @@ def test_multiclass_f1():
     assert microF1.num_inst == 6
     assert macroF1.num_inst == 6
     
-    from sklearn.metrics import f1_score
-    overall_pred = [0, 1, 2, 0, 1, 2]
-    overall_label = [0, 2, 1, 0, 0, 1]
-    fmacro = f1_score(overall_label, overall_pred, average="macro")
-    fmicro = f1_score(overall_label, overall_pred, average="micro")
+    # from sklearn.metrics import f1_score
+    # overall_pred = [0, 1, 2, 0, 1, 2]
+    # overall_label = [0, 2, 1, 0, 0, 1]
+    fmacro = 0.26666666666666666 #f1_score(overall_label, overall_pred, average="macro")
+    fmicro = 0.3333333333333333 #f1_score(overall_label, overall_pred, average="micro")
     np.testing.assert_almost_equal(microF1.get()[1], fmicro)
     np.testing.assert_almost_equal(macroF1.get()[1], fmacro)
     
@@ -194,11 +194,11 @@ def test_multilabel_f1():
     macroF1.update([label11, label12], [pred11, pred12])
     assert microF1.num_inst == 3
     assert macroF1.num_inst == 3
-    from sklearn.metrics import f1_score
-    overall_pred = [[1, 0, 0], [0, 1, 1], [1, 1, 1]]
-    overall_label = [[1, 0, 1], [0, 0, 1], [0, 1, 1]]
-    fmacro = f1_score(overall_label, overall_pred, average="macro")
-    fmicro = f1_score(overall_label, overall_pred, average="micro")
+    #from sklearn.metrics import f1_score
+    #overall_pred = [[1, 0, 0], [0, 1, 1], [1, 1, 1]]
+    #overall_label = [[1, 0, 1], [0, 0, 1], [0, 1, 1]]
+    fmacro = 0.7111111111111111  #f1_score(overall_label, overall_pred, average="macro")
+    fmicro = 0.7272727272727272  #f1_score(overall_label, overall_pred, average="micro")
     np.testing.assert_almost_equal(microF1.get()[1], fmicro)
     np.testing.assert_almost_equal(macroF1.get()[1], fmacro)
     

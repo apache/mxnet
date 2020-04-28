@@ -707,8 +707,8 @@ class _ClassificationMetrics(object):
     def total_examples(self):
         if self.num_classes is None:
             return 0
-        return self.false_negatives[0] + self.false_positives[0] + \
-               self.true_negatives[0] + self.true_positives[0]
+        return int(self.false_negatives[0] + self.false_positives[0] + \
+               self.true_negatives[0] + self.true_positives[0])
 
     def reset_stats(self):
         self.num_classes = None
