@@ -1764,4 +1764,16 @@ def test_artifact_repository() {
     }]
 }
 
+def misc_test_docker_cache_build() {
+  return ['Test Docker cache build': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/docker_cache') {
+        utils.init_git()
+        sh "python3 ./ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} --no-publish"
+        sh "cd ci && docker-compose -f docker/docker-compose.yml build --parallel"
+      }
+    }
+  }]
+}
+
 return this
