@@ -22,7 +22,7 @@ __all__ = ['register_kl', 'kl_divergence', 'empirical_kl']
 
 import numpy as _np
 
-from .utils import getF, gammaln
+from .utils import getF, gammaln, digamma
 from .exponential import *
 from .weibull import *
 from .pareto import *
@@ -249,6 +249,45 @@ def _kl_gumbel_gumbel(p, q):
     t3 = F.np.exp(ct2 + lgamma(1 + ct1) - ct3)
     return t1 + t2 + t3 - (1 + _euler_gamma)
 
+@register_kl(Gamma, Gamma)
+def _kl_gamma_gamma(p, q):
+    F = p.F
+    lgamma = gammaln(F)
+    dgamma = digamma(F)
+    return (
+        q.shape * F.np.log(q.scale / p.scale) + 
+        lgamma(q.shape) - lgamma(p.shape) +
+        (p.shape - q.shape) * dgamma(p.shape) +
+        (p.shape * p.scale) * (1 / q.scale - 1 / p.scale)
+    )
+
+@register_kl(Beta, Beta)
+def _kl_beta_beta(p, q):
+    F = p.F
+    lgamma = gammaln(F)
+    dgamma = digamma(F)
+    sum_params_p = p.beta + p.alpha
+    sum_params_q = q.beta + q.alpha
+    t1 = lgamma(q.alpha) + lgamma(q.beta) + lgamma(sum_params_p)
+    t2 = lgamma(p.alpha) + lgamma(p.beta) + lgamma(sum_params_q)
+    t3 = (p.beta - q.beta) * dgamma(p.beta)
+    t4 = (p.alpha - q.alpha) * dgamma(p.alpha)
+    t5 = (sum_params_q - sum_params_p) * dgamma(sum_params_p)
+    return t1 - t2 + t3 + t4 + t5
+
+@register_kl(Dirichlet, Dirichlet)
+def _kl_dirichlet_dirichlet(p, q):
+    F = p.F
+    lgamma = gammaln(F)
+    dgamma = digamma(F)
+    sum_p_concentration = p.alpha.sum(-1)
+    sum_q_concentration = q.alpha.sum(-1)
+    t1 = lgamma(sum_p_concentration) - lgamma(sum_q_concentration)
+    t2 = (lgamma(p.alpha) - lgamma(q.alpha)).sum(-1)
+    t3 = p.alpha - q.alpha
+    t4 = dgamma(p.alpha) - F.np.expand_dims(dgamma(sum_p_concentration), -1)
+    return t1 - t2 + (t3 * t4).sum(-1)
+
 
 @register_kl(HalfNormal, HalfNormal)
 def _kl_halfNormal_halfNormal(p, q):
@@ -256,6 +295,14 @@ def _kl_halfNormal_halfNormal(p, q):
     var_ratio = (p.scale / q.scale) ** 2
     t1 = ((p.loc - q.loc) / q.scale) ** 2
     return 0.5 * (var_ratio + t1 - 1 - F.np.log(var_ratio))
+
+@register_kl(Binomial, Binomial)
+def _kl_binomial_binomial(p, q):
+    F = p.F
+    kl = p.n * (p.prob * (p.logit - q.logit) + F.np.log1p(-p.prob) - F.np.log1p(-q.prob))
+    inf_idxs = p.n > q.n
+    kl[inf_idxs] = _np.inf
+    return kl
 
 
 @register_kl(MultivariateNormal, MultivariateNormal)

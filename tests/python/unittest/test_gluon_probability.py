@@ -427,8 +427,6 @@ def test_gluon_half_cauchy():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    # TODO: Test kl
-
 
 @with_seed()
 @use_np
@@ -577,8 +575,6 @@ def test_gluon_negative_binomial():
                 assert_almost_equal(mx_out, np_out, atol=1e-4,
                                     rtol=1e-3, use_broadcast=False)
 
-    # TODO: Test kl
-
 
 @with_seed()
 @use_np
@@ -708,8 +704,6 @@ def test_gluon_weibull():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    # TODO: Test kl
-
 
 @with_seed()
 @use_np
@@ -825,8 +819,6 @@ def test_gluon_gamma():
             assert_almost_equal(mx_out, np_out, atol=1e-4,
                                 rtol=1e-3, use_broadcast=False)
 
-    # TODO: Test kl
-
                         
 @with_seed()
 @use_np
@@ -893,8 +885,6 @@ def test_gluon_dirichlet():
                 assert_almost_equal(mx_out, np_out, atol=1e-4,
                                     rtol=1e-3, use_broadcast=False)
 
-    # TODO: Test kl
-
 
 @with_seed()
 @use_np
@@ -942,8 +932,6 @@ def test_gluon_beta():
             assert_almost_equal(mx_out, np_out, atol=1e-4,
                                 rtol=1e-3, use_broadcast=False)
 
-    # TODO: Test kl
-
 
 @with_seed()
 @use_np
@@ -988,8 +976,6 @@ def test_gluon_fisher_snedecor():
                 np_out = ss_f.var()
             assert_almost_equal(mx_out, np_out, atol=1e-4,
                                 rtol=1e-3, use_broadcast=False)
-
-    # TODO: Test kl
     
 
 
@@ -1113,13 +1099,6 @@ def test_gluon_gumbel():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    # Test kl
-    for shape in shapes:
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        dist = mgp.Gumbel(loc, scale)
-        _test_zero_kl(dist, shape)
-
 
 @with_seed()
 @use_np
@@ -1204,8 +1183,6 @@ def test_gluon_multinomial():
             # Check shape
             assert mx_out.shape == desired_shape
 
-    # TODO: Test kl
-
 
 @with_seed()
 @use_np
@@ -1274,8 +1251,6 @@ def test_gluon_binomial():
                     np_out = ss_binom.var()
                 assert_almost_equal(mx_out, np_out, atol=1e-4,
                                     rtol=1e-3, use_broadcast=False)
-
-    # TODO: Test kl, to be implemented
 
 
 @with_seed()
@@ -1393,8 +1368,6 @@ def test_relaxed_bernoulli():
         desired_shape = (shape,) if isinstance(shape, int) else shape
         assert mx_out.shape == desired_shape
 
-    # TODO: Test kl
-
 
 @with_seed()
 @use_np
@@ -1491,12 +1464,6 @@ def test_gluon_categorical():
             desired_shape = (event_shape,) + (batch_shape if batch_shape is not None else ())
             assert mx_out.shape == desired_shape
 
-    # Test kl
-    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
-        prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
-        dist = mgp.Categorical(event_shape, prob=prob)
-        _test_zero_kl(dist, batch_shape)
-
 
 @with_seed()
 @use_np
@@ -1571,12 +1538,6 @@ def test_gluon_one_hot_categorical():
             desired_shape = batch_shape if batch_shape is not None else ()
             assert mx_out.shape == (event_shape,) + desired_shape + (event_shape,)
 
-    # Test kl
-    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
-        prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
-        dist = mgp.OneHotCategorical(event_shape, prob=prob)
-        _test_zero_kl(dist, batch_shape)
-
 
 @with_seed()
 @use_np
@@ -1638,8 +1599,6 @@ def test_relaxed_one_hot_categorical():
             mx_out = net(param, samples)
             # Check shape
             assert mx_out.shape == desired_shape
-
-    # TODO: Test kl
 
 
 @with_seed()
@@ -2035,6 +1994,30 @@ def test_gluon_kl():
         dist1 = mgp.Geometric(prob=prob)
         _test_zero_kl(dist1, shape)
 
+    for shape in shapes:
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        dist = mgp.Gumbel(loc, scale)
+        _test_zero_kl(dist, shape)
+
+    for shape in shapes:
+        alpha = np.random.uniform(0.5, 1.5, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        dist = mgp.Gamma(shape=alpha, scale=scale)
+        _test_zero_kl(dist, shape)
+
+    for shape in shapes:
+        alpha = np.random.uniform(0.5, 1.5, shape)
+        beta = np.random.uniform(0.5, 1.5, shape)
+        dist = mgp.Beta(alpha, beta)
+        _test_zero_kl(dist, shape)
+    
+    for shape in shapes:
+        n = _np.random.randint(5, 10)
+        prob = np.random.uniform(low=0.1, size=shape)
+        dist = mgp.Binomial(n=n, prob=prob)
+        _test_zero_kl(dist, shape)
+
     event_shapes = [3, 5, 10]
     loc_shapes = [(), (2,), (4, 2)]
     cov_shapes = [(), (2,), (4, 2)]
@@ -2045,8 +2028,24 @@ def test_gluon_kl():
         dist = mgp.MultivariateNormal(loc, cov=sigma)
         desired_shape = (loc + sigma[..., 0]).shape[:-1]
         _test_zero_kl(dist, desired_shape)
+    
+    batch_shapes = loc_shapes
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
+        desired_shape = (batch_shape if batch_shape is not None else ())
+        alpha = np.random.uniform(size=(desired_shape + (event_shape,)))
+        dist = mgp.Dirichlet(alpha)
+        _test_zero_kl(dist, desired_shape)
 
-        
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
+        prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+        dist = mgp.Categorical(event_shape, prob=prob)
+        _test_zero_kl(dist, batch_shape)
+
+    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
+        prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+        dist = mgp.OneHotCategorical(event_shape, prob=prob)
+        _test_zero_kl(dist, batch_shape)
+
 
 @with_seed()
 @use_np
