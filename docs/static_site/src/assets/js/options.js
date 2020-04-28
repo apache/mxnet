@@ -45,7 +45,7 @@ $(document).ready(function () {
         }
     }
 
-    function setSelects(urlParams) {
+    function setSelects(urlParams, doPushState) {
         let queryString = '?';
         $('button.opt').removeClass('active');
         if (urlParams.get('version')) {
@@ -87,7 +87,7 @@ $(document).ready(function () {
 
         showContent();
 
-        if (window.location.href.indexOf("/get_started") >= 0) {
+        if (window.location.href.indexOf("/get_started") >= 0 && !doPushState) {
             history.pushState(null, null, queryString);
         }
     }
@@ -129,5 +129,8 @@ $(document).ready(function () {
     $('.opt-group').on('click', '.opt', setContent);
     $('.install-widget').css("visibility", "visible");
     $('.install-content').css("visibility", "visible");
+    $(window).on('popstate', function(){
+        setSelects(urlSearchParams(window.location.search), true);
+    });
 
 });
