@@ -569,7 +569,7 @@ def compile_unix_asan_cpu() {
             // TODO(leezu) ubuntu_nightly_cpu temporarily used ASAN tests fail
             // with Ubuntu 18.04 used on ubuntu_cpu image. ubuntu_nightly_cpu
             // still uses Ubuntu 16.04
-            utils.docker_run('ubuntu_nightly_cpu', 'build_ubuntu_cpu_cmake_asan', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_asan', false)
             utils.pack_lib('cpu_asan', mx_lib_cpp_examples_cpu)
           }
         }
@@ -1725,7 +1725,7 @@ def misc_asan_cpu() {
             // TODO(leezu) ubuntu_nightly_cpu temporarily used ASAN tests fail
             // with Ubuntu 18.04 used on ubuntu_cpu image. ubuntu_nightly_cpu
             // still uses Ubuntu 16.04
-            utils.docker_run('ubuntu_nightly_cpu', 'integrationtest_ubuntu_cpu_asan', false)
+            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_asan', false)
         }
       }
     }]
