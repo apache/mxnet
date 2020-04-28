@@ -247,7 +247,7 @@ if __name__ == "__main__":
     import numpy as onp
     from mxnet import np as dnp
 
-    mx.npx.set_np()
+    mx.npx.set_np(dtype=False)
     packages = {
         "onp": {
             "module": onp,

@@ -761,7 +761,7 @@ def _set_np_array(active):
     return cur_state
 
 
-def set_np(shape=True, array=True):
+def set_np(shape=True, array=True, dtype=True):
     """Setting NumPy shape and array semantics at the same time.
     It is required to keep NumPy shape semantics active while activating NumPy array semantics.
     Deactivating NumPy shape semantics while NumPy array semantics is still active is not allowed.
@@ -843,12 +843,12 @@ def set_np(shape=True, array=True):
         raise ValueError('NumPy Shape semantics is required in using NumPy array semantics.')
     _set_np_array(array)
     set_np_shape(shape)
-    #set_np_default_dtype(dtype)
+    set_np_default_dtype(dtype)
 
 
 def reset_np():
     """Deactivate NumPy shape and array and deafult dtype semantics at the same time."""
-    set_np(shape=False, array=False)
+    set_np(shape=False, array=False, dtype=False)
 
 
 _CUDA_SUCCESS = 0
