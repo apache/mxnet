@@ -22,36 +22,39 @@
  * \brief CPU implementation of index_add operator
 */
 #include <vector>
-#include "./index_add-inl.h"
+#include "./index_update-inl.h"
 
 namespace mxnet {
 namespace op {
 
 template<typename xpu, typename DType, typename VType, int NDim>
-void IndexAddForwardImpl(mshadow::Stream<xpu> *s,
-                         const int ind_num, DType* out,
-                        const VType* val,
-                        const mshadow::Shape<NDim>& a_tail_shape,
-                        const mshadow::Shape<NDim>& a_pre_stride,
-                        const mshadow::Shape<NDim>& val_stride,
-                        const mshadow::Shape<NDim>& val_shape,
-                        const size_t a_tail_size,
-                        const int ind_ndim, const int* ind_vec,
-                        const int req) {
+void IndexUpdateForwardImpl(mshadow::Stream<xpu> *s,
+                            const int ind_num, DType* out,
+                            const VType* val,
+                            const mshadow::Shape<NDim>& a_tail_shape,
+                            const mshadow::Shape<NDim>& a_pre_stride,
+                            const mshadow::Shape<NDim>& val_stride,
+                            const mshadow::Shape<NDim>& val_shape,
+                            const size_t a_tail_size,
+                            const int ind_ndim, const int* ind_vec,
+                            const int req, int64_t* pre) {
   using namespace mxnet_op;
   using namespace mshadow;
-  Kernel<IndexAddForwardKernel<DType, VType, NDim>, xpu>::Launch(
-                                             s, ind_num, out, val,
-                                             a_tail_shape, a_pre_stride,
-                                             val_stride, val_shape,
-                                             a_tail_size, ind_num,
-                                             ind_ndim, ind_vec, req);
+  Kernel<IndexUpdateForwardKernel<DType, VType, NDim>, xpu>::Launch(
+    s, ind_num, out, val, a_tail_shape, a_pre_stride, val_stride,
+    val_shape, a_tail_size, ind_num, ind_ndim, ind_vec, req, pre);
 }
 
-DMLC_REGISTER_PARAMETER(IndexModifyParam);
+// DMLC_REGISTER_PARAMETER(IndexModifyParam);
 
-NNVM_REGISTER_OP(_npx_index_add)
-.describe(R"code(This operators implements the "+=" mimic function.
+NNVM_REGISTER_OP(_npx_index_update)
+.describe(R"code(Implent a[idx] = val.
+Returns the value of a that would result from the NumPy-style indexed assignment:
+a[idx] = val
+Note x itself is not modified, instead the new value that x would have taken is returned.
+If multiple indices refer to the same location it is undefined which update is chosen;
+it may choose the order of updates arbitrarily and nondeterministically
+(e.g., due to concurrent updates on some hardware platforms).
 )code" ADD_FILELINE)
 .set_attr_parser(ParamParser<IndexModifyParam>)
 .set_num_inputs(2)
@@ -62,7 +65,11 @@ NNVM_REGISTER_OP(_npx_index_add)
   })
 .set_attr<mxnet::FInferShape>("FInferShape", IndexModifyOpShape)
 .set_attr<nnvm::FInferType>("FInferType", IndexModifyOpType)
-.set_attr<FCompute>("FCompute<cpu>", IndexAddOpForward<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", IndexUpdateOpForward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .add_argument("a", "NDArray-or-Symbol", "Input ndarray")
 .add_argument("val", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(IndexModifyParam::__FIELDS__());

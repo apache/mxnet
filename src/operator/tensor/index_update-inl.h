@@ -18,53 +18,23 @@
  */
 
 /*!
- * \file index_add-inl.h
- * \brief Function definition of index_add operator
+ * \file index_update-inl.h
+ * \brief Function definition of index_update operator
 */
-#ifndef MXNET_OPERATOR_TENSOR_INDEX_ADD_INL_H_
-#define MXNET_OPERATOR_TENSOR_INDEX_ADD_INL_H_
+#ifndef MXNET_OPERATOR_TENSOR_INDEX_UPDATE_INL_H_
+#define MXNET_OPERATOR_TENSOR_INDEX_UPDATE_INL_H_
 
 #include <vector>
 #include <algorithm>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
+#include "index_add-inl.h"
 
 namespace mxnet {
 namespace op {
 
-struct IndexModifyParam : public dmlc::Parameter<IndexModifyParam> {
-    mxnet::Tuple<mxnet::Tuple<int>> ind;
-    DMLC_DECLARE_PARAMETER(IndexModifyParam) {
-      DMLC_DECLARE_FIELD(ind)
-        .describe("Index indicating where the input added values.");
-    }
-};
-
-inline bool IndexModifyOpShape(const nnvm::NodeAttrs& attrs,
-                               mxnet::ShapeVector* in_attrs,
-                               mxnet::ShapeVector* out_attrs) {
-  IndexModifyParam param = nnvm::get<IndexModifyParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
-  return true;
-}
-
-inline bool IndexModifyOpType(const nnvm::NodeAttrs& attrs,
-                              std::vector<int>* in_attrs,
-                              std::vector<int>* out_attrs) {
-  const IndexModifyParam param = nnvm::get<IndexModifyParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 2U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  CHECK_NE((*in_attrs)[0], -1);
-  CHECK_NE((*in_attrs)[1], -1);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
-  return (*out_attrs)[0] != -1;
-}
-
-
 template<typename DType, typename VType, int NDim>
-struct IndexAddForwardKernel {
+struct IndexUpdateForwardKernel {
   MSHADOW_XINLINE static void Map(size_t i, DType* out,
                                   const VType* val,
                                   const mshadow::Shape<NDim> a_tail_shape,
@@ -73,68 +43,47 @@ struct IndexAddForwardKernel {
                                   const mshadow::Shape<NDim> val_shape,
                                   const size_t a_tail_size, const int ind_num,
                                   const int ind_ndim, const int* ind_vec,
-                                  const int req) {
+                                  const int req, int64_t* pre) {
     size_t id = 0;
     for (int dim = 0; dim < ind_ndim; ++dim) {
       id += a_pre_stride[dim] * ind_vec[dim * ind_num + i];
     }
-    id *= a_tail_size;
-    for (int _i = 0; _i < a_tail_size; ++_i) {
-      mshadow::Shape<NDim> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
-      mshadow::Shape<NDim> val_id;
-      for (int _j = 0; _j < NDim; ++_j) {
-        val_id[_j] = (val_shape[_j] == 1) ? 0 : a_tail_id[_j];
+    if (i >= pre[id]) {
+      printf("i:%d id:%d pre[id]:%d\n",i,id,pre[id]);
+      pre[id] = i;
+      id *= a_tail_size;
+      for (int _i = 0; _i < a_tail_size; ++_i) {
+        mshadow::Shape<NDim> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
+        mshadow::Shape<NDim> val_id;
+        for (int _j = 0; _j < NDim; ++_j) {
+          val_id[_j] = (val_shape[_j] == 1) ? 0 : a_tail_id[_j];
+        }
+        val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
+        size_t val_dest = mxnet_op::dot(val_id, val_stride);
+        KERNEL_ASSIGN(out[id + _i], req, static_cast<DType>(val[val_dest]));
       }
-      val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
-      size_t val_dest = mxnet_op::dot(val_id, val_stride);
-      KERNEL_ASSIGN(out[id + _i], req, out[id + _i] + static_cast<DType>(val[val_dest]));
-    }
-  }
-
-  MSHADOW_XINLINE static void Map(size_t i, DType* out,
-                                  const VType* val,
-                                  const mshadow::Shape<NDim> a_tail_shape,
-                                  const mshadow::Shape<NDim> a_pre_stride,
-                                  const mshadow::Shape<NDim> val_stride,
-                                  const mshadow::Shape<NDim> val_shape,
-                                  const size_t a_tail_size, const int ind_num,
-                                  const int ind_ndim, const int* ind_vec) {
-    size_t id = 0;
-    for (int dim = 0; dim < ind_ndim; ++dim) {
-      id += a_pre_stride[dim] * ind_vec[dim * ind_num + i];
-    }
-    id *= a_tail_size;
-    for (int _i = 0; _i < a_tail_size; ++_i) {
-      mshadow::Shape<NDim> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
-      mshadow::Shape<NDim> val_id;
-      for (int _j = 0; _j < NDim; ++_j) {
-        val_id[_j] = (val_shape[_j] == 1) ? 0 : a_tail_id[_j];
-      }
-      val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
-      size_t val_dest = mxnet_op::dot(val_id, val_stride);
-      atomicAdd(&out[id + _i], static_cast<DType>(val[val_dest]));
     }
   }
 };
 
 template<typename xpu, typename DType, typename VType, int NDim>
-void IndexAddForwardImpl(mshadow::Stream<xpu> *s,
-                        const int ind_num, DType* out,
-                        const VType* val,
-                        const mshadow::Shape<NDim>& a_tail_shape,
-                        const mshadow::Shape<NDim>& a_pre_stride,
-                        const mshadow::Shape<NDim>& val_stride,
-                        const mshadow::Shape<NDim>& val_shape,
-                        const size_t a_tail_size,
-                        const int ind_ndim, const int* ind_vec,
-                        const int req);
+void IndexUpdateForwardImpl(mshadow::Stream<xpu> *s,
+                            const int ind_num, DType* out,
+                            const VType* val,
+                            const mshadow::Shape<NDim>& a_tail_shape,
+                            const mshadow::Shape<NDim>& a_pre_stride,
+                            const mshadow::Shape<NDim>& val_stride,
+                            const mshadow::Shape<NDim>& val_shape,
+                            const size_t a_tail_size,
+                            const int ind_ndim, const int* ind_vec,
+                            const int req, int64_t* pre);
 
 template<typename xpu>
-void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
-                       const OpContext& ctx,
-                       const std::vector<TBlob>& inputs,
-                       const std::vector<OpReqType>& req,
-                       const std::vector<TBlob>& outputs) {
+void IndexUpdateOpForward(const nnvm::NodeAttrs& attrs,
+                          const OpContext& ctx,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<OpReqType>& req,
+                          const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   using namespace mshadow;
   CHECK_EQ(inputs.size(), 2U);
@@ -144,7 +93,7 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
   const TBlob a = inputs[0];
   TBlob val = inputs[1];
   TBlob out = outputs[0];
-  CHECK_NE(a.shape_.ndim(), 0) << "Please use '+' instead.";
+  CHECK_NE(a.shape_.ndim(), 0) << "Please use '=' instead.";
   int a_ndim = a.shape_.ndim();
   int val_ndim = inputs[1].shape_.ndim();
   if (val_ndim == 0) {
@@ -156,7 +105,7 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
   // ind=(), dim:0, ind[0] is invalid
   // ind=(1), dim:1, ind[0].ndim():1
   // ind=((0,0),(0,1)), dim:2, ind[0].ndim():2
-  CHECK_NE(ind_ndim, 0) << "Param 'ind' is (). Please use op 'add' instead.\n";
+  CHECK_NE(ind_ndim, 0) << "Param 'ind' is (). Please use ‘=’ directly.\n";
 
   // get the number of 'ind' index
   int ind_num = 0;
@@ -229,11 +178,20 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
       mshadow::Shape<NDim>a_pre_stride = mxnet_op::calc_stride(a_pre_shape);
       mshadow::Shape<NDim>val_stride = mxnet_op::calc_stride(val_shape);
       MSHADOW_TYPE_SWITCH(val.type_flag_, VType, {
-        IndexAddForwardImpl<xpu, DType, VType, NDim>(s, ind_num,
-                                                     out.dptr<DType>(), val.dptr<VType>(),
-                                                     a_tail_shape, a_pre_stride, val_stride,
-                                                     val_shape, a_tail_size, ind_ndim,
-                                                     vec_ind.data(), req[0]);
+        size_t pre_size = a.shape_.ProdShape(0, ind_ndim);
+        Tensor<xpu, 1, int64_t> pre = ctx.requested[0].get_space_typed<xpu, 1, int64_t>(
+                                      Shape1(pre_size), s);  // record the index of updats value
+        // If different indexes point to the same position, the last value will be updated.
+        // example:
+        // before: a = [[0, 0], [0, 0]], ind = ((0, 0), (0, 0)) val = [1, 2]
+        // after index_update(a, val, ind) : a = [[0, 2], [0, 0]]
+        
+        Kernel<set_zero, xpu>::Launch(s, pre_size, pre.dptr_);
+        IndexUpdateForwardImpl<xpu, DType, VType, NDim>(s, ind_num,
+                                                        out.dptr<DType>(), val.dptr<VType>(),
+                                                        a_tail_shape, a_pre_stride, val_stride,
+                                                        val_shape, a_tail_size, ind_ndim,
+                                                        vec_ind.data(), req[0], pre.dptr_);
       });
     });
   });   
