@@ -25,6 +25,7 @@
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
 #include "../../../operator/numpy/np_window_op.h"
+#include "../../../common/utils.h"
 
 namespace mxnet {
 
@@ -40,7 +41,7 @@ inline static void SetNumpyWindowsParam(runtime::MXNetArgs args,
     param.M = args[0].operator nnvm::dim_t();
   }
   if (args[1].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
+    param.dtype = mxnet::common::GetDefaultDtype();
   } else {
     param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
