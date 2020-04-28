@@ -31,9 +31,6 @@ FROM $BASE_IMAGE
 
 WORKDIR /work/deps
 
-COPY install/centos7_scala.sh /work/
-RUN /work/centos7_scala.sh
-
 # Install runtime dependencies for publish tests
 # - make is used to run tests ci/publish/scala/test.sh
 # - unzip is used to run org.apache.mxnetexamples.neuralstyle.NeuralStyleSuite
