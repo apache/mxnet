@@ -188,7 +188,10 @@ def windows_build(args):
                 logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
                 logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
                 break
-    windows_package(args)
+    if ret == 0:
+        windows_package(args)
+    else:
+        sys.exit(1)
 
 
 def windows_package(args):
