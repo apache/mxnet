@@ -45,7 +45,7 @@ $(document).ready(function () {
         }
     }
 
-    function setSelects(urlParams, doPushState) {
+    function setSelects(urlParams, dontPushState) {
         let queryString = '?';
         $('button.opt').removeClass('active');
         if (urlParams.get('version')) {
@@ -87,7 +87,7 @@ $(document).ready(function () {
 
         showContent();
 
-        if (window.location.href.indexOf("/get_started") >= 0 && !doPushState) {
+        if (window.location.href.indexOf("/get_started") >= 0 && !dontPushState) {
             history.pushState(null, null, queryString);
         }
     }
