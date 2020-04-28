@@ -94,7 +94,11 @@ Example::
 .set_attr_parser(ParamParser<BroadcastAxesParam>)
 .add_arguments(BroadcastAxesParam::__FIELDS__())
 .set_attr<mxnet::FInferShape>("FInferShape", BroadcastAxesShape)
-.set_attr<FCompute>("FCompute<cpu>", BroadcastAxisComputeCPU);
+.set_attr<FCompute>("FCompute<cpu>", BroadcastAxisComputeCPU)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+});
 
 MXNET_OPERATOR_REGISTER_BROADCAST(broadcast_to)
 .describe(R"code(Broadcasts the input array to a new shape.
@@ -118,7 +122,11 @@ So with `shape=(2,0)`, we will obtain the same result as in the above example.
 .set_attr_parser(ParamParser<BroadcastToParam>)
 .add_arguments(BroadcastToParam::__FIELDS__())
 .set_attr<mxnet::FInferShape>("FInferShape", BroadcastToShape)
-.set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+});
 
 // backward op for broadcast.
 NNVM_REGISTER_OP(_broadcast_backward)
@@ -172,7 +180,11 @@ For example::
 .set_attr_parser(ParamParser<BroadcastLikeParam>)
 .add_arguments(BroadcastLikeParam::__FIELDS__())
 .set_attr<mxnet::FInferShape>("FInferShape", BroadcastLikeShape)
-.set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", BroadcastCompute<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+});
 
 }  // namespace op
 }  // namespace mxnet
