@@ -170,6 +170,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'shape',
     'trace',
     'tril',
+    'triu',
     'meshgrid',
     'outer',
     'kron',
