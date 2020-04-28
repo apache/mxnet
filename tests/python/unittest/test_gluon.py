@@ -54,14 +54,14 @@ def test_parameter():
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
 
 @with_seed()
-@pytest.mark.xfail(raises=AssertionError)
 def test_invalid_parameter_stype():
-    p = gluon.Parameter('weight', shape=(10, 10), stype='invalid')
+    with pytest.raises(AssertionError):
+        p = gluon.Parameter('weight', shape=(10, 10), stype='invalid')
 
 @with_seed()
-@pytest.mark.xfail(raises=AssertionError)
 def test_invalid_parameter_grad_stype():
-    p = gluon.Parameter('weight', shape=(10, 10), grad_stype='invalid')
+    with pytest.raises(AssertionError):
+        p = gluon.Parameter('weight', shape=(10, 10), grad_stype='invalid')
 
 @with_seed()
 def test_sparse_parameter():
@@ -424,17 +424,16 @@ def test_symbol_block():
     assert np.dtype(prediction.dtype) == np.dtype(np.float32)
 
 @with_seed()
-@pytest.mark.xfail(raises=AssertionError)
 def test_sparse_symbol_block():
     data = mx.sym.var('data')
     weight = mx.sym.var('weight', stype='row_sparse')
     bias = mx.sym.var('bias')
     out = mx.sym.broadcast_add(mx.sym.dot(data, weight), bias)
-    # an exception is expected when creating a SparseBlock w/ sparse param
-    net = gluon.SymbolBlock(out, data)
+    with pytest.raises(AssertionError):
+        # an exception is expected when creating a SparseBlock w/ sparse param
+        net = gluon.SymbolBlock(out, data)
 
 @with_seed()
-@pytest.mark.xfail(raises=RuntimeError)
 def test_sparse_hybrid_block():
     params = gluon.ParameterDict('net_')
     params.get('weight', shape=(5,5), stype='row_sparse', dtype='float32')
@@ -442,8 +441,9 @@ def test_sparse_hybrid_block():
     net = gluon.nn.Dense(5, params=params)
     net.initialize()
     x = mx.nd.ones((2,5))
-    # an exception is expected when forwarding a HybridBlock w/ sparse param
-    y = net(x)
+    with pytest.raises(RuntimeError):
+        # an exception is expected when forwarding a HybridBlock w/ sparse param
+        y = net(x)
 
 @with_seed()
 def test_hybrid_block_none_args():
@@ -1023,24 +1023,24 @@ def test_block_attr_hidden():
     b.a = 1
 
 
-@pytest.mark.xfail(raises=TypeError)
 @with_seed()
 def test_block_attr_block():
     b = gluon.Block()
 
-    # regular variables can't change types
-    b.b = gluon.Block()
-    b.b = (2,)
+    with pytest.raises(TypeError):
+        # regular variables can't change types
+        b.b = gluon.Block()
+        b.b = (2,)
 
 
-@pytest.mark.xfail(raises=TypeError)
 @with_seed()
 def test_block_attr_param():
     b = gluon.Block()
 
-    # regular variables can't change types
-    b.b = gluon.Parameter()
-    b.b = (2,)
+    with pytest.raises(TypeError):
+        # regular variables can't change types
+        b.b = gluon.Parameter()
+        b.b = (2,)
 
 
 @with_seed()

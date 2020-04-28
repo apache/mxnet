@@ -40,11 +40,11 @@ class MockResponse(requests.Response):
         self.raw = io.BytesIO(content.encode('utf-8'))
 
 
-@pytest.mark.xfail(raises=Exception)
 @mock.patch(
     'requests.get', mock.Mock(side_effect=requests.exceptions.ConnectionError))
-def test_download_retries():
-    mx.gluon.utils.download("http://doesnotexist.notfound")
+def test_download_retries_error():
+    with pytest.raises(Exception):
+        mx.gluon.utils.download("http://doesnotexist.notfound")
 
 
 @mock.patch(

@@ -1349,9 +1349,9 @@ def test_ndarray_fluent():
     check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
 
 
-@pytest.mark.xfail(raises=ValueError)
 def test_bool_ambiguous():
-    bool(mx.nd.ones((2,3,4)))
+    with pytest.raises(ValueError):
+        bool(mx.nd.ones((2,3,4)))
 
 
 def test_bool():

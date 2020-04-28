@@ -109,24 +109,24 @@ def test_inter_methods_in_augmenter(inter_method):
     for batch in dataiter:
         pass
 
-@pytest.mark.xfail(raises=MXNetError)
 def test_image_iter_exception():
-    path = tempfile.mkdtemp()
-    get_cifar10(path)
-    dataiter = mx.io.ImageRecordIter(
-        path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
-        mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
-        rand_crop=False,
-        and_mirror=False,
-        shuffle=False,
-        data_shape=(5, 28, 28),
-        batch_size=100,
-        preprocess_threads=4,
-        prefetch_buffer=1)
-    labelcount = [0 for i in range(10)]
-    batchcount = 0
-    for batch in dataiter:
-        pass
+    with pytest.raises(MXNetError):
+        path = tempfile.mkdtemp()
+        get_cifar10(path)
+        dataiter = mx.io.ImageRecordIter(
+            path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
+            mean_img=os.path.join(path, 'cifar', 'cifar10_mean.bin'),
+            rand_crop=False,
+            and_mirror=False,
+            shuffle=False,
+            data_shape=(5, 28, 28),
+            batch_size=100,
+            preprocess_threads=4,
+            prefetch_buffer=1)
+        labelcount = [0 for i in range(10)]
+        batchcount = 0
+        for batch in dataiter:
+            pass
 
 def _init_NDArrayIter_data(data_type, is_image=False):
     if is_image:

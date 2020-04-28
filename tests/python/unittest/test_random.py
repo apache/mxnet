@@ -600,15 +600,6 @@ def test_sample_multinomial(dtype, x):
             real_dx[int(y[i][j])] += 5.0 / rprob[j]
         assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
 
-@pytest.mark.parametrize('dtype', ['uint8', 'float16', 'float32'])
-@with_seed()
-@retry(5)
-@pytest.mark.xfail(raises=mx.MXNetError)
-@pytest.mark.serial
-def test_sample_multinomial_bound_check(dtype):
-    # Larger than the max integer in float32 without precision loss.
-    y = mx.nd.random.multinomial(mx.nd.zeros(2 ** 25), dtype=dtype)
-
 # Test the generators with the chi-square testing
 @with_seed()
 @pytest.mark.serial

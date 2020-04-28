@@ -122,9 +122,9 @@ class TestImage(unittest.TestCase):
             print("cleanup {}".format(self.IMAGES_DIR))
             shutil.rmtree(self.IMAGES_DIR)
 
-    @pytest.mark.xfail(raises=mx.base.MXNetError)
     def test_imread_not_found(self):
-        x = mx.img.image.imread("/139810923jadjsajlskd.___adskj/blah.jpg")
+        with pytest.raises(mx.base.MXNetError):
+            x = mx.img.image.imread("/139810923jadjsajlskd.___adskj/blah.jpg")
 
     def test_imread_vs_imdecode(self):
         for img in self.IMAGES:
@@ -158,14 +158,13 @@ class TestImage(unittest.TestCase):
             cv_image = cv2.imread(img)
             assert_almost_equal(image.asnumpy(), cv_image)
 
-    @pytest.mark.xfail(raises=mx.base.MXNetError)
     def test_imdecode_empty_buffer(self):
-        mx.image.imdecode(b'', to_rgb=0)
+        with pytest.raises(mx.base.MXNetError):
+            mx.image.imdecode(b'', to_rgb=0)
 
-    @pytest.mark.xfail(raises=mx.base.MXNetError)
     def test_imdecode_invalid_image(self):
-        image = mx.image.imdecode(b'clearly not image content')
-        assert_equal(image, None)
+        with pytest.raises(mx.base.MXNetError):
+            image = mx.image.imdecode(b'clearly not image content')
 
     def test_scale_down(self):
         assert mx.image.scale_down((640, 480), (720, 120)) == (640, 106)

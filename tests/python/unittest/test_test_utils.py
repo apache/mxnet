@@ -23,9 +23,9 @@ import mxnet as mx
 import pytest
 
 
-@pytest.mark.xfail(raises=Exception)
 def test_download_retries():
-    mx.test_utils.download("http://doesnotexist.notfound")
+    with pytest.raises(Exception):
+        mx.test_utils.download("http://doesnotexist.notfound")
 
 def test_download_successful():
     tmp = tempfile.mkdtemp()

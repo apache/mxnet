@@ -215,11 +215,11 @@ def test_np_dot(shape_a, shape_b):
     ((4, 5), (2, 3)),
     ((3, 4, 5), (6, ))
 ])
-@pytest.mark.xfail(raises=mx.base.MXNetError)
 def test_np_dot_error(shape_a, shape_b):
     a = mx.nd.array(random.random()) if len(shape_a) == 0 else rand_ndarray(shape_a)
     b = mx.nd.array(random.random()) if len(shape_b) == 0 else rand_ndarray(shape_b)
-    mx_res = np.dot(a.as_np_ndarray(), b.as_np_ndarray())
+    with pytest.raises(mx.base.MXNetError):
+        mx_res = np.dot(a.as_np_ndarray(), b.as_np_ndarray())
 
 
 @with_seed()
@@ -536,11 +536,11 @@ def test_np_matmul(shape_a, shape_b, grad_req_a, grad_req_b,
     ((), (1, 1)),            # scalar matrix
     ((2, 2, 1), (3, 1, 2)),  # cannot broadcast
 ])
-@pytest.mark.xfail(raises=MXNetError)
 def test_np_matmul_error(shape_a, shape_b):
     a = np.random.uniform(size=shape_a)
     b = np.random.uniform(size=shape_b)
-    np.matmul(a, b)
+    with pytest.raises(MXNetError):
+        np.matmul(a, b)
 
 
 @with_seed()
@@ -1212,9 +1212,9 @@ def test_np_linspace_gluon(config, dtype, endpoint, hybridize):
     (0, 10, -1),
     (0, 1, 2.5)
 ])
-@pytest.mark.xfail(raises=MXNetError)
 def test_np_linspace_error(config):
-    np.linspace(*config)
+    with pytest.raises(MXNetError):
+        np.linspace(*config)
 
 
 @use_np
