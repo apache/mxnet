@@ -192,7 +192,8 @@ def main() -> int:
     region_name = os.environ['DOCKERHUB_SECRET_ENDPOINT_REGION']
 
     try:
-        login_dockerhub(secret_name, endpoint_url, region_name)
+        if not args.no_publish:
+            login_dockerhub(secret_name, endpoint_url, region_name)
         return build_save_containers(platforms=platforms, registry=args.docker_registry, load_cache=True, no_publish=args.no_publish)
     finally:
         logout_dockerhub()
