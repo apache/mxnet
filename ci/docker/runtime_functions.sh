@@ -1261,7 +1261,6 @@ integrationtest_ubuntu_gpu_python() {
 
 integrationtest_ubuntu_cpu_asan() {
     set -ex
-    export LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5
     export DMLC_LOG_STACK_TRACE_DEPTH=10
 
     cd /work/mxnet/build/cpp-package/example/
