@@ -19,7 +19,7 @@ import pickle as pkl
 
 from mxnet.ndarray import NDArray
 from mxnet.test_utils import *
-from common import setup_module, with_seed, random_seed, teardown
+from common import setup_module, with_seed, random_seed, teardown_module
 from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
@@ -1056,6 +1056,3 @@ def test_sparse_getnnz():
         for a in axis:
             check_sparse_getnnz(d, a)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

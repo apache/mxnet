@@ -141,16 +141,9 @@ else:
         libraries.append('CUDA-10.0')
     elif variant.startswith('CU92'):
         libraries.append('CUDA-9.2')
-    elif variant.startswith('CU91'):
-        libraries.append('CUDA-9.1')
-    elif variant.startswith('CU90'):
-        libraries.append('CUDA-9.0')
-    elif variant.startswith('CU80'):
-        libraries.append('CUDA-8.0')
-    elif variant.startswith('CU75'):
-        libraries.append('CUDA-7.5')
-    if variant.endswith('MKL'):
-        libraries.append('MKLDNN')
+
+if variant != 'native':
+    libraries.append('MKLDNN')
 
 short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 

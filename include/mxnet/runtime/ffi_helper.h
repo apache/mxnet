@@ -99,6 +99,24 @@ class Integer: public ObjectRef {
   MXNET_DEFINE_OBJECT_REF_METHODS(Integer, ObjectRef, IntegerObj)
 };
 
+class FloatObj: public Object {
+ public:
+  double value;
+  static constexpr const uint32_t _type_index = TypeIndex::kFloat;
+  static constexpr const char* _type_key = "MXNet.Float";
+  MXNET_DECLARE_FINAL_OBJECT_INFO(FloatObj, Object)
+};
+
+class Float: public ObjectRef {
+ public:
+  explicit Float(double value,
+                 ObjectPtr<FloatObj>&& data = make_object<FloatObj>()) {
+    data->value = value;
+    data_ = std::move(data);
+  }
+  MXNET_DEFINE_OBJECT_REF_METHODS(Float, ObjectRef, FloatObj)
+};
+
 //  Helper functions for fast FFI implementations
 /*!
  * \brief A builder class that helps to incrementally build ADT.

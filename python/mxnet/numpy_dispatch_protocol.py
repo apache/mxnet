@@ -166,9 +166,11 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'linalg.eigvalsh',
     'linalg.eigh',
     'linalg.qr',
+    'linalg.matrix_rank',
     'shape',
     'trace',
     'tril',
+    'triu',
     'meshgrid',
     'outer',
     'kron',
@@ -193,6 +195,7 @@ _NUMPY_ARRAY_FUNCTION_LIST = [
     'isneginf',
     'isinf',
     'pad',
+    'cross',
 ]
 
 
@@ -292,6 +295,9 @@ _NUMPY_ARRAY_UFUNC_LIST = [
     'bitwise_and',
     'bitwise_xor',
     'bitwise_or',
+    'logical_and',
+    'logical_or',
+    'logical_xor',
     'logical_not',
     'equal',
     'not_equal',

@@ -19,7 +19,7 @@
 
 /*!
  * \file np_laplace_op.cc
- * \brief Implementation of the API of functions in src/operator/numpy/np_laplace_op.cc
+ * \brief Implementation of the API of functions in src/operator/numpy/random/np_laplace_op.cc
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>

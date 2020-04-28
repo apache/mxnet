@@ -32,8 +32,8 @@ libmxnet = 'lib/libmxnet.so'
 licenses = 'licenses/*'
 
 // libmxnet dependencies
-mx_native_deps = 'lib/libgfortran.so.3, lib/libquadmath.so.0'
-mx_deps = 'lib/libgfortran.so.3, lib/libquadmath.so.0, 3rdparty/mkldnn/build/install/include/dnnl_version.h, 3rdparty/mkldnn/build/install/include/dnnl_config.h'
+mx_native_deps = 'lib/libgfortran.so.4, lib/libquadmath.so.0'
+mx_deps = 'lib/libgfortran.so.4, lib/libquadmath.so.0, 3rdparty/mkldnn/build/install/include/dnnl_version.h, 3rdparty/mkldnn/build/install/include/dnnl_config.h'
 
 // library type
 // either static or dynamic - depending on how it links to its dependencies
@@ -45,10 +45,9 @@ libmxnet_pipeline = load('cd/mxnet_lib/mxnet_lib_pipeline.groovy')
 def build(mxnet_variant) {
   node(NODE_LINUX_CPU) {
     ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
+      def image = libmxnet_pipeline.get_environment(mxnet_variant)
       ci_utils.init_git()
-      // Compiling in Ubuntu14.04 due to glibc issues. 
-      // This should be updates once we have clarity on this issue.
-      ci_utils.docker_run('publish.ubuntu1404_cpu', "build_static_libmxnet ${mxnet_variant}", false)
+      ci_utils.docker_run(image, "build_static_libmxnet ${mxnet_variant}", false)
       ci_utils.pack_lib("mxnet_${mxnet_variant}", libmxnet_pipeline.get_stash(mxnet_variant))
     }
   }

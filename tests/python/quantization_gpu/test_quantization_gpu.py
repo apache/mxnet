@@ -25,8 +25,3 @@ from mxnet.test_utils import set_default_context
 from test_quantization import *
 
 set_default_context(mx.gpu(0))
-
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -69,6 +69,3 @@ def test_tensorrt_resnet18_feature_vect():
     finally:
         mx.contrib.tensorrt.set_use_fp16(original_precision_value)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

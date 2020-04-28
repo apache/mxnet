@@ -22,6 +22,7 @@
  * \brief GPU Implementation of unary trigonometric function.
  */
 #include "./elemwise_binary_op.h"
+#include "./elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {

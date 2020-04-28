@@ -20,7 +20,7 @@ import mxnet as mx
 import numpy as np
 import unittest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
-from common import setup_module, with_seed, assertRaises, teardown
+from common import setup_module, with_seed, assertRaises, teardown_module
 from mxnet.base import py_str, MXNetError
 
 shape = (4, 4)
@@ -190,6 +190,3 @@ def test_set_optimizer():
     kv = mx.kv.create('teststore')
     check_unsupported_methods(kv)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
