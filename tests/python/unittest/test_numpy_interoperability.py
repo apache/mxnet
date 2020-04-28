@@ -3250,6 +3250,7 @@ def test_np_memory_array_function():
         assert op(data_mx, np.ones((5, 0))) == op(data_np, _np.ones((5, 0)))
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/17840")
 @with_seed()
 @use_np
 @with_array_function_protocol
@@ -3257,6 +3258,7 @@ def test_np_array_function_protocol():
     check_interoperability(_NUMPY_ARRAY_FUNCTION_LIST)
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/17840")
 @with_seed()
 @use_np
 @with_array_ufunc_protocol

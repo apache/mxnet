@@ -636,6 +636,7 @@ def test_np_kron():
                 assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol=1e-2, atol=1e-2)
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/17840")
 @with_seed()
 @use_np
 def test_np_sum():
@@ -1029,6 +1030,7 @@ def test_np_average():
         assert_almost_equal(mx_out.asnumpy(), np_out.astype(dtype), rtol=rtol, atol=atol)
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/17840")
 @with_seed()
 @use_np
 def test_np_mean():
@@ -2220,6 +2222,7 @@ def test_np_triu():
                 assert same(ret_mx.asnumpy(), ret_np)
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/17840")
 @with_seed()
 @use_np
 def test_np_unary_funcs():
@@ -2442,6 +2445,7 @@ def test_np_bitwise_not():
             check_unary_func(func, ref_grad, shape, low, high)
 
 
+@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/17840")
 @with_seed()
 @use_np
 def test_np_binary_funcs():
