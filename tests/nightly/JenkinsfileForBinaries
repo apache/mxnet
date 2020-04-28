@@ -34,7 +34,7 @@ core_logic: {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-mkldnn-gpu') {
           utils.init_git()
-          utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_mkldnn', false)
+          utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_mkldnn', false)
           utils.pack_lib('gpu', mx_lib)
         }
       }

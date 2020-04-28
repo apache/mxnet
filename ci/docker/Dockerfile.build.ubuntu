@@ -160,8 +160,3 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt install -y  --no-install-recommends \
         cuda-10-1 && \
     rm -rf /var/lib/apt/lists/*
-
-
-FROM gpu as gpuwithcompatenv
-# TVMOP requires /usr/local/cuda/compat is no LD_LIBRARY_PATH.
-# This should be fixed and deleted.
