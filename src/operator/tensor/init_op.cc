@@ -148,16 +148,6 @@ NNVM_REGISTER_OP(_linspace)
 .set_attr<FCompute>("FCompute<cpu>", LinspaceCompute<cpu>)
 .add_arguments(RangeParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_npi_linspace)
-.describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
-.set_num_inputs(0)
-.set_num_outputs(1)
-.set_attr_parser(ParamParser<LinspaceParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", LinspaceShape)
-.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<LinspaceParam>)
-.set_attr<FCompute>("FCompute<cpu>", LinspaceCompute<cpu>)
-.add_arguments(RangeParam::__FIELDS__());
-
 NNVM_REGISTER_OP(zeros_like)
 MXNET_ADD_SPARSE_OP_ALIAS(zeros_like)
 .describe(R"code(Return an array of zeros with the same shape, type and storage type
