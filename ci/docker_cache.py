@@ -190,7 +190,7 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    platforms = build_util.get_platforms()
+    platforms = build_util.get_platforms(legacy_only=True)
 
     secret_name = os.environ['DOCKERHUB_SECRET_NAME']
     endpoint_url = os.environ['DOCKERHUB_SECRET_ENDPOINT_URL']
