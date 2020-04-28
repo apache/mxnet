@@ -238,6 +238,16 @@ NNVM_REGISTER_OP(_npi_indices)
 .set_attr<FCompute>("FCompute<cpu>", IndicesCompute<cpu>)
 .add_arguments(IndicesOpParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_npi_linspace)
+.describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
+.set_num_inputs(0)
+.set_num_outputs(1)
+.set_attr_parser(ParamParser<LinspaceParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LinspaceShape)
+.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<LinspaceParam>)
+.set_attr<FCompute>("FCompute<cpu>", LinspaceCompute<cpu>)
+.add_arguments(RangeParam::__FIELDS__());
+
 NNVM_REGISTER_OP(_npi_logspace)
 .describe("Return numbers spaced evenly on a log scale.")
 .set_num_inputs(0)
