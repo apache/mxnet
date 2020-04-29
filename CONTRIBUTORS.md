@@ -251,6 +251,7 @@ List of Contributors
 * [Piljae Chae](https://github.com/IHateMint)
 * [Oliver Kowalke](https://github.com/olk)
 * [Connor Goggins](https://github.com/connorgoggins)
+* [Yang Shi](https://github.com/ys2843)
 
 Label Bot
 ---------
