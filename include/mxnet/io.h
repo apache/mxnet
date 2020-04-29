@@ -134,10 +134,6 @@ class Dataset {
   */
   virtual uint64_t GetLen(void) const = 0;
   /*!
-  *  \brief Create a copy of dataset for threaded worker
-  */
-  virtual Dataset* Clone(void) const = 0;
-  /*!
   *  \brief Get the ndarray items given index in dataset
   *  \param idx the integer index for required data
   *  \param ret the returned ndarray items

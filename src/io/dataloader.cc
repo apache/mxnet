@@ -83,14 +83,8 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
       threadget = omp_get_num_threads();
     }
     param_.num_workers = std::max(1, threadget);
-    auto dataset = *static_cast<std::shared_ptr<Dataset>*>(reinterpret_cast<void*>(param_.dataset));
-    datasets_.clear();
-    datasets_.reserve(param_.num_workers);
-    datasets_.emplace_back(dataset);
-    for (int i = 1; i < param_.num_workers; ++i) {
-      datasets_.emplace_back(std::shared_ptr<Dataset>(dataset->Clone()));
-    }
-    dataset_len_ = datasets_[0]->GetLen();
+    dataset_ = *static_cast<std::shared_ptr<Dataset>*>(reinterpret_cast<void*>(param_.dataset));
+    dataset_len_ = dataset_->GetLen();
     sampler_ = static_cast<IIterator<DataBatch>* >(reinterpret_cast<void*>(param_.sampler));
     batchify_fn_ = *static_cast<BatchifyFunctionPtr*>(reinterpret_cast<void*>(param_.batchify_fn));
     this->BeforeFirst();
@@ -126,7 +120,7 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     for (int i = 0; i < real_batch_size; ++i) {
       omp_exc_.Run([&] {
         auto idx = idx_ptrs[i];
-        CHECK(datasets_[i % param_.num_workers]->GetItem(idx, &inputs[i]))
+        CHECK(dataset_->GetItem(idx, &inputs[i]))
           << "Error getting data # " << idx;
       });
     }
@@ -170,8 +164,7 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
   /*! \brief batched buffer */
   std::vector<NDArray> batched_buffer_;
   /*! \brief pointer to dataset */
-  // std::shared_ptr<Dataset> dataset_;
-  std::vector<std::shared_ptr<Dataset>> datasets_;
+  std::shared_ptr<Dataset> dataset_;
   /*! \brief dataset length */
   int64_t dataset_len_;
   /*! \brief pointer to sampler iterator */

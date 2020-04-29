@@ -64,10 +64,6 @@ class RecordFileDataset final : public Dataset {
   explicit RecordFileDataset(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     param_.InitAllowUnknown(kwargs);
-    // open record file for read
-    dmlc::Stream *stream = dmlc::Stream::Create(param_.rec_file.c_str(), "r");
-    reader_ = std::make_shared<dmlc::RecordIOReader>(stream);
-    stream_.reset(stream);
     // read and process idx file
     dmlc::Stream *idx_stream = dmlc::Stream::Create(param_.idx_file.c_str(), "r");
     dmlc::istream is(idx_stream);
@@ -78,19 +74,6 @@ class RecordFileDataset final : public Dataset {
     delete idx_stream;
   }
 
-  RecordFileDataset* Clone(void) const {
-    auto other = new RecordFileDataset(std::vector<std::pair<std::string, std::string> >());
-    other->param_ = param_;
-    other->idx_ = idx_;
-    // do not share the pointer since it's not threadsafe to seek simultaneously
-    if (reader_ && stream_) {
-      dmlc::Stream *stream = dmlc::Stream::Create(param_.rec_file.c_str(), "r");
-      other->reader_ = std::make_shared<dmlc::RecordIOReader>(stream);
-      other->stream_.reset(stream);
-    }
-    return other;
-  }
-
   uint64_t GetLen() const {
     return idx_.size();
   }
@@ -98,33 +81,37 @@ class RecordFileDataset final : public Dataset {
   bool GetItem(uint64_t idx, std::vector<NDArray>* ret) {
     ret->resize(1);
     auto& out = (*ret)[0];
+    auto& reader = RecordIOPair::Get()->second;
+    if (!reader) {
+      auto s = dmlc::Stream::Create(param_.rec_file.c_str(), "r");
+      auto& stream = RecordIOPair::Get()->first;
+      stream.reset(s);
+      reader = std::make_unique<dmlc::RecordIOReader>(s);
+    }
     size_t pos = idx_[static_cast<size_t>(idx)];
-    {
-      std::lock_guard<std::mutex> lck(mutex_);
-      reader_->Seek(pos);
-      if (reader_->NextRecord(&read_buff_)) {
-        const char *buf = read_buff_.c_str();
-        const size_t size = read_buff_.size();
-        out = NDArray(TShape({static_cast<dim_t>(size)}), Context::CPU(), false, mshadow::kInt8);
-        TBlob dst = out.data();
-        RunContext rctx{Context::CPU(), nullptr, nullptr, false};
-        mxnet::ndarray::Copy<cpu, cpu>(
-          TBlob(const_cast<void*>(reinterpret_cast<const void*>(buf)),
-            out.shape(), cpu::kDevMask, out.dtype(), 0),
-            &dst, Context::CPU(), Context::CPU(), rctx);
-      }
+    auto read_buff = ReadBuff::Get();
+    reader->Seek(pos);
+    if (reader->NextRecord(read_buff)) {
+      const char *buf = read_buff->c_str();
+      const size_t size = read_buff->size();
+      out = NDArray(TShape({static_cast<dim_t>(size)}), Context::CPU(), false, mshadow::kInt8);
+      TBlob dst = out.data();
+      RunContext rctx{Context::CPU(), nullptr, nullptr, false};
+      mxnet::ndarray::Copy<cpu, cpu>(
+        TBlob(const_cast<void*>(reinterpret_cast<const void*>(buf)),
+          out.shape(), cpu::kDevMask, out.dtype(), 0),
+          &dst, Context::CPU(), Context::CPU(), rctx);
     }
     return true;
   }
 
  private:
+  using ReaderPtr = std::unique_ptr<dmlc::RecordIOReader>;
+  using StreamPtr = std::unique_ptr<dmlc::Stream>;
+  using RecordIOPair = dmlc::ThreadLocalStore<std::pair<StreamPtr, ReaderPtr> >;
+  using ReadBuff = dmlc::ThreadLocalStore<std::string>;
   /*! \brief parameters */
   RecordFileDatasetParam param_;
-  /*! \brief recordIO context */
-  std::shared_ptr<dmlc::RecordIOReader> reader_;
-  std::shared_ptr<dmlc::Stream> stream_;
-  std::string read_buff_;
-  std::mutex mutex_;
   /*! \brief indices */
   std::unordered_map<size_t, size_t> idx_;
 };
@@ -207,13 +194,6 @@ class ImageRecordFileDataset : public Dataset {
     std::vector<std::pair<std::string, std::string> > kwargs_left;
     param_.InitAllowUnknown(kwargs);
     base_ = std::make_shared<RecordFileDataset>(kwargs);
-  }
-
-  ImageRecordFileDataset* Clone(void) const {
-    auto other = new ImageRecordFileDataset(std::vector<std::pair<std::string, std::string> >());
-    other->param_ = param_;
-    other->base_.reset(base_->Clone());
-    return other;
   }
 
   uint64_t GetLen() const {
@@ -315,10 +295,6 @@ class ImageSequenceDataset final : public Dataset {
     img_list_ = dmlc::Split(param_.img_list, param_.path_sep);
   }
 
-  ImageSequenceDataset* Clone(void) const {
-    return new ImageSequenceDataset(*this);
-  }
-
   uint64_t GetLen() const {
     return img_list_.size();
   }
@@ -380,10 +356,6 @@ class NDArrayDataset final : public Dataset {
       LOG(FATAL) << "NDArray with no dim is not iterable";
     }
     size_ = data_.shape().begin()[0];
-  }
-
-  NDArrayDataset* Clone(void) const {
-    return new NDArrayDataset(*this);
   }
 
   uint64_t GetLen() const {
@@ -461,10 +433,6 @@ class GroupDataset final : public Dataset {
     }
   }
 
-  GroupDataset* Clone(void) const {
-    return new GroupDataset(*this);
-  }
-
   uint64_t GetLen() const {
     return size_;
   }
@@ -518,10 +486,6 @@ class IndexedDataset final : public Dataset {
   explicit IndexedDataset(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     param_.InitAllowUnknown(kwargs);
     base_data_ = *static_cast<std::shared_ptr<Dataset>*>(reinterpret_cast<void*>(param_.base));
-  }
-
-  IndexedDataset* Clone(void) const {
-    return new IndexedDataset(*this);
   }
 
   uint64_t GetLen() const {
@@ -636,10 +600,6 @@ class LazyTransformDataset final : public Dataset {
   }
 
   virtual ~LazyTransformDataset(void) {
-  }
-
-  LazyTransformDataset* Clone(void) const {
-    return new LazyTransformDataset(*this);
   }
 
   uint64_t GetLen() const {
