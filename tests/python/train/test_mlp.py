@@ -35,7 +35,8 @@ softmax = mx.symbol.SoftmaxOutput(fc3, name = 'sm')
 
 def accuracy(label, pred):
     py = np.argmax(pred, axis=1)
-    return np.sum(py == label) / float(label.size)
+    return np.sum(py == label.astype(py)) / float(label.size)
+    # currently mxnet.numpy (which used in gluon.metric) did not support "==" between different types
 
 num_epoch = 4
 prefix = './mlp'
