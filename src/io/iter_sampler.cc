@@ -126,7 +126,9 @@ class RandomSampler : public IIterator<DataInst> {
     param_.InitAllowUnknown(kwargs);
     indices_.resize(param_.length);
     std::iota(std::begin(indices_), std::end(indices_), 0);  // fill like arange
-    rng_.reset(new common::RANDOM_ENGINE(kRandMagic + param_.seed));
+    mshadow::Random<cpu> *ctx_rng = ResourceManager::Get()->Request(
+      Context::CPU(), ResourceRequest::kRandom).get_random<cpu, real_t>(nullptr);
+    rng_.reset(new common::RANDOM_ENGINE(ctx_rng->GetSeed() + param_.seed));
     out_.data.resize(2);  // label required by DataBatch, we can use fake label here
     out_.data[1] = TBlob(indices_.data(), TShape({1, }), cpu::kDevMask, 0);
     BeforeFirst();
@@ -155,8 +157,6 @@ class RandomSampler : public IIterator<DataInst> {
     return out_;
   }
  private:
-  /*! \brief random magic number */
-  static const int kRandMagic = 2333;
   /*! \brief Stored integer indices */
   std::vector<int64_t> indices_;
   /*! \brief current position for iteration */

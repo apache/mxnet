@@ -133,7 +133,6 @@ class TestImage(unittest.TestCase):
     @use_np
     def test_bbox_augmenters(self):
         # only test if all augmenters will work
-        # TODO(Joshua Zhang): verify the augmenter outputs
         im_list = [_generate_objects() + [x] for x in self.IMAGES]
         det_iter = mx.gluon.contrib.data.vision.ImageBboxDataLoader(2, (3, 300, 300), imglist=im_list, path_root='',
             rand_crop=1, rand_pad=1, rand_gray=0.1, rand_mirror=True, mean=True,

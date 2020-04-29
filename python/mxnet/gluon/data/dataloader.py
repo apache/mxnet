@@ -22,7 +22,6 @@ __all__ = ['DataLoader']
 
 import pickle
 import logging
-import warnings
 import io
 import sys
 import signal
@@ -564,14 +563,14 @@ class DataLoader(object):
         unless you are experiencing timeout and you know it's due to slow data loading.
         Sometimes full `shared_memory` will cause all workers to hang and causes timeout. In these
         cases please reduce `num_workers` or increase system `shared_memory` size instead.
-    try_nopython : bool, default is None
+    try_nopython : bool or None, default is None
         Try compile python dataloading pipeline into pure MXNet c++ implementation. The benefit is
         potentially faster iteration, no `shared_memory` usage, and less processes managed by python.
         The compilation is not gauranteed to support all use cases, but it will fallback to python in
         case of failure. You can set `try_nopython` to `False` to disable auto-detection of the
         compilation feature or leave it to `None` to allow MXNet to determine it automatically.
-        If you request `try_nopython` to `True` and the compilation fails, it will raise a warning and
-        continue with python based implementation.
+        If you request `try_nopython` to `True` and the compilation fails, it will raise a
+        RuntimeError with the failure reason.
 
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
@@ -623,14 +622,14 @@ class DataLoader(object):
                 self._dataset, self._batch_sampler, self._batchify_fn)
             if not use_mx_iter:
                 if try_nopython:
-                    warnings.warn(mx_iter_args)
+                    raise RuntimeError(mx_iter_args)
         else:
             use_mx_iter = False
 
         if use_mx_iter:
             logging.info("Using MXNet backend ThreadedDataLoader with %s workers "
                          "instead of python dataloader.", self._num_workers)
-            self._mx_iter = MXThreadedDataLoader(
+            self._mx_iter = _MXThreadedDataLoader(
                 num_workers=self._num_workers,
                 pin_memory=self._pin_memory,
                 pin_device_id=self._pin_device_id,
@@ -730,7 +729,7 @@ def _check_mx_loader_capability(dataset, batch_sampler, batchify_fn):
     return True, mx_loader_args
 
 
-class MXThreadedDataLoader(object):
+class _MXThreadedDataLoader(object):
     """MXNet internal C++ threaded Data Iterator in form of DataLoader
 
     parameters
