@@ -133,11 +133,18 @@ $(document).ready(function () {
         setSelects(urlSearchParams(window.location.search), true);
     });
 
-    $("button.dropbtn").click(function (e) {
-        e.stopPropagation();
-        $(".version-dropdown").toggle();
-    });
-    $(document).click(function () {
-        $(".version-dropdown").hide();
-    });
+    let timer;
+    const mouseenterHandler = function() {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(function() {
+            $(".version-dropdown").show()
+        }, 250);  
+    }
+
+    const mouseleaveHandler = function() {
+        if (timer) clearTimeout(timer);
+        $(".version-dropdown").hide()
+    }
+
+    $(".dropdown").mouseenter(mouseenterHandler).mouseleave(mouseleaveHandler);
 });
