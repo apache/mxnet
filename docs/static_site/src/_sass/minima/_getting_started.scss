@@ -109,6 +109,11 @@ ul.version-dropdown {
   outline: 0;
 }
 
+.current-version .dropdown-caret {
+  position: relative;
+  top: 4px;
+}
+
 .version-dropdown .active a {
   color: $grey-color-light;
 }
