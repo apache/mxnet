@@ -1077,36 +1077,37 @@ struct broadcast_kernel {
   }
 };
 
-namespace
-{
-  struct shape_and_stride {
-    int32_t in_stride[MXNET_SPECIAL_MAX_NDIM];
-    int32_t out_stride[MXNET_SPECIAL_MAX_NDIM];
-    int32_t input_shape[MXNET_SPECIAL_MAX_NDIM];
-    int32_t output_shape[MXNET_SPECIAL_MAX_NDIM];
-  };
+namespace {
+struct shape_and_stride {
+  index_t in_stride[MXNET_SPECIAL_MAX_NDIM];
+  index_t out_stride[MXNET_SPECIAL_MAX_NDIM];
+  index_t input_shape[MXNET_SPECIAL_MAX_NDIM];
+  index_t output_shape[MXNET_SPECIAL_MAX_NDIM];
+};
 }
 
 template<typename OP>
 struct broadcast_kernel_gpu {
   template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(int32_t i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   IType *input,
                                   OType *output,
-                                  const struct shape_and_stride aux_data,
+                                  const shape_and_stride& aux_data,
                                   const OpReqType req,
-                                  const int32_t ndim) {
-    int32_t idx = i;
-    int32_t in_idx = i;
+                                  const int ndim) {
+    index_t idx = i;
+    index_t in_idx = i;
 #pragma unroll 4
-    for (int32_t iter = ndim - 1; iter >= 0; --iter) {
-      int32_t dim_idx = idx % aux_data.output_shape[iter];
+    for (index_t iter = ndim - 1; iter >= 0; --iter) {
+      index_t out_dim_shape = aux_data.output_shape[iter];
+      index_t out_dim_stride = aux_data.out_stride[iter];
+      index_t dim_idx = idx - (idx / out_dim_shape) * out_dim_shape;
       if (aux_data.input_shape[iter] != 1) {
-        in_idx += dim_idx * (aux_data.in_stride[iter] - aux_data.out_stride[iter]);
+        in_idx += dim_idx * (aux_data.in_stride[iter] - out_dim_stride);
       } else {
-        in_idx -= dim_idx * aux_data.out_stride[iter];
+        in_idx -= dim_idx * out_dim_stride;
       }
-      idx /= aux_data.output_shape[iter];
+      idx /= out_dim_shape;
     }
     KERNEL_ASSIGN(output[i], req, OP::Map(input[in_idx]));
   }
@@ -1139,25 +1140,24 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
         }
       }
       struct shape_and_stride aux_data;
-      int32_t iter = dst_shape.ndim() - 1;
+      index_t iter = dst_shape.ndim() - 1;
       aux_data.out_stride[iter] = 1;
       aux_data.in_stride[iter] = 1;
-      aux_data.input_shape[iter] = (int32_t)in_shape[iter];
-      aux_data.output_shape[iter] = (int32_t)out_shape[iter];
+      aux_data.input_shape[iter] = in_shape[iter];
+      aux_data.output_shape[iter] = out_shape[iter];
       iter--;
-#pragma unroll 4
       for (; iter >= 0; --iter) {
         aux_data.out_stride[iter] = aux_data.out_stride[iter+1] * out_shape[iter+1];
         aux_data.in_stride[iter] = aux_data.in_stride[iter+1] * in_shape[iter+1];
-        aux_data.input_shape[iter] = (int32_t)in_shape[iter];
-        aux_data.output_shape[iter] = (int32_t)out_shape[iter];
+        aux_data.input_shape[iter] = in_shape[iter];
+        aux_data.output_shape[iter] = out_shape[iter];
       }
       if (dst_shape.ndim() == 2) {
         Tensor<xpu, 2, OType> out =
           outputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
         Tensor<xpu, 2, IType> data =
           inputs[0].get_with_shape<xpu, 2, IType>(src_shape.get<2>(), s);
-        if(ctx.run_ctx.get_ctx().dev_type == Context::kGPU){
+        if (ctx.run_ctx.get_ctx().dev_type == Context::kGPU) {
           Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
             s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
         } else {
@@ -1170,7 +1170,7 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
           outputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
         Tensor<xpu, ndim, IType> data =
           inputs[0].get_with_shape<xpu, ndim, IType>(src_shape.get<ndim>(), s);
-        if(ctx.run_ctx.get_ctx().dev_type == Context::kGPU){
+        if (ctx.run_ctx.get_ctx().dev_type == Context::kGPU) {
           Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
             s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
         } else {
