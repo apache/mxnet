@@ -19,10 +19,11 @@ import os
 import tempfile
 
 import mxnet as mx
-from nose.tools import *
+
+import pytest
 
 
-@raises(Exception)
+@pytest.mark.xfail(raises=Exception)
 def test_download_retries():
     mx.test_utils.download("http://doesnotexist.notfound")
 

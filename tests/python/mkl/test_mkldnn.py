@@ -702,6 +702,3 @@ def test_elemwise_add():
     for stype in stypes:
         check_elemwise_add_training(stype)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

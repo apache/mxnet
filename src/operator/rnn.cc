@@ -180,7 +180,6 @@ static std::vector<ResourceRequest> RNNResourceEx(const NodeAttrs& attrs, const 
     const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
     if (param.p != 0 && 1.0f - param.p > 0) {
       request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
-      request.emplace_back(ResourceRequest::kRandom);
     }
 #endif
   } else {

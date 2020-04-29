@@ -29,6 +29,7 @@
 #include <dmlc/omp.h>
 #include <nnvm/graph.h>
 #include <nnvm/node.h>
+#include <mxnet/imperative.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/storage.h>
@@ -882,6 +883,11 @@ inline bool is_float(const int dtype) {
   return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
 }
 
+inline bool is_int(const int dtype) {
+  return dtype == mshadow::kUint8 || dtype == mshadow::kInt8 ||
+         dtype == mshadow::kInt32 || dtype == mshadow::kInt64;
+}
+
 inline int get_more_precise_type(const int type1, const int type2) {
   if (type1 == type2) return type1;
   if (is_float(type1) && is_float(type2)) {
@@ -929,6 +935,19 @@ NodeAttrsGetProfilerScope(const nnvm::NodeAttrs& attrs) {
     profiler_scope = profiler_scope_iter->second;
   }
   return profiler_scope;
+}
+
+inline int GetDefaultDtype() {
+  return Imperative::Get()->is_np_default_dtype() ?
+         mshadow::kFloat64 :
+         mshadow::kFloat32;
+}
+
+inline int GetDefaultDtype(int dtype) {
+  if (dtype != -1) return dtype;
+  return Imperative::Get()->is_np_default_dtype() ?
+         mshadow::kFloat64 :
+         mshadow::kFloat32;
 }
 
 }  // namespace common

@@ -20,7 +20,7 @@
 from __future__ import absolute_import
 import sys
 import os
-import unittest
+import pytest
 import logging
 import tarfile
 from collections import namedtuple
@@ -101,78 +101,64 @@ def forward_pass(sym, arg, aux, data_names, input_data):
     return mod.get_outputs()[0].asnumpy()
 
 
-class TestModel(unittest.TestCase):
-    """ Tests for models.
-    Tests are dynamically added.
-    Therefore edit test_models to add more tests.
-    """
-    def test_import_export(self):
-        def get_model_results(modelpath):
-            symbol, args, aux = onnx_mxnet.import_model(modelpath)
-
-            data = onnx_mxnet.get_model_metadata(modelpath)
-            data_names = [input_name[0] for input_name in data.get('input_tensor_data')]
-
-            result = []
-            for input_data, output_data in zip(inputs, outputs):
-                output = forward_pass(symbol, args, aux, data_names, input_data)
-                result.append(output)
-            return symbol, args, aux, result, data
-
-        for test in test_cases:
-            model_name, input_shape, output_shape = test
-            with self.subTest(model_name):
-                model_path, inputs, outputs = get_test_files(model_name)
-                logging.info("Translating " + model_name + " from ONNX model zoo to MXNet")
-
-                sym, arg_params, aux_params, expected_result, _ = get_model_results(model_path)
-
-                params = {}
-                params.update(arg_params)
-                params.update(aux_params)
-
-                dir_path = os.path.dirname(model_path)
-                new_model_name = "exported_" + model_name + ".onnx"
-                onnx_file = os.path.join(dir_path, new_model_name)
-
-                logging.info("Translating converted model from mxnet to ONNX")
-                converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32, onnx_file)
-
-                sym, arg_params, aux_params, actual_result, metadata = get_model_results(converted_model_path)
-
-                assert len(metadata) == 2
-                assert metadata.get('input_tensor_data')
-                assert metadata.get('input_tensor_data')[0][1] == input_shape
-                assert metadata.get('output_tensor_data')
-                assert metadata.get('output_tensor_data')[0][1] == output_shape
-
-                # verify the results
-                for expected, actual in zip(expected_result, actual_result):
-                    npt.assert_equal(expected.shape, actual.shape)
-                    npt.assert_almost_equal(expected, actual, decimal=3)
-
-                logging.info(model_name + " conversion successful")
-
-    def test_nodims_import(self):
-        # Download test model without dims mentioned in params
-        test_model = download(test_model_path, dirname=CURR_PATH.__str__())
-        input_data = np.array([0.2, 0.5])
-        nd_data = mx.nd.array(input_data).expand_dims(0)
-        sym, arg_params, aux_params = onnx_mxnet.import_model(test_model)
-        model_metadata = onnx_mxnet.get_model_metadata(test_model)
-        input_names = [inputs[0] for inputs in model_metadata.get('input_tensor_data')]
-        output_data = forward_pass(sym, arg_params, aux_params, input_names, nd_data)
-        assert(output_data.shape == (1,1))
-
-# test_case = ("model name", input shape, output shape)
-test_cases = [
+@pytest.mark.parametrize('model_name,input_shape,output_shape', [
     ("bvlc_googlenet", (1, 3, 224, 224), (1, 1000)),
     ("bvlc_reference_caffenet", (1, 3, 224, 224), (1, 1000)),
     ("bvlc_reference_rcnn_ilsvrc13", (1, 3, 224, 224), (1, 200)),
     ("inception_v1", (1, 3, 224, 224), (1, 1000)),
     ("inception_v2", (1, 3, 224, 224), (1, 1000))
-]
+])
+def test_import_export(model_name, input_shape, output_shape):
+    def get_model_results(modelpath):
+        symbol, args, aux = onnx_mxnet.import_model(modelpath)
 
+        data = onnx_mxnet.get_model_metadata(modelpath)
+        data_names = [input_name[0] for input_name in data.get('input_tensor_data')]
 
-if __name__ == '__main__':
-    unittest.main()
+        result = []
+        for input_data, output_data in zip(inputs, outputs):
+            output = forward_pass(symbol, args, aux, data_names, input_data)
+            result.append(output)
+        return symbol, args, aux, result, data
+
+    model_path, inputs, outputs = get_test_files(model_name)
+    logging.info("Translating " + model_name + " from ONNX model zoo to MXNet")
+
+    sym, arg_params, aux_params, expected_result, _ = get_model_results(model_path)
+
+    params = {}
+    params.update(arg_params)
+    params.update(aux_params)
+
+    dir_path = os.path.dirname(model_path)
+    new_model_name = "exported_" + model_name + ".onnx"
+    onnx_file = os.path.join(dir_path, new_model_name)
+
+    logging.info("Translating converted model from mxnet to ONNX")
+    converted_model_path = onnx_mxnet.export_model(sym, params, [input_shape], np.float32, onnx_file)
+
+    sym, arg_params, aux_params, actual_result, metadata = get_model_results(converted_model_path)
+
+    assert len(metadata) == 2
+    assert metadata.get('input_tensor_data')
+    assert metadata.get('input_tensor_data')[0][1] == input_shape
+    assert metadata.get('output_tensor_data')
+    assert metadata.get('output_tensor_data')[0][1] == output_shape
+
+    # verify the results
+    for expected, actual in zip(expected_result, actual_result):
+        npt.assert_equal(expected.shape, actual.shape)
+        npt.assert_almost_equal(expected, actual, decimal=3)
+
+    logging.info(model_name + " conversion successful")
+
+def test_nodims_import():
+    # Download test model without dims mentioned in params
+    test_model = download(test_model_path, dirname=CURR_PATH.__str__())
+    input_data = np.array([0.2, 0.5])
+    nd_data = mx.nd.array(input_data).expand_dims(0)
+    sym, arg_params, aux_params = onnx_mxnet.import_model(test_model)
+    model_metadata = onnx_mxnet.get_model_metadata(test_model)
+    input_names = [inputs[0] for inputs in model_metadata.get('input_tensor_data')]
+    output_data = forward_pass(sym, arg_params, aux_params, input_names, nd_data)
+    assert(output_data.shape == (1,1))

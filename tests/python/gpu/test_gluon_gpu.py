@@ -27,10 +27,11 @@ import mxnet.ndarray as nd
 import numpy as np
 import math
 from mxnet import autograd
+import pytest
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, run_in_spawned_process
+from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, run_in_spawned_process
 from test_gluon import *
 from test_loss import *
 from test_gluon_rnn import *
@@ -597,7 +598,7 @@ def test_hybridblock_mix_ctx_raise():
             return a + b
     foo_hybrid = FooHybrid()
     foo_hybrid.hybridize()
-    assert_raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.gpu()),
+    pytest.raises(ValueError, lambda: foo_hybrid(mx.nd.ones((10,), ctx=mx.gpu()),
                                                  mx.nd.ones((10,), ctx=mx.cpu())))
 
 @with_seed()
@@ -639,7 +640,3 @@ def test_gemms_true_fp16():
                         atol=atol, rtol=rtol)
     os.environ["MXNET_FC_TRUE_FP16"] = "0"
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

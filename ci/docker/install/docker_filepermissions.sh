@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -17,27 +17,18 @@
 # specific language governing permissions and limitations
 # under the License.
 
-set -e
-runme() {
-	cmd=$*
-	echo "$cmd"
-	$cmd
-	ret=$?
-	if [[ ${ret} != 0 ]]; then
-		echo " "
-		echo "ERROR: Return value non-zero for: $cmd"
-		echo " "
-		exit 1
-	fi
-}
+# Add user in order to make sure the assumed user the container is running under
+# actually exists inside the container to avoid problems like missing home dir
 
-# g++-5 is installed in ci/docker/install/ubuntu_nightly_tests.sh
-runme make clean >/dev/null
-runme mkdir build
-echo "Starting make"
-cp make/config.mk .
-sed -i -e 's/gcc/gcc-5/g' config.mk
-sed -i -e 's/g++/g++-5/g' config.mk
-runme /usr/bin/time -f "%e" make -j$(nproc) 2>&1 | tee build/compile_output.txt
-echo "Finished make. Now processing output"
-python tests/nightly/compilation_warnings/process_output.py build/compile_output.txt
+set -ex
+
+# Add user in order to make sure the assumed user the container is running under
+# actually exists inside the container to avoid problems like missing home dir
+if [[ "$USER_ID" -gt 0 ]]; then
+    # -no-log-init required due to https://github.com/moby/moby/issues/5419
+    useradd -m --no-log-init --uid $USER_ID --system jenkins_slave
+    # By default, docker creates all WORK_DIRs with root owner
+    mkdir /work/mxnet
+    mkdir /work/build
+    chown -R jenkins_slave /work/
+fi

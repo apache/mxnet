@@ -95,7 +95,3 @@ def test_kvstore_init_aux_keys():
     # updated with AssignmentOptimizer
     assert same(param_weight_full_init.asnumpy(), np.array([2, 2, 2]))
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

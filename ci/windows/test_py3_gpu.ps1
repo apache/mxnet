@@ -23,16 +23,18 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 $env:MXNET_SUBGRAPH_VERBOSE=0
 $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
 
-C:\Python37\Scripts\pip install -r tests\requirements.txt
-C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_unittest.xml tests\python\unittest
+C:\Python37\Scripts\pip install -r ci\docker\install\requirements
+C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_unittest.xml tests\python\unittest
 if ($LastExitCode -ne 0) { Throw ("Error running unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_operator.xml tests\python\gpu\test_operator_gpu.py
+C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_operator.xml tests\python\gpu\test_operator_gpu.py
 if ($LastExitCode -ne 0) { Throw ("Error running tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_forward.xml tests\python\gpu\test_forward.py
+C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_forward.xml tests\python\gpu\test_forward.py
 if ($LastExitCode -ne 0) { Throw ("Error running tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_train.xml tests\python\train
+C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_train.xml tests\python\train
 if ($LastExitCode -ne 0) { Throw ("Error running tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
 # Adding this extra test since it's not possible to set env var on the fly in Windows.
 $env:MXNET_SAFE_ACCUMULATION=1
-C:\Python37\python.exe -m nose -v --with-timer --timer-ok 1 --timer-warning 15 --timer-filter warning,error --with-xunit --xunit-file nosetests_operator.xml tests\python\gpu\test_operator_gpu.py:test_norm
+C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_operator.xml --cov-append tests\python\gpu\test_operator_gpu.py::test_norm
 if ($LastExitCode -ne 0) { Throw ("Error running tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_tvm_op.xml tests\python\gpu\test_tvm_op_gpu.py
+if ($LastExitCode -ne 0) { Throw ("Error running TVM op tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }

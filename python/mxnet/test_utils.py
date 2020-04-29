@@ -49,7 +49,7 @@ from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
-from .util import use_np  # pylint: disable=unused-import
+from .util import use_np, use_np_default_dtype  # pylint: disable=unused-import
 from .runtime import Features
 from .numpy_extension import get_cuda_compute_capability
 
@@ -755,24 +755,6 @@ def assert_exception(f, exception_type, *args, **kwargs):
         assert(False)
     except exception_type:
         return
-
-def retry(n):
-    """Retry n times before failing for stochastic test cases."""
-    assert n > 0
-    def decorate(f):
-        """Decorate a test case."""
-        def wrapper(*args, **kwargs):
-            """Wrapper for tests function."""
-            for _ in range(n):
-                try:
-                    f(*args, **kwargs)
-                except AssertionError as e:
-                    err = e
-                    continue
-                return
-            raise err
-        return wrapper
-    return decorate
 
 
 def simple_forward(sym, ctx=None, is_train=False, **inputs):

@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+max_time = 240
 
 
 node('utility') {
@@ -44,7 +44,8 @@ core_logic: {
   ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.misc_asan_cpu()
+    custom_steps.misc_asan_cpu(),
+    custom_steps.misc_test_docker_cache_build()
   ])
 }
 ,

@@ -167,8 +167,3 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1):
     finally:
         mx.contrib.tensorrt.set_use_fp16(original_use_fp16)
 
-
-if __name__ == '__main__':
-    import nose
-
-    nose.runmodule()

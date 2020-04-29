@@ -18,18 +18,21 @@
 
 # pylint: disable=too-many-locals,wrong-import-position,import-error
 from __future__ import absolute_import
-import os
+import os, sys
 import unittest
 import logging
 import tempfile
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(curr_path, '..'))
+from common import setup_module, teardown_module, with_seed
 from mxnet import nd, sym
+from mxnet.test_utils import set_default_context
 from mxnet.gluon import nn
 from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
 
 logger = logging.getLogger()
 logger.setLevel(logging.DEBUG)
-
 
 def _assert_sym_equal(lhs, rhs):
     assert lhs.list_inputs() == rhs.list_inputs()  # input names must be identical
@@ -74,19 +77,24 @@ def _check_onnx_export(net, group_outputs=False, shape_type=tuple, extra_params=
         # Confirm network outputs are the same
         imported_net_output = _force_list(imported_net(data))
         for out, imp_out in zip(output, imported_net_output):
-            mx.test_utils.assert_almost_equal(out, imp_out)
+            mx.test_utils.assert_almost_equal(out, imp_out, atol=1e-5, rtol=1e-5)
 
 
 class TestExport(unittest.TestCase):
     """ Tests ONNX export.
     """
 
+    def setUp(self):
+        set_default_context(mx.cpu(0))
+
+    @with_seed()
     def test_onnx_export_single_output(self):
         net = nn.HybridSequential(prefix='single_output_net')
         with net.name_scope():
             net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net)
 
+    @with_seed()
     def test_onnx_export_multi_output(self):
         class MultiOutputBlock(nn.HybridBlock):
             def __init__(self):
@@ -104,18 +112,17 @@ class TestExport(unittest.TestCase):
         assert len(sym.Group(net(sym.Variable('data'))).list_outputs()) == 10
         _check_onnx_export(net, group_outputs=True)
 
+    @with_seed()
     def test_onnx_export_list_shape(self):
         net = nn.HybridSequential(prefix='list_shape_net')
         with net.name_scope():
             net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net, shape_type=list)
 
+    @with_seed()
     def test_onnx_export_extra_params(self):
         net = nn.HybridSequential(prefix='extra_params_net')
         with net.name_scope():
             net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net, extra_params={'extra_param': nd.array([1, 2])})
 
-
-if __name__ == '__main__':
-    unittest.main()

@@ -29,9 +29,9 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
+from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
 from common import run_in_spawned_process
-from nose.tools import assert_raises, ok_
+import pytest
 import unittest
 import os
 
@@ -6069,7 +6069,7 @@ def test_custom_op_exc():
         b = mx.nd.zeros((1, 4))
         c = mx.nd.Custom(a, b, op_type='Dot1')
         c.wait_to_read()
-    assert_raises(MXNetError, custom_exc1)
+    pytest.raises(MXNetError, custom_exc1)
 
     # 2. error in pushing operator to engine
     def custom_exc2():
@@ -6081,7 +6081,7 @@ def test_custom_op_exc():
         # trigger error by invalid input shapes of operands
         c = mx.nd.Custom(a, b, op_type='Dot2')
         c.wait_to_read()
-    assert_raises(MXNetError, custom_exc2)
+    pytest.raises(MXNetError, custom_exc2)
 
     # 3. error in real execution
     if default_context().device_type == 'cpu':
@@ -6098,7 +6098,7 @@ def test_custom_op_exc():
             b = mx.nd.zeros((1, 2))
             c = mx.nd.Custom(a, b, op_type='Dot3')
             c.wait_to_read()
-        assert_raises(MXNetError, custom_exc3)
+        pytest.raises(MXNetError, custom_exc3)
 
         def custom_exc4():
             def f(in_data, out_data):
@@ -6112,7 +6112,7 @@ def test_custom_op_exc():
             b = mx.nd.zeros((1, 2))
             c = mx.nd.Custom(a, b, op_type='Dot4')
             c.wait_to_read()
-        assert_raises(MXNetError, custom_exc4)
+        pytest.raises(MXNetError, custom_exc4)
 
 
 @with_seed()
@@ -7133,36 +7133,6 @@ def test_dropout():
         # check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
         # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
-@with_seed()
-def test_dropout_reproducibility():
-    info = np.iinfo(np.int32)
-    seed1 = np.random.randint(info.min, info.max)
-    seed2 = np.random.randint(info.min, info.max)
-    data = mx.nd.ones((100, 100), ctx=default_context())
-    dropout = mx.gluon.nn.Dropout(0.5)
-    mx.random.seed(seed1)
-    with mx.autograd.record():
-        result1 = dropout(data)
-        result2 = dropout(result1)
-
-    mx.random.seed(seed2)
-    with mx.autograd.record():
-        result3 = dropout(data)
-        result4 = dropout(result3)
-
-    mx.random.seed(seed1)
-    with mx.autograd.record():
-        result5 = dropout(data)
-        result6 = dropout(result5)
-
-    assert_almost_equal(result1.asnumpy(), result5.asnumpy())
-    assert_almost_equal(result2.asnumpy(), result6.asnumpy())
-    with assert_raises(AssertionError):
-        assert_almost_equal(result1.asnumpy(), result2.asnumpy())
-    with assert_raises(AssertionError):
-        assert_almost_equal(result1.asnumpy(), result3.asnumpy())
-    with assert_raises(AssertionError):
-        assert_almost_equal(result2.asnumpy(), result4.asnumpy())
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
 @with_seed()
@@ -7704,8 +7674,8 @@ def test_zero_size_min_max():
         a = mx.nd.zeros(shape=(5, 0))
         a.max()
 
-    assert_raises(MXNetError, min)
-    assert_raises(MXNetError, max)
+    pytest.raises(MXNetError, min)
+    pytest.raises(MXNetError, max)
 
 
 @with_seed()
@@ -9343,18 +9313,18 @@ def test_add_n():
 
 def test_get_all_registered_operators():
     ops = get_all_registered_operators()
-    ok_(isinstance(ops, list))
-    ok_(len(ops) > 0)
-    ok_('Activation' in ops)
+    assert isinstance(ops, list)
+    assert len(ops) > 0
+    assert 'Activation' in ops
 
 
 def test_get_operator_arguments():
     operator_arguments = get_operator_arguments('Activation')
-    ok_(isinstance(operator_arguments, OperatorArguments))
-    ok_(operator_arguments.names == ['data', 'act_type'])
-    ok_(operator_arguments.types
-        == ['NDArray-or-Symbol', "{'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required"])
-    ok_(operator_arguments.narg == 2)
+    assert isinstance(operator_arguments, OperatorArguments)
+    assert operator_arguments.names == ['data', 'act_type']
+    assert operator_arguments.types \
+        == ['NDArray-or-Symbol', "{'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required"]
+    assert operator_arguments.narg == 2
 
 
 def test_transpose_infer_shape_back():
@@ -10016,6 +9986,3 @@ def test_broadcast_ops_on_misaligned_input_oneside():
                 mx.nd.waitall()
                 assert_almost_equal(f, expected)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

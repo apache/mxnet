@@ -50,13 +50,6 @@ def python3_ut(docker_container_name) {
   }
 }
 
-// Python 3
-def python3_ut_asan(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_asan', false)
-  }
-}
-
 def python3_ut_mkldnn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_mkldnn', false)
@@ -807,8 +800,8 @@ def test_unix_python3_cpu() {
             python3_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_unittest.xml')
-            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_quantization.xml')
+            utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_cpu_unittest.xml')
+            utils.collect_test_results_unix('tests_quantization.xml', 'tests_python3_cpu_quantization.xml')
           }
         }
       }
@@ -824,8 +817,8 @@ def test_unix_python3_mkl_cpu() {
             python3_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_unittest.xml')
-            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_quantization.xml')
+            utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_cpu_unittest.xml')
+            utils.collect_test_results_unix('tests_quantization.xml', 'tests_python3_cpu_quantization.xml')
           }
         }
       }
@@ -841,7 +834,7 @@ def test_unix_python3_gpu() {
             python3_gpu_ut_cython('ubuntu_gpu_cu101')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
+            utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_gpu.xml')
           }
         }
       }
@@ -857,7 +850,7 @@ def test_unix_python3_gpu_no_tvm_op() {
             python3_gpu_ut_cython('ubuntu_gpu_cu101')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
+            utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_gpu.xml')
           }
         }
       }
@@ -874,7 +867,7 @@ def test_unix_python3_quantize_gpu() {
               utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_python3_quantization_gpu', true)
               utils.publish_test_coverage()
             } finally {
-              utils.collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python3_quantize_gpu.xml')
+              utils.collect_test_results_unix('tests_quantization_gpu.xml', 'tests_python3_quantize_gpu.xml')
             }
           }
         }
@@ -890,8 +883,8 @@ def test_unix_python3_debug_cpu() {
             utils.unpack_and_init('cpu_debug', mx_cmake_lib_debug, true)
             python3_ut('ubuntu_cpu')
           } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_debug_unittest.xml')
-            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_debug_quantization.xml')
+            utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_cpu_debug_unittest.xml')
+            utils.collect_test_results_unix('tests_quantization.xml', 'tests_python3_cpu_debug_quantization.xml')
           }
         }
       }
@@ -906,8 +899,8 @@ def test_unix_python3_cpu_no_tvm_op() {
             utils.unpack_and_init('cpu_openblas_no_tvm_op', mx_cmake_lib_no_tvm_op)
             python3_ut('ubuntu_cpu')
           } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_cpu_no_tvm_op_unittest.xml')
-            utils.collect_test_results_unix('nosetests_quantization.xml', 'nosetests_python3_cpu_no_tvm_op_quantization.xml')
+            utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_cpu_no_tvm_op_unittest.xml')
+            utils.collect_test_results_unix('tests_quantization.xml', 'tests_python3_cpu_no_tvm_op_quantization.xml')
           }
         }
       }
@@ -923,8 +916,8 @@ def test_unix_python3_mkldnn_cpu() {
             python3_ut_mkldnn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_mkldnn_cpu_unittest.xml')
-            utils.collect_test_results_unix('nosetests_mkl.xml', 'nosetests_python3_mkldnn_cpu_mkl.xml')
+            utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_mkldnn_cpu_unittest.xml')
+            utils.collect_test_results_unix('tests_mkl.xml', 'tests_python3_mkldnn_cpu_mkl.xml')
           }
         }
       }
@@ -940,8 +933,8 @@ def test_unix_python3_mkldnn_mkl_cpu() {
             python3_ut_mkldnn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_mkldnn_cpu_unittest.xml')
-            utils.collect_test_results_unix('nosetests_mkl.xml', 'nosetests_python3_mkldnn_cpu_mkl.xml')
+            utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_mkldnn_cpu_unittest.xml')
+            utils.collect_test_results_unix('tests_mkl.xml', 'tests_python3_mkldnn_cpu_mkl.xml')
           }
         }
       }
@@ -957,7 +950,7 @@ def test_unix_python3_mkldnn_gpu() {
             python3_gpu_ut('ubuntu_gpu_cu101')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_mkldnn_gpu.xml')
+            utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_mkldnn_gpu.xml')
           }
         }
       }
@@ -973,7 +966,7 @@ def test_unix_python3_mkldnn_nocudnn_gpu() {
             python3_gpu_ut_nocudnn('ubuntu_gpu_cu101')
             utils.publish_test_coverage()
           } finally {
-            utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_mkldnn_gpu_nocudnn.xml')
+            utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_mkldnn_gpu_nocudnn.xml')
           }
         }
       }
@@ -990,7 +983,7 @@ def test_unix_python3_tensorrt_gpu() {
               utils.docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
               utils.publish_test_coverage()
             } finally {
-              utils.collect_test_results_unix('nosetests_tensorrt.xml', 'nosetests_python3_tensorrt_gpu.xml')
+              utils.collect_test_results_unix('tests_tensorrt.xml', 'tests_python3_tensorrt_gpu.xml')
             }
           }
         }
@@ -1009,21 +1002,6 @@ def test_unix_python3_integration_gpu() {
           }
         }
       }
-    }]
-}
-
-def test_unix_caffe_gpu() {
-    return ['Caffe GPU': {
-        node(NODE_LINUX_GPU) {
-            ws('workspace/it-caffe') {
-            timeout(time: max_time, unit: 'MINUTES') {
-                utils.init_git()
-                utils.unpack_lib('gpu', mx_lib)
-                utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_caffe', true)
-                utils.publish_test_coverage()
-            }
-            }
-        }
     }]
 }
 
@@ -1300,8 +1278,8 @@ def test_centos7_python3_cpu() {
               utils.docker_run('centos7_cpu', 'unittest_centos7_cpu', false)
               utils.publish_test_coverage()
             } finally {
-              utils.collect_test_results_unix('nosetests_unittest.xml', 'nosetests_python3_centos7_cpu_unittest.xml')
-              utils.collect_test_results_unix('nosetests_train.xml', 'nosetests_python3_centos7_cpu_train.xml')
+              utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_centos7_cpu_unittest.xml')
+              utils.collect_test_results_unix('tests_train.xml', 'tests_python3_centos7_cpu_train.xml')
             }
           }
         }
@@ -1319,7 +1297,7 @@ def test_centos7_python3_gpu() {
               utils.docker_run('centos7_gpu_cu92', 'unittest_centos7_gpu', true)
               utils.publish_test_coverage()
             } finally {
-              utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_centos7_gpu.xml')
+              utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_centos7_gpu.xml')
             }
           }
         }
@@ -1351,8 +1329,8 @@ def test_windows_python3_gpu() {
               unstash 'windows_package_gpu'
               powershell 'ci/windows/test_py3_gpu.ps1'
             } finally {
-              utils.collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu.xml')
-              utils.collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu.xml')
+              utils.collect_test_results_windows('tests_forward.xml', 'tests_gpu_forward_windows_python3_gpu.xml')
+              utils.collect_test_results_windows('tests_operator.xml', 'tests_gpu_operator_windows_python3_gpu.xml')
             }
           }
         }
@@ -1370,8 +1348,8 @@ def test_windows_python3_gpu_mkldnn() {
               unstash 'windows_package_gpu_mkldnn'
               powershell 'ci/windows/test_py3_gpu.ps1'
             } finally {
-              utils.collect_test_results_windows('nosetests_forward.xml', 'nosetests_gpu_forward_windows_python3_gpu_mkldnn.xml')
-              utils.collect_test_results_windows('nosetests_operator.xml', 'nosetests_gpu_operator_windows_python3_gpu_mkldnn.xml')
+              utils.collect_test_results_windows('tests_forward.xml', 'tests_gpu_forward_windows_python3_gpu_mkldnn.xml')
+              utils.collect_test_results_windows('tests_operator.xml', 'tests_gpu_operator_windows_python3_gpu_mkldnn.xml')
             }
           }
         }
@@ -1389,7 +1367,7 @@ def test_windows_python3_cpu() {
               unstash 'windows_package_cpu'
               powershell 'ci/windows/test_py3_cpu.ps1'
             } finally {
-              utils.collect_test_results_windows('nosetests_unittest.xml', 'nosetests_unittest_windows_python3_cpu.xml')
+              utils.collect_test_results_windows('tests_unittest.xml', 'tests_unittest_windows_python3_cpu.xml')
             }
           }
         }
@@ -1778,6 +1756,18 @@ def test_artifact_repository() {
         }
       }
     }]
+}
+
+def misc_test_docker_cache_build() {
+  return ['Test Docker cache build': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/docker_cache') {
+        utils.init_git()
+        sh "python3 ./ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} --no-publish"
+        sh "cd ci && docker-compose -f docker/docker-compose.yml build --parallel"
+      }
+    }
+  }]
 }
 
 return this

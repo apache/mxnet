@@ -27,8 +27,7 @@ sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed
-from nose.tools import with_setup
+from common import with_seed
 import unittest
 
 # dimension constants
@@ -370,7 +369,7 @@ def test_tensor():
 
     def check_gather():
         arr = mx.nd.ones(LARGE_X)
-        # Passing dtype=np.int64 since randomly generated indices are 
+        # Passing dtype=np.int64 since randomly generated indices are
         # very large that exceeds int32 limits.
         idx = mx.nd.random.randint(0, LARGE_X, 10, dtype=np.int64)
         # Calls gather_nd internally
@@ -1063,7 +1062,3 @@ def test_basic():
     check_maximum()
     check_minimum()
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

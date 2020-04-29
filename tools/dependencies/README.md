@@ -204,7 +204,7 @@ pip install -e python
 export NCCL_DEBUG=VERSION
 vim tests/python/gpu/test_nccl.py
 # Remove @unittest.skip("Test requires NCCL library installed and enabled during build") then run
-nosetests --verbose tests/python/gpu/test_nccl.py
+pytest --verbose tests/python/gpu/test_nccl.py
 # test_nccl.test_nccl_pushpull ... NCCL version 2.4.2+cuda10.0
 # ok
 # ----------------------------------------------------------------------

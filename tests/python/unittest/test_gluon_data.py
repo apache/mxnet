@@ -23,7 +23,7 @@ import numpy as np
 import random
 from mxnet import gluon
 import platform
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 from mxnet.gluon.data import DataLoader
 import mxnet.ndarray as nd
 from mxnet import context
@@ -382,7 +382,3 @@ def test_dataloader_scope():
 
     assert item is not None
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

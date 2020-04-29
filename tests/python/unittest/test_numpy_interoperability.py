@@ -345,6 +345,7 @@ def _add_workload_expand_dims():
 def _add_workload_split():
     OpArgMngr.add_workload('split', np.random.uniform(size=(4, 1)), 2)
     OpArgMngr.add_workload('split', np.arange(10), 2)
+    OpArgMngr.add_workload('split', np.random.uniform(size=(10, 10, 3)), 3, -1)
     assertRaises(ValueError, np.split, np.arange(10), 3)
 
 
@@ -756,6 +757,9 @@ def _add_workload_tril():
                         [np.inf, 1, 1]])
         OpArgMngr.add_workload('tril', arr)
         OpArgMngr.add_workload('tril', np.zeros((3, 3), dtype=dt))
+    import mxnet as mx
+    assertRaises(mx.MXNetError, np.tril, 10)
+    assertRaises(mx.MXNetError, np.tril, 2, 10)
 
 
 def _add_workload_triu():
@@ -1813,7 +1817,7 @@ def _add_workload_matmul():
             a = np.ones((2,), dtype=dt)
             b = np.ones((2,), dtype=dt)
             OpArgMngr.add_workload('matmul', a, b)
-    
+
     def test_result_types():
         mat = np.ones((1,1))
         vec = np.ones((1,))
@@ -1822,7 +1826,7 @@ def _add_workload_matmul():
             v = vec.astype(dt)
             for arg in [(m, v), (v, m), (m, m)]:
                 OpArgMngr.add_workload('matmul', *arg)
-    
+
     def test_scalar_output():
         vec1 = np.array([2])
         vec2 = np.array([3, 4]).reshape(1, -1)
@@ -1831,7 +1835,7 @@ def _add_workload_matmul():
             v2 = vec2.astype(dt)
             OpArgMngr.add_workload('matmul', v1, v2)
             OpArgMngr.add_workload('matmul', v2.T, v1)
-    
+
     def test_vector_vector_values():
         vec1 = np.array([1, 2])
         vec2 = np.array([3, 4]).reshape(-1, 1)
@@ -1863,7 +1867,7 @@ def _add_workload_matmul():
             m2 = mat2.astype(dt)
             OpArgMngr.add_workload('matmul', m1, v)
             OpArgMngr.add_workload('matmul', m2, v)
-    
+
     def test_matrix_matrix_values():
         mat1 = np.array([[1, 2], [3, 4]])
         mat2 = np.array([[1, 0], [1, 1]])
@@ -2988,6 +2992,7 @@ def _prepare_workloads():
     _add_workload_linalg_multi_dot()
     _add_workload_trace()
     _add_workload_tril()
+    _add_workload_triu()
     _add_workload_outer()
     _add_workload_kron()
     _add_workload_meshgrid()
@@ -3265,7 +3270,3 @@ def test_np_fallback_ops():
     op_list = np.fallback.__all__ + ['linalg.{}'.format(op_name) for op_name in np.fallback_linalg.__all__]
     check_interoperability(op_list)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

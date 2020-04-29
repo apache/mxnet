@@ -17,7 +17,7 @@
 
 import numpy as np
 import mxnet as mx
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 from mxnet.test_utils import assert_almost_equal
 
 
@@ -164,7 +164,3 @@ def test_reshape():
     # weight ndarray is shared between exe and new_exe
     assert np.all(new_exe.arg_arrays[1].asnumpy() == 1)
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

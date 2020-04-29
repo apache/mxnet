@@ -27,14 +27,14 @@ test_kvstore() {
         "-n 4 --launcher local python3 dist_device_sync_kvstore.py"
         "-n 4 --launcher local python3 dist_device_sync_kvstore_custom.py"
         "--p3 -n 4 --launcher local python3 dist_device_sync_kvstore_custom.py"
-        "-n 4 --launcher local python3 dist_sync_kvstore.py --type=init_gpu" 
+        "-n 4 --launcher local python3 dist_sync_kvstore.py --type=init_gpu"
     )
 
     for arg in "${test_args[@]}"; do
         python3 ../../tools/launch.py $arg
         if [ $? -ne 0 ]; then
             return $?
-        fi 
+        fi
     done
 }
 

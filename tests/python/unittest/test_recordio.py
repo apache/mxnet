@@ -22,7 +22,7 @@ import numpy as np
 import tempfile
 import random
 import string
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 
 @with_seed()
 def test_recordio():

@@ -44,18 +44,24 @@ from util import *
 
 # NOTE: Temporary whitelist used until all Dockerfiles are refactored for docker compose
 DOCKER_COMPOSE_WHITELIST = ('centos7_cpu', 'centos7_gpu_cu92', 'centos7_gpu_cu100',
-                            'centos7_gpu_cu101', 'centos7_gpu_cu102')
+                            'centos7_gpu_cu101', 'centos7_gpu_cu102', 'ubuntu_cpu',
+                            'ubuntu_build_cuda', 'ubuntu_gpu_cu101', 'publish.test.centos7_cpu',
+                            'publish.test.centos7_gpu')
+# Files for docker compose
+DOCKER_COMPOSE_FILES = set(('docker/build.centos7', 'docker/build.ubuntu', 'docker/publish.test.centos7'))
 
 
 def get_dockerfiles_path():
     return "docker"
 
 
-def get_platforms(path: str = get_dockerfiles_path()) -> List[str]:
+def get_platforms(path: str = get_dockerfiles_path(), legacy_only=False) -> List[str]:
     """Get a list of architectures given our dockerfiles"""
     dockerfiles = glob.glob(os.path.join(path, "Dockerfile.*"))
-    dockerfiles = list(filter(lambda x: x[-1] != '~', dockerfiles))
-    files = list(map(lambda x: re.sub(r"Dockerfile.(.*)", r"\1", x), dockerfiles))
+    dockerfiles = set(filter(lambda x: x[-1] != '~', dockerfiles))
+    files = set(map(lambda x: re.sub(r"Dockerfile.(.*)", r"\1", x), dockerfiles))
+    if legacy_only:
+        files = files - DOCKER_COMPOSE_FILES
     platforms = list(map(lambda x: os.path.split(x)[1], sorted(files)))
     return platforms
 
