@@ -56,8 +56,7 @@ class SequentialSampler : public IIterator<DataInst> {
     param_.InitAllowUnknown(kwargs);
     indices_.resize(param_.length);
     std::iota(std::begin(indices_), std::end(indices_), 0);  // fill like arange
-    out_.data.resize(2);  // label required by DataBatch, we can use fake label here
-    out_.data[1] = TBlob(indices_.data(), TShape({1, }), cpu::kDevMask, 0);
+    out_.data.resize(1);
   }
 
   virtual void BeforeFirst(void) {
@@ -129,8 +128,7 @@ class RandomSampler : public IIterator<DataInst> {
     mshadow::Random<cpu> *ctx_rng = ResourceManager::Get()->Request(
       Context::CPU(), ResourceRequest::kRandom).get_random<cpu, real_t>(nullptr);
     rng_.reset(new common::RANDOM_ENGINE(ctx_rng->GetSeed() + param_.seed));
-    out_.data.resize(2);  // label required by DataBatch, we can use fake label here
-    out_.data[1] = TBlob(indices_.data(), TShape({1, }), cpu::kDevMask, 0);
+    out_.data.resize(1);
     BeforeFirst();
   }
 
@@ -164,7 +162,7 @@ class RandomSampler : public IIterator<DataInst> {
   /*! \brief data for next value */
   DataInst out_;
   /*! \brief random generator engine */
-  std::unique_ptr<common::RANDOM_ENGINE> rng_;
+  std::unique_ptr<std::mt19937> rng_;
   /*! \brief arguments */
   RandomSamplerParam param_;
 };  // class RandomSampler

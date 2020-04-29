@@ -99,7 +99,7 @@ class PrefetcherIter : public IIterator<DataBatch> {
         // copy data over
         for (size_t i = 0; i < batch.data.size(); ++i) {
           if ((*dptr)->data.at(i).shape() != batch.data[i].shape_) {
-            // perf warning, dynamic buffer might be slow
+            // TODO(zhreshold): memory pool for dynamic shaped data
             (*dptr)->data.at(i).ReshapeAndAlloc(batch.data[i].shape_);
           }
           CHECK_EQ((*dptr)->data.at(i).shape(), batch.data[i].shape_);

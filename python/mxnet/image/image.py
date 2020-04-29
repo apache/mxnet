@@ -656,14 +656,14 @@ def imrotate(src, rotation_degrees, zoom_in=False, zoom_out=False):
     # when a scalar is passed we wrap it into an array
     if isinstance(rotation_degrees, Number):
         rotation_degrees = nd.array([rotation_degrees] * len(src),
-                                    ctx=src.context)
+                                    ctx=src.ctx)
 
     if len(src) != len(rotation_degrees):
         raise ValueError(
             "The number of images must be equal to the number of rotation angles"
         )
 
-    rotation_degrees = rotation_degrees.as_in_context(src.context)
+    rotation_degrees = rotation_degrees.as_in_context(src.ctx)
     rotation_rad = np.pi * rotation_degrees / 180
     # reshape the rotations angle in order to be broadcasted
     # over the `src` tensor
@@ -674,10 +674,10 @@ def imrotate(src, rotation_degrees, zoom_in=False, zoom_out=False):
     hscale = (float(h - 1) / 2)
     wscale = (float(w - 1) / 2)
     h_matrix = (
-        nd.repeat(nd.arange(h, ctx=src.context).astype('float32').reshape(h, 1), w, axis=1) - hscale
+        nd.repeat(nd.arange(h, ctx=src.ctx).astype('float32').reshape(h, 1), w, axis=1) - hscale
     ).expand_dims(axis=0)
     w_matrix = (
-        nd.repeat(nd.arange(w, ctx=src.context).astype('float32').reshape(1, w), h, axis=0) - wscale
+        nd.repeat(nd.arange(w, ctx=src.ctx).astype('float32').reshape(1, w), h, axis=0) - wscale
     ).expand_dims(axis=0)
     # perform rotation on the grid
     c_alpha = nd.cos(rotation_rad)
@@ -689,7 +689,7 @@ def imrotate(src, rotation_degrees, zoom_in=False, zoom_out=False):
     w_matrix_rot = w_matrix_rot / wscale
     h_matrix_rot = h_matrix_rot / hscale
 
-    h, w = nd.array([h], ctx=src.context), nd.array([w], ctx=src.context)
+    h, w = nd.array([h], ctx=src.ctx), nd.array([w], ctx=src.ctx)
     # compute the scale factor in case `zoom_in` or `zoom_out` are True
     if zoom_in or zoom_out:
         rho_corner = nd.sqrt(h * h + w * w)
