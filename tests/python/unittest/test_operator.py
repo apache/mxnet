@@ -1960,10 +1960,10 @@ def test_groupnorm():
         return x_hat, mean, std
 
     def np_groupnorm(data, gamma, beta, num_groups, eps):
-        new_param_shape = (1, num_groups, 1, 1, 1)
+        new_param_shape = (1, dshape[1], 1, 1)
         x_hat, mean, std = x_hat_helper(data, num_groups, eps)
-        out = x_hat * gamma.reshape(new_param_shape) + beta.reshape(new_param_shape)
-        return out.reshape(dshape), mean, std
+        out = x_hat.reshape(dshape) * gamma.reshape(new_param_shape) + beta.reshape(new_param_shape)
+        return out, mean, std
 
     def np_groupnorm_grad(ograd, data, gamma, beta, mean, std, num_groups, eps):
         x_hat, mean, std = x_hat_helper(data, num_groups, eps)
@@ -1971,7 +1971,7 @@ def test_groupnorm():
         dshape = data.shape
         dtype = data.dtype
         new_moments_shape = (new_shape[0], num_groups, 1, 1, 1)
-        new_param_shape = (1, num_groups, 1, 1, 1)
+        new_param_shape = (1, dshape[1], 1, 1)
         acc_type = acc_types[str(dtype)]
         ograd = ograd.reshape(new_shape)
         data = data.reshape(new_shape)
@@ -1979,9 +1979,9 @@ def test_groupnorm():
         beta = beta.reshape(new_param_shape)
         mean = mean.reshape(new_moments_shape)
         std = std.reshape(new_moments_shape)
-        beta_grad = np.sum(ograd, axis=(0, 2, 3, 4), dtype=acc_type, keepdims=False).astype(dtype)
-        gamma_grad = np.sum(x_hat * ograd, axis=(0, 2, 3, 4), dtype=acc_type, keepdims=False).astype(dtype)
-        x_hat_grad = ograd * gamma
+        beta_grad = np.sum(ograd, axis=(0, 3, 4), dtype=acc_type, keepdims=False).astype(dtype).flatten()
+        gamma_grad = np.sum(x_hat * ograd, axis=(0, 3, 4), dtype=acc_type, keepdims=False).astype(dtype).flatten()
+        x_hat_grad = ograd * gamma.reshape(1, num_groups, dshape[1] // num_groups, 1, 1)
         ograd_mult = x_hat_grad / std
         red_out = np.mean(ograd_mult, axis=(2, 3, 4), dtype=acc_type, keepdims=True).astype(dtype)
         data_grad = ograd_mult - red_out
@@ -1996,7 +1996,7 @@ def test_groupnorm():
     height = random.randint(1, 5)
     width = random.randint(1, 5)
     dshape = (batch_size, num_channels, height, width)
-    param_shape = (num_groups,)
+    param_shape = (num_channels,)
     temp_shape = (batch_size, num_groups, int(num_channels / num_groups), height, width)
     np_data = np.random.uniform(0.2, 1.0, dshape)
     np_gamma = np.random.uniform(-1.0, 1.0, param_shape)

@@ -828,10 +828,10 @@ class GroupNorm(HybridBlock):
         self._center = center
         self._scale = scale
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(num_groups,), init=gamma_initializer,
+                                     shape=(0,), init=gamma_initializer,
                                      allow_deferred_init=True)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(num_groups,), init=beta_initializer,
+                                    shape=(0,), init=beta_initializer,
                                     allow_deferred_init=True)
 
     def hybrid_forward(self, F, data, gamma, beta):
