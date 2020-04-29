@@ -543,7 +543,7 @@ class BaseModule(object):
                     monitor.toc_print()
 
                 if end_of_batch:
-                    eval_name_vals = eval_metric.get_global_name_value()
+                    eval_name_vals = eval_metric.get_name_value()
 
                 if batch_end_callback is not None:
                     batch_end_params = BatchEndParam(epoch=epoch, nbatch=nbatch,
