@@ -27,7 +27,7 @@
 namespace mxnet {
 namespace op {
 NNVM_REGISTER_OP(argmax)
-.set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::maximum>);
+.set_attr<FCompute>("FCompute<gpu>", ArgMax<gpu>);
 
 NNVM_REGISTER_OP(argmin)
 .set_attr<FCompute>("FCompute<gpu>", SearchAxisCompute<gpu, mshadow::red::minimum>);
@@ -42,6 +42,22 @@ NNVM_REGISTER_OP(pick)
 
 NNVM_REGISTER_OP(_backward_pick)
 .set_attr<FCompute>("FCompute<gpu>", PickOpBackward<gpu>);
+
+template<>
+int DefineNumbWorkers<gpu>(const TShape &shape, int axis) {
+  const auto nSteps = static_cast<uint32_t>(shape[axis]);
+  const auto nThreads = shape.Size()/nSteps;
+  if (nThreads > nSteps)
+    return 1;
+
+  // The formula used here is just a heuristic. Experimenting with different values,
+  // we accumulated a lot of data for different(shape, axis, numbWorkers).
+  // It turned out that they almost perfectly correspond to this formula.
+  const auto a = static_cast<float>(nSteps)/nThreads;
+  const auto b = log2f(a);
+  const auto numbWorkers = pow(2, (b * 5 + 28)/11);
+  return 2 * numbWorkers <= nSteps? numbWorkers : 1;
+}
 
 }  // namespace op
 }  // namespace mxnet

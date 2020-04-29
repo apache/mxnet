@@ -7510,6 +7510,15 @@ def test_softmax():
     check_smoothed_softmax_grad(default_context())
 
 
+def create_data(batch_size, num_labels, ctx=None, dtype=None, H=None, W=None):
+    if ctx is None:
+        ctx = default_context()
+    if dtype is None:
+        dtype = np.float32
+
+    data_shape = (batch_size, num_labels) if None in [H, W] else (batch_size, num_labels, H, W)
+    return mx.nd.random.uniform(-1., 1., shape=data_shape, dtype=dtype, ctx=ctx)
+
 @with_seed()
 def test_softmax_output_normalization():
     def _softmaxoutput_normalization(multi_output, use_ignore, normalization):
@@ -7520,13 +7529,12 @@ def test_softmax_output_normalization():
         ignore_label = np.random.randint(0, num_labels) if use_ignore else -1
 
         if multi_output:
-            data_shape = (batch_size, num_labels, H, W)
+            data = create_data(batch_size, num_labels, ctx=None, H=H, W=W)
             label_shape = (batch_size, H, W)
         else:
-            data_shape = (batch_size, num_labels)
+            data = create_data(batch_size, num_labels)
             label_shape = (batch_size, )
 
-        data = mx.nd.random.uniform(-1, 1, shape=data_shape)
         label = mx.nd.random.randint(
             0, num_labels, shape=label_shape).astype('float32')
         data.attach_grad()
@@ -7578,6 +7586,155 @@ def test_softmax_output_normalization():
                 _softmaxoutput_normalization(
                     multi_output, use_ignore, normalization)
 
+
+@with_seed()
+def test_argmax():
+    def run_test_argmax(multi_output, ctx, axis=None):
+        batch_size = 8
+        num_labels =  6
+        if multi_output:
+            H, W = 3, 3
+            tensor = create_data(batch_size, num_labels, ctx=ctx, H=H, W=W)
+        else:
+            tensor = create_data(batch_size, num_labels, ctx=ctx)
+
+        max = mx.nd.argmax(tensor, axis=axis)
+        topk_data = mx.nd.topk(tensor, axis=axis, is_ascend=0, k=1)
+        assert_almost_equal(max.reshape(-1), topk_data.reshape(-1))
+
+    ctx = default_context()
+    for multi_output in [False, True]:
+        axisMax = 4 if multi_output else 2
+        for axis in range(axisMax):
+            run_test_argmax(multi_output, ctx, axis)
+
+        # Global reduction test
+        run_test_argmax(multi_output, ctx)
+
+def profiling_argmax():
+    def getNumWorkers(shape, axis, ctx=mx.gpu()):
+        if ctx == mx.cpu():
+            return 1
+
+        nSteps = shape[axis]
+        nThreads = np.prod(shape)/nSteps
+        if nThreads > nSteps:
+            return 1
+
+        a = nSteps / nThreads
+        b = math.log2(a)
+        numbWorkers = math.floor(math.pow(2, (b * 5 + 28)/11))
+        return numbWorkers if 2 * numbWorkers <= nSteps else 1
+
+    def calc_argmax(tensor, axis, checkResult=False, nWorkers=1):
+        if axis is not None:
+            if nWorkers > 0:
+                # To use a predefined number of workers you need to recompile MxNet with following
+                # lines added to broadcast_reduce_op.h:
+                #
+                #  struct ReduceAxisParam : public dmlc::Parameter<ReduceAxisParam> {
+                #    ...
+                #   int nWorkers;
+                #    ...
+                #   DMLC_DECLARE_FIELD(nWorkers).set_default(1) \
+                #       .describe("Number of workers assigned for each vector processing on GPU");
+                max = mx.nd.argmax(tensor, axis=axis, nWorkers=nWorkers)
+            else:
+                max = mx.nd.argmax(tensor, axis=axis, nWorkers=-1)
+        else:
+            max = mx.nd.argmax(tensor, axis=axis)
+
+        if checkResult:
+            topk_data = mx.nd.topk(tensor, axis=axis, is_ascend=0, k=1)
+            assert_almost_equal(max.reshape(-1), topk_data.reshape(-1))
+        else:
+            max.wait_to_read()
+        return max
+
+    # Useful function for collection of information about performance of argmax and other MxNet operators
+    def runTest(a, b, shape = None, ctx=mx.gpu(), testArgmax=1, checkResult=False, lenTest=1000, nWorkers=1):
+        debug = True #False
+        iFirst = 5 if lenTest > 5 else 0
+        iLast = lenTest - iFirst - 1
+        if iLast <= 0:
+            iLast = lenTest - 1
+
+        buff = None
+        jMax = 2 if shape is None and 2 * nWorkers <= a else 1
+        for j in range(jMax):
+            if buff is None:
+                if shape is None:
+                    shape = (a, b) if j == 0 else (b, a)
+                    if j == 0:
+                        buff = "shape = (%2d, %6d):  " % (a, b)
+                else:
+                    buff = "{}".format(shape)
+
+            if testArgmax:
+                tmp = mx.nd.random.uniform(-1, 1, shape=shape, ctx=ctx)
+            else:
+                tmp = np.random.RandomState().uniform(-1, 1, shape)
+
+            for axis in range(len(shape)):
+                if nWorkers > shape[axis]:
+                    buff += "***************"
+                    continue
+                for i in range(lenTest):
+                    if i == iFirst:
+                        begin = time.time()
+                    if i == iLast:
+                        end = time.time()
+
+                    if testArgmax:
+                        max = calc_argmax(tmp, axis, checkResult=checkResult and (i==0), nWorkers=nWorkers)
+                    else:
+                        max = np.argmax(tmp, axis=axis)
+
+                if max is not None and debug and testArgmax == 1:
+                    if nWorkers < 0:
+                        buff += "   %6.3f (%3d)" % (end - begin, getNumWorkers(shape, axis, ctx=ctx))
+                    else:
+                        buff += "   %6.3f (%3d)" % (end - begin, nWorkers)
+                else:
+                    buff += "   %6.3f" % (end - begin)
+
+            if j == jMax - 1:
+                if nWorkers > 0:
+                    buff += "   ** %3d" % getNumWorkers(shape, axis, ctx=ctx)
+                print(buff)
+
+    testArgmax = 1
+    lenTest = 100
+    dim_2 = False       # 2- or 3-dimensional shapes will be tested
+    nWorkerLoop = False # Run tests for different nWorkers (to define best value)
+    checkResult = False #False # Check results on first iteration of each test
+    n = 32              # Size of 0th-dimesion
+    for ctx in [mx.cpu(), mx.gpu()]:
+        print("\n\nProfiling %s version" %("CPU" if ctx == mx.cpu() else "GPU"))
+        iMax = 1 if dim_2 else 3
+        for i in range(iMax):
+            for j in [1, 2, 4, 6, 8, 10, 12, 14]:
+                nCol = n * 2**j
+                shape = (n, nCol) if dim_2 else (n, (i + 1) * n, n * 2**j)
+                if nWorkerLoop:
+                    # Loop for determining the optimal number of workers assigned to one vector
+                    # ... for different 2-dimensional and 3-dimesional shapes
+                    nWorkersTheory = getNumWorkers(shape, 1, ctx=ctx)
+                    nWorkers = 1
+                    while 2 * nWorkers <= nCol and nWorkers < 8 * nWorkersTheory:
+                        if dim_2:
+                            runTest(n, nCol, ctx=ctx, testArgmax=testArgmax, lenTest=lenTest, nWorkers=nWorkers)
+                        else:
+                            runTest(0, 0, shape = shape, ctx=ctx, testArgmax=testArgmax, lenTest=lenTest, nWorkers=nWorkers)
+                        if nWorkers > 0:
+                            nWorkers *= 2
+                        else:
+                            break
+                else:
+                    if dim_2:
+                        runTest(n, nCol, ctx=ctx, testArgmax=testArgmax, checkResult=checkResult, lenTest=lenTest, nWorkers=-1)
+                    else:
+                        runTest(0, 0, shape = shape, ctx=ctx, testArgmax=testArgmax, checkResult=checkResult, lenTest=lenTest, nWorkers=-1)
 
 @with_seed()
 def test_slice():
