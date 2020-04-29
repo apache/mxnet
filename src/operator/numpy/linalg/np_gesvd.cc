@@ -27,7 +27,6 @@
 #include "./np_gesvd-inl.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
-#include "../../tensor/init_op.h"
 #include "../../operator_common.h"
 #include "../../elemwise_op_common.h"
 

@@ -58,10 +58,9 @@ void TrueDivideScalarCompute(const nnvm::NodeAttrs &attrs,
     });
   } else {
 #ifndef _WIN32
-    CHECK_EQ(outputs[0].type_flag_, mxnet::common::GetDefaultDtype())
-      << "true_divide only supports float32 and float64"
-         " output when input's dtype is "
-      << type_string(inputs[0].type_flag_);
+    CHECK_EQ(outputs[0].type_flag_, kFloat32) << "true_divide only supports float32 output "
+                                                 "when input's dtype is "
+                                              << type_string(inputs[0].type_flag_);
     MXNET_INT_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         Kernel<op_with_req<OP, Req>, xpu>::Launch(
@@ -105,11 +104,10 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs &attrs,
         });
       });
     } else {
-      // If both are the same integers, output is float32 or float64
-      CHECK_EQ(out.type_flag_, mxnet::common::GetDefaultDtype())
-        << "true_divide only supports float32 and float64"
-            " output when input's dtype is "
-        << type_string(lhs.type_flag_);
+      // If both are the same integers, output is float32
+      CHECK_EQ(out.type_flag_, kFloat32) << "true_divide only supports float32 output "
+                                            "when input's dtype is "
+                                         << type_string(lhs.type_flag_);
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
         MXNET_INT_TYPE_SWITCH(lhs.type_flag_, DType, {
           Kernel<op_with_req<mshadow_op::true_divide, Req>, xpu>::Launch(
@@ -230,8 +228,8 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
                                 lhs.dptr<DType>(), rhs.dptr<DType>(), out.dptr<DType>());
           });
         } else {
-          CHECK_EQ(out.type_flag_, mxnet::common::GetDefaultDtype())
-            << "true_divide only supports float32 and float64 output when input's dtype is "
+          CHECK_EQ(out.type_flag_, mshadow::kFloat32)
+            << "true_divide only supports float32 output when input's dtype is "
             << type_string(lhs.type_flag_);
           MXNET_INT_TYPE_SWITCH(lhs.type_flag_, DType, {
             // If both inputs are the same integer types, output is float type
@@ -290,8 +288,8 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
                                 lhs.dptr<DType>(), rhs.dptr<DType>(), out.dptr<DType>());
           });
         } else {
-          CHECK_EQ(out.type_flag_, mxnet::common::GetDefaultDtype())
-            << "true_divide only supports float32 and float64 output when input's dtype is "
+          CHECK_EQ(out.type_flag_, mshadow::kFloat32)
+            << "true_divide only supports float32 output when input's dtype is "
             << type_string(lhs.type_flag_);
           MXNET_INT_TYPE_SWITCH(lhs.type_flag_, DType, {
             // If both inputs are the same integer types, output is float type

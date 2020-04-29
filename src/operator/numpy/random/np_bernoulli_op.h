@@ -29,7 +29,6 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-#include "../../../common/utils.h"
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -60,17 +59,16 @@ struct NumpyBernoulliParam : public dmlc::Parameter<NumpyBernoulliParam> {
         "Context of output, in format [cpu|gpu|cpu_pinned](n)."
         " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-        .add_enum("None", -1)
         .add_enum("uint8", mshadow::kUint8)
         .add_enum("int32", mshadow::kInt32)
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
         .add_enum("bool", mshadow::kBool)
-        .set_default(-1)
+        .set_default(mshadow::kFloat32)
         .describe(
             "DType of the output in case this can't be inferred. "
-            "Defaults to float32 or float64 if not defined (dtype=None).");
+            "Defaults to float32 if not defined (dtype=None).");
     DMLC_DECLARE_FIELD(is_logit);
   }
 };
@@ -79,7 +77,7 @@ inline bool NumpyBernoulliOpType(const nnvm::NodeAttrs &attrs,
                                std::vector<int> *in_attrs,
                                std::vector<int> *out_attrs) {
   const NumpyBernoulliParam &param = nnvm::get<NumpyBernoulliParam>(attrs.parsed);
-  int otype = mxnet::common::GetDefaultDtype(param.dtype);
+  int otype = param.dtype;
   (*out_attrs)[0] = otype;
   return true;
 }

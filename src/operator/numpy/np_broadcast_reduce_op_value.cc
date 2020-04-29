@@ -272,7 +272,7 @@ inline bool NumpyMeanType(const nnvm::NodeAttrs& attrs,
       TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
       TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
     } else {
-      TYPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::common::GetDefaultDtype());
+      TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
     }
   }
 

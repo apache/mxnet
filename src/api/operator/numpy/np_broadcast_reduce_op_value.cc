@@ -123,7 +123,7 @@ MXNET_REGISTER_API("_npi.mean")
     param.axis = mxnet::Tuple<int>(args[1].operator ObjectRef());
   }
   if (args[2].type_code() == kNull) {
-    param.dtype = mxnet::common::GetDefaultDtype();
+    param.dtype = dmlc::optional<int>();
   } else {
     param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
   }

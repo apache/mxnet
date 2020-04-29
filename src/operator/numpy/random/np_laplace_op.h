@@ -76,7 +76,7 @@ struct NumpyLaplaceParam : public dmlc::Parameter<NumpyLaplaceParam> {
     (*dict)["loc"] = loc_s.str();
     (*dict)["scale"] = scale_s.str();
     (*dict)["size"] = size_s.str();
-    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+    (*dict)["dtype"] = dtype_s.str();
     // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
     // Setting ctx here results in an error.
   }

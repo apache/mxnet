@@ -38,7 +38,7 @@ inline bool NumpyGammaOpType(const nnvm::NodeAttrs& attrs,
   if (otype != -1) {
     (*out_attrs)[0] = otype;
   } else {
-    (*out_attrs)[0] = mxnet::common::GetDefaultDtype(param.dtype);
+    (*out_attrs)[0] = mshadow::kFloat32;
   }
   return true;
 }

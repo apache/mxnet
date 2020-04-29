@@ -46,7 +46,6 @@ namespace mxnet {
    *   turn off numpy shape flag globally.
    * */
   enum NumpyShape{Off, ThreadLocalOn, GlobalOn};
-  typedef NumpyShape NumpyDefaultDtype;
 /*! \brief runtime functions for NDArray */
 class Imperative {
  public:
@@ -190,11 +189,9 @@ class Imperative {
    * */
   int is_np_shape() const {
     if (is_np_shape_global_) {
-      return NumpyShape::GlobalOn;
+      return 2;
     }
-    return is_np_shape_thread_local_ ?
-           NumpyShape::ThreadLocalOn :
-           NumpyShape::Off;
+    return is_np_shape_thread_local_ ? 1 : 0;
   }
   /*! \brief specify numpy compatibility off, thread local on or global on. */
   bool set_is_np_shape(int is_np_shape) {
@@ -212,24 +209,6 @@ class Imperative {
         is_np_shape_global_ = false;
         is_np_shape_thread_local_ = false;
         break;
-    }
-    return old;
-  }
-  /*! \brief return current numpy default dtype compatibility status.
-   * */
-  bool is_np_default_dtype() const {
-    if (is_np_default_dtype_global_) {
-      return true;
-    }
-    return false;
-  }
-  /*! \brief specify numpy default dtype off or global on. */
-  bool set_is_np_default_dtype(bool is_np_default_dtype) {
-    bool old = this->is_np_default_dtype();
-    if (is_np_default_dtype) {
-      is_np_default_dtype_global_ = true;
-    } else {
-      is_np_default_dtype_global_ = false;
     }
     return old;
   }
@@ -322,7 +301,6 @@ class Imperative {
   static MX_THREAD_LOCAL bool is_np_shape_thread_local_;
 #endif
   bool is_np_shape_global_{false};
-  bool is_np_default_dtype_global_{false};
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};
   /*! \brief variable count used for naming */

@@ -6765,15 +6765,16 @@ def test_np_trace():
 @use_np
 def test_np_windows():
     class TestWindows(HybridBlock):
-        def __init__(self, func, M):
+        def __init__(self, func, M, dtype):
             super(TestWindows, self).__init__()
             self._func = func
             self._M = M
+            self._dtype = dtype
 
         def hybrid_forward(self, F, x, *args, **kwargs):
             op = getattr(F.np, self._func)
             assert op is not None
-            return x + op(M=self._M)
+            return x + op(M=self._M, dtype=self._dtype)
 
     configs = [-10, -3, -1, 0, 1, 6, 10, 20]
     dtypes = ['float32', 'float64']
@@ -6784,14 +6785,14 @@ def test_np_windows():
                 x = np.zeros(shape=(), dtype=dtype)
                 for hybridize in [False, True]:
                     np_func = getattr(_np, func)
-                    mx_func = TestWindows(func, M=config)
+                    mx_func = TestWindows(func, M=config, dtype=dtype)
                     np_out = np_func(M=config).astype(dtype)
                     if hybridize:
                         mx_func.hybridize()
                     mx_out = mx_func(x)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
                     # test imperative
-                    mx_out = getattr(np, func)(M=config)
+                    mx_out = getattr(np, func)(M=config, dtype=dtype)
                     np_out = np_func(M=config).astype(dtype)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 

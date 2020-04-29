@@ -83,5 +83,5 @@ def test_np_einsum():
 
 
 if __name__ == "__main__":
-    npx.set_np(dtype=False)
+    npx.set_np()
     test_np_einsum()

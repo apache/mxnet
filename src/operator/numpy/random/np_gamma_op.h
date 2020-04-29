@@ -62,14 +62,12 @@ struct NumpyGammaParam : public dmlc::Parameter<NumpyGammaParam> {
       .describe("Context of output, in format [xpu|xpu|xpu_pinned](n)."
                 " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-      .add_enum("None", -1)
       .add_enum("float32", mshadow::kFloat32)
       .add_enum("float64", mshadow::kFloat64)
       .add_enum("float16", mshadow::kFloat16)
-      .set_default(-1)
-      .describe("DType of the output in case this can't be inferred."
-                "Defaults to float64 or float32 if not defined (dtype=None),"
-                "which depends on your current default dtype.");
+      .set_default(mshadow::kFloat32)
+      .describe("DType of the output in case this can't be inferred. "
+                "Defaults to float32 if not defined (dtype=None).");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream shape_s, scale_s, dtype_s, size_s;
