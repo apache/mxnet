@@ -70,8 +70,8 @@ def advance_data_iter(data_iter, n):
 
 
 def score(sym, arg_params, aux_params, data, devs, label_name, max_num_examples, logger=None):
-    metrics = [mx.metric.create('acc'),
-               mx.metric.create('top_k_accuracy', top_k=5)]
+    metrics = [mx.gluon.metric.create('acc'),
+               mx.gluon.metric.create('top_k_accuracy', top_k=5)]
     if not isinstance(metrics, list):
         metrics = [metrics, ]
     mod = mx.mod.Module(symbol=sym, context=devs, label_names=[label_name, ])

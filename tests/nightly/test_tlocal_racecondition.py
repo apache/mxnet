@@ -91,7 +91,7 @@ class MyCustomProp(mx.operator.CustomOpProp):
     def create_operator(self, ctx, shapes, dtypes):
         return MyCustom()
 
-class MyMetric(mx.metric.EvalMetric):
+class MyMetric(mx.gluon.metric.EvalMetric):
     def __init__(self):
         super(MyMetric, self).__init__("MyMetric")
         self.name = ['empty']

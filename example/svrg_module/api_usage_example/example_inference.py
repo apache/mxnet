@@ -42,7 +42,7 @@ def get_validation_score(args):
     mod.bind(data_shapes=train_iter.provide_data, label_shapes=train_iter.provide_label)
     mod.init_params(initializer=mx.init.Uniform(0.01), allow_missing=False, force_init=False, allow_extra=False)
     mod.init_optimizer(kvstore='local', optimizer='sgd', optimizer_params=(('learning_rate', 0.025),))
-    metrics = mx.metric.create("mse")
+    metrics = mx.gluon.metric.create("mse")
     for e in range(epoch):
         metrics.reset()
         if e % mod.update_freq == 0:

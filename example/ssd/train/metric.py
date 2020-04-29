@@ -19,7 +19,7 @@ import mxnet as mx
 import numpy as np
 
 
-class MultiBoxMetric(mx.metric.EvalMetric):
+class MultiBoxMetric(mx.gluon.metric.EvalMetric):
     """Calculate metrics for Multibox training """
     def __init__(self, eps=1e-8):
         super(MultiBoxMetric, self).__init__('MultiBox')

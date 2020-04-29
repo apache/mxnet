@@ -102,7 +102,7 @@ d_trainer = gluon.Trainer(
 g_net.collect_params().zero_grad()
 d_net.collect_params().zero_grad()
 # define evaluation metric
-metric = mx.metric.CustomMetric(facc)
+metric = mx.gluon.metric.CustomMetric(facc)
 # initialize labels
 real_label = nd.ones(BATCH_SIZE, CTX)
 fake_label = nd.zeros(BATCH_SIZE, CTX)

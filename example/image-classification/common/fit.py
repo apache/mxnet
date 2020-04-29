@@ -290,7 +290,7 @@ def fit(args, network, data_loader, **kwargs):
     # evaluation metrices
     eval_metrics = ['accuracy']
     if args.top_k > 0:
-        eval_metrics.append(mx.metric.create(
+        eval_metrics.append(mx.gluon.metric.create(
             'top_k_accuracy', top_k=args.top_k))
 
     supported_loss = ['ce', 'nll_loss']
@@ -306,7 +306,7 @@ def fit(args, network, data_loader, **kwargs):
                     logging.warning(loss_type + ' is not an valid loss type, only cross-entropy or ' \
                                     'negative likelihood loss is supported!')
                 else:
-                    eval_metrics.append(mx.metric.create(loss_type))
+                    eval_metrics.append(mx.gluon.metric.create(loss_type))
         else:
             logging.warning("The output is not softmax_output, loss argument will be skipped!")
 

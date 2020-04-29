@@ -25,7 +25,7 @@ def get_names():
     return pred, label
 
 
-class RPNAccMetric(mx.metric.EvalMetric):
+class RPNAccMetric(mx.gluon.metric.EvalMetric):
     def __init__(self):
         super(RPNAccMetric, self).__init__('RPNAcc')
         self.pred, self.label = get_names()
@@ -49,7 +49,7 @@ class RPNAccMetric(mx.metric.EvalMetric):
         self.num_inst += len(pred_label.flat)
 
 
-class RCNNAccMetric(mx.metric.EvalMetric):
+class RCNNAccMetric(mx.gluon.metric.EvalMetric):
     def __init__(self):
         super(RCNNAccMetric, self).__init__('RCNNAcc')
         self.pred, self.label = get_names()
@@ -66,7 +66,7 @@ class RCNNAccMetric(mx.metric.EvalMetric):
         self.num_inst += len(pred_label.flat)
 
 
-class RPNLogLossMetric(mx.metric.EvalMetric):
+class RPNLogLossMetric(mx.gluon.metric.EvalMetric):
     def __init__(self):
         super(RPNLogLossMetric, self).__init__('RPNLogLoss')
         self.pred, self.label = get_names()
@@ -93,7 +93,7 @@ class RPNLogLossMetric(mx.metric.EvalMetric):
         self.num_inst += label.shape[0]
 
 
-class RCNNLogLossMetric(mx.metric.EvalMetric):
+class RCNNLogLossMetric(mx.gluon.metric.EvalMetric):
     def __init__(self):
         super(RCNNLogLossMetric, self).__init__('RCNNLogLoss')
         self.pred, self.label = get_names()
@@ -114,7 +114,7 @@ class RCNNLogLossMetric(mx.metric.EvalMetric):
         self.num_inst += label.shape[0]
 
 
-class RPNL1LossMetric(mx.metric.EvalMetric):
+class RPNL1LossMetric(mx.gluon.metric.EvalMetric):
     def __init__(self):
         super(RPNL1LossMetric, self).__init__('RPNL1Loss')
         self.pred, self.label = get_names()
@@ -130,7 +130,7 @@ class RPNL1LossMetric(mx.metric.EvalMetric):
         self.num_inst += num_inst
 
 
-class RCNNL1LossMetric(mx.metric.EvalMetric):
+class RCNNL1LossMetric(mx.gluon.metric.EvalMetric):
     def __init__(self):
         super(RCNNL1LossMetric, self).__init__('RCNNL1Loss')
         self.pred, self.label = get_names()

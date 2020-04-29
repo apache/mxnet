@@ -156,7 +156,7 @@ def train(args):
     model.fit(
         train_data          = data_train,
         eval_data           = data_val,
-        eval_metric         = mx.metric.Perplexity(invalid_label),
+        eval_metric         = mx.gluon.metric.Perplexity(invalid_label),
         kvstore             = args.kv_store,
         optimizer           = args.optimizer,
         optimizer_params    = opt_params,
@@ -244,14 +244,14 @@ def test(args):
 
     if args.dtype == "float32":
         model.set_params(arg_params, aux_params)
-        model.score(data_val, mx.metric.Perplexity(invalid_label),
+        model.score(data_val, mx.gluon.metric.Perplexity(invalid_label),
                     batch_end_callback=mx.callback.Speedometer(args.batch_size, 5))
     else:
         assert args.dtype == "float16", "Only float32 and float16 are supported currently"
         model = amp.convert_bucketing_module(model, target_dtype="float16")
         model.bind(data_val.provide_data, data_val.provide_label,
                    for_training=False)
-        model.score(data_val, mx.metric.Perplexity(invalid_label),
+        model.score(data_val, mx.gluon.metric.Perplexity(invalid_label),
                     batch_end_callback=mx.callback.Speedometer(args.batch_size, 5))
 
 if __name__ == '__main__':

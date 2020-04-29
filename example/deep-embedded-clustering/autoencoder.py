@@ -165,7 +165,7 @@ class AutoEncoderModel(model.MXModel):
             return np.mean(np.square(label-pred))/2.0
         solver = Solver(optimizer, momentum=0.9, wd=decay, learning_rate=l_rate,
                         lr_scheduler=lr_scheduler)
-        solver.set_metric(mx.metric.CustomMetric(l2_norm))
+        solver.set_metric(mx.gluon.metric.CustomMetric(l2_norm))
         solver.set_monitor(Monitor(print_every))
         data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=True,
                                       last_batch_handle='roll_over')
@@ -188,7 +188,7 @@ class AutoEncoderModel(model.MXModel):
             return np.mean(np.square(label-pred))/2.0
         solver = Solver(optimizer, momentum=0.9, wd=decay, learning_rate=l_rate,
                         lr_scheduler=lr_scheduler)
-        solver.set_metric(mx.metric.CustomMetric(l2_norm))
+        solver.set_metric(mx.gluon.metric.CustomMetric(l2_norm))
         solver.set_monitor(Monitor(print_every))
         data_iter = mx.io.NDArrayIter({'data': X}, batch_size=batch_size, shuffle=True,
                                       last_batch_handle='roll_over')

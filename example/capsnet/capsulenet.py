@@ -122,7 +122,7 @@ def to4d(img):
     return img.reshape(img.shape[0], 1, 28, 28).astype(np.float32)/255
 
 
-class LossMetric(mx.metric.EvalMetric):
+class LossMetric(mx.gluon.metric.EvalMetric):
     """Evaluate the loss function"""
     def __init__(self, batch_size, num_gpus):
         super(LossMetric, self).__init__('LossMetric')

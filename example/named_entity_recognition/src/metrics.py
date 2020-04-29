@@ -79,9 +79,9 @@ def entity_f1(label, pred):
     return classifer_metrics(label, pred)[2]
 
 def composite_classifier_metrics():
-    metric1 = mx.metric.CustomMetric(feval=entity_precision, name='entity precision')
-    metric2 = mx.metric.CustomMetric(feval=entity_recall, name='entity recall')
-    metric3 = mx.metric.CustomMetric(feval=entity_f1, name='entity f1 score')
-    metric4 = mx.metric.Accuracy()
+    metric1 = mx.gluon.metric.CustomMetric(feval=entity_precision, name='entity precision')
+    metric2 = mx.gluon.metric.CustomMetric(feval=entity_recall, name='entity recall')
+    metric3 = mx.gluon.metric.CustomMetric(feval=entity_f1, name='entity f1 score')
+    metric4 = mx.gluon.metric.Accuracy()
 
-    return mx.metric.CompositeEvalMetric([metric4, metric1, metric2, metric3])
+    return mx.gluon.metric.CompositeEvalMetric([metric4, metric1, metric2, metric3])

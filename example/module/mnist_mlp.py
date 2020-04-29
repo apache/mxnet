@@ -55,7 +55,7 @@ mod.bind(data_shapes=train_dataiter.provide_data, label_shapes=train_dataiter.pr
 mod.init_params()
 
 mod.init_optimizer(optimizer_params={'learning_rate':0.01, 'momentum': 0.9})
-metric = mx.metric.create('acc')
+metric = mx.gluon.metric.create('acc')
 
 for i_epoch in range(n_epoch):
     for i_iter, batch in enumerate(train_dataiter):

@@ -97,8 +97,8 @@ if __name__ == '__main__':
     logger = logging.getLogger()
     logger.setLevel(logging.DEBUG)
 
-    metrics = [mx.metric.create('acc'),
-               mx.metric.create('top_k_accuracy', top_k = 5)]
+    metrics = [mx.gluon.metric.create('acc'),
+               mx.gluon.metric.create('top_k_accuracy', top_k = 5)]
 
     (speed,) = score(metrics = metrics, **vars(args))
     logging.info('Finished with %f images per second', speed)

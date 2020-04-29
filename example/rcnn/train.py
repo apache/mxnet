@@ -85,7 +85,7 @@ def train_net(sym, roidb, args):
     eval_metric = RCNNAccMetric()
     cls_metric = RCNNLogLossMetric()
     bbox_metric = RCNNL1LossMetric()
-    eval_metrics = mx.metric.CompositeEvalMetric()
+    eval_metrics = mx.gluon.metric.CompositeEvalMetric()
     for child_metric in [rpn_eval_metric, rpn_cls_metric, rpn_bbox_metric, eval_metric, cls_metric, bbox_metric]:
         eval_metrics.add(child_metric)
 

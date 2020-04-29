@@ -157,7 +157,7 @@ model.fit(train_iter,  # train data
           num_epoch=args.epochs)  # train for at most 10 dataset passes
 
 # Step 7: evaluate model accuracy
-acc = mx.metric.Accuracy()
+acc = mx.gluon.metric.Accuracy()
 model.score(val_iter, acc)
 
 if hvd.rank() == 0:

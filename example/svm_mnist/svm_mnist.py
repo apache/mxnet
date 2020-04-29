@@ -113,8 +113,8 @@ for output in [mlp_svm_l2, mlp_svm_l1, mlp_softmax]:
             'momentum': 0.9,       # Momentum for SGD with momentum
             'wd': 0.00001,         # Weight decay for regularization
         })
-    results[output.name] = mod.score(test_iter, mx.metric.Accuracy())[0][1]*100
-    print('Accuracy for %s:'%output.name, mod.score(test_iter, mx.metric.Accuracy())[0][1]*100, '%\n')
+    results[output.name] = mod.score(test_iter, mx.gluon.metric.Accuracy())[0][1]*100
+    print('Accuracy for %s:'%output.name, mod.score(test_iter, mx.gluon.metric.Accuracy())[0][1]*100, '%\n')
     
 for key, value in results.items():
     print(key, value, "%s")

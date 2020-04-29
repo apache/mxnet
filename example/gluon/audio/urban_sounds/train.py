@@ -28,7 +28,7 @@ sys.path.append('../')
 
 def evaluate_accuracy(data_iterator, net):
     """Function to evaluate accuracy of any data iterator passed to it as an argument"""
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     for data, label in data_iterator:
         output = net(data)
         predictions = nd.argmax(output, axis=1)

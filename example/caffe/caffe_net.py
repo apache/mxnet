@@ -140,6 +140,6 @@ if __name__ == '__main__':
 
     # train
     if use_caffe_loss:
-        train_model.fit(args, net, get_iterator(data_shape, use_caffe_data), mx.metric.Caffe())
+        train_model.fit(args, net, get_iterator(data_shape, use_caffe_data), mx.gluon.metric.Caffe())
     else:
         train_model.fit(args, net, get_iterator(data_shape, use_caffe_data))
