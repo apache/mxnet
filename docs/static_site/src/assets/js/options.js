@@ -134,17 +134,19 @@ $(document).ready(function () {
     });
 
     let timer;
-    const mouseenterHandler = function() {
+    const toggleDropdown = function(showContent) {
         if (timer) clearTimeout(timer);
-        timer = setTimeout(function() {
-            $(".version-dropdown").show()
-        }, 250);  
+        if (showContent) {
+            timer = setTimeout(function() {
+                $(".version-dropdown").show()
+            }, 250);  
+        } else {
+            $(".version-dropdown").hide()
+        }
     }
 
-    const mouseleaveHandler = function() {
-        if (timer) clearTimeout(timer);
-        $(".version-dropdown").hide()
-    }
-
-    $(".dropdown").mouseenter(mouseenterHandler).mouseleave(mouseleaveHandler);
+    $("#version-dropdown-container")
+        .mouseenter(toggleDropdown.bind(null, true))
+        .mouseleave(toggleDropdown.bind(null, false))
+        .click(toggleDropdown.bind(null, false));
 });
