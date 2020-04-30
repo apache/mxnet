@@ -52,5 +52,6 @@ int main() {
         LOG(ERROR) << "Error binding the symbol: " << MXGetLastError() << " " << e.what();
         throw;
     }
+    MXNotifyShutdown();
     return 0;
 }
