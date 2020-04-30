@@ -2302,7 +2302,12 @@ def array(object, dtype=None, ctx=None):
     """
     if ctx is None:
         ctx = current_context()
-    if isinstance(object, (ndarray, _np.ndarray)):
+    if isinstance(object, _np.ndarray):
+        if is_np_default_dtype():
+            dtype = object.dtype if dtype is None else dtype
+        else:
+            dtype = _np.float32 if dtype is None else dtype
+    if isinstance(object, ndarray):
         dtype = object.dtype if dtype is None else dtype
     elif isinstance(object, NDArray):
         raise ValueError("If you're trying to create a mxnet.numpy.ndarray "
