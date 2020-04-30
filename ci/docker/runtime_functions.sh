@@ -943,8 +943,7 @@ cd_unittest_ubuntu() {
 
         # Adding these here as CI doesn't test all CUDA environments
         pytest example/image-classification/test_score.py
-        # TODO(szha): fix and reenable the hanging issue. tracked in #18098
-        # integrationtest_ubuntu_gpu_dist_kvstore
+        integrationtest_ubuntu_gpu_dist_kvstore
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then

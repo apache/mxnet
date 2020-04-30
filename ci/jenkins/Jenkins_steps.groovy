@@ -817,22 +817,6 @@ def test_unix_python3_gpu() {
     }]
 }
 
-def test_unix_python3_gpu_no_tvm_op() {
-    return ['Python3: GPU TVM_OP OFF': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/ut-python3-gpu-no-tvm-op') {
-          try {
-            utils.unpack_and_init('gpu_no_tvm_op', mx_lib_cpp_examples_no_tvm_op)
-            python3_gpu_ut_cython('ubuntu_gpu_cu101')
-            utils.publish_test_coverage()
-          } finally {
-            utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_gpu.xml')
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_python3_quantize_gpu() {
     return ['Python3: Quantize GPU': {
       node(NODE_LINUX_GPU_P3) {
