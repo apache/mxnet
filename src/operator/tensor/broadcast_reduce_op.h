@@ -1049,58 +1049,59 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
   ReduceAxesBackwardUseInOutImpl<xpu, OP, normalize>(ctx, small, inputs, req, outputs);
 }
 
+namespace {  // unnamed namespace to keep scope of the struct within the file
+struct ShapeAndStride {
+  index_t in_stride[MXNET_SPECIAL_MAX_NDIM];
+  index_t out_stride[MXNET_SPECIAL_MAX_NDIM];
+  index_t input_shape[MXNET_SPECIAL_MAX_NDIM];
+  index_t output_shape[MXNET_SPECIAL_MAX_NDIM];
+};
+
+/*!
+ * \brief Calculates Stride of input and output tensor dimesnions
+          And saves mshadow::Shape data in an integer array for
+          faster access.
+ * \param *aux_data to hold stride and shape data.
+ * \param in_shape input shape
+ * \param out_shape output shape
+ * \param ndim no of dimensions in output
+ */
+inline void PrepareAUXData(ShapeAndStride *aux_data,
+                    mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape,
+                    mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape,
+                    int ndim) {
+  int iter = ndim - 1;
+  aux_data->out_stride[iter] = 1;
+  aux_data->in_stride[iter] = 1;
+  aux_data->input_shape[iter] = in_shape[iter];
+  aux_data->output_shape[iter] = out_shape[iter];
+  iter--;
+  for (; iter >= 0; --iter) {
+    aux_data->out_stride[iter] = aux_data->out_stride[iter + 1] * out_shape[iter + 1];
+    aux_data->in_stride[iter] = aux_data->in_stride[iter + 1] * in_shape[iter + 1];
+    aux_data->input_shape[iter] = in_shape[iter];
+    aux_data->output_shape[iter] = out_shape[iter];
+  }
+}
+}  // unnamed namespace
+
 template<typename OP>
 struct broadcast_kernel {
   template<typename IType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i,
                                   IType *input,
                                   OType *output,
-                                  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape,
-                                  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape,
-                                  const OpReqType req,
-                                  const uint32_t ndim) {
-    size_t in_stride = 1;
-    size_t out_stride = 1;
-    index_t idx = i;
-    index_t in_idx = i;
-    for (int iter = ndim - 1; iter >= 0; --iter) {
-      size_t dim_idx = idx % out_shape[iter];
-      in_idx -= dim_idx * out_stride;
-      if (in_shape[iter] != 1) {
-        in_idx += dim_idx * in_stride;
-      }
-      idx /= out_shape[iter];
-      in_stride *= in_shape[iter];
-      out_stride *= out_shape[iter];
-    }
-    KERNEL_ASSIGN(output[i], req, OP::Map(input[in_idx]));
-  }
-};
-
-namespace {
-struct shape_and_stride {
-  index_t in_stride[MXNET_SPECIAL_MAX_NDIM];
-  index_t out_stride[MXNET_SPECIAL_MAX_NDIM];
-  index_t input_shape[MXNET_SPECIAL_MAX_NDIM];
-  index_t output_shape[MXNET_SPECIAL_MAX_NDIM];
-};
-}
-
-template<typename OP>
-struct broadcast_kernel_gpu {
-  template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(index_t i,
-                                  IType *input,
-                                  OType *output,
-                                  const shape_and_stride& aux_data,
+                                  const ShapeAndStride& aux_data,
                                   const OpReqType req,
                                   const int ndim) {
     index_t idx = i;
     index_t in_idx = i;
 #pragma unroll 4
-    for (index_t iter = ndim - 1; iter >= 0; --iter) {
+    for (int iter = ndim - 1; iter >= 0; --iter) {
       index_t out_dim_shape = aux_data.output_shape[iter];
       index_t out_dim_stride = aux_data.out_stride[iter];
+      // x % y = x - (x / y) * y
+      // speeds up modulo(%) operation in GPU
       index_t dim_idx = idx - (idx / out_dim_shape) * out_dim_shape;
       if (aux_data.input_shape[iter] != 1) {
         in_idx += dim_idx * (aux_data.in_stride[iter] - out_dim_stride);
@@ -1139,44 +1140,23 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
           out_shape[i] = 1;
         }
       }
-      struct shape_and_stride aux_data;
-      index_t iter = dst_shape.ndim() - 1;
-      aux_data.out_stride[iter] = 1;
-      aux_data.in_stride[iter] = 1;
-      aux_data.input_shape[iter] = in_shape[iter];
-      aux_data.output_shape[iter] = out_shape[iter];
-      iter--;
-      for (; iter >= 0; --iter) {
-        aux_data.out_stride[iter] = aux_data.out_stride[iter+1] * out_shape[iter+1];
-        aux_data.in_stride[iter] = aux_data.in_stride[iter+1] * in_shape[iter+1];
-        aux_data.input_shape[iter] = in_shape[iter];
-        aux_data.output_shape[iter] = out_shape[iter];
-      }
+      struct ShapeAndStride aux_data;
+      PrepareAUXData(&aux_data, in_shape, out_shape, dst_shape.ndim());
       if (dst_shape.ndim() == 2) {
         Tensor<xpu, 2, OType> out =
           outputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
         Tensor<xpu, 2, IType> data =
           inputs[0].get_with_shape<xpu, 2, IType>(src_shape.get<2>(), s);
-        if (ctx.run_ctx.get_ctx().dev_type == Context::kGPU) {
-          Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
-            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
-        } else {
-          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-            s, out.shape_.Size(), data.dptr_, out.dptr_, in_shape, out_shape, req[0], 2);
-        }
+        Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
+          s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
       } else {
         const int ndim = MXNET_SPECIAL_MAX_NDIM;
         Tensor<xpu, ndim, OType> out =
           outputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
         Tensor<xpu, ndim, IType> data =
           inputs[0].get_with_shape<xpu, ndim, IType>(src_shape.get<ndim>(), s);
-        if (ctx.run_ctx.get_ctx().dev_type == Context::kGPU) {
-          Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
-            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
-        } else {
-          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-            s, out.shape_.Size(), data.dptr_, out.dptr_, in_shape, out_shape, req[0], ndim);
-        }
+        Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
+          s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
       }
     });
   });

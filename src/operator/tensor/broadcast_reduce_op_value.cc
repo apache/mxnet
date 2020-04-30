@@ -128,7 +128,7 @@ NNVM_REGISTER_OP(_broadcast_backward)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-});
+  });
 
 NNVM_REGISTER_OP(broadcast_like)
 .add_alias("_npx_broadcast_like")
