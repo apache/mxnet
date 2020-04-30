@@ -29,6 +29,8 @@ from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, d
 from mxnet import gluon, nd
 from common import with_seed
 import unittest
+import pytest
+
 
 # dimension constants
 MEDIUM_X = 10000
@@ -41,6 +43,7 @@ LARGE_TENSOR_SHAPE = 2**32
 RNN_LARGE_TENSOR = 2**28
 
 
+@pytest.mark.timeout(0)
 def test_nn():
     def check_gluon_embedding():
         m = gluon.nn.Embedding(SMALL_Y, MEDIUM_X)
@@ -591,6 +594,7 @@ def test_nn():
     check_rnn()
 
 
+@pytest.mark.timeout(0)
 def test_tensor():
     def check_ndarray_zeros():
         a = nd.zeros(shape=(LARGE_X, SMALL_Y))
@@ -1196,6 +1200,7 @@ def test_tensor():
     check_binary_broadcast()
 
 
+@pytest.mark.timeout(0)
 def test_basic():
     def check_elementwise():
         a = nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -1810,6 +1815,7 @@ def test_basic():
     check_minimum()
 
 
+@pytest.mark.timeout(0)
 def test_sparse_dot():
     shape = (2, VLARGE_X)
     sp_mat1 = nd.sparse.csr_matrix(([2], [6], [0, 1, 1]), shape=shape)
