@@ -71,7 +71,7 @@ def get_docker_tag(platform: str, registry: str) -> str:
     if platform in DOCKER_COMPOSE_WHITELIST:
         with open("docker/docker-compose.yml", "r") as f:
             compose_config = yaml.load(f.read(), yaml.SafeLoader)
-            return compose_config["services"][platform]["image"]
+            return compose_config["services"][platform]["image"].replace('${DOCKER_CACHE_REGISTRY}', registry)
 
     platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
     if not registry:
@@ -96,6 +96,8 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     """
     tag = get_docker_tag(platform=platform, registry=registry)
 
+    env = os.environ.copy()
+
     # Case 1: docker-compose
     if platform in DOCKER_COMPOSE_WHITELIST:
         logging.info('Building docker container tagged \'%s\' based on ci/docker/docker-compose.yml', tag)
@@ -107,6 +109,7 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
         if cache_intermediate:
             cmd.append('--no-rm')
         cmd.append(platform)
+        env["DOCKER_CACHE_REGISTRY"] = registry
     else:  # Case 2: Deprecated way, will be removed
         # We add a user with the same group as the executing non-root user so files created in the
         # container match permissions of the local user. Same for the group.
@@ -137,11 +140,11 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
 
 
     @retry(subprocess.CalledProcessError, tries=num_retries)
-    def run_cmd():
+    def run_cmd(env=None):
         logging.info("Running command: '%s'", ' '.join(cmd))
-        check_call(cmd)
+        check_call(cmd, env=env)
 
-    run_cmd()
+    run_cmd(env=env)
 
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed

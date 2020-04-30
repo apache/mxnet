@@ -28,8 +28,9 @@ services:
   ###################################################################################################
   centos7_cpu:
     # The resulting image will be named build.centos7_cpu:latest and will be
-    # pushed to mxnetci under this name
-    image: build.centos7_cpu:latest
+    # pushed to the dockerhub user specified in the environment variable
+    # ${DOCKER_CACHE_REGISTRY} (typicall "mxnetci") under this name
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_cpu:latest
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
@@ -39,12 +40,9 @@ services:
         # BASE_IMAGE is used to dynamically specify the FROM image in Dockerfile.build.centos7
         BASE_IMAGE: centos:7
       cache_from:
-        # Due to https://github.com/moby/moby/issues/32612, we have to specify
-        # the local image tag in in addition to the dockerhub tag.
-        - build.centos7_cpu:latest
-        - mxnetci/build.centos7_cpu:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_cpu:latest
   centos7_gpu_cu92:
-    image: build.centos7_gpu_cu92:latest
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu92:latest
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
@@ -52,10 +50,9 @@ services:
       args:
         BASE_IMAGE: nvidia/cuda:9.2-cudnn7-devel-centos7
       cache_from:
-        - build.centos7_gpu_cu92:latest
-        - mxnetci/build.centos7_gpu_cu92:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu92:latest
   centos7_gpu_cu100:
-    image: build.centos7_gpu_cu100:latest
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu100:latest
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
@@ -63,10 +60,9 @@ services:
       args:
         BASE_IMAGE: nvidia/cuda:10.0-cudnn7-devel-centos7
       cache_from:
-        - build.centos7_gpu_cu100:latest
-        - mxnetci/build.centos7_gpu_cu100:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu100:latest
   centos7_gpu_cu101:
-    image: build.centos7_gpu_cu101:latest
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu101:latest
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
@@ -74,10 +70,9 @@ services:
       args:
         BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-centos7
       cache_from:
-        - build.centos7_gpu_cu101:latest
-        - mxnetci/build.centos7_gpu_cu101:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu101:latest
   centos7_gpu_cu102:
-    image: build.centos7_gpu_cu102:latest
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu102:latest
     build:
       context: .
       dockerfile: Dockerfile.build.centos7
@@ -85,8 +80,7 @@ services:
       args:
         BASE_IMAGE: nvidia/cuda:10.2-cudnn7-devel-centos7
       cache_from:
-        - build.centos7_gpu_cu102:latest
-        - mxnetci/build.centos7_gpu_cu102:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu102:latest
   ###################################################################################################
   # Dockerfile.build.ubuntu based images. On Ubuntu we test more recent
   # toolchain and dependency versions compared to CentOS7. We attempt to update
@@ -95,7 +89,7 @@ services:
   # Ubuntu release.
   ###################################################################################################
   ubuntu_cpu:
-    image: build.ubuntu_cpu:latest
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu:latest
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu
@@ -103,10 +97,9 @@ services:
       args:
         BASE_IMAGE: ubuntu:18.04
       cache_from:
-        - build.ubuntu_cpu:latest
-        - mxnetci/build.ubuntu_cpu:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu:latest
   ubuntu_gpu_cu101:
-    image: build.ubuntu_gpu_cu101:latest
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu101:latest
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu
@@ -114,10 +107,9 @@ services:
       args:
         BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
       cache_from:
-        - build.ubuntu_gpu_cu101:latest
-        - mxnetci/build.ubuntu_gpu_cu101:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu101:latest
   ubuntu_build_cuda:
-    image: build.ubuntu_build_cuda:latest
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_build_cuda:latest
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu
@@ -125,28 +117,25 @@ services:
       args:
         BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
       cache_from:
-        - build.ubuntu_build_cuda:latest
-        - mxnetci/build.ubuntu_build_cuda:latest
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_build_cuda:latest
   ###################################################################################################
   # Dockerfile.publish.test based images used for testing binary artifacts on minimal systems.
   ###################################################################################################
   publish.test.centos7_cpu:
-    image: publish.test.centos7_cpu:latest
+    image: ${DOCKER_CACHE_REGISTRY}/publish.test.centos7_cpu:latest
     build:
       context: .
       dockerfile: Dockerfile.publish.test.centos7
       args:
         BASE_IMAGE: centos:7
       cache_from:
-        - publish.test.centos7_cpu:latest
-        - mxnetci/publish.test.centos7_cpu:latest
+        - ${DOCKER_CACHE_REGISTRY}/publish.test.centos7_cpu:latest
   publish.test.centos7_gpu:
-    image: publish.test.centos7_gpu:latest
+    image: ${DOCKER_CACHE_REGISTRY}/publish.test.centos7_gpu:latest
     build:
       context: .
       dockerfile: Dockerfile.publish.test.centos7
       args:
         BASE_IMAGE: nvidia/cuda:9.2-cudnn7-devel-centos7
       cache_from:
-        - publish.test.centos7_gpu:latest
-        - mxnetci/publish.test.centos7_gpu:latest
+        - ${DOCKER_CACHE_REGISTRY}/publish.test.centos7_gpu:latest
