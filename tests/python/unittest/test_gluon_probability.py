@@ -2074,6 +2074,7 @@ def test_gluon_stochastic_block():
         assert mx_out.shape == loc.shape
         assert kl.shape == loc.shape
 
+
 @with_seed()
 @use_np
 def test_gluon_stochastic_sequential():
@@ -2106,6 +2107,71 @@ def test_gluon_stochastic_sequential():
         assert_almost_equal(accumulated_loss[0][1].asnumpy(), _np.ones(shape) - 1)
         assert_almost_equal(accumulated_loss[1][0].asnumpy(), _np.ones(shape) * 9)
         assert_almost_equal(accumulated_loss[1][1].asnumpy(), _np.ones(shape) + 1)
+
+
+@with_seed()
+@use_np
+def test_gluon_constraint():
+    class TestConstraint(HybridBlock):
+        def __init__(self, constraint_type):
+            super(TestConstraint, self).__init__()
+            self._constraint_type = getattr(mgp.constraint, constraint_type)
+
+        def hybrid_forward(self, F, *params):
+            value = params[0]
+            constraint_param = params[1:]
+            if len(constraint_param) == 0:
+                constraint = self._constraint_type()
+            else:
+                constraint = self._constraint_type(*constraint_param)
+            return constraint.check(value)
+
+    _s = np.random.randn(5, 3, 3)
+    psd_matrix = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(_s.shape[-1])    
+    
+    constraints_zoo = [
+        # (constraint_type, constraint_param, test_samples)
+        ('Real', (), [np.random.randn(2, 2)]),
+        ('Boolean', (), [np.random.randint(0, 20, size=(2, 2)) % 2 == 0]),
+        ('Interval', [np.zeros((2, 2)), np.ones((2, 2))], [np.random.rand(2, 2)]),
+        ('OpenInterval', [np.zeros((2, 2)), np.ones((2, 2))], [np.random.rand(2, 2)]),
+        ('HalfOpenInterval', [np.zeros((2, 2)), np.ones((2, 2))], [np.random.rand(2, 2)]),
+        ('IntegerInterval', [np.zeros((2, 2)), np.ones((2, 2)) * 10],
+            [np.random.randint(0, 10, size=(2, 2)).astype('float32')]),
+        ('IntegerOpenInterval', [np.zeros((2, 2)), np.ones((2, 2)) * 10],
+            [np.random.randint(0, 10, size=(2, 2)).astype('float32')]),
+        ('IntegerHalfOpenInterval', [np.zeros((2, 2)), np.ones((2, 2)) * 10],
+            [np.random.randint(0, 10, size=(2, 2)).astype('float32')]),
+        ('GreaterThan', [np.zeros((2, 2))], [np.random.rand(2, 2)]),
+        ('GreaterThanEq', [np.zeros((2, 2))], [np.random.rand(2, 2)]),
+        ('LessThan', [np.ones((2, 2))], [np.random.rand(2, 2)]),
+        ('LessThanEq', [np.ones((2, 2))], [np.random.rand(2, 2)]),
+        ('IntegerGreaterThan', [np.zeros((2, 2))],
+            [np.random.randint(1, 10, size=(2, 2)).astype('float32')]),
+        ('IntegerGreaterThanEq', [np.zeros((2, 2))],
+            [np.random.randint(0, 10, size=(2, 2)).astype('float32')]),
+        ('IntegerLessThan', [np.ones((2, 2)) * 10], 
+            [np.random.randint(0, 9, size=(2, 2)).astype('float32')]),
+        ('IntegerLessThanEq', [np.ones((2, 2)) * 10],
+            [np.random.randint(0, 10, size=(2, 2)).astype('float32')]),
+        ('Positive', (), [np.random.rand(2, 2)]),
+        ('NonNegative', (), [np.random.rand(2, 2)]),
+        ('PositiveInteger', (), [np.random.randint(1, 5, size=(2, 2)).astype('float32')]),
+        ('NonNegativeInteger', (), [np.random.randint(0, 5, size=(2, 2)).astype('float32')]),
+        ('Simplex', (), [npx.softmax(np.random.randn(4, 4), axis=-1)]),
+        ('LowerTriangular', (), [np.tril(np.random.randn(5, 3, 3))]),
+        ('LowerCholesky', (), [np.linalg.cholesky(psd_matrix)]),
+        ('PositiveDefinite', (), [psd_matrix]),
+    ]
+
+    for (constraint_type, constraint_arg, test_samples) in constraints_zoo:
+        for hybridize in [True, False]:
+            net = TestConstraint(constraint_type)
+            if hybridize:
+                net.hybridize()
+            for test_sample in test_samples:
+                mx_out = net(test_sample, *constraint_arg).asnumpy()
+                assert_almost_equal(mx_out, test_sample.asnumpy())
 
 
 if __name__ == '__main__':

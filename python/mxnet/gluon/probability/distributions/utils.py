@@ -19,13 +19,26 @@
 # pylint: disable=wildcard-import
 """Distribution utilities"""
 __all__ = ['getF', 'prob2logit', 'logit2prob', 'cached_property', 'sample_n_shape_converter',
-           'gammaln', 'erfinv', 'erf']
+           'constraint_check', 'digamma', 'gammaln', 'erfinv', 'erf']
 
 from functools import update_wrapper
 from numbers import Number
 import numpy as onp
 import scipy.special as sc
 from .... import nd, sym, np
+
+def constraint_check(F):
+    """Unified check_constraint interface for both scalar and tensor
+    """
+    def _check(condition, err_msg):
+        if isinstance(condition, bool):
+            if not condition:
+                raise ValueError(err_msg)
+            else:
+                return 1.0
+        return F.npx.constraint_check(condition, err_msg)
+    return _check
+
 
 def digamma(F):
     """Unified digamma interface for both scalar and tensor
@@ -37,7 +50,6 @@ def digamma(F):
             return sc.digamma(value, dtype='float32')
         return F.npx.digamma(value)
     return compute
-
 
 def gammaln(F):
     """Unified gammaln interface for both scalar and tensor
