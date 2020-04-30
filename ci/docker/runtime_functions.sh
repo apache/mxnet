@@ -989,7 +989,8 @@ cd_unittest_ubuntu() {
 
         # Adding these here as CI doesn't test all CUDA environments
         pytest example/image-classification/test_score.py
-        integrationtest_ubuntu_gpu_dist_kvstore
+        # TODO(szha): fix and reenable the hanging issue. tracked in #18098
+        # integrationtest_ubuntu_gpu_dist_kvstore
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then
@@ -1885,6 +1886,7 @@ build_static_libmxnet() {
     source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
     export USE_SYSTEM_CUDA=1
+    export CMAKE_STATICBUILD=1
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
