@@ -82,6 +82,7 @@ NNVM_REGISTER_OP(_ones)
 .add_arguments(InitOpParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_full)
+.add_alias("_npi_full")
   .describe("fill target with a scalar value")
   .set_num_inputs(0)
   .set_num_outputs(1)
@@ -139,6 +140,7 @@ Examples::
 .add_arguments(RangeLikeParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_linspace)
+.add_alias("_npi_linspace")
 .describe("Return evenly spaced numbers over a specified interval. Similar to Numpy")
 .set_num_inputs(0)
 .set_num_outputs(1)

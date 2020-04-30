@@ -25,8 +25,7 @@ from . import random  # pylint: disable=wildcard-import
 from . import _register
 from ._op import *  # pylint: disable=wildcard-import
 from ..context import *  # pylint: disable=wildcard-import
-from ..util import is_np_shape, is_np_array, set_np, reset_np, get_cuda_compute_capability,\
-                   is_np_default_dtype, set_np_default_dtype
+from ..util import is_np_shape, is_np_array, set_np, reset_np, get_cuda_compute_capability
 from ..ndarray import waitall
 from .utils import *  # pylint: disable=wildcard-import
 

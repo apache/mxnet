@@ -30,7 +30,6 @@
 #include <string>
 #include <vector>
 #include "../../../api/operator/op_utils.h"
-#include "../../../common/utils.h"
 #include "../../elemwise_op_common.h"
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
@@ -60,14 +59,13 @@ struct NumpyUniformParam : public dmlc::Parameter<NumpyUniformParam> {
         "Context of output, in format [cpu|gpu|cpu_pinned](n)."
         " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-        .add_enum("None", -1)
         .add_enum("float32", mshadow::kFloat32)
         .add_enum("float64", mshadow::kFloat64)
         .add_enum("float16", mshadow::kFloat16)
-        .set_default(-1)
+        .set_default(mshadow::kFloat32)
         .describe(
             "DType of the output in case this can't be inferred. "
-            "Defaults to float32 or float64 if not defined (dtype=None).");
+            "Defaults to float32 if not defined (dtype=None).");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream low_s, high_s, dtype_s, size_s;
@@ -90,7 +88,7 @@ inline bool NumpyUniformOpType(const nnvm::NodeAttrs &attrs,
   if (otype != -1) {
     (*out_attrs)[0] = otype;
   } else {
-    (*out_attrs)[0] = mxnet::common::GetDefaultDtype();
+    (*out_attrs)[0] = mshadow::kFloat32;
   }
   return true;
 }

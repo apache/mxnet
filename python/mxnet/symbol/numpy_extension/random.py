@@ -79,6 +79,8 @@ def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
         raise ValueError(
             "Either `prob` or `logit` must be specified, but not both. " +
             "Received prob={}, logit={}".format(prob, logit))
+    if dtype is None:
+        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
     if size == ():

@@ -29,7 +29,6 @@
 #include <mshadow/base.h>
 #include <string>
 #include <vector>
-#include "../../common/utils.h"
 #include "../mxnet_op.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
@@ -747,7 +746,7 @@ inline bool SampleOpType(const nnvm::NodeAttrs& attrs,
       dtype = param.dtype;
     } else {
       // Use default
-      dtype = mxnet::common::GetDefaultDtype();
+      dtype = mshadow::kFloat32;
     }
   }
   bool dtype_ok = (dtype == mshadow::kFloat16) || (dtype == mshadow::kFloat32) ||

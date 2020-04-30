@@ -84,7 +84,7 @@ MXNET_REGISTER_API("_npi.gamma")
     param.size = Tuple<int>(args[2].operator ObjectRef());
   }
   if (args[4].type_code() == kNull) {
-    param.dtype = mxnet::common::GetDefaultDtype();
+    param.dtype = mshadow::kFloat32;
   } else {
     param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
   }

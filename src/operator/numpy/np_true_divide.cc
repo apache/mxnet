@@ -36,8 +36,8 @@ int TrueDivideOutType(int ltype, int rtype) {
     // If only one of the inputs is float, return that float type
     return (common::is_float(ltype)) ? ltype : rtype;
   }
-  // If neither of the inputs is float, return the default dtype
-  return mxnet::common::GetDefaultDtype();
+  // If neither of the inputs is float, return the default float32 type
+  return mshadow::kFloat32;
 }
 
 template <int num_inputs>
@@ -55,8 +55,7 @@ bool TrueDivideType(const nnvm::NodeAttrs& attrs,
   const int lhs_dtype = in_attrs->at(0);
   const int rhs_dtype = (num_inputs == 2) ?
                         in_attrs->at(1) :
-                        (common::is_float(lhs_dtype) ?
-                         lhs_dtype : mxnet::common::GetDefaultDtype());
+                        (common::is_float(lhs_dtype) ? lhs_dtype : mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, TrueDivideOutType(lhs_dtype, rhs_dtype));
   return true;
 }

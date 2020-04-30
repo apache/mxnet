@@ -34,7 +34,6 @@ _np_ufunc_default_kwargs = {
 
 _set_np_shape_logged = False
 _set_np_array_logged = False
-_set_np_default_dtype_logged = False
 
 
 def get_gpu_count():
@@ -761,7 +760,7 @@ def _set_np_array(active):
     return cur_state
 
 
-def set_np(shape=True, array=True, dtype=True):
+def set_np(shape=True, array=True):
     """Setting NumPy shape and array semantics at the same time.
     It is required to keep NumPy shape semantics active while activating NumPy array semantics.
     Deactivating NumPy shape semantics while NumPy array semantics is still active is not allowed.
@@ -779,10 +778,7 @@ def set_np(shape=True, array=True, dtype=True):
         When this flag is set to `True`, it enables Gluon code flow to use or generate `mxnet.numpy.ndarray`s
         instead of `mxnet.ndarray.NDArray`. For example, a `Block` would create parameters of type
         `mxnet.numpy.ndarray`.
-    dtype : bool
-        A boolean value indicating whether the NumPy-dtype semantics should be turned on or off.
-        When this flag is set to `True`, default dtype is float64.
-        When this flag is set to `False`, default dtype is float32.
+
     Examples
     --------
     >>> import mxnet as mx
@@ -823,8 +819,6 @@ def set_np(shape=True, array=True, dtype=True):
     array(1.)
     >>> np.ones(shape=(2, 0, 3))
     array([], shape=(2, 0, 3))
-    >>> np.ones(shape=()).dtype
-    dtype('float64')
 
     When the `array` flag is `True`, Gluon layers would create parameters and outputs of type `mx.np.ndarray`.
 
@@ -843,12 +837,11 @@ def set_np(shape=True, array=True, dtype=True):
         raise ValueError('NumPy Shape semantics is required in using NumPy array semantics.')
     _set_np_array(array)
     set_np_shape(shape)
-    set_np_default_dtype(dtype)
 
 
 def reset_np():
-    """Deactivate NumPy shape and array and deafult dtype semantics at the same time."""
-    set_np(shape=False, array=False, dtype=False)
+    """Deactivate NumPy shape and array semantics at the same time."""
+    set_np(shape=False, array=False)
 
 
 _CUDA_SUCCESS = 0
@@ -910,205 +903,3 @@ def get_cuda_compute_capability(ctx):
         raise RuntimeError('cuDeviceComputeCapability failed with error code {}: {}'
                            .format(ret, error_str.value.decode()))
     return cc_major.value * 10 + cc_minor.value
-
-
-class _NumpyDefaultDtypeScope(object):
-    """Scope for managing NumPy default dtype semantics.
-    In NumPy default dtype semantics, default dtype is 'float64',
-    i.e. np.array([1, 2, 3]).dtype = np.float64
-    Original default dtype without this semantic is 'float32'.
-
-    Do not use this class directly. Use `np_shape(active)` instead.
-
-    Example::
-
-        with _NumpyDefaultDtypeScope(True):
-            y = model(x)
-            backward([y])
-
-    """
-    def __init__(self, is_np_default_dtype):  #pylint: disable=redefined-outer-name
-        self._enter_is_np_default_dtype = is_np_default_dtype
-        self._prev_is_np_default_dtype = None
-
-    def __enter__(self):
-        if self._enter_is_np_default_dtype is not None:
-            self._prev_is_np_default_dtype = set_np_default_dtype(self._enter_is_np_default_dtype)
-
-    def __exit__(self, ptype, value, trace):
-        if self._enter_is_np_default_dtype is not None and\
-           self._prev_is_np_default_dtype != self._enter_is_np_default_dtype:
-            set_np_default_dtype(self._prev_is_np_default_dtype)
-
-def np_default_dtype(active=True):
-    """Returns an activated/deactivated NumPy-default_dtype scope to be used in 'with' statement
-    and captures code that needs the NumPy default dtype semantics. i.e. default dtype is float64.
-
-    Please note that this is designed as an infrastructure for the incoming
-    MXNet-NumPy operators. Legacy operators registered in the modules
-    `mx.nd` and `mx.sym` are not guaranteed to behave like their counterparts
-    in NumPy even within this scope.
-
-    Parameters
-    ----------
-    active : bool
-        Indicates whether to activate NumPy default dtype semantics.
-
-    Returns
-    -------
-    _NumpyDefaultDtypeScope
-        A scope object for wrapping the code w/ or w/o NumPy-default_dtype semantics.
-
-    Example::
-
-        with mx.np_default_Dtype(active=True):
-            # Default Dtype is 'float64', consistent with offical NumPy behavior.
-            arr = mx.nd.array([1, 2, 3])
-            assert arr.dtype == float64
-
-        with mx.np_default_dtype(active=False):
-            # Default Dtype is 'float32' in the legacy default dtype definition.
-            arr = mx.nd.array([1, 2, 3])
-            assert arr.dtype == float32
-
-    """
-    return _NumpyDefaultDtypeScope(active)
-
-def use_np_default_dtype(func):
-    """A decorator wrapping a function or class with activated NumPy-default_dtype semantics.
-    When `func` is a function, this ensures that the execution of the function is scoped with NumPy
-    default dtype semantics, with the support for float64 as default dtype.
-    When`func` is a class, it ensures that all the methods, static functions, and properties
-    of the class are executed with the NumPy-default_dtype semantics.
-
-    Example:
-        import mxnet as mx
-        @mx.use_np_default_dtype
-        def float64_one():
-            return mx.nd.ones(()).dtype
-        print(float64_one())
-
-        @np.use_np_default_dtype
-        class Float64Tensor(object):
-            def __init__(self, data=None):
-                if data is None:
-                    data = Float64Tensor.random().data
-                self._data = data
-
-            def __repr__(self):
-                print("Is __repr__ in np_default_dtype semantics? {}!".format(str(np.is_np_deafult_dtype())))
-                return str(self._data.asnumpy())
-
-            @staticmethod
-            def random():
-                data = mx.nd.random.uniform(shape=(2,2))
-                return ScalarTensor(data)
-
-            @property
-            def value(self):
-                print("Is value property in np_dafault_dtype semantics? {}!".format(str(np.is_np_default_dtype())))
-                return self._data.asnumpy()
-
-
-        print("Is global scope of np_default_dtype activated? {}!".format(str(np.is_np_default_dtype())))
-        float64_tensor = Float64Tensor()
-        print(float64_tensor)
-
-    Parameters
-    ----------
-    func : a user-provided callable function or class to be scoped by the NumPy-default_dtype semantics.
-
-    Returns
-    -------
-    Function or class
-        A function or class wrapped in the NumPy-default_dtype scope.
-    """
-    if inspect.isclass(func):
-        for name, method in inspect.getmembers(
-                func,
-                predicate=
-                lambda f: inspect.isfunction(f) or inspect.ismethod(f) or isinstance(f, property)):
-            if isinstance(method, property):
-                setattr(func, name, property(use_np_default_dtype(method.__get__),
-                                             method.__set__,
-                                             method.__delattr__,
-                                             method.__doc__))
-            else:
-                setattr(func, name, use_np_default_dtype(method))
-        return func
-    elif callable(func):
-        @functools.wraps(func)
-        def _with_np_default_dtype(*args, **kwargs):
-            with np_default_dtype(active=True):
-                return func(*args, **kwargs)
-        return _with_np_default_dtype
-    else:
-        raise TypeError('use_np_default_dtype can only decorate classes and callable objects, '
-                        'while received a {}'.format(str(type(func))))
-
-def is_np_default_dtype():
-    """Checks whether the NumPy default dtype semantics is currently turned on.
-    In NumPy default dtype semantics, default dtype is float64.
-
-    Please note that this is designed as an infrastructure for the incoming
-    MXNet-NumPy operators. Legacy operators registered in the modules
-    `mx.nd` and `mx.sym` are not guaranteed to behave like their counterparts
-    in NumPy even within this scope.
-
-    Returns
-    -------
-        A bool value indicating whether the NumPy default dtype semantics is currently on.
-
-    Example
-    -------
-    >>> import mxnet as mx
-    >>> from mxnet import npx
-    >>> prev_state = npx.set_np_default_dtype(True)
-    >>> print(prev_state)
-    False
-    >>> print(npx.is_np_default_dtype())
-    True
-    """
-    curr = ctypes.c_bool()
-    check_call(_LIB.MXIsNumpyDefaultDtype(ctypes.byref(curr)))
-    return curr.value
-
-def set_np_default_dtype(is_np_default_dtype=True):  # pylint: disable=redefined-outer-name
-    """Turns on/off NumPy default dtype semantics, because mxnet.numpy.ndarray use
-    32 bit data storage as default (e.g. float32 and int 32) while offical NumPy use
-    64 bit data storage as default (e.g. float64 and int64).
-    This is turned off by default for keeping backward compatibility.
-
-    Please note that this is designed as an infrastructure for the incoming
-    MXNet-NumPy operators. Legacy operators registered in the modules
-    `mx.nd` and `mx.sym` are not guaranteed to behave like their counterparts
-    in NumPy within this semantics.
-
-    Parameters
-    ----------
-    active : bool
-        Indicates whether to turn on/off NumPy default dtype semantics.
-
-    Returns
-    -------
-        A bool value indicating the previous state of NumPy default dtype semantics.
-
-    Example
-    -------
-    >>> import mxnet as mx
-    >>> from mxnet import npx
-    >>> prev_state = npx.set_np_default_dtype(True)
-    >>> print(prev_state)
-    False
-    >>> print(npx.is_np_default_dtype())
-    True
-    """
-    global _set_np_default_dtype_logged
-    if is_np_default_dtype:
-        if not _set_np_default_dtype_logged:
-            import logging
-            logging.info('NumPy array default dtype has been changed from flaot32 to float64 in your code.')
-            _set_np_default_dtype_logged = True
-    prev = ctypes.c_bool()
-    check_call(_LIB.MXSetIsNumpyDefaultDtype(ctypes.c_bool(is_np_default_dtype), ctypes.byref(prev)))
-    return prev.value

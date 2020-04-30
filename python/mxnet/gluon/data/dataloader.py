@@ -407,7 +407,7 @@ class DataLoaderV1(object):
 
 def _thread_worker_initializer(active_shape, active_array):
     """Initializer for ThreadPool."""
-    set_np(shape=active_shape, array=active_array, dtype=False)
+    set_np(shape=active_shape, array=active_array)
 
 
 _worker_dataset = None
@@ -418,7 +418,7 @@ def _worker_initializer(dataset, active_shape, active_array):
     # can be passed as argument
     global _worker_dataset
     _worker_dataset = dataset
-    set_np(shape=active_shape, array=active_array, dtype=False)
+    set_np(shape=active_shape, array=active_array)
 
 def _worker_fn(samples, batchify_fn, dataset=None):
     """Function for processing data in worker process."""

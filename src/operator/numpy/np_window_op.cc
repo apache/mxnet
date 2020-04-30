@@ -49,7 +49,7 @@ NNVM_REGISTER_OP(_npi_hanning)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyWindowsParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyWindowsShape)
-.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<NumpyWindowsParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitType<NumpyWindowsParam>)
 .set_attr<FCompute>("FCompute<cpu>", NumpyWindowCompute<cpu, 0>)
 .add_arguments(NumpyWindowsParam::__FIELDS__());
 
@@ -60,7 +60,7 @@ NNVM_REGISTER_OP(_npi_hamming)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyWindowsParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyWindowsShape)
-.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<NumpyWindowsParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitType<NumpyWindowsParam>)
 .set_attr<FCompute>("FCompute<cpu>", NumpyWindowCompute<cpu, 1>)
 .add_arguments(NumpyWindowsParam::__FIELDS__());
 
@@ -71,7 +71,7 @@ NNVM_REGISTER_OP(_npi_blackman)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyWindowsParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", NumpyWindowsShape)
-.set_attr<nnvm::FInferType>("FInferType", InitNumpyType<NumpyWindowsParam>)
+.set_attr<nnvm::FInferType>("FInferType", InitType<NumpyWindowsParam>)
 .set_attr<FCompute>("FCompute<cpu>", NumpyWindowCompute<cpu, 2>)
 .add_arguments(NumpyWindowsParam::__FIELDS__());
 

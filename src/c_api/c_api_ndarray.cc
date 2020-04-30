@@ -332,18 +332,6 @@ int MXSetIsNumpyShape(int is_np_shape, int* prev) {
   API_END();
 }
 
-int MXIsNumpyDefaultDtype(bool* curr) {
-  API_BEGIN();
-  *curr = Imperative::Get()->is_np_default_dtype();
-  API_END();
-}
-
-int MXSetIsNumpyDefaultDtype(bool default_dtype, bool* prev) {
-  API_BEGIN();
-  *prev = Imperative::Get()->set_is_np_default_dtype(default_dtype);
-  API_END();
-}
-
 int MXAutogradMarkVariables(uint32_t num_var,
                             NDArrayHandle *var_handles,
                             uint32_t *reqs_array,

@@ -55,8 +55,7 @@ struct NumpyWindowsParam : public dmlc::Parameter<NumpyWindowsParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
     "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .set_default(-1)
-    .add_enum("None", -1)
+    .set_default(mshadow::kFloat32)
     MXNET_ADD_ALL_TYPES
     .describe("Data-type of the returned array.");
   }
