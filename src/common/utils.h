@@ -950,19 +950,6 @@ inline int GetDefaultDtype(int dtype) {
          mshadow::kFloat32;
 }
 
-inline int GetDefaultDtype() {
-  return Imperative::Get()->is_np_default_dtype() ?
-         mshadow::kFloat64 :
-         mshadow::kFloat32;
-}
-
-inline int GetDefaultDtype(int dtype) {
-  if (dtype != -1) return dtype;
-  return Imperative::Get()->is_np_default_dtype() ?
-         mshadow::kFloat64 :
-         mshadow::kFloat32;
-}
-
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_

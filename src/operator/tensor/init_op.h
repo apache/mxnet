@@ -414,17 +414,6 @@ inline bool InitNumpyType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-template<typename ParamType, int num_in = 0U>
-inline bool InitNumpyType(const nnvm::NodeAttrs& attrs,
-                          std::vector<int> *in_attrs,
-                          std::vector<int> *out_attrs) {
-  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), num_in);
-  CHECK_EQ(out_attrs->size(), 1U);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::common::GetDefaultDtype(param.dtype));
-  return true;
-}
-
 template<typename ParamType, bool rsp, bool csr>
 inline bool InitStorageType(const nnvm::NodeAttrs& attrs,
                             const int dev_mask,
