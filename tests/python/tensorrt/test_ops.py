@@ -147,7 +147,10 @@ def test_conv_deconv_2d(op, kernel, stride, pad, group, layout, no_bias):
         rtol_fp32 = 1e-5
         atol_fp16 = 1e-3
         rtol_fp16 = 1e-2
-    weight_shape = (num_filter, data_shape[1]) + kernel
+    if op == mx.sym.Convolution:
+        weight_shape = (num_filter, data_shape[1]) + kernel
+    else:
+        weight_shape = (data_shape[1], num_filter) + kernel
     print("kernel: {} | stride: {} | pad: {} | group: {} | layout: {} | no_bias: {}".format(
           kernel, stride, pad, group, layout, no_bias))
     kwargs = {'weight': weight, 'kernel': kernel, 'stride': stride, 'layout': layout,

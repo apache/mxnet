@@ -25,7 +25,6 @@ import os
 import gzip
 import pickle as pickle
 import time
-import tempfile
 try:
     import h5py
 except ImportError:
@@ -39,9 +38,9 @@ except:
     from itertools import zip_longest
 
 
-def test_MNISTIter():
+def test_MNISTIter(tmpdir):
     # prepare data
-    path = tempfile.mkdtemp()
+    path = str(tmpdir)
     get_mnist_ubyte(path)
 
     batch_size = 100
@@ -70,8 +69,8 @@ def test_MNISTIter():
     assert(sum(label_0 - label_1) == 0)
 
 
-def test_Cifar10Rec():
-    path = tempfile.mkdtemp()
+def test_Cifar10Rec(tmpdir):
+    path = str(tmpdir)
     get_cifar10(path)
     dataiter = mx.io.ImageRecordIter(
         path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
@@ -96,8 +95,8 @@ def test_Cifar10Rec():
         assert(labelcount[i] == 5000)
 
 @pytest.mark.parametrize('inter_method', [0,1,2,3,4,9,10])
-def test_inter_methods_in_augmenter(inter_method):
-    path = tempfile.mkdtemp()
+def test_inter_methods_in_augmenter(inter_method, tmpdir):
+    path = str(tmpdir)
     get_cifar10(path)
     dataiter = mx.io.ImageRecordIter(
         path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
@@ -109,9 +108,9 @@ def test_inter_methods_in_augmenter(inter_method):
     for batch in dataiter:
         pass
 
-def test_image_iter_exception():
+def test_image_iter_exception(tmpdir):
     with pytest.raises(MXNetError):
-        path = tempfile.mkdtemp()
+        path = str(tmpdir)
         get_cifar10(path)
         dataiter = mx.io.ImageRecordIter(
             path_imgrec=os.path.join(path, 'cifar', 'train.rec'),
@@ -455,8 +454,8 @@ def test_CSVIter():
     for dtype in ['int32', 'int64', 'float32']:
         check_CSVIter_synthetic(dtype=dtype)
 
-def test_ImageRecordIter_seed_augmentation():
-    path = tempfile.mkdtemp()
+def test_ImageRecordIter_seed_augmentation(tmpdir):
+    path = str(tmpdir)
     get_cifar10(path)
     seed_aug = 3
 

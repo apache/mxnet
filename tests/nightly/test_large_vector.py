@@ -408,13 +408,13 @@ def test_tensor():
 
     def check_load_save():
         x = create_vector(size=LARGE_X)
-        tmp = tempfile.mkdtemp()
-        tmpfile = os.path.join(tmp, 'large_vector')
-        nd.save(tmpfile, [x])
-        y = nd.load(tmpfile)
-        y = y[0]
-        assert x[0] == y[0]
-        assert x[-1] == y[-1]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmpfile = os.path.join(tmp, 'large_vector')
+            nd.save(tmpfile, [x])
+            y = nd.load(tmpfile)
+            y = y[0]
+            assert x[0] == y[0]
+            assert x[-1] == y[-1]
 
     def check_binary_broadcast():
         def check_correctness(mxnet_op, numpy_op, atol=1e-3):

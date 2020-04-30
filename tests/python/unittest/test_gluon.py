@@ -16,7 +16,6 @@
 # under the License.
 
 import os
-import tempfile
 
 import mxnet as mx
 from mxnet import gluon
@@ -37,6 +36,7 @@ import warnings
 import json
 import unittest
 import random
+import tempfile
 
 @with_seed()
 def test_parameter():
@@ -336,7 +336,7 @@ def test_dense():
 
 
 @with_seed()
-def test_symbol_block():
+def test_symbol_block(tmpdir):
     model = nn.HybridSequential()
     model.add(nn.Dense(128, activation='tanh'))
     model.add(nn.Dropout(0.5))
@@ -380,7 +380,7 @@ def test_symbol_block():
     # other than fp32 param dtype.
 
     # 1. Load a resnet model, cast it to fp64 and export
-    tmp = tempfile.mkdtemp()
+    tmp = str(tmpdir)
     tmpfile = os.path.join(tmp, 'resnet34_fp64')
     ctx = mx.cpu(0)
 
@@ -1508,14 +1508,14 @@ def test_req():
 
 
 @with_seed()
-def test_save_load():
-    net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True)
-    net.save_parameters('test_save_load.params')
+def test_save_load(tmpdir):
+    net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True, root=str(tmpdir))
+    net.save_parameters(os.path.join(str(tmpdir), 'test_save_load.params'))
 
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
     net.output = mx.gluon.nn.Dense(1000)
 
-    net.load_parameters('test_save_load.params')
+    net.load_parameters(os.path.join(str(tmpdir), 'test_save_load.params'))
 
     class Network(gluon.Block):
         def __init__(self, **kwargs):
@@ -1537,12 +1537,13 @@ def test_save_load():
     x = np.random.rand(32, 10, 10)
     x = mx.nd.array(x).as_in_context(mx.cpu())
     net(x)
-    net.save_parameters('tmp.params')
+    _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
+    net.save_parameters(param_path)
     net2 = Network()
-    net2.load_parameters('tmp.params')
+    net2.load_parameters(param_path)
 
 @with_seed()
-def test_save_load_deduplicate_with_shared_params():
+def test_save_load_deduplicate_with_shared_params(tmpdir):
     class B(mx.gluon.Block):
         def __init__(self, params=None):
             super(B, self).__init__(params=params)
@@ -1560,26 +1561,27 @@ def test_save_load_deduplicate_with_shared_params():
     b2 = B(b1.collect_params())
     c = C(b1, b2)
     c.initialize()
-    c.save_parameters('tmp.params', deduplicate=True)
+    _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
+    c.save_parameters(param_path, deduplicate=True)
 
-    params = mx.nd.load('tmp.params')
+    params = mx.nd.load(param_path)
     assert len(params) == 1  # Only a single copy of the shared parameter is saved
 
     b1 = B()
     b2 = B(b1.collect_params())
     c = C(b1, b2)
-    c.load_parameters('tmp.params')
+    c.load_parameters(param_path)
 
     # Test default behavior
-    c.save_parameters('tmp2.params', deduplicate=False)
+    c.save_parameters(param_path, deduplicate=False)
 
-    params = mx.nd.load('tmp2.params')
+    params = mx.nd.load(param_path)
     assert len(params) == 2  # Only a single copy of the shared parameter is saved
 
     b1 = B()
     b2 = B(b1.collect_params())
     c = C(b1, b2)
-    c.load_parameters('tmp2.params')
+    c.load_parameters(param_path)
 
 @with_seed()
 def test_symbol_block_save_load():
