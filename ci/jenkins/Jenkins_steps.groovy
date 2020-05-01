@@ -289,20 +289,6 @@ def compile_unix_full_gpu_mkldnn_cpp_test() {
     }]
 }
 
-def compile_unix_full_gpu_no_tvm_op() {
-    return ['GPU: CUDA10.1+cuDNN7 TVM_OP OFF': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-gpu-no-tvm-op') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op', false)
-            utils.pack_lib('gpu_no_tvm_op', mx_lib_cpp_examples_no_tvm_op)
-          }
-        }
-      }
-    }]
-}
-
 def compile_unix_cmake_gpu() {
     return ['GPU: CMake': {
       node(NODE_LINUX_CPU) {
@@ -311,19 +297,6 @@ def compile_unix_cmake_gpu() {
             utils.init_git()
             utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake', false)
             utils.pack_lib('cmake_gpu', mx_cmake_lib_cython)
-          }
-        }
-      }
-    }]
-}
-
-def compile_unix_cmake_gpu_no_tvm_op() {
-    return ['GPU: CMake TVM_OP OFF': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cmake-gpu-no-tvm-op') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake_no_tvm_op', false)
           }
         }
       }
@@ -831,22 +804,6 @@ def test_unix_python3_gpu() {
         ws('workspace/ut-python3-gpu') {
           try {
             utils.unpack_and_init('gpu', mx_lib_cython)
-            python3_gpu_ut_cython('ubuntu_gpu_cu101')
-            utils.publish_test_coverage()
-          } finally {
-            utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_gpu.xml')
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_python3_gpu_no_tvm_op() {
-    return ['Python3: GPU TVM_OP OFF': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/ut-python3-gpu-no-tvm-op') {
-          try {
-            utils.unpack_and_init('gpu_no_tvm_op', mx_lib_cpp_examples_no_tvm_op)
             python3_gpu_ut_cython('ubuntu_gpu_cu101')
             utils.publish_test_coverage()
           } finally {
