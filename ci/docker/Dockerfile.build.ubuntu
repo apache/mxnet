@@ -130,7 +130,6 @@ RUN /work/ubuntu_perl.sh
 # MXNetJS nightly needs emscripten for wasm
 COPY install/ubuntu_emscripten.sh /work/
 RUN /work/ubuntu_emscripten.sh
-ENV LLVM=/work/deps/emscripten-fastcomp/build/bin
 
 ARG USER_ID=0
 COPY install/docker_filepermissions.sh /work/
