@@ -148,5 +148,5 @@ $(document).ready(function () {
     $("#version-dropdown-container")
         .mouseenter(toggleDropdown.bind(null, true))
         .mouseleave(toggleDropdown.bind(null, false))
-        .click(toggleDropdown.bind(null, false));
+        .click(function() {$(".version-dropdown").toggle()});
 });
