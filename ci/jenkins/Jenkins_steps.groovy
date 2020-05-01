@@ -1736,17 +1736,6 @@ def sanity_lint() {
     }]
 }
 
-def sanity_rat_license() {
-    return ['RAT License': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/sanity-rat') {
-          utils.init_git()
-          utils.docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
-        }
-      }
-    }]
-}
-
 def test_artifact_repository() {
     return ['Test Artifact Repository Client': {
       node(NODE_LINUX_CPU) {
