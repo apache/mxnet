@@ -391,8 +391,7 @@ def main() -> int:
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-        if args.docker_registry and platform not in DOCKER_COMPOSE_WHITELIST:
-            # Caching logic for Dockerfiles not yet refactored with compose
+        if args.docker_registry:
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
             build_docker(platform=platform, registry=args.docker_registry, num_retries=args.docker_build_retries,
