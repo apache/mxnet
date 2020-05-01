@@ -6420,6 +6420,7 @@ def test_np_linalg_det():
 
 @with_seed()
 @use_np
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18184')
 def test_np_linalg_slogdet():
     class TestSlogdet(HybridBlock):
         def __init__(self):
