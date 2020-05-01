@@ -237,9 +237,9 @@ struct MultiSGDKernel {
         }
         rescale_grad += param.wds[index] * w;
         if (has_momentum) {
-          param.mom[index][i] *= param.momentum;
-          param.mom[index][i] -= param.lrs[index] * rescale_grad;
-          w = w + param.mom[index][i];
+          const MPDType m = param.mom[index][i] * param.momentum - rescale_grad;
+          w = w + param.lrs[index] * m;
+          param.mom[index][i] = m;
         } else {
           w -= param.lrs[index] * rescale_grad;
         }
@@ -599,9 +599,11 @@ struct SGDMomKernel {
       rescale_grad = mshadow_op::clip::Map(rescale_grad, param_clip_gradient);
     }
     rescale_grad += param_wd * weight_data[i];
-    mom_data[i] *= param_momentum;
-    mom_data[i] -= param_lr * rescale_grad;
-    KERNEL_ASSIGN(out_data[i], req, weight_data[i] + mom_data[i]);
+    const DType m = mom_data[i];
+    m *= param_momentum;
+    m -= rescale_grad;
+    mom_data[i] = m;
+    KERNEL_ASSIGN(out_data[i], req, weight_data[i] + param_lr * m);
   }
 };
 
@@ -692,9 +694,9 @@ struct MP_SGDMomKernel {
     }
     grad_rescaled += param_wd * w;
     mom *= param_momentum;
-    mom -= param_lr * grad_rescaled;
+    mom -= grad_rescaled;
     mom_data[i] = mom;
-    w = w + mom;
+    w = w + param_lr * mom;
     weight32[i] = w;
     KERNEL_ASSIGN(out_data[i], req, w);
   }
