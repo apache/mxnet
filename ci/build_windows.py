@@ -164,11 +164,6 @@ def windows_build(args):
     if 'GPU' in args.flavour:
         # Get Thrust version to be shipped in Cuda 11, due to flakyness of
         # older Thrust versions with MSVC 19 compiler
-        thrust_path = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.2\\include\\thrust"
-        if os.path.exists(thrust_path):
-            logging.info("Deleteting Cuda 10.2 Thrust")
-            shutil.rmtree(thrust_path)
-
         with remember_cwd():
             tmpdirname = tempfile.mkdtemp()
             os.chdir(tmpdirname)
