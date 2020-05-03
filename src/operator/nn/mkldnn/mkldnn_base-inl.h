@@ -129,7 +129,7 @@ static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
     // MKLDNN currently does not support 0-dim Tensor and 0-size Tensor
     return false;
   }
-  return (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16) &&
+  return (dtype == mshadow::kFloat32) &&
                     (ndim == 1 || ndim == 2 || ndim == 4);
 }
 

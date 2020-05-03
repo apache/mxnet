@@ -51,7 +51,7 @@ bool SupportMKLDNNAct(const ActivationParam& param, const NDArray &input) {
   // MKL-DNN Activation supports 1d, 2d, 3d, 4d and 5d data layout
   if ((input.shape().ndim() < 1) ||
       (input.shape().ndim() > 5) ||
-      !(input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16))
+      !(input.dtype() == mshadow::kFloat32))
     return false;
   return SupportMKLDNNAct(param);
 }
@@ -65,7 +65,7 @@ bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param, const NDArray &input) {
   // MKL-DNN Activation supports 1d, 2d, 3d, 4d and 5d data layout
   if ((input.shape().ndim() < 1) ||
       (input.shape().ndim() > 5) ||
-      !(input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16))
+      !(input.dtype() == mshadow::kFloat32))
     return false;
   return SupportMKLDNNLeakyRelu(param);
 }

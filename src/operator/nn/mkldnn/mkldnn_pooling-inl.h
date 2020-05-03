@@ -104,7 +104,7 @@ inline bool SupportMKLDNNPooling(const PoolingParam &param,
   const auto dtype = input.dtype();
 
   if (!(SupportStorageMKLDNN(input.storage_type()) && (ndim == 3 || ndim == 4 || ndim == 5) &&
-       (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16)))
+       (dtype == mshadow::kFloat32)))
     return false;
 
   if (!SupportMKLDNNPooling(param))
