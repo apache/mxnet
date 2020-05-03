@@ -192,6 +192,61 @@ def test_crop_resize():
 
 
 @with_seed()
+def test_center_crop():
+    def _test_center_crop_with_diff_type(dtype):
+        # test 3-D case
+        data_in = nd.random.uniform(0, 255, (300, 200, 3)).astype(dtype)
+        out_nd = transforms.CenterCrop((100, 100), 1)(data_in)
+        data_expected = image.center_crop(data_in, (100, 100), 1)[0]
+        assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+        # test 4-D input
+        data_bath_in = nd.random.uniform(0, 255, (3, 300, 200, 3)).astype(dtype)
+        out_batch_nd = transforms.CenterCrop((100, 100), 1)(data_bath_in)
+        for i in range(len(out_batch_nd)):
+            assert_almost_equal(image.center_crop(data_bath_in[i], (100, 100), 1)[0].asnumpy(),
+                                out_batch_nd[i].asnumpy())
+        # test size is larger than input image
+        data_in = nd.random.uniform(0, 255, (100, 100, 3)).astype(dtype)
+        out_nd = transforms.CenterCrop((200, 150), 1)(data_in)
+        data_expected = image.center_crop(data_in, (200, 150), 1)[0]
+        assert_almost_equal(out_nd.asnumpy(), data_expected.asnumpy())
+        # test size is larger than input image
+        data_bath_in = nd.random.uniform(0, 255, (3, 100, 100, 3)).astype(dtype)
+        out_batch_nd = transforms.CenterCrop((200, 150), 1)(data_bath_in)
+        for i in range(len(out_batch_nd)):
+            assert_almost_equal(image.center_crop(data_bath_in[i], (200, 150), 1)[0].asnumpy(),
+                                out_batch_nd[i].asnumpy())
+
+        def _test_size_below_zero_exception():
+            transforms.CenterCrop((-200, 150), 1)(data_in)
+        assertRaises(MXNetError, _test_size_below_zero_exception)
+
+    for dtype in ['uint8', 'float32', 'float64']:
+        _test_center_crop_with_diff_type(dtype)
+
+    # test nd.image.crop backward
+    def test_center_crop_backward(test_nd_arr, test_case):
+        a_np = test_nd_arr.asnumpy()
+        x, y = (test_nd_arr.shape[1] - test_case.width) // 2, (test_nd_arr.shape[0] - test_case.height) // 2
+        b_np = a_np[(slice(y, y + test_case.height), slice(x, x + test_case.width), slice(0, 3))]
+
+        data = mx.sym.Variable('data')
+        crop_sym = mx.sym.image.center_crop(data, (test_case.width, test_case.height))
+
+        expected_in_grad = np.zeros_like(a_np)
+        expected_in_grad[(slice(y, y + test_case.height), slice(x, x + test_case.width), slice(0, 3))] = b_np
+        check_symbolic_backward(crop_sym, [a_np], [b_np], [expected_in_grad])
+
+    TestCase = namedtuple('TestCase', ['width', 'height'])
+    test_list = [TestCase(3, 3), TestCase(1, 2), TestCase(3, 2)]
+
+    for dtype in ['uint8', 'float32', 'float64']:
+        data_in = nd.arange(60).reshape((5, 4, 3)).astype(dtype)
+        for test in test_list:
+            test_center_crop_backward(data_in, test)
+
+
+@with_seed()
 def test_flip_left_right():
     data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
     flip_in = data_in[:, ::-1, :]

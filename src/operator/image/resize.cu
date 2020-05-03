@@ -67,7 +67,7 @@ void ResizeImplCUDA(mshadow::Stream<gpu> *s,
 }
 
 NNVM_REGISTER_OP(_image_resize)
-.set_attr<FCompute>("FCompute<gpu>", Resize<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", ResizeOpForward<gpu>);
 
 }  // namespace image
 }  // namespace op

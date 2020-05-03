@@ -32,15 +32,6 @@ from test_gluon_data_vision import test_to_tensor, test_normalize, test_crop_res
 
 set_default_context(mx.gpu(0))
 
-@with_seed()
-def test_normalize_gpu():
-    test_normalize()
-
-
-@with_seed()
-def test_to_tensor_gpu():
-    test_to_tensor()
-
 
 @with_seed()
 def test_resize_gpu():
@@ -88,7 +79,3 @@ def test_resize_gpu():
                             h1lambda*((1-w1lambda)*x[b][h1+h1p][w1][c] + \
                             w1lambda*x[b][h1+h1p][w1+w1p][c])
         return y
-
-@with_seed()
-def test_crop_resize_gpu():
-    test_crop_resize()

@@ -287,7 +287,7 @@ inline void Imresize(const nnvm::NodeAttrs& attrs,
                      const std::vector<OpReqType> &req,
                      const std::vector<TBlob> &outputs) {
   const auto& param = nnvm::get<ResizeParam>(attrs.parsed);
-  op::image::ResizeImpl(inputs, outputs, param.h, param.w, param.interp);
+  op::image::ResizeOpenCVImpl(inputs, outputs, param.h, param.w, param.interp);
 }
 
 

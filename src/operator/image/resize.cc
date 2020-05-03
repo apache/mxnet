@@ -74,7 +74,7 @@ Example:
 .set_attr_parser(ParamParser<ResizeParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ResizeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
-.set_attr<FCompute>("FCompute<cpu>", Resize<cpu>)
+.set_attr<FCompute>("FCompute<cpu>", ResizeOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{ "_copy" })
 .add_argument("data", "NDArray-or-Symbol", "The input.")
 .add_arguments(ResizeParam::__FIELDS__());
