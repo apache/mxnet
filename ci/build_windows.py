@@ -31,6 +31,7 @@ import sys
 import tempfile
 import time
 import zipfile
+import requests
 from distutils.dir_util import copy_tree
 from enum import Enum
 from subprocess import check_call, call
@@ -127,7 +128,6 @@ CMAKE_FLAGS = {
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
         '-DMXNET_CUDA_ARCH="5.2" '
-        '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
         '-DUSE_MKL_IF_AVAILABLE=OFF '
         '-DCMAKE_BUILD_TYPE=Release')
 
@@ -144,7 +144,6 @@ CMAKE_FLAGS = {
         '-DUSE_DIST_KVSTORE=OFF '
         '-DMXNET_CUDA_ARCH="5.2" '
         '-DUSE_MKLDNN=ON '
-        '-DCMAKE_CXX_FLAGS="/FS /MD /O2 /Ob2" '
         '-DCMAKE_BUILD_TYPE=Release')
 
 }
@@ -155,43 +154,51 @@ def windows_build(args):
 
     path = args.output
 
-    # cuda thrust + VS 2019 is flaky: try multiple times if fail
-    MAXIMUM_TRY = 5
-    build_try = 0
+    if os.path.exists(path):
+        shutil.rmtree(path)
+    os.makedirs(path, exist_ok=True)
 
-    while build_try < MAXIMUM_TRY:
-        if os.path.exists(path):
-            shutil.rmtree(path)
-        os.makedirs(path, exist_ok=True)
+    mxnet_root = get_mxnet_root()
+    logging.info("Found MXNet root: {}".format(mxnet_root))
 
-        mxnet_root = get_mxnet_root()
-        logging.info("Found MXNet root: {}".format(mxnet_root))
-
+    if 'GPU' in args.flavour:
+        # Get Thrust version to be shipped in Cuda 11, due to flakyness of
+        # older Thrust versions with MSVC 19 compiler
         with remember_cwd():
-            os.chdir(path)
-            cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
-                                                         CMAKE_FLAGS[args.flavour],
-                                                         mxnet_root)
-            logging.info("Generating project with CMake:\n{}".format(cmd))
-            check_call(cmd, shell=True)
+            tmpdirname = tempfile.mkdtemp()
+            os.chdir(tmpdirname)
+            r = requests.get('https://github.com/thrust/thrust/archive/1.9.8.zip', allow_redirects=True)
+            with open('thrust.zip', 'wb') as f:
+                f.write(r.content)
+            with zipfile.ZipFile('thrust.zip', 'r') as zip_ref:
+                zip_ref.extractall('.')
+            thrust_path = os.path.join(tmpdirname, "thrust-1.9.8")
 
-            cmd = "\"{}\" && ninja".format(args.vcvars)
-            logging.info("Building:\n{}".format(cmd))
+    with remember_cwd():
+        os.chdir(path)
+        env = os.environ.copy()
+        if 'GPU' in args.flavour:
+            env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
+            env["CUDAFLAGS"] = '-I {}'.format(thrust_path)
+        cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
+                                                     CMAKE_FLAGS[args.flavour],
+                                                     mxnet_root)
+        logging.info("Generating project with CMake:\n{}".format(cmd))
+        check_call(cmd, shell=True, env=env)
 
-            t0 = int(time.time())
-            ret = call(cmd, shell=True)
+        cmd = "\"{}\" && ninja".format(args.vcvars)
+        logging.info("Building:\n{}".format(cmd))
 
-            if ret != 0:
-                build_try += 1
-                logging.info("{} build(s) have failed".format(build_try))
-            else:
-                logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
-                logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
-                break
-    if ret == 0:
-        windows_package(args)
-    else:
+        t0 = int(time.time())
+        ret = call(cmd, shell=True)
+
+    if ret != 0:
+        logging.info("Build failed")
         sys.exit(1)
+
+    logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
+    logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
+    windows_package(args)
 
 
 def windows_package(args):
