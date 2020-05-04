@@ -722,7 +722,7 @@ def autograd_grad_ex(heads, variables, head_grads=None, retain_graph=None, creat
 
     The autograd.grad requires user knows which variables involved to compute the heads grad of them.
     That's fine for first order grad, but for higher order grad, the variables used to compute the heads,
-    may not used to computer their higher order grad. It's impossible to ask user to know
+    may not used to compute their higher order grad. It's impossible to ask user to know
     the formulas of every order grad.
 
     E.g. we use such code to compute 2-nd order gradient:

@@ -63,8 +63,7 @@ Example::
 
   auto lnx = nnvm::NodeEntry{MakeNode("log",
       n->attrs.name + "_ln_lhs",  {x}, nullptr, &n)};
-  auto x_power_y = nnvm::NodeEntry{MakeNode("elemwise_mul",
-      n->attrs.name + "_lhs_power_rhs", {x_power_y_sub_1, x}, nullptr, &n)};
+  auto x_power_y = nnvm::NodeEntry{n};
   auto dzdy = nnvm::NodeEntry{MakeNode("elemwise_mul",
      n->attrs.name + "dpower/drhs", {x_power_y, lnx}, nullptr, &n)};
 
