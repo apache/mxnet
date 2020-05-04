@@ -67,8 +67,14 @@
 
 li.opt.versions {
   padding: 10px;
-}
+  &:hover {
+    background-color: $color-mxnet;
 
+    & a {
+      color: whitesmoke;
+    }
+  }
+}
 
 .dropdown {
   position: relative;
@@ -91,6 +97,26 @@ ul.dropdown-content {
   list-style-type: none;
 }
 
+ul.version-dropdown {
+  @extend ul.dropdown-content;
+  left: 0px;
+  width: 100%;
+}
+
+.current-version.dropbtn.btn:focus{
+  outline: 0;
+}
+
+.current-version .dropdown-caret {
+  position: relative;
+  top: 4px;
+}
+
+.version-dropdown .active a {
+  color: $grey-color-light;
+}
+
+.version-dropdown a,
 .dropdown-content a {
   color: $grey-color-dark;
   text-decoration: none;
@@ -113,7 +139,7 @@ ul.dropdown-content {
 }
 
 .dropdown:hover .dropbtn {
-  background-color: $color-mxnet
+  background-color: $color-mxnet;
 }
 
 /*
