@@ -827,13 +827,7 @@ def check_nth_order_binary(inputs, op, grad_ops, orders, broadcast_op = False, r
                                               create_graph=True, retain_graph=True)[i])
                 # If we only use once auto grad with head_grads = head_grad in every iteration,
                 # in the i-th iteration, we use head = derivative_(i-1) * head_grad_(i-1)
-                # but in the expected computed, we use  head = derivative_(i-1)
-                # why it is woks in the check_nth_order_unary?
-                # Because most of them defined gradient of the first gradient (derivative_(1) * head_grad_(1))
-                # of the function, and in the gradient function, they manually defined derivative_(i-1)
-                # and use it to computed derivative_(1) * head_grad_(1).
-                # It maybe a wrong approach, because the gradient of the first gradient should compute the grad of
-                # derivative_(1) * head_grad_(1) instead of gradient of derivative_(1).
+                # but in the expected computed, we use head = derivative_(i-1)
                 new_heads.append(autograd_grad_ex(heads=head, variables=inputs, head_grads=nd.ones_like(head),
                                               create_graph=True, retain_graph=True)[i])
             heads = new_heads
