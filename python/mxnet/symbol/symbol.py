@@ -1488,14 +1488,14 @@ class Symbol(SymbolBase):
             args_handle = c_array(NDArrayHandle, [])
         else:
             args_handle, args_ = self._get_ndarray_inputs('args', args,
-                                                         self.list_arguments(), False)
+                                                          self.list_arguments(), False)
 
         if aux is None or len(aux) == 0:
             aux_ = []
             aux_handle = c_array(NDArrayHandle, [])
         else:
             aux_handle, aux_ = self._get_ndarray_inputs('aux_states', aux,
-                                                       self.list_auxiliary_states(), False)
+                                                        self.list_auxiliary_states(), False)
         if ctx is None:
             ctx = current_context()
         assert isinstance(ctx, Context)
