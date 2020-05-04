@@ -228,7 +228,7 @@ std::vector<nnvm::NodeEntry> BatchNormWithReLUGrad(const nnvm::ObjectPtr& n,
 NNVM_REGISTER_OP(_contrib_BatchNormWithReLU)
 .describe(R"code(Batch normalization with ReLU fusion.
 
-An extented operator of Batch normalization which can fuse ReLU activation。
+An extented operator of Batch normalization which can fuse ReLU activation.
 
 )code" ADD_FILELINE)
 .set_num_inputs(5)
