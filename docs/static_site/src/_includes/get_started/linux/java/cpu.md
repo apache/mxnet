@@ -5,7 +5,7 @@ instructions to help you with the setup process.
 
 <a href="https://repository.apache.org/#nexus-search;gav~org.apache.mxnet~~1.5.0~~">
     <img src="https://img.shields.io/badge/org.apache.mxnet-linux cpu-green.svg"
-     alt="maven badge"/>
+    alt="maven badge"/>
 </a>
 
 {% highlight html %}

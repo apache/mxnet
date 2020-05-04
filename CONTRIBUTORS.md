@@ -252,6 +252,7 @@ List of Contributors
 * [Jonathan Tan](https://github.com/jonatan1626)
 * [Oliver Kowalke](https://github.com/olk)
 * [Connor Goggins](https://github.com/connorgoggins)
+* [Wei Chu](https://github.com/waytrue17)
 * [Yang Shi](https://github.com/ys2843)
 
 Label Bot
