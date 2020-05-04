@@ -87,6 +87,14 @@ class MKLDNNPoolingBwd {
   const mkldnn::pooling_backward::primitive_desc &GetPd();
 };
 
+inline int GetPaddingSizeFull(dim_t x, int padl, int padr, int k, int s) {
+  if ((x + padl + padr - k) % s != 0) {
+    return (padr + s - ((x + padl + padr - k) % s));
+  } else {
+    return padr;
+  }
+}
+
 inline bool SupportMKLDNNPooling(const PoolingParam &param) {
   return (param.kernel.ndim() == 1 || param.kernel.ndim() == 2 ||
           param.kernel.ndim() == 3) &&
