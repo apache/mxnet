@@ -20,7 +20,7 @@ import sys
 import os
 import mxnet as mx
 import numpy as np
-import unittest
+import pytest
 from mxnet.test_utils import assert_almost_equal, default_context, EnvManager
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -44,8 +44,9 @@ def init_kv_with_str(stype='default', kv_type='local'):
 # src/operator/nn/mkldnn/mkldnn_base.cc:567: Check failed: similar
 # Both of them are not reproducible, so this test is back on random seeds.
 @with_seed()
-@unittest.skipIf(mx.context.num_gpus() < 2, "test_rsp_push_pull needs more than 1 GPU")
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/14189")
+@pytest.mark.skipif(mx.context.num_gpus() < 2, reason="test_rsp_push_pull needs more than 1 GPU")
+@pytest.mark.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/14189")
+@pytest.mark.serial
 def test_rsp_push_pull():
     def check_rsp_push_pull(kv_type, sparse_pull, is_push_cpu=True):
         kv = init_kv_with_str('row_sparse', kv_type)
@@ -124,6 +125,7 @@ def test_row_sparse_pull_single_device():
     assert_almost_equal(grad.asnumpy(), copy.asnumpy())
 
 
+@pytest.mark.serial
 def test_rsp_push_pull_large_rowid():
     num_rows = 793470
     val = mx.nd.ones((num_rows, 1)).tostype('row_sparse').copyto(mx.gpu())

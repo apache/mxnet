@@ -16,7 +16,6 @@
 # under the License.
 
 import os
-import tempfile
 
 import mxnet as mx
 from mxnet import gluon
@@ -37,6 +36,7 @@ import warnings
 import json
 import unittest
 import random
+import tempfile
 
 @with_seed()
 def test_parameter():
@@ -54,14 +54,14 @@ def test_parameter():
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
 
 @with_seed()
-@pytest.mark.xfail(raises=AssertionError)
 def test_invalid_parameter_stype():
-    p = gluon.Parameter('weight', shape=(10, 10), stype='invalid')
+    with pytest.raises(AssertionError):
+        p = gluon.Parameter('weight', shape=(10, 10), stype='invalid')
 
 @with_seed()
-@pytest.mark.xfail(raises=AssertionError)
 def test_invalid_parameter_grad_stype():
-    p = gluon.Parameter('weight', shape=(10, 10), grad_stype='invalid')
+    with pytest.raises(AssertionError):
+        p = gluon.Parameter('weight', shape=(10, 10), grad_stype='invalid')
 
 @with_seed()
 def test_sparse_parameter():
@@ -336,7 +336,7 @@ def test_dense():
 
 
 @with_seed()
-def test_symbol_block():
+def test_symbol_block(tmpdir):
     model = nn.HybridSequential()
     model.add(nn.Dense(128, activation='tanh'))
     model.add(nn.Dropout(0.5))
@@ -380,7 +380,7 @@ def test_symbol_block():
     # other than fp32 param dtype.
 
     # 1. Load a resnet model, cast it to fp64 and export
-    tmp = tempfile.mkdtemp()
+    tmp = str(tmpdir)
     tmpfile = os.path.join(tmp, 'resnet34_fp64')
     ctx = mx.cpu(0)
 
@@ -424,17 +424,16 @@ def test_symbol_block():
     assert np.dtype(prediction.dtype) == np.dtype(np.float32)
 
 @with_seed()
-@pytest.mark.xfail(raises=AssertionError)
 def test_sparse_symbol_block():
     data = mx.sym.var('data')
     weight = mx.sym.var('weight', stype='row_sparse')
     bias = mx.sym.var('bias')
     out = mx.sym.broadcast_add(mx.sym.dot(data, weight), bias)
-    # an exception is expected when creating a SparseBlock w/ sparse param
-    net = gluon.SymbolBlock(out, data)
+    with pytest.raises(AssertionError):
+        # an exception is expected when creating a SparseBlock w/ sparse param
+        net = gluon.SymbolBlock(out, data)
 
 @with_seed()
-@pytest.mark.xfail(raises=RuntimeError)
 def test_sparse_hybrid_block():
     params = gluon.ParameterDict('net_')
     params.get('weight', shape=(5,5), stype='row_sparse', dtype='float32')
@@ -442,8 +441,9 @@ def test_sparse_hybrid_block():
     net = gluon.nn.Dense(5, params=params)
     net.initialize()
     x = mx.nd.ones((2,5))
-    # an exception is expected when forwarding a HybridBlock w/ sparse param
-    y = net(x)
+    with pytest.raises(RuntimeError):
+        # an exception is expected when forwarding a HybridBlock w/ sparse param
+        y = net(x)
 
 @with_seed()
 def test_hybrid_block_none_args():
@@ -602,44 +602,35 @@ def check_layer_forward(layer, dshape):
     mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
 
 @with_seed()
-def test_conv():
-    layers1d = [
-        nn.Conv1D(16, 3, in_channels=4),
-        nn.Conv1D(16, 3, groups=2, in_channels=4),
-        nn.Conv1D(16, 3, strides=3, groups=2, in_channels=4),
-        ]
-    for layer in layers1d:
-        check_layer_forward(layer, (1, 4, 10))
+@pytest.mark.parametrize('layer,shape', [
+    (nn.Conv1D(16, 3, in_channels=4), (1, 4, 10)),
+    (nn.Conv1D(16, 3, groups=2, in_channels=4), (1, 4, 10)),
+    (nn.Conv1D(16, 3, strides=3, groups=2, in_channels=4), (1, 4, 10)),
+    (nn.Conv2D(16, (3, 4), in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (5, 4), in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), groups=2, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), strides=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), dilation=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), padding=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv3D(16, (1, 8, 4), in_channels=4, activation='relu'), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, (5, 4, 3), in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, (3, 3, 3), groups=2, in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, 4, strides=4, in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, (3, 3, 3), padding=4, in_channels=4), (1, 4, 10, 10, 10)),
+])
+def test_conv(layer, shape):
+    check_layer_forward(layer, shape)
 
-
-    layers2d = [
-        nn.Conv2D(16, (3, 4), in_channels=4),
-        nn.Conv2D(16, (5, 4), in_channels=4),
-        nn.Conv2D(16, (3, 4), groups=2, in_channels=4),
-        nn.Conv2D(16, (3, 4), strides=4, in_channels=4),
-        nn.Conv2D(16, (3, 4), dilation=4, in_channels=4),
-        nn.Conv2D(16, (3, 4), padding=4, in_channels=4),
-        ]
-    for layer in layers2d:
-        check_layer_forward(layer, (1, 4, 20, 20))
-
-
-    layers3d = [
-        nn.Conv3D(16, (1, 8, 4), in_channels=4, activation='relu'),
-        nn.Conv3D(16, (5, 4, 3), in_channels=4),
-        nn.Conv3D(16, (3, 3, 3), groups=2, in_channels=4),
-        nn.Conv3D(16, 4, strides=4, in_channels=4),
-        nn.Conv3D(16, (3, 3, 3), padding=4, in_channels=4),
-        ]
-    for layer in layers3d:
-        check_layer_forward(layer, (1, 4, 10, 10, 10))
-
-
-    layer = nn.Conv2D(16, (3, 3), layout='NHWC', in_channels=4)
-    # check_layer_forward(layer, (1, 10, 10, 4))
-
-    layer = nn.Conv3D(16, (3, 3, 3), layout='NDHWC', in_channels=4)
-    # check_layer_forward(layer, (1, 10, 10, 10, 4))
+@with_seed()
+@pytest.mark.parametrize('layer,shape', [
+    (nn.Conv2D(16, (3, 3), layout='NHWC', in_channels=4), (1, 10, 10, 4)),
+    # (nn.Conv3D(16, (3, 3, 3), layout='NDHWC', in_channels=4), (1, 10, 10, 10, 4)),
+])
+@pytest.mark.skipif(mx.context.current_context().device_type!='gpu' or
+                    not mx.runtime.Features().is_enabled('CUDNN'),
+                    reason='nhwc/ndhwc layout is only supported with CUDNN.')
+def test_conv_nhwc(layer, shape):
+    check_layer_forward(layer, shape)
 
 
 @with_seed()
@@ -1023,24 +1014,24 @@ def test_block_attr_hidden():
     b.a = 1
 
 
-@pytest.mark.xfail(raises=TypeError)
 @with_seed()
 def test_block_attr_block():
     b = gluon.Block()
 
-    # regular variables can't change types
-    b.b = gluon.Block()
-    b.b = (2,)
+    with pytest.raises(TypeError):
+        # regular variables can't change types
+        b.b = gluon.Block()
+        b.b = (2,)
 
 
-@pytest.mark.xfail(raises=TypeError)
 @with_seed()
 def test_block_attr_param():
     b = gluon.Block()
 
-    # regular variables can't change types
-    b.b = gluon.Parameter()
-    b.b = (2,)
+    with pytest.raises(TypeError):
+        # regular variables can't change types
+        b.b = gluon.Parameter()
+        b.b = (2,)
 
 
 @with_seed()
@@ -1517,14 +1508,14 @@ def test_req():
 
 
 @with_seed()
-def test_save_load():
-    net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True)
-    net.save_parameters('test_save_load.params')
+def test_save_load(tmpdir):
+    net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True, root=str(tmpdir))
+    net.save_parameters(os.path.join(str(tmpdir), 'test_save_load.params'))
 
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
     net.output = mx.gluon.nn.Dense(1000)
 
-    net.load_parameters('test_save_load.params')
+    net.load_parameters(os.path.join(str(tmpdir), 'test_save_load.params'))
 
     class Network(gluon.Block):
         def __init__(self, **kwargs):
@@ -1546,12 +1537,13 @@ def test_save_load():
     x = np.random.rand(32, 10, 10)
     x = mx.nd.array(x).as_in_context(mx.cpu())
     net(x)
-    net.save_parameters('tmp.params')
+    _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
+    net.save_parameters(param_path)
     net2 = Network()
-    net2.load_parameters('tmp.params')
+    net2.load_parameters(param_path)
 
 @with_seed()
-def test_save_load_deduplicate_with_shared_params():
+def test_save_load_deduplicate_with_shared_params(tmpdir):
     class B(mx.gluon.Block):
         def __init__(self, params=None):
             super(B, self).__init__(params=params)
@@ -1569,26 +1561,27 @@ def test_save_load_deduplicate_with_shared_params():
     b2 = B(b1.collect_params())
     c = C(b1, b2)
     c.initialize()
-    c.save_parameters('tmp.params', deduplicate=True)
+    _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
+    c.save_parameters(param_path, deduplicate=True)
 
-    params = mx.nd.load('tmp.params')
+    params = mx.nd.load(param_path)
     assert len(params) == 1  # Only a single copy of the shared parameter is saved
 
     b1 = B()
     b2 = B(b1.collect_params())
     c = C(b1, b2)
-    c.load_parameters('tmp.params')
+    c.load_parameters(param_path)
 
     # Test default behavior
-    c.save_parameters('tmp2.params', deduplicate=False)
+    c.save_parameters(param_path, deduplicate=False)
 
-    params = mx.nd.load('tmp2.params')
+    params = mx.nd.load(param_path)
     assert len(params) == 2  # Only a single copy of the shared parameter is saved
 
     b1 = B()
     b2 = B(b1.collect_params())
     c = C(b1, b2)
-    c.load_parameters('tmp2.params')
+    c.load_parameters(param_path)
 
 @with_seed()
 def test_symbol_block_save_load():
@@ -2477,6 +2470,7 @@ def test_reshape_batchnorm():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2501,6 +2495,7 @@ def test_slice_batchnorm():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_batchnorm_slice_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2552,6 +2547,7 @@ def test_reshape_batchnorm_reshape_batchnorm():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_batchnorm_reshape_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
@@ -2635,6 +2631,7 @@ def test_reshape_pooling2d():
         check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_pooling2d():
     # transpose shape to bring feature dimension 'c' from 2nd position to last
     def transpose(shape):
@@ -2709,6 +2706,7 @@ def test_reshape_pooling2d_reshape_pooling2d():
             check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_pooling2d_slice_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2782,6 +2780,7 @@ def test_slice_pooling2d_reshape_pooling2d():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_pooling2d_slice_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2821,6 +2820,7 @@ def test_reshape_pooling2d_slice_pooling2d():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
@@ -2840,6 +2840,7 @@ def test_reshape_deconv():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2859,6 +2860,7 @@ def test_slice_deconv():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_deconv_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
@@ -2882,6 +2884,7 @@ def test_reshape_deconv_reshape_deconv():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_deconv_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
@@ -2905,6 +2908,7 @@ def test_slice_deconv_slice_deconv():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_deconv_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
@@ -2930,6 +2934,7 @@ def test_reshape_deconv_slice_deconv():
 
 @with_seed()
 @unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_deconv_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
@@ -2954,6 +2959,7 @@ def test_slice_deconv_reshape_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_reshape_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act, shape, **kwargs):
@@ -2975,6 +2981,7 @@ def test_reshape_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act, slice, **kwargs):
@@ -2997,6 +3004,7 @@ def test_slice_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_reshape_activation_reshape_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, shape, **kwargs):
@@ -3024,6 +3032,7 @@ def test_reshape_activation_reshape_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_activation_slice_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, slice, **kwargs):
@@ -3051,6 +3060,7 @@ def test_slice_activation_slice_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_reshape_activation_slice_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, shape, slice, **kwargs):
@@ -3080,6 +3090,7 @@ def test_reshape_activation_slice_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_activation_reshape_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, shape, slice, **kwargs):
@@ -3108,6 +3119,7 @@ def test_slice_activation_reshape_activation():
             check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_np_shape_parameters():
     class Foo(gluon.Block):
         def __init__(self, **kwargs):

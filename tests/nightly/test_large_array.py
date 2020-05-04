@@ -1100,13 +1100,13 @@ def test_tensor():
 
     def check_load_save():
         x = create_2d_tensor(SMALL_Y, LARGE_X)
-        tmp = tempfile.mkdtemp()
-        tmpfile = os.path.join(tmp, 'large_tensor')
-        nd.save(tmpfile, [x])
-        y = nd.load(tmpfile)
-        y = y[0]
-        assert x[0][0] == y[0][0]
-        assert x[-1][-1]== y[-1][-1]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmpfile = os.path.join(tmp, 'large_tensor')
+            nd.save(tmpfile, [x])
+            y = nd.load(tmpfile)
+            y = y[0]
+            assert x[0][0] == y[0][0]
+            assert x[-1][-1]== y[-1][-1]
 
     def check_pad():
         x = create_2d_tensor(rows=SMALL_Y-2, columns=LARGE_X//2-2, dtype=np.float32).reshape(1 , 1, SMALL_Y-2, LARGE_X//2-2)

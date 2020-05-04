@@ -32,7 +32,6 @@ def dict_equ(a, b):
         assert (a[k].asnumpy() == b[k].asnumpy()).all()
 
 @with_seed()
-@pytest.mark.xfail(raises=RuntimeError)
 def test_multi_trainer():
     x = gluon.Parameter('x', shape=(10,), stype='row_sparse')
     x.initialize()
@@ -43,8 +42,9 @@ def test_multi_trainer():
     x._set_trainer(None)
     assert(x._trainer is None)
     x._set_trainer(trainer0)
-    # multiple trainers for a sparse Parameter is not allowed
-    trainer1 = gluon.Trainer([x], 'sgd')
+    with pytest.raises(RuntimeError):
+        # multiple trainers for a sparse Parameter is not allowed
+        trainer1 = gluon.Trainer([x], 'sgd')
 
 @with_seed()
 def test_trainer_with_sparse_grad_on_single_context():

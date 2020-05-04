@@ -25,7 +25,7 @@ import unittest
 import pytest
 import math
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown_module
+from common import setup_module, with_seed, teardown_module, retry
 
 @with_seed()
 def test_learning_rate():
@@ -44,12 +44,13 @@ def test_learning_rate():
     assert o3.learning_rate == 1024
 
 
-@pytest.mark.xfail(raises=UserWarning)
 @with_seed()
 def test_learning_rate_expect_user_warning():
     lr_s = lr_scheduler.FactorScheduler(step=1)
     o = mx.optimizer.Optimizer(lr_scheduler=lr_s, learning_rate=0.3)
-    o.set_learning_rate(0.5)
+
+    with pytest.raises(UserWarning):
+        o.set_learning_rate(0.5)
 
 
 @with_seed()
@@ -506,6 +507,7 @@ def test_sparse_adam():
 
 
 @with_seed()
+@retry(3)
 def test_adamax():
     opt1 = mx.optimizer.Adamax
     opt2 = mx.optimizer.Adamax
@@ -668,6 +670,7 @@ class PySparseFtrl(mx.optimizer.Optimizer):
 
 
 @with_seed()
+@retry(3)
 def test_ftrl():
     opt1 = mx.optimizer.Ftrl
     opt2 = mx.optimizer.Ftrl

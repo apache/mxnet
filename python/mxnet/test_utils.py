@@ -1740,7 +1740,7 @@ def download_model(model_name, dst_dir='./', meta_info=None):
     return (model_name, 0)
 
 
-def get_mnist():
+def get_mnist(path='data'):
     """Download and load the MNIST dataset
 
     Returns
@@ -1749,10 +1749,12 @@ def get_mnist():
         A dict containing the data
     """
     def read_data(label_url, image_url):
-        with gzip.open(mx.test_utils.download(label_url)) as flbl:
+        if not os.path.isdir(path):
+            os.makedirs(path)
+        with gzip.open(mx.gluon.utils.download(label_url, path=path)) as flbl:
             struct.unpack(">II", flbl.read(8))
             label = np.frombuffer(flbl.read(), dtype=np.int8)
-        with gzip.open(mx.test_utils.download(image_url), 'rb') as fimg:
+        with gzip.open(mx.gluon.utils.download(image_url, path=path), 'rb') as fimg:
             _, _, rows, cols = struct.unpack(">IIII", fimg.read(16))
             image = np.frombuffer(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
             image = image.reshape(image.shape[0], 1, 28, 28).astype(np.float32)/255
@@ -1760,53 +1762,57 @@ def get_mnist():
 
     # changed to mxnet.io for more stable hosting
     # path = 'http://yann.lecun.com/exdb/mnist/'
-    path = 'http://data.mxnet.io/data/mnist/'
+    url_path = 'http://data.mxnet.io/data/mnist/'
     (train_lbl, train_img) = read_data(
-        path+'train-labels-idx1-ubyte.gz', path+'train-images-idx3-ubyte.gz')
+        url_path+'train-labels-idx1-ubyte.gz', url_path+'train-images-idx3-ubyte.gz')
     (test_lbl, test_img) = read_data(
-        path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
+        url_path+'t10k-labels-idx1-ubyte.gz', url_path+'t10k-images-idx3-ubyte.gz')
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
 
-def get_mnist_pkl():
+def get_mnist_pkl(path='data'):
     """Downloads MNIST dataset as a pkl.gz into a directory in the current directory
     with the name `data`
     """
-    if not os.path.isdir("data"):
-        os.makedirs('data')
-    if not os.path.exists('data/mnist.pkl.gz'):
-        download('http://deeplearning.net/data/mnist/mnist.pkl.gz',
-                 dirname='data')
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    if not os.path.exists(os.path.join(path, 'mnist.pkl.gz')):
+        mx.gluon.utils.download('http://deeplearning.net/data/mnist/mnist.pkl.gz',
+                                sha1_hash='0b07d663e8a02d51849faa39e226ed19d7b7ed23',
+                                path=path)
 
-def get_mnist_ubyte():
+def get_mnist_ubyte(path='data'):
     """Downloads ubyte version of the MNIST dataset into a directory in the current directory
     with the name `data` and extracts all files in the zip archive to this directory.
     """
-    if not os.path.isdir("data"):
-        os.makedirs('data')
-    if (not os.path.exists('data/train-images-idx3-ubyte')) or \
-            (not os.path.exists('data/train-labels-idx1-ubyte')) or \
-            (not os.path.exists('data/t10k-images-idx3-ubyte')) or \
-            (not os.path.exists('data/t10k-labels-idx1-ubyte')):
-        zip_file_path = download('http://data.mxnet.io/mxnet/data/mnist.zip',
-                                 dirname='data')
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    files = ['train-images-idx3-ubyte', 'train-labels-idx1-ubyte',
+             't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte']
+    if not all(os.path.exists(os.path.join(path, f)) for f in files):
+        url = 'http://data.mxnet.io/mxnet/data/mnist.zip'
+        sha1 = '74fc763958b9d6e04eb32717f80355bf895f0561'
+        zip_file_path = mx.gluon.utils.download(url, path=path, sha1_hash=sha1,
+                                                verify_ssl=False)
         with zipfile.ZipFile(zip_file_path) as zf:
-            zf.extractall('data')
+            zf.extractall(path)
 
-def get_cifar10():
+def get_cifar10(path='data'):
     """Downloads CIFAR10 dataset into a directory in the current directory with the name `data`,
     and then extracts all files into the directory `data/cifar`.
     """
-    if not os.path.isdir("data"):
-        os.makedirs('data')
-    if (not os.path.exists('data/cifar/train.rec')) or \
-            (not os.path.exists('data/cifar/test.rec')) or \
-            (not os.path.exists('data/cifar/train.lst')) or \
-            (not os.path.exists('data/cifar/test.lst')):
-        zip_file_path = download('http://data.mxnet.io/mxnet/data/cifar10.zip',
-                                 dirname='data')
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    if (not os.path.exists(os.path.join(path, 'cifar', 'train.rec'))) or \
+            (not os.path.exists(os.path.join(path, 'cifar', 'test.rec'))) or \
+            (not os.path.exists(os.path.join(path, 'cifar', 'train.lst'))) or \
+            (not os.path.exists(os.path.join(path, 'cifar', 'test.lst'))):
+        url = 'http://data.mxnet.io/mxnet/data/cifar10.zip'
+        sha1 = 'b9ac287012f2dad9dfb49d8271c39ecdd7db376c'
+        zip_file_path = mx.gluon.utils.download(url, path=path, sha1_hash=sha1,
+                                                verify_ssl=False)
         with zipfile.ZipFile(zip_file_path) as zf:
-            zf.extractall('data')
+            zf.extractall(path)
 
 def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
     """Returns training and validation iterators for MNIST dataset

@@ -23,40 +23,41 @@ import pickle as pickle
 import logging
 from mxnet.test_utils import get_mnist_ubyte
 
-# symbol net
-batch_size = 100
-data = mx.symbol.Variable('data')
-fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
-act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
-fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
-act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
-fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
-softmax = mx.symbol.SoftmaxOutput(fc3, name = 'sm')
 
-def accuracy(label, pred):
-    py = np.argmax(pred, axis=1)
-    return np.sum(py == label) / float(label.size)
+def test_mlp(tmpdir):
+    # symbol net
+    batch_size = 100
+    data = mx.symbol.Variable('data')
+    fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128)
+    act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
+    fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
+    act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
+    fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
+    softmax = mx.symbol.SoftmaxOutput(fc3, name = 'sm')
 
-num_epoch = 4
-prefix = './mlp'
+    def accuracy(label, pred):
+        py = np.argmax(pred, axis=1)
+        return np.sum(py == label) / float(label.size)
 
-#check data
-get_mnist_ubyte()
+    num_epoch = 4
+    prefix = './mlp'
 
-train_dataiter = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
-        data_shape=(784,),
-        label_name='sm_label',
-        batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
-val_dataiter = mx.io.MNISTIter(
-        image="data/t10k-images-idx3-ubyte",
-        label="data/t10k-labels-idx1-ubyte",
-        data_shape=(784,),
-        label_name='sm_label',
-        batch_size=batch_size, shuffle=True, flat=True, silent=False)
+    #check data
+    path = str(tmpdir)
+    get_mnist_ubyte(path)
 
-def test_mlp():
+    train_dataiter = mx.io.MNISTIter(
+            image=os.path.join(path, 'train-images-idx3-ubyte'),
+            label=os.path.join(path, 'train-labels-idx1-ubyte'),
+            data_shape=(784,),
+            label_name='sm_label',
+            batch_size=batch_size, shuffle=True, flat=True, silent=False, seed=10)
+    val_dataiter = mx.io.MNISTIter(
+            image=os.path.join(path, 't10k-images-idx3-ubyte'),
+            label=os.path.join(path, 't10k-labels-idx1-ubyte'),
+            data_shape=(784,),
+            label_name='sm_label',
+            batch_size=batch_size, shuffle=True, flat=True, silent=False)
     # print logging by default
     logging.basicConfig(level=logging.DEBUG)
 
@@ -111,7 +112,3 @@ def test_mlp():
         os.remove('%s-%04d.params' % (prefix, i + 1))
     os.remove('%s-symbol.json' % prefix)
     os.remove('%s-0128.params' % prefix)
-
-
-if __name__ == "__main__":
-    test_mlp()
