@@ -27,7 +27,7 @@ sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
 from mxnet import gluon, nd
-from common import with_seed, with_post_test_cleanup
+from common import with_seed
 from nose.tools import with_setup
 import unittest
 
