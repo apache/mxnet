@@ -20,9 +20,14 @@
                 <span>MXNet Version</span>
             </div>
             <div class="col-9 install-right">
-                <div class="dropdown">
-                    <button class="current-version dropbtn btn" type="button" data-toggle="dropdown">v1.6.0</button>
-                    <ul class="opt-group dropdown-content">
+                <div class="dropdown" id="version-dropdown-container">
+                    <button class="current-version dropbtn btn" type="button" data-toggle="dropdown">
+                        v1.6.0
+                        <svg class="dropdown-caret" viewBox="0 0 32 32" class="icon icon-caret-bottom" aria-hidden="true">
+                            <path class="dropdown-caret-path" d="M24 11.305l-7.997 11.39L8 11.305z"></path>
+                        </svg>
+                    </button>
+                    <ul class="opt-group version-dropdown">
                         <li class="opt versions"><a href="#">master</a></li>
                         <li class="opt active versions"><a href="#">v1.6.0</a></li>
                         <li class="opt versions"><a href="#">v1.5.1</a></li>
