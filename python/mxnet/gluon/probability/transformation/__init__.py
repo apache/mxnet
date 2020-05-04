@@ -20,4 +20,5 @@
 """Transformation classes."""
 
 from .transformation import *
+from .domain_map import *
 
