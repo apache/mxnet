@@ -3120,6 +3120,16 @@ def test_reshape_like_different_types():
     assert_allclose(z.asnumpy(), [[0,0],[0,0],[0,0]])
 
 @with_seed()
+def test_broadcast_like_different_types():
+    x = mx.nd.zeros((2, 1))
+    y = mx.nd.ones((2, 2))
+
+    y = mx.nd.array(y).astype('int32')
+    z = mx.nd.broadcast_like(x, y)
+    assert_allclose(z.asnumpy(), [[0,0],[0,0]])
+    assert x.dtype == z.dtype
+
+@with_seed()
 def test_flip():
     for ndim in range(1, 6):
         for t in range(5):
