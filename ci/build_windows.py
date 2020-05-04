@@ -154,10 +154,6 @@ def windows_build(args):
 
     path = args.output
 
-    if os.path.exists(path):
-        shutil.rmtree(path)
-    os.makedirs(path, exist_ok=True)
-
     mxnet_root = get_mxnet_root()
     logging.info("Found MXNet root: {}".format(mxnet_root))
 
@@ -174,31 +170,48 @@ def windows_build(args):
                 zip_ref.extractall('.')
             thrust_path = os.path.join(tmpdirname, "thrust-1.9.8")
 
-    with remember_cwd():
-        os.chdir(path)
-        env = os.environ.copy()
-        if 'GPU' in args.flavour:
-            env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
-            env["CUDAFLAGS"] = '-I {}'.format(thrust_path)
-        cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
-                                                     CMAKE_FLAGS[args.flavour],
-                                                     mxnet_root)
-        logging.info("Generating project with CMake:\n{}".format(cmd))
-        check_call(cmd, shell=True, env=env)
 
-        cmd = "\"{}\" && ninja".format(args.vcvars)
-        logging.info("Building:\n{}".format(cmd))
+    # cuda thrust / CUB + VS 2019 is flaky: try multiple times if fail
+    MAXIMUM_TRY = 5
+    build_try = 0
 
-        t0 = int(time.time())
-        ret = call(cmd, shell=True)
+    while build_try < MAXIMUM_TRY:
+        if os.path.exists(path):
+            shutil.rmtree(path)
+        os.makedirs(path, exist_ok=True)
 
-    if ret != 0:
+        with remember_cwd():
+            os.chdir(path)
+            env = os.environ.copy()
+            if 'GPU' in args.flavour:
+                env["CXXFLAGS"] = '/FS /MD /O2 /Ob2 /I {}'.format(thrust_path)
+                env["CUDAFLAGS"] = '-I {}'.format(thrust_path)
+            cmd = "\"{}\" && cmake -GNinja {} {}".format(args.vcvars,
+                                                         CMAKE_FLAGS[args.flavour],
+                                                         mxnet_root)
+            logging.info("Generating project with CMake:\n{}".format(cmd))
+            check_call(cmd, shell=True, env=env)
+
+            cmd = "\"{}\" && ninja".format(args.vcvars)
+            logging.info("Building:\n{}".format(cmd))
+
+            t0 = int(time.time())
+            ret = call(cmd, shell=True)
+
+
+            if ret != 0:
+                build_try += 1
+                logging.info("{} build(s) have failed".format(build_try))
+            else:
+                logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
+                logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
+                break
+
+    if ret == 0:
+        windows_package(args)
+    else:
         logging.info("Build failed")
         sys.exit(1)
-
-    logging.info("Build flavour: {} complete in directory: \"{}\"".format(args.flavour, os.path.abspath(path)))
-    logging.info("Build took {}".format(datetime.timedelta(seconds=int(time.time() - t0))))
-    windows_package(args)
 
 
 def windows_package(args):
