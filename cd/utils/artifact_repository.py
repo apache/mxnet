@@ -396,7 +396,7 @@ def get_s3_key_prefix(args: argparse.Namespace, subdir: str = '') -> str:
     :param subdir: An optional subdirectory in which to store the files. Post-pended to the end of the prefix.
     :return: A string containing the S3 key prefix to be used to uploading and downloading files to the artifact repository
     """
-    prefix = "{git_sha}/{libtype}/{variant}/".format(**vars(args))
+    prefix = "{git_sha}/{libtype}/{os}/{variant}/".format(**vars(args))
     if subdir:
         return "{}{}/".format(prefix, subdir)
     return prefix
