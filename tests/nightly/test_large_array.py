@@ -27,9 +27,10 @@ sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
 from mxnet import gluon, nd
-from common import with_seed, with_post_test_cleanup
-from nose.tools import with_setup
+from common import with_seed
 import unittest
+import pytest
+
 
 # dimension constants
 MEDIUM_X = 10000
@@ -39,8 +40,10 @@ SMALL_X = 100
 SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
 LARGE_TENSOR_SHAPE = 2**32
+RNN_LARGE_TENSOR = 2**28
 
 
+@pytest.mark.timeout(0)
 def test_nn():
     def check_gluon_embedding():
         m = gluon.nn.Embedding(SMALL_Y, MEDIUM_X)
@@ -468,7 +471,7 @@ def test_nn():
         assert res.shape[2] == 2
         assert res.shape[3] == 2
         assert res.shape[4] == 1
-        
+
     def check_embedding():
         data = nd.random_normal(shape=(LARGE_TENSOR_SHAPE, 1))
         weight = nd.random_normal(shape=(LARGE_TENSOR_SHAPE, 1))
@@ -479,8 +482,7 @@ def test_nn():
 
         assert out.shape[0] == LARGE_TENSOR_SHAPE
         assert out.shape[1] == 1
-        assert out.shape[2] == 1
-        
+
     def check_spatial_transformer():
         data = nd.random_normal(shape=(2, 2**29, 1, 6))
         loc = nd.random_normal(shape=(2, 6))
@@ -495,7 +497,7 @@ def test_nn():
         assert res.shape[1] == 536870912
         assert res.shape[2] == 2
         assert res.shape[3] == 6
-        
+
     def check_ravel():
         data = nd.random_normal(shape=(2, LARGE_TENSOR_SHAPE))
         shape = (2, 10)
@@ -531,6 +533,39 @@ def test_nn():
         # Trigger lazy evaluation of the output NDArray and ensure that it has been filled
         assert type(out[0, 0].asscalar()).__name__ == 'float32'
 
+    def check_rnn():
+        data = nd.random_normal(shape=(RNN_LARGE_TENSOR, 4, 4))
+        parameters_relu_tanh = nd.random_normal(shape=(7,))
+        parameters_lstm = nd.random_normal(shape=(28,))
+        parameters_gru = nd.random_normal(shape=(21,))
+        state = nd.random_normal(shape=(1, 4, 1))
+        state_cell = nd.random_normal(shape=(1, 4, 1))
+        mode_relu = 'rnn_relu'
+        mode_tanh = 'rnn_tanh'
+        mode_lstm = 'lstm'
+        mode_gru = 'gru'
+        state_size = 1
+        num_layers = 1
+
+        out_relu = nd.RNN(data=data, parameters=parameters_relu_tanh, state=state, mode=mode_relu,
+                          state_size=state_size, num_layers=num_layers)
+
+        out_tanh = nd.RNN(data=data, parameters=parameters_relu_tanh, state=state, mode=mode_tanh,
+                          state_size=state_size, num_layers=num_layers)
+
+        out_lstm = nd.RNN(data=data, parameters=parameters_lstm, state=state, mode=mode_lstm,
+                          state_cell=state_cell, state_size=state_size, num_layers=num_layers)
+
+        out_gru = nd.RNN(data=data, parameters=parameters_gru, state=state, mode=mode_gru,
+                         state_size=state_size, num_layers=num_layers)
+
+        for out in [out_relu, out_tanh, out_lstm, out_gru]:
+            assert out.shape[0] == RNN_LARGE_TENSOR
+            assert out.shape[1] == 4
+            assert out.shape[2] == 1
+
+            assert type(out[0, 0, 0].asscalar()).__name__ == 'float32'
+
     check_gluon_embedding()
     check_fully_connected()
     check_dense()
@@ -556,8 +591,10 @@ def test_nn():
     check_ravel()
     check_cumsum()
     check_multi_lars()
+    check_rnn()
 
 
+@pytest.mark.timeout(0)
 def test_tensor():
     def check_ndarray_zeros():
         a = nd.zeros(shape=(LARGE_X, SMALL_Y))
@@ -1163,6 +1200,7 @@ def test_tensor():
     check_binary_broadcast()
 
 
+@pytest.mark.timeout(0)
 def test_basic():
     def check_elementwise():
         a = nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -1512,7 +1550,7 @@ def test_basic():
     def create_input_for_rounding_ops():
         # Creates an vector with values (-LARGE_X/2 .... -2, -1, 0, 1, 2, .... , LARGE_X/2-1)
         # then divides each element by 2 i.e (-LARGE_X/4 .... -1, -0.5, 0, 0.5, 1, .... , LARGE_X/4-1)
-        # and finally broadcasts to 
+        # and finally broadcasts to
         inp = nd.arange(-LARGE_X//2, LARGE_X//2, dtype=np.float64).reshape(1, LARGE_X)
         inp = inp/2
         inp = nd.broadcast_to(inp, (SMALL_Y, LARGE_X))
@@ -1525,7 +1563,7 @@ def test_basic():
         for i in range(len(output_idx_to_inspect)):
             assert output[1][output_idx_to_inspect[i]] == expected_vals[i]
 
-    # TODO(access2rohit): merge similar tests in large vector and array into one file. 
+    # TODO(access2rohit): merge similar tests in large vector and array into one file.
     def check_rounding_ops():
         x = create_input_for_rounding_ops()
         def check_ceil():
@@ -1777,6 +1815,7 @@ def test_basic():
     check_minimum()
 
 
+@pytest.mark.timeout(0)
 def test_sparse_dot():
     shape = (2, VLARGE_X)
     sp_mat1 = nd.sparse.csr_matrix(([2], [6], [0, 1, 1]), shape=shape)
@@ -1785,7 +1824,3 @@ def test_sparse_dot():
     assert out.asnumpy()[0][0] == 2
     assert out.shape == (2, 2)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

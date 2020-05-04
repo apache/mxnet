@@ -44,6 +44,7 @@ from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
 from ..util import is_np_shape
+from ..profiler import Scope
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
@@ -1445,7 +1446,8 @@ class Symbol(SymbolBase):
         return Symbol(handle)
 
 
-    def optimize_for(self, backend, args=None, ctx=None, **kwargs):
+    # pylint: disable=too-many-locals
+    def optimize_for(self, backend, args=None, aux=None, ctx=None, **kwargs):
         """Partitions current symbol and optimizes it for a given backend,
         returns new partitioned symbol.
 
@@ -1456,6 +1458,13 @@ class Symbol(SymbolBase):
 
         args : list of NDArray or dict of str to NDArray, optional
             Input arguments to the symbol, required to infer shapes/types before partitioning
+
+            - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
+            - If type is a dict of str to `NDArray`, then it maps the name of arguments
+              to the corresponding `NDArray`.
+
+        aux : list of NDArray or dict of str to NDArray, optional
+            Input auxiliary arguments to the symbol
 
             - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
             - If type is a dict of str to `NDArray`, then it maps the name of arguments
@@ -1475,16 +1484,29 @@ class Symbol(SymbolBase):
         out = SymbolHandle()
         assert isinstance(backend, str)
 
-        if args is None:
+        if args is None or len(args) == 0:
             args = []
             args_handle = c_array(NDArrayHandle, [])
         else:
-            listed_arguments = self.list_arguments()
-            args_handle, args = self._get_ndarray_inputs('args', args, listed_arguments, False)
+            args_handle, args = self._get_ndarray_inputs('args', args,
+                                                         self.list_arguments(), False)
 
+        if aux is None or len(aux) == 0:
+            aux = []
+            aux_handle = c_array(NDArrayHandle, [])
+        else:
+            aux_handle, aux = self._get_ndarray_inputs('aux_states', aux,
+                                                       self.list_auxiliary_states(), False)
         if ctx is None:
             ctx = current_context()
         assert isinstance(ctx, Context)
+
+        new_args_size = ctypes.c_uint()
+        new_arg_names = ctypes.POINTER(ctypes.c_char_p)()
+        new_args_handle = ctypes.POINTER(NDArrayHandle)()
+        new_aux_size = ctypes.c_uint()
+        new_aux_names = ctypes.POINTER(ctypes.c_char_p)()
+        new_aux_handle = ctypes.POINTER(NDArrayHandle)()
 
         key_list = []
         val_list = []
@@ -1497,9 +1519,41 @@ class Symbol(SymbolBase):
                                              ctypes.byref(out),
                                              mx_uint(len(args)),
                                              args_handle,
+                                             mx_uint(len(aux)),
+                                             aux_handle,
                                              mx_uint(len(key_list)),
                                              c_str_array(key_list),
-                                             c_str_array(val_list)))
+                                             c_str_array(val_list),
+                                             ctypes.byref(new_args_size),
+                                             ctypes.byref(new_args_handle),
+                                             ctypes.byref(new_arg_names),
+                                             ctypes.byref(new_aux_size),
+                                             ctypes.byref(new_aux_handle),
+                                             ctypes.byref(new_aux_names)))
+        arg_names = self.list_arguments()
+        if isinstance(args, dict):
+            for i in range(new_args_size.value):
+                args[py_str(new_arg_names[i])] = NDArray(NDArrayHandle(new_args_handle[i]))
+        elif isinstance(args, list):
+            for i in range(new_args_size.value):
+                name = py_str(new_arg_names[i])
+                if name in arg_names:
+                    idx = arg_names.index(name)
+                    args[idx] = NDArray(NDArrayHandle(new_args_handle[i]))
+                else:
+                    args.append(NDArray(NDArrayHandle(new_args_handle[i])))
+        aux_names = self.list_auxiliary_states()
+        if isinstance(aux, dict):
+            for i in range(new_aux_size.value):
+                aux[py_str(new_aux_names[i])] = NDArray(NDArrayHandle(new_aux_handle[i]))
+        elif isinstance(aux, list):
+            for i in range(new_aux_size.value):
+                name = py_str(new_aux_names[i])
+                if name in aux_names:
+                    idx = aux_names.index(name)
+                    aux[idx] = NDArray(NDArrayHandle(new_aux_handle[i]))
+                else:
+                    aux.append(NDArray(NDArrayHandle(new_aux_handle[i])))
         return Symbol(out)
 
 
@@ -2742,7 +2796,7 @@ class Symbol(SymbolBase):
         raise NotImplementedForSymbol(self.backward, None)
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
-        init=None, stype=None, **kwargs):
+        init=None, stype=None, profiler_scope=None, **kwargs):
     """Creates a symbolic variable with specified name.
 
     Example
@@ -2777,6 +2831,8 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         Initializer for this variable to (optionally) override the default initializer.
     stype : str
         The storage type of the variable, such as 'row_sparse', 'csr', 'default', etc
+    profiler_scope : str
+        The profiler scope for input variable.
     kwargs : Additional attribute variables
         Additional attributes must start and end with double underscores.
 
@@ -2812,6 +2868,12 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         attr['__init__'] = init
     if stype is not None:
         attr['__storage_type__'] = str(_STORAGE_TYPE_STR_TO_ID[stype])
+    if profiler_scope is not None:
+        attr['__profiler_scope__'] = profiler_scope
+    else:
+        if not hasattr(Scope._current, "value"):
+            Scope._current.value = Scope()
+        attr['__profiler_scope__'] = Scope._current.value.name
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)

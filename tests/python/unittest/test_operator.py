@@ -29,9 +29,9 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
+from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
 from common import run_in_spawned_process
-from nose.tools import assert_raises, ok_
+import pytest
 import unittest
 import os
 
@@ -1960,10 +1960,10 @@ def test_groupnorm():
         return x_hat, mean, std
 
     def np_groupnorm(data, gamma, beta, num_groups, eps):
-        new_param_shape = (1, num_groups, 1, 1, 1)
+        new_param_shape = (1, dshape[1], 1, 1)
         x_hat, mean, std = x_hat_helper(data, num_groups, eps)
-        out = x_hat * gamma.reshape(new_param_shape) + beta.reshape(new_param_shape)
-        return out.reshape(dshape), mean, std
+        out = x_hat.reshape(dshape) * gamma.reshape(new_param_shape) + beta.reshape(new_param_shape)
+        return out, mean, std
 
     def np_groupnorm_grad(ograd, data, gamma, beta, mean, std, num_groups, eps):
         x_hat, mean, std = x_hat_helper(data, num_groups, eps)
@@ -1971,7 +1971,7 @@ def test_groupnorm():
         dshape = data.shape
         dtype = data.dtype
         new_moments_shape = (new_shape[0], num_groups, 1, 1, 1)
-        new_param_shape = (1, num_groups, 1, 1, 1)
+        new_param_shape = (1, dshape[1], 1, 1)
         acc_type = acc_types[str(dtype)]
         ograd = ograd.reshape(new_shape)
         data = data.reshape(new_shape)
@@ -1979,9 +1979,9 @@ def test_groupnorm():
         beta = beta.reshape(new_param_shape)
         mean = mean.reshape(new_moments_shape)
         std = std.reshape(new_moments_shape)
-        beta_grad = np.sum(ograd, axis=(0, 2, 3, 4), dtype=acc_type, keepdims=False).astype(dtype)
-        gamma_grad = np.sum(x_hat * ograd, axis=(0, 2, 3, 4), dtype=acc_type, keepdims=False).astype(dtype)
-        x_hat_grad = ograd * gamma
+        beta_grad = np.sum(ograd, axis=(0, 3, 4), dtype=acc_type, keepdims=False).astype(dtype).flatten()
+        gamma_grad = np.sum(x_hat * ograd, axis=(0, 3, 4), dtype=acc_type, keepdims=False).astype(dtype).flatten()
+        x_hat_grad = ograd * gamma.reshape(1, num_groups, dshape[1] // num_groups, 1, 1)
         ograd_mult = x_hat_grad / std
         red_out = np.mean(ograd_mult, axis=(2, 3, 4), dtype=acc_type, keepdims=True).astype(dtype)
         data_grad = ograd_mult - red_out
@@ -1996,7 +1996,7 @@ def test_groupnorm():
     height = random.randint(1, 5)
     width = random.randint(1, 5)
     dshape = (batch_size, num_channels, height, width)
-    param_shape = (num_groups,)
+    param_shape = (num_channels,)
     temp_shape = (batch_size, num_groups, int(num_channels / num_groups), height, width)
     np_data = np.random.uniform(0.2, 1.0, dshape)
     np_gamma = np.random.uniform(-1.0, 1.0, param_shape)
@@ -3118,6 +3118,16 @@ def test_reshape_like_different_types():
     y = mx.nd.array(y).astype('int32')
     z = mx.nd.reshape_like(x, y)
     assert_allclose(z.asnumpy(), [[0,0],[0,0],[0,0]])
+
+@with_seed()
+def test_broadcast_like_different_types():
+    x = mx.nd.zeros((2, 1))
+    y = mx.nd.ones((2, 2))
+
+    y = mx.nd.array(y).astype('int32')
+    z = mx.nd.broadcast_like(x, y)
+    assert_allclose(z.asnumpy(), [[0,0],[0,0]])
+    assert x.dtype == z.dtype
 
 @with_seed()
 def test_flip():
@@ -6069,7 +6079,7 @@ def test_custom_op_exc():
         b = mx.nd.zeros((1, 4))
         c = mx.nd.Custom(a, b, op_type='Dot1')
         c.wait_to_read()
-    assert_raises(MXNetError, custom_exc1)
+    pytest.raises(MXNetError, custom_exc1)
 
     # 2. error in pushing operator to engine
     def custom_exc2():
@@ -6081,7 +6091,7 @@ def test_custom_op_exc():
         # trigger error by invalid input shapes of operands
         c = mx.nd.Custom(a, b, op_type='Dot2')
         c.wait_to_read()
-    assert_raises(MXNetError, custom_exc2)
+    pytest.raises(MXNetError, custom_exc2)
 
     # 3. error in real execution
     if default_context().device_type == 'cpu':
@@ -6098,7 +6108,7 @@ def test_custom_op_exc():
             b = mx.nd.zeros((1, 2))
             c = mx.nd.Custom(a, b, op_type='Dot3')
             c.wait_to_read()
-        assert_raises(MXNetError, custom_exc3)
+        pytest.raises(MXNetError, custom_exc3)
 
         def custom_exc4():
             def f(in_data, out_data):
@@ -6112,7 +6122,7 @@ def test_custom_op_exc():
             b = mx.nd.zeros((1, 2))
             c = mx.nd.Custom(a, b, op_type='Dot4')
             c.wait_to_read()
-        assert_raises(MXNetError, custom_exc4)
+        pytest.raises(MXNetError, custom_exc4)
 
 
 @with_seed()
@@ -7674,8 +7684,8 @@ def test_zero_size_min_max():
         a = mx.nd.zeros(shape=(5, 0))
         a.max()
 
-    assert_raises(MXNetError, min)
-    assert_raises(MXNetError, max)
+    pytest.raises(MXNetError, min)
+    pytest.raises(MXNetError, max)
 
 
 @with_seed()
@@ -8396,6 +8406,19 @@ def test_ravel():
       check_symbolic_forward(b, location={'a': data}, expected=[ravel_npy])
       c = mx.sym.unravel_index(a, shape=shape2)
       check_symbolic_forward(c, location={'a': ravel_npy}, expected=[data])
+
+
+@with_seed()
+def test_unravel_index():
+    unravel_shape = (2, 10)
+    unravel_size = np.prod(unravel_shape)
+    for shape in [(10,), (2, 10), (3, 4, 5)]:
+        a = np.random.randint(0, unravel_size, size=shape)
+        b = np.stack(np.unravel_index(a, shape=unravel_shape), 0)
+        a_mx = mx.nd.array(a)
+        b_mx = mx.nd.unravel_index(a_mx, shape=unravel_shape)
+        assert_array_equal(b, b_mx.asnumpy())
+
 
 def test_context_num_gpus():
     try:
@@ -9300,18 +9323,18 @@ def test_add_n():
 
 def test_get_all_registered_operators():
     ops = get_all_registered_operators()
-    ok_(isinstance(ops, list))
-    ok_(len(ops) > 0)
-    ok_('Activation' in ops)
+    assert isinstance(ops, list)
+    assert len(ops) > 0
+    assert 'Activation' in ops
 
 
 def test_get_operator_arguments():
     operator_arguments = get_operator_arguments('Activation')
-    ok_(isinstance(operator_arguments, OperatorArguments))
-    ok_(operator_arguments.names == ['data', 'act_type'])
-    ok_(operator_arguments.types
-        == ['NDArray-or-Symbol', "{'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required"])
-    ok_(operator_arguments.narg == 2)
+    assert isinstance(operator_arguments, OperatorArguments)
+    assert operator_arguments.names == ['data', 'act_type']
+    assert operator_arguments.types \
+        == ['NDArray-or-Symbol', "{'relu', 'sigmoid', 'softrelu', 'softsign', 'tanh'}, required"]
+    assert operator_arguments.narg == 2
 
 
 def test_transpose_infer_shape_back():
@@ -9875,7 +9898,101 @@ def test_im2col_col2im():
         pad         = 1
     )
 
+def test_elemwise_sum_for_gradient_accumulation():
+    for nrepeat in range(1, 10):
+        stored_grad = dict()
+        for grad_req in ['write', 'add']:
+            a = mx.nd.array([1])
+            b = mx.nd.array([2])
+            if grad_req == 'write':
+                a.attach_grad(grad_req='write')
+            elif grad_req == 'add':
+                a.attach_grad(grad_req='add')
+            a.grad[:] = 0
+            with mx.autograd.record():
+                for _ in range(nrepeat):
+                    b = b * a
+                b.backward()
+            stored_grad[grad_req] = a.grad.asscalar()
+        assert stored_grad['write'] == stored_grad['add']
+        assert stored_grad['write'] == 2 * nrepeat
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+@with_seed()
+def test_elementwise_ops_on_misaligned_input():
+    a = mx.nd.array([1,2,3,4], dtype='float16')
+    b = mx.nd.array([1,2,3,4], dtype='float16')
+
+    c = a[1:3]
+    d = b[1:3]
+    # Note: testing just elemwise_add since all elemwise_ops
+    #       share the implementation
+    mx.nd.elemwise_add(c, d, out=c)
+    mx.nd.waitall()
+
+    a = mx.nd.array([1,2,3,4], dtype='float16')
+    b = mx.nd.array([1,2,3,4], dtype='float16')
+
+    c = a[0:3]
+    d = b[0:3]
+    mx.nd.elemwise_add(c, d, out=c)
+    mx.nd.waitall()
+    assert a[3].asscalar() == 4.0
+
+@with_seed()
+def test_broadcast_ops_on_misaligned_input():
+    dtypes = ['float16', 'float32', 'float64']
+    lead_dims = [2,3,4,6,10]
+
+    for dtype in dtypes:
+        for lead_dim in lead_dims:
+            for both_ways in [False, True]:
+                shape = list(rand_shape_2d()) + [lead_dim]
+                small_shape = [shape[0], 1, lead_dim]
+                if both_ways:
+                    # Broadcast in both ways [1, K, L] x [M, 1, L]
+                    big_shape = [1, shape[1], lead_dim]
+                else:
+                    big_shape = shape
+                size = np.product(shape)
+                small_size = np.product(small_shape)
+                big_size = np.product(big_shape)
+                a = mx.nd.arange(5000)
+                b = mx.nd.arange(5000)
+                e = mx.nd.arange(5000)
+                c = a[1:big_size + 1].reshape(big_shape)
+                d = b[1:small_size + 1].reshape(small_shape)
+                f = e[1:size + 1].reshape(shape)
+                mx.nd.broadcast_add(c, d, out=f)
+                expected = c.asnumpy() + d.asnumpy()
+                mx.nd.waitall()
+                assert_almost_equal(f, expected)
+
+@with_seed()
+def test_broadcast_ops_on_misaligned_input_oneside():
+    dtypes = ['float16', 'float32', 'float64']
+    lead_dims = [2,3,4,6,10]
+
+    for dtype in dtypes:
+        for lead_dim in lead_dims:
+            for both_ways in [False, True]:
+                shape = list(rand_shape_2d()) + [lead_dim]
+                small_shape = [shape[0], shape[1], 1]
+                if both_ways:
+                    # Broadcast in both ways [1, K, L] x [M, 1, 1]
+                    big_shape = [1, shape[1], lead_dim]
+                else:
+                    big_shape = shape
+                size = np.product(shape)
+                small_size = np.product(small_shape)
+                big_size = np.product(big_shape)
+                a = mx.nd.arange(5000)
+                b = mx.nd.arange(5000)
+                e = mx.nd.arange(5000)
+                c = a[1:big_size + 1].reshape(big_shape)
+                d = b[1:small_size + 1].reshape(small_shape)
+                f = e[1:size + 1].reshape(shape)
+                mx.nd.broadcast_add(c, d, out=f)
+                expected = c.asnumpy() + d.asnumpy()
+                mx.nd.waitall()
+                assert_almost_equal(f, expected)
+

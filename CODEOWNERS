@@ -23,27 +23,25 @@
 /julia/                           @iblis17
 
 # C++ base
-/src/kvstore/     @rahul003 @anirudh2290 @eric-haibin-lin @apeforest
-/include/         @anirudh2290 @pllarroy @eric-haibin-lin
-/src/c_api/       @anirudh2290 @eric-haibin-lin @apeforest
-/src/common/      @anirudh2290
-/src/engine/      @anirudh2290 @eric-haibin-lin @apeforest
-/src/executor/    @anirudh2290 @eric-haibin-lin @apeforest
-/src/imperative/  @anirudh2290 @eric-haibin-lin @apeforest
-/src/io/          @anirudh2290 @eric-haibin-lin @apeforest
-/src/ndarray/     @anirudh2290 @eric-haibin-lin @apeforest
-/src/nnvm/        @anirudh2290 @eric-haibin-lin @apeforest
-/src/operator/    @anirudh2290 @eric-haibin-lin @apeforest
-/src/profiler/    @anirudh2290 @eric-haibin-lin
-/src/storage/     @anirudh2290 @eric-haibin-lin
-/tests/cpp/       @anirudh2290
+/src/kvstore/     @rahul003 @eric-haibin-lin @apeforest
+/include/         @pllarroy @eric-haibin-lin
+/src/c_api/       @eric-haibin-lin @apeforest
+/src/engine/      @eric-haibin-lin @apeforest
+/src/executor/    @eric-haibin-lin @apeforest
+/src/imperative/  @eric-haibin-lin @apeforest
+/src/io/          @eric-haibin-lin @apeforest
+/src/ndarray/     @eric-haibin-lin @apeforest
+/src/nnvm/        @eric-haibin-lin @apeforest
+/src/operator/    @eric-haibin-lin @apeforest
+/src/profiler/    @eric-haibin-lin
+/src/storage/     @eric-haibin-lin
 /cpp-package/     @nswamy @pllarroy
 /src/             @pllarroy
 /plugin/          @pllarroy
 
 # Build system
-CMakeLists.txt    @szha @pllarroy
-/cmake/           @szha @pllarroy
+CMakeLists.txt    @szha @pllarroy @leezu
+/cmake/           @szha @pllarroy @leezu
 /make/            @szha
 
 # MXNet CI
@@ -53,8 +51,6 @@ dev_menu.py         @pllarroy
 /docker/            @marcoabreu
 /tests/ci_build/    @marcoabreu
 Jenkinsfile         @marcoabreu
-.travis.yml         @marcoabreu
-appveyor.yml        @marcoabreu
 
 # MXNet CD
 /cd/                @szha
@@ -75,5 +71,5 @@ prepare_mkl.sh    @szha
 # Tools
 /tools/           @szha @pllarroy
 
-# Github templates
-/.github/         @szha
+# Github configuration
+/.github/         @szha @leezu

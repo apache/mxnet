@@ -16,27 +16,39 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to build MXNet for Android ARMv7
+# Dockerfile to build MXNet for ARMv7
 
-FROM dockcross/linux-armv7
+FROM ubuntu:20.04
 
-ENV ARCH armv7l
-ENV HOSTCC gcc
-ENV TARGET ARMV7
+ENV ARCH=armv7l \
+    HOSTCC=gcc \
+    HOSTCXX=g++ \
+    TARGET=ARMV7
 
-WORKDIR /work/deps
+WORKDIR /usr/local
 
-COPY install/ubuntu_arm.sh /work/
-RUN /work/ubuntu_arm.sh
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    build-essential \
+    ninja-build \
+    cmake \
+    ccache \
+    git \
+    curl \
+    zip \
+    python3 \
+    python3-pip \
+    crossbuild-essential-armhf \
+ && rm -rf /var/lib/apt/lists/*
 
-COPY install/arm_openblas.sh /work/
-RUN /work/arm_openblas.sh
+COPY toolchains/arm-linux-gnueabihf-toolchain.cmake /usr/local
+ENV CMAKE_TOOLCHAIN_FILE=/usr/local/arm-linux-gnueabihf-toolchain.cmake
 
-ENV OpenBLAS_HOME=${CROSS_ROOT}
-ENV OpenBLAS_DIR=${CROSS_ROOT}
-
-COPY install/deb_ubuntu_ccache.sh /work/
-RUN /work/deb_ubuntu_ccache.sh
+RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
+    cd /usr/local/OpenBLAS && \
+    make NOFORTRAN=1 NO_SHARED=1 CC=arm-linux-gnueabihf-gcc && \
+    make PREFIX=/usr/local/arm-linux-gnueabihf NO_SHARED=1 install && \
+    cd /usr/local && \
+    rm -rf OpenBLAS
 
 ARG USER_ID=0
 ARG GROUP_ID=0

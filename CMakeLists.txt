@@ -7,6 +7,9 @@ if(CMAKE_CROSSCOMPILING)
 endif()
 
 project(mxnet C CXX)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)  # GNU extensions used by src/operator/random/shuffle_op.cc
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
   # Load config.cmake only if mxnet is not compiled as a dependency of another project
@@ -33,6 +36,7 @@ Format: Auto | Common | All | LIST(ARCH_AND_PTX ...)
 option(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
 option(USE_OPENCV "Build with OpenCV support" ON)
 option(USE_OPENMP "Build with Openmp support" ON)
+cmake_dependent_option(USE_NVML "Build with nvml support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
 cmake_dependent_option(USE_NVTX "Build with nvtx support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
@@ -58,7 +62,6 @@ option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
 option(USE_CPP_PACKAGE "Build C++ Package" OFF)
 option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 option(USE_GPROF "Compile with gprof (profiling) flag" OFF)
-option(USE_CXX14_IF_AVAILABLE "Build with C++14 if the compiler supports it" OFF)
 option(USE_VTUNE "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
 option(USE_TVM_OP "Enable use of TVM operator build system." OFF)
 option(ENABLE_CUDA_RTC "Build with CUDA runtime compilation support" ON)
@@ -67,9 +70,10 @@ option(INSTALL_EXAMPLES "Install the example source files." OFF)
 option(USE_SIGNAL_HANDLER "Print stack traces on segfaults." ON)
 option(USE_TENSORRT "Enable inference optimization with TensorRT." OFF)
 option(USE_ASAN "Enable Clang/GCC ASAN sanitizers." OFF)
-option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF)
+cmake_dependent_option(ENABLE_TESTCOVERAGE "Enable compilation with test coverage metric output" OFF "NOT MSVC" OFF)
 option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
+option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
 cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
 
@@ -90,19 +94,13 @@ if(USE_CUDA)
   cmake_minimum_required(VERSION 3.13.2)  # CUDA 10 (Turing) detection available starting 3.13.2
   include(CheckLanguage)
   check_language(CUDA)
-  if (NOT CMAKE_CUDA_COMPILER_LOADED AND UNIX AND EXISTS "/usr/local/cuda/bin/nvcc")
-    set(CMAKE_CUDA_COMPILER "/usr/local/cuda/bin/nvcc")
-    message(WARNING "CMAKE_CUDA_COMPILER guessed: ${CMAKE_CUDA_COMPILER}")
+  if (NOT CMAKE_CUDA_COMPILER AND UNIX AND EXISTS "/usr/local/cuda/bin/nvcc")
+    set(ENV{CUDACXX} "/usr/local/cuda/bin/nvcc")
+    message(WARNING "CMAKE_CUDA_COMPILER guessed: " $ENV{CUDACXX} "\n"
+      "Please fix your cuda installation: https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#mandatory-post")
   endif()
   enable_language(CUDA)
-  set(CMAKE_CUDA_STANDARD 11)
-  include(CheckCXXCompilerFlag)
-  if(USE_CXX14_IF_AVAILABLE)
-    check_cxx_compiler_flag("-std=c++14" SUPPORT_CXX14)
-    if (SUPPORT_CXX14)
-      set(CMAKE_CUDA_STANDARD 14)
-    endif()
-  endif()
+  set(CMAKE_CUDA_STANDARD 14)
   set(CMAKE_CUDA_STANDARD_REQUIRED ON)
 endif()
 
@@ -149,30 +147,23 @@ endif()
 add_definitions(-DDMLC_MODERN_THREAD_LOCAL=0)
 # disable stack trace in exception by default.
 add_definitions(-DDMLC_LOG_STACK_TRACE_SIZE=0)
-add_definitions(-DDMLC_LOG_FATAL_THROW=1)
 
+add_definitions(-DDMLC_USE_CXX11)
+add_definitions(-DDMLC_STRICT_CXX11)
+add_definitions(-DDMLC_USE_CXX14)
+add_definitions(-DMSHADOW_IN_CXX11)
 if(MSVC)
   add_definitions(-DWIN32_LEAN_AND_MEAN)
-  add_definitions(-DDMLC_USE_CXX11)
   add_definitions(-D_SCL_SECURE_NO_WARNINGS)
   add_definitions(-D_CRT_SECURE_NO_WARNINGS)
   add_definitions(-DMXNET_EXPORTS)
   add_definitions(-DNNVM_EXPORTS)
-  add_definitions(-DDMLC_STRICT_CXX11)
   add_definitions(-DNOMINMAX)
   set(CMAKE_C_FLAGS "/MP")
-  set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} /bigobj")
+  set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} ${CMAKE_CXX_FLAGS} /bigobj")
 else()
   include(CheckCXXCompilerFlag)
-  if(USE_CXX14_IF_AVAILABLE)
-    check_cxx_compiler_flag("-std=c++14" SUPPORT_CXX14)
-  endif()
-  check_cxx_compiler_flag("-std=c++11"   SUPPORT_CXX11)
-  check_cxx_compiler_flag("-std=c++0x"   SUPPORT_CXX0X)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-unknown-pragmas -Wno-sign-compare")
-  if ("${CMAKE_CXX_COMPILER_ID}" MATCHES ".*Clang$")
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-braced-scalar-init")
-  endif()
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wno-sign-compare")
   if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -g")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -D_GLIBCXX_ASSERTIONS")
@@ -185,25 +176,11 @@ else()
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
   endif()
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CMAKE_C_FLAGS}")
-  if(SUPPORT_CXX14)
-    add_definitions(-DDMLC_USE_CXX11=1)
-    add_definitions(-DDMLC_USE_CXX14=1)
-    add_definitions(-DMSHADOW_IN_CXX11)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
-  elseif(SUPPORT_CXX11)
-    add_definitions(-DDMLC_USE_CXX11=1)
-    add_definitions(-DMSHADOW_IN_CXX11)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
-  elseif(SUPPORT_CXX0X)
-    add_definitions(-DDMLC_USE_CXX11=1)
-    add_definitions(-DMSHADOW_IN_CXX11)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++0x")
-  endif()
-endif(MSVC)
+endif()
 
 if(NOT mxnet_LINKER_LIBS)
   set(mxnet_LINKER_LIBS "")
-endif(NOT mxnet_LINKER_LIBS)
+endif()
 
 if(USE_GPROF)
   message(STATUS "Using GPROF")
@@ -257,22 +234,6 @@ if(USE_TENSORRT)
           ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
 endif()
 
-# please note that when you enable this, you might run into an linker not being able to work properly due to large code injection.
-# you can find more information here https://github.com/apache/incubator-mxnet/issues/15971
-if(ENABLE_TESTCOVERAGE)
-  message(STATUS "Compiling with test coverage support enabled. This will result in additional files being written to your source directory!")
-  find_program( GCOV_PATH gcov )
-  if(NOT GCOV_PATH)
-    message(FATAL_ERROR "gcov not found! Aborting...")
-  endif() # NOT GCOV_PATH
-
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} --coverage")
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} --coverage")
-  set(CMAKE_LINKER_FLAGS "${CMAKE_LINKER_FLAGS} --coverage")
-  set(GTEST_LIBRARIES "${GTEST_LIBRARIES} --coverage")
-  link_libraries(gcov)
-endif()
-
 if(USE_MKLDNN)
   # CPU architecture (e.g., C5) can't run on another architecture (e.g., g3).
   if(MSVC)
@@ -285,6 +246,7 @@ if(USE_MKLDNN)
   set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
   set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
   set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
+  set(DNNL_ENABLE_CONCURRENT_EXEC ON CACHE INTERNAL "" FORCE)
 
   if(NOT USE_OPENMP)
       set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
@@ -297,10 +259,6 @@ if(USE_MKLDNN)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
   set(INSTALL_MKLDNN ON)
-endif()
-
-if(USE_CPP_PACKAGE)
-    add_definitions(-DMXNET_USE_CPP_PACKAGE=1)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
@@ -419,17 +377,19 @@ if(USE_OPENMP)
     set(CMAKE_BUILD_TYPE Release)
     set(OPENMP_ENABLE_LIBOMPTARGET OFF CACHE BOOL "LLVM OpenMP offloading support")  # Requires CMP0077 CMake 3.13
     add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp)
+    # Disable warnings
+    target_compile_options(omp PRIVATE
+      $<$<OR:$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>,$<CXX_COMPILER_ID:GNU>>:-w>
+      $<$<CXX_COMPILER_ID:MSVC>:/w>)
   endfunction()
 
-  # This should build on Windows, but there's some problem and I don't have a Windows box, so
-  # could a Windows user please fix?
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/openmp/CMakeLists.txt
      AND SYSTEM_ARCHITECTURE STREQUAL "x86_64"
      AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution"
+     AND NOT BLAS STREQUAL "MKL"
      AND NOT MSVC
      AND NOT CMAKE_CROSSCOMPILING)
     load_omp()
-    list(REMOVE_ITEM mxnet_LINKER_LIBS iomp5)
     list(APPEND mxnet_LINKER_LIBS omp)
     if(UNIX)
       list(APPEND mxnet_LINKER_LIBS pthread)
@@ -442,8 +402,11 @@ if(USE_OPENMP)
     if(OPENMP_FOUND)
       set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-      set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-      set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+      if(NOT BLAS STREQUAL "MKL")
+        # Linker flags for Intel OMP are already set in case MKL is used. Only set if not MKL
+        set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+      endif()
       add_definitions(-DMXNET_USE_OPENMP=1)
     endif()
   endif()
@@ -477,8 +440,6 @@ endif()
 include(CTest)
 set(GTEST_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/googletest/googletest")
 set(GTEST_INCLUDE_DIR ${GTEST_ROOT}/include)
-#set(GTEST_BOTH_LIBRARIES gtest gtest_main)
-set(GTEST_LIBRARIES gtest gtest_main)
 set(GTEST_MAIN_LIBRARY gtest_main)
 set(GTEST_LIBRARY gtest)
 
@@ -547,8 +508,6 @@ if(USE_PLUGIN_CAFFE)
   endif()
   if(NOT DEFINED CAFFE_PATH)
     if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/caffe)
-      # Need newer FindCUDA.cmake that correctly handles -std=c++11
-      cmake_minimum_required(VERSION 3.3)
       set(CAFFE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/caffe)
     else()
       set(CAFFE_PATH $ENV{CAFFE_PATH})
@@ -601,7 +560,7 @@ if(USE_CUDA)
   message("-- CUDA: Using the following NVCC architecture flags ${CUDA_ARCH_FLAGS}")
   set(arch_code_list)
   foreach(arch_str ${CUDA_ARCH_FLAGS})
-    if((arch_str MATCHES ".*sm_[0-9]+")) 
+    if((arch_str MATCHES ".*sm_[0-9]+"))
       string( REGEX REPLACE  ".*sm_([0-9]+)" "\\1" arch_code ${arch_str} )
       list(APPEND arch_code_list ${arch_code})
     endif()
@@ -624,6 +583,19 @@ if(USE_CUDA)
   list(APPEND SOURCE ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
 
+  if(UNIX)
+    if(USE_NVML)
+      find_package(NVML)
+      if(NVML_FOUND)
+        include_directories(${NVML_INCLUDE_DIRS})
+        list(APPEND mxnet_LINKER_LIBS ${NVML_LIBRARIES})
+        add_definitions(-DMXNET_USE_NVML=1)
+      else()
+        add_definitions(-DMXNET_USE_NVML=0)
+        message(WARNING "Could not find NVML libraries")
+      endif()
+    endif()
+  endif()
   if(USE_NCCL)
     find_package(NCCL)
     if(NCCL_FOUND)
@@ -679,6 +651,7 @@ if(UNIX)
   list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
   add_library(mxnet_static STATIC ${SOURCE})
   target_link_libraries(mxnet_static PUBLIC mshadow)
+  target_compile_definitions(mxnet_static PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
   add_library(mxnet SHARED ${DUMMY_SOURCE})
   target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
   target_link_libraries(mxnet PRIVATE mxnet_static)
@@ -690,86 +663,98 @@ if(UNIX)
     # 1) variables used in '#pragma omp parallel' are considered unused
     target_compile_options(mxnet_static PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Wno-error=unused-variable>")
     if(USE_CUDA)
-      string(APPEND CMAKE_CUDA_FLAGS " -Werror cross-execution-space-call")
+      # Note: "=" is required to avoid breaking ccache
+      string(APPEND CMAKE_CUDA_FLAGS " -Werror=cross-execution-space-call")
     endif()
+  endif()
+  if(ENABLE_TESTCOVERAGE)
+    find_program(GCOV_PATH gcov REQUIRED)
+    target_compile_options(mxnet_static PUBLIC "--coverage")
+    target_link_libraries(mxnet_static PUBLIC gcov)
   endif()
 elseif(MSVC)
   if(USE_CUDA)
-    if(MSVC)
-      if(USE_SPLIT_ARCH_DLL)
-        add_executable(gen_warp tools/windowsbuild/gen_warp.cpp)
-        add_library(mxnet SHARED tools/windowsbuild/warp_dll.cpp ${CMAKE_BINARY_DIR}/warp_gen_cpp.cpp
-                    ${CMAKE_BINARY_DIR}/warp_gen.asm)
-        target_link_libraries(mxnet PRIVATE cudart Shlwapi)
-        list(GET arch_code_list 0 mxnet_first_arch)
-        foreach(arch ${arch_code_list})
-          add_library(mxnet_${arch} SHARED ${SOURCE})
-          target_link_libraries(mxnet_${arch} PUBLIC mshadow)
-          target_compile_options(
-            mxnet_${arch}
-            PRIVATE
-            "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-architecture=compute_${arch}>"
-          )
-          target_compile_options(
-            mxnet_${arch}
-            PRIVATE
-            "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-code=sm_${arch},compute_${arch}>"
-          )
-          target_compile_options(
-            mxnet_${arch} 
-            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
-          target_compile_options(
-            mxnet_${arch}
-            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
-        endforeach()
-
-        add_custom_command(
-          OUTPUT ${CMAKE_BINARY_DIR}/warp_gen_cpp.cpp ${CMAKE_BINARY_DIR}/warp_gen.asm
-          COMMAND gen_warp $<TARGET_FILE:mxnet_${mxnet_first_arch}> WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/ DEPENDS $<TARGET_FILE:mxnet_${mxnet_first_arch}>)
-      else(USE_SPLIT_ARCH_DLL)
-        string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
-        set(CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
-        add_library(mxnet SHARED ${SOURCE})
-        target_link_libraries(mxnet PUBLIC mshadow)
+    if(USE_SPLIT_ARCH_DLL)
+      add_executable(gen_warp tools/windowsbuild/gen_warp.cpp)
+      add_library(mxnet SHARED tools/windowsbuild/warp_dll.cpp ${CMAKE_BINARY_DIR}/warp_gen_cpp.cpp
+                  ${CMAKE_BINARY_DIR}/warp_gen.asm)
+      target_link_libraries(mxnet PRIVATE cudart Shlwapi)
+      list(GET arch_code_list 0 mxnet_first_arch)
+      foreach(arch ${arch_code_list})
+        add_library(mxnet_${arch} SHARED ${SOURCE})
+        target_link_libraries(mxnet_${arch} PUBLIC mshadow)
+        target_compile_definitions(mxnet_${arch} PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
         target_compile_options(
-            mxnet 
-            PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
+          mxnet_${arch}
+          PRIVATE
+          "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-architecture=compute_${arch}>"
+        )
         target_compile_options(
-            mxnet
-            PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+          mxnet_${arch}
+          PRIVATE
+          "$<$<COMPILE_LANGUAGE:CUDA>:--gpu-code=sm_${arch},compute_${arch}>"
+        )
+        target_compile_options(
+          mxnet_${arch}
+          PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
+        target_compile_options(
+          mxnet_${arch}
+          PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+      endforeach()
 
-      endif(USE_SPLIT_ARCH_DLL)
-    else()
+      add_custom_command(
+        OUTPUT ${CMAKE_BINARY_DIR}/warp_gen_cpp.cpp ${CMAKE_BINARY_DIR}/warp_gen.asm
+        COMMAND gen_warp $<TARGET_FILE:mxnet_${mxnet_first_arch}> WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/ DEPENDS $<TARGET_FILE:mxnet_${mxnet_first_arch}>)
+    else(USE_SPLIT_ARCH_DLL)
+      string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
+      set(CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
       add_library(mxnet SHARED ${SOURCE})
       target_link_libraries(mxnet PUBLIC mshadow)
-    endif()
+      target_compile_options(
+          mxnet
+          PRIVATE "$<$<AND:$<CONFIG:DEBUG>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MTd -Gy /bigobj>")
+      target_compile_options(
+          mxnet
+          PRIVATE "$<$<AND:$<CONFIG:RELEASE>,$<COMPILE_LANGUAGE:CUDA>>:-Xcompiler=-MT -Gy /bigobj>")
+    endif(USE_SPLIT_ARCH_DLL)
   else()
     add_library(mxnet SHARED ${SOURCE})
+    target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
     target_link_libraries(mxnet PUBLIC mshadow)
   endif()
-
 endif()
 
+# extension libraries (custom operators, custom subgraphs) are built by default
 add_library(customop_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc)
+add_library(transposecsr_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/transposecsr_lib.cc)
+add_library(transposerowsp_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/transposerowsp_lib.cc)
 add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_subgraph/subgraph_lib.cc)
+add_library(pass_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_pass/pass_lib.cc)
 target_include_directories(customop_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
+target_include_directories(transposecsr_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
+target_include_directories(transposerowsp_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 target_include_directories(subgraph_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
-if (USE_CUDA)
+target_include_directories(pass_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
+if(USE_CUDA)
   add_library(customop_gpu_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/relu_lib.cu)
   target_include_directories(customop_gpu_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 endif()
 if(UNIX)
-  target_compile_options(customop_lib PUBLIC -shared)
-  target_compile_options(subgraph_lib PUBLIC -shared)
   if (USE_CUDA)
     target_compile_options(customop_gpu_lib PUBLIC -shared)
   endif()
 elseif(MSVC)
   target_compile_options(customop_lib PUBLIC /LD)
+  target_compile_options(transposecsr_lib PUBLIC /LD)
+  target_compile_options(transposerowsp_lib PUBLIC /LD)
   target_compile_options(subgraph_lib PUBLIC /LD)
+  target_compile_options(pass_lib PUBLIC /LD)
   set_target_properties(customop_lib PROPERTIES PREFIX "lib")
+  set_target_properties(transposecsr_lib PROPERTIES PREFIX "lib")
+  set_target_properties(transposerowsp_lib PROPERTIES PREFIX "lib")
   set_target_properties(subgraph_lib PROPERTIES PREFIX "lib")
-  if (USE_CUDA)
+  set_target_properties(pass_lib PROPERTIES PREFIX "lib")
+  if(USE_CUDA)
     target_compile_options(customop_gpu_lib PUBLIC "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-fPIC>")
     set_target_properties(customop_gpu_lib PROPERTIES PREFIX "lib")
   endif()
@@ -909,11 +894,12 @@ endif()
 
 if(USE_CPP_PACKAGE)
   add_subdirectory(cpp-package)
+  target_compile_definitions(mxnet PUBLIC MXNET_USE_CPP_PACKAGE=1)
+  if(BUILD_CPP_EXAMPLES)
+    add_subdirectory(example/image-classification/predict-cpp)
+  endif()
 endif()
 
-if(BUILD_CPP_EXAMPLES)
-  add_subdirectory(example/image-classification/predict-cpp)
-endif()
 add_subdirectory(tests)
 
 # ---[ Linter target

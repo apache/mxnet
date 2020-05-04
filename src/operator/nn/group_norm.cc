@@ -47,8 +47,8 @@ static bool GroupNormShape(const nnvm::NodeAttrs& attrs,
     return false;
   }
 
-  in_shape->at(groupnorm::kGamma) = mxnet::TShape(Shape1(num_groups));
-  in_shape->at(groupnorm::kBeta) = mxnet::TShape(Shape1(num_groups));
+  in_shape->at(groupnorm::kGamma) = mxnet::TShape(Shape1(dshape[1]));
+  in_shape->at(groupnorm::kBeta) = mxnet::TShape(Shape1(dshape[1]));
 
   out_shape->clear();
   out_shape->push_back(dshape);

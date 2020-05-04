@@ -19,12 +19,13 @@ import os
 import math
 import itertools
 import mxnet as mx
-from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, retry, assert_almost_equal
+from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_almost_equal
 import numpy as np
 import random as rnd
-from common import setup_module, with_seed, random_seed, teardown
+from common import setup_module, with_seed, retry, random_seed, teardown_module
 import scipy.stats as ss
 import unittest
+import pytest
 from mxnet.test_utils import *
 
 def same(a, b):
@@ -339,7 +340,7 @@ def check_with_device(device, dtype):
            un1 = np.maximum(un1, 1e-1)
         if name == 'uniform':
            un1 = np.minimum(np.maximum(un1.reshape((un1.shape[0],un1.shape[1],-1)), p1.reshape((p1.shape[0],p1.shape[1],-1))+1e-4),
-                            p2.reshape((p2.shape[0],p2.shape[1],-1))-1e-4).reshape(un1.shape) 
+                            p2.reshape((p2.shape[0],p2.shape[1],-1))-1e-4).reshape(un1.shape)
         for use_log in [False, True]:
             test_pdf = symbol(v0, v1, is_log=use_log) if single_param else symbol(v0, v1, v2, is_log=use_log)
             forw_atol  = 1e-7 if dtype != np.float16 else 1e-3
@@ -349,7 +350,7 @@ def check_with_device(device, dtype):
             if single_param:
                 res = pdffunc(un1.reshape((un1.shape[0],un1.shape[1],-1)),
                     p1.reshape((p1.shape[0],p1.shape[1],-1))).reshape(un1.shape)
-                if use_log: 
+                if use_log:
                     res = np.log(res)
                 check_symbolic_forward(test_pdf, [un1, p1], [res], atol=forw_atol, rtol=forw_rtol, dtype=dtype)
                 if dtype == np.float64:
@@ -558,48 +559,47 @@ def test_parallel_random_seed_setting_for_context():
         for i in range(1, len(samples_sym)):
             assert same(samples_sym[i - 1], samples_sym[i])
 
-@retry(5)
 @with_seed()
-def test_sample_multinomial():
-    for dtype in ['uint8', 'int32', 'float16', 'float32', 'float64']: # output array types
-        for x in [mx.nd.array([[0,1,2,3,4],[4,3,2,1,0]])/10.0, mx.nd.array([0,1,2,3,4])/10.0]:
-            dx = mx.nd.ones_like(x)
-            mx.contrib.autograd.mark_variables([x], [dx])
-            # Adding rtol and increasing samples needed to pass with seed 2951820647
-            samples = 10000
-            with mx.autograd.record():
-                y, prob = mx.nd.random.multinomial(x, shape=samples, get_prob=True, dtype=dtype)
-                r = prob * 5
-                r.backward()
+@pytest.mark.parametrize('dtype', ['uint8', 'int32', 'float16', 'float32', 'float64'])
+@pytest.mark.parametrize('x', [[[0,1,2,3,4],[4,3,2,1,0]], [0,1,2,3,4]])
+def test_sample_multinomial(dtype, x):
+    x = mx.nd.array(x) / 10.0
+    dx = mx.nd.ones_like(x)
+    mx.contrib.autograd.mark_variables([x], [dx])
+    # Adding rtol and increasing samples needed to pass with seed 2951820647
+    samples = 10000
+    with mx.autograd.record():
+        y, prob = mx.nd.random.multinomial(x, shape=samples, get_prob=True, dtype=dtype)
+        r = prob * 5
+        r.backward()
 
-            assert(np.dtype(dtype) == y.dtype)
-            y = y.asnumpy()
-            x = x.asnumpy()
-            dx = dx.asnumpy()
-            if len(x.shape) is 1:
-                x = x.reshape((1, x.shape[0]))
-                dx = dx.reshape(1, dx.shape[0])
-                y = y.reshape((1, y.shape[0]))
-                prob = prob.reshape((1, prob.shape[0]))
-            for i in range(x.shape[0]):
-                freq = np.bincount(y[i,:].astype('int32'), minlength=5)/np.float32(samples)*x[i,:].sum()
-                assert_almost_equal(freq, x[i], rtol=0.20, atol=1e-1)
-                rprob = x[i][y[i].astype('int32')]/x[i].sum()
-                assert_almost_equal(np.log(rprob), prob.asnumpy()[i], atol=1e-5)
+    assert(np.dtype(dtype) == y.dtype)
+    y = y.asnumpy()
+    x = x.asnumpy()
+    dx = dx.asnumpy()
+    if len(x.shape) is 1:
+        x = x.reshape((1, x.shape[0]))
+        dx = dx.reshape(1, dx.shape[0])
+        y = y.reshape((1, y.shape[0]))
+        prob = prob.reshape((1, prob.shape[0]))
+    for i in range(x.shape[0]):
+        freq = np.bincount(y[i,:].astype('int32'), minlength=5)/np.float32(samples)*x[i,:].sum()
+        assert_almost_equal(freq, x[i], rtol=0.20, atol=1e-1)
+        rprob = x[i][y[i].astype('int32')]/x[i].sum()
+        assert_almost_equal(np.log(rprob), prob.asnumpy()[i], atol=1e-5)
 
-                real_dx = np.zeros((5,))
-                for j in range(samples):
-                    real_dx[int(y[i][j])] += 5.0 / rprob[j]
-                assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
-    for dtype in ['uint8', 'float16', 'float32']:
-        # Bound check for the output data types. 'int32' and 'float64' require large memory so are skipped.
-        x = mx.nd.zeros(2 ** 25)  # Larger than the max integer in float32 without precision loss.
-        bound_check = False
-        try:
-            y = mx.nd.random.multinomial(x, dtype=dtype)
-        except mx.MXNetError as e:
-            bound_check = True
-        assert bound_check
+        real_dx = np.zeros((5,))
+        for j in range(samples):
+            real_dx[int(y[i][j])] += 5.0 / rprob[j]
+        assert_almost_equal(real_dx, dx[i, :], rtol=1e-4, atol=1e-5)
+
+@pytest.mark.parametrize('dtype', ['uint8', 'float16', 'float32'])
+@with_seed()
+@retry(5)
+@pytest.mark.xfail(raises=mx.MXNetError)
+def test_sample_multinomial_bound_check(dtype):
+    # Larger than the max integer in float32 without precision loss.
+    y = mx.nd.random.multinomial(mx.nd.zeros(2 ** 25), dtype=dtype)
 
 # Test the generators with the chi-square testing
 @with_seed()
@@ -1035,7 +1035,3 @@ def test_sample_multinomial_num_outputs():
     assert isinstance(out, list)
     assert len(out) == 2
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

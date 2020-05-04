@@ -47,14 +47,11 @@ typedef enum {
   kNull = 4U,
   kMXNetType = 5U,
   kMXNetContext = 6U,
-  kArrayHandle = 7U,
-  kObjectHandle = 8U,
-  kModuleHandle = 9U,
-  kFuncHandle = 10U,
-  kStr = 11U,
-  kBytes = 12U,
-  kNDArrayContainer = 13U,
-  kNDArrayHandle = 14U,
+  kObjectHandle = 7U,
+  kStr = 8U,
+  kBytes = 9U,
+  kPyArg = 10U,
+  kNDArrayHandle = 11U,
   // Extension codes for other frameworks to integrate MXNet PackedFunc.
   // To make sure each framework's id do not conflict, use first and
   // last sections to mark ranges.
@@ -158,6 +155,24 @@ MXNET_DLL int MXNetFuncListGlobalNames(int* out_size,
  * \return 0 when success, -1 when failure happens
  */
 MXNET_DLL int MXNetObjectFree(MXNetObjectHandle obj);
+
+
+/*!
+ * \brief Get the type_index from an object.
+ *
+ * \param obj The object handle.
+ * \param out_tindex the output type index.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNetObjectGetTypeIndex(MXNetObjectHandle obj, unsigned* out_tindex);
+
+/*!
+ * \brief Convert type key to type index.
+ * \param type_key The key of the type.
+ * \param out_tindex the corresponding type index.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNetObjectTypeKey2Index(const char* type_key, unsigned* out_tindex);
 
 #ifdef __cplusplus
 }  // extern "C"

@@ -28,6 +28,7 @@
 #include "mxnet/base.h"
 #include "mxnet/storage.h"
 #include "../common/cuda_utils.h"
+#include "../profiler/storage_profiler.h"
 #if MXNET_USE_CUDA
 #include <cuda_runtime.h>
 #endif  // MXNET_USE_CUDA
@@ -64,8 +65,11 @@ inline void GPUDeviceStorage::Alloc(Storage::Handle* handle) {
   std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #endif  // MXNET_USE_NCCL
   cudaError_t e = cudaMalloc(&handle->dptr, size);
-  if (e != cudaSuccess && e != cudaErrorCudartUnloading)
+  if (e != cudaSuccess && e != cudaErrorCudartUnloading) {
     LOG(FATAL) << "CUDA: " << cudaGetErrorString(e);
+  }
+  // record the allocation event in the memory profiler
+  profiler::GpuDeviceStorageProfiler::Get()->OnAlloc(*handle, size, false);
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA
@@ -83,6 +87,8 @@ inline void GPUDeviceStorage::Free(Storage::Handle handle) {
   if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
     LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
   }
+  // record the deallocation event in the memory profiler
+  profiler::GpuDeviceStorageProfiler::Get()->OnFree(handle);
 #else   // MXNET_USE_CUDA
   LOG(FATAL) << "Please compile with CUDA enabled";
 #endif  // MXNET_USE_CUDA

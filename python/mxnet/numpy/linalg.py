@@ -21,9 +21,121 @@ from ..ndarray import numpy as _mx_nd_np
 from .fallback_linalg import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback_linalg
 
-__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve', 'pinv',
-           'eigvals', 'eig', 'eigvalsh', 'eigh']
+__all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank']
 __all__ += fallback_linalg.__all__
+
+
+def matrix_rank(M, tol=None, hermitian=False):
+    """
+    Return matrix rank of array using SVD method
+
+    Rank of the array is the number of singular values of the array that are
+    greater than `tol`.
+
+    Parameters
+    M : {(M,), (..., M, N)} ndarray
+        Input vector or stack of matrices.
+    tol : (...) ndarray, float, optional
+        Threshold below which SVD values are considered zero. If `tol` is
+        None, and ``S`` is an array with singular values for `M`, and
+        ``eps`` is the epsilon value for datatype of ``S``, then `tol` is
+        set to ``S.max() * max(M.shape) * eps``.
+    hermitian : bool, optional
+        If True, `M` is assumed to be Hermitian (symmetric if real-valued),
+        enabling a more efficient method for finding singular values.
+        Defaults to False.
+
+    Returns
+    -------
+    rank : (...) ndarray
+        Rank of M.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> np.matrix_rank(np.eye(4)) # Full rank matrix
+    4
+    >>> I=np.eye(4); I[-1,-1] = 0. # rank deficient matrix
+    >>> np.matrix_rank(I)
+    3
+    >>> np.matrix_rank(np.ones((4,))) # 1 dimension - rank 1 unless all 0
+    1
+    >>> np.matrix_rank(np.zeros((4,)))
+    0
+    """
+    return _mx_nd_np.linalg.matrix_rank(M, tol, hermitian)
+
+
+def lstsq(a, b, rcond='warn'):
+    r"""
+    Return the least-squares solution to a linear matrix equation.
+
+    Solves the equation :math:`a x = b` by computing a vector `x` that
+    minimizes the squared Euclidean 2-norm :math:`\| b - a x \|^2_2`.
+    The equation may be under-, well-, or over-determined (i.e., the
+    number of linearly independent rows of `a` can be less than, equal
+    to, or greater than its number of linearly independent columns).
+    If `a` is square and of full rank, then `x` (but for round-off error)
+    is the "exact" solution of the equation.
+
+    Parameters
+    ----------
+    a : (M, N) ndarray
+        "Coefficient" matrix.
+    b : {(M,), (M, K)} ndarray
+        Ordinate or "dependent variable" values. If `b` is two-dimensional,
+        the least-squares solution is calculated for each of the `K` columns
+        of `b`.
+    rcond : float, optional
+        Cut-off ratio for small singular values of `a`.
+        For the purposes of rank determination, singular values are treated
+        as zero if they are smaller than `rcond` times the largest singular
+        value of `a`
+        The default of ``warn`` or ``-1`` will use the machine precision as
+        `rcond` parameter. The default of ``None`` will use the machine
+        precision times `max(M, N)`.
+
+    Returns
+    -------
+    x : {(N,), (N, K)} ndarray
+        Least-squares solution. If `b` is two-dimensional,
+        the solutions are in the `K` columns of `x`.
+    residuals : {(1,), (K,), (0,)} ndarray
+        Sums of residuals.
+        Squared Euclidean 2-norm for each column in ``b - a*x``.
+        If the rank of `a` is < N or M <= N, this is an empty array.
+        If `b` is 1-dimensional, this is a (1,) shape array.
+        Otherwise the shape is (K,).
+    rank : int
+        Rank of matrix `a`.
+    s : (min(M, N),) ndarray
+        Singular values of `a`.
+
+    Raises
+    ------
+    MXNetError
+        If computation does not converge.
+
+    Notes
+    -----
+    If `b` is a matrix, then all array results are returned as matrices.
+
+    Examples
+    --------
+    >>> x = np.array([0, 1, 2, 3])
+    >>> y = np.array([-1, 0.2, 0.9, 2.1])
+    >>> A = np.vstack([x, np.ones(len(x))]).T
+    >>> A
+    array([[ 0.,  1.],
+           [ 1.,  1.],
+           [ 2.,  1.],
+           [ 3.,  1.]])
+    >>> m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+    >>> m, c
+    (1.0 -0.95) # may vary
+    """
+    return _mx_nd_np.linalg.lstsq(a, b, rcond)
 
 
 def pinv(a, rcond=1e-15, hermitian=False):
@@ -289,6 +401,63 @@ def cholesky(a):
            [ 4., 10.]])
     """
     return _mx_nd_np.linalg.cholesky(a)
+
+
+def qr(a, mode='reduced'):
+    r"""
+    Compute the qr factorization of a matrix a.
+    Factor the matrix a as qr, where q is orthonormal and r is upper-triangular.
+
+    Parameters
+    ----------
+    a : (..., M, N) ndarray
+        Matrix or stack of matrices to be qr factored.
+    mode: {‘reduced’, ‘complete’, ‘r’, ‘raw’, ‘full’, ‘economic’}, optional
+        Only default mode, 'reduced', is implemented. If K = min(M, N), then
+        * 'reduced’ : returns q, r with dimensions (M, K), (K, N) (default)
+
+    Returns
+    -------
+    q : (..., M, K) ndarray
+        A matrix or stack of matrices with K orthonormal columns, with K = min(M, N).
+    r : (..., K, N) ndarray
+        A matrix or stack of upper triangular matrices.
+
+    Raises
+    ------
+    MXNetError
+        If factoring fails.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> a = np.random.uniform(-10, 10, (2, 2))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.22121978, -0.97522414],
+           [-0.97522414,  0.22121954]])
+    >>> r
+    array([[-4.4131265 , -7.1255064 ],
+           [ 0.        , -0.28771925]])
+    >>> a = np.random.uniform(-10, 10, (2, 3))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.28376842, -0.9588929 ],
+           [-0.9588929 ,  0.28376836]])
+    >>> r
+    array([[-7.242763  , -0.5673361 , -2.624416  ],
+           [ 0.        , -7.297918  , -0.15949416]])
+    >>> a = np.random.uniform(-10, 10, (3, 2))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.34515655,  0.10919492],
+           [ 0.14765628, -0.97452265],
+           [-0.92685735, -0.19591334]])
+    >>> r
+    array([[-8.453794,  8.4175  ],
+           [ 0.      ,  5.430561]])
+    """
+    return _mx_nd_np.linalg.qr(a, mode)
 
 
 def inv(a):

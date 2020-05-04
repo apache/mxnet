@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+max_time = 240
 
 node('utility') {
   // Loading the utilities requires a node context unfortunately
@@ -41,8 +41,6 @@ core_logic: {
     custom_steps.compile_unix_cmake_gpu(),
     custom_steps.compile_unix_tensorrt_gpu(),
     custom_steps.compile_unix_int64_gpu(),
-    custom_steps.compile_unix_full_gpu_no_tvm_op(),
-    custom_steps.compile_unix_cmake_gpu_no_tvm_op(),
     custom_steps.compile_unix_cmake_gpu_no_rtc(),
     custom_steps.compile_unix_full_gpu_mkldnn_cpp_test()
   ])
@@ -59,14 +57,9 @@ core_logic: {
     custom_steps.test_unix_python3_integration_gpu(),
     custom_steps.test_unix_cpp_package_gpu(),
     custom_steps.test_unix_scala_gpu(),
-    custom_steps.test_unix_distributed_kvstore_gpu(),
-    custom_steps.test_static_python_gpu(),
-    custom_steps.test_static_python_gpu_cmake(),
-    custom_steps.test_unix_python3_gpu_no_tvm_op(),
+    // TODO(szha): fix and reenable the hanging issue. tracked in #18098
+    // custom_steps.test_unix_distributed_kvstore_gpu(),
     custom_steps.test_unix_capi_cpp_package(),
-
-    // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407
-    //custom_steps.test_unix_caffe_gpu()
   ]) 
 }
 ,

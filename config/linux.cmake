@@ -73,8 +73,6 @@ set(USE_TVM_OP OFF CACHE BOOL "Enable use of TVM operator build system.")
 #---------------------
 # Compilers
 #--------------------
-set(CMAKE_GENERATOR "Ninja" CACHE STRING "Build Tool Generator used by CMake")
-
 # Compilers are usually autodetected. Uncomment and modify the next 3 lines to
 # choose manually:
 
@@ -82,8 +80,6 @@ set(CMAKE_GENERATOR "Ninja" CACHE STRING "Build Tool Generator used by CMake")
 # set(CMAKE_CXX_COMPILER "" CACHE BOOL "C++ compiler")
 # set(CMAKE_CUDA_COMPILER "" CACHE BOOL "Cuda compiler (nvcc)")
 
-# Uncomment the following line to compile with debug information
-# set(CMAKE_BUILD_TYPE Debug CACHE STRING "CMake build type")
 
 #---------------------------------------------
 # CPU instruction sets: The support is autodetected if turned ON

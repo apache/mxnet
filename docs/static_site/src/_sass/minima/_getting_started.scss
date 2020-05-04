@@ -172,6 +172,11 @@ ul.dropdown-content {
       background-color: $color-mxnet;
       color: $grey-color-light;
     }
+
+    &:focus {
+      outline: 0;
+    }
+    
   }
 
 

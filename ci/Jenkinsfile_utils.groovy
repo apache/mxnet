@@ -159,9 +159,11 @@ def collect_test_results_windows(original_file_name, new_file_name) {
 }
 
 
-def docker_run(platform, function_name, use_nvidia, shared_mem = '500m', env_vars = "") {
-  def command = "ci/build.py %ENV_VARS% --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+def docker_run(platform, function_name, use_nvidia = false, shared_mem = '500m', env_vars = "",
+               build_args = "") {
+  def command = "ci/build.py %ENV_VARS% %BUILD_ARGS% --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
   command = command.replaceAll('%ENV_VARS%', env_vars.length() > 0 ? "-e ${env_vars}" : '')
+  command = command.replaceAll('%BUILD_ARGS%', env_vars.length() > 0 ? "${build_args}" : '')
   command = command.replaceAll('%USE_NVIDIA%', use_nvidia ? '--nvidiadocker' : '')
   command = command.replaceAll('%PLATFORM%', platform)
   command = command.replaceAll('%FUNCTION_NAME%', function_name)
@@ -278,7 +280,6 @@ def main_wrapper(args) {
     currentBuild.result = "SUCCESS"
     update_github_commit_status('SUCCESS', 'Job succeeded')
   } catch (caughtError) {
-    caughtError.printStackTrace();  
     node(NODE_UTILITY) {
       echo "caught ${caughtError}"
       err = caughtError

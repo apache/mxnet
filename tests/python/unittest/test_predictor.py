@@ -26,7 +26,7 @@ import mxnet as mx
 import mxnet.ndarray as nd
 from mxnet import gluon
 from mxnet.test_utils import assert_almost_equal
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 
 @with_seed()
 def test_predictor():
@@ -81,7 +81,3 @@ def test_load_ndarray():
     for k in nd_data.keys():
         assert_almost_equal(nd_data[k].asnumpy(), nd_load[k], rtol=1e-5, atol=1e-6)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

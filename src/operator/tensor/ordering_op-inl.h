@@ -362,7 +362,7 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
     }
   } else {
     const int nthreads(mshadow::cuda::kBaseThreadNum);
-    PartialSortSmallK<<<M, nthreads, nthreads*K*(sizeof(int)+sizeof(DType)),
+    PartialSortSmallK<<<M, nthreads, nthreads*K*(sizeof(index_t)+sizeof(DType)),
                         mshadow::Stream<gpu>::GetStream(s)>>>
                         (K, N, dat.dptr_, ind.dptr_, is_ascend);
   }

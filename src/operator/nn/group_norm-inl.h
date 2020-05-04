@@ -136,16 +136,16 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
   TBlob data_grp = data.reshape(temp_data_shape);
   const TBlob& mean_grp = mean.reshape(moments_shape);
   const TBlob& std_grp = std.reshape(moments_shape);
-  const TBlob& output = outputs[groupnorm::kOut].reshape(temp_data_shape);
+  const TBlob& output_grp = outputs[groupnorm::kOut].reshape(temp_data_shape);
 
   // Calculate data = data - mean
   BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx,
                                                      {data_grp, mean_grp},
-                                                     {kWriteTo}, {output});
+                                                     {kWriteTo}, {output_grp});
 
   // Calculate std
   const TBlob centered_out = outputs[groupnorm::kOut].reshape(red_src_shape);
-  MSHADOW_REAL_TYPE_SWITCH(output.type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(output_grp.type_flag_, DType, {
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       broadcast::Reduce<mshadow_op::sum, NDim, DType, mshadow_op::square, true>(
         s, std_, req[0], workspace, centered_out);
@@ -157,11 +157,12 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
 
   // Calculate data = data / std
   BinaryBroadcastCompute<xpu, mshadow_op::div>(attrs, ctx,
-                                               {output, std_grp},
-                                               {kWriteTo}, {output});
+                                               {output_grp, std_grp},
+                                               {kWriteTo}, {output_grp});
 
-  mxnet::TShape new_param_shape(data_shape.ndim() + 1, 1);
-  new_param_shape[1] = num_groups;
+  const TBlob& output = outputs[groupnorm::kOut];
+  mxnet::TShape new_param_shape(data_shape.ndim(), 1);
+  new_param_shape[1] = data_shape[1];
 
   const TBlob& gamma = inputs[groupnorm::kGamma].reshape(new_param_shape);
   const TBlob& beta = inputs[groupnorm::kBeta].reshape(new_param_shape);
@@ -215,8 +216,8 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
   // Reshape gamma to be broadcastable
-  mxnet::TShape new_param_shape(dshape.ndim() + 1, 1);
-  new_param_shape[1] = num_groups;
+  mxnet::TShape new_param_shape(dshape.ndim(), 1);
+  new_param_shape[1] = dshape[1];
 
   const TBlob& gamma = inputs[2].reshape(new_param_shape);
 
@@ -233,7 +234,7 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
   // Prepare the necessary shapes for reduction
   mxnet::TShape red_src_shape, red_dst_shape, red_exclude_src_shape, red_exclude_dst_shape;
   BroadcastReduceShapeCompact(temp_dshape, mean_.shape_, &red_src_shape, &red_dst_shape);
-  BroadcastReduceShapeCompact(temp_dshape, gamma.shape_,
+  BroadcastReduceShapeCompact(dshape, gamma.shape_,
                               &red_exclude_src_shape, &red_exclude_dst_shape);
 
   int N = red_src_shape.Size() / red_dst_shape.Size();
@@ -308,8 +309,8 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
   if (req[0] != kNullOp) {
     const TBlob output_ = outputs[0].reshape(data_.shape_);
     BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
-                                                    {ograd, gamma},
-                                                    {kWriteTo}, {ograd_mult});
+                                                    {inputs[0], gamma},
+                                                    {kWriteTo}, {ograd_mult.reshape(data.shape_)});
     BinaryBroadcastCompute<xpu, op::mshadow_op::div>(attrs, ctx,
                                                     {ograd_mult, std_},
                                                     {kWriteTo}, {ograd_mult});

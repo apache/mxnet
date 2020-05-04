@@ -27,15 +27,17 @@ sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed
-from nose.tools import with_setup
+from common import with_seed
 import unittest
+import pytest
+
 
 # dimension constants
 LARGE_X = 4300000000
 MEDIUM_X = 1000000000
 
 
+@pytest.mark.timeout(0)
 def test_nn():
     def check_dense():
         data = mx.nd.ones(shape=LARGE_X)
@@ -162,6 +164,7 @@ def test_nn():
     check_sequence_reverse()
 
 
+@pytest.mark.timeout(0)
 def test_tensor():
     def check_ndarray_zeros():
         a = nd.zeros(shape=LARGE_X)
@@ -370,7 +373,7 @@ def test_tensor():
 
     def check_gather():
         arr = mx.nd.ones(LARGE_X)
-        # Passing dtype=np.int64 since randomly generated indices are 
+        # Passing dtype=np.int64 since randomly generated indices are
         # very large that exceeds int32 limits.
         idx = mx.nd.random.randint(0, LARGE_X, 10, dtype=np.int64)
         # Calls gather_nd internally
@@ -463,6 +466,7 @@ def test_tensor():
     check_binary_broadcast()
 
 
+@pytest.mark.timeout(0)
 def test_basic():
     def check_elementwise():
         a = nd.ones(shape=LARGE_X)
@@ -1063,7 +1067,3 @@ def test_basic():
     check_maximum()
     check_minimum()
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

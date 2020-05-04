@@ -249,9 +249,11 @@ List of Contributors
 * [Guanxin Qiao](https://github.com/guanxinq)
 * [dithyrambe](https://github.com/dithyrambe)
 * [Piljae Chae](https://github.com/IHateMint)
+* [Jonathan Tan](https://github.com/jonatan1626)
 * [Oliver Kowalke](https://github.com/olk)
 * [Connor Goggins](https://github.com/connorgoggins)
 * [Deng, Wenqi](https://github.com/tobecontinued)
+* [Yang Shi](https://github.com/ys2843)
 
 Label Bot
 ---------

@@ -88,6 +88,3 @@ def test_lars():
     accuracy = acc.get()[1]
     assert accuracy > 0.98, "LeNet-5 training accuracy on MNIST was too low"
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

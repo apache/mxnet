@@ -96,6 +96,10 @@ void CreateGraphNDs(const nnvm::Graph& g,
       continue;
     *((*arrays)[eid]) = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
                                 shapes[eid], default_ctx, true, dtypes[eid]);
+    const nnvm::NodeAttrs& attrs = idx[idx.outputs()[i].node_id].source->attrs;
+    (*arrays)[eid]->AssignStorageInfo(
+        common::NodeAttrsGetProfilerScope(attrs),
+        attrs.name);
   }
 }
 
@@ -136,7 +140,9 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
   ograd_entries->reserve(fwd_graph->outputs.size());
   for (size_t i = 0; i < fwd_graph->outputs.size(); ++i) {
     nnvm::ObjectPtr np = Node::Create();
-    np->attrs.name = "_head_grad_" + std::to_string(i);
+    const nnvm::NodeAttrs& attrs = fwd_graph->outputs[i].node->attrs;
+    np->attrs.name = attrs.name + "_head_grad";
+    np->attrs.dict["__profiler_scope__"] = common::NodeAttrsGetProfilerScope(attrs);
     ograd_entries->emplace_back(np);
   }
 
@@ -294,7 +300,7 @@ void SetInputIndices(const nnvm::Graph& fwd_graph,
   const auto& indexed_graph = fwd_graph.indexed_graph();
   if (data_indices->ndim() || param_indices.ndim()) {
     CHECK_EQ(data_indices->ndim() + param_indices.ndim(),
-             indexed_graph.input_nodes().size());
+             static_cast<const int>(indexed_graph.input_nodes().size()));
   } else {
     std::vector<uint32_t> tmp;
     tmp.reserve(indexed_graph.input_nodes().size());
@@ -360,7 +366,7 @@ class CachedOp {
   CachedOp(
       const nnvm::Symbol& sym,
       const std::vector<std::pair<std::string, std::string> >& flags);
-  ~CachedOp();
+  virtual ~CachedOp();
   uint32_t num_inputs() const {
     return fwd_graph_.indexed_graph().input_nodes().size();
   }

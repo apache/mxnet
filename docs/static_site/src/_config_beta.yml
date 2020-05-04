@@ -41,9 +41,7 @@ github_username:  apache/incubator-mxnet
 youtube_username: apachemxnet
 
 # Build settings
-markdown: redcarpet
-redcarpet:
-  extensions: ["no_intra_emphasis", "fenced_code_blocks", "autolink", "tables", "with_toc_data"]
+markdown: kramdown
 plugins:
   - jekyll-feed
   - jekyll-seo-tag

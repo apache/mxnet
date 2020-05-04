@@ -130,9 +130,12 @@ the guide in [Math Library Selection](build_from_source#math-library-selection).
 ```bash
 rm -rf build
 mkdir -p build && cd build
-cmake ..
+cmake -GNinja ..
 cmake --build .
 ```
+
+Specify `cmake -DCMAKE_BUILD_TYPE=Debug -GNinja ..` if you wish to build the
+Debug version.
 
 Specify `cmake --build . --parallel N` to set the number of parallel compilation
 jobs. Default is derived from CPUs available.

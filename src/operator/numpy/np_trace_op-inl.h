@@ -28,6 +28,7 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <utility>
 #include <algorithm>
 #include "../mxnet_op.h"
@@ -53,6 +54,15 @@ struct NumpyTraceParam: public dmlc::Parameter<NumpyTraceParam> {
     .set_default(1)
     .describe("Axes to be used as the second axis of the 2-D sub-arrays "
               "from which the diagonals should be taken. Defaults to 1.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream offset_s, axis1_s, axis2_s;
+    offset_s << offset;
+    axis1_s << axis1;
+    axis2_s << axis2;
+    (*dict)["offset"] = offset_s.str();
+    (*dict)["axis1"] = axis1_s.str();
+    (*dict)["axis2"] = axis2_s.str();
   }
 };
 
