@@ -211,7 +211,7 @@ NNVM_REGISTER_OP(broadcast_like)
       ret.emplace_back(MakeNode("zeros_like", n->attrs.name + "_rhs_backward",
                        {n->inputs[1]}, nullptr, &n));
       return ret;
-  }})
+})t
 .add_argument("lhs", "NDArray-or-Symbol", "First input.")
 .add_argument("rhs", "NDArray-or-Symbol", "Second input.")
 .describe(R"code(Broadcasts lhs to have the same shape as rhs.
