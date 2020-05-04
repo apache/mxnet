@@ -322,7 +322,7 @@ def test_input_reorder():
         def hybrid_forward(self, F, x, y, z):
             s = x * 2
             s2 = s + z
-            s = F.broadcast_add(s, y)
+            s = F.broadcast_add(s, y * y)
             return F.dot(s, s2)
 
     for static_alloc in (False, True):
