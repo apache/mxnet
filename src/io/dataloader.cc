@@ -48,11 +48,11 @@ struct ThreadedDataLoaderParam : public dmlc::Parameter<ThreadedDataLoaderParam>
       DMLC_DECLARE_FIELD(num_workers).set_default(0)
           .describe("Number of thread workers.");
       DMLC_DECLARE_FIELD(dataset)
-          .describe("Number of thread workers.");
+          .describe("Pointer to shared Dataset.");
       DMLC_DECLARE_FIELD(sampler)
-          .describe("Number of thread workers.");
+          .describe("Pointer to Sampler.");
       DMLC_DECLARE_FIELD(batchify_fn)
-          .describe("Number of thread workers.");
+          .describe("Pointer to Batchify function.");
       DMLC_DECLARE_FIELD(pin_device_id).set_default(-1)
           .describe("If not negative, will move data to pinned memory.");
   }

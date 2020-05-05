@@ -37,7 +37,7 @@ namespace io {
 struct SequentialSamplerParam : public dmlc::Parameter<SequentialSamplerParam> {
   /*! \brief Length of the sequence. */
   size_t length;
-  /*! \brief Random seed.*/
+  /*! \brief start index.*/
   int start;
   // declare parameters
   DMLC_DECLARE_PARAMETER(SequentialSamplerParam) {
@@ -106,14 +106,10 @@ MXNET_REGISTER_IO_ITER(SequentialSampler)
 struct RandomSamplerParam : public dmlc::Parameter<RandomSamplerParam> {
   /*! \brief Length of the sequence. */
   size_t length;
-  /*! \brief Random seed.*/
-  int seed;
   // declare parameters
   DMLC_DECLARE_PARAMETER(RandomSamplerParam) {
       DMLC_DECLARE_FIELD(length)
           .describe("Length of the sequence.");
-      DMLC_DECLARE_FIELD(seed).set_default(0)
-          .describe("Random seed.");
   }
 };  // struct RandomSamplerParam
 
@@ -127,7 +123,7 @@ class RandomSampler : public IIterator<DataInst> {
     std::iota(std::begin(indices_), std::end(indices_), 0);  // fill like arange
     mshadow::Random<cpu> *ctx_rng = ResourceManager::Get()->Request(
       Context::CPU(), ResourceRequest::kRandom).get_random<cpu, real_t>(nullptr);
-    rng_.reset(new common::RANDOM_ENGINE(ctx_rng->GetSeed() + param_.seed));
+    rng_.reset(new common::RANDOM_ENGINE(ctx_rng->GetSeed()));
     out_.data.resize(1);
     BeforeFirst();
   }

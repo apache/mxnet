@@ -32,6 +32,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
+#include <thread>
 
 #include "../imperative/cached_op.h"
 #include "../imperative/naive_cached_op.h"
@@ -81,19 +82,16 @@ class RecordFileDataset final : public Dataset {
   bool GetItem(uint64_t idx, std::vector<NDArray>* ret) {
     ret->resize(1);
     auto& out = (*ret)[0];
-    auto& reader = RecordIOPair::Get()->second;
-    if (!reader) {
+    if (!reader_) {
       auto s = dmlc::Stream::Create(param_.rec_file.c_str(), "r");
-      auto& stream = RecordIOPair::Get()->first;
-      stream.reset(s);
-      reader = std::make_unique<dmlc::RecordIOReader>(s);
+      stream_.reset(s);
+      reader_ = std::make_unique<dmlc::RecordIOReader>(s);
     }
     size_t pos = idx_[static_cast<size_t>(idx)];
-    auto read_buff = ReadBuff::Get();
-    reader->Seek(pos);
-    if (reader->NextRecord(read_buff)) {
-      const char *buf = read_buff->c_str();
-      const size_t size = read_buff->size();
+    reader_->Seek(pos);
+    if (reader_->NextRecord(&read_buff_)) {
+      const char *buf = read_buff_.c_str();
+      const size_t size = read_buff_.size();
       out = NDArray(TShape({static_cast<dim_t>(size)}), Context::CPU(), false, mshadow::kInt8);
       TBlob dst = out.data();
       RunContext rctx{Context::CPU(), nullptr, nullptr, false};
@@ -106,14 +104,16 @@ class RecordFileDataset final : public Dataset {
   }
 
  private:
-  using ReaderPtr = std::unique_ptr<dmlc::RecordIOReader>;
-  using StreamPtr = std::unique_ptr<dmlc::Stream>;
-  using RecordIOPair = dmlc::ThreadLocalStore<std::pair<StreamPtr, ReaderPtr> >;
-  using ReadBuff = dmlc::ThreadLocalStore<std::string>;
   /*! \brief parameters */
   RecordFileDatasetParam param_;
   /*! \brief indices */
   std::unordered_map<size_t, size_t> idx_;
+  /*! \brief thread local recordio stream */
+  static thread_local std::unique_ptr<dmlc::Stream> stream_;
+  /*! \brief thread local recordio reader */
+  static thread_local std::unique_ptr<dmlc::RecordIOReader> reader_;
+  /*! \brief thread local read buffer */
+  static thread_local std::string read_buff_;
 };
 
 MXNET_REGISTER_IO_DATASET(RecordFileDataset)
