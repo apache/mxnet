@@ -116,12 +116,12 @@ def push_artifact(libmxnet_path, variant, libtype, license_paths = '', dependenc
   if(license_paths == null) license_paths = ''
   if(dependency_paths == null) dependency_paths = ''
 
-  sh "python3 ./cd/utils/artifact_repository.py --push --verbose --libtype ${libtype} --variant ${variant} --libmxnet ${libmxnet_path} --licenses ${license_paths} --dependencies ${dependency_paths}"
+  sh "python3 ./cd/utils/artifact_repository.py --push --verbose --libtype ${libtype} --variant ${variant} --libmxnet ${libmxnet_path} --licenses ${license_paths} --dependencies ${dependency_paths} --os ubuntu18.04"
 }
 
 // pull artifact from repository
 def pull_artifact(variant, libtype, destination = '') {
-  sh "python3 ./cd/utils/artifact_repository.py --pull --verbose --libtype ${libtype} --variant ${variant} --destination ${destination}"
+  sh "python3 ./cd/utils/artifact_repository.py --pull --verbose --libtype ${libtype} --variant ${variant} --destination ${destination} --os ubuntu18.04"
 }
 
 // pulls artifact from repository and places files in the appropriate directories
