@@ -24,7 +24,7 @@ from .exp_family import ExponentialFamily
 from .constraint import Positive, Simplex
 from .utils import getF, gammaln, digamma
 
-# FIXME: Implement `entropy()`.
+
 class Dirichlet(ExponentialFamily):
     has_grad = False
     support = Simplex()

@@ -21,7 +21,7 @@
 __all__ = ['Bernoulli']
 
 from .exp_family import ExponentialFamily
-from .utils import prob2logit, logit2prob, getF, cached_property
+from .utils import prob2logit, logit2prob, getF, cached_property, sample_n_shape_converter
 from .constraint import Boolean, Interval, Real
 
 
@@ -114,6 +114,9 @@ class Bernoulli(ExponentialFamily):
 
     def sample(self, size=None):
         return self.F.npx.random.bernoulli(self.prob, self.logit, size)
+
+    def sample_n(self, size=None):
+        return self.F.npx.random.bernoulli(self.prob, self.logit, sample_n_shape_converter(size))
 
     @property
     def _natural_params(self):

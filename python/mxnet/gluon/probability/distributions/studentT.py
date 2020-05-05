@@ -26,7 +26,7 @@ from .chi2 import Chi2
 from .utils import getF, gammaln, digamma, sample_n_shape_converter
 from numpy import nan, inf, pi
 
-# FIXME: Implement entropy
+
 class StudentT(Distribution):
 
     support = Real()

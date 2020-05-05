@@ -126,5 +126,10 @@ class Binomial(Distribution):
         return F.npx.random.bernoulli(logit=expanded_logit).sum(-1)
 
     def sample_n(self, size=None):
-        # TODO: Implement sample_n for Bernoulli.
-        raise NotImplementedError("binomial.sample_n() not implemented")
+        F = self.F
+        logit = self.logit
+        expanded_logit = F.np.repeat(F.np.expand_dims(logit, -1), int(self.n), -1)
+        return F.npx.random.bernoulli(
+                logit=expanded_logit,
+                size=sample_n_shape_converter(size)
+                ).sum(-1)
