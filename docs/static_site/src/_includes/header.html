@@ -21,6 +21,23 @@
           $(this).addClass("page-current");
         }
       });
+
+      $("#search-icon").click(function () {
+        $(".trigger").hide();
+        $("#global-search-form").css("display", "inline-block");
+        $("#global-search").animate({
+          width: "300px"
+        }).focus();
+      });
+
+      $("#global-search").blur(function () {
+        $(this).animate({
+          width: "0px"
+        }, function () {
+          $("#global-search-form").hide();
+          $(".trigger").show();
+        });
+      });
     })
   </script>
   <div class="wrapper">
@@ -60,6 +77,12 @@
             <a href="/versions/0.11.0/">0.11.0</a>
           </div>
         </div>
+      </div>
+      <div class="search-border">
+        <div id="search-icon"></div>
+        <form id="global-search-form">
+          <input id="global-search" type="text" title="Search" placeholder="Search" />
+        </form>
       </div>
     </nav>
   </div>

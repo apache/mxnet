@@ -10,48 +10,90 @@
   {%- if jekyll.environment == 'production' and site.google_analytics -%}
     {%- include google-analytics.html -%}
   {%- endif -%}
-
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.css" />
   <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-
+  <script src="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.js"></script>
+  <script src="{{'/assets/js/globalSearch.js'|relative_url}}"></script>
   <script src="{{'/assets/js/clipboard.js'|relative_url}}"></script>
   <script src="{{'/assets/js/copycode.js'|relative_url}}"></script>
   <style>
-  .dropdown-option-active {
+    .dropdown-option-active {
       color: #FF4500 !important;
       font-weight: lighter;
-  }
+    }
 
-  .dropdown {
-    position: relative;
-    display: inline-block;
-  }
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
 
-  .dropdown-content {
-    display: none;
-    position: absolute;
-    background-color: #f9f9f9;
-    min-width: 160px;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-    padding: 12px 16px;
-    z-index: 1;
-    text-align: left;
-  }
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      background-color: #f9f9f9;
+      min-width: 160px;
+      box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+      padding: 12px 16px;
+      z-index: 1;
+      text-align: left;
+    }
 
-  .dropdown:hover .dropdown-content {
-    display: block;
-  }
+    .dropdown:hover .dropdown-content {
+      display: block;
+    }
 
-  .dropdown-header {
+    .dropdown-header {
       color: #FFFFFF;
       display: inline-flex;
-  }
+    }
 
-  .dropdown-caret {
+    .dropdown-caret {
       width: 18px;
-  }
+    }
 
-  .dropdown-caret-path {
+    .dropdown-caret-path {
       fill: #FFFFFF;
-  }
+    }
+
+    .trigger {
+      display: inline-block;
+    }
+
+    .search-border {
+      display: inline-block;
+      padding-left: 25px;
+    }
+
+    #global-search {
+      width: 0px;
+      border: 0px;
+      background-color: transparent;
+      border-bottom: 1px solid rgba(0, 0, 0, .12);
+      outline: none;
+      font-size: 1em;
+      top: 20px;
+      color: "#66666";
+      display: inline-block;
+    }
+
+    #global-search::placeholder {
+      color: #666666;
+    }
+
+    #search-icon {
+      background: url(/assets/img/search-icon.svg) center no-repeat;
+      background-size: 1em;
+      height: 30px;
+      width: 30px;
+      position: relative;
+      top: 10px;
+      cursor: pointer;
+      display: inline-block;
+    }
+
+    #global-search-form {
+      display: none;
+      padding: 5px;
+    }
   </style>
 </head>
