@@ -82,16 +82,19 @@ class RecordFileDataset final : public Dataset {
   bool GetItem(uint64_t idx, std::vector<NDArray>* ret) {
     ret->resize(1);
     auto& out = (*ret)[0];
-    if (!reader_) {
+    static thread_local std::unique_ptr<dmlc::Stream> stream;
+    static thread_local std::unique_ptr<dmlc::RecordIOReader> reader;
+    if (!reader) {
       auto s = dmlc::Stream::Create(param_.rec_file.c_str(), "r");
-      stream_.reset(s);
-      reader_ = std::make_unique<dmlc::RecordIOReader>(s);
+      stream.reset(s);
+      reader = std::make_unique<dmlc::RecordIOReader>(s);
     }
     size_t pos = idx_[static_cast<size_t>(idx)];
-    reader_->Seek(pos);
-    if (reader_->NextRecord(&read_buff_)) {
-      const char *buf = read_buff_.c_str();
-      const size_t size = read_buff_.size();
+    reader->Seek(pos);
+    static thread_local std::string read_buff;
+    if (reader->NextRecord(&read_buff)) {
+      const char *buf = read_buff.c_str();
+      const size_t size = read_buff.size();
       out = NDArray(TShape({static_cast<dim_t>(size)}), Context::CPU(), false, mshadow::kInt8);
       TBlob dst = out.data();
       RunContext rctx{Context::CPU(), nullptr, nullptr, false};
@@ -108,12 +111,6 @@ class RecordFileDataset final : public Dataset {
   RecordFileDatasetParam param_;
   /*! \brief indices */
   std::unordered_map<size_t, size_t> idx_;
-  /*! \brief thread local recordio stream */
-  static thread_local std::unique_ptr<dmlc::Stream> stream_;
-  /*! \brief thread local recordio reader */
-  static thread_local std::unique_ptr<dmlc::RecordIOReader> reader_;
-  /*! \brief thread local read buffer */
-  static thread_local std::string read_buff_;
 };
 
 MXNET_REGISTER_IO_DATASET(RecordFileDataset)
