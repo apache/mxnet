@@ -21,23 +21,6 @@
           $(this).addClass("page-current");
         }
       });
-
-      $("#search-icon").click(function () {
-        $(".trigger").hide();
-        $("#global-search-form").css("display", "inline-block");
-        $("#global-search").animate({
-          width: "300px"
-        }).focus();
-      });
-
-      $("#global-search").blur(function () {
-        $(this).animate({
-          width: "0px"
-        }, function () {
-          $("#global-search-form").hide();
-          $(".trigger").show();
-        });
-      });
     })
   </script>
   <div class="wrapper">
