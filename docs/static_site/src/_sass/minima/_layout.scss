@@ -37,6 +37,10 @@
   .nav-trigger {
     display: none;
   }
+  
+  .search-border {
+    display: inline-block;
+  }
 
   .menu-icon {
     display: none;
@@ -79,6 +83,10 @@
       height: 36px;
       z-index: 2;
       cursor: pointer;
+    }
+
+    .search-border {
+      display: none;
     }
 
     .menu-icon {
