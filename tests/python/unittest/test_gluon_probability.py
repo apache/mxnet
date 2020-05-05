@@ -2060,6 +2060,17 @@ def test_gluon_kl():
         dist = mgp.OneHotCategorical(event_shape, prob=prob)
         _test_zero_kl(dist, batch_shape)
 
+    # Test kl between different distributions
+    for shape in shapes:
+        low = np.random.uniform(-1, 1, shape)
+        high = low + np.random.uniform(0.5, 1.5, shape)
+        uniform = mgp.Uniform(low, high)
+        loc = np.random.uniform(-1, 1, shape)
+        scale = np.random.uniform(0.5, 1.5, shape)
+        normal = mgp.Normal(loc, scale)
+        kl_u_n = mgp.kl_divergence(uniform, normal)
+        assert kl_u_n.shape == low.shape
+
 
 @with_seed()
 @use_np

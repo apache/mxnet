@@ -328,3 +328,14 @@ def _kl_mvn_mvn(p, q):
             ) * -0.5
     n = F.np.ones_like(diff).sum(-1)
     return 0.5 * (term1 + term2 + term3 - n)
+
+
+@register_kl(Uniform, Normal)
+def _kl_uniform_normal(p, q):
+    import math
+    F = p.F
+    common_term = p.high - p.low
+    t1 = F.np.log(math.sqrt(math.pi * 2) * q.scale / common_term)
+    t2 = (common_term) ** 2 / 12
+    t3 = ((p.high + p.low - 2 * q.loc) / 2) ** 2
+    return t1 + 0.5 * (t2 + t3) / (q.scale ** 2)
