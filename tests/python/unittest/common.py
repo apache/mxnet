@@ -31,6 +31,13 @@ import models
 from contextlib import contextmanager
 import pytest
 from tempfile import TemporaryDirectory
+import locale
+
+xfail_when_nonstandard_decimal_point = pytest.mark.xfail(
+    locale.localeconv()["decimal_point"] != ".",
+    reason="Some operators break when the decimal point is set to anything other than \".\". These "
+    "operators should be rewritten to utilize the new FFI. Please see #18097 for more information."
+)
 
 def assertRaises(expected_exception, func, *args, **kwargs):
     try:
