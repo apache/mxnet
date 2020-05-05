@@ -34,17 +34,17 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu')
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_centos7_cpu(),
-    custom_steps.compile_centos7_cpu_make(),
-    custom_steps.compile_centos7_cpu_mkldnn()
+    custom_steps.compile_centos7_cpu('centos7_cpu'),
+    custom_steps.compile_centos7_cpu_make('centos7_cpu_make'),
+    custom_steps.compile_centos7_cpu_mkldnn(),
+    custom_steps.compile_static_scala_cpu(),
+    custom_steps.compile_static_python_cpu(),
+    custom_steps.compile_static_python_cpu_cmake()
   ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.test_centos7_python3_cpu(),
-    custom_steps.test_centos7_scala_cpu(),
-    custom_steps.test_static_scala_cpu(),
-    custom_steps.test_static_python_cpu(),
-    custom_steps.test_static_python_cpu_cmake(),
+    custom_steps.test_centos7_python3_cpu('centos7_cpu'),
+    custom_steps.test_centos7_scala_cpu('centos7_cpu_make')
   ])
 }
 ,

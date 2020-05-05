@@ -35,18 +35,18 @@ utils.assign_node_labels(utility: 'restricted-utility', linux_cpu: 'restricted-m
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_unix_lite()
+    custom_steps.compile_unix_lite('libmxnet')
   ])
 
   utils.parallel_stage('Build Docs', [
     custom_steps.docs_jekyll(),
-    custom_steps.docs_c(),
-    custom_steps.docs_python(),
-    custom_steps.docs_julia(),
-    custom_steps.docs_r(),
-    custom_steps.docs_scala(),
-    custom_steps.docs_java(),
-    custom_steps.docs_clojure()
+    custom_steps.docs_c('libmxnet'),
+    custom_steps.docs_python('libmxnet'),
+    custom_steps.docs_julia('libmxnet'),
+    custom_steps.docs_r('libmxnet'),
+    custom_steps.docs_scala('libmxnet'),
+    custom_steps.docs_java('libmxnet'),
+    custom_steps.docs_clojure('libmxnet')
   ])
 
   utils.parallel_stage('Prepare', [
