@@ -34,32 +34,33 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_unix_mkldnn_gpu(),
-    custom_steps.compile_unix_mkldnn_nocudnn_gpu(),
-    custom_steps.compile_unix_full_gpu(),
-    custom_steps.compile_unix_full_gpu_make(),
-    custom_steps.compile_unix_cmake_gpu(),
-    custom_steps.compile_unix_tensorrt_gpu(),
-    custom_steps.compile_unix_int64_gpu(),
-    custom_steps.compile_unix_cmake_gpu_no_rtc(),
-    custom_steps.compile_unix_full_gpu_mkldnn_cpp_test()
+    custom_steps.compile_unix_mkldnn_gpu('mkldnn_gpu'),
+    custom_steps.compile_unix_mkldnn_nocudnn_gpu('mkldnn_gpu_nocudnn'),
+    custom_steps.compile_unix_full_gpu('gpu'),
+    custom_steps.compile_unix_full_gpu_make('gpu_make'),
+    custom_steps.compile_unix_full_gpu_debug('gpu_debug'),
+    custom_steps.compile_unix_cmake_gpu('cmake_gpu'),
+    custom_steps.compile_unix_tensorrt_gpu('tensorrt'),
+    custom_steps.compile_unix_int64_gpu('gpu_int64'),
+    custom_steps.compile_unix_cmake_gpu_no_rtc('gpu_no_rtc'),
+    custom_steps.compile_unix_full_gpu_mkldnn_cpp_test('gpu_mkldnn_cpp_test_make')
   ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.test_unix_python3_gpu(),
-    custom_steps.test_unix_python3_quantize_gpu(),
-    custom_steps.test_unix_python3_mkldnn_gpu(),
-    custom_steps.test_unix_python3_mkldnn_nocudnn_gpu(),
-    custom_steps.test_unix_python3_tensorrt_gpu(),
-    custom_steps.test_unix_perl_gpu(),
-    custom_steps.test_unix_r_gpu(),
-    custom_steps.test_unix_cpp_gpu(),
-    custom_steps.test_unix_python3_integration_gpu(),
-    custom_steps.test_unix_cpp_package_gpu(),
-    custom_steps.test_unix_scala_gpu(),
+    custom_steps.test_unix_python3_gpu('gpu'),
+    custom_steps.test_unix_python3_quantize_gpu('gpu'),
+    custom_steps.test_unix_python3_mkldnn_gpu('mkldnn_gpu'),
+    custom_steps.test_unix_python3_mkldnn_nocudnn_gpu('mkldnn_gpu_nocudnn'),
+    custom_steps.test_unix_python3_tensorrt_gpu('tensorrt'),
+    custom_steps.test_unix_perl_gpu('gpu_make'),
+    custom_steps.test_unix_r_gpu('gpu'),
+    custom_steps.test_unix_cpp_gpu('cmake_gpu'),
+    custom_steps.test_unix_python3_integration_gpu('gpu'),
+    custom_steps.test_unix_cpp_package_gpu('gpu_make'),
+    custom_steps.test_unix_scala_gpu('gpu_make'),
     // TODO(szha): fix and reenable the hanging issue. tracked in #18098
-    // custom_steps.test_unix_distributed_kvstore_gpu(),
-    custom_steps.test_unix_capi_cpp_package(),
+    // custom_steps.test_unix_distributed_kvstore_gpu('gpu'),
+    custom_steps.test_unix_capi_cpp_package('gpu_mkldnn_cpp_test_make'),
   ]) 
 }
 ,

@@ -761,6 +761,23 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     ninja
 }
 
+build_ubuntu_gpu_cuda101_cudnn7_debug() {
+    set -ex
+    cd /work/build
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_CUDA=ON \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DUSE_CUDNN=ON \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_CPP_PACKAGE=ON \
+        -DUSE_DIST_KVSTORE=ON \
+        -DBUILD_CYTHON_MODULES=ON \
+        -G Ninja /work/mxnet
+    ninja
+}
+
 build_ubuntu_gpu_cuda101_cudnn7_make() {
     set -ex
     export CC=gcc-7

@@ -34,11 +34,11 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu')
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_unix_lite()
+    custom_steps.compile_unix_lite('libmxnet')
   ])
 
   utils.parallel_stage('R Docs', [
-    custom_steps.docs_r()
+    custom_steps.docs_r('libmxnet')
 
   ])
 
