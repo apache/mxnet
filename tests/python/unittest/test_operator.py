@@ -4581,7 +4581,40 @@ def test_blockgrad():
 
 
 @with_seed()
-def test_take():
+def test_take_autograd_req():
+    row_len = 2
+    col_len = 8
+    shape = (row_len, col_len)
+    sc = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype="float32")
+    sc.attach_grad()
+    i = mx.nd.array([0], dtype="int64")
+    j = mx.nd.array([0], dtype="int64")
+    with mx.autograd.record(train_mode=True):
+        xs = []
+        for _ in range(row_len):
+            x_i = []
+            for _ in range(col_len):
+                x_ij = sc.take(i).squeeze(axis=0).take(j).squeeze(axis=0)
+                x_i.append(x_ij)
+                j = j + 1
+            i = i + 1
+            j = j - col_len  # reset j
+            xs.append(mx.nd.stack(*x_i))
+        x = mx.nd.stack(*xs)
+        x = x.sum()
+
+    x.backward()
+    assert_almost_equal(np.ones(sc.grad.shape), sc.grad)
+
+@with_seed()
+@pytest.mark.parametrize('mode,out_of_range', [
+    ('clip', True),
+    ('wrap', True),
+    ('raise', False)
+])
+@pytest.mark.parametrize('data_ndim', range(1, 5))
+@pytest.mark.parametrize('idx_ndim', range(1, 4))
+def test_take(mode, out_of_range, data_ndim, idx_ndim):
     def grad_helper(grad_in, axis, idx):
         if axis == 0:
             if axis == len(grad_in.shape) - 1:
@@ -4608,89 +4641,55 @@ def test_take():
         else:
             raise ValueError("axis %d is not supported..." % axis)
 
-    def check_output_n_grad(data_shape, idx_shape, axis, mode, out_of_range=True):
-        data = mx.sym.Variable('a')
-        idx = mx.sym.Variable('indices')
-        idx = mx.sym.BlockGrad(idx)
-        result = mx.sym.take(a=data, indices=idx, axis=axis, mode=mode)
-        exe = result.simple_bind(default_context(), a=data_shape,
-                                 indices=idx_shape, axis=axis, mode=mode)
-        data_real = np.random.normal(size=data_shape).astype('float32')
-        if out_of_range:
-            idx_real = np.random.randint(low=-data_shape[axis], high=data_shape[axis], size=idx_shape)
-            if mode == 'raise':
-                idx_real[idx_real == 0] = 1
-                idx_real *= data_shape[axis]
+    for axis in range(-data_ndim, data_ndim):
+        data_shape = ()
+        for _ in range(data_ndim):
+            data_shape += (np.random.randint(low=1, high=5), )
+        idx_shape = ()
+        for _ in range(idx_ndim):
+            idx_shape += (np.random.randint(low=1, high=5), )
+
+    data = mx.sym.Variable('a')
+    idx = mx.sym.Variable('indices')
+    idx = mx.sym.BlockGrad(idx)
+    result = mx.sym.take(a=data, indices=idx, axis=axis, mode=mode)
+    exe = result.simple_bind(default_context(), a=data_shape,
+                             indices=idx_shape, axis=axis, mode=mode)
+    data_real = np.random.normal(size=data_shape).astype('float32')
+    if out_of_range:
+        idx_real = np.random.randint(low=-data_shape[axis], high=data_shape[axis], size=idx_shape)
+        if mode == 'raise':
+            idx_real[idx_real == 0] = 1
+            idx_real *= data_shape[axis]
+    else:
+        idx_real = np.random.randint(low=0, high=data_shape[axis], size=idx_shape)
+    if axis < 0:
+        axis += len(data_shape)
+
+    grad_out = np.ones((data_shape[0:axis] if axis > 0 else ()) + idx_shape + (data_shape[axis+1:] if axis < len(data_shape) - 1 else ()), dtype='float32')
+    grad_in = np.zeros(data_shape, dtype='float32')
+
+    exe.arg_dict['a'][:] = mx.nd.array(data_real)
+    exe.arg_dict['indices'][:] = mx.nd.array(idx_real)
+    exe.forward(is_train=True)
+    if out_of_range and mode == 'raise':
+        try:
+            mx_out = exe.outputs[0].asnumpy()
+        except MXNetError as e:
+            return
         else:
-            idx_real = np.random.randint(low=0, high=data_shape[axis], size=idx_shape)
-        if axis < 0:
-            axis += len(data_shape)
+            # Did not raise exception
+            assert False, "did not raise %s" % MXNetError.__name__
 
-        grad_out = np.ones((data_shape[0:axis] if axis > 0 else ()) + idx_shape + (data_shape[axis+1:] if axis < len(data_shape) - 1 else ()), dtype='float32')
-        grad_in = np.zeros(data_shape, dtype='float32')
+    assert_almost_equal(exe.outputs[0], np.take(data_real, idx_real, axis=axis, mode=mode))
 
-        exe.arg_dict['a'][:] = mx.nd.array(data_real)
-        exe.arg_dict['indices'][:] = mx.nd.array(idx_real)
-        exe.forward(is_train=True)
-        if out_of_range and mode == 'raise':
-            try:
-                mx_out = exe.outputs[0].asnumpy()
-            except MXNetError as e:
-                return
-            else:
-                # Did not raise exception
-                assert False, "did not raise %s" % MXNetError.__name__
+    for i in np.nditer(idx_real):
+        if mode == 'clip':
+            i = np.clip(i, 0, data_shape[axis])
+        grad_helper(grad_in, axis, i)
 
-        assert_almost_equal(exe.outputs[0], np.take(data_real, idx_real, axis=axis, mode=mode))
-
-        for i in np.nditer(idx_real):
-            if mode == 'clip':
-                i = np.clip(i, 0, data_shape[axis])
-            grad_helper(grad_in, axis, i)
-
-        exe.backward([mx.nd.array(grad_out)])
-        assert_almost_equal(exe.grad_dict['a'], grad_in)
-
-    def check_autograd_req():
-        row_len = 2
-        col_len = 8
-        shape = (row_len, col_len)
-        sc = mx.nd.random.uniform(-1.0, 1.0, shape=shape, dtype="float32")
-        sc.attach_grad()
-        i = mx.nd.array([0], dtype="int64")
-        j = mx.nd.array([0], dtype="int64")
-        with mx.autograd.record(train_mode=True):
-            xs = []
-            for _ in range(row_len):
-                x_i = []
-                for _ in range(col_len):
-                    x_ij = sc.take(i).squeeze(axis=0).take(j).squeeze(axis=0)
-                    x_i.append(x_ij)
-                    j = j + 1
-                i = i + 1
-                j = j - col_len  # reset j
-                xs.append(mx.nd.stack(*x_i))
-            x = mx.nd.stack(*xs)
-            x = x.sum()
-
-        x.backward()
-        assert_almost_equal(np.ones(sc.grad.shape), sc.grad)
-
-    for mode in ['clip', 'wrap', 'raise']:
-        for data_ndim in range(1, 5):
-            for idx_ndim in range(1, 4):
-                for axis in range(-data_ndim, data_ndim):
-                    data_shape = ()
-                    for _ in range(data_ndim):
-                        data_shape += (np.random.randint(low=1, high=5), )
-                    idx_shape = ()
-                    for _ in range(idx_ndim):
-                        idx_shape += (np.random.randint(low=1, high=5), )
-                    if mode == 'raise':
-                        check_output_n_grad(data_shape, idx_shape, axis, 'raise', False)
-                    check_output_n_grad(data_shape, idx_shape, axis, mode)
-
-    check_autograd_req()
+    exe.backward([mx.nd.array(grad_out)])
+    assert_almost_equal(exe.grad_dict['a'], grad_in)
 
 
 @with_seed()
