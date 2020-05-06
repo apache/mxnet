@@ -3939,6 +3939,15 @@ def test_np_random_grad():
                 assert scale.grad.shape == shape2
                 assert_almost_equal(loc.grad.asnumpy().sum(), _np.ones(out_shape).sum(), rtol=1e-3, atol=1e-5)
 
+        for (loc, scale) in [(2, (2,3)), ((2,3), 2), ((2,3), (2,3))]:
+            if isinstance(loc, tuple):
+                loc = np.ones(loc)
+            if isinstance(scale, tuple):
+                scale = np.ones(scale)
+            mx_out = getattr(np.random, op_name)(loc, scale)
+            np_out = getattr(_np.random, op_name)(loc, scale)
+            assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+
 
 @with_seed()
 @use_np
