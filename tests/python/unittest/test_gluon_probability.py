@@ -1957,6 +1957,9 @@ def test_independent():
 @with_seed()
 @use_np
 def test_gluon_kl():
+    # could cause longer runtime and potential flaky tests
+    monte_carlo_test = False 
+    repeated_times = 50000
     shapes = [(), (1,), (2, 3), 6]
     for shape in shapes:
         low = np.random.uniform(-1, 1, shape)
@@ -2068,8 +2071,12 @@ def test_gluon_kl():
         loc = np.random.uniform(-1, 1, shape)
         scale = np.random.uniform(0.5, 1.5, shape)
         normal = mgp.Normal(loc, scale)
-        kl_u_n = mgp.kl_divergence(uniform, normal)
-        assert kl_u_n.shape == low.shape
+        kl = mgp.kl_divergence(uniform, normal)
+        assert kl.shape == low.shape
+        if monte_carlo_test:
+            mc_approx = mgp.empirical_kl(uniform, normal, repeated_times)
+            assert_almost_equal(mc_approx.asnumpy(), kl.asnumpy(), atol=1e-1,
+                        rtol=1e-1, use_broadcast=False)
 
 
 @with_seed()
