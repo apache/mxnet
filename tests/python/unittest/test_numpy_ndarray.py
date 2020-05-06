@@ -20,7 +20,6 @@ from __future__ import absolute_import
 from __future__ import division
 import itertools
 import os
-import unittest
 import pytest
 import numpy as _np
 import mxnet as mx
@@ -1132,10 +1131,9 @@ def test_np_multinomial():
 
 
 @with_seed()
-@unittest.skipUnless(is_op_runnable(), "Comparison ops can only run on either CPU instances, or GPU instances with"
-                                       " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
+@pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
+                                                 " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
-@unittest.skip("NumpyBooleanAssignForwardCPU broken: https://github.com/apache/incubator-mxnet/issues/17990")
 @pytest.mark.serial
 def test_np_ndarray_boolean_indexing():
     def test_single_bool_index():

@@ -15,18 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 import os
-import unittest
+import pytest
 
 import mxnet as mx
 import sys
 
 from subprocess import Popen, PIPE
 
-
+@pytest.mark.skipif(not mx.context.num_gpus(), reason='Test only applicable to machines with GPUs')
 def test_nvtx_ranges_present_in_profile():
-
-    if not mx.context.num_gpus():
-        unittest.skip('Test only applicable to machines with GPUs')
 
     # Build a system independent wrapper to execute simple_forward with nvprof
     # This requires nvprof to be on your path (which should be the case for most GPU workstations with cuda installed).

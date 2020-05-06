@@ -32,7 +32,6 @@ from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
 from common import run_in_spawned_process, xfail_when_nonstandard_decimal_separator
 import pytest
-import unittest
 import os
 
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
@@ -2084,7 +2083,7 @@ def test_convolution_grouping():
                 np.testing.assert_allclose(arr1.asnumpy(), arr2.asnumpy(), rtol=1e-3, atol=1e-3)
 
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/14052")
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/14052")
 @with_seed()
 def test_depthwise_convolution():
     for dim in [1,2]:
@@ -4058,7 +4057,7 @@ def check_sequence_func(ftype, mask_value=0, axis=0):
 
 
 @with_seed()
-@unittest.skip("Flaky test: https://github.com/apache/incubator-mxnet/issues/11395")
+@pytest.mark.skip(reason="Flaky test: https://github.com/apache/incubator-mxnet/issues/11395")
 def test_sequence_last():
     check_sequence_func("last", axis=0)
     check_sequence_func("last", axis=1)
@@ -6016,7 +6015,7 @@ def test_custom_op():
         x = mx.nd.Custom(length=10, depth=10, op_type="no_input_op")
     assert_almost_equal(x, np.ones(shape=(10, 10), dtype=np.float32))
 
-@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/17467")
+@pytest.mark.skip(reason="Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/17467")
 @with_seed()
 def test_custom_op_fork():
     # test custom operator fork
@@ -6281,7 +6280,7 @@ def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w,
 
     return output_offset
 
-@unittest.skip("Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/11713")
+@pytest.mark.skip(reason="Flaky test, tracked at https://github.com/apache/incubator-mxnet/issues/11713")
 @with_seed()
 def test_deformable_psroipooling():
     sample_per_part = 4
@@ -6924,7 +6923,7 @@ def test_laop_5():
 
 # Tests for linalg.inverse
 @with_seed()
-@unittest.skip("Test crashes https://github.com/apache/incubator-mxnet/issues/15975")
+@pytest.mark.skip(reason="Test crashes https://github.com/apache/incubator-mxnet/issues/15975")
 def test_laop_6():
     dtype = np.float64
     rtol_fw = 1e-7
@@ -7161,7 +7160,7 @@ def test_dropout():
         # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
+@pytest.mark.skip(reason="test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
 @with_seed()
 def test_scatter_gather_nd():
     def check(data, idx):
@@ -8358,7 +8357,7 @@ def test_op_all_names_monitor():
         del os.environ['MXNET_SUBGRAPH_BACKEND']
 
 @with_seed()
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/13915")
+@pytest.mark.skip(reason="test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/13915")
 def test_activation():
     shapes = [(9,), (9, 10), (9, 10, 10), (1, 9, 10, 10)]
     dtype_l = [np.float64, np.float32, np.float16]
