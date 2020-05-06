@@ -24,6 +24,7 @@ from .distribution import Distribution
 from .constraint import Real, Interval
 from .utils import getF, sample_n_shape_converter
 
+# FIXME: doc
 class Uniform(Distribution):
     # Reparameterization gradient for Uniform is currently not implemented
     # in the backend at this moment.

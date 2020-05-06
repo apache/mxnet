@@ -29,6 +29,18 @@ from numbers import Number
 
 
 class Cauchy(Distribution):
+    r"""Create a relaxed Cauchy distribution object.
+
+    Parameters
+    ----------
+    loc : Tensor or scalar, default 0
+        mode or median of the distribution
+    scale : Tensor or scalar, default 1
+        half width at half maximum
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
     has_grad = True
     support = Real()
     arg_constraints = {'loc': Real(), 'scale': Real()}

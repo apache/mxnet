@@ -1100,7 +1100,6 @@ def test_gluon_gumbel():
                             rtol=1e-3, use_broadcast=False)
 
 
-@unittest.skip("Gumbel broken")
 @with_seed()
 @use_np
 def test_gluon_multinomial():
@@ -1329,7 +1328,6 @@ def test_gluon_bernoulli():
         _test_zero_kl(dist, shape)
 
 
-@unittest.skip("Logistic broken")
 @with_seed()
 @use_np
 def test_relaxed_bernoulli():
@@ -1380,7 +1378,6 @@ def test_relaxed_bernoulli():
         assert mx_out.shape == desired_shape
 
 
-@unittest.skip("Gumbel not working")
 @with_seed()
 @use_np
 def test_gluon_categorical():
@@ -1477,7 +1474,6 @@ def test_gluon_categorical():
             assert mx_out.shape == desired_shape
 
 
-@unittest.skip("Gumbel broken")
 @with_seed()
 @use_np
 def test_gluon_one_hot_categorical():
@@ -1552,7 +1548,6 @@ def test_gluon_one_hot_categorical():
             assert mx_out.shape == (event_shape,) + desired_shape + (event_shape,)
 
 
-@unittest.skip("Gumbel broken")
 @with_seed()
 @use_np
 def test_relaxed_one_hot_categorical():
@@ -1719,7 +1714,6 @@ def test_gluon_mvn():
                         rtol=1e-3, use_broadcast=False)
 
 
-@unittest.skip("Normal broken")
 @with_seed()
 @use_np
 def test_gluon_half_normal():
@@ -1958,7 +1952,7 @@ def test_independent():
 @use_np
 def test_gluon_kl():
     # could cause longer runtime and potential flaky tests
-    monte_carlo_test = False 
+    monte_carlo_test = True 
     repeated_times = 50000
     shapes = [(), (1,), (2, 3), 6]
     for shape in shapes:

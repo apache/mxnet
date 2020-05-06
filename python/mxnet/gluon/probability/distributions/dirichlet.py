@@ -26,6 +26,15 @@ from .utils import getF, gammaln, digamma
 
 
 class Dirichlet(ExponentialFamily):
+    r"""Create a Dirichlet distribution object.
+
+    Parameters
+    ----------
+    alpha : Tensor or scalar
+       Shape parameter of the distribution
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+    """
     has_grad = False
     support = Simplex()
     arg_constraints = {'alpha', Positive()}

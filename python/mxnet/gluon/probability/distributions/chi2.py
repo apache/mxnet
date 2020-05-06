@@ -24,6 +24,17 @@ from .gamma import Gamma
 from .constraint import Positive
 
 class Chi2(Gamma):
+    r"""Create a Chi2 distribution object.
+    Chi2(df) is equivalent to Gamma(shape=df / 2, scale=2)
+
+    Parameters
+    ----------
+    df : Tensor or scalar, default 0
+        Shape parameter of the distribution.
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
     arg_constraints = {'df': Positive()}
 
     def __init__(self, df, F=None, validate_args=None):

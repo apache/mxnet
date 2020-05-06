@@ -25,7 +25,15 @@ from .constraint import Real, Positive
 from .utils import getF, sample_n_shape_converter, cached_property
 
 class Exponential(ExponentialFamily):
+    r"""Create a Exponential distribution object parameterized by `scale`.
 
+    Parameters
+    ----------
+    scale : Tensor or scalar
+       Scale of the distribution. (scale = 1 /rate)
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+    """
     has_grad = True
     support = Positive()
     arg_constraints = {'scale' : Positive()}

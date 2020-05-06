@@ -28,6 +28,7 @@ from .utils import getF, sample_n_shape_converter, gammaln
 # Euler-Mascheroni constant 
 from numpy import euler_gamma
 
+# FIXME: doc
 class Weibull(TransformedDistribution):
 
     has_grad = True

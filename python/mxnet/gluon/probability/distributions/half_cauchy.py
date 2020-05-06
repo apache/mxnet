@@ -30,6 +30,18 @@ from numpy import inf
 
 
 class HalfCauchy(TransformedDistribution):
+    r"""Create a half cauchy object, where
+        X ~ Cauchy(0, scale)
+        Y = |X| ~ HalfCauchy(scale)
+
+    Parameters
+    ----------
+    scale : Tensor or scalar, default 1
+        Scale of the full Cauchy distribution.
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
 
     has_grad = True
     support = Positive()

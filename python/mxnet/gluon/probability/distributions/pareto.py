@@ -26,6 +26,8 @@ from .constraint import Positive
 from ..transformation import ExpTransform, AffineTransform
 from .utils import getF, sample_n_shape_converter
 
+
+# FIXME: doc
 class Pareto(TransformedDistribution):
 
     has_grad = True

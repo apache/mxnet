@@ -24,7 +24,7 @@ from .distribution import Distribution
 from .constraint import Real, PositiveDefinite, LowerCholesky
 from .utils import getF, cached_property
 
-
+# FIXME: doc
 class MultivariateNormal(Distribution):
     has_grad = True
     support = Real()

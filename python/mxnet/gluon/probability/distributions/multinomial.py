@@ -26,6 +26,8 @@ from .utils import getF, cached_property, logit2prob, prob2logit, gammaln
 from .constraint import Simplex, Real, IntegerInterval
 from numbers import Number
 
+
+# FIXME: doc
 class Multinomial(Distribution):
     arg_constraints = {'prob': Simplex(), 'logit': Real()}
 

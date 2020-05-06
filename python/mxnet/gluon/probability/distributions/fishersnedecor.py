@@ -27,6 +27,18 @@ from .utils import getF, gammaln
 from numpy import nan
 
 class FisherSnedecor(Distribution):
+    r"""Create a FisherSnedecor distribution object, often known as F distribution.
+    
+    Parameters
+    ----------
+    df1 : Tensor or scalar
+        degree of freedom parameter 1
+    scale : Tensor or scalar
+        degree of freedom parameter 2
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
     support = Positive()
     arg_constraints = {'df1': Positive(), 'df2': Positive()}
 

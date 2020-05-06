@@ -25,6 +25,17 @@ from .constraint import UnitInterval, Positive
 from .utils import getF, sample_n_shape_converter, gammaln, digamma
 
 class Beta(ExponentialFamily):
+    r"""Create a Beta distribution object.
+
+    Parameters
+    ----------
+    alpha : Tensor or scalar
+       The first shape parameter
+    beta : Tensor or scalar
+        The second shape parameter
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+    """
     has_grad = False
     support = UnitInterval()
     arg_constraints = {'alpha' : Positive(),

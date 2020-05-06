@@ -25,6 +25,8 @@ from .constraint import Real, Positive, NonNegativeInteger
 from numbers import Number
 from .utils import getF, gammaln
 
+
+# FIXME: doc
 class Poisson(ExponentialFamily):
     arg_constraints = {'rate': Positive()}
     support = NonNegativeInteger()
