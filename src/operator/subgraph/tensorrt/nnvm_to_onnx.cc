@@ -31,7 +31,6 @@
 #include <mxnet/base.h>
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
-#include <operator/nn/deconvolution-inl.h>
 
 #include "../../../common/utils.h"
 #include "../../../ndarray/ndarray_function.h"
@@ -39,6 +38,7 @@
 #include "../../nn/activation-inl.h"
 #include "../../nn/batch_norm-inl.h"
 #include "../../nn/convolution-inl.h"
+#include "../../nn/deconvolution-inl.h"
 #include "../../nn/fully_connected-inl.h"
 #include "../../nn/pooling-inl.h"
 #include "../../nn/concat-inl.h"
