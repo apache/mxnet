@@ -8,11 +8,12 @@ $(document).ready(function () {
     });
     
     $("#search-icon").hover(function () {
-        $(".trigger").hide();
-        $("#global-search-form").css("display", "inline-block");
-        $("#global-search").animate({
-            width: "300px"
-        }).focus();
+        $(".trigger").fadeOut("fast", function() {
+            $("#global-search-form").css("display", "inline-block");
+            $("#global-search").animate({
+                width: "300px"
+            }).focus();
+        });
     });
 
     $("#global-search").blur(function () {
@@ -20,7 +21,7 @@ $(document).ready(function () {
             width: "0px"
         }, function () {
             $("#global-search-form").hide();
-            $(".trigger").show();
+            $(".trigger").fadeIn("fast");
         });
     });
 });
