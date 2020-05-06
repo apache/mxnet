@@ -218,6 +218,14 @@ NNVM_REGISTER_OP(_backward_gammaln)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
   gpu, unary_bwd<mshadow_op::gammaln_grad> >);
 
+// digamma
+NNVM_REGISTER_OP(digamma)
+.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::digamma>);
+
+NNVM_REGISTER_OP(_backward_digamma)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
+  gpu, unary_bwd<mshadow_op::trigamma> >);
+
 // logical not
 NNVM_REGISTER_OP(logical_not)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::nt>);

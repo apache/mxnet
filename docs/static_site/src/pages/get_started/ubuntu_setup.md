@@ -26,11 +26,10 @@ permalink: /get_started/ubuntu_setup
 
 The following installation instructions are for building MXNet from source on
 computers running **Ubuntu 16.04** or higher. For instructions to build MXNet
-from source on other platforms, see the general [Build From Source
-guide](build_from_source).
+from source on other platforms, see the general [Build From Source guide](build_from_source.html).
 
 Instead of building from source, you can install a binary version of MXNet. For
-that, please follow the information at [Get Started](get_started).
+that, please follow the information at [Get Started](/get_started).
 
 Building MXNet from source is a two-step process:
 
@@ -74,7 +73,9 @@ sudo ldconfig
 
 ## Build the MXNet shared library from source
 
-It is recommended that you review the general [build from source](build_from_source) instructions before continuing.
+It is recommended that you review the general [build from source](build_from_source.html) instructions before continuing.
+
+**Note**: Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler.
 
 On Ubuntu versions 16.04 or later, you need the following dependencies:
 
@@ -117,13 +118,13 @@ series of `set(name value CACHE TYPE "Description")` entries. You can change the
 values of the respective `value`.
 
 For a GPU-enabled build make sure you have installed the [CUDA dependencies
-first](#cuda-dependencies)). When building a GPU-enabled build on a machine
+first](#cuda-dependencies). When building a GPU-enabled build on a machine
 without GPU, MXNet build can't autodetect your GPU architecture and will target
 all available GPU architectures. Please set the `MXNET_CUDA_ARCH` variable in
 `config.cmake` to your desired cuda architecture to speed up the build.
 
 To (optionally) build with MKL math library, please install MKL first based on
-the guide in [Math Library Selection](build_from_source#math-library-selection).
+the guide in [Math Library Selection](build_from_source.html#math-library-selection).
 
 **Step 3:** Build MXNet core shared library.
 
@@ -189,7 +190,7 @@ pip install --user graphviz==0.8.4 jupyter
 
 ### Install the MXNet Package for C++
 
-Refer to the [C++ Package setup guide](c_plus_plus).
+Refer to the [C++ Package setup guide](cpp_setup.html).
 <hr>
 
 
@@ -300,7 +301,7 @@ julia --color=yes --project=./ -e \
 ```
 
 For more details about installing and using MXNet with Julia, see the
-[MXNet Julia documentation]({{'/api/julia'|relative_url}}).
+[MXNet Julia documentation](/api/julia.html).
 
 <hr>
 
@@ -409,20 +410,20 @@ You should see the following output:
 
 To use the MXNet-Scala package, you can acquire the Maven package as a dependency.
 
-Further information is in the [MXNet-Scala Setup Instructions](scala_setup).
+Further information is in the [MXNet-Scala Setup Instructions](scala_setup.html).
 
 If you use IntelliJ or a similar IDE, you may want to follow the
-[MXNet-Scala on IntelliJ tutorial]({{'/api/scala/docs/tutorials/mxnet_scala_on_intellij'|relative_url}}) instead.
+[MXNet-Scala on IntelliJ tutorial](/api/scala/docs/tutorials/mxnet_scala_on_intellij.html) instead.
 <hr>
 
 ### Install the MXNet Package for Java
 
 To use the MXNet-Java package, you can acquire the Maven package as a dependency.
 
-Further information is in the [MXNet-Java Setup Instructions](java_setup).
+Further information is in the [MXNet-Java Setup Instructions](java_setup.html).
 
 If you use IntelliJ or a similar IDE, you may want to follow the
-[MXNet-Java on IntelliJ tutorial]({{'/api/java/docs/tutorials/mxnet_java_on_intellij'|relative_url}}) instead.
+[MXNet-Java on IntelliJ tutorial](/api/java/docs/tutorials/mxnet_java_on_intellij.html) instead.
 <hr>
 
 ## Contributions

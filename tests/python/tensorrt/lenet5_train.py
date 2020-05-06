@@ -21,6 +21,7 @@
 import os
 import mxnet as mx
 import numpy as np
+from tempfile import TemporaryDirectory
 
 def get_iters(mnist, batch_size):
     """Get MNIST iterators."""
@@ -90,10 +91,11 @@ if __name__ == '__main__':
     params_file = '%s/%s-%04d.params' % (model_dir, model_name, num_epochs)
 
     if not (os.path.exists(model_file) and os.path.exists(params_file)):
-        mnist = mx.test_utils.get_mnist()
+        with TemporaryDirectory() as path:
+            mnist = mx.test_utils.get_mnist(path)
 
-        _, _, _, all_test_labels = get_iters(mnist, batch_size)
+            _, _, _, all_test_labels = get_iters(mnist, batch_size)
 
-        trained_lenet = train_lenet5(num_epochs, batch_size,
-                                    *get_iters(mnist, batch_size)[:-1])
-        trained_lenet.save_checkpoint(model_name, num_epochs)
+            trained_lenet = train_lenet5(num_epochs, batch_size,
+                                        *get_iters(mnist, batch_size)[:-1])
+            trained_lenet.save_checkpoint(model_name, num_epochs)

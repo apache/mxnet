@@ -25,7 +25,6 @@
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
-#include "../../../operator/tensor/broadcast_reduce_op.h"
 #include "../../../operator/numpy/np_broadcast_reduce_op.h"
 
 namespace mxnet {
@@ -145,6 +144,50 @@ MXNET_REGISTER_API("_npi.mean")
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
   if (out) {
     *ret = PythonArg(4);
+  } else {
+    *ret = ndoutputs[0];
+  }
+});
+
+MXNET_REGISTER_API("_npi.prod")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_prod");
+  nnvm::NodeAttrs attrs;
+  op::NumpyReduceAxesParam param;
+  if (args[1].type_code() == kNull) {
+    param.axis = dmlc::optional<mxnet::Tuple<int>>();
+  } else if (args[1].type_code() == kDLInt) {
+    param.axis = Tuple<int>(1, args[1].operator int64_t());
+  } else {
+    param.axis = Tuple<int>(args[1].operator ObjectRef());
+  }
+  if (args[2].type_code() == kNull) {
+    param.dtype = dmlc::optional<int>();
+  } else {
+    param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
+  }
+  if (args[3].type_code() == kNull) {
+    param.keepdims = false;
+  } else {
+    param.keepdims = args[3].operator bool();
+  }
+  if (args[4].type_code() == kNull) {
+    param.initial = dmlc::optional<double>();
+  } else {
+    param.initial = args[4].operator double();
+  }
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
+  int num_inputs = 1;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  NDArray* out = args[5].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(5);
   } else {
     *ret = ndoutputs[0];
   }

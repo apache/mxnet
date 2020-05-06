@@ -16,16 +16,18 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile declaring CentOS 7 related images.
+# Dockerfile for CentOS 7 based builds.
 # Via the CentOS 7 Dockerfiles, we ensure MXNet continues to run fine on older systems.
 #
 # See docker-compose.yml for supported BASE_IMAGE ARGs and targets.
 
 ####################################################################################################
-# The Dockerfile uses a dynamic BASE_IMAGE (for examplecentos:7, nvidia/cuda:10.2-devel-centos7 etc)
-# On top of BASE_IMAGE we install all dependencies shared by all MXNet build environments into a
-# "base" target. At the end of this file, we specialize "base" for specific usecases.
-# The target built by docker can be selected via "--target" option or docker-compose.yml
+# The Dockerfile uses a dynamic BASE_IMAGE (for example centos:7,
+# nvidia/cuda:10.2-cudnn7-devel-centos7 etc).
+# On top of BASE_IMAGE we install all dependencies shared by all MXNet build
+# environments into a "base" target. At the end of this file, we specialize
+# "base" for specific usecases. The target built by docker can be selected via
+# "--target" option or docker-compose.yml
 ####################################################################################################
 ARG BASE_IMAGE
 FROM $BASE_IMAGE AS base
@@ -104,19 +106,9 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
     protobuf==3.5.2 \
     tabulate==0.7.5
 
-
 ARG USER_ID=0
-# Add user in order to make sure the assumed user the container is running under
-# actually exists inside the container to avoid problems like missing home dir
-RUN if [[ "$USER_ID" -gt 0 ]]; then \
-        # -no-log-init required due to https://github.com/moby/moby/issues/5419
-        useradd -m --no-log-init --uid $USER_ID --system jenkins_slave; \
-        usermod -aG wheel jenkins_slave; \
-        # By default, docker creates all WORK_DIRs with root owner
-        mkdir /work/mxnet; \
-        mkdir /work/build; \
-        chown -R jenkins_slave /work/; \
-    fi
+COPY install/docker_filepermissions.sh /work/
+RUN /work/docker_filepermissions.sh
 
 ENV PYTHONPATH=./python/
 WORKDIR /work/mxnet
@@ -128,7 +120,8 @@ COPY runtime_functions.sh /work/
 # The target built by docker can be selected via "--target" option or docker-compose.yml
 ####################################################################################################
 FROM base as gpu
-# Different Cuda versions require different NCCL versions
+# NCCL is missing on CentOS7 images https://gitlab.com/nvidia/container-images/cuda/-/issues/68
+# Install manually; different Cuda versions require different NCCL versions
 # https://wiki.bash-hackers.org/syntax/pe#search_and_replace
 RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     if [[ ${SHORT_CUDA_VERSION} == 9.2 ]]; then \

@@ -139,6 +139,8 @@ Check the chart below for other options or refer to [PyPI for other MXNet pip pa
 
 **IMPORTANT: It is recommended that you review the [build from source guide](build_from_source) first.** It describes many of the build options that come with MXNet in more detail. You may decide to install additional dependencies and modify your build flags after reviewing this material.
 
+**Note**: Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler.
+
 We provide two primary options to build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) or [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
 
 **NOTE:** Visual Studio 2017's compiler is `vc15`. This is not to be confused with Visual Studio 2015's compiler, `vc14`.

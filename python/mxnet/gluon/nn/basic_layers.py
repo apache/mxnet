@@ -820,7 +820,7 @@ class GroupNorm(HybridBlock):
     """
     def __init__(self, num_groups=1, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
-                 prefix=None, params=None):
+                 in_channels=0, prefix=None, params=None):
         super(GroupNorm, self).__init__(prefix=prefix, params=params)
         self._kwargs = {'eps': epsilon, 'num_groups': num_groups, 'center': center, 'scale': scale}
         self._num_groups = num_groups
@@ -828,10 +828,10 @@ class GroupNorm(HybridBlock):
         self._center = center
         self._scale = scale
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(num_groups,), init=gamma_initializer,
+                                     shape=(in_channels,), init=gamma_initializer,
                                      allow_deferred_init=True)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(num_groups,), init=beta_initializer,
+                                    shape=(in_channels,), init=beta_initializer,
                                     allow_deferred_init=True)
 
     def hybrid_forward(self, F, data, gamma, beta):
@@ -839,7 +839,10 @@ class GroupNorm(HybridBlock):
         return norm_data
 
     def __repr__(self):
-        s = '{name}({content})'
+        s = '{name}({content}'
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels)
+        s += ')'
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
                                            for k, v in self._kwargs.items()]))

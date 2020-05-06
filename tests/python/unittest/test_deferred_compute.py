@@ -213,14 +213,15 @@ def test_dc_subset_of_output():
     _all_assert_dc(_dc_simple_setup, f)
 
 
-@pytest.mark.xfail(raises=MXNetError)  # Should raise NotImplementedError https://github.com/apache/incubator-mxnet/issues/17522
-def test_dc_inplace():
+def test_dc_inplace_error():
     def f(a, *, nd):
         a[:5] = 0
         b = a + 1
         return [a, b]
 
-    _all_assert_dc(_dc_simple_setup, f)
+    with pytest.raises(MXNetError):
+    # TODO(leezu): Should raise NotImplementedError https://github.com/apache/incubator-mxnet/issues/17522
+        _all_assert_dc(_dc_simple_setup, f)
 
 
 ###############################################################################
@@ -245,11 +246,12 @@ def test_dc_get_symbol_called_twice():
     assert sym2.list_inputs() == ['a']
 
 
-@pytest.mark.xfail(raises=MXNetError)  # Should raise ValueError https://github.com/apache/incubator-mxnet/issues/17522
-def test_dc_set_variable_called_twice():
+def test_dc_set_variable_called_twice_error():
     a = mx.np.arange(10)
     dc.set_variable(a, mx.sym.var('a'))
-    dc.set_variable(a, mx.sym.var('b'))
+    with pytest.raises(MXNetError):
+    # TODO(leezu): Should raise ValueError https://github.com/apache/incubator-mxnet/issues/17522
+        dc.set_variable(a, mx.sym.var('b'))
 
 
 def test_dc_no_inputs_context_switch():
@@ -342,24 +344,24 @@ def test_dc_simple_boolean_indexing():
         _assert_dc(setup, f, mode=mode)
 
 
-@pytest.mark.xfail(raises=TypeError)  # Advanced indexing
-def test_dc_list_indexing():
+def test_dc_list_indexing_error():
     def f(a, *, nd):
         assert nd is mx.np
         return [a[[1, 2, 3]]]
 
     for mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute'):
-        _assert_dc(_dc_simple_setup, f, mode=mode)
+        with pytest.raises(TypeError):
+            _assert_dc(_dc_simple_setup, f, mode=mode)
 
 
-@pytest.mark.xfail(raises=TypeError)  # Advanced indexing
-def test_dc_numpy_indexing():
+def test_dc_numpy_indexing_error():
     def f(a, *, nd):
         assert nd is mx.np
         return [a[np.array([1, 2, 3])]]
 
     for mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute'):
-        _assert_dc(_dc_simple_setup, f, mode=mode)
+        with pytest.raises(TypeError):
+            _assert_dc(_dc_simple_setup, f, mode=mode)
 
 
 ###############################################################################
@@ -430,8 +432,7 @@ def test_dc_hybridblock():
         _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
 
 
-@pytest.mark.xfail(raises=RuntimeError)
-def test_dc_hybridblock_deferred_init_no_infer_shape():
+def test_dc_hybridblock_deferred_init_no_infer_shape_error():
     class MyBlock(mx.gluon.HybridBlock):
         def __init__(self, *, prefix=None, params=None):
             super().__init__(prefix, params)
@@ -445,7 +446,8 @@ def test_dc_hybridblock_deferred_init_no_infer_shape():
     net = MyBlock()
     net.initialize()
     data = mx.nd.ones(shape=(8, 10), ctx=mx.context.current_context())
-    net(data)  # Raises RuntimeError
+    with pytest.raises(RuntimeError):
+        net(data)
 
 
 def test_dc_hybridblock_deferred_init():
@@ -496,8 +498,7 @@ def test_dc_hybridblock_dynamic_shape():
         _assert_dc_gluon(setup, net, numpy=True)
 
 
-@pytest.mark.xfail(raises=RuntimeError)
-def test_dc_hybridblock_symbolblock():
+def test_dc_hybridblock_symbolblock_error():
     model = mx.gluon.nn.HybridSequential()
     model.add(mx.gluon.nn.Dense(128, activation='tanh'))
     model.add(mx.gluon.nn.Dropout(0.5))
@@ -505,9 +506,11 @@ def test_dc_hybridblock_symbolblock():
               mx.gluon.nn.Dense(32, in_units=64))
     model.add(mx.gluon.nn.Activation('relu'))
     model.initialize()
+
     inputs = mx.sym.var('data')
     outputs = model(inputs).get_internals()
     smodel = mx.gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
+
     assert len(smodel(mx.nd.zeros((16, 10)))) == 14
 
     class Net(mx.gluon.HybridBlock):
@@ -520,13 +523,10 @@ def test_dc_hybridblock_symbolblock():
             return mx.nd.add_n(*[i.sum() for i in out])
 
     net = Net(smodel)
-    net.hybridize()
     data = mx.nd.zeros((16, 10))
     out = net(data)
     out.asnumpy()
 
     net.hybridize()
-    out_hybrid = net(data)  # Raises RuntimeError
-
-    _all_same([out], [out_hybrid])
-
+    with pytest.raises(RuntimeError):
+        out_hybrid = net(data)  # Raises RuntimeError

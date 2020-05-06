@@ -220,10 +220,9 @@ void NumpyBooleanAssignForwardCPU(const nnvm::NodeAttrs& attrs,
   // If there's no True in mask, return directly
   if (valid_num == 0) return;
 
-  const TShape& vshape = inputs.at(2).shape_;
-
   if (inputs.size() == 3U) {
     // tensor case
+    const TShape& vshape = inputs.at(2).shape_;
     if (inputs[2].shape_.Size() != 1) {
       auto vndim = vshape.ndim();
       auto dndim = dshape.ndim();
@@ -253,6 +252,8 @@ void NumpyBooleanAssignForwardCPU(const nnvm::NodeAttrs& attrs,
   }
 
   if (inputs.size() == 3U) {
+    // tensor case
+    const TShape& vshape = inputs.at(2).shape_;
     MSHADOW_TYPE_SWITCH_WITH_BOOL(data.type_flag_, DType, {
       if (inputs[2].shape_.Size() == 1) {
         Kernel<BooleanAssignCPUKernel<true>, cpu>::Launch(
@@ -268,6 +269,7 @@ void NumpyBooleanAssignForwardCPU(const nnvm::NodeAttrs& attrs,
       }
     });
   } else {
+    // scalar case
     CHECK(attrs.dict.find("value") != attrs.dict.end()) << "value needs be provided";
     MSHADOW_TYPE_SWITCH_WITH_BOOL(data.type_flag_, DType, {
       Kernel<BooleanAssignCPUKernel<true>, cpu>::Launch(

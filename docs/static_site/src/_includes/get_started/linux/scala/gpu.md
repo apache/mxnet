@@ -1,6 +1,6 @@
 You can use the Maven packages defined in the following dependency to include MXNet in
 your Scala
-project. Please refer to the <a href="scala_setup.html">MXNet-Scala setup guide</a> for
+project. Please refer to the <a href="/get_started/scala_setup.html">MXNet-Scala setup guide</a> for
 a detailed set
 of instructions to help you with the setup process.
 
@@ -10,7 +10,7 @@ of instructions to help you with the setup process.
 
 {% highlight html %}
 <dependency>
-<groupId>org.apache.mxnet</groupId>
-<artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
+    <groupId>org.apache.mxnet</groupId>
+    <artifactId>mxnet-full_2.11-linux-x86_64-gpu</artifactId>
 </dependency>
 {% endhighlight %}

@@ -43,7 +43,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/build-cpu-int64') {
           utils.init_git()
-          utils.docker_run('ubuntu_nightly_cpu', 'build_ubuntu_cpu_large_tensor', false)
+          utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_large_tensor', false)
           utils.pack_lib('cpu_int64', mx_lib)
         }
       }
@@ -55,7 +55,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/nt-ImageClassificationTest') {
           utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_image_classification', true)
+          utils.docker_run('ubuntu_build_cuda', 'nightly_test_image_classification', true)
         }
       }
     },
@@ -63,7 +63,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/nt-ImageInferenceTest') {
           utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_imagenet_inference', true)
+          utils.docker_run('ubuntu_build_cuda', 'nightly_test_imagenet_inference', true)
         }
       }
     },
@@ -71,7 +71,7 @@ core_logic: {
       node('mxnetlinux-gpu-p3-8xlarge') {
         ws('workspace/nt-KVStoreTest') {
           utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_test_KVStore_singleNode', true)
+          utils.docker_run('ubuntu_build_cuda', 'nightly_test_KVStore_singleNode', true)
         }
       }
     },
@@ -79,8 +79,8 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/large_tensor-cpu') {
             utils.unpack_and_init('cpu_int64', mx_lib)
-            utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_large_tensor', false)
-            utils.docker_run('ubuntu_nightly_cpu', 'nightly_test_large_vector', false)
+            utils.docker_run('ubuntu_cpu', 'nightly_test_large_tensor', false)
+            utils.docker_run('ubuntu_cpu', 'nightly_test_large_vector', false)
         }
       }
     },
@@ -88,7 +88,7 @@ core_logic: {
       node(NODE_LINUX_GPU) {
         ws('workspace/estimator-test-gpu') {
           utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_nightly_gpu', 'nightly_estimator', true)
+          utils.docker_run('ubuntu_build_cuda', 'nightly_estimator', true)
         }
       }
     }
