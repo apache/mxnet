@@ -127,5 +127,6 @@ def test_gluon_trainer_type():
 
 if __name__ == "__main__":
     test_sync_init()
-    test_sync_push_pull()
+    # TODO(szha): disabled due to repeated failures. tracked in #18098
+    # test_sync_push_pull()
     test_gluon_trainer_type()

@@ -24,7 +24,7 @@ from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
 from common import setup_module, with_seed, assertRaises
 from copy import deepcopy
-from nose.tools import raises, assert_raises
+import pytest
 
 def dict_equ(a, b):
     assert set(a) == set(b)
@@ -32,7 +32,6 @@ def dict_equ(a, b):
         assert (a[k].asnumpy() == b[k].asnumpy()).all()
 
 @with_seed()
-@raises(RuntimeError)
 def test_multi_trainer():
     x = gluon.Parameter('x', shape=(10,), stype='row_sparse')
     x.initialize()
@@ -43,8 +42,9 @@ def test_multi_trainer():
     x._set_trainer(None)
     assert(x._trainer is None)
     x._set_trainer(trainer0)
-    # multiple trainers for a sparse Parameter is not allowed
-    trainer1 = gluon.Trainer([x], 'sgd')
+    with pytest.raises(RuntimeError):
+        # multiple trainers for a sparse Parameter is not allowed
+        trainer1 = gluon.Trainer([x], 'sgd')
 
 @with_seed()
 def test_trainer_with_sparse_grad_on_single_context():
@@ -78,7 +78,7 @@ def test_trainer_with_teststore():
     # Expect exceptions if update_on_kvstore is set to True,
     # because TestStore does not support that
     invalid_trainer = gluon.Trainer([x], 'sgd', kvstore=kv, update_on_kvstore=True)
-    assert_raises(ValueError, invalid_trainer._init_kvstore)
+    pytest.raises(ValueError, invalid_trainer._init_kvstore)
 
 @with_seed()
 def test_trainer():
@@ -110,8 +110,8 @@ def test_trainer():
         dict_equ(trainer._kvstore._updater.states, states)
         assert trainer._optimizer == trainer._kvstore._updater.optimizer
         # invalid usage of update and allreduce_grads if update_on_kvstore
-        assert_raises(AssertionError, trainer.update, 1)
-        assert_raises(AssertionError, trainer.allreduce_grads)
+        pytest.raises(AssertionError, trainer.update, 1)
+        pytest.raises(AssertionError, trainer.allreduce_grads)
     else:
         for updater in trainer._updaters:
             dict_equ(updater.states, states)

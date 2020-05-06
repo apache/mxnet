@@ -16,7 +16,7 @@
 # under the License.
 
 from __future__ import print_function
-import sys, os, logging
+import sys, os, logging, functools
 import multiprocessing as mp
 import mxnet as mx
 import numpy as np
@@ -29,8 +29,8 @@ sys.path.insert(0, os.path.join(curr_path, '../../../python'))
 
 import models
 from contextlib import contextmanager
-from nose.tools import make_decorator, assert_raises
-import tempfile
+import pytest
+from tempfile import TemporaryDirectory
 
 def assertRaises(expected_exception, func, *args, **kwargs):
     try:
@@ -43,7 +43,7 @@ def assertRaises(expected_exception, func, *args, **kwargs):
 
 
 def default_logger():
-    """A logger used to output seed information to nosetests logs."""
+    """A logger used to output seed information to logs."""
     logger = logging.getLogger(__name__)
     # getLogger() lookups will return the same logger, but only add the handler once.
     if not len(logger.handlers):
@@ -109,7 +109,7 @@ def _assert_raise_cuxx_version_not_satisfied(min_version, cfg):
         left = version_left.split(".")
         right = version_right.split(".")
 
-        # 0 pad shortest version - e.g. 
+        # 0 pad shortest version - e.g.
         # less_than("9.1", "9.1.9") == less_than("9.1.0", "9.1.9")
         longest = max(len(left), len(right))
         left.extend([0] * (longest - len(left)))
@@ -123,7 +123,7 @@ def _assert_raise_cuxx_version_not_satisfied(min_version, cfg):
         return False
 
     def test_helper(orig_test):
-        @make_decorator(orig_test)
+        @functools.wraps(orig_test)
         def test_new(*args, **kwargs):
             cuxx_off = os.getenv(cfg['TEST_OFF_ENV_VAR']) == 'true'
             cuxx_env_version = os.getenv(cfg['VERSION_ENV_VAR'], None if cuxx_off else cfg['DEFAULT_VERSION'])
@@ -131,7 +131,7 @@ def _assert_raise_cuxx_version_not_satisfied(min_version, cfg):
             if not cuxx_test_disabled or mx.context.current_context().device_type == 'cpu':
                 orig_test(*args, **kwargs)
             else:
-                assert_raises((MXNetError, RuntimeError), orig_test, *args, **kwargs)
+                pytest.raises((MXNetError, RuntimeError), orig_test, *args, **kwargs)
         return test_new
     return test_helper
 
@@ -154,7 +154,7 @@ def assert_raises_cuda_not_satisfied(min_version):
 
 def with_seed(seed=None):
     """
-    A decorator for nosetests test functions that manages rng seeds.
+    A decorator for test functions that manages rng seeds.
 
     Parameters
     ----------
@@ -181,13 +181,13 @@ def with_seed(seed=None):
     can then set the environment variable MXNET_TEST_SEED to
     the value reported, then rerun the test with:
 
-        nosetests --verbose -s <test_module_name.py>:<failing_test>
+        pytest --verbose --capture=no <test_module_name.py>::<failing_test>
 
     To run a test repeatedly, set MXNET_TEST_COUNT=<NNN> in the environment.
-    To see the seeds of even the passing tests, add '--logging-level=DEBUG' to nosetests.
+    To see the seeds of even the passing tests, add '--log-level=DEBUG' to pytest.
     """
     def test_helper(orig_test):
-        @make_decorator(orig_test)
+        @functools.wraps(orig_test)
         def test_new(*args, **kwargs):
             test_count = int(os.getenv('MXNET_TEST_COUNT', '1'))
             env_seed_str = os.getenv('MXNET_TEST_SEED')
@@ -206,7 +206,7 @@ def with_seed(seed=None):
                 mx.random.seed(this_test_seed)
                 random.seed(this_test_seed)
                 logger = default_logger()
-                # 'nosetests --logging-level=DEBUG' shows this msg even with an ensuing core dump.
+                # 'pytest --logging-level=DEBUG' shows this msg even with an ensuing core dump.
                 test_count_msg = '{} of {}: '.format(i+1,test_count) if test_count > 1 else ''
                 test_msg = ('{}Setting test np/mx/python random seeds, use MXNET_TEST_SEED={}'
                             ' to reproduce.').format(test_count_msg, this_test_seed)
@@ -226,12 +226,12 @@ def with_seed(seed=None):
 
 def setup_module():
     """
-    A function with a 'magic name' executed automatically before each nosetests module
+    A function with a 'magic name' executed automatically before each pytest module
     (file of tests) that helps reproduce a test segfault by setting and outputting the rng seeds.
 
     The segfault-debug procedure on a module called test_module.py is:
 
-    1. run "nosetests --verbose test_module.py".  A seg-faulting output might be:
+    1. run "pytest --verbose test_module.py".  A seg-faulting output might be:
 
        [INFO] np, mx and python random seeds = 4018804151
        test_module.test1 ... ok
@@ -239,7 +239,7 @@ def setup_module():
 
     2. Copy the module-starting seed into the next command, then run:
 
-       MXNET_MODULE_SEED=4018804151 nosetests --logging-level=DEBUG --verbose test_module.py
+       MXNET_MODULE_SEED=4018804151 pytest --logging-level=DEBUG --verbose test_module.py
 
        Output might be:
 
@@ -251,7 +251,7 @@ def setup_module():
        Illegal instruction (core dumped)
 
     3. Copy the segfaulting-test seed into the command:
-       MXNET_TEST_SEED=1435005594 nosetests --logging-level=DEBUG --verbose test_module.py:test2
+       MXNET_TEST_SEED=1435005594 pytest --logging-level=DEBUG --verbose test_module.py:test2
        Output might be:
 
        [INFO] np, mx and python random seeds = 2481884723
@@ -287,48 +287,14 @@ def setup_module():
     if os.getenv('MXNET_TEST_SEED') is not None:
         logger.warn('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
 
-try:
-    from tempfile import TemporaryDirectory
-except:  # Python 2 support
-    # really simple implementation of TemporaryDirectory
-    class TemporaryDirectory(object):
-        def __init__(self, suffix='', prefix='', dir=''):
-            self._dirname = tempfile.mkdtemp(suffix, prefix, dir)
 
-        def __enter__(self):
-            return self._dirname
-
-        def __exit__(self, exc_type, exc_value, traceback):
-            shutil.rmtree(self._dirname)
-
-def teardown():
+def teardown_module():
     """
-    A function with a 'magic name' executed automatically after each nosetests test module.
+    A function with a 'magic name' executed automatically after each pytest test module.
 
     It waits for all operations in one file to finish before carrying on the next.
     """
     mx.nd.waitall()
-
-
-def with_post_test_cleanup():
-    """
-    Helper function that cleans up memory by releasing it from memory pool
-    Required especially by large tensor tests that have memory footprints in GBs.
-    """
-    def test_helper(orig_test):
-        @make_decorator(orig_test)
-        def test_new(*args, **kwargs):
-            logger = default_logger()
-            try:
-                orig_test(*args, **kwargs)
-            except:
-                logger.info(test_msg)
-                raise
-            finally:
-                mx.nd.waitall()
-                mx.cpu().empty_cache()
-        return test_new
-    return test_helper
 
 
 def run_in_spawned_process(func, env, *args):
@@ -374,3 +340,24 @@ def run_in_spawned_process(func, env, *args):
             os.environ.clear()
             os.environ.update(orig_environ)
     return True
+
+
+def retry(n):
+    """Retry n times before failing for stochastic test cases."""
+    # TODO(szha): replace with flaky
+    # https://github.com/apache/incubator-mxnet/issues/17803
+    assert n > 0
+    def test_helper(orig_test):
+        @functools.wraps(orig_test)
+        def test_new(*args, **kwargs):
+            """Wrapper for tests function."""
+            for _ in range(n):
+                try:
+                    orig_test(*args, **kwargs)
+                except AssertionError as e:
+                    err = e
+                    continue
+                return
+            raise err
+        return test_new
+    return test_helper

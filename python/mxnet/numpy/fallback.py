@@ -50,7 +50,6 @@ __all__ = [
     'histogramdd',
     'i0',
     'in1d',
-    'interp',
     'intersect1d',
     'isclose',
     'isin',
@@ -90,7 +89,6 @@ __all__ = [
     'rate',
     'real',
     'result_type',
-    'rollaxis',
     'roots',
     'searchsorted',
     'select',
@@ -103,7 +101,6 @@ __all__ = [
     'trapz',
     'tril_indices_from',
     'trim_zeros',
-    'triu_indices_from',
     'union1d',
     'unpackbits',
     'unwrap',
@@ -138,7 +135,6 @@ histogram_bin_edges = onp.histogram_bin_edges
 histogramdd = onp.histogramdd
 i0 = onp.i0
 in1d = onp.in1d
-interp = onp.interp
 intersect1d = onp.intersect1d
 isclose = onp.isclose
 isin = onp.isin
@@ -182,7 +178,6 @@ pv = onp.pv
 rate = onp.rate
 real = onp.real
 result_type = onp.result_type
-rollaxis = onp.rollaxis
 roots = onp.roots
 searchsorted = onp.searchsorted
 select = onp.select
@@ -195,7 +190,6 @@ take_along_axis = onp.take_along_axis
 trapz = onp.trapz
 tril_indices_from = onp.tril_indices_from
 trim_zeros = onp.trim_zeros
-triu_indices_from = onp.triu_indices_from
 union1d = onp.union1d
 unpackbits = onp.unpackbits
 unwrap = onp.unwrap

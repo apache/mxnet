@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
 import mxnet as mx
 import numpy as np
 import scipy.ndimage
@@ -23,8 +24,7 @@ from common import assertRaises, with_seed
 import shutil
 import tempfile
 import unittest
-
-from nose.tools import raises
+import pytest
 
 
 def _get_data(url, dirname):
@@ -111,27 +111,23 @@ def _test_imageiter_last_batch(imageiter_list, assert_data_shape):
 
 class TestImage(unittest.TestCase):
     IMAGES_URL = "http://data.mxnet.io/data/test_images.tar.gz"
-    IMAGES = []
-    IMAGES_DIR = None
 
-    @classmethod
-    def setupClass(cls):
-        cls.IMAGES_DIR = tempfile.mkdtemp()
-        cls.IMAGES = _get_data(cls.IMAGES_URL, cls.IMAGES_DIR)
-        print("Loaded {} images".format(len(cls.IMAGES)))
+    def setUp(self):
+        self.IMAGES_DIR = tempfile.mkdtemp()
+        self.IMAGES = _get_data(self.IMAGES_URL, self.IMAGES_DIR)
+        print("Loaded {} images".format(len(self.IMAGES)))
 
-    @classmethod
-    def teardownClass(cls):
-        if cls.IMAGES_DIR:
-            print("cleanup {}".format(cls.IMAGES_DIR))
-            shutil.rmtree(cls.IMAGES_DIR)
+    def tearDown(self):
+        if self.IMAGES_DIR:
+            print("cleanup {}".format(self.IMAGES_DIR))
+            shutil.rmtree(self.IMAGES_DIR)
 
-    @raises(mx.base.MXNetError)
     def test_imread_not_found(self):
-        x = mx.img.image.imread("/139810923jadjsajlskd.___adskj/blah.jpg")
+        with pytest.raises(mx.base.MXNetError):
+            x = mx.img.image.imread("/139810923jadjsajlskd.___adskj/blah.jpg")
 
     def test_imread_vs_imdecode(self):
-        for img in TestImage.IMAGES:
+        for img in self.IMAGES:
             with open(img, 'rb') as fp:
                 str_image = fp.read()
                 image = mx.image.imdecode(str_image, to_rgb=0)
@@ -143,7 +139,7 @@ class TestImage(unittest.TestCase):
             import cv2
         except ImportError:
             raise unittest.SkipTest("Unable to import cv2.")
-        for img in TestImage.IMAGES:
+        for img in self.IMAGES:
             with open(img, 'rb') as fp:
                 str_image = fp.read()
                 image = mx.image.imdecode(str_image, to_rgb=0)
@@ -155,21 +151,20 @@ class TestImage(unittest.TestCase):
             import cv2
         except ImportError:
             return
-        for img in TestImage.IMAGES:
+        for img in self.IMAGES:
             with open(img, 'rb') as fp:
                 str_image = bytearray(fp.read())
                 image = mx.image.imdecode(str_image, to_rgb=0)
             cv_image = cv2.imread(img)
             assert_almost_equal(image.asnumpy(), cv_image)
 
-    @raises(mx.base.MXNetError)
     def test_imdecode_empty_buffer(self):
-        mx.image.imdecode(b'', to_rgb=0)
+        with pytest.raises(mx.base.MXNetError):
+            mx.image.imdecode(b'', to_rgb=0)
 
-    @raises(mx.base.MXNetError)
     def test_imdecode_invalid_image(self):
-        image = mx.image.imdecode(b'clearly not image content')
-        assert_equal(image, None)
+        with pytest.raises(mx.base.MXNetError):
+            image = mx.image.imdecode(b'clearly not image content')
 
     def test_scale_down(self):
         assert mx.image.scale_down((640, 480), (720, 120)) == (640, 106)
@@ -182,7 +177,7 @@ class TestImage(unittest.TestCase):
             import cv2
         except ImportError:
             raise unittest.SkipTest("Unable to import cv2")
-        for img in TestImage.IMAGES:
+        for img in self.IMAGES:
             cv_img = cv2.imread(img)
             mx_img = mx.nd.array(cv_img[:, :, (2, 1, 0)])
             h, w, _ = cv_img.shape
@@ -204,7 +199,7 @@ class TestImage(unittest.TestCase):
             import cv2
         except ImportError:
             raise unittest.SkipTest("Unable to import cv2")
-        for img in TestImage.IMAGES:
+        for img in self.IMAGES:
             cv_img = cv2.imread(img)
             mx_img = mx.nd.array(cv_img[:, :, (2, 1, 0)])
             new_h = np.random.randint(1, 1000)
@@ -229,10 +224,11 @@ class TestImage(unittest.TestCase):
             assert_almost_equal(mx_result.asnumpy(), (src - mean) / std, atol=1e-3)
 
     def test_imageiter(self):
-        im_list = [[np.random.randint(0, 5), x] for x in TestImage.IMAGES]
-        fname = './data/test_imageiter.lst'
+        print(self.IMAGES)
+        im_list = [[np.random.randint(0, 5), x] for x in self.IMAGES]
+        fname = os.path.join(self.IMAGES_DIR, 'test_imageiter.lst')
         file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x])
-                        for k, x in enumerate(TestImage.IMAGES)]
+                        for k, x in enumerate(self.IMAGES)]
         with open(fname, 'w') as f:
             for line in file_list:
                 f.write(line + '\n')
@@ -244,15 +240,15 @@ class TestImage(unittest.TestCase):
                 path_imglist = fname if test == 'path_imglist' else None
                 imageiter_list = [
                     mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=imglist,
-                        path_imglist=path_imglist, path_root='', dtype=dtype),
+                        path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype),
                     mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='discard'),
+                        path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='discard'),
                     mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad'),
+                        path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='pad'),
                     mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist,
-                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='roll_over'),
+                        path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='roll_over'),
                     mx.image.ImageIter(3, (3, 224, 224), label_width=1, imglist=imglist, shuffle=True,
-                        path_imglist=path_imglist, path_root='', dtype=dtype, last_batch_handle='pad')
+                        path_imglist=path_imglist, path_root=self.IMAGES_DIR, dtype=dtype, last_batch_handle='pad')
                 ]
                 _test_imageiter_last_batch(imageiter_list, (2, 3, 224, 224))
 
@@ -262,7 +258,7 @@ class TestImage(unittest.TestCase):
             import cv2
         except ImportError:
             raise unittest.SkipTest("Unable to import cv2")
-        for img in TestImage.IMAGES:
+        for img in self.IMAGES:
             cv_img = cv2.imread(img)
             mx_img = mx.nd.array(cv_img)
             top = np.random.randint(1, 10)
@@ -296,34 +292,34 @@ class TestImage(unittest.TestCase):
 
         # only test if all augmenters will work
         # TODO(Joshua Zhang): verify the augmenter outputs
-        im_list = [[0, x] for x in TestImage.IMAGES]
+        im_list = [[0, x] for x in self.IMAGES]
         test_iter = mx.image.ImageIter(2, (3, 224, 224), label_width=1, imglist=im_list,
             resize=640, rand_crop=True, rand_resize=True, rand_mirror=True, mean=True,
             std=np.array([1.1, 1.03, 1.05]), brightness=0.1, contrast=0.1, saturation=0.1,
-            hue=0.1, pca_noise=0.1, rand_gray=0.2, inter_method=10, path_root='', shuffle=True)
+            hue=0.1, pca_noise=0.1, rand_gray=0.2, inter_method=10, path_root=self.IMAGES_DIR, shuffle=True)
         for batch in test_iter:
             pass
 
     def test_image_detiter(self):
-        im_list = [_generate_objects() + [x] for x in TestImage.IMAGES]
-        det_iter = mx.image.ImageDetIter(2, (3, 300, 300), imglist=im_list, path_root='')
+        im_list = [_generate_objects() + [x] for x in self.IMAGES]
+        det_iter = mx.image.ImageDetIter(2, (3, 300, 300), imglist=im_list, path_root=self.IMAGES_DIR)
         for _ in range(3):
             for _ in det_iter:
                 pass
         det_iter.reset()
-        val_iter = mx.image.ImageDetIter(2, (3, 300, 300), imglist=im_list, path_root='')
+        val_iter = mx.image.ImageDetIter(2, (3, 300, 300), imglist=im_list, path_root=self.IMAGES_DIR)
         det_iter = val_iter.sync_label_shape(det_iter)
         assert det_iter.data_shape == val_iter.data_shape
         assert det_iter.label_shape == val_iter.label_shape
 
         # test batch_size is not divisible by number of images
-        det_iter = mx.image.ImageDetIter(4, (3, 300, 300), imglist=im_list, path_root='')
+        det_iter = mx.image.ImageDetIter(4, (3, 300, 300), imglist=im_list, path_root=self.IMAGES_DIR)
         for _ in det_iter:
             pass
 
         # test file list with last batch handle
-        fname = './data/test_imagedetiter.lst'
-        im_list = [[k] + _generate_objects() + [x] for k, x in enumerate(TestImage.IMAGES)]
+        fname = os.path.join(self.IMAGES_DIR, 'test_imagedetiter.lst')
+        im_list = [[k] + _generate_objects() + [x] for k, x in enumerate(self.IMAGES)]
         with open(fname, 'w') as f:
             for line in im_list:
                 line = '\t'.join([str(k) for k in line])
@@ -331,23 +327,23 @@ class TestImage(unittest.TestCase):
 
         imageiter_list = [
             mx.image.ImageDetIter(2, (3, 400, 400),
-                path_imglist=fname, path_root=''),
+                path_imglist=fname, path_root=self.IMAGES_DIR),
             mx.image.ImageDetIter(3, (3, 400, 400),
-                path_imglist=fname, path_root='', last_batch_handle='discard'),
+                path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='discard'),
             mx.image.ImageDetIter(3, (3, 400, 400),
-                path_imglist=fname, path_root='', last_batch_handle='pad'),
+                path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='pad'),
             mx.image.ImageDetIter(3, (3, 400, 400),
-                path_imglist=fname, path_root='', last_batch_handle='roll_over'),
+                path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='roll_over'),
             mx.image.ImageDetIter(3, (3, 400, 400), shuffle=True,
-                path_imglist=fname, path_root='', last_batch_handle='pad')
+                path_imglist=fname, path_root=self.IMAGES_DIR, last_batch_handle='pad')
         ]
         _test_imageiter_last_batch(imageiter_list, (2, 3, 400, 400))
 
     def test_det_augmenters(self):
         # only test if all augmenters will work
         # TODO(Joshua Zhang): verify the augmenter outputs
-        im_list = [_generate_objects() + [x] for x in TestImage.IMAGES]
-        det_iter = mx.image.ImageDetIter(2, (3, 300, 300), imglist=im_list, path_root='',
+        im_list = [_generate_objects() + [x] for x in self.IMAGES]
+        det_iter = mx.image.ImageDetIter(2, (3, 300, 300), imglist=im_list, path_root=self.IMAGES_DIR,
             resize=640, rand_crop=1, rand_pad=1, rand_gray=0.1, rand_mirror=True, mean=True,
             std=np.array([1.1, 1.03, 1.05]), brightness=0.1, contrast=0.1, saturation=0.1,
             pca_noise=0.1, hue=0.1, inter_method=10, min_object_covered=0.5,
@@ -451,7 +447,3 @@ class TestImage(unittest.TestCase):
                                                  angle_limits)
         self.assertEqual(out_batch_image.shape, (3, 3, 30, 60))
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

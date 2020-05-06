@@ -22,4 +22,4 @@
 from .kvstore import *
 from .base import *
 from .kvstore_server import *
-from .byteps import *
+from .horovod import *

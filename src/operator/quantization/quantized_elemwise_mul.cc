@@ -58,7 +58,6 @@ inline bool QuantizedElemwiseMulOpShape(const nnvm::NodeAttrs& attrs,
   SHAPE_ASSIGN_CHECK(*in_attrs, quantized_elemwise_mul::kRhsMin, mxnet::TShape(1, 1));
   SHAPE_ASSIGN_CHECK(*in_attrs, quantized_elemwise_mul::kRhsMax, mxnet::TShape(1, 1));
 
-  out_attrs->clear();
   SHAPE_ASSIGN_CHECK(*out_attrs, quantized_elemwise_mul::kOut, lshape);
   if (!params.enable_float_output) {
     SHAPE_ASSIGN_CHECK(*out_attrs, quantized_elemwise_mul::kOutMin, mxnet::TShape(1, 1));

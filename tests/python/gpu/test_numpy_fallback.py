@@ -19,14 +19,13 @@
 from __future__ import absolute_import
 from distutils.version import StrictVersion
 import sys
-import unittest
+import pytest
 import itertools
 import numpy as _np
 import platform
 import mxnet as mx
 import scipy.stats as ss
 import scipy.special as scipy_special
-from nose.tools import assert_raises
 from mxnet import np, npx
 from mxnet.base import MXNetError
 from mxnet.test_utils import assert_almost_equal, use_np, set_default_context
@@ -43,6 +42,7 @@ set_default_context(mx.gpu(0))
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_fallback_decorator():
     @numpy_fallback
     def dnp_func(a, b=None, split_inputs=(), ret_type=list):
@@ -109,7 +109,3 @@ def test_np_fallback_decorator():
     # does not support functions with no return values
     assertRaises(ValueError, empty_ret_func)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

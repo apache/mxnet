@@ -24,6 +24,7 @@ import platform
 import itertools
 import numpy as _np
 import unittest
+import pytest
 from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
@@ -42,7 +43,10 @@ _TVM_OPS = [
     'less',
     'less_equal',
     'greater',
-    'greater_equal'
+    'greater_equal',
+    'logical_and',
+    'logical_or',
+    'logical_xor',
 ]
 
 
@@ -130,6 +134,39 @@ def _add_workload_bincount():
     OpArgMngr.add_workload('bincount', y, minlength=8)
     OpArgMngr.add_workload('bincount', y2, minlength=0)
     OpArgMngr.add_workload('bincount', y2, minlength=5)
+
+
+def _add_workload_cross():
+    shapes = [
+        # (a_shape, b_shape, (a_axis, b_axis, c_axis))
+        ((2,), (2,), (-1, -1, -1)),
+        ((1, 2), (1, 2), (-1, -1, -1)),
+        ((2, 5, 4, 3), (5, 2, 4, 3), (0, 1, 2)),
+        ((2, 5, 1, 3), (1, 2, 4, 3), (0, 1, 2)),
+
+        ((2,), (3,), (-1, -1, -1)),
+        ((1, 2,), (1, 3,), (-1, -1, -1)),
+        ((6, 2, 5, 4), (6, 5, 3, 4), (1, 2, 0)),
+        ((6, 2, 1, 4), (1, 5, 3, 4), (1, 2, 0)),
+
+        ((3,), (2,), (-1, -1, -1)),
+        ((1, 3,), (1, 2,), (-1, -1, -1)),
+        ((6, 3, 5, 4), (6, 5, 2, 4), (1, 2, 0)),
+        ((6, 3, 1, 4), (1, 5, 2, 4), (1, 2, 0)),
+
+        ((3,), (3,), (-1, -1, -1)),
+        ((1, 3,), (1, 3,), (-1, -1, -1)),
+        ((6, 3, 5, 4), (6, 5, 3, 4), (1, 2, 0)),
+        ((6, 3, 1, 4), (1, 5, 3, 4), (1, 2, 0)),
+    ]
+    dtypes = [np.float32, np.float64]
+    for shape, dtype in itertools.product(shapes, dtypes):
+        a_shape, b_shape, (a_axis, b_axis, c_axis) = shape
+        a_np = _np.random.uniform(-10., 10., size=a_shape)
+        b_np = _np.random.uniform(-10., 10., size=b_shape)
+        a = np.array(a_np, dtype=dtype)
+        b = np.array(b_np, dtype=dtype)
+        OpArgMngr.add_workload('cross', a, b, axisa=a_axis, axisb=b_axis, axisc=c_axis)
 
 
 def _add_workload_diag():
@@ -309,6 +346,7 @@ def _add_workload_expand_dims():
 def _add_workload_split():
     OpArgMngr.add_workload('split', np.random.uniform(size=(4, 1)), 2)
     OpArgMngr.add_workload('split', np.arange(10), 2)
+    OpArgMngr.add_workload('split', np.random.uniform(size=(10, 10, 3)), 3, -1)
     assertRaises(ValueError, np.split, np.arange(10), 3)
 
 
@@ -495,6 +533,13 @@ def _add_workload_linalg_cholesky():
         OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
         a = np.zeros((1, 0, 0))
         OpArgMngr.add_workload('linalg.cholesky', np.array(a, dtype=dtype))
+
+
+def _add_workload_linalg_qr():
+    A = np.array([[0, 1], [1, 1], [1, 1], [2, 1]])
+    OpArgMngr.add_workload('linalg.qr', A)
+    # default mode in numpy is 'reduced'
+    OpArgMngr.add_workload('linalg.qr', A, mode='reduced')
 
 
 def _add_workload_linalg_inv():
@@ -713,6 +758,26 @@ def _add_workload_tril():
                         [np.inf, 1, 1]])
         OpArgMngr.add_workload('tril', arr)
         OpArgMngr.add_workload('tril', np.zeros((3, 3), dtype=dt))
+    import mxnet as mx
+    assertRaises(mx.MXNetError, np.tril, 10)
+    assertRaises(mx.MXNetError, np.tril, 2, 10)
+
+
+def _add_workload_triu():
+    OpArgMngr.add_workload('triu', np.random.uniform(size=(4, 1)))
+    for dt in ['float16', 'float32', 'float64', 'int32', 'int64', 'int8', 'uint8']:
+        OpArgMngr.add_workload('triu', np.ones((2, 2), dtype=dt))
+        a = np.array([
+            [[1, 1], [1, 1]],
+            [[1, 1], [1, 0]],
+            [[1, 1], [0, 0]],
+        ], dtype=dt)
+        OpArgMngr.add_workload('triu', a)
+        arr = np.array([[1, 1, np.inf],
+                        [1, 1, 1],
+                        [np.inf, 1, 1]])
+        OpArgMngr.add_workload('triu', arr)
+        OpArgMngr.add_workload('triu', np.zeros((3, 3), dtype=dt))
 
 
 def _add_workload_einsum():
@@ -1363,6 +1428,38 @@ def _add_workload_insert():
     OpArgMngr.add_workload('insert', np.array(1), 0, np.array([0]))
 
 
+def _add_workload_interp():
+    xp0 = np.linspace(0, 1, 5)
+    fp0 = np.linspace(0, 1, 5)
+    x0 = np.linspace(0, 1, 50)
+    xp1 = np.array([1, 2, 3, 4])
+    fp1 = np.array([1, 2, np.inf, 4])
+    x1 = np.array([1, 2, 2.5, 3, 4])
+    xp2 = np.arange(0, 10, 0.0001)
+    fp2 = np.sin(xp2)
+    xp3 = np.array([190, -190, 350, -350])
+    fp3 = np.array([5, 10, 3, 4])
+    x3 = np.array([-180, -170, -185, 185, -10, -5, 0, 365])
+
+    OpArgMngr.add_workload('interp', x0, xp0, fp0)
+    OpArgMngr.add_workload('interp', x1, xp1, fp1)
+    OpArgMngr.add_workload('interp', np.pi, xp2, fp2)
+    OpArgMngr.add_workload('interp', x3, xp3, fp3, period=360)
+    for size in range(1, 10):
+        xp = np.arange(size, dtype=np.float64)
+        fp = np.ones(size, dtype=np.float64)
+        incpts = np.array([-1, 0, size - 1, size], dtype=np.float64)
+        decpts = incpts[::-1]
+        OpArgMngr.add_workload('interp', incpts, xp, fp)
+        OpArgMngr.add_workload('interp', decpts, xp, fp)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, left=0)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, left=0)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, right=2)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, right=2)
+        OpArgMngr.add_workload('interp', incpts, xp, fp, left=0, right=2)
+        OpArgMngr.add_workload('interp', decpts, xp, fp, left=0, right=2)
+
+
 def _add_workload_hypot():
     OpArgMngr.add_workload('hypot', np.array(1), np.array(1))
     OpArgMngr.add_workload('hypot', np.array(0), np.array(0))
@@ -1721,7 +1818,7 @@ def _add_workload_matmul():
             a = np.ones((2,), dtype=dt)
             b = np.ones((2,), dtype=dt)
             OpArgMngr.add_workload('matmul', a, b)
-    
+
     def test_result_types():
         mat = np.ones((1,1))
         vec = np.ones((1,))
@@ -1730,7 +1827,7 @@ def _add_workload_matmul():
             v = vec.astype(dt)
             for arg in [(m, v), (v, m), (m, m)]:
                 OpArgMngr.add_workload('matmul', *arg)
-    
+
     def test_scalar_output():
         vec1 = np.array([2])
         vec2 = np.array([3, 4]).reshape(1, -1)
@@ -1739,7 +1836,7 @@ def _add_workload_matmul():
             v2 = vec2.astype(dt)
             OpArgMngr.add_workload('matmul', v1, v2)
             OpArgMngr.add_workload('matmul', v2.T, v1)
-    
+
     def test_vector_vector_values():
         vec1 = np.array([1, 2])
         vec2 = np.array([3, 4]).reshape(-1, 1)
@@ -1771,7 +1868,7 @@ def _add_workload_matmul():
             m2 = mat2.astype(dt)
             OpArgMngr.add_workload('matmul', m1, v)
             OpArgMngr.add_workload('matmul', m2, v)
-    
+
     def test_matrix_matrix_values():
         mat1 = np.array([[1, 2], [3, 4]])
         mat2 = np.array([[1, 0], [1, 1]])
@@ -1877,6 +1974,23 @@ def _add_workload_less_equal(array_pool):
     OpArgMngr.add_workload('less_equal', array_pool['4x1'], array_pool['1x2'])
     # TODO(junwu): mxnet currently does not have a consistent behavior as NumPy in dealing with np.nan
     # OpArgMngr.add_workload('less_equal', np.array([np.nan]), np.array([np.nan]))
+
+
+def _add_workload_logical_and(array_pool):
+    OpArgMngr.add_workload('logical_and', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
+    OpArgMngr.add_workload('logical_and', np.array([False, False, True, True], dtype=np.bool),
+                           np.array([False, True, False, True], dtype=np.bool))
+
+def _add_workload_logical_or(array_pool):
+    OpArgMngr.add_workload('logical_or', np.array([0, 1, 2, 4, 2], dtype=np.bool), np.array([-2, 5, 1, 4, 3], dtype=np.bool))
+    OpArgMngr.add_workload('logical_or', np.array([False, False, True, True], dtype=np.bool),
+                           np.array([False, True, False, True], dtype=np.bool))
+
+
+def _add_workload_logical_xor(array_pool):
+    OpArgMngr.add_workload('logical_xor', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
+    OpArgMngr.add_workload('logical_xor', np.array([False, False, True, True], dtype=np.bool),
+                           np.array([False, True, False, True], dtype=np.bool))
 
 
 def _add_workload_where():
@@ -2074,12 +2188,29 @@ def _add_workload_linalg_matrix_power():
 
 
 def _add_workload_linalg_matrix_rank():
-    a = np.eye(4)
-    b = a; b[-1,-1] = 0
-    c = np.ones((4,))
-    OpArgMngr.add_workload('linalg.matrix_rank', a)
-    OpArgMngr.add_workload('linalg.matrix_rank', b)
-    OpArgMngr.add_workload('linalg.matrix_rank', c)
+    shapes = [
+        ((4, 3), ()),
+        ((4, 3), (1,)),
+        ((4, 3), (2, 3,)),
+        ((2, 1, 1), (1,)),
+        ((2, 3, 3), (2,)),
+        ((2, 3, 1, 1), ()),
+        ((2, 3, 4, 4), (1, 3)),
+        ((2, 3, 4, 5), (2, 3)),
+        ((2, 3, 5, 4), (2, 3)),
+    ]
+    dtypes = (np.float32, np.float64)
+    for dtype in dtypes:
+        for a_shape, tol_shape in shapes:
+            for tol_is_none in [True, False]:
+                a_np = _np.asarray(_np.random.uniform(-10., 10., a_shape))
+                a = np.array(a_np, dtype=dtype)
+                if tol_is_none:
+                    OpArgMngr.add_workload('linalg.matrix_rank', a, None, False)
+                else:
+                    tol_np = _np.random.uniform(10., 20., tol_shape)
+                    tol = np.array(tol_np, dtype=dtype)
+                    OpArgMngr.add_workload('linalg.matrix_rank', a, tol, False)
 
 
 def _add_workload_linalg_multi_dot():
@@ -2087,13 +2218,6 @@ def _add_workload_linalg_multi_dot():
     F = np.ones((6,6))
     OpArgMngr.add_workload('linalg.multi_dot', E)
     OpArgMngr.add_workload('linalg.multi_dot', [F,F])
-
-
-
-def _add_workload_linalg_qr():
-    A = np.array([[0, 1], [1, 1], [1, 1], [2, 1]])
-    OpArgMngr.add_workload('linalg.qr', A)
-    OpArgMngr.add_workload('linalg.qr', A, mode='r')
 
 
 def _add_workload_heaviside():
@@ -2801,6 +2925,7 @@ def _prepare_workloads():
     _add_workload_clip()
     _add_workload_concatenate(array_pool)
     _add_workload_copy()
+    _add_workload_cross()
     _add_workload_cumsum()
     _add_workload_ravel()
     _add_workload_unravel_index()
@@ -2849,6 +2974,7 @@ def _prepare_workloads():
     _add_workload_zeros_like(array_pool)
     _add_workload_linalg_norm()
     _add_workload_linalg_cholesky()
+    _add_workload_linalg_qr()
     _add_workload_linalg_inv()
     _add_workload_linalg_solve()
     _add_workload_linalg_det()
@@ -2865,9 +2991,9 @@ def _prepare_workloads():
     _add_workload_linalg_matrix_power()
     _add_workload_linalg_matrix_rank()
     _add_workload_linalg_multi_dot()
-    _add_workload_linalg_qr()
     _add_workload_trace()
     _add_workload_tril()
+    _add_workload_triu()
     _add_workload_outer()
     _add_workload_kron()
     _add_workload_meshgrid()
@@ -2881,6 +3007,7 @@ def _prepare_workloads():
     _add_workload_true_divide()
     _add_workload_inner()
     _add_workload_insert()
+    _add_workload_interp()
     _add_workload_hypot()
     _add_workload_lcm()
     _add_workload_bitwise_and()
@@ -2939,6 +3066,9 @@ def _prepare_workloads():
     _add_workload_greater_equal(array_pool)
     _add_workload_less(array_pool)
     _add_workload_less_equal(array_pool)
+    _add_workload_logical_and(array_pool)
+    _add_workload_logical_or(array_pool)
+    _add_workload_logical_xor(array_pool)
     _add_workload_where()
     _add_workload_shape()
     _add_workload_diff()
@@ -3111,6 +3241,7 @@ def check_interoperability(op_list):
 @with_seed()
 @use_np
 @with_array_function_protocol
+@pytest.mark.serial
 def test_np_memory_array_function():
     ops = [_np.shares_memory, _np.may_share_memory]
     for op in ops:
@@ -3124,6 +3255,7 @@ def test_np_memory_array_function():
 @with_seed()
 @use_np
 @with_array_function_protocol
+@pytest.mark.serial
 def test_np_array_function_protocol():
     check_interoperability(_NUMPY_ARRAY_FUNCTION_LIST)
 
@@ -3131,17 +3263,15 @@ def test_np_array_function_protocol():
 @with_seed()
 @use_np
 @with_array_ufunc_protocol
+@pytest.mark.serial
 def test_np_array_ufunc_protocol():
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
 
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_fallback_ops():
     op_list = np.fallback.__all__ + ['linalg.{}'.format(op_name) for op_name in np.fallback_linalg.__all__]
     check_interoperability(op_list)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

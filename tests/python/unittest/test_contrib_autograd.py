@@ -18,7 +18,7 @@
 import mxnet.ndarray as nd
 from mxnet.contrib.autograd import *
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 
 def autograd_assert(*args, **kwargs):
     func   = kwargs["func"]
@@ -190,7 +190,3 @@ def test_retain_grad():
     raise AssertionError(
         "differentiating the same graph twice without retain_graph should fail")
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

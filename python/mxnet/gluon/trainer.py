@@ -25,6 +25,7 @@ from ..model import _create_kvstore, _create_sparse_kvstore
 from .parameter import ParameterDict, Parameter
 from ..kvstore import KVStore
 
+
 class Trainer(object):
     """Applies an `Optimizer` on a set of Parameters. Trainer should
     be used together with `autograd`.

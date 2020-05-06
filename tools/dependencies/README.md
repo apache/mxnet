@@ -204,7 +204,7 @@ pip install -e python
 export NCCL_DEBUG=VERSION
 vim tests/python/gpu/test_nccl.py
 # Remove @unittest.skip("Test requires NCCL library installed and enabled during build") then run
-nosetests --verbose tests/python/gpu/test_nccl.py
+pytest --verbose tests/python/gpu/test_nccl.py
 # test_nccl.test_nccl_pushpull ... NCCL version 2.4.2+cuda10.0
 # ok
 # ----------------------------------------------------------------------
@@ -228,7 +228,6 @@ Please run performance test aginast the MXNet you build before raising the PR.
 - [ ] Python/setup.py
 - [ ] tools/pip/setup.py
 - [ ] ci/docker/install/requirements
-- [ ] ci/docker/install/ubuntu_publish.sh
 - [ ] ci/docker/install/ubuntu_python.sh
 - [ ] ci/qemu/mxnet_requirements.txt
 - [ ] docs/install/requirements.txt 

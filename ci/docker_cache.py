@@ -41,7 +41,7 @@ PARALLEL_BUILDS = 10
 DOCKER_CACHE_RETRY_SECONDS = 5
 
 
-def build_save_containers(platforms, registry, load_cache) -> int:
+def build_save_containers(platforms, registry, load_cache, no_publish) -> int:
     """
     Entry point to build and upload all built dockerimages in parallel
     :param platforms: List of platforms
@@ -54,7 +54,7 @@ def build_save_containers(platforms, registry, load_cache) -> int:
         return 0
 
     platform_results = Parallel(n_jobs=PARALLEL_BUILDS, backend="multiprocessing")(
-        delayed(_build_save_container)(platform, registry, load_cache)
+        delayed(_build_save_container)(platform, registry, load_cache, no_publish)
         for platform in platforms)
 
     is_error = False
@@ -66,7 +66,7 @@ def build_save_containers(platforms, registry, load_cache) -> int:
     return 1 if is_error else 0
 
 
-def _build_save_container(platform, registry, load_cache) -> Optional[str]:
+def _build_save_container(platform, registry, load_cache, no_publish) -> Optional[str]:
     """
     Build image for passed platform and upload the cache to the specified S3 bucket
     :param platform: Platform
@@ -75,7 +75,6 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     :return: Platform if failed, None otherwise
     """
     docker_tag = build_util.get_docker_tag(platform=platform, registry=registry)
-
     # Preload cache
     if load_cache:
         load_docker_cache(registry=registry, docker_tag=docker_tag)
@@ -84,11 +83,12 @@ def _build_save_container(platform, registry, load_cache) -> Optional[str]:
     logging.debug('Building %s as %s', platform, docker_tag)
     try:
         # Increase the number of retries for building the cache.
-        image_id = build_util.build_docker(docker_binary='docker', platform=platform, registry=registry, num_retries=10, no_cache=False)
+        image_id = build_util.build_docker(platform=platform, registry=registry, num_retries=10, no_cache=False)
         logging.info('Built %s as %s', docker_tag, image_id)
 
         # Push cache to registry
-        _upload_image(registry=registry, docker_tag=docker_tag, image_id=image_id)
+        if not no_publish:
+            _upload_image(registry=registry, docker_tag=docker_tag, image_id=image_id)
         return None
     except Exception:
         logging.exception('Unexpected exception during build of %s', docker_tag)
@@ -180,18 +180,21 @@ def main() -> int:
                         help="Docker hub registry name",
                         type=str,
                         required=True)
+    parser.add_argument("--no-publish", help="Only build but don't publish. Used for testing.",
+                        action='store_true')
 
     args = parser.parse_args()
 
-    platforms = build_util.get_platforms()
+    platforms = build_util.get_platforms(legacy_only=True)
 
     secret_name = os.environ['DOCKERHUB_SECRET_NAME']
     endpoint_url = os.environ['DOCKERHUB_SECRET_ENDPOINT_URL']
     region_name = os.environ['DOCKERHUB_SECRET_ENDPOINT_REGION']
 
     try:
-        login_dockerhub(secret_name, endpoint_url, region_name)
-        return build_save_containers(platforms=platforms, registry=args.docker_registry, load_cache=True)
+        if not args.no_publish:
+            login_dockerhub(secret_name, endpoint_url, region_name)
+        return build_save_containers(platforms=platforms, registry=args.docker_registry, load_cache=True, no_publish=args.no_publish)
     finally:
         logout_dockerhub()
 
