@@ -41,6 +41,10 @@
 namespace mxnet {
 namespace op {
 
+namespace pad_enum {
+enum PadOpType { kConstant, kEdge, kReflect, kSymmetric, kMinimum, kMaximum };
+}
+
 template <int ndim>
 MSHADOW_XINLINE index_t rravel(const mshadow::Shape<ndim>& coord,
                                const index_t* shape) {
@@ -67,14 +71,31 @@ MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(const int idx,
   return ret;
 }
 
-namespace pad_enum {
-enum PadOpType { kConstant, kEdge, kReflect, kSymmetric, kMinimum, kMaximum };
+inline std::string MXNetPadType2String(const int s) {
+  using namespace op;
+  if (s == pad_enum::kConstant) {
+    return "constant";
+  } else if (s == pad_enum::kEdge) {
+    return "edge";
+  } else if (s == pad_enum::kReflect) {
+    return "reflect";
+  } else if (s == pad_enum::kSymmetric) {
+    return "symmetric";
+  } else if (s == pad_enum::kMaximum) {
+    return "maximum";
+  } else if (s == pad_enum::kMinimum) {
+    return "minimum";
+  } else {
+    LOG(FATAL) << "unknown type " << s;
+  }
+  LOG(FATAL) << "should not reach here ";
+  return 0;
 }
 
 struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
   mxnet::Tuple<mxnet::Tuple<int>> pad_width;
   int mode;
-  double constant_value;
+  double constant_values;
   std::string reflect_type;
   DMLC_DECLARE_PARAMETER(NumpyPadParam) {
     DMLC_DECLARE_FIELD(pad_width)
@@ -95,7 +116,7 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
         .set_default(pad_enum::kConstant)
         .describe(
             "Padding type to use."
-            " \"constant\" pads with `constant_value`"
+            " \"constant\" pads with `constant_values`"
             " \"edge\" pads using the edge values of the input array"
             " \"reflect\" Pads with the reflection of the vector mirrored"
             "on the first and last values of the vector along each axis."
@@ -105,7 +126,7 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
             "vector along each axis."
             " \"minimum\" Pads with the minimum value of all or part of the"
             "vector along each axis.");
-    DMLC_DECLARE_FIELD(constant_value)
+    DMLC_DECLARE_FIELD(constant_values)
         .set_default(0.0)
         .describe("Used in ‘constant’. The values to set the padded values for each axis."
                   "((before_1, after_1), ... (before_N, after_N)) unique pad constants for"
@@ -121,6 +142,16 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
                   "the edge value. For the ‘odd’ style,"
                   "the extended part of the array is created by subtracting the "
                   "reflected values from two times the edge value.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream pad_width_s, mode_s, constant_values_s, reflect_type_s;
+    pad_width_s << pad_width;
+    constant_values_s << constant_values;
+    reflect_type_s << reflect_type;
+    (*dict)["pad_width"] = pad_width_s.str();
+    (*dict)["mode"] = MXNetPadType2String(mode);
+    (*dict)["constant_values"] = constant_values_s.str();
+    (*dict)["reflect_type"] = reflect_type_s.str();
   }
 };
 
@@ -149,7 +180,7 @@ struct constant_pad {
                                   const index_t* ishape,
                                   const index_t* oshape,
                                   mshadow::Shape<ndim*2> width,
-                                  double constant_value) {
+                                  double constant_values) {
     using namespace mxnet_op;
     auto j = uunravel<ndim>(i, oshape);
     size_t m;
@@ -161,7 +192,7 @@ struct constant_pad {
         continue;
       } else {
         origin = false;
-        KERNEL_ASSIGN(out[i], req, constant_value);
+        KERNEL_ASSIGN(out[i], req, constant_values);
       }
     }
     if (origin) {
@@ -554,7 +585,7 @@ void NumpyPadOpImpl(const TBlob& in_data,
             MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
               Kernel<constant_pad<xpu, req_type, NDim>, xpu>::Launch(
                 s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-                idptr, odptr, width, param.constant_value);
+                idptr, odptr, width, param.constant_values);
             });
           });
           // constant padding end

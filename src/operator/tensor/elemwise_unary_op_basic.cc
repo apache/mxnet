@@ -944,6 +944,21 @@ The storage type of ``gammaln`` output is always dense
 MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_gammaln,
                                                   unary_bwd<mshadow_op::gammaln_grad>);
 
+// digamma
+MXNET_OPERATOR_REGISTER_UNARY_WITH_SPARSE_DR(digamma, cpu, mshadow_op::digamma)
+.add_alias("_npx_digamma")
+MXNET_ADD_SPARSE_OP_ALIAS(digamma)
+.describe(R"code(Returns element-wise log derivative of the gamma function \
+of the input.
+
+The storage type of ``digamma`` output is always dense
+
+)code")
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_digamma"});
+
+MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU_DR(_backward_digamma,
+                                                  unary_bwd<mshadow_op::trigamma>);
+
 MXNET_OPERATOR_REGISTER_UNARY(logical_not)
 .describe(R"code(Returns the result of logical NOT (!) function
 

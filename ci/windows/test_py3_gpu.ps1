@@ -22,16 +22,28 @@ $env:PYTHONPATH=join-path $pwd.Path windows_package\python
 $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 $env:MXNET_SUBGRAPH_VERBOSE=0
 $env:MXNET_HOME=[io.path]::combine($PSScriptRoot, 'mxnet_home')
+$env:MXNET_GPU_MEM_POOL_TYPE="Unpooled"
 
 C:\Python37\Scripts\pip install -r ci\docker\install\requirements
-C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_unittest.xml tests\python\unittest
-if ($LastExitCode -ne 0) { Throw ("Error running unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_operator.xml tests\python\gpu\test_operator_gpu.py
-if ($LastExitCode -ne 0) { Throw ("Error running tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_forward.xml tests\python\gpu\test_forward.py
-if ($LastExitCode -ne 0) { Throw ("Error running tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_train.xml tests\python\train
-if ($LastExitCode -ne 0) { Throw ("Error running tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+C:\Python37\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_unittest.xml tests\python\unittest
+if ($LastExitCode -ne 0) { Throw ("Error running parallel unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+C:\Python37\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append tests\python\unittest
+if ($LastExitCode -ne 0) { Throw ("Error running serial unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+
+C:\Python37\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_operator.xml tests\python\gpu\test_operator_gpu.py
+if ($LastExitCode -ne 0) { Throw ("Error running parallel tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+C:\Python37\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_operator.xml --cov-append tests\python\gpu\test_operator_gpu.py
+if ($LastExitCode -ne 0) { Throw ("Error running serial tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+
+C:\Python37\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_forward.xml tests\python\gpu\test_forward.py
+if ($LastExitCode -ne 0) { Throw ("Error running parallel tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+C:\Python37\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_forward.xml --cov-append tests\python\gpu\test_forward.py
+if ($LastExitCode -ne 0) { Throw ("Error running serial tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+
+C:\Python37\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_train.xml tests\python\train
+if ($LastExitCode -ne 0) { Throw ("Error running parallel tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+C:\Python37\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_train.xml --cov-append tests\python\train
+if ($LastExitCode -ne 0) { Throw ("Error running serial tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
 # Adding this extra test since it's not possible to set env var on the fly in Windows.
 $env:MXNET_SAFE_ACCUMULATION=1
 C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_operator.xml --cov-append tests\python\gpu\test_operator_gpu.py::test_norm

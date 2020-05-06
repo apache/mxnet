@@ -54,7 +54,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
            'atleast_1d', 'atleast_2d', 'atleast_3d',
-           'where', 'bincount', 'rollaxis', 'pad', 'cumsum', 'sum', 'diag', 'diagonal']
+           'where', 'bincount', 'rollaxis', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -7390,7 +7390,7 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         values = kwargs.get("constant_values", 0)
         if isinstance(values, tuple):
             raise TypeError("unsupported constant_values type: {'tuple'}.")
-        _npi.pad(x, pad_width, mode='constant', constant_value=values)
+        return _npi.pad(x, pad_width, mode='constant', constant_values=values)
     elif mode == "symmetric":
         values = kwargs.get("reflect_type", "even")
         if values != "even" and values is not None:
@@ -7413,8 +7413,86 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         if values is not None:
             raise ValueError("unsupported stat_length '{}'".format(values))
         return _npi.pad(x, pad_width, mode='minimum')
-    return _npi.pad(x, pad_width, mode='constant', constant_value=0)
+    return _npi.pad(x, pad_width, mode='constant', constant_values=0)
 
+
+@set_module('mxnet.symbol.numpy')
+def prod(a, axis=None, dtype=None, keepdims=False, initial=None, output=None): # pylint: disable=too-many-arguments
+    """
+    Return the product of array elements over a given axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Input data.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which a product is performed.  The default,
+        axis=None, will calculate the product of all the elements in the
+        input array. If axis is negative it counts from the last to the
+        first axis.
+        .. versionadded:: 1.7.0
+        If axis is a tuple of ints, a product is performed on all of the
+        axes specified in the tuple instead of a single axis or all the
+        axes as before.
+    dtype : dtype, optional
+        The type of the returned array, as well as of the accumulator in
+        which the elements are multiplied.  The dtype of `a` is used by
+        default unless `a` has an integer dtype of less precision than the
+        default platform integer.  In that case, if `a` is signed then the
+        platform integer is used while if `a` is unsigned then an unsigned
+        integer of the same precision as the platform integer is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must have
+        the same shape as the expected output, but the type of the output
+        values will be cast if necessary.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the
+        result as dimensions with size one. With this option, the result
+        will broadcast correctly against the input array.
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `prod` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-class' method does not implement `keepdims` any
+        exceptions will be raised.
+    initial : scalar, optional
+        The starting value for this product. See `~numpy.ufunc.reduce` for details.
+    where : not supported
+
+    Returns
+    -------
+    product_along_axis : ndarray, see `dtype` parameter above.
+        An array shaped as `a` but with the specified axis removed.
+        Returns a reference to `out` if specified.
+
+    Examples
+    --------
+    By default, calculate the product of all elements:
+    >>> np.prod([1.,2.])
+    2.0
+    Even when the input array is two-dimensional:
+    >>> np.prod([[1.,2.],[3.,4.]])
+    24.0
+    But we can also specify the axis over which to multiply:
+    >>> np.prod([[1.,2.],[3.,4.]], axis=1)
+    array([  2.,  12.])
+    Or select specific elements to include:
+    >>> np.prod([1., np.nan, 3.], where=[True, False, True])
+    3.0
+    If the type of `x` is unsigned, then the output type is
+    the unsigned platform integer:
+    >>> x = np.array([1, 2, 3], dtype=np.uint8)
+    >>> np.prod(x).dtype == np.uint
+    True
+    If `x` is of a signed integer type, then the output type
+    is the default platform integer:
+    >>> x = np.array([1, 2, 3], dtype=np.int8)
+    >>> np.prod(x).dtype == int
+    True
+    You can also start the product with a value other than one:
+    >>> np.prod([1, 2], initial=5)
+    10
+    """
+    return _npi.prod(a, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial)
 
 @set_module('mxnet.symbol.numpy')
 def cumsum(a, axis=None, dtype=None, out=None):

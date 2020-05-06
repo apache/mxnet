@@ -353,6 +353,9 @@ class RNNCell(HybridRecurrentCell):
         Initializer for the bias vector.
     h2h_bias_initializer : str or Initializer, default 'zeros'
         Initializer for the bias vector.
+    input_size: int, default 0
+        The number of expected features in the input x.
+        If not specified, it will be inferred from input.
     prefix : str, default ``'rnn_'``
         Prefix for name of `Block`s
         (and name of weight if params is `None`).
@@ -460,6 +463,9 @@ class LSTMCell(HybridRecurrentCell):
         Initializer for the bias vector.
     h2h_bias_initializer : str or Initializer, default 'zeros'
         Initializer for the bias vector.
+    input_size: int, default 0
+        The number of expected features in the input x.
+        If not specified, it will be inferred from input.
     prefix : str, default ``'lstm_'``
         Prefix for name of `Block`s
         (and name of weight if params is `None`).
@@ -585,6 +591,9 @@ class GRUCell(HybridRecurrentCell):
         Initializer for the bias vector.
     h2h_bias_initializer : str or Initializer, default 'zeros'
         Initializer for the bias vector.
+    input_size: int, default 0
+        The number of expected features in the input x.
+        If not specified, it will be inferred from input.
     prefix : str, default ``'gru_'``
         prefix for name of `Block`s
         (and name of weight if params is `None`).

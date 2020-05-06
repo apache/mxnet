@@ -19,7 +19,13 @@ import mxnet as mx
 import mxnet.ndarray as nd
 from mxnet.test_utils import *
 import numpy as np
+import os
+import sys
+CURR_PATH = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.insert(0, os.path.join(CURR_PATH, '../unittest'))
+from common import retry
 
+@retry(5)
 def test_factorization_machine_module(verbose=False):
     """ Test factorization machine model with sparse operators """
     def check_factorization_machine_module(optimizer=None, num_epochs=None):
@@ -135,4 +141,4 @@ def test_factorization_machine_module(verbose=False):
 
 # run as a script
 if __name__ == "__main__":
-    test_factorization_machine_module()	
+    test_factorization_machine_module()

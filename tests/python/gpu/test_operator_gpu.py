@@ -85,6 +85,7 @@ def check_countsketch(in_dim,out_dim,n):
 
 
 @with_seed()
+@pytest.mark.serial
 def test_countsketch():
     minindim = 40
     maxindim = 100
@@ -281,6 +282,7 @@ def check_multi_sum_sq(dtype, shapes, ctx, tol1, tol2):
     assert_almost_equal(ref_sum_sq.asnumpy(), sum_sq.asnumpy(), atol=tol1, rtol=tol1)
 
 @with_seed()
+@pytest.mark.serial
 def test_multi_sum_sq():
     min_nparam = 100
     max_nparam = 120
@@ -338,6 +340,7 @@ def check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2):
     assert_almost_equal(ref_new_lrs.asnumpy(), mx_new_lrs.asnumpy(), atol=tol2, rtol=tol2)
 
 @with_seed()
+@pytest.mark.serial
 def test_fast_lars():
     min_nparam = 50
     max_nparam = 60
@@ -451,6 +454,7 @@ def test_preloaded_multi_sgd():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_batchnorm_with_type():
   ctx_list_v1_2D = [
     {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
@@ -519,6 +523,7 @@ def test_batchnorm_with_type():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_batchnorm_versions():
   def test_batchnorm_versions_helper(batchnorm_op_list, data, fix_gamma, use_global_stats):
     ctx_list = []
@@ -600,6 +605,7 @@ def test_batchnorm_versions():
 
 @with_seed(1234)
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+@pytest.mark.serial
 def test_convolution_with_type():
     sym1 = mx.sym.Convolution(num_filter=3, kernel=(3,3), name='conv')
 
@@ -643,6 +649,7 @@ def check_consistency_NxM(sym_list, ctx_list):
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10141")
 @with_seed()
+@pytest.mark.serial
 def test_convolution_options():
     # 1D convolution
     ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 2, 7), 'type_dict': {'conv_data': np.float64}},
@@ -710,6 +717,7 @@ def test_convolution_options():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_conv_deconv_guards():
     # Test cases for convolution and deconvolution via strided fft.  Ensure that the framework
     # guards against problematic CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING in cuDNN [7.3.1,7.5)
@@ -773,6 +781,7 @@ def test_convolution_multiple_streams():
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
 # Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
 @with_seed()
+@pytest.mark.serial
 def test_convolution_large_c():
     problematic_c = 64 * 1024
     # The convolution accumulates many values, so set large tolerances.
@@ -803,6 +812,7 @@ def test_convolution_large_c():
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
 # Algos returned by find() can fail to run with grad_req='add' (wgrad kernel beta parameter == 1.0f).
 @with_seed()
+@pytest.mark.serial
 def test_deconvolution_large_c():
     problematic_c = 64 * 1024
     # The deconvolution accumulates many values, so set large tolerances.
@@ -831,6 +841,7 @@ def test_deconvolution_large_c():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_convolution_versions():
     # 2D convolution NCHW
     ctx_list = [{'ctx': mx.cpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float32}},
@@ -859,6 +870,7 @@ def test_convolution_versions():
 
 # More max-pooling strides and pads to test cudnn pooling implementation code paths
 @with_seed()
+@pytest.mark.serial
 def test_pooling_nhwc_with_convention():
     def make_pooling_syms(**kwargs):
         # Conventional NCHW layout pooling
@@ -891,6 +903,7 @@ def test_pooling_nhwc_with_convention():
                     check_consistency_NxM(symlist, ctx_list)
 
 
+@pytest.mark.serial
 def test_pooling_with_type():
     ctx_list = [{'ctx': mx.gpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float64}},
                 {'ctx': mx.gpu(0), 'pool_data': (2, 2, 10, 10), 'type_dict': {'pool_data': np.float32}},
@@ -908,6 +921,7 @@ def test_pooling_with_type():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_deconvolution_with_type():
     # Test basic deconvolution without exercising stride, pad or dilation.
     # 1D deconvolution
@@ -944,6 +958,7 @@ def test_deconvolution_with_type():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_deconvolution_options():
 
     # 1D deconvolution
@@ -1099,6 +1114,7 @@ def test_pooling_nhwc_with_type():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_pooling_versions():
 
     # Produce the name of the 'transposed' layout, given the dimension
@@ -1318,6 +1334,7 @@ def test_pooling_full_2d():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_flatten_slice_after_conv():
     ctx_list = []
 
@@ -1356,6 +1373,7 @@ def test_bilinear_resize_op():
     check_consistency(sym, ctx_list)
 
 @with_seed()
+@pytest.mark.serial
 def test_global_pooling():
     def test_1d_pooling(pool_type, p_value=2):
         data = (2, 3, 20)
@@ -1724,6 +1742,7 @@ def check_rnn_consistency(cell1, cell2):
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+@pytest.mark.serial
 def test_rnn():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
 
@@ -1758,6 +1777,7 @@ def test_lstm_forget_bias():
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+@pytest.mark.serial
 def test_gru():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
 
@@ -1770,6 +1790,7 @@ def test_gru():
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+@pytest.mark.serial
 def test_bidirectional():
     fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
             bidirectional=True)
@@ -1804,6 +1825,7 @@ def test_unfuse():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_psroipooling_with_type():
     arg_params = {
         'psroipool_rois': np.array([[0, 10, 22, 161, 173], [0, 20, 15, 154, 160]])}
@@ -1829,6 +1851,7 @@ def test_psroipooling_with_type():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_deformable_psroipooling_with_type():
     tol = {np.dtype(np.float32): 1e-1,
            np.dtype(np.float64): 1e-3,
@@ -1886,6 +1909,7 @@ def test_deformable_psroipooling_with_type():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_deformable_convolution_with_type():
     tol = {np.dtype(np.float32): 1e-1,
            np.dtype(np.float64): 1e-3}
@@ -2013,6 +2037,7 @@ def test_deformable_convolution_options():
 
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
+@pytest.mark.serial
 def test_residual_fused():
     cell = mx.rnn.ResidualCell(
             mx.rnn.FusedRNNCell(50, num_layers=3, mode='lstm',
@@ -2068,11 +2093,13 @@ def check_rnn_layer_w_rand_inputs(layer):
         assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
 @with_seed()
+@pytest.mark.serial
 def test_sequence_reverse():
     check_sequence_reverse(mx.gpu(0))
 
 
 @with_seed()
+@pytest.mark.serial
 def test_autograd_save_memory():
     x = mx.nd.zeros((128, 512, 512), ctx=mx.gpu(0))
     x.attach_grad()
@@ -2085,6 +2112,7 @@ def test_autograd_save_memory():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_cuda_rtc():
     source = r'''
     extern "C" __global__ void axpy(const float *x, float *y, float alpha) {
@@ -2115,6 +2143,7 @@ def test_cuda_rtc():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_cross_device_autograd():
     x = mx.nd.random.uniform(shape=(10,))
     x.attach_grad()
@@ -2142,6 +2171,7 @@ def test_cross_device_autograd():
     assert_almost_equal(dx, x.grad)
 
 @with_seed()
+@pytest.mark.serial
 def test_multi_proposal_op():
     # paramters
     feature_stride = 16
@@ -2254,6 +2284,7 @@ def kernel_error_check_symbolic():
         f.forward()
         g = f.outputs[0].asnumpy()
 
+@pytest.mark.serial
 def test_kernel_error_checking():
     # Running tests that may throw exceptions out of worker threads will stop CI testing
     # if not run in a separate process (with its own address space for CUDA compatibility).
@@ -2331,6 +2362,8 @@ def test_softmax_activation():
 
 
 @with_seed()
+@pytest.mark.serial
+@pytest.mark.serial
 def test_bilinear_sampler_versions():
     data = mx.sym.Variable('data')
     grid = mx.sym.Variable('grid')
@@ -2477,6 +2510,7 @@ def test_bulking():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_allclose_function_gpu():
     allclose_function([mx.cpu(), mx.gpu(0)])
 
@@ -2522,6 +2556,7 @@ def run_math(op, shape, dtype="float32", check_value=True):
             math_square(shape=shape, dtype=dtype, check_value=check_value)
 
 @with_seed()
+@pytest.mark.serial
 def test_math():
     ops = ['log', 'erf', 'square']
     check_value= True
@@ -2533,6 +2568,7 @@ def test_math():
                 run_math(op, shape, dtype, check_value=check_value)
 
 @with_seed()
+@pytest.mark.serial
 def test_arange_like_dtype():
     dtypes = [np.float16, np.float32, np.float64]
 

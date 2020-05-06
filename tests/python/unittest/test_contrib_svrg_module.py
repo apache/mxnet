@@ -96,8 +96,7 @@ def test_module_bind():
 
 @unittest.skip("Flaky test https://gitsvrhub.com/apache/incubator-mxnet/issues/12510")
 @with_seed()
-def test_module_save_load():
-    import tempfile
+def test_module_save_load(tmpdir):
     import os
 
     x = mx.sym.Variable("data")
@@ -110,8 +109,7 @@ def test_module_save_load():
     mod.init_optimizer(optimizer='sgd', optimizer_params={'learning_rate': 0.1})
     mod.update()
 
-    # Create tempfile
-    tmp = tempfile.mkdtemp()
+    tmp = str(tmpdir)
     tmp_file = os.path.join(tmp, 'svrg_test_output')
     mod.save_checkpoint(tmp_file, 0, save_optimizer_states=True)
 

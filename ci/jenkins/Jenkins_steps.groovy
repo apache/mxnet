@@ -539,10 +539,7 @@ def compile_unix_asan_cpu() {
         ws('workspace/build-cpu-asan') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            // TODO(leezu) ubuntu_nightly_cpu temporarily used ASAN tests fail
-            // with Ubuntu 18.04 used on ubuntu_cpu image. ubuntu_nightly_cpu
-            // still uses Ubuntu 16.04
-            utils.docker_run('ubuntu_nightly_cpu', 'build_ubuntu_cpu_cmake_asan', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_cmake_asan', false)
             utils.pack_lib('cpu_asan', mx_lib_cpp_examples_cpu)
           }
         }
@@ -1679,10 +1676,7 @@ def misc_asan_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu-asan') {
             utils.unpack_and_init('cpu_asan', mx_lib_cpp_examples_cpu)
-            // TODO(leezu) ubuntu_nightly_cpu temporarily used ASAN tests fail
-            // with Ubuntu 18.04 used on ubuntu_cpu image. ubuntu_nightly_cpu
-            // still uses Ubuntu 16.04
-            utils.docker_run('ubuntu_nightly_cpu', 'integrationtest_ubuntu_cpu_asan', false)
+            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_asan', false)
         }
       }
     }]
@@ -1719,6 +1713,18 @@ def test_artifact_repository() {
         }
       }
     }]
+}
+
+def misc_test_docker_cache_build() {
+  return ['Test Docker cache build': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/docker_cache') {
+        utils.init_git()
+        sh "python3 ./ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} --no-publish"
+        sh "cd ci && docker-compose -f docker/docker-compose.yml build --parallel"
+      }
+    }
+  }]
 }
 
 return this

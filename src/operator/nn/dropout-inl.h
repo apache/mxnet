@@ -226,7 +226,6 @@ class DropoutOp {
       CUDNN_CALL(cudnnCreateTensorDescriptor(&y_desc_));
       CUDNN_CALL(cudnnCreateTensorDescriptor(&dx_desc_));
       CUDNN_CALL(cudnnCreateTensorDescriptor(&dy_desc_));
-      CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
     }
 #endif  // MXNET_USE_CUDNN_DROPOUT
   }
@@ -238,7 +237,6 @@ class DropoutOp {
       CUDNN_CALL(cudnnDestroyTensorDescriptor(y_desc_));
       CUDNN_CALL(cudnnDestroyTensorDescriptor(dx_desc_));
       CUDNN_CALL(cudnnDestroyTensorDescriptor(dy_desc_));
-      CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
     }
 #endif  // MXNET_USE_CUDNN_DROPOUT
   }

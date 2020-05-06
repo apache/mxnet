@@ -45,4 +45,4 @@ REPOSITORY TAG IMAGE ID CREATED SIZE
 mxnet/python 1.3.0_gpu_cu92_mkl adcb3ab19f50 4 days ago 4.23 GB
 {% endhighlight %}
 
-**Step 5** <a href="get_started/validate_mxnet">Validate the installation</a>.
+**Step 5** <a href="/get_started/validate_mxnet">Validate the installation</a>.

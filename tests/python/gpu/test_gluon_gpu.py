@@ -18,7 +18,6 @@
 from __future__ import print_function
 import sys
 import os
-import tempfile
 import time
 import mxnet as mx
 import multiprocessing as mp
@@ -431,12 +430,12 @@ def test_sync_batchnorm():
                                 num_devices=ndev, cuda=True)
 
 @with_seed()
-def test_symbol_block_fp16():
+def test_symbol_block_fp16(tmpdir):
     # Test case to verify if initializing the SymbolBlock from a model with params
     # other than fp32 param dtype.
 
     # 1. Load a resnet model, cast it to fp16 and export
-    tmp = tempfile.mkdtemp()
+    tmp = str(tmpdir)
     tmpfile = os.path.join(tmp, 'resnet34_fp16')
     ctx = mx.gpu(0)
 
@@ -463,6 +462,7 @@ def test_symbol_block_fp16():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_large_models():
     ctx = default_context()
     # Create model

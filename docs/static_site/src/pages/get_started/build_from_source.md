@@ -27,7 +27,6 @@ permalink: /get_started/build_from_source
 
 This document explains how to build MXNet from source code.
 
-**For Java/Scala/Clojure, please follow [this guide instead](scala_setup)**
 
 ## Overview
 
@@ -36,6 +35,7 @@ Building from source follows this general two-step flow of building the shared l
 1. Build the MXNet shared library, `libmxnet.so`.
     * [Clone the repository](#clone-the-mxnet-project)
     * [Prerequisites](#prerequisites)
+        * [Compiler requirement](#compiler-requirement)
         * [Math library selection](#math-library-selection)
         * [Install GPU software](#install-gpu-software)
         * [Install optional software](#install-optional-software)
@@ -89,6 +89,9 @@ cd mxnet
 
 The following sections will help you decide which specific prerequisites you need to install.
 
+#### Compiler Requirement
+Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler
+
 #### Math Library Selection
 It is useful to consider your math library selection prior to your other prerequisites.
 MXNet relies on the
@@ -109,18 +112,18 @@ The following lists show this order by library and `cmake` switch.
 
 For desktop platforms (x86_64):
 
-1. MKL-DNN (submodule) | `USE_MKLDNN`
-2. MKL | `USE_MKL_IF_AVAILABLE`
-3. MKLML (downloaded) | `USE_MKLML`
-4. Apple Accelerate | `USE_APPLE_ACCELERATE_IF_AVAILABLE` | Mac only
-5. OpenBLAS | `BLAS` | Options: Atlas, Open, MKL, Apple
+1. MKL-DNN (submodule), `USE_MKLDNN`
+2. MKL, `USE_MKL_IF_AVAILABLE`
+3. MKLML (downloaded), `USE_MKLML`
+4. Apple Accelerate (Mac only), `USE_APPLE_ACCELERATE_IF_AVAILABLE`
+5. OpenBLAS, `BLAS`
 
 Note: If `USE_MKL_IF_AVAILABLE` is set to False then MKLML and MKL-DNN will be disabled as well for configuration
 backwards compatibility.
 
 For embedded platforms (all other and if cross compiled):
 
-1. OpenBLAS | `BLAS` | Options: Atlas, Open, MKL, Apple
+1. OpenBLAS, `BLAS`
 
 You can set the BLAS library explicitly by setting the BLAS variable to:
 
@@ -170,6 +173,7 @@ unpredictable.
 
 If you want to run MXNet with GPUs, you must install [NVDIA CUDA and cuDNN](https://developer.nvidia.com/cuda-downloads).
 
+After installation, run nvidia-smi to verify cuda is available on your machine.
 
 #### Install Optional Software
 
@@ -314,7 +318,7 @@ ninja -v
 ## Installing MXNet Language Bindings
 After building MXNet's shared library, you can install other language bindings.
 
-**NOTE:** The C++ API binding must be built when you build MXNet from source. See [Build MXNet with C++]({{'/api/cpp'|relative_url}}).
+**NOTE:** The C++ API binding must be built when you build MXNet from source. See [Build MXNet with C++]({{'/api/cpp.html'|relative_url}}).
 
 The following table provides links to each language binding by operating system:
 
