@@ -1725,7 +1725,7 @@ class Symbol(SymbolBase):
             shared_arg_name_list = shared_arg_names
 
         # prepare shared_buffer
-        if not shared_buffer:
+        if shared_buffer is None:
             shared_buffer_len = ctypes.c_int(-1)
             shared_buffer_names = ctypes.POINTER(ctypes.c_char_p)()
             shared_buffer_handles = ctypes.POINTER(NDArrayHandle)()

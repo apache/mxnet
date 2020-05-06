@@ -770,12 +770,14 @@ int _SimpleBindImpl(SymbolHandle symbol_handle,
     nd_idx = ret->ret_handles.size();
   }
 
+  size_t num_grads = 0;
   for (const auto& nd : arg_grad_vec) {
     if (nd.is_none()) {
       ret->ret_handles.push_back(nullptr);
     } else {
       ret->ret_handles.push_back(new NDArray(nd));
     }
+    num_grads += 1;
   }
   if (arg_grad_vec.size() > 0) {
     *arg_grads = &(ret->ret_handles[nd_idx]);
@@ -808,6 +810,8 @@ int _SimpleBindImpl(SymbolHandle symbol_handle,
       ret->ret_vec_charp.push_back(ret->ret_vec_str.back().c_str());
     }
     *shared_buffer_len = shared_buffer_map.size();
+    // gradient buffers are shared only if shared_exec is present
+    if (shared_exec_handle == nullptr) nd_idx -= num_grads;
     *updated_shared_buffer_handle_list = &(ret->ret_handles.at(nd_idx));
     *updated_shared_buffer_name_list = &(ret->ret_vec_charp[0]);
   }
