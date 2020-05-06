@@ -50,7 +50,7 @@ MXNET_REGISTER_API("_npi.tri")
   attrs.op = op;
   SetAttrDict<op::TriParam>(&attrs);
 
-  int num_outputs = 1;
+  int num_outputs = 0;
   auto ndoutputs = Invoke(op, &attrs, 0, nullptr, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
