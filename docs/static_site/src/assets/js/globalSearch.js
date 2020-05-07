@@ -3,7 +3,7 @@ $(document).ready(function () {
         apiKey: '500f8e78748bd043cc6e4ac130e8c0e7',
         indexName: 'apache_mxnet',
         inputSelector: '#global-search',
-        algoliaOptions: { 'facetFilters': ["version:1.6.0"] },
+        algoliaOptions: { 'facetFilters': ["version:1.6"] },
         debug: true// Set debug to true if you want to inspect the dropdown
     });
     
@@ -48,6 +48,7 @@ $(document).ready(function () {
 
     $("ul.gs-version-dropdown li").each(function() {
         $(this).on("click", function() {
+            $("#global-search").val("");
             $("li.gs-opt.active").removeClass("active");
             $(this).addClass("active");
             $("#gs-current-version-label").html(this.innerHTML);
