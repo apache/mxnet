@@ -502,7 +502,8 @@ class TopKAccuracy(EvalMetric):
             # we do not care about the order of top k elements. It is
             # much faster, which is important since that computation is
             # single-threaded due to Python GIL.
-            pred_label = numpy.argpartition(pred_label.as_np_ndarray().astype('float32'), -self.top_k).as_in_ctx(label.ctx)
+            pred_label = pred_label.as_np_ndarray().as_in_ctx(label.ctx).astype('float32')
+            pred_label = numpy.argpartition(pred_label, -self.top_k)
             label = label.as_np_ndarray().astype('int32')
             check_label_shapes(label, pred_label)
             num_samples = pred_label.shape[0]
