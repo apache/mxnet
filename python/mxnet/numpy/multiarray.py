@@ -2307,7 +2307,7 @@ def array(object, dtype=None, ctx=None):
         if is_np_default_dtype():
             dtype = object.dtype if dtype is None else dtype
         else:
-            dtype = _np.float32 if dtype is None or _np.float64 else dtype
+            dtype = _np.float32 if dtype is None or object.dtype is _np.float64 else dtype
     if isinstance(object, ndarray):
         dtype = object.dtype if dtype is None else dtype
     elif isinstance(object, NDArray):

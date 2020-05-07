@@ -2123,8 +2123,9 @@ def test_np_tril():
 
     for prefix in [1, -1]:
         for shape, k in config:
-            data_np = _np.random.uniform(size=shape)
+            data_np = _np.random.uniform(size=shape).astype(_np.float32)
             data_mx = np.array(data_np, dtype=data_np.dtype)
+
             data_mx.attach_grad()
             ret_np = _np.tril(data_np, k*prefix)
             with mx.autograd.record():
@@ -2184,7 +2185,7 @@ def test_np_triu():
 
     for prefix in [1, -1]:
         for shape, k in config:
-            data_np = _np.random.uniform(size=shape)
+            data_np = _np.random.uniform(size=shape).astype(_np.float32)
             data_mx = np.array(data_np, dtype=data_np.dtype)
             data_mx.attach_grad()
             ret_np = _np.triu(data_np, k*prefix)
@@ -2389,6 +2390,8 @@ def test_np_bitwise_not(func, low, high, ndim):
         mx_func = TestUnary(func)
         np_test_data = _np.random.uniform(low, high, shape).astype(_np.int32)
         mx_test_data = mx.numpy.array(np_test_data)
+        print("np_test_data.dtype:", np_test_data.dtype)
+        print("mx_test_data.dtype:", mx_test_data.dtype)
         for hybridize in [True, False]:
             if hybridize:
                 mx_func.hybridize()
