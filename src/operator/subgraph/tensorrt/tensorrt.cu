@@ -56,8 +56,7 @@ void TRTCompute(const OpStatePtr& state, const OpContext& ctx,
       param.bindings->at(i) = outputs[p.first].dptr_;
     }
   }
-  const int batch_size = static_cast<int>(inputs[0].shape_[0]);
-  param.trt_executor->enqueue(batch_size, param.bindings->data(), cuda_s, nullptr);
+  param.trt_executor->enqueueV2(param.bindings->data(), cuda_s, nullptr);
 }
 
 NNVM_REGISTER_OP(_TensorRT)
