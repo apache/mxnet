@@ -40,8 +40,10 @@ $(document).ready(function () {
             $("li.gs-opt.active").removeClass("active");
             $(this).addClass("active");
             $("#gs-current-version-label").html(this.innerHTML);
-            globalSearch.algoliaOptions = { 'facetFilters': ["version:" + this.innerHTML] };
-        })
+            globalSearch.algoliaOptions = {
+                'facetFilters': ["version:" + this.innerHTML], 'hitsPerPage': 5
+            };
+        });
     });
 
     $(document).click(function () {
