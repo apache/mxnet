@@ -7,7 +7,7 @@ $(document).ready(function () {
         debug: false// Set debug to true if you want to inspect the dropdown
     });
 
-    $("#search-icon").click(function () {
+    $("#gs-search-icon").click(function () {
         $(".trigger").fadeOut("fast", function () {
             $("#global-search-form").css("display", "inline-block");
             $("#global-search-close").show();
