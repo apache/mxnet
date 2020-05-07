@@ -133,5 +133,57 @@
     .algolia-autocomplete .algolia-docsearch-suggestion--highlight {
       color: blue;
     }
+
+    #global-search-dropdown-container {
+      display: inline-block;
+      position: relative;
+    }
+
+    #global-search-dropdown-container button {
+      background-color: #048ccc;
+      color: white;
+      font-size: 17px;
+      margin: 0px;
+      border: none;
+      min-width: 100%;
+      outline: 0;
+    }
+
+    .gs-current-version .dropdown-caret {
+      position: relative;
+      top: 4px;
+    }
+
+    ul.gs-version-dropdown {
+      display: none;
+      position: absolute;
+      right: 7%;
+      text-align: center;
+      background-color: whitesmoke;
+      box-shadow: none;
+      z-index: 1;
+      margin: 0px;
+      padding: 0px;
+      list-style-type: none;
+    }
+
+    li.gs-opt.versions {
+      padding: 10px;
+    }
+
+    .gs-version-dropdown li:hover,
+    .gs-version-dropdown li.active {
+      color: #FFFFFF;
+      background-color: #048ccc;
+    }
+
+    .gs-version-dropdown li {
+      color: #424242;
+      text-decoration: none;
+      display: block;
+      padding-left: 5px;
+      padding-right: 5px;
+      font-size: 17px;
+    }
   </style>
 </head>
