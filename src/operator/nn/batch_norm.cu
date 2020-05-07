@@ -64,15 +64,14 @@ struct ScalarConvert {
 };
 
 // Number of threads in a block given an input size up to MAX_BLOCK_SIZE
-static unsigned getNumThreads(int nElem, const bool smaller) {
-  unsigned threadSizes[5] = {32, 64, 128, 256, MAX_BLOCK_SIZE};
-  const int maxi = smaller ? 4 : 5;
-  for (int i = 0; i != maxi; ++i) {
+static unsigned getNumThreads(int nElem) {
+  unsigned threadSizes[4] = {32, 64, 128, 256};
+  for (int i = 0; i != 4; ++i) {
     if (static_cast<unsigned>(nElem) <= threadSizes[i]) {
       return threadSizes[i];
     }
   }
-  return smaller ? (MAX_BLOCK_SIZE >> 1) : MAX_BLOCK_SIZE;
+  return MAX_BLOCK_SIZE;
 }
 
 // Returns the index of the most significant 1 bit in `val`.
@@ -509,7 +508,7 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
 
   if ((flags & IS_TRAINING_FLAG) == 0 || (flags & USE_GLOBAL_STATS_FLAG) != 0) {
     dim3 blocks(input.ChannelCount());
-    dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize(), false));
+    dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize()));
     BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal, DeviceTensor1,
       batchnorm::BNTensor3<DType>>
       <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
@@ -517,7 +516,7 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
         saveInvStd, weight, bias, eps, flags);
   } else {
     dim3 blocks(input.ChannelCount());
-    dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize(), false));
+    dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize()));
     BatchNormalizationUpdateOutputKernel<DType, AccReal, DeviceTensor1,
       batchnorm::BNTensor3<DType>>
       << < blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >> > (
@@ -559,13 +558,8 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
   tensors.saveInvStd = devicetensor<AccReal, 1>(out_data[batchnorm::kVar]);
 
   DCHECK_GT(tensors.weight.numElements(), 0);
-#ifdef NDEBUG
-  constexpr bool SMALLER_THREADS = false;
-#else
-  constexpr bool SMALLER_THREADS = true;
-#endif
   dim3 blocks(gradOutput.ChannelCount());
-  dim3 threads(batchnorm::cuda::getNumThreads(gradOutput.InnerSize(), SMALLER_THREADS));
+  dim3 threads(batchnorm::cuda::getNumThreads(gradOutput.InnerSize()));
   BatchNormalizationBackwardKernel<DType, AccReal, DeviceTensor1, batchnorm::BNTensor3<DType>>
     <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
     input, gradOutput, gradInput, tensors, flags, momentum, eps);

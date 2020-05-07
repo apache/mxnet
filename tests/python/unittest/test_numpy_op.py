@@ -1734,6 +1734,40 @@ def test_np_squeeze():
 
 @with_seed()
 @use_np
+def test_np_tri():
+    class TestTri(HybridBlock):
+        def __init__(self, N, M=None, k=0, dtype=None):
+            super(TestTri, self).__init__()
+            self._N = N
+            self._M = M
+            self._k = k
+            self._dtype = dtype
+
+        def hybrid_forward(self, F, x):
+            return x + F.np.tri(self._N, self._M, self._k, self._dtype)
+
+    dtypes = ['float16', 'float32', 'float64', 'int32', 'int64', 'int8', 'uint8', None]
+    hybrids = [False, True]
+
+    for dtype, hybrid in itertools.product(dtypes, hybrids):
+        N = random.randint(2,6)
+        M = random.randint(2,6)
+        k = random.randint(-M*2, N*2)
+
+        test_tri = TestTri(N, M, k, dtype)
+        if hybrid:
+            test_tri.hybridize()
+        np_out = np.tri(N, M, k, dtype)
+        x = np.zeros(shape=(), dtype=dtype)
+        mx_out = test_tri(x)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+        mx_out = np.tri(N, M, k, dtype)
+        assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
+
+
+@with_seed()
+@use_np
 def test_np_prod():
     class TestProd(HybridBlock):
         def __init__(self, axis=None, dtype=None, keepdims=False):
@@ -3939,6 +3973,15 @@ def test_np_random_grad():
                 assert scale.grad.shape == shape2
                 assert_almost_equal(loc.grad.asnumpy().sum(), _np.ones(out_shape).sum(), rtol=1e-3, atol=1e-5)
 
+        for (loc, scale) in [(2, (2,3)), ((2,3), 2), ((2,3), (2,3))]:
+            if isinstance(loc, tuple):
+                loc = np.ones(loc)
+            if isinstance(scale, tuple):
+                scale = np.ones(scale)
+            mx_out = getattr(np.random, op_name)(loc, scale)
+            np_out = getattr(_np.random, op_name)(loc, scale)
+            assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+
 
 @with_seed()
 @use_np
@@ -5755,7 +5798,7 @@ def test_np_linalg_lstsq():
         def __init__(self, rcond):
             super(TestLstsq, self).__init__()
             self._rcond = rcond
-
+        
         def hybrid_forward(self, F, a, b, rcond='warn'):
             return F.np.linalg.lstsq(a, b, rcond=self._rcond)
 
@@ -7152,10 +7195,10 @@ def test_np_tril_indices():
             if m is None:
                 m = n
             self._m = m
-
+        
         def hybrid_forward(self, F, x, *args, **kwargs):
             return x, F.np.tril_indices(n=self._n, k=self._k, m=self._m)
-
+    
     for n in _np.random.random_integers(-10, 50, 2):
         for k in _np.random.random_integers(-50, 50, 2):
             for m in _np.random.random_integers(-10, 50, 2):
@@ -7176,7 +7219,7 @@ def test_np_tril_indices():
                         np_data[np_out] = -10
                         mx_data[mx_out] = -10
                         assert same(np_data, mx_data.asnumpy())
-
+                        
 
 @with_seed()
 @use_np
@@ -7936,7 +7979,7 @@ def test_np_median():
         a = np.random.uniform(-1.0, 1.0, size=a_shape)
         np_out = _np.median(a.asnumpy(), axis=axis, keepdims=keepdims)
         mx_out = test_median(a)
-
+        
         assert mx_out.shape == np_out.shape
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
@@ -8953,10 +8996,10 @@ def test_np_interp():
             self._left = left
             self._right = right
             self._period = period
-
+        
         def hybrid_forward(self, F, x, xp, fp):
             return F.np.interp(x, xp, fp, left=self._left, right=self._right, period=self._period)
-
+    
     class TestInterpScalar(HybridBlock):
         def __init__(self, x=None, left=None, right=None, period=None):
             super(TestInterpScalar, self).__init__()
@@ -8964,7 +9007,7 @@ def test_np_interp():
             self._left = left
             self._right = right
             self._period = period
-
+        
         def hybrid_forward(self, F, xp, fp):
             return F.np.interp(self._x, xp, fp, left=self._left, right=self._right, period=self._period)
 
@@ -8991,13 +9034,13 @@ def test_np_interp():
         else:
             x = np.random.uniform(0, 100, size=xshape).astype(xtype)
             xp = np.sort(np.random.choice(100, dsize, replace=False).astype(dtype))
-            fp = np.random.uniform(-50, 50, size=dsize).astype(dtype)
+            fp = np.random.uniform(-50, 50, size=dsize).astype(dtype) 
         np_x = x.asnumpy()
         if x_scalar and xshape == ():
             x = x.item()
             np_x = x
             test_interp = TestInterpScalar(x=x, left=left, right=right, period=period)
-        else:
+        else: 
             test_interp = TestInterp(left=left, right=right, period=period)
         if hybridize:
             test_interp.hybridize()
@@ -9385,7 +9428,7 @@ def test_np_rollaxis():
             super(TestRollaxis, self).__init__()
             self._axis = axis
             self._start = start
-
+             
         def hybrid_forward(self, F, a, *args, **kwargs):
             return F.np.rollaxis(a, axis=self._axis, start=self._start)
 

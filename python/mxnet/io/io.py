@@ -33,7 +33,7 @@ from ..base import mx_real_t
 from ..base import check_call, build_param_doc as _build_param_doc
 from ..ndarray import NDArray
 from ..ndarray.sparse import CSRNDArray
-from ..ndarray import _ndarray_cls
+from ..util import is_np_array
 from ..ndarray import array
 from ..ndarray import concat, tile
 
@@ -822,9 +822,13 @@ class MXDataIter(DataIter):
     --------
     src/io : The underlying C++ data iterator implementation, e.g., `CSVIter`.
     """
-    def __init__(self, handle, data_name='data', label_name='softmax_label', **_):
+    def __init__(self, handle, data_name='data', label_name='softmax_label', **kwargs):
         super(MXDataIter, self).__init__()
+        from ..ndarray import _ndarray_cls
+        from ..numpy.multiarray import _np_ndarray_cls
+        self._create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
         self.handle = handle
+        self._kwargs = kwargs
         # debug option, used to test the speed with io effect eliminated
         self._debug_skip_load = False
 
@@ -881,12 +885,12 @@ class MXDataIter(DataIter):
     def getdata(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
-        return _ndarray_cls(hdl, False)
+        return self._create_ndarray_fn(hdl, False)
 
     def getlabel(self):
         hdl = NDArrayHandle()
         check_call(_LIB.MXDataIterGetLabel(self.handle, ctypes.byref(hdl)))
-        return _ndarray_cls(hdl, False)
+        return self._create_ndarray_fn(hdl, False)
 
     def getindex(self):
         index_size = ctypes.c_uint64(0)
@@ -906,6 +910,24 @@ class MXDataIter(DataIter):
         pad = ctypes.c_int(0)
         check_call(_LIB.MXDataIterGetPadNum(self.handle, ctypes.byref(pad)))
         return pad.value
+
+    def getitems(self):
+        output_vars = ctypes.POINTER(NDArrayHandle)()
+        num_output = ctypes.c_int(0)
+        check_call(_LIB.MXDataIterGetItems(self.handle,
+                                           ctypes.byref(num_output),
+                                           ctypes.byref(output_vars)))
+        out = [self._create_ndarray_fn(ctypes.cast(output_vars[i], NDArrayHandle),
+                                       False) for i in range(num_output.value)]
+        return tuple(out)
+
+    def __len__(self):
+        length = ctypes.c_int64(-1)
+        check_call(_LIB.MXDataIterGetLenHint(self.handle, ctypes.byref(length)))
+        if length.value < 0:
+            return 0
+        return length.value
+
 
 def _make_io_iterator(handle):
     """Create an io iterator by handle."""
@@ -956,6 +978,14 @@ def _make_io_iterator(handle):
         param_vals = []
 
         for k, val in kwargs.items():
+            if iter_name == 'ThreadedDataLoader':
+                # convert ndarray to handle
+                if hasattr(val, 'handle'):
+                    val = val.handle.value
+                elif isinstance(val, (tuple, list)):
+                    val = [vv.handle.value if hasattr(vv, 'handle') else vv for vv in val]
+                elif isinstance(getattr(val, '_iter', None), MXDataIter):
+                    val = val._iter.handle.value
             param_keys.append(k)
             param_vals.append(str(val))
         # create atomic symbol

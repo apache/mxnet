@@ -61,6 +61,13 @@ class IIterator : public dmlc::DataIter<DType> {
   inline void SetDataName(const std::string data_name) {
     data_names.push_back(data_name);
   }
+  /*! \brief request iterator length hint for current epoch.
+   * Note that the returned value can be < 0, indicating
+   * that the length of iterator is unknown unless you went through all data.
+   */
+  virtual int64_t GetLenHint(void) const {
+    return -1;
+  }
 };  // class IIterator
 
 /*! \brief a single data instance */
@@ -104,7 +111,7 @@ struct DataIteratorReg
  *
  * \code
  * // example of registering a mnist iterator
- * REGISTER_IO_ITE(MNISTIter)
+ * REGISTER_IO_ITER(MNISTIter)
  * .describe("Mnist data iterator")
  * .set_body([]() {
  *     return new PrefetcherIter(new MNISTIter());
@@ -113,5 +120,94 @@ struct DataIteratorReg
  */
 #define MXNET_REGISTER_IO_ITER(name)                                    \
   DMLC_REGISTRY_REGISTER(::mxnet::DataIteratorReg, DataIteratorReg, name)
+
+/*!
+ * \brief A random accessable dataset which provides GetLen() and GetItem().
+ * Unlike DataIter, it's a static lookup storage which is friendly to random access.
+ * The dataset itself should NOT contain data processing, which should be applied during
+ * data augmentation or transformation processes.
+ */
+class Dataset {
+ public:
+  /*!
+  *  \brief Get the size of the dataset
+  */
+  virtual uint64_t GetLen(void) const = 0;
+  /*!
+  *  \brief Get the ndarray items given index in dataset
+  *  \param idx the integer index for required data
+  *  \param ret the returned ndarray items
+  */
+  virtual bool GetItem(uint64_t idx, std::vector<NDArray>* ret) = 0;
+  // virtual destructor
+  virtual ~Dataset(void) {}
+};  // class Dataset
+
+/*! \brief typedef the factory function of dataset */
+typedef std::function<Dataset *(
+  const std::vector<std::pair<std::string, std::string> >&)> DatasetFactory;
+/*!
+ * \brief Registry entry for Dataset factory functions.
+ */
+struct DatasetReg
+    : public dmlc::FunctionRegEntryBase<DatasetReg,
+                                        DatasetFactory> {
+};
+//--------------------------------------------------------------
+// The following part are API Registration of Datasets
+//--------------------------------------------------------------
+/*!
+ * \brief Macro to register Datasets
+ *
+ * \code
+ * // example of registering an image sequence dataset
+ * REGISTER_IO_ITE(ImageSequenceDataset)
+ * .describe("image sequence dataset")
+ * .set_body([]() {
+ *     return new ImageSequenceDataset();
+ *   });
+ * \endcode
+ */
+#define MXNET_REGISTER_IO_DATASET(name)                                    \
+  DMLC_REGISTRY_REGISTER(::mxnet::DatasetReg, DatasetReg, name)
+
+class BatchifyFunction {
+ public:
+  /*! \brief Destructor */
+  virtual ~BatchifyFunction(void) {}
+  /*! \brief The batchify logic */
+  virtual bool Batchify(const std::vector<std::vector<NDArray> >& inputs,
+                        std::vector<NDArray>* outputs) = 0;
+};  // class BatchifyFunction
+
+using BatchifyFunctionPtr = std::shared_ptr<BatchifyFunction>;
+
+/*! \brief typedef the factory function of data sampler */
+typedef std::function<BatchifyFunction *(
+  const std::vector<std::pair<std::string, std::string> >&)> BatchifyFunctionFactory;
+/*!
+ * \brief Registry entry for DataSampler factory functions.
+ */
+struct BatchifyFunctionReg
+    : public dmlc::FunctionRegEntryBase<BatchifyFunctionReg,
+                                        BatchifyFunctionFactory> {
+};
+//--------------------------------------------------------------
+// The following part are API Registration of Batchify Function
+//--------------------------------------------------------------
+/*!
+ * \brief Macro to register Batchify Functions
+ *
+ * \code
+ * // example of registering a Batchify Function
+ * MXNET_REGISTER_IO_BATCHIFY_FUNCTION(StackBatchify)
+ * .describe("Stack Batchify Function")
+ * .set_body([]() {
+ *     return new StackBatchify();
+ *   });
+ * \endcode
+ */
+#define MXNET_REGISTER_IO_BATCHIFY_FUNCTION(name)                                    \
+  DMLC_REGISTRY_REGISTER(::mxnet::BatchifyFunctionReg, BatchifyFunctionReg, name)
 }  // namespace mxnet
 #endif  // MXNET_IO_H_
