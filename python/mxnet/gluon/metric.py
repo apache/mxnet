@@ -420,8 +420,8 @@ class Accuracy(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred_label in zip(labels, preds):
-            pred_label = pred_label.as_np_ndarray()
-            label = label.as_np_ndarray().as_in_ctx(pred_label.ctx)
+            pred_label = pred_label.as_np_ndarray().as_in_ctx(label.ctx)
+            label = label.as_np_ndarray()
             if pred_label.shape != label.shape:
                 pred_label = pred_label.argmax(axis=self.axis)
             pred_label = pred_label.astype('int32')
@@ -502,8 +502,8 @@ class TopKAccuracy(EvalMetric):
             # we do not care about the order of top k elements. It is
             # much faster, which is important since that computation is
             # single-threaded due to Python GIL.
-            pred_label = numpy.argpartition(pred_label.as_np_ndarray().astype('float32'), -self.top_k)
-            label = label.as_np_ndarray().astype('int32').as_in_ctx(pred_label.ctx)
+            pred_label = numpy.argpartition(pred_label.as_np_ndarray().astype('float32'), -self.top_k).as_in_ctx(label.ctx)
+            label = label.as_np_ndarray().astype('int32')
             check_label_shapes(label, pred_label)
             num_samples = pred_label.shape[0]
             num_dims = len(pred_label.shape)
@@ -594,10 +594,10 @@ class _ClassificationMetrics(object):
         pred : `NDArray`
             Predicted values.
         """
-        pred = pred.as_np_ndarray()
-        label = label.as_np_ndarray().astype('int32').as_in_ctx(pred.ctx)
+        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
+        label = label.as_np_ndarray().astype('int32')
         if self.class_type == "binary":
-            self._set(1, pred.ctx)
+            self._set(1, label.ctx)
             if label.max() > 1:
                 raise ValueError("Wrong label for binary classification.")
             if pred.shape == label.shape:
@@ -611,14 +611,14 @@ class _ClassificationMetrics(object):
 
         elif self.class_type == "multiclass":
             num = pred.shape[-1]
-            self._set(num, pred.ctx)
+            self._set(num, label.ctx)
             assert label.max() < num, "pred contains fewer classes than label!"
             pred_label = one_hot(pred.argmax(axis=-1).reshape(-1), num)
             label = one_hot(label.reshape(-1), num)
 
         elif self.class_type == "multilabel":
             num = pred.shape[-1]
-            self._set(num, pred.ctx)
+            self._set(num, label.ctx)
             assert pred.shape == label.shape, \
                 "The shape of label should be same as that of prediction for multilabel classification."
             pred_label = predict_with_threshold(pred, self.threshold).reshape(-1, num)
@@ -920,8 +920,8 @@ class BinaryAccuracy(EvalMetric):
         for label, pred_label in zip(labels, preds):
             pred_label = predict_with_threshold(pred_label, self.threshold)
 
-            pred_label = pred_label.as_np_ndarray().astype('int32')
-            label = label.as_np_ndarray().astype('int32').as_in_ctx(pred_label.ctx)
+            pred_label = pred_label.as_np_ndarray().astype('int32').as_in_ctx(label.ctx)
+            label = label.as_np_ndarray().astype('int32')
             # flatten before checking shapes to avoid shape miss match
             label = label.reshape(-1)
             pred_label = pred_label.reshape(-1)
@@ -1080,8 +1080,8 @@ class MAE(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.as_np_ndarray().as_in_ctx(pred.ctx)
-            pred = pred.as_np_ndarray()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
 
             num_inst = label.shape[0]
             mae = numpy.abs(label - pred).reshape(num_inst, -1).mean(axis=-1).sum()
@@ -1139,8 +1139,8 @@ class MSE(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.as_np_ndarray().as_in_ctx(pred.ctx)
-            pred = pred.as_np_ndarray()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
 
             num_inst = label.shape[0]
             mse = ((label - pred)**2.0).reshape(num_inst, -1).mean(axis=-1).sum()
@@ -1243,8 +1243,8 @@ class MeanPairwiseDistance(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.as_np_ndarray().as_in_ctx(pred.ctx)
-            pred = pred.as_np_ndarray()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
 
             label = label.reshape(label.shape[0], -1)
             pred = pred.reshape(pred.shape[0], -1)
@@ -1310,8 +1310,8 @@ class MeanCosineSimilarity(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.as_np_ndarray().as_in_ctx(pred.ctx)
-            pred = pred.as_np_ndarray()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
 
             if len(label.shape) == 1:
                 label = label.reshape(1, label.shape[0])
@@ -1345,6 +1345,8 @@ class CrossEntropy(EvalMetric):
 
     Parameters
     ----------
+    eps : float, default 1e-12
+        Use small constant for the case that predicted value is 0.
     ignore_label : int or None, default None
         Index of invalid label to ignore when
         counting. By default, sets to -1.
@@ -1370,12 +1372,13 @@ class CrossEntropy(EvalMetric):
     >>> print ce.get()
     ('cross-entropy', 0.57159948348999023)
     """
-    def __init__(self, ignore_label=None, axis=-1, name='cross-entropy',
+    def __init__(self, eps=1e-12, ignore_label=None, axis=-1, name='cross-entropy',
                  output_names=None, label_names=None):
         super(CrossEntropy, self).__init__(
             name, output_names=output_names, label_names=label_names)
         self.ignore_label = ignore_label
         self.axis = axis
+        self.eps = eps
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -1395,15 +1398,15 @@ class CrossEntropy(EvalMetric):
         for label, pred in zip(labels, preds):
             assert label.size == pred.size/pred.shape[-1], \
                 "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
-            label = label.as_in_context(pred.ctx).reshape((label.size,))
-            pred = ndarray.pick(pred, label.astype(dtype='int32'), axis=self.axis)
+            label = label.reshape((label.size,))
+            pred = ndarray.pick(pred.as_in_context(label.ctx), label.astype(dtype='int32'), axis=self.axis)
             label = label.as_np_ndarray()
             pred = pred.as_np_ndarray()
             if self.ignore_label is not None:
                 ignore = (label == self.ignore_label).astype(pred.dtype)
                 num -= ignore.sum()
                 pred = pred * (1 - ignore) + ignore
-            loss -= numpy.log(numpy.maximum(1e-12, pred)).sum()
+            loss -= numpy.log(numpy.maximum(self.eps, pred)).sum()
             num += pred.size
         self.sum_metric += loss
         self.num_inst += num
@@ -1438,6 +1441,8 @@ class Perplexity(CrossEntropy):
 
     Parameters
     ----------
+    eps : float, default 1e-12
+        Use small constant for the case that predicted value is 0.
     ignore_label : int or None, default None
         Index of invalid label to ignore when
         counting. By default, sets to -1.
@@ -1463,10 +1468,10 @@ class Perplexity(CrossEntropy):
     >>> print perp.get()
     ('Perplexity', 1.7710976285155853)
     """
-    def __init__(self, ignore_label=None, axis=-1, name='perplexity',
+    def __init__(self, eps=1e-12, ignore_label=None, axis=-1, name='perplexity',
                  output_names=None, label_names=None):
         super(Perplexity, self).__init__(
-            name=name, ignore_label=ignore_label, axis=axis,
+            name=name, eps=eps, ignore_label=ignore_label, axis=axis,
             output_names=output_names, label_names=label_names)
 
     def get(self):
@@ -1535,8 +1540,8 @@ class NegativeLogLikelihood(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.as_np_ndarray().as_in_ctx(pred.ctx)
-            pred = pred.as_np_ndarray()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
 
             label = label.reshape(-1)
             num_examples = pred.shape[0]
@@ -1622,8 +1627,8 @@ class PearsonCorrelation(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
         for label, pred in zip(labels, preds):
             check_label_shapes(label, pred, False, True)
-            label = label.as_np_ndarray().as_in_ctx(pred.ctx).reshape(-1).astype(numpy.float64)
-            pred = pred.as_np_ndarray().reshape(-1).astype(numpy.float64)
+            label = label.as_np_ndarray().reshape(-1).astype(numpy.float64)
+            pred = pred.as_np_ndarray().as_in_ctx(label.ctx).reshape(-1).astype(numpy.float64)
 
             self.num_inst += 1
             self._label_nums, self._mean_l, self._sse_l = \
@@ -1733,8 +1738,8 @@ class PCC(EvalMetric):
 
         # update the confusion matrix
         for label, pred in zip(labels, preds):
-            label = label.astype('int32', copy=False).as_np_ndarray().as_in_ctx(pred.ctx)
-            pred = pred.as_np_ndarray()
+            label = label.astype('int32', copy=False).as_np_ndarray()
+            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
             if pred.shape != label.shape:
                 pred = pred.argmax(axis=1).astype(label, copy=False)
             else:
@@ -1872,8 +1877,8 @@ class CustomMetric(EvalMetric):
             labels, preds = check_label_shapes(labels, preds, True)
 
         for pred, label in zip(preds, labels):
-            label = label.as_np_ndarray().as_in_ctx(pred.ctx)
-            pred = pred.as_np_ndarray()
+            label = label.as_np_ndarray()
+            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
 
             reval = self._feval(label, pred)
             if isinstance(reval, tuple):
