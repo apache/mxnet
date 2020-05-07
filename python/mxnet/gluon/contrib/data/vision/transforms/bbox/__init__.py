@@ -14,12 +14,5 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-
-# coding: utf-8
-# pylint: disable=wildcard-import
-"""Contrib datasets."""
-
-from . import text
-from . import vision
-
-from .sampler import *
+"""Gluon contrib vision bbox transform"""
+from .bbox import *

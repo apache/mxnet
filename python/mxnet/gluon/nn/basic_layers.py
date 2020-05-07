@@ -50,9 +50,15 @@ class Sequential(Block):
         for block in blocks:
             self.register_child(block)
 
-    def forward(self, x):
+    def forward(self, x, *args):
         for block in self._children.values():
-            x = block(x)
+            x = block(x, *args)
+            args = []
+            if isinstance(x, (tuple, list)):
+                args = x[1:]
+                x = x[0]
+        if args:
+            x = tuple([x] + list(args))
         return x
 
     def __repr__(self):
@@ -114,9 +120,15 @@ class HybridSequential(HybridBlock):
         for block in blocks:
             self.register_child(block)
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         for block in self._children.values():
-            x = block(x)
+            x = block(x, *args)
+            args = []
+            if isinstance(x, (tuple, list)):
+                args = x[1:]
+                x = x[0]
+        if args:
+            x = tuple([x] + list(args))
         return x
 
     def __repr__(self):

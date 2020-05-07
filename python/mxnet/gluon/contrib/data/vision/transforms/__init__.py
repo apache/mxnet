@@ -17,9 +17,5 @@
 
 # coding: utf-8
 # pylint: disable=wildcard-import
-"""Contrib datasets."""
-
-from . import text
-from . import vision
-
-from .sampler import *
+"""Contrib vision transforms."""
+from .bbox import *

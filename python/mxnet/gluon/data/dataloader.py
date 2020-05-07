@@ -21,6 +21,7 @@
 __all__ = ['DataLoader']
 
 import pickle
+import logging
 import io
 import sys
 import signal
@@ -37,6 +38,7 @@ except ImportError:
     pass
 
 from . import sampler as _sampler
+from . import batchify as _batchify
 from ... import nd, context
 from ...util import is_np_shape, is_np_array, set_np
 from ... import numpy as _mx_np  # pylint: disable=reimported
@@ -138,7 +140,6 @@ class SimpleQueue(multiprocessing.queues.SimpleQueue):
         self._writer = ConnectionWrapper(self._writer)
         self._send = self._writer.send
         self._recv = self._reader.recv
-
 
 def default_batchify_fn(data):
     """Collate data into batch."""
@@ -380,9 +381,9 @@ class DataLoaderV1(object):
         self._num_workers = num_workers if num_workers >= 0 else 0
         if batchify_fn is None:
             if num_workers > 0:
-                self._batchify_fn = default_mp_batchify_fn
+                self._batchify_fn = _batchify.Stack(use_shared_mem=True)
             else:
-                self._batchify_fn = default_batchify_fn
+                self._batchify_fn = _batchify.Stack()
         else:
             self._batchify_fn = batchify_fn
 
@@ -535,17 +536,7 @@ class DataLoader(object):
         shuffle, sampler, and last_batch if batch_sampler is specified.
     batchify_fn : callable
         Callback function to allow users to specify how to merge samples
-        into a batch. Defaults to `default_batchify_fn`::
-
-            def default_batchify_fn(data):
-                if isinstance(data[0], nd.NDArray):
-                    return nd.stack(*data)
-                elif isinstance(data[0], tuple):
-                    data = zip(*data)
-                    return [default_batchify_fn(i) for i in data]
-                else:
-                    data = np.asarray(data)
-                    return nd.array(data, dtype=data.dtype)
+        into a batch. Defaults to `gluon.data.batchify.Stack()`::
 
     num_workers : int, default 0
         The number of multiprocessing workers to use for data preprocessing.
@@ -572,16 +563,26 @@ class DataLoader(object):
         unless you are experiencing timeout and you know it's due to slow data loading.
         Sometimes full `shared_memory` will cause all workers to hang and causes timeout. In these
         cases please reduce `num_workers` or increase system `shared_memory` size instead.
+    try_nopython : bool or None, default is None
+        Try compile python dataloading pipeline into pure MXNet c++ implementation. The benefit is
+        potentially faster iteration, no `shared_memory` usage, and less processes managed by python.
+        The compilation is not gauranteed to support all use cases, but it will fallback to python in
+        case of failure. You can set `try_nopython` to `False` to disable auto-detection of the
+        compilation feature or leave it to `None` to allow MXNet to determine it automatically.
+        If you request `try_nopython` to `True` and the compilation fails, it will raise a
+        RuntimeError with the failure reason.
+
     """
     def __init__(self, dataset, batch_size=None, shuffle=False, sampler=None,
                  last_batch=None, batch_sampler=None, batchify_fn=None,
                  num_workers=0, pin_memory=False, pin_device_id=0,
-                 prefetch=None, thread_pool=False, timeout=120):
+                 prefetch=None, thread_pool=False, timeout=120, try_nopython=None):
         self._dataset = dataset
         self._pin_memory = pin_memory
         self._pin_device_id = pin_device_id
         self._thread_pool = thread_pool
         self._timeout = timeout
+        self._mx_iter = None
         assert timeout > 0, "timeout must be positive, given {}".format(timeout)
 
         if batch_sampler is None:
@@ -607,28 +608,51 @@ class DataLoader(object):
         self._num_workers = num_workers if num_workers >= 0 else 0
         self._worker_pool = None
         self._prefetch = max(0, int(prefetch) if prefetch is not None else 2 * self._num_workers)
-        if self._num_workers > 0:
-            if self._thread_pool:
-                self._worker_pool = ThreadPool(self._num_workers,
-                                               initializer=_thread_worker_initializer,
-                                               initargs=(is_np_shape(), is_np_array()))
-            else:
-                # set ignore keyboard interupt signal before forking processes
-                original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
-                self._worker_pool = multiprocessing.Pool(
-                    self._num_workers, initializer=_worker_initializer,
-                    initargs=[self._dataset, is_np_shape(), is_np_array()])
-                # resume keyboard interupt signal in main process
-                signal.signal(signal.SIGINT, original_sigint_handler)
         if batchify_fn is None:
             if num_workers > 0:
-                self._batchify_fn = default_mp_batchify_fn
+                self._batchify_fn = _batchify.Stack(use_shared_mem=True)
             else:
-                self._batchify_fn = default_batchify_fn
+                self._batchify_fn = _batchify.Stack()
         else:
             self._batchify_fn = batchify_fn
 
+        if num_workers > 0 and (try_nopython or try_nopython is None):
+            # check for capability to use mx backend threadedLoader
+            use_mx_iter, mx_iter_args = _check_mx_loader_capability(
+                self._dataset, self._batch_sampler, self._batchify_fn)
+            if not use_mx_iter:
+                if try_nopython:
+                    raise RuntimeError(mx_iter_args)
+        else:
+            use_mx_iter = False
+
+        if use_mx_iter:
+            logging.info("Using MXNet backend ThreadedDataLoader with %s workers "
+                         "instead of python dataloader.", self._num_workers)
+            self._mx_iter = _MXThreadedDataLoader(
+                num_workers=self._num_workers,
+                pin_memory=self._pin_memory,
+                pin_device_id=self._pin_device_id,
+                prefetch=self._prefetch, **mx_iter_args)
+        else:
+            if self._num_workers > 0:
+                if self._thread_pool:
+                    self._worker_pool = ThreadPool(self._num_workers,
+                                                   initializer=_thread_worker_initializer,
+                                                   initargs=(is_np_shape(), is_np_array()))
+                else:
+                    # set ignore keyboard interupt signal before forking processes
+                    original_sigint_handler = signal.signal(signal.SIGINT, signal.SIG_IGN)
+                    self._worker_pool = multiprocessing.Pool(
+                        self._num_workers, initializer=_worker_initializer,
+                        initargs=[self._dataset, is_np_shape(), is_np_array()])
+                    # resume keyboard interupt signal in main process
+                    signal.signal(signal.SIGINT, original_sigint_handler)
+
     def __iter__(self):
+        if self._mx_iter is not None:
+            return iter(self._mx_iter)
+
         if self._num_workers == 0:
             def same_process_iter():
                 for batch in self._batch_sampler:
@@ -655,3 +679,119 @@ class DataLoader(object):
             # https://bugs.python.org/issue34172
             assert isinstance(self._worker_pool, multiprocessing.pool.Pool)
             self._worker_pool.terminate()
+
+def _check_mx_loader_capability(dataset, batch_sampler, batchify_fn):
+    from ._internal import MXDataset, MXSampler
+    from ._internal import MXBatchifyFunction
+    mx_loader_args = {}
+    error_template = "MXNet backend loader compatibility: " \
+        "[dataset - {}][batchify_fn - {}][batch sampler - {}]"
+
+    # supported dataset
+    if isinstance(dataset, MXDataset):
+        mx_loader_args['dataset'] = dataset
+    elif hasattr(dataset, '__mx_handle__'):
+        try:
+            mx_loader_args['dataset'] = dataset.__mx_handle__()
+        except NotImplementedError:
+            return False, error_template.format('fail', 'unknown', 'unknown')
+    else:
+        return False, error_template.format('fail', 'unknown', 'unknown')
+
+    # supported batchify functions
+    if hasattr(batchify_fn, '__mx_handle__'):
+        mx_loader_args['batchify_fn'] = batchify_fn.__mx_handle__()
+    elif isinstance(batchify_fn, MXBatchifyFunction):
+        mx_loader_args['batchify_fn'] = batchify_fn
+    else:
+        return False, error_template.format('pass', 'fail', 'unknown')
+
+    # supported sampler
+    if isinstance(batch_sampler, _sampler.BatchSampler):
+        if isinstance(batch_sampler._sampler, _sampler.SequentialSampler):
+            mx_loader_args['batch_sampler'] = MXSampler(
+                'SequentialSampler', length=batch_sampler._sampler._length,
+                start=batch_sampler._sampler._start,
+                batch_size=batch_sampler._batch_size,
+                last_batch=batch_sampler._last_batch)
+        elif isinstance(batch_sampler._sampler, _sampler.RandomSampler):
+            mx_loader_args['batch_sampler'] = MXSampler(
+                'RandomSampler', length=batch_sampler._sampler._length,
+                batch_size=batch_sampler._batch_size,
+                last_batch=batch_sampler._last_batch)
+        else:
+            return False, error_template.format('pass', 'pass', 'fail')
+    elif isinstance(batch_sampler, MXSampler):
+        mx_loader_args['batch_sampler'] = batch_sampler
+    else:
+        return False, error_template.format('pass', 'pass', 'fail')
+    # all good
+    return True, mx_loader_args
+
+
+class _MXThreadedDataLoader(object):
+    """MXNet internal C++ threaded Data Iterator in form of DataLoader
+
+    parameters
+    ----------
+    dataset : Dataset
+        Source dataset. Note that numpy and mxnet arrays can be directly used
+        as a Dataset.
+    batch_sampler : Sampler
+        A sampler that returns mini-batches.
+    batchify_fn : callable
+        Callback function to allow users to specify how to merge samples
+        into a batch. Defaults to `gluon.data.batchify.Stack()`::
+    num_workers : int, default 0
+        The number of multiprocessing workers to use for data preprocessing.
+    pin_memory : boolean, default False
+        If ``True``, the dataloader will copy NDArrays into pinned memory
+        before returning them. Copying from CPU pinned memory to GPU is faster
+        than from normal CPU memory.
+    pin_device_id : int, default 0
+        The device id to use for allocating pinned memory if pin_memory is ``True``
+    prefetch : int, default is `num_workers * 2`
+        The number of prefetching batches only works if `num_workers` > 0.
+        If `prefetch` > 0, it allow worker process to prefetch certain batches before
+        acquiring data from iterators.
+        Note that using large prefetching batch will provide smoother bootstrapping performance,
+        but will consume more shared_memory. Using smaller number may forfeit the purpose of using
+        multiple worker processes, try reduce `num_workers` in this case.
+        By default it defaults to `num_workers * 2`, maximum prefetch size is `16`.
+    """
+    def __init__(self, dataset, batch_sampler, batchify_fn,
+                 num_workers=0, pin_memory=False, pin_device_id=0,
+                 prefetch=4):
+        from ._internal import MXDataset, MXSampler, MXBatchifyFunction
+        from ...io.io import ThreadedDataLoader
+        assert isinstance(dataset, MXDataset)
+        assert isinstance(batch_sampler, MXSampler)
+        assert isinstance(batchify_fn, MXBatchifyFunction)
+        self._dataset = dataset
+        self._batch_sampler = batch_sampler
+        self._batchify_fn = batchify_fn
+        if num_workers == 0:
+            num_workers = 1  # different convention for single thread
+        if prefetch == 0:
+            prefetch = 1  # at least one buffer required
+        pin_device_id = pin_device_id if pin_memory else -1
+        ctx = 'cpu_pinned' if pin_memory else 'cpu'
+        self._iter = ThreadedDataLoader(num_workers=num_workers, dataset=dataset,
+                                        sampler=batch_sampler, batchify_fn=batchify_fn,
+                                        prefetch_buffer=prefetch, ctx=ctx,
+                                        device_id=pin_device_id)
+
+    def __iter__(self):
+        while self._iter.iter_next():
+            self._iter.first_batch = None
+            items = self._iter.getitems()
+            pad = self._iter.getpad()
+            if pad > 0:
+                items = tuple([x[:-pad] for x in items])
+            if len(items) < 2:
+                items = items[0]
+            yield items
+        self._iter.reset()
+
+    def __len__(self):
+        return len(self._iter)
