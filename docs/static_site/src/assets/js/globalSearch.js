@@ -7,19 +7,21 @@ $(document).ready(function () {
         debug: true// Set debug to true if you want to inspect the dropdown
     });
     
-    $("#search-icon").hover(function () {
+    $("#search-icon").click(function () {
         $(".trigger").fadeOut("fast", function() {
             $("#global-search-form").css("display", "inline-block");
+            $("#global-search-close").show();
             $("#global-search").animate({
                 width: "300px"
             }).focus();
         });
     });
 
-    $("#global-search").blur(function () {
-        $(this).animate({
+    $("#global-search-close").click(function () {
+        $("#global-search").animate({
             width: "0px"
         }, function () {
+            $(this).hide();
             $("#global-search-form").hide();
             $(".trigger").fadeIn("fast");
         });
