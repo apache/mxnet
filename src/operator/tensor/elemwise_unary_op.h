@@ -629,6 +629,11 @@ struct AroundParam : public dmlc::Parameter<AroundParam> {
       .set_default(0)
       .describe("Number of decimal places to round to.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream decimals_s;
+    decimals_s << decimals;
+    (*dict)["decimal"] = decimals_s.str();
+  }
 };
 
 template<int req>

@@ -1714,6 +1714,13 @@ struct RepeatParam : public dmlc::Parameter<RepeatParam> {
                 " By default, use the flattened input array,"
                 " and return a flat output array.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream repeats_s, axis_s;
+    repeats_s << repeats;
+    axis_s << axis;
+    (*dict)["repeats"] = repeats_s.str();
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 /*!
@@ -2335,6 +2342,11 @@ struct SqueezeParam : public dmlc::Parameter<SqueezeParam> {
     .set_default(dmlc::optional<mxnet::Tuple<int>>())
     .describe("Selects a subset of the single-dimensional entries in the shape."
               " If an axis is selected with shape entry greater than one, an error is raised.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s;
+    axis_s << axis;
+    (*dict)["axis"] = axis_s.str();
   }
 };
 

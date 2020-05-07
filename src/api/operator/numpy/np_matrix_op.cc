@@ -470,4 +470,66 @@ MXNET_REGISTER_API("_npi.diag_indices_from")
   *ret = ndoutputs[0];
 });
 
+MXNET_REGISTER_API("_npi.repeat")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_repeat");
+  nnvm::NodeAttrs attrs;
+  op::RepeatParam param;
+  param.repeats = args[1].operator int();
+  if (args[2].type_code() == kNull) {
+    param.axis = dmlc::optional<int>();
+  } else {
+    param.axis = args[2].operator int64_t();
+  }
+  int num_inputs = 1;
+  int num_outputs = 0;
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::RepeatParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.diagflat")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_diagflat");
+  nnvm::NodeAttrs attrs;
+  op::NumpyDiagflatParam param;
+  param.k = args[1].operator int();
+  int num_inputs = 1;
+  int num_outputs = 0;
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyDiagflatParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.squeeze")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_squeeze");
+  nnvm::NodeAttrs attrs;
+  op::SqueezeParam param;
+  if (args[1].type_code() == kNull) {
+    param.axis = dmlc::optional<mxnet::Tuple<int>>();
+  } else if (args[1].type_code() == kDLInt) {
+    param.axis = Tuple<int>(1, args[1].operator int64_t());
+  } else {
+    param.axis = Tuple<int>(args[1].operator ObjectRef());
+  }
+  int num_inputs = 1;
+  int num_outputs = 0;
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::SqueezeParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
 }  // namespace mxnet
