@@ -286,9 +286,15 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
   if (outputs[0].shape_.Size() == 0) return;
   if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
     using namespace mxnet_op;
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
-    });
+    if (std::is_same<reducer, mshadow_op::sum>::value) {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
+      });
+    } else {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        Kernel<set_one, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
+      });
+    }
     return;
   }
   CHECK_NE(req[0], kWriteInplace) << "Reduce does not support write in-place";
