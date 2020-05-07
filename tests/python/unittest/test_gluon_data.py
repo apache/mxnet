@@ -30,6 +30,7 @@ import mxnet.ndarray as nd
 from mxnet import context
 from mxnet.gluon.data.dataset import Dataset
 from mxnet.gluon.data.dataset import ArrayDataset
+import pytest
 
 @with_seed()
 def test_array_dataset():
@@ -149,6 +150,7 @@ def test_datasets():
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100', train=False)) == 10000
 
 @with_seed()
+@pytest.mark.serial
 def test_datasets_handles():
     assert len(gluon.data.vision.MNIST(root='data/mnist').__mx_handle__()) == 60000
     assert len(gluon.data.vision.MNIST(root='data/mnist', train=False).__mx_handle__()) == 10000
