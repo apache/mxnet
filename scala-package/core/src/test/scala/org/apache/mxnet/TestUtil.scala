@@ -58,7 +58,7 @@ object TestUtil {
    * Cancel the test if the system's locale uses a decimal separator other than '.'. Please see
    * #18097 for more information.
    */
-  def assumeStandardDecimalSeparator() = {
+  def assumeStandardDecimalSeparator(): Unit = {
     val lcNumeric = System.getenv("LC_NUMERIC");
 
     val decimalFormatSymbols = if (lcNumeric != null) {
