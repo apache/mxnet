@@ -119,6 +119,25 @@ services:
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_build_cuda:latest
   ###################################################################################################
+  # Dockerfile.build.android based images used for testing cross-compilation for Android
+  ###################################################################################################
+  build.android_armv7:
+    image: ${DOCKER_CACHE_REGISTRY}/build.android_armv7:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.android
+      target: armv7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.android_armv7:latest
+  build.android_armv8:
+    image: ${DOCKER_CACHE_REGISTRY}/build.android_armv8:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.android
+      target: armv8
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.android_armv8:latest
+  ###################################################################################################
   # Dockerfile.publish.test based images used for testing binary artifacts on minimal systems.
   ###################################################################################################
   publish.test.centos7_cpu:
