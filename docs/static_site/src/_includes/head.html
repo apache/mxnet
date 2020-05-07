@@ -150,6 +150,7 @@
       height: 37px;
       width: 90px;
       padding: 0px;
+      cursor: pointer;
     }
 
     .gs-current-version .dropdown-caret {
@@ -171,12 +172,16 @@
 
     li.gs-opt.versions {
       padding: 10px;
+      cursor: pointer;
     }
 
-    .gs-version-dropdown li:hover,
+    .gs-version-dropdown li:hover {
+      color: #FF4500 !important;
+    }
+
     .gs-version-dropdown li.active {
-      color: #FFFFFF;
-      background-color: #048ccc;
+      color: #FF4500 !important;
+      font-weight: lighter;
     }
 
     .gs-version-dropdown li {
