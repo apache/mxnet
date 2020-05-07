@@ -24,8 +24,24 @@ from .distribution import Distribution
 from .constraint import Real, PositiveDefinite, LowerCholesky
 from .utils import getF, cached_property
 
-# FIXME: doc
+
 class MultivariateNormal(Distribution):
+    r"""Create a multivaraite Normal distribution object.
+
+    Parameters
+    ----------
+    loc : Tensor
+        mean of the distribution.
+    cov : Tensor
+        covariance matrix of the distribution
+    precision : Tensor
+        precision matrix of the distribution
+    scale_tril : Tensor
+        lower-triangular factor of the covariance
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
     has_grad = True
     support = Real()
     arg_constraints = {'loc': Real(),
@@ -44,9 +60,6 @@ class MultivariateNormal(Distribution):
             self.precision = precision
         else:
             self.scale_tril = scale_tril
-        # self._cov = cov
-        # self._precision = precision
-        # self._scale_tril = scale_tril
         super(MultivariateNormal, self).__init__(F=_F, event_dim=1, validate_args=validate_args)
 
     def _precision_to_scale_tril(self, P):

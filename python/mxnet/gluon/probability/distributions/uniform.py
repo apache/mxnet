@@ -24,8 +24,20 @@ from .distribution import Distribution
 from .constraint import Real, Interval
 from .utils import getF, sample_n_shape_converter
 
-# FIXME: doc
+
 class Uniform(Distribution):
+    r"""Create a uniform distribution object.
+
+    Parameters
+    ----------
+    low : Tensor or scalar, default 0
+        lower range of the distribution.
+    high : Tensor or scalar, default 1
+        upper range of the distribution.
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
     # Reparameterization gradient for Uniform is currently not implemented
     # in the backend at this moment.
     has_grad = False

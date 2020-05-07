@@ -24,7 +24,7 @@ from .distribution import Distribution
 from .categorical import Categorical
 from .utils import getF, cached_property
 
-# FIXME: Finish broadcast_to
+
 class OneHotCategorical(Distribution):
     def __init__(self, num_events, prob=None, logit=None, F=None, validate_args=None):
         _F = F if F is not None else getF([prob, logit])

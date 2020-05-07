@@ -25,7 +25,6 @@ from .utils import prob2logit, logit2prob, getF, cached_property, sample_n_shape
 from .constraint import Simplex, Real
 
 
-# FIXME: Finish broadcast_to
 class Categorical(Distribution):
     """Create a categorical distribution object.
 

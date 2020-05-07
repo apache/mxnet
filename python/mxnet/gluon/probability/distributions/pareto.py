@@ -27,9 +27,19 @@ from ..transformation import ExpTransform, AffineTransform
 from .utils import getF, sample_n_shape_converter
 
 
-# FIXME: doc
 class Pareto(TransformedDistribution):
+    r"""Create a Pareto Type I distribution object.
 
+    Parameters
+    ----------
+    alpha : Tensor or scalar
+        shape parameter of the distribution.
+    scale : Tensor or scalar, default 1
+        scale parameter of the distribution.
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
     has_grad = True
     support = Positive()
     arg_constraints = {'scale': Positive(),

@@ -28,9 +28,20 @@ from .utils import getF, sample_n_shape_converter, gammaln
 # Euler-Mascheroni constant 
 from numpy import euler_gamma
 
-# FIXME: doc
-class Weibull(TransformedDistribution):
 
+class Weibull(TransformedDistribution):
+    r"""Create a two parameter Weibull distribution object.
+
+    Parameters
+    ----------
+    concentration : Tensor or scalar
+        Concentration/shape parameter of the distribution.
+    scale : Tensor or scalar, default 1
+        scale parameter of the distribution.
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
     has_grad = True
     support = Positive()
     arg_constraints = {'scale': Positive(),

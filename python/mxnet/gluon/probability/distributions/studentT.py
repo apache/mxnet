@@ -26,8 +26,22 @@ from .chi2 import Chi2
 from .utils import getF, gammaln, digamma, sample_n_shape_converter
 from numpy import nan, inf, pi
 
-# FIXME: doc
+
 class StudentT(Distribution):
+    r"""Create a studentT distribution object, often known as t distribution.
+
+    Parameters
+    ----------
+    df : Tensor or scalar
+        degree of freedom.
+    loc : Tensor or scalar, default 0
+        mean of the distribution.
+    scale : Tensor or scalar, default 1
+        scale of the distribution
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
 
     support = Real()
     arg_constraints = {'df': Positive(), 'loc': Real(), 'scale': Real()}

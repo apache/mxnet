@@ -27,8 +27,23 @@ from .constraint import Simplex, Real, IntegerInterval
 from numbers import Number
 
 
-# FIXME: doc
 class Multinomial(Distribution):
+    r"""Create a multinomial distribution object.
+
+    Parameters
+    ----------
+    num_events : int
+        number of events.
+    prob : Tensor
+        probability of each event.
+    logit : Tensor
+        unnormalized probability of each event.
+    total_count : int
+        number of trials.
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
     arg_constraints = {'prob': Simplex(), 'logit': Real()}
 
     def __init__(self, num_events,

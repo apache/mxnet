@@ -26,8 +26,17 @@ from numbers import Number
 from .utils import getF, gammaln
 
 
-# FIXME: doc
 class Poisson(ExponentialFamily):
+    r"""Create a Poisson distribution object.
+
+    Parameters
+    ----------
+    rate : Tensor or scalar, default 1
+        rate parameter of the distribution.
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
     arg_constraints = {'rate': Positive()}
     support = NonNegativeInteger()
 

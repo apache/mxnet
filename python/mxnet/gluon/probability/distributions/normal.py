@@ -38,7 +38,6 @@ class Normal(ExponentialFamily):
     F : mx.ndarray or mx.symbol.numpy._Symbol or None
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
-
     """
 
     has_grad = True
