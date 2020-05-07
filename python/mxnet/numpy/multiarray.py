@@ -1435,8 +1435,8 @@ class ndarray(NDArray):
             raise TypeError('function takes at most 1 keyword argument')
         if len(kwargs) == 1:
             if 'order' not in kwargs:
-                raise TypeError('{} is an invalid keyword argument for this function'
-                                .format(list(kwargs.keys())[0])) # python3.6 - TypeError: 'dict_keys' object does not support indexing
+                raise TypeError("'{}' is an invalid keyword argument for this function"
+                                .format(list(kwargs.keys())[0]))
             order = kwargs.pop('order', 'C')
             if order != 'C':
                 raise NotImplementedError('only supports C-order,'
