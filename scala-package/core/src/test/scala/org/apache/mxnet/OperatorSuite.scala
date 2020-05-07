@@ -191,6 +191,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("scalar op") {
+    TestUtil.assumeStandardDecimalSeparator()
+
     val data = Symbol.Variable("data")
     val shape = Shape(3, 4)
     val dataTmp = NDArray.ones(shape) * 5
@@ -277,6 +279,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("pow fn") {
+    TestUtil.assumeStandardDecimalSeparator()
+
     val shape = Shape(3, 4)
     val exp = Symbol.Variable("exp")
     import SymbolConversions._
