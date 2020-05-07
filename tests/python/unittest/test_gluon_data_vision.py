@@ -26,7 +26,7 @@ from mxnet.gluon.data.vision import transforms
 from mxnet import image
 from mxnet.test_utils import *
 from common import assertRaises, setup_module, with_seed, teardown_module, \
-    xfail_when_nonstandard_decimal_point
+    xfail_when_nonstandard_decimal_separator
 
 import numpy as np
 
@@ -319,7 +319,7 @@ def test_random_rotation():
     assert_almost_equal(data, transformer(data))
 
 
-@xfail_when_nonstandard_decimal_point
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_rotate():
     transformer = transforms.Rotate(10.)

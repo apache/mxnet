@@ -23,10 +23,10 @@ import pytest
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import with_seed, xfail_when_nonstandard_decimal_point
+from common import with_seed, xfail_when_nonstandard_decimal_separator
 
 
-@xfail_when_nonstandard_decimal_point
+@xfail_when_nonstandard_decimal_separator
 def test_group_adagrad():
     mx.random.seed(0)
     opt1 = mx.optimizer.contrib.GroupAdaGrad
@@ -62,7 +62,7 @@ def test_group_adagrad():
                 g_stype='row_sparse')
 
 
-@xfail_when_nonstandard_decimal_point
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 @pytest.mark.serial
 def test_adamw():
