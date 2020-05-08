@@ -146,6 +146,27 @@ services:
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.armv8:latest
   ###################################################################################################
+  # Dockerfile.test.arm based images for testing ARM artefacts via QEMU
+  ###################################################################################################
+  test.armv7:
+    image: ${DOCKER_CACHE_REGISTRY}/test.armv7:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.test.arm
+      args:
+        BASE_IMAGE: arm32v7/ubuntu:20.04
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/test.armv7:latest
+  test.armv8:
+    image: ${DOCKER_CACHE_REGISTRY}/test.armv8:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.test.arm
+      args:
+        BASE_IMAGE: arm64v8/ubuntu:20.04
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/test.armv8:latest
+  ###################################################################################################
   # Dockerfile.build.android based images used for testing cross-compilation for Android
   ###################################################################################################
   build.android_armv7:
