@@ -191,7 +191,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("scalar op") {
-    TestUtil.assumeStandardDecimalSeparator()
+    CancelTestUtil.assumeStandardDecimalSeparator()
 
     val data = Symbol.Variable("data")
     val shape = Shape(3, 4)
@@ -279,7 +279,7 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("pow fn") {
-    TestUtil.assumeStandardDecimalSeparator()
+    CancelTestUtil.assumeStandardDecimalSeparator()
 
     val shape = Shape(3, 4)
     val exp = Symbol.Variable("exp")
