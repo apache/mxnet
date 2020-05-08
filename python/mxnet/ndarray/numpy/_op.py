@@ -4032,7 +4032,7 @@ def repeat(a, repeats, axis=None):
     repeated_array : ndarray
         Output array which has the same shape as `a`, except along
         the given axis.
-    
+
     See Also
     --------
     tile : Tile an array.
