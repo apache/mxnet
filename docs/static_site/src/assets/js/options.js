@@ -149,4 +149,8 @@ $(document).ready(function () {
         .mouseenter(toggleDropdown.bind(null, true))
         .mouseleave(toggleDropdown.bind(null, false))
         .click(function() {$(".version-dropdown").toggle()});
+
+    $("ul.version-dropdown").click(function(e) {
+        e.preventDefault();
+    });
 });
