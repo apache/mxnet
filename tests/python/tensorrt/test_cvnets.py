@@ -28,7 +28,7 @@ from mxnet.gluon.data.vision import transforms
 def get_classif_model(model_name, use_tensorrt, ctx=mx.gpu(0), batch_size=128):
     mx.contrib.tensorrt.set_use_fp16(False)
     h, w = 32, 32
-    model_url = "https://raw.githubusercontent.com/dmlc/web-data/master/gluoncv/models/"
+    model_url = "https://raw.githubusercontent.com/dmlc/web-data/221ce5b7c6d5b0777a1e3471f7f03ff98da90a0a/gluoncv/models"
     param_file = "{}-0000.params".format(model_name)
     symbol_file = "{}-symbol.json".format(model_name)
     mx.test_utils.download("{}/{}".format(model_url, param_file), fname=param_file, overwrite=True)

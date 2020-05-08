@@ -23,7 +23,7 @@ import random
 from .......base import numeric_types
 from ......block import Block
 from .......util import is_np_array
-from ....... import nd, npx, np
+from ....... import ndarray as nd, numpy_extension as npx, numpy as np
 from .utils import _check_bbox_shape, bbox_crop, bbox_translate
 from .utils import bbox_resize, bbox_random_crop_with_constraints
 
