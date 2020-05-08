@@ -121,7 +121,7 @@ services:
   ###################################################################################################
   # Dockerfile.build.android based images used for testing cross-compilation for plain ARM
   ###################################################################################################
-  build.armv6:
+  armv6:
     image: ${DOCKER_CACHE_REGISTRY}/build.armv6:latest
     build:
       context: .
@@ -129,7 +129,7 @@ services:
       target: armv6
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.armv6:latest
-  build.armv7:
+  armv7:
     image: ${DOCKER_CACHE_REGISTRY}/build.armv7:latest
     build:
       context: .
@@ -137,7 +137,7 @@ services:
       target: armv7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.armv7:latest
-  build.armv8:
+  armv8:
     image: ${DOCKER_CACHE_REGISTRY}/build.armv8:latest
     build:
       context: .
@@ -169,7 +169,7 @@ services:
   ###################################################################################################
   # Dockerfile.build.android based images used for testing cross-compilation for Android
   ###################################################################################################
-  build.android_armv7:
+  android_armv7:
     image: ${DOCKER_CACHE_REGISTRY}/build.android_armv7:latest
     build:
       context: .
@@ -177,7 +177,7 @@ services:
       target: armv7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.android_armv7:latest
-  build.android_armv8:
+  android_armv8:
     image: ${DOCKER_CACHE_REGISTRY}/build.android_armv8:latest
     build:
       context: .
