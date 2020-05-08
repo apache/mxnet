@@ -287,6 +287,7 @@ def test_lars():
                               shapes, dtype, rtol=1e-3, atol=1e-3)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_lamb():
     opt1 = mx.optimizer.LAMB
