@@ -258,6 +258,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("symbol pow") {
+    CancelTestUtil.assumeStandardDecimalSeparator()
+
     val shape = Shape(1, 1)
 
     val data = Symbol.Variable("data")
