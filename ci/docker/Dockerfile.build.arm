@@ -43,7 +43,6 @@ COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
-WORKDIR /work/mxnet
 
 
 ####################################################################################################
@@ -72,6 +71,8 @@ RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
     cd /usr/local && \
     rm -rf OpenBLAS
 
+WORKDIR /work/mxnet
+
 
 ####################################################################################################
 # Specialize base image for ARMv7
@@ -97,6 +98,8 @@ RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
     cd /usr/local && \
     rm -rf OpenBLAS
 
+WORKDIR /work/mxnet
+
 
 ####################################################################################################
 # Specialize base image for ARMv8
@@ -121,3 +124,5 @@ RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
     make PREFIX=/usr/aarch64-linux-gnu NO_SHARED=1 install && \
     cd /usr/local && \
     rm -rf OpenBLAS
+
+WORKDIR /work/mxnet

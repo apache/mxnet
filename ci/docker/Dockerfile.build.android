@@ -46,7 +46,6 @@ COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
 COPY runtime_functions.sh /work/
-WORKDIR /work/build
 
 
 ####################################################################################################
@@ -70,6 +69,8 @@ RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
     rm -rf OpenBLAS
 ENV OpenBLAS_HOME=/usr/local/openblas-android
 
+WORKDIR /work/build
+
 
 ####################################################################################################
 # Specialize base image for ARMv8
@@ -91,3 +92,5 @@ RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
     cd /usr/local && \
     rm -rf OpenBLAS
 ENV OpenBLAS_HOME=/usr/local/openblas-android
+
+WORKDIR /work/build
