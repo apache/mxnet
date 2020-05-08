@@ -6132,7 +6132,7 @@ def around(x, decimals=0, out=None, **kwargs):
     """
     from ...numpy import ndarray
     if isinstance(x, numeric_types):
-        return _api_internal.around(x, decimals, **kwargs)
+        return _np.around(x, decimals, **kwargs)
     elif isinstance(x, ndarray):
         return _api_internal.around(x, decimals, out, **kwargs)
     else:
@@ -6151,7 +6151,7 @@ def round(x, decimals=0, out=None, **kwargs):
     """
     from ...numpy import ndarray
     if isinstance(x, numeric_types):
-        return _api_internal.around(x, decimals, **kwargs)
+        return _np.around(x, decimals, **kwargs)
     elif isinstance(x, ndarray):
         return _api_internal.around(x, decimals, out, **kwargs)
     else:
