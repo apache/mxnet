@@ -4812,7 +4812,7 @@ def swapaxes(a, axis1, axis2):
     a_swapped : ndarray
         Swapped array. This is always a copy of the input array.
     """
-    return _api_internal.swapaxes(a, axis1, axis2)
+    return _npi.swapaxes(a, dim1=axis1, dim2=axis2)
 
 
 @set_module('mxnet.ndarray.numpy')

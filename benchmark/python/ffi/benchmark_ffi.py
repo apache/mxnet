@@ -146,7 +146,6 @@ def prepare_workloads():
     OpArgMngr.add_workload("fmod", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("may_share_memory", pool['2x3'][:0], pool['2x3'][:1])
     OpArgMngr.add_workload('squeeze', pool['2x2'], axis=None)
-    OpArgMngr.add_workload('swapaxes', pool['1x3'], dim1=0, dim2=1)
     OpArgMngr.add_workload("pad", pool['2x2'], pad_width=((1,2),(1,2)), mode="constant")
     OpArgMngr.add_workload("prod", pool['2x2'], axis=1, dtype="float64", keepdims=False)
     OpArgMngr.add_workload("around", pool['2x2'], decimals=0)

@@ -57,13 +57,6 @@ struct SwapAxisParam : public dmlc::Parameter<SwapAxisParam> {
     .set_default(0)
     .describe("the second axis to be swapped.");
   }
-  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
-  std::ostringstream dim1_s, dim2_s;
-  dim1_s << dim1;
-  dim2_s << dim2;
-  (*dict)["dim1"] = dim1_s.str();
-  (*dict)["dim2"] = dim2_s.str();
-  }
 };
 
 
