@@ -391,6 +391,7 @@ def test_random_transforms():
             num_apply += 1
     assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_random_gray():
     from mxnet.gluon.data.vision import transforms
