@@ -10347,7 +10347,7 @@ def squeeze(x, axis=None):
     ------
     ValueError
         If `axis` is not `None`, and an axis being squeezed is not of length 1
-    
+
     See Also
     --------
     expand_dims : The inverse operation, adding singleton dimensions
@@ -11230,7 +11230,7 @@ def diagflat(v, k=0):
     diag : MATLAB work-alike for 1-D and 2-D arrays.
     diagonal : Return specified diagonals.
     trace : Sum along diagonals.
-    
+
     Examples
     --------
     >>> np.diagflat([[1,2], [3,4]])
