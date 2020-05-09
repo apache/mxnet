@@ -54,6 +54,7 @@ struct GroupNormParam : public dmlc::Parameter<GroupNormParam> {
   int num_groups;
   float eps;
   bool output_mean_var;
+  bool v2;
   DMLC_DECLARE_PARAMETER(GroupNormParam) {
     DMLC_DECLARE_FIELD(num_groups).set_default(1)
       .describe("Total number of groups.");
@@ -61,6 +62,11 @@ struct GroupNormParam : public dmlc::Parameter<GroupNormParam> {
       .describe("An `epsilon` parameter to prevent division by 0.");
     DMLC_DECLARE_FIELD(output_mean_var).set_default(false)
       .describe("Output the mean and std calculated along the given axis.");
+    DMLC_DECLARE_FIELD(v2).set_default(false)
+      .describe("Set to true to use a corrected version of this operator that will be used in "
+                "MXNet 2.0. The default value is currently false for backward compatibility. "
+                "This option will be removed with MXNet 2.0. Please see #18199 for more "
+                "information.");
   }
 };
 
@@ -76,6 +82,7 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   const GroupNormParam& param = nnvm::get<GroupNormParam>(attrs.parsed);
   const int num_groups = param.num_groups;
+  const bool v2 = param.v2;
   if (req[0] == kNullOp) return;
   CHECK_NE(req[0], kAddTo);
 
@@ -160,9 +167,9 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
                                                {output_grp, std_grp},
                                                {kWriteTo}, {output_grp});
 
-  const TBlob& output = outputs[groupnorm::kOut];
-  mxnet::TShape new_param_shape(data_shape.ndim(), 1);
-  new_param_shape[1] = data_shape[1];
+  const TBlob& output = v2 ? outputs[groupnorm::kOut] : output_grp;
+  mxnet::TShape new_param_shape(data_shape.ndim() + (v2 ? 0 : 1), 1);
+  new_param_shape[1] = v2 ? data_shape[1] : num_groups;
 
   const TBlob& gamma = inputs[groupnorm::kGamma].reshape(new_param_shape);
   const TBlob& beta = inputs[groupnorm::kBeta].reshape(new_param_shape);
@@ -200,6 +207,7 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 3U);
   const GroupNormParam& param = nnvm::get<GroupNormParam>(attrs.parsed);
   const int num_groups = param.num_groups;
+  const bool v2 = param.v2;
 
   const TBlob& data = inputs[1];
   const mxnet::TShape& dshape = data.shape_;
@@ -216,8 +224,8 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
   // Reshape gamma to be broadcastable
-  mxnet::TShape new_param_shape(dshape.ndim(), 1);
-  new_param_shape[1] = dshape[1];
+  mxnet::TShape new_param_shape(dshape.ndim() + (v2 ? 0 : 1), 1);
+  new_param_shape[1] = v2 ? dshape[1] : num_groups;
 
   const TBlob& gamma = inputs[2].reshape(new_param_shape);
 
@@ -234,7 +242,7 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
   // Prepare the necessary shapes for reduction
   mxnet::TShape red_src_shape, red_dst_shape, red_exclude_src_shape, red_exclude_dst_shape;
   BroadcastReduceShapeCompact(temp_dshape, mean_.shape_, &red_src_shape, &red_dst_shape);
-  BroadcastReduceShapeCompact(dshape, gamma.shape_,
+  BroadcastReduceShapeCompact(v2 ? dshape : temp_dshape, gamma.shape_,
                               &red_exclude_src_shape, &red_exclude_dst_shape);
 
   int N = red_src_shape.Size() / red_dst_shape.Size();
@@ -309,8 +317,11 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
   if (req[0] != kNullOp) {
     const TBlob output_ = outputs[0].reshape(data_.shape_);
     BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
-                                                    {inputs[0], gamma},
-                                                    {kWriteTo}, {ograd_mult.reshape(data.shape_)});
+                                                    {v2 ? inputs[0] : ograd, gamma},
+                                                    {kWriteTo},
+                                                    {v2
+                                                     ? ograd_mult.reshape(data.shape_)
+                                                     : ograd_mult});
     BinaryBroadcastCompute<xpu, op::mshadow_op::div>(attrs, ctx,
                                                     {ograd_mult, std_},
                                                     {kWriteTo}, {ograd_mult});
