@@ -1960,19 +1960,23 @@ def test_groupnorm():
         x_hat = (data - mean.reshape(new_moments_shape)) / std.reshape(new_moments_shape)
         return x_hat, mean, std
 
-    def np_groupnorm(data, gamma, beta, num_groups, eps):
-        new_param_shape = (1, dshape[1], 1, 1)
+    def np_groupnorm(data, gamma, beta, num_groups, eps, v2):
+        new_param_shape = (1, dshape[1], 1, 1) if v2 else (1, num_groups, 1, 1, 1)
         x_hat, mean, std = x_hat_helper(data, num_groups, eps)
-        out = x_hat.reshape(dshape) * gamma.reshape(new_param_shape) + beta.reshape(new_param_shape)
-        return out, mean, std
+        if v2:
+            out = x_hat.reshape(dshape) * gamma.reshape(new_param_shape) + beta.reshape(new_param_shape)
+            return out, mean, std
+        else:
+            out = x_hat * gamma.reshape(new_param_shape) + beta.reshape(new_param_shape)
+            return out.reshape(dshape), mean, std
 
-    def np_groupnorm_grad(ograd, data, gamma, beta, mean, std, num_groups, eps):
+    def np_groupnorm_grad(ograd, data, gamma, beta, mean, std, num_groups, eps, v2):
         x_hat, mean, std = x_hat_helper(data, num_groups, eps)
         new_shape = x_hat.shape
         dshape = data.shape
         dtype = data.dtype
         new_moments_shape = (new_shape[0], num_groups, 1, 1, 1)
-        new_param_shape = (1, dshape[1], 1, 1)
+        new_param_shape = (1, dshape[1], 1, 1) if v2 else (1, num_groups, 1, 1, 1)
         acc_type = acc_types[str(dtype)]
         ograd = ograd.reshape(new_shape)
         data = data.reshape(new_shape)
@@ -1980,9 +1984,16 @@ def test_groupnorm():
         beta = beta.reshape(new_param_shape)
         mean = mean.reshape(new_moments_shape)
         std = std.reshape(new_moments_shape)
-        beta_grad = np.sum(ograd, axis=(0, 3, 4), dtype=acc_type, keepdims=False).astype(dtype).flatten()
-        gamma_grad = np.sum(x_hat * ograd, axis=(0, 3, 4), dtype=acc_type, keepdims=False).astype(dtype).flatten()
-        x_hat_grad = ograd * gamma.reshape(1, num_groups, dshape[1] // num_groups, 1, 1)
+        beta_grad = np.sum(ograd, axis=(0, 3, 4) if v2 else (0, 2, 3, 4), dtype=acc_type, keepdims=False).astype(dtype)
+        if v2:
+            beta_grad = beta_grad.flatten()
+        gamma_grad = np.sum(x_hat * ograd, axis=(0, 3, 4) if v2 else (0, 2, 3, 4), dtype=acc_type, keepdims=False).astype(dtype)
+        if v2:
+            gamma_grad = gamma_grad.flatten()
+        if v2:
+            x_hat_grad = ograd * gamma.reshape(1, num_groups, dshape[1] // num_groups, 1, 1)
+        else:
+            x_hat_grad = ograd * gamma
         ograd_mult = x_hat_grad / std
         red_out = np.mean(ograd_mult, axis=(2, 3, 4), dtype=acc_type, keepdims=True).astype(dtype)
         data_grad = ograd_mult - red_out
@@ -1990,49 +2001,50 @@ def test_groupnorm():
         data_grad = data_grad - x_hat * red_out
         return data_grad.reshape(dshape), gamma_grad, beta_grad
 
-
-    batch_size = random.randint(1, 8)
-    num_groups = random.randint(2, 3)
-    num_channels = random.randint(2, 3) * num_groups
-    height = random.randint(1, 5)
-    width = random.randint(1, 5)
-    dshape = (batch_size, num_channels, height, width)
-    param_shape = (num_channels,)
-    temp_shape = (batch_size, num_groups, int(num_channels / num_groups), height, width)
-    np_data = np.random.uniform(0.2, 1.0, dshape)
-    np_gamma = np.random.uniform(-1.0, 1.0, param_shape)
-    np_beta = np.random.uniform(-1.0, 1.0, param_shape)
-    data_sym = mx.sym.Variable("data")
-    gamma_sym = mx.sym.Variable("gamma")
-    beta_sym = mx.sym.Variable("beta")
-    for dtype in [np.float16, np.float32, np.float64]:
-        eps = 1e-2 if dtype == np.float16 else 1e-5
-        mx_data = mx.nd.array(np_data, dtype=dtype)
-        mx_gamma = mx.nd.array(np_gamma, dtype=dtype)
-        mx_beta = mx.nd.array(np_beta, dtype=dtype)
-        np_out, np_mean, np_std = np_groupnorm(np_data.astype(dtype),
-                                               np_gamma.astype(dtype),
-                                               np_beta.astype(dtype),
-                                               num_groups=num_groups,
-                                               eps=eps)
-        mx_sym = mx.sym.GroupNorm(data=data_sym, gamma=gamma_sym, beta=beta_sym,
-                                  num_groups=num_groups, eps=eps, output_mean_var=True)
-        check_symbolic_forward(mx_sym, [mx_data, mx_gamma, mx_beta], [np_out, np_mean, np_std],
-                               rtol=1e-2 if dtype == np.float16 else 1e-3,
-                               atol=5e-3 if dtype == np.float16 else 1e-4, dtype=dtype)
-        mx_sym = mx.sym.GroupNorm(data=data_sym, gamma=gamma_sym, beta=beta_sym,
-                                  num_groups=num_groups, eps=eps, output_mean_var=False)
-        np_ograd = np.random.uniform(-1.0, 1.0, dshape).astype(dtype)
-        np_data_grad, np_gamma_grad, np_beta_grad = np_groupnorm_grad(np_ograd,
-                                                                      np_data.astype(dtype),
-                                                                      np_gamma.astype(dtype),
-                                                                      np_beta.astype(dtype),
-                                                                      np_mean, np_std,
-                                                                      num_groups, eps)
-        check_symbolic_backward(mx_sym, [mx_data, mx_gamma, mx_beta], [mx.nd.array(np_ograd)],
-                                [np_data_grad, np_gamma_grad, np_beta_grad],
+    for v2 in [False, True]:
+        batch_size = random.randint(1, 8)
+        num_groups = random.randint(2, 3)
+        num_channels = random.randint(2, 3) * num_groups
+        height = random.randint(1, 5)
+        width = random.randint(1, 5)
+        dshape = (batch_size, num_channels, height, width)
+        param_shape = (num_channels if v2 else num_groups,)
+        temp_shape = (batch_size, num_groups, int(num_channels / num_groups), height, width)
+        np_data = np.random.uniform(0.2, 1.0, dshape)
+        np_gamma = np.random.uniform(-1.0, 1.0, param_shape)
+        np_beta = np.random.uniform(-1.0, 1.0, param_shape)
+        data_sym = mx.sym.Variable("data")
+        gamma_sym = mx.sym.Variable("gamma")
+        beta_sym = mx.sym.Variable("beta")
+        for dtype in [np.float16, np.float32, np.float64]:
+            eps = 1e-2 if dtype == np.float16 else 1e-5
+            mx_data = mx.nd.array(np_data, dtype=dtype)
+            mx_gamma = mx.nd.array(np_gamma, dtype=dtype)
+            mx_beta = mx.nd.array(np_beta, dtype=dtype)
+            np_out, np_mean, np_std = np_groupnorm(np_data.astype(dtype),
+                                                np_gamma.astype(dtype),
+                                                np_beta.astype(dtype),
+                                                num_groups=num_groups,
+                                                eps=eps,
+                                                v2=v2)
+            mx_sym = mx.sym.GroupNorm(data=data_sym, gamma=gamma_sym, beta=beta_sym,
+                                    num_groups=num_groups, eps=eps, output_mean_var=True, v2=v2)
+            check_symbolic_forward(mx_sym, [mx_data, mx_gamma, mx_beta], [np_out, np_mean, np_std],
                                 rtol=1e-2 if dtype == np.float16 else 1e-3,
-                                atol=5e-2 if dtype == np.float16 else 1e-4, dtype=dtype)
+                                atol=5e-3 if dtype == np.float16 else 1e-4, dtype=dtype)
+            mx_sym = mx.sym.GroupNorm(data=data_sym, gamma=gamma_sym, beta=beta_sym,
+                                    num_groups=num_groups, eps=eps, output_mean_var=False, v2=v2)
+            np_ograd = np.random.uniform(-1.0, 1.0, dshape).astype(dtype)
+            np_data_grad, np_gamma_grad, np_beta_grad = np_groupnorm_grad(np_ograd,
+                                                                        np_data.astype(dtype),
+                                                                        np_gamma.astype(dtype),
+                                                                        np_beta.astype(dtype),
+                                                                        np_mean, np_std,
+                                                                        num_groups, eps, v2)
+            check_symbolic_backward(mx_sym, [mx_data, mx_gamma, mx_beta], [mx.nd.array(np_ograd)],
+                                    [np_data_grad, np_gamma_grad, np_beta_grad],
+                                    rtol=1e-2 if dtype == np.float16 else 1e-3,
+                                    atol=5e-2 if dtype == np.float16 else 1e-4, dtype=dtype)
 
 
 @with_seed()
