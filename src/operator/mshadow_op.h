@@ -746,6 +746,10 @@ MXNET_BINARY_MATH_OP_NC(minus_sign, a - b > DType(0) ? DType(1) : -DType(1));
 
 MXNET_BINARY_MATH_OP(rminus, b - a);
 
+MXNET_BINARY_MATH_OP_NC(posone, 1);
+
+MXNET_BINARY_MATH_OP_NC(negone, -1);
+
 MXNET_BINARY_MATH_OP(div_grad, 1.0f / math::id(b));
 
 MXNET_BINARY_MATH_OP(div_rgrad, -math::id(a) / math::sqr(b));
@@ -798,6 +802,54 @@ struct mod : public mxnet_op::tunable {
     }
   }
 };
+
+#ifndef _WIN32
+struct mixed_mod {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return mod::Map(static_cast<mshadow::half::half_t>(a), b);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return mod::Map(static_cast<float>(a), b);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return mod::Map(static_cast<double>(a), b);
+  }
+};
+
+struct mixed_rmod {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return mod::Map(b, static_cast<mshadow::half::half_t>(a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return mod::Map(b, static_cast<float>(a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return mod::Map(b, static_cast<double>(a));
+  }
+};
+#endif
 
 struct fmod : public mxnet_op::tunable {
   template<typename DType>
