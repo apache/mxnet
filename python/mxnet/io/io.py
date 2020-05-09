@@ -226,7 +226,7 @@ class DataIter(object):
             raise StopIteration
 
     def __next__(self):
-        return self.next()
+        return self.next() # pylint: disable=E1102
 
     def iter_next(self):
         """Move to the next batch.
@@ -830,7 +830,7 @@ class MXDataIter(DataIter):
 
         # load the first batch to get shape information
         self.first_batch = None
-        self.first_batch = self.next()
+        self.first_batch = self.next() # pylint: disable=E1102
         data = self.first_batch.data[0]
         label = self.first_batch.label[0]
 
