@@ -706,6 +706,13 @@ class GroupNorm(HybridBlock):
         self._center = center
         self._scale = scale
         self._v2 = v2
+
+        if not v2:
+            warnings.warn("You are using an incorrect implementation of GroupNorm. To use a "
+                          "corrected implementation, pass v2=True into GroupNorm's constructor. "
+                          "The current (broken) implementation will be removed in MXNet 2.0. "
+                          "Please see #18199 and #17139 for more details.")
+
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
                                      shape=(in_channels if v2 else num_groups,),
                                      init=gamma_initializer, allow_deferred_init=True)
