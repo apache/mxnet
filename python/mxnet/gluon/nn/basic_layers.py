@@ -655,8 +655,8 @@ class GroupNorm(HybridBlock):
     gamma_initializer: str or `Initializer`, default 'ones'
         Initializer for the gamma weight.
     v2: bool, default False
-        If True, a correct implementation of the group normalization operator from the original 
-        paper will be used. This is the only version of this operator that will be available in 
+        If True, a correct implementation of the group normalization operator from the original
+        paper will be used. This is the only version of this operator that will be available in
         MXNet 2.0.
         If False, an incorrect implementation of group normalization will be used. This setting is
         only present for backward compatibility with older MXNet 1.x models. Please see
@@ -721,7 +721,8 @@ class GroupNorm(HybridBlock):
                                     init=beta_initializer, allow_deferred_init=True)
 
     def hybrid_forward(self, F, data, gamma, beta):
-        norm_data = F.GroupNorm(data, gamma=gamma, beta=beta, num_groups=self._num_groups, eps=self._epsilon, v2=self._v2)
+        norm_data = F.GroupNorm(data, gamma=gamma, beta=beta, num_groups=self._num_groups, eps=self._epsilon,
+                                v2=self._v2)
         return norm_data
 
     def __repr__(self):
