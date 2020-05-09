@@ -654,6 +654,14 @@ class GroupNorm(HybridBlock):
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
         Initializer for the gamma weight.
+    v2: bool, default False
+        If True, a correct implementation of the group normalization operator from the original 
+        paper will be used. This is the only version of this operator that will be available in 
+        MXNet 2.0.
+        If False, an incorrect implementation of group normalization will be used. This setting is
+        only present for backward compatibility with older MXNet 1.x models. Please see
+        `#18199 <https://github.com/apache/incubator-mxnet/pull/18199>`_ and
+        `#17139 <https://github.com/apache/incubator-mxnet/issues/17139>`_ for more information.
 
 
     Inputs:
