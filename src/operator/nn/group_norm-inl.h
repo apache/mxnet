@@ -65,7 +65,7 @@ struct GroupNormParam : public dmlc::Parameter<GroupNormParam> {
     DMLC_DECLARE_FIELD(v2).set_default(false)
       .describe("Set to true to use a corrected version of this operator that will be used in "
                 "MXNet 2.0. The default value is currently false for backward compatibility. "
-                "This option will be removed with MXNet 2.0. Please see #18199 for more "
+                "This option will be removed with MXNet 2.0. Please see #18199 and #17139 for more "
                 "information.");
   }
 };
