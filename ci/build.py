@@ -45,7 +45,7 @@ from util import *
 # NOTE: Temporary whitelist used until all Dockerfiles are refactored for docker compose
 DOCKER_COMPOSE_WHITELIST = ('centos7_cpu', 'centos7_gpu_cu92', 'centos7_gpu_cu100',
                             'centos7_gpu_cu101', 'centos7_gpu_cu102', 'ubuntu_cpu',
-                            'ubuntu_gpu_cu101', 'publish.test.centos7_cpu',
+                            'ubuntu_build_cuda', 'ubuntu_gpu_cu101', 'publish.test.centos7_cpu',
                             'publish.test.centos7_gpu')
 # Files for docker compose
 DOCKER_COMPOSE_FILES = set(('docker/build.centos7', 'docker/build.ubuntu', 'docker/publish.test.centos7'))
