@@ -7161,6 +7161,51 @@ def test_dropout():
         # check_dropout_axes(0.25, nshape, axes = (0, 2, 3), cudnn_off=False)
         # check_dropout_axes(0.25, nshape, axes = (1, 2, 3), cudnn_off=False)
 
+@with_seed()
+def test_unfold():
+    def np_unfold(x, dim, size, step):
+        new_size = [0] * (x.ndim + 1)
+        new_stride = [0] * (x.ndim + 1)
+
+        new_size[x.ndim] = size
+        new_stride[x.ndim] = 1 if x.ndim == 0 else x.strides[dim]
+
+        for d in range(x.ndim):
+            self_size = x.shape[d]
+            self_stride = x.strides[d]
+            if d == dim:
+                new_size[d] = (self_size - size) // step + 1
+                new_stride[d] = step * self_stride
+            else:
+                new_size[d] = self_size
+                new_stride[d] = self_stride
+
+        return np.lib.stride_tricks.as_strided(x, new_size, new_stride)
+
+    for dtype in ['int32', 'int64', 'float16', 'float32', 'float64']:
+        for _ in range(100):
+            data_shape = tuple(np.random.randint(1, 6, np.random.randint(1, 6, 1)))
+
+            data = mx.nd.random.randint(0, 100, data_shape).astype(dtype)
+            data_np = data.asnumpy()
+
+            vaild_dims = [x for x in range(len(data_shape)) if data_shape[x] > 1]
+            if len(vaild_dims) == 0:
+                continue
+            dim = np.random.choice(vaild_dims)
+            kernel = np.random.randint(2, data_shape[dim] + 1)
+            stride = np.random.randint(1, data_shape[dim] - kernel + 2)
+
+            output = mx.nd.unfold(data, dim, kernel, stride)
+            output_np = np_unfold(data_np, dim, kernel, stride)
+
+            assert_almost_equal(output.asnumpy(), output_np)
+
+            # Check gradient
+            if dtype in (np.float16, np.float32, np.float64):
+                unfold_sym = mx.sym.unfold(data=mx.sym.Variable('data'), dim=dim, kernel_size=kernel, stride=stride)
+                check_numeric_gradient(unfold_sym, [data_np])
+
 
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/11290")
 @with_seed()
