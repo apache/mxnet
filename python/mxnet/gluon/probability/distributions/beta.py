@@ -49,11 +49,11 @@ class Beta(ExponentialFamily):
 
     def sample(self, size=None):
         F = self.F
-        return F.random.beta(self.alpha, self.beta, size)
+        return F.np.random.beta(self.alpha, self.beta, size)
     
     def sample_n(self, size=None):
         F = self.F
-        return F.random.beta(self.alpha, self.beta,
+        return F.np.random.beta(self.alpha, self.beta,
                              sample_n_shape_converter(size))
 
     @property
@@ -70,13 +70,15 @@ class Beta(ExponentialFamily):
                 ((a + b) ** 2 * (a + b + 1)))
     
     def log_prob(self, value):
+        eps = 1e-5
         F = self.F
         lgamma = gammaln(F)
         log = F.np.log
+        log1p = F.np.log1p
         a = self.alpha
         b = self.beta
         lgamma_term = lgamma(a + b) - lgamma(a) - lgamma(b)
-        return (a - 1) * log(value) + (b - 1) * log(1 - value) + lgamma_term
+        return (a - 1) * log(value + eps) + (b - 1) * log1p(-value + eps) + lgamma_term
 
     def entropy(self):
         F = self.F

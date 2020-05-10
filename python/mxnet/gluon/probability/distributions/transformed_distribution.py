@@ -44,6 +44,12 @@ class TransformedDistribution(Distribution):
             x = t(x)
         return x
 
+    def sample_n(self, size=None):
+        x = self._base_dist.sample_n(size)
+        for t in self._transforms:
+            x = t(x)
+        return x
+
     def log_prob(self, value):
         """
         Compute log-likelihood of `value` with `log_det_jacobian` and

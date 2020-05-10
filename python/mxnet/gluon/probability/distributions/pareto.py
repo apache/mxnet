@@ -22,7 +22,7 @@ __all__ = ['Pareto']
 
 from .transformed_distribution import TransformedDistribution
 from .exponential import Exponential
-from .constraint import Positive
+from .constraint import Positive, dependent_property, GreaterThan
 from ..transformation import ExpTransform, AffineTransform
 from .utils import getF, sample_n_shape_converter
 
@@ -41,7 +41,6 @@ class Pareto(TransformedDistribution):
         inferred from parameters if declared None.
     """
     has_grad = True
-    support = Positive()
     arg_constraints = {'scale': Positive(),
                        'alpha': Positive()}
     
@@ -59,6 +58,10 @@ class Pareto(TransformedDistribution):
     def sample_n(self, size=None):
         F = self.F
         return self.scale * (F.np.random.pareto(self.alpha, sample_n_shape_converter(size)) + 1)
+
+    @dependent_property
+    def support(self):
+        return GreaterThan(self.scale)
 
     @property
     def mean(self):

@@ -22,7 +22,7 @@ __all__ = ['Gumbel']
 
 from .distribution import Distribution
 from .constraint import Real, Positive
-from .utils import getF
+from .utils import getF, sample_n_shape_converter
 # Euler-Mascheroni constant 
 from numpy import euler_gamma
 
@@ -80,6 +80,9 @@ class Gumbel(Distribution):
 
     def sample(self, size=None):
         return self.F.np.random.gumbel(self.loc, self.scale, size)
+
+    def sample_n(self, size=None):
+        return self.F.np.random.gumbel(self.loc, self.scale, sample_n_shape_converter(size))
 
     @property
     def mean(self):

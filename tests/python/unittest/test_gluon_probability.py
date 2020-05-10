@@ -61,18 +61,6 @@ def _distribution_method_invoker(dist, func, *args):
             return out
     return getattr(dist, func)(*args)
 
-def _test_zero_kl(p, shape):
-    """Check if KL(p || p) = 0
-    
-    Parameters
-    ----------
-    p : Distribution
-    """
-    mx_out = mgp.kl_divergence(p, p).asnumpy()
-    np_out = _np.zeros(shape)
-    assert_almost_equal(mx_out, np_out, atol=1e-3,
-                        rtol=1e-2, use_broadcast=False)
-
 
 @with_seed()
 @use_np
@@ -1951,77 +1939,109 @@ def test_independent():
 @with_seed()
 @use_np
 def test_gluon_kl():
+    def _test_zero_kl(p, shape):
+        """Check if KL(p || p) = 0
+        
+        Parameters
+        ----------
+        p : Distribution
+        """
+        mx_out = mgp.kl_divergence(p, p).asnumpy()
+        np_out = _np.zeros(shape)
+        assert_almost_equal(mx_out, np_out, atol=1e-3,
+                            rtol=1e-2, use_broadcast=False)
+
+    def _test_monte_carlo(p, q, M=50000):
+        """Check if KL(p || q) is approximately equal to
+        1/M * \Sum_{i=1}^{M} log(p(x_i) / q(x_i)), x_i ~ p(x)
+        """
+        kl = mgp.kl_divergence(p, q)
+        mc_approx = mgp.empirical_kl(p, q, M)
+        assert_almost_equal(mc_approx.asnumpy(), kl.asnumpy(), atol=1e-1,
+                    rtol=1e-1, use_broadcast=False)
+
+    def _dist_factory(dist, *param_funcs):
+        """Generate a distribution object with parameters of random value.
+
+        Parameters
+        ----------
+        dist : Type
+            A type of distribution.
+        param_funcs : List
+            A list of functions that generate valid parameters for `dist`
+        """
+        params = [f() for f in param_funcs]
+        return dist(*params)
+
     # could cause longer runtime and potential flaky tests
     monte_carlo_test = True 
     repeated_times = 50000
     shapes = [(), (1,), (2, 3), 6]
+
+    # Test kl between same distributions
+    # uniform
     for shape in shapes:
-        low = np.random.uniform(-1, 1, shape)
-        high = low + np.random.uniform(0.5, 1.5, shape)
-        dist1 = mgp.Uniform(low, high)
-        _test_zero_kl(dist1, shape)
+        low = lambda: np.random.uniform(0, 1, shape)
+        high = lambda: np.random.uniform(1, 2, shape)
+        _test_zero_kl(_dist_factory(mgp.Uniform, low, high), shape)
     
+    # normal, laplace, cauchy, gumbel
+    for dist in [mgp.Normal, mgp.Laplace, mgp.Cauchy, mgp.Gumbel]:
+        for shape in shapes:
+            loc = lambda: np.random.uniform(-1, 1, shape)
+            scale = lambda: np.random.uniform(0.5, 1.5, shape)
+            _test_zero_kl(_dist_factory(dist, loc, scale), shape)
+            if monte_carlo_test:
+                _test_monte_carlo(_dist_factory(dist, loc, scale),
+                                _dist_factory(dist, loc, scale),
+                                repeated_times)
+
+    # poisson
+    for shape in shapes[1:]:
+        dist = mgp.Poisson
+        rate = lambda: np.random.uniform(0.5, 1.5, shape)
+        _test_zero_kl(_dist_factory(dist, rate), shape)
+        if monte_carlo_test:
+            _test_monte_carlo(_dist_factory(dist, rate),
+                            _dist_factory(dist, rate),
+                            repeated_times)
+
+    # exponential, geometric
+    for dist in [mgp.Exponential, mgp.Geometric]:
+        for shape in shapes:
+            s = lambda: np.random.uniform(size=shape)
+            _test_zero_kl(_dist_factory(dist, s), shape)
+            if monte_carlo_test:
+                _test_monte_carlo(_dist_factory(dist, s),
+                                _dist_factory(dist, s),
+                                repeated_times)
+
+    # pareto
     for shape in shapes:
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        dist1 = mgp.Normal(loc, scale)
-        _test_zero_kl(dist1, shape)
-    
-    for shape in shapes:
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        dist1 = mgp.Laplace(loc, scale)
-        _test_zero_kl(dist1, shape)
-    
-    for shape in shapes:
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        dist1 = mgp.Cauchy(loc, scale)
-        _test_zero_kl(dist1, shape)
-    
-    for shape in shapes:
-        rate = np.random.uniform(0.5, 1.5, shape)
-        dist1 = mgp.Poisson(rate)
-        _test_zero_kl(dist1, shape)
+        dist = mgp.Pareto
+        alpha = lambda: np.random.uniform(size=shape)
+        scale = lambda: np.random.uniform(size=shape)
+        _test_zero_kl(_dist_factory(dist, alpha, scale), shape)
 
     for shape in shapes:
-        s = np.random.uniform(size=shape)
-        dist1 = mgp.Exponential(scale=s)
-        _test_zero_kl(dist1, shape)
+        dist = mgp.HalfNormal
+        scale = lambda: np.random.uniform(0.5, 1.5, shape)
+        _test_zero_kl(_dist_factory(dist, scale), shape)
+        if monte_carlo_test:
+            _test_monte_carlo(_dist_factory(dist, scale),
+                            _dist_factory(dist, scale),
+                            repeated_times)
 
-    for shape in shapes:
-        alpha = np.random.uniform(size=shape)
-        scale = np.random.uniform(size=shape)
-        dist1 = mgp.Pareto(scale=scale, alpha=alpha)    
-        _test_zero_kl(dist1, shape)
-
-    for shape in shapes:
-        scale = np.random.uniform(0.5, 1.5, shape)
-        dist = mgp.HalfNormal(scale=scale)
-        _test_zero_kl(dist, shape)
-
-    for shape in shapes:
-        prob = np.random.uniform(size=shape)
-        dist1 = mgp.Geometric(prob=prob)
-        _test_zero_kl(dist1, shape)
-
-    for shape in shapes:
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        dist = mgp.Gumbel(loc, scale)
-        _test_zero_kl(dist, shape)
-
-    for shape in shapes:
-        alpha = np.random.uniform(0.5, 1.5, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        dist = mgp.Gamma(shape=alpha, scale=scale)
-        _test_zero_kl(dist, shape)
-
-    for shape in shapes:
-        alpha = np.random.uniform(0.5, 1.5, shape)
-        beta = np.random.uniform(0.5, 1.5, shape)
-        dist = mgp.Beta(alpha, beta)
-        _test_zero_kl(dist, shape)
+    # gamma, beta
+    for dist in [mgp.Gamma, mgp.Beta]:
+        for shape in shapes:
+            param1 = lambda: np.random.uniform(0.5, 1.5, shape)
+            param2 = lambda: np.random.uniform(0.5, 1.5, shape)
+            _test_zero_kl(_dist_factory(dist, param1, param2), shape)
+            if monte_carlo_test:
+                _test_monte_carlo(_dist_factory(dist, param1, param2),
+                                _dist_factory(dist, param1, param2),
+                                repeated_times)
     
     for shape in shapes:
         n = _np.random.randint(5, 10)
@@ -2061,16 +2081,14 @@ def test_gluon_kl():
     for shape in shapes:
         low = np.random.uniform(-1, 1, shape)
         high = low + np.random.uniform(0.5, 1.5, shape)
-        uniform = mgp.Uniform(low, high)
+        dist1 = mgp.Uniform(low, high)
         loc = np.random.uniform(-1, 1, shape)
         scale = np.random.uniform(0.5, 1.5, shape)
-        normal = mgp.Normal(loc, scale)
-        kl = mgp.kl_divergence(uniform, normal)
+        dist2 = mgp.Normal(loc, scale)
+        kl = mgp.kl_divergence(dist1, dist2)
         assert kl.shape == low.shape
         if monte_carlo_test:
-            mc_approx = mgp.empirical_kl(uniform, normal, repeated_times)
-            assert_almost_equal(mc_approx.asnumpy(), kl.asnumpy(), atol=1e-1,
-                        rtol=1e-1, use_broadcast=False)
+            _test_monte_carlo(dist1, dist2, repeated_times)
 
 
 @with_seed()

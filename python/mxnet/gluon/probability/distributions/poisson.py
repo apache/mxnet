@@ -86,7 +86,7 @@ class Poisson(ExponentialFamily):
                 size = ()
             return F.npx.scalar_poisson(lam, size)
         else:
-            return F.npx.tensor_poisson(lam, size)
+            return F.np.moveaxis(F.npx.tensor_poisson(lam, size), -1, 0)
 
     def log_prob(self, value):
         F = self.F

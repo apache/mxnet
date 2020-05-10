@@ -232,7 +232,7 @@ def _kl_pareto_pareto(p, q):
     t2 = -F.np.log(alpha_ratio)
     result = t1 + t2 + alpha_ratio - 1
     # TODO: Handle out-of-support value
-    # result[p.support.lower_bound < q.support.lower_bound] = inf
+    # result[p.support._lower_bound < q.support._lower_bound] = _np.nan
     return result
 
 
@@ -339,3 +339,8 @@ def _kl_uniform_normal(p, q):
     t2 = (common_term) ** 2 / 12
     t3 = ((p.high + p.low - 2 * q.loc) / 2) ** 2
     return t1 + 0.5 * (t2 + t3) / (q.scale ** 2)
+
+@register_kl(Uniform, Beta)
+def _kl_uniform_beta(p, q):
+    pass
+
