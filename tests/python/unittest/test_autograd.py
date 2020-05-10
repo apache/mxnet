@@ -20,7 +20,7 @@ import mxnet.ndarray as nd
 from mxnet.ndarray import zeros_like
 from mxnet.autograd import *
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown_module
+from common import setup_module, with_seed, teardown_module, xfail_when_nonstandard_decimal_separator
 from mxnet.test_utils import EnvManager
 
 
@@ -107,6 +107,7 @@ def autograd_assert(*args, **kwargs):
     for a, b in zip(grad_vals, grad_res):
         assert same(a.asnumpy(), b.asnumpy())
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_unary_func():
     def check_unary_func(x):

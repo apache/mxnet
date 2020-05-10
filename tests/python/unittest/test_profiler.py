@@ -20,7 +20,6 @@ import time
 import os
 import csv
 import json
-import unittest
 import numpy as np
 from collections import OrderedDict
 
@@ -28,6 +27,7 @@ import mxnet as mx
 from mxnet import profiler
 from mxnet.gluon import nn
 from common import run_in_spawned_process
+import pytest
 
 
 def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate_stats=False):
@@ -437,17 +437,19 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
     profiler.set_state('stop')
 
 
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_multiple_custom_ops_symbolic():
     custom_operator_profiling_multiple_custom_ops(None, 'symbolic', \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
 
 
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_multiple_custom_ops_imperative():
     custom_operator_profiling_multiple_custom_ops(None, 'imperative', \
             'test_custom_operator_profiling_multiple_custom_ops_imperative.json')
 
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_naive_engine():
     # run the three tests above using Naive Engine
     run_in_spawned_process(test_custom_operator_profiling, \
@@ -461,7 +463,7 @@ def test_custom_operator_profiling_naive_engine():
             'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
 
 
-@unittest.skipIf(mx.context.num_gpus() == 0, "GPU memory profiler records allocation on GPUs only")
+@pytest.mark.skipif(mx.context.num_gpus() == 0, reason="GPU memory profiler records allocation on GPUs only")
 def test_gpu_memory_profiler_symbolic():
     iter_num = 5
 
@@ -529,7 +531,7 @@ def test_gpu_memory_profiler_symbolic():
                    .format(expected_alloc_entry['Attribute Name'])
 
 
-@unittest.skipIf(mx.context.num_gpus() == 0, "GPU memory profiler records allocation on GPUs only")
+@pytest.mark.skipif(mx.context.num_gpus() == 0, reason="GPU memory profiler records allocation on GPUs only")
 def test_gpu_memory_profiler_gluon():
     enable_profiler(profile_filename='test_profiler.json',
                     run=True, continuous_dump=True)

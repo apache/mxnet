@@ -30,7 +30,15 @@ sys.path.insert(0, os.path.join(curr_path, '../../../python'))
 import models
 from contextlib import contextmanager
 import pytest
-import tempfile
+from tempfile import TemporaryDirectory
+import locale
+
+xfail_when_nonstandard_decimal_separator = pytest.mark.xfail(
+    locale.localeconv()["decimal_point"] != ".",
+    reason="Some operators break when the decimal separator is set to anything other than \".\". "
+    "These operators should be rewritten to utilize the new FFI. Please see #18097 for more "
+    "information."
+)
 
 def assertRaises(expected_exception, func, *args, **kwargs):
     try:
@@ -287,19 +295,6 @@ def setup_module():
     if os.getenv('MXNET_TEST_SEED') is not None:
         logger.warn('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
 
-try:
-    from tempfile import TemporaryDirectory
-except:  # Python 2 support
-    # really simple implementation of TemporaryDirectory
-    class TemporaryDirectory(object):
-        def __init__(self, suffix='', prefix='', dir=''):
-            self._dirname = tempfile.mkdtemp(suffix, prefix, dir)
-
-        def __enter__(self):
-            return self._dirname
-
-        def __exit__(self, exc_type, exc_value, traceback):
-            shutil.rmtree(self._dirname)
 
 def teardown_module():
     """
@@ -308,27 +303,6 @@ def teardown_module():
     It waits for all operations in one file to finish before carrying on the next.
     """
     mx.nd.waitall()
-
-
-def with_post_test_cleanup():
-    """
-    Helper function that cleans up memory by releasing it from memory pool
-    Required especially by large tensor tests that have memory footprints in GBs.
-    """
-    def test_helper(orig_test):
-        @functools.wraps(orig_test)
-        def test_new(*args, **kwargs):
-            logger = default_logger()
-            try:
-                orig_test(*args, **kwargs)
-            except:
-                logger.info(test_msg)
-                raise
-            finally:
-                mx.nd.waitall()
-                mx.cpu().empty_cache()
-        return test_new
-    return test_helper
 
 
 def run_in_spawned_process(func, env, *args):

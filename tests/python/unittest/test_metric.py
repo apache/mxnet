@@ -21,7 +21,7 @@ import scipy
 from scipy.stats import pearsonr
 import json
 import math
-from common import with_seed
+from common import with_seed, xfail_when_nonstandard_decimal_separator
 from copy import deepcopy
 
 def check_metric(metric, *args, **kwargs):
@@ -387,6 +387,7 @@ def test_pcc():
         met_pcc.update(l, p)
     assert pcc == met_pcc.get()[1]
 
+@xfail_when_nonstandard_decimal_separator
 def test_single_array_input():
     pred = mx.nd.array([[1,2,3,4]])
     label = pred + 0.1

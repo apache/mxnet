@@ -127,6 +127,10 @@ RUN /work/ubuntu_julia.sh
 COPY install/ubuntu_perl.sh /work/
 RUN /work/ubuntu_perl.sh
 
+# MXNetJS nightly needs emscripten for wasm
+COPY install/ubuntu_emscripten.sh /work/
+RUN /work/ubuntu_emscripten.sh
+
 ARG USER_ID=0
 COPY install/docker_filepermissions.sh /work/
 RUN /work/docker_filepermissions.sh

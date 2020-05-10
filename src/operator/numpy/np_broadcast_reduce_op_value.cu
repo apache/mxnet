@@ -44,10 +44,10 @@ NNVM_REGISTER_OP(_np_min)
 NNVM_REGISTER_OP(_backward_np_min)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesNoDTypeBackward<gpu, mshadow_op::eq>);
 
-NNVM_REGISTER_OP(_np_prod)
+NNVM_REGISTER_OP(_npi_prod)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesCompute<gpu, mshadow_op::product, true>);
 
-NNVM_REGISTER_OP(_backward_np_prod)
+NNVM_REGISTER_OP(_backward_npi_prod)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBackwardUseInOut<gpu, mshadow_op::rdiv>);
 
 NNVM_REGISTER_OP(_npi_average)

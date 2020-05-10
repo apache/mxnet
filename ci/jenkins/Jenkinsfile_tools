@@ -37,7 +37,7 @@ utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Tooling Tests', [
     custom_steps.test_artifact_repository(),
-  ])    
+  ])
 }
 ,
 failure_handler: {

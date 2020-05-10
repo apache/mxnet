@@ -27,7 +27,7 @@ import mxnet as mx
 from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, use_np
-from common import with_seed, retry, TemporaryDirectory
+from common import with_seed, retry, TemporaryDirectory, xfail_when_nonstandard_decimal_separator
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
@@ -108,6 +108,7 @@ def test_np_array_creation():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_zeros():
     # test np.zeros in Gluon
     class TestZeros(HybridBlock):
@@ -216,6 +217,7 @@ def test_np_ones():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_identity():
     class TestIdentity(HybridBlock):
         def __init__(self, shape, dtype=None):
@@ -259,7 +261,9 @@ def test_identity():
                 assert type(y[1]) == np.ndarray
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
+@pytest.mark.serial
 def test_np_ndarray_binary_element_wise_ops():
     np_op_map = {
         '+': _np.add,
@@ -514,6 +518,7 @@ def test_np_ndarray_binary_element_wise_ops():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_np_hybrid_block_multiple_outputs():
     @use_np
     class TestAllNumpyOutputs(HybridBlock):
@@ -557,6 +562,7 @@ def test_np_grad_ndarray_type():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_ndarray_astype():
     class TestAstype(HybridBlock):
         def __init__(self, dtype, copy):
@@ -631,6 +637,7 @@ def test_formatting():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_ndarray_indexing():
     def np_int(index, int_type=np.int32):
         """
@@ -1007,6 +1014,7 @@ def test_np_ndarray_indexing():
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_save_load_ndarrays():
     shapes = [(2, 0, 1), (0,), (), (), (0, 4), (), (3, 0, 0, 0), (2, 1), (0, 5, 0), (4, 5, 6), (0, 0, 0)]
     array_list = [_np.random.randint(0, 10, size=shape) for shape in shapes]
@@ -1051,6 +1059,7 @@ def test_np_save_load_ndarrays():
 @retry(5)
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_multinomial():
     pvals_list = [[0.0, 0.1, 0.2, 0.3, 0.4], [0.4, 0.3, 0.2, 0.1, 0.0]]
     sizes = [None, (), (3,), (2, 5, 7), (4, 9)]
@@ -1127,6 +1136,7 @@ def test_np_multinomial():
                                        " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
 @unittest.skip("NumpyBooleanAssignForwardCPU broken: https://github.com/apache/incubator-mxnet/issues/17990")
+@pytest.mark.serial
 def test_np_ndarray_boolean_indexing():
     def test_single_bool_index():
         # adapted from numpy's test_indexing.py

@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from common import with_seed
+from common import with_seed, xfail_when_nonstandard_decimal_separator
 import mxnet as mx
 from mxnet import nd, autograd, gluon
 from mxnet.test_utils import default_context
@@ -98,6 +98,7 @@ def check_ste(net_type_str, w_init, hybridize, in_data, ctx=None):
                                                                      str(net.w.grad()) + " but expected " + \
                                                                      str(net.expected_grads(in_data, w_init))
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_contrib_round_ste():
     # Test with random data
@@ -119,6 +120,7 @@ def test_contrib_round_ste():
     check_ste(net_type_str="RoundSTENET", w_init=w_init, hybridize=False, in_data=in_data)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_contrib_sign_ste():
     in_data = nd.uniform(-10, 10, shape=30)  # 10 and 30 are arbitrary numbers

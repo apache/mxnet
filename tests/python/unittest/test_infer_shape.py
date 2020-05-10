@@ -36,13 +36,13 @@ def test_mlp2_infer_shape():
     for k, v in true_shapes.items():
         assert arg_shape_dict[k] == v
 
-@pytest.mark.xfail(raises=mx.MXNetError)
 def test_mlp2_infer_error():
     # Test shape inconsistent case
     out = models.mlp2()
     weight_shape= (1, 100)
     data_shape = (100, 100)
-    arg_shapes, out_shapes, aux_shapes = out.infer_shape(data=data_shape, fc1_weight=weight_shape)
+    with pytest.raises(mx.MXNetError):
+        arg_shapes, out_shapes, aux_shapes = out.infer_shape(data=data_shape, fc1_weight=weight_shape)
 
 
 def test_backward_infer():

@@ -236,7 +236,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
       } else {
         return 1;  // CV_INTER_LINEAR for others
       }
-      } else if (inter_method == 10) {
+    } else if (inter_method == 10) {
       std::uniform_int_distribution<size_t> rand_uniform_int(0, 4);
       return rand_uniform_int(*prnd);
     } else {
@@ -270,7 +270,7 @@ class DefaultImageAugmenter : public ImageAugmenter {
       }
       CHECK((param_.inter_method >= 0 && param_.inter_method <= 4) ||
        (param_.inter_method >= 9 && param_.inter_method <= 10))
-        << "invalid inter_method: valid value 0,1,2,3,9,10";
+        << "invalid inter_method: valid value 0,1,2,3,4,9,10";
       int interpolation_method = GetInterMethod(param_.inter_method,
                    src.cols, src.rows, new_width, new_height, prnd);
       cv::resize(src, res, cv::Size(new_width, new_height),
@@ -325,9 +325,9 @@ class DefaultImageAugmenter : public ImageAugmenter {
       float ori_center_height = M.at<float>(1, 0) * res.cols + M.at<float>(1, 1) * res.rows;
       M.at<float>(0, 2) = (new_width - ori_center_width) / 2;
       M.at<float>(1, 2) = (new_height - ori_center_height) / 2;
-      CHECK((param_.inter_method >= 1 && param_.inter_method <= 4) ||
+      CHECK((param_.inter_method >= 0 && param_.inter_method <= 4) ||
         (param_.inter_method >= 9 && param_.inter_method <= 10))
-         << "invalid inter_method: valid value 0,1,2,3,9,10";
+         << "invalid inter_method: valid value 0,1,2,3,4,9,10";
       int interpolation_method = GetInterMethod(param_.inter_method,
                     res.cols, res.rows, new_width, new_height, prnd);
       cv::warpAffine(res, temp_, M, cv::Size(new_width, new_height),

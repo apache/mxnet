@@ -17,6 +17,7 @@
 
 from mxnet.test_utils import *
 from mxnet.base import MXNetError
+import pytest
 from common import setup_module, with_seed, teardown_module, assertRaises
 import random
 import warnings
@@ -741,6 +742,7 @@ def check_sparse_mathematical_core(name, stype,
 
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_mathematical_core():
     def util_sign(a):
         if np.isclose(a, -0, rtol=1.e-3, atol=1.e-3, equal_nan=True):
@@ -1206,6 +1208,7 @@ def test_sparse_mathematical_core():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_elemwise_add_ex():
     def check_elemwise_add_ex(lhs_stype, rhs_stype, shape, lhs_grad_stype=None, rhs_grad_stype=None):
         lhs = mx.symbol.Variable('lhs', stype=lhs_stype)
@@ -1236,6 +1239,7 @@ def test_elemwise_add_ex():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_cast_storage_ex():
     def check_cast_storage(shape, density, from_stype, to_stype, check_numeric_grad=True):
         x = mx.symbol.Variable('x', stype=from_stype)
@@ -1291,6 +1295,7 @@ def test_cast_storage_ex():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_dot():
     def test_infer_forward_stype(lhs_shape, rhs_shape, lhs_density, rhs_density, trans_a, trans_b):
         all_stypes = ["default", "csr", "row_sparse"]
@@ -1421,6 +1426,7 @@ def test_sparse_dot():
     test_sparse_dot_zero_output(rand_shape_2d(50, 200), True, 40)
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_dot_determinism():
     def check_dot_determinism(lhs_stype, rhs_stype, lhs_density, rhs_density, transpose_a, transpose_b, forward_stype):
         lhs_row = rnd.randint(50, 100)
@@ -1466,6 +1472,7 @@ def test_sparse_slice():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_retain():
     def check_sparse_retain(shape, density, index_type=np.int64):
         num_rows = shape[0]
@@ -1577,6 +1584,7 @@ def test_sparse_unary_with_numerics():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_nd_zeros():
     def check_sparse_nd_zeros(stype, shape):
         zero = mx.nd.zeros(shape)
@@ -1590,6 +1598,7 @@ def test_sparse_nd_zeros():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_nd_zeros_like():
     def check_sparse_nd_zeros_like(stype, shape):
         zero = mx.nd.zeros(shape, stype=stype)
@@ -1602,6 +1611,7 @@ def test_sparse_nd_zeros_like():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_axis_operations():
     def test_variations(func_name):
         dim0 = 30
@@ -1693,6 +1703,7 @@ def test_sparse_square_sum():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_storage_fallback():
     """ test operators which don't implement FComputeEx or FStatefulComputeEx """
     def check_broadcast_add(shape, lhs_stype, rhs_stype):
@@ -1763,6 +1774,7 @@ def test_sparse_storage_fallback():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_elementwise_sum():
     def check_sparse_elementwise_sum_with_shape(stypes, shape, n):
         # forward
@@ -1858,6 +1870,7 @@ def test_contrib_sparse_embedding():
             check_sparse_embedding(in_dim, out_dim, batch, densities, deterministic, stype)
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_embedding():
     ''' test sparse embedding operator '''
     def check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad, weight_stype):
@@ -2171,6 +2184,7 @@ def test_batchnorm_fallback():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_mkldnn_sparse():
     # This test is trying to create a race condition describedd in
     # https://github.com/apache/incubator-mxnet/issues/10189
@@ -2187,6 +2201,7 @@ def test_mkldnn_sparse():
     almost_equal(res1, fc_res.asnumpy())
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_nd_where():
     def get_forward_expected_output(condition, x, y):
         original_shape = x.shape
@@ -2284,6 +2299,7 @@ def test_sparse_nd_where():
     test_where_numeric_gradient((5, 9))
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_quadratic_function():
     def f(x, a, b, c):
         return a * x**2 + b * x + c

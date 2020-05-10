@@ -167,6 +167,8 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
   }
 
   test ("module reshape") {
+    CancelTestUtil.assumeStandardDecimalSeparator()
+
     var sym = Symbol.Variable("data")
     sym = Symbol.FullyConnected("fc")()(Map("data" -> sym, "num_hidden" -> 20))
 
