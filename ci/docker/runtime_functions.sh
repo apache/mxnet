@@ -1678,7 +1678,7 @@ build_scala_docs() {
 
     pushd $scala_path
 
-    scala_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer" | egrep -v "/javaapi"  | egrep -v "Suite" | egrep -v "/mxnetexamples"`
+    scala_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer" | egrep -v "/javaapi"  | egrep -v "Suite" | egrep -v "CancelTestUtil" | egrep -v "/mxnetexamples"`
     jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
     jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
     jar_core=`find core -name "*.jar" | tr "\\n" ":" `
@@ -1753,7 +1753,7 @@ build_java_docs() {
 
     pushd $java_path
 
-    java_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer"  | egrep "/javaapi"  | egrep -v "Suite" | egrep -v "/mxnetexamples"`
+    java_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer"  | egrep "/javaapi"  | egrep -v "Suite" | egrep -v "CancelTestUtil" | egrep -v "/mxnetexamples"`
     jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
     jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
     jar_core=`find core -name "*.jar" | tr "\\n" ":" `

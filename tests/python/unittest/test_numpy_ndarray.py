@@ -27,7 +27,7 @@ import mxnet as mx
 from mxnet import np, npx, autograd
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray, use_np
-from common import with_seed, retry, TemporaryDirectory
+from common import with_seed, retry, TemporaryDirectory, xfail_when_nonstandard_decimal_separator
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_exception, is_op_runnable, collapse_sum_like
 from mxnet.ndarray.ndarray import py_slice
 from mxnet.base import integer_types
@@ -261,6 +261,7 @@ def test_identity():
                 assert type(y[1]) == np.ndarray
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 @pytest.mark.serial
 def test_np_ndarray_binary_element_wise_ops():

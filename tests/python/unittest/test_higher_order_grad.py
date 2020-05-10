@@ -22,7 +22,7 @@ from functools import reduce
 from operator import mul
 import random
 
-from common import with_seed
+from common import with_seed, xfail_when_nonstandard_decimal_separator
 import mxnet
 from mxnet import nd, autograd, gluon
 from mxnet.test_utils import (
@@ -276,6 +276,7 @@ def test_log():
         check_nth_order_unary(array, log, [grad_op, grad_grad_op], [1, 2])
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_log2():
     def log2(x):
@@ -289,7 +290,7 @@ def test_log2():
         array = random_arrays(shape)
         check_second_order_unary(array, log2, grad_grad_op)
 
-
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_log10():
     def log10(x):
@@ -415,6 +416,7 @@ def test_sigmoid():
         check_nth_order_unary(array, sigmoid, grad_grad_op, 2)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sqrt():
     def sqrt(x):

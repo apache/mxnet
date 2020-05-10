@@ -34,7 +34,7 @@ from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndar
 from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
 from mxnet.test_utils import new_matrix_with_real_eigvals_nd
 from mxnet.test_utils import new_sym_matrix_with_real_eigvals_nd
-from common import assertRaises, with_seed, retry
+from common import assertRaises, with_seed, retry, xfail_when_nonstandard_decimal_separator
 import random
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
@@ -1732,6 +1732,7 @@ def test_np_squeeze():
                                 rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 @use_np
 def test_np_tri():
@@ -3935,6 +3936,7 @@ def test_npx_special_unary_func():
             check_unary_func(func, ref_grad, shape, low, high)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 @use_np
 def test_np_random_grad():

@@ -25,7 +25,8 @@ import unittest
 import pytest
 import math
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown_module, retry
+from common import setup_module, with_seed, teardown_module, retry, \
+    xfail_when_nonstandard_decimal_separator
 
 @with_seed()
 def test_learning_rate():
@@ -79,6 +80,7 @@ def test_lr_wd_mult():
     assert not mx.test_utils.almost_equal(args1['fc2_weight'], args2['fc2_weight'], 1e-1)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sgd():
     opt1 = mx.optimizer.SGD
@@ -184,6 +186,7 @@ class PySparseSGD(mx.optimizer.Optimizer):
                     weight[row] += mom[row]
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sparse_sgd():
     opt1 = PySparseSGD
@@ -207,6 +210,7 @@ def test_sparse_sgd():
                               w_stype='default', g_stype='row_sparse')
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_std_sparse_sgd():
     opt1 = mx.optimizer.SGD
@@ -231,6 +235,7 @@ def test_std_sparse_sgd():
                               w_stype='default', g_stype='row_sparse')
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_nag():
     opt1 = mx.optimizer.NAG
@@ -256,6 +261,7 @@ def test_nag():
                               shapes, dtype, rtol=1e-3, atol=1e-4)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_lars():
     opt1 = mx.optimizer.LARS
@@ -281,6 +287,7 @@ def test_lars():
                               shapes, dtype, rtol=1e-3, atol=1e-3)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_lamb():
     opt1 = mx.optimizer.LAMB
@@ -337,6 +344,7 @@ def test_sgld():
                                                shapes, dtype, seed, atol=atol, rtol=rtol)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_ftml():
     opt1 = mx.optimizer.FTML
@@ -437,6 +445,7 @@ class PySparseAdam(mx.optimizer.Optimizer):
                 weight[row] -= lr * mean[row] / (mx.nd.sqrt(variance[row]) + self.epsilon)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_adam():
     opt1 = mx.optimizer.Adam
@@ -463,6 +472,7 @@ def test_adam():
                               rtol=1e-4, atol=2e-5)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sparse_adam():
     opt1 = PySparseAdam
@@ -506,6 +516,7 @@ def test_sparse_adam():
                               rtol=1e-4, atol=2e-5)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 @retry(3)
 def test_adamax():
@@ -530,6 +541,7 @@ def test_adamax():
             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shapes, dtype)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_signum():
     opt1 = mx.optimizer.Signum
@@ -558,6 +570,7 @@ def test_signum():
                                    rtol=rtol, atol=atol)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_rms():
     opt1 = mx.optimizer.RMSProp
@@ -669,6 +682,7 @@ class PySparseFtrl(mx.optimizer.Optimizer):
                 weight[row] = - d / denom
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 @retry(3)
 def test_ftrl():
@@ -696,6 +710,7 @@ def test_ftrl():
                               rtol=rtol, atol=atol)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sparse_ftrl():
     opt1 = PySparseFtrl
@@ -722,6 +737,7 @@ def test_sparse_ftrl():
                               rtol=rtol, atol=atol)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_nadam():
     opt1 = mx.optimizer.Nadam
@@ -835,6 +851,7 @@ def test_adagrad():
                               opt2(use_fused_step=True, **kwarg), shapes, dtype)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sparse_adagrad():
     opt1 = PySparseAdaGrad

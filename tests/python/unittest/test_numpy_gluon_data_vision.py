@@ -26,7 +26,8 @@ import numpy as _np
 import mxnet as mx
 from mxnet import gluon, autograd, np, npx
 from mxnet.test_utils import use_np, assert_almost_equal, check_gluon_hybridize_consistency, same, check_symbolic_backward
-from common import assertRaises, setup_module, with_seed, teardown_module
+from common import assertRaises, setup_module, with_seed, teardown_module, \
+    xfail_when_nonstandard_decimal_separator
 import random
 from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
@@ -276,6 +277,7 @@ def test_hybrid_transformer():
 
     transform(mx.np.ones((245, 480, 3), dtype='uint8')).wait_to_read()
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 @use_np
 def test_rotate():
@@ -350,6 +352,7 @@ def test_random_transforms():
             num_apply += 1
     assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 @use_np
 def test_random_gray():

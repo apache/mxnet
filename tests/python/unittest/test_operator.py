@@ -30,7 +30,7 @@ from mxnet.test_utils import *
 from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
-from common import run_in_spawned_process
+from common import run_in_spawned_process, xfail_when_nonstandard_decimal_separator
 import pytest
 import unittest
 import os
@@ -772,6 +772,7 @@ def test_swapaxes():
         assert_almost_equal(out, ret_np)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_scalarop():
     data = mx.symbol.Variable('data')
@@ -1836,6 +1837,7 @@ def test_batchnorm_training():
     check_batchnorm_training('default')
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_batchnorm():
     momentum = 0.9
@@ -6485,6 +6487,7 @@ def _make_triangle_symm(a, ndims, m, lower, dtype=np.float32):
 
 # @ankkhedia: Getting rid of fixed seed as flakiness could not be reproduced
 # tracked at https://github.com/apache/incubator-mxnet/issues/11718
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_laop():
     dtype = np.float64
@@ -7535,6 +7538,7 @@ def test_softmax():
     check_smoothed_softmax_grad(default_context())
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_softmax_output_normalization():
     def _softmaxoutput_normalization(multi_output, use_ignore, normalization):

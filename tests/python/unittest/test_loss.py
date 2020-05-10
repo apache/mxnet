@@ -19,10 +19,11 @@ import mxnet as mx
 import numpy as np
 from mxnet import gluon, autograd
 from mxnet.test_utils import assert_almost_equal, default_context
-from common import setup_module, with_seed, teardown_module
+from common import setup_module, with_seed, teardown_module, xfail_when_nonstandard_decimal_separator
 import unittest
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_loss_ndarray():
     output = mx.nd.array([1, 2, 3, 4])
@@ -348,6 +349,7 @@ def test_triplet_loss():
             optimizer='adam')
     assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sdml_loss():
 
@@ -399,6 +401,7 @@ def test_cosine_loss():
     mx.nd.broadcast_maximum(mx.nd.array([0]), numerator/denominator, axis=1))
     assert_almost_equal(loss.asnumpy(), numpy_loss.asnumpy(), rtol=1e-3, atol=1e-5)
 
+@xfail_when_nonstandard_decimal_separator
 def test_poisson_nllloss():
     shape=(3, 4)
     not_axis0 = tuple(range(1, len(shape)))
