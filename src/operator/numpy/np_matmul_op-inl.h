@@ -157,12 +157,15 @@ inline void MatmulImpl(const OpContext& ctx,
     DType* bc_b_ptr = bc_a_ptr + bc_size_a;
     MSHADOW_TYPE_SWITCH_WITH_BOOL(input_a.type_flag_, IType, {
       MSHADOW_TYPE_SWITCH_WITH_BOOL(input_b.type_flag_, OType, {
+        struct ShapeAndStride aux_data_a, aux_data_b;
+        PrepareAUXData(&aux_data_a, k_a_shape, k_a_shape_bc, ndim);
+        PrepareAUXData(&aux_data_b, k_b_shape, k_b_shape_bc, ndim);
         Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
           s, bc_size_a, input_a.dptr<IType>(), bc_a_ptr,
-          k_a_shape, k_a_shape_bc, OpReqType::kWriteTo, ndim);
+          aux_data_a, OpReqType::kWriteTo, ndim);
         Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
           s, bc_size_b, input_b.dptr<IType>(), bc_b_ptr,
-          k_b_shape, k_b_shape_bc, OpReqType::kWriteTo, ndim);
+          aux_data_b, OpReqType::kWriteTo, ndim);
       });
     });
     ans = mshadow::Tensor<xpu, 3, DType>(output.dptr<DType>(),

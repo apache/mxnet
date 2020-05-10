@@ -17,7 +17,6 @@
 
 import mxnet as mx
 from mxnet.base import data_dir
-from nose.tools import *
 import os
 import unittest
 import logging
@@ -46,5 +45,4 @@ class MXNetDataDirTest(unittest.TestCase):
         self.assertEqual(data_dir(), '/tmp/mxnet_data')
         del os.environ['MXNET_HOME']
         self.assertEqual(data_dir(), prev_data_dir)
-
 

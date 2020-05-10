@@ -23,18 +23,10 @@ The `docker-python` directory can be used to release mxnet python docker images 
 It uses the appropriate pip binaries to build different docker images. Both python2 (default) and python3 images are available as -
 * {version}_cpu
 * {version}_cpu_mkl
-* {version}_gpu_cu90
-* {version}_gpu_cu90_mkl
-* {version}_gpu_cu80
-* {version}_gpu_cu80_mkl
 * {version}_gpu_cu92
 * {version}_gpu_cu92_mkl
 * {version}_cpu_py3
 * {version}_cpu_mkl_py3
-* {version}_gpu_cu90_py3
-* {version}_gpu_cu90_mkl_py3
-* {version}_gpu_cu80_py3
-* {version}_gpu_cu80_mkl_py3
 * {version}_gpu_cu92_py3
 * {version}_gpu_cu92_mkl_py3
 

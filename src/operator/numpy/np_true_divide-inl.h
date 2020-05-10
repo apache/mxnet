@@ -29,6 +29,7 @@
 #include <vector>
 #include "../../common/utils.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
+#include "../numpy/np_elemwise_broadcast_op.h"
 
 namespace mxnet {
 namespace op {

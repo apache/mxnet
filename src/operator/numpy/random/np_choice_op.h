@@ -53,6 +53,17 @@ struct NumpyChoiceParam : public dmlc::Parameter<NumpyChoiceParam> {
     DMLC_DECLARE_FIELD(replace).set_default(true);
     DMLC_DECLARE_FIELD(weighted).set_default(false);
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_s, size_s, replace_s, weighted_s;
+    a_s << a;
+    size_s << size;
+    replace_s << replace;
+    weighted_s << weighted;
+    (*dict)["a"] = a_s.str();
+    (*dict)["size"] = size_s.str();
+    (*dict)["replace"] = replace_s.str();
+    (*dict)["weighted"] = weighted_s.str();
+  }
 };
 
 inline bool NumpyChoiceOpType(const nnvm::NodeAttrs &attrs,

@@ -35,6 +35,7 @@
 #include <string>
 #include <algorithm>
 #include <limits>
+#include "../../api/operator/op_utils.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
@@ -226,6 +227,21 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream start_s, stop_s, step_s, repeat_s, infer_range_s, dtype_s;
+    start_s << start;
+    stop_s << stop;
+    step_s << step;
+    repeat_s << repeat;
+    infer_range_s << infer_range;
+    dtype_s << dtype;
+    (*dict)["start"] = start_s.str();
+    (*dict)["stop"] = stop_s.str();
+    (*dict)["step"] = step_s.str();
+    (*dict)["repeat"] = repeat_s.str();
+    (*dict)["infer_range"] = infer_range_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+  }
 };
 
 struct RangeLikeParam : public dmlc::Parameter<RangeLikeParam> {
@@ -315,6 +331,19 @@ struct LinspaceParam : public dmlc::Parameter<LinspaceParam> {
     DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
     MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream start_s, stop_s, num_s, endpoint_s, dtype_s;
+    start_s << start;
+    stop_s << stop;
+    num_s << num;
+    endpoint_s << endpoint;
+    dtype_s << dtype;
+    (*dict)["start"] = start_s.str();
+    (*dict)["stop"] = stop_s.str();
+    (*dict)["num"] = num_s.str();
+    (*dict)["endpoint"] = endpoint_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 

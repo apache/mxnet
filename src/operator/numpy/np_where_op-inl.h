@@ -323,7 +323,7 @@ inline void NumpyWhereScalarOpForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename xpu, bool is_left>
+template<typename xpu, bool is_lscalar>
 inline void NumpyWhereScalarOpBackward(const nnvm::NodeAttrs& attrs,
                                        const OpContext& ctx,
                                        const std::vector<TBlob>& inputs,
@@ -369,9 +369,9 @@ inline void NumpyWhereScalarOpBackward(const nnvm::NodeAttrs& attrs,
         ws_size = broadcast::ReduceWorkspaceSize<broadcast::MAX_DIM, DType>(
             s, expanded_lshape, req[0], expanded_oshape);
       }
-      // process left output
+      // If lscalar, then process right output, `is_left` should be false
       if (ograd.shape_ == dx.shape_) {
-        mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, is_left>, xpu>::Launch(
+        mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, !is_lscalar>, xpu>::Launch(
           s, ograd.Size(), req[0], cstride, oshape,
           cond.dptr<CType>(), ograd.dptr<DType>(), dx.dptr<DType>());
       } else {
@@ -380,7 +380,7 @@ inline void NumpyWhereScalarOpBackward(const nnvm::NodeAttrs& attrs,
         workspace = Tensor<xpu, broadcast::MAX_DIM, DType>(
             reinterpret_cast<DType*>(largespace.dptr_ + ws_size),
             expanded_oshape.get<broadcast::MAX_DIM>(), s);
-        mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, true>, xpu>::Launch(
+        mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, !is_lscalar>, xpu>::Launch(
           s, ograd.Size(), req[0], cstride, oshape,
           cond.dptr<CType>(), ograd.dptr<DType>(), workspace.dptr_);
         if (NeedSafeAcc<true>(dx.type_flag_, dx.type_flag_)) {

@@ -31,7 +31,16 @@ _includes/*
 .*ipynb
 .*json
 .*txt
-3rdparty/*
+ctc_include/*
+dlpack/*
+dmlc-core/*
+googletest/*
+mkldnn/*
+nvidia_cub/*
+onnx-tensorrt/*
+openmp/*
+ps-lite/*
+tvm/*
 R-package/*
 trunk/*
 .*\\.m

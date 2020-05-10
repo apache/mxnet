@@ -69,18 +69,3 @@ def c_array(ctype, values):
         Created ctypes array
     """
     return (ctype * len(values))(*values)
-
-
-def decorate(func, fwrapped):
-    """A wrapper call of decorator package, differs to call time
-
-    Parameters
-    ----------
-    func : function
-        The original function
-
-    fwrapped : function
-        The wrapped function
-    """
-    import decorator
-    return decorator.decorate(func, fwrapped)

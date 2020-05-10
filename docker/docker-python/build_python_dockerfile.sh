@@ -140,10 +140,6 @@ docker_generate_image_cpu "${mxnet_version}_cpu_mkl" "Dockerfile.mxnet.python.cp
 
 
 #Build and Test dockerfiles - GPU
-docker_generate_image_gpu "${mxnet_version}_gpu_cu90" "Dockerfile.mxnet.python.gpu.cu90" "python" > ${LOGDIR}/docker_gpu_cu90.out 2>&1 &
-docker_generate_image_gpu "${mxnet_version}_gpu_cu90_mkl" "Dockerfile.mxnet.python.gpu.cu90.mkl" "python" > ${LOGDIR}/docker_gpu_cu90_mkl.out 2>&1 &
-docker_generate_image_gpu "${mxnet_version}_gpu_cu80" "Dockerfile.mxnet.python.gpu.cu80" "python" > ${LOGDIR}/docker_gpu_cu80.out 2>&1 &
-docker_generate_image_gpu "${mxnet_version}_gpu_cu80_mkl" "Dockerfile.mxnet.python.gpu.cu80.mkl" "python" > ${LOGDIR}/docker_gpu_cu80_mkl.out 2>&1 &
 docker_generate_image_gpu "${mxnet_version}_gpu_cu92" "Dockerfile.mxnet.python.gpu.cu92" "python" > ${LOGDIR}/docker_gpu_cu92.out 2>&1 &
 docker_generate_image_gpu "${mxnet_version}_gpu_cu92_mkl" "Dockerfile.mxnet.python.gpu.cu92.mkl" "python" > ${LOGDIR}/docker_gpu_cu92_mkl.out 2>&1
 
@@ -155,10 +151,6 @@ docker_generate_image_cpu "${mxnet_version}_cpu_py3" "Dockerfile.mxnet.python3.c
 docker_generate_image_cpu "${mxnet_version}_cpu_mkl_py3" "Dockerfile.mxnet.python3.cpu.mkl" "python3" > ${LOGDIR}/docker_cpu_mkl_py3.out 2>&1 &
 
 #Build and Test Python3 dockerfiles - GPU
-docker_generate_image_gpu "${mxnet_version}_gpu_cu90_py3" "Dockerfile.mxnet.python3.gpu.cu90" "python3" > ${LOGDIR}/docker_gpu_cu90_py3.out 2>&1 &
-docker_generate_image_gpu "${mxnet_version}_gpu_cu90_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu90.mkl" "python3" > ${LOGDIR}/docker_gpu_cu90_mkl_py3.out 2>&1 &
-docker_generate_image_gpu "${mxnet_version}_gpu_cu80_py3" "Dockerfile.mxnet.python3.gpu.cu80" "python3" > ${LOGDIR}/docker_gpu_cu80_py3.out 2>&1 &
-docker_generate_image_gpu "${mxnet_version}_gpu_cu80_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu80.mkl" "python3" > ${LOGDIR}/docker_gpu_cu80_mkl_py3.out 2>&1 &
 docker_generate_image_gpu "${mxnet_version}_gpu_cu92_py3" "Dockerfile.mxnet.python3.gpu.cu92" "python3" > ${LOGDIR}/docker_gpu_cu92_py3.out 2>&1 &
 docker_generate_image_gpu "${mxnet_version}_gpu_cu92_mkl_py3" "Dockerfile.mxnet.python3.gpu.cu92.mkl" "python3" > ${LOGDIR}/docker_gpu_cu92_mkl_py3.out 2>&1
 
@@ -167,11 +159,8 @@ wait
 
 echo "Re-Tag 6 images with version-free names (for Benchmarking) - only after previous builds complete. "
 docker_tag_image_cpu "${mxnet_version}_cpu" "latest" "python" > ${LOGDIR}/docker_latest.out 2>&1 &
-docker_tag_image_gpu "${mxnet_version}_gpu_cu90" "gpu" "python" > ${LOGDIR}/docker_gpu.out 2>&1 &
 docker_tag_image_cpu "${mxnet_version}_cpu_mkl" "latest_cpu_mkl_py2" "python" > ${LOGDIR}/docker_latest_cpu_mkl_py2.out 2>&1 &
 docker_tag_image_cpu "${mxnet_version}_cpu_mkl_py3" "latest_cpu_mkl_py3" "python3" > ${LOGDIR}/docker_latest_cpu_mkl_py3.out 2>&1 &
-docker_tag_image_gpu "${mxnet_version}_gpu_cu90_mkl" "latest_gpu_mkl_py2" "python" > ${LOGDIR}/docker_latest_gpu_mkl_py2.out 2>&1 &
-docker_tag_image_gpu "${mxnet_version}_gpu_cu90_mkl_py3" "latest_gpu_mkl_py3" "python3" > ${LOGDIR}/docker_latest_gpu_mkl_py3.out 2>&1
 wait
 
 # Parse all the docker logfiles to make sure there is no error. Fail script if error is found.
@@ -184,20 +173,12 @@ docker_account_login
 # Python2
 docker_push_image "${mxnet_version}_cpu"
 docker_push_image "${mxnet_version}_cpu_mkl"
-docker_push_image "${mxnet_version}_gpu_cu90"
-docker_push_image "${mxnet_version}_gpu_cu90_mkl"
-docker_push_image "${mxnet_version}_gpu_cu80"
-docker_push_image "${mxnet_version}_gpu_cu80_mkl"
 docker_push_image "${mxnet_version}_gpu_cu92"
 docker_push_image "${mxnet_version}_gpu_cu92_mkl"
 
 # Python3
 docker_push_image "${mxnet_version}_cpu_py3"
 docker_push_image "${mxnet_version}_cpu_mkl_py3"
-docker_push_image "${mxnet_version}_gpu_cu90_py3"
-docker_push_image "${mxnet_version}_gpu_cu90_mkl_py3"
-docker_push_image "${mxnet_version}_gpu_cu80_py3"
-docker_push_image "${mxnet_version}_gpu_cu80_mkl_py3"
 docker_push_image "${mxnet_version}_gpu_cu92_py3"
 docker_push_image "${mxnet_version}_gpu_cu92_mkl_py3"
 

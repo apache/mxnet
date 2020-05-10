@@ -431,7 +431,3 @@ def test_hybridize_boolean_dtype():
 
     assert mx.test_utils.same(out1.asnumpy(), out2.asnumpy())
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

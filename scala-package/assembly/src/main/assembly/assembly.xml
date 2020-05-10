@@ -55,7 +55,7 @@
       <includes>
         <include>libmxnet.so</include>
         <include>libtvm_runtime.so</include>
-        <include>libgfortran.so.3</include>
+        <include>libgfortran.so.4</include>
         <include>libquadmath.so.0</include>
       </includes>
       <outputDirectory>lib/native</outputDirectory>

@@ -24,6 +24,7 @@ __all__ = ['Dataset', 'SimpleDataset', 'ArrayDataset',
 import os
 
 from ... import recordio, ndarray
+from ...util import default_array
 
 
 class Dataset(object):
@@ -196,6 +197,7 @@ class SimpleDataset(Dataset):
     """
     def __init__(self, data):
         self._data = data
+        self._handle = None
 
     def __len__(self):
         return len(self._data)
@@ -203,12 +205,25 @@ class SimpleDataset(Dataset):
     def __getitem__(self, idx):
         return self._data[idx]
 
+    def __mx_handle__(self):
+        if self._handle is None:
+            import numpy as np
+            from ._internal import NDArrayDataset
+            if isinstance(self._data, (np.ndarray, ndarray.NDArray)):
+                self._handle = NDArrayDataset(arr=default_array(self._data))
+            else:
+                raise NotImplementedError(
+                    "C++ handle for general type object is not supported, "
+                    "given {}, expect np.ndarray".format(type(self._data)))
+        return self._handle
+
 
 class _LazyTransformDataset(Dataset):
     """Lazily transformed dataset."""
     def __init__(self, data, fn):
         self._data = data
         self._fn = fn
+        self.handle = None
 
     def __len__(self):
         return len(self._data)
@@ -218,6 +233,43 @@ class _LazyTransformDataset(Dataset):
         if isinstance(item, tuple):
             return self._fn(*item)
         return self._fn(item)
+
+    def __mx_handle__(self):
+        if self.handle is None:
+            from ..block import HybridBlock
+            from ._internal import LazyTransformDataset
+            from ...base import numeric_types
+            if not hasattr(self._data, '__mx_handle__'):
+                raise NotImplementedError("{} don't support backend".format(self._data))
+            if isinstance(self._fn, HybridBlock):
+                item = self._data[0]
+                self._fn.hybridize()
+                if isinstance(item, tuple):
+                    ret = self._fn(*item)
+                    is_scalar = [int(isinstance(x, numeric_types)) for x in ret]
+                else:
+                    ret = self._fn(item)
+                    is_scalar = [int(isinstance(ret, numeric_types))]
+                cached_op = self._fn._cached_op
+                self.handle = LazyTransformDataset(cached_op=cached_op,
+                                                   dataset=self._data.__mx_handle__(),
+                                                   scalar_outputs=tuple(is_scalar))
+            elif isinstance(self._fn, _TransformFirstClosure):
+                if not isinstance(self._fn._fn, HybridBlock):
+                    raise NotImplementedError("Block not supported.")
+                item = self._data[0][0]
+                self._fn._fn.hybridize()
+                ret = self._fn._fn(item)
+                is_scalar = [int(isinstance(ret, numeric_types))]
+                cached_op = self._fn._fn._cached_op
+                self.handle = LazyTransformDataset(cached_op=cached_op,
+                                                   dataset=self._data.__mx_handle__(),
+                                                   scalar_outputs=tuple(is_scalar),
+                                                   transform_indices=(0,))
+            else:
+                raise NotImplementedError(
+                    "C++ handle Not implemented for transforms that are not hybridizable")
+        return self.handle
 
 
 class _TransformFirstClosure(object):
@@ -235,6 +287,7 @@ class _FilteredDataset(Dataset):
     def __init__(self, dataset, fn):
         self._dataset = dataset
         self._indices = [i for i, sample in enumerate(dataset) if fn(sample)]
+        self.handle = None
 
     def __len__(self):
         return len(self._indices)
@@ -242,18 +295,47 @@ class _FilteredDataset(Dataset):
     def __getitem__(self, idx):
         return self._dataset[self._indices[idx]]
 
+    def __mx_handle__(self):
+        if self.handle is None:
+            from ._internal import MXDataset, IndexedDataset
+            if hasattr(self._dataset, '__mx_handle__'):
+                dataset = self._dataset.__mx_handle__()
+            elif isinstance(self._dataset, MXDataset):
+                dataset = self._dataset
+            else:
+                raise NotImplementedError('{} not supported.'.format(self._dataset))
+            self.handle = IndexedDataset(base=dataset,
+                                         indices=self._indices)
+        return self.handle
+
+
 class _SampledDataset(Dataset):
     """Dataset with elements chosen by a sampler"""
     def __init__(self, dataset, sampler):
         self._dataset = dataset
         self._sampler = sampler
         self._indices = list(iter(sampler))
+        self.handle = None
 
     def __len__(self):
         return len(self._sampler)
 
     def __getitem__(self, idx):
         return self._dataset[self._indices[idx]]
+
+    def __mx_handle__(self):
+        if self.handle is None:
+            from ._internal import MXDataset, IndexedDataset
+            if hasattr(self._dataset, '__mx_handle__'):
+                dataset = self._dataset.__mx_handle__()
+            elif isinstance(self._dataset, MXDataset):
+                dataset = self._dataset
+            else:
+                raise NotImplementedError('{} not supported.'.format(self._dataset))
+            self.handle = IndexedDataset(base=dataset,
+                                         indices=self._indices)
+        return self.handle
+
 
 class ArrayDataset(Dataset):
     """A dataset that combines multiple dataset-like objects, e.g.
@@ -277,6 +359,7 @@ class ArrayDataset(Dataset):
             if isinstance(data, ndarray.NDArray) and len(data.shape) == 1:
                 data = data.asnumpy()
             self._data.append(data)
+        self.handle = None
 
     def __getitem__(self, idx):
         if len(self._data) == 1:
@@ -286,6 +369,20 @@ class ArrayDataset(Dataset):
 
     def __len__(self):
         return self._length
+
+    def __mx_handle__(self):
+        if self.handle is None:
+            from ._internal import MXDataset, NDArrayDataset, GroupDataset
+            datasets = []
+            for data in self._data:
+                if isinstance(data, MXDataset):
+                    datasets.append(data)
+                elif hasattr(data, '__mx_handle__'):
+                    datasets.append(data.__mx_handle__())
+                else:
+                    datasets.append(NDArrayDataset(arr=default_array(data)))
+            self.handle = GroupDataset(datasets=datasets)
+        return self.handle
 
 
 class RecordFileDataset(Dataset):
@@ -309,6 +406,10 @@ class RecordFileDataset(Dataset):
     def __len__(self):
         return len(self._record.keys)
 
+    def __mx_handle__(self):
+        from ._internal import RecordFileDataset as _RecordFileDataset
+        return _RecordFileDataset(rec_file=self.filename, idx_file=self.idx_file)
+
 
 class _DownloadedDataset(Dataset):
     """Base class for MNIST, cifar10, etc."""
@@ -322,6 +423,7 @@ class _DownloadedDataset(Dataset):
         if not os.path.isdir(root):
             os.makedirs(root)
         self._get_data()
+        self.handle = None
 
     def __getitem__(self, idx):
         if self._transform is not None:
@@ -333,3 +435,11 @@ class _DownloadedDataset(Dataset):
 
     def _get_data(self):
         raise NotImplementedError
+
+    def __mx_handle__(self):
+        if self.handle is None:
+            from ._internal import NDArrayDataset, GroupDataset
+            self.handle = GroupDataset(
+                datasets=(NDArrayDataset(arr=default_array(self._data)),
+                          NDArrayDataset(arr=default_array(self._label))))
+        return self.handle

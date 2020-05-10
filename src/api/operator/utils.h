@@ -56,6 +56,16 @@ void SetAttrDict(nnvm::NodeAttrs* attrs) {
   }
 }
 
+template<typename ValueType, typename T>
+Tuple<ValueType> Obj2Tuple(const runtime::ObjectRef& src) {
+  runtime::ADT adt = Downcast<runtime::ADT, runtime::ObjectRef>(src);
+  Tuple<ValueType> ret(adt.size(), 0);
+  for (size_t i = 0; i < adt.size(); ++i) {
+    ret[i] = Downcast<T, runtime::ObjectRef>(adt[i])->value;
+  }
+  return ret;
+}
+
 }  // namespace mxnet
 
 #endif  // MXNET_API_OPERATOR_UTILS_H_

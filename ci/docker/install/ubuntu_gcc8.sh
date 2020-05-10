@@ -20,4 +20,4 @@
 sudo add-apt-repository ppa:jonathonf/gcc-8.0
 sudo add-apt-repository ppa:jonathonf/gcc-7.3
 sudo apt-get update || true
-sudo apt-get install -y gcc-8 g++-8
+sudo apt-get install -y gcc-8 g++-8 gcc-7 g++-7

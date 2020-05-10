@@ -80,9 +80,25 @@ NNVM_REGISTER_OP(_npi_true_divide)
   })
 #endif
 .set_attr<FCompute>("FCompute<cpu>", TrueDivideBroadcastCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_div"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_div"})
 .add_argument("lhs", "NDArray-or-Symbol", "Dividend array")
 .add_argument("rhs", "NDArray-or-Symbol", "Divisor array");
+
+
+NNVM_REGISTER_OP(_backward_npi_broadcast_div)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 1}};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", NumpyBinaryBackwardUseIn<cpu, mshadow_op::div_grad,
+                                                              mshadow_op::div_rgrad>);
 
 NNVM_REGISTER_OP(_npi_true_divide_scalar)
 .set_num_inputs(1)

@@ -221,7 +221,3 @@ def test_np_global_shape():
     finally:
         set_np_shape(0)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
