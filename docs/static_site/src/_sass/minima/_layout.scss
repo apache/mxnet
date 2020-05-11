@@ -38,6 +38,10 @@
     display: none;
   }
   
+  #global-search-mobile-border {
+    display: none;
+  }
+
   .gs-search-border {
     display: inline-block;
   }
@@ -87,6 +91,10 @@
 
     .gs-search-border {
       display: none;
+    }
+
+    #global-search-mobile-border {
+      display: block;
     }
 
     .menu-icon {

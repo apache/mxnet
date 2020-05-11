@@ -7,6 +7,14 @@ $(document).ready(function () {
         debug: false// Set debug to true if you want to inspect the dropdown
     });
 
+    const globalSearchMobile = docsearch({
+        apiKey: '500f8e78748bd043cc6e4ac130e8c0e7',
+        indexName: 'apache_mxnet',
+        inputSelector: '#global-search-mobile',
+        algoliaOptions: { 'facetFilters': ["version:1.6"], 'hitsPerPage': 5 },
+        debug: false// Set debug to true if you want to inspect the dropdown
+    });
+
     $("#gs-search-icon").click(function () {
         $(".trigger").fadeOut("fast", function () {
             $("#global-search-form").css("display", "inline-block");

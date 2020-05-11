@@ -76,6 +76,21 @@
       margin-bottom: 19px;
     }
 
+    #global-search-mobile {
+      width: 130px;
+      margin: 5px 10px 5px;
+      padding: 2px 5px 2px 5px;
+      border: 0px;
+      border-radius: 4px;
+      outline: none;
+      font-size: 1em;
+      color: gray;
+    }
+
+    #global-search-mobile-border {
+      line-height: 25px;
+    }
+
     #global-search::placeholder {
       color: #EEEEEE;
     }
@@ -103,7 +118,8 @@
 
     /* Main dropdown wrapper */
     .algolia-autocomplete .ds-dropdown-menu {
-      width: 800px;
+      max-width: 800px;
+      min-width: 80vw;
     }
 
     /* Main category (eg. Getting Started) */
