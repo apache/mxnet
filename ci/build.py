@@ -46,9 +46,11 @@ from util import *
 DOCKER_COMPOSE_WHITELIST = ('centos7_cpu', 'centos7_gpu_cu92', 'centos7_gpu_cu100',
                             'centos7_gpu_cu101', 'centos7_gpu_cu102', 'ubuntu_cpu',
                             'ubuntu_build_cuda', 'ubuntu_gpu_cu101', 'publish.test.centos7_cpu',
-                            'publish.test.centos7_gpu')
+                            'publish.test.centos7_gpu', 'android_armv7', 'android_armv8',
+                            'armv6', 'armv7', 'armv8', 'test.armv7', 'test.armv8')
 # Files for docker compose
-DOCKER_COMPOSE_FILES = set(('docker/build.centos7', 'docker/build.ubuntu', 'docker/publish.test.centos7'))
+DOCKER_COMPOSE_FILES = set(('docker/build.centos7', 'docker/build.ubuntu', 'docker/build.android',
+                            'docker/build.arm', 'docker/test.arm', 'docker/publish.test.centos7'))
 
 
 def get_dockerfiles_path():
