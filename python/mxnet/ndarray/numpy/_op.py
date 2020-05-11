@@ -48,8 +48,8 @@ __all__ = ['shape', 'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_li
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'nonzero', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'interp',
            'diff', 'ediff1d', 'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
-           'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal',
-           'where', 'bincount', 'rollaxis', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal']
+           'atleast_1d', 'atleast_2d', 'atleast_3d', 'fill_diagonal', 'squeeze',
+           'where', 'bincount', 'rollaxis', 'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal']
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4011,6 +4011,49 @@ def transpose(a, axes=None):
     return _api_internal.transpose(a, axes)
 
 
+@set_module('mxnet.ndarray.numpy')
+def repeat(a, repeats, axis=None):
+    """
+    Repeat elements of an array.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    repeats : int
+        The number of repetitions for each element.
+    axis : int, optional
+        The axis along which to repeat values.  By default, use the
+        flattened input array, and return a flat output array.
+
+    Returns
+    -------
+    repeated_array : ndarray
+        Output array which has the same shape as `a`, except along
+        the given axis.
+
+    See Also
+    --------
+    tile : Tile an array.
+
+    Examples
+    --------
+    >>> np.repeat(3, 4)
+    array([3, 3, 3, 3])
+    >>> x = np.array([[1,2],[3,4]])
+    >>> np.repeat(x, 2)
+    array([1, 1, 2, 2, 3, 3, 4, 4])
+    >>> np.repeat(x, 3, axis=1)
+    array([[1, 1, 1, 2, 2, 2],
+           [3, 3, 3, 4, 4, 4]])
+    >>> np.repeat(x, [1, 2], axis=0)
+    array([[1, 2],
+           [3, 4],
+           [3, 4]])
+    """
+    return _api_internal.repeat(a, repeats, axis)
+
+
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.ndarray.numpy')
 def split(ary, indices_or_sections, axis=0):
@@ -6090,7 +6133,7 @@ def around(x, decimals=0, out=None, **kwargs):
     if isinstance(x, numeric_types):
         return _np.around(x, decimals, **kwargs)
     elif isinstance(x, ndarray):
-        return _npi.around(x, decimals, out=out, **kwargs)
+        return _api_internal.around(x, decimals, out, **kwargs)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
@@ -6109,7 +6152,7 @@ def round(x, decimals=0, out=None, **kwargs):
     if isinstance(x, numeric_types):
         return _np.around(x, decimals, **kwargs)
     elif isinstance(x, ndarray):
-        return _npi.around(x, decimals, out=out, **kwargs)
+        return _api_internal.around(x, decimals, out, **kwargs)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
@@ -8067,6 +8110,57 @@ def fill_diagonal(a, val, wrap=False):
 
 
 @set_module('mxnet.ndarray.numpy')
+def squeeze(x, axis=None):
+    """
+    Remove single-dimensional entries from the shape of an array.
+
+    Parameters
+    ----------
+    a : array_like
+        Input data.
+    axis : None or int or tuple of ints, optional
+        .. versionadded:: 1.7.0
+        Selects a subset of the single-dimensional entries in the
+        shape. If an axis is selected with shape entry greater than
+        one, an error is raised.
+
+    Returns
+    -------
+    squeezed : ndarray
+        The input array, but with all or a subset of the
+        dimensions of length 1 removed. This is always `a` itself
+        or a view into `a`.
+
+    Raises
+    ------
+    ValueError
+        If `axis` is not `None`, and an axis being squeezed is not of length 1
+
+    See Also
+    --------
+    expand_dims : The inverse operation, adding singleton dimensions
+    reshape : Insert, remove, and combine dimensions, and resize existing ones
+
+    Examples
+    --------
+    >>> x = np.array([[[0], [1], [2]]])
+    >>> x.shape
+    (1, 3, 1)
+    >>> np.squeeze(x).shape
+    (3,)
+    >>> np.squeeze(x, axis=0).shape
+    (3, 1)
+    >>> np.squeeze(x, axis=1).shape
+    Traceback (most recent call last):
+    ...
+    ValueError: cannot select an axis to squeeze out which has size not equal to one
+    >>> np.squeeze(x, axis=2).shape
+    (1, 3)
+    """
+    return _api_internal.squeeze(x, axis)
+
+
+@set_module('mxnet.ndarray.numpy')
 def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
     """
     Replace NaN with zero and infinity with large finite numbers (default
@@ -9054,6 +9148,47 @@ def diag(v, k=0):
            [0, 0, 8]])
     """
     return _api_internal.diag(v, k)
+
+
+@set_module('mxnet.ndarray.numpy')
+def diagflat(v, k=0):
+    """
+    Create a two-dimensional array with the flattened input as a diagonal.
+
+    Parameters
+    ----------
+    v : array_like
+        Input data, which is flattened and set as the `k`-th
+        diagonal of the output.
+    k : int, optional
+        Diagonal to set; 0, the default, corresponds to the "main" diagonal,
+        a positive (negative) `k` giving the number of the diagonal above
+        (below) the main.
+
+    Returns
+    -------
+    out : ndarray
+        The 2-D output array.
+
+    See Also
+    --------
+    diag : MATLAB work-alike for 1-D and 2-D arrays.
+    diagonal : Return specified diagonals.
+    trace : Sum along diagonals.
+
+    Examples
+    --------
+    >>> np.diagflat([[1,2], [3,4]])
+    array([[1, 0, 0, 0],
+           [0, 2, 0, 0],
+           [0, 0, 3, 0],
+           [0, 0, 0, 4]])
+    >>> np.diagflat([1,2], 1)
+    array([[0, 1, 0],
+           [0, 0, 2],
+           [0, 0, 0]])
+    """
+    return _api_internal.diagflat(v, k)
 
 
 @set_module('mxnet.ndarray.numpy')
