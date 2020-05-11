@@ -4553,8 +4553,8 @@ def test_npx_categorical():
 
         def hybrid_forward(self, F, prob):
             if self.size is None:
-                return F.npx.sample_categorical(prob)
-            return F.npx.sample_categorical(prob, shape=self.size)
+                return F.npx.random.categorical(prob)
+            return F.npx.random.categorical(prob, shape=self.size)
 
     batch_sizes = [(2,), (2, 3)]
     event_shapes = [None, (10,), (10, 12)]
