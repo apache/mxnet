@@ -317,9 +317,12 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(logical_xor);
 
 #else
 
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(name)                               \
-  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                       \
-  .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeLogic<cpu, mshadow_op::np_##name>)
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(name)                                  \
+  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                          \
+  .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeLogic<cpu, mshadow_op::np_##name>)  \
+  .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {                        \
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};                             \
+  })
 
 #endif  // MXNET_USE_TVM_OP
 

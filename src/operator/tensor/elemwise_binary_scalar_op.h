@@ -276,11 +276,20 @@ class BinaryScalarOp : public UnaryOp {
     using namespace mshadow::expr;
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const double alpha = nnvm::get<double>(attrs.parsed);
-    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
-        MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-          mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
-              s, inputs[0].Size(), outputs[0].dptr<bool>(), inputs[0].dptr<DType>(), DType(alpha));
-        });
+    TBlob temp_tblob;
+    if (common::is_int(inputs[0].type_flag_)) {
+      Tensor<xpu, 1, double> temp_tensor =
+          ctx.requested[0].get_space_typed<xpu, 1, double>(Shape1(inputs[0].Size()), s);
+      temp_tblob = TBlob(temp_tensor);
+      CastCompute<xpu>(attrs, ctx, {inputs[0]}, {kWriteTo}, {temp_tblob});
+    } else {
+      temp_tblob = inputs[0];
+    }
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(temp_tblob.type_flag_, DType, {
+      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+            s, inputs[0].Size(), outputs[0].dptr<bool>(), temp_tblob.dptr<DType>(), DType(alpha));
+      });
     });
   }
 
