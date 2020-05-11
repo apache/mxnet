@@ -4545,6 +4545,33 @@ def test_np_multivariate_normal():
 
 @with_seed()
 @use_np
+def test_npx_categorical():
+    class TestNumpyCategorical(HybridBlock):
+        def __init__(self, size=None):
+            super(TestNumpyCategorical, self).__init__()
+            self.size = size
+
+        def hybrid_forward(self, F, prob):
+            if self.size is None:
+                return F.npx.random.categorical(prob)
+            return F.npx.random.categorical(prob, shape=self.size)
+
+    batch_sizes = [(2,), (2, 3)]
+    event_shapes = [None, (10,), (10, 12)]
+    num_event = [2, 4, 10]
+    for batch_size, num_event, event_shape in itertools.product(batch_sizes, num_event, event_shapes):
+        for hybridize in [True, False]:
+            prob = np.ones(batch_size + (num_event,)) / num_event
+            net = TestNumpyCategorical(event_shape)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(prob)
+            desired_shape = batch_size + event_shape if event_shape is not None else batch_size
+            assert mx_out.shape == desired_shape
+
+
+@with_seed()
+@use_np
 def test_random_seed():
     for seed in [234, 594, 7240, 20394]:
         ret = []
