@@ -22,7 +22,7 @@ __all__ = ['Dirichlet']
 
 from .exp_family import ExponentialFamily
 from .constraint import Positive, Simplex
-from .utils import getF, gammaln, digamma
+from .utils import getF, gammaln, digamma, sample_n_shape_converter, _clip_prob
 
 
 class Dirichlet(ExponentialFamily):
@@ -54,7 +54,16 @@ class Dirichlet(ExponentialFamily):
                 alpha = F.np.broadcast_to(self.alpha, (size,) + (-2,))
             else:
                 alpha = F.np.broadcast_to(self.alpha, size + (-2,))
-        gamma_samples = F.np.random.gamma(alpha, 1)
+        gamma_samples = _clip_prob(F.np.random.gamma(alpha, 1), F)
+        s = gamma_samples.sum(-1, keepdims=True)
+        return gamma_samples / s
+
+    def sample_n(self, size=None):
+        F = self.F
+        alpha = self.alpha
+        if size is None:
+            return self.sample()
+        gamma_samples = _clip_prob(F.np.random.gamma(alpha, 1, sample_n_shape_converter(size)), F)
         s = gamma_samples.sum(-1, keepdims=True)
         return gamma_samples / s
 
@@ -63,7 +72,8 @@ class Dirichlet(ExponentialFamily):
         lgamma = gammaln(F)
         log = F.np.log
         alpha = self.alpha
-        return (log(value) * (alpha - 1.0)).sum(-1) + lgamma(alpha.sum(-1)) - lgamma(alpha).sum(-1)
+        return (log(value) * (alpha - 1.0)).sum(-1) +\
+                lgamma(alpha.sum(-1)) - lgamma(alpha).sum(-1)
 
     @property
     def mean(self):

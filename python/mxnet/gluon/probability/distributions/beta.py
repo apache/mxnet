@@ -22,7 +22,7 @@ __all__ = ['Beta']
 
 from .exp_family import ExponentialFamily
 from .constraint import UnitInterval, Positive
-from .utils import getF, sample_n_shape_converter, gammaln, digamma
+from .utils import getF, sample_n_shape_converter, gammaln, digamma, _clip_prob
 
 class Beta(ExponentialFamily):
     r"""Create a Beta distribution object.
@@ -49,12 +49,14 @@ class Beta(ExponentialFamily):
 
     def sample(self, size=None):
         F = self.F
-        return F.np.random.beta(self.alpha, self.beta, size)
+        X = _clip_prob(F.np.random.gamma(self.alpha, 1, size=size), F)
+        Y = _clip_prob(F.np.random.gamma(self.beta, 1, size=size), F)
+        out = X / (X + Y)
+        return out
     
     def sample_n(self, size=None):
         F = self.F
-        return F.np.random.beta(self.alpha, self.beta,
-                             sample_n_shape_converter(size))
+        return self.sample(sample_n_shape_converter(size))
 
     @property
     def mean(self):
@@ -70,7 +72,6 @@ class Beta(ExponentialFamily):
                 ((a + b) ** 2 * (a + b + 1)))
     
     def log_prob(self, value):
-        eps = 1e-5
         F = self.F
         lgamma = gammaln(F)
         log = F.np.log
@@ -78,7 +79,7 @@ class Beta(ExponentialFamily):
         a = self.alpha
         b = self.beta
         lgamma_term = lgamma(a + b) - lgamma(a) - lgamma(b)
-        return (a - 1) * log(value + eps) + (b - 1) * log1p(-value + eps) + lgamma_term
+        return (a - 1) * log(value) + (b - 1) * log1p(-value) + lgamma_term
 
     def entropy(self):
         F = self.F

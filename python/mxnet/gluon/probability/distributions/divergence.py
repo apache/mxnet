@@ -275,6 +275,7 @@ def _kl_beta_beta(p, q):
     t5 = (sum_params_q - sum_params_p) * dgamma(sum_params_p)
     return t1 - t2 + t3 + t4 + t5
 
+# http://bariskurt.com/kullback-leibler-divergence-between-two-dirichlet-and-beta-distributions/
 @register_kl(Dirichlet, Dirichlet)
 def _kl_dirichlet_dirichlet(p, q):
     F = p.F
@@ -340,7 +341,45 @@ def _kl_uniform_normal(p, q):
     t3 = ((p.high + p.low - 2 * q.loc) / 2) ** 2
     return t1 + 0.5 * (t2 + t3) / (q.scale ** 2)
 
-@register_kl(Uniform, Beta)
-def _kl_uniform_beta(p, q):
-    pass
 
+@register_kl(Uniform, Gumbel)
+def _kl_uniform_gumbel(p, q):
+    F = p.F
+    common_term = q.scale / (p.high - p.low)
+    high_loc_diff = (p.high - q.loc) / q.scale
+    low_loc_diff = (p.low - q.loc) / q.scale
+    t1 = F.np.log(common_term) + 0.5 * (high_loc_diff + low_loc_diff)
+    t2 = common_term * (F.np.exp(-high_loc_diff) - F.np.exp(-low_loc_diff))
+    return t1 - t2
+
+
+@register_kl(Exponential, Gumbel)
+def _kl_exponential_gumbel(p, q):
+    F = p.F
+    scale_rate_prod = q.scale / p.scale
+    loc_scale_ratio = q.loc / q.scale
+    t1 = F.np.log(scale_rate_prod) - 1
+    t2 = F.np.exp(loc_scale_ratio) * scale_rate_prod / (scale_rate_prod + 1)
+    t3 = scale_rate_prod ** -1
+    return t1 - loc_scale_ratio + t2 + t3
+
+
+@register_kl(Exponential, Normal)
+def _kl_exponential_normal(p, q):
+    F = p.F
+    var_normal = q.variance
+    rate_sqr = p.scale ** (-2)
+    t1 = 0.5 * F.np.log(rate_sqr * var_normal * 2 * _np.pi)
+    t2 = rate_sqr ** -1
+    t3 = q.loc * p.scale
+    t4 = (q.loc ** 2) * 0.5
+    return t1 - 1 + (t2 - t3 + t4) / var_normal
+
+
+@register_kl(Exponential, Gamma)
+def _kl_exponential_gamma(p, q):
+    F = p.F
+    lgamma = gammaln(F)
+    ratio = p.scale / q.scale
+    t1 = -q.shape * F.np.log(ratio)
+    return t1 + ratio + lgamma(q.shape) + q.shape * _np.euler_gamma - (1 + _np.euler_gamma)

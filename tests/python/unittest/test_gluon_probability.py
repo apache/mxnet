@@ -1970,7 +1970,7 @@ def test_gluon_kl():
         param_funcs : List
             A list of functions that generate valid parameters for `dist`
         """
-        params = [f() for f in param_funcs]
+        params = [f() if callable(f) else f for f in param_funcs]
         return dist(*params)
 
     # could cause longer runtime and potential flaky tests
@@ -2038,10 +2038,10 @@ def test_gluon_kl():
             param1 = lambda: np.random.uniform(0.5, 1.5, shape)
             param2 = lambda: np.random.uniform(0.5, 1.5, shape)
             _test_zero_kl(_dist_factory(dist, param1, param2), shape)
-            if monte_carlo_test:
-                _test_monte_carlo(_dist_factory(dist, param1, param2),
-                                _dist_factory(dist, param1, param2),
-                                repeated_times)
+            # if monte_carlo_test:
+            #     _test_monte_carlo(_dist_factory(dist, param1, param2),
+            #                     _dist_factory(dist, param1, param2),
+            #                     repeated_times)
     
     for shape in shapes:
         n = _np.random.randint(5, 10)
@@ -2061,34 +2061,58 @@ def test_gluon_kl():
         _test_zero_kl(dist, desired_shape)
     
     batch_shapes = loc_shapes
+    # dirichlet
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         desired_shape = (batch_shape if batch_shape is not None else ())
-        alpha = np.random.uniform(size=(desired_shape + (event_shape,)))
-        dist = mgp.Dirichlet(alpha)
-        _test_zero_kl(dist, desired_shape)
+        dist = mgp.Dirichlet
+        alpha = lambda: np.random.uniform(size=(desired_shape + (event_shape,)))
+        _test_zero_kl(_dist_factory(dist, alpha), desired_shape)
+        # if monte_carlo_test:
+        #     _test_monte_carlo(_dist_factory(dist, alpha),
+        #                       _dist_factory(dist, alpha),
+        #                       100000)
 
-    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
-        prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
-        dist = mgp.Categorical(event_shape, prob=prob)
-        _test_zero_kl(dist, batch_shape)
-
-    for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
-        prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
-        dist = mgp.OneHotCategorical(event_shape, prob=prob)
-        _test_zero_kl(dist, batch_shape)
+    # categorical, One-hot categorical
+    for dist in [mgp.Categorical, mgp.OneHotCategorical]:
+        for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
+            prob = (lambda:
+                np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape)))
+            _test_zero_kl(_dist_factory(dist, event_shape, prob), batch_shape)
+            if monte_carlo_test:
+                _test_monte_carlo(_dist_factory(dist, event_shape, prob),
+                                _dist_factory(dist, event_shape, prob),
+                                repeated_times)
 
     # Test kl between different distributions
+    # KL(Uniform || ...)
     for shape in shapes:
-        low = np.random.uniform(-1, 1, shape)
-        high = low + np.random.uniform(0.5, 1.5, shape)
-        dist1 = mgp.Uniform(low, high)
-        loc = np.random.uniform(-1, 1, shape)
-        scale = np.random.uniform(0.5, 1.5, shape)
-        dist2 = mgp.Normal(loc, scale)
-        kl = mgp.kl_divergence(dist1, dist2)
-        assert kl.shape == low.shape
-        if monte_carlo_test:
-            _test_monte_carlo(dist1, dist2, repeated_times)
+        rhs_dists = [
+            mgp.Normal(np.random.uniform(-1, 1, shape), np.random.uniform(0.5, 1.5, shape)),
+            mgp.Gumbel(np.random.uniform(-1, 1, shape), np.random.uniform(0.5, 1.5, shape)),
+        ]
+        for rhs_dist in rhs_dists:
+            low = np.random.uniform(-1, 1, shape)
+            high = low + np.random.uniform(0.5, 1.5, shape)
+            lhs_dist = mgp.Uniform(low, high)
+            kl = mgp.kl_divergence(lhs_dist, rhs_dist)
+            assert kl.shape == low.shape
+            if monte_carlo_test:
+                _test_monte_carlo(lhs_dist, rhs_dist, repeated_times)
+    
+    # KL(Exponential || ...)
+    for shape in shapes:
+        rhs_dists = [
+            mgp.Normal(np.random.uniform(-1, 1, shape), np.random.uniform(0.5, 1.5, shape)),
+            mgp.Gumbel(np.random.uniform(-1, 1, shape), np.random.uniform(0.5, 1.5, shape)),
+            mgp.Gamma(np.random.uniform(0.5, 1.5, shape), np.random.uniform(0.5, 1.5, shape))   
+        ]
+        for rhs_dist in rhs_dists:
+            s = np.random.uniform(size=shape)
+            lhs_dist = mgp.Exponential(s)
+            kl = mgp.kl_divergence(lhs_dist, rhs_dist)
+            assert kl.shape == s.shape
+            if monte_carlo_test:
+                _test_monte_carlo(lhs_dist, rhs_dist, repeated_times)
 
 
 @with_seed()
