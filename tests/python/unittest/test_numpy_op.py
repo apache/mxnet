@@ -1323,159 +1323,159 @@ def test_npx_slice(start, end, step, hybridize):
     expected_grad[basic_index] = 1
     assert same(a.grad.asnumpy(), expected_grad)
 
-@with_seed()
-@use_np
-def test_npx_index_add():
-    class TestIndexAdd(HybridBlock):
-        def __init__(self, ind):
-            super(TestIndexAdd, self).__init__()
-            self.ind = ind
+# @with_seed()
+# @use_np
+# def test_npx_index_add():
+#     class TestIndexAdd(HybridBlock):
+#         def __init__(self, ind):
+#             super(TestIndexAdd, self).__init__()
+#             self.ind = ind
 
-        def hybrid_forward(self, F, a, val):
-            return F.npx.index_add(a, val, ind=self.ind)
+#         def hybrid_forward(self, F, a, val):
+#             return F.npx.index_add(a, val, ind=self.ind)
 
-    def index_add_forward(a, ind, val, ind_ndim, ind_num):
-        ind_arr = _np.array([], dtype=int)
-        if ind_ndim == 1:
-            ind_arr = _np.array(ind).transpose()
-        else:
-            t_ind = []
-            for i in range(ind_ndim):
-                if len(ind[i]) == 1:
-                    t_ind.append((ind[i][0],) * ind_num)
-                else:
-                    t_ind.append(ind[i])
-            ind_arr = _np.array(t_ind).transpose()
-        for i in range(ind_arr.shape[0]):
-            t_ind = tuple(ind_arr[i].tolist()) if type(ind_arr[i]) is _np.ndarray else ind_arr[i].tolist()
-            if val.ndim + ind_ndim > a.ndim:
-                t_val = val[tuple([0 if val.shape[0]==1 else i])]
-                if type(t_val) is _np.ndarray and t_val.shape[0] == 1:
-                    a[t_ind] += _np.squeeze(t_val, axis=0)
-                else:
-                    a[t_ind] += t_val
-            else:
-                a[t_ind] += val
-        return a
+#     def index_add_forward(a, ind, val, ind_ndim, ind_num):
+#         ind_arr = _np.array([], dtype=int)
+#         if ind_ndim == 1:
+#             ind_arr = _np.array(ind).transpose()
+#         else:
+#             t_ind = []
+#             for i in range(ind_ndim):
+#                 if len(ind[i]) == 1:
+#                     t_ind.append((ind[i][0],) * ind_num)
+#                 else:
+#                     t_ind.append(ind[i])
+#             ind_arr = _np.array(t_ind).transpose()
+#         for i in range(ind_arr.shape[0]):
+#             t_ind = tuple(ind_arr[i].tolist()) if type(ind_arr[i]) is _np.ndarray else ind_arr[i].tolist()
+#             if val.ndim + ind_ndim > a.ndim:
+#                 t_val = val[tuple([0 if val.shape[0]==1 else i])]
+#                 if type(t_val) is _np.ndarray and t_val.shape[0] == 1:
+#                     a[t_ind] += _np.squeeze(t_val, axis=0)
+#                 else:
+#                     a[t_ind] += t_val
+#             else:
+#                 a[t_ind] += val
+#         return a
     
-    def index_add_bwd(out_grad, a_grad, ind, val_grad, ind_ndim, ind_num, grad_req_a, grad_req_val):
-        if grad_req_a == 'add':
-            init_a_grad = _np.array(a_grad)
-        if grad_req_a == 'add':
-            init_val_grad = _np.array(val_grad)
-        a_grad = _np.zeros(a_grad.shape)
-        val_grad = _np.zeros(val_grad.shape)
+#     def index_add_bwd(out_grad, a_grad, ind, val_grad, ind_ndim, ind_num, grad_req_a, grad_req_val):
+#         if grad_req_a == 'add':
+#             init_a_grad = _np.array(a_grad)
+#         if grad_req_a == 'add':
+#             init_val_grad = _np.array(val_grad)
+#         a_grad = _np.zeros(a_grad.shape)
+#         val_grad = _np.zeros(val_grad.shape)
         
-        ind_arr = _np.array([], dtype=int)
-        if ind_ndim == 1:
-            ind_arr = _np.array(ind).transpose()
-        else:
-            t_ind = []
-            for i in range(ind_ndim):
-                if len(ind[i]) == 1:
-                    t_ind.append((ind[i][0],) * ind_num)
-                else:
-                    t_ind.append(ind[i])
-            ind_arr = _np.array(t_ind).transpose()
-        for i in range(ind_arr.shape[0]):
-            t_ind = tuple(ind_arr[i].tolist()) if type(ind_arr[i]) is _np.ndarray else ind_arr[i].tolist()
-            a_grad[t_ind] = out_grad[t_ind]
-            if val_grad.ndim + ind_ndim > a_grad.ndim:
-                idx = 0 if val_grad.shape[0]==1 else i
-                t_grad = out_grad[t_ind]
-                t_grad_shape = _np.array(t_grad.shape)
-                val_grad_shape = _np.array(val_grad[idx].shape)
-                if type(val_grad[idx]) is not _np.ndarray:
-                    t_grad = _np.sum(t_grad)
-                else:
-                    is_not_equal = t_grad_shape - val_grad_shape
-                    if _np.any(is_not_equal):
-                        broadcast_dim = _np.nonzero(_np.where(is_not_equal, 1, 0))
-                        t_grad = _np.sum(t_grad, axis=tuple(broadcast_dim[0].reshape(1, -1)[0]), keepdims=True)
-                val_grad[idx] += t_grad
-            else:
-                t_grad = out_grad[t_ind]
-                if type(val_grad) is not _np.ndarray or val_grad.shape == ():
-                    t_grad = _np.sum(t_grad)
-                else:
-                    if type(t_grad) is _np.ndarray:
-                        ext_dim = t_grad.ndim() - val_grad.ndim()
-                        if ext_dim:
-                            t_grad = _np.sum(t_grad, axis=tuple(_np.arange(ext_dim)))
-                        t_grad_shape = _np.array(t_grad.shape)
-                        val_grad_shape = _np.array(val_grad.shape)
-                        is_not_equal = t_grad_shape - val_grad_shape
-                        if _np.any(is_not_equal):
-                            broadcast_dim = _np.nonzero(_np.where(is_not_equal, 1, 0))
-                            t_grad = _np.sum(t_grad, axis=tuple(broadcast_dim.reshape(1, -1)[0]), keepdims=True)
-                val_grad += t_grad
-        if grad_req_a == 'add':
-            a_grad += init_a_grad
-        if grad_req_val == 'add':
-            val_grad += init_val_grad
-        return a_grad, val_grad
+#         ind_arr = _np.array([], dtype=int)
+#         if ind_ndim == 1:
+#             ind_arr = _np.array(ind).transpose()
+#         else:
+#             t_ind = []
+#             for i in range(ind_ndim):
+#                 if len(ind[i]) == 1:
+#                     t_ind.append((ind[i][0],) * ind_num)
+#                 else:
+#                     t_ind.append(ind[i])
+#             ind_arr = _np.array(t_ind).transpose()
+#         for i in range(ind_arr.shape[0]):
+#             t_ind = tuple(ind_arr[i].tolist()) if type(ind_arr[i]) is _np.ndarray else ind_arr[i].tolist()
+#             a_grad[t_ind] = out_grad[t_ind]
+#             if val_grad.ndim + ind_ndim > a_grad.ndim:
+#                 idx = 0 if val_grad.shape[0]==1 else i
+#                 t_grad = out_grad[t_ind]
+#                 t_grad_shape = _np.array(t_grad.shape)
+#                 val_grad_shape = _np.array(val_grad[idx].shape)
+#                 if type(val_grad[idx]) is not _np.ndarray:
+#                     t_grad = _np.sum(t_grad)
+#                 else:
+#                     is_not_equal = t_grad_shape - val_grad_shape
+#                     if _np.any(is_not_equal):
+#                         broadcast_dim = _np.nonzero(_np.where(is_not_equal, 1, 0))
+#                         t_grad = _np.sum(t_grad, axis=tuple(broadcast_dim[0].reshape(1, -1)[0]), keepdims=True)
+#                 val_grad[idx] += t_grad
+#             else:
+#                 t_grad = out_grad[t_ind]
+#                 if type(val_grad) is not _np.ndarray or val_grad.shape == ():
+#                     t_grad = _np.sum(t_grad)
+#                 else:
+#                     if type(t_grad) is _np.ndarray:
+#                         ext_dim = t_grad.ndim() - val_grad.ndim()
+#                         if ext_dim:
+#                             t_grad = _np.sum(t_grad, axis=tuple(_np.arange(ext_dim)))
+#                         t_grad_shape = _np.array(t_grad.shape)
+#                         val_grad_shape = _np.array(val_grad.shape)
+#                         is_not_equal = t_grad_shape - val_grad_shape
+#                         if _np.any(is_not_equal):
+#                             broadcast_dim = _np.nonzero(_np.where(is_not_equal, 1, 0))
+#                             t_grad = _np.sum(t_grad, axis=tuple(broadcast_dim.reshape(1, -1)[0]), keepdims=True)
+#                 val_grad += t_grad
+#         if grad_req_a == 'add':
+#             a_grad += init_a_grad
+#         if grad_req_val == 'add':
+#             val_grad += init_val_grad
+#         return a_grad, val_grad
 
-    configs = [((2, ), (1, ), (1, ), 1, 1)]
-    shape = tuple(_np.random.randint(1, 6, size=(4)))
-    for ind_ndim in range(1, 5):
-        ind_num = _np.random.randint(1, 7)
-        ind = []
-        for ind_dim in range(ind_ndim):
-            if ind_dim == 0:
-                sz = ind_num
-            else:
-                sz = 1 if _np.random.randint(0, 5)==0 else ind_num
-            ind.append(tuple(_np.random.randint(0, shape[ind_dim], size=(sz))))
-        configs.append(tuple([shape, tuple(ind), (), ind_ndim, ind_num]))
-        for val_ndim in range(1, 5 - ind_ndim):
-            val_shape = [1 if _np.random.randint(0, 5)==0 else ind_num]
-            for val_dim in range(ind_ndim, 4):
-                val_shape.append(1 if _np.random.randint(0, 5)==0 else shape[val_dim])
-            configs.append(tuple([shape, tuple(ind), tuple(val_shape), ind_ndim, ind_num]))
+#     configs = [((2, ), (1, ), (1, ), 1, 1)]
+#     shape = tuple(_np.random.randint(1, 6, size=(4)))
+#     for ind_ndim in range(1, 5):
+#         ind_num = _np.random.randint(1, 7)
+#         ind = []
+#         for ind_dim in range(ind_ndim):
+#             if ind_dim == 0:
+#                 sz = ind_num
+#             else:
+#                 sz = 1 if _np.random.randint(0, 5)==0 else ind_num
+#             ind.append(tuple(_np.random.randint(0, shape[ind_dim], size=(sz))))
+#         configs.append(tuple([shape, tuple(ind), (), ind_ndim, ind_num]))
+#         for val_ndim in range(1, 5 - ind_ndim):
+#             val_shape = [1 if _np.random.randint(0, 5)==0 else ind_num]
+#             for val_dim in range(ind_ndim, 4):
+#                 val_shape.append(1 if _np.random.randint(0, 5)==0 else shape[val_dim])
+#             configs.append(tuple([shape, tuple(ind), tuple(val_shape), ind_ndim, ind_num]))
 
-    dtypes = ['float32', 'float64']
-    grad_req = ['write', 'null']
-    for hybridize, grad_req_a, grad_req_val, atype, valtype in itertools.product([True, False], grad_req, grad_req, dtypes, dtypes):
-        for a_shape, ind, val_shape ,ind_ndim, ind_num in configs:
-            eps = 1e-3
-            test_index_add = TestIndexAdd(ind=ind)
-            if hybridize:
-                test_index_add.hybridize()
-            a = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
-            a.attach_grad(grad_req=grad_req_a)
-            val = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
-            val.attach_grad(grad_req=grad_req_val)
+#     dtypes = ['float32', 'float64']
+#     grad_req = ['write', 'null']
+#     for hybridize, grad_req_a, grad_req_val, atype, valtype in itertools.product([True, False], grad_req, grad_req, dtypes, dtypes):
+#         for a_shape, ind, val_shape ,ind_ndim, ind_num in configs:
+#             eps = 1e-3
+#             test_index_add = TestIndexAdd(ind=ind)
+#             if hybridize:
+#                 test_index_add.hybridize()
+#             a = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
+#             a.attach_grad(grad_req=grad_req_a)
+#             val = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
+#             val.attach_grad(grad_req=grad_req_val)
 
-            expected_ret = index_add_forward(a.asnumpy(), ind, val.asnumpy(), ind_ndim, ind_num)
-            with mx.autograd.record():
-                mx_ret = test_index_add(a, val)
-            assert mx_ret.shape == a.shape
-            assert expected_ret.shape == a.shape
-            assert_almost_equal(mx_ret.asnumpy(), expected_ret, rtol=eps, atol=eps)
+#             expected_ret = index_add_forward(a.asnumpy(), ind, val.asnumpy(), ind_ndim, ind_num)
+#             with mx.autograd.record():
+#                 mx_ret = test_index_add(a, val)
+#             assert mx_ret.shape == a.shape
+#             assert expected_ret.shape == a.shape
+#             assert_almost_equal(mx_ret.asnumpy(), expected_ret, rtol=eps, atol=eps)
 
-            if grad_req_a != 'null' or grad_req_val != 'null':
-                init_a_grad = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
-                init_val_grad = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
-                out_grad = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
-                if grad_req_a == 'add':
-                    a.grad[:] = init_a_grad
-                if grad_req_val == 'add':
-                    val.grad[:] = init_val_grad
-                mx_ret.backward(out_grad)
-                expected_bwd_a, expected_bwd_val = index_add_bwd(out_grad.asnumpy(), init_a_grad.asnumpy(), ind,
-                                                                 init_val_grad.asnumpy(), ind_ndim, ind_num,
-                                                                 grad_req_a, grad_req_val)
-                if grad_req_a == 'null':
-                    assert a.grad is None
-                else:
-                    assert_almost_equal(a.grad.asnumpy(), expected_bwd_a, rtol = eps, atol=eps)
-                if grad_req_val == 'null':
-                    assert val.grad is None
-                else:
-                    assert_almost_equal(val.grad.asnumpy(), expected_bwd_val, rtol = eps, atol=eps)
+#             if grad_req_a != 'null' or grad_req_val != 'null':
+#                 init_a_grad = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
+#                 init_val_grad = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
+#                 out_grad = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
+#                 if grad_req_a == 'add':
+#                     a.grad[:] = init_a_grad
+#                 if grad_req_val == 'add':
+#                     val.grad[:] = init_val_grad
+#                 mx_ret.backward(out_grad)
+#                 expected_bwd_a, expected_bwd_val = index_add_bwd(out_grad.asnumpy(), init_a_grad.asnumpy(), ind,
+#                                                                  init_val_grad.asnumpy(), ind_ndim, ind_num,
+#                                                                  grad_req_a, grad_req_val)
+#                 if grad_req_a == 'null':
+#                     assert a.grad is None
+#                 else:
+#                     assert_almost_equal(a.grad.asnumpy(), expected_bwd_a, rtol = eps, atol=eps)
+#                 if grad_req_val == 'null':
+#                     assert val.grad is None
+#                 else:
+#                     assert_almost_equal(val.grad.asnumpy(), expected_bwd_val, rtol = eps, atol=eps)
 
-            mx_out = npx.index_add(a, val, ind)
-            assert_almost_equal(mx_out.asnumpy(), expected_ret, rtol=eps, atol=eps)
+#             mx_out = npx.index_add(a, val, ind)
+#             assert_almost_equal(mx_out.asnumpy(), expected_ret, rtol=eps, atol=eps)
 
 
 @with_seed()

@@ -258,41 +258,41 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   }
   int ndim = ograd.shape_.ndim();
   size_t tail_size = ograd.shape_.ProdShape(ind_ndim, ndim);
-  MSHADOW_REAL_TYPE_SWITCH(grad_a.type_flag_, DType, {
-    MSHADOW_REAL_TYPE_SWITCH(ograd.type_flag_, OType, {
-      MXNET_NDIM_SWITCH(ndim, NDim, {
-        mshadow::Shape<NDim> stride = mxnet_op::calc_stride(ograd.shape_.get<NDim>());
-        IndexAddOpBackwardACalc<xpu, DType, OType, NDim>(s, grad_a.dptr<DType>(),
-          ograd.dptr<OType>(), stride, tail_size, ind_num, ind_ndim,
-          vec_ind.data(), req[0]);
-      });
-    });
-  });
-  MSHADOW_REAL_TYPE_SWITCH(grad_val.type_flag_, DType, {
-    MXNET_NDIM_SWITCH(ndim, NDim, {
-      mshadow::Shape<NDim>ograd_shape = ograd.shape_.get<NDim>();
-      mshadow::Shape<NDim>ograd_pre_shape(ograd_shape);
-      mshadow::Shape<NDim>ograd_tail_shape(ograd_shape);
-      mshadow::Shape<NDim>val_shape;
-      for (int i = 0; i < ind_ndim; ++i) {
-        ograd_tail_shape[i] = 1;
-      }
-      for (int i = ind_ndim; i < NDim; ++i) {
-        ograd_pre_shape[i] = 1;
-      }
-      for (int i = NDim - 1, j = grad_val.shape_.ndim() - 1; i >= 0; --i, --j) {
-        val_shape[i] = (j >= 0) ? val.shape_[j] : 1;
-      }
-      mshadow::Shape<NDim>ograd_pre_stride = mxnet_op::calc_stride(ograd_pre_shape);
-      mshadow::Shape<NDim>val_stride = mxnet_op::calc_stride(val_shape);
-      MSHADOW_REAL_TYPE_SWITCH(ograd.type_flag_, OType, {
-        IndexAddOpBackwardValCalc<xpu, DType, OType>(
-          s, grad_val.dptr<DType>(), ograd.dptr<OType>(),
-          ograd_tail_shape, ograd_pre_stride, val_stride, val_shape,
-          tail_size, ind_num, ind_ndim, vec_ind.data());
-      });
-    });
-  });
+  // MSHADOW_REAL_TYPE_SWITCH(grad_a.type_flag_, DType, {
+  //   MSHADOW_REAL_TYPE_SWITCH(ograd.type_flag_, OType, {
+  //     MXNET_NDIM_SWITCH(ndim, NDim, {
+  //       mshadow::Shape<NDim> stride = mxnet_op::calc_stride(ograd.shape_.get<NDim>());
+  //       IndexAddOpBackwardACalc<xpu, DType, OType, NDim>(s, grad_a.dptr<DType>(),
+  //         ograd.dptr<OType>(), stride, tail_size, ind_num, ind_ndim,
+  //         vec_ind.data(), req[0]);
+  //     });
+  //   });
+  // });
+  // MSHADOW_REAL_TYPE_SWITCH(grad_val.type_flag_, DType, {
+  //   MXNET_NDIM_SWITCH(ndim, NDim, {
+  //     mshadow::Shape<NDim>ograd_shape = ograd.shape_.get<NDim>();
+  //     mshadow::Shape<NDim>ograd_pre_shape(ograd_shape);
+  //     mshadow::Shape<NDim>ograd_tail_shape(ograd_shape);
+  //     mshadow::Shape<NDim>val_shape;
+  //     for (int i = 0; i < ind_ndim; ++i) {
+  //       ograd_tail_shape[i] = 1;
+  //     }
+  //     for (int i = ind_ndim; i < NDim; ++i) {
+  //       ograd_pre_shape[i] = 1;
+  //     }
+  //     for (int i = NDim - 1, j = grad_val.shape_.ndim() - 1; i >= 0; --i, --j) {
+  //       val_shape[i] = (j >= 0) ? val.shape_[j] : 1;
+  //     }
+  //     mshadow::Shape<NDim>ograd_pre_stride = mxnet_op::calc_stride(ograd_pre_shape);
+  //     mshadow::Shape<NDim>val_stride = mxnet_op::calc_stride(val_shape);
+  //     MSHADOW_REAL_TYPE_SWITCH(ograd.type_flag_, OType, {
+  //       IndexAddOpBackwardValCalc<xpu, DType, OType>(
+  //         s, grad_val.dptr<DType>(), ograd.dptr<OType>(),
+  //         ograd_tail_shape, ograd_pre_stride, val_stride, val_shape,
+  //         tail_size, ind_num, ind_ndim, vec_ind.data());
+  //     });
+  //   });
+  // });
 }
 
 }   // namespace op
