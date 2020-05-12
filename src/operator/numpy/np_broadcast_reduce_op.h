@@ -269,7 +269,7 @@ namespace mxnet_op {
 struct set_to_nan {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out) {
-    out[i] = DType(static_cast<DType>(0) / static_cast<int>(0));
+    out[i] = std::numeric_limits<DType>::quiet_NaN();
   }
 };
 
@@ -300,21 +300,26 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
       LOG(WARNING) << "WARNING: Mean of empty slice.";
       if (mxnet::common::is_float(outputs[0].type_flag_)) {
         MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-          Kernel<set_to_nan, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
+          Kernel<set_to_nan, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                          outputs[0].dptr<DType>());
         });
       } else {
-        LOG(WARNING) << "WARNING: nan is outside the range of representable values of type 'int'";
+        LOG(WARNING) << "WARNING: nan is outside the range of"<<
+                        "representable values of type 'int'";
         MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-          Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
+          Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                        outputs[0].dptr<DType>());
         });
       }
     } else if (std::is_same<reducer, mshadow_op::sum>::value) {
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-        Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
+        Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                      outputs[0].dptr<DType>());
       });
     } else {
       MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-        Kernel<set_one, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
+        Kernel<set_one, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                     outputs[0].dptr<DType>());
       });
     }
     return;
