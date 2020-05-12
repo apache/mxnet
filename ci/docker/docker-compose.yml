@@ -103,7 +103,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu
-      target: gpuwithcompatenv
+      target: gpu
       args:
         BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
       cache_from:
