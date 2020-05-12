@@ -47,9 +47,14 @@ std::vector<NDArray*> Invoke(const nnvm::Op* op,
                              int* num_outputs,
                              NDArray** outputs);
 
+bool is_recording();
+bool is_deferred_compute();
+
 template<typename T>
 void SetAttrDict(nnvm::NodeAttrs* attrs) {
-  ::dmlc::get<T>(attrs->parsed).SetAttrDict(&(attrs->dict));
+  if (is_recording() || is_deferred_compute()) {
+    ::dmlc::get<T>(attrs->parsed).SetAttrDict(&(attrs->dict));
+  }
 }
 
 template<typename ValueType, typename T>
