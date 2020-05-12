@@ -181,7 +181,7 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
                                                      vec_ind.data());
       });
     });
-  });   
+  });
 }
 
 template<typename DType, typename OType, int NDim>
@@ -259,17 +259,16 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   int ndim = ograd.shape_.ndim();
   size_t tail_size = ograd.shape_.ProdShape(ind_ndim, ndim);
   MSHADOW_TYPE_SWITCH(grad_a.type_flag_, DType, {
-    // Kernel<mxnet_op::set_zero, xpu>::Launch(s, grad_a.shape_.Size(), grad_a.dptr<DType>());
     MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
       MXNET_NDIM_SWITCH(ndim, NDim, {
         mshadow::Shape<NDim> stride = mxnet_op::calc_stride(ograd.shape_.get<NDim>());
-        IndexAddOpBackwardACalc<xpu, DType, OType, NDim>(s, grad_a.dptr<DType>(), ograd.dptr<OType>(),
-          stride, tail_size, ind_num, ind_ndim, vec_ind.data(), req[0]);
+        IndexAddOpBackwardACalc<xpu, DType, OType, NDim>(s, grad_a.dptr<DType>(),
+          ograd.dptr<OType>(), stride, tail_size, ind_num, ind_ndim,
+          vec_ind.data(), req[0]);
       });
     });
   });
   MSHADOW_TYPE_SWITCH(grad_val.type_flag_, DType, {
-    // Kernel<mxnet_op::set_zero, xpu>::Launch(s, grad_val.shape_.Size(), grad_val.dptr<DType>());
     MXNET_NDIM_SWITCH(ndim, NDim, {
       mshadow::Shape<NDim>ograd_shape = ograd.shape_.get<NDim>();
       mshadow::Shape<NDim>ograd_pre_shape(ograd_shape);
