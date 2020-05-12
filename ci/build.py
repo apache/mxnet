@@ -193,8 +193,9 @@ def container_run(docker_client: SafeDockerClient,
 
     # Equivalent command
     docker_cmd_list = [
-        get_docker_binary(nvidia_runtime),
+        "docker",
         'run',
+        "--gpus all" if nvidia_runtime else "",
         "--cap-add",
         "SYS_PTRACE", # Required by ASAN
         '--rm',

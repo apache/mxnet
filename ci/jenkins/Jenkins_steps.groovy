@@ -146,7 +146,7 @@ def compile_unix_int64_cpu() {
 
 def compile_unix_int64_gpu() {
     return ['GPU: USE_INT64_TENSOR_SIZE': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/build-gpu-int64') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
@@ -751,7 +751,7 @@ def test_unix_python3_mkl_cpu() {
 
 def test_unix_python3_gpu() {
     return ['Python3: GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-python3-gpu') {
           try {
             utils.unpack_and_init('gpu', mx_lib_cython)
@@ -867,7 +867,7 @@ def test_unix_python3_mkldnn_mkl_cpu() {
 
 def test_unix_python3_mkldnn_gpu() {
     return ['Python3: MKLDNN-GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-python3-mkldnn-gpu') {
           try {
             utils.unpack_and_init('mkldnn_gpu', mx_mkldnn_lib)
@@ -883,7 +883,7 @@ def test_unix_python3_mkldnn_gpu() {
 
 def test_unix_python3_mkldnn_nocudnn_gpu() {
     return ['Python3: MKLDNN-GPU-NOCUDNN': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
           try {
             utils.unpack_and_init('mkldnn_gpu_nocudnn', mx_mkldnn_lib)
@@ -917,7 +917,7 @@ def test_unix_python3_tensorrt_gpu() {
 
 def test_unix_python3_integration_gpu() {
     return ['Python Integration GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
@@ -929,24 +929,9 @@ def test_unix_python3_integration_gpu() {
     }]
 }
 
-def test_unix_caffe_gpu() {
-    return ['Caffe GPU': {
-        node(NODE_LINUX_GPU) {
-            ws('workspace/it-caffe') {
-            timeout(time: max_time, unit: 'MINUTES') {
-                utils.init_git()
-                utils.unpack_lib('gpu', mx_lib)
-                utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_caffe', true)
-                utils.publish_test_coverage()
-            }
-            }
-        }
-    }]
-}
-
 def test_unix_cpp_package_gpu() {
-    return ['cpp-package GPU': {
-      node(NODE_LINUX_GPU) {
+    return ['cpp-package GPU Makefile': {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-cpp-package') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib_cpp_examples)
@@ -959,8 +944,8 @@ def test_unix_cpp_package_gpu() {
 }
 
 def test_unix_capi_cpp_package() {
-    return ['capi-cpp-package GPU': {
-      node(NODE_LINUX_GPU) {
+    return ['capi-cpp-package GPU Makefile': {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-capi-cpp-package') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu_mkldnn_cpp_test', mx_lib_cpp_capi)
@@ -1001,8 +986,8 @@ def test_unix_scala_mkldnn_cpu(){
 }
 
 def test_unix_scala_gpu() {
-    return ['Scala: GPU': {
-      node(NODE_LINUX_GPU) {
+    return ['Scala: GPU Makefile': {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-scala-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
@@ -1085,7 +1070,7 @@ def test_unix_perl_cpu() {
 
 def test_unix_cpp_gpu() {
     return ['Cpp: GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-cpp-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('cmake_gpu', mx_cmake_lib)
@@ -1126,8 +1111,8 @@ def test_unix_cpp_cpu() {
 }
 
 def test_unix_perl_gpu() {
-    return ['Perl: GPU': {
-      node(NODE_LINUX_GPU) {
+    return ['Perl: GPU Makefile': {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-perl-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
@@ -1141,7 +1126,7 @@ def test_unix_perl_gpu() {
 
 def test_unix_r_gpu() {
     return ['R: GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-r-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
@@ -1209,7 +1194,7 @@ def test_unix_distributed_kvstore_cpu() {
 
 def test_unix_distributed_kvstore_gpu() {
     return ['dist-kvstore tests GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('gpu', mx_lib)
