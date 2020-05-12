@@ -408,7 +408,7 @@ class TestSafeDockerRun(unittest.TestCase):
         # to the atexit
         for sig in [None, signal.SIGTERM, signal.SIGINT]:
             # Execute the safe docker run script in a different process
-            proc = subprocess.Popen(['./safe_docker_run.py', "--name", container_name, "ubuntu:18.04", "sleep 10"])
+            proc = subprocess.Popen(['python3','safe_docker_run.py', "--name", container_name, "ubuntu:18.04", "sleep 10"])
             # NOTE: we need to wait for the container to come up as not all operating systems support blocking signals
             if wait_for_container(container_name) is False:
                 raise RuntimeError("Test container did not come up")

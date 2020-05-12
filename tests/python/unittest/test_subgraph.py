@@ -21,6 +21,7 @@ import numpy as np
 import mxnet as mx
 import copy
 from mxnet.test_utils import *
+import pytest
 from common import setup_module, with_seed, teardown_module
 from mxnet.gluon.model_zoo.vision import get_model
 
@@ -29,6 +30,7 @@ def make_subgraph(subg, *args):
     return mx.sym._internal._CachedOp(*args, subgraph=js)
 
 @with_seed()
+@pytest.mark.serial
 def test_make_subgraph():
     def make_subgraph1(stype):
         a = mx.symbol.Variable(name='a', stype=stype)
@@ -137,6 +139,7 @@ def test_make_subgraph():
                         rtol=0.001, atol=0.0001)
 
 
+@pytest.mark.serial
 def test_subgraph_with_customOp():
     class MyAdd(mx.operator.CustomOp):
         def forward(self, is_train, req, in_data, out_data, aux):

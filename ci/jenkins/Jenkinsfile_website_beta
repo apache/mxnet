@@ -36,13 +36,13 @@ utils.assign_node_labels(utility: 'restricted-utility', linux_cpu: 'restricted-m
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_unix_lite()
+    custom_steps.compile_unix_lite('libmxnet')
   ])
 
   utils.parallel_stage('Build Docs', [
     // Only building a subset of the docs for previewing on staging
     custom_steps.docs_jekyll(),
-    custom_steps.docs_python()
+    custom_steps.docs_python('libmxnet')
   ])
 
   utils.parallel_stage('Prepare', [

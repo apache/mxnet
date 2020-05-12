@@ -106,11 +106,18 @@ RUN pip3 install --no-cache-dir --upgrade pip && \
     protobuf==3.5.2 \
     tabulate==0.7.5
 
+# Fix the en_DK.UTF-8 locale to test locale invariance
+RUN localedef -i en_DK -f UTF-8 en_DK.UTF-8
+
 ARG USER_ID=0
 COPY install/docker_filepermissions.sh /work/
 RUN /work/docker_filepermissions.sh
 
 ENV PYTHONPATH=./python/
+# Verify that MXNet works correctly when the C locale is set to a locale that uses a comma as the
+# decimal separator. Please see #16134 for an example of a bug caused by incorrect handling of
+# number serialization and deserialization.
+ENV LC_NUMERIC=en_DK.UTF-8
 WORKDIR /work/mxnet
 
 COPY runtime_functions.sh /work/

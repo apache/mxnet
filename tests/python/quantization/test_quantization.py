@@ -353,10 +353,6 @@ def test_quantized_elemwise_mul():
         if is_test_for_native_cpu():
             print('skipped testing quantized_elemwise_mul for native cpu since it is not supported yet')
             return
-        if is_test_for_mkldnn():
-            print('skipped testing quantized_elemwise_mul for mkldnn due to '
-                  'https://github.com/apache/incubator-mxnet/issues/18034')
-            return
         elif qtype != 'int8':
             print('skipped testing quantized_elemwise_mul for not supported data type')
             return

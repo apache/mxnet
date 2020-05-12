@@ -82,10 +82,11 @@ def run_inference(sym, arg_params, aux_params, mnist, all_test_labels, batch_siz
     return percentage
 
 
-def test_tensorrt_inference():
+def test_tensorrt_inference(tmpdir):
     """Run LeNet-5 inference comparison between MXNet and TensorRT."""
     check_tensorrt_installation()
-    mnist = mx.test_utils.get_mnist()
+    path = str(tmpdir)
+    mnist = mx.test_utils.get_mnist(path)
     num_epochs = 10
     batch_size = 128
     model_name = 'lenet5'

@@ -33,4 +33,4 @@ set(USE_F16C OFF CACHE BOOL "Build with x86 F16C instruction support")
 set(USE_LIBJPEG_TURBO ON CACHE BOOL "Build with libjpeg-turbo")
 
 set(CUDACXX "/usr/local/cuda-10.0/bin/nvcc" CACHE STRING "Cuda compiler")
-set(MXNET_CUDA_ARCH "3.0;5.0;6.0;7.0;7.5" CACHE STRING "Cuda architectures")
+set(MXNET_CUDA_ARCH "3.0;5.0;6.0;7.0" CACHE STRING "Cuda architectures")
