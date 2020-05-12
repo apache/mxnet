@@ -155,7 +155,7 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
     }
   }
   size_t a_tail_size = a.shape_.ProdShape(ind_ndim, a_ndim);
-  MSHADOW_TYPE_SWITCH(a.type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(a.type_flag_, DType, {
     MXNET_NDIM_SWITCH(a_ndim, NDim, {
       mxnet_op::copy(s, out, a);
       mshadow::Shape<NDim>a_shape = a.shape_.get<NDim>();
@@ -173,7 +173,7 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
       }
       mshadow::Shape<NDim>a_pre_stride = mxnet_op::calc_stride(a_pre_shape);
       mshadow::Shape<NDim>val_stride = mxnet_op::calc_stride(val_shape);
-      MSHADOW_TYPE_SWITCH(val.type_flag_, VType, {
+      MSHADOW_REAL_TYPE_SWITCH(val.type_flag_, VType, {
         IndexAddForwardCalc<xpu, DType, VType, NDim>(s, ind_num,
                                                      out.dptr<DType>(), val.dptr<VType>(),
                                                      a_tail_shape, a_pre_stride, val_stride,
@@ -258,8 +258,8 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   }
   int ndim = ograd.shape_.ndim();
   size_t tail_size = ograd.shape_.ProdShape(ind_ndim, ndim);
-  MSHADOW_TYPE_SWITCH(grad_a.type_flag_, DType, {
-    MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
+  MSHADOW_REAL_TYPE_SWITCH(grad_a.type_flag_, DType, {
+    MSHADOW_REAL_TYPE_SWITCH(ograd.type_flag_, OType, {
       MXNET_NDIM_SWITCH(ndim, NDim, {
         mshadow::Shape<NDim> stride = mxnet_op::calc_stride(ograd.shape_.get<NDim>());
         IndexAddOpBackwardACalc<xpu, DType, OType, NDim>(s, grad_a.dptr<DType>(),
@@ -268,7 +268,7 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
       });
     });
   });
-  MSHADOW_TYPE_SWITCH(grad_val.type_flag_, DType, {
+  MSHADOW_REAL_TYPE_SWITCH(grad_val.type_flag_, DType, {
     MXNET_NDIM_SWITCH(ndim, NDim, {
       mshadow::Shape<NDim>ograd_shape = ograd.shape_.get<NDim>();
       mshadow::Shape<NDim>ograd_pre_shape(ograd_shape);
@@ -285,7 +285,7 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
       }
       mshadow::Shape<NDim>ograd_pre_stride = mxnet_op::calc_stride(ograd_pre_shape);
       mshadow::Shape<NDim>val_stride = mxnet_op::calc_stride(val_shape);
-      MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
+      MSHADOW_REAL_TYPE_SWITCH(ograd.type_flag_, OType, {
         IndexAddOpBackwardValCalc<xpu, DType, OType>(
           s, grad_val.dptr<DType>(), ograd.dptr<OType>(),
           ograd_tail_shape, ograd_pre_stride, val_stride, val_shape,
