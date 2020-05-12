@@ -2388,7 +2388,7 @@ def test_np_bitwise_not(func, low, high, ndim):
         np_func = getattr(_np, func)
         mx_func = TestUnary(func)
         np_test_data = _np.random.uniform(low, high, shape).astype(_np.int32)
-        mx_test_data = mx.numpy.array(np_test_data)
+        mx_test_data = mx.numpy.array(np_test_data).astype(_np.int32)
         for hybridize in [True, False]:
             if hybridize:
                 mx_func.hybridize()
