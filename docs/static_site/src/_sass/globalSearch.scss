@@ -20,20 +20,61 @@
 }
 
 #global-search-mobile {
-  width: 130px;
-  margin: 5px 10px 5px;
-  padding: 2px 5px 2px 5px;
+  width: 120px;
+  margin-right: 10px;
+  background-color: transparent;
   border: 0px;
-  border-radius: 4px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
   outline: none;
   font-size: 1em;
-  color: gray;
+  color: white;
+}
+
+#gs-search-icon-mobile {
+  background: url(/assets/img/search-icon.svg) center no-repeat;
+  background-size: 1em;
+  height: 30px;
+  width: 30px;
+  position: relative;
+  top: 10px;
+  cursor: pointer;
+  display: inline-block;
+}
+
+#global-search-dropdown-container-mobile {
+  display: inline-block;
+  position: absolute;
+  right: 10px;
+}
+
+#global-search-dropdown-container-mobile button {
+  background-color: inherit;
+  margin: 0px;
+  border: none;
+  outline: 0;
+  height: 37px;
+  padding: 0px;
+  cursor: pointer;
+}
+
+.gs-version-dropdown-mobile {
+  display: none;
+  position: absolute;
+  text-align: center;
+  background-color: whitesmoke;
+  box-shadow: none;
+  z-index: 1;
+  margin: 0px;
+  padding: 0px;
+  left: -50px;
+  list-style-type: none;
 }
 
 #global-search-mobile-border {
   line-height: 25px;
 }
 
+#global-search-mobile::placeholder,
 #global-search::placeholder {
   color: #eeeeee;
 }
@@ -62,6 +103,12 @@
 /* Main dropdown wrapper */
 #global-search-mobile-border .algolia-autocomplete .ds-dropdown-menu {
   min-width: 80vw;
+  max-height: 90vw;
+}
+
+.algolia-autocomplete .ds-dropdown-menu {
+  max-height: 60vw;
+  overflow-y: scroll;
 }
 
 /* Main category (eg. Getting Started) */
@@ -111,7 +158,10 @@
   cursor: pointer;
 }
 
-.gs-current-version .dropdown-caret {
+#global-search-dropdown-container-mobile
+  .gs-current-version-mobile
+  .gs-dropdown-caret,
+#global-search-dropdown-container .gs-current-version .gs-dropdown-caret {
   position: relative;
   top: 4px;
   height: 18px;
@@ -129,7 +179,7 @@ ul.gs-version-dropdown {
   list-style-type: none;
 }
 
-li.gs-opt.versions {
+li.gs-opt.gs-versions {
   padding: 10px;
   cursor: pointer;
 }
@@ -138,11 +188,13 @@ li.gs-opt.versions {
   color: #ff4500 !important;
 }
 
+.gs-version-dropdown-mobile li.active,
 .gs-version-dropdown li.active {
   color: #ff4500 !important;
   font-weight: lighter;
 }
 
+.gs-version-dropdown-mobile li,
 .gs-version-dropdown li {
   color: #424242;
   text-decoration: none;

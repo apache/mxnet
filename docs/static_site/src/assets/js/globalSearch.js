@@ -7,14 +7,6 @@ $(document).ready(function () {
     debug: false, // Set debug to true if you want to inspect the dropdown
   });
 
-  const globalSearchMobile = docsearch({
-    apiKey: "500f8e78748bd043cc6e4ac130e8c0e7",
-    indexName: "apache_mxnet",
-    inputSelector: "#global-search-mobile",
-    algoliaOptions: { facetFilters: ["version:1.6"], hitsPerPage: 5 },
-    debug: false, // Set debug to true if you want to inspect the dropdown
-  });
-
   $("#gs-search-icon").click(function () {
     $(".trigger").fadeOut("fast", function () {
       $("#global-search-form").css("display", "inline-block");
@@ -50,17 +42,42 @@ $(document).ready(function () {
   $("ul.gs-version-dropdown li").each(function () {
     $(this).on("click", function () {
       $("#global-search").val("");
-      $("li.gs-opt.active").removeClass("active");
+      $(".gs-version-dropdown li.gs-opt.active").removeClass("active");
       $(this).addClass("active");
       $("#gs-current-version-label").html(this.innerHTML);
       globalSearch.algoliaOptions = {
         facetFilters: ["version:" + this.innerHTML],
-        hitsPerPage: 5,
       };
     });
   });
 
   $(document).click(function () {
     $(".gs-version-dropdown").hide();
+    $(".gs-version-dropdown-mobile").hide();
+  });
+
+  const globalSearchMobile = docsearch({
+    apiKey: "500f8e78748bd043cc6e4ac130e8c0e7",
+    indexName: "apache_mxnet",
+    inputSelector: "#global-search-mobile",
+    algoliaOptions: { facetFilters: ["version:1.6"], hitsPerPage: 5 },
+    debug: false, // Set debug to true if you want to inspect the dropdown
+  });
+
+  $("#global-search-dropdown-container-mobile").click(function (e) {
+    $(".gs-version-dropdown-mobile").toggle();
+    e.stopPropagation();
+  });
+
+  $("ul.gs-version-dropdown-mobile li").each(function () {
+    $(this).on("click", function () {
+      $("#global-search-mobile").val("").attr("placeholder", "v - " + this.innerHTML);
+      $(".gs-version-dropdown-mobile li.gs-opt.active").removeClass("active");
+      $(this).addClass("active");
+      globalSearchMobile.algoliaOptions = {
+        facetFilters: ["version:" + this.innerHTML],
+        hitsPerPage: 5,
+      };
+    });
   });
 });
