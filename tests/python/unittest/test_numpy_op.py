@@ -2560,6 +2560,7 @@ def test_np_binary_funcs():
 
 @with_seed()
 @use_np
+@pytest.mark.flaky()
 def test_np_mixed_precision_binary_funcs():
     itypes = [np.bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
