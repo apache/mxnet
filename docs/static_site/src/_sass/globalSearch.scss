@@ -1,152 +1,152 @@
 .trigger {
-    float: right;
+  float: right;
 }
 
 .gs-search-border {
-    padding-left: 25px;
-    float: right;
+  padding-left: 25px;
+  float: right;
 }
 
 #global-search {
-    width: 0px;
-    border: 0px;
-    background-color: transparent;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.12);
-    outline: none;
-    font-size: 1em;
-    color: #ffffff;
-    display: inline-block;
-    margin-bottom: 19px;
+  width: 0px;
+  border: 0px;
+  background-color: transparent;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  outline: none;
+  font-size: 1em;
+  color: #ffffff;
+  display: inline-block;
+  margin-bottom: 19px;
 }
 
 #global-search-mobile {
-    width: 130px;
-    margin: 5px 10px 5px;
-    padding: 2px 5px 2px 5px;
-    border: 0px;
-    border-radius: 4px;
-    outline: none;
-    font-size: 1em;
-    color: gray;
+  width: 130px;
+  margin: 5px 10px 5px;
+  padding: 2px 5px 2px 5px;
+  border: 0px;
+  border-radius: 4px;
+  outline: none;
+  font-size: 1em;
+  color: gray;
 }
 
 #global-search-mobile-border {
-    line-height: 25px;
+  line-height: 25px;
 }
 
 #global-search::placeholder {
-    color: #eeeeee;
+  color: #eeeeee;
 }
 
 #gs-search-icon {
-    background: url(/assets/img/search-icon.svg) center no-repeat;
-    background-size: 1em;
-    height: 30px;
-    width: 30px;
-    position: relative;
-    top: 10px;
-    cursor: pointer;
-    display: inline-block;
+  background: url(/assets/img/search-icon.svg) center no-repeat;
+  background-size: 1em;
+  height: 30px;
+  width: 30px;
+  position: relative;
+  top: 10px;
+  cursor: pointer;
+  display: inline-block;
 }
 
 #global-search-form {
-    display: none;
-    padding: 5px;
-    line-height: 1em;
+  display: none;
+  padding: 5px;
+  line-height: 1em;
 }
 
 #global-search-close {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 /* Main dropdown wrapper */
 #global-search-mobile-border .algolia-autocomplete .ds-dropdown-menu {
-    min-width: 80vw;
+  min-width: 80vw;
 }
 
 /* Main category (eg. Getting Started) */
 .algolia-autocomplete .algolia-docsearch-suggestion--category-header {
-    color: #000000;
-    text-align: center;
+  color: #000000;
+  text-align: center;
 }
 
 /* Category (eg. Downloads) */
 .algolia-autocomplete .algolia-docsearch-suggestion--subcategory-column {
-    color: gray;
+  color: gray;
 }
 
 /* Title (eg. Bootstrap CDN) */
 .algolia-autocomplete .algolia-docsearch-suggestion--title {
-    color: black;
-    font-weight: 300;
+  color: black;
+  font-weight: 300;
 }
 
 /* Description description (eg. Bootstrap currently works...) */
 .algolia-autocomplete .algolia-docsearch-suggestion--text {
-    font-size: 0.8rem;
-    color: gray;
+  font-size: 0.8rem;
+  color: gray;
 }
 
 /* Highlighted text */
 .algolia-autocomplete .algolia-docsearch-suggestion--highlight {
-    color: blue;
+  color: blue;
 }
 
 #global-search-dropdown-container {
-    display: inline-block;
-    position: relative;
+  display: inline-block;
+  position: relative;
 }
 
 #global-search-dropdown-container button {
-    background-color: inherit;
-    color: white;
-    font-size: 17px;
-    margin: 0px;
-    border: none;
-    min-width: 100%;
-    outline: 0;
-    height: 37px;
-    width: 90px;
-    padding: 0px;
-    cursor: pointer;
+  background-color: inherit;
+  color: white;
+  font-size: 17px;
+  margin: 0px;
+  border: none;
+  min-width: 100%;
+  outline: 0;
+  height: 37px;
+  width: 90px;
+  padding: 0px;
+  cursor: pointer;
 }
 
 .gs-current-version .dropdown-caret {
-    position: relative;
-    top: 4px;
+  position: relative;
+  top: 4px;
 }
 
 ul.gs-version-dropdown {
-    display: none;
-    position: absolute;
-    text-align: center;
-    background-color: whitesmoke;
-    box-shadow: none;
-    z-index: 1;
-    margin: 0px;
-    padding: 0px;
-    list-style-type: none;
+  display: none;
+  position: absolute;
+  text-align: center;
+  background-color: whitesmoke;
+  box-shadow: none;
+  z-index: 1;
+  margin: 0px;
+  padding: 0px;
+  list-style-type: none;
 }
 
 li.gs-opt.versions {
-    padding: 10px;
-    cursor: pointer;
+  padding: 10px;
+  cursor: pointer;
 }
 
 .gs-version-dropdown li:hover {
-    color: #ff4500 !important;
+  color: #ff4500 !important;
 }
 
 .gs-version-dropdown li.active {
-    color: #ff4500 !important;
-    font-weight: lighter;
+  color: #ff4500 !important;
+  font-weight: lighter;
 }
 
 .gs-version-dropdown li {
-    color: #424242;
-    text-decoration: none;
-    display: block;
-    padding-left: 5px;
-    padding-right: 5px;
-    font-size: 17px;
+  color: #424242;
+  text-decoration: none;
+  display: block;
+  padding-left: 5px;
+  padding-right: 5px;
+  font-size: 17px;
 }
