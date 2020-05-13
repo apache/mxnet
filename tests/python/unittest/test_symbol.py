@@ -485,9 +485,7 @@ def test_eliminate_common_expr():
     arr2 = mx.random.uniform(shape=shape)
     arr3 = mx.random.uniform(shape=shape)
 
-    check_cse_on_symbol((a+5) + (a+5), expected_savings=1, check_data=True, a=arr1, b=arr2)
     check_cse_on_symbol((a+1) + (a+2), expected_savings=0, check_data=True, a=arr1, b=arr2)
-    check_cse_on_symbol((1+a) + (a+1), expected_savings=1, check_data=True, a=arr1, b=arr2)
     check_cse_on_symbol((a+b) + (a+b), expected_savings=1, check_data=True, a=arr1, b=arr2)
     check_cse_on_symbol(((a+b)+c) +((a+b)+c), expected_savings=2, check_data=True,
                                                                   a=arr1, b=arr2, c=arr3)
