@@ -36,7 +36,7 @@ $(document).ready(function () {
     "0.11.0",
   ];
 
-  // bind docserach
+  // bind docsearch
   const globalSearch = docsearch({
     apiKey: "500f8e78748bd043cc6e4ac130e8c0e7",
     indexName: "apache_mxnet",
