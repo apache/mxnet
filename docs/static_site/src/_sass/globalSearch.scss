@@ -103,14 +103,18 @@
 }
 
 /* Main dropdown wrapper */
+.algolia-autocomplete .ds-dropdown-menu {
+  max-height: 60vw;
+  overflow-y: scroll;
+}
+
 #global-search-mobile-border .algolia-autocomplete .ds-dropdown-menu {
   min-width: 80vw;
   max-height: 90vw;
 }
 
-.algolia-autocomplete .ds-dropdown-menu {
-  max-height: 60vw;
-  overflow-y: scroll;
+.gs-search-border .algolia-autocomplete .ds-dropdown-menu {
+  min-width: 680px;
 }
 
 /* Main category (eg. Getting Started) */
