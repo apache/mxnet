@@ -54,12 +54,12 @@ class DeviceStorageProfiler {
       if (prof->IsProfiling(profiler::Profiler::kMemory)) {
         Init();
         const size_t idx = prof->DeviceIndex(handle.ctx.dev_type, handle.ctx.dev_id);
-	// sleep for a few seconds until the mem_counters_ is fully initialized
-	size_t timeout = 1000;
-	while (idx >= mem_counters_.size() && timeout > 0) {
-	  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	  timeout -= 100;
-	}
+        // sleep for a few seconds until the mem_counters_ is fully initialized
+        size_t timeout = 1000;
+        while (idx >= mem_counters_.size() && timeout > 0) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          timeout -= 100;
+        }
         CHECK_LT(idx, mem_counters_.size()) << "Invalid device index: " << idx;
         *mem_counters_[idx] += handle.size;
       }
@@ -76,12 +76,12 @@ class DeviceStorageProfiler {
       if (prof->IsProfiling(profiler::Profiler::kMemory)) {
         Init();  // In case of bug which tries to free first
         const size_t idx = prof->DeviceIndex(handle.ctx.dev_type, handle.ctx.dev_id);
-	// sleep for a few seconds until the mem_counters_ is fully initialized
-	size_t timeout = 1000;
-	while (idx >= mem_counters_.size() && timeout > 0) {
-	  std::this_thread::sleep_for(std::chrono::milliseconds(100));
-	  timeout -= 100;
-	}
+        // sleep for a few seconds until the mem_counters_ is fully initialized
+        size_t timeout = 1000;
+        while (idx >= mem_counters_.size() && timeout > 0) {
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+          timeout -= 100;
+        }
         CHECK_LT(idx, mem_counters_.size()) << "Invalid device index: " << idx;
         if (*mem_counters_[idx] >= handle.size) {
             *mem_counters_[idx] -= handle.size;
