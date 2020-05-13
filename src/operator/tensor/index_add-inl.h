@@ -155,33 +155,33 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
     }
   }
   size_t a_tail_size = a.shape_.ProdShape(ind_ndim, a_ndim);
-  // MSHADOW_REAL_TYPE_SWITCH(a.type_flag_, DType, {
-  //   MXNET_NDIM_SWITCH(a_ndim, NDim, {
-  //     mxnet_op::copy(s, out, a);
-  //     mshadow::Shape<NDim>a_shape = a.shape_.get<NDim>();
-  //     mshadow::Shape<NDim>a_pre_shape(a_shape);
-  //     mshadow::Shape<NDim>a_tail_shape(a_shape);
-  //     mshadow::Shape<NDim>val_shape;
-  //     for (int i = 0; i < ind_ndim; ++i) {
-  //       a_tail_shape[i] = 1;
-  //     }
-  //     for (int i = ind_ndim; i < NDim; ++i) {
-  //       a_pre_shape[i] = 1;
-  //     }
-  //     for (int i = NDim - 1, j = val_ndim - 1; i >= 0; --i, --j) {
-  //       val_shape[i] = (j >= 0) ? val.shape_[j] : 1;
-  //     }
-  //     mshadow::Shape<NDim>a_pre_stride = mxnet_op::calc_stride(a_pre_shape);
-  //     mshadow::Shape<NDim>val_stride = mxnet_op::calc_stride(val_shape);
-  //     MSHADOW_REAL_TYPE_SWITCH(val.type_flag_, VType, {
-  //       IndexAddForwardCalc<xpu, DType, VType, NDim>(s, ind_num,
-  //                                                    out.dptr<DType>(), val.dptr<VType>(),
-  //                                                    a_tail_shape, a_pre_stride, val_stride,
-  //                                                    val_shape, a_tail_size, ind_ndim,
-  //                                                    vec_ind.data());
-  //     });
-  //   });
-  // });
+  MXNET_NDIM_SWITCH(a_ndim, NDim, {
+    mxnet_op::copy(s, out, a);
+    mshadow::Shape<NDim>a_shape = a.shape_.get<NDim>();
+    mshadow::Shape<NDim>a_pre_shape(a_shape);
+    mshadow::Shape<NDim>a_tail_shape(a_shape);
+    mshadow::Shape<NDim>val_shape;
+    for (int i = 0; i < ind_ndim; ++i) {
+      a_tail_shape[i] = 1;
+    }
+    for (int i = ind_ndim; i < NDim; ++i) {
+      a_pre_shape[i] = 1;
+    }
+    for (int i = NDim - 1, j = val_ndim - 1; i >= 0; --i, --j) {
+      val_shape[i] = (j >= 0) ? val.shape_[j] : 1;
+    }
+    mshadow::Shape<NDim>a_pre_stride = mxnet_op::calc_stride(a_pre_shape);
+    mshadow::Shape<NDim>val_stride = mxnet_op::calc_stride(val_shape);
+    MSHADOW_REAL_TYPE_SWITCH(a.type_flag_, DType, {
+      MSHADOW_REAL_TYPE_SWITCH(val.type_flag_, VType, {
+        IndexAddForwardCalc<xpu, DType, VType, NDim>(s, ind_num,
+                                                     out.dptr<DType>(), val.dptr<VType>(),
+                                                     a_tail_shape, a_pre_stride, val_stride,
+                                                     val_shape, a_tail_size, ind_ndim,
+                                                     vec_ind.data());
+      });
+    });
+  });
 }
 
 template<typename DType, typename OType, int NDim>
