@@ -22,14 +22,64 @@
 */
 
 $(document).ready(function () {
+  const DEFAULT_CURRENT_VERSION = "1.6";
+  const VERSIONS = [
+    "master",
+    "1.6",
+    "1.5.0",
+    "1.4.1",
+    "1.3.1",
+    "1.2.1",
+    "1.1.0",
+    "1.0.0",
+    "0.12.1",
+    "0.11.0",
+  ];
+
+  // bind docserach
   const globalSearch = docsearch({
     apiKey: "500f8e78748bd043cc6e4ac130e8c0e7",
     indexName: "apache_mxnet",
     inputSelector: "#global-search",
-    algoliaOptions: { facetFilters: ["version:1.6"], hitsPerPage: 5 },
+    algoliaOptions: {
+      facetFilters: ["version:" + DEFAULT_CURRENT_VERSION],
+      hitsPerPage: 5,
+    },
     debug: false, // Set debug to true if you want to inspect the dropdown
   });
 
+  const globalSearchMobile = docsearch({
+    apiKey: "500f8e78748bd043cc6e4ac130e8c0e7",
+    indexName: "apache_mxnet",
+    inputSelector: "#global-search-mobile",
+    algoliaOptions: {
+      facetFilters: ["version:" + DEFAULT_CURRENT_VERSION],
+      hitsPerPage: 5,
+    },
+    debug: false, // Set debug to true if you want to inspect the dropdown
+  });
+
+  // dynamically generate version dropdown
+  // to add new version options: edit above constants VERSIONS and DEFAULT_CURRENT_VERSION
+  $("ul.gs-version-dropdown").append(
+    VERSIONS.map(function (version) {
+      const liNode = $("<li>", { class: "gs-opt gs-versions", text: version });
+      if (version === DEFAULT_CURRENT_VERSION) liNode.addClass("active");
+      return liNode;
+    })
+  );
+
+  $("#gs-current-version-label").text(DEFAULT_CURRENT_VERSION);
+
+  $("ul.gs-version-dropdown-mobile").append(
+    VERSIONS.map(function (version) {
+      const liNode = $("<li>", { class: "gs-opt gs-versions", text: version });
+      if (version === DEFAULT_CURRENT_VERSION) liNode.addClass("active");
+      return liNode;
+    })
+  );
+
+  // search bar animation and event listeners for desktop 
   $("#gs-search-icon").click(function () {
     $(".trigger").fadeOut("fast", function () {
       $("#global-search-form").css("display", "inline-block");
@@ -74,19 +124,7 @@ $(document).ready(function () {
     });
   });
 
-  $(document).click(function () {
-    $(".gs-version-dropdown").hide();
-    $(".gs-version-dropdown-mobile").hide();
-  });
-
-  const globalSearchMobile = docsearch({
-    apiKey: "500f8e78748bd043cc6e4ac130e8c0e7",
-    indexName: "apache_mxnet",
-    inputSelector: "#global-search-mobile",
-    algoliaOptions: { facetFilters: ["version:1.6"], hitsPerPage: 5 },
-    debug: false, // Set debug to true if you want to inspect the dropdown
-  });
-
+  // search bar event listeners for mobile and tablet 
   $("#global-search-dropdown-container-mobile").click(function (e) {
     $(".gs-version-dropdown-mobile").toggle();
     e.stopPropagation();
@@ -94,7 +132,9 @@ $(document).ready(function () {
 
   $("ul.gs-version-dropdown-mobile li").each(function () {
     $(this).on("click", function () {
-      $("#global-search-mobile").val("").attr("placeholder", "v - " + this.innerHTML);
+      $("#global-search-mobile")
+        .val("")
+        .attr("placeholder", "v - " + this.innerHTML);
       $(".gs-version-dropdown-mobile li.gs-opt.active").removeClass("active");
       $(this).addClass("active");
       globalSearchMobile.algoliaOptions = {
@@ -102,5 +142,11 @@ $(document).ready(function () {
         hitsPerPage: 5,
       };
     });
+  });
+
+  // Common logic
+  $(document).click(function () {
+    $(".gs-version-dropdown").hide();
+    $(".gs-version-dropdown-mobile").hide();
   });
 });
