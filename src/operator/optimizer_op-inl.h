@@ -1040,8 +1040,7 @@ struct NAGMomKernel {
     grad_rescaled += param_wd * weight_data[i];
     mom_data[i] *= param_momentum;
     mom_data[i] -= grad_rescaled;
-    KERNEL_ASSIGN(out_data[i], req, weight_data[i] + param_lr * (param_momentum * mom_data[i]
-			   - grad_rescaled));
+    KERNEL_ASSIGN(out_data[i], req, weight_data[i]+param_lr*(param_momentum*mom_data[i]-grad_rescaled));
   }
 };
 
