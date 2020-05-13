@@ -137,6 +137,12 @@ def _clip_prob(prob, F):
     return F.np.clip(prob, eps, 1 - eps)
 
 
+def _clip_float_eps(value, F):
+    import numpy as onp
+    eps = onp.finfo('float32').eps
+    return F.np.maximum(value, eps)
+
+
 def prob2logit(prob, binary=True, F=None):
     r"""Convert probability to logit form.
     For the binary case, the logit stands for log(p / (1 - p)).

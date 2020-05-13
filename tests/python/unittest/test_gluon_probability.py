@@ -2038,10 +2038,10 @@ def test_gluon_kl():
             param1 = lambda: np.random.uniform(0.5, 1.5, shape)
             param2 = lambda: np.random.uniform(0.5, 1.5, shape)
             _test_zero_kl(_dist_factory(dist, param1, param2), shape)
-            # if monte_carlo_test:
-            #     _test_monte_carlo(_dist_factory(dist, param1, param2),
-            #                     _dist_factory(dist, param1, param2),
-            #                     repeated_times)
+            if monte_carlo_test:
+                _test_monte_carlo(_dist_factory(dist, param1, param2),
+                                _dist_factory(dist, param1, param2),
+                                50000)
     
     for shape in shapes:
         n = _np.random.randint(5, 10)
@@ -2065,12 +2065,12 @@ def test_gluon_kl():
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         desired_shape = (batch_shape if batch_shape is not None else ())
         dist = mgp.Dirichlet
-        alpha = lambda: np.random.uniform(size=(desired_shape + (event_shape,)))
+        alpha = lambda: np.random.uniform(0.5, 1.5, size=(desired_shape + (event_shape,)))
         _test_zero_kl(_dist_factory(dist, alpha), desired_shape)
-        # if monte_carlo_test:
-        #     _test_monte_carlo(_dist_factory(dist, alpha),
-        #                       _dist_factory(dist, alpha),
-        #                       100000)
+        if monte_carlo_test:
+            _test_monte_carlo(_dist_factory(dist, alpha),
+                              _dist_factory(dist, alpha),
+                              50000)
 
     # categorical, One-hot categorical
     for dist in [mgp.Categorical, mgp.OneHotCategorical]:

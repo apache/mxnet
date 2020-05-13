@@ -49,10 +49,10 @@ class Beta(ExponentialFamily):
 
     def sample(self, size=None):
         F = self.F
-        X = _clip_prob(F.np.random.gamma(self.alpha, 1, size=size), F)
-        Y = _clip_prob(F.np.random.gamma(self.beta, 1, size=size), F)
+        X = F.np.random.gamma(self.alpha, 1, size=size)
+        Y = F.np.random.gamma(self.beta, 1, size=size)
         out = X / (X + Y)
-        return out
+        return _clip_prob(out, F)
     
     def sample_n(self, size=None):
         F = self.F
