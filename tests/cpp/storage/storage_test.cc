@@ -50,8 +50,8 @@ TEST(Storage, Basic_CPU) {
 #if MXNET_USE_CUDA
 TEST(Storage_GPU, Basic_GPU) {
   if (mxnet::test::unitTestsWithCuda) {
-    putenv("MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF=20");
-    putenv("MXNET_GPU_MEM_POOL_TYPE=Round");
+    setenv("MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF", "20", 1);
+    setenv("MXNET_GPU_MEM_POOL_TYPE", "Round", 1);
 
     auto &&storage = mxnet::Storage::Get();
     mxnet::Context context_gpu = mxnet::Context::GPU(0);

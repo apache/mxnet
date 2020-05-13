@@ -316,14 +316,14 @@ def test_zero_prop():
         data = data * data
 
     exe = data.simple_bind(ctx=mx.cpu(), data=(10, 3, 256, 256))
-    big = int(re.search('Total (\d+) MB allocated', exe.debug_str()).group(1))
+    big = int(re.search(r'Total (\d+) MB allocated', exe.debug_str()).group(1))
 
     exe = data.simple_bind(ctx=mx.cpu(), data=(10, 3, 256, 256), grad_req='null')
-    small1 = int(re.search('Total (\d+) MB allocated', exe.debug_str()).group(1))
+    small1 = int(re.search(r'Total (\d+) MB allocated', exe.debug_str()).group(1))
 
     data = mx.sym.stop_gradient(data)
     exe = data.simple_bind(ctx=mx.cpu(), data=(10, 3, 256, 256))
-    small2 = int(re.search('Total (\d+) MB allocated', exe.debug_str()).group(1))
+    small2 = int(re.search(r'Total (\d+) MB allocated', exe.debug_str()).group(1))
 
     assert big > small2
     assert small1 == small2
@@ -351,7 +351,7 @@ def test_zero_prop2():
 
 
 def test_simple_bind_incomplete_shape_inference_in_one_forward_pass():
-    """This is a special case that results in shape inference
+    r"""This is a special case that results in shape inference
     failure after moving simple_bind logic from frontend to backend.
     Added here for testing against the network similar to the following one.
 
@@ -559,6 +559,3 @@ def test_infershape_happens_for_all_ops_in_graph():
 
     assert False
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

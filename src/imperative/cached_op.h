@@ -300,7 +300,7 @@ void SetInputIndices(const nnvm::Graph& fwd_graph,
   const auto& indexed_graph = fwd_graph.indexed_graph();
   if (data_indices->ndim() || param_indices.ndim()) {
     CHECK_EQ(data_indices->ndim() + param_indices.ndim(),
-             indexed_graph.input_nodes().size());
+             static_cast<const int>(indexed_graph.input_nodes().size()));
   } else {
     std::vector<uint32_t> tmp;
     tmp.reserve(indexed_graph.input_nodes().size());
@@ -358,6 +358,10 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   }
 };
 
+namespace io {
+class LazyTransformDataset;
+}
+
 class CachedOp {
   using CachedOpMonCallback =
       std::function<void(const char *, const char *, void *)>;
@@ -366,7 +370,7 @@ class CachedOp {
   CachedOp(
       const nnvm::Symbol& sym,
       const std::vector<std::pair<std::string, std::string> >& flags);
-  ~CachedOp();
+  virtual ~CachedOp();
   uint32_t num_inputs() const {
     return fwd_graph_.indexed_graph().input_nodes().size();
   }
@@ -523,11 +527,9 @@ class CachedOp {
       const Context& default_ctx,
       const std::vector<NDArray*>& inputs,
       const std::vector<NDArray*>& outputs);
-
-
- private:
   struct DynamicRuntime;
 
+ private:
   OpStatePtr DynamicForward(
       const Context& default_ctx,
       const std::vector<NDArray*>& inputs,
@@ -561,6 +563,16 @@ class CachedOp {
 
   std::mutex mutex_;
   std::unordered_map<Context, std::vector<OpStatePtr> > cached_op_states_;
+
+  friend class ::mxnet::io::LazyTransformDataset;
+  nnvm::Symbol sym_;
+  std::vector<std::pair<std::string, std::string> > flags_;
+};
+
+struct CachedOp::DynamicRuntime {
+  GraphInfo info;
+  std::vector<NDArray> buff;
+  std::vector<OpStatePtr> op_states;
 };
 
 using CachedOpPtr = std::shared_ptr<CachedOp>;

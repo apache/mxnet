@@ -81,6 +81,14 @@ typedef void *ExecutorHandle;
 typedef void *DataIterCreator;
 /*! \brief handle to a DataIterator */
 typedef void *DataIterHandle;
+/*! \brief handle a dataset creator */
+typedef void *DatasetCreator;
+/*! \brief handle to a Dataset */
+typedef void *DatasetHandle;
+/*! \brief handle to a BatchifyFunction creator*/
+typedef void *BatchifyFunctionCreator;
+/*! \brief handle to a BatchifyFunction */
+typedef void *BatchifyFunctionHandle;
 /*! \brief handle to KVStore */
 typedef void *KVStoreHandle;
 /*! \brief handle to RecordIO */
@@ -234,9 +242,10 @@ MXNET_DLL const char *MXGetLastError();
 /*!
  * \brief Load library dynamically
  * \param path to the library .so file
+ * \param 0 for quiet, 1 for verbose
  * \return 0 when success, -1 when failure happens.
  */
-MXNET_DLL int MXLoadLib(const char *path);
+MXNET_DLL int MXLoadLib(const char *path, unsigned verbose);
 
 /*!
  * \brief Get list of features supported on the runtime
@@ -1423,6 +1432,44 @@ MXNET_DLL int MXCachedOpRegisterOpHook(NDArrayHandle handle,
                                        CachedOpMonitorCallback callback,
                                        bool monitor_all);
 
+/*!
+ * \brief Get current status of deferred compute mode
+ * \param curr returns the current status.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArrayIsDeferredCompute(int *curr);
+
+/*!
+ * \brief set whether to enable deferred compute mode
+ * \param deferred_compute_enabled 1 to enable, 0 to disable.
+ * \param prev returns the previous status before this set.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArraySetIsDeferredCompute(int deferred_compute_enabled, int *prev);
+
+/*!
+ * \brief Associate variables with deferred compute arrays
+ * \param arrays ndarray handles to be matched with variables
+ * \param variables symbol handles of variables to be matched with ndarrays
+ * \param num number of arrays and variables respectively
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXNDArraySetDeferredComputeVariable(NDArrayHandle *arrays,
+                                                  SymbolHandle *variables,
+                                                  int num);
+
+/*!
+ * \brief Convert the graph constructed during deferred computation mode to a Symbol.
+ * \param output_handles ndarray handles of outputs
+ * \param out grouped output symbol handle
+ *
+ * Construct a Symbol for the deferred computation graph. output_handles
+ * specifies the outputs of interest which the returned symbol will compute.
+ */
+MXNET_DLL int MXNDArrayGetDeferredComputeSymbol(NDArrayHandle *output_handles,
+                                                int num_outputs,
+                                                SymbolHandle *out);
+
 //--------------------------------------------
 // Part 3: symbolic configuration generation
 //--------------------------------------------
@@ -1501,6 +1548,10 @@ MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                           const char **return_type DEFAULT(NULL));
 /*!
  * \brief Create an AtomicSymbol.
+ *
+ * A Symbol is said to be atomic if it is not composed of other Symbols. Atomic
+ * Symbols can be composed.
+ *
  * \param creator the AtomicSymbolCreator
  * \param num_param the number of parameters
  * \param keys the keys to the params
@@ -2177,11 +2228,19 @@ MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    const char* backend_name,
                                    const int dev_type,
                                    SymbolHandle* ret_sym_handle,
-                                   const mx_uint len,
+                                   const mx_uint args_len,
                                    NDArrayHandle* in_args_handle,
+                                   const mx_uint aux_len,
+                                   NDArrayHandle* in_aux_handle,
                                    const mx_uint num_options,
                                    const char** keys,
-                                   const char** vals);
+                                   const char** vals,
+                                   int* new_args_cnt,
+                                   NDArrayHandle** new_args_handle,
+                                   char*** new_arg_names_handle,
+                                   int* new_aux_cnt,
+                                   NDArrayHandle** new_aux_handle,
+                                   char*** new_aux_names_handle);
 
 
 //--------------------------------------------
@@ -2620,6 +2679,13 @@ MXNET_DLL int MXDataIterNext(DataIterHandle handle,
 MXNET_DLL int MXDataIterBeforeFirst(DataIterHandle handle);
 
 /*!
+ * \brief Call iterator.GetLenHint. Note that some iterators don't provide length.
+ * \param handle the handle to iterator
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetLenHint(DataIterHandle handle,
+                                   int64_t *len);
+/*!
  * \brief Get the handle to the NDArray of underlying data
  * \param handle the handle pointer to the data iterator
  * \param out handle to underlying data NDArray
@@ -2654,6 +2720,147 @@ MXNET_DLL int MXDataIterGetPadNum(DataIterHandle handle,
  */
 MXNET_DLL int MXDataIterGetLabel(DataIterHandle handle,
                                  NDArrayHandle *out);
+/*!
+ * \brief Get the handles to specified underlying ndarrays of index
+ * \param handle the handle pointer to the data iterator
+ * \param num_outputs the length of outputs
+ * \param out the handle to an array of NDArrays that stores pointers to handles
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDataIterGetItems(DataIterHandle handle,
+                                int* num_outputs,
+                                NDArrayHandle **outputs);
+
+/*!
+ * \brief List all the available dataset entries
+ * \param out_size the size of returned datasets
+ * \param out_array the output dataset entries
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXListDatasets(uint32_t *out_size,
+                             DatasetCreator **out_array);
+/*!
+ * \brief Init an dataset, init with parameters
+ * the array size of passed in arguments
+ * \param handle of the dataset creator
+ * \param num_param number of parameter
+ * \param keys parameter keys
+ * \param vals parameter values
+ * \param out resulting dataset
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDatasetCreateDataset(DatasetCreator handle,
+                                     uint32_t num_param,
+                                     const char **keys,
+                                     const char **vals,
+                                     DatasetHandle *out);
+/*!
+ * \brief Get the detailed information about dataset.
+ * \param creator the DatasetCreator.
+ * \param name The returned name of the creator.
+ * \param description The returned description of the symbol.
+ * \param num_args Number of arguments.
+ * \param arg_names Name of the arguments.
+ * \param arg_type_infos Type informations about the arguments.
+ * \param arg_descriptions Description information about the arguments.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDatasetGetDatasetInfo(DatasetCreator creator,
+                                      const char **name,
+                                      const char **description,
+                                      uint32_t *num_args,
+                                      const char ***arg_names,
+                                      const char ***arg_type_infos,
+                                      const char ***arg_descriptions);
+/*!
+ * \brief Free the handle to the IO module
+ * \param handle the handle pointer to the dataset
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDatasetFree(DatasetHandle handle);
+/*!
+ * \brief Get dataset overal length(size)
+ * \param handle the handle to dataset
+ * \param out return value of GetLen
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDatasetGetLen(DatasetHandle handle,
+                              uint64_t *out);
+/*!
+ * \brief Get Output NDArray given specified indices
+ * \param handle the handle to dataset
+ * \param index the index of the dataset item to be retrieved
+ * \param num_outputs the number of output ndarrays
+ * \param outputs the pointers to handles of ndarrays
+ * \param is_scalar if not zeros then output should be casted to scalars
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXDatasetGetItems(DatasetHandle handle,
+                                uint64_t index,
+                                int* num_outputs,
+                                NDArrayHandle **outputs);
+
+/*!
+ * \brief List all the available batchify function entries
+ * \param out_size the size of returned batchify functions
+ * \param out_array the output batchify function entries
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXListBatchifyFunctions(uint32_t *out_size,
+                                      BatchifyFunctionCreator **out_array);
+/*!
+ * \brief Init an batchify function, init with parameters
+ * the array size of passed in arguments
+ * \param handle of the batchify function creator
+ * \param num_param number of parameter
+ * \param keys parameter keys
+ * \param vals parameter values
+ * \param out resulting batchify function
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXBatchifyFunctionCreateFunction(BatchifyFunctionCreator handle,
+                                     uint32_t num_param,
+                                     const char **keys,
+                                     const char **vals,
+                                     BatchifyFunctionHandle *out);
+/*!
+ * \brief Get the detailed information about batchify function.
+ * \param creator the batchifyFunctionCreator.
+ * \param name The returned name of the creator.
+ * \param description The returned description of the symbol.
+ * \param num_args Number of arguments.
+ * \param arg_names Name of the arguments.
+ * \param arg_type_infos Type informations about the arguments.
+ * \param arg_descriptions Description information about the arguments.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
+                                      const char **name,
+                                      const char **description,
+                                      uint32_t *num_args,
+                                      const char ***arg_names,
+                                      const char ***arg_type_infos,
+                                      const char ***arg_descriptions);
+/*!
+ * \brief Invoke the Batchify Function
+ * \param handle the handle pointer to the batchify function
+ * \param batch_size the batch size
+ * \param num_output the number of ndarrays for output
+ * \param inputs the pointers to input ndarrays
+ * \param ouptuts the pointers to output ndarrays
+ * \return 0 when success, -1 when failure happens
+ */                                      
+MXNET_DLL int MXBatchifyFunctionInvoke(BatchifyFunctionHandle handle,
+                                       int batch_size,
+                                       int num_output,
+                                       NDArrayHandle *inputs,
+                                       NDArrayHandle **outputs);
+/*!
+ * \brief Free the handle to the IO module
+ * \param handle the handle pointer to the batchify function
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXBatchifyFunctionFree(BatchifyFunctionHandle handle);
 //--------------------------------------------
 // Part 6: basic KVStore interface
 //--------------------------------------------

@@ -66,6 +66,7 @@ inline bool CumsumType(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(CumsumParam);
 
 NNVM_REGISTER_OP(_npi_cumsum)
+.add_alias("cumsum")
 .describe(R"code(Return the cumulative sum of the elements along a given axis.)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<CumsumParam>)
 .set_num_inputs(1)

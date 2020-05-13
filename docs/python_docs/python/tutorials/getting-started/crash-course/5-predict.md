@@ -62,7 +62,7 @@ transformer = transforms.Compose([
     transforms.Normalize(0.13, 0.31)])
 ```
 
-Now let's try to predict the first six images in the validation dataset and store the predictions into `preds`.
+Now let's try to predict the first ten images in the validation dataset and store the predictions into `preds`.
 
 ```{.python .input  n=5}
 mnist_valid = datasets.FashionMNIST(train=False)

@@ -25,6 +25,7 @@
 #define MXNET_OPERATOR_NUMPY_NP_PERCENTILE_OP_INL_H_
 
 #include <vector>
+#include <string>
 #include "../tensor/ordering_op-inl.h"
 #include "../tensor/matrix_op-inl.h"
 #include "../../common/utils.h"
@@ -32,6 +33,7 @@
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "np_broadcast_reduce_op.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -64,6 +66,16 @@ struct NumpyPercentileParam : public dmlc::Parameter<NumpyPercentileParam> {
                 "in the result as dimension with size one.");
     DMLC_DECLARE_FIELD(q_scalar).set_default(dmlc::optional<double>())
       .describe("inqut q is a scalar");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s, q_scalar_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    q_scalar_s << q_scalar;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["interpolation"] = MXNetPercentileType2String(interpolation);
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["q_scalar"] = q_scalar_s.str();
   }
 };
 

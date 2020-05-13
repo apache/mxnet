@@ -1254,7 +1254,8 @@ method export(Str $path, :$epoch=0)
         );
     }
     my $sym = $self->_cached_graph->[1];
-    $sym->save("$path-symbol.json");
+    my $sym_filename = "$path-symbol.json";
+    $sym->save($sym_filename);
 
     my %arg_names = map { $_ => 1 } @{ $sym->list_arguments };
     my %aux_names = map { $_ => 1 } @{ $sym->list_auxiliary_states };
@@ -1273,7 +1274,9 @@ method export(Str $path, :$epoch=0)
             $arg_dict{ "aux:$name" } = $param->_reduce;
         }
     }
-    AI::MXNet::NDArray->save(sprintf('%s-%04d.params', $path, $epoch), \%arg_dict);
+    my $params_filename = sprintf('%s-%04d.params', $path, $epoch);
+    AI::MXNet::NDArray->save($params_filename, \%arg_dict);
+    return ($sym_filename, $params_filename);
 }
 
 __PACKAGE__->register('AI::MXNet::Gluon');

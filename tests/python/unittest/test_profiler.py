@@ -20,7 +20,6 @@ import time
 import os
 import csv
 import json
-import unittest
 import numpy as np
 from collections import OrderedDict
 
@@ -28,6 +27,7 @@ import mxnet as mx
 from mxnet import profiler
 from mxnet.gluon import nn
 from common import run_in_spawned_process
+import pytest
 
 
 def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate_stats=False):
@@ -263,7 +263,7 @@ def test_aggregate_stats_sorting():
         for domain_name, domain in target_dict['Time'].items():
             lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
             check_ascending(lst, ascending)
-        # Memory items do not have stat 'Total' 
+        # Memory items do not have stat 'Total'
         if sort_by != 'total':
             for domain_name, domain in target_dict['Memory'].items():
                 lst = [item[sort_by_options[sort_by]] for item_name, item in domain.items()]
@@ -372,7 +372,7 @@ def check_custom_operator_profiling_multiple_custom_ops_output(debug_str):
 
 def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
     class MyAdd(mx.operator.CustomOp):
-        def forward(self, is_train, req, in_data, out_data, aux):        
+        def forward(self, is_train, req, in_data, out_data, aux):
             self.assign(out_data[0], req[0], in_data[0] + 1)
 
         def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
@@ -437,17 +437,19 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
     profiler.set_state('stop')
 
 
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_multiple_custom_ops_symbolic():
     custom_operator_profiling_multiple_custom_ops(None, 'symbolic', \
             'test_custom_operator_profiling_multiple_custom_ops_symbolic.json')
 
 
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_multiple_custom_ops_imperative():
     custom_operator_profiling_multiple_custom_ops(None, 'imperative', \
             'test_custom_operator_profiling_multiple_custom_ops_imperative.json')
 
 
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_custom_operator_profiling_naive_engine():
     # run the three tests above using Naive Engine
     run_in_spawned_process(test_custom_operator_profiling, \
@@ -461,7 +463,7 @@ def test_custom_operator_profiling_naive_engine():
             'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
 
 
-@unittest.skipIf(mx.context.num_gpus() == 0, "GPU memory profiler records allocation on GPUs only")
+@pytest.mark.skipif(mx.context.num_gpus() == 0, reason="GPU memory profiler records allocation on GPUs only")
 def test_gpu_memory_profiler_symbolic():
     iter_num = 5
 
@@ -529,7 +531,7 @@ def test_gpu_memory_profiler_symbolic():
                    .format(expected_alloc_entry['Attribute Name'])
 
 
-@unittest.skipIf(mx.context.num_gpus() == 0, "GPU memory profiler records allocation on GPUs only")
+@pytest.mark.skipif(mx.context.num_gpus() == 0, reason="GPU memory profiler records allocation on GPUs only")
 def test_gpu_memory_profiler_gluon():
     enable_profiler(profile_filename='test_profiler.json',
                     run=True, continuous_dump=True)
@@ -610,7 +612,3 @@ def test_gpu_memory_profiler_gluon():
                row['Attribute Name'] == "<unk>:":
                 assert False, "Unknown allocation entry has been encountered"
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- * 
+ *
  *   http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  * Unless required by applicable law or agreed to in writing,
  * software distributed under the License is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
@@ -23,6 +23,7 @@
  */
 #include "ufunc_helper.h"
 #include "utils.h"
+#include "../../imperative/imperative_utils.h"
 
 namespace mxnet {
 
@@ -104,6 +105,25 @@ void UFuncHelper(runtime::MXNetArgs args,
   } else {
     UFuncHelper(args[0].operator double(), args[1].operator NDArray*(), out, ret,
                 rfn_scalar ? rfn_scalar : lfn_scalar);
+  }
+}
+
+void UFuncHelper(runtime::MXNetArgs args,
+                 runtime::MXNetRetValue* ret,
+                 const nnvm::Op* op) {
+  using namespace runtime;
+  nnvm::NodeAttrs attrs;
+  attrs.op = op;
+  NDArray* inputs[] = {args[0].operator NDArray*()};
+  NDArray* out = args[1].operator NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_inputs = 1;
+  int num_outputs = out != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (outputs) {
+    *ret = PythonArg(1);
+  } else {
+    *ret = ndoutputs[0];
   }
 }
 

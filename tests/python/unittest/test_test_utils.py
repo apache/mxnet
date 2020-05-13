@@ -16,18 +16,18 @@
 # under the License.
 
 import os
-import tempfile
 
 import mxnet as mx
-from nose.tools import *
+
+import pytest
 
 
-@raises(Exception)
 def test_download_retries():
-    mx.test_utils.download("http://doesnotexist.notfound")
+    with pytest.raises(Exception):
+        mx.test_utils.download("http://doesnotexist.notfound")
 
-def test_download_successful():
-    tmp = tempfile.mkdtemp()
+def test_download_successful(tmpdir):
+    tmp = str(tmpdir)
     tmpfile = os.path.join(tmp, 'README.md')
     mx.test_utils.download("https://raw.githubusercontent.com/apache/incubator-mxnet/master/README.md",
                            fname=tmpfile)

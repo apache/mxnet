@@ -28,7 +28,7 @@ import warnings
 import numpy as np
 
 from ..base import mx_real_t, MXNetError
-from .. import symbol, ndarray, initializer, context
+from .. import symbol, ndarray, initializer, context, _deferred_compute as dc
 from ..context import Context, cpu
 from .. import autograd
 from .utils import _indent, _brief_print_list, shape_is_known
@@ -335,7 +335,7 @@ class Parameter(object):
             "in_channels, etc for `Block`s."%(
                 self.name, str(self.shape))
 
-        with autograd.pause():
+        with autograd.pause(), dc.context(False):
             if data is None:
                 kwargs = {'shape': self.shape, 'dtype': self.dtype, 'ctx': context.cpu()}
                 if is_np_array():
@@ -568,7 +568,9 @@ class Parameter(object):
             raise RuntimeError("Cannot return a copy of Parameter '%s' on ctx %s via data() " \
                                "because its storage type is %s. Please use row_sparse_data() " \
                                "instead." % (self.name, str(ctx), self._stype))
-        return self._check_and_get(self._data, ctx)
+        data = self._check_and_get(self._data, ctx)
+        dc.set_variable(data, self.var())
+        return data
 
     def list_data(self):
         """Returns copies of this parameter on all contexts, in the same order

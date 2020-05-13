@@ -384,6 +384,15 @@ struct NumpyEinsumParam: public dmlc::Parameter<NumpyEinsumParam> {
     DMLC_DECLARE_FIELD(optimize)
       .set_default(0);
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s, optimize_s, subscripts_s;
+    num_args_s << num_args;
+    optimize_s << optimize;
+    subscripts_s << subscripts;
+    (*dict)["num_args"] = num_args_s.str();
+    (*dict)["optimize"] = optimize_s.str();
+    (*dict)["subscripts"] = subscripts_s.str();
+  }
 };
 
 class EinsumOp {

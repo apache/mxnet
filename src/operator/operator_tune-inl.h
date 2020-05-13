@@ -529,6 +529,10 @@ class OperatorTune : public OperatorTuneByType<DType> {
   static bool output_tuning_data_;
 };
 
+// TODO(leezu) uncomment once gcc4.8 support is dropped; fixes Wno-undefined-var-template
+// template <typename DType>
+// std::unordered_set<std::string> OperatorTune<DType>::operator_names_;
+
 /*!
  * \brief Class that tunes unary operators
  * \tparam DType Data type to be used when tuning the kernel operations

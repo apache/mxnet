@@ -64,7 +64,7 @@ struct CumsumParam : public dmlc::Parameter<CumsumParam> {
     dtype_s << dtype;
     (*dict)["axis"] = axis_s.str();
     if (dtype.has_value()) {
-      (*dict)["dtype"] = String2MXNetTypeWithBool(dtype.value());
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
     } else {
       (*dict)["dtype"] = dtype_s.str();
     }

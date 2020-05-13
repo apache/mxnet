@@ -308,7 +308,4 @@ def test_encode_sentences():
     print(result, vocab)
     assert vocab == {'a': 1, 'b': 2, 'c': 3, 'UNK': 0}
     assert result == [[1,2,3],[2,3,0]]
-    
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+

@@ -270,8 +270,3 @@ def _assert_docker_build(lambda_func, expected_cache_hit_count: int, expected_ca
         assert output.count('Using cache') == expected_cache_hit_count, \
             'Expected {} "Using cache", got {}. Log:{}'.\
                 format(expected_cache_hit_count, output.count('Using cache'), output)
-
-
-if __name__ == '__main__':
-    import nose
-    nose.main()

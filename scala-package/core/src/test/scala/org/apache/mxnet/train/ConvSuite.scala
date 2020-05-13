@@ -32,6 +32,7 @@ class ConvSuite extends FunSuite with BeforeAndAfterAll {
   private var tu = new TestUtil
 
   test("train mnist") {
+    CancelTestUtil.assumeStandardDecimalSeparator()
     // symbol net
     val batchSize = 100
 

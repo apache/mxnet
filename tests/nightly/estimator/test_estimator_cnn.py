@@ -155,7 +155,3 @@ def test_estimator_gpu():
 
     assert acc.get()[1] > 0.80
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

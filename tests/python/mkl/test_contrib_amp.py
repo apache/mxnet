@@ -24,7 +24,7 @@ import warnings
 import collections
 import ctypes
 import mxnet.contrib.amp as amp
-from nose.tools import assert_raises
+import pytest
 from mxnet.test_utils import set_default_context, download_model, same_symbol_structure, assert_almost_equal
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
@@ -117,18 +117,18 @@ def test_amp_conversion():
             "convert_symbol generating wrong computation graph"
 
         # convert_symbol called with incorrect inputs
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="bfloat16", target_dtype_ops=["FullyConnected"],
                       fp32_ops=["elemwise_add"])
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="bfloat16", target_dtype_ops=["FullyConnected"],
                       fp32_ops=["Activation"],
                       conditional_fp32_ops=[('Activation', 'act_type', ['selu'])])
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="bfloat16", target_dtype_ops=["Activation"],
                       fp32_ops=["Activation"],
                       conditional_fp32_ops=[('Activation', 'act_type', ['selu'])])
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="bfloat16", target_dtype_ops=["FullyConnected"],
                       fp32_ops=["FullyConnected"])
 
@@ -495,7 +495,3 @@ def test_bf16_casting():
     exe = final_res.simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2))
     assert exe.arg_arrays[0].dtype == bfloat16
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

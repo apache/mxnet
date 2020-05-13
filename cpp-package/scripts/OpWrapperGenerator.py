@@ -20,17 +20,19 @@
 # based on current libmxnet.dll. This script is written so that we don't need to
 # write new operator wrappers when new ones are added to the library.
 
-from ctypes import *
-from ctypes.util import find_library
-import os
+import codecs
+import filecmp
 import logging
+import os
 import platform
 import re
+import shutil
 import sys
 import tempfile
-import filecmp
-import shutil
-import codecs
+import traceback
+from ctypes import *
+from ctypes.util import find_library
+
 
 def gen_enum_value(value):
     return 'k' + value[0].upper() + value[1:]
@@ -426,6 +428,7 @@ if __name__ == "__main__":
         with codecs.open(temp_file_name, 'w', 'utf-8') as f:
             f.write(patternStr % ParseAllOps())
     except Exception as e:
+      traceback.print_exc()
       if (os.path.exists(output_file)):
         os.remove(output_file)
       if len(temp_file_name) > 0:

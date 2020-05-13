@@ -240,31 +240,44 @@ const mkldnn::memory *GetWeights(const NDArray &arr, int num_groups) {
   auto tz = mkldnn::memory::dims{0};
   auto format_tag = mkldnn::memory::format_tag::undef;
   auto engine = CpuEngine::Get()->get_engine();
-  const int O = 0, I = 1, H = 2, W = 3;
-  if (arr.shape().ndim() == 2) {
-    tz = mkldnn::memory::dims{static_cast<int>(arr.shape()[O]), static_cast<int>(arr.shape()[I])};
+  const int ndim = arr.shape().ndim();
+  int O = 0, I = 1, H = 2, W = 3;
+  int D = -1;
+  if (ndim == 5) {
+    D = 2;
+    H = 3;
+    W = 4;
+  }
+  if (ndim == 2) {
+    tz = mkldnn::memory::dims{arr.shape()[O], arr.shape()[I]};
     format_tag = mkldnn::memory::format_tag::oi;
-  } else if (arr.shape().ndim() == 3) {
+  } else if (ndim == 3) {
     tz = num_groups > 1
-             ? mkldnn::memory::dims{num_groups, static_cast<int>(arr.shape()[O] / num_groups),
-                                    static_cast<int>(arr.shape()[I]),
-                                    static_cast<int>(arr.shape()[H])}
-             : mkldnn::memory::dims{static_cast<int>(arr.shape()[O]),
-                                    static_cast<int>(arr.shape()[I]),
-                                    static_cast<int>(arr.shape()[H])};
+             ? mkldnn::memory::dims{num_groups, arr.shape()[O] / num_groups,
+                                    arr.shape()[I], arr.shape()[H]}
+             : mkldnn::memory::dims{arr.shape()[O],
+                                    arr.shape()[I], arr.shape()[H]};
     format_tag = num_groups > 1 ? mkldnn::memory::format_tag::goiw
                                 : mkldnn::memory::format_tag::oiw;
-  } else if (arr.shape().ndim() == 4) {
+  } else if (ndim == 4) {
     tz = num_groups > 1
-             ? mkldnn::memory::dims{num_groups, static_cast<int>(arr.shape()[O] / num_groups),
-                                    static_cast<int>(arr.shape()[I]),
-                                    static_cast<int>(arr.shape()[H]),
-                                    static_cast<int>(arr.shape()[W])}
+             ? mkldnn::memory::dims{num_groups, arr.shape()[O] / num_groups,
+                                    arr.shape()[I], arr.shape()[H],
+                                    arr.shape()[W]}
              : mkldnn::memory::dims{
-                   static_cast<int>(arr.shape()[O]), static_cast<int>(arr.shape()[I]),
-                   static_cast<int>(arr.shape()[H]), static_cast<int>(arr.shape()[W])};
+                   arr.shape()[O], arr.shape()[I],  arr.shape()[H], arr.shape()[W]};
     format_tag = num_groups > 1 ? mkldnn::memory::format_tag::goihw
                                 : mkldnn::memory::format_tag::oihw;
+  } else if (ndim == 5) {
+    tz = num_groups > 1
+             ? mkldnn::memory::dims{num_groups, arr.shape()[O] / num_groups,
+                                    arr.shape()[I], arr.shape()[D],
+                                    arr.shape()[H], arr.shape()[W]}
+             : mkldnn::memory::dims{
+                   arr.shape()[O], arr.shape()[I], arr.shape()[D],
+                   arr.shape()[H], arr.shape()[W]};
+    format_tag = num_groups > 1 ? mkldnn::memory::format_tag::goidhw
+                                : mkldnn::memory::format_tag::oidhw;
   } else {
     LOG(FATAL) << "The weight array has an unsupported number of dimensions";
   }
@@ -486,8 +499,11 @@ static bool SimilarArray(const mxnet::NDArray &arr1, const mxnet::NDArray &arr2,
   for (size_t i = 0; i < arr1.shape().Size(); i++)
 #endif
   {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wabsolute-value"
     if (std::abs(data1[i] - data2[i]) > atol + rtol * std::abs(data2[i]))
       success.store(false);
+#pragma clang diagnostic pop
   }
   return success.load();
 }
@@ -558,7 +574,8 @@ void OpCheck::Run(mxnet::FCompute fn, const nnvm::NodeAttrs &attrs,
     if (req[i] == kNullOp)
       continue;
     MSHADOW_TYPE_SWITCH(outputs[i].dtype(), DType, {
-      bool similar = SimilarArray<DType>(outputs[i], outputs_[i], 1e-2, 1e-2);
+      bool similar = SimilarArray<DType>(outputs[i], outputs_[i], static_cast<DType>(1e-2),
+                                         static_cast<DType>(1e-2));
       if (!similar) {
         LOG(ERROR) << attrs.op->name << " fails";
       }

@@ -40,11 +40,13 @@ from benchmark.opperf.nd_operations.nn_conv_operators import run_pooling_operato
     run_convolution_operators_benchmarks, run_transpose_convolution_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_basic_operators import run_nn_basic_operators_benchmarks
 from benchmark.opperf.nd_operations.nn_optimizer_operators import run_optimizer_operators_benchmarks
-from benchmark.opperf.nd_operations.array_rearrange import run_rearrange_operators_benchmarks
 from benchmark.opperf.nd_operations.indexing_routines import run_indexing_routines_benchmarks
 from benchmark.opperf.nd_operations.nn_loss_operators import run_loss_operators_benchmarks
 from benchmark.opperf.nd_operations.linalg_operators import run_linalg_operators_benchmarks
 from benchmark.opperf.nd_operations.misc_operators import run_mx_misc_operators_benchmarks
+from benchmark.opperf.nd_operations.array_manipulation_operators import run_rearrange_operators_benchmarks, \
+    run_shape_operators_benchmarks, run_expanding_operators_benchmarks, run_rounding_operators_benchmarks, \
+    run_join_split_operators_benchmarks
 
 from benchmark.opperf.utils.common_utils import merge_map_list, save_to_file
 from benchmark.opperf.utils.op_registry_utils import get_operators_with_no_benchmark, \
@@ -87,11 +89,23 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     # Run all Sorting and Searching operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_sorting_searching_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
 
+    # Run all Indexing routines benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_indexing_routines_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
+
     # Run all Array Rearrange operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_rearrange_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
 
-    # Run all Indexing routines benchmarks with default input values
-    mxnet_operator_benchmark_results.append(run_indexing_routines_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
+    # Run all Array Shape Manipulation operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_shape_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
+
+    # Run all Array Expansion operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_expanding_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
+
+    # Run all Array Rounding operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_rounding_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
+
+    # Run all Array Join & Split operations benchmarks with default input values
+    mxnet_operator_benchmark_results.append(run_join_split_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
 
     # ************************ MXNET NN OPERATOR BENCHMARKS ****************************
 
@@ -109,13 +123,13 @@ def run_all_mxnet_operator_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
 
     # Run all Optimizer operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_optimizer_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
-    
+
     # Run all Transpose Convolution operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_transpose_convolution_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
 
     # Run all NN loss operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_loss_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
-    
+
     # Run all Miscellaneous operations benchmarks with default input values
     mxnet_operator_benchmark_results.append(run_mx_misc_operators_benchmarks(ctx=ctx, dtype=dtype, profiler=profiler, int64_tensor=int64_tensor, warmup=warmup, runs=runs))
 
@@ -164,7 +178,7 @@ def main():
                         help='Use built-in CPP profiler (native) or Python'
                              'time module.'
                              'Valid Inputs - native, python')
-    
+
     parser.add_argument('--int64-tensor', type=str, default='off',
                         help='Run performance tests with large tensor input'
                              'data (dimension >= 2**32) or standard input data.'
@@ -176,7 +190,7 @@ def main():
 
     parser.add_argument('-r', '--runs', type=int, default=100,
                         help='Number of runs to capture benchmark results.'
-                             'Valid Inputs - positive integers')    
+                             'Valid Inputs - positive integers') 
 
     args = parser.parse_args()
     logging.info("Running MXNet operator benchmarks with the following options: {args}".format(args=args))

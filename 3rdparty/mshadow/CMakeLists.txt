@@ -15,9 +15,16 @@ target_include_directories(mshadow INTERFACE "${CMAKE_CURRENT_SOURCE_DIR}")
 target_sources(mshadow INTERFACE ${MSHADOWSOURCE})
 if(UNIX)
   target_compile_options(mshadow INTERFACE
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-braced-scalar-init>"
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-pass-failed>"
+    # TODO Replace Wno-unused-lambda-capture with [[maybe_unused]] annotation once requiring C++17
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-unused-lambda-capture>"
+    # TODO Fixing the warning leads to compile error on 4.8; fix once 4.8 support is dropped
+    "$<$<AND:$<COMPILE_LANGUAGE:CXX>,$<CXX_COMPILER_ID:Clang>>:-Wno-undefined-var-template>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-parameter>"
     "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unknown-pragmas>"
-    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-local-typedefs>")
+    "$<$<COMPILE_LANGUAGE:CXX>:-Wno-unused-local-typedefs>"
+    "$<$<COMPILE_LANGUAGE:CUDA>:--expt-relaxed-constexpr>")
 endif()
 
 if(USE_CUDA)

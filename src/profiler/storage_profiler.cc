@@ -61,7 +61,7 @@ void GpuDeviceStorageProfiler::DumpProfile() const {
   std::multimap<std::string, AllocEntryDumpFmt> gpu_mem_ordered_alloc_entries;
   // map the GPU device ID to the total amount of allocations
   std::unordered_map<int, size_t> gpu_dev_id_total_alloc_map;
-  for (const std::pair<void*, AllocEntry>& alloc_entry :
+  for (const std::pair<void *const, AllocEntry>& alloc_entry :
        gpu_mem_alloc_entries_) {
     gpu_mem_ordered_alloc_entries.emplace(
         alloc_entry.second.profiler_scope +
@@ -74,7 +74,7 @@ void GpuDeviceStorageProfiler::DumpProfile() const {
   }
   fout << "\"Attribute Name\",\"Requested Size\","
           "\"Device\",\"Actual Size\",\"Reuse?\"" << std::endl;
-  for (const std::pair<std::string, AllocEntryDumpFmt>& alloc_entry :
+  for (const std::pair<const std::string, AllocEntryDumpFmt>& alloc_entry :
        gpu_mem_ordered_alloc_entries) {
     fout << "\"" << alloc_entry.first << "\","
          << "\"" << alloc_entry.second.requested_size << "\","

@@ -47,10 +47,10 @@ def _get_operator_profile(operator_name, operator_profile_results):
 
     # alias map : dictionary of the form {"alias" : "registered_name"}
     # allows to retrieve alias operator profile from the profiler results
-    # TODO handling - "identity" : "_copy"
     alias_map = {"broadcast_plus": "broadcast_add", "broadcast_minus": "broadcast_sub", "flatten": "Flatten", "max_axis": "max", "Custom": "CustomAddOne",
                  "swapaxes": "SwapAxis", "flip": "reverse", "reshape": "Reshape", "crop": "slice", "sum_axis": "sum", "min_axis": "min", "ctc_loss": "CTCLoss",
-                 "fill_element_0index": "TernaryOp", "identity": "_copy", "ElementWiseSum": "add_n", "choose_element_0index": "pick", "stop_gradient": "BlockGrad"}
+                 "fill_element_0index": "TernaryOp", "identity": "_copy", "ElementWiseSum": "add_n", "choose_element_0index": "pick", "stop_gradient": "BlockGrad",
+                 "broadcast_axes": "broadcast_axis"}
 
     op_name = None
 

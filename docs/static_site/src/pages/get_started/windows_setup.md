@@ -139,6 +139,8 @@ Check the chart below for other options or refer to [PyPI for other MXNet pip pa
 
 **IMPORTANT: It is recommended that you review the [build from source guide](build_from_source) first.** It describes many of the build options that come with MXNet in more detail. You may decide to install additional dependencies and modify your build flags after reviewing this material.
 
+**Note**: Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler.
+
 We provide two primary options to build and install MXNet yourself using [Microsoft Visual Studio 2017](https://www.visualstudio.com/downloads/) or [Microsoft Visual Studio 2015](https://www.visualstudio.com/vs/older-downloads/).
 
 **NOTE:** Visual Studio 2017's compiler is `vc15`. This is not to be confused with Visual Studio 2015's compiler, `vc14`.
@@ -369,7 +371,7 @@ However, a few dependencies remain for both options.  You will need the followin
 
 * Install [Microsoft Visual Studio](https://visualstudio.microsoft.com/downloads/) (VS2015 or VS2017 is required by CUDA)
 
-* Install  [NVidia CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)(cu92 is recommended though we support cu80, cu90, cu91 and cu92)
+* Install  [NVidia CUDA Toolkit](https://developer.nvidia.com/cuda-toolkit)(cu102 is recommended though we support cu92, cu100, cu101, cu102)
 
 * Download and install [CuDNN](https://developer.nvidia.com/cudnn) (to provide a Deep Neural Network library). Latest version recommended.
 
@@ -390,7 +392,7 @@ For GPU package:
   options(repos = cran)
   install.packages("mxnet")
 ```
-Change cu92 to cu80, cu90 or cu91 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
+Change cu92 to cu100, cu101 or cu102 based on your CUDA toolkit version. Currently, MXNet supports these versions of CUDA.
 
 #### Building MXNet-R from Source Code(GPU)
 After you have installed above software, continue with the following steps to build MXNet-R:

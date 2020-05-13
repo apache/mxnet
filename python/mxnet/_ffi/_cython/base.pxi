@@ -59,6 +59,8 @@ cdef extern from "mxnet/runtime/c_runtime_api.h":
                       MXNetValue* ret_val,
                       int* ret_type_code)
     int MXNetFuncFree(MXNetFunctionHandle func)
+    int MXNetObjectFree(ObjectHandle obj)
+    int MXNetObjectGetTypeIndex(ObjectHandle obj, unsigned* out_index)
 
 
 cdef inline py_str(const char* x):

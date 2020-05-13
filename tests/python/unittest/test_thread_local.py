@@ -221,7 +221,6 @@ def test_np_global_shape():
     finally:
         set_np_shape(0)
 
-
 def test_blockscope_multithread():
     event = threading.Event()
     status = [False]

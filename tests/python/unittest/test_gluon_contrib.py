@@ -25,7 +25,7 @@ from mxnet.gluon.contrib.nn import (
     Concurrent, HybridConcurrent, Identity, SparseEmbedding, PixelShuffle1D,
     PixelShuffle2D, PixelShuffle3D)
 from mxnet.test_utils import almost_equal, default_context, assert_almost_equal, assert_allclose
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 import numpy as np
 
 
@@ -314,9 +314,9 @@ def test_sampler():
     assert list(interval_sampler) == [0, 3, 6, 9]
 
 
-class TestRNNLayer(gluon.HybridBlock):
+class RNNLayer(gluon.HybridBlock):
     def __init__(self, cell_type, hidden_size, layout, prefix=None, params=None):
-        super(TestRNNLayer, self).__init__(prefix=prefix, params=params)
+        super(RNNLayer, self).__init__(prefix=prefix, params=params)
         self.cell = cell_type(hidden_size, prefix='rnn_')
         self.layout = layout
 
@@ -370,7 +370,7 @@ def check_unroll(cell_type, num_states, layout):
     if valid_length is None:
         valid_length = []
     for config in configs:
-        layer = TestRNNLayer(cell_type, hidden_size, layout)
+        layer = RNNLayer(cell_type, hidden_size, layout)
         layer.initialize(ctx=default_context())
         config(layer)
         res2, states2 = layer(rnn_data, states, valid_length)
@@ -436,7 +436,3 @@ def test_ModulatedDeformableConvolution():
     with mx.autograd.record():
         y = net(x)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

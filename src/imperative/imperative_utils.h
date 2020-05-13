@@ -39,6 +39,17 @@
 namespace mxnet {
 namespace imperative {
 
+namespace {
+  static const char SKIP_ENGINE[] = "__skip_engine__";
+  static const char SKIP_ENGINE_SET[] = "__true__";
+
+  inline bool CheckIfSkipEngine(const nnvm::NodeAttrs& attrs) {
+    const auto& skip_engine_attr = attrs.dict.find(SKIP_ENGINE);
+    if (skip_engine_attr == attrs.dict.end()) return false;
+    return (*skip_engine_attr).second == SKIP_ENGINE_SET;
+  }
+}
+
 struct MemoryPlanInfo {
   int storage_id;
   uint32_t root;
@@ -96,7 +107,12 @@ inline Context GetContext(const nnvm::NodeAttrs& attrs,
   return ctx;
 }
 
-// Set the shape, dtype, storage type and dispatch mode via the attribute inference functions
+/*! \brief Set the shape, dtype, storage type and dispatch mode via the
+ * attribute inference functions
+ *
+ * Inferred information is stored in MXAPIThreadLocalEntry. Existing information
+ * is overwritten.
+ */
 inline void SetShapeType(const Context& ctx,
                          const nnvm::NodeAttrs& attrs,
                          const std::vector<NDArray*>& inputs,
@@ -123,6 +139,17 @@ inline void SetShapeType(const Context& ctx,
   if (!infershape.count(attrs.op)) {
     is_dynamic_shape_existing = true;
   } else {
+    // If any of the inputs is a deferred computed array with unknown shape, we
+    // can't infer shapes.
+    for (const NDArray *i : inputs) {
+      if (!shape_is_known(i->shape()) && !Imperative::DCInfo::IsNone(*i)) {
+        is_dynamic_shape_existing = true;
+        break;
+      }
+    }
+  }
+
+  if (!is_dynamic_shape_existing) {
     if (!Imperative::Get()->is_np_shape()) {
       common::ConvertToNumpyShape(&in_shapes);
       common::ConvertToNumpyShape(&out_shapes);
@@ -202,7 +229,8 @@ inline void SetShapeType(const Context& ctx,
 
   for (size_t i = 0; i < outputs.size(); ++i) {
     NDArrayStorageType storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
-    if (outputs[i]->is_none() || mxnet::op::shape_is_none(outputs[i]->shape())) {
+    if (outputs[i]->is_none() || (mxnet::op::shape_is_none(outputs[i]->shape()) &&
+                                   Imperative::DCInfo::IsNone(*outputs[i]))) {
       if (is_dynamic_shape_existing) {
         // once there is dynamic shape somewhere, we could not pre-determine the shape.
         *outputs[i] = NDArray(ctx, out_types[i]);
@@ -214,19 +242,35 @@ inline void SetShapeType(const Context& ctx,
         *outputs[i] = NDArray(storage_type, out_shapes[i], ctx, true, out_types[i]);
         outputs[i]->AssignStorageInfo(common::NodeAttrsGetProfilerScope(attrs), attrs.name);
       }
+    } else if (mxnet::op::shape_is_none(outputs[i]->shape()) &&
+               !Imperative::DCInfo::IsNone(*outputs[i])) {
+      // For deferred computed arrays with unknown shape (following dynamic
+      // shape operator), don't use copy assignment as it would destroy the
+      // deferredcompute metadata.
+      if (!is_dynamic_shape_existing) {
+        outputs[i]->Init(out_shapes[i]);
+      }
+      CHECK_EQ(outputs[i]->dtype(), out_types[i])
+        << i << "-th output has invalid dtype. "
+        << "Expecting " << out_types[i] << " got " << outputs[i]->dtype()
+        << " in operator " << attrs.op->name;
     } else {
       CHECK_EQ(outputs[i]->shape(), out_shapes[i])
         << i << "-th output has invalid shape. "
         << "Expecting " << out_shapes[i] << " got "
         << outputs[i]->shape() << " in operator " << attrs.op->name;
       CHECK_EQ(outputs[i]->dtype(), out_types[i])
-        << i << "-th output has invalid shape. "
+        << i << "-th output has invalid dtype. "
         << "Expecting " << out_types[i] << " got "
         << outputs[i]->dtype()  << " in operator " << attrs.op->name;
     }
   }
 }
 
+/*! \brief Set read and write vars, resource requests and mutate_idx
+ *
+ * For inputs and outputs arguments only NDArray::var() is accessed.
+ */
 inline void SetDependency(const nnvm::NodeAttrs& attrs,
                    const Context& ctx,
                    const std::vector<NDArray*>& inputs,
@@ -300,6 +344,11 @@ inline void SetDependency(const nnvm::NodeAttrs& attrs,
   Engine::Get()->DeduplicateVarHandle(&read_vars, &write_vars);
 }
 
+/*! \brief Reset vector of OpReqType *req based on input and output NDArrays.
+ *
+ * Set to kWriteInplace if corresponding output shares variable with any input
+ * NDArray. Set to kWriteTo otherwise.
+ */
 inline void SetWriteInplaceReq(const std::vector<NDArray*>& inputs,
                         const std::vector<NDArray*>& outputs,
                         std::vector<OpReqType> *req) {
@@ -385,6 +434,9 @@ inline void SetNumOutputs(const nnvm::Op *op,
   }
 }
 
+/*!
+ * \brief Copy-construct NDArrays referenced by inputs and outputs to p_inputs and p_outputs
+ */
 inline void DerefInputOutput(const std::vector<NDArray*>& inputs,
                              const std::vector<NDArray*>& outputs,
                              std::vector<NDArray>* p_inputs,
@@ -415,41 +467,47 @@ inline void PushFCompute(const FCompute& fn,
   CHECK(exec_type == ExecType::kSync);
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
-  Engine::Get()->PushSync(
-    [=](RunContext rctx) {
-      std::vector<TBlob> input_blobs, output_blobs;
-      // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
-      std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
-      // mapping from index in input_blobs to index in pre_temp_dst
-      std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
+  const auto& run = [=](RunContext rctx) {
+    std::vector<TBlob> input_blobs, output_blobs;
+    // pre-fcompute and post-fcompute storage fallback src NDArrays and dst NDArrays
+    std::vector<NDArray> pre_temp_src, pre_temp_dst, post_temp_dst, post_temp_src;
+    // mapping from index in input_blobs to index in pre_temp_dst
+    std::unordered_map<uint32_t, uint32_t> in_temp_idx_map;
 #if MXNET_USE_MKLDNN == 1
-      if (exec_type != ExecType::kCrossDeviceCopy) {
-        // kCrossDeviceCopy is used for `_copy_to` operator, which doesn't compute immediately in
-        // its FCcomputeEx, but AsyncPush the copy operation to engine.
-        // So for the case that A is holding mkldnn memory, and then copy A to B, and then copy B
-        // back to A, we shouldn't invalidate outputs for copying B back to A, because at this time,
-        // copying A to B may not happen, and will corrupt A's memory.
-        InvalidateOutputs(outputs, req);
-      }
+    if (exec_type != ExecType::kCrossDeviceCopy) {
+      // kCrossDeviceCopy is used for `_copy_to` operator, which doesn't compute immediately in
+      // its FCcomputeEx, but AsyncPush the copy operation to engine.
+      // So for the case that A is holding mkldnn memory, and then copy A to B, and then copy B
+      // back to A, we shouldn't invalidate outputs for copying B back to A, because at this time,
+      // copying A to B may not happen, and will corrupt A's memory.
+      InvalidateOutputs(outputs, req);
+    }
 #endif
-      std::vector<OpReqType> tmp_req = req;
-      // setup blobs
-      SetupDefaultBlobsInOut(inputs, outputs, nullptr, nullptr, &tmp_req,
-                             &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,
-                             &post_temp_src, &post_temp_dst, &in_temp_idx_map, mutate_idx);
-      // setup context
-      OpContext opctx{need_grad, is_train, rctx, engine::CallbackOnComplete(), requested};
-      bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
-      // pre-fcompute fallback, cast to default storage type
-      CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
-      fn(attrs, opctx, input_blobs, tmp_req, output_blobs);
-      // post-fcompute fallback, cast to original storage type
-      CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
-      if (is_gpu && !rctx.is_bulk) {
-        rctx.get_stream<gpu>()->Wait();
-      }
-    }, ctx, read_vars, write_vars, FnProperty::kNormal,
+    std::vector<OpReqType> tmp_req = req;
+    // setup blobs
+    SetupDefaultBlobsInOut(inputs, outputs, nullptr, nullptr, &tmp_req,
+                            &input_blobs, &output_blobs, &pre_temp_src, &pre_temp_dst,
+                            &post_temp_src, &post_temp_dst, &in_temp_idx_map, mutate_idx);
+    // setup context
+    OpContext opctx{need_grad, is_train, rctx, engine::CallbackOnComplete(), requested};
+    bool is_gpu = ctx.dev_mask() == gpu::kDevMask;
+    // pre-fcompute fallback, cast to default storage type
+    CastNonDefaultStorage(pre_temp_src, pre_temp_dst, opctx, is_gpu);
+    fn(attrs, opctx, input_blobs, tmp_req, output_blobs);
+    // post-fcompute fallback, cast to original storage type
+    CastNonDefaultStorage(post_temp_src, post_temp_dst, opctx, is_gpu);
+    if (is_gpu && !rctx.is_bulk) {
+      rctx.get_stream<gpu>()->Wait();
+    }
+  };
+  if (CheckIfSkipEngine(attrs)) {
+    // execute without engine
+    run(RunContext{ctx, nullptr, nullptr, false});
+  } else {
+    Engine::Get()->PushSync(
+    run, ctx, read_vars, write_vars, FnProperty::kNormal,
     0, op->name.c_str());
+  }
 }
 
 inline void PushFComputeEx(const FComputeEx& fn,
@@ -496,8 +554,7 @@ inline void PushFComputeEx(const FComputeEx& fn,
         rctx.get_stream<gpu>()->Wait();
       }
     };
-
-  if (exec_type == ExecType::kCrossDeviceCopy) {
+  if (exec_type == ExecType::kCrossDeviceCopy || CheckIfSkipEngine(attrs)) {
     run(RunContext{ctx, nullptr, nullptr, false});
   } else {
     CHECK(exec_type == ExecType::kSync);
@@ -564,7 +621,7 @@ inline void PushOperator(const OpStatePtr& state,
 
     // For operators with subgraphs, we need to invoke them in the main thread
     // instead of the threaded engine.
-    if (exec_type == ExecType::kSubgraphExec) {
+    if (exec_type == ExecType::kSubgraphExec || CheckIfSkipEngine(attrs)) {
       RunContext rctx{ctx, nullptr, nullptr, false};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
@@ -619,7 +676,7 @@ inline void PushOperator(const OpStatePtr& state,
         }
       };
 
-    if (exec_type == ExecType::kSubgraphExec) {
+    if (exec_type == ExecType::kSubgraphExec || CheckIfSkipEngine(attrs)) {
       RunContext rctx{ctx, nullptr, nullptr, false};
       run(rctx, engine::CallbackOnComplete());
     } else if (exec_type == ExecType::kSync) {
@@ -1124,7 +1181,8 @@ void NaiveRunGraph(const bool retain_graph,
                    bool recording,
                    mxnet::ShapeVector *shapes,
                    const CachedOpMonCallback& callback = nullptr,
-                   const bool monitor_all_ = false);
+                   const bool monitor_all_ = false,
+                   const bool skip_engine = false);
 
 }  // namespace imperative
 }  // namespace mxnet

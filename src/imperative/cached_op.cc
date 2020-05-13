@@ -32,15 +32,9 @@ DMLC_REGISTER_PARAMETER(CachedOpConfig);
 
 constexpr uint32_t kEidNotExist = std::numeric_limits<uint32_t>::max();
 
-struct CachedOp::DynamicRuntime {
-  GraphInfo info;
-  std::vector<NDArray> buff;
-  std::vector<OpStatePtr> op_states;
-};
-
 CachedOp::CachedOp(
     const nnvm::Symbol& sym,
-    const std::vector<std::pair<std::string, std::string> >& flags) {
+    const std::vector<std::pair<std::string, std::string> >& flags) : sym_(sym), flags_(flags) {
   config_.Init(flags);
   this->dynamic_shape_checked_ = false;
 
@@ -963,7 +957,8 @@ void CachedOp::StaticBackward(
       auto entry = state.info.grad_graph.outputs[iter->second];
       if (!idx.exist(entry.node.get())) continue;
       auto eid = idx.entry_id(entry);
-      if (!arrays[eid]->IsSame(*outputs[iter->second]) ||
+      if ((!arrays[eid]->IsSame(*outputs[iter->second]) &&
+            state.array_reqs[eid] != kNullOp) ||
           !(state.array_reqs[eid] == reqs[iter->second])) {
         match = false;
         state.array_reqs[eid] = reqs[iter->second];

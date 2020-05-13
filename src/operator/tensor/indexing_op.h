@@ -680,6 +680,27 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
               " \"wrap\" means to wrap around."
               " \"raise\" means to raise an error when index out of range.");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, mode_s;
+    axis_s << axis;
+    mode_s << mode;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["mode"] = mode_s.str();
+    switch (mode) {
+      case take_::kRaise:
+        (*dict)["mode"] = "raise";
+        break;
+      case take_::kClip:
+        (*dict)["mode"] = "clip";
+        break;
+      case take_::kWrap:
+        (*dict)["mode"] = "wrap";
+        break;
+      default:
+        (*dict)["mode"] = mode_s.str();
+    }
+  }
 };
 
 inline bool TakeOpShape(const nnvm::NodeAttrs& attrs,

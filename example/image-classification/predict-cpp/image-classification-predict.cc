@@ -95,7 +95,7 @@ void GetImageFile(const std::string& image_file,
 
   if (im_ori.empty()) {
     std::cerr << "Can't open the image. Please check " << image_file << ". \n";
-    assert(false);
+    std::abort();
   }
 
   cv::Mat im;
@@ -140,7 +140,7 @@ std::vector<std::string> LoadSynset(const std::string& synset_file) {
 
   if (!fi.is_open()) {
     std::cerr << "Error opening synset file " << synset_file << std::endl;
-    assert(false);
+    std::abort();
   }
 
   std::vector<std::string> output;
@@ -315,8 +315,10 @@ int main(int argc, char* argv[]) {
                             input_shape_data,
                             pred_hnds.size(),
                             pred_hnds.data());
+#ifndef NDEBUG
     for (auto hnd : pred_hnds)
       assert(hnd);
+#endif
 
     std::vector<std::thread> threads;
     for (int i = 0; i < num_threads; i++)
