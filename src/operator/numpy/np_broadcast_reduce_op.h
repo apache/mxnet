@@ -270,7 +270,7 @@ namespace mxnet_op {
 struct set_to_nan {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out) {
-    out[i] = std::numeric_limits<DType>::quiet_NaN();
+    out[i] = DType(nanf(""));
   }
 };
 
