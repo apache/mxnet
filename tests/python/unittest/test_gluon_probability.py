@@ -62,6 +62,20 @@ def _distribution_method_invoker(dist, func, *args):
     return getattr(dist, func)(*args)
 
 
+def test_mgp_getF():
+    # Test getF
+    getF = mgp.utils.getF
+    nd = mx.nd
+    sym = mx.sym
+    assert getF(nd.ones((2,2)), nd.ones((2,2))) == nd
+    assert getF(sym.ones((2,2)), sym.ones((2,2))) == sym
+    assert getF(1.0, 2.0) == nd
+    try:
+        getF(nd.ones((2,2)), sym.ones((2,2)))
+    except TypeError as e:
+        pass
+
+
 @with_seed()
 @use_np
 def test_gluon_uniform():
@@ -1310,11 +1324,6 @@ def test_gluon_bernoulli():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                         rtol=1e-3, use_broadcast=False)
 
-    for shape in shapes:
-        prob = np.random.uniform(size=shape)
-        dist = mgp.Bernoulli(prob=prob)
-        _test_zero_kl(dist, shape)
-
 
 @with_seed()
 @use_np
@@ -2043,10 +2052,17 @@ def test_gluon_kl():
                                 _dist_factory(dist, param1, param2),
                                 50000)
     
+    # binomial
     for shape in shapes:
         n = _np.random.randint(5, 10)
         prob = np.random.uniform(low=0.1, size=shape)
         dist = mgp.Binomial(n=n, prob=prob)
+        _test_zero_kl(dist, shape)
+
+    # bernoulli
+    for shape in shapes:
+        prob = np.random.uniform(size=shape)
+        dist = mgp.Bernoulli(prob=prob)
         _test_zero_kl(dist, shape)
 
     event_shapes = [3, 5, 10]

@@ -102,12 +102,21 @@ def getF(*params):
     ndarray or _Symbol
         the running mode inferred from `*params`
     """
-    # TODO: Raise exception when params types are not consistent, i.e. mixed ndarray and symbols.
+    mode_flag = 0
     for param in params:
         if isinstance(param, np.ndarray):
+            if mode_flag < 0:
+                raise TypeError("Expect parameters to have consistent running mode," + 
+                                " got {}".format([type(p) for p in params]))
+            mode_flag = 1
             return nd
-        elif isinstance(param, sym.numpy._Symbol):
+        elif isinstance(param, sym.Symbol):
+            if mode_flag > 0:
+                raise TypeError("Expect parameters to have consistent running mode," + 
+                                " got {}".format([type(p) for p in params]))
+            mode_flag = -1
             return sym
+    # In case of scalar params, we choose to use the imperative mode.
     return nd
 
 
