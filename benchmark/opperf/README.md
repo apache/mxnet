@@ -176,11 +176,15 @@ However, locally, one can profile internal operators in `mx.nd.internal.*` names
 Remove the hasattr check for `op.__name__` to be in `mx.nd`
 
 The resulting diff would look like :
+##### Old Code
 ```
 -        if hasattr(mx.nd, op.__name__):
 -            benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list, profiler)
 -        else:
 -            raise ValueError("Unknown NDArray operator provided to benchmark. -  ", op.__name__)
+```
+##### New Code
+```
 +        #if hasattr(mx.nd, op.__name__):
 +        benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list, profiler)
 +        #else:
