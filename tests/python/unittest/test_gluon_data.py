@@ -66,6 +66,7 @@ def prepare_record():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_recordimage_dataset():
     recfile = prepare_record()
     fn = lambda x, y : (x, y)
@@ -77,6 +78,7 @@ def test_recordimage_dataset():
         assert y.asscalar() == i
 
 @with_seed()
+@pytest.mark.serial
 def test_recordimage_dataset_handle():
     recfile = prepare_record()
     class TmpTransform(mx.gluon.HybridBlock):
@@ -99,6 +101,7 @@ def _dataset_transform_first_fn(x):
     return x
 
 @with_seed()
+@pytest.mark.serial
 def test_recordimage_dataset_with_data_loader_multiworker():
     recfile = prepare_record()
     dataset = gluon.data.vision.ImageRecordDataset(recfile)
@@ -138,6 +141,7 @@ def test_sampler():
     assert sorted(sum(list(rand_batch_keep), [])) == list(range(10))
 
 @with_seed()
+@pytest.mark.serial
 def test_datasets():
     assert len(gluon.data.vision.MNIST(root='data/mnist')) == 60000
     assert len(gluon.data.vision.MNIST(root='data/mnist', train=False)) == 10000
@@ -163,6 +167,7 @@ def test_datasets_handles():
     assert len(gluon.data.vision.CIFAR100(root='data/cifar100', train=False).__mx_handle__()) == 10000
 
 @with_seed()
+@pytest.mark.serial
 def test_image_folder_dataset():
     prepare_record()
     dataset = gluon.data.vision.ImageFolderDataset('data/test_images')
@@ -170,6 +175,7 @@ def test_image_folder_dataset():
     assert len(dataset.items) == 16
 
 @with_seed()
+@pytest.mark.serial
 def test_image_folder_dataset_handle():
     prepare_record()
     dataset = gluon.data.vision.ImageFolderDataset('data/test_images')
@@ -179,6 +185,7 @@ def test_image_folder_dataset_handle():
     assert hd[5][1] == dataset[5][1]
 
 @with_seed()
+@pytest.mark.serial
 def test_image_list_dataset():
     prepare_record()
     imlist = os.listdir('data/test_images/test_images')
@@ -203,6 +210,7 @@ def test_image_list_dataset():
         assert label == 0
 
 @with_seed()
+@pytest.mark.serial
 def test_image_list_dataset_handle():
     prepare_record()
     imlist = os.listdir('data/test_images/test_images')
