@@ -32,14 +32,18 @@ __version__ = base.__version__
 
 from . import contrib
 from . import ndarray
+# use mx.nd as short for mx.ndarray
 from . import ndarray as nd
 from . import numpy
-from . import numpy_extension
+# use mx.np as short for mx.numpy
 from . import numpy as np
+from . import numpy_extension
+# use mx.npx as short for mx.numpy_extension
 from . import numpy_extension as npx
 from . import name
-# use mx.sym as short for symbol
+# use mx.sym as short for mx.symbol
 from . import symbol as sym
+# use mx.np_symbol as short for mx.symbol.numpy
 from .symbol.numpy import _symbol as np_symbol
 from . import symbol
 from . import symbol_doc
@@ -56,7 +60,7 @@ from . import initializer
 # use mx.init as short for mx.initializer
 from . import initializer as init
 from . import visualization
-# use viz as short for mx.ndarray
+# use mx.viz as short for mx.visualization
 from . import visualization as viz
 from . import callback
 # from . import misc
@@ -67,18 +71,22 @@ from . import rtc
 from .attribute import AttrScope
 
 from . import monitor
+# use mx.mon as short for mx.monitor
 from . import monitor as mon
 
 from . import torch
+# use mx.th as short for mx.torch
 from . import torch as th
 
 from . import profiler
 from . import log
 
 from . import module
+# use mx.mod as short for mx.module
 from . import module as mod
 
 from . import image
+# use mx.img as short for mx.image
 from . import image as img
 
 from . import test_utils
@@ -94,7 +102,7 @@ from . import _deferred_compute
 # For example, the LRScheduler in gluoncv depends on a specific version of MXNet, and
 # checks the __version__ attr of MXNet, which is not set on kvstore server due to the
 # fact that kvstore-server module is imported before the __version__ attr is set.
-# use mx.kv as short for kvstore
+# use mx.kv as short for mx.kvstore
 from . import kvstore as kv
 
 # Dynamic library module should be done after ndarray and symbol are initialized
