@@ -988,15 +988,15 @@ def np_default_dtype(active=True):
 
     Example::
 
-        with mx.np_default_Dtype(active=True):
+        with mx.np_default_dtype(active=True):
             # Default Dtype is 'float64', consistent with offical NumPy behavior.
-            arr = mx.nd.array([1, 2, 3])
-            assert arr.dtype == float64
+            arr = mx.np.array([1, 2, 3])
+            assert arr.dtype == 'float64'
 
         with mx.np_default_dtype(active=False):
             # Default Dtype is 'float32' in the legacy default dtype definition.
-            arr = mx.nd.array([1, 2, 3])
-            assert arr.dtype == float32
+            arr = mx.np.array([1, 2, 3])
+            assert arr.dtype == 'float32'
 
     """
     return _NumpyDefaultDtypeScope(active)
