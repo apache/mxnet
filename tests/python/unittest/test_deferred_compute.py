@@ -170,8 +170,7 @@ def test_dc_numpy_tril():
         c = nd.tril(a, -1)
         return [b, c]
 
-    # for mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute'):
-    for mode in ('symbolic', ):
+    for mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute'):
         _assert_dc(_dc_simple_setup, f, mode=mode)
 
 
