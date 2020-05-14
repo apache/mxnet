@@ -65,8 +65,8 @@ static void LogSoftmaxGradComputeExCPU(const nnvm::NodeAttrs& attrs,
     MKLDNN_OPCHECK_RUN(fn, attrs, ctx, inputs, req, outputs);
     return;
   }
-  FallBackCompute(SoftmaxGradCompute<cpu, op::mshadow_op::left, mxnet_op::log_softmax_bwd>, attrs, ctx,
-                  inputs, req, outputs);
+  FallBackCompute(SoftmaxGradCompute<cpu, op::mshadow_op::left, mxnet_op::log_softmax_bwd>,
+                  attrs, ctx, inputs, req, outputs);
 }
 
 inline static bool LogSoftmaxStorageType(const nnvm::NodeAttrs& attrs,
