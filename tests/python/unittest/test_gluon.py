@@ -16,6 +16,7 @@
 # under the License.
 
 import os
+import gc
 
 import mxnet as mx
 from mxnet import gluon
@@ -3229,3 +3230,36 @@ def test_reqs_switching_training_inference():
 
     mx.test_utils.assert_almost_equal(grad1, grad2)
 
+def test_no_memory_leak_in_gluon():
+    gc_flags = gc.get_debug()
+    gc.set_debug(gc.DEBUG_SAVEALL)
+    net = mx.gluon.nn.Dense(10, in_units=10)
+    net.initialize()
+    del net
+    gc.collect()
+    gc.set_debug(gc_flags)  # reset gc flags
+
+    # Check for leaked NDArrays
+    seen = set()
+    def has_array(element):
+        try:
+            if element in seen:
+                return False
+            seen.add(element)
+        except TypeError:  # unhashable
+            pass
+
+        if isinstance(element, mx.nd._internal.NDArrayBase):
+            return True
+        elif hasattr(element, '__dict__'):
+            return any(has_array(x) for x in vars(element))
+        elif isinstance(element, dict):
+            return any(has_array(x) for x in element.items())
+        else:
+            try:
+                return any(has_array(x) for x in element)
+            except (TypeError, KeyError):
+                return False
+
+    assert not any(has_array(x) for x in gc.garbage), 'Found leaked NDArrays due to reference cycles'
+    del gc.garbage[:]
