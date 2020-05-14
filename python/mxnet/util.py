@@ -761,7 +761,7 @@ def _set_np_array(active):
     return cur_state
 
 
-def set_np(shape=True, array=True):
+def set_np(shape=True, array=True, dtype=False):
     """Setting NumPy shape and array semantics at the same time.
     It is required to keep NumPy shape semantics active while activating NumPy array semantics.
     Deactivating NumPy shape semantics while NumPy array semantics is still active is not allowed.
@@ -779,6 +779,10 @@ def set_np(shape=True, array=True):
         When this flag is set to `True`, it enables Gluon code flow to use or generate `mxnet.numpy.ndarray`s
         instead of `mxnet.ndarray.NDArray`. For example, a `Block` would create parameters of type
         `mxnet.numpy.ndarray`.
+    dtype : bool
+         A boolean value indicating whether the NumPy-dtype semantics should be turned on or off.
+         When this flag is set to `True`, default dtype is float64.
+         When this flag is set to `False`, default dtype is float32.
     Examples
     --------
     >>> import mxnet as mx
@@ -832,16 +836,21 @@ def set_np(shape=True, array=True):
     >>> [p.data() for p in dense.collect_params().values()]
     [array([[0.0068339 , 0.01299825],
            [0.0301265 , 0.04819721]]), array([0., 0.])]
+
+    >>> npx.set_np(dtype=True)
+    >>> np.ones(shape=()).dtype
+    dtype('float64')
     """
     if not shape and array:
         raise ValueError('NumPy Shape semantics is required in using NumPy array semantics.')
     _set_np_array(array)
     set_np_shape(shape)
+    set_np_default_dtype(dtype)
 
 
 def reset_np():
     """Deactivate NumPy shape and array and deafult dtype semantics at the same time."""
-    set_np(shape=False, array=False)
+    set_np(shape=False, array=False, dtype=False)
 
 
 _CUDA_SUCCESS = 0
