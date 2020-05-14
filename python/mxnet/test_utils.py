@@ -1945,9 +1945,40 @@ def same_array(array1, array2):
     array1[:] -= 1
     return same(array1.asnumpy(), array2.asnumpy())
 
+
+@contextmanager
+def environment(env_vars):
+    """
+    Helper function that takes a dictionary of environment variables and their
+    desired settings and changes the environment in advance of running the
+    decorated code.  The original environment state is reinstated afterwards,
+    even if exceptions are raised.
+    """
+    def set_environ(env_var_dict):
+        for var_name, var_setting in env_var_dict.items():
+            if var_setting is None:
+                os.environ.pop(var_name, None)
+            else:
+                os.environ[var_name] = var_setting
+
+    # Take a snapshot of the existing environment variable state
+    # for those variables to be changed
+    snapshot = {x:os.environ.get(x, None) for x in env_vars.keys()}
+
+    # Alter the environment per the env_vars dict
+    set_environ(env_vars)
+
+    # Now run the wrapped code
+    yield
+
+    # reinstate original env var state per the snapshot taken earlier
+    set_environ(snapshot)
+
+
 @contextmanager
 def discard_stderr():
-    """Discards error output of a routine if invoked as:
+    """
+    Discards error output of a routine if invoked as:
 
     with discard_stderr():
         ...
