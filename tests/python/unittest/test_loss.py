@@ -80,9 +80,9 @@ def test_ce_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            eval_metric=mx.metric.Loss(), optimizer='adam',
+            eval_metric=mx.gluon.metric.Loss(), optimizer='adam',
             initializer=mx.init.Xavier(magnitude=2))
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.05
 
 # tracked at: https://github.com/apache/incubator-mxnet/issues/11691
 @with_seed()
@@ -98,9 +98,9 @@ def test_bce_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            eval_metric=mx.metric.Loss(), optimizer='adam',
+            eval_metric=mx.gluon.metric.Loss(), optimizer='adam',
             initializer=mx.init.Xavier(magnitude=2))
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.01
     # Test against npy
     data = mx.random.uniform(-5, 5, shape=(10,))
     label = mx.random.uniform(0, 1, shape=(10,))
@@ -143,8 +143,8 @@ def test_kl_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            eval_metric=mx.metric.Loss(), optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+            eval_metric=mx.gluon.metric.Loss(), optimizer='adam')
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.05
 
 
 @with_seed()
@@ -160,9 +160,9 @@ def test_l2_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.gluon.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.05
 
 
 @with_seed()
@@ -178,9 +178,9 @@ def test_l1_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.gluon.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.1
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.1
 
 
 @with_seed()
@@ -223,9 +223,9 @@ def test_ctc_loss_train():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.gluon.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 10
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 10
 
 
 @with_seed()
@@ -244,12 +244,12 @@ def test_sample_weight_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label', 'w'))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            eval_metric=mx.metric.Loss(), optimizer='adam')
+            eval_metric=mx.gluon.metric.Loss(), optimizer='adam')
     data_iter = mx.io.NDArrayIter(data[10:], {'label': label, 'w': weight}, batch_size=10)
-    score =  mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
+    score =  mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1]
     assert score > 1
     data_iter = mx.io.NDArrayIter(data[:10], {'label': label, 'w': weight}, batch_size=10)
-    score =  mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1]
+    score =  mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1]
     assert score < 0.05
 
 
@@ -267,13 +267,13 @@ def test_saveload():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=100, optimizer_params={'learning_rate': 1.},
-            eval_metric=mx.metric.Loss())
+            eval_metric=mx.gluon.metric.Loss())
     mod.save_checkpoint('test', 100, save_optimizer_states=True)
     mod = mx.mod.Module.load('test', 100, load_optimizer_states=True,
                              data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=100, optimizer_params={'learning_rate': 1.},
-            eval_metric=mx.metric.Loss())
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+            eval_metric=mx.gluon.metric.Loss())
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.05
 
 @with_seed()
 def test_huber_loss():
@@ -288,9 +288,9 @@ def test_huber_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.gluon.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.05
 
 
 @with_seed()
@@ -306,9 +306,9 @@ def test_hinge_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.gluon.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.06
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.06
 
 
 @with_seed()
@@ -324,9 +324,9 @@ def test_squared_hinge_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.gluon.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.05
 
 
 @with_seed()
@@ -345,9 +345,9 @@ def test_triplet_loss():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('pos','neg'))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.metric.Loss(),
+            initializer=mx.init.Xavier(magnitude=2), eval_metric=mx.gluon.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.05
 
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
@@ -456,9 +456,9 @@ def test_poisson_nllloss_mod():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label',))
     mod.fit(data_iter, num_epoch=20, optimizer_params={'learning_rate': 0.01},
-            initializer=mx.init.Normal(sigma=0.1), eval_metric=mx.metric.Loss(),
+            initializer=mx.init.Normal(sigma=0.1), eval_metric=mx.gluon.metric.Loss(),
             optimizer='adam')
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.05
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.05
 
 @with_seed()
 def test_bce_loss_with_pos_weight():
@@ -477,9 +477,9 @@ def test_bce_loss_with_pos_weight():
     loss = mx.sym.make_loss(loss)
     mod = mx.mod.Module(loss, data_names=('data',), label_names=('label', 'pos_w'))
     mod.fit(data_iter, num_epoch=200, optimizer_params={'learning_rate': 0.01},
-            eval_metric=mx.metric.Loss(), optimizer='adam',
+            eval_metric=mx.gluon.metric.Loss(), optimizer='adam',
             initializer=mx.init.Xavier(magnitude=2))
-    assert mod.score(data_iter, eval_metric=mx.metric.Loss())[0][1] < 0.01
+    assert mod.score(data_iter, eval_metric=mx.gluon.metric.Loss())[0][1] < 0.01
     # Test against npy
     data = mx.nd.random.uniform(-5, 5, shape=(N, 5))
     label = mx.nd.array(np.random.randint(2, size=(N, 5)), dtype='float32')

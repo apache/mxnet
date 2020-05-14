@@ -16,7 +16,6 @@
 # under the License.
 
 import gc
-import gluoncv
 import mxnet as mx
 import numpy as np
 
@@ -29,7 +28,12 @@ from mxnet.gluon.data.vision import transforms
 def get_classif_model(model_name, use_tensorrt, ctx=mx.gpu(0), batch_size=128):
     mx.contrib.tensorrt.set_use_fp16(False)
     h, w = 32, 32
-    net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
+    model_url = "https://raw.githubusercontent.com/dmlc/web-data/221ce5b7c6d5b0777a1e3471f7f03ff98da90a0a/gluoncv/models"
+    param_file = "{}-0000.params".format(model_name)
+    symbol_file = "{}-symbol.json".format(model_name)
+    mx.test_utils.download("{}/{}".format(model_url, param_file), fname=param_file, overwrite=True)
+    mx.test_utils.download("{}/{}".format(model_url, symbol_file), fname=symbol_file, overwrite=True)
+    net = gluon.SymbolBlock.imports(symbol_file, ['data'], param_file)
     net.hybridize()
     net.forward(mx.nd.zeros((batch_size, 3, h, w)))
     net.export(model_name)
@@ -130,10 +134,7 @@ def test_tensorrt_on_cifar_resnets(batch_size=32, tolerance=0.1, num_workers=1):
             'cifar_resnet20_v2',
             'cifar_resnet56_v2',
             'cifar_resnet110_v2',
-            'cifar_wideresnet16_10',
-            'cifar_wideresnet28_10',
-            'cifar_wideresnet40_8',
-            'cifar_resnext29_16x64d'
+            'cifar_wideresnet16_10'
         ]
 
         num_models = len(models)

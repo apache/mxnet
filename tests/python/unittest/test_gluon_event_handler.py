@@ -84,7 +84,7 @@ def test_checkpoint_handler():
 
         net = _get_test_network()
         ce_loss = loss.SoftmaxCrossEntropyLoss()
-        acc = mx.metric.Accuracy()
+        acc = mx.gluon.metric.Accuracy()
         est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
         checkpoint_handler = event_handler.CheckpointHandler(model_dir=tmpdir,
                                                              model_prefix=model_prefix,
@@ -130,7 +130,7 @@ def test_resume_checkpoint():
 
         net = _get_test_network()
         ce_loss = loss.SoftmaxCrossEntropyLoss()
-        acc = mx.metric.Accuracy()
+        acc = mx.gluon.metric.Accuracy()
         est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
         checkpoint_handler = event_handler.CheckpointHandler(model_dir=tmpdir,
                                                              model_prefix=model_prefix,
@@ -155,7 +155,7 @@ def test_early_stopping():
 
     net = _get_test_network()
     ce_loss = loss.SoftmaxCrossEntropyLoss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
     early_stopping = event_handler.EarlyStoppingHandler(monitor=acc,
                                                         patience=0,
@@ -179,7 +179,7 @@ def test_logging():
 
         net = _get_test_network()
         ce_loss = loss.SoftmaxCrossEntropyLoss()
-        acc = mx.metric.Accuracy()
+        acc = mx.gluon.metric.Accuracy()
         est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
 
         est.logger.addHandler(logging.FileHandler(output_dir))
@@ -226,7 +226,7 @@ def test_custom_handler():
     test_data = _get_test_data()
     net = _get_test_network()
     ce_loss = loss.SoftmaxCrossEntropyLoss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
     custom_handler = CustomStopHandler(3, 2)
     est.fit(test_data, event_handlers=[custom_handler], epochs=3)
@@ -249,7 +249,7 @@ def test_logging_interval():
     dataloader = _get_test_data(in_size=data_size)
     num_epochs = 1
     ce_loss = loss.SoftmaxCrossEntropyLoss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     logging = LoggingHandler(metrics=[acc], log_interval=log_interval)
     est = estimator.Estimator(net=net,
                               loss=ce_loss,
@@ -273,7 +273,7 @@ def test_logging_interval():
     ''' test case #2: log interval is 5 '''
     old_stdout = sys.stdout
     sys.stdout = mystdout = StringIO()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     log_interval = 5
     logging = LoggingHandler(metrics=[acc], log_interval=log_interval)
     est = estimator.Estimator(net=net,
@@ -299,7 +299,7 @@ def test_validation_handler_batch_axis():
     test_data = _get_test_data()
     net = _get_test_network()
     ce_loss = loss.SoftmaxCrossEntropyLoss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
     est.fit(test_data, epochs=3)
 
@@ -315,7 +315,7 @@ def test_validation_handler():
 
     net = _get_test_network()
     ce_loss = loss.SoftmaxCrossEntropyLoss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     est = estimator.Estimator(net, loss=ce_loss, train_metrics=acc)
     val_handler = ValidationHandler(val_data=test_data,
                                     eval_fn=est.evaluate,

@@ -111,7 +111,7 @@ systole_model = mx.model.FeedForward(ctx=devs,
         wd                 = 0.00001,
         momentum           = 0.9)
 
-systole_model.fit(X=data_train, eval_metric = mx.metric.np(CRPS))
+systole_model.fit(X=data_train, eval_metric = mx.gluon.metric.np(CRPS))
 
 
 # # Predict systole
@@ -139,7 +139,7 @@ diastole_model = mx.model.FeedForward(ctx=devs,
         wd                 = 0.00001,
         momentum           = 0.9)
 
-diastole_model.fit(X=data_train, eval_metric = mx.metric.np(CRPS))
+diastole_model.fit(X=data_train, eval_metric = mx.gluon.metric.np(CRPS))
 
 
 # # Predict diastole

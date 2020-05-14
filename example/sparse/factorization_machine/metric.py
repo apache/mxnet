@@ -19,9 +19,9 @@ import mxnet as mx
 import numpy as np
 from operator import itemgetter
 
-@mx.metric.register
-@mx.metric.alias('log_loss')
-class LogLossMetric(mx.metric.EvalMetric):
+@mx.gluon.metric.register
+@mx.gluon.metric.alias('log_loss')
+class LogLossMetric(mx.gluon.metric.EvalMetric):
     """Computes the negative log-likelihood loss.
 
     The negative log-likelihoodd loss over a batch of sample size :math:`N` is given by
@@ -51,7 +51,7 @@ class LogLossMetric(mx.metric.EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3], [0], [0.4]])]
     >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> log_loss= mx.metric.NegativeLogLikelihood()
+    >>> log_loss= mx.gluon.metric.NegativeLogLikelihood()
     >>> log_loss.update(labels, predicts)
     >>> print(log_loss.get())
     ('log-loss', 0.57159948348999023)
@@ -74,7 +74,7 @@ class LogLossMetric(mx.metric.EvalMetric):
         preds : list of `NDArray`
             Predicted values.
         """
-        mx.metric.check_label_shapes(labels, preds)
+        mx.gluon.metric.check_label_shapes(labels, preds)
 
         for label, pred in zip(labels, preds):
             label = label.asnumpy()
@@ -88,16 +88,16 @@ class LogLossMetric(mx.metric.EvalMetric):
             self.sum_metric += (-np.log(prob + self.eps)).sum()
             self.num_inst += num_examples
 
-@mx.metric.register
-@mx.metric.alias('auc')
-class AUCMetric(mx.metric.EvalMetric):
+@mx.gluon.metric.register
+@mx.gluon.metric.alias('auc')
+class AUCMetric(mx.gluon.metric.EvalMetric):
     def __init__(self, eps=1e-12):
         super(AUCMetric, self).__init__(
             'auc')
         self.eps = eps
 
     def update(self, labels, preds):
-        mx.metric.check_label_shapes(labels, preds)
+        mx.gluon.metric.check_label_shapes(labels, preds)
         label_weight = labels[0].asnumpy()
         preds = preds[0].asnumpy()
         tmp = []

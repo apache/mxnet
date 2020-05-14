@@ -98,7 +98,7 @@ def train_model(context=mx.cpu()):
     model.fit(
         train_data=data_train,
         eval_data=data_val,
-        eval_metric=mx.metric.Perplexity(invalid_label), # Use Perplexity for multiclass classification.
+        eval_metric=mx.gluon.metric.Perplexity(invalid_label), # Use Perplexity for multiclass classification.
         kvstore='device',
         optimizer='sgd',
         optimizer_params={'learning_rate': 0.01,
@@ -114,7 +114,7 @@ def train_model(context=mx.cpu()):
 def test_bucket_module():
     # This test forecasts random sequence of words to check bucketing.
     # We cannot guarantee the accuracy of such an impossible task, and comments out the following line.
-    # assert model.score(data_val, mx.metric.MSE())[0][1] < 350, "High mean square error."
+    # assert model.score(data_val, mx.gluon.metric.MSE())[0][1] < 350, "High mean square error."
     model = train_model()
 
 

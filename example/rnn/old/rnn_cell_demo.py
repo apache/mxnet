@@ -144,7 +144,7 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format=head)
 
     mod.fit(data_train, eval_data=data_val, num_epoch=num_epoch,
-            eval_metric=mx.metric.np(Perplexity),
+            eval_metric=mx.gluon.metric.np(Perplexity),
             batch_end_callback=mx.callback.Speedometer(batch_size, 50),
             initializer=mx.init.Xavier(factor_type="in", magnitude=2.34),
             optimizer='sgd',
