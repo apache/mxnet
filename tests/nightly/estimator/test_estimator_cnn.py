@@ -116,7 +116,7 @@ def test_estimator_cpu():
         # Define estimator
         est = estimator.Estimator(net=net,
                                   loss=loss,
-                                  train_metrics=mx.gluon.metric.Accuracy(),
+                                  train_metrics=mx.metric.Accuracy(),
                                   trainer=trainer,
                                   context=context)
         # Call fit()
@@ -140,7 +140,7 @@ def test_estimator_gpu():
     train_data, test_data = load_data_mnist(batch_size, resize=224)
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     net.hybridize()
-    acc = mx.gluon.metric.Accuracy()
+    acc = mx.metric.Accuracy()
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     # Define estimator
     est = estimator.Estimator(net=net,

@@ -123,7 +123,7 @@ def evaluate(data_iterator, network, context):
     ----------
     tuple of array element
     """
-    acc = mx.gluon.metric.Accuracy()
+    acc = mx.metric.Accuracy()
 
     # Iterate through data and label
     for i, (data, label) in enumerate(data_iterator):
@@ -208,7 +208,7 @@ trainer = gluon.Trainer(net.collect_params(), optimizer='adam',
                         optimizer_params={'learning_rate': args.lr},
                         kvstore=store)
 
-train_metric = mx.gluon.metric.Accuracy()
+train_metric = mx.metric.Accuracy()
 
 # Run as many epochs as required
 for epoch in range(args.epochs):

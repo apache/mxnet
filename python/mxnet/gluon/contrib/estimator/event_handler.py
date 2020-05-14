@@ -25,8 +25,8 @@ import warnings
 
 import numpy as np
 
-from ...metric import CompositeEvalMetric, EvalMetric
-from ...metric import Loss as metric_loss
+from ....metric import CompositeEvalMetric, EvalMetric
+from ....metric import Loss as metric_loss
 from .utils import _check_metrics
 
 __all__ = ['TrainBegin', 'TrainEnd', 'EpochBegin', 'EpochEnd', 'BatchBegin', 'BatchEnd',

@@ -21,9 +21,9 @@
 import logging
 import numpy as np
 
-from ..... import ndarray as nd
+from ..... import nd
 from .....util import is_np_array
-from ..... import numpy as _mx_np   # pylint: disable=reimported
+from ..... import np as _mx_np   # pylint: disable=reimported
 from ....nn import HybridSequential, Sequential, HybridBlock, Block
 from ....data.vision import transforms
 from ....data import DataLoader

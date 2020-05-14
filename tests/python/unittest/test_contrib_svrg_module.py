@@ -240,7 +240,7 @@ def test_svrg_with_sgd():
     num_epoch = 10
 
     # Use metric MSE
-    metrics = mx.gluon.metric.create("mse")
+    metrics = mx.metric.create("mse")
 
     # Train with SVRGModule
     for e in range(num_epoch):
@@ -297,7 +297,7 @@ def test_accumulate_kvstore():
 def test_fit():
     di, mod = setup()
     num_epoch = 100
-    metric = mx.gluon.metric.create("mse")
+    metric = mx.metric.create("mse")
     mod.fit(di, eval_metric=metric, optimizer='sgd', optimizer_params=(('learning_rate', 0.025),), num_epoch=num_epoch,
             kvstore='local')
 

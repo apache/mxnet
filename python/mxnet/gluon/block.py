@@ -28,8 +28,7 @@ from collections import OrderedDict, defaultdict
 import numpy as np
 
 from ..base import mx_real_t, MXNetError, NDArrayHandle, py_str
-from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc
-from ..symbol.numpy import _symbol as np_symbol
+from .. import symbol, ndarray, initializer, np_symbol, autograd, _deferred_compute as dc
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name

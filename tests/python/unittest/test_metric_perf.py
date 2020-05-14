@@ -66,7 +66,7 @@ class PearsonMetricDataGen(MetricDataGen):
 
 def run_metric(name, data_gen_cls, i, n, c, pred_ctx, label_ctx, **kwargs):
     """ Helper function for running one metric benchmark """
-    metric = mx.gluon.metric.create(name, **kwargs)
+    metric = mx.metric.create(name, **kwargs)
     data_gen = data_gen_cls(n, c, pred_ctx, label_ctx)
     try:
         label, pred = data_gen.data()
@@ -105,7 +105,7 @@ def test_metric_performance():
     output_dims = [128, 1024, 8192]
     ctxs = [mx.cpu(), mx.gpu()]
 
-    print("\nmx.gluon.metric benchmarks", file=sys.stderr)
+    print("\nmx.metric benchmarks", file=sys.stderr)
     print(
         "{:15}{:10}{:12}{:12}{:15}{:15}{}".format(
             'Metric', 'Data-Ctx', 'Label-Ctx', 'Data Size', 'Batch Size', 'Output Dim', 'Elapsed Time'),

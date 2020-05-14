@@ -18,7 +18,7 @@
 import mxnet as mx
 import numpy as np
 
-class MApMetric(mx.gluon.metric.EvalMetric):
+class MApMetric(mx.metric.EvalMetric):
     """
     Calculate mean AP for object detection task
 

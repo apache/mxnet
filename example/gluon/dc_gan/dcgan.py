@@ -259,7 +259,7 @@ def main():
     real_label = mx.nd.ones((opt.batch_size,), ctx=ctx)
     fake_label = mx.nd.zeros((opt.batch_size,), ctx=ctx)
 
-    metric = mx.gluon.metric.Accuracy()
+    metric = mx.metric.Accuracy()
     print('Training... ')
     stamp = datetime.now().strftime('%Y_%m_%d-%H_%M')
 

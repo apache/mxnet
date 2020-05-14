@@ -22,12 +22,11 @@
 import math
 from collections import OrderedDict
 
-from .. import numpy
-from ..util import use_np
+import numpy
 
-from ..base import numeric_types, string_types
-from .. import ndarray
-from .. import registry
+from .base import numeric_types, string_types
+from . import ndarray
+from . import registry
 
 
 def check_label_shapes(labels, preds, wrap=False, shape=False):
@@ -90,6 +89,7 @@ class EvalMetric(object):
         self.name = str(name)
         self.output_names = output_names
         self.label_names = label_names
+        self._has_global_stats = kwargs.pop("has_global_stats", False)
         self._kwargs = kwargs
         self.reset()
 
@@ -148,6 +148,13 @@ class EvalMetric(object):
         """Resets the internal evaluation result to initial state."""
         self.num_inst = 0
         self.sum_metric = 0.0
+        self.global_num_inst = 0
+        self.global_sum_metric = 0.0
+
+    def reset_local(self):
+        """Resets the local portion of the internal evaluation results to initial state."""
+        self.num_inst = 0
+        self.sum_metric = 0.0
 
     def get(self):
         """Gets the current evaluation result.
@@ -162,13 +169,25 @@ class EvalMetric(object):
         if self.num_inst == 0:
             return (self.name, float('nan'))
         else:
-            res = self.sum_metric / self.num_inst
-            if isinstance(res, numpy.ndarray) and len(res.shape) == 0:
-                # currently calling ' c = mxnet.numpy.array([1,2,3]).sum() ' would get
-                # ' array(6.) ', a ndarray with shape ()
-                # In this case, returning a 'float' in .get() is more explicit.
-                res = res.item()
-            return (self.name, res)
+            return (self.name, self.sum_metric / self.num_inst)
+
+    def get_global(self):
+        """Gets the current global evaluation result.
+
+        Returns
+        -------
+        names : list of str
+           Name of the metrics.
+        values : list of float
+           Value of the evaluations.
+        """
+        if self._has_global_stats:
+            if self.global_num_inst == 0:
+                return (self.name, float('nan'))
+            else:
+                return (self.name, self.global_sum_metric / self.global_num_inst)
+        else:
+            return self.get()
 
     def get_name_value(self):
         """Returns zipped name and value pairs.
@@ -184,6 +203,24 @@ class EvalMetric(object):
         if not isinstance(value, list):
             value = [value]
         return list(zip(name, value))
+
+    def get_global_name_value(self):
+        """Returns zipped name and value pairs for global results.
+
+        Returns
+        -------
+        list of tuples
+            A (name, value) tuple list.
+        """
+        if self._has_global_stats:
+            name, value = self.get_global()
+            if not isinstance(name, list):
+                name = [name]
+            if not isinstance(value, list):
+                value = [value]
+            return list(zip(name, value))
+        else:
+            return self.get_name_value()
 
 # pylint: disable=invalid-name
 register = registry.get_register_func(EvalMetric, 'metric')
@@ -219,9 +256,9 @@ def create(metric, *args, **kwargs):
     >>> def custom_metric(label, pred):
     ...     return np.mean(np.abs(label - pred))
     ...
-    >>> metric1 = mx.gluon.metric.create('acc')
-    >>> metric2 = mx.gluon.metric.create(custom_metric)
-    >>> metric3 = mx.gluon.metric.create([metric1, metric2, 'rmse'])
+    >>> metric1 = mx.metric.create('acc')
+    >>> metric2 = mx.metric.create(custom_metric)
+    >>> metric3 = mx.metric.create([metric1, metric2, 'rmse'])
     """
     if callable(metric):
         return CustomMetric(metric, *args, **kwargs)
@@ -256,9 +293,9 @@ class CompositeEvalMetric(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> eval_metrics_1 = mx.gluon.metric.Accuracy()
-    >>> eval_metrics_2 = mx.gluon.metric.F1()
-    >>> eval_metrics = mx.gluon.metric.CompositeEvalMetric()
+    >>> eval_metrics_1 = mx.metric.Accuracy()
+    >>> eval_metrics_2 = mx.metric.F1()
+    >>> eval_metrics = mx.metric.CompositeEvalMetric()
     >>> for child_metric in [eval_metrics_1, eval_metrics_2]:
     >>>     eval_metrics.add(child_metric)
     >>> eval_metrics.update(labels = labels, preds = predicts)
@@ -269,7 +306,8 @@ class CompositeEvalMetric(EvalMetric):
     def __init__(self, metrics=None, name='composite',
                  output_names=None, label_names=None):
         super(CompositeEvalMetric, self).__init__(
-            name, output_names=output_names, label_names=label_names)
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         if metrics is None:
             metrics = []
         self.metrics = [create(i) for i in metrics]
@@ -331,6 +369,14 @@ class CompositeEvalMetric(EvalMetric):
         except AttributeError:
             pass
 
+    def reset_local(self):
+        """Resets the local portion of the internal evaluation results to initial state."""
+        try:
+            for metric in self.metrics:
+                metric.reset_local()
+        except AttributeError:
+            pass
+
     def get(self):
         """Returns the current evaluation result.
 
@@ -353,6 +399,28 @@ class CompositeEvalMetric(EvalMetric):
             values.extend(value)
         return (names, values)
 
+    def get_global(self):
+        """Returns the current evaluation result.
+
+        Returns
+        -------
+        names : list of str
+           Name of the metrics.
+        values : list of float
+           Value of the evaluations.
+        """
+        names = []
+        values = []
+        for metric in self.metrics:
+            name, value = metric.get_global()
+            if isinstance(name, string_types):
+                name = [name]
+            if isinstance(value, numeric_types):
+                value = [value]
+            names.extend(name)
+            values.extend(value)
+        return (names, values)
+
     def get_config(self):
         config = super(CompositeEvalMetric, self).get_config()
         config.update({'metrics': [i.get_config() for i in self.metrics]})
@@ -366,7 +434,6 @@ class CompositeEvalMetric(EvalMetric):
 
 @register
 @alias('acc')
-@use_np
 class Accuracy(EvalMetric):
     """Computes accuracy classification score.
 
@@ -393,7 +460,7 @@ class Accuracy(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> acc = mx.gluon.metric.Accuracy()
+    >>> acc = mx.metric.Accuracy()
     >>> acc.update(preds = predicts, labels = labels)
     >>> print acc.get()
     ('accuracy', 0.6666666666666666)
@@ -402,7 +469,8 @@ class Accuracy(EvalMetric):
                  output_names=None, label_names=None):
         super(Accuracy, self).__init__(
             name, axis=axis,
-            output_names=output_names, label_names=label_names)
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         self.axis = axis
 
     def update(self, labels, preds):
@@ -420,26 +488,25 @@ class Accuracy(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred_label in zip(labels, preds):
-            pred_label = pred_label.as_np_ndarray().as_in_ctx(label.ctx)
-            label = label.as_np_ndarray()
             if pred_label.shape != label.shape:
-                pred_label = pred_label.argmax(axis=self.axis)
-            pred_label = pred_label.astype('int32')
-            label = label.astype('int32')
+                pred_label = ndarray.argmax(pred_label, axis=self.axis)
+            pred_label = pred_label.asnumpy().astype('int32')
+            label = label.asnumpy().astype('int32')
             # flatten before checking shapes to avoid shape miss match
-            label = label.reshape(-1)
-            pred_label = pred_label.reshape(-1)
+            label = label.flat
+            pred_label = pred_label.flat
 
             check_label_shapes(label, pred_label)
 
-            num_correct = (pred_label == label).sum().astype('float64')
+            num_correct = (pred_label == label).sum()
             self.sum_metric += num_correct
+            self.global_sum_metric += num_correct
             self.num_inst += len(pred_label)
+            self.global_num_inst += len(pred_label)
 
 
 @register
 @alias('top_k_accuracy', 'top_k_acc')
-@use_np
 class TopKAccuracy(EvalMetric):
     """Computes top k predictions accuracy.
 
@@ -468,7 +535,7 @@ class TopKAccuracy(EvalMetric):
     >>> top_k = 3
     >>> labels = [mx.nd.array([2, 6, 9, 2, 3, 4, 7, 8, 9, 6])]
     >>> predicts = [mx.nd.array(np.random.rand(10, 10))]
-    >>> acc = mx.gluon.metric.TopKAccuracy(top_k=top_k)
+    >>> acc = mx.metric.TopKAccuracy(top_k=top_k)
     >>> acc.update(labels, predicts)
     >>> print acc.get()
     ('top_k_accuracy', 0.3)
@@ -478,7 +545,8 @@ class TopKAccuracy(EvalMetric):
                  output_names=None, label_names=None):
         super(TopKAccuracy, self).__init__(
             name, top_k=top_k,
-            output_names=output_names, label_names=label_names)
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         self.top_k = top_k
         assert(self.top_k > 1), 'Please use Accuracy if top_k is no more than 1'
         self.name += '_%d' % self.top_k
@@ -502,89 +570,43 @@ class TopKAccuracy(EvalMetric):
             # we do not care about the order of top k elements. It is
             # much faster, which is important since that computation is
             # single-threaded due to Python GIL.
-            pred_label = pred_label.as_np_ndarray().as_in_ctx(label.ctx).astype('float32')
-            pred_label = numpy.argpartition(pred_label, -self.top_k)
-            label = label.as_np_ndarray().astype('int32')
+            pred_label = numpy.argpartition(pred_label.asnumpy().astype('float32'), -self.top_k)
+            label = label.asnumpy().astype('int32')
             check_label_shapes(label, pred_label)
             num_samples = pred_label.shape[0]
             num_dims = len(pred_label.shape)
             if num_dims == 1:
-                num_correct = (pred_label.reshape(-1) == label.reshape(-1)).sum()
-                self.sum_metric += num_correct.astype('float64')
+                self.sum_metric += (pred_label.flat == label.flat).sum()
             elif num_dims == 2:
                 num_classes = pred_label.shape[1]
                 top_k = min(num_classes, self.top_k)
                 for j in range(top_k):
-                    num_correct = (pred_label[:, num_classes - 1 - j].reshape(-1) == label.reshape(-1)).sum()
-                    self.sum_metric += num_correct.astype('float64')
+                    num_correct = (pred_label[:, num_classes - 1 - j].flat == label.flat).sum()
+                    self.sum_metric += num_correct
+                    self.global_sum_metric += num_correct
             self.num_inst += num_samples
+            self.global_num_inst += num_samples
 
 
-def predict_with_threshold(pred, threshold=0.5):
-    """Do thresholding of predictions in binary and multilabel cases.
-
-    Parameters
-    ----------
-    preds : ndarray
-        predictions in shape of (batch_size, ...) or (batch_size, ..., num_categories)
-
-    preds : float or ndarray
-        threshold（s) in shape of float or (num_categories)
-    """
-    if isinstance(threshold, float):
-        return pred > threshold
-    elif isinstance(threshold, (numpy.ndarray, ndarray.ndarray.NDArray)):
-        num_classes = pred.shape[-1]
-        assert threshold.shape[-1] == num_classes, \
-                "shape mismatch: %s vs. %s"%(pred.shape[-1], threshold.shape[-1])
-        return pred > threshold
-    else:
-        raise ValueError("{} is a wrong type for threshold!".format(type(threshold)))
-
-
-def one_hot(idx, num):
-    return (numpy.arange(num).astype(idx) == idx[:, None]).astype('int32')
-
-
-@use_np
-class _ClassificationMetrics(object):
+class _BinaryClassificationMetrics(object):
     """Private container class for classification metric statistics.
 
     True/false positive and true/false negative counts are sufficient statistics for various classification metrics.
     This class provides the machinery to track those statistics across mini-batches of
     (label, prediction) pairs.
-
-    Parameters
-    ----------
-    class_type : str, default "binary"
-        "binary": f1 for binary classification.
-        "multiclass": f1 for multiclassification problem.
-        "multilabel": f1 for multilabel classification.
-    beta : float, default 1
-        weight of precision in harmonic mean.
-    threshold : float, default 0.5
-        threshold for deciding whether the predictions are positive or negative.
-
     """
 
-    def __init__(self, class_type="binary", threshold=0.5, beta=1):
-        self.class_type = class_type
-        self.threshold = threshold
-        self.beta = beta
-        self.reset_stats()
+    def __init__(self):
+        self.true_positives = 0
+        self.false_negatives = 0
+        self.false_positives = 0
+        self.true_negatives = 0
+        self.global_true_positives = 0
+        self.global_false_negatives = 0
+        self.global_false_positives = 0
+        self.global_true_negatives = 0
 
-    def _set(self, num, ctx):
-        if self.num_classes is None:
-            self.num_classes = num
-            self.true_positives = numpy.zeros(num, dtype='float64').as_in_ctx(ctx)
-            self.false_negatives = numpy.zeros(num, dtype='float64').as_in_ctx(ctx)
-            self.false_positives = numpy.zeros(num, dtype='float64').as_in_ctx(ctx)
-            self.true_negatives = numpy.zeros(num, dtype='float64').as_in_ctx(ctx)
-        else:
-            assert self.num_classes == num, \
-                "Input number of classes has changed from {} to {}".format(self.num_classes, num)
-
-    def update_stats(self, label, pred):
+    def update_binary_stats(self, label, pred):
         """Update various binary classification counts for a single (label, pred) pair.
 
         Parameters
@@ -595,107 +617,92 @@ class _ClassificationMetrics(object):
         pred : `NDArray`
             Predicted values.
         """
-        pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-        label = label.as_np_ndarray().astype('int32')
-        if self.class_type == "binary":
-            self._set(1, label.ctx)
-            if label.max() > 1:
-                raise ValueError("Wrong label for binary classification.")
-            if pred.shape == label.shape:
-                pass
-            elif pred.shape[-1] > 2:
-                raise ValueError("The shape of prediction {} is wrong for binary classification.".format(pred.shape))
-            elif pred.shape[-1] == 2:
-                pred = pred.reshape(-1, 2)[:, 1]
-            pred_label = predict_with_threshold(pred, self.threshold).reshape(-1)
-            label = label.reshape(-1)
+        pred = pred.asnumpy()
+        label = label.asnumpy().astype('int32')
+        pred_label = numpy.argmax(pred, axis=1)
 
-        elif self.class_type == "multiclass":
-            num = pred.shape[-1]
-            self._set(num, label.ctx)
-            assert label.max() < num, "pred contains fewer classes than label!"
-            pred_label = one_hot(pred.argmax(axis=-1).reshape(-1), num)
-            label = one_hot(label.reshape(-1), num)
-
-        elif self.class_type == "multilabel":
-            num = pred.shape[-1]
-            self._set(num, label.ctx)
-            assert pred.shape == label.shape, \
-                "The shape of label should be same as that of prediction for multilabel classification."
-            pred_label = predict_with_threshold(pred, self.threshold).reshape(-1, num)
-            label = label.reshape(-1, num)
-        else:
-            raise ValueError(
-                "Wrong class_type {}! Only supports ['binary', 'multiclass', 'multilabel']".format(self.class_type))
-
-        check_label_shapes(label, pred_label)
-
+        check_label_shapes(label, pred)
+        if len(numpy.unique(label)) > 2:
+            raise ValueError("%s currently only supports binary classification."
+                             % self.__class__.__name__)
         pred_true = (pred_label == 1)
-        pred_false = (pred_label == 0)
+        pred_false = 1 - pred_true
         label_true = (label == 1)
-        label_false = (label == 0)
+        label_false = 1 - label_true
 
-        true_pos = (pred_true * label_true).sum(0)
-        false_pos = (pred_true * label_false).sum(0)
-        false_neg = (pred_false * label_true).sum(0)
-        true_neg = (pred_false * label_false).sum(0)
+        true_pos = (pred_true * label_true).sum()
+        false_pos = (pred_true * label_false).sum()
+        false_neg = (pred_false * label_true).sum()
+        true_neg = (pred_false * label_false).sum()
         self.true_positives += true_pos
+        self.global_true_positives += true_pos
         self.false_positives += false_pos
+        self.global_false_positives += false_pos
         self.false_negatives += false_neg
+        self.global_false_negatives += false_neg
         self.true_negatives += true_neg
+        self.global_true_negatives += true_neg
 
     @property
     def precision(self):
-        if self.num_classes is not None:
-            return self.true_positives / numpy.maximum(self.true_positives + self.false_positives, 1e-12)
+        if self.true_positives + self.false_positives > 0:
+            return float(self.true_positives) / (self.true_positives + self.false_positives)
         else:
             return 0.
 
     @property
-    def micro_precision(self):
-        if self.num_classes is not None:
-            return self.true_positives.sum() / \
-                numpy.maximum(self.true_positives.sum() + self.false_positives.sum(), 1e-12)
+    def global_precision(self):
+        if self.global_true_positives + self.global_false_positives > 0:
+            return float(self.global_true_positives) / (self.global_true_positives + self.global_false_positives)
         else:
             return 0.
 
     @property
     def recall(self):
-        if self.num_classes is not None:
-            return self.true_positives / numpy.maximum(self.true_positives + self.false_negatives, 1e-12)
+        if self.true_positives + self.false_negatives > 0:
+            return float(self.true_positives) / (self.true_positives + self.false_negatives)
         else:
             return 0.
 
     @property
-    def micro_recall(self):
-        if self.num_classes is not None:
-            return self.true_positives.sum() / \
-                numpy.maximum(self.true_positives.sum() + self.false_negatives.sum(), 1e-12)
+    def global_recall(self):
+        if self.global_true_positives + self.global_false_negatives > 0:
+            return float(self.global_true_positives) / (self.global_true_positives + self.global_false_negatives)
         else:
             return 0.
 
     @property
     def fscore(self):
-        return (1 + self.beta ** 2) * self.precision * self.recall / \
-            numpy.maximum(self.beta ** 2 * self.precision + self.recall, 1e-12)
-
-    @property
-    def micro_fscore(self):
-        if self.micro_precision + self.micro_recall > 0:
-            return (1 + self.beta ** 2) * self.micro_precision * self.micro_recall / \
-                (self.beta ** 2 * self.micro_precision + self.micro_recall)
+        if self.precision + self.recall > 0:
+            return 2 * self.precision * self.recall / (self.precision + self.recall)
         else:
             return 0.
 
-    def binary_matthewscc(self):
-        """Calculate the Matthew's Correlation Coefficent"""
-        if not self.total_examples:
+    @property
+    def global_fscore(self):
+        if self.global_precision + self.global_recall > 0:
+            return 2 * self.global_precision * self.global_recall / (self.global_precision + self.global_recall)
+        else:
             return 0.
 
-        true_pos = float(self.true_positives)
-        false_pos = float(self.false_positives)
-        false_neg = float(self.false_negatives)
-        true_neg = float(self.true_negatives)
+    def matthewscc(self, use_global=False):
+        """Calculate the Matthew's Correlation Coefficent"""
+        if use_global:
+            if not self.global_total_examples:
+                return 0.
+
+            true_pos = float(self.global_true_positives)
+            false_pos = float(self.global_false_positives)
+            false_neg = float(self.global_false_negatives)
+            true_neg = float(self.global_true_negatives)
+        else:
+            if not self.total_examples:
+                return 0.
+
+            true_pos = float(self.true_positives)
+            false_pos = float(self.false_positives)
+            false_neg = float(self.false_negatives)
+            true_neg = float(self.true_negatives)
 
         terms = [(true_pos + false_pos),
                  (true_pos + false_neg),
@@ -708,21 +715,32 @@ class _ClassificationMetrics(object):
 
     @property
     def total_examples(self):
-        if self.num_classes is None:
-            return 0
-        return int(self.false_negatives[0] + self.false_positives[0] + \
-               self.true_negatives[0] + self.true_positives[0])
+        return self.false_negatives + self.false_positives + \
+               self.true_negatives + self.true_positives
+
+    @property
+    def global_total_examples(self):
+        return self.global_false_negatives + self.global_false_positives + \
+               self.global_true_negatives + self.global_true_positives
+
+    def local_reset_stats(self):
+        self.false_positives = 0
+        self.false_negatives = 0
+        self.true_positives = 0
+        self.true_negatives = 0
 
     def reset_stats(self):
-        self.num_classes = None
-        self.true_positives = None
-        self.false_negatives = None
-        self.false_positives = None
-        self.true_negatives = None
+        self.false_positives = 0
+        self.false_negatives = 0
+        self.true_positives = 0
+        self.true_negatives = 0
+        self.global_false_positives = 0
+        self.global_false_negatives = 0
+        self.global_true_positives = 0
+        self.global_true_negatives = 0
 
 
 @register
-@use_np
 class F1(EvalMetric):
     """Computes the F1 score of a binary classification problem.
 
@@ -750,34 +768,28 @@ class F1(EvalMetric):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
-    class_type : str, default "binary"
-        "binary": f1 for binary classification.
-        "multiclass": f1 for multiclassification problem.
-        "multilabel": f1 for multilabel classification.
-    threshold : float, default 0.5
-        threshold for postive confidence value.
-    average : str, default 'micro'
+    average : str, default 'macro'
         Strategy to be used for aggregating across mini-batches.
-            "macro": Calculate metrics for each label and return unweighted mean of f1.
-            "micro": Calculate metrics globally by counting the total TP, FN and FP.
-            None: Return f1 scores for each class (numpy.ndarray) .
+            "macro": average the F1 scores for each batch.
+            "micro": compute a single F1 score across all batches.
 
     Examples
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0., 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0., 1., 1.])]
-    >>> f1 = mx.gluon.metric.F1()
+    >>> f1 = mx.metric.F1()
     >>> f1.update(preds = predicts, labels = labels)
     >>> print f1.get()
     ('f1', 0.8)
     """
 
     def __init__(self, name='f1',
-                 output_names=None, label_names=None, class_type="binary", threshold=0.5, average="micro"):
+                 output_names=None, label_names=None, average="macro"):
         self.average = average
-        self.metrics = _ClassificationMetrics(class_type=class_type, threshold=threshold)
+        self.metrics = _BinaryClassificationMetrics()
         EvalMetric.__init__(self, name=name,
-                            output_names=output_names, label_names=label_names)
+                            output_names=output_names, label_names=label_names,
+                            has_global_stats=True)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -793,149 +805,36 @@ class F1(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            self.metrics.update_stats(label, pred)
+            self.metrics.update_binary_stats(label, pred)
 
-        if self.average == "micro":
-            self.sum_metric = self.metrics.micro_fscore * self.metrics.total_examples
-        elif self.average == "macro":
-            self.sum_metric = self.metrics.fscore.mean() * self.metrics.total_examples
+        if self.average == "macro":
+            self.sum_metric += self.metrics.fscore
+            self.global_sum_metric += self.metrics.global_fscore
+            self.num_inst += 1
+            self.global_num_inst += 1
+            self.metrics.reset_stats()
         else:
             self.sum_metric = self.metrics.fscore * self.metrics.total_examples
-        self.num_inst = self.metrics.total_examples
+            self.global_sum_metric = self.metrics.global_fscore * self.metrics.global_total_examples
+            self.num_inst = self.metrics.total_examples
+            self.global_num_inst = self.metrics.global_total_examples
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
         self.sum_metric = 0.
         self.num_inst = 0
+        self.global_num_inst = 0
+        self.global_sum_metric = 0.0
         self.metrics.reset_stats()
 
-
-@register
-@use_np
-class Fbeta(F1):
-    """Computes the Fbeta score of a binary classification problem.
-
-    The Fbeta score is equivalent to harmonic mean of the precision and recall,
-    where the best value is 1.0 and the worst value is 0.0. The formula for Fbeta score is::
-
-        Fbeta = (1 + beta ** 2) * (precision * recall) / (beta ** 2 * precision + recall)
-
-    The formula for precision and recall is::
-
-        precision = true_positives / (true_positives + false_positives)
-        recall    = true_positives / (true_positives + false_negatives)
-
-    .. note::
-
-        This Fbeta score only supports binary classification.
-
-    Parameters
-    ----------
-    name : str
-        Name of this metric instance for display.
-    output_names : list of str, or None
-        Name of predictions that should be used when updating with update_dict.
-        By default include all predictions.
-    label_names : list of str, or None
-        Name of labels that should be used when updating with update_dict.
-        By default include all labels.
-    class_type : str, default "binary"
-        "binary": f1 for binary classification.
-        "multiclass": f1 for multiclassification problem.
-        "multilabel": f1 for multilabel classification.
-    beta : float, default 1
-        weight of precision in harmonic mean.
-    threshold : float, default 0.5
-        threshold for postive confidence value.
-    average : str, default 'micro'
-        Strategy to be used for aggregating across mini-batches.
-            "macro": Calculate metrics for each label and return unweighted mean of f1.
-            "micro": Calculate metrics globally by counting the total TP, FN and FP.
-            None: Return f1 scores for each class.
-
-    Examples
-    --------
-    >>> predicts = [mx.nd.array([[0.3, 0.7], [0., 1.], [0.4, 0.6]])]
-    >>> labels   = [mx.nd.array([0., 1., 1.])]
-    >>> fbeta = mx.gluon.metric.Fbeta(beta=2)
-    >>> fbeta.update(preds = predicts, labels = labels)
-    >>> print fbeta.get()
-    ('fbeta', 0.9090909090909091)
-    """
-
-    def __init__(self, name='fbeta',
-                 output_names=None, label_names=None, class_type="binary", beta=1, threshold=0.5, average="micro"):
-        super(Fbeta, self).__init__(
-            name=name, output_names=output_names, label_names=label_names,
-            class_type=class_type, threshold=threshold, average=average)
-        self.metrics = _ClassificationMetrics(class_type=class_type, threshold=threshold, beta=beta)
+    def reset_local(self):
+        """Resets the internal evaluation result to initial state."""
+        self.sum_metric = 0.
+        self.num_inst = 0
+        self.metrics.local_reset_stats()
 
 
 @register
-@use_np
-class BinaryAccuracy(EvalMetric):
-    """Computes the accuracy of a binary or multilabel classification problem.
-
-    Parameters
-    ----------
-    name : str
-        Name of this metric instance for display.
-    output_names : list of str, or None
-        Name of predictions that should be used when updating with update_dict.
-        By default include all predictions.
-    label_names : list of str, or None
-        Name of labels that should be used when updating with update_dict.
-        By default include all labels.
-    threshold : float or ndarray, default 0.5
-        threshold for deciding whether the predictions are positive or negative.
-
-    Examples
-    --------
-    >>> predicts = [mx.nd.array([0.7, 1, 0.55])]
-    >>> labels   = [mx.nd.array([0., 1., 0.])]
-    >>> bacc = mx.gluon.metric.BinaryAccuracy(threshold=0.6)
-    >>> bacc.update(preds = predicts, labels = labels)
-    >>> print bacc.get()
-    ('binary_accuracy', 0.6666666666666666)
-    """
-
-    def __init__(self, name='binary_accuracy',
-                 output_names=None, label_names=None, threshold=0.5):
-        self.threshold = threshold
-        EvalMetric.__init__(self, name=name,
-                            output_names=output_names, label_names=label_names)
-
-    def update(self, labels, preds):
-        """Updates the internal evaluation result.
-
-        Parameters
-        ----------
-        labels : list of `NDArray`
-            Each label denotes positive/negative for each class.
-
-        preds : list of `NDArray`
-            Each prediction value is a confidence value of being positive for each class.
-        """
-        labels, preds = check_label_shapes(labels, preds, True)
-
-        for label, pred_label in zip(labels, preds):
-            pred_label = predict_with_threshold(pred_label, self.threshold)
-
-            pred_label = pred_label.as_np_ndarray().astype('int32').as_in_ctx(label.ctx)
-            label = label.as_np_ndarray().astype('int32')
-            # flatten before checking shapes to avoid shape miss match
-            label = label.reshape(-1)
-            pred_label = pred_label.reshape(-1)
-
-            check_label_shapes(label, pred_label)
-
-            num_correct = (pred_label == label).sum().astype('float64')
-            self.sum_metric += num_correct
-            self.num_inst += len(pred_label)
-
-
-@register
-@use_np
 class MCC(EvalMetric):
     """Computes the Matthews Correlation Coefficient of a binary classification problem.
 
@@ -966,6 +865,10 @@ class MCC(EvalMetric):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
+    average : str, default 'macro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average the MCC for each batch.
+            "micro": compute a single MCC across all batches.
 
     Examples
     --------
@@ -984,9 +887,9 @@ class MCC(EvalMetric):
         [0.]*(false_positives + true_negatives) +
         [1.]*(false_negatives + true_positives)
     )]
-    >>> f1 = mx.gluon.metric.F1()
+    >>> f1 = mx.metric.F1()
     >>> f1.update(preds = predicts, labels = labels)
-    >>> mcc = mx.gluon.metric.MCC()
+    >>> mcc = mx.metric.MCC()
     >>> mcc.update(preds = predicts, labels = labels)
     >>> print f1.get()
     ('f1', 0.95233560306652054)
@@ -995,10 +898,12 @@ class MCC(EvalMetric):
     """
 
     def __init__(self, name='mcc',
-                 output_names=None, label_names=None):
-        self._metrics = _ClassificationMetrics()
+                 output_names=None, label_names=None, average="macro"):
+        self._average = average
+        self._metrics = _BinaryClassificationMetrics()
         EvalMetric.__init__(self, name=name,
-                            output_names=output_names, label_names=label_names)
+                            output_names=output_names, label_names=label_names,
+                            has_global_stats=True)
 
     def update(self, labels, preds):
         """Updates the internal evaluation result.
@@ -1014,408 +919,38 @@ class MCC(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            self._metrics.update_stats(label, pred)
+            self._metrics.update_binary_stats(label, pred)
 
-        self.sum_metric = self._metrics.binary_matthewscc() * self._metrics.total_examples
-        self.num_inst = self._metrics.total_examples
+        if self._average == "macro":
+            self.sum_metric += self._metrics.matthewscc()
+            self.global_sum_metric += self._metrics.matthewscc(use_global=True)
+            self.num_inst += 1
+            self.global_num_inst += 1
+            self._metrics.reset_stats()
+        else:
+            self.sum_metric = self._metrics.matthewscc() * self._metrics.total_examples
+            self.global_sum_metric = self._metrics.matthewscc(use_global=True) * \
+                                     self._metrics.global_total_examples
+            self.num_inst = self._metrics.total_examples
+            self.global_num_inst = self._metrics.global_total_examples
 
     def reset(self):
         """Resets the internal evaluation result to initial state."""
         self.sum_metric = 0.
         self.num_inst = 0.
+        self.global_sum_metric = 0.
+        self.global_num_inst = 0.
         self._metrics.reset_stats()
 
-
-####################
-# REGRESSION METRICS
-####################
-
-
-@register
-@use_np
-class MAE(EvalMetric):
-    """Computes Mean Absolute Error (MAE) loss.
-
-    The mean absolute error is given by
-
-    .. math::
-        \\frac{\\sum_i^n |y_i - \\hat{y}_i|}{n}
-
-    Parameters
-    ----------
-    name : str
-        Name of this metric instance for display.
-    output_names : list of str, or None
-        Name of predictions that should be used when updating with update_dict.
-        By default include all predictions.
-    label_names : list of str, or None
-        Name of labels that should be used when updating with update_dict.
-        By default include all labels.
-
-    Examples
-    --------
-    >>> predicts = [mx.nd.array([3, -0.5, 2, 7])]
-    >>> labels = [mx.nd.array([2.5, 0.0, 2, 8])]
-    >>> mean_absolute_error = mx.gluon.metric.MAE()
-    >>> mean_absolute_error.update(labels = labels, preds = predicts)
-    >>> print mean_absolute_error.get()
-    ('mae', 0.5)
-    """
-
-    def __init__(self, name='mae',
-                 output_names=None, label_names=None):
-        super(MAE, self).__init__(
-            name, output_names=output_names, label_names=label_names)
-
-    def update(self, labels, preds):
-        """Updates the internal evaluation result.
-
-        Parameters
-        ----------
-        labels : list of `NDArray`
-            The labels of the data.
-
-        preds : list of `NDArray`
-            Predicted values.
-        """
-        labels, preds = check_label_shapes(labels, preds, True)
-
-        for label, pred in zip(labels, preds):
-            label = label.as_np_ndarray()
-            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-
-            num_inst = label.shape[0]
-            mae = numpy.abs(label - pred).reshape(num_inst, -1).mean(axis=-1).sum()
-
-            self.sum_metric += mae
-            self.num_inst += num_inst
+    def reset_local(self):
+        """Resets the internal evaluation result to initial state."""
+        self.sum_metric = 0.
+        self.num_inst = 0.
+        self._metrics.local_reset_stats()
 
 
 @register
-@use_np
-class MSE(EvalMetric):
-    """Computes Mean Squared Error (MSE) loss.
-
-    The mean squared error is given by
-
-    .. math::
-        \\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}
-
-    Parameters
-    ----------
-    name : str
-        Name of this metric instance for display.
-    output_names : list of str, or None
-        Name of predictions that should be used when updating with update_dict.
-        By default include all predictions.
-    label_names : list of str, or None
-        Name of labels that should be used when updating with update_dict.
-        By default include all labels.
-
-    Examples
-    --------
-    >>> predicts = [mx.nd.array([3, -0.5, 2, 7])]
-    >>> labels = [mx.nd.array([2.5, 0.0, 2, 8])]
-    >>> mean_squared_error = mx.gluon.metric.MSE()
-    >>> mean_squared_error.update(labels = labels, preds = predicts)
-    >>> print mean_squared_error.get()
-    ('mse', 0.375)
-    """
-    def __init__(self, name='mse',
-                 output_names=None, label_names=None):
-        super(MSE, self).__init__(
-            name, output_names=output_names, label_names=label_names)
-
-    def update(self, labels, preds):
-        """Updates the internal evaluation result.
-
-        Parameters
-        ----------
-        labels : list of `NDArray`
-            The labels of the data.
-
-        preds : list of `NDArray`
-            Predicted values.
-        """
-        labels, preds = check_label_shapes(labels, preds, True)
-
-        for label, pred in zip(labels, preds):
-            label = label.as_np_ndarray()
-            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-
-            num_inst = label.shape[0]
-            mse = ((label - pred)**2.0).reshape(num_inst, -1).mean(axis=-1).sum()
-
-            self.sum_metric += mse
-            self.num_inst += num_inst
-
-
-@register
-@use_np
-class RMSE(MSE):
-    """Computes Root Mean Squred Error (RMSE) loss.
-
-    The root mean squared error is given by
-
-    .. math::
-        \\sqrt{\\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}}
-
-    Parameters
-    ----------
-    name : str
-        Name of this metric instance for display.
-    output_names : list of str, or None
-        Name of predictions that should be used when updating with update_dict.
-        By default include all predictions.
-    label_names : list of str, or None
-        Name of labels that should be used when updating with update_dict.
-        By default include all labels.
-
-    Examples
-    --------
-    >>> predicts = [mx.nd.array([3, -0.5, 2, 7])]
-    >>> labels = [mx.nd.array([2.5, 0.0, 2, 8])]
-    >>> root_mean_squared_error = mx.gluon.metric.RMSE()
-    >>> root_mean_squared_error.update(labels = labels, preds = predicts)
-    >>> print root_mean_squared_error.get()
-    ('rmse', 0.612372457981)
-    """
-    def __init__(self, name='rmse',
-                 output_names=None, label_names=None):
-        super(RMSE, self).__init__(
-            name, output_names=output_names, label_names=label_names)
-
-    def get(self):
-        if self.num_inst == 0:
-            return (self.name, float('nan'))
-        else:
-            return (self.name, math.sqrt(self.sum_metric / self.num_inst))
-
-
-@register
-@use_np
-class MeanPairwiseDistance(EvalMetric):
-    """Computes Mean Pairwise Distance.
-
-    The mean pairwise distance is given by
-
-    .. math::
-        \\sqrt{\\frac{(\\sum_i^n (y_i - \\hat{y}_i)^p)^\\frac{1}{p}}{n}}
-
-    Parameters
-    ----------
-    name : str
-        Name of this metric instance for display.
-    output_names : list of str, or None
-        Name of predictions that should be used when updating with update_dict.
-        By default include all predictions.
-    label_names : list of str, or None
-        Name of labels that should be used when updating with update_dict.
-        By default include all labels.
-    p : float, default 2
-        calculating distance using the p-norm
-
-    Examples
-    --------
-    >>> predicts = [mx.nd.array([[1., 2.], [3., 4.]])]
-    >>> labels = [mx.nd.array([[1., 0.], [4., 2.]])]
-    >>> mpd = mx.gluon.metric.MeanPairwiseDistance()
-    >>> mpd.update(labels = labels, preds = predicts)
-    >>> print mpd.get()
-    ('mpd', 2.1180338859558105)
-    """
-    def __init__(self, name='mpd',
-                 output_names=None, label_names=None, p=2):
-        super(MeanPairwiseDistance, self).__init__(
-            name, output_names=output_names, label_names=label_names)
-        self.p = p
-
-    def update(self, labels, preds):
-        """Updates the internal evaluation result.
-
-        Parameters
-        ----------
-        labels : list of `NDArray`
-            The labels of the data.
-
-        preds : list of `NDArray`
-            Predicted values.
-        """
-        labels, preds = check_label_shapes(labels, preds, True)
-
-        for label, pred in zip(labels, preds):
-            label = label.as_np_ndarray()
-            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-
-            label = label.reshape(label.shape[0], -1)
-            pred = pred.reshape(pred.shape[0], -1)
-
-            dis = (((label - pred) ** self.p).sum(axis=-1)) ** (1./self.p)
-            dis = dis.sum()
-            num_inst = label.shape[0]
-
-            self.sum_metric += dis
-            self.num_inst += num_inst
-
-
-@register
-@use_np
-class MeanCosineSimilarity(EvalMetric):
-    """Computes Mean Cosine Similarity.
-
-    The mean cosine similarity is given by
-
-    .. math::
-        cos_sim(label, pred) = \frac{{label}.{pred}}{max(||label||.||pred||, eps)}
-    (calculating on the last dimension of label and pred.)
-
-    Parameters
-    ----------
-    name : str
-        Name of this metric instance for display.
-    output_names : list of str, or None
-        Name of predictions that should be used when updating with update_dict.
-        By default include all predictions.
-    label_names : list of str, or None
-        Name of labels that should be used when updating with update_dict.
-        By default include all labels.
-    eps : float, default 1e-8
-        small vale to avoid division by zero.
-
-    Examples
-    --------
-    >>> predicts = [mx.nd.array([[1., 0.], [1., 1.]])]
-    >>> labels = [mx.nd.array([[3., 4.], [2., 2.]])]
-    >>> mcs = mx.gluon.metric.MeanCosineSimilarity()
-    >>> mcs.update(labels = labels, preds = predicts)
-    >>> print mcs.get()
-    ('cos_sim', 0.8)
-    """
-    def __init__(self, name='cos_sim',
-                 output_names=None, label_names=None, eps=1e-8):
-        super(MeanCosineSimilarity, self).__init__(
-            name, output_names=output_names, label_names=label_names)
-        self.eps = eps
-
-    def update(self, labels, preds):
-        """Updates the internal evaluation result.
-
-        Parameters
-        ----------
-        labels : list of `NDArray`
-            The labels of the data.
-
-        preds : list of `NDArray`
-            Predicted values.
-        """
-        labels, preds = check_label_shapes(labels, preds, True)
-
-        for label, pred in zip(labels, preds):
-            label = label.as_np_ndarray()
-            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
-
-            if len(label.shape) == 1:
-                label = label.reshape(1, label.shape[0])
-            if len(pred.shape) == 1:
-                pred = pred.reshape(1, pred.shape[0])
-
-            sim = (label * pred).sum(axis=-1)
-            n_p = numpy.linalg.norm(pred, axis=-1)
-            n_l = numpy.linalg.norm(label, axis=-1)
-            sim = sim / numpy.maximum(n_l * n_p, self.eps)
-            sim = sim.sum()
-            num_inst = len(label.reshape(-1, label.shape[-1])) # numpy.prod(label.shape[:-1]) is not supported
-            self.sum_metric += sim
-            self.num_inst += num_inst
-
-
-@register
-@alias('ce')
-@use_np
-class CrossEntropy(EvalMetric):
-    """Computes Cross Entropy loss.
-
-    The cross entropy over a batch of sample size :math:`N` is given by
-
-    .. math::
-       -\\sum_{n=1}^{N}\\sum_{k=1}^{K}t_{nk}\\log (y_{nk}),
-
-    where :math:`t_{nk}=1` if and only if sample :math:`n` belongs to class :math:`k`.
-    :math:`y_{nk}` denotes the probability of sample :math:`n` belonging to
-    class :math:`k`.
-
-    Parameters
-    ----------
-    eps : float, default 1e-12
-        Use small constant for the case that predicted value is 0.
-    ignore_label : int or None, default None
-        Index of invalid label to ignore when
-        counting. By default, sets to -1.
-        If set to `None`, it will include all entries.
-    axis : int (default -1)
-        The axis from prediction that was used to
-        compute softmax. By default use the last axis.
-    name : str
-        Name of this metric instance for display.
-    output_names : list of str, or None
-        Name of predictions that should be used when updating with update_dict.
-        By default include all predictions.
-    label_names : list of str, or None
-        Name of labels that should be used when updating with update_dict.
-        By default include all labels.
-
-    Examples
-    --------
-    >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
-    >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> ce = mx.gluon.metric.CrossEntropy()
-    >>> ce.update(labels, predicts)
-    >>> print ce.get()
-    ('cross-entropy', 0.57159948348999023)
-    """
-    def __init__(self, eps=1e-12, ignore_label=None, axis=-1, name='cross-entropy',
-                 output_names=None, label_names=None):
-        super(CrossEntropy, self).__init__(
-            name, output_names=output_names, label_names=label_names)
-        self.ignore_label = ignore_label
-        self.axis = axis
-        self.eps = eps
-
-    def update(self, labels, preds):
-        """Updates the internal evaluation result.
-
-        Parameters
-        ----------
-        labels : list of `NDArray`
-            The labels of the data.
-
-        preds : list of `NDArray`
-            Predicted values.
-        """
-        labels, preds = check_label_shapes(labels, preds, True)
-
-        loss = 0.
-        num = 0
-        for label, pred in zip(labels, preds):
-            assert label.size == pred.size/pred.shape[-1], \
-                "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
-            label = label.reshape((label.size,))
-            pred = ndarray.pick(pred.as_in_context(label.ctx), label.astype(dtype='int32'), axis=self.axis)
-            label = label.as_np_ndarray()
-            pred = pred.as_np_ndarray()
-            if self.ignore_label is not None:
-                ignore = (label == self.ignore_label).astype(pred.dtype)
-                num -= ignore.sum()
-                pred = pred * (1 - ignore) + ignore
-            loss -= numpy.log(numpy.maximum(self.eps, pred)).sum()
-            num += pred.size
-        self.sum_metric += loss
-        self.num_inst += num
-
-
-@register
-@use_np
-class Perplexity(CrossEntropy):
+class Perplexity(EvalMetric):
     """Computes perplexity.
 
     Perplexity is a measurement of how well a probability distribution
@@ -1442,15 +977,14 @@ class Perplexity(CrossEntropy):
 
     Parameters
     ----------
-    eps : float, default 1e-12
-        Use small constant for the case that predicted value is 0.
-    ignore_label : int or None, default None
+    ignore_label : int or None
         Index of invalid label to ignore when
         counting. By default, sets to -1.
         If set to `None`, it will include all entries.
     axis : int (default -1)
         The axis from prediction that was used to
-        compute softmax. By default use the last axis.
+        compute softmax. By default use the last
+        axis.
     name : str
         Name of this metric instance for display.
     output_names : list of str, or None
@@ -1464,27 +998,348 @@ class Perplexity(CrossEntropy):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> perp = mx.gluon.metric.Perplexity(ignore_label=None)
+    >>> perp = mx.metric.Perplexity(ignore_label=None)
     >>> perp.update(labels, predicts)
     >>> print perp.get()
     ('Perplexity', 1.7710976285155853)
     """
-    def __init__(self, eps=1e-12, ignore_label=None, axis=-1, name='perplexity',
+    def __init__(self, ignore_label, axis=-1, name='perplexity',
                  output_names=None, label_names=None):
         super(Perplexity, self).__init__(
-            name=name, eps=eps, ignore_label=ignore_label, axis=axis,
-            output_names=output_names, label_names=label_names)
+            name, ignore_label=ignore_label,
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
+        self.ignore_label = ignore_label
+        self.axis = axis
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        assert len(labels) == len(preds)
+        loss = 0.
+        num = 0
+        for label, pred in zip(labels, preds):
+            assert label.size == pred.size/pred.shape[-1], \
+                "shape mismatch: %s vs. %s"%(label.shape, pred.shape)
+            label = label.as_in_context(pred.context).reshape((label.size,))
+            pred = ndarray.pick(pred, label.astype(dtype='int32'), axis=self.axis)
+            if self.ignore_label is not None:
+                ignore = (label == self.ignore_label).astype(pred.dtype)
+                num -= ndarray.sum(ignore).asscalar()
+                pred = pred*(1-ignore) + ignore
+            loss -= ndarray.sum(ndarray.log(ndarray.maximum(1e-10, pred))).asscalar()
+            num += pred.size
+        self.sum_metric += loss
+        self.global_sum_metric += loss
+        self.num_inst += num
+        self.global_num_inst += num
 
     def get(self):
+        """Returns the current evaluation result.
+
+        Returns
+        -------
+        Tuple of (str, float)
+            Representing name of the metric and evaluation result.
+        """
         if self.num_inst == 0:
             return (self.name, float('nan'))
         else:
             return (self.name, math.exp(self.sum_metric/self.num_inst))
 
+    def get_global(self):
+        """Returns the current global evaluation result.
+
+        Returns
+        -------
+        Tuple of (str, float)
+            Representing name of the metric and evaluation result.
+        """
+        if self.global_num_inst == 0:
+            return (self.name, float('nan'))
+        else:
+            return (self.name, math.exp(self.global_sum_metric/self.global_num_inst))
+
+####################
+# REGRESSION METRICS
+####################
+
+
+@register
+class MAE(EvalMetric):
+    """Computes Mean Absolute Error (MAE) loss.
+
+    The mean absolute error is given by
+
+    .. math::
+        \\frac{\\sum_i^n |y_i - \\hat{y}_i|}{n}
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
+    Examples
+    --------
+    >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
+    >>> labels = [mx.nd.array(np.array([2.5, 0.0, 2, 8]).reshape(4,1))]
+    >>> mean_absolute_error = mx.metric.MAE()
+    >>> mean_absolute_error.update(labels = labels, preds = predicts)
+    >>> print mean_absolute_error.get()
+    ('mae', 0.5)
+    """
+
+    def __init__(self, name='mae',
+                 output_names=None, label_names=None):
+        super(MAE, self).__init__(
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        labels, preds = check_label_shapes(labels, preds, True)
+
+        for label, pred in zip(labels, preds):
+            label = label.asnumpy()
+            pred = pred.asnumpy()
+
+            if len(label.shape) == 1:
+                label = label.reshape(label.shape[0], 1)
+            if len(pred.shape) == 1:
+                pred = pred.reshape(pred.shape[0], 1)
+
+            mae = numpy.abs(label - pred).mean()
+            self.sum_metric += mae
+            self.global_sum_metric += mae
+            self.num_inst += 1 # numpy.prod(label.shape)
+            self.global_num_inst += 1 # numpy.prod(label.shape)
+
+
+@register
+class MSE(EvalMetric):
+    """Computes Mean Squared Error (MSE) loss.
+
+    The mean squared error is given by
+
+    .. math::
+        \\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
+    Examples
+    --------
+    >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
+    >>> labels = [mx.nd.array(np.array([2.5, 0.0, 2, 8]).reshape(4,1))]
+    >>> mean_squared_error = mx.metric.MSE()
+    >>> mean_squared_error.update(labels = labels, preds = predicts)
+    >>> print mean_squared_error.get()
+    ('mse', 0.375)
+    """
+    def __init__(self, name='mse',
+                 output_names=None, label_names=None):
+        super(MSE, self).__init__(
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        labels, preds = check_label_shapes(labels, preds, True)
+
+        for label, pred in zip(labels, preds):
+            label = label.asnumpy()
+            pred = pred.asnumpy()
+
+            if len(label.shape) == 1:
+                label = label.reshape(label.shape[0], 1)
+            if len(pred.shape) == 1:
+                pred = pred.reshape(pred.shape[0], 1)
+
+            mse = ((label - pred)**2.0).mean()
+            self.sum_metric += mse
+            self.global_sum_metric += mse
+            self.num_inst += 1 # numpy.prod(label.shape)
+            self.global_num_inst += 1 # numpy.prod(label.shape)
+
+
+@register
+class RMSE(EvalMetric):
+    """Computes Root Mean Squred Error (RMSE) loss.
+
+    The root mean squared error is given by
+
+    .. math::
+        \\sqrt{\\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}}
+
+    Parameters
+    ----------
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
+    Examples
+    --------
+    >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
+    >>> labels = [mx.nd.array(np.array([2.5, 0.0, 2, 8]).reshape(4,1))]
+    >>> root_mean_squared_error = mx.metric.RMSE()
+    >>> root_mean_squared_error.update(labels = labels, preds = predicts)
+    >>> print root_mean_squared_error.get()
+    ('rmse', 0.612372457981)
+    """
+    def __init__(self, name='rmse',
+                 output_names=None, label_names=None):
+        super(RMSE, self).__init__(
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        labels, preds = check_label_shapes(labels, preds, True)
+
+        for label, pred in zip(labels, preds):
+            label = label.asnumpy()
+            pred = pred.asnumpy()
+
+            if len(label.shape) == 1:
+                label = label.reshape(label.shape[0], 1)
+            if len(pred.shape) == 1:
+                pred = pred.reshape(pred.shape[0], 1)
+
+            rmse = numpy.sqrt(((label - pred)**2.0).mean())
+            self.sum_metric += rmse
+            self.global_sum_metric += rmse
+            self.num_inst += 1
+            self.global_num_inst += 1
+
+
+@register
+@alias('ce')
+class CrossEntropy(EvalMetric):
+    """Computes Cross Entropy loss.
+
+    The cross entropy over a batch of sample size :math:`N` is given by
+
+    .. math::
+       -\\sum_{n=1}^{N}\\sum_{k=1}^{K}t_{nk}\\log (y_{nk}),
+
+    where :math:`t_{nk}=1` if and only if sample :math:`n` belongs to class :math:`k`.
+    :math:`y_{nk}` denotes the probability of sample :math:`n` belonging to
+    class :math:`k`.
+
+    Parameters
+    ----------
+    eps : float
+        Cross Entropy loss is undefined for predicted value is 0 or 1,
+        so predicted values are added with the small constant.
+    name : str
+        Name of this metric instance for display.
+    output_names : list of str, or None
+        Name of predictions that should be used when updating with update_dict.
+        By default include all predictions.
+    label_names : list of str, or None
+        Name of labels that should be used when updating with update_dict.
+        By default include all labels.
+
+    Examples
+    --------
+    >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
+    >>> labels   = [mx.nd.array([0, 1, 1])]
+    >>> ce = mx.metric.CrossEntropy()
+    >>> ce.update(labels, predicts)
+    >>> print ce.get()
+    ('cross-entropy', 0.57159948348999023)
+    """
+    def __init__(self, eps=1e-12, name='cross-entropy',
+                 output_names=None, label_names=None):
+        super(CrossEntropy, self).__init__(
+            name, eps=eps,
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
+        self.eps = eps
+
+    def update(self, labels, preds):
+        """Updates the internal evaluation result.
+
+        Parameters
+        ----------
+        labels : list of `NDArray`
+            The labels of the data.
+
+        preds : list of `NDArray`
+            Predicted values.
+        """
+        labels, preds = check_label_shapes(labels, preds, True)
+
+        for label, pred in zip(labels, preds):
+            label = label.asnumpy()
+            pred = pred.asnumpy()
+
+            label = label.ravel()
+            assert label.shape[0] == pred.shape[0]
+
+            prob = pred[numpy.arange(label.shape[0]), numpy.int64(label)]
+            cross_entropy = (-numpy.log(prob + self.eps)).sum()
+            self.sum_metric += cross_entropy
+            self.global_sum_metric += cross_entropy
+            self.num_inst += label.shape[0]
+            self.global_num_inst += label.shape[0]
 
 @register
 @alias('nll_loss')
-@use_np
 class NegativeLogLikelihood(EvalMetric):
     """Computes the negative log-likelihood loss.
 
@@ -1515,7 +1370,7 @@ class NegativeLogLikelihood(EvalMetric):
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([0, 1, 1])]
-    >>> nll_loss = mx.gluon.metric.NegativeLogLikelihood()
+    >>> nll_loss = mx.metric.NegativeLogLikelihood()
     >>> nll_loss.update(labels, predicts)
     >>> print nll_loss.get()
     ('nll-loss', 0.57159948348999023)
@@ -1524,7 +1379,8 @@ class NegativeLogLikelihood(EvalMetric):
                  output_names=None, label_names=None):
         super(NegativeLogLikelihood, self).__init__(
             name, eps=eps,
-            output_names=output_names, label_names=label_names)
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         self.eps = eps
 
     def update(self, labels, preds):
@@ -1541,21 +1397,21 @@ class NegativeLogLikelihood(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
 
         for label, pred in zip(labels, preds):
-            label = label.as_np_ndarray()
-            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
+            label = label.asnumpy()
+            pred = pred.asnumpy()
 
-            label = label.reshape(-1)
+            label = label.ravel()
             num_examples = pred.shape[0]
             assert label.shape[0] == num_examples, (label.shape[0], num_examples)
             prob = pred[numpy.arange(num_examples, dtype=numpy.int64), numpy.int64(label)]
             nll = (-numpy.log(prob + self.eps)).sum()
             self.sum_metric += nll
+            self.global_sum_metric += nll
             self.num_inst += num_examples
-
+            self.global_num_inst += num_examples
 
 @register
 @alias('pearsonr')
-@use_np
 class PearsonCorrelation(EvalMetric):
     """Computes Pearson correlation.
 
@@ -1574,23 +1430,30 @@ class PearsonCorrelation(EvalMetric):
     label_names : list of str, or None
         Name of labels that should be used when updating with update_dict.
         By default include all labels.
+    average : str, default 'macro'
+        Strategy to be used for aggregating across mini-batches.
+            "macro": average the pearsonr scores for each batch.
+            "micro": compute a single pearsonr score across all batches.
 
     Examples
     --------
     >>> predicts = [mx.nd.array([[0.3, 0.7], [0, 1.], [0.4, 0.6]])]
     >>> labels   = [mx.nd.array([[1, 0], [0, 1], [0, 1]])]
-    >>> pr = mx.gluon.metric.PearsonCorrelation()
+    >>> pr = mx.metric.PearsonCorrelation()
     >>> pr.update(labels, predicts)
     >>> print pr.get()
     ('pearsonr', 0.42163704544016178)
     """
     def __init__(self, name='pearsonr',
-                 output_names=None, label_names=None):
+                 output_names=None, label_names=None, average='macro'):
+        self.average = average
         super(PearsonCorrelation, self).__init__(
-            name, output_names=output_names, label_names=label_names)
-        self.reset()
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
+        if self.average == 'micro':
+            self.reset_micro()
 
-    def reset(self):
+    def reset_micro(self):
         self._sse_p = 0
         self._mean_p = 0
         self._sse_l = 0
@@ -1599,8 +1462,13 @@ class PearsonCorrelation(EvalMetric):
         self._label_nums = 0
         self._conv = 0
 
+    def reset(self):
         self.num_inst = 0
         self.sum_metric = 0.0
+        self.global_num_inst = 0
+        self.global_sum_metric = 0.0
+        if self.average == 'micro':
+            self.reset_micro()
 
     def update_variance(self, new_values, *aggregate):
         #Welford's online algorithm for variance update
@@ -1628,26 +1496,34 @@ class PearsonCorrelation(EvalMetric):
         labels, preds = check_label_shapes(labels, preds, True)
         for label, pred in zip(labels, preds):
             check_label_shapes(label, pred, False, True)
-            label = label.as_np_ndarray().reshape(-1).astype(numpy.float64)
-            pred = pred.as_np_ndarray().as_in_ctx(label.ctx).reshape(-1).astype(numpy.float64)
-
-            self.num_inst += 1
-            self._label_nums, self._mean_l, self._sse_l = \
-                self.update_variance(label, self._label_nums, self._mean_l, self._sse_l)
-            self.update_cov(label, pred)
-            self._pred_nums, self._mean_p, self._sse_p = \
-                self.update_variance(pred, self._pred_nums, self._mean_p, self._sse_p)
+            label = label.asnumpy().ravel().astype(numpy.float64)
+            pred = pred.asnumpy().ravel().astype(numpy.float64)
+            if self.average == 'macro':
+                pearson_corr = numpy.corrcoef(pred, label)[0, 1]
+                self.sum_metric += pearson_corr
+                self.global_sum_metric += pearson_corr
+                self.num_inst += 1
+                self.global_num_inst += 1
+            else:
+                self.global_num_inst += 1
+                self.num_inst += 1
+                self._label_nums, self._mean_l, self._sse_l = \
+                    self.update_variance(label, self._label_nums, self._mean_l, self._sse_l)
+                self.update_cov(label, pred)
+                self._pred_nums, self._mean_p, self._sse_p = \
+                    self.update_variance(pred, self._pred_nums, self._mean_p, self._sse_p)
 
     def get(self):
         if self.num_inst == 0:
             return (self.name, float('nan'))
-
-        n = self._label_nums
-        pearsonr = self._conv / ((n-1) * numpy.sqrt(self._sse_p / (n - 1)) * numpy.sqrt(self._sse_l / (n - 1)))
-        return (self.name, float(pearsonr))
+        if self.average == 'macro':
+            return (self.name, self.sum_metric / self.num_inst)
+        else:
+            n = self._label_nums
+            pearsonr = self._conv / ((n-1) * numpy.sqrt(self._sse_p / (n - 1)) * numpy.sqrt(self._sse_l / (n - 1)))
+            return (self.name, pearsonr)
 
 @register
-@use_np
 class PCC(EvalMetric):
     """PCC is a multiclass equivalent for the Matthews correlation coefficient derived
     from a discrete solution to the Pearson correlation coefficient.
@@ -1691,9 +1567,9 @@ class PCC(EvalMetric):
         [0]*(false_positives + true_negatives) +
         [1]*(false_negatives + true_positives)
     )]
-    >>> f1 = mx.gluon.metric.F1()
+    >>> f1 = mx.metric.F1()
     >>> f1.update(preds = predicts, labels = labels)
-    >>> pcc = mx.gluon.metric.PCC()
+    >>> pcc = mx.metric.PCC()
     >>> pcc.update(preds = predicts, labels = labels)
     >>> print f1.get()
     ('f1', 0.95233560306652054)
@@ -1701,14 +1577,18 @@ class PCC(EvalMetric):
     ('pcc', 0.01917751877733392)
     """
     def __init__(self, name='pcc',
-                 output_names=None, label_names=None):
+                 output_names=None, label_names=None,
+                 has_global_stats=True):
         self.k = 2
         super(PCC, self).__init__(
-            name=name, output_names=output_names, label_names=label_names)
+            name=name, output_names=output_names, label_names=label_names,
+            has_global_stats=has_global_stats)
 
     def _grow(self, inc):
         self.lcm = numpy.pad(
             self.lcm, ((0, inc), (0, inc)), 'constant', constant_values=(0))
+        self.gcm = numpy.pad(
+            self.gcm, ((0, inc), (0, inc)), 'constant', constant_values=(0))
         self.k += inc
 
     def _calc_mcc(self, cmat):
@@ -1719,8 +1599,7 @@ class PCC(EvalMetric):
         cov_yy = numpy.sum(y * (n - y))
         if cov_xx == 0 or cov_yy == 0:
             return float('nan')
-        # i = cmat.diagonal() # mxnet.numpy.ndarray.diagonal() is currently not available.
-        i = cmat[numpy.arange(self.k), numpy.arange(self.k)]
+        i = cmat.diagonal()
         cov_xy = numpy.sum(i * n - x * y)
         return cov_xy / (cov_xx * cov_yy) ** 0.5
 
@@ -1739,29 +1618,42 @@ class PCC(EvalMetric):
 
         # update the confusion matrix
         for label, pred in zip(labels, preds):
-            label = label.astype('int32', copy=False).as_np_ndarray()
-            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
+            label = label.astype('int32', copy=False).asnumpy()
+            pred = pred.asnumpy()
             if pred.shape != label.shape:
-                pred = pred.argmax(axis=1).astype(label, copy=False)
+                pred = pred.argmax(axis=1)
             else:
                 pred = pred.astype('int32', copy=False)
-            n = int(max(pred.max(), label.max()))
+            n = max(pred.max(), label.max())
             if n >= self.k:
                 self._grow(n + 1 - self.k)
-            bcm = numpy.zeros((self.k, self.k), dtype='float64')
+            bcm = numpy.zeros((self.k, self.k))
             for i, j in zip(pred, label):
                 bcm[i, j] += 1
             self.lcm += bcm
+            self.gcm += bcm
+
         self.num_inst += 1
+        self.global_num_inst += 1
 
     @property
     def sum_metric(self):
         return self._calc_mcc(self.lcm) * self.num_inst
 
+    @property
+    def global_sum_metric(self):
+        return self._calc_mcc(self.gcm) * self.global_num_inst
+
     def reset(self):
         """Resets the internal evaluation result to initial state."""
+        self.global_num_inst = 0.
+        self.gcm = numpy.zeros((self.k, self.k))
+        self.reset_local()
+
+    def reset_local(self):
+        """Resets the local portion of the internal evaluation results to initial state."""
         self.num_inst = 0.
-        self.lcm = numpy.zeros((self.k, self.k), dtype='float64')
+        self.lcm = numpy.zeros((self.k, self.k))
 
 
 @register
@@ -1782,7 +1674,8 @@ class Loss(EvalMetric):
     def __init__(self, name='loss',
                  output_names=None, label_names=None):
         super(Loss, self).__init__(
-            name, output_names=output_names, label_names=label_names)
+            name, output_names=output_names, label_names=label_names,
+            has_global_stats=True)
 
     def update(self, _, preds):
 
@@ -1792,7 +1685,9 @@ class Loss(EvalMetric):
         for pred in preds:
             loss = ndarray.sum(pred).asscalar()
             self.sum_metric += loss
+            self.global_sum_metric += loss
             self.num_inst += pred.size
+            self.global_num_inst += pred.size
 
 
 @register
@@ -1814,7 +1709,6 @@ class Caffe(Loss):
 
 
 @register
-@use_np
 class CustomMetric(EvalMetric):
     """Computes a customized evaluation metric.
 
@@ -1845,7 +1739,7 @@ class CustomMetric(EvalMetric):
     >>> predicts = [mx.nd.array(np.array([3, -0.5, 2, 7]).reshape(4,1))]
     >>> labels = [mx.nd.array(np.array([2.5, 0.0, 2, 8]).reshape(4,1))]
     >>> feval = lambda x, y : (x + y).mean()
-    >>> eval_metrics = mx.gluon.metric.CustomMetric(feval=feval)
+    >>> eval_metrics = mx.metric.CustomMetric(feval=feval)
     >>> eval_metrics.update(labels, predicts)
     >>> print eval_metrics.get()
     ('custom(<lambda>)', 6.0)
@@ -1859,7 +1753,8 @@ class CustomMetric(EvalMetric):
         super(CustomMetric, self).__init__(
             name, feval=feval,
             allow_extra_outputs=allow_extra_outputs,
-            output_names=output_names, label_names=label_names)
+            output_names=output_names, label_names=label_names,
+            has_global_stats=True)
         self._feval = feval
         self._allow_extra_outputs = allow_extra_outputs
 
@@ -1878,17 +1773,21 @@ class CustomMetric(EvalMetric):
             labels, preds = check_label_shapes(labels, preds, True)
 
         for pred, label in zip(preds, labels):
-            label = label.as_np_ndarray()
-            pred = pred.as_np_ndarray().as_in_ctx(label.ctx)
+            label = label.asnumpy()
+            pred = pred.asnumpy()
 
             reval = self._feval(label, pred)
             if isinstance(reval, tuple):
                 (sum_metric, num_inst) = reval
                 self.sum_metric += sum_metric
+                self.global_sum_metric += sum_metric
                 self.num_inst += num_inst
+                self.global_num_inst += num_inst
             else:
                 self.sum_metric += reval
+                self.global_sum_metric += reval
                 self.num_inst += 1
+                self.global_num_inst += 1
 
     def get_config(self):
         raise NotImplementedError("CustomMetric cannot be serialized")
@@ -1920,7 +1819,7 @@ def np(numpy_feval, name=None, allow_extra_outputs=False):
     >>> def custom_metric(label, pred):
     ...     return np.mean(np.abs(label-pred))
     ...
-    >>> metric = mx.gluon.metric.np(custom_metric)
+    >>> metric = mx.metric.np(custom_metric)
     """
     def feval(label, pred):
         """Internal eval function."""

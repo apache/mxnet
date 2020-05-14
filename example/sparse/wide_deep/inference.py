@@ -93,7 +93,7 @@ if __name__ == '__main__':
     else:
         logging.info('Inference started ...')
         # use accuracy as the metric
-        metric = mx.gluon.metric.create(['acc'])
+        metric = mx.metric.create(['acc'])
         accuracy_avg = 0.0
         for batch in data_iter:
             nbatch += 1

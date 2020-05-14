@@ -20,7 +20,7 @@
 """Gluon Estimator Utility Functions"""
 
 from ...loss import SoftmaxCrossEntropyLoss
-from ...metric import Accuracy, EvalMetric, CompositeEvalMetric
+from ....metric import Accuracy, EvalMetric, CompositeEvalMetric
 
 def _check_metrics(metrics):
     if isinstance(metrics, CompositeEvalMetric):
@@ -31,7 +31,7 @@ def _check_metrics(metrics):
         metrics = metrics or []
         if not all([isinstance(metric, EvalMetric) for metric in metrics]):
             raise ValueError("metrics must be a Metric or a list of Metric, "
-                             "refer to mxnet.gluon.metric.EvalMetric: {}".format(metrics))
+                             "refer to mxnet.metric.EvalMetric: {}".format(metrics))
     return metrics
 
 def _check_handler_metric_ref(handler, known_metrics):

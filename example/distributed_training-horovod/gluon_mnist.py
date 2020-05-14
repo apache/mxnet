@@ -104,7 +104,7 @@ def conv_nets():
 # Function to evaluate accuracy for a model
 def evaluate(model, data_iter, context):
     data_iter.reset()
-    metric = mx.gluon.metric.Accuracy()
+    metric = mx.metric.Accuracy()
     for _, batch in enumerate(data_iter):
         data = batch.data[0].as_in_context(context)
         label = batch.label[0].as_in_context(context)
@@ -149,7 +149,7 @@ trainer = hvd.DistributedTrainer(params, opt)
 
 # Create loss function and train metric
 loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
-metric = mx.gluon.metric.Accuracy()
+metric = mx.metric.Accuracy()
 
 # Train model
 for epoch in range(args.epochs):

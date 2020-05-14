@@ -70,7 +70,7 @@ val_data = gluon.data.DataLoader(
 # train
 
 def test(ctx):
-    metric = mx.gluon.metric.Accuracy()
+    metric = mx.metric.Accuracy()
     for data, label in val_data:
         data = data.as_in_context(ctx)
         label = label.as_in_context(ctx)
@@ -86,7 +86,7 @@ def train(epochs, ctx):
     # Trainer is for updating parameters with gradient.
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
                             {'learning_rate': opt.lr, 'momentum': opt.momentum})
-    metric = mx.gluon.metric.Accuracy()
+    metric = mx.metric.Accuracy()
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
     for epoch in range(epochs):

@@ -156,7 +156,7 @@ class SuperResolutionNet(gluon.HybridBlock):
         return x
 
 net = SuperResolutionNet(upscale_factor)
-metric = mx.gluon.metric.MSE()
+metric = mx.metric.MSE()
 
 def test(ctx):
     val_data.reset()

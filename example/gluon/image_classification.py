@@ -27,7 +27,7 @@ from mxnet.gluon import nn
 from mxnet.gluon.model_zoo import vision as models
 from mxnet import autograd as ag
 from mxnet.test_utils import get_mnist_iterator
-from mxnet.gluon.metric import Accuracy, TopKAccuracy, CompositeEvalMetric
+from mxnet.metric import Accuracy, TopKAccuracy, CompositeEvalMetric
 import numpy as np
 
 from data import (get_cifar10_iterator, get_imagenet_iterator,
