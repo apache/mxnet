@@ -19,25 +19,24 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file preloaded_multi_sgd.cu
+ * \file lars_multi_sgd.cu
  * \brief Multi-sgd optimizers with lrs and wds as mxnet inputs
  * \author Clement Fuji Tsang
  */
-#include "./preloaded_multi_sgd-inl.h"
-#include <cub/cub.cuh>
+#include "lars_multi_sgd-inl.h"
 
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(preloaded_multi_sgd_update)
-.set_attr<FCompute>("FCompute<gpu>", PreloadedMultiSGDUpdate<gpu, preloaded_type_identity, 2>);
-NNVM_REGISTER_OP(preloaded_multi_sgd_mom_update)
-.set_attr<FCompute>("FCompute<gpu>", PreloadedMultiSGDMomUpdate<gpu, preloaded_type_identity, 3>);
-NNVM_REGISTER_OP(preloaded_multi_mp_sgd_update)
-.set_attr<FCompute>("FCompute<gpu>", PreloadedMultiSGDUpdate<gpu, preloaded_single_precision, 3>);
-NNVM_REGISTER_OP(preloaded_multi_mp_sgd_mom_update)
+NNVM_REGISTER_OP(lars_multi_sgd_update)
+.set_attr<FCompute>("FCompute<gpu>", LARSMultiSGDUpdate<gpu, lars_type_identity, 2>);
+NNVM_REGISTER_OP(lars_multi_sgd_mom_update)
+.set_attr<FCompute>("FCompute<gpu>", LARSMultiSGDMomUpdate<gpu, lars_type_identity, 3>);
+NNVM_REGISTER_OP(lars_multi_mp_sgd_update)
+.set_attr<FCompute>("FCompute<gpu>", LARSMultiSGDUpdate<gpu, lars_single_precision, 3>);
+NNVM_REGISTER_OP(lars_multi_mp_sgd_mom_update)
 .set_attr<FCompute>("FCompute<gpu>",
-                    PreloadedMultiSGDMomUpdate<gpu, preloaded_single_precision, 4>);
+                    LARSMultiSGDMomUpdate<gpu, lars_single_precision, 4>);
 
 }  // namespace op
 }  // namespace mxnet

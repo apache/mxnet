@@ -19,20 +19,20 @@
 
 /*!
  *  Copyright (c) 2019 by Contributors
- * \file preloaded_multi_sgd.cc
+ * \file lars_multi_sgd.cc
  * \brief Multi-sgd optimizers with lrs and wds as mxnet inputs
  * \author Clement Fuji Tsang
  */
-#include "./preloaded_multi_sgd-inl.h"
-#include "../elemwise_op_common.h"
+#include "lars_multi_sgd-inl.h"
+#include "elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {
 
-DMLC_REGISTER_PARAMETER(PreloadedMultiSGDParam);
-DMLC_REGISTER_PARAMETER(PreloadedMultiSGDMomParam);
+DMLC_REGISTER_PARAMETER(LARSMultiSGDParam);
+DMLC_REGISTER_PARAMETER(LARSMultiSGDMomParam);
 
-NNVM_REGISTER_OP(preloaded_multi_sgd_update)
+NNVM_REGISTER_OP(lars_multi_sgd_update)
 .describe(R"code(Update function for Stochastic Gradient Descent (SDG) optimizer.
 
 It updates the weights using::
@@ -41,20 +41,20 @@ It updates the weights using::
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
-    const PreloadedMultiSGDParam& param = dmlc::get<PreloadedMultiSGDParam>(attrs.parsed);
+    const LARSMultiSGDParam& param = dmlc::get<LARSMultiSGDParam>(attrs.parsed);
     return static_cast<uint32_t>(param.num_weights * 2 + 2);
   })
 .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
-    const PreloadedMultiSGDParam& param = dmlc::get<PreloadedMultiSGDParam>(attrs.parsed);
+    const LARSMultiSGDParam& param = dmlc::get<LARSMultiSGDParam>(attrs.parsed);
     return static_cast<uint32_t>(param.num_weights);
   })
-.set_attr_parser(ParamParser<PreloadedMultiSGDParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", PreloadedMultiSGDShape<PreloadedMultiSGDParam, 2>)
+.set_attr_parser(ParamParser<LARSMultiSGDParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LARSMultiSGDShape<LARSMultiSGDParam, 2>)
 .set_attr<nnvm::FInferType>("FInferType",
-                            MP_PreloadedMultiSGD_InferType<PreloadedMultiSGDParam, 2, 0>)
+                            MP_LARSMultiSGD_InferType<LARSMultiSGDParam, 2, 0>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    uint32_t num_args = dmlc::get<PreloadedMultiSGDParam>(attrs.parsed).num_weights;
+    uint32_t num_args = dmlc::get<LARSMultiSGDParam>(attrs.parsed).num_weights;
     std::vector<std::string> ret;
     ret.reserve(num_args * 2 + 2);
     for (uint32_t i = 0; i < num_args; ++i) {
@@ -65,11 +65,11 @@ It updates the weights using::
     ret.emplace_back("wds");
     return ret;
   })
-.set_attr<FCompute>("FCompute<cpu>", PreloadedMultiSGDUpdate<cpu, preloaded_type_identity, 2>)
+.set_attr<FCompute>("FCompute<cpu>", LARSMultiSGDUpdate<cpu, lars_type_identity, 2>)
 .add_argument("data", "NDArray-or-Symbol[]", "Weights, gradients, learning rates and weight decays")
-.add_arguments(PreloadedMultiSGDParam::__FIELDS__());
+.add_arguments(LARSMultiSGDParam::__FIELDS__());
 
-NNVM_REGISTER_OP(preloaded_multi_sgd_mom_update)
+NNVM_REGISTER_OP(lars_multi_sgd_mom_update)
 .describe(R"code(Momentum update function for Stochastic Gradient Descent (SGD) optimizer.
 
 Momentum update has better convergence rates on neural networks. Mathematically it looks
@@ -90,20 +90,20 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
-    const PreloadedMultiSGDMomParam& param = dmlc::get<PreloadedMultiSGDMomParam>(attrs.parsed);
+    const LARSMultiSGDMomParam& param = dmlc::get<LARSMultiSGDMomParam>(attrs.parsed);
     return static_cast<uint32_t>(param.num_weights * 3 + 2);
   })
 .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
-    const PreloadedMultiSGDMomParam& param = dmlc::get<PreloadedMultiSGDMomParam>(attrs.parsed);
+    const LARSMultiSGDMomParam& param = dmlc::get<LARSMultiSGDMomParam>(attrs.parsed);
     return static_cast<uint32_t>(param.num_weights);
   })
-.set_attr_parser(ParamParser<PreloadedMultiSGDMomParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", PreloadedMultiSGDShape<PreloadedMultiSGDMomParam, 3>)
+.set_attr_parser(ParamParser<LARSMultiSGDMomParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LARSMultiSGDShape<LARSMultiSGDMomParam, 3>)
 .set_attr<nnvm::FInferType>("FInferType",
-                            MP_PreloadedMultiSGD_InferType<PreloadedMultiSGDMomParam, 3, 0>)
+                            MP_LARSMultiSGD_InferType<LARSMultiSGDMomParam, 3, 0>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    uint32_t num_args = dmlc::get<PreloadedMultiSGDParam>(attrs.parsed).num_weights;
+    uint32_t num_args = dmlc::get<LARSMultiSGDParam>(attrs.parsed).num_weights;
     std::vector<std::string> ret;
     ret.reserve(num_args * 3 + 2);
     for (uint32_t i = 0; i < num_args; ++i) {
@@ -118,19 +118,19 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
-    const PreloadedMultiSGDMomParam& param = dmlc::get<PreloadedMultiSGDMomParam>(attrs.parsed);
+    const LARSMultiSGDMomParam& param = dmlc::get<LARSMultiSGDMomParam>(attrs.parsed);
     ret.reserve(param.num_weights);
     for (int i = 0; i < param.num_weights; ++i) {
       ret.push_back(i * 3 + 2);
     }
     return ret;
   })
-.set_attr<FCompute>("FCompute<cpu>", PreloadedMultiSGDMomUpdate<cpu, preloaded_type_identity, 3>)
+.set_attr<FCompute>("FCompute<cpu>", LARSMultiSGDMomUpdate<cpu, lars_type_identity, 3>)
 .add_argument("data", "NDArray-or-Symbol[]",
               "Weights, gradients, momentum, learning rates and weight decays")
-.add_arguments(PreloadedMultiSGDMomParam::__FIELDS__());
+.add_arguments(LARSMultiSGDMomParam::__FIELDS__());
 
-NNVM_REGISTER_OP(preloaded_multi_mp_sgd_update)
+NNVM_REGISTER_OP(lars_multi_mp_sgd_update)
 .describe(R"code(Update function for multi-precision Stochastic Gradient Descent (SDG) optimizer.
 
 It updates the weights using::
@@ -139,20 +139,20 @@ It updates the weights using::
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
-    const PreloadedMultiSGDParam& param = dmlc::get<PreloadedMultiSGDParam>(attrs.parsed);
+    const LARSMultiSGDParam& param = dmlc::get<LARSMultiSGDParam>(attrs.parsed);
     return static_cast<uint32_t>(param.num_weights * 3 + 2);
   })
 .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
-    const PreloadedMultiSGDParam& param = dmlc::get<PreloadedMultiSGDParam>(attrs.parsed);
+    const LARSMultiSGDParam& param = dmlc::get<LARSMultiSGDParam>(attrs.parsed);
     return static_cast<uint32_t>(param.num_weights);
   })
-.set_attr_parser(ParamParser<PreloadedMultiSGDParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", PreloadedMultiSGDShape<PreloadedMultiSGDParam, 3>)
+.set_attr_parser(ParamParser<LARSMultiSGDParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LARSMultiSGDShape<LARSMultiSGDParam, 3>)
 .set_attr<nnvm::FInferType>("FInferType",
-                            MP_PreloadedMultiSGD_InferType<PreloadedMultiSGDParam, 3, 1>)
+                            MP_LARSMultiSGD_InferType<LARSMultiSGDParam, 3, 1>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    uint32_t num_args = dmlc::get<PreloadedMultiSGDParam>(attrs.parsed).num_weights;
+    uint32_t num_args = dmlc::get<LARSMultiSGDParam>(attrs.parsed).num_weights;
     std::vector<std::string> ret;
     ret.reserve(num_args * 3 + 2);
     for (uint32_t i = 0; i < num_args; ++i) {
@@ -167,18 +167,18 @@ It updates the weights using::
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
-    const PreloadedMultiSGDParam& param = dmlc::get<PreloadedMultiSGDParam>(attrs.parsed);
+    const LARSMultiSGDParam& param = dmlc::get<LARSMultiSGDParam>(attrs.parsed);
     ret.reserve(param.num_weights);
     for (int i = 0; i < param.num_weights; ++i) {
       ret.push_back(i * 3 + 2);
     }
     return ret;
   })
-.set_attr<FCompute>("FCompute<cpu>", PreloadedMultiSGDUpdate<cpu, preloaded_single_precision, 3>)
+.set_attr<FCompute>("FCompute<cpu>", LARSMultiSGDUpdate<cpu, lars_single_precision, 3>)
 .add_argument("data", "NDArray-or-Symbol[]", "Weights, gradients, learning rates and weight decays")
-.add_arguments(PreloadedMultiSGDParam::__FIELDS__());
+.add_arguments(LARSMultiSGDParam::__FIELDS__());
 
-NNVM_REGISTER_OP(preloaded_multi_mp_sgd_mom_update)
+NNVM_REGISTER_OP(lars_multi_mp_sgd_mom_update)
 .describe(R"code(Momentum update function for multi-precision Stochastic Gradient Descent (SGD) optimizer.
 
 Momentum update has better convergence rates on neural networks. Mathematically it looks
@@ -199,20 +199,20 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
 
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {
-    const PreloadedMultiSGDMomParam& param = dmlc::get<PreloadedMultiSGDMomParam>(attrs.parsed);
+    const LARSMultiSGDMomParam& param = dmlc::get<LARSMultiSGDMomParam>(attrs.parsed);
     return static_cast<uint32_t>(param.num_weights * 4 + 2);
   })
 .set_num_outputs([](const nnvm::NodeAttrs& attrs) {
-    const PreloadedMultiSGDMomParam& param = dmlc::get<PreloadedMultiSGDMomParam>(attrs.parsed);
+    const LARSMultiSGDMomParam& param = dmlc::get<LARSMultiSGDMomParam>(attrs.parsed);
     return static_cast<uint32_t>(param.num_weights);
   })
-.set_attr_parser(ParamParser<PreloadedMultiSGDMomParam>)
-.set_attr<mxnet::FInferShape>("FInferShape", PreloadedMultiSGDShape<PreloadedMultiSGDMomParam, 4>)
+.set_attr_parser(ParamParser<LARSMultiSGDMomParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", LARSMultiSGDShape<LARSMultiSGDMomParam, 4>)
 .set_attr<nnvm::FInferType>("FInferType",
-                            MP_PreloadedMultiSGD_InferType<PreloadedMultiSGDMomParam, 4, 2>)
+                            MP_LARSMultiSGD_InferType<LARSMultiSGDMomParam, 4, 2>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    uint32_t num_args = dmlc::get<PreloadedMultiSGDMomParam>(attrs.parsed).num_weights;
+    uint32_t num_args = dmlc::get<LARSMultiSGDMomParam>(attrs.parsed).num_weights;
     std::vector<std::string> ret;
     ret.reserve(num_args * 4 + 2);
     for (uint32_t i = 0; i < num_args; ++i) {
@@ -228,7 +228,7 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
 .set_attr<nnvm::FMutateInputs>("FMutateInputs",
   [](const nnvm::NodeAttrs& attrs) {
     std::vector<uint32_t> ret;
-    const PreloadedMultiSGDMomParam& param = dmlc::get<PreloadedMultiSGDMomParam>(attrs.parsed);
+    const LARSMultiSGDMomParam& param = dmlc::get<LARSMultiSGDMomParam>(attrs.parsed);
     ret.reserve(param.num_weights * 2);
     for (int i = 0; i < param.num_weights; ++i) {
       ret.push_back(i * 4 + 2);
@@ -236,10 +236,10 @@ Where the parameter ``momentum`` is the decay rate of momentum estimates at each
     }
     return ret;
   })
-.set_attr<FCompute>("FCompute<cpu>", PreloadedMultiSGDMomUpdate<cpu, preloaded_single_precision, 4>)
+.set_attr<FCompute>("FCompute<cpu>", LARSMultiSGDMomUpdate<cpu, lars_single_precision, 4>)
 .add_argument("data", "NDArray-or-Symbol[]",
               "Weights, gradients, momentums, learning rates and weight decays")
-.add_arguments(PreloadedMultiSGDMomParam::__FIELDS__());
+.add_arguments(LARSMultiSGDMomParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

@@ -358,7 +358,7 @@ def test_fast_lars():
                 tol2 = 1e-6 if lowTol else 1e-7
                 check_fast_lars(w_dtype, g_dtype, shapes, ctx, tol1, tol2)
 
-def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
+def check_lars_multi_sgd(dtype, shapes, momentum, use_master_weights):
     def _flatten_list(nested_list):
         return [item for sublist in nested_list for item in sublist]
     weights_arr = [np.random.rand(*shape).astype(dtype) * 100. for shape in shapes]
@@ -382,7 +382,7 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
                                      *_flatten_list(zip(mx_w, mx_g, mx_w32)),
                                      num_weights=len(shapes), lrs=lrs, wds=wds,
                                      rescale_grad=rescale_grad, out=mx_w)
-            mx.nd.preloaded_multi_mp_sgd_update(
+            mx.nd.lars_multi_mp_sgd_update(
                                      *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_w32)) +
                                       [mx_lrs, mx_wds]), num_weights=len(shapes),
                                      rescale_grad=rescale_grad, out=mx_p_w)
@@ -391,7 +391,7 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
                                     *_flatten_list(zip(mx_w, mx_g)),
                                     num_weights=len(shapes), lrs=lrs, wds=wds,
                                     rescale_grad=rescale_grad, out=mx_w)
-            preloaded_out = mx.nd.preloaded_multi_sgd_update(
+            lars_out = mx.nd.lars_multi_sgd_update(
                                     *(_flatten_list(zip(mx_p_w, mx_p_g)) +
                                      [mx_lrs, mx_wds]), num_weights=len(shapes),
                                     rescale_grad=rescale_grad, out=mx_p_w)
@@ -399,33 +399,35 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
         if use_master_weights:
             momentums_arr = [np.random.rand(*shape).astype("float32") for shape in shapes]
             mx_m = _make_ndarrays(momentums_arr)
-            mx_p_m = _make_ndarrays(momentums_arr)
+            mx_p_m = [lr * m for lr,m in zip(lrs,_make_ndarrays(momentums_arr))]
             out = mx.nd.multi_mp_sgd_mom_update(
                                     *_flatten_list(zip(mx_w, mx_g, mx_m, mx_w32)),
                                     num_weights=len(shapes), lrs=lrs, wds=wds,
                                     rescale_grad=0.95, momentum=momentum, out=mx_w)
-            preloaded_out = mx.nd.preloaded_multi_mp_sgd_mom_update(
+            lars_out = mx.nd.lars_multi_mp_sgd_mom_update(
                                     *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m, mx_p_w32)) +
                                       [mx_lrs, mx_wds]), num_weights=len(shapes),
                                     rescale_grad=0.95, momentum=momentum, out=mx_p_w)
+            mx_p_m = [m / lr for lr,m in zip(lrs, mx_p_m)]
         else:
             momentums_arr = [np.random.rand(*shape).astype(dtype) for shape in shapes]
             mx_m = _make_ndarrays(momentums_arr)
-            mx_p_m = _make_ndarrays(momentums_arr)
+            mx_p_m = [lr * m for lr,m in zip(lrs,_make_ndarrays(momentums_arr))]
             mx.nd.multi_sgd_mom_update(
                                     *_flatten_list(zip(mx_w, mx_g, mx_m)),
                                     num_weights=len(shapes), lrs=lrs, wds=wds,
                                     rescale_grad=0.95, momentum=momentum, out=mx_w)
-            mx.nd.preloaded_multi_sgd_mom_update(
+            mx.nd.lars_multi_sgd_mom_update(
                                     *(_flatten_list(zip(mx_p_w, mx_p_g, mx_p_m)) +
                                       [mx_lrs, mx_wds]), num_weights=len(shapes),
                                     rescale_grad=0.95, momentum=momentum, out=mx_p_w)
+            mx_p_m = [m / lr for lr,m in zip(lrs, mx_p_m)]
 
     def _assert_all_almost_equal(lhs_list, rhs_list, rtol, atol):
         for i, (lhs, rhs) in enumerate(zip(lhs_list, rhs_list)):
             assert_almost_equal(lhs.asnumpy(), rhs.asnumpy(), rtol=rtol, atol=atol)
     if dtype == 'float16':
-        rtol = 1e-3
+        rtol = 1e-2
         atol = 1e-2
     else:
         rtol = 1e-5
@@ -437,7 +439,7 @@ def check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights):
         _assert_all_almost_equal(mx_p_w32, mx_w32, 1e-5, 1e-6)
 
 @with_seed()
-def test_preloaded_multi_sgd():
+def test_lars_multi_sgd():
     dtypes = ['float16', 'float32']
     momentums = [None, 0.9]
     min_nparam = 5
@@ -450,7 +452,7 @@ def test_preloaded_multi_sgd():
             for momentum in momentums:
                 nparam = np.random.randint(min_nparam + 1, max_nparam + 1)
                 shapes = [np.random.randint(1, maxdim + 1, size=maxndim) for i in range(nparam)]
-                check_preloaded_multi_sgd(dtype, shapes, momentum, use_master_weights)
+                check_lars_multi_sgd(dtype, shapes, momentum, use_master_weights)
 
 
 @with_seed()

@@ -127,8 +127,8 @@ struct SGDMomStdDnsRspDnsKernel<req, cpu> {
       }
       grad_rescaled += wd * weight_data[data_i];
       mom_data[data_i] *= momentum;
-      mom_data[data_i] -= lr * grad_rescaled;
-      KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + mom_data[data_i]);
+      mom_data[data_i] -= grad_rescaled;
+      KERNEL_ASSIGN(out_data[data_i], req, weight_data[data_i] + lr * mom_data[data_i]);
     }
   }
 };
@@ -351,14 +351,14 @@ like below:
 
 .. math::
 
-  v_1 = \alpha * \nabla J(W_0)\\
-  v_t = \gamma v_{t-1} - \alpha * \nabla J(W_{t-1})\\
-  W_t = W_{t-1} + v_t
+  v_1 = \nabla J(W_0)\\
+  v_t = \gamma v_{t-1} - \nabla J(W_{t-1})\\
+  W_t = W_{t-1} + \alpha * v_t
 
 It updates the weights using::
 
-  v = momentum * v - learning_rate * gradient
-  weight += v
+  v = momentum * v - gradient
+  weight += learning_rate * v
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
@@ -449,14 +449,14 @@ like below:
 
 .. math::
 
-  v_1 = \alpha * \nabla J(W_0)\\
-  v_t = \gamma v_{t-1} - \alpha * \nabla J(W_{t-1})\\
-  W_t = W_{t-1} + v_t
+  v_1 = \nabla J(W_0)\\
+  v_t = \gamma v_{t-1} - \nabla J(W_{t-1})\\
+  W_t = W_{t-1} + \alpha * v_t
 
 It updates the weights using::
 
-  v = momentum * v - learning_rate * gradient
-  weight += v
+  v = momentum * v - gradient
+  weight += learning_rate * v
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
@@ -534,14 +534,14 @@ like below:
 
 .. math::
 
-  v_1 = \alpha * \nabla J(W_0)\\
-  v_t = \gamma v_{t-1} - \alpha * \nabla J(W_{t-1})\\
-  W_t = W_{t-1} + v_t
+  v_1 = \nabla J(W_0)\\
+  v_t = \gamma v_{t-1} - \nabla J(W_{t-1})\\
+  W_t = W_{t-1} + \alpha * v_t
 
 It updates the weights using::
 
-  v = momentum * v - learning_rate * gradient
-  weight += v
+  v = momentum * v - gradient
+  weight += learning_rate * v
 
 Where the parameter ``momentum`` is the decay rate of momentum estimates at each epoch.
 
@@ -550,8 +550,8 @@ type is the same as momentum's storage type,
 only the row slices whose indices appear in grad.indices are updated (for both weight and momentum)::
 
   for row in gradient.indices:
-      v[row] = momentum[row] * v[row] - learning_rate * gradient[row]
-      weight[row] += v[row]
+      v[row] = momentum[row] * v[row] - gradient[row]
+      weight[row] += learning_rate * v[row]
 
 )code" ADD_FILELINE)
 .set_num_inputs(3)
