@@ -27,7 +27,7 @@ import numpy as np
 from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
-from ... import nd, sym
+from ... import ndarray as nd, symbol as sym
 from ...util import is_np_array
 
 

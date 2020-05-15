@@ -30,7 +30,7 @@ import numpy as np
 
 from .. import dataset
 from ...utils import download, check_sha1, _get_repo_file_url
-from .... import nd, image, recordio, base
+from .... import ndarray as nd, image, recordio, base
 from .... import numpy as _mx_np  # pylint: disable=reimported
 from ....util import is_np_array, default_array
 from ....base import numeric_types

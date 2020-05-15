@@ -83,7 +83,7 @@ def test_lars():
                     num_epoch=num_epochs)
 
     # predict accuracy for lenet
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     lenet_model.score(test_iter, acc)
     accuracy = acc.get()[1]
     assert accuracy > 0.98, "LeNet-5 training accuracy on MNIST was too low"

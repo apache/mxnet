@@ -103,7 +103,7 @@ def main():
         module.fit(train_data=data_train,
                    eval_data=data_val,
                    # use metrics.accuracy or metrics.accuracy_lcs
-                   eval_metric=mx.metric.np(metrics.accuracy, allow_extra_outputs=True),
+                   eval_metric=mx.gluon.metric.np(metrics.accuracy, allow_extra_outputs=True),
                    optimizer='sgd',
                    optimizer_params={'learning_rate': hp.learning_rate,
                                      'momentum': hp.momentum,

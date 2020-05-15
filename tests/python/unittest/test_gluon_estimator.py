@@ -58,7 +58,7 @@ def test_fit():
     num_epochs = 1
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
@@ -87,7 +87,7 @@ def test_validation():
     num_epochs = 1
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     val_loss = gluon.loss.L1Loss()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
@@ -126,7 +126,7 @@ def test_initializer():
     ctx = mx.cpu()
 
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     # no initializer
     est = Estimator(net=net,
                     loss=loss,
@@ -166,7 +166,7 @@ def test_trainer():
     ctx = mx.cpu()
 
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     net.initialize(ctx=ctx)
     # input no trainer
     with warnings.catch_warnings(record=True) as w:
@@ -206,7 +206,7 @@ def test_metric():
     est.fit(train_data=train_data,
             epochs=num_epochs)
     # input list of metrics
-    metrics = [mx.metric.Accuracy(), mx.metric.Accuracy()]
+    metrics = [mx.gluon.metric.Accuracy(), mx.gluon.metric.Accuracy()]
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=metrics,
@@ -227,14 +227,14 @@ def test_metric():
                     loss=loss,
                     trainer=trainer,
                     context=ctx)
-    assert isinstance(est.train_metrics[0], mx.metric.Accuracy)
+    assert isinstance(est.train_metrics[0], mx.gluon.metric.Accuracy)
 
 
 def test_loss():
     ''' test with invalid loss '''
     net = _get_test_network()
     ctx = mx.cpu()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     # input invalid loss
@@ -250,7 +250,7 @@ def test_context():
     ''' test with no context, list of context, invalid context '''
     net = _get_test_network()
     loss = gluon.loss.L2Loss()
-    metrics = mx.metric.Accuracy()
+    metrics = mx.gluon.metric.Accuracy()
     # input no context
     est = Estimator(net=net,
                     loss=loss,
@@ -332,7 +332,7 @@ def test_default_handlers():
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
 
-    train_acc = mx.metric.RMSE()
+    train_acc = mx.gluon.metric.RMSE()
     loss = gluon.loss.L2Loss()
 
     est = Estimator(net=net,
@@ -359,7 +359,7 @@ def test_default_handlers():
 
     # handler with mixed metrics, some handler use metrics prepared by estimator
     # some handler use metrics user prepared
-    logging = LoggingHandler(metrics=[mx.metric.RMSE("val acc")])
+    logging = LoggingHandler(metrics=[mx.gluon.metric.RMSE("val acc")])
     with pytest.raises(ValueError):
         est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
 
@@ -383,7 +383,7 @@ def test_val_net():
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
     val_loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
@@ -448,7 +448,7 @@ def test_val_handlers():
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
 
-    train_acc = mx.metric.RMSE()
+    train_acc = mx.gluon.metric.RMSE()
     loss = gluon.loss.L2Loss()
 
     est = Estimator(net=net,

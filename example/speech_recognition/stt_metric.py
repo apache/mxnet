@@ -35,7 +35,7 @@ def check_label_shapes(labels, preds, shape=0):
                          "predictions {}".format(label_shape, pred_shape))
 
 
-class STTMetric(mx.metric.EvalMetric):
+class STTMetric(mx.gluon.metric.EvalMetric):
     def __init__(self, batch_size, num_gpu, is_epoch_end=False, is_logging=True):
         super(STTMetric, self).__init__('STTMetric')
 

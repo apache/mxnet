@@ -108,7 +108,7 @@ def test_factorization_machine_module(verbose=False):
         else:
             raise AssertionError("Unsupported optimizer type '" + optimizer + "' specified")
         # use accuracy as the metric
-        metric = mx.metric.create('MSE')
+        metric = mx.gluon.metric.create('MSE')
         # train 'num_epochs' epoch
         for epoch in range(num_epochs):
             train_iter.reset()
