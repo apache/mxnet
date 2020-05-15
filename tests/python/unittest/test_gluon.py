@@ -2049,10 +2049,9 @@ def check_layer_forward_withinput(net, x):
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
 
 @with_seed()
-def test_conv2d_16c():
-    chn_list = [16, 256]
-    kernel_list = [1, 3]
-    kernel_list.append(224)
+@pytest.mark.parametrize('chn_num', [16, 256])
+@pytest.mark.parametrize('kernel', [1, 3, 224])
+def test_conv2d_16c(chn_num, kernel):
     batch_size = 4
     class Net(gluon.HybridBlock):
         def __init__(self,
@@ -2068,10 +2067,8 @@ def test_conv2d_16c():
             return out
 
     x = mx.nd.random.uniform(-1.0, 1.0, shape=(batch_size, 3, 224, 224))
-    for i in range(len(chn_list)):
-        for j in range(len(kernel_list)):
-            net = Net(chn_list[i], kernel_list[j])
-            check_layer_forward_withinput(net, x)
+    net = Net(chn_num, kernel)
+    check_layer_forward_withinput(net, x)
 
 @with_seed()
 def test_group_conv2d_16c():
