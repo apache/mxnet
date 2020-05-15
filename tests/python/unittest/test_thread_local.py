@@ -125,8 +125,9 @@ def test_blockscope():
     status = [False]
     event = threading.Event()
     def f():
-        with block._BlockScope(dummy_block("spawned_")):
-            x= NameManager.current.get(None, "hello")
+        net = dummy_block("spawned_")  # BlockScope only keeps a weakref to the Block
+        with block._BlockScope(net):
+            x = NameManager.current.get(None, "hello")
             event.wait()
             if x == "spawned_hello0":
                 status[0] = True
