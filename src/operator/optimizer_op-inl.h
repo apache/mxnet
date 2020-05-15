@@ -599,7 +599,7 @@ struct SGDMomKernel {
       rescale_grad = mshadow_op::clip::Map(rescale_grad, param_clip_gradient);
     }
     rescale_grad += param_wd * weight_data[i];
-    const DType m = mom_data[i];
+    DType m = mom_data[i];
     m *= param_momentum;
     m -= rescale_grad;
     mom_data[i] = m;
