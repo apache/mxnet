@@ -253,11 +253,12 @@ class LARS(Optimizer):
                 wd = wds[i]
                 lr = lrs[i]
                 lr *= self._get_lars(index, weight, grad, wd)
-                # normal SGD picks up momentum correction by default,
-                # so need to modify the momentum to undo that.
-                # The correction term is previous_lr / current_lr.
-                kwargs['momentum'] = (self.momentum * (self.last_lr.get(index, lr) / lr)) \
-                                     if lr != 0 else self.momentum
+                if state is not None:
+                    # normal SGD picks up momentum correction by default,
+                    # so need to modify the momentum to undo that.
+                    # The correction term is previous_lr / current_lr.
+                    kwargs['momentum'] = (self.momentum * (self.last_lr.get(index, lr) / lr)) \
+                                         if lr != 0 else self.momentum
                 self.last_lr[index] = lr
                 multi_precision = self.multi_precision and weights[0].dtype == numpy.float16
                 if not multi_precision:
