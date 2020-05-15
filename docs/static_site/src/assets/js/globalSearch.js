@@ -22,27 +22,14 @@
 */
 
 $(document).ready(function () {
-  const DEFAULT_CURRENT_VERSION = "1.6";
-  const VERSIONS = [
-    "master",
-    "1.6",
-    "1.5.0",
-    "1.4.1",
-    "1.3.1",
-    "1.2.1",
-    "1.1.0",
-    "1.0.0",
-    "0.12.1",
-    "0.11.0",
-  ];
-
+  const default_version = $("#gs-current-version-label").text();
   // bind docsearch
   const globalSearch = docsearch({
     apiKey: "500f8e78748bd043cc6e4ac130e8c0e7",
     indexName: "apache_mxnet",
     inputSelector: "#global-search",
     algoliaOptions: {
-      facetFilters: ["version:" + DEFAULT_CURRENT_VERSION],
+      facetFilters: ["version:" + default_version],
       hitsPerPage: 5,
     },
     debug: false, // Set debug to true if you want to inspect the dropdown
@@ -53,31 +40,11 @@ $(document).ready(function () {
     indexName: "apache_mxnet",
     inputSelector: "#global-search-mobile",
     algoliaOptions: {
-      facetFilters: ["version:" + DEFAULT_CURRENT_VERSION],
+      facetFilters: ["version:" + default_version],
       hitsPerPage: 5,
     },
     debug: false, // Set debug to true if you want to inspect the dropdown
   });
-
-  // dynamically generate version dropdown
-  // to add new version options: edit above constants VERSIONS and DEFAULT_CURRENT_VERSION
-  $("ul.gs-version-dropdown").append(
-    VERSIONS.map(function (version) {
-      const liNode = $("<li>", { class: "gs-opt gs-versions", text: version });
-      if (version === DEFAULT_CURRENT_VERSION) liNode.addClass("active");
-      return liNode;
-    })
-  );
-
-  $("#gs-current-version-label").text(DEFAULT_CURRENT_VERSION);
-
-  $("ul.gs-version-dropdown-mobile").append(
-    VERSIONS.map(function (version) {
-      const liNode = $("<li>", { class: "gs-opt gs-versions", text: version });
-      if (version === DEFAULT_CURRENT_VERSION) liNode.addClass("active");
-      return liNode;
-    })
-  );
 
   // search bar animation and event listeners for desktop 
   $("#gs-search-icon").click(function () {

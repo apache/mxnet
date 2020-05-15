@@ -41,12 +41,20 @@
           <input id="global-search" type="text" title="Search" placeholder="Search" />
           <div id="global-search-dropdown-container">
             <button class="gs-current-version btn" type="button" data-toggle="dropdown">
-                <span id="gs-current-version-label">1.6</span>
+                <span id="gs-current-version-label">{{site.default_version}}</span>
                 <svg class="gs-dropdown-caret" viewBox="0 0 32 32" class="icon icon-caret-bottom" aria-hidden="true">
                     <path class="dropdown-caret-path" d="M24 11.305l-7.997 11.39L8 11.305z"></path>
                 </svg>
             </button>
-            <ul class="gs-opt-group gs-version-dropdown"></ul>
+            <ul class="gs-opt-group gs-version-dropdown">
+              {% for version in site.versions %}
+                {% if version == site.default_version %}
+                  <li class="gs-opt gs-versions active">{{version}}</li>
+                {% else %}
+                  <li class="gs-opt gs-versions">{{version}}</li>
+                {% endif %}
+              {% endfor %}
+            </ul>
         </div>
           <span id="global-search-close">x</span>
         </form>
@@ -61,7 +69,15 @@
                     <path class="dropdown-caret-path" d="M24 11.305l-7.997 11.39L8 11.305z"></path>
                 </svg>
             </button>
-            <ul class="gs-opt-group gs-version-dropdown-mobile"></ul>
+            <ul class="gs-opt-group gs-version-dropdown-mobile">
+              {% for version in site.versions %}
+                {% if version == site.default_version %}
+                  <li class="gs-opt gs-versions active">{{version}}</li>
+                {% else %}
+                  <li class="gs-opt gs-versions">{{version}}</li>
+                {% endif %}
+              {% endfor %}
+            </ul>
         </div>
         </div>
         <a class="page-link" href="{{'/get_started' | relative_url }}">Get Started</a>
