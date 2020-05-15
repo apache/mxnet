@@ -15,12 +15,12 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import print_function
-
 import itertools
 import mxnet as mx
 import sys
 import time
+
+import pytest
 
 
 class MetricDataGen(object):
@@ -83,6 +83,8 @@ def run_metric(name, data_gen_cls, i, n, c, pred_ctx, label_ctx, **kwargs):
         out_dim=data_gen.output_dim, elapsed=elapsed_str), file=sys.stderr)
 
 
+@pytest.mark.skipif('✔ BLAS_MKL' in mx.runtime.feature_list(),
+                    reason='https://github.com/apache/incubator-mxnet/issues/18244')
 def test_metric_performance():
     """ unittest entry for metric performance benchmarking """
     # Each dictionary entry is (metric_name:(kwargs, DataGenClass))
