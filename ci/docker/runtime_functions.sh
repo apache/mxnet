@@ -648,6 +648,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
     set -ex
     cd /work/build
     CC=gcc-7 CXX=g++-7 cmake \
+        -DUSE_MKL -I/opt/intel/mkl/include
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=ON \
         -DUSE_MKLDNN=ON \
