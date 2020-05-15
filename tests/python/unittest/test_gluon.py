@@ -3231,6 +3231,10 @@ def test_reqs_switching_training_inference():
     mx.test_utils.assert_almost_equal(grad1, grad2)
 
 def test_no_memory_leak_in_gluon():
+    # Collect all other garbage prior to this test. Otherwise the test may fail
+    # due to unrelated memory leaks.
+    gc.collect()
+
     gc_flags = gc.get_debug()
     gc.set_debug(gc.DEBUG_SAVEALL)
     net = mx.gluon.nn.Dense(10, in_units=10)
