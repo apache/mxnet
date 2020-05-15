@@ -22,7 +22,7 @@ import scipy
 from scipy.stats import pearsonr
 import json
 import math
-from common import with_seed
+from common import with_seed, xfail_when_nonstandard_decimal_separator
 from copy import deepcopy
 
 def check_metric(metric, *args, **kwargs):
@@ -83,6 +83,7 @@ def test_loss_update():
     _, acc2 = metric2.get()
     assert acc1 == acc2
 
+@xfail_when_nonstandard_decimal_separator
 def test_binary_f1():
     microF1 = mx.gluon.metric.create("f1", average="micro")
     macroF1 = mx.gluon.metric.F1(average="macro")
@@ -167,6 +168,7 @@ def test_multiclass_f1():
     np.testing.assert_almost_equal(microF1.get()[1], fmicro)
     np.testing.assert_almost_equal(macroF1.get()[1], fmacro)
     
+@xfail_when_nonstandard_decimal_separator
 def test_multilabel_f1():
     microF1 = mx.gluon.metric.create("f1", class_type="multilabel", average="micro")
     macroF1 = mx.gluon.metric.F1(class_type="multilabel", average="macro")
@@ -201,7 +203,8 @@ def test_multilabel_f1():
     fmicro = 0.7272727272727272  #f1_score(overall_label, overall_pred, average="micro")
     np.testing.assert_almost_equal(microF1.get()[1], fmicro)
     np.testing.assert_almost_equal(macroF1.get()[1], fmacro)
-    
+
+@xfail_when_nonstandard_decimal_separator
 def test_mcc():
     microMCC = mx.gluon.metric.create("mcc")
 
@@ -363,6 +366,7 @@ def test_pcc():
         met_pcc.update(l, p)
     assert pcc == met_pcc.get()[1]
 
+@xfail_when_nonstandard_decimal_separator
 def test_single_array_input():
     pred = mx.nd.array([[1,2,3,4]])
     label = pred + 0.1

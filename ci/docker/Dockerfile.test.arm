@@ -16,9 +16,10 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to test MXNet on Ubuntu 20.04 ARMv7 CPU
+# Dockerfile to test MXNet on Ubuntu 20.04 ARM
 
-FROM arm32v7/ubuntu:20.04
+ARG BASE_IMAGE
+FROM $BASE_IMAGE
 
 WORKDIR /usr/local
 

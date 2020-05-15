@@ -415,6 +415,10 @@ class _DownloadedDataset(Dataset):
     """Base class for MNIST, cifar10, etc."""
     def __init__(self, root, transform):
         super(_DownloadedDataset, self).__init__()
+        if transform is not None:
+            raise DeprecationWarning(
+                'Directly apply transform to dataset is deprecated. '
+                'Please use dataset.transform() or dataset.transform_first() instead...')
         self._transform = transform
         self._data = None
         self._label = None

@@ -27,7 +27,7 @@ from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
 import mxnet.numpy as _mx_np
 from common import (setup_module, with_seed, assertRaises, teardown_module,
-                    assert_raises_cudnn_not_satisfied)
+                    assert_raises_cudnn_not_satisfied, xfail_when_nonstandard_decimal_separator)
 import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
@@ -754,6 +754,7 @@ def test_batchnorm():
     check_layer_forward(layer, (2, 10, 10, 10))
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sync_batchnorm():
     def _check_batchnorm_result(input, num_devices=1, cuda=False):
@@ -1377,6 +1378,7 @@ def test_inline():
     assert len_1 == len_2 + 2
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_activations():
     point_to_validate = mx.nd.array([-0.1, 0.1] * 3)

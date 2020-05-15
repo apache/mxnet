@@ -23,7 +23,7 @@ import mxnet as mx
 import numpy as np
 from mxnet.gluon.model_zoo import vision
 from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter
-from common import with_seed
+from common import with_seed, xfail_when_nonstandard_decimal_separator
 from mxnet.module import Module
 from mxnet.io import NDArrayIter
 import unittest
@@ -870,6 +870,7 @@ def get_fp32_sym_with_multiple_outputs(length=1):
                               out_grad=False, preserve_shape=False, use_ignore=False, name='softmax')
     return sym
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_quantize_model():
     def check_quantize_model(qdtype):
@@ -1170,6 +1171,7 @@ def test_quantize_gluon_with_forward():
     for qdtype in ['int8', 'uint8']:
         check_quantize_net(qdtype)
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_quantize_sym_with_calib():
     if is_test_for_native_cpu():

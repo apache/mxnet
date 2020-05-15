@@ -34,7 +34,7 @@ from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndar
 from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
 from mxnet.test_utils import new_matrix_with_real_eigvals_nd
 from mxnet.test_utils import new_sym_matrix_with_real_eigvals_nd
-from common import assertRaises, with_seed, retry
+from common import assertRaises, with_seed, retry, xfail_when_nonstandard_decimal_separator
 import random
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
@@ -1732,6 +1732,7 @@ def test_np_squeeze():
                                 rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 @use_np
 def test_np_tri():
@@ -2559,6 +2560,7 @@ def test_np_binary_funcs():
 
 @with_seed()
 @use_np
+@pytest.mark.flaky()
 def test_np_mixed_precision_binary_funcs():
     itypes = [np.bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
@@ -2618,10 +2620,13 @@ def test_np_mixed_precision_binary_funcs():
                             use_broadcast=False, equal_nan=True)
 
     funcs = {
-        'add': (-1.0, 1.0, None, None),
-        'subtract': (-1.0, 1.0, None, None),
+        'add': (-1.0, 1.0, lambda y, x1, x2: _np.ones(y.shape),
+                           lambda y, x1, x2: _np.ones(y.shape)),
+        'subtract': (-1.0, 1.0, lambda y, x1, x2: _np.ones(y.shape),
+                                lambda y, x1, x2: _np.ones(y.shape) * -1),
         'multiply': (-1.0, 1.0, lambda y, x1, x2: _np.broadcast_to(x2, y.shape),
                                 lambda y, x1, x2: _np.broadcast_to(x1, y.shape)),
+        'mod': (1.0, 5.0, None, None),
         'power': (1.0, 3.0, lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2,
                             lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)),
     }
@@ -2649,7 +2654,7 @@ def test_np_mixed_precision_binary_funcs():
                     continue
                 check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type1, type2)
 
-            if func == 'subtract':
+            if func == 'subtract' or func == 'mod':
                 continue
             for type1, type2 in itertools.product(itypes, itypes):
                 if type1 == type2:
@@ -3932,6 +3937,7 @@ def test_npx_special_unary_func():
             check_unary_func(func, ref_grad, shape, low, high)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 @use_np
 def test_np_random_grad():
@@ -4536,6 +4542,33 @@ def test_np_multivariate_normal():
 
         assert list(desired_shape) == list(test_shape)
         assert list(desired_shape) == list(actual_shape)
+
+
+@with_seed()
+@use_np
+def test_npx_categorical():
+    class TestNumpyCategorical(HybridBlock):
+        def __init__(self, size=None):
+            super(TestNumpyCategorical, self).__init__()
+            self.size = size
+
+        def hybrid_forward(self, F, prob):
+            if self.size is None:
+                return F.npx.random.categorical(prob)
+            return F.npx.random.categorical(prob, shape=self.size)
+
+    batch_sizes = [(2,), (2, 3)]
+    event_shapes = [None, (10,), (10, 12)]
+    num_event = [2, 4, 10]
+    for batch_size, num_event, event_shape in itertools.product(batch_sizes, num_event, event_shapes):
+        for hybridize in [True, False]:
+            prob = np.ones(batch_size + (num_event,)) / num_event
+            net = TestNumpyCategorical(event_shape)
+            if hybridize:
+                net.hybridize()
+            mx_out = net(prob)
+            desired_shape = batch_size + event_shape if event_shape is not None else batch_size
+            assert mx_out.shape == desired_shape
 
 
 @with_seed()

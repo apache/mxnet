@@ -22,7 +22,7 @@ import numpy as np
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
-from common import setup_module, with_seed, assertRaises
+from common import setup_module, with_seed, assertRaises, xfail_when_nonstandard_decimal_separator
 from copy import deepcopy
 import pytest
 
@@ -217,6 +217,7 @@ def test_trainer_multi_layer_init():
     check_init([mx.cpu(1), mx.cpu(2)])
     check_init([mx.cpu(1)])
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_trainer_reset_kv():
     def check_trainer_reset_kv(kv):
@@ -250,6 +251,7 @@ def test_trainer_reset_kv():
     for kv in kvs:
         check_trainer_reset_kv(kv)
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_trainer_sparse_kv():
     def check_trainer_sparse_kv(kv, stype, grad_stype, update_on_kv, expected):

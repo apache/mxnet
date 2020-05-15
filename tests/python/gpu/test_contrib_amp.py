@@ -104,7 +104,6 @@ def test_amp_coverage(amp_tests):
                        - If you are not sure which list to choose, FP32_FUNCS is the
                          safest option""")
 
-@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 @with_seed()
 def test_amp_conversion(amp_tests):
     def check_amp_convert_symbol():

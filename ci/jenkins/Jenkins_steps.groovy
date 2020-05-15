@@ -151,7 +151,7 @@ def compile_unix_int64_cpu(lib_name) {
 
 def compile_unix_int64_gpu(lib_name) {
     return ['GPU: USE_INT64_TENSOR_SIZE': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/build-gpu-int64') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
@@ -816,7 +816,7 @@ def test_unix_python3_mkl_cpu(lib_name) {
 
 def test_unix_python3_gpu(lib_name) {
     return ['Python3: GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-python3-gpu') {
           try {
             utils.unpack_and_init(lib_name, mx_lib_cython)
@@ -916,7 +916,7 @@ def test_unix_python3_mkldnn_mkl_cpu(lib_name) {
 
 def test_unix_python3_mkldnn_gpu(lib_name) {
     return ['Python3: MKLDNN-GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-python3-mkldnn-gpu') {
           try {
             utils.unpack_and_init(lib_name, mx_mkldnn_lib)
@@ -932,7 +932,7 @@ def test_unix_python3_mkldnn_gpu(lib_name) {
 
 def test_unix_python3_mkldnn_nocudnn_gpu(lib_name) {
     return ['Python3: MKLDNN-GPU-NOCUDNN': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-python3-mkldnn-gpu-nocudnn') {
           try {
             utils.unpack_and_init(lib_name, mx_mkldnn_lib)
@@ -966,7 +966,7 @@ def test_unix_python3_tensorrt_gpu(lib_name) {
 
 def test_unix_python3_integration_gpu(lib_name) {
     return ['Python Integration GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib)
@@ -980,7 +980,7 @@ def test_unix_python3_integration_gpu(lib_name) {
 
 def test_unix_cpp_package_gpu(lib_name) {
     return ['cpp-package GPU Makefile': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-cpp-package') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_cpp_examples_make)
@@ -994,7 +994,7 @@ def test_unix_cpp_package_gpu(lib_name) {
 
 def test_unix_capi_cpp_package(lib_name) {
     return ['capi-cpp-package GPU Makefile': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-capi-cpp-package') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_cpp_capi_make)
@@ -1036,7 +1036,7 @@ def test_unix_scala_mkldnn_cpu(lib_name){
 
 def test_unix_scala_gpu(lib_name) {
     return ['Scala: GPU Makefile': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-scala-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_make)
@@ -1119,7 +1119,7 @@ def test_unix_perl_cpu(lib_name) {
 
 def test_unix_cpp_gpu(lib_name) {
     return ['Cpp: GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-cpp-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_cmake_lib)
@@ -1147,7 +1147,7 @@ def test_unix_cpp_cpu(lib_name) {
 
 def test_unix_perl_gpu(lib_name) {
     return ['Perl: GPU Makefile': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-perl-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_make)
@@ -1161,7 +1161,7 @@ def test_unix_perl_gpu(lib_name) {
 
 def test_unix_r_gpu(lib_name) {
     return ['R: GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/ut-r-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib)
@@ -1229,7 +1229,7 @@ def test_unix_distributed_kvstore_cpu(lib_name) {
 
 def test_unix_distributed_kvstore_gpu(lib_name) {
     return ['dist-kvstore tests GPU': {
-      node(NODE_LINUX_GPU) {
+      node(NODE_LINUX_GPU_G4) {
         ws('workspace/it-dist-kvstore') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib)
