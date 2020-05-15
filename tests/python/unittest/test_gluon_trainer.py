@@ -100,7 +100,7 @@ def test_trainer():
             y = w + 1
             y.backward()
     trainer.step(1)
-    assert (x.data(mx.cpu(1)).asnumpy() == -4).all()
+    assert (x.data(mx.cpu(1)).asnumpy() == -3.5).all()
 
     trainer.save_states('test_trainer.states')
     states = deepcopy(trainer._kvstore._updater.states) if trainer._update_on_kvstore \
