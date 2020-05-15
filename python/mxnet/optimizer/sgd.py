@@ -38,8 +38,8 @@ class SGD(Optimizer):
 
         for row in grad.indices:
             rescaled_grad[row] = clip(rescale_grad * grad[row] + wd * weight[row], clip_gradient)
-            state[row] = momentum[row] * state[row] + lr * rescaled_grad[row]
-            weight[row] = weight[row] - state[row]
+            state[row] = momentum[row] * state[row] + rescaled_grad[row]
+            weight[row] = weight[row] - lr * state[row]
 
     The sparse update only updates the momentum for the weights whose row_sparse
     gradient indices appear in the current batch, rather than updating it for all
@@ -57,8 +57,8 @@ class SGD(Optimizer):
     Otherwise, **standard updates** are applied by::
 
         rescaled_grad = clip(rescale_grad * grad, clip_gradient)) + wd * weight
-        state = momentum * state + lr * rescaled_grad
-        weight = weight - state
+        state = momentum * state + rescaled_grad
+        weight = weight - lr * state
 
     For details of the update algorithm see
     :class:`~mxnet.ndarray.sgd_update` and :class:`~mxnet.ndarray.sgd_mom_update`.
@@ -146,12 +146,12 @@ class SGD(Optimizer):
             mom = state
             if mom is not None:
                 mom[:] *= self.momentum
-                mom[:] -= lr * grad
+                mom[:] -= grad
             else:
-                mom = -lr * grad
+                mom = -grad
 
             # update weight
-            weight[:] += mom
+            weight[:] += lr * mom
 
     def fused_step(self, indices, weights, grads, states):
         """Perform a fused optimization step using gradients and states.
