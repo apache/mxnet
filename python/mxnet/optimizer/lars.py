@@ -249,7 +249,9 @@ class LARS(Optimizer):
                           [new_lrs, new_wds]), out=new_weights, num_weights=len(new_weights),
                         **kwargs)
         else:
+            kwargs_old = kwargs
             for i, (index, weight, grad, state) in enumerate(zip(indices, weights, grads, states)):
+                kwargs = kwargs_old.copy()
                 wd = wds[i]
                 lr = lrs[i]
                 lr *= self._get_lars(index, weight, grad, wd)
