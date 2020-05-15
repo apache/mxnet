@@ -23,6 +23,9 @@
  * \brief Multi-sgd optimizers with lrs and wds as mxnet inputs
  * \author Clement Fuji Tsang
  */
+
+#include <string>
+
 #include "lars_multi_sgd-inl.h"
 #include "elemwise_op_common.h"
 
