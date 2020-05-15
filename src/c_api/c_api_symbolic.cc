@@ -1360,6 +1360,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
                          const mx_uint num_options,
                          const char** keys,
                          const char** vals,
+                         bool deferred_infer,
                          int* new_args_cnt,
                          NDArrayHandle** new_args_handle,
                          char*** new_arg_names_handle,
@@ -1383,47 +1384,47 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   if (args_len || aux_len) {
     NDArray **in_args_ptr = reinterpret_cast<NDArray**>(in_args_handle);
     NDArray **in_aux_ptr = reinterpret_cast<NDArray**>(in_aux_handle);
-    Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), 0);
-    mxnet::ShapeVector arg_shapes(args_len + aux_len);
-    nnvm::DTypeVector arg_dtypes(args_len + aux_len);
-    StorageTypeVector arg_stypes(args_len + aux_len);
-    size_t args_top = 0, aux_top = 0;
-    // loop over inputs to symbol in order and add to args/aux if mutable
-    for (size_t i = 0; i < num_forward_inputs; ++i) {
-      const uint32_t nid = indexed_graph.input_nodes().at(i);
-      if (mutable_nodes.count(nid)) {
-        CHECK_LT(aux_top, aux_len)
-          << "Cannot find aux '" << input_names[i] << "' in provided aux to optimize_for";
-        const auto &in_arg = *(in_aux_ptr[aux_top++]);
-        arg_shapes[i] = in_arg.shape();
-        arg_dtypes[i] = in_arg.dtype();
-        arg_stypes[i] = in_arg.storage_type();
-      } else {
-        CHECK_LT(args_top, args_len)
-          << "Cannot find arg '" << input_names[i] << "' in provided args to optimize_for";
-        const auto &in_arg = *(in_args_ptr[args_top++]);
-        arg_shapes[i] = in_arg.shape();
-        arg_dtypes[i] = in_arg.dtype();
-        arg_stypes[i] = in_arg.storage_type();
+    if (!deferred_infer) {
+      Context default_ctx = Context::Create(static_cast<Context::DeviceType>(dev_type), 0);
+      mxnet::ShapeVector arg_shapes(args_len + aux_len);
+      nnvm::DTypeVector arg_dtypes(args_len + aux_len);
+      StorageTypeVector arg_stypes(args_len + aux_len);
+      size_t args_top = 0, aux_top = 0;
+      // loop over inputs to symbol in order and add to args/aux if mutable
+      for (size_t i = 0; i < num_forward_inputs; ++i) {
+        const uint32_t nid = indexed_graph.input_nodes().at(i);
+        if (mutable_nodes.count(nid)) {
+          CHECK_LT(aux_top, aux_len)
+            << "Cannot find aux '" << input_names[i] << "' in provided aux to optimize_for";
+          if (in_aux_ptr[aux_top] != nullptr) {
+            const auto &in_arg = *(in_aux_ptr[aux_top]);
+            arg_shapes[i] = in_arg.shape();
+            arg_dtypes[i] = in_arg.dtype();
+            arg_stypes[i] = in_arg.storage_type();
+          }
+          aux_top++;
+        } else {
+          CHECK_LT(args_top, args_len)
+            << "Cannot find arg '" << input_names[i] << "' in provided args to optimize_for";
+          if (in_args_ptr[args_top] != nullptr) {
+            const auto &in_arg = *(in_args_ptr[args_top]);
+            arg_shapes[i] = in_arg.shape();
+            arg_dtypes[i] = in_arg.dtype();
+            arg_stypes[i] = in_arg.storage_type();
+          }
+          args_top++;
+        }
       }
-    }
 
-    g.attrs["context"] = std::make_shared<nnvm::any>(
-        exec::ContextVector(indexed_graph.num_nodes(), default_ctx));
+      g.attrs["context"] = std::make_shared<nnvm::any>(
+          exec::ContextVector(indexed_graph.num_nodes(), default_ctx));
 
-    // infer shapes
-    g = exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
-    // infer dtypes
-    g = exec::InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
-    if (g.GetAttr<size_t>("dtype_num_unknown_nodes") != 0U) {
-      common::HandleInferTypeError(num_forward_inputs, indexed_graph,
-                                   g.GetAttr<nnvm::DTypeVector>("dtype"));
-    }
-    // infer stypes
-    g = exec::InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
-    if (g.GetAttr<size_t>("storage_type_num_unknown_nodes") != 0U) {
-      common::HandleInferStorageTypeError(num_forward_inputs, indexed_graph,
-                                          g.GetAttr<StorageTypeVector>("storage_type"));
+      // infer shapes
+      g = exec::InferShape(std::move(g), std::move(arg_shapes), "__shape__");
+      // infer dtypes
+      g = exec::InferType(std::move(g), std::move(arg_dtypes), "__dtype__");
+      // infer stypes
+      g = exec::InferStorageType(std::move(g), std::move(arg_stypes), "__storage_type__");
     }
     // set args/aux as attributes on graph so that subgraph property can use them
     std::vector<std::string> arg_names = sym->ListInputNames(nnvm::Symbol::kReadOnlyArgs);

@@ -1446,7 +1446,7 @@ class Symbol(SymbolBase):
 
 
     # pylint: disable=too-many-locals
-    def optimize_for(self, backend, args=None, aux=None, ctx=None, **kwargs):
+    def optimize_for(self, backend, args=None, aux=None, ctx=None, deferred_infer=False, **kwargs):
         """Partitions current symbol and optimizes it for a given backend,
         returns new partitioned symbol.
 
@@ -1457,18 +1457,21 @@ class Symbol(SymbolBase):
 
         args : dict of str to NDArray, optional
             Input arguments to the symbol, required to infer shapes/types before partitioning
-
             - If type is a dict of str to `NDArray`, then it maps the name of arguments
-              to the corresponding `NDArray`.
+              to the corresponding `NDArray`. Non defined arguments' `NDArray`s don't have to be
+              specified in the dict.
 
         aux : dict of str to NDArray, optional
             Input auxiliary arguments to the symbol
-
             - If type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding `NDArray`.
 
         ctx : Context, optional
             Device context, used to infer stypes
+
+        deferred_infer : bool, optional
+            If True, the optimization skips the shape, type and storage type inference pass.
+            (Deferring it to `bind`.)
 
         kwargs : optional arguments
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
@@ -1488,7 +1491,7 @@ class Symbol(SymbolBase):
             args_handle = c_array(NDArrayHandle, [])
         else:
             args_handle, args_ = self._get_ndarray_inputs('args', args,
-                                                          self.list_arguments(), False)
+                                                          self.list_arguments(), True)
 
         if aux is None or len(aux) == 0:
             aux_ = []
@@ -1523,6 +1526,7 @@ class Symbol(SymbolBase):
                                              mx_uint(len(key_list)),
                                              c_str_array(key_list),
                                              c_str_array(val_list),
+                                             ctypes.c_bool(deferred_infer),
                                              ctypes.byref(new_args_size),
                                              ctypes.byref(new_args_handle),
                                              ctypes.byref(new_arg_names),
