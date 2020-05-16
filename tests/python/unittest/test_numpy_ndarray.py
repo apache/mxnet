@@ -1354,6 +1354,7 @@ def test_np_ndarray_pickle():
 def test_dlpack(dtype, size):
     a = mx.np.random.uniform(size=size)
     a_np = a.copy()
+    a += 1
 
     pack = mx.npx.to_dlpack_for_read(a)
     b = mx.npx.from_dlpack(pack)
@@ -1361,8 +1362,9 @@ def test_dlpack(dtype, size):
     a_copy = a.copy()
     pack2 = mx.npx.to_dlpack_for_write(a_copy)
     c = mx.npx.from_dlpack(pack2)
+    c += 1
 
     del a, pack, pack2
 
-    same(a_np, b)
-    same(a_np, c)
+    same(a_np+1, b)
+    same(a_np+2, c)
