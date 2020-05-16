@@ -90,6 +90,6 @@ if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG, format=head)
 
     model.fit(X=data_train, eval_data=data_val, kvstore='device',
-              eval_metric = mx.metric.np(Perplexity),
+              eval_metric = mx.gluon.metric.np(Perplexity),
               batch_end_callback=mx.callback.Speedometer(batch_size, 50),)
 

@@ -37,8 +37,9 @@ def test_mlp(tmpdir):
 
     def accuracy(label, pred):
         py = np.argmax(pred, axis=1)
-        return np.sum(py == label) / float(label.size)
-
+        return np.sum(py == label.astype(py)) / float(label.size)
+        # currently mxnet.numpy (which used in gluon.metric) did not support "==" between different types        
+        
     num_epoch = 4
     prefix = './mlp'
 
@@ -65,7 +66,7 @@ def test_mlp(tmpdir):
         softmax,
         X=train_dataiter,
         eval_data=val_dataiter,
-        eval_metric=mx.metric.np(accuracy),
+        eval_metric=mx.gluon.metric.np(accuracy),
         epoch_end_callback=mx.callback.do_checkpoint(prefix),
         ctx=[mx.cpu(i) for i in range(2)],
         num_epoch=num_epoch,

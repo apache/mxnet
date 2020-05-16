@@ -424,10 +424,10 @@ def train(dataset, nef, ndf, ngf, nc, batch_size, Z, lr, beta1, epsilon, ctx, ch
         KLLoss = KLLoss / nElements
         return KLLoss
 
-    mG = mx.metric.CustomMetric(fentropy)
-    mD = mx.metric.CustomMetric(fentropy)
-    mE = mx.metric.CustomMetric(kldivergence)
-    mACC = mx.metric.CustomMetric(facc)
+    mG = mx.gluon.metric.CustomMetric(fentropy)
+    mD = mx.gluon.metric.CustomMetric(fentropy)
+    mE = mx.gluon.metric.CustomMetric(kldivergence)
+    mACC = mx.gluon.metric.CustomMetric(facc)
 
     print('Training...')
     stamp =  datetime.now().strftime('%Y_%m_%d-%H_%M')

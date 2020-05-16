@@ -101,7 +101,7 @@ if __name__ == '__main__':
                                 rescale_grad=1.0/batch_size)
     mod.init_optimizer(optimizer=optim, kvstore='device')
     # use MSE as the metric
-    metric = mx.metric.create(['MSE'])
+    metric = mx.gluon.metric.create(['MSE'])
     speedometer = mx.callback.Speedometer(batch_size, log_interval)
     logging.info('Training started ...')
     for epoch in range(num_epoch):

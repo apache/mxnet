@@ -110,7 +110,7 @@ if __name__ == '__main__':
     mod.init_optimizer(optimizer='adam', kvstore=kv, optimizer_params=optimizer_params)
 
     # metrics
-    metric = mx.metric.create(['log_loss', 'auc'])
+    metric = mx.gluon.metric.create(['log_loss', 'auc'])
     speedometer = mx.callback.Speedometer(batch_size, log_interval)
 
     logging.info('Training started ...')

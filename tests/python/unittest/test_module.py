@@ -275,7 +275,7 @@ def test_bucketing_save_load():
     mod2.fit(
         train_data=data_train,
         eval_data=data_val,
-        eval_metric=mx.metric.Perplexity(invalid_label), # Use Perplexity for multiclass classification.
+        eval_metric=mx.gluon.metric.Perplexity(invalid_label), # Use Perplexity for multiclass classification.
         kvstore='device',
         optimizer='sgd',
         optimizer_params={'learning_rate': 0.01,
@@ -711,7 +711,7 @@ def test_factorization_machine_module():
         expected_accuracy = 0.02
 
 	# use accuracy as the metric
-        metric = mx.metric.create('MSE')
+        metric = mx.gluon.metric.create('MSE')
         # train 'num_epochs' epoch
         for epoch in range(num_epochs):
             train_iter.reset()

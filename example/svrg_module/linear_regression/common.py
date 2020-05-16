@@ -39,7 +39,7 @@ def create_lin_reg_network(train_features, train_labels, feature_dim, batch_size
 
 
 def create_metrics(metrics):
-    metric = mx.metric.create(metrics)
+    metric = mx.gluon.metric.create(metrics)
     return metric
 
 
