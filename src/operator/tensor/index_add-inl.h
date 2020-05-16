@@ -64,7 +64,8 @@ inline bool IndexModifyOpType(const nnvm::NodeAttrs& attrs,
   return (*out_attrs)[0] != -1;
 }
 
-MSHADOW_XINLINE void index_unravel(const size_t idx, const int ndim, const size_t* shape, size_t* ret) {
+MSHADOW_XINLINE void index_unravel(const size_t idx, const int ndim,
+                                   const size_t* shape, size_t* ret) {
   #pragma unroll
   for (int i = ndim-1, j = idx; i >= 0; --i) {
     auto tmp = j / shape[i];
@@ -82,11 +83,12 @@ MSHADOW_XINLINE size_t index_dot(const int ndim, const size_t* coord, const size
   return ret;
 }
 
-MSHADOW_XINLINE void vec_calc_stride(const int ndim, const std::vector<size_t>& shape, std::vector<size_t>& stride) {
+MSHADOW_XINLINE void vec_calc_stride(const int ndim, const std::vector<size_t>& shape,
+                                     std::vector<size_t>* stride) {
   size_t cumprod = 1;
   #pragma unroll
   for (int i = ndim - 1; i >= 0; --i) {
-    stride[i] = (shape[i] > 1) ? cumprod : 0;
+    (*stride)[i] = (shape[i] > 1) ? cumprod : 0;
     cumprod *= shape[i];
   }
 }
