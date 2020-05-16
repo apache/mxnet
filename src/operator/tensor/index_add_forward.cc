@@ -27,16 +27,49 @@
 namespace mxnet {
 namespace op {
 
-template<typename DType, typename VType, int NDim>
+// template<typename DType, typename VType, int NDim>
+// struct IndexAddForwardCPUKernel {
+//   MSHADOW_XINLINE static void Map(size_t i, DType* out,
+//                                   const VType* val,
+//                                   const mshadow::Shape<NDim> a_tail_shape,
+//                                   const mshadow::Shape<NDim> a_pre_stride,
+//                                   const mshadow::Shape<NDim> val_stride,
+//                                   const mshadow::Shape<NDim> val_shape,
+//                                   const size_t a_tail_size, const int ind_num,
+//                                   const int ind_ndim, const int* ind_vec) {
+//     size_t id = 0;
+//     for (int dim = 0; dim < ind_ndim; ++dim) {
+//       id += a_pre_stride[dim] * ind_vec[dim * ind_num + i];
+//     }
+//     id *= a_tail_size;
+//     #pragma omp parallel for
+//     for (int _i = 0; _i < a_tail_size; ++_i) {
+//       mshadow::Shape<NDim> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
+//       mshadow::Shape<NDim> val_id;
+//       for (int _j = 0; _j < NDim; ++_j) {
+//         val_id[_j] = (val_shape[_j] == 1) ? 0 : a_tail_id[_j];
+//       }
+//       val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
+//       size_t val_dest = mxnet_op::dot(val_id, val_stride);
+//       #pragma omp critical
+//       {
+//         out[id + _i] += static_cast<DType>(val[val_dest]);
+//       }
+//     }
+//   }
+// };
+
+template<typename DType, typename VType>
 struct IndexAddForwardCPUKernel {
   MSHADOW_XINLINE static void Map(size_t i, DType* out,
                                   const VType* val,
-                                  const mshadow::Shape<NDim> a_tail_shape,
-                                  const mshadow::Shape<NDim> a_pre_stride,
-                                  const mshadow::Shape<NDim> val_stride,
-                                  const mshadow::Shape<NDim> val_shape,
+                                  const size_t* a_tail_shape,
+                                  const size_t* a_pre_stride,
+                                  const size_t* val_stride,
+                                  const size_t* val_shape,
                                   const size_t a_tail_size, const int ind_num,
-                                  const int ind_ndim, const int* ind_vec) {
+                                  const int ind_ndim, const int* ind_vec,
+                                  const int a_ndim) {
     size_t id = 0;
     for (int dim = 0; dim < ind_ndim; ++dim) {
       id += a_pre_stride[dim] * ind_vec[dim * ind_num + i];
@@ -44,13 +77,14 @@ struct IndexAddForwardCPUKernel {
     id *= a_tail_size;
     #pragma omp parallel for
     for (int _i = 0; _i < a_tail_size; ++_i) {
-      mshadow::Shape<NDim> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
-      mshadow::Shape<NDim> val_id;
-      for (int _j = 0; _j < NDim; ++_j) {
+      size_t a_tail_id[MXNET_SPECIAL_MAX_NDIM];
+      index_unravel(_i, a_ndim, a_tail_shape, a_tail_id);
+      size_t val_id[MXNET_SPECIAL_MAX_NDIM];
+      for (int _j = 0; _j < a_ndim; ++_j) {
         val_id[_j] = (val_shape[_j] == 1) ? 0 : a_tail_id[_j];
       }
       val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
-      size_t val_dest = mxnet_op::dot(val_id, val_stride);
+      size_t val_dest = index_dot(a_ndim, val_id, val_stride);
       #pragma omp critical
       {
         out[id + _i] += static_cast<DType>(val[val_dest]);
@@ -59,24 +93,25 @@ struct IndexAddForwardCPUKernel {
   }
 };
 
-template<typename xpu, typename DType, typename VType, int NDim>
+template<typename xpu, typename DType, typename VType>
 void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
                          const int ind_num, DType* out,
                         const VType* val,
-                        const mshadow::Shape<NDim>& a_tail_shape,
-                        const mshadow::Shape<NDim>& a_pre_stride,
-                        const mshadow::Shape<NDim>& val_stride,
-                        const mshadow::Shape<NDim>& val_shape,
+                        const size_t* a_tail_shape,
+                        const size_t* a_pre_stride,
+                        const size_t* val_stride,
+                        const size_t* val_shape,
                         const size_t a_tail_size,
-                        const int ind_ndim, const int* ind_vec) {
+                        const int ind_ndim, const int* ind_vec,
+                        const int a_ndim) {
   using namespace mxnet_op;
   using namespace mshadow;
-  Kernel<IndexAddForwardCPUKernel<DType, VType, NDim>, xpu>::Launch(
+  Kernel<IndexAddForwardCPUKernel<DType, VType>, xpu>::Launch(
                                              s, ind_num, out, val,
                                              a_tail_shape, a_pre_stride,
                                              val_stride, val_shape,
                                              a_tail_size, ind_num,
-                                             ind_ndim, ind_vec);
+                                             ind_ndim, ind_vec, a_ndim);
 }
 
 

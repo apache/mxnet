@@ -27,29 +27,30 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu, typename DType, typename OType, int NDim>
+template<typename xpu, typename DType, typename OType>
 void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
                              DType* grad_a, const OType* ograd,
-                             const mshadow::Shape<NDim>& stride,
+                             const size_t* stride,
                              const size_t tail_size, const int ind_num,
                              const int ind_ndim, const int* ind_vec,
-                             const int req) {
+                             const int req, const int out_ndim) {
   using namespace mxnet_op;
   using namespace mshadow;
-  Kernel<IndexAddBackwardAKernel<DType, OType, NDim>, xpu>::Launch(
+  Kernel<IndexAddBackwardAKernel<DType, OType>, xpu>::Launch(
     s, ind_num, grad_a, ograd, stride, tail_size, ind_num, ind_ndim, ind_vec, req);
 }
 
-template<typename DType, typename OType, int NDim>
+template<typename DType, typename OType>
 struct IndexAddBackwardValCPUKernel {
   MSHADOW_XINLINE static void Map(size_t i, DType* grad_val,
                                   const OType* ograd,
-                                  const mshadow::Shape<NDim> ograd_tail_shape,
-                                  const mshadow::Shape<NDim> ograd_pre_stride,
-                                  const mshadow::Shape<NDim> val_stride,
-                                  const mshadow::Shape<NDim> val_shape,
+                                  const size_t* ograd_tail_shape,
+                                  const size_t* ograd_pre_stride,
+                                  const size_t* val_stride,
+                                  const size_t* val_shape,
                                   const size_t ograd_tail_size, const int ind_num,
-                                  const int ind_ndim, const int* ind_vec) {
+                                  const int ind_ndim, const int* ind_vec,
+                                  const int out_ndim) {
     size_t id = 0;
     for (int dim = 0; dim < ind_ndim; ++dim) {
       id += ograd_pre_stride[dim] * ind_vec[dim * ind_num + i];
@@ -57,35 +58,37 @@ struct IndexAddBackwardValCPUKernel {
     id *= ograd_tail_size;
     #pragma omp parallel for
     for (int _i = 0; _i < ograd_tail_size; ++_i) {
-      mshadow::Shape<NDim> ograd_tail_id = mxnet_op::unravel(_i, ograd_tail_shape);
-      mshadow::Shape<NDim> val_id;
-      for (int _j = 0; _j < NDim; ++_j) {
+      size_t ograd_tail_id[MXNET_SPECIAL_MAX_NDIM];
+      index_unravel(_i, out_ndim, ograd_tail_shape, ograd_tail_id);
+      size_t val_id[MXNET_SPECIAL_MAX_NDIM];
+      for (int _j = 0; _j < out_ndim; ++_j) {
         val_id[_j] = (val_shape[_j] == 1) ? 0 : ograd_tail_id[_j];
       }
       val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
-      size_t val_dest = mxnet_op::dot(val_id, val_stride);
+      size_t val_dest = index_dot(out_ndim, val_id, val_stride);
       #pragma omp critical
       {
-        grad_val[val_dest] += static_cast<DType>(ograd[id + _i]);
+        grad_val[val_dest] += ograd[id + _i];
       }
     }
   }
 };
 
-template<typename xpu, typename DType, typename OType, int NDim>
+template<typename xpu, typename DType, typename OType>
 void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
                                DType* grad_val, const OType* ograd,
-                               const mshadow::Shape<NDim>& ograd_tail_shape,
-                               const mshadow::Shape<NDim>& ograd_pre_stride,
-                               const mshadow::Shape<NDim>& val_stride,
-                               const mshadow::Shape<NDim>& val_shape,
+                               const size_t* ograd_tail_shape,
+                               const size_t* ograd_pre_stride,
+                               const size_t* val_stride,
+                               const size_t* val_shape,
                                const size_t tail_size, const int ind_num,
-                               const int ind_ndim, const int* ind_vec) {
+                               const int ind_ndim, const int* ind_vec,
+                               const int out_ndim) {
   using namespace mxnet_op;
   using namespace mshadow;
-  Kernel<IndexAddBackwardValCPUKernel<DType, OType, NDim>, xpu>::Launch(
+  Kernel<IndexAddBackwardValCPUKernel<DType, OType>, xpu>::Launch(
     s, ind_num, grad_val, ograd, ograd_tail_shape, ograd_pre_stride,
-    val_stride, val_shape, tail_size, ind_num, ind_ndim, ind_vec);
+    val_stride, val_shape, tail_size, ind_num, ind_ndim, ind_vec, out_ndim);
 }
 
 NNVM_REGISTER_OP(_backward_index_add)

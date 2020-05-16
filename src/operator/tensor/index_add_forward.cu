@@ -30,55 +30,74 @@
 namespace mxnet {
 namespace op {
 
-template<typename DType, typename VType, int NDim>
+template<typename DType, typename VType>
 struct IndexAddForwardGPUKernel {
   MSHADOW_XINLINE static void Map(size_t i, DType* out,
                                   const VType* val,
-                                  const mshadow::Shape<NDim> a_tail_shape,
-                                  const mshadow::Shape<NDim> a_pre_stride,
-                                  const mshadow::Shape<NDim> val_stride,
-                                  const mshadow::Shape<NDim> val_shape,
+                                  const size_t* a_tail_shape,
+                                  const size_t* a_pre_stride,
+                                  const size_t* val_stride,
+                                  const size_t* val_shape,
                                   const size_t a_tail_size, const int ind_num,
-                                  const int ind_ndim, const int* ind_vec) {
+                                  const int ind_ndim, const int* ind_vec,
+                                  const int a_ndim) {
     size_t id = 0;
     for (int dim = 0; dim < ind_ndim; ++dim) {
       id += a_pre_stride[dim] * ind_vec[dim * ind_num + i];
     }
     id *= a_tail_size;
     for (int _i = 0; _i < a_tail_size; ++_i) {
-      mshadow::Shape<NDim> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
-      mshadow::Shape<NDim> val_id;
-      for (int _j = 0; _j < NDim; ++_j) {
+      size_t a_tail_id[MXNET_SPECIAL_MAX_NDIM];
+      index_unravel(_i, a_ndim, a_tail_shape, a_tail_id);
+      size_t val_id[MXNET_SPECIAL_MAX_NDIM];
+      for (int _j = 0; _j < a_ndim; ++_j) {
         val_id[_j] = (val_shape[_j] == 1) ? 0 : a_tail_id[_j];
       }
       val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
-      size_t val_dest = mxnet_op::dot(val_id, val_stride);
+      size_t val_dest = index_dot(a_ndim, val_id, val_stride);
       atomicAdd(&out[id + _i], static_cast<DType>(val[val_dest]));
     }
   }
 };
 
-template<typename xpu, typename DType, typename VType, int NDim>
+template<typename xpu, typename DType, typename VType>
 void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
                          const int ind_num, DType* out,
                          const VType* val,
-                         const mshadow::Shape<NDim>& a_tail_shape,
-                         const mshadow::Shape<NDim>& a_pre_stride,
-                         const mshadow::Shape<NDim>& val_stride,
-                         const mshadow::Shape<NDim>& val_shape,
+                         const size_t* a_tail_shape,
+                         const size_t* a_pre_stride,
+                         const size_t* val_stride,
+                         const size_t* val_shape,
                          const size_t a_tail_size,
-                         const int ind_ndim, const int* ind_vec) {
+                         const int ind_ndim, const int* ind_vec,
+                         const int a_ndim) {
   using namespace mxnet_op;
   using namespace mshadow;
   int* d_ind_vec;
-  cudaMalloc(reinterpret_cast<void**>(&d_ind_vec), sizeof(int) * ind_ndim * ind_num);
-  cudaMemcpy(d_ind_vec, ind_vec, sizeof(int) * ind_ndim * ind_num, cudaMemcpyHostToDevice);
-  Kernel<IndexAddForwardGPUKernel<DType, VType, NDim>, xpu>::Launch(
+  size_t *d_a_tail_shape, *d_a_pre_stride, *d_val_stride, *d_val_shape;
+  size_t ind_vec_size = sizeof(int) * ind_ndim * ind_num;
+  size_t shape_size = sizeof(size_t) * a_ndim * 4;
+  cudaMalloc(reinterpret_cast<void**>(&d_ind_vec), ind_vec_size);
+  cudaMemcpy(d_ind_vec, ind_vec, ind_vec_size, cudaMemcpyHostToDevice);
+  cudaMalloc(reinterpret_cast<void**>(&d_a_tail_shape), shape_size);
+  cudaMemcpy(d_a_tail_shape, a_tail_shape, shape_size, cudaMemcpyHostToDevice);
+  cudaMalloc(reinterpret_cast<void**>(&d_a_pre_stride), shape_size);
+  cudaMemcpy(d_a_pre_stride, a_pre_stride, shape_size, cudaMemcpyHostToDevice);
+  cudaMalloc(reinterpret_cast<void**>(&d_val_stride), shape_size);
+  cudaMemcpy(d_val_stride, val_stride, shape_size, cudaMemcpyHostToDevice);
+  cudaMalloc(reinterpret_cast<void**>(&d_val_shape), shape_size);
+  cudaMemcpy(d_val_shape, val_shape, shape_size, cudaMemcpyHostToDevice);
+  Kernel<IndexAddForwardGPUKernel<DType, VType>, xpu>::Launch(
                                               s, ind_num, out, val,
-                                              a_tail_shape, a_pre_stride,
-                                              val_stride, val_shape,
+                                              d_a_tail_shape, d_a_pre_stride,
+                                              d_val_stride, d_val_shape,
                                               a_tail_size, ind_num,
-                                              ind_ndim, d_ind_vec);
+                                              ind_ndim, d_ind_vec, a_ndim);
+  cudaFree(d_ind_vec);
+  cudaFree(d_a_tail_shape);
+  cudaFree(d_a_pre_stride);
+  cudaFree(d_val_stride);
+  cudaFree(d_val_shape);
 }
 
 
