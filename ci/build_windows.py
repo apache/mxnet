@@ -97,6 +97,7 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=mkl '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
+        '-DUSE_MKL -I/opt/intel/mkl/include'
         '-DUSE_MKL_IF_AVAILABLE=ON '
         '-DUSE_MKLDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
@@ -110,6 +111,7 @@ CMAKE_FLAGS = {
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
+        '-DUSE_MKL -I/opt/intel/mkl/include'
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
         '-DUSE_MKL_IF_AVAILABLE=ON '
