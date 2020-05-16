@@ -993,6 +993,19 @@ unittest_ubuntu_python3_cpu() {
     pytest -n 4 --durations=50 --cov-report xml:tests_quantization.xml --verbose tests/python/quantization
 }
 
+unittest_ubuntu_python3_cpu_serial() {
+    # TODO(szha): delete this and switch to unittest_ubuntu_python3_cpu once #18244 is fixed
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    pytest --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    pytest --durations=50 --cov-report xml:tests_quantization.xml --verbose tests/python/quantization
+}
+
 unittest_ubuntu_python3_cpu_mkldnn() {
     set -ex
     export PYTHONPATH=./python/
@@ -1001,11 +1014,9 @@ unittest_ubuntu_python3_cpu_mkldnn() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
-    MXNET_ENGINE_TYPE=NaiveEngine \
-        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
-    pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
-    pytest -n 4 --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
+    # TODO(szha): enable parallel testing and naive engine for ops once #18244 is fixed
+    pytest --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
 }
 
 unittest_ubuntu_python3_gpu() {
