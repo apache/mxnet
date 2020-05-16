@@ -1368,3 +1368,4 @@ def test_dlpack(dtype, size):
 
     same(a_np+1, b)
     same(a_np+2, c)
+    same(a_np+2, a_copy)
