@@ -20,7 +20,7 @@ all: html
 html:
 	mkdir -p build
 	cd src && bundle install && JEKYLL_ENV=production bundle exec jekyll build --config _config_prod.yml -d ../build/html && cd ..
-	wget https://mxnet-static-artifacts.s3.amazonaws.com/versions.zip && unzip versions.zip -d build/html && rm -rf build/html/__MACOSX && rm versions.zip
+	wget https://mxnet-website-static-artifacts.s3.us-east-2.amazonaws.com/versions.zip && unzip versions.zip -d build/html && rm -rf build/html/__MACOSX && rm versions.zip
 
 clean:
 	rm -rf build
