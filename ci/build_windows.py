@@ -83,6 +83,7 @@ CMAKE_FLAGS = {
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
         '-DUSE_MKL_IF_AVAILABLE=ON '
+        '-DUSE_MKL -I/opt/intel/mkl/include'
         '-DUSE_MKLDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 

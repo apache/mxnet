@@ -432,6 +432,7 @@ build_ubuntu_cpu_mkl() {
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=ON \
+        -DUSE_MKL -I/opt/intel/mkl/include
         -DUSE_BLAS=MKL \
         -GNinja /work/mxnet
     ninja
