@@ -70,8 +70,15 @@ def test_mgp_getF():
     assert getF(nd.ones((2,2)), nd.ones((2,2))) == nd
     assert getF(sym.ones((2,2)), sym.ones((2,2))) == sym
     assert getF(1.0, 2.0) == nd
+
+    # Test exception
     try:
         getF(nd.ones((2,2)), sym.ones((2,2)))
+    except TypeError as e:
+        pass
+
+    try:
+        getF(sym.ones((2,2)), nd.ones((2,2)))
     except TypeError as e:
         pass
 
@@ -1990,9 +1997,10 @@ def test_gluon_kl():
     # Test kl between same distributions
     # uniform
     for shape in shapes:
+        dist = mgp.Uniform
         low = lambda: np.random.uniform(0, 1, shape)
         high = lambda: np.random.uniform(1, 2, shape)
-        _test_zero_kl(_dist_factory(mgp.Uniform, low, high), shape)
+        _test_zero_kl(_dist_factory(dist, low, high), shape)
     
     # normal, laplace, cauchy, gumbel
     for dist in [mgp.Normal, mgp.Laplace, mgp.Cauchy, mgp.Gumbel]:

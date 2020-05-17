@@ -118,6 +118,7 @@ class _InverseTransformation(Transformation):
 class TransformBlock(Transformation, HybridBlock):
     """Transform with learnable parameters should inherit from this class
     rather than `Transformation`.
+    For example: normalization flow.
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -135,7 +136,6 @@ class ComposeTransform(Transformation):
 
     @property
     def F(self):
-        # FIXME: check if all components have the same F
         return self._parts[0].F
 
     @F.setter

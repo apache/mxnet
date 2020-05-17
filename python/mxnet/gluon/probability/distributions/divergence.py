@@ -178,7 +178,7 @@ def _kl_onehotcategorical_onehotcategorical(p, q):
 def _kl_uniform_uniform(p, q):
     F = p.F
     result = F.np.log((q.high - q.low) / (p.high - p.low))
-    result[(q.low > p.low) | (q.high < p.high)] = _np.inf
+    result = F.np.where((q.low > p.low) | (q.high < p.high), _np.inf, result)
     return result
 
 
@@ -231,8 +231,7 @@ def _kl_pareto_pareto(p, q):
     t1 = q.alpha * F.np.log(scale_ratio)
     t2 = -F.np.log(alpha_ratio)
     result = t1 + t2 + alpha_ratio - 1
-    # TODO: Handle out-of-support value
-    # result[p.support._lower_bound < q.support._lower_bound] = _np.nan
+    result = F.np.where(p.support._lower_bound < q.support._lower_bound, _np.nan, result)
     return result
 
 
@@ -301,8 +300,7 @@ def _kl_halfNormal_halfNormal(p, q):
 def _kl_binomial_binomial(p, q):
     F = p.F
     kl = p.n * (p.prob * (p.logit - q.logit) + F.np.log1p(-p.prob) - F.np.log1p(-q.prob))
-    inf_idxs = p.n > q.n
-    kl[inf_idxs] = _np.inf
+    kl = F.np.where(p.n > q.n, _np.inf, kl)
     return kl
 
 
