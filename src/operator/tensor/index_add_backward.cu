@@ -30,9 +30,9 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu, typename DType, typename OType>
+template<typename xpu, typename DType>
 void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
-                             DType* grad_a, const OType* ograd,
+                             DType* grad_a, const DType* ograd,
                              const size_t* stride,
                              const size_t tail_size, const int ind_num,
                              const int ind_ndim, const int* ind_vec,
@@ -46,7 +46,7 @@ void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
   size_t shape_size = sizeof(size_t) * out_ndim;
   cudaMalloc(reinterpret_cast<void**>(&d_stride), shape_size);
   cudaMemcpy(d_stride, stride, shape_size, cudaMemcpyHostToDevice);
-  Kernel<IndexAddBackwardAKernel<DType, OType>, xpu>::Launch(
+  Kernel<IndexAddBackwardAKernel<DType>, xpu>::Launch(
                                              s, ind_num, grad_a, ograd,
                                              d_stride, tail_size,
                                              ind_num, ind_ndim, d_ind_vec, req);
@@ -54,10 +54,10 @@ void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
   cudaFree(d_stride);
 }
 
-template<typename DType, typename OType>
+template<typename DType>
 struct IndexAddBackwardValGPUKernel {
   MSHADOW_XINLINE static void Map(size_t i, DType* grad_val,
-                                  const OType* ograd,
+                                  const DType* ograd,
                                   const size_t* ograd_tail_shape,
                                   const size_t* ograd_pre_stride,
                                   const size_t* val_stride,
@@ -70,7 +70,7 @@ struct IndexAddBackwardValGPUKernel {
       id += ograd_pre_stride[dim] * ind_vec[dim * ind_num + i];
     }
     id *= ograd_tail_size;
-    for (int _i = 0; _i < ograd_tail_size; ++_i) {
+    for (size_t _i = 0; _i < ograd_tail_size; ++_i) {
       size_t ograd_tail_id[MXNET_SPECIAL_MAX_NDIM];
       index_unravel(_i, out_ndim, ograd_tail_shape, ograd_tail_id);
       size_t val_id[MXNET_SPECIAL_MAX_NDIM];
@@ -84,9 +84,9 @@ struct IndexAddBackwardValGPUKernel {
   }
 };
 
-template<typename xpu, typename DType, typename OType>
+template<typename xpu, typename DType>
 void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
-                               DType* grad_val, const OType* ograd,
+                               DType* grad_val, const DType* ograd,
                                const size_t* ograd_tail_shape,
                                const size_t* ograd_pre_stride,
                                const size_t* val_stride,
@@ -109,7 +109,7 @@ void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
   cudaMemcpy(d_val_stride, val_stride, shape_size, cudaMemcpyHostToDevice);
   cudaMalloc(reinterpret_cast<void**>(&d_val_shape), shape_size);
   cudaMemcpy(d_val_shape, val_shape, shape_size, cudaMemcpyHostToDevice);
-  Kernel<IndexAddBackwardValGPUKernel<DType, OType>, xpu>::Launch(
+  Kernel<IndexAddBackwardValGPUKernel<DType>, xpu>::Launch(
     s, ind_num, grad_val, ograd, d_ograd_tail_shape, d_ograd_pre_stride,
     d_val_stride, d_val_shape, tail_size, ind_num, ind_ndim, d_ind_vec, out_ndim);
   cudaFree(d_ind_vec);

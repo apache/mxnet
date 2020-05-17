@@ -223,10 +223,10 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
-template<typename DType, typename OType>
+template<typename DType>
 struct IndexAddBackwardAKernel {
   MSHADOW_XINLINE static void Map(size_t i, DType* grad_a,
-                                  const OType* ograd,
+                                  const DType* ograd,
                                   const size_t* stride,
                                   const size_t tail_size,
                                   const int ind_num, const int ind_ndim,
@@ -235,23 +235,23 @@ struct IndexAddBackwardAKernel {
     for (int dim = 0; dim < ind_ndim; ++dim) {
       id += stride[dim] * ind_vec[dim * ind_num + i];
     }
-    for (int _i = 0; _i < tail_size; ++_i) {
+    for (size_t _i = 0; _i < tail_size; ++_i) {
       KERNEL_ASSIGN(grad_a[id + _i], req, ograd[id + _i]);
     }
   }
 };
 
-template<typename xpu, typename DType, typename OType>
+template<typename xpu, typename DType>
 void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
-                             DType* grad_a, const OType* ograd,
+                             DType* grad_a, const DType* ograd,
                              const size_t* stride,
                              const size_t tail_size, const int ind_num,
                              const int ind_ndim, const int* ind_vec,
                              const int req, const int out_ndim);
 
-template<typename xpu, typename DType, typename OType>
+template<typename xpu, typename DType>
 void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
-                               DType* grad_val, const OType* ograd,
+                               DType* grad_val, const DType* ograd,
                                const size_t* ograd_tail_shape,
                                const size_t* ograd_pre_stride,
                                const size_t* val_stride,
@@ -306,12 +306,24 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   std::vector<size_t>val_shape(ndim);
   std::vector<size_t>val_stride(ndim);
   vec_calc_stride(ndim, ograd_shape, &ograd_stride);
-  MSHADOW_TYPE_SWITCH(grad_a.type_flag_, DType, {
-    MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
-      IndexAddOpBackwardACalc<xpu, DType, OType>(s, grad_a.dptr<DType>(),
-        ograd.dptr<OType>(), ograd_stride.data(), tail_size, ind_num, ind_ndim,
-        vec_ind.data(), req[0], ndim);
+  TBlob ograd_a, ograd_val;
+  size_t temp_size = 0;
+  MSHADOW_TYPE_SWITCH(grad_a.type_flag_, GAType, {
+    MSHADOW_TYPE_SWITCH(grad_val.type_flag_, GVType, {
+      temp_size = (sizeof(GAType) + sizeof(GVType)) * ograd.shape_.Size();
     });
+  });
+  Tensor<xpu, 1, char> temp_mem =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_size), s);
+  char* ograd_a_ptr = temp_mem.dptr_;
+  char* ograd_val_ptr = temp_mem.dptr_;
+  MSHADOW_TYPE_SWITCH(grad_a.type_flag_, DType, {
+    ograd_a = TBlob(reinterpret_cast<DType*>(ograd_a_ptr), ograd.shape_, xpu::kDevMask);
+    mxnet_op::copy(s, ograd_a, ograd);
+    ograd_val_ptr = temp_mem.dptr_ + sizeof(DType) * ograd.shape_.Size();
+    IndexAddOpBackwardACalc<xpu, DType>(s, grad_a.dptr<DType>(),
+      ograd_a.dptr<DType>(), ograd_stride.data(), tail_size, ind_num, ind_ndim,
+      vec_ind.data(), req[0], ndim);
   });
   for (int i = 0; i < ind_ndim; ++i) {
     ograd_tail_shape[i] = 1;
@@ -325,12 +337,12 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   vec_calc_stride(ndim, ograd_pre_shape, &ograd_pre_stride);
   vec_calc_stride(ndim, val_shape, &val_stride);
   MSHADOW_TYPE_SWITCH(grad_val.type_flag_, DType, {
-    MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
-      IndexAddOpBackwardValCalc<xpu, DType, OType>(
-        s, grad_val.dptr<DType>(), ograd.dptr<OType>(),
-        ograd_tail_shape.data(), ograd_pre_stride.data(), val_stride.data(),
-        val_shape.data(), tail_size, ind_num, ind_ndim, vec_ind.data(), ndim);
-    });
+    ograd_val = TBlob(reinterpret_cast<DType*>(ograd_val_ptr), ograd.shape_, xpu::kDevMask);
+    mxnet_op::copy(s, ograd_val, ograd);
+    IndexAddOpBackwardValCalc<xpu, DType>(
+      s, grad_val.dptr<DType>(), ograd_val.dptr<DType>(),
+      ograd_tail_shape.data(), ograd_pre_stride.data(), val_stride.data(),
+      val_shape.data(), tail_size, ind_num, ind_ndim, vec_ind.data(), ndim);
   });
 }
 

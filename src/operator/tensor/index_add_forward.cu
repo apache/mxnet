@@ -46,7 +46,7 @@ struct IndexAddForwardGPUKernel {
       id += a_pre_stride[dim] * ind_vec[dim * ind_num + i];
     }
     id *= a_tail_size;
-    for (int _i = 0; _i < a_tail_size; ++_i) {
+    for (size_t _i = 0; _i < a_tail_size; ++_i) {
       size_t a_tail_id[MXNET_SPECIAL_MAX_NDIM];
       index_unravel(_i, a_ndim, a_tail_shape, a_tail_id);
       size_t val_id[MXNET_SPECIAL_MAX_NDIM];
