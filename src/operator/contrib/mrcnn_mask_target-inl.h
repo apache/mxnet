@@ -109,7 +109,10 @@ inline bool MRCNNMaskTargetType(const NodeAttrs& attrs,
                                 std::vector<int>* out_type) {
   CHECK_EQ(in_type->size(), 4);
   int dtype = (*in_type)[1];
-  CHECK_NE(dtype, -1) << "Input must have specified type";
+  if (type_is_none(dtype)) {
+    // partial type inference
+    return false;
+  }
 
   out_type->clear();
   out_type->push_back(dtype);

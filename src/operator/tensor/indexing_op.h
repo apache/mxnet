@@ -175,7 +175,10 @@ inline bool EmbeddingOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_type->size(), 2U);
   CHECK_GE(out_type->size(), 1U);
   int itype = (*in_type)[0];
-  CHECK_NE(itype, -1) << "First input must have specified type";
+  if (type_is_none(itype)) {
+    // partial type inference
+    return false;
+  }
   int dtype_in = (*in_type)[1];
   int dtype_out = (*out_type)[0];
   int dtype = param.dtype;

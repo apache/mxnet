@@ -2788,7 +2788,10 @@ inline bool SplitOpType(const nnvm::NodeAttrs& attrs,
                         std::vector<int>* out_attrs) {
   CHECK_EQ(in_attrs->size(), 1U);
   int dtype = (*in_attrs)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
+  if (type_is_none(dtype)) {
+    // partial type inference
+    return false;
+  }
   const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
   out_attrs->clear();
   int num_outputs = (param.sections > 0) ? param.sections : param.indices.ndim();

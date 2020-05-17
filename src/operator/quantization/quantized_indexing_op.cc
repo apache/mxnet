@@ -57,8 +57,11 @@ inline bool QuantizedEmbeddingOpType(const nnvm::NodeAttrs& attrs,
                                      std::vector<int> *out_type) {
   CHECK_EQ(in_type->size(), 4U);
   CHECK_GE(out_type->size(), 3U);
-  int itype = (*in_type)[0];
-  CHECK_NE(itype, -1) << "First input must have specified type";
+  int dtype = (*in_type)[0];
+  if (type_is_none(dtype)) {
+    // partial type inference
+    return false;
+  }
   TYPE_ASSIGN_CHECK(*in_type, 1, mshadow::kInt8);
   TYPE_ASSIGN_CHECK(*in_type, 2, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*in_type, 3, mshadow::kFloat32);

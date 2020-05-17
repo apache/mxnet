@@ -91,7 +91,10 @@ static bool UpSamplingType(const nnvm::NodeAttrs& attrs,
   const UpSamplingParam& param = nnvm::get<UpSamplingParam>(attrs.parsed);
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
+  if (type_is_none(dtype)) {
+    // partial type inference
+    return false;
+  }
   for (size_t i = 0; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
       (*in_type)[i] = dtype;

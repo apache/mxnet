@@ -502,7 +502,10 @@ class SyncBatchNormProp : public OperatorProperty {
     using namespace mshadow;
     CHECK_GE(in_type->size(), 1U);
     int dtype = (*in_type)[0];
-    CHECK_NE(dtype, -1) << "First input must have specified type";
+    if (type_is_none(dtype)) {
+      // partial type inference
+      return false;
+    }
     // For float16 input type beta, gamma, mean, and average are stored in float32.
     // For other input types, these parameters have the same type as input
     // NOTE: This requirement is from cuDNN (v. 4 and 5)

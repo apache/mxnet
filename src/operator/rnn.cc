@@ -145,7 +145,10 @@ static bool RNNType(const nnvm::NodeAttrs& attrs,
   if (param_.mode != rnn_enum::kLstm)  --seq_len_input_idx;
 
   int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
+  if (type_is_none(dtype)) {
+    // partial type inference
+    return false;
+  }
   std::vector<std::string> arguments = ListArguments(param_);
   for (size_t i = 0; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {

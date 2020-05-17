@@ -252,7 +252,10 @@ inline bool CTCLossOpType(const nnvm::NodeAttrs& attrs,
     CHECK_GE(in_attrs->size(), 2U);
     CHECK_EQ(out_attrs->size(), 2U);
     int dtype = (*in_attrs)[ctc_loss::kData];
-    CHECK_NE(dtype, -1) << "Input data must have specified type";
+    if (type_is_none(dtype)) {
+      // partial type inference
+      return false;
+    }
 
     TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));  // forward output
     TYPE_ASSIGN_CHECK(*out_attrs, 1, in_attrs->at(0));  // grad output
