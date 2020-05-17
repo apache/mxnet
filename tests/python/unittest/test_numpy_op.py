@@ -1485,7 +1485,6 @@ def test_npx_index_add():
 
 @with_seed()
 @use_np
-@unittest.skip("NumpyBooleanAssignForwardCPU broken: https://github.com/apache/incubator-mxnet/issues/17990")
 def test_npx_batch_dot():
     ctx = mx.context.current_context()
     dtypes = ['float32', 'float64']
