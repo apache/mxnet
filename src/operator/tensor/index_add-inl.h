@@ -93,10 +93,10 @@ MSHADOW_XINLINE void vec_calc_stride(const int ndim, const std::vector<size_t>& 
   }
 }
 
-template<typename xpu, typename DType, typename VType>
+template<typename xpu, typename DType>
 void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
                          const int ind_num, DType* out,
-                         const VType* val,
+                         const DType* val,
                          const size_t* a_tail_shape,
                          const size_t* a_pre_stride,
                          const size_t* val_stride,
@@ -204,19 +204,22 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
     val_shape[i] = (j >= 0) ? val.shape_[j] : 1;
   }
   std::vector<size_t> a_pre_stride(a_ndim);
-  vec_calc_stride(a_ndim, a_pre_shape, a_pre_stride);
+  vec_calc_stride(a_ndim, a_pre_shape, &a_pre_stride);
   std::vector<size_t> val_stride(a_ndim);
-  vec_calc_stride(a_ndim, val_shape, val_stride);
+  vec_calc_stride(a_ndim, val_shape, &val_stride);
   mxnet_op::copy(s, out, a);
+  TBlob t_val;
   MSHADOW_TYPE_SWITCH(a.type_flag_, DType, {
-    MSHADOW_TYPE_SWITCH(val.type_flag_, VType, {
-      IndexAddForwardCalc<xpu, DType, VType>(s, ind_num,
-                                             out.dptr<DType>(), val.dptr<VType>(),
-                                             a_tail_shape.data(), a_pre_stride.data(),
-                                             val_stride.data(), val_shape.data(),
-                                             a_tail_size, ind_ndim,
-                                             vec_ind.data(), a_ndim);
-    });
+    t_val = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(val.shape_.Size()), s));
+    mxnet_op::copy(s, t_val, val);
+  });
+  MSHADOW_TYPE_SWITCH(a.type_flag_, DType, {
+    IndexAddForwardCalc<xpu, DType>(s, ind_num,
+                                            out.dptr<DType>(), t_val.dptr<DType>(),
+                                            a_tail_shape.data(), a_pre_stride.data(),
+                                            val_stride.data(), val_shape.data(),
+                                            a_tail_size, ind_ndim,
+                                            vec_ind.data(), a_ndim);
   });
 }
 
@@ -302,22 +305,14 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   std::vector<size_t>ograd_pre_stride(ndim);
   std::vector<size_t>val_shape(ndim);
   std::vector<size_t>val_stride(ndim);
-  vec_calc_stride(ndim, ograd_shape, ograd_stride);
+  vec_calc_stride(ndim, ograd_shape, &ograd_stride);
   MSHADOW_TYPE_SWITCH(grad_a.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
-      // MXNET_NDIM_SWITCH(ndim, NDim, {
-      // mshadow::Shape<NDim> stride = mxnet_op::calc_stride(ograd.shape_.get<NDim>());
       IndexAddOpBackwardACalc<xpu, DType, OType>(s, grad_a.dptr<DType>(),
         ograd.dptr<OType>(), ograd_stride.data(), tail_size, ind_num, ind_ndim,
         vec_ind.data(), req[0], ndim);
-      // });
     });
   });
-  // MXNET_NDIM_SWITCH(ndim, NDim, {
-  // mshadow::Shape<NDim>ograd_shape = ograd.shape_.get<NDim>();
-  // mshadow::Shape<NDim>ograd_pre_shape(ograd_shape);
-  // mshadow::Shape<NDim>ograd_tail_shape(ograd_shape);
-  // mshadow::Shape<NDim>val_shape;
   for (int i = 0; i < ind_ndim; ++i) {
     ograd_tail_shape[i] = 1;
   }
@@ -327,10 +322,8 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   for (int i = ndim - 1, j = grad_val.shape_.ndim() - 1; i >= 0; --i, --j) {
     val_shape[i] = (j >= 0) ? val.shape_[j] : 1;
   }
-  vec_calc_stride(ndim, ograd_pre_shape, ograd_pre_stride);
-  vec_calc_stride(ndim, val_shape, val_stride);
-  // mshadow::Shape<NDim>ograd_pre_stride = mxnet_op::calc_stride(ograd_pre_shape);
-  // mshadow::Shape<NDim>val_stride = mxnet_op::calc_stride(val_shape);
+  vec_calc_stride(ndim, ograd_pre_shape, &ograd_pre_stride);
+  vec_calc_stride(ndim, val_shape, &val_stride);
   MSHADOW_TYPE_SWITCH(grad_val.type_flag_, DType, {
     MSHADOW_TYPE_SWITCH(ograd.type_flag_, OType, {
       IndexAddOpBackwardValCalc<xpu, DType, OType>(
@@ -338,7 +331,6 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
         ograd_tail_shape.data(), ograd_pre_stride.data(), val_stride.data(),
         val_shape.data(), tail_size, ind_num, ind_ndim, vec_ind.data(), ndim);
     });
-    // });
   });
 }
 

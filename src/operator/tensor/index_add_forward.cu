@@ -30,10 +30,10 @@
 namespace mxnet {
 namespace op {
 
-template<typename DType, typename VType>
+template<typename DType>
 struct IndexAddForwardGPUKernel {
   MSHADOW_XINLINE static void Map(size_t i, DType* out,
-                                  const VType* val,
+                                  const DType* val,
                                   const size_t* a_tail_shape,
                                   const size_t* a_pre_stride,
                                   const size_t* val_stride,
@@ -55,15 +55,15 @@ struct IndexAddForwardGPUKernel {
       }
       val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
       size_t val_dest = index_dot(a_ndim, val_id, val_stride);
-      atomicAdd(&out[id + _i], static_cast<DType>(val[val_dest]));
+      atomicAdd(&out[id + _i], val[val_dest]);
     }
   }
 };
 
-template<typename xpu, typename DType, typename VType>
+template<typename xpu, typename DType>
 void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
                          const int ind_num, DType* out,
-                         const VType* val,
+                         const DType* val,
                          const size_t* a_tail_shape,
                          const size_t* a_pre_stride,
                          const size_t* val_stride,
@@ -87,7 +87,7 @@ void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
   cudaMemcpy(d_val_stride, val_stride, shape_size, cudaMemcpyHostToDevice);
   cudaMalloc(reinterpret_cast<void**>(&d_val_shape), shape_size);
   cudaMemcpy(d_val_shape, val_shape, shape_size, cudaMemcpyHostToDevice);
-  Kernel<IndexAddForwardGPUKernel<DType, VType>, xpu>::Launch(
+  Kernel<IndexAddForwardGPUKernel<DType>, xpu>::Launch(
                                               s, ind_num, out, val,
                                               d_a_tail_shape, d_a_pre_stride,
                                               d_val_stride, d_val_shape,
