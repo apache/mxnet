@@ -186,7 +186,7 @@ def to_dlpack_for_read(data):
 
     Parameters
     ----------
-    data: ndarray
+    data: np.ndarray
         input data.
 
     Returns
