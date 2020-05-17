@@ -83,12 +83,22 @@ MSHADOW_XINLINE size_t index_dot(const int ndim, const size_t* coord, const size
   return ret;
 }
 
-MSHADOW_XINLINE void vec_calc_stride(const int ndim, const std::vector<size_t>& shape,
-                                     std::vector<size_t>* stride) {
+// MSHADOW_XINLINE void vec_calc_stride(const int ndim, const std::vector<size_t>& shape,
+//                                      std::vector<size_t>* stride) {
+//   size_t cumprod = 1;
+//   #pragma unroll
+//   for (int i = ndim - 1; i >= 0; --i) {
+//     (*stride)[i] = (shape[i] > 1) ? cumprod : 0;
+//     cumprod *= shape[i];
+//   }
+// }
+
+MSHADOW_XINLINE void vec_calc_stride(const int ndim, const size_t* shape,
+                                     size_t* stride) {
   size_t cumprod = 1;
   #pragma unroll
   for (int i = ndim - 1; i >= 0; --i) {
-    (*stride)[i] = (shape[i] > 1) ? cumprod : 0;
+    stride[i] = (shape[i] > 1) ? cumprod : 0;
     cumprod *= shape[i];
   }
 }
@@ -204,9 +214,11 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
     val_shape[i] = (j >= 0) ? val.shape_[j] : 1;
   }
   std::vector<size_t> a_pre_stride(a_ndim);
-  vec_calc_stride(a_ndim, a_pre_shape, &a_pre_stride);
+  vec_calc_stride(a_ndim, a_pre_shape.data(), a_pre_stride.data());
+  // vec_calc_stride(a_ndim, a_pre_shape, &a_pre_stride);
   std::vector<size_t> val_stride(a_ndim);
-  vec_calc_stride(a_ndim, val_shape, &val_stride);
+  vec_calc_stride(a_ndim, val_shape.data(), val_stride.data());
+  // vec_calc_stride(a_ndim, val_shape, &val_stride);
   mxnet_op::copy(s, out, a);
   TBlob t_val;
   MSHADOW_TYPE_SWITCH(a.type_flag_, DType, {
@@ -305,7 +317,8 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   std::vector<size_t>ograd_pre_stride(ndim);
   std::vector<size_t>val_shape(ndim);
   std::vector<size_t>val_stride(ndim);
-  vec_calc_stride(ndim, ograd_shape, &ograd_stride);
+  vec_calc_stride(ndim, ograd_shape.data(), ograd_stride.data());
+  // vec_calc_stride(ndim, ograd_shape, &ograd_stride);
   TBlob ograd_a, ograd_val;
   size_t temp_size = 0;
   MSHADOW_TYPE_SWITCH(grad_a.type_flag_, GAType, {
@@ -334,8 +347,10 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   for (int i = ndim - 1, j = grad_val.shape_.ndim() - 1; i >= 0; --i, --j) {
     val_shape[i] = (j >= 0) ? val.shape_[j] : 1;
   }
-  vec_calc_stride(ndim, ograd_pre_shape, &ograd_pre_stride);
-  vec_calc_stride(ndim, val_shape, &val_stride);
+  vec_calc_stride(ndim, ograd_pre_shape.data(), ograd_pre_stride.data());
+  // vec_calc_stride(ndim, ograd_pre_shape, &ograd_pre_stride);
+  vec_calc_stride(ndim, val_shape.data(), val_stride.data());
+  // vec_calc_stride(ndim, val_shape, &val_stride);
   MSHADOW_TYPE_SWITCH(grad_val.type_flag_, DType, {
     ograd_val = TBlob(reinterpret_cast<DType*>(ograd_val_ptr), ograd.shape_, xpu::kDevMask);
     mxnet_op::copy(s, ograd_val, ograd);
