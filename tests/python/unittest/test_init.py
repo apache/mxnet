@@ -16,7 +16,7 @@
 # under the License.
 
 import json
-import unittest
+import pytest
 
 import mxnet as mx
 import numpy as np
@@ -48,7 +48,7 @@ def test_aux_init():
     assert (mod.get_params()[1]['bn_moving_var'].asnumpy() == 1).all()
     assert (mod.get_params()[1]['bn_moving_mean'].asnumpy() == 0).all()
 
-@unittest.skip("rsp const init is broken: https://github.com/apache/incubator-mxnet/issues/17988")
+@pytest.mark.skip(reason="rsp const init is broken: https://github.com/apache/incubator-mxnet/issues/17988")
 def test_rsp_const_init():
     def check_rsp_const_init(init, val):
         shape = (10, 10)

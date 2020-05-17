@@ -22,7 +22,6 @@ import time
 import multiprocessing as mp
 import mxnet as mx
 import numpy as np
-import unittest
 import pytest
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.base import MXNetError
@@ -647,7 +646,7 @@ def check_consistency_NxM(sym_list, ctx_list):
     check_consistency(np.repeat(sym_list, len(ctx_list)), ctx_list * len(sym_list), scale=0.5)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10141")
+@pytest.mark.skip(reason="test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10141")
 @with_seed()
 @pytest.mark.serial
 def test_convolution_options():
@@ -767,7 +766,7 @@ def _conv_with_num_streams(seed):
                 raise
 
 
-@unittest.skip("skipping for now due to severe flakiness")
+@pytest.mark.skip(reason="skipping for now due to severe flakiness")
 @with_seed()
 def test_convolution_multiple_streams():
     for num_streams in [1, 2]:
@@ -1635,6 +1634,8 @@ def test_lrn():
 
 
 @with_seed()
+@pytest.mark.skipif(os.environ.get('MXNET_ENGINE_TYPE') == 'NaiveEngine',
+                    reason="Testing with naive engine consistently triggers illegal memory access. Tracked in #17713")
 def test_embedding_with_type():
     def test_embedding_helper(data_types, weight_types, low_pad, high_pad):
         NVD = [[20, 10, 20], [200, 10, 300]]
@@ -2466,12 +2467,12 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/16517')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/16517')
 def test_bulking_operator_gpu():
     _test_bulking(_test_bulking_in_process)
 
 
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
 def test_bulking():
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
     test_cases = [(0,0,True), (1,1,True), (15,15,False), (15,0,True), (0,15,True), (15,15,True)]
