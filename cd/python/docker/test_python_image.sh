@@ -37,7 +37,7 @@ if [[ $mxnet_variant == cu* ]]; then
     test_conv_params="--gpu"
 fi
 
-if [[ $mxnet_variant == cpu ]]; then
+if [[ $mxnet_variant != native ]]; then
     python3 tests/python/mkl/test_mkldnn.py
 fi
 
