@@ -25,7 +25,7 @@ FROM ${BASE_IMAGE}
 
 ARG PYTHON_CMD=python3
 RUN apt-get update && \
-    apt-get install -y wget ${PYTHON_CMD}-dev gcc && \
+    apt-get install -y wget ${PYTHON_CMD}-dev gcc libopenblas-dev && \
     wget https://bootstrap.pypa.io/get-pip.py && \
     ${PYTHON_CMD} get-pip.py
 
