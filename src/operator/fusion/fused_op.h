@@ -28,7 +28,7 @@
 #include <mutex>
 #include <tuple>
 
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 
@@ -201,6 +201,6 @@ using FusedOpHelperParamPtr = std::shared_ptr<FusedOpHelperParam>;
 
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#endif  // MXNET_USE_CUDA
 
 #endif  // MXNET_OPERATOR_FUSION_FUSED_OP_H_

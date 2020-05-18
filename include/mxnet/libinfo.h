@@ -70,10 +70,6 @@
 #define MXNET_USE_CUSOLVER MSHADOW_USE_CUSOLVER
 #endif
 
-#ifndef MXNET_ENABLE_CUDA_RTC
-#define MXNET_ENABLE_CUDA_RTC 0
-#endif
-
 /*! \brief Error message for using gpu when MXNET_USE_CUDA==0 */
 #define MXNET_GPU_NOT_ENABLED_ERROR  "GPU is not enabled"
 
@@ -146,7 +142,6 @@ enum : unsigned {
   CUDA = 0,
   CUDNN,
   NCCL,
-  CUDA_RTC,
   TENSORRT,
 
   // CPU Features / optimizations

@@ -23,7 +23,7 @@
 #include "../common/cuda_utils.h"
 #include "../operator/operator_common.h"
 
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 namespace rtc {
@@ -186,4 +186,4 @@ void CudaModule::Kernel::Launch(
 }  // namespace rtc
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#endif  // MXNET_USE_CUDA

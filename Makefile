@@ -518,11 +518,7 @@ ALL_DEP = $(OBJ) $(EXTRA_OBJ) $(PLUGIN_OBJ) $(LIB_DEP)
 ifeq ($(USE_CUDA), 1)
 	CFLAGS += -I$(ROOTDIR)/3rdparty/nvidia_cub
 	ALL_DEP += $(CUOBJ) $(EXTRA_CUOBJ) $(PLUGIN_CUOBJ)
-	LDFLAGS += -lcufft
-	ifeq ($(ENABLE_CUDA_RTC), 1)
-		LDFLAGS += -lcuda -lnvrtc
-		CFLAGS += -DMXNET_ENABLE_CUDA_RTC=1
-	endif
+	LDFLAGS += -lcufft -lcuda -lnvrtc
 	# Make sure to add stubs as fallback in order to be able to build
 	# without full CUDA install (especially if run without nvidia-docker)
 	LDFLAGS += -L/usr/local/cuda/lib64/stubs
