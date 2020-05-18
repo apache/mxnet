@@ -242,9 +242,7 @@ struct TVMBinaryBroadcastScalarCompute {
   NNVM_REGISTER_OP(_npi_##name##_scalar)                                                    \
   .set_num_inputs(1)                                                                        \
   .set_num_outputs(1)                                                                       \
-  .set_attr_parser([](NodeAttrs* attrs) {                                                   \
-    attrs->parsed = std::stod(attrs->dict["scalar"]);                                       \
-  })                                                                                        \
+  .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)                                     \
   .set_attr<nnvm::FListInputNames>("FListInputNames",                                       \
   [](const NodeAttrs& attrs) {                                                              \
     return std::vector<std::string>{"data"};                                                \
@@ -257,7 +255,7 @@ struct TVMBinaryBroadcastScalarCompute {
   })                                                                                        \
   .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)                                \
   .add_argument("data", "NDArray-or-Symbol", "First input to the function")                 \
-  .add_argument("scalar", "float", "scalar input")
+  .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(not_equal);

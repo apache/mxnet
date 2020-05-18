@@ -2702,6 +2702,67 @@ def test_np_mixed_mxnp_op_funcs():
 
 @with_seed()
 @use_np
+def test_np_binary_scalar_funcs():
+    itypes = [np.int8, np.int32, np.int64]
+    def check_binary_scalar_func(func, low, high, lshape, lgrad, ltype, scalar_is_int, hybridize):
+        class TestBinaryScalar(HybridBlock):
+            def __init__(self, func, scalar):
+                super(TestBinaryScalar, self).__init__()
+                self._func = func
+                self._scalar = scalar
+
+            def hybrid_forward(self, F, a, *args, **kwargs):
+                return getattr(F.np, self._func)(a, self._scalar)
+
+        np_test_x1 = _np.random.uniform(low, high, lshape).astype(ltype)
+        np_test_x2 = int(_np.random.uniform(low, high)) if scalar_is_int else _np.random.uniform(low, high)
+        mx_test_x1 = np.array(np_test_x1, dtype=ltype)
+        mx_test_x2 = np_test_x2
+        np_func = getattr(_np, func)
+        mx_func = TestBinaryScalar(func, np_test_x2)
+        if hybridize:
+            mx_func.hybridize()
+        rtol = 1e-2 if ltype is np.float16 else 1e-3
+        atol = 1e-3 if ltype is np.float16 else 1e-5
+        if ltype not in itypes:
+            if lgrad:
+                mx_test_x1.attach_grad()
+            np_out = np_func(np_test_x1, np_test_x2)
+            with mx.autograd.record():
+                y = mx_func(mx_test_x1, mx_test_x2)
+            assert y.shape == np_out.shape
+            assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=rtol, atol=atol)
+            if lgrad:
+                y.backward()
+                assert_almost_equal(mx_test_x1.grad.asnumpy(),
+                                    collapse_sum_like(lgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x1.shape),
+                                    rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+
+        # Test imperative
+        np_out = getattr(_np, func)(np_test_x1, np_test_x2)
+        mx_out = getattr(mx.np, func)(mx_test_x1, mx_test_x2)
+        assert mx_out.shape == np_out.shape
+        assert mx_out.asnumpy().dtype == np_out.dtype
+        assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=rtol, atol=atol)
+
+    funcs = {
+        'add': (-1.0, 1.0, None),
+        'subtract': (-1.0, 1.0, None),
+        'multiply': (-1.0, 1.0, lambda y, x1, x2: _np.broadcast_to(x2, y.shape)),
+        'power': (1.0, 5.0, lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2),
+    }
+
+    shapes = [(3, 2), (3, 0), (3, 1), (0, 2), (2, 3, 4)]
+    ltypes = [np.int32, np.int64, np.float16, np.float32, np.float64]
+    flags = [True, False]
+    for func, func_data in funcs.items():
+        low, high, lgrad = func_data
+        for shape, ltype, is_int, is_int, hybridize in itertools.product(shapes, ltypes, flags, flags):
+                check_binary_scalar_func(func, low, high, shape, lgrad, ltype, is_int, hybridize)
+
+
+@with_seed()
+@use_np
 def test_np_boolean_binary_funcs():
     def check_boolean_binary_func(func, mx_x1, mx_x2):
         class TestBooleanBinary(HybridBlock):
