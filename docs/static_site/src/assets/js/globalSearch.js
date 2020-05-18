@@ -22,7 +22,7 @@
 */
 
 $(document).ready(function () {
-  const default_version = $("#gs-current-version-label").text();
+  const default_version = $("#gs-current-version-label").text() || "master";
   // bind docsearch
   const globalSearch = docsearch({
     apiKey: "500f8e78748bd043cc6e4ac130e8c0e7",
@@ -30,7 +30,6 @@ $(document).ready(function () {
     inputSelector: "#global-search",
     algoliaOptions: {
       facetFilters: ["version:" + default_version],
-      hitsPerPage: 5,
     },
     debug: false, // Set debug to true if you want to inspect the dropdown
   });

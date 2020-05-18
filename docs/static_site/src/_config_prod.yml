@@ -39,7 +39,6 @@ twitter_username: apachemxnet
 github_username:  apache/incubator-mxnet
 youtube_username: apachemxnet
 google_analytics: UA-96378503-1
-default_version: 1.6
 versions: 
   - master
   - 1.6
