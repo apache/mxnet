@@ -1446,7 +1446,8 @@ class Symbol(SymbolBase):
 
 
     # pylint: disable=too-many-locals
-    def optimize_for(self, backend, args=None, aux=None, ctx=None, deferred_infer=False, **kwargs):
+    def optimize_for(self, backend, args=None, aux=None, ctx=None,
+                     shape_dict=None, type_dict=None, stype_dict=None, skip_infer=False, **kwargs):
         """Partitions current symbol and optimizes it for a given backend,
         returns new partitioned symbol.
 
@@ -1469,9 +1470,20 @@ class Symbol(SymbolBase):
         ctx : Context, optional
             Device context, used to infer stypes
 
-        deferred_infer : bool, optional
+        shape_dict  : Dict of str->tuple, optional
+            Input shape dictionary.
+            Used iff input NDArray is not in `args`.
+
+        type_dict  : Dict of str->numpy.dtype, optional
+            Input type dictionary.
+            Used iff input NDArray is not in `args`.
+
+        stype_dict  : Dict of str->str, optional
+            Input storage type dictionary.
+            Used iff input NDArray is not in `args`.
+
+        skip_infer : bool, optional
             If True, the optimization skips the shape, type and storage type inference pass.
-            (Deferring it to `bind`.)
 
         kwargs : optional arguments
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
@@ -1498,10 +1510,70 @@ class Symbol(SymbolBase):
             aux_handle = c_array(NDArrayHandle, [])
         else:
             aux_handle, aux_ = self._get_ndarray_inputs('aux_states', aux,
-                                                        self.list_auxiliary_states(), False)
+                                                        self.list_auxiliary_states(), True)
         if ctx is None:
             ctx = current_context()
         assert isinstance(ctx, Context)
+
+
+        # parse input data shape dict
+        num_input_shapes = 0
+        input_shape_names = ctypes.POINTER(ctypes.c_char_p)()
+        input_shape_data = ctypes.POINTER(mx_int64)()
+        input_shape_idx = ctypes.POINTER(mx_uint)()
+        if shape_dict is not None:
+            input_shape_names = []
+            input_shape_data = []
+            input_shape_idx = [0]
+            for k, v in shape_dict.items():
+                if isinstance(v, (tuple, list)):
+                    input_shape_names.append(k)
+                    input_shape_data.extend(v)
+                    input_shape_idx.append(len(input_shape_data))
+                else:
+                    raise ValueError(str(v) + " has to be a tuple or list.")
+            num_input_shapes = mx_uint(len(input_shape_names))
+            input_shape_names = c_str_array(input_shape_names)
+            input_shape_data = c_array_buf(mx_int64, array('q', input_shape_data))
+            input_shape_idx = c_array_buf(mx_uint, array('i', input_shape_idx))
+
+        # parse input data types dict
+        num_input_types = 0
+        input_type_names = ctypes.POINTER(ctypes.c_char_p)()  # provided type argument names
+        input_type_data = ctypes.POINTER(mx_uint)()  # provided types
+        if type_dict is not None:
+            input_type_names = []
+            input_type_data = []
+            for k, v in type_dict.items():
+                v = _numpy.dtype(v).type
+                if v in _DTYPE_NP_TO_MX:
+                    input_type_names.append(k)
+                    input_type_data.append(_DTYPE_NP_TO_MX[v])
+                else:
+                    raise ValueError(str(v) + " is not a MXNet type.")
+
+            num_input_types = mx_uint(len(input_type_names))
+            input_type_names = c_str_array(input_type_names)
+            input_type_data = c_array_buf(ctypes.c_int, array('i', input_type_data))
+
+        # parse input data storage types dict
+        num_input_stypes = 0
+        # provided storage type argument names
+        input_stype_names = ctypes.POINTER(ctypes.c_char_p)()
+        input_stype_data = ctypes.POINTER(mx_uint)()  # provided storage types
+        if stype_dict is not None:
+            input_stype_names = []
+            input_stype_data = []
+            for k, v in stype_dict.items():
+                if v in _STORAGE_TYPE_STR_TO_ID:
+                    input_stype_names.append(k)
+                    input_stype_data.append(_STORAGE_TYPE_STR_TO_ID[v])
+                else:
+                    raise ValueError(str(v) + " is not a MXNet storage type.")
+
+            num_input_stypes = mx_uint(len(input_stype_names))
+            input_stype_names = c_str_array(input_stype_names)
+            input_stype_data = c_array_buf(ctypes.c_int, array('i', input_stype_data))
 
         new_args_size = ctypes.c_uint()
         new_arg_names = ctypes.POINTER(ctypes.c_char_p)()
@@ -1526,7 +1598,17 @@ class Symbol(SymbolBase):
                                              mx_uint(len(key_list)),
                                              c_str_array(key_list),
                                              c_str_array(val_list),
-                                             ctypes.c_bool(deferred_infer),
+                                             num_input_shapes,
+                                             input_shape_names,
+                                             input_shape_data,
+                                             input_shape_idx,
+                                             num_input_types,
+                                             input_type_names,
+                                             input_type_data,
+                                             num_input_stypes,
+                                             input_stype_names,
+                                             input_stype_data,
+                                             ctypes.c_bool(skip_infer),
                                              ctypes.byref(new_args_size),
                                              ctypes.byref(new_args_handle),
                                              ctypes.byref(new_arg_names),
