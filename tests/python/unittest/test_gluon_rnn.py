@@ -491,7 +491,6 @@ def test_rnn_forward_backward(layer, merged_inputs, hybridize, merge_outputs, de
     check_rnn_forward_backward(layer, merged_inputs, hybridize, merge_outputs, determinism)
 
 
-@retry(3)
 @pytest.mark.parametrize('seq_rnn_type', [
     gluon.rnn.SequentialRNNCell,
     gluon.rnn.HybridSequentialRNNCell
@@ -500,6 +499,7 @@ def test_rnn_forward_backward(layer, merged_inputs, hybridize, merge_outputs, de
 @pytest.mark.parametrize('merged_inputs', [True, False])
 @pytest.mark.parametrize('hybridize', [True, False])
 @pytest.mark.parametrize('merge_outputs', [True, False, None])
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18291')
 def test_sequential_rnn_cells(seq_rnn_type, determinism, merged_inputs, hybridize, merge_outputs):
     net = gluon.rnn.SequentialRNNCell()
     net.add(gluon.rnn.LSTMCell(10, input_size=5))
