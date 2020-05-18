@@ -35,7 +35,7 @@ from mxnet.gluon.contrib.estimator import estimator
 # use with_seed decorator in python/unittest/common.py
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'python', 'unittest'))
 from common import with_seed
-import unittest
+import pytest
 
 
 class TextCNN(nn.Block):
@@ -243,7 +243,7 @@ def test_estimator_cpu():
 
 # using fixed seed to reduce flakiness in accuracy assertion
 @with_seed(7)
-@unittest.skipIf(mx.context.num_gpus() < 1, "skip if no GPU")
+@pytest.mark.skipif(mx.context.num_gpus() < 1, reason="skip if no GPU")
 def test_estimator_gpu():
     '''
     Test estimator by training Bidirectional RNN for 5 epochs on the IMDB dataset

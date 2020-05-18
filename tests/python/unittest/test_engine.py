@@ -17,8 +17,8 @@
 
 import mxnet as mx
 import os
-import unittest
 from mxnet.test_utils import EnvManager
+import pytest
 
 def test_bulk():
     with mx.engine.bulk(10):
@@ -32,7 +32,7 @@ def test_bulk():
             x += 1
     assert (x.asnumpy() == 104).all()
 
-@unittest.skip("OMP platform dependent")
+@pytest.mark.skip(reason="OMP platform dependent")
 def test_engine_openmp_after_fork():
     """
     Test that the number of max threads in the child is 1. After forking we should not use a bigger

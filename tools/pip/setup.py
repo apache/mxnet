@@ -142,14 +142,14 @@ else:
     elif variant.startswith('CU92'):
         libraries.append('CUDA-9.2')
 
-if variant != 'native':
+if variant != 'NATIVE':
     libraries.append('MKLDNN')
 
 short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 
 package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
-if variant != 'native':
+if variant != 'NATIVE':
     shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':

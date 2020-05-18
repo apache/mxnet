@@ -50,6 +50,12 @@ def python3_ut(docker_container_name) {
   }
 }
 
+def python3_ut_serial(docker_container_name) {
+  timeout(time: max_time, unit: 'MINUTES') {
+    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_serial', false)
+  }
+}
+
 def python3_ut_mkldnn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_mkldnn', false)
@@ -803,7 +809,7 @@ def test_unix_python3_mkl_cpu(lib_name) {
         ws('workspace/ut-python3-cpu') {
           try {
             utils.unpack_and_init(lib_name, mx_lib, true)
-            python3_ut('ubuntu_cpu')
+            python3_ut_serial('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_cpu_unittest.xml')

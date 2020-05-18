@@ -15,6 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import os
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
@@ -26,6 +27,8 @@ import pytest
 
 
 @with_seed()
+@pytest.mark.skipif(os.environ.get('MXNET_ENGINE_TYPE') == 'NaiveEngine',
+                    reason="This test assumes asynchronous execution.")
 def test_exc_imperative():
     def imperative(exec_numpy=True):
         a = mx.nd.random.normal(0, 1, (2, 2))
@@ -76,6 +79,8 @@ def test_exc_symbolic():
     pytest.raises(MXNetError, symbolic, exec_backward=True, waitall=True)
 
 @with_seed()
+@pytest.mark.skipif(os.environ.get('MXNET_ENGINE_TYPE') == 'NaiveEngine',
+                    reason="This test assumes asynchronous execution.")
 def test_exc_gluon():
     def gluon(exec_wait=True, waitall=False):
         model = nn.Sequential()
@@ -127,6 +132,8 @@ def test_exc_multiple_waits():
     multiple_waits(waitall=True)
 
 @with_seed()
+@pytest.mark.skipif(os.environ.get('MXNET_ENGINE_TYPE') == 'NaiveEngine',
+                    reason="This test assumes asynchronous execution.")
 def test_exc_post_fail():
     def post_fail(waitall=False):
         caught = False

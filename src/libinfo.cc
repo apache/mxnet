@@ -156,7 +156,6 @@ const std::vector<std::string> EnumNames::names = {
   "MKLDNN",
   "OPENCV",
   "CAFFE",
-  "PROFILER",
   "DIST_KVSTORE",
   "CXX14",
   "INT64_TENSOR_SIZE",
