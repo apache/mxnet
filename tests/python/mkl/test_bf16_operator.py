@@ -130,6 +130,18 @@ def test_bf16_bn():
     check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(32, 16, 64, 64), bf16_use_fp32_params=True, etol=1e-2)
 
 @with_seed()
+def test_bf16_bnrelu():
+    data_sym_fp32 = mx.sym.Variable(name='data')
+    data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
+
+    bnrelu_params = {"eps": 2e-05, "fix_gamma": False, "use_global_stats": True, "name": "bn"}
+    bnrelu_fp32 = mx.sym.contrib.BatchNormWithReLU(data_sym_fp32, **bnrelu_params)
+
+    bnrelu_bf16 = mx.sym.contrib.BatchNormWithReLU(data_sym_bf16, **bnrelu_params)
+    check_operator_accuracy(sym_fp32=bnrelu_fp32, sym_bf16=bnrelu_bf16, data_shape=(3, 32, 28, 28), bf16_use_fp32_params=True, etol=1e-2)
+    check_operator_accuracy(sym_fp32=bnrelu_fp32, sym_bf16=bnrelu_bf16, data_shape=(32, 16, 64, 64), bf16_use_fp32_params=True, etol=1e-2)
+
+@with_seed()
 def test_bf16_conv():
     data_sym_fp32 = mx.sym.Variable(name='data')
     data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
