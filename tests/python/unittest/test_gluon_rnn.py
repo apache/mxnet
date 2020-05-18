@@ -487,6 +487,7 @@ def check_rnn_forward_backward(layer, merged_inputs, hybridize, merge_outputs, d
 @pytest.mark.parametrize('merged_inputs', [True, False])
 @pytest.mark.parametrize('hybridize', [True, False])
 @pytest.mark.parametrize('merge_outputs', [True, False, None])
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18225')
 def test_rnn_forward_backward(layer, merged_inputs, hybridize, merge_outputs, determinism):
     check_rnn_forward_backward(layer, merged_inputs, hybridize, merge_outputs, determinism)
 
