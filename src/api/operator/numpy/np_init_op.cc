@@ -217,7 +217,9 @@ MXNET_REGISTER_API("_npi.arange")
   param.repeat = 1;
   param.infer_range = false;
   if (args[3].type_code() == kNull) {
-    param.dtype = mxnet::common::GetDefaultDtype();
+    param.dtype = Imperative::Get()->is_np_default_dtype() ?
+                  mshadow::kInt64 :
+                  mshadow::kFloat32;
   } else {
     param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
   }

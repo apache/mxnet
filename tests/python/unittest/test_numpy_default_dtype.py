@@ -45,7 +45,6 @@ _NUMPY_DTYPE_DEFAULT_FUNC_LIST = [
     'zeros',
     'eye',
     'full',
-    'arange',
     'identity',
     'linspace',
     'logspace',
@@ -82,13 +81,6 @@ def _add_dtype_workload_eye():
 
 def _add_dtype_workload_full():
     DtypeOpArgMngr.add_workload('full', (2, 2), 10)
-
-
-def _add_dtype_workload_arange():
-    DtypeOpArgMngr.add_workload('arange', 3)
-    DtypeOpArgMngr.add_workload('arange', 3, 7)
-    DtypeOpArgMngr.add_workload('arange', 3, 7, 2)
-    DtypeOpArgMngr.add_workload('arange', 3.0)
 
 
 def _add_dtype_workload_identity():
@@ -150,7 +142,6 @@ def _prepare_workloads():
     _add_dtype_workload_zeros()
     _add_dtype_workload_eye()
     _add_dtype_workload_full()
-    _add_dtype_workload_arange()
     _add_dtype_workload_identity()
     _add_dtype_workload_linspace()
     _add_dtype_workload_logspace()
@@ -218,6 +209,20 @@ def test_np_indices_default_dtype():
         check_deepnp_indices_default_dtype()
         check_np_indices_default_dtype()
 
+
+@use_np
+def test_np_arange_default_dtype():
+    import platform
+    if 'Windows' not in platform.system():
+        @use_np_default_dtype
+        def check_np_indices_default_dtype():
+            assert np.arange(3, 7, 2).dtype == 'int64'
+
+        def check_deepnp_indices_default_dtype():
+            assert np.arange(3, 7, 2).dtype == 'float32'
+        
+        check_deepnp_indices_default_dtype()
+        check_np_indices_default_dtype()
 
     
 if __name__ == '__main__':
