@@ -149,7 +149,7 @@ If two `NDArray`s are located on different devices, we need to explicitly move t
 ```r
 a <- mx.nd.ones(c(2, 3)) * 2
 b <- mx.nd.ones(c(2, 3), mx.gpu()) / 8
-c <- a.copyto(mx.gpu()) * b
+c <- mx.nd.copyto(a, mx.gpu()) * b
 as.array(c)
 ```
 
@@ -202,7 +202,7 @@ following example, `a <- a + 1` and `c <- c * 3` can be executed in parallel, bu
 ```r
 a <- mx.nd.ones(c(2,3))
 b <- a
-c <- a.copyto(mx.cpu())
+c <- mx.nd.copyto(a, mx.cpu())
 a <- a + 1
 b <- b * 3
 c <- c * 3
