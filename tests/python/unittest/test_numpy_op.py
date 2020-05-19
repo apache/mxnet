@@ -2558,7 +2558,7 @@ def test_np_binary_funcs():
 
 @with_seed()
 @use_np
-@pytest.mark.flaky(max_runs=3)
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/16848')
 def test_np_mixed_precision_binary_funcs():
     itypes = [np.bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
