@@ -2121,7 +2121,7 @@ def test_np_tril():
 
     for prefix in [1, -1]:
         for shape, k in config:
-            data_np = _np.random.uniform(size=shape)
+            data_np = _np.random.uniform(size=shape).astype(_np.float32)
             data_mx = np.array(data_np, dtype=data_np.dtype)
             data_mx.attach_grad()
             ret_np = _np.tril(data_np, k*prefix)
@@ -2182,7 +2182,7 @@ def test_np_triu():
 
     for prefix in [1, -1]:
         for shape, k in config:
-            data_np = _np.random.uniform(size=shape)
+            data_np = _np.random.uniform(size=shape).astype(_np.float32)
             data_mx = np.array(data_np, dtype=data_np.dtype)
             data_mx.attach_grad()
             ret_np = _np.triu(data_np, k*prefix)
@@ -2386,7 +2386,7 @@ def test_np_bitwise_not(func, low, high, ndim):
         np_func = getattr(_np, func)
         mx_func = TestUnary(func)
         np_test_data = _np.random.uniform(low, high, shape).astype(_np.int32)
-        mx_test_data = mx.numpy.array(np_test_data)
+        mx_test_data = mx.numpy.array(np_test_data).astype(_np.int32)
         for hybridize in [True, False]:
             if hybridize:
                 mx_func.hybridize()
@@ -6821,16 +6821,15 @@ def test_np_trace():
 @use_np
 def test_np_windows():
     class TestWindows(HybridBlock):
-        def __init__(self, func, M, dtype):
+        def __init__(self, func, M):
             super(TestWindows, self).__init__()
             self._func = func
             self._M = M
-            self._dtype = dtype
 
         def hybrid_forward(self, F, x, *args, **kwargs):
             op = getattr(F.np, self._func)
             assert op is not None
-            return x + op(M=self._M, dtype=self._dtype)
+            return x + op(M=self._M)
 
     configs = [-10, -3, -1, 0, 1, 6, 10, 20]
     dtypes = ['float32', 'float64']
@@ -6841,14 +6840,14 @@ def test_np_windows():
                 x = np.zeros(shape=(), dtype=dtype)
                 for hybridize in [False, True]:
                     np_func = getattr(_np, func)
-                    mx_func = TestWindows(func, M=config, dtype=dtype)
+                    mx_func = TestWindows(func, M=config)
                     np_out = np_func(M=config).astype(dtype)
                     if hybridize:
                         mx_func.hybridize()
                     mx_out = mx_func(x)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
                     # test imperative
-                    mx_out = getattr(np, func)(M=config, dtype=dtype)
+                    mx_out = getattr(np, func)(M=config)
                     np_out = np_func(M=config).astype(dtype)
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
