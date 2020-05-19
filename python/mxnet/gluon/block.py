@@ -348,7 +348,7 @@ class Block(object):
                         return True
                 return False
             elif isinstance(data, Block):
-                return not data in children
+                return not data in (c() for c in children)
             else:
                 return False
         for k, v in self.__dict__.items():
@@ -426,7 +426,7 @@ class Block(object):
             pattern = re.compile(select)
             ret.update({name:value for name, value in self.params.items() if pattern.match(name)})
         for cld in self._children.values():
-            ret.update(cld.collect_params(select=select))
+            ret.update(cld().collect_params(select=select))
         return ret
 
     def _collect_params_with_prefix(self, prefix=''):
@@ -434,7 +434,7 @@ class Block(object):
             prefix += '.'
         ret = {prefix + key : val for key, val in self._reg_params.items()}
         for name, child in self._children.items():
-            ret.update(child._collect_params_with_prefix(prefix + name))
+            ret.update(child()._collect_params_with_prefix(prefix + name))
         return ret
 
     def save_parameters(self, filename, deduplicate=False):
@@ -602,7 +602,7 @@ class Block(object):
         attributes will be registered automatically."""
         if name is None:
             name = str(len(self._children))
-        self._children[name] = block
+        self._children[name] = weakref.ref(block)
 
     def register_forward_pre_hook(self, hook):
         r"""Registers a forward pre-hook on the block.
@@ -655,7 +655,7 @@ class Block(object):
         this block
         """
         for cld in self._children.values():
-            cld.apply(fn)
+            cld().apply(fn)
         fn(self)
         return self
 
@@ -682,7 +682,7 @@ class Block(object):
         """ Please refer description of HybridBlock hybridize().
         """
         for cld in self._children.values():
-            cld.hybridize(active, **kwargs)
+            cld().hybridize(active, **kwargs)
 
     def cast(self, dtype):
         """Cast this Block to use another data type.
@@ -693,7 +693,7 @@ class Block(object):
             The new data type.
         """
         for child in self._children.values():
-            child.cast(dtype)
+            child().cast(dtype)
         for _, param in self.params.items():
             param.cast(dtype)
 
@@ -737,7 +737,7 @@ class Block(object):
             If True, monitor both input and output, otherwise monitor output only.
         """
         for cld in self._children.values():
-            cld.register_op_hook(callback, monitor_all)
+            cld().register_op_hook(callback, monitor_all)
 
     def summary(self, *inputs):
         """Print the summary of the model's output and parameters.
@@ -1315,8 +1315,8 @@ class HybridBlock(Block):
         self._callback = c_callback
         self._monitor_all = monitor_all
         for cld in self._children.values():
-            cld._callback = c_callback
-            cld._monitor_all = monitor_all
+            cld()._callback = c_callback
+            cld()._monitor_all = monitor_all
 
     def __call__(self, x, *args):
         if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:

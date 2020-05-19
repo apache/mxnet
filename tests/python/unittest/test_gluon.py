@@ -38,6 +38,49 @@ import json
 import random
 import tempfile
 
+@pytest.fixture(autouse=True)
+def check_leak_ndarray():
+    del gc.garbage[:]
+    # Collect garbage prior to running the next test
+    gc.collect()
+    # Enable gc debug mode to check if the test leaks any arrays
+    gc_flags = gc.get_debug()
+    gc.set_debug(gc.DEBUG_SAVEALL)
+
+    # Run the test
+    yield
+
+    # Check for leaked NDArrays
+    gc.collect()
+    gc.set_debug(gc_flags)  # reset gc flags
+
+    seen = set()
+    def has_array(element):
+        try:
+            if element in seen:
+                return False
+            seen.add(element)
+        except TypeError:  # unhashable
+            pass
+
+        if isinstance(element, mx.nd._internal.NDArrayBase):
+            return True
+        elif isinstance(element, mx.sym._internal.SymbolBase):
+            return False
+        elif hasattr(element, '__dict__'):
+            return any(has_array(x) for x in vars(element))
+        elif isinstance(element, dict):
+            return any(has_array(x) for x in element.items())
+        else:
+            try:
+                return any(has_array(x) for x in element)
+            except (TypeError, KeyError, RecursionError):
+                return False
+
+    assert not any(has_array(x) for x in gc.garbage), 'Found leaked NDArrays due to reference cycles'
+    del gc.garbage[:]
+
+
 @with_seed()
 def test_parameter():
     p = gluon.Parameter('weight', shape=(10, 10))
@@ -1040,11 +1083,11 @@ def test_block_attr_param():
 def test_block_attr_regular():
     b = gluon.Block()
 
-    # set block attribute also sets _children
+    # set block attribute also sets a weakref in _children
     b.c = gluon.Block()
     c2 = gluon.Block()
     b.c = c2
-    assert b.c is c2 and list(b._children.values())[0] is c2
+    assert b.c is c2 and list(b._children.values())[0]() is c2
 
 
 @with_seed()
@@ -1430,8 +1473,10 @@ def test_activations():
             return 1.0 + mx.nd.tanh(g(x))
         def gelu(x):
             return 0.5 * x * f(x)
-        for test_point, ref_point in zip(gelu_test(point_to_validate), gelu(point_to_validate)):
-            assert test_point == ref_point
+        return [gelu(x_i) for x_i in x]
+
+    for test_point, ref_point in zip(gelu_test(point_to_validate), gelu(point_to_validate)):
+        assert test_point == ref_point
 
 
 @with_seed()
@@ -3230,5 +3275,9 @@ def test_reqs_switching_training_inference():
 
 @pytest.mark.usefixtures("check_leak_ndarray")
 def test_no_memory_leak_in_gluon():
-    net = mx.gluon.nn.Dense(10, in_units=10)
+    class MyNet(mx.gluon.Block):
+        def __init__(self):
+            super().__init__()
+            self.net = mx.gluon.nn.Dense(10, in_units=10)
+    net = MyNet()
     net.initialize()
