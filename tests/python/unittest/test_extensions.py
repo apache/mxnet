@@ -97,7 +97,7 @@ def test_custom_op():
     assert_almost_equal(in_grad_base[0].asnumpy(), in_grad2[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
 @pytest.mark.skipif(check_platform(), reason="not all machine types supported")
-@pytest.mark.skipIf(is_cd_run(), reason="continuous delivery run - ignoring test")
+@pytest.mark.skipif(is_cd_run(), reason="continuous delivery run - ignoring test")
 def test_subgraph():
     # possible places to find library file
     if (os.name=='posix'):
