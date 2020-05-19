@@ -29,7 +29,7 @@
 #if MXNET_USE_CUDA && __CUDACC__
 
 #include <cuda_runtime.h>
-#include "cuda_utils.h"
+#include "utils.h"
 
 
 namespace mxnet {

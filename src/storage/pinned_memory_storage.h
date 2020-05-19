@@ -29,7 +29,7 @@
 #include <dmlc/logging.h>
 #include "mxnet/base.h"
 #include "mxnet/storage.h"
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #include "../profiler/storage_profiler.h"
 
 namespace mxnet {

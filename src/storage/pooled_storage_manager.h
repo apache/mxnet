@@ -37,7 +37,7 @@
 #include <mutex>
 #include <new>
 #include "./storage_manager.h"
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #include "../common/utils.h"
 #include "../profiler/storage_profiler.h"
 

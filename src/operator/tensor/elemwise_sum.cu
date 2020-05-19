@@ -24,7 +24,7 @@
 */
 #include "./elemwise_sum.h"
 #include "../../ndarray/ndarray_function.h"
-#include "../../common/cuda_vectorization.cuh"
+#include "../../common/cuda/vectorization.cuh"
 
 namespace mxnet {
 namespace op {

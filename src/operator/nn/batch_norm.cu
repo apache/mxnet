@@ -42,7 +42,6 @@
 #include "./cudnn/cudnn_batch_norm-inl.h"
 #endif
 
-#include "../../common/cuda_utils.h"
 #include "../../../include/mxnet/tensor_blob.h"
 
 using namespace mxnet;

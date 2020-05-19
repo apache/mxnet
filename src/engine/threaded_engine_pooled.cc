@@ -32,7 +32,7 @@
 #include "./thread_pool.h"
 #include "./stream_manager.h"
 #if MXNET_USE_CUDA
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #endif
 
 namespace mxnet {

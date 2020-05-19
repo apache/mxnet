@@ -20,7 +20,7 @@
 #include <mxnet/rtc.h>
 #include <typeinfo>
 
-#include "../common/cuda_utils.h"
+#include "cuda/utils.h"
 #include "../operator/operator_common.h"
 
 #if MXNET_USE_CUDA

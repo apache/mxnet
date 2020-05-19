@@ -18,8 +18,6 @@
  */
 
 #include <sys/stat.h>
-#include <nvrtc.h>
-#include <cuda.h>
 #include <nnvm/pass_functions.h>
 #include <algorithm>
 #include <mutex>
@@ -28,7 +26,8 @@
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
 #include "../../imperative/exec_pass.h"
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
+#include "../../common/cuda/rtc.h"
 
 namespace mxnet {
 
@@ -165,30 +164,6 @@ void AddPointerAndShape(const TBlob& data,
     ptrs->push_back(tensor.dptr_);
     AddShape(data.shape_, shapes);
   });
-}
-
-// Obtain compilation log from the program.
-std::string GetCompileLog(nvrtcProgram program) {
-  size_t log_size_including_null;
-  NVRTC_CALL(nvrtcGetProgramLogSize(program, &log_size_including_null));
-  // For most std::string implementations, this is probably 1 char bigger than needed.  OK though.
-  std::string log(log_size_including_null, '\0');
-  NVRTC_CALL(nvrtcGetProgramLog(program, &log[0]));
-  // Make sure the string reflects the true size (so minus the null terminator).
-  log.resize(log_size_including_null - 1);
-  return log;
-}
-
-// Obtain compilation result (ptx assembly) from the program.
-std::string GetPtx(nvrtcProgram program) {
-  size_t ptx_size_including_null;
-  NVRTC_CALL(nvrtcGetPTXSize(program, &ptx_size_including_null));
-  // For most std::string implementations, this is probably 1 char bigger than needed.  OK though.
-  std::string ptx(ptx_size_including_null, '\0');
-  NVRTC_CALL(nvrtcGetPTX(program, &ptx[0]));
-  // Make sure the string reflects the true size (so minus the null terminator).
-  ptx.resize(ptx_size_including_null - 1);
-  return ptx;
 }
 
 }  // namespace
@@ -592,86 +567,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
 CUfunction FusedOp::CompileCode(const std::string &code,
                                 const std::string &kernel_name,
                                 int dev_id) {
-  // Guard NVRTC calls
-  std::lock_guard<std::mutex> lock_nvrtc(mutex_);
-  // Local class for value type of compile cache
-  struct KernelInfo {
-    std::string mangled_name;
-    std::string ptx;
-    std::vector<CUfunction> functions;
-  };
-  // Maps from the cuda source code (minus header) to the ptx and jit-compiled CUfunctions.
-  using KernelCache = std::map<std::string, KernelInfo>;
-  // Per-gpu-architecture compiled kernel cache with jit-compiled function for each device context
-  static std::map<int32_t, KernelCache> compiled_kernels;
-  int sm_arch = SMArch(dev_id);
-  KernelCache& compiled_kernels_this_arch = compiled_kernels[sm_arch];  // make null map as needed
-  KernelInfo& kinfo = compiled_kernels_this_arch[code];                 // make KernelInfo as needed
-  if (kinfo.ptx.size() == 0) {
-    // It's the first time we've seen this kernel, so we need to generate the ptx and mangled_name.
-    static std::string common_header =
-        std::string(fusion::fp16_support_string) + "\n" +
-        fusion::type_support_string + "\n" +
-        fusion::function_definitions + "\n" +
-        fusion::backward_function_definitions + "\n";
-    std::string code_with_header = common_header + code;
-    // If verbose mode, output kernel source, though not including the common header
-    if (dmlc::GetEnv("MXNET_FUSION_VERBOSE", false)) {
-      LOG(INFO) << "\n" << std::string(80, '-') << "\n" << code;
-    }
-    if (compiled_kernels_this_arch.size() == CACHESIZE_WARN_THRESHOLD + 1 &&
-        dmlc::GetEnv("MXNET_FUSION_SIZE_WARNING", true)) {
-      LOG(WARNING) << "The number of different fused ops exceeds " << CACHESIZE_WARN_THRESHOLD
-                   << ".  Set MXNET_FUSION_SIZE_WARNING=0 to quiet this warning.";
-    }
-    nvrtcProgram program;
-    NVRTC_CALL(nvrtcCreateProgram(&program,                                  // prog
-                                  &code_with_header[0],                      // buffer
-                                  (kernel_name + "_kernel.cu").c_str(),      // name
-                                  0,                                         // num headers
-                                  nullptr,                                      // headers
-                                  nullptr));                                    // include names
-
-    std::string gpu_arch_arg = "--gpu-architecture=compute_" + std::to_string(sm_arch);
-    const char *opts[] = {gpu_arch_arg.c_str(),
-                          "--std=c++14"};
-    const std::string kernel_name_demangled = "FusedKernel_" + kernel_name;
-    NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
-
-    nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
-                                                    2,        // num options
-                                                    opts);    // options
-    CHECK_EQ(compileResult, NVRTC_SUCCESS)
-        << "NVRTC Compilation failed. Please set environment variable MXNET_USE_FUSION to 0.\n"
-        << GetCompileLog(program);
-
-    kinfo.ptx = GetPtx(program);
-    const char *mangled_name;
-    NVRTC_CALL(nvrtcGetLoweredName(program,
-                                   kernel_name_demangled.c_str(),
-                                   &mangled_name));
-    kinfo.mangled_name = mangled_name;
-    // Destroy the program.
-    NVRTC_CALL(nvrtcDestroyProgram(&program));
-  }
-  // Ensure function array is deep enough to index by dev_id
-  while (kinfo.functions.size() <= static_cast<size_t>(dev_id))
-    kinfo.functions.push_back(static_cast<CUfunction>(nullptr));
-  // Jit-compile ptx for the device as needed
-  if (kinfo.functions[dev_id] == static_cast<CUfunction>(nullptr)) {
-    // Make sure driver context is set to the proper device
-    CUdevice cu_device;
-    CUcontext context;
-    CUDA_DRIVER_CALL(cuDeviceGet(&cu_device, dev_id));
-    CUDA_DRIVER_CALL(cuDevicePrimaryCtxRetain(&context, cu_device));
-    // Jit-compile ptx for the driver's current context
-    CUmodule module;
-    CUDA_DRIVER_CALL(cuModuleLoadData(&module, kinfo.ptx.c_str()));
-    CUDA_DRIVER_CALL(cuModuleGetFunction(&kinfo.functions[dev_id],
-                                         module,
-                                         kinfo.mangled_name.c_str()));
-  }
-  return kinfo.functions[dev_id];
+  return common::cuda::rtc::get_function(code, kernel_name, dev_id);
 }
 
 
@@ -776,7 +672,6 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
                <<  ", not expecting switch to device " << dev_id;
 
   Stream<gpu>* s = ctx.get_stream<gpu>();
-  auto stream = Stream<gpu>::GetStream(s);
   std::vector<void*> args;
   size_t N = 0;
   for (const auto& output : outputs) {
@@ -816,12 +711,10 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
           }
       }
   }
-  CUDA_DRIVER_CALL(
-      cuLaunchKernel(kernel_functions_[kernel_variant],
-        num_blocks, 1, 1,          // grid dim
-        FusedOp::NTHREADS, 1, 1,   // block dim
-        0, stream,                 // shared mem and stream
-        &(args[0]), 0));           // arguments
+  common::cuda::rtc::launch(kernel_functions_[kernel_variant],
+                            {num_blocks, 1, 1},
+                            {FusedOp::NTHREADS, 1, 1},
+                            0, s, &args);
 }
 
 void FusedOpForwardGPU(const nnvm::NodeAttrs& attrs,

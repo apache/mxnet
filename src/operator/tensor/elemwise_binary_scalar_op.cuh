@@ -28,7 +28,7 @@
 
 #include <cuda_runtime.h>
 #include "../operator_common.h"
-#include "../../common/cuda_vectorization.cuh"
+#include "../../common/cuda/vectorization.cuh"
 
 #include <vector>
 
