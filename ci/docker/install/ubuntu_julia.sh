@@ -32,7 +32,7 @@ function install_julia() {
     # The julia version in Ubuntu repo is too old
     # We download the tarball from the official link:
     #   https://julialang.org/downloads/
-    wget -qO $JLBINARY https://julialang-s3.julialang.org/bin/linux/x64/$1/julia-$2-linux-x86_64.tar.gz
+    wget -qO $JLBINARY https://s3.amazonaws.com/julialang2/bin/linux/x64/0.7/julia-0.7.0-linux-x86_64.tar.gz
     tar xzf $JLBINARY -C $JULIADIR --strip 1
     rm $JLBINARY
 
