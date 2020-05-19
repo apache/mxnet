@@ -70,10 +70,10 @@ static void LogSoftmaxGradComputeExCPU(const nnvm::NodeAttrs& attrs,
 }
 
 inline static bool LogSoftmaxStorageType(const nnvm::NodeAttrs& attrs,
-                                      const int dev_mask,
-                                      DispatchMode* dispatch_mode,
-                                      std::vector<int> *in_attrs,
-                                      std::vector<int> *out_attrs) {
+                                         const int dev_mask,
+                                         DispatchMode* dispatch_mode,
+                                         std::vector<int> *in_attrs,
+                                         std::vector<int> *out_attrs) {
   CHECK_EQ(in_attrs->size(),  1U);
   CHECK_EQ(out_attrs->size(), 1U);
 
@@ -82,10 +82,10 @@ inline static bool LogSoftmaxStorageType(const nnvm::NodeAttrs& attrs,
 }
 
 inline static bool LogSoftmaxGradStorageType(const nnvm::NodeAttrs& attrs,
-                                          const int dev_mask,
-                                          DispatchMode* dispatch_mode,
-                                          std::vector<int> *in_attrs,
-                                          std::vector<int> *out_attrs) {
+                                             const int dev_mask,
+                                             DispatchMode* dispatch_mode,
+                                             std::vector<int> *in_attrs,
+                                             std::vector<int> *out_attrs) {
   bool support = true;
   int num_inputs = 2U;
   if (softmax_has_dtype_override(attrs)) {

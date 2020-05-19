@@ -58,15 +58,13 @@ static mkldnn::logsoftmax_backward::primitive_desc GetLogSoftmaxBwdPd(
 bool SupportMKLDNNLogSoftmax(const SoftmaxParam &param,
                              const NDArray &data,
                              const NDArray &output) {
-  // MKLDNN does not support temperature argument in their softmax function
-  // now. Need update this once they start to support it.
   const int ndim = data.shape().ndim();
   const int in_dtype = data.dtype();
   const int out_dtype = output.dtype();
   const int axis = CheckAxis(param.axis, ndim);
-  // MKLDNN does not support temperature argument in their softmax function
+  // MKLDNN does not support temperature argument in their log_softmax function
   // now. Need update this once they start to support it.
-  // Currently, MKLDNN shows bad performance when softmax is not performed on the last dimension
+  // Currently, MKLDNN shows bad performance when log_softmax is not performed on the last dimension
   if (param.temperature.has_value() ||
       in_dtype != mshadow::kFloat32 ||
       in_dtype != out_dtype ||
@@ -133,7 +131,7 @@ void MKLDNNLogSoftmaxForward(const nnvm::NodeAttrs& attrs,
                              const OpReqType &req,
                              const NDArray &out_data) {
   if (req == kNullOp) return;
-  // same as the FCompute path, softmax only supports kWriteTo and kWriteInplace for now.
+  // same as the FCompute path, log_softmax only supports kWriteTo and kWriteInplace for now.
   CHECK_NE(req, kAddTo);
 
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
