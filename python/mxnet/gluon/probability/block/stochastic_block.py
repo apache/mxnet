@@ -43,6 +43,20 @@ class StochasticBlock(HybridBlock):
 
     @staticmethod
     def collectLoss(func):
+        """To accumulate loss during the forward phase, one could first decorate
+        hybrid_forward with `StochasticBlock.collectLos`s`,
+        and then collect the loss tensor `x` by calling self.add_loss(x).
+        For example, in the following forward function,
+        we generate samples from a Gaussian parameterized by `loc` and `scale` and
+        accumulate the KL-divergence between it and its prior into the block's loss storage.:
+        @StochasticBlock.collectLoss
+        def hybrid_forward(self, F, loc, scale):
+            qz = mgp.Normal(loc, scale)
+            # prior
+            pz = mgp.Normal(F.np.zeros_like(loc), F.np.ones_like(scale))
+            self.add_loss(mgp.kl_divergence(qz, pz))
+            return qz.sample()
+        """
         @wraps(func)
         def inner(self, *args, **kwargs):
             # Loss from hybrid_forward
@@ -58,7 +72,7 @@ class StochasticBlock(HybridBlock):
         for hook in self._forward_pre_hooks.values():
             hook(self, args)
         self._losses = []
-        out = self.forward(*args)
+        out = self.forward(*args) # out[0]: net output, out[1]: collected loss
         self._losses.extend(out[1])
         for hook in self._forward_hooks.values():
             hook(self, args, out)
@@ -70,6 +84,8 @@ class StochasticBlock(HybridBlock):
 
 
 class StochasticSequential(StochasticBlock):
+    """Stack StochasticBlock sequentially.
+    """
     def __init__(self, prefix=None, params=None):
         super(StochasticSequential, self).__init__(prefix=prefix, params=params)
 
