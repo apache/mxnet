@@ -207,7 +207,10 @@ class Parameter(object):
                 "Failed to set the trainer for Parameter '%s' because it was already set. " \
                 "More than one trainers for a %s Parameter is not supported." \
                 %(self.name, self._stype))
-        self._trainer = weakref.ref(trainer)
+        if trainer is not None:
+            self._trainer = weakref.ref(trainer)
+        else:
+            self._trainer = trainer
 
     def _check_and_get(self, arr_list, ctx):
         if arr_list is not None:
