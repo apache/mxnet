@@ -165,8 +165,8 @@ inline bool NumpyReduceAxesNoDTypeType(const nnvm::NodeAttrs& attrs,
   return out_attrs->at(0) != -1 && in_attrs->at(0) != -1;
 }
 
-NNVM_REGISTER_OP(_np_max)
-.add_alias("_np_amax")
+NNVM_REGISTER_OP(_npi_max)
+.add_alias("_npi_amax")
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -185,17 +185,17 @@ NNVM_REGISTER_OP(_np_max)
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_max"});
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_npi_max"});
 
-NNVM_REGISTER_OP(_backward_np_max)
+NNVM_REGISTER_OP(_backward_npi_max)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesNoDTypeParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_num_inputs(3)
 .set_attr<FCompute>("FCompute<cpu>", NumpyReduceAxesNoDTypeBackward<cpu, mshadow_op::eq>);
 
-NNVM_REGISTER_OP(_np_min)
-.add_alias("_np_amin")
+NNVM_REGISTER_OP(_npi_min)
+.add_alias("_npi_amin")
 .describe(R"code()code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -214,9 +214,9 @@ return std::vector<std::string>{"a"};
 return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
 })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
-.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_np_min"});
+.set_attr<nnvm::FGradient>("FGradient", ReduceGrad{"_backward_npi_min"});
 
-NNVM_REGISTER_OP(_backward_np_min)
+NNVM_REGISTER_OP(_backward_npi_min)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyReduceAxesNoDTypeParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
