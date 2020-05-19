@@ -248,15 +248,22 @@ build_dynamic_libmxnet() {
 
 build_jetson() {
     set -ex
-    pushd .
-
-    #build_ccache_wrappers
-
-    cp make/crosscompile.jetson.mk ./config.mk
-    make -j$(nproc)
-
-    build_wheel /work/mxnet/python /work/mxnet/lib
-    popd
+    cd /work/build
+    cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DUSE_CUDA=ON \
+        -DMXNET_CUDA_ARCH="5.2" \
+        -DENABLE_CUDA_RTC=OFF \
+        -DSUPPORT_F16C=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=ON \
+        -DUSE_LAPACK=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -G Ninja /work/mxnet
+    ninja
+    build_wheel
 }
 
 #
