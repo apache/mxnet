@@ -28,7 +28,6 @@ import gc
 import os
 import random
 
-import mxnet as mx
 import pytest
 
 
