@@ -176,7 +176,7 @@ ifeq ($(USE_OPENCV), 1)
                 ifneq ($(filter-out NONE, $(opencv_inc)),)
                     CFLAGS += $(opencv_inc)
                 else
-$(error Cannot determin OpenCV include path)
+$(error Cannot determine OpenCV include path)
                 endif
 		ifeq ($(filter-out NONE, $(USE_OPENCV_LIB_PATH)),)
 $(error Please add the path of OpenCV shared library path into `USE_OPENCV_LIB_PATH`, when `USE_OPENCV_INC_PATH` is not NONE)
