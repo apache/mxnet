@@ -20,7 +20,7 @@
 import os
 import platform
 import logging
-
+import sys
 
 def find_lib_path(prefix='libmxnet'):
     """Find MXNet dynamic library files.
@@ -73,6 +73,11 @@ def find_lib_path(prefix='libmxnet'):
                            'List of candidates:\n' + str('\n'.join(dll_path)))
     if os.name == 'nt':
         os.environ['PATH'] = os.environ['PATH'] + ';' + os.path.dirname(lib_path[0])
+        if sys.version_info >= (3, 8):
+            if 'CUDA_PATH' not in os.environ:
+                raise RuntimeError('Cannot find the env CUDA_PATH.Please set CUDA_PATH env with cuda path')
+            os.add_dll_directory(os.path.dirname(lib_path[0]))
+            os.add_dll_directory(os.path.join(os.environ['CUDA_PATH'], 'bin'))
     return lib_path
 
 def find_include_path():
