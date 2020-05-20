@@ -2719,7 +2719,7 @@ def test_np_binary_scalar_funcs():
         mx_test_x1 = np.array(np_test_x1, dtype=ltype)
         mx_test_x2 = np_test_x2
         np_func = getattr(_np, func)
-        mx_func = TestBinaryScalar(func, np_test_x2)
+        mx_func = TestBinaryScalar(func, mx_test_x2)
         if hybridize:
             mx_func.hybridize()
         rtol = 1e-2 if ltype is np.float16 else 1e-3
@@ -2729,14 +2729,14 @@ def test_np_binary_scalar_funcs():
                 mx_test_x1.attach_grad()
             np_out = np_func(np_test_x1, np_test_x2)
             with mx.autograd.record():
-                y = mx_func(mx_test_x1, mx_test_x2)
+                y = mx_func(mx_test_x1)
             assert y.shape == np_out.shape
             assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=rtol, atol=atol)
             if lgrad:
                 y.backward()
                 assert_almost_equal(mx_test_x1.grad.asnumpy(),
                                     collapse_sum_like(lgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x1.shape),
-                                    rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                                    rtol=rtol, atol=atol, equal_nan=True, use_broadcast=False)
 
         # Test imperative
         np_out = getattr(_np, func)(np_test_x1, np_test_x2)
@@ -2757,7 +2757,7 @@ def test_np_binary_scalar_funcs():
     flags = [True, False]
     for func, func_data in funcs.items():
         low, high, lgrad = func_data
-        for shape, ltype, is_int, is_int, hybridize in itertools.product(shapes, ltypes, flags, flags):
+        for shape, ltype, is_int, hybridize in itertools.product(shapes, ltypes, flags, flags):
                 check_binary_scalar_func(func, low, high, shape, lgrad, ltype, is_int, hybridize)
 
 

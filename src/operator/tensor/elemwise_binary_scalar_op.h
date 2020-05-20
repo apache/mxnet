@@ -44,7 +44,7 @@ struct NumpyBinaryScalarParam : public dmlc::Parameter<NumpyBinaryScalarParam> {
     .set_default(1)
     .describe("Scalar input value");
     DMLC_DECLARE_FIELD(is_int)
-    .set_default(false)
+    .set_default(true)
     .describe("Indicate whether scalar input is int type");
   }
 

@@ -223,7 +223,8 @@ struct TVMBinaryBroadcastScalarCompute {
 
     // scalar param
     type_codes[1] = kDLFloat;
-    values[1].v_float64 = nnvm::get<double>(attrs.parsed);
+    const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
+    values[1].v_float64 = param.scalar;
 
     // output tensor
     type_codes[2] = kTVMDLTensorHandle;
