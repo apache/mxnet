@@ -446,6 +446,7 @@ def test_activations_leakyrelu():
 @use_np
 def test_activations_prelu():
     act_layer = nn.PReLU()
+    act_layer.initialize()
     out = act_layer(mx.np.random.uniform(size=(10,)))
     out.asnumpy()
 
