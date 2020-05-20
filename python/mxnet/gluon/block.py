@@ -52,8 +52,9 @@ class _BlockScope(object):
     def __init__(self, block):
         self._block = weakref.ref(block) if block is not None else None
         self._counter = {}
-        self._old_scope = None
-        self._name_scope = None
+        self._local = threading.local()
+        self._local._old_scope = None
+        self._local._name_scope = None
 
     @staticmethod
     def create(prefix, params, hint):
@@ -96,23 +97,23 @@ class _BlockScope(object):
         block = self._block()
         if block is None or block._empty_prefix:
             return self
-        self._old_scope = getattr(_BlockScope._current, "value", None)
+        self._local._old_scope = getattr(_BlockScope._current, "value", None)
         _BlockScope._current.value = self
-        self._name_scope = _name.Prefix(block.prefix)
-        self._name_scope.__enter__()
-        self._profiler_scope = _profiler.Scope(block._profiler_scope_name)
-        self._profiler_scope.__enter__()
+        self._local._name_scope = _name.Prefix(block.prefix)
+        self._local._name_scope.__enter__()
+        self._local._profiler_scope = _profiler.Scope(block._profiler_scope_name)
+        self._local._profiler_scope.__enter__()
         return self
 
     def __exit__(self, ptype, value, trace):
         block = self._block()
         if block is None or block._empty_prefix:
             return
-        self._name_scope.__exit__(ptype, value, trace)
-        self._name_scope = None
-        self._profiler_scope.__exit__(ptype, value, trace)
-        self._profiler_scope = None
-        _BlockScope._current.value = self._old_scope
+        self._local._name_scope.__exit__(ptype, value, trace)
+        self._local._name_scope = None
+        self._local._profiler_scope.__exit__(ptype, value, trace)
+        self._local._profiler_scope = None
+        _BlockScope._current.value = self._local._old_scope
 
 
 def _gather_type_ctx_info(args):

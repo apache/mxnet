@@ -222,3 +222,39 @@ def test_np_global_shape():
     finally:
         set_np_shape(0)
 
+def test_blockscope_multithread():
+    event = threading.Event()
+    status = [False]
+
+    class dummy_block(object):
+        def __init__(self, prefix):
+            self.prefix = prefix
+            self._profiler_scope_name = prefix
+            self._empty_prefix = False
+    
+    def f(scope):
+        try:
+            with scope:
+                event.wait()
+        except:
+            status[0] = True
+
+    def g(scope):
+        with scope:
+            pass
+        event.set()
+
+    scope = block._BlockScope(dummy_block("scope_"))
+    count = 2
+    threads = [threading.Thread(target=f, args=(scope,)),
+               threading.Thread(target=g, args=(scope,))]
+    for i in range(count):
+        threads[i].start()
+    for i in range(count):
+        threads[i].join()
+    assert status[0] is False, "_BlockScope does not work with multithread"
+
+
+if __name__ == '__main__':
+    import nose
+    nose.runmodule()
