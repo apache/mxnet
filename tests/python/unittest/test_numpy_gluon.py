@@ -462,7 +462,7 @@ def test_activations_elu():
 @use_np
 def test_activations_selu():
     act_layer = nn.SELU()
-    out = act_layer(mx.np.random.normal.uniform(size=(10,)))
+    out = act_layer(mx.np.random.uniform(size=(10,)))
     out.asnumpy()
 
 
@@ -470,7 +470,7 @@ def test_activations_selu():
 @use_np
 def test_activations_gelu():
     act_layer = nn.GELU()
-    out = act_layer(mx.np.random.normal.uniform(size=(10,)))
+    out = act_layer(mx.np.random.uniform(size=(10,)))
     out.asnumpy()
 
 
@@ -478,5 +478,5 @@ def test_activations_gelu():
 @use_np
 def test_activations_swish():
     act_layer = nn.Swish()
-    out = act_layer(mx.np.random.normal.uniform(size=(10,)))
+    out = act_layer(mx.np.random.uniform(size=(10,)))
     out.asnumpy()
