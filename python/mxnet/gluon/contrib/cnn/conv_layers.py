@@ -23,6 +23,7 @@ __all__ = ['DeformableConvolution', 'ModulatedDeformableConvolution']
 
 from .... import symbol
 from ...block import HybridBlock
+from ...parameter import Parameter
 from ....base import numeric_types
 from ...nn import Activation
 
@@ -103,80 +104,79 @@ class DeformableConvolution(HybridBlock):
                  num_deformable_group=1, layout='NCHW', use_bias=True, in_channels=0, activation=None,
                  weight_initializer=None, bias_initializer='zeros',
                  offset_weight_initializer='zeros', offset_bias_initializer='zeros', offset_use_bias=True,
-                 op_name='DeformableConvolution', adj=None, prefix=None, params=None):
-        super(DeformableConvolution, self).__init__(prefix=prefix, params=params)
-        with self.name_scope():
-            self._channels = channels
-            self._in_channels = in_channels
+                 op_name='DeformableConvolution', adj=None):
+        super(DeformableConvolution, self).__init__()
+        self._channels = channels
+        self._in_channels = in_channels
 
-            assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
-            if isinstance(kernel_size, numeric_types):
-                kernel_size = (kernel_size,) * 2
-            if isinstance(strides, numeric_types):
-                strides = (strides,) * len(kernel_size)
-            if isinstance(padding, numeric_types):
-                padding = (padding,) * len(kernel_size)
-            if isinstance(dilation, numeric_types):
-                dilation = (dilation,) * len(kernel_size)
-            self._op_name = op_name
+        assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
+        if isinstance(kernel_size, numeric_types):
+            kernel_size = (kernel_size,) * 2
+        if isinstance(strides, numeric_types):
+            strides = (strides,) * len(kernel_size)
+        if isinstance(padding, numeric_types):
+            padding = (padding,) * len(kernel_size)
+        if isinstance(dilation, numeric_types):
+            dilation = (dilation,) * len(kernel_size)
+        self._op_name = op_name
 
-            offset_channels = 2 * kernel_size[0] * kernel_size[1] * num_deformable_group
-            self._kwargs_offset = {
-                'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
-                'pad': padding, 'num_filter': offset_channels, 'num_group': groups,
-                'no_bias': not offset_use_bias, 'layout': layout}
+        offset_channels = 2 * kernel_size[0] * kernel_size[1] * num_deformable_group
+        self._kwargs_offset = {
+            'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
+            'pad': padding, 'num_filter': offset_channels, 'num_group': groups,
+            'no_bias': not offset_use_bias, 'layout': layout}
 
-            self._kwargs_deformable_conv = {
-                'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
-                'pad': padding, 'num_filter': channels, 'num_group': groups,
-                'num_deformable_group': num_deformable_group,
-                'no_bias': not use_bias, 'layout': layout}
+        self._kwargs_deformable_conv = {
+            'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
+            'pad': padding, 'num_filter': channels, 'num_group': groups,
+            'num_deformable_group': num_deformable_group,
+            'no_bias': not use_bias, 'layout': layout}
 
-            if adj:
-                self._kwargs_offset['adj'] = adj
-                self._kwargs_deformable_conv['adj'] = adj
+        if adj:
+            self._kwargs_offset['adj'] = adj
+            self._kwargs_deformable_conv['adj'] = adj
 
-            dshape = [0] * (len(kernel_size) + 2)
-            dshape[layout.find('N')] = 1
-            dshape[layout.find('C')] = in_channels
+        dshape = [0] * (len(kernel_size) + 2)
+        dshape[layout.find('N')] = 1
+        dshape[layout.find('C')] = in_channels
 
-            op = getattr(symbol, 'Convolution')
-            offset = op(symbol.var('data', shape=dshape), **self._kwargs_offset)
+        op = getattr(symbol, 'Convolution')
+        offset = op(symbol.var('data', shape=dshape), **self._kwargs_offset)
 
-            offsetshapes = offset.infer_shape_partial()[0]
+        offsetshapes = offset.infer_shape_partial()[0]
 
-            self.offset_weight = self.params.get('offset_weight', shape=offsetshapes[1],
-                                                 init=offset_weight_initializer,
-                                                 allow_deferred_init=True)
+        self.offset_weight = Parameter('offset_weight', shape=offsetshapes[1],
+                                       init=offset_weight_initializer,
+                                       allow_deferred_init=True)
 
-            if offset_use_bias:
-                self.offset_bias = self.params.get('offset_bias', shape=offsetshapes[2],
-                                                   init=offset_bias_initializer,
-                                                   allow_deferred_init=True)
-            else:
-                self.offset_bias = None
+        if offset_use_bias:
+            self.offset_bias = Parameter('offset_bias', shape=offsetshapes[2],
+                                         init=offset_bias_initializer,
+                                         allow_deferred_init=True)
+        else:
+            self.offset_bias = None
 
-            deformable_conv_weight_shape = [0] * (len(kernel_size) + 2)
-            deformable_conv_weight_shape[0] = channels
-            deformable_conv_weight_shape[2] = kernel_size[0]
-            deformable_conv_weight_shape[3] = kernel_size[1]
+        deformable_conv_weight_shape = [0] * (len(kernel_size) + 2)
+        deformable_conv_weight_shape[0] = channels
+        deformable_conv_weight_shape[2] = kernel_size[0]
+        deformable_conv_weight_shape[3] = kernel_size[1]
 
-            self.deformable_conv_weight = self.params.get('deformable_conv_weight',
-                                                          shape=deformable_conv_weight_shape,
-                                                          init=weight_initializer,
-                                                          allow_deferred_init=True)
+        self.deformable_conv_weight = Parameter('deformable_conv_weight',
+                                                shape=deformable_conv_weight_shape,
+                                                init=weight_initializer,
+                                                allow_deferred_init=True)
 
-            if use_bias:
-                self.deformable_conv_bias = self.params.get('deformable_conv_bias', shape=(channels,),
-                                                            init=bias_initializer,
-                                                            allow_deferred_init=True)
-            else:
-                self.deformable_conv_bias = None
+        if use_bias:
+            self.deformable_conv_bias = Parameter('deformable_conv_bias', shape=(channels,),
+                                                  init=bias_initializer,
+                                                  allow_deferred_init=True)
+        else:
+            self.deformable_conv_bias = None
 
-            if activation:
-                self.act = Activation(activation, prefix=activation + '_')
-            else:
-                self.act = None
+        if activation:
+            self.act = Activation(activation)
+        else:
+            self.act = None
 
     def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
         if offset_bias is None:
@@ -296,81 +296,80 @@ class ModulatedDeformableConvolution(HybridBlock):
                  num_deformable_group=1, layout='NCHW', use_bias=True, in_channels=0, activation=None,
                  weight_initializer=None, bias_initializer='zeros',
                  offset_weight_initializer='zeros', offset_bias_initializer='zeros', offset_use_bias=True,
-                 op_name='ModulatedDeformableConvolution', adj=None, prefix=None, params=None):
-        super(ModulatedDeformableConvolution, self).__init__(prefix=prefix, params=params)
-        with self.name_scope():
-            self._channels = channels
-            self._in_channels = in_channels
+                 op_name='ModulatedDeformableConvolution', adj=None):
+        super(ModulatedDeformableConvolution, self).__init__()
+        self._channels = channels
+        self._in_channels = in_channels
 
-            assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
-            if isinstance(kernel_size, numeric_types):
-                kernel_size = (kernel_size,) * 2
-            if isinstance(strides, numeric_types):
-                strides = (strides,) * len(kernel_size)
-            if isinstance(padding, numeric_types):
-                padding = (padding,) * len(kernel_size)
-            if isinstance(dilation, numeric_types):
-                dilation = (dilation,) * len(kernel_size)
-            self._op_name = op_name
+        assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
+        if isinstance(kernel_size, numeric_types):
+            kernel_size = (kernel_size,) * 2
+        if isinstance(strides, numeric_types):
+            strides = (strides,) * len(kernel_size)
+        if isinstance(padding, numeric_types):
+            padding = (padding,) * len(kernel_size)
+        if isinstance(dilation, numeric_types):
+            dilation = (dilation,) * len(kernel_size)
+        self._op_name = op_name
 
-            offset_channels = num_deformable_group * 3 * kernel_size[0] * kernel_size[1]
-            self.offset_split_index = num_deformable_group * 2 * kernel_size[0] * kernel_size[1]
-            self._kwargs_offset = {
-                'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
-                'pad': padding, 'num_filter': offset_channels, 'num_group': groups,
-                'no_bias': not offset_use_bias, 'layout': layout}
+        offset_channels = num_deformable_group * 3 * kernel_size[0] * kernel_size[1]
+        self.offset_split_index = num_deformable_group * 2 * kernel_size[0] * kernel_size[1]
+        self._kwargs_offset = {
+            'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
+            'pad': padding, 'num_filter': offset_channels, 'num_group': groups,
+            'no_bias': not offset_use_bias, 'layout': layout}
 
-            self._kwargs_deformable_conv = {
-                'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
-                'pad': padding, 'num_filter': channels, 'num_group': groups,
-                'num_deformable_group': num_deformable_group,
-                'no_bias': not use_bias, 'layout': layout}
+        self._kwargs_deformable_conv = {
+            'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
+            'pad': padding, 'num_filter': channels, 'num_group': groups,
+            'num_deformable_group': num_deformable_group,
+            'no_bias': not use_bias, 'layout': layout}
 
-            if adj:
-                self._kwargs_offset['adj'] = adj
-                self._kwargs_deformable_conv['adj'] = adj
+        if adj:
+            self._kwargs_offset['adj'] = adj
+            self._kwargs_deformable_conv['adj'] = adj
 
-            deformable_conv_weight_shape = [0] * (len(kernel_size) + 2)
-            deformable_conv_weight_shape[0] = channels
-            deformable_conv_weight_shape[2] = kernel_size[0]
-            deformable_conv_weight_shape[3] = kernel_size[1]
+        deformable_conv_weight_shape = [0] * (len(kernel_size) + 2)
+        deformable_conv_weight_shape[0] = channels
+        deformable_conv_weight_shape[2] = kernel_size[0]
+        deformable_conv_weight_shape[3] = kernel_size[1]
 
-            self.deformable_conv_weight = self.params.get('deformable_conv_weight',
-                                                          shape=deformable_conv_weight_shape,
-                                                          init=weight_initializer,
-                                                          allow_deferred_init=True)
+        self.deformable_conv_weight = Parameter('deformable_conv_weight',
+                                                shape=deformable_conv_weight_shape,
+                                                init=weight_initializer,
+                                                allow_deferred_init=True)
 
-            if use_bias:
-                self.deformable_conv_bias = self.params.get('deformable_conv_bias', shape=(channels,),
-                                                            init=bias_initializer,
-                                                            allow_deferred_init=True)
-            else:
-                self.deformable_conv_bias = None
+        if use_bias:
+            self.deformable_conv_bias = Parameter('deformable_conv_bias', shape=(channels,),
+                                                    init=bias_initializer,
+                                                    allow_deferred_init=True)
+        else:
+            self.deformable_conv_bias = None
 
-            dshape = [0] * (len(kernel_size) + 2)
-            dshape[layout.find('N')] = 1
-            dshape[layout.find('C')] = in_channels
+        dshape = [0] * (len(kernel_size) + 2)
+        dshape[layout.find('N')] = 1
+        dshape[layout.find('C')] = in_channels
 
-            op = getattr(symbol, 'Convolution')
-            offset = op(symbol.var('data', shape=dshape), **self._kwargs_offset)
+        op = getattr(symbol, 'Convolution')
+        offset = op(symbol.var('data', shape=dshape), **self._kwargs_offset)
 
-            offsetshapes = offset.infer_shape_partial()[0]
+        offsetshapes = offset.infer_shape_partial()[0]
 
-            self.offset_weight = self.params.get('offset_weight', shape=offsetshapes[1],
-                                                 init=offset_weight_initializer,
-                                                 allow_deferred_init=True)
+        self.offset_weight = Parameter('offset_weight', shape=offsetshapes[1],
+                                        init=offset_weight_initializer,
+                                        allow_deferred_init=True)
 
-            if offset_use_bias:
-                self.offset_bias = self.params.get('offset_bias', shape=offsetshapes[2],
-                                                   init=offset_bias_initializer,
-                                                   allow_deferred_init=True)
-            else:
-                self.offset_bias = None
+        if offset_use_bias:
+            self.offset_bias = Parameter('offset_bias', shape=offsetshapes[2],
+                                            init=offset_bias_initializer,
+                                            allow_deferred_init=True)
+        else:
+            self.offset_bias = None
 
-            if activation:
-                self.act = Activation(activation, prefix=activation + '_')
-            else:
-                self.act = None
+        if activation:
+            self.act = Activation(activation)
+        else:
+            self.act = None
 
     def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
         if offset_bias is None:

@@ -999,8 +999,8 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         save_dict.update({('aux:%s' % k): v.as_in_context(cpu())
                           for k, v in aux_params.items()})
         nd_save(param_name, save_dict)
-        net.collect_params().load(param_name, cast_dtype=True, dtype_source='saved')
-        net.collect_params().reset_ctx(ctx)
+        net.load_parameters(param_name, cast_dtype=True, dtype_source='saved')
+        net.reset_ctx(ctx)
     return net
 
 def quantize_net(network, quantized_dtype='auto', quantize_mode='full',

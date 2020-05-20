@@ -720,7 +720,7 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
         if aux_param_name in arg_dict and param.dtype != arg_dict[aux_param_name].dtype:
             param.cast(arg_dict[aux_param_name].dtype)
 
-    ret.collect_params().load_dict(arg_dict, ctx=ctx)
+    ret.load_dict(arg_dict, ctx=ctx)
     return ret
 
 def convert_bucketing_module(bucketing_mod, target_dtype="float16", target_dtype_ops=None,
