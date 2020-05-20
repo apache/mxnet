@@ -164,14 +164,13 @@ def test_datasets_handles(tmpdir):
 
 @with_seed()
 def test_image_folder_dataset(prepare_record):
-    print(prepare_record[:-8])
-    dataset = gluon.data.vision.ImageFolderDataset(prepare_record[:-8])
+    dataset = gluon.data.vision.ImageFolderDataset(os.path.dirname(prepare_record))
     assert dataset.synsets == ['test_images']
     assert len(dataset.items) == 16
 
 @with_seed()
 def test_image_folder_dataset_handle(prepare_record):
-    dataset = gluon.data.vision.ImageFolderDataset(prepare_record[:-8])
+    dataset = gluon.data.vision.ImageFolderDataset(os.path.dirname(prepare_record))
     hd = dataset.__mx_handle__()
     assert len(hd) == 16
     assert (hd[1][0] == dataset[1][0]).asnumpy().all()
@@ -179,7 +178,7 @@ def test_image_folder_dataset_handle(prepare_record):
 
 @with_seed()
 def test_image_list_dataset(prepare_record):
-    root = os.path.join(prepare_record[:-8], 'test_images')
+    root = os.path.join(os.path.dirname(prepare_record), 'test_images')
     imlist = os.listdir(root)
     imglist = [(0, path) for i, path in enumerate(imlist)]
     dataset = gluon.data.vision.ImageListDataset(root=root, imglist=imglist)
@@ -203,7 +202,7 @@ def test_image_list_dataset(prepare_record):
 
 @with_seed()
 def test_image_list_dataset_handle(prepare_record):
-    root = os.path.join(prepare_record[:-8], 'test_images')
+    root = os.path.join(os.path.dirname(prepare_record), 'test_images')
     imlist = os.listdir(root)
     imglist = [(0, path) for i, path in enumerate(imlist)]
     dataset = gluon.data.vision.ImageListDataset(root=root, imglist=imglist).__mx_handle__()
