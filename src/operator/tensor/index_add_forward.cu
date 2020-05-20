@@ -39,11 +39,11 @@ struct IndexAddForwardGPUKernel {
                                   const size_t* val_stride,
                                   const size_t* val_shape,
                                   const size_t a_tail_size, const int ind_num,
-                                  const int ind_ndim, const int* ind_vec,
+                                  const int ind_ndim, const int* ind,
                                   const int a_ndim) {
     size_t id = 0;
     for (int dim = 0; dim < ind_ndim; ++dim) {
-      id += a_pre_stride[dim] * ind_vec[dim * ind_num + i];
+      id += a_pre_stride[dim] * ind[dim * ind_num + i];
     }
     id *= a_tail_size;
     for (size_t _i = 0; _i < a_tail_size; ++_i) {
@@ -68,17 +68,14 @@ void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
                          const size_t* a_pre_stride,
                          const size_t* val_stride,
                          const size_t* val_shape,
+                         const size_t* a_shape,
                          const size_t a_tail_size,
-                         const int ind_ndim, const int* ind_vec,
+                         const int ind_ndim, const int* ind,
                          const int a_ndim) {
   using namespace mxnet_op;
   using namespace mshadow;
-  int* d_ind_vec;
   size_t *d_a_tail_shape, *d_a_pre_stride, *d_val_stride, *d_val_shape;
-  size_t ind_vec_size = sizeof(int) * ind_ndim * ind_num;
-  size_t shape_size = sizeof(size_t) * a_ndim * 4;
-  cudaMalloc(reinterpret_cast<void**>(&d_ind_vec), ind_vec_size);
-  cudaMemcpy(d_ind_vec, ind_vec, ind_vec_size, cudaMemcpyHostToDevice);
+  size_t shape_size = sizeof(size_t) * a_ndim;
   cudaMalloc(reinterpret_cast<void**>(&d_a_tail_shape), shape_size);
   cudaMemcpy(d_a_tail_shape, a_tail_shape, shape_size, cudaMemcpyHostToDevice);
   cudaMalloc(reinterpret_cast<void**>(&d_a_pre_stride), shape_size);
@@ -92,8 +89,7 @@ void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
                                               d_a_tail_shape, d_a_pre_stride,
                                               d_val_stride, d_val_shape,
                                               a_tail_size, ind_num,
-                                              ind_ndim, d_ind_vec, a_ndim);
-  cudaFree(d_ind_vec);
+                                              ind_ndim, ind, a_ndim);
   cudaFree(d_a_tail_shape);
   cudaFree(d_a_pre_stride);
   cudaFree(d_val_stride);

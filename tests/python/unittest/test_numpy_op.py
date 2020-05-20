@@ -1327,29 +1327,21 @@ def test_npx_slice(start, end, step, hybridize):
 @use_np
 def test_npx_index_add():
     class TestIndexAdd(HybridBlock):
-        def __init__(self, ind):
+        def __init__(self):
             super(TestIndexAdd, self).__init__()
-            self.ind = ind
 
-        def hybrid_forward(self, F, a, val):
-            return F.npx.index_add(a, val, ind=self.ind)
+        def hybrid_forward(self, F, a, ind, val):
+            return F.npx.index_add(a, ind, val)
 
     def index_add_forward(a, ind, val, ind_ndim, ind_num):
         if val.dtype != a.dtype:
             val = val.astype(a.dtype)
-        ind_arr = _np.array([], dtype=int)
-        if ind_ndim == 1:
-            ind_arr = _np.array(ind).transpose()
-        else:
-            t_ind = []
-            for i in range(ind_ndim):
-                if len(ind[i]) == 1:
-                    t_ind.append((ind[i][0],) * ind_num)
-                else:
-                    t_ind.append(ind[i])
-            ind_arr = _np.array(t_ind).transpose()
+        ind_arr = ind.transpose()
+        if ind_arr.ndim == 0:
+            ind_arr = _np.array([ind_arr])
         for i in range(ind_arr.shape[0]):
-            t_ind = tuple(ind_arr[i].tolist()) if type(ind_arr[i]) is _np.ndarray else ind_arr[i].tolist()
+            t_ind = ind_arr[i]
+            t_ind = tuple(t_ind.tolist()) if type(t_ind) is _np.ndarray else t_ind.tolist()
             if val.ndim + ind_ndim > a.ndim:
                 t_val = val[tuple([0 if val.shape[0]==1 else i])]
                 if type(t_val) is _np.ndarray and t_val.shape[0] == 1:
@@ -1367,19 +1359,12 @@ def test_npx_index_add():
             init_val_grad = _np.array(val_grad)
         a_grad = _np.zeros(a_grad.shape).astype(a_grad.dtype)
         val_grad = _np.zeros(val_grad.shape).astype(val_grad.dtype)
-        
-        ind_arr = _np.array([], dtype=int)
-        if ind_ndim == 1:
-            ind_arr = _np.array(ind).transpose()
-        else:
-            t_ind = []
-            for i in range(ind_ndim):
-                if len(ind[i]) == 1:
-                    t_ind.append((ind[i][0],) * ind_num)
-                else:
-                    t_ind.append(ind[i])
-            ind_arr = _np.array(t_ind).transpose()
+
+        ind_arr = ind.transpose()
+        if ind_arr.ndim == 0:
+            ind_arr = _np.array([ind_arr])
         for i in range(ind_arr.shape[0]):
+            t_ind = ind_arr[i]
             t_ind = tuple(ind_arr[i].tolist()) if type(ind_arr[i]) is _np.ndarray else ind_arr[i].tolist()
             a_grad[t_ind] = out_grad[t_ind]
             if val_grad.ndim + ind_ndim > a_grad.ndim:
@@ -1417,39 +1402,42 @@ def test_npx_index_add():
             val_grad += init_val_grad
         return a_grad, val_grad
 
-    configs = [((2, ), (1, ), (1, ), 1, 1)]
-    shape = tuple(_np.random.randint(1, 6, size=(4)))
-    for ind_ndim in range(1, 5):
+    # a.shape, ind.shape, val.shape, ind_ndim, ind_num
+    configs = [((2, ), np.array(1, dtype=_np.int32), (1, ), 1, 1)]
+    shape = tuple(_np.random.randint(1, 6, size=(4))) # a.shape
+    for ind_ndim in range(1, 5): # ind.shape: (ind_ndim, ind_num)
         ind_num = _np.random.randint(1, 7)
         ind = []
         for ind_dim in range(ind_ndim):
-            if ind_dim == 0:
-                sz = ind_num
-            else:
-                sz = 1 if _np.random.randint(0, 5)==0 else ind_num
-            ind.append(tuple(_np.random.randint(0, shape[ind_dim], size=(sz))))
-        configs.append(tuple([shape, tuple(ind), (), ind_ndim, ind_num]))
+            ind.append(_np.random.randint(0, shape[ind_dim], size=(ind_num)))
+        ind = _np.array(ind).astype(_np.int32)
+        # case: val is scalar
+        configs.append(tuple([shape, ind, (), ind_ndim, ind_num]))
         for val_ndim in range(1, 5 - ind_ndim):
             val_shape = [1 if _np.random.randint(0, 5)==0 else ind_num]
             for val_dim in range(ind_ndim, 4):
                 val_shape.append(1 if _np.random.randint(0, 5)==0 else shape[val_dim])
-            configs.append(tuple([shape, tuple(ind), tuple(val_shape), ind_ndim, ind_num]))
+            # case: val is tensor
+            configs.append(tuple([shape, ind, tuple(val_shape), ind_ndim, ind_num]))
 
     dtypes = ['float32', 'float64', 'int32', 'int64']
     grad_req = ['write', 'null']
-    for hybridize, grad_req_a, grad_req_val, atype, valtype in itertools.product([True, False], grad_req, grad_req, dtypes, dtypes):
+    for hybridize, grad_req_a, grad_req_val, dtype, indtype in \
+        itertools.product([True, False], grad_req, grad_req, dtypes, ['int32', 'int64']):
         for a_shape, ind, val_shape ,ind_ndim, ind_num in configs:
             eps = 1e-3
-            test_index_add = TestIndexAdd(ind=ind)
+            atype = dtype
+            valtype = dtype
+            test_index_add = TestIndexAdd()
             if hybridize:
                 test_index_add.hybridize()
             a = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
             a.attach_grad(grad_req=grad_req_a)
             val = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
             val.attach_grad(grad_req=grad_req_val)
-            expected_ret = index_add_forward(a.asnumpy(), ind, val.asnumpy(), ind_ndim, ind_num)
+            expected_ret = index_add_forward(a.asnumpy(), ind.astype(indtype), val.asnumpy(), ind_ndim, ind_num)
             with mx.autograd.record():
-                mx_ret = test_index_add(a, val)
+                mx_ret = test_index_add(a, np.array(ind).astype(indtype), val)
             assert mx_ret.shape == a.shape
             assert expected_ret.shape == a.shape
             assert mx_ret.dtype == a.dtype
@@ -1479,7 +1467,7 @@ def test_npx_index_add():
                 else:
                     assert_almost_equal(val.grad.asnumpy(), expected_bwd_val, rtol = eps, atol=eps)
 
-            mx_out = npx.index_add(a, val, ind)
+            mx_out = npx.index_add(a, np.array(ind).astype(indtype), val)
             assert_almost_equal(mx_out.asnumpy(), expected_ret, rtol=eps, atol=eps)
 
 

@@ -34,19 +34,10 @@
 namespace mxnet {
 namespace op {
 
-struct IndexModifyParam : public dmlc::Parameter<IndexModifyParam> {
-    mxnet::Tuple<mxnet::Tuple<int>> ind;
-    DMLC_DECLARE_PARAMETER(IndexModifyParam) {
-      DMLC_DECLARE_FIELD(ind)
-        .describe("Index indicating where the input added values.");
-    }
-};
-
 inline bool IndexModifyOpShape(const nnvm::NodeAttrs& attrs,
                                mxnet::ShapeVector* in_attrs,
                                mxnet::ShapeVector* out_attrs) {
-  IndexModifyParam param = nnvm::get<IndexModifyParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
   SHAPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   return true;
@@ -55,11 +46,16 @@ inline bool IndexModifyOpShape(const nnvm::NodeAttrs& attrs,
 inline bool IndexModifyOpType(const nnvm::NodeAttrs& attrs,
                               std::vector<int>* in_attrs,
                               std::vector<int>* out_attrs) {
-  const IndexModifyParam param = nnvm::get<IndexModifyParam>(attrs.parsed);
-  CHECK_EQ(in_attrs->size(), 2U);
+  CHECK_EQ(in_attrs->size(), 3U);
   CHECK_EQ(out_attrs->size(), 1U);
   CHECK_NE((*in_attrs)[0], -1);
   CHECK_NE((*in_attrs)[1], -1);
+  CHECK_NE((*in_attrs)[2], -1);
+  CHECK_EQ((*in_attrs)[0], (*in_attrs)[2])
+    << "index_add(a, ind, val) only support a.dtype == val.dtype";
+  CHECK((*in_attrs)[1] == mshadow::kInt64 ||
+        (*in_attrs)[1] == mshadow::kInt32)
+    << "'ind' only support int dtype.";
   TYPE_ASSIGN_CHECK(*out_attrs, 0, (*in_attrs)[0]);
   return (*out_attrs)[0] != -1;
 }
@@ -83,16 +79,6 @@ MSHADOW_XINLINE size_t index_dot(const int ndim, const size_t* coord, const size
   return ret;
 }
 
-// MSHADOW_XINLINE void vec_calc_stride(const int ndim, const std::vector<size_t>& shape,
-//                                      std::vector<size_t>* stride) {
-//   size_t cumprod = 1;
-//   #pragma unroll
-//   for (int i = ndim - 1; i >= 0; --i) {
-//     (*stride)[i] = (shape[i] > 1) ? cumprod : 0;
-//     cumprod *= shape[i];
-//   }
-// }
-
 MSHADOW_XINLINE void vec_calc_stride(const int ndim, const size_t* shape,
                                      size_t* stride) {
   size_t cumprod = 1;
@@ -111,8 +97,9 @@ void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
                          const size_t* a_pre_stride,
                          const size_t* val_stride,
                          const size_t* val_shape,
+                         const size_t* a_shape,
                          const size_t a_tail_size,
-                         const int ind_ndim, const int* ind_vec,
+                         const int ind_ndim, const int* ind,
                          const int a_ndim);
 
 template<typename xpu>
@@ -123,55 +110,37 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
                        const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
   using namespace mshadow;
-  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(inputs.size(), 3U);
   CHECK_EQ(outputs.size(), 1U);
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  const IndexModifyParam& param = nnvm::get<IndexModifyParam>(attrs.parsed);
   const TBlob a = inputs[0];
-  TBlob val = inputs[1];
+  TBlob ind = inputs[1];
+  TBlob val = inputs[2];
   TBlob out = outputs[0];
-  CHECK_NE(a.shape_.ndim(), 0) << "Please use '+' instead.";
+  CHECK_GT(a.shape_.ndim(), 0) << "The first input is saclar, please use '+' instead.";
   int a_ndim = a.shape_.ndim();
   CHECK_LE(a_ndim, MXNET_SPECIAL_MAX_NDIM)
     << "ndim should less than "<< MXNET_SPECIAL_MAX_NDIM
     << "but get " << a_ndim <<"\n";
-  int val_ndim = inputs[1].shape_.ndim();
+  int val_ndim = val.shape_.ndim();
   if (val_ndim == 0) {
     val.shape_ = Shape1(1);
     val_ndim = 1;
   }
-  int ind_ndim = param.ind.ndim();
+  // ind=np.array([]), ind.shape_.ndim() = 1
+  // ind=np.array(1), ind.shape_.ndim() = 0
+  // ind=np.array([[0,0],[0,1]]), ind.shape_.ndim() = 2
+  CHECK_NE(ind.shape_.Size(), 0) << "Param 'ind' is []. Please just use op 'add' instead.\n";
+  CHECK_LE(ind.shape_.ndim(), 2) << "'ind' array allow 2 dimension at most.";
+  if (ind.shape_.ndim() == 0) {
+    ind.shape_ = Shape2(1, 1);
+  } else if (ind.shape_.ndim() == 1) {
+    ind.shape_ = Shape2(1, ind.shape_[0]);
+  }
+  int ind_ndim = ind.shape_[0];
+  int ind_num = ind.shape_[1];
   CHECK_LE(ind_ndim, a_ndim) << "IndexError: too many indices for array.";
-  // ind=(), dim:0, ind[0] is invalid
-  // ind=(1), dim:1, ind[0].ndim():1
-  // ind=((0,0),(0,1)), dim:2, ind[0].ndim():2
-  CHECK_NE(ind_ndim, 0) << "Param 'ind' is (). Please use op 'add' instead.\n";
 
-  // get the number of 'ind' index
-  int ind_num = 0;
-  for (int p_dim = 0; p_dim < ind_ndim; ++p_dim) {
-    ind_num = (param.ind[p_dim].ndim() > ind_num) ? param.ind[p_dim].ndim() : ind_num;
-  }
-  // check 'ind' data legality
-  for (int p_dim = 0; p_dim < ind_ndim; ++p_dim) {
-    // broadcast check
-    CHECK((param.ind[p_dim].ndim() == ind_num) ||
-          (param.ind[p_dim].ndim() == 1) ||
-          (param.ind[p_dim].ndim() == 0))
-      << "IndexError: shape mismatch: indexing arrays could not be broadcast together"
-      << " with shapes (" << ind_num << ",) (" << param.ind[p_dim].ndim() << ",)";
-    if (param.ind[p_dim].ndim() == 0) {
-      // nothing changed
-      return;
-    }
-    // bounds check
-    for (int p_num = 0; p_num < param.ind[p_dim].ndim(); ++p_num) {
-      CHECK_LE(param.ind[p_dim][p_num], a.shape_[p_dim])
-        << "IndexError: index " << param.ind[p_dim][p_num]
-        << " is out of bounds for axis " << p_dim
-        << " with size " << a.shape_[p_dim];
-    }
-  }
   // check 'val' broadcast legality
   CHECK_LE(val_ndim, a_ndim - ind_ndim + 1)
     << "The ndim of param 'val' is " << val_ndim
@@ -185,17 +154,6 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
       CHECK(val.shape_[j] == a.shape_[i] || val.shape_[j] == 1)
         << "can not broadcast from " << val.shape_[j] << " to " << a.shape_[i]
         << " in axis " << i;
-    }
-  }
-
-  // broadcast 'ind'
-  size_t vec_size = ind_ndim * ind_num;
-  std::vector<int>vec_ind(vec_size);
-  for (int p_dim = 0; p_dim < ind_ndim; ++p_dim) {
-    for (int p_num = 0; p_num < ind_num; ++p_num) {
-      vec_ind[p_dim * ind_num + p_num] = param.ind[p_dim].ndim() == 1 ?
-                                         param.ind[p_dim][0] :
-                                         param.ind[p_dim][p_num];
     }
   }
   size_t a_tail_size = a.shape_.ProdShape(ind_ndim, a_ndim);
@@ -215,23 +173,21 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
   }
   std::vector<size_t> a_pre_stride(a_ndim);
   vec_calc_stride(a_ndim, a_pre_shape.data(), a_pre_stride.data());
-  // vec_calc_stride(a_ndim, a_pre_shape, &a_pre_stride);
   std::vector<size_t> val_stride(a_ndim);
   vec_calc_stride(a_ndim, val_shape.data(), val_stride.data());
-  // vec_calc_stride(a_ndim, val_shape, &val_stride);
   mxnet_op::copy(s, out, a);
-  TBlob t_val;
-  MSHADOW_TYPE_SWITCH(a.type_flag_, DType, {
-    t_val = TBlob(ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(val.shape_.Size()), s));
-    mxnet_op::copy(s, t_val, val);
-  });
+  Tensor<xpu, 1, char> temp_mem = ctx.requested[0].get_space_typed<xpu, 1, char>(
+                                  Shape1(sizeof(int) * ind_ndim * ind_num), s);
+  TBlob t_ind = TBlob(reinterpret_cast<int*>(temp_mem.dptr_),
+                      Shape1(ind_ndim * ind_num), xpu::kDevMask);
+  mxnet_op::copy(s, t_ind, ind);
   MSHADOW_TYPE_SWITCH(a.type_flag_, DType, {
     IndexAddForwardCalc<xpu, DType>(s, ind_num,
-                                            out.dptr<DType>(), t_val.dptr<DType>(),
-                                            a_tail_shape.data(), a_pre_stride.data(),
-                                            val_stride.data(), val_shape.data(),
-                                            a_tail_size, ind_ndim,
-                                            vec_ind.data(), a_ndim);
+                                    out.dptr<DType>(), val.dptr<DType>(),
+                                    a_tail_shape.data(), a_pre_stride.data(),
+                                    val_stride.data(), val_shape.data(), a_shape.data(),
+                                    a_tail_size, ind_ndim,
+                                    t_ind.dptr<int>(), a_ndim);
   });
 }
 
@@ -242,7 +198,7 @@ struct IndexAddBackwardAKernel {
                                   const size_t* stride,
                                   const size_t tail_size,
                                   const int ind_num, const int ind_ndim,
-                                  const int* ind_vec, const int req) {
+                                  const int32_t* ind_vec, const int req) {
     size_t id = 0;
     for (int dim = 0; dim < ind_ndim; ++dim) {
       id += stride[dim] * ind_vec[dim * ind_num + i];
@@ -258,7 +214,7 @@ void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
                              DType* grad_a, const DType* ograd,
                              const size_t* stride,
                              const size_t tail_size, const int ind_num,
-                             const int ind_ndim, const int* ind_vec,
+                             const int ind_ndim, const int32_t* ind_vec,
                              const int req, const int out_ndim);
 
 template<typename xpu, typename DType>
@@ -269,7 +225,7 @@ void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
                                const size_t* val_stride,
                                const size_t* val_shape,
                                const size_t tail_size, const int ind_num,
-                               const int ind_ndim, const int* ind_vec,
+                               const int ind_ndim, const int32_t* ind_vec,
                                const int out_ndim);
 
 template<typename xpu>
@@ -280,34 +236,27 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
                         const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   using namespace mxnet_op;
-  if (req[0] == kNullOp && req[1] == kNullOp) {
+  if (req[0] == kNullOp && req[2] == kNullOp) {
     return;
   }
-  CHECK_EQ(inputs.size(), 3);
-  CHECK_EQ(outputs.size(), 2);
+  CHECK_EQ(inputs.size(), 4);
+  CHECK_EQ(outputs.size(), 3);
   const TBlob& ograd = inputs[0];
   const TBlob& a = inputs[1];
-  const TBlob& val = inputs[2];
+  TBlob ind = inputs[2];
+  const TBlob& val = inputs[3];
   const TBlob& grad_a = outputs[0];
-  const TBlob& grad_val = outputs[1];
+  const TBlob& grad_val = outputs[2];
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  const IndexModifyParam& param = nnvm::get<IndexModifyParam>(attrs.parsed);
   // get the number of 'ind' index
-  int ind_num = 0;
-  int ind_ndim = param.ind.ndim();
-  for (int p_dim = 0; p_dim < ind_ndim; ++p_dim) {
-    ind_num = (param.ind[p_dim].ndim() > ind_num) ? param.ind[p_dim].ndim() : ind_num;
+  if (ind.shape_.ndim() == 0) {
+    ind.shape_ = Shape2(1, 1);
+  } else if (ind.shape_.ndim() == 1) {
+    ind.shape_ = Shape2(1, ind.shape_[0]);
   }
+  int ind_ndim = ind.shape_[0];
+  int ind_num = ind.shape_[1];
   // broadcast 'ind'
-  size_t vec_size = ind_ndim * ind_num;
-  std::vector<int>vec_ind(vec_size);
-  for (int p_dim = 0; p_dim < ind_ndim; ++p_dim) {
-    for (int p_num = 0; p_num < ind_num; ++p_num) {
-      vec_ind[p_dim * ind_num + p_num] = param.ind[p_dim].ndim() == 1 ?
-                                         param.ind[p_dim][0] :
-                                         param.ind[p_dim][p_num];
-    }
-  }
   int ndim = ograd.shape_.ndim();
   size_t tail_size = ograd.shape_.ProdShape(ind_ndim, ndim);
   std::vector<size_t>ograd_shape(ograd.shape_.begin(), ograd.shape_.end());
@@ -318,26 +267,16 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   std::vector<size_t>val_shape(ndim);
   std::vector<size_t>val_stride(ndim);
   vec_calc_stride(ndim, ograd_shape.data(), ograd_stride.data());
-  // vec_calc_stride(ndim, ograd_shape, &ograd_stride);
-  TBlob ograd_a, ograd_val;
-  size_t temp_size = 0;
-  MSHADOW_TYPE_SWITCH(grad_a.type_flag_, GAType, {
-    MSHADOW_TYPE_SWITCH(grad_val.type_flag_, GVType, {
-      temp_size = (sizeof(GAType) + sizeof(GVType)) * ograd.shape_.Size();
-    });
-  });
-  Tensor<xpu, 1, char> temp_mem =
-      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_size), s);
-  char* ograd_a_ptr = temp_mem.dptr_;
-  char* ograd_val_ptr = temp_mem.dptr_;
+  Tensor<xpu, 1, char> temp_mem = ctx.requested[0].get_space_typed<xpu, 1, char>(
+                                  Shape1(sizeof(int32_t) * ind_ndim * ind_num), s);
+  TBlob t_ind = TBlob(reinterpret_cast<int32_t*>(temp_mem.dptr_), ind.shape_, xpu::kDevMask);
+  mxnet_op::copy(s, t_ind, ind);
   MSHADOW_TYPE_SWITCH(grad_a.type_flag_, DType, {
-    ograd_a = TBlob(reinterpret_cast<DType*>(ograd_a_ptr), ograd.shape_, xpu::kDevMask);
-    mxnet_op::copy(s, ograd_a, ograd);
-    ograd_val_ptr = temp_mem.dptr_ + sizeof(DType) * ograd.shape_.Size();
     IndexAddOpBackwardACalc<xpu, DType>(s, grad_a.dptr<DType>(),
-      ograd_a.dptr<DType>(), ograd_stride.data(), tail_size, ind_num, ind_ndim,
-      vec_ind.data(), req[0], ndim);
+      ograd.dptr<DType>(), ograd_stride.data(), tail_size, ind_num, ind_ndim,
+      t_ind.dptr<int32_t>(), req[0], ndim);
   });
+
   for (int i = 0; i < ind_ndim; ++i) {
     ograd_tail_shape[i] = 1;
   }
@@ -348,16 +287,13 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
     val_shape[i] = (j >= 0) ? val.shape_[j] : 1;
   }
   vec_calc_stride(ndim, ograd_pre_shape.data(), ograd_pre_stride.data());
-  // vec_calc_stride(ndim, ograd_pre_shape, &ograd_pre_stride);
   vec_calc_stride(ndim, val_shape.data(), val_stride.data());
-  // vec_calc_stride(ndim, val_shape, &val_stride);
+
   MSHADOW_TYPE_SWITCH(grad_val.type_flag_, DType, {
-    ograd_val = TBlob(reinterpret_cast<DType*>(ograd_val_ptr), ograd.shape_, xpu::kDevMask);
-    mxnet_op::copy(s, ograd_val, ograd);
     IndexAddOpBackwardValCalc<xpu, DType>(
-      s, grad_val.dptr<DType>(), ograd_val.dptr<DType>(),
+      s, grad_val.dptr<DType>(), ograd.dptr<DType>(),
       ograd_tail_shape.data(), ograd_pre_stride.data(), val_stride.data(),
-      val_shape.data(), tail_size, ind_num, ind_ndim, vec_ind.data(), ndim);
+      val_shape.data(), tail_size, ind_num, ind_ndim, t_ind.dptr<int32_t>(), ndim);
   });
 }
 

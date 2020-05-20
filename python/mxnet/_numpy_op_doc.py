@@ -626,7 +626,7 @@ def _npx_reshape(a, newshape, reverse=False, order='C'):
     pass
 
 
-def _npx_index_add(a, val, ind):
+def _npx_index_add(a, ind, val):
     """
     Add values to input according to given indexes.
     If exists repeate positions to be updated, the update value will be accumulated.
@@ -634,13 +634,15 @@ def _npx_index_add(a, val, ind):
     ----------
     a : ndarray
         Input data. The array to be updated.
+    ind : ndarray
+        Indexes for indicating update positions.
+        For example, array([[0, 1], [2, 3], [4, 5]] indicates here are two positions to
+        be updated, which is (0, 2, 4) and (1, 3, 5).
+        Note: - 'ind' cannot be empty array '[]', for that case, please use operator 'add' instead.
+              - 0 <= ind.ndim <= 2.
+              - ind.dtype should be 'int32' or 'int64'
     val : ndarray
         Input data. The array to update the input 'a'.
-    ind : tuple
-        Indexes for indicating update positions.
-        For example, tuple ((0, 1), (2, 3), (4, 5)) indicates here are two positions to
-        be updated, which is (0, 2, 4) and (1, 3, 5).
-        Note: 'ind' cannot be '()', for that case, please use operator 'add' instead.
     Returns
     -------
     out : ndarray
@@ -648,9 +650,9 @@ def _npx_index_add(a, val, ind):
     Examples
     --------
     >>> a = np.zeros((2, 3, 4))
-    >>> ind = ((0, 0), (0, 0), (0, 1))
+    >>> ind = np.array([[0, 0], [0, 0], [0, 1]], dtype='int32')
     >>> val = np.arange(2).reshape(2) + 1
-    >>> b = npx.index_add(a, val, ind)
+    >>> b = npx.index_add(a, ind, val)
     >>> b
     array([[[1., 2., 0., 0.],
             [0., 0., 0., 0.],
@@ -660,8 +662,8 @@ def _npx_index_add(a, val, ind):
             [0., 0., 0., 0.],
             [0., 0., 0., 0.]]])
     
-    >>> ind = ((0, 0), (0, 0), (0, 0))  # accumulate values in repeated positions
-    >>> b = npx.index_add(a, val, ind)
+    >>> ind = np.array([[0, 0], [0, 0], [0, 0]], dtype='int32')  # accumulate values in repeated positions
+    >>> b = npx.index_add(a, ind, val)
     >>> b
     array([[[3., 0., 0., 0.],
             [0., 0., 0., 0.],
@@ -670,21 +672,10 @@ def _npx_index_add(a, val, ind):
            [[0., 0., 0., 0.],
             [0., 0., 0., 0.],
             [0., 0., 0., 0.]]])
-
-    >>> ind = ((0, ), (0, ), (0, 1))  # brocast 'ind'
-    >>> b = npx.index_add(a, val, ind)
-    >>> b
-    array([[[1., 2., 0., 0.],
-            [0., 0., 0., 0.],
-            [0., 0., 0., 0.]],
-
-           [[0., 0., 0., 0.],
-            [0., 0., 0., 0.],
-            [0., 0., 0., 0.]]])
     
-    >>> ind=((0, 0), (0, 1)) 
+    >>> ind=np.array([[0, 0], [0, 1]], dtype='int32') 
     >>> val = np.arange(8).reshape(2, 4) 
-    >>> b = npx.index_add(a,val,ind)
+    >>> b = npx.index_add(a, ind, val)
     >>> b
     array([[[0., 1., 2., 3.],
             [4., 5., 6., 7.],
@@ -695,7 +686,7 @@ def _npx_index_add(a, val, ind):
             [0., 0., 0., 0.]]])
     
     >>> val = np.arange(4).reshape(4)  # brocast 'val'
-    >>> b = npx.index_add(a,val,ind)
+    >>> b = npx.index_add(a, ind, val)
     >>> b
     array([[[0., 1., 2., 3.],
             [0., 1., 2., 3.],

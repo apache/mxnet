@@ -32,7 +32,7 @@ void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
                              DType* grad_a, const DType* ograd,
                              const size_t* stride,
                              const size_t tail_size, const int ind_num,
-                             const int ind_ndim, const int* ind_vec,
+                             const int ind_ndim, const int32_t* ind_vec,
                              const int req, const int out_ndim) {
   using namespace mxnet_op;
   using namespace mshadow;
@@ -49,7 +49,7 @@ struct IndexAddBackwardValCPUKernel {
                                   const size_t* val_stride,
                                   const size_t* val_shape,
                                   const size_t ograd_tail_size, const int ind_num,
-                                  const int ind_ndim, const int* ind_vec,
+                                  const int ind_ndim, const int32_t* ind_vec,
                                   const int out_ndim) {
     size_t id = 0;
     for (int dim = 0; dim < ind_ndim; ++dim) {
@@ -82,7 +82,7 @@ void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
                                const size_t* val_stride,
                                const size_t* val_shape,
                                const size_t tail_size, const int ind_num,
-                               const int ind_ndim, const int* ind_vec,
+                               const int ind_ndim, const int32_t* ind_vec,
                                const int out_ndim) {
   using namespace mxnet_op;
   using namespace mshadow;
@@ -92,9 +92,9 @@ void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
 }
 
 NNVM_REGISTER_OP(_backward_index_add)
-.set_num_inputs(3)
-.set_num_outputs(2)
-.set_attr_parser(ParamParser<IndexModifyParam>)
+.set_num_inputs(4)
+.set_num_outputs(3)
+// .set_attr_parser(ParamParser<IndexModifyParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {

@@ -34,12 +34,20 @@ struct IndexAddForwardCPUKernel {
                                   const size_t* a_pre_stride,
                                   const size_t* val_stride,
                                   const size_t* val_shape,
+                                  const size_t* a_shape,
                                   const size_t a_tail_size, const int ind_num,
-                                  const int ind_ndim, const int* ind_vec,
+                                  const int ind_ndim, const int* ind,
                                   const int a_ndim) {
     size_t id = 0;
     for (int dim = 0; dim < ind_ndim; ++dim) {
-      id += a_pre_stride[dim] * ind_vec[dim * ind_num + i];
+      CHECK_LT(ind[dim * ind_num + i], a_shape[dim])
+        << "IndexError: index " << ind[dim * ind_num + i]
+        << " is out of bounds for axis " << dim
+        << " with size " << a_shape[dim];
+      CHECK_GE(ind[dim * ind_num + i], 0)
+        << "IndexError: index " << ind[dim * ind_num + i]
+        << " should be greater or equal to 0.";
+      id += a_pre_stride[dim] * ind[dim * ind_num + i];
     }
     id *= a_tail_size;
     #pragma omp parallel for
@@ -68,31 +76,30 @@ void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
                         const size_t* a_pre_stride,
                         const size_t* val_stride,
                         const size_t* val_shape,
+                        const size_t* a_shape,
                         const size_t a_tail_size,
-                        const int ind_ndim, const int* ind_vec,
+                        const int ind_ndim, const int* ind,
                         const int a_ndim) {
   using namespace mxnet_op;
   using namespace mshadow;
   Kernel<IndexAddForwardCPUKernel<DType>, xpu>::Launch(
                                              s, ind_num, out, val,
                                              a_tail_shape, a_pre_stride,
-                                             val_stride, val_shape,
+                                             val_stride, val_shape, a_shape,
                                              a_tail_size, ind_num,
-                                             ind_ndim, ind_vec, a_ndim);
+                                             ind_ndim, ind, a_ndim);
 }
 
 
-DMLC_REGISTER_PARAMETER(IndexModifyParam);
 
 NNVM_REGISTER_OP(_npx_index_add)
 .describe(R"code(This operators implements the "+=" mimic function.
 )code" ADD_FILELINE)
-.set_attr_parser(ParamParser<IndexModifyParam>)
-.set_num_inputs(2)
+.set_num_inputs(3)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    return std::vector<std::string>{"a", "val"};
+    return std::vector<std::string>{"a", "ind", "val"};
   })
 .set_attr<mxnet::FInferShape>("FInferShape", IndexModifyOpShape)
 .set_attr<nnvm::FInferType>("FInferType", IndexModifyOpType)
@@ -103,8 +110,8 @@ NNVM_REGISTER_OP(_npx_index_add)
   })
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_index_add"})
 .add_argument("a", "NDArray-or-Symbol", "Input ndarray")
-.add_argument("val", "NDArray-or-Symbol", "Input ndarray")
-.add_arguments(IndexModifyParam::__FIELDS__());
+.add_argument("ind", "NDArray-or-Symbol", "Index ndarray")
+.add_argument("val", "NDArray-or-Symbol", "Input ndarray");
 }  // namespace op
 }  // namespace mxnet
 
