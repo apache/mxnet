@@ -762,9 +762,9 @@ class SequentialRNNCell(RecurrentCell):
             states = begin_state[p:p+n]
             p += n
             inputs, states = cell().unroll(length, inputs=inputs, begin_state=states,
-                                         layout=layout,
-                                         merge_outputs=None if i < num_cells-1 else merge_outputs,
-                                         valid_length=valid_length)
+                                           layout=layout,
+                                           merge_outputs=None if i < num_cells-1 else merge_outputs,
+                                           valid_length=valid_length)
             next_states.extend(states)
 
         return inputs, next_states
@@ -840,9 +840,9 @@ class HybridSequentialRNNCell(HybridRecurrentCell):
             states = begin_state[p:p+n]
             p += n
             inputs, states = cell().unroll(length, inputs=inputs, begin_state=states,
-                                         layout=layout,
-                                         merge_outputs=None if i < num_cells-1 else merge_outputs,
-                                         valid_length=valid_length)
+                                           layout=layout,
+                                           merge_outputs=None if i < num_cells-1 else merge_outputs,
+                                           valid_length=valid_length)
             next_states.extend(states)
 
         return inputs, next_states

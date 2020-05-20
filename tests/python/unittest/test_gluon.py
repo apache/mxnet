@@ -38,49 +38,6 @@ import json
 import random
 import tempfile
 
-@pytest.fixture(autouse=True)
-def check_leak_ndarray():
-    del gc.garbage[:]
-    # Collect garbage prior to running the next test
-    gc.collect()
-    # Enable gc debug mode to check if the test leaks any arrays
-    gc_flags = gc.get_debug()
-    gc.set_debug(gc.DEBUG_SAVEALL)
-
-    # Run the test
-    yield
-
-    # Check for leaked NDArrays
-    gc.collect()
-    gc.set_debug(gc_flags)  # reset gc flags
-
-    seen = set()
-    def has_array(element):
-        try:
-            if element in seen:
-                return False
-            seen.add(element)
-        except TypeError:  # unhashable
-            pass
-
-        if isinstance(element, mx.nd._internal.NDArrayBase):
-            return True
-        elif isinstance(element, mx.sym._internal.SymbolBase):
-            return False
-        elif hasattr(element, '__dict__'):
-            return any(has_array(x) for x in vars(element))
-        elif isinstance(element, dict):
-            return any(has_array(x) for x in element.items())
-        else:
-            try:
-                return any(has_array(x) for x in element)
-            except (TypeError, KeyError, RecursionError):
-                return False
-
-    assert not any(has_array(x) for x in gc.garbage), 'Found leaked NDArrays due to reference cycles'
-    del gc.garbage[:]
-
-
 @with_seed()
 def test_parameter():
     p = gluon.Parameter('weight', shape=(10, 10))
