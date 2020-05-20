@@ -372,6 +372,18 @@ class Block(object):
         self._check_container_with_block()
         return self._collect_params_with_prefix(select=select)
 
+    def _set_prefix(self, recorded, prefix=''):
+        if prefix:
+            prefix += '.'
+
+        for val in self._reg_params.values():
+            if val not in recorded:
+                recorded.add(val)
+                val._prefix = prefix
+
+        for name, child in self._children.items():
+            child._set_prefix(recorded, prefix + name)
+
     def _collect_params_with_prefix(self, prefix='', select=None):
         if prefix:
             prefix += '.'
@@ -380,6 +392,7 @@ class Block(object):
         else:
             pattern = re.compile(select)
             ret = {prefix + key : val for key, val in self._reg_params.items() if pattern.match(key)}
+
         for name, child in self._children.items():
             ret.update(child._collect_params_with_prefix(prefix + name, select))
         return ret
@@ -524,7 +537,7 @@ class Block(object):
         loaded = [(k[4:] if k.startswith('arg:') or k.startswith('aux:') else k, v) \
                   for k, v in param_dict.items()] if isinstance(param_dict, dict) else param_dict
         arg_dict = {restore_prefix+k: v for k, v in loaded}
-        params = self._collect_params_with_prefix()
+        params = self.collect_params()
         error_str = "file: %s" % (filename) if filename else "param_dict"
         if not allow_missing:
             for name in params.keys():
@@ -622,7 +635,8 @@ class Block(object):
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
         """
-        params = self._collect_params_with_prefix()
+        self._set_prefix(set())
+        params = self.collect_params()
         if verbose:
             init.set_verbosity(verbose=verbose)
         for v in params.values():
@@ -651,7 +665,7 @@ class Block(object):
         """Sets all Parameters' gradient buffer to 0."""
         # collect gradient arrays for each ctx
         arrays = defaultdict(list)
-        params = self._collect_params_with_prefix()
+        params = self.collect_params()
         for p in params.values():
             if p.grad_req == 'null' or p._grad is None:
                 continue
@@ -681,7 +695,7 @@ class Block(object):
             Assign Parameter to given context. If ctx is a list of Context, a
             copy will be made for each context.
         """
-        params = self._collect_params_with_prefix()
+        params = self.collect_params()
         for i in params.values():
             i.reset_ctx(ctx)
 
@@ -704,7 +718,7 @@ class Block(object):
         value : valid type for attribute name
             The new value for the attribute.
         """
-        params = self._collect_params_with_prefix()
+        params = self.collect_params()
         for i in params.values():
             setattr(i, name, value)
 
@@ -736,7 +750,7 @@ class Block(object):
         for name in self._reg_params.keys():
             key = prefix + name
             if shared.get(key) is not None:
-                setattr(self, name, shared[key])   
+                setattr(self, name, shared[key])
                 shared_set.remove(key)
         for name, child in self._children.items():
             child._shared_parameters(shared, shared_set, prefix + name)
@@ -937,8 +951,8 @@ class HybridBlock(Block):
         `Hybrid - Faster training and easy deployment
         <https://mxnet.io/tutorials/gluon/hybrid.html>`_
     """
-    def __init__(self, prefix=None, params=None):
-        super(HybridBlock, self).__init__(prefix=prefix, params=params)
+    def __init__(self):
+        super(HybridBlock, self).__init__()
         self._cached_graph = ()
         self._cached_op = None
         self._out_format = None

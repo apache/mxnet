@@ -118,12 +118,13 @@ class Parameter(object):
         if isinstance(shape, int):
             shape = (shape,)
         self._shape = shape
-        self.name = name
+        self._name = name
         self._dtype = dtype
         self.lr_mult = lr_mult
         self.wd_mult = wd_mult
         self.grad_req = grad_req
         self.init = init
+        self._prefix = ""
         # sparse related storage type information
         valid_stypes = ['default', 'row_sparse', 'csr']
         assert grad_stype in valid_stypes, "grad_stype for Parameter '%s' must be " \
@@ -140,6 +141,10 @@ class Parameter(object):
     @property
     def grad_req(self):
         return self._grad_req
+
+    @property
+    def name(self):
+        return self._prefix + self._name
 
     @grad_req.setter
     def grad_req(self, req):
