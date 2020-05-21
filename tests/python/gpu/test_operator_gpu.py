@@ -29,7 +29,7 @@ from mxnet import autograd
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied
+from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, with_environment
 from common import run_in_spawned_process
 from test_operator import *
 from test_numpy_ndarray import *
@@ -2268,22 +2268,22 @@ def test_multi_proposal_op():
 
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
 def kernel_error_check_imperative():
-    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    with mx.np_shape(active=True):
-        a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
-        b = mx.nd.array([],ctx=mx.gpu(0))
-        c = (a / b).asnumpy()
+    with environment('MXNET_ENGINE_TYPE', 'NaiveEngine'):
+        with mx.np_shape(active=True):
+            a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
+            b = mx.nd.array([],ctx=mx.gpu(0))
+            c = (a / b).asnumpy()
 
 def kernel_error_check_symbolic():
-    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    with mx.np_shape(active=True):
-        a = mx.sym.Variable('a')
-        b = mx.sym.Variable('b')
-        c = a / b
-        f = c.bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
-                                'b':mx.nd.array([],ctx=mx.gpu(0))})
-        f.forward()
-        g = f.outputs[0].asnumpy()
+    with environment('MXNET_ENGINE_TYPE', 'NaiveEngine'):
+        with mx.np_shape(active=True):
+            a = mx.sym.Variable('a')
+            b = mx.sym.Variable('b')
+            c = a / b
+            f = c.bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
+                                    'b':mx.nd.array([],ctx=mx.gpu(0))})
+            f.forward()
+            g = f.outputs[0].asnumpy()
 
 @pytest.mark.serial
 def test_kernel_error_checking():

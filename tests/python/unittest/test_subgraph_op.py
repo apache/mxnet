@@ -21,7 +21,7 @@ import mxnet as mx
 from mxnet.base import SymbolHandle, check_call, _LIB, mx_uint, c_str_array, c_str, mx_real_t
 from mxnet.symbol import Symbol
 import numpy as np
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, environment
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet import nd
@@ -145,10 +145,6 @@ def test_subgraph_exe2(sym, subgraph_backend, op_names):
     """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in simple_bind
     and compare results of the partitioned sym and the original sym."""
     def get_executor(sym, subgraph_backend=None, op_names=None, original_exec=None):
-        if subgraph_backend is not None:
-            os.environ['MXNET_SUBGRAPH_BACKEND'] = subgraph_backend
-            check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
-                                                         c_str_array(op_names)))
         exe = sym.simple_bind(ctx=mx.current_context(), grad_req='null')
         input_names = sym.list_inputs()
         for name in input_names:
@@ -160,14 +156,15 @@ def test_subgraph_exe2(sym, subgraph_backend, op_names):
                 exe.aux_dict[name][:] = mx.nd.random.uniform(shape=exe.aux_dict[name].shape)\
                     if original_exec is None else original_exec.aux_dict[name]
         exe.forward()
-        if subgraph_backend is not None:
-            check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
-            del os.environ['MXNET_SUBGRAPH_BACKEND']
         return exe
     sym, _, _ = sym
 
     original_exec = get_executor(sym)
-    partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
+    with environment('MXNET_SUBGRAPH_BACKEND', subgraph_backend):
+        check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                     c_str_array(op_names)))
+        partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
+        check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
     outputs1 = original_exec.outputs
     outputs2 = partitioned_exec.outputs
     assert len(outputs1) == len(outputs2)
@@ -210,10 +207,6 @@ def test_subgraph_exe4(sym, subgraph_backend, op_names):
     """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in bind
     and compare results of the partitioned sym and the original sym."""
     def get_executor(sym, subgraph_backend=None, op_names=None, original_exec=None):
-        if subgraph_backend is not None:
-            os.environ['MXNET_SUBGRAPH_BACKEND'] = subgraph_backend
-            check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
-                                                         c_str_array(op_names)))
         arg_shapes, _, aux_shapes = sym.infer_shape()
         if subgraph_backend is None:
             arg_array = [mx.nd.random.uniform(shape=shape) for shape in arg_shapes]
@@ -226,14 +219,15 @@ def test_subgraph_exe4(sym, subgraph_backend, op_names):
                        aux_states=aux_array if subgraph_backend is None else original_exec.aux_arrays,
                        grad_req='null')
         exe.forward()
-        if subgraph_backend is not None:
-            check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
-            del os.environ['MXNET_SUBGRAPH_BACKEND']
         return exe
 
     sym, _, _ = sym
     original_exec = get_executor(sym)
-    partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
+    with environment('MXNET_SUBGRAPH_BACKEND', subgraph_backend):
+        check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                     c_str_array(op_names)))
+        partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
+        check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
     outputs1 = original_exec.outputs
     outputs2 = partitioned_exec.outputs
     assert len(outputs1) == len(outputs2)

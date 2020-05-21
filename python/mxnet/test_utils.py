@@ -1947,35 +1947,6 @@ def same_array(array1, array2):
 
 
 @contextmanager
-def environment(env_vars):
-    """
-    Helper function that takes a dictionary of environment variables and their
-    desired settings and changes the environment in advance of running the
-    decorated code.  The original environment state is reinstated afterwards,
-    even if exceptions are raised.
-    """
-    def set_environ(env_var_dict):
-        for var_name, var_setting in env_var_dict.items():
-            if var_setting is None:
-                os.environ.pop(var_name, None)
-            else:
-                os.environ[var_name] = var_setting
-
-    # Take a snapshot of the existing environment variable state
-    # for those variables to be changed
-    snapshot = {x:os.environ.get(x, None) for x in env_vars.keys()}
-
-    # Alter the environment per the env_vars dict
-    set_environ(env_vars)
-
-    # Now run the wrapped code
-    yield
-
-    # reinstate original env var state per the snapshot taken earlier
-    set_environ(snapshot)
-
-
-@contextmanager
 def discard_stderr():
     """
     Discards error output of a routine if invoked as:
@@ -2411,22 +2382,52 @@ def same_symbol_structure(sym1, sym2):
     return True
 
 
-class EnvManager(object):
-    """Environment variable setter and unsetter via with idiom"""
-    def __init__(self, key, val):
-        self._key = key
-        self._next_val = val
-        self._prev_val = None
+@contextmanager
+def environment(*args):
+    """
+    Environment variable setter and unsetter via `with` idiom.
 
-    def __enter__(self):
-        self._prev_val = os.environ.get(self._key)
-        os.environ[self._key] = self._next_val
+    Takes a specification of env var names and desired values and adds those
+    settings to the environment in advance of running the body of the `with`
+    statement.  The original environment state is restored afterwards, even
+    if exceptions are raised in the `with` body.
 
-    def __exit__(self, ptype, value, trace):
-        if self._prev_val:
-            os.environ[self._key] = self._prev_val
-        else:
-            del os.environ[self._key]
+    Parameters
+    ----------
+    args:
+        if 2 args are passed:
+            name, desired_value strings of the single env var to update, or
+        if 1 arg is passed:
+            a dict of name:desired_value for env var's to update
+
+    """
+    # Core routine to alter environment from a dict of env_var_name, env_var_value pairs
+    def set_environ(env_var_dict):
+        for env_var_name, env_var_value in env_var_dict.items():
+            if env_var_value is None:
+                os.environ.pop(env_var_name, None)
+            else:
+                os.environ[env_var_name] = env_var_value
+
+    # Create standardized env_var name:value dict from the two calling methods of this routine
+    if len(args) == 1 and isinstance(args[0], dict):
+        env_vars = args[0]
+    else:
+        assert len(args) == 2, 'Expecting one dict arg or two args: env var name and value'
+        env_vars = {args[0]: args[1]}
+
+    # Take a snapshot of the existing environment variable state
+    # for those variables to be changed.  get() return None for unset keys.
+    snapshot = {x: os.environ.get(x) for x in env_vars.keys()}
+
+    # Alter the environment per the env_vars dict
+    set_environ(env_vars)
+
+    # Now run the wrapped code
+    yield
+
+    # reinstate original env_var state per the snapshot taken earlier
+    set_environ(snapshot)
 
 
 def collapse_sum_like(a, shape):

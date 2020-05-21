@@ -23,6 +23,7 @@ import numpy as np
 import random
 import shutil
 from mxnet.base import MXNetError
+from mxnet.test_utils import environment
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../common/'))
 sys.path.insert(0, os.path.join(curr_path, '../../../python'))
@@ -303,6 +304,22 @@ def teardown_module():
     It waits for all operations in one file to finish before carrying on the next.
     """
     mx.nd.waitall()
+
+
+def with_environment(*args_):
+    """
+    Helper function that takes a dictionary of environment variables and their
+    desired settings and changes the environment in advance of running the
+    decorated code.  The original environment state is reinstated afterwards,
+    even if exceptions are raised.
+    """
+    def test_helper(orig_test):
+        @make_decorator(orig_test)
+        def test_new(*args, **kwargs):
+            with environment(*args_):
+                orig_test(*args, **kwargs)
+        return test_new
+    return test_helper
 
 
 def run_in_spawned_process(func, env, *args):

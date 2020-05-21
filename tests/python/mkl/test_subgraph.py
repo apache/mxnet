@@ -30,7 +30,7 @@ from mxnet.test_utils import DummyIter
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
-from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err
+from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err, environment
 import itertools
 import pytest
 import tempfile
@@ -274,10 +274,9 @@ def check_fusion(sym, data_shape, attrs_dict, path, check_fp32_fusion=True, chec
     aux_array = [mx.nd.random.uniform(shape=shape) for shape in aux_shapes]
     exe = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe.forward()
-    os.environ['MXNET_SUBGRAPH_BACKEND'] = SG_PASS_NAME
-    exe_sg = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
+    with environment('MXNET_SUBGRAPH_BACKEND', SG_PASS_NAME):
+      exe_sg = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe_sg.forward()
-    del os.environ['MXNET_SUBGRAPH_BACKEND']
     for i in range(len(exe.outputs)):
       assert_almost_equal(exe.outputs[i].asnumpy(), exe_sg.outputs[i].asnumpy(), rtol=1e-3, atol=1e-1)
 

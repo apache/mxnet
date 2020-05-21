@@ -17,32 +17,24 @@
 
 import mxnet as mx
 from mxnet.base import data_dir
+from nose.tools import *
+from mxnet.test_utils import environment
 import os
 import unittest
 import logging
 import os.path as op
 import platform
 
-class MXNetDataDirTest(unittest.TestCase):
-    def setUp(self):
-        self.mxnet_data_dir = os.environ.get('MXNET_HOME')
-        if 'MXNET_HOME' in os.environ:
-            del os.environ['MXNET_HOME']
 
-    def tearDown(self):
-        if self.mxnet_data_dir:
-            os.environ['MXNET_HOME'] = self.mxnet_data_dir
-        else:
-            if 'MXNET_HOME' in os.environ:
-                del os.environ['MXNET_HOME']
-
-    def test_data_dir(self,):
-        prev_data_dir = data_dir()
-        system = platform.system()
-        if system != 'Windows':
-            self.assertEqual(data_dir(), op.join(op.expanduser('~'), '.mxnet'))
-        os.environ['MXNET_HOME'] = '/tmp/mxnet_data'
-        self.assertEqual(data_dir(), '/tmp/mxnet_data')
-        del os.environ['MXNET_HOME']
-        self.assertEqual(data_dir(), prev_data_dir)
-
+def test_data_dir():
+    prev_data_dir = data_dir()
+    system = platform.system()
+    # Test that data_dir() returns the proper default value when MXNET_HOME is not set
+    if system != 'Windows':
+        with environment('MXNET_HOME', None):
+            assertEqual(data_dir(), op.join(op.expanduser('~'), '.mxnet'))
+    # Test that data_dir() responds to an explicit setting of MXNET_HOME
+    with environment('MXNET_HOME', '/tmp/mxnet_data'):
+        assertEqual(data_dir(), '/tmp/mxnet_data')
+    # Test that this test has not disturbed the MXNET_HOME value existing before the test
+    assertEqual(data_dir(), prev_data_dir)
