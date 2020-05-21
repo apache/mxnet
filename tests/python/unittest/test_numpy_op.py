@@ -5309,6 +5309,8 @@ def test_np_repeat():
         ((4, 2), 2, 0),
         ((4, 2), 2, 1),
         ((4, 2), 2, -1),
+        ((4, 2), [2,3] * 4, None),
+        ((4, 2), [1,2], 1),
     ]
 
     class TestRepeat(HybridBlock):

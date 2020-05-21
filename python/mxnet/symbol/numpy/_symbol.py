@@ -2450,6 +2450,8 @@ def repeat(a, repeats, axis=None):
     """
     if isinstance(repeats, numeric_types):
         return _npi.repeat(a, repeats=repeats, axis=axis)
+    if len(repeats) == 1:
+        return _npi.repeat(a, repeats[0], axis)
     if axis is not None:
         tmp = swapaxes(a, 0, axis)
         res = _npi.repeats(tmp, repeats=repeats, axis=0)
