@@ -66,7 +66,16 @@ static bool SoftmaxOutputType(const nnvm::NodeAttrs& attrs,
                               std::vector<int> *out_type) {
   CHECK_EQ(in_type->size(), 2U);
   int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
+  if (type_is_none(dtype)) {
+    if (out_type->size() == 0 || type_is_none((*out_type)[0])) {
+      return false;
+    } else {
+      dtype = (*out_type)[0];
+    }
+  } else {
+    out_type->clear();
+    out_type->push_back(dtype);
+  }
   for (size_t i = 0; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
       (*in_type)[i] = dtype;
@@ -74,8 +83,6 @@ static bool SoftmaxOutputType(const nnvm::NodeAttrs& attrs,
       UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments()[i]);
     }
   }
-  out_type->clear();
-  out_type->push_back(dtype);
   return true;
 }
 
