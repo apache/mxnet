@@ -4076,7 +4076,13 @@ def repeat(a, repeats, axis=None):
            [3, 4],
            [3, 4]])
     """
-    return _api_internal.repeat(a, repeats, axis)
+    if isinstance(repeats, numeric_types)
+        return _api_internal.repeat(a, repeats, axis)
+    if axis is not None:
+        tmp = swapaxes(a, 0, axis)
+        res = _api_internal.repeats(tmp, repeats=repeats, axis=0)
+        return swapaxes(res, 0, axis)
+    return _api_internal.repeats(a, repeats, axis)
 
 
 # pylint: disable=redefined-outer-name
