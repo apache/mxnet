@@ -38,7 +38,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
 include(CMakeDependentOption)
 #Some things have order. This must be put in front alone
-option(BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" ON)
+option(MXNET_BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" ON)
 option(USE_CUDA "Build with CUDA support"   ON)
 set(MXNET_CUDA_ARCH "Auto" CACHE STRING "Target NVIDIA GPU achitecture.
 Format: Auto | Common | All | LIST(ARCH_AND_PTX ...)
@@ -658,14 +658,16 @@ endif()
 # Add cmake targets
 add_subdirectory("3rdparty/mshadow")
 
-set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)
   string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
   # Create dummy file since we want an empty shared library before linking
   set(DUMMY_SOURCE ${CMAKE_BINARY_DIR}/dummy.c)
   file(WRITE ${DUMMY_SOURCE} "")
-  add_library(mxnet ${SOURCE})
-  list(APPEND MXNET_INSTALL_TARGETS mxnet)
+  if(MXNET_BUILD_SHARED_LIBS)
+    add_library(mxnet SHARED ${SOURCE})
+  else()
+    add_library(mxnet STATIC ${SOURCE})
+  endif()
   target_link_libraries(mxnet PUBLIC mshadow)
   target_link_libraries(mxnet PUBLIC ${CMAKE_DL_LIBS})
   target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
@@ -848,7 +850,7 @@ endif()
 #       https://cmake.org/cmake/help/v3.13/variable/CMAKE_INSTALL_PREFIX.html
 #       https://cmake.org/cmake/help/v3.13/module/GNUInstallDirs.html
 include(GNUInstallDirs)
-install(TARGETS ${MXNET_INSTALL_TARGETS}
+install(TARGETS mxnet
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
