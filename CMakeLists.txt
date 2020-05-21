@@ -38,6 +38,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
 include(CMakeDependentOption)
 #Some things have order. This must be put in front alone
+option(BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" ON)
 option(USE_CUDA "Build with CUDA support"   ON)
 set(MXNET_CUDA_ARCH "Auto" CACHE STRING "Target NVIDIA GPU achitecture.
 Format: Auto | Common | All | LIST(ARCH_AND_PTX ...)
