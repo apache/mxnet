@@ -1312,6 +1312,94 @@ def test_unix_large_tensor(lib_name) {
   }]
 }
 
+def test_unix_amalgamation_1() {
+  return ['Amalgamation-atlas: CPU': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/nt-amalgamation1') {
+        utils.init_git()
+        utils.docker_run('ubuntu_cpu', 'nightly_test_amalgamation USE_BLAS=atlas', false)
+      }
+    }
+  }]
+}
+
+def test_unix_amalgamation_2() {
+  return ['Amalgamation-atlas-min: CPU': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/nt-amalgamation2') {
+        utils.init_git()
+        utils.docker_run('ubuntu_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MIN=1', false)
+      }
+    }
+  }]
+}
+
+def test_unix_amalgamation_3() {
+  return ['Amalgamation-atlas-mkl: CPU': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/nt-amalgamation3') {
+        utils.init_git()
+        utils.docker_run('ubuntu_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_MKL=1', false)
+      }
+    }
+  }]
+}
+
+def test_unix_amalgamation_4() {
+  return ['Amalgamation-atlas-cuda: CPU': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/nt-amalgamation4') {
+        utils.init_git()
+        utils.docker_run('ubuntu_cpu', 'nightly_test_amalgamation USE_BLAS=atlas MSHADOW_USE_CUDA=1', false)
+      }
+    }
+  }]
+}
+
+def test_unix_amalgamation_5() {
+  return ['Amalgamation-atlas-openmp: CPU': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/nt-amalgamation5') {
+        utils.init_git()
+        utils.docker_run('ubuntu_cpu', 'nightly_test_amalgamation USE_BLAS=atlas DISABLE_OPENMP=0', false)
+      }
+    }
+  }]
+}
+
+def test_unix_java_demo() {
+  return ['Java Demo: CPU': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/java-demo') {
+        utils.init_git()
+        utils.docker_run('ubuntu_cpu', 'nightly_java_demo_test_cpu', false)
+      }
+    }
+  }]
+}
+
+def test_unix_scala_demo() {
+  return ['Scala Demo: CPU': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/scala-demo') {
+        utils.init_git()
+        utils.docker_run('ubuntu_cpu', 'nightly_scala_demo_test_cpu', false)
+      }
+    }
+  }]
+}
+
+def test_unix_mxnetjs() {
+  return ['MXNetJS: CPU': {
+    node(NODE_LINUX_CPU) {
+      ws('workspace/nt-mxnetjs') {
+        utils.init_git()
+        utils.docker_run('ubuntu_cpu', 'nightly_test_javascript', false)
+      }
+    }
+  }]
+}
+
 def test_centos7_python3_cpu(lib_name) {
     return ['Python3: CentOS 7 CPU': {
       node(NODE_LINUX_CPU) {
