@@ -331,20 +331,32 @@ build_armv7() {
 }
 
 build_armv8() {
+    set -ex
+    pushd .
+    cd /work/build
+
+    # Lapack functionality will be included and statically linked to openblas.
+    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
+    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
+    # to be linked additionally.
+
     build_ccache_wrappers
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DCMAKE_CROSSCOMPILING=ON \
         -DUSE_CUDA=OFF \
-        -DSUPPORT_F16C=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
-        -DUSE_LAPACK=OFF \
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_LAPACK=OFF \
+        -DBUILD_CPP_EXAMPLES=OFF \
         -G Ninja /work/mxnet
+
     ninja
     build_wheel
+    popd
 }
 
 
