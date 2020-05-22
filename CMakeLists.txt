@@ -38,6 +38,7 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
 include(CMakeDependentOption)
 #Some things have order. This must be put in front alone
+option(MXNET_BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" ON)
 option(USE_CUDA "Build with CUDA support"   ON)
 set(MXNET_CUDA_ARCH "Auto" CACHE STRING "Target NVIDIA GPU achitecture.
 Format: Auto | Common | All | LIST(ARCH_AND_PTX ...)
@@ -657,26 +658,24 @@ endif()
 # Add cmake targets
 add_subdirectory("3rdparty/mshadow")
 
-set(MXNET_INSTALL_TARGETS mxnet)
 if(UNIX)
   string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
   # Create dummy file since we want an empty shared library before linking
   set(DUMMY_SOURCE ${CMAKE_BINARY_DIR}/dummy.c)
   file(WRITE ${DUMMY_SOURCE} "")
-  list(APPEND MXNET_INSTALL_TARGETS mxnet_static)
-  add_library(mxnet_static STATIC ${SOURCE})
-  target_link_libraries(mxnet_static PUBLIC mshadow)
-  target_compile_definitions(mxnet_static PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
-  add_library(mxnet SHARED ${DUMMY_SOURCE})
-  target_link_libraries(mxnet PRIVATE ${BEGIN_WHOLE_ARCHIVE} $<TARGET_FILE:mxnet_static> ${END_WHOLE_ARCHIVE})
-  target_link_libraries(mxnet PRIVATE mxnet_static)
-  target_link_libraries(mxnet_static PUBLIC ${CMAKE_DL_LIBS})
-  set_target_properties(mxnet_static PROPERTIES OUTPUT_NAME mxnet)
+  if(MXNET_BUILD_SHARED_LIBS)
+    add_library(mxnet SHARED ${SOURCE})
+  else()
+    add_library(mxnet STATIC ${SOURCE})
+  endif()
+  target_link_libraries(mxnet PUBLIC mshadow)
+  target_link_libraries(mxnet PUBLIC ${CMAKE_DL_LIBS})
+  target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
   if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-    target_compile_options(mxnet_static PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
+    target_compile_options(mxnet PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
     # Ignore erroneous compiler warnings:
     # 1) variables used in '#pragma omp parallel' are considered unused
-    target_compile_options(mxnet_static PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Wno-error=unused-variable>")
+    target_compile_options(mxnet PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Wno-error=unused-variable>")
     if(USE_CUDA)
       # Note: "=" is required to avoid breaking ccache
       string(APPEND CMAKE_CUDA_FLAGS " -Werror=cross-execution-space-call")
@@ -684,8 +683,8 @@ if(UNIX)
   endif()
   if(ENABLE_TESTCOVERAGE)
     find_program(GCOV_PATH gcov REQUIRED)
-    target_compile_options(mxnet_static PUBLIC "--coverage")
-    target_link_libraries(mxnet_static PUBLIC gcov)
+    target_compile_options(mxnet PUBLIC "--coverage")
+    target_link_libraries(mxnet PUBLIC gcov)
   endif()
 elseif(MSVC)
   if(USE_CUDA)
@@ -822,25 +821,18 @@ if(MSVC)
       target_link_libraries(mxnet_${arch} PUBLIC ${mxnet_LINKER_LIBS})
       target_link_libraries(mxnet_${arch} PUBLIC dmlc)
     endforeach()
-  else()
-    target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
-    target_link_libraries(mxnet PUBLIC dmlc)
   endif()
-else()
-  target_link_libraries(mxnet_static PUBLIC ${mxnet_LINKER_LIBS})
-  target_link_libraries(mxnet PUBLIC dmlc)
 endif()
+
+target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
+target_link_libraries(mxnet PUBLIC dmlc)
 
 if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
   add_executable(im2rec "tools/im2rec.cc")
-  if(MSVC)
-    target_link_libraries(im2rec mxnet)
-  else()
-    target_link_libraries(im2rec ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE})
-  endif()
   target_link_libraries(im2rec
     ${mxnet_LINKER_LIBS}
     ${OpenCV_LIBS}
+    mxnet
     dmlc
     )
 else()
@@ -858,7 +850,7 @@ endif()
 #       https://cmake.org/cmake/help/v3.13/variable/CMAKE_INSTALL_PREFIX.html
 #       https://cmake.org/cmake/help/v3.13/module/GNUInstallDirs.html
 include(GNUInstallDirs)
-install(TARGETS ${MXNET_INSTALL_TARGETS}
+install(TARGETS mxnet
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
