@@ -39,13 +39,13 @@ namespace mxnet {
 namespace io {
 
 #ifdef _MSC_VER
-  #if _MSC_VER < 1925 
+  #if _MSC_VER < 1925
     #define omp_parallel __pragma(omp parallel for num_threads(bs))
   #else
-    #define omp_parallel _Pragma("omp parallel for num_threads(bs)") 
+    #define omp_parallel _Pragma("omp parallel for num_threads(bs)")
   #endif
 #else
-  #define omp_parallel _Pragma("omp parallel for num_threads(bs)") 
+  #define omp_parallel _Pragma("omp parallel for num_threads(bs)")
 #endif
 
 struct GroupBatchifyParam : public dmlc::Parameter<GroupBatchifyParam> {
