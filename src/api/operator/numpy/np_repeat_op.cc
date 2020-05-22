@@ -49,5 +49,4 @@ MXNET_REGISTER_API("_npi.repeats")
   *ret = ndoutputs[0];
 });
 
-
 }  // namespace mxnet

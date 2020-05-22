@@ -37,6 +37,10 @@ NNVM_REGISTER_OP(_npi_repeats)
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", RepeatsOpShape)
 .set_attr<nnvm::FInferType>("FInferType", RepeatOpType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 .set_attr<FCompute>("FCompute<cpu>", NumpyRepeatsOpForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_argument("data", "NDArray-or-Symbol", "Input data array")
