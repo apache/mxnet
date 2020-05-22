@@ -372,6 +372,28 @@ class Block(object):
         self._check_container_with_block()
         return self._collect_params_with_prefix(select=select)
 
+    def set_prefix(self):
+        """Set parameters with current prefixs recursively.
+        For example::
+
+            class Model(Block):
+                def __init__(self, **kwargs):
+                    super(Model, self).__init__(**kwargs)
+                    self.dense0 = nn.Dense(20)
+                    self.dense1 = nn.Dense(20)
+            net = Model()
+            net.set_prefix()
+
+        After calling ``net.set_prefix()``,
+        the names of the parameters inside 'net' would be added with the correspongding prefix.
+        Like for self.dense0.weight, it will be named automatically::
+            Parameter dense0.weight (...)
+        which originally was Parameter weight (...)
+        Shared parameters would be added with the prefix where it first occurs.
+        """
+        recorded = set()
+        self._set_prefix(recorded)
+
     def _set_prefix(self, recorded, prefix=''):
         if prefix:
             prefix += '.'
@@ -635,7 +657,7 @@ class Block(object):
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
         """
-        self._set_prefix(set())
+        self.set_prefix()
         params = self.collect_params()
         if verbose:
             init.set_verbosity(verbose=verbose)
@@ -726,9 +748,11 @@ class Block(object):
         """Share parameters recursively inside the model.
 
         For example, if you want ``dense1`` to share ``dense0``'s weights, you can do::
+
             dense0 = nn.Dense(20)
             dense1 = nn.Dense(20)
             dense1.share_parameters(dense0.collect_params())
+
         which equals to
             dense1.weight = dense0.weight
             dense1.bias = dense0.bias
@@ -743,6 +767,7 @@ class Block(object):
         if len(shared_set) > 0:
             for name in shared_set:
                 warnings.warn("Parameter name {} is not in the current model!".format(name))
+        return self
 
     def _shared_parameters(self, shared, shared_set, prefix=""):
         if prefix:
@@ -1046,7 +1071,7 @@ class HybridBlock(Block):
         data_names = {data.name: i for i, data in enumerate(data)}
         params = self.collect_params()
         input_names = out.list_inputs()
-        param_names = set(params.keys())
+        param_names = set([p.name for p in params.values()])
         expected_names = set(input_names)
         for name in expected_names:
             assert name in param_names or name in data_names, \

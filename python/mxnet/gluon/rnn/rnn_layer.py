@@ -123,64 +123,8 @@ class _RNNLayer(HybridBlock):
                         mapping=mapping,
                         **self.__dict__)
 
-    def _collect_params_with_prefix(self, prefix=''):
-        if prefix:
-            prefix += '.'
-        pattern = re.compile(r'(l|r)(\d)_(i2h|h2h|h2r)_(weight|bias)\Z')
-        def convert_key(m, bidirectional): # for compatibility with old parameter format
-            d, l, g, t = [m.group(i) for i in range(1, 5)]
-            if bidirectional:
-                return '_unfused.{}.{}_cell.{}_{}'.format(l, d, g, t)
-            else:
-                return '_unfused.{}.{}_{}'.format(l, g, t)
-        bidirectional = any(pattern.match(k).group(1) == 'r' for k in self._reg_params)
-
-        ret = {prefix + convert_key(pattern.match(key), bidirectional) : val
-               for key, val in self._reg_params.items()}
-        for name, child in self._children.items():
-            ret.update(child._collect_params_with_prefix(prefix + name))
-        return ret
-
     def state_info(self, batch_size=0):
         raise NotImplementedError
-
-    def _unfuse(self):
-        """Unfuses the fused RNN in to a stack of rnn cells."""
-        assert not self._projection_size, "_unfuse does not support projection layer yet!"
-        assert not self._lstm_state_clip_min and not self._lstm_state_clip_max, \
-                "_unfuse does not support state clipping yet!"
-        get_cell = {'rnn_relu': lambda **kwargs: rnn_cell.RNNCell(self._hidden_size,
-                                                                  activation='relu',
-                                                                  **kwargs),
-                    'rnn_tanh': lambda **kwargs: rnn_cell.RNNCell(self._hidden_size,
-                                                                  activation='tanh',
-                                                                  **kwargs),
-                    'lstm': lambda **kwargs: rnn_cell.LSTMCell(self._hidden_size,
-                                                               **kwargs),
-                    'gru': lambda **kwargs: rnn_cell.GRUCell(self._hidden_size,
-                                                             **kwargs)}[self._mode]
-
-        stack = rnn_cell.HybridSequentialRNNCell()
-        ni = self._input_size
-        for i in range(self._num_layers):
-            kwargs = {'input_size': ni,
-                        'i2h_weight_initializer': self._i2h_weight_initializer,
-                        'h2h_weight_initializer': self._h2h_weight_initializer,
-                        'i2h_bias_initializer': self._i2h_bias_initializer,
-                        'h2h_bias_initializer': self._h2h_bias_initializer}
-            if self._dir == 2:
-                stack.add(rnn_cell.BidirectionalCell(
-                    get_cell(**kwargs),
-                    get_cell(**kwargs)))
-            else:
-                stack.add(get_cell(**kwargs))
-
-            if self._dropout > 0 and i != self._num_layers - 1:
-                stack.add(rnn_cell.DropoutCell(self._dropout))
-
-            ni = self._hidden_size * self._dir
-
-        return stack
 
     def cast(self, dtype):
         super(_RNNLayer, self).cast(dtype)
