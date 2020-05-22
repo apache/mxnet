@@ -25,12 +25,16 @@
 
 #include <mutex>
 #include <string>
+#include <fstream>
+#include <unordered_map>
+#include <vector>
 
 #include "rtc.h"
 #include "rtc/half-inl.h"
 #include "rtc/type-inl.h"
 #include "rtc/forward_functions-inl.h"
 #include "rtc/backward_functions-inl.h"
+#include "rtc/vectorization-inl.h"
 #include "utils.h"
 
 
@@ -40,6 +44,23 @@ namespace cuda {
 namespace rtc {
 
 std::mutex lock;
+
+namespace util {
+
+std::string to_string(OpReqType req) {
+  switch (req) {
+    case kNullOp:
+      return "OpReqType::kNullOp";
+    case kWriteTo:
+    case kWriteInplace:
+      return "OpReqType::kWriteTo";
+    case kAddTo:
+      return "OpReqType::kAddTo";
+  }
+  LOG(FATAL) << "Unrecognized req.";
+}
+
+}  // namespace util
 
 namespace {
 
@@ -81,9 +102,9 @@ CUfunction get_function(const std::string &code,
     std::vector<CUfunction> functions;
   };
   // Maps from the cuda source code (minus header) to the ptx and jit-compiled CUfunctions.
-  using KernelCache = std::map<std::string, KernelInfo>;
+  using KernelCache = std::unordered_map<std::string, KernelInfo>;
   // Per-gpu-architecture compiled kernel cache with jit-compiled function for each device context
-  static std::map<int32_t, KernelCache> compiled_kernels;
+  static std::unordered_map<int32_t, KernelCache> compiled_kernels;
   int sm_arch = SMArch(dev_id);
   KernelCache& compiled_kernels_this_arch = compiled_kernels[sm_arch];  // make null map as needed
   KernelInfo& kinfo = compiled_kernels_this_arch[code];                 // make KernelInfo as needed
@@ -92,8 +113,10 @@ CUfunction get_function(const std::string &code,
     static std::string common_header =
         std::string(fp16_support_string) + "\n" +
         type_support_string + "\n" +
+        op_req_type_string + "\n" +
         function_definitions + "\n" +
-        backward_function_definitions + "\n";
+        backward_function_definitions + "\n" +
+        vectorization_support_string + "\n";
     std::string code_with_header = common_header + code;
     // If verbose mode, output kernel source, though not including the common header
     if (dmlc::GetEnv("MXNET_RTC_VERBOSE", false)) {
@@ -101,10 +124,15 @@ CUfunction get_function(const std::string &code,
     }
     if (compiled_kernels_this_arch.size() == CACHESIZE_WARN_THRESHOLD + 1 &&
         dmlc::GetEnv("MXNET_RTC_SIZE_WARNING", true)) {
-      LOG(WARNING) << "The number of different compiled kernels exceeds " << CACHESIZE_WARN_THRESHOLD
+      LOG(WARNING) << "The number of different compiled kernels exceeds "
+                   << CACHESIZE_WARN_THRESHOLD
                    << ".  Set MXNET_RTC_SIZE_WARNING=0 to quiet this warning.";
     }
     nvrtcProgram program;
+    std::ofstream f("debug.log");
+    f << code_with_header;
+    f.close();
+
     NVRTC_CALL(nvrtcCreateProgram(&program,                                  // prog
                                   &code_with_header[0],                      // buffer
                                   (kernel_name + "_kernel.cu").c_str(),      // name
@@ -115,7 +143,7 @@ CUfunction get_function(const std::string &code,
     std::string gpu_arch_arg = "--gpu-architecture=compute_" + std::to_string(sm_arch);
     const char *opts[] = {gpu_arch_arg.c_str(),
                           "--std=c++11"};
-    const std::string kernel_name_demangled = "FusedKernel_" + kernel_name;
+    const std::string kernel_name_demangled = kernel_name;
     NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
 
     nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
@@ -159,14 +187,17 @@ void launch(CUfunction function,
             const dim3 block_dim,
             unsigned int shared_mem_bytes,
             mshadow::Stream<gpu> *stream,
-            std::vector<void*> *args) {
+            std::vector<const void*> *args) {
+  CHECK(args->size() != 0) <<
+    "Empty argument list passed to a kernel.";
   CUDA_DRIVER_CALL(
-      cuLaunchKernel(function,                   // function to launch
-        grid_dim.x, grid_dim.y, grid_dim.z,      // grid dim
-        block_dim.x, block_dim.y, block_dim.z,   // block dim
-        shared_mem_bytes,                        // shared memory
-        mshadow::Stream<gpu>::GetStream(stream), // stream
-        &((*args)[0]), nullptr));                // arguments
+      cuLaunchKernel(function,                    // function to launch
+        grid_dim.x, grid_dim.y, grid_dim.z,       // grid dim
+        block_dim.x, block_dim.y, block_dim.z,    // block dim
+        shared_mem_bytes,                         // shared memory
+        mshadow::Stream<gpu>::GetStream(stream),  // stream
+        const_cast<void**>(args->data()),         // arguments
+        nullptr));
 }
 
 }  // namespace rtc

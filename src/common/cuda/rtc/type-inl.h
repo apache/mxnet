@@ -20,6 +20,8 @@
 #ifndef MXNET_COMMON_CUDA_RTC_TYPE_INL_H_
 #define MXNET_COMMON_CUDA_RTC_TYPE_INL_H_
 
+#include <mxnet/base.h>
+
 #if MXNET_USE_CUDA
 
 namespace mxnet {
@@ -35,8 +37,66 @@ using uint8 = unsigned char;
 using int8 = char;
 using int32 = int;
 using int64 = long long;
-)code";
 
+namespace type_util {
+
+struct false_type {
+  static constexpr bool value = false;
+};
+
+struct true_type {
+  static constexpr bool value = true;
+};
+
+// is_integral
+template <typename T> struct is_integral : false_type {};
+template <> struct is_integral<uint8> : true_type {};
+template <> struct is_integral<int8>  : true_type {};
+template <> struct is_integral<int32> : true_type {};
+template <> struct is_integral<int64> : true_type {};
+template <> struct is_integral<bool>  : true_type {};
+
+// is_same
+template <typename T, typename U>
+struct is_same : false_type {};
+template <typename T> struct is_same<T, T> : true_type {};
+
+// has_double
+template <typename... T> struct has_double : false_type {};
+
+template <typename A, typename... B>
+struct has_double<A, B...> {
+    static constexpr bool value = is_same<A, double>::value ||
+                                  has_double<B...>::value;
+};
+
+// has_double_or_integral
+template <typename... T> struct has_double_or_integral : false_type {};
+
+template <typename A, typename... B>
+struct has_double_or_integral<A, B...> {
+    static constexpr bool value = is_same<A, double>::value ||
+                                  is_integral<A>::value ||
+                                  has_double_or_integral<B...>::value;
+};
+
+
+}  // namespace type_util
+)code"
+#if MSHADOW_INT64_TENSOR_SIZE == 1
+"typedef int64 index_t;\n";
+#else
+"typedef int32 index_t;\n";
+#endif
+
+const char op_req_type_string[] = R"code(
+enum class OpReqType {
+  kNullOp,
+  kWriteTo,
+  kWriteInplace,
+  kAddTo
+};
+)code";
 }  // namespace rtc
 }  // namespace cuda
 }  // namespace common

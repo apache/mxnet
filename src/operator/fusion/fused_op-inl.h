@@ -129,6 +129,7 @@ const std::map<std::string, std::vector<std::vector<std::string>>> ops_desc = {
   {"negative"                          , {{"(-%)", "_0"}}},
   {"_hypot"                            , {{"op::hypot(%, %)", "_0", "_1"}}},
   {"_hypot_scalar"                     , {{"op::hypot(%, float(%))", "_0", "scalar"}}},
+  {"logical_not"                       , {{"op::logical_not(%)", "_0"}}},
   {"_backward_relu"                    , {{"op::backward_relu(%, %)", "_1", "_0"}}},
   {"_backward_sigmoid"                 , {{"op::backward_sigmoid(%, %)", "_1", "_0"}}},
   {"_backward_expm1"                   , {{"op::backward_expm1(%, %)", "_1", "_0"}}},

@@ -567,7 +567,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
 CUfunction FusedOp::CompileCode(const std::string &code,
                                 const std::string &kernel_name,
                                 int dev_id) {
-  return common::cuda::rtc::get_function(code, kernel_name, dev_id);
+  return common::cuda::rtc::get_function(code, "FusedKernel_" + kernel_name, dev_id);
 }
 
 
@@ -672,7 +672,7 @@ void FusedOp::Forward<gpu>(const nnvm::NodeAttrs& attrs,
                <<  ", not expecting switch to device " << dev_id;
 
   Stream<gpu>* s = ctx.get_stream<gpu>();
-  std::vector<void*> args;
+  std::vector<const void*> args;
   size_t N = 0;
   for (const auto& output : outputs) {
     N = std::max(N, output.shape_.Size());

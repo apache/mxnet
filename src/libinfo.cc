@@ -133,7 +133,6 @@ const std::vector<std::string> EnumNames::names = {
   "CUDA",
   "CUDNN",
   "NCCL",
-  "CUDA_RTC",
   "TENSORRT",
   "CPU_SSE",
   "CPU_SSE2",

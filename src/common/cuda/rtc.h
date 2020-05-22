@@ -28,6 +28,7 @@
 #define MXNET_COMMON_CUDA_RTC_H_
 
 #include "mxnet/base.h"
+#include "mxnet/op_attr_types.h"
 
 #if MXNET_USE_CUDA
 
@@ -36,11 +37,18 @@
 
 #include <mutex>
 #include <string>
+#include <vector>
 
 namespace mxnet {
 namespace common {
 namespace cuda {
 namespace rtc {
+
+namespace util {
+
+std::string to_string(OpReqType req);
+
+}
 
 extern std::mutex lock;
 
@@ -53,7 +61,7 @@ void launch(CUfunction function,
             const dim3 block_dim,
             unsigned int shared_mem_bytes,
             mshadow::Stream<gpu> *stream,
-            std::vector<void*> *args);
+            std::vector<const void*> *args);
 
 }  // namespace rtc
 }  // namespace cuda

@@ -45,6 +45,34 @@ __device__ inline float __half2float(const __half h) {
 }
 
 typedef __half half;
+
+template <typename DType>
+struct AccType {
+  using type = DType;
+
+  __device__ static inline type from(const DType& val) {
+    return val;
+  }
+
+  __device__ static inline DType to(type val) {
+    return val;
+  }
+
+};
+
+template<>
+struct AccType<half> {
+  using type = float;
+
+  __device__ static inline type from(const half& val) {
+    return __half2float(val);
+  }
+
+  __device__ static inline half to(type val) {
+    return __float2half(val);
+  }
+};
+
 )code";
 
 }  // namespace rtc

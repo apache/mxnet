@@ -58,7 +58,6 @@ struct FusedOpEntry {
 class FusedOp {
  public:
   static const int NTHREADS = 512;
-  static const int CACHESIZE_WARN_THRESHOLD = 10000;
 
   explicit FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config);
   ~FusedOp() {}

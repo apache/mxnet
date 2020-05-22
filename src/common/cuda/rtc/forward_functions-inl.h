@@ -269,6 +269,11 @@ __device__ inline DType identity(const DType val) {
   return val;
 }
 
+template <typename DType>
+__device__ inline DType negation(const DType val) {
+  return -val;
+}
+
 template <typename DType, typename DType2>
 __device__ inline DType add(const DType a, const DType2 b) {
   return a + b;
@@ -294,30 +299,38 @@ __device__ inline DType rdiv(const DType a, const DType2 b) {
   return b / a;
 }
 
-template <typename DType, typename DType2>
-__device__ inline DType power(const DType a, const DType2 b) {
-  return powf(a, b);
+#define DEFINE_BINARY_MATH_FUNC(name, double_version, float_version) \
+template <typename DType, typename DType2> \
+__device__ inline DType name (const DType a, const DType2 b) { \
+  if (type_util::has_double_or_integral<DType, DType2>::value) { \
+    return double_version ((double)a, (double)b); \
+  } else { \
+    return float_version (a, b); \
+  } \
 }
+
+DEFINE_BINARY_MATH_FUNC(power, ::pow, ::powf)
 
 template <typename DType, typename DType2>
 __device__ inline DType rpow(const DType a, const DType2 b) {
-  return powf(b, a);
+  return power(b, a);
 }
 
 template <typename DType, typename DType2>
 __device__ inline DType max(const DType a, const DType2 b) {
+  if (isnan(a)) return a;
   return a > b ? a : b;
 }
 
 template <typename DType, typename DType2>
 __device__ inline DType min(const DType a, const DType2 b) {
+  if (isnan(a)) return a;
   return a < b ? a : b;
 }
 
-template <typename DType, typename DType2>
-__device__ inline DType hypot(const DType a, const DType2 b) {
-  return hypotf(a, b);
-}
+DEFINE_BINARY_MATH_FUNC(hypot, ::hypot, ::hypotf)
+
+#undef DEFINE_BINARY_MATH_FUNC
 
 template <typename OutType, typename DType>
 __device__ inline typename LoadType<OutType>::Type cast(const DType val) {
@@ -328,55 +341,54 @@ __device__ inline typename LoadType<OutType>::Type cast(const DType val) {
 
 template <typename DType>
 __device__ inline DType relu(const DType val) {
-  return val > 0 ? val : 0;
+  return (isnan(val) || val > 0) ? val : 0;
 }
 
 template <typename DType>
 __device__ inline DType sigmoid(const DType val) {
-  return 1.f/(1 + expf(-val));
+  if (type_util::has_double_or_integral<DType>::value) {
+    return 1./(1 + ::exp(-val));
+  } else {
+    return 1.f/(1 + expf(-val));
+  }
 }
 
 template <typename DType>
 __device__ inline DType softrelu(const DType val) {
-  return logf(1 + expf(val));
+  if (type_util::has_double_or_integral<DType>::value) {
+    return ::log(1 + ::exp(val));
+  } else {
+    return logf(1 + expf(val));
+  }
 }
 
 template <typename DType>
 __device__ inline DType softsign(const DType val) {
-  return val / (1 + fabsf(val));
+  if (type_util::has_double_or_integral<DType>::value) {
+    return val / (1 + fabs(val));
+  } else {
+    return val / (1 + fabsf(val));
+  }
 }
 
 // exp and log
 
-template <typename DType>
-__device__ inline DType exp(const DType val) {
-  return expf(val);
+#define DEFINE_UNARY_MATH_FUNC(name, double_version, float_version) \
+template <typename DType> \
+__device__ inline DType name (const DType a) { \
+  if (type_util::has_double_or_integral<DType>::value) { \
+    return double_version ((double)a); \
+  } else { \
+    return float_version (a); \
+  } \
 }
 
-template <typename DType>
-__device__ inline DType expm1(const DType val) {
-  return expm1f(val);
-}
-
-template <typename DType>
-__device__ inline DType log(const DType val) {
-  return logf(val);
-}
-
-template <typename DType>
-__device__ inline DType log10(const DType val) {
-  return log10f(val);
-}
-
-template <typename DType>
-__device__ inline DType log2(const DType val) {
-  return log2f(val);
-}
-
-template <typename DType>
-__device__ inline DType log1p(const DType val) {
-  return log1pf(val);
-}
+DEFINE_UNARY_MATH_FUNC(exp, ::exp, ::expf)
+DEFINE_UNARY_MATH_FUNC(expm1, ::expm1, ::expm1f)
+DEFINE_UNARY_MATH_FUNC(log, ::log, ::logf)
+DEFINE_UNARY_MATH_FUNC(log10, ::log10, ::log10f)
+DEFINE_UNARY_MATH_FUNC(log2, ::log2, ::log2f)
+DEFINE_UNARY_MATH_FUNC(log1p, ::log1p, ::log1pf)
 
 // trigonometric
 
@@ -384,95 +396,42 @@ constexpr double pi = 3.14159265358979323846;
 
 template <typename DType>
 __device__ inline DType degrees(const DType val) {
-  return (val / pi) * 180;
+  if (type_util::has_double_or_integral<DType>::value) {
+    return (val / pi) * 180;
+  } else {
+    return (val / static_cast<float>(pi)) * 180.f;
+  }
 }
 
 template <typename DType>
 __device__ inline DType radians(const DType val) {
-  return (val / 180.0) * pi;
+  if (type_util::has_double_or_integral<DType>::value) {
+    return (val / 180.0) * pi;
+  } else {
+    return (val / 180.0f) * static_cast<float>(pi);
+  }
 }
 
-template <typename DType>
-__device__ inline DType sin(const DType val) {
-  return sinf(val);
-}
+DEFINE_UNARY_MATH_FUNC(sin, ::sin, ::sinf)
+DEFINE_UNARY_MATH_FUNC(cos, ::cos, ::cosf)
+DEFINE_UNARY_MATH_FUNC(tan, ::tan, ::tanf)
+DEFINE_UNARY_MATH_FUNC(arcsin, ::asin, ::asinf)
+DEFINE_UNARY_MATH_FUNC(arccos, ::acos, ::acosf)
+DEFINE_UNARY_MATH_FUNC(arctan, ::atan, ::atanf)
 
-template <typename DType>
-__device__ inline DType cos(const DType val) {
-  return cosf(val);
-}
-
-template <typename DType>
-__device__ inline DType tan(const DType val) {
-  return tanf(val);
-}
-
-template <typename DType>
-__device__ inline DType arcsin(const DType val) {
-  return asinf(val);
-}
-
-template <typename DType>
-__device__ inline DType arccos(const DType val) {
-  return acosf(val);
-}
-
-template <typename DType>
-__device__ inline DType arctan(const DType val) {
-  return atanf(val);
-}
-
-template <typename DType>
-__device__ inline DType sinh(const DType val) {
-  return sinhf(val);
-}
-
-template <typename DType>
-__device__ inline DType cosh(const DType val) {
-  return coshf(val);
-}
-
-template <typename DType>
-__device__ inline DType tanh(const DType val) {
-  return tanhf(val);
-}
-
-template <typename DType>
-__device__ inline DType arcsinh(const DType val) {
-  return asinhf(val);
-}
-
-template <typename DType>
-__device__ inline DType arccosh(const DType val) {
-  return acoshf(val);
-}
-
-template <typename DType>
-__device__ inline DType arctanh(const DType val) {
-  return atanhf(val);
-}
+DEFINE_UNARY_MATH_FUNC(sinh, ::sinh, ::sinhf)
+DEFINE_UNARY_MATH_FUNC(cosh, ::cosh, ::coshf)
+DEFINE_UNARY_MATH_FUNC(tanh, ::tanh, ::tanhf)
+DEFINE_UNARY_MATH_FUNC(arcsinh, ::asinh, ::asinhf)
+DEFINE_UNARY_MATH_FUNC(arccosh, ::acosh, ::acoshf)
+DEFINE_UNARY_MATH_FUNC(arctanh, ::atanh, ::atanhf)
 
 // sqrt
 
-template <typename DType>
-__device__ inline DType sqrt(const DType val) {
-  return sqrtf(val);
-}
-
-template <typename DType>
-__device__ inline DType rsqrt(const DType val) {
-  return rsqrtf(val);
-}
-
-template <typename DType>
-__device__ inline DType cbrt(const DType val) {
-  return cbrtf(val);
-}
-
-template <typename DType>
-__device__ inline DType rcbrt(const DType val) {
-  return rcbrtf(val);
-}
+DEFINE_UNARY_MATH_FUNC(sqrt, ::sqrt, ::sqrtf)
+DEFINE_UNARY_MATH_FUNC(rsqrt, ::rsqrt, ::rsqrtf)
+DEFINE_UNARY_MATH_FUNC(cbrt, ::cbrt, ::cbrtf)
+DEFINE_UNARY_MATH_FUNC(rcbrt, ::rcbrt, ::rcbrtf)
 
 template <typename DType>
 __device__ inline DType square(const DType val) {
@@ -501,34 +460,64 @@ __device__ inline typename LoadType<DType>::Type one() {
 
 template <typename DType>
 __device__ inline DType round(const DType val) {
-  return roundf(val);
-}
-
-template <typename DType>
-__device__ inline DType rint(const DType val) {
-  return rintf(val);
-}
-
-template <typename DType>
-__device__ inline DType fix(const DType val) {
-    const auto floor = floorf(val);
-    const auto ceil = ceilf(val);
-    return (floor > 0 ? floor : -floor) < (ceil > 0 ? ceil : -ceil) ? floor : ceil;
+  if (type_util::has_double<DType>::value) {
+    return ::round((double)val);
+  } else if (type_util::is_integral<DType>::value) {
+    return val;
+  } else {
+    return ::roundf(val);
+  }
 }
 
 template <typename DType>
 __device__ inline DType floor(const DType val) {
-    return floorf(val);
+  if (type_util::has_double<DType>::value) {
+    return ::floor((double)val);
+  } else if (type_util::is_integral<DType>::value) {
+    return val;
+  } else {
+    return ::floorf(val);
+  }
 }
 
 template <typename DType>
 __device__ inline DType ceil(const DType val) {
-    return ceilf(val);
+  if (type_util::has_double<DType>::value) {
+    return ::ceil((double)val);
+  } else if (type_util::is_integral<DType>::value) {
+    return val;
+  } else {
+    return ::ceilf(val);
+  }
+}
+
+template <typename DType>
+__device__ inline DType rint(const DType val) {
+  if (type_util::has_double<DType>::value) {
+    return ::rint((double)val);
+  } else if (type_util::is_integral<DType>::value) {
+    return val;
+  } else {
+    return ::rintf(val);
+  }
+}
+
+template <typename DType>
+__device__ inline DType fix(const DType val) {
+  const auto f = floor(val);
+  const auto c = ceil(val);
+  return (f > 0 ? f : -f) < (c > 0 ? c : -c) ? f : c;
 }
 
 template <typename DType>
 __device__ inline DType trunc(const DType val) {
-    return truncf(val);
+  if (type_util::has_double<DType>::value) {
+    return ::trunc((double)val);
+  } else if (type_util::is_integral<DType>::value) {
+    return val;
+  } else {
+    return ::truncf(val);
+  }
 }
 
 template <typename DType>
@@ -547,30 +536,11 @@ __device__ inline DType reciprocal(const DType val) {
   return 1.0f / val;
 }
 
-template <typename DType>
-__device__ inline DType abs(const DType val) {
-  return fabsf(val);
-}
-
-template <typename DType>
-__device__ inline DType gamma(const DType val) {
-  return tgammaf(val);
-}
-
-template <typename DType>
-__device__ inline DType gammaln(const DType val) {
-  return lgammaf(val);
-}
-
-template <typename DType>
-__device__ inline DType erf(const DType val) {
-  return erff(val);
-}
-
-template <typename DType>
-__device__ inline DType erfinv(const DType val) {
-  return erfinvf(val);
-}
+DEFINE_UNARY_MATH_FUNC(abs, ::fabs, ::fabsf)
+DEFINE_UNARY_MATH_FUNC(gamma, ::tgamma, ::tgammaf)
+DEFINE_UNARY_MATH_FUNC(gammaln, ::lgamma, ::lgammaf)
+DEFINE_UNARY_MATH_FUNC(erf, ::erf, ::erff)
+DEFINE_UNARY_MATH_FUNC(erfinv, ::erfinv, ::erfinvf)
 
 template <typename DType1, typename DType2>
 __device__ inline DType1 smooth_l1(const DType1 val, const DType2 scalar) {
@@ -584,6 +554,18 @@ __device__ inline DType1 smooth_l1(const DType1 val, const DType2 scalar) {
     return 0.5f * val * val * bsq;
   }
 }
+
+template <typename DType>
+__device__ inline DType logical_not(const DType val) {
+  return val != DType(0) ? DType(0) : DType(1);
+}
+
+template <typename DType>
+__device__ inline bool np_logical_not(const DType val) {
+  return !static_cast<bool>(val);
+}
+
+#undef DEFINE_UNARY_MATH_FUNC
 
 }  // namespace op
 

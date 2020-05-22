@@ -29,6 +29,8 @@
 #include <cuda_runtime.h>
 #include "../operator_common.h"
 #include "../../common/cuda/vectorization.cuh"
+#include "../../common/cuda/rtc/vectorization-inl.h"
+#include "../../common/cuda/rtc.h"
 
 #include <vector>
 
@@ -37,88 +39,123 @@
 namespace mxnet {
 namespace op {
 
-namespace unary {
-
-using common::cuda::VectorizedKernelLauncher;
-using common::cuda::VectorizedLoader;
-using common::cuda::VectorizedStorer;
-
-template <typename DType, int NumInputs, int NumOutputs>
-struct VectorizedKernelParams {
-  const DType* inputs[NumInputs];
-  DType* outputs[NumOutputs];
+struct unary_kernel_params {
+  const void *inputs[1];
+  void *outputs[1];
 };
 
-template <bool aligned, typename DType, typename LType, typename OP, int req>
-__global__ void VectorizedUnaryScalarKernelFwd(const VectorizedKernelParams<DType, 1, 1> params,
-                                               const index_t N) {
-  VectorizedLoader<DType, LType, aligned> loader(params.inputs[0], N);
-  VectorizedStorer<DType, LType, aligned> storer(params.outputs[0], N);
+const char unary_kernel_fwd[] = R"code(
 
-  const index_t M = loader.num_aligned_elements();
+struct unary_kernel_params {
+  const void *inputs[1];
+  void *outputs[1];
+};
+
+__global__ void unary_kernel(const unary_kernel_params params,
+                             const index_t lead_dim,
+                             const index_t other_dim,
+                             const index_t N,
+                             const index_t num_aligned_elements) {
+  using namespace vector;
+  VectorizedLoader<InputType0, nvec, aligned> loader(
+    reinterpret_cast<const InputType0*>(params.inputs[0]), N);
+  VectorizedStorer<OutputType0, nvec, aligned> storer(
+    reinterpret_cast<OutputType0*>(params.outputs[0]), N);
+
+  using IType = AccType<InputType0>;
+  using OType = AccType<OutputType0>;
+
+  const index_t M = num_aligned_elements;
 
   for (index_t tid = blockIdx.x * blockDim.x + threadIdx.x;
        tid < M;
        tid += gridDim.x * blockDim.x) {
     loader.load(tid, N);
-    if (req == kAddTo) {
+    if (req == OpReqType::kAddTo) {
       storer.load(tid, N);
     }
 #pragma unroll
-    for (int i = 0; i < loader.nvec(); ++i) {
-      DType temp = OP::Map(loader.separate()[i]);
+    for (int i = 0; i < nvec; ++i) {
+      const auto input = IType::from(loader.separate()[i]);
+      const auto temp = OP(input);  // enables returning different type
 
-      if (req == kAddTo) {
-        storer.separate()[i] += temp;
+      if (req == OpReqType::kAddTo) {
+        // temp2 may have a wider type than either temp
+        // or OType
+        const auto temp2 = op::add(temp, OType::from(storer.separate()[i]));
+        storer.separate()[i] = OType::to(temp2);
       } else {
-        storer.separate()[i] = temp;
+        storer.separate()[i] = OType::to(temp);
       }
     }
     storer.store(tid, N);
   }
 }
 
-template <typename DType, typename OP, int req>
-class VectorizedUnaryScalarFwd {
- public:
-  using ParamType = VectorizedKernelParams<DType, 1, 1>;
+)code";
 
-  template <bool aligned, typename LType>
-  static void Launch(const index_t blocks, const index_t threads,
-                     cudaStream_t stream,
-                     const ParamType params, const index_t lead_dim,
-                     const index_t /* other_dim */) {
-    VectorizedUnaryScalarKernelFwd<aligned, DType, LType, OP, req>
-      <<<blocks, threads, 0, stream>>>(params, lead_dim);
-  }
-};
+struct UnaryRTCCompute {
 
-}  // namespace unary
+  std::string OP;
 
-template<typename OP>
-void UnaryOp::Compute_(const nnvm::NodeAttrs& attrs,
-                     mshadow::Stream<gpu>* s,
-                     const std::vector<TBlob>& inputs,
-                     const std::vector<OpReqType>& req,
-                     const std::vector<TBlob>& outputs) {
-  using namespace unary;
+void operator()(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
+                const std::vector<TBlob>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& outputs) {
+  using namespace mxnet::common::cuda::rtc;
   if (req[0] == kNullOp) return;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      using LType = uint4;
-      using Kernel = VectorizedUnaryScalarFwd<DType, OP, Req>;
 
-      const index_t size = outputs[0].Size();
-      typename Kernel::ParamType params;
-      params.inputs[0] = inputs[0].dptr<DType>();
-      params.outputs[0] = outputs[0].dptr<DType>();
+  const std::string code = std::string("const OpReqType req = ") +
+                           util::to_string(req[0]) +
+                           ";\n" +
+                           "#define OP op::" +
+                           OP +
+                           "\n" +
+                           unary_kernel_fwd;
+  const int nvec = outputs[0].type_flag_ == mshadow::kFloat64 ? 2 : 4;
 
-      VectorizedKernelLauncher<DType, LType, Kernel>(size, 1, s, params);
-    });
-  });
+  const index_t size = outputs[0].Size();
+  unary_kernel_params params = { {inputs[0].dptr_},
+                                 {outputs[0].dptr_} };
+
+  VectorizedKernelRTCLauncher(code, "unary_kernel", nvec,
+                              size, 1, s, params,
+                              inputs, outputs,
+                              ctx.run_ctx.get_ctx().dev_id);
 }
+
+void operator()(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
+                const std::vector<NDArray>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<NDArray>& outputs) {
+    InitStorageGeometry<1, 1>(attrs, inputs, outputs);
+    CHECK_NE(outputs[0].storage_type(), kDefaultStorage)
+      << "This function works only for sparse types.";
+    CHECK_EQ(inputs[0].storage_type(), outputs[0].storage_type())
+      << "The storage type of both inputs and outputs needs to be the same.";
+    AllocateGeometry(&outputs[0], req[0], &inputs[0]);
+    CopyGeometryBlobs<gpu>(ctx.get_stream<gpu>(), &outputs[0], req[0], inputs[0]);
+    outputs[0].CheckAndAllocData(inputs[0].storage_shape());
+    if (inputs[0].storage_shape().Size()) {
+      std::vector<TBlob> in_blobs, out_blobs;
+      in_blobs.reserve(inputs.size());
+      out_blobs.reserve(outputs.size());
+      for (auto &input : inputs) {
+        in_blobs.emplace_back(input.data());
+      }
+      for (auto &output : outputs) {
+        out_blobs.emplace_back(output.data());
+      }
+      this->operator()(attrs, ctx, in_blobs, req, out_blobs);
+    }
+}
+
+};
 
 }  // namespace op
 }  // namespace mxnet

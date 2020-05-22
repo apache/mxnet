@@ -26,7 +26,9 @@
 #ifndef MXNET_COMMON_CUDA_VECTORIZATION_CUH_
 #define MXNET_COMMON_CUDA_VECTORIZATION_CUH_
 
-#if MXNET_USE_CUDA && __CUDACC__
+#include <mxnet/base.h>
+
+#if MXNET_USE_CUDA
 
 #include <cuda_runtime.h>
 #include "utils.h"
@@ -278,6 +280,6 @@ void VectorizedKernelLauncher(const index_t lead_dim,
 }  // namespace common
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA && __CUDACC__
+#endif  // MXNET_USE_CUDA
 
 #endif  // MXNET_COMMON_CUDA_VECTORIZATION_CUH_
