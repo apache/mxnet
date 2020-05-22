@@ -1017,11 +1017,10 @@ class BidirectionalCell(HybridRecurrentCell):
     r_cell : RecurrentCell
         Cell for backward unrolling
     """
-    def __init__(self, l_cell, r_cell, output_prefix='bi_'):
+    def __init__(self, l_cell, r_cell):
         super(BidirectionalCell, self).__init__()
         self.register_child(l_cell, 'l_cell')
         self.register_child(r_cell, 'r_cell')
-        self._output_prefix = output_prefix
 
     def __call__(self, inputs, states):
         raise NotImplementedError("Bidirectional cannot be stepped. Please use unroll")
@@ -1072,10 +1071,10 @@ class BidirectionalCell(HybridRecurrentCell):
         if merge_outputs:
             reversed_r_outputs = F.stack(*reversed_r_outputs, axis=axis)
             outputs = F.concat(l_outputs, reversed_r_outputs, dim=2,
-                               name='%sout'%self._output_prefix)
+                               name='out')
 
         else:
-            outputs = [F.concat(l_o, r_o, dim=1, name='%st%d'%(self._output_prefix, i))
+            outputs = [F.concat(l_o, r_o, dim=1, name='t%d'%(i))
                        for i, (l_o, r_o) in enumerate(zip(l_outputs, reversed_r_outputs))]
         if valid_length is not None:
             outputs = _mask_sequence_variable_length(F, outputs, length, valid_length, axis,

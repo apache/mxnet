@@ -349,7 +349,7 @@ class _BatchNorm(HybridBlock):
                                allow_deferred_init=True,
                                differentiable=scale)
         self.beta = Parameter('beta', grad_req='write' if center else 'null',
-                              hape=(in_channels,), init=beta_initializer,
+                              shape=(in_channels,), init=beta_initializer,
                               allow_deferred_init=True,
                               differentiable=center)
         self.running_mean = Parameter('running_mean', grad_req='null',

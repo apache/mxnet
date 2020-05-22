@@ -390,9 +390,14 @@ class Block(object):
             Parameter dense0.weight (...)
         which originally was Parameter weight (...)
         Shared parameters would be added with the prefix where it first occurs.
+
+        Returns
+        -------
+        this block
         """
         recorded = set()
         self._set_prefix(recorded)
+        return self
 
     def _set_prefix(self, recorded, prefix=''):
         if prefix:
@@ -761,6 +766,10 @@ class Block(object):
         ----------
         shared : Dict
             Dict of the shared parameters.
+
+        Returns
+        -------
+        this block            
         """
         shared_set = set(shared.keys())
         self._shared_parameters(shared, shared_set)
