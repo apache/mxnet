@@ -1247,6 +1247,71 @@ def test_unix_distributed_kvstore_gpu(lib_name) {
     }]
 }
 
+def test_unix_estimator(lib_name) {
+  return ['estimator tests': {
+    node(NODE_LINUX_GPU_G4) {
+      ws('workspace/estimator-test-gpu') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          utils.unpack_and_init(lib_name, mx_lib)
+          utils.docker_run('ubuntu_build_cuda', 'test_estimator', true)
+        }
+      }
+    }
+  }]
+}
+
+def test_unix_image_classification(lib_name) {
+  return ['estimator tests': {
+    node(NODE_LINUX_GPU_G4) {
+      ws('workspace/ImageClassificationTest') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          utils.unpack_and_init(lib_name, mx_lib)
+          utils.docker_run('ubuntu_build_cuda', 'test_image_classification', true)
+        }
+      }
+    }
+  }]
+}
+
+def test_unix_imagenet_inference(lib_name) {
+  return ['estimator tests': {
+    node(NODE_LINUX_GPU_G4) {
+      ws('workspace/ImageInferenceTest') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          utils.unpack_and_init(lib_name, mx_lib)
+          utils.docker_run('ubuntu_build_cuda', 'test_imagenet_inference', true)
+        }
+      }
+    }
+  }]
+}
+
+def test_unix_kvstore_singlenode(lib_name) {
+  return ['estimator tests': {
+    node(NODE_LINUX_GPU_G4) {
+      ws('workspace/KVStoreTest') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          utils.unpack_and_init(lib_name, mx_lib)
+          utils.docker_run('ubuntu_build_cuda', 'test_KVStore_singleNode', true)
+        }
+      }
+    }
+  }]
+}
+
+def test_unix_large_tensor(lib_name) {
+  return ['estimator tests': {
+    node(NODE_LINUX_GPU_G4) {
+      ws('workspace/large_tensor-cpu') {
+        timeout(time: max_time, unit: 'MINUTES') {
+          utils.unpack_and_init(lib_name, mx_lib)
+          utils.docker_run('ubuntu_build_cuda', 'test_large_tensor', true)
+        }
+      }
+    }
+  }]
+}
+
 def test_centos7_python3_cpu(lib_name) {
     return ['Python3: CentOS 7 CPU': {
       node(NODE_LINUX_CPU) {

@@ -17,6 +17,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -ex
 
 if [ -f $(which nvidia-smi) ]; then
     if [ $# -eq 1 ]; then

@@ -41,11 +41,6 @@ If the test runs on the MXNet source, modify tests/nightly/Jenkinsfile -
 1. Add a function to ci/docker/runtimefunctions.sh which calls your test script. 
 2. In the Jenkinsfile, add a new test similar to existing tests under the `NightlyTests` stage. Make sure to call the right runtime function
 
-If the test runs on MXNet binaries modify tests/nightly/JenkinsfileForBinaries -
-1. Add a function to ci/docker/runtimefunctions.sh which calls your test script. 
-2. In the Jenkinsfile, if needed, add a new build similar to existing tests under the `Build` stage. 
-3. Add a new test similar to existing tests under the `NightlyTests` stage. Make sure to call the right runtime function
-
 ### Currently Running Tests
 
 #### Tests on Source
