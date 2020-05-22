@@ -1275,7 +1275,8 @@ class HybridBlock(Block):
             if name in arg_names:
                 arg_dict['arg:%s'%name] = param._reduce()
             else:
-                if name.endswith('running_mean') or name.endswith('running_var'):
+                if name.endswith('running_mean') or name.endswith('running_var') \
+                    or name.endswith('moving_mean') or name.endswith('moving_var'):
                     assert name in aux_names
                     arg_dict['aux:%s'%name] = param._reduce()
                 else:
