@@ -105,6 +105,7 @@ def test_amp_coverage(amp_tests):
                          safest option""")
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_amp_conversion(amp_tests):
     def check_amp_convert_symbol():
         x = mx.sym.var("x")
