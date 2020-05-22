@@ -23,7 +23,7 @@ from mxnet.base import MXNetError
 import numpy as np
 import os
 import gzip
-import pickle as pickle
+import pickle
 import time
 try:
     import h5py
@@ -32,10 +32,7 @@ except ImportError:
 import sys
 from common import assertRaises
 import pytest
-try:
-    from itertools import izip_longest as zip_longest
-except:
-    from itertools import zip_longest
+from itertools import zip_longest
 
 
 def test_MNISTIter(tmpdir):
@@ -426,6 +423,7 @@ def test_DataBatch():
         r'DataBatch: data shapes: \[\(2L?, 3L?\), \(7L?, 8L?\)\] label shapes: \[\(4L?, 5L?\)\]', str(batch))
 
 
+@pytest.mark.skip(reason="https://github.com/apache/incubator-mxnet/issues/18382")
 def test_CSVIter():
     def check_CSVIter_synthetic(dtype='float32'):
         cwd = os.getcwd()
