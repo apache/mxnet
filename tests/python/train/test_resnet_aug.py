@@ -15,15 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: skip-file
-import sys
-sys.path.insert(0, '../../python')
 import mxnet as mx
 import numpy as np
 import os, pickle, gzip
 import logging
 from mxnet.test_utils import get_cifar10
 
+import pytest
+
+
+@pytest.mark.garbage_expected
 def test_cifar10(tmpdir):
     batch_size = 128
 
