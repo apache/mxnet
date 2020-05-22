@@ -212,6 +212,7 @@ def test_save_load(ctx, get_updater, tmpdir):
 
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_bucketing_save_load(tmpdir):
     previous_update_on_kvstore = os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")
     os.putenv('MXNET_UPDATE_ON_KVSTORE', '1')
@@ -462,6 +463,7 @@ def test_module_set_params():
 
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_monitor():
     # data iter
     data = mx.nd.array([[0.05, .10]]);

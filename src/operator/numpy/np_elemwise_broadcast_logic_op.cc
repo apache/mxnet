@@ -223,7 +223,8 @@ struct TVMBinaryBroadcastScalarCompute {
 
     // scalar param
     type_codes[1] = kDLFloat;
-    values[1].v_float64 = nnvm::get<double>(attrs.parsed);
+    const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
+    values[1].v_float64 = param.scalar;
 
     // output tensor
     type_codes[2] = kTVMDLTensorHandle;
@@ -242,9 +243,7 @@ struct TVMBinaryBroadcastScalarCompute {
   NNVM_REGISTER_OP(_npi_##name##_scalar)                                                    \
   .set_num_inputs(1)                                                                        \
   .set_num_outputs(1)                                                                       \
-  .set_attr_parser([](NodeAttrs* attrs) {                                                   \
-    attrs->parsed = std::stod(attrs->dict["scalar"]);                                       \
-  })                                                                                        \
+  .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)                                     \
   .set_attr<nnvm::FListInputNames>("FListInputNames",                                       \
   [](const NodeAttrs& attrs) {                                                              \
     return std::vector<std::string>{"data"};                                                \
@@ -257,7 +256,7 @@ struct TVMBinaryBroadcastScalarCompute {
   })                                                                                        \
   .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)                                \
   .add_argument("data", "NDArray-or-Symbol", "First input to the function")                 \
-  .add_argument("scalar", "float", "scalar input")
+  .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(not_equal);
@@ -317,9 +316,12 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(logical_xor);
 
 #else
 
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(name)                               \
-  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                       \
-  .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeLogic<cpu, mshadow_op::np_##name>)
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(name)                                  \
+  NNVM_REGISTER_OP(_npi_##name##_scalar)                                                          \
+  .set_attr<FCompute>("FCompute<cpu>", BinaryScalarOp::ComputeLogic<cpu, mshadow_op::np_##name>)  \
+  .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {                        \
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};                             \
+  })
 
 #endif  // MXNET_USE_TVM_OP
 

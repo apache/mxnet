@@ -1040,11 +1040,11 @@ def test_block_attr_param():
 def test_block_attr_regular():
     b = gluon.Block()
 
-    # set block attribute also sets _children
+    # set block attribute also sets a weakref in _children
     b.c = gluon.Block()
     c2 = gluon.Block()
     b.c = c2
-    assert b.c is c2 and list(b._children.values())[0] is c2
+    assert b.c is c2 and list(b._children.values())[0]() is c2
 
 
 @with_seed()
@@ -1420,18 +1420,21 @@ def test_activations():
     prelu_multichannel.initialize()
     assert_almost_equal(prelu_multichannel(x).asnumpy(), np.array([[-0.01, 0.1], [-0.025, 0.1], [-0.05, 0.1]]))
 
-    gelu = mx.gluon.nn.GELU()
-    def gelu_test(x):
-        CUBE_CONSTANT = 0.044715
-        ROOT_TWO_OVER_PI = 0.7978845608028654
-        def g(x):
-            return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * x * x * x)
-        def f(x):
-            return 1.0 + mx.nd.tanh(g(x))
-        def gelu(x):
-            return 0.5 * x * f(x)
-        for test_point, ref_point in zip(gelu_test(point_to_validate), gelu(point_to_validate)):
-            assert test_point == ref_point
+    # https://github.com/apache/incubator-mxnet/issues/18381
+    # gelu = mx.gluon.nn.GELU()
+    # def gelu_test(x):
+    #     CUBE_CONSTANT = 0.044715
+    #     ROOT_TWO_OVER_PI = 0.7978845608028654
+    #     def g(x):
+    #         return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * x * x * x)
+    #     def f(x):
+    #         return 1.0 + mx.nd.tanh(g(x))
+    #     def gelu(x):
+    #         return 0.5 * x * f(x)
+    #     return [gelu(x_i) for x_i in x]
+
+    # for test_point, ref_point in zip(gelu_test(point_to_validate), gelu(point_to_validate)):
+    #     assert test_point == ref_point
 
 
 @with_seed()
@@ -3230,5 +3233,9 @@ def test_reqs_switching_training_inference():
 
 @pytest.mark.usefixtures("check_leak_ndarray")
 def test_no_memory_leak_in_gluon():
-    net = mx.gluon.nn.Dense(10, in_units=10)
+    class MyNet(mx.gluon.Block):
+        def __init__(self):
+            super().__init__()
+            self.net = mx.gluon.nn.Dense(10, in_units=10)
+    net = MyNet()
     net.initialize()

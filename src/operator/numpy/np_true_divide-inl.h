@@ -47,7 +47,8 @@ void TrueDivideScalarCompute(const nnvm::NodeAttrs &attrs,
   using namespace mxnet_op;
   using namespace mshadow::expr;
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  const double alpha = nnvm::get<double>(attrs.parsed);
+  const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
+  const double alpha = param.scalar;
   const TBlob& data = inputs[0];
   const TBlob& out = outputs[0];
   if (out.type_flag_ == data.type_flag_) {

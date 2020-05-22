@@ -225,6 +225,7 @@ def test_image_list_dataset_handle(prepare_record):
         assert label == 0
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_list_dataset():
     for num_worker in range(0, 3):
         data = mx.gluon.data.DataLoader([([1,2], 0), ([3, 4], 1)], batch_size=1, num_workers=num_worker)
@@ -239,6 +240,7 @@ class _Dataset(gluon.data.Dataset):
         return mx.nd.full((10,), key)
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_multi_worker():
     data = _Dataset()
     for thread_pool in [True, False]:
@@ -502,6 +504,7 @@ def test_dataset_take_handle():
         total += sample
     assert total == expected_total
 
+@pytest.mark.garbage_expected
 def test_dataloader_scope():
     """
     Bug: Gluon DataLoader terminates the process pool early while
