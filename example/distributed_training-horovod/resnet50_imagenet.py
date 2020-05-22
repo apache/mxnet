@@ -286,8 +286,8 @@ def train_gluon():
             return
 
         val_data.reset()
-        acc_top1 = mx.metric.Accuracy()
-        acc_top5 = mx.metric.TopKAccuracy(5)
+        acc_top1 = mx.gluon.metric.Accuracy()
+        acc_top5 = mx.gluon.metric.TopKAccuracy(5)
         for _, batch in enumerate(val_data):
             data, label = batch_fn(batch, context)
             output = net(data.astype(args.dtype, copy=False))
@@ -321,7 +321,7 @@ def train_gluon():
 
     # Create loss function and train metric
     loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
-    metric = mx.metric.Accuracy()
+    metric = mx.gluon.metric.Accuracy()
 
     # Train model
     for epoch in range(args.num_epochs):
@@ -450,8 +450,8 @@ def train_module():
 
     # Evaluate performance if not using synthetic data
     if args.use_rec:
-        acc_top1 = mx.metric.Accuracy()
-        acc_top5 = mx.metric.TopKAccuracy(5)
+        acc_top1 = mx.gluon.metric.Accuracy()
+        acc_top5 = mx.gluon.metric.TopKAccuracy(5)
         res = mod.score(val_data, [acc_top1, acc_top5])
         for name, val in res:
             logging.info('Epoch[%d] Rank[%d] Validation-%s=%f',

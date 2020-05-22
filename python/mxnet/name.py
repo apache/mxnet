@@ -30,7 +30,8 @@ class NameManager(with_metaclass(_MXClassPropertyMetaClass, object)):
 
     def __init__(self):
         self._counter = {}
-        self._old_manager = None
+        self._local = threading.local()
+        self._local._old_manager = None
 
     def get(self, name, hint):
         """Get the canonical name for a symbol.
@@ -66,13 +67,13 @@ class NameManager(with_metaclass(_MXClassPropertyMetaClass, object)):
     def __enter__(self):
         if not hasattr(NameManager._current, "value"):
             NameManager._current.value = NameManager()
-        self._old_manager = NameManager._current.value
+        self._local._old_manager = NameManager._current.value
         NameManager._current.value = self
         return self
 
     def __exit__(self, ptype, value, trace):
-        assert self._old_manager
-        NameManager._current.value = self._old_manager
+        assert self._local._old_manager
+        NameManager._current.value = self._local._old_manager
 
     #pylint: disable=no-self-argument
     @classproperty

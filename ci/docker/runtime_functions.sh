@@ -723,7 +723,6 @@ build_ubuntu_gpu_mkldnn() {
     CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CPP_PACKAGE=ON \
@@ -737,7 +736,6 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
     CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=OFF \
@@ -752,7 +750,23 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_TVM_OP=ON \
+        -DUSE_CUDA=ON \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DUSE_CUDNN=ON \
+        -DUSE_MKLDNN=OFF \
+        -DUSE_CPP_PACKAGE=ON \
+        -DUSE_DIST_KVSTORE=ON \
+        -DBUILD_CYTHON_MODULES=ON \
+        -G Ninja /work/mxnet
+    ninja
+}
+
+build_ubuntu_gpu_cuda101_cudnn7_debug() {
+    set -ex
+    cd /work/build
+    CC=gcc-7 CXX=g++-7 cmake \
+        -DCMAKE_BUILD_TYPE=Debug \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=ON \
@@ -775,7 +789,6 @@ build_ubuntu_gpu_cuda101_cudnn7_make() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
-        USE_TVM_OP=1                              \
         USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
@@ -795,7 +808,6 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
-        USE_TVM_OP=0                              \
         USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
@@ -803,23 +815,6 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
         -j$(nproc)
     make test USE_CPP_PACKAGE=1 -j$(nproc)
     make cython PYTHON=python3
-}
-
-build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
-    set -ex
-    cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
-        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-        -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DUSE_TVM_OP=OFF \
-        -DUSE_CUDA=ON \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DUSE_CUDNN=ON \
-        -DUSE_MKLDNN=OFF \
-        -DBUILD_CYTHON_MODULES=ON \
-        -DUSE_DIST_KVSTORE=ON \
-        -G Ninja /work/mxnet
-    ninja
 }
 
 build_ubuntu_amalgamation() {
@@ -852,7 +847,6 @@ build_ubuntu_gpu_cmake() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=ON                         \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=OFF                        \
@@ -873,7 +867,6 @@ build_ubuntu_gpu_cmake_no_rtc() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=ON                         \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=ON                         \
@@ -882,27 +875,6 @@ build_ubuntu_gpu_cmake_no_rtc() {
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DBUILD_CYTHON_MODULES=1                \
         -DENABLE_CUDA_RTC=OFF                   \
-        -G Ninja                                \
-        /work/mxnet
-
-    ninja
-}
-
-build_ubuntu_gpu_cmake_no_tvm_op() {
-    set -ex
-    cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
-        -DUSE_SIGNAL_HANDLER=ON                 \
-        -DUSE_CUDA=ON                           \
-        -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=OFF                        \
-        -DUSE_MKL_IF_AVAILABLE=OFF              \
-        -DUSE_MKLML_MKL=OFF                     \
-        -DUSE_MKLDNN=OFF                        \
-        -DUSE_DIST_KVSTORE=ON                   \
-        -DCMAKE_BUILD_TYPE=Release              \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DBUILD_CYTHON_MODULES=1                \
         -G Ninja                                \
         /work/mxnet
 
@@ -931,7 +903,6 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=ON                         \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
         -DUSE_MKLDNN=OFF                        \
@@ -957,7 +928,7 @@ sanity_check() {
     make cpplint jnilint
     make -f R-package/Makefile rcpplint
     make pylint
-    pytest tests/tutorials/test_sanity_tutorials.py
+    pytest -n 4 tests/tutorials/test_sanity_tutorials.py
 }
 
 # Tests libmxnet
@@ -976,8 +947,11 @@ cd_unittest_ubuntu() {
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
 
-    pytest --durations=50 --verbose tests/python/unittest
-    pytest --durations=50 --verbose tests/python/quantization
+    pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/unittest
+    MXNET_ENGINE_TYPE=NaiveEngine \
+        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --verbose tests/python/unittest
+    pytest -m 'serial' --durations=50 --verbose tests/python/unittest
+    pytest -n 4 --durations=50 --verbose tests/python/quantization
 
     # https://github.com/apache/incubator-mxnet/issues/11801
     # if [[ ${mxnet_variant} = "cpu" ]] || [[ ${mxnet_variant} = "mkl" ]]; then
@@ -985,19 +959,42 @@ cd_unittest_ubuntu() {
     # fi
 
     if [[ ${mxnet_variant} = cu* ]]; then
-        pytest --durations=50 --verbose tests/python/gpu
+        MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+        MXNET_ENGINE_TYPE=NaiveEngine \
+            pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --verbose tests/python/gpu
+        MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+            pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/gpu
+        pytest -m 'serial' --durations=50 --verbose tests/python/gpu
 
         # Adding these here as CI doesn't test all CUDA environments
-        pytest example/image-classification/test_score.py
-        integrationtest_ubuntu_gpu_dist_kvstore
+        MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+            pytest -n 4 example/image-classification/test_score.py
+        # TODO(szha): fix and reenable the hanging issue. tracked in #18098
+        # integrationtest_ubuntu_gpu_dist_kvstore
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then
-        pytest --durations=50 --verbose tests/python/mkl
+        pytest -n 4 --durations=50 --verbose tests/python/mkl
     fi
 }
 
 unittest_ubuntu_python3_cpu() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    MXNET_ENGINE_TYPE=NaiveEngine \
+        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
+    pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
+    pytest -n 4 --durations=50 --cov-report xml:tests_quantization.xml --verbose tests/python/quantization
+}
+
+unittest_ubuntu_python3_cpu_serial() {
+    # TODO(szha): delete this and switch to unittest_ubuntu_python3_cpu once #18244 is fixed
     set -ex
     export PYTHONPATH=./python/
     export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
@@ -1017,6 +1014,7 @@ unittest_ubuntu_python3_cpu_mkldnn() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
+    # TODO(szha): enable parallel testing and naive engine for ops once #18244 is fixed
     pytest --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
     pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
 }
@@ -1030,7 +1028,12 @@ unittest_ubuntu_python3_gpu() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+        pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+    MXNET_ENGINE_TYPE=NaiveEngine \
+        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
+    pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
 unittest_ubuntu_python3_gpu_cython() {
@@ -1044,7 +1047,12 @@ unittest_ubuntu_python3_gpu_cython() {
     export MXNET_ENFORCE_CYTHON=1
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     check_cython
-    pytest --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+        pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+    MXNET_ENGINE_TYPE=NaiveEngine \
+        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
+    pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
 unittest_ubuntu_python3_gpu_nocudnn() {
@@ -1055,7 +1063,12 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     export CUDNN_OFF_TEST_ONLY=true
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+        pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+    MXNET_ENGINE_TYPE=NaiveEngine \
+        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
+    pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
 unittest_ubuntu_tensorrt_gpu() {
@@ -1068,7 +1081,9 @@ unittest_ubuntu_tensorrt_gpu() {
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     python3 tests/python/tensorrt/lenet5_train.py
-    pytest --durations=50 --cov-report xml:tests_trt_gpu.xml --verbose --capture=no tests/python/tensorrt/
+    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+        pytest -n 4 --durations=50 --cov-report xml:tests_trt_gpu.xml --verbose --capture=no tests/python/tensorrt/test_ops.py
+    pytest -k 'not test_ops' --durations=50 --cov-report xml:tests_trt_gpu.xml --cov-append --verbose --capture=no tests/python/tensorrt/
 }
 
 # quantization gpu currently only runs on P3 instances
@@ -1085,7 +1100,8 @@ unittest_ubuntu_python3_quantization_gpu() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest --durations=50 --cov-report xml:tests_quantization_gpu.xml --verbose tests/python/quantization_gpu
+    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+        pytest -n 4 --durations=50 --cov-report xml:tests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
 unittest_centos7_cpu_scala() {
@@ -1227,8 +1243,11 @@ unittest_centos7_cpu() {
     set -ex
     source /opt/rh/rh-python36/enable
     cd /work/mxnet
-    python -m pytest --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
-    python -m pytest --durations=50 --cov-report xml:tests_train.xml --verbose tests/python/train
+    python -m pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    MXNET_ENGINE_TYPE=NaiveEngine \
+        python -m pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
+    python -m pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
+    python -m pytest -n 4 --durations=50 --cov-report xml:tests_train.xml --verbose tests/python/train
 }
 
 unittest_centos7_gpu() {
@@ -1237,7 +1256,12 @@ unittest_centos7_gpu() {
     cd /work/mxnet
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python3 -m pytest --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+        pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
+    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
+    MXNET_ENGINE_TYPE=NaiveEngine \
+        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
+    pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
 integrationtest_ubuntu_cpu_onnx() {
@@ -1245,9 +1269,9 @@ integrationtest_ubuntu_cpu_onnx() {
 	export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=10
 	python3 tests/python/unittest/onnx/backend_test.py
-	pytest tests/python/unittest/onnx/mxnet_export_test.py
-	pytest tests/python/unittest/onnx/test_models.py
-	pytest tests/python/unittest/onnx/test_node.py
+	pytest -n 4 tests/python/unittest/onnx/mxnet_export_test.py
+	pytest -n 4 tests/python/unittest/onnx/test_models.py
+	pytest -n 4 tests/python/unittest/onnx/test_node.py
 }
 
 integrationtest_ubuntu_gpu_python() {
@@ -1353,7 +1377,10 @@ test_ubuntu_cpu_python3() {
     cd /work/mxnet/python
     pip3 install -e .
     cd /work/mxnet
-    python3 -m pytest $TEST_TIMER_ARGUMENTS --verbose tests/python/unittest
+    python3 -m pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/unittest
+    MXNET_ENGINE_TYPE=NaiveEngine \
+        python3 -m pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --verbose tests/python/unittest
+    python3 -m pytest -m 'serial' --durations=50 --verbose tests/python/unittest
 
     popd
 }
@@ -1367,7 +1394,7 @@ unittest_ubuntu_python3_arm() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python3 -m pytest --verbose tests/python/unittest/test_engine.py
+    python3 -m pytest -n 2 --verbose tests/python/unittest/test_engine.py
 }
 
 # Functions that run the nightly Tests:
@@ -1429,16 +1456,6 @@ nightly_test_large_tensor() {
     pytest tests/nightly/test_large_array.py::test_tensor
     pytest tests/nightly/test_large_array.py::test_nn
     pytest tests/nightly/test_large_array.py::test_basic
-}
-
-#Test Large Vectors
-nightly_test_large_vector() {
-    set -ex
-    export PYTHONPATH=./python/
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest tests/nightly/test_large_vector.py::test_tensor
-    pytest tests/nightly/test_large_vector.py::test_nn
-    pytest tests/nightly/test_large_vector.py::test_basic
 }
 
 #Test Large Vectors
@@ -1698,7 +1715,7 @@ build_scala_docs() {
 
     pushd $scala_path
 
-    scala_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer" | egrep -v "/javaapi"  | egrep -v "Suite" | egrep -v "/mxnetexamples"`
+    scala_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer" | egrep -v "/javaapi"  | egrep -v "Suite" | egrep -v "CancelTestUtil" | egrep -v "/mxnetexamples"`
     jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
     jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
     jar_core=`find core -name "*.jar" | tr "\\n" ":" `
@@ -1773,7 +1790,7 @@ build_java_docs() {
 
     pushd $java_path
 
-    java_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer"  | egrep "/javaapi"  | egrep -v "Suite" | egrep -v "/mxnetexamples"`
+    java_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer"  | egrep "/javaapi"  | egrep -v "Suite" | egrep -v "CancelTestUtil" | egrep -v "/mxnetexamples"`
     jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
     jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
     jar_core=`find core -name "*.jar" | tr "\\n" ":" `
@@ -1885,6 +1902,7 @@ build_static_libmxnet() {
     source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
     export USE_SYSTEM_CUDA=1
+    export CMAKE_STATICBUILD=1
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
@@ -2034,12 +2052,12 @@ broken_link_checker() {
     ./tests/nightly/broken_link_checker_test/broken_link_checker.sh
 }
 
-# artifact repository unit tets
+# artifact repository unit tests
 test_artifact_repository() {
     set -ex
     pushd .
     cd cd/utils/
-    pytest test_artifact_repository.py
+    pytest -n 4 test_artifact_repository.py
     popd
 }
 

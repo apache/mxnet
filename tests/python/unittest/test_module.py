@@ -27,6 +27,7 @@ from collections import namedtuple
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, "../train"))
 from test_bucketing import train_model, prepare_bucketing_data
+import pytest
 
 
 @with_seed()
@@ -177,7 +178,11 @@ def test_module_layout():
 
 
 @with_seed()
-def test_save_load():
+@pytest.mark.parametrize('ctx,get_updater', [
+    (mx.cpu(), lambda m: m._updater),
+    ([mx.cpu(0), mx.cpu(1)], lambda m: m._kvstore._updater)
+])
+def test_save_load(ctx, get_updater, tmpdir):
     previous_update_on_kvstore = os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")
     os.putenv('MXNET_UPDATE_ON_KVSTORE', '1')
     def dict_equ(a, b):
@@ -188,40 +193,26 @@ def test_save_load():
     sym = mx.sym.Variable('data')
     sym = mx.sym.FullyConnected(sym, num_hidden=100)
 
-    # single device
-    mod = mx.mod.Module(sym, ('data',))
+    path = str(tmpdir.join('test'))
+    mod = mx.mod.Module(sym, ('data',), context=ctx)
     mod.bind(data_shapes=[('data', (10, 10))])
     mod.init_params()
     mod.init_optimizer(optimizer_params={'learning_rate':0.1, 'momentum':0.9})
     mod.update()
-    mod.save_checkpoint('test', 0, save_optimizer_states=True)
+    mod.save_checkpoint(path, 0, save_optimizer_states=True)
 
-    mod2 = mx.mod.Module.load('test', 0, load_optimizer_states=True, data_names=('data',))
+    mod2 = mx.mod.Module.load(path, 0, load_optimizer_states=True, data_names=('data',))
     mod2.bind(data_shapes=[('data', (10, 10))])
     mod2.init_optimizer(optimizer_params={'learning_rate':0.1, 'momentum':0.9})
     assert mod._symbol.tojson() == mod2._symbol.tojson()
     dict_equ(mod.get_params()[0], mod2.get_params()[0])
-    dict_equ(mod._updater.states, mod2._updater.states)
+    dict_equ(get_updater(mod).states, mod2._updater.states)
 
-    # multi device
-    mod = mx.mod.Module(sym, ('data',), context=[mx.cpu(0), mx.cpu(1)])
-    mod.bind(data_shapes=[('data', (10, 10))])
-    mod.init_params()
-    mod.init_optimizer(optimizer_params={'learning_rate':0.1, 'momentum':0.9})
-    mod.update()
-    mod.save_checkpoint('test', 0, save_optimizer_states=True)
-
-    mod2 = mx.mod.Module.load('test', 0, load_optimizer_states=True, data_names=('data',))
-    mod2.bind(data_shapes=[('data', (10, 10))])
-    mod2.init_optimizer(optimizer_params={'learning_rate':0.1, 'momentum':0.9})
-    assert mod._symbol.tojson() == mod2._symbol.tojson()
-    dict_equ(mod.get_params()[0], mod2.get_params()[0])
-    dict_equ(mod._kvstore._updater.states, mod2._updater.states)
     os.putenv('MXNET_UPDATE_ON_KVSTORE', previous_update_on_kvstore)
 
 
 @with_seed()
-def test_bucketing_save_load():
+def test_bucketing_save_load(tmpdir):
     previous_update_on_kvstore = os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")
     os.putenv('MXNET_UPDATE_ON_KVSTORE', '1')
     def dict_equ(a, b):
@@ -260,10 +251,12 @@ def test_bucketing_save_load():
 
         return loss, ('data',), ('softmax_label',)
 
+    path = str(tmpdir.join('test'))
+
     model = train_model(context=mx.current_context())
-    model.save_checkpoint("test", 0)
+    model.save_checkpoint(path, 0)
     data_train, data_val = prepare_bucketing_data(buckets, len_vocab, batch_size, invalid_label, num_sentence)
-    mod2 = mx.mod.BucketingModule.load('test', 0, sym_gen=sym_gen,
+    mod2 = mx.mod.BucketingModule.load(path, 0, sym_gen=sym_gen,
                                        default_bucket_key=data_train.default_bucket_key)
 
     mod2.bind(data_shapes=data_train.provide_data,
@@ -275,7 +268,7 @@ def test_bucketing_save_load():
     mod2.fit(
         train_data=data_train,
         eval_data=data_val,
-        eval_metric=mx.metric.Perplexity(invalid_label), # Use Perplexity for multiclass classification.
+        eval_metric=mx.gluon.metric.Perplexity(invalid_label), # Use Perplexity for multiclass classification.
         kvstore='device',
         optimizer='sgd',
         optimizer_params={'learning_rate': 0.01,
@@ -711,7 +704,7 @@ def test_factorization_machine_module():
         expected_accuracy = 0.02
 
 	# use accuracy as the metric
-        metric = mx.metric.create('MSE')
+        metric = mx.gluon.metric.create('MSE')
         # train 'num_epochs' epoch
         for epoch in range(num_epochs):
             train_iter.reset()

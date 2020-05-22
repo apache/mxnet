@@ -40,4 +40,4 @@ REPOSITORY TAG IMAGE ID CREATED SIZE
 mxnet/python 1.3.0_cpu_mkl deaf9bf61d29 4 days ago 678 MB
 {% endhighlight %}
 
-**Step 4** <a href="get_started/validate_mxnet">Validate the installation</a>.
+**Step 4** <a href="/get_started/validate_mxnet.html">Validate the installation</a>.

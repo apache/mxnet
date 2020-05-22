@@ -22,7 +22,7 @@ import sys
 import os
 import numpy as np
 import mxnet as mx
-import unittest
+import pytest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
 from mxnet.module import Module
 from mxnet import gluon
@@ -446,7 +446,7 @@ def test_convolution():
 
 
 @with_seed()
-@unittest.skip("Flaky test https://github.com/apache/incubator-mxnet/issues/12579")
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/12579")
 def test_Deconvolution():
     def check_Deconvolution_training(stype):
         for shape in [(3, 3, 10), (3, 3, 10, 10)]:

@@ -40,7 +40,7 @@ def test_svrg_intermediate_level_api(args):
     mod.init_params(initializer=mx.init.Uniform(0.01), allow_missing=False, force_init=False, allow_extra=False)
     kv = mx.kv.create("local")
     mod.init_optimizer(kvstore=kv, optimizer='sgd', optimizer_params=(('learning_rate', 0.025),))
-    metrics = mx.metric.create("mse")
+    metrics = mx.gluon.metric.create("mse")
     for e in range(num_epoch):
         metrics.reset()
         if e % mod.update_freq == 0:

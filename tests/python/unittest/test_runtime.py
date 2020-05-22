@@ -44,8 +44,8 @@ def test_is_enabled():
             assert not features.is_enabled(f)
 
 
-@pytest.mark.xfail(raises=RuntimeError)
 def test_is_enabled_not_existing():
     features = Features()
-    features.is_enabled('this girl is on fire')
+    with pytest.raises(RuntimeError):
+        features.is_enabled('this girl is on fire')
 

@@ -83,7 +83,7 @@ if __name__ == '__main__':
     optim = mx.optimizer.create(optimizer, learning_rate=lr, rescale_grad=1.0/batch_size)
     mod.init_optimizer(optimizer=optim)
     # use accuracy as the metric
-    metric = mx.metric.create(['acc'])
+    metric = mx.gluon.metric.create(['acc'])
     # get the sparse weight parameter
     speedometer = mx.callback.Speedometer(batch_size, log_interval)
 

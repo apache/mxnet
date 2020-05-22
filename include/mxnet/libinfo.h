@@ -184,7 +184,6 @@ enum : unsigned {
 
   // Misc
   CAFFE,
-  PROFILER,
   DIST_KVSTORE,
   CXX14,
   INT64_TENSOR_SIZE,

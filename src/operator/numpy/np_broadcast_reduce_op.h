@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include "../../common/utils.h"
 #include "../nn/moments-inl.h"
 #include "../tensor/broadcast_reduce_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
@@ -100,6 +101,15 @@ struct NumpyReduceAxesNoDTypeParam : public dmlc::Parameter<NumpyReduceAxesNoDTy
                 "in the result as dimension with size one.");
     DMLC_DECLARE_FIELD(initial).set_default(dmlc::optional<double>())
       .describe("Starting value for the sum.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s, initial_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    initial_s << initial;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["initial"] = initial_s.str();
   }
 };
 

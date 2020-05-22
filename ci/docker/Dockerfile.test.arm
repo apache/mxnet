@@ -16,9 +16,10 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Dockerfile to test MXNet on Ubuntu 20.04 ARMv8 CPU
+# Dockerfile to test MXNet on Ubuntu 20.04 ARM
 
-FROM arm64v8/ubuntu:20.04
+ARG BASE_IMAGE
+FROM $BASE_IMAGE
 
 WORKDIR /usr/local
 
@@ -30,6 +31,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     python3-requests \
  && rm -rf /var/lib/apt/lists/*
 
+
+# Python dependencies
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir \
     pytest==5.3.5 \

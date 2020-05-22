@@ -478,8 +478,8 @@ class SVRGModule(Module):
 
         if validation_metric is None:
             validation_metric = eval_metric
-        if not isinstance(eval_metric, mx.metric.EvalMetric):
-            eval_metric = mx.metric.create(eval_metric)
+        if not isinstance(eval_metric, mx.gluon.metric.EvalMetric):
+            eval_metric = mx.gluon.metric.create(eval_metric)
 
         ################################################################################
         # training loop

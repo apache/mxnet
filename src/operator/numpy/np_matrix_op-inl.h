@@ -1633,6 +1633,11 @@ struct NumpyDiagflatParam : public dmlc::Parameter<NumpyDiagflatParam> {
                 "Use k>0 for diagonals above the main diagonal, "
                 "and k<0 for diagonals below the main diagonal. ");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream k_s;
+    k_s << k;
+    (*dict)["k"] = k_s.str();
+  }
 };
 
 inline mxnet::TShape NumpyDiagflatShapeImpl(const mxnet::TShape& ishape, const int k) {

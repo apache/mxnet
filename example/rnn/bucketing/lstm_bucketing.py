@@ -115,7 +115,7 @@ if __name__ == '__main__':
     model.fit(
         train_data          = data_train,
         eval_data           = data_val,
-        eval_metric         = mx.metric.Perplexity(invalid_label),
+        eval_metric         = mx.gluon.metric.Perplexity(invalid_label),
         kvstore             = args.kv_store,
         optimizer           = args.optimizer,
         optimizer_params    = { 'learning_rate': args.lr,

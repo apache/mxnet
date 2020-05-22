@@ -104,7 +104,6 @@ def test_amp_coverage(amp_tests):
                        - If you are not sure which list to choose, FP32_FUNCS is the
                          safest option""")
 
-@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 @with_seed()
 def test_amp_conversion(amp_tests):
     def check_amp_convert_symbol():
@@ -334,7 +333,7 @@ def test_amp_conversion(amp_tests):
         data_val =  mx.rnn.BucketSentenceIter(val_sent, batch_size, buckets=buckets,
                                      invalid_label=invalid_label)
         result_model.bind(data_val.provide_data, data_val.provide_label, for_training=False)
-        result_model.score(data_val, mx.metric.Perplexity(invalid_label),
+        result_model.score(data_val, mx.gluon.metric.Perplexity(invalid_label),
                            batch_end_callback=mx.callback.Speedometer(batch_size, 1))
 
         # AMP conversion with cast_optional_params set to true
@@ -342,7 +341,7 @@ def test_amp_conversion(amp_tests):
         '''
         result_model = amp.convert_bucketing_module(model, cast_optional_params=True)
         result_model.bind(data_val.provide_data, data_val.provide_label, for_training=False)
-        result_model.score(data_val, mx.metric.Perplexity(invalid_label),
+        result_model.score(data_val, mx.gluon.metric.Perplexity(invalid_label),
                            batch_end_callback=mx.callback.Speedometer(batch_size, 1))
         '''
 

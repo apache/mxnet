@@ -46,9 +46,11 @@ from util import *
 DOCKER_COMPOSE_WHITELIST = ('centos7_cpu', 'centos7_gpu_cu92', 'centos7_gpu_cu100',
                             'centos7_gpu_cu101', 'centos7_gpu_cu102', 'ubuntu_cpu',
                             'ubuntu_build_cuda', 'ubuntu_gpu_cu101', 'publish.test.centos7_cpu',
-                            'publish.test.centos7_gpu')
+                            'publish.test.centos7_gpu', 'android_armv7', 'android_armv8',
+                            'armv6', 'armv7', 'armv8', 'test.armv7', 'test.armv8')
 # Files for docker compose
-DOCKER_COMPOSE_FILES = set(('docker/build.centos7', 'docker/build.ubuntu', 'docker/publish.test.centos7'))
+DOCKER_COMPOSE_FILES = set(('docker/build.centos7', 'docker/build.ubuntu', 'docker/build.android',
+                            'docker/build.arm', 'docker/test.arm', 'docker/publish.test.centos7'))
 
 
 def get_dockerfiles_path():
@@ -71,7 +73,7 @@ def get_docker_tag(platform: str, registry: str) -> str:
     if platform in DOCKER_COMPOSE_WHITELIST:
         with open("docker/docker-compose.yml", "r") as f:
             compose_config = yaml.load(f.read(), yaml.SafeLoader)
-            return compose_config["services"][platform]["image"]
+            return compose_config["services"][platform]["image"].replace('${DOCKER_CACHE_REGISTRY}', registry)
 
     platform = platform if any(x in platform for x in ['build.', 'publish.']) else 'build.{}'.format(platform)
     if not registry:
@@ -96,6 +98,8 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
     """
     tag = get_docker_tag(platform=platform, registry=registry)
 
+    env = os.environ.copy()
+
     # Case 1: docker-compose
     if platform in DOCKER_COMPOSE_WHITELIST:
         logging.info('Building docker container tagged \'%s\' based on ci/docker/docker-compose.yml', tag)
@@ -107,6 +111,7 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
         if cache_intermediate:
             cmd.append('--no-rm')
         cmd.append(platform)
+        env["DOCKER_CACHE_REGISTRY"] = registry
     else:  # Case 2: Deprecated way, will be removed
         # We add a user with the same group as the executing non-root user so files created in the
         # container match permissions of the local user. Same for the group.
@@ -137,11 +142,11 @@ def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
 
 
     @retry(subprocess.CalledProcessError, tries=num_retries)
-    def run_cmd():
+    def run_cmd(env=None):
         logging.info("Running command: '%s'", ' '.join(cmd))
-        check_call(cmd)
+        check_call(cmd, env=env)
 
-    run_cmd()
+    run_cmd(env=env)
 
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
@@ -222,8 +227,9 @@ def container_run(docker_client: SafeDockerClient,
 
     # Equivalent command
     docker_cmd_list = [
-        "nvidia-docker" if nvidia_runtime else "docker",
+        "docker",
         'run',
+        "--gpus all" if nvidia_runtime else "",
         "--cap-add",
         "SYS_PTRACE", # Required by ASAN
         '--rm',
@@ -388,8 +394,7 @@ def main() -> int:
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-        if args.docker_registry and platform not in DOCKER_COMPOSE_WHITELIST:
-            # Caching logic for Dockerfiles not yet refactored with compose
+        if args.docker_registry:
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
             build_docker(platform=platform, registry=args.docker_registry, num_retries=args.docker_build_retries,
