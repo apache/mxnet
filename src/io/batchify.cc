@@ -37,6 +37,17 @@
 
 namespace mxnet {
 namespace io {
+
+#ifdef _MSC_VER
+  #if _MSC_VER < 1925 
+    #define omp_parallel __pragma(omp parallel for num_threads(bs))
+  #else
+    #define omp_parallel _Pragma("omp parallel for num_threads(bs)") 
+  #endif
+#else
+  #define omp_parallel _Pragma("omp parallel for num_threads(bs)") 
+#endif
+
 struct GroupBatchifyParam : public dmlc::Parameter<GroupBatchifyParam> {
   mxnet::Tuple<std::intptr_t> functions;
   // declare parameters
@@ -150,7 +161,7 @@ class StackBatchify : public BatchifyFunction {
         }
         int sbs = static_cast<int>(bs);
         MSHADOW_TYPE_SWITCH_WITH_BOOL(dtype, DType, {
-          #pragma omp parallel for num_threads(bs)
+          omp_parallel
           for (int j = 0; j < sbs; ++j) {
             omp_exc_.Run([&] {
               // inputs[j][i].WaitToRead();
@@ -276,7 +287,7 @@ class PadBatchify : public BatchifyFunction {
           DType *ptr = (*outputs)[i].data().dptr<DType>();
           auto asize = ashape.Size();
           int sbs = static_cast<int>(bs);
-          #pragma omp parallel for num_threads(bs)")
+          omp_parallel
           for (int j = 0; j < sbs; ++j) {
             using namespace mshadow::expr;
             auto compact_shapes = CompactShapes(ashape, inputs[j][i].shape());
