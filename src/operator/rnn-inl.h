@@ -843,7 +843,6 @@ class RNNOp {
     }
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
 
-#if !defined(__CUDACC__)  // cuda doesn't support C++17
     if (ctx_.dev_type == kCPU) {
       int projection_size = 0;
       if (param_.projection_size.has_value()) {
@@ -922,7 +921,6 @@ class RNNOp {
                                    param_.mode);
       }
     }
-#endif
   }
 
   void Backward(const OpContext &ctx,
