@@ -48,7 +48,7 @@ namespace io {
     #define omp_parallel(t) _Pragma(tostr(omp parallel for num_threads( ## t ## )))
   #endif
 #else
-  #define omp_parallel(t) _Pragma(tostr(omp parallel for num_threads( ## t ## )))
+  #define omp_parallel(t) _Pragma(tostr(omp parallel for num_threads(t)))
 #endif
 
 struct GroupBatchifyParam : public dmlc::Parameter<GroupBatchifyParam> {
