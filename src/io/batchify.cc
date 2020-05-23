@@ -43,9 +43,9 @@ namespace io {
 
 #ifdef _MSC_VER
   #if _MSC_VER < 1925
-   #define omp_parallel(t) __pragma(omp parallel for num_threads(t))
+    #define omp_parallel(t) __pragma(omp parallel for num_threads(t))
   #else
-   #define omp_parallel(t) _Pragma(tostr(omp parallel for num_threads( ## t ## )))
+    #define omp_parallel(t) _Pragma(tostr(omp parallel for num_threads( ## t ## )))
   #endif
 #else
   #define omp_parallel(t) _Pragma(tostr(omp parallel for num_threads( ## t ## )))
