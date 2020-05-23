@@ -464,7 +464,7 @@ def compile_armv6_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('armv6', 'build_armv6', false)
-            utils.pack_lib('armv6', mx_lib)
+            utils.pack_lib('armv6', mx_cmake_lib)
           }
         }
       }
@@ -478,7 +478,7 @@ def compile_armv7_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('armv7', 'build_armv7', false)
-            utils.pack_lib('armv7', mx_lib)
+            utils.pack_lib('armv7', mx_cmake_lib)
           }
         }
       }
@@ -492,7 +492,7 @@ def compile_armv8_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('armv8', 'build_armv8', false)
-            utils.pack_lib('armv8', mx_lib)
+            utils.pack_lib('armv8', mx_cmake_lib)
           }
         }
       }
@@ -1360,7 +1360,7 @@ def test_qemu_armv7_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-armv7-qemu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('armv7', mx_lib)
+            utils.unpack_and_init('armv7', mx_cmake_lib)
             utils.docker_run('test.armv7', 'unittest_ubuntu_python3_arm', false)
           }
         }
@@ -1373,7 +1373,7 @@ def test_qemu_armv8_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-armv8-qemu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('armv8', mx_lib)
+            utils.unpack_and_init('armv8', mx_cmake_lib)
             utils.docker_run('test.armv8', 'unittest_ubuntu_python3_arm', false)
           }
         }
