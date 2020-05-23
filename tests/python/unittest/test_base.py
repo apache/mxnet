@@ -20,7 +20,6 @@ from mxnet.base import data_dir
 from nose.tools import *
 from mxnet.test_utils import environment
 import os
-import unittest
 import logging
 import os.path as op
 import platform
@@ -32,9 +31,9 @@ def test_data_dir():
     # Test that data_dir() returns the proper default value when MXNET_HOME is not set
     if system != 'Windows':
         with environment('MXNET_HOME', None):
-            assertEqual(data_dir(), op.join(op.expanduser('~'), '.mxnet'))
+            assert_equals(data_dir(), op.join(op.expanduser('~'), '.mxnet'))
     # Test that data_dir() responds to an explicit setting of MXNET_HOME
     with environment('MXNET_HOME', '/tmp/mxnet_data'):
-        assertEqual(data_dir(), '/tmp/mxnet_data')
+        assert_equals(data_dir(), '/tmp/mxnet_data')
     # Test that this test has not disturbed the MXNET_HOME value existing before the test
-    assertEqual(data_dir(), prev_data_dir)
+    assert_equals(data_dir(), prev_data_dir)
