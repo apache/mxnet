@@ -842,65 +842,46 @@ class RNNOp {
 #endif  // MXNET_USE_CUDNN_GE_7200
     }
 #endif  // MXNET_USE_CUDNN == 1 && defined(__CUDACC__)
-#if !defined(__CUDACC__)
-    int projection_size = 0;
-    if (param_.projection_size.has_value()) {
-      projection_size = param_.projection_size.value();
-    }
 
-    // allocate temp space
-    const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
-        param_.state_size, projection_size, direction, param_.mode);
-    if (!temp_init_space_ || temp_cpu_space_size_ < work_cpu_space_size) {
-      temp_cpu_space_size_ = work_cpu_space_size;
-      temp_cpu_space_ = NDArray(TShape({static_cast<dim_t>(temp_cpu_space_size_)}), ctx_,
-          false, in_data[rnn_enum::kData].type_flag_);
-      temp_init_space_ = true;
-    }
-    DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.data().dptr_);
-
-    if (ctx.is_train || ctx.need_grad) {
-      mshadow::Random<cpu, unsigned> *prnd = ctx.requested[0].get_random<xpu, unsigned int>(s);
-      std::mt19937 &rnd_engine = prnd->GetRndEngine();
-
-      // allocate reserve space
+    if (ctx_.dev_type == kCPU) {
+      int projection_size = 0;
       if (param_.projection_size.has_value()) {
-        LOG(FATAL) << "No training support for LSTM with projection on CPU currently.";
+        projection_size = param_.projection_size.value();
       }
 
-      const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
-                                                    param_.seq_length_, param_.batch_size_,
-                                                    param_.state_size, param_.mode);
-      if (!init_space_ || reserve_cpu_space_size_ < r_size) {
-        reserve_cpu_space_size_ = r_size;
-        reserve_cpu_space_ = NDArray(TShape({static_cast<dim_t>(reserve_cpu_space_size_)}), ctx_,
+      // allocate temp space
+      const size_t work_cpu_space_size = GetRNNWorkspaceSize(param_.seq_length_, param_.batch_size_,
+          param_.state_size, projection_size, direction, param_.mode);
+      if (!temp_init_space_ || temp_cpu_space_size_ < work_cpu_space_size) {
+        temp_cpu_space_size_ = work_cpu_space_size;
+        temp_cpu_space_ = NDArray(TShape({static_cast<dim_t>(temp_cpu_space_size_)}), ctx_,
             false, in_data[rnn_enum::kData].type_flag_);
-        init_space_ = true;
+        temp_init_space_ = true;
       }
-      DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.data().dptr_);
+      DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.data().dptr_);
 
-      RNNForwardTraining<DType>(work_cpu_space,
-                                reserve_space_ptr,
-                                param_.state_outputs,
-                                param_.num_layers,
-                                direction,
-                                param_.seq_length_,
-                                param_.batch_size_,
-                                param_.input_size_,
-                                param_.state_size,
-                                x.dptr_,
-                                hx.dptr_,
-                                cx_ptr,
-                                w.dptr_,
-                                b_ptr,
-                                y.dptr_,
-                                hy_ptr,
-                                cy_ptr,
-                                param_.p,
-                                param_.mode,
-                                rnd_engine);
-    } else {
-      RNNForwardInference<DType>(work_cpu_space,
+      if (ctx.is_train || ctx.need_grad) {
+        mshadow::Random<cpu, unsigned> *prnd = ctx.requested[0].get_random<xpu, unsigned int>(s);
+        std::mt19937 &rnd_engine = prnd->GetRndEngine();
+
+        // allocate reserve space
+        if (param_.projection_size.has_value()) {
+          LOG(FATAL) << "No training support for LSTM with projection on CPU currently.";
+        }
+
+        const size_t r_size = GetRNNReserveSpaceSize(param_.num_layers, direction,
+                                                     param_.seq_length_, param_.batch_size_,
+                                                     param_.state_size, param_.mode);
+        if (!init_space_ || reserve_cpu_space_size_ < r_size) {
+          reserve_cpu_space_size_ = r_size;
+          reserve_cpu_space_ = NDArray(TShape({static_cast<dim_t>(reserve_cpu_space_size_)}), ctx_,
+              false, in_data[rnn_enum::kData].type_flag_);
+          init_space_ = true;
+        }
+        DType* reserve_space_ptr = static_cast<DType*>(reserve_cpu_space_.data().dptr_);
+
+        RNNForwardTraining<DType>(work_cpu_space,
+                                  reserve_space_ptr,
                                   param_.state_outputs,
                                   param_.num_layers,
                                   direction,
@@ -908,7 +889,6 @@ class RNNOp {
                                   param_.batch_size_,
                                   param_.input_size_,
                                   param_.state_size,
-                                  projection_size,
                                   x.dptr_,
                                   hx.dptr_,
                                   cx_ptr,
@@ -917,9 +897,30 @@ class RNNOp {
                                   y.dptr_,
                                   hy_ptr,
                                   cy_ptr,
-                                  param_.mode);
+                                  param_.p,
+                                  param_.mode,
+                                  rnd_engine);
+      } else {
+        RNNForwardInference<DType>(work_cpu_space,
+                                   param_.state_outputs,
+                                   param_.num_layers,
+                                   direction,
+                                   param_.seq_length_,
+                                   param_.batch_size_,
+                                   param_.input_size_,
+                                   param_.state_size,
+                                   projection_size,
+                                   x.dptr_,
+                                   hx.dptr_,
+                                   cx_ptr,
+                                   w.dptr_,
+                                   b_ptr,
+                                   y.dptr_,
+                                   hy_ptr,
+                                   cy_ptr,
+                                   param_.mode);
+      }
     }
-#endif  // !defined(__CUDACC__)
   }
 
   void Backward(const OpContext &ctx,
