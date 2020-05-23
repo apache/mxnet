@@ -22,6 +22,7 @@
  * \file c_api_test.cc
  * \brief C API of mxnet for the ease of testing backend in Python
  */
+#include <iostream>
 #include <mxnet/c_api_test.h>
 #include <nnvm/pass.h>
 #include "./c_api_common.h"
@@ -104,5 +105,27 @@ int MXRemoveSubgraphPropertyOpNamesV2(const char* prop_name) {
   for (auto& property : subgraph_prop_list) {
     property->RemoveAttr("op_names");
   }
+  API_END();
+}
+
+int MXGetEnv(const char* name,
+             const char** value) {
+  API_BEGIN();
+  *value = getenv(name);
+  API_END();
+}
+
+int MXSetEnv(const char* name,
+             const char* value) {
+  API_BEGIN();
+#ifdef _WIN32
+  auto value_arg = (value == nullptr) ? "" : value;
+  _putenv_s(name, value_arg);
+#else
+  if (value == nullptr)
+    unsetenv(name);
+  else
+    setenv(name, value, 1);
+#endif
   API_END();
 }

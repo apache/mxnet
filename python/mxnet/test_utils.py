@@ -24,6 +24,7 @@ import traceback
 import numbers
 import sys
 import os
+import platform
 import errno
 import logging
 import bz2
@@ -49,7 +50,7 @@ from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
-from .util import use_np, use_np_default_dtype  # pylint: disable=unused-import
+from .util import use_np, use_np_default_dtype, getenv, setenv  # pylint: disable=unused-import
 from .runtime import Features
 from .numpy_extension import get_cuda_compute_capability
 
@@ -2401,6 +2402,29 @@ def environment(*args):
             a dict of name:desired_value for env var's to update
 
     """
+
+    # On Linux, env var changes made through python's os.environ are seen
+    # by the backend.  On Windows though, the C runtime gets a snapshot
+    # of the environment that cannot be altered by os.environ.  Here we
+    # check, using a wrapped version of the backend's getenv(), that
+    # the desired env var value is seen by the backend, and otherwise use
+    # a wrapped setenv() to establish that value in the backend.
+
+    # Also on Windows, a set env var can never have the value '', since
+    # the command 'set FOO= ' is used to unset the variable.  Perhaps
+    # as a result, the wrapped dmlc::GetEnv() routine returns the same
+    # value for unset variables and those set to ''.  As a result, we
+    # ignore discrepancy.
+    def validate_backend_setting(name, value, can_use_setenv=True):
+        backend_value = getenv(name)
+        if value == backend_value or \
+           value == '' and backend_value is None and platform.system() == 'Windows':
+            return
+        if not can_use_setenv:
+            raise RuntimeError('Could not set env var {}={} within C Runtime'.format(name, value))
+        setenv(name, value)
+        validate_backend_setting(name, value, can_use_setenv=False)
+
     # Core routine to alter environment from a dict of env_var_name, env_var_value pairs
     def set_environ(env_var_dict):
         for env_var_name, env_var_value in env_var_dict.items():
@@ -2408,8 +2432,9 @@ def environment(*args):
                 os.environ.pop(env_var_name, None)
             else:
                 os.environ[env_var_name] = env_var_value
+            validate_backend_setting(env_var_name, env_var_value)
 
-    # Create standardized env_var name:value dict from the two calling methods of this routine
+    # Create env_var name:value dict from the two calling methods of this routine
     if len(args) == 1 and isinstance(args[0], dict):
         env_vars = args[0]
     else:
