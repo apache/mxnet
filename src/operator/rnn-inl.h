@@ -861,9 +861,13 @@ class RNNOp {
       DType* work_cpu_space = static_cast<DType*>(temp_cpu_space_.data().dptr_);
 
       if (ctx.is_train || ctx.need_grad) {
-        mshadow::Random<cpu, unsigned> *prnd = ctx.requested[0].get_random<xpu, unsigned int>(s);
-        std::mt19937 &rnd_engine = prnd->GetRndEngine();
-
+        mshadow::Random<xpu, unsigned> *prnd = ctx.requested[0].get_random<xpu, unsigned int>(s);
+        // Hack: the surrounding if condition would be a constexpr if in C++17.
+        // Since this branch can only be reached if the xpu == cpu, the cast is valid.
+        // Using macros with defined(__CUDACC__) instead of the if statement results in errors
+        // related to unused variables which are declared above.
+        auto cpu_prnd = reinterpret_cast<mshadow::Random<cpu, unsigned> *>(prnd);
+        std::mt19937 &rnd_engine = cpu_prnd->GetRndEngine();
         // allocate reserve space
         if (param_.projection_size.has_value()) {
           LOG(FATAL) << "No training support for LSTM with projection on CPU currently.";
