@@ -1251,8 +1251,8 @@ class HybridBlock(Block):
         remove_amp_cast : bool, optional
             Whether to remove the amp_cast and amp_multicast operators, before exporting the model.
         allow_extra : bool, optional
-            Whether to save extra parameters whose name not in the result symbol. User can set
-            allow_extra to True to load these parameters with old mxnet.mod.Module.set_params api.
+            Whether to save extra parameters whose names are not in the result symbol.
+            User can set allow_extra to True to load these parameters with old mxnet.mod.Module.set_params API.
         Returns
         -------
         symbol_filename : str
