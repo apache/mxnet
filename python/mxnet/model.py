@@ -20,17 +20,12 @@
 """MXNet model module"""
 
 import os
-import time
 import logging
-import warnings
 from collections import namedtuple
 import numpy as np
 
-from . import io
 from . import ndarray as nd
 from . import symbol as sym
-from . import optimizer as opt
-from .gluon import metric
 from . import kvstore as kvs
 from .context import cpu
 
