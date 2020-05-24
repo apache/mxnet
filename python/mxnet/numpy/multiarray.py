@@ -2352,8 +2352,10 @@ def array(object, dtype=None, ctx=None):
         __array__ method returns an array, or any (nested) sequence.
     dtype : data-type, optional
         The desired data-type for the array.
-        When npx.is_np_default_dtype() returns False, default dtype is float32;
-        When npx.is_np_default_dtype() returns True, default dtype is float64.
+        The default dtype is ``object.dtype`` if `object` is an `ndarray`, `float32` otherwise.
+        Default dtype can be set to be consistent with offical numpy by `npx.set_np(dtype=True)`.
+        - When npx.is_np_default_dtype() returns False, default dtype is float32;
+        - When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : device context, optional
         Device context on which the memory is allocated. Default is
         `mxnet.context.current_context()`.
@@ -2375,6 +2377,13 @@ def array(object, dtype=None, ctx=None):
     >>> np.array([[1, 0], [0, 1]], dtype=bool)
     array([[ True, False],
            [False,  True]])
+    
+    >>> np.array([1, 2, 3]).dtype
+    dtype('float32')
+
+    >>> npx.set_np(dtype=True)
+    >>> np.array([1, 2, 3]).dtype
+    dtype('float64')
     """
     if ctx is None:
         ctx = current_context()
@@ -6024,8 +6033,10 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         step size is 1.  If `step` is specified as a position argument,
         `start` must also be given.
     dtype : dtype
-        The type of the output array. The default is `float32` or 'float64',
-        which depends on your current default dtype.
+        The type of the output array.
+        Default dtype can be set to be consistent with offical numpy by `npx.set_np(dtype=True)`.
+        - When npx.is_np_default_dtype() returns False, default dtype is float32;
+        - When npx.is_np_default_dtype() returns True, default dtype is int64.
 
     Returns
     -------
@@ -6050,6 +6061,12 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
 
     >>> np.arange(3,7,2)
     array([3., 5.])
+
+    >>> np.arange(3).dtype
+    dtype('float32')
+    >>> npx.set_np(dtype=True)
+    >>> np.arange(3).dtype
+    dtype('int64')
     """
     return _mx_nd_np.arange(start, stop, step, dtype, ctx)
 # pylint: enable=redefined-outer-name
@@ -7336,7 +7353,9 @@ def average(a, axis=None, weights=None, returned=False, out=None):
     - Does not guarantee the same behavior with numpy when given float16 dtype and overflow happens
     - Does not support complex dtype
     - The dtypes of a and weights must be the same
-    - Integral a results in float32 or float64 returned dtype, which depends on your current default dtype
+    - Integral a results in float32 or float64 returned dtype:
+      When npx.is_np_default_dtype() returns False, default dtype is float32,
+      When npx.is_np_default_dtype() returns True, default dtype is float64;
 
     Examples
     --------
@@ -11727,6 +11746,7 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
     - Input type does not support Python native iterables(list, tuple, ...).
     - "out" param: cannot perform auto type cast. out ndarray's dtype must be the same as the expected output.
     - "initial" param is not supported yet. Please use ``None`` as input or skip it.
+    - The default type is float32.
 
     Examples
     --------
