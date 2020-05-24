@@ -125,7 +125,7 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs &attrs,
     // Case when types of the 2 input tensors are different
     if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
       // both lhs and rhs are float types, output type is the more precise one
-      LOG(ERROR) << "not implemented yet...";
+      LOG(FATAL) << "not implemented yet...";
     } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
       // one is float type, the other is integer type, the output type should be the same as float
       CHECK_EQ(out.type_flag_,
@@ -154,14 +154,14 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs &attrs,
       }
     } else {
       // lhs is integer type, rhs is integer type, output type should be float
-      LOG(ERROR) << "not implemented yet...";
+      LOG(FATAL) << "not implemented yet...";
     }
 #else
     // Windows case: using temp space for casting the type
     // Case when types of the 2 input tensors are different
     if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
       // both lhs and rhs are float types, output type is the more precise one
-      LOG(ERROR) << "not implemented yet...";
+      LOG(FATAL) << "not implemented yet...";
     } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
       // lhs is float type, rhs is integer type, the output type should be the same as lhs
       CHECK_EQ(out.type_flag_,
@@ -191,7 +191,7 @@ void TrueDivideElemwiseCompute(const nnvm::NodeAttrs &attrs,
       }
     } else {
       // lhs is integer type, rhs is integer type, output type should be float
-      LOG(ERROR) << "not implemented yet...";
+      LOG(FATAL) << "not implemented yet...";
     }
 #endif
   }
@@ -245,7 +245,7 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
       } else {
         if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
           // lhs and rhs have different float types, the output is the more precise one
-          LOG(ERROR) << "not implemented yet...";
+          LOG(FATAL) << "not implemented yet...";
         } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
           // one of lhs and rhs is float, the output is the same type as the float one
           if (common::is_float(lhs.type_flag_)) {
@@ -273,7 +273,7 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
           }
         } else {
           // lhs and rhs have different integer types, the output is float type
-          LOG(ERROR) << "not implemented yet...";
+          LOG(FATAL) << "not implemented yet...";
         }
       }
     });
@@ -306,7 +306,7 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
     } else {
       if (common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
         // lhs and rhs have different float types, the output is the more precise one
-        LOG(ERROR) << "not implemented yet...";
+        LOG(FATAL) << "not implemented yet...";
       } else if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
         // one of lhs and rhs is float, the output is the same type as the float one
         TBlob temp_tblob;
@@ -337,7 +337,7 @@ void TrueDivideBroadcastCompute(const nnvm::NodeAttrs& attrs,
         }
       } else {
         // lhs and rhs have different integer types, the output is float type
-        LOG(ERROR) << "not implemented yet...";
+        LOG(FATAL) << "not implemented yet...";
       }
     }
 #endif
