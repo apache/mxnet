@@ -22,7 +22,6 @@
  * \file c_api_test.cc
  * \brief C API of mxnet for the ease of testing backend in Python
  */
-#include <iostream>
 #include <mxnet/c_api_test.h>
 #include <nnvm/pass.h>
 #include "./c_api_common.h"
