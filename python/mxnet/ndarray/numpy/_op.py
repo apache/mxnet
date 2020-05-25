@@ -4077,9 +4077,7 @@ def repeat(a, repeats, axis=None):
            [3, 4]])
     """
     if isinstance(repeats, numeric_types):
-        return _api_internal.repeat(a, repeats, axis)
-    if len(repeats) == 1:
-        return _api_internal.repeat(a, repeats[0], axis)
+        repeats = [repeats]
     if axis is not None:
         tmp = swapaxes(a, 0, axis)
         res = _api_internal.repeats(tmp, repeats, 0)

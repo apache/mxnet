@@ -65,21 +65,21 @@ struct RepeatsParam : public dmlc::Parameter<RepeatsParam> {
 };
 
 inline void GetRepeatsParams(const RepeatsParam& param, const mxnet::TShape& ishape,
-                             int* repeats, dmlc::optional<int>* axisOpt) {
+                             int* repeats, dmlc::optional<int>* axisOpt, int* axis) {
   *repeats = 0;
   const mxnet::Tuple<int> &repts = param.repeats.value();
   for (int i=0; i < repts.ndim(); i++) {
-    CHECK_GE(*repeats, 0) << "repeats cannot be a negative number";
+    CHECK_GE(repts[i], 0) << "repeats cannot be a negative number";
     *repeats += repts[i];
   }
   *axisOpt = param.axis;
   if (static_cast<bool>(*axisOpt)) {
     int ndims = ishape.ndim();
-    int axis = axisOpt->value();
-    if (axis < 0) {
-      axis += ndims;
+    *axis = axisOpt->value();
+    if (*axis < 0) {
+      *axis += ndims;
     }
-    CHECK(axis >= 0 && axis < ndims) << "axis = " << axisOpt->value() << " out of bounds";
+    CHECK(*axis >= 0 && *axis < ndims) << "axis = " << axisOpt->value() << " out of bounds";
   }
 }
 
@@ -92,7 +92,8 @@ inline bool RepeatsOpShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& ishape = (*in_attrs)[0];
   int repeats = 0;
   dmlc::optional<int> axisOpt;
-  GetRepeatsParams(param, ishape, &repeats, &axisOpt);
+  int axis = -1;
+  GetRepeatsParams(param, ishape, &repeats, &axisOpt, &axis);
   // If 0 repeats, return an empty 1-dim, 0-size array
   if (0 == repeats) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::TShape(1, 0));
@@ -101,21 +102,17 @@ inline bool RepeatsOpShape(const nnvm::NodeAttrs& attrs,
 
   // If repeats > 0, multiply the size of the corresponding axis by repeats
   if (static_cast<bool>(axisOpt)) {
-    int ndims = ishape.ndim();
-    int axis = axisOpt.value();
-    if (axis < 0) {
-      axis += ndims;
-    }
     mxnet::TShape shape(ishape.ndim(), -1);
     for (int i = 0; i < ishape.ndim(); ++i) {
       if (i == axis) {
-        shape[i] = repeats;
+        shape[i] = param.repeats.value().ndim() == 1 ? repeats * ishape[i] : repeats;
       } else {
         shape[i] = ishape[i];
       }
     }
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
-  } else {  // If axis is not input by user, return a flat 1D array of size = in.size*repeats
+  } else {  // If axis is not input by user, return a flat 1D array of size = repeats
+    repeats = param.repeats.value().ndim() == 1 ? ishape.Size() * repeats : repeats;
     mxnet::TShape shape(1, repeats);
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, shape);
   }
@@ -165,10 +162,16 @@ void NumpyRepeatsOpForward(const nnvm::NodeAttrs& attrs,
 
   int repeats = 0;
   dmlc::optional<int> axisOpt;
+  int axis = -1;
   const RepeatsParam& param = nnvm::get<RepeatsParam>(attrs.parsed);
-  GetRepeatsParams(param, ishape, &repeats, &axisOpt);
+  GetRepeatsParams(param, ishape, &repeats, &axisOpt, &axis);
   if (0 == repeats) return;
   mxnet::Tuple<int> repts = param.repeats.value();
+  if (repts.ndim() == 1) {
+    int len = static_cast<bool>(axisOpt) ? ishape[axis] : ishape.Size();
+    std::vector<int> temp(len, repeats);
+    repts = mxnet::Tuple<int>(temp);
+  }
   for (int i=1; i < repts.ndim(); i++) {
     repts[i] += repts[i-1];
   }
