@@ -467,7 +467,7 @@ CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 ifeq ($(USE_INTGEMM), 1)
   $(shell mkdir -p build/3rdparty/intgemm/)
   $(shell echo '#pragma once' >build/3rdparty/intgemm/intgemm_config.h)
-  ifneq ($(shell $(CXX) $(CFLAGS) -mavx512f -mavx512bw -mavx512dq $(ROOTDIR)/3rdparty/intgemm/compile_test_avx512.cc 2>/dev/null && echo \\\#define INTGEMM_COMPILER_SUPPORTS_AVX512 >>build/3rdparty/intgemm/intgemm_config.h; echo $$?), 0)
+  ifneq ($(shell $(CXX) $(CFLAGS) $(ROOTDIR)/3rdparty/intgemm/compile_test_avx512bw.cc 2>/dev/null && echo \\\#define INTGEMM_COMPILER_SUPPORTS_AVX512 >>build/3rdparty/intgemm/intgemm_config.h; echo $$?), 0)
     $(warning WARNING: The compiler is too old for AVX512BW; so these instructions will not be used.)
   endif
   ifneq ($(shell $(CXX) $(CFLAGS) $(ROOTDIR)/3rdparty/intgemm/compile_test_avx512vnni.cc 2>/dev/null && echo \\\#define INTGEMM_COMPILER_SUPPORTS_AVX512VNNI >>build/3rdparty/intgemm/intgemm_config.h; echo $$?), 0)
