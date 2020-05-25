@@ -30,42 +30,43 @@ namespace op {
 template<typename xpu, typename DType>
 void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
                              DType* grad_a, const DType* ograd,
-                             const size_t* stride,
+                             const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& stride,
                              const size_t tail_size, const int ind_num,
                              const int ind_ndim, const int32_t* ind_vec,
                              const int req, const int out_ndim) {
   using namespace mxnet_op;
   using namespace mshadow;
   Kernel<IndexAddBackwardAKernel<DType>, xpu>::Launch(
-    s, ind_num, grad_a, ograd, stride, tail_size, ind_num, ind_ndim, ind_vec, req);
+    s, ind_num, grad_a, ograd, stride, tail_size, ind_num, ind_ndim, ind_vec, req, out_ndim);
 }
 
 template<typename DType>
 struct IndexAddBackwardValCPUKernel {
   MSHADOW_XINLINE static void Map(size_t i, DType* grad_val,
                                   const DType* ograd,
-                                  const size_t* ograd_tail_shape,
-                                  const size_t* ograd_pre_stride,
-                                  const size_t* val_stride,
-                                  const size_t* val_shape,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& ograd_tail_shape,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& ograd_pre_stride,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_stride,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_shape,
                                   const size_t ograd_tail_size, const int ind_num,
                                   const int ind_ndim, const int32_t* ind_vec,
                                   const int out_ndim) {
     size_t id = 0;
+    int seg = MXNET_SPECIAL_MAX_NDIM - out_ndim;
     for (int dim = 0; dim < ind_ndim; ++dim) {
-      id += ograd_pre_stride[dim] * ind_vec[dim * ind_num + i];
+      id += ograd_pre_stride[seg + dim] * ind_vec[dim * ind_num + i];
     }
     id *= ograd_tail_size;
     #pragma omp parallel for
     for (size_t _i = 0; _i < ograd_tail_size; ++_i) {
-      size_t ograd_tail_id[MXNET_SPECIAL_MAX_NDIM];
-      index_unravel(_i, out_ndim, ograd_tail_shape, ograd_tail_id);
-      size_t val_id[MXNET_SPECIAL_MAX_NDIM];
-      for (int _j = 0; _j < out_ndim; ++_j) {
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_id =
+        mxnet_op::unravel(_i, ograd_tail_shape);
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_id;
+      for (int _j = seg; _j < seg + out_ndim; ++_j) {
         val_id[_j] = (val_shape[_j] == 1) ? 0 : ograd_tail_id[_j];
       }
-      val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
-      size_t val_dest = index_dot(out_ndim, val_id, val_stride);
+      val_id[seg + ind_ndim - 1] = (val_shape[seg + ind_ndim - 1] == 1) ? 0 : i;
+      index_t val_dest = mxnet_op::dot(val_id, val_stride);
       #pragma omp critical
       {
         grad_val[val_dest] += ograd[id + _i];
@@ -77,10 +78,10 @@ struct IndexAddBackwardValCPUKernel {
 template<typename xpu, typename DType>
 void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
                                DType* grad_val, const DType* ograd,
-                               const size_t* ograd_tail_shape,
-                               const size_t* ograd_pre_stride,
-                               const size_t* val_stride,
-                               const size_t* val_shape,
+                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& ograd_tail_shape,
+                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& ograd_pre_stride,
+                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_stride,
+                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_shape,
                                const size_t tail_size, const int ind_num,
                                const int ind_ndim, const int32_t* ind_vec,
                                const int out_ndim) {
@@ -94,7 +95,6 @@ void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
 NNVM_REGISTER_OP(_backward_index_add)
 .set_num_inputs(4)
 .set_num_outputs(3)
-// .set_attr_parser(ParamParser<IndexModifyParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {

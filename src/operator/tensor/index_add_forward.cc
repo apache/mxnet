@@ -30,36 +30,36 @@ template<typename DType>
 struct IndexAddForwardCPUKernel {
   MSHADOW_XINLINE static void Map(size_t i, DType* out,
                                   const DType* val,
-                                  const size_t* a_tail_shape,
-                                  const size_t* a_pre_stride,
-                                  const size_t* val_stride,
-                                  const size_t* val_shape,
-                                  const size_t* a_shape,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& a_tail_shape,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& a_pre_stride,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_stride,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_shape,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& a_shape,
                                   const size_t a_tail_size, const int ind_num,
                                   const int ind_ndim, const int* ind,
                                   const int a_ndim) {
     size_t id = 0;
+    int seg = MXNET_SPECIAL_MAX_NDIM - a_ndim;
     for (int dim = 0; dim < ind_ndim; ++dim) {
-      CHECK_LT(ind[dim * ind_num + i], a_shape[dim])
+      CHECK_LT(ind[dim * ind_num + i], a_shape[seg + dim])
         << "IndexError: index " << ind[dim * ind_num + i]
         << " is out of bounds for axis " << dim
-        << " with size " << a_shape[dim];
+        << " with size " << a_shape[seg + dim];
       CHECK_GE(ind[dim * ind_num + i], 0)
         << "IndexError: index " << ind[dim * ind_num + i]
         << " should be greater or equal to 0.";
-      id += a_pre_stride[dim] * ind[dim * ind_num + i];
+      id += a_pre_stride[seg + dim] * ind[dim * ind_num + i];
     }
     id *= a_tail_size;
     #pragma omp parallel for
     for (size_t _i = 0; _i < a_tail_size; ++_i) {
-      size_t a_tail_id[MXNET_SPECIAL_MAX_NDIM];
-      index_unravel(_i, a_ndim, a_tail_shape, a_tail_id);
-      size_t val_id[MXNET_SPECIAL_MAX_NDIM];
-      for (int _j = 0; _j < a_ndim; ++_j) {
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
+      mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_id;
+      for (int _j = seg; _j < seg + a_ndim; ++_j) {
         val_id[_j] = (val_shape[_j] == 1) ? 0 : a_tail_id[_j];
       }
-      val_id[ind_ndim - 1] = (val_shape[ind_ndim - 1] == 1) ? 0 : i;
-      size_t val_dest = index_dot(a_ndim, val_id, val_stride);
+      val_id[seg + ind_ndim - 1] = (val_shape[seg + ind_ndim - 1] == 1) ? 0 : i;
+      index_t val_dest = mxnet_op::dot(val_id, val_stride);
       #pragma omp critical
       {
         out[id + _i] += val[val_dest];
@@ -72,11 +72,11 @@ template<typename xpu, typename DType>
 void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
                          const int ind_num, DType* out,
                         const DType* val,
-                        const size_t* a_tail_shape,
-                        const size_t* a_pre_stride,
-                        const size_t* val_stride,
-                        const size_t* val_shape,
-                        const size_t* a_shape,
+                        const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& a_tail_shape,
+                        const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& a_pre_stride,
+                        const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_stride,
+                        const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_shape,
+                        const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& a_shape,
                         const size_t a_tail_size,
                         const int ind_ndim, const int* ind,
                         const int a_ndim) {
