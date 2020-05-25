@@ -828,20 +828,26 @@ class MXDataIter(DataIter):
         from ..numpy.multiarray import _np_ndarray_cls
         self._create_ndarray_fn = _np_ndarray_cls if is_np_array() else _ndarray_cls
         self.handle = handle
+        self.data_size = 1
         self._kwargs = kwargs
+        if isinstance(data_name, list):
+            self.data_size = len(data_name)
         # debug option, used to test the speed with io effect eliminated
         self._debug_skip_load = False
 
         # load the first batch to get shape information
         self.first_batch = None
         self.first_batch = self.next()
-        data = self.first_batch.data[0]
+        data = self.first_batch.data
         label = self.first_batch.label[0]
 
         # properties
-        self.provide_data = [DataDesc(data_name, data.shape, data.dtype)]
+        if isinstance(data_name, list):
+            self.provide_data = [DataDesc(data_name[i], data[i].shape, data[i].dtype) for i in range(self.data_size)]
+        else:
+            self.provide_data = [DataDesc(data_name, data[0].shape, data[0].dtype)]
         self.provide_label = [DataDesc(label_name, label.shape, label.dtype)]
-        self.batch_size = data.shape[0]
+        self.batch_size = data[0].shape[0]
 
     def __del__(self):
         check_call(_LIB.MXDataIterFree(self.handle))
@@ -860,7 +866,7 @@ class MXDataIter(DataIter):
 
     def next(self):
         if self._debug_skip_load and not self._debug_at_begin:
-            return  DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(),
+            return  DataBatch(data=self.getdata(), label=[self.getlabel()], pad=self.getpad(),
                               index=self.getindex())
         if self.first_batch is not None:
             batch = self.first_batch
@@ -870,7 +876,7 @@ class MXDataIter(DataIter):
         next_res = ctypes.c_int(0)
         check_call(_LIB.MXDataIterNext(self.handle, ctypes.byref(next_res)))
         if next_res.value:
-            return DataBatch(data=[self.getdata()], label=[self.getlabel()], pad=self.getpad(),
+            return DataBatch(data=self.getdata(), label=[self.getlabel()], pad=self.getpad(),
                              index=self.getindex())
         else:
             raise StopIteration
@@ -883,9 +889,20 @@ class MXDataIter(DataIter):
         return next_res.value
 
     def getdata(self):
-        hdl = NDArrayHandle()
-        check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
-        return self._create_ndarray_fn(hdl, False)
+        #hdl = NDArrayHandle()
+        #check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
+        #return self._create_ndarray_fn(hdl, False)
+        NDARR = NDArrayHandle *self.data_size
+        t = NDARR()
+        hdl = ctypes.cast(t, ctypes.POINTER(NDArrayHandle))
+        check_call(_LIB.MXDataIterGetData(self.handle, hdl))
+        #check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
+        res = []
+        for i in range(self.data_size):
+            v = ctypes.cast(hdl[i], NDArrayHandle)
+            x = self._create_ndarray_fn(v, False)
+            res.append(x)
+        return res
 
     def getlabel(self):
         hdl = NDArrayHandle()

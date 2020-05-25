@@ -185,10 +185,16 @@ struct BatchParam : public dmlc::Parameter<BatchParam> {
   uint32_t batch_size;
   /*! \brief use round roubin to handle overflow batch */
   bool round_batch;
+  size_t data_size;
+  size_t label_width;
   // declare parameters
   DMLC_DECLARE_PARAMETER(BatchParam) {
     DMLC_DECLARE_FIELD(batch_size)
         .describe("Batch size.");
+    DMLC_DECLARE_FIELD(data_size).set_default(1)
+        .describe("The number of input data.");
+    DMLC_DECLARE_FIELD(label_width).set_default(1)
+        .describe("The number of label.");
     DMLC_DECLARE_FIELD(round_batch).set_default(true)
         .describe("Whether to use round robin to handle overflow batch or not.");
   }
@@ -390,6 +396,8 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
   int device_id;
   /*! \brief data type */
   dmlc::optional<int> dtype;
+  size_t data_size;
+  size_t label_width;
 
   // declare parameters
   DMLC_DECLARE_PARAMETER(PrefetcherParam) {
@@ -406,6 +414,10 @@ struct PrefetcherParam : public dmlc::Parameter<PrefetcherParam> {
                   "it will use cpu_pinned(device_id) as ctx");
     DMLC_DECLARE_FIELD(device_id).set_default(-1)
         .describe("The default device id for context. -1 indicate it's on default device");
+    DMLC_DECLARE_FIELD(data_size).set_default(1)
+        .describe("The number of input data.");
+    DMLC_DECLARE_FIELD(label_width).set_default(1)
+        .describe("The number of label.");
     DMLC_DECLARE_FIELD(dtype)
       .add_enum("float32", mshadow::kFloat32)
       .add_enum("float64", mshadow::kFloat64)

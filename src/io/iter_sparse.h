@@ -36,9 +36,12 @@ template<typename DType>
 class SparseIIterator : public IIterator<DType> {
  public:
   /*! \brief storage type of the data or label */
-  virtual const NDArrayStorageType GetStorageType(bool is_data) const = 0;
+  virtual const NDArrayStorageType GetStorageType(size_t ind, bool is_data) const = 0;
   /*! \brief shape of the data or label */
-  virtual const mxnet::TShape GetShape(bool is_data) const = 0;
+  virtual const mxnet::TShape GetShape(size_t ind, bool is_data) const = 0;
+  virtual bool IsIndPtr(size_t ind) {
+    LOG(FATAL) << "cannot call IsIndPtr"; return false;
+  }
 };  // class SparseIIterator
 
 }  // namespace mxnet

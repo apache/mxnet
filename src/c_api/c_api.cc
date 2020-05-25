@@ -2197,15 +2197,16 @@ int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   NDArray* pndarray = new NDArray();
   // temp hack to make label 1D
   // TODO(tianjun) make label 1D when label_width=0
-  mxnet::TShape shape = no_label ? TShape({1, }) : db.data[1].shape();
+  size_t label_ind = db.data.size() - 1;
+  mxnet::TShape shape = no_label ? TShape({1, }) : db.data[label_ind].shape();
   if (no_label || shape.Size() < 1) {
     // it's possible that label is not available and not required
     // but we need to bypass the invalid copy
     *pndarray = NDArray(TShape({1}), mxnet::Context::CPU(0));
   } else if (shape.ndim() > 1 && shape[1] == 1) {
-    *pndarray = db.data[1].Reshape(mshadow::Shape1(shape[0]));
+    *pndarray = db.data[label_ind].Reshape(mshadow::Shape1(shape[0]));
   } else {
-    *pndarray = db.data[1];
+    *pndarray = db.data[label_ind];
   }
   *out = pndarray;
   API_END();
@@ -2254,9 +2255,11 @@ int MXDataIterGetIndex(DataIterHandle handle, uint64_t **out_index, uint64_t *ou
 int MXDataIterGetData(DataIterHandle handle, NDArrayHandle *out) {
   API_BEGIN();
   const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
-  NDArray* pndarray = new NDArray();
-  *pndarray = db.data[0];
-  *out = pndarray;
+  for (size_t i = 0 ; i < db.data.size() - 1; ++i) {
+    NDArray* pndarray = new NDArray();
+    *pndarray = db.data[i];
+    *(out + i) = pndarray;
+  }
   API_END();
 }
 

@@ -65,18 +65,18 @@ class SparsePrefetcherIter : public PrefetcherIter {
           (*dptr)->num_batch_padd = batch.num_batch_padd;
           // (*dptr)->data.at(0) => data
           // (*dptr)->data.at(1) => label
-          (*dptr)->data.resize(2);
+          (*dptr)->data.resize(param_.data_size + 1);
           (*dptr)->index.resize(batch.batch_size);
           size_t data_iter = 0;
           for (size_t i = 0; i < (*dptr)->data.size(); ++i) {
             bool is_data = i == 0;
-            auto stype = this->GetStorageType(is_data);
+            auto stype = this->GetStorageType(i, is_data);
             auto dtype = param_.dtype ? param_.dtype.value() : batch.data[data_iter].type_flag_;
             if (stype == kDefaultStorage) {
               (*dptr)->data.at(i) = NDArray(batch.data[data_iter].shape_,
                                             Context::CPU(), false, dtype);
             } else {
-              (*dptr)->data.at(i) = NDArray(stype, this->GetShape(is_data),
+              (*dptr)->data.at(i) = NDArray(stype, this->GetShape(i, is_data),
                                             Context::CPU(), false, dtype);
             }
             data_iter += num_aux_data(stype) + 1;
@@ -89,18 +89,32 @@ class SparsePrefetcherIter : public PrefetcherIter {
           auto stype = nd.storage_type();
           auto& data_i = ((*dptr)->data)[i];
           if (stype == kDefaultStorage) {
-            CopyFromTo(data_i.data(), batch.data[data_iter]);
+            CHECK_EQ(data_i.shape(), batch.data[data_iter].shape_);
+            if (param_.data_size > 1 && i < 2) {
+              MSHADOW_TYPE_SWITCH(batch.data[data_iter].type_flag_, DType, {
+                  mshadow::Copy(data_i.data().FlatTo2D<cpu, DType>(),
+                        batch.data[data_iter].FlatTo2D<cpu, DType>());
+              });
+            } else {
+              CopyFromTo(data_i.data(), batch.data[data_iter]);
+            }
           } else if (stype == kCSRStorage) {
             auto& values = batch.data[data_iter];
             auto& indices = batch.data[data_iter + 1];
             auto& indptr = batch.data[data_iter + 2];
+            if (values.shape_.Size() != 0) {
+               CHECK_EQ(indices.shape_.Size(), values.shape_.Size());
+               nd.CheckAndAllocData(values.shape_);
+               CopyFromTo(data_i.data(), values);
+            } else {
+               nd.CheckAndAllocData(indices.shape_);
+               SetOne(data_i.data());
+            }
             // allocate memory
-            CHECK_EQ(indices.shape_.Size(), values.shape_.Size());
             nd.CheckAndAllocAuxData(csr::kIdx, indices.shape_);
-            nd.CheckAndAllocData(values.shape_);
             nd.CheckAndAllocAuxData(csr::kIndPtr, indptr.shape_);
             // copy values, indices and indptr
-            CopyFromTo(data_i.data(), values);
+            //CopyFromTo(data_i.data(), values);
             CopyFromTo(data_i.aux_data(csr::kIdx), indices);
             CopyFromTo(data_i.aux_data(csr::kIndPtr), indptr);
           } else {
@@ -130,12 +144,12 @@ class SparsePrefetcherIter : public PrefetcherIter {
     return PrefetcherIter::Value();
   }
 
-  virtual const NDArrayStorageType GetStorageType(bool is_data) const {
-    return sparse_loader_->GetStorageType(is_data);
+  virtual const NDArrayStorageType GetStorageType(size_t ind, bool is_data) const {
+    return sparse_loader_->GetStorageType(ind, is_data);
   }
 
-  virtual const mxnet::TShape GetShape(bool is_data) const {
-    return sparse_loader_->GetShape(is_data);
+  virtual const mxnet::TShape GetShape(size_t ind, bool is_data) const {
+    return sparse_loader_->GetShape(ind, is_data);
   }
 
  private:
@@ -145,6 +159,12 @@ class SparsePrefetcherIter : public PrefetcherIter {
   inline void CopyFromTo(TBlob dst, const TBlob src) {
     MSHADOW_TYPE_SWITCH(src.type_flag_, DType, {
       mshadow::Copy(dst.FlatTo1D<cpu, DType>(), src.FlatTo1D<cpu, DType>());
+    });
+  }
+
+  inline void SetOne(TBlob data) {
+    MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
+      data.FlatTo1D<cpu, DType>() = 1;
     });
   }
 };
