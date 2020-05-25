@@ -63,7 +63,7 @@ class _BlockScope(object):
         _BlockScope._current.value = self
         self._name_scope = _name.Prefix(block.prefix)
         self._name_scope.__enter__()
-        _profiler_scope_name = (block.prefix[:-1] if block.prefix.endswith('.') \
+        _profiler_scope_name = (block.prefix[:-1] if block.prefix.endswith('_') \
                                 else block.prefix) + ":"
         self._profiler_scope = _profiler.Scope(_profiler_scope_name)
         self._profiler_scope.__enter__()
@@ -375,7 +375,7 @@ class Block(object):
 
     def _set_prefix(self, recorded, prefix=''):
         if prefix:
-            prefix += '.'
+            prefix += '_'
         self._prefix = prefix
         for val in self._reg_params.values():
             if val not in recorded:
@@ -387,7 +387,7 @@ class Block(object):
 
     def _collect_params_with_prefix(self, prefix='', select=None):
         if prefix:
-            prefix += '.'
+            prefix += '_'
         if select is None:
             ret = {prefix + key : val for key, val in self._reg_params.items()}
         else:
@@ -622,7 +622,6 @@ class Block(object):
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
                    force_reinit=False):
         """Initializes :py:class:`Parameter` s of this :py:class:`Block` and its children.
-        Equivalent to ``block.collect_params().initialize(...)``
 
         Parameters
         ----------
@@ -745,6 +744,10 @@ class Block(object):
         -------
         this block            
         """
+        if shared is None:
+            return self
+        if not isinstance(shared, (dict, OrderedDict)):
+            raise ValueError("'shared' should be in type of Dict. Get type {}!".format(type(shared)))
         shared_set = set(shared.keys())
         self._shared_parameters(shared, shared_set)
         if len(shared_set) > 0:
@@ -754,7 +757,7 @@ class Block(object):
 
     def _shared_parameters(self, shared, shared_set, prefix=""):
         if prefix:
-            prefix += '.'
+            prefix += '_'
         for name in self._reg_params.keys():
             key = prefix + name
             if shared.get(key) is not None:
@@ -1548,7 +1551,7 @@ class SymbolBlock(HybridBlock):
             inputs = [symbol.var(i).as_np_ndarray() if is_np_array() else symbol.var(i) for i in input_names]
         ret = SymbolBlock(sym, inputs)
         if param_file is not None:
-            ret.collect_params().load(param_file, ctx=ctx, cast_dtype=True, dtype_source='saved')
+            ret.load_parameters(param_file, ctx=ctx, cast_dtype=True, dtype_source='saved')
         return ret
 
     def __repr__(self):
