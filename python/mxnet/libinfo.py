@@ -59,7 +59,7 @@ def find_lib_path(prefix='libmxnet'):
     elif os.name == "posix" and os.environ.get('LD_LIBRARY_PATH', None):
         dll_path[0:0] = [p.strip() for p in os.environ['LD_LIBRARY_PATH'].split(":")]
     if os.name == 'nt':
-        os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ['PATH']
+        os.environ['PATH'] = os.path.dirname(__file__) + ';' + os.environ.get('PATH', '')
         dll_path = [os.path.join(p, prefix + '.dll') for p in dll_path]
     elif platform.system() == 'Darwin':
         dll_path = [os.path.join(p, prefix + '.dylib') for p in dll_path] + \
