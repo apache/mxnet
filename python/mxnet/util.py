@@ -1085,7 +1085,7 @@ def is_np_default_dtype():
     Returns
     -------
         A bool value indicating whether the NumPy default dtype semantics is currently on.
-    
+
     See Also
     --------
     set_np_default_dtype : Set default dtype equals to offical numpy

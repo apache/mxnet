@@ -2377,7 +2377,7 @@ def array(object, dtype=None, ctx=None):
     >>> np.array([[1, 0], [0, 1]], dtype=bool)
     array([[ True, False],
            [False,  True]])
-    
+
     >>> np.array([1, 2, 3]).dtype
     dtype('float32')
 
