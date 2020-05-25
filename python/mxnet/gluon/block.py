@@ -55,58 +55,23 @@ class _BlockScope(object):
         self._old_scope = None
         self._name_scope = None
 
-    @staticmethod
-    def create(prefix, params, hint):
-        """
-        Creates prefix, params, and profiler scope name for new `Block`.
-        The profiler scope is to support the GPU memory profiler.
-        """
-        current = getattr(_BlockScope._current, "value", None)
-        block = current._block() if current is not None else None
-        if current is None or block is None:
-            if prefix is None:
-                if not hasattr(_name.NameManager._current, "value"):
-                    _name.NameManager._current.value = _name.NameManager()
-                prefix = _name.NameManager._current.value.get(None, hint) + '_'
-            # replace the trailing underscore with colon
-            profiler_scope_name = (prefix[:-1] if prefix.endswith('_') \
-                                   else prefix) + ":"
-            if params is None:
-                params = ParameterDict(prefix)
-            else:
-                params = ParameterDict(params.prefix, params)
-            return prefix, params, profiler_scope_name
-
-        if prefix is None:
-            count = current._counter.get(hint, 0)
-            prefix = '%s%d_'%(hint, count)
-            current._counter[hint] = count + 1
-        if params is None:
-            parent = block.params
-            params = ParameterDict(parent.prefix+prefix, parent._shared)
-        else:
-            params = ParameterDict(params.prefix, params)
-        # replace the trailing underscore with colon
-        profiler_scope_name = (prefix[:-1] if prefix.endswith('_') \
-                               else prefix) + ":"
-        return block.prefix + prefix, params, \
-               block._profiler_scope_name + profiler_scope_name
-
     def __enter__(self):
         block = self._block()
-        if block is None or block._empty_prefix:
+        if block is None or block.prefix == '':
             return self
         self._old_scope = getattr(_BlockScope._current, "value", None)
         _BlockScope._current.value = self
         self._name_scope = _name.Prefix(block.prefix)
         self._name_scope.__enter__()
-        self._profiler_scope = _profiler.Scope(block._profiler_scope_name)
+        _profiler_scope_name = (block.prefix[:-1] if block.prefix.endswith('.') \
+                                else block.prefix) + ":"
+        self._profiler_scope = _profiler.Scope(_profiler_scope_name)
         self._profiler_scope.__enter__()
         return self
 
     def __exit__(self, ptype, value, trace):
         block = self._block()
-        if block is None or block._empty_prefix:
+        if block is None or block.prefix == '':
             return
         self._name_scope.__exit__(ptype, value, trace)
         self._name_scope = None
@@ -282,6 +247,8 @@ class Block(object):
         self._reg_params = {}
         self._forward_hooks = OrderedDict()
         self._forward_pre_hooks = OrderedDict()
+        self._scope = _BlockScope(self)
+        self._prefix = ""
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
@@ -337,6 +304,13 @@ class Block(object):
 
     def _alias(self):
         return self.__class__.__name__.lower()
+
+    @property
+    def prefix(self):
+        """Prefix of this :py:class:`Block`.
+        Please call self.set_prefix() to get the correct prefix for current block.
+        """
+        return self._prefix
 
     @property
     def params(self):
@@ -402,7 +376,7 @@ class Block(object):
     def _set_prefix(self, recorded, prefix=''):
         if prefix:
             prefix += '.'
-
+        self._prefix = prefix
         for val in self._reg_params.values():
             if val not in recorded:
                 recorded.add(val)
@@ -1034,7 +1008,8 @@ class HybridBlock(Block):
                     flatten_inputs.append(None)
             grouped_inputs = _regroup(flatten_inputs, self._in_format)
             params = {i: j.var() for i, j in self._reg_params.items()}
-            out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
+            with self._scope:
+                out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out, "output")
 
             self._cached_graph = symbol_inputs, symbol.Group(out, _check_same_symbol_type(out))
@@ -1479,7 +1454,8 @@ class HybridBlock(Block):
 
                 return self.hybrid_forward(ndarray, x, *args, **params)
         params = {i: j.var() for i, j in self._reg_params.items()}
-        return self.hybrid_forward(symbol, x, *args, **params)
+        with self._scope:
+            return self.hybrid_forward(symbol, x, *args, **params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
         """Overrides to construct symbolic graph for this `Block`.
