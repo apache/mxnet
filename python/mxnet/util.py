@@ -1086,6 +1086,11 @@ def is_np_default_dtype():
     -------
         A bool value indicating whether the NumPy default dtype semantics is currently on.
 
+    See Also
+    --------
+    set_np_default_dtype : Set default dtype equals to offical numpy
+    set_np : npx.set_np(dtype=True) has equal performance to npx.set_np_default_dtype(True)
+
     Example
     -------
     >>> import mxnet as mx

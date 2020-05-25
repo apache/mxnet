@@ -9595,6 +9595,7 @@ def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=N
     - Input type does not support Python native iterables(list, tuple, ...).
     - "out" param: cannot perform auto type cast. out ndarray's dtype must be the same as the expected output.
     - "initial" param is not supported yet. Please use ``None`` as input or skip it.
+    - The default type is float32.
 
     Examples
     --------
