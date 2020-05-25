@@ -21,6 +21,7 @@
 __all__ = ['Distribution']
 
 from .utils import cached_property
+from numbers import Number
 
 
 class Distribution(object):
@@ -171,3 +172,25 @@ class Distribution(object):
         """
         F = self.F
         return F.np.exp(self.entropy())
+
+    def __repr__(self):
+        mode = self.F
+        args_string = ''
+        if 'symbol' not in mode.__name__:
+            for k in self.arg_constraints.keys():
+                v = self.__dict__[k]
+                if isinstance(v, Number):
+                    shape_v = ()
+                else:
+                    shape_v = v.shape
+                args_string += '{}: size {}'.format(k, shape_v) + ', '
+        args_string += ', '.join(['F: {}'.format(mode.__name__),
+                        'event_dim: {}'.format(self.event_dim)])
+        return self.__class__.__name__ + '(' + args_string + ')'
+
+    def _validate_samples(self, value):
+        """
+        Validate samples for methods like `log_prob`, `cdf`.
+        Check if `value` lies in `self.support`
+        """
+        return self.support.check(value)

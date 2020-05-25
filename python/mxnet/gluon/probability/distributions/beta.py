@@ -72,6 +72,8 @@ class Beta(ExponentialFamily):
                 ((a + b) ** 2 * (a + b + 1)))
     
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         lgamma = gammaln(F)
         log = F.np.log

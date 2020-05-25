@@ -23,9 +23,27 @@ __all__ = ['OneHotCategorical']
 from .distribution import Distribution
 from .categorical import Categorical
 from .utils import getF, cached_property
+from .constraint import Simplex, Real, IntegerInterval
 
 
 class OneHotCategorical(Distribution):
+    """Create a one-hot categorical distribution object.
+
+    Parameters
+    ----------
+    num_events : Int
+        Number of events.
+    prob : Tensor
+        Probabilities of each event.
+    logit : Tensor
+        The log-odds of each event
+     F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
+
+    arg_constraints = {'prob': Simplex(), 'logit': Real()}
+
     def __init__(self, num_events, prob=None, logit=None, F=None, validate_args=None):
         _F = F if F is not None else getF([prob, logit])
         if (num_events > 0):
@@ -34,7 +52,7 @@ class OneHotCategorical(Distribution):
         else:
             raise ValueError("`num_events` should be greater than zero. " +
                              "Received num_events={}".format(num_events))
-        self._categorical = Categorical(num_events, prob, logit, _F)
+        self._categorical = Categorical(num_events, prob, logit, _F, validate_args)
         super(OneHotCategorical, self).__init__(_F, event_dim=1, validate_args=validate_args)
 
     @cached_property
@@ -63,6 +81,8 @@ class OneHotCategorical(Distribution):
         return self.F.npx.one_hot(indices, self.num_events)
     
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         logit = self.logit
         return (value * logit).sum(-1)
 

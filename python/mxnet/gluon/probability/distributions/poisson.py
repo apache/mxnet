@@ -89,6 +89,8 @@ class Poisson(ExponentialFamily):
             return F.np.moveaxis(F.npx.tensor_poisson(lam, size), -1, 0)
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         lgamma = gammaln(F)
         rate = self.rate

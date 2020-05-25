@@ -37,7 +37,7 @@ class Dirichlet(ExponentialFamily):
     """
     has_grad = False
     support = Simplex()
-    arg_constraints = {'alpha', Positive()}
+    arg_constraints = {'alpha': Positive()}
 
     def __init__(self, alpha, F=None, validate_args=None):
         _F = F if F is not None else getF(alpha)
@@ -68,6 +68,8 @@ class Dirichlet(ExponentialFamily):
         return _clip_float_eps(gamma_samples / s, F)
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         lgamma = gammaln(F)
         log = F.np.log

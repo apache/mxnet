@@ -73,11 +73,15 @@ class Cauchy(Distribution):
         return self.sample(sample_n_shape_converter(size))
     
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         log = self.F.np.log
         return (-log(pi) - log(self.scale) -
                 log(1 + ((value - self.loc) / self.scale) ** 2))
     
     def cdf(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         return self.F.np.arctan((value - self.loc) / self.scale) / pi + 0.5
 
     def icdf(self, value):

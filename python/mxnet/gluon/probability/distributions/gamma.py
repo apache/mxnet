@@ -49,7 +49,9 @@ class Gamma(ExponentialFamily):
         self.scale = scale
         super(Gamma, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
 
-    def log_prob(self, value): 
+    def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         log_fn = F.np.log
         lgamma = gammaln(F)

@@ -22,7 +22,7 @@ __all__ = ['Categorical']
 
 from .distribution import Distribution
 from .utils import prob2logit, logit2prob, getF, cached_property, sample_n_shape_converter
-from .constraint import Simplex, Real
+from .constraint import Simplex, Real, IntegerInterval
 
 
 class Categorical(Distribution):
@@ -87,6 +87,10 @@ class Categorical(Distribution):
         """
         return prob2logit(self.prob, False, self.F)
 
+    @property
+    def support(self):
+        return IntegerInterval(0, self.num_events)
+
     def log_prob(self, value):
         """Compute the log-likelihood of `value`
         
@@ -100,6 +104,8 @@ class Categorical(Distribution):
         Tensor
             log-likelihood of `value`
         """
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         logit = self.logit
         indices = F.np.expand_dims(value, -1).astype('int')

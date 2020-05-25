@@ -49,6 +49,7 @@ class HalfCauchy(TransformedDistribution):
 
     def __init__(self, scale=1.0, F=None, validate_args=None):
         base_dist = Cauchy(0, scale, F)
+        self.scale = scale
         super(HalfCauchy, self).__init__(base_dist, AbsTransform(), validate_args=validate_args)
 
     def log_prob(self, value):
@@ -64,10 +65,6 @@ class HalfCauchy(TransformedDistribution):
 
     def entropy(self):
         return self._base_dist.entropy() - math.log(2)
-
-    @property
-    def scale(self):
-        return self._base_dist._scale
 
     @property
     def mean(self):

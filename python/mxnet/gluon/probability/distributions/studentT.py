@@ -91,6 +91,8 @@ class StudentT(Distribution):
         return self.sample(sample_n_shape_converter(size))
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         lgamma = gammaln(F)
         df = self.df

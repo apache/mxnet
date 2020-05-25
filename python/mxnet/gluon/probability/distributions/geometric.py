@@ -101,6 +101,8 @@ class Geometric(Distribution):
         return new_instance
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         prob = self.prob
         return value * F.np.log1p(-prob) + F.np.log(prob)

@@ -102,6 +102,8 @@ class Bernoulli(ExponentialFamily):
         return new_instance
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         if self.prob is None:
             logit = self.logit

@@ -51,6 +51,8 @@ class Gumbel(Distribution):
         super(Gumbel, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         # Standardized sample
         y = (self.loc - value) / self.scale
@@ -68,6 +70,8 @@ class Gumbel(Distribution):
         return new_instance
 
     def cdf(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         y = (value - self.loc) / self.scale
         exp_fn = F.np.exp

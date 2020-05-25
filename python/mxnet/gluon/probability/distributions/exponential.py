@@ -79,10 +79,14 @@ class Exponential(ExponentialFamily):
 
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         return F.np.log(self.rate) - self.rate * value
 
     def cdf(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         return 1 - F.np.exp(-self.rate * value)
 

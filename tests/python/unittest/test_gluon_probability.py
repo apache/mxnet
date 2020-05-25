@@ -92,7 +92,7 @@ def test_gluon_uniform():
             self._func = func
 
         def hybrid_forward(self, F, low, high, *args):
-            uniform = mgp.Uniform(low, high)
+            uniform = mgp.Uniform(low, high, validate_args=True)
             return _distribution_method_invoker(uniform, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -162,7 +162,7 @@ def test_gluon_normal():
             self._func = func
 
         def hybrid_forward(self, F, loc, scale, *args):
-            normal = mgp.Normal(loc, scale, F)
+            normal = mgp.Normal(loc, scale, F, validate_args=True)
             return getattr(normal, self._func)(*args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -232,7 +232,7 @@ def test_gluon_laplace():
             self._func = func
 
         def hybrid_forward(self, F, loc, scale, *args):
-            normal = mgp.Laplace(loc, scale, F)
+            normal = mgp.Laplace(loc, scale, F, validate_args=True)
             return getattr(normal, self._func)(*args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -302,7 +302,7 @@ def test_gluon_cauchy():
             super(TestCauchy, self).__init__()
 
         def hybrid_forward(self, F, loc, scale, *args):
-            cauchy = mgp.Cauchy(loc, scale, F)
+            cauchy = mgp.Cauchy(loc, scale, F, validate_args=True)
             return _distribution_method_invoker(cauchy, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -384,7 +384,7 @@ def test_gluon_half_cauchy():
             self._func = func
 
         def hybrid_forward(self, F, scale, *args):
-            half_normal = mgp.HalfCauchy(scale, F)
+            half_normal = mgp.HalfCauchy(scale, F, validate_args=True)
             return getattr(half_normal, self._func)(*args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -446,7 +446,7 @@ def test_gluon_poisson():
             super(TestPoisson, self).__init__()
 
         def hybrid_forward(self, F, rate, *args):
-            poisson = mgp.Poisson(rate, F)
+            poisson = mgp.Poisson(rate, F, validate_args=True)
             return _distribution_method_invoker(poisson, self._func, *args)
 
     shapes = [(1,), (2, 3), (1, 0, 2), 6]
@@ -482,8 +482,8 @@ def test_gluon_geometric():
             self._func = func
 
         def hybrid_forward(self, F, params, *args):
-            dist = mgp.Geometric(logit=params, F=F) if self._is_logit else \
-                        mgp.Geometric(prob=params, F=F)
+            dist = mgp.Geometric(logit=params, F=F, validate_args=True) if self._is_logit else \
+                        mgp.Geometric(prob=params, F=F, validate_args=True)
             return _distribution_method_invoker(dist, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -542,8 +542,8 @@ def test_gluon_negative_binomial():
             self._func = func
 
         def hybrid_forward(self, F, n, params, *args):
-            dist = mgp.NegativeBinomial(n=n, logit=params, F=F) if self._is_logit else \
-                        mgp.NegativeBinomial(n=n, prob=params, F=F)
+            dist = mgp.NegativeBinomial(n=n, logit=params, F=F, validate_args=True) if self._is_logit else \
+                        mgp.NegativeBinomial(n=n, prob=params, F=F, validate_args=True)
             return _distribution_method_invoker(dist, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -594,7 +594,7 @@ def test_gluon_exponential():
             super(TestExponential, self).__init__()
         
         def hybrid_forward(self, F, scale, *args):
-            exponential = mgp.Exponential(scale, F)
+            exponential = mgp.Exponential(scale, F, validate_args=True)
             return _distribution_method_invoker(exponential, self._func, *args)
     
     shapes = [(), (1,), (2, 3), 6]
@@ -657,7 +657,7 @@ def test_gluon_weibull():
             self._func = func
 
         def hybrid_forward(self, F, concentration, scale, *args):
-            weibull = mgp.Weibull(concentration, scale, F)
+            weibull = mgp.Weibull(concentration, scale, F, validate_args=True)
             return _distribution_method_invoker(weibull, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -723,7 +723,7 @@ def test_gluon_pareto():
             self._func = func
 
         def hybrid_forward(self, F, alpha, scale, *args):
-            pareto = mgp.Pareto(alpha, scale, F)
+            pareto = mgp.Pareto(alpha, scale, F, validate_args=True)
             return _distribution_method_invoker(pareto, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -791,7 +791,7 @@ def test_gluon_gamma():
             self._func = func
 
         def hybrid_forward(self, F, shape, scale, *args):
-            gamma = mgp.Gamma(shape, scale, F)
+            gamma = mgp.Gamma(shape, scale, F, validate_args=True)
             return _distribution_method_invoker(gamma, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -838,7 +838,7 @@ def test_gluon_dirichlet():
             self._func = func
 
         def hybrid_forward(self, F, alpha, *args):
-            dirichlet = mgp.Dirichlet(alpha, F)
+            dirichlet = mgp.Dirichlet(alpha, F, validate_args=True)
             return _distribution_method_invoker(dirichlet, self._func, *args)
 
     event_shapes = [2, 5, 10]
@@ -904,7 +904,7 @@ def test_gluon_beta():
             self._func = func
 
         def hybrid_forward(self, F, alpha, beta, *args):
-            beta_dist = mgp.Beta(alpha, beta, F)
+            beta_dist = mgp.Beta(alpha, beta, F, validate_args=True)
             return _distribution_method_invoker(beta_dist, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -951,7 +951,7 @@ def test_gluon_fisher_snedecor():
             self._func = func
 
         def hybrid_forward(self, F, df1, df2, *args):
-            beta_dist = mgp.FisherSnedecor(df1, df2, F)
+            beta_dist = mgp.FisherSnedecor(df1, df2, F, validate_args=True)
             return _distribution_method_invoker(beta_dist, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -997,7 +997,7 @@ def test_gluon_student_t():
             self._func = func
 
         def hybrid_forward(self, F, df, loc, scale, *args):
-            t_dist = mgp.StudentT(df, loc, scale, F)
+            t_dist = mgp.StudentT(df, loc, scale, F, validate_args=True)
             return _distribution_method_invoker(t_dist, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -1046,7 +1046,7 @@ def test_gluon_gumbel():
             self._func = func
 
         def hybrid_forward(self, F, loc, scale, *args):
-            normal = mgp.Gumbel(loc, scale, F)
+            normal = mgp.Gumbel(loc, scale, F, validate_args=True)
             return getattr(normal, self._func)(*args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -1124,9 +1124,11 @@ def test_gluon_multinomial():
 
         def hybrid_forward(self, F, params, *args):
             multinomial = (
-                mgp.Multinomial(self._num_events, logit=params, total_count=self._total_count, F=F)
+                mgp.Multinomial(self._num_events, logit=params, total_count=self._total_count, F=F,
+                                validate_args=True)
                 if self._is_logit else \
-                mgp.Multinomial(self._num_events, prob=params, total_count=self._total_count, F=F)
+                mgp.Multinomial(self._num_events, prob=params, total_count=self._total_count, F=F,
+                                validate_args=True)
             )
             if self._func == 'sample':
                 return multinomial.sample(self._batch_shape)
@@ -1204,8 +1206,9 @@ def test_gluon_binomial():
             self._n = n
 
         def hybrid_forward(self, F, params, *args):
-            dist = mgp.Binomial(n=self._n, logit=params, F=F) if self._is_logit else \
-                        mgp.Binomial(n=self._n, prob=params, F=F)
+            dist = mgp.Binomial(n=self._n, logit=params, F=F, validate_args=True) \
+                    if self._is_logit else \
+                    mgp.Binomial(n=self._n, prob=params, F=F, validate_args=True)
             return _distribution_method_invoker(dist, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -1281,8 +1284,8 @@ def test_gluon_bernoulli():
             self._func = func
 
         def hybrid_forward(self, F, params, *args):
-            bernoulli = mgp.Bernoulli(logit=params, F=F) if self._is_logit else \
-                        mgp.Bernoulli(prob=params, F=F)
+            bernoulli = mgp.Bernoulli(logit=params, F=F, validate_args=True) if self._is_logit else \
+                        mgp.Bernoulli(prob=params, F=F, validate_args=True)
             return _distribution_method_invoker(bernoulli, self._func, *args)
 
     # Test log_prob
@@ -1342,8 +1345,9 @@ def test_relaxed_bernoulli():
             self._func = func
 
         def hybrid_forward(self, F, params, *args):
-            relaxed_bernoulli = mgp.RelaxedBernoulli(T=1.0, logit=params, F=F) if self._is_logit else \
-                        mgp.RelaxedBernoulli(T=1.0, prob=params, F=F)
+            relaxed_bernoulli = mgp.RelaxedBernoulli(T=1.0, logit=params, F=F, validate_args=True)\
+                        if self._is_logit else \
+                        mgp.RelaxedBernoulli(T=1.0, prob=params, F=F, validate_args=True)
             if self._func == "sample":
                 return relaxed_bernoulli.sample()
             return _distribution_method_invoker(relaxed_bernoulli, self._func, *args)
@@ -1395,8 +1399,9 @@ def test_gluon_categorical():
             self._sample_shape = sample_shape
 
         def hybrid_forward(self, F, params, *args):
-            categorical = mgp.Categorical(self._num_events, logit=params, F=F) if self._is_logit else \
-                        mgp.Categorical(self._num_events, prob=params, F=F)
+            categorical = mgp.Categorical(self._num_events, logit=params, F=F, validate_args=True)\
+                        if self._is_logit else \
+                        mgp.Categorical(self._num_events, prob=params, F=F, validate_args=True)
             if self._func == "sample":
                 return categorical.sample(self._batch_shape)
             if self._func == "sample_n":
@@ -1429,7 +1434,7 @@ def test_gluon_categorical():
             if use_logit:
                 param = np.log(param)
             net = TestCategorical("sample_n",
-                                is_logit=False, batch_shape=batch_shape,
+                                is_logit=use_logit, batch_shape=batch_shape,
                                 num_events=event_shape, sample_shape=sample_shape
                     )
             if hybridize:
@@ -1625,22 +1630,31 @@ def test_gluon_mvn():
             self._param_type = param_type
 
         def hybrid_forward(self, F, loc, cov, *args):
-            mvn = mgp.MultivariateNormal(loc=loc, **{self._param_type: cov}, F=F)
+            mvn = mgp.MultivariateNormal(loc=loc, **{self._param_type: cov}, F=F,
+                                            validate_args=True)
             return _distribution_method_invoker(mvn, self._func, *args)
+
+    def _stable_inv(cov):
+        """
+        Force the precision matrix to be symmetric.
+        """
+        precision = np.linalg.inv(cov)
+        precision_t = np.swapaxes(precision, -1, -2)
+        return (precision + precision_t) / 2
 
     event_shapes = [3, 5, 10]
     loc_shapes = [(), (2,), (4, 2)]
     cov_shapes = [(), (2,), (4, 2)]
     cov_func = {
         'cov': lambda s: s,
-        'precision': lambda s: np.linalg.inv(s),
+        'precision': lambda s: _stable_inv(s),
         'scale_tril': lambda s: np.linalg.cholesky(s)
     }
 
     # Test sampling
     for loc_shape, cov_shape, event_shape in itertools.product(loc_shapes, cov_shapes, event_shapes):
         for cov_type in cov_func.keys():
-            for hybridize in [True, False]:
+            for hybridize in [False]:
                 loc = np.random.randn(*(loc_shape + (event_shape,)))
                 _s = np.random.randn(*(cov_shape + (event_shape, event_shape)))
                 loc.attach_grad()
@@ -1727,7 +1741,7 @@ def test_gluon_half_normal():
             self._func = func
 
         def hybrid_forward(self, F, scale, *args):
-            half_normal = mgp.HalfNormal(scale, F)
+            half_normal = mgp.HalfNormal(scale, F, validate_args=True)
             return getattr(half_normal, self._func)(*args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -2218,8 +2232,8 @@ def test_gluon_constraint():
                 constraint = self._constraint_type(*constraint_param)
             return constraint.check(value)
 
-    _s = np.random.randn(5, 3, 3)
-    psd_matrix = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(_s.shape[-1])    
+    _s = np.random.randn(5, 10, 10)
+    psd_matrix = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(_s.shape[-1])
     
     constraints_zoo = [
         # (constraint_type, constraint_param, test_samples)

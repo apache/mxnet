@@ -112,6 +112,8 @@ class NegativeBinomial(Distribution):
         return new_instance
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         lgamma = gammaln(F)
         binomal_coef = lgamma(value + self.n) - lgamma(1 + value) - lgamma(self.n)

@@ -49,6 +49,7 @@ class HalfNormal(TransformedDistribution):
 
     def __init__(self, scale=1.0, F=None, validate_args=None):
         base_dist = Normal(0, scale, F)
+        self.scale = scale
         super(HalfNormal, self).__init__(base_dist, AbsTransform(), validate_args=validate_args)
 
     def log_prob(self, value):
@@ -61,10 +62,6 @@ class HalfNormal(TransformedDistribution):
 
     def icdf(self, value):
         return self._base_dist.icdf((value + 1) / 2)
-
-    @property
-    def scale(self):
-        return self._base_dist.scale
 
     @property
     def loc(self):

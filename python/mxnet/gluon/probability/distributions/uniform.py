@@ -50,6 +50,8 @@ class Uniform(Distribution):
         super(Uniform, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         type_converter = lambda x: float(x) if isinstance(x, bool) else x.astype('float')
         lower_bound = type_converter(self.low < value)
@@ -83,6 +85,8 @@ class Uniform(Distribution):
         return new_instance
     
     def cdf(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         x = (value - self.low) / (self.high - self.low)
         return x.clip(0, 1)
 

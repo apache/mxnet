@@ -98,6 +98,8 @@ class Multinomial(Distribution):
         return self._categorical.sample_n((self.total_count,) + size).sum(0)
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         lgamma = gammaln(F)
         log_factorial_n = lgamma(value.sum(-1) + 1)

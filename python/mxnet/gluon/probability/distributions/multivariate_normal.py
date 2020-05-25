@@ -132,6 +132,8 @@ class MultivariateNormal(Distribution):
         return samples
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         import math
         F = self.F
         diff = value - self.loc

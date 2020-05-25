@@ -63,6 +63,8 @@ class Normal(ExponentialFamily):
         Tensor
             Log likelihood of the input.
         """
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         log_scale = F.np.log(self.scale)
         log_prob = -((value - self.loc) ** 2) / (2 * self.variance)
@@ -115,6 +117,8 @@ class Normal(ExponentialFamily):
         return new_instance
 
     def cdf(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         erf_func = erf(self.F)
         standarized_samples = ((value - self.loc) /
                                 (math.sqrt(2) * self.scale))

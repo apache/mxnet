@@ -44,11 +44,12 @@ class Binomial(Distribution):
     """
 
     support = NonNegativeInteger()
-    arg_constraints = {'n' : NonNegativeInteger(),
-                       'prob': Interval(0, 1),
+    arg_constraints = {'prob': Interval(0, 1),
                        'logit': Real()}
 
     def __init__(self, n=1, prob=None, logit=None, F=None, validate_args=None):
+        if (n < 0) or (n % 1 != 0):
+            raise ValueError("Expect `n` to be non-negative integer, received n={}".format(n))
         _F = F if F is not None else getF(n, prob, logit)
         if (prob is None) == (logit is None):
             raise ValueError(
@@ -108,6 +109,8 @@ class Binomial(Distribution):
         return new_instance
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         lgamma = gammaln(F)
         binomal_coef = lgamma(self.n + 1) - lgamma(1 + value) - lgamma(self.n - value + 1)

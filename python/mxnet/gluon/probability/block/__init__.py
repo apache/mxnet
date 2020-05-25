@@ -19,4 +19,4 @@
 # pylint: disable=wildcard-import
 """Stochastic block."""
 
-from .StochasticBlock import *
+from .stochastic_block import *

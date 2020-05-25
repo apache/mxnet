@@ -64,6 +64,8 @@ class Laplace(Distribution):
         Tensor
             Log likelihood of the input.
         """
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         return -F.np.log(2 * self.scale) - F.np.abs(value - self.loc) /  self.scale
 
@@ -112,6 +114,8 @@ class Laplace(Distribution):
         return new_instance
 
     def cdf(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         F = self.F
         value = value - self.loc
         return 0.5 - 0.5 * F.np.sign(value) * F.np.expm1(-F.np.abs(value) / self.scale)
