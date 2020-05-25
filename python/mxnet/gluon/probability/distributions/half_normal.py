@@ -53,11 +53,15 @@ class HalfNormal(TransformedDistribution):
         super(HalfNormal, self).__init__(base_dist, AbsTransform(), validate_args=validate_args)
 
     def log_prob(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         log_prob = self._base_dist.log_prob(value) + math.log(2)
         log_prob = self.F.np.where(value < 0, -inf, log_prob)
         return log_prob
 
     def cdf(self, value):
+        if self._validate_args:
+            self._validate_samples(value)
         return 2 * self._base_dist.cdf(value) - 1
 
     def icdf(self, value):
