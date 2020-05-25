@@ -207,12 +207,12 @@ extern "C" {
 #define MSHADOW_FORCE_INLINE inline __attribute__((always_inline))
 #endif
 #ifdef __CUDACC__
-  #define MSHADOW_XINLINE MSHADOW_FORCE_INLINE __device__ __host__
+  #define MSHADOW_XINLINE inline __device__ __host__
 #else
-  #define MSHADOW_XINLINE MSHADOW_FORCE_INLINE
+  #define MSHADOW_XINLINE inline
 #endif
 /*! \brief cpu force inline */
-#define MSHADOW_CINLINE MSHADOW_FORCE_INLINE
+#define MSHADOW_CINLINE inline
 
 /*!
  * \brief default data type for tensor string
