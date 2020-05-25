@@ -1162,7 +1162,7 @@ def getenv(name):
     """
     ret = ctypes.c_char_p()
     check_call(_LIB.MXGetEnv(c_str(name), ctypes.byref(ret)))
-    return None if ret.value == None else py_str(ret.value)
+    return None if ret.value is None else py_str(ret.value)
 
 
 def setenv(name, value):
