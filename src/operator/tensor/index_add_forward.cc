@@ -52,7 +52,7 @@ struct IndexAddForwardCPUKernel {
     }
     id *= a_tail_size;
     #pragma omp parallel for
-    for (size_t _i = 0; _i < a_tail_size; ++_i) {
+    for (int _i = 0; _i < a_tail_size; ++_i) {
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_id;
       for (int _j = seg; _j < seg + a_ndim; ++_j) {
@@ -77,7 +77,7 @@ void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
                         const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_stride,
                         const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_shape,
                         const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& a_shape,
-                        const size_t a_tail_size,
+                        const int a_tail_size,
                         const int ind_ndim, const int* ind,
                         const int a_ndim) {
   using namespace mxnet_op;

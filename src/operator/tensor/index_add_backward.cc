@@ -31,7 +31,7 @@ template<typename xpu, typename DType>
 void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
                              DType* grad_a, const DType* ograd,
                              const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& stride,
-                             const size_t tail_size, const int ind_num,
+                             const int tail_size, const int ind_num,
                              const int ind_ndim, const int32_t* ind_vec,
                              const int req, const int out_ndim) {
   using namespace mxnet_op;
@@ -48,7 +48,7 @@ struct IndexAddBackwardValCPUKernel {
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& ograd_pre_stride,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_stride,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_shape,
-                                  const size_t ograd_tail_size, const int ind_num,
+                                  const int ograd_tail_size, const int ind_num,
                                   const int ind_ndim, const int32_t* ind_vec,
                                   const int out_ndim) {
     size_t id = 0;
@@ -58,7 +58,7 @@ struct IndexAddBackwardValCPUKernel {
     }
     id *= ograd_tail_size;
     #pragma omp parallel for
-    for (size_t _i = 0; _i < ograd_tail_size; ++_i) {
+    for (int _i = 0; _i < ograd_tail_size; ++_i) {
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_id =
         mxnet_op::unravel(_i, ograd_tail_shape);
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_id;
@@ -82,7 +82,7 @@ void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
                                const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& ograd_pre_stride,
                                const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_stride,
                                const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_shape,
-                               const size_t tail_size, const int ind_num,
+                               const int tail_size, const int ind_num,
                                const int ind_ndim, const int32_t* ind_vec,
                                const int out_ndim) {
   using namespace mxnet_op;
