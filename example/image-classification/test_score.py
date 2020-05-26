@@ -43,7 +43,7 @@ def test_imagenet1k_resnet(imagenet_val_5k_settings):
     models = ['imagenet1k-resnet-50', 'imagenet1k-resnet-152']
     accs = [.77, .78]
     for (m, g) in zip(models, accs):
-        acc = mx.metric.create('acc')
+        acc = mx.gluon.metric.create('acc')
         (speed,) = score(model=m, data_val=imagenet_val_5k,
                          rgb_mean='0,0,0', metrics=acc, **kwargs)
         r = acc.get()[1]
@@ -52,7 +52,7 @@ def test_imagenet1k_resnet(imagenet_val_5k_settings):
 
 def test_imagenet1k_inception_bn(imagenet_val_5k_settings):
     imagenet_val_5k, kwargs = imagenet_val_5k_settings
-    acc = mx.metric.create('acc')
+    acc = mx.gluon.metric.create('acc')
     m = 'imagenet1k-inception-bn'
     g = 0.75
     (speed,) = score(model=m,

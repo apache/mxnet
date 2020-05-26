@@ -124,7 +124,7 @@ if __name__ == '__main__':
     mod.init_params()
     mod.init_optimizer(optimizer='adam', optimizer_params=[('learning_rate', learning_rate), ('beta1',beta1), ('beta2',beta2), ('epsilon',eps)])
     
-    metric = mx.metric.create(cross_entropy)
+    metric = mx.gluon.metric.create(cross_entropy)
     speedometer = mx.callback.Speedometer(batch_size, log_interval)
     best_hr, best_ndcg, best_iter = -1, -1, -1 
     logging.info('Training started ...')

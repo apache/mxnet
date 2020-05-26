@@ -94,7 +94,7 @@ if __name__ == '__main__':
         'rescale_grad': 1.0/batch_size}
 
     # use MSE as the metric
-    metric = mx.metric.create(['MSE'])
+    metric = mx.gluon.metric.create(['MSE'])
     
     speedometer = mx.callback.Speedometer(batch_size, print_every)
     

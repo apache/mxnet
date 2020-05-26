@@ -19,7 +19,7 @@ import mxnet as mx
 import numpy as np
 
 
-class MultiBoxMetric(mx.metric.EvalMetric):
+class MultiBoxMetric(mx.gluon.metric.EvalMetric):
     """Calculate metrics for Multibox training """
     def __init__(self, eps=1e-8):
         super(MultiBoxMetric, self).__init__('MultiBox')
@@ -29,17 +29,6 @@ class MultiBoxMetric(mx.metric.EvalMetric):
         self.reset()
 
     def reset(self):
-        """
-        override reset behavior
-        """
-        if getattr(self, 'num', None) is None:
-            self.num_inst = 0
-            self.sum_metric = 0.0
-        else:
-            self.num_inst = [0] * self.num
-            self.sum_metric = [0.0] * self.num
-
-    def reset_local(self):
         """
         override reset behavior
         """

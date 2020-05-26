@@ -27,7 +27,7 @@ import numpy as np
 from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
-from ... import nd, sym
+from ... import ndarray as nd, symbol as sym
 from ...util import is_np_array
 
 
@@ -44,34 +44,41 @@ class Sequential(Block):
     """
     def __init__(self, prefix=None, params=None):
         super(Sequential, self).__init__(prefix=prefix, params=params)
+        self._layers = []
 
     def add(self, *blocks):
         """Adds block on top of the stack."""
         for block in blocks:
+            self._layers.append(block)
             self.register_child(block)
 
-    def forward(self, x):
+    def forward(self, x, *args):
         for block in self._children.values():
-            x = block(x)
+            x = block()(x, *args)
+            args = []
+            if isinstance(x, (tuple, list)):
+                args = x[1:]
+                x = x[0]
+        if args:
+            x = tuple([x] + list(args))
         return x
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
-                                                        block=_indent(block.__repr__(), 2))
+                                                        block=_indent(block().__repr__(), 2))
                             for key, block in self._children.items()])
-        return s.format(name=self.__class__.__name__,
-                        modstr=modstr)
+        return s.format(name=self.__class__.__name__, modstr=modstr)
 
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
             net = type(self)(prefix=self._prefix)
             with net.name_scope():
-                net.add(*layers)
+                net.add(*(l() for l in layers))
             return net
         else:
-            return layers
+            return layers()
 
     def __len__(self):
         return len(self._children)
@@ -87,7 +94,7 @@ class Sequential(Block):
         **kwargs : string
             Additional flags for hybridized operator.
         """
-        if self._children and all(isinstance(c, HybridBlock) for c in self._children.values()):
+        if self._children and all(isinstance(c(), HybridBlock) for c in self._children.values()):
             warnings.warn(
                 "All children of this Sequential layer '%s' are HybridBlocks. Consider "
                 "using HybridSequential for the best performance."%self.prefix, stacklevel=2)
@@ -108,34 +115,41 @@ class HybridSequential(HybridBlock):
     """
     def __init__(self, prefix=None, params=None):
         super(HybridSequential, self).__init__(prefix=prefix, params=params)
+        self._layers = []
 
     def add(self, *blocks):
         """Adds block on top of the stack."""
         for block in blocks:
+            self._layers.append(block)
             self.register_child(block)
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         for block in self._children.values():
-            x = block(x)
+            x = block()(x, *args)
+            args = []
+            if isinstance(x, (tuple, list)):
+                args = x[1:]
+                x = x[0]
+        if args:
+            x = tuple([x] + list(args))
         return x
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
-                                                        block=_indent(block.__repr__(), 2))
+                                                        block=_indent(block().__repr__(), 2))
                             for key, block in self._children.items()])
-        return s.format(name=self.__class__.__name__,
-                        modstr=modstr)
+        return s.format(name=self.__class__.__name__, modstr=modstr)
 
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
             net = type(self)(prefix=self._prefix)
             with net.name_scope():
-                net.add(*layers)
+                net.add(*(l() for l in layers))
             return net
         else:
-            return layers
+            return layers()
 
     def __len__(self):
         return len(self._children)
@@ -820,7 +834,7 @@ class GroupNorm(HybridBlock):
     """
     def __init__(self, num_groups=1, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
-                 prefix=None, params=None):
+                 in_channels=0, prefix=None, params=None):
         super(GroupNorm, self).__init__(prefix=prefix, params=params)
         self._kwargs = {'eps': epsilon, 'num_groups': num_groups, 'center': center, 'scale': scale}
         self._num_groups = num_groups
@@ -828,10 +842,10 @@ class GroupNorm(HybridBlock):
         self._center = center
         self._scale = scale
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(num_groups,), init=gamma_initializer,
+                                     shape=(in_channels,), init=gamma_initializer,
                                      allow_deferred_init=True)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(num_groups,), init=beta_initializer,
+                                    shape=(in_channels,), init=beta_initializer,
                                     allow_deferred_init=True)
 
     def hybrid_forward(self, F, data, gamma, beta):
@@ -839,7 +853,10 @@ class GroupNorm(HybridBlock):
         return norm_data
 
     def __repr__(self):
-        s = '{name}({content})'
+        s = '{name}({content}'
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels)
+        s += ')'
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
                                            for k, v in self._kwargs.items()]))

@@ -1,4 +1,5 @@
-Run the following command:
+<!-- Uncomment the following line when the newest version is released -->
+<!-- Run the following command: -->
 
 <div class="v1-6-0">
 

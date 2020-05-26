@@ -122,7 +122,7 @@ class DECModel(model.MXModel):
 
         def ce(label, pred):
             return np.sum(label*np.log(label/(pred+0.000001)))/label.shape[0]
-        solver.set_metric(mx.metric.CustomMetric(ce))
+        solver.set_metric(mx.gluon.metric.CustomMetric(ce))
 
         label_buff = np.zeros((X.shape[0], self.num_centers))
         train_iter = mx.io.NDArrayIter({'data': X}, {'label': label_buff}, batch_size=batch_size,

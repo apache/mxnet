@@ -23,7 +23,7 @@ import logging
 from collections import namedtuple
 from mxnet import optimizer as opt
 from mxnet.optimizer import get_updater
-from mxnet import metric
+from mxnet.gluon import metric
 
 # Parameter to pass to batch_end_callback
 BatchEndParam = namedtuple('BatchEndParams', ['epoch', 'nbatch', 'eval_metric'])

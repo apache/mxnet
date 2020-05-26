@@ -32,6 +32,8 @@ sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
 from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err
 import itertools
+import pytest
+import tempfile
 
 OP_NAME='op_name'
 QUANTIZED_OP_NAME='quantized_op_name'
@@ -101,15 +103,17 @@ def check_qsym_dummy_forward(qsym, batch, data_shape):
     output.wait_to_read()
   return mod.get_outputs()
 
-def check_qsym_gluon_forward(qsym, qarg_params, qaux_params, data_shape):
+def check_qsym_gluon_forward(path, qsym, qarg_params, qaux_params, data_shape):
   # save qsym to JSON file
-  qsym.save('quantized-symbol.json')
+  _, json_path = tempfile.mkstemp(suffix='-symbol.json', dir=path)
+  params_path = json_path.replace('-symbol.json', '-0000.params')
+  qsym.save(json_path)
   # save params
   save_dict = {('arg:%s' % k): v.as_in_context(mx.current_context()) for k, v in qarg_params.items()}
   save_dict.update({('aux:%s' % k): v.as_in_context(mx.current_context()) for k, v in qaux_params.items()})
-  mx.nd.save('quantized-0000.params', save_dict)
+  mx.nd.save(params_path, save_dict)
   # load back with SymbolBlock
-  net = mx.gluon.SymbolBlock.imports('quantized-symbol.json', ['data'], 'quantized-0000.params')
+  net = mx.gluon.SymbolBlock.imports(json_path, ['data'], params_path)
   net.collect_params().reset_ctx(ctx = mx.current_context())
   net.hybridize()
 
@@ -129,7 +133,7 @@ class CalibIter(mx.io.DataIter):
         yield self.batch
 
 
-def check_quantize(sym, data_shape, out_type, name='conv',
+def check_quantize(sym, data_shape, out_type, path, name='conv',
                    check_calibration=True, gluon_forward=False, check_scale_align=False):
   quantize_granularity_list = ['tensor-wise']
   if name == 'fc':
@@ -182,7 +186,7 @@ def check_quantize(sym, data_shape, out_type, name='conv',
     if check_scale_align:
       check_qsym_scale_align(qsym)
     if gluon_forward == True:
-      check_qsym_gluon_forward(qsym, qarg_params, qaux_params, data_shape)
+      check_qsym_gluon_forward(path, qsym, qarg_params, qaux_params, data_shape)
     else:
       quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape)
       for i in range(len(ref_out)):
@@ -242,7 +246,7 @@ def check_quantize_whole_model_with_forward():
     check_quantize_whole_model(qdtype)
 
 @with_seed()
-def check_fusion(sym, data_shape, attrs_dict, check_fp32_fusion=True, check_quantization=True, out_types=['uint8', 'int8', 'auto']):
+def check_fusion(sym, data_shape, attrs_dict, path, check_fp32_fusion=True, check_quantization=True, out_types=['uint8', 'int8', 'auto']):
   if check_fp32_fusion:
     data_min = -1.0
     data_max = 1.0
@@ -280,12 +284,12 @@ def check_fusion(sym, data_shape, attrs_dict, check_fp32_fusion=True, check_quan
   if check_quantization:
     # fp32 to int8
     for out_type in out_types:
-      check_quantize(sym, data_shape, out_type, name=name)
+      check_quantize(sym, data_shape, out_type, path, name=name)
       # TODO(ciyong), since quantized fc save its params in int8, while gluon treat the default
       # variable from symbol file as fp32 which results in mismatch dtype of params.
       # Skip quantized fc in gluon pass.
       if name != 'fc':
-        check_quantize(sym, data_shape, out_type, name=name, gluon_forward=True)
+        check_quantize(sym, data_shape, out_type, path, name=name, gluon_forward=True)
 
 def check_neg_fusion(syms, attrs_name=None, excluded_attrs=None,
                      date_shape=(4,4,10,10), name='conv'):
@@ -308,13 +312,16 @@ def head_symbol(data_shape):
   weight = mx.symbol.Variable('weight', dtype='float32')
   return data, weight
 
+@with_seed()
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+def test_pos_single_conv(no_bias, data_shape, tmpdir):
 # single conv fusion case
-def single_conv(no_bias, data_shape):
-  attr = {'conv': []}
-  data, weight = head_symbol(data_shape)
-  conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
-                               kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
-  return conv, attr
+    attr = {'conv': []}
+    data, weight = head_symbol(data_shape)
+    conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
+                                 kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
+    check_fusion(conv, data_shape, attr, str(tmpdir))
 
 # conv + bn fusion case
 def conv_bn(no_bias, data_shape):
@@ -361,31 +368,49 @@ def conv_act_sum(no_bias, data_shape, alg):
   return sum, attr
 
 # conv + add fusion case
-def conv_add(no_bias, data_shape):
-  attr = {'conv': {'with_sum': 'true'}}
-  data, weight = head_symbol(data_shape)
-  conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
+@with_seed()
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+def test_pos_conv_add(no_bias, data_shape, tmpdir):
+    attr = {'conv': {'with_sum': 'true'}}
+    data, weight = head_symbol(data_shape)
+    conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
-  conv2 = mx.symbol.Convolution(data=data, name='conv2', num_filter=64,
+    conv2 = mx.symbol.Convolution(data=data, name='conv2', num_filter=64,
                                kernel=(3, 3), stride=(1, 1))
-  pool = mx.sym.Pooling(data=conv2, kernel=(1, 1), pool_type='avg', name='pool')
-  sum = conv1 + pool
-  return sum, attr
+    pool = mx.sym.Pooling(data=conv2, kernel=(1, 1), pool_type='avg', name='pool')
+    sum = conv1 + pool
+    check_fusion(sum, data_shape, attr, str(tmpdir))
 
 # conv + add fusion case 2
-def conv_add2(no_bias, data_shape):
-  attr = {'conv': {'with_sum': 'true'}}
-  data, weight = head_symbol(data_shape)
-  conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
+@with_seed()
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+def test_pos_conv_add2(no_bias, data_shape, tmpdir):
+    attr = {'conv': {'with_sum': 'true'}}
+    data, weight = head_symbol(data_shape)
+    conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=no_bias)
-  conv2 = mx.symbol.Convolution(data=data, name='conv2', num_filter=64,
+    conv2 = mx.symbol.Convolution(data=data, name='conv2', num_filter=64,
                                kernel=(3, 3), stride=(1, 1))
-  pool = mx.sym.Pooling(data=conv2, kernel=(1, 1), pool_type='avg', name='pool')
-  sum = pool + conv1
-  return sum, attr
+    pool = mx.sym.Pooling(data=conv2, kernel=(1, 1), pool_type='avg', name='pool')
+    sum = pool + conv1
+    check_fusion(sum, data_shape, attr, str(tmpdir))
 
 # conv + bn + act fusion case
-def conv_bn_act(no_bias, data_shape, alg):
+@with_seed()
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('alg,quantize', [
+    ("relu", True),
+    ("sigmoid", True),
+    ("tanh", True),
+    ("softrelu", True),
+    ("relu6", True),
+    ("leakyrelu", True),
+    ("gelu", True)
+])
+@pytest.mark.parametrize('no_bias', [True, False])
+def test_pos_conv_bn_act(no_bias, data_shape, alg, quantize, tmpdir):
   attr = {'conv': {'with_bn': 'true', 'with_act': 'true'}}
   data, weight = head_symbol(data_shape)
   conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
@@ -399,10 +424,22 @@ def conv_bn_act(no_bias, data_shape, alg):
     relu = mx.symbol.LeakyReLU(data=bn1, act_type='gelu')
   else:
     relu = mx.symbol.Activation(data=bn1, name=alg, act_type=alg)
-  return relu, attr
+  check_fusion(relu, data_shape, attr, str(tmpdir), check_quantization=quantize)
 
 # conv + bn + add + act fusion case
-def conv_bn_sum_act(no_bias, data_shape, alg):
+@with_seed()
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('alg,quantize', [
+    ("relu", True),
+    ("sigmoid", True),
+    ("tanh", True),
+    ("softrelu", True),
+    ("relu6", False),
+    ("leakyrelu", True),
+    ("gelu", False)
+])
+@pytest.mark.parametrize('no_bias', [True, False])
+def test_pos_conv_bn_sum_act(no_bias, data_shape, alg, quantize, tmpdir):
   attr = {'conv': {'with_sum': 'true', 'with_postsum_act': 'true', 'with_bn': 'true'}}
   data, weight = head_symbol(data_shape)
   conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=64,
@@ -419,39 +456,58 @@ def conv_bn_sum_act(no_bias, data_shape, alg):
     relu = mx.symbol.LeakyReLU(data=sum1, act_type='gelu')
   else:
     relu = mx.symbol.Activation(data=sum1, name=alg, act_type=alg)
-  return relu, attr
+  check_fusion(relu, data_shape, attr, str(tmpdir), check_quantization=quantize)
 
 # single concat case
-def single_concat(data_shape, input_num, dim):
-  data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
-  inputs = []
-  for i in range(input_num):
-    inputs.append(data)
-  concat = mx.symbol.Concat(*inputs, name="concat", dim=dim)
-  return concat
+@with_seed()
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('input_num,dim', [
+    (2, -1),
+    (2, 1),
+    (4, 2),
+    (4, 3)
+])
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+@pytest.mark.parametrize('gluon_forward', [False, True])
+def test_pos_single_concat(data_shape, input_num, dim, gluon_forward, out_type, tmpdir):
+    data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
+    inputs = []
+    for i in range(input_num):
+        inputs.append(data)
+        concat = mx.symbol.Concat(*inputs, name="concat", dim=dim)
+    check_quantize(concat, data_shape, out_type, str(tmpdir), name='conv',
+                   check_calibration=False, gluon_forward=gluon_forward)
 
-def single_concat_pos_neg(data_shape):
-  data, weight = head_symbol(data_shape)
-  conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=4,
-                               kernel=(1, 1), stride=(1, 1), no_bias=True)
-  relu = mx.symbol.Activation(data=conv, name='relu', act_type='relu')
-  inputs = [data, relu]
-  concat = mx.symbol.Concat(*inputs, name="concat", dim=1)
-  return concat
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+def test_pos_single_concat_pos_neg(data_shape, out_type, tmpdir):
+    data, weight = head_symbol(data_shape)
+    conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=4,
+                                 kernel=(1, 1), stride=(1, 1), no_bias=True)
+    relu = mx.symbol.Activation(data=conv, name='relu', act_type='relu')
+    inputs = [data, relu]
+    concat = mx.symbol.Concat(*inputs, name="concat", dim=1)
+    check_quantize(concat, data_shape, out_type, str(tmpdir), name='', check_calibration=False)
 
 # concat scale alignment case
-def concat_scale_align(data_shape):
-  data, weight = head_symbol(data_shape)
-  conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
+
+@with_seed()
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('out_type', ['int8', 'auto'])
+@pytest.mark.parametrize('gluon_forward', [False, True])
+def test_pos_concat_scale_align(data_shape, out_type, gluon_forward, tmpdir):
+    data, weight = head_symbol(data_shape)
+    conv1 = mx.symbol.Convolution(data=data, weight=weight, name='conv1', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=True)
-  conv2 = mx.symbol.Convolution(data=data, weight=weight * 2, name='conv2', num_filter=64,
+    conv2 = mx.symbol.Convolution(data=data, weight=weight * 2, name='conv2', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=True)
-  conv3 = mx.symbol.Convolution(data=data, weight=weight * 3, name='conv3', num_filter=64,
+    conv3 = mx.symbol.Convolution(data=data, weight=weight * 3, name='conv3', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=True)
-  conv4 = mx.symbol.Convolution(data=data, weight=weight * 4, name='conv4', num_filter=64,
+    conv4 = mx.symbol.Convolution(data=data, weight=weight * 4, name='conv4', num_filter=64,
                                kernel=(3, 3), stride=(1, 1), no_bias=True)
-  concat = mx.symbol.Concat(*[conv1, conv2, conv3, conv4], name="concat", dim=1)
-  return concat
+    concat = mx.symbol.Concat(*[conv1, conv2, conv3, conv4], name="concat", dim=1)
+    check_quantize(concat, data_shape, out_type, str(tmpdir), check_calibration=True,
+                   check_scale_align=True, gluon_forward=gluon_forward)
 
 
 # mobilenetv2 case
@@ -702,15 +758,7 @@ def neg_fc_relu(no_bias, data_shape, flatten=True):
   return syms, attrs, excluded_attrs
 
 @with_seed()
-def test_pos_single_conv():
-  for data_shape in DATA_SHAPE:
-    net, attrs = single_conv(False, data_shape)
-    check_fusion(net, data_shape, attrs)
-    net, attrs = single_conv(True, data_shape)
-    check_fusion(net, data_shape, attrs)
-
-@with_seed()
-def test_pos_conv_act():
+def test_pos_conv_act(tmpdir):
   act_list = {"relu": True,
               "sigmoid": True,
               "tanh": True,
@@ -721,155 +769,78 @@ def test_pos_conv_act():
   for data_shape in DATA_SHAPE:
     for (alg, quantize) in act_list.items():
       net, attrs = conv_act(False, data_shape, alg)
-      check_fusion(net, data_shape, attrs, check_quantization=quantize)
+      check_fusion(net, data_shape, attrs, str(tmpdir), check_quantization=quantize)
       net, attrs = conv_act(True, data_shape, alg)
-      check_fusion(net, data_shape, attrs, check_quantization=quantize)
+      check_fusion(net, data_shape, attrs, str(tmpdir), check_quantization=quantize)
 
 @with_seed()
-def test_pos_conv_bn():
+def test_pos_conv_bn(tmpdir):
   for data_shape in DATA_SHAPE:
     net, attrs = conv_bn(False, data_shape)
-    check_fusion(net, data_shape, attrs)
+    check_fusion(net, data_shape, attrs, str(tmpdir))
     net, attrs = conv_bn(True, data_shape)
-    check_fusion(net, data_shape, attrs)
+    check_fusion(net, data_shape, attrs, str(tmpdir))
 
 @with_seed()
-def test_pos_conv_add():
-  for data_shape in DATA_SHAPE:
-    net, attrs = conv_add(False, data_shape)
-    check_fusion(net, data_shape, attrs)
-    net, attrs = conv_add(True, data_shape)
-    check_fusion(net, data_shape, attrs)
-
-@with_seed()
-def test_pos_conv_add2():
-  for data_shape in DATA_SHAPE:
-    net, attrs = conv_add2(False, data_shape)
-    check_fusion(net, data_shape, attrs)
-    net, attrs = conv_add2(True, data_shape)
-    check_fusion(net, data_shape, attrs)
-
-@with_seed()
-def test_pos_conv_bn_act():
-  act_list = {"relu": True,
-              "sigmoid": True,
-              "tanh": True,
-              "softrelu": True,
-              "relu6": True,
-              "leakyrelu": True,
-              "gelu": True}
-  for data_shape in DATA_SHAPE:
-    for (alg, quantize) in act_list.items():
-      net, attrs = conv_bn_act(False, data_shape, alg)
-      check_fusion(net, data_shape, attrs, check_quantization=quantize)
-      net, attrs = conv_bn_act(True, data_shape, alg)
-      check_fusion(net, data_shape, attrs, check_quantization=quantize)
-
-@with_seed()
-def test_pos_conv_bn_sum_act():
-  act_list = {"relu": True,
-              "sigmoid": True,
-              "tanh": True,
-              "softrelu": True,
-              "relu6": False,
-              "leakyrelu": True,
-              "gelu": False}
-  for data_shape in DATA_SHAPE:
-    for (alg, quantize) in act_list.items():
-      net, attrs = conv_bn_sum_act(False, data_shape, alg)
-      check_fusion(net, data_shape, attrs, check_quantization=quantize)
-      net, attrs = conv_bn_sum_act(True, data_shape, alg)
-      check_fusion(net, data_shape, attrs, check_quantization=quantize)
-
-@with_seed()
-def test_pos_single_concat():
-  for data_shape in DATA_SHAPE:
-    for out_type in ('int8', 'auto'):
-      net = single_concat(data_shape, 2, -1)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
-      net = single_concat(data_shape, 2, 1)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
-      net = single_concat(data_shape, 4, 2)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
-      net = single_concat(data_shape, 4, 3)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False)
-      check_quantize(net, data_shape, out_type, name='conv', check_calibration=False, gluon_forward=True)
-      net = single_concat_pos_neg(data_shape)
-      check_quantize(net, data_shape, out_type, name='', check_calibration=False)
-
-@with_seed()
-def test_pos_concat_scale_align():
-  for data_shape in DATA_SHAPE:
-    for out_type in ('int8', 'auto'):
-      net = concat_scale_align(data_shape)
-      check_quantize(net, data_shape, out_type, check_calibration=True, check_scale_align=True)
-      check_quantize(net, data_shape, out_type, check_calibration=True, check_scale_align=True, gluon_forward=True)
-
-@with_seed()
-def test_mobilenetv2_struct():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_mobilenetv2_struct(data_shape, tmpdir):
       net, attrs = mobilenetv2_struct(data_shape)
-      check_fusion(net, data_shape, attrs, out_types=['int8', 'auto'])
+      check_fusion(net, data_shape, attrs, str(tmpdir), out_types=['int8', 'auto'])
 
 @with_seed()
-def test_neg_conv_bn():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_neg_conv_bn(data_shape):
     syms, attrs, excluded_attrs = neg_conv_bn(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-def test_neg_conv_relu():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_neg_conv_relu(data_shape):
     syms, attrs, excluded_attrs = neg_conv_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-def test_neg_conv_add():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_neg_conv_add(data_shape):
     syms, attrs, excluded_attrs = neg_conv_add(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-def test_neg_conv_bn_relu():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_neg_conv_bn_relu(data_shape):
     syms, attrs, excluded_attrs = neg_conv_bn_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-def test_neg_conv_bn_add_relu():
-  for data_shape in DATA_SHAPE:
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_neg_conv_bn_add_relu(data_shape):
     syms, attrs, excluded_attrs = neg_conv_bn_add_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
 @with_seed()
-def test_single_fc():
-  for dshape, no_bias, flatten in itertools.product(DATA_SHAPE, [True, False], [True, False]):
-    syms, attrs = single_fc(no_bias, dshape, flatten)
-    if flatten is True:
-      check_fusion(syms, dshape, attrs, check_quantization=True)
-    else:
-      check_fusion(syms, dshape, attrs, check_quantization=False)
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('flatten', [True, False])
+def test_single_fc(data_shape, no_bias, flatten, tmpdir):
+    syms, attrs = single_fc(no_bias, data_shape, flatten)
+    check_fusion(syms, data_shape, attrs, str(tmpdir), check_quantization=flatten)
 
 @with_seed()
-def test_fc_eltwise():
-  for dshape, no_bias, flatten, alg in itertools.product(DATA_SHAPE,
-                                                        [True, False],
-                                                        [True, False],
-                                                        fc_post_ops_list):
-    syms, attrs = fc_eltwise(no_bias, dshape, flatten, alg)
-    if flatten is True:
-      check_fusion(syms, dshape, attrs, check_quantization=True)
-    else:
-      check_fusion(syms, dshape, attrs, check_quantization=False)
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('flatten', [True, False])
+@pytest.mark.parametrize('alg', fc_post_ops_list)
+def test_fc_eltwise(data_shape, no_bias, flatten, alg, tmpdir):
+    syms, attrs = fc_eltwise(no_bias, data_shape, flatten, alg)
+    check_fusion(syms, data_shape, attrs, str(tmpdir), check_quantization=flatten)
 
 @with_seed()
-def test_neg_fc_relu():
-  for dshape, no_bias, flatten in itertools.product(DATA_SHAPE, [True, False], [True, False]):
-    syms, attrs, excluded_attrs = neg_fc_relu(no_bias, dshape, flatten)
-    check_neg_fusion(syms, attrs, excluded_attrs, dshape, name='fc')
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+@pytest.mark.parametrize('no_bias', [True, False])
+@pytest.mark.parametrize('flatten', [True, False])
+def test_neg_fc_relu(data_shape, no_bias, flatten):
+    syms, attrs, excluded_attrs = neg_fc_relu(no_bias, data_shape, flatten)
+    check_neg_fusion(syms, attrs, excluded_attrs, data_shape, name='fc')
 
 def test_float64_fallback():
     sym = mx.sym.FullyConnected(
@@ -893,7 +864,16 @@ def test_float64_fallback():
     ex.outputs[0].wait_to_read()
 
 
-def helper_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max):
+@with_seed()
+@pytest.mark.parametrize('data_min,data_max,weight_min,weight_max', [
+    (-1, 1, 0, 0),
+    (-1, 1, -1e-6, +1e-6),
+    (0, 0, 1, 1),
+    (-1e-6, +1e-6, -1, 1),
+    (-1e-6, +1e-6, -1e-6, +1e-6),
+    (0, 0, 0, 0)
+])
+def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max):
   data_shape = (1, 32, 2, 2)
   data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
   weight = mx.symbol.Variable('weight', dtype='float32')
@@ -938,7 +918,16 @@ def helper_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_m
   assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
                                rtol=1e-2, atol=1e-2, etol=0.01)
 
-def helper_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
+@with_seed()
+@pytest.mark.parametrize('data_min,data_max,weight_min,weight_max', [
+    (-1, 1, 0, 0),
+    (-1, 1, -1e-6, +1e-6),
+    (0, 0, 1, 1),
+    (-1e-6, +1e-6, -1, 1),
+    (-1e-6, +1e-6, -1e-6, +1e-6),
+    (0, 0, 0, 0)
+])
+def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
   data_shape = (1, 32)
   data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
   weight = mx.symbol.Variable('weight', dtype='float32')
@@ -981,21 +970,4 @@ def helper_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max
   qex.outputs[0].wait_to_read()
   assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
                                rtol=1e-2, atol=1e-2, etol=0.01)
-
-@with_seed()
-def test_quantized_conv_bias_overflow():
-    helper_quantized_conv_bias_overflow(-1, 1, 0, 0)
-    helper_quantized_conv_bias_overflow(-1, 1, -1e-6, +1e-6)
-    helper_quantized_conv_bias_overflow(0, 0, 1, 1)
-    helper_quantized_conv_bias_overflow(-1e-6, +1e-6, -1, 1)
-    helper_quantized_conv_bias_overflow(-1e-6, +1e-6, -1e-6, +1e-6)
-    helper_quantized_conv_bias_overflow(0, 0, 0, 0)
-
-def test_quantized_fc_bias_overflow():
-    helper_quantized_fc_bias_overflow(-1, 1, 0, 0)
-    helper_quantized_fc_bias_overflow(-1, 1, -1e-6, +1e-6)
-    helper_quantized_fc_bias_overflow(0, 0, 1, 1)
-    helper_quantized_fc_bias_overflow(-1e-6, +1e-6, -1, 1)
-    helper_quantized_fc_bias_overflow(-1e-6, +1e-6, -1e-6, +1e-6)
-    helper_quantized_fc_bias_overflow(0, 0, 0, 0)
 

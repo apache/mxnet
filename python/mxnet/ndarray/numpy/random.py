@@ -17,6 +17,7 @@
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
 import numpy as np
+from ...util import is_np_default_dtype
 from ...context import current_context
 from . import _internal as _npi
 from . import _api_internal
@@ -76,7 +77,7 @@ def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
 
     >>> np.random.randint(5, size=(2, 4))
     array([[4, 0, 2, 1],
-        [3, 2, 2, 0]])
+           [3, 2, 2, 0]])
     """
     if dtype is None:
         dtype = 'int'
@@ -112,7 +113,9 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         a scalar tensor containing a single value is returned if
         ``low`` and ``high`` are both scalars.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
     out : ``ndarray``, optional
@@ -123,8 +126,6 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     out : ndarray
         Drawn samples from the parameterized uniform distribution.
     """
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = str(current_context())
     else:
@@ -154,7 +155,9 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         samples are drawn. If size is `None` (default), a scalar tensor containing
         a single value is returned if loc and scale are both scalars.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
     out : ``ndarray``, optional
@@ -165,8 +168,6 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     out : ndarray
         Drawn samples from the parameterized normal distribution.
     """
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = str(current_context())
     else:
@@ -706,7 +707,9 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         a single value is returned if ``shape`` and ``scale`` are both scalars.
         Otherwise, ``np.broadcast(shape, scale).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'.
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -719,8 +722,6 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     electronic components, and arises naturally in processes for which the
     waiting times between Poisson distributed events are relevant.
     """
-    if dtype is None:
-        dtype = 'float32'
     if out is not None:
         size = out.shape
     if size == ():
@@ -763,7 +764,9 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         a single value is returned if ``a`` and ``b`` are both scalars.
         Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'.
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -777,7 +780,7 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         Drawn samples from the parameterized beta distribution.
     """
     if dtype is None:
-        dtype = 'float32'
+        dtype = np.float64 if is_np_default_dtype() else np.float32
     if ctx is None:
         ctx = current_context()
     if size == ():
@@ -874,7 +877,9 @@ def chisquare(df, size=None, dtype=None, ctx=None):
         a single value is returned if ``df`` is a scalar.  Otherwise,
         ``np.array(df).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'.
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
         Dtype 'float32' or 'float64' is strongly recommended,
         since lower precision might lead to out of range issue.
     ctx : Context, optional
@@ -922,7 +927,7 @@ def chisquare(df, size=None, dtype=None, ctx=None):
     array([ 1.89920014,  9.00867716,  3.13710533,  5.62318272]) # random
     """
     if dtype is None:
-        dtype = 'float32'
+        dtype = np.float64 if is_np_default_dtype() else np.float32
     if ctx is None:
         ctx = current_context()
     if size == ():

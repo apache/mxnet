@@ -15,241 +15,243 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: skip-file
-import sys
-sys.path.insert(0, '../../python')
 import mxnet as mx
 import numpy as np
 import os, pickle, gzip
 import logging
 from mxnet.test_utils import get_cifar10
 
-batch_size = 128
+import pytest
 
-# small mlp network
-def get_net():
-    data = mx.symbol.Variable('data')
-    float_data = mx.symbol.Cast(data=data, dtype="float32")
-    fc1 = mx.symbol.FullyConnected(float_data, name='fc1', num_hidden=128)
-    act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
-    fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
-    act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
-    fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
-    softmax = mx.symbol.SoftmaxOutput(fc3, name="softmax")
-    return softmax
 
-# check data
-get_cifar10()
+@pytest.mark.garbage_expected
+def test_cifar10(tmpdir):
+    batch_size = 128
 
-def get_iterator_uint8(kv):
-    data_shape = (3, 28, 28)
+    # small mlp network
+    def get_net():
+        data = mx.symbol.Variable('data')
+        float_data = mx.symbol.Cast(data=data, dtype="float32")
+        fc1 = mx.symbol.FullyConnected(float_data, name='fc1', num_hidden=128)
+        act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
+        fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64)
+        act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
+        fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=10)
+        softmax = mx.symbol.SoftmaxOutput(fc3, name="softmax")
+        return softmax
 
-    train = mx.io.ImageRecordUInt8Iter(
-        path_imgrec = "data/cifar/train.rec",
-        data_shape  = data_shape,
-        batch_size  = batch_size,
-        rand_crop   = True,
-        rand_mirror = True,
-        num_parts   = kv.num_workers,
-        part_index  = kv.rank)
-    train = mx.io.PrefetchingIter(train)
+    # check data
+    path = str(tmpdir)
+    get_cifar10(path)
 
-    val = mx.io.ImageRecordUInt8Iter(
-        path_imgrec = "data/cifar/test.rec",
-        rand_crop   = False,
-        rand_mirror = False,
-        data_shape  = data_shape,
-        batch_size  = batch_size,
-        num_parts   = kv.num_workers,
-        part_index  = kv.rank)
+    def get_iterator_uint8(kv):
+        data_shape = (3, 28, 28)
 
-    return (train, val)
+        train = mx.io.ImageRecordUInt8Iter(
+            path_imgrec = os.path.join(path, 'cifar', 'train.rec'),
+            data_shape  = data_shape,
+            batch_size  = batch_size,
+            rand_crop   = True,
+            rand_mirror = True,
+            num_parts   = kv.num_workers,
+            part_index  = kv.rank)
+        train = mx.io.PrefetchingIter(train)
 
-def get_iterator_uint8_with_param(kv, ctx):
-    data_shape = (3, 28, 28)
+        val = mx.io.ImageRecordUInt8Iter(
+            path_imgrec = os.path.join(path, 'cifar', 'test.rec'),
+            rand_crop   = False,
+            rand_mirror = False,
+            data_shape  = data_shape,
+            batch_size  = batch_size,
+            num_parts   = kv.num_workers,
+            part_index  = kv.rank)
 
-    train = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/train.rec",
-        data_shape  = data_shape,
-        batch_size  = batch_size,
-        rand_crop   = True,
-        rand_mirror = True,
-        num_parts   = kv.num_workers,
-        part_index  = kv.rank,
-        dtype       ='uint8',
-        ctx         = ctx)
-    train = mx.io.PrefetchingIter(train)
+        return (train, val)
 
-    val = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/test.rec",
-        rand_crop   = False,
-        rand_mirror = False,
-        data_shape  = data_shape,
-        batch_size  = batch_size,
-        num_parts   = kv.num_workers,
-        part_index  = kv.rank,
-        dtype       ='uint8',
-        ctx         = ctx)
+    def get_iterator_uint8_with_param(kv, ctx):
+        data_shape = (3, 28, 28)
 
-    return (train, val)
+        train = mx.io.ImageRecordIter(
+            path_imgrec = os.path.join(path, 'cifar', 'train.rec'),
+            data_shape  = data_shape,
+            batch_size  = batch_size,
+            rand_crop   = True,
+            rand_mirror = True,
+            num_parts   = kv.num_workers,
+            part_index  = kv.rank,
+            dtype       ='uint8',
+            ctx         = ctx)
+        train = mx.io.PrefetchingIter(train)
 
-def get_iterator_int8(kv):
-    data_shape = (3, 28, 28)
+        val = mx.io.ImageRecordIter(
+            path_imgrec = os.path.join(path, 'cifar', 'test.rec'),
+            rand_crop   = False,
+            rand_mirror = False,
+            data_shape  = data_shape,
+            batch_size  = batch_size,
+            num_parts   = kv.num_workers,
+            part_index  = kv.rank,
+            dtype       ='uint8',
+            ctx         = ctx)
 
-    train = mx.io.ImageRecordInt8Iter(
-        path_imgrec = "data/cifar/train.rec",
-        data_shape  = data_shape,
-        batch_size  = batch_size,
-        rand_crop   = True,
-        rand_mirror = True,
-        num_parts   = kv.num_workers,
-        part_index  = kv.rank)
-    train = mx.io.PrefetchingIter(train)
+        return (train, val)
 
-    val = mx.io.ImageRecordInt8Iter(
-        path_imgrec = "data/cifar/test.rec",
-        rand_crop   = False,
-        rand_mirror = False,
-        data_shape  = data_shape,
-        batch_size  = batch_size,
-        num_parts   = kv.num_workers,
-        part_index  = kv.rank)
+    def get_iterator_int8(kv):
+        data_shape = (3, 28, 28)
 
-    return (train, val)
+        train = mx.io.ImageRecordInt8Iter(
+            path_imgrec = os.path.join(path, 'cifar', 'train.rec'),
+            data_shape  = data_shape,
+            batch_size  = batch_size,
+            rand_crop   = True,
+            rand_mirror = True,
+            num_parts   = kv.num_workers,
+            part_index  = kv.rank)
+        train = mx.io.PrefetchingIter(train)
 
-def get_iterator_int8_with_param(kv, ctx):
-    data_shape = (3, 28, 28)
+        val = mx.io.ImageRecordInt8Iter(
+            path_imgrec = os.path.join(path, 'cifar', 'test.rec'),
+            rand_crop   = False,
+            rand_mirror = False,
+            data_shape  = data_shape,
+            batch_size  = batch_size,
+            num_parts   = kv.num_workers,
+            part_index  = kv.rank)
 
-    train = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/train.rec",
-        data_shape  = data_shape,
-        batch_size  = batch_size,
-        rand_crop   = True,
-        rand_mirror = True,
-        num_parts   = kv.num_workers,
-        part_index  = kv.rank,
-        dtype       ='int8',
-        ctx         = ctx)
-    train = mx.io.PrefetchingIter(train)
+        return (train, val)
 
-    val = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/test.rec",
-        rand_crop   = False,
-        rand_mirror = False,
-        data_shape  = data_shape,
-        batch_size  = batch_size,
-        num_parts   = kv.num_workers,
-        part_index  = kv.rank,
-        dtype       = 'int8',
-        ctx         = ctx)
+    def get_iterator_int8_with_param(kv, ctx):
+        data_shape = (3, 28, 28)
 
-    return (train, val)
+        train = mx.io.ImageRecordIter(
+            path_imgrec = os.path.join(path, 'cifar', 'train.rec'),
+            data_shape  = data_shape,
+            batch_size  = batch_size,
+            rand_crop   = True,
+            rand_mirror = True,
+            num_parts   = kv.num_workers,
+            part_index  = kv.rank,
+            dtype       ='int8',
+            ctx         = ctx)
+        train = mx.io.PrefetchingIter(train)
 
-def get_iterator_float32(kv):
-    data_shape = (3, 28, 28)
+        val = mx.io.ImageRecordIter(
+            path_imgrec = os.path.join(path, 'cifar', 'test.rec'),
+            rand_crop   = False,
+            rand_mirror = False,
+            data_shape  = data_shape,
+            batch_size  = batch_size,
+            num_parts   = kv.num_workers,
+            part_index  = kv.rank,
+            dtype       = 'int8',
+            ctx         = ctx)
 
-    train = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/train.rec",
-        mean_img    = "data/cifar/mean.bin",
-        data_shape  = data_shape,
-        batch_size  = batch_size,
-        rand_crop   = True,
-        rand_mirror = True,
-        num_parts   = kv.num_workers,
-        part_index  = kv.rank)
-    train = mx.io.PrefetchingIter(train)
+        return (train, val)
 
-    val = mx.io.ImageRecordIter(
-        path_imgrec = "data/cifar/test.rec",
-        mean_img    = "data/cifar/mean.bin",
-        rand_crop   = False,
-        rand_mirror = False,
-        data_shape  = data_shape,
-        batch_size  = batch_size,
-        num_parts   = kv.num_workers,
-        part_index  = kv.rank)
+    def get_iterator_float32(kv):
+        data_shape = (3, 28, 28)
 
-    return (train, val)
+        train = mx.io.ImageRecordIter(
+            path_imgrec = os.path.join(path, 'cifar', 'train.rec'),
+            mean_img=os.path.join(path, 'cifar', 'mean.bin'),
+            data_shape  = data_shape,
+            batch_size  = batch_size,
+            rand_crop   = True,
+            rand_mirror = True,
+            num_parts   = kv.num_workers,
+            part_index  = kv.rank)
+        train = mx.io.PrefetchingIter(train)
 
-num_epoch = 1
+        val = mx.io.ImageRecordIter(
+            path_imgrec = os.path.join(path, 'cifar', 'test.rec'),
+            mean_img=os.path.join(path, 'cifar', 'mean.bin'),
+            rand_crop   = False,
+            rand_mirror = False,
+            data_shape  = data_shape,
+            batch_size  = batch_size,
+            num_parts   = kv.num_workers,
+            part_index  = kv.rank)
 
-def run_cifar10(train, val, use_module):
-    train.reset()
-    val.reset()
-    devs = [mx.cpu(0)]
-    net = get_net()
-    mod = mx.mod.Module(net, context=devs)
-    optim_args = {'learning_rate': 0.001, 'wd': 0.00001, 'momentum': 0.9}
-    eval_metrics = ['accuracy']
-    if use_module:
-        executor = mx.mod.Module(net, context=devs)
-        executor.fit(
-            train,
-            eval_data=val,
-            optimizer_params=optim_args,
-            eval_metric=eval_metrics,
-            num_epoch=num_epoch,
-            arg_params=None,
-            aux_params=None,
-            begin_epoch=0,
-            batch_end_callback=mx.callback.Speedometer(batch_size, 50),
-            epoch_end_callback=None)
-    else:
-        executor = mx.model.FeedForward.create(
-            net,
-            train,
-            ctx=devs,
-            eval_data=val,
-            eval_metric=eval_metrics,
-            num_epoch=num_epoch,
-            arg_params=None,
-            aux_params=None,
-            begin_epoch=0,
-            batch_end_callback=mx.callback.Speedometer(batch_size, 50),
-            epoch_end_callback=None,
-            **optim_args)
+        return (train, val)
 
-    ret = executor.score(val, eval_metrics)
-    if use_module:
-        ret = list(ret)
-        logging.info('final accuracy = %f', ret[0][1])
-        assert (ret[0][1] > 0.08)
-    else:
-        logging.info('final accuracy = %f', ret[0])
-        assert (ret[0] > 0.08)
+    num_epoch = 1
 
-class CustomDataIter(mx.io.DataIter):
-    def __init__(self, data):
-        super(CustomDataIter, self).__init__()
-        self.data = data
-        self.batch_size = data.provide_data[0][1][0]
+    def run_cifar10(train, val, use_module):
+        train.reset()
+        val.reset()
+        devs = [mx.cpu(0)]
+        net = get_net()
+        mod = mx.mod.Module(net, context=devs)
+        optim_args = {'learning_rate': 0.001, 'wd': 0.00001, 'momentum': 0.9}
+        eval_metrics = ['accuracy']
+        if use_module:
+            executor = mx.mod.Module(net, context=devs)
+            executor.fit(
+                train,
+                eval_data=val,
+                optimizer_params=optim_args,
+                eval_metric=eval_metrics,
+                num_epoch=num_epoch,
+                arg_params=None,
+                aux_params=None,
+                begin_epoch=0,
+                batch_end_callback=mx.callback.Speedometer(batch_size, 50),
+                epoch_end_callback=None)
+        else:
+            executor = mx.model.FeedForward.create(
+                net,
+                train,
+                ctx=devs,
+                eval_data=val,
+                eval_metric=eval_metrics,
+                num_epoch=num_epoch,
+                arg_params=None,
+                aux_params=None,
+                begin_epoch=0,
+                batch_end_callback=mx.callback.Speedometer(batch_size, 50),
+                epoch_end_callback=None,
+                **optim_args)
 
-        # use legacy tuple
-        self.provide_data = [(n, s) for n, s in data.provide_data]
-        self.provide_label = [(n, s) for n, s in data.provide_label]
+        ret = executor.score(val, eval_metrics)
+        if use_module:
+            ret = list(ret)
+            logging.info('final accuracy = %f', ret[0][1])
+            assert (ret[0][1] > 0.08)
+        else:
+            logging.info('final accuracy = %f', ret[0])
+            assert (ret[0] > 0.08)
 
-    def reset(self):
-        self.data.reset()
+    class CustomDataIter(mx.io.DataIter):
+        def __init__(self, data):
+            super(CustomDataIter, self).__init__()
+            self.data = data
+            self.batch_size = data.provide_data[0][1][0]
 
-    def next(self):
-        return self.data.next()
+            # use legacy tuple
+            self.provide_data = [(n, s) for n, s in data.provide_data]
+            self.provide_label = [(n, s) for n, s in data.provide_label]
 
-    def iter_next(self):
-        return self.data.iter_next()
+        def reset(self):
+            self.data.reset()
 
-    def getdata(self):
-        return self.data.getdata()
+        def next(self):
+            return self.data.next()
 
-    def getlabel(self):
-        return self.data.getlable()
+        def iter_next(self):
+            return self.data.iter_next()
 
-    def getindex(self):
-        return self.data.getindex()
+        def getdata(self):
+            return self.data.getdata()
 
-    def getpad(self):
-        return self.data.getpad()
+        def getlabel(self):
+            return self.data.getlable()
 
-def test_cifar10():
+        def getindex(self):
+            return self.data.getindex()
+
+        def getpad(self):
+            return self.data.getpad()
+
     # print logging by default
     logging.basicConfig(level=logging.DEBUG)
     console = logging.StreamHandler()
@@ -284,6 +286,3 @@ def test_cifar10():
         (train, val) = get_iterator_int8_with_param(kv, ctx)
         run_cifar10(train, val, use_module=False)
         run_cifar10(train, val, use_module=True)
-
-if __name__ == "__main__":
-    test_cifar10()

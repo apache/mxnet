@@ -55,6 +55,9 @@ static bool BatchNormWithReLUShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
   CHECK_EQ(out_shape->size(), 4U);
   const mxnet::TShape &dshape = in_shape->at(batchnormrelu::kData);
+  if (!mxnet::ndim_is_known(dshape)) {
+    return false;
+  }
 
   const size_t channelAxis = static_cast<size_t>(param.axis < 0
       ? static_cast<int>(dshape.ndim()) + param.axis
@@ -62,10 +65,6 @@ static bool BatchNormWithReLUShape(const nnvm::NodeAttrs& attrs,
   CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param.axis;
 
   const int channelCount = dshape[channelAxis];
-
-  if (!mxnet::ndim_is_known(dshape)) {
-    return false;
-  }
 
   in_shape->at(batchnormrelu::kGamma) = mxnet::TShape(Shape1(channelCount));
   in_shape->at(batchnormrelu::kBeta) = mxnet::TShape(Shape1(channelCount));
@@ -228,7 +227,7 @@ std::vector<nnvm::NodeEntry> BatchNormWithReLUGrad(const nnvm::ObjectPtr& n,
 NNVM_REGISTER_OP(_contrib_BatchNormWithReLU)
 .describe(R"code(Batch normalization with ReLU fusion.
 
-An extented operator of Batch normalization which can fuse ReLU activation。
+An extented operator of Batch normalization which can fuse ReLU activation.
 
 )code" ADD_FILELINE)
 .set_num_inputs(5)

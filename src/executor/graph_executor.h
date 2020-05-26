@@ -188,10 +188,14 @@ class GraphExecutor : public Executor {
                   const std::vector<Context>& in_arg_ctxes,
                   const std::vector<Context>& arg_grad_ctxes,
                   const std::vector<Context>& aux_state_ctxes,
-                  const std::vector<OpReqType>& grad_req_types);
+                  const std::vector<OpReqType>& grad_req_types,
+                  const ShapeVector& in_arg_shapes,
+                  const nnvm::DTypeVector& in_arg_dtypes);
   // intialize the full graph for simple bind, including gradient
   Graph InitFullGraph(nnvm::Symbol symbol,
-                      const std::vector<OpReqType>& grad_req_types);
+                      const std::vector<OpReqType>& grad_req_types,
+                      const ShapeVector& in_arg_shapes,
+                      const nnvm::DTypeVector& in_arg_dtypes);
   // initialize the cached operator
   void InitCachedOps();
   // initialize the opr segments for bulk exec

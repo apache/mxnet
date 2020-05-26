@@ -24,6 +24,7 @@ import platform
 import itertools
 import numpy as _np
 import unittest
+import pytest
 from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
@@ -757,6 +758,9 @@ def _add_workload_tril():
                         [np.inf, 1, 1]])
         OpArgMngr.add_workload('tril', arr)
         OpArgMngr.add_workload('tril', np.zeros((3, 3), dtype=dt))
+    import mxnet as mx
+    assertRaises(mx.MXNetError, np.tril, 10)
+    assertRaises(mx.MXNetError, np.tril, 2, 10)
 
 
 def _add_workload_triu():
@@ -1101,6 +1105,7 @@ def _add_workload_mean(array_pool):
     OpArgMngr.add_workload('mean', array_pool['4x1'])
     OpArgMngr.add_workload('mean', array_pool['4x1'], axis=0, keepdims=True)
     OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]))
+    OpArgMngr.add_workload('mean', np.array([]).reshape(2,0,0))
     OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]), axis=0)
     OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]), axis=1)
 
@@ -1135,6 +1140,7 @@ def _add_workload_atleast_nd():
 
 def _add_workload_prod(array_pool):
     OpArgMngr.add_workload('prod', array_pool['4x1'])
+    OpArgMngr.add_workload('prod', np.array([]).reshape(2,0,0))
 
 
 def _add_workload_product(array_pool):
@@ -2989,6 +2995,7 @@ def _prepare_workloads():
     _add_workload_linalg_multi_dot()
     _add_workload_trace()
     _add_workload_tril()
+    _add_workload_triu()
     _add_workload_outer()
     _add_workload_kron()
     _add_workload_meshgrid()
@@ -3236,6 +3243,7 @@ def check_interoperability(op_list):
 @with_seed()
 @use_np
 @with_array_function_protocol
+@pytest.mark.serial
 def test_np_memory_array_function():
     ops = [_np.shares_memory, _np.may_share_memory]
     for op in ops:
@@ -3249,6 +3257,7 @@ def test_np_memory_array_function():
 @with_seed()
 @use_np
 @with_array_function_protocol
+@pytest.mark.serial
 def test_np_array_function_protocol():
     check_interoperability(_NUMPY_ARRAY_FUNCTION_LIST)
 
@@ -3256,13 +3265,14 @@ def test_np_array_function_protocol():
 @with_seed()
 @use_np
 @with_array_ufunc_protocol
+@pytest.mark.serial
 def test_np_array_ufunc_protocol():
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
 
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_fallback_ops():
     op_list = np.fallback.__all__ + ['linalg.{}'.format(op_name) for op_name in np.fallback_linalg.__all__]
     check_interoperability(op_list)
-

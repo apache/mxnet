@@ -27,8 +27,9 @@ sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
 from mxnet import gluon, nd
-from common import with_seed, with_post_test_cleanup
-import unittest
+from common import with_seed
+import pytest
+
 
 # dimension constants
 MEDIUM_X = 10000
@@ -41,6 +42,7 @@ LARGE_TENSOR_SHAPE = 2**32
 RNN_LARGE_TENSOR = 2**28
 
 
+@pytest.mark.timeout(0)
 def test_nn():
     def check_gluon_embedding():
         m = gluon.nn.Embedding(SMALL_Y, MEDIUM_X)
@@ -145,8 +147,8 @@ def test_nn():
         x /= np.sum(x, axis=axis, keepdims=True)
         return x
 
-    @unittest.skip("log_softmax flaky, tracked at "
-                   "https://github.com/apache/incubator-mxnet/issues/17397")
+    @pytest.mark.skip(reason="log_softmax flaky, tracked at "
+                      "https://github.com/apache/incubator-mxnet/issues/17397")
     def check_log_softmax():
         ndim = 2
         shape = (SMALL_Y, LARGE_X)
@@ -591,6 +593,7 @@ def test_nn():
     check_rnn()
 
 
+@pytest.mark.timeout(0)
 def test_tensor():
     def check_ndarray_zeros():
         a = nd.zeros(shape=(LARGE_X, SMALL_Y))
@@ -608,8 +611,8 @@ def test_tensor():
         a = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
         assert a[-1][0] != 0
 
-    @unittest.skip("Randint flaky, tracked at "
-                   "https://github.com/apache/incubator-mxnet/issues/16172")
+    @pytest.mark.skip(reason="Randint flaky, tracked at "
+                      "https://github.com/apache/incubator-mxnet/issues/16172")
     @with_seed()
     def check_ndarray_random_randint():
         a = nd.random.randint(100, 10000, shape=(LARGE_X, SMALL_Y))
@@ -822,8 +825,8 @@ def test_tensor():
         res = mx.nd.pick(a, b)
         assert res.shape == b.shape
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, "
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, "
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_depthtospace():
         def numpy_depth_to_space(x, blocksize):
             b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
@@ -841,8 +844,8 @@ def test_tensor():
         output = mx.nd.depth_to_space(data, 2)
         assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, "
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, "
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_spacetodepth():
         def numpy_space_to_depth(x, blocksize):
             b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
@@ -906,8 +909,8 @@ def test_tensor():
                                          shape=(LARGE_X, SMALL_Y))
         assert (indices_2d.asnumpy() == np.array(original_2d_indices)).all()
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_transpose():
         check_dtypes = [np.float32, np.int64]
         for dtype in check_dtypes:
@@ -917,16 +920,16 @@ def test_tensor():
             ref_out = np.transpose(b.asnumpy())
             assert_almost_equal(t.asnumpy(), ref_out, rtol=1e-10)
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_swapaxes():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         t = nd.swapaxes(b, dim1=0, dim2=1)
         assert np.sum(t[:, -1].asnumpy() == (LARGE_X - 1)) == b.shape[1]
         assert t.shape == (SMALL_Y, LARGE_X)
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_flip():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         t = nd.flip(b, axis=0)
@@ -1096,13 +1099,13 @@ def test_tensor():
 
     def check_load_save():
         x = create_2d_tensor(SMALL_Y, LARGE_X)
-        tmp = tempfile.mkdtemp()
-        tmpfile = os.path.join(tmp, 'large_tensor')
-        nd.save(tmpfile, [x])
-        y = nd.load(tmpfile)
-        y = y[0]
-        assert x[0][0] == y[0][0]
-        assert x[-1][-1]== y[-1][-1]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmpfile = os.path.join(tmp, 'large_tensor')
+            nd.save(tmpfile, [x])
+            y = nd.load(tmpfile)
+            y = y[0]
+            assert x[0][0] == y[0][0]
+            assert x[-1][-1]== y[-1][-1]
 
     def check_pad():
         x = create_2d_tensor(rows=SMALL_Y-2, columns=LARGE_X//2-2, dtype=np.float32).reshape(1 , 1, SMALL_Y-2, LARGE_X//2-2)
@@ -1196,6 +1199,7 @@ def test_tensor():
     check_binary_broadcast()
 
 
+@pytest.mark.timeout(0)
 def test_basic():
     def check_elementwise():
         a = nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -1222,16 +1226,16 @@ def test_basic():
         idx = mx.nd.argmin(a, axis=0)
         assert idx.shape[0] == SMALL_Y
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_argsort():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         s = nd.argsort(b, axis=0, is_ascend=False, dtype=np.int64)
         mx.nd.waitall()
         assert (s[0].asnumpy() == (LARGE_X - 1)).all()
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_sort():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         s = nd.sort(b, axis=0, is_ascend=False)
@@ -1239,8 +1243,8 @@ def test_basic():
         s = nd.sort(b, is_ascend=False)
         assert np.sum(s[0].asnumpy() == 0).all()
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_topk():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         k = nd.topk(b, k=10, axis=0, dtype=np.int64)
@@ -1810,6 +1814,7 @@ def test_basic():
     check_minimum()
 
 
+@pytest.mark.timeout(0)
 def test_sparse_dot():
     shape = (2, VLARGE_X)
     sp_mat1 = nd.sparse.csr_matrix(([2], [6], [0, 1, 1]), shape=shape)

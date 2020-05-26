@@ -323,6 +323,9 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
   CHECK_EQ(out_shape->size(), 3U);
   const mxnet::TShape &dshape = in_shape->at(batchnorm::kData);
+  if (!mxnet::ndim_is_known(dshape)) {
+    return false;
+  }
 
   const size_t channelAxis = static_cast<size_t>(param.axis < 0
       ? static_cast<int>(dshape.ndim()) + param.axis
@@ -330,10 +333,6 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
   CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param.axis;
 
   const index_t channelCount = dshape[channelAxis];
-
-  if (!mxnet::ndim_is_known(dshape)) {
-    return false;
-  }
 
   in_shape->at(batchnorm::kGamma) = mxnet::TShape(Shape1(channelCount));
   in_shape->at(batchnorm::kBeta) = mxnet::TShape(Shape1(channelCount));

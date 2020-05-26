@@ -18,87 +18,28 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 "Image transforms."
-
-import random
 import numpy as np
 
-from ...block import Block, HybridBlock
-from ...nn import Sequential, HybridSequential
-from .... import image
-from ....base import numeric_types
-from ....util import is_np_array
+from ....block import Block, HybridBlock
+from ..... import image
+from .....base import numeric_types
+from .....util import is_np_array
 
+__all__ = ['ToTensor', 'Normalize', 'Rotate', 'RandomRotation',
+           'RandomResizedCrop', 'CropResize', 'CropResize', 'RandomCrop',
+           'CenterCrop', 'Resize', 'RandomFlipLeftRight', 'RandomFlipTopBottom',
+           'RandomBrightness', 'RandomContrast', 'RandomSaturation', 'RandomHue',
+           'RandomColorJitter', 'RandomLighting', 'RandomGray']
 
-class Compose(Sequential):
-    """Sequentially composes multiple transforms.
-
-    Parameters
-    ----------
-    transforms : list of transform Blocks.
-        The list of transforms to be composed.
-
-
-    Inputs:
-        - **data**: input tensor with shape of the first transform Block requires.
-
-    Outputs:
-        - **out**: output tensor with shape of the last transform Block produces.
-
-    Examples
-    --------
-    >>> transformer = transforms.Compose([transforms.Resize(300),
-    ...                                   transforms.CenterCrop(256),
-    ...                                   transforms.ToTensor()])
-    >>> image = mx.nd.random.uniform(0, 255, (224, 224, 3)).astype(dtype=np.uint8)
-    >>> transformer(image)
-    <NDArray 3x256x256 @cpu(0)>
+def _append_return(*args):
+    """Append multiple args together.
+    This allows many transform functions to bypass additional arguments.
     """
-    def __init__(self, transforms):
-        super(Compose, self).__init__()
-        transforms.append(None)
-        hybrid = []
-        for i in transforms:
-            if isinstance(i, HybridBlock):
-                hybrid.append(i)
-                continue
-            elif len(hybrid) == 1:
-                self.add(hybrid[0])
-                hybrid = []
-            elif len(hybrid) > 1:
-                hblock = HybridSequential()
-                for j in hybrid:
-                    hblock.add(j)
-                hblock.hybridize()
-                self.add(hblock)
-                hybrid = []
-
-            if i is not None:
-                self.add(i)
-
-
-class Cast(HybridBlock):
-    """Cast input to a specific data type
-
-    Parameters
-    ----------
-    dtype : str, default 'float32'
-        The target data type, in string or `numpy.dtype`.
-
-
-    Inputs:
-        - **data**: input tensor with arbitrary shape and dtype.
-
-    Outputs:
-        - **out**: output tensor with the same shape as `data` and data type as dtype.
-    """
-    def __init__(self, dtype='float32'):
-        super(Cast, self).__init__()
-        self._dtype = dtype
-
-    def hybrid_forward(self, F, x):
-        if is_np_array():
-            F = F.npx
-        return F.cast(x, self._dtype)
+    if args:
+        if len(args) == 1:
+            return args[0]
+        return tuple(args)
+    return None
 
 
 class ToTensor(HybridBlock):
@@ -139,10 +80,10 @@ class ToTensor(HybridBlock):
     def __init__(self):
         super(ToTensor, self).__init__()
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         if is_np_array():
             F = F.npx
-        return F.image.to_tensor(x)
+        return _append_return(F.image.to_tensor(x), *args)
 
 
 class Normalize(HybridBlock):
@@ -194,10 +135,10 @@ class Normalize(HybridBlock):
         self._mean = mean
         self._std = std
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         if is_np_array():
             F = F.npx
-        return F.image.normalize(x, self._mean, self._std)
+        return _append_return(F.image.normalize(x, self._mean, self._std), *args)
 
 
 class Rotate(Block):
@@ -223,11 +164,11 @@ class Rotate(Block):
         super(Rotate, self).__init__()
         self._args = (rotation_degrees, zoom_in, zoom_out)
 
-    def forward(self, x):
-        if x.dtype is not np.float32:
+    def forward(self, x, *args):
+        if np.dtype(x.dtype) is not np.dtype(np.float32):
             raise TypeError("This transformation only supports float32. "
-                            "Consider calling it after ToTensor")
-        return image.imrotate(x, *self._args)
+                            "Consider calling it after ToTensor, given: {}".format(x.dtype))
+        return _append_return(image.imrotate(x, *self._args), *args)
 
 
 class RandomRotation(Block):
@@ -262,16 +203,16 @@ class RandomRotation(Block):
         self._args = (angle_limits, zoom_in, zoom_out)
         self._rotate_with_proba = rotate_with_proba
 
-    def forward(self, x):
+    def forward(self, x, *args):
         if np.random.random() > self._rotate_with_proba:
             return x
-        if x.dtype is not np.float32:
+        if np.dtype(x.dtype) is not np.dtype(np.float32):
             raise TypeError("This transformation only supports float32. "
                             "Consider calling it after ToTensor")
-        return image.random_rotate(x, *self._args)
+        return _append_return(image.random_rotate(x, *self._args), *args)
 
 
-class RandomResizedCrop(Block):
+class RandomResizedCrop(HybridBlock):
     """Crop the input image with random scale and aspect ratio.
 
     Makes a crop of the original image with random size (default: 0.08
@@ -303,10 +244,16 @@ class RandomResizedCrop(Block):
         super(RandomResizedCrop, self).__init__()
         if isinstance(size, numeric_types):
             size = (size, size)
-        self._args = (size, scale, ratio, interpolation)
+        if isinstance(scale, numeric_types):
+            scale = (scale, 1.0)
+        self._kwargs = {'width': size[0], 'height': size[1],
+                        'area': scale, 'ratio': ratio,
+                        'interp': interpolation, 'max_trial': 10}
 
-    def forward(self, x):
-        return image.random_size_crop(x, *self._args)[0]
+    def hybrid_forward(self, F, x, *args):
+        if is_np_array():
+            F = F.npx
+        return _append_return(F.image.random_resized_crop(x, **self._kwargs), *args)
 
 
 class CropResize(HybridBlock):
@@ -362,13 +309,73 @@ class CropResize(HybridBlock):
         self._size = size
         self._interpolation = interpolation
 
-    def hybrid_forward(self, F, x):
-        out = F.image.crop(x, self._x, self._y, self._width, self._height)
+    def hybrid_forward(self, F, x, *args):
+        if is_np_array():
+            _image = F.npx.image
+        else:
+            _image = F.image
+        out = _image.crop(x, self._x, self._y, self._width, self._height)
         if self._size:
-            out = F.image.resize(out, self._size, False, self._interpolation)
-        return out
+            out = _image.resize(out, self._size, False, self._interpolation)
+        return _append_return(out, *args)
 
-class CenterCrop(Block):
+class RandomCrop(HybridBlock):
+    """Randomly crop `src` with `size` (width, height).
+    Padding is optional.
+    Upsample result if `src` is smaller than `size`
+    .
+    Parameters
+    ----------
+    size : int or tuple of (W, H)
+        Size of the final output.
+    pad: int or tuple
+        if int, size of the zero-padding
+        if tuple, number of values padded to the edges of each axis.
+            ((before_1, after_1), ... (before_N, after_N)) unique pad widths for each axis.
+            ((before, after),) yields same before and after pad for each axis.
+            (pad,) or int is a shortcut for before = after = pad width for all axes.
+    pad_value : int
+        The value to use for padded pixels
+    interpolation : int
+        Interpolation method for resizing. By default uses bilinear
+        interpolation. See OpenCV's resize function for available choices.
+    Inputs:
+        - **data**: input tensor with (Hi x Wi x C) shape.
+    Outputs:
+        - **out**: output tensor with ((H+2*pad) x (W+2*pad) x C) shape.
+    """
+
+    def __init__(self, size, pad=None, pad_value=0, interpolation=1):
+        super(RandomCrop, self).__init__()
+        if isinstance(size, numeric_types):
+            size = (size, size)
+        self._args = ((0, 1), (0, 1), size[0], size[1], interpolation)
+        self._pad_value = pad_value
+        if isinstance(pad, int):
+            self.nd_pad = (0, 0, 0, 0, pad, pad, pad, pad, 0, 0)  # workaround as 5D
+            self.np_pad = ((pad, pad), (pad, pad), (0, 0))
+        elif pad is not None:
+            assert len(pad) >= 4
+            self.nd_pad = tuple([0] * 4 + list(pad) + [0] * (6 - len(pad)))
+            self.np_pad = ((pad[0], pad[1]), (pad[2], pad[3]), (0, 0))
+        else:
+            self.nd_pad = pad
+            self.np_pad = pad
+
+    def hybrid_forward(self, F, x, *args):
+        if is_np_array():
+            if self.np_pad:
+                x = F.np.pad(x, pad_width=self.np_pad, mode='constant', constant_values=self._pad_value)
+            return _append_return(F.npx.image.random_crop(x, *self._args), *args)
+        else:
+            if self.nd_pad:
+                x = F.cast(F.expand_dims(F.expand_dims(x, 0), 0), 'float32')
+                x_pad = F.pad(x, pad_width=self.nd_pad, mode='constant', constant_value=self._pad_value)
+                x = F.cast(x_pad.squeeze(0).squeeze(0), 'uint8')
+            return _append_return(F.image.random_crop(x, *self._args), *args)
+
+
+class CenterCrop(HybridBlock):
     """Crops the image `src` to the given `size` by trimming on all four
     sides and preserving the center of the image. Upsamples if `src` is
     smaller than `size`.
@@ -399,10 +406,12 @@ class CenterCrop(Block):
         super(CenterCrop, self).__init__()
         if isinstance(size, numeric_types):
             size = (size, size)
-        self._args = (size, interpolation)
+        self._args = (size[0], size[1], interpolation)
 
-    def forward(self, x):
-        return image.center_crop(x, *self._args)[0]
+    def hybrid_forward(self, F, x, *args):
+        if is_np_array():
+            F = F.npx
+        return _append_return(F.image.random_crop(x, (0.5, 0.5), (0.5, 0.5), *self._args), *args)
 
 
 class Resize(HybridBlock):
@@ -445,14 +454,14 @@ class Resize(HybridBlock):
         self._size = size
         self._interpolation = interpolation
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         if is_np_array():
             F = F.npx
-        return F.image.resize(x, self._size, self._keep, self._interpolation)
+        return _append_return(F.image.resize(x, self._size, self._keep, self._interpolation), *args)
 
 class RandomFlipLeftRight(HybridBlock):
     """Randomly flip the input image left to right with a probability
-    of 0.5.
+    of p(0.5 by default).
 
     Inputs:
         - **data**: input tensor with (H x W x C) shape.
@@ -460,18 +469,27 @@ class RandomFlipLeftRight(HybridBlock):
     Outputs:
         - **out**: output tensor with same shape as `data`.
     """
-    def __init__(self):
+    def __init__(self, p=0.5):
         super(RandomFlipLeftRight, self).__init__()
+        self.p = p
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
+        if self.p <= 0:
+            return _append_return(x, *args)
+
         if is_np_array():
-            F = F.npx
-        return F.image.random_flip_left_right(x)
+            if self.p >= 1:
+                return _append_return(F.npx.image.flip_left_right(x), *args)
+            return _append_return(F.npx.image.random_flip_left_right(x, p=self.p), *args)
+        else:
+            if self.p >= 1:
+                return _append_return(F.image.flip_left_right(x), *args)
+            return _append_return(F.image.random_flip_left_right(x, p=self.p), *args)
 
 
 class RandomFlipTopBottom(HybridBlock):
     """Randomly flip the input image top to bottom with a probability
-    of 0.5.
+    of p(0.5 by default).
 
     Inputs:
         - **data**: input tensor with (H x W x C) shape.
@@ -479,13 +497,22 @@ class RandomFlipTopBottom(HybridBlock):
     Outputs:
         - **out**: output tensor with same shape as `data`.
     """
-    def __init__(self):
+    def __init__(self, p=0.5):
         super(RandomFlipTopBottom, self).__init__()
+        self.p = p
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
+        if self.p <= 0:
+            return _append_return(x, *args)
+
         if is_np_array():
-            F = F.npx
-        return F.image.random_flip_top_bottom(x)
+            if self.p >= 1:
+                return _append_return(F.npx.image.flip_top_bottom(x), *args)
+            return _append_return(F.npx.image.random_flip_top_bottom(x, p=self.p), *args)
+        else:
+            if self.p >= 1:
+                return _append_return(F.image.flip_top_bottom(x), *args)
+            return _append_return(F.image.random_flip_top_bottom(x, p=self.p), *args)
 
 
 class RandomBrightness(HybridBlock):
@@ -509,10 +536,10 @@ class RandomBrightness(HybridBlock):
         super(RandomBrightness, self).__init__()
         self._args = (max(0, 1-brightness), 1+brightness)
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         if is_np_array():
             F = F.npx
-        return F.image.random_brightness(x, *self._args)
+        return _append_return(F.image.random_brightness(x, *self._args), *args)
 
 
 class RandomContrast(HybridBlock):
@@ -536,10 +563,10 @@ class RandomContrast(HybridBlock):
         super(RandomContrast, self).__init__()
         self._args = (max(0, 1-contrast), 1+contrast)
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         if is_np_array():
             F = F.npx
-        return F.image.random_contrast(x, *self._args)
+        return _append_return(F.image.random_contrast(x, *self._args), *args)
 
 
 class RandomSaturation(HybridBlock):
@@ -563,10 +590,10 @@ class RandomSaturation(HybridBlock):
         super(RandomSaturation, self).__init__()
         self._args = (max(0, 1-saturation), 1+saturation)
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         if is_np_array():
             F = F.npx
-        return F.image.random_saturation(x, *self._args)
+        return _append_return(F.image.random_saturation(x, *self._args), *args)
 
 
 class RandomHue(HybridBlock):
@@ -590,10 +617,10 @@ class RandomHue(HybridBlock):
         super(RandomHue, self).__init__()
         self._args = (max(0, 1-hue), 1+hue)
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         if is_np_array():
             F = F.npx
-        return F.image.random_hue(x, *self._args)
+        return _append_return(F.image.random_hue(x, *self._args), *args)
 
 
 class RandomColorJitter(HybridBlock):
@@ -626,10 +653,10 @@ class RandomColorJitter(HybridBlock):
         super(RandomColorJitter, self).__init__()
         self._args = (brightness, contrast, saturation, hue)
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         if is_np_array():
             F = F.npx
-        return F.image.random_color_jitter(x, *self._args)
+        return _append_return(F.image.random_color_jitter(x, *self._args), *args)
 
 
 class RandomLighting(HybridBlock):
@@ -651,37 +678,36 @@ class RandomLighting(HybridBlock):
         super(RandomLighting, self).__init__()
         self._alpha = alpha
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         if is_np_array():
             F = F.npx
-        return F.image.random_lighting(x, self._alpha)
+        return _append_return(F.image.random_lighting(x, self._alpha), *args)
 
 
-class RandomApply(Sequential):
-    """Apply a list of transformations randomly given probability
+class RandomGray(HybridBlock):
+    """Randomly convert to gray image.
 
     Parameters
     ----------
-    transforms
-        List of transformations.
     p : float
-        Probability of applying the transformations.
-
-
-    Inputs:
-        - **data**: input tensor.
-
-    Outputs:
-        - **out**: transformed image.
+        Probability to convert to grayscale
     """
-
-    def __init__(self, transforms, p=0.5):
-        super(RandomApply, self).__init__()
-        self.transforms = transforms
+    def __init__(self, p=0.5):
+        super(RandomGray, self).__init__()
         self.p = p
 
-    def forward(self, x):
-        if self.p < random.random():
-            return x
-        x = self.transforms(x)
-        return x
+    def hybrid_forward(self, F, x, *args):
+        if is_np_array():
+            mat = F.np.concatenate((F.np.full((3, 1), 0.2989),
+                                    F.np.full((3, 1), 0.5870),
+                                    F.np.full((3, 1), 0.114)), axis=1)
+            x = F.npx.cast(x, dtype='float32')
+            gray = F.np.where(self.p < F.np.random.uniform(), x, F.np.dot(x, mat))
+        else:
+            mat = F.concat(F.full((3, 1), 0.2989),
+                           F.full((3, 1), 0.5870),
+                           F.full((3, 1), 0.114), dim=1)
+            cond = self.p < F.random.uniform(shape=1)
+            x = F.cast(x, dtype='float32')
+            gray = F.contrib.cond(cond, lambda: x, lambda: F.dot(x, mat))
+        return _append_return(gray, *args)
