@@ -28,7 +28,6 @@ __all__ = ["Constraint", "Real", "Boolean",
            "Cat", "Stack"]
 
 from .utils import getF, constraint_check
-from .... import nd
 
 
 class Constraint(object):

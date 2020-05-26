@@ -22,6 +22,7 @@ __all__ = ['StochasticBlock', 'StochasticSequential']
 
 from functools import wraps
 from ...block import HybridBlock
+from ...nn.basic_layers import HybridSequential
 from ...utils import _indent
 
 
@@ -88,15 +89,17 @@ class StochasticSequential(StochasticBlock):
     """
     def __init__(self, prefix=None, params=None):
         super(StochasticSequential, self).__init__(prefix=prefix, params=params)
+        self._layers = []
 
     def add(self, *blocks):
         """Adds block on top of the stack."""
         for block in blocks:
+            self._layers.append(block)
             self.register_child(block)
 
     @StochasticBlock.collectLoss
     def hybrid_forward(self, F, x):
-        for block in self._children.values():
+        for block in self._layers:
             x = block(x)
             if hasattr(block, '_losses'):
                 self.add_loss(block._losses)

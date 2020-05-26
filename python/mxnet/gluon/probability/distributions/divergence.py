@@ -54,10 +54,11 @@ from .multivariate_normal import *
 
 
 def empirical_kl(p, q, n_samples=1):
-    """Estimate KL(p||q) through monte-carlo estimation,
-    i.e. approximate KL(p||q) with:
+    """Estimate KL(p||q) through monte-carlo estimation, i.e. approximate
+    KL(p||q) with:
+
         1/M * \Sum_{i=1}^{M} log(p(x_i) / q(x_i)), x_i ~ p(x)
-    
+
     Parameters
     ----------
     p : Distribution
@@ -69,13 +70,13 @@ def empirical_kl(p, q, n_samples=1):
     return (p.log_prob(samples) - q.log_prob(samples)).mean(0)
 
 
+
 def register_kl(typeP, typeQ):
-    """Decorator for registering custom implementation
-    of kl divergence between distribution `typeP` and `typeQ`
+    """Decorator for registering custom implementation of kl divergence between
+    distribution `typeP` and `typeQ`
 
     Returns
-    -------
-    wrapped function
+    ------- function
     """
     func_name = "_kl_" + str(typeP.__name__) \
                 + "_" + str(typeQ.__name__)

@@ -25,7 +25,9 @@ from functools import update_wrapper
 from numbers import Number
 import numpy as onp
 import scipy.special as sc
-from .... import nd, sym, np
+from .... import numpy as np
+from .... import symbol as sym
+from .... import ndarray as nd
 
 def constraint_check(F):
     """Unified check_constraint interface for both scalar and tensor

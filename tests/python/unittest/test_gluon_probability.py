@@ -2181,6 +2181,7 @@ def test_gluon_stochastic_block():
         assert kl.shape == loc.shape
 
 
+# @unittest.skip("Stochastic Sequential broken.")
 @with_seed()
 @use_np
 def test_gluon_stochastic_sequential():
