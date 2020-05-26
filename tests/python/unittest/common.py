@@ -314,7 +314,7 @@ def with_environment(*args_):
     even if exceptions are raised.
     """
     def test_helper(orig_test):
-        @make_decorator(orig_test)
+        @functools.wraps(orig_test)
         def test_new(*args, **kwargs):
             with environment(*args_):
                 orig_test(*args, **kwargs)

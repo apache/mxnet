@@ -1901,27 +1901,6 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
             bz_file.close()
         os.remove(data_origin_name)
 
-def set_env_var(key, val, default_val=""):
-    """Set environment variable
-
-    Parameters
-    ----------
-
-    key : str
-        Env var to set
-    val : str
-        New value assigned to the env var
-    default_val : str, optional
-        Default value returned if the env var doesn't exist
-
-    Returns
-    -------
-    str
-        The value of env var before it is set to the new value
-    """
-    prev_val = os.environ.get(key, default_val)
-    os.environ[key] = val
-    return prev_val
 
 def same_array(array1, array2):
     """Check whether two NDArrays sharing the same memory block

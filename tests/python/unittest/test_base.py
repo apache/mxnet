@@ -29,8 +29,10 @@ def test_data_dir():
     prev_data_dir = data_dir()
     system = platform.system()
     # Test that data_dir() returns the proper default value when MXNET_HOME is not set
-    if system != 'Windows':
-        with environment('MXNET_HOME', None):
+    with environment('MXNET_HOME', None):
+        if system == 'Windows':
+            assert_equals(data_dir(), op.join(os.environ.get('APPDATA'), 'mxnet'))
+        else:
             assert_equals(data_dir(), op.join(op.expanduser('~'), '.mxnet'))
     # Test that data_dir() responds to an explicit setting of MXNET_HOME
     with environment('MXNET_HOME', '/tmp/mxnet_data'):

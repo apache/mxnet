@@ -420,10 +420,6 @@ def test_gen_atomic_symbol_multiple_outputs():
 
 
 def test_eliminate_common_expr():
-    if not sys.platform.startswith('linux'):
-        logging.info("Bypass the CSE test on non-Linux OS as setting env variables during test does not work on Windows")
-        return
-
     # helper function to test a single model
     def check_cse_on_symbol(sym, expected_savings, check_data, **kwargs):
         inputs = sym.list_inputs()

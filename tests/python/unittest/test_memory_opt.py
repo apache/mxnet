@@ -19,40 +19,12 @@
 import mxnet as mx
 import os
 import sys
-
+from common import setup_module, teardown_module, with_environment
+from mxnet.test_utils import environment
 
 num_hidden = 4096
 
-
-def memory_opt_env_check(test_func):
-    # This decorator checks for th
-    def test_memory_opt_wrapper():
-        # Whether the underlying OS is Windows or not. Windows does not support
-        # setting environment variblae on the fly. In other words, statement
-        #
-        #     os.environ["MXNET_MEMORY_OPT"] = '1'
-        #
-        # will have NO effect because the C++ backend still sees
-        # `os.environ["MXNET_MEMORY_OPT"]` as NULL pointer.
-        #
-        # \sa test_operator.py:test_norm
-        is_windows = sys.platform.startswith('win')
-        do_memory_opt = True
-        if is_windows:
-            if "MXNET_MEMORY_OPT" not in os.environ:
-                do_memory_opt = False
-            else:
-                do_memory_opt = os.environ["MXNET_MEMORY_OPT"] == '1'
-        else:
-            os.environ["MXNET_MEMORY_OPT"] = '1'
-
-        if do_memory_opt:
-            test_func()
-            os.environ["MXNET_MEMORY_OPT"] = '0'
-    return test_memory_opt_wrapper
-
-
-@memory_opt_env_check
+@with_environment('MXNET_MEMORY_OPT', '1')
 def test_rnn_cell():
     # x →→→ + →→→ tanh ⇒⇒⇒
     #       ↑
@@ -81,7 +53,7 @@ def test_rnn_cell():
            "Not all operator nodes have been verified on the mirror stage"
 
 
-@memory_opt_env_check
+@with_environment('MXNET_MEMORY_OPT', '1')
 def test_mlp_attn():
     # x →→→ + →→→ tanh ⇒⇒⇒
     #       ↑ + →→→ tanh ⇒⇒⇒
@@ -116,7 +88,7 @@ def test_mlp_attn():
            "Not all operator nodes have been verified on the mirror stage"
 
 
-@memory_opt_env_check
+@with_environment('MXNET_MEMORY_OPT', '1')
 def test_fc():
     # x →→→ tanh ⇒⇒⇒ tanh  ⇒⇒⇒ FC
     #            →→→ tanh_ →→→
@@ -167,7 +139,6 @@ def grep_exec_memory_consumption(exec):
                   "debug string: %s" % exec_debug_str
 
 
-@memory_opt_env_check
 def test_resnet152():
     # Verify the memory allocation behavior on ResNet-152, the state-of-the-art
     # model used for image classification.
@@ -184,11 +155,11 @@ def test_resnet152():
     # We do the binding twice, one with the memory optimizations and one without.
     # It is expected that the memory consumption of the former should be roughly
     # half of that of the latter.
-    memory_opt_exec = resnet_152.simple_bind(mx.cpu(), 'write',
-                                             data=(32, 3, 224, 224))
-    os.environ["MXNET_MEMORY_OPT"] = '0'
-    no_opt_exec = resnet_152.simple_bind(mx.cpu(), 'write', data=(32, 3, 224, 224))
-    os.environ["MXNET_MEMORY_OPT"] = '1'
+    with environment('MXNET_MEMORY_OPT', '1'):
+        memory_opt_exec = resnet_152.simple_bind(mx.cpu(), 'write',
+                                                 data=(32, 3, 224, 224))
+    with environment('MXNET_MEMORY_OPT', '0'):
+        no_opt_exec = resnet_152.simple_bind(mx.cpu(), 'write', data=(32, 3, 224, 224))
     memory_opt_alloc = grep_exec_memory_consumption(memory_opt_exec)
     no_opt_alloc = grep_exec_memory_consumption(no_opt_exec)
     assert memory_opt_alloc / no_opt_alloc < 0.6, \

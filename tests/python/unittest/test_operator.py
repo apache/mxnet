@@ -30,7 +30,7 @@ from mxnet.test_utils import *
 from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
-from common import run_in_spawned_process, xfail_when_nonstandard_decimal_separator
+from common import run_in_spawned_process, xfail_when_nonstandard_decimal_separator, with_environment
 import pytest
 import os
 
@@ -3899,13 +3899,7 @@ def test_norm():
                 np.int32: np.int32, np.int64: np.int64}
     dtype_to_str = {np.float16: 'float16', np.float32: 'float32', np.float64: 'float64',
                     np.int32: 'int32', np.int64: 'int64'}
-    is_windows = sys.platform.startswith('win')
     for enforce_safe_acc in ['1', '0']:
-        # We can't alter env vars seen by the Windows runtime, so test once for the setting that's present
-        if is_windows:
-            if enforce_safe_acc == '0':
-                break
-            enforce_safe_acc = '0' if 'MXNET_SAFE_ACCUMULATION' not in os.environ else os.environ['MXNET_SAFE_ACCUMULATION']
         with environment('MXNET_SAFE_ACCUMULATION', enforce_safe_acc):
             for order in [1, 2]:
                 for dtype in [np.float16, np.float32, np.float64]:
@@ -5380,6 +5374,7 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
 @with_seed()
+@with_environment('MXNET_SAFE_ACCUMULATION', '1')
 def test_softmax_dtype():
     def check_dtypes_almost_equal(op_name,
                                   atol, rtol,
@@ -5399,26 +5394,22 @@ def test_softmax_dtype():
         ref_softmax.backward()
         assert_almost_equal(dtype_input.grad, ref_input.grad, rtol=grad_rtol, atol=grad_atol)
 
-    import sys
-    is_windows = sys.platform.startswith('win')
-    if not is_windows:
-        with environment('MXNET_SAFE_ACCUMULATION', '1'):
-            check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-            check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
-            check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
-            check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-            check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-            check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
-            check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
-            check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-            check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                                      'float16', 'float32')
-            check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                                      'float16', 'float32', 'float32')
-            check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                                      'float32', 'float64')
-            check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                                      'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64', 'float64')
 
 
 @with_seed()
@@ -8251,46 +8242,41 @@ def test_op_output_names_monitor():
             pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
-    is_windows = sys.platform.startswith('win')
-    if (is_windows):
-        # Windows doesn't support set environment variable on the fly, so disable it for now
-        pass
-    else:
-        # Disable subgraph in case subgraph will replace symbol
-        with environment('MXNET_SUBGRAPH_BACKEND', None):
-            os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
-            data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
-            conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
-            check_name(conv_sym, ['conv_output'])
+    # Disable subgraph in case subgraph will replace symbol
+    with environment('MXNET_SUBGRAPH_BACKEND', None):
+        os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
+        data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
+        conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+        check_name(conv_sym, ['conv_output'])
 
-            deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
-            check_name(deconv_sym, ['deconv_output'])
+        deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
+        check_name(deconv_sym, ['deconv_output'])
 
-            fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
-            check_name(fc_sym, ['fc_output'])
+        fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
+        check_name(fc_sym, ['fc_output'])
 
-            lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
-            check_name(lrn_sym, ['lrn_output', 'lrn_tmp_norm'])
+        lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
+        check_name(lrn_sym, ['lrn_output', 'lrn_tmp_norm'])
 
-            act_sym = mx.sym.Activation(data, act_type='relu', name='act')
-            check_name(act_sym, ['act_output'])
+        act_sym = mx.sym.Activation(data, act_type='relu', name='act')
+        check_name(act_sym, ['act_output'])
 
-            cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
-            check_name(cc_sym, ['concat_output'])
+        cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
+        check_name(cc_sym, ['concat_output'])
 
-            sm_sym = mx.sym.softmax(data, name='softmax')
-            check_name(sm_sym, ['softmax_output'])
+        sm_sym = mx.sym.softmax(data, name='softmax')
+        check_name(sm_sym, ['softmax_output'])
 
-            sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
-            check_name(sa_sym, ['softmax_output'])
+        sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
+        check_name(sa_sym, ['softmax_output'])
 
-            us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
-                                       name='upsampling')
-            check_name(us_sym, ['upsampling_output'])
+        us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
+                                   name='upsampling')
+        check_name(us_sym, ['upsampling_output'])
 
-            us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
-                                    name='pooling')
-            check_name(us_sym, ['pooling_output'])
+        us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
+                                name='pooling')
+        check_name(us_sym, ['pooling_output'])
 
 
 def test_op_all_names_monitor():
@@ -8310,49 +8296,44 @@ def test_op_all_names_monitor():
             pass
         for output_name, expected_name in zip(output_names, expected_names):
             assert output_name == expected_name
-    is_windows = sys.platform.startswith('win')
-    if (is_windows):
-        # Windows doesn't support set environment variable on the fly, so disable it for now
-        pass
-    else:
-        # Disable subgraph in case subgraph will replace symbol
-        with environment('MXNET_SUBGRAPH_BACKEND', None):
-            data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
-            conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
-            check_name(conv_sym, ['data', 'conv_data', 'conv_weight', 'conv_weight', 'conv_bias', 'conv_bias', 'conv_output'])
+    # Disable subgraph in case subgraph will replace symbol
+    with environment('MXNET_SUBGRAPH_BACKEND', None):
+        data = mx.sym.Variable('data', shape=(10, 3, 10, 10))
+        conv_sym = mx.sym.Convolution(data, kernel=(2, 2), num_filter=1, name='conv')
+        check_name(conv_sym, ['data', 'conv_data', 'conv_weight', 'conv_weight', 'conv_bias', 'conv_bias', 'conv_output'])
 
-            deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
-            check_name(deconv_sym, ['data', 'deconv_data', 'deconv_weight', 'deconv_weight', 'deconv_output'])
+        deconv_sym = mx.sym.Deconvolution(data, kernel=(2, 2), num_filter=1, name='deconv')
+        check_name(deconv_sym, ['data', 'deconv_data', 'deconv_weight', 'deconv_weight', 'deconv_output'])
 
-            fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
-            check_name(fc_sym, ['data', 'fc_data', 'fc_weight', 'fc_weight', 'fc_bias', 'fc_bias', 'fc_output'])
+        fc_sym = mx.sym.FullyConnected(data, num_hidden=10, name='fc')
+        check_name(fc_sym, ['data', 'fc_data', 'fc_weight', 'fc_weight', 'fc_bias', 'fc_bias', 'fc_output'])
 
-            lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
-            check_name(lrn_sym, ['data', 'lrn_data', 'lrn_output', 'lrn_tmp_norm'])
+        lrn_sym = mx.sym.LRN(data, nsize=1, name='lrn')
+        check_name(lrn_sym, ['data', 'lrn_data', 'lrn_output', 'lrn_tmp_norm'])
 
-            act_sym = mx.sym.Activation(data, act_type='relu', name='act')
-            check_name(act_sym, ['data', 'act_input0', 'act_output'])
+        act_sym = mx.sym.Activation(data, act_type='relu', name='act')
+        check_name(act_sym, ['data', 'act_input0', 'act_output'])
 
-            cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
-            check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
+        cc_sym = mx.sym.concat(data, data, dim=0, name='concat')
+        check_name(cc_sym, ['data', 'concat_arg0', 'data', 'concat_arg1', 'concat_output'])
 
-            sm_sym = mx.sym.softmax(data, name='softmax')
-            check_name(sm_sym, ['data', 'softmax_data', 'softmax_output'])
+        sm_sym = mx.sym.softmax(data, name='softmax')
+        check_name(sm_sym, ['data', 'softmax_data', 'softmax_output'])
 
-            length = mx.sym.Variable("length", shape=(10, 10, 10))
-            sm_sym = mx.sym.softmax(data, length, axis=1, use_length=True, name='softmax')
-            check_name(sm_sym, ['data', 'softmax_data', 'length', 'softmax_length', 'softmax_output'])
+        length = mx.sym.Variable("length", shape=(10, 10, 10))
+        sm_sym = mx.sym.softmax(data, length, axis=1, use_length=True, name='softmax')
+        check_name(sm_sym, ['data', 'softmax_data', 'length', 'softmax_length', 'softmax_output'])
 
-            sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
-            check_name(sa_sym, ['data', 'softmax_input0', 'softmax_output'])
+        sa_sym = mx.sym.SoftmaxActivation(data, name='softmax')
+        check_name(sa_sym, ['data', 'softmax_input0', 'softmax_output'])
 
-            us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
-                                       name='upsampling')
-            check_name(us_sym, ['data', 'upsampling_arg0', 'upsampling_output'])
+        us_sym = mx.sym.UpSampling(data, scale=2, sample_type='nearest',
+                                   name='upsampling')
+        check_name(us_sym, ['data', 'upsampling_arg0', 'upsampling_output'])
 
-            us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
-                                    name='pooling')
-            check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
+        us_sym = mx.sym.Pooling(data, kernel=(2, 2), pool_type='avg',
+                                name='pooling')
+        check_name(us_sym, ['data', 'pooling_data', 'pooling_output'])
 
 
 @with_seed()
