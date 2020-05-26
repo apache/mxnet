@@ -7,6 +7,9 @@ if(CMAKE_CROSSCOMPILING)
 endif()
 
 project(mxnet C CXX)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
   # Load config.cmake only if mxnet is not compiled as a dependency of another project
@@ -202,7 +205,7 @@ endif(MSVC)
 
 if(NOT mxnet_LINKER_LIBS)
   set(mxnet_LINKER_LIBS "")
-endif(NOT mxnet_LINKER_LIBS)
+endif()
 
 if(USE_GPROF)
   message(STATUS "Using GPROF")
