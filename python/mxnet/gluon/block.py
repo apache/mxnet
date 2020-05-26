@@ -1489,8 +1489,7 @@ class SymbolBlock(HybridBlock):
     Examples
     --------
     >>> # To extract the feature from fc1 and fc2 layers of AlexNet:
-    >>> alexnet = gluon.model_zoo.vision.alexnet(pretrained=True, ctx=mx.cpu(),
-                                                 prefix='model_')
+    >>> alexnet = gluon.model_zoo.vision.alexnet(pretrained=True, ctx=mx.cpu())
     >>> inputs = mx.sym.var('data')
     >>> out = alexnet(inputs)
     >>> internals = out.get_internals()
@@ -1526,8 +1525,7 @@ class SymbolBlock(HybridBlock):
 
         Examples
         --------
-        >>> net1 = gluon.model_zoo.vision.resnet18_v1(
-        ...     prefix='resnet', pretrained=True)
+        >>> net1 = gluon.model_zoo.vision.resnet18_v1(pretrained=True)
         >>> net1.hybridize()
         >>> x = mx.nd.random.normal(shape=(1, 3, 32, 32))
         >>> out1 = net1(x)
@@ -1600,11 +1598,12 @@ class SymbolBlock(HybridBlock):
 
         for i, arg in enumerate(arg_params):
             if arg not in input_names:
-                self.params.get(arg, allow_deferred_init=True, dtype=arg_types[i])
+                self._reg_params[arg] = Parameter(name=arg, allow_deferred_init=True, dtype=arg_types[i])
 
         for i, aux in enumerate(aux_params):
             if aux not in input_names:
-                self.params.get(aux, grad_req='null', allow_deferred_init=True, dtype=aux_types[i])
+                self._reg_params[aux] = Parameter(name=aux, grad_req='null', allow_deferred_init=True, 
+                                                  dtype=aux_types[i])
 
         self._cached_graph = syms, out
         self._reg_params = {}

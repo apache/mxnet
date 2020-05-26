@@ -129,7 +129,7 @@ def get_squeezenet(version, pretrained=False, ctx=cpu(),
     root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
-    net = SqueezeNet(version, **kwargs)
+    net = SqueezeNet(version, **kwargs).set_prefix()
     if pretrained:
         from ..model_store import get_model_file
         net.load_parameters(get_model_file('squeezenet%s'%version, root=root), ctx=ctx)

@@ -109,7 +109,7 @@ def get_vgg(num_layers, pretrained=False, ctx=cpu(),
         Location for keeping the model parameters.
     """
     layers, filters = vgg_spec[num_layers]
-    net = VGG(layers, filters, **kwargs)
+    net = VGG(layers, filters, **kwargs).set_prefix()
     if pretrained:
         from ..model_store import get_model_file
         batch_norm_suffix = '_bn' if kwargs.get('batch_norm') else ''

@@ -2504,7 +2504,7 @@ def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test
     use_autograd_flags = [False, True] if test_grad else [False]
     for hybridize in [False, True]:
         for use_autograd in use_autograd_flags:
-            net = net_builder(prefix='net_')
+            net = net_builder()
             if params_init is None:
                 net.initialize()
             else:

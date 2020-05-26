@@ -201,7 +201,7 @@ def get_mobilenet(multiplier, pretrained=False, ctx=cpu(),
     root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
-    net = MobileNet(multiplier, **kwargs)
+    net = MobileNet(multiplier, **kwargs).set_prefix()
 
     if pretrained:
         from ..model_store import get_model_file
