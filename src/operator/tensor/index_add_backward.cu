@@ -55,7 +55,7 @@ struct IndexAddBackwardValGPUKernel {
                                   const int ograd_tail_size, const int ind_num,
                                   const int ind_ndim, const int32_t* ind_vec,
                                   const int out_ndim) {
-    size_t id = 0;
+    index_t id = 0;
     int seg = MXNET_SPECIAL_MAX_NDIM - out_ndim;
     for (int dim = 0; dim < ind_ndim; ++dim) {
       id += ograd_pre_stride[seg + dim] * ind_vec[dim * ind_num + i];

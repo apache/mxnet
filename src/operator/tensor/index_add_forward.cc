@@ -35,10 +35,10 @@ struct IndexAddForwardCPUKernel {
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_stride,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_shape,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& a_shape,
-                                  const size_t a_tail_size, const int ind_num,
+                                  const int a_tail_size, const int ind_num,
                                   const int ind_ndim, const int* ind,
                                   const int a_ndim) {
-    size_t id = 0;
+    index_t id = 0;
     int seg = MXNET_SPECIAL_MAX_NDIM - a_ndim;
     for (int dim = 0; dim < ind_ndim; ++dim) {
       CHECK_LT(ind[dim * ind_num + i], a_shape[seg + dim])
