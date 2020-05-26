@@ -274,8 +274,8 @@ def test_fusion_boolean_inputs():
     from mxnet.gluon import HybridBlock
 
     class Foo(HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(Foo, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(Foo, self).__init__()
 
         def hybrid_forward(self, F, valid_length):
             mask = valid_length.astype(np.float32)
@@ -293,8 +293,8 @@ def test_fusion_different_dimensions():
     from mxnet.gluon import HybridBlock
 
     class Foo(HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(Foo, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(Foo, self).__init__()
 
         def hybrid_forward(self, F, x):
             mask2 = x.astype(np.float32)

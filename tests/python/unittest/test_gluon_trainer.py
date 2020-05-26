@@ -177,12 +177,11 @@ def test_trainer_multi_layer_init():
     class Net(gluon.Block):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                # sparse param
-                self.embed_weight = self.params.get('embed_weight', stype='row_sparse',
-                                                    shape=(4,3), grad_stype='row_sparse')
-                # dense param from a hybrid block
-                self.dense0 = nn.Dense(2)
+            # sparse param
+            self.embed_weight = gluon.Parameter('embed_weight', stype='row_sparse',
+                                                shape=(4,3), grad_stype='row_sparse')
+            # dense param from a hybrid block
+            self.dense0 = nn.Dense(2)
 
         def forward(self, x):
             embed_weight = self.embed_weight.row_sparse_data(x)
@@ -191,7 +190,7 @@ def test_trainer_multi_layer_init():
             return self.dense0(embed)
 
     def check_init(ctxes):
-        net = Net(prefix='net_')
+        net = Net()
         net.initialize(mx.init.One(), ctx=ctxes)
         trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 1})
         data = mx.nd.array([[0,2], [1,2]])
@@ -255,10 +254,9 @@ def test_trainer_reset_kv():
 @with_seed()
 def test_trainer_sparse_kv():
     def check_trainer_sparse_kv(kv, stype, grad_stype, update_on_kv, expected):
-        params = gluon.ParameterDict()
-        x = params.get('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
-        params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-        trainer = gluon.Trainer(params, 'sgd', {'learning_rate': 0.1},
+        x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
+        x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+        trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},
                                 kvstore=kv, update_on_kvstore=update_on_kv)
         all_rows = mx.nd.arange(0, 10, ctx=mx.cpu(0))
         try:
@@ -337,11 +335,11 @@ def test_gluon_trainer_param_order():
     layers = {'ones_': 1, 'zeros_': 0}
     for name, init in layers.items():
         net.add(mx.gluon.nn.Dense(10, in_units=10, weight_initializer=mx.init.Constant(init),
-                                  use_bias=False, prefix=name))
-    params = net.collect_params()
+                                  use_bias=False))
     net.initialize()
+    params = net.collect_params()
     trainer = gluon.Trainer(params, 'sgd')
     for name, init in layers.items():
         expected_idx = 0 if name == 'ones_' else 1
-        expected_name = name + 'weight'
+        expected_name = '{}_weight'.format(expected_idx)
         assert trainer._params[expected_idx].name == expected_name

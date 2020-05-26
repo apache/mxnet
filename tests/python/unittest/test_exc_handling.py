@@ -90,7 +90,7 @@ def test_exc_gluon():
                   nn.Dense(32, in_units=64))
         x = mx.sym.var('data')
         y = model(x)
-        model.collect_params().initialize(ctx=[default_context()])
+        model.initialize(ctx=[default_context()])
         z = model(mx.nd.random.normal(10, -10, (32, 2, 10), ctx=default_context()))
         if waitall:
             mx.nd.waitall()
@@ -178,11 +178,10 @@ def run_training_iteration(data):
     output = net(data)
 
     net = gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.add(gluon.nn.Dense(10))
+    net.add(gluon.nn.Dense(10))
 
     ctx = default_context()
-    net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+    net.initialize(mx.init.Xavier(), ctx=ctx)
     data = mx.nd.ones((3, 4))
     mx.profiler.set_state("run")
     run_training_iteration(data)

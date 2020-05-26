@@ -1136,7 +1136,7 @@ def test_quantize_gluon_with_forward():
         label_shape = (32, 1)
         batch_size = 1
         resnet18_v1 = vision.resnet18_v1(pretrained=True)
-        resnet18_v1.collect_params().reset_ctx(mx.current_context())
+        resnet18_v1.reset_ctx(mx.current_context())
         excluded_names_match = []
         if mx.current_context() == mx.gpu():
             excluded_names_match += ['activation', 'relu', 'conv0']

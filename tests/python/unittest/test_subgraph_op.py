@@ -421,7 +421,7 @@ def test_subgraph_backend_gluon_ext1(tmpdir):
     # regular inference
     x = nd.random.normal(shape=(1, 512),ctx=mx.current_context())
     net = get_net()
-    net.collect_params().initialize(ctx=mx.current_context())
+    net.initialize(ctx=mx.current_context())
     outputs1 = net(x)
     param_path = os.path.join(str(tmpdir), 'test_subgraph_backend_gluon_ext1.params')
     net.save_parameters(param_path)
@@ -448,10 +448,9 @@ def test_subgraph_backend_gluon_ext2(tmpdir):
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.fc1 = nn.Dense(256)
-                self.fc2 = nn.Dense(128)
-                self.fc3 = nn.Dense(2)
+            self.fc1 = nn.Dense(256)
+            self.fc2 = nn.Dense(128)
+            self.fc3 = nn.Dense(2)
 
         def hybrid_forward(self, F, x):
             x = F.relu(self.fc1(x))
@@ -460,7 +459,7 @@ def test_subgraph_backend_gluon_ext2(tmpdir):
     # regular inference
     x = nd.random.normal(shape=(1, 512),ctx=mx.current_context())
     net = Net()
-    net.collect_params().initialize(ctx=mx.current_context())
+    net.initialize(ctx=mx.current_context())
     outputs1 = net(x)
     param_path = os.path.join(str(tmpdir), 'test_subgraph_backend_gluon_ext2.params')
     net.save_parameters(param_path)

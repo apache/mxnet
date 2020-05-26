@@ -365,7 +365,7 @@ def test_sdml_loss():
     # Init model and trainer
     sdml_loss = gluon.loss.SDMLLoss()
     model = gluon.nn.Dense(DIM, activation='tanh') # Simple NN encoder
-    model.collect_params().initialize(mx.init.Xavier(), ctx=mx.current_context())
+    model.initialize(mx.init.Xavier(), ctx=mx.current_context())
     trainer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate' : 0.1})
 
     for i in range(EPOCHS): # Training loop

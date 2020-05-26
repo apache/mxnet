@@ -30,14 +30,9 @@ from mxnet.gluon.contrib.estimator.event_handler import *
 
 
 def _get_test_network(params=None):
-    net = nn.Sequential(params=params)
+    net = nn.Sequential()
     net.add(nn.Dense(4, activation='relu', flatten=False))
-    return net
-
-def _get_test_network_with_namescope(params=None):
-    net = nn.Sequential(params=params)
-    with net.name_scope():
-        net.add(nn.Dense(4, activation='relu', flatten=False))
+    net.share_parameters(params)
     return net
 
 def _get_test_data():
@@ -375,7 +370,6 @@ def test_default_handlers():
 
 def test_val_net():
     ''' test estimator with different training and validation networks '''
-    ''' test weight sharing of sequential networks without namescope '''
     net = _get_test_network()
     val_net = _get_test_network(params=net.collect_params())
     dataloader, dataiter = _get_test_data()
@@ -394,24 +388,6 @@ def test_val_net():
                     val_loss=val_loss,
                     val_net=val_net)
 
-    with pytest.raises(RuntimeError):
-        est.fit(train_data=dataloader,
-                val_data=dataloader,
-                epochs=num_epochs)
-
-    ''' test weight sharing of sequential networks with namescope '''
-    net = _get_test_network_with_namescope()
-    val_net = _get_test_network_with_namescope(params=net.collect_params())
-    net.initialize(ctx=ctx)
-    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    est = Estimator(net=net,
-                    loss=loss,
-                    train_metrics=acc,
-                    trainer=trainer,
-                    context=ctx,
-                    val_loss=val_loss,
-                    val_net=val_net)
-
     est.fit(train_data=dataloader,
             val_data=dataloader,
             epochs=num_epochs)
@@ -420,7 +396,7 @@ def test_val_net():
     net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
     net.output = gluon.nn.Dense(10)
     val_net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
-    val_net.output = gluon.nn.Dense(10, params=net.collect_params())
+    val_net.output = net.output
     dataset = gluon.data.ArrayDataset(mx.nd.zeros((10, 3, 224, 224)), mx.nd.zeros((10, 10)))
     dataloader = gluon.data.DataLoader(dataset=dataset, batch_size=5)
     net.initialize(ctx=ctx)

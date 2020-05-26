@@ -29,7 +29,7 @@ from mxnet.gluon import nn
 from common import run_in_spawned_process
 import pytest
 
-
+# TODO phile: update the profiler
 def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate_stats=False):
     profiler.set_config(profile_symbolic=True,
                         profile_imperative=True,
@@ -537,13 +537,12 @@ def test_gpu_memory_profiler_gluon():
                     run=True, continuous_dump=True)
     profiler.set_state('run')
 
-    model = nn.HybridSequential(prefix='net_')
-    with model.name_scope():
-        model.add(nn.Dense(128, activation='tanh'))
-        model.add(nn.Dropout(0.5))
-        model.add(nn.Dense(64, activation='tanh'),
-                  nn.Dense(32, in_units=64))
-        model.add(nn.Activation('relu'))
+    model = nn.HybridSequential()
+    model.add(nn.Dense(128, activation='tanh'))
+    model.add(nn.Dropout(0.5))
+    model.add(nn.Dense(64, activation='tanh'),
+              nn.Dense(32, in_units=64))
+    model.add(nn.Activation('relu'))
     model.initialize(ctx=mx.gpu())
     model.hybridize()
 

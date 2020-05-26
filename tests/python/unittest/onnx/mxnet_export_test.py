@@ -89,9 +89,8 @@ class TestExport(unittest.TestCase):
 
     @with_seed()
     def test_onnx_export_single_output(self):
-        net = nn.HybridSequential(prefix='single_output_net')
-        with net.name_scope():
-            net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+        net = nn.HybridSequential()
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net)
 
     @with_seed()
@@ -99,10 +98,9 @@ class TestExport(unittest.TestCase):
         class MultiOutputBlock(nn.HybridBlock):
             def __init__(self):
                 super(MultiOutputBlock, self).__init__()
-                with self.name_scope():
-                    self.net = nn.HybridSequential()
-                    for i in range(10):
-                        self.net.add(nn.Dense(100 + i * 10, activation='relu'))
+                self.net = nn.HybridSequential()
+                for i in range(10):
+                    self.net.add(nn.Dense(100 + i * 10, activation='relu'))
 
             def hybrid_forward(self, F, x):
                 out = tuple(block(x) for block in self.net._children.values())
@@ -114,15 +112,13 @@ class TestExport(unittest.TestCase):
 
     @with_seed()
     def test_onnx_export_list_shape(self):
-        net = nn.HybridSequential(prefix='list_shape_net')
-        with net.name_scope():
-            net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+        net = nn.HybridSequential()
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net, shape_type=list)
 
     @with_seed()
     def test_onnx_export_extra_params(self):
-        net = nn.HybridSequential(prefix='extra_params_net')
-        with net.name_scope():
-            net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+        net = nn.HybridSequential()
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net, extra_params={'extra_param': nd.array([1, 2])})
 

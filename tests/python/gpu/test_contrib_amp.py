@@ -259,14 +259,14 @@ def test_amp_conversion(amp_tests):
     def check_amp_convert_hybrid_block():
         # Test conversion for hybrid block on CPU
         model_cpu = get_model("resnet50_v1")
-        model_cpu.collect_params().initialize(ctx=mx.cpu())
+        model_cpu.initialize(ctx=mx.cpu())
         model_cpu.hybridize()
         model_cpu(mx.nd.random.uniform(0, 1, shape=(1, 3, 224, 224), ctx=mx.cpu()))
         converted_model_cpu = amp.convert_hybrid_block(model_cpu)
 
         # Test with real world model, default inputs for convert_hybrid_block
         model = get_model("resnet50_v1")
-        model.collect_params().initialize(ctx=mx.gpu())
+        model.initialize(ctx=mx.gpu())
         model.hybridize()
         model(mx.nd.zeros((1, 3, 224, 224)))
         converted_model = amp.convert_hybrid_block(model)
@@ -292,7 +292,7 @@ def test_amp_conversion(amp_tests):
         net = SymbolBlock.imports(os.path.join(model_path, "imagenet1k-resnet-18-symbol.json"),
                                   input_names=["data", "softmax_label"],
                                   param_file=os.path.join(model_path, "imagenet1k-resnet-18-0000.params"))
-        net.collect_params().reset_ctx(ctx=mx.gpu())
+        net.reset_ctx(ctx=mx.gpu())
         net.hybridize()
         net(mx.nd.zeros((1, 3, 224, 224)), mx.nd.zeros((1,)))
         converted_model = amp.convert_hybrid_block(net)

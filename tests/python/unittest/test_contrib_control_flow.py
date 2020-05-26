@@ -1152,9 +1152,9 @@ def test_cond():
                 )
 
 class RNNLayer(gluon.HybridBlock):
-    def __init__(self, cell_type, hidden_size, prefix=None, params=None):
-        super(RNNLayer, self).__init__(prefix=prefix, params=params)
-        self.cell = cell_type(hidden_size, prefix='rnn_')
+    def __init__(self, cell_type, hidden_size):
+        super(RNNLayer, self).__init__()
+        self.cell = cell_type(hidden_size)
 
     def hybrid_forward(self, F, inputs, states):
         out, states = F.contrib.foreach(self.cell, inputs, states)
@@ -1687,8 +1687,8 @@ def test_foreach_rnn():
 @with_seed()
 def test_cut_subgraph_foreach():
     class TestLayer(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestLayer, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestLayer, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def step1(data, states):
@@ -1722,8 +1722,8 @@ def test_cut_subgraph_foreach():
 @with_seed()
 def test_uniq_name():
     class ForeachLayer1(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(ForeachLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(ForeachLayer1, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def step1(data, states):
@@ -1734,8 +1734,8 @@ def test_uniq_name():
             return out
 
     class ForeachLayer2(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(ForeachLayer2, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(ForeachLayer2, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def step1(data, states):
@@ -1749,8 +1749,8 @@ def test_uniq_name():
             return out
 
     class WhileLayer1(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(WhileLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(WhileLayer1, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def cond(state1, state2):
@@ -1765,8 +1765,8 @@ def test_uniq_name():
             return out
 
     class WhileLayer2(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(WhileLayer2, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(WhileLayer2, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def cond(state1, state2):
@@ -1808,8 +1808,8 @@ def test_uniq_name():
 @with_seed()
 def test_cut_subgraph_while_loop():
     class TestLayer(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestLayer, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestLayer, self).__init__()
         def hybrid_forward(self, F, data):
             out1, data1 = F.contrib.while_loop(
                 cond=lambda i: i <= 5,
@@ -1842,8 +1842,8 @@ def test_cut_subgraph_while_loop():
 @with_seed()
 def test_cut_subgraph_cond():
     class TestLayer(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestLayer, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestLayer, self).__init__()
         def hybrid_forward(self, F, data):
             data1 = F.contrib.cond(
                 data > 0.5,
@@ -1873,8 +1873,8 @@ def test_cut_subgraph_cond():
 
 def test_scope():
     class TestBlock1(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestBlock1, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestBlock1, self).__init__()
         def hybrid_forward(self, F, data):
             (new_data, ) = F.contrib.cond(
                 data > 0.5,
@@ -1884,8 +1884,8 @@ def test_scope():
             )
             return new_data
     class TestBlock2(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestBlock2, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestBlock2, self).__init__()
         def hybrid_forward(self, F, data):
             (new_data, ) = F.contrib.cond(
                 data > 0.5,
@@ -1912,8 +1912,8 @@ def test_scope():
 
 def test_output_format_foreach():
     class TestLayer1(gluon.HybridBlock):
-        def __init__(self, step, prefix=None, params=None):
-            super(TestLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self, step):
+            super(TestLayer1, self).__init__()
             self.step = step
         def hybrid_forward(self, F, ins, states):
             out, states = F.contrib.foreach(self.step, ins, states)
@@ -2011,8 +2011,8 @@ def test_output_format_foreach():
 
 def test_output_format_while():
     class TestLayer1(gluon.HybridBlock):
-        def __init__(self, step, use_list, nested_list=False, prefix=None, params=None):
-            super(TestLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self, step, use_list, nested_list=False):
+            super(TestLayer1, self).__init__()
             self.step = step
             self.use_list = use_list
             self.nested_list = nested_list
@@ -2122,8 +2122,8 @@ def test_output_format_while():
 
 def test_output_format_cond():
     class TestLayer1(gluon.HybridBlock):
-        def __init__(self, func, prefix=None, params=None):
-            super(TestLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self, func):
+            super(TestLayer1, self).__init__()
             self.func = func
         def hybrid_forward(self, F, data):
             def then_func():

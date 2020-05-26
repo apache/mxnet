@@ -49,7 +49,7 @@ def test_models(model_name):
     eprint('testing forward for %s' % model_name)
     print(model)
     if not test_pretrain:
-        model.collect_params().initialize()
+        model.initialize()
     model(mx.nd.random.uniform(shape=data_shape)).wait_to_read()
 
 def parallel_download(model_name):

@@ -94,14 +94,14 @@ def test_rnn():
 def test_lstm():
     for activation_type in ['', 'relu', 'sigmoid', 'softrelu', 'tanh', 'softsign']:
         if activation_type == '':
-            cell = mx.gluon.rnn.LSTMCell(100, prefix='rnn_')
+            cell = mx.gluon.rnn.LSTMCell(100)
         else:
-            cell = mx.gluon.rnn.LSTMCell(100, prefix='rnn_', activation=activation_type, recurrent_activation=activation_type)
+            cell = mx.gluon.rnn.LSTMCell(100, activation=activation_type, recurrent_activation=activation_type)
         inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
         outputs, _ = cell.unroll(3, inputs)
         outputs = mx.sym.Group(outputs)
-        assert sorted(cell.collect_params().keys()) == ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
-        assert outputs.list_outputs() == ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
+        assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight', 'i2h_bias', 'i2h_weight']
+        assert outputs.list_outputs() == ['t0_out_output', 't1_out_output', 't2_out_output']
 
         args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
         assert outs == [(10, 100), (10, 100), (10, 100)]

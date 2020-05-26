@@ -65,9 +65,8 @@ def test_mkldnn_model():
 def test_mkldnn_ndarray_slice():
     ctx = mx.cpu()
     net = gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
-    net.collect_params().initialize(ctx=ctx)
+    net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
+    net.initialize(ctx=ctx)
     x = mx.nd.array(np.ones([32, 3, 224, 224]), ctx)
     y = net(x)
 
@@ -77,9 +76,8 @@ def test_mkldnn_ndarray_slice():
 @with_seed(1234)
 def test_mkldnn_engine_threading():
     net = gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
-    net.collect_params().initialize(ctx=mx.cpu())
+    net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
+    net.initialize(ctx=mx.cpu())
     class Dummy(gluon.data.Dataset):
         def __len__(self):
             return 2
@@ -140,9 +138,8 @@ def test_reshape_before_conv():
         """
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(10, (3, 3))
-                self.conv1 = nn.Conv2D(5, (3, 3))
+            self.conv0 = nn.Conv2D(10, (3, 3))
+            self.conv1 = nn.Conv2D(5, (3, 3))
 
         def hybrid_forward(self, F, x, *args, **kwargs):
             x_reshape = x.reshape((0, 0, 20, 5))
@@ -153,7 +150,7 @@ def test_reshape_before_conv():
     x = mx.nd.random.uniform(shape=(2, 4, 10, 10))
     x.attach_grad()
     net = Net()
-    net.collect_params().initialize()
+    net.initialize()
     with mx.autograd.record():
         out1 = net(x)
     out1.backward()
@@ -174,9 +171,8 @@ def test_slice_before_conv():
         """
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(4, (3, 3))
-                self.conv1 = nn.Conv2D(4, (3, 3))
+            self.conv0 = nn.Conv2D(4, (3, 3))
+            self.conv1 = nn.Conv2D(4, (3, 3))
 
         def hybrid_forward(self, F, x, *args, **kwargs):
             x_slice = x.slice(begin=(0, 0, 0, 0), end=(2, 4, 10, 10))
@@ -187,7 +183,7 @@ def test_slice_before_conv():
     x = mx.nd.random.uniform(shape=(2, 10, 10, 10))
     x.attach_grad()
     net = Net()
-    net.collect_params().initialize()
+    net.initialize()
     with mx.autograd.record():
         out1 = net(x)
     out1.backward()
@@ -208,9 +204,8 @@ def test_slice_reshape_before_conv():
         """
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(4, (3, 3))
-                self.conv1 = nn.Conv2D(4, (3, 3))
+            self.conv0 = nn.Conv2D(4, (3, 3))
+            self.conv1 = nn.Conv2D(4, (3, 3))
 
         def hybrid_forward(self, F, x, *args, **kwargs):
             x_slice = x.slice(begin=(0, 0, 0, 0), end=(2, 4, 8, 9))
@@ -221,7 +216,7 @@ def test_slice_reshape_before_conv():
     x = mx.nd.random.uniform(shape=(2, 10, 10, 10))
     x.attach_grad()
     net = Net()
-    net.collect_params().initialize()
+    net.initialize()
     with mx.autograd.record():
         out1 = net(x)
     out1.backward()
@@ -328,12 +323,11 @@ def test_batchnorm_relu_fusion():
             def __init__(self, fuse_relu):
                 super(BNNet, self).__init__()
                 self.fuse_relu = fuse_relu
-                with self.name_scope():
-                    if self.fuse_relu:
-                        self.bn = gluon.nn.BatchNormReLU()
-                    else:
-                        self.bn = gluon.nn.BatchNorm()
-                    self.relu = gluon.nn.Activation('relu')
+                if self.fuse_relu:
+                    self.bn = gluon.nn.BatchNormReLU()
+                else:
+                    self.bn = gluon.nn.BatchNorm()
+                self.relu = gluon.nn.Activation('relu')
 
             def forward(self, x):
                 y = self.bn(x)
@@ -342,8 +336,8 @@ def test_batchnorm_relu_fusion():
                 return y
         fused_net = BNNet(fuse_relu=True)
         unfused_net = BNNet(fuse_relu=False)
-        fused_net.collect_params().initialize()
-        unfused_net.collect_params().initialize()
+        fused_net.initialize()
+        unfused_net.initialize()
         in_data = mx.nd.random.normal(shape=shape)
         no_fuse_outputs = unfused_net.forward(in_data)
         fuse_outputs = fused_net.forward(in_data)
@@ -601,9 +595,8 @@ def test_reshape_transpose_6d():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv1 = nn.Conv2D(8, kernel_size=5)
-                self.reshape2D = Reshape2D(2)
+            self.conv1 = nn.Conv2D(8, kernel_size=5)
+            self.reshape2D = Reshape2D(2)
 
         def hybrid_forward(self, F, x):
             x = self.conv1(x)

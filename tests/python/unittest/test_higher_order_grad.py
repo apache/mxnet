@@ -622,8 +622,7 @@ def test_dense_backward_flatten():
     for x in NDArrayGenerator(4,2):
         hidden = random.randrange(1, 4)
         net = gluon.nn.Sequential()
-        with net.name_scope():
-            net.add(gluon.nn.Dense(hidden, flatten=True))
+        net.add(gluon.nn.Dense(hidden, flatten=True))
         net.initialize(mxnet.initializer.Constant(.5))
         x.attach_grad()
         with autograd.record():
@@ -667,8 +666,7 @@ def test_dense_backward_no_flatten():
     for x in NDArrayGenerator(5,3):
         hidden = random.randrange(1, 4)
         net = gluon.nn.Sequential()
-        with net.name_scope():
-            net.add(gluon.nn.Dense(hidden, flatten=False))
+        net.add(gluon.nn.Dense(hidden, flatten=False))
         net.initialize(mxnet.initializer.Constant(.5))
         x.attach_grad()
         with autograd.record():
