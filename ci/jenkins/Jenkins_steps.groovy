@@ -26,9 +26,6 @@ utils = load('ci/Jenkinsfile_utils.groovy')
 mx_lib = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 mx_lib_cython = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 
-// Python wheels
-mx_pip = 'build/*.whl'
-
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/libmxnet.a, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_cmake_lib_no_tvm_op = 'build/libmxnet.so, build/libmxnet.a, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/3rdparty/dmlc-core/libdmlc.a, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
@@ -460,20 +457,6 @@ def compile_armv8_jetson_gpu() {
     }]
 }
 
-def compile_armv7_cpu() {
-    return ['ARMv7':{
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-ARMv7') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('armv7', 'build_armv7', false)
-            utils.pack_lib('armv7', mx_pip)
-          }
-        }
-      }
-    }]
-}
-
 def compile_armv6_cpu() {
     return ['ARMv6':{
       node(NODE_LINUX_CPU) {
@@ -481,6 +464,21 @@ def compile_armv6_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('armv6', 'build_armv6', false)
+            utils.pack_lib('armv6', mx_cmake_lib)
+          }
+        }
+      }
+    }]
+}
+
+def compile_armv7_cpu() {
+    return ['ARMv7':{
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-ARMv7') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('armv7', 'build_armv7', false)
+            utils.pack_lib('armv7', mx_cmake_lib)
           }
         }
       }
@@ -494,6 +492,7 @@ def compile_armv8_cpu() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('armv8', 'build_armv8', false)
+            utils.pack_lib('armv8', mx_cmake_lib)
           }
         }
       }
@@ -1361,8 +1360,21 @@ def test_qemu_armv7_cpu() {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-armv7-qemu') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('armv7', mx_pip)
-            sh "ci/build.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} -p test.arm_qemu ./runtime_functions.py run_ut_py3_qemu"
+            utils.unpack_and_init('armv7', mx_cmake_lib)
+            utils.docker_run('test.armv7', 'unittest_ubuntu_python3_arm', false)
+          }
+        }
+      }
+    }]
+}
+
+def test_qemu_armv8_cpu() {
+    return ['ARMv8 QEMU': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/ut-armv8-qemu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init('armv8', mx_cmake_lib)
+            utils.docker_run('test.armv8', 'unittest_ubuntu_python3_arm', false)
           }
         }
       }
