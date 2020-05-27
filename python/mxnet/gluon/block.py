@@ -377,10 +377,11 @@ class Block(object):
         if prefix:
             prefix += '_'
         self._prefix = prefix
-        for val in self._reg_params.values():
+        for name, val in self._reg_params.items():
             if val not in recorded:
                 recorded.add(val)
                 val._prefix = prefix
+                val._name = name # use the name of the first occurence as the name of the shared parameter.
 
         for name, child in self._children.items():
             child._set_prefix(recorded, prefix + name)
@@ -742,7 +743,7 @@ class Block(object):
 
         Returns
         -------
-        this block            
+        this block
         """
         if shared is None:
             return self
@@ -1561,8 +1562,11 @@ class SymbolBlock(HybridBlock):
         return s.format(name=self.__class__.__name__,
                         modstr=modstr)
 
-    def __init__(self, outputs, inputs):
+    def __init__(self, outputs, inputs, params=None):
         super(SymbolBlock, self).__init__()
+        if params is not None:
+            self._reg_params = params
+
         if isinstance(inputs, symbol.Symbol) and len(inputs.list_outputs()) == 1:
             inputs = [inputs]
         if isinstance(outputs, (list, tuple)) and len(outputs) == 1:
@@ -1596,17 +1600,22 @@ class SymbolBlock(HybridBlock):
 
         arg_types, aux_types = _infer_param_types(syms, out, arg_params, aux_params)
 
+        def _set_params_attr(name, **kwargs):
+            if self._reg_params.get(name) is None:
+                self._reg_params[name] = Parameter(name=name, **kwargs)
+                return
+            param = self._reg_params[name]
+            param.check_and_setattr(**kwargs)
+
         for i, arg in enumerate(arg_params):
             if arg not in input_names:
-                self._reg_params[arg] = Parameter(name=arg, allow_deferred_init=True, dtype=arg_types[i])
+                _set_params_attr(name=arg, allow_deferred_init=True, dtype=arg_types[i])
 
         for i, aux in enumerate(aux_params):
             if aux not in input_names:
-                self._reg_params[aux] = Parameter(name=aux, grad_req='null', allow_deferred_init=True, 
-                                                  dtype=aux_types[i])
+                _set_params_attr(name=aux, grad_req='null', allow_deferred_init=True, dtype=aux_types[i])
 
         self._cached_graph = syms, out
-        self._reg_params = {}
 
     def forward(self, x, *args):
         if dc.is_deferred_compute():

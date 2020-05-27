@@ -659,6 +659,40 @@ class Parameter(object):
             self._grad = [i.astype(dtype) for i in self._grad]
             autograd.mark_variables(self._data, self._grad, self.grad_req)
 
+    def check_and_setattr(self, **kwargs):
+        """check and set attributes for parameters
+        # TODO add explanations.
+        """
+        for k, v in kwargs.items():
+            if hasattr(self, k) and getattr(self, k) is not None:
+                existing = getattr(self, k)
+                if k == 'shape' and len(v) == len(existing):
+                    inferred_shape = []
+                    matched = True
+                    for dim1, dim2 in zip(v, existing):
+                        if dim1 != dim2 and dim1 > 0 and dim2 > 0:
+                            matched = False
+                            break
+                        elif dim1 == dim2:
+                            inferred_shape.append(dim1)
+                        elif dim1 in (0, -1):  # -1 means unknown dim size in np_shape mode
+                            inferred_shape.append(dim2)
+                        else:
+                            inferred_shape.append(dim1)
+
+                    if matched:
+                        self._shape = tuple(inferred_shape)
+                        continue
+                elif k == 'dtype' and np.dtype(v) == np.dtype(existing):
+                    continue
+
+                assert v is None or v == existing, \
+                    "Cannot retrieve Parameter '%s' because desired attribute " \
+                    "does not match with stored for attribute '%s': " \
+                    "desired '%s' vs stored '%s'."%(
+                        name, k, str(v), str(getattr(self, k)))
+            else:
+                setattr(self, k, v)
 
 class Constant(Parameter):
     """A constant parameter for holding immutable tensors.
@@ -794,36 +828,7 @@ class ParameterDict(object):
             param = Parameter(name, **kwargs)
             self._params[name] = param
         else:
-            for k, v in kwargs.items():
-                if hasattr(param, k) and getattr(param, k) is not None:
-                    existing = getattr(param, k)
-                    if k == 'shape' and len(v) == len(existing):
-                        inferred_shape = []
-                        matched = True
-                        for dim1, dim2 in zip(v, existing):
-                            if dim1 != dim2 and dim1 > 0 and dim2 > 0:
-                                matched = False
-                                break
-                            elif dim1 == dim2:
-                                inferred_shape.append(dim1)
-                            elif dim1 in (0, -1):  # -1 means unknown dim size in np_shape mode
-                                inferred_shape.append(dim2)
-                            else:
-                                inferred_shape.append(dim1)
-
-                        if matched:
-                            param._shape = tuple(inferred_shape)
-                            continue
-                    elif k == 'dtype' and np.dtype(v) == np.dtype(existing):
-                        continue
-
-                    assert v is None or v == existing, \
-                        "Cannot retrieve Parameter '%s' because desired attribute " \
-                        "does not match with stored for attribute '%s': " \
-                        "desired '%s' vs stored '%s'."%(
-                            name, k, str(v), str(getattr(param, k)))
-                else:
-                    setattr(param, k, v)
+            param.check_and_setattr(**kwargs)
         return param
 
     def get_constant(self, name, value=None):
