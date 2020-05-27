@@ -2428,10 +2428,11 @@ def environment(*args):
     set_environ(env_vars)
 
     # Now run the wrapped code
-    yield
-
-    # reinstate original env_var state per the snapshot taken earlier
-    set_environ(snapshot)
+    try:
+        yield
+    finally:
+        # reinstate original env_var state per the snapshot taken earlier
+        set_environ(snapshot)
 
 
 def collapse_sum_like(a, shape):
