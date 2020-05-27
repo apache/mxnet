@@ -57,7 +57,6 @@ struct IndexAddBackwardValCPUKernel {
       id += ograd_pre_stride[seg + dim] * ind_vec[dim * ind_num + i];
     }
     id *= ograd_tail_size;
-    #pragma omp parallel for
     for (int _i = 0; _i < ograd_tail_size; ++_i) {
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_id =
         mxnet_op::unravel(_i, ograd_tail_shape);

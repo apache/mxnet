@@ -51,7 +51,6 @@ struct IndexAddForwardCPUKernel {
       id += a_pre_stride[seg + dim] * ind[dim * ind_num + i];
     }
     id *= a_tail_size;
-    #pragma omp parallel for
     for (int _i = 0; _i < a_tail_size; ++_i) {
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_id;
