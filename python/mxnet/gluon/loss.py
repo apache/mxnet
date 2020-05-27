@@ -476,7 +476,7 @@ class KLDivLoss(Loss):
             pred = F.log_softmax(pred, self._axis)
         loss = label * (F.log(label + 1e-12) - pred)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        return F.sum(loss, axis=self._batch_axis, exclude=True)
 
 
 class CTCLoss(Loss):
