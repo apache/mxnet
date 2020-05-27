@@ -383,6 +383,7 @@ def test_function():
 
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_function1():
     class Foo(mx.autograd.Function):
         def __init__(self):
