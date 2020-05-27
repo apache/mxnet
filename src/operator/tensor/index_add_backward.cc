@@ -30,7 +30,7 @@ namespace op {
 template<typename xpu, typename DType>
 void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
                              DType* grad_a, const DType* ograd,
-                             const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& stride,
+                             const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> stride,
                              const int tail_size, const int ind_num,
                              const int ind_ndim, const int32_t* ind_vec,
                              const int req, const int out_ndim) {
@@ -44,10 +44,10 @@ template<typename DType>
 struct IndexAddBackwardValCPUKernel {
   MSHADOW_XINLINE static void Map(size_t i, DType* grad_val,
                                   const DType* ograd,
-                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& ograd_tail_shape,
-                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& ograd_pre_stride,
-                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_stride,
-                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_shape,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_stride,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride,
+                                  const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_shape,
                                   const int ograd_tail_size, const int ind_num,
                                   const int ind_ndim, const int32_t* ind_vec,
                                   const int out_ndim) {
@@ -78,10 +78,10 @@ struct IndexAddBackwardValCPUKernel {
 template<typename xpu, typename DType>
 void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
                                DType* grad_val, const DType* ograd,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& ograd_tail_shape,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& ograd_pre_stride,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_stride,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM>& val_shape,
+                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape,
+                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_stride,
+                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride,
+                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_shape,
                                const int tail_size, const int ind_num,
                                const int ind_ndim, const int32_t* ind_vec,
                                const int out_ndim) {
