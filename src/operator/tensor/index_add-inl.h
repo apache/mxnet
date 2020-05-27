@@ -182,14 +182,6 @@ struct IndexAddBackwardAKernel {
 };
 
 template<typename xpu, typename DType>
-void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
-                             DType* grad_a, const DType* ograd,
-                             const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> stride,
-                             const int tail_size, const int ind_num,
-                             const int ind_ndim, const int32_t* ind_vec,
-                             const int req, const int out_ndim);
-
-template<typename xpu, typename DType>
 void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
                                DType* grad_val, const DType* ograd,
                                const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape,
@@ -243,9 +235,9 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   TBlob t_ind = TBlob(reinterpret_cast<int32_t*>(temp_mem.dptr_), ind.shape_, xpu::kDevMask);
   mxnet_op::copy(s, t_ind, ind);
   MSHADOW_TYPE_SWITCH(grad_a.type_flag_, DType, {
-    IndexAddOpBackwardACalc<xpu, DType>(s, grad_a.dptr<DType>(),
-      ograd.dptr<DType>(), ograd_stride, tail_size, ind_num, ind_ndim,
-      t_ind.dptr<int32_t>(), req[0], ndim);
+    Kernel<IndexAddBackwardAKernel<DType>, xpu>::Launch(
+      s, ind_num, grad_a.dptr<DType>(), ograd.dptr<DType>(), ograd_stride,
+      tail_size, ind_num, ind_ndim, t_ind.dptr<int32_t>(), req[0], ndim);
   });
 
   int seg = MXNET_SPECIAL_MAX_NDIM - ndim;

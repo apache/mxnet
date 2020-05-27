@@ -30,20 +30,6 @@
 namespace mxnet {
 namespace op {
 
-template<typename xpu, typename DType>
-void IndexAddOpBackwardACalc(mshadow::Stream<xpu> *s,
-                             DType* grad_a, const DType* ograd,
-                             const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> stride,
-                             const int tail_size, const int ind_num,
-                             const int ind_ndim, const int32_t* ind_vec,
-                             const int req, const int out_ndim) {
-  using namespace mxnet_op;
-  using namespace mshadow;
-  Kernel<IndexAddBackwardAKernel<DType>, xpu>::Launch(
-    s, ind_num, grad_a, ograd, stride, tail_size,
-    ind_num, ind_ndim, ind_vec, req, out_ndim);
-}
-
 template<typename DType>
 struct IndexAddBackwardValGPUKernel {
   MSHADOW_XINLINE static void Map(size_t i, DType* grad_val,
