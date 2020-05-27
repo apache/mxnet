@@ -29,7 +29,7 @@ import numpy as _np
 from common import (setup_module, with_seed, assertRaises,
                     assert_raises_cudnn_not_satisfied)
 from numpy.testing import assert_array_equal
-from nose.tools import raises, assert_raises
+import pytest
 import scipy.stats as ss
 import scipy.special as scipy_special
 import warnings
