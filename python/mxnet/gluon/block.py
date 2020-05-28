@@ -344,7 +344,7 @@ class Block(object):
         """
         # We need to check here because blocks inside containers are not supported.
         self._check_container_with_block()
-        return self._collect_params_with_prefix(select=select)
+        return self._collect_params_with_prefix(select=select, prefix=self._prefix[:-1])
 
     def set_prefix(self):
         """Set parameters with current prefixs recursively.
@@ -487,6 +487,9 @@ class Block(object):
         params = self._collect_params_with_prefix()
         if not loaded and not params:
             return
+
+        loaded = {k[4:] if k.startswith('arg:') or k.startswith('aux:') else k: v \
+                  for k, v in loaded.items()}
 
         if not allow_missing:
             # Shared parameters are stored only a single time as of MXNet 1.6.

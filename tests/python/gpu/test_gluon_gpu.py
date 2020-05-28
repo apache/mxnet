@@ -112,8 +112,8 @@ def test_lstmp():
     layer_output.backward()
     cell_output.backward()
     for k, v in weights.items():
-        layer_grad = layer_params['lstm0_l0_' + k].grad()
-        cell_grad = cell_params['lstm0_l0_' + k].grad()
+        layer_grad = layer_params['l0_' + k].grad()
+        cell_grad = cell_params[k].grad()
         print('checking gradient for {}'.format('lstm0_l0_' + k))
         assert_almost_equal(layer_grad, cell_grad, rtol=rtol, atol=atol)
     check_rnn_layer_forward(gluon.rnn.LSTM(
@@ -232,7 +232,7 @@ def check_layer_bidirectional_varseqlen(size, in_size):
     ref_net_params = ref_net.collect_params()
     for k in weights:
         net_params[k].set_data(weights[k])
-        ref_net_params[k)].set_data(weights[k])
+        ref_net_params[k].set_data(weights[k])
 
     batch_size = 10
     num_timesteps = 11

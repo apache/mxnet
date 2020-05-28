@@ -101,7 +101,7 @@ def test_lstmp():
         for name, value in fused_layer_params.items():
             w = mx.nd.random.uniform(shape=value.shape)
             value.set_data(w.copy())
-            stack_layer_params[name].set_data(w.copy())
+            stack_layer_params[name[1:]].set_data(w.copy())
 
         fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
         stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
@@ -135,7 +135,8 @@ def test_lstmp():
         for name, value in fused_layer_params.items():
             w = mx.nd.random.uniform(shape=value.shape)
             value.set_data(w.copy())
-            stack_layer_params[name].set_data(w.copy())
+            cur = name.split("_")[0]
+            stack_layer_params["{}_{}_cell{}".format(cur[1:], name[0], name[len(cur):])].set_data(w.copy())
 
         fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
         stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
@@ -232,7 +233,7 @@ def test_residual_bidirectional():
                 gluon.rnn.GRUCell(25),
                 gluon.rnn.GRUCell(25)))
     cell.set_prefix()
-    inputs = [mx.sym.Variable('t%d_data'%i) for i in range(2)]
+    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
     outputs, _ = cell.unroll(2, inputs, merge_outputs=False)
     outputs = mx.sym.Group(outputs)
     assert sorted(cell.collect_params().keys()) == \
@@ -245,8 +246,8 @@ def test_residual_bidirectional():
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10, 50), rnn_t1_data=(10, 50))
     assert outs == [(10, 50), (10, 50)]
-    outputs = outputs.eval(t0_data=mx.nd.ones((10, 50))+5,
-                           t1_data=mx.nd.ones((10, 50))+5,
+    outputs = outputs.eval(rnn_t0_data=mx.nd.ones((10, 50))+5,
+                           rnn_t1_data=mx.nd.ones((10, 50))+5,
                            base_cell_l_cell_i2h_weight=mx.nd.zeros((75, 50)),
                            base_cell_l_cell_i2h_bias=mx.nd.zeros((75,)),
                            base_cell_l_cell_h2h_weight=mx.nd.zeros((75, 25)),
@@ -272,15 +273,17 @@ def test_stack():
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
     keys = sorted(cell.collect_params().keys())
-    for i in range(1, 5):
+    for i in range(5):
+        if i==1:
+            continue
         assert '%d_h2h_weight'%i in keys
         assert '%d_h2h_bias'%i in keys
         assert '%d_i2h_weight'%i in keys
         assert '%d_i2h_bias'%i in keys
-    assert '%d_base_cell_h2h_weight'%i in keys
-    assert '%d_base_cell_h2h_bias'%i in keys
-    assert '%d_base_cell_i2h_weight'%i in keys
-    assert '%d_base_cell_i2h_bias'%i in keys
+    assert '1_base_cell_h2h_weight' in keys
+    assert '1_base_cell_h2h_bias' in keys
+    assert '1_base_cell_i2h_weight' in keys
+    assert '1_base_cell_i2h_bias' in keys
     assert outputs.list_outputs() == ['4_t0_out_output', '4_t1_out_output', '4_t2_out_output']
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
@@ -300,15 +303,17 @@ def test_hybridstack():
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
     keys = sorted(cell.collect_params().keys())
-    for i in range(1, 5):
+    for i in range(5):
+        if i==1:
+            continue
         assert '%d_h2h_weight'%i in keys
         assert '%d_h2h_bias'%i in keys
         assert '%d_i2h_weight'%i in keys
         assert '%d_i2h_bias'%i in keys
-    assert '%d_base_cell_h2h_weight'%i in keys
-    assert '%d_base_cell_h2h_bias'%i in keys
-    assert '%d_base_cell_i2h_weight'%i in keys
-    assert '%d_base_cell_i2h_bias'%i in keys
+    assert '1_base_cell_h2h_weight' in keys
+    assert '1_base_cell_h2h_bias' in keys
+    assert '1_base_cell_i2h_weight' in keys
+    assert '1_base_cell_i2h_bias' in keys
     assert outputs.list_outputs() == ['4_t0_out_output', '4_t1_out_output', '4_t2_out_output']
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
@@ -347,7 +352,7 @@ def test_bidirectional():
     inputs = [mx.sym.Variable('t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
-    assert outputs.list_outputs() == ['t0_output', 'rnn_bi_t1_output', 'rnn_bi_t2_output']
+    assert outputs.list_outputs() == ['t0_output', 't1_output', 't2_output']
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
     assert outs == [(10, 200), (10, 200), (10, 200)]
@@ -387,7 +392,7 @@ def test_layer_bidirectional():
     ref_net_params = ref_net.collect_params()
     for k in weights:
         net_params[k].set_data(weights[k])
-        ref_net_params[k.replace('l0', '_lstm_fwd_l0').replace('r0', '_lstm_fwd_l0')].set_data(weights[k])
+        ref_net_params[k.replace('l0', '_lstm_fwd_l0').replace('r0', '_lstm_bwd_l0')].set_data(weights[k])
 
     data = mx.random.uniform(shape=(11, 10, in_size))
     assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy(), rtol=1e-04, atol=1e-02)
@@ -838,6 +843,7 @@ def test_rnn_unroll_variant_length():
     for cell in cell_list:
         cell.initialize()
         cell.hybridize()
+        print(cell.collect_params())
         # Test for NTC layout
         data_nd = mx.nd.random.normal(0, 1, shape=(batch_size, max_length, 20))
         outs, states = cell.unroll(length=max_length, inputs=data_nd,
