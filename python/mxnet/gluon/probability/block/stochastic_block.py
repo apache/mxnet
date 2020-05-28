@@ -32,6 +32,7 @@ class StochasticBlock(HybridBlock):
     where the loss function is composed of a classification loss and a KL loss.
 
     """
+
     def __init__(self, prefix=None, params=None):
         super(StochasticBlock, self).__init__(prefix=prefix, params=params)
         self._losses = []
@@ -73,7 +74,7 @@ class StochasticBlock(HybridBlock):
         for hook in self._forward_pre_hooks.values():
             hook(self, args)
         self._losses = []
-        out = self.forward(*args) # out[0]: net output, out[1]: collected loss
+        out = self.forward(*args)  # out[0]: net output, out[1]: collected loss
         self._losses.extend(out[1])
         for hook in self._forward_hooks.values():
             hook(self, args, out)
@@ -87,8 +88,10 @@ class StochasticBlock(HybridBlock):
 class StochasticSequential(StochasticBlock):
     """Stack StochasticBlock sequentially.
     """
+
     def __init__(self, prefix=None, params=None):
-        super(StochasticSequential, self).__init__(prefix=prefix, params=params)
+        super(StochasticSequential, self).__init__(
+            prefix=prefix, params=params)
         self._layers = []
 
     def add(self, *blocks):

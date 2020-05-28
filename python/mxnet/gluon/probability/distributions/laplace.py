@@ -49,7 +49,8 @@ class Laplace(Distribution):
         _F = F if F is not None else getF(loc, scale)
         self.loc = loc
         self.scale = scale
-        super(Laplace, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(Laplace, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     def log_prob(self, value):
         """Compute the log likelihood of `value`.
@@ -67,7 +68,7 @@ class Laplace(Distribution):
         if self._validate_args:
             self._validate_samples(value)
         F = self.F
-        return -F.np.log(2 * self.scale) - F.np.abs(value - self.loc) /  self.scale
+        return -F.np.log(2 * self.scale) - F.np.abs(value - self.loc) / self.scale
 
     def sample(self, size=None):
         r"""Generate samples of `size` from the normal distribution
@@ -108,8 +109,8 @@ class Laplace(Distribution):
         new_instance.loc = F.np.broadcast_to(self.loc, batch_shape)
         new_instance.scale = F.np.broadcast_to(self.scale, batch_shape)
         super(Laplace, new_instance).__init__(F=F,
-                                             event_dim=self.event_dim,
-                                             validate_args=False)
+                                              event_dim=self.event_dim,
+                                              validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
 

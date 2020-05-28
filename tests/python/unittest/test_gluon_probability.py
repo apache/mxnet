@@ -1060,8 +1060,6 @@ def test_gluon_gumbel():
         if hybridize:
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
-        import torch
-        from torch.distributions import Gumbel
         np_out = ss.gumbel_r(loc=loc.asnumpy(),
                         scale=scale.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
@@ -2326,8 +2324,3 @@ def test_gluon_domain_map():
                     net.hybridize()
                 constrained_out, constraint_status = net(test_sample, *constraint_arg)
                 assert_almost_equal(constrained_out.asnumpy(), constraint_status.asnumpy())
-
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

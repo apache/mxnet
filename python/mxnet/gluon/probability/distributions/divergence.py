@@ -20,41 +20,32 @@
 """KL divergence functions."""
 __all__ = ['register_kl', 'kl_divergence', 'empirical_kl']
 
+import math
 import numpy as _np
 
-from .utils import getF, gammaln, digamma
-from .exponential import *
-from .weibull import *
-from .pareto import *
-from .uniform import *
-from .normal import *
-from .laplace import *
-from .cauchy import *
-from .half_cauchy import *
-from .poisson import *
-from .geometric import *
-from .negative_binomial import *
-from .gamma import *
-from .dirichlet import *
-from .beta import *
-from .chi2 import *
-from .fishersnedecor import *
-from .studentT import *
-from .half_normal import *
-from .independent import *
-from .bernoulli import *
-from .binomial import *
-from .relaxed_bernoulli import *
-from .gumbel import *
-from .categorical import *
-from .one_hot_categorical import *
-from .relaxed_one_hot_categorical import *
-from .multinomial import *
-from .multivariate_normal import *
+from .utils import gammaln, digamma
+from .exponential import Exponential
+from .pareto import Pareto
+from .uniform import Uniform
+from .normal import Normal
+from .laplace import Laplace
+from .cauchy import Cauchy
+from .poisson import Poisson
+from .geometric import Geometric
+from .gamma import Gamma
+from .dirichlet import Dirichlet
+from .beta import Beta
+from .half_normal import HalfNormal
+from .bernoulli import Bernoulli
+from .binomial import Binomial
+from .gumbel import Gumbel
+from .categorical import Categorical
+from .one_hot_categorical import OneHotCategorical
+from .multivariate_normal import MultivariateNormal
 
 
 def empirical_kl(p, q, n_samples=1):
-    """Estimate KL(p||q) through monte-carlo estimation, i.e. approximate
+    r"""Estimate KL(p||q) through monte-carlo estimation, i.e. approximate
     KL(p||q) with:
 
         1/M * \Sum_{i=1}^{M} log(p(x_i) / q(x_i)), x_i ~ p(x)
@@ -68,7 +59,6 @@ def empirical_kl(p, q, n_samples=1):
     """
     samples = p.sample_n(n_samples)
     return (p.log_prob(samples) - q.log_prob(samples)).mean(0)
-
 
 
 def register_kl(typeP, typeQ):
@@ -142,7 +132,7 @@ def _dispatch_kl(type_p, type_q):
 
 
 class _KL_storage():
-    r"""Class for storing the definition of kl divergence 
+    r"""Class for storing the definition of kl divergence
     between distributions.
     All the class methods should be static
     """
@@ -169,6 +159,7 @@ def _kl_bernoulli_bernoulli(p, q):
 @register_kl(Categorical, Categorical)
 def _kl_categorical_categorical(p, q):
     return (p.prob * (p.logit - q.logit)).sum(-1)
+
 
 @register_kl(OneHotCategorical, OneHotCategorical)
 def _kl_onehotcategorical_onehotcategorical(p, q):
@@ -232,7 +223,8 @@ def _kl_pareto_pareto(p, q):
     t1 = q.alpha * F.np.log(scale_ratio)
     t2 = -F.np.log(alpha_ratio)
     result = t1 + t2 + alpha_ratio - 1
-    result = F.np.where(p.support._lower_bound < q.support._lower_bound, _np.nan, result)
+    result = F.np.where(p.support._lower_bound <
+                        q.support._lower_bound, _np.nan, result)
     return result
 
 
@@ -249,17 +241,19 @@ def _kl_gumbel_gumbel(p, q):
     t3 = F.np.exp(ct2 + lgamma(1 + ct1) - ct3)
     return t1 + t2 + t3 - (1 + _euler_gamma)
 
+
 @register_kl(Gamma, Gamma)
 def _kl_gamma_gamma(p, q):
     F = p.F
     lgamma = gammaln(F)
     dgamma = digamma(F)
     return (
-        q.shape * F.np.log(q.scale / p.scale) + 
+        q.shape * F.np.log(q.scale / p.scale) +
         lgamma(q.shape) - lgamma(p.shape) +
         (p.shape - q.shape) * dgamma(p.shape) +
         (p.shape * p.scale) * (1 / q.scale - 1 / p.scale)
     )
+
 
 @register_kl(Beta, Beta)
 def _kl_beta_beta(p, q):
@@ -276,6 +270,8 @@ def _kl_beta_beta(p, q):
     return t1 - t2 + t3 + t4 + t5
 
 # http://bariskurt.com/kullback-leibler-divergence-between-two-dirichlet-and-beta-distributions/
+
+
 @register_kl(Dirichlet, Dirichlet)
 def _kl_dirichlet_dirichlet(p, q):
     F = p.F
@@ -297,10 +293,12 @@ def _kl_halfNormal_halfNormal(p, q):
     t1 = ((p.loc - q.loc) / q.scale) ** 2
     return 0.5 * (var_ratio + t1 - 1 - F.np.log(var_ratio))
 
+
 @register_kl(Binomial, Binomial)
 def _kl_binomial_binomial(p, q):
     F = p.F
-    kl = p.n * (p.prob * (p.logit - q.logit) + F.np.log1p(-p.prob) - F.np.log1p(-q.prob))
+    kl = p.n * (p.prob * (p.logit - q.logit) +
+                F.np.log1p(-p.prob) - F.np.log1p(-q.prob))
     kl = F.np.where(p.n > q.n, _np.inf, kl)
     return kl
 
@@ -308,11 +306,11 @@ def _kl_binomial_binomial(p, q):
 @register_kl(MultivariateNormal, MultivariateNormal)
 def _kl_mvn_mvn(p, q):
     F = p.F
-    log_det = (lambda mvn: 
-        F.np.log(
-            F.np.diagonal(mvn.scale_tril, axis1=-2, axis2=-1)
-        ).sum(-1)
-    )
+    log_det = (lambda mvn:
+               F.np.log(
+                   F.np.diagonal(mvn.scale_tril, axis1=-2, axis2=-1)
+               ).sum(-1)
+               )
     # log(det(\Sigma_1) / det(\Sigma_2))
     term1 = log_det(q) - log_det(p)
 
@@ -322,17 +320,17 @@ def _kl_mvn_mvn(p, q):
     # (\mu_2 - \mu_1).T * inv(\Sigma_2) * (\mu_2 - \mu_1)
     diff = q.loc - p.loc
     term3 = F.np.einsum(
-            '...i,...i->...',
-            diff,
-            F.np.einsum('...jk,...j->...k', q.precision, diff)  # Batch matrix vector multiply
-            ) * -0.5
+        '...i,...i->...',
+        diff,
+        # Batch matrix vector multiply
+        F.np.einsum('...jk,...j->...k', q.precision, diff)
+    ) * -0.5
     n = F.np.ones_like(diff).sum(-1)
     return 0.5 * (term1 + term2 + term3 - n)
 
 
 @register_kl(Uniform, Normal)
 def _kl_uniform_normal(p, q):
-    import math
     F = p.F
     common_term = p.high - p.low
     t1 = F.np.log(math.sqrt(math.pi * 2) * q.scale / common_term)
