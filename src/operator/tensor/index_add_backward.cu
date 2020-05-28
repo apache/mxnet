@@ -33,7 +33,7 @@ namespace op {
 struct IndexAddBackwardValGPUKernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(size_t i, DType* grad_val,
-                                  const DType* ograd, const int32_t* ind_vec,
+                                  const DType* ograd, const int* ind_vec,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_stride,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride,
@@ -77,14 +77,14 @@ void IndexAddOpBackwardValImpl<gpu>(const OpContext& ctx,
   mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
   MSHADOW_TYPE_SWITCH(grad_val.type_flag_, DType, {
     Kernel<IndexAddBackwardValGPUKernel, gpu>::Launch(
-    s, ind_num, grad_val.dptr<DType>(), ograd.dptr<DType>(), t_ind.dptr<int32_t>(),
+    s, ind_num, grad_val.dptr<DType>(), ograd.dptr<DType>(), t_ind.dptr<int>(),
     ograd_tail_shape, ograd_pre_stride, val_stride, val_shape, tail_size,
     ind_num, ind_ndim, ndim);
   });
 }
 
-NNVM_REGISTER_OP(_backward_index_add)
-.set_attr<FCompute>("FCompute<gpu>", IndexAddOpBackward<gpu>);
+NNVM_REGISTER_OP(_backward_index_add_val)
+.set_attr<FCompute>("FCompute<gpu>", IndexAddOpBackwardVal<gpu>);
 
 }  // namespace op
 }  // namespace mxnet

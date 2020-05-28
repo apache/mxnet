@@ -30,7 +30,7 @@ namespace op {
 struct IndexAddBackwardValCPUKernel {
   template<typename DType>
   MSHADOW_XINLINE static void Map(size_t i, DType* grad_val,
-                                  const DType* ograd, const int32_t* ind_vec,
+                                  const DType* ograd, const int* ind_vec,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_stride,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride,
@@ -77,21 +77,21 @@ void IndexAddOpBackwardValImpl<cpu>(const OpContext& ctx,
   mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
   MSHADOW_TYPE_SWITCH(grad_val.type_flag_, DType, {
     Kernel<IndexAddBackwardValCPUKernel, cpu>::Launch(
-      s, ind_num, grad_val.dptr<DType>(), ograd.dptr<DType>(), t_ind.dptr<int32_t>(),
+      s, ind_num, grad_val.dptr<DType>(), ograd.dptr<DType>(), t_ind.dptr<int>(),
       ograd_tail_shape, ograd_pre_stride, val_stride, val_shape, tail_size,
       ind_num, ind_ndim, ndim);
   });
 }
 
-NNVM_REGISTER_OP(_backward_index_add)
-.set_num_inputs(4)
-.set_num_outputs(3)
+NNVM_REGISTER_OP(_backward_index_add_val)
+.set_num_inputs(2)
+.set_num_outputs(1)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", IndexAddOpBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", IndexAddOpBackwardVal<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

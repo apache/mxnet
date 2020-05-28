@@ -1357,7 +1357,8 @@ def test_npx_index_add():
             init_a_grad = _np.array(a_grad)
         if grad_req_val == 'add':
             init_val_grad = _np.array(val_grad)
-        a_grad = _np.zeros(a_grad.shape).astype(a_grad.dtype)
+        a_grad = _np.zeros(a_grad.shape) + out_grad
+        a_grad = a_grad.astype(a_grad.dtype)
         val_grad = _np.zeros(val_grad.shape).astype(val_grad.dtype)
 
         ind_arr = ind.transpose()
@@ -1366,7 +1367,6 @@ def test_npx_index_add():
         for i in range(ind_arr.shape[0]):
             t_ind = ind_arr[i]
             t_ind = tuple(ind_arr[i].tolist()) if type(ind_arr[i]) is _np.ndarray else ind_arr[i].tolist()
-            a_grad[t_ind] = out_grad[t_ind]
             if val_grad.ndim + ind_ndim > a_grad.ndim:
                 idx = 0 if val_grad.shape[0]==1 else i
                 t_grad = out_grad[t_ind]

@@ -107,7 +107,20 @@ NNVM_REGISTER_OP(_npx_index_add)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_index_add"})
+.set_attr<nnvm::FGradient>("FGradient", 
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+      auto a_grad = MakeNode("_copy", n->attrs.name + "_backward_a",
+                              {ograds[0]}, nullptr, &n);
+      auto idx_grad = MakeNode("zeros_like", n->attrs.name + "_backward_indices",
+                              {n->inputs[1]}, nullptr, &n);
+      auto val_grad = MakeNode("_backward_index_add_val", n->attrs.name + "_backward_val",
+                              {ograds[0], n->inputs[1]}, nullptr, &n);
+      std::vector<nnvm::NodeEntry> ret;
+      ret.emplace_back(a_grad);
+      ret.emplace_back(idx_grad);
+      ret.emplace_back(val_grad);
+      return ret;
+  })
 .add_argument("a", "NDArray-or-Symbol", "Input ndarray")
 .add_argument("ind", "NDArray-or-Symbol", "Index ndarray")
 .add_argument("val", "NDArray-or-Symbol", "Input ndarray");
