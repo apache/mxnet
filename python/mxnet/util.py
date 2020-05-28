@@ -1177,4 +1177,3 @@ def setenv(name, value):
     """
     passed_value = None if value is None else c_str(value)
     check_call(_LIB.MXSetEnv(c_str(name), passed_value))
-
