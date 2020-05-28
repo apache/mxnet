@@ -231,7 +231,8 @@ void IndexAddOpBackward(const nnvm::NodeAttrs& attrs,
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_stride = mxnet_op::calc_stride(ograd_shape);
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_shape(ograd_shape);
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape(ograd_shape);
-  TBlob t_ind = TBlob(ctx.requested[0].get_space_typed<xpu, 1, int32_t>(Shape1(ind.shape_.Size()), s));
+  TBlob t_ind = TBlob(ctx.requested[0].get_space_typed<xpu, 1, int32_t>
+                (Shape1(ind.shape_.Size()), s));
   mxnet_op::copy(s, t_ind, ind);
   MSHADOW_TYPE_SWITCH(grad_a.type_flag_, DType, {
     Kernel<IndexAddBackwardAKernel<DType>, xpu>::Launch(
