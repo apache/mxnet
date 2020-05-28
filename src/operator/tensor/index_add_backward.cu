@@ -30,16 +30,16 @@
 namespace mxnet {
 namespace op {
 
-template<typename DType>
 struct IndexAddBackwardValGPUKernel {
+  template<typename DType>
   MSHADOW_XINLINE static void Map(size_t i, DType* grad_val,
-                                  const DType* ograd,
+                                  const DType* ograd, const int32_t* ind_vec,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_stride,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_shape,
                                   const int ograd_tail_size, const int ind_num,
-                                  const int ind_ndim, const int32_t* ind_vec,
+                                  const int ind_ndim,
                                   const int out_ndim) {
     index_t id = 0;
     int seg = MXNET_SPECIAL_MAX_NDIM - out_ndim;
@@ -61,21 +61,26 @@ struct IndexAddBackwardValGPUKernel {
   }
 };
 
-template<typename xpu, typename DType>
-void IndexAddOpBackwardValCalc(mshadow::Stream<xpu> *s,
-                               DType* grad_val, const DType* ograd,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_stride,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_shape,
-                               const int tail_size, const int ind_num,
-                               const int ind_ndim, const int32_t* ind_vec,
-                               const int out_ndim) {
-  using namespace mxnet_op;
+template<>
+void IndexAddOpBackwardValImpl<gpu>(const OpContext& ctx,
+                                    const TBlob& grad_val,
+                                    const TBlob& ograd,
+                                    const TBlob& t_ind,
+                                    const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape,
+                                    const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_stride,
+                                    const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride,
+                                    const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_shape,
+                                    const int tail_size, const int ind_num, const int ind_ndim,
+                                    const int ndim) {
   using namespace mshadow;
-  Kernel<IndexAddBackwardValGPUKernel<DType>, xpu>::Launch(
-    s, ind_num, grad_val, ograd, ograd_tail_shape, ograd_pre_stride,
-    val_stride, val_shape, tail_size, ind_num, ind_ndim, ind_vec, out_ndim);
+  using namespace mxnet_op;
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  MSHADOW_TYPE_SWITCH(grad_val.type_flag_, DType, {
+    Kernel<IndexAddBackwardValGPUKernel, gpu>::Launch(
+    s, ind_num, grad_val.dptr<DType>(), ograd.dptr<DType>(), t_ind.dptr<int32_t>(),
+    ograd_tail_shape, ograd_pre_stride, val_stride, val_shape, tail_size,
+    ind_num, ind_ndim, ndim);
+  });
 }
 
 NNVM_REGISTER_OP(_backward_index_add)

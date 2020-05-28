@@ -1355,7 +1355,7 @@ def test_npx_index_add():
     def index_add_bwd(out_grad, a_grad, ind, val_grad, ind_ndim, ind_num, grad_req_a, grad_req_val):
         if grad_req_a == 'add':
             init_a_grad = _np.array(a_grad)
-        if grad_req_a == 'add':
+        if grad_req_val == 'add':
             init_val_grad = _np.array(val_grad)
         a_grad = _np.zeros(a_grad.shape).astype(a_grad.dtype)
         val_grad = _np.zeros(val_grad.shape).astype(val_grad.dtype)
