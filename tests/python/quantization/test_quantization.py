@@ -1253,7 +1253,3 @@ def test_get_optimal_thresholds():
         assert 'layer1' in th_dict
         assert_almost_equal(np.array([th_dict['layer1'][1]]), expected_threshold, rtol=1e-2, atol=1e-4)
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

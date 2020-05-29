@@ -24,19 +24,27 @@ import warnings
 import collections
 import ctypes
 import mxnet.contrib.amp as amp
-from nose.tools import assert_raises
+import pytest
 from mxnet.test_utils import set_default_context, download_model, same_symbol_structure
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
 from mxnet.contrib.amp import amp
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import with_seed, teardown, assert_raises_cudnn_not_satisfied
+from common import with_seed, teardown_module, assert_raises_cudnn_not_satisfied
 sys.path.insert(0, os.path.join(curr_path, '../train'))
 from test_bucketing import train_model
 set_default_context(mx.gpu(0))
 
-def test_amp_coverage():
+@pytest.fixture()
+def amp_tests(request):
+    def teardown():
+        mx.nd.waitall()
+
+    request.addfinalizer(teardown)
+
+@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
+def test_amp_coverage(amp_tests):
     conditional = [item[0] for item in amp.lists.symbol_fp16.CONDITIONAL_FP32_FUNCS]
 
     # Check for duplicates
@@ -96,8 +104,9 @@ def test_amp_coverage():
                        - If you are not sure which list to choose, FP32_FUNCS is the
                          safest option""")
 
+@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 @with_seed()
-def test_amp_conversion():
+def test_amp_conversion(amp_tests):
     def check_amp_convert_symbol():
         x = mx.sym.var("x")
         y = mx.sym.var("y")
@@ -119,18 +128,18 @@ def test_amp_conversion():
             "convert_symbol generating wrong computation graph"
 
         # convert_symbol called with incorrect inputs
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="float16", target_dtype_ops=["FullyConnected"],
                       fp32_ops=["elemwise_add"])
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="float16", target_dtype_ops=["FullyConnected"],
                       fp32_ops=["Activation"],
                       conditional_fp32_ops=[('Activation', 'act_type', ['selu'])])
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="float16", target_dtype_ops=["Activation"],
                       fp32_ops=["Activation"],
                       conditional_fp32_ops=[('Activation', 'act_type', ['selu'])])
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="float16", target_dtype_ops=["FullyConnected"],
                       fp32_ops=["FullyConnected"])
 
@@ -345,8 +354,9 @@ def test_amp_conversion():
         check_amp_convert_bucketing_module()
 
 @with_seed()
+@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_amp_conversion_rnn():
+def test_amp_conversion_rnn(amp_tests):
     with mx.Context(mx.gpu(0)):
         model = nn.HybridSequential()
         model.add(rnn.LSTM(hidden_size=10, num_layers=2, bidirectional=True))
@@ -360,7 +370,8 @@ def test_amp_conversion_rnn():
 
 
 @with_seed()
-def test_module_backward_compatibility():
+@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
+def test_module_backward_compatibility(amp_tests):
     channel_num = 10
     conv_layer_filter_dims = [2, 3]
     conv_layer_strides = [1, 1]
@@ -403,7 +414,8 @@ def test_module_backward_compatibility():
 
 
 @with_seed()
-def test_fp16_casting():
+@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
+def test_fp16_casting(amp_tests):
     data = mx.sym.var("data")
     out1 = mx.sym.amp_cast(data, dtype="float16")
     out2 = mx.sym.amp_cast(data, dtype="float32")
@@ -484,7 +496,3 @@ def test_fp16_casting():
     out = mx.sym.split(concat_res, axis=1, num_outputs=2)
     final_res = amp.convert_symbol(out)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -1605,6 +1605,14 @@ struct ClipParam : public dmlc::Parameter<ClipParam> {
     DMLC_DECLARE_FIELD(a_max)
     .describe("Maximum value");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_min_s, a_max_s;
+    a_min_s << a_min;
+    a_max_s << a_max;
+    (*dict)["a_min"] = a_min_s.str();
+    (*dict)["a_max"] = a_max_s.str();
+  }
 };
 
 
@@ -1705,6 +1713,13 @@ struct RepeatParam : public dmlc::Parameter<RepeatParam> {
                 " The negative numbers are interpreted counting from the backward."
                 " By default, use the flattened input array,"
                 " and return a flat output array.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream repeats_s, axis_s;
+    repeats_s << repeats;
+    axis_s << axis;
+    (*dict)["repeats"] = repeats_s.str();
+    (*dict)["axis"] = axis_s.str();
   }
 };
 
@@ -1916,6 +1931,11 @@ struct TileParam : public dmlc::Parameter<TileParam> {
                 " If reps has length d, the result will have dimension of max(d, a.ndim);"
                 " If a.ndim < d, a is promoted to be d-dimensional by prepending new axes."
                 " If a.ndim > d, reps is promoted to a.ndim by pre-pending 1's to it.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream reps_s;
+    reps_s << reps;
+    (*dict)["reps"] = reps_s.str();
   }
 };
 
@@ -2322,6 +2342,11 @@ struct SqueezeParam : public dmlc::Parameter<SqueezeParam> {
     .set_default(dmlc::optional<mxnet::Tuple<int>>())
     .describe("Selects a subset of the single-dimensional entries in the shape."
               " If an axis is selected with shape entry greater than one, an error is raised.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s;
+    axis_s << axis;
+    (*dict)["axis"] = axis_s.str();
   }
 };
 

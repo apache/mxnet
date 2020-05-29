@@ -33,7 +33,7 @@ if haskey(ENV, "MXNET_HOME")
   # In case of macOS, if user build libmxnet from source and set the MXNET_HOME,
   # the output is still named as `libmxnet.so`.
   lib = Libdl.find_library(["libmxnet.$(Libdl.dlext)", "libmxnet.so"],
-                           [joinpath(MXNET_HOME, "lib"), MXNET_HOME])
+                           [joinpath(MXNET_HOME, "lib"), joinpath(MXNET_HOME, "build"), MXNET_HOME])
   if !isempty(lib)
     @info("Existing libmxnet detected at $lib, skip building...")
     libmxnet_detected = true

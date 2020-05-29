@@ -14,13 +14,13 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-# 
+
 import mxnet as mx
 from core.model import get_model
 
 def test_model():
     def test_ncf(model_type):
-        net = get_model(model_type=model_type, factor_size_mlp=128, factor_size_gmf=64, 
+        net = get_model(model_type=model_type, factor_size_mlp=128, factor_size_gmf=64,
                         model_layers=[256, 128, 64], num_hidden=1, max_user=138493, max_item=26744)
         mod = mx.module.Module(net, context=mx.cpu(), data_names=['user', 'item'], label_names=['softmax_label'])
         provide_data = [mx.io.DataDesc(name='item', shape=((1,))),
@@ -57,8 +57,4 @@ def test_model():
 
     for model_type in ['neumf', 'mlp', 'gmf']:
         test_ncf(model_type)
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()
 

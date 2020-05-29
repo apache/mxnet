@@ -18,11 +18,11 @@
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module
 from mxnet.gluon import nn
 from mxnet.base import MXNetError
 from mxnet.test_utils import assert_exception, default_context, set_default_context, use_np
-from nose.tools import assert_raises
+import pytest
 
 
 @with_seed()
@@ -35,7 +35,7 @@ def test_exc_imperative():
             c.asnumpy()
 
     imperative(exec_numpy=False)
-    assert_raises(MXNetError, imperative, exec_numpy=True)
+    pytest.raises(MXNetError, imperative, exec_numpy=True)
 
 @with_seed()
 def test_exc_symbolic():
@@ -69,11 +69,11 @@ def test_exc_symbolic():
             else:
                 outputs[0].asnumpy()
 
-    assert_raises(MXNetError, symbolic, exec_backward=False)
-    assert_raises(MXNetError, symbolic, exec_backward=True)
+    pytest.raises(MXNetError, symbolic, exec_backward=False)
+    pytest.raises(MXNetError, symbolic, exec_backward=True)
 
-    assert_raises(MXNetError, symbolic, exec_backward=False, waitall=True)
-    assert_raises(MXNetError, symbolic, exec_backward=True, waitall=True)
+    pytest.raises(MXNetError, symbolic, exec_backward=False, waitall=True)
+    pytest.raises(MXNetError, symbolic, exec_backward=True, waitall=True)
 
 @with_seed()
 def test_exc_gluon():
@@ -93,9 +93,9 @@ def test_exc_gluon():
             z.wait_to_read()
 
     gluon(exec_wait=False)
-    assert_raises(MXNetError, gluon, exec_wait=True)
+    pytest.raises(MXNetError, gluon, exec_wait=True)
 
-    assert_raises(MXNetError, gluon, waitall=True)
+    pytest.raises(MXNetError, gluon, waitall=True)
 
 @with_seed()
 def test_exc_multiple_waits():
@@ -152,8 +152,8 @@ def test_exc_mutable_var_fail():
             mx.nd.waitall()
         else:
             a.asnumpy()
-    assert_raises(MXNetError, mutable_var_check, waitall=False)
-    assert_raises(MXNetError, mutable_var_check, waitall=True)
+    pytest.raises(MXNetError, mutable_var_check, waitall=False)
+    pytest.raises(MXNetError, mutable_var_check, waitall=True)
 
 @with_seed()
 def test_multiple_waitalls():
@@ -189,16 +189,16 @@ def test_opencv_exception():
         img = mx.nd.ones((1200, 1600, 3))
         img = mx.image.imresize(img, 320, 320, interp=-1)
         img.asnumpy()
-    assert_raises(MXNetError, check_resize)
+    pytest.raises(MXNetError, check_resize)
 
 
 @with_seed()
 def test_np_reshape_exception():
     a = mx.np.ones((10, 10))
     a.reshape((-1,)).asnumpy()  # Check no-raise
-    assert_raises(MXNetError, lambda: a.reshape((1,)))
-    assert_raises(MXNetError, lambda: mx.np.reshape(a, (1,)))
-    assert_raises(MXNetError, lambda: mx.np.reshape(a, (-1, 3)))
+    pytest.raises(MXNetError, lambda: a.reshape((1,)))
+    pytest.raises(MXNetError, lambda: mx.np.reshape(a, (1,)))
+    pytest.raises(MXNetError, lambda: mx.np.reshape(a, (-1, 3)))
 
 
 @with_seed()
@@ -208,10 +208,6 @@ def test_np_random_incorrect_named_arguments():
     for op_name in random_ops:
         op = getattr(mx.np.random, op_name, None)
         assert op is not None
-        assert_raises(TypeError, op, shape=())
-        assert_raises(TypeError, op, shape=None)
+        pytest.raises(TypeError, op, shape=())
+        pytest.raises(TypeError, op, shape=None)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

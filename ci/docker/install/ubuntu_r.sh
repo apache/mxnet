@@ -44,4 +44,7 @@ apt-get install -y --allow-unauthenticated \
     r-base-dev \
     texinfo \
     texlive \
-    texlive-fonts-extra 
+    texlive-fonts-extra
+
+# Delete cran repository as it requires --allow-unauthenticated
+find /etc/apt -name "*.list" | xargs sed -i 's/.*cran\.rstudio.com.*//'

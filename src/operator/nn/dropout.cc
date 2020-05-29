@@ -157,7 +157,6 @@ Example::
           && !(param.cudnn_off && param.cudnn_off.value())
           && param.axes.ndim() == 0) {
         request.emplace_back(ResourceRequest::kCuDNNDropoutDesc);
-        request.emplace_back(ResourceRequest::kRandom);
         return request;
       }
 #endif

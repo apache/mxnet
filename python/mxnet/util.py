@@ -903,3 +903,29 @@ def get_cuda_compute_capability(ctx):
         raise RuntimeError('cuDeviceComputeCapability failed with error code {}: {}'
                            .format(ret, error_str.value.decode()))
     return cc_major.value * 10 + cc_minor.value
+
+def default_array(source_array, ctx=None, dtype=None):
+    """Creates an array from any object exposing the default(nd or np) array interface.
+
+    Parameters
+    ----------
+    source_array : array_like
+        An object exposing the array interface, an object whose `__array__`
+        method returns an array, or any (nested) sequence.
+    ctx : Context, optional
+        Device context (default is the current default context).
+    dtype : str or numpy.dtype, optional
+        The data type of the output array. The default dtype is ``source_array.dtype``
+        if `source_array` is an `NDArray`, `float32` otherwise.
+
+    Returns
+    -------
+    NDArray
+        An `NDArray`(nd or np) with the same contents as the `source_array`.
+    """
+    from . import nd as _mx_nd
+    from . import np as _mx_np
+    if is_np_array():
+        return _mx_np.array(source_array, ctx=ctx, dtype=dtype)
+    else:
+        return _mx_nd.array(source_array, ctx=ctx, dtype=dtype)

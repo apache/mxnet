@@ -25,7 +25,7 @@ except NameError:  # Python 3
 
 def test_engine_import():
     import mxnet
-        
+
     engine_types = ['', 'NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']
 
     for type in engine_types:
@@ -35,7 +35,3 @@ def test_engine_import():
             os.environ.pop('MXNET_ENGINE_TYPE', None)
         reload(mxnet)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

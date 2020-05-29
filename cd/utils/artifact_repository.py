@@ -303,7 +303,7 @@ def probe_gpu_variant(mxnet_features: Dict[str, bool]) -> Optional[str]:
     """
     Returns the mxnet gpu variant depending on which mxnet features are enabled
     :param mxnet_features: An mxnet feature dictionary of feature to boolean (True = enabled)
-    :return: The mxnet gpu variant, eg. cu90, cu90mkl, etc.
+    :return: The mxnet gpu variant, eg. cu102, cu102mkl, etc.
     :raises RuntimeError is the CUDA feature is not enabled in the library
     """
     if not mxnet_features['CUDA']:
@@ -323,7 +323,7 @@ def probe_gpu_variant(mxnet_features: Dict[str, bool]) -> Optional[str]:
 def probe_mxnet_variant(limxnet_path: str) -> Optional[str]:
     """
     Probes the libmxnet library and environment to determine
-    the mxnet variant, eg. cpu, cu90, etc.
+    the mxnet variant, eg. cpu, cu102, etc.
     :return:
     """
     logger.debug('Probing for mxnet variant')
@@ -544,7 +544,7 @@ def main() -> int:
                         type=str)
 
     parser.add_argument("--variant",
-                        help="MXNet binary variant. Eg. cpu, mkl, cu90, cu100mkl, etc.",
+                        help="MXNet binary variant. Eg. cpu, native, cu102, etc.",
                         required=False,
                         type=str)
 

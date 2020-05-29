@@ -118,7 +118,3 @@ def test_metric_performance():
                     run_metric(k, v[1], (data_size * 128)//(n * c), n, c, pred_ctx, label_ctx, **v[0])
                 print("{:-^90}".format(''), file=sys.stderr)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

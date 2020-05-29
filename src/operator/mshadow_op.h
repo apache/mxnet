@@ -619,6 +619,12 @@ MXNET_BINARY_LOGIC_OP_NC(np_equal, a == b ? true : false);
 
 MXNET_BINARY_LOGIC_OP_NC(np_not_equal, a != b ? true : false);
 
+MXNET_BINARY_LOGIC_OP_NC(np_logical_and, a && b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_logical_or, a || b ? true : false);
+
+MXNET_BINARY_LOGIC_OP_NC(np_logical_xor, (a || b) && !(a && b) ? true : false);
+
 MXNET_BINARY_MATH_OP(logical_and, a && b ? DType(1) : DType(0));
 
 MXNET_BINARY_MATH_OP(logical_or, a || b ? DType(1) : DType(0));
@@ -740,6 +746,10 @@ MXNET_BINARY_MATH_OP_NC(minus_sign, a - b > DType(0) ? DType(1) : -DType(1));
 
 MXNET_BINARY_MATH_OP(rminus, b - a);
 
+MXNET_BINARY_MATH_OP_NC(posone, 1);
+
+MXNET_BINARY_MATH_OP_NC(negone, -1);
+
 MXNET_BINARY_MATH_OP(div_grad, 1.0f / math::id(b));
 
 template<>
@@ -806,6 +816,54 @@ struct mod : public mxnet_op::tunable {
     }
   }
 };
+
+#ifndef _WIN32
+struct mixed_mod {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return mod::Map(static_cast<mshadow::half::half_t>(a), b);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return mod::Map(static_cast<float>(a), b);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return mod::Map(static_cast<double>(a), b);
+  }
+};
+
+struct mixed_rmod {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return mod::Map(b, static_cast<mshadow::half::half_t>(a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return mod::Map(b, static_cast<float>(a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return mod::Map(b, static_cast<double>(a));
+  }
+};
+#endif
 
 struct fmod : public mxnet_op::tunable {
   template<typename DType>
@@ -1038,6 +1096,36 @@ struct gammaln_grad : public mxnet_op::tunable {
 template<>
 MSHADOW_XINLINE double gammaln_grad::Map<double>(double a) {
   return special_functions::cephes::psi<double>(a);
+}
+
+/***** digamma ******/
+
+struct digamma : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // default implementation using floating precision
+    return DType(special_functions::cephes::psi<float>(a));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double digamma::Map<double>(double a) {
+  return special_functions::cephes::psi<double>(a);
+}
+
+/***** trigamma ******/
+
+struct trigamma : public mxnet_op::tunable {
+  template<typename DType>
+  MSHADOW_XINLINE static DType Map(DType a) {
+    // default implementation using floating precision
+    return DType(special_functions::trigamma<float>(a));
+  }
+};
+
+template<>
+MSHADOW_XINLINE double trigamma::Map<double>(double a) {
+  return special_functions::trigamma<double>(a);
 }
 
 /* Smooth L1 Loss is a loss specific for R-CNN franchise training

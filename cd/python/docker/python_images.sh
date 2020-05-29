@@ -57,7 +57,7 @@ test() {
 
     # Ensure the correct context root is passed in when building - Dockerfile.test expects ci directory
     docker build -t "${test_image_name}" --build-arg USER_ID=`id -u` --build-arg GROUP_ID=`id -g` --build-arg BASE_IMAGE="${image_name}" -f ${resources_path}/Dockerfile.test ./ci
-    ./ci/safe_docker_run.py ${runtime_param} --cap-add "SYS_PTRACE" -u `id -u`:`id -g` -v `pwd`:/work/mxnet "${test_image_name}" ${resources_path}/test_python_image.sh "${mxnet_variant}"
+    python3 ci/safe_docker_run.py ${runtime_param} --cap-add "SYS_PTRACE" -u `id -u`:`id -g` -v `pwd`:/work/mxnet "${test_image_name}" ${resources_path}/test_python_image.sh "${mxnet_variant}"
 }
 
 push() {

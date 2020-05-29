@@ -50,6 +50,12 @@ static constexpr char func_greater_equal_cpu[] = "greater_equal_cpu";
 static constexpr char func_greater_equal_gpu[] = "greater_equal_gpu";
 static constexpr char func_less_equal_cpu[] = "less_equal_cpu";
 static constexpr char func_less_equal_gpu[] = "less_equal_gpu";
+static constexpr char func_logical_and_cpu[] = "logical_and_cpu";
+static constexpr char func_logical_and_gpu[] = "logical_and_gpu";
+static constexpr char func_logical_or_cpu[] = "logical_or_cpu";
+static constexpr char func_logical_or_gpu[] = "logical_or_gpu";
+static constexpr char func_logical_xor_cpu[] = "logical_xor_cpu";
+static constexpr char func_logical_xor_gpu[] = "logical_xor_gpu";
 #pragma clang diagnostic pop
 
 bool NumpyBinaryLogicOpType(const nnvm::NodeAttrs& attrs,
@@ -134,6 +140,9 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(greater);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(less);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(greater_equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(less_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(logical_and);
+MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(logical_or);
+MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC(logical_xor);
 
 #if MXNET_USE_TVM_OP
 
@@ -153,6 +162,9 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(greater);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(less);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(greater_equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(less_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(logical_and);
+MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(logical_or);
+MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(logical_xor);
 
 #endif  // MXNET_USE_CUDA
 
@@ -170,6 +182,9 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(greater);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(less);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(greater_equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(less_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(logical_and);
+MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(logical_or);
+MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(logical_xor);
 
 bool NumpyBinaryScalarLogicOpType(const nnvm::NodeAttrs& attrs,
                                   std::vector<int>* in_attrs,
@@ -250,6 +265,9 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(greater);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(less);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(greater_equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(less_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(logical_and);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(logical_or);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC(logical_xor);
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-const-variable"
@@ -265,6 +283,12 @@ static constexpr char func_greater_equal_scalar_cpu[] = "greater_equal_scalar_cp
 static constexpr char func_greater_equal_scalar_gpu[] = "greater_equal_scalar_gpu";
 static constexpr char func_less_equal_scalar_cpu[] = "less_equal_scalar_cpu";
 static constexpr char func_less_equal_scalar_gpu[] = "less_equal_scalar_gpu";
+static constexpr char func_logical_and_scalar_cpu[] = "logical_and_scalar_cpu";
+static constexpr char func_logical_and_scalar_gpu[] = "logical_and_scalar_gpu";
+static constexpr char func_logical_or_scalar_cpu[] = "logical_or_scalar_cpu";
+static constexpr char func_logical_or_scalar_gpu[] = "logical_or_scalar_gpu";
+static constexpr char func_logical_xor_scalar_cpu[] = "logical_xor_scalar_cpu";
+static constexpr char func_logical_xor_scalar_gpu[] = "logical_xor_scalar_gpu";
 #pragma clang diagnostic pop
 
 #if MXNET_USE_TVM_OP
@@ -285,6 +309,9 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(greater);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(less);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(greater_equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(less_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(logical_and);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(logical_or);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(logical_xor);
 
 #endif  // MXNET_USE_CUDA
 
@@ -302,6 +329,9 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(greater);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(less);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(greater_equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(less_equal);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(logical_and);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(logical_or);
+MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_CPU(logical_xor);
 
 }  // namespace op
 }  // namespace mxnet

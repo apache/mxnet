@@ -48,7 +48,3 @@ def test_dynamic_shape():
     assert_almost_equal(result.asnumpy(), result_nd)
     assert_almost_equal(data.grad.asnumpy(), data_grad_nd)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -67,6 +67,7 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
     DMLC_DECLARE_FIELD(initial).set_default(dmlc::optional<double>())
       .describe("Starting value for the sum.");
   }
+
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
     std::ostringstream axis_s, dtype_s, keepdims_s, initial_s;
     axis_s << axis;
@@ -449,6 +450,7 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
   }
 
   BroadcastComputeImpl<xpu>(attrs, ctx, inputs, req, outputs, small);
+
   if (normalize) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, IType, {
@@ -500,11 +502,27 @@ struct NumpyMomentsParam : public dmlc::Parameter<NumpyMomentsParam> {
                 "precision than the default platform integer. In that case, if a is signed then "
                 "the platform integer is used while if a is unsigned then an unsigned integer of "
                 "the same precision as the platform integer is used.");
-    DMLC_DECLARE_FIELD(ddof).set_default(0)
-      .describe("Starting value for the sum.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
+    DMLC_DECLARE_FIELD(ddof).set_default(0)
+      .describe("Starting value for the sum.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, dtype_s, keepdims_s, ddof_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    ddof_s << ddof;
+    (*dict)["axis"] = axis_s.str();
+    dtype_s << dtype;
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["ddof"] = ddof_s.str();
   }
 };
 
@@ -559,6 +577,16 @@ struct NumpyWeightedAverageParam : public dmlc::Parameter<NumpyWeightedAveragePa
     DMLC_DECLARE_FIELD(weighted)
       .set_default(true)
       .describe("Auxiliary flag to deal with none weights.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, returned_s, weighted_s;
+    axis_s << axis;
+    returned_s << returned;
+    weighted_s << weighted;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["returned"] = returned_s.str();
+    (*dict)["weighted"] = weighted_s.str();
   }
 };
 

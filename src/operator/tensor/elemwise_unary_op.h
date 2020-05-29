@@ -254,6 +254,30 @@ class UnaryOp : public OpBase {
   }
 
   template<typename xpu, typename OP>
+  static void ComputeMixedType(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+
+    if (mxnet::common::is_float(inputs[0].type_flag_)) {
+      UnaryOp::Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    } else {
+      MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        MXNET_INT_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+          MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+            if (inputs[0].Size() != 0) {
+              mxnet_op::Kernel<mxnet_op::mixed_type_unary_op<OP, Req>, xpu>::Launch(
+                s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<IType>());
+            }
+          });
+        });
+      });
+    }
+  }
+
+  template<typename xpu, typename OP>
   static void ComputeInt(const nnvm::NodeAttrs& attrs,
                       const OpContext& ctx,
                       const std::vector<TBlob>& inputs,
@@ -602,6 +626,11 @@ struct AroundParam : public dmlc::Parameter<AroundParam> {
     DMLC_DECLARE_FIELD(decimals)
       .set_default(0)
       .describe("Number of decimal places to round to.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream decimals_s;
+    decimals_s << decimals;
+    (*dict)["decimal"] = decimals_s.str();
   }
 };
 
