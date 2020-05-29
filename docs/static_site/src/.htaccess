@@ -4,7 +4,7 @@ RewriteEngine on
 RewriteOptions AllowNoSlash
 
 # Redirect Chinese visitors to Chinese CDN, temporary solution for slow site speed in China
-RewriteCond %{HTTP:Accept-Language} ^zh
+RewriteCond %{ENV:GEOIP_COUNTRY_CODE} ^CN$
 RewriteCond %{HTTP_HOST} mxnet.apache.org
 RewriteRule ^(.*) https://mxnet.cdn.apache.org%{REQUEST_URI} [R,NC,L]
 
