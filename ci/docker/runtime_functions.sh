@@ -427,7 +427,7 @@ build_ubuntu_cpu_mkl() {
     cd /work/build
     CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
-        -DENABLE_TESTCOVERAGE=ON \
+        -DENABLE_TESTCOVERAGE=OFF \
         -DUSE_MKLDNN=OFF \
         -DUSE_CUDA=OFF \
         -DUSE_TVM_OP=ON \
