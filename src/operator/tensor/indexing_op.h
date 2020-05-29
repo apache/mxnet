@@ -534,7 +534,8 @@ void EmbeddingOpBackward(const nnvm::NodeAttrs& attrs,
 
   bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
   if (!safe_acc && outputs[1].type_flag_ == mshadow::kFloat16) {
-    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for EmbeddingOpBackward with float16 inputs. "
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for EmbeddingOpBackward "
+                    "with float16 inputs. "
                     "See https://mxnet.apache.org/api/faq/env_var "
                     "for more details.");
   }
@@ -931,7 +932,7 @@ void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
     size_t original_idx_bytes = idxshape.Size() * sizeof(int);
     size_t src_indptr_bytes = (arrshape[axis] + 1) * sizeof(int);
     size_t temp_accumulation_arrgrad_bytes = 0;
-    if (safe_acc){
+    if (safe_acc) {
         temp_accumulation_arrgrad_bytes = arr.Size() * sizeof(AType);
     }
     size_t workspace_bytes = src_indptr_bytes + 2 * original_idx_bytes +
@@ -983,7 +984,7 @@ void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
       out_strides[i] = stride;
     }
     MSHADOW_TYPE_SWITCH(arr.type_flag_, DType, {
-      if (safe_acc){
+      if (safe_acc) {
         Kernel<TakeGradGeneralKernelSafeAccumulation, cpu>::Launch(
           s, arrshape.Size(), arr.dptr<DType>(), temp_accum_arrgrad_ptr, ograd.dptr<DType>(),
           src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
@@ -1040,7 +1041,7 @@ void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
     size_t original_idx_bytes = idxshape.Size() * sizeof(int);
     size_t src_indptr_bytes = (arrshape[axis] + 1) * sizeof(int);
     size_t temp_accumulation_igrad_bytes = 0;
-    if (safe_acc){
+    if (safe_acc) {
         temp_accumulation_igrad_bytes = arr.Size() * sizeof(AType);
     }
     size_t workspace_bytes = src_indptr_bytes + 2 * original_idx_bytes +
@@ -1108,12 +1109,14 @@ void TakeOpBackwardImpl(mshadow::Stream<gpu>* s,
           Kernel<TakeGradGeneralKernelSafeAccumulation, gpu>::Launch(
             s, arrshape.Size(), arr.dptr<DType>(), temp_accum_igrad_ptr, ograd.dptr<DType>(),
             src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
-            arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis, static_cast<int>(arrshape[axis]));
+            arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis,
+            static_cast<int>(arrshape[axis]));
       } else {
           Kernel<TakeGradGeneralKernel, gpu>::Launch(
             s, arrshape.Size(), arr.dptr<DType>(), ograd.dptr<DType>(),
             src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
-            arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis, static_cast<int>(arrshape[axis]));
+            arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis,
+            static_cast<int>(arrshape[axis]));
       }
     });
   });
@@ -1141,7 +1144,8 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
 
   bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
   if (!safe_acc && outputs[0].type_flag_ == mshadow::kFloat16) {
-    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for TakeOpBackward with float16 inputs. "
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for TakeOpBackward "
+                    "with float16 inputs. "
                     "See https://mxnet.apache.org/api/faq/env_var "
                     "for more details.");
   }
@@ -1214,7 +1218,7 @@ void TakeOpBackward(const nnvm::NodeAttrs& attrs,
           } else {
             TakeOpBackwardImpl<false, true, AType>(s, ctx, arr, idx, ograd, actual_axis);
           }
-        }else{
+        } else {
           if (param.mode == take_::kClip) {
             TakeOpBackwardImpl<true, false, AType>(s, ctx, arr, idx, ograd, actual_axis);
           } else {

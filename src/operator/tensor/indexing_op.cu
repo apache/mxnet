@@ -734,7 +734,7 @@ __global__ void EmbeddingGradKernel(DType *grad_in,
       for (index_t val_id = 0; val_id < nelems_per_load; val_id++) {
         data_values[val_id] = static_cast<DType>(grad_in_row[val_id * blockDim.x + threadIdx.x]);
       }
-      aligned_grad_in[my_row * aligned_emb_dim + emb_id] = *load_value; //grad_in_row[threadIdx.x];
+      aligned_grad_in[my_row * aligned_emb_dim + emb_id] = *load_value;
     }
   }
 }
@@ -845,7 +845,8 @@ void EmbeddingOpBackward<gpu>(const nnvm::NodeAttrs& attrs,
     << "Backward of Embedding does not support writing in place.";
   bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
   if (!safe_acc && outputs[1].type_flag_ == mshadow::kFloat16) {
-    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for EmbeddingOpBackward with float16 inputs. "
+    common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for EmbeddingOpBackward "
+                    "with float16 inputs. "
                     "See https://mxnet.apache.org/api/faq/env_var "
                     "for more details.");
   }
