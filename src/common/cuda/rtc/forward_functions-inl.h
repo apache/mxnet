@@ -285,6 +285,11 @@ __device__ inline DType sub(const DType a, const DType2 b) {
 }
 
 template <typename DType, typename DType2>
+__device__ inline DType rsub(const DType a, const DType2 b) {
+  return b - a;
+}
+
+template <typename DType, typename DType2>
 __device__ inline DType mul(const DType a, const DType2 b) {
   return a * b;
 }
@@ -329,6 +334,181 @@ __device__ inline DType min(const DType a, const DType2 b) {
 }
 
 DEFINE_BINARY_MATH_FUNC(hypot, ::hypot, ::hypotf)
+
+template <typename DType, typename DType2>
+__device__ inline DType mod(const DType a, const DType2 b) {
+  if (b == 0) {
+    return 0;
+  }
+  const double ad = static_cast<double>(a);
+  const double bd = static_cast<double>(b);
+  if (bd < 0) {
+    if (ad < 0) {
+      return -::fmod(-ad, -bd);
+    } else {
+      return ::fmod(ad, -bd) +
+             (::fmod(ad, -bd) != 0 ? bd : 0);
+    }
+  } else {
+    if (ad < 0) {
+      return -::fmod(-ad, bd) +
+              (::fmod(-ad, bd) != 0 ? bd : 0);
+    } else {
+      return ::fmod(ad, bd);
+    }
+  }
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType rmod(const DType a, const DType2 b) {
+  return op::mod(b, a);
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType equal(const DType a, const DType2 b) {
+  return a == static_cast<DType>(b) ? 1 : 0;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType not_equal(const DType a, const DType2 b) {
+  return a != static_cast<DType>(b) ? 1 : 0;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType greater(const DType a, const DType2 b) {
+  return a > static_cast<DType>(b) ? 1 : 0;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType greater_equal(const DType a, const DType2 b) {
+  return a >= static_cast<DType>(b) ? 1 : 0;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType less(const DType a, const DType2 b) {
+  return a < static_cast<DType>(b) ? 1 : 0;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType less_equal(const DType a, const DType2 b) {
+  return a <= static_cast<DType>(b) ? 1 : 0;
+}
+
+template <typename DType, typename DType2>
+__device__ inline bool np_equal(const DType a, const DType2 b) {
+  return a == static_cast<DType>(b) ? true : false;
+}
+
+template <typename DType, typename DType2>
+__device__ inline bool np_not_equal(const DType a, const DType2 b) {
+  return a != static_cast<DType>(b) ? true : false;
+}
+
+template <typename DType, typename DType2>
+__device__ inline bool np_greater(const DType a, const DType2 b) {
+  return a > static_cast<DType>(b) ? true : false;
+}
+
+template <typename DType, typename DType2>
+__device__ inline bool np_greater_equal(const DType a, const DType2 b) {
+  return a >= static_cast<DType>(b) ? true : false;
+}
+
+template <typename DType, typename DType2>
+__device__ inline bool np_less(const DType a, const DType2 b) {
+  return a < static_cast<DType>(b) ? true : false;
+}
+
+template <typename DType, typename DType2>
+__device__ inline bool np_less_equal(const DType a, const DType2 b) {
+  return a <= static_cast<DType>(b) ? true : false;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType logical_and(const DType a, const DType2 b) {
+  return a && static_cast<DType>(b) ? 1 : 0;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType logical_or(const DType a, const DType2 b) {
+  return a || static_cast<DType>(b) ? 1 : 0;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType logical_xor(const DType a, const DType2 b) {
+  const DType bb = static_cast<DType>(b);
+  return ((a || bb) && !(a && bb)) ? 1 : 0;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType copysign(const DType a, const DType2 b) {
+  return (a >= 0 && b >= 0) || (a < 0 && b < 0) ? a : -a;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType rcopysign(const DType a, const DType2 b) {
+  return copysign(b, a);
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType lcm(const DType a, const DType2 b) {
+  if (type_util::is_integral<DType>::value &&
+      type_util::is_integral<DType2>::value) {
+    DType A = a;
+    DType2 B = b;
+    // minus cases.
+    if (a < 0) {
+      A = -a;
+    }
+    if (b < 0) {
+      B = -b;
+    }
+    // handle zero-valued cases.
+    DType c;
+    if (a == 0 || b == 0) {
+      c = 0;
+    } else {
+      DType tmp;
+      DType tmp_a = A;
+      DType tmp_b = B;
+      if (A < B) {
+        tmp = A;
+        A = B;
+        B = tmp;
+      }
+      while (A % B != 0) {
+        A = A % B;
+        tmp = A;
+        A = B;
+        B = tmp;
+      }
+      c = tmp_a / B * tmp_b;
+    }
+    return c;
+  } else {
+    return 0;
+  }
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType bitwise_xor(const DType a, const DType2 b) {
+  return static_cast<int64_t>(a) ^ static_cast<int64_t>(b);
+}
+
+
+DEFINE_BINARY_MATH_FUNC(arctan2, ::atan2, ::atan2f)
+
+template <typename DType, typename DType2>
+__device__ inline DType rarctan2(const DType a, const DType2 b) {
+  return arctan2(b, a);
+}
+
+DEFINE_BINARY_MATH_FUNC(ldexp, a * ::pow(2.0f, b), a * ::powf(2.0f, b))
+
+template <typename DType, typename DType2>
+__device__ inline DType rldexp(const DType a, const DType2 b) {
+  return ldexp(b, a);
+}
 
 #undef DEFINE_BINARY_MATH_FUNC
 

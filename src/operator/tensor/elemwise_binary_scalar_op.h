@@ -298,16 +298,6 @@ class BinaryScalarOp : public UnaryOp {
     });
   }
 
-#if MXNET_USE_CUDA
-  template<typename OP>
-  static void Compute_(const nnvm::NodeAttrs &attrs,
-                       const OpContext &ctx,
-                       mshadow::Stream<gpu>* s,
-                       const std::vector<TBlob> &inputs,
-                       const std::vector<OpReqType> &req,
-                       const std::vector<TBlob> &outputs);
-#endif
-
   template<typename xpu, typename OP>
   static void Compute(const nnvm::NodeAttrs &attrs,
                       const OpContext &ctx,

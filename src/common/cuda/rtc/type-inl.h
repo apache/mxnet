@@ -56,6 +56,11 @@ template <> struct is_integral<int32> : true_type {};
 template <> struct is_integral<int64> : true_type {};
 template <> struct is_integral<bool>  : true_type {};
 
+// is_unsigned
+template <typename T> struct is_unsigned : false_type {};
+template <> struct is_unsigned<uint8> : true_type {};
+template <> struct is_unsigned<bool>  : true_type {};
+
 // is_same
 template <typename T, typename U>
 struct is_same : false_type {};

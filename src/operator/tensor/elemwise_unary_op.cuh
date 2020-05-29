@@ -95,44 +95,48 @@ __global__ void unary_kernel(const unary_kernel_params params,
 )code";
 
 struct UnaryRTCCompute {
-
   std::string OP;
 
-void operator()(const nnvm::NodeAttrs& attrs,
-                const OpContext& ctx,
-                const std::vector<TBlob>& inputs,
-                const std::vector<OpReqType>& req,
-                const std::vector<TBlob>& outputs) {
-  using namespace mxnet::common::cuda::rtc;
-  if (req[0] == kNullOp) return;
-  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
-  CHECK_EQ(inputs.size(), 1U);
-  CHECK_EQ(outputs.size(), 1U);
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
+    using namespace mxnet::common::cuda::rtc;
+    if (req[0] == kNullOp) return;
+    mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+    CHECK_EQ(inputs.size(), 1U);
+    CHECK_EQ(outputs.size(), 1U);
 
-  const std::string code = std::string("const OpReqType req = ") +
-                           util::to_string(req[0]) +
-                           ";\n" +
-                           "#define OP op::" +
-                           OP +
-                           "\n" +
-                           unary_kernel_fwd;
-  const int nvec = outputs[0].type_flag_ == mshadow::kFloat64 ? 2 : 4;
+    const std::string code = std::string("const OpReqType req = ") +
+                             util::to_string(req[0]) +
+                             ";\n" +
+                             "#define OP op::" +
+                             OP +
+                             "\n" +
+                             unary_kernel_fwd;
+    const int nvec = outputs[0].type_flag_ == mshadow::kFloat64 ? 2 : 4;
 
-  const index_t size = outputs[0].Size();
-  unary_kernel_params params = { {inputs[0].dptr_},
-                                 {outputs[0].dptr_} };
+    const index_t size = outputs[0].Size();
+    unary_kernel_params params = { {inputs[0].dptr_},
+                                   {outputs[0].dptr_} };
 
-  VectorizedKernelRTCLauncher(code, "unary_kernel", nvec,
-                              size, 1, s, params,
-                              inputs, outputs,
-                              ctx.run_ctx.get_ctx().dev_id);
-}
+    VectorizedKernelRTCLauncher(code, "unary_kernel", nvec,
+                                size, 1, s, params,
+                                inputs, outputs,
+                                ctx.run_ctx.get_ctx().dev_id);
+  }
 
-void operator()(const nnvm::NodeAttrs& attrs,
-                const OpContext& ctx,
-                const std::vector<NDArray>& inputs,
-                const std::vector<OpReqType>& req,
-                const std::vector<NDArray>& outputs) {
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<NDArray>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<NDArray>& outputs) {
+    if (req[0] == kNullOp) {
+      return;
+    }
+    CHECK_EQ(inputs.size(), 1U);
+    CHECK_EQ(outputs.size(), 1U);
     InitStorageGeometry<1, 1>(attrs, inputs, outputs);
     CHECK_NE(outputs[0].storage_type(), kDefaultStorage)
       << "This function works only for sparse types.";
@@ -153,7 +157,7 @@ void operator()(const nnvm::NodeAttrs& attrs,
       }
       this->operator()(attrs, ctx, in_blobs, req, out_blobs);
     }
-}
+  }
 
 };
 

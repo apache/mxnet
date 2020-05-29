@@ -38,7 +38,7 @@ namespace op {
 
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR_LOGIC_GPU(name)                               \
   NNVM_REGISTER_OP(_npi_##name##_scalar)                                                       \
-  .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::ComputeLogic<gpu, mshadow_op::np_##name>)
+  .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"np_" #name})
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(equal);
 MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(not_equal);
