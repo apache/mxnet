@@ -2627,6 +2627,15 @@ def test_np_mixed_precision_binary_funcs():
         'mod': (1.0, 5.0, None, None),
         'power': (1.0, 3.0, lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2,
                             lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)),
+        'equal': (0.0, 2.0, None, None),
+        'not_equal': (0.0, 2.0, None, None),
+        'greater': (0.0, 2.0, None, None),
+        'less': (0.0, 2.0, None, None),
+        'greater_equal': (0.0, 2.0, None, None),
+        'less_equal': (0.0, 2.0, None, None),
+        'logical_and': (0.0, 2.0, None, None),
+        'logical_or': (0.0, 2.0, None, None),
+        'logical_xor': (0.0, 2.0, None, None),
     }
 
     shape_pairs = [((3, 2), (3, 2)),
