@@ -899,6 +899,7 @@ struct TakeGradGeneralKernelSafeAccumulation {
     const int in_mid_index = in_rest_index / in_strides[axis];
     const int in_tail_index = (axis == in_ndims - 1) ?
                               0 : (in_rest_index % in_strides[axis]);
+    temp[tid] = static_cast<AType>(arr_grad[tid]);
     for (IType i = src_indptr[in_mid_index]; i < src_indptr[in_mid_index + 1]; ++i) {
       int out_mid_index = original_idx[i];
       out_mid_index = (out_mid_index < 0) ? out_mid_index + K : out_mid_index;
@@ -929,22 +930,22 @@ void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
     size_t temp_storage_bytes = SortByKeyWorkspaceSize<int, int, cpu>(idxshape.Size());
     size_t original_idx_bytes = idxshape.Size() * sizeof(int);
     size_t src_indptr_bytes = (arrshape[axis] + 1) * sizeof(int);
-    size_t temp_accumulation_igrad_bytes = 0;
+    size_t temp_accumulation_arrgrad_bytes = 0;
     if (safe_acc){
-        temp_accumulation_igrad_bytes = arr.Size() * sizeof(AType);
+        temp_accumulation_arrgrad_bytes = arr.Size() * sizeof(AType);
     }
     size_t workspace_bytes = src_indptr_bytes + 2 * original_idx_bytes +
-        temp_storage_bytes + temp_accumulation_igrad_bytes;
+        temp_storage_bytes + temp_accumulation_arrgrad_bytes;
     Tensor<cpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<cpu, 1, char>(Shape1(workspace_bytes), s);
-    AType* temp_accum_igrad_ptr = reinterpret_cast<AType*>(workspace.dptr_);
-    int* sorted_idx_ptr = reinterpret_cast<int*>(workspace.dptr_ + temp_accumulation_igrad_bytes);
+    AType* temp_accum_arrgrad_ptr = reinterpret_cast<AType*>(workspace.dptr_);
+    int* sorted_idx_ptr = reinterpret_cast<int*>(workspace.dptr_ + temp_accumulation_arrgrad_bytes);
     int* original_idx_ptr = reinterpret_cast<int*>(workspace.dptr_ + original_idx_bytes +
-                                                   temp_accumulation_igrad_bytes);
+                                                   temp_accumulation_arrgrad_bytes);
     src_indptr_ptr = reinterpret_cast<int*>(workspace.dptr_ + 2 * original_idx_bytes +
-                                            temp_accumulation_igrad_bytes);
+                                            temp_accumulation_arrgrad_bytes);
     Tensor<cpu, 1, char> temp_storage(
-      workspace.dptr_ + 2 * original_idx_bytes + src_indptr_bytes + temp_accumulation_igrad_bytes,
+      workspace.dptr_ + 2 * original_idx_bytes + src_indptr_bytes + temp_accumulation_arrgrad_bytes,
       Shape1(temp_storage_bytes), s);
     // Reset indptr to zero
     Kernel<set_zero, cpu>::Launch(s, arrshape[axis] + 1, src_indptr_ptr);
@@ -984,7 +985,7 @@ void TakeOpBackwardImpl(mshadow::Stream<cpu>* s,
     MSHADOW_TYPE_SWITCH(arr.type_flag_, DType, {
       if (safe_acc){
         Kernel<TakeGradGeneralKernelSafeAccumulation, cpu>::Launch(
-          s, arrshape.Size(), arr.dptr<DType>(), temp_accum_igrad_ptr, ograd.dptr<DType>(),
+          s, arrshape.Size(), arr.dptr<DType>(), temp_accum_arrgrad_ptr, ograd.dptr<DType>(),
           src_indptr_ptr, original_idx_ptr, in_strides, out_strides,
           arrshape.ndim(), oshape.ndim(), idxshape.ndim(), axis, static_cast<int>(arrshape[axis]));
       } else {

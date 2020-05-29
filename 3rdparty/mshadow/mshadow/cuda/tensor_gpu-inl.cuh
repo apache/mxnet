@@ -641,15 +641,20 @@ __global__ void AddTakeGradKernel(DstPlan dst,
   }
 }
 
-template<bool clip, int x_bits, typename DstPlan, typename AType,
+template<bool clip, int x_bits, typename DstPlan, typename ATypePlan,
          typename SrcPlan1, typename SrcPlan2>
 __global__ void AddTakeGradKernel(DstPlan dst,
-                                  AType temp,
+                                  ATypePlan temp,
                                   SrcPlan1 index, SrcPlan2 src,
                                   index_t ymax, index_t xmax, const int K) {
   const unsigned x_size = 1 << x_bits;
   const int xindex = blockIdx.x * x_size + threadIdx.x;
   __shared__ int ptr;
+  if (xindex < xmax) {
+    for (unsigned y = 0; y < K; ++y) {
+      temp.REval(y, xindex) = dst.Eval(y, xindex);
+    }
+  }
   for (unsigned y = 0; y < ymax; ++y) {
     if (threadIdx.x == 0) {
       ptr = index.Eval(0, y);
@@ -666,8 +671,8 @@ __global__ void AddTakeGradKernel(DstPlan dst,
       temp.REval(ptr, xindex) += src.Eval(y, xindex);
     }
   }
-  for (unsigned y = 0; y < K; ++y) {
-    if (xindex < xmax) {
+  if (xindex < xmax) {
+    for (unsigned y = 0; y < K; ++y) {
       dst.REval(y, xindex) = temp.Eval(y, xindex);
     }
   }
