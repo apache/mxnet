@@ -204,7 +204,6 @@ inline void IndexAddOpBackwardVal(const nnvm::NodeAttrs& attrs,
   for (int i = MXNET_SPECIAL_MAX_NDIM - 1, j = out_ndim - 1; i >= 0; --i, --j) {
     ograd_shape[i] = (j >= 0) ? ograd.shape_[j] : 1;
   }
-  mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_stride = mxnet_op::calc_stride(ograd_shape);
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_shape(ograd_shape);
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape(ograd_shape);
   TBlob t_ind = TBlob(ctx.requested[0].get_space_typed<xpu, 1, int>

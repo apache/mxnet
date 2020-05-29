@@ -78,7 +78,6 @@ void IndexAddOpBackwardValImpl<cpu>(const OpContext& ctx,
                                const int ndim) {
   using namespace mshadow;
   using namespace mxnet_op;
-  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
   int seg = MXNET_SPECIAL_MAX_NDIM - ndim;
   MSHADOW_TYPE_SWITCH(grad_val.type_flag_, DType, {
     IndexAddBackwardValCPUCompute<DType>(
