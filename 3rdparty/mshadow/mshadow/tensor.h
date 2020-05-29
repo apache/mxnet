@@ -89,7 +89,16 @@ struct Shape {
    * \return the corresponding dimension size
    */
   MSHADOW_XINLINE index_t &operator[](int idx) {
+// two possible solutions: throw exception if idx is out of bounds
+//                         --> costs runtime performance
+//                         disable warning and let the user take care
+//                         --> UB possible if user doesn't take care
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
     return shape_[idx];
+#pragma GCC diagnostic pop
   }
   /*!
    * \brief get corresponding index
@@ -97,7 +106,16 @@ struct Shape {
    * \return the corresponding dimension size
    */
   MSHADOW_XINLINE const index_t &operator[](int idx) const {
+// two possible solutions: throw exception if idx is out of bounds
+//                         --> costs runtime performance
+//                         disable warning and let the user take care
+//                         --> UB possible if user doesn't take care
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Warray-bounds"
+#endif
     return shape_[idx];
+#pragma GCC diagnostic pop
   }
   /*!
    * \return whether two shape equals

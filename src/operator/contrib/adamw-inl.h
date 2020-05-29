@@ -416,9 +416,9 @@ void FillMultiAdamKernelParam(const nnvm::NodeAttrs& attrs,
 
     pParam->out_data[i] = outputs[i].FlatTo2D<xpu, DType>(s).dptr_;
   }
-  memcpy(pParam->etas, p.etas.begin(), pParam->count * sizeof(p.etas[0]));
-  memcpy(pParam->lrs, p.lrs.begin(), pParam->count * sizeof(p.lrs[0]));
-  memcpy(pParam->wds, p.wds.begin(), pParam->count * sizeof(p.wds[0]));
+  memcpy(static_cast<void*>(pParam->etas), p.etas.begin(), pParam->count * sizeof(p.etas[0]));
+  memcpy(static_cast<void*>(pParam->lrs), p.lrs.begin(), pParam->count * sizeof(p.lrs[0]));
+  memcpy(static_cast<void*>(pParam->wds), p.wds.begin(), pParam->count * sizeof(p.wds[0]));
 }
 
 template<typename xpu, template<typename> class MPTypeChooser, int input_stride>

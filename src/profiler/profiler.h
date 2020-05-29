@@ -54,16 +54,37 @@ struct static_string {
   inline explicit static_string(const char *s) { set(s); }
   inline const char *c_str() const { return &string_[0]; }
   inline void set(const char *s) {
+    // it is not possible to avoid truncation by strncpy
+    // thus the result of strncpy must properly NULL-terminated
+    // the NULL must be added explicitly after strncpy()
+    // GCC tries to detect the addition of NULL in order to avoid issuing the warning (if detected)
+    // GCC 8 does not detect the missing handling
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
     strncpy(&string_[0], s, string_size - 1);
+#pragma GCC diagnostic pop
     string_[string_size - 1] = '\0';
   }
   inline void append(const char *s) {
     const size_t l = strlen(&string_[0]);
     if (l < string_size - 1) {
+    // it is not possible to avoid truncation by strncpy
+    // thus the result of strncpy must properly NULL-terminated
+    // the NULL must be added explicitly after strncpy()
+    // GCC tries to detect the addition of NULL in order to avoid issuing the warning (if detected)
+    // GCC 8 does not detect the missing handling
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wstringop-truncation"
+#endif
       strncpy(&string_[0] + l, s, string_size - l - 1);
+#pragma GCC diagnostic pop
       string_[string_size - 1] = '\0';
     }
   }
+
  private:
   /*! \brief The actual character array */
   std::array<char, string_size> string_;
