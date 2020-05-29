@@ -416,11 +416,11 @@ def test_val_net():
             val_data=dataloader,
             epochs=num_epochs)
 
-    ''' test weight sharing of two resnets '''
+    ''' test partial weight sharing of two resnets '''
     net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
     net.output = gluon.nn.Dense(10)
     val_net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
-    val_net.output = gluon.nn.Dense(10, params=net.collect_params())
+    val_net.output = gluon.nn.Dense(10, params=net.output.collect_params())
     dataset = gluon.data.ArrayDataset(mx.nd.zeros((10, 3, 224, 224)), mx.nd.zeros((10, 10)))
     dataloader = gluon.data.DataLoader(dataset=dataset, batch_size=5)
     net.initialize(ctx=ctx)

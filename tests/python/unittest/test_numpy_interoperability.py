@@ -1105,6 +1105,7 @@ def _add_workload_mean(array_pool):
     OpArgMngr.add_workload('mean', array_pool['4x1'])
     OpArgMngr.add_workload('mean', array_pool['4x1'], axis=0, keepdims=True)
     OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]))
+    OpArgMngr.add_workload('mean', np.array([]).reshape(2,0,0))
     OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]), axis=0)
     OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]), axis=1)
 
@@ -1139,6 +1140,7 @@ def _add_workload_atleast_nd():
 
 def _add_workload_prod(array_pool):
     OpArgMngr.add_workload('prod', array_pool['4x1'])
+    OpArgMngr.add_workload('prod', np.array([]).reshape(2,0,0))
 
 
 def _add_workload_product(array_pool):

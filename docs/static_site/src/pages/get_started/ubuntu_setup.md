@@ -408,23 +408,23 @@ You should see the following output:
 
 ### Install the MXNet Package for Scala
 
-To use the MXNet-Scala package, you can acquire the Maven package as a dependency.
+After building the MXNet shared library, you may simply run the following from the MXNet scala-package folder:
 
-Further information is in the [MXNet-Scala Setup Instructions](scala_setup.html).
+```bash
+mvn install
+```
 
-If you use IntelliJ or a similar IDE, you may want to follow the
-[MXNet-Scala on IntelliJ tutorial](/api/scala/docs/tutorials/mxnet_scala_on_intellij.html) instead.
-<hr>
+This will install both the Java Inference API and the required MXNet-Scala package.<hr>
 
 ### Install the MXNet Package for Java
 
-To use the MXNet-Java package, you can acquire the Maven package as a dependency.
+After building the MXNet shared library, you may simply run the following from the MXNet scala-package folder:
 
-Further information is in the [MXNet-Java Setup Instructions](java_setup.html).
+```bash
+mvn install
+```
 
-If you use IntelliJ or a similar IDE, you may want to follow the
-[MXNet-Java on IntelliJ tutorial](/api/java/docs/tutorials/mxnet_java_on_intellij.html) instead.
-<hr>
+This will install both the Java Inference API and the required MXNet-Scala package.<hr>
 
 ## Contributions
 
