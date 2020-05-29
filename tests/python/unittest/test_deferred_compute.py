@@ -425,7 +425,7 @@ def _dc_gluon_simple_setup(shape=(8, 10), *, nd):
 
 def test_dc_hybridblock():
     class MyBlock(mx.gluon.HybridBlock):
-        def __init__(self, *):
+        def __init__(self):
             super().__init__()
             self.dense = mx.gluon.nn.Dense(units=10, in_units=10)
             self.weight = mx.gluon.Parameter('weight', shape=(10, ))
@@ -445,7 +445,7 @@ def test_dc_hybridblock():
 
 def test_dc_hybridblock_deferred_init_no_infer_shape_error():
     class MyBlock(mx.gluon.HybridBlock):
-        def __init__(self, *):
+        def __init__(self):
             super().__init__()
             self.dense = mx.gluon.nn.Dense(units=10)
             self.weight = mx.gluon.Parameter('weight', allow_deferred_init=True)
@@ -462,10 +462,10 @@ def test_dc_hybridblock_deferred_init_no_infer_shape_error():
 
 def test_dc_hybridblock_deferred_init():
     class MyBlock(mx.gluon.HybridBlock):
-        def __init__(self, *):
+        def __init__(self):
             super().__init__()
             self.dense = mx.gluon.nn.Dense(units=10)
-            self.weight = gluon.Parameter('weight', allow_deferred_init=True)
+            self.weight = mx.gluon.Parameter('weight', allow_deferred_init=True)
 
         def infer_shape(self, x):
             self.weight.shape = (x.shape[1], )
@@ -488,7 +488,7 @@ def test_dc_hybridblock_dynamic_shape():
         return
 
     class MyBlock(mx.gluon.HybridBlock):
-        def __init__(self, *):
+        def __init__(self):
             super().__init__()
             self.dense = mx.gluon.nn.Dense(units=10)
 

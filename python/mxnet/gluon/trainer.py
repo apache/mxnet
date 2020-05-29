@@ -24,7 +24,7 @@ from collections import OrderedDict
 
 from .. import optimizer as opt
 from ..model import _create_kvstore, _create_sparse_kvstore
-from .parameter import Parameter
+from .parameter import Parameter, ParameterDict
 from ..kvstore import KVStore
 
 
@@ -78,7 +78,7 @@ class Trainer(object):
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device',
                  compression_params=None, update_on_kvstore=None):
         param_list = []
-        if isinstance(params, (dict, OrderedDict)):
+        if isinstance(params, (dict, OrderedDict, ParameterDict)):
             for key in sorted(list(params.keys())):
                 param_list.append(params[key])
             params = param_list

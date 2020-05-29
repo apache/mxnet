@@ -309,9 +309,9 @@ def test_basic():
     assert x.shape == (32, 32)
     x.wait_to_read()
 
-    model.collect_params().setattr('grad_req', 'null')
+    model.setattr('grad_req', 'null')
     assert list(model.collect_params().values())[0]._grad is None
-    model.collect_params().setattr('grad_req', 'write')
+    model.setattr('grad_req', 'write')
     assert list(model.collect_params().values())[0]._grad is not None
 
 
@@ -370,7 +370,7 @@ def test_symbol_block(tmpdir):
 
     inputs = mx.sym.var('data')
     outputs = model(inputs)
-    smodel = gluon.SymbolBlock(outputs, inputs).share_parameters(model.collect_params())
+    smodel = gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
     net = Net(smodel).set_prefix()
     net.hybridize()
     assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
@@ -1569,7 +1569,7 @@ def test_save_load_deduplicate_with_shared_params(tmpdir):
     assert len(params) == 2  # Only a single copy of the shared parameter is saved
 
     b1 = B()
-    b2 = B(b1.collect_params())
+    b2 = B().share_parameters(b1.collect_params())
     c = C(b1, b2)
     c.load_parameters(param_path)
 
@@ -1580,12 +1580,11 @@ def test_symbol_block_save_load():
             super(Net, self).__init__()
             backbone = gluon.model_zoo.vision.resnet18_v1()
             data = mx.sym.var('data')
-            # TODO phile is there a problem?
-            featnames = ['stage1_activation0', 'stage2_activation0', 'stage3_activation0']
-            out_names = ['_'.join([backbone.name, featname, 'output']) for featname in featnames]
+            featnames = ['features_4_1_activation0', 'features_5_1_activation0', 'features_6_1_activation0']
+            out_names = ['_'.join([featname, 'output']) for featname in featnames]
             internals = backbone(data).get_internals()
             outs = [internals[out_name] for out_name in out_names]
-            self.backbone = gluon.SymbolBlock(outs, data).share_parameters(backbone.collect_params())
+            self.backbone = gluon.SymbolBlock(outs, data, params=backbone.collect_params())
             self.body = nn.Conv2D(3, 1)
 
         def hybrid_forward(self, F, x):
@@ -3115,7 +3114,7 @@ def test_shared_parameters_with_non_default_initializer():
             self.param = gluon.Parameter("param", shape=(1, ), init=mx.init.Constant(-10.0))
 
     bl = MyBlock()
-    bl2 = MyBlock(params=bl.collect_params())
+    bl2 = MyBlock().share_parameters(bl.collect_params())
     assert bl.param is bl2.param
     bl3 = MyBlock()
     assert bl.param is not bl3.param

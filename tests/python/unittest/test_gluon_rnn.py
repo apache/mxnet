@@ -153,7 +153,7 @@ def test_lstm_forget_bias():
     stack = gluon.rnn.SequentialRNNCell()
     stack.add(gluon.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias)))
     stack.add(gluon.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias)))
-
+    stack.set_prefix()
     dshape = (32, 1, 200)
     data = mx.sym.Variable('data')
 
@@ -178,14 +178,9 @@ def test_lstm_cpu_inference():
                                       [0.95215213, 0.95215213, 0.72045636, 0.72045636]]])
     x = mx.nd.ones(shape=(2, 2, 2))
     model = mx.gluon.rnn.LSTM(2, num_layers=6, bidirectional=True)
-    model_cell = model._unfuse()
     model.initialize(mx.init.One())
 
     y = model(x).asnumpy()
-    y_cell = model_cell.unroll(2, x, layout='TNC', merge_outputs=True)[0].asnumpy()
-
-    mx.test_utils.assert_almost_equal(y_cell, EXPECTED_LSTM_OUTPUT,
-                                      rtol=1e-3, atol=1e-5)
     mx.test_utils.assert_almost_equal(y, EXPECTED_LSTM_OUTPUT,
                                       rtol=1e-3, atol=1e-5)
 
@@ -690,12 +685,14 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
     stack_layer_params = stack_layer.collect_params()
 
     for name, value in fused_layer_params.items():
-        if 'rnn' in fused_layer.prefix and 'weight' in name:
+        if 'weight' in name:
             w = mx.nd.zeros(shape=value.shape)
         else:
             w = mx.nd.random.normal(shape=value.shape)
         value.set_data(w.copy())
-        stack_layer_params[name].set_data(w.copy())
+        num = name.split('_')[0][1:]
+        stack_name = name.replace(name[0] + num, '{}_{}_cell'.format(num, name[0])) if bidirectional else name[1:]
+        stack_layer_params[stack_name].set_data(w.copy())
 
     fx = x.copy()
     sx = x.copy()
@@ -719,8 +716,10 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
 
     assert_allclose(fused_out.asnumpy(), stack_out.asnumpy(), rtol=rtol, atol=atol)
     assert_allclose(fused_input_grad, stack_input_grad, rtol=rtol, atol=atol)
-    for key, value in fused_grads.items():
-        assert_allclose(value.asnumpy(), stack_grads[key].asnumpy(), rtol=rtol, atol=atol)
+    for name, value in fused_grads.items():
+        num = name.split('_')[0][1:]
+        stack_name = name.replace(name[0] + num, '{}_{}_cell'.format(num, name[0])) if bidirectional else name[1:]
+        assert_allclose(value.asnumpy(), stack_grads[stack_name].asnumpy(), rtol=rtol, atol=atol)
 
     num_layers = fused_begin_state[0].shape[0] // (2 if bidirectional else 1)
     check_rnn_states(fused_states, stack_states, num_layers, bidirectional, len(fused_begin_state) == 2)

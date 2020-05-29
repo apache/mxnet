@@ -313,6 +313,11 @@ class Block(object):
         return self._prefix
 
     @property
+    def name(self):
+        """Name of this :py:class:`Block`, prefix + class name """
+        return self._prefix + self._alias()
+
+    @property
     def params(self):
         """Returns this :py:class:`Block`'s parameter dictionary (does not include its
         children's parameters)."""
@@ -393,7 +398,7 @@ class Block(object):
             ret = {prefix + key : val for key, val in self._reg_params.items()}
         else:
             pattern = re.compile(select)
-            ret = {prefix + key : val for key, val in self._reg_params.items() if pattern.match(key)}
+            ret = {prefix + key : val for key, val in self._reg_params.items() if pattern.match(prefix + key)}
 
         for name, child in self._children.items():
             ret.update(child._collect_params_with_prefix(prefix + name, select))
@@ -484,6 +489,7 @@ class Block(object):
                     raise ValueError(err_msg)
         else:
             loaded = ndarray.load(filename)
+        self.set_prefix()
         params = self._collect_params_with_prefix()
         if not loaded and not params:
             return

@@ -29,7 +29,7 @@ from common import setup_module, with_seed, teardown_module
 import numpy as np
 
 
-def check_rnn_cell(cell, prefix, in_shape=(10, 50), out_shape=(10, 100), begin_state=None):
+def check_rnn_cell(cell, in_shape=(10, 50), out_shape=(10, 100), begin_state=None):
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs, begin_state=begin_state)
     outputs = mx.sym.Group(outputs)
@@ -40,7 +40,7 @@ def check_rnn_cell(cell, prefix, in_shape=(10, 50), out_shape=(10, 100), begin_s
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=in_shape,
                                            rnn_t1_data=in_shape,
                                            rnn_t2_data=in_shape)
-    assert outs == [out_shape]*3
+    assert outs == [out_shape] * 3
 
 
 def check_rnn_forward(layer, inputs):
@@ -376,7 +376,7 @@ def check_unroll(cell_type, num_states, layout):
         res2, states2 = layer(rnn_data, states, valid_length)
         params2 = layer.collect_params()
         for key, val in orig_params1.items():
-            params2[key].set_data(copy.deepcopy(val.data()))
+            params2['cell_' + key].set_data(copy.deepcopy(val.data()))
 
         trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
         with mx.autograd.record():
@@ -390,7 +390,7 @@ def check_unroll(cell_type, num_states, layout):
 
         for key, val in params1.items():
             weight1 = val.data()
-            weight2 = params2[key].data()
+            weight2 = params2['cell_' + key].data()
             assert_almost_equal(weight1, weight2, rtol=0.001, atol=0.0001)
 
 
