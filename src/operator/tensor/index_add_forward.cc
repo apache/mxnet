@@ -37,9 +37,8 @@ struct IndexAddForwardCPUKernel {
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> a_shape,
                                   const int a_tail_size, const int ind_num,
                                   const int ind_ndim, const int* ind,
-                                  const int a_ndim) {
+                                  const int a_ndim, const int seg) {
     index_t id = 0;
-    int seg = MXNET_SPECIAL_MAX_NDIM - a_ndim;
     for (int dim = 0; dim < ind_ndim; ++dim) {
       CHECK_LT(ind[dim * ind_num + i], a_shape[seg + dim])
         << "IndexError: index " << ind[dim * ind_num + i]
@@ -54,6 +53,9 @@ struct IndexAddForwardCPUKernel {
     for (int _i = 0; _i < a_tail_size; ++_i) {
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> a_tail_id = mxnet_op::unravel(_i, a_tail_shape);
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_id;
+      for (int _j = 0; _j < seg; ++_j) {
+        val_id[_j] = 0;
+      }
       for (int _j = seg; _j < seg + a_ndim; ++_j) {
         val_id[_j] = (val_shape[_j] == 1) ? 0 : a_tail_id[_j];
       }
@@ -81,12 +83,13 @@ void IndexAddForwardCalc(mshadow::Stream<xpu> *s,
                         const int a_ndim) {
   using namespace mxnet_op;
   using namespace mshadow;
+  int seg = MXNET_SPECIAL_MAX_NDIM - a_ndim;
   Kernel<IndexAddForwardCPUKernel<DType>, xpu>::Launch(
                                              s, ind_num, out, val,
                                              a_tail_shape, a_pre_stride,
                                              val_stride, val_shape, a_shape,
                                              a_tail_size, ind_num,
-                                             ind_ndim, ind, a_ndim);
+                                             ind_ndim, ind, a_ndim, seg);
 }
 
 
@@ -107,7 +110,7 @@ NNVM_REGISTER_OP(_npx_index_add)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<nnvm::FGradient>("FGradient", 
+.set_attr<nnvm::FGradient>("FGradient",
   [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       auto a_grad = MakeNode("_copy", n->attrs.name + "_backward_a",
                               {ograds[0]}, nullptr, &n);

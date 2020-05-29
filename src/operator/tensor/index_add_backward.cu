@@ -39,10 +39,8 @@ struct IndexAddBackwardValGPUKernel {
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride,
                                   const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_shape,
                                   const int ograd_tail_size, const int ind_num,
-                                  const int ind_ndim,
-                                  const int out_ndim) {
+                                  const int ind_ndim, const int out_ndim, const int seg) {
     index_t id = 0;
-    int seg = MXNET_SPECIAL_MAX_NDIM - out_ndim;
     for (int dim = 0; dim < ind_ndim; ++dim) {
       id += ograd_pre_stride[seg + dim] * ind_vec[dim * ind_num + i];
     }
@@ -51,6 +49,9 @@ struct IndexAddBackwardValGPUKernel {
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_id =
         mxnet_op::unravel(_i, ograd_tail_shape);
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_id;
+      for (int _j = 0; _j < seg; ++_j) {
+        val_id[_j] = 0;
+      }
       for (int _j = seg; _j < seg + out_ndim; ++_j) {
         val_id[_j] = (val_shape[_j] == 1) ? 0 : ograd_tail_id[_j];
       }
@@ -75,11 +76,12 @@ void IndexAddOpBackwardValImpl<gpu>(const OpContext& ctx,
   using namespace mshadow;
   using namespace mxnet_op;
   mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  int seg = MXNET_SPECIAL_MAX_NDIM - ndim;
   MSHADOW_TYPE_SWITCH(grad_val.type_flag_, DType, {
     Kernel<IndexAddBackwardValGPUKernel, gpu>::Launch(
     s, ind_num, grad_val.dptr<DType>(), ograd.dptr<DType>(), t_ind.dptr<int>(),
     ograd_tail_shape, ograd_pre_stride, val_stride, val_shape, tail_size,
-    ind_num, ind_ndim, ndim);
+    ind_num, ind_ndim, ndim, seg);
   });
 }
 

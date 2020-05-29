@@ -1421,7 +1421,7 @@ def test_npx_index_add():
             configs.append(tuple([shape, ind, tuple(val_shape), ind_ndim, ind_num]))
 
     dtypes = ['float32', 'float64', 'int32', 'int64']
-    grad_req = ['write', 'null']
+    grad_req = ['write', 'null', 'add']
     for hybridize, grad_req_a, grad_req_val, dtype, indtype in \
         itertools.product([True, False], grad_req, grad_req, dtypes, ['int32', 'int64']):
         for a_shape, ind, val_shape ,ind_ndim, ind_num in configs:
@@ -1451,9 +1451,15 @@ def test_npx_index_add():
                 init_val_grad = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
                 out_grad = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
                 if grad_req_a == 'add':
-                    a.grad[:] = init_a_grad
+                    if init_a_grad.ndim == 0:
+                        a.grad[()] = init_a_grad.item()
+                    else:
+                        a.grad[:] = init_a_grad
                 if grad_req_val == 'add':
-                    val.grad[:] = init_val_grad
+                    if init_val_grad.ndim == 0:
+                        val.grad[()] = init_val_grad.item()
+                    else:
+                        val.grad[:] = init_val_grad
                 mx_ret.backward(out_grad)
                 expected_bwd_a, expected_bwd_val = index_add_bwd(out_grad.asnumpy(), init_a_grad.asnumpy(), ind,
                                                                  init_val_grad.asnumpy(), ind_ndim, ind_num,

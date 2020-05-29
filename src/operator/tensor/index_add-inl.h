@@ -148,10 +148,8 @@ void IndexAddOpForward(const nnvm::NodeAttrs& attrs,
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> a_pre_stride = calc_stride(a_pre_shape);
   mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride = calc_stride(val_shape);
   mxnet_op::copy(s, out, a);
-  Tensor<xpu, 1, char> temp_mem = ctx.requested[0].get_space_typed<xpu, 1, char>(
-                                  Shape1(sizeof(int) * ind_ndim * ind_num), s);
-  TBlob t_ind = TBlob(reinterpret_cast<int*>(temp_mem.dptr_),
-                      Shape1(ind_ndim * ind_num), xpu::kDevMask);
+  TBlob t_ind = TBlob(ctx.requested[0].get_space_typed<xpu, 1, int>
+                (Shape1(ind.shape_.Size()), s));
   mxnet_op::copy(s, t_ind, ind);
   MSHADOW_TYPE_SWITCH(a.type_flag_, DType, {
     IndexAddForwardCalc<xpu, DType>(s, ind_num,
