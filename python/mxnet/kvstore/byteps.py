@@ -34,10 +34,10 @@ class BytePS(KVStoreBase):
         try:
             import byteps.mxnet as bps
             self.handle = bps
-        except ImportError as err:
+        except ModuleNotFoundError as err:
             print('Did not find BytePS library. Please install BytePS first')
             raise err
-        except ModuleNotFoundError as err:
+        except ImportError as err:
             print('Did not find BytePS library. Please install BytePS first')
             raise err
         self.handle.init()
