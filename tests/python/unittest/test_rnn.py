@@ -107,27 +107,6 @@ def test_lstm():
         assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
-def test_lstm_forget_bias():
-    forget_bias = 2.0
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.LSTMCell(100, forget_bias=forget_bias, prefix='l0_'))
-    stack.add(mx.rnn.LSTMCell(100, forget_bias=forget_bias, prefix='l1_'))
-
-    dshape = (32, 1, 200)
-    data = mx.sym.Variable('data')
-
-    sym, _ = stack.unroll(1, data, merge_outputs=True)
-    mod = mx.mod.Module(sym, label_names=None, context=mx.cpu(0))
-    mod.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    mod.init_params()
-
-    bias_argument = next(x for x in sym.list_arguments() if x.endswith('i2h_bias'))
-    expected_bias = np.hstack([np.zeros((100,)),
-                               forget_bias * np.ones(100, ), np.zeros((2 * 100,))])
-    assert_allclose(mod.get_params()[0][bias_argument].asnumpy(), expected_bias)
-
-
 def test_gru():
     cell = mx.rnn.GRUCell(100, prefix='rnn_')
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
