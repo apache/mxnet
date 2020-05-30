@@ -235,7 +235,6 @@ class BaseRNNCell(object):
         ----------
         args : dict of str -> NDArray
             Dictionary containing packed weights.
-            usually from `Module.get_params()[0]`.
 
         Returns
         -------
