@@ -72,7 +72,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         caffe-cpu \
         libcaffe-cpu-dev \
         # BytePS
-        numactl numactl-devel \
+        numactl \
         ## Frontend languages
         # Python
         python3 \

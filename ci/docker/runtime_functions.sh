@@ -1338,7 +1338,7 @@ integrationtest_ubuntu_gpu_byteps() {
     export BYTEPS_WITHOUT_PYTORCH=1
     export BYTEPS_WITHOUT_TENSORFLOW=1
     apt-get install numactl numactl-devel -y
-    git clone -b v0.2 https://github.com/bytedance/byteps/ --recursive
+    git clone -b stable https://github.com/eric-haibin-lin/byteps/ --recursive
     cd byteps && python3 setup.py install --user && cd -
 
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
