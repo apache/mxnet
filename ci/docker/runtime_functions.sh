@@ -1337,7 +1337,6 @@ integrationtest_ubuntu_gpu_byteps() {
     export PYTHONPATH=$PWD/python/
     export BYTEPS_WITHOUT_PYTORCH=1
     export BYTEPS_WITHOUT_TENSORFLOW=1
-    apt-get install numactl numactl-devel -y
     git clone -b stable https://github.com/eric-haibin-lin/byteps/ --recursive
     cd byteps && python3 setup.py install --user && cd -
 
