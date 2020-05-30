@@ -34,9 +34,10 @@
 namespace nnvm {
 namespace pass {
 
-namespace {
-// Return bytes of data flag.
-static int MXGetDTypeSize(int type_flag) {
+/*!
+ * \brief Return the storage in bytes for the corresponding data flag.
+ */
+size_t MXGetDTypeSize(const int type_flag) {
   switch (type_flag) {
     case mshadow::kUint8:
     case mshadow::kInt8:
@@ -61,6 +62,8 @@ static int MXGetDTypeSize(int type_flag) {
   }
 }
 
+namespace {
+
 // simple graph based allocator.
 class MXGraphAllocator {
  public:
@@ -78,8 +81,7 @@ class MXGraphAllocator {
   StorageID Request(int dev_id, int dtype, mxnet::TShape shape, uint32_t node_id) {
     if (!mxnet::shape_is_known(shape)) return kBadStorageID;
     // search memory block in [size / match_range_, size * match_range_)
-    // TODO(tqchen) add size of the dtype, assume 4 bytes for now
-    size_t size = shape.Size() * 4;
+    size_t size = shape.Size() * MXGetDTypeSize(dtype);
     if (match_range_ == 0) return this->Alloc(dev_id, size);
     auto begin = free_.lower_bound(size / match_range_);
     auto mid = free_.lower_bound(size);
@@ -373,7 +375,8 @@ Graph MXPlanMemory(Graph ret) {
   size_t min_allocated_bytes = -1;
   size_t max_match_range = dmlc::GetEnv("NNVM_EXEC_MATCH_RANGE", 16);
   size_t min_match_range =
-         dmlc::GetEnv("NNVM_AUTO_SEARCH_MATCH_RANGE", false) ? 1 : max_match_range;
+      dmlc::GetEnv("MXNET_MEMORY_OPT", 0) ||
+      dmlc::GetEnv("NNVM_AUTO_SEARCH_MATCH_RANGE", false) ? 1 : max_match_range;
   for (size_t match_range = min_match_range; match_range <= max_match_range; match_range *= 2) {
     // Make a copy of related fields
     StorageVector storage_vec(storage);

@@ -121,7 +121,7 @@ def evaluate_accuracy(data_iterator, network):
     ----------
     tuple of array element
     """
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
 
     # Iterate through data and label
     for i, (data, label) in enumerate(data_iterator):

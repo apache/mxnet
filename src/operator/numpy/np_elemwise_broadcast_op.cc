@@ -28,21 +28,21 @@
 namespace mxnet {
 namespace op {
 
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)              \
-  NNVM_REGISTER_OP(name)                                            \
-  .set_num_inputs(1)                                                \
-  .set_num_outputs(1)                                               \
-  .set_attr_parser([](NodeAttrs* attrs) {                           \
-      attrs->parsed = std::stod(attrs->dict["scalar"]);             \
-    })                                                              \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>) \
-  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)  \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
-    [](const NodeAttrs& attrs){                                     \
-      return std::vector<std::pair<int, int> >{{0, 0}};             \
-    })                                                              \
-  .add_argument("data", "NDArray-or-Symbol", "source input")        \
-  .add_argument("scalar", "float", "scalar input")
+DMLC_REGISTER_PARAMETER(NumpyBinaryScalarParam);
+
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)                    \
+  NNVM_REGISTER_OP(name)                                                  \
+  .set_num_inputs(1)                                                      \
+  .set_num_outputs(1)                                                     \
+  .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)                   \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)       \
+  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)        \
+  .set_attr<FResourceRequest>("FResourceRequest",                         \
+    [](const NodeAttrs& attrs) {                                          \
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};   \
+    })                                                                    \
+  .add_argument("data", "NDArray-or-Symbol", "source input")              \
+  .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
 bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
                                    std::vector<int>* in_attrs,

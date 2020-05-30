@@ -28,6 +28,7 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include "../../common/utils.h"
 #include "../nn/moments-inl.h"
 #include "../tensor/broadcast_reduce_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
@@ -100,6 +101,15 @@ struct NumpyReduceAxesNoDTypeParam : public dmlc::Parameter<NumpyReduceAxesNoDTy
                 "in the result as dimension with size one.");
     DMLC_DECLARE_FIELD(initial).set_default(dmlc::optional<double>())
       .describe("Starting value for the sum.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s, initial_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    initial_s << initial;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["initial"] = initial_s.str();
   }
 };
 
@@ -265,6 +275,16 @@ inline bool NeedSafeAcc(int itype, int otype) {
   return safe_acc_hint && rule;
 }
 
+namespace mxnet_op {
+struct set_to_nan {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out) {
+    out[i] = DType(nanf(""));
+  }
+};
+
+}  // namespace mxnet_op
+
 void TVMOpReduce(const OpContext& ctx, const TBlob& input,
                  const dmlc::optional<mxnet::Tuple<int>>& axis,
                  const TBlob& output, const OpReqType req, const std::string& reducer_name);
@@ -286,9 +306,32 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
   if (outputs[0].shape_.Size() == 0) return;
   if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
     using namespace mxnet_op;
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
-    });
+    if (normalize) {
+      LOG(WARNING) << "WARNING: Mean of empty slice.";
+      if (mxnet::common::is_float(outputs[0].type_flag_)) {
+        MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+          Kernel<set_to_nan, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                          outputs[0].dptr<DType>());
+        });
+      } else {
+        LOG(WARNING) << "WARNING: nan is outside the range of"<<
+                        "representable values of type 'int'";
+        MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+          Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                        outputs[0].dptr<DType>());
+        });
+      }
+    } else if (std::is_same<reducer, mshadow_op::sum>::value) {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                      outputs[0].dptr<DType>());
+      });
+    } else {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        Kernel<set_one, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                     outputs[0].dptr<DType>());
+      });
+    }
     return;
   }
   CHECK_NE(req[0], kWriteInplace) << "Reduce does not support write in-place";

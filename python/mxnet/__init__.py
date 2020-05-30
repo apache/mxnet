@@ -25,6 +25,7 @@ from . import engine, error
 from .base import MXNetError
 from .util import is_np_shape, set_np_shape, np_shape, use_np_shape
 from .util import is_np_array, np_array, use_np_array, use_np
+from .util import is_np_default_dtype, np_default_dtype, use_np_default_dtype
 from . import base
 
 # version info
@@ -51,7 +52,6 @@ from . import random as rnd
 from . import random
 from . import optimizer
 from . import model
-from . import metric
 from . import notebook
 from . import initializer
 # use mx.init as short for mx.initializer

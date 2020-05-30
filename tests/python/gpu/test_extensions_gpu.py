@@ -19,20 +19,20 @@
 
 import os
 import platform
-import unittest
 import mxnet as mx
 import numpy as np
 from mxnet import nd
 from mxnet.gluon import nn
 from mxnet.base import MXNetError
 from mxnet.test_utils import download, is_cd_run, assert_almost_equal, default_context
+import pytest
 
 base_path = os.path.join(os.path.dirname(__file__), "../../..")
 def check_platform():
     return platform.machine() not in ['x86_64', 'AMD64']
 
-@unittest.skipIf(check_platform(), "not all machine types supported")
-@unittest.skipIf(is_cd_run(), "continuous delivery run - ignoring test")
+@pytest.mark.skipif(check_platform(), reason="not all machine types supported")
+@pytest.mark.skipif(is_cd_run(), reason="continuous delivery run - ignoring test")
 def test_custom_op_gpu():
     # possible places to find library file
     if (os.name=='posix'):

@@ -24,7 +24,7 @@ __all__ = ['Concurrent', 'HybridConcurrent', 'Identity', 'SparseEmbedding',
            'PixelShuffle3D']
 
 import warnings
-from .... import nd, context
+from .... import ndarray as nd, context
 from ...block import HybridBlock, Block
 from ...nn import Sequential, HybridSequential, BatchNorm
 
@@ -56,7 +56,7 @@ class Concurrent(Sequential):
     def forward(self, x):
         out = []
         for block in self._children.values():
-            out.append(block(x))
+            out.append(block()(x))
         out = nd.concat(*out, dim=self.axis)
         return out
 
@@ -89,7 +89,7 @@ class HybridConcurrent(HybridSequential):
     def hybrid_forward(self, F, x):
         out = []
         for block in self._children.values():
-            out.append(block(x))
+            out.append(block()(x))
         out = F.concat(*out, dim=self.axis)
         return out
 

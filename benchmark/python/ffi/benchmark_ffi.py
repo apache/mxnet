@@ -51,6 +51,9 @@ def generate_workloads():
 def prepare_workloads():
     pool = generate_workloads()
     OpArgMngr.add_workload("zeros", (2, 2))
+    OpArgMngr.add_workload("full", (2, 2), 10)
+    OpArgMngr.add_workload("identity", 3)
+    OpArgMngr.add_workload("ones", (2, 2))
     OpArgMngr.add_workload("einsum", "ii", pool['2x2'], optimize=False)
     OpArgMngr.add_workload("unique", pool['1'], return_index=True, return_inverse=True, return_counts=True, axis=-1)
     OpArgMngr.add_workload("dstack", (pool['2x1'], pool['2x1'], pool['2x1'], pool['2x1']))
@@ -188,6 +191,10 @@ def prepare_workloads():
     OpArgMngr.add_workload("mean", pool['2x2'], axis=0, keepdims=True)
     OpArgMngr.add_workload("random.gamma", 1, size=(2, 3))
     OpArgMngr.add_workload("random.normal", 1, size=(2, 3))
+    OpArgMngr.add_workload("max", pool["2x2"], axis=0, out=pool['2'], keepdims=False)
+    OpArgMngr.add_workload("min", pool["2x2"], axis=0, out=pool['2'], keepdims=False)
+    OpArgMngr.add_workload("amax", pool["2x2"], axis=1, out=pool['2'], keepdims=False)
+    OpArgMngr.add_workload("amin", pool["2x2"], axis=1, out=pool['2'], keepdims=False)
 
     unary_ops = ['negative', 'reciprocal', 'abs', 'sign', 'rint', 'ceil', 'floor',
                  'bitwise_not', 'trunc', 'fix', 'square', 'sqrt', 'cbrt', 'exp',
@@ -252,7 +259,7 @@ if __name__ == "__main__":
     import numpy as onp
     from mxnet import np as dnp
 
-    mx.npx.set_np()
+    mx.npx.set_np(dtype=False)
     packages = {
         "onp": {
             "module": onp,

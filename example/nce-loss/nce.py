@@ -62,7 +62,7 @@ def nce_loss_subwords(
                                            label=label_weight)
 
 
-class NceAccuracy(mx.metric.EvalMetric):
+class NceAccuracy(mx.gluon.metric.EvalMetric):
     def __init__(self):
         super(NceAccuracy, self).__init__('nce-accuracy')
 
@@ -75,7 +75,7 @@ class NceAccuracy(mx.metric.EvalMetric):
             self.num_inst += 1
 
 
-class NceAuc(mx.metric.EvalMetric):
+class NceAuc(mx.gluon.metric.EvalMetric):
     def __init__(self):
         super(NceAuc, self).__init__('nce-auc')
 
@@ -105,7 +105,7 @@ class NceAuc(mx.metric.EvalMetric):
         self.num_inst += 1
 
 
-class NceLSTMAuc(mx.metric.EvalMetric):
+class NceLSTMAuc(mx.gluon.metric.EvalMetric):
     def __init__(self):
         super(NceLSTMAuc, self).__init__('nce-lstm-auc')
 

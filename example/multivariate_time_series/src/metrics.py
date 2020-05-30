@@ -46,10 +46,10 @@ def get_custom_metrics():
     """
     :return: mxnet metric object
     """
-    _rse = mx.metric.create(rse)
-    _rae = mx.metric.create(rae)
-    _corr = mx.metric.create(corr)
-    return mx.metric.create([_rae, _rse, _corr])
+    _rse = mx.gluon.metric.create(rse)
+    _rae = mx.gluon.metric.create(rae)
+    _corr = mx.gluon.metric.create(corr)
+    return mx.gluon.metric.create([_rae, _rse, _corr])
 
 def evaluate(pred, label):
     return {"RAE":rae(label, pred), "RSE":rse(label,pred),"CORR": corr(label,pred)}
