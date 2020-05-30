@@ -1743,7 +1743,7 @@ def misc_test_docker_cache_build() {
       ws('workspace/docker_cache') {
         utils.init_git()
         sh "python3 ./ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} --no-publish"
-        sh "cd ci && docker-compose -f docker/docker-compose.yml build --parallel"
+        sh "cd ci && docker-compose -f docker/docker-compose.yml pull && docker-compose -f docker/docker-compose.yml build --parallel"
       }
     }
   }]
