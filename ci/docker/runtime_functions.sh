@@ -1372,8 +1372,7 @@ integrationtest_ubuntu_gpu_byteps() {
     export PYTHONPATH=$PWD/python/
     export BYTEPS_WITHOUT_PYTORCH=1
     export BYTEPS_WITHOUT_TENSORFLOW=1
-    git clone -b v0.2.3 https://github.com/bytedance/byteps/ --recursive
-    cd byteps && python3 setup.py install --user && cd -
+    pip3 install byteps==0.2.3 --user
 
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
