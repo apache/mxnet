@@ -1372,16 +1372,26 @@ integrationtest_ubuntu_gpu_byteps() {
     export PYTHONPATH=$PWD/python/
     export BYTEPS_WITHOUT_PYTORCH=1
     export BYTEPS_WITHOUT_TENSORFLOW=1
-    git clone -b stable https://github.com/eric-haibin-lin/byteps/ --recursive
+    git clone -b v0.2.3 https://github.com/bytedance/byteps/ --recursive
     cd byteps && python3 setup.py install --user && cd -
 
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
-    python3 ../../tools/launch.py -n 1 -s 1 --byteps --env NVIDIA_VISIBLE_DEVICES:0,1 python3 dist_device_sync_kvstore_byteps.py
-    ls byteps-log/
-    cat byteps-log/*
+
+    export NVIDIA_VISIBLE_DEVICES=0,1
+    export DMLC_WORKER_ID=0 # your worker id
+    export DMLC_NUM_WORKER=1 # one worker
+    export DMLC_ROLE=worker
+
+    # the following value does not matter for non-distributed jobs
+    export DMLC_NUM_SERVER=1
+    export DMLC_PS_ROOT_URI=0.0.0.127
+    export DMLC_PS_ROOT_PORT=1234
+
+    bpslaunch python3 dist_device_sync_kvstore_byteps.py
+
     popd
 }
 
