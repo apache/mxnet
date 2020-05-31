@@ -202,6 +202,10 @@ build_jetson() {
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DGPU_ARCH="52" \
+        -DUSE_CUDNN=ON \
+        -DUSE_TENSORRT=ON \
+        -DCMAKE_CXX_FLAGS=-I/usr/local/cuda/targets/aarch64-linux/inlude \
         -G Ninja /work/mxnet
     ninja
     build_wheel
