@@ -54,7 +54,7 @@ struct RMFIterParam : public dmlc::Parameter<RMFIterParam> {
   /*! \brief the number of multiple field feature*/
   size_t multi_field_num;
   /*! \brief the number of label*/
-  size_t label_width;
+  int label_width;
   std::string multi_field_shape_str;
   // declare parameters 
   DMLC_DECLARE_PARAMETER(RMFIterParam) {

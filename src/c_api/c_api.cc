@@ -2255,6 +2255,7 @@ int MXDataIterGetIndex(DataIterHandle handle, uint64_t **out_index, uint64_t *ou
 int MXDataIterGetData(DataIterHandle handle, NDArrayHandle *out) {
   API_BEGIN();
   const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  CHECK_GE(db.data.size(), 1) << "The size of data in db should be greater than or equal to 1.";
   for (size_t i = 0 ; i < db.data.size() - 1; ++i) {
     NDArray* pndarray = new NDArray();
     *pndarray = db.data[i];
