@@ -193,7 +193,7 @@ build_jetson() {
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DUSE_CUDA=ON \
-        -DMXNET_CUDA_ARCH="5.2" \
+        -DMXNET_CUDA_ARCH="5.3" \
         -DENABLE_CUDA_RTC=OFF \
         -DSUPPORT_F16C=OFF \
         -DUSE_OPENCV=OFF \
@@ -202,7 +202,6 @@ build_jetson() {
         -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
-        -DGPU_ARCH="52" \
         -DUSE_CUDNN=ON \
         -DUSE_TENSORRT=ON \
         -DCMAKE_CXX_FLAGS=-I/usr/local/cuda/targets/aarch64-linux/inlude \
