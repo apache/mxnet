@@ -830,7 +830,7 @@ class MXDataIter(DataIter):
         self.handle = handle
         self.data_size = 1
         self._kwargs = kwargs
-        if isinstance(data_name, list):
+        if isinstance(data_name, (list, tuple)):
             self.data_size = len(data_name)
         # debug option, used to test the speed with io effect eliminated
         self._debug_skip_load = False
@@ -842,7 +842,7 @@ class MXDataIter(DataIter):
         label = self.first_batch.label[0]
 
         # properties
-        if isinstance(data_name, list):
+        if isinstance(data_name, (list, tuple)):
             self.provide_data = [DataDesc(data_name[i], data[i].shape, data[i].dtype) for i in range(self.data_size)]
         else:
             self.provide_data = [DataDesc(data_name, data[0].shape, data[0].dtype)]
@@ -892,7 +892,7 @@ class MXDataIter(DataIter):
         #hdl = NDArrayHandle()
         #check_call(_LIB.MXDataIterGetData(self.handle, ctypes.byref(hdl)))
         #return self._create_ndarray_fn(hdl, False)
-        NDARR = NDArrayHandle *self.data_size
+        NDARR = NDArrayHandle * self.data_size
         t = NDARR()
         hdl = ctypes.cast(t, ctypes.POINTER(NDArrayHandle))
         check_call(_LIB.MXDataIterGetData(self.handle, hdl))
