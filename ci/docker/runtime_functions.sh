@@ -928,7 +928,7 @@ sanity_check() {
     make cpplint jnilint
     make -f R-package/Makefile rcpplint
     make pylint
-    pytest -n 4 tests/tutorials/test_sanity_tutorials.py
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/tutorials/test_sanity_tutorials.py
 }
 
 # Tests libmxnet
@@ -947,11 +947,11 @@ cd_unittest_ubuntu() {
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
 
-    pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/unittest
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/unittest
     MXNET_ENGINE_TYPE=NaiveEngine \
-        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --verbose tests/python/unittest
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --verbose tests/python/unittest
-    pytest -n 4 --durations=50 --verbose tests/python/quantization
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 --durations=50 --verbose tests/python/quantization
 
     # https://github.com/apache/incubator-mxnet/issues/11801
     # if [[ ${mxnet_variant} = "cpu" ]] || [[ ${mxnet_variant} = "mkl" ]]; then
@@ -961,20 +961,20 @@ cd_unittest_ubuntu() {
     if [[ ${mxnet_variant} = cu* ]]; then
         MXNET_GPU_MEM_POOL_TYPE=Unpooled \
         MXNET_ENGINE_TYPE=NaiveEngine \
-            pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --verbose tests/python/gpu
+            OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --verbose tests/python/gpu
         MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-            pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/gpu
+            OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/gpu
         pytest -m 'serial' --durations=50 --verbose tests/python/gpu
 
         # Adding these here as CI doesn't test all CUDA environments
         MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-            pytest -n 4 example/image-classification/test_score.py
+            OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 example/image-classification/test_score.py
         # TODO(szha): fix and reenable the hanging issue. tracked in #18098
         # integrationtest_ubuntu_gpu_dist_kvstore
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then
-        pytest -n 4 --durations=50 --verbose tests/python/mkl
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 --durations=50 --verbose tests/python/mkl
     fi
 }
 
@@ -986,11 +986,11 @@ unittest_ubuntu_python3_cpu() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
     MXNET_ENGINE_TYPE=NaiveEngine \
-        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
-    pytest -n 4 --durations=50 --cov-report xml:tests_quantization.xml --verbose tests/python/quantization
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 --durations=50 --cov-report xml:tests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu_mkldnn() {
@@ -1001,9 +1001,9 @@ unittest_ubuntu_python3_cpu_mkldnn() {
     export MXNET_SUBGRAPH_VERBOSE=0
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
     MXNET_ENGINE_TYPE=NaiveEngine \
-                     pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
+                     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest --durations=50 --cov-report xml:tests_mkl.xml --verbose tests/python/mkl
 }
@@ -1018,10 +1018,10 @@ unittest_ubuntu_python3_gpu() {
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-        pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
     MXNET_ENGINE_TYPE=NaiveEngine \
-        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
@@ -1037,10 +1037,10 @@ unittest_ubuntu_python3_gpu_cython() {
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     check_cython
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-        pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
     MXNET_ENGINE_TYPE=NaiveEngine \
-        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
@@ -1053,10 +1053,10 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-        pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --verbose tests/python/gpu
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
     MXNET_ENGINE_TYPE=NaiveEngine \
-        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
@@ -1071,7 +1071,7 @@ unittest_ubuntu_tensorrt_gpu() {
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     python3 tests/python/tensorrt/lenet5_train.py
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-        pytest -n 4 --durations=50 --cov-report xml:tests_trt_gpu.xml --verbose --capture=no tests/python/tensorrt/test_ops.py
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 --durations=50 --cov-report xml:tests_trt_gpu.xml --verbose --capture=no tests/python/tensorrt/test_ops.py
     pytest -k 'not test_ops' --durations=50 --cov-report xml:tests_trt_gpu.xml --cov-append --verbose --capture=no tests/python/tensorrt/
 }
 
@@ -1090,7 +1090,7 @@ unittest_ubuntu_python3_quantization_gpu() {
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-        pytest -n 4 --durations=50 --cov-report xml:tests_quantization_gpu.xml --verbose tests/python/quantization_gpu
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 --durations=50 --cov-report xml:tests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
 unittest_centos7_cpu_scala() {
@@ -1232,11 +1232,11 @@ unittest_centos7_cpu() {
     set -ex
     source /opt/rh/rh-python36/enable
     cd /work/mxnet
-    python -m pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) python -m pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
     MXNET_ENGINE_TYPE=NaiveEngine \
-        python -m pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) python -m pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     python -m pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
-    python -m pytest -n 4 --durations=50 --cov-report xml:tests_train.xml --verbose tests/python/train
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) python -m pytest -n 4 --durations=50 --cov-report xml:tests_train.xml --verbose tests/python/train
 }
 
 unittest_centos7_gpu() {
@@ -1246,10 +1246,10 @@ unittest_centos7_gpu() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-        pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
     MXNET_ENGINE_TYPE=NaiveEngine \
-        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
@@ -1258,9 +1258,9 @@ integrationtest_ubuntu_cpu_onnx() {
 	export PYTHONPATH=./python/
     export DMLC_LOG_STACK_TRACE_DEPTH=10
 	python3 tests/python/unittest/onnx/backend_test.py
-	pytest -n 4 tests/python/unittest/onnx/mxnet_export_test.py
-	pytest -n 4 tests/python/unittest/onnx/test_models.py
-	pytest -n 4 tests/python/unittest/onnx/test_node.py
+	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/mxnet_export_test.py
+	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_models.py
+	OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/python/unittest/onnx/test_node.py
 }
 
 integrationtest_ubuntu_gpu_python() {
@@ -1366,9 +1366,9 @@ test_ubuntu_cpu_python3() {
     cd /work/mxnet/python
     pip3 install -e .
     cd /work/mxnet
-    python3 -m pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/unittest
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) python3 -m pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/unittest
     MXNET_ENGINE_TYPE=NaiveEngine \
-        python3 -m pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --verbose tests/python/unittest
+        OMP_NUM_THREADS=$(expr $(nproc) / 4) python3 -m pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --verbose tests/python/unittest
     python3 -m pytest -m 'serial' --durations=50 --verbose tests/python/unittest
 
     popd
@@ -2046,7 +2046,7 @@ test_artifact_repository() {
     set -ex
     pushd .
     cd cd/utils/
-    pytest -n 4 test_artifact_repository.py
+    OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 test_artifact_repository.py
     popd
 }
 
