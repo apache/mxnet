@@ -166,8 +166,8 @@ class Dataset(object):
         transformed by the transformer function `fn`.
 
         This is mostly applicable when each sample contains two components
-        - features and label, i.e., (X, y), and you only want to transform 
-        the first element X (i.e., the features) while keeping the label y 
+        - features and label, i.e., (X, y), and you only want to transform
+        the first element X (i.e., the features) while keeping the label y
         unchanged.
 
         Parameters
