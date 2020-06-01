@@ -204,7 +204,7 @@ __global__ void binary_scalar_kernel_bwd(const binary_scalar_kernel_params param
       const auto ograd = GType::from(ograd_loader.separate()[i]);
       const auto input = IType::from(input_loader.separate()[i]);
       // enables returning different type
-      const auto temp = op::mul(grad,
+      const auto temp = op::mul(ograd,
                                 OP(input, static_cast<typename IType::type>(params.scalar)));
 
       if (req == OpReqType::kAddTo) {
