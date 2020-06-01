@@ -218,11 +218,11 @@ void ElemwiseBinaryOp::DnsCsrDnsOp(mshadow::Stream<gpu> *s,
 }
 
 NNVM_REGISTER_OP(elemwise_add)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, op::mshadow_op::plus>)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"add"})
 .set_attr<FComputeEx>("FComputeEx<gpu>", ElemwiseBinaryOp::ComputeEx<gpu, op::mshadow_op::plus>);
 
 NNVM_REGISTER_OP(_grad_add)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, op::mshadow_op::plus>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"add"});
 
 NNVM_REGISTER_OP(_backward_add)
 .set_attr<FCompute>("FCompute<gpu>",
@@ -230,7 +230,7 @@ NNVM_REGISTER_OP(_backward_add)
                     mshadow_op::identity>);
 
 NNVM_REGISTER_OP(elemwise_sub)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, op::mshadow_op::minus>)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"sub"})
 .set_attr<FComputeEx>("FComputeEx<gpu>", ElemwiseBinaryOp::ComputeEx<gpu, op::mshadow_op::minus>);
 
 NNVM_REGISTER_OP(_backward_sub)
@@ -239,7 +239,7 @@ NNVM_REGISTER_OP(_backward_sub)
                     mshadow_op::negation>);
 
 NNVM_REGISTER_OP(elemwise_mul)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, op::mshadow_op::mul>)
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"mul"})
 .set_attr<FComputeEx>("FComputeEx<gpu>",
   ElemwiseBinaryOp::ComputeDnsLRValueEx<gpu, op::mshadow_op::mul, true, true>);
 
@@ -250,7 +250,7 @@ NNVM_REGISTER_OP(_backward_mul)
 
 NNVM_REGISTER_OP(elemwise_div)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::Compute<gpu, op::mshadow_op::div>);
+                    ElemwiseBinaryRTCCompute{"div"});
 
 NNVM_REGISTER_OP(_backward_div)
 .set_attr<FCompute>("FCompute<gpu>",
@@ -258,7 +258,7 @@ NNVM_REGISTER_OP(_backward_div)
                     mshadow_op::div_rgrad>);
 
 NNVM_REGISTER_OP(_mod)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, mshadow_op::mod>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"mod"});
 
 NNVM_REGISTER_OP(_backward_mod)
 .set_attr<FCompute>("FCompute<gpu>",
