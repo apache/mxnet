@@ -67,7 +67,9 @@
 }
 
 .docs-faq {
-  background-color: white;
+  background-color: $grey-color-light;
+  padding-top: 20px;
+  padding-bottom: 20px;
 }
 
 .docs-architecture {
@@ -79,7 +81,7 @@
 }
 
 .docs-dev-guide {
-  background-color: $grey-color-light;
+  background-color: white;
   padding-top: 20px;
   padding-bottom: 20px;
 }
