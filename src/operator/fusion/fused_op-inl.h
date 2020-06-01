@@ -159,8 +159,8 @@ const std::map<std::string, std::vector<std::vector<std::string>>> ops_desc = {
   {"_backward_square"                  , {{"op::backward_square(%, %)", "_1", "_0"}}},
   {"_backward_div_scalar"              , {{"(% * 1.0f/float(%))", "_0", "scalar"}}},
   {"_backward_div_scalar"              , {{"(% * 1.0f/float(%))", "_0", "scalar"}}},
-  {"_backward_rdiv_scalar"             , {{"(-% * float(%) / (% * %))", "_0",
-                                           "scalar", "_1", "_1"}}},
+  {"_backward_rdiv_scalar"             , {{"(op::rdiv_grad(%, %) * %", "_1",
+                                           "scalar", "_0"}}},
   {"_backward_hypot_scalar"            , {{"(% * % / op::hypot(%, float(%)))",
                                            "_0", "_1", "_1", "scalar"}}},
   {"_backward_radians"                 , {{"op::radians(%)", "_0"}}},
@@ -173,7 +173,7 @@ const std::map<std::string, std::vector<std::vector<std::string>>> ops_desc = {
   {"_backward_clip"                    , {{"op::backward_clip(%, %, %, %)", "_1", "_0",
                                                                             "a_min", "a_max"}}},
   {"smooth_l1"                         , {{"op::smooth_l1(%, float(%))", "_0", "scalar"}}},
-  {"_backward_smooth_l1"               , {{"op::backward_smooth_l1(%, float(%), %)",
+  {"_backward_smooth_l1"               , {{"op::smooth_l1_grad(%, float(%)) * %",
                                            "_1", "scalar", "_0"}}},
   // TODO(ptredak): arange
   // TODO(ptredak): LeakyRelu

@@ -67,23 +67,19 @@ NNVM_REGISTER_OP(_npi_rcopysign_scalar)
 
 NNVM_REGISTER_OP(_backward_npi_copysign_scalar)
 .set_attr<FCompute>("FCompute<gpu>",
-                    BinaryScalarOp::Backward<gpu, mshadow_op::copysign_grad>);
-
-NNVM_REGISTER_OP(_backward_npi_rcopysign_scalar)
-.set_attr<FCompute>("FCompute<gpu>",
-                    BinaryScalarOp::Backward<gpu, mshadow_op::rcopysign_grad>);
+                    BinaryScalarRTCBackward{"copysign_grad"});
 
 NNVM_REGISTER_OP(_npi_arctan2_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"arctan2"});
 
 NNVM_REGISTER_OP(_backward_npi_arctan2_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::arctan2_grad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"arctan2_grad"});
 
 NNVM_REGISTER_OP(_npi_rarctan2_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rarctan2"});
 
 NNVM_REGISTER_OP(_backward_npi_rarctan2_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::rarctan2_grad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"rarctan2_grad"});
 
 NNVM_REGISTER_OP(_npi_lcm_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"lcm"});
@@ -111,10 +107,10 @@ NNVM_REGISTER_OP(_backward_npi_ldexp)
                                                                   mshadow_op::ldexp_rgrad>);
 
 NNVM_REGISTER_OP(_backward_npi_ldexp_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::ldexp_grad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"ldexp_grad"});
 
 NNVM_REGISTER_OP(_backward_npi_rldexp_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::rldexp_grad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"rldexp_grad"});
 
 }  // namespace op
 }  // namespace mxnet

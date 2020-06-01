@@ -432,15 +432,6 @@ class BinaryScalarOp : public UnaryOp {
     });
   }
 
-#if MXNET_USE_CUDA
-  template<typename OP>
-  static void Backward_(const nnvm::NodeAttrs &attrs,
-                        mshadow::Stream<gpu>* s,
-                        const std::vector<TBlob> &inputs,
-                        const std::vector<OpReqType> &req,
-                        const std::vector<TBlob> &outputs);
-#endif
-
   template<typename xpu, typename OP>
   static void Backward(const nnvm::NodeAttrs &attrs,
                        const OpContext &ctx,

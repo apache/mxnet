@@ -171,6 +171,86 @@ __device__ inline DTypeGrad backward_square(const DType val, const DTypeGrad gra
   return 2 * val * grad;
 }
 
+template <typename DType, typename DType2>
+__device__ inline DType rdiv_grad(const DType val,
+                                  const DType2 val2) {
+  return -val2 / (val * val);
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType mod_grad(const DType val,
+                                 const DType2 val2) {
+  if (type_util::is_integral<DType>::value) {
+    return 0;
+  } else {
+    return 1;
+  }
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType rmod_grad(const DType val,
+                                  const DType2 val2) {
+  if (type_util::is_integral<DType>::value) {
+    return 0;
+  } else {
+    return -op::floor(val2 / val);
+  }
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType power_grad(const DType val,
+                                   const DType2 val2) {
+  return op::power(val, val2 - 1.f) * val2;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType rpower_grad(const DType val,
+                                   const DType2 val2) {
+  return val * op::log(val2);
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType hypot_grad_left(const DType val,
+                                        const DType2 val2) {
+  return val / op::hypot(val, val2);
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType hypot_grad_right(const DType val,
+                                         const DType2 val2) {
+  return val2 / op::hypot(val, val2);
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType copysign_grad(const DType val,
+                                      const DType2 val2) {
+  return (a >= 0 && b >= 0) || (a < 0 && b < 0) ? 1 : -1;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType arctan2_grad(const DType val,
+                                     const DType2 val2) {
+  return val2 / (val * val + val2 * val2);
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType rarctan2_grad(const DType val,
+                                      const DType2 val2) {
+  return val / (val * val + val2 * val2);
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType ldexp_grad(const DType val,
+                                   const DType2 val2) {
+  return op::power(static_cast<DType>(2), val2);
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType rldexp_grad(const DType val,
+                                    const DType2 val2) {
+  returni val2 * op::power(static_cast<DType>(2), val) * op::log(static_cast<DType>(2));
+}
+
 template <typename DType, typename DTypeGrad>
 __device__ inline DTypeGrad backward_clip(const DType val, const DTypeGrad grad,
                                           const float a_min, const float a_max) {
@@ -196,17 +276,16 @@ __device__ inline DTypeGrad backward_erfinv(const DType val, const DTypeGrad gra
   return 0.5f * op::sqrt(pi) * op::exp(val * val) * grad;
 }
 
-template <typename DType, typename DType2, typename DTypeGrad>
-__device__ inline DTypeGrad backward_smooth_l1(const DType val, const DType2 scalar,
-                                               const DTypeGrad grad) {
+template <typename DType, typename DType2>
+__device__ inline DType smooth_l1_grad(const DType val, const DType2 scalar) {
   auto bsq = scalar * scalar;
   auto ibsq = 1.0f / bsq;
   if (val > ibsq) {
-    return grad;
+    return 1;
   } else if (val < -ibsq) {
-    return -grad;
+    return -1;
   } else {
-    return bsq * val * grad;
+    return bsq * val;
   }
 }
 

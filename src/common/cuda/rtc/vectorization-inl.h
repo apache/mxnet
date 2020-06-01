@@ -298,13 +298,15 @@ Alignment CheckAlignment(const Params& params, const index_t lead_dim,
 
   size_t i = 0;
   for (const void *ptr : params.inputs) {
-    int new_align = CalcAlignment(ptr,
-                                  mshadow_type_info(inputs[i].type_flag_).size * nvec);
-    if (align == -1) {
-      align = new_align;
-    } else {
-      if (align != new_align) {
-        return Alignment::DIFFERENT;
+    if (ptr != nullptr) {
+      int new_align = CalcAlignment(ptr,
+                                    mshadow_type_info(inputs[i].type_flag_).size * nvec);
+      if (align == -1) {
+        align = new_align;
+      } else {
+        if (align != new_align) {
+          return Alignment::DIFFERENT;
+        }
       }
     }
     ++i;
@@ -312,13 +314,15 @@ Alignment CheckAlignment(const Params& params, const index_t lead_dim,
 
   i = 0;
   for (const void *ptr : params.outputs) {
-    int new_align = CalcAlignment(ptr,
-                                  mshadow_type_info(outputs[i].type_flag_).size * nvec);
-    if (align == -1) {
-      align = new_align;
-    } else {
-      if (align != new_align) {
-        return Alignment::DIFFERENT;
+    if (ptr != nullptr) {
+      int new_align = CalcAlignment(ptr,
+                                    mshadow_type_info(outputs[i].type_flag_).size * nvec);
+      if (align == -1) {
+        align = new_align;
+      } else {
+        if (align != new_align) {
+          return Alignment::DIFFERENT;
+        }
       }
     }
     ++i;

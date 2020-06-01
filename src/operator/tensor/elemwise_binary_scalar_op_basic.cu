@@ -57,19 +57,19 @@ NNVM_REGISTER_OP(_rdiv_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rdiv"});
 
 NNVM_REGISTER_OP(_backward_rdiv_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::rdiv_grad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"rdiv_grad"});
 
 NNVM_REGISTER_OP(_mod_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"mod"});
 
 NNVM_REGISTER_OP(_backward_mod_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::mod_grad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"mod_grad"});
 
 NNVM_REGISTER_OP(_rmod_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rmod"});
 
 NNVM_REGISTER_OP(_backward_rmod_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::rmod_grad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"rmod_grad"});
 
 }  // namespace op
 }  // namespace mxnet

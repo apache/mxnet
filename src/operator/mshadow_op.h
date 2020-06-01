@@ -760,8 +760,6 @@ MXNET_BINARY_MATH_OP(copysign_rgrad, 0);
 
 MXNET_BINARY_MATH_OP(rcopysign, (b >= 0 && a >= 0) || (b < 0 && a < 0) ? b : -b);
 
-MXNET_BINARY_MATH_OP(rcopysign_grad, 0);
-
 struct mod : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static typename enable_if<!is_unsigned<DType>::value, DType>::type

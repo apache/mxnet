@@ -28,7 +28,6 @@
 
 #include <cuda_runtime.h>
 #include "../operator_common.h"
-#include "../../common/cuda/vectorization.cuh"
 #include "elemwise_unary_op.h"
 
 #include <vector>
@@ -38,71 +37,8 @@
 namespace mxnet {
 namespace op {
 
-namespace binary_scalar {
-
-using common::cuda::VectorizedKernelLauncher;
-using common::cuda::VectorizedLoader;
-using common::cuda::VectorizedStorer;
-
-template <typename DType, int NumInputs, int NumOutputs>
-struct VectorizedKernelParams {
-  const DType* inputs[NumInputs];
-  DType* outputs[NumOutputs];
-  DType scalar;
-};
-
-template <bool aligned, typename DType, typename LType, typename OP, int req>
-__global__ void VectorizedBinaryScalarKernelBwd(const VectorizedKernelParams<DType, 2, 1> params,
-                                                const index_t N) {
-  VectorizedLoader<DType, LType, aligned> ograd_loader(params.inputs[0], N);
-  VectorizedLoader<DType, LType, aligned> input_loader(params.inputs[1], N);
-  VectorizedStorer<DType, LType, aligned> storer(params.outputs[0], N);
-
-  const index_t M = ograd_loader.num_aligned_elements();
-
-  for (index_t tid = blockIdx.x * blockDim.x + threadIdx.x;
-       tid < M;
-       tid += gridDim.x * blockDim.x) {
-    ograd_loader.load(tid, N);
-    input_loader.load(tid, N);
-    if (req == kAddTo) {
-      storer.load(tid, N);
-    }
-#pragma unroll
-    for (int i = 0; i < ograd_loader.nvec(); ++i) {
-      DType ograd = ograd_loader.separate()[i];
-      DType temp = ograd * OP::Map(input_loader.separate()[i],
-                                   params.scalar);
-
-      if (req == kAddTo) {
-        storer.separate()[i] += temp;
-      } else {
-        storer.separate()[i] = temp;
-      }
-    }
-    storer.store(tid, N);
-  }
-}
-
-template <typename DType, typename OP, int req>
-class VectorizedBinaryScalarBwd {
- public:
-  using ParamType = VectorizedKernelParams<DType, 2, 1>;
-
-  template <bool aligned, typename LType>
-  static void Launch(const index_t blocks, const index_t threads,
-                     cudaStream_t stream,
-                     const ParamType params, const index_t lead_dim,
-                     const index_t /* other_dim */) {
-    VectorizedBinaryScalarKernelBwd<aligned, DType, LType, OP, req>
-      <<<blocks, threads, 0, stream>>>(params, lead_dim);
-  }
-};
-
-}  // namespace binary_scalar
-
 struct binary_scalar_kernel_params {
-  const void *inputs[1];
+  const void *inputs[2];
   void *outputs[1];
   double scalar;
 };
@@ -110,7 +46,7 @@ struct binary_scalar_kernel_params {
 const char binary_scalar_kernel_fwd[] = R"code(
 
 struct binary_scalar_kernel_params {
-  const void *inputs[1];
+  const void *inputs[2];
   void *outputs[1];
   double scalar;
 };
@@ -185,7 +121,7 @@ struct BinaryScalarRTCCompute {
     const int nvec = outputs[0].type_flag_ == mshadow::kFloat64 ? 2 : 4;
 
     const index_t size = outputs[0].Size();
-    binary_scalar_kernel_params params = { {inputs[0].dptr_},
+    binary_scalar_kernel_params params = { {inputs[0].dptr_, nullptr},
                                            {outputs[0].dptr_},
                                            alpha };
 
@@ -228,34 +164,100 @@ struct BinaryScalarRTCCompute {
   }
 };
 
-template <typename OP>
-void BinaryScalarOp::Backward_(const nnvm::NodeAttrs &attrs,
-                               mshadow::Stream<gpu>* s,
-                               const std::vector<TBlob> &inputs,
-                               const std::vector<OpReqType> &req,
-                               const std::vector<TBlob> &outputs) {
-  using namespace binary_scalar;
-  if (req[0] == kNullOp) return;
-  CHECK_EQ(inputs.size(), 2U);
-  CHECK_EQ(outputs.size(), 1U);
-  const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
-  const double alpha = param.scalar;
-  MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      using LType = uint4;
-      using Kernel = VectorizedBinaryScalarBwd<DType, OP, Req>;
+const char binary_scalar_kernel_bwd[] = R"code(
 
-      const index_t size = outputs[0].Size();
-      typename Kernel::ParamType params;
-      params.inputs[0] = inputs[0].dptr<DType>();
-      params.inputs[1] = inputs[1].dptr<DType>();
-      params.outputs[0] = outputs[0].dptr<DType>();
-      params.scalar = (DType)alpha;
+struct binary_scalar_kernel_params {
+  const void *inputs[2];
+  void *outputs[1];
+  double scalar;
+};
 
-      VectorizedKernelLauncher<DType, LType, Kernel>(size, 1, s, params);
-    });
-  });
+__global__ void binary_scalar_kernel_bwd(const binary_scalar_kernel_params params,
+                                         const index_t lead_dim,
+                                         const index_t other_dim,
+                                         const index_t N,
+                                         const index_t num_aligned_elements) {
+  using namespace vector;
+  VectorizedLoader<InputType0, nvec, aligned> ograd_loader(
+    reinterpret_cast<const InputType0*>(params.inputs[0]), N);
+  VectorizedLoader<InputType1, nvec, aligned> input_loader(
+    reinterpret_cast<const InputType1*>(params.inputs[1]), N);
+  VectorizedStorer<OutputType0, nvec, aligned> storer(
+    reinterpret_cast<OutputType0*>(params.outputs[0]), N);
+
+  using GType = AccType<InputType0>;
+  using IType = AccType<InputType1>;
+  using OType = AccType<OutputType0>;
+
+  const index_t M = num_aligned_elements;
+
+  for (index_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+       tid < M;
+       tid += gridDim.x * blockDim.x) {
+    ograd_loader.load(tid, N);
+    input_loader.load(tid, N);
+    if (req == OpReqType::kAddTo) {
+      storer.load(tid, N);
+    }
+#pragma unroll
+    for (int i = 0; i < nvec; ++i) {
+      const auto ograd = GType::from(ograd_loader.separate()[i]);
+      const auto input = IType::from(input_loader.separate()[i]);
+      // enables returning different type
+      const auto temp = op::mul(grad,
+                                OP(input, static_cast<typename IType::type>(params.scalar)));
+
+      if (req == OpReqType::kAddTo) {
+        // temp2 may have a wider type than either temp
+        // or OType
+        const auto temp2 = op::add(temp, OType::from(storer.separate()[i]));
+        storer.separate()[i] = OType::to(temp2);
+      } else {
+        storer.separate()[i] = OType::to(temp);
+      }
+    }
+    storer.store(tid, N);
+  }
 }
+
+)code";
+
+struct BinaryScalarRTCBackward {
+  std::string OP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs) {
+    using namespace mxnet::common::cuda::rtc;
+    if (req[0] == kNullOp) return;
+    mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+    CHECK_EQ(inputs.size(), 2U);
+    CHECK_EQ(outputs.size(), 1U);
+    const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
+    const double alpha = param.scalar;
+
+    const std::string code = std::string("const OpReqType req = ") +
+                             util::to_string(req[0]) +
+                             ";\n" +
+                             "#define OP op::" +
+                             OP +
+                             "\n" +
+                             binary_scalar_kernel_bwd;
+    const int nvec = outputs[0].type_flag_ == mshadow::kFloat64 ? 2 : 4;
+
+    const index_t size = outputs[0].Size();
+    binary_scalar_kernel_params params = { {inputs[0].dptr_, inputs[1].dptr_},
+                                           {outputs[0].dptr_},
+                                           alpha };
+
+    VectorizedKernelRTCLauncher(code, "binary_scalar_kernel_bwd", nvec,
+                                size, 1, s, params,
+                                inputs, outputs,
+                                ctx.run_ctx.get_ctx().dev_id);
+  }
+};
 
 }  // namespace op
 }  // namespace mxnet

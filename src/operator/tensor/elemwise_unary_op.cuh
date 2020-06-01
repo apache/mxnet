@@ -28,7 +28,6 @@
 
 #include <cuda_runtime.h>
 #include "../operator_common.h"
-#include "../../common/cuda/vectorization.cuh"
 #include "../../common/cuda/rtc/vectorization-inl.h"
 #include "../../common/cuda/rtc.h"
 
