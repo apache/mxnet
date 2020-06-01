@@ -8,13 +8,13 @@ permalink: /api/devGuide/examine_forward_results_with_hooks
 
 There are currently three ways to register a function in an MXNet Gluon Block for execution either
 
-* before `forward` via `[register_forward_pre_hook](https://mxnet.apache.org/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_pre_hook)`
-* after `forward` via `[register_forward_hook](https://mxnet.apache.org/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_hook)`
-* as a callback via `[register_op_hook](https://mxnet.apache.org/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_op_hook)`
+* before `forward` via [register_forward_pre_hook](https://mxnet.apache.org/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_pre_hook)
+* after `forward` via [register_forward_hook](https://mxnet.apache.org/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_hook)
+* as a callback via [register_op_hook](https://mxnet.apache.org/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_op_hook)
 
 ## Pre-forward hook
 
-To register a hook prior to forward execution, the requirement is that the registered operation **should not modify the input or output i.e. **`hook(block, input) -> None`.** **This is useful for example to get some summary before execution.
+To register a hook prior to forward execution, the requirement is that the registered operation **should not modify the input or output i.e.** `hook(block, input) -> None`. This is useful for example to get some summary before execution.
 
 ```
 import mxnet as mx
@@ -64,7 +64,7 @@ Notice `Dense(None -> 10, linear)` is not displayed anymore.
 
 ## Post-forward hook
 
-Registering a hook after forward execution is very similar to pre-forward hook (as explained above) with the difference that the hook signature should be `hook(block, input, output) -> None` where **hook should not modify the input and output. **Continuing from the above example
+Registering a hook after forward execution is very similar to pre-forward hook (as explained above) with the difference that the hook signature should be `hook(block, input, output) -> None` where **hook should not modify the input and output.** Continuing from the above example
 
 
 ```
@@ -90,7 +90,7 @@ Notice the difference between `pre_hook` and `post_hook` results due to shape in
 
 ## Callback hook
 
-We can register a callback monitor to monitor all operators that are called by the `HybridBlock` **after hybridization **with `register_op_hook(callback, monitor_all=False) ` where callback signature should be 
+We can register a callback monitor to monitor all operators that are called by the `HybridBlock` **after hybridization** with `register_op_hook(callback, monitor_all=False) ` where callback signature should be 
 
 
 ```

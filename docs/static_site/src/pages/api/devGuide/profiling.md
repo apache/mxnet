@@ -57,9 +57,9 @@ profiler.dump(True)
 ```
 
 And in `chrome://tracing` use the `load` and select `test_profiler.json`, then you will see something like this
-[Image: Screen Shot 2020-05-25 at 7.13.13 PM.png]To understand what is going on we need to dive deep into the MXNet runtime.
+![dev_guide_profilling_1](/assets/img/dev_guide_profilling_1.png) To understand what is going on we need to dive deep into the MXNet runtime.
 
-# Dive deep into MXNet runtime with the `profiler`
+# Dive deep into MXNet runtime with the profiler
 
 We start with a simple example and try to explain as we go on. The following code creates a 3x3 tensor, computes the diagonal and then sum's along the diagonal (to compute the “trace”). Using the MXNet profiler, we capture internal MXNet behavior and dump it to a string and print it (`dumps()`) and also dump it to a file (`dump()`). Then we can import that file in `chrome://tracing` and view it graphically.
 
@@ -133,38 +133,38 @@ WaitForVar                              1           0.0220           0.0220     
 
 The dump function writes out the same data in a different format to a file that can be opened in `chrome://tracing` and displayed visually. This can be seen in the diagram below.
 
-[Image: Screen Shot 2018-09-11 at 1.03.06 PM.png]
+![dev_guide_profilling_2.png](/assets/img/dev_guide_profilling_2.png)
 The profiling data has captured info about interesting functions that have executed which your program was running. Here are some explanations about what each one does.
 
 ### **The functions in the C_API are:**
 
-|****Function Name****	|****Description****	|
+|**Function Name**	|**Description**	|
 |---	|---	|
-|****MXImperativeInvokeEx****	| invokes  an operator to perform the computation	|
-|****MXNDArrayCreateEx****	| creates  an ndarray	|
-| ****MXNDArrayGetDType****	| returns  the data type of the ndarray	|
-| ****MXNDArrayGetShape****	| returns  the shape of the ndarray (as a tuple where each element is the size of a  dimension)	|
-| ****MXNDArraySyncCopyFromCPU****	| called  when data is initially residing outside of an MXNet data structure (ie.  numpy.ndarry rather than mxnet.numpy.ndarray). Data is copied into the mxnet  data structure	|
-| ****MXNDArrayWaitAll****	| wait  for all asynchronous operations to finish in MXNet. This function is only  used in benchmarking to wait for work to happen. In a real program there is  no waiting, data dependencies are evaluated and computation executed as  needed in a As Late As Possible (ALAP) way	|
+|**MXImperativeInvokeEx**	| invokes  an operator to perform the computation	|
+|**MXNDArrayCreateEx**	| creates  an ndarray	|
+| **MXNDArrayGetDType**	| returns  the data type of the ndarray	|
+| **MXNDArrayGetShape**	| returns  the shape of the ndarray (as a tuple where each element is the size of a  dimension)	|
+| **MXNDArraySyncCopyFromCPU**	| called  when data is initially residing outside of an MXNet data structure (ie.  numpy.ndarry rather than mxnet.numpy.ndarray). Data is copied into the mxnet  data structure	|
+| **MXNDArrayWaitAll**	| wait  for all asynchronous operations to finish in MXNet. This function is only  used in benchmarking to wait for work to happen. In a real program there is  no waiting, data dependencies are evaluated and computation executed as  needed in a As Late As Possible (ALAP) way	|
 
-### The function in the Engine API are:**The function in the**** Engine API are:**
+### **The function in the Engine API are:**
 
-| ****Function Name****	| ****Description****	|
+| **Function Name**	| **Description**	|
 |---	|---	|
-| ****WaitForVar****	| Takes  a variable reference as input and waits until that variable has been computed  before returning	|
+| **WaitForVar**	| Takes  a variable reference as input and waits until that variable has been computed  before returning	|
 
-### Other API functions:**Other A****PI functions:**
+### **Other API functions:**
 
-| ****Function Name****	| ****Description****	|
+| **Function Name**	| **Description**	|
 |---	|---	|
-| ****ResourceParallelRandomSetSeed****	| sets  the random number generator seed	|
+| **ResourceParallelRandomSetSeed**	| sets  the random number generator seed	|
 
-### Operators we intended to call in the code:
+### **Operators we intended to call in the code:**
 
-| ****Operator Name****	| ****Description****	|
+| **Operator Name**	| **Description**	|
 |---	|---	|
-| ****sum****	| sum  a tensor along a particular axis	|
-| ****diag****	| compute  the diagonal of the tensor	|
+| **sum**	| sum  a tensor along a particular axis	|
+| **diag**	| compute  the diagonal of the tensor	|
 
 
 
@@ -181,7 +181,7 @@ From the code, we can identify the major events in our test application
 
 Nothing MXNet related happens before #2 (in our code example) those calls are all regular numpy functions. When #2 happens and we create an MXNet ndarray quite a few things happen. The screenshot below shows a zoomed in portion of the timeline.
 
-[Image: Screen Shot 2018-09-12 at 11.56.38 AM.png]
+![dev_guide_profilling_3.png](/assets/img/dev_guide_profilling_3.png)
 Here, the four red arrows show the important events in this sequence.
 
 1. First, the `MXNDArrayCreateEx` is called to physically  allocate space to store the data and other necessary attributes in the `ndarray` class
@@ -190,7 +190,7 @@ Here, the four red arrows show the important events in this sequence.
 
 Next, #3 (in our code example) begins the computing process to produce our output data. The screenshot below shows this behavior.
 
-[Image: Screen Shot 2018-09-12 at 12.46.18 PM.png]
+![dev_guide_profilling_4.png](/assets/img/dev_guide_profilling_4.png)
 Here you can see that the following sequence of events happen:
 
 1. `MXImperativeInvokeEx` is called the first time to launch  the diagonal operator from #3 (in our code example)
@@ -200,14 +200,14 @@ Here you can see that the following sequence of events happen:
 
 Next lets look at a view of the part of the timeline zoomed to the actual operator execution.
 
-[Image: Screen Shot 2018-09-12 at 1.00.14 PM.png]
+![dev_guide_profilling_5.png](/assets/img/dev_guide_profilling_5.png)
 Here there are 3 main events happening:
 
 1. The **`diag`** operator is executing first
 2. Then the `ResourceParallelRandomSetSeed` runs
 3. And finally the `sum` operator executes  (for a very short time as shown by the big red arrow)
 
-The `diag` operator running makes sense (although seems to take a little longer than we'd like). And at the end the sum operator runs (very quickly!). But the weird part in the middle is this `**ResourceParallelRandomSetSeed**` thing running. This is part of the MXNet resource manager. The resource manager handles temporary space and random number generators needed by the operators. The **`sum`** operator requests temporary space in order to compute the sum, and therefore launches the resource manager (for the first time) here. As part of its startup sequence the random number generator is initialized by setting the seed. So this is some initialization overhead. But lets try and run the app again, running the compute twice, and look at the 2nd run to try and remove this initialization from our profiling.
+The `diag` operator running makes sense (although seems to take a little longer than we'd like). And at the end the sum operator runs (very quickly!). But the weird part in the middle is this **`ResourceParallelRandomSetSeed`** thing running. This is part of the MXNet resource manager. The resource manager handles temporary space and random number generators needed by the operators. The **`sum`** operator requests temporary space in order to compute the sum, and therefore launches the resource manager (for the first time) here. As part of its startup sequence the random number generator is initialized by setting the seed. So this is some initialization overhead. But let's try and run the app again, running the compute twice, and look at the 2nd run to try and remove this initialization from our profiling.
 
  Here is the modified code:
 
@@ -252,10 +252,10 @@ Notice that we renamed the variables and made another copy after the `waital`l c
 
  Here is an overview of the *new* timeline:
 
-[Image: Screen Shot 2018-09-12 at 1.14.36 PM(1).png]
+![dev_guide_profilling_6.png](/assets/img/dev_guide_profilling_6.png)
 The first red box is the first run, and the 2nd smaller one is the 2nd run. First off, we can see how much smaller the 2nd one is now without any of the initialization routines. Here is a zoomed in view of just the 2nd run. 
 
 
-[Image: Screen Shot 2018-09-12 at 1.26.50 PM.png]We still have the same sequence of events at the beginning to initialize the MXNet ndarray (`MXNDArrayCreateEx`, `MXNDArrayGetShape`, `MXNDArrayGetDType`, `MXNDArraySyncCopyFromCPU`). Then the **`diag`** operator runs, followed by the **`sum`** operator, and finally the `waitall`. When you look at this, be careful about the assumptions that you make. In this version of the timeline it appears that the operator executes after the `MXImperativeInvokeEx` runs, and seems to imply an inherent ordering. But realize that there is no dependency between the **`diag`** operator finishing and the next `**MXImperativeInvokeEx**` launching the **`sum`** operator. In this case it just-so-happens that the **`diag`** operator finishes so quickly that it appears that way. But in reality the main thread is launching the operators and not waiting for them to finish. Lastly, keep in mind that in this case by the time we hit the `**MXNDArrayWaitAll**` everything is already done and we return immediately, but in other circumstances it may sit here waiting for everything to finish (like we saw earlier in the first run). 
+![dev_guide_profilling_7.png](/assets/img/dev_guide_profilling_7.png)We still have the same sequence of events at the beginning to initialize the MXNet ndarray (`MXNDArrayCreateEx`, `MXNDArrayGetShape`, `MXNDArrayGetDType`, `MXNDArraySyncCopyFromCPU`). Then the **`diag`** operator runs, followed by the **`sum`** operator, and finally the `waitall`. When you look at this, be careful about the assumptions that you make. In this version of the timeline it appears that the operator executes after the `MXImperativeInvokeEx` runs, and seems to imply an inherent ordering. But realize that there is no dependency between the **`diag`** operator finishing and the next **`MXImperativeInvokeEx`** launching the **`sum`** operator. In this case it just-so-happens that the **`diag`** operator finishes so quickly that it appears that way. But in reality the main thread is launching the operators and not waiting for them to finish. Lastly, keep in mind that in this case by the time we hit the **`MXNDArrayWaitAll`** everything is already done and we return immediately, but in other circumstances it may sit here waiting for everything to finish (like we saw earlier in the first run). 
 
 
