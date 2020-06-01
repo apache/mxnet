@@ -1373,7 +1373,7 @@ integrationtest_ubuntu_gpu_byteps() {
     export BYTEPS_WITHOUT_PYTORCH=1
     export BYTEPS_WITHOUT_TENSORFLOW=1
     pip3 install byteps==0.2.3 --user
-
+    git clone -b v0.2.3 https://github.com/bytedance/byteps ~/byteps
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
@@ -1389,7 +1389,7 @@ integrationtest_ubuntu_gpu_byteps() {
     export DMLC_PS_ROOT_URI=0.0.0.127
     export DMLC_PS_ROOT_PORT=1234
 
-    bpslaunch python3 dist_device_sync_kvstore_byteps.py
+    python3 ~/byteps/launcher/launch.py python3 dist_device_sync_kvstore_byteps.py
 
     popd
 }
