@@ -12,7 +12,7 @@ Remember that the general workflow when defining your network with Gluon API is 
 
 * inherit from `nn.Block` or `nn.HybridBlock`
 
-# Debugging
+## Debugging
 
 When debugging your MXNet code, remember the following
 
@@ -21,7 +21,7 @@ When debugging your MXNet code, remember the following
 Remember that the difference between [imperative style (Gluon non-hybridized) and symbolic style (Gluon hybridized)](https://mxnet.incubator.apache.org/versions/1.2.1/architecture/program_model.html) is 
 
 * *imperative style* is _define-by-run_
-* *symbolic style *is _define-then-run_
+* *symbolic style* is _define-then-run_
 
 
 Basically, that means the execution path changes when calling `hybridize`  on your network inherited from `HybridBlock` or `HybridSequential` (note that inheriting directly from `Block` is the same as not hybridizing your network). Since for efficiency, symbolic code does not keep the intermediate results then it would be hard to debug and examine the intermediate outputs. Therefore, if you want to *examine the intermediate results for debugging, do NOT hybridize*. Once everything is working as expected, then you can finally `hybridize` and enjoy the speed up.
@@ -34,7 +34,7 @@ It is also useful to set the environment variable `MXNET_ENGINE_TYPE='NaiveEngin
 
  For more details here is a comprehensive tutorial on interactive debugging on [YouTube](https://www.youtube.com/watch?v=6-dOoJVw9_0).
 
-# Performance optimization
+## Performance optimization
 
 Following up on using the environment variable `MXNET_ENGINE_TYPE` for debugging, here are the [available environment variables](https://mxnet.apache.org/api/faq/env_var)  that affect the performance of your code.
 
