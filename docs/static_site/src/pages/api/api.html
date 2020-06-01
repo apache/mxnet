@@ -14,6 +14,13 @@ faq_categories:
 - Security
 - Extend and Contribute to MXNet
 
+dev_guide:
+- Exception handing and custom error types
+- Profiling
+- Debugging and performance optimization tips
+- Examine forward results with hooks
+- GitHub contribution and PR verification tips
+
 docs:
 - title: Python
   guide_link: /api/python.html
@@ -188,5 +195,17 @@ docs:
         {%- endfor -%}
         </ul>
     </div>
+</div>
+<div class="docs-dev-guide">
+  <div class="wrapper">
+      <h2>Developer Guide</h2>
+      <ul>
+        {%- for p in site.pages -%}
+          {%- if p.category == 'Developer Guide' -%}
+            <li><a href="{{p.url | relative_url}}">{{p.title}}</a></li>
+          {%- endif -%}
+        {%- endfor -%}
+        </ul>
+  </div>
 </div>
 <div> <!-- reopening to close wrapper -->

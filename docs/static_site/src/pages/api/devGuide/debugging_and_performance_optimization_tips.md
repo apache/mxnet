@@ -1,0 +1,42 @@
+---
+layout: page_category
+title:  Debugging and performance optimization tips
+category: Developer Guide
+permalink: /api/devGuide/debugging_and_performance_optimization_tips
+---
+# Debugging and performance optimization tips
+
+Remember that the general workflow when defining your network with Gluon API is either 
+
+* build sequentially using `nn.Sequential` or `nn.HybridSequential` 
+
+* inherit from `nn.Block` or `nn.HybridBlock`
+
+# Debugging
+
+When debugging your MXNet code, remember the following
+
+**Do NOT hybridize for debugging**
+
+Remember that the difference between [imperative style (Gluon non-hybridized) and symbolic style (Gluon hybridized)](https://mxnet.incubator.apache.org/versions/1.2.1/architecture/program_model.html) is 
+
+* *imperative style* is _define-by-run_
+* *symbolic style *is _define-then-run_
+
+
+Basically, that means the execution path changes when calling `hybridize`  on your network inherited from `HybridBlock` or `HybridSequential` (note that inheriting directly from `Block` is the same as not hybridizing your network). Since for efficiency, symbolic code does not keep the intermediate results then it would be hard to debug and examine the intermediate outputs. Therefore, if you want to *examine the intermediate results for debugging, do NOT hybridize*. Once everything is working as expected, then you can finally `hybridize` and enjoy the speed up.
+
+Please checkout the [d2l](http://d2l.ai/chapter_computational-performance/hybridize.html?highlight=hybridize#hybrid-programming) for more details about hybrid-programming model.
+
+## Use naive engine
+
+It is also useful to set the environment variable `MXNET_ENGINE_TYPE='NaiveEngine'` prior to running your (end-to-end) code. This setting disables multi-threading and the execution engine will be synchronous, so you can examine the backtrace more easily. Remember to change it back to either the default `'ThreadedEnginePerDevice'` or `'ThreadedEngine'`.
+
+ For more details here is a comprehensive tutorial on interactive debugging on [YouTube](https://www.youtube.com/watch?v=6-dOoJVw9_0).
+
+# Performance optimization
+
+Following up on using the environment variable `MXNET_ENGINE_TYPE` for debugging, here are the [available environment variables](https://mxnet.apache.org/api/faq/env_var)  that affect the performance of your code.
+
+Please refer to [this presentation](https://www.slideshare.net/ThomasDelteil1/debugging-and-performance-tricks-for-mxnet-gluon) for more information on debugging and performance optimization.
+
