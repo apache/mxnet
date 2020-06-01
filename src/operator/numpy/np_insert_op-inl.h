@@ -84,12 +84,11 @@ struct NumpyInsertParam : public dmlc::Parameter<NumpyInsertParam> {
 };
 
 /*!
- * \brief insert when obj is 'scaler' or a 'slice' with only one element.
+ * \brief insert when obj is 'scalar' with only one element.
  * \tparam ndim - both 'in_arr', 'in_val' and 'out_data' have same ndim before call this.
  * \param out_data - output: insert 'value' to 'arr' according to 'index'.
  * \param in_arr - input: 'arr', original array.
  * \param index - input(only for first Map): it's the only element in 'obj' indicats insert position.
- * \param in_obj - input(only for second Map): It indicats insert position, it's ndim may equals to 0.
  * \param in_val - input: 'value', insert to 'arr' according to 'index'.
  * \param N - (only for first Map) arr.shape_[axis]
  * \param numnew - extra dim size in 'out_data' compared with 'arr' in 'axis'.
@@ -101,7 +100,7 @@ struct NumpyInsertParam : public dmlc::Parameter<NumpyInsertParam> {
          The second one use a sequence of indecies which only has one index.
  */
 template<int ndim>
-struct InsertSingleIndexKernel {
+struct InsertSingleIndexScalarKernel {
   template<typename DType, typename VType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data,
                                   const VType* in_val, const DType* in_arr,
@@ -150,7 +149,26 @@ struct InsertSingleIndexKernel {
       KERNEL_ASSIGN(out_data[i], req, in_arr[dest_idx]);
     }
   }
+};
 
+/*!
+ * \brief insert when obj is 'slice' with only one element.
+ * \tparam ndim - both 'in_arr', 'in_val' and 'out_data' have same ndim before call this.
+ * \param out_data - output: insert 'value' to 'arr' according to 'index'.
+ * \param in_arr - input: 'arr', original array.
+ * \param in_obj - input(only for second Map): It indicats insert position, it's ndim may equals to 0.
+ * \param in_val - input: 'value', insert to 'arr' according to 'index'.
+ * \param N - (only for first Map) arr.shape_[axis]
+ * \param numnew - extra dim size in 'out_data' compared with 'arr' in 'axis'.
+ * \param axis - insert 'value' to 'arr' in 'axis'.
+ * \param moveaxis - If 'obj' is a scaler, moveaxis is true;
+                     If 'obj' is a slice with one element, moveaxis is false.
+ * \note Different between the two Map:
+         The first one use a scaler index;
+         The second one use a sequence of indecies which only has one index.
+ */
+template<int ndim>
+struct InsertSingleIndexTensorKernel {
   template<typename DType, typename VType>
   MSHADOW_XINLINE static void Map(int i, DType* out_data,
                                   const VType* in_val, const DType* in_arr,
@@ -321,7 +339,7 @@ void InsertScalerImpl(mshadow::Stream<xpu> *s, const TBlob& output,
   using namespace mxnet_op;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
     MSHADOW_TYPE_SWITCH(vtype, VType, {
-      Kernel<InsertSingleIndexKernel<ndim>, xpu>::Launch(
+      Kernel<InsertSingleIndexScalarKernel<ndim>, xpu>::Launch(
         s, len, output.dptr<DType>(),
         values.dptr<VType>(), arr.dptr<DType>(),
         k_outshape, k_valshape, index, numnew,
@@ -347,7 +365,7 @@ void InsertSizeOneTensorImpl(mshadow::Stream<xpu> *s, const TBlob& output,
   using namespace mxnet_op;
   MSHADOW_TYPE_SWITCH(dtype, DType, {
     MSHADOW_TYPE_SWITCH(vtype, VType, {
-      Kernel<InsertSingleIndexKernel<ndim>, xpu>::Launch(
+      Kernel<InsertSingleIndexTensorKernel<ndim>, xpu>::Launch(
         s, len, output.dptr<DType>(),
         values.dptr<VType>(), arr.dptr<DType>(),
         k_outshape, k_valshape, N, index.dptr<int64_t>(), numnew,
