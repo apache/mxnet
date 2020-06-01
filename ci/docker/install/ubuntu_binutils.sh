@@ -35,4 +35,4 @@ tar -xvf binutils-2.27.tar.gz && cd binutils-2.27
 ./configure --prefix=/opt/binutils_other --exec-prefix=/opt/binutils_install
 make -j$(nproc)
 make install
-ls /opt/binutils_install/bin/ | xargs -I{} ln -s /opt/binutils_install/bin/{} /usr/local/bin/{}
+ls /opt/binutils_install/bin/ | xargs -I{} ln -sf /opt/binutils_install/bin/{} /usr/local/bin/{}

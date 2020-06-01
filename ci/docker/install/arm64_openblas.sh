@@ -29,7 +29,7 @@ git clone https://github.com/xianyi/OpenBLAS.git
 cd OpenBLAS
 make -j$(nproc) TARGET=ARMV8
 make install
-ln -s /opt/OpenBLAS/lib/libopenblas.so /usr/lib/libopenblas.so
-ln -s /opt/OpenBLAS/lib/libopenblas.a /usr/lib/libopenblas.a
-ln -s /opt/OpenBLAS/lib/libopenblas.a /usr/lib/liblapack.a
+ln -sf /opt/OpenBLAS/lib/libopenblas.so /usr/lib/libopenblas.so
+ln -sf /opt/OpenBLAS/lib/libopenblas.a /usr/lib/libopenblas.a
+ln -sf /opt/OpenBLAS/lib/libopenblas.a /usr/lib/liblapack.a
 popd

@@ -41,12 +41,12 @@ yum -y install unzip
 yum -y install ninja-build
 
 # Centos 7 only provides ninja-build
-ln -s /usr/bin/ninja-build /usr/bin/ninja
+ln -sf /usr/bin/ninja-build /usr/bin/ninja
 
 # CMake 3.13.2+ is required
 mkdir /opt/cmake && cd /opt/cmake
 wget -nv https://cmake.org/files/v3.13/cmake-3.13.5-Linux-x86_64.sh
 sh cmake-3.13.5-Linux-x86_64.sh --prefix=/opt/cmake --skip-license
-ln -s /opt/cmake/bin/cmake /usr/local/bin/cmake
+ln -sf /opt/cmake/bin/cmake /usr/local/bin/cmake
 rm cmake-3.13.5-Linux-x86_64.sh
 cmake --version

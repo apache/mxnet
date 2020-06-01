@@ -49,8 +49,8 @@ echo "LIBRARY_DIRS += /usr/lib /usr/lib/x86_64-linux-gnu /usr/lib/x86_64-linux-g
 
 # Fixes https://github.com/BVLC/caffe/issues/4333 See https://github.com/intel/caffe/wiki/Ubuntu-16.04-or-15.10-Installation-Guide
 # Note: This is only valid on Ubuntu16.04 - the version numbers are bound to the distribution
-ln -s /usr/lib/x86_64-linux-gnu/libhdf5_serial.so.10.0.2 /usr/lib/x86_64-linux-gnu/libhdf5.so
-ln -s /usr/lib/x86_64-linux-gnu/libhdf5_serial_hl.so.10.0.2 /usr/lib/x86_64-linux-gnu/libhdf5_hl.so
+ln -sf /usr/lib/x86_64-linux-gnu/libhdf5_serial.so.10.0.2 /usr/lib/x86_64-linux-gnu/libhdf5.so
+ln -sf /usr/lib/x86_64-linux-gnu/libhdf5_serial_hl.so.10.0.2 /usr/lib/x86_64-linux-gnu/libhdf5_hl.so
 
 make all pycaffe -j$(nproc)
 
