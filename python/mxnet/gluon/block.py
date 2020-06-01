@@ -496,6 +496,7 @@ class Block(object):
 
         loaded = {k[4:] if k.startswith('arg:') or k.startswith('aux:') else k: v \
                   for k, v in loaded.items()}
+        loaded = {k.replace('.', '_'): v for k, v in loaded.items()} # compatibility
 
         if not allow_missing:
             # Shared parameters are stored only a single time as of MXNet 1.6.
@@ -1495,6 +1496,9 @@ class SymbolBlock(HybridBlock):
         The desired output for SymbolBlock.
     inputs : Symbol or list of Symbol
         The Variables in output's argument that should be used as inputs.
+    params : ParameterDict
+        Parameter dictionary for arguments and auxililary states of outputs
+        that are not inputs.
 
     Examples
     --------
@@ -1504,9 +1508,9 @@ class SymbolBlock(HybridBlock):
     >>> out = alexnet(inputs)
     >>> internals = out.get_internals()
     >>> print(internals.list_outputs())
-    ['data', ..., 'model_dense0_relu_fwd_output', ..., 'model_dense1_relu_fwd_output', ...]
-    >>> outputs = [internals['model_dense0_relu_fwd_output'],
-                   internals['model_dense1_relu_fwd_output']]
+    ['data', ..., 'features_9_act_fwd_output', ..., 'features_11_act_fwd_output', ...]
+    >>> outputs = [internals['features_9_act_fwd_output'],
+                   internals['features_11_act_fwd_output']]
     >>> # Create SymbolBlock that shares parameters with alexnet
     >>> feat_model = gluon.SymbolBlock(outputs, inputs, params=alexnet.collect_params())
     >>> x = mx.nd.random.normal(shape=(16, 3, 224, 224))
