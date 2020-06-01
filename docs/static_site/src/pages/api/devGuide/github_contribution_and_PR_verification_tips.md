@@ -10,7 +10,7 @@ Here are some general git workflow tips
 
 ## Setup and configure
 
-Fork https://github.com/apache/incubator-mxnet then
+Fork [https://github.com/apache/incubator-mxnet](https://github.com/apache/incubator-mxnet) then
 
 ```
 git clone https://github.com/your_username/incubator-mxnet
