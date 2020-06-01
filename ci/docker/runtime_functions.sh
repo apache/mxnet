@@ -1938,7 +1938,6 @@ cd_integration_test_pypi() {
     pip3 install --user ./wheel_build/dist/*.whl
 
     # execute tests
-    python3 /work/mxnet/tests/python/train/test_conv.py ${test_conv_params}
     python3 /work/mxnet/example/image-classification/train_mnist.py ${mnist_params}
 }
 
