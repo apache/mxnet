@@ -61,6 +61,7 @@ RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
 # Install aarch64 cross depedencies based on Jetpack 4.3
 # Manually downloaded using SDK Manager tool and placed in a private S3 bucket.
 # We're not allowed to redistribute these files and there is no public version.
+# Install protobuf and protobuf-compiler for TensorRT integration.
 RUN aws s3 cp s3://mxnet-ci-prod-private-slave-data/nvidia/sdkm_downloads/cuda-repo-ubuntu1804-10-0-local-10.0.326-410.108_1.0-1_amd64.deb . && \
     dpkg -i cuda-repo-ubuntu1804-10-0-local-10.0.326-410.108_1.0-1_amd64.deb && \
     rm cuda-repo-ubuntu1804-10-0-local-10.0.326-410.108_1.0-1_amd64.deb && \
@@ -71,6 +72,7 @@ RUN aws s3 cp s3://mxnet-ci-prod-private-slave-data/nvidia/sdkm_downloads/cuda-r
     apt-get update && \
     apt-get install -y -f && \
     apt-get install -y cuda-cross-aarch64 cuda-cross-aarch64-10-0 && \
+    apt-get install -y libprotobuf-dev protobuf-compiler && \
     rm -rf /var/lib/apt/lists/*
 
 ARG USER_ID=0
