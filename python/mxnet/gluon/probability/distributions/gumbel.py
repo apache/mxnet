@@ -23,8 +23,9 @@ __all__ = ['Gumbel']
 from .distribution import Distribution
 from .constraint import Real, Positive
 from .utils import getF, sample_n_shape_converter
-# Euler-Mascheroni constant 
+# Euler-Mascheroni constant
 from numpy import euler_gamma
+
 
 class Gumbel(Distribution):
     r"""Create a Gumble distribution object
@@ -42,13 +43,15 @@ class Gumbel(Distribution):
 
     has_grad = True
     support = Real()
-    arg_constraints = {'loc' : Real(),
-                       'scale' : Positive()}
+    arg_constraints = {'loc': Real(),
+                       'scale': Positive()}
+
     def __init__(self, loc, scale=1, F=None, validate_args=None):
         _F = F if F is not None else getF(loc, scale)
         self.loc = loc
         self.scale = scale
-        super(Gumbel, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(Gumbel, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     def log_prob(self, value):
         if self._validate_args:

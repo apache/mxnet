@@ -445,7 +445,8 @@ class PositiveDefinite(Constraint):
         F = getF(value)
         err_msg = "Constraint violated: {} should be" \
                   " positive definite matrices".format(value)
-        condition = F.np.all(value == F.np.swapaxes(value, -1, -2), axis=-1)
+        eps = 1e-5
+        condition = F.np.all(F.np.abs(value - F.np.swapaxes(value, -1, -2)) < eps, axis=-1)
         condition = condition & (F.np.linalg.eigvals(value) > 0)
         _value = constraint_check(F)(condition, err_msg) * value
         return _value

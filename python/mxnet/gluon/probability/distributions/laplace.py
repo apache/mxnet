@@ -20,7 +20,6 @@
 """Laplace distribution"""
 __all__ = ['Laplace']
 
-import math
 from .constraint import Real, Positive
 from .distribution import Distribution
 from .utils import getF, sample_n_shape_converter
