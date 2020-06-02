@@ -260,7 +260,6 @@ def test_parameter_sharing():
 
 @with_seed()
 def test_parameter_str():
-    # TODO phile to update
     class Net(gluon.Block):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
@@ -270,9 +269,9 @@ def test_parameter_str():
     lines = str(net.collect_params()).splitlines()
     
     #assert lines[0] == 'net1_ ('
-    #assert 'net1_dense0_weight' in lines[1]
-    #assert '(10, 5)' in lines[1]
-    #assert 'float32' in lines[1]
+    assert 'dense0_weight' in lines[0]
+    assert '(10, 5)' in lines[0]
+    assert 'float32' in lines[0]
     #assert lines[2] == ')'
     
 
@@ -754,6 +753,7 @@ def test_batchnorm():
 
 
 @xfail_when_nonstandard_decimal_separator
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/18466')
 @with_seed()
 def test_sync_batchnorm():
     def _check_batchnorm_result(input, num_devices=1, cuda=False):

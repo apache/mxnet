@@ -29,7 +29,7 @@ from mxnet.gluon import nn
 from common import run_in_spawned_process
 import pytest
 
-# TODO phile: update the profiler
+
 def enable_profiler(profile_filename, run=True, continuous_dump=False, aggregate_stats=False):
     profiler.set_config(profile_symbolic=True,
                         profile_imperative=True,
@@ -557,40 +557,42 @@ def test_gpu_memory_profiler_gluon():
 
     # Sample gpu_memory_profiler.csv
     # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
-    # "<unk>:in_arg:data","640","0","4096","0"
-    # "net:arg_grad:net_dense0_bias","512","0","4096","0"
-    # "net:arg_grad:net_dense0_weight","5120","0","8192","0"
-    # "net:arg_grad:net_dense1_bias","256","0","4096","0"
-    # "net:arg_grad:net_dense1_weight","32768","0","32768","0"
-    # "net:arg_grad:net_dense2_bias","128","0","4096","0"
-    # "net:arg_grad:net_dense2_weight","8192","0","8192","0"
-    # "net:dense0:net_dense0_fwd","8192","0","8192","0"
-    # "net:dense0:tanh:net_dense0_tanh_fwd","8192","0","8192","0"
-    # "net:dense1:net_dense1_fwd","4096","0","4096","0"
-    # "net:dense1:tanh:net_dense1_tanh_fwd","4096","0","4096","0"
-    # "net:dense2:net_dense2_fwd","2048","0","4096","0"
-    # "net:dense2:net_dense2_fwd_backward","4096","0","4096","0"
-    # "net:dropout0:net_dropout0_fwd","8192","0","8192","0"
-    # "net:dropout0:net_dropout0_fwd","8192","0","8192","0"
-    # "net:in_arg:net_dense0_bias","512","0","4096","0"
-    # "net:in_arg:net_dense0_weight","5120","0","8192","0"
-    # "net:in_arg:net_dense1_bias","256","0","4096","0"
-    # "net:in_arg:net_dense1_weight","32768","0","32768","0"
-    # "net:in_arg:net_dense2_bias","128","0","4096","0"
-    # "net:in_arg:net_dense2_weight","8192","0","8192","0"
-    # "net:relu0:net_relu0_fwd","2048","0","4096","0"
-    # "net:relu0:net_relu0_fwd_backward","8192","0","8192","0"
-    # "net:relu0:net_relu0_fwd_head_grad","2048","0","4096","0"
-    # "resource:cudnn_dropout_state (dropout-inl.h +258)","1671168","0","1671168","0"
-    # "resource:temp_space (fully_connected-inl.h +316)","34816","0","36864","0"
+    # 0:0_fwd,8192,0,8192,0
+    # 0_act:0_act_fwd,8192,0,8192,0
+    # 1:1_fwd,8192,0,8192,0
+    # 1:1_fwd,8192,0,8192,0
+    # 2:2_fwd,4096,0,4096,0
+    # 2_act:2_act_fwd,4096,0,4096,0
+    # 3:3_fwd_backward,4096,0,4096,1
+    # 4:4_fwd,2048,0,4096,0
+    # 4:4_fwd_backward,8192,0,8192,0
+    # 4:4_fwd_head_grad,2048,0,4096,0
+    # <unk>:arg_grad:0_bias,512,0,4096,0
+    # <unk>:arg_grad:0_weight,5120,0,8192,0
+    # <unk>:arg_grad:2_bias,256,0,4096,0
+    # <unk>:arg_grad:2_weight,32768,0,32768,0
+    # <unk>:arg_grad:3_bias,128,0,4096,0
+    # <unk>:arg_grad:3_weight,8192,0,8192,0
+    # <unk>:in_arg:0_bias,512,0,4096,0
+    # <unk>:in_arg:0_weight,5120,0,8192,0
+    # <unk>:in_arg:2_bias,256,0,4096,0
+    # <unk>:in_arg:2_weight,32768,0,32768,0
+    # <unk>:in_arg:3_bias,128,0,4096,0
+    # <unk>:in_arg:3_weight,8192,0,8192,0
+    # <unk>:in_arg:data,640,0,4096,0
+    # resource:cudnn_dropout_state (dropout-inl.h +256),786432,0,786432,0
+    # resource:temp_space (fully_connected-inl.h +316),8192,0,8192,0
+    # nvml_amend,639434752,0,639434752,0
 
     # We are only checking for weight parameters here, also making sure that
     # there is no unknown entries in the memory profile.
     with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
+        for row in csv_reader:
+            print(",".join(list(row.values())))
         for scope in ['in_arg', 'arg_grad']:
             for key, nd in model.collect_params().items():
-                expected_arg_name = "net:%s:" % scope + key
+                expected_arg_name = "<unk>:%s:" % scope + key
                 expected_arg_size = str(4 * np.prod(nd.shape))
                 csv_file.seek(0)
                 entry_found = False

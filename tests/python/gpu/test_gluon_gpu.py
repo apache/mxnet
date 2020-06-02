@@ -410,6 +410,7 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
     input2grad = mx.nd.concat(*[output.grad.as_in_context(input.context) for output in inputs2], dim=0)
     assert_almost_equal(input1.grad, input2grad, atol=1e-3, rtol=1e-3)
 
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/18466')
 @with_seed()
 def test_sync_batchnorm():
     def get_num_devices():
