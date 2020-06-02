@@ -42,7 +42,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     automake \
     libtool \
     crossbuild-essential-arm64 \
- && rm -rf /var/lib/apt/lists/*
+ && rm -rf /var/lib/apt/lists/* \
+ && alias python=python3
 
 # cmake on Ubuntu 18.04 is too old
 RUN python3 -m pip install cmake
