@@ -224,6 +224,7 @@ build_onnx_and_onnx_tensorrt() {
 
 build_jetson() {
     set -ex
+    PYVER=3
     build_onnx_and_onnx_tensorrt
     cd /work/build
     cmake \
