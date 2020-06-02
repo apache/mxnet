@@ -62,6 +62,7 @@ OpStatePtr NaiveCachedOp::Forward(
       std::lock_guard<std::mutex> lock(state.mutex);
       SetForwardGraph(default_ctx, &state.info, recording, inputs);
       runtime.info.fwd_graph = state.info.fwd_graph;
+      runtime.info.input_map = state.info.input_map;
     }
     nnvm::Graph& g = runtime.info.fwd_graph;
     const auto& idx = g.indexed_graph();
@@ -84,7 +85,7 @@ OpStatePtr NaiveCachedOp::Forward(
     for (size_t i = 0; i < idx.num_node_entries(); ++i) {
       if (ref_count[i] == 0) array_reqs[i] = kNullOp;
     }
-    CollectInputOutputNDRefs(g, inputs, outputs, &arrays);
+    CollectInputOutputNDRefs(g, inputs, runtime.info.input_map, outputs, &arrays);
 
     mxnet::ShapeVector shapes = g.GetAttr<mxnet::ShapeVector>("shape");
     imperative::NaiveRunGraph(false, default_ctx, idx, arrays, 0, idx.num_nodes(),
