@@ -68,7 +68,7 @@ push() {
 
     # The secret name env var is set in the Jenkins configuration
     # Manage Jenkins -> Configure System
-    ./${ci_utils}/docker_login.py --secret-name "${RELEASE_DOCKERHUB_SECRET_NAME}"
+    python3 ${ci_utils}/docker_login.py --secret-name "${RELEASE_DOCKERHUB_SECRET_NAME}"
 
     # Push image
     docker push "${image_name}"
