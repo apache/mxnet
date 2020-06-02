@@ -133,7 +133,11 @@ if !libmxnet_detected
     name = "mxnet_x64_$(HAS_CUDA ? "vc141_gpu_cu101" : "vc14_cpu").7z"
     package_url = "https://github.com/yajiedesign/mxnet/releases/download/$(curr_win)/$(curr_win)_$(name)"
 
-    exe7z = joinpath(Sys.BINDIR, Base.LIBEXECDIR, "7z.exe")
+    if isdefined(Base, :LIBEXECDIR)
+        exe7z = joinpath(Sys.BINDIR, Base.LIBEXECDIR, "7z.exe")
+    else
+        exe7z = joinpath(Sys.BINDIR, "7z.exe")
+    end
 
     run(download_cmd(package_url, "mxnet.7z"))
     # this command will create the dir "usr\\lib"
