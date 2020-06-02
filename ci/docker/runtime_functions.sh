@@ -197,7 +197,6 @@ build_onnx_and_onnx_tensorrt() {
     mkdir -p build
     cd build
     cmake \
-        -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
         -DBUILD_SHARED_LIBS=ON ..\
         -G Ninja
     ninja -j 1 -v onnx/onnx.proto
@@ -224,7 +223,6 @@ build_onnx_and_onnx_tensorrt() {
 
 build_jetson() {
     set -ex
-    PYVER=3
     build_onnx_and_onnx_tensorrt
     cd /work/build
     cmake \
