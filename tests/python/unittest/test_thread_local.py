@@ -133,7 +133,6 @@ def test_blockscope():
                 status[0] = True
     thread = threading.Thread(target=f)
     thread.start()
-    block._BlockScope.create("main_thread", None, "hi")
     event.set()
     thread.join()
     event.clear()

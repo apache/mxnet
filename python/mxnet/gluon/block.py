@@ -545,7 +545,7 @@ class Block(object):
             Whether to silently skip loading parameters not represented in the file.
         ignore_extra : bool, default False
             Whether to silently ignore parameters from the file that are not
-            present in this ParameterDict.
+            present in this dict.
         restore_prefix : str, default ''
             prepend prefix to names of stored parameters before loading
         filename : str, default None
@@ -568,7 +568,7 @@ class Block(object):
         for name in arg_dict:
             if name not in params:
                 assert ignore_extra, \
-                    "Parameter '%s' loaded from %s is not present in ParameterDict, " \
+                    "Parameter '%s' loaded from %s is not present in dict, " \
                     "choices are: %s. Set ignore_extra to True to ignore. " \
                     "Please make sure source and target networks have the same prefix." %(
                         name[lprefix:], error_str, _brief_print_list(params.keys()))
@@ -1504,7 +1504,7 @@ class SymbolBlock(HybridBlock):
         The desired output for SymbolBlock.
     inputs : Symbol or list of Symbol
         The Variables in output's argument that should be used as inputs.
-    params : ParameterDict
+    params : dict
         Parameter dictionary for arguments and auxililary states of outputs
         that are not inputs.
 
