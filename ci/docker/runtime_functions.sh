@@ -200,7 +200,6 @@ build_onnx_and_onnx_tensorrt() {
         -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
         -DBUILD_SHARED_LIBS=ON ..\
         -G Ninja
-    ninja -j 1 -v onnx/onnx.proto
     ninja -j 1 -v
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
