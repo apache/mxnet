@@ -2,7 +2,7 @@
 layout: page_category
 title:  GitHub contribution and PR verification tips 
 category: Developer Guide
-permalink: /api/devGuide/github_contribution_and_PR_verification_tips
+permalink: /api/dev-guide/github_contribution_and_PR_verification_tips
 ---
 # GitHub contribution and PR verification tips 
 

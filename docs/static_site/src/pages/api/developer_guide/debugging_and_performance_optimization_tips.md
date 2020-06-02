@@ -2,7 +2,7 @@
 layout: page_category
 title:  Debugging and performance optimization tips
 category: Developer Guide
-permalink: /api/devGuide/debugging_and_performance_optimization_tips
+permalink: /api/dev-guide/debugging_and_performance_optimization_tips
 ---
 # Debugging and performance optimization tips
 

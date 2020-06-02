@@ -2,7 +2,7 @@
 layout: page_category
 title:  Examine forward results with hooks
 category: Developer Guide
-permalink: /api/devGuide/examine_forward_results_with_hooks
+permalink: /api/dev-guide/examine_forward_results_with_hooks
 ---
 # Examine forward results with hooks
 

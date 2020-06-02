@@ -2,7 +2,7 @@
 layout: page_category
 title:  Profiling
 category: Developer Guide
-permalink: /api/devGuide/profiling
+permalink: /api/dev-guide/profiling
 ---
 # Profiling
 

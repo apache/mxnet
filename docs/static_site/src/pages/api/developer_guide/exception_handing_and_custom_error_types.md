@@ -2,7 +2,7 @@
 layout: page_category
 title:  Exception handing and custom error types
 category: Developer Guide
-permalink: /api/devGuide/exception_handing_and_custom_error_types
+permalink: /api/dev-guide/exception_handing_and_custom_error_types
 ---
 # Exception handing and custom error types
 
