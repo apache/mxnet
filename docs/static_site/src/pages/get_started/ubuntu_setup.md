@@ -331,6 +331,12 @@ cd ${MXNET_HOME}/perl-package/AI-MXNet/
 perl Makefile.PL INSTALL_BASE=${HOME}/perl5
 make install
 ```
+Alternately, install MXNet dependencies, MXNet, perl dependencies and MXNet Perl package via script:
+```bash
+cd setup-utils
+./install-mxnet-ubuntu-perl.sh
+```
+The script will indicate values for the required environment variables.
 <hr>
 
 
