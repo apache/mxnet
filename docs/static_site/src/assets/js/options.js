@@ -52,7 +52,7 @@ $(document).ready(function () {
             versionSelect = urlParams.get('version');
             $('li.versions').removeClass('active');
             $('li.versions').each(function () { is_a_match($(this), versionSelect) });
-            $('.current-version').html(versionSelect + '<svg class="dropdown-caret" viewBox="0 0 32 32" class="icon icon-caret-bottom" aria-hidden="true"><path class="dropdown-caret-path" d="M24 11.305l-7.997 11.39L8 11.305z"></path></svg>');
+            $('.current-version').html("Version: " + versionSelect + '<svg class="dropdown-caret" viewBox="0 0 32 32" class="icon icon-caret-bottom" aria-hidden="true"><path class="dropdown-caret-path" d="M24 11.305l-7.997 11.39L8 11.305z"></path></svg>');
             queryString += 'version=' + versionSelect + '&';
         }
         if (urlParams.get('platform')) {
@@ -109,7 +109,7 @@ $(document).ready(function () {
         el.siblings().removeClass('active');
         el.addClass('active');
         if ($(this).hasClass("versions")) {
-            $('.current-version').html($(this).text());
+            $('.current-version').html("Verision: " + $(this).text());
             urlParams.set("version", $(this).text());
         } else if ($(this).hasClass("platforms")) {
             urlParams.set("platform", label($(this).text()));
