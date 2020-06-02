@@ -1423,41 +1423,6 @@ nightly_test_rat_check() {
     popd
 }
 
-# Runs Imagenet inference
-nightly_test_imagenet_inference() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    echo $PWD
-    cp /work/mxnet/build/cpp-package/example/inference/imagenet_inference /work/mxnet/cpp-package/example/inference/
-    cd /work/mxnet/cpp-package/example/inference/
-    ./unit_test_imagenet_inference.sh
-}
-
-#Runs a simple MNIST training example
-nightly_test_image_classification() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    ./tests/nightly/test_image_classification.sh
-}
-
-#Single Node KVStore Test
-nightly_test_KVStore_singleNode() {
-    set -ex
-    export PYTHONPATH=./python/
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    tests/nightly/test_kvstore.py
-}
-
-#Test Large Tensor Size
-nightly_test_large_tensor() {
-    set -ex
-    export PYTHONPATH=./python/
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest tests/nightly/test_large_array.py::test_tensor
-    pytest tests/nightly/test_large_array.py::test_nn
-    pytest tests/nightly/test_large_array.py::test_basic
-}
-
 #Test Large Vectors
 nightly_test_large_vector() {
     set -ex
@@ -1540,13 +1505,48 @@ nightly_scala_demo_test_cpu() {
     bash bin/run_im.sh
 }
 
-nightly_estimator() {
+test_estimator() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    cd /work/mxnet/tests/nightly/estimator
+    cd /work/mxnet/tests/python/estimator
     export PYTHONPATH=/work/mxnet/python/
-    pytest test_estimator_cnn.py
-    pytest test_sentiment_rnn.py
+    python -m pytest test_estimator_cnn.py
+    python -m pytest test_sentiment_rnn.py
+}
+
+#Runs a simple MNIST training example
+test_image_classification() {
+    set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    ./tests/nightly/test_image_classification.sh
+}
+
+# Runs Imagenet inference
+test_imagenet_inference() {
+    set -ex
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    echo $PWD
+    cp /work/mxnet/build/cpp-package/example/inference/imagenet_inference /work/mxnet/cpp-package/example/inference/
+    cd /work/mxnet/cpp-package/example/inference/
+    ./unit_test_imagenet_inference.sh
+}
+
+#Single Node KVStore Test
+test_KVStore_singleNode() {
+    set -ex
+    export PYTHONPATH=./python/
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    tests/nightly/test_kvstore.py
+}
+
+#Test Large Tensor Size
+test_large_tensor() {
+    set -ex
+    export PYTHONPATH=./python/
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    pytest tests/nightly/test_large_array.py::test_tensor
+    pytest tests/nightly/test_large_array.py::test_nn
+    pytest tests/nightly/test_large_array.py::test_basic
 }
 
 # For testing PRs

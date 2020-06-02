@@ -43,6 +43,14 @@ core_logic: {
     custom_steps.compile_unix_mkldnn_mkl_cpu('mkldnn_mkl_cpu'),
     custom_steps.compile_unix_int64_cpu('ubuntu_cpu'),
     custom_steps.compile_unix_openblas_cpu_no_tvm_op('cpu_openblas_no_tvm_op'),
+    custom_steps.test_unix_amalgamation_1(),
+    custom_steps.test_unix_amalgamation_2(),
+    custom_steps.test_unix_amalgamation_3(),
+    custom_steps.test_unix_amalgamation_4(),
+    custom_steps.test_unix_amalgamation_5(),
+    custom_steps.test_unix_java_demo(),
+    custom_steps.test_unix_scala_demo(),
+    custom_steps.test_unix_mxnetjs(),
   ])
 
   utils.parallel_stage('Tests', [
