@@ -199,6 +199,7 @@ build_onnx_and_onnx_tensorrt() {
     cmake \
         -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
         -DBUILD_SHARED_LIBS=ON ..\
+        -DPYTHON_EXECUTABLE=/usr/bin/python3
         -G Ninja
     ninja -j 1 -v
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
