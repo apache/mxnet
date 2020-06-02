@@ -109,7 +109,7 @@ $(document).ready(function () {
         el.siblings().removeClass('active');
         el.addClass('active');
         if ($(this).hasClass("versions")) {
-            $('.current-version').html("Verision: " + $(this).text());
+            $('.current-version').html("Version: " + $(this).text());
             urlParams.set("version", $(this).text());
         } else if ($(this).hasClass("platforms")) {
             urlParams.set("platform", label($(this).text()));
