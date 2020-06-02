@@ -64,8 +64,6 @@ bool NumpyBinaryLogicOpType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 2U);
   CHECK_EQ(out_attrs->size(), 1U);
   if (in_attrs->at(0) == -1 && in_attrs->at(1) == -1) return false;
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, in_attrs->at(1));
-  TYPE_ASSIGN_CHECK(*in_attrs, 1, in_attrs->at(0));
   TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kBool);
   return true;
 }
