@@ -8,9 +8,9 @@ permalink: /api/devGuide/examine_forward_results_with_hooks
 
 There are currently three ways to register a function in an MXNet Gluon Block for execution either
 
-* before `forward` via [register_forward_pre_hook](https://mxnet.apache.org/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_pre_hook)
-* after `forward` via [register_forward_hook](https://mxnet.apache.org/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_hook)
-* as a callback via [register_op_hook](https://mxnet.apache.org/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_op_hook)
+* before `forward` via [register_forward_pre_hook]({{"/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_pre_hook" | relative_url }})
+* after `forward` via [register_forward_hook]({{"/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_hook" | relative_url }})
+* as a callback via [register_op_hook]({{"/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_op_hook" | relative_url }})
 
 ## Pre-forward hook
 
