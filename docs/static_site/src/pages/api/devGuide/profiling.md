@@ -6,7 +6,7 @@ permalink: /api/devGuide/profiling
 ---
 # Profiling
 
-Apache MXNet provides memory [profiler](https://mxnet.apache.org/api/python/docs/api/mxnet/profiler/index.html) which is way to access what is happening under the hood during runtime. The common scenario is you want to use the profiler for your hybridized model and visual the outputs via `chrome://tracing`. Here are the steps you need to do:
+Apache MXNet provides memory [profiler]({{"/api/python/docs/api/mxnet/profiler/index.html" | relative_url }}) which is way to access what is happening under the hood during runtime. The common scenario is you want to use the profiler for your hybridized model and visual the outputs via `chrome://tracing`. Here are the steps you need to do:
 
 1. Configure the profiler
 2. `set_state('run')` before the model is defined
