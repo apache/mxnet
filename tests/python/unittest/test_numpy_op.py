@@ -2373,10 +2373,10 @@ def test_np_unary_funcs():
                 return getattr(F.np, self._func)(a)
 
         np_func = getattr(_np, func)
-        mx_func = TestUnary(func)
         np_test_data = _np.random.uniform(low, high, shape).astype(_np.float32)
         mx_test_data = mx.numpy.array(np_test_data)
         for hybridize in [True, False]:
+            mx_func = TestUnary(func)
             if hybridize:
                 mx_func.hybridize()
             if ref_grad:
@@ -2420,11 +2420,28 @@ def test_np_unary_funcs():
         funcs['rad2deg'] = (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0)
         funcs['deg2rad'] = (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0)
     ndim = random.choice([2, 3, 4])
-    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
     for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
         for func, func_data in funcs.items():
             ref_grad, low, high = func_data
             check_unary_func(func, ref_grad, shape, low, high)
+
+
+@use_np
+def test_negation():
+    class TestNegation(HybridBlock):
+        def hybrid_forward(self, F, a):
+            return -a
+    mx_func = TestNegation()
+    for dtype in [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64]:
+        np_test_data = _np.random.uniform(-1, 1, (5, 5)).astype(dtype)
+        for hybridize in [True, False]:
+            mx_test_data = mx.numpy.array(np_test_data, dtype=dtype)
+            if hybridize:
+                mx_func.hybridize()
+            y = mx_func(mx_test_data)
+            assert y.shape == (5, 5)
+            assert y.dtype == dtype
+            assert_almost_equal(y.asnumpy(), -np_test_data)
 
 
 @with_seed()
