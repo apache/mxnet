@@ -32,8 +32,7 @@ NNVM_REGISTER_OP(reciprocal)
 .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"reciprocal"});
 
 NNVM_REGISTER_OP(_backward_reciprocal)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::reciprocal_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_reciprocal"});
 
 // square
 NNVM_REGISTER_OP(square)
@@ -41,8 +40,7 @@ NNVM_REGISTER_OP(square)
 .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"square"});
 
 NNVM_REGISTER_OP(_backward_square)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::square_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_square"});
 
 // sqrt
 NNVM_REGISTER_OP(sqrt)
@@ -50,8 +48,7 @@ NNVM_REGISTER_OP(sqrt)
 .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"sqrt"});
 
 NNVM_REGISTER_OP(_backward_sqrt)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::square_root_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_sqrt"});
 
 // rsqrt
 NNVM_REGISTER_OP(rsqrt)
@@ -59,7 +56,7 @@ NNVM_REGISTER_OP(rsqrt)
 
 NNVM_REGISTER_OP(_backward_rsqrt)
 .set_attr<FCompute>("FCompute<gpu>",
-  ElemwiseBinaryOp::Compute<gpu, unary_bwd<mshadow_op::reciprocal_square_root_grad> >);
+  ElemwiseBinaryRTCCompute{"backward_rsqrt"});
 
 // cbrt
 NNVM_REGISTER_OP(cbrt)
@@ -68,8 +65,7 @@ NNVM_REGISTER_OP(cbrt)
 
 
 NNVM_REGISTER_OP(_backward_cbrt)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::cube_root_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_cbrt"});
 
 // rcbrt
 NNVM_REGISTER_OP(rcbrt)
@@ -77,7 +73,7 @@ NNVM_REGISTER_OP(rcbrt)
 
 NNVM_REGISTER_OP(_backward_rcbrt)
 .set_attr<FCompute>("FCompute<gpu>",
-  ElemwiseBinaryOp::Compute<gpu, unary_bwd<mshadow_op::reciprocal_cube_root_grad> >);
+  ElemwiseBinaryRTCCompute{"backward_rcbrt"});
 
 }  // namespace op
 }  // namespace mxnet

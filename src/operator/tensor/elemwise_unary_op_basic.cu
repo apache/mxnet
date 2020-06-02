@@ -31,15 +31,13 @@ NNVM_REGISTER_OP(relu)
 .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"relu"});
 
 NNVM_REGISTER_OP(_backward_relu)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::relu_grad>>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_relu"});
 
 NNVM_REGISTER_OP(sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"sigmoid"});
 
 NNVM_REGISTER_OP(_backward_sigmoid)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::sigmoid_grad>>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_sigmoid"});
 
 NNVM_REGISTER_OP(hard_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", HardSigmoidForward<gpu>);
@@ -52,8 +50,7 @@ NNVM_REGISTER_OP(softsign)
 .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"softsign"});
 
 NNVM_REGISTER_OP(_backward_softsign)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::softsign_grad>>);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_softsign"});
 
 // erf
 NNVM_REGISTER_OP(erf)
@@ -61,7 +58,7 @@ NNVM_REGISTER_OP(erf)
 
 NNVM_REGISTER_OP(_backward_erf)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::Compute<gpu, unary_bwd<mshadow_op::erf_grad>>);
+                    ElemwiseBinaryRTCCompute{"backward_erf"});
 
 // erfinv
 NNVM_REGISTER_OP(erfinv)
@@ -69,7 +66,7 @@ NNVM_REGISTER_OP(erfinv)
 
 NNVM_REGISTER_OP(_backward_erfinv)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::Compute<gpu, unary_bwd<mshadow_op::erfinv_grad>>);
+                    ElemwiseBinaryRTCCompute{"backward_erfinv"});
 
 // copy
 NNVM_REGISTER_OP(_copy)
@@ -161,16 +158,12 @@ NNVM_REGISTER_OP(abs)
 .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"abs"});
 
 NNVM_REGISTER_OP(_backward_abs)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<gpu, unary_bwd<mshadow_op::sign> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_abs"});
 
 // sign
 NNVM_REGISTER_OP(sign)
 .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"sign"})
 .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"sign"});
-
-NNVM_REGISTER_OP(_backward_sign)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::sign_grad> >);
 
 // round
 NNVM_REGISTER_OP(round)
@@ -207,16 +200,14 @@ NNVM_REGISTER_OP(gamma)
 .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"gamma"});
 
 NNVM_REGISTER_OP(_backward_gamma)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::gamma_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_gamma"});
 
 // gammaln
 NNVM_REGISTER_OP(gammaln)
 .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"gammaln"});
 
 NNVM_REGISTER_OP(_backward_gammaln)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::gammaln_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_gammaln"});
 
 // digamma
 NNVM_REGISTER_OP(digamma)

@@ -43,16 +43,13 @@ NNVM_REGISTER_OP(log2)
 .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"log2"});
 
 NNVM_REGISTER_OP(_backward_log)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::log_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log"});
 
 NNVM_REGISTER_OP(_backward_log10)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::log10_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log10"});
 
 NNVM_REGISTER_OP(_backward_log2)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::log2_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log2"});
 
 // log1p
 NNVM_REGISTER_OP(log1p)
@@ -60,8 +57,7 @@ NNVM_REGISTER_OP(log1p)
 .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"log1p"});
 
 NNVM_REGISTER_OP(_backward_log1p)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::log1p_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log1p"});
 
 // expm1
 NNVM_REGISTER_OP(expm1)
@@ -69,8 +65,7 @@ NNVM_REGISTER_OP(expm1)
 .set_attr<FComputeEx>("FComputeEx<gpu>", UnaryRTCCompute{"expm1"});
 
 NNVM_REGISTER_OP(_backward_expm1)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::exp> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_expm1"});
 
 }  // namespace op
 }  // namespace mxnet

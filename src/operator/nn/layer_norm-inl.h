@@ -276,8 +276,13 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
     });
   }
   // Calculate grad_gamma, it will be sum(ograd * normalized_data, exclude_axis)
-  ElemwiseBinaryOp::Compute<xpu, op::mshadow_op::mul>(attrs, ctx, {normalized_data, ograd},
-                                                      {kWriteTo}, {ograd_mult});
+  if constexpr (std::is_same<xpu, mshadow::cpu>::value) {
+    ElemwiseBinaryOp::Compute<xpu, op::mshadow_op::mul>(attrs, ctx, {normalized_data, ograd},
+                                                        {kWriteTo}, {ograd_mult});
+  } else {
+    ElemwiseBinaryRTCCompute{"mul"}(attrs, ctx, {normalized_data, ograd},
+                                    {kWriteTo}, {ograd_mult});
+  }
   if (req[1] != kNullOp) {
     MSHADOW_REAL_TYPE_SWITCH(outputs[1].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
@@ -322,8 +327,13 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
     BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx,
                                                       {ograd_mult, red_out},
                                                       {req[0]}, {outputs[0]});
-    ElemwiseBinaryOp::Compute<xpu, op::mshadow_op::mul>(attrs, ctx, {ograd_mult, normalized_data},
-                                                        {kWriteTo}, {ograd_mult});
+    if constexpr (std::is_same<xpu, mshadow::cpu>::value) {
+      ElemwiseBinaryOp::Compute<xpu, op::mshadow_op::mul>(attrs, ctx, {ograd_mult, normalized_data},
+                                                          {kWriteTo}, {ograd_mult});
+    } else {
+      ElemwiseBinaryRTCCompute{"mul"}(attrs, ctx, {ograd_mult, normalized_data},
+                                      {kWriteTo}, {ograd_mult});
+    }
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
         if (safe_acc) {

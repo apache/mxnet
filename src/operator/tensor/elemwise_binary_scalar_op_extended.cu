@@ -38,7 +38,7 @@ NNVM_REGISTER_OP(_minimum_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"min"});
 
 NNVM_REGISTER_OP(_backward_minimum_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"lesser_equal"});
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"less_equal"});
 
 NNVM_REGISTER_OP(_power_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"power"});

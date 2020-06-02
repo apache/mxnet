@@ -463,11 +463,38 @@ class BinaryScalarOp : public UnaryOp {
   .add_argument("data", "NDArray-or-Symbol", "source input")              \
   .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
+#if MXNET_USE_CUDA
+
+struct BinaryScalarRTCCompute {
+  std::string OP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<NDArray>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<NDArray>& outputs);
+};
+
+struct BinaryScalarRTCBackward {
+  std::string OP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
+#endif
+
 }  // namespace op
 }  // namespace mxnet
 
-#ifdef __CUDACC__
-#include "elemwise_binary_scalar_op.cuh"
-#endif
 
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_SCALAR_OP_H_

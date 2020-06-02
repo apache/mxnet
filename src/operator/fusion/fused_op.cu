@@ -394,17 +394,17 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         if (op_name == "_backward_Activation") {
           CHECK_EQ(outputs[i], 1);
           std::string act_type = node.source->attrs.dict.at("act_type");
-          std::string rhs, lhs;
-          rhs = variables[{node.inputs[0].node_id, node.inputs[0].index}];
+          std::string ograd, input;
+          ograd = variables[{node.inputs[0].node_id, node.inputs[0].index}];
           if (act_type == "relu" ||
               act_type == "sigmoid" ||
               act_type == "tanh") {
-            lhs = variables[{node.inputs[1].node_id, node.inputs[1].index}];
+            input = variables[{node.inputs[1].node_id, node.inputs[1].index}];
           } else {
-            lhs = variables[{node.inputs[2].node_id, node.inputs[2].index}];
+            input = variables[{node.inputs[2].node_id, node.inputs[2].index}];
           }
           code += "const auto " + var_name + " = op::backward_" + act_type +
-                  "(" + lhs + ", " + rhs + ");\n";
+                  "(" + ograd + ", " + input + ");\n";
 
           variables[{i, 0}] = var_name;
           continue;

@@ -913,11 +913,28 @@ void NumpyNanToNumOpBackward(const nnvm::NodeAttrs& attrs,
   MXNET_OPERATOR_REGISTER_UNARY(__name$)                                                \
   .set_attr<FCompute>("FCompute<" #__xpu$ ">", UnaryOp::Compute<__xpu$, __kernel$>)
 
+#if MXNET_USE_CUDA
+
+struct UnaryRTCCompute {
+  std::string OP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<NDArray>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<NDArray>& outputs);
+
+};
+
+#endif
+
 }  // namespace op
 }  // namespace mxnet
-
-#ifdef __CUDACC__
-#include "elemwise_unary_op.cuh"
-#endif
 
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_UNARY_OP_H_

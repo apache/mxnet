@@ -35,6 +35,7 @@
 #include "rtc/forward_functions-inl.h"
 #include "rtc/backward_functions-inl.h"
 #include "rtc/vectorization-inl.h"
+#include "rtc/special_functions-inl.h"
 #include "utils.h"
 
 
@@ -114,6 +115,8 @@ CUfunction get_function(const std::string &code,
         std::string(fp16_support_string) + "\n" +
         type_support_string + "\n" +
         op_req_type_string + "\n" +
+        float_limits() +
+        special_functions_definitions + '\n' +
         function_definitions + "\n" +
         backward_function_definitions + "\n" +
         vectorization_support_string + "\n";

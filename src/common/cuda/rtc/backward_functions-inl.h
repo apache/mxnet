@@ -32,142 +32,158 @@ const char backward_function_definitions[] = R"code(
 namespace op {
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_relu(const DType val, const DTypeGrad grad) {
-  return (isnan(val) || val > 0) ? grad : 0;
+__device__ inline DTypeGrad backward_relu(const DTypeGrad grad, const DType val) {
+  if (isnan(val)) return val;
+  return val > 0 ? grad : 0;
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_sigmoid(const DType out, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_sigmoid(const DTypeGrad grad, const DType out) {
   return grad * out * (1 - out);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_softrelu(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_softrelu(const DTypeGrad grad, const DType val) {
   return grad * sigmoid(val);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_softsign(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_softsign(const DTypeGrad grad, const DType val) {
   const DType ap1 = 1 + op::abs(val);
   return grad / (ap1 * ap1);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_exp(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_abs(const DTypeGrad grad, const DType val) {
+  return grad * op::sign(val);
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline DTypeGrad backward_exp(const DTypeGrad grad, const DType val) {
   return grad * op::exp(val);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_expm1(const DType val, const DTypeGrad grad) {
-  return backward_exp(val, grad);
+__device__ inline DTypeGrad backward_expm1(const DTypeGrad grad, const DType val) {
+  return backward_exp(grad, val);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_log(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_log(const DTypeGrad grad, const DType val) {
   return grad / val;
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_log10(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_log10(const DTypeGrad grad, const DType val) {
   return grad / (val * op::log(static_cast<DTypeGrad>(10)));
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_log2(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_log2(const DTypeGrad grad, const DType val) {
   return grad / (val * op::log(static_cast<DTypeGrad>(2)));
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_log1p(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_log1p(const DTypeGrad grad, const DType val) {
   return grad / (1 + val);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_sin(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_sin(const DTypeGrad grad, const DType val) {
   return grad * op::cos(val);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_cos(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_cos(const DTypeGrad grad, const DType val) {
   return -grad * op::sin(val);
 }
 
 // Uses output from tan
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_tan(const DType out, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_tan(const DTypeGrad grad, const DType out) {
   return grad * (out * out + 1);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_arcsin(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_arcsin(const DTypeGrad grad, const DType val) {
   return grad / op::sqrt(1 - val*val);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_arccos(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_arccos(const DTypeGrad grad, const DType val) {
   return -grad / op::sqrt(1 - val*val);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_arctan(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_arctan(const DTypeGrad grad, const DType val) {
   return grad / (1 + val*val);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_sinh(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_degrees(const DTypeGrad grad, const DType /* val */) {
+  return op::degrees(grad);
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline DTypeGrad backward_radians(const DTypeGrad grad, const DType /* val */) {
+  return op::radians(grad);
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline DTypeGrad backward_sinh(const DTypeGrad grad, const DType val) {
   return grad * op::cosh(val);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_cosh(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_cosh(const DTypeGrad grad, const DType val) {
   return grad * op::sinh(val);
 }
 
 // Uses tanh output
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_tanh(const DType out, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_tanh(const DTypeGrad grad, const DType out) {
   return grad * (1 - out * out);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_arcsinh(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_arcsinh(const DTypeGrad grad, const DType val) {
   return grad / op::sqrt(val * val + 1);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_arccosh(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_arccosh(const DTypeGrad grad, const DType val) {
   return grad / op::sqrt(val * val - 1);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_arctanh(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_arctanh(const DTypeGrad grad, const DType val) {
   return grad / (1 - val * val);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_sqrt(const DType out, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_sqrt(const DTypeGrad grad, const DType out) {
   return 0.5 * grad / out;
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_rsqrt(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_rsqrt(const DTypeGrad grad, const DType val) {
   const DType inv = 1 / val;
   return -0.5 * grad * op::sqrt(inv) * inv;
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_cbrt(const DType out, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_cbrt(const DTypeGrad grad, const DType out) {
   return grad / (3.0f * out * out);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_rcbrt(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_rcbrt(const DTypeGrad grad, const DType val) {
   const DType inv = 1 / val;
   return -1.f/3.f * grad * op::cbrt(inv) * inv;
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_square(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_square(const DTypeGrad grad, const DType val) {
   return 2 * val * grad;
 }
 
@@ -252,7 +268,7 @@ __device__ inline DType rldexp_grad(const DType val,
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_clip(const DType val, const DTypeGrad grad,
+__device__ inline DTypeGrad backward_clip(const DTypeGrad grad, const DType val,
                                           const float a_min, const float a_max) {
   if (val > a_max || val < a_min) {
     return 0;
@@ -262,18 +278,36 @@ __device__ inline DTypeGrad backward_clip(const DType val, const DTypeGrad grad,
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_reciprocal(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_reciprocal(const DTypeGrad grad, const DType val) {
   return -grad / (val * val);
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_erf(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_erf(const DTypeGrad grad, const DType val) {
   return 2.0f / op::sqrt(pi) * op::exp(-(val*val)) * grad;
 }
 
 template <typename DType, typename DTypeGrad>
-__device__ inline DTypeGrad backward_erfinv(const DType val, const DTypeGrad grad) {
+__device__ inline DTypeGrad backward_erfinv(const DTypeGrad grad, const DType val) {
   return 0.5f * op::sqrt(pi) * op::exp(val * val) * grad;
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline DTypeGrad backward_gamma(const DTypeGrad grad, const DType val) {
+  if (type_util::is_same<DTypeGrad, double>::value) {
+    return grad * op::gamma(val) * op::special_functions::cephes::psi<double>(val);
+  } else {
+    return grad * op::gamma(val) * op::special_functions::cephes::psi<float>(val);
+  }
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline DTypeGrad backward_gammaln(const DTypeGrad grad, const DType val) {
+  if (type_util::is_same<DTypeGrad, double>::value) {
+    return grad * op::special_functions::cephes::psi<double>(val);
+  } else {
+    return grad * op::special_functions::cephes::psi<float>(val);
+  }
 }
 
 template <typename DType, typename DType2>

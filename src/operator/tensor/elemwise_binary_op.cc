@@ -25,6 +25,10 @@
 
 #include "./elemwise_binary_op.h"
 
+#if MXNET_USE_CUDA
+#include "../../common/cuda/rtc/vectorization-inl.h"
+#include "../../common/cuda/rtc.h"
+#endif  // MXNET_USE_CUDA
 
 namespace mxnet {
 namespace op {
@@ -91,6 +95,101 @@ bool ElemwiseBinaryOp::BackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
   }
   return dispatched;
 }
+
+#if MXNET_USE_CUDA
+
+struct binary_kernel_params {
+  const void *inputs[2];
+  void *outputs[1];
+};
+
+const char binary_kernel_fwd[] = R"code(
+
+struct binary_kernel_params {
+  const void *inputs[2];
+  void *outputs[1];
+};
+
+__global__ void binary_kernel(const binary_kernel_params params,
+                              const index_t lead_dim,
+                              const index_t other_dim,
+                              const index_t N,
+                              const index_t num_aligned_elements) {
+  using namespace vector;
+  VectorizedLoader<InputType0, nvec, aligned> loader0(
+    reinterpret_cast<const InputType0*>(params.inputs[0]), N);
+  VectorizedLoader<InputType1, nvec, aligned> loader1(
+    reinterpret_cast<const InputType1*>(params.inputs[1]), N);
+  VectorizedStorer<OutputType0, nvec, aligned> storer(
+    reinterpret_cast<OutputType0*>(params.outputs[0]), N);
+
+  using IType0 = AccType<InputType0>;
+  using IType1 = AccType<InputType0>;
+  using OType = AccType<OutputType0>;
+
+  const index_t M = num_aligned_elements;
+
+  for (index_t tid = blockIdx.x * blockDim.x + threadIdx.x;
+       tid < M;
+       tid += gridDim.x * blockDim.x) {
+    loader0.load(tid, N);
+    loader1.load(tid, N);
+    if (req == OpReqType::kAddTo) {
+      storer.load(tid, N);
+    }
+#pragma unroll
+    for (int i = 0; i < nvec; ++i) {
+      const auto input0 = IType0::from(loader0.separate()[i]);
+      const auto input1 = IType1::from(loader1.separate()[i]);
+      const auto temp = OP(input0, input1);  // enables returning different type
+
+      if (req == OpReqType::kAddTo) {
+        // temp2 may have a wider type than either temp
+        // or OType
+        const auto temp2 = op::add(temp, OType::from(storer.separate()[i]));
+        storer.separate()[i] = OType::to(temp2);
+      } else {
+        storer.separate()[i] = OType::to(temp);
+      }
+    }
+    storer.store(tid, N);
+  }
+}
+
+)code";
+
+void ElemwiseBinaryRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
+                const OpContext& ctx,
+                const std::vector<TBlob>& inputs,
+                const std::vector<OpReqType>& req,
+                const std::vector<TBlob>& outputs) {
+  using namespace mxnet::common::cuda::rtc;
+  if (req[0] == kNullOp) return;
+  mshadow::Stream<gpu>* s = ctx.get_stream<gpu>();
+  CHECK_EQ(inputs.size(), 2U);
+  CHECK_EQ(outputs.size(), 1U);
+
+  const std::string code = std::string("const OpReqType req = ") +
+                           util::to_string(req[0]) +
+                           ";\n" +
+                           "#define OP op::" +
+                           OP +
+                           "\n" +
+                           binary_kernel_fwd;
+  const int nvec = outputs[0].type_flag_ == mshadow::kFloat64 ? 2 : 4;
+
+  const index_t size = outputs[0].Size();
+  binary_kernel_params params = { {inputs[0].dptr_, inputs[1].dptr_},
+                                  {outputs[0].dptr_} };
+
+  VectorizedKernelRTCLauncher(code, "binary_kernel", nvec,
+                              size, 1, s, params,
+                              inputs, outputs,
+                              ctx.run_ctx.get_ctx().dev_id);
+}
+
+
+#endif  // MXNET_USE_CUDA
 
 }  // namespace op
 }  // namespace mxnet
