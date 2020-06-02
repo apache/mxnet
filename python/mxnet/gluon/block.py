@@ -364,7 +364,7 @@ class Block(object):
             net.set_prefix()
 
         After calling ``net.set_prefix()``,
-        the names of the parameters inside 'net' would be added with the correspongding prefix.
+        the names of the parameters inside 'net' would be added with the corresponding prefix.
         Like for self.dense0.weight, it will be named automatically::
             Parameter dense0.weight (...)
         which originally was Parameter weight (...)
@@ -389,6 +389,8 @@ class Block(object):
                 val._name = name # use the name of the first occurence as the name of the shared parameter.
 
         for name, child in self._children.items():
+            if isinstance(child, SymbolBlock):
+                continue
             child._set_prefix(recorded, prefix + name)
 
     def _collect_params_with_prefix(self, prefix='', select=None):
@@ -401,7 +403,13 @@ class Block(object):
             ret = {prefix + key : val for key, val in self._reg_params.items() if pattern.match(prefix + key)}
 
         for name, child in self._children.items():
-            ret.update(child._collect_params_with_prefix(prefix + name, select))
+            child_ret = child._collect_params_with_prefix(prefix + name if not isinstance(child, SymbolBlock) else '', select)
+            commons = set(child_ret.keys()) & set(ret.keys())
+            if len(commons) > 0:
+                for common in commons:
+                    warnings.warn('Parmeter name "{}" occurs more than once. \
+                                  Please change the corresponding attribute name to avoid conflict.'.format(common))
+            ret.update(child_ret)
         return ret
 
     def save_parameters(self, filename, deduplicate=False):
@@ -1577,8 +1585,8 @@ class SymbolBlock(HybridBlock):
 
     def __init__(self, outputs, inputs, params=None):
         super(SymbolBlock, self).__init__()
-        if params is not None:
-            self._reg_params = params
+        if params is None:
+            params = {}
 
         if isinstance(inputs, symbol.Symbol) and len(inputs.list_outputs()) == 1:
             inputs = [inputs]
@@ -1614,11 +1622,12 @@ class SymbolBlock(HybridBlock):
         arg_types, aux_types = _infer_param_types(syms, out, arg_params, aux_params)
 
         def _set_params_attr(name, **kwargs):
-            if self._reg_params.get(name) is None:
+            if params.get(name) is None:
                 self._reg_params[name] = Parameter(name=name, **kwargs)
                 return
-            param = self._reg_params[name]
+            param = params[name]
             param.check_and_setattr(**kwargs)
+            self._reg_params[name] = param
 
         for i, arg in enumerate(arg_params):
             if arg not in input_names:
