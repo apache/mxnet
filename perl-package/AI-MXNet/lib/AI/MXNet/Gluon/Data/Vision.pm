@@ -367,7 +367,7 @@ extends 'AI::MXNet::Gluon::Data::Set';
 =cut
 has 'root'      => (is => 'rw', isa => 'Str');
 has 'flag'      => (is => 'rw', isa => 'Bool', default => 1);
-has 'transform' => (is => 'rw', isa => 'Maybe[CodeRef]');
+has 'transform' => (is => 'ro', isa => 'Maybe[CodeRef]');
 has [qw/exts
     synsets
     items/]     => (is => 'rw', init_arg => undef);
