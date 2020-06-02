@@ -59,7 +59,7 @@ profiler.dump(True)
 And in `chrome://tracing` use the `load` and select `test_profiler.json`, then you will see something like this
 ![dev_guide_profilling_1](/assets/img/dev_guide_profilling_1.png) To understand what is going on we need to dive deep into the MXNet runtime.
 
-# Dive deep into MXNet runtime with the profiler
+## Dive deep into MXNet runtime with the profiler
 
 We start with a simple example and try to explain as we go on. The following code creates a 3x3 tensor, computes the diagonal and then sum's along the diagonal (to compute the “trace”). Using the MXNet profiler, we capture internal MXNet behavior and dump it to a string and print it (`dumps()`) and also dump it to a file (`dump()`). Then we can import that file in `chrome://tracing` and view it graphically.
 
