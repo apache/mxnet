@@ -2278,7 +2278,7 @@ def test_negation():
         def hybrid_forward(self, F, a):
             return -a
     mx_func = TestNegation()
-    for dtype in [_np.int8, _np.int32, _np.bool, _np.float16, _np.float32, _np.float64]:
+    for dtype in [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64]:
         np_test_data = _np.random.uniform(-1, 1, (5, 5)).astype(dtype)
         for hybridize in [True, False]:
             mx_test_data = mx.numpy.array(np_test_data, dtype=dtype)
