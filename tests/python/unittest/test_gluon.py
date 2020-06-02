@@ -1971,6 +1971,29 @@ def test_hybrid_static_memory_recording():
         net(x)
     net(x)
 
+@with_seed()
+def test_ignore_force_reinit():
+    net = nn.HybridSequential()
+    net.add(nn.Dense(4))
+    net.add(nn.Dense(2))
+    net.add(nn.Dense(1))
+    net.collect_params().initialize()
+    net(mx.nd.zeros((4,)))
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        net.initialize(force_reinit=True)
+        assert len(w) == 0
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        net.initialize(force_reinit=False, ignore_reinit=False)
+        assert len(w) == (3 * 2)  # weight and bias, 3 layers
+
+    with warnings.catch_warnings(record=True) as w:
+        warnings.simplefilter("always")
+        net.initialize(force_reinit=False, ignore_reinit=True)
+        assert len(w) == 0
 
 def test_share_inputs_outputs():
     class TestIOBackward(gluon.HybridBlock):

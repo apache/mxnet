@@ -410,7 +410,7 @@ class Parameter(object):
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
-                   force_reinit=False):
+                   force_reinit=False, ignore_reinit=False):
         """Initializes parameter and gradient arrays. Only used for :py:class:`NDArray` API.
 
         Parameters
@@ -431,6 +431,8 @@ class Parameter(object):
             and :py:meth:`Parameter.init` are ``None``.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
+        ignore_reinit : bool, default False
+            Whether to ignore re-initialization warning if `force_reinit` is not True.
 
         Examples
         --------
@@ -455,9 +457,10 @@ class Parameter(object):
         <NDArray 2x2 @gpu(1)>
         """
         if self._data is not None and not force_reinit:
-            warnings.warn("Parameter '%s' is already initialized, ignoring. " \
-                          "Set force_reinit=True to re-initialize."%self.name,
-                          stacklevel=2)
+            if not ignore_reinit:
+                warnings.warn("Parameter '%s' is already initialized, ignoring. " \
+                              "Set force_reinit=True to re-initialize."%self.name,
+                              stacklevel=2)
             return
         self._data = self._grad = None
 
@@ -883,7 +886,7 @@ class ParameterDict(object):
             self._params[k] = v
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
-                   force_reinit=False):
+                   force_reinit=False, ignore_reinit=False):
         """Initializes all Parameters managed by this dictionary to be used for :py:class:`NDArray`
         API. It has no effect when using :py:class:`Symbol` API.
 
@@ -898,11 +901,13 @@ class ParameterDict(object):
             Whether to verbosely print out details on initialization.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
+        ignore_reinit : bool, default False
+            Whether to ignore re-initialization warning if `force_reinit` is not True.
         """
         if verbose:
             init.set_verbosity(verbose=verbose)
         for _, v in self.items():
-            v.initialize(None, ctx, init, force_reinit=force_reinit)
+            v.initialize(None, ctx, init, force_reinit=force_reinit, ignore_reinit=ignore_reinit)
 
     def zero_grad(self):
         """Sets all Parameters' gradient buffer to 0."""

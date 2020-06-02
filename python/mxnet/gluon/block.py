@@ -660,7 +660,7 @@ class Block(object):
         return self
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
-                   force_reinit=False):
+                   force_reinit=False, ignore_reinit=False):
         """Initializes :py:class:`Parameter` s of this :py:class:`Block` and its children.
         Equivalent to ``block.collect_params().initialize(...)``
 
@@ -675,8 +675,10 @@ class Block(object):
             Whether to verbosely print out details on initialization.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
+        ignore_reinit : bool, default False
+            Whether to ignore re-initialization warning if `force_reinit` is not True.
         """
-        self.collect_params().initialize(init, ctx, verbose, force_reinit)
+        self.collect_params().initialize(init, ctx, verbose, force_reinit, ignore_reinit)
 
     def hybridize(self, active=True, **kwargs):
         """ Please refer description of HybridBlock hybridize().
