@@ -1040,29 +1040,16 @@ class HybridBlock(Block):
             warnings.warn("Parameter %s is not used by any computation. "
                           "Is this intended?"%unused, stacklevel=4)
 
-        data_indices = []
-        param_indices = []
-        self._cached_op_args = []
-        for i, name in enumerate(input_names):
-            if name in data_names:
-                data_indices.append(i)
-                self._cached_op_args.append((True, data_names[name]))
-            else:
-                param_indices.append(i)
-                self._cached_op_args.append((False, params[name]))
-        flags = [('data_indices', data_indices), ('param_indices', param_indices)] + \
-                self._flags
-
         args, _ = _flatten(args, "input")
         try:
-            for is_arg, i in self._cached_op_args:
-                if not is_arg:
-                    i.data()
+            for name in input_names:
+                if name in params:
+                    params[name].data()
         except DeferredInitializationError:
             self._deferred_infer_shape(*args)
-            for is_arg, i in self._cached_op_args:
-                if not is_arg:
-                    i._finish_deferred_init()
+            for name in input_names:
+                if name in params:
+                    params[name]._finish_deferred_init()
 
         if self._backend:
             ctx = args[0].context
@@ -1075,6 +1062,20 @@ class HybridBlock(Block):
             out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
             #update cached graph with partitioned graph
             self._cached_graph = data, out
+
+        input_names = out.list_inputs()
+        data_indices = []
+        param_indices = []
+        self._cached_op_args = []
+        for i, name in enumerate(input_names):
+            if name in data_names:
+                data_indices.append(i)
+                self._cached_op_args.append((True, data_names[name]))
+            else:
+                param_indices.append(i)
+                self._cached_op_args.append((False, params[name]))
+        flags = [('data_indices', data_indices), ('param_indices', param_indices)] + \
+                self._flags
         self._cached_op = ndarray.CachedOp(out, flags)
 
 

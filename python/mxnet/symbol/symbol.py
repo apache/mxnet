@@ -1544,8 +1544,35 @@ class Symbol(SymbolBase):
             raise RuntimeError('Cannot add new aux in optimize_for since aux is None\n' +
                                'Provide a dictionary to the aux argument to optimize_for')
 
-        # return modified symbol
-        return Symbol(out)
+        new_sym = Symbol(out)
+
+        arg_names = self.list_arguments()
+        new_arg_names = new_sym.list_arguments()
+        deleted_arg_names = set([item for item in arg_names
+                                    if item not in set(new_arg_names)])
+
+        if len(deleted_arg_names) > 0:
+            if args is not None:
+                for a_n in deleted_arg_names:
+                    if a_n in args:
+                        args.pop(a_n)
+            else:
+                warnings.warn('optimize_for deleted some argument. \n' +
+                              'Provide a dictionary to the arg argument to optimize_for')
+        aux_names = self.list_auxiliary_states()
+        new_aux_names = new_sym.list_auxiliary_states()
+        deleted_aux_names = set([item for item in aux_names
+                                    if item not in set(new_aux_names)])
+        if len(deleted_aux_names) > 0:
+            if aux is not None:
+                for a_n in deleted_aux_names:
+                    if a_n in aux:
+                        aux.pop(a_n)
+            else:
+                warnings.warn('optimize_for deleted some aux argument. \n' +
+                              'Provide a dictionary to the aux argument to optimize_for')
+
+        return new_sym
 
     # pylint: disable=too-many-locals
     def _simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
