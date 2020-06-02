@@ -93,7 +93,7 @@
           <div class="dropdown-content">
             {% for version in site.versions %}
               {% if version == site.versions[0] %}
-                <a class="dropdown-option-active" href="/">master</a>
+                <a class="dropdown-option-active" href="/">{{version}}</a>
               {% else %}
                 <a href="/versions/{{version}}/">{{version}}</a>
               {% endif %}
