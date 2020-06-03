@@ -30,7 +30,7 @@ Here are some general git workflow tips
 Fork [https://github.com/apache/incubator-mxnet](https://github.com/apache/incubator-mxnet) then
 
 ```
-git clone https://github.com/your_username/incubator-mxnet
+git clone --recursive https://github.com/your_username/incubator-mxnet
 cd mxnet
 git remote add upstream https://github.com/apache/incubator-mxnet
 ```
