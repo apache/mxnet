@@ -55,6 +55,24 @@ class _BlockScope(object):
         self._old_scope = None
         self._name_scope = None
 
+    @staticmethod
+    def count(hint):
+        """
+        Creates unique name for new `Block`.
+        The profiler scope is to support the GPU memory profiler.
+        """
+        current = getattr(_BlockScope._current, "value", None)
+        if current is None:
+            if not hasattr(_name.NameManager._current, "value"):
+                _name.NameManager._current.value = _name.NameManager()
+            block_name = _name.NameManager._current.value.get(None, hint)
+            return block_name
+
+        count = current._counter.get(hint, 0)
+        block_name = '%s%d'%(hint, count)
+        current._counter[hint] = count + 1
+        return block_name
+
     def __enter__(self):
         block = self._block()
         if block is None or block.prefix == '':
@@ -247,6 +265,7 @@ class Block(object):
         self._reg_params = {}
         self._forward_hooks = OrderedDict()
         self._forward_pre_hooks = OrderedDict()
+        self._name = _BlockScope.count(self._alias())
         self._scope = _BlockScope(self)
         self._prefix = ""
 
@@ -315,7 +334,7 @@ class Block(object):
     @property
     def name(self):
         """Name of this :py:class:`Block`, prefix + class name """
-        return self._prefix + self._alias()
+        return self._prefix + self._name
 
     @property
     def params(self):

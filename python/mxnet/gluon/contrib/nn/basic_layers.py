@@ -223,7 +223,7 @@ class SyncBatchNorm(BatchNorm):
         num_devices = self._get_num_devices() if num_devices is None else num_devices
         self._kwargs = {'eps': epsilon, 'momentum': momentum,
                         'fix_gamma': not scale, 'use_global_stats': use_global_stats,
-                        'ndev': num_devices, 'key': self.prefix}
+                        'ndev': num_devices, 'key': self.name}
 
     def _get_num_devices(self):
         warnings.warn("Caution using SyncBatchNorm: "

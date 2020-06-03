@@ -753,7 +753,6 @@ def test_batchnorm():
 
 
 @xfail_when_nonstandard_decimal_separator
-@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/18466')
 @with_seed()
 def test_sync_batchnorm():
     def _check_batchnorm_result(input, num_devices=1, cuda=False):
