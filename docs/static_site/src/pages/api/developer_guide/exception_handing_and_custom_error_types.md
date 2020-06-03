@@ -26,7 +26,7 @@ permalink: /api/dev-guide/exception_handing_and_custom_error_types
 
 Apache MXNet v1.7 has added the custom error type support and as a result `MXNetError` is inherited from `RuntimeError` so it is possible to register a custom error type in the backend and prepend its error message. Then in the frontend, one can throw the exception of the registered error type. 
 
-For example, we want the `transpose` operator defined the C++ backend to throw `ValueError` type in the Python frontend. Therefore, in the C++ backend we can add this check
+For example, we want the `transpose` operator defined in the C++ backend to throw `ValueError` type in the Python frontend. Therefore, in the C++ backend we can add this check:
 
 ```
 CHECK_EQ(axes_set.size(), axes.ndim()) << "ValueError: Repeated axis in transpose."
@@ -34,7 +34,7 @@ CHECK_EQ(axes_set.size(), axes.ndim()) << "ValueError: Repeated axis in transpos
                                        << param.axes;
 ```
 
-and frontend effect for a problematic `transpose`  call such as
+so that on the frontend, when a problematic `transpose` call is made such as:
 
 ```
 from mxnet import np
@@ -43,7 +43,7 @@ dat = np.random.normal(0, 1, (3, 4, 5))
 dat.transpose((0, 0, 1))
 ```
 
-will become the following traceback
+the following traceback will be produced:
 
 
 ```
@@ -79,7 +79,7 @@ ValueError: Check failed: axes_set.size() == axes.ndim() (2 vs. 3) : Repeated ax
 ```
 
 
-Note that as of writing this document, the following Python error types are supported
+Note that as of writing this document, the following Python error types are supported:
 
 
 * `ValueError`
@@ -88,11 +88,12 @@ Note that as of writing this document, the following Python error types are supp
 * `IndexError`
 * `NotImplementedError`
 
-Check [this](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/error.py) our for more details.
+Check [this](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/error.py) resource for more details
+about Python supported error types that MXNet supports.
 
 ## How to register a custom error type
 
-Here is the way to register a custom error type in Python frontend 
+Here is the way to register a custom error type in Python frontend:
 
 
 ```
@@ -104,7 +105,6 @@ class MyError(mx.MXNetError):
         super().__init__(msg)
 ```
 
-Then in the C++ backend, you can refer to `MyError` via
+Then in the C++ backend, you can refer to `MyError` via:
 
-`LOG(FATAL) << "MyError: this is a custom error message"
-`
+`LOG(FATAL) << "MyError: this is a custom error message"`

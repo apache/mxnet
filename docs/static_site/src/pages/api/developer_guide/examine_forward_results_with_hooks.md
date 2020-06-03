@@ -23,7 +23,7 @@ permalink: /api/dev-guide/examine_forward_results_with_hooks
 
 # Examine forward results with hooks
 
-There are currently three ways to register a function in an MXNet Gluon Block for execution either
+There are currently three ways to register a function in an MXNet Gluon Block for execution:
 
 * before `forward` via [register_forward_pre_hook]({{"/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_pre_hook" | relative_url }})
 * after `forward` via [register_forward_hook]({{"/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_hook" | relative_url }})
@@ -31,7 +31,7 @@ There are currently three ways to register a function in an MXNet Gluon Block fo
 
 ## Pre-forward hook
 
-To register a hook prior to forward execution, the requirement is that the registered operation **should not modify the input or output i.e.** `hook(block, input) -> None`. This is useful for example to get some summary before execution.
+To register a hook prior to forward execution, the requirement is that the registered operation **should not modify the input or output**. For example: `hook(block, input) -> None`. This is useful to get a summary before execution.
 
 ```
 import mxnet as mx
@@ -61,7 +61,7 @@ print(block(input))
 # <NDArray 3x10 @cpu(0)>
 ```
 
-We can `detach` a hook from a block 
+We can `detach` a hook from a block:
 
 
 ```
@@ -81,7 +81,7 @@ Notice `Dense(None -> 10, linear)` is not displayed anymore.
 
 ## Post-forward hook
 
-Registering a hook after forward execution is very similar to pre-forward hook (as explained above) with the difference that the hook signature should be `hook(block, input, output) -> None` where **hook should not modify the input and output.** Continuing from the above example
+Registering a hook after forward execution is very similar to pre-forward hook (as explained above) with the difference that the hook signature should be `hook(block, input, output) -> None` where **hook should not modify the input and output.** Continuing from the above example:
 
 
 ```
@@ -107,14 +107,14 @@ Notice the difference between `pre_hook` and `post_hook` results due to shape in
 
 ## Callback hook
 
-We can register a callback monitor to monitor all operators that are called by the `HybridBlock` **after hybridization** with `register_op_hook(callback, monitor_all=False) ` where callback signature should be 
+We can register a callback monitor to monitor all operators that are called by the `HybridBlock` **after hybridization** with `register_op_hook(callback, monitor_all=False) ` where the callback signature should be:
 
 
 ```
 callback(node_name: str,  opr_name: str, arr: NDArray) -> None
 ```
 
-where `node_name` is the name of the tensor being inspected (str), `opr_name` is the name of the operator producing or consuming that tensor (str) and finally `arr` the tensor being inspected (NDArray).
+where `node_name` is the name of the tensor being inspected (str), `opr_name` is the name of the operator producing or consuming that tensor (str) and `arr` the tensor being inspected (NDArray).
 
 
 ```
@@ -149,7 +149,7 @@ print(model(mx.nd.ones((2, 3, 4))))
 ```
 
 
-Setting `monitor_all=False` will print only the output
+Setting `monitor_all=False` will print only the output:
 
 
 ```
