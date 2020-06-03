@@ -35,16 +35,6 @@
 namespace mxnet {
 namespace op {
 
-inline bool NumpyBinaryScalarType(const nnvm::NodeAttrs& attrs,
-                           std::vector<int>* in_attrs,
-                           std::vector<int>* out_attrs) {
-  CHECK_EQ(in_attrs->size(), 1U);
-  CHECK_EQ(out_attrs->size(), 1U);
-  TYPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0));
-  TYPE_ASSIGN_CHECK(*in_attrs, 0, out_attrs->at(0));
-  return in_attrs->at(0) != -1;
-}
-
 inline void PrintErrorMessage(const std::string& op_name, const int dtype1, const int dtype2) {
   LOG(FATAL) << "Operator " << op_name << " does not support combination of "
              << mshadow::dtype_string(dtype1) << " with " << mshadow::dtype_string(dtype2)

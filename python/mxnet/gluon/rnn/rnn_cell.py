@@ -36,10 +36,10 @@ from ..nn import LeakyReLU
 
 
 def _cells_state_info(cells, batch_size):
-    return sum([c.state_info(batch_size) for c in cells], [])
+    return sum([c().state_info(batch_size) for c in cells], [])
 
 def _cells_begin_state(cells, **kwargs):
-    return sum([c.begin_state(**kwargs) for c in cells], [])
+    return sum([c().begin_state(**kwargs) for c in cells], [])
 
 def _get_begin_state(cell, F, begin_state, inputs, batch_size):
     if begin_state is None:
@@ -137,7 +137,7 @@ class RecurrentCell(Block):
         self._init_counter = -1
         self._counter = -1
         for cell in self._children.values():
-            cell.reset()
+            cell().reset()
 
     def state_info(self, batch_size=0):
         """shape and layout information of states"""
@@ -676,11 +676,12 @@ class SequentialRNNCell(RecurrentCell):
     """Sequentially stacking multiple RNN cells."""
     def __init__(self):
         super(SequentialRNNCell, self).__init__()
+        self._layers = []
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
         return s.format(name=self.__class__.__name__,
-                        modstr='\n'.join(['({i}): {m}'.format(i=i, m=_indent(m.__repr__(), 2))
+                        modstr='\n'.join(['({i}): {m}'.format(i=i, m=_indent(m().__repr__(), 2))
                                           for i, m in self._children.items()]))
 
     def add(self, cell):
@@ -691,6 +692,7 @@ class SequentialRNNCell(RecurrentCell):
         cell : RecurrentCell
             The cell to add.
         """
+        self._layers.append(cell)
         self.register_child(cell)
 
     def state_info(self, batch_size=0):
@@ -706,13 +708,13 @@ class SequentialRNNCell(RecurrentCell):
         self._counter += 1
         next_states = []
         p = 0
-        assert all(not isinstance(cell, BidirectionalCell) for cell in self._children.values())
+        assert all(not isinstance(cell(), BidirectionalCell) for cell in self._children.values())
         for cell in self._children.values():
-            assert not isinstance(cell, BidirectionalCell)
-            n = len(cell.state_info())
+            assert not isinstance(cell(), BidirectionalCell)
+            n = len(cell().state_info())
             state = states[p:p+n]
             p += n
-            inputs, state = cell(inputs, state)
+            inputs, state = cell()(inputs, state)
             next_states.append(state)
         return inputs, sum(next_states, [])
 
@@ -728,19 +730,19 @@ class SequentialRNNCell(RecurrentCell):
         p = 0
         next_states = []
         for i, cell in enumerate(self._children.values()):
-            n = len(cell.state_info())
+            n = len(cell().state_info())
             states = begin_state[p:p+n]
             p += n
-            inputs, states = cell.unroll(length, inputs=inputs, begin_state=states,
-                                         layout=layout,
-                                         merge_outputs=None if i < num_cells-1 else merge_outputs,
-                                         valid_length=valid_length)
+            inputs, states = cell().unroll(length, inputs=inputs, begin_state=states,
+                                           layout=layout,
+                                           merge_outputs=None if i < num_cells-1 else merge_outputs,
+                                           valid_length=valid_length)
             next_states.extend(states)
 
         return inputs, next_states
 
     def __getitem__(self, i):
-        return self._children[str(i)]
+        return self._children[str(i)]()
 
     def __len__(self):
         return len(self._children)
@@ -754,11 +756,12 @@ class HybridSequentialRNNCell(HybridRecurrentCell):
     """Sequentially stacking multiple HybridRNN cells."""
     def __init__(self):
         super(HybridSequentialRNNCell, self).__init__()
+        self._layers = []
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
         return s.format(name=self.__class__.__name__,
-                        modstr='\n'.join(['({i}): {m}'.format(i=i, m=_indent(m.__repr__(), 2))
+                        modstr='\n'.join(['({i}): {m}'.format(i=i, m=_indent(m().__repr__(), 2))
                                           for i, m in self._children.items()]))
 
     def add(self, cell):
@@ -769,6 +772,7 @@ class HybridSequentialRNNCell(HybridRecurrentCell):
         cell : RecurrentCell
             The cell to add.
         """
+        self._layers.append(cell)
         self.register_child(cell)
 
     def state_info(self, batch_size=0):
@@ -784,12 +788,12 @@ class HybridSequentialRNNCell(HybridRecurrentCell):
         self._counter += 1
         next_states = []
         p = 0
-        assert all(not isinstance(cell, BidirectionalCell) for cell in self._children.values())
+        assert all(not isinstance(cell(), BidirectionalCell) for cell in self._children.values())
         for cell in self._children.values():
-            n = len(cell.state_info())
+            n = len(cell().state_info())
             state = states[p:p+n]
             p += n
-            inputs, state = cell(inputs, state)
+            inputs, state = cell()(inputs, state)
             next_states.append(state)
         return inputs, sum(next_states, [])
 
@@ -804,19 +808,19 @@ class HybridSequentialRNNCell(HybridRecurrentCell):
         p = 0
         next_states = []
         for i, cell in enumerate(self._children.values()):
-            n = len(cell.state_info())
+            n = len(cell().state_info())
             states = begin_state[p:p+n]
             p += n
-            inputs, states = cell.unroll(length, inputs=inputs, begin_state=states,
-                                         layout=layout,
-                                         merge_outputs=None if i < num_cells-1 else merge_outputs,
-                                         valid_length=valid_length)
+            inputs, states = cell().unroll(length, inputs=inputs, begin_state=states,
+                                           layout=layout,
+                                           merge_outputs=None if i < num_cells-1 else merge_outputs,
+                                           valid_length=valid_length)
             next_states.extend(states)
 
         return inputs, next_states
 
     def __getitem__(self, i):
-        return self._children[str(i)]
+        return self._children[str(i)]()
 
     def __len__(self):
         return len(self._children)
@@ -1019,8 +1023,8 @@ class BidirectionalCell(HybridRecurrentCell):
     """
     def __init__(self, l_cell, r_cell):
         super(BidirectionalCell, self).__init__()
-        self.register_child(l_cell, 'l_cell')
-        self.register_child(r_cell, 'r_cell')
+        self.l_cell = l_cell
+        self.r_cell = r_cell
 
     def __call__(self, inputs, states):
         raise NotImplementedError("Bidirectional cannot be stepped. Please use unroll")
@@ -1028,8 +1032,8 @@ class BidirectionalCell(HybridRecurrentCell):
     def __repr__(self):
         s = '{name}(forward={l_cell}, backward={r_cell})'
         return s.format(name=self.__class__.__name__,
-                        l_cell=self._children['l_cell'],
-                        r_cell=self._children['r_cell'])
+                        l_cell=self._children['l_cell'](),
+                        r_cell=self._children['r_cell']())
 
     def state_info(self, batch_size=0):
         return _cells_state_info(self._children.values(), batch_size)
@@ -1050,7 +1054,7 @@ class BidirectionalCell(HybridRecurrentCell):
         begin_state = _get_begin_state(self, F, begin_state, inputs, batch_size)
 
         states = begin_state
-        l_cell, r_cell = self._children.values()
+        l_cell, r_cell = [c() for c in self._children.values()]
         l_outputs, l_states = l_cell.unroll(length, inputs=inputs,
                                             begin_state=states[:len(l_cell.state_info(batch_size))],
                                             layout=layout, merge_outputs=merge_outputs,

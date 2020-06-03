@@ -43,15 +43,17 @@ class Sequential(Block):
     """
     def __init__(self):
         super(Sequential, self).__init__()
+        self._layers = []
 
     def add(self, *blocks):
         """Adds block on top of the stack."""
         for block in blocks:
+            self._layers.append(block)
             self.register_child(block)
 
     def forward(self, x, *args):
         for block in self._children.values():
-            x = block(x, *args)
+            x = block()(x, *args)
             args = []
             if isinstance(x, (tuple, list)):
                 args = x[1:]
@@ -63,19 +65,19 @@ class Sequential(Block):
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
-                                                        block=_indent(block.__repr__(), 2))
+                                                        block=_indent(block().__repr__(), 2))
                             for key, block in self._children.items()])
-        return s.format(name=self.__class__.__name__,
-                        modstr=modstr)
+        return s.format(name=self.__class__.__name__, modstr=modstr)
 
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
             net = type(self)()
-            net.add(*layers)
-            return net
+            net._prefix = self._prefix
+            net.add(*(l() for l in layers))
+            return net.set_prefix()
         else:
-            return layers
+            return layers()
 
     def __len__(self):
         return len(self._children)
@@ -91,7 +93,7 @@ class Sequential(Block):
         **kwargs : string
             Additional flags for hybridized operator.
         """
-        if self._children and all(isinstance(c, HybridBlock) for c in self._children.values()):
+        if self._children and all(isinstance(c(), HybridBlock) for c in self._children.values()):
             warnings.warn(
                 "All children of this Sequential layer '%s'\n are HybridBlocks. Consider "
                 "using HybridSequential for the best performance."%repr(self), stacklevel=2)
@@ -110,15 +112,17 @@ class HybridSequential(HybridBlock):
     """
     def __init__(self):
         super(HybridSequential, self).__init__()
+        self._layers = []
 
     def add(self, *blocks):
         """Adds block on top of the stack."""
         for block in blocks:
+            self._layers.append(block)
             self.register_child(block)
 
     def hybrid_forward(self, F, x, *args):
         for block in self._children.values():
-            x = block(x, *args)
+            x = block()(x, *args)
             args = []
             if isinstance(x, (tuple, list)):
                 args = x[1:]
@@ -130,19 +134,19 @@ class HybridSequential(HybridBlock):
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
-                                                        block=_indent(block.__repr__(), 2))
+                                                        block=_indent(block().__repr__(), 2))
                             for key, block in self._children.items()])
-        return s.format(name=self.__class__.__name__,
-                        modstr=modstr)
+        return s.format(name=self.__class__.__name__, modstr=modstr)
 
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
             net = type(self)()
-            net.add(*layers)
-            return net
+            net._prefix = self._prefix
+            net.add(*(l() for l in layers))
+            return net.set_prefix()
         else:
-            return layers
+            return layers()
 
     def __len__(self):
         return len(self._children)
@@ -412,7 +416,6 @@ class BatchNorm(_BatchNorm):
         If True, use global moving statistics instead of local batch-norm. This will force
         change batch-norm into a scale shift operator.
         If False, use local batch-norm.
-    fuse_relu: False
     beta_initializer: str or `Initializer`, default 'zeros'
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
@@ -434,17 +437,20 @@ class BatchNorm(_BatchNorm):
         - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
-                 use_global_stats=False, fuse_relu=False,
+                 use_global_stats=False,
                  beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
                  in_channels=0, **kwargs):
-        assert not fuse_relu, "Please use BatchNormReLU with Relu fusion"
         super(BatchNorm, self).__init__(
-            axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
-            use_global_stats=False, fuse_relu=False,
-            beta_initializer='zeros', gamma_initializer='ones',
-            running_mean_initializer='zeros', running_variance_initializer='ones',
-            in_channels=0, **kwargs)
+            axis=axis, momentum=momentum, epsilon=epsilon, center=center,
+            scale=scale,
+            use_global_stats=use_global_stats, fuse_relu=False,
+            beta_initializer=beta_initializer,
+            gamma_initializer=gamma_initializer,
+            running_mean_initializer=running_mean_initializer,
+            running_variance_initializer=running_variance_initializer,
+            in_channels=in_channels, **kwargs)
+
 
 class BatchNormReLU(_BatchNorm):
     """Batch normalization layer (Ioffe and Szegedy, 2014).
@@ -474,7 +480,6 @@ class BatchNormReLU(_BatchNorm):
         If True, use global moving statistics instead of local batch-norm. This will force
         change batch-norm into a scale shift operator.
         If False, use local batch-norm.
-    fuse_relu: True
     beta_initializer: str or `Initializer`, default 'zeros'
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
@@ -496,17 +501,20 @@ class BatchNormReLU(_BatchNorm):
         - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
-                 use_global_stats=False, fuse_relu=True,
+                 use_global_stats=False,
                  beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
                  in_channels=0, **kwargs):
-        assert fuse_relu, "Please use BatchNorm w/o Relu fusion"
         super(BatchNormReLU, self).__init__(
-            axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
-            use_global_stats=False, fuse_relu=True,
-            beta_initializer='zeros', gamma_initializer='ones',
-            running_mean_initializer='zeros', running_variance_initializer='ones',
-            in_channels=0, **kwargs)
+            axis=axis, momentum=momentum, epsilon=epsilon,
+            center=center, scale=scale,
+            use_global_stats=use_global_stats, fuse_relu=True,
+            beta_initializer=beta_initializer,
+            gamma_initializer=gamma_initializer,
+            running_mean_initializer=running_mean_initializer,
+            running_variance_initializer=running_variance_initializer,
+            in_channels=in_channels, **kwargs)
+
 
 class Embedding(HybridBlock):
     r"""Turns non-negative integers (indexes/tokens) into dense vectors

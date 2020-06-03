@@ -23,6 +23,8 @@ from mxnet.test_utils import *
 from common import setup_module, with_seed, teardown_module, xfail_when_nonstandard_decimal_separator
 from mxnet.test_utils import EnvManager
 
+import pytest
+
 
 def grad_and_loss(func, argnum=None):
     """Return function that computes both gradient of arguments and loss value.
@@ -344,6 +346,7 @@ def test_is_train():
         assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_function():
     class func(Function):
         def forward(self, x, y):
@@ -380,6 +383,7 @@ def test_function():
 
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_function1():
     class Foo(mx.autograd.Function):
         def __init__(self):

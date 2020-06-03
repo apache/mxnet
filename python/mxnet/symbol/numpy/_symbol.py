@@ -26,6 +26,7 @@ from ...base import c_str
 from ...base import py_str
 from ...util import check_call, set_module, _sanity_check_params
 from ...util import wrap_np_unary_func, wrap_np_binary_func
+from ...util import is_np_default_dtype
 from ...context import current_context
 from ..symbol import Symbol, Group
 from .._internal import _set_np_symbol_class
@@ -45,7 +46,7 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
            'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'any', 'all', 'around', 'round', 'round_',
-           'flatnonzero', 'tril_indices', 'logical_and', 'logical_or', 'logical_xor',
+           'flatnonzero', 'tril_indices', 'amax', 'amin', 'max', 'min', 'logical_and', 'logical_or', 'logical_xor',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'interp',
@@ -279,7 +280,7 @@ class _Symbol(Symbol):
 
     def __neg__(self):
         """x.__neg__() <=> - x"""
-        return self.__mul__(-1.0)
+        return negative(self)
 
     def __deepcopy__(self, _):
         return super(_Symbol, self).as_np_ndarray()
@@ -584,7 +585,7 @@ class _Symbol(Symbol):
         Refer to `mxnet.numpy.argmax` for full documentation."""
         return argmin(self, axis, out)
 
-    def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ
+    def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ, redefined-outer-name
         """Return an array whose values are limited to [min, max].
         One of max or min must be given.
         """
@@ -729,11 +730,11 @@ class _Symbol(Symbol):
 
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
-        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
+        return _npi.max(self, axis=axis, keepdims=keepdims, out=out)
 
     def min(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the minimum along a given axis."""
-        return _mx_np_op.min(self, axis=axis, keepdims=keepdims, out=out)
+        return _npi.min(self, axis=axis, keepdims=keepdims, out=out)
 
     def norm(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`norm`.
@@ -1051,7 +1052,7 @@ class _Symbol(Symbol):
 
 
 @set_module('mxnet.symbol.numpy')
-def zeros(shape, dtype=_np.float32, order='C', ctx=None):
+def zeros(shape, dtype=float, order='C', ctx=None):
     """Return a new array of given shape and type, filled with zeros.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -1061,10 +1062,12 @@ def zeros(shape, dtype=_np.float32, order='C', ctx=None):
     shape : int or tuple of int
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
-        An optional value type. Default is `numpy.float32`. Note that this
-        behavior is different from NumPy's `zeros` function  where `float64`
-        is the default value, because `float32` is considered as the default
-        data type in deep learning.
+        An optional value type .
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
+        Note that this behavior is different from NumPy's `zeros` function where `float64`
+        is the default value, here we can set 'float32' or 'float64' as your default dtype,
+        because `float32` is considered as the default data type in deep learning.
     order : {'C'}, optional, default: 'C'
         How to store multi-dimensional data in memory, currently only row-major
         (C-style) is supported.
@@ -1080,12 +1083,13 @@ def zeros(shape, dtype=_np.float32, order='C', ctx=None):
         raise NotImplementedError
     if ctx is None:
         ctx = current_context()
-    dtype = _np.float32 if dtype is None else dtype
+    if dtype is None or dtype is float:
+        dtype = _np.float64 if is_np_default_dtype() else _np.float32
     return _npi.zeros(shape=shape, ctx=ctx, dtype=dtype)
 
 
 @set_module('mxnet.symbol.numpy')
-def ones(shape, dtype=_np.float32, order='C', ctx=None):
+def ones(shape, dtype=None, order='C', ctx=None):
     """Return a new array of given shape and type, filled with ones.
     This function currently only supports storing multi-dimensional data
     in row-major (C-style).
@@ -1095,10 +1099,11 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
     shape : int or tuple of int
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
-        An optional value type. Default is `numpy.float32`. Note that this
-        behavior is different from NumPy's `ones` function where `float64`
-        is the default value, because `float32` is considered as the default
-        data type in deep learning.
+        An optional value type.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
+        Note that this behavior is different from NumPy's `ones` function where
+        `float64` is the default value.
     order : {'C'}, optional, default: 'C'
         How to store multi-dimensional data in memory, currently only row-major
         (C-style) is supported.
@@ -1114,7 +1119,6 @@ def ones(shape, dtype=_np.float32, order='C', ctx=None):
         raise NotImplementedError
     if ctx is None:
         ctx = current_context()
-    dtype = _np.float32 if dtype is None else dtype
     return _npi.ones(shape=shape, ctx=ctx, dtype=dtype)
 
 
@@ -1251,6 +1255,8 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     fill_value : scalar or _Symbol
         Fill value.
     dtype : data-type, optional
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
         The desired data-type for the array. The default, `None`, means
         `np.array(fill_value).dtype`.
     order : {'C'}, optional
@@ -1300,7 +1306,6 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     if isinstance(fill_value, bool):
         fill_value = int(fill_value)
         dtype = _np.bool if dtype is None else dtype
-    dtype = _np.float32 if dtype is None else dtype
     return _npi.full(shape=shape, value=fill_value, ctx=ctx, dtype=dtype, out=out)
 
 
@@ -1448,7 +1453,9 @@ def identity(n, dtype=None, ctx=None):
     n : int
         Number of rows (and columns) in `n` x `n` output.
     dtype : data-type, optional
-        Data-type of the output.  Defaults to ``numpy.float32``.
+        Data-type of the output.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -1464,7 +1471,6 @@ def identity(n, dtype=None, ctx=None):
         raise ValueError("Input 'n' cannot be negative")
     if ctx is None:
         ctx = current_context()
-    dtype = _np.float32 if dtype is None else dtype
     return _npi.identity(shape=(n, n), ctx=ctx, dtype=dtype)
 
 
@@ -1571,13 +1577,15 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
         if isinstance(rhs, numeric_types):
             return fn_scalar(lhs, rhs, out=out)
         else:
+            is_int = isinstance(rhs, integer_types)
             if rfn_scalar is None:
                 # commutative function
-                return lfn_scalar(rhs, float(lhs), out=out)
+                return lfn_scalar(rhs, scalar=float(lhs), is_int=is_int, out=out)
             else:
-                return rfn_scalar(rhs, float(lhs), out=out)
+                return rfn_scalar(rhs, scalar=float(lhs), is_int=is_int, out=out)
     elif isinstance(rhs, numeric_types):
-        return lfn_scalar(lhs, float(rhs), out=out)
+        is_int = isinstance(rhs, integer_types)
+        return lfn_scalar(lhs, scalar=float(rhs), is_int=is_int, out=out)
     elif isinstance(rhs, Symbol):
         return fn_array(lhs, rhs, out=out)
     else:
@@ -1903,7 +1911,7 @@ def histogram(a, bins=10, range=None, normed=None, weights=None, density=None): 
 
 
 @set_module('mxnet.symbol.numpy')
-def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
+def eye(N, M=None, k=0, dtype=float, **kwargs):
     """
     Return a 2-D array with ones on the diagonal and zeros elsewhere.
 
@@ -1919,6 +1927,8 @@ def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
         and a negative value to a lower diagonal.
     dtype : data-type, optional
         Data-type of the returned array.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
 
     Returns
     -------
@@ -1930,6 +1940,8 @@ def eye(N, M=None, k=0, dtype=_np.float32, **kwargs):
     ctx = kwargs.pop('ctx', current_context())
     if ctx is None:
         ctx = current_context()
+    if dtype is None or dtype is float:
+        dtype = _np.float64 if is_np_default_dtype() else _np.float32
     return _npi.eye(N, M, k, ctx, dtype)
 
 
@@ -3737,7 +3749,9 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         step size is 1.  If `step` is specified as a position argument,
         `start` must also be given.
     dtype : dtype
-        The type of the output array. The default is `float32`.
+        The type of the output array.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
 
     Returns
     -------
@@ -3749,8 +3763,6 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         this rule may result in the last element of `out` being greater
         than `stop`.
     """
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
     if stop is None:
@@ -4206,7 +4218,6 @@ def stack(arrays, axis=0, out=None):
         if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
             raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
         return [arr for arr in arrays]
-
     arrays = get_list(arrays)
     return _npi.stack(*arrays, axis=axis, out=out)
 
@@ -4239,7 +4250,6 @@ def vstack(arrays, out=None):
         if not hasattr(arrays, '__getitem__') and hasattr(arrays, '__iter__'):
             raise ValueError("expected iterable for arrays but got {}".format(type(arrays)))
         return [arr for arr in arrays]
-
     arrays = get_list(arrays)
     return _npi.vstack(*arrays)
 
@@ -4399,6 +4409,190 @@ def minimum(x1, x2, out=None, **kwargs):
 @wrap_np_binary_func
 def fmin(x1, x2, out=None, **kwargs):
     return _ufunc_helper(x1, x2, _npi.fmin, _np.fmin, _npi.fmin_scalar, None, out)
+
+
+@set_module('mxnet.symbol.numpy')
+def max(a, axis=None, out=None, keepdims=False):
+    """
+    Return the maximum of an array or maximum along an axis.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default, flattened input is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+
+    Returns
+    -------
+    max : _Symbol
+        Maximum of `a`. If `axis` is None, the result is an array of dimension 1.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+
+    See Also
+    --------
+    min :
+        The minimum value of an array along a given axis, ignoring any nan.
+    maximum :
+        Element-wise maximum of two arrays, ignoring any nan.
+    argmax :
+        Return the indices of the maximum values.
+
+    Notes
+    -----
+    NaN in the orginal `numpy` is denoted as nan and will be ignored.
+
+    Don't use `max` for element-wise comparison of 2 arrays; when
+    ``a.shape[0]`` is 2, ``maximum(a[0], a[1])`` is faster than
+    ``max(a, axis=0)``.
+    """
+    return _npi.max(a, axis=axis, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def min(a, axis=None, out=None, keepdims=False):
+    """
+    Return the minimum of an array or minimum along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default, flattened input is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+
+    Returns
+    -------
+    min : ndarray
+        Minimum of `a`. If `axis` is None, the result is an array of dimension 1.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+
+    See Also
+    --------
+    max :
+        The maximum value of an array along a given axis, ignoring any nan.
+    minimum :
+        Element-wise minimum of two arrays, ignoring any nan.
+
+    Notes
+    -----
+    NaN in the orginal `numpy` is denoted as nan and will be ignored.
+
+    Don't use `min` for element-wise comparison of 2 arrays; when
+    ``a.shape[0]`` is 2, ``minimum(a[0], a[1])`` is faster than
+    ``min(a, axis=0)``.
+    """
+    return _npi.min(a, axis=axis, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def amax(a, axis=None, out=None, keepdims=False):
+    """
+    Return the maximum of an array or maximum along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default, flattened input is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+
+    Returns
+    -------
+    max : ndarray
+        Maximum of `a`. If `axis` is None, the result is an array of dimension 1.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+
+    See Also
+    --------
+    min :
+        The minimum value of an array along a given axis, ignoring any nan.
+    maximum :
+        Element-wise maximum of two arrays, ignoring any nan.
+    argmax :
+        Return the indices of the maximum values.
+
+    Notes
+    -----
+    NaN in the orginal `numpy` is denoted as nan and will be ignored.
+
+    Don't use `max` for element-wise comparison of 2 arrays; when
+    ``a.shape[0]`` is 2, ``maximum(a[0], a[1])`` is faster than
+    ``max(a, axis=0)``.
+    """
+    return _npi.amax(a, axis=axis, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def amin(a, axis=None, out=None, keepdims=False):
+    """
+    Return the minimum of an array or minimum along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default, flattened input is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+
+    Returns
+    -------
+    min : ndarray
+        Minimum of `a`. If `axis` is None, the result is an array of dimension 1.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+
+    See Also
+    --------
+    max :
+        The maximum value of an array along a given axis, ignoring any nan.
+    minimum :
+        Element-wise minimum of two arrays, ignoring any nan.
+
+    Notes
+    -----
+    NaN in the orginal `numpy` is denoted as nan and will be ignored.
+
+    Don't use `min` for element-wise comparison of 2 arrays; when
+    ``a.shape[0]`` is 2, ``minimum(a[0], a[1])`` is faster than
+    ``min(a, axis=0)``.
+    """
+    return _npi.amin(a, axis=axis, keepdims=keepdims, out=out)
 
 
 @set_module('mxnet.symbol.numpy')
@@ -4648,7 +4842,10 @@ def average(a, axis=None, weights=None, returned=False, out=None):
         Return the average along the specified axis.
         When returned is True, return a tuple with the average as the first element
         and the sum of the weights as the second element. sum_of_weights is of the same type as retval.
-        If a is integral, the result dtype will be float32, otherwise it will be the same as dtype of a.
+        If a is integral, the result dtype will beyour current default dtype,
+        When npx.is_np_default_dtype() returns False, default dtype is float32,
+        When npx.is_np_default_dtype() returns True, default dtype is float64;
+        otherwise it will be the same as dtype of a.
 
     Raises
     --------
@@ -4671,7 +4868,8 @@ def average(a, axis=None, weights=None, returned=False, out=None):
     - Does not guarantee the same behavior with numpy when given float16 dtype and overflow happens
     - Does not support complex dtype
     - The dtypes of a and weights must be the same
-    - Integral a results in float32 returned dtype, not float64
+    - Integral a results in float32 or float64 returned dtype, which depends on your current default dtype
+
 
     Examples
     --------
@@ -4716,7 +4914,9 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
         If this is a tuple of ints, a mean is performed over multiple axes,
         instead of a single axis or all the axes as before.
     dtype : data-type, optional
-        Type to use in computing the mean. For integer inputs, the default is float32;
+        Type to use in computing the mean.
+        For integer inputs, When npx.is_np_default_dtype() returns False, default dtype is float32,
+        When npx.is_np_default_dtype() returns True, default dtype is float64;
         for floating point inputs, it is the same as the input dtype.
     out : _Symbol, optional
         Dummy parameter to keep the consistency with the ndarray counterpart.
@@ -4741,7 +4941,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
     the following way(s):
 
     - only _Symbol is accepted as valid input, python iterables or scalar is not supported
-    - default data type for integer input is float32
+    - default data type for integer input is float32 or float64, which depends on your current default dtype
 
     Examples
     --------
@@ -4828,8 +5028,11 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
         If this is a tuple of ints, computation is performed over multiple axes,
         instead of a single axis or all the axes as before.
     dtype : data-type, optional
-        Type to use in computing the variance. For integer inputs, the default is float32;
-        for floating point inputs, it is the same as the input dtype.
+        Type to use in computing the variance.
+        For arrays of integer type,
+        When npx.is_np_default_dtype() returns False, default dtype is float32,
+        When npx.is_np_default_dtype() returns True, default dtype is float64;
+        For arrays of float types it is the same as the array type.
     out : _Symbol, optional
         Dummy parameter to keep the consistency with the ndarray counterpart.
     keepdims : bool, optional
@@ -4861,7 +5064,7 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.symbol.numpy')
-def indices(dimensions, dtype=_np.int32, ctx=None):
+def indices(dimensions, dtype=None, ctx=None):
     """Return an array representing the indices of a grid.
 
     Compute an array where the subarrays contain index values 0,1,...
@@ -4872,7 +5075,7 @@ def indices(dimensions, dtype=_np.int32, ctx=None):
     dimensions : sequence of ints
         The shape of the grid.
     dtype : data-type, optional
-        The desired data-type for the array. Default is `float32`.
+        The desired data-type for the array. Default is `int64`.
     ctx : device context, optional
         Device context on which the memory is allocated. Default is
         `mxnet.context.current_context()`.
@@ -4902,10 +5105,10 @@ def indices(dimensions, dtype=_np.int32, ctx=None):
     (2, 2, 3)
     >>> grid[0]        # row indices
     array([[0, 0, 0],
-           [1, 1, 1]])
+           [1, 1, 1]], dtype=int64)
     >>> grid[1]        # column indices
     array([[0, 0, 0],
-           [1, 1, 1]], dtype=int32)
+           [1, 1, 1]], dtype=int64)
 
     The indices can be used as an index into an array.
 
@@ -5098,7 +5301,7 @@ def diag_indices_from(arr):
 
 
 @set_module('mxnet.symbol.numpy')
-def hanning(M, dtype=_np.float32, ctx=None):
+def hanning(M, dtype=None, ctx=None):
     r"""Return the Hanning window.
 
     The Hanning window is a taper formed by using a weighted cosine.
@@ -5108,9 +5311,6 @@ def hanning(M, dtype=_np.float32, ctx=None):
     M : int
         Number of points in the output window. If zero or less, an
         empty array is returned.
-    dtype : str or numpy.dtype, optional
-        An optional value type. Default is `float32`. Note that you need
-        select numpy.float32 or float64 in this operator.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -5119,6 +5319,9 @@ def hanning(M, dtype=_np.float32, ctx=None):
     out : _Symbol, shape(M,)
         The window, with the maximum value normalized to one (the value
         one appears only if `M` is odd).
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
+        Note that you need select numpy.float32 or float64 in this operator.
 
     See Also
     --------
@@ -5180,7 +5383,7 @@ def hanning(M, dtype=_np.float32, ctx=None):
 
 
 @set_module('mxnet.symbol.numpy')
-def hamming(M, dtype=_np.float32, ctx=None):
+def hamming(M, dtype=None, ctx=None):
     r"""Return the hamming window.
 
     The hamming window is a taper formed by using a weighted cosine.
@@ -5190,9 +5393,6 @@ def hamming(M, dtype=_np.float32, ctx=None):
     M : int
         Number of points in the output window. If zero or less, an
         empty array is returned.
-    dtype : str or numpy.dtype, optional
-        An optional value type. Default is `float32`. Note that you need
-        select numpy.float32 or float64 in this operator.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -5201,6 +5401,9 @@ def hamming(M, dtype=_np.float32, ctx=None):
     out : _Symbol, shape(M,)
         The window, with the maximum value normalized to one (the value
         one appears only if `M` is odd).
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
+        Note that you need select numpy.float32 or float64 in this operator.
 
     See Also
     --------
@@ -5260,7 +5463,7 @@ def hamming(M, dtype=_np.float32, ctx=None):
 
 
 @set_module('mxnet.symbol.numpy')
-def blackman(M, dtype=_np.float32, ctx=None):
+def blackman(M, dtype=None, ctx=None):
     r"""Return the Blackman window.
 
     The Blackman window is a taper formed by using the first three
@@ -5273,9 +5476,6 @@ def blackman(M, dtype=_np.float32, ctx=None):
     M : int
         Number of points in the output window. If zero or less, an
         empty array is returned.
-    dtype : str or numpy.dtype, optional
-        An optional value type. Default is `float32`. Note that you need
-        select numpy.float32 or float64 in this operator.
     ctx : Context, optional
         An optional device context (default is the current default context).
 
@@ -5284,6 +5484,9 @@ def blackman(M, dtype=_np.float32, ctx=None):
     out : _Symbol
         The window, with the maximum value normalized to one (the value one
         appears only if the number of samples is odd).
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
+        Note that you need select numpy.float32 or float64 in this operator.
 
     See Also
     --------

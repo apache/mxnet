@@ -165,8 +165,10 @@ class Dataset(object):
         """Returns a new dataset with the first element of each sample
         transformed by the transformer function `fn`.
 
-        This is useful, for example, when you only want to transform data
-        while keeping label as is.
+        This is mostly applicable when each sample contains two components
+        - features and label, i.e., (X, y), and you only want to transform
+        the first element X (i.e., the features) while keeping the label y
+        unchanged.
 
         Parameters
         ----------

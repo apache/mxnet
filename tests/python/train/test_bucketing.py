@@ -22,6 +22,8 @@ import random
 from random import randint
 from mxnet.contrib.amp import amp
 
+import pytest
+
 
 def prepare_bucketing_data(buckets, len_vocab, batch_size, invalid_label, num_sentence):
     train_sent = []
@@ -111,6 +113,7 @@ def train_model(context=mx.cpu()):
     return model
 
 
+@pytest.mark.garbage_expected
 def test_bucket_module():
     # This test forecasts random sequence of words to check bucketing.
     # We cannot guarantee the accuracy of such an impossible task, and comments out the following line.

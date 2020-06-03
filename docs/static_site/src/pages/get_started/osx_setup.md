@@ -207,14 +207,6 @@ You might want to add this command to your ```~/.bashrc``` file. If you do, you 
 For more details about installing and using MXNet with Julia, see the [MXNet Julia documentation](/api/julia.html).
 
 
-### Install the MXNet Package for Scala
-
-To use the MXNet-Scala package, you can acquire the Maven package as a dependency.
-
-Further information is in the [MXNet-Scala Setup Instructions](scala_setup.html).
-
-If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Scala on IntelliJ tutorial](/api/scala/docs/tutorials/mxnet_scala_on_intellij.html) instead.
-
 ### Install the MXNet Package for Perl
 
 Before you build MXNet for Perl from source code, you must complete [building the shared library](#build-the-shared-library).
@@ -249,18 +241,25 @@ After you build the shared library, run the following command from the MXNet sou
     make install
 ```
 
-### Install the MXNet Package for Java
+### Install the MXNet Package for Scala
 
-**Note:** If you use IntelliJ or a similar IDE, you may want to follow the [MXNet-Java on IntelliJ tutorial](/api/java/docs/tutorials/mxnet_java_on_intellij.html) instead of these instructions.
-
-To install Maven, please refer to [Maven setup guide](java_setup.html). After Maven is setup, you may simply run the following from the MXNet scala-package folder:
+After building the MXNet shared library, you may simply run the following from the MXNet scala-package folder:
 
 ```bash
 mvn install
 ```
 
-This will install both the Java Inference API and the required MXNet-Scala package.
-<hr>
+This will install both the Java Inference API and the required MXNet-Scala package.<hr>
+
+### Install the MXNet Package for Java
+
+After building the MXNet shared library, you may simply run the following from the MXNet scala-package folder:
+
+```bash
+mvn install
+```
+
+This will install both the Java Inference API and the required MXNet-Scala package.<hr>
 
 ## Contributions
 

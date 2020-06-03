@@ -366,11 +366,12 @@ An over sized batch size may result in out of GPU memory. The common error
 message is `cudaMalloc failed: out of memory`. Now we can
 
 - Reduce the batch size
-- Set the environment variable `MXNET_BACKWARD_DO_MIRROR` to 1. It trades off
-  computation for memory consumption. For example, with batch size 64,
-  inception-v3 uses 10G memory and trains 30 image/sec on a single K80 GPU. When
-  mirroring is enabled, with 10G GPU memory consumption, we can run inception-v3
-  using batch size 128. The cost is that the speed reduces to 27 images/sec.
+- Set the environment variable `MXNET_MEMORY_OPT=1` to perform a series of
+  memory optimizations (e.g., trades off computation for memory consumption).
+  For example, with batch size 64, inception-v3 uses 10G memory and trains 30
+  image/sec on a single K80 GPU. When mirroring is enabled, with 10G GPU memory
+  consumption, we can run inception-v3 using batch size 128. The cost is that
+  the speed reduces to 27 images/sec.
 
 ## History
 

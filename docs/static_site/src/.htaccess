@@ -3,6 +3,11 @@ DirectorySlash off
 RewriteEngine on
 RewriteOptions AllowNoSlash
 
+# Redirect Chinese visitors to Chinese CDN, temporary solution for slow site speed in China
+RewriteCond %{ENV:GEOIP_COUNTRY_CODE} ^CN$
+RewriteCond %{HTTP_HOST} !cdn
+RewriteRule ^(.*) https://mxnet.cdn.apache.org%{REQUEST_URI} [R,NC,L]
+
 # Show file instead of folder for example /api/docs/tutorials.html
 # instead of /api/docs/tutorials/
 RewriteCond %{REQUEST_FILENAME} -d

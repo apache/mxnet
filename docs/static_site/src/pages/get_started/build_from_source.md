@@ -330,6 +330,6 @@ The following table provides links to each language binding by operating system:
 | Julia | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-julia) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-julia) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-julia) |
 | Perl | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-perl) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-perl) | n/a |
 | R | [Ubuntu guide](ubuntu_setup.html#install-the-mxnet-package-for-r) | [OSX guide](osx_setup.html#install-the-mxnet-package-for-r) | [Windows guide](windows_setup.html#install-the-mxnet-package-for-r) |
-| Scala | [Scala guide](scala_setup.html) | [Scala guide](scala_setup.html) | n/a |
-| Java | [Java guide](java_setup.html) | [Java Guide](java_setup.html) | n/a |
+| Scala | [Scala guide](ubuntu_setup.html#install-the-mxnet-package-for-scala) | [Scala guide](osx_setup.html#install-the-mxnet-package-for-scala) | n/a |
+| Java | [Java guide](ubuntu_setup.html#install-the-mxnet-package-for-java) | [Java Guide](osx_setup.html#install-the-mxnet-package-for-java) | n/a |
 

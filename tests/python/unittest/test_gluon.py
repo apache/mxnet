@@ -99,6 +99,7 @@ def test_parameter_invalid_access():
     assertRaises(RuntimeError, p1.list_row_sparse_data, row_id)
 
 @with_seed()
+@pytest.mark.usefixtures("check_leak_ndarray")
 def test_parameter_dict():
     ctx = mx.cpu(1)
     params0 = gluon.ParameterDict('net_')
@@ -1037,11 +1038,11 @@ def test_block_attr_param():
 def test_block_attr_regular():
     b = gluon.Block()
 
-    # set block attribute also sets _children
+    # set block attribute also sets a weakref in _children
     b.c = gluon.Block()
     c2 = gluon.Block()
     b.c = c2
-    assert b.c is c2 and list(b._children.values())[0] is c2
+    assert b.c is c2 and list(b._children.values())[0]() is c2
 
 
 @with_seed()
@@ -1410,18 +1411,21 @@ def test_activations():
     prelu_multichannel.initialize()
     assert_almost_equal(prelu_multichannel(x).asnumpy(), np.array([[-0.01, 0.1], [-0.025, 0.1], [-0.05, 0.1]]))
 
-    gelu = mx.gluon.nn.GELU()
-    def gelu_test(x):
-        CUBE_CONSTANT = 0.044715
-        ROOT_TWO_OVER_PI = 0.7978845608028654
-        def g(x):
-            return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * x * x * x)
-        def f(x):
-            return 1.0 + mx.nd.tanh(g(x))
-        def gelu(x):
-            return 0.5 * x * f(x)
-        for test_point, ref_point in zip(gelu_test(point_to_validate), gelu(point_to_validate)):
-            assert test_point == ref_point
+    # https://github.com/apache/incubator-mxnet/issues/18381
+    # gelu = mx.gluon.nn.GELU()
+    # def gelu_test(x):
+    #     CUBE_CONSTANT = 0.044715
+    #     ROOT_TWO_OVER_PI = 0.7978845608028654
+    #     def g(x):
+    #         return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * x * x * x)
+    #     def f(x):
+    #         return 1.0 + mx.nd.tanh(g(x))
+    #     def gelu(x):
+    #         return 0.5 * x * f(x)
+    #     return [gelu(x_i) for x_i in x]
+
+    # for test_point, ref_point in zip(gelu_test(point_to_validate), gelu(point_to_validate)):
+    #     assert test_point == ref_point
 
 
 @with_seed()
@@ -3160,40 +3164,12 @@ def test_reqs_switching_training_inference():
 
     mx.test_utils.assert_almost_equal(grad1, grad2)
 
+
+@pytest.mark.usefixtures("check_leak_ndarray")
 def test_no_memory_leak_in_gluon():
-    # Collect all other garbage prior to this test. Otherwise the test may fail
-    # due to unrelated memory leaks.
-    gc.collect()
-
-    gc_flags = gc.get_debug()
-    gc.set_debug(gc.DEBUG_SAVEALL)
-    net = mx.gluon.nn.Dense(10, in_units=10)
+    class MyNet(mx.gluon.Block):
+        def __init__(self):
+            super().__init__()
+            self.net = mx.gluon.nn.Dense(10, in_units=10)
+    net = MyNet()
     net.initialize()
-    del net
-    gc.collect()
-    gc.set_debug(gc_flags)  # reset gc flags
-
-    # Check for leaked NDArrays
-    seen = set()
-    def has_array(element):
-        try:
-            if element in seen:
-                return False
-            seen.add(element)
-        except TypeError:  # unhashable
-            pass
-
-        if isinstance(element, mx.nd._internal.NDArrayBase):
-            return True
-        elif hasattr(element, '__dict__'):
-            return any(has_array(x) for x in vars(element))
-        elif isinstance(element, dict):
-            return any(has_array(x) for x in element.items())
-        else:
-            try:
-                return any(has_array(x) for x in element)
-            except (TypeError, KeyError):
-                return False
-
-    assert not any(has_array(x) for x in gc.garbage), 'Found leaked NDArrays due to reference cycles'
-    del gc.garbage[:]

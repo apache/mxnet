@@ -52,8 +52,9 @@ class _BlockScope(object):
     def __init__(self, block):
         self._block = weakref.ref(block) if block is not None else None
         self._counter = {}
-        self._old_scope = None
-        self._name_scope = None
+        self._local = threading.local()
+        self._local._old_scope = None
+        self._local._name_scope = None
 
     @staticmethod
     def count(hint):
@@ -77,25 +78,25 @@ class _BlockScope(object):
         block = self._block()
         if block is None or block.prefix == '':
             return self
-        self._old_scope = getattr(_BlockScope._current, "value", None)
+        self._local._old_scope = getattr(_BlockScope._current, "value", None)
         _BlockScope._current.value = self
-        self._name_scope = _name.Prefix(block.prefix)
-        self._name_scope.__enter__()
+        self._local._name_scope = _name.Prefix(block.prefix)
+        self._local._name_scope.__enter__()
         _profiler_scope_name = (block.prefix[:-1] if block.prefix.endswith('_') \
                                 else block.prefix) + ":"
-        self._profiler_scope = _profiler.Scope(_profiler_scope_name)
-        self._profiler_scope.__enter__()
+        self._local._profiler_scope = _profiler.Scope(_profiler_scope_name)
+        self._local._profiler_scope.__enter__()
         return self
 
     def __exit__(self, ptype, value, trace):
         block = self._block()
         if block is None or block.prefix == '':
             return
-        self._name_scope.__exit__(ptype, value, trace)
-        self._name_scope = None
-        self._profiler_scope.__exit__(ptype, value, trace)
-        self._profiler_scope = None
-        _BlockScope._current.value = self._old_scope
+        self._local._name_scope.__exit__(ptype, value, trace)
+        self._local._name_scope = None
+        self._local._profiler_scope.__exit__(ptype, value, trace)
+        self._local._profiler_scope = None
+        _BlockScope._current.value = self._local._old_scope
 
 
 def _gather_type_ctx_info(args):
@@ -308,7 +309,7 @@ class Block(object):
                         return True
                 return False
             elif isinstance(data, Block):
-                return not data in children
+                return not data in (c() for c in children)
             else:
                 return False
         for k, v in self.__dict__.items():
@@ -408,9 +409,9 @@ class Block(object):
                 val._name = name # use the name of the first occurence as the name of the shared parameter.
 
         for name, child in self._children.items():
-            if isinstance(child, SymbolBlock):
+            if isinstance(child(), SymbolBlock):
                 continue
-            child._set_prefix(recorded, prefix + name)
+            child()._set_prefix(recorded, prefix + name)
 
     def _collect_params_with_prefix(self, prefix='', select=None):
         if prefix:
@@ -422,7 +423,7 @@ class Block(object):
             ret = {prefix + key : val for key, val in self._reg_params.items() if pattern.match(prefix + key)}
 
         for name, child in self._children.items():
-            child_ret = child._collect_params_with_prefix(prefix + name if not isinstance(child, SymbolBlock) else '', select)
+            child_ret = child()._collect_params_with_prefix(prefix + name if not isinstance(child(), SymbolBlock) else '', select)
             commons = set(child_ret.keys()) & set(ret.keys())
             if len(commons) > 0:
                 for common in commons:
@@ -600,7 +601,7 @@ class Block(object):
         attributes will be registered automatically."""
         if name is None:
             name = str(len(self._children))
-        self._children[name] = block
+        self._children[name] = weakref.ref(block)
 
     def register_forward_pre_hook(self, hook):
         r"""Registers a forward pre-hook on the block.
@@ -653,7 +654,7 @@ class Block(object):
         this block
         """
         for cld in self._children.values():
-            cld.apply(fn)
+            cld().apply(fn)
         fn(self)
         return self
 
@@ -684,7 +685,7 @@ class Block(object):
         """ Please refer description of HybridBlock hybridize().
         """
         for cld in self._children.values():
-            cld.hybridize(active, **kwargs)
+            cld().hybridize(active, **kwargs)
 
     def cast(self, dtype):
         """Cast this Block to use another data type.
@@ -695,8 +696,8 @@ class Block(object):
             The new data type.
         """
         for child in self._children.values():
-            child.cast(dtype)
-        for param in self.params.values():
+            child().cast(dtype)
+        for _, param in self.params.items():
             param.cast(dtype)
 
     def zero_grad(self):
@@ -802,7 +803,7 @@ class Block(object):
                 setattr(self, name, shared[key])
                 shared_set.remove(key)
         for name, child in self._children.items():
-            child._shared_parameters(shared, shared_set, prefix + name)
+            child()._shared_parameters(shared, shared_set, prefix + name)
 
     def __call__(self, *args):
         """Calls forward. Only accepts positional arguments."""
@@ -844,7 +845,7 @@ class Block(object):
             If True, monitor both input and output, otherwise monitor output only.
         """
         for cld in self._children.values():
-            cld.register_op_hook(callback, monitor_all)
+            cld().register_op_hook(callback, monitor_all)
 
     def summary(self, *inputs):
         """Print the summary of the model's output and parameters.
@@ -1432,8 +1433,8 @@ class HybridBlock(Block):
         self._callback = c_callback
         self._monitor_all = monitor_all
         for cld in self._children.values():
-            cld._callback = c_callback
-            cld._monitor_all = monitor_all
+            cld()._callback = c_callback
+            cld()._monitor_all = monitor_all
 
     def __call__(self, x, *args):
         if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:

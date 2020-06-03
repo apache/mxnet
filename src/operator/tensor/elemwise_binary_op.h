@@ -620,14 +620,16 @@ template<typename xpu, typename OP>
     CHECK_EQ(outputs.size(), 1U);
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
       MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
+        MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[1].type_flag_, EType, {
           const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
           + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
           if (size != 0) {
             Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
                                                                 outputs[0].dptr<bool>(),
                                                                 inputs[0].dptr<DType>(),
-                                                                inputs[1].dptr<DType>());
+                                                                inputs[1].dptr<EType>());
           }
+        });
       });
     });
   }

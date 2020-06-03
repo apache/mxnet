@@ -37,7 +37,7 @@ def test_multi_trainer():
     x.initialize()
     # test set trainer
     trainer0 = gluon.Trainer([x], 'sgd')
-    assert(x._trainer is trainer0)
+    assert(x._trainer() is trainer0)
     # test unset trainer
     x._set_trainer(None)
     assert(x._trainer is None)

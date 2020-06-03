@@ -66,7 +66,6 @@ use Mouse;
             'TENSORRT' => 0,
             'JEMALLOC' => 1,
             'SSE' => 0,
-            'PROFILER' => 0,
             'DEBUG' => 0,
             'BLAS_APPLE' => 0,
             'CPU_SSE3' => 1,
@@ -85,7 +84,7 @@ use Mouse;
     [✖ CUDA, ✖ CUDNN, ✖ NCCL, ✖ CUDA_RTC, ✖ TENSORRT, ✔ CPU_SSE, ✔ CPU_SSE2, ✔ CPU_SSE3,
     ✔ CPU_SSE4_1, ✔ CPU_SSE4_2, ✖ CPU_SSE4A, ✔ CPU_AVX, ✖ CPU_AVX2, ✔ OPENMP, ✖ SSE,
     ✔ F16C, ✔ JEMALLOC, ✔ BLAS_OPEN, ✖ BLAS_ATLAS, ✖ BLAS_MKL, ✖ BLAS_APPLE, ✔ LAPACK,
-    ✖ MKLDNN, ✔ OPENCV, ✖ CAFFE, ✖ PROFILER, ✖ DIST_KVSTORE, ✖ CXX14, ✖ INT64_TENSOR_SIZE,
+    ✖ MKLDNN, ✔ OPENCV, ✖ CAFFE, ✖ DIST_KVSTORE, ✖ CXX14, ✖ INT64_TENSOR_SIZE,
     ✔ SIGNAL_HANDLER, ✔ DEBUG, ✖ TVM_OP]
 
 =cut

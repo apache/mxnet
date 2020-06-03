@@ -348,256 +348,6 @@ def _np_squeeze(a, axis=None, out=None):
     pass
 
 
-def _np_max(a, axis=None, keepdims=False, out=None):
-    """
-    Return the maximum of an array or maximum along an axis.
-
-    Parameters
-    ----------
-    a : ndarray
-        Input data.
-    axis : int, optional
-        Axis along which to operate.  By default, flattened input is used.
-    out : ndarray, optional
-        Alternative output array in which to place the result.  Must
-        be of the same shape and buffer length as the expected output.
-        See `doc.ufuncs` (Section "Output arguments") for more details.
-    keepdims : bool, optional
-        If this is set to True, the axes which are reduced are left
-        in the result as dimensions with size one. With this option,
-        the result will broadcast correctly against the original `arr`.
-
-    Returns
-    -------
-    max : ndarray
-        Maximum of `a`. If `axis` is None, the result is an array of dimension 1.
-        If `axis` is given, the result is an array of dimension
-        ``a.ndim - 1``.
-
-    See Also
-    --------
-    min :
-        The minimum value of an array along a given axis, ignoring any nan.
-    maximum :
-        Element-wise maximum of two arrays, ignoring any nan.
-    argmax :
-        Return the indices of the maximum values.
-
-    Notes
-    -----
-    NaN in the orginal `numpy` is denoted as nan and will be ignored.
-
-    Don't use `max` for element-wise comparison of 2 arrays; when
-    ``a.shape[0]`` is 2, ``maximum(a[0], a[1])`` is faster than
-    ``max(a, axis=0)``.
-
-    Examples
-    --------
-    >>> a = np.arange(4).reshape((2,2))
-    >>> a
-    array([[0., 1.],
-        [2., 3.]])
-    >>> np.max(a)            # Maximum of the flattened array
-    array(3.)
-    >>> np.max(a, axis=0)    # Maxima along the first axis
-    array([2., 3.])
-    >>> np.max(a, axis=1)    # Maxima along the second axis
-    array([1., 3.])
-
-    >>> b = np.arange(5, dtype=np.float32)
-    >>> b[2] = np.nan
-    >>> np.max(b)
-    array(4.)
-    """
-    pass
-
-
-def _np_amax(a, axis=None, keepdims=False, out=None):
-    """
-    Return the maximum of an array or maximum along an axis.
-
-    Parameters
-    ----------
-    a : ndarray
-        Input data.
-    axis : int, optional
-        Axis along which to operate.  By default, flattened input is used.
-    out : ndarray, optional
-        Alternative output array in which to place the result.  Must
-        be of the same shape and buffer length as the expected output.
-        See `doc.ufuncs` (Section "Output arguments") for more details.
-    keepdims : bool, optional
-        If this is set to True, the axes which are reduced are left
-        in the result as dimensions with size one. With this option,
-        the result will broadcast correctly against the original `arr`.
-
-    Returns
-    -------
-    amax : ndarray
-        Maximum of `a`. If `axis` is None, the result is an array of dimension 1.
-        If `axis` is given, the result is an array of dimension
-        ``a.ndim - 1``.
-
-    See Also
-    --------
-    min :
-        The minimum value of an array along a given axis, ignoring any nan.
-    maximum :
-        Element-wise maximum of two arrays, ignoring any nan.
-    argmax :
-        Return the indices of the maximum values.
-
-    Notes
-    -----
-    NaN in the orginal `numpy` is denoted as nan and will be ignored.
-
-    Don't use `amax` for element-wise comparison of 2 arrays; when
-    ``a.shape[0]`` is 2, ``maximum(a[0], a[1])`` is faster than
-    ``amax(a, axis=0)``.
-
-    Examples
-    --------
-    >>> a = np.arange(4).reshape((2,2))
-    >>> a
-    array([[0., 1.],
-        [2., 3.]])
-    >>> np.amax(a)            # Maximum of the flattened array
-    array(3.)
-    >>> np.amax(a, axis=0)    # Maxima along the first axis
-    array([2., 3.])
-    >>> np.amax(a, axis=1)    # Maxima along the second axis
-    array([1., 3.])
-
-    >>> b = np.arange(5, dtype=np.float32)
-    >>> b[2] = np.nan
-    >>> np.amax(b)
-    array(4.)
-    """
-    pass
-
-
-def _np_min(a, axis=None, keepdims=False, out=None):
-    """
-    Return the minimum of an array or minimum along an axis.
-
-    Parameters
-    ----------
-    a : ndarray
-        Input data.
-    axis : int, optional
-        Axis along which to operate.  By default, flattened input is used.
-    out : ndarray, optional
-        Alternative output array in which to place the result.  Must
-        be of the same shape and buffer length as the expected output.
-        See `doc.ufuncs` (Section "Output arguments") for more details.
-    keepdims : bool, optional
-        If this is set to True, the axes which are reduced are left
-        in the result as dimensions with size one. With this option,
-        the result will broadcast correctly against the original `arr`.
-
-    Returns
-    -------
-    min : ndarray
-        Minimum of `a`. If `axis` is None, the result is an array of dimension 1.
-        If `axis` is given, the result is an array of dimension
-        ``a.ndim - 1``.
-
-    See Also
-    --------
-    max :
-        The maximum value of an array along a given axis, ignoring any nan.
-    minimum :
-        Element-wise minimum of two arrays, ignoring any nan.
-
-    Notes
-    -----
-    NaN in the orginal `numpy` is denoted as nan and will be ignored.
-
-    Don't use `min` for element-wise comparison of 2 arrays; when
-    ``a.shape[0]`` is 2, ``minimum(a[0], a[1])`` is faster than
-    ``min(a, axis=0)``.
-
-    Examples
-    --------
-    >>> a = np.arange(4).reshape((2,2))
-    >>> a
-    array([[0., 1.],
-        [2., 3.]])
-    >>> np.min(a)           # Minimum of the flattened array
-    array(0.)
-    >>> np.min(a, axis=0)   # Minima along the first axis
-    array([0., 1.])
-    >>> np.min(a, axis=1)   # Minima along the second axis
-    array([0., 2.])
-    >>> b = np.arange(5, dtype=np.float32)
-    >>> b[2] = np.nan
-    >>> np.min(b)
-    array(0.) # nan will be ignored
-    """
-    pass
-
-
-def _np_amin(a, axis=None, keepdims=False, out=None):
-    """
-    Return the minimum of an array or minimum along an axis.
-
-    Parameters
-    ----------
-    a : ndarray
-        Input data.
-    axis : int, optional
-        Axis along which to operate.  By default, flattened input is used.
-    out : ndarray, optional
-        Alternative output array in which to place the result.  Must
-        be of the same shape and buffer length as the expected output.
-        See `doc.ufuncs` (Section "Output arguments") for more details.
-    keepdims : bool, optional
-        If this is set to True, the axes which are reduced are left
-        in the result as dimensions with size one. With this option,
-        the result will broadcast correctly against the original `arr`.
-
-    Returns
-    -------
-    amin : ndarray
-        Minimum of `a`. If `axis` is None, the result is an array of dimension 1.
-        If `axis` is given, the result is an array of dimension
-        ``a.ndim - 1``.
-
-    See Also
-    --------
-    max :
-        The maximum value of an array along a given axis, ignoring any nan.
-    minimum :
-        Element-wise minimum of two arrays, ignoring any nan.
-
-    Notes
-    -----
-    NaN in the orginal `numpy` is denoted as nan and will be ignored.
-
-    Don't use `amin` for element-wise comparison of 2 arrays; when
-    ``a.shape[0]`` is 2, ``minimum(a[0], a[1])`` is faster than
-    ``amin(a, axis=0)``.
-
-    Examples
-    --------
-    >>> a = np.arange(4).reshape((2,2))
-    >>> a
-    array([[0., 1.],
-        [2., 3.]])
-    >>> np.amin(a)           # Minimum of the flattened array
-    array(0.)
-    >>> np.amin(a, axis=0)   # Minima along the first axis
-    array([0., 1.])
-    >>> np.amin(a, axis=1)   # Minima along the second axis
-    array([0., 2.])
-    >>> b = np.arange(5, dtype=np.float32)
-    >>> b[2] = np.nan
-    >>> np.amin(b)
-    array(0.) # nan will be ignored
-    """
-    pass
-
-
 def _np_prod(a, axis=None, dtype=None, out=None, keepdims=False):
     """
     Return the product of array elements over a given axis.
@@ -872,6 +622,79 @@ def _npx_reshape(a, newshape, reverse=False, order='C'):
     >>> x = np.ones((8, 3, 2, 4, 8))
     >>> npx.reshape(x, (-4, -1, 2, -6), reverse=True).shape
     (8, 3, 2, 4, 4, 2)
+    """
+    pass
+
+
+def _npx_index_add(a, ind, val):
+    """
+    Add values to input according to given indexes.
+    If exists repeate positions to be updated, the update value will be accumulated.
+    Parameters
+    ----------
+    a : ndarray
+        Input data. The array to be updated.
+    ind : ndarray
+        Indexes for indicating update positions.
+        For example, array([[0, 1], [2, 3], [4, 5]] indicates here are two positions to
+        be updated, which is (0, 2, 4) and (1, 3, 5).
+        Note: - 'ind' cannot be empty array '[]', for that case, please use operator 'add' instead.
+              - 0 <= ind.ndim <= 2.
+              - ind.dtype should be 'int32' or 'int64'
+    val : ndarray
+        Input data. The array to update the input 'a'.
+    Returns
+    -------
+    out : ndarray
+        The output array.
+    Examples
+    --------
+    >>> a = np.zeros((2, 3, 4))
+    >>> ind = np.array([[0, 0], [0, 0], [0, 1]], dtype='int32')
+    >>> val = np.arange(2).reshape(2) + 1
+    >>> b = npx.index_add(a, ind, val)
+    >>> b
+    array([[[1., 2., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    
+    >>> ind = np.array([[0, 0], [0, 0], [0, 0]], dtype='int32')  # accumulate values in repeated positions
+    >>> b = npx.index_add(a, ind, val)
+    >>> b
+    array([[[3., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    
+    >>> ind=np.array([[0, 0], [0, 1]], dtype='int32') 
+    >>> val = np.arange(8).reshape(2, 4) 
+    >>> b = npx.index_add(a, ind, val)
+    >>> b
+    array([[[0., 1., 2., 3.],
+            [4., 5., 6., 7.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    
+    >>> val = np.arange(4).reshape(4)  # brocast 'val'
+    >>> b = npx.index_add(a, ind, val)
+    >>> b
+    array([[[0., 1., 2., 3.],
+            [0., 1., 2., 3.],
+            [0., 0., 0., 0.]],
+
+        [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
     """
     pass
 
