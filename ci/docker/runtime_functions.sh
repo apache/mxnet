@@ -1379,7 +1379,7 @@ integrationtest_ubuntu_gpu_byteps() {
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cd tests/nightly/
 
-    export NVIDIA_VISIBLE_DEVICES=0,1
+    export NVIDIA_VISIBLE_DEVICES=0
     export DMLC_WORKER_ID=0 # your worker id
     export DMLC_NUM_WORKER=1 # one worker
     export DMLC_ROLE=worker
