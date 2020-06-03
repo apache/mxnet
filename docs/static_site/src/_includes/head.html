@@ -11,7 +11,7 @@
   {%- if jekyll.environment == 'production' and site.google_analytics -%}
     {%- include google-analytics.html -%}
   {%- endif -%}
-  <script src="https://code.jquery.com/jquery-3.3.1.min.js" integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8=" crossorigin="anonymous"></script>
+  <script src="{{'/assets/js/jquery-3.3.1.min.js'|relative_url}}"></script>
   <script src="https://cdn.jsdelivr.net/npm/docsearch.js@2/dist/cdn/docsearch.min.js"></script>
   <script src="{{'/assets/js/globalSearch.js'|relative_url}}"></script>
   <script src="{{'/assets/js/clipboard.js'|relative_url}}"></script>
