@@ -22,7 +22,7 @@
 
 #include <mxnet/imperative.h>
 #include <vector>
-#include <algorithm>
+#include <numeric>
 #include <atomic>
 #include <utility>
 #include <string>
