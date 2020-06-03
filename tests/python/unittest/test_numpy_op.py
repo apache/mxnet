@@ -9156,6 +9156,13 @@ def test_np_where():
             same(ret.asnumpy(), _np.where(cond.asnumpy(), x.asnumpy(), 1))
             ret_rscalar.backward()
             same(x.grad.asnumpy(), collapse_sum_like(_np.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
+        
+        # check both scalar case
+        x = _np.random.randint(0, 100)
+        y = _np.random.randint(0, 100)
+        mx_out = np.where(cond, x, y)
+        np_out = _np.where(cond, x, y)
+        same(mx_out, np_out)
 
 
 @with_seed()
