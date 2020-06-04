@@ -359,15 +359,20 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
   int dtype_param;
   int dtype = (*in_type)[0];
   if (type_is_none(dtype)) {
+    // Input type is undefined, we try backward inference
      if (out_type->size() == 0 || type_is_none((*out_type)[0])) {
+       // Neither the input nor the output are defined,
+       // types cannot be infered for this op
        return false;
      } else {
+       // Input type is undefined but output type is: backward inference
        dtype = (*out_type)[0];
        (*in_type)[0] = dtype;
        MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
          dtype_param = mshadow::DataType<AccRealX>::kFlag; });
      }
   } else {
+    // Input type is defined but output type is not: forward inference
     MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
       dtype_param = mshadow::DataType<AccRealX>::kFlag; });
     out_type->clear();
