@@ -39,6 +39,7 @@ class Normal(ExponentialFamily):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
 
     has_grad = True
     support = Real()
@@ -48,7 +49,8 @@ class Normal(ExponentialFamily):
         _F = F if F is not None else getF(loc, scale)
         self.loc = loc
         self.scale = scale
-        super(Normal, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(Normal, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     def log_prob(self, value):
         """Compute the log likelihood of `value`.
@@ -121,7 +123,7 @@ class Normal(ExponentialFamily):
             self._validate_samples(value)
         erf_func = erf(self.F)
         standarized_samples = ((value - self.loc) /
-                                (math.sqrt(2) * self.scale))
+                               (math.sqrt(2) * self.scale))
         erf_term = erf_func(standarized_samples)
         return 0.5 * (1 + erf_term)
 
@@ -141,6 +143,7 @@ class Normal(ExponentialFamily):
     def variance(self):
         return self.scale ** 2
 
+    @property
     def entropy(self):
         F = self.F
         return 0.5 + 0.5 * math.log(2 * math.pi) + F.np.log(self.scale)
@@ -176,4 +179,3 @@ class Normal(ExponentialFamily):
         """
         F = self.F
         return -0.25 * F.np.pow(2) / y + 0.5 * F.np.log(-math.pi / y)
-

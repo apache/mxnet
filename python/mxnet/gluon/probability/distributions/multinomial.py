@@ -20,11 +20,11 @@
 """Multinomial Distribution"""
 __all__ = ['Multinomial']
 
+from numbers import Number
 from .distribution import Distribution
 from .one_hot_categorical import OneHotCategorical
 from .utils import getF, cached_property, logit2prob, prob2logit, gammaln
 from .constraint import Simplex, Real, IntegerInterval
-from numbers import Number
 
 
 class Multinomial(Distribution):
@@ -44,15 +44,16 @@ class Multinomial(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
+
     arg_constraints = {'prob': Simplex(), 'logit': Real()}
 
     def __init__(self, num_events,
                  prob=None, logit=None, total_count=1, F=None, validate_args=None):
-        _F = F if F is not None else getF(prob, logit)       
+        _F = F if F is not None else getF(prob, logit)
         if not isinstance(total_count, Number):
             raise ValueError("Expect `total_conut` to be scalar value")
-        else:
-            self.total_count = total_count
+        self.total_count = total_count
         if (prob is None) == (logit is None):
             raise ValueError(
                 "Either `prob` or `logit` must be specified, but not both. " +
@@ -61,8 +62,10 @@ class Multinomial(Distribution):
             self.prob = prob
         else:
             self.logit = logit
-        self._categorical = OneHotCategorical(num_events, prob, logit, F, validate_args)
-        super(Multinomial, self).__init__(F=_F, event_dim=1, validate_args=validate_args)
+        self._categorical = OneHotCategorical(
+            num_events, prob, logit, F, validate_args)
+        super(Multinomial, self).__init__(
+            F=_F, event_dim=1, validate_args=validate_args)
 
     @property
     def mean(self):

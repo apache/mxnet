@@ -24,7 +24,7 @@ from .distribution import Distribution
 from .transformed_distribution import TransformedDistribution
 from ..transformation import SigmoidTransform
 from .utils import prob2logit, logit2prob, getF, cached_property
-from .constraint import Boolean, OpenInterval, Real, Interval
+from .constraint import OpenInterval, Real, Interval
 
 
 class _LogitRelaxedBernoulli(Distribution):
@@ -42,11 +42,13 @@ class _LogitRelaxedBernoulli(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
 
     has_grad = True
     support = Real()
     arg_constraints = {'prob': Interval(0, 1),
                        'logit': Real()}
+
     def __init__(self, T, prob=None, logit=None, F=None, validate_args=None):
         _F = F if F is not None else getF(prob, logit)
         self.T = T
@@ -82,7 +84,6 @@ class _LogitRelaxedBernoulli(Distribution):
         return F.np.log(self.T) + diff - 2 * F.np.log1p(F.np.exp(diff))
 
 
-
 class RelaxedBernoulli(TransformedDistribution):
     r"""Create a relaxed Bernoulli distribution object.
 
@@ -98,6 +99,7 @@ class RelaxedBernoulli(TransformedDistribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
 
     has_grad = True
     support = OpenInterval(0, 1)
@@ -128,7 +130,7 @@ class RelaxedBernoulli(TransformedDistribution):
         else:
             new_instance.logit = F.np.broadcast_to(self.logit, batch_shape)
         super(RelaxedBernoulli, new_instance).__init__(F=F,
-                                                event_dim=self.event_dim,
-                                                validate_args=False)
+                                                       event_dim=self.event_dim,
+                                                       validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance

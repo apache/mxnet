@@ -20,13 +20,13 @@
 """Base distribution class."""
 __all__ = ['Distribution']
 
-from .utils import cached_property
 from numbers import Number
+from .utils import cached_property
 
 
 class Distribution(object):
     r"""Base class for distribution.
-    
+
     Parameters
     ----------
     F : mx.ndarray or mx.symbol.numpy._Symbol
@@ -35,7 +35,7 @@ class Distribution(object):
         Variable indicating the dimension of the distribution's support.
     validate_args : bool, default None
         Whether to validate the distribution parameters
-    """          
+    """
 
     # Variable indicating whether the sampling method has
     # pathwise gradient.
@@ -75,7 +75,7 @@ class Distribution(object):
         r"""
         Returns the probability density/mass function evaluated at `value`.
         """
-        raise NotImplementedError()
+        return self.F.np.exp(self.log_prob(value))
 
     def cdf(self, value):
         r"""
@@ -177,7 +177,7 @@ class Distribution(object):
         mode = self.F
         args_string = ''
         if 'symbol' not in mode.__name__:
-            for k in self.arg_constraints.keys():
+            for k, _ in self.arg_constraints:
                 v = self.__dict__[k]
                 if isinstance(v, Number):
                     shape_v = ()
@@ -185,7 +185,7 @@ class Distribution(object):
                     shape_v = v.shape
                 args_string += '{}: size {}'.format(k, shape_v) + ', '
         args_string += ', '.join(['F: {}'.format(mode.__name__),
-                        'event_dim: {}'.format(self.event_dim)])
+                                  'event_dim: {}'.format(self.event_dim)])
         return self.__class__.__name__ + '(' + args_string + ')'
 
     def _validate_samples(self, value):

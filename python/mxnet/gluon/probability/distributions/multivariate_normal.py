@@ -42,12 +42,15 @@ class MultivariateNormal(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
+
     has_grad = True
     support = Real()
     arg_constraints = {'loc': Real(),
                        'cov': PositiveDefinite(),
                        'precision': PositiveDefinite(),
                        'scale_tril': LowerCholesky()}
+
     def __init__(self, loc, cov=None, precision=None, scale_tril=None, F=None, validate_args=None):
         if (cov is not None) + (precision is not None) + (scale_tril is not None) != 1:
             raise ValueError("Exactly one onf `cov` or `precision` or " +
@@ -60,7 +63,8 @@ class MultivariateNormal(Distribution):
             self.precision = precision
         else:
             self.scale_tril = scale_tril
-        super(MultivariateNormal, self).__init__(F=_F, event_dim=1, validate_args=validate_args)
+        super(MultivariateNormal, self).__init__(
+            F=_F, event_dim=1, validate_args=validate_args)
 
     def _precision_to_scale_tril(self, P):
         """
@@ -71,7 +75,8 @@ class MultivariateNormal(Distribution):
         """
         F = self.F
         L_flip_inv_T = F.np.linalg.cholesky(F.np.flip(P, (-1, -2)))
-        L = F.np.linalg.inv(F.np.swapaxes(F.np.flip(L_flip_inv_T, (-1, -2)), -1, -2))
+        L = F.np.linalg.inv(F.np.swapaxes(
+            F.np.flip(L_flip_inv_T, (-1, -2)), -1, -2))
         return L
 
     @cached_property
@@ -80,7 +85,7 @@ class MultivariateNormal(Distribution):
         if 'cov' in self.__dict__:
             return F.np.linalg.cholesky(self.cov)
         return self._precision_to_scale_tril(self.precision)
-    
+
     @cached_property
     def cov(self):
         F = self.F
@@ -114,8 +119,10 @@ class MultivariateNormal(Distribution):
             if isinstance(size, int):
                 size = (size,)
             shape_tensor = F.np.broadcast_to(shape_tensor, size + (-2,))
-        noise = F.np.random.normal(F.np.zeros_like(shape_tensor), F.np.ones_like(shape_tensor))
-        samples = self.loc + F.np.einsum('...jk,...j->...k', self.scale_tril, noise)
+        noise = F.np.random.normal(F.np.zeros_like(
+            shape_tensor), F.np.ones_like(shape_tensor))
+        samples = self.loc + \
+            F.np.einsum('...jk,...j->...k', self.scale_tril, noise)
         return samples
 
     def sample_n(self, size=None):
@@ -128,7 +135,8 @@ class MultivariateNormal(Distribution):
             size = (size,)
         noise = F.np.random.normal(F.np.zeros_like(shape_tensor), F.np.ones_like(shape_tensor),
                                    (-2,) + size)
-        samples = self.loc + F.np.einsum('...jk,...j->...k', self.scale_tril, noise)
+        samples = self.loc + \
+            F.np.einsum('...jk,...j->...k', self.scale_tril, noise)
         return samples
 
     def log_prob(self, value):
@@ -141,13 +149,15 @@ class MultivariateNormal(Distribution):
         M = F.np.einsum(
             '...i,...i->...',
             diff,
-            F.np.einsum('...jk,...j->...k', self.precision, diff)  # Batch matrix vector multiply
-            ) * -0.5
-        #   (2 * \pi)^{-k/2} * det(\Sigma)^{-1/2} 
+            F.np.einsum('...jk,...j->...k', self.precision,
+                        diff)  # Batch matrix vector multiply
+        ) * -0.5
+        #   (2 * \pi)^{-k/2} * det(\Sigma)^{-1/2}
         # = det(2 * \pi * L * L.T)^{-1/2}
         # = det(\sqrt(2 * \pi) * L)^{-1}
         half_log_det = F.np.log(
-            F.np.diagonal(F.np.sqrt(2 * math.pi) * self.scale_tril, axis1=-2, axis2=-1)
+            F.np.diagonal(F.np.sqrt(2 * math.pi) *
+                          self.scale_tril, axis1=-2, axis2=-1)
         ).sum(-1)
         return M - half_log_det
 
@@ -157,6 +167,6 @@ class MultivariateNormal(Distribution):
         #   det(2 * \pi * e * \Sigma)
         # = det(\sqrt(2 * \pi * e) * L)^2
         return F.np.log(F.np.diagonal(
-                F.np.sqrt(2 * math.pi * math.e) * self.scale_tril,
-                axis1=-2, axis2=-1
+            F.np.sqrt(2 * math.pi * math.e) * self.scale_tril,
+            axis1=-2, axis2=-1
         )).sum(-1)

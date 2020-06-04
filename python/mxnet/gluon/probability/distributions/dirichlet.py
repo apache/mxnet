@@ -35,6 +35,8 @@ class Dirichlet(ExponentialFamily):
     F : mx.ndarray or mx.symbol.numpy._Symbol or None
         Variable recording running mode, will be automatically
     """
+    # pylint: disable=abstract-method
+
     has_grad = False
     support = Simplex()
     arg_constraints = {'alpha': Positive()}
@@ -42,8 +44,9 @@ class Dirichlet(ExponentialFamily):
     def __init__(self, alpha, F=None, validate_args=None):
         _F = F if F is not None else getF(alpha)
         self.alpha = alpha
-        super(Dirichlet, self).__init__(F=_F, event_dim=1, validate_args=validate_args)
-    
+        super(Dirichlet, self).__init__(
+            F=_F, event_dim=1, validate_args=validate_args)
+
     def sample(self, size=None):
         F = self.F
         if size is None:
@@ -63,7 +66,8 @@ class Dirichlet(ExponentialFamily):
         alpha = self.alpha
         if size is None:
             return self.sample()
-        gamma_samples = F.np.random.gamma(alpha, 1, sample_n_shape_converter(size))
+        gamma_samples = F.np.random.gamma(
+            alpha, 1, sample_n_shape_converter(size))
         s = gamma_samples.sum(-1, keepdims=True)
         return _clip_float_eps(gamma_samples / s, F)
 
@@ -75,7 +79,7 @@ class Dirichlet(ExponentialFamily):
         log = F.np.log
         alpha = self.alpha
         return (log(value) * (alpha - 1.0)).sum(-1) +\
-                lgamma(alpha.sum(-1)) - lgamma(alpha).sum(-1)
+            lgamma(alpha.sum(-1)) - lgamma(alpha).sum(-1)
 
     @property
     def mean(self):
@@ -88,6 +92,7 @@ class Dirichlet(ExponentialFamily):
         s = a.sum(-1, keepdims=True)
         return a * (s - a) / ((s + 1) * s ** 2)
 
+    @property
     def entropy(self):
         F = self.F
         lgamma = gammaln(F)

@@ -24,6 +24,7 @@ from .exp_family import ExponentialFamily
 from .constraint import Real, Positive
 from .utils import getF, sample_n_shape_converter, gammaln, digamma
 
+
 class Gamma(ExponentialFamily):
     r"""Create a Gamma distribution object.
 
@@ -38,6 +39,8 @@ class Gamma(ExponentialFamily):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
+
     # TODO: Implement implicit reparameterization gradient for Gamma.
     has_grad = False
     support = Real()
@@ -47,7 +50,8 @@ class Gamma(ExponentialFamily):
         _F = F if F is not None else getF(shape, scale)
         self.shape = shape
         self.scale = scale
-        super(Gamma, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(Gamma, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     def log_prob(self, value):
         if self._validate_args:
@@ -67,8 +71,8 @@ class Gamma(ExponentialFamily):
         new_instance.shape = F.np.broadcast_to(self.shape, batch_shape)
         new_instance.scale = F.np.broadcast_to(self.scale, batch_shape)
         super(Gamma, new_instance).__init__(F=F,
-                                             event_dim=self.event_dim,
-                                             validate_args=False)
+                                            event_dim=self.event_dim,
+                                            validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
 
@@ -86,11 +90,12 @@ class Gamma(ExponentialFamily):
     def variance(self):
         return self.shape * (self.scale ** 2)
 
+    @property
     def entropy(self):
         F = self.F
         lgamma = gammaln(F)
         dgamma = digamma(F)
-        return (self.shape + F.np.log(self.scale) + lgamma(self.shape) + 
+        return (self.shape + F.np.log(self.scale) + lgamma(self.shape) +
                 (1 - self.shape) * dgamma(self.shape))
 
     @property

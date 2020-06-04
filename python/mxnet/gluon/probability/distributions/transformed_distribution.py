@@ -35,18 +35,21 @@ class TransformedDistribution(Distribution):
     transforms : Transformation or List
         Transformation to be applied
     """
+    # pylint: disable=abstract-method
+
     def __init__(self, base_dist, transforms, validate_args=None):
         self._base_dist = base_dist
         if isinstance(transforms, Transformation):
-            transforms = [transforms,]
+            transforms = [transforms, ]
         self._transforms = transforms
         _F = base_dist.F
         # Overwrite the F in transform
         for t in self._transforms:
             t.F = _F
         event_dim = max([self._base_dist.event_dim] +
-                             [t.event_dim for t in self._transforms])
-        super(TransformedDistribution, self).__init__(_F, event_dim=event_dim, validate_args=validate_args)
+                        [t.event_dim for t in self._transforms])
+        super(TransformedDistribution, self).__init__(
+            _F, event_dim=event_dim, validate_args=validate_args)
 
     def sample(self, size=None):
         x = self._base_dist.sample(size)
@@ -69,7 +72,7 @@ class TransformedDistribution(Distribution):
         log(p(y)) = log(p(x)) - log(|dy/dx|)
         """
         log_prob = 0.0
-        y = value # T_n(T_{n-1}(...T_1(x)))
+        y = value  # T_n(T_{n-1}(...T_1(x)))
         # Reverse `_transforms` to transform to the base distribution.
         for t in reversed(self._transforms):
             x = t.inv(y)
@@ -95,7 +98,7 @@ class TransformedDistribution(Distribution):
         sign = self.F.np.ones_like(value)
         for t in self._transforms:
             sign = sign * t.sign
-        value = sign * (value - 0.5) + 0.5 # value or (1 - value)
+        value = sign * (value - 0.5) + 0.5  # value or (1 - value)
         samples_base = self._base_dist.icdf(value)
         for t in self._transforms:
             samples_base = t(samples_base)

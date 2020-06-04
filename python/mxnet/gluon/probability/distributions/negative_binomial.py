@@ -23,10 +23,9 @@ __all__ = ['NegativeBinomial']
 from .distribution import Distribution
 from .poisson import Poisson
 from .gamma import Gamma
-from .utils import prob2logit, logit2prob, getF, cached_property, sample_n_shape_converter
+from .utils import prob2logit, logit2prob, getF, cached_property
 from .utils import gammaln
 from .constraint import GreaterThanEq, Interval, Real, NonNegativeInteger
-from numbers import Number
 
 
 class NegativeBinomial(Distribution):
@@ -44,9 +43,10 @@ class NegativeBinomial(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
 
     support = NonNegativeInteger()
-    arg_constraints = {'n' : GreaterThanEq(0),
+    arg_constraints = {'n': GreaterThanEq(0),
                        'prob': Interval(0, 1),
                        'logit': Real()}
 
@@ -62,12 +62,13 @@ class NegativeBinomial(Distribution):
         else:
             self.logit = logit
         self.n = n
-        super(NegativeBinomial, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(NegativeBinomial, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     @cached_property
     def prob(self):
         """Get the probability of sampling `1`.
-        
+
         Returns
         -------
         Tensor
@@ -78,7 +79,7 @@ class NegativeBinomial(Distribution):
     @cached_property
     def logit(self):
         """Get the log-odds of sampling `1`.
-        
+
         Returns
         -------
         Tensor
@@ -93,7 +94,6 @@ class NegativeBinomial(Distribution):
 
     @property
     def variance(self):
-        F = self.F
         prob = self.prob
         return self.n * prob / (1 - prob) ** 2
 
@@ -104,10 +104,10 @@ class NegativeBinomial(Distribution):
             new_instance.prob = F.np.broadcast_to(self.prob, batch_shape)
         else:
             new_instance.logit = F.np.broadcast_to(self.logit, batch_shape)
-        new_instance.n = F.np.broadcast_to(self.n, batch_shape) 
+        new_instance.n = F.np.broadcast_to(self.n, batch_shape)
         super(NegativeBinomial, new_instance).__init__(F=F,
-                                                event_dim=self.event_dim,
-                                                validate_args=False)
+                                                       event_dim=self.event_dim,
+                                                       validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
 
@@ -116,19 +116,23 @@ class NegativeBinomial(Distribution):
             self._validate_samples(value)
         F = self.F
         lgamma = gammaln(F)
-        binomal_coef = lgamma(value + self.n) - lgamma(1 + value) - lgamma(self.n)
+        binomal_coef = lgamma(value + self.n) - \
+            lgamma(1 + value) - lgamma(self.n)
         # log(prob) may have numerical issue.
-        unnormalized_log_prob = self.n * F.np.log(self.prob) + value * F.np.log1p(-self.prob)
+        unnormalized_log_prob = self.n * \
+            F.np.log(self.prob) + value * F.np.log1p(-self.prob)
         return binomal_coef + unnormalized_log_prob
 
     def sample(self, size=None):
         F = self.F
         # Sample via Poisson-Gamma mixture
-        rate = Gamma(shape=self.n, scale=F.np.exp(self.logit), F=F).sample(size)
+        rate = Gamma(shape=self.n, scale=F.np.exp(
+            self.logit), F=F).sample(size)
         return Poisson(rate, F=F).sample()
 
     def sample_n(self, size=None):
         F = self.F
         # Sample via Poisson-Gamma mixture
-        rate = Gamma(shape=self.n, scale=F.np.exp(self.logit), F=F).sample_n(size)
+        rate = Gamma(shape=self.n, scale=F.np.exp(
+            self.logit), F=F).sample_n(size)
         return Poisson(rate, F=F).sample()

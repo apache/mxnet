@@ -39,6 +39,7 @@ class Laplace(Distribution):
         inferred from parameters if declared None.
 
     """
+    # pylint: disable=abstract-method
 
     has_grad = False
     support = Real()

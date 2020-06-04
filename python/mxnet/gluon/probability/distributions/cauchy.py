@@ -21,11 +21,11 @@
 
 __all__ = ['Cauchy']
 
+from numbers import Number
+from numpy import nan, pi
 from .constraint import Real
 from .distribution import Distribution
 from .utils import getF, sample_n_shape_converter
-from numpy import nan, pi
-from numbers import Number
 
 
 class Cauchy(Distribution):
@@ -41,6 +41,8 @@ class Cauchy(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
+
     has_grad = True
     support = Real()
     arg_constraints = {'loc': Real(), 'scale': Real()}
@@ -49,7 +51,8 @@ class Cauchy(Distribution):
         _F = F if F is not None else getF(loc, scale)
         self.loc = loc
         self.scale = scale
-        super(Cauchy, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(Cauchy, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     @property
     def mean(self):
@@ -66,19 +69,20 @@ class Cauchy(Distribution):
         if (isinstance(self.loc, Number), isinstance(self.scale, Number)) == (True, True):
             u = F.np.random.uniform(size=size)
         else:
-            u = F.np.random.uniform(F.np.zeros_like(self.loc + self.scale), size=size)
+            u = F.np.random.uniform(F.np.zeros_like(
+                self.loc + self.scale), size=size)
         return self.icdf(u)
 
     def sample_n(self, size=None):
         return self.sample(sample_n_shape_converter(size))
-    
+
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
         log = self.F.np.log
         return (-log(pi) - log(self.scale) -
                 log(1 + ((value - self.loc) / self.scale) ** 2))
-    
+
     def cdf(self, value):
         if self._validate_args:
             self._validate_samples(value)

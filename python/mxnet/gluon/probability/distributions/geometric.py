@@ -20,10 +20,10 @@
 """Geometric distribution class."""
 __all__ = ['Geometric']
 
+from numbers import Number
 from .distribution import Distribution
 from .utils import prob2logit, logit2prob, getF, cached_property, sample_n_shape_converter
 from .constraint import NonNegativeInteger, Interval, Real
-from numbers import Number
 
 
 class Geometric(Distribution):
@@ -39,6 +39,7 @@ class Geometric(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
 
     support = NonNegativeInteger()
     arg_constraints = {'prob': Interval(0, 1),
@@ -55,12 +56,13 @@ class Geometric(Distribution):
             self.prob = prob
         else:
             self.logit = logit
-        super(Geometric, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(Geometric, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     @cached_property
     def prob(self):
         """Get the probability of sampling `1`.
-        
+
         Returns
         -------
         Tensor
@@ -71,7 +73,7 @@ class Geometric(Distribution):
     @cached_property
     def logit(self):
         """Get the log-odds of sampling `1`.
-        
+
         Returns
         -------
         Tensor

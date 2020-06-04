@@ -20,13 +20,12 @@
 """Half-cauchy Distribution"""
 __all__ = ["HalfCauchy"]
 
+import math
+from numpy import inf
 from .transformed_distribution import TransformedDistribution
 from ..transformation import AbsTransform
 from .cauchy import Cauchy
 from .constraint import Positive
-from .utils import getF
-import math
-from numpy import inf
 
 
 class HalfCauchy(TransformedDistribution):
@@ -42,6 +41,7 @@ class HalfCauchy(TransformedDistribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
 
     has_grad = True
     support = Positive()
@@ -50,7 +50,8 @@ class HalfCauchy(TransformedDistribution):
     def __init__(self, scale=1.0, F=None, validate_args=None):
         base_dist = Cauchy(0, scale, F)
         self.scale = scale
-        super(HalfCauchy, self).__init__(base_dist, AbsTransform(), validate_args=validate_args)
+        super(HalfCauchy, self).__init__(
+            base_dist, AbsTransform(), validate_args=validate_args)
 
     def log_prob(self, value):
         if self._validate_args:
@@ -78,5 +79,3 @@ class HalfCauchy(TransformedDistribution):
     def variance(self):
         pow_fn = self.F.np.power
         return pow_fn(self.scale, 2) * (1 - 2 / math.pi)
-
-    

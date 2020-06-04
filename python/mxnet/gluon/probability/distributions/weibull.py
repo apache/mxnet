@@ -25,7 +25,7 @@ from .exponential import Exponential
 from .constraint import Positive
 from ..transformation import PowerTransform, AffineTransform
 from .utils import getF, sample_n_shape_converter, gammaln
-# Euler-Mascheroni constant 
+# Euler-Mascheroni constant
 from numpy import euler_gamma
 
 
@@ -42,11 +42,13 @@ class Weibull(TransformedDistribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
+
     has_grad = True
     support = Positive()
     arg_constraints = {'scale': Positive(),
                        'concentration': Positive()}
-    
+
     def __init__(self, concentration, scale=1.0, F=None, validate_args=None):
         _F = F if F is not None else getF(scale, concentration)
         self.concentration = concentration
@@ -54,11 +56,11 @@ class Weibull(TransformedDistribution):
         base_dist = Exponential(F=_F)
         super(Weibull, self).__init__(base_dist, [PowerTransform(1 / self.concentration),
                                                   AffineTransform(0, self.scale)])
-    
+
     def sample(self, size=None):
         F = self.F
         return self.scale * F.np.random.weibull(self.concentration, size)
-    
+
     def sample_n(self, size=None):
         F = self.F
         return self.scale * F.np.random.weibull(self.concentration,
@@ -69,15 +71,16 @@ class Weibull(TransformedDistribution):
         F = self.F
         return self.scale * F.np.exp(F.npx.gammaln(1 + 1 / self.concentration))
 
+    @property
     def variance(self):
         F = self.F
         exp = F.np.exp
         lgamma = gammaln(F)
         term1 = exp(lgamma(1 + 2 / self.concentration))
         term2 = exp(2 * lgamma(1 + 1 / self.concentration))
-        return (self.scale ** 2) * (term1 - term1)
+        return (self.scale ** 2) * (term1 - term2)
 
     def entropy(self):
         F = self.F
-        return (euler_gamma * (1 - 1 / self.concentration) + 
+        return (euler_gamma * (1 - 1 / self.concentration) +
                 F.np.log(self.scale / self.concentration) + 1)

@@ -40,21 +40,24 @@ class Pareto(TransformedDistribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
+
     has_grad = True
     arg_constraints = {'scale': Positive(),
                        'alpha': Positive()}
-    
+
     def __init__(self, alpha, scale=1.0, F=None, validate_args=None):
         _F = F if F is not None else getF(alpha, scale)
         self.alpha = alpha
         self.scale = scale
         base_dist = Exponential(1 / self.alpha)
-        super(Pareto, self).__init__(base_dist, [ExpTransform(), AffineTransform(0, self.scale)])
-    
+        super(Pareto, self).__init__(base_dist, [
+            ExpTransform(), AffineTransform(0, self.scale)])
+
     def sample(self, size=None):
         F = self.F
         return self.scale * (F.np.random.pareto(self.alpha, size) + 1)
-    
+
     def sample_n(self, size=None):
         F = self.F
         return self.scale * (F.np.random.pareto(self.alpha, sample_n_shape_converter(size)) + 1)
@@ -69,6 +72,7 @@ class Pareto(TransformedDistribution):
         a = F.np.clip(self.alpha, min=1)
         return a * self.scale / (a - 1)
 
+    @property
     def variance(self):
         F = self.F
         a = F.np.clip(self.alpha, min=2)

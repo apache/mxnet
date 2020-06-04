@@ -21,8 +21,9 @@
 __all__ = ['Exponential']
 
 from .exp_family import ExponentialFamily
-from .constraint import Real, Positive
+from .constraint import Positive
 from .utils import getF, sample_n_shape_converter, cached_property
+
 
 class Exponential(ExponentialFamily):
     r"""Create a Exponential distribution object parameterized by `scale`.
@@ -34,14 +35,17 @@ class Exponential(ExponentialFamily):
     F : mx.ndarray or mx.symbol.numpy._Symbol or None
         Variable recording running mode, will be automatically
     """
+    # pylint: disable=abstract-method
+
     has_grad = True
     support = Positive()
-    arg_constraints = {'scale' : Positive()}
-    
+    arg_constraints = {'scale': Positive()}
+
     def __init__(self, scale=1.0, F=None, validate_args=None):
         _F = F if F is not None else getF(scale)
         self.scale = scale
-        super(Exponential, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(Exponential, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     @cached_property
     def rate(self):
@@ -66,17 +70,15 @@ class Exponential(ExponentialFamily):
         return self.F.np.random.exponential(self.scale,
                                             size=sample_n_shape_converter(size))
 
-
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
         F = self.F
         new_instance.scale = F.np.broadcast_to(self.scale, batch_shape)
         super(Exponential, new_instance).__init__(F=F,
-                                                event_dim=self.event_dim,
-                                                validate_args=False)
+                                                  event_dim=self.event_dim,
+                                                  validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
-
 
     def log_prob(self, value):
         if self._validate_args:
@@ -94,15 +96,15 @@ class Exponential(ExponentialFamily):
         F = self.F
         return - self.scale * F.np.log(1 - value)
 
+    @property
     def entropy(self):
         F = self.F
         return 1.0 + F.np.log(self.scale)
-    
+
     @property
     def _natural_params(self):
         return (-self.rate, )
-    
+
     def _log_normalizer(self, x):
         F = self.F
         return -F.np.log(-x)
-    

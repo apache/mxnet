@@ -24,7 +24,8 @@ from .distribution import Distribution
 from .transformed_distribution import TransformedDistribution
 from ..transformation import ExpTransform
 from .utils import prob2logit, logit2prob, getF, cached_property
-from .constraint import OpenInterval, Real, Simplex
+from .constraint import Real, Simplex
+
 
 class _LogRelaxedOneHotCategorical(Distribution):
     """Helper class for creating the log of a
@@ -44,6 +45,7 @@ class _LogRelaxedOneHotCategorical(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
 
     has_grad = True
     arg_constraints = {'prob': Simplex(),
@@ -68,7 +70,8 @@ class _LogRelaxedOneHotCategorical(Distribution):
         else:
             self.logit = logit
 
-        super(_LogRelaxedOneHotCategorical, self).__init__(_F, event_dim=1, validate_args=validate_args)
+        super(_LogRelaxedOneHotCategorical, self).__init__(
+            _F, event_dim=1, validate_args=validate_args)
 
     @cached_property
     def prob(self):
@@ -94,12 +97,12 @@ class _LogRelaxedOneHotCategorical(Distribution):
 
     def log_prob(self, value):
         """Compute the log-likelihood of `value`
-        
+
         Parameters
         ----------
         value : Tensor
             samples from Relaxed Categorical distribution
-        
+
         Returns
         -------
         Tensor
@@ -107,7 +110,7 @@ class _LogRelaxedOneHotCategorical(Distribution):
         """
         from math import lgamma
         F = self.F
-        K = self.num_events # Python scalar
+        K = self.num_events  # Python scalar
         log = F.np.log
         exp = F.np.exp
         logit = self.logit
@@ -115,7 +118,6 @@ class _LogRelaxedOneHotCategorical(Distribution):
         log_sum_exp = log(exp(y).sum(-1, keepdims=True) + 1e-20)
         log_scale = lgamma(K) - log(self.T) * (-(K - 1))
         return (y - log_sum_exp).sum(-1) + log_scale
-
 
     def sample(self, size=None):
         F = self.F
@@ -148,15 +150,18 @@ class RelaxedOneHotCategorical(TransformedDistribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
-    
+    # pylint: disable=abstract-method
+
     has_grad = True
     arg_constraints = {'prob': Simplex(),
                        'logit': Real()}
 
     def __init__(self, T, num_events, prob=None, logit=None, F=None, validate_args=None):
-        base_dist = _LogRelaxedOneHotCategorical(T, num_events, prob, logit, F, validate_args)
-        super(RelaxedOneHotCategorical, self).__init__(base_dist, ExpTransform())
-    
+        base_dist = _LogRelaxedOneHotCategorical(
+            T, num_events, prob, logit, F, validate_args)
+        super(RelaxedOneHotCategorical, self).__init__(
+            base_dist, ExpTransform())
+
     @property
     def T(self):
         return self._base_dist.T

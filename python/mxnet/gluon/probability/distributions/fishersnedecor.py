@@ -20,15 +20,16 @@
 """Snedecor's F Distribution."""
 __all__ = ['FisherSnedecor']
 
+from numpy import nan
 from .distribution import Distribution
 from .gamma import Gamma
 from .constraint import Positive
 from .utils import getF, gammaln
-from numpy import nan
+
 
 class FisherSnedecor(Distribution):
     r"""Create a FisherSnedecor distribution object, often known as F distribution.
-    
+
     Parameters
     ----------
     df1 : Tensor or scalar
@@ -39,6 +40,8 @@ class FisherSnedecor(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
+
     support = Positive()
     arg_constraints = {'df1': Positive(), 'df2': Positive()}
 
@@ -48,7 +51,8 @@ class FisherSnedecor(Distribution):
         self.df2 = df2
         self._gamma1 = Gamma(0.5 * self.df1, 1 / self.df1)
         self._gamma2 = Gamma(0.5 * self.df2, 1 / self.df2)
-        super(FisherSnedecor, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(FisherSnedecor, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     def broadcast_to(self, batch_shape):
         new_instance = self.__new__(type(self))
@@ -58,7 +62,7 @@ class FisherSnedecor(Distribution):
         new_instance._gamma1 = self._gamma1.broadcast_to(batch_shape)
         new_instance._gamma2 = self._gamma2.broadcast_to(batch_shape)
         super(FisherSnedecor, new_instance).__init__(F=F,
-                                        event_dim=0, validate_args=False)
+                                                     event_dim=0, validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
 
@@ -96,7 +100,8 @@ class FisherSnedecor(Distribution):
         ct1 = self.df1 / 2
         ct2 = self.df2 / 2
         ct3 = self.df1 / self.df2
-        t1 = lgamma(ct1 + ct2) - lgamma(ct1) - lgamma(ct2) # Beta(df1/2, df2/2)
+        t1 = lgamma(ct1 + ct2) - lgamma(ct1) - \
+            lgamma(ct2)  # Beta(df1/2, df2/2)
         t2 = log(ct3) * ct1 + (ct1 - 1) * log(value)
         t3 = (ct1 + ct2) * log(ct3 * value + 1)
         return t1 + t2 - t3

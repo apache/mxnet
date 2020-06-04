@@ -25,9 +25,10 @@ from functools import update_wrapper
 from numbers import Number
 import numpy as onp
 import scipy.special as sc
-from .... import numpy as np
+from .... import numpy as np # pylint: disable=reimported
 from .... import symbol as sym
 from .... import ndarray as nd
+
 
 def constraint_check(F):
     """Unified check_constraint interface for both scalar and tensor
@@ -36,8 +37,7 @@ def constraint_check(F):
         if isinstance(condition, bool):
             if not condition:
                 raise ValueError(err_msg)
-            else:
-                return 1.0
+            return 1.0
         return F.npx.constraint_check(condition, err_msg)
     return _check
 
@@ -53,6 +53,7 @@ def digamma(F):
         return F.npx.digamma(value)
     return compute
 
+
 def gammaln(F):
     """Unified gammaln interface for both scalar and tensor
     """
@@ -64,6 +65,7 @@ def gammaln(F):
         return F.npx.gammaln(value)
     return compute
 
+
 def erf(F):
     """Unified erf interface for both scalar and tensor
     """
@@ -73,6 +75,7 @@ def erf(F):
         return F.npx.erf(value)
     return compute
 
+
 def erfinv(F):
     """Unified erfinv interface for both scalar and tensor
     """
@@ -81,6 +84,7 @@ def erfinv(F):
             return sc.erfinv(value)
         return F.npx.erfinv(value)
     return compute
+
 
 def sample_n_shape_converter(size):
     """Convert `size` to the proper format for performing sample_n.
@@ -95,10 +99,11 @@ def sample_n_shape_converter(size):
         size = (-2,) + size
     return size
 
+
 def getF(*params):
     """Get running mode from parameters,
     return mx.ndarray if inputs are python scalar.
-    
+
     Returns
     -------
     ndarray or _Symbol
@@ -108,13 +113,13 @@ def getF(*params):
     for param in params:
         if isinstance(param, np.ndarray):
             if mode_flag < 0:
-                raise TypeError("Expect parameters to have consistent running mode," + 
+                raise TypeError("Expect parameters to have consistent running mode," +
                                 " got {}".format([type(p) for p in params]))
             mode_flag = 1
             return nd
         elif isinstance(param, sym.Symbol):
             if mode_flag > 0:
-                raise TypeError("Expect parameters to have consistent running mode," + 
+                raise TypeError("Expect parameters to have consistent running mode," +
                                 " got {}".format([type(p) for p in params]))
             mode_flag = -1
             return sym
@@ -124,14 +129,14 @@ def getF(*params):
 
 def sum_right_most(x, ndim):
     """Sum along the right most `ndim` dimensions of `x`,
-    
+
     Parameters
     ----------
     x : Tensor
         Input tensor.
     ndim : Int
         Number of dimensions to be summed.
-    
+
     Returns
     -------
     Tensor
@@ -143,13 +148,11 @@ def sum_right_most(x, ndim):
 
 
 def _clip_prob(prob, F):
-    import numpy as onp
     eps = onp.finfo('float32').eps
     return F.np.clip(prob, eps, 1 - eps)
 
 
 def _clip_float_eps(value, F):
-    import numpy as onp
     eps = onp.finfo('float32').eps
     return F.np.maximum(value, eps)
 
@@ -184,6 +187,7 @@ def logit2prob(logit, binary=True, F=None):
 
 class _CachedProperty(object):
     r"""Use as a decorator for loading class attribute, but caches the value."""
+
     def __init__(self, func):
         self._func = func
         update_wrapper(self, self._func)

@@ -28,8 +28,8 @@ class ExponentialFamily(Distribution):
     ExponentialFamily inherits from Distribution. ExponentialFamily is a base
     class for distributions whose density function has the form:
     p_F(x;\theta) = exp(
-        <t(x), \theta> - 
-        F(\theta) + 
+        <t(x), \theta> -
+        F(\theta) +
         k(x)
     ) where
     t(x): sufficient statistics
@@ -52,7 +52,6 @@ class ExponentialFamily(Distribution):
         """
         raise NotImplementedError
 
-    @property
     def _mean_carrier_measure(self, x):
         r"""
         Return the mean of carrier measure k(x) based on input x,

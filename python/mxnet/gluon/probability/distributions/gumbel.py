@@ -20,16 +20,16 @@
 """Gumbel Distribution."""
 __all__ = ['Gumbel']
 
+import math
+from numpy import euler_gamma # Euler-Mascheroni constant
 from .distribution import Distribution
 from .constraint import Real, Positive
 from .utils import getF, sample_n_shape_converter
-# Euler-Mascheroni constant
-from numpy import euler_gamma
 
 
 class Gumbel(Distribution):
     r"""Create a Gumble distribution object
-    
+
     Parameters
     ----------
     loc : Tensor or scalar, default 0
@@ -40,6 +40,7 @@ class Gumbel(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
 
     has_grad = True
     support = Real()
@@ -97,7 +98,6 @@ class Gumbel(Distribution):
 
     @property
     def stddev(self):
-        import math
         return (math.pi / math.sqrt(6)) * self.scale
 
     @property

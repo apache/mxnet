@@ -40,6 +40,7 @@ class Categorical(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
 
     has_enumerate_support = True
     arg_constraints = {'prob': Simplex(),
@@ -63,7 +64,8 @@ class Categorical(Distribution):
         else:
             self.logit = logit
 
-        super(Categorical, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(Categorical, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     @cached_property
     def prob(self):
@@ -93,12 +95,12 @@ class Categorical(Distribution):
 
     def log_prob(self, value):
         """Compute the log-likelihood of `value`
-        
+
         Parameters
         ----------
         value : Tensor
             samples from Categorical distribution
-        
+
         Returns
         -------
         Tensor
@@ -117,11 +119,11 @@ class Categorical(Distribution):
         Given logit/prob of size `(batch_size, num_events)`,
         `batch_size` samples will be drawn.
         If `size` is given, `np.broadcast(size, batch_size)` samples will be drawn.
-        
+
         Parameters
         ----------
         size : int or tuple of ints
-        
+
         Returns
         -------
         out : Tensor
@@ -152,8 +154,8 @@ class Categorical(Distribution):
         new_instance.logit = F.np.broadcast_to(self.logit, batch_shape + (-2,))
         new_instance.num_events = self.num_events
         super(Categorical, new_instance).__init__(F=F,
-                                             event_dim=self.event_dim,
-                                             validate_args=False)
+                                                  event_dim=self.event_dim,
+                                                  validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
 

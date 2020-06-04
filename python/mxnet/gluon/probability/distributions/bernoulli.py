@@ -38,6 +38,7 @@ class Bernoulli(ExponentialFamily):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
 
     support = Boolean()
     arg_constraints = {'prob': Interval(0, 1),
@@ -56,12 +57,13 @@ class Bernoulli(ExponentialFamily):
         else:
             self.logit = logit
 
-        super(Bernoulli, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(Bernoulli, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     @cached_property
     def prob(self):
         """Get the probability of sampling `1`.
-        
+
         Returns
         -------
         Tensor
@@ -72,7 +74,7 @@ class Bernoulli(ExponentialFamily):
     @cached_property
     def logit(self):
         """Get the log-odds of sampling `1`.
-        
+
         Returns
         -------
         Tensor
@@ -124,7 +126,6 @@ class Bernoulli(ExponentialFamily):
     def _natural_params(self):
         return (self.logit,)
 
-    @property
     def _log_normalizer(self, x):
         return self.F.np.log(1 + self.F.np.exp(x))
 

@@ -23,7 +23,7 @@ __all__ = ['OneHotCategorical']
 from .distribution import Distribution
 from .categorical import Categorical
 from .utils import getF, cached_property
-from .constraint import Simplex, Real, IntegerInterval
+from .constraint import Simplex, Real
 
 
 class OneHotCategorical(Distribution):
@@ -41,6 +41,7 @@ class OneHotCategorical(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
 
     arg_constraints = {'prob': Simplex(), 'logit': Real()}
 
@@ -52,8 +53,10 @@ class OneHotCategorical(Distribution):
         else:
             raise ValueError("`num_events` should be greater than zero. " +
                              "Received num_events={}".format(num_events))
-        self._categorical = Categorical(num_events, prob, logit, _F, validate_args)
-        super(OneHotCategorical, self).__init__(_F, event_dim=1, validate_args=validate_args)
+        self._categorical = Categorical(
+            num_events, prob, logit, _F, validate_args)
+        super(OneHotCategorical, self).__init__(
+            _F, event_dim=1, validate_args=validate_args)
 
     @cached_property
     def prob(self):
@@ -79,7 +82,7 @@ class OneHotCategorical(Distribution):
     def sample_n(self, size=None):
         indices = self._categorical.sample_n(size)
         return self.F.npx.one_hot(indices, self.num_events)
-    
+
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
@@ -98,6 +101,5 @@ class OneHotCategorical(Distribution):
         return new_instance
 
     def enumerate_support(self):
-        F = self.F
         value = self._categorical.enumerate_support()
         return self.F.npx.one_hot(value, self.num_events)

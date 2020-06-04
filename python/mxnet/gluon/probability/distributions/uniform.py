@@ -38,6 +38,8 @@ class Uniform(Distribution):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
+
     # Reparameterization gradient for Uniform is currently not implemented
     # in the backend at this moment.
     has_grad = False
@@ -47,19 +49,21 @@ class Uniform(Distribution):
         _F = F if F is not None else getF(low, high)
         self.low = low
         self.high = high
-        super(Uniform, self).__init__(F=_F, event_dim=0, validate_args=validate_args)
+        super(Uniform, self).__init__(
+            F=_F, event_dim=0, validate_args=validate_args)
 
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
         F = self.F
-        type_converter = lambda x: float(x) if isinstance(x, bool) else x.astype('float')
+        def type_converter(x):
+            return float(x) if isinstance(x, bool) else x.astype('float')
         lower_bound = type_converter(self.low < value)
         upper_bound = type_converter(self.high > value)
         # 0 if value \in [low, high], -inf otherwise.
         out_of_support_value = F.np.log(lower_bound * upper_bound)
         return out_of_support_value - F.np.log(self.high - self.low)
-    
+
     def sample(self, size=None):
         F = self.F
         return F.np.random.uniform(self.low, self.high, size=size)
@@ -79,11 +83,11 @@ class Uniform(Distribution):
         new_instance.low = F.np.broadcast_to(self.low, batch_shape)
         new_instance.high = F.np.broadcast_to(self.high, batch_shape)
         super(Uniform, new_instance).__init__(F=F,
-                                             event_dim=self.event_dim,
-                                             validate_args=False)
+                                              event_dim=self.event_dim,
+                                              validate_args=False)
         new_instance._validate_args = self._validate_args
         return new_instance
-    
+
     def cdf(self, value):
         if self._validate_args:
             self._validate_samples(value)

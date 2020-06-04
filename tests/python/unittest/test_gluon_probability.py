@@ -90,8 +90,8 @@ def test_gluon_uniform():
         def __init__(self, func):
             super(TestUniform, self).__init__()
             self._func = func
-
-        def hybrid_forward(self, F, low, high, *args):
+        
+        def forward(self, low, high, *args):
             uniform = mgp.Uniform(low, high, validate_args=True)
             return _distribution_method_invoker(uniform, self._func, *args)
 
@@ -161,9 +161,9 @@ def test_gluon_normal():
             super(TestNormal, self).__init__()
             self._func = func
 
-        def hybrid_forward(self, F, loc, scale, *args):
-            normal = mgp.Normal(loc, scale, F, validate_args=True)
-            return getattr(normal, self._func)(*args)
+        def forward(self, loc, scale, *args):
+            normal = mgp.Normal(loc, scale, validate_args=True)
+            return _distribution_method_invoker(normal, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
 
@@ -232,8 +232,8 @@ def test_gluon_laplace():
             self._func = func
 
         def hybrid_forward(self, F, loc, scale, *args):
-            normal = mgp.Laplace(loc, scale, F, validate_args=True)
-            return getattr(normal, self._func)(*args)
+            laplace = mgp.Laplace(loc, scale, F, validate_args=True)
+            return _distribution_method_invoker(laplace, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
 
@@ -1640,7 +1640,7 @@ def test_gluon_mvn():
         precision_t = np.swapaxes(precision, -1, -2)
         return (precision + precision_t) / 2
 
-    event_shapes = [3, 5, 10]
+    event_shapes = [3, 5]
     loc_shapes = [(), (2,), (4, 2)]
     cov_shapes = [(), (2,), (4, 2)]
     cov_func = {
@@ -2002,7 +2002,7 @@ def test_gluon_kl():
         return dist(*params)
 
     # could cause longer runtime and potential flaky tests
-    monte_carlo_test = True 
+    monte_carlo_test = False 
     repeated_times = 50000
     shapes = [(), (1,), (2, 3), 6]
 

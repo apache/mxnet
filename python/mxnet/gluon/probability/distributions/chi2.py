@@ -23,6 +23,7 @@ __all__ = ['Chi2']
 from .gamma import Gamma
 from .constraint import Positive
 
+
 class Chi2(Gamma):
     r"""Create a Chi2 distribution object.
     Chi2(df) is equivalent to Gamma(shape=df / 2, scale=2)
@@ -35,6 +36,8 @@ class Chi2(Gamma):
         Variable recording running mode, will be automatically
         inferred from parameters if declared None.
     """
+    # pylint: disable=abstract-method
+
     arg_constraints = {'df': Positive()}
 
     def __init__(self, df, F=None, validate_args=None):
