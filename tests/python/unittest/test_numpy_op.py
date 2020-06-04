@@ -6785,6 +6785,26 @@ def test_np_einsum():
         # broadcast bug
         ('ij, ij -> i', [(1, 4), (2, 4)], lambda *args: (_np.sum(args[1], axis=0)[None, :],
                                                          _np.tile(args[0], [2, 1]))),
+        # one dimensim bug
+        ('...ij, ...jk -> ...ik', [(1, 4), (4, 2)], lambda *args: (args[1].sum(axis=1)[None, :],
+                                                                   _np.tile(args[0].sum(axis=0)[: ,None], [1, 2]))),
+        ('...ij, ...jk -> ...ik', [(2, 4), (4, 2)], lambda *args: (_np.tile(args[1].sum(axis=1)[None, :], [2, 1]),
+                                                                   _np.tile(args[0].sum(axis=0)[: ,None], [1, 2]))),
+        ('...ij, ...jk -> ...ik', [(3, 2, 1, 4), (3, 2, 4, 2)], lambda *args: (
+                                                            args[1].sum(axis=3)[:, :, None, :],
+                                                            _np.tile(args[0].sum(axis=2)[:, :, :, None], [1, 1, 1, 2]))),
+        ('...ij, ...ik -> ...jk', [(1, 1, 1, 4), (1, 1, 1, 3)], lambda *args: (
+                                                            _np.tile(args[1].sum(axis=3)[:, :, :, None], [1, 1, 1, 4]),
+                                                            _np.tile(args[0].sum(axis=3)[:, :, : ,None], [1, 1, 1, 3]))),
+        ('...ij, ...jc -> ...ic', [(1, 1, 5, 3), (1, 1, 3, 2)], lambda *args: (
+                                                            _np.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
+                                                            _np.tile(args[0].sum(axis=2)[:, :, : ,None], [1, 1, 1, 2]))),
+        ('...ij, ...jc -> ...ic', [(1, 2, 5, 4), (1, 2, 4, 2)], lambda *args: (
+                                                            _np.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
+                                                            _np.tile(args[0].sum(axis=2)[:, :, : ,None], [1, 1, 1, 2]))),
+        ('...ij, ...jc -> ...ic', [(2, 1, 5, 4), (2, 1, 4, 2)], lambda *args: (
+                                                            _np.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
+                                                             _np.tile(args[0].sum(axis=2)[:, :, : ,None], [1, 1, 1, 2]))),
         # issue #16576
         # commented due to long running time
         # ('abiz,abjz->abij', [(64, 8, 128, 512), (64, 8, 128, 512)], lambda *args: (_np.matmul(_np.ones((64, 8, 128, 128)), args[1]),
