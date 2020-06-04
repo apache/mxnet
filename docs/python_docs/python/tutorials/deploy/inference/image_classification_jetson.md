@@ -43,6 +43,14 @@ To complete this tutorial, you need:
 
 ## Installing MXNet v1.6 with Jetson support
 
+To install MXNet with Jetson support, you can follow the [installation guide](https://mxnet.apache.org/get_started/jetson_setup) on MXNet official website.
+
+Alternatively, you can also directly install MXNet v1.6 wheel with Jetson support, hosted on a public s3 bucket. Here are the steps to install this wheel:
+
+*WARNING: this MXNet wheel is provided for your convenience but it contains packages that are not provided nor endorsed by the Apache Software Foundation.
+As such, they might contain software components with more restrictive licenses than the Apache License and you'll need to decide whether they are appropriate for your usage. Like all Apache Releases, the
+official Apache MXNet (incubating) releases consist of source code only and are found at https://downloads.apache.org/incubator/mxnet .*
+
 We start by installing MXNet dependencies
 ```bash
 sudo apt-get update
