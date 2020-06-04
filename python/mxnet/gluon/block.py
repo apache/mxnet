@@ -369,9 +369,9 @@ class Block(object):
         """
         # We need to check here because blocks inside containers are not supported.
         self._check_container_with_block()
-        return self._collect_params_with_prefix(select=select, prefix=self._prefix[:-1])
+        return self._collect_params_with_prefix(select=select)
 
-    def set_prefix(self):
+    def set_prefix(self, prefix=None):
         """Set parameters with current prefixs recursively.
         For example::
 
@@ -386,16 +386,28 @@ class Block(object):
         After calling ``net.set_prefix()``,
         the names of the parameters inside 'net' would be added with the corresponding prefix.
         Like for self.dense0.weight, it will be named automatically::
-            Parameter dense0.weight (...)
+            Parameter dense0_weight (...)
         which originally was Parameter weight (...)
         Shared parameters would be added with the prefix where it first occurs.
 
+        The method is called internally at the beginning of Block.initialize.
+        Note that prefix should be set before calling hybridize and forward.
+
+        Parameters
+        ----------
+        prefix : str or None, default None
+            Use assigned prefix for naming Block's parameters.
+            If prefix is None, use current prefix `self._prefix`.
         Returns
         -------
         this block
         """
         recorded = set()
-        self._set_prefix(recorded)
+        if prefix is None:
+            prefix = self._prefix
+        if prefix.endswith('_'):
+            prefix = prefix[:-1]
+        self._set_prefix(recorded, prefix)
         return self
 
     def _set_prefix(self, recorded, prefix=''):
@@ -405,8 +417,7 @@ class Block(object):
         for name, val in self._reg_params.items():
             if val not in recorded:
                 recorded.add(val)
-                val._prefix = prefix
-                val._name = name # use the name of the first occurence as the name of the shared parameter.
+                val.name = prefix + name # use the name of the first occurence as the name of the shared parameter.
 
         for name, child in self._children.items():
             if isinstance(child(), SymbolBlock):
@@ -1097,8 +1108,9 @@ class HybridBlock(Block):
         data, out = self._get_graph(*args)
         data_names = {data.name: i for i, data in enumerate(data)}
         params = self.collect_params()
+        params = {p.name: p for p in params.values()}
         input_names = out.list_inputs()
-        param_names = set([p.name for p in params.values()])
+        param_names = set(params.keys())
         expected_names = set(input_names)
         for name in expected_names:
             assert name in param_names or name in data_names, \

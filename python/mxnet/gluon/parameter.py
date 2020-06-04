@@ -125,7 +125,6 @@ class Parameter(object):
         self.wd_mult = wd_mult
         self.grad_req = grad_req
         self.init = init
-        self._prefix = ""
         # sparse related storage type information
         valid_stypes = ['default', 'row_sparse', 'csr']
         assert grad_stype in valid_stypes, "grad_stype for Parameter '%s' must be " \
@@ -145,7 +144,16 @@ class Parameter(object):
 
     @property
     def name(self):
-        return self._prefix + self._name
+        return self._name
+
+    @name.setter
+    def name(self, name):
+        if self._var is not None:
+            warnings.warn("Parameter {} has generated its symbol representation, "
+                          "which could be used in some cached graph. "
+                          "Skip the operation that sets its name as {}. ".format(self.name, name), stacklevel=4)
+            return
+        self._name = name
 
     @grad_req.setter
     def grad_req(self, req):
