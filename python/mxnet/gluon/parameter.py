@@ -700,7 +700,7 @@ class Parameter(object):
                     "Cannot retrieve Parameter '%s' because desired attribute " \
                     "does not match with stored for attribute '%s': " \
                     "desired '%s' vs stored '%s'."%(
-                        name, k, str(v), str(getattr(self, k)))
+                        self.name, k, str(v), str(getattr(self, k)))
             else:
                 setattr(self, k, v)
 

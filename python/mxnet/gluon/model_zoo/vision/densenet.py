@@ -29,7 +29,7 @@ from ...contrib.nn import HybridConcurrent, Identity
 from .... import base
 
 # Helpers
-def _make_dense_block(num_layers, bn_size, growth_rate, dropout, stage_index):
+def _make_dense_block(num_layers, bn_size, growth_rate, dropout):
     out = nn.HybridSequential()
     for _ in range(num_layers):
         out.add(_make_dense_layer(growth_rate, bn_size, dropout))
@@ -94,7 +94,7 @@ class DenseNet(HybridBlock):
         # Add dense blocks
         num_features = num_init_features
         for i, num_layers in enumerate(block_config):
-            self.features.add(_make_dense_block(num_layers, bn_size, growth_rate, dropout, i+1))
+            self.features.add(_make_dense_block(num_layers, bn_size, growth_rate, dropout))
             num_features = num_features + num_layers * growth_rate
             if i != len(block_config) - 1:
                 self.features.add(_make_transition(num_features // 2))

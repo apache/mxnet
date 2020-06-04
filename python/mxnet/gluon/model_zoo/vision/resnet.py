@@ -265,12 +265,12 @@ class ResNetV1(HybridBlock):
         for i, num_layer in enumerate(layers):
             stride = 1 if i == 0 else 2
             self.features.add(self._make_layer(block, num_layer, channels[i+1],
-                                               stride, i+1, in_channels=channels[i]))
+                                               stride, in_channels=channels[i]))
         self.features.add(nn.GlobalAvgPool2D())
 
         self.output = nn.Dense(classes, in_units=channels[-1])
 
-    def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0):
+    def _make_layer(self, block, layers, channels, stride, in_channels=0):
         layer = nn.HybridSequential()
         layer.add(block(channels, stride, channels != in_channels, in_channels=in_channels))
         for _ in range(layers-1):
@@ -319,7 +319,7 @@ class ResNetV2(HybridBlock):
         for i, num_layer in enumerate(layers):
             stride = 1 if i == 0 else 2
             self.features.add(self._make_layer(block, num_layer, channels[i+1],
-                                                stride, i+1, in_channels=in_channels))
+                                               stride, in_channels=in_channels))
             in_channels = channels[i+1]
         self.features.add(nn.BatchNorm())
         self.features.add(nn.Activation('relu'))
@@ -328,7 +328,7 @@ class ResNetV2(HybridBlock):
 
         self.output = nn.Dense(classes, in_units=in_channels)
 
-    def _make_layer(self, block, layers, channels, stride, stage_index, in_channels=0):
+    def _make_layer(self, block, layers, channels, stride, in_channels=0):
         layer = nn.HybridSequential()
         layer.add(block(channels, stride, channels != in_channels, in_channels=in_channels))
         for _ in range(layers-1):

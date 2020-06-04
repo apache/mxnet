@@ -98,13 +98,13 @@ def _make_C(channels_7x7):
 def _make_D():
     out = HybridConcurrent(axis=1)
     out.add(_make_branch(None,
-                        (192, 1, None, None),
-                        (320, 3, 2, None)))
+                         (192, 1, None, None),
+                         (320, 3, 2, None)))
     out.add(_make_branch(None,
-                        (192, 1, None, None),
-                        (192, (1, 7), None, (0, 3)),
-                        (192, (7, 1), None, (3, 0)),
-                        (192, 3, 2, None)))
+                         (192, 1, None, None),
+                         (192, (1, 7), None, (0, 3)),
+                         (192, (7, 1), None, (3, 0)),
+                         (192, 3, 2, None)))
     out.add(_make_branch('max'))
     return out
 

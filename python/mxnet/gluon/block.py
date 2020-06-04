@@ -348,10 +348,10 @@ class Block(object):
         children's Parameters(default), also can returns the select :py:class:`Dict`
         which match some given regular expressions.
 
-        For example, collect the specified parameters in ['conv1.weight', 'conv1.bias', 'fc.weight',
-        'fc.bias']::
+        For example, collect the specified parameters in ['conv1_weight', 'conv1_bias', 'fc_weight',
+        'fc_bias']::
 
-            model.collect_params(r'conv1\.weight|conv1\.bias|fc\.weight|fc\.bias')
+            model.collect_params('conv1_weight|conv1_bias|fc_weight|fc_bias')
 
         or collect all parameters whose names end with 'weight' or 'bias', this can be done
         using regular expressions::
@@ -423,7 +423,8 @@ class Block(object):
             ret = {prefix + key : val for key, val in self._reg_params.items() if pattern.match(prefix + key)}
 
         for name, child in self._children.items():
-            child_ret = child()._collect_params_with_prefix(prefix + name if not isinstance(child(), SymbolBlock) else '', select)
+            child_prefix = prefix + name if not isinstance(child(), SymbolBlock) else ''
+            child_ret = child()._collect_params_with_prefix(child_prefix, select)
             commons = set(child_ret.keys()) & set(ret.keys())
             if len(commons) > 0:
                 for common in commons:
@@ -594,7 +595,7 @@ class Block(object):
                         name[lprefix:], error_str, _brief_print_list(params.keys()))
                 continue
             params[name]._load_init(arg_dict[name], ctx, cast_dtype=cast_dtype,
-                                  dtype_source=dtype_source)
+                                    dtype_source=dtype_source)
 
     def register_child(self, block, name=None):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
@@ -797,7 +798,7 @@ class Block(object):
     def _shared_parameters(self, shared, shared_set, prefix=""):
         if prefix:
             prefix += '_'
-        for name in self._reg_params.keys():
+        for name in self._reg_params:
             key = prefix + name
             if shared.get(key) is not None:
                 setattr(self, name, shared[key])

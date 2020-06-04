@@ -151,7 +151,7 @@ class MobileNetV2(nn.HybridBlock):
         super(MobileNetV2, self).__init__(**kwargs)
         self.features = nn.HybridSequential()
         _add_conv(self.features, int(32 * multiplier), kernel=3,
-                    stride=2, pad=1, relu6=True)
+                  stride=2, pad=1, relu6=True)
 
         in_channels_group = [int(x * multiplier) for x in [32] + [16] + [24] * 2
                              + [32] * 3 + [64] * 4 + [96] * 3 + [160] * 3]

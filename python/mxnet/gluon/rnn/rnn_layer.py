@@ -20,14 +20,12 @@
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network layers."""
-import re
 
 __all__ = ['RNN', 'LSTM', 'GRU']
 
 from ... import ndarray, symbol
 from .. import HybridBlock, tensor_types
 from ..parameter import Parameter
-from . import rnn_cell
 from ...util import is_np_array
 
 
