@@ -71,6 +71,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         # Caffe
         caffe-cpu \
         libcaffe-cpu-dev \
+        # BytePS
+        numactl \
+        libnuma-dev \
         ## Frontend languages
         # Python
         python3 \
