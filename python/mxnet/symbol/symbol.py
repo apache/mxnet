@@ -1483,7 +1483,7 @@ class Symbol(SymbolBase):
         assert isinstance(backend, str)
         assert isinstance(args, dict) or args is None
         assert isinstance(aux, dict) or aux is None
-        
+
         if args is None or len(args) == 0:
             args_ = []
             args_handle = c_array(NDArrayHandle, [])
@@ -1541,7 +1541,7 @@ class Symbol(SymbolBase):
             for i in range(new_aux_size.value):
                 aux[py_str(new_aux_names[i])] = NDArray(NDArrayHandle(new_aux_handle[i]))
         elif new_aux_size.value > 0:
-            warnings.warn("Cannot add new aux in optimize_for since args is None", stacklevel=2)
+            warnings.warn("Cannot add new aux in optimize_for since aux is None", stacklevel=2)
 
         # return modified symbol
         return Symbol(out)

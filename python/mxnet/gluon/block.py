@@ -1034,9 +1034,9 @@ class HybridBlock(Block):
             ctx = args[0].context
             # get list of params in the order of out.list_arguments
             arg_dict = {name:args[data_names[name]] if name in data_names.keys() else params[name].data()
-                         for name in out.list_arguments()}
+                        for name in out.list_arguments()}
             aux_dict = {name:args[data_names[name]] if name in data_names.keys() else params[name].data()
-                         for name in out.list_auxiliary_states()}
+                        for name in out.list_auxiliary_states()}
             # Partition the graph.
             out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
             #update cached graph with partitioned graph
