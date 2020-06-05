@@ -1085,7 +1085,7 @@ inline void PrepareAUXData(ShapeAndStride *aux_data,
 }
 }  // unnamed namespace
 
-template<typename OP>
+template<typename OP, typename IDXType = index_t>
 struct broadcast_kernel {
   template<typename IType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i,
@@ -1094,15 +1094,16 @@ struct broadcast_kernel {
                                   const ShapeAndStride& aux_data,
                                   const OpReqType req,
                                   const int ndim) {
-    index_t idx = i;
-    index_t in_idx = i;
+    printf("size of IDXType=%d",sizeof(IDXType));
+    IDXType idx = i;
+    IDXType in_idx = i;
 #pragma unroll 4
-    for (int iter = ndim - 1; iter >= 0; --iter) {
-      index_t out_dim_shape = aux_data.output_shape[iter];
-      index_t out_dim_stride = aux_data.out_stride[iter];
+    for (IDXType iter = ndim - 1; iter >= 0; --iter) {
+      IDXType out_dim_shape = aux_data.output_shape[iter];
+      IDXType out_dim_stride = aux_data.out_stride[iter];
       // x % y = x - (x / y) * y
       // speeds up modulo(%) operation in GPU
-      index_t dim_idx = idx - (idx / out_dim_shape) * out_dim_shape;
+      IDXType dim_idx = idx - (idx / out_dim_shape) * out_dim_shape;
       if (aux_data.input_shape[iter] != 1) {
         in_idx += dim_idx * (aux_data.in_stride[iter] - out_dim_stride);
       } else {
@@ -1147,16 +1148,26 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
           outputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
         Tensor<xpu, 2, IType> data =
           inputs[0].get_with_shape<xpu, 2, IType>(src_shape.get<2>(), s);
-        Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-          s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
+        if (ctx.run_ctx.get_ctx().dev_type == Context::kGPU) {
+          Kernel<broadcast_kernel<mshadow_op::identity, int>, xpu>::Launch(
+            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
+	} else {
+          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
+            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
+	}
       } else {
         const int ndim = MXNET_SPECIAL_MAX_NDIM;
         Tensor<xpu, ndim, OType> out =
           outputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
         Tensor<xpu, ndim, IType> data =
           inputs[0].get_with_shape<xpu, ndim, IType>(src_shape.get<ndim>(), s);
-        Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-          s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
+        if (ctx.run_ctx.get_ctx().dev_type == Context::kGPU) {
+          Kernel<broadcast_kernel<mshadow_op::identity, int>, xpu>::Launch(
+            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
+	} else {
+          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
+            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
+	}
       }
     });
   });
