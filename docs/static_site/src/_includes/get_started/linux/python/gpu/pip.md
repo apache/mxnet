@@ -75,17 +75,6 @@ $ pip install mxnet-cu80==0.11.0
 
 </div> <!-- End of v0-11-0-->
 
-<div class="master">
-
-The nightly builds from the master branch are only intended for individuals
-actively participating in development or following the dev list.
-
-{% highlight bash %}
-$ pip install --pre mxnet-cu102 -f https://dist.mxnet.io/python/all
-{% endhighlight %}
-
-</div> <!-- End of master-->
-
 <br>
 
 {% include /get_started/pip_snippet.md %}
