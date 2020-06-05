@@ -276,7 +276,15 @@ To install MXNet on a computer with a CPU processor, choose from two options:
 * Build the library from source code
 
 #### Installing MXNet-R with the Prebuilt Binary Package(CPU)
-For Windows users, MXNet provides prebuilt binary packages.
+WARNING: the following links are provided for your convenience but they point to
+packages that are *not* provided nor endorsed by the Apache Software Foundation.
+As such, they might contain software components with more restrictive licenses
+than the Apache License and you'll need to decide whether they are appropriate
+for your usage. Like all Apache Releases, the official Apache MXNet (incubating)
+releases consist of source code only and are found at
+[downloads.apache.org](https://downloads.apache.org/incubator/mxnet/).
+
+For Windows users, there are prebuilt binary packages.
 You can install the package directly in the R console.
 
 Note: packages for 3.6.x are not yet available.

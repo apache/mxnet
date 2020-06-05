@@ -117,6 +117,15 @@ sudo ln -s /usr/local/cuda-10.0 /usr/local/cuda
 ## Option 1. Install MXNet for Python
 
 To use a prepared Python wheel, download it to your Jetson, and run it.
+
+WARNING: the following links are provided for your convenience but they point to
+packages that are *not* provided nor endorsed by the Apache Software Foundation.
+As such, they might contain software components with more restrictive licenses
+than the Apache License and you'll need to decide whether they are appropriate
+for your usage. Like all Apache Releases, the official Apache MXNet (incubating)
+releases consist of source code only and are found at
+[downloads.apache.org](https://downloads.apache.org/incubator/mxnet/).
+
 * [MXNet 1.4.0 - Python 3](https://s3.us-east-2.amazonaws.com/mxnet-public/install/jetson/1.4.0/mxnet-1.4.0-cp36-cp36m-linux_aarch64.whl)
 * [MXNet 1.4.0 - Python 2](https://s3.us-east-2.amazonaws.com/mxnet-public/install/jetson/1.4.0/mxnet-1.4.0-cp27-cp27mu-linux_aarch64.whl)
 
