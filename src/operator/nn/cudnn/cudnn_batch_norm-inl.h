@@ -228,7 +228,7 @@ class CuDNNBatchNormOp {
         &a,
         &b,
         &a,
-        req[cudnnbatchnorm::kGamma] == kWriteTo ? &b: &b_add,
+        req[cudnnbatchnorm::kGamma] == kAddTo ? &b_add : &b,
         io_desc_,
         x.dptr_,
         io_desc_,

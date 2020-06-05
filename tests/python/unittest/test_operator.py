@@ -1842,8 +1842,10 @@ def test_batchnorm():
     momentum = 0.9
     epsilon = 1e-5
 
-    def _test_batchnorm_impl(op, shape, axis, cudnn_off, output_mean_var):
-        print(str((op, shape, axis, cudnn_off)))
+    def _test_batchnorm_impl(op, shape, axis, fix_gamma,
+            cudnn_off, output_mean_var):
+        print(str((op, shape, axis, fix_gamma,
+            cudnn_off, output_mean_var)))
 
         kwargs = dict(output_mean_var=output_mean_var)
         if op == mx.nd.contrib.SyncBatchNorm:
@@ -1857,8 +1859,11 @@ def test_batchnorm():
             kwargs.update(dict(axis=axis, cudnn_off=cudnn_off))
         nch = shape[axis]
 
-        bn_gamma = mx.nd.random.uniform(shape=(nch,))
-        bn_gamma.attach_grad()
+        if not fix_gamma:
+            bn_gamma = mx.nd.random.uniform(shape=(nch,))
+            bn_gamma.attach_grad()
+        else:
+            bn_gamma = mx.nd.ones(shape=(nch,))
 
         bn_beta = mx.nd.random.uniform(shape=(nch,))
         bn_beta.attach_grad()
@@ -1879,7 +1884,7 @@ def test_batchnorm():
                 output = op(data, bn_gamma, bn_beta,
                             bn_running_mean, bn_running_var,
                             momentum=momentum, eps=epsilon,
-                            fix_gamma=False, **kwargs)
+                            fix_gamma=fix_gamma, **kwargs)
                 if output_mean_var:
                     output, output_mean, output_std = output
                 output.backward(ograd)
@@ -1945,18 +1950,24 @@ def test_batchnorm():
 
             assert_almost_equal(data.grad.asnumpy(),
                                 dX.asnumpy(), atol=atol, rtol=rtol)
-            assert_almost_equal(
-                bn_gamma.grad.asnumpy(), dW.asnumpy(), atol=atol, rtol=rtol)
+            if not fix_gamma:
+                assert_almost_equal(
+                    bn_gamma.grad.asnumpy(), dW.asnumpy(),
+                    atol=atol, rtol=rtol)
+            else:
+                assert((bn_gamma.asnumpy() == 1).all())
             assert_almost_equal(
                 bn_beta.grad.asnumpy(), db.asnumpy(), atol=atol, rtol=rtol)
 
     for op in [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm]:
-        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 8, 4, 4), (24, 5, 6, 4, 4)]:
+        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4),
+                (24, 8, 4, 4), (24, 5, 6, 4, 4)]:
             for axis in range(len(shape)):
-                for cudnn_off in [False, True]:
-                    for output_mean_var in [False, True]:
-                        _test_batchnorm_impl(op, shape, axis,
-                                             cudnn_off, output_mean_var)
+                for fix_gamma in [False, True]:
+                    for cudnn_off in [False, True]:
+                        for output_mean_var in [False, True]:
+                            _test_batchnorm_impl(op, shape, axis, fix_gamma,
+                                                 cudnn_off, output_mean_var)
 
 
 @with_seed()
