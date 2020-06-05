@@ -1535,13 +1535,15 @@ class Symbol(SymbolBase):
             for i in range(new_args_size.value):
                 args[py_str(new_arg_names[i])] = NDArray(NDArrayHandle(new_args_handle[i]))
         elif new_args_size.value > 0:
-            warnings.warn("Cannot add new args in optimize_for since args is None", stacklevel=2)
+            raise RuntimeError('Cannot add new args in optimize_for since args is None\n' +
+                               'Provide a dictionary to the args argument to optimize_for')
 
         if not aux is None:
             for i in range(new_aux_size.value):
                 aux[py_str(new_aux_names[i])] = NDArray(NDArrayHandle(new_aux_handle[i]))
         elif new_aux_size.value > 0:
-            warnings.warn("Cannot add new aux in optimize_for since aux is None", stacklevel=2)
+            raise RuntimeError('Cannot add new aux in optimize_for since aux is None\n' +
+                               'Provide a dictionary to the aux argument to optimize_for')
 
         # return modified symbol
         return Symbol(out)
