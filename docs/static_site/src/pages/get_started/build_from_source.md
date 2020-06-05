@@ -101,7 +101,22 @@ OpenMP on macOS you need to install for example the Clang compiler via `brew`:
 brew install llvm
 ```
 
-<hr>
+### Windows
+You can use Chocolatey software management solution to install some dependencies
+on Windows.
+
+```bash
+choco install python git 7zip cmake ninja opencv
+```
+
+Currently OpenBLAS is not available from Chocolatey. You may download it from
+from [the OpenBLAS release page](https://github.com/xianyi/OpenBLAS/releases)
+and compile from source. Set the `OpenBLAS_HOME` environment variable to point
+to the OpenBLAS directory that contains the `include` and `lib` directories for
+example by typing `set OpenBLAS_HOME=C:\utils\OpenBLAS`.
+
+If you like to compile MXNet with Visual Studio compiler, please install at
+least [VS2019](https://www.visualstudio.com/downloads/).
 
 ## Overview of optional dependencies and optional features
 
