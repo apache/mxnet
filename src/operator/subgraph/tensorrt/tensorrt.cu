@@ -60,7 +60,8 @@ void TRTCompute(const OpStatePtr& state, const OpContext& ctx,
 }
 
 NNVM_REGISTER_OP(_TensorRT)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", TRTCompute);
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", TRTCompute)
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 }  // namespace op
 }  // namespace mxnet
