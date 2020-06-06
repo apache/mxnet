@@ -348,7 +348,7 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     diff_mem = diff.GetMKLDNNDataReorder(data_mem->get_desc());
   auto &bwd = GetBNBackward<DType>(param, ctx, data, *data_mem, diff, *diff_mem, flags);
   auto gradi_mem = CreateMKLDNNMem(const_cast<NDArray &>(gradIn),
-      bwd.GetDataPd().diff_src_desc(), req[batchnorm::kData]);
+      bwd.pd.diff_src_desc(), req[batchnorm::kData]);
 
   if (static_cast<int>(flags) & static_cast<int>(mkldnn::normalization_flags::use_scale_shift)) {
     const NDArray &gamma    = in_data[batchnorm::kGamma];
@@ -403,12 +403,12 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       net_args[MKLDNN_ARG_MEAN] = *(out_mean.GetMKLDNNData());
       net_args[MKLDNN_ARG_VARIANCE] = var_mem;
       MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
+      CommitOutput(gradIn, gradi_mem);
       MKLDNNStream::Get()->Submit();
     } else {
       net_args[MKLDNN_ARG_MEAN] =  *(moving_mean.GetMKLDNNData());
       net_args[MKLDNN_ARG_VARIANCE] = *(moving_var.GetMKLDNNData());
       MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
-      CommitOutput(gradIn, gradi_mem);
       MKLDNNStream::Get()->Submit();
     }
 
