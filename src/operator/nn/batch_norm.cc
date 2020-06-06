@@ -299,7 +299,7 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
         const AccReal k = dotp * invstd * invstd / itemCount;
         const AccReal iw = invstd * w;
         const AccReal gradMean = sumGradOut / itemCount;
-        if (req[batchnorm::kData != kAddTo) {
+        if (req[batchnorm::kData] != kAddTo) {
           ForEachFast(inputData, gradIn, static_cast<size_t>(channel),
                       [&mean, &k](const DType *inputDataPtr, DType *gradIn_data) {
                         *gradIn_data = (*inputDataPtr - mean) * k;
@@ -325,7 +325,7 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
         // Y = Q(X) / running_std    ; i.e. BN output before weight and bias
         // dL/dX = w / running_std
         const AccReal iw = invstd * w;
-        if (req[batchnorm::kData != kAddTo) {
+        if (req[batchnorm::kData] != kAddTo) {
           ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
                       [iw](const DType *gradOut_data, DType *gradIn_data) {
                         *gradIn_data = *gradOut_data * iw;

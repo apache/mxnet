@@ -300,7 +300,6 @@ template <typename DType>
 void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                              const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
                              const std::vector<NDArray> &outputs, bool fuse_relu) {
-  CHECK_NE(req[batchnorm::kData], kAddTo) << "MKLDNN BatchNorm does not support `data.grad_req = add`";
   if (fuse_relu) {
     CHECK_EQ(inputs.size(), 9U);
   } else {
@@ -348,7 +347,8 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   else if (diff.IsDefaultData())
     diff_mem = diff.GetMKLDNNDataReorder(data_mem->get_desc());
   auto &bwd = GetBNBackward<DType>(param, ctx, data, *data_mem, diff, *diff_mem, flags);
-  auto gradi_mem = const_cast<NDArray &>(gradIn).CreateMKLDNNData(data_mem->get_desc());
+  auto gradi_mem = CreateMKLDNNMem(const_cast<NDArray &>(gradIn),
+      bwd.GetDataPd().diff_src_desc(), req[batchnorm::kData]);
 
   if (static_cast<int>(flags) & static_cast<int>(mkldnn::normalization_flags::use_scale_shift)) {
     const NDArray &gamma    = in_data[batchnorm::kGamma];
@@ -369,7 +369,7 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
     }
     mkldnn_args_map_t net_args;
     net_args[MKLDNN_ARG_SRC] = *data_mem;
-    net_args[MKLDNN_ARG_DIFF_SRC] = *gradi_mem;
+    net_args[MKLDNN_ARG_DIFF_SRC] = *gradi_mem.second;
     net_args[MKLDNN_ARG_SCALE_SHIFT] = bwd.GetWeight();
     net_args[MKLDNN_ARG_DIFF_SCALE_SHIFT] = bwd.GetGradw();
     net_args[MKLDNN_ARG_DIFF_DST] = *diff_mem;
@@ -408,6 +408,7 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       net_args[MKLDNN_ARG_MEAN] =  *(moving_mean.GetMKLDNNData());
       net_args[MKLDNN_ARG_VARIANCE] = *(moving_var.GetMKLDNNData());
       MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
+      CommitOutput(gradIn, gradi_mem);
       MKLDNNStream::Get()->Submit();
     }
 
