@@ -5,7 +5,7 @@ components with more restrictive licenses than the Apache License and you'll
 need to decide whether they are appropriate for your usage. Like all Apache
 Releases, the official Apache MXNet (incubating) releases consist of source code
 only and are found at
-[downloads.apache.org](https://downloads.apache.org/incubator/mxnet/).
+the [Download page](https://mxnet.apache.org/get_started/download).
     
 
 Docker images with *MXNet* are available at [DockerHub](https://hub.docker.com/r/mxnet/).
