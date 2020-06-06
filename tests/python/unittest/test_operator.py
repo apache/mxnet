@@ -34,6 +34,7 @@ from common import run_in_spawned_process, xfail_when_nonstandard_decimal_separa
 import pytest
 import os
 
+
 def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
     dshape = (N, T, I)
     data = mx.sym.Variable('data')
@@ -1044,6 +1045,35 @@ def test_gelu():
         check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
         check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
         check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
+
+
+@with_seed()
+def test_rrelu():
+    def rrelu(x, lower_bound):
+        neg_indices = x < 0
+        out = x.copy()
+        out[neg_indices] = lower_bound * out[neg_indices]
+        return out
+    def rrelu_grad(grad, x, lower_bound):
+        neg_indices = x < 0
+        out = np.ones(x.shape)
+        out[neg_indices] = lower_bound
+        return out * grad
+    for ndim in range(1, 4):
+        shape = rand_shape_nd(ndim)
+        x = mx.symbol.Variable("x")
+        eps = 1e-4
+        lower_bound = 1
+        upper_bound = 2
+        for dtype in [np.float16, np.float32, np.float64]:
+            xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype(dtype)
+            xa[abs(xa) < eps] = 1.0
+            y = mx.symbol.LeakyReLU(data=x, act_type="rrelu",
+                lower_bound=lower_bound, upper_bound=upper_bound)
+            ya = rrelu(xa, lower_bound=lower_bound)
+            ga = rrelu_grad(np.ones(shape), xa, lower_bound=lower_bound)
+            check_symbolic_forward(y, [xa], [ya], rtol=0, atol=1, dtype=dtype)
+            check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=0, atol=1, dtype=dtype)
 
 
 @with_seed()

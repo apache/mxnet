@@ -75,6 +75,21 @@ struct LeakyReLUParam : public dmlc::Parameter<LeakyReLUParam> {
   }
 };
 
+template<typename xpu>
+struct get_slope {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(int id, RandGenerator<xpu, DType> gen,
+                                  const int N, const int step,
+                                  DType* out_data,
+                                  const int upper_bound,
+                                  const int lower_bound) {
+    RNG_KERNEL_LOOP(xpu, DType, id, gen, N, step, {
+      const DType rand_num = static_cast<DType>(genImpl.uniform());
+      out_data[i] = ((upper_bound - lower_bound) * rand_num) + lower_bound;
+    });
+  }
+};
+
 template<typename xpu, typename DType>
 class LeakyReLUOp : public Operator {
  public:
@@ -145,23 +160,12 @@ class LeakyReLUOp : public Operator {
       case leakyrelu::kRReLU: {
         if (ctx.is_train) {
           mask = out_data[leakyrelu::kMask].get_with_shape<xpu, 3, DType>(dshape, s);
-          mxnet::op::UniformSampler<xpu> sampler;
-          Tensor<xpu, 1, DType> low, high;
-          mxnet::op::GetSamplingTempData<xpu, DType>(DType(0.0f), DType(1.0f), ctx, &low, &high);
-          mxnet::common::random::RandGenerator<xpu, DType> *pgen =
-            ctx.requested[0].get_parallel_random<xpu, DType>();
-          Tensor<xpu, 1, DType> out = mask.FlatTo1D();
-          sampler.Sample(low, high, out, pgen, s);
-          MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kMask], Req, {
-            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::mul, Req>, xpu>::Launch(
-              s, mask.size(0) * mask.size(1) * mask.size(2), mask.dptr_, mask.dptr_,
-              DType(param_.upper_bound - param_.lower_bound));
-          });
-          MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kMask], Req, {
-            mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::plus, Req>, xpu>::Launch(
-              s, mask.size(0) * mask.size(1) * mask.size(2), mask.dptr_, mask.dptr_,
-              DType(param_.lower_bound));
-          });
+          Stream<xpu> *s = ctx.get_stream<xpu>();
+          RandGenerator<xpu, DType> *pgen = ctx.requested[1].get_parallel_random<xpu, DType>();
+          CHECK_NOTNULL(pgen);
+          LaunchRNG<get_slope<xpu>, xpu>(s, pgen,
+            out_data[leakyrelu::kMask].Size(), mask.dptr_,
+            param_.lower_bound, param_.upper_bound);
           MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kOut], Req, {
             mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::xelu, Req>, xpu>::Launch(
               s, mask.size(0) * mask.size(1) * mask.size(2), out.dptr_, data.dptr_, mask.dptr_);
@@ -273,7 +277,13 @@ class LeakyReLUOp : public Operator {
         break;
       }
       case leakyrelu::kRReLU: {
-        Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(output, mask) * grad);
+        // Assign(gdata, req[leakyrelu::kData], F<mshadow_op::xelu_grad>(output, mask) * grad);
+        MXNET_ASSIGN_REQ_SWITCH(req[leakyrelu::kData], Req, {
+          mxnet_op::Kernel<mxnet_op::op_with_req<
+            mxnet_op::backward_grad_tuned<mshadow_op::xelu_grad>, Req>, xpu>::Launch(
+              s, gdata.size(0) * gdata.size(1) * gdata.size(2), gdata.dptr_, grad.dptr_,
+              output.dptr_, mask.dptr_);
+        });
         break;
       }
       case leakyrelu::kELU: {
