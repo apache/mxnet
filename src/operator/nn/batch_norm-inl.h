@@ -266,7 +266,7 @@ void BatchNormBackward(const OpContext &ctx, const BatchNormParam& param,
     if (IsBNWriting(r)) req_write_existed = true;
     else if (r == kAddTo) req_addto_existed = true;
   }
-  CHECK_EQ(req_write_existed && req_addto_existed, true) \
+  CHECK_EQ(req_write_existed && req_addto_existed, false) \
     << "BatchNorm does not support `grad_req` of two inputs \
 are `write` and `add` simultaneously";
 

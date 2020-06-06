@@ -1878,19 +1878,16 @@ def test_batchnorm():
         num_iters = 10
         expand_shape = [1] * len(shape)
         expand_shape[axis] = shape[axis]
-        other_data = mx.nd.zeros(shape=shape)
-        other_data.attach_grad(grad_req=grad_req)
+        data = mx.nd.random.uniform(shape=shape)
+        data.attach_grad(grad_req=grad_req)
         adX, adW, adb = 0, 0, 0
         for _ in range(num_iters):
-            data = mx.nd.random.uniform(shape=shape)
-            data.attach_grad(grad_req=grad_req)
-            if grad_req == 'add':
-                mixed_data = data + other_data
-            else:
-                mixed_data = data
+            if grad_req != 'add':
+                data = mx.nd.random.uniform(shape=shape)
+                data.attach_grad(grad_req=grad_req)
             ograd = mx.nd.random.uniform(shape=shape)
             with mx.autograd.record():
-                output = op(mixed_data, bn_gamma, bn_beta,
+                output = op(data, bn_gamma, bn_beta,
                             bn_running_mean, bn_running_var,
                             momentum=momentum, eps=epsilon,
                             fix_gamma=fix_gamma, **kwargs)
@@ -1940,8 +1937,10 @@ def test_batchnorm():
             else:
                 adX, adW, adb = dX, dW, db
 
-            atol = 1e-2
-            rtol = 1e-2
+            if grad_req == 'add':
+                atol, rtol = 5e-1, 5e-1
+            else:
+                atol, rtol = 1e-2, 1e-2
 
             if output_mean_var:
                 assert_almost_equal(output_mean.asnumpy(),
@@ -1964,11 +1963,7 @@ def test_batchnorm():
             ), running_var.asnumpy(), atol=atol, rtol=rtol)
 
             assert_almost_equal(data.grad.asnumpy(),
-                                dX.asnumpy(), atol=atol, rtol=rtol)
-
-            if grad_req == 'add':
-                assert_almost_equal(other_data.grad.asnumpy(),
-                                    adX.asnumpy(), atol=atol, rtol=rtol)
+                                adX.asnumpy(), atol=atol, rtol=rtol)
             if not fix_gamma:
                 assert_almost_equal(
                     bn_gamma.grad.asnumpy(), adW.asnumpy(),
