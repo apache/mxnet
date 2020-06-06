@@ -345,8 +345,7 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
     if (!param_.fix_gamma) {
       KERNEL_ASSIGN(gradWeightData[channel], req[batchnorm::kGamma], scale * dotp * invstd);
     } else {
-      if (req[batchnorm::kGamma] != kNullOp)
-        gradWeightData[channel] = AccReal(0);
+      gradWeightData[channel] = AccReal(0);
     }
 
     KERNEL_ASSIGN(gradBiasData[channel], req[batchnorm::kBeta], scale * sumGradOut);
