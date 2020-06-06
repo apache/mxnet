@@ -239,7 +239,7 @@ class CuDNNBatchNormOp {
         &a,
         req[cudnnbatchnorm::kData] == kAddTo ? &b_add : &b,
         &a,
-        grad_add_gamma_beta ? &b_add : &b, // gamma and beta
+        grad_add_gamma_beta ? &b_add : &b,  // gamma and beta
         io_desc_,
         x.dptr_,
         io_desc_,
