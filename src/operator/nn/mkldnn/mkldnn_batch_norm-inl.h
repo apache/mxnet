@@ -300,6 +300,7 @@ template <typename DType>
 void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                              const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
                              const std::vector<NDArray> &outputs, bool fuse_relu) {
+  CHECK_NE(req[batchnorm::kData], kAddTo) << "MKLDNN BatchNorm does not support `data.grad_req = add`";
   if (fuse_relu) {
     CHECK_EQ(inputs.size(), 9U);
   } else {
@@ -412,17 +413,36 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
 
     // copy data from gradw_mem to in_grad[1] and in_grad[2]
     DType *gw_buf = reinterpret_cast<DType *>(bwd.GetGradw().get_data_handle());
-    DType *w_grad_1 = in_grad[1].data().dptr<DType>();
-    DType *w_grad_2 = in_grad[2].data().dptr<DType>();
+    DType *w_grad_1 = in_grad[batchnorm::kGamma].data().dptr<DType>();
+    DType *w_grad_2 = in_grad[batchnorm::kBeta].data().dptr<DType>();
 
+    // the gradient of gamma
     if (!param.fix_gamma) {
-      memcpy(w_grad_1, gw_buf, copy_size);
-      memcpy(w_grad_2, &gw_buf[channels_], copy_size);
+      if (req[batchnorm::kGamma] != kNullOp) {
+        if (req[batchnorm::kGamma] != kAddTo) {
+          memcpy(w_grad_1, gw_buf, copy_size);
+        } else {
+          for (int i = 0; i < channels_; i++) {
+            w_grad_1[i] += gw_buf[i];
+          }
+        }
+      }
     } else {
       for (int i = 0; i < channels_; i++) {
         (in_grad[1].data().dptr<DType>())[i] = 0.0f;
       }
-      memcpy(w_grad_2, &gw_buf[channels_], copy_size);
+    }
+
+    // the gradient of beta
+    if (req[batchnorm::kBeta] != kNullOp) {
+      if (req[batchnorm::kBeta] != kAddTo) {
+        memcpy(w_grad_2, &gw_buf[channels_], copy_size);
+      } else {
+        DType *grad_beta = &gw_buf[channels_];
+        for (int i = 0; i < channels_; i++) {
+          w_grad_2[i] += grad_beta[i];
+        }
+      }
     }
   } else {
     LOG(FATAL) << "MKLDNN batch normalization backward: should not reach here ...";
