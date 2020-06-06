@@ -402,15 +402,13 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       }
       net_args[MKLDNN_ARG_MEAN] = *(out_mean.GetMKLDNNData());
       net_args[MKLDNN_ARG_VARIANCE] = var_mem;
-      MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
-      CommitOutput(gradIn, gradi_mem);
-      MKLDNNStream::Get()->Submit();
     } else {
       net_args[MKLDNN_ARG_MEAN] =  *(moving_mean.GetMKLDNNData());
       net_args[MKLDNN_ARG_VARIANCE] = *(moving_var.GetMKLDNNData());
-      MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
-      MKLDNNStream::Get()->Submit();
     }
+    MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
+    CommitOutput(gradIn, gradi_mem);
+    MKLDNNStream::Get()->Submit();
 
     // copy data from gradw_mem to in_grad[1] and in_grad[2]
     DType *gw_buf = reinterpret_cast<DType *>(bwd.GetGradw().get_data_handle());

@@ -1938,7 +1938,7 @@ def test_batchnorm():
                 adX, adW, adb = dX, dW, db
 
             if grad_req == 'add':
-                atol, rtol = 5e-1, 5e-1
+                atol, rtol = 5e-2, 5e-2
             else:
                 atol, rtol = 1e-2, 1e-2
 
