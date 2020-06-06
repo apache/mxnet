@@ -267,8 +267,8 @@ void BatchNormBackward(const OpContext &ctx, const BatchNormParam& param,
     else if (r == kAddTo) req_addto_existed = true;
   }
   CHECK_EQ(req_write_existed && req_addto_existed, false) \
-    << "BatchNorm does not support `grad_req` of two inputs \
-are `write` and `add` simultaneously";
+    << "BatchNorm does not support `grad_req` of two inputs"
+       "are `write` and `add` simultaneously";
 
   std::vector<TBlob> out_grad(1);
   std::vector<TBlob> out_data(3);
