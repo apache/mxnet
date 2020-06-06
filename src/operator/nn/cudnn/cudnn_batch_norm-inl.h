@@ -222,8 +222,8 @@ class CuDNNBatchNormOp {
 
       if (param_.fix_gamma) gamma = 1.f;
 
-      bool grad_add_gamma_beta = req[cudnnbatchnorm::kGamma] ||
-                                 req[cudnnbatchnorm::kBeta];
+      bool grad_add_gamma_beta = (req[cudnnbatchnorm::kGamma] == kAddTo) ||
+                                 (req[cudnnbatchnorm::kBeta] == kAddTo);
       if (grad_add_gamma_beta) {
         if (IsBNWriting(req[cudnnbatchnorm::kGamma])) {
           dgamma = 0.f;
