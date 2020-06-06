@@ -400,7 +400,8 @@ static __global__ void BatchNormalizationBackwardKernel(
     }
   }
 
-  if (tensors.gradWeight.numElements() > 0 && threadIdx.x == 0 && (flags & (WRITE_GAMMA_FLAG | ADDTO_GAMMA_FLAG)) != 0) {
+  if (tensors.gradWeight.numElements() > 0 && threadIdx.x == 0 &&
+      (flags & (WRITE_GAMMA_FLAG | ADDTO_GAMMA_FLAG)) != 0) {
     if ((flags & FIX_GAMMA_FLAG) == 0) {
       if (flags & WRITE_GAMMA_FLAG)
         tensors.gradWeight[plane] = ScalarConvert<AccReal, DType>::to(dotP * invstd);
@@ -411,7 +412,8 @@ static __global__ void BatchNormalizationBackwardKernel(
     }
   }
 
-  if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 && (flags & (WRITE_BETA_FLAG | ADDTO_BETA_FLAG)) != 0) {
+  if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 &&
+      (flags & (WRITE_BETA_FLAG | ADDTO_BETA_FLAG)) != 0) {
     if (flags & WRITE_BETA_FLAG)
       tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
     else
