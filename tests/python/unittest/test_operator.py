@@ -1843,8 +1843,10 @@ def test_batchnorm():
     epsilon = 1e-5
 
     def _test_batchnorm_impl(op, shape, axis, fix_gamma,
+            grad_req,
             cudnn_off, output_mean_var):
         print(str((op, shape, axis, fix_gamma,
+            grad_req,
             cudnn_off, output_mean_var)))
 
         kwargs = dict(output_mean_var=output_mean_var)
@@ -1861,12 +1863,12 @@ def test_batchnorm():
 
         if not fix_gamma:
             bn_gamma = mx.nd.random.uniform(shape=(nch,))
-            bn_gamma.attach_grad()
+            bn_gamma.attach_grad(grad_req=grad_req)
         else:
             bn_gamma = mx.nd.ones(shape=(nch,))
 
         bn_beta = mx.nd.random.uniform(shape=(nch,))
-        bn_beta.attach_grad()
+        bn_beta.attach_grad(grad_req=grad_req)
 
         bn_running_mean = mx.nd.zeros(nch)
         bn_running_var = mx.nd.ones(nch)
@@ -1876,12 +1878,19 @@ def test_batchnorm():
         num_iters = 10
         expand_shape = [1] * len(shape)
         expand_shape[axis] = shape[axis]
+        other_data = mx.nd.zeros(shape=shape)
+        other_data.attach_grad(grad_req=grad_req)
+        adX, adW, adb = 0, 0, 0
         for _ in range(num_iters):
             data = mx.nd.random.uniform(shape=shape)
-            data.attach_grad()
+            data.attach_grad(grad_req=grad_req)
+            if grad_req == 'add':
+                mixed_data = data + other_data
+            else:
+                mixed_data = data
             ograd = mx.nd.random.uniform(shape=shape)
             with mx.autograd.record():
-                output = op(data, bn_gamma, bn_beta,
+                output = op(mixed_data, bn_gamma, bn_beta,
                             bn_running_mean, bn_running_var,
                             momentum=momentum, eps=epsilon,
                             fix_gamma=fix_gamma, **kwargs)
@@ -1924,6 +1933,12 @@ def test_batchnorm():
             dX = dnx * nd + dvar * xsm * (2.0 / m) + dmean * (1.0 / m)
             dW = (ograd * nx).sum(axis=axis, exclude=True)
             db = ograd.sum(axis=axis, exclude=True)
+            if grad_req == 'add':
+                adX += dX
+                adW += dW
+                adb += db
+            else:
+                adX, adW, adb = dX, dW, db
 
             atol = 1e-2
             rtol = 1e-2
@@ -1950,25 +1965,30 @@ def test_batchnorm():
 
             assert_almost_equal(data.grad.asnumpy(),
                                 dX.asnumpy(), atol=atol, rtol=rtol)
+
+            if grad_req == 'add':
+                assert_almost_equal(other_data.grad.asnumpy(),
+                                    adX.asnumpy(), atol=atol, rtol=rtol)
             if not fix_gamma:
                 assert_almost_equal(
-                    bn_gamma.grad.asnumpy(), dW.asnumpy(),
+                    bn_gamma.grad.asnumpy(), adW.asnumpy(),
                     atol=atol, rtol=rtol)
             else:
                 assert((bn_gamma.asnumpy() == 1).all())
             assert_almost_equal(
-                bn_beta.grad.asnumpy(), db.asnumpy(), atol=atol, rtol=rtol)
+                bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
 
     for op in [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm]:
         for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4),
                 (24, 8, 4, 4), (24, 5, 6, 4, 4)]:
             for axis in range(len(shape)):
                 for fix_gamma in [False, True]:
-                    for cudnn_off in [False, True]:
-                        for output_mean_var in [False, True]:
-                            _test_batchnorm_impl(op, shape, axis, fix_gamma,
-                                                 cudnn_off, output_mean_var)
-
+                    for grad_req in ['write', 'add']:
+                        for cudnn_off in [False, True]:
+                            for output_mean_var in [False, True]:
+                                _test_batchnorm_impl(op, shape, axis, fix_gamma,
+                                                     grad_req,
+                                                     cudnn_off, output_mean_var)
 
 @with_seed()
 def test_groupnorm():
