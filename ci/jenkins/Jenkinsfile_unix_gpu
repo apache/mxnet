@@ -60,6 +60,7 @@ core_logic: {
     custom_steps.test_unix_scala_gpu('gpu_make'),
     // TODO(szha): fix and reenable the hanging issue. tracked in #18098
     // custom_steps.test_unix_distributed_kvstore_gpu('gpu'),
+    custom_steps.test_unix_byteps_gpu('gpu'),
     custom_steps.test_unix_capi_cpp_package('gpu_mkldnn_cpp_test_make'),
   ]) 
 }

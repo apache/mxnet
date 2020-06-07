@@ -971,6 +971,7 @@ cd_unittest_ubuntu() {
             pytest -n 4 example/image-classification/test_score.py
         # TODO(szha): fix and reenable the hanging issue. tracked in #18098
         # integrationtest_ubuntu_gpu_dist_kvstore
+        integrationtest_ubuntu_gpu_byteps
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then
@@ -1364,6 +1365,35 @@ integrationtest_ubuntu_gpu_dist_kvstore() {
     ./test_distributed_training-gpu.sh
     popd
 }
+
+integrationtest_ubuntu_gpu_byteps() {
+    set -ex
+    pushd .
+    export PYTHONPATH=$PWD/python/
+    export BYTEPS_WITHOUT_PYTORCH=1
+    export BYTEPS_WITHOUT_TENSORFLOW=1
+    pip3 install byteps==0.2.3 --user
+    git clone -b v0.2.3 https://github.com/bytedance/byteps ~/byteps
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    cd tests/nightly/
+
+    export NVIDIA_VISIBLE_DEVICES=0
+    export DMLC_WORKER_ID=0 # your worker id
+    export DMLC_NUM_WORKER=1 # one worker
+    export DMLC_ROLE=worker
+
+    # the following value does not matter for non-distributed jobs
+    export DMLC_NUM_SERVER=1
+    export DMLC_PS_ROOT_URI=0.0.0.127
+    export DMLC_PS_ROOT_PORT=1234
+
+    python3 ~/byteps/launcher/launch.py python3 dist_device_sync_kvstore_byteps.py
+
+    popd
+}
+
 
 test_ubuntu_cpu_python3() {
     set -ex
@@ -1938,7 +1968,6 @@ cd_integration_test_pypi() {
     pip3 install --user ./wheel_build/dist/*.whl
 
     # execute tests
-    python3 /work/mxnet/tests/python/train/test_conv.py ${test_conv_params}
     python3 /work/mxnet/example/image-classification/train_mnist.py ${mnist_params}
 }
 

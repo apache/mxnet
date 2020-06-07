@@ -93,6 +93,32 @@ RUN cd /usr/local/src && \
     cd /usr/local/src && \
     rm -rf ccache
 
+# NCCL is missing on CentOS7 images https://gitlab.com/nvidia/container-images/cuda/-/issues/68
+# Install manually if this is a GPU image; different Cuda versions require different NCCL versions
+# https://wiki.bash-hackers.org/syntax/pe#search_and_replace
+# We need to redeclare ARG due to
+# https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
+ARG BASE_IMAGE
+RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
+    if [[ "$BASE_IMAGE" == *"nvidia/cuda"* ]]; then \
+        if [[ ${SHORT_CUDA_VERSION} == 9.2 ]]; then \
+            export NCCL_VERSION=2.4.8; \
+        elif [[ ${SHORT_CUDA_VERSION} == 10.* ]]; then \
+            export NCCL_VERSION=2.6.4; \
+        else \
+            echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.centos7"; \
+            exit 1; \
+        fi && \
+        curl -fsSL https://developer.download.nvidia.com/compute/machine-learning/repos/rhel7/x86_64/nvidia-machine-learning-repo-rhel7-1.0.0-1.x86_64.rpm -O && \
+        rpm -i nvidia-machine-learning-repo-rhel7-1.0.0-1.x86_64.rpm && \
+        yum -y check-update || true && \
+        yum -y install \
+            libnccl-${NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} \
+            libnccl-devel-${NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} \
+            libnccl-static-${NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} && \
+        yum clean all; \
+    fi
+
 # Python dependencies
 RUN pip3 install --no-cache-dir --upgrade pip && \
     pip3 install --no-cache-dir pylint cython numpy requests h5py scipy==1.2.3 wheel \
@@ -121,29 +147,3 @@ ENV LC_NUMERIC=en_DK.UTF-8
 WORKDIR /work/mxnet
 
 COPY runtime_functions.sh /work/
-
-####################################################################################################
-# Specialize base image to install more gpu specific dependencies.
-# The target built by docker can be selected via "--target" option or docker-compose.yml
-####################################################################################################
-FROM base as gpu
-# NCCL is missing on CentOS7 images https://gitlab.com/nvidia/container-images/cuda/-/issues/68
-# Install manually; different Cuda versions require different NCCL versions
-# https://wiki.bash-hackers.org/syntax/pe#search_and_replace
-RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
-    if [[ ${SHORT_CUDA_VERSION} == 9.2 ]]; then \
-        export NCCL_VERSION=2.4.8; \
-    elif [[ ${SHORT_CUDA_VERSION} == 10.* ]]; then \
-        export NCCL_VERSION=2.6.4; \
-    else \
-        echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.centos7"; \
-        exit 1; \
-    fi && \
-    curl -fsSL https://developer.download.nvidia.com/compute/machine-learning/repos/rhel7/x86_64/nvidia-machine-learning-repo-rhel7-1.0.0-1.x86_64.rpm -O && \
-    rpm -i nvidia-machine-learning-repo-rhel7-1.0.0-1.x86_64.rpm && \
-    yum -y check-update || true && \
-    yum -y install \
-        libnccl-${NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} \
-        libnccl-devel-${NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} \
-        libnccl-static-${NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} && \
-    yum clean all

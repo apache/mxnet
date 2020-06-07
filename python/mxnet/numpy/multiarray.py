@@ -985,7 +985,7 @@ class ndarray(NDArray):
         return multiply(self, other)
 
     def __neg__(self):
-        return self.__mul__(-1.0)
+        return negative(self)
 
     @wrap_mxnp_np_ufunc
     def __imul__(self, other):

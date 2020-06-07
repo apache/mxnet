@@ -50,10 +50,10 @@ def test_loss_ndarray():
 
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     L = loss(output, label).asnumpy()
-    assert_almost_equal(L, np.array([ 2.12692809,  0.04858733]))
+    assert_almost_equal(L, np.array([ 2.12692809,  0.04858733]), rtol=1e-3, atol=1e-4)
 
     L = loss(output, label, weighting).asnumpy()
-    assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]))
+    assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]), rtol=1e-3, atol=1e-4)
 
 
 def get_net(num_hidden, flatten=True):

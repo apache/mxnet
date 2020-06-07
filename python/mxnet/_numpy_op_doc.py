@@ -626,6 +626,79 @@ def _npx_reshape(a, newshape, reverse=False, order='C'):
     pass
 
 
+def _npx_index_add(a, ind, val):
+    """
+    Add values to input according to given indexes.
+    If exists repeate positions to be updated, the update value will be accumulated.
+    Parameters
+    ----------
+    a : ndarray
+        Input data. The array to be updated.
+    ind : ndarray
+        Indexes for indicating update positions.
+        For example, array([[0, 1], [2, 3], [4, 5]] indicates here are two positions to
+        be updated, which is (0, 2, 4) and (1, 3, 5).
+        Note: - 'ind' cannot be empty array '[]', for that case, please use operator 'add' instead.
+              - 0 <= ind.ndim <= 2.
+              - ind.dtype should be 'int32' or 'int64'
+    val : ndarray
+        Input data. The array to update the input 'a'.
+    Returns
+    -------
+    out : ndarray
+        The output array.
+    Examples
+    --------
+    >>> a = np.zeros((2, 3, 4))
+    >>> ind = np.array([[0, 0], [0, 0], [0, 1]], dtype='int32')
+    >>> val = np.arange(2).reshape(2) + 1
+    >>> b = npx.index_add(a, ind, val)
+    >>> b
+    array([[[1., 2., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    
+    >>> ind = np.array([[0, 0], [0, 0], [0, 0]], dtype='int32')  # accumulate values in repeated positions
+    >>> b = npx.index_add(a, ind, val)
+    >>> b
+    array([[[3., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    
+    >>> ind=np.array([[0, 0], [0, 1]], dtype='int32') 
+    >>> val = np.arange(8).reshape(2, 4) 
+    >>> b = npx.index_add(a, ind, val)
+    >>> b
+    array([[[0., 1., 2., 3.],
+            [4., 5., 6., 7.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    
+    >>> val = np.arange(4).reshape(4)  # brocast 'val'
+    >>> b = npx.index_add(a, ind, val)
+    >>> b
+    array([[[0., 1., 2., 3.],
+            [0., 1., 2., 3.],
+            [0., 0., 0., 0.]],
+
+        [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    """
+    pass
+
+
 def _np_diag(array, k=0):
     """
     Extracts a diagonal or constructs a diagonal array.

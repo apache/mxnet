@@ -280,7 +280,7 @@ class _Symbol(Symbol):
 
     def __neg__(self):
         """x.__neg__() <=> - x"""
-        return self.__mul__(-1.0)
+        return negative(self)
 
     def __deepcopy__(self, _):
         return super(_Symbol, self).as_np_ndarray()
