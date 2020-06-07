@@ -1937,7 +1937,7 @@ def test_batchnorm():
             else:
                 adX, adW, adb = dX, dW, db
 
-            atol, rtol = 1e-2, 5e-2
+            atol, rtol = 5e-2, 5e-2
 
             if output_mean_var:
                 assert_almost_equal(output_mean.asnumpy(),
