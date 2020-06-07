@@ -230,11 +230,14 @@ int MXFreeCachedOp(CachedOpHandle handle) {
   API_END();
 }
 
-int MXInvokeCachedOp(CachedOpHandle handle,
-                     int num_inputs,
-                     NDArrayHandle *inputs,
-                     int *num_outputs,
-                     NDArrayHandle **outputs) {
+int MXInvokeCachedOpEx(CachedOpHandle handle,
+                       int num_inputs,
+                       NDArrayHandle *inputs,
+                       int default_dev_type,
+                       int default_dev_id,
+                       int *num_outputs,
+                       NDArrayHandle **outputs,
+                       const int **out_stypes) {  // outputs storage types
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
 
   API_BEGIN();
@@ -261,8 +264,10 @@ int MXInvokeCachedOp(CachedOpHandle handle,
       ndoutputs.push_back(reinterpret_cast<NDArray*>((*outputs)[i]));
     }
   }
-
-  op->Forward(op_shared, ndinputs, ndoutputs);
+  // construct default context
+  Context ctx = Context::Create(static_cast<Context::DeviceType>(default_dev_type),
+                                default_dev_id);
+  op->Forward(op_shared, ndinputs, ndoutputs, ctx);
 
   if (*outputs == nullptr) {
     ret->ret_handles.clear();
@@ -273,19 +278,6 @@ int MXInvokeCachedOp(CachedOpHandle handle,
     *outputs = dmlc::BeginPtr(ret->ret_handles);
   }
 
-  API_END();
-}
-
-int MXInvokeCachedOpEx(CachedOpHandle handle,
-                       int num_inputs,
-                       NDArrayHandle *inputs,
-                       int *num_outputs,
-                       NDArrayHandle **outputs,
-                       const int **out_stypes) {  // outputs storage types
-  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
-  int err = MXInvokeCachedOp(handle, num_inputs, inputs, num_outputs, outputs);
-  if (err != 0) return err;
-  API_BEGIN();
   NDArray** out_array = reinterpret_cast<NDArray**>(*outputs);
   ret->out_types.clear();
   ret->out_types.reserve(*num_outputs);
@@ -293,6 +285,7 @@ int MXInvokeCachedOpEx(CachedOpHandle handle,
     ret->out_types.emplace_back(out_array[i]->storage_type());
   }
   *out_stypes = dmlc::BeginPtr(ret->out_types);
+
   API_END();
 }
 

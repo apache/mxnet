@@ -1083,14 +1083,7 @@ int MXCreateCachedOpEx(SymbolHandle handle,
   * \brief free cached operator
   */
 int MXFreeCachedOp(CachedOpHandle handle);
- /*!
-  * \brief invoke cached operator
-  */
-int MXInvokeCachedOp(CachedOpHandle handle,
-                               int num_inputs,
-                               NDArrayHandle *in,
-                               int *out_size,
-                               NDArrayHandle **out_array);
+
 /*!
  * \brief invoke a cached op
  * \param handle the handle to the cached op
