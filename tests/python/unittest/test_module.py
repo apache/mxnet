@@ -26,7 +26,6 @@ from common import setup_module, with_seed, assertRaises, teardown_module
 from collections import namedtuple
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, "../train"))
-from test_bucketing import train_model, prepare_bucketing_data
 import pytest
 
 
