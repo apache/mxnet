@@ -877,6 +877,28 @@ struct ElemwiseBinaryRTCCompute {
                   const std::vector<TBlob>& outputs);
 };
 
+struct ElemwiseBinaryRTCBwdUseNone {
+  std::string LOP;
+  std::string ROP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
+struct ElemwiseBinaryRTCBwdUseIn {
+  std::string LOP;
+  std::string ROP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
 #endif
 
 }  // namespace op

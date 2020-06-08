@@ -31,6 +31,7 @@
 #include <utility>
 #include <algorithm>
 #include <climits>
+#include <string>
 #include "./cast_storage-inl.h"
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
@@ -929,7 +930,6 @@ struct UnaryRTCCompute {
                   const std::vector<NDArray>& inputs,
                   const std::vector<OpReqType>& req,
                   const std::vector<NDArray>& outputs);
-
 };
 
 #endif

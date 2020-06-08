@@ -227,8 +227,7 @@ NNVM_REGISTER_OP(_grad_add)
 
 NNVM_REGISTER_OP(_backward_add)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::BackwardUseNone<gpu, mshadow_op::identity,
-                    mshadow_op::identity>);
+                    ElemwiseBinaryRTCBwdUseNone{"identity", "identity"});
 
 NNVM_REGISTER_OP(elemwise_sub)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"sub"})
@@ -236,8 +235,7 @@ NNVM_REGISTER_OP(elemwise_sub)
 
 NNVM_REGISTER_OP(_backward_sub)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::BackwardUseNone<gpu, mshadow_op::identity,
-                    mshadow_op::negation>);
+                    ElemwiseBinaryRTCBwdUseNone{"identity", "negation"});
 
 NNVM_REGISTER_OP(elemwise_mul)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"mul"})
@@ -246,8 +244,7 @@ NNVM_REGISTER_OP(elemwise_mul)
 
 NNVM_REGISTER_OP(_backward_mul)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::BackwardUseIn<gpu, mshadow_op::right,
-                    mshadow_op::left>);
+                    ElemwiseBinaryRTCBwdUseIn{"right", "left"});
 
 NNVM_REGISTER_OP(elemwise_div)
 .set_attr<FCompute>("FCompute<gpu>",
@@ -255,15 +252,14 @@ NNVM_REGISTER_OP(elemwise_div)
 
 NNVM_REGISTER_OP(_backward_div)
 .set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::BackwardUseIn<gpu, mshadow_op::div_grad,
-                    mshadow_op::div_rgrad>);
+                    ElemwiseBinaryRTCBwdUseIn{"div_grad", "div_rgrad"});
 
 NNVM_REGISTER_OP(_mod)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"mod"});
 
 NNVM_REGISTER_OP(_backward_mod)
 .set_attr<FCompute>("FCompute<gpu>",
-  ElemwiseBinaryOp::BackwardUseIn<gpu, mshadow_op::mod_grad, mshadow_op::mod_rgrad>);
+  ElemwiseBinaryRTCBwdUseIn{"mod_grad","mod_rgrad"});
 
 }  // namespace op
 }  // namespace mxnet

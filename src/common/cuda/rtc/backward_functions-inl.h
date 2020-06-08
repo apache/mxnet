@@ -194,12 +194,34 @@ __device__ inline DType rdiv_grad(const DType val,
 }
 
 template <typename DType, typename DType2>
+__device__ inline DType div_grad(const DType val,
+                                  const DType2 val2) {
+  return op::reciprocal(val2);
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType div_rgrad(const DType val,
+                                  const DType2 val2) {
+  return -val / (val2 * val2);
+}
+
+template <typename DType, typename DType2>
 __device__ inline DType mod_grad(const DType val,
                                  const DType2 val2) {
   if (type_util::is_integral<DType>::value) {
     return 0;
   } else {
     return 1;
+  }
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType mod_rgrad(const DType val,
+                                  const DType2 val2) {
+  if (type_util::is_integral<DType>::value) {
+    return 0;
+  } else {
+    return -op::floor(val / val2);
   }
 }
 
@@ -217,6 +239,12 @@ template <typename DType, typename DType2>
 __device__ inline DType power_grad(const DType val,
                                    const DType2 val2) {
   return op::power(val, val2 - 1.f) * val2;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType power_rgrad(const DType val,
+                                   const DType2 val2) {
+  return op::power(val, val2) * op::log(val);
 }
 
 template <typename DType, typename DType2>

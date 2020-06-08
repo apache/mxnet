@@ -747,6 +747,16 @@ __device__ inline bool np_logical_not(const DType val) {
 
 #undef DEFINE_UNARY_MATH_FUNC
 
+template <typename DType, typename DType2>
+__device__ inline DType left(DType left_val, DType2 right_val) {
+  return left_val;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType2 right(DType left_val, DType2 right_val) {
+  return right_val;
+}
+
 }  // namespace op
 
 )code";

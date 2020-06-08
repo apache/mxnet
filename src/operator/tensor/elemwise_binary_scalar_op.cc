@@ -225,7 +225,7 @@ void BinaryScalarRTCBackward::operator()(const nnvm::NodeAttrs& attrs,
 
   const std::string code = std::string("const OpReqType req = ") +
                            util::to_string(req[0]) +
-                           ";\n" +
+                           ";\n"
                            "#define OP op::" +
                            OP +
                            "\n" +

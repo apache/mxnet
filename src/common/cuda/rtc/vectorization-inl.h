@@ -240,39 +240,6 @@ index_t get_num_aligned_elements(const void *ptr, const index_t lead_dim,
   return (lead_dim + alignment + nvec - 1) / nvec;
 }
 
-struct TypeInfo {
-  std::string name;
-  int size;
-
-  TypeInfo(const std::string name, const int size) :
-    name(std::move(name)), size(size) {}
-};
-
-TypeInfo mshadow_type_info(int type_flag) {
-  using namespace mshadow;
-  switch (type_flag) {
-    case kFloat32:
-      return TypeInfo("float32", sizeof(float));
-    case kFloat64:
-      return TypeInfo("float64", sizeof(double));
-    case kFloat16:
-      return TypeInfo("float16", 2);
-    case kUint8:
-      return TypeInfo("uint8", sizeof(uint8_t));
-    case kInt32:
-      return TypeInfo("int32", sizeof(int32_t));
-    case kInt8:
-      return TypeInfo("int8", sizeof(int8_t));
-    case kInt64:
-      return TypeInfo("int64", sizeof(int64_t));
-    case kBool:
-      return TypeInfo("bool", sizeof(bool));
-    default:
-      LOG(FATAL) << "Unknown type flag " << type_flag;
-      return TypeInfo("INVALID", 1);
-  }
-}
-
 enum class Alignment {
   SAME_ALIGNED,  // All tensors aligned
   SAME_UNALIGNED,  // All tensors have the same misalignment
@@ -294,6 +261,7 @@ Alignment CheckAlignment(const Params& params, const index_t lead_dim,
                          const index_t other_dim, const int nvec,
                          const std::vector<TBlob> &inputs,
                          const std::vector<TBlob> &outputs) {
+  using namespace util;
   int align = -1;
 
   size_t i = 0;
@@ -356,6 +324,7 @@ void VectorizedKernelRTCLauncher(const std::string &code,
                                  const std::vector<TBlob> &inputs,
                                  const std::vector<TBlob> &outputs,
                                  const int dev_id) {
+  using namespace util;
   const index_t N = lead_dim * other_dim;
   if (N != 0) {
     index_t num_aligned_elements = get_num_aligned_elements(params.inputs[0], lead_dim, nvec,

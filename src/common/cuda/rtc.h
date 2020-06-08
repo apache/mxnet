@@ -48,6 +48,16 @@ namespace util {
 
 std::string to_string(OpReqType req);
 
+struct TypeInfo {
+  std::string name;
+  int size;
+
+  TypeInfo(const std::string name, const int size) :
+    name(std::move(name)), size(size) {}
+};
+
+TypeInfo mshadow_type_info(int type_flag);
+
 }
 
 extern std::mutex lock;

@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include <string>
 #include "elemwise_unary_op.h"
 
 #if MXNET_USE_CUDA
@@ -97,7 +98,7 @@ void UnaryRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
 
   const std::string code = std::string("const OpReqType req = ") +
                            util::to_string(req[0]) +
-                           ";\n" +
+                           ";\n"
                            "#define OP op::" +
                            OP +
                            "\n" +

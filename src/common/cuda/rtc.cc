@@ -61,6 +61,31 @@ std::string to_string(OpReqType req) {
   LOG(FATAL) << "Unrecognized req.";
 }
 
+TypeInfo mshadow_type_info(int type_flag) {
+  using namespace mshadow;
+  switch (type_flag) {
+    case kFloat32:
+      return TypeInfo("float32", sizeof(float));
+    case kFloat64:
+      return TypeInfo("float64", sizeof(double));
+    case kFloat16:
+      return TypeInfo("float16", 2);
+    case kUint8:
+      return TypeInfo("uint8", sizeof(uint8_t));
+    case kInt32:
+      return TypeInfo("int32", sizeof(int32_t));
+    case kInt8:
+      return TypeInfo("int8", sizeof(int8_t));
+    case kInt64:
+      return TypeInfo("int64", sizeof(int64_t));
+    case kBool:
+      return TypeInfo("bool", sizeof(bool));
+    default:
+      LOG(FATAL) << "Unknown type flag " << type_flag;
+      return TypeInfo("INVALID", 1);
+  }
+}
+
 }  // namespace util
 
 namespace {
