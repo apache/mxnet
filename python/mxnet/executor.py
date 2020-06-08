@@ -564,39 +564,60 @@ class ExecutorV2:
                 try:
                     i = self._input_names.index(k)
                     self._args[i] = v.copyto(ctx)
-                    g = self._args_grad[k]
-                    if isinstance(grad_req, str):
-                        self._args[i].attach_grad(grad_req, stype=g.stype)
-                    else:
-                        assert isinstance(grad_req, dict)
-                        self._args[i].attach_grad(grad_req[k], stype=g.stype)
-                    self._args[i].grad[:] = g
                 # ignore provided arg which is not present in
                 # input_names
                 except ValueError as e:
                     pass
         else:
-            isinstance(args, (list, tuple))
+            assert isinstance(args, (list, tuple))
             self._args = []
             for i, arg in enumerate(args):
-                arg_copy = arg.copyto(ctx)
-                g = self._args_grad[i]
-                if isinstance(grad_req, str):
-                    arg_copy.attach_grad(grad_req, stype=g.stype)
-                else:
-                    assert isinstance(grad_req, dict)
-                    name = self._input_names[i]
-                    arg_copy.attach_grad(grad_req[name], stype=g.stype)
-                arg_copy.grad[:] = g
-                self._args.append(arg_copy)
+                self._args.append(arg.copyto(ctx))
 
         # aux states
         if aux_states:
-            assert isinstance(aux_states, dict)
-            for k, v in aux_states.items():
-                if k in self._aux_names:
-                    i = self._input_names.index(k)
-                    self._args[i] = v.copyto(ctx)
+            if isinstance(aux_states, dict):
+                for k, v in aux_states.items():
+                    if k in self._aux_names:
+                        i = self._input_names.index(k)
+                        self._args[i] = v.copyto(ctx)
+            else:
+                assert isinstance(aux_states, (list, tuple))
+                num_args = len(self._arg_names)
+                print(len(aux_states), num_args, len(self._args))
+                for i, v in enumerate(aux_states):
+                    self._args[i + num_args] = v.copyto(ctx)
+
+        # arg grad
+        if self._args_grad:
+            if isinstance(self._args_grad, dict):
+                for k, g in self._args_grad.items():
+                    try:
+                        i = self._input_names.index(k)
+                        # get req
+                        if isinstance(grad_req, str):
+                            req = grad_req
+                        else:
+                            assert isinstance(grad_req, dict)
+                            req = grad_req[k]
+                        self._args[i].attach_grad(req, stype=g.stype)
+                        self._args[i].grad[:] = g
+                    # ignore provided arg which is not present in
+                    # input_names
+                    except ValueError as e:
+                        pass
+            else:
+                assert isinstance(self._args_grad, (list, tuple))
+                for i, g in enumerate(self._args_grad):
+                    # get req
+                    if isinstance(grad_req, str):
+                        req = grad_req
+                    else:
+                        assert isinstance(grad_req, dict)
+                        req = grad_req[self._input_names[i]]
+                    self._args[i].attach_grad(req, stype=g.stype)
+                    self._args[i].grad[:] = g
+
         self._cached_op = ndarray.CachedOp(sym)
 
     def forward(self, is_train=False, **kwargs):

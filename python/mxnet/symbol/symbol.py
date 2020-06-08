@@ -1865,7 +1865,6 @@ class Symbol(SymbolBase):
         """Bind to get a cached op executor for testing
         args_grad : list of NDArray, or dict of str -> NDArray
         """
-        assert aux_states is None or isinstance(aux_states, dict)
         assert group2ctx is None
         assert shared_exec is None
         assert isinstance(grad_req, (str, dict))

@@ -2355,7 +2355,7 @@ def test_reshape_backward_fallback():
     out = mx.sym.sparse.dot(x, w_x, name='out_x')
 
     grad_w_nd = rand_ndarray(w_shape, 'row_sparse')
-    executor = out.bind(ctx=ctx, args={"x": x_nd, "w": w_nd},
+    executor = out._bind(ctx=ctx, args={"x": x_nd, "w": w_nd},
                         args_grad={"w": grad_w_nd})
     executor.forward(is_train=True)
     executor.backward(out_x_nd)
