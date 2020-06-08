@@ -680,9 +680,9 @@ def check_sparse_mathematical_core(name, stype,
     args.append(arr_data)
 
     if arr_grad is not None:
-        exe_test = test.bind(default_context(), args=args, args_grad=[arr_grad])
+        exe_test = test._bind(default_context(), args=args, args_grad=[arr_grad])
     else:
-        exe_test = test.bind(default_context(), args=args)
+        exe_test = test._bind(default_context(), args=args)
 
     exe_test.forward(is_train=True)
     assert exe_test.outputs[0].stype == expected_result_type
@@ -1675,7 +1675,7 @@ def test_sparse_square_sum():
                     dns_data = mx.sym.Variable('data')
                     baseline = mx.sym.sum(mx.sym.square(dns_data), axis=axis, keepdims=keepdim)
                     igrad_expected = mx.nd.empty(dns.shape)
-                    baseline_exec = baseline.bind(default_context(), args=[dns],
+                    baseline_exec = baseline._bind(default_context(), args=[dns],
                                                   args_grad=[igrad_expected])
                     baseline_exec.forward(is_train=True)
                     baseline_exec.backward([ret_expected])
@@ -1689,7 +1689,7 @@ def test_sparse_square_sum():
                     # Need to add one more layer after square_sum to trigger the kernel for ograd
                     # with default stype in square_sum op.
                     baseline1 = baseline + 1
-                    baseline_exec1 = baseline1.bind(default_context(), args=[dns],
+                    baseline_exec1 = baseline1._bind(default_context(), args=[dns],
                                                     args_grad=[igrad_expected])
                     baseline_exec1.forward(is_train=True)
                     baseline_exec1.backward([ret_expected])
@@ -1786,7 +1786,7 @@ def test_sparse_elementwise_sum():
         for stype in stypes:
             arr.append(rand_ndarray(shape, stype, densities[np.random.randint(0, len(densities))]))
 
-        exec1 = out.bind(default_context(),
+        exec1 = out._bind(default_context(),
                          args=arr,
                          args_grad=arr_grad)
         exec1.forward(is_train=True)
@@ -2041,7 +2041,7 @@ def test_scatter_ops():
         location = {'lhs': lhs_nd, 'rhs': rhs_nd}
 
         out = forward_mxnet_call(lhs, rhs)
-        exe_test = out.bind(default_context(), args=location)
+        exe_test = out._bind(default_context(), args=location)
         exe_test.forward(is_train=False)
         out_nd = exe_test.outputs[0]
 
@@ -2361,4 +2361,3 @@ def test_reshape_backward_fallback():
     executor.backward(out_x_nd)
 
     assert_almost_equal(grad_w_nd.asnumpy(), expected_grad_nd)
-
