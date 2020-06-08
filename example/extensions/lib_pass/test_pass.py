@@ -48,10 +48,11 @@ d = mx.sym.exp(c)
 sym = mx.sym.log(d)
 
 def test_model(pass_name):
+    args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))}
     # execute in MXNet
     print('-------------------------------')
     print('Testing regular MXNet execution')
-    exe = sym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    exe = sym.bind(ctx=mx.cpu(), args=args)
     out = exe.forward()
     print(out)
 
@@ -59,11 +60,10 @@ def test_model(pass_name):
     # with propogating shapes/types
     print('-------------------------------')
     print('Testing pass "%s" with shapes/types' % pass_name)
-    arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
-    aux = []
-    mysym2 = sym.optimize_for(pass_name,arg_array,aux)
+    aux = {}
+    mysym2 = sym.optimize_for(pass_name,args,aux)
     print(mysym2.tojson())
-    exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    exe2 = mysym2.bind(ctx=mx.cpu(), args=args)
     out2 = exe2.forward()
     print(out2)
 
@@ -71,7 +71,7 @@ def test_model(pass_name):
     print('-------------------------------')
     print('Testing pass "%s" without shapes/types' % pass_name)
     mysym3 = sym.optimize_for(pass_name, myOpt='yello')
-    exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    exe3 = mysym3.bind(ctx=mx.cpu(), args=args)
     out3 = exe3.forward()
     print(out3)
 
