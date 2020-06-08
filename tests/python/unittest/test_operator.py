@@ -3275,67 +3275,6 @@ def test_correlation():
         unittest_correlation((5,1,11,11), kernel_size = 5,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
 
 
-@with_seed()
-def test_support_vector_machine_l1_svm():
-    xpu = default_context()
-    shape = (20, 10)
-
-    X = mx.symbol.Variable('X')
-    L = mx.symbol.Variable('L')
-    Y = mx.symbol.SVMOutput(data=X, label=L, use_linear=True)
-    x = mx.nd.empty(shape, ctx = xpu)
-    l = mx.nd.empty((shape[0],), ctx = xpu)
-    x_np = np.random.rand(*shape)
-    l_np = np.random.randint(0, shape[1], (shape[0],))
-    x[:] = x_np
-    l[:] = l_np
-
-    grad = mx.nd.empty(shape, ctx = xpu)
-    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
-    exec1.forward(is_train=True)
-
-    assert_almost_equal(x_np, exec1.outputs[0])
-
-    exec1.backward()
-
-    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
-    l_mask = np.array(l_mask, dtype=np.float32)*2 -1
-    grad_np = (-1) * l_mask * np.greater(1 - l_mask * x_np, 0)
-
-    assert_almost_equal(grad_np, grad)
-
-
-@with_seed()
-def test_support_vector_machine_l2_svm():
-    xpu = default_context()
-    shape = (20, 10)
-
-    X = mx.symbol.Variable('X')
-    L = mx.symbol.Variable('L')
-    Y = mx.symbol.SVMOutput(data=X, label=L)
-    x = mx.nd.empty(shape, ctx = xpu)
-    l = mx.nd.empty((shape[0],), ctx = xpu)
-    x_np = np.random.rand(*shape)
-    x_np = x_np.astype(np.float32)
-    l_np = np.random.randint(0, shape[1], (shape[0],))
-    x[:] = x_np
-    l[:] = l_np
-
-    grad = mx.nd.empty(shape, ctx = xpu)
-    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
-    exec1.forward(is_train=True)
-
-    assert_almost_equal(x_np, exec1.outputs[0])
-
-    exec1.backward()
-
-    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
-    l_mask = np.array(l_mask, dtype=np.float32)*2 -1
-    grad_np = (-2)*l_mask*np.maximum(1-l_mask*x_np,0)
-    grad_np = grad_np.astype(np.float32)
-    assert_almost_equal(grad_np, grad)
-
-
 # Seed set because the test is not robust enough to operate on random data
 @with_seed(1234)
 def test_roipooling():
