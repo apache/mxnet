@@ -190,7 +190,9 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
     // Future: allow scale to be passed in? Should the induced scale be an output?
     float scale = 127.0 / ::intgemm::MaxAbsolute(A_raw, A_raw + A.shape_.Size());
     out_float_multiplier /= scale;
-    A_quant_store = ctx.requested[0].get_space_typed<cpu, 1, int8_t>(mshadow::Shape1(A.shape_.Size()), ctx.get_stream<cpu>());
+    A_quant_store = ctx.requested[0].get_space_typed<cpu, 1, int8_t>(
+        mshadow::Shape1(A.shape_.Size()),
+        ctx.get_stream<cpu>());
     A_quant = A_quant_store.dptr_;
     ::intgemm::Int8::PrepareA(A_raw, A_quant, scale, A_rows, inner);
   } else {
