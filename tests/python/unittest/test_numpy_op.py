@@ -1598,30 +1598,14 @@ def test_npx_batch_dot():
 
 @with_seed()
 @use_np
-@pytest.mark.parametrize('shape', [(24, 2), (24, 3, 4), (24, 4, 4, 5),
+@pytest.mark.parametrize('shape', [(24, 2), (24, 3, 4),
     (24, 8, 4, 5), (24, 5, 6, 4, 5)])
 @pytest.mark.parametrize('fix_gamma', [False, True])
-@pytest.mark.parametrize('data_grad_req', ['null', 'write', 'add'])
-@pytest.mark.parametrize('gamma_grad_req', ['null', 'write', 'add'])
-@pytest.mark.parametrize('beta_grad_req', ['null', 'write', 'add'])
 @pytest.mark.parametrize('cudnn_off', [False, True])
 @pytest.mark.parametrize('output_mean_var', [False, True])
-def test_npx_batch_norm(shape, fix_gamma,
-        data_grad_req, gamma_grad_req, beta_grad_req,
-        cudnn_off, output_mean_var):
-    shape = (24, 2)
-    fix_gamma = False
-    data_grad_req = 'write'
-    gamma_grad_req = 'write'
-    beta_grad_req = 'write'
-    cudnn_off = False
-    output_mean_var = False
-
+def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
     momentum = 0.9
     epsilon = 1e-5
-    if fix_gamma and gamma_grad_req != 'null':
-        # skip redundant test when fixing gamma
-        return
     class TestBatchNorm(HybridBlock):
         def __init__(self, eps=1e-5, fix_gamma=False, momentum=0.9, **kwargs):
             super().__init__()
@@ -1638,7 +1622,8 @@ def test_npx_batch_norm(shape, fix_gamma,
                         fix_gamma=self.fix_gamma, **self.kwargs)
             return output
 
-    def _test_batchnorm_impl(axis):
+    def _test_batchnorm_impl(axis,
+                             data_grad_req, gamma_grad_req, beta_grad_req):
         kwargs = dict(output_mean_var=output_mean_var)
         kwargs.update(dict(axis=axis, cudnn_off=cudnn_off))
         op = TestBatchNorm(eps=epsilon, fix_gamma=fix_gamma, momentum=momentum, **kwargs)
@@ -1754,9 +1739,15 @@ def test_npx_batch_norm(shape, fix_gamma,
                 assert_almost_equal(
                     bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
 
-    for axis in range(len(shape)):
-        _test_batchnorm_impl(axis)
-
+        grad_reqs = ['write'] if len(shape) != 4 else ['null', 'write', 'add']
+        for data_grad_req in grad_reqs:
+            for gamma_grad_req in grad_reqs:
+                if fix_gamma and gamma_grad_req != 'null':
+                    continue
+                for beta_grad_req in grad_reqs:
+                    for axis in range(len(shape)):
+                        _test_batchnorm_impl(axis,
+                            data_grad_req, gamma_grad_req, beta_grad_req)
 
 @with_seed()
 @use_np
