@@ -75,7 +75,7 @@ class Sequential(Block):
             net = type(self)()
             net._prefix = self._prefix
             net.add(*(l() for l in layers))
-            return net.set_prefix()
+            return net
         else:
             return layers()
 
@@ -144,7 +144,7 @@ class HybridSequential(HybridBlock):
             net = type(self)()
             net._prefix = self._prefix
             net.add(*(l() for l in layers))
-            return net.set_prefix()
+            return net
         else:
             return layers()
 

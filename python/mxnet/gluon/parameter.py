@@ -24,6 +24,7 @@ __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
 
 
 from collections import OrderedDict, defaultdict
+import uuid
 import warnings
 import weakref
 import numpy as np
@@ -103,7 +104,7 @@ class Parameter(object):
     wd_mult : float
         Local weight decay multiplier for this Parameter.
     """
-    def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
+    def __init__(self, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
                  differentiable=True, stype='default', grad_stype='default'):
         self._var = None
@@ -119,7 +120,7 @@ class Parameter(object):
         if isinstance(shape, int):
             shape = (shape,)
         self._shape = shape
-        self._name = name
+        self._name = uuid.uuid4()
         self._dtype = dtype
         self.lr_mult = lr_mult
         self.wd_mult = wd_mult
@@ -135,8 +136,8 @@ class Parameter(object):
         self._stype = stype
 
     def __repr__(self):
-        s = 'Parameter {name} (shape={shape}, dtype={dtype})'
-        return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
+        s = 'Parameter (shape={shape}, dtype={dtype})'
+        return s.format(shape=self.shape, dtype=self.dtype)
 
     @property
     def grad_req(self):
@@ -145,15 +146,6 @@ class Parameter(object):
     @property
     def name(self):
         return self._name
-
-    @name.setter
-    def name(self, name):
-        if self._var is not None:
-            warnings.warn("Parameter {} has generated its symbol representation, "
-                          "which could be used in some cached graph. "
-                          "Skip the operation that sets its name as {}. ".format(self.name, name), stacklevel=4)
-            return
-        self._name = name
 
     @grad_req.setter
     def grad_req(self, req):
@@ -677,10 +669,8 @@ class Parameter(object):
             self._grad = [i.astype(dtype) for i in self._grad]
             autograd.mark_variables(self._data, self._grad, self.grad_req)
 
-    def check_and_setattr(self, **kwargs):
-        """check and set attributes for parameters
-        # TODO add explanations.
-        """
+    def _check_and_setattr(self, **kwargs):
+        """check and set attributes for parameter"""
         for k, v in kwargs.items():
             if hasattr(self, k) and getattr(self, k) is not None:
                 existing = getattr(self, k)
@@ -846,7 +836,7 @@ class ParameterDict(object):
             param = Parameter(name, **kwargs)
             self._params[name] = param
         else:
-            param.check_and_setattr(**kwargs)
+            param._check_and_setattr(**kwargs)
         return param
 
     def get_constant(self, name, value=None):

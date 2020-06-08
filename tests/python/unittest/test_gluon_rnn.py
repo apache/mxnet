@@ -153,7 +153,6 @@ def test_lstm_forget_bias():
     stack = gluon.rnn.SequentialRNNCell()
     stack.add(gluon.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias)))
     stack.add(gluon.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias)))
-    stack.set_prefix()
     dshape = (32, 1, 200)
     data = mx.sym.Variable('data')
 
@@ -199,7 +198,7 @@ def test_gru():
 
 @pytest.mark.serial
 def test_residual():
-    cell = gluon.rnn.ResidualCell(gluon.rnn.GRUCell(50)).set_prefix()
+    cell = gluon.rnn.ResidualCell(gluon.rnn.GRUCell(50))
     inputs = [mx.sym.Variable('t%d_data'%i) for i in range(2)]
     outputs, _ = cell.unroll(2, inputs)
     outputs = mx.sym.Group(outputs)
@@ -227,7 +226,6 @@ def test_residual_bidirectional():
             gluon.rnn.BidirectionalCell(
                 gluon.rnn.GRUCell(25),
                 gluon.rnn.GRUCell(25)))
-    cell.set_prefix()
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
     outputs, _ = cell.unroll(2, inputs, merge_outputs=False)
     outputs = mx.sym.Group(outputs)
@@ -263,7 +261,6 @@ def test_stack():
             cell.add(gluon.rnn.ResidualCell(gluon.rnn.LSTMCell(100)))
         else:
             cell.add(gluon.rnn.LSTMCell(100))
-    cell.set_prefix()
     inputs = [mx.sym.Variable('t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -293,7 +290,6 @@ def test_hybridstack():
             cell.add(gluon.rnn.ResidualCell(gluon.rnn.LSTMCell(100)))
         else:
             cell.add(gluon.rnn.LSTMCell(100))
-    cell.set_prefix()
     inputs = [mx.sym.Variable('t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
@@ -396,7 +392,7 @@ def test_layer_bidirectional():
 
 def test_zoneout():
     cell = gluon.rnn.ZoneoutCell(gluon.rnn.RNNCell(100), zoneout_outputs=0.5,
-                                 zoneout_states=0.5).set_prefix()
+                                 zoneout_states=0.5)
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)

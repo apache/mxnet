@@ -238,7 +238,7 @@ def test_parameter_sharing():
         def forward(self, x):
             return self.dense1(self.dense0(x))
 
-    net1 = Net(in_units=5).set_prefix()
+    net1 = Net(in_units=5)
     net2 = Net().share_parameters(net1.collect_params())
     net1.initialize()
     net2(mx.nd.zeros((3, 5)))
@@ -248,7 +248,7 @@ def test_parameter_sharing():
     net3 = Net()
     net3.load_parameters('net1.params', mx.cpu())
 
-    net4 = Net().set_prefix()
+    net4 = Net()
     net5 = Net(in_units=5).share_parameters(net4.collect_params())
     net4.initialize()
     net5(mx.nd.zeros((3, 5)))
@@ -269,11 +269,9 @@ def test_parameter_str():
     net = Net()
     lines = str(net.collect_params()).splitlines()
     
-    #assert lines[0] == 'net1_ ('
     assert 'dense0_weight' in lines[0]
     assert '(10, 5)' in lines[0]
     assert 'float32' in lines[0]
-    #assert lines[2] == ')'
     
 
 @with_seed()
@@ -281,7 +279,6 @@ def test_collect_parameters():
     net = nn.HybridSequential()
     net.add(nn.Conv2D(10, 3))
     net.add(nn.Dense(10, activation='relu'))
-    net.set_prefix()
     assert set(net.collect_params().keys()) == \
         set(['0_weight', '0_bias','1_weight','1_bias'])
     assert set(net.collect_params('.*weight').keys()) == \
@@ -297,7 +294,6 @@ def test_basic():
     model.add(nn.Dense(64, activation='tanh', in_units=256),
               nn.Dense(32, in_units=64))
     model.add(nn.Activation('relu'))
-    model.set_prefix()
     # symbol
     x = mx.sym.var('data')
     y = model(x)
@@ -317,7 +313,7 @@ def test_basic():
 
 @with_seed()
 def test_dense():
-    model = nn.Dense(128, activation='tanh', in_units=10, flatten=False).set_prefix()
+    model = nn.Dense(128, activation='tanh', in_units=10, flatten=False)
     inputs = mx.sym.Variable('data')
     outputs = model(inputs)
     assert set(model.collect_params().keys()) == set(['weight', 'bias'])
@@ -325,7 +321,7 @@ def test_dense():
     args, outs, auxs = outputs.infer_shape(data=(2, 3, 10))
     assert outs == [(2, 3, 128)]
 
-    model = nn.Dense(128, activation='relu', in_units=30, flatten=True).set_prefix()
+    model = nn.Dense(128, activation='relu', in_units=30, flatten=True)
     inputs = mx.sym.Variable('data')
     outputs = model(inputs)
     assert set(model.collect_params().keys()) == set(['weight', 'bias'])
@@ -364,14 +360,14 @@ def test_symbol_block(tmpdir):
             out = self.model(x)
             return F.add_n(*[i.sum() for i in out])
 
-    net = Net(smodel).set_prefix()
+    net = Net(smodel)
     net.hybridize()
     assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
 
     inputs = mx.sym.var('data')
     outputs = model(inputs)
     smodel = gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
-    net = Net(smodel).set_prefix()
+    net = Net(smodel)
     net.hybridize()
     assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
 
@@ -485,9 +481,9 @@ def test_hybrid_block_none_args():
     for arg_inputs in [(None, mx.nd.ones((10,))),
                        (mx.nd.ones((10,)), mx.nd.ones((10,))),
                        (mx.nd.ones((10,)), None)]:
-        foo1 = FooNested().set_prefix()
+        foo1 = FooNested()
         foo1.hybridize()
-        foo2 = FooNested().set_prefix()
+        foo2 = FooNested()
         for _ in range(2): # Loop for 2 times to trigger forwarding of the cached version
             out1 = foo1(*arg_inputs)
             out2 = foo2(*arg_inputs)
@@ -503,13 +499,13 @@ def test_hybrid_block_none_args():
         pytest.raises(ValueError, foo, None, None)
 
     # Make sure the ValueError is correctly raised
-    foo = FooNested().set_prefix()
+    foo = FooNested()
     foo.hybridize()
     foo(None, mx.nd.ones((10,)))  # Pass for the first time to initialize the cached op
     pytest.raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.nd.ones((10,))))
-    foo = FooNested().set_prefix()
+    foo = FooNested()
     pytest.raises(ValueError, lambda: foo(mx.nd.ones((10,)), mx.sym.var('a')))
-    foo = FooNested().set_prefix()
+    foo = FooNested()
     pytest.raises(ValueError, lambda: foo(mx.sym.var('a'), mx.nd.ones((10,))))
 
     # Test the case of the default values
@@ -1173,7 +1169,7 @@ def test_embedding():
 def test_export():
     ctx = mx.context.current_context()
     model = gluon.model_zoo.vision.resnet18_v1(
-        ctx=ctx, pretrained=True).set_prefix()
+        ctx=ctx, pretrained=True)
     model.hybridize()
     data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out = model(data)
@@ -1189,7 +1185,7 @@ def test_export():
 
     assert_almost_equal(out.asnumpy(), mod_out.asnumpy())
 
-    model2 = gluon.model_zoo.vision.resnet18_v1(ctx=ctx).set_prefix()
+    model2 = gluon.model_zoo.vision.resnet18_v1(ctx=ctx)
     model2.load_parameters('gluon-0000.params', ctx)
     out2 = model2(data)
 
@@ -1199,7 +1195,7 @@ def test_export():
 def test_import():
     ctx = mx.context.current_context()
     net1 = gluon.model_zoo.vision.resnet18_v1(
-        ctx=ctx, pretrained=True).set_prefix()
+        ctx=ctx, pretrained=True)
     net1.hybridize()
     data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out1 = net1(data)
@@ -1221,7 +1217,6 @@ def test_import():
 def test_hybrid_stale_cache():
     net = mx.gluon.nn.HybridSequential()
     net.add(mx.gluon.nn.Dense(10, weight_initializer='zeros', bias_initializer='ones', flatten=False))
-    net.set_prefix()
 
     net.hybridize()
     net.initialize()
@@ -1235,7 +1230,6 @@ def test_hybrid_stale_cache():
                                 bias_initializer='ones', flatten=False)
     net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
                                 bias_initializer='ones', flatten=False)
-    net.set_prefix()
     net.hybridize()
     net.initialize()
     net(mx.nd.ones((2,3,5)))
@@ -1274,7 +1268,7 @@ def test_fill_shape_deferred():
     net.add(nn.Conv2D(64, kernel_size=2, padding=1),
             nn.BatchNorm(),
             nn.Dense(10))
-    net.set_prefix()
+    net
     net.hybridize()
     net.initialize()
     net(mx.nd.ones((2,3,5,7)))
@@ -1327,7 +1321,7 @@ def test_fill_shape_load():
     net1.add(nn.Conv2D(64, kernel_size=2, padding=1),
              nn.BatchNorm(),
              nn.Dense(10))
-    net1.set_prefix()
+    net1
     net1.hybridize()
     net1.initialize(ctx=ctx)
     net1(mx.nd.ones((2,3,5,7), ctx))

@@ -106,7 +106,7 @@ class TestExport(unittest.TestCase):
                 out = tuple(block()(x) for block in self.net._children.values())
                 return out
 
-        net = MultiOutputBlock().set_prefix()
+        net = MultiOutputBlock()
         assert len(sym.Group(net(sym.Variable('data'))).list_outputs()) == 10
         _check_onnx_export(net, group_outputs=True)
 

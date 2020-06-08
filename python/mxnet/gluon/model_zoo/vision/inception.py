@@ -208,7 +208,7 @@ def inception_v3(pretrained=False, ctx=cpu(),
     root : str, default $MXNET_HOME/models
         Location for keeping the model parameters.
     """
-    net = Inception3(**kwargs).set_prefix()
+    net = Inception3(**kwargs)
     if pretrained:
         from ..model_store import get_model_file
         net.load_parameters(get_model_file('inceptionv3', root=root), ctx=ctx)

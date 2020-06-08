@@ -76,21 +76,20 @@ class _BlockScope(object):
 
     def __enter__(self):
         block = self._block()
-        if block is None or block.prefix == '':
+        if block is None or block.name == '':
             return self
         self._local._old_scope = getattr(_BlockScope._current, "value", None)
         _BlockScope._current.value = self
-        self._local._name_scope = _name.Prefix(block.prefix)
+        self._local._name_scope = _name.Prefix(block.name)
         self._local._name_scope.__enter__()
-        _profiler_scope_name = (block.prefix[:-1] if block.prefix.endswith('_') \
-                                else block.prefix) + ":"
+        _profiler_scope_name = block.name + ":"
         self._local._profiler_scope = _profiler.Scope(_profiler_scope_name)
         self._local._profiler_scope.__enter__()
         return self
 
     def __exit__(self, ptype, value, trace):
         block = self._block()
-        if block is None or block.prefix == '':
+        if block is None or block.name == '':
             return
         self._local._name_scope.__exit__(ptype, value, trace)
         self._local._name_scope = None
@@ -268,7 +267,6 @@ class Block(object):
         self._forward_pre_hooks = OrderedDict()
         self._name = _BlockScope.count(self._alias())
         self._scope = _BlockScope(self)
-        self._prefix = ""
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
@@ -326,16 +324,9 @@ class Block(object):
         return self.__class__.__name__.lower()
 
     @property
-    def prefix(self):
-        """Prefix of this :py:class:`Block`.
-        Please call self.set_prefix() to get the correct prefix for current block.
-        """
-        return self._prefix
-
-    @property
     def name(self):
-        """Name of this :py:class:`Block`, prefix + class name """
-        return self._prefix + self._name
+        """Name of this :py:class:`Block`, class name + counter """
+        return self._name
 
     @property
     def params(self):
@@ -370,59 +361,6 @@ class Block(object):
         # We need to check here because blocks inside containers are not supported.
         self._check_container_with_block()
         return self._collect_params_with_prefix(select=select)
-
-    def set_prefix(self, prefix=None):
-        """Set parameters with current prefixs recursively.
-        For example::
-
-            class Model(Block):
-                def __init__(self, **kwargs):
-                    super(Model, self).__init__(**kwargs)
-                    self.dense0 = nn.Dense(20)
-                    self.dense1 = nn.Dense(20)
-            net = Model()
-            net.set_prefix()
-
-        After calling ``net.set_prefix()``,
-        the names of the parameters inside 'net' would be added with the corresponding prefix.
-        Like for self.dense0.weight, it will be named automatically::
-            Parameter dense0_weight (...)
-        which originally was Parameter weight (...)
-        Shared parameters would be added with the prefix where it first occurs.
-
-        The method is called internally at the beginning of Block.initialize.
-        Note that prefix should be set before calling hybridize and forward.
-
-        Parameters
-        ----------
-        prefix : str or None, default None
-            Use assigned prefix for naming Block's parameters.
-            If prefix is None, use current prefix `self._prefix`.
-        Returns
-        -------
-        this block
-        """
-        recorded = set()
-        if prefix is None:
-            prefix = self._prefix
-        if prefix.endswith('_'):
-            prefix = prefix[:-1]
-        self._set_prefix(recorded, prefix)
-        return self
-
-    def _set_prefix(self, recorded, prefix=''):
-        if prefix:
-            prefix += '_'
-        self._prefix = prefix
-        for name, val in self._reg_params.items():
-            if val not in recorded:
-                recorded.add(val)
-                val.name = prefix + name # use the name of the first occurence as the name of the shared parameter.
-
-        for name, child in self._children.items():
-            if isinstance(child(), SymbolBlock):
-                continue
-            child()._set_prefix(recorded, prefix + name)
 
     def _collect_params_with_prefix(self, prefix='', select=None):
         if prefix:
@@ -529,7 +467,7 @@ class Block(object):
                     raise ValueError(err_msg)
         else:
             loaded = ndarray.load(filename)
-        self.set_prefix()
+
         params = self._collect_params_with_prefix()
         if not loaded and not params:
             return
@@ -686,7 +624,6 @@ class Block(object):
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
         """
-        self.set_prefix()
         params = self.collect_params()
         if verbose:
             init.set_verbosity(verbose=verbose)
@@ -1410,10 +1347,10 @@ class HybridBlock(Block):
         aux_names = set(sym.list_auxiliary_states())
         arg_dict = {}
         for name, param in self.collect_params().items():
-            if name in arg_names:
+            if param.name in arg_names:
                 arg_dict['arg:%s'%name] = param._reduce()
             else:
-                assert name in aux_names
+                assert param.name in aux_names
                 arg_dict['aux:%s'%name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         params_filename = '%s-%04d.params'%(path, epoch)
@@ -1659,7 +1596,7 @@ class SymbolBlock(HybridBlock):
                 self._reg_params[name] = Parameter(name=name, **kwargs)
                 return
             param = params[name]
-            param.check_and_setattr(**kwargs)
+            param._check_and_setattr(**kwargs)
             self._reg_params[name] = param
 
         for i, arg in enumerate(arg_params):

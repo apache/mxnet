@@ -469,7 +469,6 @@ def test_large_models():
     largest_num_features = 256
     net.add(nn.Conv2D(largest_num_features, 3))
 
-    net.set_prefix()
     net.hybridize()
     net.initialize(mx.init.Normal(sigma=0.01), ctx=ctx)
 
@@ -515,7 +514,6 @@ def _test_bulking_in_process(seed, time_per_iteration):
         net = nn.HybridSequential()
         for _ in range(num_ops):
             net.add(Flip())
-        net.set_prefix()
         return net
 
     data_shape = (10,)
