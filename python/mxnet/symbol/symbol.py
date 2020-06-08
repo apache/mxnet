@@ -1865,11 +1865,11 @@ class Symbol(SymbolBase):
         """Bind to get a cached op executor for testing
         args_grad : list of NDArray, or dict of str -> NDArray
         """
-        assert aux_states is None
+        assert aux_states is None or isinstance(aux_states, dict)
         assert group2ctx is None
         assert shared_exec is None
         assert isinstance(grad_req, (str, dict))
-        return ExecutorV2(self, ctx, args, args_grad, grad_req)
+        return ExecutorV2(self, ctx, args, args_grad, grad_req, aux_states)
 
     def bind(self, ctx, args, args_grad=None, grad_req='write',
              aux_states=None, group2ctx=None, shared_exec=None):

@@ -536,9 +536,11 @@ class Executor(object):
         return ret
 
 class ExecutorV2:
-    def __init__(self, sym, ctx, args, args_grad, grad_req):
+    def __init__(self, sym, ctx, args, args_grad, grad_req, aux_states):
         self.outputs = None
         self._input_names = sym.list_inputs()
+        self._aux_names = sym.list_auxiliary_states()
+        self._arg_names = sym.list_arguments()
         self._ctx = ctx
         # grad_req
         self._requires_grad = False
@@ -550,6 +552,11 @@ class ExecutorV2:
             assert isinstance(grad_req, str)
             self._requires_grad = grad_req != 'null'
 
+        # args grad
+        self._args_grad = args_grad
+        if not self._args_grad:
+            self._args_grad = None
+
         # args
         if isinstance(args, dict):
             self._args = [None] * len(self._input_names)
@@ -557,11 +564,13 @@ class ExecutorV2:
                 try:
                     i = self._input_names.index(k)
                     self._args[i] = v.copyto(ctx)
+                    g = self._args_grad[k]
                     if isinstance(grad_req, str):
-                        self._args[i].attach_grad(grad_req)
+                        self._args[i].attach_grad(grad_req, stype=g.stype)
                     else:
                         assert isinstance(grad_req, dict)
-                        self._args[i].attach_grad(grad_req[k])
+                        self._args[i].attach_grad(grad_req[k], stype=g.stype)
+                    self._args[i].grad[:] = g
                 # ignore provided arg which is not present in
                 # input_names
                 except ValueError as e:
@@ -571,49 +580,44 @@ class ExecutorV2:
             self._args = []
             for i, arg in enumerate(args):
                 arg_copy = arg.copyto(ctx)
+                g = self._args_grad[i]
                 if isinstance(grad_req, str):
-                    arg_copy.attach_grad(grad_req)
+                    arg_copy.attach_grad(grad_req, stype=g.stype)
                 else:
                     assert isinstance(grad_req, dict)
                     name = self._input_names[i]
-                    arg_copy.attach_grad(grad_req[name])
+                    arg_copy.attach_grad(grad_req[name], stype=g.stype)
+                arg_copy.grad[:] = g
                 self._args.append(arg_copy)
-        # args grad
-        self._args_grad = args_grad
-        if not self._args_grad:
-            self._args_grad = None
-        elif isinstance(self._args_grad, dict):
-            for k, v in self._args_grad.items():
-                try:
+
+        # aux states
+        if aux_states:
+            assert isinstance(aux_states, dict)
+            for k, v in aux_states.items():
+                if k in self._aux_names:
                     i = self._input_names.index(k)
-                    self._args[i].grad[:] = v
-                # ignore provided arg grad which is not present in
-                # input_names
-                except ValueError as e:
-                    pass
-        else:
-            isinstance(self._args_grad, (list, tuple))
-            for arg, out in zip(self._args, self._args_grad):
-                arg.grad[:] = out
+                    self._args[i] = v.copyto(ctx)
         self._cached_op = ndarray.CachedOp(sym)
 
     def forward(self, is_train=False, **kwargs):
         assert not kwargs
         from . import autograd
         with autograd.record(train_mode=is_train):
-            self.outputs = [self._cached_op(*self._args)]
+            self.outputs = self._cached_op(*self._args)
+        if not isinstance(self.outputs, (list, tuple)):
+            self.outputs = [self.outputs]
         return self.outputs
 
     def backward(self, out_grads=None, is_train=True):
         assert is_train is True
-        if isinstance(out_grads, (list, tuple)):
-            assert len(out_grads) == 1
-            out_grads = out_grads[0]
+        from . import autograd
+        if not isinstance(out_grads, (list, tuple)):
+            out_grads = [out_grads]
 
         if self._requires_grad:
             if self.outputs is None:
                 self.forward()
-            self.outputs[0].backward(out_grads)
+            autograd.backward(self.outputs, head_grads=out_grads)
 
             if isinstance(self._args_grad, dict):
                 for k, v in self._args_grad.items():
@@ -635,17 +639,16 @@ class ExecutorV2:
         if isinstance(self._args_grad, (list, tuple)):
             return list(self._args_grad)
 
-        arr = [None] * len(self._input_names)
+        arr = [None] * len(self._arg_names)
         if self._args_grad:
             assert isinstance(self._args_grad, dict)
             for k, v in self._args_grad.items():
                 try:
                     i = self._input_names.index(k)
-                    arr[i] = self._args[i].grad
+                    j = self._arg_names.index(k)
+                    arr[j] = self._args[i].grad
                 # ignore provided arg grad which is not present in
                 # input_names
                 except ValueError as e:
                     pass
         return arr
-
-

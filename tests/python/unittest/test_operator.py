@@ -8227,10 +8227,10 @@ def test_histogram():
         bins = mx.sym.Variable("bins")
         histo1 = mx.sym.histogram(a=data, bins=bin_cnt, range=bin_range)
         histo2 = mx.sym.histogram(a=data, bins=bins)
-        executor1 = histo1.bind(ctx=default_context(), args={"data" : x})
+        executor1 = histo1._bind(ctx=default_context(), args={"data" : x})
         executor1.forward(is_train=False)
         assert_almost_equal(np_histo1, executor1.outputs[0].asnumpy(), 0, 0, ("EXPECTED_histo1", "FORWARD_histo1"), equal_nan=False)
-        executor2 = histo2.bind(ctx=default_context(), args={"data" : x, "bins" : mx_bins})
+        executor2 = histo2._bind(ctx=default_context(), args={"data" : x, "bins" : mx_bins})
         executor2.forward(is_train=False)
         assert_almost_equal(np_histo2, executor2.outputs[0].asnumpy(), 0, 0, ("EXPECTED_histo2", "FORWARD_histo2"), equal_nan=False)
 
