@@ -85,6 +85,31 @@ static inline void ForEachFast(const BNTensor3<DType1> &in_data,
   }
 }
 
+template<typename DType1, typename DType2, typename DType3, typename OnData>
+static inline void ForEachFast(const BNTensor3<DType1> &in_data,
+                               const BNTensor3<DType2> &in_data2,
+                               const BNTensor3<DType3> &out_data,
+                               const size_t channel,
+                               OnData onData) {
+  const size_t num         = in_data.OuterSize();
+  const size_t matrixSize  = in_data.InnerSize();
+  const size_t skipLength  = in_data.SkipLengthToNextSameChannelData();
+  const size_t startOffset = in_data.StartOffset(channel);
+
+  DType1 *data = in_data.dptr_  + startOffset;
+  DType2 *data2 = in_data2.dptr_  + startOffset;
+  DType3 *odata = out_data.dptr_ + startOffset;
+
+  for (size_t outer = 0; outer < num; ++outer) {
+    for (size_t i = 0; i < matrixSize; ++i) {
+      onData(data++, data2++, odata++);
+    }
+    data  += skipLength;
+    data2 += skipLength;
+    odata += skipLength;
+  }
+}
+
 }  // namespace batchnorm
 
 /*! \brief Forward CPU */
@@ -263,7 +288,7 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
                   dotp += (*thisInputData - mean) * (*gradOut_data);
                 });
 
-    if (!gradIn.IsEmpty() && IsBNWriting(req[batchnorm::kData])) {  // if there's a grad input
+    if (!gradIn.IsEmpty() && req[batchnorm::kData] != kNullOp) {  // if there's a grad input
       if (is_train_and_not_global_stats) {
         // when in training mode
         // Q(X) = X - E[x] ; i.e. input centered to zero mean
@@ -272,44 +297,60 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
 
         // projection of gradOutput on to output scaled by std
         const AccReal k = dotp * invstd * invstd / itemCount;
-        ForEachFast(inputData, gradIn, static_cast<size_t>(channel),
-                    [&mean, &k](const DType *inputDataPtr, DType *gradIn_data) {
-                      *gradIn_data = (*inputDataPtr - mean) * k;
-                    });
-
         const AccReal iw = invstd * w;
         const AccReal gradMean = sumGradOut / itemCount;
-        ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
-                    [iw, gradMean](const DType *gradOut_data, DType *gradIn_data) {
-                      *gradIn_data = (*gradOut_data - gradMean - *gradIn_data) * iw;
-                    });
+        if (req[batchnorm::kData] != kAddTo) {
+          ForEachFast(inputData, gradIn, static_cast<size_t>(channel),
+                      [&mean, &k](const DType *inputDataPtr, DType *gradIn_data) {
+                        *gradIn_data = (*inputDataPtr - mean) * k;
+                      });
+
+          ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
+                      [iw, gradMean](const DType *gradOut_data, DType *gradIn_data) {
+                        *gradIn_data = (*gradOut_data - gradMean - *gradIn_data) * iw;
+                      });
+        } else {
+          ForEachFast(inputData, gradOut, gradIn, static_cast<size_t>(channel),
+                      [&mean, &k, iw, gradMean](const DType *inputDataPtr,
+                                                const DType *gradOut_data,
+                                                DType *gradIn_data) {
+                        DType normal_val = (*inputDataPtr - mean) * k;
+                        *gradIn_data += (*gradOut_data - gradMean -
+                            normal_val) * iw;
+                      });
+        }
       } else {
         // when in evaluation mode
         // Q(X) = X - running_mean  ; i.e. input centered to zero mean
         // Y = Q(X) / running_std    ; i.e. BN output before weight and bias
         // dL/dX = w / running_std
         const AccReal iw = invstd * w;
-        ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
-                    [iw](const DType *gradOut_data, DType *gradIn_data) {
-                      *gradIn_data = *gradOut_data * iw;
-                    });
+        if (req[batchnorm::kData] != kAddTo) {
+          ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
+                      [iw](const DType *gradOut_data, DType *gradIn_data) {
+                        *gradIn_data = *gradOut_data * iw;
+                      });
+        } else {
+          ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
+                      [iw](const DType *gradOut_data, DType *gradIn_data) {
+                        *gradIn_data += *gradOut_data * iw;
+                      });
+        }
       }
     }
 
     // May want to make this a param eventually
     const AccReal scale = 1.0f;
 
-    if (IsBNWriting(req[batchnorm::kGamma])) {
-      if (!param_.fix_gamma) {
-        gradWeightData[channel] = scale * dotp * invstd;
-      } else {
+    if (!param_.fix_gamma) {
+      KERNEL_ASSIGN(gradWeightData[channel], req[batchnorm::kGamma], scale * dotp * invstd);
+    } else {
+      if (IsBNWriting(req[batchnorm::kGamma])) {
         gradWeightData[channel] = AccReal(0);
       }
     }
 
-    if (IsBNWriting(req[batchnorm::kBeta])) {
-      gradBiasData[channel] = scale * sumGradOut;
-    }
+    KERNEL_ASSIGN(gradBiasData[channel], req[batchnorm::kBeta], scale * sumGradOut);
   }
 }
 
