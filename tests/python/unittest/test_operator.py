@@ -1982,15 +1982,15 @@ def test_batchnorm(op_name, shape, fix_gamma, cudnn_off, output_mean_var):
                 assert_almost_equal(
                     bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
 
-        grad_reqs = ['write'] if len(shape) != 4 else ['null', 'write', 'add']
-        for data_grad_req in grad_reqs:
-            for gamma_grad_req in grad_reqs:
-                if fix_gamma and gamma_grad_req != 'null':
-                    continue
-                for beta_grad_req in grad_reqs:
-                    for axis in range(len(shape)):
-                        _test_batchnorm_impl(axis,
-                            data_grad_req, gamma_grad_req, beta_grad_req)
+    grad_reqs = ['write'] if len(shape) != 4 else ['null', 'write', 'add']
+    for data_grad_req in grad_reqs:
+        for gamma_grad_req in grad_reqs:
+            if fix_gamma and gamma_grad_req != 'null':
+                continue
+            for beta_grad_req in grad_reqs:
+                for axis in range(len(shape)):
+                    _test_batchnorm_impl(axis,
+                        data_grad_req, gamma_grad_req, beta_grad_req)
 
 
 @with_seed()
