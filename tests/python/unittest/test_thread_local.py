@@ -160,7 +160,7 @@ def test_symbol():
         b = mx.sym.var("b")
         a_ = mx.nd.ones((2, 2))
         c_ = a_.copy()
-        func1 = (a + b).bind(mx.cpu(), args={'a': a_, 'b': c_})
+        func1 = (a + b)._bind(mx.cpu(), args={'a': a_, 'b': c_})
         func1.forward()[0].wait_to_read()
         status[0] = True
     thread = threading.Thread(target=f)

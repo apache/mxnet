@@ -39,7 +39,7 @@ from ..context import Context, current_context
 from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _int64_enabled, _SIGNED_INT32_UPPER_LIMIT
 from ..ndarray import _ndarray_cls
-from ..executor import Executor
+from ..executor import Executor, ExecutorV2
 from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
@@ -1859,6 +1859,17 @@ class Symbol(SymbolBase):
         executor.grad_arrays = grad_arrays
         executor.aux_arrays = aux_arrays
         return executor
+
+    def _bind(self, ctx, args, args_grad=None, grad_req='write',
+         aux_states=None, group2ctx=None, shared_exec=None):
+        """Bind to get a cached op executor for testing
+        args_grad : list of NDArray, or dict of str -> NDArray
+        """
+        assert aux_states is None
+        assert group2ctx is None
+        assert shared_exec is None
+        assert isinstance(grad_req, (str, dict))
+        return ExecutorV2(self, ctx, args, args_grad, grad_req)
 
     def bind(self, ctx, args, args_grad=None, grad_req='write',
              aux_states=None, group2ctx=None, shared_exec=None):

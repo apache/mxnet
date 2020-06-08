@@ -109,15 +109,15 @@ def test_nn():
         sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0,
                                    use_ignore=False)
 
-        ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
-                      args_grad=None)
+        ex = sym._bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
+                       args_grad=None)
         ex.forward(is_train=False)
         softmax_out = ex.outputs[0][0].asnumpy()
         expected_softmax_out = (1 / SMALL_Y) * mx.nd.ones((SMALL_Y)).asnumpy()
         assert np.isclose(softmax_out, expected_softmax_out).all()
 
-        ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
-                      args_grad={'x': grad_x})
+        ex = sym._bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
+                       args_grad={'x': grad_x})
         ex.forward(is_train=True)
         softmax_out = ex.outputs[0][0].asnumpy()
         expected_softmax_out = (1 / SMALL_Y) * mx.nd.ones((SMALL_Y)).asnumpy()

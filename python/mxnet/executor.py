@@ -42,6 +42,7 @@ def _monitor_callback_wrapper(callback):
         callback(name, array)
     return callback_handle
 
+
 class Executor(object):
     """Executor is the object providing efficient symbolic graph execution and optimization.
 
@@ -533,3 +534,118 @@ class Executor(object):
         check_call(_LIB.MXExecutorGetOptimizedSymbol(self.handle, ctypes.byref(sym_handle)))
         ret = Symbol(sym_handle)
         return ret
+
+class ExecutorV2:
+    def __init__(self, sym, ctx, args, args_grad, grad_req):
+        self.outputs = None
+        self._input_names = sym.list_inputs()
+        self._ctx = ctx
+        # grad_req
+        self._requires_grad = False
+        if isinstance(grad_req, dict):
+            for k, v in grad_req.items():
+                if k in self._input_names and v != 'null':
+                    self._requires_grad = True
+        else:
+            assert isinstance(grad_req, str)
+            self._requires_grad = grad_req != 'null'
+
+        # args
+        if isinstance(args, dict):
+            self._args = [None] * len(self._input_names)
+            for k, v in args.items():
+                try:
+                    i = self._input_names.index(k)
+                    self._args[i] = v.copyto(ctx)
+                    if isinstance(grad_req, str):
+                        self._args[i].attach_grad(grad_req)
+                    else:
+                        assert isinstance(grad_req, dict)
+                        self._args[i].attach_grad(grad_req[k])
+                # ignore provided arg which is not present in
+                # input_names
+                except ValueError as e:
+                    pass
+        else:
+            isinstance(args, (list, tuple))
+            self._args = []
+            for i, arg in enumerate(args):
+                arg_copy = arg.copyto(ctx)
+                if isinstance(grad_req, str):
+                    arg_copy.attach_grad(grad_req)
+                else:
+                    assert isinstance(grad_req, dict)
+                    name = self._input_names[i]
+                    arg_copy.attach_grad(grad_req[name])
+                self._args.append(arg_copy)
+        # args grad
+        self._args_grad = args_grad
+        if not self._args_grad:
+            self._args_grad = None
+        elif isinstance(self._args_grad, dict):
+            for k, v in self._args_grad.items():
+                try:
+                    i = self._input_names.index(k)
+                    self._args[i].grad[:] = v
+                # ignore provided arg grad which is not present in
+                # input_names
+                except ValueError as e:
+                    pass
+        else:
+            isinstance(self._args_grad, (list, tuple))
+            for arg, out in zip(self._args, self._args_grad):
+                arg.grad[:] = out
+        self._cached_op = ndarray.CachedOp(sym)
+
+    def forward(self, is_train=False, **kwargs):
+        assert not kwargs
+        from . import autograd
+        with autograd.record(train_mode=is_train):
+            self.outputs = [self._cached_op(*self._args)]
+        return self.outputs
+
+    def backward(self, out_grads=None, is_train=True):
+        assert is_train is True
+        if isinstance(out_grads, (list, tuple)):
+            assert len(out_grads) == 1
+            out_grads = out_grads[0]
+
+        if self._requires_grad:
+            if self.outputs is None:
+                self.forward()
+            self.outputs[0].backward(out_grads)
+
+            if isinstance(self._args_grad, dict):
+                for k, v in self._args_grad.items():
+                    try:
+                        i = self._input_names.index(k)
+                        if self._args[i].grad is not None:
+                            v[:] = self._args[i].grad
+                    # ignore provided arg grad which is not present in
+                    # input_names
+                    except ValueError as e:
+                        pass
+            else:
+                assert isinstance(self._args_grad, (list, tuple))
+                for arg, out in zip(self._args, self._args_grad):
+                    if arg.grad is not None:
+                        out[:] = arg.grad
+    @property
+    def grad_arrays(self):
+        if isinstance(self._args_grad, (list, tuple)):
+            return list(self._args_grad)
+
+        arr = [None] * len(self._input_names)
+        if self._args_grad:
+            assert isinstance(self._args_grad, dict)
+            for k, v in self._args_grad.items():
+                try:
+                    i = self._input_names.index(k)
+                    arr[i] = self._args[i].grad
+                # ignore provided arg grad which is not present in
+                # input_names
+                except ValueError as e:
+                    pass
+        return arr
+
+

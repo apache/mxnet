@@ -50,7 +50,7 @@ def test_mkldnn_model():
     grads = get_tensors(args, shapes[0], ctx)
 
     try:
-        exe = sym.bind(ctx, inputs, args_grad=grads)
+        exe = sym._bind(ctx, inputs, args_grad=grads)
         for _ in range(2):
             exe.forward(is_train=True)
             for y in exe.outputs:
