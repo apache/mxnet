@@ -1850,6 +1850,9 @@ def test_batchnorm_training():
 def test_batchnorm(op, shape, fix_gamma,
         data_grad_req, gamma_grad_req, beta_grad_req,
         cudnn_off, output_mean_var):
+    if fix_gamma and gamma_grad_req != 'null':
+        # skip redundant test when fixing gamma
+        return
     momentum = 0.9
     epsilon = 1e-5
 
