@@ -20,13 +20,13 @@
 """Weibull Distribution."""
 __all__ = ['Weibull']
 
+# Euler-Mascheroni constant
+from numpy import euler_gamma
 from .transformed_distribution import TransformedDistribution
 from .exponential import Exponential
 from .constraint import Positive
 from ..transformation import PowerTransform, AffineTransform
 from .utils import getF, sample_n_shape_converter, gammaln
-# Euler-Mascheroni constant
-from numpy import euler_gamma
 
 
 class Weibull(TransformedDistribution):
@@ -43,7 +43,6 @@ class Weibull(TransformedDistribution):
         inferred from parameters if declared None.
     """
     # pylint: disable=abstract-method
-
     has_grad = True
     support = Positive()
     arg_constraints = {'scale': Positive(),

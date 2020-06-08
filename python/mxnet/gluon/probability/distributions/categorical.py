@@ -69,6 +69,7 @@ class Categorical(Distribution):
 
     @cached_property
     def prob(self):
+        # pylint: disable=method-hidden
         """Get the probability of sampling each class.
 
         Returns
@@ -80,6 +81,7 @@ class Categorical(Distribution):
 
     @cached_property
     def logit(self):
+        # pylint: disable=method-hidden
         """Get the log probability of sampling each class.
 
         Returns

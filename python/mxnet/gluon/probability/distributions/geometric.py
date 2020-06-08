@@ -68,6 +68,7 @@ class Geometric(Distribution):
         Tensor
             Parameter tensor.
         """
+        # pylint: disable=method-hidden
         return logit2prob(self.logit, True, self.F)
 
     @cached_property
@@ -79,6 +80,7 @@ class Geometric(Distribution):
         Tensor
             Parameter tensor.
         """
+        # pylint: disable=method-hidden
         return prob2logit(self.prob, True, self.F)
 
     @property

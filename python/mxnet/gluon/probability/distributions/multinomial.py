@@ -77,10 +77,12 @@ class Multinomial(Distribution):
 
     @cached_property
     def prob(self):
+        # pylint: disable=method-hidden
         return logit2prob(self.logit, False, self.F)
 
     @cached_property
     def logit(self):
+        # pylint: disable=method-hidden
         return prob2logit(self.prob, False, self.F)
 
     @property

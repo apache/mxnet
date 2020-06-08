@@ -20,6 +20,7 @@
 """Relaxed Bernoulli class."""
 __all__ = ['RelaxedOneHotCategorical']
 
+from math import lgamma
 from .distribution import Distribution
 from .transformed_distribution import TransformedDistribution
 from ..transformation import ExpTransform
@@ -82,6 +83,7 @@ class _LogRelaxedOneHotCategorical(Distribution):
         Tensor
             Parameter tensor.
         """
+        # pylint: disable=method-hidden
         return logit2prob(self.logit, False, self.F)
 
     @cached_property
@@ -93,6 +95,7 @@ class _LogRelaxedOneHotCategorical(Distribution):
         Tensor
             Parameter tensor.
         """
+        # pylint: disable=method-hidden
         return prob2logit(self.prob, False, self.F)
 
     def log_prob(self, value):
@@ -108,7 +111,6 @@ class _LogRelaxedOneHotCategorical(Distribution):
         Tensor
             log-likelihood of `value`
         """
-        from math import lgamma
         F = self.F
         K = self.num_events  # Python scalar
         log = F.np.log

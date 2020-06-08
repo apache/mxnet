@@ -26,7 +26,6 @@ from .transformed_distribution import TransformedDistribution
 from ..transformation import AbsTransform
 from .normal import Normal
 from .constraint import Positive
-from .utils import getF
 
 
 class HalfNormal(TransformedDistribution):

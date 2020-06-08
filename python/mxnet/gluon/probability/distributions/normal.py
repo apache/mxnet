@@ -143,7 +143,6 @@ class Normal(ExponentialFamily):
     def variance(self):
         return self.scale ** 2
 
-    @property
     def entropy(self):
         F = self.F
         return 0.5 + 0.5 * math.log(2 * math.pi) + F.np.log(self.scale)
@@ -161,21 +160,7 @@ class Normal(ExponentialFamily):
         return (self.loc / (self.scale ** 2),
                 -0.5 * self.F.np.reciprocal(self.scale ** 2))
 
-    @property
     def _log_normalizer(self, x, y):
-        """Return the log_normalizer term of normal distribution in exponential family term.
-
-        Parameters
-        ----------
-        x : Tensor
-            The first natural parameter.
-        y : Tensor
-            The second natural parameter.
-
-        Returns
-        -------
-        Tensor
-            the log_normalizer term
-        """
+        # pylint: disable=arguments-differ
         F = self.F
-        return -0.25 * F.np.pow(2) / y + 0.5 * F.np.log(-math.pi / y)
+        return -0.25 * F.np.pow(x, 2) / y + 0.5 * F.np.log(-math.pi / y)

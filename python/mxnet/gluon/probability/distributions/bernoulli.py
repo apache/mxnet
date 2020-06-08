@@ -69,6 +69,7 @@ class Bernoulli(ExponentialFamily):
         Tensor
             Parameter tensor.
         """
+        # pylint: disable=method-hidden
         return logit2prob(self.logit, True, self.F)
 
     @cached_property
@@ -80,6 +81,7 @@ class Bernoulli(ExponentialFamily):
         Tensor
             Parameter tensor.
         """
+        # pylint: disable=method-hidden
         return prob2logit(self.prob, True, self.F)
 
     @property
@@ -127,6 +129,7 @@ class Bernoulli(ExponentialFamily):
         return (self.logit,)
 
     def _log_normalizer(self, x):
+        # pylint: disable=arguments-differ
         return self.F.np.log(1 + self.F.np.exp(x))
 
     def entropy(self):

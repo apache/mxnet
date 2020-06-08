@@ -16,21 +16,30 @@
 # under the License.
 
 # coding: utf-8
-"""Classes for registering and storaging bijection/transformations from
+"""Classes for registering and storing bijection/transformations from
 unconstrained space to a given domain.
 """
-from .transformation import *
-from ..distributions.constraint import *
+
 from numbers import Number
+from .transformation import (
+    ExpTransform, AffineTransform, SigmoidTransform, ComposeTransform)
+from ..distributions.constraint import (Constraint, Positive, GreaterThan, GreaterThanEq,
+                                        LessThan, Interval, HalfOpenInterval)
+
 
 __all__ = ['domain_map', 'biject_to', 'transform_to']
 
+
 class domain_map():
+    """
+    Abstract Class for registering and storing mappings from domain
+    to bijections/transformations
+    """
     def __init__(self):
         # constraint -> constraint -> transformation
         self._storage = {}
         super(domain_map, self).__init__()
-    
+
     def register(self, constraint, factory=None):
         """Register a bijection/transformation from unconstrained space to the domain
         specified by `constraint`.
@@ -46,14 +55,14 @@ class domain_map():
         # Decorator mode
         if factory is None:
             return lambda factory: self.register(constraint, factory)
-        
+
         if isinstance(constraint, Constraint):
             constraint = type(constraint)
 
         if not isinstance(constraint, type) or not issubclass(constraint, Constraint):
             raise TypeError('Expected constraint to be either a Constraint subclass or instance, '
                             'but got {}'.format(constraint))
-        
+
         self._storage[constraint] = factory
         return factory
 
@@ -73,6 +82,9 @@ transform_to = domain_map()
 @biject_to.register(Positive)
 @transform_to.register(Positive)
 def _transform_to_positive(constraint):
+    # Although `constraint` is not used in this factory function,
+    # we decide to keep it for the purpose of consistency.
+    # pylint: disable=unused-argument
     return ExpTransform()
 
 
@@ -98,8 +110,10 @@ def _transform_to_less_than(constraint):
 @transform_to.register(HalfOpenInterval)
 def _transform_to_interval(constraint):
     # Handle the special case of the unit interval.
-    lower_is_0 = isinstance(constraint._lower_bound, Number) and constraint._lower_bound == 0
-    upper_is_1 = isinstance(constraint._upper_bound, Number) and constraint._upper_bound == 1
+    lower_is_0 = isinstance(constraint._lower_bound,
+                            Number) and constraint._lower_bound == 0
+    upper_is_1 = isinstance(constraint._upper_bound,
+                            Number) and constraint._upper_bound == 1
     if lower_is_0 and upper_is_1:
         return SigmoidTransform()
 

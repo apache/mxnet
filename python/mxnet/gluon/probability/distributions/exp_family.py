@@ -45,8 +45,7 @@ class ExponentialFamily(Distribution):
         """
         raise NotImplementedError
 
-    @property
-    def _log_normalizer(self):
+    def _log_normalizer(self, *natural_params):
         r"""
         Return the log_normalizer F(\theta) based the natural parameters.
         """
@@ -59,7 +58,6 @@ class ExponentialFamily(Distribution):
         """
         raise NotImplementedError
 
-    @property
     def entropy(self):
         r"""
         Return the entropy of a distribution.

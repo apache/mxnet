@@ -90,7 +90,6 @@ class Gamma(ExponentialFamily):
     def variance(self):
         return self.shape * (self.scale ** 2)
 
-    @property
     def entropy(self):
         F = self.F
         lgamma = gammaln(F)

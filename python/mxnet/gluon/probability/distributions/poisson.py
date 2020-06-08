@@ -105,5 +105,6 @@ class Poisson(ExponentialFamily):
         return (F.np.log(self.rate),)
 
     def _log_normalizer(self, x):
+        # pylint: disable=arguments-differ
         F = self.F
         return F.np.exp(x)

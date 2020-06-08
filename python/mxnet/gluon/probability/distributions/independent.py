@@ -31,7 +31,7 @@ class Independent(Distribution):
     a single multivariate random variable (convert some `batch_dim` to `event_dim`).
     """
     # pylint: disable=abstract-method
-    
+
     arg_constraints = {}
 
     def __init__(self, base_distribution, reinterpreted_batch_ndims, validate_args=None):
@@ -76,14 +76,13 @@ class Independent(Distribution):
     def sample(self, size=None):
         return self.base_dist.sample(size)
 
-    def sample_n(self, n):
-        return self.base_dist.sample_n(n)
+    def sample_n(self, size):
+        return self.base_dist.sample_n(size)
 
     def log_prob(self, value):
         log_prob = self.base_dist.log_prob(value)
         return sum_right_most(log_prob, self.reinterpreted_batch_ndims)
 
-    @property
     def entropy(self):
         entropy = self.base_dist.entropy()
         return sum_right_most(entropy, self.reinterpreted_batch_ndims)

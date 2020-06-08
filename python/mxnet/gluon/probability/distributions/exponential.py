@@ -96,15 +96,15 @@ class Exponential(ExponentialFamily):
         F = self.F
         return - self.scale * F.np.log(1 - value)
 
-    @property
     def entropy(self):
         F = self.F
         return 1.0 + F.np.log(self.scale)
 
     @property
     def _natural_params(self):
-        return (-self.rate, )
+        return (-self.rate,)
 
     def _log_normalizer(self, x):
+        # pylint: disable=arguments-differ
         F = self.F
         return -F.np.log(-x)

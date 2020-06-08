@@ -66,10 +66,12 @@ class _LogitRelaxedBernoulli(Distribution):
 
     @cached_property
     def prob(self):
+        # pylint: disable=method-hidden
         return logit2prob(self.logit, True, self.F)
 
     @cached_property
     def logit(self):
+        # pylint: disable=method-hidden
         return prob2logit(self.prob, True, self.F)
 
     def sample(self, size=None):

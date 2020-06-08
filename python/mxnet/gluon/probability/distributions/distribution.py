@@ -130,6 +130,7 @@ class Distribution(object):
         should be satisfied by each parameter of this distribution. Args that
         are not ndarray/symbol need not appear in this dict.
         """
+        # pylint: disable=function-redefined
         raise NotImplementedError
 
     @property
@@ -158,6 +159,7 @@ class Distribution(object):
         r"""
         Returns a function representing the distribution's support.
         """
+        # pylint: disable=function-redefined
         raise NotImplementedError
 
     def entropy(self):

@@ -92,7 +92,6 @@ class Dirichlet(ExponentialFamily):
         s = a.sum(-1, keepdims=True)
         return a * (s - a) / ((s + 1) * s ** 2)
 
-    @property
     def entropy(self):
         F = self.F
         lgamma = gammaln(F)

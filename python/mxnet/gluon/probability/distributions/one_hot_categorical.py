@@ -46,7 +46,7 @@ class OneHotCategorical(Distribution):
     arg_constraints = {'prob': Simplex(), 'logit': Real()}
 
     def __init__(self, num_events, prob=None, logit=None, F=None, validate_args=None):
-        _F = F if F is not None else getF([prob, logit])
+        _F = F if F is not None else getF(prob, logit)
         if (num_events > 0):
             num_events = int(num_events)
             self.num_events = num_events

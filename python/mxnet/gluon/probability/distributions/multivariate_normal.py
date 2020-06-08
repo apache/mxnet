@@ -20,6 +20,7 @@
 """Multivariate Normal Distribution"""
 __all__ = ['MultivariateNormal']
 
+import math
 from .distribution import Distribution
 from .constraint import Real, PositiveDefinite, LowerCholesky
 from .utils import getF, cached_property
@@ -81,6 +82,7 @@ class MultivariateNormal(Distribution):
 
     @cached_property
     def scale_tril(self):
+        # pylint: disable=method-hidden
         F = self.F
         if 'cov' in self.__dict__:
             return F.np.linalg.cholesky(self.cov)
@@ -88,6 +90,7 @@ class MultivariateNormal(Distribution):
 
     @cached_property
     def cov(self):
+        # pylint: disable=method-hidden
         F = self.F
         if 'scale_tril' in self.__dict__:
             scale_triu = F.np.swapaxes(self.scale_tril, -1, -2)
@@ -96,6 +99,7 @@ class MultivariateNormal(Distribution):
 
     @cached_property
     def precision(self):
+        # pylint: disable=method-hidden
         F = self.F
         if 'cov' in self.__dict__:
             return F.np.linalg.inv(self.cov)
@@ -142,7 +146,6 @@ class MultivariateNormal(Distribution):
     def log_prob(self, value):
         if self._validate_args:
             self._validate_samples(value)
-        import math
         F = self.F
         diff = value - self.loc
         # diff.T * inv(\Sigma) * diff
@@ -162,7 +165,6 @@ class MultivariateNormal(Distribution):
         return M - half_log_det
 
     def entropy(self):
-        import math
         F = self.F
         #   det(2 * \pi * e * \Sigma)
         # = det(\sqrt(2 * \pi * e) * L)^2

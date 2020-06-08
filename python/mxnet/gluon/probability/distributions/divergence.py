@@ -104,7 +104,7 @@ def kl_divergence(p, q):
         KL(p||q)
     """
     func = _dispatch_kl(p.__class__.__name__, q.__class__.__name__)
-    return func(p, q)
+    return func(p, q) # pylint: disable=not-callable
 
 
 def _dispatch_kl(type_p, type_q):

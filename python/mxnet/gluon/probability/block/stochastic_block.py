@@ -22,7 +22,6 @@ __all__ = ['StochasticBlock', 'StochasticSequential']
 
 from functools import wraps
 from ...block import HybridBlock
-from ...nn.basic_layers import HybridSequential
 from ...utils import _indent
 
 
@@ -37,16 +36,14 @@ class StochasticBlock(HybridBlock):
         super(StochasticBlock, self).__init__(prefix=prefix, params=params)
         self._losses = []
         self._losscache = []
-        self._count = 0
 
     def add_loss(self, loss):
-        self._count += 1
         self._losscache.append(loss)
 
     @staticmethod
     def collectLoss(func):
         """To accumulate loss during the forward phase, one could first decorate
-        hybrid_forward with `StochasticBlock.collectLos`s`,
+        hybrid_forward with `StochasticBlock.collectLoss,
         and then collect the loss tensor `x` by calling self.add_loss(x).
         For example, in the following forward function,
         we generate samples from a Gaussian parameterized by `loc` and `scale` and
@@ -74,6 +71,7 @@ class StochasticBlock(HybridBlock):
         for hook in self._forward_pre_hooks.values():
             hook(self, args)
         self._losses = []
+        # pylint: disable=no-value-for-parameter
         out = self.forward(*args)  # out[0]: net output, out[1]: collected loss
         self._losses.extend(out[1])
         for hook in self._forward_hooks.values():
@@ -83,6 +81,9 @@ class StochasticBlock(HybridBlock):
     @property
     def losses(self):
         return self._losses
+
+    def hybrid_forward(self, F, x, *args, **kwargs):
+        raise NotImplementedError
 
 
 class StochasticSequential(StochasticBlock):
@@ -101,7 +102,7 @@ class StochasticSequential(StochasticBlock):
             self.register_child(block)
 
     @StochasticBlock.collectLoss
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args, **kwargs):
         for block in self._layers:
             x = block(x)
             if hasattr(block, '_losses'):

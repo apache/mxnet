@@ -16,24 +16,26 @@
 # under the License.
 
 # coding: utf-8
+# pylint: disable=abstract-method
+# pylint: disable=arguments-differ
 """Transformation Classes"""
-__all__ = ["Transformation", "TransformBlock","ComposeTransform", "ExpTransform",
+__all__ = ["Transformation", "TransformBlock", "ComposeTransform", "ExpTransform",
            "AffineTransform", "PowerTransform", "AbsTransform", 'SigmoidTransform',
            'SoftmaxTransform']
 
+import weakref
 from ..distributions.utils import _clip_prob, cached_property, sum_right_most
 from ...block import HybridBlock
-import weakref
 
 
 class Transformation(object):
     r"""Abstract class for implementing invertible transformation
     with computable log  det jacobians
-    
+
     Attributes
     ----------
     bijective : bool
-        
+
     """
     bijective = False
     event_dim = 0
@@ -79,7 +81,7 @@ class Transformation(object):
 
     def _inverse_compute(self, x):
         raise NotImplementedError
-    
+
     def log_det_jacobian(self, x, y):
         """
         Compute the value of log(|dy/dx|)
@@ -92,6 +94,7 @@ class _InverseTransformation(Transformation):
     A private class representing the invert of `Transformation`,
     which should be accessed through `Transformation.inv` property.
     """
+
     def __init__(self, forward_transformation):
         super(_InverseTransformation, self).__init__()
         self._inv = forward_transformation
@@ -120,11 +123,15 @@ class TransformBlock(Transformation, HybridBlock):
     rather than `Transformation`.
     For example: normalization flow.
     """
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
 
 class ComposeTransform(Transformation):
+    r"""
+    Composes multiple transforms in a chain.
+    """
     def __init__(self, parts):
         super(ComposeTransform, self).__init__()
         self._parts = parts
@@ -142,7 +149,9 @@ class ComposeTransform(Transformation):
     def F(self, value):
         for t in self._parts:
             t.F = value
-        
+
+    # @cached_property is, in essence, @property with lazy evaluation.
+    # pylint: disable=invalid-overridden-method
     @cached_property
     def sign(self):
         sign = 1
@@ -178,9 +187,9 @@ class ComposeTransform(Transformation):
         t_last = self._parts[-1]
         result = result + sum_right_most(t_last.log_det_jacobian(x, y),
                                          self.event_dim - t_last.event_dim)
-                                        
+
         return result
-    
+
 
 class ExpTransform(Transformation):
     r"""
@@ -213,9 +222,9 @@ class AffineTransform(Transformation):
 
     def _forward_compute(self, x):
         return self._loc + self._scale * x
-    
+
     def _inverse_compute(self, y):
-        return (y - self._loc) /  self._scale
+        return (y - self._loc) / self._scale
 
     def log_det_jacobian(self, x, y):
         abs_fn = self.F.np.abs
@@ -231,6 +240,9 @@ class AffineTransform(Transformation):
 
 
 class PowerTransform(Transformation):
+    r"""
+    Perform *pointwise* power transform: y = pow(x, exponent).
+    """
     bijective = True
     sign = 1
 
@@ -251,6 +263,9 @@ class PowerTransform(Transformation):
 
 
 class SigmoidTransform(Transformation):
+    r"""
+    Perform *pointwise* sigmoid transform: y = 1 / (1 + exp(-x)).
+    """
     bijective = True
     sign = 1
 

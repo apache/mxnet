@@ -86,7 +86,6 @@ class Beta(ExponentialFamily):
         lgamma_term = lgamma(a + b) - lgamma(a) - lgamma(b)
         return (a - 1) * log(value) + (b - 1) * log1p(-value) + lgamma_term
 
-    @property
     def entropy(self):
         F = self.F
         lgamma = gammaln(F)

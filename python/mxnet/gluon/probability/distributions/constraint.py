@@ -77,7 +77,7 @@ class _DependentProperty(property, _Dependent):
             def support(self):
                 return constraint.Interval(self.low, self.high)
     """
-    pass
+    pass # pylint: disable=unnecessary-pass
 
 
 class Real(Constraint):
@@ -510,7 +510,7 @@ class Cat(Constraint):
         F = getF(value)
         _values = []
         start = 0
-        for constraint, length in zip(self._constraint_seq, self._lengths):
+        for length in self._lengths:
             v = F.np.take(value, indices=F.np.arange(
                 start, start + length), axis=self._axis)
             _values.append(v)

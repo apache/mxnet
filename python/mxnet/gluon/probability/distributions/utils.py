@@ -25,7 +25,6 @@ from functools import update_wrapper
 from numbers import Number
 import numpy as onp
 import scipy.special as sc
-from .... import numpy as np # pylint: disable=reimported
 from .... import symbol as sym
 from .... import ndarray as nd
 
@@ -111,19 +110,19 @@ def getF(*params):
     """
     mode_flag = 0
     for param in params:
-        if isinstance(param, np.ndarray):
+        if isinstance(param, nd.NDArray):
             if mode_flag < 0:
                 raise TypeError("Expect parameters to have consistent running mode," +
                                 " got {}".format([type(p) for p in params]))
             mode_flag = 1
-            return nd
         elif isinstance(param, sym.Symbol):
             if mode_flag > 0:
                 raise TypeError("Expect parameters to have consistent running mode," +
                                 " got {}".format([type(p) for p in params]))
             mode_flag = -1
-            return sym
     # In case of scalar params, we choose to use the imperative mode.
+    if mode_flag < 0:
+        return sym
     return nd
 
 
