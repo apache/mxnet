@@ -153,17 +153,8 @@ if variant != 'NATIVE':
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':
     libdir, mxdir = os.path.dirname(LIB_PATH[0]), os.path.join(CURRENT_DIR, 'mxnet')
-    if os.path.exists(os.path.join(libdir, 'libgfortran.so.3')):
-        shutil.copy(os.path.join(libdir, 'libgfortran.so.3'), mxdir)
-        package_data['mxnet'].append('mxnet/libgfortran.so.3')
-    else:
-        shutil.copy(os.path.join(libdir, 'libgfortran.so.4'), mxdir)
-        package_data['mxnet'].append('mxnet/libgfortran.so.4')
-    shutil.copy(os.path.join(libdir, 'libquadmath.so.0'), mxdir)
-    package_data['mxnet'].append('mxnet/libquadmath.so.0')
-    if os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
-        shutil.copy(os.path.join(libdir, 'libopenblas.so.0'), mxdir)
-        package_data['mxnet'].append('mxnet/libquadmath.so.0')
+    shutil.copy(os.path.join(libdir, 'libomp.so'), mxdir)
+    package_data['mxnet'].append('mxnet/libomp.so')
 
 # Copy licenses and notice
 for f in os.listdir('mxnet/licenses'):

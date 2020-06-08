@@ -19,7 +19,7 @@
 
 # This script builds the static library of protobuf along with protoc, that can be used as dependency of mxnet.
 set -ex
-PROTOBUF_VERSION=3.5.1
+PROTOBUF_VERSION=3.12.3
 if [[ $PLATFORM == 'darwin' ]]; then
     DY_EXT="dylib"
 else
@@ -32,13 +32,14 @@ if [[ ! -e $LIBPROTOBUF ]] || [[ ! -e $LIBPROTOC ]]; then
     # Download and build protobuf
     >&2 echo "Building protobuf..."
     download \
-        https://github.com/google/protobuf/archive/v${PROTOBUF_VERSION}.zip \
+        https://github.com/protocolbuffers/protobuf/archive/v${PROTOBUF_VERSION}.zip \
         ${DEPS_PATH}/protobuf.zip
     unzip -q $DEPS_PATH/protobuf.zip -d $DEPS_PATH
     pushd .
     cd $DEPS_PATH/protobuf-$PROTOBUF_VERSION
     ./autogen.sh
-    ./configure -prefix=$DEPS_PATH
+    # Need to find /opt/rh/devtoolset-8/root/usr/libexec/gcc/x86_64-redhat-linux/8/cc1plus
+    PATH=/opt/rh/devtoolset-8/root/usr/libexec/gcc/x86_64-redhat-linux/8/:$PATH ./configure -prefix=$DEPS_PATH
     $MAKE
     $MAKE install
     popd

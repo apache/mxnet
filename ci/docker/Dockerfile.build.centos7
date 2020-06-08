@@ -52,7 +52,8 @@ RUN yum -y check-update || true && \
         protobuf-compiler \
         protobuf-devel \
         # CentOS Software Collections https://www.softwarecollections.org
-        devtoolset-7 \
+        llvm-toolset-7.0 \
+        llvm-toolset-7.0-libomp-devel \
         rh-python36 \
         rh-maven35 \
         # Libraries
@@ -67,13 +68,11 @@ RUN yum -y check-update || true && \
         gperf \
         libb2-devel \
         libzstd-devel && \
-    yum clean all && \
-    # Centos 7 only provides ninja-build
-    ln -s /usr/bin/ninja-build /usr/bin/ninja
+    yum clean all
 
 # Make GCC7, Python 3.5 and Maven 3.3 Software Collections available by default
 # during build and runtime of this container
-SHELL [ "/usr/bin/scl", "enable", "devtoolset-7", "rh-python36", "rh-maven35" ]
+SHELL [ "/usr/bin/scl", "enable", "llvm-toolset-7.0", "rh-python36", "rh-maven35" ]
 
 # Install minimum required cmake version
 RUN cd /usr/local/src && \
@@ -118,6 +117,15 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
             libnccl-static-${NCCL_VERSION}-1+cuda${SHORT_CUDA_VERSION} && \
         yum clean all; \
     fi
+
+# Flang fortran compiler as replacement for gfortran due to the resulting
+# runtime dependency on libgfortran.so which is GPL-licensed and thus
+# https://www.apache.org/legal/resolved.html#category-x for distribution.
+# We need a Fortran compiler to compile the OpenBLAS Lapack implementation.
+RUN cd /usr/local/ && mkdir flang && cd flang && \
+    wget -nv https://github.com/flang-compiler/flang/releases/download/flang_20190329/flang-20190329-x86-70.tgz && \
+    tar xf flang-20190329-x86-70.tgz && \
+    rm flang-20190329-x86-70.tgz
 
 # Python dependencies
 COPY install/requirements /work/

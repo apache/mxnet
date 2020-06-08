@@ -163,7 +163,7 @@ build_dynamic_libmxnet() {
     gather_licenses
 
     cd /work/build
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     if [[ ${mxnet_variant} = "cpu" ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
@@ -329,7 +329,7 @@ build_android_armv8() {
 build_centos7_cpu() {
     set -ex
     cd /work/build
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=ON \
@@ -344,7 +344,7 @@ build_centos7_cpu() {
 build_centos7_cpu_make() {
     set -ex
     cd /work/mxnet
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     make \
         DEV=1 \
         USE_LAPACK=1 \
@@ -359,7 +359,7 @@ build_centos7_cpu_make() {
 build_centos7_mkldnn() {
     set -ex
     cd /work/build
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
@@ -371,7 +371,7 @@ build_centos7_mkldnn() {
 build_centos7_gpu() {
     set -ex
     cd /work/build
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -1107,7 +1107,7 @@ unittest_ubuntu_python3_quantization_gpu() {
 
 unittest_centos7_cpu_scala() {
     set -ex
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-maven35/enable
     cd /work/mxnet
     scala_prepare
@@ -1929,7 +1929,7 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-python36/enable
     export USE_SYSTEM_CUDA=1
     export CMAKE_STATICBUILD=1
@@ -1942,7 +1942,7 @@ build_static_libmxnet() {
 cd_package_pypi() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-python36/enable
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
@@ -1996,7 +1996,7 @@ build_static_scala_cpu() {
     scala_prepare
     export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
     export mxnet_variant=cpu
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-maven35/enable
     ./ci/publish/scala/build.sh
     popd
@@ -2006,7 +2006,7 @@ build_static_python_cpu() {
     set -ex
     pushd .
     export mxnet_variant=cpu
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
@@ -2017,7 +2017,7 @@ build_static_python_cu92() {
     pushd .
     export mxnet_variant=cu92
     export USE_SYSTEM_CUDA=1
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
@@ -2028,7 +2028,7 @@ build_static_python_cpu_cmake() {
     pushd .
     export mxnet_variant=cpu
     export CMAKE_STATICBUILD=1
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
@@ -2040,7 +2040,7 @@ build_static_python_cu92_cmake() {
     export mxnet_variant=cu92
     export CMAKE_STATICBUILD=1
     export USE_SYSTEM_CUDA=1
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
@@ -2050,7 +2050,7 @@ publish_scala_build() {
     set -ex
     pushd .
     scala_prepare
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-maven35/enable
     export USE_SYSTEM_CUDA=1
     ./ci/publish/scala/build.sh

@@ -40,8 +40,7 @@ $MAKE DEPS_PATH=$DEPS_PATH mkldnn
 $MAKE DEPS_PATH=$DEPS_PATH
 
 if [[ $PLATFORM == 'linux' ]]; then
-    cp -L $(ldd lib/libmxnet.so | grep libgfortran |  awk '{print $3}') lib/
-    cp -L $(ldd lib/libmxnet.so | grep libquadmath |  awk '{print $3}') lib/
+    cp -L $(ldd lib/libmxnet.so | grep libomp |  awk '{print $3}') lib/
 fi
 
 # Print the linked objects on libmxnet.so

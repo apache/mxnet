@@ -9,9 +9,13 @@
     =======================================================================================
 
     1. cityhash  - For details, see https://github.com/google/cityhash/blob/master/COPYING
-    	Copyright (c) 2011 Google, Inc.
+        Copyright (c) 2011 Google, Inc.
+
     2. protobuf - For details, see https://github.com/protocolbuffers/protobuf/blob/master/LICENSE
         Copyright 2008 Google Inc.  All rights reserved.
+
+    3. llvm openmp - For details, see https://github.com/llvm/llvm-project/blob/release/7.x/openmp/LICENSE.txt
+        Copyright (c) 1997-2016 Intel Corporation  All rights reserved.
 
     =======================================================================================
     Mozilla Public License Version 2.0
@@ -50,6 +54,12 @@
     1. openssl - For details, see https://github.com/openssl/openssl/blob/master/LICENSE
         Copyright (c) 1998-2018 The OpenSSL Project
         Copyright (c) 1995-1998 Eric A. Young, Tim J. Hudson
+
+    2. flang - For details, see https://github.com/flang-compiler/flang/blob/flang_20190329/LICENSE.txt
+        Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
+
+    3. pgmath - For details, see https://github.com/flang-compiler/flang/blob/flang_20190329/runtime/libpgmath/LICENSE.txt
+        Copyright (c) 2018, NVIDIA CORPORATION.  All rights reserved.
 
     =======================================================================================
     Other Licenses

@@ -48,9 +48,9 @@ else
 fi
 export MAKE="make $ADD_MAKE_FLAG"
 
-export CC="gcc -fPIC -mno-avx"
-export CXX="g++ -fPIC -mno-avx"
-export FC="gfortran"
+export CC="clang -fPIC -mno-avx"
+export CXX="clang++ -fPIC -mno-avx"
+export FC="/usr/local/flang/bin/flang"
 export PKG_CONFIG_PATH=$DEPS_PATH/lib/pkgconfig:$DEPS_PATH/lib64/pkgconfig:$DEPS_PATH/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
 export CPATH=$DEPS_PATH/include:$CPATH
 
