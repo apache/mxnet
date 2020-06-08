@@ -46,7 +46,6 @@ def test_parameter():
     assert len(p.list_grad()) == 2
     assert p.data(mx.cpu(1)).context == mx.cpu(1)
     assert p.data(mx.cpu(0)).shape == (10, 10)
-    assert p.var().name == 'weight'
     assert p.grad(mx.cpu(0)).stype == 'default'
     assert p.data(mx.cpu(0)).stype == 'default'
 
@@ -77,7 +76,6 @@ def test_sparse_parameter():
     assert weight.context == mx.cpu(1)
     assert weight.shape == (10, 10)
     assert weight.stype == 'row_sparse'
-    assert p.var().name == 'weight'
     assert p.var().attr('__storage_type__') == str(_STORAGE_TYPE_STR_TO_ID['row_sparse'])
     assert p.grad(mx.cpu(0)).stype == 'row_sparse'
 
@@ -205,7 +203,7 @@ def test_constant():
         def __init__(self, **kwargs):
             super(Test, self).__init__(**kwargs)
             self.value = np.asarray([[1,2], [3,4]])
-            self.const = gluon.Constant('const', self.value)
+            self.const = gluon.Constant(self.value)
 
         def hybrid_forward(self, F, x, const):
             return x + const
@@ -317,7 +315,6 @@ def test_dense():
     inputs = mx.sym.Variable('data')
     outputs = model(inputs)
     assert set(model.collect_params().keys()) == set(['weight', 'bias'])
-    assert outputs.list_outputs() == ['act_fwd_output']
     args, outs, auxs = outputs.infer_shape(data=(2, 3, 10))
     assert outs == [(2, 3, 128)]
 
@@ -325,7 +322,6 @@ def test_dense():
     inputs = mx.sym.Variable('data')
     outputs = model(inputs)
     assert set(model.collect_params().keys()) == set(['weight', 'bias'])
-    assert outputs.list_outputs() == ['act_fwd_output']
     args, outs, auxs = outputs.infer_shape(data=(17, 2, 5, 3))
     assert outs == [(17, 128)]
 
@@ -3108,7 +3104,7 @@ def test_shared_parameters_with_non_default_initializer():
         def __init__(self, **kwargs):
             super(MyBlock, self).__init__(**kwargs)
 
-            self.param = gluon.Parameter("param", shape=(1, ), init=mx.init.Constant(-10.0))
+            self.param = gluon.Parameter(shape=(1, ), init=mx.init.Constant(-10.0))
 
     bl = MyBlock()
     bl2 = MyBlock().share_parameters(bl.collect_params())

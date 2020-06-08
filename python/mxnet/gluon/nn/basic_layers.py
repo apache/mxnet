@@ -73,7 +73,6 @@ class Sequential(Block):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
             net = type(self)()
-            net._prefix = self._prefix
             net.add(*(l() for l in layers))
             return net
         else:
@@ -142,7 +141,6 @@ class HybridSequential(HybridBlock):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
             net = type(self)()
-            net._prefix = self._prefix
             net.add(*(l() for l in layers))
             return net
         else:

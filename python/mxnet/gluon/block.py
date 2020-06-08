@@ -80,7 +80,7 @@ class _BlockScope(object):
             return self
         self._local._old_scope = getattr(_BlockScope._current, "value", None)
         _BlockScope._current.value = self
-        self._local._name_scope = _name.Prefix(block.name)
+        self._local._name_scope = _name.Prefix(block.name + '_')
         self._local._name_scope.__enter__()
         _profiler_scope_name = block.name + ":"
         self._local._profiler_scope = _profiler.Scope(_profiler_scope_name)
@@ -1557,6 +1557,8 @@ class SymbolBlock(HybridBlock):
         super(SymbolBlock, self).__init__()
         if params is None:
             params = {}
+
+        params = {p.name : p for p in params.values()}    
 
         if isinstance(inputs, symbol.Symbol) and len(inputs.list_outputs()) == 1:
             inputs = [inputs]

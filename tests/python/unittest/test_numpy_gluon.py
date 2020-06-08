@@ -165,7 +165,7 @@ def test_np_get_constant():
     class Foo(gluon.HybridBlock):
         def __init__(self):
             super(Foo, self).__init__()
-            self.weight = gluon.Constant('const', const_arr)
+            self.weight = gluon.Constant(const_arr)
 
         def hybrid_forward(self, F, x, weight):
             return x + weight.astype(np.float32)

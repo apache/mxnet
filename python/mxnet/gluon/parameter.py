@@ -126,10 +126,10 @@ class Parameter(object):
         self.init = init
         # sparse related storage type information
         valid_stypes = ['default', 'row_sparse', 'csr']
-        assert grad_stype in valid_stypes, "grad_stype for Parameter '%s' must be " \
-            "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (name, grad_stype)
-        assert stype in valid_stypes, "stype for Parameter '%s' must be " \
-            "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (name, stype)
+        assert grad_stype in valid_stypes, "grad_stype for Parameter must be " \
+            "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (grad_stype)
+        assert stype in valid_stypes, "stype for Parameter must be " \
+            "one of 'default', 'row_sparse', or 'csr', but got '%s'" % (stype)
         self._grad_stype = grad_stype
         self._stype = stype
 
@@ -708,23 +708,21 @@ class Constant(Parameter):
 
     `Constant` s can be created with either::
 
-        const = mx.gluon.Constant('const', [[1,2],[3,4]])
+        const = mx.gluon.Constant([[1,2],[3,4]])
 
     or::
 
         class Block(gluon.Block):
             def __init__(self, **kwargs):
                 super(Block, self).__init__(**kwargs)
-                self.const = self.params.get_constant('const', [[1,2],[3,4]])
+                self.const = mx.gluon.Constant([[1,2],[3,4]])
 
     Parameters
     ----------
-    name : str
-        Name of the parameter.
     value : array-like
         Initial value for the constant.
     """
-    def __init__(self, name, value):
+    def __init__(self, value):
         if not isinstance(value, ndarray.NDArray):
             array_fn = _mx_np.array if is_np_array() else ndarray.array
             value = array_fn(value)
@@ -733,16 +731,16 @@ class Constant(Parameter):
         class Init(initializer.Initializer):
             def _init_weight(self, _, arr):
                 value.copyto(arr)
-        init_name = 'Constant_{}_{}'.format(name, id(self))
+        init_name = 'Constant_{}'.format(id(self))
         initializer.alias(init_name)(Init)
 
         super(Constant, self).__init__(
-            name, grad_req='null', shape=value.shape, dtype=value.dtype,
+            grad_req='null', shape=value.shape, dtype=value.dtype,
             init=init_name)
 
     def __repr__(self):
-        s = 'Constant {name} (shape={shape}, dtype={dtype})'
-        return s.format(name=self.name, shape=self.shape, dtype=self.dtype)
+        s = 'Constant (shape={shape}, dtype={dtype})'
+        return s.format(shape=self.shape, dtype=self.dtype)
 
     @property
     def grad_req(self):
@@ -863,7 +861,7 @@ class ParameterDict(object):
                 raise KeyError("No constant named '{}'. Please specify value " \
                                "if you want to create a new constant.".format(
                                    name))
-            param = Constant(name, value)
+            param = Constant(value)
             self._params[name] = param
         elif value is not None:
             assert isinstance(param, Constant), \
@@ -987,9 +985,9 @@ class ParameterDict(object):
             Strip prefix from parameter names before saving.
         """
         arg_dict = {}
-        for param in self.values():
+        for name, param in self.items():
             weight = param._reduce()
-            if not param.name.startswith(strip_prefix):
+            if not name.startswith(strip_prefix):
                 raise ValueError(
                     "Prefix '%s' is to be striped before saving, but Parameter's "
                     "name '%s' does not start with '%s'. "
@@ -997,8 +995,8 @@ class ParameterDict(object):
                     "Blocks or you forgot to use 'with name_scope()' when creating "
                     "child blocks. For more info on naming, please see "
                     "https://mxnet.io/api/python/docs/tutorials/packages/gluon/blocks/naming.html"%(
-                        strip_prefix, param.name, strip_prefix))
-            arg_dict[param.name[len(strip_prefix):]] = weight
+                        strip_prefix, name, strip_prefix))
+            arg_dict[name[len(strip_prefix):]] = weight
         ndarray.save(filename, arg_dict)
 
     def load(self, filename, ctx=None, allow_missing=False,
