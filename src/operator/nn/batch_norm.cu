@@ -34,6 +34,9 @@
 #define FIX_GAMMA_FLAG        8
 #define IS_TRAINING_FLAG      16
 #define USE_GLOBAL_STATS_FLAG 32
+#define ADDTO_DATA_FLAG       (1 << 6)
+#define ADDTO_GAMMA_FLAG      (1 << 7)
+#define ADDTO_BETA_FLAG       (1 << 8)
 
 #if MXNET_USE_CUDNN == 1
 #include "./cudnn/cudnn_batch_norm-inl.h"
@@ -362,33 +365,60 @@ static __global__ void BatchNormalizationBackwardKernel(
                                 * momentum + localVariance * (AccReal(1) - momentum);
   }
 
-  if (gradInput.Size() > 0 && (flags & WRITE_DATA_FLAG) != 0) {
-    for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
-      for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
-        const DType gradOut = gradOutput.get_ref(batch, plane, x);
-        if (is_train_and_not_global_stats) {
-          const DType inp = input.get_ref(batch, plane, x);
-          const AccReal proj = (inp - mean) * projScale;
-          gradInput.get_ref(batch, plane, x) =
-            ScalarConvert<AccReal, DType>::to((gradOut - proj - gradMean) * gradScale);
-        } else {
-          gradInput.get_ref(batch, plane, x) = ScalarConvert<AccReal, DType>::to(
-            gradOut * gradScale);
+  if (gradInput.Size() > 0 && (flags & (WRITE_DATA_FLAG | ADDTO_DATA_FLAG)) != 0) {
+    const bool grad_write = flags & WRITE_DATA_FLAG;
+    if (grad_write) {
+      for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
+        for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
+          const DType gradOut = gradOutput.get_ref(batch, plane, x);
+          if (is_train_and_not_global_stats) {
+            const DType inp = input.get_ref(batch, plane, x);
+            const AccReal proj = (inp - mean) * projScale;
+            gradInput.get_ref(batch, plane, x) =
+              ScalarConvert<AccReal, DType>::to((gradOut - proj - gradMean) * gradScale);
+          } else {
+            gradInput.get_ref(batch, plane, x) = ScalarConvert<AccReal, DType>::to(
+              gradOut * gradScale);
+          }
+        }
+      }
+    } else {
+      // grad addto
+      for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
+        for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
+          const DType gradOut = gradOutput.get_ref(batch, plane, x);
+          if (is_train_and_not_global_stats) {
+            const DType inp = input.get_ref(batch, plane, x);
+            const AccReal proj = (inp - mean) * projScale;
+            gradInput.get_ref(batch, plane, x) +=
+              ScalarConvert<AccReal, DType>::to((gradOut - proj - gradMean) * gradScale);
+          } else {
+            gradInput.get_ref(batch, plane, x) += ScalarConvert<AccReal, DType>::to(
+              gradOut * gradScale);
+          }
         }
       }
     }
   }
 
-  if (tensors.gradWeight.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_GAMMA_FLAG) != 0) {
+  if (tensors.gradWeight.numElements() > 0 && threadIdx.x == 0 &&
+      (flags & (WRITE_GAMMA_FLAG | ADDTO_GAMMA_FLAG)) != 0) {
     if ((flags & FIX_GAMMA_FLAG) == 0) {
-      tensors.gradWeight[plane] = ScalarConvert<AccReal, DType>::to(dotP * invstd);
+      if (flags & WRITE_GAMMA_FLAG)
+        tensors.gradWeight[plane] = ScalarConvert<AccReal, DType>::to(dotP * invstd);
+      else
+        tensors.gradWeight[plane] += ScalarConvert<AccReal, DType>::to(dotP * invstd);
     } else {
       tensors.gradWeight[plane] = DType(0);
     }
   }
 
-  if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_BETA_FLAG) != 0) {
-    tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
+  if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 &&
+      (flags & (WRITE_BETA_FLAG | ADDTO_BETA_FLAG)) != 0) {
+    if (flags & WRITE_BETA_FLAG)
+      tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
+    else
+      tensors.gradBias[plane] += ScalarConvert<AccReal, DType>::to(gradOutputSum);
   }
 }
 
@@ -585,12 +615,18 @@ static inline uint32_t SetupFlags(const OpContext &ctx,
   flags |= params.use_global_stats ? USE_GLOBAL_STATS_FLAG : 0;
   if (IsBNWriting(req[batchnorm::kData])) {
     flags |= WRITE_DATA_FLAG;
+  } else if (req[batchnorm::kData] == kAddTo) {
+    flags |= ADDTO_DATA_FLAG;
   }
   if (IsBNWriting(req[batchnorm::kGamma])) {
     flags |= WRITE_GAMMA_FLAG;
+  } else if (req[batchnorm::kGamma] == kAddTo) {
+    flags |= ADDTO_GAMMA_FLAG;
   }
   if (IsBNWriting(req[batchnorm::kBeta])) {
     flags |= WRITE_BETA_FLAG;
+  } else if (req[batchnorm::kBeta] == kAddTo) {
+    flags |= ADDTO_BETA_FLAG;
   }
   return flags;
 }
