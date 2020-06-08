@@ -26,65 +26,11 @@ permalink: /api/faq/caffe
 
 Key topics covered include the following:
 
-- [Converting Caffe trained models to MXNet](#converting-caffe-trained-models-to-mxnet)
 - [Calling Caffe operators in MXNet](#calling-caffe-operators-in-mxnet)
-
-## Converting Caffe trained models to MXNet
-
-The converting tool is available at
-[tools/caffe_converter](https://github.com/dmlc/mxnet/tree/master/tools/caffe_converter). On
-the remaining of this section, we assume we are on the `tools/caffe_converter`
-directory.
-
-### How to build
-
-If Caffe's python package is installed, namely we can run `import caffe` in
-python, then we are ready to go.
-
-For example, we can used
-[AWS Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B06VSPXKDX) with
-both Caffe and MXNet installed.
-
-Otherwise we can install the
-[Google protobuf](https://developers.google.com/protocol-buffers/?hl=en)
-compiler and its python binding. It is easier to install, but may be slower
-during running.
-
-1. Install the compiler:
-  - Linux: install `protobuf-compiler` e.g. `sudo apt-get install
-    protobuf-compiler` for Ubuntu and `sudo yum install protobuf-compiler` for
-     Redhat/Fedora.
-  - Windows: Download the win32 build of
-    [protobuf](https://github.com/google/protobuf/releases). Make sure to
-    download the version that corresponds to the version of the python binding
-    on the next step. Extract to any location then add that location to your
-    `PATH`
-  - Mac OS X: `brew install protobuf`
-
-2. Install the python binding by either `conda install -c conda-forge protobuf`
-   or `pip install protobuf`.
-
-3. Compile Caffe proto definition. Run `make` in Linux or Mac OS X, or
-   `make_win32.bat` in Windows
-
-### How to use
-
-There are three tools:
-
-- `convert_symbol.py` : convert Caffe model definition in protobuf into MXNet's
-  Symbol in JSON format.
-- `convert_model.py` : convert Caffe model parameters into MXNet's NDArray format
-- `convert_mean.py` : convert Caffe input mean file into MXNet's NDArray format
-
-In addition, there are two tools:
-- `convert_caffe_modelzoo.py` : download and convert models from Caffe model
-  zoo.
-- `test_converter.py` : test the converted models by checking the prediction
-  accuracy.
 
 ## Calling Caffe operators in MXNet
 
-Besides converting Caffe models, MXNet supports calling most Caffe operators,
+MXNet supports calling most Caffe operators,
 including network layer, data layer, and loss function, directly. It is
 particularly useful if there are customized operators implemented in Caffe, then
 we do not need to re-implement them in MXNet.
@@ -201,8 +147,3 @@ train = mx.io.CaffeDataIter(
     num_examples   = 60000,
 )
 ```
-
-### Put it all together
-
-The complete example is available at
-[example/caffe](https://github.com/dmlc/mxnet/blob/master/example/caffe/)

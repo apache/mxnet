@@ -36,7 +36,6 @@ The arXiv paper is available [here](http://arxiv.org/abs/1512.02325).
 
 This example is intended for reproducing the nice detector while fully utilize the
 remarkable traits of MXNet.
-* Model [converter](#convert-caffemodel) from caffe is available now!
 * The result is almost identical to the original version. However, due to different implementation details, the results might differ slightly.
 
 Due to the permission issue, this example is maintained in this [repository](https://github.com/zhreshold/mxnet-ssd) separately. You can use the link regarding specific per example [issues](https://github.com/zhreshold/mxnet-ssd/issues).
@@ -260,19 +259,6 @@ Useful when loading python symbol is not available.
 # cd /path/to/incubator-mxnet/example/ssd
 python deploy.py --num-class 20
 ```
-
-### Convert caffe model
-Converter from caffe is available at `/path/to/incubator-mxnet/example/ssd/tools/caffe_converter`
-
-This is specifically modified to handle custom layer in caffe-ssd. Usage:
-```
-cd /path/to/incubator-mxnet/example/ssd/tools/caffe_converter
-make
-python convert_model.py deploy.prototxt name_of_pretrained_caffe_model.caffemodel ssd_converted
-# you will use this model in deploy mode without loading from python symbol(layer names inconsistent)
-python demo.py --prefix ssd_converted --epoch 1 --deploy
-```
-There is no guarantee that conversion will always work, but at least it's good for now.
 
 ### Legacy models
 Since the new interface for composing network is introduced, the old models have inconsistent names for weights.
