@@ -33,7 +33,6 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import with_seed, teardown_module, assert_raises_cudnn_not_satisfied
 sys.path.insert(0, os.path.join(curr_path, '../train'))
-from test_bucketing import train_model
 set_default_context(mx.gpu(0))
 
 @pytest.fixture()

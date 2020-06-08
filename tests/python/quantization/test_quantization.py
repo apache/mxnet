@@ -787,7 +787,6 @@ def get_fp32_sym_with_multiple_outputs(length=1):
                               out_grad=False, preserve_shape=False, use_ignore=False, name='softmax')
     return sym
 
-
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_quantize_sym_with_calib():
