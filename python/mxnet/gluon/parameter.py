@@ -54,16 +54,14 @@ class Parameter(object):
 
         ctx = mx.gpu(0)
         x = mx.nd.zeros((16, 100), ctx=ctx)
-        w = mx.gluon.Parameter('fc_weight', shape=(64, 100), init=mx.init.Xavier())
-        b = mx.gluon.Parameter('fc_bias', shape=(64,), init=mx.init.Zero())
+        w = mx.gluon.Parameter(shape=(64, 100), init=mx.init.Xavier())
+        b = mx.gluon.Parameter(shape=(64,), init=mx.init.Zero())
         w.initialize(ctx=ctx)
         b.initialize(ctx=ctx)
         out = mx.nd.FullyConnected(x, w.data(ctx), b.data(ctx), num_hidden=64)
 
     Parameters
     ----------
-    name : str
-        Name of this parameter.
     grad_req : {'write', 'add', 'null'}, default 'write'
         Specifies how to update gradient to grad arrays.
 
@@ -120,7 +118,7 @@ class Parameter(object):
         if isinstance(shape, int):
             shape = (shape,)
         self._shape = shape
-        self._name = uuid.uuid4()
+        self._name = str(uuid.uuid4()).replace('-', '_')
         self._dtype = dtype
         self.lr_mult = lr_mult
         self.wd_mult = wd_mult
@@ -439,7 +437,7 @@ class Parameter(object):
 
         Examples
         --------
-        >>> weight = mx.gluon.Parameter('weight', shape=(2, 2))
+        >>> weight = mx.gluon.Parameter(shape=(2, 2))
         >>> weight.initialize(ctx=mx.cpu(0))
         >>> weight.data()
         [[-0.01068833  0.01729892]
@@ -833,7 +831,7 @@ class ParameterDict(object):
         name = self.prefix + name
         param = self._get_impl(name)
         if param is None: # pylint: disable=too-many-nested-blocks
-            param = Parameter(name, **kwargs)
+            param = Parameter(**kwargs)
             self._params[name] = param
         else:
             param._check_and_setattr(**kwargs)

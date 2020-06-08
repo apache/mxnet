@@ -1593,7 +1593,7 @@ class SymbolBlock(HybridBlock):
 
         def _set_params_attr(name, **kwargs):
             if params.get(name) is None:
-                self._reg_params[name] = Parameter(name=name, **kwargs)
+                self._reg_params[name] = Parameter(**kwargs)
                 return
             param = params[name]
             param._check_and_setattr(**kwargs)

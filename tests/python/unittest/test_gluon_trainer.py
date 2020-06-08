@@ -33,7 +33,7 @@ def dict_equ(a, b):
 
 @with_seed()
 def test_multi_trainer():
-    x = gluon.Parameter('x', shape=(10,), stype='row_sparse')
+    x = gluon.Parameter(shape=(10,), stype='row_sparse')
     x.initialize()
     # test set trainer
     trainer0 = gluon.Trainer([x], 'sgd')
@@ -48,7 +48,7 @@ def test_multi_trainer():
 
 @with_seed()
 def test_trainer_with_sparse_grad_on_single_context():
-    x = gluon.Parameter('x', shape=(10,), grad_stype='row_sparse')
+    x = gluon.Parameter(shape=(10,), grad_stype='row_sparse')
     x.initialize(ctx=[mx.cpu(0)], init='zeros')
     trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
     with mx.autograd.record():
@@ -63,7 +63,7 @@ def test_trainer_with_sparse_grad_on_single_context():
 
 @with_seed()
 def test_trainer_with_teststore():
-    x = gluon.Parameter('x', shape=(10,))
+    x = gluon.Parameter(shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     kv = mx.kv.create('teststore')
     trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5}, kvstore=kv)
@@ -82,7 +82,7 @@ def test_trainer_with_teststore():
 
 @with_seed()
 def test_trainer():
-    x = gluon.Parameter('x', shape=(10,))
+    x = gluon.Parameter(shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
     with mx.autograd.record():
@@ -117,7 +117,7 @@ def test_trainer():
             dict_equ(updater.states, states)
         assert trainer._optimizer == trainer._updaters[0].optimizer
 
-    x = gluon.Parameter('x', shape=(10,))
+    x = gluon.Parameter(shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     trainer2 = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5},
                              update_on_kvstore=False)
@@ -137,7 +137,7 @@ def test_trainer_save_load():
     previous_update_on_kvstore = os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")
     os.putenv('MXNET_UPDATE_ON_KVSTORE', '1')
 
-    x = gluon.Parameter('x', shape=(10,), lr_mult=1.0)
+    x = gluon.Parameter(shape=(10,), lr_mult=1.0)
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
     with mx.autograd.record():
@@ -155,7 +155,7 @@ def test_trainer_save_load():
 
 @with_seed()
 def test_trainer_sparse_save_load():
-    x = gluon.Parameter('x', shape=(10, 1), lr_mult=1.0,
+    x = gluon.Parameter(shape=(10, 1), lr_mult=1.0,
                         stype='row_sparse', grad_stype='row_sparse')
     x.initialize(ctx=[mx.cpu(0)], init='zeros')
     trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
@@ -178,7 +178,7 @@ def test_trainer_multi_layer_init():
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
             # sparse param
-            self.embed_weight = gluon.Parameter('embed_weight', stype='row_sparse',
+            self.embed_weight = gluon.Parameter(stype='row_sparse',
                                                 shape=(4,3), grad_stype='row_sparse')
             # dense param from a hybrid block
             self.dense0 = nn.Dense(2)
@@ -254,7 +254,7 @@ def test_trainer_reset_kv():
 @with_seed()
 def test_trainer_sparse_kv():
     def check_trainer_sparse_kv(kv, stype, grad_stype, update_on_kv, expected):
-        x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
+        x = mx.gluon.Parameter(shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
         x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},
                                 kvstore=kv, update_on_kvstore=update_on_kv)
@@ -290,7 +290,7 @@ def test_trainer_sparse_kv():
 
 @with_seed()
 def test_trainer_lr_sched():
-    x = gluon.Parameter('x', shape=(10,))
+    x = gluon.Parameter(shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     freq = 2
     factor = 0.1
@@ -309,7 +309,7 @@ def test_trainer_lr_sched():
     mx.nd.waitall()
 
     # Update on kvstore = False
-    x = gluon.Parameter('x', shape=(10,))
+    x = gluon.Parameter(shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     freq = 2
     factor = 0.1

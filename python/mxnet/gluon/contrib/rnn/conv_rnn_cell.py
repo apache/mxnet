@@ -79,16 +79,16 @@ class _BaseConvRNNCell(HybridRecurrentCell):
         self._h2h_pad, \
         self._state_shape = self._decide_shapes()
 
-        self.i2h_weight = Parameter('i2h_weight', shape=i2h_param_shape,
+        self.i2h_weight = Parameter(shape=i2h_param_shape,
                                     init=i2h_weight_initializer,
                                     allow_deferred_init=True)
-        self.h2h_weight = Parameter('h2h_weight', shape=h2h_param_shape,
+        self.h2h_weight = Parameter(shape=h2h_param_shape,
                                     init=h2h_weight_initializer,
                                     allow_deferred_init=True)
-        self.i2h_bias = Parameter('i2h_bias', shape=(hidden_channels*self._num_gates,),
+        self.i2h_bias = Parameter(shape=(hidden_channels*self._num_gates,),
                                   init=i2h_bias_initializer,
                                   allow_deferred_init=True)
-        self.h2h_bias = Parameter('h2h_bias', shape=(hidden_channels*self._num_gates,),
+        self.h2h_bias = Parameter(shape=(hidden_channels*self._num_gates,),
                                   init=h2h_bias_initializer,
                                   allow_deferred_init=True)
 

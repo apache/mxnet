@@ -47,7 +47,7 @@ def test_create_np_param():
     class TestBlock1(gluon.HybridBlock):
         def __init__(self):
             super(TestBlock1, self).__init__()
-            self.w = gluon.Parameter('w', shape=(K, N), allow_deferred_init=True)
+            self.w = gluon.Parameter(shape=(K, N), allow_deferred_init=True)
 
         def hybrid_forward(self, F, x, w):
             return F.dot(x, w)
@@ -56,7 +56,7 @@ def test_create_np_param():
     class TestBlock2(gluon.HybridBlock):
         def __init__(self):
             super(TestBlock2, self).__init__()
-            self.w = gluon.Parameter('w', shape=(K, N), allow_deferred_init=True)
+            self.w = gluon.Parameter(shape=(K, N), allow_deferred_init=True)
 
         def hybrid_forward(self, F, x, w):
             return F.np.dot(x, w)
@@ -75,9 +75,9 @@ def test_optimizer_with_np_ndarrays():
     class LinearRegression(gluon.HybridBlock):
         def __init__(self, num_input_dim=0, num_hidden_dim=100, num_output_dim=10):
             super(LinearRegression, self).__init__()
-            self.w1 = gluon.Parameter('w1', shape=(num_input_dim, num_hidden_dim),
+            self.w1 = gluon.Parameter(shape=(num_input_dim, num_hidden_dim),
                                       allow_deferred_init=True)
-            self.w2 = gluon.Parameter('w2', shape=(num_hidden_dim, num_output_dim),
+            self.w2 = gluon.Parameter(shape=(num_hidden_dim, num_output_dim),
                                       allow_deferred_init=True)
 
         def hybrid_forward(self, F, x, w1, w2):

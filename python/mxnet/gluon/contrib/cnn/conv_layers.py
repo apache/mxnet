@@ -145,12 +145,12 @@ class DeformableConvolution(HybridBlock):
 
         offsetshapes = offset.infer_shape_partial()[0]
 
-        self.offset_weight = Parameter('offset_weight', shape=offsetshapes[1],
+        self.offset_weight = Parameter(shape=offsetshapes[1],
                                        init=offset_weight_initializer,
                                        allow_deferred_init=True)
 
         if offset_use_bias:
-            self.offset_bias = Parameter('offset_bias', shape=offsetshapes[2],
+            self.offset_bias = Parameter(shape=offsetshapes[2],
                                          init=offset_bias_initializer,
                                          allow_deferred_init=True)
         else:
@@ -161,13 +161,12 @@ class DeformableConvolution(HybridBlock):
         deformable_conv_weight_shape[2] = kernel_size[0]
         deformable_conv_weight_shape[3] = kernel_size[1]
 
-        self.deformable_conv_weight = Parameter('deformable_conv_weight',
-                                                shape=deformable_conv_weight_shape,
+        self.deformable_conv_weight = Parameter(shape=deformable_conv_weight_shape,
                                                 init=weight_initializer,
                                                 allow_deferred_init=True)
 
         if use_bias:
-            self.deformable_conv_bias = Parameter('deformable_conv_bias', shape=(channels,),
+            self.deformable_conv_bias = Parameter(shape=(channels,),
                                                   init=bias_initializer,
                                                   allow_deferred_init=True)
         else:
@@ -334,13 +333,12 @@ class ModulatedDeformableConvolution(HybridBlock):
         deformable_conv_weight_shape[2] = kernel_size[0]
         deformable_conv_weight_shape[3] = kernel_size[1]
 
-        self.deformable_conv_weight = Parameter('deformable_conv_weight',
-                                                shape=deformable_conv_weight_shape,
+        self.deformable_conv_weight = Parameter(shape=deformable_conv_weight_shape,
                                                 init=weight_initializer,
                                                 allow_deferred_init=True)
 
         if use_bias:
-            self.deformable_conv_bias = Parameter('deformable_conv_bias', shape=(channels,),
+            self.deformable_conv_bias = Parameter(shape=(channels,),
                                                   init=bias_initializer,
                                                   allow_deferred_init=True)
         else:
@@ -355,12 +353,12 @@ class ModulatedDeformableConvolution(HybridBlock):
 
         offsetshapes = offset.infer_shape_partial()[0]
 
-        self.offset_weight = Parameter('offset_weight', shape=offsetshapes[1],
+        self.offset_weight = Parameter(shape=offsetshapes[1],
                                        init=offset_weight_initializer,
                                        allow_deferred_init=True)
 
         if offset_use_bias:
-            self.offset_bias = Parameter('offset_bias', shape=offsetshapes[2],
+            self.offset_bias = Parameter(shape=offsetshapes[2],
                                          init=offset_bias_initializer,
                                          allow_deferred_init=True)
         else:

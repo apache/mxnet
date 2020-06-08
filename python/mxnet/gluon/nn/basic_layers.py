@@ -211,11 +211,11 @@ class Dense(HybridBlock):
         self._flatten = flatten
         self._units = units
         self._in_units = in_units
-        self.weight = Parameter('weight', shape=(units, in_units),
+        self.weight = Parameter(shape=(units, in_units),
                                 init=weight_initializer, dtype=dtype,
                                 allow_deferred_init=True)
         if use_bias:
-            self.bias = Parameter('bias', shape=(units,),
+            self.bias = Parameter(shape=(units,),
                                   init=bias_initializer, dtype=dtype,
                                   allow_deferred_init=True)
         else:
@@ -348,20 +348,20 @@ class _BatchNorm(HybridBlock):
         if in_channels != 0:
             self.in_channels = in_channels
 
-        self.gamma = Parameter('gamma', grad_req='write' if scale else 'null',
+        self.gamma = Parameter(grad_req='write' if scale else 'null',
                                shape=(in_channels,), init=gamma_initializer,
                                allow_deferred_init=True,
                                differentiable=scale)
-        self.beta = Parameter('beta', grad_req='write' if center else 'null',
+        self.beta = Parameter(grad_req='write' if center else 'null',
                               shape=(in_channels,), init=beta_initializer,
                               allow_deferred_init=True,
                               differentiable=center)
-        self.running_mean = Parameter('running_mean', grad_req='null',
+        self.running_mean = Parameter(grad_req='null',
                                       shape=(in_channels,),
                                       init=running_mean_initializer,
                                       allow_deferred_init=True,
                                       differentiable=False)
-        self.running_var = Parameter('running_var', grad_req='null',
+        self.running_var = Parameter(grad_req='null',
                                      shape=(in_channels,),
                                      init=running_variance_initializer,
                                      allow_deferred_init=True,
@@ -553,7 +553,7 @@ class Embedding(HybridBlock):
         grad_stype = 'row_sparse' if sparse_grad else 'default'
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
                         'dtype': dtype, 'sparse_grad': sparse_grad}
-        self.weight = Parameter('weight', shape=(input_dim, output_dim),
+        self.weight = Parameter(shape=(input_dim, output_dim),
                                 init=weight_initializer, dtype=dtype,
                                 allow_deferred_init=True, grad_stype=grad_stype)
 
@@ -658,10 +658,10 @@ class InstanceNorm(HybridBlock):
         self._kwargs = {'eps': epsilon, 'axis': axis, 'center': center, 'scale': scale}
         self._axis = axis
         self._epsilon = epsilon
-        self.gamma = Parameter('gamma', grad_req='write' if scale else 'null',
+        self.gamma = Parameter(grad_req='write' if scale else 'null',
                                shape=(in_channels,), init=gamma_initializer,
                                allow_deferred_init=True)
-        self.beta = Parameter('beta', grad_req='write' if center else 'null',
+        self.beta = Parameter(grad_req='write' if center else 'null',
                               shape=(in_channels,), init=beta_initializer,
                               allow_deferred_init=True)
 
@@ -746,10 +746,10 @@ class LayerNorm(HybridBlock):
         self._epsilon = epsilon
         self._center = center
         self._scale = scale
-        self.gamma = Parameter('gamma', grad_req='write' if scale else 'null',
+        self.gamma = Parameter(grad_req='write' if scale else 'null',
                                shape=(in_channels,), init=gamma_initializer,
                                allow_deferred_init=True)
-        self.beta = Parameter('beta', grad_req='write' if center else 'null',
+        self.beta = Parameter(grad_req='write' if center else 'null',
                               shape=(in_channels,), init=beta_initializer,
                               allow_deferred_init=True)
 
@@ -837,10 +837,10 @@ class GroupNorm(HybridBlock):
         self._epsilon = epsilon
         self._center = center
         self._scale = scale
-        self.gamma = Parameter('gamma', grad_req='write' if scale else 'null',
+        self.gamma = Parameter(grad_req='write' if scale else 'null',
                                shape=(in_channels,), init=gamma_initializer,
                                allow_deferred_init=True)
-        self.beta = Parameter('beta', grad_req='write' if center else 'null',
+        self.beta = Parameter(grad_req='write' if center else 'null',
                               shape=(in_channels,), init=beta_initializer,
                               allow_deferred_init=True)
 

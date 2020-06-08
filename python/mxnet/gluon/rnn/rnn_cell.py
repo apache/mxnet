@@ -368,16 +368,16 @@ class RNNCell(HybridRecurrentCell):
         self._hidden_size = hidden_size
         self._activation = activation
         self._input_size = input_size
-        self.i2h_weight = Parameter('i2h_weight', shape=(hidden_size, input_size),
+        self.i2h_weight = Parameter(shape=(hidden_size, input_size),
                                     init=i2h_weight_initializer,
                                     allow_deferred_init=True)
-        self.h2h_weight = Parameter('h2h_weight', shape=(hidden_size, hidden_size),
+        self.h2h_weight = Parameter(shape=(hidden_size, hidden_size),
                                     init=h2h_weight_initializer,
                                     allow_deferred_init=True)
-        self.i2h_bias = Parameter('i2h_bias', shape=(hidden_size,),
+        self.i2h_bias = Parameter(shape=(hidden_size,),
                                   init=i2h_bias_initializer,
                                   allow_deferred_init=True)
-        self.h2h_bias = Parameter('h2h_bias', shape=(hidden_size,),
+        self.h2h_bias = Parameter(shape=(hidden_size,),
                                   init=h2h_bias_initializer,
                                   allow_deferred_init=True)
 
@@ -478,16 +478,16 @@ class LSTMCell(HybridRecurrentCell):
 
         self._hidden_size = hidden_size
         self._input_size = input_size
-        self.i2h_weight = Parameter('i2h_weight', shape=(4*hidden_size, input_size),
+        self.i2h_weight = Parameter(shape=(4*hidden_size, input_size),
                                     init=i2h_weight_initializer,
                                     allow_deferred_init=True)
-        self.h2h_weight = Parameter('h2h_weight', shape=(4*hidden_size, hidden_size),
+        self.h2h_weight = Parameter(shape=(4*hidden_size, hidden_size),
                                     init=h2h_weight_initializer,
                                     allow_deferred_init=True)
-        self.i2h_bias = Parameter('i2h_bias', shape=(4*hidden_size,),
+        self.i2h_bias = Parameter(shape=(4*hidden_size,),
                                   init=i2h_bias_initializer,
                                   allow_deferred_init=True)
-        self.h2h_bias = Parameter('h2h_bias', shape=(4*hidden_size,),
+        self.h2h_bias = Parameter(shape=(4*hidden_size,),
                                   init=h2h_bias_initializer,
                                   allow_deferred_init=True)
         self._activation = activation
@@ -598,16 +598,16 @@ class GRUCell(HybridRecurrentCell):
         super(GRUCell, self).__init__()
         self._hidden_size = hidden_size
         self._input_size = input_size
-        self.i2h_weight = Parameter('i2h_weight', shape=(3*hidden_size, input_size),
+        self.i2h_weight = Parameter(shape=(3*hidden_size, input_size),
                                     init=i2h_weight_initializer,
                                     allow_deferred_init=True)
-        self.h2h_weight = Parameter('h2h_weight', shape=(3*hidden_size, hidden_size),
+        self.h2h_weight = Parameter(shape=(3*hidden_size, hidden_size),
                                     init=h2h_weight_initializer,
                                     allow_deferred_init=True)
-        self.i2h_bias = Parameter('i2h_bias', shape=(3*hidden_size,),
+        self.i2h_bias = Parameter(shape=(3*hidden_size,),
                                   init=i2h_bias_initializer,
                                   allow_deferred_init=True)
-        self.h2h_bias = Parameter('h2h_bias', shape=(3*hidden_size,),
+        self.h2h_bias = Parameter(shape=(3*hidden_size,),
                                   init=h2h_bias_initializer,
                                   allow_deferred_init=True)
         self._activation = activation

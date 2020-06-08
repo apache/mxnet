@@ -102,7 +102,7 @@ class _RNNLayer(HybridBlock):
                 ni = np * self._dir
 
     def _register_param(self, name, shape, init, dtype):
-        p = Parameter(name, shape=shape, init=init, allow_deferred_init=True, dtype=dtype)
+        p = Parameter(shape=shape, init=init, allow_deferred_init=True, dtype=dtype)
         setattr(self, name, p)
         return p
 

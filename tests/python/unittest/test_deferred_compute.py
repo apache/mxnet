@@ -428,7 +428,7 @@ def test_dc_hybridblock():
         def __init__(self):
             super().__init__()
             self.dense = mx.gluon.nn.Dense(units=10, in_units=10)
-            self.weight = mx.gluon.Parameter('weight', shape=(10, ))
+            self.weight = mx.gluon.Parameter(shape=(10, ))
 
         def forward(self, x):
             assert x.shape[1] == 10  # due to in_units=10 above
@@ -448,7 +448,7 @@ def test_dc_hybridblock_deferred_init_no_infer_shape_error():
         def __init__(self):
             super().__init__()
             self.dense = mx.gluon.nn.Dense(units=10)
-            self.weight = mx.gluon.Parameter('weight', allow_deferred_init=True)
+            self.weight = mx.gluon.Parameter(allow_deferred_init=True)
 
         def forward(self, x):
             return self.dense(x) + self.weight.data(x.context)
@@ -465,7 +465,7 @@ def test_dc_hybridblock_deferred_init():
         def __init__(self):
             super().__init__()
             self.dense = mx.gluon.nn.Dense(units=10)
-            self.weight = mx.gluon.Parameter('weight', allow_deferred_init=True)
+            self.weight = mx.gluon.Parameter(allow_deferred_init=True)
 
         def infer_shape(self, x):
             self.weight.shape = (x.shape[1], )

@@ -135,7 +135,7 @@ class PReLU(HybridBlock):
     def __init__(self, alpha_initializer=initializer.Constant(0.25),
                  in_channels=1, **kwargs):
         super(PReLU, self).__init__(**kwargs)
-        self.alpha = Parameter('alpha', shape=(in_channels,), init=alpha_initializer)
+        self.alpha = Parameter(shape=(in_channels,), init=alpha_initializer)
 
     def hybrid_forward(self, F, x, alpha):
         leaky_relu = F.npx.leaky_relu if is_np_array() else F.LeakyReLU

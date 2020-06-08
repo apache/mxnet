@@ -172,7 +172,7 @@ def optimize(args):
     features_style = vgg(style_image)
     gram_style = [net.gram_matrix(y) for y in features_style]
     # output
-    output = Parameter('output', shape=content_image.shape)
+    output = Parameter(shape=content_image.shape)
     output.initialize(ctx=ctx)
     output.set_data(content_image)
     # optimizer
