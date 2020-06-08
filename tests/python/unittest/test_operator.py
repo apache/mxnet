@@ -1842,20 +1842,18 @@ def test_batchnorm_training():
 @pytest.mark.parametrize('shape', [(24, 2), (24, 3, 4), (24, 4, 4, 5),
     (24, 8, 4, 5), (24, 5, 6, 4, 5)])
 @pytest.mark.parametrize('fix_gamma', [False, True])
-@pytest.mark.parametrize('grad_req', ['write', 'add'])
+@pytest.mark.parametrize('data_grad_req', ['null', 'write', 'add'])
+@pytest.mark.parametrize('gamma_grad_req', ['null', 'write', 'add'])
+@pytest.mark.parametrize('beta_grad_req', ['null', 'write', 'add'])
 @pytest.mark.parametrize('cudnn_off', [False, True])
 @pytest.mark.parametrize('output_mean_var', [False, True])
-def test_batchnorm(op, shape, fix_gamma, grad_req, cudnn_off, output_mean_var):
+def test_batchnorm(op, shape, fix_gamma,
+        data_grad_req, gamma_grad_req, beta_grad_req,
+        cudnn_off, output_mean_var):
     momentum = 0.9
     epsilon = 1e-5
 
-    def _test_batchnorm_impl(op, shape, axis, fix_gamma,
-            grad_req,
-            cudnn_off, output_mean_var):
-        print(str((op, shape, axis, fix_gamma,
-            grad_req,
-            cudnn_off, output_mean_var)))
-
+    def _test_batchnorm_impl(axis):
         kwargs = dict(output_mean_var=output_mean_var)
         if op == mx.nd.contrib.SyncBatchNorm:
             if axis != 1:
@@ -1870,12 +1868,12 @@ def test_batchnorm(op, shape, fix_gamma, grad_req, cudnn_off, output_mean_var):
 
         if not fix_gamma:
             bn_gamma = mx.nd.random.uniform(shape=(nch,))
-            bn_gamma.attach_grad(grad_req=grad_req)
+            bn_gamma.attach_grad(grad_req=gamma_grad_req)
         else:
             bn_gamma = mx.nd.ones(shape=(nch,))
 
         bn_beta = mx.nd.random.uniform(shape=(nch,))
-        bn_beta.attach_grad(grad_req=grad_req)
+        bn_beta.attach_grad(grad_req=beta_grad_req)
 
         bn_running_mean = mx.nd.zeros(nch)
         bn_running_var = mx.nd.ones(nch)
@@ -1886,12 +1884,15 @@ def test_batchnorm(op, shape, fix_gamma, grad_req, cudnn_off, output_mean_var):
         expand_shape = [1] * len(shape)
         expand_shape[axis] = shape[axis]
         data = mx.nd.random.uniform(shape=shape)
-        data.attach_grad(grad_req=grad_req)
+        data.attach_grad(grad_req=data_grad_req)
         adX, adW, adb = 0, 0, 0
+        is_train = data_grad_req != 'null' or \
+            (not fix_gamma and gamma_grad_req != 'null') or \
+            beta_grad_req != 'null'
         for _ in range(num_iters):
-            if grad_req != 'add':
+            if data_grad_req != 'add':
                 data = mx.nd.random.uniform(shape=shape)
-                data.attach_grad(grad_req=grad_req)
+                data.attach_grad(grad_req=data_grad_req)
             ograd = mx.nd.random.uniform(shape=shape)
             with mx.autograd.record():
                 output = op(data, bn_gamma, bn_beta,
@@ -1900,7 +1901,8 @@ def test_batchnorm(op, shape, fix_gamma, grad_req, cudnn_off, output_mean_var):
                             fix_gamma=fix_gamma, **kwargs)
                 if output_mean_var:
                     output, output_mean, output_std = output
-                output.backward(ograd)
+                if is_train:
+                    output.backward(ograd)
             mx.nd.waitall()
 
             data_mean = data.mean(
@@ -1937,12 +1939,9 @@ def test_batchnorm(op, shape, fix_gamma, grad_req, cudnn_off, output_mean_var):
             dX = dnx * nd + dvar * xsm * (2.0 / m) + dmean * (1.0 / m)
             dW = (ograd * nx).sum(axis=axis, exclude=True)
             db = ograd.sum(axis=axis, exclude=True)
-            if grad_req == 'add':
-                adX += dX
-                adW += dW
-                adb += db
-            else:
-                adX, adW, adb = dX, dW, db
+            adX = dX if data_grad_req != 'add' else adX + dX
+            adW = dW if gamma_grad_req != 'add' else adW + dW
+            adb = db if beta_grad_req != 'add' else adb + db
 
             atol, rtol = 5e-2, 5e-2
 
@@ -1961,25 +1960,28 @@ def test_batchnorm(op, shape, fix_gamma, grad_req, cudnn_off, output_mean_var):
                                         atol=atol, rtol=rtol)
             assert_almost_equal(output.asnumpy(), target_output.asnumpy(),
                                 atol=atol, rtol=rtol)
-            assert_almost_equal(bn_running_mean.asnumpy(
-            ), running_mean.asnumpy(), atol=atol, rtol=rtol)
-            assert_almost_equal(bn_running_var.asnumpy(
-            ), running_var.asnumpy(), atol=atol, rtol=rtol)
+            if is_train:
+                assert_almost_equal(bn_running_mean.asnumpy(
+                ), running_mean.asnumpy(), atol=atol, rtol=rtol)
+                assert_almost_equal(bn_running_var.asnumpy(
+                ), running_var.asnumpy(), atol=atol, rtol=rtol)
 
-            assert_almost_equal(data.grad.asnumpy(),
-                                adX.asnumpy(), atol=atol, rtol=rtol)
+            if data_grad_req != 'null':
+                assert_almost_equal(data.grad.asnumpy(),
+                                    adX.asnumpy(), atol=atol, rtol=rtol)
             if not fix_gamma:
-                assert_almost_equal(
-                    bn_gamma.grad.asnumpy(), adW.asnumpy(),
-                    atol=atol, rtol=rtol)
+                if gamma_grad_req != 'null':
+                    assert_almost_equal(
+                        bn_gamma.grad.asnumpy(), adW.asnumpy(),
+                        atol=atol, rtol=rtol)
             else:
                 assert((bn_gamma.asnumpy() == 1).all())
-            assert_almost_equal(
-                bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
+            if beta_grad_req != 'null':
+                assert_almost_equal(
+                    bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
 
     for axis in range(len(shape)):
-        _test_batchnorm_impl(op, shape, axis, fix_gamma,
-                             grad_req, cudnn_off, output_mean_var)
+        _test_batchnorm_impl(axis)
 
 @with_seed()
 def test_groupnorm():
