@@ -584,7 +584,6 @@ class ExecutorV2:
             else:
                 assert isinstance(aux_states, (list, tuple))
                 num_args = len(self._arg_names)
-                print(len(aux_states), num_args, len(self._args))
                 for i, v in enumerate(aux_states):
                     self._args[i + num_args] = v.copyto(ctx)
 
@@ -655,6 +654,12 @@ class ExecutorV2:
                 for arg, out in zip(self._args, self._args_grad):
                     if arg.grad is not None:
                         out[:] = arg.grad
+
+    @property
+    def arg_arrays(self):
+        assert isinstance(self._args, list)
+        return self._args
+
     @property
     def grad_arrays(self):
         if isinstance(self._args_grad, (list, tuple)):

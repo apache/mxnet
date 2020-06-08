@@ -2354,8 +2354,8 @@ def check_binary_op_backward(symbol, baseline, gen_data, rtol=1e-3, atol=1e-5):
         y_2 = mx.nd.empty(d[1].shape)
         y = symbol._bind(default_context(), args={'a': mx.nd.array(d[0]), 'b': mx.nd.array(d[1])},
                         args_grad=[y_1, y_2])
-        y.forward(is_train=True)
-        y.backward([mx.nd.array(out)])
+        o = y.forward(is_train=True)
+        y.backward([mx.nd.array(out, dtype=o[0].dtype)])
         assert_allclose(y_1.asnumpy(), x_1, rtol=rtol, atol=atol)
         assert_allclose(y_2.asnumpy(), x_2, rtol=rtol, atol=atol)
 
@@ -4821,8 +4821,8 @@ def test_cast_float32_to_float16():
         ctx = default_context()
         exe = sym._bind(ctx, {'x': mx.nd.array(input_np, dtype=np.float32, ctx=ctx)})
         assert exe.arg_arrays[0].dtype == np.float32
-        assert exe.outputs[0].dtype == np.float16
         exe.forward(is_train=True)
+        assert exe.outputs[0].dtype == np.float16
         sym_output = exe.outputs[0].asnumpy()
         for fp32_val, model_fp16_val, np_fp16_val in zip(input_np, sym_output, expected_output):
             assert (model_fp16_val == np_fp16_val) or \
