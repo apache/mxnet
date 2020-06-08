@@ -28,6 +28,7 @@
 #include <mxnet/operator_util.h>
 #include <utility>
 #include <vector>
+#include <string>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
@@ -49,6 +50,13 @@ struct NumpyBincountParam : public dmlc::Parameter<NumpyBincountParam> {
     DMLC_DECLARE_FIELD(has_weights)
     .set_default(false)
     .describe("Determine whether Bincount has weights.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream minlength_s, has_weights_s;
+    minlength_s << minlength;
+    has_weights_s << has_weights;
+    (*dict)["minlength"] = minlength_s.str();
+    (*dict)["has_weights"] = has_weights_s.str();
   }
 };
 

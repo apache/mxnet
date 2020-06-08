@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-arguments,  global-statement
 """Symbolic configuration API."""
-from __future__ import absolute_import as _abs
 
 import ctypes
 from ..base import _LIB

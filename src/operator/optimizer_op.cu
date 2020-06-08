@@ -37,7 +37,6 @@ struct SGDMomStdDnsRspDnsKernel<req, gpu> {
     const DType* grad_data, const RType* prefix_sum, const DType clip_gradient,
     const DType momentum, const DType lr, const DType wd, const DType rescale_grad) {
     using nnvm::dim_t;
-    const DType rate = lr * wd;
     const dim_t row_id = i / row_length;
     const dim_t col_id = i % row_length;
     const dim_t nnr = prefix_sum[row_id];
@@ -46,14 +45,13 @@ struct SGDMomStdDnsRspDnsKernel<req, gpu> {
     const RType grad_i = (nnr - 1) * row_length + col_id;
     const DType grad = non_zero ? grad_data[grad_i]
                                 : static_cast<DType>(0);
+    DType grad_rescaled = rescale_grad * grad;
     if (clip_gradient >= 0.0f) {
-      mom_data[i] = momentum * mom_data[i]
-              - rate * weight_data[i]
-              - lr * mshadow_op::clip::Map(rescale_grad * grad, clip_gradient);
-    } else {
-      mom_data[i] = momentum * mom_data[i]
-                  - rate * weight_data[i] - lr * rescale_grad * grad;
+      grad_rescaled = mshadow_op::clip::Map(grad_rescaled, clip_gradient);
     }
+    grad_rescaled += wd * weight_data[i];
+    mom_data[i] *= momentum;
+    mom_data[i] -= lr * grad_rescaled;
     KERNEL_ASSIGN(out_data[i], req, weight_data[i] + mom_data[i]);
   }
 };
@@ -139,12 +137,12 @@ struct AdamStdDnsRspDnsKernel<req, gpu> {
     const bool non_zero = (row_id == 0) ? prefix_sum[0] > 0
                           : prefix_sum[row_id] > prefix_sum[row_id - 1];
     const RType grad_offset = (prefix_sum[row_id] - 1) * row_length + col_id;
-    DType grad_rescaled = non_zero ? static_cast<DType>(grad_data[grad_offset] * rescale_grad
-                                                        + weight_data[i] * wd)
-                                   : static_cast<DType>(weight_data[i] * wd);
+    DType grad_rescaled = non_zero ? static_cast<DType>(grad_data[grad_offset] * rescale_grad)
+                                   : static_cast<DType>(0);
     if (clip_gradient >= 0.0f) {
       grad_rescaled = clip::Map(grad_rescaled, clip_gradient);
     }
+    grad_rescaled += weight_data[i] * wd;
     mean_data[i] = beta1 * mean_data[i] + (1.f - beta1) * grad_rescaled;
     var_data[i] = beta2 * var_data[i] +
                   (1.f - beta2) * square::Map(grad_rescaled);

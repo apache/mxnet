@@ -31,5 +31,8 @@ namespace op {
 NNVM_REGISTER_OP(_npi_exponential)
 .set_attr<FCompute>("FCompute<gpu>", NumpyExponentialForward<gpu>);
 
+NNVM_REGISTER_OP(_backward_broadcast_exponential)
+.set_attr<FCompute>("FCompute<gpu>", ExponentialReparamBackward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

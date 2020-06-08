@@ -30,8 +30,8 @@ cpp-package-inference-example-all: cpp-package-all $(CPPEX_EXE)
 
 build/cpp-package/example/% : cpp-package/example/inference/%.cpp lib/libmxnet.so $(CPP_PACKAGE_OP_H_FILE)
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 $(CFLAGS) $(CPPEX_CFLAGS) -MM -MT cpp-package/example/inference/$* $< >build/cpp-package/example/$*.d
-	$(CXX) -std=c++11 $(CFLAGS) $(CPPEX_CFLAGS) -o $@ $(filter %.cpp %.a, $^) $(LDFLAGS) $(CPPEX_EXTRA_LDFLAGS)
+	$(CXX) -std=c++17 $(CFLAGS) $(CPPEX_CFLAGS) -MM -MT cpp-package/example/inference/$* $< >build/cpp-package/example/$*.d
+	$(CXX) -std=c++17 $(CFLAGS) $(CPPEX_CFLAGS) -o $@ $(filter %.cpp %.a, $^) $(LDFLAGS) $(CPPEX_EXTRA_LDFLAGS)
 
 cpp-package-inference-example-clean:
 	rm -rf build/cpp-package/example/inference*

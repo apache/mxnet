@@ -1,5 +1,5 @@
 # Special thanks to https://github.com/pertusa for the Makefile
-CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall
+CFLAGS=-std=c++17 -Wno-unknown-pragmas -Wall
 
 # Added for openblas
 # export OPENBLAS_ROOT=/usr/local/opt/openblas
@@ -22,8 +22,8 @@ image-classification-predict: image-classification-predict.o
 
 image-classification-predict.o: image-classification-predict.cc
 	g++ -O3 -c image-classification-predict.cc ${CFLAGS}
-	
-clean: 
+
+clean:
 	rm image-classification-predict
 	rm -f *.d *.o
 

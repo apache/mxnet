@@ -47,6 +47,8 @@ apt-get install -y \
     zlib1g-dev \
     libedit-dev \
     libxml2-dev \
+    libprotobuf-dev \
+    protobuf-compiler \
     ninja-build \
     software-properties-common \
     sudo \

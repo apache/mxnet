@@ -104,7 +104,7 @@ std::vector<NodeEntry> OfflineParams(std::vector<NodeEntry>&& outputs,
       }
     }
   });
-  return outputs;
+  return std::move(outputs);
 }
 
 // To check if a node is registered with a computation function on a target device.
@@ -575,7 +575,7 @@ Graph SetCalibTableToQuantizedGraph(Graph&& g) {
       SetCalibTableForEntry({node, static_cast<uint32_t>(idx), 0}, node, calib_table);
     }
   });
-  return g;
+  return std::move(g);
 }
 
 NNVM_REGISTER_PASS(QuantizeGraph)

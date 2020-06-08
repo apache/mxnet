@@ -22,9 +22,9 @@
  * \file shuffle_op.cc
  * \brief Operator to shuffle elements of an NDArray
  */
-#if !defined (__ANDROID__) && ((__GNUC__ > 4 &&\
-    !defined(__clang__major__)) || (__clang_major__ > 4 && __linux__))
-        #define USE_GNU_PARALLEL_SHUFFLE
+#if ((__GNUC__ > 4 && !defined(__clang__major__)) || (__clang_major__ > 4 && __linux__)) && \
+  defined(_OPENMP) && !defined(__ANDROID__)
+#define USE_GNU_PARALLEL_SHUFFLE
 #endif
 
 #include <mxnet/operator_util.h>
@@ -78,9 +78,14 @@ void ShuffleND(DType* const out, const index_t size, const index_t first_axis_le
   for (index_t i = first_axis_len - 1; i > 0; --i) {
     const index_t j = rand_n(i + 1);
     if (i != j) {
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
+#endif
       std::memcpy(buf.dptr_, out + stride * i, stride_bytes);
       std::memcpy(out + stride * i, out + stride * j, stride_bytes);
       std::memcpy(out + stride * j, buf.dptr_, stride_bytes);
+#pragma GCC diagnostic pop
     }
   }
 }

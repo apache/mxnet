@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2014 by Contributors
  * \file base.h
@@ -18,12 +37,13 @@
 #define NOMINMAX
 #endif
 #endif
-#include <cmath>
-#include <cstdio>
+#include <algorithm>
 #include <cfloat>
 #include <climits>
-#include <algorithm>
+#include <cmath>
+#include <cstdio>
 #include <functional>
+#include <limits>
 #include <sstream>
 #include <string>
 
@@ -118,18 +138,6 @@ typedef unsigned __int64 uint64_t;
 #define MSHADOW_OLD_CUDA 0
 #endif
 
-/*!
- * \brief macro to decide existence of c++11 compiler
- */
-#ifndef MSHADOW_IN_CXX11
-  #if (defined(__GXX_EXPERIMENTAL_CXX0X__) ||\
-      __cplusplus >= 201103L || defined(_MSC_VER))
-    #define MSHADOW_IN_CXX11 1
-  #else
-    #define MSHADOW_IN_CXX11 0
-  #endif
-#endif
-
 /*! \brief whether use SSE */
 #ifndef MSHADOW_USE_SSE
   #define MSHADOW_USE_SSE 1
@@ -206,13 +214,6 @@ extern "C" {
 /*! \brief cpu force inline */
 #define MSHADOW_CINLINE MSHADOW_FORCE_INLINE
 
-#if defined(__GXX_EXPERIMENTAL_CXX0X) ||\
-    defined(__GXX_EXPERIMENTAL_CXX0X__) || __cplusplus >= 201103L
-  #define MSHADOW_CONSTEXPR constexpr
-#else
-  #define MSHADOW_CONSTEXPR const
-#endif
-
 /*!
  * \brief default data type for tensor string
  *  in code release, change it to default_real_t
@@ -230,13 +231,8 @@ extern "C" {
 #define MSHADOW_USE_GLOG DMLC_USE_GLOG
 #endif  // MSHADOW_USE_GLOG
 
-#if DMLC_USE_CXX11
 #define MSHADOW_THROW_EXCEPTION noexcept(false)
 #define MSHADOW_NO_EXCEPTION  noexcept(true)
-#else
-#define MSHADOW_THROW_EXCEPTION
-#define MSHADOW_NO_EXCEPTION
-#endif
 
 #if defined(_MSC_VER)
 #define MSHADOW_ALIGNED(x) __declspec(align(x))
@@ -255,7 +251,7 @@ extern "C" {
     if (e == cudaErrorCudartUnloading) {                           \
       throw dmlc::Error(cudaGetErrorString(e));                    \
     }                                                              \
-    CHECK(e == cudaSuccess)                                        \
+    CHECK_EQ(e, cudaSuccess)                                       \
         << "CUDA: " << cudaGetErrorString(e);                      \
   }
 
@@ -277,6 +273,32 @@ extern "C" {
 
 #include "./half.h"
 #include "./half2.h"
+#include "./bfloat.h"
+#define MSHADOW_HALF_BF_OPERATOR(RTYPE, OP)                                               \
+  MSHADOW_XINLINE RTYPE operator OP(mshadow::half::half_t a, mshadow::bfloat::bf16_t b) { \
+    return float(a) OP float(b); /* NOLINT(*) */                                          \
+  }                                                                                       \
+  MSHADOW_XINLINE RTYPE operator OP(mshadow::bfloat::bf16_t a, mshadow::half::half_t b) { \
+    return float(a) OP float(b); /* NOLINT(*) */                                          \
+  }
+
+/*! \brief overloaded + operator between half_t and bf16_t */
+MSHADOW_HALF_BF_OPERATOR(float, +)
+/*! \brief overloaded - operator between half_t and bf16_t */
+MSHADOW_HALF_BF_OPERATOR(float, -)
+/*! \brief overloaded * operator between half_t and bf16_t */
+MSHADOW_HALF_BF_OPERATOR(float, *)
+/*! \brief overloaded / operator between half_t and bf16_t */
+MSHADOW_HALF_BF_OPERATOR(float, /)
+/*! \brief overloaded > operator between half_t and bf16_t */
+MSHADOW_HALF_BF_OPERATOR(bool, >)
+/*! \brief overloaded < operator between half_t and bf16_t */
+MSHADOW_HALF_BF_OPERATOR(bool, <)
+/*! \brief overloaded >= operator between half_t and bf16_t */
+MSHADOW_HALF_BF_OPERATOR(bool, >=)
+/*! \brief overloaded <= operator between half_t and bf16_t */
+MSHADOW_HALF_BF_OPERATOR(bool, <=)
+
 #include "./logging.h"
 /*! \brief namespace for mshadow */
 namespace mshadow {
@@ -312,6 +334,11 @@ enum TypeFlag {
   kInt8  = 5,
   kInt64 = 6,
   kBool = 7,
+  kInt16 = 8,
+  kUint16 = 9,
+  kUint32 = 10,
+  kUint64 = 11,
+  kBfloat16 = 12
 };
 
 template<typename DType>
@@ -363,6 +390,11 @@ template<>
 struct DataType<half::half2_t> {
   static const int kFlag = kFloat16;
   static const int kLanes = 2;
+};
+template<>
+struct DataType<bfloat::bf16_t> {
+  static const int kFlag = kBfloat16;
+  static const int kLanes = 1;
 };
 template<>
 struct DataType<uint8_t> {
@@ -688,6 +720,11 @@ template<>
 MSHADOW_XINLINE half::half_t MinValue<half::half_t>(void) {
   return MSHADOW_HALF_MIN;
 }
+/*! \brief minimum value of bf16 */
+template<>
+MSHADOW_XINLINE bfloat::bf16_t MinValue<bfloat::bf16_t>(void) {
+  return MSHADOW_BF16_MIN;
+}
 /*! \brief minimum value of uint8_t */
 template<>
 MSHADOW_XINLINE uint8_t MinValue<uint8_t>(void) {
@@ -765,6 +802,11 @@ template<>
 MSHADOW_XINLINE half::half_t MaxValue<half::half_t>(void) {
   return MSHADOW_HALF_MAX;
 }
+/*! \brief maximum value of bf16 */
+template<>
+MSHADOW_XINLINE bfloat::bf16_t MaxValue<bfloat::bf16_t>(void) {
+  return MSHADOW_BF16_MAX;
+}
 /*! \brief maximum value of uint8_t */
 template<>
 MSHADOW_XINLINE uint8_t MaxValue<uint8_t>(void) {
@@ -793,7 +835,7 @@ MSHADOW_XINLINE bool MaxValue<bool>(void) {
 /*! \brief maximum value of uint32_t */
 template<>
 MSHADOW_XINLINE uint32_t MaxValue<uint32_t>(void) {
-  return -1;
+  return std::numeric_limits<uint32_t>::max();
 }
 
 /*!
@@ -998,6 +1040,61 @@ struct minimum {
 };
 }  // namespace red
 
+#ifndef __NVCC__
+#define MSHADOW_TYPE_SWITCH(type, DType, ...)       \
+  switch (type) {                                   \
+  case mshadow::kFloat32:                           \
+    {                                               \
+      typedef float DType;                          \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kFloat64:                           \
+    {                                               \
+      typedef double DType;                         \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kFloat16:                           \
+    {                                               \
+      typedef mshadow::half::half_t DType;          \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kBfloat16:                          \
+    {                                               \
+      typedef mshadow::bfloat::bf16_t DType;        \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kUint8:                             \
+    {                                               \
+      typedef uint8_t DType;                        \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kInt8:                              \
+    {                                               \
+      typedef int8_t DType;                         \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kInt32:                             \
+    {                                               \
+      typedef int32_t DType;                        \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kInt64:                             \
+    {                                               \
+      typedef int64_t DType;                        \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  default:                                          \
+    LOG(FATAL) << "Unknown type enum " << type;     \
+  }
+#else
 #define MSHADOW_TYPE_SWITCH(type, DType, ...)       \
   switch (type) {                                   \
   case mshadow::kFloat32:                           \
@@ -1045,6 +1142,7 @@ struct minimum {
   default:                                          \
     LOG(FATAL) << "Unknown type enum " << type;     \
   }
+#endif
 
 #define MSHADOW_TYPE_SWITCH_WITH_HALF2(type, DType, ...)  \
   switch (type) {                                         \
@@ -1147,6 +1245,57 @@ struct minimum {
     LOG(FATAL) << "Unknown type enum " << type;     \
   }
 
+#ifndef __NVCC__
+#define MSHADOW_REAL_TYPE_SWITCH_EX(type$, DType$, DLargeType$, ...)  \
+  switch (type$) {                                  \
+  case mshadow::kFloat32:                           \
+    {                                               \
+      typedef float DType$;                         \
+      typedef float DLargeType$;                    \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kFloat64:                           \
+    {                                               \
+      typedef double DType$;                        \
+      typedef double DLargeType$;                   \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kFloat16:                           \
+    {                                               \
+      typedef mshadow::half::half_t DType$;         \
+      typedef float DLargeType$;                    \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kBfloat16:                          \
+    {                                               \
+      typedef mshadow::bfloat::bf16_t DType$;       \
+      typedef float DLargeType$;                    \
+      {__VA_ARGS__}                                 \
+    }                                               \
+    break;                                          \
+  case mshadow::kUint8:                             \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types not uint8"; \
+    break;                                          \
+  case mshadow::kInt8:                              \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types not int8";  \
+    break;                                          \
+  case mshadow::kInt32:                             \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types, not int32";\
+    break;                                          \
+  case mshadow::kInt64:                             \
+    LOG(FATAL) << "This operation only support "    \
+                  "floating point types, not int64";\
+    break;                                          \
+  default:                                          \
+    LOG(FATAL) << "Unknown type enum " << type$;    \
+  }
+#else
 #define MSHADOW_REAL_TYPE_SWITCH_EX(type$, DType$, DLargeType$, ...)  \
   switch (type$) {                                  \
   case mshadow::kFloat32:                           \
@@ -1189,7 +1338,7 @@ struct minimum {
   default:                                          \
     LOG(FATAL) << "Unknown type enum " << type$;    \
   }
-
+#endif
 #define MSHADOW_LAYOUT_SWITCH(layout, Layout, ...)  \
   switch (layout) {                                 \
   case mshadow::kNCHW:                              \
@@ -1253,6 +1402,12 @@ struct minimum {
   case mshadow::kFloat16:                                     \
     {                                                         \
       typedef mshadow::half::half_t DType;                    \
+      {__VA_ARGS__}                                           \
+    }                                                         \
+    break;                                                    \
+  case mshadow::kBfloat16:                                    \
+    {                                                         \
+      typedef mshadow::bfloat::bf16_t DType;                  \
       {__VA_ARGS__}                                           \
     }                                                         \
     break;                                                    \

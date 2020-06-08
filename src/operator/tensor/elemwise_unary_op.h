@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <utility>
 #include <algorithm>
 #include <climits>
@@ -250,6 +251,30 @@ class UnaryOp : public OpBase {
         }
       });
     });
+  }
+
+  template<typename xpu, typename OP>
+  static void ComputeMixedType(const nnvm::NodeAttrs& attrs,
+                               const OpContext& ctx,
+                               const std::vector<TBlob>& inputs,
+                               const std::vector<OpReqType>& req,
+                               const std::vector<TBlob>& outputs) {
+    mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+
+    if (mxnet::common::is_float(inputs[0].type_flag_)) {
+      UnaryOp::Compute<xpu, OP>(attrs, ctx, inputs, req, outputs);
+    } else {
+      MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        MXNET_INT_TYPE_SWITCH(inputs[0].type_flag_, IType, {
+          MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+            if (inputs[0].Size() != 0) {
+              mxnet_op::Kernel<mxnet_op::mixed_type_unary_op<OP, Req>, xpu>::Launch(
+                s, inputs[0].Size(), outputs[0].dptr<DType>(), inputs[0].dptr<IType>());
+            }
+          });
+        });
+      });
+    }
   }
 
   template<typename xpu, typename OP>
@@ -495,7 +520,7 @@ struct HardSigmoidParam : public dmlc::Parameter<HardSigmoidParam> {
 template<int req>
 struct hard_sigmoid_forward {
   template<typename DType>
-    MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+    MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
                                     const real_t alpha, const real_t beta) {
       DType result = DType(alpha * in_data[i] + beta);
       result = (DType(1) < result) ? DType(1) : result;
@@ -507,7 +532,7 @@ struct hard_sigmoid_forward {
 template<int req>
 struct hard_sigmoid_backward {
   template<typename DType>
-    MSHADOW_XINLINE static void Map(int i, DType* in_grad, const DType* in_data,
+    MSHADOW_XINLINE static void Map(index_t i, DType* in_grad, const DType* in_data,
                                     const DType* out_grad, const real_t alpha, const real_t beta) {
       DType out_val = DType(alpha) * in_data[i] + DType(beta);
       DType grad = (out_val > DType(0) && out_val < DType(1)) ?
@@ -601,6 +626,11 @@ struct AroundParam : public dmlc::Parameter<AroundParam> {
     DMLC_DECLARE_FIELD(decimals)
       .set_default(0)
       .describe("Number of decimal places to round to.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream decimals_s;
+    decimals_s << decimals;
+    (*dict)["decimal"] = decimals_s.str();
   }
 };
 
@@ -703,6 +733,17 @@ struct NumpyNanToNumParam : public dmlc::Parameter<NumpyNanToNumParam> {
     .describe("Value to be used to fill negative infinity values."
               "If no value is passed then negative infinity values"
               "will be replaced with a very small (or negative) number.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream copy_s, nan_s, posinf_s, neginf_s;
+    copy_s << copy;
+    nan_s << nan;
+    posinf_s << posinf;
+    neginf_s << neginf;
+    (*dict)["copy"] = copy_s.str();
+    (*dict)["nan"] = nan_s.str();
+    (*dict)["posinf"] = posinf_s.str();
+    (*dict)["neginf"] = neginf_s.str();
   }
 };
 

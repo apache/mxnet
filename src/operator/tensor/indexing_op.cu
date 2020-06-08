@@ -486,7 +486,7 @@ void GatherNDForwardGPU(const nnvm::NodeAttrs& attrs,
     strides[i] = stride;
     mshape[i] = dshape[i];
   }
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {  // output data type switch
     MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
       // check whether indices are out of bound
       IType* idx_ptr = inputs[1].dptr<IType>();
@@ -550,8 +550,8 @@ void TakeOpForward<gpu>(const nnvm::NodeAttrs& attrs,
   Stream<gpu> *s = ctx.get_stream<gpu>();
   const int actual_axis = param.axis + ((param.axis < 0) ? arrshape.ndim() : 0);
 
-  MSHADOW_TYPE_SWITCH(outputs[take_::kOut].type_flag_, DType, {  // output data type
-    MSHADOW_TYPE_SWITCH(inputs[take_::kIdx].type_flag_, IType, {  // index data type
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[take_::kOut].type_flag_, DType, {  // output data type
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[take_::kIdx].type_flag_, IType, {  // index data type
       if (param.mode == take_::kRaise) {
         // check out-of-bound indices
         IType min = 0;

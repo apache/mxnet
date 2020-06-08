@@ -1,72 +1,59 @@
-if(NOT MSVC)
-  set(UNITTEST_STATIC_LINK ON)
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+# Explicitly set GENERATED property https://gitlab.kitware.com/cmake/cmake/issues/18399
+set_property(SOURCE ${CMAKE_CURRENT_LIST_DIR}/../include/mxnet-cpp/op.h PROPERTY GENERATED 1)
+
+add_executable(test_regress_label test_regress_label.cpp)
+target_link_libraries(test_regress_label mxnet_cpp)
+
+add_executable(lenet lenet.cpp)
+target_link_libraries(lenet mxnet_cpp)
+
+add_executable(lenet_with_mxdataiter lenet_with_mxdataiter.cpp)
+target_link_libraries(lenet_with_mxdataiter mxnet_cpp)
+
+add_executable(alexnet alexnet.cpp)
+target_link_libraries(alexnet mxnet_cpp)
+
+add_executable(charRNN charRNN.cpp)
+target_link_libraries(charRNN mxnet_cpp)
+
+add_executable(googlenet googlenet.cpp)
+target_link_libraries(googlenet mxnet_cpp)
+
+add_executable(inception_bn inception_bn.cpp)
+target_link_libraries(inception_bn mxnet_cpp)
+
+add_executable(mlp mlp.cpp)
+target_link_libraries(mlp mxnet_cpp)
+
+add_executable(mlp_cpu mlp_cpu.cpp)
+target_link_libraries(mlp_cpu mxnet_cpp)
+
+add_executable(mlp_gpu mlp_gpu.cpp)
+target_link_libraries(mlp_gpu mxnet_cpp)
+
+add_executable(resnet resnet.cpp)
+target_link_libraries(resnet mxnet_cpp)
+
+
+if(MSVC)
+  add_custom_target(cpp_package_deploy_library ALL
+    DEPENDS mxnet
+    COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mxnet> $<TARGET_FILE_DIR:mlp>)
 endif()
-
-set(CPP_EXAMPLE_LIBS
-  ${BEGIN_WHOLE_ARCHIVE} mxnet_static ${END_WHOLE_ARCHIVE}
-  ${BEGIN_WHOLE_ARCHIVE} dmlc ${END_WHOLE_ARCHIVE}
-  ${mxnet_LINKER_LIBS}
-  )
-
-set(CPP_PACKAGE_INCLUDE_DIR ${CMAKE_CURRENT_LIST_DIR}/../include/mxnet-cpp/)
-
-set(CPPEX_DEPS cpp_package_op_h)
-
-file(GLOB_RECURSE CPP_PACKAGE_HEADERS
-  "${CPP_PACKAGE_INCLUDE_DIR}/*.h"
-  "${CPP_PACKAGE_INCLUDE_DIR}/*.hpp"
-  )
-
-if (MSVC)
- add_custom_target(
-   cpp_package_deploy_library ALL
-   DEPENDS mxnet
-   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:mxnet> $<TARGET_FILE_DIR:mlp>
- )
-endif()
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/../include)
-
-add_executable(test_regress_label test_regress_label.cpp ${CPP_PACKAGE_HAEDERS})
-target_link_libraries(test_regress_label ${CPP_EXAMPLE_LIBS})
-add_dependencies(test_regress_label ${CPPEX_DEPS})
-
-add_executable(lenet lenet.cpp ${CPP_PACKAGE_HEADERS})
-target_link_libraries(lenet ${CPP_EXAMPLE_LIBS})
-add_dependencies(lenet ${CPPEX_DEPS})
-
-add_executable(lenet_with_mxdataiter lenet_with_mxdataiter.cpp ${CPP_PACKAGE_HEADERS})
-target_link_libraries(lenet_with_mxdataiter ${CPP_EXAMPLE_LIBS})
-add_dependencies(lenet_with_mxdataiter ${CPPEX_DEPS})
-
-add_executable(alexnet alexnet.cpp ${CPP_PACKAGE_HEADERS})
-target_link_libraries(alexnet ${CPP_EXAMPLE_LIBS})
-add_dependencies(alexnet ${CPPEX_DEPS})
-
-add_executable(charRNN charRNN.cpp ${CPP_PACKAGE_HEADERS})
-target_link_libraries(charRNN ${CPP_EXAMPLE_LIBS})
-add_dependencies(charRNN ${CPPEX_DEPS})
-
-add_executable(googlenet googlenet.cpp ${CPP_PACKAGE_HEADERS})
-target_link_libraries(googlenet ${CPP_EXAMPLE_LIBS})
-add_dependencies(googlenet ${CPPEX_DEPS})
-
-add_executable(inception_bn inception_bn.cpp ${CPP_PACKAGE_HEADERS})
-target_link_libraries(inception_bn ${CPP_EXAMPLE_LIBS})
-add_dependencies(inception_bn ${CPPEX_DEPS})
-
-add_executable(mlp mlp.cpp ${CPP_PACKAGE_HEADERS})
-target_link_libraries(mlp ${CPP_EXAMPLE_LIBS})
-add_dependencies(mlp ${CPPEX_DEPS})
-
-add_executable(mlp_cpu mlp_cpu.cpp ${CPP_PACKAGE_HEADERS})
-target_link_libraries(mlp_cpu ${CPP_EXAMPLE_LIBS})
-add_dependencies(mlp_cpu ${CPPEX_DEPS})
-
-add_executable(mlp_gpu mlp_gpu.cpp ${CPP_PACKAGE_HEADERS})
-target_link_libraries(mlp_gpu ${CPP_EXAMPLE_LIBS})
-add_dependencies(mlp_gpu ${CPPEX_DEPS})
-
-add_executable(resnet resnet.cpp ${CPP_PACKAGE_HEADERS})
-target_link_libraries(resnet ${CPP_EXAMPLE_LIBS})
-add_dependencies(resnet ${CPPEX_DEPS})

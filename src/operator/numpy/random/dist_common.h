@@ -143,33 +143,60 @@ template <typename DistParam>
 inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
                                  std::vector<TShape> *in_attrs,
                                  std::vector<TShape> *out_attrs) {
+  // The inferShape function for sampling Ops has two modes: Concat/Broadcast,
+  // if size[0] == -2, the Concat schema will be selected:
+  // output_size = (size[1:],) + broadcast(param1.shape, param2.shape)
+  // otherwise output_size = broadcast(param1.shape, param2.shape, size)
   const DistParam &param = nnvm::get<DistParam>(attrs.parsed);
+  // Variable indicating the mode.
+  bool concat_mode = false;
+  // Variable storing the info from `size` parameter.
+  std::vector<dim_t> oshape_vec;
   if (param.size.has_value()) {
     // Size declared.
-    std::vector<dim_t> oshape_vec;
     const mxnet::Tuple<int> &size = param.size.value();
-    for (int i = 0; i < size.ndim(); ++i) {
+    int head = size[0];
+    if (head == -2) {
+      concat_mode = true;
+    } else {
+      oshape_vec.emplace_back(head);
+    }
+    for (int i = 1; i < size.ndim(); ++i) {
       oshape_vec.emplace_back(size[i]);
     }
+    // If under the broadcast mode, `size` is equivalent to the final output_size.
+    if (!concat_mode) {
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec));
     for (size_t input_idx = 0; input_idx < in_attrs->size(); input_idx++) {
       CheckBroadcastable((*in_attrs)[input_idx], (*out_attrs)[0]);
+      }
     }
-  } else {
-    // Size undeclared.
+  }
+  // Under concat mode, or `size` is not declared.
+  if (concat_mode || (!param.size.has_value())) {
+    // broadcast(param1.shape, param2.shape).
+    mxnet::TShape param_broadcast_shape;
     if (in_attrs->size() == 2U) {
       // Both params from ndarray.
-      mxnet::TShape &low = (*in_attrs)[0];
-      mxnet::TShape &high = (*in_attrs)[1];
-      mxnet::TShape out(std::max(low.ndim(), high.ndim()), -1);
-      InferBroadcastShape(low, high, &out);
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, out);
+      mxnet::TShape &param1 = (*in_attrs)[0];
+      mxnet::TShape &param2 = (*in_attrs)[1];
+      mxnet::TShape out(std::max(param1.ndim(), param2.ndim()), -1);
+      InferBroadcastShape(param1, param2, &out);
+      param_broadcast_shape = out;
     } else if (in_attrs->size() == 1U) {
       // One param from ndarray.
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_attrs->at(0))
+      param_broadcast_shape = in_attrs->at(0);
     } else if (in_attrs->size() == 0) {
       // Two scalar case.
-      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(0, -1))
+      param_broadcast_shape = TShape(0, -1);
+    }
+    if (concat_mode) {
+      for (int i = 0; i < param_broadcast_shape.ndim(); ++i) {
+        oshape_vec.emplace_back(param_broadcast_shape[i]);
+      }
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, TShape(oshape_vec));
+    } else {
+      SHAPE_ASSIGN_CHECK(*out_attrs, 0, param_broadcast_shape);
     }
   }
   if (out_attrs->size() == 2U) {

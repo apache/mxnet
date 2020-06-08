@@ -17,12 +17,131 @@
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
 
-from __future__ import absolute_import
+import numpy as _np
 from . import _op as _mx_nd_np
-from . import _internal as _npi
+from . import _api_internal
 
-__all__ = ['norm', 'svd', 'cholesky', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve', 'pinv',
-           'eigvals', 'eig', 'eigvalsh', 'eigh']
+__all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
+           'pinv', 'eigvals', 'eig', 'eigvalsh', 'eigh', 'lstsq', 'matrix_rank']
+
+
+def matrix_rank(M, tol=None, hermitian=False):
+    """
+    Return matrix rank of array using SVD method
+
+    Rank of the array is the number of singular values of the array that are
+    greater than `tol`.
+
+    Parameters
+    M : {(M,), (..., M, N)} ndarray
+        Input vector or stack of matrices.
+    tol : (...) ndarray, float, optional
+        Threshold below which SVD values are considered zero. If `tol` is
+        None, and ``S`` is an array with singular values for `M`, and
+        ``eps`` is the epsilon value for datatype of ``S``, then `tol` is
+        set to ``S.max() * max(M.shape) * eps``.
+    hermitian : bool, optional
+        If True, `M` is assumed to be Hermitian (symmetric if real-valued),
+        enabling a more efficient method for finding singular values.
+        Defaults to False.
+
+    Returns
+    -------
+    rank : (...) ndarray
+        Rank of M.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> np.matrix_rank(np.eye(4)) # Full rank matrix
+    4
+    >>> I=np.eye(4); I[-1,-1] = 0. # rank deficient matrix
+    >>> np.matrix_rank(I)
+    3
+    >>> np.matrix_rank(np.ones((4,))) # 1 dimension - rank 1 unless all 0
+    1
+    >>> np.matrix_rank(np.zeros((4,)))
+    0
+    """
+    finfo_eps_32 = _np.finfo(_np.float32).eps
+    finfo_eps_64 = _np.finfo(_np.float64).eps
+    if hermitian is True:
+        raise NotImplementedError("hermitian is not supported yet...")
+    return _api_internal.matrix_rank(M, tol, hermitian, finfo_eps_32, finfo_eps_64)
+
+
+def lstsq(a, b, rcond='warn'):
+    r"""
+    Return the least-squares solution to a linear matrix equation.
+
+    Solves the equation :math:`a x = b` by computing a vector `x` that
+    minimizes the squared Euclidean 2-norm :math:`\| b - a x \|^2_2`.
+    The equation may be under-, well-, or over-determined (i.e., the
+    number of linearly independent rows of `a` can be less than, equal
+    to, or greater than its number of linearly independent columns).
+    If `a` is square and of full rank, then `x` (but for round-off error)
+    is the "exact" solution of the equation.
+
+    Parameters
+    ----------
+    a : (M, N) ndarray
+        "Coefficient" matrix.
+    b : {(M,), (M, K)} ndarray
+        Ordinate or "dependent variable" values. If `b` is two-dimensional,
+        the least-squares solution is calculated for each of the `K` columns
+        of `b`.
+    rcond : float, optional
+        Cut-off ratio for small singular values of `a`.
+        For the purposes of rank determination, singular values are treated
+        as zero if they are smaller than `rcond` times the largest singular
+        value of `a`
+        The default of ``warn`` or ``-1`` will use the machine precision as
+        `rcond` parameter. The default of ``None`` will use the machine
+        precision times `max(M, N)`.
+
+    Returns
+    -------
+    x : {(N,), (N, K)} ndarray
+        Least-squares solution. If `b` is two-dimensional,
+        the solutions are in the `K` columns of `x`.
+    residuals : {(1,), (K,), (0,)} ndarray
+        Sums of residuals.
+        Squared Euclidean 2-norm for each column in ``b - a*x``.
+        If the rank of `a` is < N or M <= N, this is an empty array.
+        If `b` is 1-dimensional, this is a (1,) shape array.
+        Otherwise the shape is (K,).
+    rank : int
+        Rank of matrix `a`.
+    s : (min(M, N),) ndarray
+        Singular values of `a`.
+
+    Raises
+    ------
+    MXNetError
+        If computation does not converge.
+
+    Notes
+    -----
+    If `b` is a matrix, then all array results are returned as matrices.
+
+    Examples
+    --------
+    >>> x = np.array([0, 1, 2, 3])
+    >>> y = np.array([-1, 0.2, 0.9, 2.1])
+    >>> A = np.vstack([x, np.ones(len(x))]).T
+    >>> A
+    array([[ 0.,  1.],
+           [ 1.,  1.],
+           [ 2.,  1.],
+           [ 3.,  1.]])
+    >>> m, c = np.linalg.lstsq(A, y, rcond=None)[0]
+    >>> m, c
+    (1.0 -0.95) # may vary
+    """
+    finfo_eps_32 = _np.finfo(_np.float32).eps
+    finfo_eps_64 = _np.finfo(_np.float64).eps
+    x, residuals, rank, s = _api_internal.lstsq(a, b, rcond, finfo_eps_32, finfo_eps_64)
+    return (x, residuals, rank, s)
 
 
 def pinv(a, rcond=1e-15, hermitian=False):
@@ -92,9 +211,7 @@ def pinv(a, rcond=1e-15, hermitian=False):
     """
     if hermitian is True:
         raise NotImplementedError("hermitian is not supported yet...")
-    if _mx_nd_np._np.isscalar(rcond):
-        return _npi.pinv_scalar_rcond(a, rcond, hermitian)
-    return _npi.pinv(a, rcond, hermitian)
+    return _api_internal.pinv(a, rcond, hermitian)
 
 
 # pylint: disable=too-many-return-statements
@@ -212,7 +329,7 @@ def norm(x, ord=None, axis=None, keepdims=False):
     (array(3.7416573), array(11.224973))
     """
     if axis is None and ord is None:
-        return _npi.norm(x, ord=2, axis=None, keepdims=keepdims, flag=-2)
+        return _api_internal.norm(x, 2, None, keepdims, -2)
     if axis is None or isinstance(axis, (int, tuple)):  # pylint: disable=too-many-nested-blocks
         if axis is not None:
             if isinstance(axis, int):
@@ -237,23 +354,23 @@ def norm(x, ord=None, axis=None, keepdims=False):
                     elif ord == -1:
                         return _mx_nd_np.sum(_mx_nd_np.abs(x), axis=row_axis, keepdims=keepdims).min(axis=col_axis, keepdims=keepdims)  # pylint: disable=line-too-long
                 if ord in [2, -2]:
-                    return _npi.norm(x, ord=ord, axis=axis, keepdims=keepdims, flag=0)
+                    return _api_internal.norm(x, ord, axis, keepdims, 0)
                 if ord is None:
-                    return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
+                    return _api_internal.norm(x, 2, axis, keepdims, 1)
         if ord == 'inf':
             return _mx_nd_np.max(_mx_nd_np.abs(x), axis=axis, keepdims=keepdims)
         elif ord == '-inf':
             return _mx_nd_np.min(_mx_nd_np.abs(x), axis=axis, keepdims=keepdims)
         elif ord is None:
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
+            return _api_internal.norm(x, 2, axis, keepdims, 1)
         elif ord == 2:
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=-1)
+            return _api_internal.norm(x, 2, axis, keepdims, -1)
         elif ord == 'nuc':
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=2)
+            return _api_internal.norm(x, 2, axis, keepdims, 2)
         elif ord in ['fro', 'f']:
-            return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
+            return _api_internal.norm(x, 2, axis, keepdims, 1)
         else:
-            return _npi.norm(x, ord=ord, axis=axis, keepdims=keepdims, flag=-1)
+            return _api_internal.norm(x, ord, axis, keepdims, -1)
     else:
         raise TypeError("'axis' must be None, an integer or a tuple of integers.")
 # pylint: enable=too-many-return-statements
@@ -330,7 +447,7 @@ def svd(a):
     >>> (ret - a < -1e-3).sum()
     array(0.)
     """
-    return tuple(_npi.svd(a))
+    return tuple(_api_internal.svd(a))
 
 
 def cholesky(a):
@@ -389,7 +506,66 @@ def cholesky(a):
     array([[16.,  4.],
            [ 4., 10.]])
     """
-    return _npi.cholesky(a)
+    return _api_internal.cholesky(a, True)
+
+
+def qr(a, mode='reduced'):
+    r"""
+    Compute the qr factorization of a matrix a.
+    Factor the matrix a as qr, where q is orthonormal and r is upper-triangular.
+
+    Parameters
+    ----------
+    a : (..., M, N) ndarray
+        Matrix or stack of matrices to be qr factored.
+    mode: {‘reduced’, ‘complete’, ‘r’, ‘raw’, ‘full’, ‘economic’}, optional
+        Only default mode, 'reduced', is implemented. If K = min(M, N), then
+        * 'reduced’ : returns q, r with dimensions (M, K), (K, N) (default)
+
+    Returns
+    -------
+    q : (..., M, K) ndarray
+        A matrix or stack of matrices with K orthonormal columns, with K = min(M, N).
+    r : (..., K, N) ndarray
+        A matrix or stack of upper triangular matrices.
+
+    Raises
+    ------
+    MXNetError
+        If factoring fails.
+
+    Examples
+    --------
+    >>> from mxnet import np
+    >>> a = np.random.uniform(-10, 10, (2, 2))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.22121978, -0.97522414],
+           [-0.97522414,  0.22121954]])
+    >>> r
+    array([[-4.4131265 , -7.1255064 ],
+           [ 0.        , -0.28771925]])
+    >>> a = np.random.uniform(-10, 10, (2, 3))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.28376842, -0.9588929 ],
+           [-0.9588929 ,  0.28376836]])
+    >>> r
+    array([[-7.242763  , -0.5673361 , -2.624416  ],
+           [ 0.        , -7.297918  , -0.15949416]])
+    >>> a = np.random.uniform(-10, 10, (3, 2))
+    >>> q, r = np.linalg.qr(a)
+    >>> q
+    array([[-0.34515655,  0.10919492],
+           [ 0.14765628, -0.97452265],
+           [-0.92685735, -0.19591334]])
+    >>> r
+    array([[-8.453794,  8.4175  ],
+           [ 0.      ,  5.430561]])
+    """
+    if mode is not None and mode != 'reduced':
+        raise NotImplementedError("Only default mode='reduced' is implemented.")
+    return tuple(_api_internal.qr(a))
 
 
 def inv(a):
@@ -431,7 +607,7 @@ def inv(a):
            [[-1.2500001 ,  0.75000006],
             [ 0.75000006, -0.25000003]]])
     """
-    return _npi.inv(a)
+    return _api_internal.inv(a)
 
 
 def det(a):
@@ -475,7 +651,7 @@ def det(a):
     >>> np.linalg.det(a)
     array([-2., -3., -8.])
     """
-    return _npi.det(a)
+    return _api_internal.det(a)
 
 
 def slogdet(a):
@@ -541,7 +717,7 @@ def slogdet(a):
     >>> np.linalg.slogdet(np.eye(500) * 0.1)
     (1., -1151.2925464970228)
     """
-    return _npi.slogdet(a)
+    return tuple(_api_internal.slogdet(a))
 
 
 def solve(a, b):
@@ -595,7 +771,7 @@ def solve(a, b):
     >>> np.allclose(np.dot(a, x), b)
     True
     """
-    return _npi.solve(a, b)
+    return _api_internal.solve(a, b)
 
 
 def tensorinv(a, ind=2):
@@ -650,7 +826,7 @@ def tensorinv(a, ind=2):
     >>> np.allclose(np.tensordot(ainv, b, 1), np.linalg.tensorsolve(a, b))
     True
     """
-    return _npi.tensorinv(a, ind)
+    return _api_internal.tensorinv(a, ind)
 
 
 def tensorsolve(a, b, axes=None):
@@ -698,7 +874,7 @@ def tensorsolve(a, b, axes=None):
     >>> np.allclose(np.tensordot(a, x, axes=3), b)
     True
     """
-    return _npi.tensorsolve(a, b, axes)
+    return _api_internal.tensorsolve(a, b, axes)
 
 
 def eigvals(a):
@@ -766,7 +942,7 @@ def eigvals(a):
     >>> LA.eigvals(A)
     array([ 1., -1.]) # random
     """
-    return _npi.eigvals(a)
+    return _api_internal.eigvals(a)
 
 
 def eigvalsh(a, UPLO='L'):
@@ -825,7 +1001,7 @@ def eigvalsh(a, UPLO='L'):
     >>> LA.eigvalsh(a, UPLO='L')
     array([-2.87381886,  5.10144682,  6.38623114]) # in ascending order
     """
-    return _npi.eigvalsh(a, UPLO)
+    return _api_internal.eigvalsh(a, UPLO)
 
 
 def eig(a):
@@ -893,7 +1069,7 @@ def eig(a):
            [ 0.13086087, -0.04077047, -0.9325615 ],
            [ 0.4021404 , -0.29585576,  0.26117516]])
     """
-    w, v = _npi.eig(a)
+    w, v = _api_internal.eig(a)
     return (w, v)
 
 
@@ -961,5 +1137,5 @@ def eigh(a, UPLO='L'):
            [ 0.8242942 ,  0.56326365, -0.05721384],
            [-0.53661287,  0.80949366,  0.23825769]])
     """
-    w, v = _npi.eigh(a, UPLO)
+    w, v = _api_internal.eigh(a, UPLO)
     return (w, v)

@@ -15,6 +15,10 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
+# v1.7.0
+# v2.0.0
+
+
 # v1.6.0
 
 * Add an abstract type `AbstractMXError` as the parent type for all MXNet-related

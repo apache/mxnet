@@ -25,15 +25,17 @@
 #if MXNET_USE_CPP_PACKAGE == 1
 #include <stdio.h>
 #include <gtest/gtest.h>
-#include <mxnet/op_attr_types.h>
 #include <mxnet/ndarray.h>
-#include <thread>
+#include <mxnet/op_attr_types.h>
 #include <chrono>
 #include <cstdlib>
+#include <random>
+#include <thread>
 #include "../src/engine/engine_impl.h"
 #include "../src/imperative/imperative_utils.h"
 #include "../include/test_util.h"
 #include "mxnet-cpp/MxNetCpp.h"
+
 /*
  * Prepares input data for the ops/models used in this file
  */
@@ -298,8 +300,10 @@ void run_inference(const std::string& model,
       unsigned next = num;
       for (size_t i = 0; i < num_inf_per_thread; ++i) {
         if (random_sleep) {
-            int sleep_time = rand_r(&next) % 5;
-            std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
+          static thread_local std::mt19937 generator;
+          std::uniform_int_distribution<int> distribution(0, 5);
+          int sleep_time = distribution(generator);
+          std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
         }
         int num_output = 0;
         const int *stypes;
@@ -479,7 +483,9 @@ void run_inference_unsupported(const std::string& model,
       unsigned next = num;
       for (size_t i = 0; i < num_inf_per_thread; ++i) {
         if (random_sleep) {
-          int sleep_time = rand_r(&next) % 5;
+          static thread_local std::mt19937 generator;
+          std::uniform_int_distribution<int> distribution(0, 5);
+          int sleep_time = distribution(generator);
           std::this_thread::sleep_for(std::chrono::seconds(sleep_time));
         }
         int num_output = 0;

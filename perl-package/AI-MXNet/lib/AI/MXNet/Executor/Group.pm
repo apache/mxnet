@@ -340,7 +340,7 @@ sub BUILD
     $self->bind_exec($self->data_shapes, $self->label_shapes, $self->shared_group);
 }
 
-=decide_slices
+=head2 decide_slices
 
     Decide the slices for each context according to the workload.
 

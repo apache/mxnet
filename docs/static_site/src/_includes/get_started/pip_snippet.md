@@ -3,7 +3,7 @@ Check the chart below for other options, refer to <a href="https://pypi.org/proj
 other MXNet pip packages</a>, or <a href="/get_started/validate_mxnet.html">validate your MXNet installation</a>.
 
 <div style="text-align: center">
-    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.5.1.png"
+    <img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/install/pip-packages-1.6.0.png"
     alt="pip packages"/>
 </div>
 

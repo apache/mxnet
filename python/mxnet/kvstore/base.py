@@ -17,7 +17,6 @@
 
 # coding: utf-8
 """ Key value store interface of MXNet for parameter synchronization."""
-from __future__ import absolute_import
 
 from array import array
 import ctypes
@@ -314,6 +313,8 @@ class TestStore(KVStoreBase):
     def is_capable(capability):
         """Queries if the KVStore type supports certain capability, such as optimizer algorithm,
         gradient compression, sparsity, etc.
+        If the kvstore does not store weights in server part, then no optimizer is supported,
+        this function will return False.
 
         Parameters
         ----------
@@ -428,10 +429,15 @@ def create(name='local'):
     No two updates happen on the same weight at the same time. However, the order is not
     guaranteed.
 
+    ``byteps``: Use byteps as broadcast/pushpull backend.
+    This kind of kvstore doesn't store weights, thus there won't be optimizer in this kvstore server.
+    Byteps doesn't support pure cpu training, so be sure to enable gpu training when using this kvstore.
+
     Parameters
     ----------
-    name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async', 'horovod'}
+    name : {'local', 'device', 'nccl', 'dist_sync', 'dist_device_sync', 'dist_async', 'horovod', 'byteps'}
         The type of KVStore.
+
     Returns
     -------
     kv : KVStoreBase

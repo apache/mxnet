@@ -50,7 +50,8 @@ endif
 
 DEFS+=-DMSHADOW_USE_CUDA=0 -DMSHADOW_USE_MKL=0 -DMSHADOW_RABIT_PS=0 -DMSHADOW_DIST_PS=0 -DDMLC_LOG_STACK_TRACE=0
 DEFS+=-DMSHADOW_FORCE_STREAM -DMXNET_USE_OPENCV=0 -DMXNET_PREDICT_ONLY=1
-CFLAGS=-std=c++11 -Wno-unknown-pragmas -Wall $(DEFS)
+DEFS+=-DDMLC_USE_CXX11=1 -DDMLC_USE_CXX11=1 -DDMLC_USE_CXX14=1
+CFLAGS=-std=c++17 -Wno-unknown-pragmas -Wall $(DEFS)
 
 # if architecture of the CPU supports F16C instruction set, enable USE_F16C for fast fp16 computation on CPU
 ifeq ($(USE_F16C), 1)
@@ -63,7 +64,7 @@ ifneq ($(MIN), 1)
 	CFLAGS += -I${OPENBLAS_ROOT} -I${OPENBLAS_ROOT}/include
 	LDFLAGS+= -L${OPENBLAS_ROOT} -L${OPENBLAS_ROOT}/lib
 
-	# Define which blas is installed. Uses OpenBLAS by default.
+# Define which blas is installed. Uses OpenBLAS by default.
 	ifeq ($(USE_BLAS), atlas)
                 LDFLAGS += -lcblas
         else ifeq ($(USE_BLAS), blas)
@@ -120,7 +121,7 @@ else
 endif
 
 libmxnet_predict.js: mxnet_predict-all.cc
-	${EMCC} -std=c++11 -O2 $(DEFS) -DMSHADOW_USE_SSE=0 -D__MXNET_JS__  -o $@ $+ \
+	${EMCC} -std=c++17 -O2 $(DEFS) -DMSHADOW_USE_SSE=0 -D__MXNET_JS__  -o $@ $+ \
 	-s EXPORTED_FUNCTIONS="['_MXPredCreate', \
 	                        '_MXPredGetOutputShape', \
 	                        '_MXPredSetInput', \

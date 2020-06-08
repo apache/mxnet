@@ -40,6 +40,9 @@ Operator* CreateOp<gpu>(CaffeLossParam param, int dtype) {
   case mshadow::kFloat16:
     LOG(FATAL) << "float16 layer is not supported by caffe";
     break;
+  case mshadow::kBfloat16:
+    LOG(FATAL) << "bfloat16 layer is not supported by caffe";
+    break;
   default:
     LOG(FATAL) << "Unsupported type " << dtype;
   }

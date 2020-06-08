@@ -220,7 +220,7 @@ inline void AccessAsCPU(const TBlob& src,
 constexpr const size_t MPRINT_PRECISION = 5;
 template<typename DType>
 inline void fill(const RunContext &run_ctx, const TBlob& _blob, const DType val) {
-  AccessAsCPU(_blob, run_ctx, [&run_ctx, val](const TBlob& blob) {
+  AccessAsCPU(_blob, run_ctx, [val](const TBlob& blob) {
     MSHADOW_TYPE_SWITCH(blob.type_flag_, DTypeX, {
       DTypeX *p1 = blob.dptr<DTypeX>();
       for (size_t i = 0, n = blob.Size(); i < n; ++i) {
@@ -820,7 +820,8 @@ static void AssertEqual(const std::vector<NDArray *> &in_arrs,
         static_cast<mshadow::default_real_t *>(blob2.dptr_);
     for (int i = 0; i < tmp1.shape().Size(); i++) {
       float abs_err = fabs((d1[i]) - (d2[i]));
-      ASSERT_LE(abs_err, (atol + rtol * fabs(d2[i])));
+      ASSERT_LE(abs_err, (atol + rtol * fabs(d2[i])))
+          << "index: " << i << ", " << d1[i] << " vs " << d2[i];
     }
   }
 }

@@ -17,7 +17,7 @@
 
 import mxnet as mx
 import numpy as np
-import unittest
+import pytest
 import os
 import logging
 
@@ -35,7 +35,7 @@ if num_gpus > 8 :
 
 gpus = range(1, 1+num_gpus)
 
-@unittest.skipIf(mx.context.num_gpus() < 1, "test_device_pushpull needs at least 1 GPU")
+@pytest.mark.skipif(mx.context.num_gpus() < 1, reason="test_device_pushpull needs at least 1 GPU")
 def test_device_pushpull():
     def check_dense_pushpull(kv_type):
         for shape, key in zip(shapes, keys):

@@ -36,4 +36,4 @@ no_index:
     - inc
 requires:
   Test::More: '0'
-version: '1.4'
+version: '1.5'

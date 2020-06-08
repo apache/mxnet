@@ -221,6 +221,9 @@ class CaffeDataIterWrapper : public PrefetcherIter {
       case mshadow::kFloat16:
         LOG(FATAL) << "float16 layer is not supported by caffe";
         return;
+      case mshadow::kBfloat16:
+        LOG(FATAL) << "bfloat16 layer is not supported by caffe";
+        return;
       default:
         LOG(FATAL) << "Unsupported type " << this->param_.dtype.value();
         return;
@@ -268,4 +271,3 @@ MXNET_REGISTER_IO_ITER(CaffeDataIter)
 
 }  // namespace io
 }  // namespace mxnet
-

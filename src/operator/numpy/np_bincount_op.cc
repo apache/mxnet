@@ -112,7 +112,7 @@ NNVM_REGISTER_OP(_npi_bincount)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     const NumpyBincountParam& params =
-    nnvm::get<NumpyBincountParam>(attrs.parsed);
+      nnvm::get<NumpyBincountParam>(attrs.parsed);
     return params.has_weights ?
            std::vector<std::string>{"data", "weights"} :
            std::vector<std::string>{"data"};

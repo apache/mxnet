@@ -26,15 +26,15 @@ import org.apache.mxnet.NDArrayConversions._
  * http://arxiv.org/pdf/1308.0850v5.pdf Eq(38) - Eq(45) by Alex Graves, 2013.
  *
  * @param learningRate Float, Step size.
- * @param gamma1 Float, decay factor of moving average for gradient, gradient^^2.
- * @param gamma2 Float, momentum factor of moving average for gradient.
+ * @param rho Float, decay factor of moving average for gradient, gradient^^2.
+ * @param momentum Float, momentum factor of moving average for gradient.
  * @param rescaleGradient Float, rescaling factor of gradient.
  * @param wd Float, L2 regularization coefficient add to all the weights
  * @param clipGradient Float, clip gradient in range [-clip_gradient, clip_gradient]
  * @param lrScheduler The learning rate scheduler
  */
 class RMSProp(val learningRate: Float = 0.002f, rescaleGradient: Float = 1.0f,
-              gamma1: Float = 0.95f, gamma2: Float = 0.9f, wd: Float = 0.0f,
+              rho: Float = 0.95f, momentum: Float = 0.9f, wd: Float = 0.0f,
               lrScheduler: LRScheduler = null, clipGradient: Float = 0f) extends Optimizer {
 
   /**
@@ -57,18 +57,18 @@ class RMSProp(val learningRate: Float = 0.002f, rescaleGradient: Float = 1.0f,
       oldResdGrad.dispose()
     }
 
-    val nUpdated = ((1 - this.gamma1) * (resdGrad * resdGrad) + this.gamma1 * n)
+    val nUpdated = ((1 - this.rho) * (resdGrad * resdGrad) + this.rho * n)
       .disposeDepsExcept(resdGrad, n)
     n.set(nUpdated)
     nUpdated.dispose()
 
-    val gUpdated = ((1 - this.gamma1) * resdGrad + this.gamma1 * g)
+    val gUpdated = ((1 - this.rho) * resdGrad + this.rho * g)
       .disposeDepsExcept(resdGrad, g)
     g.set(gUpdated)
     gUpdated.dispose()
 
     val deltaUpdated =
-      (this.gamma2 * delta - lr * (resdGrad / NDArray.sqrt(n - g * g + 1e-4f) + wd * weight))
+      (this.momentum * delta - lr * (resdGrad / NDArray.sqrt(n - g * g + 1e-4f) + wd * weight))
       .disposeDepsExcept(delta, resdGrad, n, g, weight)
     delta.set(deltaUpdated)
     deltaUpdated.dispose()

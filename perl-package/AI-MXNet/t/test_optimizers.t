@@ -76,11 +76,12 @@ method update($index, $weight, $grad, $state)
     my $t = $self->_index_update_count->{$index};
     my ($mean, $variance) = @$state;
     my $wd = $self->_get_wd($index);
-    $grad = $grad * $self->rescale_grad + $wd * $weight;
+    $grad = $grad * $self->rescale_grad;
     if($self->clip_gradient)
     {
         mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient, out => $grad);
     }
+    $grad += $wd * $weight;
     $mean *= $self->beta1;
     $mean += $grad * (1 - $self->beta1);
 
@@ -109,11 +110,10 @@ method update($index, $weight, $grad, $state)
     learning_rate : float, optional
         Step size.
         Default value is set to 0.001.
-    gamma1: float, optional
+    rho: float, optional
         decay factor of moving average for gradient, gradient^2.
         Default value is set to 0.9.
-    gamma2: float, optional
-        "momentum" factor.
+    momentum: float, optional
         Default value if set to 0.9.
         Only used if centered=True
     epsilon : float, optional
@@ -134,8 +134,8 @@ package PerlRMSProp;
 use Mouse;
 extends 'AI::MXNet::Optimizer';
 has '+learning_rate' => (default => 0.001);
-has 'gamma1'         => (is => "ro", isa => "Num",  default => 0.9);
-has 'gamma2'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'rho'         => (is => "ro", isa => "Num",  default => 0.9);
+has 'momentum'         => (is => "ro", isa => "Num",  default => 0.9);
 has 'epsilon'        => (is => "ro", isa => "Num",  default => 1e-8);
 has 'centered'       => (is => "ro", isa => "Bool", default => 0);
 has 'clip_weights'   => (is => "ro", isa => "Num");
@@ -174,7 +174,7 @@ method update($index, $weight, $grad, $state)
     my $lr = $self->_get_lr($index);
     my $wd = $self->_get_wd($index);
     $self->_update_count($index);
-    $grad = $grad * $self->rescale_grad + $wd * $weight;
+    $grad = $grad * $self->rescale_grad;
     if(not $self->centered)
     {
         my ($n) = @$state;
@@ -182,8 +182,9 @@ method update($index, $weight, $grad, $state)
         {
             $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
         }
-        $n .= (1 - $self->gamma1) * ($grad * $grad) + $self->gamma1 * $n;
-        $weight -= $lr * $grad/(mx->nd->sqrt($n + $self->epsilon));
+        $grad += $wd * $weight;
+        $n .= (1 - $self->rho) * ($grad * $grad) + $self->rho * $n;
+        $weight -= $lr * $grad/(mx->nd->sqrt($n) + $self->epsilon);
     }
     else
     {
@@ -192,9 +193,10 @@ method update($index, $weight, $grad, $state)
         {
             $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
         }
-        $n .= (1 - $self->gamma1) * ($grad * $grad) + $self->gamma1 * $n;
-        $g .= (1 - $self->gamma1) * $grad + $self->gamma1 * $g;
-        $delta .= ($self->gamma2) * $delta - $lr * $grad/(mx->nd->sqrt($n - $g*$g + $self->epsilon));
+        $grad += $wd * $weight;
+        $n .= (1 - $self->rho) * ($grad * $grad) + $self->rho * $n;
+        $g .= (1 - $self->rho) * $grad + $self->rho * $g;
+        $delta .= ($self->momentum) * $delta - $lr * $grad/(mx->nd->sqrt($n - $g*$g + $self->epsilon));
         $weight += $delta;
     }
     if($self->clip_weights)
@@ -443,12 +445,13 @@ method update($index, $weight, $grad, $state)
         }
         else
         {
+            $grad += $wd * $weight;
             my $mom = $state;
             $mom *= $self->momentum;
-            $grad += $wd * $weight;
-            $mom += $grad;
+            $mom -= $lr * $grad;
+            $grad *= -$lr;
             $grad += $self->momentum * $mom;
-            $weight += -$lr * $grad;
+            $weight += $grad;
         }
     }
     else
@@ -467,11 +470,12 @@ method update($index, $weight, $grad, $state)
         }
         else
         {
-            $mom *= $self->momentum;
             $grad32 += $wd * $weight32;
-            $mom += $grad32;
+            $mom *= $self->momentum;
+            $mom -= $lr * $grad32;
+            $grad32 *= -$lr;
             $grad32 += $self->momentum * $mom;
-            $weight32 += -$lr * $grad32;
+            $weight32 += $grad32;
         }
         my $tmp = $weight32->astype($weight->dtype);
         $tmp->copyto($weight);
@@ -499,11 +503,12 @@ method update($index, $weight, $grad, $state)
     my $wd = $self->_get_wd($index);
     my $t = $self->_index_update_count->{$index};
 
-    my $grad = $grad * $self->rescale_grad + $wd * $weight;
+    my $grad = $grad * $self->rescale_grad;
     if(defined $self->clip_gradient)
     {
         $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
     }
+    $grad += $wd * $weight;
     # get previous states
     my ($prev_d, $prev_v, $prev_z) = @{ $state };
     # compute states
@@ -604,8 +609,8 @@ method update($index, $weight, $grad, $state)
         $n->at($row) += $grad_row * $grad_row;
 
         # update weight
-        $weight->at($row) .= (mx->nd->sign($dn->at($row)) * $self->lamda1 - $dn->at($row)) /
-                          (($self->beta + mx->nd->sqrt($n->at($row))) / $lr + $wd) * (mx->nd->abs($dn->at($row)) > $self->lamda1);
+        $weight->at($row) .= - mx->nd->sign($dn->at($row)) * (mx->nd->abs($dn->at($row)) - $self->lamda1)->maximum(0) /
+                          (($self->beta + mx->nd->sqrt($n->at($row))) / $lr + $wd);
     }
 }
 
@@ -613,7 +618,7 @@ package PerlAdaGrad;
 use Mouse;
 extends 'AI::MXNet::Optimizer';
 
-has 'eps' => (is => 'rw', default => 1e-7);
+has 'epsilon' => (is => 'rw', default => 1e-7);
 method create_state($index, $weight)
 {
     mx->nd->zeros($weight->shape, ctx => $weight->context, stype => $weight->stype);
@@ -631,9 +636,10 @@ method update($index, $weight, $grad, $state)
     {
         $grad = mx->nd->clip($grad, -$self->clip_gradient, $self->clip_gradient);
     }
+    $grad += $wd * $weight;
     $history += mx->nd->square($grad);
-    my $div = $grad / mx->nd->sqrt($history + $self->eps);
-    $weight += ($div + $weight * $wd) * -$lr;
+    my $div = $grad / (mx->nd->sqrt($history) + $self->epsilon);
+    $weight -= $lr * $div;
 }
 
 package main;
@@ -1052,7 +1058,7 @@ sub test_adagrad
     my $opt1 = 'PerlAdaGrad';
     my $opt2 = mx->optimizer->AdaGrad;
     my $shape = [3, 4, 5];
-    my @eps_options= ({}, {eps => 1e-9});
+    my @eps_options= ({}, {epsilon => 1e-9});
     my @cg_options = ({}, {clip_gradient => 0.4}, {clip_gradient => 0.5});
     my @rg_options = ({}, {rescale_grad  => 0.14}, {rescale_grad => 0.8});
     my @wd_options = ({}, {wd => 0});
@@ -1072,11 +1078,11 @@ sub test_adagrad
                         %kwarg = (%kwarg, %$rg_option);
                         %kwarg = (%kwarg, %$wd_option);
                         compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype);
-                        if(($wd_option->{wd}//0) == 0)
-                        {
-                            compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype, 'row_sparse', 'row_sparse');
-                            compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype, 'default', 'row_sparse');
-                        }
+			if($wd_option->{wd} == 0)
+			{
+			    compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype, 'row_sparse', 'row_sparse');
+			    compare_optimizer($opt1->new(%kwarg), $opt2->new(%kwarg), $shape, $dtype, 'default', 'row_sparse');
+			}
                     }
                 }
             }

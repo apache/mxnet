@@ -120,12 +120,14 @@ def test_blockscope():
         def __init__(self, prefix):
             self.prefix = prefix
             self._empty_prefix = False
+            self._profiler_scope_name = '<unk>:'
     blockscope_list = []
     status = [False]
     event = threading.Event()
     def f():
-        with block._BlockScope(dummy_block("spawned_")):
-            x= NameManager.current.get(None, "hello")
+        net = dummy_block("spawned_")  # BlockScope only keeps a weakref to the Block
+        with block._BlockScope(net):
+            x = NameManager.current.get(None, "hello")
             event.wait()
             if x == "spawned_hello0":
                 status[0] = True
@@ -219,6 +221,38 @@ def test_np_global_shape():
         assert_almost_equal(data[1].asnumpy(), np.ones(shape=(0, 1, 2)))
     finally:
         set_np_shape(0)
+
+def test_blockscope_multithread():
+    event = threading.Event()
+    status = [False]
+
+    class dummy_block(object):
+        def __init__(self, prefix):
+            self.prefix = prefix
+            self._profiler_scope_name = prefix
+            self._empty_prefix = False
+    
+    def f(scope):
+        try:
+            with scope:
+                event.wait()
+        except:
+            status[0] = True
+
+    def g(scope):
+        with scope:
+            pass
+        event.set()
+
+    scope = block._BlockScope(dummy_block("scope_"))
+    count = 2
+    threads = [threading.Thread(target=f, args=(scope,)),
+               threading.Thread(target=g, args=(scope,))]
+    for i in range(count):
+        threads[i].start()
+    for i in range(count):
+        threads[i].join()
+    assert status[0] is False, "_BlockScope does not work with multithread"
 
 
 if __name__ == '__main__':

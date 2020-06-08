@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """VGG, implemented in Gluon."""
-from __future__ import division
 __all__ = ['VGG',
            'vgg11', 'vgg13', 'vgg16', 'vgg19',
            'vgg11_bn', 'vgg13_bn', 'vgg16_bn', 'vgg19_bn',

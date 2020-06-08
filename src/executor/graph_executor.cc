@@ -302,28 +302,15 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
   }
 }
 
-template<typename ValueType>
-inline ValueType get_node_attr(
-    const nnvm::Node& node,
-    const std::string& key, ValueType default_value) {
-  auto it = node.attrs.dict.find(key);
-  if (it == node.attrs.dict.end()) {
-    return default_value;
-  } else {
-    ValueType ret;
-    dmlc::parameter::FieldEntry<ValueType> e;
-    e.Init(key, &ret, ret);
-    e.Set(&ret, it->second);
-    return ret;
-  }
-}
 
 /*!
  * \brief Create the graph for backward pass.
  * This is triggered by both simple_bind and bind flows.
  */
 nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
-                                         const std::vector<OpReqType>& grad_req_types) {
+                                         const std::vector<OpReqType>& grad_req_types,
+                                         const ShapeVector& in_arg_shapes,
+                                         const nnvm::DTypeVector& in_arg_dtypes) {
   using nnvm::ObjectPtr;
   using nnvm::NodeEntry;
   // initial information
@@ -342,7 +329,9 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   if (!need_grad_) return g;
   for (size_t i = 0; i < g.outputs.size(); ++i) {
     NodeEntry ngrad(nnvm::Node::Create(), 0, 0);
-    ngrad.node->attrs.name = "_head_grad_" + std::to_string(i);
+    const nnvm::NodeAttrs& attrs = g.outputs[i].node->attrs;
+    ngrad.node->attrs.name = attrs.name + "_head_grad";
+    ngrad.node->attrs.dict["__profiler_scope__"] = common::NodeAttrsGetProfilerScope(attrs);
     head_grad_entry_.emplace_back(AttrHint(ngrad, g.outputs[i]));
     head_grad_map_[ngrad.node.get()] = i;
   }
@@ -354,19 +343,28 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
     }
   }
 
-  int do_mirror = dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0);
-  auto need_mirror = [do_mirror](const nnvm::Node& node) -> int {
-    if (node.is_variable()) return 0;
-    const std::string& type = node.attrs.op->name;
-    if (type == "Dropout") return false;
-    if (get_node_attr(node, "__force_mirroring__", false)) return true;
-    if (do_mirror == 0) return false;
-    if (type == "Convolution") return false;
-    if (type == "FullyConnected") return false;
-    if (type == "Concat") return false;
-    if (type == "SoftmaxOutput") return false;
-    return true;
-  };
+  std::function<int(const nnvm::Node&)> need_mirror =
+      [](const nnvm::Node& node) -> int {
+        if (node.is_variable()) return false;
+        const std::string& type = node.attrs.op->name;
+        if (type == "Dropout") return false;
+        // We follow the hidden key attribute "force_mirroring" if it is
+        // explicitly set.
+        auto iter = node.attrs.dict.find("__force_mirroring__");
+        if (iter != node.attrs.dict.end()) {
+          bool do_mirror;
+          dmlc::parameter::FieldEntry<bool> e;
+          e.Init("__force_mirroring__", &do_mirror, do_mirror);
+          e.Set(&do_mirror, iter->second);
+          return do_mirror;
+        }
+        if (type == "Embedding") return false;
+        if (type == "Convolution") return false;
+        if (type == "FullyConnected") return false;
+        if (type == "Concat") return false;
+        if (type == "SoftmaxOutput") return false;
+        return true;
+      };
 
   std::vector<const nnvm::Op*> zero_ops;
   zero_ops.push_back(nnvm::Op::Get("zeros_like"));
@@ -375,8 +373,12 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
   // take gradient
   nnvm::Graph g_grad = nnvm::pass::MXGradient(
       g, symbol.outputs, xs, head_grad_entry_,
-      AggregateGradient, need_mirror, nullptr,
-      zero_ops, "_copy");
+      AggregateGradient,
+      (dmlc::GetEnv("MXNET_BACKWARD_DO_MIRROR", 0) ||
+       dmlc::GetEnv("MXNET_MEMORY_OPT", 0)) ? need_mirror : nullptr,
+      zero_ops, "_copy",
+      in_arg_shapes, in_arg_dtypes);
+
   CHECK_EQ(g_grad.outputs.size(), xs.size());
   for (const auto &e : g_grad.outputs) {
     g.outputs.push_back(e);
@@ -412,8 +414,37 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
   std::vector<Context> aux_state_ctxes(aux_states.size());
   std::transform(aux_states.begin(), aux_states.end(), aux_state_ctxes.begin(), get_ctx1);
 
+  // Record the shapes and data types of the input arguments in the source graph
+  // (i.e., the graph prior to the Gradient pass). Such information is need by
+  // the backward mirroring algorithm for shape and data type inference.
+  nnvm::Graph src;
+  src.outputs = symbol.outputs;
+  const nnvm::IndexedGraph& src_idx = src.indexed_graph();
+  const std::unordered_set<uint32_t>& src_mutable_nodes = src_idx.mutable_input_nodes();
+  size_t src_arg_top = 0, src_aux_top = 0;
+  ShapeVector src_arg_shapes;
+  nnvm::DTypeVector src_arg_dtypes;
+  const size_t src_num_forward_inputs = symbol.ListInputs(nnvm::Symbol::kAll).size();
+
+  for (size_t i = 0; i < src_num_forward_inputs; ++i) {
+    const uint32_t nid = src_idx.input_nodes().at(i);
+
+    if (src_mutable_nodes.count(nid)) {
+      CHECK_LT(src_aux_top, aux_states.size());
+      src_arg_shapes.push_back(aux_states[src_aux_top].shape());
+      src_arg_dtypes.push_back(aux_states[src_aux_top].dtype());
+      ++src_aux_top;
+    } else {
+      CHECK_LT(src_arg_top, in_args.size());
+      src_arg_shapes.push_back(in_args[src_arg_top].shape());
+      src_arg_dtypes.push_back(in_args[src_arg_top].dtype());
+      ++src_arg_top;
+    }
+  }
+
   nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, in_arg_ctxes,
-                            arg_grad_ctxes, aux_state_ctxes, grad_req_types);
+                            arg_grad_ctxes, aux_state_ctxes, grad_req_types,
+                            src_arg_shapes, src_arg_dtypes);
 
   // create arg_shapes and arg_dtypes for shape and type inferences
   const auto& idx = g.indexed_graph();
@@ -517,9 +548,11 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     const int inferred_dtype = inferred_dtypes[eid];
     const NDArrayStorageType inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
     const std::string& arg_name = idx[nid].source->attrs.name;
+    const std::string profiler_scope = common::NodeAttrsGetProfilerScope(idx[nid].source->attrs);
     if (mutable_nodes.count(nid)) {  // aux_states
       EmplaceBackZeros(inferred_stype, inferred_shape, aux_state_ctxes[aux_top],
                        inferred_dtype, aux_state_vec);
+      aux_state_vec->back().AssignStorageInfo(profiler_scope + "aux_state:", arg_name);
       data_entry_[eid] = aux_state_vec->back();
       aux_state_map_.emplace(arg_name, aux_state_vec->back());
       ++aux_top;
@@ -530,6 +563,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     } else {  // in_args
       EmplaceBackZeros(inferred_stype, inferred_shape, in_arg_ctxes[arg_top],
                        inferred_dtype, in_arg_vec);
+      in_arg_vec->back().AssignStorageInfo(profiler_scope + "in_arg:", arg_name);
       data_entry_[eid] = in_arg_vec->back();
       if (log_verbose_) {
         LOG(INFO) << "\tassign data entry\t" << eid << "\tas "
@@ -545,6 +579,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
         auto grad_stype = (NDArrayStorageType) inferred_stypes[grad_eid];
         EmplaceBackZeros(grad_stype, inferred_shape, arg_grad_ctxes[arg_top],
                          inferred_dtype, arg_grad_vec);
+        arg_grad_vec->back().AssignStorageInfo(profiler_scope + "arg_grad:", arg_name);
         if (log_verbose_) {
           LOG(INFO) << "\tassign grad entry\t" << grad_eid << "\tas "
                     << common::stype_string(grad_stype);
@@ -589,6 +624,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
     const int inferred_dtype = inferred_dtypes[eid];
     const NDArrayStorageType inferred_stype = (NDArrayStorageType) inferred_stypes[eid];
     const std::string& arg_name = idx[nid].source->attrs.name;
+    const std::string profiler_scope = common::NodeAttrsGetProfilerScope(idx[nid].source->attrs);
     // aux_states
     if (mutable_nodes.count(nid)) {
       if (nullptr != shared_exec) {
@@ -611,6 +647,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
       } else {
         EmplaceBackZeros(inferred_stype, inferred_shape, aux_state_ctxes[aux_top],
                          inferred_dtype, aux_state_vec);
+        aux_state_vec->back().AssignStorageInfo(profiler_scope + "aux_state:", arg_name);
       }  // if (has_shared_exec)
       data_entry_[eid] = aux_state_vec->back();
       aux_state_map_.emplace(arg_name, aux_state_vec->back());
@@ -648,6 +685,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
           // doesn't have shared_exec, or non-default storage
           EmplaceBackZeros(inferred_stype, inferred_shape, in_arg_ctxes[arg_top],
                            inferred_dtype, in_arg_vec);
+          in_arg_vec->back().AssignStorageInfo(profiler_scope + "in_arg:", arg_name);
         }
         // gradient for model parameter
         if (kNullOp == grad_req_types[arg_top]) {
@@ -664,6 +702,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
             // no need to reuse memory from shared_exec for gradient of non-default storage
             EmplaceBackZeros(grad_stype, inferred_shape, arg_grad_ctxes[arg_top],
                              inferred_dtype, arg_grad_vec);
+            arg_grad_vec->back().AssignStorageInfo(profiler_scope + "arg_grad:", arg_name);
           }
           grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         }
@@ -673,6 +712,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
         in_arg_vec->emplace_back(ReshapeOrCreate(arg_name, inferred_shape, inferred_dtype,
                                                  inferred_stype, in_arg_ctxes[arg_top],
                                                  shared_buffer, enable_row_sparse_sharing));
+        in_arg_vec->back().AssignStorageInfo(profiler_scope + "in_arg:", arg_name);
         // gradient for model parameter, row_sparse ndarray sharing disabled
         if (kNullOp == grad_req_types[arg_top]) {
           arg_grad_vec->emplace_back();
@@ -685,6 +725,7 @@ void GraphExecutor::InitArguments(const nnvm::IndexedGraph& idx,
                                                      inferred_dtype, grad_stype,
                                                      arg_grad_ctxes[arg_top], shared_buffer,
                                                      enable_row_sparse_sharing));
+          arg_grad_vec->back().AssignStorageInfo(profiler_scope + "arg_grad:", arg_name);
           grad_store_.emplace_back(grad_req_types[arg_top], arg_grad_vec->back());
         }  // if (kNullOp == grad_req_types[arg_top])
       }  // if (shared_arg_names.count(arg_name))
@@ -799,8 +840,34 @@ void GraphExecutor::Init(nnvm::Symbol symbol,
                          std::unordered_map<std::string, NDArray>* shared_buffer,
                          Executor* shared_exec,
                          const nnvm::NodeEntryMap<NDArray>& feed_dict) {
+  // Record the shapes and data types of the input arguments in the source graph
+  // (i.e., the graph prior to the Gradient pass). Such information is need by
+  // the backward mirroring algorithm for shape and data type inference.
+  nnvm::Graph src;
+  src.outputs = symbol.outputs;
+  const nnvm::IndexedGraph& src_idx = src.indexed_graph();
+  ShapeVector src_arg_shapes(src_idx.input_nodes().size(), TShape());
+  nnvm::DTypeVector src_arg_dtypes(src_idx.input_nodes().size(), -1);
+  const size_t src_num_forward_inputs = symbol.ListInputs(nnvm::Symbol::kAll).size();
+
+  for (size_t i = 0; i < src_num_forward_inputs; ++i) {
+    const uint32_t nid = src_idx.input_nodes().at(i);
+    const std::string& name = src_idx[nid].source->attrs.name;
+    std::unordered_map<std::string, TShape>::const_iterator
+        arg_shape_iter = arg_shape_map.find(name);
+    std::unordered_map<std::string, int>::const_iterator
+        arg_dtype_iter = arg_dtype_map.find(name);
+    if (arg_shape_iter != arg_shape_map.end()) {
+      src_arg_shapes[i] = arg_shape_iter->second;
+    }
+    if (arg_dtype_iter != arg_dtype_map.end()) {
+      src_arg_dtypes[i] = arg_dtype_iter->second;
+    }
+  }
+
   nnvm::Graph g = InitGraph(symbol, default_ctx, ctx_map, in_arg_ctxes, arg_grad_ctxes,
-                            aux_state_ctxes, grad_req_types);
+                            aux_state_ctxes, grad_req_types,
+                            src_arg_shapes, src_arg_dtypes);
 
   // The following code of shape and dtype inferences and argument
   // initialization is for simple_bind only. Regular bind operation
@@ -995,9 +1062,12 @@ Graph GraphExecutor::InitGraph(nnvm::Symbol symbol,
                                const std::vector<Context>& in_arg_ctxes,
                                const std::vector<Context>& arg_grad_ctxes,
                                const std::vector<Context>& aux_state_ctxes,
-                               const std::vector<OpReqType>& grad_req_types) {
+                               const std::vector<OpReqType>& grad_req_types,
+                               const ShapeVector& in_arg_shapes,
+                               const nnvm::DTypeVector& in_arg_dtypes) {
   // setup gradient
-  nnvm::Graph g = InitFullGraph(symbol, grad_req_types);
+  nnvm::Graph g = InitFullGraph(symbol, grad_req_types,
+                                in_arg_shapes, in_arg_dtypes);
 
 #if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
   if (default_ctx.dev_mask() == Context::kGPU && dmlc::GetEnv("MXNET_USE_FUSION", true)) {
@@ -1077,12 +1147,17 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
   CHECK_EQ(data_entry_.size(), vshape.size());
   std::vector<Context> data_context(idx.num_node_entries());
   std::vector<NDArrayStorageType> data_storage_type(idx.num_node_entries(), kUndefinedStorage);
+  std::vector<std::string> data_storage_profiler_scope(idx.num_node_entries());
+  std::vector<std::string> data_storage_name(idx.num_node_entries());
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
+    const std::string profiler_scope = common::NodeAttrsGetProfilerScope(idx[nid].source->attrs);
     for (uint32_t i = 0; i < idx[nid].source->num_outputs(); ++i) {
       auto eid = idx.entry_id(nid, i);
       data_context[eid] = vctx[nid];
       CHECK_NE(vstorage_type[eid], kUndefinedStorage);
       data_storage_type[eid] = (NDArrayStorageType) vstorage_type[eid];
+      data_storage_profiler_scope[eid] = profiler_scope;
+      data_storage_name[eid] = idx[nid].source->attrs.name;
     }
   }
 
@@ -1091,6 +1166,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     Context ctx;
     size_t bytes;
     NDArrayStorageType stype;
+    std::string profiler_scope;
+    std::string name;
   };
   std::vector<PoolEntry> pool_info;
 
@@ -1111,6 +1188,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     } else {
       data_entry_[data_eid] = NDArray(data_context[eid], vdtype[eid]);
     }
+    data_entry_[data_eid].AssignStorageInfo(data_storage_profiler_scope[data_eid],
+                                            data_storage_name[data_eid]);
     if (log_verbose_) {
       LOG(INFO) << "\tinit head_grad entry\t" << data_eid << "\tas "
                 << common::stype_string(stype);
@@ -1129,11 +1208,14 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     if (storage_id < 0) continue;
     size_t sid = static_cast<size_t>(storage_id);
     if (sid >= pool_info.size()) {
-      pool_info.resize(sid + 1, PoolEntry{Context::CPU(), size_t(0), kUndefinedStorage});
+      pool_info.resize(sid + 1, PoolEntry{Context::CPU(), size_t(0), kUndefinedStorage,
+                                          MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR,
+                                          MXNET_STORAGE_DEFAULT_NAME_CSTR});
     }
     PoolEntry& info = pool_info[sid];
     if (info.bytes == 0) {
-      info = PoolEntry{data_context[i], bytes, data_storage_type[i]};
+      info = PoolEntry{data_context[i], bytes, data_storage_type[i],
+                       data_storage_profiler_scope[i], data_storage_name[i]};
     } else {
       info.bytes = std::max(info.bytes, bytes);
     }
@@ -1183,6 +1265,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
       // TODO(junwu): adding delay_alloc=true to create nd
       // is a temporary solution.
       NDArray nd(shape, ctx, true);
+      nd.AssignStorageInfo(pool_info[i].profiler_scope,
+                           pool_info[i].name);
       data_pool_[i] = nd;
       // put the new allocated arrays to shared pool
       if (shared_pool != nullptr)  {
@@ -1201,6 +1285,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     if (storage_type == kDefaultStorage) {
       if (!shape_is_known(vshape[i])) {
         data_entry_[i] = NDArray(data_context[i], vdtype[i]);
+        data_entry_[i].AssignStorageInfo(data_storage_profiler_scope[i],
+                                         data_storage_name[i]);
       } else {
         CHECK_GE(storage_id, 0) << "Do not support runtime shape op yet";
         const NDArray& src = data_pool_.at(storage_id);
@@ -1209,6 +1295,8 @@ void GraphExecutor::InitDataEntryMemory(std::vector<NDArray>* shared_pool) {
     } else {
       data_entry_[i] = NDArray(storage_type, vshape[i], data_context[i],
                                true, vdtype[i]);
+      data_entry_[i].AssignStorageInfo(data_storage_profiler_scope[i],
+                                       data_storage_name[i]);
     }
     if (log_verbose_) {
       LOG(INFO) << "\tinit data entry\t" << i << "\tas " << common::stype_string(storage_type);
@@ -1630,10 +1718,9 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
   };
   opr_names.pop_back();
   opr_names += "]";
-  auto iter = cached_seg_opr_names_.insert(opr_names).first;
   ret.opr = Engine::Get()->NewOperator(
     exec_fun, use_vars, mutate_vars, FnProperty::kNormal,
-    iter->c_str());
+    opr_names.c_str());
   return ret;
 }
 

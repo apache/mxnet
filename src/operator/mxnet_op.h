@@ -210,6 +210,7 @@ inline int get_num_threads<cpu>(const int N) {
     }                                                      \
     break;                                                 \
   case mshadow::kFloat16:                                  \
+  case mshadow::kBfloat16:                                 \
     {                                                      \
       typedef mshadow::half::half_t DType;                 \
       {__VA_ARGS__}                                        \
@@ -599,6 +600,7 @@ struct AccType<mshadow::half::half_t> {
   .add_enum("float32", mshadow::kFloat32) \
   .add_enum("float64", mshadow::kFloat64) \
   .add_enum("float16", mshadow::kFloat16) \
+  .add_enum("bfloat16", mshadow::kBfloat16) \
   .add_enum("uint8", mshadow::kUint8) \
   .add_enum("int8", mshadow::kInt8) \
   .add_enum("int32", mshadow::kInt32) \
@@ -609,6 +611,7 @@ struct AccType<mshadow::half::half_t> {
   .add_enum("float32", mshadow::kFloat32) \
   .add_enum("float64", mshadow::kFloat64) \
   .add_enum("float16", mshadow::kFloat16) \
+  .add_enum("bfloat16", mshadow::kBfloat16) \
   .add_enum("uint8", mshadow::kUint8) \
   .add_enum("int8", mshadow::kInt8) \
   .add_enum("int32", mshadow::kInt32) \
@@ -759,6 +762,17 @@ struct backward_grad {
   }
 };
 
+template<typename OP, int req>
+struct mixed_type_unary_op {
+  typedef OP Operation;
+
+  /*! \brief input is one tensor */
+  template<typename OType, typename IType>
+  MSHADOW_XINLINE static void Map(index_t i, OType *out, const IType *in) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(OType(in[i])));
+  }
+};
+
 /*! \brief Binary op backward gradient OP wrapper (tuned) */
 template<typename GRAD_OP>
 struct backward_grad_tuned : public backward_grad<GRAD_OP>, public tunable {
@@ -844,6 +858,13 @@ struct op_with_req {
            typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *in, const DType value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
+  }
+
+  /*! \brief input is two tensors with different type and with a boolean output tensor */
+  template<typename LType, typename RType,
+           typename std::enable_if<!std::is_same<LType, RType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, bool *out, const LType *lhs, const RType *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
 #ifndef _WIN32

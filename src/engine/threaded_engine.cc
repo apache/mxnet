@@ -217,7 +217,7 @@ ThreadedOpr* ThreadedEngine::NewOperator(
     const char* opr_name,
     bool wait) {
   auto ret = ThreadedOpr::New();
-  ret->opr_name = opr_name;
+  ret->opr_name = opr_name ? std::string(opr_name) : std::string();
   ret->fn = std::move(fn);
   ret->prop = prop;
   ret->const_vars.resize(const_vars.size());
@@ -290,7 +290,7 @@ void ThreadedEngine::Push(OprHandle op, Context exec_ctx, int priority, bool pro
   ThreadedOpr* threaded_opr = ThreadedOpr::CastFromBase(op);
   if (profiling) {
     threaded_opr->opr_name =
-        profiler::CustomOpProfiler::Get()->GenerateDisplayName(threaded_opr->opr_name);
+        profiler::CustomOpProfiler::Get()->GenerateDisplayName(threaded_opr->opr_name.c_str());
   }
   OprBlock* opr_block = OprBlock::New();
   opr_block->opr = threaded_opr;
@@ -515,7 +515,7 @@ void ThreadedEngine::OnCompleteStatic(Engine *engine, void *opr_block_,
     auto ex_p = std::make_exception_ptr(*error);
     threaded_opr->opr_exception = std::make_shared<std::exception_ptr>(ex_p);
   }
-  if (opr_block->profiling && threaded_opr->opr_name) {
+  if (opr_block->profiling && threaded_opr->opr_name.size()) {
     // record operator end timestamp
     opr_block->opr_profile->stop();
   }

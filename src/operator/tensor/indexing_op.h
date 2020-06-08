@@ -66,8 +66,8 @@ enum QuantizedEmbeddingOpResource {kTempSpace};
 
 
 struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
-  int input_dim;
-  int output_dim;
+  index_t input_dim;
+  index_t output_dim;
   int dtype;
   bool deterministic;
   DMLC_DECLARE_PARAMETER(SparseEmbeddingParam) {
@@ -89,8 +89,8 @@ struct SparseEmbeddingParam: public dmlc::Parameter<SparseEmbeddingParam> {
 };
 
 struct EmbeddingParam: public dmlc::Parameter<EmbeddingParam> {
-  int input_dim;
-  int output_dim;
+  index_t input_dim;
+  index_t output_dim;
   int dtype;
   bool sparse_grad;
   DMLC_DECLARE_PARAMETER(EmbeddingParam) {
@@ -679,6 +679,27 @@ struct TakeParam: public dmlc::Parameter<TakeParam> {
               " they are replaced by the index that addresses the last element along an axis."
               " \"wrap\" means to wrap around."
               " \"raise\" means to raise an error when index out of range.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, mode_s;
+    axis_s << axis;
+    mode_s << mode;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["mode"] = mode_s.str();
+    switch (mode) {
+      case take_::kRaise:
+        (*dict)["mode"] = "raise";
+        break;
+      case take_::kClip:
+        (*dict)["mode"] = "clip";
+        break;
+      case take_::kWrap:
+        (*dict)["mode"] = "wrap";
+        break;
+      default:
+        (*dict)["mode"] = mode_s.str();
+    }
   }
 };
 
@@ -1447,8 +1468,8 @@ void ScatterNDForward(const nnvm::NodeAttrs& attrs,
   if (kWriteTo == req[0]) {
     Fill<true>(s, outputs[0], req[0], 0);
   }
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {  // output data type switch
-    MSHADOW_TYPE_SWITCH(inputs[1].type_flag_, IType, {  // indices data type switch
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {  // output data type switch
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[1].type_flag_, IType, {  // indices data type switch
       mxnet_op::Kernel<scatter_nd, xpu>::Launch(
         s, N, req[0], N, M, K, strides, outputs[0].dptr<DType>(),
         inputs[0].dptr<DType>(), inputs[1].dptr<IType>());

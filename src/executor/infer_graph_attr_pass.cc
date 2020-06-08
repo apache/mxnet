@@ -521,7 +521,7 @@ nnvm::Graph InferAttr(nnvm::Graph &&ret,
   }
   // number of nodes who knows the shape.
   ret.attrs[unknown_name] = std::make_shared<any>(num_unknown);
-  return ret;
+  return std::move(ret);
 }
 
 /*!\brief
@@ -662,6 +662,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
     const std::string name = inode.source->attrs.name;
     const uint32_t num_inputs = inode.inputs.size();
     const uint32_t num_outputs = inode.source->num_outputs();
+
     if (inode.source->is_variable()) {
       // Variable node. No operator. Only one output entry.
       CHECK(inode.source->op() == nullptr);
@@ -812,7 +813,7 @@ nnvm::Graph InferShapeAttr(nnvm::Graph &&ret,
   }
   // number of nodes who knows the shape.
   ret.attrs[unknown_name] = std::make_shared<any>(num_unknown);
-  return ret;
+  return std::move(ret);
 }
 
 nnvm::Graph InferShape(nnvm::Graph&& graph,

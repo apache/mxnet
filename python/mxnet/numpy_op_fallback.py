@@ -17,7 +17,6 @@
 
 """Fallback-to-NumPy operator implementation."""
 
-from __future__ import absolute_import
 from distutils.version import StrictVersion
 import functools
 import ast

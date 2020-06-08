@@ -24,35 +24,43 @@ import warnings
 import collections
 import ctypes
 import mxnet.contrib.amp as amp
-from nose.tools import assert_raises
+import pytest
 from mxnet.test_utils import set_default_context, download_model, same_symbol_structure
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
 from mxnet.contrib.amp import amp
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import with_seed, teardown, assert_raises_cudnn_not_satisfied
+from common import with_seed, teardown_module, assert_raises_cudnn_not_satisfied
 sys.path.insert(0, os.path.join(curr_path, '../train'))
 from test_bucketing import train_model
 set_default_context(mx.gpu(0))
 
-def test_amp_coverage():
-    conditional = [item[0] for item in amp.lists.symbol.CONDITIONAL_FP32_FUNCS]
+@pytest.fixture()
+def amp_tests(request):
+    def teardown():
+        mx.nd.waitall()
+
+    request.addfinalizer(teardown)
+
+@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
+def test_amp_coverage(amp_tests):
+    conditional = [item[0] for item in amp.lists.symbol_fp16.CONDITIONAL_FP32_FUNCS]
 
     # Check for duplicates
-    for a in [amp.lists.symbol.FP16_FUNCS,
-          amp.lists.symbol.FP16_FP32_FUNCS,
-          amp.lists.symbol.FP32_FUNCS,
-          amp.lists.symbol.WIDEST_TYPE_CASTS,
+    for a in [amp.lists.symbol_fp16.FP16_FUNCS,
+          amp.lists.symbol_fp16.FP16_FP32_FUNCS,
+          amp.lists.symbol_fp16.FP32_FUNCS,
+          amp.lists.symbol_fp16.WIDEST_TYPE_CASTS,
           conditional]:
         ret = [item for item, count in collections.Counter(a).items() if count > 1]
         assert ret == [], "Elements " + str(ret) + " are duplicated in the AMP lists."
 
     t = []
-    for a in [amp.lists.symbol.FP16_FUNCS,
-              amp.lists.symbol.FP16_FP32_FUNCS,
-              amp.lists.symbol.FP32_FUNCS,
-              amp.lists.symbol.WIDEST_TYPE_CASTS,
+    for a in [amp.lists.symbol_fp16.FP16_FUNCS,
+              amp.lists.symbol_fp16.FP16_FP32_FUNCS,
+              amp.lists.symbol_fp16.FP32_FUNCS,
+              amp.lists.symbol_fp16.WIDEST_TYPE_CASTS,
               conditional]:
         t += a
     ret = [item for item, count in collections.Counter(t).items() if count > 1]
@@ -77,7 +85,7 @@ def test_amp_coverage():
 
     if ret1 != set():
         warnings.warn("Operators " + str(ret1) + " do not exist in AMP lists (in "
-                       "python/mxnet/contrib/amp/lists/symbol.py) - please add them. "
+                       "python/mxnet/contrib/amp/lists/symbol_fp16.py) - please add them. "
                        """Please follow these guidelines for choosing a proper list:
                        - if your operator is not to be used in a computational graph
                          (e.g. image manipulation operators, optimizers) or does not have
@@ -97,7 +105,8 @@ def test_amp_coverage():
                          safest option""")
 
 @with_seed()
-def test_amp_conversion():
+@pytest.mark.garbage_expected
+def test_amp_conversion(amp_tests):
     def check_amp_convert_symbol():
         x = mx.sym.var("x")
         y = mx.sym.var("y")
@@ -111,26 +120,26 @@ def test_amp_conversion():
 
         x_fp16 = mx.sym.amp_cast(x, dtype="float16")
         y_fp16 = mx.sym.amp_cast(y, dtype="float16")
-        amp_casted_siny = mx.sym.sin(mx.sym.amp_cast(y, dtype="float32"))
+        siny = mx.sym.sin(y)
         z = mx.sym.FullyConnected(x_fp16, y_fp16, num_hidden=10, no_bias=True)
-        outs = mx.sym.amp_multicast(z, amp_casted_siny, num_outputs=2)
-        res_expected = outs[0] + outs[1]
+        amp_casted_z = mx.sym.amp_cast(z, dtype="float32")
+        res_expected = amp_casted_z + siny
         assert same_symbol_structure(res_converted, res_expected), \
             "convert_symbol generating wrong computation graph"
 
         # convert_symbol called with incorrect inputs
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="float16", target_dtype_ops=["FullyConnected"],
                       fp32_ops=["elemwise_add"])
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="float16", target_dtype_ops=["FullyConnected"],
                       fp32_ops=["Activation"],
                       conditional_fp32_ops=[('Activation', 'act_type', ['selu'])])
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="float16", target_dtype_ops=["Activation"],
                       fp32_ops=["Activation"],
                       conditional_fp32_ops=[('Activation', 'act_type', ['selu'])])
-        assert_raises(AssertionError, amp.convert_symbol, res,
+        pytest.raises(AssertionError, amp.convert_symbol, res,
                       target_dtype="float16", target_dtype_ops=["FullyConnected"],
                       fp32_ops=["FullyConnected"])
 
@@ -325,7 +334,7 @@ def test_amp_conversion():
         data_val =  mx.rnn.BucketSentenceIter(val_sent, batch_size, buckets=buckets,
                                      invalid_label=invalid_label)
         result_model.bind(data_val.provide_data, data_val.provide_label, for_training=False)
-        result_model.score(data_val, mx.metric.Perplexity(invalid_label),
+        result_model.score(data_val, mx.gluon.metric.Perplexity(invalid_label),
                            batch_end_callback=mx.callback.Speedometer(batch_size, 1))
 
         # AMP conversion with cast_optional_params set to true
@@ -333,7 +342,7 @@ def test_amp_conversion():
         '''
         result_model = amp.convert_bucketing_module(model, cast_optional_params=True)
         result_model.bind(data_val.provide_data, data_val.provide_label, for_training=False)
-        result_model.score(data_val, mx.metric.Perplexity(invalid_label),
+        result_model.score(data_val, mx.gluon.metric.Perplexity(invalid_label),
                            batch_end_callback=mx.callback.Speedometer(batch_size, 1))
         '''
 
@@ -345,8 +354,9 @@ def test_amp_conversion():
         check_amp_convert_bucketing_module()
 
 @with_seed()
+@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_amp_conversion_rnn():
+def test_amp_conversion_rnn(amp_tests):
     with mx.Context(mx.gpu(0)):
         model = nn.HybridSequential()
         model.add(rnn.LSTM(hidden_size=10, num_layers=2, bidirectional=True))
@@ -360,7 +370,8 @@ def test_amp_conversion_rnn():
 
 
 @with_seed()
-def test_module_backward_compatibility():
+@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
+def test_module_backward_compatibility(amp_tests):
     channel_num = 10
     conv_layer_filter_dims = [2, 3]
     conv_layer_strides = [1, 1]
@@ -403,7 +414,8 @@ def test_module_backward_compatibility():
 
 
 @with_seed()
-def test_fp16_casting():
+@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
+def test_fp16_casting(amp_tests):
     data = mx.sym.var("data")
     out1 = mx.sym.amp_cast(data, dtype="float16")
     out2 = mx.sym.amp_cast(data, dtype="float32")
@@ -484,7 +496,3 @@ def test_fp16_casting():
     out = mx.sym.split(concat_res, axis=1, num_outputs=2)
     final_res = amp.convert_symbol(out)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

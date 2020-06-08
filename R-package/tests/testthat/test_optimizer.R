@@ -73,8 +73,8 @@ test_that("rmsprop", {
     fc1_weight = w1, label = y), aux.arrays = NULL, grad.reqs = c("null", "write", 
     "null"))
   
-  optimizer <- mx.opt.create("rmsprop", learning.rate = 1, centered = TRUE, gamma1 = 0.95, 
-    gamma2 = 0.9, epsilon = 1e-04, wd = 0, rescale.grad = 1, clip_gradient = -1)
+  optimizer <- mx.opt.create("rmsprop", learning.rate = 1, centered = TRUE, rho = 0.95,
+    momentum = 0.9, epsilon = 1e-04, wd = 0, rescale.grad = 1, clip_gradient = -1)
   
   updaters <- mx.opt.get.updater(optimizer, exec$ref.arg.arrays, ctx = mx.ctx.default())
   

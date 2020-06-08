@@ -34,23 +34,14 @@ git submodule update --init --recursive || true
 $MAKE DEPS_PATH=$DEPS_PATH DMLCCORE
 $MAKE DEPS_PATH=$DEPS_PATH $PWD/3rdparty/tvm/nnvm/lib/libnnvm.a
 $MAKE DEPS_PATH=$DEPS_PATH PSLITE
-
-if [[ $VARIANT == *mkl ]]; then
-    $MAKE DEPS_PATH=$DEPS_PATH mkldnn
-fi
+$MAKE DEPS_PATH=$DEPS_PATH mkldnn
 
 >&2 echo "Now building mxnet..."
 $MAKE DEPS_PATH=$DEPS_PATH
 
 if [[ $PLATFORM == 'linux' ]]; then
-    if [[ -f /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so ]]; then
-        cp -L /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so lib/libgfortran.so.3
-    elif [[ -f /usr/lib/x86_64-linux-gnu/libgfortran.so.3 ]]; then
-        cp -L /usr/lib/x86_64-linux-gnu/libgfortran.so.3 lib/libgfortran.so.3
-    else
-        cp -L /usr/lib/x86_64-linux-gnu/libgfortran.so.4 lib/libgfortran.so.4
-    fi
-    cp -L /usr/lib/x86_64-linux-gnu/libquadmath.so.0 lib/libquadmath.so.0
+    cp -L $(ldd lib/libmxnet.so | grep libgfortran |  awk '{print $3}') lib/
+    cp -L $(ldd lib/libmxnet.so | grep libquadmath |  awk '{print $3}') lib/
 fi
 
 # Print the linked objects on libmxnet.so

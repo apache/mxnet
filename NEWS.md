@@ -18,19 +18,52 @@
 MXNet Change Log
 ================
 - [MXNet Change Log](#mxnet-change-log)
-  * [1.5.1](#151)
-  * [1.5.0](#150)
+  * [1.6.0](#160)
+    + [Deprecation of Python 2](#deprecation-of-python-2)
     + [New Features](#new-features)
-      - [Automatic Mixed Precision(experimental)](#automatic-mixed-precision-experimental-)
-      - [MKL-DNN Reduced precision inference and RNN API support](#mkl-dnn-reduced-precision-inference-and-rnn-api-support)
-      - [Dynamic Shape(experimental)](#dynamic-shape-experimental-)
-      - [Large Tensor Support](#large-tensor-support)
-      - [Dependency Update](#dependency-update)
-      - [Gluon Fit API(experimental)](#gluon-fit-api-experimental-)
-      - [New Operators](#new-operators)
-    + [Feature Improvements](#feature-improvements)
-      - [Operators](#operators)
+      - [NumPy compatible interface and using TVM to generate operators](#numpy-compatible-interface-and-using-tvm-to-generate-operators)
+      - [Graph optimizations](#graph-optimizations)
+      - [New operators](#new-operators)
+    + [Feature improvements](#feature-improvements)
+      - [Automatic Mixed Precision](#automatic-mixed-precision)
+      - [Gluon Fit API](#gluon-fit-api)
       - [MKLDNN](#mkldnn)
+      - [Large tensor support](#large-tensor-support)
+      - [TensorRT integration](#tensorrt-integration)
+      - [Higher order gradient support](#higher-order-gradient-support)
+      - [Operator improvements](#operator-improvements)
+      - [Profiler](#profiler)
+      - [ONNX import/export](#onnx-importexport)
+      - [Bug fixes](#bug-fixes)
+    + [Front end API](#front-end-api)
+      - [Gluon](#gluon)
+      - [Symbol](#symbol)
+    + [Language Bindings](#language-bindings)
+      - [Python](#python)
+      - [C/C++](#cc)
+      - [Clojure](#clojure)
+      - [Julia](#julia)
+      - [Perl](#perl)
+      - [Scala](#scala)
+    + [Performance improvements](#performance-improvements)
+    + [Examples and tutorials](#examples-and-tutorials)
+    + [Website and documentation](#website-and-documentation)
+    + [CI/CD](#cicd)
+    + [Misc](#misc)
+  * [1.5.1](#151)
+    + [Bug-fixes](#bug-fixes-1)
+  * [1.5.0](#150)
+    + [New Features](#new-features-1)
+      - [Automatic Mixed Precision(experimental)](#automatic-mixed-precisionexperimental)
+      - [MKL-DNN Reduced precision inference and RNN API support](#mkl-dnn-reduced-precision-inference-and-rnn-api-support)
+      - [Dynamic Shape(experimental)](#dynamic-shapeexperimental)
+      - [Large Tensor Support](#large-tensor-support-1)
+      - [Dependency Update](#dependency-update)
+      - [Gluon Fit API(experimental)](#gluon-fit-apiexperimental)
+      - [New Operators](#new-operators-1)
+    + [Feature Improvements](#feature-improvements-1)
+      - [Operators](#operators)
+      - [MKLDNN](#mkldnn-1)
       - [ONNX](#onnx)
       - [TensorRT](#tensorrt)
       - [FP16 Support](#fp16-support)
@@ -38,65 +71,65 @@ MXNet Change Log
       - [Horovod Integration](#horovod-integration)
       - [Dynamic Shape](#dynamic-shape)
       - [Backend Engine](#backend-engine)
-      - [Large Tensor Support](#large-tensor-support-1)
+      - [Large Tensor Support](#large-tensor-support-2)
       - [Quantization](#quantization)
-      - [Profiler](#profiler)
+      - [Profiler](#profiler-1)
       - [CoreML](#coreml)
-    + [Front End API](#front-end-api)
-      - [Gluon](#gluon)
-      - [Python](#python)
-    + [Language Bindings](#language-bindings)
-      - [Scala](#scala)
+    + [Front End API](#front-end-api-1)
+      - [Gluon](#gluon-1)
+      - [Python](#python-1)
+    + [Language Bindings](#language-bindings-1)
+      - [Scala](#scala-1)
       - [Java](#java)
-      - [C++](#c--)
-      - [Clojure](#clojure)
-      - [Julia](#julia)
-      - [Perl:](#perl-)
+      - [C++](#c)
+      - [Clojure](#clojure-1)
+      - [Julia](#julia-1)
+      - [Perl:](#perl-1)
       - [R](#r)
-    + [Performance Improvements](#performance-improvements)
+    + [Performance Improvements](#performance-improvements-1)
     + [Example and Tutorials](#example-and-tutorials)
     + [Website](#website)
     + [Documentation](#documentation)
     + [Build and Test](#build-and-test)
-    + [Bug-fixes](#bug-fixes)
+    + [Bug-fixes](#bug-fixes-2)
     + [License](#license)
     + [Depreciations](#depreciations)
     + [Known Issues](#known-issues)
   * [1.4.1](#141)
-    + [Bug-fixes](#bug-fixes-1)
+    + [Bug-fixes](#bug-fixes-3)
   * [1.4.0](#140)
-    + [New Features](#new-features-1)
+    + [New Features](#new-features-2)
       - [Java Inference API](#java-inference-api)
       - [Julia API](#julia-api)
-      - [Control Flow Operators (experimental)](#control-flow-operators--experimental-)
+      - [Control Flow Operators (experimental)](#control-flow-operators-experimental)
       - [SVRG Optimization](#svrg-optimization)
-      - [Subgraph API (experimental)](#subgraph-api--experimental-)
+      - [Subgraph API (experimental)](#subgraph-api-experimental)
       - [JVM Memory Management](#jvm-memory-management)
-      - [Topology-aware AllReduce (experimental)](#topology-aware-allreduce--experimental-)
-      - [MKLDNN backend: Graph optimization and Quantization (experimental)](#mkldnn-backend--graph-optimization-and-quantization--experimental-)
+      - [Topology-aware AllReduce (experimental)](#topology-aware-allreduce-experimental)
+      - [MKLDNN backend: Graph optimization and Quantization (experimental)](#mkldnn-backend--graph-optimization-and-quantization-experimental)
         * [Graph Optimization](#graph-optimization)
         * [Quantization](#quantization-1)
-    + [New Operators](#new-operators-1)
-    + [Feature improvements](#feature-improvements)
+    + [New Operators](#new-operators-2)
+    + [Feature improvements](#feature-improvements-2)
       - [Operator](#operator)
       - [Optimizer](#optimizer)
       - [Sparse](#sparse)
       - [ONNX](#onnx-1)
-      - [MKLDNN](#mkldnn-1)
+      - [MKLDNN](#mkldnn-2)
       - [Inference](#inference)
       - [Other](#other)
     + [Frontend API updates](#frontend-api-updates)
-      - [Gluon](#gluon-1)
-      - [Symbol](#symbol)
+      - [Gluon](#gluon-2)
+      - [Symbol](#symbol-1)
     + [Language API updates](#language-api-updates)
       - [Java](#java-1)
       - [R](#r-1)
-      - [Scala](#scala-1)
-      - [Clojure](#clojure-1)
-      - [Perl](#perl)
-      - [Julia](#julia-1)
+      - [Scala](#scala-2)
+      - [Clojure](#clojure-2)
+      - [Perl](#perl-2)
+      - [Julia](#julia-2)
     + [Performance benchmarks and improvements](#performance-benchmarks-and-improvements)
-    + [Bug fixes](#bug-fixes)
+    + [Bug fixes](#bug-fixes-4)
     + [Licensing updates](#licensing-updates)
     + [Improvements](#improvements)
       - [Tutorial](#tutorial)
@@ -107,15 +140,15 @@ MXNet Change Log
       - [Installation](#installation)
       - [Build and CI](#build-and-ci)
       - [3rd party](#3rd-party)
-        * [TVM:](#tvm-)
-        * [CUDNN:](#cudnn-)
-        * [Horovod:](#horovod-)
+        * [TVM:](#tvm)
+        * [CUDNN:](#cudnn)
+        * [Horovod:](#horovod)
     + [Deprications](#deprications)
     + [Other](#other-1)
     + [How to build MXNet](#how-to-build-mxnet)
     + [List of submodules used by Apache MXNet (Incubating) and when they were updated last](#list-of-submodules-used-by-apache-mxnet--incubating--and-when-they-were-updated-last)
   * [1.3.1](#131)
-    + [Bug fixes](#bug-fixes-1)
+    + [Bug fixes](#bug-fixes-5)
     + [Documentation fixes](#documentation-fixes)
     + [Other Improvements](#other-improvements)
     + [Submodule updates](#submodule-updates)
@@ -124,21 +157,21 @@ MXNet Change Log
     + [New Features - Gluon RNN layers are now HybridBlocks](#new-features---gluon-rnn-layers-are-now-hybridblocks)
     + [MKL-DNN improvements](#mkl-dnn-improvements)
     + [New Features - Gluon Model Zoo Pre-trained Models](#new-features---gluon-model-zoo-pre-trained-models)
-    + [New Features - Clojure package (experimental)](#new-features---clojure-package--experimental-)
-    + [New Features - Synchronized Cross-GPU Batch Norm (experimental)](#new-features---synchronized-cross-gpu-batch-norm--experimental-)
-    + [New Features - Sparse Tensor Support for Gluon (experimental)](#new-features---sparse-tensor-support-for-gluon--experimental-)
-    + [New Features - Control flow operators (experimental)](#new-features---control-flow-operators--experimental-)
-    + [New Features - Scala API Improvements (experimental)](#new-features---scala-api-improvements--experimental-)
-    + [New Features - Rounding GPU Memory Pool for dynamic networks with variable-length inputs and outputs (experimental)](#new-features---rounding-gpu-memory-pool-for-dynamic-networks-with-variable-length-inputs-and-outputs--experimental-)
-    + [New Features - Topology-aware AllReduce (experimental)](#new-features---topology-aware-allreduce--experimental-)
-    + [New Features - Export MXNet models to ONNX format (experimental)](#new-features---export-mxnet-models-to-onnx-format--experimental-)
-    + [New Features - TensorRT Runtime Integration (experimental)](#new-features---tensorrt-runtime-integration--experimental-)
+    + [New Features - Clojure package (experimental)](#new-features---clojure-package-experimental)
+    + [New Features - Synchronized Cross-GPU Batch Norm (experimental)](#new-features---synchronized-cross-gpu-batch-norm-experimental)
+    + [New Features - Sparse Tensor Support for Gluon (experimental)](#new-features---sparse-tensor-support-for-gluon-experimental)
+    + [New Features - Control flow operators (experimental)](#new-features---control-flow-operators-experimental)
+    + [New Features - Scala API Improvements (experimental)](#new-features---scala-api-improvements-experimental)
+    + [New Features - Rounding GPU Memory Pool for dynamic networks with variable-length inputs and outputs (experimental)](#new-features---rounding-gpu-memory-pool-for-dynamic-networks-with-variable-length-inputs-and-outputs-experimental)
+    + [New Features - Topology-aware AllReduce (experimental)](#new-features---topology-aware-allreduce-experimental)
+    + [New Features - Export MXNet models to ONNX format (experimental)](#new-features---export-mxnet-models-to-onnx-format-experimental)
+    + [New Features - TensorRT Runtime Integration (experimental)](#new-features---tensorrt-runtime-integration-experimental)
     + [New Examples - Scala](#new-examples---scala)
     + [Maintenance - Flaky Tests improvement effort](#maintenance---flaky-tests-improvement-effort)
     + [Maintenance - MXNet Model Backwards Compatibility Checker](#maintenance---mxnet-model-backwards-compatibility-checker)
-    + [Maintenance - Integrated testing for "the Straight Dope"](#maintenance---integrated-testing-for--the-straight-dope-)
-    + [Bug-fixes](#bug-fixes-2)
-    + [Performance Improvements](#performance-improvements-1)
+    + [Maintenance - Integrated testing for "the Straight Dope"](#maintenance---integrated-testing-for-the-straight-dope)
+    + [Bug-fixes](#bug-fixes-6)
+    + [Performance Improvements](#performance-improvements-2)
     + [API Changes](#api-changes)
     + [Other features](#other-features)
     + [Usability Improvements](#usability-improvements)
@@ -151,8 +184,8 @@ MXNet Change Log
     + [New Features - Enhanced FP16 support](#new-features---enhanced-fp16-support)
     + [New Features - Added Profiling Enhancements](#new-features---added-profiling-enhancements)
     + [Breaking Changes](#breaking-changes)
-    + [Bug Fixes](#bug-fixes)
-    + [Performance Improvements](#performance-improvements-2)
+    + [Bug Fixes](#bug-fixes-7)
+    + [Performance Improvements](#performance-improvements-3)
     + [API Changes](#api-changes-1)
     + [Sparse Support](#sparse-support)
     + [Deprecations](#deprecations)
@@ -161,25 +194,25 @@ MXNet Change Log
     + [Known Issues](#known-issues-1)
   * [1.1.0](#110)
     + [Usability Improvements](#usability-improvements-2)
-    + [Bug-fixes](#bug-fixes-3)
-    + [New Features](#new-features-2)
+    + [Bug-fixes](#bug-fixes-8)
+    + [New Features](#new-features-3)
     + [API Changes](#api-changes-2)
     + [Deprecations](#deprecations-1)
-    + [Performance Improvements](#performance-improvements-3)
+    + [Performance Improvements](#performance-improvements-4)
     + [Known Issues](#known-issues-2)
   * [1.0.0](#100)
     + [Performance](#performance)
-    + [New Features - Gradient Compression [Experimental]](#new-features---gradient-compression--experimental-)
-    + [New Features - Support of NVIDIA Collective Communication Library (NCCL) [Experimental]](#new-features---support-of-nvidia-collective-communication-library--nccl---experimental-)
-    + [New Features - Advanced Indexing [General Availability]](#new-features---advanced-indexing--general-availability-)
-    + [New Features - Gluon [General Availability]](#new-features---gluon--general-availability-)
-    + [New Features - ARM / Raspberry Pi support [Experimental]](#new-features---arm---raspberry-pi-support--experimental-)
-    + [New Features - NVIDIA Jetson support [Experimental]](#new-features---nvidia-jetson-support--experimental-)
-    + [New Features - Sparse Tensor Support [General Availability]](#new-features---sparse-tensor-support--general-availability-)
-    + [Bug-fixes](#bug-fixes-4)
+    + [New Features - Gradient Compression [Experimental]](#new-features---gradient-compression-experimental)
+    + [New Features - Support of NVIDIA Collective Communication Library (NCCL) [Experimental]](#new-features---support-of-nvidia-collective-communication-library--nccl--experimental)
+    + [New Features - Advanced Indexing [General Availability]](#new-features---advanced-indexing-general-availability)
+    + [New Features - Gluon [General Availability]](#new-features---gluon-general-availability)
+    + [New Features - ARM / Raspberry Pi support [Experimental]](#new-features---arm---raspberry-pi-support-experimental)
+    + [New Features - NVIDIA Jetson support [Experimental]](#new-features---nvidia-jetson-support-experimental)
+    + [New Features - Sparse Tensor Support [General Availability]](#new-features---sparse-tensor-support-general-availability)
+    + [Bug-fixes](#bug-fixes-9)
     + [Doc Updates](#doc-updates)
   * [0.12.1](#0121)
-    + [Bug-fixes](#bug-fixes-5)
+    + [Bug-fixes](#bug-fixes-10)
   * [0.12.0](#0120)
     + [Performance](#performance-1)
     + [New Features - Gluon](#new-features---gluon)
@@ -187,18 +220,694 @@ MXNet Change Log
     + [New Features - Sparse Tensor Support](#new-features---sparse-tensor-support)
     + [Other New Features](#other-new-features)
     + [API Changes](#api-changes-3)
-    + [Bug-fixes](#bug-fixes-6)
+    + [Bug-fixes](#bug-fixes-11)
   * [0.11.0](#0110)
     + [Major Features](#major-features)
     + [API Changes](#api-changes-4)
-    + [Performance Improvements](#performance-improvements-4)
+    + [Performance Improvements](#performance-improvements-5)
     + [Bugfixes](#bugfixes)
     + [Refactors](#refactors)
   * [0.10.0](#0100)
   * [0.9.3](#093)
   * [v0.8](#v08)
   * [v0.7](#v07)
-  * [v0.5 (initial release)](#v05--initial-release-)
+  * [v0.5 (initial release)](#v05-initial-release)
+
+## 1.6.0
+
+### Deprecation of Python 2
+
+MXNet community [voted](https://lists.apache.org/thread.html/r3a2db0f22a1680cc56804191446fef2289595798ca19fd17de1ff03e%40%3Cdev.mxnet.apache.org%3E) to no longer support Python 2 in future releases of MXNet. Therefore, MXNet 1.6 release is going to be the last MXNet release to support Python 2.
+
+### New features
+
+#### NumPy compatible interface and using TVM to generate operators
+
+NumPy has long been established as the standard math library in Python, the most prevalent language for the deep learning community. With this library as the cornerstone, there are now the largest ecosystem and community for scientific computing. The popularity of NumPy comes from its flexibility and generality.
+
+In #14253, the MXNet community reached consensus on moving towards a NumPy-compatible programing experience and committed to a major endeavor on providing NumPy compatible operators.
+
+The primary goal of the projects below is to provide the equivalent usability and expressiveness of NumPy in MXNet to facilitate Deep Learning model development, which not only helps existing deep learning practitioners but also provides people in the existing NumPy community with a shortcut for getting started in Deep Learning. The efforts towards this goal would also help a secondary goal, which is to enable the existing NumPy ecosystem to utilize GPUs and accelerators to speed up large scale computation.
+
+ - Infra to use tvm write op kernels (#15550)
+ - fix boolean_mask for 0-size output (#15731)
+ - fix tvm cmake (#15781)
+ - Numpy-compatible Infra (#15581)
+ - [MXNET-1206] Support NDArray indexing with None and Ellipsis (#13143)
+ - numpy-compatible sum (#15810)
+ - [Numpy] Numpy compatible slicing (#15798)
+ - Numpy Tensordot and Dot Operator (#15820)
+ - numpy linspace (#15852)
+ - tvm infra for op attrs (#15854)
+ - Port several np ops to master (#15867)
+ - numpy-compatible split upstream (#15841)
+ - Numpy-compatible concatenate upstream (#15894)
+ - Numpy-compatible stack upstream (#15842)
+ - [Numpy] Numpy behavior random.uniform() (#15858)
+ - Tvm broadcast backward (#15938)
+ - np elemwise unary ops upstream (#15831)
+ - [Numpy] random.randint() implemented (#15956)
+ - Refines NDArray indexing and adds numpy ndarray indexing [READY FOR REVIEW] (#15942)
+ - Port ops from np branch (#16018)
+ - numpy-compatible cumsum upstream (#15924)
+ - NumPy-compatible infrastructure on Gluon (#16024)
+ - [OP] Support range as advanced index for ndarrays (#16047)
+ - Numpy compatible max min (#16046)
+ - NumPy-compatible Mean, Std and Var (#16014)
+ - Add fluent methods mean, std, var for ndarray (#16077)
+ - numpy multinomial op (#15878)
+ - add numpy operator remainder (#16080)
+ - [Numpy] Random.choice implemented (#16089)
+ - Fix sample.normal shape inference
+ - Numpy add numpy op indices (#15837)
+ - [Numpy] Numpy copysign (#15851)
+ - numpy operator ravel, derive from reshape (#16016)
+ - Add __array_function__
+ - Improved error mesages
+ - Fix np.choice
+ - add exception check for numpy reshape (#16180)
+ - [Numpy] Numpy behavior normal distribution (#16109)
+ - fix multinomial bug on gpu (#16204)
+ - [Numpy] Differentiable svd (#15795)
+ - add epsilon to sum(pvalue) upperbound (#16211)
+ - np compatible vstack (#15850)
+ - Numpy add numpy op roll (#15902)
+ - add numpy compatible trace (#16008)
+ - add numpy op hanning, hamming, blackman (#15815)
+ - [Numpy]flip (#15819)
+ - numpy operator around (#16126)
+ - numpy operator arctan2 (#15890)
+ - numpy operator nonzero (#15838)
+ - numpy operator hypot (#15901)
+ - tvm numpy operator deg2rad && rad2deg (#16015)
+ - numpy op unique
+ - try to fix bug
+ - fix memory bug and disable some test
+ - fix according to review
+ - Numpy operators: `lcm`, `tril`, `identity` and `take` (#16264)
+ - [numpy] Cosmetic improvement on mxnet.numpy builtin op signature in documentation (#16305)
+ - Disable Pylint false error in numpy_op_signature  (#16370)
+ - boolean_mask_assign operator for future boolean indexing (#16361)
+ - Implements ldexp. (#15845)
+ - Numpy Operators: Inner, Outer, vdot (#15846)
+ - Numpy det and slogdet operators (#15861)
+ - Fix random op signature
+ - fix choice signature
+ - add raise test for shape
+ - Add boolean ndarray (#15940)
+ - global numpy shape flag (#16335)
+ - numpy-compatible histogram (#16266)
+ - [Numpy] Numpy compatible dstack (#15871)
+ - numpy eye op (#16132)
+ - Numpy compatible vsplit; minor changes to split (#15983)
+ - add numpy op logspace (#15825)
+ - add numpy op bitwise_xor, hsplit, moveaxis, rot90 (#16257)
+ - Fix optimizer bug for np attribute (#16494)
+ - Tests of NumPy interoperability (#16469)
+ - improve unary and binary operator handling and refactor tests (#16423)
+ - [DOC] Fix numpy op doc  (#16504)
+ - [Numpy] More numpy dispatch tests (#16426)
+ - [Numpy] einsum (#15911)
+ - Add test pipeline for USE_TVM_OP=OFF on Unix (#16450)
+ - Numpy dispatch test of ...... (#16422)
+ - setup and concatenate, copy, expand_dims, expm1 (#16493)
+ - add sum for boolean type in mainline (#16436)
+ - [Numpy] SVD outputs tuple (#16530)
+ - numpy op doc: max, min, prod (#16506)
+ - add interface for rand
+ - Fix numpy bugs (#16537)
+ - pickler override for np ndarrays (#16561)
+ - [numpy]op test in new pattern (#16556)
+ - Enforce adding documentation for builtin numpy operators (#16575)
+ - [Numpy] Support N_D(N>=3) batch_dot (#16586)
+ - [Numpy] Loading numpy-incompatible NDArray in numpy-compatible mode (#16597)
+ - Fix index overflow bug in einsum (#16589)
+ - add npx reshape (#16640)
+ - add type switch to weight tensor (#16543)
+ - numpy doc enhancement (#16637)
+ - Infra for tvm op runtime dispatch (#16100)
+ - [NumPy][Operator] NumPy operator `may_share_memory` and `shares_memory` (#16533)
+ - [Numpy] Numpy operator diff (#15906)
+ - Miscellaneous fix for several numpy issues (#16664)
+ - [Numpy] implement np.column_stack (#16594)
+ - [numpy] add numpy operator : append (#16564)
+ - Backport of #16711, #16737, #16408 to 1.6 branch (#16763)
+ - Backport to 1.6 (#16773, #16781, #16783, #16716, #16699, #16728, #16769, #16792) (#16832)
+ - [Backport][v1.6.x] Fix the wrong result of sum, mean, argmin, argmax when inputs contain inf or nan (#16884)
+ - Backport of #16827, #16791 and #16888 to 1.6 branch (#16901)
+ - port shape op to 1.6.x (#16912)
+ - [Numpy] Fix imperative basic indexing in numpy (#16902) (#16919)
+ - Backport #16895, #16922, #16878, #16979 and #16900 to 1.6 (#17029)
+
+
+#### Graph optimizations
+
+##### Pointwise fusion for GPU
+
+DL models, besides compute intensive operations like convolutions and fully connected layers, feature a lot of simple pointwise (aka elementwise) operations (like elementwise addition etc.). Performance of those operations is fully memory bandwidth bound and so limit speedups from newer GPU hardware, which typically has high compute/memory bandwidth ratio. When multiple of such operations are chained one after another, it results in a series of unnecessary stores and loads as well as potential increased memory usage to store the intermediate results. Pointwise fusion helps in alleviating those problems by just-in-time generation of fused operators, which do not store intermediate results in memory, resulting in performance and memory usage improvements.
+
+ - Pointwise fusion for GPU (#15167)
+ - Backport #16798, #16836 and #16838 to 1.6 (#16874)
+ - Add support for boolean inputs to FusedOp (#16796) (#16892)
+ - Workaround problem with fusion in CUDA 9 (#17028) (#17035)
+
+##### Eliminate common subexpressions
+
+ - Eliminate common expressions (#15657)
+
+##### Default MKLDNN Subgraph fusion
+
+ - [MKLDNN] Enable subgraph backend mkldnn by default. (#15518)
+
+#### New operators
+
+ - [OP] Add a new arange_like operator to contrib (#15400)
+ - PDF operators for each distribution for which we have a random sampler (plus also the PDF of the Dirichlet).  Supports probabilities and log-probabilities, as well as gradients. (#14617)
+ - Group Normalization (#14959)
+ - Add RROIAlign (#16017)
+ - Add fast implementation of LARS (#16122)
+ - Round and sign straight-through-estimators C operators. (#16373)
+ - New ops for RCNN + old ops improvements for RCNN (#16215)
+ - Comparison ops implemented using mshadow (#16414)
+ - Add mask target generator operator for Mask-RCNN (#16268)
+ - Move MRCNNMaskTarget op to contrib (#16486)
+ - Mxnet allclose (#14443)
+ - Aggregated adamw update (#16398)
+ - Make mrcnn_mask_target arg mask_size a 2d tuple (#16567)
+ - Dgl ops 2 (#16416)
+ - Lamb optimizer update (#16715)
+ - [OP] changing data type of 't' to int in lamb_update_phase1 (#16903)
+ - Multi Precision Lamb Update operator (#16885)
+ - Interleaved MHA for CPU path (#17138) (#17211)
+
+### Feature improvements
+
+#### Automatic Mixed Precision
+
+ - [AMP] Move topk from FP16_FP32_FUNCS to FP32_FUNCS (#15342)
+ - Conversion from FP32 model to Mixed Precision model (#15118)
+ - Update fp16 docs: Block.cast is inplace (#15458)
+ - FP16 Support for C Predict API (#15245)
+ - Add AMP Conversion support for BucketingModule (#15528)
+
+#### Gluon Fit API
+
+ - Fixing build for gluon estimator test, including libtvm in pack libs (#16148)
+ - [Estimator] handle composite metrics in estimator (#16676)
+ - [Estimator] refactor estimator to allow overriding evaluate/fit of a batch (#16678)
+ - [Estimator] refactor estimator and clarify docs (#16694)
+ - [Gluon] Improve estimator usability and fix logging logic (#16810) (#16846)
+ - Backport Gluon estimator changes to 1.6 (#17048)
+ - fix parameter names in the estimator api (#17051) (#17162)
+
+
+#### MKLDNN
+
+ - Upgrade MKL-DNN submodule to v0.20 release (#15422)
+ - Fix quantized concat when inputs are mixed int8 and uint8 (#15693)
+ - [MKLDNN]Enhance Quantization APIs and Tutorial (#15448)
+ - Add quantization support for GluonCV (#15754)
+ - add int8 bn mkldnn implementation and test (#15664)
+ - [Quantization]support exclude operators while quantization (#15910)
+ - [MKLDNN]Support fullyconnected and element-wise ops fusion (#15950)
+ - Disable test coverage for Clang MKLDNN (#15977)
+ - update support MKLDNN BN conditions (#15870)
+ - [MKLDNN] Fix out of bound access of req vector (#16000)
+ - add uint8 bn mkldnn implementation (#16003)
+ - Improve quantization flow (#15961)
+ - [MKLDNN] fix uint8 batch norm memory misuse (#16034)
+ - MKL-DNN RNN checks NDArray version (#16071)
+ - Float64 fallback for mkldnn subgraph and rnn op (#15853)
+ - Update MKL-DNN dependency (#16073)
+ - Integrate MKL-DNN leakyrelu (#16075)
+ - [MKLDNN] NDArray reorder in C API and deconv (#16265)
+ - Fix mkldnn reshape (#16455)
+ - [MKLDNN] Fix uint quantized fc when not fusing with requantize (#16523)
+ - [MKLDNN]Fix reorder2default (#16602)
+ - Upgrade MKL-DNN dependency to v1.0 (#16555)
+ - Revert "[MKLDNN]Fix reorder2default (#16602)" (#16697)
+ - [v1.6.x] Backport #16837 into v1.6.x (#16847)
+ - Initial checkin (#16856) (#16872)
+
+#### Large tensor support
+
+ - [MXNET-1413] Adding Large Tensor support for sort operators (#15170)
+ - Large Index Support for Slice (#15593)
+ - Add large tensor support binary arithmetic (#15785)
+ - Large tensor support for random ops (#15783)
+ - Add Large Tensor Support for Sequence, NN Ops  (#15807)
+ - Add power, exponent, log ops large tensor support (#15794)
+ - removing unnecessary int64 C apis that were added to support Large Tensors and Vectors (#15944)
+ - creating ndarray directly using mxnet ndarray primitives to reduce memory footprint of tests for topk, sort and argsort (#15900)
+ - Adding tests to verify support for Large Tensors in additional Ops along with new C_Apis supporting 64bit indexing (#15895)
+ - Added tests to verify Large Vector Support for initial set of ops  (#15943)
+ - Added more tests for Large Indices (#15960)
+ - Add Large tensor vector test cases (#15941)
+ - Test large vector mean operator and fix a few bugs (#16079)
+ - Reducing memory footprint of one_hot for Large Array Testing (#16136)
+ - removing MXNDArrayLoadFromBuffer64 and MXNDArrayLoad64 (#16203)
+ - Fix large array tests (#16328)
+ - added more tests to verify support for large vector (#16477)
+ - added support for large tensors for Dropout operator and tests to verify support for more operators (#16409)
+ - adding large tensor support for add_n and tests for more ops (#16476)
+ - adding large tensor support for pad operator (#15126)
+ - Added large tensor support and test for gather_nd (#16371)
+ - Large Vector tests for DGL Ops Part 2 (#16497)
+ - Showing proper error message when an attempt is made to create large tensor but MXNet is not built with it (#16570)
+
+#### TensorRT integration
+
+ - enable TensorRT integration with cpp api (#15335)
+ - Add unit tests for TensorRT integration and fix some bugs (#15399)
+
+#### Higher order gradient support
+
+ - [MXNET-978] Higher order gradient for sigmoid (#15288)
+ - [MXNET-978] Higher Order Gradient Support `reciprocal`, `abs`. (#15413)
+ - [MXNET-978] Add higher order gradient support `tan`, `tanh` (#15253)
+ - [MXNET-978] Higher Order Gradient Support `arctan`, `arctanh`, `radians`. (#15531)
+ - [MXNET-978] Higher Order Gradient Support `sqrt`, `cbrt`. (#15474)
+ - [MXNET-978] Higher Order Gradient Support `clip`, `dropout`. (#15746)
+ - [MXNET-978] Higher Order Gradient Support `sinh`, `cosh`. (#15412)
+ - [MXNET-978] n-th order gradient test support. (#15611)
+ - [MXNET-978] Fully connected, higher order grad (#14779)
+ - [MXNET-978] Higher Order Gradient Support `arcsinh`, `arccosh`. (#15530)
+
+#### Operator improvements
+
+ - broadcast axis is alias to broadcast axes; doc fix (#15546)
+ - Utility to help developers debug operators: Tensor Inspector (#15490)
+ - Softmax with length (#15169)
+ - in-place reshape ops (#14053)
+ - Add missing default axis value to symbol.squeeze op (#15707)
+ - Add matrix determinant operator in linalg (#15007)
+ - Add fp16 support for topk (#15560)
+ - [MXNET-1399] multiclass-mcc metric enhancements (#14874)
+ - new raise mode for nd.take and fix backward for wrap mode (#15887)
+
+#### Profiler
+
+ - Fixing duplication in operator profiling (#15240)
+ - Custom Operator Profiling Enhancement (#15210)
+ - [Opperf] Make module/namespace of the operator parameterized (#15226)
+ - Opperf: Support Python<3.6 (#15487)
+ - Add transpose_conv, sorting and searching operator benchmarks to Opperf (#15475)
+ - Deprecate USE_PROFILER flag (#15595)
+ - Update profiler.md (#15477)
+ - [Opperf] Add array rearrange operators to opperf (#15606)
+ - [OpPerf] PDF Random ops fix (#15661)
+ - [Opperf] Add  optimizer update operator benchmarks to opperf (#15522)
+ - fix broadcast op param (#15714)
+ - [OpPerf] Profiler flag for Python, Cpp  (#15881)
+ - [Opperf] Filter out deprecated ops (#15541)
+ - [OpPerf] Handle positional arguments (#15761)
+ - [OpPerf] Take care of 4d param  (#15736)
+ - Add Median,p50,p99 to python profiler (#15953)
+ - adding "total" (total time) to profiler aggregate stats sorting criteria (#16055)
+
+#### ONNX import/export
+
+ - Correct ONNX documentation (#15914)
+ - [MXNET-895] ONNX import/export: TopK (#13627)
+
+#### Runtime discovery of features
+
+ - Making Features as a singleton for improved caching (#15835)
+
+#### Bug fixes
+
+ - [bug] fix higher grad log  (#15120)
+ - Showing proper error when csr array is not 2D in shape. (#15242)
+ - add 'asnumpy' dtype option to check_symbolic_backward (#15186)
+ - point fix the vector declaration in MultiBoxDetection (#15300)
+ - Temporarily Commenting out Flaky Test (#15436)
+ - Fix memory leak in NaiveEngine (#15405)
+ - fix nightly CI failure (#15452)
+ - Small typo fixes in batch_norm-inl.h (#15527)
+ - Bypass cuda/cudnn checks if no driver. (#15551)
+ - Julia path patch (#15561)
+ - Fix AMP Tutorial failures (#15526)
+ - Fix warnings in CLang: (#15270)
+ - Fix dumps for Constant initializer (#15150)
+ - fix normalize mean error bug (#15539)
+ - [fix] print `self` in warning. (#15614)
+ - [MXNET-1411] solve pylint error issue#14851 (#15113)
+ - [Flaky test] Skip test_operator_gpu.test_convolution_independent_gradients (#15631)
+ - Fix subgraph with custom_op (#15671)
+ - Fix USE_BLAS == openblas check (#15691)
+ - update previous flaky naive engine test (#15651)
+ - make TransposeShape infer shape form both sides (#15713)
+ - Skip Flaky Test (#15722)
+ - Revert "Dynamic Library Loading Support" (#15755)
+ - Fix flaky test test_global_metric (#15756)
+ - Fix PR #15489 (Dynamic Library Loading Support) (#15760)
+ - Refactor LibraryInitializer so it's thread safe. Fixes random sporadical concurrency crashes. (#15762)
+ - Fix backward_clip num inputs and type of clip params (#15688)
+ - fixing problem with existing Singleton Caching (#15868)
+ - Allow operators with multiple outputs in get_atomic_symbol (#15740)
+ - Fix ConcatType backward type inference (#15829)
+ - Add disable attr to subgraph property (#15926)
+ - Re-enable flaky test_prelu (#15777)
+ - declare explicitly the tblob default assign operator and copy constructor (#15937)
+ - Discard needless test cases in `test_convolution_independent_gradients` (#15939)
+ - fix naive engine for multi-threaded inference (#15574)
+ - Fix get_rows_per_block (#15979)
+ - Fix a memory misalignment in topk operator (#15948)
+ - Decouple dtype from shape for Random multinomial (#15980)
+ - Fix dtype inference in arange_like operator (#15930)
+ - Disable laop_6 (#15976)
+ - Fix flaky clojure profile test (#16058)
+ - fix test_pick test time  is too long (#16066)
+ - [fix] Support nullop in `transpose` (#15865)
+ - fix flaky test (#16074)
+ - fix some test files test time is too long (#16067)
+ - Fix gradient tensor mutate in `{adam/ftrl/rmprop/rmspropalex}_update`. (#15768)
+ - Fix unary operator ceil/floor/trunc when data type is integer (#14251)
+ - Fix failing tests (#16117)
+ - Fixes NAG optimizer #15543 (#16053)
+ - avoid test relu at the origin due to discontinuous gradient (#16133)
+ - Fix remaining errors reported by D2L (#16157)
+ - use 1E-4 in groupnorm test(#16169)
+ - Sequence last fix (#16156)
+ - fixing test for model compatibility checker (#16159)
+ - assert_allclose -> rtol=1e-10 (#16198)
+ - [MEMORY] retry GPU memory allocation if fragmented (#16194)
+ - improve dataloader signals and messages (#16114)
+ - Update ndarray.py (#16205)
+ - fix flaky test (#16191)
+ - Solve #14116, #15143 (#15144)
+ - [MXNET-1422] Fix wrong results of min([inf, inf]) and max([-inf,-inf]) (#16226)
+ - Fix inconsistent interpolation method values (#16212)
+ - set fixed seed for profiler (#16155)
+ - Fix MXNDArrayGetData (#16289)
+ - fix atol for test_preloaded_multi_sgd (#16356)
+ - Fix windows flakiness (#16415)
+ - cuDNN non-persistant bidirectional RNN dgrad sync fix (#16391)
+ - [BUGFIX] Minor type issues in Squeeze (#16448)
+ - Fix Nightly Tests for Binaries (#16451)
+ - Fix dtype bug (#16467)
+ - Fix flakey pylint CI failures (#16462)
+ - Load NDArray only to GPU if GPU is present (#16432)
+ - Bug fix for the input of same axes of the swapaxes operator (#16513)
+ - Fix learning rate scheduler being unexpectedly overwritten by optimizer's default value (#16487)
+ - disable tests (#16536)
+ - fix pylint in CI (#16540)
+ - image crop gpu (#16464)
+ - Build dmlc-core with old thread_local implementation (#16526)
+ - fix doc for topk (#16571)
+ - RNNOp to call cudaEventCreate lazily (#16584)
+ - add encoding to the stub files for potential utf8 char in doc strings (#16580)
+ - Surpress subgraph log in CI (#16607)
+ - Fix dequantize memory corruption (#16606)
+ - Fix for wrong reqs set after switching from training to inference (#16553)
+ - Disables test_bulking_operator_gpu due to flakiness (#16611)
+ - Imagenet inference to nightly fix (#16599)
+ - Move some subgraph verbose to MXNET_SUBGRAPH_VERBOSE=2 (#16622)
+ - RNNOp only call cuda/cudnn if GPU ctx is requested (#16632)
+ - fix bad encode (#16641)
+ - Disable float16 test (#16643)
+ - Fix GetMKLDNNData for delay alloc (#16618)
+ - Move ops which don't support FP16 dtype to FP32 list (#16668)
+ - no such method => modified function args (#16610)
+ - fix cuDNN RNN dtype_with_fallback_ bug (#16671)
+ - Add check if scipy is imported in sparse.py (#16574)
+ - Added launch bounds to the reduce kernels (#16397)
+ - fix install dir (#16690)
+ - fix binary dependencies in CD and nightly (#16693)
+ - Fix SliceChannel Type inference (#16748) (#16797)
+ - fix flakiness of test_np_mixed_precision_binary_funcs (#16873)
+ - Fix test_gluon.py:test_sync_batchnorm when number of GPUS > 4 (#16835)
+ - Omp fork numthreads fix 1.6 (#17000)
+ - [BUGFIX] Fix race condition in kvstore.pushpull (#17007) (#17052)
+ - Backport #17002, #17068 and #17114 to 1.6 branch (#17137)
+ - Backport 3rdparty/openmp fixes (#17193)
+ - fix norm sparse fallback (#17149)
+
+### Front end API
+
+ - Expose get_all_registered_operators and get_operator_arguments in the… (#15364)
+ - Add magic method `abs` to NDArray and Symbol. (#15680)
+ - Dynamic Library Loading Support (#15489)
+ - [MXNET-1294] Add KVSTORE PushPull API (#15559)
+
+#### Gluon
+
+ - [Dataset] Add take, filter, sample API to dataset (#16078)
+ - Add register_op_hook for gluon (#15839)
+ - [Dataset] add shard API (#16175)
+ - Add list_ctx to ParameterDict (#16185)
+ - [Gluon] Support None argument in HybridBlock (#16280)
+ - Aggregated zero grad (#16446)
+ - try to fix block (#16465)
+ - [Gluon] Don't serialize shared parameters twice (#16582)
+ - Initializer.__eq__ (#16680)
+
+#### Symbol
+
+ - Add symbol api for randn and fix shape issue for randn ndarray and symbol api (#15772)
+ - Graph Partition API (#15886)
+
+### Language Bindings
+
+#### Python
+
+MXNet community [voted](https://lists.apache.org/thread.html/r3a2db0f22a1680cc56804191446fef2289595798ca19fd17de1ff03e%40%3Cdev.mxnet.apache.org%3E) to no longer support Python 2 in future releases of MXNet. Therefore, MXNet 1.6 release is going to be the last MXNet release to support Python 2.
+
+#### C/C++
+
+ - [C++] Improve inference script to support benchmark on Imagenet (#15164)
+ - C Api for simplebind, fix comment for trigoops, add atol to assert (#16585)
+
+#### Clojure
+
+ - Extend Clojure BERT example (#15023)
+ - [Clojure] Add fastText example (#15340)
+ - make clojure api generator tests less brittle (#15579)
+
+#### Julia
+
+ - add julia env settings (#15523)
+ - julia: bump window prebult binary version to v1.5.0 (#15608)
+ - julia: remove Travis CI related files (#15616)
+ - julia: bump binding version to v1.6.0 (#15607)
+ - julia: rename build env var `MXNET_HOME` to `MXNET_ROOT` (#15568)
+ - Revert "julia: rename build env var `MXNET_HOME` to `MXNET_ROOT` (#15568)" (#16147)
+ - julia: fix `mx.forward` kwargs checking (#16138)
+ - julia: implement `context.num_gpus` (#16236)
+ - julia: add `AbstractMXError` as parent type (#16235)
+ - [MXNET-1430] julia: implement context.gpu_memory_info (#16324)
+ - julia/docs: more DRY on page rendering (#16396)
+
+#### Perl
+
+ - [Perl] - simplify aliasing strategy (#15395)
+ - [Perl] - ndarray to native array conversion fix (#16635)
+
+#### Scala
+
+ - Add Sparse NDArray support for Scala (#15378)
+ - fix the bug on Scala Sparse (#15500)
+ - fix heap-use-after-free in scala (#15503)
+ - Bump Scala version to 1.6 (#15660)
+ - Fix Scala Symbolic API some/Some typo (#15687)
+ - Faster Scala NDArray to BufferedImage function (#16219)
+
+### Performance improvements
+
+ - Proper bulking of ops not using FCompute (#15272)
+ - improve layernorm CPU performance (#15313)
+ - Efficient MXNet sampling in the multinomial distribution (#15311)
+ - Revert default return type for indices in argsort() and topk() back to float32 (#15360)
+ - Use omp threads for cpu data loader (#15379)
+ - Accelerate ROIPooling layer (#14894)
+ - Avoid memory copy for dropout inference (#15521)
+ - Add omp parallel optimization for _contrib_BilinearReisze2D (#15584)
+ - Softmax optimization for GPU (#15545)
+ - Speed up group executor (#16069)
+ - FullyConnected Bias performance improvement on GPU (#16039)
+ - Embedding gradient performance optimization on GPU (#16355)
+ - Faster Transpose 2D (#16104)
+ - Pseudo 2D transpose kernel (#16229)
+ - Faster general take (#16615)
+
+### Examples and tutorials
+
+ - [TUTORIAL] Gluon performance tips and tricks (#15427)
+ - Updating profiler tutorial to include new custom operator profiling (#15403)
+ - [TUTORIAL] Gluon and Sparse NDArray (#15396)
+ - [TUTORIAL] Revise Naming tutorial (#15365)
+ - Revise Symbol tutorial (#15343)
+ - Two fixes for info_gan.md example Code (#15323)
+ - Rebase #13757 to master (#15189)
+ - Tensor Inspector Tutorial (#15517)
+ - logging (#15106)
+ - update profiler tutorial (#15580)
+ - [MXNET-1358] Fit api tutorial (#15353)
+ - Tutorials nighly fix (#16179)
+ - Update add_op_in_backend.md (#16403)
+ - typo fix in r doc lstm tutorial (#16546)
+ - [MKL-DNN] Add mxnet mkldnn cmake tutorial (#16688)
+
+### Website and documentation
+
+ - [DOC] Clarify that global pooling is going to reset padding (#15269)
+ - Update sparse_retain Documentation (#15394)
+ - nano instructions (#15117)
+ - remove comments from nano instructions (#15433)
+ - REAME   MTCNN   Link URL Error in original website (#15020)
+ - Update Horovod docs links in README (#15366)
+ - fix doc for sort and argsort (#15317)
+ - fix comment (#15481)
+ - Improve docs for AMP (#15455)
+ - [Doc] Add MKL install method apt/yum into tutorial (#15491)
+ - Julia docs (#15454)
+ - Docs: Fix misprints (#15505)
+ - website build for julia: fix path to be static (#15554)
+ - some minor typos/clarifications (#15538)
+ - refine Nano setup directions (#15524)
+ - [Doc] add squeeze to Array change shape (#15549)
+ - fix typo (#15648)
+ - Fix url (404 error) (#15683)
+ - update julia install doc (#15609)
+ - [DOC] refine autograd docs (#15109)
+ - [DOC] Fix many arguments in the doc: reshape_like, arange_like, shape_array (#15752)
+ - Add Gather_nd Scatter_nd to NDArray API category doc (#15689)
+ - [Dependency Update] [Doc] move the general prerequisite software to the top (#15896)
+ - typo in docs (#16094)
+ - [WIP] New Website: New Docs [1/3] (#15884)
+ - [DOC] Fix doc for nn.Embedding, nn.Dense and nd.Embedding (#15869)
+ - [DOC] Consistent capitalization: mxnet -> MXNet, scala -> Scala (#16041)
+ - New Website: Remove Old Content [2/3] (#15885)
+ - New Website: New Pipeline [3/3] (#15883)
+ - Update KL Divergence formula (#16170)
+ - fix broken links (#16255)
+ - redirect to the 404 page (#16287)
+ - add google-analytics config (#16271)
+ - Fixing links for website + Fixing search (#16284)
+ - Minor fix in ToTensor documentation. (#16299)
+ - adding redirects so that old website API links surfaced from searches (#16342)
+ - Fix code block formatting in Why MXNet doc page (#16334)
+ - Julia: add API docs back (#16363)
+ - Change mailing list url in footer to point to instructions about how to subscribe instead (#16384)
+ - Add instructions to report a security vulnerability (#16383)
+ - [DOC] fix installation selector wrong history (#16381)
+ - Beta build (#16411)
+ - [WIP] Improving Python Docs API (#16392)
+ - fix autodoc for spurrious toggles (#16452)
+ - [Doc] Update the download page with 1.5.1 release (#16442)
+ - Fixing broken links (#16500)
+ - add binary and docs build command options (#16514)
+ - add option to remove indexes (#16525)
+ - Correct Google Analytics Tracker (#16490)
+ - [Doc] Use mirror link in the download page (#16501)
+ - checking broken link fixes work (#16538)
+ - detect number of procs during sphinx build (#16512)
+ - fixed broken links across multiple files (#16581)
+ - fix missing docs due to git add issues (#16496)
+ - second round of fixing broken links in multiple files (#16598)
+ - Python Docstring Convetion (#16550)
+ - [MXNET-1434] Fix a broken link for basic C++ tutorial (#16461)
+ - Fix python doc build issue (#16630)
+ - fixing broken links in multiple files - round 3 (#16634)
+
+### CI/CD
+
+ - Fix build_ccache_wrappers: (#14631)
+ - Remove mhard-float option. This is already deprecated by Google. (#15435)
+ - CI: upgrade Julia version from 1.0.3 to 1.0.4 (#15502)
+ - Add -R option to ci/build.py to avoid rebuilding containers (#15426)
+ - [Dependency Update] Bump up the CI Nvidia docker to CUDA 10.1 (#14986)
+ - fixed config.mk and Makefile bugs for installing mkl (#15424)
+ - Add -DMXNET_USE_OPENMP to Makefiles so libinfo gets updated accordingly (#15498)
+ - [Dependency Update] Dependency update doc (#15045)
+ - Remove Scala package test on build (#15915)
+ - Refactor for windows CI 'out of heap space' errors (#15922)
+ - Fix Nightly Maven GPU (#15989)
+ - Windows cmake flags cleanup (#16013)
+ - Disable flaky test in test_amp_conversion (#16031)
+ - Updates git_init Jenkins utility function to support checking out a particular commit id
+ - Adds artifact repository scripts
+ - Adds CD pipeline framework
+ - Adds static libmxnet release pipeline
+ - Updates CD pipeline
+ - Adds documentation
+ - Updates kvstore functions to use pushd and popd
+ - Throws exceptions instead o magic numbers
+ - Updates artifact repository cli to use --libtype instead of --static or --dynamic
+ - Clarifies ci_utils and cd_utils origin remark
+ - Adds clarifying note on why ubuntu 14.04 is being used for compilation
+ - Removes MXNET_SHA
+ - Removes set_release_job_name
+ - Adds license headers
+ - Updates artifact repository to expect licenses
+ - Moves ci/cd to cd directory
+ - Takes downstream job name from environment
+ - Updates order of parameters
+ - Updates job type parameter to dropdown
+ - Adds libmxnet feature extraction code comments
+ - Removes ccache setup from static build
+ - Disable test coverage of C++ codebase on CI  (#15981)
+ - Update readme and project.clj comment (#16084)
+ - Enable tvm_op for ci (#15889)
+ - Not to search for coverage files when none exist (#16107)
+ - Fixes openblas installation for static build
+ - Update python dependencies (#16105)
+ - CD Fixes (#16127)
+ - Adds dynamic libmxnet to CD pipeline (#16163)
+ - Fix README Build Status (#16183)
+ - subscribe to build and CD changes (#16192)
+ - [CD] Add COMMIT_ID param to release job (#16202)
+ - Fix lack of dylib support in Makefile when use lapack (#15813)
+ - Removes git status update stop gap solution (#16285)
+ - add mkl installation temp fix (#16304)
+ - add 'Release' cmake flag (#16294)
+ - S3 upload artifacts (#16336)
+ - Fix nightly scala pipeline (#16362)
+ - remove redundant branch name (#16372)
+ - Skipping installing nightly test (#16418)
+ - Adds PyPI CD Pipeline (#16190)
+ - upgrade the pytest version (#16429)
+ - Revert "add mkl installation temp fix (#16304)" (#16369)
+ - increase docker cache timeout (#16430)
+ - Adds pip requirements file to nightly gpu ci image (#16472)
+ - [CD] Adds python docker pipeline (#16547)
+ - Move imagenet inference to nightly (#16577)
+ - Backport #16980 #17031 #17018 #17019 to 1.6 branch (#17213)
+
+### Misc
+
+ - update committer info (#15289)
+ - Typo fix in plan_memory relase -> release. (#15299)
+ - indent changes (#15321)
+ - Had a few PRs merged. Hope to become an official contributor and potentially a commiter. (#15451)
+ - cuda/cuDNN lib version checking.  Force cuDNN v7 usage. (#15449)
+ - Improve diagnose.py, adding build features info and binary library path. (#15499)
+ - update ratcheck for apache-rat 0.13 release (#15417)
+ - add myself to interested modules (#15590)
+ - 1.5.0 news (#15137)
+ - bump up version from 1.5.0 to 1.6.0 on master (#15072)
+ - Remove myself from CODEOWNERS (#15617)
+ - remove mshadow submodule
+ - import mshadow source tree
+ - cuDNN support cleanup (#15812)
+ - Remove requests_failed_to_import handling
+ - Update CODEOWNERS. (#15972)
+ - Improve diagnose.py to display environment variables (#15715)
+ - Update README.md (#16035)
+ - [Dev] update ps-lite dependency (#15936)
+ - Typedef cleanup (#15899)
+ - add KEY for Tao Lv (#16081)
+ - remove 'foo' and other print msg from test (#16088)
+ - Revert accidental change to CMakelists (#16040)
+ - Update env_var.md (#16145)
+ - Update dmlc-core (#16149)
+ - adding codeowners (#16165)
+ - Factorize CUDA_KERNEL_LOOP used in CUDA kernels (#16197)
+ - add code of conduct and conflict resolution (#16343)
+ - simple typo error in NEWS.md (#16344)
+ - update NEWS.md and README.md (#16385)
+ - split issue templates (#16558)
+ - Create SECURITY.md (#16573)
 
 ## 1.5.1
 Apache MXNet (incubating) 1.5.1 is a maintenance release incorporating important bug fixes and important performance improvements. All users of Apache MXNet (incubating) 1.5.0 are advised to upgrade. You can install Apache MXNet (incubating) 1.5.1 at the usual place. Please review these Release Notes to learn the bug fixes.
@@ -228,9 +937,9 @@ Apache MXNet (incubating) 1.5.1 is a maintenance release incorporating important
 ### New Features
 
 #### Automatic Mixed Precision(experimental)
-Training Deep Learning networks is a very computationally intensive task. Novel model architectures tend to have increasing numbers of layers and parameters, which slow down training. Fortunately, software optimizations and new generations of training hardware make it a feasible task. 
+Training Deep Learning networks is a very computationally intensive task. Novel model architectures tend to have increasing numbers of layers and parameters, which slow down training. Fortunately, software optimizations and new generations of training hardware make it a feasible task.
 However, most of the hardware and software optimization opportunities exist in exploiting lower precision (e.g. FP16) to, for example, utilize Tensor Cores available on new Volta and Turing GPUs. While training in FP16 showed great success in image classification tasks, other more complicated neural networks typically stayed in FP32 due to difficulties in applying the FP16 training guidelines.
-That is where AMP (Automatic Mixed Precision) comes into play. It automatically applies the guidelines of FP16 training, using FP16 precision where it provides the most benefit, while conservatively keeping in full FP32 precision operations unsafe to do in FP16. To learn more about AMP, check out this [tutorial](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/amp/amp_tutorial.md). 
+That is where AMP (Automatic Mixed Precision) comes into play. It automatically applies the guidelines of FP16 training, using FP16 precision where it provides the most benefit, while conservatively keeping in full FP32 precision operations unsafe to do in FP16. To learn more about AMP, check out this [tutorial](https://github.com/apache/incubator-mxnet/blob/master/docs/tutorials/amp/amp_tutorial.md).
 
 #### MKL-DNN Reduced precision inference and RNN API support
 Two advanced features, fused computation and reduced-precision kernels, are introduced by MKL-DNN in the recent version. These features can significantly speed up the inference performance on CPU for a broad range of deep learning topologies. MXNet MKL-DNN backend provides optimized implementations for various operators covering a broad range of applications including image classification, object detection, and natural language processing. Refer to the [MKL-DNN operator documentation](https://github.com/apache/incubator-mxnet/blob/v1.5.x/docs/tutorials/mkldnn/operator_list.md) for more information.
@@ -245,13 +954,13 @@ Note: Currently dynamic shape does not work with Gluon deferred initialization.
 
 #### Large Tensor Support
 Currently, MXNet supports maximal tensor size of around 4 billon (2^32). This is due to uint32_t being used as the default data type for tensor size, as well as variable indexing.
-This limitation has created many problems when larger tensors are used in the model. 
+This limitation has created many problems when larger tensors are used in the model.
 A naive solution to this problem is to replace all uint32_t in the MXNet backend source code to int64_t.
 This solution is not viable, however, because many data structures use uint32_t as the data type for its members.
-Unnecessarily replacing these variables to int64_t will increase the memory consumption causing another limitation. Second, MXNet has many submodule dependencies. 
-Updating the variable types in the MXNet repository is not enough. We also need to make sure different libraries, such as MKLDNN, MShadow etc. supports the int64_t integer data type. 
+Unnecessarily replacing these variables to int64_t will increase the memory consumption causing another limitation. Second, MXNet has many submodule dependencies.
+Updating the variable types in the MXNet repository is not enough. We also need to make sure different libraries, such as MKLDNN, MShadow etc. supports the int64_t integer data type.
 Third, many front end APIs assume unsigned 32-bit integer interface. Only updating the interface in C/C++ will cause all the language bindings to fail.
-Therefore, we need a systematic approach to enhance MXNet to support large tensors. 
+Therefore, we need a systematic approach to enhance MXNet to support large tensors.
 Now you can enable large tensor support by changing the following build flag to 1: `USE_INT64_TENSOR_SIZE = 1`. Note this is set to 0 by default.
 For more details please refer to the [design document](https://cwiki.apache.org/confluence/display/MXNET/Large+Tensor+Support).
 
@@ -260,7 +969,7 @@ MXNet has added support for CUDA 10, CUDA 10.1, cudnn7.5, NCCL 2.4.2, and numpy 
 These updates are available through PyPI packages and build from source, refer to [installation guide](https://mxnet.apache.org/versions/master/install/index.html) for more details.
 
 #### Gluon Fit API(experimental)
-Training a model in Gluon requires users to write the training loop. This is useful because of its imperative nature, however repeating the same code across multiple models can become tedious and repetitive with boilerplate code. 
+Training a model in Gluon requires users to write the training loop. This is useful because of its imperative nature, however repeating the same code across multiple models can become tedious and repetitive with boilerplate code.
 The training loop can also be overwhelming to some users new to deep learning. We have introduced an Estimator and Fit API to help facilitate training loop.
 Note: this feature is still experimental, for more details, refer to [design document](https://cwiki.apache.org/confluence/display/MXNET/Gluon+Fit+API+-+Tech+Design).
 
@@ -521,7 +1230,7 @@ Note: this feature is still experimental, for more details, refer to [design doc
 * Update inception_inference.cpp (#14674)
 * Optimize C++ API (#13496)
 
-#### Clojure 
+#### Clojure
 * [Clojure] - Add Spec Validations to the Optimizer namespace (#13499)
 * [Clojure] Add Spec Validations for the Random namespace (#13523)
 * [Clojure] Correct the versions in the README so they correspond to the latest maven.org release ([#13507)
@@ -1093,38 +1802,38 @@ Apache MXNet (incubating) 1.4.1 is a maintenance release incorporating important
 
 ## 1.4.0
 
-- [New Features](#new-features)
+- [New Features](#new-features-2)
   * [Java Inference API](#java-inference-api)
   * [Julia API](#julia-api)
-  * [Control Flow Operators (experimental)](#control-flow-operators--experimental-)
+  * [Control Flow Operators (experimental)](#control-flow-operators-experimental)
   * [SVRG Optimization](#svrg-optimization)
-  * [Subgraph API (experimental)](#subgraph-api--experimental-)
+  * [Subgraph API (experimental)](#subgraph-api-experimental)
   * [JVM Memory Management](#jvm-memory-management)
-  * [Topology-aware AllReduce (experimental)](#topology-aware-allreduce--experimental-)
-  * [MKLDNN backend: Graph optimization and Quantization (experimental)](#mkldnn-backend--graph-optimization-and-quantization--experimental-)
+  * [Topology-aware AllReduce (experimental)](#topology-aware-allreduce-experimental)
+  * [MKLDNN backend: Graph optimization and Quantization (experimental)](#mkldnn-backend--graph-optimization-and-quantization-experimental)
     + [Graph Optimization](#graph-optimization)
     + [Quantization](#quantization)
-- [New Operators](#new-operators)
-- [Feature improvements](#feature-improvements)
+- [New Operators](#new-operators-3)
+- [Feature improvements](#feature-improvements-3)
   * [Operator](#operator)
   * [Optimizer](#optimizer)
   * [Sparse](#sparse)
   * [ONNX](#onnx)
-  * [MKLDNN](#mkldnn)
+  * [MKLDNN](#mkldnn-2)
   * [Inference](#inference)
   * [Other](#other)
 - [Frontend API updates](#frontend-api-updates)
-  * [Gluon](#gluon)
-  * [Symbol](#symbol)
+  * [Gluon](#gluon-2)
+  * [Symbol](#symbol-1)
 - [Language API updates](#language-api-updates)
   * [Java](#java)
   * [R](#r)
-  * [Scala](#scala)
-  * [Clojure](#clojure)
-  * [Perl](#perl)
-  * [Julia](#julia)
+  * [Scala](#scala-2)
+  * [Clojure](#clojure-2)
+  * [Perl](#perl-2)
+  * [Julia](#julia-2)
 - [Performance benchmarks and improvements](#performance-benchmarks-and-improvements)
-- [Bug fixes](#bug-fixes)
+- [Bug fixes](#bug-fixes-4)
 - [Licensing updates](#licensing-updates)
 - [Improvements](#improvements)
   * [Tutorial](#tutorial)
@@ -1135,9 +1844,9 @@ Apache MXNet (incubating) 1.4.1 is a maintenance release incorporating important
   * [Installation](#installation)
   * [Build and CI](#build-and-ci)
   * [3rd party](#3rd-party)
-    + [TVM:](#tvm-)
-    + [CUDNN:](#cudnn-)
-    + [Horovod:](#horovod-)
+    + [TVM:](#tvm)
+    + [CUDNN:](#cudnn)
+    + [Horovod:](#horovod)
 - [Deprications](#deprications)
 - [Other](#other-1)
 - [How to build MXNet](#how-to-build-mxnet)
@@ -1668,20 +2377,20 @@ Submodule@commit ID::Last updated by MXNet:: Last update in submodule
 
 ### Bug fixes
 
-* [MXNET-953] Fix oob memory read (v1.3.x) / [#13118](https://github.com/apache/incubator-mxnet/pull/13118)  
+* [MXNET-953] Fix oob memory read (v1.3.x) / [#13118](https://github.com/apache/incubator-mxnet/pull/13118)
 Simple bugfix addressing an out-of-bounds memory read.
 
 
-* [MXNET-969] Fix buffer overflow in RNNOp (v1.3.x) / [#13119](https://github.com/apache/incubator-mxnet/pull/13119)  
+* [MXNET-969] Fix buffer overflow in RNNOp (v1.3.x) / [#13119](https://github.com/apache/incubator-mxnet/pull/13119)
 This fixes an buffer overflow detected by ASAN.
 
 
-* CudnnFind() usage improvements (v1.3.x) / [#13123](https://github.com/apache/incubator-mxnet/pull/13123)  
+* CudnnFind() usage improvements (v1.3.x) / [#13123](https://github.com/apache/incubator-mxnet/pull/13123)
   This PR improves the MXNet's use of cudnnFind() to address a few issues:
   1. With the gluon imperative style, cudnnFind() is called during forward(), and so might have its timings perturbed by other GPU activity (including potentially other cudnnFind() calls).
   2. With some cuda drivers versions, care is needed to ensure that the large I/O and workspace cudaMallocs() performed by cudnnFind() are immediately released and available to MXNet.
-  3. cudnnFind() makes both conv I/O and workspace allocations that must be covered by the GPU global memory headroom defined by MXNET_GPU_MEM_POOL_RESERVE. Per issue #12662, large convolutions can result in out-of-memory errors, even when MXNet's storage allocator has free memory in its pool.  
-  
+  3. cudnnFind() makes both conv I/O and workspace allocations that must be covered by the GPU global memory headroom defined by MXNET_GPU_MEM_POOL_RESERVE. Per issue #12662, large convolutions can result in out-of-memory errors, even when MXNet's storage allocator has free memory in its pool.
+
   This PR addresses these issues, providing the following benefits:
   1. Consistent algo choice for a given convolution type in a model, both for instances in the same GPU and in other GPUs in a multi-GPU training setting.
   2. Consistent algo choice from run to run, based on eliminating sources of interference of the cudnnFind() timing process.
@@ -1689,38 +2398,38 @@ This fixes an buffer overflow detected by ASAN.
   4. Increased training performance based on being able to consistently run with models that approach the GPU's full global memory footprint.
   5. Adds a unittest for and solves issue #12662.
 
-* [MXNET-922] Fix memleak in profiler (v1.3.x) / [#13120](https://github.com/apache/incubator-mxnet/pull/13120)  
+* [MXNET-922] Fix memleak in profiler (v1.3.x) / [#13120](https://github.com/apache/incubator-mxnet/pull/13120)
   Fix a memleak reported locally by ASAN during a normal inference test.
 
-* Fix lazy record io when used with dataloader and multi_worker > 0 (v1.3.x) / [#13124](https://github.com/apache/incubator-mxnet/pull/13124)  
+* Fix lazy record io when used with dataloader and multi_worker > 0 (v1.3.x) / [#13124](https://github.com/apache/incubator-mxnet/pull/13124)
   Fixes multi_worker data loader when record file is used. The MXRecordIO instance needs to require a new file handler after fork to be safely manipulated simultaneously.
 
   This fix also safely voids the previous temporary fixes #12093 #11370.
 
-* fixed symbols naming in RNNCell, LSTMCell, GRUCell (v1.3.x) / [#13158](https://github.com/apache/incubator-mxnet/pull/13158)  
+* fixed symbols naming in RNNCell, LSTMCell, GRUCell (v1.3.x) / [#13158](https://github.com/apache/incubator-mxnet/pull/13158)
   This fixes #12783, by assigning all nodes in hybrid_forward a unique name. Some operations were in fact performed without attaching the appropriate (time) prefix to the name, which makes serialized graphs non-deserializable.
 
-* Fixed `__setattr__` method of `_MXClassPropertyMetaClass` (v1.3.x) / [#13157](https://github.com/apache/incubator-mxnet/pull/13157)  
+* Fixed `__setattr__` method of `_MXClassPropertyMetaClass` (v1.3.x) / [#13157](https://github.com/apache/incubator-mxnet/pull/13157)
   Fixed `__setattr__` method
 
-* allow foreach on input with 0 length (v1.3.x) / [#13151](https://github.com/apache/incubator-mxnet/pull/13151)  
+* allow foreach on input with 0 length (v1.3.x) / [#13151](https://github.com/apache/incubator-mxnet/pull/13151)
   Fix #12470. With this change, outs shape can be inferred correctly.
 
-* Infer dtype in SymbolBlock import from input symbol (v1.3.x) / [#13117](https://github.com/apache/incubator-mxnet/pull/13117)  
-  Fix for the issue - #11849  
-  Currently, Gluon symbol block cannot import any symbol with type other than fp32. All the parameters are created as FP32 leading to failure in importing the params when it is of type fp16, fp64 etc,  
-  In this PR, we infer the type of the symbol being imported and create the Symbol Block Parameters with that inferred type.  
+* Infer dtype in SymbolBlock import from input symbol (v1.3.x) / [#13117](https://github.com/apache/incubator-mxnet/pull/13117)
+  Fix for the issue - #11849
+  Currently, Gluon symbol block cannot import any symbol with type other than fp32. All the parameters are created as FP32 leading to failure in importing the params when it is of type fp16, fp64 etc,
+  In this PR, we infer the type of the symbol being imported and create the Symbol Block Parameters with that inferred type.
   Added the tests
 
 ### Documentation fixes
 
-* Document the newly added env variable (v1.3.x) / [#13156](https://github.com/apache/incubator-mxnet/pull/13156)  
+* Document the newly added env variable (v1.3.x) / [#13156](https://github.com/apache/incubator-mxnet/pull/13156)
   Document the env variable: MXNET_ENFORCE_DETERMINISM added in PR: [#12992](https://github.com/apache/incubator-mxnet/pull/12992)
 
-* fix broken links (v1.3.x) / [#13155](https://github.com/apache/incubator-mxnet/pull/13155)  
+* fix broken links (v1.3.x) / [#13155](https://github.com/apache/incubator-mxnet/pull/13155)
   This PR fixes broken links on the website.
 
-* fix broken Python IO API docs (v1.3.x) / [#13154](https://github.com/apache/incubator-mxnet/pull/13154)  
+* fix broken Python IO API docs (v1.3.x) / [#13154](https://github.com/apache/incubator-mxnet/pull/13154)
   Fixes [#12854: Data Iterators documentation is broken](https://github.com/apache/incubator-mxnet/issues/12854)
 
   This PR manually specifies members of the IO module so that the docs will render as expected. This is workaround in the docs to deal with a bug introduced in the Python code/structure since v1.3.0. See the comments for more info.
@@ -1729,7 +2438,7 @@ This fixes an buffer overflow detected by ASAN.
 
   This is important for any future modules - that they recognize this issue and make efforts to map the params and other elements.
 
-* add/update infer_range docs (v1.3.x) / [#13153](https://github.com/apache/incubator-mxnet/pull/13153)  
+* add/update infer_range docs (v1.3.x) / [#13153](https://github.com/apache/incubator-mxnet/pull/13153)
   This PR adds or updates the docs for the infer_range feature.
 
   Clarifies the param in the C op docs
@@ -1740,13 +2449,13 @@ This fixes an buffer overflow detected by ASAN.
 
 ### Other Improvements
 
-* [MXNET-1179] Enforce deterministic algorithms in convolution layers (v1.3.x) / [#13152](https://github.com/apache/incubator-mxnet/pull/13152)  
+* [MXNET-1179] Enforce deterministic algorithms in convolution layers (v1.3.x) / [#13152](https://github.com/apache/incubator-mxnet/pull/13152)
   Some of the CUDNN convolution algorithms are non-deterministic (see issue #11341). This PR adds an env variable to enforce determinism in the convolution operators. If set to true, only deterministic CUDNN algorithms will be used. If no deterministic algorithm is available, MXNet will error out.
 
 
 ### Submodule updates
 
-* update mshadow (v1.3.x) / [#13122](https://github.com/apache/incubator-mxnet/pull/13122)  
+* update mshadow (v1.3.x) / [#13122](https://github.com/apache/incubator-mxnet/pull/13122)
   Update mshadow for omp acceleration when nvcc is not present
 
 ### Known issues
@@ -1871,7 +2580,7 @@ For more information and examples, see [full release notes](https://cwiki.apache
 - CTC operator performance improvement from HawkAaron/MXNet-CTC (#11834)
 - Improve performance of broadcast ops backward pass (#11252)
 - Improved numerical stability as a result of using stable L2 norm (#11573)
-- Accelerate the performance of topk for GPU and CPU side (#12085 #10997 ; This changes the behavior of topk when nan values occur in the input) 
+- Accelerate the performance of topk for GPU and CPU side (#12085 #10997 ; This changes the behavior of topk when nan values occur in the input)
 - Support for dot(dns, csr) = dns and dot(dns, csr.T) = dns on CPU ([#11113](https://github.com/apache/incubator-mxnet/pull/11113))
 - Performance improvement for Batch Dot on CPU from mshadow ([mshadow PR#342](https://github.com/dmlc/mshadow/pull/342))
 

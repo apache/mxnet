@@ -35,18 +35,14 @@ ninja
 cd -
 
 # Move to lib
-rm -rf lib; mkdir lib; cp -L build/libmxnet.so lib/libmxnet.so
-
+rm -rf lib; mkdir lib;
 if [[ $PLATFORM == 'linux' ]]; then
+    cp -L build/libmxnet.so lib/libmxnet.so
     cp -L staticdeps/lib/libopenblas.so lib/libopenblas.so.0
-    if [[ -f /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so ]]; then
-        cp -L /usr/lib/gcc/x86_64-linux-gnu/4.8/libgfortran.so lib/libgfortran.so.3
-    elif [[ -f /usr/lib/x86_64-linux-gnu/libgfortran.so.3 ]]; then
-        cp -L /usr/lib/x86_64-linux-gnu/libgfortran.so.3 lib/libgfortran.so.3
-    else
-        cp -L /usr/lib/x86_64-linux-gnu/libgfortran.so.4 lib/libgfortran.so.4
-    fi
-    cp -L /usr/lib/x86_64-linux-gnu/libquadmath.so.0 lib/libquadmath.so.0
+    cp -L $(ldd lib/libmxnet.so | grep libgfortran |  awk '{print $3}') lib/
+    cp -L $(ldd lib/libmxnet.so | grep libquadmath |  awk '{print $3}') lib/
+elif [[ $PLATFORM == 'darwin' ]]; then
+    cp -L build/libmxnet.dylib lib/libmxnet.dylib
 fi
 
 # Print the linked objects on libmxnet.so
@@ -55,8 +51,8 @@ if [[ ! -z $(command -v readelf) ]]; then
     readelf -d lib/libmxnet.so
     strip --strip-unneeded lib/libmxnet.so
 elif [[ ! -z $(command -v otool) ]]; then
-    otool -L lib/libmxnet.so
-    strip -u -r -x lib/libmxnet.so
+    otool -L lib/libmxnet.dylib
+    strip -u -r -x lib/libmxnet.dylib
 else
     >&2 echo "Not available"
 fi

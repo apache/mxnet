@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable= arguments-differ
 """ResNets, implemented in Gluon."""
-from __future__ import division
 
 __all__ = ['ResNetV1', 'ResNetV2',
            'BasicBlockV1', 'BasicBlockV2',

@@ -22,9 +22,7 @@ from functools import reduce
 from operator import mul
 import random
 
-from nose.tools import ok_
-
-from common import with_seed
+from common import with_seed, xfail_when_nonstandard_decimal_separator
 import mxnet
 from mxnet import nd, autograd, gluon
 from mxnet.test_utils import (
@@ -165,6 +163,7 @@ def test_arccos():
         check_second_order_unary(array, arccos, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_arctan():
     def arctan(x):
@@ -216,6 +215,7 @@ def test_arccosh():
         check_second_order_unary(array, arccosh, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_arctanh():
     def arctanh(x):
@@ -278,6 +278,7 @@ def test_log():
         check_nth_order_unary(array, log, [grad_op, grad_grad_op], [1, 2])
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_log2():
     def log2(x):
@@ -292,6 +293,7 @@ def test_log2():
         check_second_order_unary(array, log2, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_log10():
     def log10(x):
@@ -306,6 +308,7 @@ def test_log10():
         check_second_order_unary(array, log10, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_square():
     def grad_grad_op(x):
@@ -417,6 +420,7 @@ def test_sigmoid():
         check_nth_order_unary(array, sigmoid, grad_grad_op, 2)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sqrt():
     def sqrt(x):
@@ -457,6 +461,7 @@ def test_cbrt():
         check_second_order_unary(array, cbrt, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_rsqrt():
     def rsqrt(x):
@@ -477,6 +482,7 @@ def test_rsqrt():
         check_second_order_unary(array, rsqrt, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_rcbrt():
     def rcbrt(x):
@@ -648,18 +654,18 @@ def test_dense_backward_flatten():
         w_grad_grad_e = nd.dot(o_y, o_x_grad, transpose_a=True)
         x_grad_e = nd.dot(o_y, w)
         x_grad_grad_e = nd.dot(o_y, o_w_grad)
-        ok_(w_grad.shape == w.shape)
-        ok_(w_grad_grad.shape == w.shape)
-        ok_(x_grad.shape == x.shape)
-        ok_(x_grad_grad.shape == x.shape)
+        assert w_grad.shape == w.shape
+        assert w_grad_grad.shape == w.shape
+        assert x_grad.shape == x.shape
+        assert x_grad_grad.shape == x.shape
         w_grad_check = same(flatten2d_right(w_grad), flatten2d_right(w_grad_e))
         w_grad_grad_check = same(flatten2d_right(w_grad_grad), flatten2d_right(w_grad_grad_e))
         x_grad_check = same(flatten2d_right(x_grad), flatten2d_right(x_grad_e))
         x_grad_grad_check = same(flatten2d_right(x_grad_grad), flatten2d_right(x_grad_grad_e))
-        ok_(x_grad_check)
-        ok_(w_grad_check)
-        ok_(x_grad_grad_check)
-        ok_(w_grad_grad_check)
+        assert x_grad_check
+        assert w_grad_check
+        assert x_grad_grad_check
+        assert w_grad_grad_check
 
 @with_seed()
 def test_dense_backward_no_flatten():
@@ -701,12 +707,8 @@ def test_dense_backward_no_flatten():
         w_grad_grad_check = same(flatten2d_left(w_grad_grad), flatten2d_left(w_grad_grad_e))
         x_grad_check = same(flatten2d_left(x_grad), flatten2d_left(x_grad_e))
         x_grad_grad_check = same(flatten2d_left(x_grad_grad), flatten2d_left(x_grad_grad_e))
-        ok_(x_grad_check)
-        ok_(w_grad_check)
-        ok_(x_grad_grad_check)
-        ok_(w_grad_grad_check)
+        assert x_grad_check
+        assert w_grad_check
+        assert x_grad_grad_check
+        assert w_grad_grad_check
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments
 """Symbolic Executor component of MXNet."""
-from __future__ import absolute_import
 
 from array import array as py_array
 import ctypes
@@ -27,6 +26,7 @@ import numpy as np
 from .base import _LIB
 from .base import mx_uint, NDArrayHandle, SymbolHandle, ExecutorHandle, py_str, mx_int
 from .base import check_call, c_handle_array, c_array_buf, c_str_array
+from . import ndarray
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
 
@@ -227,11 +227,11 @@ class Executor(object):
         for obj in out_grads:
             if not isinstance(obj, NDArray):
                 raise TypeError("inputs must be NDArray")
-        ndarray = c_handle_array(out_grads)
+        handle_array = c_handle_array(out_grads)
         check_call(_LIB.MXExecutorBackwardEx(
             self.handle,
             mx_uint(len(out_grads)),
-            ndarray,
+            handle_array,
             ctypes.c_int(is_train)))
 
     def set_monitor_callback(self, callback, monitor_all=False):
@@ -358,7 +358,11 @@ class Executor(object):
         for name, array in arg_params.items():
             if name in self.arg_dict:
                 dst = self.arg_dict[name]
-                array.astype(dst.dtype).copyto(dst)
+                if dst.dtype == np.dtype([('bfloat16', np.uint16)]):
+                    cast_array = ndarray.amp_cast(array, dtype=dst.dtype)
+                    cast_array.copyto(dst)
+                else:
+                    array.astype(dst.dtype).copyto(dst)
             elif not allow_extra_params:
                 raise ValueError('Find name \"%s\" that is not in the arguments' % name)
 
@@ -368,7 +372,11 @@ class Executor(object):
         for name, array in aux_params.items():
             if name in self.aux_dict:
                 dst = self.aux_dict[name]
-                array.astype(dst.dtype).copyto(dst)
+                if dst.dtype == np.dtype([('bfloat16', np.uint16)]):
+                    cast_array = ndarray.amp_cast(array, dtype=dst.dtype)
+                    cast_array.copyto(dst)
+                else:
+                    array.astype(dst.dtype).copyto(dst)
             elif not allow_extra_params:
                 raise ValueError('Find name %s that is not in the auxiliary states' % name)
 

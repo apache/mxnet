@@ -55,46 +55,26 @@ _DTYPE_MX_TO_NP = {
 
 __all__ = ["Predictor", "load_ndarray_file"]
 
-if sys.version_info[0] == 3:
-    py_str = lambda x: x.decode('utf-8')
 
-    def c_str_array(strings):
-        """Create ctypes const char ** from a list of Python strings.
-
-        Parameters
-        ----------
-        strings : list of string
-            Python strings.
-
-        Returns
-        -------
-        (ctypes.c_char_p * len(strings))
-            A const char ** pointer that can be passed to C API.
-        """
-        arr = (ctypes.c_char_p * len(strings))()
-        arr[:] = [s.encode('utf-8') for s in strings]
-        return arr
+py_str = lambda x: x.decode('utf-8')
 
 
-else:
-    py_str = lambda x: x
+def c_str_array(strings):
+    """Create ctypes const char ** from a list of Python strings.
 
-    def c_str_array(strings):
-        """Create ctypes const char ** from a list of Python strings.
+    Parameters
+    ----------
+    strings : list of string
+        Python strings.
 
-        Parameters
-        ----------
-        strings : list of strings
-            Python strings.
-
-        Returns
-        -------
-        (ctypes.c_char_p * len(strings))
-            A const char ** pointer that can be passed to C API.
-        """
-        arr = (ctypes.c_char_p * len(strings))()
-        arr[:] = strings
-        return arr
+    Returns
+    -------
+    (ctypes.c_char_p * len(strings))
+        A const char ** pointer that can be passed to C API.
+    """
+    arr = (ctypes.c_char_p * len(strings))()
+    arr[:] = [s.encode('utf-8') for s in strings]
+    return arr
 
 
 def c_str(string):

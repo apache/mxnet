@@ -50,7 +50,7 @@
   (is (thrown? Exception (optimizer/dcasgd {:lambda 'a})))
   (is (thrown? Exception (optimizer/nag {:momentum 'a})))
   (is (thrown? Exception (optimizer/ada-delta {:epsilon 'a})))
-  (is (thrown? Exception (optimizer/rms-prop {:gamma1 'a})))
+  (is (thrown? Exception (optimizer/rms-prop {:rho 'a})))
   (is (thrown? Exception (optimizer/ada-grad {:rescale-gradient 'a})))
   (is (thrown? Exception (optimizer/adam {:beta1 'a})))
   (is (thrown? Exception (optimizer/sgld {:lr-scheduler 0.1}))))

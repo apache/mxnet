@@ -19,7 +19,7 @@
 # pylint: disable= arguments-differ
 """Basic neural network layers."""
 __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Dropout', 'Embedding',
-           'BatchNorm', 'InstanceNorm', 'LayerNorm', 'GroupNorm',
+           'BatchNorm', 'BatchNormReLU', 'InstanceNorm', 'LayerNorm', 'GroupNorm',
            'Flatten', 'Lambda', 'HybridLambda']
 import warnings
 import numpy as np
@@ -27,7 +27,7 @@ import numpy as np
 from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
-from ... import nd, sym
+from ... import ndarray as nd, symbol as sym
 from ...util import is_np_array
 
 
@@ -44,34 +44,41 @@ class Sequential(Block):
     """
     def __init__(self, prefix=None, params=None):
         super(Sequential, self).__init__(prefix=prefix, params=params)
+        self._layers = []
 
     def add(self, *blocks):
         """Adds block on top of the stack."""
         for block in blocks:
+            self._layers.append(block)
             self.register_child(block)
 
-    def forward(self, x):
+    def forward(self, x, *args):
         for block in self._children.values():
-            x = block(x)
+            x = block()(x, *args)
+            args = []
+            if isinstance(x, (tuple, list)):
+                args = x[1:]
+                x = x[0]
+        if args:
+            x = tuple([x] + list(args))
         return x
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
-                                                        block=_indent(block.__repr__(), 2))
+                                                        block=_indent(block().__repr__(), 2))
                             for key, block in self._children.items()])
-        return s.format(name=self.__class__.__name__,
-                        modstr=modstr)
+        return s.format(name=self.__class__.__name__, modstr=modstr)
 
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
             net = type(self)(prefix=self._prefix)
             with net.name_scope():
-                net.add(*layers)
+                net.add(*(l() for l in layers))
             return net
         else:
-            return layers
+            return layers()
 
     def __len__(self):
         return len(self._children)
@@ -87,7 +94,7 @@ class Sequential(Block):
         **kwargs : string
             Additional flags for hybridized operator.
         """
-        if self._children and all(isinstance(c, HybridBlock) for c in self._children.values()):
+        if self._children and all(isinstance(c(), HybridBlock) for c in self._children.values()):
             warnings.warn(
                 "All children of this Sequential layer '%s' are HybridBlocks. Consider "
                 "using HybridSequential for the best performance."%self.prefix, stacklevel=2)
@@ -108,34 +115,41 @@ class HybridSequential(HybridBlock):
     """
     def __init__(self, prefix=None, params=None):
         super(HybridSequential, self).__init__(prefix=prefix, params=params)
+        self._layers = []
 
     def add(self, *blocks):
         """Adds block on top of the stack."""
         for block in blocks:
+            self._layers.append(block)
             self.register_child(block)
 
-    def hybrid_forward(self, F, x):
+    def hybrid_forward(self, F, x, *args):
         for block in self._children.values():
-            x = block(x)
+            x = block()(x, *args)
+            args = []
+            if isinstance(x, (tuple, list)):
+                args = x[1:]
+                x = x[0]
+        if args:
+            x = tuple([x] + list(args))
         return x
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
-                                                        block=_indent(block.__repr__(), 2))
+                                                        block=_indent(block().__repr__(), 2))
                             for key, block in self._children.items()])
-        return s.format(name=self.__class__.__name__,
-                        modstr=modstr)
+        return s.format(name=self.__class__.__name__, modstr=modstr)
 
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
             net = type(self)(prefix=self._prefix)
             with net.name_scope():
-                net.add(*layers)
+                net.add(*(l() for l in layers))
             return net
         else:
-            return layers
+            return layers()
 
     def __len__(self):
         return len(self._children)
@@ -279,7 +293,110 @@ class Dropout(HybridBlock):
                         **self.__dict__)
 
 
-class BatchNorm(HybridBlock):
+class _BatchNorm(HybridBlock):
+    """Abstract BatchNorm layer (private, used as implementation base).
+    Batch normalization layer (Ioffe and Szegedy, 2014).
+    Normalizes the input at each batch, i.e. applies a transformation
+    that maintains the mean activation close to 0 and the activation
+    standard deviation close to 1.
+
+    Parameters
+    ----------
+    axis : int, default 1
+        The axis that should be normalized. This is typically the channels
+        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
+        set `axis=1` in `BatchNorm`. If `layout='NHWC'`, then set `axis=3`.
+    momentum: float, default 0.9
+        Momentum for the moving average.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+        When the next layer is linear (also e.g. `nn.relu`),
+        this can be disabled since the scaling
+        will be done by the next layer.
+    use_global_stats: bool, default False
+        If True, use global moving statistics instead of local batch-norm. This will force
+        change batch-norm into a scale shift operator.
+        If False, use local batch-norm.
+    fuse_relu: bool, default False
+        If True, this operator is equal to `BN+ReLU`.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    running_mean_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the running mean.
+    running_variance_initializer: str or `Initializer`, default 'ones'
+        Initializer for the running variance.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
+
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+    """
+    def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
+                 use_global_stats=False, fuse_relu=False,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 running_mean_initializer='zeros', running_variance_initializer='ones',
+                 in_channels=0, **kwargs):
+        super(_BatchNorm, self).__init__(**kwargs)
+        self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
+                        'fix_gamma': not scale, 'use_global_stats': use_global_stats}
+        self.fuse_relu = fuse_relu
+        if in_channels != 0:
+            self.in_channels = in_channels
+
+        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
+                                     shape=(in_channels,), init=gamma_initializer,
+                                     allow_deferred_init=True,
+                                     differentiable=scale)
+        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
+                                    shape=(in_channels,), init=beta_initializer,
+                                    allow_deferred_init=True,
+                                    differentiable=center)
+        self.running_mean = self.params.get('running_mean', grad_req='null',
+                                            shape=(in_channels,),
+                                            init=running_mean_initializer,
+                                            allow_deferred_init=True,
+                                            differentiable=False)
+        self.running_var = self.params.get('running_var', grad_req='null',
+                                           shape=(in_channels,),
+                                           init=running_variance_initializer,
+                                           allow_deferred_init=True,
+                                           differentiable=False)
+
+    def cast(self, dtype):
+        if np.dtype(dtype).name == 'float16':
+            dtype = 'float32'
+        super(_BatchNorm, self).cast(dtype)
+
+    def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
+        batch_norm = F.npx.batch_norm if is_np_array() else F.BatchNorm
+        if (not is_np_array()) and self.fuse_relu:
+            batch_norm = F.contrib.BatchNormWithReLU
+        return batch_norm(x, gamma, beta, running_mean, running_var,
+                          name='fwd', **self._kwargs)
+
+    def __repr__(self):
+        s = '{name}({content}'
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels if in_channels else None)
+        s += ')'
+        return s.format(name=self.__class__.__name__,
+                        content=', '.join(['='.join([k, v.__repr__()])
+                                           for k, v in self._kwargs.items()]))
+
+class BatchNorm(_BatchNorm):
     """Batch normalization layer (Ioffe and Szegedy, 2014).
     Normalizes the input at each batch, i.e. applies a transformation
     that maintains the mean activation close to 0 and the activation
@@ -328,52 +445,83 @@ class BatchNorm(HybridBlock):
         - **out**: output tensor with the same shape as `data`.
     """
     def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
-                 use_global_stats=False, beta_initializer='zeros', gamma_initializer='ones',
+                 use_global_stats=False,
+                 beta_initializer='zeros', gamma_initializer='ones',
                  running_mean_initializer='zeros', running_variance_initializer='ones',
                  in_channels=0, **kwargs):
-        super(BatchNorm, self).__init__(**kwargs)
-        self._kwargs = {'axis': axis, 'eps': epsilon, 'momentum': momentum,
-                        'fix_gamma': not scale, 'use_global_stats': use_global_stats}
-        if in_channels != 0:
-            self.in_channels = in_channels
+        super(BatchNorm, self).__init__(
+            axis=axis, momentum=momentum, epsilon=epsilon, center=center,
+            scale=scale,
+            use_global_stats=use_global_stats, fuse_relu=False,
+            beta_initializer=beta_initializer,
+            gamma_initializer=gamma_initializer,
+            running_mean_initializer=running_mean_initializer,
+            running_variance_initializer=running_variance_initializer,
+            in_channels=in_channels, **kwargs)
 
-        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(in_channels,), init=gamma_initializer,
-                                     allow_deferred_init=True,
-                                     differentiable=scale)
-        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True,
-                                    differentiable=center)
-        self.running_mean = self.params.get('running_mean', grad_req='null',
-                                            shape=(in_channels,),
-                                            init=running_mean_initializer,
-                                            allow_deferred_init=True,
-                                            differentiable=False)
-        self.running_var = self.params.get('running_var', grad_req='null',
-                                           shape=(in_channels,),
-                                           init=running_variance_initializer,
-                                           allow_deferred_init=True,
-                                           differentiable=False)
 
-    def cast(self, dtype):
-        if np.dtype(dtype).name == 'float16':
-            dtype = 'float32'
-        super(BatchNorm, self).cast(dtype)
+class BatchNormReLU(_BatchNorm):
+    """Batch normalization layer (Ioffe and Szegedy, 2014).
+    Normalizes the input at each batch, i.e. applies a transformation
+    that maintains the mean activation close to 0 and the activation
+    standard deviation close to 1.
 
-    def hybrid_forward(self, F, x, gamma, beta, running_mean, running_var):
-        batch_norm = F.npx.batch_norm if is_np_array() else F.BatchNorm
-        return batch_norm(x, gamma, beta, running_mean, running_var,
-                          name='fwd', **self._kwargs)
+    Parameters
+    ----------
+    axis : int, default 1
+        The axis that should be normalized. This is typically the channels
+        (C) axis. For instance, after a `Conv2D` layer with `layout='NCHW'`,
+        set `axis=1` in `BatchNorm`. If `layout='NHWC'`, then set `axis=3`.
+    momentum: float, default 0.9
+        Momentum for the moving average.
+    epsilon: float, default 1e-5
+        Small float added to variance to avoid dividing by zero.
+    center: bool, default True
+        If True, add offset of `beta` to normalized tensor.
+        If False, `beta` is ignored.
+    scale: bool, default True
+        If True, multiply by `gamma`. If False, `gamma` is not used.
+        When the next layer is linear (also e.g. `nn.relu`),
+        this can be disabled since the scaling
+        will be done by the next layer.
+    use_global_stats: bool, default False
+        If True, use global moving statistics instead of local batch-norm. This will force
+        change batch-norm into a scale shift operator.
+        If False, use local batch-norm.
+    beta_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the beta weight.
+    gamma_initializer: str or `Initializer`, default 'ones'
+        Initializer for the gamma weight.
+    running_mean_initializer: str or `Initializer`, default 'zeros'
+        Initializer for the running mean.
+    running_variance_initializer: str or `Initializer`, default 'ones'
+        Initializer for the running variance.
+    in_channels : int, default 0
+        Number of channels (feature maps) in input data. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and `in_channels` will be inferred from the shape of input data.
 
-    def __repr__(self):
-        s = '{name}({content}'
-        in_channels = self.gamma.shape[0]
-        s += ', in_channels={0}'.format(in_channels if in_channels else None)
-        s += ')'
-        return s.format(name=self.__class__.__name__,
-                        content=', '.join(['='.join([k, v.__repr__()])
-                                           for k, v in self._kwargs.items()]))
+
+    Inputs:
+        - **data**: input tensor with arbitrary shape.
+
+    Outputs:
+        - **out**: output tensor with the same shape as `data`.
+    """
+    def __init__(self, axis=1, momentum=0.9, epsilon=1e-5, center=True, scale=True,
+                 use_global_stats=False,
+                 beta_initializer='zeros', gamma_initializer='ones',
+                 running_mean_initializer='zeros', running_variance_initializer='ones',
+                 in_channels=0, **kwargs):
+        super(BatchNormReLU, self).__init__(
+            axis=axis, momentum=momentum, epsilon=epsilon,
+            center=center, scale=scale,
+            use_global_stats=use_global_stats, fuse_relu=True,
+            beta_initializer=beta_initializer,
+            gamma_initializer=gamma_initializer,
+            running_mean_initializer=running_mean_initializer,
+            running_variance_initializer=running_variance_initializer,
+            in_channels=in_channels, **kwargs)
 
 
 class Embedding(HybridBlock):
@@ -690,7 +838,7 @@ class GroupNorm(HybridBlock):
     """
     def __init__(self, num_groups=1, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
-                 prefix=None, params=None):
+                 in_channels=0, prefix=None, params=None):
         super(GroupNorm, self).__init__(prefix=prefix, params=params)
         self._kwargs = {'eps': epsilon, 'num_groups': num_groups, 'center': center, 'scale': scale}
         self._num_groups = num_groups
@@ -698,10 +846,10 @@ class GroupNorm(HybridBlock):
         self._center = center
         self._scale = scale
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(num_groups,), init=gamma_initializer,
+                                     shape=(in_channels,), init=gamma_initializer,
                                      allow_deferred_init=True)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(num_groups,), init=beta_initializer,
+                                    shape=(in_channels,), init=beta_initializer,
                                     allow_deferred_init=True)
 
     def hybrid_forward(self, F, data, gamma, beta):
@@ -709,7 +857,10 @@ class GroupNorm(HybridBlock):
         return norm_data
 
     def __repr__(self):
-        s = '{name}({content})'
+        s = '{name}({content}'
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels)
+        s += ')'
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
                                            for k, v in self._kwargs.items()]))

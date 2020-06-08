@@ -25,6 +25,7 @@ import numpy as _np
 import mxnet as mx
 from mxnet import gluon, autograd, np
 from mxnet.test_utils import use_np, assert_almost_equal, check_gluon_hybridize_consistency
+from mxnet.gluon import nn
 from common import with_seed
 import random
 
@@ -153,10 +154,10 @@ def test_np_loss_ndarray():
 
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     L = loss(output, label).asnumpy()
-    assert_almost_equal(L, _np.array([2.12692809,  0.04858733]), use_broadcast=False)
+    assert_almost_equal(L, _np.array([2.12692809,  0.04858733]), use_broadcast=False, rtol=1e-3)
 
     L = loss(output, label, weighting).asnumpy()
-    assert_almost_equal(L, _np.array([1.06346405,  0.04858733]), use_broadcast=False)
+    assert_almost_equal(L, _np.array([1.06346405,  0.04858733]), use_broadcast=False, rtol=1e-3)
 
 
 @with_seed()
@@ -368,6 +369,16 @@ def test_symbolic_basic_slicing():
                 TestSlicingWithVSplit, [x],
                 numpy_func=lambda a: _np.concatenate(_np.vsplit(a, shape[0])[1:-1], axis=0))
 
+    for data_shape, idx in [((4, 3), 2),
+                            ((3,), -1),
+                            ((3,), 0)]:
+        class IntegerIndexing(gluon.HybridBlock):
+            def hybrid_forward(self, F, x):
+                return x[idx]
+        check_gluon_hybridize_consistency(IntegerIndexing,
+                                          [mx.np.ones(data_shape)],
+                                          numpy_func=lambda a: a[idx])
+
 
 @with_seed()
 @use_np
@@ -400,7 +411,73 @@ def test_net_symbol_save_load():
                                   mx.np.random.normal(0, 1, (10, 5, 8))])
 
 
+@with_seed()
+@use_np
+def test_hybridize_boolean_dtype():
+    class Foo(gluon.HybridBlock):
+        def __init__(self, prefix=None, params=None):
+            super(Foo, self).__init__(prefix=prefix, params=params)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+        def hybrid_forward(self, F, valid_length):
+            mask = ((F.np.ones((10,)) / 2) < valid_length)
+            return mask
+
+    valid_length = mx.np.random.uniform(size=(10,))
+    foo = Foo()
+    out1 = foo(valid_length)
+
+    foo = Foo()
+    foo.hybridize()
+    out2 = foo(valid_length)
+
+    assert mx.test_utils.same(out1.asnumpy(), out2.asnumpy())
+
+
+@with_seed()
+@use_np
+def test_activations_leakyrelu():
+    # Currently, all the activation tests, we will just test for runnable.
+    act_layer = nn.LeakyReLU(0.1)
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
+
+@with_seed()
+@use_np
+def test_activations_prelu():
+    act_layer = nn.PReLU()
+    act_layer.initialize()
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
+
+@with_seed()
+@use_np
+def test_activations_elu():
+    act_layer = nn.ELU(1.0)
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
+
+@with_seed()
+@use_np
+def test_activations_selu():
+    act_layer = nn.SELU()
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
+
+@with_seed()
+@use_np
+def test_activations_gelu():
+    act_layer = nn.GELU()
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
+
+@with_seed()
+@use_np
+def test_activations_swish():
+    act_layer = nn.Swish()
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()

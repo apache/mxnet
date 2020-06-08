@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <algorithm>
 #include <utility>
 #include <type_traits>
@@ -455,9 +456,9 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
   mxnet::TShape& out_shp = (*out_attrs)[0];
-  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
-  if (shp.ndim() == -1 && out_shp.ndim() == -1)
+  if (!mxnet::ndim_is_known(shp) && !mxnet::ndim_is_known(out_shp))
     return false;  // none of the shapes is known
+  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
   if (out_shp.ndim() >= 0 && shp.ndim() >= 0)
     CHECK_EQ(out_shp.ndim(), shp.ndim());
   mxnet::TShape get(std::max(shp.ndim(), out_shp.ndim()), -1);
@@ -497,6 +498,12 @@ struct ExpandDimParam : public dmlc::Parameter<ExpandDimParam> {
   bool operator==(const ExpandDimParam &other) const {
     return this->axis == other.axis;
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s;
+    axis_s << axis;
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 
@@ -506,12 +513,12 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   const ExpandDimParam& param = nnvm::get<ExpandDimParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (!mxnet::ndim_is_known(in_attrs->at(0)) && !mxnet::ndim_is_known(out_attrs->at(0))) {
+  mxnet::TShape& ishape = (*in_attrs)[0];
+  mxnet::TShape& oshape = (*out_attrs)[0];
+  if (!mxnet::ndim_is_known(ishape) && !mxnet::ndim_is_known(oshape)) {
     return false;
   }
 
-  mxnet::TShape& ishape = (*in_attrs)[0];
-  mxnet::TShape& oshape = (*out_attrs)[0];
   int indim = ishape.ndim();
   bool unknown_ishape = false;
   if (-1 == indim) {
@@ -1434,6 +1441,9 @@ inline bool SliceLikeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& ishape = (*in_attrs)[0];
   mxnet::TShape& from_shape = (*in_attrs)[1];
+  if (!mxnet::ndim_is_known(ishape) || !mxnet::ndim_is_known(from_shape)) {
+    return false;
+  }
   if (param.axes.ndim() == 0) {
     CHECK_EQ(ishape.ndim(), from_shape.ndim())
       << "By default slice_axis performs slice on all axes, but ndim mismatch "
@@ -1598,6 +1608,14 @@ struct ClipParam : public dmlc::Parameter<ClipParam> {
     DMLC_DECLARE_FIELD(a_max)
     .describe("Maximum value");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_min_s, a_max_s;
+    a_min_s << a_min;
+    a_max_s << a_max;
+    (*dict)["a_min"] = a_min_s.str();
+    (*dict)["a_max"] = a_max_s.str();
+  }
 };
 
 
@@ -1699,6 +1717,13 @@ struct RepeatParam : public dmlc::Parameter<RepeatParam> {
                 " By default, use the flattened input array,"
                 " and return a flat output array.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream repeats_s, axis_s;
+    repeats_s << repeats;
+    axis_s << axis;
+    (*dict)["repeats"] = repeats_s.str();
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 /*!
@@ -1727,6 +1752,9 @@ inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& ishape = (*in_attrs)[0];
+  if (!mxnet::ndim_is_known(ishape)) {
+    return false;
+  }
   int repeats = 0;
   dmlc::optional<int> axisOpt;
   GetRepeatParams(param, ishape, &repeats, &axisOpt);
@@ -1909,6 +1937,11 @@ struct TileParam : public dmlc::Parameter<TileParam> {
                 " If reps has length d, the result will have dimension of max(d, a.ndim);"
                 " If a.ndim < d, a is promoted to be d-dimensional by prepending new axes."
                 " If a.ndim > d, reps is promoted to a.ndim by pre-pending 1's to it.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream reps_s;
+    reps_s << reps;
+    (*dict)["reps"] = reps_s.str();
   }
 };
 
@@ -2316,6 +2349,11 @@ struct SqueezeParam : public dmlc::Parameter<SqueezeParam> {
     .describe("Selects a subset of the single-dimensional entries in the shape."
               " If an axis is selected with shape entry greater than one, an error is raised.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s;
+    axis_s << axis;
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 // Given a shape that may have dim size equal to 0,
@@ -2395,6 +2433,9 @@ inline bool DepthToSpaceOpShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape expected_out(4, -1);
 
   mxnet::TShape& in_shape = in_attrs->at(0);
+  if (!mxnet::ndim_is_known(in_shape)) {
+    return false;
+  }
   int block = param.block_size;
   CHECK_NE(block, 0) << "block_size must be a positive integer value";
   CHECK_NE(in_shape[1], 0) << "Depth dimension:1 cannot be 0";
@@ -2559,6 +2600,9 @@ inline bool SpaceToDepthOpShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape expected_out(in_attrs->at(0).ndim(), -1);
 
   mxnet::TShape& in_shape = in_attrs->at(0);
+  if (!mxnet::ndim_is_known(in_shape)) {
+    return false;
+  }
   int block = param.block_size;
   CHECK_NE(block, 0) << "block_size must be a positive integer value";
   CHECK_NE(in_shape[0], 0)
@@ -2721,6 +2765,17 @@ struct SplitParam : public dmlc::Parameter<SplitParam> {
               " only if ``input.shape[axis] == num_outputs``.");
     DMLC_DECLARE_FIELD(sections).set_default(0)
     .describe("Number of sections if equally splitted. Default to 0 which means split by indices.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream indices_s, axis_s, squeeze_axis_s, sections_s;
+    indices_s << indices;
+    axis_s << axis;
+    squeeze_axis_s << squeeze_axis;
+    sections_s << sections;
+    (*dict)["indices"] = indices_s.str();
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["squeeze_axis"] = squeeze_axis_s.str();
+    (*dict)["sections"] = sections_s.str();
   }
 };  // struct SplitParam
 

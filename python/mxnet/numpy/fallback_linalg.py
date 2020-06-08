@@ -17,13 +17,16 @@
 
 """Operators that fallback to official NumPy implementation for np.linalg."""
 
-from __future__ import absolute_import
 
 import numpy as onp
 
 
 __all__ = [
     'cond',
+    'matrix_power',
+    'multi_dot'
 ]
 
 cond = onp.linalg.cond
+matrix_power = onp.linalg.matrix_power
+multi_dot = onp.linalg.multi_dot

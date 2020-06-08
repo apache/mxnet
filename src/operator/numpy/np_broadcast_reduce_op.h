@@ -28,9 +28,11 @@
 #include <algorithm>
 #include <vector>
 #include <string>
+#include "../../common/utils.h"
 #include "../nn/moments-inl.h"
 #include "../tensor/broadcast_reduce_op.h"
 #include "../tensor/elemwise_binary_broadcast_op.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mxnet {
 namespace op {
@@ -66,6 +68,22 @@ struct NumpyReduceAxesParam : public dmlc::Parameter<NumpyReduceAxesParam> {
     DMLC_DECLARE_FIELD(initial).set_default(dmlc::optional<double>())
       .describe("Starting value for the sum.");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, dtype_s, keepdims_s, initial_s;
+    axis_s << axis;
+    dtype_s << dtype;
+    keepdims_s << keepdims;
+    initial_s << initial;
+    (*dict)["axis"] = axis_s.str();
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["initial"] = initial_s.str();
+  }
 };
 
 struct NumpyReduceAxesNoDTypeParam : public dmlc::Parameter<NumpyReduceAxesNoDTypeParam> {
@@ -84,6 +102,15 @@ struct NumpyReduceAxesNoDTypeParam : public dmlc::Parameter<NumpyReduceAxesNoDTy
     DMLC_DECLARE_FIELD(initial).set_default(dmlc::optional<double>())
       .describe("Starting value for the sum.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s, initial_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    initial_s << initial;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["initial"] = initial_s.str();
+  }
 };
 
 struct NumpyReduceAxesBoolParam : public dmlc::Parameter<NumpyReduceAxesBoolParam> {
@@ -98,6 +125,13 @@ struct NumpyReduceAxesBoolParam : public dmlc::Parameter<NumpyReduceAxesBoolPara
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, keepdims_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["keepdims"] = keepdims_s.str();
   }
 };
 
@@ -241,6 +275,16 @@ inline bool NeedSafeAcc(int itype, int otype) {
   return safe_acc_hint && rule;
 }
 
+namespace mxnet_op {
+struct set_to_nan {
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out) {
+    out[i] = DType(nanf(""));
+  }
+};
+
+}  // namespace mxnet_op
+
 void TVMOpReduce(const OpContext& ctx, const TBlob& input,
                  const dmlc::optional<mxnet::Tuple<int>>& axis,
                  const TBlob& output, const OpReqType req, const std::string& reducer_name);
@@ -259,11 +303,35 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
     LOG(FATAL) << "initial is not supported yet";
   }
   Stream<xpu>* s = ctx.get_stream<xpu>();
+  if (outputs[0].shape_.Size() == 0) return;
   if (inputs[0].shape_.Size() == 0 && outputs[0].shape_.Size() != 0) {
     using namespace mxnet_op;
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(), outputs[0].dptr<DType>());
-    });
+    if (normalize) {
+      LOG(WARNING) << "WARNING: Mean of empty slice.";
+      if (mxnet::common::is_float(outputs[0].type_flag_)) {
+        MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+          Kernel<set_to_nan, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                          outputs[0].dptr<DType>());
+        });
+      } else {
+        LOG(WARNING) << "WARNING: nan is outside the range of"<<
+                        "representable values of type 'int'";
+        MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+          Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                        outputs[0].dptr<DType>());
+        });
+      }
+    } else if (std::is_same<reducer, mshadow_op::sum>::value) {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        Kernel<set_zero, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                      outputs[0].dptr<DType>());
+      });
+    } else {
+      MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+        Kernel<set_one, xpu>::Launch(s, outputs[0].shape_.Size(),
+                                     outputs[0].dptr<DType>());
+      });
+    }
     return;
   }
   CHECK_NE(req[0], kWriteInplace) << "Reduce does not support write in-place";
@@ -415,6 +483,7 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   CHECK_NE(outputs[0].type_flag_, kBool) << "reduce operators do not support gradient calculation "
                                             "for input tensors of boolean type.";
+  if (outputs[0].shape_.Size() == 0) return;
   const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
   TShape small;
   if (param.keepdims) {
@@ -424,6 +493,7 @@ inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,
   }
 
   BroadcastComputeImpl<xpu>(attrs, ctx, inputs, req, outputs, small);
+
   if (normalize) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, IType, {
@@ -475,11 +545,27 @@ struct NumpyMomentsParam : public dmlc::Parameter<NumpyMomentsParam> {
                 "precision than the default platform integer. In that case, if a is signed then "
                 "the platform integer is used while if a is unsigned then an unsigned integer of "
                 "the same precision as the platform integer is used.");
-    DMLC_DECLARE_FIELD(ddof).set_default(0)
-      .describe("Starting value for the sum.");
     DMLC_DECLARE_FIELD(keepdims).set_default(false)
       .describe("If this is set to `True`, the reduced axes are left "
                 "in the result as dimension with size one.");
+    DMLC_DECLARE_FIELD(ddof).set_default(0)
+      .describe("Starting value for the sum.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, dtype_s, keepdims_s, ddof_s;
+    axis_s << axis;
+    keepdims_s << keepdims;
+    ddof_s << ddof;
+    (*dict)["axis"] = axis_s.str();
+    dtype_s << dtype;
+    if (dtype.has_value()) {
+      (*dict)["dtype"] = MXNetTypeWithBool2String(dtype.value());
+    } else {
+      (*dict)["dtype"] = dtype_s.str();
+    }
+    (*dict)["keepdims"] = keepdims_s.str();
+    (*dict)["ddof"] = ddof_s.str();
   }
 };
 
@@ -534,6 +620,16 @@ struct NumpyWeightedAverageParam : public dmlc::Parameter<NumpyWeightedAveragePa
     DMLC_DECLARE_FIELD(weighted)
       .set_default(true)
       .describe("Auxiliary flag to deal with none weights.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, returned_s, weighted_s;
+    axis_s << axis;
+    returned_s << returned;
+    weighted_s << weighted;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["returned"] = returned_s.str();
+    (*dict)["weighted"] = weighted_s.str();
   }
 };
 

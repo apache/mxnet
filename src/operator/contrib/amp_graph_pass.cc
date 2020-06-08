@@ -49,7 +49,7 @@ Graph RemoveAmpCast(Graph&& g) {
       }
     }
   });
-  return g;
+  return std::move(g);
 }
 
 NNVM_REGISTER_PASS(RemoveAmpCast)

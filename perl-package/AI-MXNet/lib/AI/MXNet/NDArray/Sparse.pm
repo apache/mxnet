@@ -20,6 +20,7 @@ use strict;
 use warnings;
 use AI::MXNet::Base;
 use AI::MXNet::Function::Parameters;
+use AI::MXNet::RunTime;
 use Mouse;
 extends 'AI::MXNet::NDArray';
 
@@ -51,8 +52,11 @@ method _new_alloc_handle(
     my $aux_shape_lens = [map { scalar(@$_) } @$aux_shapes];
     @$aux_shapes = map { @$_ } @$aux_shapes;
     my $num_aux = @{ $aux_types };
+    my $sub = AI::MXNet::RunTime->Features()->is_enabled('INT64_TENSOR_SIZE')
+              ? \&AI::MXNetCAPI::NDArrayCreateSparseEx64
+              : \&AI::MXNetCAPI::NDArrayCreateSparseEx;
     my $handle = check_call(
-        AI::MXNetCAPI::NDArrayCreateSparseEx(
+        $sub->(
             STORAGE_TYPE_STR_TO_ID->{$stype},
             $shape,
             scalar(@$shape),

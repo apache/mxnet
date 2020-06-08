@@ -32,6 +32,7 @@
 #include <mxnet/kvstore.h>
 #include <stack>
 #include "./c_api_common.h"
+#include "../profiler/storage_profiler.h"
 #include "../profiler/profiler.h"
 
 namespace mxnet {
@@ -209,6 +210,7 @@ struct ProfileConfigParam : public dmlc::Parameter<ProfileConfigParam> {
   bool profile_memory;
   bool profile_api;
   std::string filename;
+  std::string gpu_memory_profile_filename_prefix;
   bool continuous_dump;
   float dump_period;
   bool aggregate_stats;
@@ -226,6 +228,10 @@ struct ProfileConfigParam : public dmlc::Parameter<ProfileConfigParam> {
       .describe("Profile C API.  Default is True.");
     DMLC_DECLARE_FIELD(filename).set_default("profile.json")
       .describe("File name to write profiling info.");
+#if MXNET_USE_CUDA
+    DMLC_DECLARE_FIELD(gpu_memory_profile_filename_prefix).set_default("gpu_memory_profile")
+      .describe("File name prefix to write GPU memory profile info.");
+#endif  // MXNET_USE_CUDA
     DMLC_DECLARE_FIELD(continuous_dump).set_default(true)
       .describe("Periodically dump (and append) profiling data to file while running. "
                 "Default is True.");
@@ -298,6 +304,10 @@ int MXSetProcessProfilerConfig(int num_params, const char* const* keys, const ch
                                            param.continuous_dump,
                                            param.dump_period,
                                            param.aggregate_stats);
+#if MXNET_USE_CUDA
+      profiler::GpuDeviceStorageProfiler::Get()->SetConfig(
+          param.gpu_memory_profile_filename_prefix);
+#endif  // MXNET_USE_CUDA
     }
   API_END();
 }
@@ -354,12 +364,21 @@ int MXDumpProcessProfile(int finished, int profile_process, KVStoreHandle kvStor
     CHECK(profiler->IsEnableOutput())
       << "Profiler hasn't been run. Config and start profiler first";
     profiler->DumpProfile(finished != 0);
+#if MXNET_USE_CUDA
+    profiler::GpuDeviceStorageProfiler::Get()->DumpProfile();
+#endif  // MXNET_USE_CUDA
   }
   API_END()
 }
 
 int MXSetProfilerState(int state) {
   return MXSetProcessProfilerState(state, static_cast<int>(ProfileProcess::kWorker), nullptr);
+}
+
+int MXSetProfilerScope(const char* const scope) {
+  API_BEGIN();
+  profiler::ProfilerScope::Get()->SetCurrentProfilerScope(scope);
+  API_END();
 }
 
 int MXSetProcessProfilerState(int state, int profile_process, KVStoreHandle kvStoreHandle) {

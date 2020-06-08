@@ -40,7 +40,7 @@ static void MKLDNNQuantizedActForward(const nnvm::NodeAttrs& attrs,
       << "_contrib_quantized_act op only supports uint8 and int8 as input "
          "type";
 
-  MKLDNNActivationForward(attrs, ctx, in_data[0], req[0], out_data[0]);
+  MKLDNNRun(MKLDNNActivationForward, attrs, ctx, in_data[0], req[0], out_data[0]);
   out_data[1].data().dptr<float>()[0] = in_data[1].data().dptr<float>()[0];
   out_data[2].data().dptr<float>()[0] = in_data[2].data().dptr<float>()[0];
 }

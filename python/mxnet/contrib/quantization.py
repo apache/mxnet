@@ -16,7 +16,6 @@
 # under the License.
 """Quantization module for generating quantized (INT8) models from FP32 models."""
 
-from __future__ import absolute_import
 
 try:
     from scipy import stats

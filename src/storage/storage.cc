@@ -53,7 +53,7 @@ class StorageImpl : public Storage {
   // internal storage managers
   std::array<common::LazyAllocArray<storage::StorageManager>,
              kMaxNumberOfDevices> storage_managers_;
-  storage::DeviceStorageProfiler profiler_;
+  profiler::DeviceStorageProfiler profiler_;
 };  // struct Storage::Impl
 #if MXNET_USE_CUDA
 int StorageImpl::num_gpu_device = 0;

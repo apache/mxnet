@@ -36,6 +36,7 @@ docs/web-data
 
 #dmlc
 config.mk
+config.cmake
 
 *.pyc
 .Rhistory

@@ -50,6 +50,7 @@ How to Contribute
 
 What's New
 ----------
+* [Version 1.6.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.6.0) - MXNet 1.6.0 Release.
 * [Version 1.5.1 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.5.1) - MXNet 1.5.1 Patch Release.
 * [Version 1.5.0 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.5.0) - MXNet 1.5.0 Release.
 * [Version 1.4.1 Release](https://github.com/apache/incubator-mxnet/releases/tag/1.4.1) - MXNet 1.4.1 Patch Release.

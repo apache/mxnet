@@ -16,15 +16,18 @@
 # under the License.
 
 """Namespace for operators used in Gluon dispatched by F=ndarray."""
-from __future__ import absolute_import
 import numpy as np
+from ...util import is_np_default_dtype
 from ...context import current_context
 from . import _internal as _npi
+from . import _api_internal
 from ..ndarray import NDArray
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",
-           "shuffle", 'gamma', 'beta', 'exponential', 'lognormal', 'weibull', 'pareto', 'power']
+           'logistic', 'gumbel', "rayleigh", 'f',
+           'laplace',
+           "shuffle", 'gamma', 'beta', 'chisquare', 'exponential', 'lognormal', 'weibull', 'pareto', 'power']
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -74,7 +77,7 @@ def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
 
     >>> np.random.randint(5, size=(2, 4))
     array([[4, 0, 2, 1],
-        [3, 2, 2, 0]])
+           [3, 2, 2, 0]])
     """
     if dtype is None:
         dtype = 'int'
@@ -110,7 +113,9 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         a scalar tensor containing a single value is returned if
         ``low`` and ``high`` are both scalars.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
     out : ``ndarray``, optional
@@ -121,26 +126,15 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     out : ndarray
         Drawn samples from the parameterized uniform distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = (isinstance(low, np_ndarray), isinstance(high, np_ndarray))
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = np.dtype(dtype).name
     if size == ():
         size = None
-    if input_type == (True, True):
-        return _npi.uniform(low, high, low=None, high=None, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (False, True):
-        return _npi.uniform(high, low=low, high=None, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (True, False):
-        return _npi.uniform(low, low=None, high=high, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
-    else:
-        return _npi.uniform(low=low, high=high, size=size,
-                            ctx=ctx, dtype=dtype, out=out)
+    return _api_internal.uniform(low, high, size, ctx, dtype, out)
 
 
 def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
@@ -161,7 +155,9 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         samples are drawn. If size is `None` (default), a scalar tensor containing
         a single value is returned if loc and scale are both scalars.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
     out : ``ndarray``, optional
@@ -172,34 +168,25 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     out : ndarray
         Drawn samples from the parameterized normal distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = (isinstance(loc, np_ndarray), isinstance(scale, np_ndarray))
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = np.dtype(dtype).name
     if size == ():
         size = None
-    if input_type == (True, True):
-        return _npi.normal(loc, scale, loc=None, scale=None, size=size,
-                           ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (False, True):
-        return _npi.normal(scale, loc=loc, scale=None, size=size,
-                           ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (True, False):
-        return _npi.normal(loc, loc=None, scale=scale, size=size,
-                           ctx=ctx, dtype=dtype, out=out)
-    else:
-        return _npi.normal(loc=loc, scale=scale, size=size,
-                           ctx=ctx, dtype=dtype, out=out)
+    return _api_internal.normal(loc, scale, size, ctx, dtype, out)
 
 
 def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     r"""Draw samples from a log-normal distribution.
+
     Draw samples from a log-normal distribution with specified mean,
     standard deviation, and array shape.  Note that the mean and standard
     deviation are not the values for the distribution itself, but of the
     underlying normal distribution it is derived from.
+
     Parameters
     ----------
     mean : float or array_like of floats, optional
@@ -218,6 +205,7 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
         Device context of output. Default is current context.
     out : ``ndarray``, optional
         Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
@@ -225,6 +213,80 @@ def lognormal(mean=0.0, sigma=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from . import _op as _mx_np_op
     return _mx_np_op.exp(normal(loc=mean, scale=sigma, size=size, dtype=dtype, ctx=ctx, out=out))
+
+
+def logistic(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a logistic distribution.
+
+    Samples are drawn from a logistic distribution with specified
+    parameters, loc (location or mean, also median), and scale (>0).
+
+    Parameters
+    ----------
+    loc : float or array_like of floats, optional
+        Parameter of the distribution. Default is 0.
+    scale : float or array_like of floats, optional
+        Parameter of the distribution. Must be non-negative.
+        Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``loc`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized logistic distribution.
+    """
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if size == ():
+        size = None
+    return _api_internal.logistic(loc, scale, size, ctx, out)
+
+
+def gumbel(loc=0.0, scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Gumbel distribution.
+
+    Draw samples from a Gumbel distribution with specified location and
+    scale.
+
+    Parameters
+    ----------
+    loc : float or array_like of floats, optional
+        The location of the mode of the distribution. Default is 0.
+    scale : float or array_like of floats, optional
+        The scale parameter of the distribution. Default is 1. Must be non-
+        negative.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``loc`` and ``scale`` are both scalars.
+        Otherwise, ``np.broadcast(loc, scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Gumbel distribution.
+    """
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if size == ():
+        size = None
+    return _api_internal.gumbel(loc, scale, size, ctx, out)
 
 
 def multinomial(n, pvals, size=None):
@@ -277,6 +339,40 @@ def multinomial(n, pvals, size=None):
         if any(isinstance(i, list) for i in pvals):
             raise ValueError('object too deep for desired array')
         return _npi.multinomial(n=n, pvals=pvals, size=size)
+
+
+def rayleigh(scale=1.0, size=None, ctx=None, out=None):
+    r"""Draw samples from a Rayleigh distribution.
+
+    The :math:`\chi` and Weibull distributions are generalizations of the
+    Rayleigh.
+
+    Parameters
+    ----------
+    scale : float, optional
+        Scale, also equals the mode. Must be non-negative. Default is 1.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``scale`` is a scalar.  Otherwise,
+        ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Rayleigh distribution.
+    """
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if size == ():
+        size = None
+    return _api_internal.rayleigh(scale, size, ctx, out)
 
 
 def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
@@ -414,28 +510,21 @@ def choice(a, size=None, replace=True, p=None, ctx=None, out=None):
     """
     from ...numpy import ndarray as np_ndarray
     if ctx is None:
-        ctx = current_context()
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
     if isinstance(a, np_ndarray):
-        ctx = None
-        if p is None:
-            indices = _npi.choice(a, a=None, size=size,
-                                  replace=replace, ctx=ctx, weighted=False)
-            return _npi.take(a, indices)
-        else:
-            indices = _npi.choice(a, p, a=None, size=size,
-                                  replace=replace, ctx=ctx, weighted=True)
-            return _npi.take(a, indices)
+        indices = _api_internal.choice(a, size, replace, p, ctx, out)
+        return _api_internal.take(a, indices, 0, 'raise', out)
     else:
-        if p is None:
-            return _npi.choice(a=a, size=size, replace=replace, ctx=ctx, weighted=False, out=out)
-        else:
-            return _npi.choice(p, a=a, size=size, replace=replace, ctx=ctx, weighted=True, out=out)
+        return _api_internal.choice(a, size, replace, p, ctx, out)
 
 
-def exponential(scale, size):
+def exponential(scale=1.0, size=None, ctx=None, out=None):
     r"""Draw samples from an exponential distribution.
+
     Parameters
     ----------
     scale : float or array_like of floats
@@ -446,23 +535,26 @@ def exponential(scale, size):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``scale`` is a scalar.  Otherwise,
         ``np.array(scale).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
     Returns
     -------
     out : ndarray or scalar
         Drawn samples from the parameterized exponential distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    tensor_type_name = np_ndarray
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
-    is_tensor = isinstance(scale, tensor_type_name)
-    if is_tensor:
-        return _npi.exponential(scale, scale=None, size=size)
-    else:
-        return _npi.exponential(scale=scale, size=size)
+    return _api_internal.exponential(scale, size, ctx, out)
 
 
-def weibull(a, size=None):
+def weibull(a, size=None, ctx=None, out=None):
     r"""Draw samples from a 1-parameter Weibull distribution with given
     parameter a, via inversion.
 
@@ -504,18 +596,16 @@ def weibull(a, size=None):
     model time to failure, in modeling particle sizes, in information retrieval
     to model dwell time on pages, in quantitative finance to model risk etc.
     """
-    from ...numpy import ndarray as np_ndarray
-    tensor_type_name = np_ndarray
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
-    is_tensor = isinstance(a, tensor_type_name)
-    if is_tensor:
-        return _npi.weibull(a, a=None, size=size)
-    else:
-        return _npi.weibull(a=a, size=size)
+    return _api_internal.weibull(a, size, ctx, out)
 
 
-def pareto(a, size=None):
+def pareto(a, size=None, ctx=None, out=None):
     r"""Draw samples from a Pareto II or Lomax distribution with specified shape a.
 
     Parameters
@@ -547,18 +637,16 @@ def pareto(a, size=None):
     where a is the shape and m the scale. Here m is assumed 1. The Pareto distribution
     is a power law distribution. Pareto created it to describe the wealth in the economy.
     """
-    from ...numpy import ndarray as np_ndarray
-    tensor_type_name = np_ndarray
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
-    is_tensor = isinstance(a, tensor_type_name)
-    if is_tensor:
-        return _npi.pareto(a, a=None, size=size)
-    else:
-        return _npi.pareto(a=a, size=size)
+    return _api_internal.pareto(a, size, ctx, out)
 
 
-def power(a, size=None):
+def power(a, size=None, ctx=None, out=None):
     r"""Draw samples in [0, 1] from a power distribution with given parameter a.
 
     Parameters
@@ -590,15 +678,13 @@ def power(a, size=None):
     The power distribution is just the inverse of the Pareto distribution and
     a special case of the Beta distribution.
     """
-    from ...numpy import ndarray as np_ndarray
-    tensor_type_name = np_ndarray
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
     if size == ():
         size = None
-    is_tensor = isinstance(a, tensor_type_name)
-    if is_tensor:
-        return _npi.powerd(a, a=None, size=size)
-    else:
-        return _npi.powerd(a=a, size=size)
+    return _api_internal.powerd(a, size, ctx, out)
 
 
 def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
@@ -620,6 +706,10 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         ``m * n * k`` samples are drawn.  If size is ``None`` (default),
         a single value is returned if ``shape`` and ``scale`` are both scalars.
         Otherwise, ``np.broadcast(shape, scale).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -632,30 +722,17 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     electronic components, and arises naturally in processes for which the
     waiting times between Poisson distributed events are relevant.
     """
-    from ...numpy import ndarray as np_ndarray
-    input_type = (isinstance(shape, np_ndarray), isinstance(scale, np_ndarray))
-    if dtype is None:
-        dtype = 'float32'
-    if ctx is None:
-        ctx = current_context()
     if out is not None:
         size = out.shape
     if size == ():
         size = None
-    if input_type == (True, True):
-        return _npi.gamma(shape, scale, shape=None, scale=None, size=size,
-                          ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (False, True):
-        return _npi.gamma(scale, shape=shape, scale=None, size=size,
-                          ctx=ctx, dtype=dtype, out=out)
-    elif input_type == (True, False):
-        return _npi.gamma(shape, shape=None, scale=scale, size=size,
-                          ctx=ctx, dtype=dtype, out=out)
+    if ctx is None:
+        ctx = str(current_context())
     else:
-        return _npi.gamma(shape=shape, scale=scale, size=size,
-                          ctx=ctx, dtype=dtype, out=out)
-
-    raise ValueError("Distribution parameters must be either mxnet.numpy.ndarray or numbers")
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = np.dtype(dtype).name
+    return _api_internal.gamma(shape, scale, size, ctx, dtype, out)
 
 
 def beta(a, b, size=None, dtype=None, ctx=None):
@@ -687,9 +764,9 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         a single value is returned if ``a`` and ``b`` are both scalars.
         Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'.
-        Dtype 'float32' or 'float64' is strongly recommended,
-        since lower precision might lead to out of range issue.
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -703,7 +780,7 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         Drawn samples from the parameterized beta distribution.
     """
     if dtype is None:
-        dtype = 'float32'
+        dtype = np.float64 if is_np_default_dtype() else np.float32
     if ctx is None:
         ctx = current_context()
     if size == ():
@@ -711,8 +788,151 @@ def beta(a, b, size=None, dtype=None, ctx=None):
     # use fp64 to prevent precision loss
     X = gamma(a, 1, size=size, dtype='float64', ctx=ctx)
     Y = gamma(b, 1, size=size, dtype='float64', ctx=ctx)
-    out = X/(X + Y)
+    out = X / (X + Y)
     return out.astype(dtype)
+
+
+def f(dfnum, dfden, size=None, ctx=None):
+    r"""Draw samples from an F distribution.
+
+    Samples are drawn from an F distribution with specified parameters,
+    `dfnum` (degrees of freedom in numerator) and `dfden` (degrees of
+    freedom in denominator), where both parameters must be greater than
+    zero.
+
+    The random variate of the F distribution (also known as the
+    Fisher distribution) is a continuous probability distribution
+    that arises in ANOVA tests, and is the ratio of two chi-square
+    variates.
+
+    Parameters
+    ----------
+    dfnum : float or ndarray of floats
+        Degrees of freedom in numerator, must be > 0.
+    dfden : float or ndarray of float
+        Degrees of freedom in denominator, must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``dfnum`` and ``dfden`` are both scalars.
+        Otherwise, ``np.broadcast(dfnum, dfden).size`` samples are drawn.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized Fisher distribution.
+
+    Examples
+    --------
+    An example from Glantz[1], pp 47-40:
+
+    Two groups, children of diabetics (25 people) and children from people
+    without diabetes (25 controls). Fasting blood glucose was measured,
+    case group had a mean value of 86.1, controls had a mean value of
+    82.2. Standard deviations were 2.09 and 2.49 respectively. Are these
+    data consistent with the null hypothesis that the parents diabetic
+    status does not affect their children's blood glucose levels?
+    Calculating the F statistic from the data gives a value of 36.01.
+
+    Draw samples from the distribution:
+
+    >>> dfnum = 1. # between group degrees of freedom
+    >>> dfden = 48. # within groups degrees of freedom
+    >>> s = np.random.f(dfnum, dfden, 1000)
+
+    The lower bound for the top 1% of the samples is :
+
+    >>> np.sort(s)[-10]
+    7.61988120985 # random
+
+    So there is about a 1% chance that the F statistic will exceed 7.62,
+    the measured value is 36, so the null hypothesis is rejected at the 1%
+    level.
+    """
+    X = chisquare(df=dfnum, size=size, ctx=ctx)
+    Y = chisquare(df=dfden, size=size, ctx=ctx)
+    return (X * dfden) / (Y * dfnum)
+
+
+def chisquare(df, size=None, dtype=None, ctx=None):
+    r"""
+    chisquare(df, size=None, dtype=None, ctx=None)
+
+    Draw samples from a chi-square distribution.
+
+    When `df` independent random variables, each with standard normal
+    distributions (mean 0, variance 1), are squared and summed, the
+    resulting distribution is chi-square (see Notes).  This distribution
+    is often used in hypothesis testing.
+
+    Parameters
+    ----------
+    df : float or ndarray of floats
+         Number of degrees of freedom, must be > 0.
+    size : int or tuple of ints, optional
+        Output shape.  If the given shape is, e.g., ``(m, n, k)``, then
+        ``m * n * k`` samples are drawn.  If size is ``None`` (default),
+        a single value is returned if ``df`` is a scalar.  Otherwise,
+        ``np.array(df).size`` samples are drawn.
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
+        Dtype 'float32' or 'float64' is strongly recommended,
+        since lower precision might lead to out of range issue.
+    ctx : Context, optional
+        Device context of output. Default is current context.
+
+    Returns
+    -------
+    out : ndarray or scalar
+        Drawn samples from the parameterized chi-square distribution.
+
+    Raises
+    ------
+    ValueError
+        When `df` <= 0 or when an inappropriate `size`
+        is given.
+
+    Notes
+    -----
+    The variable obtained by summing the squares of `df` independent,
+    standard normally distributed random variables:
+
+    .. math:: Q = \sum_{i=0}^{\mathtt{df}} X^2_i
+
+    is chi-square distributed, denoted
+
+    .. math:: Q \sim \chi^2_k.
+
+    The probability density function of the chi-squared distribution is
+
+    .. math:: p(x) = \frac{(1/2)^{k/2}}{\Gamma(k/2)}
+                     x^{k/2 - 1} e^{-x/2},
+
+    where :math:`\Gamma` is the gamma function,
+
+    .. math:: \Gamma(x) = \int_0^{-\infty} t^{x - 1} e^{-t} dt.
+
+    References
+    ----------
+    .. [1] NIST "Engineering Statistics Handbook"
+           https://www.itl.nist.gov/div898/handbook/eda/section3/eda3666.htm
+
+    Examples
+    --------
+    >>> np.random.chisquare(2,4)
+    array([ 1.89920014,  9.00867716,  3.13710533,  5.62318272]) # random
+    """
+    if dtype is None:
+        dtype = np.float64 if is_np_default_dtype() else np.float32
+    if ctx is None:
+        ctx = current_context()
+    if size == ():
+        size = None
+    return gamma(df/2, 2, size=size, dtype=dtype, ctx=ctx)
 
 
 def rand(*size, **kwargs):
@@ -775,4 +995,44 @@ def shuffle(x):
            [3., 4., 5.],
            [0., 1., 2.]])
     """
-    _npi.shuffle(x, out=x)
+    _api_internal.shuffle(x, x)
+
+
+def laplace(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
+    r"""Draw random samples from a Laplace distribution.
+
+    Samples are distributed according to a Laplace distribution parametrized
+    by *loc* (mean) and *scale* (the exponential decay).
+
+
+    Parameters
+    ----------
+    loc : float, The position of the distribution peak.
+
+    scale : float, the exponential decay.
+
+    size : int or tuple of ints, optional. Output shape.
+        If the given shape is, e.g., (m, n, k), then m * n * k samples are drawn.
+        Default is None, in which case a single value is returned.
+
+    dtype : {'float16', 'float32', 'float64'}, optional
+        Data type of output samples. Default is 'float32'
+    ctx : Context, optional
+        Device context of output. Default is current context.
+    out : ``ndarray``, optional
+        Store output to an existing ``ndarray``.
+
+    Returns
+    -------
+    out : ndarray
+        Drawn samples from the parameterized Laplace distribution.
+    """
+    if ctx is None:
+        ctx = str(current_context())
+    else:
+        ctx = str(ctx)
+    if dtype is not None and not isinstance(dtype, str):
+        dtype = np.dtype(dtype).name
+    if size == ():
+        size = None
+    return _api_internal.laplace(loc, scale, size, dtype, ctx, out)

@@ -21,7 +21,6 @@
 # pylint: disable=too-many-arguments
 # pylint: disable=dangerous-default-value
 """Visualization module"""
-from __future__ import absolute_import
 
 import re
 import copy

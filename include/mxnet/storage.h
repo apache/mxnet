@@ -26,9 +26,13 @@
 #define MXNET_STORAGE_H_
 
 #include <memory>
+#include <string>
 #include "./base.h"
 
 namespace mxnet {
+
+#define MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR  "<unk>:"
+#define MXNET_STORAGE_DEFAULT_NAME_CSTR  "unknown"
 
 /*!
  * \brief Storage manager across multiple devices.
@@ -55,7 +59,12 @@ class Storage {
      * \brief Id for IPC shared memory
      */
     int shared_pid{-1};
-    int shared_id{-1};
+    int shared_id {-1};
+    /*!
+     * \brief Attributes for tracking storage allocations.
+     */
+    std::string profiler_scope{MXNET_STORAGE_DEFAULT_PROFILER_SCOPE_CSTR};
+    std::string name{MXNET_STORAGE_DEFAULT_NAME_CSTR};
   };
   /*!
    * \brief Allocate a new contiguous memory for a given size.

@@ -19,7 +19,6 @@
 # pylint: disable=invalid-name, protected-access, too-many-arguments
 # pylint: disable=global-statement, unused-import
 """NDArray configuration API."""
-from __future__ import absolute_import as _abs
 
 import ctypes
 
@@ -27,6 +26,7 @@ from ..base import _LIB
 from ..base import c_str_array, c_handle_array
 from ..base import NDArrayHandle, CachedOpHandle
 from ..base import check_call
+from .. import _global_var
 
 
 def _monitor_callback_wrapper(callback):
@@ -58,23 +58,7 @@ class NDArrayBase(object):
         check_call(_LIB.MXNDArrayFree(self.handle))
 
     def __reduce__(self):
-        return (_ndarray_cls, (None,), self.__getstate__())
-
-
-_ndarray_cls = None
-_np_ndarray_cls = None
-
-
-def _set_ndarray_class(cls):
-    """Set the symbolic class to be cls"""
-    global _ndarray_cls
-    _ndarray_cls = cls
-
-
-def _set_np_ndarray_class(cls):
-    """Set the symbolic class to be cls"""
-    global _np_ndarray_cls
-    _np_ndarray_cls = cls
+        return (_global_var._ndarray_cls, (None,), self.__getstate__())
 
 
 def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op, output_is_list):
@@ -106,7 +90,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op, output_is_list
         c_str_array([str(s) for s in vals]),
         ctypes.byref(out_stypes)))
 
-    create_ndarray_fn = _np_ndarray_cls if is_np_op else _ndarray_cls
+    create_ndarray_fn = _global_var._np_ndarray_cls if is_np_op else _global_var._ndarray_cls
     if original_output is not None:
         return original_output
     if num_output.value == 1 and not output_is_list:
@@ -171,7 +155,7 @@ class CachedOp(object):
 
         if original_output is not None:
             return original_output
-        create_ndarray_fn = _np_ndarray_cls if self.is_np_sym else _ndarray_cls
+        create_ndarray_fn = _global_var._np_ndarray_cls if self.is_np_sym else _global_var._ndarray_cls
         if num_output.value == 1:
             return create_ndarray_fn(ctypes.cast(output_vars[0], NDArrayHandle),
                                      stype=out_stypes[0])

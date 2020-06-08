@@ -380,6 +380,7 @@ class TBlob {
       case mshadow::kFloat32: return DLDataType{kDLFloat, 32, 1};
       case mshadow::kFloat64: return DLDataType{kDLFloat, 64, 1};
       case mshadow::kFloat16: return DLDataType{kDLFloat, 16, 1};
+      case mshadow::kBfloat16: return DLDataType{kDLBfloat, 16, 1};
       case mshadow::kUint8: return DLDataType{kDLUInt, 8, 1};
       case mshadow::kInt32: return DLDataType{kDLInt, 32, 1};
       case mshadow::kInt8: return DLDataType{kDLInt, 8, 1};
@@ -403,8 +404,14 @@ class TBlob {
           case 64: return mshadow::kFloat64;
         }
         break;
+      case kDLBfloat:
+        switch (dldata_type.bits) {
+          case 16: return mshadow::kBfloat16;
+        }
+        break;
       case kDLUInt:
         switch (dldata_type.bits) {
+          case 1: return mshadow::kBool;
           case 8: return mshadow::kUint8;
         }
         break;

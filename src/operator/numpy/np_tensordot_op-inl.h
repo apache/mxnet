@@ -25,6 +25,7 @@
 #define MXNET_OPERATOR_NUMPY_NP_TENSORDOT_OP_INL_H_
 
 #include <vector>
+#include <string>
 #include "../tensor/matrix_op-inl.h"
 
 namespace mxnet {
@@ -37,6 +38,13 @@ struct TensordotParam : public dmlc::Parameter<TensordotParam> {
   DMLC_DECLARE_PARAMETER(TensordotParam) {
     DMLC_DECLARE_FIELD(a_axes_summed);
     DMLC_DECLARE_FIELD(b_axes_summed);
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_axes_summed_s, b_axes_summed_s;
+    a_axes_summed_s << a_axes_summed;
+    b_axes_summed_s << b_axes_summed;
+    (*dict)["a_axes_summed"] = a_axes_summed_s.str();
+    (*dict)["b_axes_summed"] = b_axes_summed_s.str();
   }
 };
 
@@ -552,6 +560,11 @@ struct TensordotIntAxesParam : public dmlc::Parameter<TensordotIntAxesParam> {
   int axes;
   DMLC_DECLARE_PARAMETER(TensordotIntAxesParam) {
     DMLC_DECLARE_FIELD(axes);
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axes_s;
+    axes_s << axes;
+    (*dict)["axes"] = axes_s.str();
   }
 };
 

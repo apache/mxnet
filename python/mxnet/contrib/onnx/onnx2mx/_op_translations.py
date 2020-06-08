@@ -499,6 +499,8 @@ def split(attrs, inputs, proto_obj):
 
 def _slice(attrs, inputs, proto_obj):
     """Returns a slice of the input tensor along multiple axes."""
+    input_tensor_data = proto_obj.model_metadata.get('input_tensor_data')[0]
+    input_shape = input_tensor_data[1]
     new_attrs = translation_utils._fix_attribute_names(attrs,
                                                        {'axes' : 'axis',
                                                         'ends' : 'end',
@@ -506,8 +508,10 @@ def _slice(attrs, inputs, proto_obj):
     # onnx slice provides slicing on multiple axis. Adding multiple slice_axis operator
     # for multiple axes from mxnet
     begin = new_attrs.get('begin')
-    end = new_attrs.get('end')
+    end = list(new_attrs.get('end'))
     axes = new_attrs.get('axis', tuple(range(len(begin))))
+    for i, axis in enumerate(axes):
+        end[i] = None if end[i] >= input_shape[axis] else end[i]
     slice_op = symbol.slice_axis(inputs[0], axis=axes[0], begin=begin[0], end=end[0])
     if len(axes) > 1:
         for i, axis in enumerate(axes):

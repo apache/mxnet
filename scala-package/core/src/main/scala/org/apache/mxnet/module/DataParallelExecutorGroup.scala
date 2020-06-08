@@ -33,7 +33,7 @@ private object DataParallelExecutorGroup {
                                majorAxis: Seq[Int]): Unit = {
     for (((dSrc, dTargets), axis) <- data zip targets zip majorAxis) {
       for (((sliceIdxStart, sliceIdxStop), dDst) <- dTargets) {
-        if (axis >= 0) {
+        if (axis >= 0 && (sliceIdxStart > 0 || sliceIdxStop < dSrc.shape(axis))) {
           // copy slice
           val shape = dSrc.shape
           val begin = Array.fill(shape.length)(0)

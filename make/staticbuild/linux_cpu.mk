@@ -37,7 +37,7 @@ DEBUG = 0
 USE_SIGNAL_HANDLER = 1
 
 # the additional link flags you want to add
-ADD_LDFLAGS += -L$(DEPS_PATH)/lib -lpng -ltiff -ljpeg -lz -lgfortran -ldl -Wl,--version-script=$(CURDIR)/make/config/libmxnet.ver,-rpath,'$${ORIGIN}',--gc-sections
+ADD_LDFLAGS += -L$(DEPS_PATH)/lib -lpng -ltiff -ljpeg -lz -lgfortran -ldl  -Wl,--version-script=$(CURDIR)/make/config/libmxnet.ver,-rpath,'$${ORIGIN}',--gc-sections
 
 # the additional compile flags you want to add
 ADD_CFLAGS += -I$(DEPS_PATH)/include -ffunction-sections -fdata-sections
@@ -84,23 +84,7 @@ USE_OPERATOR_TUNING = 1
 USE_LIBJPEG_TURBO = 1
 
 # whether use MKL-DNN library
-USE_MKLDNN = 0
-
-
-# MKL ML Library for Intel CPU/Xeon Phi
-# Please refer to MKL_README.md for details
-
-# MKL ML Library folder, need to be root for /usr/local
-# Change to User Home directory for standard user
-# For USE_BLAS!=mkl only
-MKLML_ROOT=/usr/local
-
-# whether use MKL2017 library
-USE_MKL2017 = 0
-
-# whether use MKL2017 experimental feature for high performance
-# Prerequisite USE_MKL2017=1
-USE_MKL2017_EXPERIMENTAL = 0
+USE_MKLDNN = 1
 
 # whether use NNPACK library
 USE_NNPACK = 0

@@ -108,7 +108,7 @@ sub model_zoo { require AI::MXNet::Gluon::ModelZoo; 'AI::MXNet::Gluon::ModelZoo'
         my $children_outputs = [
             map { $self->forward($F, $inputs, $_) @{ $tree->children }
         ];
-        #Recursively builds the neural network based on each input sentence’s
+        #Recursively builds the neural network based on each input sentence
         #syntactic structure during the model definition and training process
         ...
     }

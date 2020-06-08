@@ -91,8 +91,6 @@ class FFTOp : public Operator {
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
     // const mxnet::TShape& oshape = out_data[fft::kOutComplex].shape_;
-    const mxnet::TShape& ishape = in_data[fft::kData].shape_;
-    const mxnet::TShape& oshape = out_data[fft::kOutComplex].shape_;
     Tensor<xpu, 2, DType> data = in_data[fft::kData].get_with_shape<xpu, 2, DType>(
           Shape2(n_ffts, dim_), s);
     Tensor<xpu, 2, DType> out = out_data[fft::kOutComplex].get_with_shape<xpu, 2, DType>(
@@ -153,8 +151,6 @@ class FFTOp : public Operator {
 
     Stream<xpu> *s = ctx.get_stream<xpu>();
 
-    const mxnet::TShape& ishape = in_grad[fft::kData].shape_;
-    const mxnet::TShape& oshape = out_grad[fft::kOutComplex].shape_;
     Tensor<xpu, 2, DType> gdata = in_grad[fft::kData].get_with_shape<xpu, 2, DType>(
           Shape2(n_ffts, dim_), s);
     Tensor<xpu, 2, DType> grad = out_grad[fft::kOutComplex].get_with_shape<xpu, 2, DType>(

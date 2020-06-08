@@ -109,9 +109,9 @@ mx.opt.sgd <- function(learning.rate = 0.01,
 #'
 #' @param learning.rate float, default=0.002
 #'      The initial learning rate.
-#' @param gamma1 float, default=0.95
+#' @param rho float, default=0.95
 #'      decay factor of moving average for gradient, gradient^2.
-#' @param gamma2 float, default=0.9
+#' @param momentum float, default=0.9
 #'      "momentum" factor.
 #' @param epsilon float, default=1e-4
 #' @param wd float, default=0.0
@@ -125,8 +125,8 @@ mx.opt.sgd <- function(learning.rate = 0.01,
 #'
 mx.opt.rmsprop <- function(learning.rate = 0.002,
                            centered = TRUE,
-                           gamma1 = 0.95,
-                           gamma2 = 0.9,
+                           rho = 0.95,
+                           momentum = 0.9,
                            epsilon = 1e-4,
                            wd = 0,
                            rescale.grad = 1,
@@ -158,8 +158,8 @@ mx.opt.rmsprop <- function(learning.rate = 0.002,
                                           g,
                                           delta,
                                           lr = lr,
-                                          gamma1 = gamma1,
-                                          gamma2 = gamma2,
+                                          rho = rho,
+                                          momentum = momentum,
                                           epsilon = epsilon,
                                           wd = wd,
                                           rescale_grad = rescale.grad,
@@ -174,7 +174,7 @@ mx.opt.rmsprop <- function(learning.rate = 0.002,
                                       grad,
                                       n,
                                       lr = lr,
-                                      gamma1 = gamma1,
+                                      rho = rho,
                                       epsilon = epsilon,
                                       wd = wd,
                                       rescale_grad = rescale.grad,

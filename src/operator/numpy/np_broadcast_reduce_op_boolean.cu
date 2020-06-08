@@ -28,11 +28,11 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_np_any)
+NNVM_REGISTER_OP(_npi_any)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBoolCompute<gpu,
   mshadow_op::sum, mshadow_op::NonZero, 0>);
 
-NNVM_REGISTER_OP(_np_all)
+NNVM_REGISTER_OP(_npi_all)
 .set_attr<FCompute>("FCompute<gpu>", NumpyReduceAxesBoolCompute<gpu,
   mshadow_op::product, mshadow_op::NonZero, 1>);
 

@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=arguments-differ
 """ losses for training neural networks """
-from __future__ import absolute_import
 __all__ = ['Loss', 'L2Loss', 'L1Loss',
            'SigmoidBinaryCrossEntropyLoss', 'SigmoidBCELoss',
            'SoftmaxCrossEntropyLoss', 'SoftmaxCELoss',

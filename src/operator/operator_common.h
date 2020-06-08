@@ -140,6 +140,8 @@ inline std::string type_string(const int& x) {
       return "float64";
     case mshadow::kFloat16:
       return "float16";
+    case mshadow::kBfloat16:
+      return "bfloat16";
     case mshadow::kInt8:
       return "int8";
     case mshadow::kUint8:

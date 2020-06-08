@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -29,12 +29,9 @@ from mxnet.gluon import nn
 import re
 from mxnet.test_utils import assert_almost_equal
 
-try:
-    cmp             # Python 2
-except NameError:
-    # See: https://docs.python.org/3.0/whatsnew/3.0.html#ordering-comparisons
-    def cmp(x, y):  # Python 3
-        return (x > y) - (x < y)
+
+def cmp(x, y):  # Python 3
+    return (x > y) - (x < y)
 
 # Set fixed random seeds.
 mx.random.seed(7)

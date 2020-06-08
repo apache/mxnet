@@ -42,6 +42,7 @@
 #include "./image_iter_common.h"
 #include "./inst_vector.h"
 #include "../common/utils.h"
+#include "../profiler/profiler.h"
 
 namespace mxnet {
 
@@ -296,10 +297,16 @@ inline bool ImageRecordIOParser2<DType>::ParseNext(DataBatch *out) {
     if (dev_id != -1) {
       ctx = Context::CPUPinned(dev_id);
     }
+
+    const std::string profiler_scope =
+        profiler::ProfilerScope::Get()->GetCurrentProfilerScope() + "image_io:";
+
     out->data.at(0) = NDArray(data_shape, ctx, false,
       mshadow::DataType<DType>::kFlag);
+    out->data.at(0).AssignStorageInfo(profiler_scope, "data");
     out->data.at(1) = NDArray(label_shape, ctx, false,
       mshadow::DataType<real_t>::kFlag);
+    out->data.at(1).AssignStorageInfo(profiler_scope, "label");
     unit_size_[0] = param_.data_shape.Size();
     unit_size_[1] = param_.label_width;
   }

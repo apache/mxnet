@@ -35,8 +35,8 @@ from benchmark.opperf.utils.op_registry_utils import get_all_indexing_routines
 """
 
 
-def run_indexing_routines_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', warmup=25, runs=100):
-    """Runs benchmarks with the given context and precision (dtype) for all the indexing routines
+def run_indexing_routines_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='native', int64_tensor='off', warmup=25, runs=100):
+    """Runs benchmarks with the given context, precision (dtype), and data size (int64_tensor) for all the indexing routines
     in MXNet.
 
     Parameters
@@ -47,6 +47,8 @@ def run_indexing_routines_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
         Precision to use for benchmarks
     profiler: str, default 'native'
         Type of Profiler to use (native/python)
+    int64_tensor: str, default 'off'
+        Input tensor size to use for tests (if on, dimensions >= 2**32)
     warmup: int, default 25
         Number of times to run for warmup
     runs: int, default 100
@@ -61,5 +63,5 @@ def run_indexing_routines_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='na
     mx_indexing_ops = get_all_indexing_routines()
 
     # Run benchmarks
-    mx_indexing_op_results = run_op_benchmarks(mx_indexing_ops, dtype, ctx, profiler, warmup, runs)
+    mx_indexing_op_results = run_op_benchmarks(mx_indexing_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return mx_indexing_op_results

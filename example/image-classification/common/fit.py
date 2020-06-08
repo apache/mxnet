@@ -235,7 +235,7 @@ def fit(args, network, data_loader, **kwargs):
         'multi_precision': True}
 
     # Only a limited number of optimizers have 'momentum' property
-    has_momentum = {'sgd', 'dcasgd', 'nag', 'signum', 'lbsgd'}
+    has_momentum = {'sgd', 'dcasgd', 'nag', 'signum'}
     if args.optimizer in has_momentum:
         optimizer_params['momentum'] = args.mom
 
@@ -243,7 +243,7 @@ def fit(args, network, data_loader, **kwargs):
         args.monitor, pattern=".*") if args.monitor > 0 else None
 
     # A limited number of optimizers have a warmup period
-    has_warmup = {'lbsgd', 'lbnag'}
+    has_warmup = {'lbnag'}
     if args.optimizer in has_warmup:
         nworkers = kv.num_workers
         if epoch_size < 1:
@@ -290,7 +290,7 @@ def fit(args, network, data_loader, **kwargs):
     # evaluation metrices
     eval_metrics = ['accuracy']
     if args.top_k > 0:
-        eval_metrics.append(mx.metric.create(
+        eval_metrics.append(mx.gluon.metric.create(
             'top_k_accuracy', top_k=args.top_k))
 
     supported_loss = ['ce', 'nll_loss']
@@ -306,7 +306,7 @@ def fit(args, network, data_loader, **kwargs):
                     logging.warning(loss_type + ' is not an valid loss type, only cross-entropy or ' \
                                     'negative likelihood loss is supported!')
                 else:
-                    eval_metrics.append(mx.metric.create(loss_type))
+                    eval_metrics.append(mx.gluon.metric.create(loss_type))
         else:
             logging.warning("The output is not softmax_output, loss argument will be skipped!")
 

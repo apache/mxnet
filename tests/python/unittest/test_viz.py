@@ -15,11 +15,11 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import unittest
 import warnings
 
 import mxnet as mx
 import numpy as np
+import pytest
 
 
 def test_print_summary():
@@ -46,7 +46,7 @@ def graphviz_exists():
     else:
         return True
 
-@unittest.skipIf(not graphviz_exists(), "Skip test_plot_network as Graphviz could not be imported")
+@pytest.mark.skipif(not graphviz_exists(), reason="Skip test_plot_network as Graphviz could not be imported")
 def test_plot_network():
     # Test warnings for cyclic graph
     net = mx.sym.Variable('data')
@@ -62,6 +62,3 @@ def test_plot_network():
     assert "There are multiple variables with the same name in your graph" in str(w[-1].message)
     assert "fc" in str(w[-1].message)
 
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

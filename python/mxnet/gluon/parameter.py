@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=unnecessary-pass, too-many-lines
 """Neural network parameter."""
-from __future__ import absolute_import
 
 __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'ParameterDict', 'tensor_types']
@@ -26,10 +25,11 @@ __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
 
 from collections import OrderedDict, defaultdict
 import warnings
+import weakref
 import numpy as np
 
 from ..base import mx_real_t, MXNetError
-from .. import symbol, ndarray, initializer, context
+from .. import symbol, ndarray, initializer, context, _deferred_compute as dc
 from ..context import Context, cpu
 from .. import autograd
 from .utils import _indent, _brief_print_list, shape_is_known
@@ -202,12 +202,15 @@ class Parameter(object):
     def _set_trainer(self, trainer):
         """ Set the trainer this parameter is associated with. """
         # trainer cannot be replaced for sparse params
-        if self._stype != 'default' and self._trainer and trainer and self._trainer is not trainer:
+        if self._stype != 'default' and self._trainer and trainer and self._trainer() is not trainer:
             raise RuntimeError(
                 "Failed to set the trainer for Parameter '%s' because it was already set. " \
                 "More than one trainers for a %s Parameter is not supported." \
                 %(self.name, self._stype))
-        self._trainer = trainer
+        if trainer is not None:
+            self._trainer = weakref.ref(trainer)
+        else:
+            self._trainer = trainer
 
     def _check_and_get(self, arr_list, ctx):
         if arr_list is not None:
@@ -246,13 +249,14 @@ class Parameter(object):
         # get row sparse params based on row ids
         if not isinstance(row_id, ndarray.NDArray):
             raise TypeError("row_id must have NDArray type, but %s is given"%(type(row_id)))
-        if not self._trainer:
+        trainer = self._trainer() if self._trainer else None
+        if not trainer:
             raise RuntimeError("Cannot get row_sparse data for Parameter '%s' when no " \
                                "Trainer is created with it."%self.name)
         results = self._check_and_get(arr_list, ctx)
 
         # fetch row sparse params from the trainer
-        self._trainer._row_sparse_pull(self, results, row_id)
+        trainer._row_sparse_pull(self, results, row_id)
         return results
 
     def _load_init(self, data, ctx, cast_dtype=False, dtype_source='current'):
@@ -289,11 +293,18 @@ class Parameter(object):
                 elif dtype_source == 'saved':
                     self.dtype = data.dtype
             else:
-                assert np.dtype(self.dtype).type == data.dtype, \
-                "Failed loading Parameter '%s' from saved params: " \
-                "dtype incompatible expected %s vs saved %s. " \
-                "Set cast_dtype=True to cast the dtype of saved params."%(
-                    self.name, str(self.dtype), str(data.dtype))
+                if data.dtype == np.dtype([('bfloat16', np.uint16)]):
+                    assert np.dtype(self.dtype) == data.dtype, \
+                    "Failed loading Parameter '%s' from saved params: " \
+                    "dtype incompatible expected %s vs saved %s. " \
+                    "Set cast_dtype=True to cast the dtype of saved params."%(
+                        self.name, str(self.dtype), str(data.dtype))
+                else:
+                    assert np.dtype(self.dtype).type == data.dtype, \
+                    "Failed loading Parameter '%s' from saved params: " \
+                    "dtype incompatible expected %s vs saved %s. " \
+                    "Set cast_dtype=True to cast the dtype of saved params."%(
+                        self.name, str(self.dtype), str(data.dtype))
         if self._stype != data.stype:
             data = data.tostype(self._stype)
         if isinstance(ctx, Context):
@@ -329,7 +340,7 @@ class Parameter(object):
             "in_channels, etc for `Block`s."%(
                 self.name, str(self.shape))
 
-        with autograd.pause():
+        with autograd.pause(), dc.context(False):
             if data is None:
                 kwargs = {'shape': self.shape, 'dtype': self.dtype, 'ctx': context.cpu()}
                 if is_np_array():
@@ -391,7 +402,11 @@ class Parameter(object):
             # fetch all rows for 'row_sparse' param
             all_row_ids = ndarray.arange(0, self.shape[0], dtype='int64', ctx=ctx)
             data = ndarray.zeros(self.shape, stype='row_sparse', ctx=ctx)
-            self._trainer._row_sparse_pull(self, data, all_row_ids, full_idx=True)
+            trainer = self._trainer() if self._trainer else None
+            if not trainer:
+                raise RuntimeError("Cannot reduce row_sparse data for Parameter '%s' when no " \
+                                   "Trainer is created with it."%self.name)
+            trainer._row_sparse_pull(self, data, all_row_ids, full_idx=True)
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
@@ -497,9 +512,10 @@ class Parameter(object):
             return
 
         # if update_on_kvstore, we need to make sure the copy stored in kvstore is in sync
-        if self._trainer and self._trainer._kv_initialized and self._trainer._update_on_kvstore:
-            if self not in self._trainer._params_to_init:
-                self._trainer._reset_kvstore()
+        trainer = self._trainer() if self._trainer else None
+        if trainer and trainer._kv_initialized and trainer._update_on_kvstore:
+            if self not in trainer._params_to_init:
+                trainer._reset_kvstore()
 
         for arr in self._check_and_get(self._data, list):
             arr[:] = data
@@ -562,7 +578,9 @@ class Parameter(object):
             raise RuntimeError("Cannot return a copy of Parameter '%s' on ctx %s via data() " \
                                "because its storage type is %s. Please use row_sparse_data() " \
                                "instead." % (self.name, str(ctx), self._stype))
-        return self._check_and_get(self._data, ctx)
+        data = self._check_and_get(self._data, ctx)
+        dc.set_variable(data, self.var())
+        return data
 
     def list_data(self):
         """Returns copies of this parameter on all contexts, in the same order

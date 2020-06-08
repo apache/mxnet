@@ -115,7 +115,7 @@
     }
 }
 
-%typemap(in,numinputs=0) (int *out) (int temp), (bool *out) (bool temp), (uint64_t *out) (uint64_t temp)
+%typemap(in,numinputs=0) (int *out) (int temp), (bool *out) (bool temp), (uint64_t *out) (uint64_t temp), (int64_t *out) (int64_t temp)
 {
     temp = 0;
     $1 = &temp;
@@ -131,7 +131,7 @@
     }
 }
 
-%typemap(argout) (uint64_t *out)
+%typemap(argout) (uint64_t *out), (int64_t *out)
 {
     if(!result)
     {
@@ -169,7 +169,8 @@
 }
 
 %typemap(in,numinputs=0) (nn_uint *out_size, const char ***out_array) (nn_uint temp_size, char** temp),
-                         (mx_uint *out_size, const char ***out_array) (mx_uint temp_size, char** temp)
+                         (mx_uint *out_size, const char ***out_array) (mx_uint temp_size, char** temp),
+                         (uint32_t *out_size, const char ***out_array) (uint32_t temp_size, char** temp)
 {
     $1 = &temp_size;
     *$1 = 0;
@@ -177,7 +178,8 @@
 }
 
 %typemap(argout) (nn_uint *out_size, const char ***out_array),
-                 (mx_uint *out_size, const char ***out_array)
+                 (mx_uint *out_size, const char ***out_array),
+                 (uint32_t *out_size, const char ***out_array)
 {
     if(!result)
     {
@@ -197,14 +199,38 @@
     }
 }
 
-%typemap(in,numinputs=0) (mx_uint *out_size, const char ***out_array2) (mx_uint temp_size, char** temp)
+%typemap(in,numinputs=0) (const LibFeature **libFeature, size_t *size) (LibFeature *temp1, size_t temp2)
+{
+    $1 = &temp1;
+    $2 = &temp2;
+    *$2 = 0;
+}
+
+%typemap(argout) (const LibFeature **libFeature, size_t *size)
+{
+    if(!result)
+    {
+        HV* hash = newHV();
+        for(int i = 0; i < *$2; i++)
+        {
+            hv_store(hash, ((*$1)[i]).name, strlen(((*$1)[i]).name), newSViv(((*$1)[i]).enabled), 0);
+        }
+        $result = newRV_noinc((SV*)hash);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
+%typemap(in,numinputs=0) (mx_uint *out_size, const char ***out_array2) (mx_uint temp_size, char** temp),
+                         (uint32_t *out_size, const char ***out_array2) (uint32_t temp_size, char** temp)
 {
     $1 = &temp_size;
     *$1 = 0;
     $2 = &temp;
 }
 
-%typemap(argout) (mx_uint *out_size, const char ***out_array2)
+%typemap(argout) (mx_uint *out_size, const char ***out_array2),
+                 (uint32_t *out_size, const char ***out_array2)
 {
     if(!result)
     {
@@ -222,6 +248,21 @@
         sv_2mortal($result);
         argvi++;
     }
+}
+
+%typemap(in) (uint32_t in), (const uint32_t in), (mx_uint in), (const mx_uint in)
+{
+    $1 = (uint32_t)SvIV($input);
+}
+
+%typemap(in) (uint64_t in), (const uint64_t in)
+{
+    $1 = (uint64_t)SvUV($input);
+}
+
+%typemap(in) (int64_t in), (const int64_t in)
+{
+    $1 = (int64_t)SvUV($input);
 }
 
 %typemap(in) (FunctionHandle in)
@@ -252,7 +293,7 @@
     $1 = SvPV_nolen($input);
 }
 
-%typemap(in) (const mx_uint *in), (mx_uint *in)
+%typemap(in) (const mx_uint *in), (mx_uint *in), (const uint32_t *in), (uint32_t *in)
 {
     AV *tempav;
     int i;
@@ -278,7 +319,61 @@
     }
 }
 
-%typemap(freearg) (const mx_uint *in), (mx_uint *in) {
+%typemap(in) (const uint64_t *in), (uint64_t *in)
+{
+    AV *tempav;
+    int i;
+    SV  **tv;
+    int av_len;
+    if (!SvROK($input))
+        croak("Argument $argnum is not a reference.");
+        if (SvTYPE(SvRV($input)) != SVt_PVAV)
+        croak("Argument $argnum is not an array.");
+        tempav = (AV*)SvRV($input);
+    av_len = av_len(tempav) + 1;
+    if(av_len)
+    {
+        $1 = (uint64_t *)safemalloc(av_len*sizeof(uint64_t));
+        for (i = 0; i < av_len; i++) {
+            tv = av_fetch(tempav, i, 0);
+            $1[i] = (uint64_t)SvUV(*tv);
+        }
+    }
+    else
+    {
+       $1 = NULL;
+    }
+}
+
+%typemap(in) (const int64_t *in), (int64_t *in)
+{
+    AV *tempav;
+    int i;
+    SV  **tv;
+    int av_len;
+    if (!SvROK($input))
+        croak("Argument $argnum is not a reference.");
+        if (SvTYPE(SvRV($input)) != SVt_PVAV)
+        croak("Argument $argnum is not an array.");
+        tempav = (AV*)SvRV($input);
+    av_len = av_len(tempav) + 1;
+    if(av_len)
+    {
+        $1 = (int64_t *)safemalloc(av_len*sizeof(int64_t));
+        for (i = 0; i < av_len; i++) {
+            tv = av_fetch(tempav, i, 0);
+            $1[i] = (int64_t)SvUV(*tv);
+        }
+    }
+    else
+    {
+       $1 = NULL;
+    }
+}
+
+%typemap(freearg) (const mx_uint *in), (mx_uint *in), (const uint32_t *in),
+                  (uint32_t *in), (const uint64_t *in), (uint64_t *in), (const int64_t *in), (int64_t *in)
+{
     Safefree($1);
 }
 
@@ -337,7 +432,6 @@
     {
        $1 = NULL;
     }
-
 }
 
 %typemap(freearg) (dim_t *in) {
@@ -410,7 +504,7 @@
     Safefree($1);
 }
 
-%typemap(in) (mx_float *in)
+%typemap(in) (mx_float *in), (float *in)
 {
     AV *tempav;
     int i, len;
@@ -435,7 +529,7 @@
     }
 }
 
-%typemap(freearg) (mx_float *in) {
+%typemap(freearg) (mx_float *in), (float *in) {
     Safefree($1);
 }
 
@@ -464,7 +558,7 @@
     }
 }
 
-%typemap(in) (mx_float **out_pdata) (mx_float *temp_pdata)
+%typemap(in) (mx_float **out_pdata) (mx_float *temp_pdata), (float **out_pdata) (float *temp_pdata)
 {
     $1 = &temp_pdata;
 }
@@ -524,10 +618,31 @@
     }
 }
 
-%typemap(in,numinputs=0) (int *out_dim, const int **out_pdata) (int temp_dim, int *temp_pdata)
+%typemap(in,numinputs=0) (int *out_dim, const int **out_pdata) (int temp_dim, int *temp_pdata),
+                         (int *out_dim, const int64_t **out_pdata) (int temp_dim, int64_t *temp_pdata)
 {
     $1 = &temp_dim;
     $2 = &temp_pdata;
+}
+
+%typemap(argout) (int *out_dim, const int64_t **out_pdata)
+{
+    if(!result)
+    {
+        AV *myav;
+        SV **svs;
+        int i = 0;
+        svs = (SV **)safemalloc(*$1*sizeof(SV *));
+        for (i = 0; i < *$1 ; i++) {
+            svs[i] = newSVnv((double)((*$2)[i]));
+            sv_2mortal(svs[i]);
+        }
+        myav = av_make(*$1,svs);
+        Safefree(svs);
+        $result = newRV_noinc((SV*)myav);
+        sv_2mortal($result);
+        argvi++;
+    }
 }
 
 %typemap(argout) (int *out_dim, const int **out_pdata)
@@ -563,10 +678,10 @@
     {
         AV *myav;
         SV **svs;
-        int i = 0;
+        uint64_t i = 0;
         svs = (SV **)safemalloc(*$2*sizeof(SV *));
         for (i = 0; i < *$2 ; i++) {
-            svs[i] = newSViv((*$1)[i]);
+            svs[i] = newSVnv((double)((*$1)[i]));
             sv_2mortal(svs[i]);
         }
         myav = av_make(*$2,svs);
@@ -580,7 +695,12 @@
 %typemap(in,numinputs=0) (mx_uint *out_size, FunctionHandle** out_array) (mx_uint temp_size, FunctionHandle* temp),
                          (mx_uint *out_size, AtomicSymbolCreator** out_array) (mx_uint temp_size, AtomicSymbolCreator* temp),
                          (mx_uint *out_size, DataIterCreator **out_array) (mx_uint temp_size, DataIterCreator* temp),
-                         (mx_uint *out_size, NDArrayHandle** out_array) (mx_uint temp_size, NDArrayHandle* temp)
+                         (mx_uint *out_size, NDArrayHandle** out_array) (mx_uint temp_size, NDArrayHandle* temp),
+                         (uint32_t *out_size, FunctionHandle** out_array) (uint32_t temp_size, FunctionHandle* temp),
+                         (uint32_t *out_size, AtomicSymbolCreator** out_array) (uint32_t temp_size, AtomicSymbolCreator* temp),
+                         (uint32_t *out_size, DataIterCreator **out_array) (uint32_t temp_size, DataIterCreator* temp),
+                         (uint32_t *out_size, NDArrayHandle** out_array) (uint32_t temp_size, NDArrayHandle* temp)
+
 {
     $1 = &temp_size;
     *$1 = 0;
@@ -588,7 +708,8 @@
 }
 
 // many argouts needed because SWIG can't $**2_mangle
-%typemap(argout) (mx_uint *out_size, AtomicSymbolCreator** out_array)
+%typemap(argout) (mx_uint *out_size, AtomicSymbolCreator** out_array),
+                 (uint32_t *out_size, AtomicSymbolCreator** out_array)
 {
     if(!result)
     {
@@ -607,7 +728,8 @@
     }
 }
 
-%typemap(argout) (mx_uint *out_size, FunctionHandle** out_array)
+%typemap(argout) (mx_uint *out_size, FunctionHandle** out_array),
+                 (uint32_t *out_size, FunctionHandle** out_array)
 {
     if(!result)
     {
@@ -626,7 +748,8 @@
     }
 }
 
-%typemap(argout) (mx_uint *out_size, DataIterCreator **out_array)
+%typemap(argout) (mx_uint *out_size, DataIterCreator **out_array),
+                 (uint32_t *out_size, DataIterCreator **out_array)
 {
     if(!result)
     {
@@ -645,7 +768,8 @@
     }
 }
 
-%typemap(argout) (mx_uint *out_size, NDArrayHandle** out_array)
+%typemap(argout) (mx_uint *out_size, NDArrayHandle** out_array),
+                 (uint32_t *out_size, NDArrayHandle** out_array)
 {
     if(!result)
     {
@@ -665,7 +789,9 @@
 }
 
 %typemap(in,numinputs=0) (mx_uint* couple_out_size, NDArrayHandle** out_first_array, NDArrayHandle** out_second_array)
-                         (mx_uint t, NDArrayHandle* t1, NDArrayHandle* t2)
+                         (mx_uint t, NDArrayHandle* t1, NDArrayHandle* t2),
+                         (uint32_t* couple_out_size, NDArrayHandle** out_first_array, NDArrayHandle** out_second_array)
+                         (uint32_t t, NDArrayHandle* t1, NDArrayHandle* t2)
 {
     $1 = &t;
     *$1 = 0;
@@ -673,7 +799,8 @@
     $3 = &t2;
 }
 
-%typemap(argout) (mx_uint* couple_out_size, NDArrayHandle** out_first_array, NDArrayHandle** out_second_array)
+%typemap(argout) (mx_uint* couple_out_size, NDArrayHandle** out_first_array, NDArrayHandle** out_second_array),
+                 (uint32_t* couple_out_size, NDArrayHandle** out_first_array, NDArrayHandle** out_second_array)
 {
     if(!result)
     {
@@ -819,14 +946,14 @@
 
 %typemap(in,numinputs=0) (const char **name,
                           const char **description,
-                          mx_uint *num_args,
+                          uint32_t *num_args,
                           const char ***arg_names,
                           const char ***arg_type_infos,
                           const char ***arg_descriptions
                           ) 
                           (char *name_temp,
                            char *desc_temp,
-                           mx_uint num_args_temp,
+                           uint32_t num_args_temp,
                            char **names_temp,
                            char **types_temp,
                            char **descs_temp
@@ -843,7 +970,7 @@
 
 %typemap(argout) (const char **name,
                   const char **description,
-                  mx_uint *num_args,
+                  uint32_t *num_args,
                   const char ***arg_names,
                   const char ***arg_type_infos,
                   const char ***arg_descriptions
@@ -878,7 +1005,7 @@
 
 %typemap(in,numinputs=0) (const char **name,
                           const char **description,
-                          mx_uint *num_args,
+                          uint32_t *num_args,
                           const char ***arg_names,
                           const char ***arg_type_infos,
                           const char ***arg_descriptions,
@@ -886,7 +1013,7 @@
                           ) 
                           (char *name_temp, 
                            char *desc_temp, 
-                           mx_uint num_args_temp, 
+                           uint32_t num_args_temp, 
                            char **names_temp,
                            char **types_temp,
                            char **descs_temp,
@@ -905,7 +1032,7 @@
 
 %typemap(argout) (const char **name,
                   const char **description,
-                  mx_uint *num_args,
+                  uint32_t *num_args,
                   const char ***arg_names,
                   const char ***arg_type_infos,
                   const char ***arg_descriptions,
@@ -940,13 +1067,13 @@
     }
 }
 
-%typemap(in,numinputs=0) (mx_uint *out) (mx_uint temp), (size_t *out) (size_t temp)
+%typemap(in,numinputs=0) (uint32_t *out) (uint32_t temp), (size_t *out) (size_t temp)
 {
     $1 = &temp;
     *$1 = 0;
 }
 
-%typemap(argout) (mx_uint *out), (size_t *out)
+%typemap(argout) (uint32_t *out), (size_t *out)
 {
     if(!result)
     {
@@ -956,12 +1083,18 @@
     }
 }
 
-%typemap(in,numinputs=0) (mx_uint *in_shape_size, const int **in_shape_ndim, const int ***in_shape_data) 
-                         (mx_uint temp1, int *temp2, int **temp3),
-                         (mx_uint *out_shape_size, const int **out_shape_ndim, const int ***out_shape_data) 
-                         (mx_uint temp1, int *temp2, int **temp3),
-                         (mx_uint *aux_shape_size, const int **aux_shape_ndim, const int ***aux_shape_data) 
-                         (mx_uint temp1, int *temp2, int **temp3)
+%typemap(in,numinputs=0) (uint32_t *in_shape_size, const int **in_shape_ndim, const int ***in_shape_data) 
+                         (uint32_t temp1, int *temp2, int **temp3),
+                         (uint32_t *out_shape_size, const int **out_shape_ndim, const int ***out_shape_data) 
+                         (uint32_t temp1, int *temp2, int **temp3),
+                         (uint32_t *aux_shape_size, const int **aux_shape_ndim, const int ***aux_shape_data) 
+                         (uint32_t temp1, int *temp2, int **temp3),
+                         (size_t *in_shape_size, const int **in_shape_ndim, const int64_t ***in_shape_data)
+                         (size_t temp1, int *temp2, int64_t **temp3),
+                         (size_t *out_shape_size, const int **out_shape_ndim, const int64_t ***out_shape_data)
+                         (size_t temp1, int *temp2, int64_t **temp3),
+                         (size_t *aux_shape_size, const int **aux_shape_ndim, const int64_t ***aux_shape_data)
+                         (size_t temp1, int *temp2, int64_t **temp3)
 {
     $1 = &temp1;
     $2 = &temp2;
@@ -969,9 +1102,9 @@
     *$1 = 0;
 }
 
-%typemap(argout) (mx_uint *in_shape_size, const int **in_shape_ndim, const int ***in_shape_data),
-                 (mx_uint *out_shape_size, const int **out_shape_ndim, const int ***out_shape_data),
-                 (mx_uint *aux_shape_size, const int **aux_shape_ndim, const int ***aux_shape_data)
+%typemap(argout) (uint32_t *in_shape_size, const int **in_shape_ndim, const int ***in_shape_data),
+                 (uint32_t *out_shape_size, const int **out_shape_ndim, const int ***out_shape_data),
+                 (uint32_t *aux_shape_size, const int **aux_shape_ndim, const int ***aux_shape_data)
 {
     if(!result && *arg15)
     {
@@ -995,21 +1128,48 @@
     }
 }
 
-%typemap(in,numinputs=0) (mx_uint *in_type_size, const int **in_type_data)
-                         (mx_uint temp1, int *temp2),
-                         (mx_uint *out_type_size, const int **out_type_data) 
-                         (mx_uint temp1, int *temp2),
-                         (mx_uint *aux_type_size, const int **aux_type_data) 
-                         (mx_uint temp1, int *temp2)
+%typemap(argout) (size_t *in_shape_size, const int **in_shape_ndim, const int64_t ***in_shape_data),
+                 (size_t *out_shape_size, const int **out_shape_ndim, const int64_t ***out_shape_data),
+                 (size_t *aux_shape_size, const int **aux_shape_ndim, const int64_t ***aux_shape_data)
+{
+    if(!result && *arg15)
+    {
+        AV *container;
+        AV *tmp;
+        size_t i;
+        int j;
+        container = newAV();
+        for (i = 0; i < *$1 ; i++)
+        {
+            tmp = newAV();
+            int len = (*$2)[i];
+            for (j = 0; j < len ; j++)
+            {
+                av_push(tmp, newSVnv((double)((*$3)[i][j])));
+            }
+            av_push(container, newRV((SV*)tmp));
+        }
+        $result = newRV_noinc((SV*)container);
+        sv_2mortal($result);
+        argvi++;
+    }
+}
+
+%typemap(in,numinputs=0) (uint32_t *in_type_size, const int **in_type_data)
+                         (uint32_t temp1, int *temp2),
+                         (uint32_t *out_type_size, const int **out_type_data) 
+                         (uint32_t temp1, int *temp2),
+                         (uint32_t *aux_type_size, const int **aux_type_data) 
+                         (uint32_t temp1, int *temp2)
 {
     $1 = &temp1;
     $2 = &temp2;
     *$1 = 0;
 }
 
-%typemap(argout)  (mx_uint *in_type_size,  const int **in_type_data),
-                  (mx_uint *out_type_size, const int **out_type_data),
-                  (mx_uint *aux_type_size, const int **aux_type_data)
+%typemap(argout)  (uint32_t *in_type_size,  const int **in_type_data),
+                  (uint32_t *out_type_size, const int **out_type_data),
+                  (uint32_t *aux_type_size, const int **aux_type_data)
 
 {
     if(!result && *arg11)
@@ -1027,10 +1187,10 @@
     }
 }
 
-%typemap(in,numinputs=0) (mx_uint* num_in_args,
+%typemap(in,numinputs=0) (uint32_t* num_in_args,
                           NDArrayHandle** in_args,
                           NDArrayHandle** arg_grads)
-                         (mx_uint temp1,
+                         (uint32_t temp1,
                          NDArrayHandle* temp2,
                          NDArrayHandle* temp3)
 {
@@ -1040,7 +1200,7 @@
     *$1 = 0;
 }
 
-%typemap(argout) (mx_uint* num_in_args,
+%typemap(argout) (uint32_t* num_in_args,
                   NDArrayHandle** in_args,
                   NDArrayHandle** arg_grads)
 {
@@ -1062,9 +1222,9 @@
     }
 }
 
-%typemap(in,numinputs=0) (mx_uint* num_aux_states,
+%typemap(in,numinputs=0) (uint32_t* num_aux_states,
                           NDArrayHandle** aux_states)
-                         (mx_uint temp1,
+                         (uint32_t temp1,
                          NDArrayHandle* temp2)
 {
     $1 = &temp1;
@@ -1072,7 +1232,7 @@
     *$1 = 0;
 }
 
-%typemap(argout) (mx_uint* num_aux_states,
+%typemap(argout) (uint32_t* num_aux_states,
                   NDArrayHandle** aux_states)
 {
     if(!result)

@@ -20,7 +20,6 @@
 # coding: utf-8
 # pylint: disable=wildcard-import
 """ Data iterators for common data formats and utility functions."""
-from __future__ import absolute_import
 
 from . import io
 from .io import CSVIter, DataBatch, DataDesc, DataIter, ImageDetRecordIter, ImageRecordInt8Iter, ImageRecordIter,\

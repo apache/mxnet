@@ -20,8 +20,10 @@ import mxnet.ndarray as nd
 from mxnet.ndarray import zeros_like
 from mxnet.autograd import *
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown
+from common import setup_module, with_seed, teardown_module, xfail_when_nonstandard_decimal_separator
 from mxnet.test_utils import EnvManager
+
+import pytest
 
 
 def grad_and_loss(func, argnum=None):
@@ -107,6 +109,7 @@ def autograd_assert(*args, **kwargs):
     for a, b in zip(grad_vals, grad_res):
         assert same(a.asnumpy(), b.asnumpy())
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_unary_func():
     def check_unary_func(x):
@@ -343,6 +346,7 @@ def test_is_train():
         assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_function():
     class func(Function):
         def forward(self, x, y):
@@ -379,6 +383,7 @@ def test_function():
 
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_function1():
     class Foo(mx.autograd.Function):
         def __init__(self):
@@ -467,7 +472,3 @@ def test_gradient():
     dx.backward()
     assert abs(x.grad.asscalar() - 2.71828175) < 1e-7
 
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

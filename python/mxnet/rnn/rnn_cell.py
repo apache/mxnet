@@ -20,7 +20,6 @@
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
 # pylint: disable=too-many-lines
 """Definition of various recurrent neural network cells."""
-from __future__ import print_function
 
 import warnings
 import functools
@@ -460,6 +459,11 @@ class LSTMCell(BaseRNNCell):
                                      name='%so'%name)
         next_c = symbol._internal._plus(forget_gate * states[1], in_gate * in_transform,
                                         name='%sstate'%name)
+        next_c._set_attr(force_mirroring='0')
+        # Cell states are excluded from being mirrored. The reason is because
+        # they do not pass through the fully-connected layers and will
+        # significantly increase the overall mirroring depth, incurring large
+        # performance overhead.
         next_h = symbol._internal._mul(out_gate, symbol.Activation(next_c, act_type="tanh"),
                                        name='%sout'%name)
 

@@ -18,7 +18,6 @@
 # coding: utf-8
 # pylint: disable=
 """Parallelization utility optimizer."""
-from __future__ import absolute_import
 
 __all__ = ['split_data', 'split_and_load', 'clip_global_norm',
            'check_sha1', 'download', 'replace_file']
@@ -35,7 +34,7 @@ import requests
 import numpy as np
 
 from .. import ndarray
-from ..util import is_np_shape, is_np_array, makedirs
+from ..util import is_np_shape, is_np_array
 from .. import numpy as _mx_np  # pylint: disable=reimported
 
 
@@ -133,15 +132,23 @@ def clip_global_norm(arrays, max_norm, check_isfinite=True):
       False. Otherwise a float is returned.
 
     """
-    def _norm(array):
-        if array.stype == 'default':
-            x = array.reshape((-1,))
-            return ndarray.dot(x, x)
-        return array.norm().square()
-    assert len(arrays) > 0
+    # group arrays by ctx
+    def group_by_ctx(arr_list):
+        groups = collections.defaultdict(list)
+        for arr in arr_list:
+            ctx = arr.context
+            groups[ctx].append(arr)
+        return groups
+    arrays_groups = group_by_ctx(arrays)
+    all_ctx_sum = []
     ctx = arrays[0].context
-    total_norm = ndarray.add_n(*[_norm(arr).as_in_context(ctx) for arr in arrays])
-    total_norm = ndarray.sqrt(total_norm)
+    for group in arrays_groups:
+        sum_sq = ndarray.multi_sum_sq(*arrays_groups[group],
+                                      num_arrays=len(arrays_groups[group]))
+        sum_sq = ndarray.add_n(*sum_sq)
+        all_ctx_sum.append(sum_sq.as_in_context(ctx))
+    # global reduce
+    total_norm = ndarray.add_n(*all_ctx_sum).sqrt()
     if check_isfinite:
         if not np.isfinite(total_norm.asscalar()):
             warnings.warn(
@@ -226,11 +233,9 @@ else:
     _MOVEFILE_WRITE_THROUGH = 0x8
     _windows_default_flags = _MOVEFILE_WRITE_THROUGH
 
-    text_type = unicode if sys.version_info[0] == 2 else str  # pylint: disable=undefined-variable
-
     def _str_to_unicode(x):
         """Handle text decoding. Internal use only"""
-        if not isinstance(x, text_type):
+        if not isinstance(x, str):
             return x.decode(sys.getfilesystemencoding())
         return x
 
@@ -310,7 +315,7 @@ def download(url, path=None, overwrite=False, sha1_hash=None, retries=5, verify_
     if overwrite or not os.path.exists(fname) or (sha1_hash and not check_sha1(fname, sha1_hash)):
         dirname = os.path.dirname(os.path.abspath(os.path.expanduser(fname)))
         if not os.path.exists(dirname):
-            makedirs(dirname)
+            os.makedirs(dirname, exist_ok=True)
         while retries + 1 > 0:
             # Disable pyling too broad Exception
             # pylint: disable=W0703

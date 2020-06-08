@@ -20,7 +20,6 @@
 # pylint: disable=too-many-branches, too-many-arguments, no-self-use
 # pylint: disable=too-many-lines, arguments-differ
 """Definition of various recurrent neural network layers."""
-from __future__ import print_function
 import re
 
 __all__ = ['RNN', 'LSTM', 'GRU']
@@ -61,6 +60,7 @@ class _RNNLayer(HybridBlock):
         self._lstm_state_clip_nan = lstm_state_clip_nan
         self._dtype = dtype
         self._use_sequence_length = use_sequence_length
+        self.skip_states = None
 
         self._gates = {'rnn_relu': 1, 'rnn_tanh': 1, 'lstm': 4, 'gru': 3}[mode]
 

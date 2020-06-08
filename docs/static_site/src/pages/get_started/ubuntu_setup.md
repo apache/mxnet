@@ -26,11 +26,10 @@ permalink: /get_started/ubuntu_setup
 
 The following installation instructions are for building MXNet from source on
 computers running **Ubuntu 16.04** or higher. For instructions to build MXNet
-from source on other platforms, see the general [Build From Source
-guide](build_from_source).
+from source on other platforms, see the general [Build From Source guide](build_from_source.html).
 
 Instead of building from source, you can install a binary version of MXNet. For
-that, please follow the information at [Get Started](get_started).
+that, please follow the information at [Get Started](/get_started).
 
 Building MXNet from source is a two-step process:
 
@@ -74,7 +73,9 @@ sudo ldconfig
 
 ## Build the MXNet shared library from source
 
-It is recommended that you review the general [build from source](build_from_source) instructions before continuing.
+It is recommended that you review the general [build from source](build_from_source.html) instructions before continuing.
+
+**Note**: Building MXNet from source requires at least [gcc7](https://gcc.gnu.org/), clang6 or any C++17 compatible compiler.
 
 On Ubuntu versions 16.04 or later, you need the following dependencies:
 
@@ -90,8 +91,8 @@ Further information is provided in the source guide's [Math Library
 Selection](build_from_source#math-library-selection) section.
 
 `libopencv-dev` is an optional dependency. You can delete it from above `apt-get
-install` line and build MXNet without OpenCV support by passing
-`-DUSE_OPENCV=OFF` to the `cmake` command below.
+install` line and build MXNet without OpenCV support by setting `USE_OPENCV` to
+`OFF` in the configuration file described below.
 
 Note: CMake 3.13 or higher is required. If you are running an older version of
 CMake, you will see an error message like `CMake 3.13 or higher is required. You
@@ -109,34 +110,36 @@ Clone the repository:
 ```bash
 git clone --recursive https://github.com/apache/incubator-mxnet.git mxnet
 cd mxnet
-cp config/config.cmake config.cmake
+cp config/linux.cmake config.cmake  # or config/linux_gpu.cmake for build with CUDA
 ```
 
 Please edit the config.cmake file based on your needs. The file contains a
-series of `set(name value CACHE TYPE "Description")` entries. For example, to
-build without Cuda, change `set(USE_CUDA ON CACHE TYPE "Build with CUDA
-support")` to `set(USE_CUDA OFF CACHE TYPE "Build with CUDA support")`.
+series of `set(name value CACHE TYPE "Description")` entries. You can change the
+values of the respective `value`.
 
 For a GPU-enabled build make sure you have installed the [CUDA dependencies
-first](#cuda-dependencies)). When building a GPU-enabled build on a machine
+first](#cuda-dependencies). When building a GPU-enabled build on a machine
 without GPU, MXNet build can't autodetect your GPU architecture and will target
 all available GPU architectures. Please set the `MXNET_CUDA_ARCH` variable in
 `config.cmake` to your desired cuda architecture to speed up the build.
 
 To (optionally) build with MKL math library, please install MKL first based on
-the guide in [Math Library Selection](build_from_source#math-library-selection).
+the guide in [Math Library Selection](build_from_source.html#math-library-selection).
 
 **Step 3:** Build MXNet core shared library.
 
 ```bash
 rm -rf build
 mkdir -p build && cd build
-cmake -GNinja -C ../config.cmake ..
-cmake --build . --parallel 8
+cmake -GNinja ..
+cmake --build .
 ```
 
-You can increase the `--parallel 8` argument to match the number of processor
-cores of your computer.
+Specify `cmake -DCMAKE_BUILD_TYPE=Debug -GNinja ..` if you wish to build the
+Debug version.
+
+Specify `cmake --build . --parallel N` to set the number of parallel compilation
+jobs. Default is derived from CPUs available.
 
 After a successful build, you will find the `libmxnet.so` in the `build` folder
 in your MXNet project root. `libmxnet.so` is required to install language
@@ -147,8 +150,8 @@ bindings described in the next section.
 
 ## Installing Language Packages for MXNet
 
-After you have installed the MXNet core library. You may install MXNet interface packages for the programming language
-of your choice:
+After you have installed the MXNet core library. You may install MXNet interface
+packages for the programming language of your choice:
 - [Python](#install-mxnet-for-python)
 - [C++](#install-the-mxnet-package-for-c&plus;&plus;)
 - [Clojure](#install-the-mxnet-package-for-clojure)
@@ -169,8 +172,9 @@ cd python
 pip install --user -e .
 ```
 
-Note that the `-e` flag is optional. It is equivalent to `--editable` and means that if you edit the source files, these
-changes will be reflected in the package installed.
+Note that the `-e` flag is optional. It is equivalent to `--editable` and means
+that if you edit the source files, these changes will be reflected in the
+package installed.
 
 #### Optional Python Packages
 
@@ -186,7 +190,7 @@ pip install --user graphviz==0.8.4 jupyter
 
 ### Install the MXNet Package for C++
 
-Refer to the [C++ Package setup guide](c_plus_plus).
+Refer to the [C++ Package setup guide](cpp_setup.html).
 <hr>
 
 
@@ -297,7 +301,7 @@ julia --color=yes --project=./ -e \
 ```
 
 For more details about installing and using MXNet with Julia, see the
-[MXNet Julia documentation]({{'/api/julia'|relative_url}}).
+[MXNet Julia documentation](/api/julia.html).
 
 <hr>
 
@@ -404,23 +408,23 @@ You should see the following output:
 
 ### Install the MXNet Package for Scala
 
-To use the MXNet-Scala package, you can acquire the Maven package as a dependency.
+After building the MXNet shared library, you may simply run the following from the MXNet scala-package folder:
 
-Further information is in the [MXNet-Scala Setup Instructions](scala_setup).
+```bash
+mvn install
+```
 
-If you use IntelliJ or a similar IDE, you may want to follow the
-[MXNet-Scala on IntelliJ tutorial]({{'/api/scala/docs/tutorials/mxnet_scala_on_intellij'|relative_url}}) instead.
-<hr>
+This will install both the Java Inference API and the required MXNet-Scala package.<hr>
 
 ### Install the MXNet Package for Java
 
-To use the MXNet-Java package, you can acquire the Maven package as a dependency.
+After building the MXNet shared library, you may simply run the following from the MXNet scala-package folder:
 
-Further information is in the [MXNet-Java Setup Instructions](java_setup).
+```bash
+mvn install
+```
 
-If you use IntelliJ or a similar IDE, you may want to follow the
-[MXNet-Java on IntelliJ tutorial]({{'/api/java/docs/tutorials/mxnet_java_on_intellij'|relative_url}}) instead.
-<hr>
+This will install both the Java Inference API and the required MXNet-Scala package.<hr>
 
 ## Contributions
 

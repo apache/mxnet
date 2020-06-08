@@ -15,7 +15,7 @@
 ;; limitations under the License.
 ;;
 
-(defproject org.apache.mxnet.contrib.clojure/clojure-mxnet "1.6.0-SNAPSHOT"
+(defproject org.apache.mxnet.contrib.clojure/clojure-mxnet "2.0.0-SNAPSHOT"
   :description "Clojure package for MXNet"
   :url "https://github.com/apache/incubator-mxnet"
   :license {:name "Apache License"
