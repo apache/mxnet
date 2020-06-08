@@ -1838,7 +1838,14 @@ def test_batchnorm_training():
 
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
-def test_batchnorm():
+@pytest.mark.parametrize('op', [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm])
+@pytest.mark.parametrize('shape', [(24, 2), (24, 3, 4), (24, 4, 4, 5),
+    (24, 8, 4, 5), (24, 5, 6, 4, 5)])
+@pytest.mark.parametrize('fix_gamma', [False, True])
+@pytest.mark.parametrize('grad_req', ['write', 'add'])
+@pytest.mark.parametrize('cudnn_off', [False, True])
+@pytest.mark.parametrize('output_mean_var', [False, True])
+def test_batchnorm(op, shape, fix_gamma, grad_req, cudnn_off, output_mean_var):
     momentum = 0.9
     epsilon = 1e-5
 
@@ -1970,17 +1977,9 @@ def test_batchnorm():
             assert_almost_equal(
                 bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
 
-    for op in [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm]:
-        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4),
-                (24, 8, 4, 4), (24, 5, 6, 4, 4)]:
-            for axis in range(len(shape)):
-                for fix_gamma in [False, True]:
-                    for grad_req in ['write', 'add']:
-                        for cudnn_off in [False, True]:
-                            for output_mean_var in [False, True]:
-                                _test_batchnorm_impl(op, shape, axis, fix_gamma,
-                                                     grad_req,
-                                                     cudnn_off, output_mean_var)
+    for axis in range(len(shape)):
+        _test_batchnorm_impl(op, shape, axis, fix_gamma,
+                             grad_req, cudnn_off, output_mean_var)
 
 @with_seed()
 def test_groupnorm():
