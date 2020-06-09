@@ -259,19 +259,19 @@ class LSTMPCell(HybridRecurrentCell):
         self._hidden_size = hidden_size
         self._input_size = input_size
         self._projection_size = projection_size
-        self.i2h_weight = Parameter(shape=(4*hidden_size, input_size),
+        self.i2h_weight = Parameter('i2h_weight', shape=(4*hidden_size, input_size),
                                     init=i2h_weight_initializer,
                                     allow_deferred_init=True)
-        self.h2h_weight = Parameter(shape=(4*hidden_size, projection_size),
+        self.h2h_weight = Parameter('h2h_weight', shape=(4*hidden_size, projection_size),
                                     init=h2h_weight_initializer,
                                     allow_deferred_init=True)
-        self.h2r_weight = Parameter(shape=(projection_size, hidden_size),
+        self.h2r_weight = Parameter('h2r_weight', shape=(projection_size, hidden_size),
                                     init=h2r_weight_initializer,
                                     allow_deferred_init=True)
-        self.i2h_bias = Parameter(shape=(4*hidden_size,),
+        self.i2h_bias = Parameter('i2h_bias', shape=(4*hidden_size,),
                                   init=i2h_bias_initializer,
                                   allow_deferred_init=True)
-        self.h2h_bias = Parameter(shape=(4*hidden_size,),
+        self.h2h_bias = Parameter('h2h_bias', shape=(4*hidden_size,),
                                   init=h2h_bias_initializer,
                                   allow_deferred_init=True)
 

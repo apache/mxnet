@@ -40,7 +40,7 @@ import tempfile
 
 @with_seed()
 def test_parameter():
-    p = gluon.Parameter(shape=(10, 10))
+    p = gluon.Parameter('weight', shape=(10, 10))
     p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
     assert len(p.list_data()) == 2
     assert len(p.list_grad()) == 2
@@ -55,16 +55,16 @@ def test_parameter():
 @with_seed()
 def test_invalid_parameter_stype():
     with pytest.raises(AssertionError):
-        p = gluon.Parameter(shape=(10, 10), stype='invalid')
+        p = gluon.Parameter('weight', shape=(10, 10), stype='invalid')
 
 @with_seed()
 def test_invalid_parameter_grad_stype():
     with pytest.raises(AssertionError):
-        p = gluon.Parameter(shape=(10, 10), grad_stype='invalid')
+        p = gluon.Parameter('weight', shape=(10, 10), grad_stype='invalid')
 
 @with_seed()
 def test_sparse_parameter():
-    p = gluon.Parameter(shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
+    p = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
     p.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
     row_id = mx.nd.arange(0, 10, ctx=mx.cpu(1))
     assert len(p.list_grad()) == 2
@@ -85,13 +85,13 @@ def test_sparse_parameter():
 @with_seed()
 def test_parameter_invalid_access():
     # cannot call data on row_sparse parameters
-    p0 = gluon.Parameter(shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
+    p0 = gluon.Parameter('weight', shape=(10, 10), stype='row_sparse', grad_stype='row_sparse')
     p0.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
     assertRaises(RuntimeError, p0.data)
     assertRaises(RuntimeError, p0.list_data)
     row_id = mx.nd.arange(0, 10)
     # cannot call row_sparse_data on dense parameters
-    p1 = gluon.Parameter(shape=(10, 10))
+    p1 = gluon.Parameter('weight', shape=(10, 10))
     p1.initialize(init='xavier', ctx=[mx.cpu(0), mx.cpu(1)])
     assertRaises(RuntimeError, p1.row_sparse_data, row_id.copyto(mx.cpu(0)))
     assertRaises(RuntimeError, p1.list_row_sparse_data, row_id)
@@ -176,7 +176,7 @@ def test_parameter_row_sparse_data():
     ctx0 = mx.cpu(1)
     ctx1 = mx.cpu(2)
     dim0 = 4
-    x = gluon.Parameter(shape=(dim0, 2), stype='row_sparse')
+    x = gluon.Parameter('x', shape=(dim0, 2), stype='row_sparse')
     x.initialize(init='xavier', ctx=[ctx0, ctx1])
     trainer = gluon.Trainer([x], 'sgd')
     x_param = x._data[0].copy()
@@ -267,7 +267,7 @@ def test_parameter_str():
     net = Net()
     lines = str(net.collect_params()).splitlines()
     
-    assert 'dense0_weight' in lines[0]
+    assert 'dense0.weight' in lines[0]
     assert '(10, 5)' in lines[0]
     assert 'float32' in lines[0]
     
@@ -427,8 +427,8 @@ def test_sparse_symbol_block():
 @with_seed()
 def test_sparse_hybrid_block():
     params = {}
-    params['weight'] = gluon.Parameter(shape=(5,5), stype='row_sparse', dtype='float32')
-    params['bias'] = gluon.Parameter(shape=(5), dtype='float32')
+    params['weight'] = gluon.Parameter('weight', shape=(5,5), stype='row_sparse', dtype='float32')
+    params['bias'] = gluon.Parameter('bias', shape=(5), dtype='float32')
     net = gluon.nn.Dense(5).share_parameters(params)
     net.initialize()
     x = mx.nd.ones((2,5))
@@ -1532,7 +1532,7 @@ def test_save_load_deduplicate_with_shared_params(tmpdir):
     class B(mx.gluon.Block):
         def __init__(self):
             super(B, self).__init__()
-            self.weight = gluon.Parameter(shape=(10, 10))
+            self.weight = gluon.Parameter('weight', shape=(10, 10))
 
     class C(mx.gluon.Block):
         def __init__(self, b1, b2):
@@ -1904,7 +1904,7 @@ def test_sparse_hybrid_block():
     class Linear(mx.gluon.HybridBlock):
         def __init__(self, units):
             super(Linear, self).__init__()
-            self.w = gluon.Parameter(shape=(units, units))
+            self.w = gluon.Parameter('w', shape=(units, units))
 
         def hybrid_forward(self, F, x, w):
             return F.dot(x, w)

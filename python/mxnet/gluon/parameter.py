@@ -54,14 +54,16 @@ class Parameter(object):
 
         ctx = mx.gpu(0)
         x = mx.nd.zeros((16, 100), ctx=ctx)
-        w = mx.gluon.Parameter(shape=(64, 100), init=mx.init.Xavier())
-        b = mx.gluon.Parameter(shape=(64,), init=mx.init.Zero())
+        w = mx.gluon.Parameter('fc_weight', shape=(64, 100), init=mx.init.Xavier())
+        b = mx.gluon.Parameter('fc_bias', shape=(64,), init=mx.init.Zero())
         w.initialize(ctx=ctx)
         b.initialize(ctx=ctx)
         out = mx.nd.FullyConnected(x, w.data(ctx), b.data(ctx), num_hidden=64)
 
     Parameters
     ----------
+    name : str
+        Name of this parameter.
     grad_req : {'write', 'add', 'null'}, default 'write'
         Specifies how to update gradient to grad arrays.
 
@@ -102,7 +104,7 @@ class Parameter(object):
     wd_mult : float
         Local weight decay multiplier for this Parameter.
     """
-    def __init__(self, grad_req='write', shape=None, dtype=mx_real_t,
+    def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
                  differentiable=True, stype='default', grad_stype='default'):
         self._var = None
@@ -118,7 +120,7 @@ class Parameter(object):
         if isinstance(shape, int):
             shape = (shape,)
         self._shape = shape
-        self._name = 'param_' + str(uuid.uuid4()).replace('-', '_')
+        self._name = 'param_{}_{}'.format(str(uuid.uuid4()).replace('-', '_'), name) 
         self._dtype = dtype
         self.lr_mult = lr_mult
         self.wd_mult = wd_mult
@@ -437,7 +439,7 @@ class Parameter(object):
 
         Examples
         --------
-        >>> weight = mx.gluon.Parameter(shape=(2, 2))
+        >>> weight = mx.gluon.Parameter('weight', shape=(2, 2))
         >>> weight.initialize(ctx=mx.cpu(0))
         >>> weight.data()
         [[-0.01068833  0.01729892]
@@ -829,7 +831,7 @@ class ParameterDict(object):
         name = self.prefix + name
         param = self._get_impl(name)
         if param is None: # pylint: disable=too-many-nested-blocks
-            param = Parameter(**kwargs)
+            param = Parameter(name, **kwargs)
             self._params[name] = param
         else:
             param._check_and_setattr(**kwargs)

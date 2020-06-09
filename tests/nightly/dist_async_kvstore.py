@@ -28,7 +28,7 @@ nworker = kv.num_workers
 
 def test_gluon_trainer_type():
     def check_trainer_kv_update(weight_stype, update_on_kv):
-        x = mx.gluon.Parameter(shape=(10,1), lr_mult=1.0, stype=weight_stype)
+        x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=weight_stype)
         x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         try:
             trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},

@@ -107,7 +107,7 @@ if opt.use_pretrained:
 
 net.hybridize()
 net = MarginNet(net.features, opt.embed_dim, opt.batch_k)
-beta = mx.gluon.Parameter(shape=(100,))
+beta = mx.gluon.Parameter('beta', shape=(100,))
 
 # Get iterators.
 train_data, val_data = cub200_iterator(opt.data_path, opt.batch_k, batch_size, (3, 224, 224))

@@ -377,7 +377,7 @@ def test_invalid_operations():
 
 def test_gluon_trainer_type():
     def check_trainer_kv_type(stype, grad_stype, update_on_kv, expected):
-        x = mx.gluon.Parameter(shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
+        x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
         x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},
                                    kvstore=kv, update_on_kvstore=update_on_kv)
@@ -401,7 +401,7 @@ def test_gluon_trainer_step():
     def check_trainer_step():
         ctx = mx.cpu(0)
         shape = (10, 1)
-        x = mx.gluon.Parameter(shape=shape)
+        x = mx.gluon.Parameter('x', shape=shape)
         x.initialize(ctx=ctx, init='ones')
         trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'multi_precision': False}, kvstore=kv)
         with mx.autograd.record():
@@ -419,7 +419,7 @@ def test_gluon_trainer_sparse_step():
         ctx = mx.cpu(0)
         shape = (2, 10)
         all_rows = mx.nd.arange(0, shape[0], ctx=ctx)
-        x = mx.gluon.Parameter(shape=shape, stype='row_sparse', grad_stype='row_sparse')
+        x = mx.gluon.Parameter('x', shape=shape, stype='row_sparse', grad_stype='row_sparse')
         x.initialize(ctx=ctx, init='ones')
         trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 1.0}, kvstore=kv)
         with mx.autograd.record():

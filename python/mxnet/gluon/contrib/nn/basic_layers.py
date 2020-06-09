@@ -144,7 +144,7 @@ class SparseEmbedding(Block):
         super(SparseEmbedding, self).__init__(**kwargs)
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
                         'dtype': dtype, 'sparse_grad': True}
-        self.weight = Parameter(shape=(input_dim, output_dim),
+        self.weight = Parameter('weight', shape=(input_dim, output_dim),
                                 init=weight_initializer, dtype=dtype,
                                 grad_stype='row_sparse', stype='row_sparse')
 

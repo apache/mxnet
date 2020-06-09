@@ -52,7 +52,8 @@ def test_rnn():
     outputs = mx.sym.Group(outputs)
     assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight',
                                                     'i2h_bias', 'i2h_weight']
-    assert outputs.list_outputs() == ['t0_out_output', 't1_out_output', 't2_out_output']
+    assert outputs.list_outputs() == \
+        [cell.name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
@@ -64,7 +65,8 @@ def test_lstm():
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
     assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight', 'i2h_bias', 'i2h_weight']
-    assert outputs.list_outputs() == ['t0_out_output', 't1_out_output', 't2_out_output']
+    assert outputs.list_outputs() == \
+        [cell.name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
@@ -101,7 +103,7 @@ def test_lstmp():
         for name, value in fused_layer_params.items():
             w = mx.nd.random.uniform(shape=value.shape)
             value.set_data(w.copy())
-            stack_layer_params[name[1:]].set_data(w.copy())
+            stack_layer_params[name[1:].replace('_', '.', 1)].set_data(w.copy())
 
         fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
         stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
@@ -136,7 +138,7 @@ def test_lstmp():
             w = mx.nd.random.uniform(shape=value.shape)
             value.set_data(w.copy())
             cur = name.split("_")[0]
-            stack_layer_params["{}_{}_cell{}".format(cur[1:], name[0], name[len(cur):])].set_data(w.copy())
+            stack_layer_params["{}.{}_cell{}.".format(cur[1:], name[0], name[len(cur)+1:])].set_data(w.copy())
 
         fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
         stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,
@@ -190,7 +192,8 @@ def test_gru():
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
     assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight', 'i2h_bias', 'i2h_weight']
-    assert outputs.list_outputs() == ['t0_out_output', 't1_out_output', 't2_out_output']
+    assert outputs.list_outputs() == \
+        [cell.name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
@@ -691,8 +694,9 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
         else:
             w = mx.nd.random.normal(shape=value.shape)
         value.set_data(w.copy())
-        num = name.split('_')[0][1:]
-        stack_name = name.replace(name[0] + num, '{}_{}_cell'.format(num, name[0])) if bidirectional else name[1:]
+        cur = name.split('_')[0]
+        num = cur[1:]
+        stack_name = ('{}.{}_cell.'.format(num, name[0]) if bidirectional else num + '.' ) + name[len(cur)+1:]
         stack_layer_params[stack_name].set_data(w.copy())
 
     fx = x.copy()
@@ -718,8 +722,9 @@ def check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_siz
     assert_allclose(fused_out.asnumpy(), stack_out.asnumpy(), rtol=rtol, atol=atol)
     assert_allclose(fused_input_grad, stack_input_grad, rtol=rtol, atol=atol)
     for name, value in fused_grads.items():
-        num = name.split('_')[0][1:]
-        stack_name = name.replace(name[0] + num, '{}_{}_cell'.format(num, name[0])) if bidirectional else name[1:]
+        cur = name.split('_')[0]
+        num = cur[1:]
+        stack_name = ('{}.{}_cell.'.format(num, name[0]) if bidirectional else num + '.' ) + name[len(cur)+1:]
         assert_allclose(value.asnumpy(), stack_grads[stack_name].asnumpy(), rtol=rtol, atol=atol)
 
     num_layers = fused_begin_state[0].shape[0] // (2 if bidirectional else 1)
