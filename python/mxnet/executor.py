@@ -622,8 +622,10 @@ class ExecutorV2:
     def forward(self, is_train=False, **kwargs):
         assert not kwargs
         from . import autograd
+        default_ctx = None if self._input_names else self._ctx
         with autograd.record(train_mode=is_train):
-            self.outputs = self._cached_op(*self._args)
+            self.outputs = self._cached_op(*self._args,
+                                           default_ctx=default_ctx)
 
         if not isinstance(self.outputs, (list, tuple)):
             self.outputs = [self.outputs]

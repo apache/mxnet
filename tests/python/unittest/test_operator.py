@@ -4235,7 +4235,7 @@ def test_clip():
 def test_init():
     def test_basic_val_init(sym_func, np_func, shape, dtype):
         x = sym_func(shape=shape, dtype=dtype)
-        exe = x.bind(default_context(), args=[], args_grad=[])
+        exe = x._bind(default_context(), args=[], args_grad=[])
         exe.forward(is_train=True)
         assert_almost_equal(exe.outputs[0], np_func(shape=shape, dtype=dtype))
         assert exe.outputs[0].asnumpy().dtype == dtype
@@ -4259,7 +4259,7 @@ def test_init():
     def test_arange_inferstop():
         s = mx.sym.arange(start=0, stop=None, infer_range=True)
         s = mx.sym.elemwise_add(s, mx.sym.zeros(shape=[5]))
-        exe = s.bind(ctx=mx.cpu(), args={})
+        exe = s._bind(ctx=mx.cpu(), args={})
         exe.forward()
         assert_almost_equal(exe.outputs[0], np.array([0,1,2,3,4]))
 
@@ -9224,7 +9224,7 @@ def test_transpose_infer_shape_back():
     o2 = mx.sym.ones(shape=[-1,-1])
     t = mx.sym.transpose(o2)
     b = o1 + t
-    x = b.bind(mx.cpu(), args={})
+    x = b._bind(mx.cpu(), args={})
     y = x.forward()
     assert(y[0].shape == (2,3))
 
@@ -9234,7 +9234,7 @@ def test_transpose_infer_shape_mixed():
     o2 = mx.sym.ones(shape=[3,-1])
     t = mx.sym.transpose(o2)
     b = o1 + t
-    x = b.bind(mx.cpu(), args={})
+    x = b._bind(mx.cpu(), args={})
     y = x.forward()
     assert(y[0].shape == (2,3))
 
