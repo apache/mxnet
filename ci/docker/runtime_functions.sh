@@ -966,9 +966,6 @@ cd_unittest_ubuntu() {
             pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/gpu
         pytest -m 'serial' --durations=50 --verbose tests/python/gpu
 
-        # Adding these here as CI doesn't test all CUDA environments
-        MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-            pytest -n 4 example/image-classification/test_score.py
         # TODO(szha): fix and reenable the hanging issue. tracked in #18098
         # integrationtest_ubuntu_gpu_dist_kvstore
         integrationtest_ubuntu_gpu_byteps
@@ -1081,7 +1078,6 @@ unittest_ubuntu_tensorrt_gpu() {
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
-    python3 tests/python/tensorrt/lenet5_train.py
     MXNET_GPU_MEM_POOL_TYPE=Unpooled \
         pytest -n 4 --durations=50 --cov-report xml:tests_trt_gpu.xml --verbose --capture=no tests/python/tensorrt/test_ops.py
     pytest -k 'not test_ops' --durations=50 --cov-report xml:tests_trt_gpu.xml --cov-append --verbose --capture=no tests/python/tensorrt/
@@ -1273,15 +1269,6 @@ integrationtest_ubuntu_cpu_onnx() {
 	pytest -n 4 tests/python/unittest/onnx/mxnet_export_test.py
 	pytest -n 4 tests/python/unittest/onnx/test_models.py
 	pytest -n 4 tests/python/unittest/onnx/test_node.py
-}
-
-integrationtest_ubuntu_gpu_python() {
-    set -ex
-    export PYTHONPATH=./python/
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    pytest example/image-classification/test_score.py
 }
 
 integrationtest_ubuntu_cpu_asan() {
