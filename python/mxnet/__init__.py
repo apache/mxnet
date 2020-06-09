@@ -84,7 +84,6 @@ from . import image as img
 
 from . import test_utils
 
-from . import rnn
 from . import gluon
 
 from . import _deferred_compute
