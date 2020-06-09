@@ -122,10 +122,17 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
 # runtime dependency on libgfortran.so which is GPL-licensed and thus
 # https://www.apache.org/legal/resolved.html#category-x for distribution.
 # We need a Fortran compiler to compile the OpenBLAS Lapack implementation.
+# NOTE: The flang toolchain also provides llvm libomp.so and libomp.a. We must
+# use the libomp provided by flang for all parts of the project, to avoid
+# linking multiple omp implementations. Linking 2 different llvm omp's would
+# cause segfaults on importing mxnet. In the next step we'll install compatible
+# omp headers.
 RUN cd /usr/local/ && mkdir flang && cd flang && \
     wget -nv https://github.com/flang-compiler/flang/releases/download/flang_20190329/flang-20190329-x86-70.tgz && \
     tar xf flang-20190329-x86-70.tgz && \
-    rm flang-20190329-x86-70.tgz
+    rm flang-20190329-x86-70.tgz && \
+    # IMPORTANT: Replace libomp.so with the flang version, to avoid segfault upon importing MXNet
+    cp /usr/local/flang/lib/libomp.so /opt/rh/llvm-toolset-7.0/root/usr/lib64/libomp.so
 
 # Python dependencies
 COPY install/requirements /work/
