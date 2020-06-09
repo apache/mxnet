@@ -659,7 +659,8 @@ class ExecutorV2:
     @property
     def arg_arrays(self):
         assert isinstance(self._args, list)
-        return self._args
+        arg_array = self._args[:len(self._arg_names)]
+        return arg_array
 
     @property
     def grad_arrays(self):
@@ -679,3 +680,26 @@ class ExecutorV2:
                 except ValueError as e:
                     pass
         return arr
+
+    @property
+    def arg_dict(self):
+        ret = {}
+        arg_array = self._args[:len(self._arg_names)]
+        for k, v in zip(self._arg_names, arg_array):
+            ret[k] = v
+        return ret
+
+    @property
+    def aux_dict(self):
+        ret = {}
+        aux_array = self._args[len(self._arg_names):]
+        for k, v in zip(self._aux_names, aux_array):
+            ret[k] = v
+        return ret
+
+    @property
+    def grad_dict(self):
+        ret = {}
+        for k, v in zip(self._arg_names, self._args):
+            ret[k] = v.grad
+        return ret

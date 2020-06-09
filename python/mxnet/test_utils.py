@@ -1093,18 +1093,25 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
                 args_grad[k] = mx.nd.zeros(args_grad[k].shape, args_grad[k].context,
                                            args_grad[k].dtype, v)
 
-    executor = out.bind(ctx, grad_req=grad_req,
+    grad_req["__random_proj"] = 'write'
+    executor = out._bind(ctx, grad_req=grad_req,
                         args=location, args_grad=args_grad, aux_states=aux_states)
 
     inps = executor.arg_arrays
     if len(inps) != len(location):
         raise ValueError("Executor arg_arrays and and location len do not match."
                          "Got %d inputs and %d locations"%(len(inps), len(location)))
-    assert len(executor.outputs) == 1
 
     executor.forward(is_train=True)
+    assert len(executor.outputs) == 1
     executor.backward()
-    symbolic_grads = {k:executor.grad_dict[k].asnumpy() for k in grad_nodes}
+    symbolic_grads = {}
+    for k in grad_nodes:
+        grad_k = executor.grad_dict[k]
+        if grad_k is not None:
+            symbolic_grads[k] = grad_k.asnumpy()
+        else:
+            symbolic_grads[k] = None
 
     numeric_gradients = numeric_grad(
         executor, location_npy, aux_states_npy,
@@ -1121,8 +1128,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
             assert_almost_equal(fd_grad, sym_grad - orig_grad, rtol, atol,
                                 ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
         elif grad_req[name] == 'null':
-            assert_almost_equal(orig_grad, sym_grad, rtol, atol,
-                                ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
+            assert sym_grad is None
         else:
             raise ValueError("Invalid grad_req %s for argument %s"%(grad_req[name], name))
 
