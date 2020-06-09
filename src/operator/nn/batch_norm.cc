@@ -426,7 +426,7 @@ static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &p
   if (ndim == 0 || shape.Size() == 0) return false;
   const int dtype = input.dtype();
   return (dtype == mshadow::kFloat32 ||
-          dtype == mshadow::mshadow::kBfloat16) &&
+          dtype == mshadow::kBfloat16) &&
           SupportStorageMKLDNN(input.storage_type());
 }
 
