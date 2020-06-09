@@ -25,8 +25,6 @@ except ImportError:
 import ctypes
 import logging
 import os
-import shutil
-import warnings
 import numpy as np
 from ..base import _LIB, check_call, py_str
 from ..base import c_array, c_str, mx_uint, c_str_array
@@ -35,7 +33,6 @@ from ..symbol import Symbol
 from ..symbol import load as sym_load
 from .. import ndarray
 from ..ndarray import load as nd_load
-from ..ndarray import save as nd_save
 from ..ndarray import NDArray
 from ..io import DataIter, DataDesc, DataBatch
 from ..context import cpu, Context

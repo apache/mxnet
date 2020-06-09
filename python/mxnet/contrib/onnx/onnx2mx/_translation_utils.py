@@ -19,9 +19,6 @@
 """Utilities used for translating operators from Onnx to Mxnet."""
 # pylint: disable=protected-access
 from .... import symbol
-from .... import  context
-from .... import  ndarray as nd
-from .... import  io
 
 
 def _fix_attribute_names(attrs, change_map):
