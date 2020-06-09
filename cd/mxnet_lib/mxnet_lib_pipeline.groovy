@@ -52,7 +52,7 @@ def get_pipeline(mxnet_variant, build_fn) {
             }
           }
         }
-        
+
         parallel tests
       }
 
