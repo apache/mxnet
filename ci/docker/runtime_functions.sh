@@ -162,8 +162,8 @@ build_dynamic_libmxnet() {
     # relevant licenses will be placed in the licenses directory
     gather_licenses
 
+    source /opt/rh/devtoolset-7/enable
     cd /work/build
-    source /opt/rh/llvm-toolset-7.0/enable
     if [[ ${mxnet_variant} = "cpu" ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
@@ -329,7 +329,7 @@ build_android_armv8() {
 build_centos7_cpu() {
     set -ex
     cd /work/build
-    source /opt/rh/llvm-toolset-7.0/enable
+    source /opt/rh/devtoolset-7/enable
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=ON \
@@ -359,7 +359,7 @@ build_centos7_cpu_make() {
 build_centos7_mkldnn() {
     set -ex
     cd /work/build
-    source /opt/rh/llvm-toolset-7.0/enable
+    source /opt/rh/devtoolset-7/enable
     cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
@@ -1107,7 +1107,7 @@ unittest_ubuntu_python3_quantization_gpu() {
 
 unittest_centos7_cpu_scala() {
     set -ex
-    source /opt/rh/llvm-toolset-7.0/enable
+    source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-maven35/enable
     cd /work/mxnet
     scala_prepare
@@ -1946,7 +1946,6 @@ build_static_libmxnet() {
 cd_package_pypi() {
     set -ex
     pushd .
-    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-python36/enable
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
