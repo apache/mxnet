@@ -684,22 +684,23 @@ class ExecutorV2:
     @property
     def arg_dict(self):
         ret = {}
-        arg_array = self._args[:len(self._arg_names)]
-        for k, v in zip(self._arg_names, arg_array):
-            ret[k] = v
+        for k, v in zip(self._input_names, self._args):
+            if k in self._arg_names:
+               ret[k] = v
         return ret
 
     @property
     def aux_dict(self):
         ret = {}
-        aux_array = self._args[len(self._arg_names):]
-        for k, v in zip(self._aux_names, aux_array):
-            ret[k] = v
+        for k, v in zip(self._input_names, self._args):
+            if k in self._aux_names:
+               ret[k] = v
         return ret
 
     @property
     def grad_dict(self):
         ret = {}
-        for k, v in zip(self._arg_names, self._args):
-            ret[k] = v.grad
+        for k, v in zip(self._input_names, self._args):
+            if k in self._arg_names:
+               ret[k] = v.grad
         return ret
