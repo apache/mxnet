@@ -259,6 +259,7 @@ void BatchNormBackward(const OpContext &ctx, const BatchNormParam& param,
                        const std::vector<TBlob> &outputs) {
   CHECK_EQ(inputs.size(), 8U);
   CHECK_EQ(outputs.size(), 3U);
+
   std::vector<TBlob> out_grad(1);
   std::vector<TBlob> out_data(3);
   std::vector<TBlob> in_data(3);
