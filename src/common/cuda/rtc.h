@@ -58,7 +58,7 @@ struct TypeInfo {
 
 TypeInfo mshadow_type_info(int type_flag);
 
-}
+}  // namespace util
 
 extern std::mutex lock;
 

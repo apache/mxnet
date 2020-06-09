@@ -85,6 +85,62 @@ struct has_double_or_integral<A, B...> {
                                   has_double_or_integral<B...>::value;
 };
 
+template <bool b>
+struct enable_if {};
+
+template <>
+struct enable_if<true> {
+  using type = void;
+};
+
+template <typename T, typename U, class Enable = void>
+struct mixed_type;
+
+template <typename T>
+struct mixed_type<T, float64, typename enable_if<!is_same<float64, T>::value>::type> {
+  using type = float64;
+};
+
+template <typename T>
+struct mixed_type<float64, T> {
+  using type = float64;
+};
+
+template <typename T>
+struct mixed_type<T, float32, typename enable_if<!is_same<float64, T>::value &&
+                                                 !is_same<float32, T>::value>::type> {
+  using type = float32;
+};
+
+template <typename T>
+struct mixed_type<float32, T, typename enable_if<!is_same<float64, T>::value>::type> {
+  using type = float32;
+};
+
+template <typename T>
+struct mixed_type<T, float16, typename enable_if<is_same<float16, T>::value ||
+                                                 is_integral<T>::value>::type> {
+  using type = float16;
+};
+
+template <typename T>
+struct mixed_type<float16, T, typename enable_if<is_integral<T>::value>::type> {
+  using type = float16;
+};
+
+template <typename T, typename U>
+struct mixed_type<T, U, typename enable_if<is_integral<T>::value &&
+                                           is_integral<U>::value &&
+                                           sizeof(T) <= sizeof(U)>::type> {
+  using type = U;
+};
+
+template <typename T, typename U>
+struct mixed_type<U, T, typename enable_if<is_integral<T>::value &&
+                                           is_integral<U>::value &&
+                                           sizeof(T) < sizeof(U)>::type> {
+  using type = U;
+};
 
 }  // namespace type_util
 )code"
@@ -94,13 +150,47 @@ struct has_double_or_integral<A, B...> {
 "typedef int32 index_t;\n";
 #endif
 
-const char op_req_type_string[] = R"code(
+const char util_string[] = R"code(
 enum class OpReqType {
   kNullOp,
   kWriteTo,
   kWriteInplace,
   kAddTo
 };
+
+namespace util {
+
+constexpr int MAX_DIM = 5;
+
+template <int ndim>
+__device__ inline void unravel_dot(const index_t idx, const index_t (&shape)[MAX_DIM],
+  const index_t (&stridej)[MAX_DIM], const index_t (&stridek)[MAX_DIM], index_t* j, index_t* k) {
+  *j = 0;
+  *k = 0;
+  #pragma unroll
+  for (index_t i = ndim-1, idx_t = idx; i >=0; --i) {
+    const auto tmp = idx_t / shape[i];
+    const auto coord = idx_t - tmp*shape[i];
+    *j += coord*stridej[i];
+    *k += coord*stridek[i];
+    idx_t = tmp;
+  }
+}
+
+template<int ndim>
+__device__ inline index_t unravel_dot(const index_t idx, const index_t (&shape)[MAX_DIM],
+  const index_t (&stride)[MAX_DIM]) {
+  index_t ret = 0;
+  #pragma unroll
+  for (index_t i = ndim-1, j = idx; i >=0; --i) {
+    auto tmp = j / shape[i];
+    ret += (j - tmp*shape[i])*stride[i];
+    j = tmp;
+  }
+  return ret;
+}
+
+}  // namespace util
 )code";
 }  // namespace rtc
 }  // namespace cuda

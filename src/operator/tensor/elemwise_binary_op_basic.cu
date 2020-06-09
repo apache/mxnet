@@ -259,7 +259,7 @@ NNVM_REGISTER_OP(_mod)
 
 NNVM_REGISTER_OP(_backward_mod)
 .set_attr<FCompute>("FCompute<gpu>",
-  ElemwiseBinaryRTCBwdUseIn{"mod_grad","mod_rgrad"});
+  ElemwiseBinaryRTCBwdUseIn{"mod_grad", "mod_rgrad"});
 
 }  // namespace op
 }  // namespace mxnet

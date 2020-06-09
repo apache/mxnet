@@ -29,50 +29,35 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_add)
-.set_attr<FCompute>(
-  "FCompute<gpu>",
-  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::plus, op::mshadow_op::mixed_plus,
-                                      op::mshadow_op::mixed_plus>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"add"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_add)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::posone,
                                                                 mshadow_op::posone>);
 
 NNVM_REGISTER_OP(_npi_subtract)
-.set_attr<FCompute>(
-  "FCompute<gpu>",
-  NumpyBinaryBroadcastCompute<gpu, op::mshadow_op::minus, op::mshadow_op::mixed_minus,
-                              op::mshadow_op::mixed_rminus>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"sub"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_sub)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::posone,
                                                                 mshadow_op::negone>);
 
 NNVM_REGISTER_OP(_npi_multiply)
-.set_attr<FCompute>(
-  "FCompute<gpu>",
-  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::mul, op::mshadow_op::mixed_mul,
-                                      op::mshadow_op::mixed_mul>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"mul"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_mul)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::right,
                                                               mshadow_op::left>);
 
 NNVM_REGISTER_OP(_npi_mod)
-.set_attr<FCompute>(
-  "FCompute<gpu>",
-  NumpyBinaryBroadcastCompute<gpu, op::mshadow_op::mod, op::mshadow_op::mixed_mod,
-                                      op::mshadow_op::mixed_rmod>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"mod"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_mod)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::mod_grad,
                                                               mshadow_op::mod_rgrad>);
 
 NNVM_REGISTER_OP(_npi_power)
-.set_attr<FCompute>(
-  "FCompute<gpu>",
-  NumpyBinaryBroadcastComputeWithBool<gpu, op::mshadow_op::power, op::mshadow_op::mixed_power,
-                                      op::mshadow_op::mixed_rpower>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"power"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_power)
 .set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::power_grad,

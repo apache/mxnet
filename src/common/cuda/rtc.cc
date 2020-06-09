@@ -31,7 +31,7 @@
 
 #include "rtc.h"
 #include "rtc/half-inl.h"
-#include "rtc/type-inl.h"
+#include "rtc/util-inl.h"
 #include "rtc/forward_functions-inl.h"
 #include "rtc/backward_functions-inl.h"
 #include "rtc/vectorization-inl.h"
@@ -139,7 +139,7 @@ CUfunction get_function(const std::string &code,
     static std::string common_header =
         std::string(fp16_support_string) + "\n" +
         type_support_string + "\n" +
-        op_req_type_string + "\n" +
+        util_string + "\n" +
         float_limits() +
         special_functions_definitions + '\n' +
         function_definitions + "\n" +

@@ -139,9 +139,17 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
   const TBlob& output_grp = outputs[groupnorm::kOut].reshape(temp_data_shape);
 
   // Calculate data = data - mean
-  BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx,
-                                                     {data_grp, mean_grp},
-                                                     {kWriteTo}, {output_grp});
+  if constexpr (std::is_same<xpu, mshadow::cpu>::value) {
+    BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx,
+                                                       {data_grp, mean_grp},
+                                                       {kWriteTo}, {output_grp});
+  } else {
+#if MXNET_USE_CUDA
+    BinaryBroadcastRTCCompute {"sub"}(attrs, ctx,
+                                      {data_grp, mean_grp},
+                                      {kWriteTo}, {output_grp});
+#endif
+  }
 
   // Calculate std
   const TBlob centered_out = outputs[groupnorm::kOut].reshape(red_src_shape);
@@ -156,9 +164,17 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
   });
 
   // Calculate data = data / std
-  BinaryBroadcastCompute<xpu, mshadow_op::div>(attrs, ctx,
-                                               {output_grp, std_grp},
-                                               {kWriteTo}, {output_grp});
+  if constexpr (std::is_same<xpu, mshadow::cpu>::value) {
+    BinaryBroadcastCompute<xpu, mshadow_op::div>(attrs, ctx,
+                                                 {output_grp, std_grp},
+                                                 {kWriteTo}, {output_grp});
+  } else {
+#if MXNET_USE_CUDA
+    BinaryBroadcastRTCCompute {"div"}(attrs, ctx,
+                                      {output_grp, std_grp},
+                                      {kWriteTo}, {output_grp});
+#endif
+  }
 
   const TBlob& output = outputs[groupnorm::kOut];
   mxnet::TShape new_param_shape(data_shape.ndim(), 1);
@@ -167,14 +183,27 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
   const TBlob& gamma = inputs[groupnorm::kGamma].reshape(new_param_shape);
   const TBlob& beta = inputs[groupnorm::kBeta].reshape(new_param_shape);
 
-  // Calculate data = data * gamma
-  BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
-                                                   {output, gamma},
-                                                   {kWriteTo}, {output});
-  // Calculate data = data + beta
-  BinaryBroadcastCompute<xpu, op::mshadow_op::plus>(attrs, ctx,
-                                                   {output, beta},
-                                                   {kWriteTo}, {output});
+  if constexpr (std::is_same<xpu, mshadow::cpu>::value) {
+    // Calculate data = data * gamma
+    BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
+                                                     {output, gamma},
+                                                     {kWriteTo}, {output});
+    // Calculate data = data + beta
+    BinaryBroadcastCompute<xpu, op::mshadow_op::plus>(attrs, ctx,
+                                                     {output, beta},
+                                                     {kWriteTo}, {output});
+  } else {
+#if MXNET_USE_CUDA
+    // Calculate data = data * gamma
+    BinaryBroadcastRTCCompute {"mul"}(attrs, ctx,
+                                      {output, gamma},
+                                      {kWriteTo}, {output});
+    // Calculate data = data + beta
+    BinaryBroadcastRTCCompute {"add"}(attrs, ctx,
+                                      {output, beta},
+                                      {kWriteTo}, {output});
+#endif
+  }
 }
 
 /*
@@ -273,12 +302,23 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
   const TBlob red_out = TBlob(workspace.dptr_ + reduce_workspace_size + data_size * 2,
                               mean_.shape_, mean.dev_mask(), mean.type_flag_, mean.dev_id());
   // Compute normalized_data = (data - mean) / std
-  BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx,
-                                                    {data_, mean_},
-                                                    {kWriteTo}, {normalized_data});
-  BinaryBroadcastCompute<xpu, op::mshadow_op::div>(attrs, ctx,
-                                                   {normalized_data, std_},
-                                                   {kWriteTo}, {normalized_data});
+  if constexpr (std::is_same<xpu, mshadow::cpu>::value) {
+    BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx,
+                                                      {data_, mean_},
+                                                      {kWriteTo}, {normalized_data});
+    BinaryBroadcastCompute<xpu, op::mshadow_op::div>(attrs, ctx,
+                                                     {normalized_data, std_},
+                                                     {kWriteTo}, {normalized_data});
+  } else {
+#if MXNET_USE_CUDA
+    BinaryBroadcastRTCCompute {"sub"}(attrs, ctx,
+                                      {data_, mean_},
+                                      {kWriteTo}, {normalized_data});
+    BinaryBroadcastRTCCompute {"div"}(attrs, ctx,
+                                      {normalized_data, std_},
+                                      {kWriteTo}, {normalized_data});
+#endif
+  }
   // Calculate grad_beta
   if (req[2] != kNullOp) {
     MSHADOW_REAL_TYPE_SWITCH(outputs[2].type_flag_, DType, {
@@ -294,8 +334,10 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
     ElemwiseBinaryOp::Compute<xpu, op::mshadow_op::mul>(attrs, ctx, {normalized_data, ograd},
                                                         {kWriteTo}, {ograd_mult});
   } else {
+#if MXNET_USE_CUDA
     ElemwiseBinaryRTCCompute {"mul"}(attrs, ctx, {normalized_data, ograd},
                                      {kWriteTo}, {ograd_mult});
+#endif
   }
   if (req[1] != kNullOp) {
     MSHADOW_REAL_TYPE_SWITCH(outputs[1].type_flag_, DType, {
@@ -313,12 +355,25 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
   //               + normalized_data * (-mean(normalized_data * ograd_mult, axis))
   if (req[0] != kNullOp) {
     const TBlob output_ = outputs[0].reshape(data_.shape_);
-    BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
-                                                    {inputs[0], gamma},
-                                                    {kWriteTo}, {ograd_mult.reshape(data.shape_)});
-    BinaryBroadcastCompute<xpu, op::mshadow_op::div>(attrs, ctx,
-                                                    {ograd_mult, std_},
-                                                    {kWriteTo}, {ograd_mult});
+    if constexpr (std::is_same<xpu, mshadow::cpu>::value) {
+      BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
+                                                      {inputs[0], gamma},
+                                                      {kWriteTo},
+                                                      {ograd_mult.reshape(data.shape_)});
+      BinaryBroadcastCompute<xpu, op::mshadow_op::div>(attrs, ctx,
+                                                      {ograd_mult, std_},
+                                                      {kWriteTo}, {ograd_mult});
+    } else {
+#if MXNET_USE_CUDA
+      BinaryBroadcastRTCCompute {"mul"}(attrs, ctx,
+                                        {inputs[0], gamma},
+                                        {kWriteTo},
+                                        {ograd_mult.reshape(data.shape_)});
+      BinaryBroadcastRTCCompute {"div"}(attrs, ctx,
+                                        {ograd_mult, std_},
+                                        {kWriteTo}, {ograd_mult});
+#endif
+    }
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
         broadcast::Reduce<mshadow_op::sum, NDim, DType, op::mshadow_op::identity, true>(
@@ -328,15 +383,20 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 1, DType> red_out_tensor = red_out.FlatTo1D<xpu, DType>(s);
       red_out_tensor /= scalar<DType>(N);
     });
-    BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx,
-                                                      {ograd_mult, red_out},
-                                                      {req[0]}, {output_});
     if constexpr (std::is_same<xpu, mshadow::cpu>::value) {
+      BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx,
+                                                        {ograd_mult, red_out},
+                                                        {req[0]}, {output_});
       ElemwiseBinaryOp::Compute<xpu, op::mshadow_op::mul>(attrs, ctx, {ograd_mult, normalized_data},
                                                           {kWriteTo}, {ograd_mult});
     } else {
+#if MXNET_USE_CUDA
+      BinaryBroadcastRTCCompute {"sub"}(attrs, ctx,
+                                        {ograd_mult, red_out},
+                                        {req[0]}, {output_});
       ElemwiseBinaryRTCCompute {"mul"}(attrs, ctx, {ograd_mult, normalized_data},
                                        {kWriteTo}, {ograd_mult});
+#endif
     }
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
@@ -347,9 +407,17 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, 1, DType> red_out_tensor = red_out.FlatTo1D<xpu, DType>(s);
       red_out_tensor /= scalar<DType>(-N);
     });
-    BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
-                                                     {normalized_data, red_out},
-                                                     {kAddTo}, {output_});
+    if constexpr (std::is_same<xpu, mshadow::cpu>::value) {
+      BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
+                                                       {normalized_data, red_out},
+                                                       {kAddTo}, {output_});
+    } else {
+#if MXNET_USE_CUDA
+      BinaryBroadcastRTCCompute {"mul"}(attrs, ctx,
+                                        {normalized_data, red_out},
+                                        {kAddTo}, {output_});
+#endif
+    }
   }
 }
 

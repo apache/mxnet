@@ -316,25 +316,18 @@ constexpr int vectorized_kernel_thread_num = 512;
 template <typename Params>
 void VectorizedKernelRTCLauncher(const std::string &code,
                                  const std::string &kernel_name,
-                                 const int nvec,
+                                 int nvec,
                                  const index_t lead_dim,
                                  const index_t other_dim,
                                  mshadow::Stream<gpu> *s,
                                  const Params params,
                                  const std::vector<TBlob> &inputs,
                                  const std::vector<TBlob> &outputs,
-                                 const int dev_id) {
+                                 const int dev_id,
+                                 const int lead_input_num = 0) {
   using namespace util;
   const index_t N = lead_dim * other_dim;
   if (N != 0) {
-    index_t num_aligned_elements = get_num_aligned_elements(params.inputs[0], lead_dim, nvec,
-                                                            mshadow_type_info(inputs[0].type_flag_)
-                                                            .size);
-    size_t num_elements = other_dim * num_aligned_elements;
-    constexpr int threads = vectorized_kernel_thread_num;
-    constexpr int max_blocks = 65535;
-    index_t blocks = std::min(static_cast<int>((num_elements + threads - 1) / threads),
-                              max_blocks);
     auto align = CheckAlignment(params, lead_dim, other_dim,
                                 nvec, inputs, outputs);
     std::stringstream kernel_builder;
@@ -383,20 +376,27 @@ void VectorizedKernelRTCLauncher(const std::string &code,
                        << std::endl;
         break;
       case Alignment::DIFFERENT: {
-        num_aligned_elements = lead_dim * other_dim;
-        blocks = std::min(static_cast<int>((num_aligned_elements + threads - 1) / threads),
-                          max_blocks);
         // If the pointers are aligned differently we cannot vectorize
         kernel_builder << "const bool aligned = true;"
                        << std::endl
                        << "const int nvec = 1;"
                        << std::endl;
+        nvec = 1;
         break;
       }
     }
 
     kernel_builder << code;
 
+    index_t num_aligned_elements = get_num_aligned_elements(
+                                    params.inputs[lead_input_num],
+                                    lead_dim, nvec,
+                                    mshadow_type_info(inputs[lead_input_num].type_flag_).size);
+    size_t num_elements = other_dim * num_aligned_elements;
+    constexpr int threads = vectorized_kernel_thread_num;
+    constexpr int max_blocks = 65535;
+    index_t blocks = std::min(static_cast<int>((num_elements + threads - 1) / threads),
+                              max_blocks);
     std::vector<const void*> args = {&params, &lead_dim, &other_dim,
                                      &N, &num_aligned_elements};
     auto function = common::cuda::rtc::get_function(kernel_builder.str(),

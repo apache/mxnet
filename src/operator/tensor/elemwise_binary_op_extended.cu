@@ -30,7 +30,7 @@ NNVM_REGISTER_OP(_power)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"power"});
 
 NNVM_REGISTER_OP(_backward_power)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCBwdUseIn{"power_grad","power_rgrad"});
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCBwdUseIn{"power_grad", "power_rgrad"});
 
 NNVM_REGISTER_OP(_maximum)
 .set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"max"});

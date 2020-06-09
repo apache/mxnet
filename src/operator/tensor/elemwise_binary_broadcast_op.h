@@ -247,6 +247,20 @@ void BinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   }
 }
 
+#if MXNET_USE_CUDA
+
+struct BinaryBroadcastRTCCompute {
+  std::string OP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
+#endif  // MXNET_USE_CUDA
+
 template<typename xpu, typename OP>
 void BinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
                                     const OpContext& ctx,
