@@ -19,13 +19,14 @@ import os
 import tempfile
 
 import mxnet as mx
+import numpy as _np
 from mxnet import np, npx, autograd
 from mxnet import gluon
 import mxnet.gluon.probability as mgp
 from mxnet.gluon.probability import StochasticBlock, StochasticSequential
 from mxnet.gluon import HybridBlock
 from mxnet.test_utils import use_np, assert_almost_equal, set_default_context
-import numpy as _np
+
 from common import (setup_module, with_seed, assertRaises,
                     assert_raises_cudnn_not_satisfied)
 from numpy.testing import assert_array_equal

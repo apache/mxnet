@@ -35,6 +35,7 @@ from test_operator import *
 from test_numpy_ndarray import *
 from test_numpy_op import *
 from test_numpy_interoperability import *
+from test_gluon_probability import *
 from test_optimizer import *
 from test_random import *
 from test_exc_handling import *
@@ -46,7 +47,6 @@ from test_subgraph_op import *
 from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
 from test_contrib_optimizer import test_adamw
-from test_gluon_probability import *
 
 set_default_context(mx.gpu(0))
 del test_support_vector_machine_l1_svm  # noqa
