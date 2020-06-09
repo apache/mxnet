@@ -624,6 +624,7 @@ class ExecutorV2:
         from . import autograd
         with autograd.record(train_mode=is_train):
             self.outputs = self._cached_op(*self._args)
+
         if not isinstance(self.outputs, (list, tuple)):
             self.outputs = [self.outputs]
         return self.outputs

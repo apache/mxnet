@@ -916,7 +916,7 @@ def test_leaky_relu():
                 if dtype is not np.float16:
                     check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
                 check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
-                check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_backward(y, [xa], [np.ones(shape, dtype=dtype)], [ga], rtol=rtol, atol=atol, dtype=dtype)
 
 
 # NOTE(haojin2): Skipping the numeric check tests for float16 data type due to precision issues,
@@ -977,9 +977,10 @@ def test_prelu():
                     check_numeric_gradient(y, [xa, gam], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
                     check_numeric_gradient(y, [xa, gam_full], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
                 check_symbolic_forward(y, [xa, gam], [ya], rtol=rtol, atol=atol, dtype=dtype)
-                check_symbolic_backward(y, [xa, gam], [np.ones(shape), np.ones(gam.shape)], [g_xa, g_gam], rtol=rtol, atol=atol, dtype=dtype)
+                check_symbolic_backward(y, [xa, gam], [np.ones(ya.shape, dtype=dtype)],
+                                       [g_xa, g_gam], rtol=rtol, atol=atol, dtype=dtype)
                 check_symbolic_forward(y, [xa, gam_full], [ya_full], rtol=rtol, atol=atol, dtype=dtype)
-                check_symbolic_backward(y, [xa, gam_full], [np.ones(shape), np.ones(gam_full.shape)],
+                check_symbolic_backward(y, [xa, gam_full], [np.ones(ya_full.shape, dtype=dtype)],
                                         [g_xa_full, g_gam_full], rtol=rtol, atol=atol, dtype=dtype)
 
 @with_seed()
@@ -1010,7 +1011,7 @@ def test_selu():
         ga = fselu_grad(np.ones(shape).astype(dtype), xa, ya)
         check_numeric_gradient(y, [xa], numeric_eps=eps, rtol=rtol, atol=atol, dtype=dtype)
         check_symbolic_forward(y, [xa], [ya], rtol=rtol, atol=atol, dtype=dtype)
-        check_symbolic_backward(y, [xa], [np.ones(shape)], [ga], rtol=rtol, atol=atol, dtype=dtype)
+        check_symbolic_backward(y, [xa], [np.ones(shape, dtype=dtype)], [ga], rtol=rtol, atol=atol, dtype=dtype)
 
 
 @with_seed()
@@ -2044,7 +2045,7 @@ def test_groupnorm():
                                                                       np_beta.astype(dtype),
                                                                       np_mean, np_std,
                                                                       num_groups, eps)
-        check_symbolic_backward(mx_sym, [mx_data, mx_gamma, mx_beta], [mx.nd.array(np_ograd)],
+        check_symbolic_backward(mx_sym, [mx_data, mx_gamma, mx_beta], [mx.nd.array(np_ograd, dtype=np_ograd.dtype)],
                                 [np_data_grad, np_gamma_grad, np_beta_grad],
                                 rtol=1e-2 if dtype == np.float16 else 1e-3,
                                 atol=5e-2 if dtype == np.float16 else 1e-4, dtype=dtype)

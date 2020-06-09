@@ -2816,7 +2816,7 @@ fixed-size items.
         """
         from . import zeros as _zeros
         if stype is not None:
-            grad = _zeros(self.shape, stype=stype)
+            grad = _zeros(self.shape, stype=stype, dtype=self.dtype)
         else:
             grad = op.zeros_like(self)  # pylint: disable=undefined-variable
         grad_req = _GRAD_REQ_MAP[grad_req]
