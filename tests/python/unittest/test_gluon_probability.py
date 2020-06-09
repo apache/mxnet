@@ -43,6 +43,7 @@ from numbers import Number
 def prob_to_logit(prob):
     return np.log(prob) - np.log1p(-prob)
 
+
 def _distribution_method_invoker(dist, func, *args):
     """Wrapper for invoking different types of class methods with one unified
     interface.
@@ -66,14 +67,14 @@ def test_mgp_getF():
     getF = mgp.utils.getF
     nd = mx.nd
     sym = mx.sym
-    assert getF(nd.ones((2,2)), nd.ones((2,2))) == nd
-    assert getF(sym.ones((2,2)), sym.ones((2,2))) == sym
+    assert getF(nd.ones((2, 2)), nd.ones((2, 2))) == nd
+    assert getF(sym.ones((2, 2)), sym.ones((2, 2))) == sym
     assert getF(1.0, 2.0) == nd
 
     # Test exception
     with pytest.raises(TypeError):
-        getF(nd.ones((2,2)), sym.ones((2,2)))
-        getF(sym.ones((2,2)), nd.ones((2,2)))
+        getF(nd.ones((2, 2)), sym.ones((2, 2)))
+        getF(sym.ones((2, 2)), nd.ones((2, 2)))
 
 
 @with_seed()
@@ -83,7 +84,7 @@ def test_gluon_uniform():
         def __init__(self, func):
             super(TestUniform, self).__init__()
             self._func = func
-        
+
         def forward(self, low, high, *args):
             uniform = mgp.Uniform(low, high, validate_args=True)
             return _distribution_method_invoker(uniform, self._func, *args)
@@ -171,7 +172,7 @@ def test_gluon_normal():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.norm(loc.asnumpy(),
-                        scale.asnumpy()).logpdf(samples.asnumpy())
+                         scale.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -185,7 +186,7 @@ def test_gluon_normal():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.norm(loc.asnumpy(),
-                        scale.asnumpy()).cdf(samples.asnumpy())
+                         scale.asnumpy()).cdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -199,7 +200,7 @@ def test_gluon_normal():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.norm(loc.asnumpy(),
-                        scale.asnumpy()).ppf(samples.asnumpy())
+                         scale.asnumpy()).ppf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -212,7 +213,7 @@ def test_gluon_normal():
             net.hybridize()
         mx_out = net(loc, scale).asnumpy()
         np_out = ss.norm(loc.asnumpy(),
-                        scale.asnumpy()).entropy()
+                         scale.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -241,7 +242,7 @@ def test_gluon_laplace():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.laplace(loc.asnumpy(),
-                        scale.asnumpy()).logpdf(samples.asnumpy())
+                            scale.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -255,7 +256,7 @@ def test_gluon_laplace():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.laplace(loc.asnumpy(),
-                        scale.asnumpy()).cdf(samples.asnumpy())
+                            scale.asnumpy()).cdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -269,7 +270,7 @@ def test_gluon_laplace():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.laplace(loc.asnumpy(),
-                        scale.asnumpy()).ppf(samples.asnumpy())
+                            scale.asnumpy()).ppf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -282,7 +283,7 @@ def test_gluon_laplace():
             net.hybridize()
         mx_out = net(loc, scale).asnumpy()
         np_out = ss.laplace(loc.asnumpy(),
-                        scale.asnumpy()).entropy()
+                            scale.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -323,7 +324,7 @@ def test_gluon_cauchy():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.cauchy(loc.asnumpy(),
-                        scale.asnumpy()).logpdf(samples.asnumpy())
+                           scale.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -337,7 +338,7 @@ def test_gluon_cauchy():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.cauchy(loc.asnumpy(),
-                        scale.asnumpy()).cdf(samples.asnumpy())
+                           scale.asnumpy()).cdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -351,7 +352,7 @@ def test_gluon_cauchy():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.cauchy(loc.asnumpy(),
-                        scale.asnumpy()).ppf(samples.asnumpy())
+                           scale.asnumpy()).ppf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -364,7 +365,7 @@ def test_gluon_cauchy():
             net.hybridize()
         mx_out = net(loc, scale).asnumpy()
         np_out = ss.cauchy(loc.asnumpy(),
-                        scale.asnumpy()).entropy()
+                           scale.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -404,8 +405,8 @@ def test_gluon_half_cauchy():
         mx_out = net(scale, samples).asnumpy()
         np_out = ss.halfcauchy(0, scale.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                            rtol=1e-3, use_broadcast=False) 
-    
+                            rtol=1e-3, use_broadcast=False)
+
     # Test cdf
     for shape, hybridize in itertools.product(shapes, [True, False]):
         scale = np.random.uniform(0.5, 1.5, shape)
@@ -416,7 +417,7 @@ def test_gluon_half_cauchy():
         mx_out = net(scale, samples).asnumpy()
         np_out = ss.halfcauchy(0, scale.asnumpy()).cdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                            rtol=1e-3, use_broadcast=False) 
+                            rtol=1e-3, use_broadcast=False)
 
     # Test icdf
     for shape, hybridize in itertools.product(shapes, [True, False]):
@@ -477,7 +478,7 @@ def test_gluon_geometric():
 
         def hybrid_forward(self, F, params, *args):
             dist = mgp.Geometric(logit=params, validate_args=True) if self._is_logit else \
-                        mgp.Geometric(prob=params, validate_args=True)
+                mgp.Geometric(prob=params, validate_args=True)
             return _distribution_method_invoker(dist, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -494,7 +495,7 @@ def test_gluon_geometric():
         mx_out = net(param, sample).asnumpy()
         np_out = ss.geom.logpmf(sample.asnumpy() + 1, prob.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                        rtol=1e-3, use_broadcast=False)
+                            rtol=1e-3, use_broadcast=False)
 
     # Test variance
     for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
@@ -508,12 +509,12 @@ def test_gluon_geometric():
         mx_out = net(param).asnumpy()
         np_out = ss.geom(prob.asnumpy()).var()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                        rtol=1e-3, use_broadcast=False)
+                            rtol=1e-3, use_broadcast=False)
 
     # Test entropy
     for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
-        # Add lower bound constraint, otherwise scipy would raise warning. 
-        prob = np.random.uniform(low=0.1, size=shape) 
+        # Add lower bound constraint, otherwise scipy would raise warning.
+        prob = np.random.uniform(low=0.1, size=shape)
         param = prob
         if use_logit:
             param = prob_to_logit(param)
@@ -523,7 +524,7 @@ def test_gluon_geometric():
         mx_out = net(param).asnumpy()
         np_out = ss.geom(prob.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                        rtol=1e-3, use_broadcast=False)
+                            rtol=1e-3, use_broadcast=False)
 
 
 @with_seed()
@@ -537,7 +538,7 @@ def test_gluon_negative_binomial():
 
         def hybrid_forward(self, F, n, params, *args):
             dist = mgp.NegativeBinomial(n=n, logit=params, validate_args=True) if self._is_logit else \
-                        mgp.NegativeBinomial(n=n, prob=params, validate_args=True)
+                mgp.NegativeBinomial(n=n, prob=params, validate_args=True)
             return _distribution_method_invoker(dist, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -553,9 +554,10 @@ def test_gluon_negative_binomial():
         if hybridize:
             net.hybridize()
         mx_out = net(n, param, sample).asnumpy()
-        np_out = ss.nbinom(n=n.asnumpy(), p=prob.asnumpy()).logpmf(sample.asnumpy())
+        np_out = ss.nbinom(n=n.asnumpy(), p=prob.asnumpy()
+                           ).logpmf(sample.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                        rtol=1e-3, use_broadcast=False)
+                            rtol=1e-3, use_broadcast=False)
 
     # Test mean and variance
     for shape, hybridize in itertools.product(shapes, [True, False]):
@@ -586,11 +588,11 @@ def test_gluon_exponential():
         def __init__(self, func):
             self._func = func
             super(TestExponential, self).__init__()
-        
+
         def hybrid_forward(self, F, scale, *args):
             exponential = mgp.Exponential(scale, F, validate_args=True)
             return _distribution_method_invoker(exponential, self._func, *args)
-    
+
     shapes = [(), (1,), (2, 3), 6]
     # Test log_prob
     for shape, hybridize in itertools.product(shapes, [True, False]):
@@ -639,8 +641,6 @@ def test_gluon_exponential():
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
-    
-
 
 @with_seed()
 @use_np
@@ -665,7 +665,8 @@ def test_gluon_weibull():
         if hybridize:
             net.hybridize()
         mx_out = net(concentration, scale, samples).asnumpy()
-        np_out = ss.weibull_min(c=concentration.asnumpy(), scale=scale.asnumpy()).logpdf(samples.asnumpy())
+        np_out = ss.weibull_min(c=concentration.asnumpy(
+        ), scale=scale.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -678,7 +679,8 @@ def test_gluon_weibull():
         if hybridize:
             net.hybridize()
         mx_out = net(concentration, scale, samples).asnumpy()
-        np_out = ss.weibull_min(c=concentration.asnumpy(), scale=scale.asnumpy()).cdf(samples.asnumpy())
+        np_out = ss.weibull_min(c=concentration.asnumpy(
+        ), scale=scale.asnumpy()).cdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -691,7 +693,8 @@ def test_gluon_weibull():
         if hybridize:
             net.hybridize()
         mx_out = net(concentration, scale, samples).asnumpy()
-        np_out = ss.weibull_min(c=concentration.asnumpy(), scale=scale.asnumpy()).ppf(samples.asnumpy())
+        np_out = ss.weibull_min(c=concentration.asnumpy(
+        ), scale=scale.asnumpy()).ppf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -703,7 +706,8 @@ def test_gluon_weibull():
         if hybridize:
             net.hybridize()
         mx_out = net(concentration, scale).asnumpy()
-        np_out = ss.weibull_min(c=concentration.asnumpy(), scale=scale.asnumpy()).entropy()
+        np_out = ss.weibull_min(c=concentration.asnumpy(),
+                                scale=scale.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -731,7 +735,8 @@ def test_gluon_pareto():
         if hybridize:
             net.hybridize()
         mx_out = net(alpha, scale, samples).asnumpy()
-        np_out = ss.pareto(b=alpha.asnumpy(), scale=scale.asnumpy()).logpdf(samples.asnumpy())
+        np_out = ss.pareto(b=alpha.asnumpy(), scale=scale.asnumpy()).logpdf(
+            samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -744,7 +749,8 @@ def test_gluon_pareto():
         if hybridize:
             net.hybridize()
         mx_out = net(alpha, scale, samples).asnumpy()
-        np_out = ss.pareto(b=alpha.asnumpy(), scale=scale.asnumpy()).cdf(samples.asnumpy())
+        np_out = ss.pareto(b=alpha.asnumpy(), scale=scale.asnumpy()).cdf(
+            samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -757,7 +763,8 @@ def test_gluon_pareto():
         if hybridize:
             net.hybridize()
         mx_out = net(alpha, scale, samples).asnumpy()
-        np_out = ss.pareto(b=alpha.asnumpy(), scale=scale.asnumpy()).ppf(samples.asnumpy())
+        np_out = ss.pareto(b=alpha.asnumpy(), scale=scale.asnumpy()).ppf(
+            samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -772,8 +779,6 @@ def test_gluon_pareto():
         np_out = ss.pareto(b=alpha.asnumpy(), scale=scale.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
-
-    
 
 
 @with_seed()
@@ -799,7 +804,8 @@ def test_gluon_gamma():
         if hybridize:
             net.hybridize()
         mx_out = net(alpha, scale, samples).asnumpy()
-        np_out = ss.gamma(a=alpha.asnumpy(), loc=0, scale=scale.asnumpy()).logpdf(samples.asnumpy())
+        np_out = ss.gamma(a=alpha.asnumpy(), loc=0,
+                          scale=scale.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -812,7 +818,8 @@ def test_gluon_gamma():
             if hybridize:
                 net.hybridize()
             mx_out = net(alpha, scale).asnumpy()
-            ss_gamma = ss.gamma(a=alpha.asnumpy(), loc=0, scale=scale.asnumpy())
+            ss_gamma = ss.gamma(a=alpha.asnumpy(), loc=0,
+                                scale=scale.asnumpy())
             if func == 'mean':
                 np_out = ss_gamma.mean()
             elif func == 'variance':
@@ -841,7 +848,8 @@ def test_gluon_dirichlet():
     # Test sampling
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         for hybridize in [True, False]:
-            desired_shape = (batch_shape if batch_shape is not None else ()) + (event_shape,)
+            desired_shape = (
+                batch_shape if batch_shape is not None else ()) + (event_shape,)
             alpha = np.random.uniform(size=desired_shape)
             net = TestDirichlet("sample")
             if hybridize:
@@ -851,28 +859,31 @@ def test_gluon_dirichlet():
             assert mx_out.shape == desired_shape
             # Check simplex
             assert_almost_equal(mx_out.sum(-1), _np.ones_like(mx_out.sum(-1)), atol=1e-4,
-                            rtol=1e-3, use_broadcast=False)
+                                rtol=1e-3, use_broadcast=False)
 
     # Test log_prob
     # Scipy does not support batch `alpha`, thus we skip multi-dimensional batch_shape case.
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes[:1]):
         for hybridize in [True, False]:
-            desired_shape = (batch_shape if batch_shape is not None else ()) + (event_shape,)
+            desired_shape = (
+                batch_shape if batch_shape is not None else ()) + (event_shape,)
             alpha = np.random.uniform(size=desired_shape)
-            np_samples = _np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape)
+            np_samples = _np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape)
             net = TestDirichlet("log_prob")
             if hybridize:
                 net.hybridize()
             mx_out = net(alpha, np.array(np_samples)).asnumpy()
             np_out = ss.dirichlet(alpha=alpha.asnumpy()).logpdf(np_samples)
             assert_almost_equal(mx_out, np_out, atol=1e-4,
-                            rtol=1e-3, use_broadcast=False)
+                                rtol=1e-3, use_broadcast=False)
 
     # Test `mean`, `var` and `entropy`
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes[:1]):
         for hybridize in [False]:
             for func in ['mean', 'variance', 'entropy']:
-                desired_shape = (batch_shape if batch_shape is not None else ()) + (event_shape,)
+                desired_shape = (
+                    batch_shape if batch_shape is not None else ()) + (event_shape,)
                 alpha = np.random.uniform(size=desired_shape)
                 net = TestDirichlet(func)
                 if hybridize:
@@ -912,7 +923,8 @@ def test_gluon_beta():
         if hybridize:
             net.hybridize()
         mx_out = net(alpha, beta, samples).asnumpy()
-        np_out = ss.beta(alpha.asnumpy(), beta.asnumpy()).logpdf(samples.asnumpy())
+        np_out = ss.beta(alpha.asnumpy(), beta.asnumpy()
+                         ).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -959,7 +971,8 @@ def test_gluon_fisher_snedecor():
         if hybridize:
             net.hybridize()
         mx_out = net(df1, df2, samples).asnumpy()
-        np_out = ss.f(dfn=df1.asnumpy(), dfd=df2.asnumpy()).logpdf(samples.asnumpy())
+        np_out = ss.f(dfn=df1.asnumpy(), dfd=df2.asnumpy()
+                      ).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -979,7 +992,6 @@ def test_gluon_fisher_snedecor():
                 np_out = ss_f.var()
             assert_almost_equal(mx_out, np_out, atol=1e-4,
                                 rtol=1e-3, use_broadcast=False)
-    
 
 
 @with_seed()
@@ -1006,7 +1018,8 @@ def test_gluon_student_t():
         if hybridize:
             net.hybridize()
         mx_out = net(df, loc, scale, samples).asnumpy()
-        np_out = ss.t(loc=0, scale=scale.asnumpy(), df=df.asnumpy()).logpdf(samples.asnumpy())
+        np_out = ss.t(loc=0, scale=scale.asnumpy(),
+                      df=df.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -1055,7 +1068,7 @@ def test_gluon_gumbel():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.gumbel_r(loc=loc.asnumpy(),
-                        scale=scale.asnumpy()).logpdf(samples.asnumpy())
+                             scale=scale.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -1069,7 +1082,7 @@ def test_gluon_gumbel():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.gumbel_r(loc.asnumpy(),
-                        scale.asnumpy()).cdf(samples.asnumpy())
+                             scale.asnumpy()).cdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -1083,7 +1096,7 @@ def test_gluon_gumbel():
             net.hybridize()
         mx_out = net(loc, scale, samples).asnumpy()
         np_out = ss.gumbel_r(loc.asnumpy(),
-                        scale.asnumpy()).ppf(samples.asnumpy())
+                             scale.asnumpy()).ppf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -1096,7 +1109,7 @@ def test_gluon_gumbel():
             net.hybridize()
         mx_out = net(loc, scale).asnumpy()
         np_out = ss.gumbel_r(loc.asnumpy(),
-                        scale.asnumpy()).entropy()
+                             scale.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -1118,7 +1131,7 @@ def test_gluon_multinomial():
             multinomial = (
                 mgp.Multinomial(self._num_events, logit=params, total_count=self._total_count,
                                 validate_args=True)
-                if self._is_logit else \
+                if self._is_logit else
                 mgp.Multinomial(self._num_events, prob=params, total_count=self._total_count,
                                 validate_args=True)
             )
@@ -1127,59 +1140,65 @@ def test_gluon_multinomial():
             if self._func == 'sample_n':
                 return multinomial.sample_n(self._sample_shape)
             return _distribution_method_invoker(multinomial, self._func, *args)
-    
+
     def one_hot(a, num_classes):
         return np.identity(num_classes)[a]
 
     event_shapes = [2, 5, 10]
-    batch_shapes = [None, (2, 3)] #, (4, 0, 5)]
+    batch_shapes = [None, (2, 3)]  # , (4, 0, 5)]
     sample_shapes = [None, (2,), (3, 4)]
 
     # Test sampling
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             param = prob
             if use_logit:
                 param = np.log(param)
             net = TestMultinomial("sample", event_shape, _np.random.randint(1, 5),
-                                    use_logit, batch_shape)
+                                  use_logit, batch_shape)
             if hybridize:
                 net.hybridize()
             mx_out = net(param).asnumpy()
             desired_shape = batch_shape if batch_shape is not None else ()
             assert mx_out.shape == desired_shape + (event_shape,)
-    
+
     # Test sample_n
     for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             param = prob
             if use_logit:
                 param = np.log(param)
             net = TestMultinomial("sample_n", event_shape, _np.random.randint(1, 5),
-                                    use_logit, batch_shape, sample_shape)
+                                  use_logit, batch_shape, sample_shape)
             if hybridize:
                 net.hybridize()
             mx_out = net(param).asnumpy()
             sample_shape = () if sample_shape is None else sample_shape
-            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
+            desired_shape = sample_shape + \
+                (batch_shape if batch_shape is not None else ())
             assert mx_out.shape == desired_shape + (event_shape,)
 
     # Test log_prob
     for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
         for use_logit, hybridize in itertools.product([True, False], [False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             eps = _np.finfo('float32').eps
             prob = np.clip(prob, eps, 1 - eps)
             param = prob
             sample_shape = () if sample_shape is None else sample_shape
-            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
+            desired_shape = sample_shape + \
+                (batch_shape if batch_shape is not None else ())
             samples = np.random.choice(event_shape, size=desired_shape)
             samples = one_hot(samples, event_shape)
             if use_logit:
                 param = np.log(param)
-            net = TestMultinomial("log_prob", event_shape, _np.random.randint(1, 5), use_logit)
+            net = TestMultinomial("log_prob", event_shape,
+                                  _np.random.randint(1, 5), use_logit)
             if hybridize:
                 net.hybridize()
             mx_out = net(param, samples).asnumpy()
@@ -1199,8 +1218,8 @@ def test_gluon_binomial():
 
         def hybrid_forward(self, F, params, *args):
             dist = mgp.Binomial(n=self._n, logit=params, validate_args=True) \
-                    if self._is_logit else \
-                    mgp.Binomial(n=self._n, prob=params, validate_args=True)
+                if self._is_logit else \
+                mgp.Binomial(n=self._n, prob=params, validate_args=True)
             return _distribution_method_invoker(dist, self._func, *args)
 
     shapes = [(), (1,), (2, 3), 6]
@@ -1227,7 +1246,7 @@ def test_gluon_binomial():
         dist = mgp.Binomial(n=n, prob=prob)
         samples = dist.sample_n(prefix_shape)
         assert samples.shape == (prefix_shape + prob.shape)
-    
+
     # Test log_prob
     for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
         n = _np.random.randint(5, 10)
@@ -1242,7 +1261,7 @@ def test_gluon_binomial():
         mx_out = net(param, sample).asnumpy()
         np_out = ss.binom(n=n, p=prob.asnumpy()).logpmf(sample.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                        rtol=1e-3, use_broadcast=False)
+                            rtol=1e-3, use_broadcast=False)
 
     # Test mean and variance
     for shape, hybridize in itertools.product(shapes, [True, False]):
@@ -1277,7 +1296,7 @@ def test_gluon_bernoulli():
 
         def hybrid_forward(self, F, params, *args):
             bernoulli = mgp.Bernoulli(logit=params, validate_args=True) if self._is_logit else \
-                        mgp.Bernoulli(prob=params, validate_args=True)
+                mgp.Bernoulli(prob=params, validate_args=True)
             return _distribution_method_invoker(bernoulli, self._func, *args)
 
     # Test log_prob
@@ -1294,7 +1313,7 @@ def test_gluon_bernoulli():
         mx_out = net(param, sample).asnumpy()
         np_out = _np.log(ss.bernoulli.pmf(sample.asnumpy(), prob.asnumpy()))
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                        rtol=1e-3, use_broadcast=False)
+                            rtol=1e-3, use_broadcast=False)
 
     # Test variance
     for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
@@ -1309,7 +1328,7 @@ def test_gluon_bernoulli():
         mx_out = net(param).asnumpy()
         np_out = ss.bernoulli(prob.asnumpy()).var()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                        rtol=1e-3, use_broadcast=False)
+                            rtol=1e-3, use_broadcast=False)
 
     # Test entropy
     for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
@@ -1324,7 +1343,7 @@ def test_gluon_bernoulli():
         mx_out = net(param).asnumpy()
         np_out = ss.bernoulli(prob.asnumpy()).entropy()
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                        rtol=1e-3, use_broadcast=False)
+                            rtol=1e-3, use_broadcast=False)
 
 
 @with_seed()
@@ -1338,8 +1357,8 @@ def test_relaxed_bernoulli():
 
         def hybrid_forward(self, F, params, *args):
             relaxed_bernoulli = mgp.RelaxedBernoulli(T=1.0, logit=params, validate_args=True)\
-                        if self._is_logit else \
-                        mgp.RelaxedBernoulli(T=1.0, prob=params, validate_args=True)
+                if self._is_logit else \
+                mgp.RelaxedBernoulli(T=1.0, prob=params, validate_args=True)
             if self._func == "sample":
                 return relaxed_bernoulli.sample()
             return _distribution_method_invoker(relaxed_bernoulli, self._func, *args)
@@ -1392,8 +1411,9 @@ def test_gluon_categorical():
 
         def hybrid_forward(self, F, params, *args):
             categorical = mgp.Categorical(self._num_events, logit=params, validate_args=True)\
-                        if self._is_logit else \
-                        mgp.Categorical(self._num_events, prob=params, validate_args=True)
+                if self._is_logit else \
+                mgp.Categorical(self._num_events, prob=params,
+                                validate_args=True)
             if self._func == "sample":
                 return categorical.sample(self._batch_shape)
             if self._func == "sample_n":
@@ -1401,77 +1421,89 @@ def test_gluon_categorical():
             return _distribution_method_invoker(categorical, self._func, *args)
 
     event_shapes = [2, 5, 10]
-    batch_shapes = [None, (2, 3)] #, (4, 0, 5)]
+    batch_shapes = [None, (2, 3)]  # , (4, 0, 5)]
     sample_shapes = [(), (2,), (3, 4)]
 
     # Test sampling
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             param = prob.astype('float32')
             if use_logit:
                 param = np.log(param)
-            net = TestCategorical("sample", use_logit, batch_shape, event_shape)
+            net = TestCategorical("sample", use_logit,
+                                  batch_shape, event_shape)
             if hybridize:
                 net.hybridize()
             mx_out = net(param).asnumpy()
             desired_shape = batch_shape if batch_shape is not None else ()
             assert mx_out.shape == desired_shape
-    
+
     # Test sample_n
     for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             param = prob.astype('float32')
             if use_logit:
                 param = np.log(param)
             net = TestCategorical("sample_n",
-                                is_logit=use_logit, batch_shape=batch_shape,
-                                num_events=event_shape, sample_shape=sample_shape
-                    )
+                                  is_logit=use_logit, batch_shape=batch_shape,
+                                  num_events=event_shape, sample_shape=sample_shape
+                                  )
             if hybridize:
                 net.hybridize()
             mx_out = net(param).asnumpy()
-            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
+            desired_shape = sample_shape + \
+                (batch_shape if batch_shape is not None else ())
             assert mx_out.shape == desired_shape
 
     # Test log_prob
     for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             eps = _np.finfo('float32').eps
             prob = np.clip(prob, eps, 1 - eps)
             param = prob.astype('float32')
-            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
+            desired_shape = sample_shape + \
+                (batch_shape if batch_shape is not None else ())
             samples = np.random.choice(event_shape, size=desired_shape)
             if use_logit:
                 param = np.log(param)
-            net = TestCategorical("log_prob", use_logit, batch_shape, event_shape)
+            net = TestCategorical("log_prob", use_logit,
+                                  batch_shape, event_shape)
             if hybridize:
                 net.hybridize()
             mx_out = net(param, samples)
             # Check shape
             assert mx_out.shape == desired_shape
             # Check value
-            log_pmf, indices = np.broadcast_arrays(np.log(prob), np.expand_dims(samples, -1))
+            log_pmf, indices = np.broadcast_arrays(
+                np.log(prob), np.expand_dims(samples, -1))
             if indices.ndim >= 1:
                 indices = indices[..., :1]
-            expect_log_prob = _np.take_along_axis(log_pmf, indices.astype('int'), axis=-1).asnumpy()
+            expect_log_prob = _np.take_along_axis(
+                log_pmf, indices.astype('int'), axis=-1).asnumpy()
             assert_almost_equal(mx_out.asnumpy(), expect_log_prob.squeeze(), atol=1e-4,
-                        rtol=1e-3, use_broadcast=False)
+                                rtol=1e-3, use_broadcast=False)
 
     # Test enumerate_support
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             param = prob.astype('float32')
             if use_logit:
                 param = np.log(param)
-            net = TestCategorical("enumerate_support", use_logit, batch_shape, event_shape)
+            net = TestCategorical("enumerate_support",
+                                  use_logit, batch_shape, event_shape)
             if hybridize:
                 net.hybridize()
             mx_out = net(param).asnumpy()
-            desired_shape = (event_shape,) + (batch_shape if batch_shape is not None else ())
+            desired_shape = (event_shape,) + \
+                (batch_shape if batch_shape is not None else ())
             assert mx_out.shape == desired_shape
 
 
@@ -1491,24 +1523,26 @@ def test_gluon_one_hot_categorical():
 
         def hybrid_forward(self, F, params, *args):
             categorical = mgp.OneHotCategorical(num_events=self._num_events, logit=params) \
-                          if self._is_logit else \
-                          mgp.OneHotCategorical(num_events=self._num_events, prob=params)
+                if self._is_logit else \
+                mgp.OneHotCategorical(num_events=self._num_events, prob=params)
             if self._func == "sample":
                 return categorical.sample(self._batch_shape)
             return _distribution_method_invoker(categorical, self._func, *args)
 
     event_shapes = [2, 5, 10]
-    batch_shapes = [None, (2, 3)] #, (4, 0, 5)]
+    batch_shapes = [None, (2, 3)]  # , (4, 0, 5)]
     sample_shapes = [(), (2,), (3, 4)]
 
     # Test sampling
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             param = prob
             if use_logit:
                 param = np.log(param)
-            net = TestOneHotCategorical("sample", use_logit, batch_shape, event_shape)
+            net = TestOneHotCategorical(
+                "sample", use_logit, batch_shape, event_shape)
             if hybridize:
                 net.hybridize()
             mx_out = net(param).asnumpy()
@@ -1518,16 +1552,19 @@ def test_gluon_one_hot_categorical():
     # Test log_prob
     for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             eps = _np.finfo('float32').eps
             prob = np.clip(prob, eps, 1 - eps)
             param = prob
-            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
+            desired_shape = sample_shape + \
+                (batch_shape if batch_shape is not None else ())
             samples = np.random.choice(event_shape, size=desired_shape)
             samples = one_hot(samples, event_shape)
             if use_logit:
                 param = np.log(param)
-            net = TestOneHotCategorical("log_prob", use_logit, batch_shape, event_shape)
+            net = TestOneHotCategorical(
+                "log_prob", use_logit, batch_shape, event_shape)
             if hybridize:
                 net.hybridize()
             mx_out = net(param, samples)
@@ -1537,16 +1574,19 @@ def test_gluon_one_hot_categorical():
     # Test enumerate support
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             param = prob
             if use_logit:
                 param = np.log(param)
-            net = TestOneHotCategorical("enumerate_support", use_logit, batch_shape, event_shape)
+            net = TestOneHotCategorical(
+                "enumerate_support", use_logit, batch_shape, event_shape)
             if hybridize:
                 net.hybridize()
             mx_out = net(param).asnumpy()
             desired_shape = batch_shape if batch_shape is not None else ()
-            assert mx_out.shape == (event_shape,) + desired_shape + (event_shape,)
+            assert mx_out.shape == (event_shape,) + \
+                desired_shape + (event_shape,)
 
 
 @with_seed()
@@ -1562,26 +1602,29 @@ def test_relaxed_one_hot_categorical():
 
         def hybrid_forward(self, F, params, *args):
             categorical = mgp.RelaxedOneHotCategorical(T=1.0, num_events=self._num_events, logit=params) \
-                            if self._is_logit else \
-                            mgp.RelaxedOneHotCategorical(T=1.0, num_events=self._num_events, prob=params)
+                if self._is_logit else \
+                mgp.RelaxedOneHotCategorical(
+                    T=1.0, num_events=self._num_events, prob=params)
             if self._func == "sample":
                 return categorical.sample(self._batch_shape)
             return _distribution_method_invoker(categorical, self._func, *args)
 
     event_shapes = [2, 5, 10]
-    batch_shapes = [None, (2, 3)] #, (4, 0, 5)]
+    batch_shapes = [None, (2, 3)]  # , (4, 0, 5)]
     sample_shapes = [(), (2,), (3, 4)]
 
     # Test sampling
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         for use_logit, hybridize in itertools.product([True, False], [True, False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             prob = prob.astype('float32')
             param = prob
             if use_logit:
                 param = np.log(param)
             param.attach_grad()
-            net = TestRelaxedOneHotCategorical("sample", use_logit, batch_shape, event_shape)
+            net = TestRelaxedOneHotCategorical(
+                "sample", use_logit, batch_shape, event_shape)
             if hybridize:
                 net.hybridize()
             with autograd.record():
@@ -1594,16 +1637,20 @@ def test_relaxed_one_hot_categorical():
     # Test log_prob
     for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
         for use_logit, hybridize in itertools.product([True, False], [False]):
-            prob = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape))
+            prob = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=batch_shape))
             eps = _np.finfo('float32').eps
             prob = np.clip(prob, eps, 1 - eps)
             param = prob
-            desired_shape = sample_shape + (batch_shape if batch_shape is not None else ())
+            desired_shape = sample_shape + \
+                (batch_shape if batch_shape is not None else ())
             # Samples from a Relaxed One-hot Categorical lie on a simplex.
-            samples = np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=desired_shape))
+            samples = np.array(_np.random.dirichlet(
+                [1 / event_shape] * event_shape, size=desired_shape))
             if use_logit:
                 param = np.log(param)
-            net = TestRelaxedOneHotCategorical("log_prob", use_logit, batch_shape, event_shape)
+            net = TestRelaxedOneHotCategorical(
+                "log_prob", use_logit, batch_shape, event_shape)
             if hybridize:
                 net.hybridize()
             mx_out = net(param, samples)
@@ -1623,7 +1670,7 @@ def test_gluon_mvn():
 
         def hybrid_forward(self, F, loc, cov, *args):
             mvn = mgp.MultivariateNormal(loc=loc, **{self._param_type: cov},
-                                            validate_args=True)
+                                         validate_args=True)
             return _distribution_method_invoker(mvn, self._func, *args)
 
     def _stable_inv(cov):
@@ -1652,7 +1699,8 @@ def test_gluon_mvn():
                 loc.attach_grad()
                 _s.attach_grad()
                 # Full covariance matrix
-                sigma = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(event_shape)
+                sigma = np.matmul(_s, np.swapaxes(
+                    _s, -1, -2)) + np.eye(event_shape)
                 cov_param = cov_func[cov_type](sigma)
                 net = TestMVN('sample', cov_type)
                 if hybridize:
@@ -1671,11 +1719,13 @@ def test_gluon_mvn():
             for hybridize in [True, False]:
                 loc = np.random.randn(*(loc_shape + (event_shape,)))
                 _s = np.random.randn(*(cov_shape + (event_shape, event_shape)))
-                samples = np.random.normal(np.zeros_like(loc), np.ones_like(_s[..., 0]))
+                samples = np.random.normal(
+                    np.zeros_like(loc), np.ones_like(_s[..., 0]))
                 loc.attach_grad()
                 _s.attach_grad()
                 # Full covariance matrix
-                sigma = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(event_shape)
+                sigma = np.matmul(_s, np.swapaxes(
+                    _s, -1, -2)) + np.eye(event_shape)
                 cov_param = cov_func[cov_type](sigma)
                 net = TestMVN('log_prob', cov_type)
                 if hybridize:
@@ -1684,7 +1734,8 @@ def test_gluon_mvn():
                 assert mx_out.shape == samples.shape[:-1]
                 # Select the first element in the batch, because scipy does not support batching.
                 loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
-                sigma_t = sigma.reshape(-1, event_shape, event_shape)[0].asnumpy()
+                sigma_t = sigma.reshape(-1, event_shape,
+                                        event_shape)[0].asnumpy()
                 if mx_out.shape == ():
                     mx_out_t = mx_out.asnumpy()
                 else:
@@ -1693,7 +1744,7 @@ def test_gluon_mvn():
                 scipy_mvn = ss.multivariate_normal(loc_t, sigma_t)
                 ss_out = scipy_mvn.logpdf(samples_t)
                 assert_almost_equal(mx_out_t, ss_out, atol=1e-4,
-                        rtol=1e-3, use_broadcast=False) 
+                                    rtol=1e-3, use_broadcast=False)
 
     # Test entropy
     for loc_shape, cov_shape, event_shape in itertools.product(loc_shapes, cov_shapes, event_shapes):
@@ -1704,7 +1755,8 @@ def test_gluon_mvn():
                 loc.attach_grad()
                 _s.attach_grad()
                 # Full covariance matrix
-                sigma = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(event_shape)
+                sigma = np.matmul(_s, np.swapaxes(
+                    _s, -1, -2)) + np.eye(event_shape)
                 cov_param = cov_func[cov_type](sigma)
                 net = TestMVN('entropy', cov_type)
                 if hybridize:
@@ -1713,7 +1765,8 @@ def test_gluon_mvn():
                 assert mx_out.shape == sigma.shape[:-2]
                 # Select the first element in the batch, because scipy does not support batching.
                 loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
-                sigma_t = sigma.reshape(-1, event_shape, event_shape)[0].asnumpy()
+                sigma_t = sigma.reshape(-1, event_shape,
+                                        event_shape)[0].asnumpy()
                 if mx_out.shape == ():
                     mx_out_t = mx_out.asnumpy()
                 else:
@@ -1721,7 +1774,7 @@ def test_gluon_mvn():
                 scipy_mvn = ss.multivariate_normal(loc_t, sigma_t)
                 ss_out = scipy_mvn.entropy()
                 assert_almost_equal(mx_out_t, ss_out, atol=1e-4,
-                        rtol=1e-3, use_broadcast=False)
+                                    rtol=1e-3, use_broadcast=False)
 
 
 @with_seed()
@@ -1759,7 +1812,7 @@ def test_gluon_half_normal():
         mx_out = net(scale, samples).asnumpy()
         np_out = ss.halfnorm(0, scale.asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                            rtol=1e-3, use_broadcast=False) 
+                            rtol=1e-3, use_broadcast=False)
 
     # Test cdf
     for shape, hybridize in itertools.product(shapes, [True, False]):
@@ -1771,7 +1824,7 @@ def test_gluon_half_normal():
         mx_out = net(scale, samples).asnumpy()
         np_out = ss.halfnorm(0, scale.asnumpy()).cdf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                            rtol=1e-3, use_broadcast=False) 
+                            rtol=1e-3, use_broadcast=False)
 
     # Test icdf
     for shape, hybridize in itertools.product(shapes, [True, False]):
@@ -1783,8 +1836,8 @@ def test_gluon_half_normal():
         mx_out = net(scale, samples).asnumpy()
         np_out = ss.halfnorm(0, scale.asnumpy()).ppf(samples.asnumpy())
         assert_almost_equal(mx_out, np_out, atol=1e-4,
-                            rtol=1e-3, use_broadcast=False) 
-    
+                            rtol=1e-3, use_broadcast=False)
+
 
 @with_seed()
 @use_np
@@ -1803,7 +1856,8 @@ def test_affine_transform():
                                     F.np.ones_like(scale), F)
             transforms = [mgp.AffineTransform(loc=0, scale=scale),
                           mgp.AffineTransform(loc=loc, scale=1)]
-            transformed_normal = mgp.TransformedDistribution(std_normal, transforms)
+            transformed_normal = mgp.TransformedDistribution(
+                std_normal, transforms)
             if (len(args) == 0):
                 return getattr(transformed_normal, self._func)
             return getattr(transformed_normal, self._func)(*args)
@@ -1811,7 +1865,7 @@ def test_affine_transform():
     shapes = [(1,), (2, 3), 6]
 
     # Test log_prob
-    for shape, hybridize in itertools.product(shapes, [True, False]): 
+    for shape, hybridize in itertools.product(shapes, [True, False]):
         loc = np.random.uniform(-1, 1, shape)
         loc.attach_grad()
         scale = np.random.uniform(0.5, 1.5, shape)
@@ -1828,14 +1882,15 @@ def test_affine_transform():
                             rtol=1e-3, use_broadcast=False)
         mx_out.backward()
         loc_expected_grad = ((samples - loc) / scale ** 2).asnumpy()
-        scale_expected_grad = (samples - loc) ** 2 * np.power(scale, -3) - (1 / scale)
+        scale_expected_grad = (samples - loc) ** 2 * \
+            np.power(scale, -3) - (1 / scale)
         assert_almost_equal(loc.grad.asnumpy(), loc_expected_grad, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
         assert_almost_equal(scale.grad.asnumpy(), scale_expected_grad, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
     # Test sampling
-    for shape, hybridize in itertools.product(shapes, [True, False]): 
+    for shape, hybridize in itertools.product(shapes, [True, False]):
         loc = np.random.uniform(-1, 1, shape)
         loc.attach_grad()
         scale = np.random.uniform(0.5, 1.5, shape)
@@ -1861,18 +1916,19 @@ def test_compose_transform():
             std_normal = mgp.Normal(F.np.zeros_like(loc),
                                     F.np.ones_like(scale), F)
             transforms = mgp.ComposeTransform([
-                            mgp.AffineTransform(loc=0, scale=scale),
-                            mgp.AffineTransform(loc=loc, scale=1),
-                            mgp.ExpTransform()
-                            ])
-            transformed_normal = mgp.TransformedDistribution(std_normal, transforms)
+                mgp.AffineTransform(loc=0, scale=scale),
+                mgp.AffineTransform(loc=loc, scale=1),
+                mgp.ExpTransform()
+            ])
+            transformed_normal = mgp.TransformedDistribution(
+                std_normal, transforms)
             if (len(args) == 0):
                 return getattr(transformed_normal, self._func)
             return getattr(transformed_normal, self._func)(*args)
 
     shapes = [(1,), (2, 3), 6]
     # Test log_prob
-    for shape, hybridize in itertools.product(shapes, [True, False]): 
+    for shape, hybridize in itertools.product(shapes, [True, False]):
         loc = np.random.uniform(-1, 1, shape)
         loc.attach_grad()
         scale = np.random.uniform(0.5, 1.5, shape)
@@ -1883,7 +1939,8 @@ def test_compose_transform():
             net.hybridize()
         with autograd.record():
             mx_out = net(loc, scale, samples)
-        np_out = ss.lognorm(s=scale.asnumpy(), scale=np.exp(loc).asnumpy()).logpdf(samples.asnumpy())
+        np_out = ss.lognorm(s=scale.asnumpy(), scale=np.exp(
+            loc).asnumpy()).logpdf(samples.asnumpy())
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=1e-4,
                             rtol=1e-3, use_broadcast=False)
 
@@ -1949,7 +2006,7 @@ def test_independent():
         for hybridize in [False, True]:
             for func in ['log_prob']:
                 full_shape = batch_shape + event_shape
-                logit = np.random.normal(0,2, size=full_shape)
+                logit = np.random.normal(0, 2, size=full_shape)
                 samples = np.round(np.random.uniform(size=full_shape))
                 net = TestIndependent(len(event_shape), func)
                 if hybridize:
@@ -1974,13 +2031,13 @@ def test_gluon_kl():
                             rtol=1e-2, use_broadcast=False)
 
     def _test_monte_carlo(p, q, M=50000):
-        """Check if KL(p || q) is approximately equal to
+        r"""Check if KL(p || q) is approximately equal to
         1/M * \Sum_{i=1}^{M} log(p(x_i) / q(x_i)), x_i ~ p(x)
         """
         kl = mgp.kl_divergence(p, q)
         mc_approx = mgp.empirical_kl(p, q, M)
         assert_almost_equal(mc_approx.asnumpy(), kl.asnumpy(), atol=1e-1,
-                    rtol=1e-1, use_broadcast=False)
+                            rtol=1e-1, use_broadcast=False)
 
     def _dist_factory(dist, *param_funcs):
         """Generate a distribution object with parameters of random value.
@@ -1996,7 +2053,7 @@ def test_gluon_kl():
         return dist(*params)
 
     # could cause longer runtime and potential flaky tests
-    monte_carlo_test = False 
+    monte_carlo_test = False
     repeated_times = 50000
     shapes = [(), (1,), (2, 3), 6]
 
@@ -2004,68 +2061,68 @@ def test_gluon_kl():
     # uniform
     for shape in shapes:
         dist = mgp.Uniform
-        low = lambda: np.random.uniform(0, 1, shape)
-        high = lambda: np.random.uniform(1, 2, shape)
+        def low(): return np.random.uniform(0, 1, shape)
+        def high(): return np.random.uniform(1, 2, shape)
         _test_zero_kl(_dist_factory(dist, low, high), shape)
-    
+
     # normal, laplace, cauchy, gumbel
     for dist in [mgp.Normal, mgp.Laplace, mgp.Cauchy, mgp.Gumbel]:
         for shape in shapes:
-            loc = lambda: np.random.uniform(-1, 1, shape)
-            scale = lambda: np.random.uniform(0.5, 1.5, shape)
+            def loc(): return np.random.uniform(-1, 1, shape)
+            def scale(): return np.random.uniform(0.5, 1.5, shape)
             _test_zero_kl(_dist_factory(dist, loc, scale), shape)
             if monte_carlo_test:
                 _test_monte_carlo(_dist_factory(dist, loc, scale),
-                                _dist_factory(dist, loc, scale),
-                                repeated_times)
+                                  _dist_factory(dist, loc, scale),
+                                  repeated_times)
 
     # poisson
     for shape in shapes[1:]:
         dist = mgp.Poisson
-        rate = lambda: np.random.uniform(0.5, 1.5, shape)
+        def rate(): return np.random.uniform(0.5, 1.5, shape)
         _test_zero_kl(_dist_factory(dist, rate), shape)
         if monte_carlo_test:
             _test_monte_carlo(_dist_factory(dist, rate),
-                            _dist_factory(dist, rate),
-                            repeated_times)
+                              _dist_factory(dist, rate),
+                              repeated_times)
 
     # exponential, geometric
     for dist in [mgp.Exponential, mgp.Geometric]:
         for shape in shapes:
-            s = lambda: np.random.uniform(size=shape)
+            def s(): return np.random.uniform(size=shape)
             _test_zero_kl(_dist_factory(dist, s), shape)
             if monte_carlo_test:
                 _test_monte_carlo(_dist_factory(dist, s),
-                                _dist_factory(dist, s),
-                                repeated_times)
+                                  _dist_factory(dist, s),
+                                  repeated_times)
 
     # pareto
     for shape in shapes:
         dist = mgp.Pareto
-        alpha = lambda: np.random.uniform(size=shape)
-        scale = lambda: np.random.uniform(size=shape)
+        def alpha(): return np.random.uniform(size=shape)
+        def scale(): return np.random.uniform(size=shape)
         _test_zero_kl(_dist_factory(dist, alpha, scale), shape)
 
     for shape in shapes:
         dist = mgp.HalfNormal
-        scale = lambda: np.random.uniform(0.5, 1.5, shape)
+        def scale(): return np.random.uniform(0.5, 1.5, shape)
         _test_zero_kl(_dist_factory(dist, scale), shape)
         if monte_carlo_test:
             _test_monte_carlo(_dist_factory(dist, scale),
-                            _dist_factory(dist, scale),
-                            repeated_times)
+                              _dist_factory(dist, scale),
+                              repeated_times)
 
     # gamma, beta
     for dist in [mgp.Gamma, mgp.Beta]:
         for shape in shapes:
-            param1 = lambda: np.random.uniform(0.5, 1.5, shape)
-            param2 = lambda: np.random.uniform(0.5, 1.5, shape)
+            def param1(): return np.random.uniform(0.5, 1.5, shape)
+            def param2(): return np.random.uniform(0.5, 1.5, shape)
             _test_zero_kl(_dist_factory(dist, param1, param2), shape)
             if monte_carlo_test:
                 _test_monte_carlo(_dist_factory(dist, param1, param2),
-                                _dist_factory(dist, param1, param2),
-                                50000)
-    
+                                  _dist_factory(dist, param1, param2),
+                                  50000)
+
     # binomial
     for shape in shapes:
         n = _np.random.randint(5, 10)
@@ -2089,13 +2146,14 @@ def test_gluon_kl():
         dist = mgp.MultivariateNormal(loc, cov=sigma)
         desired_shape = (loc + sigma[..., 0]).shape[:-1]
         _test_zero_kl(dist, desired_shape)
-    
+
     batch_shapes = loc_shapes
     # dirichlet
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
         desired_shape = (batch_shape if batch_shape is not None else ())
         dist = mgp.Dirichlet
-        alpha = lambda: np.random.uniform(0.5, 1.5, size=(desired_shape + (event_shape,)))
+        def alpha(): return np.random.uniform(
+            0.5, 1.5, size=(desired_shape + (event_shape,)))
         _test_zero_kl(_dist_factory(dist, alpha), desired_shape)
         if monte_carlo_test:
             _test_monte_carlo(_dist_factory(dist, alpha),
@@ -2106,19 +2164,21 @@ def test_gluon_kl():
     for dist in [mgp.Categorical, mgp.OneHotCategorical]:
         for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes):
             prob = (lambda:
-                np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape)))
+                    np.array(_np.random.dirichlet([1 / event_shape] * event_shape, size=batch_shape)))
             _test_zero_kl(_dist_factory(dist, event_shape, prob), batch_shape)
             if monte_carlo_test:
                 _test_monte_carlo(_dist_factory(dist, event_shape, prob),
-                                _dist_factory(dist, event_shape, prob),
-                                repeated_times)
+                                  _dist_factory(dist, event_shape, prob),
+                                  repeated_times)
 
     # Test kl between different distributions
     # KL(Uniform || ...)
     for shape in shapes:
         rhs_dists = [
-            mgp.Normal(np.random.uniform(-1, 1, shape), np.random.uniform(0.5, 1.5, shape)),
-            mgp.Gumbel(np.random.uniform(-1, 1, shape), np.random.uniform(0.5, 1.5, shape)),
+            mgp.Normal(np.random.uniform(-1, 1, shape),
+                       np.random.uniform(0.5, 1.5, shape)),
+            mgp.Gumbel(np.random.uniform(-1, 1, shape),
+                       np.random.uniform(0.5, 1.5, shape)),
         ]
         for rhs_dist in rhs_dists:
             low = np.random.uniform(-1, 1, shape)
@@ -2128,13 +2188,16 @@ def test_gluon_kl():
             assert kl.shape == low.shape
             if monte_carlo_test:
                 _test_monte_carlo(lhs_dist, rhs_dist, repeated_times)
-    
+
     # KL(Exponential || ...)
     for shape in shapes:
         rhs_dists = [
-            mgp.Normal(np.random.uniform(-1, 1, shape), np.random.uniform(0.5, 1.5, shape)),
-            mgp.Gumbel(np.random.uniform(-1, 1, shape), np.random.uniform(0.5, 1.5, shape)),
-            mgp.Gamma(np.random.uniform(0.5, 1.5, shape), np.random.uniform(0.5, 1.5, shape))   
+            mgp.Normal(np.random.uniform(-1, 1, shape),
+                       np.random.uniform(0.5, 1.5, shape)),
+            mgp.Gumbel(np.random.uniform(-1, 1, shape),
+                       np.random.uniform(0.5, 1.5, shape)),
+            mgp.Gamma(np.random.uniform(0.5, 1.5, shape),
+                      np.random.uniform(0.5, 1.5, shape))
         ]
         for rhs_dist in rhs_dists:
             s = np.random.uniform(size=shape)
@@ -2173,7 +2236,7 @@ def test_gluon_stochastic_block():
         assert kl.shape == loc.shape
 
 
-@pytest.mark.skip("Stochastic sequential needs reimplementation")
+# @pytest.mark.skip("Stochastic sequential needs reimplementation")
 @with_seed()
 @use_np
 def test_gluon_stochastic_sequential():
@@ -2203,9 +2266,12 @@ def test_gluon_stochastic_sequential():
         accumulated_loss = net.losses
         assert len(accumulated_loss) == 2
         assert_almost_equal(accumulated_loss[0][0].asnumpy(), _np.ones(shape))
-        assert_almost_equal(accumulated_loss[0][1].asnumpy(), _np.ones(shape) - 1)
-        assert_almost_equal(accumulated_loss[1][0].asnumpy(), _np.ones(shape) * 9)
-        assert_almost_equal(accumulated_loss[1][1].asnumpy(), _np.ones(shape) + 1)
+        assert_almost_equal(
+            accumulated_loss[0][1].asnumpy(), _np.ones(shape) - 1)
+        assert_almost_equal(
+            accumulated_loss[1][0].asnumpy(), _np.ones(shape) * 9)
+        assert_almost_equal(
+            accumulated_loss[1][1].asnumpy(), _np.ones(shape) + 1)
 
 
 @with_seed()
@@ -2227,14 +2293,17 @@ def test_gluon_constraint():
 
     _s = np.random.randn(5, 10, 10)
     psd_matrix = np.matmul(_s, np.swapaxes(_s, -1, -2)) + np.eye(_s.shape[-1])
-    
+
     constraints_zoo = [
         # (constraint_type, constraint_param, test_samples)
         ('Real', (), [np.random.randn(2, 2)]),
         ('Boolean', (), [np.random.randint(0, 20, size=(2, 2)) % 2 == 0]),
-        ('Interval', [np.zeros((2, 2)), np.ones((2, 2))], [np.random.rand(2, 2)]),
-        ('OpenInterval', [np.zeros((2, 2)), np.ones((2, 2))], [np.random.rand(2, 2)]),
-        ('HalfOpenInterval', [np.zeros((2, 2)), np.ones((2, 2))], [np.random.rand(2, 2)]),
+        ('Interval', [np.zeros((2, 2)), np.ones(
+            (2, 2))], [np.random.rand(2, 2)]),
+        ('OpenInterval', [np.zeros((2, 2)), np.ones(
+            (2, 2))], [np.random.rand(2, 2)]),
+        ('HalfOpenInterval', [np.zeros((2, 2)),
+                              np.ones((2, 2))], [np.random.rand(2, 2)]),
         ('IntegerInterval', [np.zeros((2, 2)), np.ones((2, 2)) * 10],
             [np.random.randint(0, 10, size=(2, 2)).astype('float32')]),
         ('IntegerOpenInterval', [np.zeros((2, 2)), np.ones((2, 2)) * 10],
@@ -2249,14 +2318,16 @@ def test_gluon_constraint():
             [np.random.randint(1, 10, size=(2, 2)).astype('float32')]),
         ('IntegerGreaterThanEq', [np.zeros((2, 2))],
             [np.random.randint(0, 10, size=(2, 2)).astype('float32')]),
-        ('IntegerLessThan', [np.ones((2, 2)) * 10], 
+        ('IntegerLessThan', [np.ones((2, 2)) * 10],
             [np.random.randint(0, 9, size=(2, 2)).astype('float32')]),
         ('IntegerLessThanEq', [np.ones((2, 2)) * 10],
             [np.random.randint(0, 10, size=(2, 2)).astype('float32')]),
         ('Positive', (), [np.random.rand(2, 2)]),
         ('NonNegative', (), [np.random.rand(2, 2)]),
-        ('PositiveInteger', (), [np.random.randint(1, 5, size=(2, 2)).astype('float32')]),
-        ('NonNegativeInteger', (), [np.random.randint(0, 5, size=(2, 2)).astype('float32')]),
+        ('PositiveInteger', (), [np.random.randint(
+            1, 5, size=(2, 2)).astype('float32')]),
+        ('NonNegativeInteger', (), [np.random.randint(
+            0, 5, size=(2, 2)).astype('float32')]),
         ('Simplex', (), [npx.softmax(np.random.randn(4, 4), axis=-1)]),
         ('LowerTriangular', (), [np.tril(np.random.randn(5, 3, 3))]),
         ('LowerCholesky', (), [np.linalg.cholesky(psd_matrix)]),
@@ -2304,8 +2375,10 @@ def test_gluon_domain_map():
         ('GreaterThan', [np.random.randn(2, 2)]),
         ('GreaterThanEq', [np.random.randn(2, 2)]),
         ('LessThan', [np.random.randn(2, 2)]),
-        ('Interval', [np.random.uniform(0, 1, (2, 2)), np.random.uniform(2, 3, (2, 2))]),
-        ('HalfOpenInterval', [np.random.uniform(0, 1, (2, 2)), np.random.uniform(2, 3, (2, 2))])
+        ('Interval', [np.random.uniform(0, 1, (2, 2)),
+                      np.random.uniform(2, 3, (2, 2))]),
+        ('HalfOpenInterval', [np.random.uniform(
+            0, 1, (2, 2)), np.random.uniform(2, 3, (2, 2))])
     ]
 
     test_sample = np.random.randn(2, 2)
@@ -2316,5 +2389,7 @@ def test_gluon_domain_map():
                 net = TestDomainMap(constraint_type, bijective)
                 if hybridize:
                     net.hybridize()
-                constrained_out, constraint_status = net(test_sample, *constraint_arg)
-                assert_almost_equal(constrained_out.asnumpy(), constraint_status.asnumpy())
+                constrained_out, constraint_status = net(
+                    test_sample, *constraint_arg)
+                assert_almost_equal(constrained_out.asnumpy(),
+                                    constraint_status.asnumpy())

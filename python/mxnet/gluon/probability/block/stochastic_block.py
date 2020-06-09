@@ -16,12 +16,12 @@
 # under the License.
 
 # coding: utf-8
-# pylint: disable=wildcard-import
 """Stochastic block class."""
 __all__ = ['StochasticBlock', 'StochasticSequential']
 
 from functools import wraps
 from ...block import HybridBlock
+from ...nn import HybridSequential
 from ...utils import _indent
 
 
@@ -89,10 +89,8 @@ class StochasticBlock(HybridBlock):
 class StochasticSequential(StochasticBlock):
     """Stack StochasticBlock sequentially.
     """
-
     def __init__(self, prefix=None, params=None):
-        super(StochasticSequential, self).__init__(
-            prefix=prefix, params=params)
+        super(StochasticSequential, self).__init__(prefix=prefix, params=params)
         self._layers = []
 
     def add(self, *blocks):
@@ -102,9 +100,16 @@ class StochasticSequential(StochasticBlock):
             self.register_child(block)
 
     @StochasticBlock.collectLoss
-    def hybrid_forward(self, F, x, *args, **kwargs):
+    def hybrid_forward(self, F, x, *args):
+        for block in self._children.values():
+            x = block()(x, *args)
+            args = []
+            if isinstance(x, (tuple, list)):
+                args = x[1:]
+                x = x[0]
+        if args:
+            x = tuple([x] + list(args))
         for block in self._layers:
-            x = block(x)
             if hasattr(block, '_losses'):
                 self.add_loss(block._losses)
         return x
@@ -112,20 +117,20 @@ class StochasticSequential(StochasticBlock):
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
         modstr = '\n'.join(['  ({key}): {block}'.format(key=key,
-                                                        block=_indent(block.__repr__(), 2))
+                                                        block=_indent(block().__repr__(), 2))
                             for key, block in self._children.items()])
-        return s.format(name=self.__class__.__name__,
-                        modstr=modstr)
+        return s.format(name=self.__class__.__name__, modstr=modstr)
 
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
             net = type(self)(prefix=self._prefix)
             with net.name_scope():
-                net.add(*layers)
+                net.add(*(l() for l in layers))
             return net
         else:
-            return layers
+            return layers()
 
     def __len__(self):
         return len(self._children)
+
