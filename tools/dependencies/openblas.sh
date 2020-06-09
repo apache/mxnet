@@ -35,9 +35,9 @@ if [[ (! -e $DEPS_PATH/lib/libopenblas.a) ]]; then
     if [[ "$FC" == *"flang"* ]]; then
         LD_LIBRARY_PATH="/usr/local/flang/lib:$LD_LIBRARY_PATH" \
           LDFLAGS="-L/usr/local/flang/lib" CFLAGS="-I/usr/local/flang/include" \
-          $MAKE DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_OPENMP=1
+          CFLAGS="-fPIC" CXXFLAGS="-fPIC" $MAKE DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_OPENMP=1
     else
-        $MAKE DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_OPENMP=1
+        CFLAGS="-fPIC" CXXFLAGS="-fPIC" $MAKE DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_OPENMP=1
     fi
 
     $MAKE PREFIX=$DEPS_PATH install

@@ -344,7 +344,7 @@ build_centos7_cpu() {
 build_centos7_cpu_make() {
     set -ex
     cd /work/mxnet
-    source /opt/rh/llvm-toolset-7.0/enable
+    source /opt/rh/devtoolset-7/enable
     make \
         DEV=1 \
         USE_LAPACK=1 \
