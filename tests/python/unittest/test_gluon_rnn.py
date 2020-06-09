@@ -138,7 +138,7 @@ def test_lstmp():
             w = mx.nd.random.uniform(shape=value.shape)
             value.set_data(w.copy())
             cur = name.split("_")[0]
-            stack_layer_params["{}.{}_cell{}.".format(cur[1:], name[0], name[len(cur)+1:])].set_data(w.copy())
+            stack_layer_params["{}.{}_cell.{}".format(cur[1:], name[0], name[len(cur)+1:])].set_data(w.copy())
 
         fused_output, fused_states = fused_layer(lstm_input.copy(), fused_begin_state)
         stack_output, stack_states = stack_layer.unroll(seq_len, lstm_input.copy(), begin_state=stack_begin_state,

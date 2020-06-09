@@ -62,7 +62,7 @@ class Parameter(object):
 
     Parameters
     ----------
-    name : str
+    name : str, default ''
         Name of this parameter.
     grad_req : {'write', 'add', 'null'}, default 'write'
         Specifies how to update gradient to grad arrays.
@@ -104,7 +104,7 @@ class Parameter(object):
     wd_mult : float
         Local weight decay multiplier for this Parameter.
     """
-    def __init__(self, name, grad_req='write', shape=None, dtype=mx_real_t,
+    def __init__(self, name='', grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
                  differentiable=True, stype='default', grad_stype='default'):
         self._var = None
@@ -737,7 +737,7 @@ class Constant(Parameter):
         initializer.alias(init_name)(Init)
 
         super(Constant, self).__init__(
-            grad_req='null', shape=value.shape, dtype=value.dtype,
+            name='const', grad_req='null', shape=value.shape, dtype=value.dtype,
             init=init_name)
 
     def __repr__(self):
