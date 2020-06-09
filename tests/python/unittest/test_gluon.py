@@ -1573,8 +1573,8 @@ def test_symbol_block_save_load():
             super(Net, self).__init__()
             backbone = gluon.model_zoo.vision.resnet18_v1()
             data = mx.sym.var('data')
-            featnames = ['features_4_1_activation0', 'features_5_1_activation0', 'features_6_1_activation0']
-            out_names = ['_'.join([featname, 'output']) for featname in featnames]
+            featnames = [backbone.features[i][1].name for i in range(4, 7)]
+            out_names = ['_'.join([featname, 'activation0_output']) for featname in featnames]
             internals = backbone(data).get_internals()
             outs = [internals[out_name] for out_name in out_names]
             self.backbone = gluon.SymbolBlock(outs, data, params=backbone.collect_params())
@@ -1782,22 +1782,22 @@ def test_op_hook_output_names():
     model.add(mx.gluon.nn.Dense(2))
     model.initialize()
     model.hybridize()
-    check_name(model, ["0_fwd_output"])
+    check_name(model, [model[0].name + "_fwd_output"])
 
     # Test with Activation, FListInputNames not registered, input name will have _input appended
     model = mx.gluon.nn.HybridSequential()
     model.add(mx.gluon.nn.Activation("relu"))
     model.initialize()
     model.hybridize()
-    check_name(model, ["0_fwd_output"])
+    check_name(model, [model[0].name + "_fwd_output"])
 
     # Test with Pooling, monitor_all is set to True
     model = mx.gluon.nn.HybridSequential()
     model.add(mx.gluon.nn.AvgPool1D())
     model.initialize()
     model.hybridize()
-    check_name(model, ['0_fwd_data', '0_fwd_output'], expected_opr_names=["Pooling"],
-               monitor_all=True)
+    check_name(model, [model[0].name + '_fwd_data', model[0].name + '_fwd_output'], 
+               expected_opr_names=["Pooling"], monitor_all=True)
 
     # stack two layers and test
     model = mx.gluon.nn.HybridSequential()
@@ -1806,17 +1806,16 @@ def test_op_hook_output_names():
     model.initialize()
     model.hybridize()
     check_name(model,
-               ['0_fwd_data', '0_fwd_weight',
-                '0_fwd_bias', '0_fwd_output',
-                '1_fwd_input0', '1_fwd_output'], monitor_all=True)
+               [model[0].name + '_fwd_data', model[0].name + '_fwd_weight',
+                model[0].name + '_fwd_bias', model[0].name + '_fwd_output',
+                model[1].name + '_fwd_input0', model[1].name + '_fwd_output'], monitor_all=True)
 
     # check with different hybridize modes
     model.hybridize(static_alloc=True)
     check_name(model,
-               ['0_fwd_data', '0_fwd_weight',
-                '0_fwd_bias', '0_fwd_output',
-                '1_fwd_input0', '1_fwd_output'], monitor_all=True)
-
+               [model[0].name + '_fwd_data', model[0].name + '_fwd_weight',
+                model[0].name + '_fwd_bias', model[0].name + '_fwd_output',
+                model[1].name + '_fwd_input0', model[1].name + '_fwd_output'], monitor_all=True)
 
 @with_seed()
 def test_apply():

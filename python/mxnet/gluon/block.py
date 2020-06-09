@@ -493,7 +493,7 @@ class Block(object):
         error_str = "file: %s" % (filename) if filename else "param_dict"
         loaded = {k[4:] if k.startswith('arg:') or k.startswith('aux:') else k: v \
                   for k, v in param_dict.items()}
-        if isinstance(self, SymbolBlock):
+        if isinstance(self, SymbolBlock) and not self._structured_named:
             # load parameters using parameters' unique names
             loaded = {k.split(':')[1] : v for k, v in loaded.items()}
         else:
@@ -1528,10 +1528,16 @@ class SymbolBlock(HybridBlock):
 
     def __init__(self, outputs, inputs, params=None):
         super(SymbolBlock, self).__init__()
+        structure = defaultdict(list)
         if params is None:
             params = {}
-
-        params = {p.name : p for p in params.values()}    
+            self._structured_named = False
+        else:
+            self._structured_named = True
+            params_inv = defaultdict(list)
+            for k, v in params.items():
+                structure[v.name].append(k)
+            params = {p.name : p for p in params.values()}    
 
         if isinstance(inputs, symbol.Symbol) and len(inputs.list_outputs()) == 1:
             inputs = [inputs]
@@ -1568,12 +1574,19 @@ class SymbolBlock(HybridBlock):
 
         def _set_params_attr(name, **kwargs):
             if params.get(name) is None:
-                self._reg_params[name] = Parameter(**kwargs)
-                self._reg_params[name]._name = name
-                return
-            param = params[name]
-            param._check_and_setattr(**kwargs)
-            self._reg_params[name] = param
+                param = Parameter(**kwargs)
+                param._name = name
+            else:
+                param = params[name]
+                param._check_and_setattr(**kwargs)
+            if self._structured_named:
+                lis = structure[name]
+                assert len(lis) > 0, "Can not find structured name for Parameter %s in 'params'. " \
+                    "Please check 'params' is complete!" % name
+                for structured_name in lis:
+                    self._reg_params[name] = param
+            else:
+                self._reg_params[name] = param   
 
         for i, arg in enumerate(arg_params):
             if arg not in input_names:
