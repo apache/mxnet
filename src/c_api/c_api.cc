@@ -1366,7 +1366,7 @@ int MXLoadTVMOp(const char *libpath) {
   tvm::runtime::TVMOpModule *libpath_module =  tvm::runtime::TVMOpModule::Get();
   libpath_module->Load(libpath);
   tvm::runtime::TVMOpModule cubin_module;
-  cubin_module.Load("/home/ubuntu/Documents/mxnet/build/libtvmop.cubin");
+  cubin_module.Load("libtvmop.cubin");
   libpath_module->Import(cubin_module);
   API_END();
 }
