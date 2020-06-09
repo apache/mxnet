@@ -30,6 +30,7 @@
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
 #include "./imperative_utils.h"
+#include "../nnvm/error.h"
 
 namespace mxnet {
 namespace {
@@ -164,10 +165,14 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
 
   // There are inputs in computation graph that require gradients
   if (!xs.empty()) {
-    *grad_graph = pass::MXGradient(
-      *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
-      exec::AggregateGradient, nullptr,
-      zero_ops, "_copy");
+    try {
+      *grad_graph = pass::MXGradient(
+           *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
+           exec::AggregateGradient, nullptr,
+           zero_ops, "_copy");
+    } catch (const nnvm::pass::InvalidGraphError &e) {
+      *grad_graph = nnvm::Graph();
+    }
   } else {
     *grad_graph = nnvm::Graph();
   }
