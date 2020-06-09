@@ -1404,12 +1404,7 @@ def test_npx_batch_dot():
 
 @with_seed()
 @use_np
-@pytest.mark.parametrize('shape', [(24, 2), (24, 3, 4),
-    (24, 8, 4, 5), (24, 5, 6, 4, 5)])
-@pytest.mark.parametrize('fix_gamma', [False, True])
-@pytest.mark.parametrize('cudnn_off', [False, True])
-@pytest.mark.parametrize('output_mean_var', [False, True])
-def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
+def test_npx_batch_norm():
     momentum = 0.9
     epsilon = 1e-5
     class TestBatchNorm(HybridBlock):
@@ -1428,7 +1423,8 @@ def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
                         fix_gamma=self.fix_gamma, **self.kwargs)
             return output
 
-    def _test_batchnorm_impl(axis,
+    def _test_batchnorm_impl(shape, fix_gamma, cudnn_off, output_mean_var,
+                             axis,
                              data_grad_req, gamma_grad_req, beta_grad_req):
         kwargs = dict(output_mean_var=output_mean_var)
         kwargs.update(dict(axis=axis, cudnn_off=cudnn_off))
@@ -1501,14 +1497,14 @@ def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
             nd = 1.0 / np.sqrt(data_var + epsilon)
             nx = xsm * nd
             m = _np.prod(shape) / shape[axis]
-            dvar = (dnx * xsm).sum(axis=reduce_axis, keepdims=True,
+            dvar = np.sum(dnx * xsm, axis=reduce_axis, keepdims=True,
                                   ) * (-0.5) * np.power(nd, 3)
-            dmean = -nd * dnx.sum(axis=reduce_axis, keepdims=True) - \
+            dmean = -nd * np.sum(dnx, axis=reduce_axis, keepdims=True) - \
                 dvar * xsm.mean(axis=reduce_axis, keepdims=True,
                                 ) * 2.0
             dX = dnx * nd + dvar * xsm * (2.0 / m) + dmean * (1.0 / m)
-            dW = (ograd * nx).sum(axis=reduce_axis)
-            db = ograd.sum(axis=reduce_axis)
+            dW = np.sum(ograd * nx, axis=reduce_axis)
+            db = np.sum(ograd, axis=reduce_axis)
             adX = dX if data_grad_req != 'add' else adX + dX
             adW = dW if gamma_grad_req != 'add' else adW + dW
             adb = db if beta_grad_req != 'add' else adb + db
@@ -1545,15 +1541,23 @@ def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
                 assert_almost_equal(
                     bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
 
-    grad_reqs = ['write'] if len(shape) != 4 else ['null', 'write', 'add']
-    for data_grad_req in grad_reqs:
-        for gamma_grad_req in grad_reqs:
-            if fix_gamma and gamma_grad_req != 'null':
-                continue
-            for beta_grad_req in grad_reqs:
-                for axis in range(len(shape)):
-                    _test_batchnorm_impl(axis,
-                        data_grad_req, gamma_grad_req, beta_grad_req)
+    shapes = [(24, 2), (24, 3, 4), (24, 8, 4, 5), (24, 5, 6, 4, 5)]
+    bools = [False, True]
+    for shape, fix_gamma, cudnn_off, output_mean_var in itertools.product(
+            shapes, bools, bools, bools):
+        grad_reqs = ['write'] if len(shape) != 4 else ['null', 'write', 'add']
+        for data_grad_req in grad_reqs:
+            for gamma_grad_req in grad_reqs:
+                if fix_gamma and gamma_grad_req != 'null':
+                    continue
+                for beta_grad_req in grad_reqs:
+                    for axis in range(len(shape)):
+                        _test_batchnorm_impl(
+                            shape, fix_gamma, cudnn_off, output_mean_var,
+                            axis,
+                            data_grad_req,
+                            gamma_grad_req, beta_grad_req)
+
 
 @with_seed()
 @use_np

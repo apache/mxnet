@@ -1823,24 +1823,20 @@ def test_batchnorm_training():
 
 
 @with_seed()
-@pytest.mark.parametrize('op_name', ['BatchNorm', 'SyncBatchNorm'])
-@pytest.mark.parametrize('shape', [(24, 2), (24, 3, 4),
-    (24, 8, 4, 5), (24, 5, 6, 4, 5)])
-@pytest.mark.parametrize('fix_gamma', [False, True])
-@pytest.mark.parametrize('cudnn_off', [False, True])
-@pytest.mark.parametrize('output_mean_var', [False, True])
-def test_batchnorm(op_name, shape, fix_gamma, cudnn_off, output_mean_var):
-    if op_name == 'BatchNorm':
-        op = mx.nd.BatchNorm
-    elif op_name == 'SyncBatchNorm':
-        op = mx.nd.contrib.SyncBatchNorm
-    else:
-        raise ValueError(f'Not supported {op_name}')
+def test_batchnorm():
     momentum = 0.9
     epsilon = 1e-5
 
-    def _test_batchnorm_impl(axis,
+    def _test_batchnorm_impl(op_name, shape, fix_gamma, cudnn_off, output_mean_var,
+                             axis,
                              data_grad_req, gamma_grad_req, beta_grad_req):
+
+        if op_name == 'BatchNorm':
+            op = mx.nd.BatchNorm
+        elif op_name == 'SyncBatchNorm':
+            op = mx.nd.contrib.SyncBatchNorm
+        else:
+            raise ValueError(f'Not supported {op_name}')
         kwargs = dict(output_mean_var=output_mean_var)
         if op_name == 'SyncBatchNorm':
             if axis != 1:
@@ -1967,16 +1963,23 @@ def test_batchnorm(op_name, shape, fix_gamma, cudnn_off, output_mean_var):
                 assert_almost_equal(
                     bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
 
-    grad_reqs = ['write'] if len(shape) != 4 else ['null', 'write', 'add']
-    for data_grad_req in grad_reqs:
-        for gamma_grad_req in grad_reqs:
-            if fix_gamma and gamma_grad_req != 'null':
-                continue
-            for beta_grad_req in grad_reqs:
-                for axis in range(len(shape)):
-                    _test_batchnorm_impl(axis,
-                        data_grad_req, gamma_grad_req, beta_grad_req)
-
+    op_names = ['BatchNorm', 'SyncBatchNorm']
+    shapes = [(24, 2), (24, 3, 4), (24, 8, 4, 5), (24, 5, 6, 4, 5)]
+    bools = [False, True]
+    for op_name, shape, fix_gamma, cudnn_off, output_mean_var in itertools.product(
+            op_names, shapes, bools, bools, bools):
+        grad_reqs = ['write'] if len(shape) != 4 else ['null', 'write', 'add']
+        for data_grad_req in grad_reqs:
+            for gamma_grad_req in grad_reqs:
+                if fix_gamma and gamma_grad_req != 'null':
+                    continue
+                for beta_grad_req in grad_reqs:
+                    for axis in range(len(shape)):
+                        _test_batchnorm_impl(
+                            op_name, shape, fix_gamma, cudnn_off, output_mean_var,
+                            axis,
+                            data_grad_req,
+                            gamma_grad_req, beta_grad_req)
 
 @with_seed()
 def test_groupnorm():
