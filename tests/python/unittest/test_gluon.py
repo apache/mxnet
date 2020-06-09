@@ -278,11 +278,11 @@ def test_collect_parameters():
     net.add(nn.Conv2D(10, 3))
     net.add(nn.Dense(10, activation='relu'))
     assert set(net.collect_params().keys()) == \
-        set(['0_weight', '0_bias','1_weight','1_bias'])
+        set(['0.weight', '0.bias','1.weight','1.bias'])
     assert set(net.collect_params('.*weight').keys()) == \
-        set(['0_weight', '1_weight'])
-    assert set(net.collect_params('0_bias|1_bias').keys()) == \
-        set(['0_bias', '1_bias'])
+        set(['0.weight', '1.weight'])
+    assert set(net.collect_params('0.bias|1.bias').keys()) == \
+        set(['0.bias', '1.bias'])
 
 @with_seed()
 def test_basic():

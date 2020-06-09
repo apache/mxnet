@@ -118,7 +118,7 @@ class Parameter(object):
         if isinstance(shape, int):
             shape = (shape,)
         self._shape = shape
-        self._name = str(uuid.uuid4()).replace('-', '_')
+        self._name = 'param_' + str(uuid.uuid4()).replace('-', '_')
         self._dtype = dtype
         self.lr_mult = lr_mult
         self.wd_mult = wd_mult

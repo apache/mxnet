@@ -202,19 +202,20 @@ def test_residual():
     inputs = [mx.sym.Variable('t%d_data'%i) for i in range(2)]
     outputs, _ = cell.unroll(2, inputs)
     outputs = mx.sym.Group(outputs)
-    assert sorted(cell.collect_params().keys()) == \
-           ['base_cell_h2h_bias', 'base_cell_h2h_weight', 'base_cell_i2h_bias', 'base_cell_i2h_weight']
+    params = cell.collect_params()
+    assert sorted(params.keys()) == \
+           ['base_cell.h2h_bias', 'base_cell.h2h_weight', 'base_cell.i2h_bias', 'base_cell.i2h_weight']
     # assert outputs.list_outputs() == \
     #        ['rnn_t0_out_plus_residual_output', 'rnn_t1_out_plus_residual_output']
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10, 50), t1_data=(10, 50))
     assert outs == [(10, 50), (10, 50)]
-    outputs = outputs.eval(t0_data=mx.nd.ones((10, 50)),
-                           t1_data=mx.nd.ones((10, 50)),
-                           base_cell_i2h_weight=mx.nd.zeros((150, 50)),
-                           base_cell_i2h_bias=mx.nd.zeros((150,)),
-                           base_cell_h2h_weight=mx.nd.zeros((150, 50)),
-                           base_cell_h2h_bias=mx.nd.zeros((150,)))
+    outputs = outputs.eval(**{'t0_data':mx.nd.ones((10, 50)),
+                              't1_data':mx.nd.ones((10, 50)),
+                              params['base_cell.i2h_weight'].name:mx.nd.zeros((150, 50)),
+                              params['base_cell.i2h_bias'].name:mx.nd.zeros((150,)),
+                              params['base_cell.h2h_weight'].name:mx.nd.zeros((150, 50)),
+                              params['base_cell.h2h_bias'].name:mx.nd.zeros((150,))})
     expected_outputs = np.ones((10, 50))
     assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
     assert np.array_equal(outputs[1].asnumpy(), expected_outputs)
@@ -229,26 +230,27 @@ def test_residual_bidirectional():
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
     outputs, _ = cell.unroll(2, inputs, merge_outputs=False)
     outputs = mx.sym.Group(outputs)
-    assert sorted(cell.collect_params().keys()) == \
-           ['base_cell_l_cell_h2h_bias', 'base_cell_l_cell_h2h_weight', 
-            'base_cell_l_cell_i2h_bias', 'base_cell_l_cell_i2h_weight',
-            'base_cell_r_cell_h2h_bias', 'base_cell_r_cell_h2h_weight', 
-            'base_cell_r_cell_i2h_bias', 'base_cell_r_cell_i2h_weight']
+    params = cell.collect_params() 
+    assert sorted(params.keys()) == \
+           ['base_cell.l_cell.h2h_bias', 'base_cell.l_cell.h2h_weight', 
+            'base_cell.l_cell.i2h_bias', 'base_cell.l_cell.i2h_weight',
+            'base_cell.r_cell.h2h_bias', 'base_cell.r_cell.h2h_weight', 
+            'base_cell.r_cell.i2h_bias', 'base_cell.r_cell.i2h_weight']
     # assert outputs.list_outputs() == \
     #        ['bi_t0_plus_residual_output', 'bi_t1_plus_residual_output']
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10, 50), rnn_t1_data=(10, 50))
     assert outs == [(10, 50), (10, 50)]
-    outputs = outputs.eval(rnn_t0_data=mx.nd.ones((10, 50))+5,
-                           rnn_t1_data=mx.nd.ones((10, 50))+5,
-                           base_cell_l_cell_i2h_weight=mx.nd.zeros((75, 50)),
-                           base_cell_l_cell_i2h_bias=mx.nd.zeros((75,)),
-                           base_cell_l_cell_h2h_weight=mx.nd.zeros((75, 25)),
-                           base_cell_l_cell_h2h_bias=mx.nd.zeros((75,)),
-                           base_cell_r_cell_i2h_weight=mx.nd.zeros((75, 50)),
-                           base_cell_r_cell_i2h_bias=mx.nd.zeros((75,)),
-                           base_cell_r_cell_h2h_weight=mx.nd.zeros((75, 25)),
-                           base_cell_r_cell_h2h_bias=mx.nd.zeros((75,)))
+    outputs = outputs.eval(**{'rnn_t0_data':mx.nd.ones((10, 50))+5,
+                              'rnn_t1_data':mx.nd.ones((10, 50))+5,
+                              params['base_cell.l_cell.i2h_weight'].name:mx.nd.zeros((75, 50)),
+                              params['base_cell.l_cell.i2h_bias'].name:mx.nd.zeros((75,)),
+                              params['base_cell.l_cell.h2h_weight'].name:mx.nd.zeros((75, 25)),
+                              params['base_cell.l_cell.h2h_bias'].name:mx.nd.zeros((75,)),
+                              params['base_cell.r_cell.i2h_weight'].name:mx.nd.zeros((75, 50)),
+                              params['base_cell.r_cell.i2h_bias'].name:mx.nd.zeros((75,)),
+                              params['base_cell.r_cell.h2h_weight'].name:mx.nd.zeros((75, 25)),
+                              params['base_cell.r_cell.h2h_bias'].name:mx.nd.zeros((75,))})
     expected_outputs = np.ones((10, 50))+5
     assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
     assert np.array_equal(outputs[1].asnumpy(), expected_outputs)
@@ -268,15 +270,16 @@ def test_stack():
     for i in range(5):
         if i==1:
             continue
-        assert '%d_h2h_weight'%i in keys
-        assert '%d_h2h_bias'%i in keys
-        assert '%d_i2h_weight'%i in keys
-        assert '%d_i2h_bias'%i in keys
-    assert '1_base_cell_h2h_weight' in keys
-    assert '1_base_cell_h2h_bias' in keys
-    assert '1_base_cell_i2h_weight' in keys
-    assert '1_base_cell_i2h_bias' in keys
-    assert outputs.list_outputs() == ['4_t0_out_output', '4_t1_out_output', '4_t2_out_output']
+        assert '%d.h2h_weight'%i in keys
+        assert '%d.h2h_bias'%i in keys
+        assert '%d.i2h_weight'%i in keys
+        assert '%d.i2h_bias'%i in keys
+    assert '1.base_cell.h2h_weight' in keys
+    assert '1.base_cell.h2h_bias' in keys
+    assert '1.base_cell.i2h_weight' in keys
+    assert '1.base_cell.i2h_bias' in keys
+    assert outputs.list_outputs() == \
+        [cell[4].name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
@@ -297,15 +300,16 @@ def test_hybridstack():
     for i in range(5):
         if i==1:
             continue
-        assert '%d_h2h_weight'%i in keys
-        assert '%d_h2h_bias'%i in keys
-        assert '%d_i2h_weight'%i in keys
-        assert '%d_i2h_bias'%i in keys
-    assert '1_base_cell_h2h_weight' in keys
-    assert '1_base_cell_h2h_bias' in keys
-    assert '1_base_cell_i2h_weight' in keys
-    assert '1_base_cell_i2h_bias' in keys
-    assert outputs.list_outputs() == ['4_t0_out_output', '4_t1_out_output', '4_t2_out_output']
+        assert '%d.h2h_weight'%i in keys
+        assert '%d.h2h_bias'%i in keys
+        assert '%d.i2h_weight'%i in keys
+        assert '%d.i2h_bias'%i in keys
+    assert '1.base_cell.h2h_weight' in keys
+    assert '1.base_cell.h2h_bias' in keys
+    assert '1.base_cell.i2h_weight' in keys
+    assert '1.base_cell.i2h_bias' in keys
+    assert outputs.list_outputs() == \
+        [cell[4].name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
@@ -383,7 +387,7 @@ def test_layer_bidirectional():
     ref_net_params = ref_net.collect_params()
     for k in weights:
         net_params[k].set_data(weights[k])
-        ref_net_params[k.replace('l0', '_lstm_fwd_l0').replace('r0', '_lstm_bwd_l0')].set_data(weights[k])
+        ref_net_params[k.replace('l0', '_lstm_fwd.l0').replace('r0', '_lstm_bwd.l0')].set_data(weights[k])
 
     data = mx.random.uniform(shape=(11, 10, in_size))
     assert_allclose(net(data).asnumpy(), ref_net(data).asnumpy(), rtol=1e-04, atol=1e-02)

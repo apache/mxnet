@@ -339,10 +339,10 @@ class Block(object):
         children's Parameters(default), also can returns the select :py:class:`Dict`
         which match some given regular expressions.
 
-        For example, collect the specified parameters in ['conv1_weight', 'conv1_bias', 'fc_weight',
-        'fc_bias']::
+        For example, collect the specified parameters in ['conv1.weight', 'conv1.bias', 'fc.weight',
+        'fc.bias']::
 
-            model.collect_params('conv1_weight|conv1_bias|fc_weight|fc_bias')
+            model.collect_params('conv1.weight|conv1.bias|fc.weight|fc.bias')
 
         or collect all parameters whose names end with 'weight' or 'bias', this can be done
         using regular expressions::
@@ -364,7 +364,7 @@ class Block(object):
 
     def _collect_params_with_prefix(self, prefix='', select=None):
         if prefix:
-            prefix += '_'
+            prefix += '.'
         if select is None:
             ret = {prefix + key : val for key, val in self._reg_params.items()}
         else:
@@ -498,7 +498,7 @@ class Block(object):
             loaded = {k.split(':')[1] : v for k, v in loaded.items()}
         else:
             loaded = {k.split(':')[0] : v for k, v in loaded.items()}
-            loaded = {k.replace('.', '_'): v for k, v in loaded.items()} # compatibility
+
         if not allow_missing:
             params_inv = defaultdict(list)
             for k, v in params.items():
@@ -718,7 +718,7 @@ class Block(object):
 
     def _shared_parameters(self, shared, shared_set, prefix=""):
         if prefix:
-            prefix += '_'
+            prefix += '.'
         for name in self._reg_params:
             key = prefix + name
             if shared.get(key) is not None:
@@ -1584,7 +1584,7 @@ class SymbolBlock(HybridBlock):
                 assert len(lis) > 0, "Can not find structured name for Parameter %s in 'params'. " \
                     "Please check 'params' is complete!" % name
                 for structured_name in lis:
-                    self._reg_params[name] = param
+                    self._reg_params[structured_name] = param
             else:
                 self._reg_params[name] = param   
 
