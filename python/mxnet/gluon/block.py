@@ -372,14 +372,7 @@ class Block(object):
             ret = {prefix + key : val for key, val in self._reg_params.items() if pattern.match(prefix + key)}
 
         for name, child in self._children.items():
-            child_prefix = prefix + name if not isinstance(child(), SymbolBlock) else ''
-            child_ret = child()._collect_params_with_prefix(child_prefix, select)
-            commons = set(child_ret.keys()) & set(ret.keys())
-            if len(commons) > 0:
-                for common in commons:
-                    warnings.warn('Parmeter name "{}" occurs more than once. \
-                                  Please change the corresponding attribute name to avoid conflict.'.format(common))
-            ret.update(child_ret)
+            ret.update(child()._collect_params_with_prefix(prefix + name, select))
         return ret
 
     def save_parameters(self, filename, deduplicate=False):
@@ -414,7 +407,7 @@ class Block(object):
             reverse_params = {v: k for k, v in params.items()}
             params = {v: k for k, v in reverse_params.items()}
 
-        arg_dict = {key: val._reduce() for key, val in params.items()}
+        arg_dict = {key + ":" + val.name: val._reduce() for key, val in params.items()}
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         save_fn(filename, arg_dict)
 
@@ -468,47 +461,19 @@ class Block(object):
         else:
             loaded = ndarray.load(filename)
 
-        params = self._collect_params_with_prefix()
-        if not loaded and not params:
+        if not loaded:
             return
+        self.load_dict(loaded, filename, ctx, allow_missing, ignore_extra, cast_dtype, dtype_source)
 
-        loaded = {k[4:] if k.startswith('arg:') or k.startswith('aux:') else k: v \
-                  for k, v in loaded.items()}
-        loaded = {k.replace('.', '_'): v for k, v in loaded.items()} # compatibility
-
-        if not allow_missing:
-            # Shared parameters are stored only a single time as of MXNet 1.6.
-            # We thus retrieve all prefixes (through _collect_params_with_prefix)
-            # that a shared parameter is used with. Check that there are no
-            # missing parameters that were not yet already loaded from the
-            # shared version.
-            params_inv = defaultdict(list)
-            for k, v in params.items():
-                params_inv[v].append(k)
-
-            for name, param in params.items():
-                assert any(p in loaded for p in params_inv[param]), \
-                    "Parameter '%s' is missing in file '%s', which contains parameters: %s. " \
-                    "Set allow_missing=True to ignore missing parameters."%(
-                        name, filename, _brief_print_list(loaded.keys()))
-        for name in loaded:
-            if not ignore_extra and name not in params:
-                raise ValueError(
-                    "Parameter '%s' loaded from file '%s' is not present in Dict, " \
-                    "which contains parameters %s. Set ignore_extra=True to ignore. "%(
-                        name, filename, _brief_print_list(params.keys())))
-            if name in params:
-                params[name]._load_init(loaded[name], ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
-
-    def load_dict(self, param_dict, ctx=None, allow_missing=False,
-                  ignore_extra=False, restore_prefix='', filename=None, cast_dtype=False,
-                  dtype_source="current"):
+    def load_dict(self, param_dict, filename=None, ctx=None, allow_missing=False,
+                  ignore_extra=False, cast_dtype=False, dtype_source="current"):
         """Load parameters from dict
 
         Parameters
         ----------
         param_dict : dict
-            Dictionary containing model parameters, preprended with arg: and aux: names
+            Dictionary containing model parameters
+        filename : str, default None
         ctx : Context or list of Context
             Context(s) initialize loaded parameters on.
         allow_missing : bool, default False
@@ -516,35 +481,43 @@ class Block(object):
         ignore_extra : bool, default False
             Whether to silently ignore parameters from the file that are not
             present in this dict.
-        restore_prefix : str, default ''
-            prepend prefix to names of stored parameters before loading
-        filename : str, default None
         cast_dtype : bool, default False
             Cast the data type of the NDArray loaded from the checkpoint to the dtype
             provided by the Parameter if any
+        dtype_source : str, default 'current'
+            must be in {'current', 'saved'}
+            Only valid if cast_dtype=True, specify the source of the dtype for casting
+            the parameters
         """
-        lprefix = len(restore_prefix)
-        loaded = [(k[4:] if k.startswith('arg:') or k.startswith('aux:') else k, v) \
-                  for k, v in param_dict.items()] if isinstance(param_dict, dict) else param_dict
-        arg_dict = {restore_prefix+k: v for k, v in loaded}
         params = self.collect_params()
         error_str = "file: %s" % (filename) if filename else "param_dict"
+        loaded = {k[4:] if k.startswith('arg:') or k.startswith('aux:') else k: v \
+                  for k, v in param_dict.items()}
+        if isinstance(self, SymbolBlock):
+            # load parameters using parameters' unique names
+            loaded = {k.split(':')[1] : v for k, v in loaded.items()}
+        else:
+            loaded = {k.split(':')[0] : v for k, v in loaded.items()}
+            loaded = {k.replace('.', '_'): v for k, v in loaded.items()} # compatibility
         if not allow_missing:
-            for name in params.keys():
-                assert name in arg_dict, \
-                    "Parameter '%s' is missing in %s, which contains parameters: %s. " \
-                    "Please make sure source and target networks have the same prefix." %(
-                        name[lprefix:], error_str, _brief_print_list(arg_dict.keys()))
-        for name in arg_dict:
-            if name not in params:
-                assert ignore_extra, \
-                    "Parameter '%s' loaded from %s is not present in dict, " \
-                    "choices are: %s. Set ignore_extra to True to ignore. " \
-                    "Please make sure source and target networks have the same prefix." %(
-                        name[lprefix:], error_str, _brief_print_list(params.keys()))
-                continue
-            params[name]._load_init(arg_dict[name], ctx, cast_dtype=cast_dtype,
-                                    dtype_source=dtype_source)
+            params_inv = defaultdict(list)
+            for k, v in params.items():
+                params_inv[v].append(k)
+
+            for name, param in params.items():
+                assert any(p in loaded for p in params_inv[param]), \
+                    "Parameter '%s' is missing in '%s', which contains parameters: %s. " \
+                    "Set allow_missing=True to ignore missing parameters."%(
+                        name, error_str, _brief_print_list(loaded.keys()))
+
+        for name in loaded:
+            if not ignore_extra and name not in params:
+                raise ValueError(
+                    "Parameter '%s' loaded from '%s' is not present in Dict, " \
+                    "which contains parameters %s. Set ignore_extra=True to ignore. "%(
+                        name, error_str, _brief_print_list(params.keys())))
+            if name in params:
+                params[name]._load_init(loaded[name], ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
 
     def register_child(self, block, name=None):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
@@ -1348,10 +1321,10 @@ class HybridBlock(Block):
         arg_dict = {}
         for name, param in self.collect_params().items():
             if param.name in arg_names:
-                arg_dict['arg:%s'%name] = param._reduce()
+                arg_dict['arg:%s:%s'%(name, param.name)] = param._reduce()
             else:
                 assert param.name in aux_names
-                arg_dict['aux:%s'%name] = param._reduce()
+                arg_dict['aux:%s:%s'%(name, param.name)] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         params_filename = '%s-%04d.params'%(path, epoch)
         save_fn(params_filename, arg_dict)
@@ -1596,6 +1569,7 @@ class SymbolBlock(HybridBlock):
         def _set_params_attr(name, **kwargs):
             if params.get(name) is None:
                 self._reg_params[name] = Parameter(**kwargs)
+                self._reg_params[name]._name = name
                 return
             param = params[name]
             param._check_and_setattr(**kwargs)
