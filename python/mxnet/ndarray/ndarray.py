@@ -2560,12 +2560,12 @@ fixed-size items.
                [1, 1, 1]], dtype=int32)
         """
         data = np.empty(self.shape, dtype=self.dtype)
-        '''
+        
         check_call(_LIB.MXNDArraySyncCopyToCPU(
             self.handle,
             data.ctypes.data_as(ctypes.c_void_p),
             ctypes.c_size_t(data.size)))
-        '''
+        
         return data
 
     def asscalar(self):
