@@ -44,9 +44,16 @@ C:\Python37\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-re
 if ($LastExitCode -ne 0) { Throw ("Error running parallel tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
 C:\Python37\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_train.xml --cov-append tests\python\train
 if ($LastExitCode -ne 0) { Throw ("Error running serial tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+
 # Adding this extra test since it's not possible to set env var on the fly in Windows.
 $env:MXNET_SAFE_ACCUMULATION=1
 C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_operator.xml --cov-append tests\python\gpu\test_operator_gpu.py::test_norm
 if ($LastExitCode -ne 0) { Throw ("Error running tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
 C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_tvm_op.xml tests\python\gpu\test_tvm_op_gpu.py
 if ($LastExitCode -ne 0) { Throw ("Error running TVM op tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+
+# Similar to the MXNET_SAFE_ACCUMULATION test case above. Need to explicitly
+# set the environment variable for MXNET_MEMORY_OPT.
+$env:MXNET_MEMORY_OPT=1
+C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_unittest.xml --cov-append tests\python\unittest\test_memory_opt.py
+if ($LastExitCode -ne 0) { Throw ("Error running memory optimization tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }

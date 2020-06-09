@@ -41,6 +41,5 @@ if [[ $mxnet_variant == cpu ]]; then
     python3 tests/python/mkl/test_mkldnn.py
 fi
 
-python3 tests/python/train/test_conv.py ${test_conv_params}
 python3 example/image-classification/train_mnist.py ${mnist_params}
 

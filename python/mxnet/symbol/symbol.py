@@ -1456,17 +1456,15 @@ class Symbol(SymbolBase):
         backend : str
             The name of backend, as registered in `SubgraphBackendRegistry`
 
-        args : list of NDArray or dict of str to NDArray, optional
+        args : dict of str to NDArray, optional
             Input arguments to the symbol, required to infer shapes/types before partitioning
 
-            - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
             - If type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding `NDArray`.
 
-        aux : list of NDArray or dict of str to NDArray, optional
+        aux : dict of str to NDArray, optional
             Input auxiliary arguments to the symbol
 
-            - If type is a list of `NDArray`, the order is the same as that of `list_arguments()`.
             - If type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding `NDArray`.
 
@@ -1483,20 +1481,22 @@ class Symbol(SymbolBase):
         """
         out = SymbolHandle()
         assert isinstance(backend, str)
+        assert isinstance(args, dict) or args is None
+        assert isinstance(aux, dict) or aux is None
 
         if args is None or len(args) == 0:
-            args = []
+            args_ = []
             args_handle = c_array(NDArrayHandle, [])
         else:
-            args_handle, args = self._get_ndarray_inputs('args', args,
-                                                         self.list_arguments(), False)
+            args_handle, args_ = self._get_ndarray_inputs('args', args,
+                                                          self.list_arguments(), False)
 
         if aux is None or len(aux) == 0:
-            aux = []
+            aux_ = []
             aux_handle = c_array(NDArrayHandle, [])
         else:
-            aux_handle, aux = self._get_ndarray_inputs('aux_states', aux,
-                                                       self.list_auxiliary_states(), False)
+            aux_handle, aux_ = self._get_ndarray_inputs('aux_states', aux,
+                                                        self.list_auxiliary_states(), False)
         if ctx is None:
             ctx = current_context()
         assert isinstance(ctx, Context)
@@ -1517,9 +1517,9 @@ class Symbol(SymbolBase):
                                              c_str(backend),
                                              ctypes.c_int(ctx.device_typeid),
                                              ctypes.byref(out),
-                                             mx_uint(len(args)),
+                                             mx_uint(len(args_)),
                                              args_handle,
-                                             mx_uint(len(aux)),
+                                             mx_uint(len(aux_)),
                                              aux_handle,
                                              mx_uint(len(key_list)),
                                              c_str_array(key_list),
@@ -1530,30 +1530,22 @@ class Symbol(SymbolBase):
                                              ctypes.byref(new_aux_size),
                                              ctypes.byref(new_aux_handle),
                                              ctypes.byref(new_aux_names)))
-        arg_names = self.list_arguments()
-        if isinstance(args, dict):
+        # add new args/aux
+        if not args is None:
             for i in range(new_args_size.value):
                 args[py_str(new_arg_names[i])] = NDArray(NDArrayHandle(new_args_handle[i]))
-        elif isinstance(args, list):
-            for i in range(new_args_size.value):
-                name = py_str(new_arg_names[i])
-                if name in arg_names:
-                    idx = arg_names.index(name)
-                    args[idx] = NDArray(NDArrayHandle(new_args_handle[i]))
-                else:
-                    args.append(NDArray(NDArrayHandle(new_args_handle[i])))
-        aux_names = self.list_auxiliary_states()
-        if isinstance(aux, dict):
+        elif new_args_size.value > 0:
+            raise RuntimeError('Cannot add new args in optimize_for since args is None\n' +
+                               'Provide a dictionary to the args argument to optimize_for')
+
+        if not aux is None:
             for i in range(new_aux_size.value):
                 aux[py_str(new_aux_names[i])] = NDArray(NDArrayHandle(new_aux_handle[i]))
-        elif isinstance(aux, list):
-            for i in range(new_aux_size.value):
-                name = py_str(new_aux_names[i])
-                if name in aux_names:
-                    idx = aux_names.index(name)
-                    aux[idx] = NDArray(NDArrayHandle(new_aux_handle[i]))
-                else:
-                    aux.append(NDArray(NDArrayHandle(new_aux_handle[i])))
+        elif new_aux_size.value > 0:
+            raise RuntimeError('Cannot add new aux in optimize_for since aux is None\n' +
+                               'Provide a dictionary to the aux argument to optimize_for')
+
+        # return modified symbol
         return Symbol(out)
 
 

@@ -49,7 +49,7 @@ from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .ndarray import array
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
-from .util import use_np  # pylint: disable=unused-import
+from .util import use_np, use_np_default_dtype  # pylint: disable=unused-import
 from .runtime import Features
 from .numpy_extension import get_cuda_compute_capability
 
@@ -584,7 +584,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     atol = get_atol(atol)
     use_np_allclose = isinstance(a, np.ndarray) and isinstance(b, np.ndarray)
     if not use_np_allclose:
-        if not (hasattr(a, 'context') and hasattr(b, 'context') and a.context == b.context and a.dtype == b.dtype):
+        if not (hasattr(a, 'ctx') and hasattr(b, 'ctx') and a.ctx == b.ctx and a.dtype == b.dtype):
             use_np_allclose = True
             if isinstance(a, mx.nd.NDArray):
                 a = a.asnumpy()

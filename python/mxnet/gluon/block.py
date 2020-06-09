@@ -23,12 +23,15 @@ __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 import threading
 import copy
 import warnings
-import re
+import weakref
 from collections import OrderedDict, defaultdict
+
+import re
 import numpy as np
 
 from ..base import mx_real_t, MXNetError, NDArrayHandle, py_str
-from .. import symbol, ndarray, initializer, np_symbol, autograd, _deferred_compute as dc
+from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc
+from ..symbol.numpy import _symbol as np_symbol
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
@@ -47,10 +50,11 @@ class _BlockScope(object):
     _current = threading.local()
 
     def __init__(self, block):
-        self._block = block
+        self._block = weakref.ref(block) if block is not None else None
         self._counter = {}
-        self._old_scope = None
-        self._name_scope = None
+        self._local = threading.local()
+        self._local._old_scope = None
+        self._local._name_scope = None
 
     @staticmethod
     def create(prefix, params, hint):
@@ -59,7 +63,8 @@ class _BlockScope(object):
         The profiler scope is to support the GPU memory profiler.
         """
         current = getattr(_BlockScope._current, "value", None)
-        if current is None:
+        block = current._block() if current is not None else None
+        if current is None or block is None:
             if prefix is None:
                 if not hasattr(_name.NameManager._current, "value"):
                     _name.NameManager._current.value = _name.NameManager()
@@ -78,35 +83,37 @@ class _BlockScope(object):
             prefix = '%s%d_'%(hint, count)
             current._counter[hint] = count + 1
         if params is None:
-            parent = current._block.params
+            parent = block.params
             params = ParameterDict(parent.prefix+prefix, parent._shared)
         else:
             params = ParameterDict(params.prefix, params)
         # replace the trailing underscore with colon
         profiler_scope_name = (prefix[:-1] if prefix.endswith('_') \
                                else prefix) + ":"
-        return current._block.prefix + prefix, params, \
-               current._block._profiler_scope_name + profiler_scope_name
+        return block.prefix + prefix, params, \
+               block._profiler_scope_name + profiler_scope_name
 
     def __enter__(self):
-        if self._block._empty_prefix:
+        block = self._block()
+        if block is None or block._empty_prefix:
             return self
-        self._old_scope = getattr(_BlockScope._current, "value", None)
+        self._local._old_scope = getattr(_BlockScope._current, "value", None)
         _BlockScope._current.value = self
-        self._name_scope = _name.Prefix(self._block.prefix)
-        self._name_scope.__enter__()
-        self._profiler_scope = _profiler.Scope(self._block._profiler_scope_name)
-        self._profiler_scope.__enter__()
+        self._local._name_scope = _name.Prefix(block.prefix)
+        self._local._name_scope.__enter__()
+        self._local._profiler_scope = _profiler.Scope(block._profiler_scope_name)
+        self._local._profiler_scope.__enter__()
         return self
 
     def __exit__(self, ptype, value, trace):
-        if self._block._empty_prefix:
+        block = self._block()
+        if block is None or block._empty_prefix:
             return
-        self._name_scope.__exit__(ptype, value, trace)
-        self._name_scope = None
-        self._profiler_scope.__exit__(ptype, value, trace)
-        self._profiler_scope = None
-        _BlockScope._current.value = self._old_scope
+        self._local._name_scope.__exit__(ptype, value, trace)
+        self._local._name_scope = None
+        self._local._profiler_scope.__exit__(ptype, value, trace)
+        self._local._profiler_scope = None
+        _BlockScope._current.value = self._local._old_scope
 
 
 def _gather_type_ctx_info(args):
@@ -341,7 +348,7 @@ class Block(object):
                         return True
                 return False
             elif isinstance(data, Block):
-                return not data in children
+                return not data in (c() for c in children)
             else:
                 return False
         for k, v in self.__dict__.items():
@@ -419,7 +426,7 @@ class Block(object):
             pattern = re.compile(select)
             ret.update({name:value for name, value in self.params.items() if pattern.match(name)})
         for cld in self._children.values():
-            ret.update(cld.collect_params(select=select))
+            ret.update(cld().collect_params(select=select))
         return ret
 
     def _collect_params_with_prefix(self, prefix=''):
@@ -427,7 +434,7 @@ class Block(object):
             prefix += '.'
         ret = {prefix + key : val for key, val in self._reg_params.items()}
         for name, child in self._children.items():
-            ret.update(child._collect_params_with_prefix(prefix + name))
+            ret.update(child()._collect_params_with_prefix(prefix + name))
         return ret
 
     def save_parameters(self, filename, deduplicate=False):
@@ -595,7 +602,7 @@ class Block(object):
         attributes will be registered automatically."""
         if name is None:
             name = str(len(self._children))
-        self._children[name] = block
+        self._children[name] = weakref.ref(block)
 
     def register_forward_pre_hook(self, hook):
         r"""Registers a forward pre-hook on the block.
@@ -648,7 +655,7 @@ class Block(object):
         this block
         """
         for cld in self._children.values():
-            cld.apply(fn)
+            cld().apply(fn)
         fn(self)
         return self
 
@@ -675,7 +682,7 @@ class Block(object):
         """ Please refer description of HybridBlock hybridize().
         """
         for cld in self._children.values():
-            cld.hybridize(active, **kwargs)
+            cld().hybridize(active, **kwargs)
 
     def cast(self, dtype):
         """Cast this Block to use another data type.
@@ -686,7 +693,7 @@ class Block(object):
             The new data type.
         """
         for child in self._children.values():
-            child.cast(dtype)
+            child().cast(dtype)
         for _, param in self.params.items():
             param.cast(dtype)
 
@@ -730,7 +737,7 @@ class Block(object):
             If True, monitor both input and output, otherwise monitor output only.
         """
         for cld in self._children.values():
-            cld.register_op_hook(callback, monitor_all)
+            cld().register_op_hook(callback, monitor_all)
 
     def summary(self, *inputs):
         """Print the summary of the model's output and parameters.
@@ -1026,12 +1033,12 @@ class HybridBlock(Block):
         if self._backend:
             ctx = args[0].context
             # get list of params in the order of out.list_arguments
-            arg_array = [args[data_names[name]] if name in data_names.keys() else params[name].data()
-                         for name in out.list_arguments()]
-            aux_array = [args[data_names[name]] if name in data_names.keys() else params[name].data()
-                         for name in out.list_auxiliary_states()]
+            arg_dict = {name:args[data_names[name]] if name in data_names.keys() else params[name].data()
+                        for name in out.list_arguments()}
+            aux_dict = {name:args[data_names[name]] if name in data_names.keys() else params[name].data()
+                        for name in out.list_auxiliary_states()}
             # Partition the graph.
-            out = out.optimize_for(self._backend, arg_array, aux_array, ctx, **self._backend_opts)
+            out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
             #update cached graph with partitioned graph
             self._cached_graph = data, out
         self._cached_op = ndarray.CachedOp(out, flags)
@@ -1308,8 +1315,8 @@ class HybridBlock(Block):
         self._callback = c_callback
         self._monitor_all = monitor_all
         for cld in self._children.values():
-            cld._callback = c_callback
-            cld._monitor_all = monitor_all
+            cld()._callback = c_callback
+            cld()._monitor_all = monitor_all
 
     def __call__(self, x, *args):
         if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:

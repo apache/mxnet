@@ -476,7 +476,7 @@ void Forward_gpu(
             stride1_, stride2_,
             width, height, channels,
             rbot1, rbot2, top);
-        CORRELATION_CUDA_CHECK(cudaPeekAtLastError());
+        CORRELATION_CUDA_CHECK(cudaGetLastError());
     } else {
         //  CorrelationLayer
         for (int n = 0; n < num; n++) {
@@ -489,7 +489,7 @@ void Forward_gpu(
                 max_displacement_, neighborhood_grid_radius_,
                 neighborhood_grid_width_, kernel_radius_,
                 stride1_, stride2_, width, height, channels, rbot1, rbot2, top);
-         CORRELATION_CUDA_CHECK(cudaPeekAtLastError());
+         CORRELATION_CUDA_CHECK(cudaGetLastError());
         }
     }
 }
@@ -534,7 +534,7 @@ void Backward_gpu(
             stride1_, stride2_,
             width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size_,
             bottom0_diff, rbot2, top_diff);
-        CORRELATION_CUDA_CHECK(cudaPeekAtLastError());
+        CORRELATION_CUDA_CHECK(cudaGetLastError());
         }
         //  == Run kernel Backward 1
         for (int n = 0; n < num; n++) {
@@ -545,7 +545,7 @@ void Backward_gpu(
             stride1_, stride2_,
             width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size_,
             rbot1, bottom1_diff, top_diff);
-       CORRELATION_CUDA_CHECK(cudaPeekAtLastError());
+       CORRELATION_CUDA_CHECK(cudaGetLastError());
         }
     } else  {
         for (int n = 0; n < num; n++) {
@@ -557,7 +557,7 @@ void Backward_gpu(
             stride1_, stride2_,
             width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size_,
             bottom0_diff, rbot1, rbot2, top_diff);
-        CORRELATION_CUDA_CHECK(cudaPeekAtLastError());
+        CORRELATION_CUDA_CHECK(cudaGetLastError());
         }
         for (int n = 0; n < num; n++) {
         //  Bottom1:
@@ -568,7 +568,7 @@ void Backward_gpu(
             stride1_, stride2_,
             width, height, paddedwidth, paddedheight, channels, bottomcount, pad_size_,
             rbot1, rbot2, bottom1_diff, top_diff);
-        CORRELATION_CUDA_CHECK(cudaPeekAtLastError());
+        CORRELATION_CUDA_CHECK(cudaGetLastError());
         }
     }
 }

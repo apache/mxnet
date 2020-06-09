@@ -36,3 +36,9 @@ if ($LastExitCode -ne 0) { Throw ("Error running serial train tests, python exit
 $env:MXNET_SAFE_ACCUMULATION=1
 C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_unittest.xml --cov-append tests\python\unittest\test_operator.py::test_norm
 if ($LastExitCode -ne 0) { Throw ("Error running unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
+
+# Similar to the MXNET_SAFE_ACCUMULATION test case above. Need to explicitly
+# set the environment variable for MXNET_MEMORY_OPT.
+$env:MXNET_MEMORY_OPT=1
+C:\Python37\python.exe -m pytest -v --durations=50 --cov-report xml:tests_unittest.xml --cov-append tests\python\unittest\test_memory_opt.py
+if ($LastExitCode -ne 0) { Throw ("Error running unittest, python exited with status code " + ('{0:X}' -f $LastExitCode)) }

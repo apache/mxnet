@@ -225,7 +225,7 @@ if __name__ == '__main__':
                            learning_rate=0.1, rescale_grad=1.0/batch_size/num_worker)
     mod.init_optimizer(optimizer=sgd, kvstore=kv)
     # use accuracy as the metric
-    metric = mx.metric.create('acc')
+    metric = mx.gluon.metric.create('acc')
 
     index = mod._exec_group.param_names.index('w')
     # weight_array bound to executors of the contexts

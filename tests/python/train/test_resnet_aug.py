@@ -15,15 +15,16 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# pylint: skip-file
-import sys
-sys.path.insert(0, '../../python')
 import mxnet as mx
 import numpy as np
 import os, pickle, gzip
 import logging
 from mxnet.test_utils import get_cifar10
 
+import pytest
+
+
+@pytest.mark.garbage_expected
 def test_cifar10(tmpdir):
     batch_size = 128
 
@@ -79,7 +80,7 @@ def test_cifar10(tmpdir):
 
     num_epoch = 1
 
-    def run_cifar10(train, val, use_module):
+    def run_cifar10(train, val):
         train.reset()
         val.reset()
         devs = [mx.cpu(0)]
@@ -87,42 +88,23 @@ def test_cifar10(tmpdir):
         mod = mx.mod.Module(net, context=devs)
         optim_args = {'learning_rate': 0.001, 'wd': 0.00001, 'momentum': 0.9}
         eval_metrics = ['accuracy']
-        if use_module:
-            executor = mx.mod.Module(net, context=devs)
-            executor.fit(
-                train,
-                eval_data=val,
-                optimizer_params=optim_args,
-                eval_metric=eval_metrics,
-                num_epoch=num_epoch,
-                arg_params=None,
-                aux_params=None,
-                begin_epoch=0,
-                batch_end_callback=mx.callback.Speedometer(batch_size, 50),
-                epoch_end_callback=None)
-        else:
-            executor = mx.model.FeedForward.create(
-                net,
-                train,
-                ctx=devs,
-                eval_data=val,
-                eval_metric=eval_metrics,
-                num_epoch=num_epoch,
-                arg_params=None,
-                aux_params=None,
-                begin_epoch=0,
-                batch_end_callback=mx.callback.Speedometer(batch_size, 50),
-                epoch_end_callback=None,
-                **optim_args)
+        executor = mx.mod.Module(net, context=devs)
+        executor.fit(
+            train,
+            eval_data=val,
+            optimizer_params=optim_args,
+            eval_metric=eval_metrics,
+            num_epoch=num_epoch,
+            arg_params=None,
+            aux_params=None,
+            begin_epoch=0,
+            batch_end_callback=mx.callback.Speedometer(batch_size, 50),
+            epoch_end_callback=None)
 
         ret = executor.score(val, eval_metrics)
-        if use_module:
-            ret = list(ret)
-            logging.info('final accuracy = %f', ret[0][1])
-            assert (ret[0][1] > 0.08)
-        else:
-            logging.info('final accuracy = %f', ret[0])
-            assert (ret[0] > 0.08)
+        ret = list(ret)
+        logging.info('final accuracy = %f', ret[0][1])
+        assert (ret[0][1] > 0.08)
 
     class CustomDataIter(mx.io.DataIter):
         def __init__(self, data):
@@ -163,9 +145,7 @@ def test_cifar10(tmpdir):
     kv = mx.kvstore.create("local")
     # test float32 input
     (train, val) = get_iterator(kv)
-    run_cifar10(train, val, use_module=False)
-    run_cifar10(train, val, use_module=True)
+    run_cifar10(train, val)
 
     # test legecay tuple in provide_data and provide_label
-    run_cifar10(CustomDataIter(train), CustomDataIter(val), use_module=False)
-    run_cifar10(CustomDataIter(train), CustomDataIter(val), use_module=True)
+    run_cifar10(CustomDataIter(train), CustomDataIter(val))

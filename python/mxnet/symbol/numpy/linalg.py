@@ -19,7 +19,7 @@
 
 import numpy as _np
 from . import _symbol
-from . import _op as _mx_sym_np
+from . import _op as _mx_sym_np  # pylint: disable=unused-import
 from . import _internal as _npi
 
 __all__ = ['norm', 'svd', 'cholesky', 'qr', 'inv', 'det', 'slogdet', 'solve', 'tensorinv', 'tensorsolve',
@@ -341,10 +341,10 @@ def norm(x, ord=None, axis=None, keepdims=False):
                 if ord is None:
                     return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)
         if ord == 'inf':
-            return _mx_sym_np.max(_symbol.abs(x), axis=axis, keepdims=keepdims)
+            return _npi.max(_symbol.abs(x), axis=axis, keepdims=keepdims)
             #return _npi.norm(x, ord=float('inf'), axis=axis, keepdims=keepdims, flag=3)
         elif ord == '-inf':
-            return _mx_sym_np.min(_symbol.abs(x), axis=axis, keepdims=keepdims)
+            return _npi.min(_symbol.abs(x), axis=axis, keepdims=keepdims)
             #return _npi.norm(x, ord=-float('inf'), axis=axis, keepdims=keepdims, flag=4)
         elif ord is None:
             return _npi.norm(x, ord=2, axis=axis, keepdims=keepdims, flag=1)

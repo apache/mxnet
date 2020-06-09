@@ -37,6 +37,14 @@
   .nav-trigger {
     display: none;
   }
+  
+  #global-search-mobile-border {
+    display: none;
+  }
+
+  .gs-search-border {
+    display: inline-block;
+  }
 
   .menu-icon {
     display: none;
@@ -79,6 +87,14 @@
       height: 36px;
       z-index: 2;
       cursor: pointer;
+    }
+
+    .gs-search-border {
+      display: none;
+    }
+
+    #global-search-mobile-border {
+      display: block;
     }
 
     .menu-icon {

@@ -122,7 +122,7 @@ MXNET_REGISTER_API("_npi.mean")
     param.axis = mxnet::Tuple<int>(args[1].operator ObjectRef());
   }
   if (args[2].type_code() == kNull) {
-    param.dtype = dmlc::optional<int>();
+    param.dtype = mxnet::common::GetDefaultDtype();
   } else {
     param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
   }
@@ -190,6 +190,130 @@ MXNET_REGISTER_API("_npi.prod")
     *ret = PythonArg(5);
   } else {
     *ret = ndoutputs[0];
+  }
+});
+
+MXNET_REGISTER_API("_npi.max")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_max");
+  nnvm::NodeAttrs attrs;
+  op::NumpyReduceAxesNoDTypeParam param;
+
+  NDArray* out = args[3].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  if (args[1].type_code() == kNull) {
+    param.axis = dmlc::nullopt;
+  } else if (args[1].type_code() == kDLInt) {
+    param.axis = Tuple<int>(1, args[1].operator int64_t());
+  } else {
+    param.axis = Tuple<int>(args[1].operator ObjectRef());
+  }
+  param.keepdims = args[2].operator bool();
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyReduceAxesNoDTypeParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(3);
+  } else {
+    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  }
+});
+
+MXNET_REGISTER_API("_npi.min")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_min");
+  nnvm::NodeAttrs attrs;
+  op::NumpyReduceAxesNoDTypeParam param;
+
+  NDArray* out = args[3].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  if (args[1].type_code() == kNull) {
+    param.axis = dmlc::nullopt;
+  } else if (args[1].type_code() == kDLInt) {
+    param.axis = Tuple<int>(1, args[1].operator int64_t());
+  } else {
+    param.axis = Tuple<int>(args[1].operator ObjectRef());
+  }
+  param.keepdims = args[2].operator bool();
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyReduceAxesNoDTypeParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(3);
+  } else {
+    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  }
+});
+
+MXNET_REGISTER_API("_npi.amax")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_amax");
+  nnvm::NodeAttrs attrs;
+  op::NumpyReduceAxesNoDTypeParam param;
+
+  NDArray* out = args[3].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  if (args[1].type_code() == kNull) {
+    param.axis = dmlc::nullopt;
+  } else if (args[1].type_code() == kDLInt) {
+    param.axis = Tuple<int>(1, args[1].operator int64_t());
+  } else {
+    param.axis = Tuple<int>(args[1].operator ObjectRef());
+  }
+  param.keepdims = args[2].operator bool();
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyReduceAxesNoDTypeParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(3);
+  } else {
+    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  }
+});
+
+MXNET_REGISTER_API("_npi.amin")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  static const nnvm::Op* op = Op::Get("_npi_amin");
+  nnvm::NodeAttrs attrs;
+  op::NumpyReduceAxesNoDTypeParam param;
+
+  NDArray* out = args[3].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  if (args[1].type_code() == kNull) {
+    param.axis = dmlc::nullopt;
+  } else if (args[1].type_code() == kDLInt) {
+    param.axis = Tuple<int>(1, args[1].operator int64_t());
+  } else {
+    param.axis = Tuple<int>(args[1].operator ObjectRef());
+  }
+  param.keepdims = args[2].operator bool();
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::NumpyReduceAxesNoDTypeParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(3);
+  } else {
+    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
   }
 });
 
