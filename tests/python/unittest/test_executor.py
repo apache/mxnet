@@ -164,3 +164,15 @@ def test_reshape():
     # weight ndarray is shared between exe and new_exe
     assert np.all(new_exe.arg_arrays[1].asnumpy() == 1)
 
+@with_seed()
+def test_cached_op_init():
+    def check_init(static_alloc, static_shape):
+        out = mx.sym.zeros((3,3))
+        flags = [('static_alloc', static_alloc), ('static_shape', static_shape)]
+        exe = mx.ndarray.CachedOp(out, flags)
+        z = exe(None, default_ctx=mx.cpu())
+        assert np.all(z.asnumpy() == 0)
+
+    check_init(False, False)
+    check_init(True, False)
+    check_init(True, True)

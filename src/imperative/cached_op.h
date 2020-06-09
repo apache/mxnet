@@ -162,16 +162,18 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
     xs.emplace_back(indexed_graph[node_id].weak_ref.lock());
   }
 
-  CHECK(!xs.empty())
-    << "There are no inputs in computation graph that require gradients.";
-
-  *grad_graph = pass::MXGradient(
-    *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
-    exec::AggregateGradient, nullptr,
-    zero_ops, "_copy");
+  // There are inputs in computation graph that require gradients
+  if (!xs.empty()) {
+    *grad_graph = pass::MXGradient(
+      *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
+      exec::AggregateGradient, nullptr,
+      zero_ops, "_copy");
+  } else {
+    *grad_graph = nnvm::Graph();
+  }
 }
 
-/* \brief construct  fwd_graph, grad_graph and full_graph from symbol */
+/* \brief construct fwd_graph, grad_graph and full_graph from symbol */
 void CreateFullGraph(const nnvm::Symbol& sym,
                      nnvm::Graph* fwd_graph,
                      nnvm::Graph* grad_graph,
@@ -189,15 +191,16 @@ void CreateFullGraph(const nnvm::Symbol& sym,
   CreateBackwardGraph(fwd_graph, grad_graph, ograd_entries,
                       fwd_input_to_grad_output);
 
-  // Add backward graph outputs to full graph
   full_graph->outputs = fwd_graph->outputs;
-  for (const auto &i : grad_graph->outputs) full_graph->outputs.emplace_back(i);
+  // add backward graph outputs to full graph
+  for (const auto &i : grad_graph->outputs) {
+    full_graph->outputs.emplace_back(i);
+  }
 }
 
 /* \brief Set Ref counts for node entries for forward graph */
 void SetForwardRefCounts(nnvm::Graph *fwd_graph) {
   const auto& idx = fwd_graph->indexed_graph();
-  CHECK_GE(idx.input_nodes().size(), 1) << "CachedOp requires at least 1 input";
 
   std::vector<uint32_t> ref_count(idx.num_node_entries(), 0);
   for (const auto& i : idx.input_nodes()) ++ref_count[idx.entry_id(i, 0)];
@@ -399,7 +402,8 @@ class CachedOp {
   virtual OpStatePtr Forward(
       const std::shared_ptr<CachedOp>& op_ptr,
       const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs);
+      const std::vector<NDArray*>& outputs,
+      const Context &default_context);
   virtual void Backward(
       const bool retain_graph,
       const OpStatePtr& state,
@@ -496,6 +500,7 @@ class CachedOp {
 
   OpStatePtr GetCachedOpState(const Context& ctx);
   bool SetForwardGraph(
+      const Context& default_ctx,
       GraphInfo* info,
       const bool recording,
       const std::vector<NDArray*>& inputs);

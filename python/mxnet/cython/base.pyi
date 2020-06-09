@@ -116,6 +116,8 @@ cdef extern from "mxnet/c_api.h":
     int MXInvokeCachedOpEx(CachedOpHandle handle,
                            int num_inputs,
                            NDArrayHandle *inputs,
+                           int default_ctx_type,
+                           int default_ctx_dev_id,
                            int *num_outputs,
                            NDArrayHandle **outputs,
                            const int **out_stypes);

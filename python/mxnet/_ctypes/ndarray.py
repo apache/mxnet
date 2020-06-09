@@ -125,6 +125,7 @@ class CachedOp(object):
     def __call__(self, *args, **kwargs):
         """ctypes implementation of imperative invoke wrapper"""
         out = kwargs.pop('out', None)
+        default_ctx = kwargs.pop('default_ctx', None)
         if out is not None:
             original_output = out
             if isinstance(out, NDArrayBase):
@@ -145,10 +146,19 @@ class CachedOp(object):
         # a handle's stype in _ndarray_cls
         out_stypes = ctypes.POINTER(ctypes.c_int)()
 
+        # (None, ) -> []
+        if len(args) == 1 and args[0] is None:
+            args = []
+            assert default_ctx is not None, 'default_ctx is required if no input is provided'
+        else:
+            default_ctx = args[0].ctx if default_ctx is None else default_ctx
+
         check_call(_LIB.MXInvokeCachedOpEx(
             self.handle,
             ctypes.c_int(len(args)),
             c_handle_array(args),
+            ctypes.c_int(default_ctx.device_typeid),
+            ctypes.c_int(default_ctx.device_id),
             ctypes.byref(num_output),
             ctypes.byref(output_vars),
             ctypes.byref(out_stypes)))
