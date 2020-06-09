@@ -486,13 +486,6 @@ def test_batchnorm_with_type():
     {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}}
   ]
 
-  # V1, 2D
-  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=False)
-  check_consistency(sym, ctx_list_v1_2D)
-  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=True)
-  check_consistency(sym, ctx_list_v1_2D)
-
-
   # V2, 2D
   sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_2D)
@@ -526,19 +519,6 @@ def test_batchnorm_versions():
   def test_batchnorm_versions_helper(batchnorm_op_list, data, fix_gamma, use_global_stats):
     ctx_list = []
     sym_list = []
-    # BatchNormV1 cpu
-    if 'batchnorm_v1_cpu' in batchnorm_op_list:
-      ctx_list.append({'ctx': mx.cpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
-      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
-                                          use_global_stats=use_global_stats,
-                                          name='batchnorm'))
-
-    # BatchNormV1 gpu (organic)
-    if 'batchnorm_v1_gpu' in batchnorm_op_list:
-      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
-      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
-                                          use_global_stats=use_global_stats,
-                                          name='batchnorm'))
 
     # BatchNorm cpu
     if 'batchnorm_cpu' in batchnorm_op_list:
