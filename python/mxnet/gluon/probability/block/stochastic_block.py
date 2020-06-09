@@ -21,7 +21,6 @@ __all__ = ['StochasticBlock', 'StochasticSequential']
 
 from functools import wraps
 from ...block import HybridBlock
-from ...nn import HybridSequential
 from ...utils import _indent
 
 
@@ -89,8 +88,10 @@ class StochasticBlock(HybridBlock):
 class StochasticSequential(StochasticBlock):
     """Stack StochasticBlock sequentially.
     """
+
     def __init__(self, prefix=None, params=None):
-        super(StochasticSequential, self).__init__(prefix=prefix, params=params)
+        super(StochasticSequential, self).__init__(
+            prefix=prefix, params=params)
         self._layers = []
 
     def add(self, *blocks):
@@ -101,6 +102,7 @@ class StochasticSequential(StochasticBlock):
 
     @StochasticBlock.collectLoss
     def hybrid_forward(self, F, x, *args):
+        # pylint: disable=arguments-differ
         for block in self._children.values():
             x = block()(x, *args)
             args = []
@@ -133,4 +135,3 @@ class StochasticSequential(StochasticBlock):
 
     def __len__(self):
         return len(self._children)
-
