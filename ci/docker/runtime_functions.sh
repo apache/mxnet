@@ -371,7 +371,7 @@ build_centos7_mkldnn() {
 build_centos7_gpu() {
     set -ex
     cd /work/build
-    source /opt/rh/llvm-toolset-7.0/enable
+    source /opt/rh/devtoolset-7/enable
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -1929,11 +1929,15 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
-    source /opt/rh/llvm-toolset-7.0/enable
-    source /opt/rh/rh-python36/enable
     export USE_SYSTEM_CUDA=1
     export CMAKE_STATICBUILD=1
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
+    if [[ $mxnet_variant == cu* ]]; then
+        source /opt/rh/devtoolset-7/enable
+    else
+        source /opt/rh/llvm-toolset-7.0/enable
+    fi
+    source /opt/rh/rh-python36/enable
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
 }
@@ -2017,7 +2021,7 @@ build_static_python_cu92() {
     pushd .
     export mxnet_variant=cu92
     export USE_SYSTEM_CUDA=1
-    source /opt/rh/llvm-toolset-7.0/enable
+    source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
@@ -2040,7 +2044,7 @@ build_static_python_cu92_cmake() {
     export mxnet_variant=cu92
     export CMAKE_STATICBUILD=1
     export USE_SYSTEM_CUDA=1
-    source /opt/rh/llvm-toolset-7.0/enable
+    source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd

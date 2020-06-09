@@ -39,8 +39,11 @@ $MAKE DEPS_PATH=$DEPS_PATH mkldnn
 >&2 echo "Now building mxnet..."
 $MAKE DEPS_PATH=$DEPS_PATH
 
-if [[ $PLATFORM == 'linux' ]]; then
+if [[ ( $PLATFORM == 'linux' ) && ( "$FC" == *"flang"* ) ]]; then
     cp -L $(ldd lib/libmxnet.so | grep libomp |  awk '{print $3}') lib/
+elif [[ $PLATFORM == 'linux' ]]; then
+    cp -L $(ldd lib/libmxnet.so | grep libgfortran |  awk '{print $3}') lib/
+    cp -L $(ldd lib/libmxnet.so | grep libquadmath |  awk '{print $3}') lib/
 fi
 
 # Print the linked objects on libmxnet.so

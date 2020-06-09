@@ -85,6 +85,8 @@ sudo apt-get install -y git \
     unzip \
     gcc-4.8 \
     g++-4.8 \
+    gfortran \
+    gfortran-4.8 \
     binutils \
     nasm \
     libtool \
@@ -257,6 +259,8 @@ sudo apt-get install -y git \
     unzip \
     gcc-4.8 \
     g++-4.8 \
+    gfortran \
+    gfortran-4.8 \
     binutils \
     nasm \
     libtool \
@@ -304,6 +308,8 @@ sudo apt-get install -y git \
     unzip \
     gcc-4.8 \
     g++-4.8 \
+    gfortran \
+    gfortran-4.8 \
     binutils \
     nasm \
     libtool \

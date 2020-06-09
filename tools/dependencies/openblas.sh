@@ -32,9 +32,13 @@ if [[ (! -e $DEPS_PATH/lib/libopenblas.a) ]]; then
     cd $DEPS_PATH/OpenBLAS-${OPENBLAS_VERSION}
 
     # Adding NO_DYNAMIC=1 flag causes make install to fail
-    CXX="clang++ -fPIC" CC="clang -fPIC" LD_LIBRARY_PATH="/usr/local/flang/lib:$LD_LIBRARY_PATH" \
-       LDFLAGS="-L/usr/local/flang/lib" CFLAGS="-I/usr/local/flang/include" \
-       $MAKE DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_OPENMP=1
+    if [[ "$FC" == *"flang"* ]]; then
+        LD_LIBRARY_PATH="/usr/local/flang/lib:$LD_LIBRARY_PATH" \
+          LDFLAGS="-L/usr/local/flang/lib" CFLAGS="-I/usr/local/flang/include" \
+          $MAKE DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_OPENMP=1
+    else
+        $MAKE DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_OPENMP=1
+    fi
 
     $MAKE PREFIX=$DEPS_PATH install
 

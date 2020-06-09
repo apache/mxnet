@@ -48,9 +48,19 @@ else
 fi
 export MAKE="make $ADD_MAKE_FLAG"
 
-export CC="clang -fPIC -mno-avx"
-export CXX="clang++ -fPIC -mno-avx"
-export FC="/usr/local/flang/bin/flang"
+if [[ $VARIANT != cu* ]]; then
+    export CC="clang"
+    export CXX="clang++"
+    export CFLAGS="-fPIC -mno-avx"
+    export CXXFLAGS="-fPIC -mno-avx"
+    export FC="/usr/local/flang/bin/flang"
+else
+    export CC="gcc"
+    export CXX="g++"
+    export CFLAGS="-fPIC -mno-avx"
+    export CXXFLAGS="-fPIC -mno-avx"
+    export FC="gfortran"
+fi
 export PKG_CONFIG_PATH=$DEPS_PATH/lib/pkgconfig:$DEPS_PATH/lib64/pkgconfig:$DEPS_PATH/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
 export CPATH=$DEPS_PATH/include:$CPATH
 

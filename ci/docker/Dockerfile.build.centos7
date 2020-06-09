@@ -52,6 +52,7 @@ RUN yum -y check-update || true && \
         protobuf-compiler \
         protobuf-devel \
         # CentOS Software Collections https://www.softwarecollections.org
+        devtoolset-7 \
         llvm-toolset-7.0 \
         llvm-toolset-7.0-libomp-devel \
         rh-python36 \
