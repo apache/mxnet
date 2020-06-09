@@ -119,12 +119,6 @@ inline bool RepeatsOpShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(out_attrs->at(0));
 }
 
-namespace {  // unnamed namespace to keep scope of the struct within the file
-struct RepeatInOutIndex {
-  int index[50];
-};
-}  // unnamed namespace
-
 struct repeat_noaxis_fwd {
   template<typename IType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i, OType* out, IType* input,
