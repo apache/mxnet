@@ -1836,7 +1836,7 @@ def test_batchnorm():
         elif op_name == 'SyncBatchNorm':
             op = mx.nd.contrib.SyncBatchNorm
         else:
-            raise ValueError(f'Not supported {op_name}')
+            raise ValueError('Not supported {}'.format(op_name))
         kwargs = dict(output_mean_var=output_mean_var)
         if op_name == 'SyncBatchNorm':
             if axis != 1:
