@@ -1181,11 +1181,6 @@ def test_export():
 
     assert_almost_equal(out.asnumpy(), mod_out.asnumpy())
 
-    model2 = gluon.model_zoo.vision.resnet18_v1(ctx=ctx)
-    model2.load_parameters('gluon-0000.params', ctx)
-    out2 = model2(data)
-
-    assert_almost_equal(out.asnumpy(), out2.asnumpy())
 
 @with_seed()
 def test_import():

@@ -208,8 +208,8 @@ def check_layer_bidirectional(size, in_size, proj_size):
     ref_net_params = ref_net.collect_params()
     for k in weights:
         net_params[k].set_data(weights[k])
-        ref_net_params[k.replace('l0', '_lstm_fwd_l0').replace(
-            'r0', '_lstm_bwd_l0')].set_data(weights[k])
+        ref_net_params[k.replace('l0', '_lstm_fwd.l0').replace(
+            'r0', '_lstm_bwd.l0')].set_data(weights[k])
 
     data = mx.random.uniform(shape=(11, 10, in_size))
     mx.test_utils.assert_allclose(net(data), ref_net(data), rtol=1e-6)
@@ -453,10 +453,12 @@ def test_symbol_block_fp16(tmpdir):
     net_fp16.load_parameters(tmpfile + '-0000.params', ctx=ctx)
     # 3. Get a conv layer's weight parameter name. Conv layer's weight param is
     # expected to be of dtype casted, fp16.
-    for param_name in net_fp16.params.keys():
+    name = None    
+    for param_name, param in net_fp32.collect_params().items():
         if 'conv' in param_name and 'weight' in param_name:
+            name = param.name
             break
-    assert np.dtype(net_fp16.params[param_name].dtype) == np.dtype(np.float16)
+    assert np.dtype(net_fp16.params[name].dtype) == np.dtype(np.float16)
 
 
 @with_seed()

@@ -438,7 +438,7 @@ class Parameter(object):
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
         structural_name : str, default ""
-            The structural name for the parameter in the block. 
+            The structural name for the parameter in the block.
             The value would be accessed in InitDesc.attrs['structure'] by self-defined initializers.
             Users may want to initialize parameters based on the block's structure
         Examples

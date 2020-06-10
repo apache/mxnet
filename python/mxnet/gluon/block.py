@@ -1315,7 +1315,7 @@ class HybridBlock(Block):
         arg_names = set(sym.list_arguments())
         aux_names = set(sym.list_auxiliary_states())
         arg_dict = {}
-        for name, param in self.collect_params().items():
+        for param in self.collect_params().values():
             if param.name in arg_names:
                 arg_dict['arg:%s'%param.name] = param._reduce()
             else:
@@ -1528,11 +1528,11 @@ class SymbolBlock(HybridBlock):
         if params is None:
             params = {}
             self._structured_named = False
-        elif any(k.find('.')!=-1 for k in params):
+        elif any(k.find('.') != -1 for k in params):
             self._structured_named = True
             for k, v in params.items():
                 structure[v.name].append(k)
-        params = {p.name : p for p in params.values()}    
+        params = {p.name : p for p in params.values()}
 
         if isinstance(inputs, symbol.Symbol) and len(inputs.list_outputs()) == 1:
             inputs = [inputs]
@@ -1581,7 +1581,7 @@ class SymbolBlock(HybridBlock):
                 for structured_name in lis:
                     self._reg_params[structured_name] = param
             else:
-                self._reg_params[name] = param   
+                self._reg_params[name] = param
 
         for i, arg in enumerate(arg_params):
             if arg not in input_names:

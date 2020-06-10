@@ -687,7 +687,8 @@ def convert_hybrid_block(block, target_dtype="float16", target_dtype_ops=None,
     # If dtype for the param was set in the json, cast the
     # param to this dtype
     attr_dict = converted_sym.attr_dict()
-    for name, param in block.collect_params().items():
+    for param in block.collect_params().values():
+        name = param.name
         if name in arg_names:
             arg_dict['arg:%s'%name] = param._reduce()
             if name in attr_dict and "__dtype__" in attr_dict[name]:
