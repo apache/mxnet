@@ -81,9 +81,6 @@ def check_qsym_scale_align(qsym):
         assert max_calib_range == v['max_calib_range']
 
 
-
-def check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape):
-def check_qsym_dummy_forward(qsym, batch, data_shape):
 def check_qsym_gluon_forward(path, qsym, qarg_params, qaux_params, data_shape):
   # save qsym to JSON file
   _, json_path = tempfile.mkstemp(suffix='-symbol.json', dir=path)
