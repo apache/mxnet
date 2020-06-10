@@ -867,7 +867,6 @@ struct op_with_req {
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
-#ifndef _WIN32
   /*! \brief inputs are two tensors with a half_t output tensor */
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
@@ -921,7 +920,6 @@ struct op_with_req {
   MSHADOW_XINLINE static void Map(index_t i, double *out, const DType *lhs, const double value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
   }
-#endif
 
   /*! \brief inputs are two tensors with a float output tensor */
   template<typename DType,
