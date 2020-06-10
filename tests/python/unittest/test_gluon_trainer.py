@@ -341,5 +341,5 @@ def test_gluon_trainer_param_order():
     trainer = gluon.Trainer(params, 'sgd')
     for name, init in layers.items():
         expected_idx = 0 if name == 'ones_' else 1
-        expected_name = '{}_weight'.format(expected_idx)
-        assert trainer._params[expected_idx].name == expected_name
+        expected_name = '{}.weight'.format(expected_idx)
+        assert trainer._params[expected_idx].name == params[expected_name].name

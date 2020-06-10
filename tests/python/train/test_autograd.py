@@ -35,7 +35,7 @@ def test_autograd(tmpdir):
         net.add(nn.Dense(128, activation='relu'))
         net.add(nn.Dense(64, activation='relu'))
         net.add(nn.Dense(10))
-
+        return net
     path = str(tmpdir)
     get_mnist_ubyte(path)
 

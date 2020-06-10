@@ -101,7 +101,7 @@ def test_lstm():
         outputs, _ = cell.unroll(3, inputs)
         outputs = mx.sym.Group(outputs)
         assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight', 'i2h_bias', 'i2h_weight']
-        assert outputs.list_outputs() == ['t0_out_output', 't1_out_output', 't2_out_output']
+        assert outputs.list_outputs() == [cell.name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
 
         args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10,50), rnn_t1_data=(10,50), rnn_t2_data=(10,50))
         assert outs == [(10, 100), (10, 100), (10, 100)]

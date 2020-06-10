@@ -57,7 +57,7 @@ def _check_onnx_export(net, group_outputs=False, shape_type=tuple, extra_params=
     data = nd.random.uniform(0, 1, (1, 1024))
     output = _force_list(net(data))  # initialize weights
     net_sym = _optional_group(net(sym.Variable('data')), group_outputs)
-    net_params = {name: param._reduce() for name, param in net.collect_params().items()}
+    net_params = {param.name: param._reduce() for name, param in net.collect_params().items()}
     net_params.update(extra_params)
     with tempfile.TemporaryDirectory() as tmpdirname:
         onnx_file_path = os.path.join(tmpdirname, 'net.onnx')

@@ -35,7 +35,7 @@ def check_rnn_cell(cell, in_shape=(10, 50), out_shape=(10, 100), begin_state=Non
     outputs = mx.sym.Group(outputs)
     assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight',
                                                     'i2h_bias', 'i2h_weight']
-    assert outputs.list_outputs() == ['t0_out_output', 't1_out_output', 't2_out_output']
+    assert outputs.list_outputs() == [cell.name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=in_shape,
                                            rnn_t1_data=in_shape,
@@ -121,7 +121,7 @@ def test_lstmp():
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
     expected_params = ['h2h_bias', 'h2h_weight', 'h2r_weight', 'i2h_bias', 'i2h_weight']
-    expected_outputs = ['t0_out_output', 't1_out_output', 't2_out_output']
+    expected_outputs = [cell.name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
     assert sorted(cell.collect_params().keys()) == expected_params
     assert outputs.list_outputs() == expected_outputs, outputs.list_outputs()
 
@@ -376,7 +376,7 @@ def check_unroll(cell_type, num_states, layout):
         res2, states2 = layer(rnn_data, states, valid_length)
         params2 = layer.collect_params()
         for key, val in orig_params1.items():
-            params2['cell_' + key].set_data(copy.deepcopy(val.data()))
+            params2['cell.' + key].set_data(copy.deepcopy(val.data()))
 
         trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
         with mx.autograd.record():
@@ -390,7 +390,7 @@ def check_unroll(cell_type, num_states, layout):
 
         for key, val in params1.items():
             weight1 = val.data()
-            weight2 = params2['cell_' + key].data()
+            weight2 = params2['cell.' + key].data()
             assert_almost_equal(weight1, weight2, rtol=0.001, atol=0.0001)
 
 

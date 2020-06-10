@@ -228,11 +228,14 @@ def load_params(prefix, epoch):
         logging.warning("Params file '%s' is empty", '%s-%04d.params' % (prefix, epoch))
         return (arg_params, aux_params)
     for k, v in save_dict.items():
-        tp, name, unique_name = k.split(":", 2)
+        tp, name = k.split(":", 1)
+        if name.find(':') != -1:
+            # structural_name:unique_name
+            structural, name = name.split(':',1)
         if tp == "arg":
-            arg_params[unique_name] = v
+            arg_params[name] = v
         if tp == "aux":
-            aux_params[unique_name] = v
+            aux_params[name] = v
     return (arg_params, aux_params)
 
 def load_checkpoint(prefix, epoch):

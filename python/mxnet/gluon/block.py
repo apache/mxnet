@@ -600,8 +600,8 @@ class Block(object):
         params = self.collect_params()
         if verbose:
             init.set_verbosity(verbose=verbose)
-        for v in params.values():
-            v.initialize(None, ctx, init, force_reinit=force_reinit)
+        for k, v in params.items():
+            v.initialize(None, ctx, init, force_reinit=force_reinit, structural_name=k)
 
     def hybridize(self, active=True, **kwargs):
         """ Please refer description of HybridBlock hybridize().

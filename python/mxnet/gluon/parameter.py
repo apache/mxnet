@@ -120,7 +120,8 @@ class Parameter(object):
         if isinstance(shape, int):
             shape = (shape,)
         self._shape = shape
-        self._name = 'param_{}_{}'.format(str(uuid.uuid4()).replace('-', '_'), name) 
+        self._name = 'param_{}_{}'.format(str(uuid.uuid4()).replace('-', '_'), name)
+        self._structured_name = ''
         self._dtype = dtype
         self.lr_mult = lr_mult
         self.wd_mult = wd_mult
@@ -358,7 +359,7 @@ class Parameter(object):
                     zeros_fn = ndarray.zeros
                 data = zeros_fn(**kwargs)
                 initializer.create(default_init)(
-                    initializer.InitDesc(self.name, {'__init__': init}), data)
+                    initializer.InitDesc(self.name, {'__init__': init, 'structure': self._structural_name}), data)
 
             self._init_impl(data, ctx)
 
@@ -415,7 +416,7 @@ class Parameter(object):
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
-                   force_reinit=False):
+                   force_reinit=False, structural_name=''):
         """Initializes parameter and gradient arrays. Only used for :py:class:`NDArray` API.
 
         Parameters
@@ -465,7 +466,7 @@ class Parameter(object):
                           stacklevel=2)
             return
         self._data = self._grad = None
-
+        self._structural_name = structural_name
         if ctx is None:
             ctx = [context.current_context()]
         if isinstance(ctx, Context):
