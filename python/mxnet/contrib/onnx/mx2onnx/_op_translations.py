@@ -761,11 +761,11 @@ def convert_pooling(node, **kwargs):
     pooling_convention = attrs.get('pooling_convention', 'valid')
     ceil_mode = False
     if pooling_convention == 'full':
-        if onnx.__version__<"1.5.0":
+        if onnx.__version__ < "1.5.0":
             pooling_warning = "Pooling: ONNX lower than 1.5.0 doesn't support pooling_convention. " \
                               "This might lead to shape or accuracy issues. " \
                               "https://github.com/onnx/onnx/issues/549"
-        ceil_mode=True
+        ceil_mode = True
         logging.warning(pooling_warning)
 
     pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
@@ -806,7 +806,7 @@ def convert_pooling(node, **kwargs):
                 name=name
             )
         else:
-            if onnx.__version__>="1.5.0":
+            if onnx.__version__ >= "1.5.0":
                 node = onnx.helper.make_node(
                     pool_types[pool_type],
                     input_nodes,  # input
