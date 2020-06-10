@@ -444,7 +444,6 @@ function fit(self::FeedForward, optimizer::AbstractOptimizer, data::AbstractData
   if !isa(kvstore, Cvoid)
     if update_on_kvstore
       setoptimizer!(kvstore, optimizer)
-            
     end
 
     opts.verbosity >= 2 && @info("Initializing KVStore...")
