@@ -20,7 +20,7 @@
 # This script builds the static library of opencv that can be used as dependency of mxnet.
 # It expects openblas, libjpeg, libpng, libtiff, eigen, etc., to be in $DEPS_PATH.
 set -ex
-OPENCV_VERSION=3.4.8
+OPENCV_VERSION=3.4.2
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null && pwd )"
 if [[ $PLATFORM == 'linux' ]]; then
     OPENCV_LAPACK_OPTIONS=" \
