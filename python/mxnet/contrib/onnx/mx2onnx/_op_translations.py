@@ -761,9 +761,10 @@ def convert_pooling(node, **kwargs):
     pooling_convention = attrs.get('pooling_convention', 'valid')
     ceil_mode = False
     if pooling_convention == 'full':
-        pooling_warning = "Pooling: ONNX lower than 1.5.0 doesn't support pooling_convention. " \
-                          "This might lead to shape or accuracy issues. " \
-                          "https://github.com/onnx/onnx/issues/549, fixed in onnx 1.5.0"
+        if onnx.__version__<"1.5.0":
+            pooling_warning = "Pooling: ONNX lower than 1.5.0 doesn't support pooling_convention. " \
+                              "This might lead to shape or accuracy issues. " \
+                              "https://github.com/onnx/onnx/issues/549"
         ceil_mode=True
         logging.warning(pooling_warning)
 
