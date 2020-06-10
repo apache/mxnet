@@ -2448,7 +2448,13 @@ def repeat(a, repeats, axis=None):
            [3, 4],
            [3, 4]])
     """
-    return _npi.repeat(a, repeats=repeats, axis=axis)
+    if isinstance(repeats, numeric_types):
+        repeats = [repeats]
+    if axis is not None:
+        tmp = swapaxes(a, 0, axis)
+        res = _npi.repeats(tmp, repeats=repeats, axis=0)
+        return swapaxes(res, 0, axis)
+    return _npi.repeats(a, repeats=repeats, axis=axis)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):

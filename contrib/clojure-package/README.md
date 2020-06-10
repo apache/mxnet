@@ -66,7 +66,7 @@ Currently there are no pre-built jars available. jars that were previously avail
 
 ### Building MXNet and the Clojure package from source
 
-The first step is to download the latest version from [the Apache release page](https://downloads.apache.org/incubator/mxnet/).
+The first step is to download the latest version from the [Download page](https://mxnet.apache.org/get_started/download).
 
 #### Building the core library
 

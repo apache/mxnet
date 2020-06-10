@@ -1153,11 +1153,11 @@ def _add_workload_repeat(array_pool):
     m = _np.array([1, 2, 3, 4, 5, 6])
     m_rect = m.reshape((2, 3))
 
-    # OpArgMngr.add_workload('repeat', np.array(m), [1, 3, 2, 1, 1, 2]) # Argument "repeats" only supports int
+    OpArgMngr.add_workload('repeat', np.array(m), [1, 3, 2, 1, 1, 2]) # Argument "repeats" only supports int
     OpArgMngr.add_workload('repeat', np.array(m), 2)
     B = np.array(m_rect)
-    # OpArgMngr.add_workload('repeat', B, [2, 1], axis=0)  # Argument "repeats" only supports int
-    # OpArgMngr.add_workload('repeat', B, [1, 3, 2], axis=1)  # Argument "repeats" only supports int
+    OpArgMngr.add_workload('repeat', B, [2, 1], axis=0)  # Argument "repeats" only supports int
+    OpArgMngr.add_workload('repeat', B, [1, 3, 2], axis=1)  # Argument "repeats" only supports int
     OpArgMngr.add_workload('repeat', B, 2, axis=0)
     OpArgMngr.add_workload('repeat', B, 2, axis=1)
 
@@ -1165,7 +1165,7 @@ def _add_workload_repeat(array_pool):
     a = _np.arange(60).reshape(3, 4, 5)
     for axis in itertools.chain(range(-a.ndim, a.ndim), [None]):
         OpArgMngr.add_workload('repeat', np.array(a), 2, axis=axis)
-    #    OpArgMngr.add_workload('repeat', np.array(a), [2], axis=axis)   # Argument "repeats" only supports int
+        OpArgMngr.add_workload('repeat', np.array(a), [2], axis=axis)   # Argument "repeats" only supports int
 
 
 def _add_workload_reshape():
