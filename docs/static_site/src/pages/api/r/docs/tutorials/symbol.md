@@ -147,8 +147,6 @@ be more memory efficient than CXXNet and gets to the same runtime with
 greater flexibility.
 
 ## Next Steps
-* [Write and use callback functions](/api/r/docs/tutorials/callback_function)
-* [Neural Networks with MXNet in Five Minutes](/api/r/docs/tutorials/five_minutes_neural_network)
 * [Classify Real-World Images with Pre-trained Model](/api/r/docs/tutorials/classify_real_image_with_pretrained_model)
 * [Handwritten Digits Classification Competition](/api/r/docs/tutorials/mnist_competition)
 * [Character Language Model using RNN](/api/r/docs/tutorials/char_rnn_model)

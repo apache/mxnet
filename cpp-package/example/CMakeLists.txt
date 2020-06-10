@@ -18,9 +18,6 @@
 # Explicitly set GENERATED property https://gitlab.kitware.com/cmake/cmake/issues/18399
 set_property(SOURCE ${CMAKE_CURRENT_LIST_DIR}/../include/mxnet-cpp/op.h PROPERTY GENERATED 1)
 
-add_executable(test_regress_label test_regress_label.cpp)
-target_link_libraries(test_regress_label mxnet_cpp)
-
 add_executable(lenet lenet.cpp)
 target_link_libraries(lenet mxnet_cpp)
 

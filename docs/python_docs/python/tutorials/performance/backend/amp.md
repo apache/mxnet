@@ -317,13 +317,13 @@ with mx.Context(mx.gpu(0)):
     prefix, epoch = mx.test_utils.download_model("imagenet1k-resnet-18", dst_dir=model_path)
     sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
 
-    # All Convolution ops should run in FP16, SoftmaxOutput and FullyConnected should run in FP32
+    # All Convolution ops should run in FP16, FullyConnected should run in FP32
     # cast_optional_params=True: Force cast params to FP16 wherever possible
     result_sym, result_arg_params, result_aux_params = amp.convert_model(sym,
                                                                          arg_params,
                                                                          aux_params,
                                                                          target_dtype_ops=["Convolution"],
-                                                                         fp32_ops=["SoftmaxOutput", "FullyConnected"],
+                                                                         fp32_ops=["FullyConnected"],
                                                                          cast_optional_params=True)
 
     # Run dummy inference with the converted symbolic model
@@ -348,4 +348,3 @@ with mx.Context(mx.gpu(0)):
 ## Current limitations of AMP
 
 - AMP's dynamic loss scaling currently supports only Gluon trainer with `update_on_kvstore=False` option set
-- Using `SoftmaxOutput`, `LinearRegressionOutput`, `LogisticRegressionOutput`, `MAERegressionOutput` with dynamic loss scaling does not work when training networks with multiple Gluon trainers and so multiple loss scales
