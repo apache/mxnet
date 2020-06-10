@@ -457,22 +457,6 @@ def test_neg_conv_bn_add_relu(data_shape):
     syms, attrs, excluded_attrs = neg_conv_bn_add_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
-@with_seed()
-@pytest.mark.parametrize('data_shape', DATA_SHAPE)
-@pytest.mark.parametrize('no_bias', [True, False])
-@pytest.mark.parametrize('flatten', [True, False])
-def test_single_fc(data_shape, no_bias, flatten, tmpdir):
-    syms, attrs = single_fc(no_bias, data_shape, flatten)
-    check_fusion(syms, data_shape, attrs, str(tmpdir), check_quantization=flatten)
-
-@with_seed()
-@pytest.mark.parametrize('data_shape', DATA_SHAPE)
-@pytest.mark.parametrize('no_bias', [True, False])
-@pytest.mark.parametrize('flatten', [True, False])
-@pytest.mark.parametrize('alg', fc_post_ops_list)
-def test_fc_eltwise(data_shape, no_bias, flatten, alg, tmpdir):
-    syms, attrs = fc_eltwise(no_bias, data_shape, flatten, alg)
-    check_fusion(syms, data_shape, attrs, str(tmpdir), check_quantization=flatten)
 
 @with_seed()
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
