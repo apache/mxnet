@@ -1365,9 +1365,11 @@ int MXLoadTVMOp(const char *libpath) {
   API_BEGIN();
   tvm::runtime::TVMOpModule *libpath_module =  tvm::runtime::TVMOpModule::Get();
   libpath_module->Load(libpath);
+#if MXNET_USE_CUDA
   tvm::runtime::TVMOpModule cubin_module;
   cubin_module.Load("libtvmop.cubin");
   libpath_module->Import(cubin_module);
+#endif
   API_END();
 }
 
