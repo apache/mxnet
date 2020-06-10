@@ -229,9 +229,6 @@ def load_params(prefix, epoch):
         return (arg_params, aux_params)
     for k, v in save_dict.items():
         tp, name = k.split(":", 1)
-        if name.find(':') != -1:
-            # structural_name:unique_name
-            structural, name = name.split(':',1)
         if tp == "arg":
             arg_params[name] = v
         if tp == "aux":

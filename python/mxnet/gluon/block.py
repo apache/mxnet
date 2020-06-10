@@ -407,7 +407,7 @@ class Block(object):
             reverse_params = {v: k for k, v in params.items()}
             params = {v: k for k, v in reverse_params.items()}
 
-        arg_dict = {key + ":" + val.name: val._reduce() for key, val in params.items()}
+        arg_dict = {key: val._reduce() for key, val in params.items()}
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         save_fn(filename, arg_dict)
 
@@ -493,11 +493,6 @@ class Block(object):
         error_str = "file: %s" % (filename) if filename else "param_dict"
         loaded = {k[4:] if k.startswith('arg:') or k.startswith('aux:') else k: v \
                   for k, v in param_dict.items()}
-        if isinstance(self, SymbolBlock) and not self._structured_named:
-            # load parameters using parameters' unique names
-            loaded = {k.split(':')[1] : v for k, v in loaded.items()}
-        else:
-            loaded = {k.split(':')[0] : v for k, v in loaded.items()}
 
         if not allow_missing:
             params_inv = defaultdict(list)
@@ -1300,7 +1295,8 @@ class HybridBlock(Block):
             will be created, where xxxx is the 4 digits epoch number.
         epoch : int
             Epoch number of saved model.
-
+        remove_amp_cast : bool, optional
+            Whether to remove the amp_cast and amp_multicast operators, before saving the model.
         Returns
         -------
         symbol_filename : str
@@ -1321,10 +1317,10 @@ class HybridBlock(Block):
         arg_dict = {}
         for name, param in self.collect_params().items():
             if param.name in arg_names:
-                arg_dict['arg:%s:%s'%(name, param.name)] = param._reduce()
+                arg_dict['arg:%s'%param.name] = param._reduce()
             else:
                 assert param.name in aux_names
-                arg_dict['aux:%s:%s'%(name, param.name)] = param._reduce()
+                arg_dict['aux:%s'%param.name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         params_filename = '%s-%04d.params'%(path, epoch)
         save_fn(params_filename, arg_dict)
@@ -1532,12 +1528,11 @@ class SymbolBlock(HybridBlock):
         if params is None:
             params = {}
             self._structured_named = False
-        else:
+        elif any(k.find('.')!=-1 for k in params):
             self._structured_named = True
-            params_inv = defaultdict(list)
             for k, v in params.items():
                 structure[v.name].append(k)
-            params = {p.name : p for p in params.values()}    
+        params = {p.name : p for p in params.values()}    
 
         if isinstance(inputs, symbol.Symbol) and len(inputs.list_outputs()) == 1:
             inputs = [inputs]

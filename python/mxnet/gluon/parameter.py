@@ -62,8 +62,8 @@ class Parameter(object):
 
     Parameters
     ----------
-    name : str, default ''
-        Name of this parameter.
+    name : str, default 'weight'
+        Name of this parameter. It decides the corresponding default initializer.
     grad_req : {'write', 'add', 'null'}, default 'write'
         Specifies how to update gradient to grad arrays.
 
@@ -104,7 +104,7 @@ class Parameter(object):
     wd_mult : float
         Local weight decay multiplier for this Parameter.
     """
-    def __init__(self, name='', grad_req='write', shape=None, dtype=mx_real_t,
+    def __init__(self, name='weight', grad_req='write', shape=None, dtype=mx_real_t,
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
                  differentiable=True, stype='default', grad_stype='default'):
         self._var = None
@@ -437,7 +437,10 @@ class Parameter(object):
             and :py:meth:`Parameter.init` are ``None``.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
-
+        structural_name : str, default ""
+            The structural name for the parameter in the block. 
+            The value would be accessed in InitDesc.attrs['structure'] by self-defined initializers.
+            Users may want to initialize parameters based on the block's structure
         Examples
         --------
         >>> weight = mx.gluon.Parameter('weight', shape=(2, 2))
