@@ -1,3 +1,11 @@
+WARNING: the following PyPI package names are provided for your convenience but
+they point to packages that are *not* provided nor endorsed by the Apache
+Software Foundation. As such, they might contain software components with more
+restrictive licenses than the Apache License and you'll need to decide whether
+they are appropriate for your usage. Like all Apache Releases, the official
+Apache MXNet (incubating) releases consist of source code only and are found at
+the [Download page](https://mxnet.apache.org/get_started/download).
+
 Run the following command:
 
 <div class="v1-6-0">
@@ -115,13 +123,6 @@ pip install mxnet==0.11.0
 
 </div> <!-- End of v0-11-0-->
 
-<div class="master">
-
-{% highlight bash %}
-pip install --pre mxnet -f https://dist.mxnet.io/python/all
-{% endhighlight %}
-
-</div> <!-- End of master-->
 <br>
 
 
