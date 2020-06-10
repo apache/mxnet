@@ -208,7 +208,6 @@ function _format_graphviz_edge(io::IOBuffer, head, tail, attrs)
 end
 function _extract_shape(str :: AbstractString)
   shape = collect(m.match for m in eachmatch(r"\d+", str))
-
   shape = reverse(shape) # JSON in libmxnet has reversed shape (column vs row majoring)
   return "(" * join(shape, ",") * ")"
 end
