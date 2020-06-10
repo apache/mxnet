@@ -320,7 +320,9 @@ class TensorrtProperty : public SubgraphProperty {
       }
     }
     auto tensorrt_params_names = params_oss.str();
-    tensorrt_params_names.pop_back();
+    if (!tensorrt_params_names.empty()) {
+      tensorrt_params_names.pop_back();
+    }
     n->attrs.parsed = param;
     n->attrs.dict["subgraph_params_names"] = tensorrt_params_names;
     return n;
