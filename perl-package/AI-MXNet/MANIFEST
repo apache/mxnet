@@ -104,7 +104,6 @@ t/AI-MXNet.t
 t/test_attr.t
 t/test_autograd.t
 t/test_base.t
-t/test_conv.t
 t/test_cuda_module.t
 t/test_engine.t
 t/test_executor.t
@@ -121,7 +120,6 @@ t/test_loss.t
 t/test_metric.t
 t/test_model_parallel.t
 t/test_module.t
-t/test_multi_device_exec.t
 t/test_ndarray.t
 t/test_optimizers.t
 t/test_random.t

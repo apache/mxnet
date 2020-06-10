@@ -148,5 +148,4 @@ greater flexibility.
 
 ## Next Steps
 * [Classify Real-World Images with Pre-trained Model](/api/r/docs/tutorials/classify_real_image_with_pretrained_model)
-* [Handwritten Digits Classification Competition](/api/r/docs/tutorials/mnist_competition)
 * [Character Language Model using RNN](/api/r/docs/tutorials/char_rnn_model)

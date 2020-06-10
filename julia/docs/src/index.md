@@ -35,7 +35,6 @@ For more details, see documentation below. Please also checkout the
 
 ```@contents
 Pages = [
-  "tutorial/mnist.md",
   "tutorial/char-lstm.md",
 ]
 Depth = 2
