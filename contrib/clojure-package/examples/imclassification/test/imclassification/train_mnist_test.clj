@@ -31,10 +31,3 @@
 		(io/reader)
 		(line-seq)
 		(filter  #(not (s/includes? % "mxnet_version")))))
-
-(deftest mnist-two-epochs-test
-  (do
-    (mnist/start [(context/cpu)] 2)
-    (is (=
-         (file-to-filtered-seq "test/test-symbol.json.ref")
-         (file-to-filtered-seq "target/test-symbol.json")))))
