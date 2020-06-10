@@ -116,7 +116,7 @@ class MXNetGraph(object):
         return arg_params, aux_params
 
     @staticmethod
-    def get_outputs(sym, params, in_shape, in_label):
+    def get_outputs(sym, params, in_shape, in_label, verbose=True):
         """ Infer output shapes and return dictionary of output name to shape
 
         :param :class:`~mxnet.symbol.Symbol` sym: symbol to perform infer shape on
@@ -124,6 +124,7 @@ class MXNetGraph(object):
         :param list of tuple(int, ...) in_shape: list of all input shapes
         :param  in_label: name of label typically used in loss that may be left in graph. This name is
             removed from list of inputs required by symbol
+        :param verbose: If false, info logging messages are deactivated
         :return: dictionary of output name to shape
         :rtype: dict of (str, tuple(int, ...))
         """
@@ -142,7 +143,8 @@ class MXNetGraph(object):
             if name.endswith('_output'):
                 out_names.append(name[:-len('_output')])
             else:
-                logging.info("output '%s' does not end with '_output'", name)
+                if verbose:
+                    logging.info("output '%s' does not end with '_output'", name)
                 out_names.append(name)
 
         assert len(out_shapes) == len(out_names)
@@ -205,7 +207,7 @@ class MXNetGraph(object):
 
         # Determine output and internal shapes
         graph_outputs = MXNetGraph.get_outputs(sym, params, in_shape, output_label)
-        graph_shapes = MXNetGraph.get_outputs(sym.get_internals(), params, in_shape, output_label)
+        graph_shapes = MXNetGraph.get_outputs(sym.get_internals(), params, in_shape, output_label, verbose=False)
 
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
