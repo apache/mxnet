@@ -1306,28 +1306,30 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         grad_req = {k:v for k, v in zip(sym.list_arguments(), grad_req)}
 
     executor = sym._bind(ctx=ctx, args=location, args_grad=args_grad_data,
-                        aux_states=aux_states, grad_req=grad_req)
-    executor.forward(is_train=True)
+                         aux_states=aux_states, grad_req=grad_req)
+    outputs = executor.forward(is_train=True)
 
     if isinstance(out_grads, (tuple, list)):
         outg = list()
-        for arr in out_grads:
+        for i, arr in enumerate(out_grads):
             if isinstance(arr, np.ndarray):
-                outg.append(mx.nd.array(arr, ctx=ctx, dtype=arr.dtype if dtype == "asnumpy" else dtype))
+                dtype = arr.dtype if dtype == "asnumpy" else dtype
+                stype = outputs[i].stype
+                outg.append(mx.nd.array(arr, ctx=ctx, dtype=dtype).tostype(stype))
             else:
-                outg.append(arr)
+                outg.append(arr.tostype(stype))
         out_grads = outg
     elif isinstance(out_grads, dict):
         outg = dict()
         for k, v in out_grads.items():
             if isinstance(v, np.ndarray):
-                outg[k] = mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype)
+                dtype = v.dtype if dtype == "asnumpy" else dtype
+                outg[k] = mx.nd.array(v, ctx=ctx, dtype=dtype)
             else:
                 outg[k] = v
         out_grads = outg
     else:
         assert out_grads is None
-
     executor.backward(out_grads)
 
     grads = {k: v.asnumpy() for k, v in args_grad_data.items()}
