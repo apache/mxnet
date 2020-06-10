@@ -46,4 +46,11 @@ if [[ (! -e $DEPS_PATH/lib/libopenblas.a) ]]; then
     rm $DEPS_PATH/lib/libopenblas*.so
 
     popd
+
+    # Makefile build declares -llapack even though libopenblas provides lapack
+    # symbols. Make sure -llapack doesn't cause any harm.
+    if [[ -z "$CMAKE_STATICBUILD" ]]; then
+        ln -s libopenblas.a $DEPS_PATH/lib/libcblas.a
+        ln -s libopenblas.a $DEPS_PATH/lib/liblapack.a
+    fi
 fi

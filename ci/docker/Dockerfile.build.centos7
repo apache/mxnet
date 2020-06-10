@@ -71,8 +71,7 @@ RUN yum -y check-update || true && \
         libzstd-devel && \
     yum clean all
 
-# Make GCC7, Python 3.5 and Maven 3.3 Software Collections available by default
-# during build and runtime of this container
+# Make Clang, Python 3.6 and Maven 3.3 Software Collections available during following build steps
 SHELL [ "/usr/bin/scl", "enable", "llvm-toolset-7.0", "rh-python36", "rh-maven35" ]
 
 # Install minimum required cmake version

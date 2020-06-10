@@ -48,7 +48,7 @@ else
 fi
 export MAKE="make $ADD_MAKE_FLAG"
 
-if [[ $VARIANT == cu* ]]; then
+if [[ $VARIANT == "cu"* ]]; then
     export CC="gcc"
     export CXX="g++"
     export CFLAGS="-fPIC -mno-avx"
