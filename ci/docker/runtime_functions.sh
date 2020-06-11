@@ -947,9 +947,7 @@ cd_unittest_ubuntu() {
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
 
-    pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/unittest
-    MXNET_ENGINE_TYPE=NaiveEngine \
-        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --verbose tests/python/unittest
+    pytest -m 'not serial' -n 4 --durations=50 --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --verbose tests/python/unittest
     pytest -n 4 --durations=50 --verbose tests/python/quantization
 
@@ -968,7 +966,8 @@ cd_unittest_ubuntu() {
 
         # TODO(szha): fix and reenable the hanging issue. tracked in #18098
         # integrationtest_ubuntu_gpu_dist_kvstore
-        integrationtest_ubuntu_gpu_byteps
+        # TODO(eric-haibin-lin): fix and reenable
+        # integrationtest_ubuntu_gpu_byteps
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then
