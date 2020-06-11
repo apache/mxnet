@@ -69,7 +69,16 @@ _WHITE_LIST = [
                'docker/Dockerfiles',
 
                # Git submodules under different licenses
-               '3rdparty',
+               '3rdparty/ctc_include/contrib/moderngpu',
+               '3rdparty/dlpack',
+               '3rdparty/dmlc-core',
+               '3rdparty/googletest',
+               '3rdparty/mkldnn',
+               '3rdparty/nvidia_cub',
+               '3rdparty/onnx-tensorrt',
+               '3rdparty/openmp',
+               '3rdparty/ps-lite',
+               '3rdparty/tvm',
 
                # 3rdparty headerfiles under different licenses
                'include/mkldnn',
@@ -123,7 +132,8 @@ _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
           '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#',
           '.java':'*', '.sh':'#', '.cpp':'*', '.hpp':'*', '.c':'*',
           '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#',
-          '.t':'#', '.ps1':'#', '.jl':'#', '.clj':';;', '.pyx':'#', '.js':'*'}
+          '.t':'#', '.ps1':'#', '.jl':'#', '.clj':';;', '.pyx':'#', '.js':'*',
+          '.md':'<!---'}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')
@@ -194,6 +204,8 @@ def _get_license(comment_mark):
         body += comment_mark
         if len(l):
             body += ' ' + l
+        if comment_mark == '<!---':
+            body += ' -->'
         body += '\n'
 
     if comment_mark == '*':
@@ -226,7 +238,9 @@ def file_has_license(fname):
 def file_add_license(fname):
     if not should_have_license(fname):
         return
-    if file_have_valid_license(fname):
+    with open(fname, 'r', encoding="utf-8") as f:
+        lines = f.readlines()
+    if _lines_have_apache_license(lines):
         return
     _, ext = os.path.splitext(fname)
     with open(fname, 'w', encoding="utf-8") as f:
