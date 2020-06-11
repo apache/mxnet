@@ -55,7 +55,6 @@ core_logic: {
     custom_steps.test_unix_perl_gpu('gpu_make'),
     custom_steps.test_unix_r_gpu('gpu'),
     custom_steps.test_unix_cpp_gpu('cmake_gpu'),
-    custom_steps.test_unix_python3_integration_gpu('gpu'),
     custom_steps.test_unix_cpp_package_gpu('gpu_make'),
     custom_steps.test_unix_scala_gpu('gpu_make'),
     // TODO(szha): fix and reenable the hanging issue. tracked in #18098

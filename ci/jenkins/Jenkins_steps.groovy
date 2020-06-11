@@ -970,20 +970,6 @@ def test_unix_python3_tensorrt_gpu(lib_name) {
     }]
 }
 
-def test_unix_python3_integration_gpu(lib_name) {
-    return ['Python Integration GPU': {
-      node(NODE_LINUX_GPU_G4) {
-        ws('workspace/it-python-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_python', true)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_cpp_package_gpu(lib_name) {
     return ['cpp-package GPU Makefile': {
       node(NODE_LINUX_GPU_G4) {
