@@ -284,7 +284,7 @@ def test_load_000800():
         fc2  = mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64, lr_mult=0.01)
         act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
         fc3  = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
-        fc3 = mx.symbol.BatchNorm(fc3, name='batchnorm0')
+        fc3 = mx.symbol.BatchNorm(fc3, mkldnn_off=True, name='batchnorm0')
         sym1  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
 
     curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))

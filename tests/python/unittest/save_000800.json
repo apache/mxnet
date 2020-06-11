@@ -151,7 +151,8 @@
         "eps": "0.001", 
         "fix_gamma": "True", 
         "momentum": "0.9", 
-        "use_global_stats": "False"
+        "use_global_stats": "False",
+        "mkldnn_off": "True"
       }, 
       "name": "batchnorm0", 
       "inputs": [[11, 0], [12, 0], [13, 0]], 

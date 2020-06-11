@@ -420,7 +420,7 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_MKLDNN == 1
 static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &param) {
-  if (mxnet::op::batchnorm::disable_mkl) return false;
+  if (mxnet::op::batchnorm::disable_mkl || param.mkldnn_off) return false;
   const mxnet::TShape shape = input.shape();
   const int ndim = shape.ndim();
   if (ndim == 0 || shape.Size() == 0) return false;

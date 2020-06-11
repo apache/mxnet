@@ -74,6 +74,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
   bool output_mean_var;
   int axis;
   bool cudnn_off;
+  bool mkldnn_off;
 
   dmlc::optional<float> min_calib_range;  // min float value calculated from calibration dataset
   dmlc::optional<float> max_calib_range;  // max float value calculated from calibration dataset
@@ -96,6 +97,8 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
     .describe("Specify which shape axis the channel is specified");
     DMLC_DECLARE_FIELD(cudnn_off).set_default(false)
     .describe("Do not select CUDNN operator, if available");
+    DMLC_DECLARE_FIELD(mkldnn_off).set_default(false)
+    .describe("Do not select MKLDNN operator, if available");
     DMLC_DECLARE_FIELD(min_calib_range)
     .set_default(dmlc::optional<float>())
     .describe("The minimum scalar value in the form of float32 obtained "
@@ -116,6 +119,7 @@ struct BatchNormParam : public dmlc::Parameter<BatchNormParam> {
                 this->use_global_stats == other.use_global_stats &&
                 this->output_mean_var == other.output_mean_var && this->axis == other.axis &&
                 this->cudnn_off == other.cudnn_off &&
+                this->mkldnn_off == other.mkldnn_off &&
                 this->min_calib_range.has_value() == other.min_calib_range.has_value() &&
                 this->max_calib_range.has_value() == other.max_calib_range.has_value();
     if (this->min_calib_range.has_value() && other.min_calib_range.has_value() &&
