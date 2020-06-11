@@ -19,7 +19,7 @@ use strict;
 use warnings;
 use Test::More tests => 103;
 use AI::MXNet qw(mx);
-use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate almost_equal same);
+use AI::MXNet::TestUtils qw(mlp2 check_consistency zip assert enumerate almost_equal same);
 use Storable qw(freeze thaw);
 use PDL;
 
@@ -89,7 +89,7 @@ test_symbol_children();
 
 sub test_symbol_storable
 {
-    my $mlist = [mlp2(), conv()];
+    my $mlist = [mlp2()];
     my $data = freeze($mlist);
     my $mlist2 = thaw($data);
     zip(sub {
