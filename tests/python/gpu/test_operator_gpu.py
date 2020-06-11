@@ -47,8 +47,6 @@ from test_contrib_operator import test_multibox_target_op
 from test_contrib_optimizer import test_adamw
 
 set_default_context(mx.gpu(0))
-del test_support_vector_machine_l1_svm  # noqa
-del test_support_vector_machine_l2_svm  # noqa
 del test_custom_op_fork  #noqa
 
 def check_countsketch(in_dim,out_dim,n):

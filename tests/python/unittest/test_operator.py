@@ -7129,16 +7129,6 @@ def test_binary_math_operators():
             name, op[0], shape, op[4], op[5], op[6], op[7], rtol_fd, atol_fd,
             num_eps)
 
-
-@with_seed()
-def test_softmax():
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
-    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
-    check_softmax_grad(default_context())
-    check_smoothed_softmax_grad(default_context())
-
-
 @with_seed()
 @pytest.mark.serial
 def test_slice():
