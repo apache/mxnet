@@ -202,6 +202,10 @@ CUfunction get_function(const std::string &code,
     CUDA_DRIVER_CALL(cuDevicePrimaryCtxRetain(&context, cu_device));
     // Jit-compile ptx for the driver's current context
     CUmodule module;
+    std::ofstream f("debug.ptx");
+    f << kinfo.ptx;
+    f.close();
+
     CUDA_DRIVER_CALL(cuModuleLoadData(&module, kinfo.ptx.c_str()));
     CUDA_DRIVER_CALL(cuModuleGetFunction(&kinfo.functions[dev_id],
                                          module,

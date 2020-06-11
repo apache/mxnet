@@ -124,7 +124,7 @@ __global__ void binary_kernel(const binary_kernel_params params,
     reinterpret_cast<OutputType0*>(params.outputs[0]), N);
 
   using IType0 = AccType<InputType0>;
-  using IType1 = AccType<InputType0>;
+  using IType1 = AccType<InputType1>;
   using OType = AccType<OutputType0>;
 
   const index_t M = num_aligned_elements;

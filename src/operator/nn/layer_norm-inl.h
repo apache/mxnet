@@ -378,11 +378,11 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
       ElemwiseBinaryOp::Compute<xpu, op::mshadow_op::mul>(attrs, ctx, {ograd_mult, normalized_data},
                                                           {kWriteTo}, {ograd_mult});
     } else {
-      ElemwiseBinaryRTCCompute {"mul"}(attrs, ctx, {ograd_mult, normalized_data},
-                                       {kWriteTo}, {ograd_mult});
       BinaryBroadcastRTCCompute {"sub"}(attrs, ctx,
                                         {ograd_mult, red_out},
                                         {req[0]}, {outputs[0]});
+      ElemwiseBinaryRTCCompute {"mul"}(attrs, ctx, {ograd_mult, normalized_data},
+                                       {kWriteTo}, {ograd_mult});
     }
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {

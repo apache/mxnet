@@ -327,6 +327,7 @@ void VectorizedKernelRTCLauncher(const std::string &code,
                                  const int lead_input_num = 0) {
   using namespace util;
   const index_t N = lead_dim * other_dim;
+  nvec = std::min(nvec, 4);  // Use at most 4-wide vectors
   if (N != 0) {
     auto align = CheckAlignment(params, lead_dim, other_dim,
                                 nvec, inputs, outputs);

@@ -317,7 +317,7 @@ name (const DType a, const DType2 b) { \
   if (type_util::has_double_or_integral<DType, DType2>::value) { \
     return double_version ((double)a, (double)b); \
   } else { \
-    return float_version (a, b); \
+    return float_version ((float)a, (float)b); \
   } \
 }
 
@@ -506,7 +506,7 @@ lcm(const DType a, const DType2 b) {
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type bitwise_xor(const DType a,
                                                                        const DType2 b) {
-  return static_cast<int64_t>(a) ^ static_cast<int64_t>(b);
+  return static_cast<int64>(a) ^ static_cast<int64>(b);
 }
 
 
@@ -518,7 +518,15 @@ rarctan2(const DType a, const DType2 b) {
   return arctan2(b, a);
 }
 
-DEFINE_BINARY_MATH_FUNC(ldexp, a * ::pow(2.0f, b), a * ::powf(2.0f, b))
+template <typename DType, typename DType2>
+__device__ inline typename type_util::mixed_type<DType, DType2>::type
+ldexp(const DType a, const DType2 b) {
+  if (type_util::has_double_or_integral<DType, DType2>::value) {
+    return a * ::pow(2.0, static_cast<double>(b));
+  } else {
+    return a * ::powf(2.0f, static_cast<float>(b));
+  }
+}
 
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type

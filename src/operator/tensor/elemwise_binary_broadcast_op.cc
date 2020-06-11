@@ -109,8 +109,8 @@ __global__ void binary_broadcast_kernel(
     }
 #pragma unroll
     for (int i = 0; i < nvec; ++i) {
-      const auto temp = OP(lloader.separate()[i],
-                           rloader.separate()[i]);
+      const auto temp = OP(IType0::from(lloader.separate()[i]),
+                           IType1::from(rloader.separate()[i]));
 
       if (req == OpReqType::kAddTo) {
         const auto temp2 = op::add(temp, OType::from(storer.separate()[i]));
@@ -195,18 +195,18 @@ __global__ void single_side_binary_broadcast_kernel(
                                      static_cast<index_t>(0)),
                                  param.size[other_side] - 1);
       const auto rinput = IType2::from(
-                            reinterpret_cast<const InputType1*>(param.inputs[other_side])
+                            reinterpret_cast<const DType2*>(param.inputs[other_side])
                             [rindex]);
 
       typename OType::type temp;
       if (side == 0) {
         // Left side is vectorized
-        temp = OP(lloader.separate()[i],
+        temp = OP(IType::from(lloader.separate()[i]),
                   rinput);
       } else {
         // Right side is vectorized
         temp = OP(rinput,
-                  lloader.separate()[i]);
+                  IType::from(lloader.separate()[i]));
       }
 
       if (req == OpReqType::kAddTo) {
