@@ -1233,6 +1233,20 @@ def test_unix_distributed_kvstore_cpu(lib_name) {
     }]
 }
 
+def test_unix_byteps_gpu(lib_name) {
+    return ['byteps tests GPU': {
+      node(NODE_LINUX_GPU_G4) {
+        ws('workspace/it-byteps') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_lib)
+            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_byteps', true, '32768m')
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_distributed_kvstore_gpu(lib_name) {
     return ['dist-kvstore tests GPU': {
       node(NODE_LINUX_GPU_G4) {

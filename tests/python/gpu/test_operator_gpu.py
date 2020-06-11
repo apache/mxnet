@@ -38,7 +38,6 @@ from test_numpy_interoperability import *
 from test_optimizer import *
 from test_random import *
 from test_exc_handling import *
-#from test_rnn import *
 from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
@@ -1742,90 +1741,6 @@ def check_rnn_consistency(cell1, cell2):
     mx.test_utils.assert_allclose(mod1.get_outputs()[0], mod2.get_outputs()[0], rtol=1e-2, atol=1e-4)
 
 @with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_rnn():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.RNNCell(100, activation='relu', prefix='l0_'))
-    stack.add(mx.rnn.RNNCell(100, activation='relu', prefix='l1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_lstm_forget_bias():
-    forget_bias = 2.0
-    fused = mx.rnn.FusedRNNCell(10, forget_bias=forget_bias, num_layers=2, mode='lstm', prefix='')
-
-    dshape = (32, 1, 20)
-    data = mx.sym.Variable('data')
-
-    sym, _ = fused.unroll(1, data, merge_outputs=True)
-    mod = mx.mod.Module(sym, label_names=None, context=mx.gpu(0))
-    mod.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    mod.init_params()
-
-    args, auxs = mod.get_params()
-    args = fused.unpack_weights(args)
-
-    bias_name = next(x for x in args if x.endswith('f_bias'))
-    expected_bias = forget_bias * np.ones(10, )
-    mx.test_utils.assert_allclose(args[bias_name], expected_bias)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_gru():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.GRUCell(100, prefix='l0_'))
-    stack.add(mx.rnn.GRUCell(100, prefix='l1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_bidirectional():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
-            bidirectional=True)
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.GRUCell(100, prefix='l0_'),
-                mx.rnn.GRUCell(100, prefix='r0_'),
-                output_prefix='bi_gru_0_'))
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.GRUCell(100, prefix='l1_'),
-                mx.rnn.GRUCell(100, prefix='r1_'),
-                output_prefix='bi_gru_1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_unfuse():
-    for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
-        fused = mx.rnn.FusedRNNCell(
-            100, num_layers=2, mode=mode,
-            prefix='test_%s'%mode,
-            bidirectional=True,
-            dropout=0.5)
-
-        stack = fused.unfuse()
-
-        check_rnn_consistency(fused, stack)
-        check_rnn_consistency(stack, fused)
-
-
-@with_seed()
 @pytest.mark.serial
 def test_psroipooling_with_type():
     arg_params = {
@@ -2034,29 +1949,6 @@ def test_deformable_convolution_options():
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2, name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, tol=tol)
-
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_residual_fused():
-    cell = mx.rnn.ResidualCell(
-            mx.rnn.FusedRNNCell(50, num_layers=3, mode='lstm',
-                               prefix='rnn_', dropout=0.5))
-
-    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
-    outputs, _ = cell.unroll(2, inputs, merge_outputs=None)
-    assert sorted(cell.params._params.keys()) == \
-           ['rnn_parameters']
-
-    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10, 50), rnn_t1_data=(10, 50))
-    assert outs == [(10, 2, 50)]
-    outputs = outputs.eval(ctx=mx.gpu(0),
-                           rnn_t0_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
-                           rnn_t1_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
-                           rnn_parameters=mx.nd.zeros((61200,), ctx=mx.gpu(0)))
-    expected_outputs = np.ones((10, 2, 50))+5
-    assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
 
 
 def check_rnn_layer(layer):

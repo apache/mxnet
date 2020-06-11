@@ -1,1 +1,0 @@
-Refer to the [Perl section of the MXNet macOS installation guide](/get_started/osx_setup.html#install-the-mxnet-package-for-perl).

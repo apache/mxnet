@@ -724,7 +724,9 @@ inline void NumpyEinsumProcess(const std::vector<TBlob>& inputs,
         int j = 0;
         for (idim = 0; idim < ndim_iter; ++idim) {
           if (op_axes_arrays[i][idim] == -1 ||
-              opshape[i][op_axes_arrays[i][idim]] == 1) {
+              (iop != nop && opshape[i][op_axes_arrays[i][idim]] == 1 &&
+              op_axes_arrays[iop][idim] != -1 &&
+              opshape[iop][op_axes_arrays[iop][idim]] != 1)) {
             remainstride[iop][j++] = iterstride[iop][idim];
           } else {
             opstride[iop][op_axes_arrays[i][idim]] = iterstride[iop][idim];
