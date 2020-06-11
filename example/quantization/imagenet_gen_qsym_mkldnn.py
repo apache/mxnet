@@ -42,40 +42,6 @@ def download_model(model_name, logger=None):
         logger.info('Downloading model %s... into path %s' % (model_name, model_path))
     return modelzoo.download_model(args.model, os.path.join(dir_path, 'model'))
 
-def convert_from_gluon(model_name, image_shape, classes=1000, logger=None):
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    model_path = os.path.join(dir_path, 'model')
-    if logger is not None:
-        logger.info('Converting model from Gluon-CV ModelZoo %s... into path %s' % (model_name, model_path))
-    net = get_model(name=model_name, classes=classes, pretrained=True)
-    net.hybridize()
-    x = mx.sym.var('data')
-    y = net(x)
-    y = mx.sym.SoftmaxOutput(data=y, name='softmax')
-    symnet = mx.symbol.load_json(y.tojson())
-    params = net.collect_params()
-    args = {}
-    auxs = {}
-    for param in params.values():
-        v = param._reduce()
-        k = param.name
-        if 'running' in k:
-            auxs[k] = v
-        else:
-            args[k] = v
-    mod = mx.mod.Module(symbol=symnet, context=mx.cpu(),
-                        label_names = ['softmax_label'])
-    mod.bind(for_training=False,
-             data_shapes=[('data', (1,) +
-                          tuple([int(i) for i in image_shape.split(',')]))])
-    mod.set_params(arg_params=args, aux_params=auxs)
-    dst_dir = os.path.join(dir_path, 'model')
-    prefix = os.path.join(dir_path, 'model', model_name)
-    if not os.path.isdir(dst_dir):
-        os.mkdir(dst_dir)
-    mod.save_checkpoint(prefix, 0)
-    return prefix
-
 def save_symbol(fname, sym, logger=None):
     if logger is not None:
         logger.info('Saving symbol into file at %s' % fname)
@@ -167,17 +133,10 @@ if __name__ == '__main__':
         if logger:
             logger.info('Get pre-trained model from MXNet or Gluoncv modelzoo.')
             logger.info('If you want to use custom model, please set --no-pretrained.')
-        if args.model in ['imagenet1k-resnet-152', 'imagenet1k-inception-bn']:
-            if logger:
-                logger.info('model %s is downloaded from MXNet modelzoo' % args.model)
-            prefix, epoch = download_model(model_name=args.model, logger=logger)
-        else:
-            if logger:
-                logger.info('model %s is converted from GluonCV' % args.model)
-            prefix = convert_from_gluon(model_name=args.model, image_shape=args.image_shape, classes=1000, logger=logger)
-            rgb_mean = '123.68,116.779,103.939'
-            rgb_std = '58.393, 57.12, 57.375'
-            epoch = 0
+        assert args.model in ['imagenet1k-resnet-152', 'imagenet1k-inception-bn']
+        if logger:
+            logger.info('model %s is downloaded from MXNet modelzoo' % args.model)
+        prefix, epoch = download_model(model_name=args.model, logger=logger)
     else:
         dir_path = os.path.dirname(os.path.realpath(__file__))
         prefix = os.path.join(dir_path, 'model', args.model)
