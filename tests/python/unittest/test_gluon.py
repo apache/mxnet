@@ -1174,14 +1174,6 @@ def test_export():
     assert symbol_filename == 'gluon-symbol.json'
     assert params_filename == 'gluon-0000.params'
 
-    module = mx.mod.Module.load('gluon', 0, label_names=None, context=ctx)
-    module.bind(data_shapes=[('data', data.shape)])
-    module.forward(mx.io.DataBatch([data], None), is_train=False)
-    mod_out, = module.get_outputs()
-
-    assert_almost_equal(out.asnumpy(), mod_out.asnumpy())
-
-
 @with_seed()
 def test_import():
     ctx = mx.context.current_context()

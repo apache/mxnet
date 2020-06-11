@@ -1716,30 +1716,6 @@ def test_take_with_type():
                               arg_params=arg_params)
 
 
-def check_rnn_consistency(cell1, cell2):
-    dshape = (32, 5, 200)
-    data = mx.sym.Variable('data')
-
-    sym1, _ = cell1.unroll(5, data, merge_outputs=True)
-    mod1 = mx.mod.Module(sym1, label_names=None, context=mx.gpu(0))
-    mod1.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    sym2, _ = cell2.unroll(5, data, merge_outputs=True)
-    mod2 = mx.mod.Module(sym2, label_names=None, context=mx.gpu(0))
-    mod2.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    mod1.init_params()
-    args, auxs = mod1.get_params()
-    args = cell1.unpack_weights(args)
-    args = cell2.pack_weights(args)
-    mod2.set_params(args, auxs)
-
-    batch=mx.io.DataBatch(data=[mx.random.uniform(shape=dshape)], label=[])
-    mod1.forward(batch, is_train=False)
-    mod2.forward(batch, is_train=False)
-
-    mx.test_utils.assert_allclose(mod1.get_outputs()[0], mod2.get_outputs()[0], rtol=1e-2, atol=1e-4)
-
 @with_seed()
 @pytest.mark.serial
 def test_psroipooling_with_type():

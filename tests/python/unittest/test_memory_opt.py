@@ -172,15 +172,10 @@ def test_resnet152():
     # Verify the memory allocation behavior on ResNet-152, the state-of-the-art
     # model used for image classification.
 
-    # Import the network, similar to what we did in
-    # ${MXNET_ROOT_DIR}/example/image-classification/train_imagenet.py
-    from importlib import import_module
-    sys.path.append(os.path.join(os.path.dirname(__file__),
-                    '..', '..', '..', 'example', 'image-classification'))
-    resnet_mod = import_module('symbols.resnet')
-    resnet_152 = resnet_mod.get_symbol(num_classes=1000,
-                                       num_layers=152,
-                                       image_shape='3,224,224')
+    import resnet
+    resnet_152 = resnet.get_symbol(num_classes=1000,
+                                   num_layers=152,
+                                   image_shape='3,224,224')
     # We do the binding twice, one with the memory optimizations and one without.
     # It is expected that the memory consumption of the former should be roughly
     # half of that of the latter.

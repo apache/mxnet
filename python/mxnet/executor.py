@@ -30,11 +30,6 @@ from . import ndarray
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
 
-# those functions are not used here, we just import them to keep backward compatibility
-# in case the end user calls them, as they originally lives here
-# pylint: disable=unused-import
-from .executor_manager import _split_input_slice, _check_arguments, _load_data, _load_label
-
 def _monitor_callback_wrapper(callback):
     """A wrapper for the user-defined handle."""
     def callback_handle(name, array, _):

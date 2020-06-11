@@ -1283,7 +1283,7 @@ class HybridBlock(Block):
 
     def export(self, path, epoch=0, remove_amp_cast=True):
         """Export HybridBlock to json format that can be loaded by
-        `gluon.SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
+        `gluon.SymbolBlock.imports` or the C++ interface.
 
         .. note:: When there are only one input, it will have name `data`. When there
                   Are more than one inputs, they will be named as `data0`, `data1`, etc.
@@ -1465,8 +1465,8 @@ class SymbolBlock(HybridBlock):
     """
     @staticmethod
     def imports(symbol_file, input_names, param_file=None, ctx=None):
-        """Import model previously saved by `gluon.HybridBlock.export` or
-        `Module.save_checkpoint` as a `gluon.SymbolBlock` for use in Gluon.
+        """Import model previously saved by `gluon.HybridBlock.export`
+        as a `gluon.SymbolBlock` for use in Gluon.
 
         Parameters
         ----------

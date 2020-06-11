@@ -53,18 +53,6 @@ def get_model_path(model_name):
     return os.path.join(os.getcwd(), 'models', str(mxnet_version), model_name)
 
 
-def get_module_api_model_definition():
-    input = mx.symbol.Variable('data')
-    input = mx.symbol.Flatten(data=input)
-
-    fc1 = mx.symbol.FullyConnected(data=input, name='fc1', num_hidden=128)
-    act1 = mx.sym.Activation(data=fc1, name='relu1', act_type="relu")
-    fc2 = mx.symbol.FullyConnected(data=act1, name='fc2', num_hidden=2)
-    op = mx.symbol.SoftmaxOutput(data=fc2, name='softmax')
-    model = mx.mod.Module(symbol=op, context=ctx, data_names=['data'], label_names=['softmax_label'])
-    return model
-
-
 def save_inference_results(inference_results, model_name):
     assert (isinstance(inference_results, mx.ndarray.ndarray.NDArray))
     save_path = os.path.join(get_model_path(model_name), ''.join([model_name, '-inference']))
