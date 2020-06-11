@@ -17,7 +17,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 103;
+use Test::More tests => 31;
 use AI::MXNet qw(mx);
 use AI::MXNet::TestUtils qw(mlp2 check_consistency zip assert enumerate almost_equal same);
 use Storable qw(freeze thaw);

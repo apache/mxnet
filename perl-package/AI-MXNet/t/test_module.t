@@ -17,7 +17,7 @@
 
 use strict;
 use warnings;
-use Test::More tests => 428;
+use Test::More tests => 19;
 use AI::MXNet qw(mx);
 use AI::MXNet::Base;
 use AI::MXNet::TestUtils qw(almost_equal enumerate same_array dies_like rand_ndarray);
