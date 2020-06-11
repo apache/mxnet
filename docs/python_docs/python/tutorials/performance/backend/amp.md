@@ -39,7 +39,6 @@ import numpy as np
 import mxnet as mx
 import mxnet.gluon as gluon
 from mxnet import autograd
-from mxnet.test_utils import download_model
 import gluoncv as gcv
 from gluoncv.model_zoo import get_model
 

@@ -81,17 +81,9 @@ $ make
 
 If you have built mxnet from source with cmake, please uncomment the specific lines for cmake build or set the following environment variables: `MKLDNN_BUILD_DIR (default is $(MXNET_ROOT)/3rdparty/mkldnn/build)`, `MKLDNN_INCLUDE_DIR (default is $(MXNET_ROOT)/3rdparty/mkldnn/include)`, `MXNET_LIB_DIR (default is $(MXNET_ROOT)/lib)`.
 
-### Download the model and run multi threaded inference example
-To download a model use the `get_model.py` script. This downloads a model to run inference.
-
-```python
-python3 get_model.py --model <model_name>
-```
-e.g.
-```python
-python3 get_model.py --model imagenet1k-inception-bn
-```
-Only the supported models with `get_model.py` work with multi threaded inference.
+### Run multi threaded inference example
+The example is tested with models such as `imagenet1k-inception-bn`, `imagenet1k-resnet-50`,
+`imagenet1k-resnet-152`, `imagenet1k-resnet-18`
 
 To run the multi threaded inference example:
 
