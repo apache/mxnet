@@ -1,8 +1,4 @@
 Changes
-examples/calculator.pl
-examples/char_lstm.pl
-examples/cudnn_lstm_bucketing.pl
-examples/get_sherlockholmes_data.sh
 examples/gluon/dcgan.pl
 examples/gluon/mnist.pl
 examples/gluon/style_transfer/get_data.sh
@@ -10,15 +6,6 @@ examples/gluon/style_transfer/net.pl
 examples/gluon/style_transfer/README.md
 examples/gluon/style_transfer/style_transfer.pl
 examples/gluon/style_transfer/utils.pl
-examples/lstm_bucketing.pl
-examples/mnist.pl
-examples/plot_network.pl
-examples/sparse/matrix_factorization/get_data.sh
-examples/sparse/matrix_factorization/README.md
-examples/sparse/matrix_factorization/train.pl
-examples/sparse/wide_deep/get_data.sh
-examples/sparse/wide_deep/README.md
-examples/sparse/wide_deep/train.pl
 lib/AI/MXNet.pm
 lib/AI/MXNet/AutoGrad.pm
 lib/AI/MXNet/AutoLoad.pm
