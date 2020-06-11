@@ -555,35 +555,6 @@ def test_gpu_memory_profiler_gluon():
     profiler.set_state('stop')
     profiler.dump(True)
 
-    # Sample gpu_memory_profiler.csv
-    # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
-    # 0:0_fwd,8192,0,8192,0
-    # 0_act:0_act_fwd,8192,0,8192,0
-    # 1:1_fwd,8192,0,8192,0
-    # 1:1_fwd,8192,0,8192,0
-    # 2:2_fwd,4096,0,4096,0
-    # 2_act:2_act_fwd,4096,0,4096,0
-    # 3:3_fwd_backward,4096,0,4096,1
-    # 4:4_fwd,2048,0,4096,0
-    # 4:4_fwd_backward,8192,0,8192,0
-    # 4:4_fwd_head_grad,2048,0,4096,0
-    # <unk>:arg_grad:0_bias,512,0,4096,0
-    # <unk>:arg_grad:0_weight,5120,0,8192,0
-    # <unk>:arg_grad:2_bias,256,0,4096,0
-    # <unk>:arg_grad:2_weight,32768,0,32768,0
-    # <unk>:arg_grad:3_bias,128,0,4096,0
-    # <unk>:arg_grad:3_weight,8192,0,8192,0
-    # <unk>:in_arg:0_bias,512,0,4096,0
-    # <unk>:in_arg:0_weight,5120,0,8192,0
-    # <unk>:in_arg:2_bias,256,0,4096,0
-    # <unk>:in_arg:2_weight,32768,0,32768,0
-    # <unk>:in_arg:3_bias,128,0,4096,0
-    # <unk>:in_arg:3_weight,8192,0,8192,0
-    # <unk>:in_arg:data,640,0,4096,0
-    # resource:cudnn_dropout_state (dropout-inl.h +256),786432,0,786432,0
-    # resource:temp_space (fully_connected-inl.h +316),8192,0,8192,0
-    # nvml_amend,639434752,0,639434752,0
-
     # We are only checking for weight parameters here, also making sure that
     # there is no unknown entries in the memory profile.
     with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
@@ -592,7 +563,7 @@ def test_gpu_memory_profiler_gluon():
             print(",".join(list(row.values())))
         for scope in ['in_arg', 'arg_grad']:
             for key, nd in model.collect_params().items():
-                expected_arg_name = "<unk>:%s:" % scope + key
+                expected_arg_name = "%s:%s:" % (model.name, scope) + nd.name
                 expected_arg_size = str(4 * np.prod(nd.shape))
                 csv_file.seek(0)
                 entry_found = False
