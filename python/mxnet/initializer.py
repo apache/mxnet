@@ -306,11 +306,9 @@ def register(klass):
     ...   def _init_bias(self, _, arr):
     ...     arr[:] = 1
     ...
-    >>> # Module is an instance of 'mxnet.module.Module'
+    >>> # block is an instance of 'mxnet.gluon.Block'
     ...
-    >>> module.init_params("custominit")
-    >>> # module.init_params("myinit")
-    >>> # module.init_params(CustomInit())
+    >>> block.initialize(CustomInit())
     """
     return _register(klass)
 
@@ -374,11 +372,11 @@ class Mixed(object):
 
     Example
     -------
-    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize biases to zero
+    >>> # Given 'block', an instance of 'mxnet.gluon.Block', initialize biases to zero
     ... # and every other parameter to random values with uniform distribution.
     ...
     >>> init = mx.initializer.Mixed(['bias', '.*'], [mx.init.Zero(), mx.init.Uniform(0.1)])
-    >>> module.init_params(init)
+    >>> block.initialize(init)
     >>>
     >>> for dictionary in module.get_params():
     ...     for key in dictionary:
@@ -410,10 +408,10 @@ class Zero(Initializer):
 
     Example
     -------
-    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights to zero.
+    >>> # Given 'block', an instance of 'mxnet.gluon.Block', initialize weights to zero.
     ...
     >>> init = mx.initializer.Zero()
-    >>> module.init_params(init)
+    >>> module.initialize(init)
     >>> for dictionary in module.get_params():
     ...     for key in dictionary:
     ...         print(key)
@@ -435,10 +433,10 @@ class One(Initializer):
 
     Example
     -------
-    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights to one.
+    >>> # Given 'block', an instance of 'mxnet.gluon.Block', initialize weights to one.
     ...
     >>> init = mx.initializer.One()
-    >>> module.init_params(init)
+    >>> module.initialize(init)
     >>> for dictionary in module.get_params():
     ...     for key in dictionary:
     ...         print(key)
@@ -490,11 +488,11 @@ class Uniform(Initializer):
 
     Example
     -------
-    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights
+    >>> # Given 'block', an instance of 'mxnet.gluon.Block', initialize weights
     >>> # to random values uniformly sampled between -0.1 and 0.1.
     ...
     >>> init = mx.init.Uniform(0.1)
-    >>> module.init_params(init)
+    >>> module.initialize(init)
     >>> for dictionary in module.get_params():
     ...     for key in dictionary:
     ...         print(key)
@@ -524,11 +522,11 @@ class Normal(Initializer):
 
     Example
     -------
-    >>> # Given 'module', an instance of 'mxnet.module.Module', initialize weights
+    >>> # Given 'block', an instance of 'mxnet.gluon.Block', initialize weights
     >>> # to random values sampled from a normal distribution.
     ...
     >>> init = mx.init.Normal(0.5)
-    >>> module.init_params(init)
+    >>> module.initialize(init)
     >>> for dictionary in module.get_params():
     ...     for key in dictionary:
     ...         print(key)

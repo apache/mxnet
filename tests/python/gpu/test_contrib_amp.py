@@ -216,46 +216,6 @@ def test_amp_conversion(amp_tests):
         exe2.outputs[0].wait_to_read()
 
 
-    def check_amp_convert_model():
-        # Test with real world model, default inputs for convert_model
-        dir_path = os.path.dirname(os.path.realpath(__file__))
-        model_path = os.path.join(dir_path, 'model')
-        if not os.path.isdir(model_path):
-            os.mkdir(model_path)
-        prefix, epoch = download_model("imagenet1k-resnet-18", dst_dir=model_path)
-
-        sym, arg_params, aux_params = mx.model.load_checkpoint(prefix, epoch)
-
-        # Test with real world model, tweak inputs for convert_model
-        result_sym, result_arg_params, result_aux_params = amp.convert_model(sym,
-                                                                             arg_params,
-                                                                             aux_params,
-                                                                             target_dtype="float16",
-                                                                             target_dtype_ops=["Convolution"])
-        mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"], context=mx.gpu())
-        mod.bind(data_shapes=[['data', (1, 3, 224, 224)]], label_shapes=[['softmax_label', (1,)]])
-
-        mod.set_params(result_arg_params, result_aux_params)
-        mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
-                                    label=[mx.nd.ones((1,))]))
-        mod.get_outputs()[0].asnumpy()
-        assert mod._arg_params["stage2_unit1_conv2_weight"].dtype == np.float32
-
-        # Call convert_model with cast_optional_params set to True
-        result_sym, result_arg_params, result_aux_params = amp.convert_model(sym,
-                                                                             arg_params,
-                                                                             aux_params,
-                                                                             target_dtype="float16",
-                                                                             target_dtype_ops=["Convolution"], cast_optional_params=True)
-        mod = mx.mod.Module(result_sym, data_names=["data"], label_names=["softmax_label"], context=mx.gpu())
-        mod.bind(data_shapes=[['data', (1, 3, 224, 224)]], label_shapes=[['softmax_label', (1,)]])
-        mod.set_params(result_arg_params, result_aux_params)
-        mod.forward(mx.io.DataBatch(data=[mx.nd.ones((1, 3, 224, 224))],
-                                    label=[mx.nd.ones((1,))]))
-        mod.get_outputs()[0].asnumpy()
-        assert mod._arg_params["stage2_unit1_conv2_weight"].dtype == np.float16
-
-
     def check_amp_convert_hybrid_block():
         # Test conversion for hybrid block on CPU
         model_cpu = get_model("resnet50_v1")
@@ -315,7 +275,6 @@ def test_amp_conversion(amp_tests):
 
     with mx.Context(mx.gpu(0)):
         check_amp_convert_symbol()
-        check_amp_convert_model()
         check_amp_convert_hybrid_block()
 
 @with_seed()
@@ -332,50 +291,6 @@ def test_amp_conversion_rnn(amp_tests):
         new_model = amp.convert_hybrid_block(model)
         out2 = new_model(mx.nd.ones((2, 3, 4)))
         mx.test_utils.assert_almost_equal(out.asnumpy(), out2.asnumpy(), atol=1e-2, rtol=1e-2)
-
-
-@with_seed()
-@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
-def test_module_backward_compatibility(amp_tests):
-    channel_num = 10
-    conv_layer_filter_dims = [2, 3]
-    conv_layer_strides = [1, 1]
-    dimension = 5
-    data_len = 10
-
-    data = mx.sym.var("data")
-    conv = mx.sym.Convolution(data,
-                              num_filter=channel_num,
-                              kernel=tuple(conv_layer_filter_dims),
-                              stride=tuple(conv_layer_strides))
-
-    bn = mx.sym.BatchNorm(conv,
-                          eps=0.001,
-                          momentum=0.9,
-                          fix_gamma=False,
-                          use_global_stats=False,
-                          output_mean_var=False,
-                          name="conv0_batchnorm")
-    fc = mx.sym.FullyConnected(bn, num_hidden=10, name="fullyconnected")
-    mod = mx.mod.Module(fc, data_names=["data"], context=mx.gpu(0))
-    mod.bind(data_shapes=[['data', (1, 3, 224, 224)]])
-    mod.init_params()
-
-    arg_params, aux_params = mod.get_params()
-    for param_key, param_val in arg_params.items():
-        assert param_val.dtype == np.float32, "Incorrect inference type for arg_params," \
-                                               "please check simple_bind for module executor"
-    for param_key, param_val in aux_params.items():
-        assert param_val.dtype == np.float32, "Incorrect inference type for aux_params," \
-                                               "please check simple_bind for module executor"
-
-
-    sym, arg_params, aux_params = amp.convert_model(mod._symbol, mod._arg_params, mod._aux_params, target_dtype_ops=["Convolution"])
-    mod = mx.mod.Module(sym, data_names=["data"], context=mx.gpu(0))
-    mod.bind(data_shapes=[['data', (1, 3, 224, 224)]])
-    mod.set_params(arg_params, aux_params)
-    assert arg_params["fullyconnected_weight"].dtype == np.float16, \
-        "Module API is overwriting the inferred dtype for a mixed precision model"
 
 
 @with_seed()

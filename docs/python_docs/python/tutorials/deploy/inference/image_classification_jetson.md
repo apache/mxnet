@@ -49,7 +49,7 @@ Alternatively, you can also directly install MXNet v1.6 wheel with Jetson suppor
 
 *WARNING: this MXNet wheel is provided for your convenience but it contains packages that are not provided nor endorsed by the Apache Software Foundation.
 As such, they might contain software components with more restrictive licenses than the Apache License and you'll need to decide whether they are appropriate for your usage. Like all Apache Releases, the
-official Apache MXNet (incubating) releases consist of source code only and are found at https://downloads.apache.org/incubator/mxnet .*
+official Apache MXNet (incubating) releases consist of source code only and are found at https://mxnet.apache.org/get_started/download .*
 
 We start by installing MXNet dependencies
 ```bash

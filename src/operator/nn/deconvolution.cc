@@ -332,7 +332,21 @@ static bool DeconvolutionType(const nnvm::NodeAttrs& attrs,
   const DeconvolutionParam& param_ = nnvm::get<DeconvolutionParam>(attrs.parsed);
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
+  if (type_is_none(dtype)) {
+    // Input type is undefined, we try backward inference
+    if (out_type->size() == 0 || type_is_none((*out_type)[0])) {
+       // Neither the input nor the output are defined,
+       // types cannot be infered for this op
+      return false;
+    } else {
+       // Input type is undefined but output type is: backward inference
+      dtype = (*out_type)[0];
+    }
+  } else {
+    // Input type is defined but output type is not: forward inference
+    out_type->clear();
+    out_type->push_back(dtype);
+  }
   for (size_t i = 0; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
       (*in_type)[i] = dtype;
@@ -340,8 +354,6 @@ static bool DeconvolutionType(const nnvm::NodeAttrs& attrs,
       UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments(param_)[i]);
     }
   }
-  out_type->clear();
-  out_type->push_back(dtype);
   return true;
 }
 
