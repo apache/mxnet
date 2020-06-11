@@ -647,5 +647,4 @@ TEST(ThreadSafety, Engine) {
   mxnet::test::AssertEqual(output_mx_arr, result_expected, 1e-2, 1e-5);
   mxnet::cpp::NDArray::WaitAll();
 }
-}
 #endif
