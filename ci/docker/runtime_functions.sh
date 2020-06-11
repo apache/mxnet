@@ -1252,15 +1252,6 @@ integrationtest_ubuntu_cpu_onnx() {
 	pytest -n 4 tests/python/unittest/onnx/test_node.py
 }
 
-integrationtest_ubuntu_cpu_asan() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-
-    cd /work/mxnet/build/cpp-package/example/
-    /work/mxnet/cpp-package/example/get_data.sh
-    ./mlp_cpu
-}
-
 integrationtest_ubuntu_gpu_cpp_package() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10

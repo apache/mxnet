@@ -1693,17 +1693,6 @@ def docs_publish_beta() {
 }
 
 
-def misc_asan_cpu(lib_name) {
-    return ['CPU ASAN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python3-cpu-asan') {
-            utils.unpack_and_init(lib_name, mx_lib_cpp_examples_cpu)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_asan', false)
-        }
-      }
-    }]
-}
-
 def sanity_lint() {
     return ['Lint': {
       node(NODE_LINUX_CPU) {
