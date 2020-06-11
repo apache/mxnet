@@ -491,10 +491,6 @@ build_ubuntu_cpu_cmake_asan() {
         -DMXNET_USE_CPU=ON \
         /work/mxnet
     make -j $(nproc) mxnet
-    # Disable leak detection but enable ASAN to link with ASAN but not fail with build tooling.
-    ASAN_OPTIONS=detect_leaks=0 \
-    LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
-    make -j $(nproc) mlp_cpu
 }
 
 build_ubuntu_cpu_gcc8_werror() {

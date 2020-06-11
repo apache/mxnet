@@ -81,7 +81,6 @@
 #include "src/operator/leaky_relu.cc"
 #include "src/operator/nn/pooling.cc"
 #include "src/operator/nn/softmax_activation.cc"
-#include "src/operator/softmax_output.cc"
 #include "src/operator/tensor/elemwise_binary_broadcast_op_basic.cc"
 #include "src/operator/tensor/elemwise_binary_op.cc"
 #include "src/operator/tensor/elemwise_binary_op_basic.cc"

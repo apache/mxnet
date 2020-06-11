@@ -208,4 +208,5 @@ class ModuleSuite extends FunSuite with BeforeAndAfterAll {
     mod.update()
     assert(mod.getOutputsMerged()(0).shape == dShape)
     assert(mod.getParams._1("fc_bias").toArray.forall(x => (x - -3f) < 1e-3))
+  }
 }

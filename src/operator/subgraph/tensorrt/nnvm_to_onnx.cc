@@ -42,7 +42,6 @@
 #include "../../nn/fully_connected-inl.h"
 #include "../../nn/pooling-inl.h"
 #include "../../nn/concat-inl.h"
-#include "../../softmax_output-inl.h"
 #include "../../tensor/matrix_op-inl.h"
 
 #if MXNET_USE_TENSORRT_ONNX_CHECKER

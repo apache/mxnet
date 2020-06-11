@@ -519,7 +519,6 @@ end  # test_var
 ################################################################################
 @testset "SymbolicNode Test" begin
   test_basic()
-  test_chain()
   test_internal()
   test_compose()
   test_infer_shape()
