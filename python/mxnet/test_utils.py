@@ -2496,8 +2496,8 @@ def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test
             super(_NumpyParamDictInit, self).__init__()
             self._np_params = np_params
 
-        def _init_weight(self, desc, arr):
-            arr[()] = self._np_params[desc.attrs['structure']]
+        def _init_weight(self, name, arr):
+            arr[()] = self._np_params[name.attrs['structure']]
     saved_out_np = None
     saved_grad_np_l = None
     params_init = None
