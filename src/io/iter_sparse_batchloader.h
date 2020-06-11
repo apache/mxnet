@@ -188,11 +188,11 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
       dtypes_[i] = first_inst.data[i].type_flag_;
     }
 
-    //CHECK_EQ(buff_sizes[0], buff_sizes[1]);
+    // CHECK_EQ(buff_sizes[0], buff_sizes[1]);
     // allocate buffer
     for (size_t i = 0; i < num_arrays; ++i) {
       // init object attributes
-      if ((param_.data_size > 1 && i < 2) || (param_.label_width > 1 && i + 1== num_arrays)) { //csv
+      if ((param_.data_size > 1 && i < 2) || (param_.label_width > 1 && i + 1 == num_arrays)) {  // csv
         mxnet::TShape src_shape = first_inst.data[i].shape_;
         std::vector<index_t> shape_vec;
         shape_vec.push_back(param_.batch_size);
@@ -213,10 +213,10 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
   /* \brief set the shape of the outputs based on actual shapes */
   inline void SetOutputShape() {
     for (size_t i = 0; i < out_.data.size(); i++) {
-      if ( i < 2 && param_.data_size > 1)
+      if ( i < 2 && param_.data_size > 1) {
         out_.data[i] = TBlob(data_[i].dptr_, shape_[i],
                              Context::kCPU, dtypes_[i]);
-      else {
+      } else {
         if (i + 1 == out_.data.size()&& param_.label_width > 1)
           out_.data[i] = TBlob(data_[i].dptr_, shape_[i],
                                Context::kCPU, dtypes_[i]);
@@ -229,7 +229,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
 
   /* \brief increase the size of i-th data buffer by a factor of 2, while retaining the content */
   inline void ResizeBuffer(size_t src_size, size_t i, size_t len) {
-    if ((param_.data_size > 1 && i < 2) || (param_.label_width > 1 && i == len - 1)) { //csv
+    if ((param_.data_size > 1 && i < 2) || (param_.label_width > 1 && i == len - 1)) {  // csv
       LOG(ERROR) << "CSV neednot resize!";
       return;
     }

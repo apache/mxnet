@@ -114,7 +114,7 @@ class SparsePrefetcherIter : public PrefetcherIter {
             nd.CheckAndAllocAuxData(csr::kIdx, indices.shape_);
             nd.CheckAndAllocAuxData(csr::kIndPtr, indptr.shape_);
             // copy values, indices and indptr
-            //CopyFromTo(data_i.data(), values);
+            // CopyFromTo(data_i.data(), values);
             CopyFromTo(data_i.aux_data(csr::kIdx), indices);
             CopyFromTo(data_i.aux_data(csr::kIndPtr), indptr);
           } else {
