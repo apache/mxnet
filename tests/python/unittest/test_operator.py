@@ -34,46 +34,6 @@ from common import run_in_spawned_process, xfail_when_nonstandard_decimal_separa
 import pytest
 import os
 
-def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
-    dshape = (N, T, I)
-    data = mx.sym.Variable('data')
-
-    Y1, _ = cell1.unroll(T, data, layout='NTC', merge_outputs=True)
-    mod1 = mx.mod.Module(Y1, label_names=None, context=default_context())
-    mod1.bind(data_shapes=[('data', dshape)], label_shapes=None, inputs_need_grad=True, grad_req=grad_req)
-
-    Y2, _ = cell2.unroll(T, data, layout='NTC', merge_outputs=True)
-    mod2 = mx.mod.Module(Y2, label_names=None, context=default_context())
-    mod2.bind(data_shapes=[('data', dshape)], label_shapes=None, inputs_need_grad=True, grad_req=grad_req)
-
-    mod1.init_params()
-    args, auxs = mod1.get_params()
-    args = cell1.unpack_weights(args)
-    args = cell2.pack_weights(args)
-    mod2.set_params(args, auxs)
-
-    x = mx.random.uniform(shape=dshape)
-    batch=mx.io.DataBatch(data=[x])
-    # check inference
-    mod1.forward(batch, is_train=False)
-    mod2.forward(batch, is_train=False)
-    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=rtol, atol=atol)
-
-    # check training
-    mod1.forward(batch, is_train=True)
-    mod2.forward(batch, is_train=True)
-    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=rtol, atol=atol)
-
-    dy = mx.random.uniform(shape=mod1.get_outputs()[0].shape)
-    mod1.backward(out_grads=[dy])
-    mod2.backward(out_grads=[dy])
-    if type(grad_req) is dict and grad_req['data'] == 'null' or grad_req == 'null':
-        assert(mod1.get_input_grads()[0] == None)
-        assert(mod2.get_input_grads()[0] == None)
-    else:
-        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=rtol, atol=atol)
-
-
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 @pytest.mark.serial
