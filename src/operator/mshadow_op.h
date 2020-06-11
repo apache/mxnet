@@ -150,7 +150,6 @@ struct true_divide : public mxnet_op::tunable  {
     return static_cast<float>(a) / static_cast<float>(b);
   }
 
-#ifndef _WIN32
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
@@ -168,7 +167,6 @@ struct true_divide : public mxnet_op::tunable  {
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return static_cast<double>(a) / b;
   }
-#endif
 };
 
 struct rtrue_divide : public mxnet_op::tunable  {
@@ -184,7 +182,6 @@ struct rtrue_divide : public mxnet_op::tunable  {
     return static_cast<float>(b) / static_cast<float>(a);
   }
 
-#ifndef _WIN32
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
@@ -202,14 +199,12 @@ struct rtrue_divide : public mxnet_op::tunable  {
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return b / static_cast<double>(a);
   }
-#endif
 };
 
 MXNET_BINARY_MATH_OP_NC(left, a);
 
 MXNET_BINARY_MATH_OP_NC(right, b);
 
-#ifndef _WIN32
 struct mixed_plus {
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
@@ -347,8 +342,6 @@ struct mixed_rpower {
     return static_cast<double>(math::pow(b, a));
   }
 };
-#endif
-
 
 #pragma GCC diagnostic push
 #if __GNUC__ >= 7
@@ -584,7 +577,6 @@ MXNET_BINARY_MATH_OP(rpower, math::pow(b, a));
 MXNET_BINARY_MATH_OP(rpower_grad, math::id(a) * math::log(b));
 
 MXNET_BINARY_MATH_OP(arctan2, math::atan2(a, b));
-
 MXNET_BINARY_MATH_OP(arctan2_grad, math::id(b) / (math::id(a * a + b * b)));
 
 MXNET_BINARY_MATH_OP(arctan2_rgrad, -math::id(a) / (math::id(a * a + b * b)));
@@ -819,7 +811,6 @@ struct mod : public mxnet_op::tunable {
   }
 };
 
-#ifndef _WIN32
 struct mixed_mod {
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
@@ -865,7 +856,6 @@ struct mixed_rmod {
     return mod::Map(b, static_cast<double>(a));
   }
 };
-#endif
 
 struct fmod : public mxnet_op::tunable {
   template<typename DType>
