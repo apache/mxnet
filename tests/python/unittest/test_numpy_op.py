@@ -1508,10 +1508,7 @@ def test_npx_index_update():
             if _np.allclose(expect_tmp, mx_tmp, rtol=eps, atol=eps):
                 mx_ret[t_ind] = 0
                 a[t_ind] = 0
-        # print('mx_ret:',mx_ret)
-        # print('a:',a)
         assert_almost_equal(mx_ret, a, rtol=eps, atol=eps)
-        # return a
 
     def index_update_bwd(out_grad, a_grad, ind, val_grad, ind_ndim, ind_num, grad_req_a, grad_req_val):
         if grad_req_a == 'add':
@@ -1593,28 +1590,12 @@ def test_npx_index_update():
             test_index_update = TestIndexUpdate()
             if hybridize:
                 test_index_update.hybridize()
-            # print('a_shape:',a_shape)
-            # print('ind:',ind)
-            # print('grad_req_a:',grad_req_a)
-            # print('grad_req_val:',grad_req_val)
-            # print('val_shape:',val_shape)
-            # print('ind_ndim:',ind_ndim)
-            # print('ind_num:',ind_num)
-            # a = mx.nd.zeros(a_shape).as_np_ndarray().astype(atype)
             a = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
             a.attach_grad(grad_req=grad_req_a)
-            # size  = 1 if val_shape is () else _np.cumprod(val_shape)[-1]
-            # print('size:',size)
-            # val = (mx.nd.arange(size)+1).reshape(val_shape).as_np_ndarray().astype(valtype)
             val = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
             val.attach_grad(grad_req=grad_req_val)
-            # print('a:',a)
-            # print('val:',val)
-            # print('expected_ret:',expected_ret)
             with mx.autograd.record():
                 mx_ret = test_index_update(a, np.array(ind).astype(indtype), val)
-            # print('here mx_ret:',mx_ret)
-            # print('y:',y)
             assert mx_ret.shape == a.shape
             assert mx_ret.dtype == a.dtype
             check_index_update_forward(mx_ret.asnumpy(), a.asnumpy(), ind.astype(indtype), val.asnumpy(), ind_ndim, ind_num, eps)
@@ -1625,9 +1606,6 @@ def test_npx_index_update():
                 init_a_grad = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
                 init_val_grad = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
                 out_grad = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
-                # print('out_grad:', out_grad)
-                # print('init_a_grad:', init_a_grad)
-                # print('init_val_grad:', init_val_grad)
                 if grad_req_a == 'add':
                     if init_a_grad.ndim == 0:
                         a.grad[()] = init_a_grad.item()
@@ -1638,7 +1616,6 @@ def test_npx_index_update():
                         val.grad[()] = init_val_grad.item()
                     else:
                         val.grad[:] = init_val_grad
-                # print('bwd')
                 mx_ret.backward(out_grad)
                 expected_bwd_a, expected_bwd_val = index_update_bwd(out_grad.asnumpy(), init_a_grad.asnumpy(), ind,
                                                                     init_val_grad.asnumpy(), ind_ndim, ind_num,
@@ -1647,14 +1624,10 @@ def test_npx_index_update():
                 if grad_req_a == 'null':
                     assert a.grad is None
                 else:
-                    # print('expected_bwd_a:',expected_bwd_a)
-                    # print('a.grad.asnumpy():',a.grad.asnumpy())
                     assert_almost_equal(a.grad.asnumpy(), expected_bwd_a, rtol = eps, atol=eps)
                 if grad_req_val == 'null':
                     assert val.grad is None
                 else:
-                    # print('expected_bwd_val:',expected_bwd_val)
-                    # print('val.grad.asnumpy():',val.grad.asnumpy())
                     assert_almost_equal(val.grad.asnumpy(), expected_bwd_val, rtol = eps, atol=eps)
 
             mx_out = npx.index_update(a, np.array(ind).astype(indtype), val)
