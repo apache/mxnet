@@ -1449,13 +1449,6 @@ nightly_test_imagenet_inference() {
     ./unit_test_imagenet_inference.sh
 }
 
-#Runs a simple MNIST training example
-nightly_test_image_classification() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    # TODO: the test script needs to be added (18549)
-}
-
 #Single Node KVStore Test
 nightly_test_KVStore_singleNode() {
     set -ex
