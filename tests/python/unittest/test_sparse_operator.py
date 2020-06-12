@@ -1728,24 +1728,6 @@ def test_sparse_storage_fallback():
         x /= np.sum(x, axis=axis, keepdims=True)
         return x
 
-    def check_softmax_with_shape(lhs_stype, rhs_stype, shape, preserve_shape=False):
-        # bind with label
-        ctx = default_context()
-        X = mx.symbol.Variable('X', stype=lhs_stype)
-        L = mx.symbol.Variable('L', stype=rhs_stype)
-        Y = mx.symbol.SoftmaxOutput(data=X, label=L, preserve_shape=preserve_shape)
-        x = rand_ndarray(shape, lhs_stype)
-        l = rand_ndarray(shape, rhs_stype)
-        l[:] = np_softmax(l.asnumpy())
-        grad = mx.nd.empty(shape, ctx=ctx)
-        exec1 = Y.bind(ctx, args = [x, l], args_grad = {'X': grad})
-        exec1.forward(is_train=True)
-        out = exec1.outputs[0].asnumpy()
-        assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=1e-4)
-        exec1.backward()
-        assert_almost_equal(grad.asnumpy(), np_softmax(x.asnumpy()) - l.asnumpy(),
-                            rtol=1e-3, atol=1e-4)
-
     def check_concat(shape, lhs_stype, rhs_stype):
         x = mx.symbol.Variable('x', stype=lhs_stype)
         w = mx.symbol.Variable('w', stype=rhs_stype)
@@ -1769,8 +1751,6 @@ def test_sparse_storage_fallback():
         for rhs in stypes:
             check_broadcast_add(shape, lhs, rhs)
             check_concat(shape, lhs, rhs)
-            check_softmax_with_shape(lhs, rhs, shape, preserve_shape=False)
-            check_softmax_with_shape(rhs, rhs, shape, preserve_shape=True)
 
 
 @with_seed()

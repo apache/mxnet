@@ -74,12 +74,6 @@ NNVM_REGISTER_OP(_npi_true_divide)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
   })
-#ifdef _WIN32
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-#endif
 .set_attr<FCompute>("FCompute<cpu>", TrueDivideBroadcastCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_div"})
 .add_argument("lhs", "NDArray-or-Symbol", "Dividend array")
@@ -111,12 +105,6 @@ NNVM_REGISTER_OP(_npi_true_divide_scalar)
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-#ifdef _WIN32
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-#endif
 .set_attr<FCompute>("FCompute<cpu>", TrueDivideScalarCompute<cpu, op::mshadow_op::true_divide>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_div_scalar"})
 .add_argument("data", "NDArray-or-Symbol", "source input")

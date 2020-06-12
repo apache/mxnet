@@ -54,22 +54,6 @@ DataDesc[softmax_label,25,float32,NCHW]
 So this iterator can be used to train a symbol whose input data variable has
 name `data` and input label variable has name `softmax_label`.
 
-
-```perl
-pdl> $data  = mx->sym->Variable('data')
-pdl> $label = mx->sym->Variable('softmax_label')
-pdl> $fullc = mx->sym->FullyConnected(data=>$data, num_hidden=>1)
-pdl> $loss  = mx->sym->SoftmaxOutput(data=>$data, label=>$label)
-pdl> $mod   = mx->mod->Module($loss)
-pdl> print($mod->data_names->[0])
-data
-pdl> print($mod->label_names->[0])
-softmax_label
-pdl> $mod->bind(data_shapes=>$nd_iter->provide_data, label_shapes=>$nd_iter->provide_label)
-```
-
-Then we can call `$mod->fit($nd_iter, num_epoch=>2)` to train `loss` by 2 epochs.
-
 ## Predefined Data iterators
 
 ```perl

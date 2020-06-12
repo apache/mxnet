@@ -50,16 +50,6 @@
                                       (sym/get "fc1_output")
                                       (sym/list-arguments)))))
 
-(deftest test-infer-type
-  (let [data (sym/variable "data")
-        f32data (sym/cast {:data data :dtype "float32"})
-        fc1 (sym/fully-connected "fc1" {:data f32data :num-hidden 128})
-        mlp (sym/softmax-output "softmax" {:data fc1})
-        [arg out aux] (sym/infer-type mlp {:data dtype/FLOAT64})]
-    (is (= [dtype/FLOAT64 dtype/FLOAT32 dtype/FLOAT32 dtype/FLOAT32] (util/buffer->vec arg)))
-    (is (= [dtype/FLOAT32] (util/buffer->vec out)))
-    (is (= [] (util/buffer->vec aux)))))
-
 (deftest test-copy
   (let [data (sym/variable "data")
         data2 (sym/clone data)]

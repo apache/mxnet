@@ -27,7 +27,7 @@ import mxnet as mx
 import mxnet.ndarray as nd
 from mxnet.ndarray import NDArray
 from mxnet import gluon
-from mxnet.test_utils import assert_almost_equal, download_model
+from mxnet.test_utils import assert_almost_equal
 from mxnet.contrib.amp import amp
 from mxnet.base import NDArrayHandle, py_str
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))

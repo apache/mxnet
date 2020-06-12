@@ -91,17 +91,6 @@ test_that("symbol infer type", {
   expect_equal(ret, NULL)
 })
 
-test_that("symbol save/load", {
-  data <- mx.symbol.Variable("data")
-  fc1 <- mx.symbol.FullyConnected(data, num_hidden = 1)
-  lro <- mx.symbol.LinearRegressionOutput(fc1)
-  mx.symbol.save(lro, "tmp_r_sym.json")
-  data2 <- mx.symbol.load("tmp_r_sym.json")
-  
-  expect_equal(data2$as.json(), lro$as.json())
-  file.remove("tmp_r_sym.json")
-})
-
 test_that("symbol attributes access", {
   str <- "(1, 1, 1, 1)"
   x <- mx.symbol.Variable("x")

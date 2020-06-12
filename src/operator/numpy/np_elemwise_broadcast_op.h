@@ -41,7 +41,6 @@ inline void PrintErrorMessage(const std::string& op_name, const int dtype1, cons
              << " yet...";
 }
 
-#ifndef _WIN32
 template<typename xpu, typename OP>
 void MixedAllRealBinaryElemwiseCompute(const std::string& op_name,
                                        const OpContext& ctx,
@@ -216,13 +215,9 @@ void MixedAllRealBinaryBroadcastCompute(const std::string& op_name,
     }
   });
 }
-#endif
 
-#ifndef _WIN32
+
 template<typename xpu, typename OP, typename LOP, typename ROP>
-#else
-template<typename xpu, typename OP>
-#endif
 void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
                                  const OpContext& ctx,
                                  const std::vector<TBlob>& inputs,
@@ -237,7 +232,6 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
   const TBlob& rhs = inputs[1];
   const TBlob& out = outputs[0];
 
-#ifndef _WIN32
   mxnet::TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(lhs.shape_, rhs.shape_, out.shape_,
                                          &new_lshape, &new_rshape, &new_oshape);
@@ -303,64 +297,9 @@ void MixedBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
       PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
     }
   }
-#else
-  mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
-  if (common::is_float(lhs.type_flag_) || common::is_float(rhs.type_flag_)) {
-    TBlob temp_tblob;
-    // one is float, the other is bool
-    CHECK((out.type_flag_ == lhs.type_flag_) || (out.type_flag_ == rhs.type_flag_))
-      << "This case out type should be same as the float type";
-    if (lhs.type_flag_ == out.type_flag_) {
-      MSHADOW_REAL_TYPE_SWITCH(lhs.type_flag_, LType, {
-        Tensor<xpu, 1, LType> temp_tensor =
-          ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
-        temp_tblob = TBlob(temp_tensor);
-      });
-      CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
-      BinaryBroadcastCompute<xpu, OP>(
-        attrs, ctx, {lhs, temp_tblob.reshape(rhs.shape_)}, req, outputs);
-    } else {
-      MSHADOW_REAL_TYPE_SWITCH(rhs.type_flag_, RType, {
-        Tensor<xpu, 1, RType> temp_tensor =
-          ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
-        temp_tblob = TBlob(temp_tensor);
-      });
-      CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
-      BinaryBroadcastCompute<xpu, OP>(
-        attrs, ctx, {temp_tblob.reshape(lhs.shape_), rhs}, req, outputs);
-    }
-  } else if (!common::is_float(lhs.type_flag_) && !common::is_float(rhs.type_flag_)) {
-    TBlob temp_tblob;
-    if (lhs.type_flag_ == out.type_flag_) {
-      MXNET_INT_TYPE_SWITCH(lhs.type_flag_, LType, {
-        Tensor<xpu, 1, LType> temp_tensor =
-          ctx.requested[0].get_space_typed<xpu, 1, LType>(Shape1(rhs.Size()), s);
-        temp_tblob = TBlob(temp_tensor);
-      });
-      CastCompute<xpu>(attrs, ctx, {rhs}, {kWriteTo}, {temp_tblob});
-      BinaryBroadcastCompute<xpu, OP>(
-        attrs, ctx, {lhs, temp_tblob.reshape(rhs.shape_)}, req, outputs);
-    } else {
-      MXNET_INT_TYPE_SWITCH(rhs.type_flag_, RType, {
-        Tensor<xpu, 1, RType> temp_tensor =
-          ctx.requested[0].get_space_typed<xpu, 1, RType>(Shape1(lhs.Size()), s);
-        temp_tblob = TBlob(temp_tensor);
-      });
-      CastCompute<xpu>(attrs, ctx, {lhs}, {kWriteTo}, {temp_tblob});
-      BinaryBroadcastCompute<xpu, OP>(
-        attrs, ctx, {temp_tblob.reshape(lhs.shape_), rhs}, req, outputs);
-    }
-  } else {
-    PrintErrorMessage(attrs.op->name, lhs.type_flag_, rhs.type_flag_);
-  }
-#endif
 }
 
-#ifndef _WIN32
 template<typename xpu, typename OP, typename LOP, typename ROP>
-#else
-template<typename xpu, typename OP>
-#endif
 void NumpyBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
                                  const OpContext& ctx,
                                  const std::vector<TBlob>& inputs,
@@ -382,18 +321,10 @@ void NumpyBinaryBroadcastCompute(const nnvm::NodeAttrs& attrs,
     return;
   }
 
-#ifndef _WIN32
   MixedBinaryBroadcastCompute<xpu, OP, LOP, ROP>(attrs, ctx, inputs, req, outputs);
-#else
-  MixedBinaryBroadcastCompute<xpu, OP>(attrs, ctx, inputs, req, outputs);
-#endif
 }
 
-#ifndef _WIN32
 template<typename xpu, typename OP, typename LOP, typename ROP>
-#else
-template<typename xpu, typename OP>
-#endif
 void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
                                          const OpContext& ctx,
                                          const std::vector<TBlob>& inputs,
@@ -438,12 +369,7 @@ void NumpyBinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
     }
     return;
   }
-
-#ifndef _WIN32
   MixedBinaryBroadcastCompute<xpu, OP, LOP, ROP>(attrs, ctx, inputs, req, outputs);
-#else
-  MixedBinaryBroadcastCompute<xpu, OP>(attrs, ctx, inputs, req, outputs);
-#endif
 }
 
 template<typename xpu, typename LOP, typename ROP>

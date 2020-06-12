@@ -491,10 +491,6 @@ build_ubuntu_cpu_cmake_asan() {
         -DMXNET_USE_CPU=ON \
         /work/mxnet
     make -j $(nproc) mxnet
-    # Disable leak detection but enable ASAN to link with ASAN but not fail with build tooling.
-    ASAN_OPTIONS=detect_leaks=0 \
-    LD_PRELOAD=/usr/lib/x86_64-linux-gnu/libasan.so.5 \
-    make -j $(nproc) mlp_cpu
 }
 
 build_ubuntu_cpu_gcc8_werror() {
@@ -947,9 +943,7 @@ cd_unittest_ubuntu() {
 
     local mxnet_variant=${1:?"This function requires a mxnet variant as the first argument"}
 
-    pytest -m 'not serial' -k 'not test_operator' -n 4 --durations=50 --verbose tests/python/unittest
-    MXNET_ENGINE_TYPE=NaiveEngine \
-        pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --verbose tests/python/unittest
+    pytest -m 'not serial' -n 4 --durations=50 --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --verbose tests/python/unittest
     pytest -n 4 --durations=50 --verbose tests/python/quantization
 
@@ -968,7 +962,8 @@ cd_unittest_ubuntu() {
 
         # TODO(szha): fix and reenable the hanging issue. tracked in #18098
         # integrationtest_ubuntu_gpu_dist_kvstore
-        integrationtest_ubuntu_gpu_byteps
+        # TODO(eric-haibin-lin): fix and reenable
+        # integrationtest_ubuntu_gpu_byteps
     fi
 
     if [[ ${mxnet_variant} = *mkl ]]; then
@@ -1170,21 +1165,6 @@ unittest_ubuntu_minimal_R() {
         R_LIBS=/tmp/r-site-library
 
     R CMD INSTALL --library=/tmp/r-site-library R-package
-    # pick mlp as minimal R test
-    R_LIBS=/tmp/r-site-library \
-        Rscript -e "library(mxnet); require(mlbench); \
-                    data(Sonar, package=\"mlbench\"); \
-                    Sonar[,61] = as.numeric(Sonar[,61])-1; \
-                    train.ind = c(1:50, 100:150); \
-                    train.x = data.matrix(Sonar[train.ind, 1:60]); \
-                    train.y = Sonar[train.ind, 61]; \
-                    test.x = data.matrix(Sonar[-train.ind, 1:60]); \
-                    test.y = Sonar[-train.ind, 61]; \
-                    model = mx.mlp(train.x, train.y, hidden_node = 10, \
-                                   out_node = 2, out_activation = \"softmax\", \
-                                   learning.rate = 0.1, \
-                                   array.layout = \"rowmajor\"); \
-                    preds = predict(model, test.x, array.layout = \"rowmajor\")"
 }
 
 unittest_ubuntu_gpu_R() {
@@ -1271,37 +1251,10 @@ integrationtest_ubuntu_cpu_onnx() {
 	pytest -n 4 tests/python/unittest/onnx/test_node.py
 }
 
-integrationtest_ubuntu_cpu_asan() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-
-    cd /work/mxnet/build/cpp-package/example/
-    /work/mxnet/cpp-package/example/get_data.sh
-    ./mlp_cpu
-}
-
 integrationtest_ubuntu_gpu_cpp_package() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     cpp-package/tests/ci_test.sh
-}
-
-integrationtest_ubuntu_gpu_capi_cpp_package() {
-    set -ex
-    export PYTHONPATH=./python/
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    python3 -c "import mxnet as mx; mx.test_utils.download_model(\"imagenet1k-resnet-18\"); mx.test_utils.download_model(\"imagenet1k-resnet-152\"); mx.test_utils.download_model(\"imagenet1k-resnet-50\");"
-    # Load symbol, convert symbol to leverage fusion with subgraphs, save the model
-    python3 -c "import mxnet as mx; x = mx.sym.load(\"imagenet1k-resnet-152-symbol.json\"); x.get_backend_symbol(\"MKLDNN\"); x.save(\"imagenet1k-resnet-152-subgraph-symbol.json\");"
-    # Copy params file with a different name, used in subgraph symbol testing
-    cp imagenet1k-resnet-152-0000.params imagenet1k-resnet-152-subgraph-0000.params
-    build/tests/cpp/mxnet_unit_tests --gtest_filter="ThreadSafety.*"
-    build/tests/cpp/mxnet_unit_tests --gtest_filter="ThreadSafety.*" --thread-safety-with-cpu
-    # Also run thread safety tests in NaiveEngine mode
-    export MXNET_ENGINE_TYPE=NaiveEngine
-    build/tests/cpp/mxnet_unit_tests --gtest_filter="ThreadSafety.*"
-    build/tests/cpp/mxnet_unit_tests --gtest_filter="ThreadSafety.*" --thread-safety-with-cpu
-    unset MXNET_ENGINE_TYPE
 }
 
 integrationtest_ubuntu_cpu_dist_kvstore() {
