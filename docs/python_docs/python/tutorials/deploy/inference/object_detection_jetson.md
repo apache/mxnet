@@ -15,7 +15,7 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Object Detection using pretrained YOLO model on Jetson module
+# Object Detection using pretrained GluonCV YOLO model on Jetson module
 
 This tutorial shows how to install MXNet v1.6 (with Jetson support) and GluonCV on a Jetson module and deploy a pre-trained GluonCV model for object detection.
 
