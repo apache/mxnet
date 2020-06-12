@@ -100,36 +100,6 @@ def test_nn():
         assert_almost_equal(mx_softmax_cross_entropy.asnumpy(),
                             true_softmax_cross_entropy, rtol=1e-3, atol=1e-5)
 
-    def check_softmax_output():
-        x = mx.sym.Variable('x')
-        label = mx.sym.Variable('label')
-        x_nd = mx.nd.ones((LARGE_X, SMALL_Y))
-        grad_x = mx.nd.zeros((LARGE_X, SMALL_Y))
-        label_nd = mx.nd.ones((LARGE_X))
-        sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0,
-                                   use_ignore=False)
-
-        ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
-                      args_grad=None)
-        ex.forward(is_train=False)
-        softmax_out = ex.outputs[0][0].asnumpy()
-        expected_softmax_out = (1 / SMALL_Y) * mx.nd.ones((SMALL_Y)).asnumpy()
-        assert np.isclose(softmax_out, expected_softmax_out).all()
-
-        ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
-                      args_grad={'x': grad_x})
-        ex.forward(is_train=True)
-        softmax_out = ex.outputs[0][0].asnumpy()
-        expected_softmax_out = (1 / SMALL_Y) * mx.nd.ones((SMALL_Y)).asnumpy()
-        assert np.isclose(softmax_out, expected_softmax_out).all()
-
-        ex.backward(is_train=True)
-        grad_out = ex.grad_arrays[0][0].asnumpy()
-        k = int(label_nd[0].asscalar())
-        expected_grad_out = np.zeros((SMALL_Y,))
-        expected_grad_out[k] = -1
-        assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
-
     def check_softmax_activation():
         data = nd.random_normal(shape=(2**29, 2, 2, 2))
         out = nd.random_normal(shape=(2**29, 2, 2, 2))
@@ -358,42 +328,6 @@ def test_nn():
         ya = fsigmoid(xa)
         check_symbolic_forward(y, [xa], [ya])
 
-    def check_linear_and_logistic_regression():
-        shape = (LARGE_X, SMALL_Y)
-
-        def check_regression(symbol, forward, backward, shape):
-            # init executor
-            data_s = mx.symbol.Variable('data')
-            label_s = mx.symbol.Variable('label')
-            out_s = symbol(data=data_s, label=label_s)
-            grad_req = {'data': 'write', 'label': 'null'}
-            exe = out_s.simple_bind(ctx=default_context(), data=shape, label=shape, grad_req=grad_req)
-            arg_map = dict(zip(out_s.list_arguments(), exe.arg_arrays))
-            grad_map = dict(zip(out_s.list_arguments(), exe.grad_arrays))
-            # init data
-            data = mx.random.uniform(-1, -1, shape)
-            arg_map["data"][:] = data
-            atol = 1e-5
-            density = 0.5
-            stype = 'default'
-            label = arg_map["label"]
-            label[:] = rand_ndarray(shape, stype, density=density)
-            exe.forward(is_train=True)
-            exe.backward()
-            np_out = forward(data.asnumpy())
-            out_grad = backward(np_out, label.asnumpy().reshape(np_out.shape)) / shape[1]
-            assert_almost_equal(exe.outputs[0].asnumpy(), np_out, atol=atol)
-            assert_almost_equal(grad_map["data"].asnumpy(), out_grad, atol=atol)
-
-        check_regression(mx.symbol.LogisticRegressionOutput,
-                         lambda x: 1.0 / (1.0 + np.exp(-x)),
-                         lambda x, y: x - y,
-                         shape)
-        check_regression(mx.symbol.LinearRegressionOutput,
-                         lambda x: x,
-                         lambda x, y: x - y,
-                         shape)
-
     def check_l2_normalization():
         x = nd.ones((2, LARGE_X*2))
         x[0] = 3
@@ -570,7 +504,6 @@ def test_nn():
     check_dense()
     check_softmax()
     check_softmax_cross_entropy()
-    check_softmax_output()
     check_softmax_activation()
     check_log_softmax()
     check_leaky_relu()
@@ -581,7 +514,6 @@ def test_nn():
     check_batchnorm()
     check_relu()
     check_sigmoid()
-    check_linear_and_logistic_regression()
     check_l2_normalization()
     check_instance_norm()
     check_col2im()

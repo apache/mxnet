@@ -47,8 +47,6 @@ from test_contrib_operator import test_multibox_target_op
 from test_contrib_optimizer import test_adamw
 
 set_default_context(mx.gpu(0))
-del test_support_vector_machine_l1_svm  # noqa
-del test_support_vector_machine_l2_svm  # noqa
 del test_custom_op_fork  #noqa
 
 def check_countsketch(in_dim,out_dim,n):
@@ -1657,18 +1655,6 @@ def test_embedding_with_type():
     data_types = [np.uint8]
     weight_types = [np.float16, np.float32, np.float64]
     test_embedding_helper(data_types, weight_types, 0, 5)
-
-
-@with_seed()
-def test_svmoutput_with_type():
-    sym = mx.sym.SVMOutput(name='svmoutput', use_linear=True)
-    ctx_list = [{'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
-                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
-                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}}]
-    check_consistency(sym, ctx_list, use_uniform=True)
 
 
 @with_seed()

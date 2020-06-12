@@ -24,46 +24,14 @@ ls -l ../../lib/
 
 ./get_data.sh
 
-cp ../../build/cpp-package/example/lenet .
-./lenet 1
-
-cp ../../build/cpp-package/example/alexnet .
-./alexnet 1
-
-cp ../../build/cpp-package/example/lenet_with_mxdataiter .
-./lenet_with_mxdataiter 1
-
-cp ../../build/cpp-package/example/resnet .
-./resnet 1
-
-cp ../../build/cpp-package/example/inception_bn .
-./inception_bn 1
-
-cp ../../build/cpp-package/example/mlp .
-./mlp 150
-
-cp ../../build/cpp-package/example/mlp_cpu .
-./mlp_cpu
-
-cp ../../build/cpp-package/example/mlp_gpu .
-./mlp_gpu
-
 cp ../../build/cpp-package/example/test_optimizer .
 ./test_optimizer
 
 cp ../../build/cpp-package/example/test_kvstore .
 ./test_kvstore
 
-cp ../../build/cpp-package/example/test_score .
-./test_score 0.93
-
 cp ../../build/cpp-package/example/test_ndarray_copy .
 ./test_ndarray_copy
-
-cp ../../build/cpp-package/example/test_regress_label .
-./test_regress_label
-
-sh unittests/unit_test_mlp_csv.sh
 
 cd inference
 

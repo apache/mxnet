@@ -43,9 +43,6 @@ docs_dir: 'build'
 
 nav:
   - Home: index.md
-  - Tutorial:
-    - Digit Recognition on MNIST: tutorial/mnist.md
-    - Generating Random Sentence with LSTM RNN: tutorial/char-lstm.md
   - User Guide:
     - Installation Guide: user-guide/install.md
     - Overview: user-guide/overview.md

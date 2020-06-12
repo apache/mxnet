@@ -262,22 +262,6 @@ def test_pooling2d():
                 check_single_sym(sym, {'data': data_shape}, rtol_fp32=rtol_fp32,
                                  atol_fp32=atol_fp32, rtol_fp16=rtol_fp16, atol_fp16=atol_fp16)
 
-
-@with_seed()
-def test_softmax_output():
-    data = mx.sym.Variable('data')
-    label = mx.sym.Variable('label')
-    data_shape = (8, 100)
-    label_shape = (8, 100)
-    sym = mx.sym.SoftmaxOutput(data, label)
-    check_single_sym(sym, {'data': data_shape, 'label': label_shape},
-                     rtol_fp32=1e-6, atol_fp32=0., rtol_fp16=5e-3, atol_fp16=0.)
-    sym = mx.sym.SoftmaxOutput(data)
-    check_single_sym(sym, {'data': data_shape},
-                     rtol_fp32=1e-6, atol_fp32=0., rtol_fp16=5e-3, atol_fp16=0.)
-
-
-
 def check_batch_norm(sym, data_shapes, arg_params_shapes=None, aux_params_shapes=None,
                      rtol_fp32=1e-5, atol_fp32=1e-7, rtol_fp16=1e-2, atol_fp16=1e-3):
     if arg_params_shapes is None:

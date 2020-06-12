@@ -294,15 +294,6 @@ snippet shows a simple 2-layer MLP construction, using a hidden layer of
 using MXNet
 ```
 
-```@example fcnet
-net = mx.Variable(:data)
-net = mx.FullyConnected(net, name=:fc1, num_hidden=128)
-net = mx.Activation(net, name=:relu1, act_type=:relu)
-net = mx.FullyConnected(net, name=:fc2, num_hidden=64)
-net = mx.SoftmaxOutput(net, name=:out)
-print(net)  # debug printing
-```
-
 Each time we take the previous symbol, and compose with an operation.
 Unlike the simple `+` example above, the *operations* here are "bigger"
 ones, that correspond to common computation layers in deep neural

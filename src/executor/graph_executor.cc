@@ -362,7 +362,6 @@ nnvm::Graph GraphExecutor::InitFullGraph(nnvm::Symbol symbol,
         if (type == "Convolution") return false;
         if (type == "FullyConnected") return false;
         if (type == "Concat") return false;
-        if (type == "SoftmaxOutput") return false;
         return true;
       };
 

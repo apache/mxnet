@@ -49,18 +49,6 @@ class SymbolSuite extends FunSuite with BeforeAndAfterAll {
     assert(fc1.listArguments() === oldfc.listArguments())
   }
 
-  test("symbol infer type") {
-    val data = Symbol.Variable("data")
-    val f32data = Symbol.Cast()()(Map("data" -> data, "dtype" -> "float32"))
-    val fc1 = Symbol.FullyConnected(name = "fc1")()(Map("data" -> f32data, "num_hidden" -> 128))
-    val mlp = Symbol.SoftmaxOutput(name = "softmax")()(Map("data" -> fc1))
-
-    val (arg, out, aux) = mlp.inferType(Map("data" -> DType.Float64))
-    assert(arg.toArray === Array(DType.Float64, DType.Float32, DType.Float32, DType.Float32))
-    assert(out.toArray === Array(DType.Float32))
-    assert(aux.isEmpty)
-  }
-
   test("symbol copy") {
     val data = Symbol.Variable("data")
     val data2 = data.clone()

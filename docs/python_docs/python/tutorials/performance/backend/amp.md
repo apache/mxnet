@@ -39,7 +39,6 @@ import numpy as np
 import mxnet as mx
 import mxnet.gluon as gluon
 from mxnet import autograd
-from mxnet.test_utils import download_model
 import gluoncv as gcv
 from gluoncv.model_zoo import get_model
 
@@ -291,4 +290,3 @@ Also, you can force cast the params wherever possible to FP16.
 ## Current limitations of AMP
 
 - AMP's dynamic loss scaling currently supports only Gluon trainer with `update_on_kvstore=False` option set
-- Using `SoftmaxOutput`, `LinearRegressionOutput`, `LogisticRegressionOutput`, `MAERegressionOutput` with dynamic loss scaling does not work when training networks with multiple Gluon trainers and so multiple loss scales

@@ -82,7 +82,6 @@ act1 = mx.sym.CaffeOp(data_0=fc1, prototxt="layer{type:\"TanH\"}")
 fc2  = mx.sym.CaffeOp(data_0=act1, num_weight=2, name='fc2', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 64} }")
 act2 = mx.sym.CaffeOp(data_0=fc2, prototxt="layer{type:\"TanH\"}")
 fc3 = mx.sym.CaffeOp(data_0=act2, num_weight=2, name='fc3', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 10}}")
-mlp = mx.sym.SoftmaxOutput(data=fc3, name='softmax')
 ```
 
 Let's break it down. First, `data = mx.sym.Variable('data')` defines a variable

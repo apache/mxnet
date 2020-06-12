@@ -52,10 +52,9 @@ use JSON::PP;
     my $fc1  = mx->symbol->FullyConnected(data => $fl,  name=>"fc1", num_hidden=>30);
     my $act3 = mx->symbol->Activation(data => $fc1, name=>'relu3', act_type=>"relu");
     my $fc2  = mx->symbol->FullyConnected(data => $act3, name=>'fc2', num_hidden=>10);
-    my $softmax = mx->symbol->SoftmaxOutput(data => $fc2, name => 'softmax');
 
     ## creates the image file working directory
-    mx->viz->plot_network($softmax, save_format => 'png')->render("network.png");
+    mx->viz->plot_network($fc2, save_format => 'png')->render("network.png");
 
 =head1 DESCRIPTION
 
