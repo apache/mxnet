@@ -1364,13 +1364,13 @@ int MXGetVersion(int *out) {
 int MXLoadTVMOp(const char *libpath) {
   API_BEGIN();
   tvm::runtime::TVMOpModule *global_module =  tvm::runtime::TVMOpModule::Get();
-  libpath_module->Load(libpath);
+  global_module->Load(libpath);
 #if MXNET_USE_CUDA
   std::string libpathstr(libpath);
   std::string cubinpath = libpathstr.substr(0, libpathstr.size() - 11) + "libtvmop.cubin";
   tvm::runtime::TVMOpModule cubin_module;
   cubin_module.Load(cubinpath);
-  libpath_module->Import(cubin_module);
+  global_module->Import(cubin_module);
 #endif
   API_END();
 }
