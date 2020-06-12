@@ -1363,7 +1363,7 @@ int MXGetVersion(int *out) {
 #if MXNET_USE_TVM_OP
 int MXLoadTVMOp(const char *libpath) {
   API_BEGIN();
-  tvm::runtime::TVMOpModule *libpath_module =  tvm::runtime::TVMOpModule::Get();
+  tvm::runtime::TVMOpModule *global_module =  tvm::runtime::TVMOpModule::Get();
   libpath_module->Load(libpath);
 #if MXNET_USE_CUDA
   std::string libpathstr(libpath);
