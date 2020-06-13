@@ -30,22 +30,12 @@ use AI::MXNet::Contrib::NDArray qw(nd ndarray);
 =head1 SYNOPSIS
 
     my $embed;
-    if($sparse_embedding)
-    {
-        my $embed_weight = mx->sym->Variable('embed_weight', stype=>'row_sparse');
-        $embed = mx->sym->contrib->SparseEmbedding(
-            data=>$data, input_dim=>$num_words,
-            weight=>$embed_weight, output_dim=>$num_embed,
-            name=>'embed'
-        );
-    }
-    else
-    {
-        $embed = mx->sym->Embedding(
-            data=>$data, input_dim=>$num_words,
-            output_dim=>$num_embed, name=>'embed'
-        );
-    }
+
+    $embed = mx->sym->Embedding(
+        data=>$data, input_dim=>$num_words,
+        output_dim=>$num_embed, name=>'embed'
+    );
+
 =cut
 
 1;

@@ -109,7 +109,6 @@ FP32_FUNCS = [
     '_cond',
     '_contrib_AdaptiveAvgPooling2D',
     '_contrib_BilinearResize2D',
-    '_contrib_SparseEmbedding',
     '_contrib_bipartite_matching',
     '_contrib_dequantize',
     '_contrib_div_sqrt_dim',
