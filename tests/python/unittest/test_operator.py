@@ -4372,10 +4372,10 @@ def test_cast():
             y = mx.sym.Cast(x, dtype=dsttype)
             exe = y._simple_bind(ctx=default_context(), x=(10, 10))
             assert exe.arg_arrays[0].dtype == srctype
-            assert exe.outputs[0].dtype == dsttype
             X = np.random.uniform(-10, 10, size=(10, 10))
             exe.arg_arrays[0][:] = X
             exe.forward(is_train=True)
+            assert exe.outputs[0].dtype == dsttype
             exe.backward(mx.nd.array(X, dtype=dsttype, ctx=default_context()))
             assert_almost_equal(exe.outputs[0], X.astype(srctype).astype(dsttype), rtol=1e-3, atol=1e-5)
             assert_almost_equal(exe.grad_arrays[0], X.astype(dsttype).astype(srctype), rtol=1e-3, atol=1e-5)
@@ -6621,7 +6621,7 @@ def test_dropout():
         # test dropout
         x = mx.sym.var('data')
         y = mx.sym.Dropout(x, p=ratio, cudnn_off=cudnn_off)
-        exe = y.simple_bind(ctx=default_context(), data=shape)
+        exe = y._simple_bind(ctx=default_context(), data=shape)
 
         if ratio == 1:
             max_value = float('nan')
@@ -6659,7 +6659,7 @@ def test_dropout():
             # test permanent dropout
             x = mx.sym.var('data')
             y = mx.sym.Dropout(x, p=ratio, mode='always', cudnn_off=cudnn_off)
-            exe = y.simple_bind(ctx=default_context(), data=shape)
+            exe = y._simple_bind(ctx=default_context(), data=shape)
 
             exe.arg_arrays[0][:] = 1
             exe.forward(is_train=True)

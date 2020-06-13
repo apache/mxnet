@@ -562,8 +562,10 @@ class ExecutorV2:
                     self._args[i].attach_grad(req, stype=g.stype)
                     self._args[i].grad[:] = g
         self._cached_op = ndarray.CachedOp(sym)
+        self._is_train = None
 
     def forward(self, is_train=False, **kwargs):
+        self._is_train = is_train
         if kwargs:
             from . import ndarray
             for name, array in kwargs.items():
@@ -582,7 +584,7 @@ class ExecutorV2:
         return self.outputs
 
     def backward(self, out_grads=None, is_train=True):
-        assert is_train is True
+        assert is_train == self._is_train
         from . import autograd
         if not isinstance(out_grads, (list, tuple)):
             out_grads = [out_grads]

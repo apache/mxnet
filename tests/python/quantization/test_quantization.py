@@ -216,7 +216,7 @@ def test_quantized_conv():
                                   dilate=dilate, no_bias=no_bias, cudnn_off=False, name='conv')
         arg_shapes, _, _ = conv.infer_shape(data=data_shape)
         arg_names = conv.list_arguments()
-        conv_exe_fp32 = conv.simple_bind(ctx=mx.current_context(), grad_req='null')
+        conv_exe_fp32 = conv._simple_bind(ctx=mx.current_context(), grad_req='null')
         if qdtype == 'uint8':
             data_low = 0.0
             data_high = 127.0
@@ -248,7 +248,7 @@ def test_quantized_conv():
         type_dict = None
         if not no_bias:
             type_dict = {qarg_names[2]: 'int8'}
-        conv_exe_int8 = quantized_conv.simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
+        conv_exe_int8 = quantized_conv._simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
         conv_exe_int8.arg_dict[qarg_names[0]][:] = conv_exe_fp32.arg_dict[arg_names[0]].astype(qdtype)
         conv_exe_int8.arg_dict[qarg_names[1]][:] = conv_exe_fp32.arg_dict[arg_names[1]].astype('int8')
         quantized_range = 127.0
@@ -301,7 +301,7 @@ def test_quantized_elemwise_add():
         dataB = mx.sym.Variable(name='dataB', shape=data_shape, dtype='float32')
         elemwise_add_fp32 = mx.sym.elemwise_add(dataA, dataB)
         arg_names = elemwise_add_fp32.list_arguments()
-        elemwise_add_fp32_exe = elemwise_add_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        elemwise_add_fp32_exe = elemwise_add_fp32._simple_bind(ctx=mx.current_context(), grad_req='null')
         if qtype == 'uint8':
             data_low = 0.0
             data_high = 255.0
@@ -324,7 +324,7 @@ def test_quantized_elemwise_add():
         min_dataB = mx.sym.Variable(name='min_dataB')
         max_dataB = mx.sym.Variable(name='max_dataB')
         quantized_elemwise_add = mx.sym.contrib.quantized_elemwise_add(qdataA, qdataB, min_dataA, max_dataA, min_dataB, max_dataB)
-        elemwise_add_int8_exe = quantized_elemwise_add.simple_bind(ctx=mx.current_context(), grad_req='null')
+        elemwise_add_int8_exe = quantized_elemwise_add._simple_bind(ctx=mx.current_context(), grad_req='null')
         qarg_names = quantized_elemwise_add.list_arguments()
         elemwise_add_int8_exe.arg_dict[qarg_names[0]][:] = elemwise_add_fp32_exe.arg_dict[arg_names[0]].astype(qtype)
         elemwise_add_int8_exe.arg_dict[qarg_names[1]][:] = elemwise_add_fp32_exe.arg_dict[arg_names[1]].astype(qtype)
@@ -363,7 +363,7 @@ def test_quantized_elemwise_mul():
         dataB = mx.sym.Variable(name='dataB', shape=data_shape, dtype='float32')
         elemwise_mul_fp32 = mx.sym.elemwise_mul(dataA, dataB)
         arg_names = elemwise_mul_fp32.list_arguments()
-        elemwise_mul_fp32_exe = elemwise_mul_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        elemwise_mul_fp32_exe = elemwise_mul_fp32._simple_bind(ctx=mx.current_context(), grad_req='null')
         if qtype == 'uint8':
             data_low = 0.0
             data_high = 255.0
@@ -386,7 +386,7 @@ def test_quantized_elemwise_mul():
         min_dataB = mx.sym.Variable(name='min_dataB')
         max_dataB = mx.sym.Variable(name='max_dataB')
         quantized_elemwise_mul = mx.sym.contrib.quantized_elemwise_mul(qdataA, qdataB, min_dataA, max_dataA, min_dataB, max_dataB)
-        elemwise_mul_int8_exe = quantized_elemwise_mul.simple_bind(ctx=mx.current_context(), grad_req='null')
+        elemwise_mul_int8_exe = quantized_elemwise_mul._simple_bind(ctx=mx.current_context(), grad_req='null')
         qarg_names = quantized_elemwise_mul.list_arguments()
         elemwise_mul_int8_exe.arg_dict[qarg_names[0]][:] = elemwise_mul_fp32_exe.arg_dict[arg_names[0]].astype(qtype)
         elemwise_mul_int8_exe.arg_dict[qarg_names[1]][:] = elemwise_mul_fp32_exe.arg_dict[arg_names[1]].astype(qtype)
@@ -426,7 +426,7 @@ def test_quantized_pooling():
                                       pooling_convention=convention)
         arg_shapes, _, _ = pooling_fp32.infer_shape(data=data_shape)
         arg_names = pooling_fp32.list_arguments()
-        pooling_fp32_exe = pooling_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        pooling_fp32_exe = pooling_fp32._simple_bind(ctx=mx.current_context(), grad_req='null')
         if qdtype == 'uint8':
             data_low = 0.0
             data_high = 127.0
@@ -445,7 +445,7 @@ def test_quantized_pooling():
                                                              pad=pad, stride=stride, pool_type=pool_type,
                                                              global_pool=global_pool,
                                                              pooling_convention=convention)
-        pooling_int8_exe = quantized_pooling.simple_bind(ctx=mx.current_context(), grad_req='null')
+        pooling_int8_exe = quantized_pooling._simple_bind(ctx=mx.current_context(), grad_req='null')
         qarg_names = quantized_pooling.list_arguments()
         pooling_int8_exe.arg_dict[qarg_names[0]][:] = pooling_fp32_exe.arg_dict[arg_names[0]].astype(qdtype)
         quantized_range = 127.0
@@ -504,7 +504,7 @@ def test_quantized_fc():
         fc_fp32 = mx.sym.FullyConnected(data=data, num_hidden=num_hidden, no_bias=no_bias, flatten=flatten)
         arg_shapes, _, _ = fc_fp32.infer_shape(data=data_shape)
         arg_names = fc_fp32.list_arguments()
-        fc_fp32_exe = fc_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        fc_fp32_exe = fc_fp32._simple_bind(ctx=mx.current_context(), grad_req='null')
         int8_range = 127.0
         if qdtype == 'uint8':
             data_low = 0.0
@@ -552,7 +552,7 @@ def test_quantized_fc():
         type_dict = {qarg_names[1]: 'int8'}
         if not no_bias:
             type_dict.update({qarg_names[2]: 'int8'})
-        fc_int8_exe = fc_int8.simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
+        fc_int8_exe = fc_int8._simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
         fc_int8_exe.arg_dict[qarg_names[0]][:] = fc_fp32_exe.arg_dict[arg_names[0]].astype(qdtype)
         fc_int8_exe.arg_dict[qarg_names[1]][:] = fc_fp32_exe.arg_dict[arg_names[1]].astype('int8')
         if no_bias:
@@ -607,7 +607,7 @@ def test_quantized_embedding():
         embedding_fp32 = mx.sym.Embedding(data=data0, input_dim=input_dim, output_dim=output_dim)
         arg_shapes, _, _ = embedding_fp32.infer_shape(data=data_shape)
         arg_names = embedding_fp32.list_arguments()
-        embedding_fp32_exe = embedding_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        embedding_fp32_exe = embedding_fp32._simple_bind(ctx=mx.current_context(), grad_req='null')
         int8_range = 127.0
         data = mx.nd.random.uniform(low=0, high=input_dim,
                                       shape=arg_shapes[0]).astype('int32')
@@ -625,7 +625,7 @@ def test_quantized_embedding():
         embedding_int8 = mx.sym.contrib.quantized_embedding(data=data0, input_dim=input_dim, output_dim=output_dim)
         qarg_names = embedding_int8.list_arguments()
         type_dict = {qarg_names[1]: 'int8'}
-        embedding_int8_exe = embedding_int8.simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
+        embedding_int8_exe = embedding_int8._simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
         embedding_int8_exe.arg_dict[qarg_names[0]][:] = embedding_fp32_exe.arg_dict[arg_names[0]]
         embedding_int8_exe.arg_dict[qarg_names[1]][:] = embedding_fp32_exe.arg_dict[arg_names[1]].astype('int8')
         embedding_int8_exe.arg_dict[qarg_names[2]][:] = -weight_range
@@ -681,7 +681,7 @@ def test_quantized_act():
         act_fp32 = mx.sym.Activation(data=data, act_type='relu', name='relu')
         arg_shapes, _, _ = act_fp32.infer_shape(data=data_shape)
         arg_names = act_fp32.list_arguments()
-        act_fp32_exe = act_fp32.simple_bind(ctx=mx.current_context(), grad_req='null')
+        act_fp32_exe = act_fp32._simple_bind(ctx=mx.current_context(), grad_req='null')
         if qdtype == 'uint8':
             data_low = 0.0
             data_high = 127.0
@@ -697,7 +697,7 @@ def test_quantized_act():
         min_data = mx.sym.Variable(name='min_data')
         max_data = mx.sym.Variable(name='max_data')
         quantized_act = mx.sym.contrib.quantized_act(data=qdata, min_data=min_data, max_data=max_data, act_type='relu')
-        act_int8_exe = quantized_act.simple_bind(ctx=mx.current_context(), grad_req='null')
+        act_int8_exe = quantized_act._simple_bind(ctx=mx.current_context(), grad_req='null')
         qarg_names = quantized_act.list_arguments()
 
         act_int8_exe.arg_dict[qarg_names[0]][:] = act_fp32_exe.arg_dict[arg_names[0]].astype(qdtype)
