@@ -39,15 +39,15 @@ def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
     rhs_arr = mx.nd.array(np.random.uniform(-1, 1, rshape))
     lhs_grad = mx.nd.empty(lshape)
     rhs_grad = mx.nd.empty(rshape)
-    executor = ret.bind(mx.Context('cpu'),
+    executor = ret._bind(mx.Context('cpu'),
                         args=[lhs_arr, rhs_arr],
                         args_grad=[lhs_grad, rhs_grad])
 
-    exec3 = ret.bind(mx.Context('cpu'),
+    exec3 = ret._bind(mx.Context('cpu'),
                      args=[lhs_arr, rhs_arr])
 
 
-    exec4 = ret.bind(mx.Context('cpu'),
+    exec4 = ret._bind(mx.Context('cpu'),
                      args={'rhs': rhs_arr, 'lhs': lhs_arr},
                      args_grad={'lhs': lhs_grad, 'rhs': rhs_grad})
 

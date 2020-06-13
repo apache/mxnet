@@ -479,7 +479,7 @@ def test_softmax_with_large_inputs():
     def softmax_forward(input_data, true_output):
         data = mx.sym.Variable('data')
         out1 = data.softmax(axis=1)
-        exec1 = out1.bind(mx.cpu(), args={'data': input_data})
+        exec1 = out1._bind(mx.cpu(), args={'data': input_data})
         exec1.forward()[0].wait_to_read()
         ndarr = exec1.outputs[0][0][0][0]
         nparr = ndarr.asnumpy()
@@ -531,7 +531,7 @@ def test_non_mkldnn_fcomputeex():
     data = mx.symbol.Variable('data')
     conv = mx.sym.Convolution(data=data, kernel=(5, 5), pad=(1, 1), stride=(1,1), num_filter=8, name="conv", no_bias=True)
     custom = mx.symbol.Custom(name='custom', data=conv, op_type='custom')
-    exec1 = custom.bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
+    exec1 = custom._bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
     exec1.forward()[0].wait_to_read()
 
 @with_seed()

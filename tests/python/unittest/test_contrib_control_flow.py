@@ -876,7 +876,7 @@ def test_while_loop_nested():
             mx.sym.var("sc"),
         ]
         result_sym = mx.sym.Group(make_loop(i, j, x_sum, sc))
-        executor = result_sym.bind(
+        executor = result_sym._bind(
             ctx=default_context(),
             args=args,
             args_grad=args_grad,

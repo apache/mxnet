@@ -58,7 +58,7 @@ def test_exc_symbolic():
                'y': mx.nd.random.normal(0, 1, x_shape, ctx=default_context()),
                'z': mx.nd.random.normal(0, 1, z_shape, ctx=default_context())}
         arr_grad = {'x': mx.nd.empty(x_shape), 'y': mx.nd.empty(x_shape), 'z': mx.nd.empty(z_shape)}
-        exec1 = out.bind(ctx=default_context(), args=arr, args_grad=arr_grad)
+        exec1 = out._bind(ctx=default_context(), args=arr, args_grad=arr_grad)
         outputs = exec1.forward()
         if exec_backward:
             exec1.backward()
