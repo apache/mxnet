@@ -561,7 +561,6 @@ class ExecutorV2:
                         req = grad_req[self._input_names[i]]
                     self._args[i].attach_grad(req, stype=g.stype)
                     self._args[i].grad[:] = g
-
         self._cached_op = ndarray.CachedOp(sym)
 
     def forward(self, is_train=False, **kwargs):
@@ -571,7 +570,6 @@ class ExecutorV2:
         with autograd.record(train_mode=is_train):
             self.outputs = self._cached_op(*self._args,
                                            default_ctx=default_ctx)
-
         if not isinstance(self.outputs, (list, tuple)):
             self.outputs = [self.outputs]
         return self.outputs

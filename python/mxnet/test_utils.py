@@ -1312,9 +1312,9 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     if isinstance(out_grads, (tuple, list)):
         outg = list()
         for i, arr in enumerate(out_grads):
+            stype = outputs[i].stype
             if isinstance(arr, np.ndarray):
                 dtype = arr.dtype if dtype == "asnumpy" else dtype
-                stype = outputs[i].stype
                 outg.append(mx.nd.array(arr, ctx=ctx, dtype=dtype).tostype(stype))
             else:
                 outg.append(arr.tostype(stype))

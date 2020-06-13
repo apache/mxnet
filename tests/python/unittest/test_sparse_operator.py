@@ -304,7 +304,7 @@ def test_elemwise_binary_ops():
         if rhs_grad_stype is not None:
             assert igrads_result['rhs'].stype == rhs_grad_stype
 
-        if skip_gradient_check is not True:
+        if not skip_gradient_check:
             check_numeric_gradient(test, location,
                                    grad_stype_dict=grad_stypes)
 
