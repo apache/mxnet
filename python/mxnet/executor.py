@@ -564,7 +564,14 @@ class ExecutorV2:
         self._cached_op = ndarray.CachedOp(sym)
 
     def forward(self, is_train=False, **kwargs):
-        assert not kwargs
+        if kwargs:
+            from . import ndarray
+            for name, array in kwargs.items():
+                if name in self._input_names:
+                    index = self._input_names.index(name)
+                    self._args[index] = ndarray.array(array, dtype=array.dtype)
+                    self._args[index].attach_grad()
+
         from . import autograd
         default_ctx = None if self._input_names else self._ctx
         with autograd.record(train_mode=is_train):
@@ -649,3 +656,56 @@ class ExecutorV2:
             if k in self._arg_names:
                ret[k] = v.grad
         return ret
+
+    def copy_params_from(self, arg_params, aux_params=None, allow_extra_params=False):
+        """Copy parameters from arg_params, aux_params into executor's internal array.
+
+        Parameters
+        ----------
+        arg_params : dict of str to NDArray
+            Parameters, dict of name to NDArray of arguments.
+
+        aux_params : dict of str to NDArray, optional
+            Parameters, dict of name to NDArray of auxiliary states.
+
+        allow_extra_params : boolean, optional
+            Whether allow extra parameters that are not needed by symbol.
+            If this is True, no error will be thrown when arg_params or aux_params
+            contain extra parameters that is not needed by the executor.
+
+        Raises
+        ------
+        ValueError
+            If there is additional parameters in the dict but ``allow_extra_params=False``.
+
+        Examples
+        --------
+        >>> # set parameters with existing model checkpoint
+        >>> model_prefix = 'mx_mlp'
+        >>> sym, arg_params, aux_params = mx.model.load_checkpoint(model_prefix, 0)
+        >>> texec.copy_params_from(arg_params, aux_params)
+        """
+        for name, array in arg_params.items():
+            if name in self.arg_dict:
+                dst = self.arg_dict[name]
+                if dst.dtype == np.dtype([('bfloat16', np.uint16)]):
+                    cast_array = ndarray.amp_cast(array, dtype=dst.dtype)
+                    cast_array.copyto(dst)
+                else:
+                    array.astype(dst.dtype).copyto(dst)
+            elif not allow_extra_params:
+                raise ValueError('Find name \"%s\" that is not in the arguments' % name)
+
+        if aux_params is None:
+            return
+
+        for name, array in aux_params.items():
+            if name in self.aux_dict:
+                dst = self.aux_dict[name]
+                if dst.dtype == np.dtype([('bfloat16', np.uint16)]):
+                    cast_array = ndarray.amp_cast(array, dtype=dst.dtype)
+                    cast_array.copyto(dst)
+                else:
+                    array.astype(dst.dtype).copyto(dst)
+            elif not allow_extra_params:
+                raise ValueError('Find name %s that is not in the auxiliary states' % name)

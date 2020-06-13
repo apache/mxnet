@@ -1548,6 +1548,56 @@ class Symbol(SymbolBase):
         # return modified symbol
         return Symbol(out)
 
+    # pylint: disable=too-many-locals
+    def _simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
+                     **kwargs):
+        """Bind current symbol to get an executor, allocate all the arguments needed.
+        Allows specifying data types.
+
+        This function simplifies the binding procedure. You need to specify only input data shapes.
+        Before binding the executor, the function allocates arguments and auxiliary states
+        that were not explicitly specified. Allows specifying data types.
+        """
+        assert isinstance(grad_req, (str, dict))
+        # infer shape
+        arg_shapes, out_shapes, aux_shapes = self.infer_shape(**kwargs)
+        type_dict = {} if type_dict is None else type_dict
+        arg_dtypes, out_dtypes, aux_dtypes = None, None, None
+        try:
+            arg_dtypes, out_dtypes, aux_dtypes = self.infer_type(**type_dict)
+        except:
+            pass
+        args = [None] * len(arg_shapes)
+        aux_states = [None] * len(aux_shapes)
+
+        arg_names = self.list_arguments()
+        aux_names = self.list_auxiliary_states()
+
+        from ..ndarray import zeros
+        for i, shape in enumerate(arg_shapes):
+            if arg_dtypes:
+                args[i] = zeros(shape, dtype=arg_dtypes[i])
+            else:
+                args[i] = zeros(shape)
+
+        for i, shape in enumerate(aux_shapes):
+            if aux_dtypes:
+                aux_states[i] = zeros(shape, dtype=aux_dtypes[i])
+            else:
+                aux_states[i] = zeros(shape)
+
+        if stype_dict:
+            for name, stype in stype_dict.items():
+                if name in arg_names:
+                    index = arg_names.index(name)
+                    args[index] = args[index].tostype(stype)
+                else:
+                    assert name in aux_names
+                    index = aux_names.index(name)
+                    aux_states[index] = aux_states[index].totype(stype)
+
+        args_grad = [x.copy() for x in args]
+        return ExecutorV2(self, ctx, args, args_grad, grad_req, aux_states)
 
     # pylint: disable=too-many-locals
     def simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
@@ -1853,12 +1903,10 @@ class Symbol(SymbolBase):
         return executor
 
     def _bind(self, ctx, args, args_grad=None, grad_req='write',
-         aux_states=None, group2ctx=None, shared_exec=None):
+         aux_states=None):
         """Bind to get a cached op executor for testing
         args_grad : list of NDArray, or dict of str -> NDArray
         """
-        assert group2ctx is None
-        assert shared_exec is None
         assert isinstance(grad_req, (str, dict))
         return ExecutorV2(self, ctx, args, args_grad, grad_req, aux_states)
 
