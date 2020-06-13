@@ -1802,15 +1802,20 @@ def test_sparse_elementwise_sum():
 @pytest.mark.serial
 def test_sparse_embedding():
     ''' test sparse embedding operator '''
-    def check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad, weight_stype):
+    def check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad):
         target_stype = 'row_sparse' if sparse_grad else 'default'
         # init executor
         data = mx.sym.Variable("data")
-        weight = mx.sym.Variable("embed_weight", stype=weight_stype)
+        weight = mx.sym.Variable("embed_weight")
         embed = mx.sym.sparse.Embedding(data=data, weight=weight, input_dim=in_dim,
                                         sparse_grad=sparse_grad, output_dim=out_dim, name='embed')
         grad_req = {'data': 'null', 'embed_weight': 'write'}
-        exe_test = embed.simple_bind(default_context(), grad_req=grad_req, data=(batch,))
+        args = {'embed_weight': mx.nd.zeros((in_dim, out_dim)), 'data': mx.nd.ones((batch,))}
+        weight_grad = mx.nd.zeros((in_dim, out_dim))
+        if sparse_grad:
+            weight_grad = weight_grad.tostype('row_sparse')
+        args_grad = {'embed_weight': weight_grad}
+        exe_test = embed.bind(default_context(), args=args, args_grad=args_grad, grad_req=grad_req)
         arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
         grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
         # init data
@@ -1826,7 +1831,7 @@ def test_sparse_embedding():
         weight = arg_map["embed_weight"]
         for density in densities:
             # update weight based on density
-            weight[:] = rand_ndarray(weight.shape, weight_stype, density=density)
+            weight[:] = rand_ndarray(weight.shape, 'default', density=density)
             # check forward
             exe_test.forward(is_train=True)
             assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, weight.asnumpy()), atol=1e-4)
@@ -1840,12 +1845,9 @@ def test_sparse_embedding():
     in_dim = 50
     out_dim = 3
     batch = 8
-    weight_stypes = ['default', 'row_sparse']
     sparse_grads = [True, False]
-    for weight_stype in weight_stypes:
-        for sparse_grad in sparse_grads:
-            check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad, weight_stype)
-            check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad, weight_stype)
+    for sparse_grad in sparse_grads:
+        check_sparse_embedding(in_dim, out_dim, batch, densities, sparse_grad)
 
 @with_seed()
 def test_sparse_broadcast_add_sub():
@@ -2187,15 +2189,17 @@ def test_sparse_nd_where():
         grad_in_mx = mx.nd.array(grad_in_np, dtype=np.int32)
         where_sym = mx.sym.where(condition, x, y)
 
+        cond_nd = mx.nd.array(condition_np)
+        args = {'condition': cond_nd.tostype('csr'), 'x': mx.nd.array(x_np),
+                'y' : mx.nd.array(y_np)}
+        args_grad = {'condition': mx.nd.zeros_like(cond_nd),
+                     'x': mx.nd.array(x_np).tostype('csr'), 'y' : mx.nd.array(y_np)}
         # test req='write'
-        where_exe_write = where_sym.simple_bind(ctx=default_context(),
-                                                condition=condition_np.shape,
-                                                x=x_np.shape, y=y_np.shape,
-                                                grad_req='write')
+        where_exe_write = where_sym.bind(ctx=default_context(), args=args,
+                                         args_grad=args_grad, grad_req='write')
+
         # test forward req='write'
-        cond_nd = mx.nd.array(condition_np).tostype('csr')
-        outputs = where_exe_write.forward(is_train=True, \
-                                          condition=cond_nd, x=x_np, y=y_np)
+        outputs = where_exe_write.forward(is_train=True)
         assert same(outputs[0].asnumpy(), out_expected)
         # test backward req='write'
         where_exe_write.backward(grad_in_mx)
@@ -2206,14 +2210,12 @@ def test_sparse_nd_where():
         # test req='add'
         x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
         y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
-        where_exe_add = where_sym.simple_bind(ctx=default_context(),
-                                              condition=cond_nd.shape,
-                                              x=x_np.shape, y=y_np.shape,
-                                              grad_req='add')
+        where_exe_add = where_sym.bind(ctx=default_context(), args=args,
+                                       args_grad=args_grad, grad_req='add')
         where_exe_add.grad_dict['x'][:] = x_grad_init
         where_exe_add.grad_dict['y'][:] = y_grad_init
         # test forward req='add'
-        outputs = where_exe_add.forward(is_train=True, condition=cond_nd, x=x_np, y=y_np)
+        outputs = where_exe_add.forward(is_train=True)
         assert same(outputs[0].asnumpy(), out_expected)
 
     def test_where_numeric_gradient(shape):
