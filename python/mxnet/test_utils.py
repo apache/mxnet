@@ -757,34 +757,6 @@ def assert_exception(f, exception_type, *args, **kwargs):
         return
 
 
-def simple_forward(sym, ctx=None, is_train=False, **inputs):
-    """A simple forward function for a symbol.
-
-    Primarily used in doctest to test the functionality of a symbol.
-    Takes NumPy arrays as inputs and outputs are also converted to NumPy arrays.
-
-    Parameters
-    ----------
-    ctx : Context
-        If ``None``, will take the default context.
-    inputs : keyword arguments
-        Mapping each input name to a NumPy array.
-
-    Returns
-    -------
-    The result as a numpy array. Multiple results will
-    be returned as a list of NumPy arrays.
-    """
-    ctx = ctx or default_context()
-    inputs = {k: array(v) for k, v in inputs.items()}
-    exe = sym.bind(ctx, args=inputs)
-    exe.forward(is_train=is_train)
-    outputs = [x.asnumpy() for x in exe.outputs]
-    if len(outputs) == 1:
-        outputs = outputs[0]
-    return outputs
-
-
 def _parse_location(sym, location, ctx, dtype=default_dtype()):
     """Parses the given location to a ordered dictionary.
 
@@ -1268,7 +1240,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> mat2 = np.array([[5, 6], [7, 8]])
     >>> grad1 = mx.nd.zeros(shape)
     >>> grad2 = mx.nd.zeros(shape)
-    >>> exec_add = sym_add.bind(default_context(), args={'lhs': mat1, 'rhs': mat2},
+    >>> exec_add = sym_add._bind(default_context(), args={'lhs': mat1, 'rhs': mat2},
     ... args_grad={'lhs': grad1, 'rhs': grad2}, grad_req={'lhs': 'write', 'rhs': 'write'})
     >>> exec_add.forward(is_train=True)
     >>> ograd = mx.nd.ones(shape)
@@ -1381,12 +1353,12 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
     if grad_req is None:
         grad_req = 'write'
     if location is None:
-        exe = sym.simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
+        exe = sym._simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
         location = {k: np.random.normal(size=arr.shape, scale=1.0) for k, arr in
                     exe.arg_dict.items()}
     else:
         assert isinstance(location, dict), "Expect dict, get \"location\"=%s" %str(location)
-        exe = sym.simple_bind(grad_req=grad_req, ctx=ctx,
+        exe = sym._simple_bind(grad_req=grad_req, ctx=ctx,
                               **{k: v.shape for k, v in location.items()})
 
     for name, iarr in location.items():
@@ -1511,7 +1483,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     for s, ctx in zip(sym, ctx_list):
         assert s.list_arguments() == arg_names
         assert s.list_outputs() == output_names
-        exe_list.append(s.simple_bind(grad_req=grad_req, **ctx))
+        exe_list.append(s._simple_bind(grad_req=grad_req, **ctx))
 
     arg_params = {} if arg_params is None else arg_params
     aux_params = {} if aux_params is None else aux_params
