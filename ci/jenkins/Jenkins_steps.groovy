@@ -41,6 +41,7 @@ mx_lib_cpp_examples_make = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.
 mx_lib_cpp_capi_make = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, libsample_lib.so, lib/libmkldnn.so.1, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/**, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so, build/tests/cpp/mxnet_unit_tests'
 mx_lib_cpp_examples_no_tvm_op = 'build/libmxnet.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/3rdparty/openmp/runtime/src/libomp.so,  build/cpp-package/example/**, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/openmp/runtime/src/libomp.so, build/cpp-package/example/**'
+mx_cd_lib = 'lib/libmxnet.so, licenses/*, lib/libgfortran.so.4, lib/libquadmath.so.0, lib/libopenblas.so.0, include/mkldnn/dnnl_version.h, include/mkldnn/dnnl_config.h'
 
 // Python unittest for CPU
 // Python 3
@@ -393,6 +394,20 @@ def compile_centos7_cpu_mkldnn() {
     }]
 }
 
+def compile_static_cd_cpu(lib_name) {
+    return ['CPU: CD Static Build' : {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cd-static/cpu/') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('centos7_cpu', 'build_static_libmxnet cpu', false)
+            utils.pack_lib(lib_name, mx_cd_lib)
+          }
+        }
+      }
+    }]
+}
+
 def compile_centos7_gpu(lib_name) {
     return ['GPU: CentOS 7': {
       node(NODE_LINUX_CPU) {
@@ -401,6 +416,20 @@ def compile_centos7_gpu(lib_name) {
             utils.init_git()
             utils.docker_run('centos7_gpu_cu92', 'build_centos7_gpu', false)
             utils.pack_lib(lib_name, mx_lib)
+          }
+        }
+      }
+    }]
+}
+
+def compile_static_cd_gpu(lib_name) {
+    return ['GPU: CD Static Build' : {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-cd-static/gpu/') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('centos7_gpu_cu102', 'build_static_libmxnet cu102', false)
+            utils.pack_lib(lib_name, mx_cd_lib)
           }
         }
       }
@@ -1252,6 +1281,19 @@ def test_centos7_python3_cpu(lib_name) {
     }]
 }
 
+def test_centos7_python3_cd_cpu(lib_name) {
+    return ['Python3: CentOS 7 CPU CD': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/test-cd-static/cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_cd_lib)
+            utils.docker_run('centos7_cpu', 'cd_unittest_ubuntu cpu', false)
+          }
+        }
+      }
+    }]
+}
+
 def test_centos7_python3_gpu(lib_name) {
     return ['Python3: CentOS 7 GPU': {
       node(NODE_LINUX_GPU) {
@@ -1264,6 +1306,32 @@ def test_centos7_python3_gpu(lib_name) {
             } finally {
               utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_centos7_gpu.xml')
             }
+          }
+        }
+      }
+    }]
+}
+
+def test_centos7_python3_cd_gpu(lib_name) {
+    return ['Python3: CentOS 7 GPU CD': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/test-cd-static/gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_cd_lib)
+            utils.docker_run('centos7_gpu_cu102', 'cd_unittest_ubuntu cu102', true)
+          }
+        }
+      }
+    }]
+}
+
+def test_centos7_quantization_cd_gpu(lib_name) {
+    return ['Quantization Python3: CentOS 7 GPU CD': {
+      node(NODE_LINUX_GPU_P3) {
+        ws('workspace/test-cd-static/gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_cd_lib)
+            utils.docker_run('centos7_gpu_cu102', 'unittest_ubuntu_python3_quantization_gpu', true)
           }
         }
       }
