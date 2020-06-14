@@ -503,8 +503,8 @@ class ExecutorV2:
             self._args_grad = None
 
         # args
+        self._args = [None] * len(self._input_names)
         if isinstance(args, dict):
-            self._args = [None] * len(self._input_names)
             for k, v in args.items():
                 try:
                     i = self._input_names.index(k)
@@ -515,9 +515,8 @@ class ExecutorV2:
                     pass
         else:
             assert isinstance(args, (list, tuple))
-            self._args = []
             for i, arg in enumerate(args):
-                self._args.append(arg.copyto(ctx))
+                self._args[i] = arg.copyto(ctx)
 
         # aux states
         if aux_states:
@@ -528,9 +527,9 @@ class ExecutorV2:
                         self._args[i] = v.copyto(ctx)
             else:
                 assert isinstance(aux_states, (list, tuple))
-                num_args = len(self._arg_names)
                 for i, v in enumerate(aux_states):
-                    self._args[i + num_args] = v.copyto(ctx)
+                    index = self._input_names.index(self._aux_names[i])
+                    self._args[index] = v.copyto(ctx)
 
         # arg grad
         if self._args_grad:
