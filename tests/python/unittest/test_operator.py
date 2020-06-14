@@ -3018,9 +3018,9 @@ def test_batch_dot():
                             b_npy = np.transpose(b_npy, axes=(0, 2, 1))
                             bgrad_npy = np.transpose(bgrad_npy, axes=(0, 2, 1))
                             b_init_grad_npy = np.transpose(b_init_grad_npy, axes=(0, 2, 1))
-                        exe = c.simple_bind(ctx=ctx,
+                        exe = c._simple_bind(ctx=ctx,
                             a=a_npy.shape, b=b_npy.shape, grad_req='write')
-                        exe_add = c.simple_bind(ctx=ctx,
+                        exe_add = c._simple_bind(ctx=ctx,
                             a=a_npy.shape, b=b_npy.shape, grad_req='add')
                         exe_add.grad_dict['a'][:] = a_init_grad_npy
                         exe_add.grad_dict['b'][:] = b_init_grad_npy
@@ -3028,7 +3028,7 @@ def test_batch_dot():
                         assert_almost_equal(outputs[0], c_npy,
                                             rtol=1e-2 if data_type == 'float16' else 1e-3,
                                             atol=1e-2 if data_type == 'float16' else 1e-4)
-                        exe.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                        exe.backward(out_grads=[mx.nd.array(ograd_npy, dtype=outputs[0].dtype, ctx=exe._ctx)])
                         assert_almost_equal(exe.grad_dict['a'], agrad_npy,
                                             rtol=1e-2 if data_type == 'float16' else 1e-3,
                                             atol=1e-2 if data_type == 'float16' else 1e-4)
@@ -3036,7 +3036,7 @@ def test_batch_dot():
                                             rtol=1e-2 if data_type == 'float16' else 1e-3,
                                             atol=1e-2 if data_type == 'float16' else 1e-4)
                         exe_add.forward(is_train=True, a=a_npy, b=b_npy)
-                        exe_add.backward(out_grads=[mx.nd.array(ograd_npy, ctx=exe._ctx)])
+                        exe_add.backward(out_grads=[mx.nd.array(ograd_npy, dtype=exe_add.outputs[0].dtype, ctx=exe._ctx)])
                         assert_almost_equal(exe_add.grad_dict['a'],
                                             agrad_npy + a_init_grad_npy,
                                             rtol=1e-2 if data_type == 'float16' else 1e-3,
