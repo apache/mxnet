@@ -194,8 +194,8 @@ def test_subgraph_exe3(sym, subgraph_backend, op_names):
     arg_shapes, _, aux_shapes = sym.infer_shape()
     arg_array = [mx.nd.random.uniform(shape=shape) for shape in arg_shapes]
     aux_array = [mx.nd.random.uniform(shape=shape) for shape in aux_shapes]
-    exe = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
-    partitioned_exe = partitioned_sym.bind(ctx=mx.current_context(), args=arg_array,
+    exe = sym._bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
+    partitioned_exe = partitioned_sym._bind(ctx=mx.current_context(), args=arg_array,
                                            aux_states=aux_array, grad_req='null')
     exe.forward()
     partitioned_exe.forward()
@@ -221,7 +221,7 @@ def test_subgraph_exe4(sym, subgraph_backend, op_names):
         else:
             arg_array = None
             aux_array = None
-        exe = sym.bind(ctx=mx.current_context(),
+        exe = sym._bind(ctx=mx.current_context(),
                        args=arg_array if subgraph_backend is None else original_exec.arg_arrays,
                        aux_states=aux_array if subgraph_backend is None else original_exec.aux_arrays,
                        grad_req='null')
@@ -326,7 +326,7 @@ def test_subgraph_exe7(sym, subgraph_backend, op_names):
     arg_shapes, _, aux_shapes = sym.infer_shape()
     arg_array = [mx.nd.random.uniform(shape=shape) for shape in arg_shapes]
     aux_array = [mx.nd.random.uniform(shape=shape) for shape in aux_shapes]
-    exe1 = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
+    exe1 = sym._bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe1.forward()
 
     # partition before bind
@@ -335,7 +335,7 @@ def test_subgraph_exe7(sym, subgraph_backend, op_names):
     part_sym = sym.optimize_for(subgraph_backend)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
-    exe2 = part_sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
+    exe2 = part_sym._bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe2.forward()
 
     # compare outputs
@@ -357,7 +357,7 @@ def test_subgraph_exe8(sym, subgraph_backend, op_names):
     aux_names = sym.list_auxiliary_states()
     arg_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(arg_names,arg_shapes)}
     aux_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(aux_names,aux_shapes)}
-    exe1 = sym.bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe1 = sym._bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
     exe1.forward()
 
     # infer shape/type before partition before bind
@@ -366,7 +366,7 @@ def test_subgraph_exe8(sym, subgraph_backend, op_names):
     part_sym = sym.optimize_for(subgraph_backend, arg_dict, aux_dict)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
-    exe2 = part_sym.bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe2 = part_sym._bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
     exe2.forward()
 
     # compare outputs

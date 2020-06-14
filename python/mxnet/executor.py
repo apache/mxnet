@@ -610,9 +610,21 @@ class ExecutorV2:
                         out[:] = arg.grad
 
     @property
+    def aux_arrays(self):
+        assert isinstance(self._args, list)
+        aux_array = []
+        for name in self._aux_names:
+            index = self._input_names.index(name)
+            aux_array.append(self._args[index])
+        return aux_array
+
+    @property
     def arg_arrays(self):
         assert isinstance(self._args, list)
-        arg_array = self._args[:len(self._arg_names)]
+        arg_array = []
+        for name in self._arg_names:
+            index = self._input_names.index(name)
+            arg_array.append(self._args[index])
         return arg_array
 
     @property
