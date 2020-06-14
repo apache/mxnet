@@ -4806,7 +4806,7 @@ def test_where():
         where_sym = mx.sym.where(condition, x, y)
 
         # test req='write'
-        where_exe_write = where_sym.simple_bind(ctx=default_context(),
+        where_exe_write = where_sym._simple_bind(ctx=default_context(),
                                                 condition=condition_np.shape,
                                                 x=x_np.shape, y=y_np.shape,
                                                 grad_req='write')
@@ -4815,7 +4815,7 @@ def test_where():
                                           x=x_np, y=y_np)
         assert same(outputs[0].asnumpy(), out_expected)
         # test backward req='write'
-        where_exe_write.backward(grad_in_mx)
+        where_exe_write.backward(grad_in_mx.astype('float32'))
         assert same(where_exe_write.grad_dict['x'].asnumpy(), grad_expected_x)
         assert same(where_exe_write.grad_dict['y'].asnumpy(), grad_expected_y)
         assert same(where_exe_write.grad_dict['condition'].asnumpy(), grad_expected_cond)
@@ -4823,7 +4823,7 @@ def test_where():
         # test req='add'
         x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
         y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
-        where_exe_add = where_sym.simple_bind(ctx=default_context(),
+        where_exe_add = where_sym._simple_bind(ctx=default_context(),
                                               condition=condition_np.shape,
                                               x=x_np.shape, y=y_np.shape,
                                               grad_req='add')
@@ -4833,7 +4833,8 @@ def test_where():
         outputs = where_exe_add.forward(is_train=True, condition=condition_np, x=x_np, y=y_np)
         assert same(outputs[0].asnumpy(), out_expected)
         # test backward req='add'
-        where_exe_add.backward(grad_in_mx)
+        where_exe_add.backward(grad_in_mx.astype('float32'))
+
         x_ograd = where_exe_add.grad_dict['x'].asnumpy()
         y_ograd = where_exe_add.grad_dict['y'].asnumpy()
         assert same(x_ograd, grad_expected_x+x_grad_init)

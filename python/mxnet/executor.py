@@ -488,6 +488,7 @@ class ExecutorV2:
         self._arg_names = sym.list_arguments()
         self._output_names = sym.list_outputs()
         self._ctx = ctx
+        self._grad_req = grad_req
         # grad_req
         self._requires_grad = False
         if isinstance(grad_req, dict):
@@ -574,8 +575,18 @@ class ExecutorV2:
                 if name in self._input_names:
                     index = self._input_names.index(name)
                     with self._ctx:
-                        self._args[index] = ndarray.array(array, dtype=array.dtype)
-                        self._args[index].attach_grad()
+                        arr = ndarray.array(array, dtype=array.dtype)
+                        if self._args[index] is None:
+                            self._args[index] = arr
+                            # get req
+                            if isinstance(self._grad_req, str):
+                                req = grad_req
+                            else:
+                                assert isinstance(grad_req, dict)
+                                req = grad_req[name]
+                            self._args[index].attach_grad(req)
+                        else:
+                            self._args[index][:] = arr
 
         from . import autograd
         default_ctx = None if self._input_names else self._ctx
