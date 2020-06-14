@@ -23,7 +23,7 @@ from mxnet.base import MXNetError
 import numpy as np
 import os
 import gzip
-import pickle as pickle
+import pickle
 import time
 try:
     import h5py
@@ -32,10 +32,7 @@ except ImportError:
 import sys
 from common import assertRaises
 import pytest
-try:
-    from itertools import izip_longest as zip_longest
-except:
-    from itertools import zip_longest
+from itertools import zip_longest
 
 
 def test_MNISTIter(tmpdir):
@@ -324,12 +321,11 @@ def test_NDArrayIter_csr():
         begin += batch_size
 
 
-def test_LibSVMIter():
+def test_LibSVMIter(tmpdir):
 
     def check_libSVMIter_synthetic():
-        cwd = os.getcwd()
-        data_path = os.path.join(cwd, 'data.t')
-        label_path = os.path.join(cwd, 'label.t')
+        data_path = os.path.join(str(tmpdir), 'data.t')
+        label_path = os.path.join(str(tmpdir), 'label.t')
         with open(data_path, 'w') as fout:
             fout.write('1.0 0:0.5 2:1.2\n')
             fout.write('-2.0\n')
@@ -342,7 +338,7 @@ def test_LibSVMIter():
             fout.write('-3.0 2:1.2\n')
             fout.write('4 1:1.0 2:-1.2\n')
 
-        data_dir = os.path.join(cwd, 'data')
+        data_dir = os.path.join(str(tmpdir), 'data')
         data_train = mx.io.LibSVMIter(data_libsvm=data_path, label_libsvm=label_path,
                                       data_shape=(3, ), label_shape=(3, ), batch_size=3)
 
@@ -367,7 +363,7 @@ def test_LibSVMIter():
         }
         batch_size = 33
         num_examples = news_metadata['num_examples']
-        data_dir = os.path.join(os.getcwd(), 'data')
+        data_dir = os.path.join(str(tmpdir), 'data')
         get_bz2_data(data_dir, news_metadata['name'], news_metadata['url'],
                      news_metadata['origin_name'])
         path = os.path.join(data_dir, news_metadata['name'])
@@ -388,9 +384,8 @@ def test_LibSVMIter():
             data_train.reset()
 
     def check_libSVMIter_exception():
-        cwd = os.getcwd()
-        data_path = os.path.join(cwd, 'data.t')
-        label_path = os.path.join(cwd, 'label.t')
+        data_path = os.path.join(str(tmpdir), 'data.t')
+        label_path = os.path.join(str(tmpdir), 'label.t')
         with open(data_path, 'w') as fout:
             fout.write('1.0 0:0.5 2:1.2\n')
             fout.write('-2.0\n')
@@ -403,7 +398,7 @@ def test_LibSVMIter():
             fout.write('-2.0 0:0.125\n')
             fout.write('-3.0 2:1.2\n')
             fout.write('4 1:1.0 2:-1.2\n')
-        data_dir = os.path.join(cwd, 'data')
+        data_dir = os.path.join(str(tmpdir), 'data')
         data_train = mx.io.LibSVMIter(data_libsvm=data_path, label_libsvm=label_path,
                                       data_shape=(3, ), label_shape=(3, ), batch_size=3)
         for batch in iter(data_train):
@@ -426,11 +421,11 @@ def test_DataBatch():
         r'DataBatch: data shapes: \[\(2L?, 3L?\), \(7L?, 8L?\)\] label shapes: \[\(4L?, 5L?\)\]', str(batch))
 
 
-def test_CSVIter():
+@pytest.mark.skip(reason="https://github.com/apache/incubator-mxnet/issues/18382")
+def test_CSVIter(tmpdir):
     def check_CSVIter_synthetic(dtype='float32'):
-        cwd = os.getcwd()
-        data_path = os.path.join(cwd, 'data.t')
-        label_path = os.path.join(cwd, 'label.t')
+        data_path = os.path.join(str(tmpdir), 'data.t')
+        label_path = os.path.join(str(tmpdir), 'label.t')
         entry_str = '1'
         if dtype is 'int32':
             entry_str = '200000001'

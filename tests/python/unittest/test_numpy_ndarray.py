@@ -20,7 +20,6 @@ from __future__ import absolute_import
 from __future__ import division
 import itertools
 import os
-import unittest
 import pytest
 import numpy as _np
 import mxnet as mx
@@ -1132,162 +1131,179 @@ def test_np_multinomial():
 
 
 @with_seed()
-@unittest.skipUnless(is_op_runnable(), "Comparison ops can only run on either CPU instances, or GPU instances with"
-                                       " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
+@pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
+                                                 " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
 @use_np
-@unittest.skip("NumpyBooleanAssignForwardCPU broken: https://github.com/apache/incubator-mxnet/issues/17990")
-@pytest.mark.serial
-def test_np_ndarray_boolean_indexing():
-    def test_single_bool_index():
-        # adapted from numpy's test_indexing.py
-        # Single boolean index
-        a = np.array([[1, 2, 3],
-                      [4, 5, 6],
-                      [7, 8, 9]], dtype=np.int32)
-        assert same(a[np.array(True, dtype=np.bool_)].asnumpy(), a[None].asnumpy())
-        assert same(a[np.array(False, dtype=np.bool_)].asnumpy(), a[None][0:0].asnumpy())
+def test_boolean_index_single():
+    # adapted from numpy's test_indexing.py
+    # Single boolean index
+    a = np.array([[1, 2, 3],
+                  [4, 5, 6],
+                  [7, 8, 9]], dtype=np.int32)
+    assert same(a[np.array(True, dtype=np.bool_)].asnumpy(), a[None].asnumpy())
+    assert same(a[np.array(False, dtype=np.bool_)].asnumpy(), a[None][0:0].asnumpy())
 
-    def test_boolean_catch_exception():
-        # adapted from numpy's test_indexing.py
-        arr = np.ones((5, 4, 3))
+@with_seed()
+@pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
+                                                 " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
+@use_np
+def test_boolean_index_catch_exception():
+    # adapted from numpy's test_indexing.py
+    arr = np.ones((5, 4, 3))
 
-        index = np.array([True], dtype=np.bool_)
-        assert_exception(arr.__getitem__, IndexError, index)
+    index = np.array([True], dtype=np.bool_)
+    assert_exception(arr.__getitem__, IndexError, index)
 
-        index = np.array([False] * 6, dtype=np.bool_)
-        assert_exception(arr.__getitem__, IndexError, index)
+    index = np.array([False] * 6, dtype=np.bool_)
+    assert_exception(arr.__getitem__, IndexError, index)
 
-        index = np.zeros((4, 4), dtype=bool)
-        assert_exception(arr.__getitem__, IndexError, index)
+    index = np.zeros((4, 4), dtype=bool)
+    assert_exception(arr.__getitem__, IndexError, index)
 
-    def test_boolean_indexing_onedim():
-        # adapted from numpy's test_indexing.py
-        # Indexing a 2-dimensional array with
-        # boolean array of length one
-        a = np.array([[0.,  0.,  0.]])
-        b = np.array([True], dtype=bool)
-        assert same(a[b].asnumpy(), a.asnumpy())
+@with_seed()
+@pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
+                                                 " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
+@use_np
+def test_boolean_index_onedim():
+    # adapted from numpy's test_indexing.py
+    # Indexing a 2-dimensional array with
+    # boolean array of length one
+    a = np.array([[0.,  0.,  0.]])
+    b = np.array([True], dtype=bool)
+    assert same(a[b].asnumpy(), a.asnumpy())
 
-    def test_boolean_indexing_twodim():
-        # adapted from numpy's test_indexing.py
-        # Indexing a 2-dimensional array with
-        # 2-dimensional boolean array
-        a = np.array([[1, 2, 3],
-                      [4, 5, 6],
-                      [7, 8, 9]], dtype=np.int32)
-        b = np.array([[ True, False,  True],
-                      [False,  True, False],
-                      [ True, False,  True]], dtype=np.bool_)
-        assert same(a[b].asnumpy(), _np.array([1, 3, 5, 7, 9], dtype=a.dtype))
-        assert same(a[b[1]].asnumpy(), _np.array([[4, 5, 6]], dtype=a.dtype))
-        assert same(a[b[0]].asnumpy(), a[b[2]].asnumpy())
+@with_seed()
+@pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
+                                                 " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
+@use_np
+def test_boolean_index_twodim():
+    # adapted from numpy's test_indexing.py
+    # Indexing a 2-dimensional array with
+    # 2-dimensional boolean array
+    a = np.array([[1, 2, 3],
+                  [4, 5, 6],
+                  [7, 8, 9]], dtype=np.int32)
+    b = np.array([[ True, False,  True],
+                  [False,  True, False],
+                  [ True, False,  True]], dtype=np.bool_)
+    assert same(a[b].asnumpy(), _np.array([1, 3, 5, 7, 9], dtype=a.dtype))
+    assert same(a[b[1]].asnumpy(), _np.array([[4, 5, 6]], dtype=a.dtype))
+    assert same(a[b[0]].asnumpy(), a[b[2]].asnumpy())
 
-    def test_boolean_indexing_list():
-        # adapted from numpy's test_indexing.py
-        a = np.array([1, 2, 3], dtype=np.int32)
-        b = [True, False, True]
-        # Two variants of the test because the first takes a fast path
-        assert same(a[b].asnumpy(), _np.array([1, 3], dtype=a.dtype))
-        (a[None, b], [[1, 3]])
+@with_seed()
+@pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
+                                                 " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
+@use_np
+def test_boolean_index_list():
+    # adapted from numpy's test_indexing.py
+    a = np.array([1, 2, 3], dtype=np.int32)
+    b = [True, False, True]
+    # Two variants of the test because the first takes a fast path
+    assert same(a[b].asnumpy(), _np.array([1, 3], dtype=a.dtype))
+    (a[None, b], [[1, 3]])
 
-    def test_boolean_indexing_tuple():
-        # case arr[:, mask, :] and arr[1, mask, 0]
-        # when a boolean array is in a tuple
-        a = np.array([[[0, 1],
-                       [2, 3]],
-                      [[4, 5],
-                       [6, 7]]], dtype=np.int32)
-        b = np.array([[False,True],
-                      [True,False]],dtype=np.bool)
-        _np_a = a.asnumpy()
-        _np_b = b.asnumpy()
-        assert same(a[:, b].asnumpy(), _np_a[:, _np_b])
-        assert same(a[b, :].asnumpy(), _np_a[_np_b, :])
-        assert same(a[0, b].asnumpy(), _np_a[0, _np_b])
-        assert same(a[b, 1].asnumpy(), _np_a[_np_b, 1])
+@with_seed()
+@pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
+                                                 " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
+@use_np
+def test_boolean_index_tuple():
+    # case arr[:, mask, :] and arr[1, mask, 0]
+    # when a boolean array is in a tuple
+    a = np.array([[[0, 1],
+                   [2, 3]],
+                  [[4, 5],
+                   [6, 7]]], dtype=np.int32)
+    b = np.array([[False,True],
+                  [True,False]],dtype=np.bool)
+    _np_a = a.asnumpy()
+    _np_b = b.asnumpy()
+    assert same(a[:, b].asnumpy(), _np_a[:, _np_b])
+    assert same(a[b, :].asnumpy(), _np_a[_np_b, :])
+    assert same(a[0, b].asnumpy(), _np_a[0, _np_b])
+    assert same(a[b, 1].asnumpy(), _np_a[_np_b, 1])
 
-        a = np.arange(12).reshape(4,3)
-        b = np.array([1.,2.,3.])
-        _np_a = a.asnumpy()
-        _np_b = b.asnumpy()
-        assert same(a[:, b > 2].shape, _np_a[:, _np_b > 2].shape)
-        assert same(a[:, b > 2].asnumpy(), _np_a[:, _np_b > 2])
+    a = np.arange(12).reshape(4,3)
+    b = np.array([1.,2.,3.])
+    _np_a = a.asnumpy()
+    _np_b = b.asnumpy()
+    assert same(a[:, b > 2].shape, _np_a[:, _np_b > 2].shape)
+    assert same(a[:, b > 2].asnumpy(), _np_a[:, _np_b > 2])
 
-        a = np.array([[1,2,3],[3,4,5]])
-        _np_a = a.asnumpy()
-        assert same(a[:,a[1,:] > 0].shape, _np_a[:,_np_a[1,: ] > 0].shape)
-        assert same(a[:,a[1,:] > 0].asnumpy(), _np_a[:,_np_a[1,: ] > 0])
+    a = np.array([[1,2,3],[3,4,5]])
+    _np_a = a.asnumpy()
+    assert same(a[:,a[1,:] > 0].shape, _np_a[:,_np_a[1,: ] > 0].shape)
+    assert same(a[:,a[1,:] > 0].asnumpy(), _np_a[:,_np_a[1,: ] > 0])
 
-        a = np.ones((3,2), dtype='bool')
-        b = np.array([1,2,3])
-        _np_a = a.asnumpy()
-        _np_b = b.asnumpy()
-        assert same(a[b > 1].asnumpy(), _np_a[_np_b > 1])
+    a = np.ones((3,2), dtype='bool')
+    b = np.array([1,2,3])
+    _np_a = a.asnumpy()
+    _np_b = b.asnumpy()
+    assert same(a[b > 1].asnumpy(), _np_a[_np_b > 1])
 
-    def test_boolean_indexing_assign():
-        # test boolean indexing assign
-        shape = (3, 2, 3)
-        mx_data = np.random.uniform(size=shape)
-        mx_mask = np.array([[False,True], [True,False], [True,False]],dtype=np.bool)
-        np_data = mx_data.asnumpy()
-        np_mask = mx_mask.asnumpy()
+@with_seed()
+@pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
+                                                 " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
+@use_np
+@pytest.mark.xfail(reason='Flaky boolean index assign. See #18334')
+def test_boolean_index_assign():
+    # test boolean indexing assign
+    shape = (3, 2, 3)
+    mx_data = np.random.uniform(size=shape)
+    mx_mask = np.array([[False,True], [True,False], [True,False]],dtype=np.bool)
+    np_data = mx_data.asnumpy()
+    np_mask = mx_mask.asnumpy()
 
-        np_data[np_data>0.5] = 0
-        mx_data[mx_data>0.5] = 0
-        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
-        np_data[np_mask] = 1
-        mx_data[mx_mask] = 1
-        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+    np_data[np_data>0.5] = 0
+    mx_data[mx_data>0.5] = 0
+    assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+    np_data[np_mask] = 1
+    mx_data[mx_mask] = 1
+    assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-        np_data[np_mask, 1] = 2
-        mx_data[mx_mask, 1] = 2
-        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+    np_data[np_mask, 1] = 2
+    mx_data[mx_mask, 1] = 2
+    assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-        np_data[np_mask, :] = 3
-        mx_data[mx_mask, :] = 3
-        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+    np_data[np_mask, :] = 3
+    mx_data[mx_mask, :] = 3
+    assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-        mx_mask = np.array([[False,True, True],[False, True,False]],dtype=np.bool)
-        np_mask = mx_mask.asnumpy()
+    mx_mask = np.array([[False,True, True],[False, True,False]],dtype=np.bool)
+    np_mask = mx_mask.asnumpy()
 
-        np_data[0, np_mask] = 5
-        mx_data[0, mx_mask] = 5
-        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
-        np_data[:, np_mask] = 6
-        mx_data[:, mx_mask] = 6
-        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+    np_data[0, np_mask] = 5
+    mx_data[0, mx_mask] = 5
+    assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+    np_data[:, np_mask] = 6
+    mx_data[:, mx_mask] = 6
+    assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-        np_data[0, True, True, np_mask] = 7
-        mx_data[0, True, True, mx_mask] = 7
-        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+    np_data[0, True, True, np_mask] = 7
+    mx_data[0, True, True, mx_mask] = 7
+    assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-        np_data[False, 1] = 8
-        mx_data[False, 1] = 8
-        assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
+    np_data[False, 1] = 8
+    mx_data[False, 1] = 8
+    assert_almost_equal(mx_data.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
-    def test_boolean_indexing_autograd():
-        a = np.random.uniform(size=(3, 4, 5))
-        a.attach_grad()
-        with mx.autograd.record():
-            out_mx = a[a < 0.5]
-        out_mx.backward()
+@with_seed()
+@pytest.mark.skipif(not is_op_runnable(), reason="Comparison ops can only run on either CPU instances, or GPU instances with"
+                                                 " compute capability >= 53 if MXNet is built with USE_TVM_OP=ON")
+@use_np
+def test_boolean_index_autograd():
+    a = np.random.uniform(size=(3, 4, 5))
+    a.attach_grad()
+    with mx.autograd.record():
+        out_mx = a[a < 0.5]
+    out_mx.backward()
 
-        a_np = a.asnumpy()
-        out_np = a_np[a_np < 0.5]
-        assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-4, atol=1e-5, use_broadcast=False)
+    a_np = a.asnumpy()
+    out_np = a_np[a_np < 0.5]
+    assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-4, atol=1e-5, use_broadcast=False)
 
-        a_grad_np = _np.zeros(a.shape, dtype=a.dtype)
-        a_grad_np[a_np < 0.5] = 1
-        assert_almost_equal(a.grad.asnumpy(), a_grad_np, rtol=1e-4, atol=1e-5, use_broadcast=False)
-
-    test_single_bool_index()
-    test_boolean_catch_exception()
-    test_boolean_indexing_onedim()
-    test_boolean_indexing_twodim()
-    test_boolean_indexing_list()
-    test_boolean_indexing_tuple()
-    test_boolean_indexing_assign()
-    test_boolean_indexing_autograd()
+    a_grad_np = _np.zeros(a.shape, dtype=a.dtype)
+    a_grad_np[a_np < 0.5] = 1
+    assert_almost_equal(a.grad.asnumpy(), a_grad_np, rtol=1e-4, atol=1e-5, use_broadcast=False)
 
 
 @with_seed()
@@ -1327,3 +1343,29 @@ def test_np_ndarray_pickle():
             a_load = pickle.load(f)
         same(a.asnumpy(), a_load.asnumpy())
 
+@pytest.mark.parametrize('dtype', [np.float32, np.int32])
+@pytest.mark.parametrize('size', [
+    (3, 4, 5, 6),
+    (2, 10),
+    (15,),
+    ()
+])
+@use_np
+def test_dlpack(dtype, size):
+    a = mx.np.random.uniform(size=size)
+    a_np = a.copy()
+    a += 1
+
+    pack = mx.npx.to_dlpack_for_read(a)
+    b = mx.npx.from_dlpack(pack)
+
+    a_copy = a.copy()
+    pack2 = mx.npx.to_dlpack_for_write(a_copy)
+    c = mx.npx.from_dlpack(pack2)
+    c += 1
+
+    del a, pack, pack2
+
+    same(a_np+1, b)
+    same(a_np+2, c)
+    same(a_np+2, a_copy)

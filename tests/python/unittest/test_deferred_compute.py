@@ -162,6 +162,18 @@ def test_dc_no_inputs_subset_of_output():
     _all_assert_dc(_dc_empty_setup, f)
 
 
+def test_dc_numpy_tril():
+    def f(a, *, nd):
+        assert nd is mx.np
+        a = nd.ones((2, 2))
+        b = nd.tril(a, 1)
+        c = nd.tril(a, -1)
+        return [b, c]
+
+    for mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute'):
+        _assert_dc(_dc_simple_setup, f, mode=mode)
+
+
 ###############################################################################
 # Test cases with inputs
 ###############################################################################
@@ -402,6 +414,11 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
         [p.grad() for p in net.collect_params().values()]
     else:
         ys_hybrid = net(*xs)
+
+    assert all(
+        isinstance(y, mx.numpy.ndarray) if numpy else isinstance(y, mx.ndarray.ndarray.NDArray)
+        for y in ys_hybrid)
+
     ys_hybrid_np = [y.asnumpy() for y in ys_hybrid]
 
     _all_same(ys_np, ys_hybrid_np)

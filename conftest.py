@@ -24,6 +24,7 @@ instantiated before lower-scoped fixtures (such as ``function``).
 """
 
 import logging
+import gc
 import os
 import random
 

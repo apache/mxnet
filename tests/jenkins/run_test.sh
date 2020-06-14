@@ -44,7 +44,6 @@ export PYTHONPATH=$(pwd)/python
 echo "BUILD python_test"
 pytest --verbose tests/python/unittest || exit -1
 pytest --verbose tests/python/gpu/test_operator_gpu.py || exit -1
-pytest --verbose tests/python/gpu/test_forward.py || exit -1
 pytest --verbose tests/python/train || exit -1
 
 echo "BUILD scala_test"

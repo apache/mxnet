@@ -22,7 +22,6 @@ import time
 import multiprocessing as mp
 import mxnet as mx
 import numpy as np
-import unittest
 import pytest
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.base import MXNetError
@@ -39,7 +38,6 @@ from test_numpy_interoperability import *
 from test_optimizer import *
 from test_random import *
 from test_exc_handling import *
-#from test_rnn import *
 from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
@@ -49,8 +47,6 @@ from test_contrib_operator import test_multibox_target_op
 from test_contrib_optimizer import test_adamw
 
 set_default_context(mx.gpu(0))
-del test_support_vector_machine_l1_svm  # noqa
-del test_support_vector_machine_l2_svm  # noqa
 del test_custom_op_fork  #noqa
 
 def check_countsketch(in_dim,out_dim,n):
@@ -488,13 +484,6 @@ def test_batchnorm_with_type():
     {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}}
   ]
 
-  # V1, 2D
-  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=False)
-  check_consistency(sym, ctx_list_v1_2D)
-  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=True)
-  check_consistency(sym, ctx_list_v1_2D)
-
-
   # V2, 2D
   sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_2D)
@@ -528,19 +517,6 @@ def test_batchnorm_versions():
   def test_batchnorm_versions_helper(batchnorm_op_list, data, fix_gamma, use_global_stats):
     ctx_list = []
     sym_list = []
-    # BatchNormV1 cpu
-    if 'batchnorm_v1_cpu' in batchnorm_op_list:
-      ctx_list.append({'ctx': mx.cpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
-      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
-                                          use_global_stats=use_global_stats,
-                                          name='batchnorm'))
-
-    # BatchNormV1 gpu (organic)
-    if 'batchnorm_v1_gpu' in batchnorm_op_list:
-      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
-      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
-                                          use_global_stats=use_global_stats,
-                                          name='batchnorm'))
 
     # BatchNorm cpu
     if 'batchnorm_cpu' in batchnorm_op_list:
@@ -647,7 +623,7 @@ def check_consistency_NxM(sym_list, ctx_list):
     check_consistency(np.repeat(sym_list, len(ctx_list)), ctx_list * len(sym_list), scale=0.5)
 
 
-@unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10141")
+@pytest.mark.skip(reason="test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/10141")
 @with_seed()
 @pytest.mark.serial
 def test_convolution_options():
@@ -767,7 +743,7 @@ def _conv_with_num_streams(seed):
                 raise
 
 
-@unittest.skip("skipping for now due to severe flakiness")
+@pytest.mark.skip(reason="skipping for now due to severe flakiness")
 @with_seed()
 def test_convolution_multiple_streams():
     for num_streams in [1, 2]:
@@ -1635,6 +1611,8 @@ def test_lrn():
 
 
 @with_seed()
+@pytest.mark.skipif(os.environ.get('MXNET_ENGINE_TYPE') == 'NaiveEngine',
+                    reason="Testing with naive engine consistently triggers illegal memory access. Tracked in #17713")
 def test_embedding_with_type():
     def test_embedding_helper(data_types, weight_types, low_pad, high_pad):
         NVD = [[20, 10, 20], [200, 10, 300]]
@@ -1657,18 +1635,6 @@ def test_embedding_with_type():
     data_types = [np.uint8]
     weight_types = [np.float16, np.float32, np.float64]
     test_embedding_helper(data_types, weight_types, 0, 5)
-
-
-@with_seed()
-def test_svmoutput_with_type():
-    sym = mx.sym.SVMOutput(name='svmoutput', use_linear=True)
-    ctx_list = [{'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
-                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
-                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}}]
-    check_consistency(sym, ctx_list, use_uniform=True)
 
 
 @with_seed()
@@ -1714,114 +1680,6 @@ def test_take_with_type():
                               grad_req={'take_indices': 'null',
                                         'take_a': 'write'},
                               arg_params=arg_params)
-
-
-def check_rnn_consistency(cell1, cell2):
-    dshape = (32, 5, 200)
-    data = mx.sym.Variable('data')
-
-    sym1, _ = cell1.unroll(5, data, merge_outputs=True)
-    mod1 = mx.mod.Module(sym1, label_names=None, context=mx.gpu(0))
-    mod1.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    sym2, _ = cell2.unroll(5, data, merge_outputs=True)
-    mod2 = mx.mod.Module(sym2, label_names=None, context=mx.gpu(0))
-    mod2.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    mod1.init_params()
-    args, auxs = mod1.get_params()
-    args = cell1.unpack_weights(args)
-    args = cell2.pack_weights(args)
-    mod2.set_params(args, auxs)
-
-    batch=mx.io.DataBatch(data=[mx.random.uniform(shape=dshape)], label=[])
-    mod1.forward(batch, is_train=False)
-    mod2.forward(batch, is_train=False)
-
-    mx.test_utils.assert_allclose(mod1.get_outputs()[0], mod2.get_outputs()[0], rtol=1e-2, atol=1e-4)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_rnn():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.RNNCell(100, activation='relu', prefix='l0_'))
-    stack.add(mx.rnn.RNNCell(100, activation='relu', prefix='l1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_lstm_forget_bias():
-    forget_bias = 2.0
-    fused = mx.rnn.FusedRNNCell(10, forget_bias=forget_bias, num_layers=2, mode='lstm', prefix='')
-
-    dshape = (32, 1, 20)
-    data = mx.sym.Variable('data')
-
-    sym, _ = fused.unroll(1, data, merge_outputs=True)
-    mod = mx.mod.Module(sym, label_names=None, context=mx.gpu(0))
-    mod.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    mod.init_params()
-
-    args, auxs = mod.get_params()
-    args = fused.unpack_weights(args)
-
-    bias_name = next(x for x in args if x.endswith('f_bias'))
-    expected_bias = forget_bias * np.ones(10, )
-    mx.test_utils.assert_allclose(args[bias_name], expected_bias)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_gru():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.GRUCell(100, prefix='l0_'))
-    stack.add(mx.rnn.GRUCell(100, prefix='l1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_bidirectional():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
-            bidirectional=True)
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.GRUCell(100, prefix='l0_'),
-                mx.rnn.GRUCell(100, prefix='r0_'),
-                output_prefix='bi_gru_0_'))
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.GRUCell(100, prefix='l1_'),
-                mx.rnn.GRUCell(100, prefix='r1_'),
-                output_prefix='bi_gru_1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_unfuse():
-    for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
-        fused = mx.rnn.FusedRNNCell(
-            100, num_layers=2, mode=mode,
-            prefix='test_%s'%mode,
-            bidirectional=True,
-            dropout=0.5)
-
-        stack = fused.unfuse()
-
-        check_rnn_consistency(fused, stack)
-        check_rnn_consistency(stack, fused)
 
 
 @with_seed()
@@ -2033,29 +1891,6 @@ def test_deformable_convolution_options():
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2, name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, tol=tol)
-
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_residual_fused():
-    cell = mx.rnn.ResidualCell(
-            mx.rnn.FusedRNNCell(50, num_layers=3, mode='lstm',
-                               prefix='rnn_', dropout=0.5))
-
-    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
-    outputs, _ = cell.unroll(2, inputs, merge_outputs=None)
-    assert sorted(cell.params._params.keys()) == \
-           ['rnn_parameters']
-
-    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10, 50), rnn_t1_data=(10, 50))
-    assert outs == [(10, 2, 50)]
-    outputs = outputs.eval(ctx=mx.gpu(0),
-                           rnn_t0_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
-                           rnn_t1_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
-                           rnn_parameters=mx.nd.zeros((61200,), ctx=mx.gpu(0)))
-    expected_outputs = np.ones((10, 2, 50))+5
-    assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
 
 
 def check_rnn_layer(layer):
@@ -2466,12 +2301,12 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/16517')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/16517')
 def test_bulking_operator_gpu():
     _test_bulking(_test_bulking_in_process)
 
 
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
 def test_bulking():
     # test case format: (max_fwd_segment_size, max_bwd_segment_size, enable_bulking_in_training)
     test_cases = [(0,0,True), (1,1,True), (15,15,False), (15,0,True), (0,15,True), (15,15,True)]

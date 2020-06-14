@@ -25,6 +25,7 @@ from . import engine, error
 from .base import MXNetError
 from .util import is_np_shape, set_np_shape, np_shape, use_np_shape
 from .util import is_np_array, np_array, use_np_array, use_np
+from .util import is_np_default_dtype, np_default_dtype, use_np_default_dtype
 from . import base
 
 # version info
@@ -81,17 +82,12 @@ from . import torch as th
 from . import profiler
 from . import log
 
-from . import module
-# use mx.mod as short for mx.module
-from . import module as mod
-
 from . import image
 # use mx.img as short for mx.image
 from . import image as img
 
 from . import test_utils
 
-from . import rnn
 from . import gluon
 
 from . import _deferred_compute

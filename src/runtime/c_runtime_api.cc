@@ -41,7 +41,6 @@ using namespace mxnet::runtime;
 
 struct MXNetRuntimeEntry {
   std::string ret_str;
-  std::string last_error;
   MXNetByteArray ret_bytes;
 };
 

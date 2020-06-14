@@ -105,7 +105,7 @@ class TestExport(unittest.TestCase):
                         self.net.add(nn.Dense(100 + i * 10, activation='relu'))
 
             def hybrid_forward(self, F, x):
-                out = tuple(block(x) for block in self.net._children.values())
+                out = tuple(block()(x) for block in self.net._children.values())
                 return out
 
         net = MultiOutputBlock()

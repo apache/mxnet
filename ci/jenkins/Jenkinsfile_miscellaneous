@@ -44,7 +44,6 @@ core_logic: {
   ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.misc_asan_cpu('cpu_asan'),
     custom_steps.misc_test_docker_cache_build()
   ])
 }

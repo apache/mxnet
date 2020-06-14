@@ -56,7 +56,7 @@ class Concurrent(Sequential):
     def forward(self, x):
         out = []
         for block in self._children.values():
-            out.append(block(x))
+            out.append(block()(x))
         out = nd.concat(*out, dim=self.axis)
         return out
 
@@ -89,7 +89,7 @@ class HybridConcurrent(HybridSequential):
     def hybrid_forward(self, F, x):
         out = []
         for block in self._children.values():
-            out.append(block(x))
+            out.append(block()(x))
         out = F.concat(*out, dim=self.axis)
         return out
 
@@ -220,11 +220,15 @@ class SyncBatchNorm(BatchNorm):
                  center=True, scale=True, use_global_stats=False, beta_initializer='zeros',
                  gamma_initializer='ones', running_mean_initializer='zeros',
                  running_variance_initializer='ones', **kwargs):
-        fuse_relu = False
-        super(SyncBatchNorm, self).__init__(1, momentum, epsilon, center, scale, use_global_stats,
-                                            fuse_relu, beta_initializer, gamma_initializer,
-                                            running_mean_initializer, running_variance_initializer,
-                                            in_channels, **kwargs)
+        super(SyncBatchNorm, self).__init__(
+            axis=1, momentum=momentum, epsilon=epsilon,
+            center=center, scale=scale,
+            use_global_stats=use_global_stats,
+            beta_initializer=beta_initializer,
+            gamma_initializer=gamma_initializer,
+            running_mean_initializer=running_mean_initializer,
+            running_variance_initializer=running_variance_initializer,
+            in_channels=in_channels, **kwargs)
         num_devices = self._get_num_devices() if num_devices is None else num_devices
         self._kwargs = {'eps': epsilon, 'momentum': momentum,
                         'fix_gamma': not scale, 'use_global_stats': use_global_stats,
