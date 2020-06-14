@@ -1402,25 +1402,13 @@ def test_batchnorm_training():
                            mx.nd.array(beta).tostype(stype)]
             mean_std = [mx.nd.array(rolling_mean).tostype(stype), mx.nd.array(rolling_std).tostype(stype)]
 
-            test = mx.symbol.BatchNorm_v1(data, fix_gamma=True)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
-
             test = mx.symbol.BatchNorm(data, fix_gamma=True)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
-
-            test = mx.symbol.BatchNorm_v1(data, fix_gamma=True, use_global_stats=True)
             check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True)
             check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
 
-            test = mx.symbol.BatchNorm_v1(data, fix_gamma=False)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
-
             test = mx.symbol.BatchNorm(data, fix_gamma=False)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
-
-            test = mx.symbol.BatchNorm_v1(data, fix_gamma=False, use_global_stats=True)
             check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)

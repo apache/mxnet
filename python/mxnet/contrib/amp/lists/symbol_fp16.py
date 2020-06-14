@@ -32,7 +32,6 @@ FP16_FUNCS = [
 # are dtype neutral (can work in both fp16 and fp32)
 FP16_FP32_FUNCS = [
     'BatchNorm',
-    'BatchNorm_v1',
     'BilinearSampler',
     'BlockGrad',
     'Cast',
