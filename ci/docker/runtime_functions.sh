@@ -1403,13 +1403,6 @@ nightly_test_imagenet_inference() {
     ./unit_test_imagenet_inference.sh
 }
 
-#Runs a simple MNIST training example
-nightly_test_image_classification() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    ./tests/nightly/test_image_classification.sh
-}
-
 #Single Node KVStore Test
 nightly_test_KVStore_singleNode() {
     set -ex
@@ -1894,21 +1887,11 @@ cd_integration_test_pypi() {
     set -ex
     source /opt/rh/rh-python36/enable
 
-    local gpu_enabled=${1:-"false"}
-
-    local test_conv_params=''
-    local mnist_params=''
-
-    if [ "${gpu_enabled}" = "true" ]; then
-        mnist_params="--gpu 0"
-        test_conv_params="--gpu"
-    fi
-
     # install mxnet wheel package
     pip3 install --user ./wheel_build/dist/*.whl
 
     # execute tests
-    python3 /work/mxnet/example/image-classification/train_mnist.py ${mnist_params}
+    # TODO: Add tests (18549)
 }
 
 # Publishes wheel to PyPI
