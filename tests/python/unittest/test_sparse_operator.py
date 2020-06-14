@@ -1815,7 +1815,7 @@ def test_sparse_embedding():
         if sparse_grad:
             weight_grad = weight_grad.tostype('row_sparse')
         args_grad = {'embed_weight': weight_grad}
-        exe_test = embed.bind(default_context(), args=args, args_grad=args_grad, grad_req=grad_req)
+        exe_test = embed._bind(default_context(), args=args, args_grad=args_grad, grad_req=grad_req)
         arg_map = dict(zip(embed.list_arguments(), exe_test.arg_arrays))
         grad_map = dict(zip(embed.list_arguments(), exe_test.grad_arrays))
         # init data
@@ -1823,10 +1823,6 @@ def test_sparse_embedding():
         np_onehot = np.zeros((batch, in_dim)).astype(np.float32)
         np_onehot[np.arange(batch), np_data] = 1.0
         arg_map["data"][:] = np_data
-        # init grad
-        np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
-        grad = mx.nd.zeros(np_grad.shape)
-        grad[:] = np_grad
         # weight
         weight = arg_map["embed_weight"]
         for density in densities:
@@ -1834,6 +1830,10 @@ def test_sparse_embedding():
             weight[:] = rand_ndarray(weight.shape, 'default', density=density)
             # check forward
             exe_test.forward(is_train=True)
+            # init grad
+            np_grad = np.random.uniform(-1, 1, exe_test.outputs[0].shape)
+            grad = mx.nd.zeros(np_grad.shape)
+            grad[:] = np_grad
             assert_almost_equal(exe_test.outputs[0].asnumpy(), np.dot(np_onehot, weight.asnumpy()), atol=1e-4)
             # check backward
             exe_test.backward([grad])

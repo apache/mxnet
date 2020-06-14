@@ -119,7 +119,7 @@ def test_make_subgraph():
             all_inputs = copy.deepcopy(inputs)
             all_inputs.update(aux_states)
             args_grad = {key : mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
-            e1 = orig.bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
+            e1 = orig._bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
                     aux_states=all_inputs)
             args_grad = {key : mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
             e2 = subg.bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,

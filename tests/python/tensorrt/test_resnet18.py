@@ -43,8 +43,8 @@ def test_tensorrt_resnet18_feature_vect():
     gluon_resnet18.export(model_file_name)
     sym, arg_params, aux_params = mx.model.load_checkpoint(model_file_name, 0)
 
-    executor = sym.simple_bind(ctx=mx.gpu(), data=batch_shape,
-                               grad_req='null', force_rebind=True)
+    executor = sym._simple_bind(ctx=mx.gpu(), data=batch_shape,
+                               grad_req='null')
     executor.copy_params_from(arg_params, aux_params)
     y = executor.forward(is_train=False, data=input_data)
     trt_sym = sym.get_backend_symbol('TensorRT')
@@ -52,13 +52,13 @@ def test_tensorrt_resnet18_feature_vect():
     original_precision_value = mx.contrib.tensorrt.get_use_fp16()
     try:
         mx.contrib.tensorrt.set_use_fp16(True)
-        executor = trt_sym.simple_bind(ctx=mx.gpu(), data=batch_shape,
-                                       grad_req='null', force_rebind=True)
+        executor = trt_sym._simple_bind(ctx=mx.gpu(), data=batch_shape,
+                                       grad_req='null')
         executor.copy_params_from(arg_params, aux_params)
         y_trt = executor.forward(is_train=False, data=input_data)
         mx.contrib.tensorrt.set_use_fp16(False)
-        executor = trt_sym.simple_bind(ctx=mx.gpu(), data=batch_shape,
-                                       grad_req='null', force_rebind=True)
+        executor = trt_sym._simple_bind(ctx=mx.gpu(), data=batch_shape,
+                                       grad_req='null')
         executor.copy_params_from(arg_params, aux_params)
         y_trt_fp32 = executor.forward(is_train=False, data=input_data)
         no_trt_output = y[0].asnumpy()[0]

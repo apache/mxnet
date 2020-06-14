@@ -54,8 +54,8 @@ def check_single_sym(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
         shapes.update(data_shapes)
         shapes.update(arg_params_shapes)
         shapes.update(aux_params_shapes)
-        orig_executor = wrapped_sym.simple_bind(ctx=mx.gpu(0), grad_req='null',
-                                                force_rebind=True, **shapes)
+        orig_executor = wrapped_sym._simple_bind(ctx=mx.gpu(0), grad_req='null',
+                                                **shapes)
         orig_executor.copy_params_from(arg_params, aux_params)
         orig_executor.forward(is_train=False, **data)
         orig_outputs = [arr.asnumpy() for arr in orig_executor.outputs]
@@ -70,8 +70,8 @@ def check_single_sym(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
         shapes.update(data_shapes)
         shapes.update({k: v.shape for k, v in remaining_arg_params.items()})
         shapes.update({k: v.shape for k, v in remaining_aux_params.items()})
-        trt_fp32_executor = trt_sym.simple_bind(ctx=mx.gpu(0), grad_req='null',
-                                                force_rebind=True, **shapes)
+        trt_fp32_executor = trt_sym._simple_bind(ctx=mx.gpu(0), grad_req='null',
+                                                **shapes)
         trt_fp32_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
         trt_fp32_executor.forward(is_train=False, **data)
         trt_fp32_outputs = [arr.asnumpy() for arr in trt_fp32_executor.outputs]
@@ -90,9 +90,9 @@ def check_single_sym(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
         shapes.update({k: v.shape for k, v in remaining_arg_params.items()})
         shapes.update({k: v.shape for k, v in remaining_aux_params.items()})
 
-        trt_fp16_executor = trt_sym.simple_bind(ctx=mx.gpu(0),
+        trt_fp16_executor = trt_sym._simple_bind(ctx=mx.gpu(0),
                                                 type_dict={k: 'float16' for k in shapes.keys()},
-                                                grad_req='null', force_rebind=True, **shapes)
+                                                grad_req='null', **shapes)
         trt_fp16_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
         trt_fp16_executor.forward(is_train=False, **data)
         trt_fp16_outputs = [arr.asnumpy() for arr in trt_fp16_executor.outputs]
@@ -294,8 +294,8 @@ def check_batch_norm(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
         shapes.update(data_shapes)
         shapes.update(arg_params_shapes)
         shapes.update(aux_params_shapes)
-        orig_executor = wrapped_sym.simple_bind(ctx=mx.gpu(0), grad_req='null',
-                                                force_rebind=True, **shapes)
+        orig_executor = wrapped_sym._simple_bind(ctx=mx.gpu(0), grad_req='null',
+                                                **shapes)
         orig_executor.copy_params_from(arg_params, aux_params)
         orig_executor.forward(is_train=False, **data)
         orig_outputs = [arr.asnumpy() for arr in orig_executor.outputs]
@@ -310,8 +310,8 @@ def check_batch_norm(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
         shapes.update(data_shapes)
         shapes.update({k: v.shape for k, v in remaining_arg_params.items()})
         shapes.update({k: v.shape for k, v in remaining_aux_params.items()})
-        trt_fp32_executor = trt_sym.simple_bind(ctx=mx.gpu(0), grad_req='null',
-                                                force_rebind=True, **shapes)
+        trt_fp32_executor = trt_sym._simple_bind(ctx=mx.gpu(0), grad_req='null',
+                                                **shapes)
         trt_fp32_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
         trt_fp32_executor.forward(is_train=False, **data)
         trt_fp32_outputs = [arr.asnumpy() for arr in trt_fp32_executor.outputs]
@@ -329,9 +329,9 @@ def check_batch_norm(sym, data_shapes, arg_params_shapes=None, aux_params_shapes
         shapes.update({k: v.shape for k, v in remaining_arg_params.items()})
         shapes.update({k: v.shape for k, v in remaining_aux_params.items()})
 
-        trt_fp16_executor = trt_sym.simple_bind(ctx=mx.gpu(0),
+        trt_fp16_executor = trt_sym._simple_bind(ctx=mx.gpu(0),
                                                 type_dict={k: 'float16' for k in shapes.keys()},
-                                                grad_req='null', force_rebind=True, **shapes)
+                                                grad_req='null', **shapes)
         trt_fp16_executor.copy_params_from(remaining_arg_params, remaining_aux_params)
         trt_fp16_executor.forward(is_train=False, **data)
         trt_fp16_outputs = [arr.asnumpy() for arr in trt_fp16_executor.outputs]
@@ -443,3 +443,4 @@ def test_dropout():
             sym = mx.sym.Dropout(data, p=0.7, mode=mode, axes=(0,))
             check_unsupported_single_sym(sym)
 
+test_dropout()

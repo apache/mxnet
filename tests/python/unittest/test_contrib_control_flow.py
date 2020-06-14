@@ -958,7 +958,7 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
         outputs_sym = _as_list(outputs_sym)
         outputs_sym = [x * 2 for x in outputs_sym]
         outputs_sym = mx.sym.Group(outputs_sym)
-        executor = outputs_sym.bind(
+        executor = outputs_sym._bind(
             ctx=default_context(),
             args={name: _args_dict[name].copy() for name in outputs_sym.list_inputs()},
             args_grad=None if not is_train else _merge_dict(
@@ -1168,7 +1168,7 @@ def test_foreach():
         if is_train:
             e = out.bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
         else:
-            e = out.bind(ctx=default_context(), args=arg_dict)
+            e = out._bind(ctx=default_context(), args=arg_dict)
         # the inputs to forward and backward are the same so forward and backward
         # should always return the same outputs.
         for i in range(num_iters):

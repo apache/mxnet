@@ -60,7 +60,7 @@ def test_rnn_with_new_param():
                 bind_dict['rnn_state_cell'] = mx.ndarray.zeros(
                     shape=(num_layers * directions, batch_size, state_size))
 
-            ex = sym.bind(default_context(), bind_dict)
+            ex = sym._bind(default_context(), bind_dict)
             ex.forward(is_train=True)
             ex01 = ex.output_dict['rnn_output'].asnumpy()
             ex.forward(is_train=False)
@@ -150,7 +150,7 @@ def test_RNN_float64():
     args_grad = explicit_grad
     grad_req = 'write'
 
-    ex = sym.bind(default_context(),
+    ex = sym._bind(default_context(),
         {
             'in': mx.nd.ones([2, 1, 2], dtype=dtype),
             'par': mx.nd.ones([12], dtype=dtype),
