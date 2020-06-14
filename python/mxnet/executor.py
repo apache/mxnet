@@ -588,9 +588,10 @@ class ExecutorV2:
 
     def backward(self, out_grads=None):
         from . import autograd
-        if not isinstance(out_grads, (list, tuple)):
-            out_grads = [out_grads]
-        out_grads = [o.copyto(self._ctx) for o in out_grads]
+        if out_grads is not None:
+            if not isinstance(out_grads, (list, tuple)):
+                out_grads = [out_grads]
+            out_grads = [o.copyto(self._ctx) for o in out_grads]
 
         if self._requires_grad:
             if self.outputs is None:

@@ -2195,14 +2195,14 @@ def test_sparse_nd_where():
         args_grad = {'condition': mx.nd.zeros_like(cond_nd),
                      'x': mx.nd.array(x_np).tostype('csr'), 'y' : mx.nd.array(y_np)}
         # test req='write'
-        where_exe_write = where_sym.bind(ctx=default_context(), args=args,
+        where_exe_write = where_sym._bind(ctx=default_context(), args=args,
                                          args_grad=args_grad, grad_req='write')
 
         # test forward req='write'
         outputs = where_exe_write.forward(is_train=True)
         assert same(outputs[0].asnumpy(), out_expected)
         # test backward req='write'
-        where_exe_write.backward(grad_in_mx)
+        where_exe_write.backward(grad_in_mx.astype('float32'))
         assert same(where_exe_write.grad_dict['x'].asnumpy(), grad_expected_x)
         assert same(where_exe_write.grad_dict['y'].asnumpy(), grad_expected_y)
         assert same(where_exe_write.grad_dict['condition'].asnumpy(), grad_expected_cond)
@@ -2210,7 +2210,7 @@ def test_sparse_nd_where():
         # test req='add'
         x_grad_init = np.random.randint(30, 40, np.prod(shape)).reshape(shape)
         y_grad_init = np.random.randint(40, 50, np.prod(shape)).reshape(shape)
-        where_exe_add = where_sym.bind(ctx=default_context(), args=args,
+        where_exe_add = where_sym._bind(ctx=default_context(), args=args,
                                        args_grad=args_grad, grad_req='add')
         where_exe_add.grad_dict['x'][:] = x_grad_init
         where_exe_add.grad_dict['y'][:] = y_grad_init
