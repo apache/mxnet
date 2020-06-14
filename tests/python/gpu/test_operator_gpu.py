@@ -25,7 +25,7 @@ import numpy as np
 import pytest
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
-from mxnet.test_utils import default_context
+from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same
 from mxnet.base import MXNetError
 from mxnet import autograd
 

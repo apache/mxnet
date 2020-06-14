@@ -546,8 +546,9 @@ class ExecutorV2:
                         else:
                             assert isinstance(grad_req, dict)
                             req = grad_req[k]
-                        self._args[i].attach_grad(req, stype=g.stype)
-                        self._args[i].grad[:] = g
+                        with self._ctx:
+                            self._args[i].attach_grad(req, stype=g.stype)
+                            self._args[i].grad[:] = g
                     # ignore provided arg which is not present in
                     # input_names
                     except ValueError as e:
@@ -561,8 +562,9 @@ class ExecutorV2:
                     else:
                         assert isinstance(grad_req, dict)
                         req = grad_req[self._input_names[i]]
-                    self._args[i].attach_grad(req, stype=g.stype)
-                    self._args[i].grad[:] = g
+                    with self._ctx:
+                        self._args[i].attach_grad(req, stype=g.stype)
+                        self._args[i].grad[:] = g
         self._cached_op = ndarray.CachedOp(sym)
 
     def forward(self, is_train=False, **kwargs):
@@ -571,8 +573,9 @@ class ExecutorV2:
             for name, array in kwargs.items():
                 if name in self._input_names:
                     index = self._input_names.index(name)
-                    self._args[index] = ndarray.array(array, dtype=array.dtype)
-                    self._args[index].attach_grad()
+                    with self._ctx:
+                        self._args[index] = ndarray.array(array, dtype=array.dtype)
+                        self._args[index].attach_grad()
 
         from . import autograd
         default_ctx = None if self._input_names else self._ctx
@@ -587,6 +590,7 @@ class ExecutorV2:
         from . import autograd
         if not isinstance(out_grads, (list, tuple)):
             out_grads = [out_grads]
+        out_grads = [o.copyto(self._ctx) for o in out_grads]
 
         if self._requires_grad:
             if self.outputs is None:
