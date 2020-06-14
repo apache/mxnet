@@ -486,6 +486,7 @@ class ExecutorV2:
         self._input_names = sym.list_inputs()
         self._aux_names = sym.list_auxiliary_states()
         self._arg_names = sym.list_arguments()
+        self._output_names = sym.list_outputs()
         self._ctx = ctx
         # grad_req
         self._requires_grad = False
@@ -516,7 +517,9 @@ class ExecutorV2:
         else:
             assert isinstance(args, (list, tuple))
             for i, arg in enumerate(args):
-                self._args[i] = arg.copyto(ctx)
+                name = self._arg_names[i]
+                index = self._input_names.index(name)
+                self._args[index] = arg.copyto(ctx)
 
         # aux states
         if aux_states:
@@ -561,10 +564,8 @@ class ExecutorV2:
                     self._args[i].attach_grad(req, stype=g.stype)
                     self._args[i].grad[:] = g
         self._cached_op = ndarray.CachedOp(sym)
-        self._is_train = None
 
     def forward(self, is_train=False, **kwargs):
-        self._is_train = is_train
         if kwargs:
             from . import ndarray
             for name, array in kwargs.items():
@@ -582,8 +583,7 @@ class ExecutorV2:
             self.outputs = [self.outputs]
         return self.outputs
 
-    def backward(self, out_grads=None, is_train=True):
-        assert is_train == self._is_train
+    def backward(self, out_grads=None):
         from . import autograd
         if not isinstance(out_grads, (list, tuple)):
             out_grads = [out_grads]
@@ -656,6 +656,13 @@ class ExecutorV2:
         for k, v in zip(self._input_names, self._args):
             if k in self._arg_names:
                ret[k] = v.grad
+        return ret
+
+    @property
+    def output_dict(self):
+        ret = {}
+        for k, v in zip(self._output_names, self.outputs):
+           ret[k] = v
         return ret
 
     def copy_params_from(self, arg_params, aux_params=None, allow_extra_params=False):

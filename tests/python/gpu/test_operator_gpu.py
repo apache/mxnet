@@ -24,6 +24,7 @@ import mxnet as mx
 import numpy as np
 import pytest
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
+from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward
 from mxnet.base import MXNetError
 from mxnet import autograd
 
@@ -111,7 +112,7 @@ def check_fft(shape):
     init = [np.random.normal(size=shape, scale=1.0)]
     arr_grad = [mx.nd.empty(shape)]
     ctx_list = [{'ctx': mx.gpu(0),'fft_data': shape, 'type_dict': {'fft_data': np.float32}}]
-    exe_list = [sym.simple_bind(args_grad=arr_grad,**ctx) for ctx in ctx_list]
+    exe_list = [sym._simple_bind(**ctx) for ctx in ctx_list]
 
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
@@ -2053,7 +2054,7 @@ def kernel_error_check_symbolic():
         a = mx.sym.Variable('a')
         b = mx.sym.Variable('b')
         c = a / b
-        f = c.bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
+        f = c._bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
                                 'b':mx.nd.array([],ctx=mx.gpu(0))})
         f.forward()
         g = f.outputs[0].asnumpy()
@@ -2153,9 +2154,9 @@ def test_bilinear_sampler_versions():
     for item in test_cases:
         data_shape, grid_shape = item
         # kWriteTo
-        exe_cpu = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='write')
-        exe_gpu = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
-        exe_cudnn = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_cpu = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='write')
+        exe_gpu = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_cudnn = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
         exe_list = [exe_cpu, exe_gpu, exe_cudnn]
         ref_idx = 0
         test_data = np.random.uniform(low=-0.1, high=0.1,size=data_shape).astype(np.float32)
@@ -2176,9 +2177,9 @@ def test_bilinear_sampler_versions():
         grid_grad = exe_list[ref_idx].grad_dict['grid'].asnumpy()
 
         # kAddTo
-        exe_cpu_addto = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='add')
-        exe_gpu_addto = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
-        exe_cudnn_addto = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_cpu_addto = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='add')
+        exe_gpu_addto = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_cudnn_addto = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
         exe_list = [exe_cpu_addto, exe_gpu_addto, exe_cudnn_addto]
         data_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['data'].shape).astype(np.float32)
         grid_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['grid'].shape).astype(np.float32)
@@ -2196,9 +2197,9 @@ def test_bilinear_sampler_versions():
 
         for req_dict in [{'data' : 'null', 'grid' : 'write'}, {'data' : 'write', 'grid' : 'null'}]:
             # Mixture of kWriteTo and kNullOp
-            exe_cpu_mix = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req=req_dict)
-            exe_gpu_mix = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
-            exe_cudnn_mix = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
+            exe_cpu_mix = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req=req_dict)
+            exe_gpu_mix = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
+            exe_cudnn_mix = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
             exe_list = [exe_cpu_mix, exe_gpu_mix, exe_cudnn_mix]
             for exe in exe_list:
                 exe.arg_dict['data'][:] = test_data
@@ -2226,7 +2227,7 @@ def _test_bulking_in_process(seed, time_per_iteration):
     x = mx.ndarray.zeros(data_shape)
     dx = mx.ndarray.zeros(data_shape)
     dy = mx.ndarray.ones(data_shape)
-    exe = sym.bind(ctx=ctx, args=[x], args_grad = {'X':dx})
+    exe = sym._bind(ctx=ctx, args=[x], args_grad = {'X':dx})
 
     # time a number of forward() and backward() executions after some warm-up iterations
     warmups = 1
@@ -2351,7 +2352,7 @@ def test_arange_like_dtype():
         y = mx.sym.reshape(x, shape=(0, 0, -1))
         z = mx.sym.contrib.arange_like(y, axis=-1)
 
-        mod = z.simple_bind(ctx=mx.gpu(0), x=(3, 4, 5, 6), grad_req='null')
+        mod = z._simple_bind(ctx=mx.gpu(0), x=(3, 4, 5, 6), grad_req='null')
         mod.arg_arrays[0][:] = np.random.normal(size=mod.arg_arrays[0].shape).astype(t)
         out = mod.forward(is_train=False)
         for v in out:

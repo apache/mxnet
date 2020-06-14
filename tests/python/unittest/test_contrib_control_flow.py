@@ -1469,7 +1469,7 @@ def test_foreach_nested():
     state = mx.nd.arange(2)
     data_grad = mx.nd.empty(data.shape)
     state_grad = mx.nd.empty(state.shape)
-    e = out.bind(ctx=default_context(), args={'v1':data, 'v2':state},
+    e = out._bind(ctx=default_context(), args={'v1':data, 'v2':state},
             args_grad={'v1':data_grad, 'v2':state_grad})
     e.forward(is_train=True)
     out_grads = []

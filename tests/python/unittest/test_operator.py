@@ -6653,7 +6653,7 @@ def test_dropout():
 
             exe.forward(is_train=False)
             assert (exe.outputs[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
-            exe.backward([mx.nd.ones(shape)], is_train=False)
+            exe.backward([mx.nd.ones(shape)])
             assert (exe.grad_arrays[0].asnumpy() == exe.arg_arrays[0].asnumpy()).all()
 
             # test permanent dropout
@@ -6671,7 +6671,7 @@ def test_dropout():
             exe.forward(is_train=False)
             assert exe.outputs[0].asnumpy().max() == max_value
             assert exe.outputs[0].asnumpy().min() == min_value
-            exe.backward([mx.nd.ones(shape)], is_train=False)
+            exe.backward([mx.nd.ones(shape)])
             assert (exe.grad_arrays[0].asnumpy() == exe.outputs[0].asnumpy()).all()
 
     def get_slice(x, axis, idx):

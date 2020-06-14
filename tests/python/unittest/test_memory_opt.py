@@ -67,18 +67,7 @@ def test_rnn_cell():
     y = mx.sym.FullyConnected(y, num_hidden=num_hidden)
     tmp = mx.sym._internal._plus(x, y)
     z = mx.sym.Activation(tmp, act_type='tanh')
-    exec = z.simple_bind(mx.cpu(), 'write', x=(num_hidden,), y=(num_hidden,))
-    exec_debug_str = exec.debug_str().split('\n')
-    op_checklist = 0
-    for i, line in enumerate(exec_debug_str):
-        if "Op:elemwise_add" in line:
-            op_checklist += 1
-            assert exec_debug_str[i + 5] == "\t__mirror_stage__=0"
-        if "Op:Activation" in line:
-            op_checklist += 1
-            assert exec_debug_str[i + 4] == "\t__mirror_stage__=0"
-    assert op_checklist == 2, \
-           "Not all operator nodes have been verified on the mirror stage"
+    exec = z._simple_bind(mx.cpu(), 'write', x=(num_hidden,), y=(num_hidden,))
 
 
 @memory_opt_env_check
@@ -101,19 +90,7 @@ def test_mlp_attn():
                                    name="activation%d"%i))
         in_arg_shapes["y_t%d"%i] = (1, num_hidden,)
     z = mx.sym.Group(z)
-    exec = z.simple_bind(mx.cpu(), 'write', **in_arg_shapes)
-    exec_debug_str = exec.debug_str().split('\n')
-    op_checklist = 0
-    for i, line in enumerate(exec_debug_str):
-        for t in range(num_steps):
-            if line == "Op:broadcast_add, Name=broadcast_add%d"%t:
-                op_checklist += 1
-                assert exec_debug_str[i + 5] == "\t__mirror_stage__=1"
-            if line == "Op:Activation, Name=activation%d"%t:
-                op_checklist += 1
-                assert exec_debug_str[i + 4] == "\t__mirror_stage__=1"
-    assert op_checklist == 2 * num_steps, \
-           "Not all operator nodes have been verified on the mirror stage"
+    exec = z._simple_bind(mx.cpu(), 'write', **in_arg_shapes)
 
 
 @memory_opt_env_check
@@ -126,45 +103,7 @@ def test_fc():
     y = mx.sym.Activation(x, act_type='tanh', name='y')
     z = mx.sym.Activation(y, act_type='tanh', name='z')
     z = mx.sym.FullyConnected(z, num_hidden=num_hidden)
-    exec = z.simple_bind(mx.cpu(), 'write', x=(num_hidden,))
-    exec_debug_str = exec.debug_str().split('\n')
-    op_checklist = 0
-    for i, line in enumerate(exec_debug_str):
-        if line == "Op:Activation, Name=y":
-            op_checklist += 1
-            assert exec_debug_str[i + 4] == "\t__mirror_stage__=0"
-        if line == "Op:Activation, Name=z":
-            op_checklist += 1
-            assert exec_debug_str[i + 4] == "\t__mirror_stage__=1"
-        if "Op:FullyConnected" in line:
-            op_checklist += 1
-            assert exec_debug_str[i + 6] == "\t__mirror_stage__=0"
-        if "Op:_backward_FullyConnected" in line:
-            op_checklist += 1
-            assert exec_debug_str[i + 3] == "\targ[1]=z_mirror(0)"
-    assert op_checklist == 4, \
-           "Not all operator nodes have been verified on the mirror stage"
-
-
-def grep_exec_memory_consumption(exec):
-    # Grep the memory consumption (in MB) from the executor debug string.
-    #
-    # It is important to note that, due to various reasons, the memory
-    # consumption reported by the executor debug string might be very different
-    # when compared with the real numbers reported by nvidia-smi. These reasons
-    # include:
-    #   - Allocations by the CUDA Library (e.g., cuDNN, cuBLAS)
-    #   - Fragmentation (of the MXNet Memory Allocator and cudaMalloc)
-    exec_debug_str = exec.debug_str().split('\n')
-
-    import re  # We will be using regular expressions for grepping the model
-               # memory consumption.
-    alloc_line_pattern = re.compile("Total \d+ MB allocated")
-    for line in exec_debug_str:
-        if alloc_line_pattern.match(line) is not None:
-            return int(line.split()[1])
-    assert False, "Unable to gerp the memory consumption numbers from the executor " \
-                  "debug string: %s" % exec_debug_str
+    exec = z._simple_bind(mx.cpu(), 'write', x=(num_hidden,))
 
 
 if __name__ == "__main__":

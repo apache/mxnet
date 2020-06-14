@@ -93,7 +93,6 @@ FP16_FP32_FUNCS = [
     '_contrib_getnnz',
     '_contrib_gradientmultiplier',
     '_contrib_group_adagrad_update',
-    '_contrib_ifft',
     '_contrib_index_array',
     '_contrib_index_copy',
     '_contrib_quadratic',

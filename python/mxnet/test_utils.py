@@ -1536,6 +1536,10 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             for arr in exe.grad_arrays:
                 arr[:] = np.zeros(arr.shape, dtype=arr.dtype)
 
+    # test
+    for exe in exe_list:
+        exe.forward(is_train=False)
+
     dtypes = [np.dtype(exe.outputs[0].dtype) for exe in exe_list]
     max_idx = np.argmax(dtypes)
     gt = ground_truth
@@ -1543,10 +1547,6 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         gt = exe_list[max_idx].output_dict.copy()
         if grad_req != 'null':
             gt.update(exe_list[max_idx].grad_dict)
-
-    # test
-    for exe in exe_list:
-        exe.forward(is_train=False)
 
     for i, exe in enumerate(exe_list):
         if i == max_idx:

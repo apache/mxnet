@@ -1565,26 +1565,27 @@ class Symbol(SymbolBase):
         arg_dtypes, out_dtypes, aux_dtypes = None, None, None
         try:
             arg_dtypes, out_dtypes, aux_dtypes = self.infer_type(**type_dict)
-        except:
+        except Exception as e:
             pass
-        args = [None] * len(arg_shapes)
-        aux_states = [None] * len(aux_shapes)
+        args = [None] * len(arg_shapes) if arg_shapes else []
+        aux_states = [None] * len(aux_shapes) if aux_shapes else []
 
         arg_names = self.list_arguments()
         aux_names = self.list_auxiliary_states()
 
         from ..ndarray import zeros
-        for i, shape in enumerate(arg_shapes):
-            if arg_dtypes:
-                args[i] = zeros(shape, dtype=arg_dtypes[i])
-            else:
-                args[i] = zeros(shape)
-
-        for i, shape in enumerate(aux_shapes):
-            if aux_dtypes:
-                aux_states[i] = zeros(shape, dtype=aux_dtypes[i])
-            else:
-                aux_states[i] = zeros(shape)
+        if arg_shapes:
+            for i, shape in enumerate(arg_shapes):
+                if arg_dtypes:
+                    args[i] = zeros(shape, dtype=arg_dtypes[i])
+                else:
+                    args[i] = zeros(shape)
+        if aux_shapes:
+            for i, shape in enumerate(aux_shapes):
+                if aux_dtypes:
+                    aux_states[i] = zeros(shape, dtype=aux_dtypes[i])
+                else:
+                    aux_states[i] = zeros(shape)
 
         if stype_dict:
             for name, stype in stype_dict.items():
@@ -1595,7 +1596,6 @@ class Symbol(SymbolBase):
                     assert name in aux_names
                     index = aux_names.index(name)
                     aux_states[index] = aux_states[index].totype(stype)
-
         args_grad = [x.copy() for x in args]
         return ExecutorV2(self, ctx, args, args_grad, grad_req, aux_states)
 
