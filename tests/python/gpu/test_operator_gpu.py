@@ -33,6 +33,7 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied
 from common import run_in_spawned_process
+from test_operator import check_sequence_reverse, allclose_function
 from test_operator import *
 from test_numpy_ndarray import *
 from test_numpy_op import *
@@ -47,9 +48,9 @@ from test_subgraph_op import *
 from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
 from test_contrib_optimizer import test_adamw
+del test_custom_op_fork  #noqa
 
 set_default_context(mx.gpu(0))
-del test_custom_op_fork  #noqa
 
 def check_countsketch(in_dim,out_dim,n):
     data = mx.sym.Variable("data")
