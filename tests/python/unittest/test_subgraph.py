@@ -27,7 +27,7 @@ from mxnet.gluon.model_zoo.vision import get_model
 
 def make_subgraph(subg, *args):
     js = subg.tojson()
-    return mx.sym._internal._CachedOp(*args, subgraph=js)
+    return subg
 
 @with_seed()
 @pytest.mark.serial
@@ -122,7 +122,7 @@ def test_make_subgraph():
             e1 = orig._bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
                     aux_states=all_inputs)
             args_grad = {key : mx.nd.empty(shape=all_inputs[key].shape) for key in all_inputs.keys()}
-            e2 = subg.bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
+            e2 = subg._bind(ctx=default_context(), args=all_inputs, args_grad=args_grad,
                     aux_states=all_inputs)
             e1.forward(is_train=True)
             e2.forward(is_train=True)
@@ -192,4 +192,3 @@ def test_subgraph_with_customOp():
     b._bind(mx.cpu(), {'a': inp}).forward()
     c._bind(mx.cpu(), {'a': inp}).forward()
     mx.nd.waitall()
-
