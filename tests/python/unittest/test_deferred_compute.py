@@ -414,6 +414,11 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
         [p.grad() for p in net.collect_params().values()]
     else:
         ys_hybrid = net(*xs)
+
+    assert all(
+        isinstance(y, mx.numpy.ndarray) if numpy else isinstance(y, mx.ndarray.ndarray.NDArray)
+        for y in ys_hybrid)
+
     ys_hybrid_np = [y.asnumpy() for y in ys_hybrid]
 
     _all_same(ys_np, ys_hybrid_np)
