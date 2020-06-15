@@ -1585,6 +1585,8 @@ def test_npx_index_update():
         itertools.product([True, False], grad_req, grad_req, dtypes, ['int32', 'int64']):
         for a_shape, ind, val_shape ,ind_ndim, ind_num in configs:
             eps = 1e-3
+            if sys.platform.startwith('linux'):
+                eps = 1e-2
             atype = dtype
             valtype = dtype
             test_index_update = TestIndexUpdate()
