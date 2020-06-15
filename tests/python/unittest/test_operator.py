@@ -336,7 +336,8 @@ def test_slice_channel():
             else:
                 assert_almost_equal(outputs[i], gt)
         # test backward
-        exe.backward(out_grads=[mx.nd.array(ele, ctx=default_context(), dtype=ele.dtype) for ele in out_grads_npy])
+        ograd = [mx.nd.array(ele, dtype=outputs[i].dtype) for i, ele in enumerate(out_grads_npy)]
+        exe.backward(out_grads=ograd)
         if squeeze_axis:
             assert_almost_equal(exe.grad_arrays[0],
                                 np.concatenate([np.expand_dims(ele, axis=axis) for ele in out_grads_npy],
