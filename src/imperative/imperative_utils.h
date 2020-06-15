@@ -90,12 +90,6 @@ static inline void CreateDefaultInputs(std::vector<NDArray> *pArrs) {
 #define CREATE_DEFAULT_INPUTS(input, ...)      // empty macro
 #endif
 
-#if MXNET_USE_MKLDNN == 1
-#else
-#define CREATE_DEFAULT_INPUTS_MKLDNN(in_array, in_array_fallback, attrs)  // empty macro
-#endif
-
-
 namespace imperative {
 
 namespace {
