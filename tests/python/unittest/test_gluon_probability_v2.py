@@ -449,7 +449,7 @@ def test_gluon_poisson():
 
     shapes = [(1,), (2, 3), 6]
     # Test sampling
-    for shape, hybridize in itertools.product(shapes, [False]):
+    for shape, hybridize in itertools.product(shapes, [True, False]):
         rate = np.random.uniform(0.5, 1.5, shape)
         net = TestPoisson("sample")
         if hybridize:
@@ -883,7 +883,7 @@ def test_gluon_dirichlet():
 
     # Test `mean`, `var` and `entropy`
     for event_shape, batch_shape in itertools.product(event_shapes, batch_shapes[:1]):
-        for hybridize in [False]:
+        for hybridize in [True, False]:
             for func in ['mean', 'variance', 'entropy']:
                 desired_shape = (
                     batch_shape if batch_shape is not None else ()) + (event_shape,)
@@ -1187,7 +1187,7 @@ def test_gluon_multinomial():
 
     # Test log_prob
     for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
-        for use_logit, hybridize in itertools.product([True, False], [False]):
+        for use_logit, hybridize in itertools.product([True, False], [True, False]):
             prob = np.array(_np.random.dirichlet(
                 [1 / event_shape] * event_shape, size=batch_shape))
             eps = _np.finfo('float32').eps
@@ -1639,7 +1639,7 @@ def test_relaxed_one_hot_categorical():
 
     # Test log_prob
     for event_shape, batch_shape, sample_shape in itertools.product(event_shapes, batch_shapes, sample_shapes):
-        for use_logit, hybridize in itertools.product([True, False], [False]):
+        for use_logit, hybridize in itertools.product([True, False], [True, False]):
             prob = np.array(_np.random.dirichlet(
                 [1 / event_shape] * event_shape, size=batch_shape))
             eps = _np.finfo('float32').eps
@@ -1696,7 +1696,7 @@ def test_gluon_mvn():
     # Test sampling
     for loc_shape, cov_shape, event_shape in itertools.product(loc_shapes, cov_shapes, event_shapes):
         for cov_type in cov_func.keys():
-            for hybridize in [False]:
+            for hybridize in [True, False]:
                 loc = np.random.randn(*(loc_shape + (event_shape,)))
                 _s = np.random.randn(*(cov_shape + (event_shape, event_shape)))
                 loc.attach_grad()
