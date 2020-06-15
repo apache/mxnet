@@ -1,8 +1,4 @@
 Changes
-examples/calculator.pl
-examples/char_lstm.pl
-examples/cudnn_lstm_bucketing.pl
-examples/get_sherlockholmes_data.sh
 examples/gluon/dcgan.pl
 examples/gluon/mnist.pl
 examples/gluon/style_transfer/get_data.sh
@@ -10,15 +6,6 @@ examples/gluon/style_transfer/net.pl
 examples/gluon/style_transfer/README.md
 examples/gluon/style_transfer/style_transfer.pl
 examples/gluon/style_transfer/utils.pl
-examples/lstm_bucketing.pl
-examples/mnist.pl
-examples/plot_network.pl
-examples/sparse/matrix_factorization/get_data.sh
-examples/sparse/matrix_factorization/README.md
-examples/sparse/matrix_factorization/train.pl
-examples/sparse/wide_deep/get_data.sh
-examples/sparse/wide_deep/README.md
-examples/sparse/wide_deep/train.pl
 lib/AI/MXNet.pm
 lib/AI/MXNet/AutoGrad.pm
 lib/AI/MXNet/AutoLoad.pm
@@ -104,7 +91,6 @@ t/AI-MXNet.t
 t/test_attr.t
 t/test_autograd.t
 t/test_base.t
-t/test_conv.t
 t/test_cuda_module.t
 t/test_engine.t
 t/test_executor.t
@@ -121,7 +107,6 @@ t/test_loss.t
 t/test_metric.t
 t/test_model_parallel.t
 t/test_module.t
-t/test_multi_device_exec.t
 t/test_ndarray.t
 t/test_optimizers.t
 t/test_random.t

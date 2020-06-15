@@ -51,15 +51,7 @@ core_logic: {
   }
 
   stage('NightlyTests'){
-    parallel 'ImageClassification: GPU': {
-      node(NODE_LINUX_GPU) {
-        ws('workspace/nt-ImageClassificationTest') {
-          utils.unpack_and_init('gpu', mx_lib)
-          utils.docker_run('ubuntu_build_cuda', 'nightly_test_image_classification', true)
-        }
-      }
-    },
-    'ImageNet Inference: GPU': {
+    parallel 'ImageNet Inference: GPU': {
       node(NODE_LINUX_GPU) {
         ws('workspace/nt-ImageInferenceTest') {
           utils.unpack_and_init('gpu', mx_lib)

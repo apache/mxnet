@@ -30,11 +30,6 @@ from . import ndarray
 from .ndarray import NDArray
 from .ndarray import _ndarray_cls
 
-# those functions are not used here, we just import them to keep backward compatibility
-# in case the end user calls them, as they originally lives here
-# pylint: disable=unused-import
-from .executor_manager import _split_input_slice, _check_arguments, _load_data, _load_label
-
 def _monitor_callback_wrapper(callback):
     """A wrapper for the user-defined handle."""
     def callback_handle(name, array, _):
@@ -166,56 +161,6 @@ class Executor(object):
             cases you want to call backward with is_train=False to get gradient
             during inference.
 
-
-        Examples
-        --------
-        >>> # Example for binding on loss function symbol, which gives the loss value of the model.
-        >>> # Equivalently it gives the head gradient for backward pass.
-        >>> # In this example the built-in SoftmaxOutput is used as loss function.
-        >>> # MakeLoss can be used to define customized loss function symbol.
-        >>> net = mx.sym.Variable('data')
-        >>> net = mx.sym.FullyConnected(net, name='fc', num_hidden=6)
-        >>> net = mx.sym.Activation(net, name='relu', act_type="relu")
-        >>> net = mx.sym.SoftmaxOutput(net, name='softmax')
-
-        >>> args =  {'data': mx.nd.ones((1, 4)), 'fc_weight': mx.nd.ones((6, 4)),
-        >>>          'fc_bias': mx.nd.array((1, 4, 4, 4, 5, 6)), 'softmax_label': mx.nd.ones((1))}
-        >>> args_grad = {'fc_weight': mx.nd.zeros((6, 4)), 'fc_bias': mx.nd.zeros((6))}
-        >>> texec = net.bind(ctx=mx.cpu(), args=args, args_grad=args_grad)
-        >>> out = texec.forward(is_train=True)[0].copy()
-        >>> print out.asnumpy()
-        [[ 0.00378404  0.07600445  0.07600445  0.07600445  0.20660152  0.5616011 ]]
-        >>> texec.backward()
-        >>> print(texec.grad_arrays[1].asnumpy())
-        [[ 0.00378404  0.00378404  0.00378404  0.00378404]
-         [-0.92399555 -0.92399555 -0.92399555 -0.92399555]
-         [ 0.07600445  0.07600445  0.07600445  0.07600445]
-         [ 0.07600445  0.07600445  0.07600445  0.07600445]
-         [ 0.20660152  0.20660152  0.20660152  0.20660152]
-         [ 0.5616011   0.5616011   0.5616011   0.5616011 ]]
-        >>>
-        >>> # Example for binding on non-loss function symbol.
-        >>> # Here the binding symbol is neither built-in loss function
-        >>> # nor customized loss created by MakeLoss.
-        >>> # As a result the head gradient is not automatically provided.
-        >>> a = mx.sym.Variable('a')
-        >>> b = mx.sym.Variable('b')
-        >>> # c is not a loss function symbol
-        >>> c = 2 * a + b
-        >>> args = {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])}
-        >>> args_grad = {'a': mx.nd.zeros((2)), 'b': mx.nd.zeros((2))}
-        >>> texec = c.bind(ctx=mx.cpu(), args=args, args_grad=args_grad)
-        >>> out = texec.forward(is_train=True)[0].copy()
-        >>> print(out.asnumpy())
-        [ 4.  7.]
-        >>> # out_grads is the head gradient in backward pass.
-        >>> # Here we define 'c' as loss function.
-        >>> # Then 'out' is passed as head gradient of backward pass.
-        >>> texec.backward(out)
-        >>> print(texec.grad_arrays[0].asnumpy())
-        [ 8.  14.]
-        >>> print(texec.grad_arrays[1].asnumpy())
-        [ 4.  7.]
         """
         if out_grads is None:
             out_grads = []

@@ -647,30 +647,4 @@ TEST(ThreadSafety, Engine) {
   mxnet::test::AssertEqual(output_mx_arr, result_expected, 1e-2, 1e-5);
   mxnet::cpp::NDArray::WaitAll();
 }
-
-TEST(ThreadSafety, CachedOpFullModel) {
-  std::vector<std::string> models_list = {
-      "imagenet1k-resnet-18", "imagenet1k-resnet-152", "imagenet1k-resnet-50"};
-  if (mxnet::test::thread_safety_force_cpu) {
-    models_list.push_back("imagenet1k-resnet-152-subgraph");
-  }
-  for (const auto &model : models_list) {
-    run_inference(model, 1, true, 20);
-    run_inference(model, 2, true, 20);
-    run_inference(model, 4, true, 5);
-    run_inference(model, 4, true, 20);
-    run_inference(model, 4, false, 20);
-    run_inference(model, 8, true, 20);
-    // static_alloc = true
-    run_inference(model, 2, true, 20, true);
-    run_inference(model, 4, true, 5, true);
-    run_inference(model, 4, true, 20, true);
-    run_inference(model, 8, true, 20, true);
-    // static_alloc = true, static_shape = true
-    run_inference(model, 4, true, 20, true, true);
-    run_inference(model, 8, true, 20, true, true);
-    // the below line may hang
-    // run_inference_unsupported(model, 32, false, 20);
-  }
-}
 #endif

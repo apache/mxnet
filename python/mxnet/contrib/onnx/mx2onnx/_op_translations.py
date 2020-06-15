@@ -907,44 +907,6 @@ def convert_softmax(node, **kwargs):
     return [softmax_node]
 
 
-# There's also mx.sym.softmax(), which doesn't do cross-entropy loss,
-# just softmax for inference - hence the name convert_softmax_output.
-@mx_op.register("SoftmaxOutput")
-def convert_softmax_output(node, **kwargs):
-    """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
-    and return the created node.
-    """
-    name = node["name"]
-
-    input1_idx = kwargs["index_lookup"][node["inputs"][0][0]]
-    input1 = kwargs["proc_nodes"][input1_idx]
-
-    softmax_node = onnx.helper.make_node(
-        "Softmax",
-        [input1.name],
-        [name],
-        axis=1,
-        name=name
-    )
-
-    return [softmax_node]
-
-@mx_op.register("LogisticRegressionOutput")
-def convert_logistic_regression_output(node, **kwargs):
-    """Map MXNet's SoftmaxOutput operator attributes to onnx's Softmax operator
-    and return the created node.
-    """
-    name = node["name"]
-    input1_idx = kwargs["index_lookup"][node["inputs"][0][0]]
-    input1 = kwargs["proc_nodes"][input1_idx]
-    sigmoid_node = onnx.helper.make_node(
-        "Sigmoid",
-        [input1.name],
-        [name],
-        name=name
-    )
-    return [sigmoid_node]
-
 @mx_op.register("BlockGrad")
 def convert_blockgrad(node, **kwargs):
     """ Skip operator  """

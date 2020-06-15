@@ -76,9 +76,6 @@ from . import torch as th
 from . import profiler
 from . import log
 
-from . import module
-from . import module as mod
-
 from . import image
 from . import image as img
 

@@ -30,23 +30,6 @@
 ;; graphs. You can configure the graphs either at the level of neural
 ;; network layer operations or as fine-grained operations.
 
-;; The following example configures a two-layer neural network.
-(def data (sym/variable "data"))
-(def fc1 (sym/fully-connected "fc1" {:data data :num-hidden 128}))
-(def act1 (sym/activation "act1" {:data fc1 :act-type "relu"}))
-(def fc2 (sym/fully-connected "fc2" {:data act1 :num-hidden 64}))
-(def net (sym/softmax-output "out" {:data fc2}))
-
-;; This can also be combined more dynamically with the `as->` Clojure
-;; threading form.
-(as-> (sym/variable "data") data
-  (sym/fully-connected "fc1" {:data data :num-hidden 128})
-  (sym/activation "act1"     {:data data :act-type "relu"})
-  (sym/fully-connected "fc2" {:data data :num-hidden 64})
-  (sym/softmax-output "out"  {:data data}))
-
-net ;=> #object[org.apache.mxnet.Symbol 0x5c78c8c2 "org.apache.mxnet.Symbol@5c78c8c2"] 
-
 ;; The basic arithmetic operators (plus, minus, div, multiplication)
 ;; work as expected. The following example creates a computation graph
 ;; that adds two inputs together.
@@ -74,17 +57,7 @@ net ;=> #object[org.apache.mxnet.Symbol 0x5c78c8c2 "org.apache.mxnet.Symbol@5c78
 ;;;; Group Multiple Symbols
 
 ;; To construct neural networks with multiple loss layers, we can use
-;; `group` to group multiple symbols together. The following example
-;; groups two outputs:
-
-(def net (sym/variable "data"))
-(def fc1 (sym/fully-connected {:data net :num-hidden 128}))
-(def net2 (sym/activation {:data fc1 :act-type "relu"}))
-(def out1 (sym/softmax-output {:data net2}))
-(def out2 (sym/linear-regression-output {:data net2}))
-(def group (sym/group [out1 out2]))
-(sym/list-outputs group) ;=> ["softmaxoutput0_output" "linearregressionoutput0_output"]
-
+;; `group` to group multiple symbols together.
 
 ;;;; Serialization
 

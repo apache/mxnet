@@ -1013,20 +1013,6 @@ def test_unix_python3_tensorrt_gpu(lib_name) {
     }]
 }
 
-def test_unix_python3_integration_gpu(lib_name) {
-    return ['Python Integration GPU': {
-      node(NODE_LINUX_GPU_G4) {
-        ws('workspace/it-python-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_python', true)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_cpp_package_gpu(lib_name) {
     return ['cpp-package GPU Makefile': {
       node(NODE_LINUX_GPU_G4) {
@@ -1034,20 +1020,6 @@ def test_unix_cpp_package_gpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_cpp_examples_make)
             utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_cpp_package', true)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_capi_cpp_package(lib_name) {
-    return ['capi-cpp-package GPU Makefile': {
-      node(NODE_LINUX_GPU_G4) {
-        ws('workspace/it-capi-cpp-package') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_cpp_capi_make)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_capi_cpp_package', true)
             utils.publish_test_coverage()
           }
         }
@@ -1749,17 +1721,6 @@ def docs_publish_beta() {
     }]
 }
 
-
-def misc_asan_cpu(lib_name) {
-    return ['CPU ASAN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python3-cpu-asan') {
-            utils.unpack_and_init(lib_name, mx_lib_cpp_examples_cpu)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_asan', false)
-        }
-      }
-    }]
-}
 
 def sanity_lint() {
     return ['Lint': {

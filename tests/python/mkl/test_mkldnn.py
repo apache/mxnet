@@ -24,42 +24,12 @@ import numpy as np
 import mxnet as mx
 import pytest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
-from mxnet.module import Module
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import *
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
 from common import with_seed
-
-
-def test_mkldnn_model():
-    model = os.path.join(os.path.dirname(os.path.realpath(__file__)), "data",
-                         "test_mkldnn_test_mkldnn_model_model1.json")
-    shape = (32, 3, 300, 300)
-    ctx = mx.cpu()
-
-    sym = mx.sym.load(model)
-    args = sym.list_arguments()
-    shapes = sym.infer_shape(data=shape)
-
-    def get_tensors(args, shapes, ctx):
-        return {x: mx.nd.ones(y, ctx) for x, y in zip(args, shapes)}
-
-    inputs = get_tensors(args, shapes[0], ctx)
-    grads = get_tensors(args, shapes[0], ctx)
-
-    try:
-        exe = sym.bind(ctx, inputs, args_grad=grads)
-        for _ in range(2):
-            exe.forward(is_train=True)
-            for y in exe.outputs:
-                y.wait_to_read()
-            exe.backward()
-            for y in exe.grad_arrays:
-                y.wait_to_read()
-    except:  # pylint: disable=bare-except
-        assert 0, "test_mkldnn_model exception in bind and execution"
 
 @with_seed(1234)
 def test_mkldnn_ndarray_slice():
@@ -616,23 +586,6 @@ def test_reshape_transpose_6d():
     data = mx.nd.random_normal(shape=(1, 3, 600, 600))
     output = net(data)
     a = output.asnumpy()
-
-@with_seed()
-def test_weight_async_reorder():
-    data = mx.sym.Variable("data")
-    w1 = mx.sym.Variable("1_weight")
-    w2 = mx.sym.Variable("2_weight")
-    conv1 = mx.sym.Convolution(data=data, weight=w1 + w1, num_filter=32, no_bias=True, kernel=(3, 3))
-    conv2 = mx.sym.Convolution(data=conv1, weight=w2 + w2, num_filter=32, no_bias=True, kernel=(1, 1))
-    mod = Module(symbol=conv2, label_names=None, context=mx.current_context())
-    mod.bind(for_training=False, data_shapes=[('data', (10, 16, 50, 50))])
-    mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
-    data = [mx.random.uniform(-1.0, 1.0, shape=(10, 16, 50, 50), ctx=mx.current_context())]
-    batch=mx.io.DataBatch(data, [])
-    for i in range(2):
-        mod.forward(batch, is_train=False)
-        for output in mod.get_outputs():
-            output.wait_to_read()
 
 @with_seed()
 def test_concat():
