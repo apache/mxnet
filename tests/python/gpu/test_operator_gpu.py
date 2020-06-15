@@ -374,11 +374,6 @@ def test_preloaded_multi_sgd():
 @with_seed()
 @pytest.mark.serial
 def test_batchnorm_with_type():
-  ctx_list_v1_2D = [
-    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
-  ]
-
   ctx_list_v2_2D = [
     {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float32}},
     {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float16}},
@@ -472,8 +467,7 @@ def test_batchnorm_versions():
 
   def test_2d_batchnorm(fix_gamma, use_global_stats):
     data = (2, 3, 10, 10)
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu',
-                                                      'batchnorm_cpu',
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
                                                       'batchnorm_gpu', 'batchnorm_cudnn'],
                                    data=data,
                                    fix_gamma=fix_gamma, use_global_stats=use_global_stats)

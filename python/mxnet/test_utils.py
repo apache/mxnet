@@ -1545,6 +1545,11 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         for exe in exe_list:
             exe.forward(is_train=True)
             exe.backward(exe.outputs)
+        gt = ground_truth
+        if gt is None:
+            gt = exe_list[max_idx].output_dict.copy()
+            if grad_req != 'null':
+                gt.update(exe_list[max_idx].grad_dict)
 
         for i, exe in enumerate(exe_list):
             if i == max_idx:
