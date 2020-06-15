@@ -591,13 +591,9 @@ std::vector<NDArray*> Imperative::Backward(
     auto num_outputs = idx[i].source->num_outputs();
     for (size_t j = 0; j < num_outputs; ++j) {
       auto eid = idx.entry_id(i, j);
-      if (!arrays[eid]->is_none()) continue;
-      if (stypes[eid] == kDefaultStorage) {
-        *arrays[eid] = NDArray(shapes[eid], vctx[i], true, dtypes[eid]);
-      } else {
-        *arrays[eid] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                               shapes[eid], vctx[i], true, dtypes[eid]);
-      }
+      if (arrays[eid]->is_none())
+        arrays[eid]->ReInit(static_cast<NDArrayStorageType>(stypes[eid]),
+                            shapes[eid], vctx[i], dtypes[eid]);
     }
   }
 

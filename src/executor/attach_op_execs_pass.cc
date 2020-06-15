@@ -23,22 +23,24 @@
  * \brief Operator executor to execute each operator.
  */
 #include <mxnet/base.h>
-#include <mxnet/operator.h>
 #include <mxnet/op_attr_types.h>
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
-#include "./exec_pass.h"
-#include "../operator/nn/mkldnn/mkldnn_base-inl.h"
+#include "../imperative/imperative_utils.h"
 
 namespace mxnet {
 
-namespace op {
-const OperatorProperty* OpPropGetOpProperty(const NodeAttrs& attrs);
-}  // namespace op
-
 namespace exec {
+
+#if MXNET_USE_MKLDNN == 1
+#define CREATE_DEFAULT_INPUTS_MKLDNN(in_array, in_array_fallback, attrs)  \
+        CREATE_DEFAULT_INPUTS(true, attrs, CreateDefaultInputs(in_array, in_array_fallback))
+#else
+#define CREATE_DEFAULT_INPUTS_MKLDNN(in_array, in_array_fallback, attrs)  // empty macro
+#endif
+
 
 // abstract OpExecutor which provides storage fallback procedure on
 // non-default inputs and outputs
@@ -110,15 +112,12 @@ class StorageFallbackOpExecutor : public OpExecutor {
   bool init_;
 };
 
-
 // stateful compute executor
 class StatefulComputeExecutor : public StorageFallbackOpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
-#if MXNET_USE_MKLDNN == 1
-    InvalidateOutputs(out_array, req);
-#endif
+    INVALIDATE_OUTPUTS(out_array, req);
     PreFCompute(is_gpu);
     fcompute_(state_, op_ctx, in_data_, req, out_data_);
     PostFCompute(is_gpu);
@@ -155,17 +154,10 @@ class StatefulComputeExExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
-#if MXNET_USE_MKLDNN == 1
-    InvalidateOutputs(out_array, req);
-    // TODO(alex): (MXNET-847) Remove this fallback feature after subgraph implemented
-    const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
-    if (!is_mkldnn.get(attrs_.op, false)) {
-      CreateDefaultInputs(in_array, &in_array_fallback);
-      fcompute_(state_, op_ctx, in_array_fallback, req, out_array);
-      return;
-    }
-#endif
-    fcompute_(state_, op_ctx, in_array, req, out_array);
+    INVALIDATE_OUTPUTS(out_array, req);
+    std::vector<NDArray> *pInArray = &in_array;
+    CREATE_DEFAULT_INPUTS_MKLDNN(in_array, pInArray = &in_array_fallback, attrs_);
+    fcompute_(state_, op_ctx, *pInArray, req, out_array);
   }
 
   void Setup() override {}
@@ -202,9 +194,7 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
   void Run(RunContext rctx, bool is_gpu) override {
     using namespace common;
     op_ctx.run_ctx = rctx;
-#if MXNET_USE_MKLDNN == 1
-    InvalidateOutputs(out_array, req);
-#endif
+    INVALIDATE_OUTPUTS(out_array, req);
     PreFCompute(is_gpu);
     fcompute_(attrs_, op_ctx, in_data_, req, out_data_);
     PostFCompute(is_gpu);
@@ -231,17 +221,10 @@ class FComputeExExecutor : public OpExecutor {
  public:
   void Run(RunContext rctx, bool is_gpu) override {
     op_ctx.run_ctx = rctx;
-#if MXNET_USE_MKLDNN == 1
-    InvalidateOutputs(out_array, req);
-    // TODO(alex): (MXNET-847) Remove this fallback feature after subgraph implemented
-    const auto is_mkldnn = Op::GetAttr<bool>("TIsMKLDNN");
-    if (!is_mkldnn.get(attrs_.op, false)) {
-      CreateDefaultInputs(in_array, &in_array_fallback);
-      fcompute_(attrs_, op_ctx, in_array_fallback, req, out_array);
-      return;
-    }
-#endif
-    fcompute_(attrs_, op_ctx, in_array, req, out_array);
+    INVALIDATE_OUTPUTS(out_array, req);
+    std::vector<NDArray> *pInArray = &in_array;
+    CREATE_DEFAULT_INPUTS_MKLDNN(in_array, pInArray = &in_array_fallback, attrs_);
+    fcompute_(attrs_, op_ctx, *pInArray, req, out_array);
   }
 
   void Setup() override {}
