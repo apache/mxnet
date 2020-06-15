@@ -190,6 +190,24 @@ __device__ inline index_t unravel_dot(const index_t idx, const index_t (&shape)[
   return ret;
 }
 
+template<int ndim>
+__device__ inline index_t unravel_ravel(const index_t idx, const index_t (&shape1)[MAX_DIM],
+                                        const index_t (&shape2)[MAX_DIM]) {
+  index_t ret = 0;
+  index_t total_shape = 1;
+#pragma unroll
+  for (index_t i = ndim-1, j = idx; i >=0; --i) {
+    if (i != ndim - 1) {
+      total_shape *= shape2[i + 1];
+    }
+    auto tmp = j / shape1[i];
+    const index_t coord = j - tmp*shape1[i];
+    ret += total_shape * (shape2[i] > coord) * coord;
+    j = tmp;
+  }
+  return ret;
+}
+
 }  // namespace util
 )code";
 }  // namespace rtc

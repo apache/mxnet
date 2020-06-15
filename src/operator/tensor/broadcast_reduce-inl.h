@@ -287,6 +287,23 @@ MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const 
   assign(&small[idx], addto, OType(val));
 }
 
+namespace {
+
+// Returns the stride with which the fastest dimension is moving.
+// Used to detect memory access scatter.
+inline int fastest_stride(const TShape &small, const TShape &big,
+                                   const TShape &big_stride) {
+  const int ndim = small.ndim();
+  for (int i = ndim-1; i >= 0; --i) {
+    if (big[i] != 1) {
+      return (small[i] == big[i]) ? 1 : big_stride[i];
+    }
+  }
+  return 1;
+}
+
+}  // namespace
+
 #ifdef __CUDACC__
 #include "broadcast_reduce-inl.cuh"
 #endif
@@ -477,6 +494,20 @@ void Reduce(Stream<cpu> *s, const TBlob& small, const OpReqType req,
     rhs_shape, rhs_stride,
     lhs.shape_.get<ndim>(), rhs.shape_.get<ndim>());
 }
+
+#if MXNET_USE_CUDA
+
+void RTCReduce(const NodeAttrs& attrs,
+               const OpContext& ctx,
+               const TBlob& small,
+               const OpReqType req,
+               const Tensor<gpu, 1, char>& workspace,
+               const TBlob& big,
+               const std::string& reducer,
+               int ndim,
+               const std::string& OP);
+
+#endif
 
 }  // namespace broadcast
 }  // namespace op

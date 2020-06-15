@@ -259,6 +259,28 @@ struct BinaryBroadcastRTCCompute {
                   const std::vector<TBlob>& outputs);
 };
 
+struct BinaryBroadcastRTCBackwardUseNone {
+  std::string LOP;
+  std::string ROP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
+struct BinaryBroadcastRTCBackwardUseIn {
+  std::string LOP;
+  std::string ROP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
 #endif  // MXNET_USE_CUDA
 
 template<typename xpu, typename OP>
@@ -562,14 +584,6 @@ BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
     });
   }
 }
-
-template<typename xpu, typename LOP, typename ROP>
-inline typename std::enable_if<std::is_same<xpu, gpu>::value, void>::type
-BinaryBroadcastBackwardUseNone(const nnvm::NodeAttrs& attrs,
-                               const OpContext& ctx,
-                               const std::vector<TBlob>& inputs,
-                               const std::vector<OpReqType>& req,
-                               const std::vector<TBlob>& outputs);
 
 template<typename xpu, int ndim, typename DType, typename LOP, typename ROP>
 void BinaryBroadcastBackwardUseInImplWithWorkspace(const OpContext& ctx,

@@ -258,19 +258,6 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
   }
 }
 
-// Returns the stride with which the fastest dimension is moving.
-// Used to detect memory access scatter.
-template<int ndim>
-MSHADOW_XINLINE int fastest_stride(const Shape<ndim>& small, const Shape<ndim>& big,
-  const Shape<ndim>& big_stride) {
-  for (int i = ndim-1; i >= 0; --i) {
-    if (big[i] != 1) {
-      return (small[i] == big[i]) ? 1 : big_stride[i];
-    }
-  }
-  return 1;
-}
-
 // Returns a/b integer division rounded up
 template<typename Type>
 Type ceil_idiv(const Type a, const Type b) {
@@ -354,20 +341,19 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small,
   } else {
 
     int reduce_strides[3];
-    reduce_strides[0] = fastest_stride(small.get<ndim>(), big.get<ndim>(),
-      big.get<ndim>());
-    reduce_strides[1] = (multiOp) ? fastest_stride(small.get<ndim>(),
-      lhs->get<ndim>(), lhs->get<ndim>()) : 1;
-    reduce_strides[2] = (multiOp) ? fastest_stride(small.get<ndim>(),
-      rhs->get<ndim>(), rhs->get<ndim>()) : 1;
+    reduce_strides[0] = fastest_stride(small, big, big);
+    reduce_strides[1] = (multiOp) ? fastest_stride(small, *lhs, *lhs) : 1;
+    reduce_strides[2] = (multiOp) ? fastest_stride(small, *rhs, *rhs) : 1;
 
     int reduce_strides_transp[3];
-    reduce_strides_transp[0] = fastest_stride(small.get<ndim>(), config.rshape,
-      config.rstride);
+    reduce_strides_transp[0] = fastest_stride(small, TShape(config.rshape),
+      TShape(config.rstride));
     reduce_strides_transp[1] = (multiOp) ?
-      fastest_stride(small.get<ndim>(), config.lhs_shape, config.lhs_stride) : 1;
+      fastest_stride(small, TShape(config.lhs_shape),
+                     TShape(config.lhs_stride)) : 1;
     reduce_strides_transp[2] = (multiOp) ?
-      fastest_stride(small.get<ndim>(), config.rhs_shape, config.rhs_stride) : 1;
+      fastest_stride(small, TShape(config.rhs_shape),
+                     TShape(config.rhs_stride)) : 1;
 
     uint64_t num_load = calc_num_load(config.N, config.M, reduce_strides);
     uint64_t num_load_transp = calc_num_load(config.M, config.N, reduce_strides_transp);

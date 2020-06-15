@@ -33,16 +33,14 @@ NNVM_REGISTER_OP(broadcast_add)
 .set_attr<FComputeEx>("FComputeEx<gpu>", BinaryBroadcastComputeDenseEx<gpu, op::mshadow_op::plus>);
 
 NNVM_REGISTER_OP(_backward_broadcast_add)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseNone<gpu, mshadow_op::identity,
-                                                                mshadow_op::identity>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseNone{"identity", "identity"});
 
 NNVM_REGISTER_OP(broadcast_sub)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"sub"})
 .set_attr<FComputeEx>("FComputeEx<gpu>", BinaryBroadcastComputeDenseEx<gpu, op::mshadow_op::minus>);
 
 NNVM_REGISTER_OP(_backward_broadcast_sub)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseNone<gpu, mshadow_op::identity,
-                                                                mshadow_op::negation>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseNone{"identity", "negation"});
 
 NNVM_REGISTER_OP(broadcast_mul)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"mul"})

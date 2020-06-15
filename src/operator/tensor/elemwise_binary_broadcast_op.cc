@@ -19,6 +19,10 @@
 
 #include <string>
 
+#if MXNET_USE_CUDA
+#include <cuda_runtime.h>
+#endif  // MXNET_USE_CUDA
+
 #include "broadcast_reduce-inl.h"
 #include "elemwise_binary_broadcast_op.h"
 
@@ -340,6 +344,62 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
                                 ctx.run_ctx.get_ctx().dev_id,
                                 lead_input_num);
   }
+}
+
+void BinaryBroadcastRTCBackwardUseNone::operator()(const nnvm::NodeAttrs& attrs,
+                                                   const OpContext& ctx,
+                                                   const std::vector<TBlob>& inputs,
+                                                   const std::vector<OpReqType>& req,
+                                                   const std::vector<TBlob>& outputs) {
+  using namespace mshadow;
+  CHECK_EQ(inputs.size(), 1U);
+  CHECK_EQ(outputs.size(), 2U);
+  mxnet::TShape new_lshape, new_rshape, new_oshape;
+  int ndim = BinaryBroadcastShapeCompact(outputs[0].shape_, outputs[1].shape_, inputs[0].shape_,
+                                         &new_lshape, &new_rshape, &new_oshape);
+  if (!ndim) {
+    ElemwiseBinaryRTCBwdUseNone {LOP, ROP}(attrs, ctx, inputs, req, outputs);
+  } else {
+    Stream<gpu> *s = ctx.get_stream<gpu>();
+    const TBlob lhs = outputs[0].reshape(new_lshape);
+    const TBlob rhs = outputs[1].reshape(new_rshape);
+    const TBlob out = inputs[0].reshape(new_oshape);
+    BROADCAST_NDIM_SWITCH(ndim, NDim, {
+      // Request temporary storage
+      size_t workspace_size = new_oshape.Size();
+      Tensor<gpu, 1, char> workspace =
+          ctx.requested[0].get_space_typed<gpu, 1, char>(
+              Shape1(workspace_size * sizeof(index_t)), s);
+      if (out.shape_.Size() != 0) {
+        broadcast::RTCReduce(attrs, ctx, lhs, req[0],
+                             workspace, out,
+                             "red::sum", NDim, LOP);
+        broadcast::RTCReduce(attrs, ctx, rhs, req[1],
+                             workspace, out,
+                             "red::sum", NDim, ROP);
+      } else {
+        using namespace common::cuda::rtc::util;
+        if (lhs.shape_.Size() != 0) {
+          cudaMemsetAsync(lhs.dptr_, 0,
+                          lhs.shape_.Size() * mshadow_type_info(lhs.type_flag_).size,
+                          Stream<gpu>::GetStream(s));
+        }
+        if (rhs.shape_.Size() != 0) {
+          cudaMemsetAsync(rhs.dptr_, 0,
+                          rhs.shape_.Size() * mshadow_type_info(rhs.type_flag_).size,
+                          Stream<gpu>::GetStream(s));
+        }
+      }
+    });
+  }
+}
+
+void BinaryBroadcastRTCBackwardUseIn::operator()(const nnvm::NodeAttrs& attrs,
+                                                 const OpContext& ctx,
+                                                 const std::vector<TBlob>& inputs,
+                                                 const std::vector<OpReqType>& req,
+                                                 const std::vector<TBlob>& outputs) {
+  LOG(FATAL) << "Not implemented yet!";
 }
 
 #endif  // MXNET_USE_CUDA

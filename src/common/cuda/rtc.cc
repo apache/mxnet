@@ -36,6 +36,7 @@
 #include "rtc/backward_functions-inl.h"
 #include "rtc/vectorization-inl.h"
 #include "rtc/special_functions-inl.h"
+#include "rtc/reducer-inl.h"
 #include "utils.h"
 
 
@@ -144,7 +145,8 @@ CUfunction get_function(const std::string &code,
         special_functions_definitions + '\n' +
         function_definitions + "\n" +
         backward_function_definitions + "\n" +
-        vectorization_support_string + "\n";
+        vectorization_support_string + "\n" +
+        reducer + "\n";
     std::string code_with_header = common_header + code;
     // If verbose mode, output kernel source, though not including the common header
     if (dmlc::GetEnv("MXNET_RTC_VERBOSE", false)) {
