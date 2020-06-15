@@ -1401,3 +1401,8 @@ def test_from_numpy_exception():
     np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
     mx_array = mx.npx.from_numpy(np_array, zero_copy=False)
     np_array[2, 1] = 0 # no error
+
+def test_mixed_array_types():
+    np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
+    mx_array = mx.np.ones((3, 1))
+    assert_almost_equal(mx_array + np_array, 1+np_array)

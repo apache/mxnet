@@ -392,11 +392,17 @@ class ndarray(NDArray):
             out = func(*new_args, **new_kwargs)
             return _as_mx_np_array(out, ctx=cur_ctx)
         else:
-            # Note: this allows subclasses that don't override
-            # __array_function__ to handle mxnet.numpy.ndarray objects
-            if not py_all(issubclass(t, ndarray) for t in types):
-                return NotImplemented
-            return mx_np_func(*args, **kwargs)
+            if py_all(issubclass(t, ndarray) for t in types):
+                return mx_np_func(*args, **kwargs)
+            else:
+                try:
+                    cur_ctx = next(a.ctx for a in args if hasattr(a, 'ctx'))
+                except StopIteration:
+                    cur_ctx = next(a.ctx for a in kwargs.values() if hasattr(a, 'ctx'))
+                new_args = _as_mx_np_array(args, ctx=cur_ctx)
+                new_kwargs = {k: _as_mx_np_array(v, cur_ctx) for k, v in kwargs.items()}
+                return mx_np_func(*new_args, **new_kwargs)
+
 
     def _get_np_basic_indexing(self, key):
         """
