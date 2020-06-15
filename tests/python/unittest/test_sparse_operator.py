@@ -331,10 +331,6 @@ def test_elemwise_binary_ops():
             return 'row_sparse'
         elif lstype == 'row_sparse' and rstype == 'default':
             return 'row_sparse'
-        elif lstype == 'default' and rstype == 'csr':
-            return 'csr'
-        elif lstype == 'csr' and rstype == 'default':
-            return 'csr'
         else:
             return 'default'
 
@@ -362,7 +358,6 @@ def test_elemwise_binary_ops():
                                 verbose=False)
 
         if ((lhs_stype is 'default' and rhs_stype is 'row_sparse') or
-            (lhs_stype is 'default' and rhs_stype is 'csr') or
             (lhs_stype is 'row_sparse' and rhs_stype is 'row_sparse') and (rhs_density == 0.0)):
             test_elemwise_binary_op("elemwise_add", lhs_stype, rhs_stype, shape,
                                     lambda l, r: mx.sym.sparse.elemwise_add(l, r, out=l),
@@ -509,25 +504,8 @@ def test_elemwise_binary_ops():
                         # Try row_sparse overlaps
                         for force_lr_overlap in [False, True]:
                             for force_grad_overlap in [False, True]:
-
                                 print("  force_lr_overlap={}, force_grad_overlap={}, shape={}".
                                       format(force_lr_overlap, force_grad_overlap, shape))
-
-                                # Left and right always overlap when one is default storage
-                                # (assuming the row_sparse one has some entries in it)
-                                if force_lr_overlap is False:
-                                    check_elemwise_binary_ops('default', 'row_sparse', shape,
-                                                              lhs_density=lhs_density,
-                                                              rhs_density=rhs_density,
-                                                              force_lr_overlap=force_lr_overlap,
-                                                              force_grad_overlap=force_grad_overlap,
-                                                              ograd_density=ograd_density)
-                                    check_elemwise_binary_ops('row_sparse', 'default', shape,
-                                                              lhs_density=lhs_density,
-                                                              rhs_density=rhs_density,
-                                                              force_lr_overlap=force_lr_overlap,
-                                                              force_grad_overlap=force_grad_overlap,
-                                                              ograd_density=ograd_density)
 
                                 # Back to left-right overlap possiblities
                                 check_elemwise_binary_ops('row_sparse', 'row_sparse', shape,
@@ -538,32 +516,6 @@ def test_elemwise_binary_ops():
                                                           force_lr_overlap=force_lr_overlap,
                                                           force_grad_overlap=force_grad_overlap,
                                                           ograd_density=ograd_density)
-
-                        # No overlap flags for CSR
-                        check_elemwise_binary_ops('csr', 'csr', shape,
-                                                  lhs_grad_stype='csr',
-                                                  rhs_grad_stype='csr',
-                                                  lhs_density=lhs_density,
-                                                  rhs_density=rhs_density,
-                                                  ograd_density=ograd_density)
-                        check_elemwise_binary_ops('csr', 'csr', shape,
-                                                  lhs_grad_stype='default',
-                                                  rhs_grad_stype='default',
-                                                  lhs_density=lhs_density,
-                                                  rhs_density=rhs_density,
-                                                  ograd_density=ograd_density)
-                        check_elemwise_binary_ops('default', 'csr', shape,
-                                                  lhs_grad_stype='csr',
-                                                  rhs_grad_stype='csr',
-                                                  lhs_density=lhs_density,
-                                                  rhs_density=rhs_density,
-                                                  ograd_density=ograd_density)
-                        check_elemwise_binary_ops('csr', 'default', shape,
-                                                  lhs_grad_stype='csr',
-                                                  rhs_grad_stype='csr',
-                                                  lhs_density=lhs_density,
-                                                  rhs_density=rhs_density,
-                                                  ograd_density=ograd_density)
 
 
 @with_seed()
