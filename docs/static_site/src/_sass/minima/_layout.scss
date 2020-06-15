@@ -364,3 +364,18 @@
     color: $grey-color-light;
   }
 }
+
+#forum::before,
+#mxnet-dev-communications::before,
+#social-media::before,
+#jira::before,
+#confluence-wiki::before,
+#setup-mxnet-for-development::before,
+#your-first-contribution::before {
+  display: block;
+  content: " ";
+  margin-top: -86px;
+  height: 86px;
+  visibility: hidden;
+  pointer-events: none;
+}
