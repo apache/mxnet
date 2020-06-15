@@ -200,8 +200,9 @@ def test_quantized_conv():
         if is_test_for_native_cpu():
             print('skipped testing quantized_conv for native cpu since it is not supported yet')
             return
-        elif qdtype == 'int8' and is_test_for_mkldnn():
-            print('skipped testing quantized_conv for mkldnn cpu int8 since it is not supported yet')
+        elif is_test_for_mkldnn():
+            # (TODO)Xinyu: https://github.com/apache/incubator-mxnet/issues/16830
+            print('skipped testing quantized_conv for mkldnn cpu since it is a flaky case')
             return
         elif qdtype == 'uint8' and is_test_for_gpu():
             print('skipped testing quantized_conv for gpu uint8 since it is not supported yet')
