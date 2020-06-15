@@ -8049,7 +8049,7 @@ def shares_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `may_share_memory` in MXNet DeepNumPy
+    - Actually it is same as `may_share_memory` in MXNet np
     """
     return _api_internal.share_memory(a, b).item()
 
@@ -8090,7 +8090,7 @@ def may_share_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `shares_memory` in MXNet DeepNumPy
+    - Actually it is same as `shares_memory` in MXNet np
     """
     return _api_internal.share_memory(a, b).item()
 
