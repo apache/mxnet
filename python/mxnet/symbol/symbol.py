@@ -1596,7 +1596,16 @@ class Symbol(SymbolBase):
                     assert name in aux_names
                     index = aux_names.index(name)
                     aux_states[index] = aux_states[index].totype(stype)
-        args_grad = [x.copy() for x in args]
+
+        if grad_req == 'null':
+            args_grad = None
+        elif isinstance(grad_req, dict):
+            args_grad = {}
+            for i, name in enumerate(arg_names):
+                if grad_req[name] != 'null':
+                    args_grad[name] = args[i].copy()
+        else:
+            args_grad = [x.copy() for x in args]
         return ExecutorV2(self, ctx, args, args_grad, grad_req, aux_states)
 
     # pylint: disable=too-many-locals

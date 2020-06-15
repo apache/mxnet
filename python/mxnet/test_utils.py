@@ -1517,8 +1517,6 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     gt = ground_truth
     if gt is None:
         gt = exe_list[max_idx].output_dict.copy()
-        if grad_req != 'null':
-            gt.update(exe_list[max_idx].grad_dict)
 
     for i, exe in enumerate(exe_list):
         if i == max_idx:
@@ -1550,7 +1548,6 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             gt = exe_list[max_idx].output_dict.copy()
             if grad_req != 'null':
                 gt.update(exe_list[max_idx].grad_dict)
-
         for i, exe in enumerate(exe_list):
             if i == max_idx:
                 continue
@@ -1560,7 +1557,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             curr = zip(output_names + arg_names, exe.outputs + exe.grad_arrays)
             for name, arr in curr:
                 if gt[name] is None:
-                    assert arr is None
+                    assert arr is None, name
                     continue
 
                 # Previous cast was to dtypes[i], but symbol may be mixed-precision,

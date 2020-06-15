@@ -547,9 +547,10 @@ class ExecutorV2:
                         else:
                             assert isinstance(grad_req, dict)
                             req = grad_req[k]
-                        with self._ctx:
-                            self._args[i].attach_grad(req, stype=g.stype)
-                            self._args[i].grad[:] = g
+                        if req != 'null':
+                            with self._ctx:
+                                self._args[i].attach_grad(req, stype=g.stype)
+                                self._args[i].grad[:] = g
                     # ignore provided arg which is not present in
                     # input_names
                     except ValueError as e:
@@ -563,9 +564,10 @@ class ExecutorV2:
                     else:
                         assert isinstance(grad_req, dict)
                         req = grad_req[self._input_names[i]]
-                    with self._ctx:
-                        self._args[i].attach_grad(req, stype=g.stype)
-                        self._args[i].grad[:] = g
+                    if req != 'null':
+                        with self._ctx:
+                            self._args[i].attach_grad(req, stype=g.stype)
+                            self._args[i].grad[:] = g
         self._cached_op = ndarray.CachedOp(sym)
 
     def forward(self, is_train=False, **kwargs):
@@ -584,7 +586,9 @@ class ExecutorV2:
                             else:
                                 assert isinstance(grad_req, dict)
                                 req = grad_req[name]
-                            self._args[index].attach_grad(req)
+                            if req != 'null':
+                                with self._ctx:
+                                    self._args[index].attach_grad(req)
                         else:
                             self._args[index][:] = arr
 
