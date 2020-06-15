@@ -80,14 +80,6 @@
                            np-out (ndarray/->vec arr-label))]
       (is (approx= 1e-6 npout-back arr-grad)))))
 
-(deftest test-regression
-  (check-regression (sym/logistic-regression-output {:data (sym/variable "data") :label (sym/variable "label")})
-                    (fn [x] (/ 1.0 (+ 1.0 (Math/exp (* -1.0 x)))))
-                    (fn [x y] (- x y)))
-  (check-regression (sym/linear-regression-output {:data (sym/variable "data") :label (sym/variable "label")})
-                    (fn [x] x)
-                    (fn [x y] (- x y))))
-
 (deftest swap-axes
   (let [data (sym/variable "data")
         shape-vec [2 3 4]

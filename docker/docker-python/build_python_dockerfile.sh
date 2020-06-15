@@ -58,7 +58,6 @@ docker_test_image_cpu(){
     python_version="${2}"
     echo "Running tests on mxnet/python:${image_tag}"
     docker run -v ${test_dir}:/mxnet mxnet/python:${image_tag} bash -c "${python_version} /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
-    docker run -v ${test_dir}:/mxnet mxnet/python:${image_tag} bash -c "${python_version} /mxnet/example/image-classification/train_mnist.py"
 }
 
 docker_test_image_gpu(){
@@ -66,7 +65,6 @@ docker_test_image_gpu(){
     python_version="${2}"
     echo "Running tests on mxnet/python:${1}"
     nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${image_tag} bash -c "${python_version} /mxnet/docker/docker-python/test_mxnet.py ${mxnet_version}"
-    nvidia-docker run -v ${test_dir}:/mxnet mxnet/python:${image_tag} bash -c "${python_version} /mxnet/example/image-classification/train_mnist.py --gpus 0,1,2,3"
 }
 
 # if both $MXNET_DOCKERHUB_PASSWORD and $MXNET_DOCKERHUB_USERNAME environment variables are set, docker will automatically login

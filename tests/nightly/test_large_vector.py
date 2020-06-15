@@ -45,34 +45,6 @@ def test_nn():
         res = linear(data)
         assert res.shape == (LARGE_X, 2)
 
-    def check_regression():
-        shape = (LARGE_X, )
-        def check_regression(symbol, forward, shape):
-            # init executor
-            data_s = mx.symbol.Variable('data')
-            label_s = mx.symbol.Variable('label')
-            out_s = symbol(data=data_s, label=label_s)
-            exe = out_s.simple_bind(ctx=mx.cpu(0), data=shape, label=shape)
-            arg_map = dict(zip(out_s.list_arguments(), exe.arg_arrays))
-            # init data
-            data = mx.random.uniform(-1, -1, shape)
-            arg_map["data"][:] = data
-            atol = 1e-5
-            density = 0.5
-            stype = 'default'
-            label = arg_map["label"]
-            label[:] = rand_ndarray(shape, stype, density=density)
-            exe.forward(is_train=True)
-            exe.backward()
-            np_out = forward(data.asnumpy())
-            assert_almost_equal(exe.outputs[0].asnumpy(), np_out, atol=atol)
-        check_regression(mx.symbol.LogisticRegressionOutput,
-                         lambda x: 1.0 / (1.0 + np.exp(-x)),
-                         shape)
-        check_regression(mx.symbol.LinearRegressionOutput,
-                         lambda x: x,
-                         shape)
-
     def check_sign():
         a = mx.nd.random.normal(-1, 1, shape=LARGE_X)
         mx_res = mx.nd.sign(a)
@@ -155,7 +127,6 @@ def test_nn():
 
     check_sequence_last()
     check_dense()
-    check_regression()
     check_sign()
     check_layer_norm()
     check_batchnorm()

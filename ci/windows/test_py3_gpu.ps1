@@ -35,11 +35,6 @@ if ($LastExitCode -ne 0) { Throw ("Error running parallel tests, python exited w
 C:\Python37\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_operator.xml --cov-append tests\python\gpu\test_operator_gpu.py
 if ($LastExitCode -ne 0) { Throw ("Error running serial tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
 
-C:\Python37\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_forward.xml tests\python\gpu\test_forward.py
-if ($LastExitCode -ne 0) { Throw ("Error running parallel tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-C:\Python37\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_forward.xml --cov-append tests\python\gpu\test_forward.py
-if ($LastExitCode -ne 0) { Throw ("Error running serial tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
-
 C:\Python37\python.exe -m pytest -v -m 'not serial' -n 4 --durations=50 --cov-report xml:tests_train.xml tests\python\train
 if ($LastExitCode -ne 0) { Throw ("Error running parallel tests, python exited with status code " + ('{0:X}' -f $LastExitCode)) }
 C:\Python37\python.exe -m pytest -v -m 'serial' --durations=50 --cov-report xml:tests_train.xml --cov-append tests\python\train

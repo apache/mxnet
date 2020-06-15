@@ -34,28 +34,6 @@ function test_basic()
   @test mx.list_auxiliary_states(model) == Symbol[]
 end
 
-function test_chain()
-  @info("SymbolicNode::chain")
-
-  model = mlpchain()
-  @test mx.list_arguments(model) == [:data,:fc1_weight,:fc1_bias,:fc2_weight,:fc2_bias]
-  @test mx.list_outputs(model) == [:fc2_output]
-  @test mx.list_auxiliary_states(model) == Symbol[]
-
-  let layerconfig = [20, 10, 6]
-    model = @mx.chain mx.Variable(:data) =>
-      mx.MLP(layerconfig, prefix=:magic_) =>
-      mx.LinearRegressionOutput(mx.Variable(:label))
-
-    @test mx.list_arguments(model) == [
-      :data,
-      :magic_fc1_weight, :magic_fc1_bias,
-      :magic_fc2_weight, :magic_fc2_bias,
-      :magic_fc3_weight, :magic_fc3_bias,
-      :label]
-  end
-end
-
 function test_internal()
   @info("SymbolicNode::internal")
 
@@ -541,7 +519,6 @@ end  # test_var
 ################################################################################
 @testset "SymbolicNode Test" begin
   test_basic()
-  test_chain()
   test_internal()
   test_compose()
   test_infer_shape()

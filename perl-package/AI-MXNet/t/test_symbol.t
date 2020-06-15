@@ -17,9 +17,9 @@
 
 use strict;
 use warnings;
-use Test::More tests => 103;
+use Test::More tests => 31;
 use AI::MXNet qw(mx);
-use AI::MXNet::TestUtils qw(mlp2 conv check_consistency zip assert enumerate almost_equal same);
+use AI::MXNet::TestUtils qw(mlp2 check_consistency zip assert enumerate almost_equal same);
 use Storable qw(freeze thaw);
 use PDL;
 
@@ -89,7 +89,7 @@ test_symbol_children();
 
 sub test_symbol_storable
 {
-    my $mlist = [mlp2(), conv()];
+    my $mlist = [mlp2()];
     my $data = freeze($mlist);
     my $mlist2 = thaw($data);
     zip(sub {
@@ -113,20 +113,6 @@ sub test_symbol_saveload
 
 test_symbol_saveload();
 
-sub test_symbol_infer_type
-{
-    my $data = mx->symbol->Variable('data');
-    my $f32data = mx->symbol->Cast(data=>$data, dtype=>'float32');
-    my $fc1 = mx->symbol->FullyConnected(data => $f32data, name=>'fc1', num_hidden=>128);
-    my $mlp = mx->symbol->SoftmaxOutput(data => $fc1, name => 'softmax');
-
-    my ($arg, $out, $aux) = $mlp->infer_type(data=>'float16');
-    is_deeply($arg, [qw/float16 float32 float32 float32/]);
-    is_deeply($out, ['float32']);
-    is_deeply($aux, []);
-}
-
-test_symbol_infer_type();
 
 sub test_symbol_infer_shape
 {
@@ -193,50 +179,6 @@ sub check_symbol_consistency
     check_consistency(sym => [$sym1, $sym2], ctx_list => [$ctx, $ctx]);
 }
 
-sub test_load_000800
-{
-    my ($data, $weight, $fc1, $act1);
-    {
-        local($mx::AttrScope) = mx->AttrScope(ctx_group=>'stage1');
-        $data = mx->symbol->Variable('data', lr_mult=>0.2);
-        $weight = mx->sym->Variable('fc1_weight', lr_mult=>1.2);
-        $fc1  = mx->symbol->FullyConnected(data => $data, weight=>$weight, name=>'fc1', num_hidden=>128, wd_mult=>0.3);
-        $act1 = mx->symbol->Activation(data => $fc1, name=>'relu1', act_type=>"relu");
-    }
-    my ($fc2, $act2, $fc3, $sym1);
-    {
-        local($mx::AttrScope) = mx->AttrScope(ctx_group=>'stage2');
-        $fc2  = mx->symbol->FullyConnected(data => $act1, name => 'fc2', num_hidden => 64, lr_mult=>0.01);
-        $act2 = mx->symbol->Activation(data => $fc2, name=>'relu2', act_type=>"relu");
-        $fc3  = mx->symbol->FullyConnected(data => $act2, name=>'fc3', num_hidden=>10);
-        $fc3  = mx->symbol->BatchNorm($fc3, name=>'batchnorm0');
-        $sym1 = mx->symbol->SoftmaxOutput(data => $fc3, name => 'softmax')
-    }
-    { local $/ = undef; my $json = <DATA>; open(F, ">save_000800.json"); print F $json; close(F); };
-    my $sym2 = mx->sym->load('save_000800.json');
-    unlink 'save_000800.json';
-
-    my %attr1 = %{ $sym1->attr_dict };
-    my %attr2 = %{ $sym2->attr_dict };
-    while(my ($k, $v1) = each %attr1)
-    {
-        ok(exists $attr2{ $k });
-        my $v2 = $attr2{$k};
-        while(my ($kk, $vv1) = each %{ $v1 })
-        {
-            if($kk =~ /^__/ and $kk =~ /__$/)
-            {
-                ok(exists $v2->{$kk} and $v2->{$kk} eq $vv1);
-            }
-        }
-    }
-
-    check_symbol_consistency($sym1, $sym2,
-        {ctx => mx->cpu(0), group2ctx =>{stage1 => mx->cpu(1), stage2 => mx->cpu(2) }, shapes => { data => [1,200] }}
-    );
-}
-
-test_load_000800();
 
 sub test_linalg_gemm2
 {
