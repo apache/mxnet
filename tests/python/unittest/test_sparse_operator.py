@@ -156,6 +156,10 @@ def all_zero(var):
 
 @with_seed()
 def test_elemwise_binary_ops():
+    # skip testing on GPU because only CPU ops are implemented
+    if default_context().device_type is 'gpu':
+        return
+
     def test_elemwise_binary_op(name, lhs_stype, rhs_stype, shape,
                                 forward_mxnet_call, forward_numpy_call, backward_numpy_call,
                                 lhs_grad_stype,
@@ -303,7 +307,6 @@ def test_elemwise_binary_ops():
             assert igrads_result['lhs'].stype == lhs_grad_stype
         if rhs_grad_stype is not None:
             assert igrads_result['rhs'].stype == rhs_grad_stype
-
         if not skip_gradient_check:
             check_numeric_gradient(test, location,
                                    grad_stype_dict=grad_stypes)
@@ -379,7 +382,6 @@ def test_elemwise_binary_ops():
                                     force_grad_overlap=force_grad_overlap,
                                     lhs_density=lhs_density, rhs_density=rhs_density,
                                     verbose=False)
-
         if ((lhs_stype is 'row_sparse' and rhs_stype is 'row_sparse') and (lhs_density == 0.0)):
             test_elemwise_binary_op("elemwise_add", lhs_stype, rhs_stype, shape,
                                     lambda l, r: mx.sym.sparse.elemwise_add(l, r, out=r),

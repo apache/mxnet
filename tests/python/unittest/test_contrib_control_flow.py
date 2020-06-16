@@ -218,7 +218,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
         args_names = ["FreeVar" + str(i) for i, _ in enumerate(free_var_shapes)] \
                    + ["LoopVar" + str(i) for i, _ in enumerate(loop_var_shapes) if i >= loop_var_start]
         args_grad = None if not is_train else _zeros_like_dict(x for x in args_names)
-        executor = loop_result_sym.bind(
+        executor = loop_result_sym._bind(
             ctx=default_context(),
             args=_copy_args_dict(loop_result_sym.list_inputs()),
             args_grad=args_grad,
@@ -251,6 +251,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
 
 
 @with_seed()
+@pytest.mark.skip(reason="Bug in while loop op, tracked at incubator-mxnet/issues/18575")
 def test_while_loop_for_foreach():
 
     def make_true_cond():
