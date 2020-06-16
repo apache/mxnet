@@ -170,13 +170,15 @@ void IndexUpdateOpBackwardAImpl<gpu>(const OpContext& ctx,
   using namespace mshadow;
   mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
   MSHADOW_TYPE_SWITCH(grad_a.type_flag_, DType, {
-    size_t temp_mem_size = ind.shape_.Size() * sizeof(int) +
-                           ograd.shape_.Size() * sizeof(DType);
+    size_t alignment = std::max(sizeof(DType), sizeof(int32_t));
+    size_t id_size = PadBytes(sizeof(int32_t) * ind.Size(), alignment);
+    size_t ograd_size = PadBytes(sizeof(DType) * ograd.Size(), alignment);
+    size_t temp_mem_size = id_size + ograd_size;
     Tensor<gpu, 1, char> temp_mem =
       ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(temp_mem_size), s);
     TBlob t_ograd = TBlob(temp_mem.dptr_, ograd.shape_, ograd.dev_mask(),
                           ograd.type_flag_, ograd.dev_id());
-    TBlob t_ind = TBlob(temp_mem.dptr_ + ograd.Size() * sizeof(DType), ind.shape_, ind.dev_mask(),
+    TBlob t_ind = TBlob(temp_mem.dptr_ + ograd_size, ind.shape_, ind.dev_mask(),
                         mshadow::kInt32, ind.dev_id());
     mxnet_op::copy(s, t_ograd, ograd);
     mxnet_op::copy(s, t_ind, ind);

@@ -28,6 +28,7 @@
 #include <vector>
 #include <algorithm>
 #include "./index_add-inl.h"
+#include "./sort_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
