@@ -162,8 +162,8 @@ build_dynamic_libmxnet() {
     # relevant licenses will be placed in the licenses directory
     gather_licenses
 
-    cd /work/build
     source /opt/rh/devtoolset-7/enable
+    cd /work/build
     if [[ ${mxnet_variant} = "cpu" ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
@@ -1862,11 +1862,15 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-python36/enable
     export USE_SYSTEM_CUDA=1
     export CMAKE_STATICBUILD=1
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
+    if [[ $mxnet_variant == cu* ]]; then
+        source /opt/rh/devtoolset-7/enable
+    else
+        source /opt/rh/llvm-toolset-7.0/enable
+    fi
+    source /opt/rh/rh-python36/enable
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
 }
@@ -1875,7 +1879,6 @@ build_static_libmxnet() {
 cd_package_pypi() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
@@ -1919,7 +1922,7 @@ build_static_scala_cpu() {
     scala_prepare
     export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
     export mxnet_variant=cpu
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-maven35/enable
     ./ci/publish/scala/build.sh
     popd
@@ -1929,7 +1932,7 @@ build_static_python_cpu() {
     set -ex
     pushd .
     export mxnet_variant=cpu
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
@@ -1951,7 +1954,7 @@ build_static_python_cpu_cmake() {
     pushd .
     export mxnet_variant=cpu
     export CMAKE_STATICBUILD=1
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
@@ -1973,7 +1976,7 @@ publish_scala_build() {
     set -ex
     pushd .
     scala_prepare
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/llvm-toolset-7.0/enable
     source /opt/rh/rh-maven35/enable
     export USE_SYSTEM_CUDA=1
     ./ci/publish/scala/build.sh

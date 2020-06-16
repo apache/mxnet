@@ -776,6 +776,7 @@ endif()
 
 if(USE_DIST_KVSTORE)
   add_subdirectory("3rdparty/ps-lite")
+  target_compile_options(mxnet PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Wno-error=overloaded-virtual>")
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
   list(APPEND mxnet_LINKER_LIBS pslite)
 endif()

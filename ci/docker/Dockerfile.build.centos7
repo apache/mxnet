@@ -53,6 +53,8 @@ RUN yum -y check-update || true && \
         protobuf-devel \
         # CentOS Software Collections https://www.softwarecollections.org
         devtoolset-7 \
+        llvm-toolset-7.0 \
+        llvm-toolset-7.0-libomp-devel \
         rh-python36 \
         rh-maven35 \
         # Libraries
@@ -67,13 +69,10 @@ RUN yum -y check-update || true && \
         gperf \
         libb2-devel \
         libzstd-devel && \
-    yum clean all && \
-    # Centos 7 only provides ninja-build
-    ln -s /usr/bin/ninja-build /usr/bin/ninja
+    yum clean all
 
-# Make GCC7, Python 3.5 and Maven 3.3 Software Collections available by default
-# during build and runtime of this container
-SHELL [ "/usr/bin/scl", "enable", "devtoolset-7", "rh-python36", "rh-maven35" ]
+# Make Clang, Python 3.6 and Maven 3.3 Software Collections available during following build steps
+SHELL [ "/usr/bin/scl", "enable", "llvm-toolset-7.0", "rh-python36", "rh-maven35" ]
 
 # Install minimum required cmake version
 RUN cd /usr/local/src && \
@@ -119,18 +118,26 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
         yum clean all; \
     fi
 
+# Flang fortran compiler as replacement for gfortran due to the resulting
+# runtime dependency on libgfortran.so which is GPL-licensed and thus
+# https://www.apache.org/legal/resolved.html#category-x for distribution.
+# We need a Fortran compiler to compile the OpenBLAS Lapack implementation.
+# NOTE: The flang toolchain also provides llvm libomp.so and libomp.a. We must
+# use the libomp provided by flang for all parts of the project, to avoid
+# linking multiple omp implementations. Linking 2 different llvm omp's would
+# cause segfaults on importing mxnet. In the next step we'll install compatible
+# omp headers.
+RUN cd /usr/local/ && mkdir flang && cd flang && \
+    wget -nv https://github.com/flang-compiler/flang/releases/download/flang_20190329/flang-20190329-x86-70.tgz && \
+    tar xf flang-20190329-x86-70.tgz && \
+    rm flang-20190329-x86-70.tgz && \
+    # IMPORTANT: Replace libomp.so with the flang version, to avoid segfault upon importing MXNet
+    cp /usr/local/flang/lib/libomp.so /opt/rh/llvm-toolset-7.0/root/usr/lib64/libomp.so
+
 # Python dependencies
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir pylint cython numpy requests h5py scipy==1.2.3 wheel \
-    pytest==5.3.5 \
-    pytest-env==0.6.2 \
-    pytest-cov==2.8.1 \
-    pytest-xdist==1.31.0 \
-    pytest-timeout==1.3.4 \
-    mock==2.0.0 \
-    onnx==1.5.0 \
-    protobuf==3.5.2 \
-    tabulate==0.7.5
+COPY install/requirements /work/
+RUN python -m pip install --no-cache-dir --upgrade pip && \
+    python -m pip install --no-cache-dir -r /work/requirements
 
 # Fix the en_DK.UTF-8 locale to test locale invariance
 RUN localedef -i en_DK -f UTF-8 en_DK.UTF-8
