@@ -481,6 +481,17 @@ class Executor(object):
         return ret
 
 class ExecutorV2:
+    """Executor is the object providing efficient symbolic and imperative graph
+    execution and optimization.
+
+    Examples
+    --------
+    >>> # typical approach to create an executor is to bind symbol
+    >>> a = mx.sym.var('a')
+    >>> b = mx.sym.var('b')
+    >>> c = 2 * a + b
+    >>> texec = c._bind(mx.cpu(), {'a': mx.nd.array([1,2]), 'b':mx.nd.array([2,3])})
+    """
     def __init__(self, sym, ctx, args, args_grad, grad_req, aux_states):
         self.outputs = None
         self._input_names = sym.list_inputs()
@@ -582,6 +593,28 @@ class ExecutorV2:
 
 
     def forward(self, is_train=False, **kwargs):
+        """Calculate the outputs specified by the bound symbol.
+
+        Parameters
+        ----------
+        is_train: bool, optional
+            Whether this forward is for evaluation purpose. If True,
+            a backward call is expected to follow.
+
+        **kwargs
+            Additional specification of input arguments.
+
+        Examples
+        --------
+        >>> # doing forward by specifying data
+        >>> texec.forward(is_train=True, data=mydata)
+        >>> # doing forward by not specifying things, but copy to the executor before hand
+        >>> mydata.copyto(texec.arg_dict['data'])
+        >>> texec.forward(is_train=True)
+        >>> # doing forward by specifying data and get outputs
+        >>> outputs = texec.forward(is_train=True, data=mydata)
+        >>> print(outputs[0].asnumpy())
+        """
         if kwargs:
             from . import ndarray
             for name, array in kwargs.items():
@@ -613,6 +646,20 @@ class ExecutorV2:
         return self.outputs
 
     def backward(self, out_grads=None):
+        """Do backward pass to get the gradient of arguments.
+
+        Parameters
+        ----------
+        out_grads : NDArray or list of NDArray or dict of str to NDArray, optional
+            Gradient on the outputs to be propagated back.
+            This parameter is only needed when bind is called
+            on outputs that are not a loss function.
+        is_train : bool, default True
+            Whether this backward is for training or inference. Note that in rare
+            cases you want to call backward with is_train=False to get gradient
+            during inference.
+
+        """
         from . import autograd
         if out_grads is not None:
             if not isinstance(out_grads, (list, tuple)):
@@ -679,6 +726,17 @@ class ExecutorV2:
 
     @property
     def arg_dict(self):
+        """Get dictionary representation of argument arrrays.
+
+        Returns
+        -------
+        arg_dict : dict of str to NDArray
+            The dictionary that maps the names of arguments to NDArrays.
+
+        Raises
+        ------
+        ValueError : if there are duplicated names in the arguments.
+        """
         ret = {}
         for k, v in zip(self._input_names, self._args):
             if k in self._arg_names:
@@ -687,6 +745,17 @@ class ExecutorV2:
 
     @property
     def aux_dict(self):
+        """Get dictionary representation of auxiliary states arrays.
+
+        Returns
+        -------
+        aux_dict : dict of str to NDArray
+            The dictionary that maps name of auxiliary states to NDArrays.
+
+        Raises
+        ------
+        ValueError : if there are duplicated names in the auxiliary states.
+        """
         ret = {}
         for k, v in zip(self._input_names, self._args):
             if k in self._aux_names:
@@ -695,6 +764,13 @@ class ExecutorV2:
 
     @property
     def grad_dict(self):
+        """Get dictionary representation of gradient arrays.
+
+        Returns
+        -------
+        grad_dict : dict of str to NDArray
+            The dictionary that maps name of arguments to gradient arrays.
+        """
         ret = {}
         for k, v in zip(self._input_names, self._args):
             if k in self._arg_names:
@@ -703,6 +779,17 @@ class ExecutorV2:
 
     @property
     def output_dict(self):
+        """Get dictionary representation of output arrays.
+
+        Returns
+        -------
+        output_dict : dict of str to NDArray
+            The dictionary that maps name of output names to NDArrays.
+
+        Raises
+        ------
+        ValueError : if there are duplicated names in the outputs.
+        """
         ret = {}
         for k, v in zip(self._output_names, self.outputs):
            ret[k] = v
