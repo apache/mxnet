@@ -1166,7 +1166,7 @@ def test_foreach():
             i = i + 1
 
         if is_train:
-            e = out.bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
+            e = out._bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
         else:
             e = out._bind(ctx=default_context(), args=arg_dict)
         # the inputs to forward and backward are the same so forward and backward
@@ -1410,6 +1410,7 @@ def test_foreach():
     def step14(in1, states, free):
         return (in1 + free[0], [])
     frees = [mx.nd.random.uniform(shape=(2))]
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)], []]
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads)
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads, False)
     def step15(in1, states, free):
