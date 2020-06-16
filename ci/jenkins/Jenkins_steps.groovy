@@ -394,20 +394,6 @@ def compile_centos7_cpu_mkldnn() {
     }]
 }
 
-def compile_static_cd_cpu(lib_name) {
-    return ['CPU: CD Static Build' : {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cd-static/cpu/') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('centos7_cpu', 'build_static_libmxnet cpu', false)
-            utils.pack_lib(lib_name, mx_cd_lib)
-          }
-        }
-      }
-    }]
-}
-
 def compile_centos7_gpu(lib_name) {
     return ['GPU: CentOS 7': {
       node(NODE_LINUX_CPU) {
@@ -416,20 +402,6 @@ def compile_centos7_gpu(lib_name) {
             utils.init_git()
             utils.docker_run('centos7_gpu_cu92', 'build_centos7_gpu', false)
             utils.pack_lib(lib_name, mx_lib)
-          }
-        }
-      }
-    }]
-}
-
-def compile_static_cd_gpu(lib_name) {
-    return ['GPU: CD Static Build' : {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cd-static/gpu/') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('centos7_gpu_cu102', 'build_static_libmxnet cu102', false)
-            utils.pack_lib(lib_name, mx_cd_lib)
           }
         }
       }
@@ -776,13 +748,14 @@ def compile_static_python_cpu() {
   }]
 }
 
-def compile_static_python_cpu_cmake() {
-  return ['Static build CPU CentOS7 Python with CMake' : {
+def compile_static_cd_cpu(lib_name) {
+  return ['CPU: CD Static Build' : {
     node(NODE_LINUX_CPU) {
-        ws('workspace/ut-publish-python-cpu') {
+        ws('workspace/build-cd-static/cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_cpu', 'build_static_python_cpu_cmake', false)
+            utils.docker_run('centos7_cpu', 'build_static_libmxnet cpu', false)
+            utils.pack_lib(lib_name, mx_cd_lib)
           }
         }
     }
@@ -802,13 +775,14 @@ def compile_static_python_gpu() {
   }]
 }
 
-def compile_static_python_gpu_cmake() {
-  return ['Static build GPU CentOS7 Python with CMake' : {
-    node(NODE_LINUX_GPU) {
-        ws('workspace/ut-publish-python-gpu') {
+def compile_static_cd_gpu(lib_name) {
+  return ['GPU: CD Static Build' : {
+    node(NODE_LINUX_CPU) {
+        ws('workspace/build-cd-static/gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_gpu_cu92', 'build_static_python_cu92_cmake')
+            utils.docker_run('centos7_gpu_cu102', 'build_static_libmxnet cu102', false)
+            utils.pack_lib(lib_name, mx_cd_lib)
           }
         }
     }

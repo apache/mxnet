@@ -1958,29 +1958,6 @@ build_static_python_cu92() {
     popd
 }
 
-build_static_python_cpu_cmake() {
-    set -ex
-    pushd .
-    export mxnet_variant=cpu
-    export CMAKE_STATICBUILD=1
-    source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-python36/enable
-    ./ci/publish/python/build.sh
-    popd
-}
-
-build_static_python_cu92_cmake() {
-    set -ex
-    pushd .
-    export mxnet_variant=cu92
-    export CMAKE_STATICBUILD=1
-    export USE_SYSTEM_CUDA=1
-    source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-python36/enable
-    ./ci/publish/python/build.sh
-    popd
-}
-
 publish_scala_build() {
     set -ex
     pushd .
