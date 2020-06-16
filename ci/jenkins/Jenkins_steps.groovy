@@ -1294,6 +1294,19 @@ def test_centos7_python3_cd_cpu(lib_name) {
     }]
 }
 
+def test_centos7_pypi_package_cd_cpu(lib_name) {
+    return ['PyPI package: CentOS 7 CPU CD': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/test-cd-pypi/cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_cd_lib)
+            utils.docker_run('centos7_cpu', 'ci_package_pypi cpu', false)
+          }
+        }
+      }
+    }]
+}
+
 def test_centos7_python3_gpu(lib_name) {
     return ['Python3: CentOS 7 GPU': {
       node(NODE_LINUX_GPU) {
@@ -1332,6 +1345,19 @@ def test_centos7_quantization_cd_gpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_cd_lib)
             utils.docker_run('centos7_gpu_cu102', 'unittest_ubuntu_python3_quantization_gpu', true)
+          }
+        }
+      }
+    }]
+}
+
+def test_centos7_pypi_package_cd_gpu(lib_name) {
+    return ['PyPI package: CentOS 7 GPU CD': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/test-cd-pypi/gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_cd_lib)
+            utils.docker_run('centos7_gpu_cu102', 'ci_package_pypi cu102', true)
           }
         }
       }
