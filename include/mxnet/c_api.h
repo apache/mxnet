@@ -1414,6 +1414,12 @@ MXNET_DLL int MXCreateCachedOpEX(SymbolHandle handle,
 MXNET_DLL int MXFreeCachedOp(CachedOpHandle handle);
 
 /*!
+ * \brief get optimized graph from the cached op
+ */
+MXNET_DLL int MXCachedOpGetOptimizedSymbol(CachedOpHandle handle,
+                                           SymbolHandle *out);
+
+/*!
  * \brief invoke a cached op
  * \param handle the handle to the cached op
  * \param num_inputs number of input NDArrays

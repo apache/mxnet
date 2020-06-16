@@ -570,6 +570,17 @@ class ExecutorV2:
                             self._args[i].grad[:] = g
         self._cached_op = ndarray.CachedOp(sym)
 
+    def get_optimized_symbol(self):
+        """Get an optimized version of the symbol from the executor.
+
+        Returns
+        -------
+        symbol : Symbol
+            Optimized symbol from the executor.
+        """
+        return self._cached_op.get_optimized_symbol()
+
+
     def forward(self, is_train=False, **kwargs):
         if kwargs:
             from . import ndarray

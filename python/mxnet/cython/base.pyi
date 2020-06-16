@@ -124,3 +124,5 @@ cdef extern from "mxnet/c_api.h":
     int MXCachedOpRegisterOpHook(NDArrayHandle handle,
                                  CachedOpMonitorCallback callback,
                                  _bool monitor_all);
+    int MXCachedOpGetOptimizedSymbol(CachedOpHandle handle,
+                                     SymbolHandle *out);

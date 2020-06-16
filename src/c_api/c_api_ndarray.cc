@@ -230,6 +230,19 @@ int MXFreeCachedOp(CachedOpHandle handle) {
   API_END();
 }
 
+/*!
+ * \brief get optimized graph from the cached op
+ */
+int MXCachedOpGetOptimizedSymbol(CachedOpHandle handle,
+                                 SymbolHandle *out) {
+  auto s = new nnvm::Symbol();
+  API_BEGIN();
+  CachedOpPtr op = *static_cast<CachedOpPtr*>(handle);
+  *s = op->GetOptimizedSymbol();
+  *out = s;
+  API_END_HANDLE_ERROR(delete s);
+}
+
 int MXInvokeCachedOpEx(CachedOpHandle handle,
                        int num_inputs,
                        NDArrayHandle *inputs,

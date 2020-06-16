@@ -126,6 +126,20 @@ cdef class CachedOp:
     def __del__(self):
         CALL(MXFreeCachedOp(self.chandle))
 
+    def get_optimized_symbol(self):
+        """Get an optimized version of the symbol from the cached op.
+
+        Returns
+        -------
+        symbol : Symbol
+            Optimized symbol from the executor.
+        """
+        from ..symbol import Symbol
+        cdef SymbolHandle shandle
+        CALL(MXCachedOpGetOptimizedSymbol(self.chandle, &shandle))
+        ret = Symbol(_ctypes.cast(<unsigned long long>shandle, _ctypes.c_void_p))
+        return ret
+
     def __call__(self, *args, out=None, default_ctx=None):
         """ctypes implementation of imperative invoke wrapper"""
         cdef vector[NDArrayHandle] ndvars

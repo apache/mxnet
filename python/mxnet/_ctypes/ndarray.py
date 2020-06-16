@@ -24,7 +24,7 @@ import ctypes
 
 from ..base import _LIB
 from ..base import c_str_array, c_handle_array
-from ..base import NDArrayHandle, CachedOpHandle
+from ..base import NDArrayHandle, CachedOpHandle, SymbolHandle
 from ..base import check_call
 from .. import _global_var
 
@@ -121,6 +121,20 @@ class CachedOp(object):
 
     def __del__(self):
         check_call(_LIB.MXFreeCachedOp(self.handle))
+
+    def get_optimized_symbol(self):
+        """Get an optimized version of the symbol from the cached op.
+
+        Returns
+        -------
+        symbol : Symbol
+            Optimized symbol from the executor.
+        """
+        from ..symbol import Symbol
+        sym_handle = SymbolHandle()
+        check_call(_LIB.MXCachedOpGetOptimizedSymbol(self.handle, ctypes.byref(sym_handle)))
+        ret = Symbol(sym_handle)
+        return ret
 
     def __call__(self, *args, **kwargs):
         """ctypes implementation of imperative invoke wrapper"""

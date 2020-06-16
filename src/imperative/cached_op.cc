@@ -32,6 +32,13 @@ DMLC_REGISTER_PARAMETER(CachedOpConfig);
 
 constexpr uint32_t kEidNotExist = std::numeric_limits<uint32_t>::max();
 
+nnvm::Symbol CachedOp::GetOptimizedSymbol() const {
+  Symbol ret;
+  ret.outputs = std::vector<nnvm::NodeEntry>(full_graph_.outputs.begin(),
+                                             full_graph_.outputs.begin() + num_outputs());
+  return ret.Copy();
+}
+
 CachedOp::CachedOp(
     const nnvm::Symbol& sym,
     const std::vector<std::pair<std::string, std::string> >& flags) : sym_(sym), flags_(flags) {
