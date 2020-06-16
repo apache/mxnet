@@ -1744,8 +1744,6 @@ def test_gluon_mvn():
                 samples_t = samples.reshape(-1, event_shape).asnumpy()[0]
                 scipy_mvn = ss.multivariate_normal(loc_t, sigma_t)
                 ss_out = scipy_mvn.logpdf(samples_t)
-                print(mx_out.shape)
-                print(mx_out_t.shape)
                 assert_almost_equal(mx_out_t, ss_out, atol=1e-4,
                                     rtol=1e-3, use_broadcast=False)
 
@@ -2217,13 +2215,14 @@ def test_gluon_stochastic_block():
     class dummyBlock(StochasticBlock):
         """In this test case, we generate samples from a Gaussian parameterized
         by `loc` and `scale` and accumulate the KL-divergence between it and
-        its prior into the block's loss storage."""
+        its prior and the l2 norm of `loc` into the block's loss storage."""
         @StochasticBlock.collectLoss
         def hybrid_forward(self, F, loc, scale):
             qz = mgp.Normal(loc, scale)
             # prior
             pz = mgp.Normal(F.np.zeros_like(loc), F.np.ones_like(scale))
             self.add_loss(mgp.kl_divergence(qz, pz))
+            self.add_loss((loc ** 2).sum(1))
             return qz.sample()
 
     shape = (4, 4)
@@ -2235,11 +2234,14 @@ def test_gluon_stochastic_block():
         scale = np.random.rand(*shape)
         mx_out = net(loc, scale).asnumpy()
         kl = net.losses[0].asnumpy()
+        l2_norm = net.losses[1].asnumpy()
         assert mx_out.shape == loc.shape
         assert kl.shape == loc.shape
+        assert l2_norm.shape == shape[:-1]
+        if hybridize:
+            net.export('dummyBlock', epoch=0)
 
 
-# @pytest.mark.skip("Stochastic sequential needs reimplementation")
 @with_seed()
 @use_np
 def test_gluon_stochastic_sequential():

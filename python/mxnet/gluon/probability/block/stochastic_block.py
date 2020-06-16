@@ -65,24 +65,15 @@ class StochasticBlock(HybridBlock):
 
         return inner
 
-    def __call__(self, *args):
+    def __call__(self, *args, **kwargs):
         """Calls forward. Only accepts positional arguments."""
-        for hook in self._forward_pre_hooks.values():
-            hook(self, args)
-        self._losses = []
-        # pylint: disable=no-value-for-parameter
-        out = self.forward(*args)  # out[0]: net output, out[1]: collected loss
+        out = super().__call__(*args, **kwargs)
         self._losses.extend(out[1])
-        for hook in self._forward_hooks.values():
-            hook(self, args, out)
         return out[0]
 
     @property
     def losses(self):
         return self._losses
-
-    def hybrid_forward(self, F, x, *args, **kwargs):
-        raise NotImplementedError
 
 
 class StochasticSequential(StochasticBlock):

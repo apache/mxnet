@@ -2217,13 +2217,14 @@ def test_gluon_stochastic_block():
     class dummyBlock(StochasticBlock):
         """In this test case, we generate samples from a Gaussian parameterized
         by `loc` and `scale` and accumulate the KL-divergence between it and
-        its prior into the block's loss storage."""
+        its prior and the l2 norm of `loc` into the block's loss storage."""
         @StochasticBlock.collectLoss
         def forward(self, loc, scale):
             qz = mgp.Normal(loc, scale)
             # prior
             pz = mgp.Normal(np.zeros_like(loc), np.ones_like(scale))
             self.add_loss(mgp.kl_divergence(qz, pz))
+            self.add_loss((loc ** 2).sum(1))
             return qz.sample()
 
     shape = (4, 4)
@@ -2235,5 +2236,47 @@ def test_gluon_stochastic_block():
         scale = np.random.rand(*shape)
         mx_out = net(loc, scale).asnumpy()
         kl = net.losses[0].asnumpy()
+        l2_norm = net.losses[1].asnumpy()
         assert mx_out.shape == loc.shape
         assert kl.shape == loc.shape
+        assert l2_norm.shape == shape[:-1]
+        if hybridize:
+            net.export('dummyBlock', epoch=0)
+
+
+@pytest.mark.skip("Stochastic sequential needs reimplementation")
+@with_seed()
+@use_np
+def test_gluon_stochastic_sequential():
+    class normalBlock(HybridBlock):
+        def forward(self, x):
+            return (x + 1)
+
+    class stochasticBlock(StochasticBlock):
+        @StochasticBlock.collectLoss
+        def forward(self, x):
+            self.add_loss(x ** 2)
+            self.add_loss(x - 1)
+            return (x + 1)
+
+    shape = (4, 4)
+    for hybridize in [True, False]:
+        initial_value = np.ones(shape)
+        net = StochasticSequential()
+        net.add(stochasticBlock())
+        net.add(normalBlock())
+        net.add(stochasticBlock())
+        net.add(normalBlock())
+        if hybridize:
+            net.hybridize()
+        mx_out = net(initial_value).asnumpy()
+        assert_almost_equal(mx_out, _np.ones(shape) * 5)
+        accumulated_loss = net.losses
+        assert len(accumulated_loss) == 2
+        assert_almost_equal(accumulated_loss[0][0].asnumpy(), _np.ones(shape))
+        assert_almost_equal(
+            accumulated_loss[0][1].asnumpy(), _np.ones(shape) - 1)
+        assert_almost_equal(
+            accumulated_loss[1][0].asnumpy(), _np.ones(shape) * 9)
+        assert_almost_equal(
+            accumulated_loss[1][1].asnumpy(), _np.ones(shape) + 1)
