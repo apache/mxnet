@@ -39,12 +39,14 @@ core_logic: {
     custom_steps.compile_centos7_cpu_mkldnn(),
     custom_steps.compile_static_scala_cpu(),
     custom_steps.compile_static_python_cpu(),
-    custom_steps.compile_static_python_cpu_cmake()
+    custom_steps.compile_static_cd_cpu('centos7_cpu_cd')
   ])
 
   utils.parallel_stage('Tests', [
     custom_steps.test_centos7_python3_cpu('centos7_cpu'),
-    custom_steps.test_centos7_scala_cpu('centos7_cpu_make')
+    custom_steps.test_centos7_scala_cpu('centos7_cpu_make'),
+    custom_steps.test_centos7_python3_cd_cpu('centos7_cpu_cd'),
+    custom_steps.test_centos7_pypi_package_cd_cpu('centos7_cpu_cd')
   ])
 }
 ,
