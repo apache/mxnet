@@ -1879,7 +1879,7 @@ ci_package_pypi() {
     cp include/mkldnn/dnnl_version.h 3rdparty/mkldnn/include/.
     cp include/mkldnn/dnnl_config.h 3rdparty/mkldnn/include/.
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
-    cd_package_pypi mxnet_variant
+    cd_package_pypi ${mxnet_variant}
     cd_integration_test_pypi
 }
 
