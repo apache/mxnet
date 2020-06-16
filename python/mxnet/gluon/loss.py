@@ -1010,7 +1010,6 @@ class SDMLLoss(Loss):
         confident output distributions." arXiv preprint arXiv:1701.06548 (2017).
         """
 
-        # TODO: replace with mx.nd.eye(batch_size) with mxnet 1.2
         gold = F.eye(batch_size)
         labels = gold * (1 - self.smoothing_parameter) + (1 - gold) * self.smoothing_parameter / (batch_size - 1)
         return labels
