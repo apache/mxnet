@@ -1557,6 +1557,51 @@ class Symbol(SymbolBase):
         This function simplifies the binding procedure. You need to specify only input data shapes.
         Before binding the executor, the function allocates arguments and auxiliary states
         that were not explicitly specified. Allows specifying data types.
+
+        Example
+        -------
+        >>> x = mx.sym.Variable('x')
+        >>> y = mx.sym.FullyConnected(x, num_hidden=4)
+        >>> exe = y.simple_bind(mx.cpu(), x=(5,4), grad_req='null')
+        >>> exe.forward()
+        [<NDArray 5x4 @cpu(0)>]
+        >>> exe.outputs[0].asnumpy()
+        array([[ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.],
+               [ 0.,  0.,  0.,  0.]], dtype=float32)
+        >>> exe.arg_arrays
+        [<NDArray 5x4 @cpu(0)>, <NDArray 4x4 @cpu(0)>, <NDArray 4 @cpu(0)>]
+        >>> exe.grad_arrays
+        [<NDArray 5x4 @cpu(0)>, <NDArray 4x4 @cpu(0)>, <NDArray 4 @cpu(0)>]
+
+        Parameters
+        ----------
+        ctx : Context
+            The device context the generated executor to run on.
+
+        grad_req: string
+            {'write', 'add', 'null'}, or list of str or dict of str to str, optional
+            To specify how we should update the gradient to the `args_grad`.
+
+            - 'write' means every time gradient is written to specified `args_grad` NDArray.
+            - 'add' means every time gradient is added to the specified NDArray.
+            - 'null' means no action is taken, the gradient may not be calculated.
+
+        type_dict  : Dict of str->numpy.dtype
+            Input type dictionary, name->dtype
+
+        stype_dict  : Dict of str->str
+            Input storage type dictionary, name->storage_type
+
+        kwargs : Dict of str->shape
+            Input shape dictionary, name->shape
+
+        Returns
+        -------
+        executor : mxnet.Executor
+            The generated executor
         """
         assert isinstance(grad_req, (str, dict))
         # infer shape
@@ -1913,8 +1958,84 @@ class Symbol(SymbolBase):
 
     def _bind(self, ctx, args, args_grad=None, grad_req='write',
          aux_states=None):
-        """Bind to get a cached op executor for testing
-        args_grad : list of NDArray, or dict of str -> NDArray
+        """Binds the current symbol to an executor and returns it.
+
+        We first declare the computation and then bind to the data to run.
+        This function returns an executor which provides method `forward()` method for evaluation
+        and a `outputs()` method to get all the results.
+
+        Example
+        -------
+        >>> a = mx.sym.Variable('a')
+        >>> b = mx.sym.Variable('b')
+        >>> c = a + b
+        <Symbol _plus1>
+        >>> ex = c.bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]), 'b' : mx.nd.ones([2,3])})
+        >>> ex.forward()
+        [<NDArray 2x3 @cpu(0)>]
+        >>> ex.outputs[0].asnumpy()
+        [[ 2.  2.  2.]
+        [ 2.  2.  2.]]
+
+        Parameters
+        ----------
+        ctx : Context
+            The device context the generated executor to run on.
+
+        args : list of NDArray or dict of str to NDArray
+            Input arguments to the symbol.
+
+            - If the input type is a list of `NDArray`, the order should be same as the order
+              of `list_arguments()`.
+            - If the input type is a dict of str to `NDArray`, then it maps the name of arguments
+              to the corresponding `NDArray`.
+            - In either case, all the arguments must be provided.
+
+        args_grad : list of NDArray or dict of str to `NDArray`, optional
+            When specified, `args_grad` provides NDArrays to hold
+            the result of gradient value in backward.
+
+            - If the input type is a list of `NDArray`, the order should be same as the order
+              of `list_arguments()`.
+            - If the input type is a dict of str to `NDArray`, then it maps the name of arguments
+              to the corresponding NDArray.
+            - When the type is a dict of str to `NDArray`, one only need to provide the dict
+              for required argument gradient.
+              Only the specified argument gradient will be calculated.
+
+        grad_req : {'write', 'add', 'null'}, or list of str or dict of str to str, optional
+            To specify how we should update the gradient to the `args_grad`.
+
+            - 'write' means everytime gradient is write to specified `args_grad` `NDArray`.
+            - 'add' means everytime gradient is add to the specified NDArray.
+            - 'null' means no action is taken, the gradient may not be calculated.
+
+        aux_states : list of `NDArray`, or dict of str to `NDArray`, optional
+            Input auxiliary states to the symbol, only needed when the output of
+            `list_auxiliary_states()` is not empty.
+
+            - If the input type is a list of `NDArray`, the order should be same as the order
+              of `list_auxiliary_states()`.
+            - If the input type is a dict of str to `NDArray`, then it maps the name of
+              `auxiliary_states` to the corresponding `NDArray`,
+            - In either case, all the auxiliary states need to be provided.
+
+        Returns
+        -------
+        executor : Executor
+            The generated executor
+
+        Notes
+        -----
+        Auxiliary states are the special states of symbols that do not correspond
+        to an argument, and do not have gradient but are still useful
+        for the specific operations. Common examples of auxiliary states include
+        the `moving_mean` and `moving_variance` states in `BatchNorm`.
+        Most operators do not have auxiliary states and in those cases,
+        this parameter can be safely ignored.
+
+        One can give up gradient by using a dict in `args_grad` and only specify
+        gradient they interested in.
         """
         assert isinstance(grad_req, (str, dict))
         return ExecutorV2(self, ctx, args, args_grad, grad_req, aux_states)
