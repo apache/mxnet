@@ -630,6 +630,7 @@ def _npx_index_add(a, ind, val):
     """
     Add values to input according to given indexes.
     If exists repeate positions to be updated, the update value will be accumulated.
+
     Parameters
     ----------
     a : ndarray
@@ -643,10 +644,12 @@ def _npx_index_add(a, ind, val):
               - ind.dtype should be 'int32' or 'int64'
     val : ndarray
         Input data. The array to update the input 'a'.
+
     Returns
     -------
     out : ndarray
         The output array.
+
     Examples
     --------
     >>> a = np.zeros((2, 3, 4))
@@ -705,6 +708,8 @@ def _npx_index_update(a, ind, val):
     If multiple indices refer to the same location it is undefined which update is chosen; it may choose
     the order of updates arbitrarily and nondeterministically (e.g., due to concurrent updates on some
     hardware platforms). Recommend not to use repeate positions.
+
+    Parameters
     ----------
     a : ndarray
         Input data. The array to be updated.
@@ -719,10 +724,12 @@ def _npx_index_update(a, ind, val):
     val : ndarray
         Input data. The array to update the input 'a'.
         Support dtype: 'float32', 'float64', 'int32', 'int64'.
+
     Returns
     -------
     out : ndarray
         The output array.
+
     Examples
     --------
     >>> a = np.zeros((2, 3, 4))
