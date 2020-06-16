@@ -16,6 +16,7 @@
 # under the License.
 
 # coding: utf-8
+# pylint: disable=abstract-method
 """Stochastic block class."""
 __all__ = ['StochasticBlock', 'StochasticSequential']
 
@@ -66,7 +67,7 @@ class StochasticBlock(HybridBlock):
         return inner
 
     def __call__(self, *args, **kwargs):
-        """Calls forward. Only accepts positional arguments."""
+		# pylint: disable=arguments-differ
         out = super().__call__(*args, **kwargs)
         self._losses.extend(out[1])
         return out[0]
