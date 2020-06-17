@@ -8586,7 +8586,20 @@ def test_np_share_memory():
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
     for op in ops:
         for dt in dtypes:
-            x = np.zeros([13, 21, 23, 22], dtype=dt)
+            if dt != np.int8:
+                y = _np.zeros([13, 21, 23, 22], dtype=dt)
+                x = mx.nd.from_numpy(y, zero_copy=True).as_np_ndarray()
+            else:
+                x = np.zeros([13, 21, 23, 22], dtype=dt)
+            if 'y' in vars():
+                assert not op(y[0,:,:,:], x[1,:,:,:])
+                assert not op(y[2,:,:,:], x[3,:,:,:])
+                assert not op(y[2:5,0,0,0], x[3:4,0,0,0])
+                assert not op(y[2:5,0,0,0], x[4:7,0,0,0])
+                assert op(y[0,0,0,2:5], x[0,0,0,3:4])
+                assert op(y[0,6,0,2:5], x[0,6,0,4:7])
+                assert not op(y[0,5,0,2:5], x[0,6,0,4:7])
+                del y
             assert not op(x[0,:,:,:], x[1,:,:,:])
             assert not op(x[2,:,:,:], x[3,:,:,:])
             assert not op(x[2:5,0,0,0], x[3:4,0,0,0])

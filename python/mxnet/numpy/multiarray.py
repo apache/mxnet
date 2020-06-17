@@ -10095,6 +10095,10 @@ def shares_memory(a, b, max_work=None):
     - Does not support `max_work`, it is a dummy argument
     - Actually it is same as `may_share_memory` in MXNet DeepNumPy
     """
+    if isinstance(a, _np.ndarray):
+        a = _as_mx_np_array(a)
+    if isinstance(a, _np.ndarray):
+        b = _as_mx_np_array(b)
     return _mx_nd_np.shares_memory(a, b, max_work)
 
 
@@ -10136,6 +10140,10 @@ def may_share_memory(a, b, max_work=None):
     - Does not support `max_work`, it is a dummy argument
     - Actually it is same as `shares_memory` in MXNet DeepNumPy
     """
+    if isinstance(a, _np.ndarray):
+        a = _as_mx_np_array(a)
+    if isinstance(a, _np.ndarray):
+        b = _as_mx_np_array(b)
     return _mx_nd_np.may_share_memory(a, b, max_work)
 
 
