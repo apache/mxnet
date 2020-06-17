@@ -25,6 +25,7 @@
 #ifndef MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_
 #define MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_OP_H_
 
+#include <assert.h>
 #include <mxnet/operator_util.h>
 #include <string>
 #include <vector>
@@ -1049,14 +1050,18 @@ void ReduceAxesBackwardUseInOut(const nnvm::NodeAttrs& attrs,
   ReduceAxesBackwardUseInOutImpl<xpu, OP, normalize>(ctx, small, inputs, req, outputs);
 }
 
-<<<<<<< HEAD
 namespace {  // unnamed namespace to keep scope of the struct within the file
 struct ShapeAndStride {
   index_t in_stride[MXNET_SPECIAL_MAX_NDIM];
   index_t out_stride[MXNET_SPECIAL_MAX_NDIM];
   index_t input_shape[MXNET_SPECIAL_MAX_NDIM];
   index_t output_shape[MXNET_SPECIAL_MAX_NDIM];
+  // axes: stores which axes in input is to broadcasted
+  index_t axes[MXNET_SPECIAL_MAX_NDIM];
+  int num_broadcast_axes = -1;
+  bool shape_changed = false;
 };
+}  // unnamed namespace
 
 /*!
  * \brief Calculates Stride of input and output tensor dimesnions
@@ -1071,24 +1076,59 @@ inline void PrepareAUXData(ShapeAndStride *aux_data,
                     mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape,
                     mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> out_shape,
                     int ndim) {
-  int iter = ndim - 1;
+  int iter = ndim - 1, i = 0;
   aux_data->out_stride[iter] = 1;
   aux_data->in_stride[iter] = 1;
   aux_data->input_shape[iter] = in_shape[iter];
   aux_data->output_shape[iter] = out_shape[iter];
+  if (in_shape[iter] != out_shape[iter]) {
+    aux_data->axes[i++] = iter;
+    aux_data->shape_changed = true;
+  }
   iter--;
   for (; iter >= 0; --iter) {
     aux_data->out_stride[iter] = aux_data->out_stride[iter + 1] * out_shape[iter + 1];
     aux_data->in_stride[iter] = aux_data->in_stride[iter + 1] * in_shape[iter + 1];
     aux_data->input_shape[iter] = in_shape[iter];
     aux_data->output_shape[iter] = out_shape[iter];
+    if (in_shape[iter] != out_shape[iter]) {
+      aux_data->axes[i++] = iter;
+      aux_data->shape_changed = true;
+    }
   }
+  aux_data->num_broadcast_axes = i;
+  assert(aux_data->num_broadcast_axes > -1 && aux_data->num_broadcast_axes < 4);
 }
-}  // unnamed namespace
 
-template<typename OP, typename IDXType = index_t>
-struct broadcast_kernel {
-=======
+template<typename OP>
+struct broadcast_kernel_gpu {
+  template<typename IType, typename OType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  IType *input,
+                                  OType *output,
+                                  const ShapeAndStride& aux_data,
+                                  const OpReqType req,
+                                  const int ndim) {
+    index_t idx = i;
+    index_t in_idx = i;
+#pragma unroll 4
+    for (int iter = ndim - 1; iter >= 0; --iter) {
+      index_t out_dim_shape = aux_data.output_shape[iter];
+      index_t out_dim_stride = aux_data.out_stride[iter];
+      // x % y = x - (x / y) * y
+      // speeds up modulo(%) operation in GPU
+      index_t dim_idx = idx - (idx / out_dim_shape) * out_dim_shape;
+      if (aux_data.input_shape[iter] != 1) {
+        in_idx += dim_idx * (aux_data.in_stride[iter] - out_dim_stride);
+      } else {
+        in_idx -= dim_idx * out_dim_stride;
+      }
+      idx /= out_dim_shape;
+    }
+    KERNEL_ASSIGN(output[i], req, OP::Map(input[in_idx]));
+  }
+};
+
 /**
  * Changed the thread workload mapping from 1
  * thread/output element to 1 thread/input to be broadcasted
@@ -1098,92 +1138,96 @@ struct broadcast_kernel {
  */
 template<typename OP>
 struct broadcast_kernel_cpu {
->>>>>>> 9919eff50... adding comments explaining code optimizations
   template<typename IType, typename OType>
   MSHADOW_XINLINE static void Map(index_t i,
                                   IType *input,
                                   OType *output,
                                   const ShapeAndStride& aux_data,
                                   const OpReqType req,
-<<<<<<< HEAD
                                   const int ndim) {
-    printf("size of IDXType=%d",sizeof(IDXType));
-    IDXType idx = i;
-    IDXType in_idx = i;
-#pragma unroll 4
-    for (IDXType iter = ndim - 1; iter >= 0; --iter) {
-      IDXType out_dim_shape = aux_data.output_shape[iter];
-      IDXType out_dim_stride = aux_data.out_stride[iter];
-      // x % y = x - (x / y) * y
-      // speeds up modulo(%) operation in GPU
-      IDXType dim_idx = idx - (idx / out_dim_shape) * out_dim_shape;
-      if (aux_data.input_shape[iter] != 1) {
-        in_idx += dim_idx * (aux_data.in_stride[iter] - out_dim_stride);
-      } else {
-        in_idx -= dim_idx * out_dim_stride;
-      }
-      idx /= out_dim_shape;
+    index_t idx = i;
+    index_t init_off = 0;
+    for (int iter = ndim - 1; idx > 0 && iter >= 0; --iter) {
+      size_t dim_idx = idx % aux_data.input_shape[iter];
+      init_off += dim_idx * aux_data.out_stride[iter];
+      idx /= aux_data.input_shape[iter];
     }
-    KERNEL_ASSIGN(output[i], req, OP::Map(input[in_idx]));
-=======
-                                  const uint32_t ndim,
-                                  const size_t *axes,
-                                  const size_t *out_stride,
-                                  const int num_broadcast_axes) {
-        index_t idx = i;
-        index_t init_off = 0;
-        for (int iter = ndim - 1; idx > 0 && iter >= 0; --iter) {
-          size_t dim_idx = idx % in_shape[iter];
-          init_off += dim_idx * out_stride[iter];
-          idx /= in_shape[iter];
+    index_t stride_0, stride_1, stride_2;
+    // Each case is based on the number of axis to be broadcasted
+    // (1, 2 or 3) after merging axes.
+    switch (aux_data.num_broadcast_axes) {
+      // when input shape is one of the follwing forms
+      // (x_1,1) or (x_1,1,x_2) or (1,x_1)
+      // x_1, x_2 are size of the dimensions that are not to be broadcasted
+      // in case of (x_1,1) the system leverages vectorization but in other 2
+      // the performance is improved due avoidance of duplicate stride calculations
+      // for each output location input[i] needs to be written to.
+      case 1 :
+        stride_0 = aux_data.out_stride[aux_data.axes[0]];
+        for (index_t l = 0; l < aux_data.output_shape[aux_data.axes[0]]; l++) {
+          KERNEL_ASSIGN(output[init_off + l * stride_0],
+              req, OP::Map(input[i]));
         }
-        index_t stride_0, stride_1, stride_2;
-        // Each case is based on the number of axis to be broadcasted
-        // (1, 2 or 3) after merging axes.
-        switch (num_broadcast_axes) {
-          // when input shape is amogst one of the form
-          // [(x,1), (x,1,x), (1,x)]
-          // x can be any +ve number >=0 and they need not be equal to each other
-          case 1 :
-            stride_0 = out_stride[axes[0]];
-            for (int l=0; l < out_shape[axes[0]]; l++) {
-              KERNEL_ASSIGN(output[init_off + l*stride_0],
+        break;
+      // when input shape is one of the follwing forms
+      // (x_1,1,x_2,1) or (1,x_1,1,x_2) or (x_1,1,x_2,1,x_3)
+      // x_1, x_2, x_3 are size of the dimensions that are not to be broadcasted
+      // in the inner most loop can be vectorized by compiler in outer loops
+      // the performance is improved due avoidance of duplicate stride calculations
+      // for each output location input[i] needs to be written to.
+      case 2:
+        stride_1 = aux_data.out_stride[aux_data.axes[1]];
+        stride_0 = aux_data.out_stride[aux_data.axes[0]];
+        for (index_t k = 0; k < aux_data.output_shape[aux_data.axes[1]]; k++) {
+          for (index_t l = 0; l < aux_data.output_shape[aux_data.axes[0]]; l++) {
+            KERNEL_ASSIGN(output[init_off + k * stride_1 + l * stride_0],
+                req, OP::Map(input[i]));
+          }
+        }
+        break;
+      // when input shape is of the form (1,x_1,1,x_2,1)
+      // x_1, x_2 are size of the dimensions that are not to be broadcasted
+      // here the last axis which is [4] is the one where compiler can vectorize
+      // the code the outer 2 loops improve preformance by avoiding
+      // duplicate stride calculations
+      // for each output location input[i] needs to be written to.
+      case 3:
+        stride_2 = aux_data.out_stride[aux_data.axes[2]];
+        stride_1 = aux_data.out_stride[aux_data.axes[1]];
+        stride_0 = aux_data.out_stride[aux_data.axes[0]];
+        for (index_t j = 0; j < aux_data.output_shape[aux_data.axes[2]]; j++) {
+          for (index_t k = 0; k < aux_data.output_shape[aux_data.axes[1]]; k++) {
+            for (index_t l = 0; l < aux_data.output_shape[aux_data.axes[0]]; l++) {
+              KERNEL_ASSIGN(output[init_off + j * stride_2 + k * stride_1 + l * stride_0],
                   req, OP::Map(input[i]));
             }
-            break;
-          // when input shape is amogst one of the form
-          // [(x,1,x,1), (1,x,1,x), (x,1,x,1,x)]
-          // x can be any +ve number >1 or =0(the axis ) and they need not be equal to each other
-          case 2:
-            stride_1 = out_stride[axes[1]], stride_0 = out_stride[axes[0]];
-            for (int k=0; k < out_shape[axes[1]]; k++) {
-              for (int l=0; l < out_shape[axes[0]]; l++) {
-                KERNEL_ASSIGN(output[init_off + k*stride_1 + l*stride_0],
-                    req, OP::Map(input[i]));
-              }
-            }
-            break;
-          // when input shape is of the form [(1,x,1,x,1)] and
-          // x can be any +ve number >=0 and they need not be equal to each other
-          case 3:
-            stride_2 = out_stride[axes[2]], stride_1 = out_stride[axes[1]];
-            stride_0 = out_stride[axes[0]];
-            for (int j=0; j < out_shape[axes[2]]; j++) {
-              for (int k=0; k < out_shape[axes[1]]; k++) {
-                for (int l=0; l < out_shape[axes[0]]; l++) {
-                  KERNEL_ASSIGN(output[init_off + j*stride_2 + k*stride_1 + l*stride_0],
-                      req, OP::Map(input[i]));
-                }
-              }
-            }
-            break;
+          }
         }
->>>>>>> 9919eff50... adding comments explaining code optimizations
+        break;
+    }
   }
 };
 
+template<typename OP>
+struct direct_copy {
+  template<typename IType, typename OType>
+  MSHADOW_XINLINE static void Map(index_t i,
+                                  IType *input,
+                                  OType *output,
+                                  const OpReqType req) {
+    KERNEL_ASSIGN(output[i], req, OP::Map(input[i]));
+  }
+};
+
+/**
+ * When CPU context is used the no. of kernel launches are equal to
+ * the no. of input elements, this helps leverage vectorization when possible
+ * When GPU context is used no. of kernel launches are equal to
+ * the no. of output elements, this ensures coalesced memory writes to output
+ * and improves coalesced memory reads.
+ */
 template<typename xpu>
-inline void BroadcastComputeImplCpu(const nnvm::NodeAttrs& attrs,
+inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
                                  const OpContext& ctx,
                                  const std::vector<TBlob>& inputs,
                                  const std::vector<OpReqType>& req,
@@ -1194,11 +1238,13 @@ inline void BroadcastComputeImplCpu(const nnvm::NodeAttrs& attrs,
   using namespace mxnet_op;
   mxnet::TShape src_shape, dst_shape;
   // combines 2 or more consecutive broadcast/non-broadcast axes together
-  // e.g. (3,4,1,1,5,1,6,7) (2,3,5) (5,10,9) -> (12,1,5,1,42) (1,3) (50, 9)
+  // e.g. (3,4,1,1,5,1,6,7) (2,3,5) (5,10,9) -> (3*4,1*1,5,1,6*7) (1,3) (5*10, 9)
+  //      -> (12,1,5,1,42) (1,3) (50, 9)
   //      and this is the new input for broadcast_kernel whose total
   //      num of dimensions cannot be greater than 5(throws an error otherwise).
   BroadcastReduceShapeCompact(outputs[0].shape_, small, &dst_shape, &src_shape);
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  bool isCPU = std::is_same<xpu, cpu>::value;
   MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, IType, {
     MSHADOW_TYPE_SWITCH_WITH_BOOL(outputs[0].type_flag_, OType, {
       mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> in_shape;
@@ -1212,72 +1258,38 @@ inline void BroadcastComputeImplCpu(const nnvm::NodeAttrs& attrs,
           out_shape[i] = 1;
         }
       }
-<<<<<<< HEAD
       struct ShapeAndStride aux_data;
       PrepareAUXData(&aux_data, in_shape, out_shape, dst_shape.ndim());
-      if (dst_shape.ndim() == 2) {
-=======
-      // axes: stores which axes in input is to broadcasted
-      // stride: stores offset corresponding to an index of output tensor.
-      //         It is calculated using shape of the output tensor.
-      size_t axes[dst_shape.ndim()], out_stride[dst_shape.ndim()];
-      int iter = dst_shape.ndim() - 1, i = 0;
-      bool shape_changed = false;
-      out_stride[iter] = 1;
-      if (in_shape[iter] != dst_shape[iter]) {
-        axes[i++] = iter;
-        shape_changed = true;
-      }
-      --iter;
-      for (; iter >= 0; --iter) {
-        if (in_shape[iter] != dst_shape[iter]) {
-          axes[i++] = iter;
-          shape_changed = true;
-        }
-        out_stride[iter] = out_stride[iter+1] * dst_shape[iter+1];
-      }
-      if (!shape_changed) {
+      if (!aux_data.shape_changed) {
         // If no broadcast is required (i.e. input_shape == output_shape)
         // then simply copy input to outout.
-        mxnet_op::copy(ctx.get_stream<xpu>(), outputs[0], inputs[0]);
+        Kernel<direct_copy<mshadow_op::identity>, xpu>::Launch(
+          s, outputs[0].Size(), inputs[0].dptr<IType>(), outputs[0].dptr<OType>(), req[0]);
       } else if (dst_shape.ndim() == 2) {
->>>>>>> 9919eff50... adding comments explaining code optimizations
         Tensor<xpu, 2, OType> out =
           outputs[0].get_with_shape<xpu, 2, OType>(dst_shape.get<2>(), s);
         Tensor<xpu, 2, IType> data =
           inputs[0].get_with_shape<xpu, 2, IType>(src_shape.get<2>(), s);
-<<<<<<< HEAD
-        if (ctx.run_ctx.get_ctx().dev_type == Context::kGPU) {
-          Kernel<broadcast_kernel<mshadow_op::identity, int>, xpu>::Launch(
+        if (isCPU) {
+          Kernel<broadcast_kernel_cpu<mshadow_op::identity>, xpu>::Launch(
+            s, data.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
+        } else {
+          Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
             s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
-	} else {
-          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
-	}
-=======
-        Kernel<broadcast_kernel_cpu<mshadow_op::identity>, xpu>::Launch(
-          s, data.shape_.Size(), data.dptr_, out.dptr_, in_shape,
-          out_shape, req[0], 2, axes, out_stride, 1);
->>>>>>> 9919eff50... adding comments explaining code optimizations
+        }
       } else {
         const int ndim = MXNET_SPECIAL_MAX_NDIM;
         Tensor<xpu, ndim, OType> out =
           outputs[0].get_with_shape<xpu, ndim, OType>(dst_shape.get<ndim>(), s);
         Tensor<xpu, ndim, IType> data =
           inputs[0].get_with_shape<xpu, ndim, IType>(src_shape.get<ndim>(), s);
-<<<<<<< HEAD
-        if (ctx.run_ctx.get_ctx().dev_type == Context::kGPU) {
-          Kernel<broadcast_kernel<mshadow_op::identity, int>, xpu>::Launch(
+        if (isCPU) {
+          Kernel<broadcast_kernel_cpu<mshadow_op::identity>, xpu>::Launch(
+            s, data.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
+        } else {
+          Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
             s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
-	} else {
-          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-            s, out.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
-	}
-=======
-        Kernel<broadcast_kernel_cpu<mshadow_op::identity>, xpu>::Launch(
-          s, data.shape_.Size(), data.dptr_, out.dptr_, in_shape,
-          out_shape, req[0], ndim, axes, out_stride, i);
->>>>>>> 9919eff50... adding comments explaining code optimizations
+        }
       }
     });
   });

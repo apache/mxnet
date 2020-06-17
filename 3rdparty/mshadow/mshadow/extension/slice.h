@@ -45,10 +45,10 @@ struct SliceExp : public TRValue<SliceExp<SrcExp,
                                  Device, srcdim, DType> {
   static const int dimslice = srcdim - dimsrc_m_slice;
   const SrcExp &src_;
-  int ch_begin_;
-  int ch_old_;
+  index_t ch_begin_;
+  index_t ch_old_;
   Shape<srcdim> shape_;
-  SliceExp(const SrcExp &src, int begin, int end)
+  SliceExp(const SrcExp &src, index_t begin, index_t end)
       : src_(src), ch_begin_(begin) {
     shape_ = ShapeCheck<srcdim, SrcExp>::Check(src_);
     ch_old_ = shape_[dimslice];
@@ -81,7 +81,7 @@ struct SliceExp : public TRValue<SliceExp<SrcExp,
 template<int sdim, typename SrcExp,
          typename Device, typename DType, int srcdim>
 inline SliceExp<SrcExp, Device, DType, srcdim, srcdim - sdim>
-slice(const TRValue<SrcExp, Device, srcdim, DType> &src, int begin, int end) {
+slice(const TRValue<SrcExp, Device, srcdim, DType> &src, index_t begin, index_t end) {
   TypeCheckPass<sdim < srcdim && ExpInfo<SrcExp>::kDim == srcdim>
       ::Error_Expression_Does_Not_Meet_Dimension_Req();
   return SliceExp<SrcExp, Device, DType, srcdim, srcdim - sdim>(src.self(), begin, end);
@@ -129,26 +129,26 @@ struct Plan<SliceExp<SrcExp, Device, DType, srcdim, dimsrc_m_slice>, DType> {
       : src_(MakePlan(e.src_)),
         height_(e.shape_.ProdShape(dimslice + 1, srcdim - 1)),
         ch_begin_(e.ch_begin_), ch_old_(e.ch_old_), ch_(e.shape_[dimslice]) {}
-  MSHADOW_XINLINE DType Eval(int i, int j) const {
-    const int y = i % height_;
+  MSHADOW_XINLINE DType Eval(index_t i, index_t j) const {
+    const index_t y = i % height_;
     i /= height_;
-    const int c = i % ch_ + ch_begin_;
-    const int b = i / ch_;
-    const int x = j;
+    const index_t c = i % ch_ + ch_begin_;
+    const index_t b = i / ch_;
+    const index_t x = j;
     return src_.Eval((b * ch_old_ + c) * height_ + y, x);
   }
-  MSHADOW_XINLINE DType &REval(int i, int j) {
-    const int y = i % height_;
+  MSHADOW_XINLINE DType &REval(index_t i, index_t j) {
+    const index_t y = i % height_;
     i /= height_;
-    const int c = i % ch_ + ch_begin_;
-    const int b = i / ch_;
-    const int x = j;
+    const index_t c = i % ch_ + ch_begin_;
+    const index_t b = i / ch_;
+    const index_t x = j;
     return src_.REval((b * ch_old_ + c) * height_ + y, x);
   }
 
  private:
   Plan<SrcExp, DType> src_;
-  const int height_, ch_begin_, ch_old_, ch_;
+  const index_t height_, ch_begin_, ch_old_, ch_;
 };  // struct Plan
 
 template<typename SrcExp,
@@ -159,16 +159,16 @@ struct Plan<SliceExp<SrcExp, Device, DType, srcdim, 1>, DType> {
   explicit Plan(const SliceExp<SrcExp, Device, DType, srcdim, 1> &e)
       : src_(MakePlan(e.src_)),
         ch_begin_(e.ch_begin_) {}
-  MSHADOW_XINLINE DType Eval(int y, int x) const {
+  MSHADOW_XINLINE DType Eval(index_t y, index_t x) const {
     return src_.Eval(y, x + ch_begin_);
   }
-  MSHADOW_XINLINE DType &REval(int y, int x) {
+  MSHADOW_XINLINE DType &REval(index_t y, index_t x) {
     return src_.REval(y, x + ch_begin_);
   }
 
  private:
   Plan<SrcExp, DType> src_;
-  const int ch_begin_;
+  const index_t ch_begin_;
 };
 }  // namespace expr
 }   // namespace mshadow

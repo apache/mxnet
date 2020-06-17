@@ -138,6 +138,7 @@ inline void MatmulImpl(const OpContext& ctx,
   mshadow::Tensor<xpu, 1, DType*> workspace;
   mshadow::Tensor<xpu, 3, DType> ans, mlhs, mrhs;
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
+  bool isCPU = std::is_same<xpu, cpu>::value;
   if (MatmulNeedBroadcast(a_shape, b_shape)) {
     // e.g. a.shape = (2, 3, 1, 4, 2)
     //      b.shape =       (5, 2, 4)
@@ -160,12 +161,21 @@ inline void MatmulImpl(const OpContext& ctx,
         struct ShapeAndStride aux_data_a, aux_data_b;
         PrepareAUXData(&aux_data_a, k_a_shape, k_a_shape_bc, ndim);
         PrepareAUXData(&aux_data_b, k_b_shape, k_b_shape_bc, ndim);
-        Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-          s, bc_size_a, input_a.dptr<IType>(), bc_a_ptr,
-          aux_data_a, OpReqType::kWriteTo, ndim);
-        Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
-          s, bc_size_b, input_b.dptr<IType>(), bc_b_ptr,
-          aux_data_b, OpReqType::kWriteTo, ndim);
+        if (isCPU) {
+          Kernel<broadcast_kernel_cpu<mshadow_op::identity>, xpu>::Launch(
+            s, input_a.Size(), input_a.dptr<IType>(), bc_a_ptr,
+            aux_data_a, OpReqType::kWriteTo, ndim);
+          Kernel<broadcast_kernel_cpu<mshadow_op::identity>, xpu>::Launch(
+            s, input_b.Size(), input_b.dptr<IType>(), bc_b_ptr,
+            aux_data_b, OpReqType::kWriteTo, ndim);
+        } else {
+          Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
+            s, bc_size_a, input_a.dptr<IType>(), bc_a_ptr,
+            aux_data_a, OpReqType::kWriteTo, ndim);
+          Kernel<broadcast_kernel_gpu<mshadow_op::identity>, xpu>::Launch(
+            s, bc_size_b, input_b.dptr<IType>(), bc_b_ptr,
+            aux_data_b, OpReqType::kWriteTo, ndim);
+        }
       });
     });
     ans = mshadow::Tensor<xpu, 3, DType>(output.dptr<DType>(),
