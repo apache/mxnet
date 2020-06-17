@@ -63,15 +63,12 @@ class CPUDeviceStorage {
 };  // class CPUDeviceStorage
 
 inline void CPUDeviceStorage::Alloc(Storage::Handle* handle) {
-  handle->dptr = nullptr;
-  const size_t size = handle->size;
-  if (size == 0) return;
-
+  // NOTE: handle->size is NOT 0. See calling method: StorageImpl::Alloc
 #if _MSC_VER
-  handle->dptr = _aligned_malloc(size, alignment_);
+  handle->dptr = _aligned_malloc(handle->size, alignment_);
   if (handle->dptr == nullptr) LOG(FATAL) << "Failed to allocate CPU Memory";
 #else
-  int ret = posix_memalign(&handle->dptr, alignment_, size);
+  int ret = posix_memalign(&handle->dptr, alignment_, handle->size);
   if (ret != 0) LOG(FATAL) << "Failed to allocate CPU Memory";
 #endif
 }

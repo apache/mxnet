@@ -30,7 +30,6 @@
 #include "mxnet/base.h"
 #include "mxnet/storage.h"
 #include "../common/cuda_utils.h"
-#include "../profiler/storage_profiler.h"
 
 namespace mxnet {
 namespace storage {
@@ -51,18 +50,13 @@ class PinnedMemoryStorage {
 };
 
 inline void PinnedMemoryStorage::Alloc(Storage::Handle* handle) {
-  handle->dptr = nullptr;
-  const size_t size = handle->size;
-  if (size == 0) return;
-
+  // NOTE: handle->size is NOT 0. See calling method: StorageImpl::Alloc
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
 #endif
   mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
   // make the memory available across all devices
-  CUDA_CALL(cudaHostAlloc(&handle->dptr, size, cudaHostAllocPortable));
-  // record the allocation event in the memory profiler
-  profiler::GpuDeviceStorageProfiler::Get()->OnAlloc(*handle, size, false);
+  CUDA_CALL(cudaHostAlloc(&handle->dptr, handle->size, cudaHostAllocPortable));
 }
 
 inline void PinnedMemoryStorage::Free(Storage::Handle handle) {
@@ -70,13 +64,7 @@ inline void PinnedMemoryStorage::Free(Storage::Handle handle) {
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
 #endif
   mxnet::common::cuda::DeviceStore device_store(handle.ctx.real_dev_id(), true);
-  cudaError_t err = cudaFreeHost(handle.dptr);
-  // ignore unloading error, as memory has already been recycled
-  if (err != cudaSuccess && err != cudaErrorCudartUnloading) {
-    LOG(FATAL) << "CUDA: " << cudaGetErrorString(err);
-  }
-  // record the deallocation event in the memory profiler
-  profiler::GpuDeviceStorageProfiler::Get()->OnFree(handle);
+  CUDA_CALL(cudaFreeHost(handle.dptr));
 }
 
 }  // namespace storage

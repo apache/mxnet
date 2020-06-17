@@ -115,11 +115,7 @@ class CPUSharedStorageManager final : public StorageManager {
 };  // class CPUSharedStorageManager
 
 void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
-  if (handle->size == 0) {
-    handle->dptr = nullptr;
-    return;
-  }
-
+  // NOTE: handle->size is NOT 0. See calling method: StorageImpl::Alloc
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   std::uniform_int_distribution<> dis(0, std::numeric_limits<int>::max());
   int fid = -1;

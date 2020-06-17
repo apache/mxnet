@@ -195,6 +195,11 @@ class GpuDeviceStorageProfiler {
   /*! \brief dump the allocation entries to file */
   void DumpProfile() const;
 
+  bool inline IsProfiling() const {
+    profiler::Profiler *prof = profiler::Profiler::Get();
+    return prof->IsProfiling(profiler::Profiler::kMemory);
+  }
+
  private:
   std::string filename_prefix_ = "gpu_memory_profile";
   /*! \brief Dynamically-sized dictionary of memory profile counters */
