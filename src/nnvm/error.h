@@ -21,6 +21,8 @@
 #define MXNET_NNVM_ERROR_H_
 
 #include <exception>
+#include <string>
+
 namespace nnvm {
 namespace pass {
 
