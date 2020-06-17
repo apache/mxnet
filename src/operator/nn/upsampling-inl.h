@@ -48,7 +48,7 @@ enum UpSamplingMultiInputMode {kConcat, kSum};
 }  // namespace up_enum
 
 struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
-  int scale;
+  mxnet::TShape scale;
   int num_filter;
   int sample_type;
   int num_args;
@@ -56,8 +56,10 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   uint64_t workspace;
   DMLC_DECLARE_PARAMETER(UpSamplingParam) {
     DMLC_DECLARE_FIELD(scale)
-    .set_range(1, 1000)
-    .describe("Up sampling scale");
+    .set_default(mxnet::TShape())
+    .describe("Up sampling scale. Integer or tuple of integers. "
+              "Different scale per dimension is allowed only for "
+              "nearest neighbor upsampling.");
     DMLC_DECLARE_FIELD(num_filter)
     .describe("Input filter. Only used by bilinear sample_type."
               "Since bilinear upsampling uses deconvolution, num_filters "
@@ -84,6 +86,21 @@ struct UpSamplingParam : public dmlc::Parameter<UpSamplingParam> {
   }
 };  // struct UpSamplingParam
 
+inline std::vector<int> scaleComp(const UpSamplingParam &param) {
+  std::vector<int> scaleArr{ 1, 1 };
+  if (param.scale.ndim() == 1) {
+    scaleArr[0] = param.scale[0];
+    scaleArr[1] = param.scale[0];
+  } else if (param.scale.ndim() == 2) {
+    scaleArr[0] = param.scale[0];
+    scaleArr[1] = param.scale[1];
+  } else if (param.scale.ndim() == 4) {
+    scaleArr[0] = param.scale[2];
+    scaleArr[1] = param.scale[3];
+  }
+  return scaleArr;
+}
+
 template<typename xpu, typename DType>
 void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
                        const std::vector<TBlob> &in_data,
@@ -103,21 +120,27 @@ void UpSamplingForward(const OpContext &ctx, const UpSamplingParam &param,
     for (int i = 0; i < param.num_args; ++i) {
       Tensor<xpu, 4, DType> data = in_data[i].get<xpu, 4, DType>(s);
       int end = begin + data.size(1);
-      int scale = out_data[up_enum::kOut].size(2)/in_data[i].size(2);
+      // 3rd dimension of TBlob
+      int scale_h = out_data[up_enum::kOut].size(2)/in_data[i].size(2);
+      // 4th dimension of TBlob
+      int scale_w = out_data[up_enum::kOut].size(3)/in_data[i].size(3);
       if (param.multi_input_mode == up_enum::kSum) {
         if (i == 0) {
-          Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale));
+          Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_h, scale_w));
         } else {
-          out += upsampling_nearest(data, scale);
+          out += upsampling_nearest(data, scale_h, scale_w);
         }
       } else {
-        Assign(slice<1>(out, begin, end), req[up_enum::kOut], upsampling_nearest(data, scale));
+        Assign(slice<1>(out, begin, end),
+              req[up_enum::kOut],
+              upsampling_nearest(data, scale_h, scale_w));
       }
       begin = end;
     }
   } else {
     Tensor<xpu, 4, DType> data = in_data[up_enum::kData].get<xpu, 4, DType>(s);
-    Assign(out, req[up_enum::kOut], upsampling_nearest(data, param.scale));
+    std::vector<int> scale_hw = scaleComp(param);
+    Assign(out, req[up_enum::kOut], upsampling_nearest(data, scale_hw[0], scale_hw[1]));
   }
 }
 
@@ -136,44 +159,49 @@ void UpSamplingBackward(const OpContext &ctx, const UpSamplingParam &param,
       Tensor<xpu, 4, DType> input_grad = in_grad[i].get<xpu, 4, DType>(s);
       mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
       int end = begin + input_grad.size(1);
-      int scale = grad.size(2)/in_shape[0];
+      int scale_h = grad.size(2)/in_shape[0];
+      int scale_w = grad.size(3)/in_shape[1];
       if (param.multi_input_mode == up_enum::kSum) {
         Assign(input_grad, req[i],
                pool<mshadow::red::sum>(grad,
                                        in_shape,
-                                       scale,
-                                       scale,
-                                       scale,
-                                       scale));
+                                       scale_h,
+                                       scale_w,
+                                       scale_h,
+                                       scale_w));
       } else {
         Assign(input_grad, req[i],
                pool<mshadow::red::sum>(slice<1>(grad, begin, end),
                                        in_shape,
-                                       scale,
-                                       scale,
-                                       scale,
-                                       scale));
+                                       scale_h,
+                                       scale_w,
+                                       scale_h,
+                                       scale_w));
       }
       begin = end;
     }
   } else {
     Tensor<xpu, 4, DType> input_grad = in_grad[up_enum::kData].get<xpu, 4, DType>(s);
     mshadow::Shape<2> in_shape = Shape2(input_grad.shape_[2], input_grad.shape_[3]);
+    std::vector<int> scale_hw = scaleComp(param);
     Assign(input_grad, req[up_enum::kData],
            pool<mshadow::red::sum>(grad,
                                    in_shape,
-                                   param.scale,
-                                   param.scale,
-                                   param.scale,
-                                   param.scale));
+                                   scale_hw[0],
+                                   scale_hw[1],
+                                   scale_hw[0],
+                                   scale_hw[1]));
   }
 }
 
 static inline DeconvolutionParam GetDeconvolutionParam(const UpSamplingParam& param) {
   DeconvolutionParam p = DeconvolutionParam();
-  int kernel = 2 * param.scale - param.scale % 2;
-  int stride = param.scale;
-  int pad = static_cast<int>(ceil((param.scale - 1) / 2.));
+  std::vector<int> scale_hw = scaleComp(param);
+  CHECK_EQ(scale_hw[0], scale_hw[1]) <<
+  "UpSamplingBilinear: Scale should be the same along all dimensions for bilinear upsampling";
+  int kernel = static_cast<int>(2.0 * scale_hw[0] - ::fmod(scale_hw[0], 2));
+  int stride = scale_hw[0];
+  int pad = static_cast<int>(ceil((scale_hw[0] - 1) / 2.));
   p.workspace = param.workspace;
   p.num_group = param.num_filter;
   p.num_filter = param.num_filter;

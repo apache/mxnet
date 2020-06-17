@@ -1318,15 +1318,23 @@ def test_deconvolution_forward_with_bias():
 def check_nearest_upsampling_with_shape(shapes, scale, root_scale):
     arr = {'arg_%d'%i: mx.random.uniform(-10.0, 10.0, shape, ctx=mx.cpu()).copyto(default_context()) for i, shape in zip(range(len(shapes)), shapes)}
     arr_grad = {'arg_%d'%i: mx.nd.zeros(shape) for i, shape in zip(range(len(shapes)), shapes)}
-
     up = mx.sym.UpSampling(*[mx.sym.Variable('arg_%d'%i) for i in range(len(shapes))], sample_type='nearest', scale=root_scale)
     exe = up.bind(default_context(), args=arr, args_grad=arr_grad)
     exe.forward(is_train=True)
     exe.backward(exe.outputs)
     for k in range(len(shapes)):
         name = 'arg_%d'%k
-        assert_allclose(arr[name].asnumpy()*root_scale**2*scale**(2*k), arr_grad[name].asnumpy(), rtol=1e-4)
-
+        out = arr_grad[name].asnumpy()
+        root_h = root_w = 1
+        if type(root_scale) is int:
+            root_h = root_w = root_scale
+        elif len(root_scale) == 1:
+            root_h = root_w = root_scale[0]
+        elif len(root_scale) >= 2:
+            root_h = root_scale[0]
+            root_w = root_scale[1]
+        exp = arr[name].asnumpy() * root_h * root_w * scale ** (2 * k)
+        assert_allclose(exp, out, rtol=1.5e-4)
 
 def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_scale, num_filter):
     def _init_bilinear(arr, f):
@@ -1356,13 +1364,27 @@ def check_bilinear_upsampling_with_shape(data_shape, weight_shape, scale, root_s
     assert out.shape == data_shape[:2] + target_shape
 
 
+"""
+The test cases include integer, tuple, 
+and empty tuple scales on up to 3 shapes 
+at once with the shapes having various sizes 
+for their heights and widths
+"""
 @with_seed()
 def test_nearest_upsampling():
-    for root_scale in [1,2,3]:
-        for scale in [1,2,3]:
-            for num_shape in [1,2,3]:
-                for base in [1,2,3]:
-                    shapes = [(1,3,base*root_scale*scale**(num_shape-1-i),base*root_scale*scale**(num_shape-1-i)) for i in range(num_shape)]
+    for root_scale in [1, 2, (3), rand_shape_nd(1, 10), (5,1), (2,3), rand_shape_nd(2, 10), rand_shape_nd(2, 10), ()]:
+        for scale in [1, 2, 3]:
+            for num_shape in [1, 2, 3]:
+                for base in [1, 2, 3]:
+                    root_h = root_w = 1
+                    if type(root_scale) is int:
+                        root_h = root_w = root_scale
+                    elif len(root_scale) == 1:
+                        root_h = root_w = root_scale[0]
+                    elif len(root_scale) >= 2:
+                        root_h = root_scale[0]
+                        root_w = root_scale[1]
+                    shapes = [(1, 3, base*root_h*scale**(num_shape-1-i), base*root_w*scale**(num_shape-1-i)) for i in range(num_shape)]
                     check_nearest_upsampling_with_shape(shapes, scale, root_scale)
 
 

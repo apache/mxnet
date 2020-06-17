@@ -582,7 +582,7 @@
                scale (range 1 4)
                num-shape (range 1 4)
                base (range 1 4)]
-           (let [shape-vecs (mapv (fn [i] [1 3 (* base root-scale (int (Math/pow scale (- (dec num-shape) i))))
+          (let [shape-vecs (mapv (fn [i] [1 3 (* base root-scale (int (Math/pow scale (- (dec num-shape) i))))
                                            (* base root-scale (int (Math/pow scale (- (dec num-shape) i))))])
                                   (range 0 num-shape))]
              (check-nearest-up-sampling-with-shape {:shape-vecs shape-vecs :scale scale :root-scale root-scale})))))
