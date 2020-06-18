@@ -67,11 +67,7 @@ from . import rtc
 # Attribute scope to add attributes to symbolic graphs
 from .attribute import AttrScope
 
-from . import monitor
-from . import monitor as mon
-
 from . import torch
-from . import torch as th
 
 from . import profiler
 from . import log

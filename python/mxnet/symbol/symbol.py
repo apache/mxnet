@@ -33,12 +33,11 @@ import numpy as _numpy  # pylint: disable=relative-import
 from ..attribute import AttrScope
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
 from ..base import mx_uint, py_str, string_types, integer_types, mx_int, mx_int64
-from ..base import NDArrayHandle, ExecutorHandle, SymbolHandle
+from ..base import NDArrayHandle, SymbolHandle
 from ..base import check_call, MXNetError, NotImplementedForSymbol
 from ..context import Context, current_context
-from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP, _GRAD_REQ_MAP
+from ..ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from ..ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID, _int64_enabled, _SIGNED_INT32_UPPER_LIMIT
-from ..ndarray import _ndarray_cls
 from ..executor import Executor
 from . import _internal
 from . import op
@@ -1605,12 +1604,12 @@ class Symbol(SymbolBase):
         """
         assert isinstance(grad_req, (str, dict))
         # infer shape
-        arg_shapes, out_shapes, aux_shapes = self.infer_shape(**kwargs)
+        arg_shapes, out_shapes, _ = self.infer_shape(**kwargs)
         type_dict = {} if type_dict is None else type_dict
-        arg_dtypes, out_dtypes, aux_dtypes = None, None, None
+        arg_dtypes, out_dtypes, _ = None, None, None
         try:
             arg_dtypes, out_dtypes, aux_dtypes = self.infer_type(**type_dict)
-        except Exception as e:
+        except Exception: # pylint: disable=broad-except
             pass
         args = [None] * len(arg_shapes) if arg_shapes else []
         aux_states = [None] * len(aux_shapes) if aux_shapes else []
@@ -1618,19 +1617,19 @@ class Symbol(SymbolBase):
         arg_names = self.list_arguments()
         aux_names = self.list_auxiliary_states()
 
-        from ..ndarray import zeros
+        from ..ndarray import nd_zeros
         if arg_shapes:
             for i, shape in enumerate(arg_shapes):
                 if arg_dtypes:
-                    args[i] = zeros(shape, dtype=arg_dtypes[i])
+                    args[i] = nd_zeros(shape, dtype=arg_dtypes[i])
                 else:
-                    args[i] = zeros(shape)
+                    args[i] = nd_zeros(shape)
         if aux_shapes:
             for i, shape in enumerate(aux_shapes):
                 if aux_dtypes:
-                    aux_states[i] = zeros(shape, dtype=aux_dtypes[i])
+                    aux_states[i] = nd_zeros(shape, dtype=aux_dtypes[i])
                 else:
-                    aux_states[i] = zeros(shape)
+                    aux_states[i] = nd_zeros(shape)
 
         if stype_dict:
             for name, stype in stype_dict.items():
@@ -1651,10 +1650,10 @@ class Symbol(SymbolBase):
                     args_grad[name] = args[i].copy()
         else:
             args_grad = [x.copy() for x in args]
-        return ExecutorV2(self, ctx, args, args_grad, grad_req, aux_states)
+        return Executor(self, ctx, args, args_grad, grad_req, aux_states)
 
     def _bind(self, ctx, args, args_grad=None, grad_req='write',
-         aux_states=None):
+              aux_states=None):
         """Binds the current symbol to an executor and returns it.
 
         We first declare the computation and then bind to the data to run.

@@ -46,7 +46,6 @@ except ImportError:
 import mxnet as mx
 from .context import Context, current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
-from .ndarray import array
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
 from .util import use_np, use_np_default_dtype  # pylint: disable=unused-import
@@ -1358,7 +1357,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
     else:
         assert isinstance(location, dict), "Expect dict, get \"location\"=%s" %str(location)
         exe = sym._simple_bind(grad_req=grad_req, ctx=ctx,
-                              **{k: v.shape for k, v in location.items()})
+                               **{k: v.shape for k, v in location.items()})
 
     for name, iarr in location.items():
         exe.arg_dict[name][:] = iarr.astype(exe.arg_dict[name].dtype)

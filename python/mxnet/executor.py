@@ -19,16 +19,8 @@
 # pylint: disable=invalid-name, protected-access, too-many-locals, too-many-arguments
 """Symbolic Executor component of MXNet."""
 
-from array import array as py_array
-import ctypes
-import copy
 import numpy as np
-from .base import _LIB
-from .base import mx_uint, NDArrayHandle, SymbolHandle, ExecutorHandle, py_str, mx_int
-from .base import check_call, c_handle_array, c_array_buf, c_str_array
 from . import ndarray
-from .ndarray import NDArray
-from .ndarray import _ndarray_cls
 
 class Executor:
     """Executor is the object providing efficient symbolic and imperative graph
@@ -74,7 +66,7 @@ class Executor:
                     self._args[i] = v.copyto(ctx)
                 # ignore provided arg which is not present in
                 # input_names
-                except ValueError as e:
+                except ValueError:
                     pass
         else:
             assert isinstance(args, (list, tuple))
@@ -166,7 +158,6 @@ class Executor:
         >>> print(outputs[0].asnumpy())
         """
         if kwargs:
-            from . import ndarray
             for name, array in kwargs.items():
                 if name in self._input_names:
                     index = self._input_names.index(name)
@@ -178,8 +169,8 @@ class Executor:
                             if isinstance(self._grad_req, str):
                                 req = grad_req
                             else:
-                                assert isinstance(grad_req, dict)
-                                req = grad_req[name]
+                                assert isinstance(self._grad_req, dict)
+                                req = self._grad_req[name]
                             if req != 'null':
                                 with self._ctx:
                                     self._args[index].attach_grad(req)
@@ -229,7 +220,7 @@ class Executor:
                             v[:] = self._args[i].grad
                     # ignore provided arg grad which is not present in
                     # input_names
-                    except ValueError as e:
+                    except ValueError:
                         pass
             else:
                 assert isinstance(self._args_grad, (list, tuple))
@@ -239,6 +230,7 @@ class Executor:
 
     @property
     def aux_arrays(self):
+        """the auxilary argument array"""
         assert isinstance(self._args, list)
         aux_array = []
         for name in self._aux_names:
@@ -248,6 +240,7 @@ class Executor:
 
     @property
     def arg_arrays(self):
+        """the argument array"""
         assert isinstance(self._args, list)
         arg_array = []
         for name in self._arg_names:
@@ -257,20 +250,21 @@ class Executor:
 
     @property
     def grad_arrays(self):
+        """the gradient array"""
         if isinstance(self._args_grad, (list, tuple)):
             return list(self._args_grad)
 
         arr = [None] * len(self._arg_names)
         if self._args_grad:
             assert isinstance(self._args_grad, dict)
-            for k, v in self._args_grad.items():
+            for k, _ in self._args_grad.items():
                 try:
                     i = self._input_names.index(k)
                     j = self._arg_names.index(k)
                     arr[j] = self._args[i].grad
                 # ignore provided arg grad which is not present in
                 # input_names
-                except ValueError as e:
+                except ValueError:
                     pass
         return arr
 
@@ -290,7 +284,7 @@ class Executor:
         ret = {}
         for k, v in zip(self._input_names, self._args):
             if k in self._arg_names:
-               ret[k] = v
+                ret[k] = v
         return ret
 
     @property
@@ -309,7 +303,7 @@ class Executor:
         ret = {}
         for k, v in zip(self._input_names, self._args):
             if k in self._aux_names:
-               ret[k] = v
+                ret[k] = v
         return ret
 
     @property
@@ -324,7 +318,7 @@ class Executor:
         ret = {}
         for k, v in zip(self._input_names, self._args):
             if k in self._arg_names:
-               ret[k] = v.grad
+                ret[k] = v.grad
         return ret
 
     @property
@@ -342,7 +336,7 @@ class Executor:
         """
         ret = {}
         for k, v in zip(self._output_names, self.outputs):
-           ret[k] = v
+            ret[k] = v
         return ret
 
     def copy_params_from(self, arg_params, aux_params=None, allow_extra_params=False):
