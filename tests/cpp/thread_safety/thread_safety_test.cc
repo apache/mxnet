@@ -110,7 +110,7 @@ void get_expected_results(const mxnet::cpp::Symbol &sym,
     int num_output = 0;
     const int *stypes;
     int ret4 = MXInvokeCachedOpEx(*hdl, (*arr_handles)[i].size(), (*arr_handles)[i].data(),
-                                  &num_output, &nd_ptrs[i], &stypes);
+                                  cpu::kDevMask, 0, &num_output, &nd_ptrs[i], &stypes);
     if (ret4 < 0) {
       LOG(FATAL) << MXGetLastError();
     }
