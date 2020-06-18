@@ -26,6 +26,7 @@ from collections import OrderedDict
 import mxnet as mx
 from mxnet import profiler
 from mxnet.gluon import nn
+from mxnet.test_utils import is_cd_run
 from common import run_in_spawned_process
 import pytest
 
@@ -532,6 +533,7 @@ def test_gpu_memory_profiler_symbolic():
 
 
 @pytest.mark.skipif(mx.context.num_gpus() == 0, reason="GPU memory profiler records allocation on GPUs only")
+@pytest.mark.skipif(is_cd_run(), reason="flaky test - open issue #18564")
 def test_gpu_memory_profiler_gluon():
     enable_profiler(profile_filename='test_profiler.json',
                     run=True, continuous_dump=True)

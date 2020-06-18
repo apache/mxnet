@@ -1,6 +1,6 @@
 ---
 layout: page_api
-title: Symbol
+title: NDArray
 is_tutorial: true
 tag: r
 permalink: /api/r/docs/tutorials/symbol

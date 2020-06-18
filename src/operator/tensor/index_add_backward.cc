@@ -67,15 +67,15 @@ void IndexAddBackwardValCPUCompute(DType* grad_val,
 
 template<>
 void IndexAddOpBackwardValImpl<cpu>(const OpContext& ctx,
-                               const TBlob& grad_val,
-                               const TBlob& ograd,
-                               const TBlob& t_ind,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_stride,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride,
-                               const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_shape,
-                               const int tail_size, const int ind_num, const int ind_ndim,
-                               const int ndim) {
+                                    const TBlob& grad_val,
+                                    const TBlob& ograd,
+                                    const TBlob& t_ind,
+                                    const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_tail_shape,
+                                    const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> ograd_pre_stride,
+                                    const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_stride,
+                                    const mshadow::Shape<MXNET_SPECIAL_MAX_NDIM> val_shape,
+                                    const int tail_size, const int ind_num, const int ind_ndim,
+                                    const int ndim) {
   using namespace mshadow;
   using namespace mxnet_op;
   int seg = MXNET_SPECIAL_MAX_NDIM - ndim;

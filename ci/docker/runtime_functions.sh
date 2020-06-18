@@ -1871,6 +1871,18 @@ build_static_libmxnet() {
     popd
 }
 
+# Tests CD PyPI packaging in CI
+ci_package_pypi() {
+    set -ex
+    # copies mkldnn header files to 3rdparty/mkldnn/include/ as in CD
+    mkdir -p 3rdparty/mkldnn/include
+    cp include/mkldnn/dnnl_version.h 3rdparty/mkldnn/include/.
+    cp include/mkldnn/dnnl_config.h 3rdparty/mkldnn/include/.
+    local mxnet_variant=${1:?"This function requires a python command as the first argument"}
+    cd_package_pypi ${mxnet_variant}
+    cd_integration_test_pypi
+}
+
 # Packages libmxnet into wheel file
 cd_package_pypi() {
     set -ex
@@ -1939,29 +1951,6 @@ build_static_python_cu92() {
     set -ex
     pushd .
     export mxnet_variant=cu92
-    export USE_SYSTEM_CUDA=1
-    source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-python36/enable
-    ./ci/publish/python/build.sh
-    popd
-}
-
-build_static_python_cpu_cmake() {
-    set -ex
-    pushd .
-    export mxnet_variant=cpu
-    export CMAKE_STATICBUILD=1
-    source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-python36/enable
-    ./ci/publish/python/build.sh
-    popd
-}
-
-build_static_python_cu92_cmake() {
-    set -ex
-    pushd .
-    export mxnet_variant=cu92
-    export CMAKE_STATICBUILD=1
     export USE_SYSTEM_CUDA=1
     source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
