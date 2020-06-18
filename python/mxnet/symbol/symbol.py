@@ -1617,7 +1617,7 @@ class Symbol(SymbolBase):
         arg_names = self.list_arguments()
         aux_names = self.list_auxiliary_states()
 
-        from ..ndarray import nd_zeros
+        from ..ndarray import zeros as nd_zeros
         if arg_shapes:
             for i, shape in enumerate(arg_shapes):
                 if arg_dtypes:
