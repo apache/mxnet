@@ -99,10 +99,10 @@ sub call
     my ($output, $stypes) = check_call(
         AI::MXNetCAPI::InvokeCachedOpEx(
             $self->handle,
-            $args->[0]->device_type_id,
-            $args->[0]->device_id,
             scalar(@args),
             [map { $_->handle } @args],
+            $args->[0]->device_type_id,
+            $args->[0]->device_id,
             [map { $_->handle } @$out]
         )
     );
