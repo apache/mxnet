@@ -8582,6 +8582,7 @@ def test_npx_reshape():
 @use_np
 def test_np_share_memory():
     ops = [np.shares_memory, np.may_share_memory]
+    ctx = mx.context.current_context()
     # reshape not support boolean types
     dtypes = [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64]
     for op in ops:
@@ -8591,7 +8592,7 @@ def test_np_share_memory():
                 x = mx.nd.from_numpy(y, zero_copy=True).as_np_ndarray()
             else:
                 x = np.zeros([13, 21, 23, 22], dtype=dt)
-            if 'y' in vars():
+            if 'y' in vars() and ctx.device_type == 'cpu':
                 assert not op(y[0,:,:,:], x[1,:,:,:])
                 assert not op(y[2,:,:,:], x[3,:,:,:])
                 assert not op(y[2:5,0,0,0], x[3:4,0,0,0])

@@ -10097,8 +10097,10 @@ def shares_memory(a, b, max_work=None):
     """
     if isinstance(a, _np.ndarray):
         a = _as_mx_np_array(a)
-    if isinstance(a, _np.ndarray):
+    if isinstance(b, _np.ndarray):
         b = _as_mx_np_array(b)
+    if a.ctx != b.ctx:
+        return False
     return _mx_nd_np.shares_memory(a, b, max_work)
 
 
@@ -10142,8 +10144,10 @@ def may_share_memory(a, b, max_work=None):
     """
     if isinstance(a, _np.ndarray):
         a = _as_mx_np_array(a)
-    if isinstance(a, _np.ndarray):
+    if isinstance(b, _np.ndarray):
         b = _as_mx_np_array(b)
+    if a.ctx != b.ctx:
+        return False
     return _mx_nd_np.may_share_memory(a, b, max_work)
 
 
