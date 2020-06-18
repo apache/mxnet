@@ -463,9 +463,10 @@ class Block(object):
 
         if not loaded:
             return
-        self.load_dict(loaded, filename, ctx, allow_missing, ignore_extra, cast_dtype, dtype_source)
+        full_dict = {'params': loaded, 'filename': filename}
+        self.load_dict(full_dict, ctx, allow_missing, ignore_extra, cast_dtype, dtype_source)
 
-    def load_dict(self, param_dict, filename=None, ctx=None, allow_missing=False,
+    def load_dict(self, param_dict, ctx=None, allow_missing=False,
                   ignore_extra=False, cast_dtype=False, dtype_source="current"):
         """Load parameters from dict
 
@@ -473,7 +474,6 @@ class Block(object):
         ----------
         param_dict : dict
             Dictionary containing model parameters
-        filename : str, default None
         ctx : Context or list of Context
             Context(s) initialize loaded parameters on.
         allow_missing : bool, default False
@@ -489,6 +489,12 @@ class Block(object):
             Only valid if cast_dtype=True, specify the source of the dtype for casting
             the parameters
         """
+        if isinstance(param_dict.get('filename'), str):
+            # pass from load_parameters
+            filename = param_dict['filename']
+            param_dict = param_dict['params']
+        else:
+            filename = None
         params = self.collect_params()
         error_str = "file: %s" % (filename) if filename else "param_dict"
         loaded = {k[4:] if k.startswith('arg:') or k.startswith('aux:') else k: v \
