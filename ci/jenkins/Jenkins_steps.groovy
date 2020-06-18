@@ -1084,20 +1084,6 @@ def test_unix_r_mkldnn_cpu(lib_name) {
     }]
 }
 
-def test_unix_perl_cpu(lib_name) {
-    return ['Perl: CPU Makefile': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-perl-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_make)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpugpu_perl', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_cpp_gpu(lib_name) {
     return ['Cpp: GPU': {
       node(NODE_LINUX_GPU_G4) {
@@ -1119,20 +1105,6 @@ def test_unix_cpp_cpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_cmake_lib_debug, true)
             utils.docker_run('ubuntu_cpu', 'unittest_cpp', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_perl_gpu(lib_name) {
-    return ['Perl: GPU Makefile': {
-      node(NODE_LINUX_GPU_G4) {
-        ws('workspace/ut-perl-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_make)
-            utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_cpugpu_perl', true)
             utils.publish_test_coverage()
           }
         }

@@ -1124,11 +1124,6 @@ unittest_ubuntu_cpu_clojure_integration() {
 }
 
 
-unittest_ubuntu_cpugpu_perl() {
-    set -ex
-    ./perl-package/test.sh
-}
-
 unittest_cpp() {
     set -ex
     build/tests/mxnet_unit_tests
