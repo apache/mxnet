@@ -23,7 +23,6 @@ __all__ = ['DeferredInitializationError', 'Parameter', 'Constant',
            'tensor_types']
 
 
-from collections import OrderedDict, defaultdict
 import uuid
 import warnings
 import weakref
@@ -33,7 +32,7 @@ from ..base import mx_real_t, MXNetError
 from .. import symbol, ndarray, initializer, context, _deferred_compute as dc
 from ..context import Context, cpu
 from .. import autograd
-from .utils import _indent, _brief_print_list, shape_is_known
+from .utils import shape_is_known
 from ..util import is_np_shape, is_np_array
 from .. import numpy as _mx_np  # pylint: disable=reimported
 
