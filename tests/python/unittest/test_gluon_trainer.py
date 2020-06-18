@@ -224,7 +224,7 @@ def test_trainer_reset_kv():
         params = {'x': x}
         x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         trainer = gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
-        mx.nd.save('test_trainer_reset_kv.params', params)
+        mx.nd.save('test_trainer_reset_kv.params', {k: v._reduce() for k, v in params.items()})
         with mx.autograd.record():
             for w in x.list_data():
                 y = w + 1
@@ -234,6 +234,7 @@ def test_trainer_reset_kv():
         # load would reset kvstore
         mx.nd.waitall()
         params = mx.nd.load('test_trainer_reset_kv.params')
+        x._load_init(params['x'], None)
         if trainer._update_on_kvstore:
             # drop kvstore state if new parameters are loaded
             assert trainer._kvstore is None

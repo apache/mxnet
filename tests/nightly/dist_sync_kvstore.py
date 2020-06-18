@@ -357,6 +357,7 @@ def test_invalid_operations():
         params = {'x': x}
         x.initialize(ctx=mx.cpu(0), init='zeros')
         trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
+        params = {'x': x._reduce()}
         mx.nd.save('test_gluon_trainer_reset_' + str(my_rank) + '.params', params)
         row_id = mx.nd.arange(0, 4)
         w = x.row_sparse_data(row_id)
