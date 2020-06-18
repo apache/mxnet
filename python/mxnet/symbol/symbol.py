@@ -1608,7 +1608,7 @@ class Symbol(SymbolBase):
         type_dict = {} if type_dict is None else type_dict
         arg_dtypes, _, _ = None, None, None
         try:
-            arg_dtypes, out_dtypes, aux_dtypes = self.infer_type(**type_dict)
+            arg_dtypes, _, aux_dtypes = self.infer_type(**type_dict)
         except Exception: # pylint: disable=broad-except
             pass
         args = [None] * len(arg_shapes) if arg_shapes else []
