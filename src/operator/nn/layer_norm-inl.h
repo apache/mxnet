@@ -110,7 +110,8 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       workspace_size =
-        broadcast::ReduceWorkspaceSize<NDim, DType>(s, mean_data.shape_, req[0], in_data.shape_);
+        broadcast::ReduceWorkspaceSize<NDim>(s, mean_data.shape_, req[0],
+                                             in_data.shape_, sizeof(DType));
     });
   });
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
@@ -258,14 +259,16 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       reduce_workspace_size =
         std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_dst_shape,
-                                                             kAddTo, red_src_shape));
+                 broadcast::ReduceWorkspaceSize<NDim>(s, red_dst_shape,
+                                                      kAddTo, red_src_shape,
+                                                      sizeof(DType)));
     });
     BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
       reduce_workspace_size =
         std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_exclude_dst_shape, kAddTo,
-                                                             red_exclude_src_shape));
+                 broadcast::ReduceWorkspaceSize<NDim>(s, red_exclude_dst_shape, kAddTo,
+                                                      red_exclude_src_shape,
+                                                      sizeof(DType)));
     });
   });
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(

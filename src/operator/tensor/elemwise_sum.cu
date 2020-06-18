@@ -111,7 +111,7 @@ void VectorizedElementwiseSum(const nnvm::NodeAttrs &attrs,
   mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
   if (req[0] == kNullOp) return;
   CHECK_EQ(outputs.size(), 1U);
-  size_t output_type_size = util::mshadow_type_info(outputs[0].type_flag_).size;
+  size_t output_type_size = common::mshadow_type_info(outputs[0].type_flag_).size;
   const int nvec = output_type_size <= sizeof(uint2)
                      ? (sizeof(uint2) / output_type_size)
                      : 1;

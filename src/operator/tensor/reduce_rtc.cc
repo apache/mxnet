@@ -34,248 +34,56 @@ namespace broadcast {
 
 namespace {
 
-constexpr int nthread_reduce = 512;
-constexpr int kBaseGridNum = 1024;
-
-int diff(const TShape& small, const TShape& big, TShape* dims,
-  TShape* stride) {
-  int ndim = small.ndim();
-  int mdim = 0;
-  #pragma unroll
-  for (int i = 0; i < ndim; ++i) {
-    mdim += small[i] != big[i];
-    (*dims)[i] = (*stride)[i] = 1;
-  }
-
-  index_t s = 1;
-  #pragma unroll
-  for (int i = ndim - 1, j = mdim; i >= 0; --i) {
-    if (small[i] != big[i]) {
-      --j;
-      (*stride)[j] = s;
-      (*dims)[j] = big[i];
-    }
-    s *= big[i];
-  }
-  return mdim;
-}
-
-constexpr int warpSize = 32;
-constexpr int unroll_reduce = 2;
-constexpr int maxLoopPerTB = 64;
-
-// Returns a/b integer division rounded up
-template<typename Type>
-Type ceil_idiv(const Type a, const Type b) {
-  return (a + b - 1)/b;
-}
-
-uint64_t calc_num_load(const int X, const int Y, const int* strides) {
-  // Number of full warps
-  uint64_t num_full_warp = X / warpSize;
-  // Length of the partial warp i.e. number of threads that are performing loads
-  uint64_t len_part_warp = X % warpSize;
-
-  uint64_t num_load_full = (std::min(warpSize, strides[0]) +
-    std::min(warpSize, strides[1]) +
-    std::min(warpSize, strides[2]))*num_full_warp;
-
-  uint64_t num_load_part =
-  (std::min(len_part_warp, ceil_idiv<uint64_t>(len_part_warp*strides[0], warpSize)) +
-    std::min(len_part_warp, ceil_idiv<uint64_t>(len_part_warp*strides[1], warpSize)) +
-    std::min(len_part_warp, ceil_idiv<uint64_t>(len_part_warp*strides[2], warpSize)))*
-  (len_part_warp != 0);
-
-  uint64_t num_load = (num_load_full + num_load_part)*(uint64_t)Y;
-  return num_load;
-}
-
-struct RTCReduceImplConfig {
-  index_t N;
-  index_t M;
-  index_t Mnext;
-  struct {
-    dim3 blockDim;
-    dim3 gridDim;
-    int shMemSize;
-    bool do_transpose;
-  } kernel_1;
-  struct {
-    int blockSize;
-    int gridSize;
-  } kernel_2;
-  size_t workspace_size;
-
-  TShape rshape, rstride;
-  TShape lhs_shape, lhs_stride;
-  TShape rhs_shape, rhs_stride;
-
-  RTCReduceImplConfig(const ::mxnet::TShape& small, const ::mxnet::TShape& big,
-                      const size_t type_size, const ::mxnet::TShape* lhs,
-                      const ::mxnet::TShape* rhs) :
-    rshape(small.ndim(), 1), rstride(small.ndim(), 1),
-    lhs_shape(small.ndim(), 1), lhs_stride(small.ndim(), 1),
-    rhs_shape(small.ndim(), 1), rhs_stride(small.ndim(), 1) {
-    int ndim = small.ndim();
-
-    diff(small, big, &rshape, &rstride);
-    N = small.Size();
-
-    M = rshape[0];
-    for (int i = 1; i < ndim; ++i) {
-      M *= rshape[i];
-    }
-
-    bool multiOp = false;
-    if (lhs != nullptr) {
-      CHECK_NOTNULL(rhs);
-      diff(small, *lhs, &lhs_shape, &lhs_stride);
-      diff(small, *rhs, &rhs_shape, &rhs_stride);
-      multiOp = true;
-    }
-
-    workspace_size = 0;
-
-    if (M == 1) {
-      kernel_1.blockDim.x = nthread_reduce;
-      kernel_1.gridDim.x = std::min((unsigned int)kBaseGridNum,
-          (N + kernel_1.blockDim.x - 1)/kernel_1.blockDim.x);
-    } else {
-
-      int reduce_strides[3];
-      reduce_strides[0] = fastest_stride(small, big, big);
-      reduce_strides[1] = (multiOp) ? fastest_stride(small, *lhs, *lhs) : 1;
-      reduce_strides[2] = (multiOp) ? fastest_stride(small, *rhs, *rhs) : 1;
-
-      int reduce_strides_transp[3];
-      reduce_strides_transp[0] = fastest_stride(small, rshape, rstride);
-      reduce_strides_transp[1] = (multiOp) ?
-        fastest_stride(small, lhs_shape, lhs_stride) : 1;
-      reduce_strides_transp[2] = (multiOp) ?
-        fastest_stride(small, rhs_shape, rhs_stride) : 1;
-
-      uint64_t num_load = calc_num_load(N, M, reduce_strides);
-      uint64_t num_load_transp = calc_num_load(M, N, reduce_strides_transp);
-
-      Mnext = 1;
-      kernel_1.do_transpose = (num_load > num_load_transp);
-
-      kernel_1.blockDim.x = 0;
-      kernel_1.blockDim.y = 0;
-
-      if (kernel_1.do_transpose) {
-        // Fastest thread ID goes through M
-        // Loop over N has step size kernel_1.blockDim.y
-        if (N < 8) {
-          kernel_1.blockDim.y = 1;
-        } else if (N < 256) {
-          kernel_1.blockDim.y = 4;
-        } else {
-          if (M < 8) {
-            kernel_1.blockDim.x = 1;
-          } else if (M < 256) {
-            kernel_1.blockDim.x = 4;
-          } else {
-            kernel_1.blockDim.x = warpSize;
-          }
-        }
-      } else {
-        // Fastest thread ID goes through N
-        // Loop over M has step size kernel_1.blockDim.y
-        if (M < 8) {
-          kernel_1.blockDim.y = 1;
-        } else if (M < 256) {
-          kernel_1.blockDim.y = 4;
-        } else {
-          if (N < 8) {
-            kernel_1.blockDim.x = 1;
-          } else if (N < 256) {
-            kernel_1.blockDim.x = 4;
-          } else {
-            kernel_1.blockDim.x = warpSize;
-          }
-        }
-      }
-
-      if (kernel_1.blockDim.x == 0 && kernel_1.blockDim.y == 0) {
-        LOG(FATAL) << "Unable to set blockDim";
-      } else if (kernel_1.blockDim.x == 0) {
-        kernel_1.blockDim.x = nthread_reduce / kernel_1.blockDim.y;
-      } else if (kernel_1.blockDim.y == 0) {
-        kernel_1.blockDim.y = nthread_reduce / kernel_1.blockDim.x;
-      }
-
-      if (kernel_1.do_transpose) {
-        // Fastest thread ID goes through M
-        kernel_1.gridDim.x = std::min((unsigned int)kBaseGridNum,
-            ceil_idiv<unsigned int>(N, kernel_1.blockDim.y));
-        kernel_1.gridDim.y = std::min(kBaseGridNum, Mnext);
-        int by = kernel_1.blockDim.y;
-        if (kernel_1.blockDim.y % warpSize == 0) {
-          // Fix shared memory bank conflict
-          by++;
-        }
-        kernel_1.shMemSize = (kernel_1.blockDim.x > 1) ?
-          kernel_1.blockDim.x*by*type_size * 2 : 0;
-        // Maximum number of times we want TB to loop in M
-        // Max size of M-block each TB can handle
-        int maxMblock = kernel_1.blockDim.x*maxLoopPerTB;
-        Mnext = (M + maxMblock - 1) / maxMblock;
-      } else {
-        // Fastest thread ID goes through N
-        kernel_1.gridDim.x = std::min((unsigned int)kBaseGridNum,
-            ceil_idiv<unsigned int>(N, kernel_1.blockDim.x));
-        kernel_1.gridDim.y = std::min(kBaseGridNum, Mnext);
-        kernel_1.shMemSize = (kernel_1.blockDim.y > 1) ?
-          kernel_1.blockDim.x*kernel_1.blockDim.y*type_size * 2 : 0;
-        // Maximum number of times we want TB to loop in M
-        // Max size of M-block each TB can handle
-        int maxMblock = kernel_1.blockDim.y*maxLoopPerTB;
-        Mnext = (M + maxMblock - 1) / maxMblock;
-      }
-
-      if (Mnext > 1) {
-        // small_dptr[] is N*Mnext*type_size bytes
-        workspace_size += N*Mnext*sizeof(double);
-        // Set gridDim.y to Mnext
-        kernel_1.gridDim.y = std::min(kBaseGridNum, Mnext);
-      }
-
-      if (Mnext > 1) {
-        kernel_2.blockSize = nthread_reduce;
-        kernel_2.gridSize = std::min((int)kBaseGridNum,
-            (N + kernel_2.blockSize - 1)/kernel_2.blockSize );
-      }
-
-    }
-  }
-
-};
-
 struct reduce_kernel_params {
   index_t big_shape[MAX_DIM];
   index_t small_shape[MAX_DIM];
+  index_t lhs_shape0[MAX_DIM];
+  index_t rhs_shape0[MAX_DIM];
   index_t rshape[MAX_DIM];
   index_t rstride[MAX_DIM];
+  index_t lhs_stride[MAX_DIM];
+  index_t rhs_stride[MAX_DIM];
+  index_t lhs_shape[MAX_DIM];
+  index_t rhs_shape[MAX_DIM];
 };
+
+const char reduce_function_code[] = R"code(
+#define FUNC OP(IType0::from(big[idx_big[u]]))
+)code";
+
+const char reduce_function_use_input_code[] = R"code(
+#define FUNC OP1(IType0::from(big[idx_big[u]]),     \
+                 OP2(IType1::from(lhs[idx_lhs[u]]), \
+                     IType2::from(rhs[idx_rhs[u]])))
+)code";
 
 const char reduce_kernel_code[] = R"code(
 struct reduce_kernel_params {
   index_t big_shape[util::MAX_DIM];
   index_t small_shape[util::MAX_DIM];
+  index_t lhs_shape0[util::MAX_DIM];
+  index_t rhs_shape0[util::MAX_DIM];
   index_t rshape[util::MAX_DIM];
   index_t rstride[util::MAX_DIM];
+  index_t lhs_stride[util::MAX_DIM];
+  index_t rhs_stride[util::MAX_DIM];
+  index_t lhs_shape[util::MAX_DIM];
+  index_t rhs_shape[util::MAX_DIM];
 };
 
 __global__ void reduce_kernel(const int N, const int M, const bool addto,
                               const InputType0* __restrict big,
+                              const InputType1* __restrict lhs,
+                              const InputType2* __restrict rhs,
                               OutputType0 *small,
                               const reduce_kernel_params params,
                               const int Mnext) {
   extern __shared__ char shTileChar[];
-  using IType = AccType<InputType0>;
+  using IType0 = AccType<InputType0>;
+  using IType1 = AccType<InputType1>;
+  using IType2 = AccType<InputType2>;
   using OType = AccType<OutputType0>;
-  using AType = typename IType::type;
+  using AType = typename IType0::type;
   AType* shTile = (AType*)(shTileChar);
   const int tid = threadIdx.x + threadIdx.y*blockDim.x;
   const int bx = (do_transpose) ? blockDim.y : blockDim.x;
@@ -288,23 +96,38 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
     const index_t Mend   = (index_t)((int64)M*(int64)(m0 + 1)/(int64)Mnext);
     for (index_t idx0 = blockIdx.x*bx; idx0 < N; idx0 += bx*gridDim.x) {
       int idx = idx0 + tidx;
-      index_t idx_big0 = util::unravel_ravel<ndim>(idx, params.small_shape, params.big_shape);
+      index_t coord[ndim];
+      util::unravel(idx, params.small_shape, coord);
+      index_t idx_big0, idx_lhs0, idx_rhs0;
+      idx_big0 = util::ravel(coord, params.big_shape);
+      if (use_input) {
+        idx_lhs0 = util::ravel(coord, params.lhs_shape0);
+        idx_rhs0 = util::ravel(coord, params.rhs_shape0);
+      }
 
       AType val, residual;
       REDUCER::SetInitValue(val, residual);
       if (idx < N) {
         for (index_t k = tidy + Mstart; k < Mend; k += by*UNROLL) {
           index_t idx_big[UNROLL];
+          index_t idx_lhs[UNROLL];
+          index_t idx_rhs[UNROLL];
           #pragma unroll
           for (int u=0;u < UNROLL;u++) {
             idx_big[u] = idx_big0 + util::unravel_dot<ndim>(k + u*by, params.rshape,
                                                             params.rstride);
+            if (use_input) {
+              idx_lhs[u] = idx_lhs0 + util::unravel_dot<ndim>(k + u*by, params.lhs_shape,
+                                                              params.lhs_stride);
+              idx_rhs[u] = idx_rhs0 + util::unravel_dot<ndim>(k + u*by, params.rhs_shape,
+                                                              params.rhs_stride);
+            }
           }
           typename OType::type tmp[UNROLL];
           #pragma unroll
           for (int u=0;u < UNROLL;u++) {
             if (k + u*by < Mend) {
-              tmp[u] = OP(OType::from(big[idx_big[u]]));
+              tmp[u] = FUNC;
             }
           }
           #pragma unroll
@@ -385,8 +208,9 @@ __global__ void reduce_lines_kernel(const index_t N, const index_t M,
 
 void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
                 const TBlob& big, const Tensor<gpu, 1, char>& workspace,
-                const RTCReduceImplConfig& config, const int ndim,
-                const std::string &common_code, int dev_id) {
+                const ReduceImplConfig& config, const int ndim,
+                const std::string &common_code, int dev_id,
+                const TBlob *lhs = nullptr, const TBlob *rhs = nullptr) {
   using namespace common::cuda::rtc;
   void* small_dptr = small.dptr_;
   bool first_kernel_addto = addto;
@@ -402,7 +226,7 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
 
   const int by = (config.kernel_1.do_transpose) ?
     config.kernel_1.blockDim.x : config.kernel_1.blockDim.y;
-  const bool do_unroll = ( config.M / (by*config.Mnext) >= unroll_reduce );
+  const bool do_unroll = (config.M / (by*config.Mnext) >= unroll_reduce);
   std::string code = common_code +
                      "#define UNROLL " +
                      (do_unroll ? std::to_string(unroll_reduce) : "1") +
@@ -411,11 +235,26 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
                      (config.kernel_1.do_transpose ? "true" : "false") +
                      ";\n"
                      "using InputType0 = " +
-                     util::mshadow_type_info(big.type_flag_).name +
+                     common::mshadow_type_info(big.type_flag_).name +
                      ";\n"
                      "using OutputType0 = " +
-                     util::mshadow_type_info(small.type_flag_).name +
+                     common::mshadow_type_info(small.type_flag_).name +
+                     ";\n"
+                     "using InputType1 = " +
+                     ((lhs != nullptr)
+                     ? common::mshadow_type_info(lhs->type_flag_).name
+                     : "float32") +
+                     ";\n"
+                     "using InputType2 = " +
+                     ((rhs != nullptr)
+                     ? common::mshadow_type_info(rhs->type_flag_).name
+                     : "float32") +
                      ";\n";
+  if (lhs != nullptr) {
+    code += "const bool use_input = true;";
+  } else {
+    code += "const bool use_input = false;";
+  }
 
   reduce_kernel_params param {};
   for (int i = 0; i < ndim; ++i) {
@@ -423,19 +262,41 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
     param.small_shape[i] = small.shape_[i];
     param.rshape[i] = config.rshape[i];
     param.rstride[i] = config.rstride[i];
+    if (lhs != nullptr) {
+      param.lhs_shape0[i] = lhs->shape_[i];
+      param.rhs_shape0[i] = rhs->shape_[i];
+      param.lhs_shape[i] = config.lhs_shape[i];
+      param.rhs_shape[i] = config.rhs_shape[i];
+      param.lhs_stride[i] = config.lhs_stride[i];
+      param.rhs_stride[i] = config.rhs_stride[i];
+    }
   }
 
+  void *null_ptr = nullptr;
   std::vector<const void*> args;
   args.emplace_back(&config.N);
   args.emplace_back(&config.M);
   args.emplace_back(&first_kernel_addto);
   args.emplace_back(&big.dptr_);
+  if (lhs != nullptr) {
+    args.emplace_back(&(lhs->dptr_));
+    args.emplace_back(&(rhs->dptr_));
+  } else {
+    args.emplace_back(&(null_ptr));
+    args.emplace_back(&(null_ptr));
+  }
   args.emplace_back(&small_dptr);
   args.emplace_back(&param);
   args.emplace_back(&config.Mnext);
 
-  auto reduce_kernel_func = get_function(code + reduce_kernel_code, "reduce_kernel", dev_id);
-  launch(reduce_kernel_func, config.kernel_1.gridDim, config.kernel_1.blockDim, config.kernel_1.shMemSize, s, &args);
+  const auto &function_code = (lhs == nullptr)
+                            ? reduce_function_code
+                            : reduce_function_use_input_code;
+  auto reduce_kernel_func = get_function(code + function_code + reduce_kernel_code,
+                                         "reduce_kernel", dev_id);
+  launch(reduce_kernel_func, config.kernel_1.gridDim,
+         config.kernel_1.blockDim,
+         config.kernel_1.shMemSize, s, &args);
 
   if (config.Mnext > 1) {
     args.resize(0);
@@ -452,6 +313,91 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
   }
 }
 
+struct reduce_kernel_M1_params {
+  index_t big_shape[MAX_DIM];
+  index_t lhs_shape[MAX_DIM];
+  index_t rhs_shape[MAX_DIM];
+  index_t small_shape[MAX_DIM];
+};
+
+const char reduce_kernel_M1_code[] = R"code(
+struct reduce_kernel_M1_params {
+  index_t big_shape[util::MAX_DIM];
+  index_t lhs_shape[util::MAX_DIM];
+  index_t rhs_shape[util::MAX_DIM];
+  index_t small_shape[util::MAX_DIM];
+};
+
+__global__ void reduce_kernel_M1(const int N,
+                                 const InputType0* __restrict big,
+                                 const InputType1* __restrict lhs,
+                                 const InputType2* __restrict rhs,
+                                 OutputType0 *small,
+                                 const reduce_kernel_M1_params params) {
+  using IType0 = AccType<InputType0>;
+  using IType1 = AccType<InputType1>;
+  using IType2 = AccType<InputType2>;
+  using OType = AccType<OutputType0>;
+  for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
+    index_t coord[ndim];
+    util::unravel(idx, params.small_shape, coord);
+    const index_t idx_big = util::ravel(coord, params.big_shape);
+    const index_t idx_lhs = util::ravel(coord, params.lhs_shape);
+    const index_t idx_rhs = util::ravel(coord, params.rhs_shape);
+    const typename OType::type val =
+      OP1(IType0::from(big[idx_big]), OP2(IType1::from(lhs[idx_lhs]),
+                                          IType2::from(rhs[idx_rhs])));
+    if (req == OpReqType::kAddTo) {
+      const auto temp = op::add(val, OType::from(small[idx]));
+      small[idx] = OType::to(temp);
+    } else {
+      small[idx] = OType::to(val);
+    }
+  }
+}
+)code";
+
+void RTCReduceM1Impl(Stream<gpu> *s, const TBlob &small, const TBlob &big,
+                     const TBlob &lhs, const TBlob &rhs,
+                     const ReduceImplConfig &config, const int ndim,
+                     const std::string &common_code, int dev_id) {
+  using namespace common::cuda::rtc;
+
+  std::string code = common_code +
+                     "using InputType0 = " +
+                     common::mshadow_type_info(big.type_flag_).name +
+                     ";\n"
+                     "using InputType1 = " +
+                     common::mshadow_type_info(lhs.type_flag_).name +
+                     ";\n"
+                     "using InputType2 = " +
+                     common::mshadow_type_info(rhs.type_flag_).name +
+                     ";\n"
+                     "using OutputType0 = " +
+                     common::mshadow_type_info(small.type_flag_).name +
+                     ";\n";
+  reduce_kernel_M1_params param {};
+  for (int i = 0; i < ndim; ++i) {
+    param.big_shape[i] = big.shape_[i];
+    param.small_shape[i] = small.shape_[i];
+    param.lhs_shape[i] = lhs.shape_[i];
+    param.rhs_shape[i] = rhs.shape_[i];
+  }
+
+  std::vector<const void*> args;
+  args.emplace_back(&config.N);
+  args.emplace_back(&big.dptr_);
+  args.emplace_back(&lhs.dptr_);
+  args.emplace_back(&rhs.dptr_);
+  args.emplace_back(&small.dptr_);
+  args.emplace_back(&param);
+
+  auto reduce_kernel_M1_func = get_function(code + reduce_kernel_M1_code,
+                                            "reduce_kernel_M1", dev_id);
+  launch(reduce_kernel_M1_func, config.kernel_1.gridDim,
+         config.kernel_1.blockDim,
+         config.kernel_1.shMemSize, s, &args);
+}
 
 }  // namespace
 
@@ -467,11 +413,11 @@ void RTCReduce(const NodeAttrs& attrs,
   using namespace mxnet::common::cuda::rtc;
   if (req == kNullOp) return;
   Stream<gpu> *s = ctx.get_stream<gpu>();
-  size_t type_size = util::mshadow_type_info(small.type_flag_).size;
+  size_t type_size = common::mshadow_type_info(small.type_flag_).size;
   if (small.type_flag_ == mshadow::kFloat16) {
     type_size = sizeof(float);
   }
-  RTCReduceImplConfig config(small.shape_, big.shape_, type_size, nullptr, nullptr);
+  ReduceImplConfig config(small.shape_, big.shape_, nullptr, nullptr, type_size);
   if (config.M == 1) {
     // With M == 1 result is just (possibly reshaped) OP(big)
     UnaryRTCCompute {OP} (attrs, ctx, {big}, {req}, {small});
@@ -490,6 +436,49 @@ void RTCReduce(const NodeAttrs& attrs,
                               ";\n";
     RTCReduceImpl(s, small, req == kAddTo, big, workspace, config,
                   ndim, common_code, ctx.run_ctx.ctx.dev_id);
+  }
+}
+
+void RTCReduce(const NodeAttrs& attrs,
+               const OpContext& ctx,
+               const TBlob& small,
+               const OpReqType req,
+               const Tensor<gpu, 1, char>& workspace,
+               const TBlob& big,
+               const TBlob &lhs,
+               const TBlob &rhs,
+               const std::string& reducer,
+               int ndim,
+               const std::string& OP1,
+               const std::string& OP2) {
+  using namespace mxnet::common::cuda::rtc;
+  if (req == kNullOp) return;
+  Stream<gpu> *s = ctx.get_stream<gpu>();
+  size_t type_size = common::mshadow_type_info(small.type_flag_).size;
+  if (small.type_flag_ == mshadow::kFloat16) {
+    type_size = sizeof(float);
+  }
+  ReduceImplConfig config(small.shape_, big.shape_, &lhs.shape_, &rhs.shape_, type_size);
+  std::string common_code = std::string("const OpReqType req = ") +
+                            util::to_string(req) +
+                            ";\n"
+                            "#define OP1 op::" +
+                            OP1 +
+                            "\n"
+                            "#define OP2 op::" +
+                            OP2 +
+                            "\n"
+                            "#define REDUCER " +
+                            reducer +
+                            "\n"
+                            "const int ndim = " +
+                            std::to_string(ndim) +
+                            ";\n";
+  if (config.M == 1) {
+    RTCReduceM1Impl(s, small, big, lhs, rhs, config, ndim, common_code, ctx.run_ctx.ctx.dev_id);
+  } else {
+    RTCReduceImpl(s, small, req == kAddTo, big, workspace, config,
+                  ndim, common_code, ctx.run_ctx.ctx.dev_id, &lhs, &rhs);
   }
 }
 

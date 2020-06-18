@@ -417,7 +417,7 @@ void ElemwiseBinaryRTCBwdUseIn::operator()(const nnvm::NodeAttrs& attrs,
                            "\n" +
                            binary_kernel_bwd_use_in;
   // Using 64 bit loads to reduce register pressure
-  int output_type_size = util::mshadow_type_info(outputs[0].type_flag_).size;
+  size_t output_type_size = common::mshadow_type_info(outputs[0].type_flag_).size;
   const int nvec = output_type_size <= sizeof(uint64_t)
                      ? (sizeof(uint64_t) / output_type_size)
                      : 1;

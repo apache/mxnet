@@ -628,10 +628,10 @@ inline void BinaryBroadcastBackwardUseInImpl(const OpContext& ctx,
   const TBlob ograd = inputs[0].reshape(new_oshape);
   const TBlob lhs = inputs[1].reshape(new_lshape);
   const TBlob rhs = inputs[2].reshape(new_rshape);
-  size_t workspace_size_l = ReduceWorkspaceSize<ndim, DType>(
-      s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_, rhs.shape_);
-  size_t workspace_size_r = ReduceWorkspaceSize<ndim, DType>(
-      s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_, rhs.shape_);
+  size_t workspace_size_l = ReduceWorkspaceSize<ndim>(
+      s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_, rhs.shape_, sizeof(DType));
+  size_t workspace_size_r = ReduceWorkspaceSize<ndim>(
+      s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_, rhs.shape_, sizeof(DType));
   size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
   Tensor<xpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
@@ -686,7 +686,4 @@ void BinaryBroadcastBackwardUseIn(const nnvm::NodeAttrs& attrs,
 
 }  // namespace op
 }  // namespace mxnet
-#ifdef __CUDACC__
-#include "./elemwise_binary_broadcast_op-inl.cuh"
-#endif
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_BROADCAST_OP_H_

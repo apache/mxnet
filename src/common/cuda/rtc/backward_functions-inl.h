@@ -298,7 +298,13 @@ __device__ inline DType hypot_grad_right(const DType val,
 template <typename DType, typename DType2>
 __device__ inline DType copysign_grad(const DType val,
                                       const DType2 val2) {
-  return (a >= 0 && b >= 0) || (a < 0 && b < 0) ? 1 : -1;
+  return (val >= 0 && val2 >= 0) || (val < 0 && val2 < 0) ? 1 : -1;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType zero_grad(const DType val,
+                                  const DType2 val2) {
+  return 0;
 }
 
 template <typename DType, typename DType2>
@@ -311,6 +317,12 @@ template <typename DType, typename DType2>
 __device__ inline DType rarctan2_grad(const DType val,
                                       const DType2 val2) {
   return val / (val * val + val2 * val2);
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType arctan2_rgrad(const DType val,
+                                      const DType2 val2) {
+  return -rarctan2_grad(val, val2);
 }
 
 template <typename DType, typename DType2>
@@ -385,6 +397,18 @@ __device__ inline DType smooth_l1_grad(const DType val, const DType2 scalar) {
   } else {
     return bsq * val;
   }
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType xelu_grad(const DType val,
+                                  const DType2 val2) {
+  return (val > 0) ? 1 : val2;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType prelu_grad(const DType val,
+                                   const DType2 val2) {
+  return (val > 0) ? 0 : val;
 }
 
 }  // namespace op

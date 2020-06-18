@@ -117,7 +117,8 @@ void GroupNormCompute(const nnvm::NodeAttrs& attrs,
   MSHADOW_REAL_TYPE_SWITCH(data.type_flag_, DType, {
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       workspace_size =
-        broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_dst_shape, req[0], red_src_shape);
+        broadcast::ReduceWorkspaceSize<NDim>(s, red_dst_shape, req[0],
+                                             red_src_shape, sizeof(DType));
     });
   });
 
@@ -282,14 +283,16 @@ void GroupNormGradCompute(const nnvm::NodeAttrs& attrs,
     BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
       reduce_workspace_size =
         std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_dst_shape,
-                                                             kAddTo, red_src_shape));
+                 broadcast::ReduceWorkspaceSize<NDim>(s, red_dst_shape,
+                                                      kAddTo, red_src_shape,
+                                                      sizeof(DType)));
     });
     BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
       reduce_workspace_size =
         std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim, DType>(s, red_exclude_dst_shape, kAddTo,
-                                                             red_exclude_src_shape));
+                 broadcast::ReduceWorkspaceSize<NDim>(s, red_exclude_dst_shape, kAddTo,
+                                                      red_exclude_src_shape,
+                                                      sizeof(DType)));
     });
   });
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(

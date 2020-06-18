@@ -28,7 +28,6 @@
 
 using namespace mshadow::cuda;
 
-const int nthread_reduce = kMaxThreadsPerBlock;
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP, int unroll>
 __launch_bounds__(nthread_reduce)
 __global__ void reduce_kernel(const int N, const int M, const bool addto,
@@ -258,201 +257,6 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
   }
 }
 
-// Returns a/b integer division rounded up
-template<typename Type>
-Type ceil_idiv(const Type a, const Type b) {
-  return (a + b - 1)/b;
-}
-
-// Configuration for ReduceImpl()
-template<int ndim>
-struct ReduceImplConfig {
-  static const int warpSize = 32;
-  static const int unroll_reduce = 2;
-  static const int maxLoopPerTB = 64;
-  int N;
-  int M;
-  int Mnext;
-  struct {
-    dim3 blockDim;
-    dim3 gridDim;
-    int shMemSize;
-    bool do_transpose;
-  } kernel_1;
-  struct {
-    int blockSize;
-    int gridSize;
-  } kernel_2;
-  size_t workspace_size;
-
-  Shape<ndim> rshape, rstride;
-  Shape<ndim> lhs_shape, lhs_stride;
-  Shape<ndim> rhs_shape, rhs_stride;
-};
-
-static inline uint64_t calc_num_load(const int X, const int Y, const int* strides) {
-  const int warpSize = ReduceImplConfig<1>::warpSize;
-  // Number of full warps
-  uint64_t num_full_warp = X / warpSize;
-  // Length of the partial warp i.e. number of threads that are performing loads
-  uint64_t len_part_warp = X % warpSize;
-
-  uint64_t num_load_full = (std::min(warpSize, strides[0]) +
-    std::min(warpSize, strides[1]) +
-    std::min(warpSize, strides[2]))*num_full_warp;
-
-  uint64_t num_load_part =
-  (std::min(len_part_warp, ceil_idiv<uint64_t>(len_part_warp*strides[0], warpSize)) +
-    std::min(len_part_warp, ceil_idiv<uint64_t>(len_part_warp*strides[1], warpSize)) +
-    std::min(len_part_warp, ceil_idiv<uint64_t>(len_part_warp*strides[2], warpSize)))*
-  (len_part_warp != 0);
-
-  uint64_t num_load = (num_load_full + num_load_part)*(uint64_t)Y;
-  return num_load;
-}
-
-template<int ndim, typename DType>
-ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small,
-                                           const mxnet::TShape& big,
-                                           const mxnet::TShape* lhs,
-                                           const mxnet::TShape* rhs) {
-  ReduceImplConfig<ndim> config;
-
-  diff(small.get<ndim>(), big.get<ndim>(), &config.rshape, &config.rstride);
-  config.N = small.Size();
-  config.M = config.rshape.Size();
-
-  bool multiOp = false;
-  if (lhs != nullptr) {
-    CHECK_NOTNULL(rhs);
-    diff(small.get<ndim>(), lhs->get<ndim>(), &config.lhs_shape,
-      &config.lhs_stride);
-    diff(small.get<ndim>(), rhs->get<ndim>(), &config.rhs_shape,
-      &config.rhs_stride);
-    multiOp = true;
-  }
-
-  config.workspace_size = 0;
-
-  if (config.M == 1) {
-    config.kernel_1.blockDim.x = kMaxThreadsPerBlock;
-    config.kernel_1.gridDim.x = std::min((unsigned int)kBaseGridNum,
-      (config.N + config.kernel_1.blockDim.x - 1)/config.kernel_1.blockDim.x);
-  } else {
-
-    int reduce_strides[3];
-    reduce_strides[0] = fastest_stride(small, big, big);
-    reduce_strides[1] = (multiOp) ? fastest_stride(small, *lhs, *lhs) : 1;
-    reduce_strides[2] = (multiOp) ? fastest_stride(small, *rhs, *rhs) : 1;
-
-    int reduce_strides_transp[3];
-    reduce_strides_transp[0] = fastest_stride(small, TShape(config.rshape),
-      TShape(config.rstride));
-    reduce_strides_transp[1] = (multiOp) ?
-      fastest_stride(small, TShape(config.lhs_shape),
-                     TShape(config.lhs_stride)) : 1;
-    reduce_strides_transp[2] = (multiOp) ?
-      fastest_stride(small, TShape(config.rhs_shape),
-                     TShape(config.rhs_stride)) : 1;
-
-    uint64_t num_load = calc_num_load(config.N, config.M, reduce_strides);
-    uint64_t num_load_transp = calc_num_load(config.M, config.N, reduce_strides_transp);
-
-    config.Mnext = 1;
-    config.kernel_1.do_transpose = (num_load > num_load_transp);
-
-    config.kernel_1.blockDim.x = 0;
-    config.kernel_1.blockDim.y = 0;
-
-    if (config.kernel_1.do_transpose) {
-      // Fastest thread ID goes through M
-      // Loop over N has step size config.kernel_1.blockDim.y
-      if (config.N < 8) {
-        config.kernel_1.blockDim.y = 1;
-      } else if (config.N < 256) {
-        config.kernel_1.blockDim.y = 4;
-      } else {
-        if (config.M < 8) {
-          config.kernel_1.blockDim.x = 1;
-        } else if (config.M < 256) {
-          config.kernel_1.blockDim.x = 4;
-        } else {
-          config.kernel_1.blockDim.x = config.warpSize;
-        }
-      }
-    } else {
-      // Fastest thread ID goes through N
-      // Loop over M has step size config.kernel_1.blockDim.y
-      if (config.M < 8) {
-        config.kernel_1.blockDim.y = 1;
-      } else if (config.M < 256) {
-        config.kernel_1.blockDim.y = 4;
-      } else {
-        if (config.N < 8) {
-          config.kernel_1.blockDim.x = 1;
-        } else if (config.N < 256) {
-          config.kernel_1.blockDim.x = 4;
-        } else {
-          config.kernel_1.blockDim.x = config.warpSize;
-        }
-      }
-    }
-
-    if (config.kernel_1.blockDim.x == 0 && config.kernel_1.blockDim.y == 0) {
-      LOG(FATAL) << "Unable to set blockDim";
-    } else if (config.kernel_1.blockDim.x == 0) {
-      config.kernel_1.blockDim.x = nthread_reduce / config.kernel_1.blockDim.y;
-    } else if (config.kernel_1.blockDim.y == 0) {
-      config.kernel_1.blockDim.y = nthread_reduce / config.kernel_1.blockDim.x;
-    }
-
-    if (config.kernel_1.do_transpose) {
-      // Fastest thread ID goes through M
-      config.kernel_1.gridDim.x = std::min((unsigned int)kBaseGridNum,
-        ceil_idiv<unsigned int>(config.N, config.kernel_1.blockDim.y));
-      config.kernel_1.gridDim.y = std::min(kBaseGridNum, config.Mnext);
-      int by = config.kernel_1.blockDim.y;
-      if (config.kernel_1.blockDim.y % config.warpSize == 0) {
-        // Fix shared memory bank conflict
-        by++;
-      }
-      config.kernel_1.shMemSize = (config.kernel_1.blockDim.x > 1) ?
-        config.kernel_1.blockDim.x*by*sizeof(DType) * 2 : 0;
-      // Maximum number of times we want TB to loop in M
-      // Max size of M-block each TB can handle
-      int maxMblock = config.kernel_1.blockDim.x*config.maxLoopPerTB;
-      config.Mnext = (config.M + maxMblock - 1) / maxMblock;
-    } else {
-      // Fastest thread ID goes through N
-      config.kernel_1.gridDim.x = std::min((unsigned int)kBaseGridNum,
-        ceil_idiv<unsigned int>(config.N, config.kernel_1.blockDim.x));
-      config.kernel_1.gridDim.y = std::min(kBaseGridNum, config.Mnext);
-      config.kernel_1.shMemSize = (config.kernel_1.blockDim.y > 1) ?
-        config.kernel_1.blockDim.x*config.kernel_1.blockDim.y*sizeof(DType) * 2 : 0;
-      // Maximum number of times we want TB to loop in M
-      // Max size of M-block each TB can handle
-      int maxMblock = config.kernel_1.blockDim.y*config.maxLoopPerTB;
-      config.Mnext = (config.M + maxMblock - 1) / maxMblock;
-    }
-
-    if (config.Mnext > 1) {
-      // small_dptr[] is N*Mnext*sizeof(DType) bytes
-      config.workspace_size += config.N*config.Mnext*sizeof(double);
-      // Set gridDim.y to Mnext
-      config.kernel_1.gridDim.y = std::min(kBaseGridNum, config.Mnext);
-    }
-
-    if (config.Mnext > 1) {
-      config.kernel_2.blockSize = kMaxThreadsPerBlock;
-      config.kernel_2.gridSize = std::min((int)kBaseGridNum,
-        (config.N + config.kernel_2.blockSize - 1)/config.kernel_2.blockSize );
-    }
-
-  }
-
-  return config;
-}
-
 #define KERNEL_UNROLL_SWITCH(do_unroll, unrollAmount, unrollVar, ...) \
   if (do_unroll) {                                                    \
     const int unrollVar = unrollAmount;                               \
@@ -465,7 +269,7 @@ ReduceImplConfig<ndim> ConfigureReduceImpl(const mxnet::TShape& small,
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP>
 void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
                 const TBlob& big, const Tensor<gpu, 1, char>& workspace,
-                const ReduceImplConfig<ndim>& config) {
+                const ReduceImplConfig& config) {
   if (config.M == 1) {
     reduce_kernel_M1<Reducer, ndim, AType, DType, OType, OP>
     <<< config.kernel_1.gridDim, config.kernel_1.blockDim, 0, stream >>>(
@@ -487,13 +291,13 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
 
     const int by = (config.kernel_1.do_transpose) ?
       config.kernel_1.blockDim.x : config.kernel_1.blockDim.y;
-    const bool do_unroll = ( config.M / (by*config.Mnext) >= config.unroll_reduce );
-    KERNEL_UNROLL_SWITCH(do_unroll, ReduceImplConfig<ndim>::unroll_reduce, UNROLL, {
+    const bool do_unroll = ( config.M / (by*config.Mnext) >= unroll_reduce );
+    KERNEL_UNROLL_SWITCH(do_unroll, unroll_reduce, UNROLL, {
       reduce_kernel<Reducer, ndim, AType, DType, OType, OP, UNROLL>
       <<< config.kernel_1.gridDim, config.kernel_1.blockDim, config.kernel_1.shMemSize, stream>>>(
         config.N, config.M, addto, big.dptr<DType>(), small_dptr, big.shape_.get<ndim>(),
-        small.shape_.get<ndim>(), config.rshape, config.rstride, config.Mnext,
-        config.kernel_1.do_transpose);
+        small.shape_.get<ndim>(), config.rshape.get<ndim>(), config.rstride.get<ndim>(),
+        config.Mnext, config.kernel_1.do_transpose);
     });
     MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel);
 
@@ -509,7 +313,7 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
 void ReduceImpl(cudaStream_t stream, const TBlob& small, const TBlob& lhs, const TBlob& rhs,
                 const OpReqType req, const TBlob& big, const Tensor<gpu, 1, char>& workspace,
-                const ReduceImplConfig<ndim>& config) {
+                const ReduceImplConfig& config) {
   if (config.M == 1) {
     reduce_kernel_M1<Reducer, ndim, DType, OP1, OP2>
     <<< config.kernel_1.gridDim, config.kernel_1.blockDim, 0, stream >>>(
@@ -532,14 +336,15 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const TBlob& lhs, const
 
     const int by = (config.kernel_1.do_transpose) ?
       config.kernel_1.blockDim.x : config.kernel_1.blockDim.y;
-    const bool do_unroll = ( config.M / (by*config.Mnext) >= config.unroll_reduce );
-    KERNEL_UNROLL_SWITCH(do_unroll, ReduceImplConfig<ndim>::unroll_reduce, UNROLL, {
+    const bool do_unroll = ( config.M / (by*config.Mnext) >= unroll_reduce );
+    KERNEL_UNROLL_SWITCH(do_unroll, unroll_reduce, UNROLL, {
       reduce_kernel<Reducer, ndim, DType, OP1, OP2, UNROLL>
       <<< config.kernel_1.gridDim, config.kernel_1.blockDim, config.kernel_1.shMemSize, stream>>>(
         config.N, config.M, addto, big.dptr<DType>(), lhs.dptr<DType>(), rhs.dptr<DType>(),
         small_dptr, big.shape_.get<ndim>(), lhs.shape_.get<ndim>(),
-        rhs.shape_.get<ndim>(), small.shape_.get<ndim>(), config.rshape, config.lhs_shape,
-        config.rhs_shape, config.rstride, config.lhs_stride, config.rhs_stride, config.Mnext,
+        rhs.shape_.get<ndim>(), small.shape_.get<ndim>(), config.rshape.get<ndim>(),
+        config.lhs_shape.get<ndim>(), config.rhs_shape.get<ndim>(), config.rstride.get<ndim>(),
+        config.lhs_stride.get<ndim>(), config.rhs_stride.get<ndim>(), config.Mnext,
         config.kernel_1.do_transpose);
       MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel);
     });
@@ -560,14 +365,14 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
             const Tensor<gpu, 1, char>& workspace, const TBlob& big) {
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
-  ReduceImplConfig<ndim> config =
-    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, nullptr, nullptr);
+  ReduceImplConfig config(small.shape_, big.shape_, nullptr, nullptr, sizeof(DType));
   if (safe_acc) {
     MXNET_ACC_TYPE_SWITCH(mshadow::DataType<DType>::kFlag, DataType, AType, {
       typedef typename std::conditional<safe_acc, AType, DataType>::type AccType;
       MSHADOW_TYPE_SWITCH(small.type_flag_, OType, {
         typedef typename std::conditional<safe_acc, OType, DataType>::type OutType;
-        config = ConfigureReduceImpl<ndim, AccType>(small.shape_, big.shape_, nullptr, nullptr);
+        config = ReduceImplConfig(small.shape_, big.shape_, nullptr, nullptr,
+                                  sizeof(AccType));
         ReduceImpl<Reducer, ndim, AccType, DataType, OutType, OP>(
           stream, small, req, big, workspace, config);
       });
@@ -597,25 +402,8 @@ void Reduce(Stream<gpu> *s, const TBlob& small, const OpReqType req,
             const TBlob& lhs, const TBlob& rhs) {
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
-  ReduceImplConfig<ndim> config =
-    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, &lhs.shape_, &rhs.shape_);
+  ReduceImplConfig config(small.shape_, big.shape_, &lhs.shape_, &rhs.shape_, sizeof(DType));
   ReduceImpl<Reducer, ndim, DType, OP1, OP2>(stream, small, lhs, rhs, req, big, workspace, config);
-}
-
-template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
-                           const ::mxnet::TShape& big) {
-  if (req == kNullOp) return 0;
-  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, nullptr, nullptr);
-  return config.workspace_size;
-}
-
-template<int ndim, typename DType>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
-                           const ::mxnet::TShape& big, const ::mxnet::TShape& lhs, const ::mxnet::TShape& rhs) {
-  if (req == kNullOp) return 0;
-  ReduceImplConfig<ndim> config = ConfigureReduceImpl<ndim, DType>(small, big, &lhs, &rhs);
-  return config.workspace_size;
 }
 
 #endif  //MXNET_OPERATOR_TENSOR_BROADCAST_REDUCE_INL_CUH_

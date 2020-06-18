@@ -304,10 +304,6 @@ inline int fastest_stride(const TShape &small, const TShape &big,
 
 }  // namespace
 
-#ifdef __CUDACC__
-#include "broadcast_reduce-inl.cuh"
-#endif
-
 template<int ndim, typename DType, typename OP>
 void BinaryBroadcastComputeImpl(Stream<cpu> *s, const OpReqType req,
                                 const TBlob& lhs, const TBlob& rhs, const TBlob& out) {
@@ -408,18 +404,264 @@ void ReduceWithExtraMem(Stream<cpu>* s, const TBlob& small, const OpReqType req,
     small.shape_.get<ndim>(), rshape, rstride, ws_dptr);
 }
 
-template<int ndim, typename DType>
+template<int ndim>
 size_t ReduceWorkspaceSize(Stream<cpu> *s, const mxnet::TShape& small, const OpReqType req,
-                           const mxnet::TShape& big) {
+                           const mxnet::TShape& big, const int type_size) {
   return 0;
 }
 
-template<int ndim, typename DType>
+template<int ndim>
 size_t ReduceWorkspaceSize(Stream<cpu> *s, const mxnet::TShape& small, const OpReqType req,
                            const mxnet::TShape& big, const mxnet::TShape& lhs,
-                           const mxnet::TShape& rhs) {
+                           const mxnet::TShape& rhs, const int type_size) {
   return 0;
 }
+
+#if MXNET_USE_CUDA
+
+namespace {
+
+constexpr int warpSize = 32;
+constexpr int unroll_reduce = 2;
+
+// Returns a/b integer division rounded up
+template<typename Type>
+Type ceil_idiv(const Type a, const Type b) {
+  return (a + b - 1)/b;
+}
+
+uint64_t calc_num_load(const int X, const int Y, const int* strides) {
+  // Number of full warps
+  uint64_t num_full_warp = X / warpSize;
+  // Length of the partial warp i.e. number of threads that are performing loads
+  uint64_t len_part_warp = X % warpSize;
+
+  uint64_t num_load_full = (std::min(warpSize, strides[0]) +
+    std::min(warpSize, strides[1]) +
+    std::min(warpSize, strides[2]))*num_full_warp;
+
+  uint64_t num_load_part =
+  (std::min(len_part_warp, ceil_idiv<uint64_t>(len_part_warp*strides[0], warpSize)) +
+    std::min(len_part_warp, ceil_idiv<uint64_t>(len_part_warp*strides[1], warpSize)) +
+    std::min(len_part_warp, ceil_idiv<uint64_t>(len_part_warp*strides[2], warpSize)))*
+  (len_part_warp != 0);
+
+  uint64_t num_load = (num_load_full + num_load_part)*(uint64_t)Y;
+  return num_load;
+}
+
+inline int diff(const TShape& small, const TShape& big,
+                TShape* dims, TShape* stride) {
+  int ndim = small.ndim();
+  int mdim = 0;
+  #pragma unroll
+  for (int i = 0; i < ndim; ++i) {
+    mdim += small[i] != big[i];
+    (*dims)[i] = (*stride)[i] = 1;
+  }
+
+  index_t s = 1;
+  #pragma unroll
+  for (int i = ndim - 1, j = mdim; i >= 0; --i) {
+    if (small[i] != big[i]) {
+      --j;
+      (*stride)[j] = s;
+      (*dims)[j] = big[i];
+    }
+    s *= big[i];
+  }
+  return mdim;
+}
+
+constexpr int nthread_reduce = 512;
+constexpr int kBaseGridNum = 1024;
+
+}  // namespace
+
+// Configuration for ReduceImpl()
+struct ReduceImplConfig {
+  index_t N;
+  index_t M;
+  index_t Mnext;
+  struct {
+    dim3 blockDim;
+    dim3 gridDim;
+    int shMemSize;
+    bool do_transpose;
+  } kernel_1;
+  struct {
+    int blockSize;
+    int gridSize;
+  } kernel_2;
+  size_t workspace_size;
+
+  TShape rshape, rstride;
+  TShape lhs_shape, lhs_stride;
+  TShape rhs_shape, rhs_stride;
+
+  inline ReduceImplConfig(const ::mxnet::TShape& small, const ::mxnet::TShape& big,
+                          const ::mxnet::TShape* lhs,
+                          const ::mxnet::TShape* rhs,
+                          const size_t type_size) :
+    rshape(small.ndim(), 1), rstride(small.ndim(), 1),
+    lhs_shape(small.ndim(), 1), lhs_stride(small.ndim(), 1),
+    rhs_shape(small.ndim(), 1), rhs_stride(small.ndim(), 1) {
+    constexpr int maxLoopPerTB = 64;
+    int ndim = small.ndim();
+
+    diff(small, big, &rshape, &rstride);
+    N = small.Size();
+
+    M = rshape[0];
+    for (int i = 1; i < ndim; ++i) {
+      M *= rshape[i];
+    }
+
+    bool multiOp = false;
+    if (lhs != nullptr) {
+      CHECK_NOTNULL(rhs);
+      diff(small, *lhs, &lhs_shape, &lhs_stride);
+      diff(small, *rhs, &rhs_shape, &rhs_stride);
+      multiOp = true;
+    }
+
+    workspace_size = 0;
+
+    if (M == 1) {
+      kernel_1.blockDim.x = nthread_reduce;
+      kernel_1.gridDim.x = std::min((unsigned int)kBaseGridNum,
+          (N + kernel_1.blockDim.x - 1)/kernel_1.blockDim.x);
+    } else {
+      int reduce_strides[3];
+      reduce_strides[0] = fastest_stride(small, big, big);
+      reduce_strides[1] = (multiOp) ? fastest_stride(small, *lhs, *lhs) : 1;
+      reduce_strides[2] = (multiOp) ? fastest_stride(small, *rhs, *rhs) : 1;
+
+      int reduce_strides_transp[3];
+      reduce_strides_transp[0] = fastest_stride(small, rshape, rstride);
+      reduce_strides_transp[1] = (multiOp) ?
+        fastest_stride(small, lhs_shape, lhs_stride) : 1;
+      reduce_strides_transp[2] = (multiOp) ?
+        fastest_stride(small, rhs_shape, rhs_stride) : 1;
+
+      uint64_t num_load = calc_num_load(N, M, reduce_strides);
+      uint64_t num_load_transp = calc_num_load(M, N, reduce_strides_transp);
+
+      Mnext = 1;
+      kernel_1.do_transpose = (num_load > num_load_transp);
+
+      kernel_1.blockDim.x = 0;
+      kernel_1.blockDim.y = 0;
+
+      if (kernel_1.do_transpose) {
+        // Fastest thread ID goes through M
+        // Loop over N has step size kernel_1.blockDim.y
+        if (N < 8) {
+          kernel_1.blockDim.y = 1;
+        } else if (N < 256) {
+          kernel_1.blockDim.y = 4;
+        } else {
+          if (M < 8) {
+            kernel_1.blockDim.x = 1;
+          } else if (M < 256) {
+            kernel_1.blockDim.x = 4;
+          } else {
+            kernel_1.blockDim.x = warpSize;
+          }
+        }
+      } else {
+        // Fastest thread ID goes through N
+        // Loop over M has step size kernel_1.blockDim.y
+        if (M < 8) {
+          kernel_1.blockDim.y = 1;
+        } else if (M < 256) {
+          kernel_1.blockDim.y = 4;
+        } else {
+          if (N < 8) {
+            kernel_1.blockDim.x = 1;
+          } else if (N < 256) {
+            kernel_1.blockDim.x = 4;
+          } else {
+            kernel_1.blockDim.x = warpSize;
+          }
+        }
+      }
+
+      if (kernel_1.blockDim.x == 0 && kernel_1.blockDim.y == 0) {
+        LOG(FATAL) << "Unable to set blockDim";
+      } else if (kernel_1.blockDim.x == 0) {
+        kernel_1.blockDim.x = nthread_reduce / kernel_1.blockDim.y;
+      } else if (kernel_1.blockDim.y == 0) {
+        kernel_1.blockDim.y = nthread_reduce / kernel_1.blockDim.x;
+      }
+
+      if (kernel_1.do_transpose) {
+        // Fastest thread ID goes through M
+        kernel_1.gridDim.x = std::min((unsigned int)kBaseGridNum,
+            ceil_idiv<unsigned int>(N, kernel_1.blockDim.y));
+        kernel_1.gridDim.y = std::min(kBaseGridNum, Mnext);
+        int by = kernel_1.blockDim.y;
+        if (kernel_1.blockDim.y % warpSize == 0) {
+          // Fix shared memory bank conflict
+          by++;
+        }
+        kernel_1.shMemSize = (kernel_1.blockDim.x > 1) ?
+          kernel_1.blockDim.x*by*type_size * 2 : 0;
+        // Maximum number of times we want TB to loop in M
+        // Max size of M-block each TB can handle
+        int maxMblock = kernel_1.blockDim.x*maxLoopPerTB;
+        Mnext = (M + maxMblock - 1) / maxMblock;
+      } else {
+        // Fastest thread ID goes through N
+        kernel_1.gridDim.x = std::min((unsigned int)kBaseGridNum,
+            ceil_idiv<unsigned int>(N, kernel_1.blockDim.x));
+        kernel_1.gridDim.y = std::min(kBaseGridNum, Mnext);
+        kernel_1.shMemSize = (kernel_1.blockDim.y > 1) ?
+          kernel_1.blockDim.x*kernel_1.blockDim.y*type_size * 2 : 0;
+        // Maximum number of times we want TB to loop in M
+        // Max size of M-block each TB can handle
+        int maxMblock = kernel_1.blockDim.y*maxLoopPerTB;
+        Mnext = (M + maxMblock - 1) / maxMblock;
+      }
+
+      if (Mnext > 1) {
+        // small_dptr[] is N*Mnext*type_size bytes
+        workspace_size += N*Mnext*sizeof(double);
+        // Set gridDim.y to Mnext
+        kernel_1.gridDim.y = std::min(kBaseGridNum, Mnext);
+      }
+
+      if (Mnext > 1) {
+        kernel_2.blockSize = nthread_reduce;
+        kernel_2.gridSize = std::min(kBaseGridNum,
+            (N + kernel_2.blockSize - 1)/kernel_2.blockSize);
+      }
+    }
+  }
+};
+
+template<int ndim>
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
+                           const ::mxnet::TShape& big, const int type_size) {
+  if (req == kNullOp) return 0;
+  ReduceImplConfig config(small, big, nullptr, nullptr, type_size);
+  return config.workspace_size;
+}
+
+template<int ndim>
+size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
+                           const ::mxnet::TShape& big, const ::mxnet::TShape& lhs,
+                           const ::mxnet::TShape& rhs, const int type_size) {
+  if (req == kNullOp) return 0;
+  ReduceImplConfig config(small, big, &lhs, &rhs, type_size);
+  return config.workspace_size;
+}
+
+#ifdef __CUDACC__
+#include "broadcast_reduce-inl.cuh"
+#endif
+
+#endif  // MXNET_USE_CUDA
 
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>
 MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const bool addto,
@@ -506,6 +748,19 @@ void RTCReduce(const NodeAttrs& attrs,
                const std::string& reducer,
                int ndim,
                const std::string& OP);
+
+void RTCReduce(const NodeAttrs& attrs,
+               const OpContext& ctx,
+               const TBlob& small,
+               const OpReqType req,
+               const Tensor<gpu, 1, char>& workspace,
+               const TBlob& big,
+               const TBlob &lhs,
+               const TBlob &rhs,
+               const std::string& reducer,
+               int ndim,
+               const std::string& OP1,
+               const std::string& OP2);
 
 #endif
 

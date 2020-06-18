@@ -45,7 +45,7 @@ struct sum {
                                        volatile DType& residual) {
     DType y = op::sub(src, residual);
     DType t = dst + y;
-    if (isinf(t)) {
+    if (util::isinf(t)) {
       residual = 0;
     } else {
       residual = (t - dst) - y;
@@ -62,7 +62,7 @@ struct sum {
   __device__ inline static void Merge(volatile DType& dst_val, volatile DType& dst_residual,
                                       volatile DType& src_val, volatile DType& src_residual) {
     DType t1 = dst_val + src_val;
-    if (isinf(t1)) {
+    if (util::isinf(t1)) {
       dst_val = t1;
       dst_residual = 0;
     } else {

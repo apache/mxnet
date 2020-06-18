@@ -17,8 +17,8 @@
  * under the License.
  */
 
-#ifndef MXNET_COMMON_CUDA_RTC_TYPE_INL_H_
-#define MXNET_COMMON_CUDA_RTC_TYPE_INL_H_
+#ifndef MXNET_COMMON_CUDA_RTC_UTIL_INL_H_
+#define MXNET_COMMON_CUDA_RTC_UTIL_INL_H_
 
 #include <mxnet/base.h>
 
@@ -208,6 +208,53 @@ __device__ inline index_t unravel_ravel(const index_t idx, const index_t (&shape
   return ret;
 }
 
+template<int ndim, int ndim2>
+__device__ inline index_t ravel(const index_t (&coord)[ndim], const index_t (&shape)[ndim2]) {
+  index_t ret = 0;
+#pragma unroll
+  for (int i = 0; i < ndim; ++i) {
+    ret = ret * shape[i] + (shape[i] > coord[i]) * coord[i];
+  }
+  return ret;
+}
+
+template<int ndim, int ndim2>
+__device__ inline void unravel(const index_t idx,
+                               const index_t (&shape)[ndim2],
+                               index_t (&coord)[ndim]) {
+#pragma unroll
+  for (index_t i = ndim-1, j = idx; i >=0; --i) {
+    auto tmp = j / shape[i];
+    coord[i] = j - tmp*shape[i];
+    j = tmp;
+  }
+}
+
+template <typename DType>
+__device__ inline bool isinf(volatile const DType &val) {
+  return false;
+}
+
+template <>
+__device__ inline bool isinf(volatile const float &val) {
+  return ::isinf(val);
+}
+
+template <>
+__device__ inline bool isinf(volatile const double &val) {
+  return ::isinf(val);
+}
+
+template <>
+__device__ inline bool isinf(volatile const long double &val) {
+  return ::isinf(val);
+}
+
+template <>
+__device__ inline bool isinf(volatile const float16 &val) {
+  return ::isinf(__half2float(const_cast<const float16&>(val)));
+}
+
 }  // namespace util
 )code";
 }  // namespace rtc
@@ -217,4 +264,4 @@ __device__ inline index_t unravel_ravel(const index_t idx, const index_t (&shape
 
 #endif  // MXNET_USE_CUDA
 
-#endif  // MXNET_COMMON_CUDA_RTC_TYPE_INL_H_
+#endif  // MXNET_COMMON_CUDA_RTC_UTIL_INL_H_

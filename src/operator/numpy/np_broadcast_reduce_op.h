@@ -994,8 +994,8 @@ void NumpyMomentsForward(const nnvm::NodeAttrs& attrs,
       // Get workspace and temp space for data - mean
       size_t workspace_size = 0;
       BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-        workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
-          s, dst_shape, req[0], src_shape);;
+        workspace_size = broadcast::ReduceWorkspaceSize<NDim>(
+          s, dst_shape, req[0], src_shape, sizeof(DType));
       });
       size_t temp_data_size = data.shape_.Size() * sizeof(DType);
       size_t temp_mem_size = temp_data_size + workspace_size;

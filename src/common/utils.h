@@ -950,6 +950,16 @@ inline int GetDefaultDtype(int dtype) {
          mshadow::kFloat32;
 }
 
+struct MShadowTypeInfo {
+  std::string name;
+  int size;
+
+  MShadowTypeInfo(const std::string name, const int size) :
+    name(std::move(name)), size(size) {}
+};
+
+MShadowTypeInfo mshadow_type_info(const int type_flag);
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_

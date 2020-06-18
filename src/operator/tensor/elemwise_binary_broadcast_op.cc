@@ -270,7 +270,7 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
     const auto& lstride = calc_stride(lhs.shape_, ndim);
     const auto& rstride = calc_stride(rhs.shape_, ndim);
 
-    size_t output_type_size = util::mshadow_type_info(outputs[0].type_flag_).size;
+    size_t output_type_size = common::mshadow_type_info(outputs[0].type_flag_).size;
     const int nvec = output_type_size <= sizeof(uint64_t)
                        ? (sizeof(uint64_t) / output_type_size)
                        : 1;
@@ -381,12 +381,12 @@ void BinaryBroadcastRTCBackwardUseNone::operator()(const nnvm::NodeAttrs& attrs,
         using namespace common::cuda::rtc::util;
         if (lhs.shape_.Size() != 0) {
           cudaMemsetAsync(lhs.dptr_, 0,
-                          lhs.shape_.Size() * mshadow_type_info(lhs.type_flag_).size,
+                          lhs.shape_.Size() * common::mshadow_type_info(lhs.type_flag_).size,
                           Stream<gpu>::GetStream(s));
         }
         if (rhs.shape_.Size() != 0) {
           cudaMemsetAsync(rhs.dptr_, 0,
-                          rhs.shape_.Size() * mshadow_type_info(rhs.type_flag_).size,
+                          rhs.shape_.Size() * common::mshadow_type_info(rhs.type_flag_).size,
                           Stream<gpu>::GetStream(s));
         }
       }
@@ -399,7 +399,48 @@ void BinaryBroadcastRTCBackwardUseIn::operator()(const nnvm::NodeAttrs& attrs,
                                                  const std::vector<TBlob>& inputs,
                                                  const std::vector<OpReqType>& req,
                                                  const std::vector<TBlob>& outputs) {
-  LOG(FATAL) << "Not implemented yet!";
+  CHECK_EQ(inputs.size(), 3U);
+  CHECK_EQ(outputs.size(), 2U);
+  // skip kernel launch for zero-size tensors
+  if (inputs[0].shape_.Size() == 0U) {
+    return;
+  }
+  mxnet::TShape new_lshape, new_rshape, new_oshape;
+  const bool need_bc = BinaryBroadcastShapeCompact(outputs[0].shape_,
+                                                   outputs[1].shape_, inputs[0].shape_,
+                                                   &new_lshape, &new_rshape, &new_oshape) != 0;
+  if (!need_bc) {
+    ElemwiseBinaryRTCBwdUseIn {LOP, ROP}(attrs, ctx, inputs, req, outputs);
+  } else {
+    BROADCAST_NDIM_SWITCH(new_oshape.ndim(), NDim, {
+        using namespace mshadow;
+        Stream<gpu> *s = ctx.get_stream<gpu>();
+        const TBlob lgrad = outputs[0].reshape(new_lshape);
+        const TBlob rgrad = outputs[1].reshape(new_rshape);
+        const TBlob ograd = inputs[0].reshape(new_oshape);
+        const TBlob lhs = inputs[1].reshape(new_lshape);
+        const TBlob rhs = inputs[2].reshape(new_rshape);
+        size_t workspace_size_l = broadcast::ReduceWorkspaceSize<NDim>(
+            s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_,
+            rhs.shape_, common::mshadow_type_info(outputs[0].type_flag_).size);
+        size_t workspace_size_r = broadcast::ReduceWorkspaceSize<NDim>(
+            s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_,
+            rhs.shape_, common::mshadow_type_info(outputs[1].type_flag_).size);
+        size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
+        Tensor<gpu, 1, char> workspace =
+            ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
+        if (req[0] != kNullOp) {
+          broadcast::RTCReduce(attrs, ctx, lgrad, req[0], workspace,
+                               ograd, lhs, rhs, "red::sum", NDim,
+                               "mul", LOP);
+        }
+        if (req[1] != kNullOp) {
+          broadcast::RTCReduce(attrs, ctx, rgrad, req[1], workspace,
+                               ograd, lhs, rhs, "red::sum", NDim,
+                               "mul", ROP);
+        }
+    });
+  }
 }
 
 #endif  // MXNET_USE_CUDA

@@ -44,21 +44,22 @@ NNVM_REGISTER_OP(_npi_bitwise_or)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastIntCompute<gpu, mshadow_op::bitwise_or>);
 
 NNVM_REGISTER_OP(_backward_npi_copysign)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::copysign_grad,
-                                                                  mshadow_op::copysign_rgrad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"copysign_grad",
+                                                                     "zero_grad"});
 
 NNVM_REGISTER_OP(_npi_arctan2)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"arctan2"});
 
 NNVM_REGISTER_OP(_backward_npi_arctan2)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::arctan2_grad,
-                                                                  mshadow_op::arctan2_rgrad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"arctan2_grad",
+                                                                     "arctan2_rgrad"});
+
 NNVM_REGISTER_OP(_npi_hypot)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"hypot"});
 
 NNVM_REGISTER_OP(_backward_npi_hypot)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::hypot_grad_left,
-                                                                  mshadow_op::hypot_grad_right>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"hypot_grad_left",
+                                                                     "hypot_grad_right"});
 NNVM_REGISTER_OP(_npi_copysign_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"copysign"});
 
@@ -103,8 +104,8 @@ NNVM_REGISTER_OP(_npi_rldexp_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"rldexp"});
 
 NNVM_REGISTER_OP(_backward_npi_ldexp)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastBackwardUseIn<gpu, mshadow_op::ldexp_grad,
-                                                                  mshadow_op::ldexp_rgrad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"ldexp_grad",
+                                                                     "ldexp_rgrad"});
 
 NNVM_REGISTER_OP(_backward_npi_ldexp_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCBackward{"ldexp_grad"});
