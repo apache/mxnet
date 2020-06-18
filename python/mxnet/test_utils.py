@@ -955,7 +955,6 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
 
     return approx_grads
 
-
 def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
                            atol=None, grad_nodes=None, use_forward_train=True, ctx=None,
                            grad_stype_dict=None, dtype=default_dtype()):
@@ -1067,7 +1066,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
     grad_req["__random_proj"] = 'write'
     executor = out._bind(ctx, grad_req=grad_req,
-                        args=location, args_grad=args_grad, aux_states=aux_states)
+                         args=location, args_grad=args_grad, aux_states=aux_states)
 
     inps = executor.arg_arrays
     if len(inps) != len(location):
