@@ -106,7 +106,7 @@ class Executor:
                                 self._args[i].grad[:] = g
                     # ignore provided arg which is not present in
                     # input_names
-                    except ValueError as e:
+                    except ValueError:
                         pass
             else:
                 assert isinstance(self._args_grad, (list, tuple))
@@ -167,7 +167,7 @@ class Executor:
                             self._args[index] = arr
                             # get req
                             if isinstance(self._grad_req, str):
-                                req = grad_req
+                                req = self._grad_req
                             else:
                                 assert isinstance(self._grad_req, dict)
                                 req = self._grad_req[name]

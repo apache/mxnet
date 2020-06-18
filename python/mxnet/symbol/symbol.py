@@ -1604,9 +1604,9 @@ class Symbol(SymbolBase):
         """
         assert isinstance(grad_req, (str, dict))
         # infer shape
-        arg_shapes, out_shapes, _ = self.infer_shape(**kwargs)
+        arg_shapes, _, aux_shapes = self.infer_shape(**kwargs)
         type_dict = {} if type_dict is None else type_dict
-        arg_dtypes, out_dtypes, _ = None, None, None
+        arg_dtypes, _, _ = None, None, None
         try:
             arg_dtypes, out_dtypes, aux_dtypes = self.infer_type(**type_dict)
         except Exception: # pylint: disable=broad-except

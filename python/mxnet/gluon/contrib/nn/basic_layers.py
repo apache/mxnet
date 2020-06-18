@@ -25,7 +25,7 @@ __all__ = ['Concurrent', 'HybridConcurrent', 'Identity',
 
 import warnings
 from .... import ndarray as nd, context
-from ...block import HybridBlock, Block
+from ...block import HybridBlock
 from ...nn import Sequential, HybridSequential, BatchNorm
 
 class Concurrent(Sequential):
