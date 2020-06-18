@@ -630,6 +630,7 @@ def _npx_index_add(a, ind, val):
     """
     Add values to input according to given indexes.
     If exists repeate positions to be updated, the update value will be accumulated.
+
     Parameters
     ----------
     a : ndarray
@@ -643,10 +644,12 @@ def _npx_index_add(a, ind, val):
               - ind.dtype should be 'int32' or 'int64'
     val : ndarray
         Input data. The array to update the input 'a'.
+
     Returns
     -------
     out : ndarray
         The output array.
+
     Examples
     --------
     >>> a = np.zeros((2, 3, 4))
@@ -687,6 +690,75 @@ def _npx_index_add(a, ind, val):
     
     >>> val = np.arange(4).reshape(4)  # brocast 'val'
     >>> b = npx.index_add(a, ind, val)
+    >>> b
+    array([[[0., 1., 2., 3.],
+            [0., 1., 2., 3.],
+            [0., 0., 0., 0.]],
+
+        [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    """
+    pass
+
+
+def _npx_index_update(a, ind, val):
+    """
+    Update values to input according to given indexes.
+    If multiple indices refer to the same location it is undefined which update is chosen; it may choose
+    the order of updates arbitrarily and nondeterministically (e.g., due to concurrent updates on some
+    hardware platforms). Recommend not to use repeate positions.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data. The array to be updated.
+        Support dtype: 'float32', 'float64', 'int32', 'int64'.
+    ind : ndarray
+        Indexes for indicating update positions.
+        For example, array([[0, 1], [2, 3], [4, 5]] indicates here are two positions to
+        be updated, which is (0, 2, 4) and (1, 3, 5).
+        Note: - 'ind' cannot be empty array '[]', for that case, please use operator 'add' instead.
+              - 0 <= ind.ndim <= 2.
+              - ind.dtype should be 'int32' or 'int64'
+    val : ndarray
+        Input data. The array to update the input 'a'.
+        Support dtype: 'float32', 'float64', 'int32', 'int64'.
+
+    Returns
+    -------
+    out : ndarray
+        The output array.
+
+    Examples
+    --------
+    >>> a = np.zeros((2, 3, 4))
+    >>> ind = np.array([[0, 0], [0, 0], [0, 1]], dtype='int32')
+    >>> val = np.arange(2).reshape(2) + 1
+    >>> b = npx.index_update(a, ind, val)
+    >>> b
+    array([[[1., 2., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+
+    >>> ind=np.array([[0, 0], [0, 1]], dtype='int32') 
+    >>> val = np.arange(8).reshape(2, 4) 
+    >>> b = npx.index_update(a, ind, val)
+    >>> b
+    array([[[0., 1., 2., 3.],
+            [4., 5., 6., 7.],
+            [0., 0., 0., 0.]],
+
+           [[0., 0., 0., 0.],
+            [0., 0., 0., 0.],
+            [0., 0., 0., 0.]]])
+    
+    >>> val = np.arange(4).reshape(4)  # brocast 'val'
+    >>> b = npx.index_update(a, ind, val)
     >>> b
     array([[[0., 1., 2., 3.],
             [0., 1., 2., 3.],

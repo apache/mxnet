@@ -49,13 +49,3 @@
     (= (sym/list-arguments oldfc) (-> (sym/get-internals net1)
                                       (sym/get "fc1_output")
                                       (sym/list-arguments)))))
-
-(deftest test-infer-type
-  (let [data (sym/variable "data")
-        f32data (sym-api/cast {:data data :dtype "float32"})
-        fc1 (sym-api/fully-connected {:data f32data :num-hidden 128 :name"fc1"})
-        mlp (sym-api/softmax-output {:data fc1 :name"softmax"})
-        [arg out aux] (sym/infer-type mlp {:data dtype/FLOAT64})]
-    (is (= [dtype/FLOAT64 dtype/FLOAT32 dtype/FLOAT32 dtype/FLOAT32] (util/buffer->vec arg)))
-    (is (= [dtype/FLOAT32] (util/buffer->vec out)))
-    (is (= [] (util/buffer->vec aux)))))

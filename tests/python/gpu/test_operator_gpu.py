@@ -47,8 +47,6 @@ from test_contrib_operator import test_multibox_target_op
 from test_contrib_optimizer import test_adamw
 
 set_default_context(mx.gpu(0))
-del test_support_vector_machine_l1_svm  # noqa
-del test_support_vector_machine_l2_svm  # noqa
 del test_custom_op_fork  #noqa
 
 def check_countsketch(in_dim,out_dim,n):
@@ -486,13 +484,6 @@ def test_batchnorm_with_type():
     {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}}
   ]
 
-  # V1, 2D
-  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=False)
-  check_consistency(sym, ctx_list_v1_2D)
-  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=True)
-  check_consistency(sym, ctx_list_v1_2D)
-
-
   # V2, 2D
   sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
   check_consistency(sym, ctx_list_v2_2D)
@@ -526,19 +517,6 @@ def test_batchnorm_versions():
   def test_batchnorm_versions_helper(batchnorm_op_list, data, fix_gamma, use_global_stats):
     ctx_list = []
     sym_list = []
-    # BatchNormV1 cpu
-    if 'batchnorm_v1_cpu' in batchnorm_op_list:
-      ctx_list.append({'ctx': mx.cpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
-      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
-                                          use_global_stats=use_global_stats,
-                                          name='batchnorm'))
-
-    # BatchNormV1 gpu (organic)
-    if 'batchnorm_v1_gpu' in batchnorm_op_list:
-      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
-      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
-                                          use_global_stats=use_global_stats,
-                                          name='batchnorm'))
 
     # BatchNorm cpu
     if 'batchnorm_cpu' in batchnorm_op_list:
@@ -1657,18 +1635,6 @@ def test_embedding_with_type():
     data_types = [np.uint8]
     weight_types = [np.float16, np.float32, np.float64]
     test_embedding_helper(data_types, weight_types, 0, 5)
-
-
-@with_seed()
-def test_svmoutput_with_type():
-    sym = mx.sym.SVMOutput(name='svmoutput', use_linear=True)
-    ctx_list = [{'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
-                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
-                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}}]
-    check_consistency(sym, ctx_list, use_uniform=True)
 
 
 @with_seed()

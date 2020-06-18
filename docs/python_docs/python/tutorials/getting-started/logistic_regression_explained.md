@@ -243,9 +243,9 @@ Despite that there are 2 classes, there should be only one output neuron, becaus
 
 For `SigmoidBinaryCrossEntropyLoss` to work it is required that classes were encoded as 0 and 1. In some datasets the class encoding might be different, like -1 and 1 or 1 and 2. If this is how your dataset looks like, then you need to re-encode the data before using `SigmoidBinaryCrossEntropyLoss`.
 
-## Tip 3: Use SigmoidBinaryCrossEntropyLoss instead of LogisticRegressionOutput
+## Tip 3: Use SigmoidBinaryCrossEntropyLoss
 
-NDArray API has two options to calculate logistic regression loss: [SigmoidBinaryCrossEntropyLoss](https://mxnet.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss) and [LogisticRegressionOutput](https://mxnet.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.LogisticRegressionOutput). `LogisticRegressionOutput` is designed to be an output layer when using the Module API, and is not supposed to be used when using Gluon API.
+NDArray API has an options to calculate logistic regression loss: [SigmoidBinaryCrossEntropyLoss](https://mxnet.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss).
 
 ## Conclusion
 

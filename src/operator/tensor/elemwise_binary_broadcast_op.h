@@ -246,8 +246,8 @@ struct binary_broadcast_kernel {
     }
   }
 
-#ifndef _WIN32
   /*! \brief Map function for binary_broadcast_kernel */
+  /* used for mixed type binary ops */
   template<typename IType, typename DType,
            typename std::enable_if<!std::is_same<IType, DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t base, index_t length, OpReqType req,
@@ -268,6 +268,7 @@ struct binary_broadcast_kernel {
   }
 
   /*! \brief Map function for binary_broadcast_kernel */
+  /* used for mixed type binary ops */
   template<typename IType, typename DType,
            typename std::enable_if<!std::is_same<IType, DType>::value &&
                                    !std::is_pointer<IType>::value, int>::type = 0>
@@ -287,7 +288,6 @@ struct binary_broadcast_kernel {
       KERNEL_ASSIGN(out[base + i], req, OP::Map(lhs, rhs[ridx]));
     }
   }
-#endif
 };
 
 template<int req, typename OP, bool col_vec>

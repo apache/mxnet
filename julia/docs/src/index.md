@@ -31,16 +31,6 @@ include:
 For more details, see documentation below. Please also checkout the
 [examples](https://github.com/apache/incubator-mxnet/tree/master/julia/examples) directory.
 
-## Tutorials
-
-```@contents
-Pages = [
-  "tutorial/mnist.md",
-  "tutorial/char-lstm.md",
-]
-Depth = 2
-```
-
 ## User's Guide
 
 ```@contents
