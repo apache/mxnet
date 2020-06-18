@@ -877,7 +877,7 @@ def get_cuda_compute_capability(ctx):
         raise ValueError('Expecting a gpu context to get cuda compute capability, '
                          'while received ctx {}'.format(str(ctx)))
 
-    libnames = ('libcudart.so', 'libcuda.dylib', 'cuda.dll')
+    libnames = ('libcuda.so', 'libcuda.dylib', 'cuda.dll')
     for libname in libnames:
         try:
             cuda = ctypes.CDLL(libname)
