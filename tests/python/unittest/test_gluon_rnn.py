@@ -153,28 +153,6 @@ def test_lstmp():
         check_rnn_states(fused_states, stack_states, num_layers, True)
 
 
-@pytest.mark.serial
-def test_lstm_forget_bias():
-    forget_bias = 2.0
-    stack = gluon.rnn.SequentialRNNCell()
-    stack.add(gluon.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l0_'))
-    stack.add(gluon.rnn.LSTMCell(100, i2h_bias_initializer=mx.init.LSTMBias(forget_bias), prefix='l1_'))
-
-    dshape = (32, 1, 200)
-    data = mx.sym.Variable('data')
-
-    sym, _ = stack.unroll(1, data, merge_outputs=True)
-    mod = mx.mod.Module(sym, label_names=None, context=mx.cpu(0))
-    mod.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    mod.init_params()
-
-    bias_argument = next(x for x in sym.list_arguments() if x.endswith('i2h_bias'))
-    expected_bias = np.hstack([np.zeros((100,)),
-                               forget_bias * np.ones(100, ), np.zeros((2 * 100,))])
-    assert_allclose(mod.get_params()[0][bias_argument].asnumpy(), expected_bias)
-
-
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_lstm_cpu_inference():
     # should behave the same as lstm cell
@@ -882,18 +860,6 @@ def test_rnn_unroll_variant_length():
             for valid_out_state, gt_state in zip(states, ele_states):
                 assert_allclose(valid_out_state[i:(i+1)].asnumpy(), gt_state.asnumpy(),
                                 atol=1E-4, rtol=1E-4)
-    # For symbolic test, we need to make sure that it can be binded and run
-    data = mx.sym.var('data', shape=(4, 10, 2))
-    cell = gluon.rnn.RNNCell(100)
-    valid_length = mx.sym.var('valid_length', shape=(4,))
-    outs, states = cell.unroll(length=10, inputs=data, valid_length=valid_length,
-                               merge_outputs=True, layout='NTC')
-    mod = mx.mod.Module(states[0], data_names=('data', 'valid_length'), label_names=None,
-                        context=mx.cpu())
-    mod.bind(data_shapes=[('data', (4, 10, 2)), ('valid_length', (4,))], label_shapes=None)
-    mod.init_params()
-    mod.forward(mx.io.DataBatch([mx.random.normal(0, 1, (4, 10, 2)), mx.nd.array([3, 6, 10, 2])]))
-    mod.get_outputs()[0].asnumpy()
 
 
 def test_cell_fill_shape():

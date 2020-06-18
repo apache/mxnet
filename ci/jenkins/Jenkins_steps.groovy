@@ -41,6 +41,7 @@ mx_lib_cpp_examples_make = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.
 mx_lib_cpp_capi_make = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, libsample_lib.so, lib/libmkldnn.so.1, lib/libmklml_intel.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a, 3rdparty/ps-lite/build/libps.a, deps/lib/libprotobuf-lite.a, deps/lib/libzmq.a, build/cpp-package/example/**, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so, build/tests/cpp/mxnet_unit_tests'
 mx_lib_cpp_examples_no_tvm_op = 'build/libmxnet.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/3rdparty/openmp/runtime/src/libomp.so,  build/cpp-package/example/**, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/openmp/runtime/src/libomp.so, build/cpp-package/example/**'
+mx_cd_lib = 'lib/libmxnet.so, licenses/*, lib/libgfortran.so.4, lib/libquadmath.so.0, lib/libopenblas.so.0, include/mkldnn/dnnl_version.h, include/mkldnn/dnnl_config.h'
 
 // Python unittest for CPU
 // Python 3
@@ -741,13 +742,14 @@ def compile_static_python_cpu() {
   }]
 }
 
-def compile_static_python_cpu_cmake() {
-  return ['Static build CPU CentOS7 Python with CMake' : {
+def compile_static_cd_cpu(lib_name) {
+  return ['CPU: CD Static Build' : {
     node(NODE_LINUX_CPU) {
-        ws('workspace/ut-publish-python-cpu') {
+        ws('workspace/build-cd-static/cpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_cpu', 'build_static_python_cpu_cmake', false)
+            utils.docker_run('centos7_cpu', 'build_static_libmxnet cpu', false)
+            utils.pack_lib(lib_name, mx_cd_lib)
           }
         }
     }
@@ -767,13 +769,14 @@ def compile_static_python_gpu() {
   }]
 }
 
-def compile_static_python_gpu_cmake() {
-  return ['Static build GPU CentOS7 Python with CMake' : {
-    node(NODE_LINUX_GPU) {
-        ws('workspace/ut-publish-python-gpu') {
+def compile_static_cd_gpu(lib_name) {
+  return ['GPU: CD Static Build' : {
+    node(NODE_LINUX_CPU) {
+        ws('workspace/build-cd-static/gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_gpu_cu92', 'build_static_python_cu92_cmake')
+            utils.docker_run('centos7_gpu_cu102', 'build_static_libmxnet cu102', false)
+            utils.pack_lib(lib_name, mx_cd_lib)
           }
         }
     }
@@ -964,20 +967,6 @@ def test_unix_python3_tensorrt_gpu(lib_name) {
     }]
 }
 
-def test_unix_python3_integration_gpu(lib_name) {
-    return ['Python Integration GPU': {
-      node(NODE_LINUX_GPU_G4) {
-        ws('workspace/it-python-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_python', true)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_cpp_package_gpu(lib_name) {
     return ['cpp-package GPU Makefile': {
       node(NODE_LINUX_GPU_G4) {
@@ -985,20 +974,6 @@ def test_unix_cpp_package_gpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib_cpp_examples_make)
             utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_cpp_package', true)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_capi_cpp_package(lib_name) {
-    return ['capi-cpp-package GPU Makefile': {
-      node(NODE_LINUX_GPU_G4) {
-        ws('workspace/it-capi-cpp-package') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_cpp_capi_make)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_capi_cpp_package', true)
             utils.publish_test_coverage()
           }
         }
@@ -1227,6 +1202,20 @@ def test_unix_distributed_kvstore_cpu(lib_name) {
     }]
 }
 
+def test_unix_byteps_gpu(lib_name) {
+    return ['byteps tests GPU': {
+      node(NODE_LINUX_GPU_G4) {
+        ws('workspace/it-byteps') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_lib)
+            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_byteps', true, '32768m')
+            utils.publish_test_coverage()
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_distributed_kvstore_gpu(lib_name) {
     return ['dist-kvstore tests GPU': {
       node(NODE_LINUX_GPU_G4) {
@@ -1260,6 +1249,32 @@ def test_centos7_python3_cpu(lib_name) {
     }]
 }
 
+def test_centos7_python3_cd_cpu(lib_name) {
+    return ['Python3: CentOS 7 CPU CD': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/test-cd-static/cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_cd_lib)
+            utils.docker_run('centos7_cpu', 'cd_unittest_ubuntu cpu', false)
+          }
+        }
+      }
+    }]
+}
+
+def test_centos7_pypi_package_cd_cpu(lib_name) {
+    return ['PyPI package: CentOS 7 CPU CD': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/test-cd-pypi/cpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_cd_lib)
+            utils.docker_run('centos7_cpu', 'ci_package_pypi cpu', false)
+          }
+        }
+      }
+    }]
+}
+
 def test_centos7_python3_gpu(lib_name) {
     return ['Python3: CentOS 7 GPU': {
       node(NODE_LINUX_GPU) {
@@ -1272,6 +1287,45 @@ def test_centos7_python3_gpu(lib_name) {
             } finally {
               utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_centos7_gpu.xml')
             }
+          }
+        }
+      }
+    }]
+}
+
+def test_centos7_python3_cd_gpu(lib_name) {
+    return ['Python3: CentOS 7 GPU CD': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/test-cd-static/gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_cd_lib)
+            utils.docker_run('centos7_gpu_cu102', 'cd_unittest_ubuntu cu102', true)
+          }
+        }
+      }
+    }]
+}
+
+def test_centos7_quantization_cd_gpu(lib_name) {
+    return ['Quantization Python3: CentOS 7 GPU CD': {
+      node(NODE_LINUX_GPU_P3) {
+        ws('workspace/test-cd-static/gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_cd_lib)
+            utils.docker_run('centos7_gpu_cu102', 'unittest_ubuntu_python3_quantization_gpu', true)
+          }
+        }
+      }
+    }]
+}
+
+def test_centos7_pypi_package_cd_gpu(lib_name) {
+    return ['PyPI package: CentOS 7 GPU CD': {
+      node(NODE_LINUX_GPU) {
+        ws('workspace/test-cd-pypi/gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.unpack_and_init(lib_name, mx_cd_lib)
+            utils.docker_run('centos7_gpu_cu102', 'ci_package_pypi cu102', true)
           }
         }
       }
@@ -1687,17 +1741,6 @@ def docs_publish_beta() {
 }
 
 
-def misc_asan_cpu(lib_name) {
-    return ['CPU ASAN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-python3-cpu-asan') {
-            utils.unpack_and_init(lib_name, mx_lib_cpp_examples_cpu)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_asan', false)
-        }
-      }
-    }]
-}
-
 def sanity_lint() {
     return ['Lint': {
       node(NODE_LINUX_CPU) {
@@ -1737,7 +1780,7 @@ def misc_test_docker_cache_build() {
       ws('workspace/docker_cache') {
         utils.init_git()
         sh "python3 ./ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} --no-publish"
-        sh "cd ci && docker-compose -f docker/docker-compose.yml build --parallel"
+        sh "cd ci && docker-compose -f docker/docker-compose.yml pull && docker-compose -f docker/docker-compose.yml build --parallel"
       }
     }
   }]

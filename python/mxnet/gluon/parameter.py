@@ -194,8 +194,8 @@ class Parameter(object):
 
         assert len(self._shape) == len(new_shape) and \
             all(j in (-1, 0, i) for i, j in zip(new_shape, self._shape)), \
-            "Expected shape %s is incompatible with given shape %s."%(
-                str(new_shape), str(self._shape))  # -1 means unknown dim size in np_shape mode
+            "Expected shape %s is incompatible with given shape %s for Parameter %s."%(
+                str(new_shape), str(self._shape), str(self.name))  # -1 means unknown dim size in np_shape mode
 
         self._shape = new_shape
 

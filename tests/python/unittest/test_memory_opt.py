@@ -167,36 +167,6 @@ def grep_exec_memory_consumption(exec):
                   "debug string: %s" % exec_debug_str
 
 
-@memory_opt_env_check
-def test_resnet152():
-    # Verify the memory allocation behavior on ResNet-152, the state-of-the-art
-    # model used for image classification.
-
-    # Import the network, similar to what we did in
-    # ${MXNET_ROOT_DIR}/example/image-classification/train_imagenet.py
-    from importlib import import_module
-    sys.path.append(os.path.join(os.path.dirname(__file__),
-                    '..', '..', '..', 'example', 'image-classification'))
-    resnet_mod = import_module('symbols.resnet')
-    resnet_152 = resnet_mod.get_symbol(num_classes=1000,
-                                       num_layers=152,
-                                       image_shape='3,224,224')
-    # We do the binding twice, one with the memory optimizations and one without.
-    # It is expected that the memory consumption of the former should be roughly
-    # half of that of the latter.
-    memory_opt_exec = resnet_152.simple_bind(mx.cpu(), 'write',
-                                             data=(32, 3, 224, 224))
-    os.environ["MXNET_MEMORY_OPT"] = '0'
-    no_opt_exec = resnet_152.simple_bind(mx.cpu(), 'write', data=(32, 3, 224, 224))
-    os.environ["MXNET_MEMORY_OPT"] = '1'
-    memory_opt_alloc = grep_exec_memory_consumption(memory_opt_exec)
-    no_opt_alloc = grep_exec_memory_consumption(no_opt_exec)
-    assert memory_opt_alloc / no_opt_alloc < 0.6, \
-           "The ratio between the memory consumption with the memory optimizations " \
-           "enabled and disabled (%d vs. %d MB) is expected to be smaller than 0.6"  \
-           % (memory_opt_alloc, no_opt_alloc)
-
-
 if __name__ == "__main__":
     import nose
     nose.runmodule()

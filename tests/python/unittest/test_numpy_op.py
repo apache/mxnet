@@ -1325,6 +1325,322 @@ def test_npx_slice(start, end, step, hybridize):
 
 @with_seed()
 @use_np
+def test_npx_index_add():
+    class TestIndexAdd(HybridBlock):
+        def __init__(self):
+            super(TestIndexAdd, self).__init__()
+
+        def hybrid_forward(self, F, a, ind, val):
+            return F.npx.index_add(a, ind, val)
+
+    def index_add_forward(a, ind, val, ind_ndim, ind_num):
+        if val.dtype != a.dtype:
+            val = val.astype(a.dtype)
+        ind_arr = ind.transpose()
+        if ind_arr.ndim == 0:
+            ind_arr = _np.array([ind_arr])
+        for i in range(ind_arr.shape[0]):
+            t_ind = ind_arr[i]
+            t_ind = tuple(t_ind.tolist()) if type(t_ind) is _np.ndarray else t_ind.tolist()
+            if val.ndim + ind_ndim > a.ndim:
+                t_val = val[tuple([0 if val.shape[0]==1 else i])]
+                if type(t_val) is _np.ndarray and t_val.shape[0] == 1:
+                    a[t_ind] += _np.squeeze(t_val, axis=0)
+                else:
+                    a[t_ind] += t_val
+            else:
+                a[t_ind] += val
+        return a
+    
+    def index_add_bwd(out_grad, a_grad, ind, val_grad, ind_ndim, ind_num, grad_req_a, grad_req_val):
+        if grad_req_a == 'add':
+            init_a_grad = _np.array(a_grad)
+        if grad_req_val == 'add':
+            init_val_grad = _np.array(val_grad)
+        a_grad = _np.zeros(a_grad.shape) + out_grad
+        a_grad = a_grad.astype(a_grad.dtype)
+        val_grad = _np.zeros(val_grad.shape).astype(val_grad.dtype)
+
+        ind_arr = ind.transpose()
+        if ind_arr.ndim == 0:
+            ind_arr = _np.array([ind_arr])
+        for i in range(ind_arr.shape[0]):
+            t_ind = ind_arr[i]
+            t_ind = tuple(ind_arr[i].tolist()) if type(ind_arr[i]) is _np.ndarray else ind_arr[i].tolist()
+            if val_grad.ndim + ind_ndim > a_grad.ndim:
+                idx = 0 if val_grad.shape[0]==1 else i
+                t_grad = out_grad[t_ind]
+                t_grad_shape = _np.array(t_grad.shape)
+                val_grad_shape = _np.array(val_grad[idx].shape)
+                if type(val_grad[idx]) is not _np.ndarray:
+                    t_grad = _np.sum(t_grad)
+                else:
+                    is_not_equal = t_grad_shape - val_grad_shape
+                    if _np.any(is_not_equal):
+                        broadcast_dim = _np.nonzero(_np.where(is_not_equal, 1, 0))
+                        t_grad = _np.sum(t_grad, axis=tuple(broadcast_dim[0].reshape(1, -1)[0]), keepdims=True)
+                val_grad[idx] += t_grad
+            else:
+                t_grad = out_grad[t_ind]
+                if type(val_grad) is not _np.ndarray or val_grad.shape == ():
+                    t_grad = _np.sum(t_grad)
+                else:
+                    if type(t_grad) is _np.ndarray:
+                        ext_dim = t_grad.ndim() - val_grad.ndim()
+                        if ext_dim:
+                            t_grad = _np.sum(t_grad, axis=tuple(_np.arange(ext_dim)))
+                        t_grad_shape = _np.array(t_grad.shape)
+                        val_grad_shape = _np.array(val_grad.shape)
+                        is_not_equal = t_grad_shape - val_grad_shape
+                        if _np.any(is_not_equal):
+                            broadcast_dim = _np.nonzero(_np.where(is_not_equal, 1, 0))
+                            t_grad = _np.sum(t_grad, axis=tuple(broadcast_dim.reshape(1, -1)[0]), keepdims=True)
+                val_grad += t_grad
+        if grad_req_a == 'add':
+            a_grad += init_a_grad
+        if grad_req_val == 'add':
+            val_grad += init_val_grad
+        return a_grad, val_grad
+
+    # a.shape, ind.shape, val.shape, ind_ndim, ind_num
+    configs = [((2, ), np.array(1, dtype=_np.int32), (1, ), 1, 1)]
+    shape = tuple(_np.random.randint(1, 6, size=(4))) # a.shape
+    for ind_ndim in range(1, 5): # ind.shape: (ind_ndim, ind_num)
+        ind_num = _np.random.randint(1, 7)
+        ind = []
+        for ind_dim in range(ind_ndim):
+            ind.append(_np.random.randint(0, shape[ind_dim], size=(ind_num)))
+        ind = _np.array(ind).astype(_np.int32)
+        # case: val is scalar
+        configs.append(tuple([shape, ind, (), ind_ndim, ind_num]))
+        for val_ndim in range(1, 5 - ind_ndim):
+            val_shape = [1 if _np.random.randint(0, 5)==0 else ind_num]
+            for val_dim in range(ind_ndim, 4):
+                val_shape.append(1 if _np.random.randint(0, 5)==0 else shape[val_dim])
+            # case: val is tensor
+            configs.append(tuple([shape, ind, tuple(val_shape), ind_ndim, ind_num]))
+
+    dtypes = ['float32', 'float64', 'int32', 'int64']
+    grad_req = ['write', 'null', 'add']
+    for hybridize, grad_req_a, grad_req_val, dtype, indtype in \
+        itertools.product([True, False], grad_req, grad_req, dtypes, ['int32', 'int64']):
+        for a_shape, ind, val_shape ,ind_ndim, ind_num in configs:
+            eps = 1e-3
+            atype = dtype
+            valtype = dtype
+            test_index_add = TestIndexAdd()
+            if hybridize:
+                test_index_add.hybridize()
+            a = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
+            a.attach_grad(grad_req=grad_req_a)
+            val = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
+            val.attach_grad(grad_req=grad_req_val)
+            expected_ret = index_add_forward(a.asnumpy(), ind.astype(indtype), val.asnumpy(), ind_ndim, ind_num)
+            with mx.autograd.record():
+                mx_ret = test_index_add(a, np.array(ind).astype(indtype), val)
+            assert mx_ret.shape == a.shape
+            assert expected_ret.shape == a.shape
+            assert mx_ret.dtype == a.dtype
+            assert expected_ret.dtype == a.dtype
+            assert_almost_equal(mx_ret.asnumpy(), expected_ret, rtol=eps, atol=eps)
+
+            if atype not in ['float16', 'float32', 'float64'] or valtype not in ['float16', 'float32', 'float64']:
+                continue
+            if grad_req_a != 'null' or grad_req_val != 'null':
+                init_a_grad = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
+                init_val_grad = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
+                out_grad = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
+                if grad_req_a == 'add':
+                    if init_a_grad.ndim == 0:
+                        a.grad[()] = init_a_grad.item()
+                    else:
+                        a.grad[:] = init_a_grad
+                if grad_req_val == 'add':
+                    if init_val_grad.ndim == 0:
+                        val.grad[()] = init_val_grad.item()
+                    else:
+                        val.grad[:] = init_val_grad
+                mx_ret.backward(out_grad)
+                expected_bwd_a, expected_bwd_val = index_add_bwd(out_grad.asnumpy(), init_a_grad.asnumpy(), ind,
+                                                                 init_val_grad.asnumpy(), ind_ndim, ind_num,
+                                                                 grad_req_a, grad_req_val)
+                if grad_req_a == 'null':
+                    assert a.grad is None
+                else:
+                    assert_almost_equal(a.grad.asnumpy(), expected_bwd_a, rtol = eps, atol=eps)
+                if grad_req_val == 'null':
+                    assert val.grad is None
+                else:
+                    assert_almost_equal(val.grad.asnumpy(), expected_bwd_val, rtol = eps, atol=eps)
+
+            mx_out = npx.index_add(a, np.array(ind).astype(indtype), val)
+            assert_almost_equal(mx_out.asnumpy(), expected_ret, rtol=eps, atol=eps)
+
+
+@with_seed()
+@use_np
+def test_npx_index_update():
+    class TestIndexUpdate(HybridBlock):
+        def __init__(self):
+            super(TestIndexUpdate, self).__init__()
+
+        def hybrid_forward(self, F, a, ind, val):
+            return F.npx.index_update(a, ind, val)
+
+    def check_index_update_forward(mx_ret, a, ind, val, ind_ndim, ind_num, eps):
+        if val.dtype != a.dtype:
+            val = val.astype(a.dtype)
+        ind_arr = ind.transpose()
+        if ind_arr.ndim == 0:
+            ind_arr = _np.array([ind_arr])
+        for i in range(ind_arr.shape[0]):
+            t_ind = ind_arr[i]
+            t_ind = tuple(t_ind.tolist()) if type(t_ind) is _np.ndarray else t_ind.tolist()
+            if val.ndim + ind_ndim > a.ndim:
+                t_val = val[tuple([0 if val.shape[0]==1 else i])]
+                if type(t_val) is _np.ndarray and t_val.shape[0] == 1:
+                    expect_tmp = _np.squeeze(t_val, axis=0)
+                else:
+                    expect_tmp = t_val
+            else:
+                expect_tmp = val
+            mx_tmp = mx_ret[t_ind]
+            close_pos = _np.where(_np.isclose(expect_tmp, mx_tmp, rtol=eps, atol=eps))
+            if a[t_ind].ndim == 0:
+                if close_pos[0].size == 1:
+                    mx_ret[t_ind] = 0
+                    a[t_ind] = 0
+            else:
+                mx_ret[t_ind][close_pos] = 0
+                a[t_ind][close_pos] = 0
+        assert_almost_equal(mx_ret, a, rtol=eps, atol=eps)
+
+    def index_update_bwd(out_grad, a_grad, ind, val_grad, ind_ndim, ind_num, grad_req_a, grad_req_val):
+        if grad_req_a == 'add':
+            init_a_grad = _np.array(a_grad)
+        if grad_req_val == 'add':
+            init_val_grad = _np.array(val_grad)
+        a_grad = _np.zeros(a_grad.shape) + out_grad
+        a_grad = a_grad.astype(a_grad.dtype)
+        val_grad = _np.zeros(val_grad.shape).astype(val_grad.dtype)
+
+        ind_arr = ind.transpose()
+        if ind_arr.ndim == 0:
+            ind_arr = _np.array([ind_arr])
+        for i in range(ind_arr.shape[0]):
+            t_ind = ind_arr[i]
+            t_ind = tuple(ind_arr[i].tolist()) if type(ind_arr[i]) is _np.ndarray else ind_arr[i].tolist()
+            a_grad[t_ind] = 0
+            if val_grad.ndim + ind_ndim > a_grad.ndim:
+                idx = 0 if val_grad.shape[0]==1 else i
+                t_grad = out_grad[t_ind]
+                t_grad_shape = _np.array(t_grad.shape)
+                val_grad_shape = _np.array(val_grad[idx].shape)
+                if type(val_grad[idx]) is not _np.ndarray:
+                    t_grad = _np.sum(t_grad)
+                else:
+                    is_not_equal = t_grad_shape - val_grad_shape
+                    if _np.any(is_not_equal):
+                        broadcast_dim = _np.nonzero(_np.where(is_not_equal, 1, 0))
+                        t_grad = _np.sum(t_grad, axis=tuple(broadcast_dim[0].reshape(1, -1)[0]), keepdims=True)
+                val_grad[idx] += t_grad
+            else:
+                t_grad = out_grad[t_ind]
+                if type(val_grad) is not _np.ndarray or val_grad.shape == ():
+                    t_grad = _np.sum(t_grad)
+                else:
+                    if type(t_grad) is _np.ndarray:
+                        ext_dim = t_grad.ndim() - val_grad.ndim()
+                        if ext_dim:
+                            t_grad = _np.sum(t_grad, axis=tuple(_np.arange(ext_dim)))
+                        t_grad_shape = _np.array(t_grad.shape)
+                        val_grad_shape = _np.array(val_grad.shape)
+                        is_not_equal = t_grad_shape - val_grad_shape
+                        if _np.any(is_not_equal):
+                            broadcast_dim = _np.nonzero(_np.where(is_not_equal, 1, 0))
+                            t_grad = _np.sum(t_grad, axis=tuple(broadcast_dim.reshape(1, -1)[0]), keepdims=True)
+                val_grad += t_grad
+        if grad_req_a == 'add':
+            a_grad += init_a_grad
+        if grad_req_val == 'add':
+            val_grad += init_val_grad
+        return a_grad, val_grad
+
+    # a.shape, ind.shape, val.shape, ind_ndim, ind_num
+    configs = [((2, ), np.array(1, dtype=_np.int32), (1, ), 1, 1)]
+    shape = tuple(_np.random.randint(1, 6, size=(4))) # a.shape
+    for ind_ndim in range(1, 5): # ind.shape: (ind_ndim, ind_num)
+        ind_num = _np.random.randint(1, 7)
+        ind = []
+        for ind_dim in range(ind_ndim):
+            ind.append(_np.random.randint(0, shape[ind_dim], size=(ind_num)))
+        ind = _np.array(ind).astype(_np.int32)
+        # case: val is scalar
+        configs.append(tuple([shape, ind, (), ind_ndim, ind_num]))
+        for val_ndim in range(1, 5 - ind_ndim):
+            val_shape = [1 if _np.random.randint(0, 5)==0 else ind_num]
+            for val_dim in range(ind_ndim, 4):
+                val_shape.append(1 if _np.random.randint(0, 5)==0 else shape[val_dim])
+            # case: val is tensor
+            configs.append(tuple([shape, ind, tuple(val_shape), ind_ndim, ind_num]))
+
+    dtypes = ['float32', 'float64', 'int32', 'int64']
+    grad_req = ['write', 'null', 'add']
+    for hybridize, grad_req_a, grad_req_val, dtype, indtype in \
+        itertools.product([True, False], grad_req, grad_req, dtypes, ['int32', 'int64']):
+        for a_shape, ind, val_shape ,ind_ndim, ind_num in configs:
+            eps = 1e-3
+            atype = dtype
+            valtype = dtype
+            test_index_update = TestIndexUpdate()
+            if hybridize:
+                test_index_update.hybridize()
+            a = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
+            a.attach_grad(grad_req=grad_req_a)
+            val = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
+            val.attach_grad(grad_req=grad_req_val)
+            with mx.autograd.record():
+                mx_ret = test_index_update(a, np.array(ind).astype(indtype), val)
+            assert mx_ret.shape == a.shape
+            assert mx_ret.dtype == a.dtype
+            check_index_update_forward(mx_ret.asnumpy(), a.asnumpy(), ind.astype(indtype), val.asnumpy(), ind_ndim, ind_num, eps)
+
+            if atype not in ['float16', 'float32', 'float64'] or valtype not in ['float16', 'float32', 'float64']:
+                continue
+            if grad_req_a != 'null' or grad_req_val != 'null':
+                init_a_grad = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
+                init_val_grad = mx.nd.random.uniform(-10.0, 10.0, shape=val_shape).as_np_ndarray().astype(valtype)
+                out_grad = mx.nd.random.uniform(-10.0, 10.0, shape=a_shape).as_np_ndarray().astype(atype)
+                if grad_req_a == 'add':
+                    if init_a_grad.ndim == 0:
+                        a.grad[()] = init_a_grad.item()
+                    else:
+                        a.grad[:] = init_a_grad
+                if grad_req_val == 'add':
+                    if init_val_grad.ndim == 0:
+                        val.grad[()] = init_val_grad.item()
+                    else:
+                        val.grad[:] = init_val_grad
+                mx_ret.backward(out_grad)
+                expected_bwd_a, expected_bwd_val = index_update_bwd(out_grad.asnumpy(), init_a_grad.asnumpy(), ind,
+                                                                    init_val_grad.asnumpy(), ind_ndim, ind_num,
+                                                                    grad_req_a, grad_req_val)
+
+                if grad_req_a == 'null':
+                    assert a.grad is None
+                else:
+                    assert_almost_equal(a.grad.asnumpy(), expected_bwd_a, rtol = eps, atol=eps)
+                if grad_req_val == 'null':
+                    assert val.grad is None
+                else:
+                    assert_almost_equal(val.grad.asnumpy(), expected_bwd_val, rtol = eps, atol=eps)
+
+            mx_out = npx.index_update(a, np.array(ind).astype(indtype), val)
+            check_index_update_forward(mx_out.asnumpy(), a.asnumpy(), ind.astype(indtype), val.asnumpy(), ind_ndim, ind_num, eps)
+
+
+@with_seed()
+@use_np
 def test_npx_batch_dot():
     ctx = mx.context.current_context()
     dtypes = ['float32', 'float64']
@@ -1441,6 +1757,159 @@ def test_npx_batch_dot():
                                                                transpose_a=transpose_a,
                                                                transpose_b=transpose_b))
 
+
+@with_seed()
+@use_np
+@pytest.mark.parametrize('shape', [(24, 2), (24, 3, 4),
+    (24, 8, 4, 5), (24, 5, 6, 4, 5)])
+@pytest.mark.parametrize('fix_gamma', [False, True])
+@pytest.mark.parametrize('cudnn_off', [False, True])
+@pytest.mark.parametrize('output_mean_var', [False, True])
+def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
+    momentum = 0.9
+    epsilon = 1e-5
+    class TestBatchNorm(HybridBlock):
+        def __init__(self, eps=1e-5, fix_gamma=False, momentum=0.9, **kwargs):
+            super().__init__()
+            self.eps = eps
+            self.fix_gamma = fix_gamma
+            self.momentum = momentum
+            self.kwargs = kwargs
+        def hybrid_forward(self, F, data, bn_gamma, bn_beta,
+                           bn_running_mean, bn_running_var):
+            op = F.npx.batch_norm
+            output = op(data, bn_gamma, bn_beta,
+                        bn_running_mean, bn_running_var,
+                        momentum=self.momentum, eps=self.eps,
+                        fix_gamma=self.fix_gamma, **self.kwargs)
+            return output
+
+    def _test_batchnorm_impl(axis,
+                             data_grad_req, gamma_grad_req, beta_grad_req):
+        kwargs = dict(output_mean_var=output_mean_var)
+        kwargs.update(dict(axis=axis, cudnn_off=cudnn_off))
+        op = TestBatchNorm(eps=epsilon, fix_gamma=fix_gamma, momentum=momentum, **kwargs)
+        nch = shape[axis]
+
+        if not fix_gamma:
+            bn_gamma = np.random.uniform(size=(nch,))
+            bn_gamma.attach_grad(grad_req=gamma_grad_req)
+        else:
+            bn_gamma = np.ones((nch,))
+
+        bn_beta = np.random.uniform(size=(nch,))
+        bn_beta.attach_grad(grad_req=beta_grad_req)
+
+        bn_running_mean = np.zeros(nch)
+        bn_running_var = np.ones(nch)
+
+        running_mean = np.zeros(nch)
+        running_var = np.ones(nch)
+        num_iters = 10
+        expand_shape = [1] * len(shape)
+        expand_shape[axis] = shape[axis]
+        expand_shape = tuple(expand_shape)
+        data = np.random.uniform(size=shape)
+        data.attach_grad(grad_req=data_grad_req)
+        adX, adW, adb = 0, 0, 0
+        is_train = data_grad_req != 'null' or \
+            (not fix_gamma and gamma_grad_req != 'null') or \
+            beta_grad_req != 'null'
+        for _ in range(num_iters):
+            if data_grad_req != 'add':
+                data = np.random.uniform(size=shape)
+                data.attach_grad(grad_req=data_grad_req)
+            ograd = np.random.uniform(size=shape)
+            with mx.autograd.record():
+                output = op(data, bn_gamma, bn_beta,
+                            bn_running_mean, bn_running_var)
+                if output_mean_var:
+                    output, output_mean, output_std = output
+                if is_train:
+                    output.backward(ograd)
+            mx.nd.waitall()
+
+            assert 0 <= axis < data.ndim
+            reduce_axis = tuple(i for i in range(data.ndim) if i != axis)
+            assert len(reduce_axis) == data.ndim - 1
+            data_mean = data.mean(
+                axis=reduce_axis, keepdims=True)
+            data_var = ((data - data_mean) ** 2).mean(axis=reduce_axis,
+                                                        keepdims=True)
+
+            target_output = (data - data_mean) / \
+                np.sqrt(data_var + epsilon) * \
+                bn_gamma.reshape(expand_shape) + \
+                bn_beta.reshape(expand_shape)
+
+            # squeeze data_mean and data_var
+            data_mean_flat = data_mean.squeeze()
+            data_var_flat = data_var.squeeze()
+
+            running_mean = running_mean * momentum + \
+                data_mean_flat * (1 - momentum)
+            running_var = running_var * momentum + \
+                data_var_flat * (1 - momentum)
+
+            W = bn_gamma.reshape(expand_shape)
+            dnx = ograd * W
+            xsm = data - data_mean
+            nd = 1.0 / np.sqrt(data_var + epsilon)
+            nx = xsm * nd
+            m = _np.prod(shape) / shape[axis]
+            dvar = (dnx * xsm).sum(axis=reduce_axis, keepdims=True,
+                                  ) * (-0.5) * np.power(nd, 3)
+            dmean = -nd * dnx.sum(axis=reduce_axis, keepdims=True) - \
+                dvar * xsm.mean(axis=reduce_axis, keepdims=True,
+                                ) * 2.0
+            dX = dnx * nd + dvar * xsm * (2.0 / m) + dmean * (1.0 / m)
+            dW = (ograd * nx).sum(axis=reduce_axis)
+            db = ograd.sum(axis=reduce_axis)
+            adX = dX if data_grad_req != 'add' else adX + dX
+            adW = dW if gamma_grad_req != 'add' else adW + dW
+            adb = db if beta_grad_req != 'add' else adb + db
+
+            atol, rtol = 5e-2, 5e-2
+
+            if output_mean_var:
+                assert_almost_equal(output_mean.asnumpy(),
+                                    data_mean_flat.asnumpy(),
+                                    atol=atol, rtol=rtol)
+                assert_almost_equal(output_std.asnumpy(),
+                                    (1.0 / np.sqrt(data_var_flat +
+                                            epsilon)).asnumpy(),
+                                    atol=atol, rtol=rtol)
+            assert_almost_equal(output.asnumpy(), target_output.asnumpy(),
+                                atol=atol, rtol=rtol)
+            if is_train:
+                assert_almost_equal(bn_running_mean.asnumpy(
+                ), running_mean.asnumpy(), atol=atol, rtol=rtol)
+                assert_almost_equal(bn_running_var.asnumpy(
+                ), running_var.asnumpy(), atol=atol, rtol=rtol)
+
+            if data_grad_req != 'null':
+                assert_almost_equal(data.grad.asnumpy(),
+                                    adX.asnumpy(), atol=atol, rtol=rtol)
+            if not fix_gamma:
+                if gamma_grad_req != 'null':
+                    assert_almost_equal(
+                        bn_gamma.grad.asnumpy(), adW.asnumpy(),
+                        atol=atol, rtol=rtol)
+            else:
+                assert((bn_gamma.asnumpy() == 1).all())
+            if beta_grad_req != 'null':
+                assert_almost_equal(
+                    bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
+
+    grad_reqs = ['write'] if len(shape) != 4 else ['null', 'write', 'add']
+    for data_grad_req in grad_reqs:
+        for gamma_grad_req in grad_reqs:
+            if fix_gamma and gamma_grad_req != 'null':
+                continue
+            for beta_grad_req in grad_reqs:
+                for axis in range(len(shape)):
+                    _test_batchnorm_impl(axis,
+                        data_grad_req, gamma_grad_req, beta_grad_req)
 
 @with_seed()
 @use_np
@@ -2219,10 +2688,10 @@ def test_np_unary_funcs():
                 return getattr(F.np, self._func)(a)
 
         np_func = getattr(_np, func)
-        mx_func = TestUnary(func)
         np_test_data = _np.random.uniform(low, high, shape).astype(_np.float32)
         mx_test_data = mx.numpy.array(np_test_data)
         for hybridize in [True, False]:
+            mx_func = TestUnary(func)
             if hybridize:
                 mx_func.hybridize()
             if ref_grad:
@@ -2266,11 +2735,28 @@ def test_np_unary_funcs():
         funcs['rad2deg'] = (lambda x: 180. / _np.pi * _np.ones(x.shape), -1.0, 1.0)
         funcs['deg2rad'] = (lambda x: _np.pi / 180. * _np.ones(x.shape), -1.0, 1.0)
     ndim = random.choice([2, 3, 4])
-    shape = random.choice([rand_shape_nd(ndim, dim=3), (1, 0, 2)])
     for shape in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]:
         for func, func_data in funcs.items():
             ref_grad, low, high = func_data
             check_unary_func(func, ref_grad, shape, low, high)
+
+
+@use_np
+def test_negation():
+    class TestNegation(HybridBlock):
+        def hybrid_forward(self, F, a):
+            return -a
+    mx_func = TestNegation()
+    for dtype in [_np.int8, _np.int32, _np.float16, _np.float32, _np.float64]:
+        np_test_data = _np.random.uniform(-1, 1, (5, 5)).astype(dtype)
+        for hybridize in [True, False]:
+            mx_test_data = mx.numpy.array(np_test_data, dtype=dtype)
+            if hybridize:
+                mx_func.hybridize()
+            y = mx_func(mx_test_data)
+            assert y.shape == (5, 5)
+            assert y.dtype == dtype
+            assert_almost_equal(y.asnumpy(), -np_test_data)
 
 
 @with_seed()
@@ -2627,6 +3113,15 @@ def test_np_mixed_precision_binary_funcs():
         'mod': (1.0, 5.0, None, None),
         'power': (1.0, 3.0, lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2,
                             lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)),
+        'equal': (0.0, 2.0, None, None),
+        'not_equal': (0.0, 2.0, None, None),
+        'greater': (0.0, 2.0, None, None),
+        'less': (0.0, 2.0, None, None),
+        'greater_equal': (0.0, 2.0, None, None),
+        'less_equal': (0.0, 2.0, None, None),
+        'logical_and': (0.0, 2.0, None, None),
+        'logical_or': (0.0, 2.0, None, None),
+        'logical_xor': (0.0, 2.0, None, None),
     }
 
     shape_pairs = [((3, 2), (3, 2)),
@@ -4976,6 +5471,8 @@ def test_np_repeat():
         ((4, 2), 2, 0),
         ((4, 2), 2, 1),
         ((4, 2), 2, -1),
+        ((4, 2), [2,3] * 4, None),
+        ((4, 2), [1,2], 1),
     ]
 
     class TestRepeat(HybridBlock):
@@ -7653,6 +8150,26 @@ def test_np_einsum():
         # broadcast bug
         ('ij, ij -> i', [(1, 4), (2, 4)], lambda *args: (_np.sum(args[1], axis=0)[None, :],
                                                          _np.tile(args[0], [2, 1]))),
+        # one dimensim bug
+        ('...ij, ...jk -> ...ik', [(1, 4), (4, 2)], lambda *args: (args[1].sum(axis=1)[None, :],
+                                                                   _np.tile(args[0].sum(axis=0)[: ,None], [1, 2]))),
+        ('...ij, ...jk -> ...ik', [(2, 4), (4, 2)], lambda *args: (_np.tile(args[1].sum(axis=1)[None, :], [2, 1]),
+                                                                   _np.tile(args[0].sum(axis=0)[: ,None], [1, 2]))),
+        ('...ij, ...jk -> ...ik', [(3, 2, 1, 4), (3, 2, 4, 2)], lambda *args: (
+                                                            args[1].sum(axis=3)[:, :, None, :],
+                                                            _np.tile(args[0].sum(axis=2)[:, :, :, None], [1, 1, 1, 2]))),
+        ('...ij, ...ik -> ...jk', [(1, 1, 1, 4), (1, 1, 1, 3)], lambda *args: (
+                                                            _np.tile(args[1].sum(axis=3)[:, :, :, None], [1, 1, 1, 4]),
+                                                            _np.tile(args[0].sum(axis=3)[:, :, : ,None], [1, 1, 1, 3]))),
+        ('...ij, ...jc -> ...ic', [(1, 1, 5, 3), (1, 1, 3, 2)], lambda *args: (
+                                                            _np.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
+                                                            _np.tile(args[0].sum(axis=2)[:, :, : ,None], [1, 1, 1, 2]))),
+        ('...ij, ...jc -> ...ic', [(1, 2, 5, 4), (1, 2, 4, 2)], lambda *args: (
+                                                            _np.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
+                                                            _np.tile(args[0].sum(axis=2)[:, :, : ,None], [1, 1, 1, 2]))),
+        ('...ij, ...jc -> ...ic', [(2, 1, 5, 4), (2, 1, 4, 2)], lambda *args: (
+                                                            _np.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
+                                                             _np.tile(args[0].sum(axis=2)[:, :, : ,None], [1, 1, 1, 2]))),
         # issue #16576
         # commented due to long running time
         # ('abiz,abjz->abij', [(64, 8, 128, 512), (64, 8, 128, 512)], lambda *args: (_np.matmul(_np.ones((64, 8, 128, 128)), args[1]),
@@ -8976,6 +9493,13 @@ def test_np_where():
             same(ret.asnumpy(), _np.where(cond.asnumpy(), x.asnumpy(), 1))
             ret_rscalar.backward()
             same(x.grad.asnumpy(), collapse_sum_like(_np.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
+        
+        # check both scalar case
+        x = _np.random.randint(0, 100)
+        y = _np.random.randint(0, 100)
+        mx_out = np.where(cond, x, y)
+        np_out = _np.where(cond, x, y)
+        same(mx_out, np_out)
 
 
 @with_seed()

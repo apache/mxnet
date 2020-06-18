@@ -970,7 +970,7 @@ class HybridBlock(Block):
             with autograd.pause(), dc.context():
                 out = super().__call__(*args)
             flatten_out, self._out_format = _flatten(out, "output")
-            symbol_outputs = dc.get_symbol(flatten_out)
+            symbol_outputs = dc.get_symbol(flatten_out, sym_cls=type(symbol_inputs[0]))
             self._cached_graph = symbol_inputs, symbol_outputs
         return self._cached_graph
 
@@ -1033,12 +1033,12 @@ class HybridBlock(Block):
         if self._backend:
             ctx = args[0].context
             # get list of params in the order of out.list_arguments
-            arg_array = [args[data_names[name]] if name in data_names.keys() else params[name].data()
-                         for name in out.list_arguments()]
-            aux_array = [args[data_names[name]] if name in data_names.keys() else params[name].data()
-                         for name in out.list_auxiliary_states()]
+            arg_dict = {name:args[data_names[name]] if name in data_names.keys() else params[name].data()
+                        for name in out.list_arguments()}
+            aux_dict = {name:args[data_names[name]] if name in data_names.keys() else params[name].data()
+                        for name in out.list_auxiliary_states()}
             # Partition the graph.
-            out = out.optimize_for(self._backend, arg_array, aux_array, ctx, **self._backend_opts)
+            out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
             #update cached graph with partitioned graph
             self._cached_graph = data, out
         self._cached_op = ndarray.CachedOp(out, flags)
@@ -1247,7 +1247,7 @@ class HybridBlock(Block):
 
     def export(self, path, epoch=0, remove_amp_cast=True):
         """Export HybridBlock to json format that can be loaded by
-        `gluon.SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
+        `gluon.SymbolBlock.imports` or the C++ interface.
 
         .. note:: When there are only one input, it will have name `data`. When there
                   Are more than one inputs, they will be named as `data0`, `data1`, etc.
@@ -1441,8 +1441,8 @@ class SymbolBlock(HybridBlock):
     """
     @staticmethod
     def imports(symbol_file, input_names, param_file=None, ctx=None):
-        """Import model previously saved by `gluon.HybridBlock.export` or
-        `Module.save_checkpoint` as a `gluon.SymbolBlock` for use in Gluon.
+        """Import model previously saved by `gluon.HybridBlock.export`
+        as a `gluon.SymbolBlock` for use in Gluon.
 
         Parameters
         ----------

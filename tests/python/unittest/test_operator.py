@@ -34,46 +34,6 @@ from common import run_in_spawned_process, xfail_when_nonstandard_decimal_separa
 import pytest
 import os
 
-def check_rnn_consistency(cell1, cell2, T, N, I, H, grad_req, rtol=1e-2, atol=1e-4):
-    dshape = (N, T, I)
-    data = mx.sym.Variable('data')
-
-    Y1, _ = cell1.unroll(T, data, layout='NTC', merge_outputs=True)
-    mod1 = mx.mod.Module(Y1, label_names=None, context=default_context())
-    mod1.bind(data_shapes=[('data', dshape)], label_shapes=None, inputs_need_grad=True, grad_req=grad_req)
-
-    Y2, _ = cell2.unroll(T, data, layout='NTC', merge_outputs=True)
-    mod2 = mx.mod.Module(Y2, label_names=None, context=default_context())
-    mod2.bind(data_shapes=[('data', dshape)], label_shapes=None, inputs_need_grad=True, grad_req=grad_req)
-
-    mod1.init_params()
-    args, auxs = mod1.get_params()
-    args = cell1.unpack_weights(args)
-    args = cell2.pack_weights(args)
-    mod2.set_params(args, auxs)
-
-    x = mx.random.uniform(shape=dshape)
-    batch=mx.io.DataBatch(data=[x])
-    # check inference
-    mod1.forward(batch, is_train=False)
-    mod2.forward(batch, is_train=False)
-    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=rtol, atol=atol)
-
-    # check training
-    mod1.forward(batch, is_train=True)
-    mod2.forward(batch, is_train=True)
-    assert_allclose(mod1.get_outputs()[0].asnumpy(), mod2.get_outputs()[0].asnumpy(), rtol=rtol, atol=atol)
-
-    dy = mx.random.uniform(shape=mod1.get_outputs()[0].shape)
-    mod1.backward(out_grads=[dy])
-    mod2.backward(out_grads=[dy])
-    if type(grad_req) is dict and grad_req['data'] == 'null' or grad_req == 'null':
-        assert(mod1.get_input_grads()[0] == None)
-        assert(mod2.get_input_grads()[0] == None)
-    else:
-        assert_allclose(mod1.get_input_grads()[0].asnumpy(), mod2.get_input_grads()[0].asnumpy(), rtol=rtol, atol=atol)
-
-
 @with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 @pytest.mark.serial
@@ -114,185 +74,6 @@ def test_rnn_with_new_param():
             ex04 = ex.output_dict['rnn_output'].asnumpy()
             assert_allclose(ex03, ex04, rtol=1e-2, atol=1e-4)
 
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_lstm_sym():
-    Ts = [1, 5]
-    Ns = [1, 32]
-    Is = [32, 128, 512]
-    Hs = [32, 128, 512]
-    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
-        fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='lstm', get_next_state=True, prefix='')
-        stack = mx.rnn.SequentialRNNCell()
-        stack.add(mx.rnn.LSTMCell(H, prefix='l0_'))
-        stack.add(mx.rnn.LSTMCell(H, prefix='l1_'))
-        stack.add(mx.rnn.LSTMCell(H, prefix='l2_'))
-
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_lstm_bidirectional():
-    Ts = [1, 5]
-    Ns = [1, 32]
-    Is = [32, 128, 512]
-    Hs = [32, 128, 512]
-    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
-        fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='lstm',
-                                    bidirectional=True, get_next_state=True, prefix='')
-
-        stack = mx.rnn.SequentialRNNCell()
-        stack.add(mx.rnn.BidirectionalCell(
-                    mx.rnn.LSTMCell(H, prefix='l0_'),
-                    mx.rnn.LSTMCell(H, prefix='r0_'),
-                    output_prefix='bi_lstm_0_'))
-        stack.add(mx.rnn.BidirectionalCell(
-                    mx.rnn.LSTMCell(H, prefix='l1_'),
-                    mx.rnn.LSTMCell(H, prefix='r1_'),
-                    output_prefix='bi_lstm_1_'))
-
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
-        check_rnn_consistency(fused, stack, T, N, I, H, {'data': 'add', 'parameters': 'null'})
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_gru_sym():
-    Ts = [1, 5]
-    Ns = [1, 32]
-    Is = [32, 128, 512]
-    Hs = [32, 128, 512]
-    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
-        fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='gru', get_next_state=True, prefix='')
-        stack = mx.rnn.SequentialRNNCell()
-        stack.add(mx.rnn.GRUCell(H, prefix='l0_'))
-        stack.add(mx.rnn.GRUCell(H, prefix='l1_'))
-        stack.add(mx.rnn.GRUCell(H, prefix='l2_'))
-
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_gru_bidirectional():
-    Ts = [1, 5]
-    Ns = [1, 32]
-    Is = [32, 128, 512]
-    Hs = [32, 128, 512]
-    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
-        fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='gru',
-                                    bidirectional=True, get_next_state=True, prefix='')
-
-        stack = mx.rnn.SequentialRNNCell()
-        stack.add(mx.rnn.BidirectionalCell(
-                    mx.rnn.GRUCell(H, prefix='l0_'),
-                    mx.rnn.GRUCell(H, prefix='r0_'),
-                    output_prefix='bi_gru_0_'))
-
-        stack.add(mx.rnn.BidirectionalCell(
-                    mx.rnn.GRUCell(H, prefix='l1_'),
-                    mx.rnn.GRUCell(H, prefix='r1_'),
-                    output_prefix='bi_gru_1_'))
-
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_rnntanh_sym():
-    Ts = [1, 5]
-    Ns = [1, 32]
-    Is = [32, 128, 512]
-    Hs = [32, 128, 512]
-    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
-        fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='rnn_tanh', get_next_state=True, prefix='')
-        stack = mx.rnn.SequentialRNNCell()
-        stack.add(mx.rnn.RNNCell(H, activation='tanh', prefix='l0_'))
-        stack.add(mx.rnn.RNNCell(H, activation='tanh', prefix='l1_'))
-        stack.add(mx.rnn.RNNCell(H, activation='tanh', prefix='l2_'))
-
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_rnntanh_bidirectional():
-    Ts = [1, 5]
-    Ns = [1, 32]
-    Is = [32, 128, 512]
-    Hs = [32, 128, 512]
-    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
-        fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='rnn_tanh',
-                                    bidirectional=True, get_next_state=True, prefix='')
-
-        stack = mx.rnn.SequentialRNNCell()
-        stack.add(mx.rnn.BidirectionalCell(
-                    mx.rnn.RNNCell(H, activation='tanh', prefix='l0_'),
-                    mx.rnn.RNNCell(H, activation='tanh', prefix='r0_'),
-                    output_prefix='bi_rnntanh_0_'))
-        stack.add(mx.rnn.BidirectionalCell(
-                    mx.rnn.RNNCell(H, activation='tanh', prefix='l1_'),
-                    mx.rnn.RNNCell(H, activation='tanh', prefix='r1_'),
-                    output_prefix='bi_rnntanh_1_'))
-
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null')
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_rnnrelu_sym():
-    T, N, I, H = 5, 32, 200, 200
-
-    fused = mx.rnn.FusedRNNCell(H, num_layers=3, mode='rnn_relu', get_next_state=True, prefix='')
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.RNNCell(H, activation='relu', prefix='l0_'))
-    stack.add(mx.rnn.RNNCell(H, activation='relu', prefix='l1_'))
-    stack.add(mx.rnn.RNNCell(H, activation='relu', prefix='l2_'))
-
-    check_rnn_consistency(fused, stack, T, N, I, H, 'write')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'add')
-    check_rnn_consistency(fused, stack, T, N, I, H, 'null')
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_rnnrelu_bidirectional():
-    Ts = [1, 5]
-    Ns = [1, 32]
-    Is = [32, 128, 512]
-    Hs = [32, 128, 512]
-    for T, N, I, H in itertools.product(Ts, Ns, Is, Hs):
-        fused = mx.rnn.FusedRNNCell(H, num_layers=2, mode='rnn_relu',
-                                    bidirectional=True, get_next_state=True, prefix='')
-
-        stack = mx.rnn.SequentialRNNCell()
-        stack.add(mx.rnn.BidirectionalCell(
-                    mx.rnn.RNNCell(H, activation='relu', prefix='l0_'),
-                    mx.rnn.RNNCell(H, activation='relu', prefix='r0_'),
-                    output_prefix='bi_rnnrelu_0_'))
-        stack.add(mx.rnn.BidirectionalCell(
-                    mx.rnn.RNNCell(H, activation='relu', prefix='l1_'),
-                    mx.rnn.RNNCell(H, activation='relu', prefix='r1_'),
-                    output_prefix='bi_rnnrelu_1_'))
-
-        check_rnn_consistency(fused, stack, T, N, I, H, 'write', rtol=1e-2, atol=1e-2)
-        check_rnn_consistency(fused, stack, T, N, I, H, 'add', rtol=1e-2, atol=1e-2)
-        check_rnn_consistency(fused, stack, T, N, I, H, 'null', rtol=1e-2, atol=1e-2)
 
 @with_seed()
 @pytest.mark.serial
@@ -567,157 +348,6 @@ def test_slice_channel():
     check_slice_channel(data_ndim=4, axis=2, num_outputs=3, squeeze_axis=False)
     check_slice_channel(data_ndim=3, axis=-1, num_outputs=2, squeeze_axis=False)
     check_slice_channel(data_ndim=5, axis=-2, num_outputs=3, squeeze_axis=True)
-
-@with_seed()
-def test_regression():
-    ''' test regression operator '''
-    def check_regression(symbol, forward, backward, shape, stype='default', densities=[0, 0.5, 1]):
-        # init executor
-        data = mx.symbol.Variable('data')
-        label = mx.symbol.Variable('label', stype=stype)
-        out = symbol(data, label)
-        grad_req = {'data': 'write', 'label': 'null'}
-        out_exec = out.simple_bind(default_context(), grad_req=grad_req,
-            data=shape, label=shape)
-        arg_map = dict(zip(out.list_arguments(), out_exec.arg_arrays))
-        grad_map = dict(zip(out.list_arguments(), out_exec.grad_arrays))
-        # init data
-        arr_data = mx.random.uniform(-1, 1, shape)
-        arg_map["data"][:] = arr_data
-        # init label based on density
-        arr_label = arg_map["label"]
-        atol = 1e-5
-        for density in densities:
-            arr_label[:] = rand_ndarray(shape, stype, density=density)
-            out_exec.forward(is_train=True)
-            out_exec.backward()
-            np_out = forward(arr_data.asnumpy())
-            out_grad = backward(np_out, arr_label.asnumpy().reshape(np_out.shape)) / shape[1]
-            assert_almost_equal(out_exec.outputs[0], np_out, atol=atol)
-            assert_almost_equal(grad_map["data"], out_grad, atol=atol)
-
-    shape = (50, 30)
-
-    check_regression(mx.symbol.LogisticRegressionOutput,
-                     lambda x: 1.0 / (1.0 + np.exp(-x)),
-                     lambda x, y : x - y,
-                     shape)
-    check_regression(mx.symbol.LinearRegressionOutput,
-                     lambda x: x,
-                     lambda x, y : x - y,
-                     shape)
-    check_regression(mx.symbol.MAERegressionOutput,
-                     lambda x: x,
-                     lambda x, y : np.where(x > y, np.ones(x.shape), -np.ones(x.shape)),
-                     shape)
-    check_regression(mx.symbol.LogisticRegressionOutput,
-                     lambda x: 1.0 / (1.0 + np.exp(-x)),
-                     lambda x, y : x - y,
-                     shape, stype='csr')
-    check_regression(mx.symbol.LinearRegressionOutput,
-                     lambda x: x,
-                     lambda x, y : x - y,
-                     shape, stype='csr')
-
-
-def check_softmax_grad(xpu):
-    x = mx.sym.Variable('x')
-    label = mx.sym.Variable('label')
-    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=xpu)
-    grad_x = mx.nd.zeros((1,4), ctx=xpu)
-    label_nd = mx.nd.array([1], ctx=xpu)
-
-    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False)
-    ex = sym.bind(ctx=xpu, args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
-
-    ex.forward(is_train=True)
-    softmax_out = ex.outputs[0].asnumpy()
-    expected_softmax_out = [[0.005806628, 0.861780069, 0.116629249, 0.015784052]]
-    assert np.isclose(softmax_out, expected_softmax_out).all()
-
-    ex.backward(is_train=True)
-    grad_out = ex.grad_arrays[0].asnumpy()
-    k = int(label_nd[0].asscalar())
-    expected_grad_out = np.zeros((1,4))
-    expected_grad_out[0, k] = -1
-    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
-
-
-def check_smoothed_softmax_grad(xpu):
-    alpha = 0.2
-    x = mx.sym.Variable('x')
-    label = mx.sym.Variable('label')
-    x_nd = mx.nd.array([[1, 6, 4, 2]], ctx=xpu)
-    grad_x = mx.nd.zeros((1,4), ctx=xpu)
-    label_nd = mx.nd.array([1], ctx=xpu)
-
-    sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0, use_ignore=False, smooth_alpha=alpha)
-    ex = sym.bind(ctx=xpu, args={'x': x_nd, 'label': label_nd}, args_grad={'x': grad_x})
-
-    ex.forward(is_train=True)
-    softmax_out = ex.outputs[0].asnumpy()
-    expected_softmax_out = [[0.005806628, 0.861780069, 0.116629249, 0.015784052]]
-    assert np.isclose(softmax_out, expected_softmax_out).all()
-
-    ex.backward(is_train=True)
-    grad_out = ex.grad_arrays[0].asnumpy()
-    k = int(label_nd[0].asscalar())
-    expected_grad_out = np.full((1,4), fill_value=-alpha/float(4-1))
-    expected_grad_out[0, k] = - (1 - alpha)
-    assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
-
-
-def check_softmax_with_ignore_label(xpu):
-    X = mx.symbol.Variable('X')
-    L = mx.symbol.Variable('L')
-    Y = mx.symbol.SoftmaxOutput(data=X, label=L, ignore_label=0, use_ignore=True)
-
-    shape = (20, 10)
-    x = mx.nd.empty(shape, ctx = xpu)
-    l = mx.nd.empty((shape[0],), ctx = xpu)
-    x_np = np.random.rand(*shape)
-    l_np = np.random.randint(0, shape[1]-1, (shape[0],))
-    x[:] = x_np
-    l[:] = l_np
-
-    grad = mx.nd.empty(shape, ctx = xpu)
-
-    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
-    exec1.forward(is_train=True)
-    exec1.backward()
-
-    grad0 = grad.asnumpy()
-
-    for i in range(int(shape[0]/2)):
-        l_np[i] = 0
-    l[:] = l_np
-
-    exec1.forward(is_train=True)
-    exec1.backward()
-    grad1 = grad.asnumpy()
-
-    assert abs(np.sum(grad1[:int(shape[0]/2)])) < 1e-5
-    assert_almost_equal(grad0[int(shape[0]/2):], grad1[int(shape[0]/2):])
-
-
-def check_softmax_with_shape(shape, xpu, preserve_shape=False):
-    # bind with label
-    X = mx.symbol.Variable('X')
-    L = mx.symbol.Variable('L')
-    Y = mx.symbol.SoftmaxOutput(data=X, label=L, preserve_shape=preserve_shape)
-    x = mx.random.uniform(-1, 1, shape, ctx=xpu)
-    l = mx.random.uniform(-1, 1, shape, ctx=xpu)
-    l[:] = np_softmax(l.asnumpy())
-    grad = mx.nd.empty(shape, ctx = xpu)
-    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
-    exec1.forward(is_train=True)
-    out = exec1.outputs[0].asnumpy()
-    # Non-zero atol required by test_softmax with seed 781663739
-    rtol = 1e-4
-    atol = 1e-6
-    assert_almost_equal(out, np_softmax(x.asnumpy()), rtol=rtol, atol=atol)
-    exec1.backward()
-    assert_almost_equal(grad, np_softmax(x.asnumpy()) - l.asnumpy(), rtol=rtol, atol=atol)
 
 
 def test_python_op():
@@ -1771,25 +1401,13 @@ def test_batchnorm_training():
                            mx.nd.array(beta).tostype(stype)]
             mean_std = [mx.nd.array(rolling_mean).tostype(stype), mx.nd.array(rolling_std).tostype(stype)]
 
-            test = mx.symbol.BatchNorm_v1(data, fix_gamma=True)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
-
             test = mx.symbol.BatchNorm(data, fix_gamma=True)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
-
-            test = mx.symbol.BatchNorm_v1(data, fix_gamma=True, use_global_stats=True)
             check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=True, use_global_stats=True)
             check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
 
-            test = mx.symbol.BatchNorm_v1(data, fix_gamma=False)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
-
             test = mx.symbol.BatchNorm(data, fix_gamma=False)
-            check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
-
-            test = mx.symbol.BatchNorm_v1(data, fix_gamma=False, use_global_stats=True)
             check_numeric_gradient(test, in_location, mean_std, numeric_eps=1e-2, rtol=0.16, atol=1e-2)
 
             test = mx.symbol.BatchNorm(data, fix_gamma=False, use_global_stats=True)
@@ -1838,15 +1456,26 @@ def test_batchnorm_training():
 
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
-def test_batchnorm():
+@pytest.mark.parametrize('op_name', ['BatchNorm', 'SyncBatchNorm'])
+@pytest.mark.parametrize('shape', [(24, 2), (24, 3, 4),
+    (24, 8, 4, 5), (24, 5, 6, 4, 5)])
+@pytest.mark.parametrize('fix_gamma', [False, True])
+@pytest.mark.parametrize('cudnn_off', [False, True])
+@pytest.mark.parametrize('output_mean_var', [False, True])
+def test_batchnorm(op_name, shape, fix_gamma, cudnn_off, output_mean_var):
+    if op_name == 'BatchNorm':
+        op = mx.nd.BatchNorm
+    elif op_name == 'SyncBatchNorm':
+        op = mx.nd.contrib.SyncBatchNorm
+    else:
+        raise ValueError(f'Not supported {op_name}')
     momentum = 0.9
     epsilon = 1e-5
 
-    def _test_batchnorm_impl(op, shape, axis, cudnn_off, output_mean_var):
-        print(str((op, shape, axis, cudnn_off)))
-
+    def _test_batchnorm_impl(axis,
+                             data_grad_req, gamma_grad_req, beta_grad_req):
         kwargs = dict(output_mean_var=output_mean_var)
-        if op == mx.nd.contrib.SyncBatchNorm:
+        if op_name == 'SyncBatchNorm':
             if axis != 1:
                 return
             key = str(op) + str(shape) + str(axis)
@@ -1857,11 +1486,14 @@ def test_batchnorm():
             kwargs.update(dict(axis=axis, cudnn_off=cudnn_off))
         nch = shape[axis]
 
-        bn_gamma = mx.nd.random.uniform(shape=(nch,))
-        bn_gamma.attach_grad()
+        if not fix_gamma:
+            bn_gamma = mx.nd.random.uniform(shape=(nch,))
+            bn_gamma.attach_grad(grad_req=gamma_grad_req)
+        else:
+            bn_gamma = mx.nd.ones(shape=(nch,))
 
         bn_beta = mx.nd.random.uniform(shape=(nch,))
-        bn_beta.attach_grad()
+        bn_beta.attach_grad(grad_req=beta_grad_req)
 
         bn_running_mean = mx.nd.zeros(nch)
         bn_running_var = mx.nd.ones(nch)
@@ -1871,18 +1503,26 @@ def test_batchnorm():
         num_iters = 10
         expand_shape = [1] * len(shape)
         expand_shape[axis] = shape[axis]
+        data = mx.nd.random.uniform(shape=shape)
+        data.attach_grad(grad_req=data_grad_req)
+        adX, adW, adb = 0, 0, 0
+        is_train = data_grad_req != 'null' or \
+            (not fix_gamma and gamma_grad_req != 'null') or \
+            beta_grad_req != 'null'
         for _ in range(num_iters):
-            data = mx.nd.random.uniform(shape=shape)
-            data.attach_grad()
+            if data_grad_req != 'add':
+                data = mx.nd.random.uniform(shape=shape)
+                data.attach_grad(grad_req=data_grad_req)
             ograd = mx.nd.random.uniform(shape=shape)
             with mx.autograd.record():
                 output = op(data, bn_gamma, bn_beta,
                             bn_running_mean, bn_running_var,
                             momentum=momentum, eps=epsilon,
-                            fix_gamma=False, **kwargs)
+                            fix_gamma=fix_gamma, **kwargs)
                 if output_mean_var:
                     output, output_mean, output_std = output
-                output.backward(ograd)
+                if is_train:
+                    output.backward(ograd)
             mx.nd.waitall()
 
             data_mean = data.mean(
@@ -1919,9 +1559,11 @@ def test_batchnorm():
             dX = dnx * nd + dvar * xsm * (2.0 / m) + dmean * (1.0 / m)
             dW = (ograd * nx).sum(axis=axis, exclude=True)
             db = ograd.sum(axis=axis, exclude=True)
+            adX = dX if data_grad_req != 'add' else adX + dX
+            adW = dW if gamma_grad_req != 'add' else adW + dW
+            adb = db if beta_grad_req != 'add' else adb + db
 
-            atol = 1e-2
-            rtol = 1e-2
+            atol, rtol = 5e-2, 5e-2
 
             if output_mean_var:
                 assert_almost_equal(output_mean.asnumpy(),
@@ -1938,25 +1580,35 @@ def test_batchnorm():
                                         atol=atol, rtol=rtol)
             assert_almost_equal(output.asnumpy(), target_output.asnumpy(),
                                 atol=atol, rtol=rtol)
-            assert_almost_equal(bn_running_mean.asnumpy(
-            ), running_mean.asnumpy(), atol=atol, rtol=rtol)
-            assert_almost_equal(bn_running_var.asnumpy(
-            ), running_var.asnumpy(), atol=atol, rtol=rtol)
+            if is_train:
+                assert_almost_equal(bn_running_mean.asnumpy(
+                ), running_mean.asnumpy(), atol=atol, rtol=rtol)
+                assert_almost_equal(bn_running_var.asnumpy(
+                ), running_var.asnumpy(), atol=atol, rtol=rtol)
 
-            assert_almost_equal(data.grad.asnumpy(),
-                                dX.asnumpy(), atol=atol, rtol=rtol)
-            assert_almost_equal(
-                bn_gamma.grad.asnumpy(), dW.asnumpy(), atol=atol, rtol=rtol)
-            assert_almost_equal(
-                bn_beta.grad.asnumpy(), db.asnumpy(), atol=atol, rtol=rtol)
+            if data_grad_req != 'null':
+                assert_almost_equal(data.grad.asnumpy(),
+                                    adX.asnumpy(), atol=atol, rtol=rtol)
+            if not fix_gamma:
+                if gamma_grad_req != 'null':
+                    assert_almost_equal(
+                        bn_gamma.grad.asnumpy(), adW.asnumpy(),
+                        atol=atol, rtol=rtol)
+            else:
+                assert((bn_gamma.asnumpy() == 1).all())
+            if beta_grad_req != 'null':
+                assert_almost_equal(
+                    bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
 
-    for op in [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm]:
-        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 8, 4, 4), (24, 5, 6, 4, 4)]:
-            for axis in range(len(shape)):
-                for cudnn_off in [False, True]:
-                    for output_mean_var in [False, True]:
-                        _test_batchnorm_impl(op, shape, axis,
-                                             cudnn_off, output_mean_var)
+    grad_reqs = ['write'] if len(shape) != 4 else ['null', 'write', 'add']
+    for data_grad_req in grad_reqs:
+        for gamma_grad_req in grad_reqs:
+            if fix_gamma and gamma_grad_req != 'null':
+                continue
+            for beta_grad_req in grad_reqs:
+                for axis in range(len(shape)):
+                    _test_batchnorm_impl(axis,
+                        data_grad_req, gamma_grad_req, beta_grad_req)
 
 
 @with_seed()
@@ -3569,67 +3221,6 @@ def test_correlation():
         unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
         unittest_correlation((5,1,6,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
         unittest_correlation((5,1,11,11), kernel_size = 5,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
-
-
-@with_seed()
-def test_support_vector_machine_l1_svm():
-    xpu = default_context()
-    shape = (20, 10)
-
-    X = mx.symbol.Variable('X')
-    L = mx.symbol.Variable('L')
-    Y = mx.symbol.SVMOutput(data=X, label=L, use_linear=True)
-    x = mx.nd.empty(shape, ctx = xpu)
-    l = mx.nd.empty((shape[0],), ctx = xpu)
-    x_np = np.random.rand(*shape)
-    l_np = np.random.randint(0, shape[1], (shape[0],))
-    x[:] = x_np
-    l[:] = l_np
-
-    grad = mx.nd.empty(shape, ctx = xpu)
-    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
-    exec1.forward(is_train=True)
-
-    assert_almost_equal(x_np, exec1.outputs[0])
-
-    exec1.backward()
-
-    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
-    l_mask = np.array(l_mask, dtype=np.float32)*2 -1
-    grad_np = (-1) * l_mask * np.greater(1 - l_mask * x_np, 0)
-
-    assert_almost_equal(grad_np, grad)
-
-
-@with_seed()
-def test_support_vector_machine_l2_svm():
-    xpu = default_context()
-    shape = (20, 10)
-
-    X = mx.symbol.Variable('X')
-    L = mx.symbol.Variable('L')
-    Y = mx.symbol.SVMOutput(data=X, label=L)
-    x = mx.nd.empty(shape, ctx = xpu)
-    l = mx.nd.empty((shape[0],), ctx = xpu)
-    x_np = np.random.rand(*shape)
-    x_np = x_np.astype(np.float32)
-    l_np = np.random.randint(0, shape[1], (shape[0],))
-    x[:] = x_np
-    l[:] = l_np
-
-    grad = mx.nd.empty(shape, ctx = xpu)
-    exec1 = Y.bind(xpu, args = [x, l], args_grad = {'X': grad})
-    exec1.forward(is_train=True)
-
-    assert_almost_equal(x_np, exec1.outputs[0])
-
-    exec1.backward()
-
-    l_mask = np.equal(l_np.reshape(shape[0],1),range(shape[1]))
-    l_mask = np.array(l_mask, dtype=np.float32)*2 -1
-    grad_np = (-2)*l_mask*np.maximum(1-l_mask*x_np,0)
-    grad_np = grad_np.astype(np.float32)
-    assert_almost_equal(grad_np, grad)
 
 
 # Seed set because the test is not robust enough to operate on random data
@@ -5362,8 +4953,8 @@ def test_log_softmax():
             axis = np.random.randint(0, ndim)
             data = np.random.uniform(-2, 2, size=shape)
             sym = mx.sym.log_softmax(axis=axis-ndim)
-            check_symbolic_forward(sym, [data], [np.log(np_softmax(data, axis=axis)+1e-20)])
-            check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
+            check_symbolic_forward(sym, [data], [np.log(np_softmax(data, axis=axis)+1e-20)], rtol=1e-3, atol=1e-4)
+            check_numeric_gradient(sym, [data], rtol=1e-1, atol=1e-2)
 
 def test_softmax_with_large_inputs():
     def softmax_forward(input_data, true_output):
@@ -7525,86 +7116,6 @@ def test_binary_math_operators():
         finite_diff_binary_op(
             name, op[0], shape, op[4], op[5], op[6], op[7], rtol_fd, atol_fd,
             num_eps)
-
-
-@with_seed()
-def test_softmax():
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=False)
-    check_softmax_with_shape((3, 4), default_context(), preserve_shape=True)
-    check_softmax_with_shape((3, 4, 2), default_context(), preserve_shape=True)
-    check_softmax_grad(default_context())
-    check_smoothed_softmax_grad(default_context())
-
-
-@xfail_when_nonstandard_decimal_separator
-@with_seed()
-def test_softmax_output_normalization():
-    def _softmaxoutput_normalization(multi_output, use_ignore, normalization):
-        grad_scale = np.random.random()
-        batch_size = 8
-        num_labels = 6
-        H, W = 3, 3
-        ignore_label = np.random.randint(0, num_labels) if use_ignore else -1
-
-        if multi_output:
-            data_shape = (batch_size, num_labels, H, W)
-            label_shape = (batch_size, H, W)
-        else:
-            data_shape = (batch_size, num_labels)
-            label_shape = (batch_size, )
-
-        data = mx.nd.random.uniform(-1, 1, shape=data_shape)
-        label = mx.nd.random.randint(
-            0, num_labels, shape=label_shape).astype('float32')
-        data.attach_grad()
-
-        kwargs = dict(grad_scale=grad_scale,
-                      normalization=normalization, multi_output=multi_output)
-        if use_ignore:
-            kwargs.update(use_ignore=True, ignore_label=ignore_label)
-
-        with mx.autograd.record():
-            out = mx.nd.SoftmaxOutput(data=data, label=label, **kwargs)
-        out.backward(mx.nd.ones_like(data))
-
-        exp_data = mx.nd.exp(data)
-        softmax_data = exp_data / exp_data.sum(1, keepdims=True)
-        argmax_data = mx.nd.argmax(data, axis=1)
-
-        assert_almost_equal(out.asnumpy(), softmax_data.asnumpy())
-        one_hot_label = mx.nd.one_hot(label, num_labels)
-        if multi_output:
-            one_hot_label = one_hot_label.transpose((0, 3, 1, 2))
-        data_grad = softmax_data - one_hot_label
-
-        if use_ignore:
-            if multi_output:
-                data_grad *= (label !=
-                              ignore_label).reshape((batch_size, 1, H, W))
-            else:
-                data_grad *= (label != ignore_label).reshape((batch_size, 1))
-
-        valid_cnt = 1
-        if normalization == 'batch':
-            valid_cnt = batch_size
-        elif normalization == 'valid':
-            valid_cnt = mx.nd.maximum(1, (label != ignore_label).sum())
-        scale = grad_scale / valid_cnt
-
-        if multi_output:
-            if normalization != 'valid':
-                scale /= H * W
-
-        data_grad *= scale
-
-        assert_almost_equal(data.grad.asnumpy(), data_grad.asnumpy())
-
-    for multi_output in [False, True]:
-        for use_ignore in [False, True]:
-            for normalization in ['null', 'batch', 'valid']:
-                _softmaxoutput_normalization(
-                    multi_output, use_ignore, normalization)
-
 
 @with_seed()
 @pytest.mark.serial
