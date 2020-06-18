@@ -220,11 +220,11 @@ def test_trainer_multi_layer_init():
 @with_seed()
 def test_trainer_reset_kv():
     def check_trainer_reset_kv(kv):
-        params = gluon.ParameterDict()
-        x = params.get('x', shape=(10,), lr_mult=1.0)
-        params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+        x = gluon.Parameter('x', shape=(10,), lr_mult=1.0)
+        params = {'x': x}
+        x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         trainer = gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
-        params.save('test_trainer_reset_kv.params')
+        mx.nd.save('test_trainer_reset_kv.params', params)
         with mx.autograd.record():
             for w in x.list_data():
                 y = w + 1
@@ -233,7 +233,7 @@ def test_trainer_reset_kv():
         assert trainer._kvstore.type == kv
         # load would reset kvstore
         mx.nd.waitall()
-        params.load('test_trainer_reset_kv.params')
+        params = mx.nd.load('test_trainer_reset_kv.params')
         if trainer._update_on_kvstore:
             # drop kvstore state if new parameters are loaded
             assert trainer._kvstore is None
