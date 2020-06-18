@@ -92,9 +92,9 @@ StorageManager *CreateStorageManager(const Context &ctx, const char *context, bo
 #if MXNET_USE_CUDA
     else if (ctx.dev_type == Context::kGPU)
       ptr = new NaiveStorageManager<GPUDeviceStorage>();
-#endif
     else              // Context::kCPUPinned
       ptr = new NaiveStorageManager<PinnedMemoryStorage>();
+#endif
   } else {
     LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
   }
@@ -203,10 +203,9 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
               ptr = new NaiveStorageManager<GPUDeviceStorage>();
               break;
 #endif
-        case Context::kCPUShared: {
+        case Context::kCPUShared:
               ptr = new CPUSharedStorageManager();
-              break;
-            }
+        default: break;
       }
     } else {
       // Some Pooled Storage Manager will be used
