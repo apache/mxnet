@@ -637,7 +637,7 @@ Graph BuildGradientGraph(
         }  // for (i ∈ src_fwd_node->num_inputs())
       } else {
         std::string message = "Operator " + std::string(src_fwd_node->op()->name)
-	  + "is non-differentiable because it didn't register FGradient attribute.";
+          + "is non-differentiable because it didn't register FGradient attribute.";
         throw nnvm::pass::InvalidGraphError(message);
       }
       for (const auto& e : input_grads) {
