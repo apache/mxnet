@@ -155,12 +155,12 @@
         AV *myav;
         SV **svs;
         int i = 0;
-        svs = (SV **)safemalloc(*arg4*sizeof(SV *));
-        for (i = 0; i < *arg4 ; i++) {
+        svs = (SV **)safemalloc(*arg6*sizeof(SV *));
+        for (i = 0; i < *arg6 ; i++) {
             svs[i] = newSViv((*$1)[i]);
             sv_2mortal(svs[i]);
         }
-        myav = av_make(*arg4, svs);
+        myav = av_make(*arg6, svs);
         Safefree(svs);
         $result = newRV_noinc((SV*)myav);
         sv_2mortal($result);
