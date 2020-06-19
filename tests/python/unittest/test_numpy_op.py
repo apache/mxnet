@@ -3044,10 +3044,8 @@ def test_np_binary_funcs():
 
 @with_seed()
 @use_np
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/16848')
+# @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/16848')
 def test_np_mixed_precision_binary_funcs():
-    itypes = [np.bool, np.int8, np.int32, np.int64]
-    ftypes = [np.float16, np.float32, np.float64]
     def check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, ltype, rtype):
         class TestMixedBinary(HybridBlock):
             def __init__(self, func):
@@ -3059,49 +3057,62 @@ def test_np_mixed_precision_binary_funcs():
 
         np_func = getattr(_np, func)
         mx_func = TestMixedBinary(func)
-        np_test_x1 = _np.random.uniform(low, high, lshape).astype(ltype)
-        np_test_x2 = _np.random.uniform(low, high, rshape).astype(rtype)
-        mx_test_x1 = mx.numpy.array(np_test_x1, dtype=ltype)
-        mx_test_x2 = mx.numpy.array(np_test_x2, dtype=rtype)
+        if lshape is None:
+            np_test_x1 = _np.random.uniform(low, high, (1)).astype(ltype)[0]
+            mx_test_x1 = getattr(mx.numpy, ltype)(np_test_x1)
+        else:
+            np_test_x1 = _np.random.uniform(low, high, lshape).astype(ltype)
+            mx_test_x1 = mx.numpy.array(np_test_x1, dtype=ltype)
+        if rshape is None:
+            np_test_x2 = _np.random.uniform(low, high, (1)).astype(rtype)[0]
+            mx_test_x2 = getattr(mx.numpy, rtype)(np_test_x2)
+        else:
+            np_test_x2 = _np.random.uniform(low, high, rshape).astype(rtype)
+            mx_test_x2 = mx.numpy.array(np_test_x2, dtype=rtype)
         rtol = 1e-2 if ltype is np.float16 or rtype is np.float16 else 1e-3
         atol = 1e-3 if ltype is np.float16 or rtype is np.float16 else 1e-5
-        for hybridize in [True, False]:
-            if hybridize:
-                mx_func.hybridize()
-            if lgrad:
-                mx_test_x1.attach_grad()
-                mx_test_x2.attach_grad()
-            np_out = np_func(np_test_x1, np_test_x2)
-            with mx.autograd.record():
-                y = mx_func(mx_test_x1, mx_test_x2)
-            assert y.shape == np_out.shape
-            assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=rtol, atol=atol,
-                                use_broadcast=False, equal_nan=True)
+        if lshape is not None and rshape is not None:
+            for hybridize in [True, False]:
+                if hybridize:
+                    mx_func.hybridize()
+                if lgrad:
+                    mx_test_x1.attach_grad()
+                    mx_test_x2.attach_grad()
+                np_out = np_func(np_test_x1, np_test_x2)
+                with mx.autograd.record():
+                    y = mx_func(mx_test_x1, mx_test_x2)
+                assert y.shape == np_out.shape
+                assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=rtol, atol=atol,
+                                    use_broadcast=False, equal_nan=True)
 
-            if lgrad:
-                if (ltype in itypes) and (rtype in itypes):
-                    continue
-                y.backward()
-                if ltype not in itypes:
-                    assert_almost_equal(mx_test_x1.grad.asnumpy(),
-                                        collapse_sum_like(lgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x1.shape),
-                                        rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
-                if rtype not in itypes:
-                    if rgrad is None:
-                        assert_almost_equal(mx_test_x2.grad.asnumpy(),
-                                            collapse_sum_like(rgrad(y.asnumpy(), np_test_x2, np_test_x1), mx_test_x2.shape),
+                if lgrad:
+                    if (ltype in itypes) and (rtype in itypes):
+                        continue
+                    y.backward()
+                    if ltype not in itypes:
+                        assert_almost_equal(mx_test_x1.grad.asnumpy(),
+                                            collapse_sum_like(lgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x1.shape),
                                             rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
-                    else:
-                        assert_almost_equal(mx_test_x2.grad.asnumpy(),
-                                            collapse_sum_like(rgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x2.shape),
-                                            rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                    if rtype not in itypes:
+                        if rgrad is None:
+                            assert_almost_equal(mx_test_x2.grad.asnumpy(),
+                                                collapse_sum_like(rgrad(y.asnumpy(), np_test_x2, np_test_x1), mx_test_x2.shape),
+                                                rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
+                        else:
+                            assert_almost_equal(mx_test_x2.grad.asnumpy(),
+                                                collapse_sum_like(rgrad(y.asnumpy(), np_test_x1, np_test_x2), mx_test_x2.shape),
+                                                rtol=1e-1, atol=1e-2, equal_nan=True, use_broadcast=False)
 
 
         np_out = getattr(_np, func)(np_test_x1, np_test_x2)
         mx_out = getattr(mx.np, func)(mx_test_x1, mx_test_x2)
         assert mx_out.shape == np_out.shape
-        assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=rtol, atol=atol,
-                            use_broadcast=False, equal_nan=True)
+        if lshape or rshape:
+            assert_almost_equal(mx_out.asnumpy(), np_out.astype(mx_out.dtype), rtol=rtol, atol=atol,
+                                use_broadcast=False, equal_nan=True)
+        else:
+            assert_almost_equal(mx_out, np_out.astype(mx_out.dtype), rtol=rtol, atol=atol,
+                                use_broadcast=False, equal_nan=True)
 
     funcs = {
         'add': (-1.0, 1.0, lambda y, x1, x2: _np.ones(y.shape),
@@ -3115,7 +3126,7 @@ def test_np_mixed_precision_binary_funcs():
                             lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)),
         'equal': (0.0, 2.0, None, None),
         'not_equal': (0.0, 2.0, None, None),
-        'greater': (0.0, 2.0, None, None),
+        # 'greater': (0.0, 2.0, None, None), # Waiting for ffi version
         'less': (0.0, 2.0, None, None),
         'greater_equal': (0.0, 2.0, None, None),
         'less_equal': (0.0, 2.0, None, None),
@@ -3130,11 +3141,14 @@ def test_np_mixed_precision_binary_funcs():
                    ((3, 1), (3, 0)),
                    ((0, 2), (1, 2)),
                    ((2, 3, 4), (3, 1)),
-                   ((2, 3), ()),
-                   ((), (2, 3))]
+                #    ((2, 3), ()),  # Flaky test case
+                #    ((), (2, 3)),  # Flaky test case
+                   ((2, 3), None),
+                   (None, (2, 3)),
+                   (None, None)]
 
-    itypes = [np.bool, np.int8, np.int32, np.int64]
-    ftypes = [np.float16, np.float32, np.float64]
+    itypes = ['bool', 'int8', 'int32', 'int64']
+    ftypes = ['float16', 'float32', 'float64']
     for func, func_data in funcs.items():
         low, high, lgrad, rgrad = func_data
         for lshape, rshape in shape_pairs:
