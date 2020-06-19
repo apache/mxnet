@@ -945,7 +945,6 @@ cd_unittest_ubuntu() {
 
     pytest -m 'not serial' -n 4 --durations=50 --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --verbose tests/python/unittest
-    pytest -n 4 --durations=50 --verbose tests/python/quantization
 
     # https://github.com/apache/incubator-mxnet/issues/11801
     # if [[ ${mxnet_variant} = "cpu" ]] || [[ ${mxnet_variant} = "mkl" ]]; then
@@ -983,7 +982,6 @@ unittest_ubuntu_python3_cpu() {
     MXNET_ENGINE_TYPE=NaiveEngine \
         pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
-    pytest -n 4 --durations=50 --cov-report xml:tests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu_serial() {
@@ -996,7 +994,6 @@ unittest_ubuntu_python3_cpu_serial() {
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     pytest --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
-    pytest --durations=50 --cov-report xml:tests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu_mkldnn() {
@@ -1062,24 +1059,6 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     MXNET_ENGINE_TYPE=NaiveEngine \
         pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
     pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
-}
-
-# quantization gpu currently only runs on P3 instances
-# need to separte it from unittest_ubuntu_python3_gpu()
-unittest_ubuntu_python3_quantization_gpu() {
-    set -ex
-    if [ -f /etc/redhat-release ]; then
-        source /opt/rh/rh-python36/enable
-    fi
-    export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
-    export MXNET_ENABLE_CYTHON=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-        pytest -n 4 --durations=50 --cov-report xml:tests_quantization_gpu.xml --verbose tests/python/quantization_gpu
 }
 
 unittest_centos7_cpu_scala() {

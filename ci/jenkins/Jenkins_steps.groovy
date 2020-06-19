@@ -839,24 +839,6 @@ def test_unix_python3_gpu(lib_name) {
     }]
 }
 
-def test_unix_python3_quantize_gpu(lib_name) {
-    return ['Python3: Quantize GPU': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/ut-python3-quantize-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            try {
-              utils.unpack_and_init(lib_name, mx_lib)
-              utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_python3_quantization_gpu', true)
-              utils.publish_test_coverage()
-            } finally {
-              utils.collect_test_results_unix('tests_quantization_gpu.xml', 'tests_python3_quantize_gpu.xml')
-            }
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_python3_debug_cpu() {
     return ['Python3: CPU debug': {
       node(NODE_LINUX_CPU) {
@@ -1260,19 +1242,6 @@ def test_centos7_python3_cd_gpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_cd_lib)
             utils.docker_run('centos7_gpu_cu102', 'cd_unittest_ubuntu cu102', true)
-          }
-        }
-      }
-    }]
-}
-
-def test_centos7_quantization_cd_gpu(lib_name) {
-    return ['Quantization Python3: CentOS 7 GPU CD': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/test-cd-static/gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_cd_lib)
-            utils.docker_run('centos7_gpu_cu102', 'unittest_ubuntu_python3_quantization_gpu', true)
           }
         }
       }
