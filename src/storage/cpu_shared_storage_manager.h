@@ -20,8 +20,6 @@
 #ifndef MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_
 
-#if !defined(ANDROID) && !defined(__ANDROID__)
-
 #ifndef _WIN32
 #include <sys/mman.h>
 #include <sys/fcntl.h>
@@ -259,7 +257,5 @@ inline void CPUSharedStorageManager::CheckAndRealFree() {
 #endif  // _WIN32
 }  // namespace storage
 }  // namespace mxnet
-
-#endif  // !defined(ANDROID) && !defined(__ANDROID__)
 
 #endif  // MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_

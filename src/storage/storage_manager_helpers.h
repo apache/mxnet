@@ -27,14 +27,22 @@ typedef  mxnet::common::cuda::DeviceStore CudaDeviceStore;
 #endif  // MXNET_USE_CUDA
 
 #include <thread>
-
+#include <sys/sysctl.h>
 #ifndef _WIN32
+#if __APPLE__
+#include <mach/vm_statistics.h>
+#include <mach/mach_types.h>
+#include <mach/mach_init.h>
+#include <mach/mach_host.h>
+#else
 #include <sys/sysinfo.h>
 #include <sys/mman.h>
 #include <sys/fcntl.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/resource.h>
+#endif  // __APPLE__
 #else
 #include <Windows.h>
 #include <process.h>
@@ -52,7 +60,6 @@ typedef  mxnet::common::cuda::DeviceStore CudaDeviceStore;
 
 namespace mxnet {
 namespace storage {
-
 
 /*!
  * \brief Abstract class, which contains context specific methods used by PooledStorageManager.
@@ -94,8 +101,27 @@ class ContextHelperCPU : public ContextHelper {
     MEMORYSTATUSEX status;
     status.dwLength = sizeof(status);
     GlobalMemoryStatusEx(&status);
-    return std::make_tuple(statex.ullAvailPhys, status.ullTotalPhys)
-#else   // Linux and iOS
+    return std::make_tuple(status.ullAvailPhys, status.ullTotalPhys);
+#elif __APPLE__
+    vm_size_t page_size;
+    vm_statistics64_data_t vm_stats;
+
+    mach_port_t mach_port = mach_host_self();
+    mach_msg_type_number_t count = sizeof(vm_stats) / sizeof(natural_t);
+    if (KERN_SUCCESS != host_page_size(mach_port, &page_size) ||
+        KERN_SUCCESS != host_statistics64(mach_port, HOST_VM_INFO,
+                                          (host_info64_t)&vm_stats, &count)) {
+      LOG(FATAL) << "Cannot get memory informaition";
+    }
+
+    const size_t free_memory = (uint64_t)vm_stats.free_count * (uint64_t)page_size;
+
+    const size_t used_memory = ((uint64_t)vm_stats.active_count +
+                                (uint64_t)vm_stats.inactive_count +
+                                (uint64_t)vm_stats.wire_count) *  (uint64_t)page_size;
+
+    return std::make_tuple(free_memory, used_memory + free_memory);
+#else   // Linux
     struct sysinfo info = {};
     if (sysinfo(&info) < 0)
       LOG(FATAL) << "Error: sysinfo failed";
