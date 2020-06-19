@@ -195,11 +195,9 @@ build_jetson() {
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="5.2" \
         -DENABLE_CUDA_RTC=OFF \
-        -DSUPPORT_F16C=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
         -DUSE_LAPACK=OFF \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
@@ -215,11 +213,6 @@ build_armv6() {
     set -ex
     cd /work/build
 
-    # Lapack functionality will be included and statically linked to openblas.
-    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
-    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
-    # to be linked additionally.
-
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
     cmake \
@@ -227,12 +220,10 @@ build_armv6() {
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
         -DBUILD_CPP_EXAMPLES=OFF \
-        -Dmxnet_LINKER_LIBS=-latomic \
         -G Ninja /work/mxnet
 
     ninja
@@ -243,18 +234,11 @@ build_armv7() {
     set -ex
     cd /work/build
 
-    # Lapack functionality will be included and statically linked to openblas.
-    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
-    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
-    # to be linked additionally.
-
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
-        -DCMAKE_CROSSCOMPILING=ON \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
@@ -270,11 +254,9 @@ build_armv8() {
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DUSE_CUDA=OFF \
-        -DSUPPORT_F16C=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
         -DUSE_LAPACK=OFF \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
@@ -290,18 +272,16 @@ build_armv8() {
 build_android_armv7() {
     set -ex
     cd /work/build
+    # ANDROID_ABI and ANDROID_STL are options of the CMAKE_TOOLCHAIN_FILE
+    # provided by Android NDK
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DANDROID_ABI="armeabi-v7a" \
         -DANDROID_STL="c++_shared" \
-        -DANDROID=ON \
         -DUSE_CUDA=OFF \
-        -DUSE_SSE=OFF \
-        -DSUPPORT_F16C=OFF \
         -DUSE_LAPACK=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja
@@ -310,13 +290,13 @@ build_android_armv7() {
 build_android_armv8() {
     set -ex
     cd /work/build
+    # ANDROID_ABI and ANDROID_STL are options of the CMAKE_TOOLCHAIN_FILE
+    # provided by Android NDK
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DANDROID_ABI="arm64-v8a" \
         -DANDROID_STL="c++_shared" \
-        -DANDROID=ON \
         -DUSE_CUDA=OFF \
-        -DUSE_SSE=OFF \
         -DUSE_LAPACK=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
