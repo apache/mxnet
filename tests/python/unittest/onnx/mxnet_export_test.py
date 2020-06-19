@@ -83,8 +83,8 @@ def _check_onnx_export(net, group_outputs=False, shape_type=tuple, extra_params=
 
 class SplitConcatBlock(HybridBlock):
     """Block which creates two splits and later concatenates them"""
-    def __init__(self, name):
-        super(SplitConcatBlock, self).__init__(name)
+    def __init__(self):
+        super(SplitConcatBlock, self).__init__()
 
     def hybrid_forward(self, F, x):
         splits = F.split(x, axis=1, num_outputs=2)
@@ -135,15 +135,13 @@ class TestExport(unittest.TestCase):
 
     @with_seed()
     def test_onnx_export_slice(self):
-        net = nn.HybridSequential(prefix='slice_net')
-        with net.name_scope():
-            net.add(nn.Dense(100, activation='relu'), SplitConcatBlock("splitConcat"), nn.Dense(10))
+        net = nn.HybridSequential()
+        net.add(nn.Dense(100, activation='relu'), SplitConcatBlock(), nn.Dense(10))
         _check_onnx_export(net)
 
     @with_seed()
     def test_onnx_export_slice_changing_shape(self):
-        net = nn.HybridSequential(prefix='slice_net_changing_shape')
-        with net.name_scope():
-            net.add(nn.Dense(100, activation='relu'), SplitConcatBlock("splitConcat"),
-                    nn.Dense(50, activation='relu'), SplitConcatBlock("splitConcat2"), nn.Dense(10))
+        net = nn.HybridSequential()
+        net.add(nn.Dense(100, activation='relu'), SplitConcatBlock(),
+                nn.Dense(50, activation='relu'), SplitConcatBlock(), nn.Dense(10))
         _check_onnx_export(net)
