@@ -20,18 +20,16 @@
 #ifndef MXNET_STORAGE_STORAGE_MANAGER_HELPERS_H_
 #define MXNET_STORAGE_STORAGE_MANAGER_HELPERS_H_
 
-#if !defined(ANDROID) && !defined(__ANDROID__)
-
 #if MXNET_USE_CUDA
 #include <cuda_runtime.h>
 #include "../common/cuda_utils.h"
 typedef  mxnet::common::cuda::DeviceStore CudaDeviceStore;
 #endif  // MXNET_USE_CUDA
 
-#include <sys/sysinfo.h>
 #include <thread>
 
 #ifndef _WIN32
+#include <sys/sysinfo.h>
 #include <sys/mman.h>
 #include <sys/fcntl.h>
 #include <unistd.h>
@@ -163,7 +161,5 @@ typedef  ContextHelperCPU ContextHelperPinned;
 
 }  // namespace storage
 }  // namespace mxnet
-
-#endif  // !defined(ANDROID) && !defined(__ANDROID__)
 
 #endif  // MXNET_STORAGE_STORAGE_MANAGER_HELPERS_H_
