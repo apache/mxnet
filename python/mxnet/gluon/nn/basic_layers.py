@@ -29,6 +29,7 @@ from ..block import Block, HybridBlock
 from ..utils import _indent
 from ... import ndarray as nd, symbol as sym
 from ...util import is_np_array
+from ..parameter import Parameter
 
 
 class Sequential(Block):
@@ -37,13 +38,11 @@ class Sequential(Block):
     Example::
 
         net = nn.Sequential()
-        # use net's name_scope to give child Blocks appropriate names.
-        with net.name_scope():
-            net.add(nn.Dense(10, activation='relu'))
-            net.add(nn.Dense(20))
+        net.add(nn.Dense(10, activation='relu'))
+        net.add(nn.Dense(20))
     """
-    def __init__(self, prefix=None, params=None):
-        super(Sequential, self).__init__(prefix=prefix, params=params)
+    def __init__(self):
+        super(Sequential, self).__init__()
         self._layers = []
 
     def add(self, *blocks):
@@ -73,9 +72,8 @@ class Sequential(Block):
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
-            net = type(self)(prefix=self._prefix)
-            with net.name_scope():
-                net.add(*(l() for l in layers))
+            net = type(self)()
+            net.add(*(l() for l in layers))
             return net
         else:
             return layers()
@@ -96,8 +94,8 @@ class Sequential(Block):
         """
         if self._children and all(isinstance(c(), HybridBlock) for c in self._children.values()):
             warnings.warn(
-                "All children of this Sequential layer '%s' are HybridBlocks. Consider "
-                "using HybridSequential for the best performance."%self.prefix, stacklevel=2)
+                "All children of this Sequential layer '%s'\n are HybridBlocks. Consider "
+                "using HybridSequential for the best performance."%repr(self), stacklevel=2)
         super(Sequential, self).hybridize(active, **kwargs)
 
 
@@ -107,14 +105,12 @@ class HybridSequential(HybridBlock):
     Example::
 
         net = nn.HybridSequential()
-        # use net's name_scope to give child Blocks appropriate names.
-        with net.name_scope():
-            net.add(nn.Dense(10, activation='relu'))
-            net.add(nn.Dense(20))
+        net.add(nn.Dense(10, activation='relu'))
+        net.add(nn.Dense(20))
         net.hybridize()
     """
-    def __init__(self, prefix=None, params=None):
-        super(HybridSequential, self).__init__(prefix=prefix, params=params)
+    def __init__(self):
+        super(HybridSequential, self).__init__()
         self._layers = []
 
     def add(self, *blocks):
@@ -144,9 +140,8 @@ class HybridSequential(HybridBlock):
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
-            net = type(self)(prefix=self._prefix)
-            with net.name_scope():
-                net.add(*(l() for l in layers))
+            net = type(self)()
+            net.add(*(l() for l in layers))
             return net
         else:
             return layers()
@@ -194,10 +189,6 @@ class Dense(HybridBlock):
         Size of the input data. If not specified, initialization will be
         deferred to the first time `forward` is called and `in_units`
         will be inferred from the shape of input data.
-    prefix : str or None
-        See document of `Block`.
-    params : ParameterDict or None
-        See document of `Block`.
 
 
     Inputs:
@@ -216,22 +207,21 @@ class Dense(HybridBlock):
                  in_units=0, **kwargs):
         super(Dense, self).__init__(**kwargs)
         self._flatten = flatten
-        with self.name_scope():
-            self._units = units
-            self._in_units = in_units
-            self.weight = self.params.get('weight', shape=(units, in_units),
-                                          init=weight_initializer, dtype=dtype,
-                                          allow_deferred_init=True)
-            if use_bias:
-                self.bias = self.params.get('bias', shape=(units,),
-                                            init=bias_initializer, dtype=dtype,
-                                            allow_deferred_init=True)
-            else:
-                self.bias = None
-            if activation is not None:
-                self.act = Activation(activation, prefix=activation+'_')
-            else:
-                self.act = None
+        self._units = units
+        self._in_units = in_units
+        self.weight = Parameter('weight', shape=(units, in_units),
+                                init=weight_initializer, dtype=dtype,
+                                allow_deferred_init=True)
+        if use_bias:
+            self.bias = Parameter('bias', shape=(units,),
+                                  init=bias_initializer, dtype=dtype,
+                                  allow_deferred_init=True)
+        else:
+            self.bias = None
+        if activation is not None:
+            self.act = Activation(activation)
+        else:
+            self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
         fc = F.npx.fully_connected if is_np_array() else F.FullyConnected
@@ -356,24 +346,24 @@ class _BatchNorm(HybridBlock):
         if in_channels != 0:
             self.in_channels = in_channels
 
-        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(in_channels,), init=gamma_initializer,
+        self.gamma = Parameter('gamma', grad_req='write' if scale else 'null',
+                               shape=(in_channels,), init=gamma_initializer,
+                               allow_deferred_init=True,
+                               differentiable=scale)
+        self.beta = Parameter('beta', grad_req='write' if center else 'null',
+                              shape=(in_channels,), init=beta_initializer,
+                              allow_deferred_init=True,
+                              differentiable=center)
+        self.running_mean = Parameter('running_mean', grad_req='null',
+                                      shape=(in_channels,),
+                                      init=running_mean_initializer,
+                                      allow_deferred_init=True,
+                                      differentiable=False)
+        self.running_var = Parameter('running_var', grad_req='null',
+                                     shape=(in_channels,),
+                                     init=running_variance_initializer,
                                      allow_deferred_init=True,
-                                     differentiable=scale)
-        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True,
-                                    differentiable=center)
-        self.running_mean = self.params.get('running_mean', grad_req='null',
-                                            shape=(in_channels,),
-                                            init=running_mean_initializer,
-                                            allow_deferred_init=True,
-                                            differentiable=False)
-        self.running_var = self.params.get('running_var', grad_req='null',
-                                           shape=(in_channels,),
-                                           init=running_variance_initializer,
-                                           allow_deferred_init=True,
-                                           differentiable=False)
+                                     differentiable=False)
 
     def cast(self, dtype):
         if np.dtype(dtype).name == 'float16':
@@ -561,9 +551,9 @@ class Embedding(HybridBlock):
         grad_stype = 'row_sparse' if sparse_grad else 'default'
         self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
                         'dtype': dtype, 'sparse_grad': sparse_grad}
-        self.weight = self.params.get('weight', shape=(input_dim, output_dim),
-                                      init=weight_initializer, dtype=dtype,
-                                      allow_deferred_init=True, grad_stype=grad_stype)
+        self.weight = Parameter('weight', shape=(input_dim, output_dim),
+                                init=weight_initializer, dtype=dtype,
+                                allow_deferred_init=True, grad_stype=grad_stype)
 
     def hybrid_forward(self, F, x, weight):
         embedding = F.npx.embedding if is_np_array() else F.Embedding
@@ -666,12 +656,12 @@ class InstanceNorm(HybridBlock):
         self._kwargs = {'eps': epsilon, 'axis': axis, 'center': center, 'scale': scale}
         self._axis = axis
         self._epsilon = epsilon
-        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(in_channels,), init=gamma_initializer,
-                                     allow_deferred_init=True)
-        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True)
+        self.gamma = Parameter('gamma', grad_req='write' if scale else 'null',
+                               shape=(in_channels,), init=gamma_initializer,
+                               allow_deferred_init=True)
+        self.beta = Parameter('beta', grad_req='write' if center else 'null',
+                              shape=(in_channels,), init=beta_initializer,
+                              allow_deferred_init=True)
 
     def hybrid_forward(self, F, x, gamma, beta):
         if self._axis == 1:
@@ -747,19 +737,19 @@ class LayerNorm(HybridBlock):
     """
     def __init__(self, axis=-1, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
-                 in_channels=0, prefix=None, params=None):
-        super(LayerNorm, self).__init__(prefix=prefix, params=params)
+                 in_channels=0):
+        super(LayerNorm, self).__init__()
         self._kwargs = {'eps': epsilon, 'axis': axis, 'center': center, 'scale': scale}
         self._axis = axis
         self._epsilon = epsilon
         self._center = center
         self._scale = scale
-        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(in_channels,), init=gamma_initializer,
-                                     allow_deferred_init=True)
-        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True)
+        self.gamma = Parameter('gamma', grad_req='write' if scale else 'null',
+                               shape=(in_channels,), init=gamma_initializer,
+                               allow_deferred_init=True)
+        self.beta = Parameter('beta', grad_req='write' if center else 'null',
+                              shape=(in_channels,), init=beta_initializer,
+                              allow_deferred_init=True)
 
     def hybrid_forward(self, F, data, gamma, beta):
         layer_norm = F.npx.layer_norm if is_np_array() else F.LayerNorm
@@ -838,19 +828,19 @@ class GroupNorm(HybridBlock):
     """
     def __init__(self, num_groups=1, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
-                 in_channels=0, prefix=None, params=None):
-        super(GroupNorm, self).__init__(prefix=prefix, params=params)
+                 in_channels=0):
+        super(GroupNorm, self).__init__()
         self._kwargs = {'eps': epsilon, 'num_groups': num_groups, 'center': center, 'scale': scale}
         self._num_groups = num_groups
         self._epsilon = epsilon
         self._center = center
         self._scale = scale
-        self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(in_channels,), init=gamma_initializer,
-                                     allow_deferred_init=True)
-        self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(in_channels,), init=beta_initializer,
-                                    allow_deferred_init=True)
+        self.gamma = Parameter('gamma', grad_req='write' if scale else 'null',
+                               shape=(in_channels,), init=gamma_initializer,
+                               allow_deferred_init=True)
+        self.beta = Parameter('beta', grad_req='write' if center else 'null',
+                              shape=(in_channels,), init=beta_initializer,
+                              allow_deferred_init=True)
 
     def hybrid_forward(self, F, data, gamma, beta):
         norm_data = F.GroupNorm(data, gamma=gamma, beta=beta, num_groups=self._num_groups, eps=self._epsilon)
@@ -888,8 +878,8 @@ class Lambda(Block):
     Output:
         - ** *outputs **: one or more output data. Their shapes depend on the function.
     """
-    def __init__(self, function, prefix=None):
-        super(Lambda, self).__init__(prefix=prefix)
+    def __init__(self, function):
+        super(Lambda, self).__init__()
         if isinstance(function, str):
             assert hasattr(nd, function), \
                    "Function name %s is not found in ndarray." % function
@@ -932,8 +922,8 @@ class HybridLambda(HybridBlock):
         - ** *outputs **: one or more output data. Their shapes depend on the function.
 
     """
-    def __init__(self, function, prefix=None):
-        super(HybridLambda, self).__init__(prefix=prefix)
+    def __init__(self, function):
+        super(HybridLambda, self).__init__()
         if isinstance(function, str):
             assert hasattr(nd, function) and hasattr(sym, function), \
                    "Function name %s is not found in symbol/ndarray." % function

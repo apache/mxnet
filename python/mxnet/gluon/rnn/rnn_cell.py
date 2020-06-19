@@ -29,6 +29,7 @@ __all__ = ['RecurrentCell', 'HybridRecurrentCell',
 from ... import symbol, ndarray
 from ...base import string_types, numeric_types, _as_list
 from ..block import Block, HybridBlock
+from ..parameter import Parameter
 from ..utils import _indent
 from .. import tensor_types
 from ..nn import LeakyReLU
@@ -125,18 +126,9 @@ def _reverse_sequences(sequences, unroll_step, valid_length=None):
 class RecurrentCell(Block):
     """Abstract base class for RNN cells
 
-    Parameters
-    ----------
-    prefix : str, optional
-        Prefix for names of `Block`s
-        (this prefix is also used for names of weights if `params` is `None`
-        i.e. if `params` are being created and not reused)
-    params : Parameter or None, default None
-        Container for weight sharing between cells.
-        A new Parameter container is created if `params` is `None`.
     """
-    def __init__(self, prefix=None, params=None):
-        super(RecurrentCell, self).__init__(prefix=prefix, params=params)
+    def __init__(self):
+        super(RecurrentCell, self).__init__()
         self._modified = False
         self.reset()
 
@@ -187,7 +179,7 @@ class RecurrentCell(Block):
                 info.update(kwargs)
             else:
                 info = kwargs
-            state = func(name='%sbegin_state_%d'%(self._prefix, self._init_counter),
+            state = func(name='begin_state_%d'%(self._init_counter),
                          **info)
             states.append(state)
         return states
@@ -317,8 +309,8 @@ class RecurrentCell(Block):
 
 class HybridRecurrentCell(RecurrentCell, HybridBlock):
     """HybridRecurrentCell supports hybridize."""
-    def __init__(self, prefix=None, params=None):
-        super(HybridRecurrentCell, self).__init__(prefix=prefix, params=params)
+    def __init__(self):
+        super(HybridRecurrentCell, self).__init__()
 
     def hybrid_forward(self, F, x, *args, **kwargs):
         raise NotImplementedError
@@ -356,12 +348,6 @@ class RNNCell(HybridRecurrentCell):
     input_size: int, default 0
         The number of expected features in the input x.
         If not specified, it will be inferred from input.
-    prefix : str, default ``'rnn_'``
-        Prefix for name of `Block`s
-        (and name of weight if params is `None`).
-    params : Parameter or None
-        Container for weight sharing between cells.
-        Created if `None`.
 
 
     Inputs:
@@ -377,23 +363,23 @@ class RNNCell(HybridRecurrentCell):
     def __init__(self, hidden_size, activation='tanh',
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 input_size=0, prefix=None, params=None):
-        super(RNNCell, self).__init__(prefix=prefix, params=params)
+                 input_size=0):
+        super(RNNCell, self).__init__()
         self._hidden_size = hidden_size
         self._activation = activation
         self._input_size = input_size
-        self.i2h_weight = self.params.get('i2h_weight', shape=(hidden_size, input_size),
-                                          init=i2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.h2h_weight = self.params.get('h2h_weight', shape=(hidden_size, hidden_size),
-                                          init=h2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.i2h_bias = self.params.get('i2h_bias', shape=(hidden_size,),
-                                        init=i2h_bias_initializer,
-                                        allow_deferred_init=True)
-        self.h2h_bias = self.params.get('h2h_bias', shape=(hidden_size,),
-                                        init=h2h_bias_initializer,
-                                        allow_deferred_init=True)
+        self.i2h_weight = Parameter('i2h_weight', shape=(hidden_size, input_size),
+                                    init=i2h_weight_initializer,
+                                    allow_deferred_init=True)
+        self.h2h_weight = Parameter('h2h_weight', shape=(hidden_size, hidden_size),
+                                    init=h2h_weight_initializer,
+                                    allow_deferred_init=True)
+        self.i2h_bias = Parameter('i2h_bias', shape=(hidden_size,),
+                                  init=i2h_bias_initializer,
+                                  allow_deferred_init=True)
+        self.h2h_bias = Parameter('h2h_bias', shape=(hidden_size,),
+                                  init=h2h_bias_initializer,
+                                  allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._hidden_size), '__layout__': 'NC'}]
@@ -466,12 +452,6 @@ class LSTMCell(HybridRecurrentCell):
     input_size: int, default 0
         The number of expected features in the input x.
         If not specified, it will be inferred from input.
-    prefix : str, default ``'lstm_'``
-        Prefix for name of `Block`s
-        (and name of weight if params is `None`).
-    params : Parameter or None, default None
-        Container for weight sharing between cells.
-        Created if `None`.
     activation : str, default 'tanh'
         Activation type to use. See nd/symbol Activation
         for supported types.
@@ -493,24 +473,23 @@ class LSTMCell(HybridRecurrentCell):
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 input_size=0, prefix=None, params=None, activation='tanh',
-                 recurrent_activation='sigmoid'):
-        super(LSTMCell, self).__init__(prefix=prefix, params=params)
+                 input_size=0, activation='tanh', recurrent_activation='sigmoid'):
+        super(LSTMCell, self).__init__()
 
         self._hidden_size = hidden_size
         self._input_size = input_size
-        self.i2h_weight = self.params.get('i2h_weight', shape=(4*hidden_size, input_size),
-                                          init=i2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.h2h_weight = self.params.get('h2h_weight', shape=(4*hidden_size, hidden_size),
-                                          init=h2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
-                                        init=i2h_bias_initializer,
-                                        allow_deferred_init=True)
-        self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
-                                        init=h2h_bias_initializer,
-                                        allow_deferred_init=True)
+        self.i2h_weight = Parameter('i2h_weight', shape=(4*hidden_size, input_size),
+                                    init=i2h_weight_initializer,
+                                    allow_deferred_init=True)
+        self.h2h_weight = Parameter('h2h_weight', shape=(4*hidden_size, hidden_size),
+                                    init=h2h_weight_initializer,
+                                    allow_deferred_init=True)
+        self.i2h_bias = Parameter('i2h_bias', shape=(4*hidden_size,),
+                                  init=i2h_bias_initializer,
+                                  allow_deferred_init=True)
+        self.h2h_bias = Parameter('h2h_bias', shape=(4*hidden_size,),
+                                  init=h2h_bias_initializer,
+                                  allow_deferred_init=True)
         self._activation = activation
         self._recurrent_activation = recurrent_activation
 
@@ -594,12 +573,6 @@ class GRUCell(HybridRecurrentCell):
     input_size: int, default 0
         The number of expected features in the input x.
         If not specified, it will be inferred from input.
-    prefix : str, default ``'gru_'``
-        prefix for name of `Block`s
-        (and name of weight if params is `None`).
-    params : Parameter or None, default None
-        Container for weight sharing between cells.
-        Created if `None`.
     activation : str, default 'tanh'
         Activation type to use. See nd/symbol Activation
         for supported types.
@@ -621,23 +594,22 @@ class GRUCell(HybridRecurrentCell):
     def __init__(self, hidden_size,
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 input_size=0, prefix=None, params=None, activation='tanh',
-                 recurrent_activation='sigmoid'):
-        super(GRUCell, self).__init__(prefix=prefix, params=params)
+                 input_size=0, activation='tanh', recurrent_activation='sigmoid'):
+        super(GRUCell, self).__init__()
         self._hidden_size = hidden_size
         self._input_size = input_size
-        self.i2h_weight = self.params.get('i2h_weight', shape=(3*hidden_size, input_size),
-                                          init=i2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.h2h_weight = self.params.get('h2h_weight', shape=(3*hidden_size, hidden_size),
-                                          init=h2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.i2h_bias = self.params.get('i2h_bias', shape=(3*hidden_size,),
-                                        init=i2h_bias_initializer,
-                                        allow_deferred_init=True)
-        self.h2h_bias = self.params.get('h2h_bias', shape=(3*hidden_size,),
-                                        init=h2h_bias_initializer,
-                                        allow_deferred_init=True)
+        self.i2h_weight = Parameter('i2h_weight', shape=(3*hidden_size, input_size),
+                                    init=i2h_weight_initializer,
+                                    allow_deferred_init=True)
+        self.h2h_weight = Parameter('h2h_weight', shape=(3*hidden_size, hidden_size),
+                                    init=h2h_weight_initializer,
+                                    allow_deferred_init=True)
+        self.i2h_bias = Parameter('i2h_bias', shape=(3*hidden_size,),
+                                  init=i2h_bias_initializer,
+                                  allow_deferred_init=True)
+        self.h2h_bias = Parameter('h2h_bias', shape=(3*hidden_size,),
+                                  init=h2h_bias_initializer,
+                                  allow_deferred_init=True)
         self._activation = activation
         self._recurrent_activation = recurrent_activation
 
@@ -702,8 +674,8 @@ class GRUCell(HybridRecurrentCell):
 
 class SequentialRNNCell(RecurrentCell):
     """Sequentially stacking multiple RNN cells."""
-    def __init__(self, prefix=None, params=None):
-        super(SequentialRNNCell, self).__init__(prefix=prefix, params=params)
+    def __init__(self):
+        super(SequentialRNNCell, self).__init__()
         self._layers = []
 
     def __repr__(self):
@@ -782,8 +754,8 @@ class SequentialRNNCell(RecurrentCell):
 
 class HybridSequentialRNNCell(HybridRecurrentCell):
     """Sequentially stacking multiple HybridRNN cells."""
-    def __init__(self, prefix=None, params=None):
-        super(HybridSequentialRNNCell, self).__init__(prefix=prefix, params=params)
+    def __init__(self):
+        super(HybridSequentialRNNCell, self).__init__()
         self._layers = []
 
     def __repr__(self):
@@ -877,8 +849,8 @@ class DropoutCell(HybridRecurrentCell):
         - **out**: output tensor with shape `(batch_size, size)`.
         - **next_states**: returns input `states` directly.
     """
-    def __init__(self, rate, axes=(), prefix=None, params=None):
-        super(DropoutCell, self).__init__(prefix, params)
+    def __init__(self, rate, axes=()):
+        super(DropoutCell, self).__init__()
         assert isinstance(rate, numeric_types), "rate must be a number"
         self._rate = rate
         self._axes = axes
@@ -925,8 +897,7 @@ class ModifierCell(HybridRecurrentCell):
         assert not base_cell._modified, \
             "Cell %s is already modified. One cell cannot be modified twice"%base_cell.name
         base_cell._modified = True
-        super(ModifierCell, self).__init__(prefix=base_cell.prefix+self._alias(),
-                                           params=None)
+        super(ModifierCell, self).__init__()
         self.base_cell = base_cell
 
     @property
@@ -1050,11 +1021,10 @@ class BidirectionalCell(HybridRecurrentCell):
     r_cell : RecurrentCell
         Cell for backward unrolling
     """
-    def __init__(self, l_cell, r_cell, output_prefix='bi_'):
-        super(BidirectionalCell, self).__init__(prefix='', params=None)
+    def __init__(self, l_cell, r_cell):
+        super(BidirectionalCell, self).__init__()
         self.l_cell = l_cell
         self.r_cell = r_cell
-        self._output_prefix = output_prefix
 
     def __call__(self, inputs, states):
         raise NotImplementedError("Bidirectional cannot be stepped. Please use unroll")
@@ -1105,10 +1075,10 @@ class BidirectionalCell(HybridRecurrentCell):
         if merge_outputs:
             reversed_r_outputs = F.stack(*reversed_r_outputs, axis=axis)
             outputs = F.concat(l_outputs, reversed_r_outputs, dim=2,
-                               name='%sout'%self._output_prefix)
+                               name='out')
 
         else:
-            outputs = [F.concat(l_o, r_o, dim=1, name='%st%d'%(self._output_prefix, i))
+            outputs = [F.concat(l_o, r_o, dim=1, name='t%d'%(i))
                        for i, (l_o, r_o) in enumerate(zip(l_outputs, reversed_r_outputs))]
         if valid_length is not None:
             outputs = _mask_sequence_variable_length(F, outputs, length, valid_length, axis,

@@ -2412,14 +2412,14 @@ def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test
             self._np_params = np_params
 
         def _init_weight(self, name, arr):
-            arr[()] = self._np_params[name]
+            arr[()] = self._np_params[name.attrs['structure']]
     saved_out_np = None
     saved_grad_np_l = None
     params_init = None
     use_autograd_flags = [False, True] if test_grad else [False]
     for hybridize in [False, True]:
         for use_autograd in use_autograd_flags:
-            net = net_builder(prefix='net_')
+            net = net_builder()
             if params_init is None:
                 net.initialize()
             else:

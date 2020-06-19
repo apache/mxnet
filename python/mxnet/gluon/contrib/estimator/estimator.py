@@ -71,7 +71,8 @@ class Estimator(object):
         the training net is given below:
 
         >>> net = _get_train_network()
-        >>> val_net = _get_test_network(params=net.collect_params())
+        >>> val_net = _get_test_network()
+        >>> val_net.share_parameters(net.collect_params())
         >>> net.initialize(ctx=ctx)
         >>> est = Estimator(net, loss, val_net=val_net)
 

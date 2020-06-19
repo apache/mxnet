@@ -92,7 +92,7 @@ def create_image_augment(data_shape, resize=0, rand_crop=False, rand_resize=Fals
     """
     if inter_method == 10:
         inter_method = np.random.randint(0, 5)
-    augmenter = HybridSequential('default_img_augment_')
+    augmenter = HybridSequential()
     if resize > 0:
         augmenter.add(transforms.image.Resize(resize, interpolation=inter_method))
     crop_size = (data_shape[2], data_shape[1])
@@ -220,9 +220,9 @@ class ImageDataLoader(object):
             augmenter = create_image_augment(data_shape, **kwargs)
         elif isinstance(aug_list, list):
             if all([isinstance(a, HybridBlock) for a in aug_list]):
-                augmenter = HybridSequential('user_img_augment_')
+                augmenter = HybridSequential()
             else:
-                augmenter = Sequential('user_img_augment_')
+                augmenter = Sequential()
             for aug in aug_list:
                 augmenter.add(aug)
         elif isinstance(aug_list, Block):
@@ -316,7 +316,7 @@ def create_bbox_augment(data_shape, rand_crop=0, rand_pad=0, rand_gray=0,
     """
     if inter_method == 10:
         inter_method = np.random.randint(0, 5)
-    augmenter = Sequential('default_bbox_aug_')
+    augmenter = Sequential()
     if rand_crop > 0:
         augmenter.add(bbox.ImageBboxRandomCropWithConstraints(
             p=rand_crop, min_scale=area_range[0], max_scale=1.0,
@@ -439,9 +439,9 @@ class ImageBboxDataLoader(object):
             augmenter = create_bbox_augment(data_shape, **kwargs)
         elif isinstance(aug_list, list):
             if all([isinstance(a, HybridBlock) for a in aug_list]):
-                augmenter = HybridSequential('user_bbox_augment_')
+                augmenter = HybridSequential()
             else:
-                augmenter = Sequential('user_bbox_augment_')
+                augmenter = Sequential()
             for aug in aug_list:
                 augmenter.add(aug)
         elif isinstance(aug_list, Block):
@@ -449,7 +449,7 @@ class ImageBboxDataLoader(object):
         else:
             raise ValueError('aug_list must be a list of Blocks')
         augmenter.hybridize()
-        wrapper_aug = Sequential('wrapper_bbox_aug_')
+        wrapper_aug = Sequential()
         wrapper_aug.add(BboxLabelTransform(coord_normalized))
         wrapper_aug.add(augmenter)
 
