@@ -66,7 +66,7 @@ The following tutorials will help you learn how to deploy MXNet models for infer
    
    .. card::
       :title: Object Detection on Jetson
-      :link: object_detection_jetson.html
+      :link: https://gluon-cv.mxnet.io/build/examples_detection/demo_jetson.html
 
       Example of running a pretrained object detection model on a Jetson module.
 
