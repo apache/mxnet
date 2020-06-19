@@ -1922,6 +1922,14 @@ def test_npx_softmax():
         def hybrid_forward(self, F, a):
             return F.npx.softmax(a, axis=axis)
 
+    class TestLogSoftmax(HybridBlock):
+        def __init__(self, axis):
+            super(TestLogSoftmax, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.npx.log_softmax(a, axis=axis)
+
     def np_softmax(x, axis=-1):
         if (x.shape[axis] == 0):
             return _np.sum(x, axis=axis, keepdims=True)
@@ -1930,24 +1938,34 @@ def test_npx_softmax():
         x /= _np.sum(x, axis=axis, keepdims=True)
         return x
 
+    def np_log_softmax(x, axis=-1):
+        return _np.log(np_softmax(x, axis))
+
+    #(operator, function) tuples
+    tested_ops = [(TestSoftmax, np_softmax),
+                  (TestLogSoftmax, np_log_softmax)]
+
     # only testing 0-size shaped inputs here, other input cases have been tested in test_opeartor.py
-    for hybridize in [True, False]:
-        for shape in [(3, 0, 4), (0, 0)]:
-            mx_a = np.random.uniform(size=shape)
-            mx_a.attach_grad()
-            for axis in range(-len(shape), len(shape)):
-                test_softmax = TestSoftmax(axis)
-                if hybridize:
-                    test_softmax.hybridize()
+    for SoftmaxOp, softmax_function in tested_ops:
+        for hybridize in [True, False]:
+            for shape in [(3, 0, 4), (0, 0)]:
+                mx_a = np.random.uniform(size=shape)
+                mx_a.attach_grad()
+                for axis in range(-len(shape), len(shape)):
+                    test_softmax_op = SoftmaxOp(axis)
+                    if hybridize:
+                        test_softmax_op.hybridize()
 
-                with mx.autograd.record():
-                    mx_out = test_softmax(mx_a)
+                    with mx.autograd.record():
+                        mx_out = test_softmax_op(mx_a)
 
-                np_out = np_softmax(mx_a.asnumpy(), axis)
-                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, equal_nan=True)
+                    mx_out.wait_to_read()
 
-                mx_out.backward()
-                assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape), rtol=1e-3, atol=1e-5)
+                    np_out = softmax_function(mx_a.asnumpy(), axis)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, equal_nan=True)
+
+                    mx_out.backward()
+                    assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape), rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
