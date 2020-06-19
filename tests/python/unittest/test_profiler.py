@@ -496,23 +496,18 @@ def test_gpu_memory_profiler_symbolic():
              'Requested Size' : str(4 * a.size)},
             {'Attribute Name' : 'tensordot:in_arg:B',
              'Requested Size' : str(4 * b.size)},
-            {'Attribute Name' : 'tensordot:arg_grad:A',
-             'Requested Size' : str(4 * a.size)},
-            {'Attribute Name' : 'tensordot:arg_grad:B',
-             'Requested Size' : str(4 * b.size)},
             {'Attribute Name' : 'tensordot:dot',
-             'Requested Size' : str(4 * c.size)},
-            {'Attribute Name' : 'tensordot:dot_head_grad',
              'Requested Size' : str(4 * c.size)}]
 
     # Sample gpu_memory_profile.csv:
     # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
-    # "tensordot:arg_grad:A","67108864","0","67108864","0"
-    # "tensordot:arg_grad:B","67108864","0","67108864","0"
-    # "tensordot:dot","67108864","0","67108864","0"
-    # "tensordot:dot_head_grad","67108864","0","67108864","0"
+    # "<unk>:_zeros","67108864","0","67108864","0"
+    # "<unk>:_zeros","67108864","0","67108864","0"
+    # "tensordot:dot","67108864","0","67108864","1"
+    # "tensordot:dot","67108864","0","67108864","1"
     # "tensordot:in_arg:A","67108864","0","67108864","0"
     # "tensordot:in_arg:B","67108864","0","67108864","0"
+    # "nvml_amend","1074790400","0","1074790400","0"
 
     with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)

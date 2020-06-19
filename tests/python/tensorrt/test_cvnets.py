@@ -45,8 +45,7 @@ def get_classif_model(model_name, use_tensorrt, ctx=mx.gpu(0), batch_size=128):
     else:
         sym = _sym
     executor = sym._simple_bind(ctx=ctx, data=(batch_size, 3, h, w),
-                               softmax_label=(batch_size,),
-                               grad_req='null')
+                                grad_req='null')
     executor.copy_params_from(arg_params, aux_params)
     return executor
 
