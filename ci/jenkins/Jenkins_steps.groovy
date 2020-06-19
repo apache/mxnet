@@ -171,7 +171,7 @@ def compile_unix_mkl_cpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkl', false)
-            utils.pack_lib(lib_name, mx_lib, true)
+            utils.pack_lib(lib_name, mx_lib, false)
           }
         }
       }
@@ -213,7 +213,7 @@ def compile_unix_mkldnn_mkl_cpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn_mkl', false)
-            utils.pack_lib(lib_name, mx_mkldnn_lib, true)
+            utils.pack_lib(lib_name, mx_mkldnn_lib, false)
           }
         }
       }
