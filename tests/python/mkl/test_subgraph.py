@@ -92,7 +92,7 @@ def check_qsym_gluon_forward(path, qsym, qarg_params, qaux_params, data_shape):
   mx.nd.save(params_path, save_dict)
   # load back with SymbolBlock
   net = mx.gluon.SymbolBlock.imports(json_path, ['data'], params_path)
-  net.collect_params().reset_ctx(ctx = mx.current_context())
+  net.reset_ctx(ctx = mx.current_context())
   net.hybridize()
 
   data = mx.random.uniform(-1.0, 1.0, shape=data_shape)

@@ -1894,7 +1894,7 @@ def test_deformable_convolution_options():
 
 
 def check_rnn_layer(layer):
-    layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     with mx.gpu(0):
         x = mx.nd.ones((10, 16, 30))
         states = layer.begin_state(16)
@@ -1911,7 +1911,7 @@ def check_rnn_layer(layer):
         assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
 def check_rnn_layer_w_rand_inputs(layer):
-    layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     x = mx.nd.uniform(shape=(10, 16, 30))
     with mx.gpu(0):
         x = x.copyto(mx.gpu(0))
