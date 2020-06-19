@@ -334,7 +334,8 @@ class BinaryScalarOp : public UnaryOp {
     bool scalar_is_int = param.is_int;
     const double alpha = param.scalar;
     TBlob temp_tblob;
-    if ((common::is_int(inputs[0].type_flag_) || inputs[0].type_flag_ == mshadow::kBool) && !scalar_is_int) {
+    if ((common::is_int(inputs[0].type_flag_) || inputs[0].type_flag_ == mshadow::kBool)
+        && !scalar_is_int) {
       Tensor<xpu, 1, double> temp_tensor =
           ctx.requested[0].get_space_typed<xpu, 1, double>(Shape1(inputs[0].Size()), s);
       temp_tblob = TBlob(temp_tensor);
