@@ -955,24 +955,6 @@ def test_unix_python3_mkldnn_nocudnn_gpu(lib_name) {
     }]
 }
 
-def test_unix_python3_tensorrt_gpu(lib_name) {
-    return ['Python3: TensorRT GPU': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/build-tensorrt') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            try {
-              utils.unpack_and_init(lib_name, mx_tensorrt_lib)
-              utils.docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
-              utils.publish_test_coverage()
-            } finally {
-              utils.collect_test_results_unix('tests_tensorrt.xml', 'tests_python3_tensorrt_gpu.xml')
-            }
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_cpp_package_gpu(lib_name) {
     return ['cpp-package GPU Makefile': {
       node(NODE_LINUX_GPU_G4) {

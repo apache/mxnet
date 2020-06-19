@@ -1064,20 +1064,6 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
-unittest_ubuntu_tensorrt_gpu() {
-    set -ex
-    export PYTHONPATH=./python/
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
-    export MXNET_ENABLE_CYTHON=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-        pytest -n 4 --durations=50 --cov-report xml:tests_trt_gpu.xml --verbose --capture=no tests/python/tensorrt/test_ops.py
-    pytest -k 'not test_ops' --durations=50 --cov-report xml:tests_trt_gpu.xml --cov-append --verbose --capture=no tests/python/tensorrt/
-}
-
 # quantization gpu currently only runs on P3 instances
 # need to separte it from unittest_ubuntu_python3_gpu()
 unittest_ubuntu_python3_quantization_gpu() {
