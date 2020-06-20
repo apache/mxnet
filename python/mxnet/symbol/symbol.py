@@ -1666,7 +1666,7 @@ class Symbol(SymbolBase):
         >>> b = mx.sym.Variable('b')
         >>> c = a + b
         <Symbol _plus1>
-        >>> ex = c.bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]), 'b' : mx.nd.ones([2,3])})
+        >>> ex = c._bind(ctx=mx.cpu(), args={'a' : mx.nd.ones([2,3]), 'b' : mx.nd.ones([2,3])})
         >>> ex.forward()
         [<NDArray 2x3 @cpu(0)>]
         >>> ex.outputs[0].asnumpy()
@@ -1801,7 +1801,7 @@ class Symbol(SymbolBase):
         """
         if ctx is None:
             ctx = current_context()
-        return self.bind(ctx, kwargs).forward()
+        return self._bind(ctx, kwargs).forward()
 
     def reshape(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`reshape`.

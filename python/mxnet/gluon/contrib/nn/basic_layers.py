@@ -38,19 +38,17 @@ class Concurrent(Sequential):
     Example::
 
         net = Concurrent()
-        # use net's name_scope to give children blocks appropriate names.
-        with net.name_scope():
-            net.add(nn.Dense(10, activation='relu'))
-            net.add(nn.Dense(20))
-            net.add(Identity())
+        net.add(nn.Dense(10, activation='relu'))
+        net.add(nn.Dense(20))
+        net.add(Identity())
 
     Parameters
     ----------
     axis : int, default -1
         The axis on which to concatenate the outputs.
     """
-    def __init__(self, axis=-1, prefix=None, params=None):
-        super(Concurrent, self).__init__(prefix=prefix, params=params)
+    def __init__(self, axis=-1):
+        super(Concurrent, self).__init__()
         self.axis = axis
 
     def forward(self, x):
@@ -71,19 +69,17 @@ class HybridConcurrent(HybridSequential):
     Example::
 
         net = HybridConcurrent()
-        # use net's name_scope to give children blocks appropriate names.
-        with net.name_scope():
-            net.add(nn.Dense(10, activation='relu'))
-            net.add(nn.Dense(20))
-            net.add(Identity())
+        net.add(nn.Dense(10, activation='relu'))
+        net.add(nn.Dense(20))
+        net.add(Identity())
 
     Parameters
     ----------
     axis : int, default -1
         The axis on which to concatenate the outputs.
     """
-    def __init__(self, axis=-1, prefix=None, params=None):
-        super(HybridConcurrent, self).__init__(prefix=prefix, params=params)
+    def __init__(self, axis=-1):
+        super(HybridConcurrent, self).__init__()
         self.axis = axis
 
     def hybrid_forward(self, F, x):
@@ -103,14 +99,12 @@ class Identity(HybridBlock):
     Example::
 
         net = HybridConcurrent()
-        # use net's name_scope to give child Blocks appropriate names.
-        with net.name_scope():
-            net.add(nn.Dense(10, activation='relu'))
-            net.add(nn.Dense(20))
-            net.add(Identity())
+        net.add(nn.Dense(10, activation='relu'))
+        net.add(nn.Dense(20))
+        net.add(Identity())
     """
-    def __init__(self, prefix=None, params=None):
-        super(Identity, self).__init__(prefix=prefix, params=params)
+    def __init__(self):
+        super(Identity, self).__init__()
 
     def hybrid_forward(self, F, x):
         return x
@@ -185,7 +179,7 @@ class SyncBatchNorm(BatchNorm):
         num_devices = self._get_num_devices() if num_devices is None else num_devices
         self._kwargs = {'eps': epsilon, 'momentum': momentum,
                         'fix_gamma': not scale, 'use_global_stats': use_global_stats,
-                        'ndev': num_devices, 'key': self.prefix}
+                        'ndev': num_devices, 'key': self.name}
 
     def _get_num_devices(self):
         warnings.warn("Caution using SyncBatchNorm: "

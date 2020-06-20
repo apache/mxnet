@@ -476,7 +476,7 @@ class KLDivLoss(Loss):
             pred = F.log_softmax(pred, self._axis)
         loss = label * (F.log(label + 1e-12) - pred)
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+        return F.sum(loss, axis=self._batch_axis, exclude=True)
 
 
 class CTCLoss(Loss):
@@ -1010,8 +1010,7 @@ class SDMLLoss(Loss):
         confident output distributions." arXiv preprint arXiv:1701.06548 (2017).
         """
 
-        # TODO: replace with mx.nd.eye(batch_size) with mxnet 1.2
-        gold = F.one_hot(F.arange(batch_size), batch_size)
+        gold = F.eye(batch_size)
         labels = gold * (1 - self.smoothing_parameter) + (1 - gold) * self.smoothing_parameter / (batch_size - 1)
         return labels
 
@@ -1039,7 +1038,9 @@ class SDMLLoss(Loss):
         distances = self._compute_distances(x1, x2)
         log_probabilities = F.log_softmax(-distances, axis=1)
         # multiply for the number of labels to obtain the correct loss (gluon kl_loss averages instead of sum)
-        return self.kl_loss(log_probabilities, labels.as_in_context(distances.context)) * batch_size
+        # PR#18423:multiply for the number of labels should multiply x1.shape[1] rather than x1.shape[0])
+        # After PR#18423, it is no need to multiply it anymore.
+        return self.kl_loss(log_probabilities, labels.as_in_context(distances.context))
 
 
     def hybrid_forward(self, F, x1, x2):

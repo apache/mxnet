@@ -118,14 +118,14 @@ def test_name():
 def test_blockscope():
     class dummy_block(object):
         def __init__(self, prefix):
-            self.prefix = prefix
+            self.name = prefix
             self._empty_prefix = False
             self._profiler_scope_name = '<unk>:'
     blockscope_list = []
     status = [False]
     event = threading.Event()
     def f():
-        net = dummy_block("spawned_")  # BlockScope only keeps a weakref to the Block
+        net = dummy_block("spawned")  # BlockScope only keeps a weakref to the Block
         with block._BlockScope(net):
             x = NameManager.current.get(None, "hello")
             event.wait()
@@ -133,7 +133,6 @@ def test_blockscope():
                 status[0] = True
     thread = threading.Thread(target=f)
     thread.start()
-    block._BlockScope.create("main_thread", None, "hi")
     event.set()
     thread.join()
     event.clear()

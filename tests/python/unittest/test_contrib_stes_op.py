@@ -24,8 +24,7 @@ from mxnet.test_utils import default_context
 class RoundSTENET(gluon.HybridBlock):
     def __init__(self, w_init, **kwargs):
         super(RoundSTENET, self).__init__(**kwargs)
-        with self.name_scope():
-            self.w = self.params.get('w', shape=30, init=mx.initializer.Constant(w_init), grad_req='write')
+        self.w = gluon.Parameter('w', shape=30, init=mx.initializer.Constant(w_init), grad_req='write')
 
     @staticmethod
     def expected_grads(in_data, w_init):
@@ -48,8 +47,7 @@ class RoundSTENET(gluon.HybridBlock):
 class SignSTENET(gluon.HybridBlock):
     def __init__(self, w_init, **kwargs):
         super(SignSTENET, self).__init__(**kwargs)
-        with self.name_scope():
-            self.w = self.params.get('w', shape=30, init=mx.initializer.Constant(w_init), grad_req='write')
+        self.w = gluon.Parameter('w', shape=30, init=mx.initializer.Constant(w_init), grad_req='write')
 
     @staticmethod
     def expected_grads(in_data, w_init):
@@ -76,7 +74,7 @@ def check_ste(net_type_str, w_init, hybridize, in_data, ctx=None):
     if hybridize:
         net.hybridize()
     # Init
-    net.collect_params().initialize(mx.init.Constant([w_init]), ctx=ctx)
+    net.initialize(mx.init.Constant([w_init]), ctx=ctx)
 
     # Test:
     in_data = in_data.as_in_context(ctx)

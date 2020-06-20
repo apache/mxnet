@@ -54,7 +54,6 @@ core_logic: {
     custom_steps.test_unix_scala_mkldnn_cpu('mkldnn_cpu_make'),
     custom_steps.test_unix_clojure_cpu('cpu_make'),
     custom_steps.test_unix_clojure_integration_cpu('cpu_make'),
-    custom_steps.test_unix_perl_cpu('cpu_make'),
     custom_steps.test_unix_r_cpu('cpu'),
     custom_steps.test_unix_r_mkldnn_cpu('mkldnn_cpu'),
     custom_steps.test_unix_julia07_cpu('cpu'),

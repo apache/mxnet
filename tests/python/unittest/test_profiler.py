@@ -496,23 +496,18 @@ def test_gpu_memory_profiler_symbolic():
              'Requested Size' : str(4 * a.size)},
             {'Attribute Name' : 'tensordot:in_arg:B',
              'Requested Size' : str(4 * b.size)},
-            {'Attribute Name' : 'tensordot:arg_grad:A',
-             'Requested Size' : str(4 * a.size)},
-            {'Attribute Name' : 'tensordot:arg_grad:B',
-             'Requested Size' : str(4 * b.size)},
             {'Attribute Name' : 'tensordot:dot',
-             'Requested Size' : str(4 * c.size)},
-            {'Attribute Name' : 'tensordot:dot_head_grad',
              'Requested Size' : str(4 * c.size)}]
 
     # Sample gpu_memory_profile.csv:
     # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
-    # "tensordot:arg_grad:A","67108864","0","67108864","0"
-    # "tensordot:arg_grad:B","67108864","0","67108864","0"
-    # "tensordot:dot","67108864","0","67108864","0"
-    # "tensordot:dot_head_grad","67108864","0","67108864","0"
+    # "<unk>:_zeros","67108864","0","67108864","0"
+    # "<unk>:_zeros","67108864","0","67108864","0"
+    # "tensordot:dot","67108864","0","67108864","1"
+    # "tensordot:dot","67108864","0","67108864","1"
     # "tensordot:in_arg:A","67108864","0","67108864","0"
     # "tensordot:in_arg:B","67108864","0","67108864","0"
+    # "nvml_amend","1074790400","0","1074790400","0"
 
     with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
@@ -539,13 +534,12 @@ def test_gpu_memory_profiler_gluon():
                     run=True, continuous_dump=True)
     profiler.set_state('run')
 
-    model = nn.HybridSequential(prefix='net_')
-    with model.name_scope():
-        model.add(nn.Dense(128, activation='tanh'))
-        model.add(nn.Dropout(0.5))
-        model.add(nn.Dense(64, activation='tanh'),
-                  nn.Dense(32, in_units=64))
-        model.add(nn.Activation('relu'))
+    model = nn.HybridSequential()
+    model.add(nn.Dense(128, activation='tanh'))
+    model.add(nn.Dropout(0.5))
+    model.add(nn.Dense(64, activation='tanh'),
+              nn.Dense(32, in_units=64))
+    model.add(nn.Activation('relu'))
     model.initialize(ctx=mx.gpu())
     model.hybridize()
 
@@ -558,42 +552,15 @@ def test_gpu_memory_profiler_gluon():
     profiler.set_state('stop')
     profiler.dump(True)
 
-    # Sample gpu_memory_profiler.csv
-    # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
-    # "<unk>:in_arg:data","640","0","4096","0"
-    # "net:arg_grad:net_dense0_bias","512","0","4096","0"
-    # "net:arg_grad:net_dense0_weight","5120","0","8192","0"
-    # "net:arg_grad:net_dense1_bias","256","0","4096","0"
-    # "net:arg_grad:net_dense1_weight","32768","0","32768","0"
-    # "net:arg_grad:net_dense2_bias","128","0","4096","0"
-    # "net:arg_grad:net_dense2_weight","8192","0","8192","0"
-    # "net:dense0:net_dense0_fwd","8192","0","8192","0"
-    # "net:dense0:tanh:net_dense0_tanh_fwd","8192","0","8192","0"
-    # "net:dense1:net_dense1_fwd","4096","0","4096","0"
-    # "net:dense1:tanh:net_dense1_tanh_fwd","4096","0","4096","0"
-    # "net:dense2:net_dense2_fwd","2048","0","4096","0"
-    # "net:dense2:net_dense2_fwd_backward","4096","0","4096","0"
-    # "net:dropout0:net_dropout0_fwd","8192","0","8192","0"
-    # "net:dropout0:net_dropout0_fwd","8192","0","8192","0"
-    # "net:in_arg:net_dense0_bias","512","0","4096","0"
-    # "net:in_arg:net_dense0_weight","5120","0","8192","0"
-    # "net:in_arg:net_dense1_bias","256","0","4096","0"
-    # "net:in_arg:net_dense1_weight","32768","0","32768","0"
-    # "net:in_arg:net_dense2_bias","128","0","4096","0"
-    # "net:in_arg:net_dense2_weight","8192","0","8192","0"
-    # "net:relu0:net_relu0_fwd","2048","0","4096","0"
-    # "net:relu0:net_relu0_fwd_backward","8192","0","8192","0"
-    # "net:relu0:net_relu0_fwd_head_grad","2048","0","4096","0"
-    # "resource:cudnn_dropout_state (dropout-inl.h +258)","1671168","0","1671168","0"
-    # "resource:temp_space (fully_connected-inl.h +316)","34816","0","36864","0"
-
     # We are only checking for weight parameters here, also making sure that
     # there is no unknown entries in the memory profile.
     with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
+        for row in csv_reader:
+            print(",".join(list(row.values())))
         for scope in ['in_arg', 'arg_grad']:
             for key, nd in model.collect_params().items():
-                expected_arg_name = "net:%s:" % scope + key
+                expected_arg_name = "%s:%s:" % (model.name, scope) + nd.name
                 expected_arg_size = str(4 * np.prod(nd.shape))
                 csv_file.seek(0)
                 entry_found = False
