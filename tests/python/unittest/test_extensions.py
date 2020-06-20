@@ -72,9 +72,9 @@ def test_custom_op():
     in_grad2 = [mx.nd.empty((dim_n,dim_k),ctx=mx.cpu()),mx.nd.empty((dim_k,dim_m),ctx=mx.cpu())]
     in_grad_base = [mx.nd.empty((dim_n,dim_k),ctx=mx.cpu()),mx.nd.empty((dim_k,dim_m),ctx=mx.cpu())]
 
-    exe1 = c.bind(ctx=mx.cpu(),args={'s':mat1,'t':mat2},args_grad=in_grad1)
-    exe2 = d.bind(ctx=mx.cpu(),args={'s':mat1,'t':mat2},args_grad=in_grad2)
-    exe_base = base.bind(ctx=mx.cpu(),args={'s':mat1,'t':mat2},args_grad=in_grad_base)
+    exe1 = c._bind(ctx=mx.cpu(),args={'s':mat1,'t':mat2},args_grad=in_grad1)
+    exe2 = d._bind(ctx=mx.cpu(),args={'s':mat1,'t':mat2},args_grad=in_grad2)
+    exe_base = base._bind(ctx=mx.cpu(),args={'s':mat1,'t':mat2},args_grad=in_grad_base)
 
     out1 = exe1.forward()
     out2 = exe2.forward()
@@ -132,13 +132,13 @@ def test_subgraph():
     args = {'a':mx.nd.ones((3,2),ctx=mx.cpu()), 'b':mx.nd.ones((3,2),ctx=mx.cpu())}
 
     # baseline - regular execution in MXNet
-    exe = sym.bind(ctx=mx.cpu(), args=args)
+    exe = sym._bind(ctx=mx.cpu(), args=args)
     out = exe.forward()
 
     # without propogating shapes/types, passing a custom option to subgraph prop "myOpt"
     # should not create subgraph since subgraph prop requires type info
     mysym1 = sym.optimize_for("myProp", myOpt='yello')
-    exe1 = mysym1.bind(ctx=mx.cpu(), args=args)
+    exe1 = mysym1._bind(ctx=mx.cpu(), args=args)
     out1 = exe1.forward()
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out1[0].asnumpy(), rtol=1e-3, atol=1e-3)
@@ -146,14 +146,14 @@ def test_subgraph():
     # with propogating shapes/types, rejecting subgraph
     # this tests creating the subgraph and having the subgraph prop reject it
     mysym2 = sym.optimize_for("myProp", args, reject=True)
-    exe2 = mysym2.bind(ctx=mx.cpu(), args=args)
+    exe2 = mysym2._bind(ctx=mx.cpu(), args=args)
     out2 = exe2.forward()
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out2[0].asnumpy(), rtol=1e-3, atol=1e-3)
 
     # with propogating shapes/types
     mysym3 = sym.optimize_for("myProp",args)
-    exe3 = mysym3.bind(ctx=mx.cpu(), args=args)
+    exe3 = mysym3._bind(ctx=mx.cpu(), args=args)
     out3 = exe3.forward()
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out3[0].asnumpy(), rtol=1e-3, atol=1e-3)

@@ -46,7 +46,6 @@ except ImportError:
 import mxnet as mx
 from .context import Context, current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
-from .ndarray import array
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
 from .util import use_np, use_np_default_dtype  # pylint: disable=unused-import
@@ -757,34 +756,6 @@ def assert_exception(f, exception_type, *args, **kwargs):
         return
 
 
-def simple_forward(sym, ctx=None, is_train=False, **inputs):
-    """A simple forward function for a symbol.
-
-    Primarily used in doctest to test the functionality of a symbol.
-    Takes NumPy arrays as inputs and outputs are also converted to NumPy arrays.
-
-    Parameters
-    ----------
-    ctx : Context
-        If ``None``, will take the default context.
-    inputs : keyword arguments
-        Mapping each input name to a NumPy array.
-
-    Returns
-    -------
-    The result as a numpy array. Multiple results will
-    be returned as a list of NumPy arrays.
-    """
-    ctx = ctx or default_context()
-    inputs = {k: array(v) for k, v in inputs.items()}
-    exe = sym.bind(ctx, args=inputs)
-    exe.forward(is_train=is_train)
-    outputs = [x.asnumpy() for x in exe.outputs]
-    if len(outputs) == 1:
-        outputs = outputs[0]
-    return outputs
-
-
 def _parse_location(sym, location, ctx, dtype=default_dtype()):
     """Parses the given location to a ordered dictionary.
 
@@ -983,7 +954,6 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
 
     return approx_grads
 
-
 def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
                            atol=None, grad_nodes=None, use_forward_train=True, ctx=None,
                            grad_stype_dict=None, dtype=default_dtype()):
@@ -1093,18 +1063,25 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
                 args_grad[k] = mx.nd.zeros(args_grad[k].shape, args_grad[k].context,
                                            args_grad[k].dtype, v)
 
-    executor = out.bind(ctx, grad_req=grad_req,
-                        args=location, args_grad=args_grad, aux_states=aux_states)
+    grad_req["__random_proj"] = 'write'
+    executor = out._bind(ctx, grad_req=grad_req,
+                         args=location, args_grad=args_grad, aux_states=aux_states)
 
     inps = executor.arg_arrays
     if len(inps) != len(location):
         raise ValueError("Executor arg_arrays and and location len do not match."
                          "Got %d inputs and %d locations"%(len(inps), len(location)))
-    assert len(executor.outputs) == 1
 
     executor.forward(is_train=True)
+    assert len(executor.outputs) == 1
     executor.backward()
-    symbolic_grads = {k:executor.grad_dict[k].asnumpy() for k in grad_nodes}
+    symbolic_grads = {}
+    for k in grad_nodes:
+        grad_k = executor.grad_dict[k]
+        if grad_k is not None:
+            symbolic_grads[k] = grad_k.asnumpy()
+        else:
+            symbolic_grads[k] = None
 
     numeric_gradients = numeric_grad(
         executor, location_npy, aux_states_npy,
@@ -1121,8 +1098,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
             assert_almost_equal(fd_grad, sym_grad - orig_grad, rtol, atol,
                                 ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
         elif grad_req[name] == 'null':
-            assert_almost_equal(orig_grad, sym_grad, rtol, atol,
-                                ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
+            assert sym_grad is None
         else:
             raise ValueError("Invalid grad_req %s for argument %s"%(grad_req[name], name))
 
@@ -1192,7 +1168,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
                       for k, v in location.items()}
 
-    executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
+    executor = sym._bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
         if g.ndim == 0:
             g[()] = 0
@@ -1262,7 +1238,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> mat2 = np.array([[5, 6], [7, 8]])
     >>> grad1 = mx.nd.zeros(shape)
     >>> grad2 = mx.nd.zeros(shape)
-    >>> exec_add = sym_add.bind(default_context(), args={'lhs': mat1, 'rhs': mat2},
+    >>> exec_add = sym_add._bind(default_context(), args={'lhs': mat1, 'rhs': mat2},
     ... args_grad={'lhs': grad1, 'rhs': grad2}, grad_req={'lhs': 'write', 'rhs': 'write'})
     >>> exec_add.forward(is_train=True)
     >>> ograd = mx.nd.ones(shape)
@@ -1299,29 +1275,31 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     elif isinstance(grad_req, (list, tuple)):
         grad_req = {k:v for k, v in zip(sym.list_arguments(), grad_req)}
 
-    executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data,
-                        aux_states=aux_states, grad_req=grad_req)
-    executor.forward(is_train=True)
+    executor = sym._bind(ctx=ctx, args=location, args_grad=args_grad_data,
+                         aux_states=aux_states, grad_req=grad_req)
+    outputs = executor.forward(is_train=True)
 
     if isinstance(out_grads, (tuple, list)):
         outg = list()
-        for arr in out_grads:
+        for i, arr in enumerate(out_grads):
+            stype = outputs[i].stype
             if isinstance(arr, np.ndarray):
-                outg.append(mx.nd.array(arr, ctx=ctx, dtype=arr.dtype if dtype == "asnumpy" else dtype))
+                dtype = arr.dtype if dtype == "asnumpy" else dtype
+                outg.append(mx.nd.array(arr, ctx=ctx, dtype=dtype).tostype(stype))
             else:
-                outg.append(arr)
+                outg.append(arr.tostype(stype))
         out_grads = outg
     elif isinstance(out_grads, dict):
         outg = dict()
         for k, v in out_grads.items():
             if isinstance(v, np.ndarray):
-                outg[k] = mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype)
+                dtype = v.dtype if dtype == "asnumpy" else dtype
+                outg[k] = mx.nd.array(v, ctx=ctx, dtype=dtype)
             else:
                 outg[k] = v
         out_grads = outg
     else:
         assert out_grads is None
-
     executor.backward(out_grads)
 
     grads = {k: v.asnumpy() for k, v in args_grad_data.items()}
@@ -1373,13 +1351,13 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
     if grad_req is None:
         grad_req = 'write'
     if location is None:
-        exe = sym.simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
+        exe = sym._simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
         location = {k: np.random.normal(size=arr.shape, scale=1.0) for k, arr in
                     exe.arg_dict.items()}
     else:
         assert isinstance(location, dict), "Expect dict, get \"location\"=%s" %str(location)
-        exe = sym.simple_bind(grad_req=grad_req, ctx=ctx,
-                              **{k: v.shape for k, v in location.items()})
+        exe = sym._simple_bind(grad_req=grad_req, ctx=ctx,
+                               **{k: v.shape for k, v in location.items()})
 
     for name, iarr in location.items():
         exe.arg_dict[name][:] = iarr.astype(exe.arg_dict[name].dtype)
@@ -1503,7 +1481,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     for s, ctx in zip(sym, ctx_list):
         assert s.list_arguments() == arg_names
         assert s.list_outputs() == output_names
-        exe_list.append(s.simple_bind(grad_req=grad_req, **ctx))
+        exe_list.append(s._simple_bind(grad_req=grad_req, **ctx))
 
     arg_params = {} if arg_params is None else arg_params
     aux_params = {} if aux_params is None else aux_params
@@ -1528,17 +1506,15 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             for arr in exe.grad_arrays:
                 arr[:] = np.zeros(arr.shape, dtype=arr.dtype)
 
+    # test
+    for exe in exe_list:
+        exe.forward(is_train=False)
+
     dtypes = [np.dtype(exe.outputs[0].dtype) for exe in exe_list]
     max_idx = np.argmax(dtypes)
     gt = ground_truth
     if gt is None:
         gt = exe_list[max_idx].output_dict.copy()
-        if grad_req != 'null':
-            gt.update(exe_list[max_idx].grad_dict)
-
-    # test
-    for exe in exe_list:
-        exe.forward(is_train=False)
 
     for i, exe in enumerate(exe_list):
         if i == max_idx:
@@ -1565,7 +1541,11 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         for exe in exe_list:
             exe.forward(is_train=True)
             exe.backward(exe.outputs)
-
+        gt = ground_truth
+        if gt is None:
+            gt = exe_list[max_idx].output_dict.copy()
+            if grad_req != 'null':
+                gt.update(exe_list[max_idx].grad_dict)
         for i, exe in enumerate(exe_list):
             if i == max_idx:
                 continue
@@ -1575,7 +1555,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             curr = zip(output_names + arg_names, exe.outputs + exe.grad_arrays)
             for name, arr in curr:
                 if gt[name] is None:
-                    assert arr is None
+                    assert arr is None, name
                     continue
 
                 # Previous cast was to dtypes[i], but symbol may be mixed-precision,

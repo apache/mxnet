@@ -110,7 +110,7 @@ def get_graphs():
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe1(sym, subgraph_backend, op_names):
-    """Use the partitioned sym to simple_bind an executor and compare the outputs
+    """Use the partitioned sym to _simple_bind an executor and compare the outputs
     with those of the original executor"""
     sym, _, _ = sym
     out = SymbolHandle()
@@ -121,8 +121,8 @@ def test_subgraph_exe1(sym, subgraph_backend, op_names):
     assert partitioned_sym.list_inputs() == sym.list_inputs()
     assert partitioned_sym.list_arguments() == sym.list_arguments()
     assert partitioned_sym.list_auxiliary_states() == sym.list_auxiliary_states()
-    exe = sym.simple_bind(ctx=mx.current_context(), grad_req='null')
-    partitioned_exe = partitioned_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+    exe = sym._simple_bind(ctx=mx.current_context(), grad_req='null')
+    partitioned_exe = partitioned_sym._simple_bind(ctx=mx.current_context(), grad_req='null')
     input_names = sym.list_inputs()
     for name in input_names:
         if name in exe.arg_dict:
@@ -142,14 +142,14 @@ def test_subgraph_exe1(sym, subgraph_backend, op_names):
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe2(sym, subgraph_backend, op_names):
-    """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in simple_bind
+    """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in _simple_bind
     and compare results of the partitioned sym and the original sym."""
     def get_executor(sym, subgraph_backend=None, op_names=None, original_exec=None):
         if subgraph_backend is not None:
             os.environ['MXNET_SUBGRAPH_BACKEND'] = subgraph_backend
             check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                          c_str_array(op_names)))
-        exe = sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+        exe = sym._simple_bind(ctx=mx.current_context(), grad_req='null')
         input_names = sym.list_inputs()
         for name in input_names:
             if name in exe.arg_dict:
@@ -194,8 +194,8 @@ def test_subgraph_exe3(sym, subgraph_backend, op_names):
     arg_shapes, _, aux_shapes = sym.infer_shape()
     arg_array = [mx.nd.random.uniform(shape=shape) for shape in arg_shapes]
     aux_array = [mx.nd.random.uniform(shape=shape) for shape in aux_shapes]
-    exe = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
-    partitioned_exe = partitioned_sym.bind(ctx=mx.current_context(), args=arg_array,
+    exe = sym._bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
+    partitioned_exe = partitioned_sym._bind(ctx=mx.current_context(), args=arg_array,
                                            aux_states=aux_array, grad_req='null')
     exe.forward()
     partitioned_exe.forward()
@@ -221,7 +221,7 @@ def test_subgraph_exe4(sym, subgraph_backend, op_names):
         else:
             arg_array = None
             aux_array = None
-        exe = sym.bind(ctx=mx.current_context(),
+        exe = sym._bind(ctx=mx.current_context(),
                        args=arg_array if subgraph_backend is None else original_exec.arg_arrays,
                        aux_states=aux_array if subgraph_backend is None else original_exec.aux_arrays,
                        grad_req='null')
@@ -262,21 +262,21 @@ def copy_inputs_between_executors(exe1, exe2, input_names):
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe5(sym, subgraph_backend, op_names):
     """Call optimize_for to trigger graph partitioning without infer shapes/types before,
-    then simple_bind and compare results of the partitioned sym and the original sym."""
-    # simple_bind
+    then _simple_bind and compare results of the partitioned sym and the original sym."""
+    # _simple_bind
     sym, _, _ = sym
-    exe1 = sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+    exe1 = sym._simple_bind(ctx=mx.current_context(), grad_req='null')
     input_names = sym.list_inputs()
     set_random_inputs(exe1, input_names)
     exe1.forward()
 
-    # partition before simple_bind
+    # partition before _simple_bind
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                  c_str_array(op_names)))
     part_sym = sym.optimize_for(subgraph_backend)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
-    exe2 = part_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+    exe2 = part_sym._simple_bind(ctx=mx.current_context(), grad_req='null')
     copy_inputs_between_executors(exe1, exe2, input_names)
     exe2.forward()
 
@@ -290,22 +290,22 @@ def test_subgraph_exe5(sym, subgraph_backend, op_names):
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe6(sym, subgraph_backend, op_names):
-    """Call optimize_for to trigger graph partitioning with shapes/types, then simple_bind
+    """Call optimize_for to trigger graph partitioning with shapes/types, then _simple_bind
     and compare results of the partitioned sym and the original sym."""
-    # simple_bind
+    # _simple_bind
     sym, _, _ = sym
-    exe1 = sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+    exe1 = sym._simple_bind(ctx=mx.current_context(), grad_req='null')
     input_names = sym.list_inputs()
     set_random_inputs(exe1, input_names)
     exe1.forward()
 
-    # infer shape/type before partition before simple_bind
+    # infer shape/type before partition before _simple_bind
     check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
                                                  c_str_array(op_names)))
     part_sym = sym.optimize_for(subgraph_backend, exe1.arg_dict, exe1.aux_dict)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
-    exe2 = part_sym.simple_bind(ctx=mx.current_context(), grad_req='null')
+    exe2 = part_sym._simple_bind(ctx=mx.current_context(), grad_req='null')
     copy_inputs_between_executors(exe1, exe2, input_names)
     exe2.forward()
 
@@ -326,7 +326,7 @@ def test_subgraph_exe7(sym, subgraph_backend, op_names):
     arg_shapes, _, aux_shapes = sym.infer_shape()
     arg_array = [mx.nd.random.uniform(shape=shape) for shape in arg_shapes]
     aux_array = [mx.nd.random.uniform(shape=shape) for shape in aux_shapes]
-    exe1 = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
+    exe1 = sym._bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe1.forward()
 
     # partition before bind
@@ -335,7 +335,7 @@ def test_subgraph_exe7(sym, subgraph_backend, op_names):
     part_sym = sym.optimize_for(subgraph_backend)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
-    exe2 = part_sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
+    exe2 = part_sym._bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe2.forward()
 
     # compare outputs
@@ -357,7 +357,7 @@ def test_subgraph_exe8(sym, subgraph_backend, op_names):
     aux_names = sym.list_auxiliary_states()
     arg_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(arg_names,arg_shapes)}
     aux_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(aux_names,aux_shapes)}
-    exe1 = sym.bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe1 = sym._bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
     exe1.forward()
 
     # infer shape/type before partition before bind
@@ -366,7 +366,7 @@ def test_subgraph_exe8(sym, subgraph_backend, op_names):
     part_sym = sym.optimize_for(subgraph_backend, arg_dict, aux_dict)
     check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
 
-    exe2 = part_sym.bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe2 = part_sym._bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
     exe2.forward()
 
     # compare outputs

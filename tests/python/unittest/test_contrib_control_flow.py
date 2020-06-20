@@ -16,6 +16,7 @@
 # under the License.
 
 import copy
+import pytest
 import numpy as np
 import mxnet as mx
 from mxnet import gluon
@@ -218,7 +219,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
         args_names = ["FreeVar" + str(i) for i, _ in enumerate(free_var_shapes)] \
                    + ["LoopVar" + str(i) for i, _ in enumerate(loop_var_shapes) if i >= loop_var_start]
         args_grad = None if not is_train else _zeros_like_dict(x for x in args_names)
-        executor = loop_result_sym.bind(
+        executor = loop_result_sym._bind(
             ctx=default_context(),
             args=_copy_args_dict(loop_result_sym.list_inputs()),
             args_grad=args_grad,
@@ -251,6 +252,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
 
 
 @with_seed()
+@pytest.mark.skip(reason="Bug in while loop op, tracked at incubator-mxnet/issues/18575")
 def test_while_loop_for_foreach():
 
     def make_true_cond():
@@ -876,7 +878,7 @@ def test_while_loop_nested():
             mx.sym.var("sc"),
         ]
         result_sym = mx.sym.Group(make_loop(i, j, x_sum, sc))
-        executor = result_sym.bind(
+        executor = result_sym._bind(
             ctx=default_context(),
             args=args,
             args_grad=args_grad,
@@ -958,7 +960,7 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
         outputs_sym = _as_list(outputs_sym)
         outputs_sym = [x * 2 for x in outputs_sym]
         outputs_sym = mx.sym.Group(outputs_sym)
-        executor = outputs_sym.bind(
+        executor = outputs_sym._bind(
             ctx=default_context(),
             args={name: _args_dict[name].copy() for name in outputs_sym.list_inputs()},
             args_grad=None if not is_train else _merge_dict(
@@ -1166,9 +1168,9 @@ def test_foreach():
             i = i + 1
 
         if is_train:
-            e = out.bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
+            e = out._bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
         else:
-            e = out.bind(ctx=default_context(), args=arg_dict)
+            e = out._bind(ctx=default_context(), args=arg_dict)
         # the inputs to forward and backward are the same so forward and backward
         # should always return the same outputs.
         for i in range(num_iters):
@@ -1410,6 +1412,7 @@ def test_foreach():
     def step14(in1, states, free):
         return (in1 + free[0], [])
     frees = [mx.nd.random.uniform(shape=(2))]
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)], []]
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads)
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads, False)
     def step15(in1, states, free):
@@ -1469,7 +1472,7 @@ def test_foreach_nested():
     state = mx.nd.arange(2)
     data_grad = mx.nd.empty(data.shape)
     state_grad = mx.nd.empty(state.shape)
-    e = out.bind(ctx=default_context(), args={'v1':data, 'v2':state},
+    e = out._bind(ctx=default_context(), args={'v1':data, 'v2':state},
             args_grad={'v1':data_grad, 'v2':state_grad})
     e.forward(is_train=True)
     out_grads = []

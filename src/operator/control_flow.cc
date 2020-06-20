@@ -588,7 +588,9 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   std::vector<NDArray> func_inputs, func_outputs(outputs.size());
   extract_by_loc(inputs, params.func_input_locs, &func_inputs);
   for (size_t &step = state.n_iterations = 0; step < (size_t) params.max_iterations; ++step) {
-    state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr);
+    CHECK(inputs.size() > 0) << "while loop forward requires at least 1 input";
+    Context default_ctx = inputs[0].ctx();
+    state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr, default_ctx);
     if (!as_bool_scalar(*cond_output_ptr[0])) {
       break;
     }
@@ -910,7 +912,9 @@ static void CondComputeExCPU(const OpStatePtr& state_ptr,
   to_ptr_vec(cond_outputs, &cond_output_ptr);
   int &branch_selection = state.branch_selection;
   // run cond
-  state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr);
+  CHECK(cond_input_ptr.size() > 0) << "condition requires at least 1 input";
+  Context default_ctx = cond_inputs[0].ctx();
+  state.cond_op->Forward(nullptr, cond_input_ptr, cond_output_ptr, default_ctx);
   branch_selection = as_bool_scalar(*cond_output_ptr[0]);
   // select the right branch
   const mxnet::Tuple<dim_t> &func_input_locs = branch_selection

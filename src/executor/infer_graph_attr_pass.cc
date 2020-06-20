@@ -99,7 +99,7 @@ inline void GetAttrFromForwardNode(const uint32_t nid,
           rshape[eid] = rshape[idx.entry_id(fnode.inputs[i])];
         } else {
           CHECK_EQ(rshape[eid], rshape[idx.entry_id(fnode.inputs[i])])
-              << "Backward shape inconsistent with the forward shape";
+              << "Backward shape/type inconsistent with the forward shape/type";
         }
       }
       if (igrad_node == nullptr) {

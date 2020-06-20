@@ -71,10 +71,6 @@ from . import rtc
 # Attribute scope to add attributes to symbolic graphs
 from .attribute import AttrScope
 
-from . import monitor
-# use mx.mon as short for mx.monitor
-from . import monitor as mon
-
 from . import torch
 # use mx.th as short for mx.torch
 from . import torch as th

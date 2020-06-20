@@ -54,7 +54,7 @@ def test_profiler():
     B = mx.sym.Variable('B')
     C = mx.symbol.dot(A, B)
 
-    executor = C.simple_bind(mx.cpu(1), 'write', A=(4096, 4096), B=(4096, 4096))
+    executor = C._simple_bind(mx.cpu(1), 'write', A=(4096, 4096), B=(4096, 4096))
 
     a = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
     b = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
@@ -427,8 +427,8 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
         a = mx.symbol.Variable('a')
         b = mx.symbol.Custom(data=a, op_type='MyAdd1')
         c = mx.symbol.Custom(data=a, op_type='MyAdd2')
-        y = b.bind(mx.cpu(), {'a': inp})
-        z = c.bind(mx.cpu(), {'a': inp})
+        y = b._bind(mx.cpu(), {'a': inp})
+        z = c._bind(mx.cpu(), {'a': inp})
         yy = y.forward()
         zz = z.forward()
     mx.nd.waitall()
@@ -476,7 +476,7 @@ def test_gpu_memory_profiler_symbolic():
         B = mx.sym.Variable('B')
         C = mx.symbol.dot(A, B, name='dot')
 
-    executor = C.simple_bind(mx.gpu(), 'write', A=(4096, 4096), B=(4096, 4096))
+    executor = C._simple_bind(mx.gpu(), 'write', A=(4096, 4096), B=(4096, 4096))
 
     a = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
     b = mx.random.uniform(-1.0, 1.0, shape=(4096, 4096))
@@ -496,23 +496,18 @@ def test_gpu_memory_profiler_symbolic():
              'Requested Size' : str(4 * a.size)},
             {'Attribute Name' : 'tensordot:in_arg:B',
              'Requested Size' : str(4 * b.size)},
-            {'Attribute Name' : 'tensordot:arg_grad:A',
-             'Requested Size' : str(4 * a.size)},
-            {'Attribute Name' : 'tensordot:arg_grad:B',
-             'Requested Size' : str(4 * b.size)},
             {'Attribute Name' : 'tensordot:dot',
-             'Requested Size' : str(4 * c.size)},
-            {'Attribute Name' : 'tensordot:dot_head_grad',
              'Requested Size' : str(4 * c.size)}]
 
     # Sample gpu_memory_profile.csv:
     # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
-    # "tensordot:arg_grad:A","67108864","0","67108864","0"
-    # "tensordot:arg_grad:B","67108864","0","67108864","0"
-    # "tensordot:dot","67108864","0","67108864","0"
-    # "tensordot:dot_head_grad","67108864","0","67108864","0"
+    # "<unk>:_zeros","67108864","0","67108864","0"
+    # "<unk>:_zeros","67108864","0","67108864","0"
+    # "tensordot:dot","67108864","0","67108864","1"
+    # "tensordot:dot","67108864","0","67108864","1"
     # "tensordot:in_arg:A","67108864","0","67108864","0"
     # "tensordot:in_arg:B","67108864","0","67108864","0"
+    # "nvml_amend","1074790400","0","1074790400","0"
 
     with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)

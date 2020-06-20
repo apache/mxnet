@@ -45,7 +45,8 @@ class NaiveCachedOp : public CachedOp {
   OpStatePtr Forward(
       const std::shared_ptr<CachedOp>& op_ptr,
       const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs) override;
+      const std::vector<NDArray*>& outputs,
+      const Context& default_ctx) override;
   void Backward(
       const bool retain_graph,
       const OpStatePtr& state,

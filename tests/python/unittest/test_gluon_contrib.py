@@ -22,7 +22,7 @@ from mxnet import gluon
 from mxnet.gluon import contrib
 from mxnet.gluon import nn
 from mxnet.gluon.contrib.nn import (
-    Concurrent, HybridConcurrent, Identity, SparseEmbedding, PixelShuffle1D,
+    Concurrent, HybridConcurrent, Identity, PixelShuffle1D,
     PixelShuffle2D, PixelShuffle3D)
 from mxnet.test_utils import almost_equal, default_context, assert_almost_equal, assert_allclose
 from common import setup_module, with_seed, teardown_module
@@ -194,18 +194,6 @@ def test_identity():
     model = Identity()
     x = mx.nd.random.uniform(shape=(128, 33, 64))
     assert_almost_equal(model(x), x)
-
-@with_seed()
-def test_sparse_embedding():
-    layer = SparseEmbedding(10, 100)
-    layer.initialize()
-    trainer = mx.gluon.Trainer(layer.collect_params(), 'sgd')
-    x = mx.nd.array([3,4,2,0,1])
-    with mx.autograd.record():
-        y = layer(x)
-        y.backward()
-    assert (layer.weight.grad().asnumpy()[:5] == 1).all()
-    assert (layer.weight.grad().asnumpy()[5:] == 0).all()
 
 def test_pixelshuffle1d():
     nchan = 2

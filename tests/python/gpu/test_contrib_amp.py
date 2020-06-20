@@ -130,14 +130,14 @@ def test_fp16_casting(amp_tests):
     # data should be float32
     res = mx.sym.Group([out1, out2])
     final_res = amp.convert_symbol(res, data_names=[], cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float32
 
     # When two ops from data, both casted to float16,
     # data should be float16
     res = mx.sym.Group([out1, out3])
     final_res = amp.convert_symbol(res, data_names=[], cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float16
 
     # AMP Multicast test where one node is float32, another is float16
@@ -145,7 +145,7 @@ def test_fp16_casting(amp_tests):
     data2 = mx.sym.var("data2", dtype=np.float16)
     out4 = mx.sym.amp_multicast(data, data2, num_outputs=2)
     final_res = amp.convert_symbol(out4, cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.gpu(), data2=(1, 2), data=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.gpu(), data2=(1, 2), data=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float16
 
     # AMP Multicast test where two non input nodes are float16,
@@ -158,7 +158,7 @@ def test_fp16_casting(amp_tests):
                                 num_outputs=2)
     final_res = amp.convert_symbol(out5, target_dtype_ops=[],
                                    fp32_ops=[], cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2), data3=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2), data3=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float32
 
     # AMP Multicast test where three input nodes one fp16, one fp32
@@ -169,7 +169,7 @@ def test_fp16_casting(amp_tests):
     out6 = mx.sym.amp_multicast(data, data2, data3, num_outputs=3)
     final_res = amp.convert_symbol(out6, target_dtype_ops=[],
                                    fp32_ops=[], cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2),
+    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2),
                                 data3=(1, 2))
     assert exe.arg_arrays[2].dtype == np.float32
 
@@ -180,7 +180,7 @@ def test_fp16_casting(amp_tests):
     out7 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype="float16")])
     final_res = amp.convert_symbol(out7, target_dtype_ops=[],
                                    fp32_ops=[], cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float16
 
     # Input node to amp_multicast and amp_cast, if dtypes conflict
@@ -190,7 +190,7 @@ def test_fp16_casting(amp_tests):
     out8 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype="float16")])
     final_res = amp.convert_symbol(out8, target_dtype_ops=[],
                                    fp32_ops=[], cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.gpu(), data=(1, 2), data2=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float16
 
     # Check for symbol which has slice channel

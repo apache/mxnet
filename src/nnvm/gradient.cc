@@ -37,8 +37,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include "error.h"
 #include "../executor/exec_pass.h"
-
 
 namespace nnvm {
 namespace pass {
@@ -636,8 +636,9 @@ Graph BuildGradientGraph(
           input_grads.emplace_back(p, 0, 0);
         }  // for (i ∈ src_fwd_node->num_inputs())
       } else {
-        LOG(FATAL) << "Operator " << src_fwd_node->op()->name << " is non-differentiable "
-                   << "because it didn't register FGradient attribute.";
+        std::string message = "Operator " + std::string(src_fwd_node->op()->name)
+          + "is non-differentiable because it didn't register FGradient attribute.";
+        throw nnvm::pass::InvalidGraphError(message);
       }
       for (const auto& e : input_grads) {
         CHECK(e.node);

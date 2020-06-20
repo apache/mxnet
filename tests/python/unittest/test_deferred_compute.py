@@ -93,7 +93,7 @@ def _assert_dc(setup, compute, mode='all', setup_is_deterministic=True, numpy=Tr
                 xs = setup(nd=nd)
 
             args = {name: x for name, x in zip(xs_names, xs)}
-            ys_sym = sym.bind(mx.context.current_context(), args=args).forward()
+            ys_sym = sym._bind(mx.context.current_context(), args=args).forward()
 
             ys_sym_np = [y.asnumpy() for y in ys_sym]
             _all_same(ys_np, ys_sym_np)

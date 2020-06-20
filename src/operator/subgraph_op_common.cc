@@ -217,8 +217,9 @@ void LoopState::Forward(int iter_no,
     inputs[i] = &in_bufs[i];
   for (size_t i = 0; i < outputs.size(); i++)
     outputs[i] = &out_bufs[i];
-
-  OpStatePtr state = iter_op->Forward(nullptr, inputs, outputs);
+  CHECK(inputs.size() > 0) << "loop forward requires at least 1 input";
+  Context default_ctx = cinputs[0].ctx();
+  OpStatePtr state = iter_op->Forward(nullptr, inputs, outputs, default_ctx);
   // If an input and an output share the array, the output array will be changed
   // by CachedOp. We need to copy data to the real output.
   for (size_t i = 0; i < out_bufs.size(); i++)
