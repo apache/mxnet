@@ -696,19 +696,6 @@ def compile_windows_gpu_mkldnn(lib_name) {
     }]
 }
 
-def compile_static_scala_cpu() {
-  return ['Static build CPU CentOS7 Scala' : {
-    node(NODE_LINUX_CPU) {
-        ws('workspace/ut-publish-scala-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('centos7_cpu', 'build_static_scala_cpu', false)
-          }
-        }
-    }
-  }]
-}
-
 def compile_static_python_cpu() {
   return ['Static build CPU CentOS7 Python' : {
     node(NODE_LINUX_CPU) {
@@ -926,168 +913,6 @@ def test_unix_cpp_package_gpu(lib_name) {
 }
 
 def test_unix_scala_cpu(lib_name) {
-    return ['Scala: CPU Makefile': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-scala-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_make)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_scala', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_scala_mkldnn_cpu(lib_name){
-  return ['Scala: MKLDNN-CPU Makefile': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-scala-mkldnn-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_mkldnn_lib_make)
-            utils.docker_run('ubuntu_cpu', 'integrationtest_ubuntu_cpu_scala', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_scala_gpu(lib_name) {
-    return ['Scala: GPU Makefile': {
-      node(NODE_LINUX_GPU_G4) {
-        ws('workspace/ut-scala-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_make)
-            utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_scala', true)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_clojure_cpu(lib_name) {
-    return ['Clojure: CPU Makefile': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-clojure-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_make)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_clojure', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_clojure_integration_cpu(lib_name) {
-    return ['Clojure: CPU Integration Makefile': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-clojure-integration-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_make)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_clojure_integration', false)
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_r_cpu(lib_name) {
-    return ['R: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-r-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_R', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_r_mkldnn_cpu(lib_name) {
-    return ['R: MKLDNN-CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-r-mkldnn-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_mkldnn_lib, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_minimal_R', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_cpp_gpu(lib_name) {
-    return ['Cpp: GPU': {
-      node(NODE_LINUX_GPU_G4) {
-        ws('workspace/ut-cpp-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_cmake_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'unittest_cpp', true)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_cpp_cpu(lib_name) {
-    return ['Cpp: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-cpp-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_cmake_lib_debug, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_cpp', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_r_gpu(lib_name) {
-    return ['R: GPU': {
-      node(NODE_LINUX_GPU_G4) {
-        ws('workspace/ut-r-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib)
-            utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_gpu_R', true)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_julia07_cpu(lib_name) {
-    return ['Julia 0.7: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-it-julia07-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia07', false)
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_julia10_cpu(lib_name) {
-    return ['Julia 1.0: CPU': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-it-julia10-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib, true)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpu_julia10', false)
-          }
-        }
-      }
-    }]
 }
 
 def test_unix_onnx_cpu(lib_name) {
@@ -1229,20 +1054,6 @@ def test_centos7_pypi_package_cd_gpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_cd_lib)
             utils.docker_run('centos7_gpu_cu102', 'ci_package_pypi cu102', true)
-          }
-        }
-      }
-    }]
-}
-
-def test_centos7_scala_cpu(lib_name) {
-    return ['Scala: CentOS CPU Makefile': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-scala-centos7-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_make)
-            utils.docker_run('centos7_cpu', 'unittest_centos7_cpu_scala', false)
-            utils.publish_test_coverage()
           }
         }
       }
@@ -1407,117 +1218,6 @@ def docs_python(lib_name) {
 }
 
 
-// Call this function from Jenkins to generate just the C and C++ API microsite artifacts.
-def docs_c(lib_name) {
-    return ['C Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, 'lib/libmxnet.so', false)
-            utils.docker_run('ubuntu_cpu_c', 'build_c_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('c-artifacts', 'docs/_build/c-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
-// Call this function from Jenkins to generate just the Julia API microsite artifacts.
-def docs_julia(lib_name) {
-    return ['Julia Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, 'lib/libmxnet.so', false)
-            utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('julia-artifacts', 'docs/_build/julia-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
-// Call this function from Jenkins to generate just the R API PDF artifact.
-def docs_r(lib_name) {
-    return ['R Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, 'lib/libmxnet.so', false)
-            utils.docker_run('ubuntu_cpu_r', 'build_r_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('r-artifacts', 'docs/_build/r-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
-// Call this function from Jenkins to generate just the Scala API microsite artifacts.
-// It will also generate the Scala package.
-def docs_scala(lib_name) {
-    return ['Scala Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, 'lib/libmxnet.so', false)
-            utils.docker_run('ubuntu_cpu_scala', 'build_scala_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('scala-artifacts', 'docs/_build/scala-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
-// Call this function from Jenkins to generate just the Java API microsite artifacts.
-// It will also generate the Scala package.
-def docs_java(lib_name) {
-    return ['Java Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, 'lib/libmxnet.so', false)
-            utils.docker_run('ubuntu_cpu_scala', 'build_java_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('java-artifacts', 'docs/_build/java-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
-// Call this function from Jenkins to generate just the Clojure API microsite artifacts.
-// It will also generate the Scala package.
-def docs_clojure(lib_name) {
-    return ['Clojure Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, 'lib/libmxnet.so', false)
-            utils.docker_run('ubuntu_cpu_scala', 'build_clojure_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('clojure-artifacts', 'docs/_build/clojure-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
 // Call this function from Jenkins to generate just the main website artifacts.
 def docs_jekyll() {
     return ['Main Jekyll Website': {
@@ -1547,13 +1247,7 @@ def docs_prepare() {
             utils.init_git()
 
             unstash 'jekyll-artifacts'
-            unstash 'c-artifacts'
             unstash 'python-artifacts'
-            unstash 'r-artifacts'
-            unstash 'julia-artifacts'
-            unstash 'scala-artifacts'
-            unstash 'java-artifacts'
-            unstash 'clojure-artifacts'
 
             utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
 

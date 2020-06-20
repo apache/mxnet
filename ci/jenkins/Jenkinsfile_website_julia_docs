@@ -37,11 +37,6 @@ core_logic: {
     custom_steps.compile_unix_lite('libmxnet')
   ])
 
-  utils.parallel_stage('Julia Docs', [
-    custom_steps.docs_julia('libmxnet')
-
-  ])
-
 }
 ,
 failure_handler: {

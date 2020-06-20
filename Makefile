@@ -741,10 +741,6 @@ scalaintegrationtest:
 jnilint:
 	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src --exclude_path scala-package/native/src/main/native/org_apache_mxnet_native_c_api.h
 
-rclean:
-	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
-
 build/rat/apache-rat-0.13/apache-rat-0.13.jar:
 	mkdir -p build/rat
 	cd build/rat; \
@@ -766,7 +762,7 @@ ratcheck: build/rat/apache-rat-0.13/apache-rat-0.13.jar
 
 
 ifneq ($(EXTRA_OPERATORS),)
-clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
+clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
@@ -776,7 +772,7 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
+clean: mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
