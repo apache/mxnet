@@ -703,7 +703,7 @@ inline void SymbolInferShape(const char** keys,
 }
 
 /*!
- * \brief Executor for Symbol Shape Inference
+ * \brief Symbol shape Inference
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=0 (by default)
  * \param sym symbol handle
