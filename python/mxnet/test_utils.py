@@ -1395,7 +1395,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
         raise ValueError('typ can only be "whole" or "forward".')
 
 
-def get_tolerance(rtol, ctx):
+def get_absolute_tolerance(rtol, ctx):
     if 'atol' in ctx:
         return ctx['atol']
     if 'atol_mult' in ctx:
@@ -1469,6 +1469,31 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                np.dtype(np.int32): tol,
                np.dtype(np.int64): tol}
 
+    # TF32 is enabled by default on arch 80 GPUs
+    def is_TF32_enabled(ctx):
+        try:
+            return (ctx.device_type == 'gpu' and
+                    get_cuda_compute_capability(ctx) == 80 and
+                    os.environ.get('NVIDIA_TF32_OVERRIDE') != '0')
+        except:  # pylint: disable=bare-except
+            return False
+
+    # On arch 80, a float32-io gemm or conv op will trim the mantissa of data
+    # inputs to be of comparable precision to a float16, so float16 becomes the
+    # 'effective dtype' for tolerance tests involving such ops.
+    def effective_dtype(ctx, dtype, sym_has_TF32_ops):
+        if dtype == np.dtype(np.float32) and is_TF32_enabled(ctx) and sym_has_TF32_ops:
+            return np.dtype(np.float16)
+        else:
+            return dtype
+
+    # Return relative and absolute tolerances based on context, datatype and sym properties
+    def get_tolerances(ctx_list_elem, dtype, sym_has_TF32_ops):
+        edt = effective_dtype(ctx_list_elem['ctx'], dtype, sym_has_TF32_ops)
+        rtol = tol[edt]
+        atol = get_absolute_tolerance(rtol, ctx_list_elem)
+        return rtol, atol
+
     assert len(ctx_list) > 1
     if isinstance(sym, Symbol):
         sym = [sym]*len(ctx_list)
@@ -1520,8 +1545,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         if i == max_idx:
             continue
 
-        rtol = tol[dtypes[i]]
-        atol = get_tolerance(rtol, ctx_list[i])
+        # Assumimg simply for now that all symbols might have TF32 ops
+        rtol, atol = get_tolerances(ctx_list[i], dtypes[i], sym_has_TF32_ops=True)
         for name, arr in zip(output_names, exe.outputs):
             # Previously, the cast was to dtypes[i], but symbol may be mixed-precision,
             # so casting the ground truth to the actual output type seems more correct.
@@ -1550,8 +1575,8 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             if i == max_idx:
                 continue
 
-            rtol = tol[dtypes[i]]
-            atol = get_tolerance(rtol, ctx_list[i])
+            # Assumimg simply for now that all symbols might have TF32 ops
+            rtol, atol = get_tolerances(ctx_list[i], dtypes[i], sym_has_TF32_ops=True)
             curr = zip(output_names + arg_names, exe.outputs + exe.grad_arrays)
             for name, arr in curr:
                 if gt[name] is None:
