@@ -47,6 +47,86 @@ std::string AddPrefix(const std::string& prefix,
   return prefix + "_" + s;
 }
 
+nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
+  using nnvm::Op;
+  static size_t inplace_sum_cap = dmlc::GetEnv("MXNET_EXEC_INPLACE_GRAD_SUM_CAP", 8);
+  static const Op* ewise_plus_op = Op::Get("_grad_add");
+  static const Op* ewise_sum_op = Op::Get("ElementWiseSum");
+  static const Op* identity_op = Op::Get("identity");
+  static const Op* zeros_op = Op::Get("_zeros");
+  static const Op* zeros_like_op = Op::Get("zeros_like");
+
+  if (v.empty()) {
+    nnvm::ObjectPtr ng = nnvm::Node::Create();
+    ng->attrs.op = Op::Get("_zeros_without_dtype");
+    ng->attrs.name = "zeros_without_dtype";
+    ng->attrs.op->attr_parser(&(ng->attrs));
+    return nnvm::NodeEntry(std::move(ng), 0, 0);
+  }
+
+  // remove zero in the sum. at least keep 1.
+  auto begin = std::remove_if(v.begin(), v.end(), [](const nnvm::NodeEntry& nodeEntry) {
+     CHECK(nodeEntry.node);
+     return nodeEntry.node->op() == zeros_op || nodeEntry.node->op() == zeros_like_op;
+  });
+  if (begin == v.begin()) ++begin;
+  v.erase(begin, v.end());
+  CHECK(!v.empty());
+
+  if (v.size() == 1) {
+    return std::move(v[0]);
+  } else {
+    if (v.size() < inplace_sum_cap) {
+      nnvm::ObjectPtr sum_node = nnvm::Node::Create();
+      sum_node->attrs.op = ewise_sum_op;
+      sum_node->attrs.name = "sum_grad";
+      sum_node->attrs.dict["num_args"] = std::to_string(v.size());
+      sum_node->attrs.op->attr_parser(&(sum_node->attrs));
+      sum_node->inputs = std::move(v);
+      return nnvm::NodeEntry(std::move(sum_node), 0, 0);
+    } else {
+      // use a stream line of plus instead
+      nnvm::NodeEntry ret = v[0];
+      for (size_t i = 1; i < v.size(); ++i) {
+        // Add control flow dependency from to previous node
+        // This enforces the gradient sum order will be in the inverse
+        // order of forward traversal
+        // NOTE: adding control dependency can be dangerous and cause cycle in the dep.
+        // The curent usage is correct, because of the following invariant:
+        // assert: v[i-1] do not depend on v[i]
+        // To put in plain text: v is gradient vector that get pushed in the order
+        // that can generate them, which means if v[i] is not yet pushed,
+        // all previous gradient cannot depend on it.
+        // Note: For a symbol like the following:
+        // data = mx.sym.Variable('data')
+        // sym = data + data + data + data + data + data + data
+        // the node entries v passed in here are of the same node of
+        // op _identity_with_attr_like_rhs. We should skip adding a node
+        // to its own control_deps.
+        if (v[i-1].node != v[i].node) {
+          v[i].node->control_deps.push_back(ret.node);
+        }
+
+        std::ostringstream os;
+        os << "sum_grad_" << i;
+        nnvm::ObjectPtr x = nnvm::Node::Create();
+        x->attrs.op = ewise_plus_op;
+        x->attrs.name = os.str();
+        x->inputs = {ret, v[i]};
+        ret = nnvm::NodeEntry(std::move(x), 0, 0);
+      }
+      // identity node is used to avoid exposure of dummy plus node
+      // when its output get assigned to another space.
+      nnvm::ObjectPtr id_node = nnvm::Node::Create();
+      id_node->attrs.op = identity_op;
+      id_node->attrs.name = "sum_grad_final";
+      id_node->inputs = {ret};
+      return nnvm::NodeEntry{id_node, 0, 0};
+    }
+  }
+}
+
+
 /* \brief collect pointers to input and output ndarrays
  * into a single data structure, this data structure can
  * be used for Memory allocation pass*/
@@ -168,7 +248,7 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
     try {
       *grad_graph = pass::MXGradient(
            *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
-           nnvm::pass::AggregateGradient, nullptr,
+           mxnet::AggregateGradient, nullptr,
            zero_ops, "_copy");
     } catch (const nnvm::pass::InvalidGraphError &e) {
       *grad_graph = nnvm::Graph();

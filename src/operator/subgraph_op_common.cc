@@ -189,7 +189,7 @@ bool is_type_udf(const int &x) {
   return x == -1;
 }
 
-LoopState::LoopState(const Symbol &g) {
+LoopState::LoopState(const nnvm::Symbol &g) {
   this->subgraph_sym = g;
   this->subgraph.outputs = g.outputs;
   this->iter_op = LoopState::MakeSharedOp(g);
