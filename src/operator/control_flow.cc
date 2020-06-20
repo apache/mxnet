@@ -1028,7 +1028,8 @@ static bool BackwardCondStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size() + 3U, (size_t) params.num_args);
   CHECK_EQ(attrs.subgraphs.size(), 3U);
   static const std::function<bool(const int &)> is_udf = is_stype_udf;
-  auto sub_pass = [&](const std::shared_ptr<nnvm::Symbol> &subg, const mxnet::Tuple<dim_t> &input_locs) {
+  auto sub_pass = [&](const std::shared_ptr<nnvm::Symbol> &subg,
+                      const mxnet::Tuple<dim_t> &input_locs) {
     // A. first construct subg_in_attrs
     // need subg_in_attrs as subg_bwd_out (copy), subg_fwd_in (extract), subg_fwd_out (copy)
     std::vector<int> subg_in_attrs;
