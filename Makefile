@@ -459,7 +459,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-.PHONY: clean all extra-packages test lint clean_all rcppexport roxygen\
+.PHONY: clean all extra-packages test lint clean_all roxygen\
 	cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages extension_libs
