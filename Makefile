@@ -459,7 +459,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-.PHONY: clean all extra-packages test lint clean_all rcpplint rcppexport roxygen\
+.PHONY: clean all extra-packages test lint clean_all rcppexport roxygen\
 	cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages extension_libs
@@ -659,12 +659,6 @@ $(BIN) :
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -std=c++17  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
-# CPP Package
-ifeq ($(USE_CPP_PACKAGE), 1)
-include cpp-package/cpp-package.mk
-CFLAGS += -DMXNET_USE_CPP_PACKAGE=1
-endif
-
 include mkldnn.mk
 include tests/cpp/unittest.mk
 
@@ -672,10 +666,10 @@ extra-packages: $(EXTRA_PACKAGES)
 
 test: $(TEST)
 
-lint: cpplint rcpplint jnilint pylint
+lint: cpplint pylint
 
 cpplint:
-	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
+	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests \
 	--exclude_path src/operator/contrib/ctc_include include/mkldnn
 
 pylint:
@@ -722,24 +716,6 @@ cython3:
 
 cyclean:
 	rm -rf python/mxnet/*/*.so python/mxnet/*/*.cpp
-
-scalaclean:
-	(cd $(ROOTDIR)/scala-package && mvn clean)
-
-scalapkg:
-	(cd $(ROOTDIR)/scala-package && mvn install -DskipTests)
-
-scalainstall:
-	(cd $(ROOTDIR)/scala-package && mvn install)
-
-scalaunittest:
-	(cd $(ROOTDIR)/scala-package && mvn install)
-
-scalaintegrationtest:
-	(cd $(ROOTDIR)/scala-package && mvn integration-test -DskipTests=false)
-
-jnilint:
-	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src --exclude_path scala-package/native/src/main/native/org_apache_mxnet_native_c_api.h
 
 build/rat/apache-rat-0.13/apache-rat-0.13.jar:
 	mkdir -p build/rat

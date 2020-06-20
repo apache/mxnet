@@ -1057,12 +1057,6 @@ integrationtest_ubuntu_cpu_onnx() {
 	pytest -n 4 tests/python/unittest/onnx/test_node.py
 }
 
-integrationtest_ubuntu_gpu_cpp_package() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    cpp-package/tests/ci_test.sh
-}
-
 integrationtest_ubuntu_cpu_dist_kvstore() {
     set -ex
     pushd .
@@ -1180,16 +1174,6 @@ nightly_test_rat_check() {
         echo "SUCCESS: There are no files with an Unknown License.";
     fi
     popd
-}
-
-# Runs Imagenet inference
-nightly_test_imagenet_inference() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    echo $PWD
-    cp /work/mxnet/build/cpp-package/example/inference/imagenet_inference /work/mxnet/cpp-package/example/inference/
-    cd /work/mxnet/cpp-package/example/inference/
-    ./unit_test_imagenet_inference.sh
 }
 
 #Single Node KVStore Test
