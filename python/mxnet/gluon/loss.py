@@ -603,11 +603,22 @@ class HuberLoss(Loss):
 
     def hybrid_forward(self, F, pred, label, sample_weight=None):
         label = _reshape_like(F, label, pred)
-        loss = F.abs(label - pred)
-        loss = F.where(loss > self._rho, loss - 0.5 * self._rho,
+        
+        if is_np_array():
+            loss = F.np.abs(label - pred)
+            loss = F.np.where(loss > self._rho, loss - 0.5 * self._rho, 
+                    (0.5 / self._rho) * F.np.square(loss))
+            loss = _apply_weighting(F, loss, self._weight, sample_weight)
+            if F is ndarray:
+                return F.np.mean(loss, axis=tuple(range(1, loss.ndim)))
+            else:
+                return F.npx.batch_flatten(loss).mean(axis=1)
+        else:
+            loss = F.abs(label - pred)
+            loss = F.where(loss > self._rho, loss - 0.5 * self._rho,
                        (0.5 / self._rho) * F.square(loss))
-        loss = _apply_weighting(F, loss, self._weight, sample_weight)
-        return F.mean(loss, axis=self._batch_axis, exclude=True)
+            loss = _apply_weighting(F, loss, self._weight, sample_weight)
+            return F.mean(loss, axis=self._batch_axis, exclude=True)
 
 
 class HingeLoss(Loss):
