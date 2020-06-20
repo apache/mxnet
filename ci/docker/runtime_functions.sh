@@ -813,29 +813,6 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
     make cython PYTHON=python3
 }
 
-build_ubuntu_amalgamation() {
-    set -ex
-    # Amalgamation can not be run with -j nproc
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    make -C amalgamation/ clean
-    make -C amalgamation/     \
-        USE_BLAS=openblas
-}
-
-build_ubuntu_amalgamation_min() {
-    set -ex
-    # Amalgamation can not be run with -j nproc
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    make -C amalgamation/ clean
-    make -C amalgamation/     \
-        USE_BLAS=openblas     \
-        MIN=1
-}
-
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
@@ -1429,31 +1406,6 @@ nightly_test_large_vector() {
     pytest tests/nightly/test_large_vector.py::test_tensor
     pytest tests/nightly/test_large_vector.py::test_nn
     pytest tests/nightly/test_large_vector.py::test_basic
-}
-
-#Tests Amalgamation Build with 5 different sets of flags
-nightly_test_amalgamation() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export CC=gcc-7
-    export CXX=g++-7
-    # Amalgamation can not be run with -j nproc
-    make -C amalgamation/ clean
-    make -C amalgamation/ ${1} ${2}
-}
-
-#Tests Amalgamation Build for Javascript
-nightly_test_javascript() {
-    set -ex
-    export LLVM=/work/deps/emscripten-fastcomp/build/bin
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export CC=gcc-7
-    export CXX=g++-7
-    # This part is needed to run emcc correctly
-    cd /work/deps/emscripten
-    ./emcc
-    touch ~/.emscripten
-    make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
 }
 
 #Tests Model backwards compatibility on MXNet

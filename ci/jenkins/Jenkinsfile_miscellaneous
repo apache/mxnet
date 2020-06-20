@@ -38,9 +38,7 @@ core_logic: {
     custom_steps.compile_unix_asan_cpu('cpu_asan'),
     custom_steps.compile_unix_gcc8_werror('cpu_gcc8'),
     custom_steps.compile_unix_clang10_werror('cpu_clang10'),
-    custom_steps.compile_unix_clang10_cuda_werror('gpu_clang10'),
-    custom_steps.compile_unix_amalgamation_min(),
-    custom_steps.compile_unix_amalgamation()
+    custom_steps.compile_unix_clang10_cuda_werror('gpu_clang10')
   ])
 
   utils.parallel_stage('Tests', [

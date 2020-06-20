@@ -612,32 +612,6 @@ def compile_unix_clang10_cuda_werror(lib_name) {
     }]
 }
 
-def compile_unix_amalgamation_min() {
-    return ['Amalgamation MIN': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/amalgamationmin') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_amalgamation_min', false)
-          }
-        }
-      }
-    }]
-}
-
-def compile_unix_amalgamation() {
-    return ['Amalgamation': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/amalgamation') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_amalgamation', false)
-          }
-        }
-      }
-    }]
-}
-
 def compile_windows_cpu(lib_name) {
     return ['Build CPU windows':{
       node(NODE_WINDOWS_CPU) {

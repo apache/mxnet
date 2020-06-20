@@ -93,8 +93,6 @@ If your tutorial depends on specific packages, simply add them to this provision
 * [MXNet Julia API](https://mxnet.apache.org/api/julia/index.html)
 * [MXNet Perl API](https://mxnet.apache.org/api/perl/index.html)
 * [go-mxnet-predictor](https://github.com/songtianyi/go-mxnet-predictor) - Go binding for inference
-* [MXNet JNI](https://github.com/dmlc/mxnet/tree/master/amalgamation/jni) - JNI(Android) library
-* [MXNet Amalgamation](https://github.com/dmlc/mxnet/tree/master/amalgamation) - Amalgamation (entire library in a single file)
 * [MXNet Javascript](https://github.com/dmlc/mxnet.js/) - MXNetJS: Javascript Package for Deep Learning in Browser (without server)
 
 ### <a name="deep-learning-examples-mxnet"></a>Deep Learning Examples in the MXNet Project Repository

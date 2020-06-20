@@ -48,10 +48,6 @@ ifndef DLPACK_PATH
 	DLPACK_PATH = $(ROOTDIR)/3rdparty/dlpack
 endif
 
-ifndef AMALGAMATION_PATH
-	AMALGAMATION_PATH = $(ROOTDIR)/amalgamation
-endif
-
 ifndef TVM_PATH
 	TVM_PATH = $(TPARTYDIR)/tvm
 endif
@@ -777,7 +773,6 @@ clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
-	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
@@ -788,7 +783,6 @@ clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
-	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 endif
 
 clean_all: clean
