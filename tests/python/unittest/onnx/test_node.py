@@ -119,8 +119,16 @@ class TestNode(unittest.TestCase):
         for test in export_test_cases:
             test_name, onnx_name, mx_op, input_shape, attrs = test
             input_sym = mx.sym.var('data')
-            outsym = mx_op(input_sym, **attrs)
-            converted_model = onnx_mxnet.export_model(outsym, {}, [input_shape], np.float32,
+            if isinstance(mx_op, type) and issubclass(mx_op, (mx.gluon.HybridBlock, mx.gluon.SymbolBlock)):
+                mx_op = mx_op(**attrs)
+                mx_op.initialize()
+                mx_op(mx.nd.zeros(input_shape))
+                params = {k: v.data() for k, v in mx_op.collect_params().items()}
+                outsym = mx_op(input_sym)
+            else:
+                params = {}
+                outsym = mx_op(input_sym, **attrs)
+            converted_model = onnx_mxnet.export_model(outsym, params, [input_shape], np.float32,
                                                       onnx_file_path=outsym.name + ".onnx")
             model = load_model(converted_model)
             checker.check_model(model)
@@ -196,6 +204,8 @@ export_test_cases = [
     ("test_tile", "Tile", mx.sym.tile, (2,1,3,1), {'reps': (2,3)}),
     ("test_topk", "TopK", mx.sym.topk, (2, 10, 2), {'k': 3, 'axis': 1, 'ret_typ': 'both', 'dtype': np.int64}),
     ("test_slice_axis", "Slice", mx.sym.slice_axis, (2, 10, 2), {'begin': 3, 'end': 7, 'axis': 1}),
+    ("test_LSTM", "LSTM", mx.gluon.rnn.LSTM, (3,1,2), {'hidden_size': 3}),
+    ("test_BiLSTM", "LSTM", mx.gluon.rnn.LSTM, (3,1,2), {'hidden_size': 3, 'bidirectional': True}),
 ]
 
 if __name__ == '__main__':

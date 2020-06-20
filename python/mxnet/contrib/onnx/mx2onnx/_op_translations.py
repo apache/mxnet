@@ -950,6 +950,312 @@ def convert_concat(node, **kwargs):
     )
     return [concat_node]
 
+@mx_op.register("RNN")
+def convert_RNN(node, **kwargs):
+    """Map MXNet's RNN operator attributes to onnx's RNN operator
+    and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    nodes = []
+
+    # ============================== Attributes ==============================
+    mode = attrs['mode'].upper()
+    rnn_kwargs = {}
+    if mode != 'LSTM':
+        raise NotImplementedError(
+            "Only LSTM mode RNN conversion to ONNX is currently supported."
+        )
+
+    hidden_size = rnn_kwargs['hidden_size'] = int(attrs.get("state_size"))
+    if eval(attrs.get('bidirectional', 'False')):
+        rnn_kwargs['direction'] = 'bidirectional'
+        num_directions = 2
+    else:
+        rnn_kwargs['direction'] = 'forward'
+        num_directions = 1
+
+    clip_min = eval(attrs.get('lstm_state_clip_min', 'None'))
+    clip_max = eval(attrs.get('lstm_state_clip_max', 'None'))
+    if clip_min is not None or clip_max is not None:
+        # ONNX LSTMs have the `clip` attribute, however it seems to give
+        # slightly different results, when compared to the MXNet equivalent
+        raise NotImplementedError(
+            "Conversion of RNNs with lstm_state_clip_min/max "
+            "to ONNX is currently not supported."
+        )
+
+    if eval(attrs.get('lstm_state_clip_nan', 'False')):
+        raise NotImplementedError(
+            "ONNX RNN operator doesn't support lstm_state_clip_nan"
+        )
+
+    if eval(attrs.get('use_sequence_length', 'False')):
+        # This can maybe be implemented using the `sequence_len` optional input
+        raise NotImplementedError(
+            "Conversion of RNNs with variable input sequence length "
+            "to ONNX is currently not supported."
+        )
+
+    if eval(attrs.get('num_layers', '1')) != 1:
+        raise NotImplementedError(
+            "Conversion of RNNs with num_layers > 1 "
+            "to ONNX is currently not supported."
+        )
+
+    if eval(attrs.get('p', '0')) != 0:
+        # WARNING! The `p` attribute in mxnet is "dropout probability" while
+        # the `p` optional input of ONNX LSTMs is the peephole weights tensor.
+        raise NotImplementedError(
+            "Conversion of RNNs with dropout "
+            "to ONNX is currently not supported."
+        )
+
+    if eval(attrs.get('projection_size', 'None')) is not None:
+        raise NotImplementedError(
+            "Conversion of RNNs with custom projection_size "
+            "to ONNX is currently not supported."
+        )
+
+    if not eval(attrs.get('state_outputs', 'True')):
+        raise NotImplementedError(
+            "Conversion of RNNs with state_outputs=False "
+            "to ONNX is currently not supported."
+        )
+
+    # ============================== Parameters ==============================
+
+    # (See _rnn_param_concat for part 1 of this comment section)
+
+    # Unfortunately, mxnets version of _rnn_param_concat concatenates *ALL*
+    # the parameters, instead of grouping them like ONNX. The workaround,
+    # used here, is that the _rnn_param_concat node conversion code will
+    # produce multiple nodes with names ending in rnn_param_concatN__P
+    # (Where P is the parameter group name W, R or B)
+    # We then use regular expressions to get the "extra outputs" of the
+    # _rnn_param_concat node.
+
+    x, param_concat, *initial_states = input_nodes
+    param_pattern = re.compile(r'(.*rnn_param_concat[0-9]+__)[WRB]$')
+    if not param_pattern.match(param_concat):
+        # ToDo: Maybe do something more sane after Issue #17621 gets resolved
+        raise NotImplementedError(
+            "The order of RNN parameters is different between mxnet and ONNX. "
+            "Currently, an automatic conversion is only possible, if the RNN "
+            "parameters were concatenated using the internal "
+            "_rnn_param_concat operator."
+        )
+    w, r, b = (
+        param_pattern.sub(r'\1' + param, param_concat)
+        for param in 'WRB'
+    )
+
+    # The second conversion step handles
+    #     * parameter shapes, since mxnet uses flattened parameters, while
+    #       ONNX requires specific tensor shapes
+    #     * gate order, since both frameworks require the weights and biases
+    #       of the 4 basic gates (forget, input, cell and output) to be
+    #       concatenated, but in different order
+    #       ([ifco] for mxnet and [iofc] for ONNX)
+
+    def fix_rnn_parameter(p, p_shape_in, p_shape_out, p_order=(0, 3, 1, 2)):
+        p_ = p
+
+        # 1) Reshape flat parameters to their original shape, such that
+        #    the gates are concatenated along axis=1
+        p_reshaped_in = create_helper_reshape_node(
+            p, p_ + "__reshaped_in", p_shape_in, kwargs
+        )
+        nodes.extend(p_reshaped_in)
+        p = p_reshaped_in[-1].name
+
+        # 2) Use a Gather node to pick gates along axis=1, permuting them
+        p_reordered = create_helper_gather_node(
+            p, p_ + "__reordered", p_order, kwargs, axis=1
+        )
+        nodes.extend(p_reordered)
+        p = p_reordered[-1].name
+
+        # 3) Reshape the parameters to their final shape, squeezing the gate
+        #    and hidden dimensions together
+        p_reshaped_out = create_helper_reshape_node(
+            p, p_ + "__reshaped_out", p_shape_out, kwargs
+        )
+        nodes.extend(p_reshaped_out)
+        return p_reshaped_out[-1].name
+
+    w = fix_rnn_parameter(
+        w,
+        p_shape_in=(num_directions, 4, hidden_size, -1),
+        p_shape_out=(num_directions, 4 * hidden_size, -1),
+    )
+
+    r = fix_rnn_parameter(
+        r,
+        p_shape_in=(num_directions, 4, hidden_size, hidden_size),
+        p_shape_out=(num_directions, 4 * hidden_size, hidden_size),
+    )
+
+    b = fix_rnn_parameter(
+        b,
+        p_shape_in=(2 * num_directions, 4, hidden_size),
+        p_shape_out=(num_directions, 8 * hidden_size),
+    )
+
+    # ============================= Inputs/States ============================
+    input_shape = create_helper_shape_node(x, x + "__shape")
+    nodes.extend(input_shape)
+    input_shape = input_shape[-1].name
+
+    batch_size = create_helper_gather_node(
+        input_shape,
+        x + "__batch_size",
+        indices=[1],
+        axis=0,
+        kwargs=kwargs,
+    )
+    nodes.extend(batch_size)
+    batch_size = batch_size[-1].name
+
+    state_shape = create_helper_build_values_node(
+        [num_directions, batch_size, hidden_size],
+        name + "__state_shape",
+        dtype=np.int64,
+        kwargs=kwargs,
+    )
+    nodes.extend(state_shape)
+    state_shape = state_shape[-1].name
+
+    expanded_states = []
+    for state in initial_states:
+        expanded_state = create_helper_expand_node(
+            state, state + "__expanded", state_shape
+        )
+        nodes.extend(expanded_state)
+        expanded_states.append(expanded_state[-1].name)
+    initial_states = expanded_states
+
+    # =========================== RNN node/outputs ===========================
+    y_out = [onnx.helper.make_node(
+        mode,  # RNN or LSTM or GRU
+        inputs=[x, w, r, b, '', *initial_states],
+        outputs=[name + '__Y'],
+        name=name + '__Y',
+        **rnn_kwargs
+    )]
+    nodes.extend(y_out)
+    y = y_out[-1].name
+
+    # We are almost done. The only thing left to do is to convert the output
+    # of the RNN node from the [S, D, B, H] layout, which ONNX returns
+    # to the [S, B, D*H] layout, which mxnet uses
+
+    # 1) Transpose [S, D, B, H] -> [S, B, D, H]
+    y_perm = (0, 2, 1, 3)
+    y_transposed = create_helper_trans_node(
+        y, y + "__transposed", y_perm
+    )
+    nodes.extend(y_transposed)
+    y = y_transposed[-1].name
+
+    # 2) Reshape [S, B, D, H] -> [S, B, D*H]
+    y_shape = (0, 0, -1)
+    y_reshaped = create_helper_reshape_node(y, name, y_shape, kwargs)
+    nodes.extend(y_reshaped)
+
+    return nodes
+
+@mx_op.register('_rnn_param_concat')
+def convert_rnn_param_concat(node, **kwargs):
+    """Map MXNet's _rnn_param_concat operator attributes to onnx's Concat
+    operator and return the created node.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    axis = int(attrs.get("dim"))
+
+    # mxnet RNN node and ONNX RNN/LSTM/GRU nodes
+    # use different ways to store their parameters
+
+    # The conversion between these formats is broken into 2 steps
+    # The first step (performed here in _rnn_param_concat) regroups the
+    # flattened parameters according to the table below.
+    # The second step corrects the shapes and orders of gates and is
+    # performed and described in more detail in the RNN node
+
+    # mxnet            [ONNX] -> ONNX (group)
+    # i2h_weights [W (+  WB)] -> W    (input weights)
+    # h2h_weights [R (+  RB)] -> R    (recurrence weights)
+    # i2h_biases [Wb (+ WBb)] -> B = [Wb + Rb (+ WBb + RBb)]
+    # h2h_biases [Rb (+ RBb)] ->      (biases)
+
+    split = len(input_nodes) // 2
+    weights, biases = input_nodes[:split], input_nodes[split:]
+    i2h_weights = weights[::2]
+    h2h_weights = weights[1::2]
+    i2h_biases = biases[::2]
+    h2h_biases = biases[1::2]
+    reordered_biases = [
+        bias
+        for pair in zip(i2h_biases, h2h_biases)
+        for bias in pair
+    ]
+
+    # The order of mxnet parameters in the inputs is:
+    # [
+    #     '{}{}_{}_{}'.format(d, l, g, t)
+    #     for t in ['weight', 'bias']
+    #     for l in range(num_layers)
+    #     for d in ['l', 'r'][:num_directions]
+    #     for g in ['i2h', 'h2h']
+    # ]
+
+    w = onnx.helper.make_node(
+        "Concat",
+        inputs=i2h_weights,
+        outputs=[name + "__W"],
+        axis=axis,
+        name=name + "__W"
+    )
+    r = onnx.helper.make_node(
+        "Concat",
+        inputs=h2h_weights,
+        outputs=[name + "__R"],
+        axis=axis,
+        name=name + "__R"
+    )
+    b = onnx.helper.make_node(
+        "Concat",
+        inputs=reordered_biases,
+        outputs=[name + "__B"],
+        axis=axis,
+        name=name + "__B"
+    )
+    return [w, r, b]
+
+@mx_op.register("_zeros")
+@mx_op.register("_ones")
+@mx_op.register("_full")
+def convert_full(node, **kwargs):
+    """Map MXNet's _zeros, _ones and _full operators attributes to onnx's
+    tensors and return the created node.
+    """
+    # ToDo: Use Constant or ConstantOfShape, when Issue #15101 is resolved?
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    del input_nodes
+
+    # Convert "0"s dimensions to "1"s. This is a workaround for the case, where
+    # mxnet symbols can broadcast "0"s, while ONNX can only broadcast over "1"s
+    shape = convert_string_to_list(attrs["shape"])
+    shape = tuple(dim if dim else 1 for dim in shape)
+
+    value = {
+        '_zeros': 0.0,
+        '_ones': 1.0,
+        '_full': eval(attrs.get('value', '0')),
+    }[node['op']]
+    dtype = attrs.get('dtype')
+    data = np.full(shape, value, dtype)
+
+    return create_helper_tensor_node(data, name, kwargs)
 
 @mx_op.register("transpose")
 def convert_transpose(node, **kwargs):
