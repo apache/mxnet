@@ -26,6 +26,7 @@
 #include <string>
 #include <map>
 #include <queue>
+#include <set>
 #include "./test_op.h"
 #include "profiler/vtune.h"
 #include "../../../src/imperative/imperative_utils.h"
@@ -161,14 +162,16 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
         out_grads[i].index = index;
         index_to_nodes.push_back(out_grads[i]);
         index_to_nodes[index].index = index;
-        bwd_inputs_.emplace_back(CreateRandArray(output_shapes_[i], ctx_.run_ctx, output_types_[i]));
+        bwd_inputs_.emplace_back(CreateRandArray(output_shapes_[i], ctx_.run_ctx,
+                output_types_[i]));
       }
       for (auto i = 0; i < n->num_inputs(); ++i) {
         name_to_indexs[n->inputs[i].node->attrs.name] = ++index;
         n->inputs[i].index = index;
         index_to_nodes.push_back(n->inputs[i]);
         index_to_nodes[index].index = index;
-        bwd_outputs_.emplace_back(CreateZeroArray(input_shapes_[i], ctx_.run_ctx, input_types_[i]));
+        bwd_outputs_.emplace_back(CreateZeroArray(input_shapes_[i], ctx_.run_ctx,
+                input_types_[i]));
       }
 
       std::vector< nnvm::NodeEntry> entries = grad_fun(n, out_grads);
@@ -256,7 +259,8 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       }
       bwd_output_executors_.resize(entries.size());
       std::map<uint32_t, CoreOpExecutor*> node_executors;
-      // the order of nodes getting from button-to-up DFS can't be used for executing CoreOpExecutors.
+      // the order of nodes getting from button-to-up DFS can't be used
+      // for executing CoreOpExecutors.
       while (!index_queue.empty()) {
         auto node_index = index_queue.front();
         index_queue.pop();
@@ -630,7 +634,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
           }
         }
       }
-      input_types_= input_types;
+      input_types_ = input_types;
 
       // Output arrays
       if (outputs_.empty()) {
@@ -856,7 +860,7 @@ class CoreOpExecutor : public test::op::OperatorDataInitializer<DType>
       }
       if (!bwd_output_executors_.empty()) {
         bwd_outputs().clear();
-        for (auto& p: bwd_output_executors_) {
+        for (auto& p : bwd_output_executors_) {
           for (auto& output : p->outputs()) {
             bwd_outputs_.push_back(output);
           }
