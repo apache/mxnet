@@ -116,9 +116,6 @@ typedef void (*EngineAsyncFunc)(void*, void*, void*);
 typedef void (*EngineSyncFunc)(void*, void*);
 /*! \brief Callback to free the param for EngineAsyncFunc/EngineSyncFunc */
 typedef void (*EngineFuncParamDeleter)(void*);
-typedef void (*ExecutorMonitorCallback)(const char*,
-                                        NDArrayHandle,
-                                        void*);
 /*! \brief Monitor callback called at operator level for cached op */
 typedef void (*CachedOpMonitorCallback)(const char*,
                                         const char*,

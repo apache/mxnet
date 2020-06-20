@@ -168,7 +168,7 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
     try {
       *grad_graph = pass::MXGradient(
            *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
-           exec::AggregateGradient, nullptr,
+           nnvm::pass::AggregateGradient, nullptr,
            zero_ops, "_copy");
     } catch (const nnvm::pass::InvalidGraphError &e) {
       *grad_graph = nnvm::Graph();

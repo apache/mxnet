@@ -22,8 +22,8 @@
  * \file exec_pass.h
  * \brief All the execution related pass and data structures.
  */
-#ifndef MXNET_EXECUTOR_EXEC_PASS_H_
-#define MXNET_EXECUTOR_EXEC_PASS_H_
+#ifndef MXNET_IMPERATIVE_EXEC_PASS_H_
+#define MXNET_IMPERATIVE_EXEC_PASS_H_
 
 #include <mxnet/base.h>
 #include <mxnet/ndarray.h>
@@ -320,4 +320,4 @@ inline Graph MXGradient(
 }  // namespace pass
 }  // namespace nnvm
 
-#endif  // MXNET_EXECUTOR_EXEC_PASS_H_
+#endif  // MXNET_IMPERATIVE_EXEC_PASS_H_

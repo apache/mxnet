@@ -23,8 +23,8 @@
  * \brief Simple pass for partitioning a graph.
  * \author Clement Fuji Tsang
  */
-#ifndef MXNET_EXECUTOR_SIMPLE_PARTITION_PASS_H_
-#define MXNET_EXECUTOR_SIMPLE_PARTITION_PASS_H_
+#ifndef MXNET_IMPERATIVE_SIMPLE_PARTITION_PASS_H_
+#define MXNET_IMPERATIVE_SIMPLE_PARTITION_PASS_H_
 
 #include <mxnet/base.h>
 #include <mxnet/op_attr_types.h>
@@ -472,4 +472,4 @@ std::vector<NodeRawPtrSet> GetCompatibleSubsets(const Graph& g, FCompatible is_c
 
 }  // namespace exec
 }  // namespace mxnet
-#endif  // MXNET_EXECUTOR_SIMPLE_PARTITION_PASS_H_
+#endif  // MXNET_IMPERATIVE_SIMPLE_PARTITION_PASS_H_

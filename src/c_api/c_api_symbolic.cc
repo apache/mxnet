@@ -32,7 +32,7 @@
 #include "./c_api_common.h"
 #include "../common/exec_utils.h"
 #include "../operator/operator_common.h"
-#include "../executor/exec_pass.h"
+#include "../imperative/exec_pass.h"
 #include "../operator/subgraph/subgraph_property.h"
 
 namespace mxnet {
