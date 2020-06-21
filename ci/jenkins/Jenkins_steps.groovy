@@ -1099,34 +1099,6 @@ def test_windows_python3_cpu(lib_name) {
     }]
 }
 
-def test_windows_julia07_cpu(lib_name) {
-    return ['Julia 0.7: CPU Win': {
-      node(NODE_WINDOWS_CPU) {
-        ws('workspace/ut-julia07-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git_win()
-            unstash lib_name
-            powershell 'ci/windows/test_jl07_cpu.ps1'
-          }
-        }
-      }
-    }]
-}
-
-def test_windows_julia10_cpu(lib_name) {
-    return ['Julia 1.0: CPU Win': {
-      node(NODE_WINDOWS_CPU) {
-        ws('workspace/ut-julia10-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git_win()
-            unstash lib_name
-            powershell 'ci/windows/test_jl10_cpu.ps1'
-          }
-        }
-      }
-    }]
-}
-
 def test_qemu_armv7_cpu(lib_name) {
     return ['ARMv7 QEMU': {
       node(NODE_LINUX_CPU) {
