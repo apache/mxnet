@@ -32,9 +32,6 @@ if(GTEST_FOUND AND NOT MSVC)
   add_executable(${PROJECT_NAME}_unit_tests ${UNIT_TEST_SOURCE})
   set_property(TARGET ${PROJECT_NAME}_unit_tests
                PROPERTY RUNTIME_OUTPUT_DIRECTORY ${PRIVATE_RUNTIME_DIR})
-  if (USE_CPP_PACKAGE)
-    add_dependencies(${PROJECT_NAME}_unit_tests cpp_package_op_h)
-  endif()
 
   target_link_libraries(${PROJECT_NAME}_unit_tests
     ${GTEST_LIBRARY}
