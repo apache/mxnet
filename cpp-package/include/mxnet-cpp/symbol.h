@@ -108,7 +108,7 @@ class Symbol {
   Symbol operator[](const std::string &index);
   /*!
   * \brief Create a symbol that groups symbols together
-  * \param symbols List of symbols to be groupe
+  * \param symbols List of symbols to be grouped
   */
   static Symbol Group(const std::vector<Symbol> &symbols);
   /*!

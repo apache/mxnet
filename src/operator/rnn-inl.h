@@ -195,7 +195,9 @@ inline size_t GetRNNWorkspaceSize(index_t seq_length,
     case rnn_enum::kLstm:
       size = seq_length * batch_size * hidden_size * (4 + direction) +  // wx*x + inter-y
           batch_size * hidden_size * 6 +                                // wh*h + h + c
-          seq_length * hidden_size * 8;                    // Used in Backward, Δbx, Δbh
+          seq_length * hidden_size * 8 +                   // Used in Backward, Δbx, Δbh
+          // temporary dy in backward computation for bidirectional layers
+          seq_length * batch_size * hidden_size * (direction - 1 ? direction : 0);
       break;
     case rnn_enum::kGru:
       // Differs with Lstm, the outputs of three gates are also held in memory
@@ -496,7 +498,6 @@ class RNNOp {
       CUDNN_CALL(cudnnCreateFilterDescriptor(&dw_desc_));
 
       CUDNN_CALL(cudnnCreateRNNDescriptor(&rnn_desc_));
-      CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
 
 #if MXNET_USE_CUDNN_GE_7200
       CUDNN_CALL(cudnnCreateRNNDataDescriptor(&x_data_desc_));
@@ -539,7 +540,6 @@ class RNNOp {
     CUDNN_CALL(cudnnDestroyFilterDescriptor(w_desc_));
     CUDNN_CALL(cudnnDestroyFilterDescriptor(dw_desc_));
     CUDNN_CALL(cudnnDestroyRNNDescriptor(rnn_desc_));
-    CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
     if (dgrad_sync_event_created_)
       CUDA_CALL(cudaEventDestroy(dgrad_sync_event_));
 
@@ -1343,17 +1343,8 @@ class RNNOp {
                                             strideA));
 
       // Create Dropout descriptors
-      if (param_.p > 0) {
-         ctx.requested[rnn_enum::kCuDNNDropoutDescSpace].get_cudnn_dropout_desc
-            (&dropout_desc_, s, 1.0f - param_.p, seed_);
-      }
-      // Only update the probability by passing in a null dropout_states ptr
-      DType* dropout_states = nullptr;
-      size_t dropout_bytes = 0;
-      CUDNN_CALL(cudnnSetDropoutDescriptor(dropout_desc_, s->dnn_handle_,
-                                           param_.p,  // discard probability
-                                           dropout_states, dropout_bytes,
-                                           seed_));
+      ctx.requested[rnn_enum::kCuDNNDropoutDescSpace].get_cudnn_dropout_desc
+         (&dropout_desc_, s, param_.p, seed_);
 
       // RNN descriptors
       // adopt pseudo-fp16 for all architectures

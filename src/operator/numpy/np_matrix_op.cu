@@ -35,7 +35,7 @@ NNVM_REGISTER_OP(_npi_transpose)
 NNVM_REGISTER_OP(_np_reshape)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
-NNVM_REGISTER_OP(_np_squeeze)
+NNVM_REGISTER_OP(_npi_squeeze)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_concatenate)
@@ -148,10 +148,10 @@ NNVM_REGISTER_OP(_npi_diagonal)
 NNVM_REGISTER_OP(_backward_npi_diagonal)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagonalOpBackward<gpu>);
 
-NNVM_REGISTER_OP(_np_diagflat)
+NNVM_REGISTER_OP(_npi_diagflat)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagflatOpForward<gpu>);
 
-NNVM_REGISTER_OP(_backward_np_diagflat)
+NNVM_REGISTER_OP(_backward_npi_diagflat)
 .set_attr<FCompute>("FCompute<gpu>", NumpyDiagflatOpBackward<gpu>);
 
 NNVM_REGISTER_OP(_npi_diag_indices_from)

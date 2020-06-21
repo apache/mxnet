@@ -36,8 +36,8 @@ int TrueDivideOutType(int ltype, int rtype) {
     // If only one of the inputs is float, return that float type
     return (common::is_float(ltype)) ? ltype : rtype;
   }
-  // If neither of the inputs is float, return the default float32 type
-  return mshadow::kFloat32;
+  // If neither of the inputs is float, return the default dtype
+  return mxnet::common::GetDefaultDtype();
 }
 
 template <int num_inputs>
@@ -55,7 +55,8 @@ bool TrueDivideType(const nnvm::NodeAttrs& attrs,
   const int lhs_dtype = in_attrs->at(0);
   const int rhs_dtype = (num_inputs == 2) ?
                         in_attrs->at(1) :
-                        (common::is_float(lhs_dtype) ? lhs_dtype : mshadow::kFloat32);
+                        (common::is_float(lhs_dtype) ?
+                         lhs_dtype : mxnet::common::GetDefaultDtype());
   TYPE_ASSIGN_CHECK(*out_attrs, 0, TrueDivideOutType(lhs_dtype, rhs_dtype));
   return true;
 }
@@ -73,46 +74,46 @@ NNVM_REGISTER_OP(_npi_true_divide)
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};
   })
-#ifdef _WIN32
+.set_attr<FCompute>("FCompute<cpu>", TrueDivideBroadcastCompute<cpu>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_div"})
+.add_argument("lhs", "NDArray-or-Symbol", "Dividend array")
+.add_argument("rhs", "NDArray-or-Symbol", "Divisor array");
+
+
+NNVM_REGISTER_OP(_backward_npi_broadcast_div)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 1}};
+  })
 .set_attr<FResourceRequest>("FResourceRequest",
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-#endif
-.set_attr<FCompute>("FCompute<cpu>", TrueDivideBroadcastCompute<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_div"})
-.add_argument("lhs", "NDArray-or-Symbol", "Dividend array")
-.add_argument("rhs", "NDArray-or-Symbol", "Divisor array");
+.set_attr<FCompute>("FCompute<cpu>", NumpyBinaryBackwardUseIn<cpu, mshadow_op::div_grad,
+                                                              mshadow_op::div_rgrad>);
 
 NNVM_REGISTER_OP(_npi_true_divide_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
-  })
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", TrueDivideType<1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs) {
     return std::vector<std::pair<int, int> >{{0, 0}};
   })
-#ifdef _WIN32
-.set_attr<FResourceRequest>("FResourceRequest",
-  [](const NodeAttrs& attrs) {
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
-  })
-#endif
 .set_attr<FCompute>("FCompute<cpu>", TrueDivideScalarCompute<cpu, op::mshadow_op::true_divide>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_div_scalar"})
 .add_argument("data", "NDArray-or-Symbol", "source input")
-.add_argument("scalar", "float", "scalar input");
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__());
 
 NNVM_REGISTER_OP(_npi_rtrue_divide_scalar)
 .set_num_inputs(1)
 .set_num_outputs(1)
-.set_attr_parser([](NodeAttrs* attrs) {
-  attrs->parsed = std::stod(attrs->dict["scalar"]);
-  })
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)
 .set_attr<nnvm::FInferType>("FInferType", TrueDivideType<1>)
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
@@ -128,7 +129,7 @@ NNVM_REGISTER_OP(_npi_rtrue_divide_scalar)
 .set_attr<FCompute>("FCompute<cpu>", TrueDivideScalarCompute<cpu, mshadow_op::rtrue_divide>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_rdiv_scalar"})
 .add_argument("data", "NDArray-or-Symbol", "source input")
-.add_argument("scalar", "float", "scalar input");
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__());
 
 }  // namespace op
 }  // namespace mxnet

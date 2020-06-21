@@ -189,7 +189,7 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - The maximum size of an NDArray slice in terms of number of parameters.
   - This parameter is used to slice an NDArray before synchronizing through P3Store (dist_p3).
 
-## Memonger
+## Memory Optimizations
 
 * MXNET_BACKWARD_DO_MIRROR
   - Values: 0(false) or 1(true) ```(default=0)```
@@ -198,6 +198,10 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - When set to `1`, during forward propagation, graph executor will `mirror` some layer's feature map and drop others, but it will re-compute this dropped feature maps when needed.
   - `MXNET_BACKWARD_DO_MIRROR=1` will save 30%~50% of device memory, but retains about 95% of running speed.
   - One extension of `mirror` in MXNet is called [memonger technology](https://arxiv.org/abs/1604.06174), it will only use O(sqrt(N)) memory at 75% running speed. Checkout the code [here](https://github.com/dmlc/mxnet-memonger).
+
+* MXNET_MEMORY_OPT
+  - Values: 0(no optimizations) or 1(highest optimization level) ```(default=0)```
+  - If set to '1', various optimizations on memory consumption will be enabled.
 
 ## Control the profiler
 
@@ -208,9 +212,14 @@ The following environments can be used to profile the application without changi
   - Set to 1, MXNet starts the profiler automatically. The profiling result is stored into profile.json in the working directory.
 
 * MXNET_PROFILER_MODE
-  - Values: 0(false) or 1(true) ```(default=0)```
-  - If set to '0', profiler records the events of the symbolic operators.
-  - If set to '1', profiler records the events of all operators.
+  - Values: 0(false) to 15(profile everything) ```(default=13)```
+  - If set to '0', turns off all profiling.
+  - If set to '1', profiler records the events of symbolic operators.
+  - If set to '2', profiler records the events of imperative operators.
+  - If set to '4', profiler records the C API events.
+  - If set to '8', profiler records the events of memory (i.e. storage alloc and free calls).
+  - You need to sum the values above for a custom combination. For example, for symbolic and imperative operators, set ```MXNET_PROFILER_MODE=3```(2 + 1).
+  - If set to '15', profiler records all the above listed events (API, Memory, Symbolic, Imperative).
 
 ## Interface between Python and the C API
 

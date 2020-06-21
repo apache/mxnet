@@ -183,6 +183,7 @@ class NaiveEngine final : public Engine {
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       size_t dev_id = static_cast<size_t>(exec_ctx.dev_id);
+      cudaGetLastError();  // reset cuda error
       MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(exec_ctx.dev_id));
       if (streams_.size() <= dev_id) {
         streams_.resize(dev_id + 1, nullptr);

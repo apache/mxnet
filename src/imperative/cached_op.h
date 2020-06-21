@@ -30,6 +30,7 @@
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
 #include "./imperative_utils.h"
+#include "../nnvm/error.h"
 
 namespace mxnet {
 namespace {
@@ -162,16 +163,22 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
     xs.emplace_back(indexed_graph[node_id].weak_ref.lock());
   }
 
-  CHECK(!xs.empty())
-    << "There are no inputs in computation graph that require gradients.";
-
-  *grad_graph = pass::MXGradient(
-    *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
-    exec::AggregateGradient, nullptr, nullptr,
-    zero_ops, "_copy");
+  // There are inputs in computation graph that require gradients
+  if (!xs.empty()) {
+    try {
+      *grad_graph = pass::MXGradient(
+           *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
+           exec::AggregateGradient, nullptr,
+           zero_ops, "_copy");
+    } catch (const nnvm::pass::InvalidGraphError &e) {
+      *grad_graph = nnvm::Graph();
+    }
+  } else {
+    *grad_graph = nnvm::Graph();
+  }
 }
 
-/* \brief construct  fwd_graph, grad_graph and full_graph from symbol */
+/* \brief construct fwd_graph, grad_graph and full_graph from symbol */
 void CreateFullGraph(const nnvm::Symbol& sym,
                      nnvm::Graph* fwd_graph,
                      nnvm::Graph* grad_graph,
@@ -189,15 +196,16 @@ void CreateFullGraph(const nnvm::Symbol& sym,
   CreateBackwardGraph(fwd_graph, grad_graph, ograd_entries,
                       fwd_input_to_grad_output);
 
-  // Add backward graph outputs to full graph
   full_graph->outputs = fwd_graph->outputs;
-  for (const auto &i : grad_graph->outputs) full_graph->outputs.emplace_back(i);
+  // add backward graph outputs to full graph
+  for (const auto &i : grad_graph->outputs) {
+    full_graph->outputs.emplace_back(i);
+  }
 }
 
 /* \brief Set Ref counts for node entries for forward graph */
 void SetForwardRefCounts(nnvm::Graph *fwd_graph) {
   const auto& idx = fwd_graph->indexed_graph();
-  CHECK_GE(idx.input_nodes().size(), 1) << "CachedOp requires at least 1 input";
 
   std::vector<uint32_t> ref_count(idx.num_node_entries(), 0);
   for (const auto& i : idx.input_nodes()) ++ref_count[idx.entry_id(i, 0)];
@@ -358,6 +366,10 @@ struct CachedOpConfig : public dmlc::Parameter<CachedOpConfig> {
   }
 };
 
+namespace io {
+class LazyTransformDataset;
+}
+
 class CachedOp {
   using CachedOpMonCallback =
       std::function<void(const char *, const char *, void *)>;
@@ -367,6 +379,7 @@ class CachedOp {
       const nnvm::Symbol& sym,
       const std::vector<std::pair<std::string, std::string> >& flags);
   virtual ~CachedOp();
+  nnvm::Symbol GetOptimizedSymbol() const;
   uint32_t num_inputs() const {
     return fwd_graph_.indexed_graph().input_nodes().size();
   }
@@ -395,7 +408,8 @@ class CachedOp {
   virtual OpStatePtr Forward(
       const std::shared_ptr<CachedOp>& op_ptr,
       const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs);
+      const std::vector<NDArray*>& outputs,
+      const Context &default_context);
   virtual void Backward(
       const bool retain_graph,
       const OpStatePtr& state,
@@ -492,6 +506,7 @@ class CachedOp {
 
   OpStatePtr GetCachedOpState(const Context& ctx);
   bool SetForwardGraph(
+      const Context& default_ctx,
       GraphInfo* info,
       const bool recording,
       const std::vector<NDArray*>& inputs);
@@ -523,11 +538,9 @@ class CachedOp {
       const Context& default_ctx,
       const std::vector<NDArray*>& inputs,
       const std::vector<NDArray*>& outputs);
-
-
- private:
   struct DynamicRuntime;
 
+ private:
   OpStatePtr DynamicForward(
       const Context& default_ctx,
       const std::vector<NDArray*>& inputs,
@@ -561,6 +574,16 @@ class CachedOp {
 
   std::mutex mutex_;
   std::unordered_map<Context, std::vector<OpStatePtr> > cached_op_states_;
+
+  friend class ::mxnet::io::LazyTransformDataset;
+  nnvm::Symbol sym_;
+  std::vector<std::pair<std::string, std::string> > flags_;
+};
+
+struct CachedOp::DynamicRuntime {
+  GraphInfo info;
+  std::vector<NDArray> buff;
+  std::vector<OpStatePtr> op_states;
 };
 
 using CachedOpPtr = std::shared_ptr<CachedOp>;

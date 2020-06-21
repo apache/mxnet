@@ -24,6 +24,7 @@ instantiated before lower-scoped fixtures (such as ``function``).
 """
 
 import logging
+import gc
 import os
 import random
 
@@ -108,6 +109,11 @@ def pytest_configure():
         logging.warning('*** test-level seed set: all "@with_seed()" '
                         'tests run deterministically ***')
 
+    # Load the user's locale settings to verify that MXNet works correctly when the C locale is set
+    # to anything other than the default value. Please see #16134 for an example of a bug caused by
+    # incorrect handling of C locales.
+    import locale
+    locale.setlocale(locale.LC_ALL, "")
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)
 def pytest_runtest_makereport(item, call):

@@ -71,6 +71,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         # Caffe
         caffe-cpu \
         libcaffe-cpu-dev \
+        # BytePS
+        numactl \
+        libnuma-dev \
         ## Frontend languages
         # Python
         python3 \
@@ -123,10 +126,6 @@ RUN update-java-alternatives -s java-1.8.0-openjdk-amd64
 COPY install/ubuntu_julia.sh /work/
 RUN /work/ubuntu_julia.sh
 
-# PDL::CCS missing on 18.04
-COPY install/ubuntu_perl.sh /work/
-RUN /work/ubuntu_perl.sh
-
 # MXNetJS nightly needs emscripten for wasm
 COPY install/ubuntu_emscripten.sh /work/
 RUN /work/ubuntu_emscripten.sh
@@ -164,9 +163,3 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
     apt install -y  --no-install-recommends \
         cuda-10-1 && \
     rm -rf /var/lib/apt/lists/*
-
-
-FROM gpu as gpuwithcompatenv
-# TVMOP requires /usr/local/cuda/compat is no LD_LIBRARY_PATH.
-# This should be fixed and deleted.
-ENV LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/cuda/compat

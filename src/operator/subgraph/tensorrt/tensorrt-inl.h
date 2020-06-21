@@ -102,7 +102,6 @@ class TensorrtSelector : public SubgraphSelector {
     "Pad",
     "relu",
     "rsqrt",
-    "SoftmaxOutput"
   };
 
   const std::unordered_set<std::string> withWeightsOps = {

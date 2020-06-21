@@ -37,11 +37,4 @@ const BASEDIR = joinpath(@__DIR__, "..")
 include(joinpath(@__DIR__, "common.jl"))
 @testset "MXNet Test" begin
   test_dir(joinpath(@__DIR__, "unittest"))
-
-  # run the basic MNIST mlp example
-  if haskey(ENV, "INTEGRATION_TEST")
-    @testset "MNIST Test" begin
-      include(joinpath(BASEDIR, "examples", "mnist", "mlp-test.jl"))
-    end
-  end
 end

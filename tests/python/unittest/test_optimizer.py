@@ -25,7 +25,8 @@ import unittest
 import pytest
 import math
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown_module
+from common import setup_module, with_seed, teardown_module, retry, \
+    xfail_when_nonstandard_decimal_separator
 
 @with_seed()
 def test_learning_rate():
@@ -44,40 +45,16 @@ def test_learning_rate():
     assert o3.learning_rate == 1024
 
 
-@pytest.mark.xfail(raises=UserWarning)
 @with_seed()
 def test_learning_rate_expect_user_warning():
     lr_s = lr_scheduler.FactorScheduler(step=1)
     o = mx.optimizer.Optimizer(lr_scheduler=lr_s, learning_rate=0.3)
-    o.set_learning_rate(0.5)
+
+    with pytest.raises(UserWarning):
+        o.set_learning_rate(0.5)
 
 
-@with_seed()
-def test_lr_wd_mult():
-    data = mx.sym.Variable('data')
-    bias = mx.sym.Variable('fc1_bias', lr_mult=1.0)
-    fc1 = mx.sym.FullyConnected(data=data, bias=bias, name='fc1', num_hidden=10, lr_mult=0)
-    fc2 = mx.sym.FullyConnected(data=fc1, name='fc2', num_hidden=10, wd_mult=0.5)
-
-    mod = mx.mod.Module(symbol=fc2, label_names=None, context=default_context())
-    mod.bind(data_shapes=[('data', (5,10))])
-    mod.init_params(initializer=mx.init.Uniform(1.0))
-    mod.init_optimizer(optimizer_params={'learning_rate': 1.0})
-    args1, _ = mod.get_params()
-    args1 = {k: v.asnumpy() for k, v in args1.items()}
-    mod.forward(mx.io.DataBatch(data=[mx.random.uniform(low=-1.0, high=1.0, shape=(5,10))], label=None), is_train=True)
-    mod.backward(mod.get_outputs())
-    mod.update()
-    args2, _ = mod.get_params()
-    args2 = {k: v.asnumpy() for k, v in args2.items()}
-
-    assert mod._optimizer.lr_mult == {'fc1_bias': 1.0, 'fc1_weight': 0.0}
-    assert mod._optimizer.wd_mult == {'fc2_bias': 0.5, 'fc2_weight': 0.5}
-    assert mx.test_utils.almost_equal(args1['fc1_weight'], args2['fc1_weight'], 1e-10)
-    assert not mx.test_utils.almost_equal(args1['fc1_bias'], args2['fc1_bias'], 1e-1)
-    assert not mx.test_utils.almost_equal(args1['fc2_weight'], args2['fc2_weight'], 1e-1)
-
-
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sgd():
     opt1 = mx.optimizer.SGD
@@ -183,6 +160,7 @@ class PySparseSGD(mx.optimizer.Optimizer):
                     weight[row] += mom[row]
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sparse_sgd():
     opt1 = PySparseSGD
@@ -206,6 +184,7 @@ def test_sparse_sgd():
                               w_stype='default', g_stype='row_sparse')
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_std_sparse_sgd():
     opt1 = mx.optimizer.SGD
@@ -230,6 +209,7 @@ def test_std_sparse_sgd():
                               w_stype='default', g_stype='row_sparse')
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_nag():
     opt1 = mx.optimizer.NAG
@@ -255,6 +235,7 @@ def test_nag():
                               shapes, dtype, rtol=1e-3, atol=1e-4)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_lars():
     opt1 = mx.optimizer.LARS
@@ -280,6 +261,7 @@ def test_lars():
                               shapes, dtype, rtol=1e-3, atol=1e-3)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_lamb():
     opt1 = mx.optimizer.LAMB
@@ -336,6 +318,7 @@ def test_sgld():
                                                shapes, dtype, seed, atol=atol, rtol=rtol)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_ftml():
     opt1 = mx.optimizer.FTML
@@ -436,6 +419,7 @@ class PySparseAdam(mx.optimizer.Optimizer):
                 weight[row] -= lr * mean[row] / (mx.nd.sqrt(variance[row]) + self.epsilon)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_adam():
     opt1 = mx.optimizer.Adam
@@ -462,6 +446,7 @@ def test_adam():
                               rtol=1e-4, atol=2e-5)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sparse_adam():
     opt1 = PySparseAdam
@@ -505,7 +490,9 @@ def test_sparse_adam():
                               rtol=1e-4, atol=2e-5)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/18400")
 def test_adamax():
     opt1 = mx.optimizer.Adamax
     opt2 = mx.optimizer.Adamax
@@ -528,6 +515,7 @@ def test_adamax():
             compare_optimizer(opt1(**kwarg), opt2(**kwarg), shapes, dtype)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_signum():
     opt1 = mx.optimizer.Signum
@@ -556,6 +544,7 @@ def test_signum():
                                    rtol=rtol, atol=atol)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_rms():
     opt1 = mx.optimizer.RMSProp
@@ -667,7 +656,9 @@ class PySparseFtrl(mx.optimizer.Optimizer):
                 weight[row] = - d / denom
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
+@retry(3)
 def test_ftrl():
     opt1 = mx.optimizer.Ftrl
     opt2 = mx.optimizer.Ftrl
@@ -687,11 +678,13 @@ def test_ftrl():
             if (dtype == np.float16 and
                     ('multi_precision' not in kwarg or not kwarg['multi_precision'])):
                 continue
+            rtol, atol = (1e-3, 1e-3) if dtype is np.float16 else (1e-4, 1e-4)
             compare_optimizer(opt1(use_fused_step=False, **kwarg),
                               opt2(use_fused_step=True, **kwarg), shapes, dtype,
-                              rtol=1e-4, atol=1e-4)
+                              rtol=rtol, atol=atol)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sparse_ftrl():
     opt1 = PySparseFtrl
@@ -718,6 +711,7 @@ def test_sparse_ftrl():
                               rtol=rtol, atol=atol)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_nadam():
     opt1 = mx.optimizer.Nadam
@@ -831,6 +825,7 @@ def test_adagrad():
                               opt2(use_fused_step=True, **kwarg), shapes, dtype)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sparse_adagrad():
     opt1 = PySparseAdaGrad
@@ -952,4 +947,3 @@ def test_cosine_scheduler():
     np.testing.assert_almost_equal(cosine_sched(0), base_lr)
     np.testing.assert_almost_equal(cosine_sched(steps), final_lr)
     assert (cosine_sched(500) > 1.5)
-

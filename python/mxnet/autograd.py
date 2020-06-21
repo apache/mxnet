@@ -233,8 +233,8 @@ def _parse_head(heads, head_grads):
     if head_grads is None:
         hgrad_handles = ctypes.c_void_p(0)
     else:
-        assert len(heads) == len(head_grads), \
-            "heads and head_grads must be lists of the same length"
+        msg = "heads and head_grads must be lists of the same length: {} vs. {}"
+        assert len(heads) == len(head_grads), msg.format(len(heads), len(head_grads))
         hgrad_handles = c_array(NDArrayHandle,
                                 [i.handle if i is not None else NDArrayHandle(0)
                                  for i in head_grads])

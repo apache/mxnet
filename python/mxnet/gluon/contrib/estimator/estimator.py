@@ -33,7 +33,7 @@ from ...loss import Loss as gluon_loss
 from ...trainer import Trainer
 from ...utils import split_and_load
 from ....context import Context, cpu, gpu, num_gpus
-from ....metric import Loss as metric_loss
+from ...metric import Loss as metric_loss
 from .batch_processor import BatchProcessor
 
 __all__ = ['Estimator']
@@ -71,7 +71,8 @@ class Estimator(object):
         the training net is given below:
 
         >>> net = _get_train_network()
-        >>> val_net = _get_test_network(params=net.collect_params())
+        >>> val_net = _get_test_network()
+        >>> val_net.share_parameters(net.collect_params())
         >>> net.initialize(ctx=ctx)
         >>> est = Estimator(net, loss, val_net=val_net)
 

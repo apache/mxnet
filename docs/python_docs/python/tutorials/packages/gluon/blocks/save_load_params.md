@@ -180,7 +180,7 @@ def verify_loaded_model(net):
         return data.astype(np.float32)/255, label.astype(np.float32)
 
     # Load ten random images from the test dataset
-    sample_data = mx.gluon.data.DataLoader(mx.gluon.data.vision.MNIST(train=False, transform=transform),
+    sample_data = mx.gluon.data.DataLoader(mx.gluon.data.vision.MNIST(train=False).transform(transform),
                                   10, shuffle=True)
 
     for data, label in sample_data:

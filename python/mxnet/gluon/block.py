@@ -23,17 +23,20 @@ __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 import threading
 import copy
 import warnings
-import re
+import weakref
 from collections import OrderedDict, defaultdict
+
+import re
 import numpy as np
 
 from ..base import mx_real_t, MXNetError, NDArrayHandle, py_str
-from .. import symbol, ndarray, initializer, np_symbol, autograd, _deferred_compute as dc
+from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc
+from ..symbol.numpy import _symbol as np_symbol
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .. import name as _name
 from .. import profiler as _profiler
-from .parameter import Parameter, ParameterDict, DeferredInitializationError
+from .parameter import Parameter, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle, shape_is_known
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays
 from .. import numpy_extension as _mx_npx
@@ -47,66 +50,52 @@ class _BlockScope(object):
     _current = threading.local()
 
     def __init__(self, block):
-        self._block = block
+        self._block = weakref.ref(block) if block is not None else None
         self._counter = {}
-        self._old_scope = None
-        self._name_scope = None
+        self._local = threading.local()
+        self._local._old_scope = None
+        self._local._name_scope = None
 
     @staticmethod
-    def create(prefix, params, hint):
+    def count(hint):
         """
-        Creates prefix, params, and profiler scope name for new `Block`.
+        Creates unique name for new `Block`.
         The profiler scope is to support the GPU memory profiler.
         """
         current = getattr(_BlockScope._current, "value", None)
         if current is None:
-            if prefix is None:
-                if not hasattr(_name.NameManager._current, "value"):
-                    _name.NameManager._current.value = _name.NameManager()
-                prefix = _name.NameManager._current.value.get(None, hint) + '_'
-            # replace the trailing underscore with colon
-            profiler_scope_name = (prefix[:-1] if prefix.endswith('_') \
-                                   else prefix) + ":"
-            if params is None:
-                params = ParameterDict(prefix)
-            else:
-                params = ParameterDict(params.prefix, params)
-            return prefix, params, profiler_scope_name
+            if not hasattr(_name.NameManager._current, "value"):
+                _name.NameManager._current.value = _name.NameManager()
+            block_name = _name.NameManager._current.value.get(None, hint)
+            return block_name
 
-        if prefix is None:
-            count = current._counter.get(hint, 0)
-            prefix = '%s%d_'%(hint, count)
-            current._counter[hint] = count + 1
-        if params is None:
-            parent = current._block.params
-            params = ParameterDict(parent.prefix+prefix, parent._shared)
-        else:
-            params = ParameterDict(params.prefix, params)
-        # replace the trailing underscore with colon
-        profiler_scope_name = (prefix[:-1] if prefix.endswith('_') \
-                               else prefix) + ":"
-        return current._block.prefix + prefix, params, \
-               current._block._profiler_scope_name + profiler_scope_name
+        count = current._counter.get(hint, 0)
+        block_name = '%s%d'%(hint, count)
+        current._counter[hint] = count + 1
+        return block_name
 
     def __enter__(self):
-        if self._block._empty_prefix:
+        block = self._block()
+        if block is None or block.name == '':
             return self
-        self._old_scope = getattr(_BlockScope._current, "value", None)
+        self._local._old_scope = getattr(_BlockScope._current, "value", None)
         _BlockScope._current.value = self
-        self._name_scope = _name.Prefix(self._block.prefix)
-        self._name_scope.__enter__()
-        self._profiler_scope = _profiler.Scope(self._block._profiler_scope_name)
-        self._profiler_scope.__enter__()
+        self._local._name_scope = _name.Prefix(block.name + '_')
+        self._local._name_scope.__enter__()
+        _profiler_scope_name = block.name + ":"
+        self._local._profiler_scope = _profiler.Scope(_profiler_scope_name)
+        self._local._profiler_scope.__enter__()
         return self
 
     def __exit__(self, ptype, value, trace):
-        if self._block._empty_prefix:
+        block = self._block()
+        if block is None or block.name == '':
             return
-        self._name_scope.__exit__(ptype, value, trace)
-        self._name_scope = None
-        self._profiler_scope.__exit__(ptype, value, trace)
-        self._profiler_scope = None
-        _BlockScope._current.value = self._old_scope
+        self._local._name_scope.__exit__(ptype, value, trace)
+        self._local._name_scope = None
+        self._local._profiler_scope.__exit__(ptype, value, trace)
+        self._local._profiler_scope = None
+        _BlockScope._current.value = self._local._old_scope
 
 
 def _gather_type_ctx_info(args):
@@ -254,10 +243,8 @@ class Block(object):
         class Model(Block):
             def __init__(self, **kwargs):
                 super(Model, self).__init__(**kwargs)
-                # use name_scope to give child Blocks appropriate names.
-                with self.name_scope():
-                    self.dense0 = nn.Dense(20)
-                    self.dense1 = nn.Dense(20)
+                self.dense0 = nn.Dense(20)
+                self.dense1 = nn.Dense(20)
 
             def forward(self, x):
                 x = mx.nd.relu(self.dense0(x))
@@ -272,31 +259,14 @@ class Block(object):
     will collect their Parameters recursively. You can also manually register
     child blocks with :py:meth:`register_child`.
 
-    Parameters
-    ----------
-    prefix : str
-        Prefix acts like a name space. All children blocks created in parent block's
-        :py:meth:`name_scope` will have parent block's prefix in their name.
-        Please refer to
-        `naming tutorial </api/python/docs/tutorials/packages/gluon/blocks/naming.html>`_
-        for more info on prefix and naming.
-    params : ParameterDict or None
-        :py:class:`ParameterDict` for sharing weights with the new :py:class:`Block`. For example,
-        if you want ``dense1`` to share ``dense0``'s weights, you can do::
-
-            dense0 = nn.Dense(20)
-            dense1 = nn.Dense(20, params=dense0.collect_params())
     """
-    def __init__(self, prefix=None, params=None):
-        self._empty_prefix = prefix == ''
-        self._prefix, self._params, self._profiler_scope_name = \
-                _BlockScope.create(prefix, params, self._alias())
-        self._name = self._prefix[:-1] if self._prefix.endswith('_') else self._prefix
-        self._scope = _BlockScope(self)
+    def __init__(self):
         self._children = OrderedDict()
         self._reg_params = {}
         self._forward_hooks = OrderedDict()
         self._forward_pre_hooks = OrderedDict()
+        self._name = _BlockScope.count(self._alias())
+        self._scope = _BlockScope(self)
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
@@ -318,10 +288,6 @@ class Block(object):
         if isinstance(value, Block):
             self.register_child(value, name)
         elif isinstance(value, Parameter):
-            assert name not in self._reg_params, \
-                "Overriding Parameter attribute %s is not allowed. " \
-                "If you want to share parameters between blocks, please set " \
-                "'params' at Block construction instead."
             self._reg_params[name] = value
 
         super(Block, self).__setattr__(name, value)
@@ -341,7 +307,7 @@ class Block(object):
                         return True
                 return False
             elif isinstance(data, Block):
-                return not data in children
+                return not data in (c() for c in children)
             else:
                 return False
         for k, v in self.__dict__.items():
@@ -358,43 +324,25 @@ class Block(object):
         return self.__class__.__name__.lower()
 
     @property
-    def prefix(self):
-        """Prefix of this :py:class:`Block`."""
-        return self._prefix
-
-    @property
     def name(self):
-        """Name of this :py:class:`Block`, without '_' in the end."""
+        """Name of this :py:class:`Block`, class name + counter """
         return self._name
-
-    def name_scope(self):
-        """Returns a name space object managing a child :py:class:`Block` and parameter
-        names. Should be used within a ``with`` statement::
-
-            with self.name_scope():
-                self.dense = nn.Dense(20)
-
-        Please refer to
-        `the naming tutorial </api/python/docs/tutorials/packages/gluon/blocks/naming.html>`_
-        for more info on prefix and naming.
-        """
-        return self._scope
 
     @property
     def params(self):
         """Returns this :py:class:`Block`'s parameter dictionary (does not include its
         children's parameters)."""
-        return self._params
+        return self._reg_params
 
     def collect_params(self, select=None):
-        """Returns a :py:class:`ParameterDict` containing this :py:class:`Block` and all of its
-        children's Parameters(default), also can returns the select :py:class:`ParameterDict`
+        """Returns a :py:class:`Dict` containing this :py:class:`Block` and all of its
+        children's Parameters(default), also can returns the select :py:class:`Dict`
         which match some given regular expressions.
 
-        For example, collect the specified parameters in ['conv1_weight', 'conv1_bias', 'fc_weight',
-        'fc_bias']::
+        For example, collect the specified parameters in ['conv1.weight', 'conv1.bias', 'fc.weight',
+        'fc.bias']::
 
-            model.collect_params('conv1_weight|conv1_bias|fc_weight|fc_bias')
+            model.collect_params('conv1.weight|conv1.bias|fc.weight|fc.bias')
 
         or collect all parameters whose names end with 'weight' or 'bias', this can be done
         using regular expressions::
@@ -408,26 +356,23 @@ class Block(object):
 
         Returns
         -------
-        The selected :py:class:`ParameterDict`
+        The selected :py:class:`Dict`
         """
         # We need to check here because blocks inside containers are not supported.
         self._check_container_with_block()
-        ret = ParameterDict(self._params.prefix)
-        if not select:
-            ret.update(self.params)
-        else:
-            pattern = re.compile(select)
-            ret.update({name:value for name, value in self.params.items() if pattern.match(name)})
-        for cld in self._children.values():
-            ret.update(cld.collect_params(select=select))
-        return ret
+        return self._collect_params_with_prefix(select=select)
 
-    def _collect_params_with_prefix(self, prefix=''):
+    def _collect_params_with_prefix(self, prefix='', select=None):
         if prefix:
             prefix += '.'
-        ret = {prefix + key : val for key, val in self._reg_params.items()}
+        if select is None:
+            ret = {prefix + key : val for key, val in self._reg_params.items()}
+        else:
+            pattern = re.compile(select)
+            ret = {prefix + key : val for key, val in self._reg_params.items() if pattern.match(prefix + key)}
+
         for name, child in self._children.items():
-            ret.update(child._collect_params_with_prefix(prefix + name))
+            ret.update(child()._collect_params_with_prefix(prefix + name, select))
         return ret
 
     def save_parameters(self, filename, deduplicate=False):
@@ -465,26 +410,6 @@ class Block(object):
         arg_dict = {key: val._reduce() for key, val in params.items()}
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         save_fn(filename, arg_dict)
-
-    def save_params(self, filename):
-        """[Deprecated] Please use save_parameters. Note that if you want load
-        from SymbolBlock later, please use export instead.
-
-        Save parameters to file.
-
-        filename : str
-            Path to file.
-        """
-        warnings.warn("save_params is deprecated. Please use save_parameters. "
-                      "Note that if you want load from SymbolBlock later, please "
-                      "use export instead. For details, see "
-                      "https://mxnet.apache.org/tutorials/gluon/save_lo"
-                      "ad_params.html")
-        try:
-            self.collect_params().save(filename, strip_prefix=self.prefix)
-        except ValueError as e:
-            raise ValueError('%s\nsave_params is deprecated. Using ' \
-                              'save_parameters may resolve this error.'%e.message)
 
     def load_parameters(self, filename, ctx=None, allow_missing=False,
                         ignore_extra=False, cast_dtype=False, dtype_source='current'):
@@ -535,67 +460,72 @@ class Block(object):
                     raise ValueError(err_msg)
         else:
             loaded = ndarray.load(filename)
-        params = self._collect_params_with_prefix()
-        if not loaded and not params:
-            return
 
-        if not any('.' in i for i in loaded.keys()):
-            # legacy loading
-            loaded = None  # This should be changed to `del loaded` when dropping Python 2
-            self.collect_params().load(
-                filename, ctx, allow_missing, ignore_extra, self.prefix,
-                cast_dtype=cast_dtype, dtype_source=dtype_source)
+        if not loaded:
             return
+        full_dict = {'params': loaded, 'filename': filename}
+        self.load_dict(full_dict, ctx, allow_missing, ignore_extra, cast_dtype, dtype_source)
+
+    def load_dict(self, param_dict, ctx=None, allow_missing=False,
+                  ignore_extra=False, cast_dtype=False, dtype_source="current"):
+        """Load parameters from dict
+
+        Parameters
+        ----------
+        param_dict : dict
+            Dictionary containing model parameters
+        ctx : Context or list of Context
+            Context(s) initialize loaded parameters on.
+        allow_missing : bool, default False
+            Whether to silently skip loading parameters not represented in the file.
+        ignore_extra : bool, default False
+            Whether to silently ignore parameters from the file that are not
+            present in this dict.
+        cast_dtype : bool, default False
+            Cast the data type of the NDArray loaded from the checkpoint to the dtype
+            provided by the Parameter if any
+        dtype_source : str, default 'current'
+            must be in {'current', 'saved'}
+            Only valid if cast_dtype=True, specify the source of the dtype for casting
+            the parameters
+        """
+        if isinstance(param_dict.get('filename'), str):
+            # pass from load_parameters
+            filename = param_dict['filename']
+            param_dict = param_dict['params']
+        else:
+            filename = None
+        params = self.collect_params()
+        error_str = "file: %s" % (filename) if filename else "param_dict"
+        loaded = {k[4:] if k.startswith('arg:') or k.startswith('aux:') else k: v \
+                  for k, v in param_dict.items()}
 
         if not allow_missing:
-            # Shared parameters are stored only a single time as of MXNet 1.6.
-            # We thus retrieve all prefixes (through _collect_params_with_prefix)
-            # that a shared parameter is used with. Check that there are no
-            # missing parameters that were not yet already loaded from the
-            # shared version.
             params_inv = defaultdict(list)
             for k, v in params.items():
                 params_inv[v].append(k)
 
             for name, param in params.items():
                 assert any(p in loaded for p in params_inv[param]), \
-                    "Parameter '%s' is missing in file '%s', which contains parameters: %s. " \
+                    "Parameter '%s' is missing in '%s', which contains parameters: %s. " \
                     "Set allow_missing=True to ignore missing parameters."%(
-                        name, filename, _brief_print_list(loaded.keys()))
+                        name, error_str, _brief_print_list(loaded.keys()))
+
         for name in loaded:
             if not ignore_extra and name not in params:
                 raise ValueError(
-                    "Parameter '%s' loaded from file '%s' is not present in ParameterDict, " \
+                    "Parameter '%s' loaded from '%s' is not present in Dict, " \
                     "which contains parameters %s. Set ignore_extra=True to ignore. "%(
-                        name, filename, _brief_print_list(self._params.keys())))
+                        name, error_str, _brief_print_list(params.keys())))
             if name in params:
                 params[name]._load_init(loaded[name], ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
-
-    def load_params(self, filename, ctx=None, allow_missing=False,
-                    ignore_extra=False):
-        """[Deprecated] Please use load_parameters.
-
-        Load parameters from file.
-
-        filename : str
-            Path to parameter file.
-        ctx : Context or list of Context, default cpu()
-            Context(s) to initialize loaded parameters on.
-        allow_missing : bool, default False
-            Whether to silently skip loading parameters not represents in the file.
-        ignore_extra : bool, default False
-            Whether to silently ignore parameters from the file that are not
-            present in this Block.
-        """
-        warnings.warn("load_params is deprecated. Please use load_parameters.")
-        self.load_parameters(filename, ctx, allow_missing, ignore_extra)
 
     def register_child(self, block, name=None):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
         attributes will be registered automatically."""
         if name is None:
             name = str(len(self._children))
-        self._children[name] = block
+        self._children[name] = weakref.ref(block)
 
     def register_forward_pre_hook(self, hook):
         r"""Registers a forward pre-hook on the block.
@@ -648,14 +578,13 @@ class Block(object):
         this block
         """
         for cld in self._children.values():
-            cld.apply(fn)
+            cld().apply(fn)
         fn(self)
         return self
 
     def initialize(self, init=initializer.Uniform(), ctx=None, verbose=False,
                    force_reinit=False):
         """Initializes :py:class:`Parameter` s of this :py:class:`Block` and its children.
-        Equivalent to ``block.collect_params().initialize(...)``
 
         Parameters
         ----------
@@ -669,13 +598,17 @@ class Block(object):
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
         """
-        self.collect_params().initialize(init, ctx, verbose, force_reinit)
+        params = self.collect_params()
+        if verbose:
+            init.set_verbosity(verbose=verbose)
+        for k, v in params.items():
+            v.initialize(None, ctx, init, force_reinit=force_reinit, structural_name=k)
 
     def hybridize(self, active=True, **kwargs):
         """ Please refer description of HybridBlock hybridize().
         """
         for cld in self._children.values():
-            cld.hybridize(active, **kwargs)
+            cld().hybridize(active, **kwargs)
 
     def cast(self, dtype):
         """Cast this Block to use another data type.
@@ -686,9 +619,114 @@ class Block(object):
             The new data type.
         """
         for child in self._children.values():
-            child.cast(dtype)
+            child().cast(dtype)
         for _, param in self.params.items():
             param.cast(dtype)
+
+    def zero_grad(self):
+        """Sets all Parameters' gradient buffer to 0."""
+        # collect gradient arrays for each ctx
+        arrays = defaultdict(list)
+        params = self.collect_params()
+        for p in params.values():
+            if p.grad_req == 'null' or p._grad is None:
+                continue
+            for g in p.list_grad():
+                if g.stype == 'row_sparse':
+                    ndarray.zeros_like(g, out=g)
+                else:
+                    arrays[g.ctx].append(g)
+
+        if len(arrays) == 0:
+            return
+
+        if is_np_array():
+            for arr in arrays.values():
+                for ele in arr:
+                    ele[()] = 0
+        else:
+            for arr in arrays.values():
+                ndarray.reset_arrays(*arr, num_arrays=len(arr))
+
+    def reset_ctx(self, ctx):
+        """Re-assign all Parameters to other contexts.
+
+        Parameters
+        ----------
+        ctx : Context or list of Context, default :py:meth:`context.current_context()`.
+            Assign Parameter to given context. If ctx is a list of Context, a
+            copy will be made for each context.
+        """
+        params = self.collect_params()
+        for i in params.values():
+            i.reset_ctx(ctx)
+
+    def setattr(self, name, value):
+        """Set an attribute to a new value for all Parameters.
+
+        For example, set grad_req to null if you don't need gradient w.r.t a
+        model's Parameters::
+
+            model.setattr('grad_req', 'null')
+
+        or change the learning rate multiplier::
+
+            model.setattr('lr_mult', 0.5)
+
+        Parameters
+        ----------
+        name : str
+            Name of the attribute.
+        value : valid type for attribute name
+            The new value for the attribute.
+        """
+        params = self.collect_params()
+        for i in params.values():
+            setattr(i, name, value)
+
+    def share_parameters(self, shared):
+        """Share parameters recursively inside the model.
+
+        For example, if you want ``dense1`` to share ``dense0``'s weights, you can do::
+
+            dense0 = nn.Dense(20)
+            dense1 = nn.Dense(20)
+            dense1.share_parameters(dense0.collect_params())
+
+        which equals to
+            dense1.weight = dense0.weight
+            dense1.bias = dense0.bias
+
+        Parameters
+        ----------
+        shared : Dict
+            Dict of the shared parameters.
+
+        Returns
+        -------
+        this block
+        """
+        if shared is None:
+            return self
+        if not isinstance(shared, (dict, OrderedDict)):
+            raise ValueError("'shared' should be in type of Dict. Get type {}!".format(type(shared)))
+        shared_set = set(shared.keys())
+        self._shared_parameters(shared, shared_set)
+        if len(shared_set) > 0:
+            for name in shared_set:
+                warnings.warn("Parameter name {} is not in the current model!".format(name))
+        return self
+
+    def _shared_parameters(self, shared, shared_set, prefix=""):
+        if prefix:
+            prefix += '.'
+        for name in self._reg_params:
+            key = prefix + name
+            if shared.get(key) is not None:
+                setattr(self, name, shared[key])
+                shared_set.remove(key)
+        for name, child in self._children.items():
+            child()._shared_parameters(shared, shared_set, prefix + name)
 
     def __call__(self, *args):
         """Calls forward. Only accepts positional arguments."""
@@ -730,7 +768,7 @@ class Block(object):
             If True, monitor both input and output, otherwise monitor output only.
         """
         for cld in self._children.values():
-            cld.register_op_hook(callback, monitor_all)
+            cld().register_op_hook(callback, monitor_all)
 
     def summary(self, *inputs):
         """Print the summary of the model's output and parameters.
@@ -855,10 +893,8 @@ class HybridBlock(Block):
         class Model(HybridBlock):
             def __init__(self, **kwargs):
                 super(Model, self).__init__(**kwargs)
-                # use name_scope to give child Blocks appropriate names.
-                with self.name_scope():
-                    self.dense0 = nn.Dense(20)
-                    self.dense1 = nn.Dense(20)
+                self.dense0 = nn.Dense(20)
+                self.dense1 = nn.Dense(20)
 
             def forward(self, x):
                 x = nd.relu(self.dense0(x))
@@ -888,8 +924,8 @@ class HybridBlock(Block):
         `Hybrid - Faster training and easy deployment
         <https://mxnet.io/tutorials/gluon/hybrid.html>`_
     """
-    def __init__(self, prefix=None, params=None):
-        super(HybridBlock, self).__init__(prefix=prefix, params=params)
+    def __init__(self):
+        super(HybridBlock, self).__init__()
         self._cached_graph = ()
         self._cached_op = None
         self._out_format = None
@@ -906,6 +942,10 @@ class HybridBlock(Block):
         """Registers parameters."""
         super(HybridBlock, self).__setattr__(name, value)
         if isinstance(value, HybridBlock):
+            if self._active:
+                warnings.warn("Currently the model has been hybridized. Automatically deactivate the hybridization \
+                               when changing the children blocks.")
+                self._active = False
             self._clear_cached_op()
 
     def _get_graph_v1(self, *args):
@@ -933,7 +973,7 @@ class HybridBlock(Block):
                     flatten_inputs.append(None)
             grouped_inputs = _regroup(flatten_inputs, self._in_format)
             params = {i: j.var() for i, j in self._reg_params.items()}
-            with self.name_scope():
+            with self._scope:
                 out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out, "output")
 
@@ -963,7 +1003,7 @@ class HybridBlock(Block):
             with autograd.pause(), dc.context():
                 out = super().__call__(*args)
             flatten_out, self._out_format = _flatten(out, "output")
-            symbol_outputs = dc.get_symbol(flatten_out)
+            symbol_outputs = dc.get_symbol(flatten_out, sym_cls=type(symbol_inputs[0]))
             self._cached_graph = symbol_inputs, symbol_outputs
         return self._cached_graph
 
@@ -979,6 +1019,7 @@ class HybridBlock(Block):
         data, out = self._get_graph(*args)
         data_names = {data.name: i for i, data in enumerate(data)}
         params = self.collect_params()
+        params = {p.name: p for p in params.values()}
         input_names = out.list_inputs()
         param_names = set(params.keys())
         expected_names = set(input_names)
@@ -1026,12 +1067,12 @@ class HybridBlock(Block):
         if self._backend:
             ctx = args[0].context
             # get list of params in the order of out.list_arguments
-            arg_array = [args[data_names[name]] if name in data_names.keys() else params[name].data()
-                         for name in out.list_arguments()]
-            aux_array = [args[data_names[name]] if name in data_names.keys() else params[name].data()
-                         for name in out.list_auxiliary_states()]
+            arg_dict = {name:args[data_names[name]] if name in data_names.keys() else params[name].data()
+                        for name in out.list_arguments()}
+            aux_dict = {name:args[data_names[name]] if name in data_names.keys() else params[name].data()
+                        for name in out.list_auxiliary_states()}
             # Partition the graph.
-            out = out.optimize_for(self._backend, arg_array, aux_array, ctx, **self._backend_opts)
+            out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
             #update cached graph with partitioned graph
             self._cached_graph = data, out
         self._cached_op = ndarray.CachedOp(out, flags)
@@ -1160,6 +1201,10 @@ class HybridBlock(Block):
                 "please try HybridSequential instead."%(
                     str(block), str(type(block))))
         super(HybridBlock, self).register_child(block, name)
+        if self._active:
+            warnings.warn("Currently the model has been hybridized. Automatically deactivate the hybridization \
+                           when adding new children block.")
+            self._active = False
         self._clear_cached_op()
 
     def hybridize(self, active=True, backend=None, backend_opts=None, **kwargs):
@@ -1198,6 +1243,10 @@ class HybridBlock(Block):
         super(HybridBlock, self).hybridize(active, **kwargs)
 
     def cast(self, dtype):
+        if self._active:
+            warnings.warn("Currently the model has been hybridized. Automatically deactivate the hybridization \
+                           when cast the block to use another data type.")
+            self._active = False
         self._clear_cached_op()
         super(HybridBlock, self).cast(dtype)
 
@@ -1240,7 +1289,7 @@ class HybridBlock(Block):
 
     def export(self, path, epoch=0, remove_amp_cast=True):
         """Export HybridBlock to json format that can be loaded by
-        `gluon.SymbolBlock.imports`, `mxnet.mod.Module` or the C++ interface.
+        `gluon.SymbolBlock.imports` or the C++ interface.
 
         .. note:: When there are only one input, it will have name `data`. When there
                   Are more than one inputs, they will be named as `data0`, `data1`, etc.
@@ -1252,7 +1301,8 @@ class HybridBlock(Block):
             will be created, where xxxx is the 4 digits epoch number.
         epoch : int
             Epoch number of saved model.
-
+        remove_amp_cast : bool, optional
+            Whether to remove the amp_cast and amp_multicast operators, before saving the model.
         Returns
         -------
         symbol_filename : str
@@ -1271,12 +1321,12 @@ class HybridBlock(Block):
         arg_names = set(sym.list_arguments())
         aux_names = set(sym.list_auxiliary_states())
         arg_dict = {}
-        for name, param in self.collect_params().items():
-            if name in arg_names:
-                arg_dict['arg:%s'%name] = param._reduce()
+        for param in self.collect_params().values():
+            if param.name in arg_names:
+                arg_dict['arg:%s'%param.name] = param._reduce()
             else:
-                assert name in aux_names
-                arg_dict['aux:%s'%name] = param._reduce()
+                assert param.name in aux_names
+                arg_dict['aux:%s'%param.name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         params_filename = '%s-%04d.params'%(path, epoch)
         save_fn(params_filename, arg_dict)
@@ -1308,8 +1358,8 @@ class HybridBlock(Block):
         self._callback = c_callback
         self._monitor_all = monitor_all
         for cld in self._children.values():
-            cld._callback = c_callback
-            cld._monitor_all = monitor_all
+            cld()._callback = c_callback
+            cld()._monitor_all = monitor_all
 
     def __call__(self, x, *args):
         if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:
@@ -1371,7 +1421,7 @@ class HybridBlock(Block):
 
                 return self.hybrid_forward(ndarray, x, *args, **params)
         params = {i: j.var() for i, j in self._reg_params.items()}
-        with self.name_scope():
+        with self._scope:
             return self.hybrid_forward(symbol, x, *args, **params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
@@ -1387,18 +1437,6 @@ class HybridBlock(Block):
         # pylint: disable= invalid-name
         raise NotImplementedError
 
-def _common_prefix(names):
-    """Get the common prefix for all names"""
-    if not names:
-        return ''
-    prefix = names[0]
-    for name in names:
-        i = 0
-        while i < len(prefix) and i < len(name) and prefix[i] == name[i]:
-            i += 1
-        prefix = prefix[:i]
-    return prefix
-
 
 class SymbolBlock(HybridBlock):
     """Construct block from symbol. This is useful for using pre-trained models
@@ -1411,22 +1449,21 @@ class SymbolBlock(HybridBlock):
         The desired output for SymbolBlock.
     inputs : Symbol or list of Symbol
         The Variables in output's argument that should be used as inputs.
-    params : ParameterDict
+    params : dict
         Parameter dictionary for arguments and auxililary states of outputs
         that are not inputs.
 
     Examples
     --------
     >>> # To extract the feature from fc1 and fc2 layers of AlexNet:
-    >>> alexnet = gluon.model_zoo.vision.alexnet(pretrained=True, ctx=mx.cpu(),
-                                                 prefix='model_')
+    >>> alexnet = gluon.model_zoo.vision.alexnet(pretrained=True, ctx=mx.cpu())
     >>> inputs = mx.sym.var('data')
     >>> out = alexnet(inputs)
     >>> internals = out.get_internals()
     >>> print(internals.list_outputs())
-    ['data', ..., 'model_dense0_relu_fwd_output', ..., 'model_dense1_relu_fwd_output', ...]
-    >>> outputs = [internals['model_dense0_relu_fwd_output'],
-                   internals['model_dense1_relu_fwd_output']]
+    ['data', ..., 'features_9_act_fwd_output', ..., 'features_11_act_fwd_output', ...]
+    >>> outputs = [internals['features_9_act_fwd_output'],
+                   internals['features_11_act_fwd_output']]
     >>> # Create SymbolBlock that shares parameters with alexnet
     >>> feat_model = gluon.SymbolBlock(outputs, inputs, params=alexnet.collect_params())
     >>> x = mx.nd.random.normal(shape=(16, 3, 224, 224))
@@ -1434,8 +1471,8 @@ class SymbolBlock(HybridBlock):
     """
     @staticmethod
     def imports(symbol_file, input_names, param_file=None, ctx=None):
-        """Import model previously saved by `gluon.HybridBlock.export` or
-        `Module.save_checkpoint` as a `gluon.SymbolBlock` for use in Gluon.
+        """Import model previously saved by `gluon.HybridBlock.export`
+        as a `gluon.SymbolBlock` for use in Gluon.
 
         Parameters
         ----------
@@ -1455,8 +1492,7 @@ class SymbolBlock(HybridBlock):
 
         Examples
         --------
-        >>> net1 = gluon.model_zoo.vision.resnet18_v1(
-        ...     prefix='resnet', pretrained=True)
+        >>> net1 = gluon.model_zoo.vision.resnet18_v1(pretrained=True)
         >>> net1.hybridize()
         >>> x = mx.nd.random.normal(shape=(1, 3, 32, 32))
         >>> out1 = net1(x)
@@ -1480,7 +1516,7 @@ class SymbolBlock(HybridBlock):
             inputs = [symbol.var(i).as_np_ndarray() if is_np_array() else symbol.var(i) for i in input_names]
         ret = SymbolBlock(sym, inputs)
         if param_file is not None:
-            ret.collect_params().load(param_file, ctx=ctx, cast_dtype=True, dtype_source='saved')
+            ret.load_parameters(param_file, ctx=ctx, cast_dtype=True, dtype_source='saved')
         return ret
 
     def __repr__(self):
@@ -1493,9 +1529,17 @@ class SymbolBlock(HybridBlock):
                         modstr=modstr)
 
     def __init__(self, outputs, inputs, params=None):
-        super(SymbolBlock, self).__init__(prefix=None, params=None)
-        self._prefix = ''
-        self._params = ParameterDict('', params)
+        super(SymbolBlock, self).__init__()
+        structure = defaultdict(list)
+        if params is None:
+            params = {}
+            self._structured_named = False
+        elif any(k.find('.') != -1 for k in params):
+            self._structured_named = True
+            for k, v in params.items():
+                structure[v.name].append(k)
+        params = {p.name : p for p in params.values()}
+
         if isinstance(inputs, symbol.Symbol) and len(inputs.list_outputs()) == 1:
             inputs = [inputs]
         if isinstance(outputs, (list, tuple)) and len(outputs) == 1:
@@ -1529,17 +1573,31 @@ class SymbolBlock(HybridBlock):
 
         arg_types, aux_types = _infer_param_types(syms, out, arg_params, aux_params)
 
+        def _set_params_attr(name, **kwargs):
+            if params.get(name) is None:
+                param = Parameter(**kwargs)
+                param._name = name
+            else:
+                param = params[name]
+                param._check_and_setattr(**kwargs)
+            if self._structured_named:
+                lis = structure[name]
+                assert len(lis) > 0, "Can not find structured name for Parameter %s in 'params'. " \
+                    "Please check 'params' is complete!" % name
+                for structured_name in lis:
+                    self._reg_params[structured_name] = param
+            else:
+                self._reg_params[name] = param
+
         for i, arg in enumerate(arg_params):
             if arg not in input_names:
-                self.params.get(arg, allow_deferred_init=True, dtype=arg_types[i])
+                _set_params_attr(name=arg, allow_deferred_init=True, dtype=arg_types[i])
 
         for i, aux in enumerate(aux_params):
             if aux not in input_names:
-                self.params.get(aux, grad_req='null', allow_deferred_init=True, dtype=aux_types[i])
+                _set_params_attr(name=aux, grad_req='null', allow_deferred_init=True, dtype=aux_types[i])
 
         self._cached_graph = syms, out
-        len_prefix = len(_common_prefix(list(self._params.keys())))
-        self._reg_params = {key[len_prefix:]: val for key, val in self._params.items()}
 
     def forward(self, x, *args):
         if dc.is_deferred_compute():

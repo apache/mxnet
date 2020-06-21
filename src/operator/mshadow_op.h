@@ -114,8 +114,10 @@ using std::is_integral;
 
 #define MXNET_BINARY_LOGIC_OP_NC(name, expr) \
   struct name : public mxnet_op::tunable  { \
-    template<typename DType> \
-    MSHADOW_XINLINE static bool Map(DType a, DType b) { \
+    template<typename DType, typename EType> \
+    MSHADOW_XINLINE static bool Map(DType lhs, EType rhs) { \
+      double a = static_cast<double>(lhs); \
+      double b = static_cast<double>(rhs); \
       return (expr); \
     } \
   }
@@ -148,7 +150,6 @@ struct true_divide : public mxnet_op::tunable  {
     return static_cast<float>(a) / static_cast<float>(b);
   }
 
-#ifndef _WIN32
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
@@ -166,7 +167,6 @@ struct true_divide : public mxnet_op::tunable  {
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return static_cast<double>(a) / b;
   }
-#endif
 };
 
 struct rtrue_divide : public mxnet_op::tunable  {
@@ -182,7 +182,6 @@ struct rtrue_divide : public mxnet_op::tunable  {
     return static_cast<float>(b) / static_cast<float>(a);
   }
 
-#ifndef _WIN32
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
@@ -200,14 +199,12 @@ struct rtrue_divide : public mxnet_op::tunable  {
   MSHADOW_XINLINE static double Map(DType a, double b) {
     return b / static_cast<double>(a);
   }
-#endif
 };
 
 MXNET_BINARY_MATH_OP_NC(left, a);
 
 MXNET_BINARY_MATH_OP_NC(right, b);
 
-#ifndef _WIN32
 struct mixed_plus {
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
@@ -345,8 +342,6 @@ struct mixed_rpower {
     return static_cast<double>(math::pow(b, a));
   }
 };
-#endif
-
 
 #pragma GCC diagnostic push
 #if __GNUC__ >= 7
@@ -582,7 +577,6 @@ MXNET_BINARY_MATH_OP(rpower, math::pow(b, a));
 MXNET_BINARY_MATH_OP(rpower_grad, math::id(a) * math::log(b));
 
 MXNET_BINARY_MATH_OP(arctan2, math::atan2(a, b));
-
 MXNET_BINARY_MATH_OP(arctan2_grad, math::id(b) / (math::id(a * a + b * b)));
 
 MXNET_BINARY_MATH_OP(arctan2_rgrad, -math::id(a) / (math::id(a * a + b * b)));
@@ -746,9 +740,27 @@ MXNET_BINARY_MATH_OP_NC(minus_sign, a - b > DType(0) ? DType(1) : -DType(1));
 
 MXNET_BINARY_MATH_OP(rminus, b - a);
 
+MXNET_BINARY_MATH_OP_NC(posone, 1);
+
+MXNET_BINARY_MATH_OP_NC(negone, -1);
+
 MXNET_BINARY_MATH_OP(div_grad, 1.0f / math::id(b));
 
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t div_grad::Map<mshadow::half::half2_t>
+                                               (mshadow::half::half2_t a,
+                                                mshadow::half::half2_t b) {
+  return mshadow::half::half2_t(1) / b;
+}
+
 MXNET_BINARY_MATH_OP(div_rgrad, -math::id(a) / math::sqr(b));
+
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t div_rgrad::Map<mshadow::half::half2_t>
+                                               (mshadow::half::half2_t a,
+                                                mshadow::half::half2_t b) {
+  return -a / (b * b);
+}
 
 MXNET_BINARY_MATH_OP(rdiv, math::id(b) / math::id(a));
 
@@ -799,6 +811,52 @@ struct mod : public mxnet_op::tunable {
   }
 };
 
+struct mixed_mod {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return mod::Map(static_cast<mshadow::half::half_t>(a), b);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return mod::Map(static_cast<float>(a), b);
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return mod::Map(static_cast<double>(a), b);
+  }
+};
+
+struct mixed_rmod {
+  template<typename DType,
+           typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static mshadow::half::half_t Map(DType a, mshadow::half::half_t b) {
+    return mod::Map(b, static_cast<mshadow::half::half_t>(a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static float Map(DType a, float b) {
+    return mod::Map(b, static_cast<float>(a));
+  }
+
+  template<typename DType,
+           typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
+                                   std::is_same<DType, float>::value ||
+                                   std::is_integral<DType>::value, int>::type = 0>
+  MSHADOW_XINLINE static double Map(DType a, double b) {
+    return mod::Map(b, static_cast<double>(a));
+  }
+};
+
 struct fmod : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
@@ -821,6 +879,13 @@ struct rfmod : public mxnet_op::tunable {
   }
 };
 
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t mod::Map<mshadow::half::half2_t>
+                                               (mshadow::half::half2_t a,
+                                                mshadow::half::half2_t b) {
+  return a%b;
+}
+
 struct mod_grad : public mxnet_op::tunable  {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
@@ -841,6 +906,19 @@ MSHADOW_XINLINE mshadow::half::half_t mod_grad::Map<mshadow::half::half_t>
                                                    (mshadow::half::half_t a,
                                                     mshadow::half::half_t b) {
   return mshadow::half::half_t(1.0f);
+}
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t mod_grad::Map<mshadow::half::half2_t>
+                                                    (mshadow::half::half2_t a,
+                                                     mshadow::half::half2_t b) {
+  mshadow::half::half2_t result = mshadow::half::half2_t();
+#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
+  result.half2_ = ::__float2half2_rn(1.0f);
+#else
+  result.half_t2[0] = mshadow::half::half_t(0.0f);
+  result.half_t2[1] = mshadow::half::half_t(1.0f);
+#endif
+  return result;
 }
 
 struct mod_rgrad : public mxnet_op::tunable {
@@ -863,6 +941,19 @@ MSHADOW_XINLINE mshadow::half::half_t mod_rgrad::Map<mshadow::half::half_t>
                                                     (mshadow::half::half_t a,
                                                      mshadow::half::half_t b) {
   return mshadow::half::half_t(-::floorf(static_cast<float>(a/b)));
+}
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
+                                                     (mshadow::half::half2_t a,
+                                                      mshadow::half::half2_t b) {
+#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
+  return mshadow::half::half2_t(__hneg2(::h2floor((a/b).half2_)));
+#else
+  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(a.half_t2[0]/b.half_t2[0]))),
+                                mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(a.half_t2[1]/b.half_t2[1]))));
+#endif
 }
 
 struct rmod : public mxnet_op::tunable {
@@ -900,6 +991,13 @@ struct rmod : public mxnet_op::tunable {
   }
 };
 
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t rmod::Map<mshadow::half::half2_t>
+                                                (mshadow::half::half2_t a,
+                                                 mshadow::half::half2_t b) {
+  return b%a;
+}
+
 struct rmod_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
@@ -920,6 +1018,19 @@ MSHADOW_XINLINE mshadow::half::half_t rmod_grad::Map<mshadow::half::half_t>
                                                    (mshadow::half::half_t a,
                                                     mshadow::half::half_t b) {
   return mshadow::half::half_t(-::floorf(static_cast<float>(b/a)));
+}
+template<>
+MSHADOW_XINLINE mshadow::half::half2_t rmod_grad::Map<mshadow::half::half2_t>
+                                                     (mshadow::half::half2_t a,
+                                                      mshadow::half::half2_t b) {
+#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
+  return mshadow::half::half2_t(::__hneg2(::h2floor((b/a).half2_)));
+#else
+  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(b.half_t2[0]/a.half_t2[0]))),
+                                mshadow::half::half_t(-::floorf(
+                                  static_cast<float>(b.half_t2[1]/a.half_t2[1]))));
+#endif
 }
 
 struct clip : public mxnet_op::tunable {

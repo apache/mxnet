@@ -112,41 +112,6 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
     }
   }
 
-  private def checkRegression(model: Symbol,
-                              forward: Float => Float,
-                              backward: (Float, Float) => Float) = {
-    val shape = Shape(3, 1)
-    val arrData = Random.uniform(-1, 1, shape)
-    val arrLabel = Random.uniform(0, 1, Shape(shape.head))
-    val arrGrad = NDArray.empty(shape)
-    val exec1 = model.bind(Context.cpu(),
-      args = Array(arrData, arrLabel), argsGrad = Map("data" -> arrGrad))
-    exec1.forward()
-    assert(exec1.outputs(0).shape === shape)
-    val out1 = exec1.outputs(0).toArray
-    val npout = arrData.toArray.map(forward(_))
-    assert(CheckUtils.reldiff(npout, out1) < 1e-6f)
-
-    exec1.backward()
-    // arrData shape: Vector(3, 1)
-    // arrLabel shape: Vector(3)
-    val npoutBack = (npout zip arrLabel.toArray).map { case (data, label) =>
-      backward(data, label)
-    }
-    assert(CheckUtils.reldiff(npoutBack, arrGrad.toArray) < 1e-6f)
-  }
-
-  test("regression") {
-    checkRegression(Symbol.LogisticRegressionOutput()()(
-      Map("data" -> Symbol.Variable("data"), "label" -> Symbol.Variable("label"))),
-      (x: Float) => 1.0f / (1.0f + Math.exp(-x).toFloat),
-      (x: Float, y: Float) => x - y)
-    checkRegression(Symbol.LinearRegressionOutput()()(
-      Map("data" -> Symbol.Variable("data"), "label" -> Symbol.Variable("label"))),
-      (x: Float) => x,
-      (x: Float, y: Float) => x - y)
-  }
-
   // TODO: test softmax
 
   test("swap axes") {
@@ -191,6 +156,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("scalar op") {
+    CancelTestUtil.assumeStandardDecimalSeparator()
+
     val data = Symbol.Variable("data")
     val shape = Shape(3, 4)
     val dataTmp = NDArray.ones(shape) * 5
@@ -256,6 +223,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("symbol pow") {
+    CancelTestUtil.assumeStandardDecimalSeparator()
+
     val shape = Shape(1, 1)
 
     val data = Symbol.Variable("data")
@@ -277,6 +246,8 @@ class OperatorSuite extends FunSuite with BeforeAndAfterAll
   }
 
   test("pow fn") {
+    CancelTestUtil.assumeStandardDecimalSeparator()
+
     val shape = Shape(3, 4)
     val exp = Symbol.Variable("exp")
     import SymbolConversions._

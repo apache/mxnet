@@ -110,7 +110,7 @@ void get_expected_results(const mxnet::cpp::Symbol &sym,
     int num_output = 0;
     const int *stypes;
     int ret4 = MXInvokeCachedOpEx(*hdl, (*arr_handles)[i].size(), (*arr_handles)[i].data(),
-                                  &num_output, &nd_ptrs[i], &stypes);
+                                  cpu::kDevMask, 0, &num_output, &nd_ptrs[i], &stypes);
     if (ret4 < 0) {
       LOG(FATAL) << MXGetLastError();
     }
@@ -158,8 +158,8 @@ inline void get_expected_results_multiple(
       int num_output = 0;
       const int *stypes;
       int ret4 = MXInvokeCachedOpEx(*hdl, (*arr_handles)[i][j].size(),
-                                    (*arr_handles)[i][j].data(), &num_output,
-                                    &nd_ptrs[i][j], &stypes);
+                                    (*arr_handles)[i][j].data(), cpu::kDevMask, 0,
+                                    &num_output, &nd_ptrs[i][j], &stypes);
       if (ret4 < 0) {
         LOG(FATAL) << MXGetLastError();
       }
@@ -309,7 +309,8 @@ void run_inference(const std::string& model,
         const int *stypes;
         int ret = MXInvokeCachedOpEx(
             hdl2, arr_handles2[i][num].size(), arr_handles2[i][num].data(),
-            &num_output, &(cached_op_handles[i * num_threads + num]), &stypes);
+            cpu::kDevMask, 0, &num_output, &(cached_op_handles[i * num_threads + num]),
+            &stypes);
         if (ret < 0) {
             LOG(FATAL) << MXGetLastError();
         }
@@ -492,7 +493,8 @@ void run_inference_unsupported(const std::string& model,
         const int *stypes;
         int ret = MXInvokeCachedOpEx(
             hdl2, arr_handles2[i][num].size(), arr_handles2[i][num].data(),
-            &num_output, &(cached_op_handles[i * num_threads + num]), &stypes);
+            cpu::kDevMask, 0, &num_output, &(cached_op_handles[i * num_threads + num]),
+            &stypes);
         if (ret < 0) {
           LOG(FATAL) << MXGetLastError();
         }
@@ -646,31 +648,5 @@ TEST(ThreadSafety, Engine) {
   mxnet::cpp::NDArray::WaitAll();
   mxnet::test::AssertEqual(output_mx_arr, result_expected, 1e-2, 1e-5);
   mxnet::cpp::NDArray::WaitAll();
-}
-
-TEST(ThreadSafety, CachedOpFullModel) {
-  std::vector<std::string> models_list = {
-      "imagenet1k-resnet-18", "imagenet1k-resnet-152", "imagenet1k-resnet-50"};
-  if (mxnet::test::thread_safety_force_cpu) {
-    models_list.push_back("imagenet1k-resnet-152-subgraph");
-  }
-  for (const auto &model : models_list) {
-    run_inference(model, 1, true, 20);
-    run_inference(model, 2, true, 20);
-    run_inference(model, 4, true, 5);
-    run_inference(model, 4, true, 20);
-    run_inference(model, 4, false, 20);
-    run_inference(model, 8, true, 20);
-    // static_alloc = true
-    run_inference(model, 2, true, 20, true);
-    run_inference(model, 4, true, 5, true);
-    run_inference(model, 4, true, 20, true);
-    run_inference(model, 8, true, 20, true);
-    // static_alloc = true, static_shape = true
-    run_inference(model, 4, true, 20, true, true);
-    run_inference(model, 8, true, 20, true, true);
-    // the below line may hang
-    // run_inference_unsupported(model, 32, false, 20);
-  }
 }
 #endif

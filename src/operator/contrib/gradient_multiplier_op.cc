@@ -76,9 +76,7 @@ In forward pass it acts as an identity transform. During backpropagation it
 multiplies the gradient from the subsequent level by a scalar factor lambda and passes it to
 the preceding layer.
 )code" ADD_FILELINE)
-.set_attr_parser([](NodeAttrs* attrs) {
-    attrs->parsed = std::stod(attrs->dict["scalar"]);
-  })
+.set_attr_parser(ParamParser<NumpyBinaryScalarParam>)
 .set_attr<FInferStorageType>("FInferStorageType", ElemwiseStorageType<1, 1, false, true, true>)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::IdentityCompute<cpu>)
 .set_attr<FComputeEx>("FComputeEx<cpu>", UnaryOp::IdentityComputeEx<cpu>)
@@ -87,7 +85,7 @@ the preceding layer.
   [](const NodeAttrs& attrs){
     return std::vector<bool>{true};
   })
-.add_argument("scalar", "float", "lambda multiplier");
+.add_arguments(NumpyBinaryScalarParam::__FIELDS__());
 
 MXNET_OPERATOR_REGISTER_BINARY_SCALAR(_contrib_backward_gradientmultiplier)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)

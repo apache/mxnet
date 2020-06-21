@@ -19,7 +19,7 @@
 from __future__ import absolute_import
 from distutils.version import StrictVersion
 import sys
-import unittest
+import pytest
 import itertools
 import numpy as _np
 import platform
@@ -42,6 +42,7 @@ set_default_context(mx.gpu(0))
 
 @with_seed()
 @use_np
+@pytest.mark.serial
 def test_np_fallback_decorator():
     @numpy_fallback
     def dnp_func(a, b=None, split_inputs=(), ret_type=list):

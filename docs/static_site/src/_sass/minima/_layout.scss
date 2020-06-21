@@ -37,6 +37,14 @@
   .nav-trigger {
     display: none;
   }
+  
+  #global-search-mobile-border {
+    display: none;
+  }
+
+  .gs-search-border {
+    display: inline-block;
+  }
 
   .menu-icon {
     display: none;
@@ -79,6 +87,14 @@
       height: 36px;
       z-index: 2;
       cursor: pointer;
+    }
+
+    .gs-search-border {
+      display: none;
+    }
+
+    #global-search-mobile-border {
+      display: block;
     }
 
     .menu-icon {
@@ -347,4 +363,19 @@
     background-color: $color-mxnet;
     color: $grey-color-light;
   }
+}
+
+#forum::before,
+#mxnet-dev-communications::before,
+#social-media::before,
+#jira::before,
+#confluence-wiki::before,
+#setup-mxnet-for-development::before,
+#your-first-contribution::before {
+  display: block;
+  content: " ";
+  margin-top: -86px;
+  height: 86px;
+  visibility: hidden;
+  pointer-events: none;
 }

@@ -24,7 +24,7 @@ from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
 import numpy as np
-from common import assertRaises
+from common import assertRaises, xfail_when_nonstandard_decimal_separator
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
 
@@ -318,6 +318,7 @@ def test_sparse_nd_binary():
         check_binary(lambda x, y: x == y, stype)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sparse_nd_binary_scalar_op():
     N = 3

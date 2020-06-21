@@ -477,6 +477,7 @@ def test_buffer_load():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_ndarray_slice():
     shape = (10,)
     A = mx.nd.array(np.random.uniform(-10, 10, shape))
@@ -534,6 +535,7 @@ def test_ndarray_crop():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_ndarray_concatenate():
     axis = 1
     shapes = [(2, 3, 4, 2), (2, 2, 4, 2), (2, 1, 4, 2)]
@@ -596,6 +598,7 @@ def test_dot():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_reduce():
     sample_num = 300
     def test_reduce_inner(numpy_reduce_func, nd_reduce_func, multi_axes,
@@ -672,6 +675,7 @@ def test_reduce():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_broadcast():
     sample_num = 1000
     def test_broadcast_to():
@@ -735,6 +739,7 @@ def test_broadcast():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_broadcast_binary():
     N = 100
     def check_broadcast_binary(fn):
@@ -879,6 +884,7 @@ def test_linspace():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_order():
     ctx = default_context()
     dat_size = 5
@@ -1214,6 +1220,7 @@ def test_iter():
         assert same(y[i].asnumpy(), x[i].asnumpy())
 
 @with_seed()
+@pytest.mark.serial
 def test_cached():
     sym = mx.sym.Convolution(kernel=(3, 3), num_filter=10) + 2
     op = mx.nd.CachedOp(sym)
@@ -1282,6 +1289,7 @@ def test_output():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_ndarray_fluent():
     has_grad = set(['flatten', 'expand_dims', 'flip', 'tile', 'transpose', 'sum', 'nansum', 'prod',
                     'nanprod', 'mean', 'max', 'min', 'reshape', 'broadcast_to', 'split', 'split_v2',
@@ -1341,9 +1349,9 @@ def test_ndarray_fluent():
     check_fluent_regular('squeeze', {'axis': (1, 3)}, shape=(2, 1, 3, 1, 4))
 
 
-@pytest.mark.xfail(raises=ValueError)
 def test_bool_ambiguous():
-    bool(mx.nd.ones((2,3,4)))
+    with pytest.raises(ValueError):
+        bool(mx.nd.ones((2,3,4)))
 
 
 def test_bool():
@@ -1352,6 +1360,7 @@ def test_bool():
     assert bool(mx.nd.ones((1,)))
 
 
+@pytest.mark.serial
 def test_basic_indexing_is_contiguous():
     x_np = np.arange(np.prod((6, 7, 8, 9))).reshape((6, 7, 8, 9))
     x_mx = mx.nd.array(x_np)
@@ -1389,6 +1398,7 @@ def test_basic_indexing_is_contiguous():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_ndarray_indexing():
     def test_getitem(np_array, index, is_scalar=False):
         """`is_scalar` indicates whether we should expect a scalar for the result.
@@ -1746,6 +1756,7 @@ def test_ndarray_astype():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_norm(ctx=default_context()):
     try:
         import scipy
@@ -1791,6 +1802,7 @@ def test_ndarray_cpu_shared_ctx():
     assert(res.context == ctx)
 
 @with_seed()
+@pytest.mark.serial
 def test_dlpack():
     for dtype in [np.float32, np.int32]:
         for shape in [(3, 4, 5, 6), (2, 10), (15,)]:
@@ -2015,6 +2027,7 @@ def _test_update_ops_mutation_impl():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_update_ops_mutation():
     _test_update_ops_mutation_impl()
 
@@ -2022,6 +2035,7 @@ def test_update_ops_mutation():
 # Problem :
 # https://github.com/apache/incubator-mxnet/pull/15768#issuecomment-532046408
 @with_seed(412298777)
+@pytest.mark.serial
 def test_update_ops_mutation_failed_seed():
     # The difference was -5.9604645e-08 which was
     # lower than then `rtol` of 1e-07

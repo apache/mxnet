@@ -253,6 +253,7 @@ List of Contributors
 * [Oliver Kowalke](https://github.com/olk)
 * [Connor Goggins](https://github.com/connorgoggins)
 * [Deng, Wenqi](https://github.com/tobecontinued)
+* [Wei Chu](https://github.com/waytrue17)
 * [Yang Shi](https://github.com/ys2843)
 
 Label Bot

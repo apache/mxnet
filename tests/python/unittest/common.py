@@ -30,7 +30,15 @@ sys.path.insert(0, os.path.join(curr_path, '../../../python'))
 import models
 from contextlib import contextmanager
 import pytest
-import tempfile
+from tempfile import TemporaryDirectory
+import locale
+
+xfail_when_nonstandard_decimal_separator = pytest.mark.xfail(
+    locale.localeconv()["decimal_point"] != ".",
+    reason="Some operators break when the decimal separator is set to anything other than \".\". "
+    "These operators should be rewritten to utilize the new FFI. Please see #18097 for more "
+    "information."
+)
 
 def assertRaises(expected_exception, func, *args, **kwargs):
     try:
@@ -287,19 +295,6 @@ def setup_module():
     if os.getenv('MXNET_TEST_SEED') is not None:
         logger.warn('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
 
-try:
-    from tempfile import TemporaryDirectory
-except:  # Python 2 support
-    # really simple implementation of TemporaryDirectory
-    class TemporaryDirectory(object):
-        def __init__(self, suffix='', prefix='', dir=''):
-            self._dirname = tempfile.mkdtemp(suffix, prefix, dir)
-
-        def __enter__(self):
-            return self._dirname
-
-        def __exit__(self, exc_type, exc_value, traceback):
-            shutil.rmtree(self._dirname)
 
 def teardown_module():
     """

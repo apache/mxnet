@@ -17,15 +17,14 @@
 
 # coding: utf-8
 
-from __future__ import absolute_import
-from __future__ import print_function
-
 from collections import Counter
 
 from common import assertRaises
 from mxnet import ndarray as nd
 from mxnet.test_utils import *
 from mxnet.contrib import text
+
+import pytest
 
 
 def _get_test_str_of_tokens(token_delim, seq_delim):
@@ -518,6 +517,7 @@ def test_custom_embedding_with_vocabulary():
                         )
 
 
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18282')
 def test_composite_embedding_with_one_embedding():
     embed_root = 'embeddings'
     embed_name = 'my_embed'

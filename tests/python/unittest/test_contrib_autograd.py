@@ -18,7 +18,7 @@
 import mxnet.ndarray as nd
 from mxnet.contrib.autograd import *
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown_module
+from common import setup_module, with_seed, teardown_module, xfail_when_nonstandard_decimal_separator
 
 def autograd_assert(*args, **kwargs):
     func   = kwargs["func"]
@@ -34,6 +34,7 @@ def autograd_assert(*args, **kwargs):
     for a, b in zip(grad_vals, grad_res):
         assert same(a.asnumpy(), b.asnumpy())
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_unary_func():
     x = nd.uniform(shape=(4, 5))
