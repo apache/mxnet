@@ -23,7 +23,7 @@
 set -ex
 
  # Python 2.7 is installed by default, install 3.6 on top
-yum -y install https://repo.ius.io/ius-release-el7.rpm
+yum -y install https://centos7.iuscommunity.org/ius-release.rpm
 yum -y install python36u
 
 # Install PIP
