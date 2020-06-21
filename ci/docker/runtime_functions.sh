@@ -878,7 +878,7 @@ build_ubuntu_blc() {
 sanity_check() {
     set -ex
     tools/license_header.py check
-    make cpplint jnilint
+    make cpplint
     make pylint
     pytest -n 4 tests/tutorials/test_sanity_tutorials.py
 }
