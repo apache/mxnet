@@ -79,8 +79,8 @@ class EnumType:
 
 class Arg:
     typeDict = {'boolean':'bool',\
-        'boolean or None':'dmlc::optional<bool>',\
         'Shape(tuple)':'Shape',\
+        'Shape':'Shape',\
         'Symbol':'Symbol',\
         'NDArray':'Symbol',\
         'NDArray-or-Symbol':'Symbol',\
@@ -89,19 +89,26 @@ class Arg:
         'NDArray[]':'const std::vector<Symbol>&',\
         'caffe-layer-parameter':'::caffe::LayerParameter',\
         'NDArray-or-Symbol[]':'const std::vector<Symbol>&',\
-        'float':'mx_float',\
-        'real_t':'mx_float',\
+        'float':'float',\
+        'real_t':'float',\
         'int':'int',\
+        'long':'int64_t',\
         'int (non-negative)': 'uint32_t',\
         'long (non-negative)': 'uint64_t',\
-        'int or None':'dmlc::optional<int>',\
-        'float or None':'dmlc::optional<float>',\
         'long':'int64_t',\
         'double':'double',\
-        'double or None':'dmlc::optional<double>',\
-        'Shape or None':'dmlc::optional<Shape>',\
         'string':'const std::string&',\
-        'tuple of <float>':'nnvm::Tuple<mx_float>'}
+        'ptr':'void*',\
+        'tuple of <int>':'nnvm::Tuple<int>',\
+        'tuple of <long>':'nnvm::Tuple<int64_t>',\
+        'tuple of <int (non-negative)>':'nnvm::Tuple<uint32_t>',\
+        'tuple of <long (non-negative)>':'nnvm::Tuple<uint64_t>',\
+        'tuple of <float>':'nnvm::Tuple<float>',\
+        'tuple of <double>':'nnvm::Tuple<double>',\
+        }
+    # add optional types
+    for k, v in list(typeDict.items()):
+        typeDict[k + ' or None'] = 'dmlc::optional<{}>'.format(v)
     name = ''
     type = ''
     description = ''
@@ -119,9 +126,8 @@ class Arg:
         else:
             try:
                 self.type = self.typeDict[typeString.split(',')[0]]
-            except:
-                print('argument "%s" of operator "%s" has unknown type "%s"' % (argName, opName, typeString))
-                pass
+            except KeyError as e:
+                raise KeyError('argument "%s" of operator "%s" has unknown type "%s"' % (argName, opName, typeString))
         if typeString.find('default=') != -1:
             self.hasDefault = True
             self.defaultString = typeString.split('default=')[1].strip().strip("'")
@@ -137,9 +143,9 @@ class Arg:
                 else:
                     self.defaultString = "false"
             elif self.defaultString[0] == '(':
-                self.defaultString = 'Shape' + self.defaultString
+                self.defaultString = '{' + self.defaultString + '}'
             elif self.defaultString[0] == '[':
-                self.defaultString = 'Shape(' + self.defaultString[1:-1] + ")"
+                self.defaultString = '{' + self.defaultString[1:-1] + '}'
             elif self.type == 'dmlc::optional<int>':
                 self.defaultString = self.type + '(' + self.defaultString + ')'
             elif self.type == 'dmlc::optional<bool>':
@@ -308,13 +314,13 @@ class Op:
 
 def ParseAllOps():
     """
-    MXNET_DLL int MXSymbolListAtomicSymbolCreators(mx_uint *out_size,
+    MXNET_DLL int MXSymbolListAtomicSymbolCreators(uint32_t *out_size,
                                                    AtomicSymbolCreator **out_array);
 
     MXNET_DLL int MXSymbolGetAtomicSymbolInfo(AtomicSymbolCreator creator,
                                               const char **name,
                                               const char **description,
-                                              mx_uint *num_args,
+                                              uint32_t *num_args,
                                               const char ***arg_names,
                                               const char ***arg_type_infos,
                                               const char ***arg_descriptions,
@@ -355,47 +361,36 @@ def ParseAllOps():
             byref(nArgs), byref(argNames), byref(argTypes), \
             byref(argDescs), byref(varArgName), byref(return_type))
 
-        if name.value.decode('utf-8').startswith('_'):     # get rid of functions like __init__
-            continue
+        decoded_name = name.value.decode('utf-8')
+        if decoded_name.startswith('_'):
+            if decoded_name.startswith('_backward'):
+                continue
 
         args = []
 
-        for i in range(0, nArgs.value):
-            arg = Arg(name.value.decode('utf-8'),
-                      argNames[i].decode('utf-8'),
-                      argTypes[i].decode('utf-8'),
-                      argDescs[i].decode('utf-8'))
-            args.append(arg)
+        try:
+            for i in range(0, nArgs.value):
+                arg = Arg(decoded_name,
+                          argNames[i].decode('utf-8'),
+                          argTypes[i].decode('utf-8'),
+                          argDescs[i].decode('utf-8'))
+                args.append(arg)
+            op = Op(decoded_name, description.value.decode('utf-8'), args)
+            ret = ret + op.GetOpDefinitionString(True) + "\n"
+            ret2 = ret2 + op.GetOpDefinitionString(False) + "\n"
+        except Exception as e:
+            print(e)
+            continue
 
-        op = Op(name.value.decode('utf-8'), description.value.decode('utf-8'), args)
-
-        ret = ret + op.GetOpDefinitionString(True) + "\n"
-        ret2 = ret2 + op.GetOpDefinitionString(False) + "\n"
     return ret + ret2
 
 if __name__ == "__main__":
-    #et = EnumType(typeName = 'MyET')
-    #print(et.GetDefinitionString())
-    #print(et.GetEnumStringArray())
-    #arg = Arg()
-    #print(arg.ConstructEnumTypeName('SoftmaxActivation', 'act_type'))
-    #arg = Arg(opName = 'FullConnected', argName='act_type', \
-    #    typeString="{'elu', 'leaky', 'prelu', 'rrelu'},optional, default='leaky'", \
-    #    descString='Activation function to be applied.')
-    #print(arg.isEnum)
-    #print(arg.defaultString)
-    #arg = Arg("fc", "alpha", "float, optional, default=0.0001", "alpha")
-    #decl = "%s %s" % (arg.type, arg.name)
-    #if arg.hasDefault:
-    #    decl = decl + "=" + arg.defaultString
-    #print(decl)
-
     temp_file_name = ""
     output_file = '../include/mxnet-cpp/op.h'
     try:
         # generate file header
         patternStr = ("/*!\n"
-                      "*  Copyright (c) 2016 by Contributors\n"
+                      "*  Copyright (c) 2020 by Contributors\n"
                       "* \\file op.h\n"
                       "* \\brief definition of all the operators\n"
                       "* \\author Chuntao Hong, Xin Li\n"

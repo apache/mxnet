@@ -800,6 +800,13 @@ struct type_name_helper<mxnet::Tuple<T> > {
     return "tuple of <" + type_name<T>() + ">";
   }
 };
+
+template<typename T>
+struct type_name_helper<optional<mxnet::Tuple<T> >> {
+  static inline std::string value() {
+    return "tuple of <" + type_name<T>() + "> or None";
+  }
+};
 #endif
 }  // namespace dmlc
 
