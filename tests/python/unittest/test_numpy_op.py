@@ -3071,6 +3071,36 @@ def test_np_mixed_precision_binary_funcs():
             mx_test_x2 = mx.numpy.array(np_test_x2, dtype=rtype)
         rtol = 1e-2 if ltype is np.float16 or rtype is np.float16 else 1e-3
         atol = 1e-3 if ltype is np.float16 or rtype is np.float16 else 1e-5
+        print('\n')
+        print('------------------')
+        print('func:', func)
+        print('low:', low)
+        print('high:', high)
+        print('lgrad:', lgrad)
+        print('rgrad:', rgrad)
+        print('lshape:', lshape)
+        print('rshape:', rshape)
+        print('type1:', type1)
+        print('type2:', type2)
+        print('np_test_x1:',np_test_x1)
+        print('np_test_x1.dtype:',np_test_x1.dtype)
+        print('type(np_test_x1):',type(np_test_x1))
+        print('np_test_x1.shape:',np_test_x1.shape)
+        print('np_test_x2:',np_test_x2)
+        print('np_test_x2.dtype:',np_test_x2.dtype)
+        print('type(np_test_x2):',type(np_test_x2))
+        print('np_test_x2.shape:',np_test_x2.shape)
+        print('mx_test_x1:',mx_test_x1)
+        print('mx_test_x1.dtype:',mx_test_x1.dtype)
+        print('type(mx_test_x1):',type(mx_test_x1))
+        print('mx_test_x1.shape:',mx_test_x1.shape)
+        print('mx_test_x2:',mx_test_x2)
+        print('mx_test_x2.dtype:',mx_test_x2.dtype)
+        print('type(mx_test_x2):',type(mx_test_x2))
+        print('mx_test_x2.shape:',mx_test_x2.shape)
+        print('rtol:',rtol)
+        print('atol:',atol)
+        print('\n')
         if lshape and rshape:
             for hybridize in [True, False]:
                 if hybridize:
@@ -3081,10 +3111,12 @@ def test_np_mixed_precision_binary_funcs():
                 np_out = np_func(np_test_x1, np_test_x2)
                 with mx.autograd.record():
                     y = mx_func(mx_test_x1, mx_test_x2)
+                print("hybridize:", hybridize)
                 print("mx_test_x1:", mx_test_x1)
                 print("mx_test_x2:", mx_test_x2)
                 print("np_out:", np_out)
                 print("y:", y)
+                print('\n')
                 assert y.shape == np_out.shape
                 assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=rtol, atol=atol,
                                     use_broadcast=False, equal_nan=True)
