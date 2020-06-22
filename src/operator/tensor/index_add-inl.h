@@ -52,7 +52,7 @@ inline bool IndexModifyOpType(const nnvm::NodeAttrs& attrs,
   CHECK_NE((*in_attrs)[1], -1);
   CHECK_NE((*in_attrs)[2], -1);
   CHECK_EQ((*in_attrs)[0], (*in_attrs)[2])
-    << "index_add(a, ind, val) only support a.dtype == val.dtype";
+    << "index_add/index_update(a, ind, val) only support a.dtype == val.dtype";
   CHECK((*in_attrs)[1] == mshadow::kInt64 ||
         (*in_attrs)[1] == mshadow::kInt32)
     << "'ind' only support int dtype.";

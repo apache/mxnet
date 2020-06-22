@@ -39,15 +39,15 @@ def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
     rhs_arr = mx.nd.array(np.random.uniform(-1, 1, rshape))
     lhs_grad = mx.nd.empty(lshape)
     rhs_grad = mx.nd.empty(rshape)
-    executor = ret.bind(mx.Context('cpu'),
+    executor = ret._bind(mx.Context('cpu'),
                         args=[lhs_arr, rhs_arr],
                         args_grad=[lhs_grad, rhs_grad])
 
-    exec3 = ret.bind(mx.Context('cpu'),
+    exec3 = ret._bind(mx.Context('cpu'),
                      args=[lhs_arr, rhs_arr])
 
 
-    exec4 = ret.bind(mx.Context('cpu'),
+    exec4 = ret._bind(mx.Context('cpu'),
                      args={'rhs': rhs_arr, 'lhs': lhs_arr},
                      args_grad={'lhs': lhs_grad, 'rhs': rhs_grad})
 
@@ -141,26 +141,34 @@ def test_reshape():
     x = mx.sym.Variable('x')
     y = mx.sym.FullyConnected(x, num_hidden=4)
 
-    exe = y.simple_bind(mx.cpu(), x=(5,4), grad_req='null')
+    exe = y._simple_bind(mx.cpu(), x=(5,4), grad_req='null')
     exe.arg_arrays[0][:] = 1
     exe.arg_arrays[1][:] = mx.nd.ones((4,4))
     exe.arg_arrays[2][:] = 0
 
-    new_exe = exe.reshape(x=(3,4))
-    new_exe.forward(is_train=False)
+    exe.forward(is_train=False)
     # test sub exec forward
-    assert np.all(new_exe.outputs[0].asnumpy() == 4)
+    assert np.all(exe.outputs[0].asnumpy() == 4)
     # test shared memory
     assert np.all(exe.outputs[0].asnumpy()[:3] == 4)
     # test base exec forward
     exe.forward(is_train=False)
     assert np.all(exe.outputs[0].asnumpy() == 4)
 
-    # test sharing ndarray depending on new_shape
-    new_exe = exe.reshape(allow_up_sizing=True, x=(6,4))
     # data ndarray is not shared between exe and new_exe
-    new_exe.arg_arrays[0][:] = 0
-    assert np.all(exe.arg_arrays[0].asnumpy() == 1)
+    exe.arg_arrays[0][:] = 0
     # weight ndarray is shared between exe and new_exe
-    assert np.all(new_exe.arg_arrays[1].asnumpy() == 1)
+    assert np.all(exe.arg_arrays[1].asnumpy() == 1)
 
+@with_seed()
+def test_cached_op_init():
+    def check_init(static_alloc, static_shape):
+        out = mx.sym.zeros((3,3))
+        flags = [('static_alloc', static_alloc), ('static_shape', static_shape)]
+        exe = mx.ndarray.CachedOp(out, flags)
+        z = exe(None, default_ctx=mx.cpu())
+        assert np.all(z.asnumpy() == 0)
+
+    check_init(False, False)
+    check_init(True, False)
+    check_init(True, True)

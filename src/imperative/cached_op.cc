@@ -20,7 +20,7 @@
 #include <iostream>
 #include "./imperative_utils.h"
 #include "./cached_op.h"
-#include "../executor/exec_pass.h"
+#include "./exec_pass.h"
 #include "../profiler/profiler.h"
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
@@ -31,6 +31,13 @@ namespace mxnet {
 DMLC_REGISTER_PARAMETER(CachedOpConfig);
 
 constexpr uint32_t kEidNotExist = std::numeric_limits<uint32_t>::max();
+
+nnvm::Symbol CachedOp::GetOptimizedSymbol() const {
+  nnvm::Symbol ret;
+  ret.outputs = std::vector<nnvm::NodeEntry>(full_graph_.outputs.begin(),
+                                             full_graph_.outputs.begin() + num_outputs());
+  return ret.Copy();
+}
 
 CachedOp::CachedOp(
     const nnvm::Symbol& sym,
@@ -160,6 +167,7 @@ bool CachedOp::CheckDynamicShapeExists(const Context& default_ctx,
 }
 
 bool CachedOp::SetForwardGraph(
+    const Context& default_ctx,
     GraphInfo* info,
     const bool recording,
     const std::vector<NDArray*>& inputs) {
@@ -185,7 +193,7 @@ bool CachedOp::SetForwardGraph(
   match &= CheckAndInferShape(&g, std::move(shape_inputs), true,
                               {0, 0}, {0, 0}, &contain_dynamic_shape);
   match &= CheckAndInferType(&g, std::move(dtype_inputs), true);
-  exec::DevMaskVector dev_mask(g.indexed_graph().num_nodes(), inputs[0]->ctx().dev_mask());
+  exec::DevMaskVector dev_mask(g.indexed_graph().num_nodes(), default_ctx.dev_mask());
   match &= CheckAndInferStorageType(&g, std::move(dev_mask),
                                     std::move(storage_type_inputs), true);
 
@@ -624,7 +632,7 @@ OpStatePtr CachedOp::StaticForward(
   // and executors for multiple forward invokes of the same op.
   std::lock_guard<std::mutex> lock(state.mutex);
 
-  bool match = SetForwardGraph(&state.info, recording, inputs);
+  bool match = SetForwardGraph(default_ctx, &state.info, recording, inputs);
   match = match && state.recording == recording;
 
   nnvm::Graph& g = state.info.fwd_graph;
@@ -704,7 +712,7 @@ OpStatePtr CachedOp::DynamicForward(
     auto state_ptr = GetCachedOpState(default_ctx);
     auto& state = state_ptr.get_state<CachedOpState>();
     std::lock_guard<std::mutex> lock(state.mutex);
-    SetForwardGraph(&state.info, recording, inputs);
+    SetForwardGraph(default_ctx, &state.info, recording, inputs);
     runtime.info.fwd_graph = state.info.fwd_graph;
   }
   nnvm::Graph& g = runtime.info.fwd_graph;
@@ -759,7 +767,8 @@ OpStatePtr CachedOp::DynamicForward(
 OpStatePtr CachedOp::Forward(
     const std::shared_ptr<CachedOp>& op_ptr,
     const std::vector<NDArray*>& inputs,
-    const std::vector<NDArray*>& outputs) {
+    const std::vector<NDArray*>& outputs,
+    const Context& default_ctx) {
   static const auto cached_op = nnvm::Op::Get("_CachedOp");
 
   CHECK_EQ(inputs.size(), num_inputs());
@@ -780,7 +789,6 @@ OpStatePtr CachedOp::Forward(
     }
   }
 
-  Context default_ctx = inputs[0]->ctx();
   {
     auto state_ptr = GetCachedOpState(default_ctx);
     auto& state = state_ptr.get_state<CachedOpState>();
@@ -1099,7 +1107,9 @@ void CachedOpForward(const OpStatePtr& state_ptr,
     orig_is_train = Imperative::Get()->set_is_training(true);
   else
     orig_is_train = Imperative::Get()->is_training();
-  s.forward_state = s.op->Forward(nullptr, in_ptrs, out_ptrs);
+  CHECK(inputs.size() > 0) << "cached op forward requires at least 1 input";
+  Context default_ctx = inputs[0].ctx();
+  s.forward_state = s.op->Forward(nullptr, in_ptrs, out_ptrs, default_ctx);
   Imperative::Get()->set_is_training(orig_is_train);
   Imperative::Get()->set_is_recording(orig_is_record);
   // The arrays in out_ptrs may be changed by CachedOp.

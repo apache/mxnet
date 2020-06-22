@@ -49,11 +49,10 @@ If the test runs on MXNet binaries modify tests/nightly/JenkinsfileForBinaries -
 ### Currently Running Tests
 
 #### Tests on Source
-1. Amalgamation Tests
-2. Compilation Warnings
-3. Installation Guide
-4. MXNet Javascript Test
-5. Apache RAT check
+1. Compilation Warnings
+2. Installation Guide
+3. MXNet Javascript Test
+4. Apache RAT check
 
 #### Tests on Binaries
 1. Image Classification Test

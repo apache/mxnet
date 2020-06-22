@@ -64,7 +64,7 @@ def test_MNISTIter(tmpdir):
     train_dataiter.iter_next()
     label_1 = train_dataiter.getlabel().asnumpy().flatten()
     assert(sum(label_0 - label_1) == 0)
-
+    mx.nd.waitall()
 
 def test_Cifar10Rec(tmpdir):
     path = str(tmpdir)

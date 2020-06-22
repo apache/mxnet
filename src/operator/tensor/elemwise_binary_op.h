@@ -201,33 +201,6 @@ class ElemwiseBinaryOp : public OpBase {
     }
   }
 
-  template<typename xpu, typename LOP, typename ROP>
-  static inline void DnsCsrCsrOpBackward(const nnvm::NodeAttrs &attrs,
-                                         const OpContext &ctx,
-                                         const std::vector<NDArray> &inputs,
-                                         const std::vector<OpReqType> &req,
-                                         const std::vector<NDArray> &outputs) {
-    const bool supported_ops = std::is_same<mshadow_op::right, LOP>::value &&
-                                std::is_same<mshadow_op::left, ROP>::value;
-    CHECK(supported_ops)
-      << "Only backward for mul is supported (LOP should be right, ROP should be left)";
-    const NDArray& out_grad = inputs[0];
-    const NDArray& lhs_in = inputs[1];
-    const NDArray& rhs_in = inputs[2];
-    const NDArray& lhs_grad = outputs[0];
-    const NDArray& rhs_grad = outputs[1];
-    const bool reverse = (outputs[0].storage_type() == kCSRStorage);
-    if (reverse) {
-      DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, out_grad, rhs_in, req[0], lhs_grad, false);
-      Compute<xpu, mshadow_op::mul>(attrs, ctx, {out_grad.data(), lhs_in.data()}, {req[1]},
-                                    {rhs_grad.data()});
-    } else {
-      DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, out_grad, lhs_in, req[1], rhs_grad, false);
-      Compute<xpu, mshadow_op::mul>(attrs, ctx, {out_grad.data(), rhs_in.data()}, {req[0]},
-                                    {lhs_grad.data()});
-    }
-  }
-
  public:
   /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
   template<typename OP>
@@ -827,9 +800,7 @@ template<typename xpu, typename OP>
     });
   }
 
-  template<
-    typename xpu, typename LOP, typename ROP,
-    bool in0_ok_dense = false, bool in1_ok_dense = false, bool in2_ok_dense = false>
+  template<typename xpu, typename LOP, typename ROP>
   static inline void BackwardUseInEx(const nnvm::NodeAttrs &attrs,
                                      const OpContext &ctx,
                                      const std::vector<NDArray> &inputs,
@@ -845,14 +816,10 @@ template<typename xpu, typename OP>
         (lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
         (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
       // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
-      RspRspOpBackward<xpu, LOP, ROP, in0_ok_dense, in1_ok_dense, in2_ok_dense>(
+      RspRspOpBackward<xpu, LOP, ROP, false, false, false>(
         attrs, ctx, inputs, req, outputs, BackwardUseIn<xpu, LOP, ROP>);
-    }
-    if (((lhs_grad_stype == kDefaultStorage && rhs_grad_stype == kCSRStorage) ||
-         (lhs_grad_stype == kCSRStorage && rhs_grad_stype == kDefaultStorage)) &&
-        out_grad_stype == kDefaultStorage) {
-      // dns, csr, dns -> [csr, dns] / csr, dns, dns -> [dns, csr]
-      DnsCsrCsrOpBackward<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
+    } else {
+      LOG(FATAL) << "Not Implemented";
     }
   }
 };  // class ElemwiseBinaryOp

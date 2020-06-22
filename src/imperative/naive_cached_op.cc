@@ -20,7 +20,7 @@
 #include <iostream>
 #include "./imperative_utils.h"
 #include "./naive_cached_op.h"
-#include "../executor/exec_pass.h"
+#include "./exec_pass.h"
 #include "../profiler/profiler.h"
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
@@ -30,11 +30,11 @@ namespace mxnet {
 OpStatePtr NaiveCachedOp::Forward(
     const std::shared_ptr<CachedOp>& op_ptr,
     const std::vector<NDArray*>& inputs,
-    const std::vector<NDArray*>& outputs) {
+    const std::vector<NDArray*>& outputs,
+    const Context& default_ctx) {
 
   CHECK_EQ(inputs.size(), num_inputs());
 
-  Context default_ctx = inputs[0]->ctx();
   {
     auto state_ptr = GetCachedOpState(default_ctx);
     auto& state = state_ptr.get_state<CachedOpState>();
@@ -60,7 +60,7 @@ OpStatePtr NaiveCachedOp::Forward(
       auto state_ptr = GetCachedOpState(default_ctx);
       auto& state = state_ptr.get_state<CachedOpState>();
       std::lock_guard<std::mutex> lock(state.mutex);
-      SetForwardGraph(&state.info, recording, inputs);
+      SetForwardGraph(default_ctx, &state.info, recording, inputs);
       runtime.info.fwd_graph = state.info.fwd_graph;
     }
     nnvm::Graph& g = runtime.info.fwd_graph;

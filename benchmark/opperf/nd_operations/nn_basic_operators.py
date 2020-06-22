@@ -29,11 +29,6 @@ from benchmark.opperf.rules.default_params import MX_OP_MODULE
 1. FullyConnected
 2. Dropout
 3. BatchNorm
-4. SoftmaxOutput
-5. LinearRegressionOutput
-6. LogisticRegressionOutput
-7. MAERegressionOutput
-8. SVMOutput
 9. L2Normalization
 10. LayerNorm
 11. InstanceNorm

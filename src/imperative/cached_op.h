@@ -30,6 +30,7 @@
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
 #include "./imperative_utils.h"
+#include "../nnvm/error.h"
 
 namespace mxnet {
 namespace {
@@ -45,6 +46,86 @@ std::string AddPrefix(const std::string& prefix,
                       const std::string& s) {
   return prefix + "_" + s;
 }
+
+nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
+  using nnvm::Op;
+  static size_t inplace_sum_cap = dmlc::GetEnv("MXNET_EXEC_INPLACE_GRAD_SUM_CAP", 8);
+  static const Op* ewise_plus_op = Op::Get("_grad_add");
+  static const Op* ewise_sum_op = Op::Get("ElementWiseSum");
+  static const Op* identity_op = Op::Get("identity");
+  static const Op* zeros_op = Op::Get("_zeros");
+  static const Op* zeros_like_op = Op::Get("zeros_like");
+
+  if (v.empty()) {
+    nnvm::ObjectPtr ng = nnvm::Node::Create();
+    ng->attrs.op = Op::Get("_zeros_without_dtype");
+    ng->attrs.name = "zeros_without_dtype";
+    ng->attrs.op->attr_parser(&(ng->attrs));
+    return nnvm::NodeEntry(std::move(ng), 0, 0);
+  }
+
+  // remove zero in the sum. at least keep 1.
+  auto begin = std::remove_if(v.begin(), v.end(), [](const nnvm::NodeEntry& nodeEntry) {
+     CHECK(nodeEntry.node);
+     return nodeEntry.node->op() == zeros_op || nodeEntry.node->op() == zeros_like_op;
+  });
+  if (begin == v.begin()) ++begin;
+  v.erase(begin, v.end());
+  CHECK(!v.empty());
+
+  if (v.size() == 1) {
+    return std::move(v[0]);
+  } else {
+    if (v.size() < inplace_sum_cap) {
+      nnvm::ObjectPtr sum_node = nnvm::Node::Create();
+      sum_node->attrs.op = ewise_sum_op;
+      sum_node->attrs.name = "sum_grad";
+      sum_node->attrs.dict["num_args"] = std::to_string(v.size());
+      sum_node->attrs.op->attr_parser(&(sum_node->attrs));
+      sum_node->inputs = std::move(v);
+      return nnvm::NodeEntry(std::move(sum_node), 0, 0);
+    } else {
+      // use a stream line of plus instead
+      nnvm::NodeEntry ret = v[0];
+      for (size_t i = 1; i < v.size(); ++i) {
+        // Add control flow dependency from to previous node
+        // This enforces the gradient sum order will be in the inverse
+        // order of forward traversal
+        // NOTE: adding control dependency can be dangerous and cause cycle in the dep.
+        // The curent usage is correct, because of the following invariant:
+        // assert: v[i-1] do not depend on v[i]
+        // To put in plain text: v is gradient vector that get pushed in the order
+        // that can generate them, which means if v[i] is not yet pushed,
+        // all previous gradient cannot depend on it.
+        // Note: For a symbol like the following:
+        // data = mx.sym.Variable('data')
+        // sym = data + data + data + data + data + data + data
+        // the node entries v passed in here are of the same node of
+        // op _identity_with_attr_like_rhs. We should skip adding a node
+        // to its own control_deps.
+        if (v[i-1].node != v[i].node) {
+          v[i].node->control_deps.push_back(ret.node);
+        }
+
+        std::ostringstream os;
+        os << "sum_grad_" << i;
+        nnvm::ObjectPtr x = nnvm::Node::Create();
+        x->attrs.op = ewise_plus_op;
+        x->attrs.name = os.str();
+        x->inputs = {ret, v[i]};
+        ret = nnvm::NodeEntry(std::move(x), 0, 0);
+      }
+      // identity node is used to avoid exposure of dummy plus node
+      // when its output get assigned to another space.
+      nnvm::ObjectPtr id_node = nnvm::Node::Create();
+      id_node->attrs.op = identity_op;
+      id_node->attrs.name = "sum_grad_final";
+      id_node->inputs = {ret};
+      return nnvm::NodeEntry{id_node, 0, 0};
+    }
+  }
+}
+
 
 /* \brief collect pointers to input and output ndarrays
  * into a single data structure, this data structure can
@@ -162,16 +243,22 @@ void CreateBackwardGraph(nnvm::Graph* fwd_graph,
     xs.emplace_back(indexed_graph[node_id].weak_ref.lock());
   }
 
-  CHECK(!xs.empty())
-    << "There are no inputs in computation graph that require gradients.";
-
-  *grad_graph = pass::MXGradient(
-    *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
-    exec::AggregateGradient, nullptr,
-    zero_ops, "_copy");
+  // There are inputs in computation graph that require gradients
+  if (!xs.empty()) {
+    try {
+      *grad_graph = pass::MXGradient(
+           *fwd_graph, fwd_graph->outputs, xs, *ograd_entries,
+           mxnet::AggregateGradient, nullptr,
+           zero_ops, "_copy");
+    } catch (const nnvm::pass::InvalidGraphError &e) {
+      *grad_graph = nnvm::Graph();
+    }
+  } else {
+    *grad_graph = nnvm::Graph();
+  }
 }
 
-/* \brief construct  fwd_graph, grad_graph and full_graph from symbol */
+/* \brief construct fwd_graph, grad_graph and full_graph from symbol */
 void CreateFullGraph(const nnvm::Symbol& sym,
                      nnvm::Graph* fwd_graph,
                      nnvm::Graph* grad_graph,
@@ -189,15 +276,16 @@ void CreateFullGraph(const nnvm::Symbol& sym,
   CreateBackwardGraph(fwd_graph, grad_graph, ograd_entries,
                       fwd_input_to_grad_output);
 
-  // Add backward graph outputs to full graph
   full_graph->outputs = fwd_graph->outputs;
-  for (const auto &i : grad_graph->outputs) full_graph->outputs.emplace_back(i);
+  // add backward graph outputs to full graph
+  for (const auto &i : grad_graph->outputs) {
+    full_graph->outputs.emplace_back(i);
+  }
 }
 
 /* \brief Set Ref counts for node entries for forward graph */
 void SetForwardRefCounts(nnvm::Graph *fwd_graph) {
   const auto& idx = fwd_graph->indexed_graph();
-  CHECK_GE(idx.input_nodes().size(), 1) << "CachedOp requires at least 1 input";
 
   std::vector<uint32_t> ref_count(idx.num_node_entries(), 0);
   for (const auto& i : idx.input_nodes()) ++ref_count[idx.entry_id(i, 0)];
@@ -371,6 +459,7 @@ class CachedOp {
       const nnvm::Symbol& sym,
       const std::vector<std::pair<std::string, std::string> >& flags);
   virtual ~CachedOp();
+  nnvm::Symbol GetOptimizedSymbol() const;
   uint32_t num_inputs() const {
     return fwd_graph_.indexed_graph().input_nodes().size();
   }
@@ -399,7 +488,8 @@ class CachedOp {
   virtual OpStatePtr Forward(
       const std::shared_ptr<CachedOp>& op_ptr,
       const std::vector<NDArray*>& inputs,
-      const std::vector<NDArray*>& outputs);
+      const std::vector<NDArray*>& outputs,
+      const Context &default_context);
   virtual void Backward(
       const bool retain_graph,
       const OpStatePtr& state,
@@ -496,6 +586,7 @@ class CachedOp {
 
   OpStatePtr GetCachedOpState(const Context& ctx);
   bool SetForwardGraph(
+      const Context& default_ctx,
       GraphInfo* info,
       const bool recording,
       const std::vector<NDArray*>& inputs);

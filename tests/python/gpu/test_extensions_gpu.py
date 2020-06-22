@@ -62,8 +62,8 @@ def test_custom_op_gpu():
     base = mx.sym.relu(d)
     in_grad = [mx.nd.empty((2,2), ctx=mx.gpu())]
     in_grad_base = [mx.nd.empty((2,2), ctx=mx.gpu())]
-    exe = e.bind(ctx=mx.gpu(), args={'c':b}, args_grad=in_grad)
-    exe_base = base.bind(ctx=mx.gpu(), args={'d':b}, args_grad=in_grad_base)
+    exe = e._bind(ctx=mx.gpu(), args={'c':b}, args_grad=in_grad)
+    exe_base = base._bind(ctx=mx.gpu(), args={'d':b}, args_grad=in_grad_base)
     out = exe.forward()
     out_base = exe_base.forward()
     assert_almost_equal(out_base[0].asnumpy(), out[0].asnumpy(), rtol=1e-3, atol=1e-3)
