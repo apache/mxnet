@@ -112,7 +112,6 @@ _WHITE_LIST = [
                'docs/static_site/src/assets/js/clipboard.js',
                'cmake/upstream/FindCUDAToolkit.cmake',
                'cmake/upstream/select_compute_arch.cmake',
-               'src/operator/numpy/np_einsum_op-inl.h',
 
                # Licensed under 2-Clause BSD in header
                'example/ssd/dataset/pycocotools/coco.py',
@@ -124,7 +123,13 @@ _WHITE_LIST = [
                'example/image-classification/predict-cpp/image-classification-predict.cc',
 
                # This file
-               'tools/license_header.py'
+               'tools/license_header.py',
+
+               # Github template
+               '.github/ISSUE_TEMPLATE/bug_report.md',
+               '.github/ISSUE_TEMPLATE/feature_request.md',
+               '.github/ISSUE_TEMPLATE/flaky_test.md',
+               '.github/PULL_REQUEST_TEMPLATE.md'
                ]
 
 # language extensions and the according commment mark
@@ -169,7 +174,8 @@ def _lines_have_apache_license(lines):
 def _file_listed_in_top_level_license(fname):
     with open(TOP_LEVEL_LICENSE_FILE, 'r', encoding="utf-8") as f:
         lines = f.readlines()
-    return any([fname in l for l in lines])
+    module = os.path.split(fname)[0] + '/LICENSE'
+    return any([fname in l or module in l for l in lines])
 
 
 def file_have_valid_license(fname):
