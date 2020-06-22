@@ -26,9 +26,9 @@
 #ifndef MXNET_STORAGE_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_STORAGE_MANAGER_H_
 
+#include "./storage_manager_helpers.h"
 #include <mxnet/storage.h>
 #include <cstddef>
-#include "./storage_manager_helpers.h"
 
 namespace mxnet {
 namespace storage {

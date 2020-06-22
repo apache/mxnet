@@ -26,8 +26,6 @@
 typedef  mxnet::common::cuda::DeviceStore CudaDeviceStore;
 #endif  // MXNET_USE_CUDA
 
-#include <thread>
-#include <sys/sysctl.h>
 #ifndef _WIN32
 #if __APPLE__
 #include <mach/vm_statistics.h>
@@ -36,27 +34,13 @@ typedef  mxnet::common::cuda::DeviceStore CudaDeviceStore;
 #include <mach/mach_host.h>
 #else
 #include <sys/sysinfo.h>
-#include <sys/mman.h>
-#include <sys/fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <sys/resource.h>
 #endif  // __APPLE__
 #else
 #include <Windows.h>
 #include <process.h>
 #endif  // _WIN32
 
-#include <unordered_map>
-#include <vector>
 #include <tuple>
-#include <atomic>
-#include <iostream>
-#include <mutex>
-#include <new>
-#include <string>
-#include <limits>
 
 namespace mxnet {
 namespace storage {
@@ -111,7 +95,7 @@ class ContextHelperCPU : public ContextHelper {
     if (KERN_SUCCESS != host_page_size(mach_port, &page_size) ||
         KERN_SUCCESS != host_statistics64(mach_port, HOST_VM_INFO,
                                           (host_info64_t)&vm_stats, &count)) {
-      LOG(FATAL) << "Cannot get memory informaition";
+      LOG(FATAL) << "Cannot get memory information";
     }
 
     const size_t free_memory = (uint64_t)vm_stats.free_count * (uint64_t)page_size;
