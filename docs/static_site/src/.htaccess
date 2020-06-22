@@ -23,7 +23,7 @@ RewriteOptions AllowNoSlash
 </IfModule>
 
 # TODO temporary fix for issue #18604
-Redirect 302 /api/r/docs/api/R-package/build/mxnet-r-reference-manual.pdf https://s3.amazonaws.com/mxnet-prod/docs/R/mxnet-r-reference-manual.pdf
+Redirect 302 /api/r/docs/api/R-package/build/mxnet-r-reference-manual.pdf https://mxnet-public.s3.us-east-2.amazonaws.com/docs/v1.x/mxnet-r-reference-manual.pdf
 Redirect 302 /api/scala/docs/api/ /versions/1.6/api/scala/docs/api/
 Redirect 302 /api/java/docs/api/ /versions/1.6/api/java/docs/api/
 Redirect 302 /api/clojure/docs/api/ /versions/1.6/api/clojure/docs/api/
