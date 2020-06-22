@@ -20,7 +20,7 @@
 #include <iostream>
 #include "./imperative_utils.h"
 #include "./cached_op.h"
-#include "../executor/exec_pass.h"
+#include "./exec_pass.h"
 #include "../profiler/profiler.h"
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"
@@ -33,7 +33,7 @@ DMLC_REGISTER_PARAMETER(CachedOpConfig);
 constexpr uint32_t kEidNotExist = std::numeric_limits<uint32_t>::max();
 
 nnvm::Symbol CachedOp::GetOptimizedSymbol() const {
-  Symbol ret;
+  nnvm::Symbol ret;
   ret.outputs = std::vector<nnvm::NodeEntry>(full_graph_.outputs.begin(),
                                              full_graph_.outputs.begin() + num_outputs());
   return ret.Copy();

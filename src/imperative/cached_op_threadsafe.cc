@@ -20,7 +20,7 @@
 #include <unordered_set>
 #include <iostream>
 #include "./imperative_utils.h"
-#include "../executor/exec_pass.h"
+#include "./exec_pass.h"
 #include "./cached_op_threadsafe.h"
 #include "../profiler/profiler.h"
 #include "../operator/operator_common.h"

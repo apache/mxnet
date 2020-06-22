@@ -30,7 +30,7 @@
 #include "../../src/operator/operator_common.h"
 #include "./test_legacy_op.h"
 #include "./test_core_op.h"
-#include "executor/exec_pass.h"
+#include "imperative/exec_pass.h"
 
 using namespace mxnet;
 

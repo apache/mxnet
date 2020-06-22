@@ -20,7 +20,7 @@
 #include <iostream>
 #include "./imperative_utils.h"
 #include "./naive_cached_op.h"
-#include "../executor/exec_pass.h"
+#include "./exec_pass.h"
 #include "../profiler/profiler.h"
 #include "../operator/operator_common.h"
 #include "../operator/subgraph/common.h"

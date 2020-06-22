@@ -50,10 +50,6 @@ core_logic: {
     custom_steps.test_unix_python3_gpu('gpu'),
     custom_steps.test_unix_python3_mkldnn_gpu('mkldnn_gpu'),
     custom_steps.test_unix_python3_mkldnn_nocudnn_gpu('mkldnn_gpu_nocudnn'),
-    custom_steps.test_unix_r_gpu('gpu'),
-    custom_steps.test_unix_cpp_gpu('cmake_gpu'),
-    custom_steps.test_unix_cpp_package_gpu('gpu_make'),
-    custom_steps.test_unix_scala_gpu('gpu_make'),
     // TODO(szha): fix and reenable the hanging issue. tracked in #18098
     // custom_steps.test_unix_distributed_kvstore_gpu('gpu'),
     custom_steps.test_unix_byteps_gpu('gpu'),

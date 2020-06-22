@@ -17,7 +17,6 @@
  * under the License.
  */
 #include <mxnet/operator.h>
-#include <mxnet/executor.h>
 #include <mxnet/imperative.h>
 #include <nnvm/pass_functions.h>
 #include <utility>
@@ -25,8 +24,7 @@
 #include <vector>
 #include <map>
 #include <string>
-#include "../executor/graph_executor.h"
-#include "../executor/exec_pass.h"
+#include "./exec_pass.h"
 #include "../c_api/c_api_common.h"
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
