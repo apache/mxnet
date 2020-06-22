@@ -383,7 +383,7 @@ def main() -> int:
 
     args = parser.parse_args()
 
-    command = list(chain(*args.command))
+    command = list(chain.from_iterable(args.command))
     docker_client = SafeDockerClient()
 
     environment = dict([(e.split('=')[:2] if '=' in e else (e, os.environ[e]))

@@ -237,7 +237,7 @@ def main():
 
     args = parser.parse_args()
     action = args.action[0]
-    files = list(chain(*args.file))
+    files = list(chain.from_iterable(args.file))
     if not files and action =='check':
         if under_git():
             logging.info("Git detected: Using files under version control")
