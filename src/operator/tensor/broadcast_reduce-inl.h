@@ -33,9 +33,6 @@
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
-#if MXNET_USE_CUDA
-#include "../../common/cuda/vectorization.cuh"
-#endif
 
 namespace mxnet {
 namespace op {

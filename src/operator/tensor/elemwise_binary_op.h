@@ -904,8 +904,4 @@ struct ElemwiseBinaryRTCBwdUseIn {
 }  // namespace op
 }  // namespace mxnet
 
-#ifdef __CUDACC__
-#include "elemwise_binary_op.cuh"
-#endif  // __CUDACC__
-
 #endif  // MXNET_OPERATOR_TENSOR_ELEMWISE_BINARY_OP_H_
