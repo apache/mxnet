@@ -16,6 +16,7 @@
 # under the License.
 
 import copy
+import pytest
 import numpy as np
 import mxnet as mx
 from mxnet import gluon
@@ -218,7 +219,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
         args_names = ["FreeVar" + str(i) for i, _ in enumerate(free_var_shapes)] \
                    + ["LoopVar" + str(i) for i, _ in enumerate(loop_var_shapes) if i >= loop_var_start]
         args_grad = None if not is_train else _zeros_like_dict(x for x in args_names)
-        executor = loop_result_sym.bind(
+        executor = loop_result_sym._bind(
             ctx=default_context(),
             args=_copy_args_dict(loop_result_sym.list_inputs()),
             args_grad=args_grad,
@@ -251,6 +252,7 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
 
 
 @with_seed()
+@pytest.mark.skip(reason="Bug in while loop op, tracked at incubator-mxnet/issues/18575")
 def test_while_loop_for_foreach():
 
     def make_true_cond():
@@ -876,7 +878,7 @@ def test_while_loop_nested():
             mx.sym.var("sc"),
         ]
         result_sym = mx.sym.Group(make_loop(i, j, x_sum, sc))
-        executor = result_sym.bind(
+        executor = result_sym._bind(
             ctx=default_context(),
             args=args,
             args_grad=args_grad,
@@ -958,7 +960,7 @@ def _verify_cond(cond_func, then_func, else_func, input_var_shapes, free_var_sha
         outputs_sym = _as_list(outputs_sym)
         outputs_sym = [x * 2 for x in outputs_sym]
         outputs_sym = mx.sym.Group(outputs_sym)
-        executor = outputs_sym.bind(
+        executor = outputs_sym._bind(
             ctx=default_context(),
             args={name: _args_dict[name].copy() for name in outputs_sym.list_inputs()},
             args_grad=None if not is_train else _merge_dict(
@@ -1057,9 +1059,9 @@ def test_cond():
                 )
 
 class RNNLayer(gluon.HybridBlock):
-    def __init__(self, cell_type, hidden_size, prefix=None, params=None):
-        super(RNNLayer, self).__init__(prefix=prefix, params=params)
-        self.cell = cell_type(hidden_size, prefix='rnn_')
+    def __init__(self, cell_type, hidden_size):
+        super(RNNLayer, self).__init__()
+        self.cell = cell_type(hidden_size)
 
     def hybrid_forward(self, F, inputs, states):
         out, states = F.contrib.foreach(self.cell, inputs, states)
@@ -1166,9 +1168,9 @@ def test_foreach():
             i = i + 1
 
         if is_train:
-            e = out.bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
+            e = out._bind(ctx=default_context(), args=arg_dict, args_grad=arg_grad_dict)
         else:
-            e = out.bind(ctx=default_context(), args=arg_dict)
+            e = out._bind(ctx=default_context(), args=arg_dict)
         # the inputs to forward and backward are the same so forward and backward
         # should always return the same outputs.
         for i in range(num_iters):
@@ -1410,6 +1412,7 @@ def test_foreach():
     def step14(in1, states, free):
         return (in1 + free[0], [])
     frees = [mx.nd.random.uniform(shape=(2))]
+    out_grads = [[mx.nd.random.uniform(-10, 10, arrs.shape)], []]
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads)
     verify_foreach(step14, v3, [], [v4], arrs, [], frees, out_grads, False)
     def step15(in1, states, free):
@@ -1469,7 +1472,7 @@ def test_foreach_nested():
     state = mx.nd.arange(2)
     data_grad = mx.nd.empty(data.shape)
     state_grad = mx.nd.empty(state.shape)
-    e = out.bind(ctx=default_context(), args={'v1':data, 'v2':state},
+    e = out._bind(ctx=default_context(), args={'v1':data, 'v2':state},
             args_grad={'v1':data_grad, 'v2':state_grad})
     e.forward(is_train=True)
     out_grads = []
@@ -1494,8 +1497,8 @@ def test_foreach_nested():
 @with_seed()
 def test_cut_subgraph_foreach():
     class TestLayer(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestLayer, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestLayer, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def step1(data, states):
@@ -1529,8 +1532,8 @@ def test_cut_subgraph_foreach():
 @with_seed()
 def test_uniq_name():
     class ForeachLayer1(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(ForeachLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(ForeachLayer1, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def step1(data, states):
@@ -1541,8 +1544,8 @@ def test_uniq_name():
             return out
 
     class ForeachLayer2(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(ForeachLayer2, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(ForeachLayer2, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def step1(data, states):
@@ -1556,8 +1559,8 @@ def test_uniq_name():
             return out
 
     class WhileLayer1(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(WhileLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(WhileLayer1, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def cond(state1, state2):
@@ -1572,8 +1575,8 @@ def test_uniq_name():
             return out
 
     class WhileLayer2(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(WhileLayer2, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(WhileLayer2, self).__init__()
 
         def hybrid_forward(self, F, inputs, states):
             def cond(state1, state2):
@@ -1615,8 +1618,8 @@ def test_uniq_name():
 @with_seed()
 def test_cut_subgraph_while_loop():
     class TestLayer(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestLayer, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestLayer, self).__init__()
         def hybrid_forward(self, F, data):
             out1, data1 = F.contrib.while_loop(
                 cond=lambda i: i <= 5,
@@ -1649,8 +1652,8 @@ def test_cut_subgraph_while_loop():
 @with_seed()
 def test_cut_subgraph_cond():
     class TestLayer(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestLayer, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestLayer, self).__init__()
         def hybrid_forward(self, F, data):
             data1 = F.contrib.cond(
                 data > 0.5,
@@ -1680,8 +1683,8 @@ def test_cut_subgraph_cond():
 
 def test_scope():
     class TestBlock1(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestBlock1, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestBlock1, self).__init__()
         def hybrid_forward(self, F, data):
             (new_data, ) = F.contrib.cond(
                 data > 0.5,
@@ -1691,8 +1694,8 @@ def test_scope():
             )
             return new_data
     class TestBlock2(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestBlock2, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestBlock2, self).__init__()
         def hybrid_forward(self, F, data):
             (new_data, ) = F.contrib.cond(
                 data > 0.5,
@@ -1719,8 +1722,8 @@ def test_scope():
 
 def test_output_format_foreach():
     class TestLayer1(gluon.HybridBlock):
-        def __init__(self, step, prefix=None, params=None):
-            super(TestLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self, step):
+            super(TestLayer1, self).__init__()
             self.step = step
         def hybrid_forward(self, F, ins, states):
             out, states = F.contrib.foreach(self.step, ins, states)
@@ -1818,8 +1821,8 @@ def test_output_format_foreach():
 
 def test_output_format_while():
     class TestLayer1(gluon.HybridBlock):
-        def __init__(self, step, use_list, nested_list=False, prefix=None, params=None):
-            super(TestLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self, step, use_list, nested_list=False):
+            super(TestLayer1, self).__init__()
             self.step = step
             self.use_list = use_list
             self.nested_list = nested_list
@@ -1929,8 +1932,8 @@ def test_output_format_while():
 
 def test_output_format_cond():
     class TestLayer1(gluon.HybridBlock):
-        def __init__(self, func, prefix=None, params=None):
-            super(TestLayer1, self).__init__(prefix=prefix, params=params)
+        def __init__(self, func):
+            super(TestLayer1, self).__init__()
             self.func = func
         def hybrid_forward(self, F, data):
             def then_func():

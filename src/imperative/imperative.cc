@@ -219,7 +219,8 @@ void Imperative::RecordOp(
       << "will cause undefined behavior when evaluating gradients. "
       << "Please call backward first to clear the graph or do this out side of "
       << "a record section. Also note that you cannot use inplace operations "
-      << "like +=, *=, relu(x, out=x), y[idx]=x, etc inside a record section.";
+      << "like +=, *=, relu(x, out=x), y[idx]=x, etc inside a record section. "
+      << "Issue occurred while recording op: " << attrs.name;
   }
 
   bool need_grad = false;

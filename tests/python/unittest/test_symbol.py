@@ -257,52 +257,24 @@ def check_symbol_consistency(sym1, sym2, ctx, skip_grad=False, equal_nan=False):
 def test_blockgrad():
     a = mx.sym.Variable('a')
     b = mx.sym.BlockGrad(2*a)
-    exe = b.simple_bind(ctx=mx.cpu(), a=(10,10))
+    exe = b._simple_bind(ctx=mx.cpu(), a=(10,10))
 
-
-def test_zero_prop():
-    data = mx.symbol.Variable('data')
-    for i in range(10):
-        data = data * data
-
-    exe = data.simple_bind(ctx=mx.cpu(), data=(10, 3, 256, 256))
-    big = int(re.search(r'Total (\d+) MB allocated', exe.debug_str()).group(1))
-
-    exe = data.simple_bind(ctx=mx.cpu(), data=(10, 3, 256, 256), grad_req='null')
-    small1 = int(re.search(r'Total (\d+) MB allocated', exe.debug_str()).group(1))
-
-    data = mx.sym.stop_gradient(data)
-    exe = data.simple_bind(ctx=mx.cpu(), data=(10, 3, 256, 256))
-    small2 = int(re.search(r'Total (\d+) MB allocated', exe.debug_str()).group(1))
-
-    assert big > small2
-    assert small1 == small2
 
 def test_zero_prop2():
     x = mx.sym.Variable('x')
     idx = mx.sym.Variable('idx')
     y = mx.sym.batch_take(x, idx)
     z = mx.sym.stop_gradient(y)
-    exe = z.simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
+    exe = z._simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
                         type_dict={'x': np.float32, 'idx': np.int32})
-    exe.forward()
+    exe.forward(is_train=True)
     exe.backward()
-
-    # The following bind() should throw an exception. We discard the expected stderr
-    # output for this operation only in order to keep the test logs clean.
-    with discard_stderr():
-        try:
-            y.simple_bind(ctx=mx.cpu(), x=(10, 10), idx=(10,),
-                          type_dict={'x': np.float32, 'idx': np.int32})
-        except:
-            return
-
-    assert False
+    mx.nd.waitall()
 
 
 def test_simple_bind_incomplete_shape_inference_in_one_forward_pass():
     r"""This is a special case that results in shape inference
-    failure after moving simple_bind logic from frontend to backend.
+    failure after moving _simple_bind logic from frontend to backend.
     Added here for testing against the network similar to the following one.
 
     Network diagram:
@@ -322,7 +294,7 @@ def test_simple_bind_incomplete_shape_inference_in_one_forward_pass():
     fc = mx.sym.FullyConnected(data=data, num_hidden=1, no_bias=True, name='fc')
     modified_weight = mx.sym.abs(fc.get_internals()['fc_weight'])
     net = mx.sym.sum(modified_weight) + mx.sym.sum(fc)
-    net.simple_bind(ctx=mx.cpu(), data=data_shape)
+    net._simple_bind(ctx=mx.cpu(), data=data_shape)
 
 
 def test_simple_bind_gradient_graph_possible_with_cycle():
@@ -336,7 +308,7 @@ def test_simple_bind_gradient_graph_possible_with_cycle():
     for more details."""
     data = mx.symbol.Variable('data')
     res = data + data + data + data + data + data + data + data
-    res.simple_bind(ctx=mx.cpu(), data=(1,))
+    res._simple_bind(ctx=mx.cpu(), data=(1,))
 
 def test_children_same_name():
     a = mx.sym.Variable('data')
@@ -399,10 +371,10 @@ def test_eliminate_common_expr():
                 for grad_req in ['write', 'add']:
                     type_dict = {inp : dtype for inp in inputs}
                     os.environ[env_var_name] = '0'
-                    orig_exec = sym.simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
+                    orig_exec = sym._simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
                                                 type_dict=type_dict, **shapes)
                     os.environ[env_var_name] = '1'
-                    cse_exec = sym.simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
+                    cse_exec = sym._simple_bind(ctx=mx.cpu(0), grad_req=grad_req,
                                                type_dict=type_dict, **shapes)
                     fwd_orig = orig_exec.forward(is_train=True, **data)
                     out_grads = [mx.nd.ones_like(arr) for arr in fwd_orig]
@@ -501,7 +473,7 @@ def test_infershape_happens_for_all_ops_in_graph():
         try:
             # This should throw an exception as you cannot add arrays
             # with shapes [2,3] and [3,2]
-            e = s3.simple_bind(ctx=mx.cpu(), x=(2,3), grad_req='null')
+            e = s3._simple_bind(ctx=mx.cpu(), x=(2,3), grad_req='null')
         except:
             return
 

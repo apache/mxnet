@@ -839,24 +839,6 @@ def test_unix_python3_gpu(lib_name) {
     }]
 }
 
-def test_unix_python3_quantize_gpu(lib_name) {
-    return ['Python3: Quantize GPU': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/ut-python3-quantize-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            try {
-              utils.unpack_and_init(lib_name, mx_lib)
-              utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_python3_quantization_gpu', true)
-              utils.publish_test_coverage()
-            } finally {
-              utils.collect_test_results_unix('tests_quantization_gpu.xml', 'tests_python3_quantize_gpu.xml')
-            }
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_python3_debug_cpu() {
     return ['Python3: CPU debug': {
       node(NODE_LINUX_CPU) {
@@ -949,24 +931,6 @@ def test_unix_python3_mkldnn_nocudnn_gpu(lib_name) {
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_mkldnn_gpu_nocudnn.xml')
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_python3_tensorrt_gpu(lib_name) {
-    return ['Python3: TensorRT GPU': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/build-tensorrt') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            try {
-              utils.unpack_and_init(lib_name, mx_tensorrt_lib)
-              utils.docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
-              utils.publish_test_coverage()
-            } finally {
-              utils.collect_test_results_unix('tests_tensorrt.xml', 'tests_python3_tensorrt_gpu.xml')
-            }
           }
         }
       }
@@ -1084,20 +1048,6 @@ def test_unix_r_mkldnn_cpu(lib_name) {
     }]
 }
 
-def test_unix_perl_cpu(lib_name) {
-    return ['Perl: CPU Makefile': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/ut-perl-cpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_make)
-            utils.docker_run('ubuntu_cpu', 'unittest_ubuntu_cpugpu_perl', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
 def test_unix_cpp_gpu(lib_name) {
     return ['Cpp: GPU': {
       node(NODE_LINUX_GPU_G4) {
@@ -1119,20 +1069,6 @@ def test_unix_cpp_cpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_cmake_lib_debug, true)
             utils.docker_run('ubuntu_cpu', 'unittest_cpp', false)
-            utils.publish_test_coverage()
-          }
-        }
-      }
-    }]
-}
-
-def test_unix_perl_gpu(lib_name) {
-    return ['Perl: GPU Makefile': {
-      node(NODE_LINUX_GPU_G4) {
-        ws('workspace/ut-perl-gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_lib_make)
-            utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_cpugpu_perl', true)
             utils.publish_test_coverage()
           }
         }
@@ -1306,19 +1242,6 @@ def test_centos7_python3_cd_gpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_cd_lib)
             utils.docker_run('centos7_gpu_cu102', 'cd_unittest_ubuntu cu102', true)
-          }
-        }
-      }
-    }]
-}
-
-def test_centos7_quantization_cd_gpu(lib_name) {
-    return ['Quantization Python3: CentOS 7 GPU CD': {
-      node(NODE_LINUX_GPU_P3) {
-        ws('workspace/test-cd-static/gpu') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, mx_cd_lib)
-            utils.docker_run('centos7_gpu_cu102', 'unittest_ubuntu_python3_quantization_gpu', true)
           }
         }
       }

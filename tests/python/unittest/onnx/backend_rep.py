@@ -80,7 +80,7 @@ class MXNetBackendRep(BackendRep):
                 data_forward.append(mx.nd.array(val))
 
         args = dict(zip(data_names, data_forward))
-        exe = self.symbol.bind(ctx, args=args, aux_states=self.aux_params)
+        exe = self.symbol._bind(ctx, args=args, aux_states=self.aux_params)
         exe.forward(is_train=False)
         result = []
         for output in exe.outputs:

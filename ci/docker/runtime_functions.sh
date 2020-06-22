@@ -195,11 +195,9 @@ build_jetson() {
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="5.2" \
         -DENABLE_CUDA_RTC=OFF \
-        -DSUPPORT_F16C=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
         -DUSE_LAPACK=OFF \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
@@ -215,11 +213,6 @@ build_armv6() {
     set -ex
     cd /work/build
 
-    # Lapack functionality will be included and statically linked to openblas.
-    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
-    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
-    # to be linked additionally.
-
     # We do not need OpenMP, since most armv6 systems have only 1 core
 
     cmake \
@@ -227,12 +220,10 @@ build_armv6() {
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
         -DBUILD_CPP_EXAMPLES=OFF \
-        -Dmxnet_LINKER_LIBS=-latomic \
         -G Ninja /work/mxnet
 
     ninja
@@ -243,18 +234,11 @@ build_armv7() {
     set -ex
     cd /work/build
 
-    # Lapack functionality will be included and statically linked to openblas.
-    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
-    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
-    # to be linked additionally.
-
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
-        -DCMAKE_CROSSCOMPILING=ON \
         -DUSE_CUDA=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
@@ -270,11 +254,9 @@ build_armv8() {
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DUSE_CUDA=OFF \
-        -DSUPPORT_F16C=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
         -DUSE_LAPACK=OFF \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
@@ -290,18 +272,16 @@ build_armv8() {
 build_android_armv7() {
     set -ex
     cd /work/build
+    # ANDROID_ABI and ANDROID_STL are options of the CMAKE_TOOLCHAIN_FILE
+    # provided by Android NDK
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DANDROID_ABI="armeabi-v7a" \
         -DANDROID_STL="c++_shared" \
-        -DANDROID=ON \
         -DUSE_CUDA=OFF \
-        -DUSE_SSE=OFF \
-        -DSUPPORT_F16C=OFF \
         -DUSE_LAPACK=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
-        -DUSE_SIGNAL_HANDLER=ON \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja
@@ -310,13 +290,13 @@ build_android_armv7() {
 build_android_armv8() {
     set -ex
     cd /work/build
+    # ANDROID_ABI and ANDROID_STL are options of the CMAKE_TOOLCHAIN_FILE
+    # provided by Android NDK
     cmake \
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DANDROID_ABI="arm64-v8a" \
         -DANDROID_STL="c++_shared" \
-        -DANDROID=ON \
         -DUSE_CUDA=OFF \
-        -DUSE_SSE=OFF \
         -DUSE_LAPACK=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=OFF \
@@ -945,7 +925,6 @@ cd_unittest_ubuntu() {
 
     pytest -m 'not serial' -n 4 --durations=50 --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --verbose tests/python/unittest
-    pytest -n 4 --durations=50 --verbose tests/python/quantization
 
     # https://github.com/apache/incubator-mxnet/issues/11801
     # if [[ ${mxnet_variant} = "cpu" ]] || [[ ${mxnet_variant} = "mkl" ]]; then
@@ -983,7 +962,6 @@ unittest_ubuntu_python3_cpu() {
     MXNET_ENGINE_TYPE=NaiveEngine \
         pytest -m 'not serial' -k 'test_operator' -n 4 --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
     pytest -m 'serial' --durations=50 --cov-report xml:tests_unittest.xml --cov-append --verbose tests/python/unittest
-    pytest -n 4 --durations=50 --cov-report xml:tests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu_serial() {
@@ -996,7 +974,6 @@ unittest_ubuntu_python3_cpu_serial() {
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     pytest --durations=50 --cov-report xml:tests_unittest.xml --verbose tests/python/unittest
-    pytest --durations=50 --cov-report xml:tests_quantization.xml --verbose tests/python/quantization
 }
 
 unittest_ubuntu_python3_cpu_mkldnn() {
@@ -1064,38 +1041,6 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
-unittest_ubuntu_tensorrt_gpu() {
-    set -ex
-    export PYTHONPATH=./python/
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
-    export MXNET_ENABLE_CYTHON=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-        pytest -n 4 --durations=50 --cov-report xml:tests_trt_gpu.xml --verbose --capture=no tests/python/tensorrt/test_ops.py
-    pytest -k 'not test_ops' --durations=50 --cov-report xml:tests_trt_gpu.xml --cov-append --verbose --capture=no tests/python/tensorrt/
-}
-
-# quantization gpu currently only runs on P3 instances
-# need to separte it from unittest_ubuntu_python3_gpu()
-unittest_ubuntu_python3_quantization_gpu() {
-    set -ex
-    if [ -f /etc/redhat-release ]; then
-        source /opt/rh/rh-python36/enable
-    fi
-    export PYTHONPATH=./python/
-    export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
-    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
-    export MXNET_SUBGRAPH_VERBOSE=0
-    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
-    export MXNET_ENABLE_CYTHON=0
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    MXNET_GPU_MEM_POOL_TYPE=Unpooled \
-        pytest -n 4 --durations=50 --cov-report xml:tests_quantization_gpu.xml --verbose tests/python/quantization_gpu
-}
-
 unittest_centos7_cpu_scala() {
     set -ex
     source /opt/rh/devtoolset-7/enable
@@ -1123,11 +1068,6 @@ unittest_ubuntu_cpu_clojure_integration() {
     ./contrib/clojure-package/integration-tests.sh
 }
 
-
-unittest_ubuntu_cpugpu_perl() {
-    set -ex
-    ./perl-package/test.sh
-}
 
 unittest_cpp() {
     set -ex

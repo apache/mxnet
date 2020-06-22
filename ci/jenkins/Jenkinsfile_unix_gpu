@@ -48,11 +48,8 @@ core_logic: {
 
   utils.parallel_stage('Tests', [
     custom_steps.test_unix_python3_gpu('gpu'),
-    custom_steps.test_unix_python3_quantize_gpu('gpu'),
     custom_steps.test_unix_python3_mkldnn_gpu('mkldnn_gpu'),
     custom_steps.test_unix_python3_mkldnn_nocudnn_gpu('mkldnn_gpu_nocudnn'),
-    custom_steps.test_unix_python3_tensorrt_gpu('tensorrt'),
-    custom_steps.test_unix_perl_gpu('gpu_make'),
     custom_steps.test_unix_r_gpu('gpu'),
     custom_steps.test_unix_cpp_gpu('cmake_gpu'),
     custom_steps.test_unix_cpp_package_gpu('gpu_make'),

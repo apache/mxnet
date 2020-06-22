@@ -110,7 +110,7 @@ void get_expected_results(const mxnet::cpp::Symbol &sym,
     int num_output = 0;
     const int *stypes;
     int ret4 = MXInvokeCachedOpEx(*hdl, (*arr_handles)[i].size(), (*arr_handles)[i].data(),
-                                  &num_output, &nd_ptrs[i], &stypes);
+                                  cpu::kDevMask, 0, &num_output, &nd_ptrs[i], &stypes);
     if (ret4 < 0) {
       LOG(FATAL) << MXGetLastError();
     }
@@ -158,8 +158,8 @@ inline void get_expected_results_multiple(
       int num_output = 0;
       const int *stypes;
       int ret4 = MXInvokeCachedOpEx(*hdl, (*arr_handles)[i][j].size(),
-                                    (*arr_handles)[i][j].data(), &num_output,
-                                    &nd_ptrs[i][j], &stypes);
+                                    (*arr_handles)[i][j].data(), cpu::kDevMask, 0,
+                                    &num_output, &nd_ptrs[i][j], &stypes);
       if (ret4 < 0) {
         LOG(FATAL) << MXGetLastError();
       }
@@ -309,7 +309,8 @@ void run_inference(const std::string& model,
         const int *stypes;
         int ret = MXInvokeCachedOpEx(
             hdl2, arr_handles2[i][num].size(), arr_handles2[i][num].data(),
-            &num_output, &(cached_op_handles[i * num_threads + num]), &stypes);
+            cpu::kDevMask, 0, &num_output, &(cached_op_handles[i * num_threads + num]),
+            &stypes);
         if (ret < 0) {
             LOG(FATAL) << MXGetLastError();
         }
@@ -492,7 +493,8 @@ void run_inference_unsupported(const std::string& model,
         const int *stypes;
         int ret = MXInvokeCachedOpEx(
             hdl2, arr_handles2[i][num].size(), arr_handles2[i][num].data(),
-            &num_output, &(cached_op_handles[i * num_threads + num]), &stypes);
+            cpu::kDevMask, 0, &num_output, &(cached_op_handles[i * num_threads + num]),
+            &stypes);
         if (ret < 0) {
           LOG(FATAL) << MXGetLastError();
         }

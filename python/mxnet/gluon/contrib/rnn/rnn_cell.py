@@ -22,6 +22,7 @@ __all__ = ['VariationalDropoutCell', 'LSTMPCell']
 from ...rnn import BidirectionalCell, SequentialRNNCell, ModifierCell, HybridRecurrentCell
 from ...rnn.rnn_cell import _format_sequence, _get_begin_state, _mask_sequence_variable_length
 from ... import tensor_types
+from ...parameter import Parameter
 from ....base import _as_list
 
 class VariationalDropoutCell(ModifierCell):
@@ -239,12 +240,6 @@ class LSTMPCell(HybridRecurrentCell):
         to zero.
     h2h_bias_initializer : str or Initializer
         Initializer for the bias vector.
-    prefix : str, default ``'lstmp_``'
-        Prefix for name of `Block`s
-        (and name of weight if params is `None`).
-    params : Parameter or None
-        Container for weight sharing between cells.
-        Created if `None`.
     Inputs:
         - **data**: input tensor with shape `(batch_size, input_size)`.
         - **states**: a list of two initial recurrent state tensors, with shape
@@ -258,27 +253,27 @@ class LSTMPCell(HybridRecurrentCell):
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  h2r_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 input_size=0, prefix=None, params=None):
-        super(LSTMPCell, self).__init__(prefix=prefix, params=params)
+                 input_size=0):
+        super(LSTMPCell, self).__init__()
 
         self._hidden_size = hidden_size
         self._input_size = input_size
         self._projection_size = projection_size
-        self.i2h_weight = self.params.get('i2h_weight', shape=(4*hidden_size, input_size),
-                                          init=i2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.h2h_weight = self.params.get('h2h_weight', shape=(4*hidden_size, projection_size),
-                                          init=h2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.h2r_weight = self.params.get('h2r_weight', shape=(projection_size, hidden_size),
-                                          init=h2r_weight_initializer,
-                                          allow_deferred_init=True)
-        self.i2h_bias = self.params.get('i2h_bias', shape=(4*hidden_size,),
-                                        init=i2h_bias_initializer,
-                                        allow_deferred_init=True)
-        self.h2h_bias = self.params.get('h2h_bias', shape=(4*hidden_size,),
-                                        init=h2h_bias_initializer,
-                                        allow_deferred_init=True)
+        self.i2h_weight = Parameter('i2h_weight', shape=(4*hidden_size, input_size),
+                                    init=i2h_weight_initializer,
+                                    allow_deferred_init=True)
+        self.h2h_weight = Parameter('h2h_weight', shape=(4*hidden_size, projection_size),
+                                    init=h2h_weight_initializer,
+                                    allow_deferred_init=True)
+        self.h2r_weight = Parameter('h2r_weight', shape=(projection_size, hidden_size),
+                                    init=h2r_weight_initializer,
+                                    allow_deferred_init=True)
+        self.i2h_bias = Parameter('i2h_bias', shape=(4*hidden_size,),
+                                  init=i2h_bias_initializer,
+                                  allow_deferred_init=True)
+        self.h2h_bias = Parameter('h2h_bias', shape=(4*hidden_size,),
+                                  init=h2h_bias_initializer,
+                                  allow_deferred_init=True)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size, self._projection_size), '__layout__': 'NC'},
@@ -369,7 +364,7 @@ def dynamic_unroll(cell, inputs, begin_state, drop_inputs=0, drop_outputs=0,
     >>> seq_len = 3
     >>> batch_size = 2
     >>> input_size = 5
-    >>> cell = mx.gluon.rnn.LSTMCell(input_size, prefix='rnn_')
+    >>> cell = mx.gluon.rnn.LSTMCell(input_size)
     >>> cell.initialize(ctx=mx.cpu())
     >>> rnn_data = mx.nd.normal(loc=0, scale=1, shape=(seq_len, batch_size, input_size))
     >>> state_shape = (batch_size, input_size)

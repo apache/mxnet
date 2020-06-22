@@ -17,25 +17,26 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2015 by Contributors
- * \file Ifft-inl.h
- * \brief
- * \author Chen Zhu
-*/
+#ifndef MXNET_NNVM_ERROR_H_
+#define MXNET_NNVM_ERROR_H_
 
-#include "./ifft-inl.h"
-namespace mxnet {
-namespace op {
+#include <exception>
+#include <string>
 
-template<>
-Operator* CreateOp<gpu>(IFFTParam param, int dtype) {
-  Operator *op = nullptr;
-  MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
-      op = new IFFTOp<gpu, DType>(param);
-  })
-  return op;
-}
+namespace nnvm {
+namespace pass {
 
-}  // namespace op
-}  // namespace mxnet
+class InvalidGraphError : public std::exception {
+ public:
+  explicit InvalidGraphError(const std::string& msg = "invalid graph error"): msg_(msg) { }
+  ~InvalidGraphError() throw() {}
+  virtual const char* what() const throw() {
+    return msg_.c_str();
+  }
+ private:
+  std::string msg_;
+};
+
+}  // namespace pass
+}  // namespace nnvm
+#endif  // MXNET_NNVM_ERROR_H_

@@ -279,7 +279,7 @@ def check_with_device(device, dtype):
         Y = symbol(**params) + X
         x = mx.nd.zeros(shape, dtype=dtype, ctx=device)
         xgrad = mx.nd.zeros(shape, dtype=dtype, ctx=device)
-        yexec = Y.bind(device, {'X' : x}, {'X': xgrad})
+        yexec = Y._bind(device, {'X' : x}, {'X': xgrad})
         mx.random.seed(128)
         yexec.forward(is_train=True)
         yexec.backward(yexec.outputs[0])
@@ -311,7 +311,7 @@ def check_with_device(device, dtype):
         bindings = { 'v1' : mx.nd.array(symbdic['inputs'][0][1]) }
         if not single_param :
             bindings.update({ 'v2' : mx.nd.array(symbdic['inputs'][1][1]) })
-        yexec = Y.bind(ctx=device, args=bindings)
+        yexec = Y._bind(ctx=device, args=bindings)
         yexec.forward()
         un1 = yexec.outputs[0].copyto(device).asnumpy()
         params = {}
@@ -467,7 +467,7 @@ def test_parallel_random_seed_setting():
             Y = mx.sym.random.uniform(**params) + X
             x = mx.nd.zeros(shape, dtype=dtype, ctx=ctx)
             xgrad = mx.nd.zeros(shape, dtype=dtype, ctx=ctx)
-            yexec = Y.bind(ctx, {'X' : x}, {'X': xgrad})
+            yexec = Y._bind(ctx, {'X' : x}, {'X': xgrad})
             seed = set_seed_variously(seed, num_temp_seeds, seed_to_test)
             yexec.forward(is_train=True)
             yexec.backward(yexec.outputs[0])
@@ -512,7 +512,7 @@ def test_random_seed_setting_for_context():
                 # Check symbolic. `multinomial` uses non-parallel rng.
                 P = mx.sym.Variable("P")
                 X = mx.sym.random.multinomial(data=P, shape=num_samples, get_prob=False)
-                exe = X.bind(ctx, {"P": mx.nd.array(probs, dtype=dtype)})
+                exe = X._bind(ctx, {"P": mx.nd.array(probs, dtype=dtype)})
                 set_seed_variously_for_context(ctx, seed, num_temp_seeds, seed_to_test)
                 exe.forward()
                 samples_sym.append(exe.outputs[0].asnumpy())
@@ -554,7 +554,7 @@ def test_parallel_random_seed_setting_for_context():
                     Y = mx.sym.random.uniform(**params) + X
                     x = mx.nd.zeros(shape, dtype=dtype)
                     xgrad = mx.nd.zeros(shape, dtype=dtype)
-                    yexec = Y.bind(ctx, {'X' : x}, {'X': xgrad})
+                    yexec = Y._bind(ctx, {'X' : x}, {'X': xgrad})
                     set_seed_variously_for_context(ctx, seed, num_temp_seeds, seed_to_test)
                     yexec.forward(is_train=True)
                     yexec.backward(yexec.outputs[0])
@@ -900,7 +900,7 @@ def test_zipfian_generator():
     true_classes_var = mx.sym.var('true_classes')
     outputs = mx.sym.contrib.rand_zipfian(true_classes_var, num_sampled, range_max)
     outputs = mx.sym.Group(outputs)
-    executor = outputs.bind(mx.context.current_context(), {'true_classes' : true_classes})
+    executor = outputs._bind(mx.context.current_context(), {'true_classes' : true_classes})
     executor.forward()
     sampled_classes, exp_cnt_true, exp_cnt_sampled = executor.outputs
     assert_almost_equal(exp_cnt_sampled, exp_cnt[sampled_classes], rtol=1e-1, atol=1e-2)

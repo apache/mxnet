@@ -1414,13 +1414,10 @@ MXNET_DLL int MXCreateCachedOpEX(SymbolHandle handle,
 MXNET_DLL int MXFreeCachedOp(CachedOpHandle handle);
 
 /*!
- * \brief invoke cached operator
+ * \brief get optimized graph from the cached op
  */
-MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
-                               int num_inputs,
-                               NDArrayHandle *inputs,
-                               int *num_outputs,
-                               NDArrayHandle **outputs);
+MXNET_DLL int MXCachedOpGetOptimizedSymbol(CachedOpHandle handle,
+                                           SymbolHandle *out);
 
 /*!
  * \brief invoke a cached op
@@ -1428,6 +1425,8 @@ MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
  * \param num_inputs number of input NDArrays
  * \param inputs input NDArrays
  * \param num_outputs number of output NDArrays
+ * \param default_dev_type the default context type
+ * \param default_dev_id the default context device id
  * \param outputs output NDArrays
  * \param out_stypes output ndarrays' stypes
  * \return 0 when success, -1 when failure happens
@@ -1435,6 +1434,8 @@ MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
 MXNET_DLL int MXInvokeCachedOpEx(CachedOpHandle handle,
                                  int num_inputs,
                                  NDArrayHandle *inputs,
+                                 int default_dev_type,
+                                 int default_dev_id,
                                  int *num_outputs,
                                  NDArrayHandle **outputs,
                                  const int** out_stypes);
