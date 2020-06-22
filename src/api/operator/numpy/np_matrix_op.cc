@@ -551,7 +551,7 @@ MXNET_REGISTER_API("_npi.tril_indices")
   std::vector<NDArrayHandle> ndarray_handles;
   ndarray_handles.reserve(num_outputs);
   for (int i = 0; i < num_outputs; ++i) {
-  ndarray_handles.emplace_back(ndoutputs[i]);
+    ndarray_handles.emplace_back(ndoutputs[i]);
   }
   *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
 });
