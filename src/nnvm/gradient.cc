@@ -38,7 +38,7 @@
 #include <vector>
 
 #include "error.h"
-#include "../executor/exec_pass.h"
+#include "../imperative/exec_pass.h"
 
 namespace nnvm {
 namespace pass {
@@ -46,7 +46,6 @@ namespace pass {
 extern size_t MXGetDTypeSize(const int type_flag);  // defined in plan_memory.cc
 
 namespace {
-
 
 /*! Auxiliary Data Structure for Gradient Entries */
 struct GradEntry {
@@ -709,5 +708,6 @@ NNVM_REGISTER_PASS(MXGradient)
 .depend_graph_attr("grad_ys_out_grad");
 
 }  // namespace
+
 }  // namespace pass
 }  // namespace nnvm

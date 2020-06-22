@@ -793,29 +793,6 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
     make cython PYTHON=python3
 }
 
-build_ubuntu_amalgamation() {
-    set -ex
-    # Amalgamation can not be run with -j nproc
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    make -C amalgamation/ clean
-    make -C amalgamation/     \
-        USE_BLAS=openblas
-}
-
-build_ubuntu_amalgamation_min() {
-    set -ex
-    # Amalgamation can not be run with -j nproc
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    make -C amalgamation/ clean
-    make -C amalgamation/     \
-        USE_BLAS=openblas     \
-        MIN=1
-}
-
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
@@ -901,8 +878,7 @@ build_ubuntu_blc() {
 sanity_check() {
     set -ex
     tools/license_header.py check
-    make cpplint jnilint
-    make -f R-package/Makefile rcpplint
+    make cpplint
     make pylint
     pytest -n 4 tests/tutorials/test_sanity_tutorials.py
 }
@@ -1041,119 +1017,9 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     pytest -m 'serial' --durations=50 --cov-report xml:tests_gpu.xml --cov-append --verbose tests/python/gpu
 }
 
-unittest_centos7_cpu_scala() {
-    set -ex
-    source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-maven35/enable
-    cd /work/mxnet
-    scala_prepare
-    cd scala-package
-    mvn -B integration-test
-}
-
-unittest_ubuntu_cpu_clojure() {
-    set -ex
-    scala_prepare
-    cd scala-package
-    mvn -B install
-    cd ..
-    ./contrib/clojure-package/ci-test.sh
-}
-
-unittest_ubuntu_cpu_clojure_integration() {
-    set -ex
-    cd scala-package
-    mvn -B install
-    cd ..
-    ./contrib/clojure-package/integration-tests.sh
-}
-
-
 unittest_cpp() {
     set -ex
     build/tests/mxnet_unit_tests
-}
-
-unittest_ubuntu_cpu_R() {
-    set -ex
-    mkdir -p /tmp/r-site-library
-    # build R packages in parallel
-    mkdir -p ~/.R/
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
-    # make -j not supported
-    make -f R-package/Makefile rpkg \
-        R_LIBS=/tmp/r-site-library
-
-    R CMD INSTALL --library=/tmp/r-site-library R-package
-    make -f R-package/Makefile rpkgtest R_LIBS=/tmp/r-site-library
-}
-
-unittest_ubuntu_minimal_R() {
-    set -ex
-    mkdir -p /tmp/r-site-library
-    # build R packages in parallel
-    mkdir -p ~/.R/
-    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    # make -j not supported
-    make -f R-package/Makefile rpkg \
-        R_LIBS=/tmp/r-site-library
-
-    R CMD INSTALL --library=/tmp/r-site-library R-package
-}
-
-unittest_ubuntu_gpu_R() {
-    set -ex
-    mkdir -p /tmp/r-site-library
-    # build R packages in parallel
-    mkdir -p ~/.R/
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
-    # make -j not supported
-    make -f R-package/Makefile rpkg \
-        R_LIBS=/tmp/r-site-library
-    R CMD INSTALL --library=/tmp/r-site-library R-package
-    make -f R-package/Makefile rpkgtest R_LIBS=/tmp/r-site-library R_GPU_ENABLE=1
-}
-
-unittest_ubuntu_cpu_julia() {
-    set -ex
-    export PATH="$1/bin:$PATH"
-    export MXNET_HOME='/work/mxnet'
-    export JULIA_DEPOT_PATH='/work/julia-depot'
-    export INTEGRATION_TEST=1
-
-    julia -e 'using InteractiveUtils; versioninfo()'
-
-    # FIXME
-    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-
-    # use the prebuilt binary from $MXNET_HOME/lib
-    julia --project=./julia -e 'using Pkg; Pkg.build("MXNet")'
-
-    # run the script `julia/test/runtests.jl`
-    julia --project=./julia -e 'using Pkg; Pkg.test("MXNet")'
-
-    # See https://github.com/dmlc/MXNet.jl/pull/303#issuecomment-341171774
-    julia --project=./julia -e 'using MXNet; mx._sig_checker()'
-}
-
-unittest_ubuntu_cpu_julia07() {
-    set -ex
-    unittest_ubuntu_cpu_julia /work/julia07
-}
-
-unittest_ubuntu_cpu_julia10() {
-    set -ex
-    unittest_ubuntu_cpu_julia /work/julia10
 }
 
 unittest_centos7_cpu() {
@@ -1191,12 +1057,6 @@ integrationtest_ubuntu_cpu_onnx() {
 	pytest -n 4 tests/python/unittest/onnx/test_node.py
 }
 
-integrationtest_ubuntu_gpu_cpp_package() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    cpp-package/tests/ci_test.sh
-}
-
 integrationtest_ubuntu_cpu_dist_kvstore() {
     set -ex
     pushd .
@@ -1216,23 +1076,6 @@ integrationtest_ubuntu_cpu_dist_kvstore() {
     python3 ../../tools/launch.py -n 7 --launcher local python3 dist_sync_kvstore.py --type=compressed_cpu --no-multiprecision
     python3 ../../tools/launch.py -n 3 --launcher local python3 test_server_profiling.py
     popd
-}
-
-integrationtest_ubuntu_cpu_scala() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    scala_prepare
-    cd scala-package
-    mvn -B verify -DskipTests=false
-}
-
-integrationtest_ubuntu_gpu_scala() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    scala_prepare
-    cd scala-package
-    export SCALA_TEST_ON_GPU=1
-    mvn -B verify -DskipTests=false
 }
 
 integrationtest_ubuntu_gpu_dist_kvstore() {
@@ -1333,16 +1176,6 @@ nightly_test_rat_check() {
     popd
 }
 
-# Runs Imagenet inference
-nightly_test_imagenet_inference() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    echo $PWD
-    cp /work/mxnet/build/cpp-package/example/inference/imagenet_inference /work/mxnet/cpp-package/example/inference/
-    cd /work/mxnet/cpp-package/example/inference/
-    ./unit_test_imagenet_inference.sh
-}
-
 #Single Node KVStore Test
 nightly_test_KVStore_singleNode() {
     set -ex
@@ -1369,31 +1202,6 @@ nightly_test_large_vector() {
     pytest tests/nightly/test_large_vector.py::test_tensor
     pytest tests/nightly/test_large_vector.py::test_nn
     pytest tests/nightly/test_large_vector.py::test_basic
-}
-
-#Tests Amalgamation Build with 5 different sets of flags
-nightly_test_amalgamation() {
-    set -ex
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export CC=gcc-7
-    export CXX=g++-7
-    # Amalgamation can not be run with -j nproc
-    make -C amalgamation/ clean
-    make -C amalgamation/ ${1} ${2}
-}
-
-#Tests Amalgamation Build for Javascript
-nightly_test_javascript() {
-    set -ex
-    export LLVM=/work/deps/emscripten-fastcomp/build/bin
-    export DMLC_LOG_STACK_TRACE_DEPTH=10
-    export CC=gcc-7
-    export CXX=g++-7
-    # This part is needed to run emcc correctly
-    cd /work/deps/emscripten
-    ./emcc
-    touch ~/.emscripten
-    make -C /work/mxnet/amalgamation libmxnet_predict.js MIN=1 EMCC=/work/deps/emscripten/emcc
 }
 
 #Tests Model backwards compatibility on MXNet
@@ -1427,22 +1235,6 @@ nightly_tutorial_test_ubuntu_python3_gpu() {
     pytest --durations=50 --cov-report xml:tests_tutorials.xml --capture=no test_tutorials.py
 }
 
-nightly_java_demo_test_cpu() {
-    set -ex
-    cd /work/mxnet/scala-package/mxnet-demo/java-demo
-    mvn -B -Pci-nightly install
-    bash bin/java_sample.sh
-    bash bin/run_od.sh
-}
-
-nightly_scala_demo_test_cpu() {
-    set -ex
-    cd /work/mxnet/scala-package/mxnet-demo/scala-demo
-    mvn -B -Pci-nightly install
-    bash bin/demo.sh
-    bash bin/run_im.sh
-}
-
 nightly_estimator() {
     set -ex
     export DMLC_LOG_STACK_TRACE_DEPTH=10
@@ -1456,18 +1248,6 @@ nightly_estimator() {
 deploy_docs() {
     set -ex
     pushd .
-
-    # Setup for Julia docs
-    export PATH="/work/julia10/bin:$PATH"
-    export MXNET_HOME='/work/mxnet'
-    export JULIA_DEPOT_PATH='/work/julia-depot'
-
-    julia -e 'using InteractiveUtils; versioninfo()'
-
-    # FIXME
-    export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
-    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-    # End Julia setup
 
     export CC="ccache gcc"
     export CXX="ccache g++"
@@ -1568,187 +1348,12 @@ build_c_docs() {
 }
 
 
-build_r_docs() {
-    set -ex
-    pushd .
-
-    build_docs_setup
-    r_root='R-package'
-    r_pdf='mxnet-r-reference-manual.pdf'
-    r_build='build'
-    docs_build_path="$r_root/$r_build/$r_pdf"
-    artifacts_path='docs/_build/r-artifacts.tgz'
-
-    mkdir -p $r_root/$r_build
-
-    unittest_ubuntu_minimal_R
-
-    pushd $r_root
-
-    R_LIBS=/tmp/r-site-library R CMD Rd2pdf . --no-preview --encoding=utf8 -o $r_build/$r_pdf
-
-    popd
-
-    GZIP=-9 tar zcvf $artifacts_path $docs_build_path
-
-    popd
-}
-
-
-build_scala() {
-   set -ex
-   pushd .
-
-   cd scala-package
-   mvn -B install -DskipTests
-
-   popd
-}
-
-
-build_scala_docs() {
-    set -ex
-    pushd .
-    build_docs_setup
-    build_scala
-
-    scala_path='scala-package'
-    docs_build_path='scala-package/docs/build/docs/scala'
-    artifacts_path='docs/_build/scala-artifacts.tgz'
-
-    pushd $scala_path
-
-    scala_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer" | egrep -v "/javaapi"  | egrep -v "Suite" | egrep -v "CancelTestUtil" | egrep -v "/mxnetexamples"`
-    jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
-    jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
-    jar_core=`find core -name "*.jar" | tr "\\n" ":" `
-    jar_infer=`find infer -name "*.jar" | tr "\\n" ":" `
-    scala_doc_classpath=$jar_native:$jar_macros:$jar_core:$jar_infer
-
-    scala_ignore_errors=''
-    legacy_ver=".*1.2|1.3.*"
-    # BUILD_VER needs to be pull from environment vars
-    if [[ $_BUILD_VER =~ $legacy_ver ]]
-    then
-      # There are unresolvable errors on mxnet 1.2.x. We are ignoring those
-      # errors while aborting the ci on newer versions
-      echo "We will ignoring unresolvable errors on MXNet 1.2/1.3."
-      scala_ignore_errors='; exit 0'
-    fi
-
-    scaladoc $scala_doc_sources -classpath $scala_doc_classpath $scala_ignore_errors -doc-title MXNet
-    popd
-
-    # Clean-up old artifacts
-    rm -rf $docs_build_path
-    mkdir -p $docs_build_path
-
-    for doc_file in index index.html org lib index.js package.html; do
-        mv $scala_path/$doc_file $docs_build_path
-    done
-
-    GZIP=-9 tar -zcvf $artifacts_path -C $docs_build_path .
-
-    popd
-}
-
-
-build_julia_docs() {
-   set -ex
-   pushd .
-
-   build_docs_setup
-   # Setup environment for Julia docs
-   export PATH="/work/julia10/bin:$PATH"
-   export MXNET_HOME='/work/mxnet'
-   export JULIA_DEPOT_PATH='/work/julia-depot'
-   export LD_PRELOAD='/usr/lib/x86_64-linux-gnu/libjemalloc.so'
-   export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
-
-   julia_doc_path='julia/docs/site/'
-   julia_doc_artifact='docs/_build/julia-artifacts.tgz'
-
-   echo "Julia will check for MXNet in $MXNET_HOME/lib"
-
-
-   make -C julia/docs
-
-   GZIP=-9 tar -zcvf $julia_doc_artifact -C $julia_doc_path .
-
-   popd
-}
-
-
-build_java_docs() {
-    set -ex
-    pushd .
-
-    build_docs_setup
-    build_scala
-
-    # Re-use scala-package build artifacts.
-    java_path='scala-package'
-    docs_build_path='docs/scala-package/build/docs/java'
-    artifacts_path='docs/_build/java-artifacts.tgz'
-
-    pushd $java_path
-
-    java_doc_sources=`find . -type f -name "*.scala" | egrep "./core|./infer"  | egrep "/javaapi"  | egrep -v "Suite" | egrep -v "CancelTestUtil" | egrep -v "/mxnetexamples"`
-    jar_native=`find native -name "*.jar" | grep "target/lib/" | tr "\\n" ":" `
-    jar_macros=`find macros -name "*.jar" | tr "\\n" ":" `
-    jar_core=`find core -name "*.jar" | tr "\\n" ":" `
-    jar_infer=`find infer -name "*.jar" | tr "\\n" ":" `
-    java_doc_classpath=$jar_native:$jar_macros:$jar_core:$jar_infer
-
-    scaladoc $java_doc_sources -classpath $java_doc_classpath -feature -deprecation -doc-title MXNet
-    popd
-
-    # Clean-up old artifacts
-    rm -rf $docs_build_path
-    mkdir -p $docs_build_path
-
-    for doc_file in index index.html org lib index.js package.html; do
-        mv $java_path/$doc_file $docs_build_path
-    done
-
-    GZIP=-9 tar -zcvf $artifacts_path -C $docs_build_path .
-
-    popd
-}
-
-
-build_clojure_docs() {
-    set -ex
-    pushd .
-
-    build_docs_setup
-    build_scala
-
-    clojure_path='contrib/clojure-package'
-    clojure_doc_path='contrib/clojure-package/target/doc'
-    clojure_doc_artifact='docs/_build/clojure-artifacts.tgz'
-
-    pushd $clojure_path
-    lein codox
-    popd
-
-    GZIP=-9 tar -zcvf $clojure_doc_artifact -C $clojure_doc_path .
-
-    popd
-}
-
 build_docs() {
     pushd docs/_build
     tar -xzf jekyll-artifacts.tgz
     api_folder='html/api'
     # Python has it's own landing page/site so we don't put it in /docs/api
     mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
-    mkdir -p $api_folder/cpp/docs/api && tar -xzf c-artifacts.tgz --directory $api_folder/cpp/docs/api
-    mkdir -p $api_folder/r/docs/api && tar -xzf r-artifacts.tgz --directory $api_folder/r/docs/api
-    mkdir -p $api_folder/julia/docs/api && tar -xzf julia-artifacts.tgz --directory $api_folder/julia/docs/api
-    mkdir -p $api_folder/scala/docs/api && tar -xzf scala-artifacts.tgz --directory $api_folder/scala/docs/api
-    mkdir -p $api_folder/java/docs/api && tar -xzf java-artifacts.tgz --directory $api_folder/java/docs/api
-    mkdir -p $api_folder/clojure/docs/api && tar -xzf clojure-artifacts.tgz --directory $api_folder/clojure/docs/api
     GZIP=-9 tar -zcvf full_website.tgz -C html .
     popd
 }
@@ -1865,18 +1470,6 @@ cd_s3_publish() {
     aws s3 cp ${filepath} s3://apache-mxnet/dist/python/${variant}/${filename} --grants read=uri=http://acs.amazonaws.com/groups/global/AllUsers full=id=43f628fab72838a4f0b929d7f1993b14411f4b0294b011261bc6bd3e950a6822
 }
 
-build_static_scala_cpu() {
-    set -ex
-    pushd .
-    scala_prepare
-    export MAVEN_PUBLISH_OS_TYPE=linux-x86_64-cpu
-    export mxnet_variant=cpu
-    source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-maven35/enable
-    ./ci/publish/scala/build.sh
-    popd
-}
-
 build_static_python_cpu() {
     set -ex
     pushd .
@@ -1898,36 +1491,7 @@ build_static_python_cu92() {
     popd
 }
 
-publish_scala_build() {
-    set -ex
-    pushd .
-    scala_prepare
-    source /opt/rh/devtoolset-7/enable
-    source /opt/rh/rh-maven35/enable
-    export USE_SYSTEM_CUDA=1
-    ./ci/publish/scala/build.sh
-    popd
-}
-
-publish_scala_test() {
-    set -ex
-    pushd .
-    scala_prepare
-    source /opt/rh/rh-maven35/enable
-    ./ci/publish/scala/test.sh
-    popd
-}
-
-publish_scala_deploy() {
-    set -ex
-    pushd .
-    scala_prepare
-    ./ci/publish/scala/deploy.sh
-    popd
-}
-
 # broken_link_checker
-
 broken_link_checker() {
     set -ex
     ./tests/nightly/broken_link_checker_test/broken_link_checker.sh

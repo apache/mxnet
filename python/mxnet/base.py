@@ -362,7 +362,6 @@ FunctionHandle = ctypes.c_void_p
 OpHandle = ctypes.c_void_p
 CachedOpHandle = ctypes.c_void_p
 SymbolHandle = ctypes.c_void_p
-ExecutorHandle = ctypes.c_void_p
 DataIterCreatorHandle = ctypes.c_void_p
 DataIterHandle = ctypes.c_void_p
 DatasetHandle = ctypes.c_void_p

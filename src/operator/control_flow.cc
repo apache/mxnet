@@ -65,7 +65,7 @@ class ForeachState: public LoopState {
   ForeachParam params;
   int num_iterations;
 
-  ForeachState(const Symbol &g, const ForeachParam &params) : LoopState(g) {
+  ForeachState(const nnvm::Symbol &g, const ForeachParam &params) : LoopState(g) {
     this->params = params;
   }
 };
@@ -531,7 +531,7 @@ class WhileLoopState: public LoopState {
   // indicates to which index the output of `func' will be copied to the input of `cond'
   std::vector<int> oi_map;
 
-  WhileLoopState(const WhileLoopParam &params, const Symbol &cond, const Symbol &func) :
+  WhileLoopState(const WhileLoopParam &params, const nnvm::Symbol &cond, const nnvm::Symbol &func) :
                  LoopState(func),
                  params(params),
                  n_iterations(0U),
@@ -866,9 +866,9 @@ class CondState {
   int branch_selection;  // 1 if then branch; 0 if else branch; -1 if undefined
 
   CondState(const CondParam &params,
-            const Symbol &cond,
-            const Symbol &then_sym,
-            const Symbol &else_sym):
+            const nnvm::Symbol &cond,
+            const nnvm::Symbol &then_sym,
+            const nnvm::Symbol &else_sym):
             params(params),
             cond_op(LoopState::MakeSharedOp(cond)),
             then_branch(then_sym),
@@ -1028,7 +1028,8 @@ static bool BackwardCondStorageType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size() + 3U, (size_t) params.num_args);
   CHECK_EQ(attrs.subgraphs.size(), 3U);
   static const std::function<bool(const int &)> is_udf = is_stype_udf;
-  auto sub_pass = [&](const std::shared_ptr<Symbol> &subg, const mxnet::Tuple<dim_t> &input_locs) {
+  auto sub_pass = [&](const std::shared_ptr<nnvm::Symbol> &subg,
+                      const mxnet::Tuple<dim_t> &input_locs) {
     // A. first construct subg_in_attrs
     // need subg_in_attrs as subg_bwd_out (copy), subg_fwd_in (extract), subg_fwd_out (copy)
     std::vector<int> subg_in_attrs;

@@ -332,7 +332,7 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
 }
 
 nnvm::Symbol Imperative::GetDeferredComputeSymbol(const std::vector<NDArray *> &outputs) {
-  Symbol s;
+  nnvm::Symbol s;
   s.outputs.reserve(outputs.size());
   for (NDArray * ndoutput : outputs) {
     CHECK(!Imperative::DCInfo::IsNone(*ndoutput))
@@ -456,7 +456,7 @@ std::vector<NDArray*> Imperative::Backward(
 
   Graph g_graph = pass::MXGradient(
       graph, graph.outputs, xs, ograd_entries,
-      exec::AggregateGradient, nullptr,
+      mxnet::AggregateGradient, nullptr,
       zero_ops, "_copy");
   CHECK_EQ(g_graph.outputs.size(), xs.size());
   for (const auto& e : g_graph.outputs) {

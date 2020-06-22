@@ -76,7 +76,6 @@ What's New
 * [MXNet.js: Javascript Package for Deep Learning in Browser (without server)](https://github.com/dmlc/mxnet.js/)
 * [Guide to Creating New Operators (Layers)](https://mxnet.apache.org/api/faq/new_op)
 * [Go binding for inference](https://github.com/songtianyi/go-mxnet-predictor)
-* [Amalgamation and Go Binding for Predictors](https://github.com/jdeng/gomxnet/) - Outdated
 * [Large Scale Image Classification](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification)
 
 Contents

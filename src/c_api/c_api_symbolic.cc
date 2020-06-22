@@ -32,7 +32,7 @@
 #include "./c_api_common.h"
 #include "../common/exec_utils.h"
 #include "../operator/operator_common.h"
-#include "../executor/exec_pass.h"
+#include "../imperative/exec_pass.h"
 #include "../operator/subgraph/subgraph_property.h"
 
 namespace mxnet {
@@ -703,7 +703,7 @@ inline void SymbolInferShape(const char** keys,
 }
 
 /*!
- * \brief Executor for Symbol Shape Inference
+ * \brief Symbol shape Inference
  *  This api is available when MXNet is built with flag
  *  USE_INT64_TENSOR_SIZE=0 (by default)
  * \param sym symbol handle
