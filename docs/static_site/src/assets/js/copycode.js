@@ -19,79 +19,58 @@
 
 /* Copy code to clipboard */
 
-
-function addBtn() {
-    copyBtn = '<button type="button" class="copy-btn" data-placement="bottom" title="Copy to clipboard">copy</button>'
-    codeBlock = $('figure,highlight, div.highlight');
-    codeBlock.css('position', 'relative')
-    codeBlock.prepend(copyBtn);
-    codeBlock.hover(
-        function () {
-            $(this).children().first().show();
-        }, function () {
-            $(this).children().first().hide();
-        }
-    );
-
-};
-
-function html2clipboard(content) {
-    var tmpEl = document.createElement("div");
-    tmpEl.style.opacity = 0;
-    tmpEl.style.position = "absolute";
-    tmpEl.style.pointerEvents = "none";
-    tmpEl.style.zIndex = -1;
-
-    tmpEl.innerHTML = content;
-    document.body.appendChild(tmpEl);
-
-    var range = document.createRange();
-    range.selectNode(tmpEl);
-    window.getSelection().addRange(range);
-    document.execCommand("copy");
-    document.body.removeChild(tmpEl);
-}
-
 $(document).ready(function () {
-    addBtn()
+  // Omitted prompts in Regex for each language
+  const LANG_GP = {
+    default: [">>> ", "\\.\\.\\."],
+    python: [">>> ", "\\.\\.\\."],
+    scala: ["scala>"],
+    java: [],
+    julia: ["julia> "],
+    r: ["> "],
+    perl: ["pdl>"],
+    cpp: [""],
+    bash: ["\\$ "],
+  };
 
-    clipboard = new Clipboard('.copy-btn', {
-        target: function (trigger) {
-            return trigger.parentNode.querySelector('code');
-        }
-    });
+  // Append a copy button to each code block on the page
+  $("figure.highlight, div.highlight").each(function () {
+    const copyBtn = $('<button type="button" class="copy-btn">copy</button>');
+    $(this)
+      .css("position", "relative")
+      .prepend(copyBtn)
+      .hover(
+        () => copyBtn.show(),
+        () => copyBtn.hide()
+      );
+  });
 
-    clipboard.on('success', function (e) {
-        //Deal with codes with leading gap
-        var btnClass = e.trigger.classList;
-        var lang = btnClass[btnClass.length - 1];
-        var lines = e.text.split('\n');
-        var hasGap = false;
-        var continueSign = '...';
+  // Clipboard feature based on Clipboard.js v2.0.6
+  const cleanPrompt = function (line, prompts) {
+    let res = line;
+    for (let i = 0; i < prompts.length; i++) {
+      let reg = new RegExp("(?<=^\\s*)" + prompts[i]);
+      if (reg.test(res)) {
+        res = res.replace(reg, "");
+        break;
+      }
+    }
+    return res + "\n";
+  };
 
-        e.clearSelection();
+  const clipboard = new ClipboardJS(".copy-btn", {
+    text: function (trigger) {
+      const lang = trigger.nextElementSibling.children[0].dataset.lang ||
+        trigger.parentNode.parentNode.classList[0].split("-")[1] ||
+        "default";
+      const langPrompts = LANG_GP[lang] || [];
+      const lines = trigger.parentNode.querySelector("code").textContent.split("\n");
+      const cleanedCode = lines.reduce(
+        (content, line) => content.concat(cleanPrompt(line, langPrompts)),
+        "");
+      return cleanedCode.replace(/\n$/, "");
+    },
+  });
 
-        for (var i = 0; i < lines.length; ++i) {
-            lines[i] = lines[i].replace(/^\s+|\s+$/g, "");
-            if (!hasGap && lines[i].startsWith(LANG_GP[lang])) hasGap = true;
-        }
-
-        if (hasGap) {
-            var content = '';
-            for (var i = 0; i < lines.length; ++i) {
-                if (lines[i].startsWith(LANG_GP[lang]) || ((lang == 'python' || lang == 'default') &&
-                    lines[i].startsWith(continueSign))) {
-                    content = content.concat(lines[i].substring(LANG_GP[lang].length, lines[i].length) + '<br />');
-                } else if (lines[i].length == 0) content = content.concat('<br />');
-            }
-            content = content.substring(0, content.length - 6);
-            html2clipboard(content);
-        }
-    });
-
-    clipboard.on('error', function (e) {
-        $(e.trigger).attr('title', 'Copy failed. Try again.')
-            .tooltip('fixTitle')
-            .tooltip('show');
-    });
+  clipboard.on("success", (e) => e.clearSelection());
 });
