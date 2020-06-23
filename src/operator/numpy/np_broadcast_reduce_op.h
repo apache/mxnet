@@ -820,10 +820,8 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
     TShape src_shape, dst_shape;
     BroadcastReduceShapeCompact(data.shape_, small1, &src_shape, &dst_shape);
     size_t workspace_size = 0;
-    MXNET_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-      workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
-        s, dst_shape, {kWriteTo}, src_shape);
-    });
+    workspace_size = broadcast::ReduceWorkspaceSize(
+      s, dst_shape, {kWriteTo}, src_shape, sizeof(DType));
     size_t temp_mem_size = temp_data_size + temp_sum_size + workspace_size;
     Tensor<xpu, 1, char> temp_mem =
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
@@ -993,10 +991,8 @@ void NumpyMomentsForward(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       // Get workspace and temp space for data - mean
       size_t workspace_size = 0;
-      BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-        workspace_size = broadcast::ReduceWorkspaceSize<NDim>(
-          s, dst_shape, req[0], src_shape, sizeof(DType));
-      });
+      workspace_size = broadcast::ReduceWorkspaceSize(
+        s, dst_shape, req[0], src_shape, sizeof(DType));
       size_t temp_data_size = data.shape_.Size() * sizeof(DType);
       size_t temp_mem_size = temp_data_size + workspace_size;
       Tensor<xpu, 1, char> temp_mem =

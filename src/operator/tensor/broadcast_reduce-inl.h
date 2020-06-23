@@ -401,16 +401,14 @@ void ReduceWithExtraMem(Stream<cpu>* s, const TBlob& small, const OpReqType req,
     small.shape_.get<ndim>(), rshape, rstride, ws_dptr);
 }
 
-template<int ndim>
-size_t ReduceWorkspaceSize(Stream<cpu> *s, const mxnet::TShape& small, const OpReqType req,
-                           const mxnet::TShape& big, const int type_size) {
+inline size_t ReduceWorkspaceSize(Stream<cpu> *s, const mxnet::TShape& small, const OpReqType req,
+                                  const mxnet::TShape& big, const int type_size) {
   return 0;
 }
 
-template<int ndim>
-size_t ReduceWorkspaceSize(Stream<cpu> *s, const mxnet::TShape& small, const OpReqType req,
-                           const mxnet::TShape& big, const mxnet::TShape& lhs,
-                           const mxnet::TShape& rhs, const int type_size) {
+inline size_t ReduceWorkspaceSize(Stream<cpu> *s, const mxnet::TShape& small, const OpReqType req,
+                                  const mxnet::TShape& big, const mxnet::TShape& lhs,
+                                  const mxnet::TShape& rhs, const int type_size) {
   return 0;
 }
 
@@ -637,18 +635,16 @@ struct ReduceImplConfig {
   }
 };
 
-template<int ndim>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
-                           const ::mxnet::TShape& big, const int type_size) {
+inline size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
+                                  const ::mxnet::TShape& big, const int type_size) {
   if (req == kNullOp) return 0;
   ReduceImplConfig config(small, big, nullptr, nullptr, type_size);
   return config.workspace_size;
 }
 
-template<int ndim>
-size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
-                           const ::mxnet::TShape& big, const ::mxnet::TShape& lhs,
-                           const ::mxnet::TShape& rhs, const int type_size) {
+inline size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, const OpReqType req,
+                                  const ::mxnet::TShape& big, const ::mxnet::TShape& lhs,
+                                  const ::mxnet::TShape& rhs, const int type_size) {
   if (req == kNullOp) return 0;
   ReduceImplConfig config(small, big, &lhs, &rhs, type_size);
   return config.workspace_size;

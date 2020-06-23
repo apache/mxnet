@@ -659,10 +659,9 @@ struct ReduceImplWrap {
     size_t ws_reduce = 0U;
     std::vector<int> reduce_axis = GetReduceAxis(out_move_shape, in_move_shape);
     if (reduce_axis.empty() || req == kNullOp) { return 0U; }
-    SUM_NDIM_SWITCH(out_shape.ndim(), NDim, {
-      ws_reduce = broadcast::ReduceWorkspaceSize<NDim, DType>(ctx.get_stream<xpu>(),
-                                                              out_shape, req, in_shape);
-    });
+    ws_reduce = broadcast::ReduceWorkspaceSize(ctx.get_stream<xpu>(),
+                                               out_shape, req, in_shape,
+                                               sizeof(DType));
     return ws_reduce;
   }
 

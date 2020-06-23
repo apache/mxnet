@@ -108,11 +108,9 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
   Tensor<xpu, 1, char> workspace;
   size_t workspace_size = 0;
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-      workspace_size =
-        broadcast::ReduceWorkspaceSize<NDim>(s, mean_data.shape_, req[0],
-                                             in_data.shape_, sizeof(DType));
-    });
+    workspace_size =
+      broadcast::ReduceWorkspaceSize(s, mean_data.shape_, req[0],
+                                     in_data.shape_, sizeof(DType));
   });
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
 
@@ -256,20 +254,16 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
     // There are two types of reduction workloads: reduce over axis and reduce exclude axis
     // We take the maximum of the workspace sizes required by these workloads.
     // Also, we explicitly set the req_type=kAddto in case we want to use it.
-    BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
-      reduce_workspace_size =
-        std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim>(s, red_dst_shape,
-                                                      kAddTo, red_src_shape,
-                                                      sizeof(DType)));
-    });
-    BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {
-      reduce_workspace_size =
-        std::max(reduce_workspace_size,
-                 broadcast::ReduceWorkspaceSize<NDim>(s, red_exclude_dst_shape, kAddTo,
-                                                      red_exclude_src_shape,
-                                                      sizeof(DType)));
-    });
+    reduce_workspace_size =
+      std::max(reduce_workspace_size,
+               broadcast::ReduceWorkspaceSize(s, red_dst_shape,
+                                              kAddTo, red_src_shape,
+                                              sizeof(DType)));
+    reduce_workspace_size =
+      std::max(reduce_workspace_size,
+               broadcast::ReduceWorkspaceSize(s, red_exclude_dst_shape, kAddTo,
+                                              red_exclude_src_shape,
+                                              sizeof(DType)));
   });
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(
     Shape1(reduce_workspace_size + data_size * 2 + red_out_size), s);

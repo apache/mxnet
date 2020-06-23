@@ -420,10 +420,10 @@ void BinaryBroadcastRTCBackwardUseIn::operator()(const nnvm::NodeAttrs& attrs,
         const TBlob ograd = inputs[0].reshape(new_oshape);
         const TBlob lhs = inputs[1].reshape(new_lshape);
         const TBlob rhs = inputs[2].reshape(new_rshape);
-        size_t workspace_size_l = broadcast::ReduceWorkspaceSize<NDim>(
+        size_t workspace_size_l = broadcast::ReduceWorkspaceSize(
             s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_,
             rhs.shape_, common::mshadow_type_info(outputs[0].type_flag_).size);
-        size_t workspace_size_r = broadcast::ReduceWorkspaceSize<NDim>(
+        size_t workspace_size_r = broadcast::ReduceWorkspaceSize(
             s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_,
             rhs.shape_, common::mshadow_type_info(outputs[1].type_flag_).size);
         size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
