@@ -3046,6 +3046,8 @@ def test_np_binary_funcs():
 @use_np
 # @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/16848')
 def test_np_mixed_precision_binary_funcs():
+    types_dict = {'bool':np.bool, 'int8': np.int8, 'int32': np.int32, 'int64': np.int64,
+                  'float16': np.float16, 'float32': np.float32, 'float64': np.float64}
     def check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, ltype, rtype):
         class TestMixedBinary(HybridBlock):
             def __init__(self, func):
@@ -3058,19 +3060,19 @@ def test_np_mixed_precision_binary_funcs():
         np_func = getattr(_np, func)
         mx_func = TestMixedBinary(func)
         if lshape is None:
-            np_test_x1 = _np.random.uniform(low, high, (1)).astype(ltype)[0]
+            np_test_x1 = _np.random.uniform(low, high, (1)).astype(types_dict[ltype])[0]
             mx_test_x1 = getattr(mx.numpy, ltype)(np_test_x1)
         else:
-            np_test_x1 = _np.random.uniform(low, high, lshape).astype(ltype)
-            mx_test_x1 = mx.numpy.array(np_test_x1, dtype=ltype)
+            np_test_x1 = _np.random.uniform(low, high, lshape).astype(types_dict[ltype])
+            mx_test_x1 = mx.numpy.array(np_test_x1, dtype=types_dict[ltype])
         if rshape is None:
-            np_test_x2 = _np.random.uniform(low, high, (1)).astype(rtype)[0]
+            np_test_x2 = _np.random.uniform(low, high, (1)).astype(types_dict[rtype])[0]
             mx_test_x2 = getattr(mx.numpy, rtype)(np_test_x2)
         else:
-            np_test_x2 = _np.random.uniform(low, high, rshape).astype(rtype)
-            mx_test_x2 = mx.numpy.array(np_test_x2, dtype=rtype)
-        rtol = 1e-2 if ltype is np.float16 or rtype is np.float16 else 1e-3
-        atol = 1e-3 if ltype is np.float16 or rtype is np.float16 else 1e-5
+            np_test_x2 = _np.random.uniform(low, high, rshape).astype(types_dict[rtype])
+            mx_test_x2 = mx.numpy.array(np_test_x2, dtype=types_dict[rtype])
+        rtol = 1e-2 if ltype is 'float16' or rtype is 'float16' else 1e-3
+        atol = 1e-3 if ltype is 'float16' or rtype is 'float16' else 1e-5
         print('\n')
         print('------------------')
         print('func:', func)
@@ -3080,8 +3082,8 @@ def test_np_mixed_precision_binary_funcs():
         print('rgrad:', rgrad)
         print('lshape:', lshape)
         print('rshape:', rshape)
-        print('type1:', type1)
-        print('type2:', type2)
+        print('ltype:', ltype)
+        print('rtype:', rtype)
         print('np_test_x1:',np_test_x1)
         print('np_test_x1.dtype:',np_test_x1.dtype)
         print('type(np_test_x1):',type(np_test_x1))
