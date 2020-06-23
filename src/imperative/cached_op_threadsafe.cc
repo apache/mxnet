@@ -20,7 +20,7 @@
 #include <unordered_set>
 #include <iostream>
 #include "./imperative_utils.h"
-#include "../executor/exec_pass.h"
+#include "./exec_pass.h"
 #include "./cached_op_threadsafe.h"
 #include "../profiler/profiler.h"
 #include "../operator/operator_common.h"
@@ -101,7 +101,7 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
     // shape inference, storage type inference and if the graph
     // doesn't have dynamic shapes it also plans and allocates memory
     // for intermediate and final outputs in the graph
-    SetForwardGraph(&state.info, false, inputs);
+    SetForwardGraph(default_ctx, &state.info, false, inputs);
     runtime.info.fwd_graph = state.info.fwd_graph;
   }
   nnvm::Graph &g = runtime.info.fwd_graph;
@@ -145,7 +145,8 @@ OpStatePtr CachedOpThreadSafe::DynamicForward(const Context& default_ctx,
 
 OpStatePtr CachedOpThreadSafe::Forward(const std::shared_ptr<CachedOp>& op_ptr,
                                        const std::vector<NDArray*>& inputs,
-                                       const std::vector<NDArray*>& outputs) {
+                                       const std::vector<NDArray*>& outputs,
+                                       const Context& default_ctx) {
   // Acquiring lock on the mutex in forward
   // Without this there are issues with static_forward,
   // specifically with static_shape=True and dynamic_forward.
@@ -158,7 +159,6 @@ OpStatePtr CachedOpThreadSafe::Forward(const std::shared_ptr<CachedOp>& op_ptr,
   // push of ops for different contexts
   std::lock_guard<std::mutex> lock(mutex_);
   CHECK_EQ(inputs.size(), num_inputs());
-  Context default_ctx = inputs[0]->ctx();
   const auto& idx = fwd_graph_.indexed_graph();
   for (size_t i = 0; i < inputs.size(); ++i) {
     CHECK_EQ(inputs[i]->ctx(), default_ctx)
@@ -222,7 +222,9 @@ void CachedOpThreadSafeForward(const OpStatePtr& state_ptr,
   // Set is_recording correct for the imperative executor.
   CHECK(!ctx.need_grad) << "Only inference use case supported with thread safe cached op";
   CHECK(!ctx.is_train) << "Only inference use case supported with thread safe cached op";
-  s.forward_state = s.op->Forward(nullptr, in_ptrs, out_ptrs);
+  CHECK(inputs.size() > 0) << "thread safe cached op requires at least one input";
+  Context default_ctx = inputs[0].ctx();
+  s.forward_state = s.op->Forward(nullptr, in_ptrs, out_ptrs, default_ctx);
   // The arrays in out_ptrs may be changed by CachedOp.
   // If it is, we need to copy data back.
   for (size_t i = 0; i < out_bufs.size(); i++)

@@ -37,11 +37,6 @@ core_logic: {
     custom_steps.compile_unix_lite('libmxnet')
   ])
 
-  utils.parallel_stage('Clojure Docs', [
-    custom_steps.docs_clojure('libmxnet')
-
-  ])
-
 }
 ,
 failure_handler: {

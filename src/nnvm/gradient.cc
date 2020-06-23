@@ -37,8 +37,8 @@
 #include <unordered_set>
 #include <vector>
 
-#include "../executor/exec_pass.h"
-
+#include "error.h"
+#include "../imperative/exec_pass.h"
 
 namespace nnvm {
 namespace pass {
@@ -46,7 +46,6 @@ namespace pass {
 extern size_t MXGetDTypeSize(const int type_flag);  // defined in plan_memory.cc
 
 namespace {
-
 
 /*! Auxiliary Data Structure for Gradient Entries */
 struct GradEntry {
@@ -636,8 +635,9 @@ Graph BuildGradientGraph(
           input_grads.emplace_back(p, 0, 0);
         }  // for (i ∈ src_fwd_node->num_inputs())
       } else {
-        LOG(FATAL) << "Operator " << src_fwd_node->op()->name << " is non-differentiable "
-                   << "because it didn't register FGradient attribute.";
+        std::string message = "Operator " + std::string(src_fwd_node->op()->name)
+          + "is non-differentiable because it didn't register FGradient attribute.";
+        throw nnvm::pass::InvalidGraphError(message);
       }
       for (const auto& e : input_grads) {
         CHECK(e.node);
@@ -708,5 +708,6 @@ NNVM_REGISTER_PASS(MXGradient)
 .depend_graph_attr("grad_ys_out_grad");
 
 }  // namespace
+
 }  // namespace pass
 }  // namespace nnvm

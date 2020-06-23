@@ -628,7 +628,9 @@ class LazyTransformDataset final : public Dataset {
     for (size_t i = 0; i < inputs.size(); ++i) {
       inputs[i].WaitToRead();
     }
-    cached_op_->Forward(cached_op_, ndinputs, ndoutputs);
+    CHECK(inputs.size() > 0) << "dataset getitem requires at least one input";
+    Context default_ctx = inputs[0].ctx();
+    cached_op_->Forward(cached_op_, ndinputs, ndoutputs, default_ctx);
     return true;
   }
 

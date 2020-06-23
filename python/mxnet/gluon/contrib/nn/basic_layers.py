@@ -19,13 +19,13 @@
 # pylint: disable= arguments-differ
 """Custom neural network layers in model_zoo."""
 
-__all__ = ['Concurrent', 'HybridConcurrent', 'Identity', 'SparseEmbedding',
+__all__ = ['Concurrent', 'HybridConcurrent', 'Identity',
            'SyncBatchNorm', 'PixelShuffle1D', 'PixelShuffle2D',
            'PixelShuffle3D']
 
 import warnings
 from .... import ndarray as nd, context
-from ...block import HybridBlock, Block
+from ...block import HybridBlock
 from ...nn import Sequential, HybridSequential, BatchNorm
 
 class Concurrent(Sequential):
@@ -38,19 +38,17 @@ class Concurrent(Sequential):
     Example::
 
         net = Concurrent()
-        # use net's name_scope to give children blocks appropriate names.
-        with net.name_scope():
-            net.add(nn.Dense(10, activation='relu'))
-            net.add(nn.Dense(20))
-            net.add(Identity())
+        net.add(nn.Dense(10, activation='relu'))
+        net.add(nn.Dense(20))
+        net.add(Identity())
 
     Parameters
     ----------
     axis : int, default -1
         The axis on which to concatenate the outputs.
     """
-    def __init__(self, axis=-1, prefix=None, params=None):
-        super(Concurrent, self).__init__(prefix=prefix, params=params)
+    def __init__(self, axis=-1):
+        super(Concurrent, self).__init__()
         self.axis = axis
 
     def forward(self, x):
@@ -71,19 +69,17 @@ class HybridConcurrent(HybridSequential):
     Example::
 
         net = HybridConcurrent()
-        # use net's name_scope to give children blocks appropriate names.
-        with net.name_scope():
-            net.add(nn.Dense(10, activation='relu'))
-            net.add(nn.Dense(20))
-            net.add(Identity())
+        net.add(nn.Dense(10, activation='relu'))
+        net.add(nn.Dense(20))
+        net.add(Identity())
 
     Parameters
     ----------
     axis : int, default -1
         The axis on which to concatenate the outputs.
     """
-    def __init__(self, axis=-1, prefix=None, params=None):
-        super(HybridConcurrent, self).__init__(prefix=prefix, params=params)
+    def __init__(self, axis=-1):
+        super(HybridConcurrent, self).__init__()
         self.axis = axis
 
     def hybrid_forward(self, F, x):
@@ -103,64 +99,15 @@ class Identity(HybridBlock):
     Example::
 
         net = HybridConcurrent()
-        # use net's name_scope to give child Blocks appropriate names.
-        with net.name_scope():
-            net.add(nn.Dense(10, activation='relu'))
-            net.add(nn.Dense(20))
-            net.add(Identity())
+        net.add(nn.Dense(10, activation='relu'))
+        net.add(nn.Dense(20))
+        net.add(Identity())
     """
-    def __init__(self, prefix=None, params=None):
-        super(Identity, self).__init__(prefix=prefix, params=params)
+    def __init__(self):
+        super(Identity, self).__init__()
 
     def hybrid_forward(self, F, x):
         return x
-
-class SparseEmbedding(Block):
-    r"""Turns non-negative integers (indexes/tokens) into dense vectors
-    of fixed size. eg. [4, 20] -> [[0.25, 0.1], [0.6, -0.2]]
-
-    This SparseBlock is designed for distributed training with extremely large
-    input dimension. Both weight and gradient w.r.t. weight are `RowSparseNDArray`.
-
-    Note: if `sparse_grad` is set to True, the gradient w.r.t weight will be
-    sparse. Only a subset of optimizers support sparse gradients, including SGD, AdaGrad
-    and Adam. By default lazy updates is turned on, which may perform differently
-    from standard updates. For more details, please check the Optimization API at:
-    https://mxnet.incubator.apache.org/api/python/optimization/optimization.html
-
-    Parameters
-    ----------
-    input_dim : int
-        Size of the vocabulary, i.e. maximum integer index + 1.
-    output_dim : int
-        Dimension of the dense embedding.
-    dtype : str or np.dtype, default 'float32'
-        Data type of output embeddings.
-    weight_initializer : Initializer
-        Initializer for the `embeddings` matrix.
-
-    Inputs:
-        - **data**: (N-1)-D tensor with shape: `(x1, x2, ..., xN-1)`.
-    Output:
-        - **out**: N-D tensor with shape: `(x1, x2, ..., xN-1, output_dim)`.
-    """
-    def __init__(self, input_dim, output_dim, dtype='float32',
-                 weight_initializer=None, **kwargs):
-        super(SparseEmbedding, self).__init__(**kwargs)
-        self._kwargs = {'input_dim': input_dim, 'output_dim': output_dim,
-                        'dtype': dtype, 'sparse_grad': True}
-        self.weight = self.params.get('weight', shape=(input_dim, output_dim),
-                                      init=weight_initializer, dtype=dtype,
-                                      grad_stype='row_sparse', stype='row_sparse')
-
-    def forward(self, x):
-        weight = self.weight.row_sparse_data(x)
-        return nd.Embedding(x, weight, name='fwd', **self._kwargs)
-
-    def __repr__(self):
-        s = '{block_name}({input_dim} -> {output_dim}, {dtype})'
-        return s.format(block_name=self.__class__.__name__,
-                        **self._kwargs)
 
 class SyncBatchNorm(BatchNorm):
     """Cross-GPU Synchronized Batch normalization (SyncBN)
@@ -220,15 +167,19 @@ class SyncBatchNorm(BatchNorm):
                  center=True, scale=True, use_global_stats=False, beta_initializer='zeros',
                  gamma_initializer='ones', running_mean_initializer='zeros',
                  running_variance_initializer='ones', **kwargs):
-        fuse_relu = False
-        super(SyncBatchNorm, self).__init__(1, momentum, epsilon, center, scale, use_global_stats,
-                                            fuse_relu, beta_initializer, gamma_initializer,
-                                            running_mean_initializer, running_variance_initializer,
-                                            in_channels, **kwargs)
+        super(SyncBatchNorm, self).__init__(
+            axis=1, momentum=momentum, epsilon=epsilon,
+            center=center, scale=scale,
+            use_global_stats=use_global_stats,
+            beta_initializer=beta_initializer,
+            gamma_initializer=gamma_initializer,
+            running_mean_initializer=running_mean_initializer,
+            running_variance_initializer=running_variance_initializer,
+            in_channels=in_channels, **kwargs)
         num_devices = self._get_num_devices() if num_devices is None else num_devices
         self._kwargs = {'eps': epsilon, 'momentum': momentum,
                         'fix_gamma': not scale, 'use_global_stats': use_global_stats,
-                        'ndev': num_devices, 'key': self.prefix}
+                        'ndev': num_devices, 'key': self.name}
 
     def _get_num_devices(self):
         warnings.warn("Caution using SyncBatchNorm: "

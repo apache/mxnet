@@ -31,7 +31,7 @@
 #include <string>
 #include <utility>
 #include "../common/utils.h"
-#include "../executor/exec_pass.h"
+#include "../imperative/exec_pass.h"
 
 namespace mxnet {
 namespace common {

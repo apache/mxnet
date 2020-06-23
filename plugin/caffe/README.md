@@ -43,24 +43,16 @@ For example, the following code shows multi-layer perception network for classif
 ### Python
 ```Python
 data = mx.symbol.Variable('data')
+label = mx.symbol.Variable('softmax_label')
 fc1  = mx.symbol.CaffeOp(data_0=data, num_weight=2, name='fc1', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 128} }")
 act1 = mx.symbol.CaffeOp(data_0=fc1, prototxt="layer{type:\"TanH\"}")
 fc2  = mx.symbol.CaffeOp(data_0=act1, num_weight=2, name='fc2', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 64} }")
 act2 = mx.symbol.CaffeOp(data_0=fc2, prototxt="layer{type:\"TanH\"}")
 fc3 = mx.symbol.CaffeOp(data_0=act2, num_weight=2, name='fc3', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 10}}")
-mlp = mx.symbol.SoftmaxOutput(data=fc3, name='softmax')
+mlp = mx.symbol.CaffeLoss(data=fc3, label=label, grad_scale=1, name='softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
 ```
 
 Let's break it down. First `data = mx.symbol.Variable('data')` defines a variable as placeholder for input.
 Then it's fed through Caffe operators with `fc1  = mx.symbol.CaffeOp(data_0=data, num_weight=2, name='fc1', prototxt="layer{type:\"InnerProduct\" inner_product_param{num_output: 128} }")`.
 
 The inputs to caffe op are named as data_i for i=0 ... num_data-1 as `num_data` is the number of inputs. You may skip the argument, as the example does, if its value is 1. While `num_weight` is number of `blobs_`(weights). Its default value is 0, as many ops maintain no weight. `prototxt` is the configuration string.
-
-We could also replace the last line by:
-
-```Python
-label = mx.symbol.Variable('softmax_label')
-mlp = mx.symbol.CaffeLoss(data=fc3, label=label, grad_scale=1, name='softmax', prototxt="layer{type:\"SoftmaxWithLoss\"}")
-```
-
-to use loss function in caffe.

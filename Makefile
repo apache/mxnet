@@ -48,10 +48,6 @@ ifndef DLPACK_PATH
 	DLPACK_PATH = $(ROOTDIR)/3rdparty/dlpack
 endif
 
-ifndef AMALGAMATION_PATH
-	AMALGAMATION_PATH = $(ROOTDIR)/amalgamation
-endif
-
 ifndef TVM_PATH
 	TVM_PATH = $(TPARTYDIR)/tvm
 endif
@@ -463,7 +459,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-.PHONY: clean all extra-packages test lint clean_all rcpplint rcppexport roxygen\
+.PHONY: clean all extra-packages test lint clean_all roxygen\
 	cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages extension_libs
@@ -663,12 +659,6 @@ $(BIN) :
 	@mkdir -p $(@D)
 	$(CXX) $(CFLAGS) -std=c++17  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
-# CPP Package
-ifeq ($(USE_CPP_PACKAGE), 1)
-include cpp-package/cpp-package.mk
-CFLAGS += -DMXNET_USE_CPP_PACKAGE=1
-endif
-
 include mkldnn.mk
 include tests/cpp/unittest.mk
 
@@ -676,10 +666,10 @@ extra-packages: $(EXTRA_PACKAGES)
 
 test: $(TEST)
 
-lint: cpplint rcpplint jnilint pylint
+lint: cpplint pylint
 
 cpplint:
-	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
+	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests \
 	--exclude_path src/operator/contrib/ctc_include include/mkldnn
 
 pylint:
@@ -727,28 +717,6 @@ cython3:
 cyclean:
 	rm -rf python/mxnet/*/*.so python/mxnet/*/*.cpp
 
-scalaclean:
-	(cd $(ROOTDIR)/scala-package && mvn clean)
-
-scalapkg:
-	(cd $(ROOTDIR)/scala-package && mvn install -DskipTests)
-
-scalainstall:
-	(cd $(ROOTDIR)/scala-package && mvn install)
-
-scalaunittest:
-	(cd $(ROOTDIR)/scala-package && mvn install)
-
-scalaintegrationtest:
-	(cd $(ROOTDIR)/scala-package && mvn integration-test -DskipTests=false)
-
-jnilint:
-	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src --exclude_path scala-package/native/src/main/native/org_apache_mxnet_native_c_api.h
-
-rclean:
-	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
-
 build/rat/apache-rat-0.13/apache-rat-0.13.jar:
 	mkdir -p build/rat
 	cd build/rat; \
@@ -770,25 +738,23 @@ ratcheck: build/rat/apache-rat-0.13/apache-rat-0.13.jar
 
 
 ifneq ($(EXTRA_OPERATORS),)
-clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
+clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
-	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
+clean: mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
-	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 endif
 
 clean_all: clean

@@ -201,33 +201,6 @@ class ElemwiseBinaryOp : public OpBase {
     }
   }
 
-  template<typename xpu, typename LOP, typename ROP>
-  static inline void DnsCsrCsrOpBackward(const nnvm::NodeAttrs &attrs,
-                                         const OpContext &ctx,
-                                         const std::vector<NDArray> &inputs,
-                                         const std::vector<OpReqType> &req,
-                                         const std::vector<NDArray> &outputs) {
-    const bool supported_ops = std::is_same<mshadow_op::right, LOP>::value &&
-                                std::is_same<mshadow_op::left, ROP>::value;
-    CHECK(supported_ops)
-      << "Only backward for mul is supported (LOP should be right, ROP should be left)";
-    const NDArray& out_grad = inputs[0];
-    const NDArray& lhs_in = inputs[1];
-    const NDArray& rhs_in = inputs[2];
-    const NDArray& lhs_grad = outputs[0];
-    const NDArray& rhs_grad = outputs[1];
-    const bool reverse = (outputs[0].storage_type() == kCSRStorage);
-    if (reverse) {
-      DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, out_grad, rhs_in, req[0], lhs_grad, false);
-      Compute<xpu, mshadow_op::mul>(attrs, ctx, {out_grad.data(), lhs_in.data()}, {req[1]},
-                                    {rhs_grad.data()});
-    } else {
-      DnsCsrCsrOp<xpu, mshadow_op::mul>(attrs, ctx, out_grad, lhs_in, req[1], rhs_grad, false);
-      Compute<xpu, mshadow_op::mul>(attrs, ctx, {out_grad.data(), rhs_in.data()}, {req[0]},
-                                    {lhs_grad.data()});
-    }
-  }
-
  public:
   /*! \brief Binary op handling for lhr/rhs: RspDns, RspRsp, DnsRsp, or RspRsp->Dns result */
   template<typename OP>
@@ -620,14 +593,16 @@ template<typename xpu, typename OP>
     CHECK_EQ(outputs.size(), 1U);
     MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
       MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
+        MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[1].type_flag_, EType, {
           const size_t size = (minthree(outputs[0].Size(), inputs[0].Size(), inputs[1].Size())
           + DataType<DType>::kLanes - 1) / DataType<DType>::kLanes;
           if (size != 0) {
             Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(s, size,
                                                                 outputs[0].dptr<bool>(),
                                                                 inputs[0].dptr<DType>(),
-                                                                inputs[1].dptr<DType>());
+                                                                inputs[1].dptr<EType>());
           }
+        });
       });
     });
   }
@@ -825,9 +800,7 @@ template<typename xpu, typename OP>
     });
   }
 
-  template<
-    typename xpu, typename LOP, typename ROP,
-    bool in0_ok_dense = false, bool in1_ok_dense = false, bool in2_ok_dense = false>
+  template<typename xpu, typename LOP, typename ROP>
   static inline void BackwardUseInEx(const nnvm::NodeAttrs &attrs,
                                      const OpContext &ctx,
                                      const std::vector<NDArray> &inputs,
@@ -843,14 +816,10 @@ template<typename xpu, typename OP>
         (lhs_grad_stype == kDefaultStorage || lhs_grad_stype == kRowSparseStorage) &&
         (rhs_grad_stype == kDefaultStorage || rhs_grad_stype == kRowSparseStorage)) {
       // rsp, rsp, rsp -> [dns, rsp], [dns, rsp]
-      RspRspOpBackward<xpu, LOP, ROP, in0_ok_dense, in1_ok_dense, in2_ok_dense>(
+      RspRspOpBackward<xpu, LOP, ROP, false, false, false>(
         attrs, ctx, inputs, req, outputs, BackwardUseIn<xpu, LOP, ROP>);
-    }
-    if (((lhs_grad_stype == kDefaultStorage && rhs_grad_stype == kCSRStorage) ||
-         (lhs_grad_stype == kCSRStorage && rhs_grad_stype == kDefaultStorage)) &&
-        out_grad_stype == kDefaultStorage) {
-      // dns, csr, dns -> [csr, dns] / csr, dns, dns -> [dns, csr]
-      DnsCsrCsrOpBackward<xpu, LOP, ROP>(attrs, ctx, inputs, req, outputs);
+    } else {
+      LOG(FATAL) << "Not Implemented";
     }
   }
 };  // class ElemwiseBinaryOp

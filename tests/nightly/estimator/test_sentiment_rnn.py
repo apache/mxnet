@@ -274,7 +274,7 @@ def test_estimator_gpu():
         'glove', pretrained_file_name='glove.6B.100d.txt', vocabulary=vocab)
 
     net.embedding.weight.set_data(glove_embedding.idx_to_vec)
-    net.embedding.collect_params().setattr('grad_req', 'null')
+    net.embedding.setattr('grad_req', 'null')
 
     acc = run(net, train_dataloader, test_dataloader, num_epochs=num_epochs, ctx=ctx, lr=lr)
 

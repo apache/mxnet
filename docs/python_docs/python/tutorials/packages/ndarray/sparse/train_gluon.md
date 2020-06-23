@@ -465,10 +465,6 @@ Memory Allocation for Weight Gradient:
   0.000 MBs (  0.050%) for fullyconnected3                         
 ```
 
-### Advanced: Sparse `weight`
-
-You can optimize this example further by setting the weight's `stype` to `'row_sparse'`, but whether `'row_sparse'` weights make sense or not will depends on your specific task. See [contrib.SparseEmbedding](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/contrib/nn/basic_layers.py#L118) for an example of this.
-
 ## Conclusion
 
 As part of this tutorial, we learned how to write sparse data to disk in LibSVM format and load it back in sparse batches with the [LibSVMIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter). We learned how to improve the performance of Gluon's [nn.Dense](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) on sparse arrays using `mx.nd.sparse`. And lastly, we set `grad_stype` to `'row_sparse'` to reduce the size of the gradient and speed up the parameter update step.

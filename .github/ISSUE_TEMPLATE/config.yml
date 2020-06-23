@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Ask a question
+    url: https://stackoverflow.com/questions/tagged/mxnet
+    about: Use Stack Overflow to ask and answer questions
+  - name: Discuss
+    url: https://discuss.mxnet.io/
+    about: Use Discuss forums for discussions [Stackoverflow alternative]
