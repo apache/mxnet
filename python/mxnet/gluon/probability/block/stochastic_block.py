@@ -32,8 +32,8 @@ class StochasticBlock(HybridBlock):
 
     """
 
-    def __init__(self, prefix=None, params=None):
-        super(StochasticBlock, self).__init__(prefix=prefix, params=params)
+    def __init__(self, **kwargs):
+        super(StochasticBlock, self).__init__(**kwargs)
         self._losses = []
         self._losscache = []
 
@@ -81,9 +81,8 @@ class StochasticSequential(StochasticBlock):
     """Stack StochasticBlock sequentially.
     """
 
-    def __init__(self, prefix=None, params=None):
-        super(StochasticSequential, self).__init__(
-            prefix=prefix, params=params)
+    def __init__(self, **kwargs):
+        super(StochasticSequential, self).__init__(**kwargs)
         self._layers = []
 
     def add(self, *blocks):
@@ -118,9 +117,8 @@ class StochasticSequential(StochasticBlock):
     def __getitem__(self, key):
         layers = list(self._children.values())[key]
         if isinstance(layers, list):
-            net = type(self)(prefix=self._prefix)
-            with net.name_scope():
-                net.add(*(l() for l in layers))
+            net = type(self)()
+            net.add(*(l() for l in layers))
             return net
         else:
             return layers()
