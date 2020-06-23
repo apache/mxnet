@@ -6271,7 +6271,7 @@ def flip(m, axis=None, out=None):
     if isinstance(m, numeric_types):
         return _np.flip(m, axis)
     elif isinstance(m, ndarray):
-        return _npi.flip(m, axis, out=out)
+        return _api_internal.flip(m, axis, out)
     else:
         raise TypeError('type {} not supported'.format(str(type(m))))
 

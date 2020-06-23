@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <string>
 #include <utility>
+#include <unordered_map>
 #include "../tensor/matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 #include "../../common/utils.h"
@@ -565,6 +566,12 @@ struct FlipParam : public dmlc::Parameter<FlipParam> {
   DMLC_DECLARE_PARAMETER(FlipParam) {
       DMLC_DECLARE_FIELD(axis)
           .describe("The axis which to flip elements.");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s;
+    axis_s << axis;
+    (*dict)["axis"] = axis_s.str();
   }
 };
 

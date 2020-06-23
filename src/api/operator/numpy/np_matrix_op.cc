@@ -74,6 +74,36 @@ MXNET_REGISTER_API("_npi.expand_dims")
   *ret = ndoutputs[0];
 });
 
+MXNET_REGISTER_API("_npi.flip")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_flip");
+  nnvm::NodeAttrs attrs;
+  op::FlipParam param;
+
+  NDArray* out = args[2].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  if (args[1].type_code() == kNull) {
+    param.axis = mxnet::Tuple<int>(-1, dim_t(0));
+  } else if (args[1].type_code() == kDLInt) {
+    param.axis = Tuple<int>(1, args[1].operator int64_t());
+  } else {
+    param.axis = Tuple<int>(args[1].operator ObjectRef());
+  }
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::FlipParam>(&attrs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(2);
+  } else {
+    *ret = reinterpret_cast<mxnet::NDArray*>(ndoutputs[0]);
+  }
+});
+
 MXNET_REGISTER_API("_npi.concatenate")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
