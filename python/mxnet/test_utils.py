@@ -75,9 +75,12 @@ def default_tols():
     return {np.dtype(np.float16): (1e-2, 1e-1),
             np.dtype(np.float32): (1e-4, 1e-3),
             np.dtype(np.float64): (1e-5, 1e-20),
+            np.dtype(np.int8): (0, 0),
             np.dtype(np.uint8): (0, 0),
             np.dtype(np.int32): (0, 0),
-            np.dtype(np.int64): (0, 0)}
+            np.dtype(np.uint32): (0, 0),
+            np.dtype(np.int64): (0, 0),
+            np.dtype(np.uint64): (0, 0)}
 
 def get_tolerances(tol, ctx, dtype, sym_has_TF32_ops=True):
     """ Return relative and absolute tolerances based on context, datatype and sym properties."""
