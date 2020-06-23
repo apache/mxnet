@@ -227,6 +227,8 @@ def with_seed(seed=None):
                         logger.info(test_msg)
                     raise
                 finally:
+                    # Provide test-isolation for any test having this decorator
+                    mx.nd.waitall()
                     np.random.set_state(post_test_state)
         return test_new
     return test_helper
