@@ -70,19 +70,51 @@ def default_dtype():
     # _TODO: get default dtype from environment variable
     return np.float32
 
+def default_tols():
+    """Get default relative and absolute tolerances for data comparisons involving each data type."""
+    return {np.dtype(np.float16): (1e-2, 1e-1),
+            np.dtype(np.float32): (1e-4, 1e-3),
+            np.dtype(np.float64): (1e-5, 1e-20),
+            np.dtype(np.uint8): (0, 0),
+            np.dtype(np.int32): (0, 0),
+            np.dtype(np.int64): (0, 0)}
 
-def get_atol(atol=None):
+def get_tolerances(tol, ctx, dtype, sym_has_TF32_ops=True):
+    """ Return relative and absolute tolerances based on context, datatype and sym properties."""
+    # TF32 is enabled by default on arch 80 GPUs
+    def is_TF32_enabled(ctx):
+        try:
+            return (ctx.device_type == 'gpu' and
+                    get_cuda_compute_capability(ctx) == 80 and
+                    os.environ.get('NVIDIA_TF32_OVERRIDE') != '0')
+        except:  # pylint: disable=bare-except
+            return False
+
+    # On arch 80 gpus, a float32-io gemm or conv op will trim the mantissa of data
+    # inputs to be of comparable precision to a float16, so float16 becomes the
+    # 'effective dtype' for tolerance tests involving such ops.
+    def effective_dtype(ctx, dtype, sym_has_TF32_ops):
+        if dtype == np.dtype(np.float32) and is_TF32_enabled(ctx) and sym_has_TF32_ops:
+            print('**** TF32 tols ****')
+            return np.dtype(np.float16)
+        else:
+            return dtype
+
+    edt = effective_dtype(ctx, dtype, sym_has_TF32_ops)
+    rtol, atol = (tol[edt], tol[edt]) if isinstance(tol[edt], numbers.Number) else tol[edt]
+    return rtol, atol
+
+def get_atol(atol=None, dtype=np.dtype(np.float64)):
     """Get default numerical threshold for regression test."""
-    # _TODO: get from env variable, different threshold might
-    # be needed for different device and dtype
-    return 1e-20 if atol is None else atol
+    if atol is None:
+        _, atol = default_tols()[dtype]
+    return atol
 
-
-def get_rtol(rtol=None):
+def get_rtol(rtol=None, dtype=np.dtype(np.float64)):
     """Get default numerical threshold for regression test."""
-    # _TODO: get from env variable, different threshold might
-    # be needed for different device and dtype
-    return 1e-5 if rtol is None else rtol
+    if rtol is None:
+        rtol, _ = default_tols()[dtype]
+    return rtol
 
 def get_etol(etol=None):
     """Get default numerical threshold for regression test."""
@@ -579,8 +611,15 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     if not use_broadcast:
         checkShapes(a, b)
 
-    rtol = get_rtol(rtol)
-    atol = get_atol(atol)
+    # If no tolerance is specified, use the largest default tol, which is based on the ctx and dtype of 'a' and 'b'
+    ain_rtol, ain_atol = (0,0) if not hasattr(a, 'ctx') else get_tolerances(default_tols(), a.ctx, np.dtype(a.dtype))
+    bin_rtol, bin_atol = (0,0) if not hasattr(b, 'ctx') else get_tolerances(default_tols(), b.ctx, np.dtype(b.dtype))
+    if rtol is None:
+        rtol = max(ain_rtol, bin_rtol, get_rtol(rtol))
+    if atol is None:
+        atol = max(ain_atol, bin_atol, get_atol(atol))
+
+#    print('Using rtol, atol = {}, {}'.format(rtol, atol))
     use_np_allclose = isinstance(a, np.ndarray) and isinstance(b, np.ndarray)
     if not use_np_allclose:
         if not (hasattr(a, 'ctx') and hasattr(b, 'ctx') and a.ctx == b.ctx and a.dtype == b.dtype):
@@ -1395,14 +1434,6 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
         raise ValueError('typ can only be "whole" or "forward".')
 
 
-def get_absolute_tolerance(rtol, ctx):
-    if 'atol' in ctx:
-        return ctx['atol']
-    if 'atol_mult' in ctx:
-        return ctx['atol_mult'] * rtol
-    return rtol
-
-
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                       arg_params=None, aux_params=None, tol=None,
                       raise_on_err=True, ground_truth=None, equal_nan=False,
@@ -1454,45 +1485,17 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
   'type_dict': {'concat_arg0': np.float32, 'concat_arg1': np.float32}}]
     >>> check_consistency(sym, ctx_list)
     """
+    # tol dict values can be single numbers (used for both rtol and atol) or (rtol, atol) tuples
     if tol is None:
-        tol = {np.dtype(np.float16): 1e-1,
-               np.dtype(np.float32): 1e-3,
-               np.dtype(np.float64): 1e-5,
-               np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0,
-               np.dtype(np.int64): 0}
-    elif isinstance(tol, numbers.Number):
+        tol = default_tols()
+    elif isinstance(tol, numbers.Number) or \
+         (isinstance(tol, tuple) and len(tol) == 2):
         tol = {np.dtype(np.float16): tol,
                np.dtype(np.float32): tol,
                np.dtype(np.float64): tol,
                np.dtype(np.uint8): tol,
                np.dtype(np.int32): tol,
                np.dtype(np.int64): tol}
-
-    # TF32 is enabled by default on arch 80 GPUs
-    def is_TF32_enabled(ctx):
-        try:
-            return (ctx.device_type == 'gpu' and
-                    get_cuda_compute_capability(ctx) == 80 and
-                    os.environ.get('NVIDIA_TF32_OVERRIDE') != '0')
-        except:  # pylint: disable=bare-except
-            return False
-
-    # On arch 80, a float32-io gemm or conv op will trim the mantissa of data
-    # inputs to be of comparable precision to a float16, so float16 becomes the
-    # 'effective dtype' for tolerance tests involving such ops.
-    def effective_dtype(ctx, dtype, sym_has_TF32_ops):
-        if dtype == np.dtype(np.float32) and is_TF32_enabled(ctx) and sym_has_TF32_ops:
-            return np.dtype(np.float16)
-        else:
-            return dtype
-
-    # Return relative and absolute tolerances based on context, datatype and sym properties
-    def get_tolerances(ctx_list_elem, dtype, sym_has_TF32_ops):
-        edt = effective_dtype(ctx_list_elem['ctx'], dtype, sym_has_TF32_ops)
-        rtol = tol[edt]
-        atol = get_absolute_tolerance(rtol, ctx_list_elem)
-        return rtol, atol
 
     assert len(ctx_list) > 1
     if isinstance(sym, Symbol):
@@ -1546,7 +1549,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             continue
 
         # Assumimg simply for now that all symbols might have TF32 ops
-        rtol, atol = get_tolerances(ctx_list[i], dtypes[i], sym_has_TF32_ops=True)
+        rtol, atol = get_tolerances(tol, ctx_list[i]['ctx'], dtypes[i], sym_has_TF32_ops=True)
         for name, arr in zip(output_names, exe.outputs):
             # Previously, the cast was to dtypes[i], but symbol may be mixed-precision,
             # so casting the ground truth to the actual output type seems more correct.
@@ -1576,7 +1579,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                 continue
 
             # Assumimg simply for now that all symbols might have TF32 ops
-            rtol, atol = get_tolerances(ctx_list[i], dtypes[i], sym_has_TF32_ops=True)
+            rtol, atol = get_tolerances(tol, ctx_list[i]['ctx'], dtypes[i], sym_has_TF32_ops=True)
             curr = zip(output_names + arg_names, exe.outputs + exe.grad_arrays)
             for name, arr in curr:
                 if gt[name] is None:

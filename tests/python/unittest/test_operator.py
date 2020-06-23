@@ -4285,7 +4285,7 @@ def test_grid_generator():
         # check forward
         exe.arg_dict['affine'][:] = np.array([[1.0,0,0,0,1.0,0]])
         exe.forward(is_train=True)
-        output = exe.outputs[0].asnumpy()
+        output = exe.outputs[0]
         output[0,0,:,:] = (output[0,0,:,:] + 1) * (target_shape[1] - 1) / 2.0
         output[0,1,:,:] = (output[0,1,:,:] + 1) * (target_shape[0] - 1) / 2.0
         xv, yv = np.meshgrid(np.arange(target_shape[0]), np.arange(target_shape[1]))
@@ -4300,7 +4300,7 @@ def test_grid_generator():
         tmp[1] = -1.0 + (np.arange(target_shape[0]*target_shape[1]) // target_shape[1]) * (2.0 / (target_shape[0]-1))
         tmp[2] = 1
         grad_est = np.dot(out_grad[0].reshape(2,target_shape[0]*target_shape[1]),tmp.T).reshape(1,6)
-        assert_almost_equal(exe.grad_dict['affine'], grad_est, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe.grad_dict['affine'], grad_est)
         # check addto
         exe = grid._simple_bind(ctx=default_context(), affine=(1,6), grad_req='add')
         grid_grad_npy = np.random.normal(size=exe.grad_dict['affine'].shape)
@@ -4308,7 +4308,7 @@ def test_grid_generator():
         exe.arg_dict['affine'][:] = np.array([[1.0, 0, 0, 0, 1.0, 0]])
         exe.forward(is_train=True)
         exe.backward(mx.nd.array(out_grad))
-        assert_almost_equal(exe.grad_dict['affine'], grad_est + grid_grad_npy, rtol=1e-2, atol=1e-5)
+        assert_almost_equal(exe.grad_dict['affine'], grad_est + grid_grad_npy)
 
     # transform_type = warp
     test_case = [(12,21),(4,3),(6,12)]
