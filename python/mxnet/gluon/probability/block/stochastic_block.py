@@ -93,7 +93,7 @@ class StochasticSequential(StochasticBlock):
             self.register_child(block)
 
     @StochasticBlock.collectLoss
-    def hybrid_forward(self, F, x, *args):
+    def forward(self, x, *args):
         # pylint: disable=arguments-differ
         for block in self._children.values():
             x = block()(x, *args)

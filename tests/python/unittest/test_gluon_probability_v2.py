@@ -2244,7 +2244,7 @@ def test_gluon_stochastic_block():
             net.export('dummyBlock', epoch=0)
 
 
-@pytest.mark.skip("Stochastic sequential needs reimplementation")
+# @pytest.mark.skip("Stochastic sequential needs reimplementation")
 @with_seed()
 @use_np
 def test_gluon_stochastic_sequential():
