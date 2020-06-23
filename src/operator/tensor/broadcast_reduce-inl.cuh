@@ -387,8 +387,7 @@ void ReduceBool(Stream<gpu> *s, const TBlob& small, const OpReqType req,
                 const Tensor<gpu, 1, char>& workspace, const TBlob& big) {
   if (req == kNullOp) return;
   cudaStream_t stream = Stream<gpu>::GetStream(s);
-  ReduceImplConfig<ndim> config =
-    ConfigureReduceImpl<ndim, DType>(small.shape_, big.shape_, nullptr, nullptr);
+  ReduceImplConfig config(small.shape_, big.shape_, nullptr, nullptr, sizeof(DType));
   ReduceImpl<Reducer, ndim, bool, DType, bool, OP>(stream, small, req, big, workspace, config);
 }
 

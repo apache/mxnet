@@ -410,9 +410,15 @@ void MatrixRankForwardImpl(const TBlob& a,
       if (new_tol_data.dptr<DType>() != tol.dptr<DType>()) {
         Copy(new_tol_data.FlatTo1D<xpu, DType>(s), tol.FlatTo1D<xpu, DType>(s), s);
       }
-      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::gt>(attrs, ctx,
-                                                                 {s_data, new_tol_data},
-                                                                 {kWriteTo}, {broadcast_data});
+      if constexpr (std::is_same<xpu, cpu>::value) {
+        mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::gt>(attrs, ctx,
+                                                                   {s_data, new_tol_data},
+                                                                   {kWriteTo}, {broadcast_data});
+      } else {
+        mxnet::op::BinaryBroadcastRTCCompute {"greater"}(attrs, ctx,
+                                                         {s_data, new_tol_data},
+                                                         {kWriteTo}, {broadcast_data});
+      }
       // Step5: Calculate rank.
       const int b_ndim  = broadcast_shape.ndim();
       const int data_size = broadcast_data.size(b_ndim - 1);

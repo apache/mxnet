@@ -74,11 +74,6 @@ bool ElemwiseBinaryOp::BackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
   const bool invalid_ctx = dev_mask != mshadow::cpu::kDevMask;
   const auto dispatch_ex = invalid_ctx ? DispatchMode::kFComputeFallback :
                            DispatchMode::kFComputeEx;
-  const int ograd_stype = in_attrs->at(0);
-  const int lhs_stype = in_attrs->at(1);
-  const int rhs_stype = in_attrs->at(2);
-  int& lhs_grad_stype = out_attrs->at(0);
-  int& rhs_grad_stype = out_attrs->at(1);
   if (!dispatched && common::ContainsOnlyStorage(*in_attrs, kDefaultStorage)) {
     dispatched = storage_type_assign(out_attrs, kDefaultStorage,
                                      dispatch_mode, DispatchMode::kFCompute);

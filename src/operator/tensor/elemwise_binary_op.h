@@ -136,14 +136,6 @@ class ElemwiseBinaryOp : public OpBase {
       }
     });
   }
-#if MXNET_USE_CUDA
-  template<typename LOP, typename ROP>
-  static void BackwardUseNone_(const nnvm::NodeAttrs &attrs,
-                               mshadow::Stream<gpu>* s,
-                               const std::vector<TBlob> &inputs,
-                               const std::vector<OpReqType> &req,
-                               const std::vector<TBlob> &outputs);
-#endif
 
   template<typename LOP, typename ROP>
   static void BackwardUseIn_(const nnvm::NodeAttrs &attrs,
@@ -177,15 +169,6 @@ class ElemwiseBinaryOp : public OpBase {
       });
     });
   }
-
-#if MXNET_USE_CUDA
-  template<typename LOP, typename ROP>
-  static void BackwardUseIn_(const nnvm::NodeAttrs &attrs,
-                             mshadow::Stream<gpu>* s,
-                             const std::vector<TBlob> &inputs,
-                             const std::vector<OpReqType> &req,
-                             const std::vector<TBlob> &outputs);
-#endif
 
   template<
     typename xpu,

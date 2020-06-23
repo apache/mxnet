@@ -70,7 +70,10 @@ __global__ void binary_scalar_kernel(const binary_scalar_kernel_params params,
     for (int i = 0; i < nvec; ++i) {
       const auto input = IType::from(loader.separate()[i]);
       // enables returning different type
-      const auto temp = OP(input, static_cast<typename IType::type>(params.scalar));
+      const auto temp = OP(input,
+                           static_cast<typename type_util::mixed_type<typename IType::type,
+                                                                      float32>::type>
+                             (params.scalar));
 
       if (req == OpReqType::kAddTo) {
         // temp2 may have a wider type than either temp

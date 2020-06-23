@@ -32,15 +32,13 @@ NNVM_REGISTER_OP(_npi_add)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"add"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_add)
-.set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::posone,
-                                                                mshadow_op::posone>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"one", "one"});
 
 NNVM_REGISTER_OP(_npi_subtract)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"sub"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_sub)
-.set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::posone,
-                                                                mshadow_op::negone>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"one", "negone"});
 
 NNVM_REGISTER_OP(_npi_multiply)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"mul"});
@@ -52,15 +50,13 @@ NNVM_REGISTER_OP(_npi_mod)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"mod"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_mod)
-.set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::mod_grad,
-                                                              mshadow_op::mod_rgrad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"mod_grad", "mod_rgrad"});
 
 NNVM_REGISTER_OP(_npi_power)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"power"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_power)
-.set_attr<FCompute>("FCompute<gpu>", NumpyBinaryBackwardUseIn<gpu, mshadow_op::power_grad,
-                                                              mshadow_op::power_rgrad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"power_grad", "power_rgrad"});
 
 NNVM_REGISTER_OP(_npi_add_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"add"});

@@ -302,12 +302,6 @@ __device__ inline DType copysign_grad(const DType val,
 }
 
 template <typename DType, typename DType2>
-__device__ inline DType zero_grad(const DType val,
-                                  const DType2 val2) {
-  return 0;
-}
-
-template <typename DType, typename DType2>
 __device__ inline DType arctan2_grad(const DType val,
                                      const DType2 val2) {
   return val2 / (val * val + val2 * val2);
@@ -384,6 +378,23 @@ backward_gammaln(const DTypeGrad grad, const DType val) {
   } else {
     return grad * op::special_functions::cephes::psi<float>(val);
   }
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
+backward_digamma(const DTypeGrad grad, const DType val) {
+  if (type_util::is_same<DTypeGrad, double>::value) {
+    return grad * op::special_functions::trigamma<double>(val);
+  } else {
+    return grad * op::special_functions::trigamma<float>(val);
+  }
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
+backward_gelu(const DTypeGrad grad, const DType val) {
+  return 0.5f * (grad + grad * op::erf(val / op::sqrt(2.0f)) +
+                 val * backward_erf(grad, val / op::sqrt(2.0f)) / op::sqrt(2.0f));
 }
 
 template <typename DType, typename DType2>

@@ -255,6 +255,31 @@ __device__ inline bool isinf(volatile const float16 &val) {
   return ::isinf(__half2float(const_cast<const float16&>(val)));
 }
 
+template <typename DType>
+__device__ inline bool isnan(volatile const DType &val) {
+  return false;
+}
+
+template <>
+__device__ inline bool isnan(volatile const float &val) {
+  return ::isnan(val);
+}
+
+template <>
+__device__ inline bool isnan(volatile const double &val) {
+  return ::isnan(val);
+}
+
+template <>
+__device__ inline bool isnan(volatile const long double &val) {
+  return ::isnan(val);
+}
+
+template <>
+__device__ inline bool isnan(volatile const float16 &val) {
+  return ::isnan(__half2float(const_cast<const float16&>(val)));
+}
+
 }  // namespace util
 )code";
 }  // namespace rtc

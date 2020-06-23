@@ -45,7 +45,7 @@ NNVM_REGISTER_OP(_npi_bitwise_or)
 
 NNVM_REGISTER_OP(_backward_npi_copysign)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"copysign_grad",
-                                                                     "zero_grad"});
+                                                                     "zero"});
 
 NNVM_REGISTER_OP(_npi_arctan2)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"arctan2"});

@@ -19,7 +19,7 @@
 
 /*!
  * Copyright (c) 2015 by Contributors
- * \file cuda_utils.h
+ * \file utils.h
  * \brief Common CUDA utilities.
  */
 #ifndef MXNET_COMMON_CUDA_UTILS_H_

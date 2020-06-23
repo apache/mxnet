@@ -338,8 +338,22 @@ max(const DType a, const DType2 b) {
 
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type
+fmax(const DType a, const DType2 b) {
+  if (isnan(b)) return a;
+  return a > b ? a : b;
+}
+
+template <typename DType, typename DType2>
+__device__ inline typename type_util::mixed_type<DType, DType2>::type
 min(const DType a, const DType2 b) {
   if (isnan(a)) return a;
+  return a < b ? a : b;
+}
+
+template <typename DType, typename DType2>
+__device__ inline typename type_util::mixed_type<DType, DType2>::type
+fmin(const DType a, const DType2 b) {
+  if (isnan(b)) return a;
   return a < b ? a : b;
 }
 
@@ -372,8 +386,23 @@ mod(const DType a, const DType2 b) {
 
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type
+fmod(const DType a, const DType2 b) {
+  if (b == 0) {
+    return 0;
+  }
+  return ::fmod(static_cast<double>(a), static_cast<double>(b));
+}
+
+template <typename DType, typename DType2>
+__device__ inline typename type_util::mixed_type<DType, DType2>::type
 rmod(const DType a, const DType2 b) {
   return op::mod(b, a);
+}
+
+template <typename DType, typename DType2>
+__device__ inline typename type_util::mixed_type<DType, DType2>::type
+rfmod(const DType a, const DType2 b) {
+  return op::fmod(b, a);
 }
 
 template <typename DType, typename DType2>
@@ -509,6 +538,14 @@ __device__ inline typename type_util::mixed_type<DType, DType2>::type bitwise_xo
   return static_cast<int64>(a) ^ static_cast<int64>(b);
 }
 
+template <typename DType>
+__device__ inline DType bitwise_not(const DType a) {
+  if (type_util::is_same<DType, bool>::value) {
+    return !a;
+  } else {
+    return ~static_cast<int64>(a);
+  }
+}
 
 DEFINE_BINARY_MATH_FUNC(arctan2, ::atan2, ::atan2f)
 
@@ -642,8 +679,8 @@ __device__ inline DType square(const DType val) {
   return val * val;
 }
 
-template <typename DType>
-__device__ inline typename LoadType<DType>::Type zero(const DType val) {
+template <typename DType, typename... DTypes>
+__device__ inline typename LoadType<DType>::Type zero(const DType val, const DTypes... args) {
   return 0;
 }
 
@@ -652,14 +689,24 @@ __device__ inline typename LoadType<DType>::Type zero() {
   return 0;
 }
 
-template <typename DType>
-__device__ inline typename LoadType<DType>::Type one(const DType val) {
+template <typename DType, typename... DTypes>
+__device__ inline typename LoadType<DType>::Type one(const DType val, const DTypes... args) {
   return 1;
 }
 
 template <typename DType>
 __device__ inline typename LoadType<DType>::Type one() {
   return 1;
+}
+
+template <typename DType, typename... DTypes>
+__device__ inline typename LoadType<DType>::Type negone(const DType val, const DTypes... args) {
+  return -1;
+}
+
+template <typename DType>
+__device__ inline typename LoadType<DType>::Type negone() {
+  return -1;
 }
 
 template <typename DType>
@@ -746,6 +793,11 @@ DEFINE_UNARY_MATH_FUNC(gammaln, ::lgamma, ::lgammaf)
 DEFINE_UNARY_MATH_FUNC(erf, ::erf, ::erff)
 DEFINE_UNARY_MATH_FUNC(erfinv, ::erfinv, ::erfinvf)
 
+template <typename DType>
+__device__ inline DType gelu(const DType val) {
+  return 0.5f * val * (1.0f + op::erf(val / op::sqrt(2.0f)));
+}
+
 template <typename DType1, typename DType2>
 __device__ inline DType1 smooth_l1(const DType1 val, const DType2 scalar) {
   const auto bsq = scalar * scalar;
@@ -760,6 +812,15 @@ __device__ inline DType1 smooth_l1(const DType1 val, const DType2 scalar) {
 }
 
 template <typename DType>
+__device__ inline DType digamma(const DType val) {
+  if (type_util::has_double_or_integral<DType>::value) {
+    return special_functions::cephes::psi<double>(val);
+  } else {
+    return special_functions::cephes::psi<float>(val);
+  }
+}
+
+template <typename DType>
 __device__ inline DType logical_not(const DType val) {
   return val != DType(0) ? DType(0) : DType(1);
 }
@@ -769,15 +830,55 @@ __device__ inline bool np_logical_not(const DType val) {
   return !static_cast<bool>(val);
 }
 
+template <typename DType, typename DType2>
+__device__ inline bool np_logical_and(const DType val, const DType2 val2) {
+  return (val && val2) ? true : false;
+}
+
+template <typename DType, typename DType2>
+__device__ inline bool np_logical_or(const DType val, const DType2 val2) {
+  return (val || val2) ? true : false;
+}
+
+template <typename DType, typename DType2>
+__device__ inline bool np_logical_xor(const DType val, const DType2 val2) {
+  return ((val || val2) && !(val && val2)) ? true : false;
+}
+
+template <typename DType>
+__device__ inline bool isnan(const DType val) {
+  return util::isnan(val);
+}
+
+template <typename DType>
+__device__ inline bool isinf(const DType val) {
+  return util::isinf(val);
+}
+
+template <typename DType>
+__device__ inline bool isposinf(const DType val) {
+  return util::isinf(val) && (val > 0);
+}
+
+template <typename DType>
+__device__ inline bool isneginf(const DType val) {
+  return util::isinf(val) && (val < 0);
+}
+
+template <typename DType>
+__device__ inline bool isfinite(const DType val) {
+  return !op::isnan(val) && !op::isinf(val);
+}
+
 #undef DEFINE_UNARY_MATH_FUNC
 
 template <typename DType, typename DType2>
-__device__ inline DType left(DType left_val, DType2 right_val) {
+__device__ inline DType left(const DType left_val, const DType2 right_val) {
   return left_val;
 }
 
 template <typename DType, typename DType2>
-__device__ inline DType2 right(DType left_val, DType2 right_val) {
+__device__ inline DType2 right(const DType left_val, const DType2 right_val) {
   return right_val;
 }
 

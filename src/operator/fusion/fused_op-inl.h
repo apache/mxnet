@@ -201,7 +201,7 @@ const std::map<std::string, std::vector<std::vector<std::string>>> LeakyReLU_ops
   {"gelu"                              , {{"op::gelu(%)", "_0"}}},
 };
 const std::map<std::string, std::vector<std::vector<std::string>>> LeakyReLU_bwd_ops = {
-  {"gelu"                              , {{"op::backward_gelu(%, %)", "_1", "_0"}}},
+  {"gelu"                              , {{"op::backward_gelu(%, %)", "_0", "_1"}}},
 };
 
 const std::map<std::string, std::string> slice_ops = {

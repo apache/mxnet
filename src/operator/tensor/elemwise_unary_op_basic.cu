@@ -211,11 +211,10 @@ NNVM_REGISTER_OP(_backward_gammaln)
 
 // digamma
 NNVM_REGISTER_OP(digamma)
-.set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::digamma>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"digamma"});
 
 NNVM_REGISTER_OP(_backward_digamma)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::Compute<
-  gpu, unary_bwd<mshadow_op::trigamma> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_digamma"});
 
 // logical not
 NNVM_REGISTER_OP(logical_not)
