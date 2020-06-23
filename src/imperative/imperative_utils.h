@@ -186,10 +186,8 @@ inline void SetShapeType(const Context& ctx,
   for (auto& i : outputs) {
     out_shapes.push_back(i->shape());
   }
-  bool is_dynamic_shape_existing = false;
-  if (!infershape.count(attrs.op)) {
-    is_dynamic_shape_existing = true;
-  } else {
+  bool is_dynamic_shape_existing = !infershape.count(attrs.op);
+  if (!is_dynamic_shape_existing) {
     // If any of the inputs is a deferred computed array with unknown shape, we
     // can't infer shapes.
     for (const NDArray *i : inputs) {
@@ -277,18 +275,15 @@ inline void SetShapeType(const Context& ctx,
 
   CHECK_EQ(out_storage_types.size(), outputs.size());
   CHECK(*dispatch_mode != DispatchMode::kUndefined);
-
-  NDArrayStorageType storage_type = kDefaultStorage;
-  // for dynamic shape, we could not pre-determine the shape
-  auto &&shape = mxnet::TShape(mshadow::Shape1(0));
   for (size_t i = 0; i < outputs.size(); ++i) {
     if (outputs[i]->is_none() || (mxnet::op::shape_is_none(outputs[i]->shape()) &&
                                    Imperative::DCInfo::IsNone(*outputs[i]))) {
       if (!is_dynamic_shape_existing) {
-        storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
-        shape = out_shapes[i];
+        const auto storage_type = static_cast<NDArrayStorageType>(out_storage_types[i]);
+        outputs[i]->ReInit(storage_type, out_shapes[i], ctx, out_types[i]);
+      } else {
+       *outputs[i] = NDArray(ctx, out_types[i]);
       }
-      outputs[i]->ReInit(storage_type, out_shapes[i], ctx, out_types[i]);
       outputs[i]->AssignStorageInfo(common::NodeAttrsGetProfilerScope(attrs), attrs.name);
     } else if (mxnet::op::shape_is_none(outputs[i]->shape())) {
       // For deferred computed arrays with unknown shape (following dynamic
