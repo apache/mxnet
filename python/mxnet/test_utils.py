@@ -615,8 +615,8 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
         checkShapes(a, b)
 
     # If no tolerance is specified, use the largest default tol, which is based on the ctx and dtype of 'a' and 'b'
-    ain_rtol, ain_atol = (0,0) if not hasattr(a, 'ctx') else get_tolerances(default_tols(), a.ctx, np.dtype(a.dtype))
-    bin_rtol, bin_atol = (0,0) if not hasattr(b, 'ctx') else get_tolerances(default_tols(), b.ctx, np.dtype(b.dtype))
+    ain_rtol, ain_atol = (0, 0) if not hasattr(a, 'ctx') else get_tolerances(default_tols(), a.ctx, np.dtype(a.dtype))
+    bin_rtol, bin_atol = (0, 0) if not hasattr(b, 'ctx') else get_tolerances(default_tols(), b.ctx, np.dtype(b.dtype))
     if rtol is None:
         rtol = max(ain_rtol, bin_rtol, get_rtol(rtol))
     if atol is None:
