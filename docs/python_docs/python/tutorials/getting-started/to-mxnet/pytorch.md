@@ -342,13 +342,12 @@ Apache MXNet uses lazy evaluation to achieve superior performance. The Python th
 
 ## PyTorch module and Gluon blocks
 
-### For new block definition, gluon needs name_scope
+### For new block definition, gluon is similar to PyTorch
 
-`name_scope` coerces Gluon to give each parameter an appropriate name, indicating which model it belongs to.
 
 | Function               | PyTorch                           | MXNet Gluon                                                                |
 |------------------------|-----------------------------------|----------------------------------------------------------------------------|
-| New block definition   | `class Net(torch.nn.Module):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`def __init__(self, D_in, D_out):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`super(Net, self).__init__()`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`self.linear = torch.nn.Linear(D_in, D_out)`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`def forward(self, x):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`return self.linear(x)`       |    `class Net(mx.gluon.Block):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`def __init__(self, D_in, D_out):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`super(Net, self).__init__()`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`with self.name_scope():`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`self.dense=mx.gluon.nn.Dense(D_out, in_units=D_in)`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`def forward(self, x):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`return self.dense(x)`      |
+| New block definition   | `class Net(torch.nn.Module):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`def __init__(self, D_in, D_out):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`super(Net, self).__init__()`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`self.linear = torch.nn.Linear(D_in, D_out)`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`def forward(self, x):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`return self.linear(x)`       |    `class Net(mx.gluon.Block):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`def __init__(self, D_in, D_out):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`super(Net, self).__init__()`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`self.dense=mx.gluon.nn.Dense(D_out, in_units=D_in)`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`def forward(self, x):`<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`return self.dense(x)`      |
 
 ### Parameter and Initializer
 
@@ -374,7 +373,7 @@ Instead of explicitly declaring the number of inputs to a layer, we can simply s
 
 | Function               | PyTorch                           | MXNet Gluon                                                                |
 |------------------------|-----------------------------------|----------------------------------------------------------------------------|
-| partial-shape  <br/> hybridized    |  Not Available   |  `net = mx.gluon.nn.HybridSequential()`<br/>`with net.name_scope():`<br/>&nbsp;&nbsp;&nbsp;&nbsp;`net.add(mx.gluon.nn.Dense(10))`<br/>`net.hybridize()`   |
+| partial-shape  <br/> hybridized    |  Not Available   |  `net = mx.gluon.nn.HybridSequential()`<br/>`net.add(mx.gluon.nn.Dense(10))`<br/>`net.hybridize()`   |
 
 ### SymbolBlock
 
@@ -382,7 +381,7 @@ SymbolBlock can construct block from symbol. This is useful for using pre-traine
 
 | Function               | PyTorch                           | MXNet Gluon                                                                |
 |------------------------|-----------------------------------|----------------------------------------------------------------------------|
-|  SymbolBlock    |  Not Available   |  `alexnet = mx.gluon.model_zoo.vision.alexnet(pretrained=True, prefix='model_')`<br/>`out = alexnet(inputs)`<br/>`internals = out.get_internals()`<br/>`outputs = [internals['model_dense0_relu_fwd_output']]`<br/>`feat_model = gluon.SymbolBlock(outputs, inputs, params=alexnet.collect_params())`   |
+|  SymbolBlock    |  Not Available   |  `alexnet = mx.gluon.model_zoo.vision.alexnet(pretrained=True)`<br/>`out = alexnet(inputs)`<br/>`internals = out.get_internals()`<br/>`outputs = [internals['model_dense0_relu_fwd_output']]`<br/>`feat_model = gluon.SymbolBlock(outputs, inputs, params=alexnet.collect_params())`   |
 
 ## PyTorch optimizer vs Gluon Trainer
 ### For Gluon API calling zero_grad is not necessary most of the time

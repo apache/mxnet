@@ -80,11 +80,10 @@ Below, we define a model which has an input layer of 10 neurons, a couple of inn
 ```python
 net = nn.HybridSequential()
 
-with net.name_scope():
-    net.add(nn.Dense(units=10, activation='relu'))  # input layer
-    net.add(nn.Dense(units=10, activation='relu'))   # inner layer 1
-    net.add(nn.Dense(units=10, activation='relu'))   # inner layer 2
-    net.add(nn.Dense(units=1))   # output layer: notice, it must have only 1 neuron
+net.add(nn.Dense(units=10, activation='relu'))  # input layer
+net.add(nn.Dense(units=10, activation='relu'))   # inner layer 1
+net.add(nn.Dense(units=10, activation='relu'))   # inner layer 2
+net.add(nn.Dense(units=1))   # output layer: notice, it must have only 1 neuron
 
 net.initialize(mx.init.Xavier())
 ```

@@ -98,7 +98,7 @@ def get_network():
         warnings.simplefilter("ignore")
         net = get_model(net_name, pretrained_base=True, norm_layer=gluon.nn.BatchNorm)
         net.initialize()
-        net.collect_params().reset_ctx(ctx)
+        net.reset_ctx(ctx)
 
     return net
 ```
@@ -272,7 +272,7 @@ with mx.Context(mx.gpu(0)):
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("ignore")
         model = get_model("resnet50_v1")
-        model.collect_params().initialize(ctx=mx.current_context())
+        model.initialize(ctx=mx.current_context())
         model.hybridize()
         model(mx.nd.zeros((1, 3, 224, 224)))
         converted_model = amp.convert_hybrid_block(model)

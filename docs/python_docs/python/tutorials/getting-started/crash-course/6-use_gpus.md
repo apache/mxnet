@@ -82,7 +82,7 @@ net.add(nn.Conv2D(channels=6, kernel_size=5, activation='relu'),
         nn.Dense(10))
 ```
 
-And then load the saved parameters into GPU 0 directly, or use `net.collect_params().reset_ctx` to change the device.
+And then load the saved parameters into GPU 0 directly, or use `net.reset_ctx` to change the device.
 
 ```{.python .input  n=20}
 net.load_parameters('net.params', ctx=gpu(0))
@@ -120,7 +120,7 @@ The training loop is quite similar to what we introduced before. The major diffe
 # Diff 1: Use two GPUs for training.
 devices = [gpu(0), gpu(1)]
 # Diff 2: reinitialize the parameters and place them on multiple GPUs
-net.collect_params().initialize(force_reinit=True, ctx=devices)
+net.initialize(force_reinit=True, ctx=devices)
 # Loss and trainer are the same as before
 softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
