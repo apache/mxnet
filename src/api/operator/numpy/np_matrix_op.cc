@@ -626,10 +626,11 @@ MXNET_REGISTER_API("_npi.vstack")
   attrs.op = op;
   SetAttrDict<op::NumpyVstackParam>(&attrs);
   int num_outputs = 0;
-  std::vector<NDArray*> inputs;
-  for (int i = 0; i < param.num_args; ++i) {
-    inputs.push_back(args[i].operator mxnet::NDArray*());
+  std::vector<NDArray*> inputs_vec(args.size(), nullptr);
+  for (int i = 0; i < args_size; ++i) {
+    inputs_vec[i] = args[i].operator mxnet::NDArray*();
   }
+  NDArray** inputs = inputs_vec.data();
   auto ndoutputs = Invoke(op, &attrs, param.num_args, &inputs[0], &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
