@@ -3176,15 +3176,15 @@ def test_np_mixed_precision_binary_funcs():
     shape_pairs = [
                     ((3, 2), (3, 2)),
                    ((3, 2), (3, 1)),
-                #    ((3, 0), (3, 0)),
-                #    ((3, 1), (3, 0)),
-                #    ((0, 2), (1, 2)),
+                   ((3, 0), (3, 0)),
+                   ((3, 1), (3, 0)),
+                   ((0, 2), (1, 2)),
                    ((2, 3, 4), (3, 1)),
                 #    ((2, 3), ()),  # Flaky test case
                 #    ((), (2, 3)),  # Flaky test case
-                #    ((2, 3), None),
-                #    (None, (2, 3)),
-                #    (None, None)
+                   ((2, 3), None),
+                   (None, (2, 3)),
+                   (None, None)
                    ]
 
     itypes = ['bool', 'int8', 'int32', 'int64']

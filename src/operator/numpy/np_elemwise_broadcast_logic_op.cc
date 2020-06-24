@@ -87,6 +87,7 @@ struct TVMBinaryBroadcastCompute {
                   const std::vector<OpReqType>& req,
                   const std::vector<TBlob>& outputs) {
 #if MXNET_USE_TVM_OP
+    printf("------TVMBinaryBroadcastCompute--------\n");
     CHECK_EQ(inputs.size(), 2U);
     CHECK_EQ(outputs.size(), 1U);
     if (outputs[0].shape_.Size() == 0U) return;  // skip zero-size tensor

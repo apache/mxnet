@@ -447,6 +447,7 @@ void BinaryBroadcastComputeLogic(const nnvm::NodeAttrs& attrs,
                                  const std::vector<TBlob>& inputs,
                                  const std::vector<OpReqType>& req,
                                  const std::vector<TBlob>& outputs) {
+  printf("-------BinaryBroadcastComputeLogic-------\n");
   if (outputs[0].shape_.Size() == 0U) return;
   mxnet::TShape new_lshape, new_rshape, new_oshape;
   const TBlob& lhs = inputs[0];
