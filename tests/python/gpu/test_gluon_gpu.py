@@ -50,10 +50,9 @@ def check_rnn_layer(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    # atol of 1e-6 required, as exposed by seed 2124685726
-    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c)
 
 
 @with_seed()
@@ -70,9 +69,9 @@ def check_rnn_layer_w_rand_inputs(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c)
 
 
 @with_seed()
