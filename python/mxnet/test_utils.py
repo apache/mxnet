@@ -622,6 +622,10 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     if atol is None:
         atol = max(ain_atol, bin_atol, get_atol(atol))
 
+    if isinstance(a, mx.numpy.ndarray):
+        a = a.asnumpy()
+    if isinstance(b, mx.numpy.ndarray):
+        b = b.asnumpy()
 #    print('Using rtol, atol = {}, {}'.format(rtol, atol))
     use_np_allclose = isinstance(a, np.ndarray) and isinstance(b, np.ndarray)
     if not use_np_allclose:

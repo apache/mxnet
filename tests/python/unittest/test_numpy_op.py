@@ -6110,7 +6110,7 @@ def test_np_linalg_solve():
             print(e)
         else:
             assert x.shape == x_expected.shape
-            assert_almost_equal(x.asnumpy(), x_expected, rtol=rtol, atol=atol)
+            assert_almost_equal(x, x_expected)
 
     def newInvertibleMatrix_2D(shape, max_cond=4):
         while 1:
@@ -6150,7 +6150,6 @@ def test_np_linalg_solve():
     nrhs = (-1, 0, 1, 2, 3)
     dtypes = ['float32', 'float64']
     for hybridize, shape, dtype, nrh in itertools.product([False, True], shapes, dtypes, nrhs):
-        rtol, atol =1e-2, 1e-4
         test_solve = TestSolve()
         if hybridize:
             test_solve.hybridize()
@@ -6184,8 +6183,8 @@ def test_np_linalg_solve():
                 mx.autograd.backward(mx_out)
                 b_backward_expected = get_grad_b(a.asnumpy(), mx_out.asnumpy())
                 a_backward_expected = -_np.matmul(b_backward_expected, _np.swapaxes(mx_out, -1, -2).asnumpy())
-                assert_almost_equal(a.grad.asnumpy(), a_backward_expected, rtol=rtol, atol=atol)
-                assert_almost_equal(b.grad.asnumpy(), b_backward_expected, rtol=rtol, atol=atol)
+                assert_almost_equal(a.grad, a_backward_expected)
+                assert_almost_equal(b.grad, b_backward_expected)
 
         # check imperative once again
         mx_out = np.linalg.solve(a, b)
@@ -6253,11 +6252,6 @@ def test_np_linalg_tensorinv():
     ]
     dtypes = ['float32', 'float64']
     for hybridize, shape, dtype, in itertools.product([False, True], shapes, dtypes):
-        rtol = 1e-3
-        atol = 1e-5
-        if dtype == 'float32':
-            rtol = 1e-2
-            atol = 1e-4
         ind = shape[0]
         test_tensorinv = TestTensorinv(ind=ind)
         if hybridize:
@@ -6285,7 +6279,7 @@ def test_np_linalg_tensorinv():
         if 0 not in mx_out.shape:
             mx.autograd.backward(mx_out)
             grad_A_expected = get_grad_A(a.asnumpy(), ind)
-            assert_almost_equal(a.grad.asnumpy(), grad_A_expected, rtol=rtol, atol=atol)
+            assert_almost_equal(a.grad, grad_A_expected)
 
     # check imperative once again
     mx_out = np.linalg.tensorinv(a, ind)
