@@ -62,7 +62,7 @@ static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
 }
 
 static inline void CreateDefaultInputs(std::vector<NDArray> *pArrs) {
-  auto arrs =  *pArrs;
+  auto &&arrs = *pArrs;
   for (size_t i = 0; i < arrs.size(); ++i)
     arrs[i].SelfReorder2Default();
 }
