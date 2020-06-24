@@ -35,14 +35,19 @@ MXNET_REGISTER_API("_npi.multinomial")
   const nnvm::Op* op = Op::Get("_npi_multinomial");
   nnvm::NodeAttrs attrs;
   op::NumpyMultinomialParam param;
-  std::vector<NDArray*> inputs;
+  NDArray** inputs = new NDArray*[1]();
+  int num_inputs = 0;
 
-  //parse int
+  // parse int
   param.n = arg[0].operator int();
 
   // parse pvals
   if (args[1].type_code() == kNull) {
     param.pvals = dmlc::nullopt;
+  } else if (args[1].type_code() == kNDArrayHandle) {
+    param.pvals = dmlc::nullopt;
+    inputs[0] = args[1].operator mxnet::NDArray*();
+    num_inputs = 1;
   } else {
     param.pvals = Tuple<double>(args[1].operator ObjectRef());
   }
@@ -61,7 +66,8 @@ MXNET_REGISTER_API("_npi.multinomial")
   attrs.parsed = std::move(param);
   attrs.op = op;
   SetAttrDict<op::NumpyMultinomialParam>(&attrs);
-  auto ndoutputs = Invoke(op, &attrs, 0, nullptr, 0, nullptr);
+  inputs = num_inputs == 0 ? nullptr : inputs;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, 0, nullptr);
   *ret = ndoutputs[0];
 
 });
