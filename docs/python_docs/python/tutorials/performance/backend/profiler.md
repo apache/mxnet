@@ -78,14 +78,13 @@ Let's build a small convolutional neural network that we can use to demonstrate 
 from mxnet import gluon
 
 net = gluon.nn.HybridSequential()
-with net.name_scope():
-    net.add(gluon.nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
-    net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
-    net.add(gluon.nn.Conv2D(channels=50, kernel_size=5, activation='relu'))
-    net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
-    net.add(gluon.nn.Flatten())
-    net.add(gluon.nn.Dense(512, activation="relu"))
-    net.add(gluon.nn.Dense(10))
+net.add(gluon.nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
+net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
+net.add(gluon.nn.Conv2D(channels=50, kernel_size=5, activation='relu'))
+net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
+net.add(gluon.nn.Flatten())
+net.add(gluon.nn.Dense(512, activation="relu"))
+net.add(gluon.nn.Dense(10))
 ```
 
 We need data that we can run through the network for profiling. We'll use the MNIST dataset.
@@ -108,7 +107,7 @@ else:
     ctx=mx.cpu()
 
 # Initialize the parameters with random weights
-net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+net.initialize(mx.init.Xavier(), ctx=ctx)
 
 # Use SGD optimizer
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
