@@ -222,9 +222,9 @@ def with_seed(seed=None):
                 try:
                     orig_test(*args, **kwargs)
                 except:
-                    # With exceptions, repeat test_msg at INFO level to be sure it's seen.
-                    if log_level < logging.INFO:
-                        logger.info(test_msg)
+                    # With exceptions, repeat test_msg at WARNING level to be sure it's seen.
+                    if log_level < logging.WARNING:
+                        logger.warning(test_msg)
                     raise
                 finally:
                     # Provide test-isolation for any test having this decorator
