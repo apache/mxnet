@@ -2280,3 +2280,51 @@ def test_gluon_stochastic_sequential():
             accumulated_loss[1][0].asnumpy(), _np.ones(shape) * 9)
         assert_almost_equal(
             accumulated_loss[1][1].asnumpy(), _np.ones(shape) + 1)
+
+@with_seed()
+@use_np
+def test_gluon_domain_map():
+    class TestDomainMap(HybridBlock):
+        def __init__(self, constraint_type, bijective):
+            super(TestDomainMap, self).__init__()
+            self._constraint_type = getattr(mgp.constraint, constraint_type)
+
+        def forward(self, *params):
+            value = params[0]
+            constraint_param = params[1:]
+            if len(constraint_param) == 0:
+                constraint = self._constraint_type()
+            else:
+                constraint = self._constraint_type(*constraint_param)
+            if bijective:
+                bijector = mgp.biject_to(constraint)
+                value = bijector(value)
+            else:
+                transformation = mgp.transform_to(constraint)
+                value = transformation(value)
+            return (value, constraint.check(value))
+
+    constraints_zoo = [
+        # (constraint_type, constraint_param)
+        ('Positive', ()),
+        ('GreaterThan', [np.random.randn(2, 2)]),
+        ('GreaterThanEq', [np.random.randn(2, 2)]),
+        ('LessThan', [np.random.randn(2, 2)]),
+        ('Interval', [np.random.uniform(0, 1, (2, 2)),
+                      np.random.uniform(2, 3, (2, 2))]),
+        ('HalfOpenInterval', [np.random.uniform(
+            0, 1, (2, 2)), np.random.uniform(2, 3, (2, 2))])
+    ]
+
+    test_sample = np.random.randn(2, 2)
+
+    for (constraint_type, constraint_arg) in constraints_zoo:
+        for bijective in [True, False]:
+            for hybridize in [True, False]:
+                net = TestDomainMap(constraint_type, bijective)
+                if hybridize:
+                    net.hybridize()
+                constrained_out, constraint_status = net(
+                    test_sample, *constraint_arg)
+                assert_almost_equal(constrained_out.asnumpy(),
+                                    constraint_status.asnumpy())

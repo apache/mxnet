@@ -26,6 +26,7 @@ __all__ = ["Transformation", "TransformBlock", "ComposeTransform", "ExpTransform
 import weakref
 from ..distributions.utils import _clip_prob, cached_property, sum_right_most
 from ...block import HybridBlock
+from .... import ndarray as nd
 
 
 class Transformation(object):
@@ -40,7 +41,7 @@ class Transformation(object):
     bijective = False
     event_dim = 0
 
-    def __init__(self, F=None):
+    def __init__(self, F=nd):
         self._inv = None
         self._F = F
         super(Transformation, self).__init__()
