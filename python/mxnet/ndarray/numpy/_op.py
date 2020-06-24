@@ -9403,8 +9403,7 @@ def rollaxis(a, axis, start=0):
     >>> np.rollaxis(a, 1, 4).shape
     (3, 5, 6, 4)
     """
-    return _npi.rollaxis(a, axis, start)
-
+    return _api_internal.rollaxis(a, axis, start)
 
 @set_module('mxnet.ndarray.numpy')
 def diag(v, k=0):

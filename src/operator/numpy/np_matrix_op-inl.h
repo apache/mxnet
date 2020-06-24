@@ -649,6 +649,13 @@ struct NumpyRollaxisParam : public dmlc::Parameter<NumpyRollaxisParam> {
     .describe("The axis is rolled until it lies before this position. "
               "The default, 0, results in a “complete” roll.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, start_s;
+    axis_s << axis;
+    start_s << start;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["start"] = start_s.str();
+  }
 };
 
 inline mxnet::TShape NumpyRollaxisShapeImpl(int axis,
