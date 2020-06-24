@@ -32,6 +32,23 @@ namespace op {
 
 #if MXNET_USE_TVM_OP == 0
 
+template<>
+void GetZeroNdimTensorScalar<gpu>(const OpContext &ctx,
+                                  double& alpha,
+                                  const TBlob& src) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
+  double* d_alpha;
+  cudaMalloc(&d_alpha, 1 * sizeof(double));
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(src.type_flag_, RType, {
+    mxnet_op::Kernel<get_item, gpu>::Launch(s, 1, src.dptr<RType>(), d_alpha[0]);
+  });
+  double h_alpha[1];
+  cudaMemcpy(h_alpha, d_alpha, 1 * sizeof(double), cudaMemcpyDeviceToHost);
+  alpha = h_alpha[0];
+}
+
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(name)                                     \
   NNVM_REGISTER_OP(_npi_##name)                                                               \
   .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastComputeLogic<gpu, mshadow_op::np_##name>)

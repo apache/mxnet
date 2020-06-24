@@ -195,6 +195,7 @@ struct binary_broadcast_kernel {
                                   const Shape <ndim> &lstride, const Shape <ndim> &rstride,
                                   const Shape <ndim> &oshape, IType *lhs, IType *rhs,
                                   DType *out) {
+    printf("binary_broadcast_kernel: IType *lhs, IType *rhs, DType *out\n");
     Shape <ndim> coord = unravel(base, oshape);
     auto lidx = static_cast<index_t>(dot(coord, lstride));
     auto ridx = static_cast<index_t>(dot(coord, rstride));
@@ -214,16 +215,21 @@ struct binary_broadcast_kernel {
                                   const Shape <ndim> &lstride, const Shape <ndim> &rstride,
                                   const Shape <ndim> &oshape, LType *lhs, RType *rhs,
                                   OType *out) {
+    printf("binary_broadcast_kernel: LType *lhs, RType *rhs, OType *out\n");
     Shape <ndim> coord = unravel(base, oshape);
     auto lidx = static_cast<index_t>(dot(coord, lstride));
     auto ridx = static_cast<index_t>(dot(coord, rstride));
+    printf("1:out[base]:%d lhs[lidx]:%f rhs[ridx]:%f lidx:%d ridx:%d\n", out[base], (double)lhs[lidx], (double)rhs[ridx], lidx, ridx);
     KERNEL_ASSIGN(out[base], req, OP::Map(lhs[lidx], rhs[ridx]));
+    printf("2:out[base]:%d lhs[lidx]:%f rhs[ridx]:%f lidx:%d ridx:%d\n", out[base], (double)lhs[lidx], (double)rhs[ridx], lidx, ridx);
     // starts from 1 to avoid extra inc at end of loop
     for (index_t i = 1; i < length; ++i) {
       inc(&coord, oshape, &lidx, lstride, &ridx, rstride);
       // When tuning, don't actually run the op, since it's not going to be tuned against
       // the actual op we'll eventually be using
+      printf("1:out[base+i]:%d lhs[lidx]:%f rhs[ridx]:%f lidx:%d ridx:%d\n", out[base+i], (double)lhs[lidx], (double)rhs[ridx], lidx, ridx);
       KERNEL_ASSIGN(out[base + i], req, OP::Map(lhs[lidx], rhs[ridx]));
+      printf("2:out[base+i]:%d lhs[lidx]:%f rhs[ridx]:%f lidx:%d ridx:%d\n", out[base+i], (double)lhs[lidx], (double)rhs[ridx], lidx, ridx);
     }
   }
 
@@ -233,6 +239,7 @@ struct binary_broadcast_kernel {
                                   const Shape <ndim> &lstride, const Shape <ndim> &rstride,
                                   const Shape <ndim> &oshape, IType lhs, IType *rhs,
                                   DType *out) {
+    printf("binary_broadcast_kernel: IType lhs, IType *rhs, DType *out\n");
     Shape <ndim> coord = unravel(base, oshape);
     auto lidx = static_cast<index_t>(dot(coord, lstride));
     auto ridx = static_cast<index_t>(dot(coord, rstride));
@@ -254,6 +261,7 @@ struct binary_broadcast_kernel {
                                   const Shape <ndim> &lstride, const Shape <ndim> &rstride,
                                   const Shape <ndim> &oshape, IType *lhs, DType *rhs,
                                   DType *out) {
+    printf("binary_broadcast_kernel: enable_if IType* lhs, IType *rhs, DType *out\n");
     Shape <ndim> coord = unravel(base, oshape);
     auto lidx = static_cast<index_t>(dot(coord, lstride));
     auto ridx = static_cast<index_t>(dot(coord, rstride));
@@ -276,6 +284,7 @@ struct binary_broadcast_kernel {
                                   const Shape <ndim> &lstride, const Shape <ndim> &rstride,
                                   const Shape <ndim> &oshape, IType lhs, DType *rhs,
                                   DType *out) {
+    printf("binary_broadcast_kernel: IType lhs, DType *rhs, DType *out\n");
     Shape <ndim> coord = unravel(base, oshape);
     auto lidx = static_cast<index_t>(dot(coord, lstride));
     auto ridx = static_cast<index_t>(dot(coord, rstride));
@@ -441,6 +450,66 @@ void BinaryBroadcastComputeWithBool(const nnvm::NodeAttrs& attrs,
   }
 }
 
+struct get_item {
+  template<typename RType>
+  MSHADOW_XINLINE static void Map(int i, const RType* rhs, double& alpha) {
+    alpha = rhs[i];
+    printf("i:%d rhs[i]:%f alpha:%f\n", i, rhs[i], alpha);
+  }
+};
+
+template<typename xpu>
+void GetZeroNdimTensorScalar(const OpContext &ctx,
+                             double& alpha,
+                             const TBlob& src);
+
+template<typename xpu, typename OP>
+static void ComputeBinaryToScalarLogic(const nnvm::NodeAttrs &attrs,
+                                       const OpContext &ctx,
+                                       const std::vector<TBlob> &inputs,
+                                       const std::vector<OpReqType> &req,
+                                       const std::vector<TBlob> &outputs,
+                                       const bool reverse) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob& lhs = inputs[0];
+  const TBlob& rhs = inputs[1]; // ndim == 0
+  const TBlob& out = outputs[0];
+  bool scalar_is_int = (rhs.type_flag_ == mshadow::kBool ||
+                        rhs.type_flag_ == mshadow::kInt16 ||
+                        rhs.type_flag_ == mshadow::kInt32 ||
+                        rhs.type_flag_ == mshadow::kInt64);
+  double alpha;
+  GetZeroNdimTensorScalar<xpu>(ctx, alpha, rhs); //TODO!! cannot get rhs[0] to alpha!!
+  printf("ComputeBinaryToScalarLogic-------scalar_is_int:%d alpha:%f req[0]:%d\n", scalar_is_int, alpha, req[0]);
+  printf("2:lhs.shape_.ndim():%d lhs.type_flag_:%d\n", lhs.shape_.ndim(), lhs.type_flag_);
+  printf("2:rhs.shape_.ndim():%d rhs.type_flag_:%d\n", rhs.shape_.ndim(), rhs.type_flag_);
+  TBlob temp_tblob;
+  if (common::is_int(inputs[0].type_flag_) && !scalar_is_int) {
+    Tensor<xpu, 1, double> temp_tensor =
+        ctx.requested[0].get_space_typed<xpu, 1, double>(Shape1(inputs[0].Size()), s);
+    temp_tblob = TBlob(temp_tensor);
+    CastCompute<xpu>(attrs, ctx, {inputs[0]}, {kWriteTo}, {temp_tblob});
+  } else {
+    printf("temp_tblob = inputs[0]\n");
+    temp_tblob = inputs[0];
+  }
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(temp_tblob.type_flag_, DType, {
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      if (!reverse) {
+        printf("<!reverse> alpha:%f\n", alpha);
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+            s, inputs[0].Size(), outputs[0].dptr<bool>(), temp_tblob.dptr<DType>(), DType(alpha));
+      } else {
+        printf("<reverse> alpha:%f\n", alpha);
+        mxnet_op::Kernel<mxnet_op::op_with_req<OP, Req>, xpu>::Launch(
+            s, inputs[0].Size(), outputs[0].dptr<bool>(), DType(alpha), temp_tblob.dptr<DType>());
+      }
+    });
+  });
+}
+
 template<typename xpu, typename OP>
 void BinaryBroadcastComputeLogic(const nnvm::NodeAttrs& attrs,
                                  const OpContext& ctx,
@@ -448,16 +517,30 @@ void BinaryBroadcastComputeLogic(const nnvm::NodeAttrs& attrs,
                                  const std::vector<OpReqType>& req,
                                  const std::vector<TBlob>& outputs) {
   if (outputs[0].shape_.Size() == 0U) return;
+  printf("-------BinaryBroadcastComputeLogic inputs.size():%d req.size():%d outputs.size():%d---------\n",
+          inputs.size(), req.size(), outputs.size());
   mxnet::TShape new_lshape, new_rshape, new_oshape;
   const TBlob& lhs = inputs[0];
   const TBlob& rhs = inputs[1];
   const TBlob& out = outputs[0];
+  printf("1:lhs.shape_.ndim():%d lhs.type_flag_:%d\n", lhs.shape_.ndim(), lhs.type_flag_);
+  printf("1:rhs.shape_.ndim():%d rhs.type_flag_:%d\n", rhs.shape_.ndim(), rhs.type_flag_);
   int ndim = BinaryBroadcastShapeCompact(lhs.shape_, rhs.shape_, out.shape_,
                                          &new_lshape, &new_rshape, &new_oshape);
-  if (!ndim) {
+  printf("ndim:%d\n", ndim);
+  if(lhs.shape_.ndim() == 0 && common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
+    printf("lhs.shape_.ndim() == 0 && common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)\n");
+    ComputeBinaryToScalarLogic<xpu, OP>(attrs, ctx, {inputs[1], inputs[0]}, {req[0]}, {outputs[0]}, true);
+  } else if (rhs.shape_.ndim() == 0 && common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)) {
+    printf("rhs.shape_.ndim() == 0 && common::is_float(lhs.type_flag_) && common::is_float(rhs.type_flag_)\n");
+    ComputeBinaryToScalarLogic<xpu, OP>(attrs, ctx, {inputs[0], inputs[1]}, {req[0]}, {outputs[0]}, false);
+  } else if (!ndim) {
+  // if (!ndim) {
+    printf("<!ndim>\n");
     ElemwiseBinaryOp::ComputeLogic<xpu, OP>(attrs, ctx, inputs, req, outputs);
   } else {
     if (req[0] == kNullOp) return;
+    printf("<else\n>");
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     MSHADOW_TYPE_SWITCH_WITH_BOOL(lhs.type_flag_, DType, {
       MSHADOW_TYPE_SWITCH_WITH_BOOL(rhs.type_flag_, EType, {

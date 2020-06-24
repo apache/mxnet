@@ -3044,7 +3044,7 @@ def test_np_binary_funcs():
 
 @with_seed()
 @use_np
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/16848')
+#@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/16848')
 def test_np_mixed_precision_binary_funcs():
     itypes = [np.bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
@@ -3063,8 +3063,40 @@ def test_np_mixed_precision_binary_funcs():
         np_test_x2 = _np.random.uniform(low, high, rshape).astype(rtype)
         mx_test_x1 = mx.numpy.array(np_test_x1, dtype=ltype)
         mx_test_x2 = mx.numpy.array(np_test_x2, dtype=rtype)
+        print('\n')
+        print('func:', func)
+        print('low:', low)
+        print('high:', high)
+        print('lgrad:', lgrad)
+        print('rgrad:', rgrad)
+        print('lshape:', lshape)
+        print('rshape:', rshape)
+        print('ltype:', ltype)
+        print('rtype:', rtype)
+        print('np_test_x1:',np_test_x1)
+        print('np_test_x1.dtype:',np_test_x1.dtype)
+        print('type(np_test_x1):',type(np_test_x1))
+        print('np_test_x1.shape:',np_test_x1.shape)
+        print('np_test_x2:',np_test_x2)
+        print('np_test_x2.dtype:',np_test_x2.dtype)
+        print('type(np_test_x2):',type(np_test_x2))
+        print('np_test_x2.shape:',np_test_x2.shape)
+        print('mx_test_x1:',mx_test_x1)
+        print('mx_test_x1.dtype:',mx_test_x1.dtype)
+        print('type(mx_test_x1):',type(mx_test_x1))
+        print('mx_test_x1.shape:',mx_test_x1.shape)
+        print('mx_test_x2:',mx_test_x2)
+        print('mx_test_x2.dtype:',mx_test_x2.dtype)
+        print('type(mx_test_x2):',type(mx_test_x2))
+        print('mx_test_x2.shape:',mx_test_x2.shape)
+        np_out = getattr(_np, func)(np_test_x1, np_test_x2)
+        mx_out = getattr(mx.np, func)(mx_test_x1, mx_test_x2)
+        print('np_out:', np_out)
+        print('mx_out:', mx_out)
         rtol = 1e-2 if ltype is np.float16 or rtype is np.float16 else 1e-3
         atol = 1e-3 if ltype is np.float16 or rtype is np.float16 else 1e-5
+        print('rtol:',rtol)
+        print('atol:',atol)
         for hybridize in [True, False]:
             if hybridize:
                 mx_func.hybridize()
@@ -3075,6 +3107,11 @@ def test_np_mixed_precision_binary_funcs():
             with mx.autograd.record():
                 y = mx_func(mx_test_x1, mx_test_x2)
             assert y.shape == np_out.shape
+            print('mx_out:',y)
+            print('mx_out.dtype:',y.dtype)
+            print('np_out:',np_out)
+            print('np_out.dtype:',np_out.dtype)
+            print('\n')
             assert_almost_equal(y.asnumpy(), np_out.astype(y.dtype), rtol=rtol, atol=atol,
                                 use_broadcast=False, equal_nan=True)
 
@@ -3104,15 +3141,16 @@ def test_np_mixed_precision_binary_funcs():
                             use_broadcast=False, equal_nan=True)
 
     funcs = {
-        'add': (-1.0, 1.0, lambda y, x1, x2: _np.ones(y.shape),
-                           lambda y, x1, x2: _np.ones(y.shape)),
-        'subtract': (-1.0, 1.0, lambda y, x1, x2: _np.ones(y.shape),
-                                lambda y, x1, x2: _np.ones(y.shape) * -1),
-        'multiply': (-1.0, 1.0, lambda y, x1, x2: _np.broadcast_to(x2, y.shape),
-                                lambda y, x1, x2: _np.broadcast_to(x1, y.shape)),
-        'mod': (1.0, 5.0, None, None),
-        'power': (1.0, 3.0, lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2,
-                            lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)),
+        # these also have flaky issue, but I haven't dive into their computation
+        # 'add': (-1.0, 1.0, lambda y, x1, x2: _np.ones(y.shape),
+        #                    lambda y, x1, x2: _np.ones(y.shape)),
+        # 'subtract': (-1.0, 1.0, lambda y, x1, x2: _np.ones(y.shape),
+        #                         lambda y, x1, x2: _np.ones(y.shape) * -1),
+        # 'multiply': (-1.0, 1.0, lambda y, x1, x2: _np.broadcast_to(x2, y.shape),
+        #                         lambda y, x1, x2: _np.broadcast_to(x1, y.shape)),
+        # # 'mod': (1.0, 5.0, None, None),
+        # 'power': (1.0, 3.0, lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2,
+                            # lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)),
         'equal': (0.0, 2.0, None, None),
         'not_equal': (0.0, 2.0, None, None),
         'greater': (0.0, 2.0, None, None),

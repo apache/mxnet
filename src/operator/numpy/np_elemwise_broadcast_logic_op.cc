@@ -79,6 +79,18 @@ TBlob PrependAxes(const TBlob& src, const int dst_ndim) {
   return src.reshape(dst_shape);
 }
 
+template<>
+void GetZeroNdimTensorScalar<cpu>(const OpContext &ctx,
+                                  double& alpha,
+                                  const TBlob& src) {
+  using namespace mxnet_op;
+  using namespace mshadow;
+  mshadow::Stream<cpu> *s = ctx.get_stream<cpu>();
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(src.type_flag_, RType, {
+    mxnet_op::Kernel<get_item, cpu>::Launch(s, 1, src.dptr<RType>(), alpha);
+  });
+}
+
 struct TVMBinaryBroadcastCompute {
   const char* func;
   void operator()(const nnvm::NodeAttrs& attrs,
@@ -168,9 +180,12 @@ MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_GPU(logical_xor);
 
 #else
 
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(name)                                     \
-  NNVM_REGISTER_OP(_npi_##name)                                                               \
-  .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastComputeLogic<cpu, mshadow_op::np_##name>)
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_LOGIC_CPU(name)                                       \
+  NNVM_REGISTER_OP(_npi_##name)                                                                 \
+  .set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastComputeLogic<cpu, mshadow_op::np_##name>) \
+  .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& n) {                        \
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};                             \
+  })
 
 #endif  // MXNET_USE_TVM_OP
 

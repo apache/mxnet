@@ -789,37 +789,50 @@ struct op_with_req {
   /*! \brief input is one tensor */
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *in) {
+    printf("op_with_req: index_t i, DType *out, const DType *in\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i]));
   }
 
   /*! \brief inputs are two tensors */
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *lhs, const DType *rhs) {
+    printf("op_with_req: index_t i, DType *out, const DType *lhs, const DType *rhs\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
   /*! \brief input is tensor and a scalar value */
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *in, const DType value) {
+    printf("op_with_req: index_t i, DType *out, const DType *in, const DType value\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
+  }
+
+  /*! \brief input is tensor and a scalar value */
+  template<typename DType>
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType value, const DType *in) {
+    printf("op_with_req: index_t i, DType *out, const DType *in, const DType value\n");
+    KERNEL_ASSIGN(out[i], req, OP::Map(value, in[i]));
   }
 
   /*! \brief input is tensor and two scalar value */
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *in,
                                   const DType value_1, const DType value_2) {
+    printf("op_with_req: index_t i, DType *out, const DType *in, const DType value_1, const DType value_2\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value_1, value_2));
   }
 
   /*! \brief No inputs (ie fill to constant value) */
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out) {
+    printf("op_with_req: index_t i, DType *out\n");
     KERNEL_ASSIGN(out[i], req, OP::Map());
   }
 
   /*! \brief input is single scalar value */
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType value) {
+    printf("op_with_req: index_t i, DType *out, const DType value\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(value));
   }
 
@@ -827,6 +840,7 @@ struct op_with_req {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out,
                                   const DType *input_1, const DType *input_2, const DType value) {
+    printf("op_with_req: index_t i, DType *out, const DType *input_1, const DType *input_2, const DType value\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(input_1[i], input_2[i], value));
   }
 
@@ -836,6 +850,7 @@ struct op_with_req {
                                   const DType *input_1,
                                   const DType *input_2,
                                   const DType *input_3) {
+    printf("op_with_req: index_t i, DType *out, const DType *input_1, const DType *input_2, const DType *input_3\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(input_1[i], input_2[i], input_3[i]));
   }
 
@@ -843,6 +858,7 @@ struct op_with_req {
   template<typename DType,
            typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *in) {
+    printf("op_with_req: enable_if index_t i, bool *out, const DType *in\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i]));
   }
 
@@ -850,6 +866,7 @@ struct op_with_req {
   template<typename DType,
            typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *lhs, const DType *rhs) {
+    printf("op_with_req: enable_if index_t i, bool *out, const DType *lhs, const DType *rhs\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
@@ -857,13 +874,23 @@ struct op_with_req {
   template<typename DType,
            typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType *in, const DType value) {
+    printf("op_with_req: enable_if index_t i, bool *out, const DType *in, const DType value\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
+  }
+
+  /*! \brief input is tensor and two scalar value with a boolean output tensor */
+  template<typename DType,
+           typename std::enable_if<!std::is_same<DType, bool>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, bool *out, const DType value, const DType *in) {
+    printf("op_with_req: enable_if index_t i, bool *out, const DType *in, const DType value\n");
+    KERNEL_ASSIGN(out[i], req, OP::Map(value, in[i]));
   }
 
   /*! \brief input is two tensors with different type and with a boolean output tensor */
   template<typename LType, typename RType,
            typename std::enable_if<!std::is_same<LType, RType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, bool *out, const LType *lhs, const RType *rhs) {
+    printf("op_with_req: enable_if index_t i, bool *out, const LType *lhs, const RType *rhs\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
@@ -874,6 +901,7 @@ struct op_with_req {
                                   mshadow::half::half_t *out,
                                   const DType *lhs,
                                   const mshadow::half::half_t *rhs) {
+    printf("op_with_req: enable_if index_t i, mshadow::half::half_t *out, const DType *lhs, const mshadow::half::half_t *rhs\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
@@ -882,6 +910,7 @@ struct op_with_req {
            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
                                    std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *lhs, const float *rhs) {
+    printf("op_with_req: enable_if index_t i, float *out, const DType *lhs, const float *rhs\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
@@ -891,6 +920,7 @@ struct op_with_req {
                                    std::is_same<DType, float>::value ||
                                    std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, double *out, const DType *lhs, const double *rhs) {
+    printf("op_with_req: enable_if index_t i, double *out, const DType *lhs, const double *rhs\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
@@ -901,6 +931,7 @@ struct op_with_req {
                                   mshadow::half::half_t *out,
                                   const DType *lhs,
                                   const mshadow::half::half_t value) {
+    printf("op_with_req: enable_if index_t i, mshadow::half::half_t *out, const DType *lhs, const mshadow::half::half_t value\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
   }
 
@@ -909,6 +940,7 @@ struct op_with_req {
            typename std::enable_if<std::is_same<DType, mshadow::half::half_t>::value ||
                                    std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *lhs, const float value) {
+    printf("op_with_req: enable_if index_t i, float *out, const DType *lhs, const float value\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
   }
 
@@ -918,6 +950,7 @@ struct op_with_req {
                                    std::is_same<DType, float>::value ||
                                    std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, double *out, const DType *lhs, const double value) {
+    printf("op_with_req: enable_if index_t i, double *out, const DType *lhs, const double value\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
   }
 
@@ -925,6 +958,7 @@ struct op_with_req {
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *lhs, const DType *rhs) {
+    printf("op_with_req: enable_if index_t i, float *out, const DType *lhs, const DType *rhs\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
   }
 
@@ -932,6 +966,7 @@ struct op_with_req {
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
   MSHADOW_XINLINE static void Map(index_t i, float *out, const DType *in, const DType value) {
+    printf("op_with_req: enable_if index_t i, float *out, const DType *in, const DType value\n");
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
   }
 };
