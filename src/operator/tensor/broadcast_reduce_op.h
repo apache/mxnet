@@ -1135,67 +1135,67 @@ struct broadcast_kernel {
  * index(stride=1) of the tensor is to be broadcasted.
  * In other cases it simply performs better by better load balancing.
  */
-template<typename OP>
-struct broadcast_kernel_cpu {
-  template<typename IType, typename OType>
-  MSHADOW_XINLINE static void Map(index_t i,
-                                  IType *input,
-                                  OType *output,
-                                  const ShapeAndStride& aux_data,
-                                  const OpReqType req,
-                                  const uint32_t ndim) {
-    index_t idx = i;
-    index_t init_off = 0;
-    for (int iter = ndim - 1; idx > 0 && iter >= 0; --iter) {
-      size_t dim_idx = idx % aux_data.input_shape[iter];
-      init_off += dim_idx * aux_data.out_stride[iter];
-      idx /= aux_data.input_shape[iter];
-    }
-    index_t stride_0, stride_1, stride_2;
-    // Each case is based on the number of axis to be broadcasted
-    // (1, 2 or 3) after merging axes.
-    switch (aux_data.num_broadcast_axes) {
-      // when input shape is amogst one of the form
-      // [(x,1), (x,1,x), (1,x)]
-      // x can be any +ve number >=0 and they need not be equal to each other
-      case 1 :
-        stride_0 = aux_data.out_stride[aux_data.axes[0]];
-        for (index_t l=0; l < aux_data.output_shape[aux_data.axes[0]]; l++) {
-          KERNEL_ASSIGN(output[init_off + l*stride_0],
-              req, OP::Map(input[i]));
-        }
-        break;
-      // when input shape is amogst one of the form
-      // [(x,1,x,1), (1,x,1,x), (x,1,x,1,x)]
-      // x can be any +ve number >1 or =0(the axis ) and they need not be equal to each other
-      case 2:
-        stride_1 = aux_data.out_stride[aux_data.axes[1]];
-        stride_0 = aux_data.out_stride[aux_data.axes[0]];
-        for (index_t k=0; k < aux_data.output_shape[aux_data.axes[1]]; k++) {
-          for (index_t l=0; l < aux_data.output_shape[aux_data.axes[0]]; l++) {
-            KERNEL_ASSIGN(output[init_off + k*stride_1 + l*stride_0],
-                req, OP::Map(input[i]));
-          }
-        }
-        break;
-      // when input shape is of the form [(1,x,1,x,1)] and
-      // x can be any +ve number >=0 and they need not be equal to each other
-      case 3:
-        stride_2 = aux_data.out_stride[aux_data.axes[2]];
-        stride_1 = aux_data.out_stride[aux_data.axes[1]];
-        stride_0 = aux_data.out_stride[aux_data.axes[0]];
-        for (index_t j=0; j < aux_data.output_shape[aux_data.axes[2]]; j++) {
-          for (index_t k=0; k < aux_data.output_shape[aux_data.axes[1]]; k++) {
-            for (index_t l=0; l < aux_data.output_shape[aux_data.axes[0]]; l++) {
-              KERNEL_ASSIGN(output[init_off + j*stride_2 + k*stride_1 + l*stride_0],
-                  req, OP::Map(input[i]));
-            }
-          }
-        }
-        break;
-    }
-  }
-};
+//template<typename OP>
+//struct broadcast_kernel_cpu {
+//  template<typename IType, typename OType>
+//  MSHADOW_XINLINE static void Map(index_t i,
+//                                  IType *input,
+//                                  OType *output,
+//                                  const ShapeAndStride& aux_data,
+//                                  const OpReqType req,
+//                                  const uint32_t ndim) {
+//    index_t idx = i;
+//    index_t init_off = 0;
+//    for (int iter = ndim - 1; idx > 0 && iter >= 0; --iter) {
+//      size_t dim_idx = idx % aux_data.input_shape[iter];
+//      init_off += dim_idx * aux_data.out_stride[iter];
+//      idx /= aux_data.input_shape[iter];
+//    }
+//    index_t stride_0, stride_1, stride_2;
+//    // Each case is based on the number of axis to be broadcasted
+//    // (1, 2 or 3) after merging axes.
+//    switch (aux_data.num_broadcast_axes) {
+//      // when input shape is amogst one of the form
+//      // [(x,1), (x,1,x), (1,x)]
+//      // x can be any +ve number >=0 and they need not be equal to each other
+//      case 1 :
+//        stride_0 = aux_data.out_stride[aux_data.axes[0]];
+//        for (index_t l=0; l < aux_data.output_shape[aux_data.axes[0]]; l++) {
+//          KERNEL_ASSIGN(output[init_off + l*stride_0],
+//              req, OP::Map(input[i]));
+//        }
+//        break;
+//      // when input shape is amogst one of the form
+//      // [(x,1,x,1), (1,x,1,x), (x,1,x,1,x)]
+//      // x can be any +ve number >1 or =0(the axis ) and they need not be equal to each other
+//      case 2:
+//        stride_1 = aux_data.out_stride[aux_data.axes[1]];
+//        stride_0 = aux_data.out_stride[aux_data.axes[0]];
+//        for (index_t k=0; k < aux_data.output_shape[aux_data.axes[1]]; k++) {
+//          for (index_t l=0; l < aux_data.output_shape[aux_data.axes[0]]; l++) {
+//            KERNEL_ASSIGN(output[init_off + k*stride_1 + l*stride_0],
+//                req, OP::Map(input[i]));
+//          }
+//        }
+//        break;
+//      // when input shape is of the form [(1,x,1,x,1)] and
+//      // x can be any +ve number >=0 and they need not be equal to each other
+//      case 3:
+//        stride_2 = aux_data.out_stride[aux_data.axes[2]];
+//        stride_1 = aux_data.out_stride[aux_data.axes[1]];
+//        stride_0 = aux_data.out_stride[aux_data.axes[0]];
+//        for (index_t j=0; j < aux_data.output_shape[aux_data.axes[2]]; j++) {
+//          for (index_t k=0; k < aux_data.output_shape[aux_data.axes[1]]; k++) {
+//            for (index_t l=0; l < aux_data.output_shape[aux_data.axes[0]]; l++) {
+//              KERNEL_ASSIGN(output[init_off + j*stride_2 + k*stride_1 + l*stride_0],
+//                  req, OP::Map(input[i]));
+//            }
+//          }
+//        }
+//        break;
+//    }
+//  }
+//};
 
 template<typename xpu>
 inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
@@ -1240,7 +1240,9 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
         Tensor<xpu, 2, IType> data =
           inputs[0].get_with_shape<xpu, 2, IType>(src_shape.get<2>(), s);
         if (isCPU) {
-          Kernel<broadcast_kernel_cpu<mshadow_op::identity>, xpu>::Launch(
+          //Kernel<broadcast_kernel_cpu<mshadow_op::identity>, xpu>::Launch(
+          //  s, data.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
+          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
             s, data.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], 2);
         } else {
           Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
@@ -1253,7 +1255,9 @@ inline void BroadcastComputeImpl(const nnvm::NodeAttrs& attrs,
         Tensor<xpu, ndim, IType> data =
           inputs[0].get_with_shape<xpu, ndim, IType>(src_shape.get<ndim>(), s);
         if (isCPU) {
-          Kernel<broadcast_kernel_cpu<mshadow_op::identity>, xpu>::Launch(
+          //Kernel<broadcast_kernel_cpu<mshadow_op::identity>, xpu>::Launch(
+          //  s, data.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
+          Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
             s, data.shape_.Size(), data.dptr_, out.dptr_, aux_data, req[0], ndim);
         } else {
           Kernel<broadcast_kernel<mshadow_op::identity>, xpu>::Launch(
