@@ -4530,7 +4530,7 @@ def stack(arrays, axis=0, out=None):
         return [arr for arr in arrays]
 
     arrays = get_list(arrays)
-    return _npi.stack(*arrays, axis=axis, out=out)
+    return _api_internal.stack(*arrays, axis, out)
 
 
 @set_module('mxnet.ndarray.numpy')

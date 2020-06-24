@@ -74,6 +74,38 @@ MXNET_REGISTER_API("_npi.expand_dims")
   *ret = ndoutputs[0];
 });
 
+MXNET_REGISTER_API("_npi.stack")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_stack");
+  nnvm::NodeAttrs attrs;
+  op::StackParam param;
+
+  int i = 0;
+  int num_inputs = 0;
+  std::vector<NDArray*> inputs;
+  while (args[i].type_code() != kDLInt) {
+    inputs.push_back(args[i].operator mxnet::NDArray*());
+    i++;
+    num_inputs++;
+  }
+
+  param.num_args = i;
+  param.axis = args[i].operator int64_t();
+  attrs.parsed = std::move(param);
+  attrs.op = op;
+  SetAttrDict<op::StackParam>(&attrs);
+  NDArray* out = args[i+1].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, &inputs[0], &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(i+1);
+  } else {
+    *ret = ndoutputs[0];
+  }
+});
+
 MXNET_REGISTER_API("_npi.flip")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
