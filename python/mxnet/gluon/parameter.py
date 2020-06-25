@@ -107,6 +107,8 @@ class Parameter(object):
                  lr_mult=1.0, wd_mult=1.0, init=None, allow_deferred_init=False,
                  differentiable=True, stype='default', grad_stype='default'):
         self._var = None
+        self._uuid = str(uuid.uuid4())
+        self._var_name = None
         self._data = None
         self._grad = None
         self._ctx_list = None
@@ -119,7 +121,7 @@ class Parameter(object):
         if isinstance(shape, int):
             shape = (shape,)
         self._shape = shape
-        self._name = 'param_{}_{}'.format(str(uuid.uuid4()).replace('-', '_'), name)
+        self._name = name
         self._structured_name = ''
         self._dtype = dtype
         self.lr_mult = lr_mult
@@ -647,7 +649,10 @@ class Parameter(object):
     def var(self):
         """Returns a symbol representing this parameter."""
         if self._var is None:
-            self._var = symbol.var(self.name, shape=self.shape, dtype=self.dtype,
+            if self._var_name is None:  # _var_name is set manually in SymbolBlock.import
+                self._var_name = self._uuid
+
+            self._var = symbol.var(self._var_name, shape=self.shape, dtype=self.dtype,
                                    lr_mult=self.lr_mult, wd_mult=self.wd_mult,
                                    init=self.init, stype=self._stype)
             if is_np_array():

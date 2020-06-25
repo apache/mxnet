@@ -30,7 +30,7 @@ import warnings
 from numbers import Number
 import numpy as _numpy  # pylint: disable=relative-import
 
-from ..attribute import AttrScope
+from .. import attribute
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
 from ..base import mx_uint, py_str, string_types, integer_types, mx_int, mx_int64
 from ..base import NDArrayHandle, SymbolHandle
@@ -43,7 +43,7 @@ from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
 from ..util import is_np_shape
-from ..profiler import Scope
+from ..profiler import _current_scope as _profiler_scope
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
@@ -674,6 +674,33 @@ class Symbol(SymbolBase):
                 raise ValueError("Set Attr only accepts string values")
             check_call(_LIB.MXSymbolSetAttr(
                 self.handle, c_str(key), c_str(str(value))))
+
+    def get_inputs(self):
+        """Gets a new grouped symbol `sgroup`. The output of `sgroup` is a list of inputs to this symbol.
+
+        Consider the following code:
+
+        Example
+        -------
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
+        >>> c = a + b
+        >>> d = c.get_inputs()
+        >>> d
+        <Symbol Grouped>
+        >>> d.list_outputs()
+        ['a', 'b']
+
+        Returns
+        -------
+        sgroup : Symbol
+            A symbol group containing all input nodes of the computation graph
+            used to compute the symbol.
+        """
+        handle = SymbolHandle()
+        check_call(_LIB.MXSymbolGetInputs(
+            self.handle, ctypes.byref(handle)))
+        return Symbol(handle=handle)
 
     def get_internals(self):
         """Gets a new grouped symbol `sgroup`. The output of `sgroup` is a list of
@@ -2564,9 +2591,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateVariable(c_str(name), ctypes.byref(handle)))
     ret = Symbol(handle)
-    if not hasattr(AttrScope._current, "value"):
-        AttrScope._current.value = AttrScope()
-    attr = AttrScope._current.value.get(attr)
+    attr = attribute.current().get(attr)
     attr = {} if attr is None else attr
     if shape is not None:
         attr['__shape__'] = str(shape)
@@ -2589,9 +2614,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     if profiler_scope is not None:
         attr['__profiler_scope__'] = profiler_scope
     else:
-        if not hasattr(Scope._current, "value"):
-            Scope._current.value = Scope()
-        attr['__profiler_scope__'] = Scope._current.value.name
+        attr['__profiler_scope__'] = _profiler_scope.get()
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)

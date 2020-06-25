@@ -177,6 +177,20 @@ int MXSymbolGetOutput(SymbolHandle symbol,
   return NNSymbolGetOutput(symbol, index, out);
 }
 
+int MXSymbolGetInputs(SymbolHandle symbol,
+                      SymbolHandle *out) {
+    nnvm::Symbol *s = new nnvm::Symbol();
+    API_BEGIN();
+    std::vector<nnvm::ObjectPtr> inputs = static_cast<nnvm::Symbol*>(symbol)->ListInputs(
+        nnvm::Symbol::ListInputOption(0));
+    for (const nnvm::ObjectPtr &o : inputs) {
+        nnvm::NodeEntry e(o);
+        s->outputs.push_back(e);
+    }
+    *out = s;
+    API_END_HANDLE_ERROR(delete s);
+}
+
 int MXSymbolGetInternals(SymbolHandle symbol,
                          SymbolHandle *out) {
   nnvm::Symbol *s = new nnvm::Symbol();

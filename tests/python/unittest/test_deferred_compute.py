@@ -522,7 +522,8 @@ def test_dc_hybridblock_symbolblock_error():
 
     inputs = mx.sym.var('data')
     outputs = model(inputs).get_internals()
-    smodel = mx.gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
+    smodel = mx.gluon.SymbolBlock(outputs, inputs)
+    smodel.initialize()
 
     assert len(smodel(mx.nd.zeros((16, 10)))) == 14
 

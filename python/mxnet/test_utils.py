@@ -44,7 +44,7 @@ except ImportError:
     # in rare cases requests may be not installed
     pass
 import mxnet as mx
-from .context import Context, current_context
+from .context import current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
@@ -62,7 +62,7 @@ def default_context():
 
 def set_default_context(ctx):
     """Set default context."""
-    Context._default_ctx.value = ctx
+    mx.context._current.set(ctx)
 
 
 def default_dtype():
