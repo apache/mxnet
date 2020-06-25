@@ -35,9 +35,8 @@ from common import with_seed
 def test_mkldnn_ndarray_slice():
     ctx = mx.cpu()
     net = gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
-    net.collect_params().initialize(ctx=ctx)
+    net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
+    net.initialize(ctx=ctx)
     x = mx.nd.array(np.ones([32, 3, 224, 224]), ctx)
     y = net(x)
 
@@ -47,9 +46,8 @@ def test_mkldnn_ndarray_slice():
 @with_seed(1234)
 def test_mkldnn_engine_threading():
     net = gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
-    net.collect_params().initialize(ctx=mx.cpu())
+    net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
+    net.initialize(ctx=mx.cpu())
     class Dummy(gluon.data.Dataset):
         def __len__(self):
             return 2
@@ -77,7 +75,7 @@ def test_mkldnn_reshape():
         data = mx.symbol.Variable('data')
         conv = mx.symbol.Convolution(data=data, num_filter=16, kernel=(1, 1), pad=(0, 0), stride=(1, 1))
         res = mx.symbol.reshape(data=conv, shape=dst_shape)
-        exe = res.simple_bind(mx.cpu(), data=shape, grad_req='null')
+        exe = res._simple_bind(mx.cpu(), data=shape, grad_req='null')
 
         val1 = np.random.uniform(-1, 1, shape)
         val2 = np.random.uniform(-1, 1, (16, 1, 1, 1))
@@ -88,7 +86,7 @@ def test_mkldnn_reshape():
         exe.arg_arrays[2][:] = val3
         outputs = exe.forward(is_train=False)[0].asnumpy()
 
-        conv_exe = conv.simple_bind(mx.cpu(), data=shape, grad_req='null')
+        conv_exe = conv._simple_bind(mx.cpu(), data=shape, grad_req='null')
         conv_exe.arg_arrays[0][:] = val1
         conv_exe.arg_arrays[1][:] = val2
         conv_exe.arg_arrays[2][:] = val3
@@ -110,9 +108,8 @@ def test_reshape_before_conv():
         """
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(10, (3, 3))
-                self.conv1 = nn.Conv2D(5, (3, 3))
+            self.conv0 = nn.Conv2D(10, (3, 3))
+            self.conv1 = nn.Conv2D(5, (3, 3))
 
         def hybrid_forward(self, F, x, *args, **kwargs):
             x_reshape = x.reshape((0, 0, 20, 5))
@@ -123,7 +120,7 @@ def test_reshape_before_conv():
     x = mx.nd.random.uniform(shape=(2, 4, 10, 10))
     x.attach_grad()
     net = Net()
-    net.collect_params().initialize()
+    net.initialize()
     with mx.autograd.record():
         out1 = net(x)
     out1.backward()
@@ -144,9 +141,8 @@ def test_slice_before_conv():
         """
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(4, (3, 3))
-                self.conv1 = nn.Conv2D(4, (3, 3))
+            self.conv0 = nn.Conv2D(4, (3, 3))
+            self.conv1 = nn.Conv2D(4, (3, 3))
 
         def hybrid_forward(self, F, x, *args, **kwargs):
             x_slice = x.slice(begin=(0, 0, 0, 0), end=(2, 4, 10, 10))
@@ -157,7 +153,7 @@ def test_slice_before_conv():
     x = mx.nd.random.uniform(shape=(2, 10, 10, 10))
     x.attach_grad()
     net = Net()
-    net.collect_params().initialize()
+    net.initialize()
     with mx.autograd.record():
         out1 = net(x)
     out1.backward()
@@ -178,9 +174,8 @@ def test_slice_reshape_before_conv():
         """
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(4, (3, 3))
-                self.conv1 = nn.Conv2D(4, (3, 3))
+            self.conv0 = nn.Conv2D(4, (3, 3))
+            self.conv1 = nn.Conv2D(4, (3, 3))
 
         def hybrid_forward(self, F, x, *args, **kwargs):
             x_slice = x.slice(begin=(0, 0, 0, 0), end=(2, 4, 8, 9))
@@ -191,7 +186,7 @@ def test_slice_reshape_before_conv():
     x = mx.nd.random.uniform(shape=(2, 10, 10, 10))
     x.attach_grad()
     net = Net()
-    net.collect_params().initialize()
+    net.initialize()
     with mx.autograd.record():
         out1 = net(x)
     out1.backward()
@@ -215,7 +210,7 @@ def test_flatten_slice_after_conv():
 
     shape = (2, 16, 16, 16)
     val = np.random.rand(2, 16, 16, 16).astype(np.float32)
-    exe = slice1.simple_bind(Context.default_ctx, data=shape)
+    exe = slice1._simple_bind(Context.default_ctx, data=shape)
     exe.arg_arrays[0][:] = val
     exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
     exe.arg_arrays[2][:] = np.random.normal(size=exe.arg_arrays[2].shape)
@@ -225,16 +220,15 @@ def test_flatten_slice_after_conv():
 
 
 def test_mkldnn_sum_inplace_with_cpu_layout():
-
     x_shape = (32, 3, 224, 224)
-    x_npy = np.ones(x_shape)
+    x_npy = np.ones(x_shape, dtype='float32')
     y_shape = (32, 32, 222, 222)
-    y_npy = np.ones(y_shape)
+    y_npy = np.ones(y_shape, dtype='float32')
     x = mx.sym.Variable("x")
     y = mx.sym.Variable("y")
     z = mx.symbol.Convolution(data=x, num_filter=32, kernel=(3, 3))
     z = mx.sym.add_n(z, y)
-    exe = z.simple_bind(ctx=mx.cpu(), x=x_shape, y=y_shape)
+    exe = z._simple_bind(ctx=mx.cpu(), x=x_shape, y=y_shape)
     out = exe.forward(is_train=False, x=x_npy, y=y_npy)[0]
     assert_almost_equal(out[0].asnumpy()[0, 0, 0], 1.0)
 
@@ -273,7 +267,7 @@ def test_batchnorm_relu_fusion():
         grad_out = mx.nd.random.uniform(0, 1, shape)
         bn = mx.sym.BatchNorm(data=x, fix_gamma=False)
         relu = mx.sym.Activation(data=bn, act_type='relu', name='relu')
-        exe = relu.simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
+        exe = relu._simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
         exe.arg_arrays[0][:] = in_data
         exe.forward(is_train=True)
         exe.backward(grad_out)
@@ -281,7 +275,7 @@ def test_batchnorm_relu_fusion():
         no_fuse_grads = exe.grad_arrays
 
         bnrelu = mx.sym.contrib.BatchNormWithReLU(data=x, fix_gamma=False)
-        exe_fuse = bnrelu.simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
+        exe_fuse = bnrelu._simple_bind(ctx=mx.cpu(), x=shape, grad_req='write')
         exe_fuse.arg_arrays[0][:] = in_data
         exe_fuse.forward(is_train=True)
         exe_fuse.backward(grad_out)
@@ -298,12 +292,11 @@ def test_batchnorm_relu_fusion():
             def __init__(self, fuse_relu):
                 super(BNNet, self).__init__()
                 self.fuse_relu = fuse_relu
-                with self.name_scope():
-                    if self.fuse_relu:
-                        self.bn = gluon.nn.BatchNormReLU()
-                    else:
-                        self.bn = gluon.nn.BatchNorm()
-                    self.relu = gluon.nn.Activation('relu')
+                if self.fuse_relu:
+                    self.bn = gluon.nn.BatchNormReLU()
+                else:
+                    self.bn = gluon.nn.BatchNorm()
+                self.relu = gluon.nn.Activation('relu')
 
             def forward(self, x):
                 y = self.bn(x)
@@ -312,8 +305,8 @@ def test_batchnorm_relu_fusion():
                 return y
         fused_net = BNNet(fuse_relu=True)
         unfused_net = BNNet(fuse_relu=False)
-        fused_net.collect_params().initialize()
-        unfused_net.collect_params().initialize()
+        fused_net.initialize()
+        unfused_net.initialize()
         in_data = mx.nd.random.normal(shape=shape)
         no_fuse_outputs = unfused_net.forward(in_data)
         fuse_outputs = fused_net.forward(in_data)
@@ -479,7 +472,7 @@ def test_softmax_with_large_inputs():
     def softmax_forward(input_data, true_output):
         data = mx.sym.Variable('data')
         out1 = data.softmax(axis=1)
-        exec1 = out1.bind(mx.cpu(), args={'data': input_data})
+        exec1 = out1._bind(mx.cpu(), args={'data': input_data})
         exec1.forward()[0].wait_to_read()
         ndarr = exec1.outputs[0][0][0][0]
         nparr = ndarr.asnumpy()
@@ -531,7 +524,7 @@ def test_non_mkldnn_fcomputeex():
     data = mx.symbol.Variable('data')
     conv = mx.sym.Convolution(data=data, kernel=(5, 5), pad=(1, 1), stride=(1,1), num_filter=8, name="conv", no_bias=True)
     custom = mx.symbol.Custom(name='custom', data=conv, op_type='custom')
-    exec1 = custom.bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
+    exec1 = custom._bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
     exec1.forward()[0].wait_to_read()
 
 @with_seed()
@@ -571,9 +564,8 @@ def test_reshape_transpose_6d():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv1 = nn.Conv2D(8, kernel_size=5)
-                self.reshape2D = Reshape2D(2)
+            self.conv1 = nn.Conv2D(8, kernel_size=5)
+            self.reshape2D = Reshape2D(2)
 
         def hybrid_forward(self, F, x):
             x = self.conv1(x)
@@ -602,7 +594,7 @@ def test_concat():
       z = mx.sym.concat(a_sym, b_sym, dim=axis)
       a = np.random.uniform(-1, 1, a_shape)
       b = np.random.uniform(-1, 1, b_shape)
-      exe = z.simple_bind(ctx=mx.cpu(), a=a_shape, b=b_shape)
+      exe = z._simple_bind(ctx=mx.cpu(), a=a_shape, b=b_shape)
       out = exe.forward(is_train=False, a=a, b=b)
       ref_out = ref_concat(a, b, axis=axis)
       out = out[0].asnumpy()
@@ -635,7 +627,7 @@ def test_elemwise_add():
     z = mx.sym.elemwise_add(a_sym, b_sym)
     a = np.random.uniform(-1, 1, a_shape)
     b = np.random.uniform(-1, 1, b_shape)
-    exe = z.simple_bind(ctx=mx.cpu(), a=a_shape, b=b_shape)
+    exe = z._simple_bind(ctx=mx.cpu(), a=a_shape, b=b_shape)
     out = exe.forward(is_train=False, a=a, b=b)
     ref_out = ref_add(a, b)
     out = out[0].asnumpy()

@@ -58,7 +58,7 @@ def _check_onnx_export(net, group_outputs=False, shape_type=tuple, extra_params=
     data = nd.random.uniform(0, 1, (1, 1024))
     output = _force_list(net(data))  # initialize weights
     net_sym = _optional_group(net(sym.Variable('data')), group_outputs)
-    net_params = {name: param._reduce() for name, param in net.collect_params().items()}
+    net_params = {param.name: param._reduce() for name, param in net.collect_params().items()}
     net_params.update(extra_params)
     with tempfile.TemporaryDirectory() as tmpdirname:
         onnx_file_path = os.path.join(tmpdirname, 'net.onnx')
@@ -83,8 +83,8 @@ def _check_onnx_export(net, group_outputs=False, shape_type=tuple, extra_params=
 
 class SplitConcatBlock(HybridBlock):
     """Block which creates two splits and later concatenates them"""
-    def __init__(self, name):
-        super(SplitConcatBlock, self).__init__(name)
+    def __init__(self):
+        super(SplitConcatBlock, self).__init__()
 
     def hybrid_forward(self, F, x):
         splits = F.split(x, axis=1, num_outputs=2)
@@ -100,9 +100,8 @@ class TestExport(unittest.TestCase):
 
     @with_seed()
     def test_onnx_export_single_output(self):
-        net = nn.HybridSequential(prefix='single_output_net')
-        with net.name_scope():
-            net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+        net = nn.HybridSequential()
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net)
 
     @with_seed()
@@ -110,10 +109,9 @@ class TestExport(unittest.TestCase):
         class MultiOutputBlock(nn.HybridBlock):
             def __init__(self):
                 super(MultiOutputBlock, self).__init__()
-                with self.name_scope():
-                    self.net = nn.HybridSequential()
-                    for i in range(10):
-                        self.net.add(nn.Dense(100 + i * 10, activation='relu'))
+                self.net = nn.HybridSequential()
+                for i in range(10):
+                    self.net.add(nn.Dense(100 + i * 10, activation='relu'))
 
             def hybrid_forward(self, F, x):
                 out = tuple(block()(x) for block in self.net._children.values())
@@ -125,29 +123,25 @@ class TestExport(unittest.TestCase):
 
     @with_seed()
     def test_onnx_export_list_shape(self):
-        net = nn.HybridSequential(prefix='list_shape_net')
-        with net.name_scope():
-            net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+        net = nn.HybridSequential()
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net, shape_type=list)
 
     @with_seed()
     def test_onnx_export_extra_params(self):
-        net = nn.HybridSequential(prefix='extra_params_net')
-        with net.name_scope():
-            net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
+        net = nn.HybridSequential()
+        net.add(nn.Dense(100, activation='relu'), nn.Dense(10))
         _check_onnx_export(net, extra_params={'extra_param': nd.array([1, 2])})
 
     @with_seed()
     def test_onnx_export_slice(self):
-        net = nn.HybridSequential(prefix='slice_net')
-        with net.name_scope():
-            net.add(nn.Dense(100, activation='relu'), SplitConcatBlock("splitConcat"), nn.Dense(10))
+        net = nn.HybridSequential()
+        net.add(nn.Dense(100, activation='relu'), SplitConcatBlock(), nn.Dense(10))
         _check_onnx_export(net)
 
     @with_seed()
     def test_onnx_export_slice_changing_shape(self):
-        net = nn.HybridSequential(prefix='slice_net_changing_shape')
-        with net.name_scope():
-            net.add(nn.Dense(100, activation='relu'), SplitConcatBlock("splitConcat"),
-                    nn.Dense(50, activation='relu'), SplitConcatBlock("splitConcat2"), nn.Dense(10))
+        net = nn.HybridSequential()
+        net.add(nn.Dense(100, activation='relu'), SplitConcatBlock(),
+                nn.Dense(50, activation='relu'), SplitConcatBlock(), nn.Dense(10))
         _check_onnx_export(net)

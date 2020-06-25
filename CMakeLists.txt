@@ -54,7 +54,8 @@ option(USE_OPENMP "Build with Openmp support" ON)
 cmake_dependent_option(USE_NVML "Build with nvml support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
 cmake_dependent_option(USE_NVTX "Build with nvtx support if found" ON "USE_CUDA" OFF)
-cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
+cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
+  "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL amd64" OFF)
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
 option(USE_LAPACK "Build with lapack support" ON)
 option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
@@ -385,7 +386,6 @@ endif()
 
 # ---[ OpenMP
 if(USE_OPENMP)
-
   function(load_omp)
     # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
     set(OPENMP_STANDALONE_BUILD TRUE)
@@ -426,8 +426,12 @@ if(USE_OPENMP)
       add_definitions(-DMXNET_USE_OPENMP=1)
     endif()
   endif()
-elseif(UNIX AND NOT ANDROID)
-  list(APPEND mxnet_LINKER_LIBS pthread)
+elseif(UNIX)
+  # Prefer compiler pthread flag. This is the recommended way, but not backwards
+  # compatible and thus not the cmake default.
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+  find_package(Threads REQUIRED)
+  list(APPEND mxnet_LINKER_LIBS Threads::Threads)
 endif()
 
 
@@ -894,19 +898,11 @@ if(INSTALL_PYTHON_VERSIONS)
   endforeach()
 endif()
 
-if(USE_CPP_PACKAGE)
-  add_subdirectory(cpp-package)
-  target_compile_definitions(mxnet PUBLIC MXNET_USE_CPP_PACKAGE=1)
-  if(BUILD_CPP_EXAMPLES)
-    add_subdirectory(example/image-classification/predict-cpp)
-  endif()
-endif()
-
 add_subdirectory(tests)
 
 # ---[ Linter target
 find_package(Python3)
-set(LINT_DIRS "include src plugin cpp-package tests")
+set(LINT_DIRS "include src plugin tests")
 set(EXCLUDE_PATH "src/operator/contrib/ctc_include")
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${Python3_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -DEXCLUDE_PATH=${EXCLUDE_PATH} -P ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake/lint.cmake)
 

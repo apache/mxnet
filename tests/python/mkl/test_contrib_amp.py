@@ -105,14 +105,14 @@ def test_bf16_casting():
     # data should be float32
     res = mx.sym.Group([out1, out2])
     final_res = amp.convert_symbol(res, data_names=[], target_dtype="bfloat16", cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.cpu(), data=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.cpu(), data=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float32
 
     # When two ops from data, both casted to bfloat16,
     # data should be bfloat16
     res = mx.sym.Group([out1, out3])
     final_res = amp.convert_symbol(res, data_names=[], target_dtype="bfloat16", cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.cpu(), data=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.cpu(), data=(1, 2))
     assert exe.arg_arrays[0].dtype == bfloat16
 
     # AMP Multicast test where one node is float32, another is bfloat16
@@ -120,7 +120,7 @@ def test_bf16_casting():
     data2 = mx.sym.var("data2", dtype=bfloat16)
     out4 = mx.sym.amp_multicast(data, data2, num_outputs=2)
     final_res = amp.convert_symbol(out4, target_dtype="bfloat16", cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.cpu(), data2=(1, 2), data=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.cpu(), data2=(1, 2), data=(1, 2))
     assert exe.arg_arrays[0].dtype == bfloat16
 
     # AMP Multicast test where two non input nodes are bfloat16,
@@ -133,7 +133,7 @@ def test_bf16_casting():
                                 num_outputs=2)
     final_res = amp.convert_symbol(out5, target_dtype_ops=[], target_dtype="bfloat16",
                                    fp32_ops=[], cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2), data3=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2), data3=(1, 2))
     assert exe.arg_arrays[0].dtype == np.float32
 
     # AMP Multicast test where three input nodes one bf16, one fp32
@@ -144,7 +144,7 @@ def test_bf16_casting():
     out6 = mx.sym.amp_multicast(data, data2, data3, num_outputs=3)
     final_res = amp.convert_symbol(out6, target_dtype_ops=[], target_dtype="bfloat16",
                                    fp32_ops=[], cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2),
+    exe = final_res._simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2),
                                 data3=(1, 2))
     assert exe.arg_arrays[2].dtype == np.float32
 
@@ -155,7 +155,7 @@ def test_bf16_casting():
     out7 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype=bfloat16)])
     final_res = amp.convert_symbol(out7, target_dtype_ops=[], target_dtype="bfloat16",
                                    fp32_ops=[], cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2))
     assert exe.arg_arrays[0].dtype == bfloat16
 
     # Input node to amp_multicast and amp_cast, if dtypes conflict
@@ -165,6 +165,5 @@ def test_bf16_casting():
     out8 = mx.sym.Group([mx.sym.amp_multicast(data, data2, num_outputs=2), mx.sym.amp_cast(data, dtype=bfloat16)])
     final_res = amp.convert_symbol(out8, target_dtype_ops=[], target_dtype="bfloat16",
                                    fp32_ops=[], cast_optional_params=True)
-    exe = final_res.simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2))
+    exe = final_res._simple_bind(ctx=mx.cpu(), data=(1, 2), data2=(1, 2))
     assert exe.arg_arrays[0].dtype == bfloat16
-

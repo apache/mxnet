@@ -33,7 +33,7 @@ set -ex
 
 # Configuration for artifacts
 version=$2
-api_list=("cpp" "clojure" "java" "julia" "python" "r" "scala")
+api_list=("python")
 jekyll_fork=ThomasDelteil
 
 

@@ -221,14 +221,13 @@ Gluon's [nn.Dense](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense
 class FullyConnected(mx.gluon.HybridBlock):
     def __init__(self, in_units, units):
         super(FullyConnected, self).__init__()
-        with self.name_scope():
-            self._units = units
-            self.weight = self.params.get('weight', shape=(units, in_units),
-                                          init=None, allow_deferred_init=True,
-                                          dtype='float32', stype='default', grad_stype='default')
-            self.bias = self.params.get('bias', shape=(units),
-                                          init='zeros', allow_deferred_init=True,
-                                          dtype='float32', stype='default', grad_stype='default')
+        self._units = units
+        self.weight = mx.gluon.Parameter('weight', shape=(units, in_units),
+                                         init=None, allow_deferred_init=True,
+                                         dtype='float32', stype='default', grad_stype='default')
+        self.bias = mx.gluon.Parameter('bias', shape=(units),
+                                        init='zeros', allow_deferred_init=True,
+                                        dtype='float32', stype='default', grad_stype='default')
 
     def hybrid_forward(self, F, x, weight, bias):
         return F.FullyConnected(x, weight, bias, num_hidden=self._units)
@@ -245,14 +244,13 @@ We could instead have created our parameter with shape `(in_units, units)` and a
 class FullyConnectedSparse(mx.gluon.HybridBlock):
     def __init__(self, in_units, units, weight_grad_stype='default'):
         super(FullyConnectedSparse, self).__init__()
-        with self.name_scope():
-            self._units = units
-            self.weight = self.params.get('weight', shape=(in_units, units),
-                                          init=None, allow_deferred_init=True,
-                                          dtype='float32', stype='default', grad_stype=weight_grad_stype)
-            self.bias = self.params.get('bias', shape=(units),
-                                          init='zeros', allow_deferred_init=True,
-                                          dtype='float32', stype='default', grad_stype='default')
+        self._units = units
+        self.weight = gluon.Parameter('weight', shape=(in_units, units),
+                                      init=None, allow_deferred_init=True,
+                                      dtype='float32', stype='default', grad_stype=weight_grad_stype)
+        self.bias = gluon.Parameter('bias', shape=(units),
+                                    init='zeros', allow_deferred_init=True,
+                                    dtype='float32', stype='default', grad_stype='default')
 
     def hybrid_forward(self, F, x, weight, bias):
         return F.sparse.dot(x, weight) + bias
@@ -464,10 +462,6 @@ Memory Allocation for Weight Gradient:
   0.004 MBs (  6.460%) for fullyconnected2                         
   0.000 MBs (  0.050%) for fullyconnected3                         
 ```
-
-### Advanced: Sparse `weight`
-
-You can optimize this example further by setting the weight's `stype` to `'row_sparse'`, but whether `'row_sparse'` weights make sense or not will depends on your specific task. See [contrib.SparseEmbedding](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/contrib/nn/basic_layers.py#L118) for an example of this.
 
 ## Conclusion
 

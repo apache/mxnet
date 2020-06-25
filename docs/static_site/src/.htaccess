@@ -22,6 +22,14 @@ RewriteOptions AllowNoSlash
   
 </IfModule>
 
+# TODO temporary fix for issue #18604
+Redirect 302 /api/r/docs/api/R-package/build/mxnet-r-reference-manual.pdf https://mxnet-public.s3.us-east-2.amazonaws.com/docs/v1.x/mxnet-r-reference-manual.pdf
+Redirect 302 /api/scala/docs/api/ /versions/1.6/api/scala/docs/api/
+Redirect 302 /api/java/docs/api/ /versions/1.6/api/java/docs/api/
+Redirect 302 /api/clojure/docs/api/ /versions/1.6/api/clojure/docs/api/
+Redirect 302 /api/cpp/docs/api/ /versions/1.6/api/cpp/docs/api/
+Redirect 302 /api/julia/docs/api/ /versions/1.6/api/julia/docs/api/
+
 # Redirect Chinese visitors to Chinese CDN, temporary solution for slow site speed in China
 RewriteCond %{ENV:GEOIP_COUNTRY_CODE} ^CN$
 RewriteCond %{HTTP_HOST} !cdn

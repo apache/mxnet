@@ -215,7 +215,7 @@ def test_nn():
         beta_s = mx.symbol.Variable('beta')
         out_s = mx.symbol.LayerNorm(data=data_s, gamma=gamma_s, beta=beta_s,
                                     axis=axis, eps=eps)
-        exe = out_s.simple_bind(ctx, data=in_shape)
+        exe = out_s._simple_bind(ctx, data=in_shape)
         exe.arg_dict['data'][:] = data
         exe.arg_dict['gamma'][:] = gamma
         exe.arg_dict['beta'][:] = beta
@@ -231,7 +231,7 @@ def test_nn():
         shape = (LARGE_X, SMALL_Y)
         x = mx.sym.var('data')
         y = mx.sym.Dropout(x, p=1, cudnn_off=True)
-        exe = y.simple_bind(ctx=default_context(), data=shape)
+        exe = y._simple_bind(ctx=default_context(), data=shape)
         exe.arg_arrays[0][:] = 1
         out = exe.forward(is_train=True)
         nd.waitall()
@@ -382,7 +382,7 @@ def test_nn():
         beta_s = mx.symbol.Variable('beta')
         out_s = mx.symbol.InstanceNorm(data=data_s, gamma=gamma_s, beta=beta_s,
                                        eps=eps)
-        exe = out_s.simple_bind(ctx, data=in_shape)
+        exe = out_s._simple_bind(ctx, data=in_shape)
         exe.arg_dict['data'][:] = data
         exe.arg_dict['gamma'][:] = gamma
         exe.arg_dict['beta'][:] = beta

@@ -170,8 +170,7 @@ Before we go to training, one unique Gluon feature you should be aware of is hyb
 finetune_net = resnet50_v2(pretrained=True, ctx=ctx)
 
 # change last softmax layer since number of classes are different
-with finetune_net.name_scope():
-    finetune_net.output = nn.Dense(classes)
+finetune_net.output = nn.Dense(classes)
 finetune_net.output.initialize(init.Xavier(), ctx=ctx)
 # hybridize for better performance
 finetune_net.hybridize()
