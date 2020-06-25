@@ -93,7 +93,7 @@ size_t GetRequiredStorageMultiSumSq(const std::vector<TBlob> &inputs,
 
 template<typename xpu>
 void MultiSumSqRun(const std::vector<TBlob> &inputs, int nInputs,
-                   float *out_ptr, const OpContext &ctx, float scale=1.0f);
+                   float *out_ptr, const OpContext &ctx, float scale = 1.0f);
 
 template<typename xpu>
 void MultiSumSq(const nnvm::NodeAttrs& attrs,
