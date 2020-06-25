@@ -683,7 +683,7 @@ def multi_mp_lamb_update(weights, grads, mean, var, weights32, step_count,
 
 
 def multi_lans_update(weights, grads, mean, var, step_count,
-                         lrs, wds, out=None, num_tensors=0, **kwargs):
+                      lrs, wds, out=None, num_tensors=0, **kwargs):
     """Given a list of gradients, update weights, mean and variance of multiple tensors
     following LANS Optimizer implementation.
 
@@ -721,7 +721,7 @@ def multi_lans_update(weights, grads, mean, var, step_count,
 
 
 def multi_mp_lans_update(weights, grads, mean, var, weights32, step_count,
-                            lrs, wds, out=None, num_tensors=0, **kwargs):
+                         lrs, wds, out=None, num_tensors=0, **kwargs):
     """Given a list of gradients, update weights, mean and variance of multiple tensors
     following LANS Optimizer implementation, and using Mixed-Precision.
 
