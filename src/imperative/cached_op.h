@@ -22,6 +22,7 @@
 
 #include <mxnet/imperative.h>
 #include <vector>
+#include <numeric>
 #include <atomic>
 #include <utility>
 #include <string>
@@ -133,16 +134,18 @@ nnvm::NodeEntry AggregateGradient(std::vector<nnvm::NodeEntry>&& v) {
 
 void CollectInputOutputNDRefs(const nnvm::Graph& g,
                               const std::vector<NDArray*>& inputs,
+                              const std::vector<size_t>& input_map,
                               const std::vector<NDArray*>& outputs,
                               std::vector<NDArray*>* arrays) DMLC_ATTRIBUTE_UNUSED;
 void CollectInputOutputNDRefs(const nnvm::Graph& g,
                               const std::vector<NDArray*>& inputs,
+                              const std::vector<size_t>& input_map,
                               const std::vector<NDArray*>& outputs,
                               std::vector<NDArray*>* arrays) {
   const auto& idx = g.indexed_graph();
   size_t num_inputs = idx.input_nodes().size();
   for (size_t i = 0; i < num_inputs; ++i) {
-    (*arrays)[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[i];
+    (*arrays)[idx.entry_id(idx.input_nodes()[i], 0)] = inputs[input_map[i]];
   }
   for (size_t i = 0; i < idx.outputs().size(); ++i) {
     auto eid = idx.entry_id(idx.outputs()[i]);
@@ -322,8 +325,11 @@ void SetRefCounts(nnvm::Graph* fwd_graph, const nnvm::Graph& full_graph) {
       std::make_shared<dmlc::any>(std::move(full_ref_count));
 }
 
-void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Graph * grad_graph,
-                   const Context& context, size_t num_forward_outputs, const bool inlining) {
+void OptimizeGraph(nnvm::Graph* full_graph, nnvm::Graph* fwd_graph, nnvm::Graph* grad_graph,
+                   std::vector<size_t>* input_map, const Context& context,
+                   size_t num_forward_outputs, const bool inlining) {
+  input_map->resize(full_graph->indexed_graph().input_nodes().size());
+  std::iota(input_map->begin(), input_map->end(), 0);
 #if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
   if (context.dev_mask() == kGPU &&
       !inlining &&
@@ -336,7 +342,7 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
       *full_graph = exec::FusePointwiseForward(std::move(*full_graph));
       full_graph->attrs["num_forward_outputs"] = std::make_shared<nnvm::any>(num_forward_outputs);
       *full_graph = exec::FusePointwiseBackward(std::move(*full_graph));
-      // Check the topological order of inputs
+      // Fill in input_map - mapping from the new to the original input indices.
       const auto &original_inputs = unoptimized_graph.indexed_graph().input_nodes();
       const auto &new_inputs = full_graph->indexed_graph().input_nodes();
       if (original_inputs.size() != new_inputs.size()) {
@@ -345,13 +351,17 @@ void OptimizeGraph(nnvm::Graph * full_graph, nnvm::Graph * fwd_graph, nnvm::Grap
           << "This is most probably a bug. Disabling fusion for this run.";
         *full_graph = unoptimized_graph;
       } else {
+        std::unordered_map<std::string, size_t> original_input_map;
+        for (size_t i = 0; i < original_inputs.size(); ++i) {
+          auto r = original_input_map.insert(std::make_pair(
+              unoptimized_graph.indexed_graph()[original_inputs[i]].source->attrs.name, i));
+          CHECK(r.second);
+        }
         for (size_t i = 0; i < new_inputs.size(); ++i) {
-          if (unoptimized_graph.indexed_graph()[original_inputs[i]].source->attrs.name !=
-              full_graph->indexed_graph()[new_inputs[i]].source->attrs.name) {
-            LOG(WARNING) << "Disabling fusion due to altered topological order of inputs.";
-            *full_graph = unoptimized_graph;
-            break;
-          }
+          auto it = original_input_map.find(
+              full_graph->indexed_graph()[new_inputs[i]].source->attrs.name);
+          CHECK(it != original_input_map.end());
+          (*input_map)[i] = it->second;
         }
       }
     } else {
@@ -524,6 +534,7 @@ class CachedOp {
     nnvm::Graph fwd_graph;
     nnvm::Graph grad_graph;
     nnvm::Graph full_graph;
+    std::vector<size_t> input_map;  // the original index of an input
     std::vector<nnvm::NodeEntry> ograd_entries;
     std::unordered_map<uint32_t, uint32_t> fwd_input_to_grad_output;
     std::vector<OpReqType> bwd_output_reqs;
@@ -540,7 +551,7 @@ class CachedOp {
                       &info.full_graph, &info.ograd_entries,
                       &info.fwd_input_to_grad_output);
 
-      OptimizeGraph(&info.full_graph, &info.fwd_graph, &info.grad_graph,
+      OptimizeGraph(&info.full_graph, &info.fwd_graph, &info.grad_graph, &info.input_map,
                     context_, fwd_graph_.outputs.size(), inlining_);
 
       size_t max_nodes = info.full_graph.indexed_graph().num_nodes();
@@ -638,6 +649,7 @@ class CachedOp {
       const std::vector<NDArray*>& inputs,
       const std::vector<OpReqType>& reqs,
       const std::vector<NDArray*>& outputs);
+  size_t BwdOriginalInput(const std::vector<size_t>& input_map, size_t new_i);
 
   CachedOpConfig config_;
   nnvm::Graph fwd_graph_;

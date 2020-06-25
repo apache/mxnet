@@ -99,10 +99,9 @@ To do this, we will use [Sequential layer](https://mxnet.io/api/python/docs/api/
 ```python
 # define network
 net = nn.Sequential()
-with net.name_scope():
-    net.add(nn.Dense(128, activation='relu'))
-    net.add(nn.Dense(64, activation='relu'))
-    net.add(nn.Dense(10))
+net.add(nn.Dense(128, activation='relu'))
+net.add(nn.Dense(64, activation='relu'))
+net.add(nn.Dense(10))
 ```
 
 #### Initialize parameters and optimizer
@@ -225,15 +224,12 @@ import mxnet.ndarray as F
 class Net(gluon.Block):
     def __init__(self, **kwargs):
         super(Net, self).__init__(**kwargs)
-        with self.name_scope():
-            # layers created in name_scope will inherit name space
-            # from parent layer.
-            self.conv1 = nn.Conv2D(20, kernel_size=(5,5))
-            self.pool1 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
-            self.conv2 = nn.Conv2D(50, kernel_size=(5,5))
-            self.pool2 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
-            self.fc1 = nn.Dense(500)
-            self.fc2 = nn.Dense(10)
+        self.conv1 = nn.Conv2D(20, kernel_size=(5,5))
+        self.pool1 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
+        self.conv2 = nn.Conv2D(50, kernel_size=(5,5))
+        self.pool2 = nn.MaxPool2D(pool_size=(2,2), strides = (2,2))
+        self.fc1 = nn.Dense(500)
+        self.fc2 = nn.Dense(10)
 
     def forward(self, x):
         x = self.pool1(F.tanh(self.conv1(x)))

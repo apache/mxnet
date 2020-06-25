@@ -150,10 +150,9 @@ from mxnet import gluon, autograd, ndarray
 
 def construct_net():
     net = gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.add(gluon.nn.Dense(128, activation="relu"))
-        net.add(gluon.nn.Dense(64, activation="relu"))
-        net.add(gluon.nn.Dense(10))
+    net.add(gluon.nn.Dense(128, activation="relu"))
+    net.add(gluon.nn.Dense(64, activation="relu"))
+    net.add(gluon.nn.Dense(10))
     return net
 
 # construct and initialize network.

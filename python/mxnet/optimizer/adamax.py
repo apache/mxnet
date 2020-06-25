@@ -37,7 +37,7 @@ class Adamax(Optimizer):
         grad = clip(grad * rescale_grad, clip_gradient) + wd * weight
         m = beta1 * m_t + (1 - beta1) * grad
         u = maximum(beta2 * u, abs(grad))
-        weight -= lr / (1 - beta1**t) * m / u
+        weight -= lr / (1 - beta1**t) * m / (u + epsilon)
 
     This optimizer accepts the following parameters in addition to those accepted
     by :class:`.Optimizer`.
@@ -58,13 +58,14 @@ class Adamax(Optimizer):
         When use_fused_step=False, step is called,
         otherwise, fused_step is called.
     """
-    def __init__(self, learning_rate=0.002, beta1=0.9, beta2=0.999,
+    def __init__(self, learning_rate=0.002, beta1=0.9, beta2=0.999, epsilon=1e-8,
                  use_fused_step=False, **kwargs):
         super(Adamax, self).__init__(learning_rate=learning_rate,
                                      use_fused_step=use_fused_step,
                                      **kwargs)
         self.beta1 = beta1
         self.beta2 = beta2
+        self.epsilon = epsilon
 
     def create_state(self, index, weight):
         return (zeros(weight.shape, weight.context, dtype=weight.dtype),  # mean
@@ -107,5 +108,5 @@ class Adamax(Optimizer):
             var[:] = maximum(self.beta2 * var, NDabs(grad))
 
             # update weight
-            d = mean / var
+            d = mean / (var + self.epsilon)
             weight[:] -= lr * d
