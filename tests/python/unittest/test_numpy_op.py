@@ -6209,7 +6209,7 @@ def test_np_linalg_tensorinv():
             print(e)
         else:
             assert inv_a.shape == inv_a_expected.shape
-            assert_almost_equal(inv_a.asnumpy(), inv_a_expected, rtol=rtol, atol=atol)
+            assert_almost_equal(inv_a, inv_a_expected)
 
     def newInvertibleMatrix_2D(shape, max_cond=4):
         while 1:
