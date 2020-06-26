@@ -35,13 +35,13 @@ NNVM_REGISTER_OP(_npi_lcm)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"lcm"});
 
 NNVM_REGISTER_OP(_npi_bitwise_and)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastIntCompute<gpu, mshadow_op::bitwise_and>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"bitwise_and"});
 
 NNVM_REGISTER_OP(_npi_bitwise_xor)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"bitwise_xor"});
 
 NNVM_REGISTER_OP(_npi_bitwise_or)
-.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastIntCompute<gpu, mshadow_op::bitwise_or>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"bitwise_or"});
 
 NNVM_REGISTER_OP(_backward_npi_copysign)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCBackwardUseIn{"copysign_grad",
@@ -86,13 +86,13 @@ NNVM_REGISTER_OP(_npi_lcm_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"lcm"});
 
 NNVM_REGISTER_OP(_npi_bitwise_and_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::ComputeInt<gpu, mshadow_op::bitwise_and>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"bitwise_and"});
 
 NNVM_REGISTER_OP(_npi_bitwise_xor_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"bitwise_xor"});
 
 NNVM_REGISTER_OP(_npi_bitwise_or_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::ComputeInt<gpu, mshadow_op::bitwise_or>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"bitwise_or"});
 
 NNVM_REGISTER_OP(_npi_ldexp)
 .set_attr<FCompute>("FCompute<gpu>", BinaryBroadcastRTCCompute{"ldexp"});

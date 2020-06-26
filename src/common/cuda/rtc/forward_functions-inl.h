@@ -547,6 +547,18 @@ __device__ inline DType bitwise_not(const DType a) {
   }
 }
 
+template <typename DType, typename DType2>
+__device__ inline typename type_util::mixed_type<DType, DType2>::type bitwise_or(const DType a,
+                                                                       const DType2 b) {
+  return static_cast<int64>(a) | static_cast<int64>(b);
+}
+
+template <typename DType, typename DType2>
+__device__ inline typename type_util::mixed_type<DType, DType2>::type bitwise_and(const DType a,
+                                                                       const DType2 b) {
+  return static_cast<int64>(a) & static_cast<int64>(b);
+}
+
 DEFINE_BINARY_MATH_FUNC(arctan2, ::atan2, ::atan2f)
 
 template <typename DType, typename DType2>

@@ -28,15 +28,6 @@ namespace common {
 namespace cuda {
 namespace rtc {
 
-const std::string float_limits() {
-  return std::string("constexpr double DBL_MAX = ") +
-         std::to_string(DBL_MAX) +
-         ";\n" +
-         "constexpr float FLT_MAX = " +
-         std::to_string(FLT_MAX) +
-         ";\n";
-}
-
 // This code is based on the Cephes Library availible at http://www.netlib.org/cephes
 // The original author, Stephen Moshier, has kindly given permission to use this code
 // in mxnet.  (See email below).
@@ -59,29 +50,11 @@ const std::string float_limits() {
 // Direct inquiries to 30 Frost Street, Cambridge, MA 02140
 //
 const char special_functions_definitions[] = R"code(
+constexpr double DBL_INFINITY = 1e500;
 
 namespace op {
 
 namespace special_functions {
-
-template<typename DType>
-struct helper_numeric_limits {
-  __device__ inline static DType max();
-};
-
-template<>
-struct helper_numeric_limits<double> {
-  __device__ inline static double max() {
-    return DBL_MAX;
-  }
-};
-
-template<>
-struct helper_numeric_limits<float> {
-  __device__ inline static double max() {
-    return FLT_MAX;
-  }
-};
 
 template<typename DType>
 __device__ inline static DType trigamma(DType x);
@@ -222,7 +195,7 @@ struct cephes {
       q = x;
       p = ::floor(q);
       if ( p == q ) {
-        return helper_numeric_limits<double>::max();
+        return DBL_INFINITY;
       }
       /* Remove the zeros of tan(PI x)
        * by subtracting the nearest integer from x
