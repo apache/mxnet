@@ -145,7 +145,7 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
     BinaryBroadcastRTCCompute {"sub"}(attrs, ctx,
                                       {inputs[0], outputs[layernorm::kMean]},
                                       {kWriteTo}, {outputs[0]});
-#endif
+#endif  // MXNET_USE_CUDA
   }
   // Calculate std
   const TBlob centered_out = outputs[0].reshape(red_src_shape);
@@ -190,7 +190,7 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
     BinaryBroadcastRTCCompute {"add"}(attrs, ctx,
                                       {outputs[0], beta},
                                       {kWriteTo}, {outputs[0]});
-#endif
+#endif  // MXNET_USE_CUDA
   }
 }
 
@@ -289,7 +289,7 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
     BinaryBroadcastRTCCompute {"div"}(attrs, ctx,
                                       {normalized_data, std},
                                       {kWriteTo}, {normalized_data});
-#endif
+#endif  // MXNET_USE_CUDA
   }
   // Calculate grad_beta
   bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
@@ -313,8 +313,10 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
     ElemwiseBinaryOp::Compute<xpu, op::mshadow_op::mul>(attrs, ctx, {normalized_data, ograd},
                                                         {kWriteTo}, {ograd_mult});
   } else {
+#if MXNET_USE_CUDA
     ElemwiseBinaryRTCCompute {"mul"}(attrs, ctx, {normalized_data, ograd},
                                      {kWriteTo}, {ograd_mult});
+#endif  // MXNET_USE_CUDA
   }
   if (req[1] != kNullOp) {
     MSHADOW_REAL_TYPE_SWITCH(outputs[1].type_flag_, DType, {
@@ -351,7 +353,7 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
       BinaryBroadcastRTCCompute {"div"}(attrs, ctx,
                                         {ograd_mult, std},
                                         {kWriteTo}, {ograd_mult});
-#endif
+#endif  // MXNET_USE_CUDA
     }
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
@@ -375,11 +377,13 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
       ElemwiseBinaryOp::Compute<xpu, op::mshadow_op::mul>(attrs, ctx, {ograd_mult, normalized_data},
                                                           {kWriteTo}, {ograd_mult});
     } else {
+#if MXNET_USE_CUDA
       BinaryBroadcastRTCCompute {"sub"}(attrs, ctx,
                                         {ograd_mult, red_out},
                                         {req[0]}, {outputs[0]});
       ElemwiseBinaryRTCCompute {"mul"}(attrs, ctx, {ograd_mult, normalized_data},
                                        {kWriteTo}, {ograd_mult});
+#endif  // MXNET_USE_CUDA
     }
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_dst_shape.ndim(), NDim, {
@@ -405,7 +409,7 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
       BinaryBroadcastRTCCompute {"mul"}(attrs, ctx,
                                         {normalized_data, red_out},
                                         {kAddTo}, {outputs[0]});
-#endif
+#endif  // MXNET_USE_CUDA
     }
   }
 }

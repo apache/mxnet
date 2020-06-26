@@ -111,7 +111,7 @@ void inline CopyBlob(mshadow::Stream<xpu> *s,
  * \param dest Destination sparse NDArray
  * \param clone_from sparse NDArray from which to clone storage attributes
  */
-void AllocateGeometry(const NDArray *dest,
+void inline AllocateGeometry(const NDArray *dest,
                              const OpReqType req,
                              const NDArray* clone_from = nullptr) {
   if (req != kNullOp) {
