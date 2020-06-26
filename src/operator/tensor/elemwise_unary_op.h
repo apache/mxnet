@@ -932,7 +932,18 @@ struct UnaryRTCCompute {
                   const std::vector<NDArray>& outputs);
 };
 
-#endif
+struct UnaryBwdInOutRTCCompute {
+  std::string OP;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+
+};
+
+#endif  // MXNET_USE_CUDA
 
 }  // namespace op
 }  // namespace mxnet

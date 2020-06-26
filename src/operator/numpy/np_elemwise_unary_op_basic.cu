@@ -126,93 +126,70 @@ NNVM_REGISTER_OP(_npi_backward_nan_to_num)
 .set_attr<FCompute>("FCompute<gpu>", NumpyNanToNumOpBackward<gpu>);
 
 NNVM_REGISTER_OP(_backward_npi_exp)
-.set_attr<FCompute>("FCompute<gpu>",
-                    ElemwiseBinaryOp::MixedUnaryBackwardUseInOutCompute<gpu,
-                    op::mshadow_op::mul>);
+.set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"mul"});
 
 NNVM_REGISTER_OP(_backward_npi_log)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::log_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log"});
 
 NNVM_REGISTER_OP(_backward_npi_log10)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-gpu, unary_bwd<mshadow_op::log10_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log10"});
 
 NNVM_REGISTER_OP(_backward_npi_log2)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::log2_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log2"});
 
 NNVM_REGISTER_OP(_backward_npi_log1p)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::log1p_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_log1p"});
 
 NNVM_REGISTER_OP(_backward_npi_expm1)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::exp> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_expm1"});
 
 NNVM_REGISTER_OP(_backward_npi_sqrt)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInOutCompute<
-  gpu, unary_bwd<mshadow_op::square_root_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_sqrt"});
 
 NNVM_REGISTER_OP(_backward_npi_cbrt)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInOutCompute<
-  gpu, unary_bwd<mshadow_op::cube_root_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_cbrt"});
 
 NNVM_REGISTER_OP(_backward_npi_sin)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::sin_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_sin"});
 
 NNVM_REGISTER_OP(_backward_npi_cos)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::cos_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_cos"});
 
 NNVM_REGISTER_OP(_backward_npi_tan)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInOutCompute<
-  gpu, unary_bwd<mshadow_op::tan_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_tan"});
 
 NNVM_REGISTER_OP(_backward_npi_arcsin)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::arcsin_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arcsin"});
 
 NNVM_REGISTER_OP(_backward_npi_arccos)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::arccos_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arccos"});
 
 NNVM_REGISTER_OP(_backward_npi_arctan)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::arctan_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arctan"});
 
 NNVM_REGISTER_OP(_backward_npi_degrees)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::degrees_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_degrees"});
 
 NNVM_REGISTER_OP(_backward_npi_radians)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::radians_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_radians"});
 
 NNVM_REGISTER_OP(_backward_npi_cosh)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::cosh_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_cosh"});
 
 NNVM_REGISTER_OP(_backward_npi_sinh)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::sinh_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_sinh"});
 
 NNVM_REGISTER_OP(_backward_npi_tanh)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInOutCompute<
-  gpu, unary_bwd<mshadow_op::tanh_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", UnaryBwdInOutRTCCompute{"backward_tanh"});
 
 NNVM_REGISTER_OP(_backward_npi_arcsinh)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::arcsinh_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arcsinh"});
 
 NNVM_REGISTER_OP(_backward_npi_arccosh)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::arccosh_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arccosh"});
 
 NNVM_REGISTER_OP(_backward_npi_arctanh)
-.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryOp::MixedUnaryBackwardUseInCompute<
-  gpu, unary_bwd<mshadow_op::arctanh_grad> >);
+.set_attr<FCompute>("FCompute<gpu>", ElemwiseBinaryRTCCompute{"backward_arctanh"});
 
 }  // namespace op
 }  // namespace mxnet

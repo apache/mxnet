@@ -19,6 +19,7 @@
 
 #include <string>
 #include "elemwise_unary_op.h"
+#include "elemwise_binary_op.h"
 
 #if MXNET_USE_CUDA
 #include "../../common/cuda/rtc/vectorization-inl.h"
@@ -145,6 +146,14 @@ void UnaryRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
     }
     this->operator()(attrs, ctx, in_blobs, req, out_blobs);
   }
+}
+
+void UnaryBwdInOutRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
+                                         const OpContext& ctx,
+                                         const std::vector<TBlob>& inputs,
+                                         const std::vector<OpReqType>& req,
+                                         const std::vector<TBlob>& outputs) {
+  ElemwiseBinaryRTCCompute {OP} (attrs, ctx, {inputs[0], inputs[2]}, req, outputs);
 }
 
 #endif  // MXNET_USE_CUDA

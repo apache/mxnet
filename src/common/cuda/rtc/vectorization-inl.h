@@ -234,8 +234,8 @@ class VectorizedStorer : public VectorizedAccessor<DType, nvec, aligned> {
 
 namespace {
 
-index_t get_num_aligned_elements(const void *ptr, const index_t lead_dim,
-                                 const int nvec, const int size) {
+inline index_t get_num_aligned_elements(const void *ptr, const index_t lead_dim,
+                                        const int nvec, const int size) {
   size_t ptr_as_number = reinterpret_cast<size_t>(ptr);
   int alignment = (ptr_as_number % (nvec * size)) / size;
   return (lead_dim + alignment + nvec - 1) / nvec;
@@ -247,7 +247,7 @@ enum class Alignment {
   DIFFERENT  // Tensors have different alignment
 };
 
-int CalcAlignment(const void *ptr, const int size) {
+inline int CalcAlignment(const void *ptr, const int size) {
   size_t ptr_as_number = reinterpret_cast<size_t>(ptr);
   return ptr_as_number % size;
 }

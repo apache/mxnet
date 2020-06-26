@@ -60,6 +60,7 @@ std::string to_string(OpReqType req) {
       return "OpReqType::kAddTo";
   }
   LOG(FATAL) << "Unrecognized req.";
+  return "";
 }
 
 }  // namespace util
