@@ -131,9 +131,9 @@ endif
 # -L/usr/local/lib
 
 ifeq ($(DEBUG), 1)
-	NVCCFLAGS += -std=c++17 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS += -std=c++14 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
-	NVCCFLAGS += -std=c++17 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS += -std=c++14 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
 # CFLAGS for segfault logger
@@ -693,7 +693,7 @@ build/libtransposerowsp_lib.so:
 build/libcustomop_gpu_lib.so:
 	@mkdir -p $(@D)
 	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o /dev/null -I include/mxnet
-	$(NVCC) -shared -std=c++17 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
+	$(NVCC) -shared -std=c++14 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
 build/libsubgraph_lib.so:
 	@mkdir -p $(@D)
 	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o /dev/null -I include/mxnet
