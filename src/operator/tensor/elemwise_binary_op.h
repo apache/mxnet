@@ -769,7 +769,6 @@ template<typename xpu, typename OP>
     using namespace common;
     CHECK_EQ(inputs.size(), 3U);
     CHECK_EQ(outputs.size(), 2U);  // lhs input grad, rhs input grad
-    const auto out_grad_stype = inputs[0].storage_type();
     const auto lhs_grad_stype = outputs[0].storage_type();
     const auto rhs_grad_stype = outputs[1].storage_type();
     if (ContainsOnlyStorage(inputs, kRowSparseStorage) &&
