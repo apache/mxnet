@@ -562,6 +562,7 @@ void PinvOpForwardImpl(const TBlob& a,
                                                                    {s_data, cutoff_data},
                                                                    temp_req, {large_data});
       } else {
+#if MXNET_USE_CUDA
         mxnet::op::BinaryBroadcastRTCCompute {"mul"}(attrs, ctx,
                                                      {rcond_data, smax_data},
                                                      temp_req, {cutoff_data});
@@ -569,6 +570,7 @@ void PinvOpForwardImpl(const TBlob& a,
         mxnet::op::BinaryBroadcastRTCCompute {"greater"}(attrs, ctx,
                                                          {s_data, cutoff_data},
                                                          temp_req, {large_data});
+#endif  // MXNET_USE_CUDA
       }
       // Step5: Discard small singular values.
       mxnet_op::Kernel<DiscardSmallSingularVal, xpu>::Launch(
@@ -587,8 +589,10 @@ void PinvOpForwardImpl(const TBlob& a,
         mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, {s_data, ut_data},
                                                                     temp_req, {u_data});
       } else {
+#if MXNET_USE_CUDA
         mxnet::op::BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, {s_data, ut_data},
                                                      temp_req, {u_data});
+#endif  // MXNET_USE_CUDA
       }
       gemm2::op(vt_data.FlatToKD<xpu, 3, DType>(s),
                 u_data.FlatToKD<xpu, 3, DType>(s),
@@ -731,8 +735,10 @@ void PinvScalarRcondOpForwardImpl(const TBlob& a,
         mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, {s_data, ut_data},
                                                                     {kWriteTo}, {u_data});
       } else {
+#if MXNET_USE_CUDA
         mxnet::op::BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, {s_data, ut_data},
                                                      {kWriteTo}, {u_data});
+#endif  // MXNET_USE_CUDA
       }
       gemm2::op(vt_data.FlatToKD<xpu, 3, DType>(s),
                 u_data.FlatToKD<xpu, 3, DType>(s),

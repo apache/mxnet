@@ -415,9 +415,11 @@ void MatrixRankForwardImpl(const TBlob& a,
                                                                    {s_data, new_tol_data},
                                                                    {kWriteTo}, {broadcast_data});
       } else {
+#if MXNET_USE_CUDA
         mxnet::op::BinaryBroadcastRTCCompute {"greater"}(attrs, ctx,
                                                          {s_data, new_tol_data},
                                                          {kWriteTo}, {broadcast_data});
+#endif  // MXNET_USE_CUDA
       }
       // Step5: Calculate rank.
       const int b_ndim  = broadcast_shape.ndim();

@@ -262,10 +262,12 @@ class LeakyReLUOp : public Operator {
                                        in_data[leakyrelu::kData],
                                        in_data[leakyrelu::kGamma]}, req, in_grad);
           } else {
+#if MXNET_USE_CUDA
             ElemwiseBinaryRTCBwdUseIn {"xelu_grad", "prelu_grad"}(
               nnvm::NodeAttrs(), ctx, {out_grad[leakyrelu::kOut],
                                        in_data[leakyrelu::kData],
                                        in_data[leakyrelu::kGamma]}, req, in_grad);
+#endif  // MXNET_USE_CUDA
           }
         } else {
           if constexpr (std::is_same<xpu, cpu>::value) {
@@ -278,6 +280,7 @@ class LeakyReLUOp : public Operator {
                   new_lshape, new_rshape, new_oshape);
             });
           } else {
+#if MXNET_USE_CUDA
             std::vector<TBlob> new_in_grad(2);
             new_in_grad[leakyrelu::kData] = in_grad[leakyrelu::kData];
             new_in_grad[leakyrelu::kGamma] = in_grad[leakyrelu::kGamma].reshape(gshape);
@@ -286,6 +289,7 @@ class LeakyReLUOp : public Operator {
                                          in_data[leakyrelu::kData],
                                          in_data[leakyrelu::kGamma]},
                   req, new_in_grad);
+#endif  // MXNET_USE_CUDA
           }
         }
         break;

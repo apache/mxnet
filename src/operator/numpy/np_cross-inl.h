@@ -394,8 +394,10 @@ struct NumpyCrossForwardImpl {
         BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { aw_data, bw_data },
                                                          { kWriteTo }, { cw_data_vec[idx] });
       } else {
+#if MXNET_USE_CUDA
         BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { aw_data, bw_data },
                                           { kWriteTo }, { cw_data_vec[idx] });
+#endif  // MXNET_USE_CUDA
       }
       MXNET_ASSIGN_REQ_SWITCH(req_vec[i], req_type, {
         mxnet_op::Kernel<CrossOutAssign<req_type>, xpu>::Launch(s, cw_data_vec[idx].Size(),
@@ -502,8 +504,10 @@ struct NumpyCrossForwardImpl<xpu, DType, 2, 2> {
       BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { aw_data, bw_data },
                                                        { req[0] }, { c });
     } else {
+#if MXNET_USE_CUDA
       BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { aw_data, bw_data },
                                         { req[0] }, { c });
+#endif  // MXNET_USE_CUDA
     }
     mxnet_op::Kernel<CrossInAssign, xpu>::Launch(s, aw_data.Size(), a_data.dptr<DType>(),
                                                  aw_data.dptr<DType>(), a_data.size(a_ndim - 1),
@@ -517,10 +521,12 @@ struct NumpyCrossForwardImpl<xpu, DType, 2, 2> {
       BinaryBroadcastCompute<xpu, op::mshadow_op::minus>(attrs, ctx, { c, cw_data },
                                                          { kWriteTo }, { c });
     } else {
+#if MXNET_USE_CUDA
       BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { aw_data, bw_data },
                                         { kWriteTo }, { cw_data });
       BinaryBroadcastRTCCompute {"sub"}(attrs, ctx, { c, cw_data },
                                         { kWriteTo }, { c });
+#endif  // MXNET_USE_CUDA
     }
   }
 };
@@ -1216,8 +1222,10 @@ struct NumpyCrossBackwardImpl<xpu, DType, 2, 2> {
       BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { grad_c, bw_data },
                                                        { kWriteTo }, { cw_data });
     } else {
+#if MXNET_USE_CUDA
       BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { grad_c, bw_data },
                                         { kWriteTo }, { cw_data });
+#endif  // MXNET_USE_CUDA
     }
     // Copy cw_data to grad_move_data[..., 0].
     mxnet_op::Kernel<CrossOutAssign<kWriteTo>, xpu>::Launch(s, cw_data.Size(),
@@ -1236,8 +1244,10 @@ struct NumpyCrossBackwardImpl<xpu, DType, 2, 2> {
       BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { grad_c, bw_data },
                                                        { kWriteTo }, { cw_data });
     } else {
+#if MXNET_USE_CUDA
       BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { grad_c, bw_data },
                                         { kWriteTo }, { cw_data });
+#endif  // MXNET_USE_CUDA
     }
     // Copy -cw_data to grad_move_data[..., 1].
     mxnet_op::Kernel<CrossOutAssign<kWriteTo>, xpu>::Launch(s, cw_data.Size(),
@@ -1287,8 +1297,10 @@ struct NumpyCrossBackwardImpl<xpu, DType, 2, 2> {
       BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { grad_c, aw_data },
                                                        { kWriteTo }, { cw_data });
     } else {
+#if MXNET_USE_CUDA
       BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { grad_c, aw_data },
                                         { kWriteTo }, { cw_data });
+#endif  // MXNET_USE_CUDA
     }
     // Copy -cw_data to grad_move_data[..., 0].
     mxnet_op::Kernel<CrossOutAssign<kWriteTo>, xpu>::Launch(s, cw_data.Size(),
@@ -1307,8 +1319,10 @@ struct NumpyCrossBackwardImpl<xpu, DType, 2, 2> {
       BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, { grad_c, aw_data },
                                                        { kWriteTo }, { cw_data });
     } else {
+#if MXNET_USE_CUDA
       BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, { grad_c, aw_data },
                                         { kWriteTo }, { cw_data });
+#endif  // MXNET_USE_CUDA
     }
     // Copy cw_data to grad_move_data[..., 1].
     mxnet_op::Kernel<CrossOutAssign<kWriteTo>, xpu>::Launch(s, cw_data.Size(),

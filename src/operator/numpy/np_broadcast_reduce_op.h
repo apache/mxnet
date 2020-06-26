@@ -836,8 +836,10 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
       BinaryBroadcastCompute<xpu, mshadow_op::mul>(
         attrs, ctx, {data, weights}, {kWriteTo}, {wa});
     } else {
+#if MXNET_USE_CUDA
       BinaryBroadcastRTCCompute {"mul"}(
         attrs, ctx, {data, weights}, {kWriteTo}, {wa});
+#endif  // MXNET_USE_CUDA
     }
 
     // Compute sum of weighted data
@@ -859,8 +861,10 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
         BinaryBroadcastCompute<xpu, mshadow_op::div>(
           attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
       } else {
+#if MXNET_USE_CUDA
         BinaryBroadcastRTCCompute {"div"}(
           attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
+#endif  // MXNET_USE_CUDA
       }
     } else {
       // Compute and assign the derivatives of a and weights
