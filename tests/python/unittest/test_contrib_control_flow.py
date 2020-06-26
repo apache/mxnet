@@ -148,7 +148,13 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
         return [mx.sym.var(prefix + str(i)) for i in range(num)]
 
     def _create_arrays(shapes):
-        return [mx.nd.random.uniform(-1.0, 1.0, shape=x) for x in shapes]
+        out = []
+        for s in shapes:
+            if np.prod(s) <= 0:
+                continue
+            else:
+                out.append(mx.nd.random.uniform(-1.0, 1.0, shape=s))
+        return out
 
     def _create_dict(prefix, shapes):
         return {prefix + str(i): mx.nd.random.uniform(-1.0, 1.0, shape=x) for i, x in enumerate(shapes)}
@@ -181,7 +187,18 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
             outputs = [x[: n_steps] for x in outputs]
             out_grads = _create_arrays(x.shape for x in outputs)  \
                       + _create_arrays(x.shape for x in final_loop_vars)
-            loop_result_nd = [x * 2 for x in outputs] + [x * 3 for x in final_loop_vars]
+            loop_result_nd_o, loop_result_nd_f = [], []
+            for x in outputs:
+                if np.prod(x.shape) <= 0:
+                    continue
+                else:
+                    loop_result_nd_o.append(x * 2)
+            for x in final_loop_vars:
+                if np.prod(x.shape) <= 0:
+                    continue
+                else:
+                    loop_result_nd_f.append(x * 3)
+            loop_result_nd = loop_result_nd_o + loop_result_nd_f
             grads = []
             if is_train:
                 cat_out = mx.nd.concat(*[x.reshape(-1) for x in loop_result_nd], dim=0)
