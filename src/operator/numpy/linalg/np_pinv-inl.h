@@ -553,25 +553,23 @@ void PinvOpForwardImpl(const TBlob& a,
         s, S.size(0), Smax.dptr_, S.dptr_, S.size(1), S.stride_);
       // Step3: Calculate Cutoff.
       std::vector<OpReqType> temp_req({kWriteTo});
-      if constexpr (std::is_same<xpu, cpu>::value) {
-        mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
-                                                                    {rcond_data, smax_data},
-                                                                    temp_req, {cutoff_data});
-        // Step4: Calculte Large.
-        mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::gt>(attrs, ctx,
-                                                                   {s_data, cutoff_data},
-                                                                   temp_req, {large_data});
-      } else {
-#if MXNET_USE_CUDA
-        mxnet::op::BinaryBroadcastRTCCompute {"mul"}(attrs, ctx,
-                                                     {rcond_data, smax_data},
-                                                     temp_req, {cutoff_data});
-        // Step4: Calculte Large.
-        mxnet::op::BinaryBroadcastRTCCompute {"greater"}(attrs, ctx,
-                                                         {s_data, cutoff_data},
-                                                         temp_req, {large_data});
-#endif  // MXNET_USE_CUDA
-      }
+#if !defined(__CUDACC__)
+      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
+                                                                  {rcond_data, smax_data},
+                                                                  temp_req, {cutoff_data});
+      // Step4: Calculte Large.
+      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::gt>(attrs, ctx,
+                                                                 {s_data, cutoff_data},
+                                                                 temp_req, {large_data});
+#else
+      mxnet::op::BinaryBroadcastRTCCompute {"mul"}(attrs, ctx,
+                                                   {rcond_data, smax_data},
+                                                   temp_req, {cutoff_data});
+      // Step4: Calculte Large.
+      mxnet::op::BinaryBroadcastRTCCompute {"greater"}(attrs, ctx,
+                                                       {s_data, cutoff_data},
+                                                       temp_req, {large_data});
+#endif  // !defined(__CUDACC__)
       // Step5: Discard small singular values.
       mxnet_op::Kernel<DiscardSmallSingularVal, xpu>::Launch(
         s, s_data.Size(), s_data.dptr<DType>(), large_data.dptr<DType>());
@@ -585,15 +583,13 @@ void PinvOpForwardImpl(const TBlob& a,
       }
       s_data = s_data.reshape(s_shape_newaxis);
       u_data = ut_data.reshape(ut_shape);
-      if constexpr (std::is_same<xpu, cpu>::value) {
-        mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, {s_data, ut_data},
-                                                                    temp_req, {u_data});
-      } else {
-#if MXNET_USE_CUDA
-        mxnet::op::BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, {s_data, ut_data},
-                                                     temp_req, {u_data});
-#endif  // MXNET_USE_CUDA
-      }
+#if !defined(__CUDACC__)
+      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, {s_data, ut_data},
+                                                                  temp_req, {u_data});
+#else
+      mxnet::op::BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, {s_data, ut_data},
+                                                   temp_req, {u_data});
+#endif  // !defined(__CUDACC__)
       gemm2::op(vt_data.FlatToKD<xpu, 3, DType>(s),
                 u_data.FlatToKD<xpu, 3, DType>(s),
                 pinv_a.FlatToKD<xpu, 3, DType>(s),
@@ -731,15 +727,13 @@ void PinvScalarRcondOpForwardImpl(const TBlob& a,
       }
       s_data = s_data.reshape(s_shape_newaxis);
       u_data = ut_data.reshape(ut_shape);
-      if constexpr (std::is_same<xpu, cpu>::value) {
-        mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, {s_data, ut_data},
-                                                                    {kWriteTo}, {u_data});
-      } else {
-#if MXNET_USE_CUDA
-        mxnet::op::BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, {s_data, ut_data},
-                                                     {kWriteTo}, {u_data});
-#endif  // MXNET_USE_CUDA
-      }
+#if !defined(__CUDACC__)
+      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, {s_data, ut_data},
+                                                                  {kWriteTo}, {u_data});
+#else
+      mxnet::op::BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, {s_data, ut_data},
+                                                   {kWriteTo}, {u_data});
+#endif  // !defined(__CUDACC__)
       gemm2::op(vt_data.FlatToKD<xpu, 3, DType>(s),
                 u_data.FlatToKD<xpu, 3, DType>(s),
                 pinv_a.FlatToKD<xpu, 3, DType>(s),

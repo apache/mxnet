@@ -832,15 +832,13 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
 
     // Compute weighted data
     TBlob wa = TBlob(temp_data_ptr, data.shape_, xpu::kDevMask);
-    if constexpr (std::is_same<xpu, cpu>::value) {
-      BinaryBroadcastCompute<xpu, mshadow_op::mul>(
-        attrs, ctx, {data, weights}, {kWriteTo}, {wa});
-    } else {
-#if MXNET_USE_CUDA
-      BinaryBroadcastRTCCompute {"mul"}(
-        attrs, ctx, {data, weights}, {kWriteTo}, {wa});
-#endif  // MXNET_USE_CUDA
-    }
+#if !defined(__CUDACC__)
+    BinaryBroadcastCompute<xpu, mshadow_op::mul>(
+      attrs, ctx, {data, weights}, {kWriteTo}, {wa});
+#else
+    BinaryBroadcastRTCCompute {"mul"}(
+      attrs, ctx, {data, weights}, {kWriteTo}, {wa});
+#endif  // !defined(__CUDACC__)
 
     // Compute sum of weighted data
     TBlob sum_of_wa = TBlob(temp_sum_ptr, small1, xpu::kDevMask);
@@ -857,15 +855,13 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
         ctx, {weights}, {kWriteTo}, {scl}, workspace, w_src_shape, w_dst_shape);
 
       // Compute avg and assign output
-      if constexpr (std::is_same<xpu, cpu>::value) {
-        BinaryBroadcastCompute<xpu, mshadow_op::div>(
-          attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
-      } else {
-#if MXNET_USE_CUDA
-        BinaryBroadcastRTCCompute {"div"}(
-          attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
-#endif  // MXNET_USE_CUDA
-      }
+#if !defined(__CUDACC__)
+      BinaryBroadcastCompute<xpu, mshadow_op::div>(
+        attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
+#else
+      BinaryBroadcastRTCCompute {"div"}(
+        attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
+#endif  // !defined(__CUDACC__)
     } else {
       // Compute and assign the derivatives of a and weights
       const TBlob& igrad_a = outputs[0];
