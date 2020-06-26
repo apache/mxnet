@@ -940,7 +940,6 @@ struct UnaryBwdInOutRTCCompute {
                   const std::vector<TBlob>& inputs,
                   const std::vector<OpReqType>& req,
                   const std::vector<TBlob>& outputs);
-
 };
 
 #endif  // MXNET_USE_CUDA
