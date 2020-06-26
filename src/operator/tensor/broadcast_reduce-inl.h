@@ -469,7 +469,7 @@ inline int diff(const TShape& small, const TShape& big,
 }
 
 constexpr int nthread_reduce = 512;
-constexpr int kBaseGridNum = 1024;
+constexpr index_t kBaseGridNum = 1024;
 
 }  // namespace
 
@@ -524,8 +524,8 @@ struct ReduceImplConfig {
 
     if (M == 1) {
       kernel_1.blockDim.x = nthread_reduce;
-      kernel_1.gridDim.x = std::min((unsigned int)kBaseGridNum,
-          (N + kernel_1.blockDim.x - 1)/kernel_1.blockDim.x);
+      kernel_1.gridDim.x = std::min(kBaseGridNum,
+          static_cast<index_t>((N + kernel_1.blockDim.x - 1)/kernel_1.blockDim.x));
     } else {
       int reduce_strides[3];
       reduce_strides[0] = fastest_stride(small, big, big);
@@ -629,7 +629,7 @@ struct ReduceImplConfig {
       if (Mnext > 1) {
         kernel_2.blockSize = nthread_reduce;
         kernel_2.gridSize = std::min(kBaseGridNum,
-            (N + kernel_2.blockSize - 1)/kernel_2.blockSize);
+            static_cast<index_t>((N + kernel_2.blockSize - 1)/kernel_2.blockSize));
       }
     }
   }
