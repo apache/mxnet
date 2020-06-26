@@ -678,20 +678,19 @@ def test_convolution_multiple_streams():
 @pytest.mark.serial
 def test_convolution_large_c():
     problematic_c = 64 * 1024
-    # The convolution accumulates many values, so set large tolerances.
-    tol = {np.dtype(np.float32): 1,
-           np.dtype(np.float64): 1}
+    # The convolution accumulates many values, so scale the input magnitude.
+    scale = 0.1
     def test_1D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float64}}]
         sym = mx.sym.Convolution(layout='NCW', num_filter=8, kernel=(2,), name='conv')
-        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+        check_consistency([sym, sym], ctx_list, grad_req=grad_req, scale=scale)
 
     def test_2D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float64}}]
         sym = mx.sym.Convolution(layout='NCHW', num_filter=4, kernel=(2,2), name='conv')
-        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+        check_consistency([sym, sym], ctx_list, grad_req=grad_req, scale=scale)
 
     # Run with different data tensor shapes to run cudnnFind() multiple times.
     # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
@@ -709,20 +708,19 @@ def test_convolution_large_c():
 @pytest.mark.serial
 def test_deconvolution_large_c():
     problematic_c = 64 * 1024
-    # The deconvolution accumulates many values, so set large tolerances.
-    tol = {np.dtype(np.float32): 1,
-           np.dtype(np.float64): 1}
+    # The deconvolution accumulates many values, so scale the input magnitude.
+    scale = 0.1
     def test_1D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float64}}]
         sym = mx.sym.Deconvolution(layout='NCW', num_filter=problematic_c, kernel=(2,), name='deconv')
-        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+        check_consistency([sym, sym], ctx_list, grad_req=grad_req, scale=scale)
 
     def test_2D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float64}}]
         sym = mx.sym.Deconvolution(layout='NCHW', num_filter=problematic_c, kernel=(2,2), name='deconv')
-        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+        check_consistency([sym, sym], ctx_list, grad_req=grad_req, scale=scale)
 
     # Run with different data tensor shapes to run cudnnFind() multiple times.
     # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
@@ -931,10 +929,11 @@ def test_bilinear_sampler_with_type():
 def test_grid_generator_with_type():
     data = mx.sym.Variable('data')
     sym = mx.sym.GridGenerator(data=data, transform_type='affine', target_shape=(20, 20))
+    scale = 1
     ctx_list = [{'ctx': mx.gpu(0), 'data': (3, 6), 'type_dict': {'data': np.float32}},
                 {'ctx': mx.cpu(0), 'data': (3, 6), 'type_dict': {'data': np.float32}}]
-    check_consistency(sym, ctx_list)
-    check_consistency(sym, ctx_list, grad_req="add")
+    check_consistency(sym, ctx_list, scale=scale)
+    check_consistency(sym, ctx_list, scale=scale, grad_req="add")
     sym = mx.sym.GridGenerator(data=data, transform_type='warp', target_shape=(20, 20))
     ctx_list = [{'ctx': mx.gpu(0), 'data': (3, 2, 20, 20), 'type_dict': {'data': np.float32}},
                 {'ctx': mx.cpu(0), 'data': (3, 2, 20, 20), 'type_dict': {'data': np.float32}}]

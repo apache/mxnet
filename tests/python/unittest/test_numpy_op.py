@@ -6332,7 +6332,7 @@ def test_np_linalg_tensorsolve():
             print(e)
         else:
             assert x.shape == x_expected.shape
-            assert_almost_equal(x.asnumpy(), x_expected, rtol=rtol, atol=atol)
+            assert_almost_equal(x, x_expected)
 
     def shapeInfer(a_shape, b_shape, axes=None):
         # b_shape - Right-hand tensor shape, which can be of any shape.
@@ -6394,8 +6394,6 @@ def test_np_linalg_tensorsolve():
     for hybridize in [True, False]:
         for dtype in dtypes:
             for a_shape, b_shape, axes in shapes:
-                rtol = 1e-2 if dtype == 'float32' else 1e-3
-                atol = 1e-4 if dtype == 'float32' else 1e-5
                 test_tensorsolve = TestTensorsolve(axes)
                 if hybridize:
                     test_tensorsolve.hybridize()
@@ -6432,8 +6430,8 @@ def test_np_linalg_tensorsolve():
                     mx.autograd.backward(mx_out)
                     grad_a_expected, grad_b_expected = get_tensorsolve_backward(
                         a.asnumpy(), b.asnumpy(), mx_out.asnumpy(), a_axes, a_origin_axes, a_trans_shape)
-                    assert_almost_equal(a.grad.asnumpy(), grad_a_expected, rtol=rtol, atol=atol)
-                    assert_almost_equal(b.grad.asnumpy(), grad_b_expected, rtol=rtol, atol=atol)
+                    assert_almost_equal(a.grad, grad_a_expected)
+                    assert_almost_equal(b.grad, grad_b_expected)
 
                 # check imperative once again
                 mx_out = test_tensorsolve(a, b)
