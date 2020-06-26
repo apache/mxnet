@@ -20,26 +20,19 @@
 #ifndef MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_
 #define MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_
 
+#if !defined(ANDROID) && !defined(__ANDROID__)
+
 #ifndef _WIN32
 #include <sys/mman.h>
 #include <sys/fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #else
 #include <Windows.h>
 #include <process.h>
 #endif  // _WIN32
 
-#include <unordered_map>
-#include <vector>
-#include <atomic>
-#include <iostream>
-#include <mutex>
-#include <new>
 #include <string>
 #include <limits>
-
 #include "./storage_manager.h"
 
 namespace mxnet {
@@ -134,7 +127,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
       map_handle = CreateFileMapping(INVALID_HANDLE_VALUE,
                                      nullptr, PAGE_READWRITE, 0, size, filename.c_str());
       if ((error = GetLastError()) == ERROR_SUCCESS) {
-        break;;
+        break;
       }
     }
   } else {
@@ -257,5 +250,7 @@ inline void CPUSharedStorageManager::CheckAndRealFree() {
 #endif  // _WIN32
 }  // namespace storage
 }  // namespace mxnet
+
+#endif  // !defined(ANDROID) && !defined(__ANDROID__)
 
 #endif  // MXNET_STORAGE_CPU_SHARED_STORAGE_MANAGER_H_

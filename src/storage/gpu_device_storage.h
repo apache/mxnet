@@ -25,14 +25,7 @@
 #ifndef MXNET_STORAGE_GPU_DEVICE_STORAGE_H_
 #define MXNET_STORAGE_GPU_DEVICE_STORAGE_H_
 
-#include "mxnet/base.h"
 #include "mxnet/storage.h"
-#include "../common/cuda_utils.h"
-#include "../profiler/storage_profiler.h"
-#if MXNET_USE_CUDA
-#include <cuda_runtime.h>
-#endif  // MXNET_USE_CUDA
-#include <new>
 
 namespace mxnet {
 namespace storage {

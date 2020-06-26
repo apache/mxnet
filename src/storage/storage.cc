@@ -142,11 +142,6 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
       LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
 #endif
 
-#if defined(ANDROID) || defined(__ANDROID__)
-      if (dev_type == Context::kCPUShared)
-        LOG(FATAL) << "Unimplemented device";
-#endif
-
     const char *context = nullptr;
     switch (dev_type) {
       case Context::kCPU:
@@ -161,7 +156,9 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
       case Context::kCPUShared:
         // We will not generate the log messages for CPUShared
         // It could be as many of them as the number of "workers".
-        break;
+#if !defined(ANDROID) && !defined(__ANDROID__)
+        break;   // For Android shared memory is not implemented
+#endif
       default:
         LOG(FATAL) << "Unimplemented device " << dev_type;
     }
@@ -187,24 +184,26 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
     if (naive_storage_manager) {
       storage_manager_type = "Naive";
       switch (dev_type) {
-        case Context::kCPUPinned:
 #if MXNET_USE_CUDA
+        case Context::kGPU:
+              ptr = new NaiveStorageManager<GPUDeviceStorage>();
+              break;
+        case Context::kCPUPinned:
               if (num_gpu_device > 0) {
                 ptr = new NaiveStorageManager<PinnedMemoryStorage>();
                 break;
               }
+#else
+        case Context::kCPUPinned:
 #endif
               context = "CPU";
         case Context::kCPU:
               ptr = new NaiveStorageManager<CPUDeviceStorage>();
               break;
-#if MXNET_USE_CUDA
-        case Context::kGPU:
-              ptr = new NaiveStorageManager<GPUDeviceStorage>();
-              break;
-#endif
+#if !defined(ANDROID) && !defined(__ANDROID__)
         case Context::kCPUShared:
               ptr = new CPUSharedStorageManager();
+#endif
         default: break;
       }
     } else {

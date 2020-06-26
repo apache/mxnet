@@ -28,7 +28,6 @@
 
 #include "./storage_manager_helpers.h"
 #include <mxnet/storage.h>
-#include <cstddef>
 
 namespace mxnet {
 namespace storage {
