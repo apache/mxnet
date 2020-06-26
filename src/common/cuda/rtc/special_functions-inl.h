@@ -50,7 +50,7 @@ namespace rtc {
 // Direct inquiries to 30 Frost Street, Cambridge, MA 02140
 //
 const char special_functions_definitions[] = R"code(
-constexpr double DBL_INFINITY = 1e500;
+constexpr double DBL_MAX = 1.7976931348623157081e+308;
 
 namespace op {
 
@@ -195,7 +195,7 @@ struct cephes {
       q = x;
       p = ::floor(q);
       if ( p == q ) {
-        return DBL_INFINITY;
+        return DBL_MAX;
       }
       /* Remove the zeros of tan(PI x)
        * by subtracting the nearest integer from x
