@@ -1156,7 +1156,7 @@ struct broadcast_kernel_cpu {
     // Each case is based on the number of axis to be broadcasted
     // (1, 2 or 3) after merging axes.
     switch (aux_data.num_broadcast_axes) {
-      // when input shape is one of the follwing forms
+      // when input shape is one of the following forms
       // (x_1,1) or (x_1,1,x_2) or (1,x_1)
       // x_1, x_2 are size of the dimensions that are not to be broadcasted
       // in case of (x_1,1) the system leverages vectorization but in other 2
