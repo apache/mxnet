@@ -200,6 +200,7 @@ build_jetson() {
         -DUSE_LAPACK=OFF \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_INT64_TENSOR_SIZE=ON \
         -G Ninja /work/mxnet
     ninja
     build_wheel
@@ -259,6 +260,7 @@ build_armv8() {
         -DUSE_LAPACK=OFF \
         -DCMAKE_BUILD_TYPE=Release \
         -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_INT64_TENSOR_SIZE=ON \
         -G Ninja /work/mxnet
     ninja
     build_wheel
@@ -317,6 +319,7 @@ build_centos7_cpu() {
         -DUSE_MKLDNN=OFF \
         -DUSE_DIST_KVSTORE=ON \
         -DUSE_CUDA=OFF \
+        -DUSE_INT64_TENSOR_SIZE=ON \
         -G Ninja /work/mxnet
     ninja
 }
@@ -333,6 +336,7 @@ build_centos7_cpu_make() {
         USE_MKLDNN=0 \
         USE_DIST_KVSTORE=1 \
         USE_SIGNAL_HANDLER=1 \
+        USE_INT64_TENSOR_SIZE=1 \
         -j$(nproc)
 }
 
@@ -344,6 +348,7 @@ build_centos7_mkldnn() {
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
         -DUSE_CUDA=OFF \
+        -DUSE_INT64_TENSOR_SIZE=ON \
         -G Ninja /work/mxnet
     ninja
 }
@@ -359,6 +364,7 @@ build_centos7_gpu() {
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_DIST_KVSTORE=ON\
+        -DUSE_INT64_TENSOR_SIZE=ON \
         -G Ninja /work/mxnet
     ninja
 }
@@ -468,6 +474,7 @@ build_ubuntu_cpu_cmake_asan() {
         -DUSE_JEMALLOC=OFF \
         -DUSE_ASAN=ON \
         -DUSE_CPP_PACKAGE=ON \
+        -DUSE_INT64_TENSOR_SIZE=ON \
         -DMXNET_USE_CPU=ON \
         /work/mxnet
     make -j $(nproc) mxnet
@@ -481,6 +488,7 @@ build_ubuntu_cpu_gcc8_werror() {
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_CPP_PACKAGE=ON \
         -DMXNET_USE_CPU=ON \
+        -DUSE_INT64_TENSOR_SIZE=ON \
         -GNinja /work/mxnet
     ninja
 }
@@ -493,6 +501,7 @@ build_ubuntu_cpu_clang10_werror() {
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
        -DUSE_CPP_PACKAGE=ON \
        -DMXNET_USE_CPU=ON \
+       -DUSE_INT64_TENSOR_SIZE=ON \
        -GNinja /work/mxnet
     ninja
 }
@@ -512,6 +521,7 @@ build_ubuntu_gpu_clang10_werror() {
        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
        -DUSE_CPP_PACKAGE=OFF \
+       -DUSE_INT64_TENSOR_SIZE=ON \
        -GNinja /work/mxnet
     ninja
 }
@@ -526,6 +536,7 @@ build_ubuntu_cpu_clang6() {
         -DUSE_OPENMP=OFF \
         -DUSE_DIST_KVSTORE=ON \
         -DUSE_CPP_PACKAGE=ON \
+        -DUSE_INT64_TENSOR_SIZE=ON \
         -G Ninja /work/mxnet
     ninja
 }
@@ -540,6 +551,7 @@ build_ubuntu_cpu_clang100() {
        -DUSE_OPENMP=ON \
        -DUSE_DIST_KVSTORE=ON \
        -DUSE_CPP_PACKAGE=ON \
+       -DUSE_INT64_TENSOR_SIZE=ON \
        -G Ninja /work/mxnet
     ninja
 }
@@ -558,6 +570,7 @@ build_ubuntu_cpu_clang_tidy() {
        -DUSE_DIST_KVSTORE=ON \
        -DUSE_CPP_PACKAGE=ON \
        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+       -DUSE_INT64_TENSOR_SIZE=ON \
        -G Ninja /work/mxnet
     ninja
     cd /work/mxnet
@@ -573,6 +586,7 @@ build_ubuntu_cpu_clang6_mkldnn() {
        -DUSE_CUDA=OFF \
        -DUSE_CPP_PACKAGE=ON \
        -DUSE_OPENMP=OFF \
+       -DUSE_INT64_TENSOR_SIZE=ON \
        -G Ninja /work/mxnet
     ninja
 }
@@ -585,6 +599,7 @@ build_ubuntu_cpu_clang100_mkldnn() {
        -DUSE_MKLDNN=ON \
        -DUSE_CUDA=OFF \
        -DUSE_CPP_PACKAGE=ON \
+       -DUSE_INT64_TENSOR_SIZE=ON \
        -G Ninja /work/mxnet
     ninja
 }

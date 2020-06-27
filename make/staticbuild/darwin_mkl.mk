@@ -107,6 +107,12 @@ else
 USE_STATIC_MKL = NONE
 endif
 
+# Use int64_t type to represent the total number of elements in a tensor
+# This will cause performance degradation reported in issue #14496
+# Set to 1 for large tensor with tensor size greater than INT32_MAX i.e. 2147483647
+# Note: the size of each dimension is still bounded by INT32_MAX
+USE_INT64_TENSOR_SIZE = 1
+
 #----------------------------
 # Settings for power and arm arch
 #----------------------------
