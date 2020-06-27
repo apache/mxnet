@@ -252,7 +252,6 @@ def _verify_while_loop(cond, func, loop_var_shapes, free_var_shapes, is_train, m
 
 
 @with_seed()
-#@pytest.mark.skip(reason="Bug in while loop op, tracked at incubator-mxnet/issues/18575")
 def test_while_loop_for_foreach():
 
     def make_true_cond():

@@ -587,6 +587,7 @@ static void WhileLoopComputeExCPU(const OpStatePtr& state_ptr,
   std::vector<NDArray> func_inputs, func_outputs(outputs.size());
   extract_by_loc(inputs, params.func_input_locs, &func_inputs);
   for (size_t &step = state.n_iterations = 0; step < (size_t) params.max_iterations; ++step) {
+    // allocate new cond outputs for each iteration
     cond_outputs = {NDArray()};
     to_ptr_vec(cond_outputs, &cond_output_ptr);
     CHECK(inputs.size() > 0) << "while loop forward requires at least 1 input";
