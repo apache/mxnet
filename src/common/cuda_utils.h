@@ -650,6 +650,12 @@ static_assert(CUDNN_PATCHLEVEL < 100 && CUDNN_MINOR < 10,
     CHECK_EQ(e, CUDNN_STATUS_SUCCESS) << "cuDNN: " << cudnnGetErrorString(e); \
   }
 
+#define CUTENSOR_CALL(func)                                                            \
+  {                                                                                    \
+    cutensorStatus_t e = (func);                                                       \
+    CHECK_EQ(e, CUTENSOR_STATUS_SUCCESS) << "cuTensor: " << cutensorGetErrorString(e); \
+  }
+
 /*!
  * \brief Return max number of perf structs cudnnFindConvolutionForwardAlgorithm()
  *        may want to populate.

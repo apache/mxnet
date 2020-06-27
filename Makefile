@@ -261,6 +261,11 @@ ifeq ($(USE_CUDNN), 1)
 	LDFLAGS += -lcudnn
 endif
 
+ifeq ($(USE_CUTENSOR), 1)
+	CFLAGS += -DMXNET_USE_CUTENSOR=1
+	LDFLAGS += -lcutensor
+endif
+
 ifeq ($(USE_BLAS), openblas)
 	CFLAGS += -DMXNET_USE_BLAS_OPEN=1
 else ifeq ($(USE_BLAS), atlas)
