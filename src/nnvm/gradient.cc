@@ -547,13 +547,13 @@ Graph BuildGradientGraph(
           return std::move(v[0]);
         } else if (v.size() == 0) {
           ObjectPtr zero_grad_node = Node::Create();
-          zero_grad_node->attrs.op = Op::Get("zeros");
+          zero_grad_node->attrs.op = Op::Get("_zeros");
           zero_grad_node->attrs.name = "zero_grad";
           zero_grad_node->attrs.op->attr_parser(&(zero_grad_node->attrs));
           return NodeEntry{zero_grad_node, 0, 0};
         } else {
           ObjectPtr grad_sum_node = Node::Create();
-          grad_sum_node->attrs.op = Op::Get("elemwise_sum");
+          grad_sum_node->attrs.op = Op::Get("ElementWiseSum");
           grad_sum_node->inputs = std::move(v);
           grad_sum_node->attrs.name = "grad_sum";
           grad_sum_node->attrs.dict["num_args"] =
