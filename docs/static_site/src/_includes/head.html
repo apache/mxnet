@@ -20,4 +20,7 @@
   <script src="{{'/assets/js/globalSearch.js'|relative_url}}" defer></script>
   <script src="{{'/assets/js/clipboard.js'|relative_url}}" defer></script>
   <script src="{{'/assets/js/copycode.js'|relative_url}}" defer></script>
+  {%- if page.feedback == true and jekyll.environment == "production" -%}
+    <script src="{{'/assets/js/feedback.js'|relative_url}}" defer></script>
+  {%- endif -%}
 </head>
