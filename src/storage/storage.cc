@@ -171,9 +171,10 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
       // Because, the pooled storage managers are NOT implemented yet for
       // following dev_type's, we will also use the naive storage managers
       switch (dev_type) {
+        case Context::kCPUPinned:
 #if MXNET_USE_CUDA
-        case Context::kCPUPinned: if (num_gpu_device > 0)
-                                      break;
+                                   if (num_gpu_device > 0)
+                                     break;
 #endif
         case Context::kCPUShared:  naive_storage_manager = true;
         default:                   break;
@@ -264,11 +265,11 @@ void StorageImpl::SharedIncrementRefCount(Storage::Handle handle) {
       LOG(FATAL) << "Cannot increment ref count before allocating any shared memory.";
       return nullptr;
     });
-#if defined(ANDROID) || defined(__ANDROID__)
-  LOG(FATAL) << "Shared memory not implemented on Android";
-#else
+#if !defined(ANDROID) && !defined(__ANDROID__)
   dynamic_cast<CPUSharedStorageManager*>(manager.get())->IncrementRefCount(handle);
-#endif  // defined(ANDROID) || defined(__ANDROID__)
+#else
+  LOG(FATAL) << "Shared memory not implemented on Android";
+#endif  // !defined(ANDROID) && !defined(__ANDROID__)
 }
 
 const std::string env_var_name(const char* dev_type, env_var_type type) {
