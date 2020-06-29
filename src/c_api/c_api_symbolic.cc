@@ -1402,17 +1402,17 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
 
       // create the input shape, dtype and stype maps
       std::unordered_map<std::string, mxnet::TShape> input_shape_map(num_input_shapes);
-      for (int i = 0; i < num_input_shapes; ++i) {
+      for (uint32_t i = 0; i < num_input_shapes; ++i) {
         input_shape_map.emplace(input_shape_names[i],
                     mxnet::TShape(input_shape_data + input_shape_idx[i],
                     input_shape_data + input_shape_idx[i+1]));
       }
       std::unordered_map<std::string, int> input_dtype_map(num_input_dtypes);
-      for (int i = 0; i < num_input_dtypes; ++i) {
+      for (uint32_t i = 0; i < num_input_dtypes; ++i) {
         input_dtype_map.emplace(input_dtype_names[i], input_dtypes[i]);
       }
       std::unordered_map<std::string, int> input_stype_map(num_input_stypes);
-      for (int i = 0; i < num_input_stypes; ++i) {
+      for (uint32_t i = 0; i < num_input_stypes; ++i) {
         input_stype_map.emplace(input_stype_names[i], input_stypes[i]);
       }
 
@@ -1421,15 +1421,27 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
       for (size_t i = 0; i < num_forward_inputs; ++i) {
         const uint32_t nid = indexed_graph.input_nodes().at(i);
         if (mutable_nodes.count(nid)) {
-          auto name = input_names[i];
           CHECK_LT(aux_top, aux_len)
-            << "Cannot find aux '" << name << "' in provided aux to optimize_for";
+            << "Cannot find aux '" << input_names[i] << "' in provided aux to optimize_for";
           if (in_aux_ptr[aux_top] != nullptr) {
             const auto &in_arg = *(in_aux_ptr[aux_top]);
             arg_shapes[i] = in_arg.shape();
             arg_dtypes[i] = in_arg.dtype();
             arg_stypes[i] = in_arg.storage_type();
+          }
+          aux_top++;
+        } else {
+          auto name = input_names[i];
+          CHECK_LT(args_top, args_len)
+            << "Cannot find arg '" << name << "' in provided args to optimize_for";
+          if (in_args_ptr[args_top] != nullptr) {
+            const auto &in_arg = *(in_args_ptr[args_top]);
+            arg_shapes[i] = in_arg.shape();
+            arg_dtypes[i] = in_arg.dtype();
+            arg_stypes[i] = in_arg.storage_type();
           } else {
+            // input_names[i] is not in args but can be in the optional
+            // shape/type/stype attribute dicts.
             auto it_shape = input_shape_map.find(name);
             if (it_shape != input_shape_map.end()) {
               arg_shapes[i] = it_shape->second;
@@ -1442,16 +1454,6 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
             if (it_type != input_stype_map.end()) {
               arg_stypes[i] = it_type->second;
             }
-          }
-          aux_top++;
-        } else {
-          CHECK_LT(args_top, args_len)
-            << "Cannot find arg '" << input_names[i] << "' in provided args to optimize_for";
-          if (in_args_ptr[args_top] != nullptr) {
-            const auto &in_arg = *(in_args_ptr[args_top]);
-            arg_shapes[i] = in_arg.shape();
-            arg_dtypes[i] = in_arg.dtype();
-            arg_stypes[i] = in_arg.storage_type();
           }
           args_top++;
         }
