@@ -64,10 +64,12 @@
     '_static/sphinx_materialdesign_theme.css',
     '_static/fontawesome/all.css',
     '_static/fonts.css',
+    '_static/feedback.css',
 ] %}
 
     {%- block header %}
-	<script type="text/javascript" src="{{ pathto('_static/sphinx_materialdesign_theme.js', 1) }} "></script>
+    <script type="text/javascript" src="{{ pathto('_static/sphinx_materialdesign_theme.js', 1) }} "></script>
+    <script type="text/javascript" src="{{ pathto('_static/feedback.js', 1) }}"></script>
     {% endblock %}
 {%- block relbar1 %}{% endblock %}
 {%- block relbar2 %}{% include "relations.html" %}{% endblock %}
@@ -85,6 +87,17 @@
 {%- block document %}
         <div class="page-content" role="main">
         {% block body %} {% endblock %}
+        <hr class="feedback-hr-top" />
+        <div class="feedback-container">
+            <div class="feedback-question">Did this page help you?</div>
+            <div class="feedback-answer-container">
+                <div class="feedback-answer yes-link" data-response="yes">Yes</div>
+                <div class="feedback-answer no-link" data-response="no">No</div>
+            </div>
+            <div class="feedback-thank-you">Thanks for your feedback</div>
+        </div>
+        <hr class="feedback-hr-bottom" />
+
         </div>
         <div class="side-doc-outline">
             <div class="side-doc-outline--content">
