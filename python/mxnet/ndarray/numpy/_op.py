@@ -7171,8 +7171,9 @@ def greater(x1, x2, out=None):
     >>> np.greater(1, np.ones(1))
     array([False])
     """
-    return _ufunc_helper(x1, x2, _npi.greater, _np.greater, _npi.greater_scalar,
-                         _npi.less_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.greater(x1, x2, out=out)
+    return _api_internal.greater(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')

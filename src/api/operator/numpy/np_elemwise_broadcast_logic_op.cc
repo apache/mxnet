@@ -56,8 +56,8 @@ void set_UFuncHelper(runtime::MXNetArgs args, runtime::MXNetRetValue* ret,
     result++;
   }
 
-  switch(result) {
-    case 0 :
+  switch (result) {
+    case 3 :
       UFuncHelper(args, ret, op, nullptr, nullptr);
       break;
     case 1 :
@@ -68,6 +68,15 @@ void set_UFuncHelper(runtime::MXNetArgs args, runtime::MXNetRetValue* ret,
       break;
   }
 }
+
+MXNET_REGISTER_API("_npi.greater")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_greater");
+  const nnvm::Op* op_scalar = Op::Get("_npi_greater_scalar");
+  const nnvm::Op* op_rscalar = Op::Get("_npi_less_scalar");
+  set_UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+});
 
 MXNET_REGISTER_API("_npi.less")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
