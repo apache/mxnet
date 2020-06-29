@@ -71,7 +71,9 @@ __global__ void binary_scalar_kernel(const binary_scalar_kernel_params params,
       const auto input = IType::from(loader.separate()[i]);
       // enables returning different type
       const auto temp = OP(input,
-                           static_cast<typename OType::type>(params.scalar));
+                           static_cast<typename type_util::mixed_type<typename IType::type,
+                                                                      typename OType::type>::type>
+                             (params.scalar));
 
       if (req == OpReqType::kAddTo) {
         // temp2 may have a wider type than either temp
