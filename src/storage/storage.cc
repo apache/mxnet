@@ -62,15 +62,13 @@ class StorageImpl : public Storage {
   profiler::DeviceStorageProfiler profiler_;
   // flag which is true when Pooled Storage Manager is used
   bool pooled_ = false;
-  static int num_gpu_device;
 #if MXNET_USE_CUDA
   profiler::GpuDeviceStorageProfiler *pProfilerGPU_ = nullptr;
 #endif  // MXNET_USE_CUDA
 };  // struct Storage::Impl
 
-int StorageImpl::num_gpu_device = 0;
-
-StorageManager *CreateStorageManager(const Context &ctx, const char *context, int num_gpu_device, bool *pPooled) {
+StorageManager *CreateStorageManager(const Context &ctx, const char *context,
+                                     int num_gpu_device, bool *pPooled) {
   const auto env_var = env_var_name(context, pool_type);
   const char *type = getenv(env_var.c_str());
   if (type == nullptr)
@@ -118,8 +116,8 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
   std::shared_ptr<StorageManager> manager = device.Get(
     handle->ctx.real_dev_id(), [handle, pPooled, ppProfiler]() {
     const auto dev_type = handle->ctx.dev_type;
+    int num_gpu_device = 0;
 #if MXNET_USE_CUDA
-    num_gpu_device = 0;
     *ppProfiler = nullptr;
     switch (dev_type) {
       case Context::kGPU:
@@ -133,11 +131,6 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
       default:
         break;
     }
-    if (dev_type == Context::kGPU)
-      CHECK_GT(num_gpu_device, 0) << "GPU usage requires at least 1 GPU";
-#else
-    if (dev_type == Context::kGPU)
-      LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
 #endif
 
     const char *context = nullptr;
@@ -146,7 +139,12 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
         context = "CPU";
         break;
       case Context::kGPU:
+#if MXNET_USE_CUDA
         context = "GPU";
+        CHECK_GT(num_gpu_device, 0) << "GPU usage requires at least 1 GPU";
+#else
+        LOG(FATAL) << "Compile with USE_CUDA=1 to enable GPU usage";
+#endif
         break;
       case Context::kCPUPinned:
         context = "CPU_PINNED";
@@ -160,8 +158,6 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
       default:
         LOG(FATAL) << "Unimplemented device " << dev_type;
     }
-
-    StorageManager *ptr = nullptr;
 
     // By default, the Pooled Storage Manager will be used, if it is available
     int naive_storage_manager = dmlc::GetEnv("MXNET_USE_NAIVE_STORAGE_MANAGER", 0);
@@ -178,6 +174,7 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
       }
     }
 
+    StorageManager *ptr = nullptr;
     const char *storage_manager_type;
     if (naive_storage_manager) {
       storage_manager_type = "Naive";
