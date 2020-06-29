@@ -87,17 +87,7 @@
 {%- block document %}
         <div class="page-content" role="main">
         {% block body %} {% endblock %}
-        <hr class="feedback-hr-top" />
-        <div class="feedback-container">
-            <div class="feedback-question">Did this page help you?</div>
-            <div class="feedback-answer-container">
-                <div class="feedback-answer yes-link" data-response="yes">Yes</div>
-                <div class="feedback-answer no-link" data-response="no">No</div>
-            </div>
-            <div class="feedback-thank-you">Thanks for your feedback</div>
-        </div>
-        <hr class="feedback-hr-bottom" />
-
+        {% if false %}{% include "feedback.html" %}{% endif %}
         </div>
         <div class="side-doc-outline">
             <div class="side-doc-outline--content">
