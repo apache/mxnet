@@ -58,7 +58,10 @@ specific language governing permissions and limitations
 under the License."""
 
 # if a file contains any str in the list, then consider it has been licensed
-_LICENSE_PATTERNS = ['Licensed to the Apache Software Foundation']
+_APACHE_LICENSE_PATTERNS = ['Licensed to the Apache Software Foundation']
+_OTHER_LICENSE_PATTERNS = ['THE SOFTWARE IS PROVIDED \"AS IS\"',
+                           'THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS']
+TOP_LEVEL_LICENSE_FILE = 'LICENSE'
 
 # the folders or files that will be ignored
 _WHITE_LIST = [
@@ -66,7 +69,16 @@ _WHITE_LIST = [
                'docker/Dockerfiles',
 
                # Git submodules under different licenses
-               '3rdparty',
+               '3rdparty/ctc_include/contrib/moderngpu',
+               '3rdparty/dlpack',
+               '3rdparty/dmlc-core',
+               '3rdparty/googletest',
+               '3rdparty/mkldnn',
+               '3rdparty/nvidia_cub',
+               '3rdparty/onnx-tensorrt',
+               '3rdparty/openmp',
+               '3rdparty/ps-lite',
+               '3rdparty/tvm',
 
                # 3rdparty headerfiles under different licenses
                'include/mkldnn',
@@ -96,7 +108,15 @@ _WHITE_LIST = [
                'docs/static_site/src/assets/js/clipboard.js',
                'cmake/upstream/FindCUDAToolkit.cmake',
                'cmake/upstream/select_compute_arch.cmake',
-               'src/operator/numpy/np_einsum_op-inl.h',
+
+               # This file
+               'tools/license_header.py',
+
+               # Github template
+               '.github/ISSUE_TEMPLATE/bug_report.md',
+               '.github/ISSUE_TEMPLATE/feature_request.md',
+               '.github/ISSUE_TEMPLATE/flaky_test.md',
+               '.github/PULL_REQUEST_TEMPLATE.md'
                ]
 
 # language extensions and the according commment mark
@@ -104,7 +124,8 @@ _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
           '.pm':'#', '.scala':'*', '.cc':'*', '.sh':'#', '.cmake':'#',
           '.java':'*', '.sh':'#', '.cpp':'*', '.hpp':'*', '.c':'*',
           '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#',
-          '.t':'#', '.ps1':'#', '.jl':'#', '.clj':';;', '.pyx':'#', '.js':'*'}
+          '.t':'#', '.ps1':'#', '.jl':'#', '.clj':';;', '.pyx':'#', '.js':'*',
+          '.md':'<!---'}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')
@@ -122,8 +143,47 @@ def get_mxnet_root():
     return curpath
 
 
-def _lines_have_license(lines):
-    return any([any([p in l for p in _LICENSE_PATTERNS]) for l in lines])
+def _lines_have_multiple_license(lines):
+    has_apache_license = False
+    has_other_license = False
+    for l in lines:
+        if any(p in l for p in _APACHE_LICENSE_PATTERNS):
+            has_apache_license = True
+        elif any(p in l for p  in _OTHER_LICENSE_PATTERNS):
+            has_other_license = True
+    return (has_apache_license and has_other_license)
+
+
+def _lines_have_apache_license(lines):
+    return any([any([p in l for p in _APACHE_LICENSE_PATTERNS]) for l in lines])
+
+
+def _file_listed_in_top_level_license(fname):
+    with open(TOP_LEVEL_LICENSE_FILE, 'r', encoding="utf-8") as f:
+        lines = f.readlines()
+    module = os.path.split(fname)[0] + '/LICENSE'
+    return any([fname in l or module in l for l in lines])
+
+
+def file_have_valid_license(fname):
+    with open(fname, 'r', encoding="utf-8") as f:
+        lines = f.readlines()
+    if not lines:
+        return True
+    if (_lines_have_apache_license(lines) and (not _lines_have_multiple_license(lines))):
+        return True
+    elif _lines_have_multiple_license(lines):
+        if _file_listed_in_top_level_license(fname):
+            return True
+        else:
+            logging.error("File %s has multiple license", fname)
+            return False
+    else:
+        if _file_listed_in_top_level_license(fname):
+            return True
+        else:
+            logging.error("File %s doesn't have a valid license", fname)
+            return False
 
 
 def _get_license(comment_mark):
@@ -137,6 +197,8 @@ def _get_license(comment_mark):
         body += comment_mark
         if len(l):
             body += ' ' + l
+        if comment_mark == '<!---':
+            body += ' -->'
         body += '\n'
 
     if comment_mark == '*':
@@ -160,13 +222,7 @@ def file_has_license(fname):
     if not should_have_license(fname):
         return True
     try:
-        with open(fname, 'r', encoding="utf-8") as f:
-            lines = f.readlines()
-        if not lines or _lines_have_license(lines):
-            return True
-        else:
-            logging.error("File %s doesn't have a license", fname)
-            return False
+        return file_have_valid_license(fname)
     except UnicodeError:
         return True
     return True
@@ -177,7 +233,7 @@ def file_add_license(fname):
         return
     with open(fname, 'r', encoding="utf-8") as f:
         lines = f.readlines()
-    if _lines_have_license(lines):
+    if _lines_have_apache_license(lines):
         return
     _, ext = os.path.splitext(fname)
     with open(fname, 'w', encoding="utf-8") as f:
@@ -247,7 +303,8 @@ def main():
             files = file_generator(get_mxnet_root())
 
     if action == 'check':
-        if not all(map(file_has_license, files)):
+        logging.info("Start to check %d files", (len(files)))
+        if False in list(map(file_has_license, files)):
             return 1
         else:
             logging.info("All known and whitelisted files have license")
