@@ -33,10 +33,3 @@ To install, use:
 ```bash
 pip install mxnet
 ```
-
-Nightly Builds
---------------
-To install the latest nightly build, use:
-```bash
-pip install --pre mxnet -f https://dist.mxnet.io/python
-```
