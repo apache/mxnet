@@ -59,18 +59,23 @@ template<typename BucketingStrategy, typename StoringMethod>
 class PooledStorageManager : public StorageManager,
              public BucketingStrategy, public StoringMethod {
  public:
-  explicit PooledStorageManager(const Context &ctx) {
+  explicit PooledStorageManager(const Context &ctx, int num_gpu_device) {
     const char *dev_type = nullptr;
     switch (dev_type_ = ctx.dev_type) {
 #if MXNET_USE_CUDA
       case Context::kGPU:       contextHelper_ = std::make_unique<ContextHelperGPU>();
                                 dev_type = "GPU";
                                 break;
-      case Context::kCPUPinned: contextHelper_ = std::make_unique<ContextHelperPinned>();
-                                dev_type_ = Context::kGPU;
-                                dev_type = "CPU_PINNED";
-                                break;
+      case Context::kCPUPinned: dev_type = "CPU_PINNED";
+                                if (num_gpu_device > 1) {
+                                  contextHelper_ = std::make_unique<ContextHelperPinned>();
+                                  dev_type_ = Context::kGPU;
+                                  break;
+                                }
+#else
+      case Context::kCPUPinned: dev_type = "CPU_PINNED";
 #endif
+                                dev_type_ = Context::kCPU;
       case Context::kCPU:       contextHelper_ = std::make_unique<ContextHelperCPU>();
                                 dev_type = "CPU";
       default:                  break;

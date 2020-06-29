@@ -62,17 +62,15 @@ class StorageImpl : public Storage {
   profiler::DeviceStorageProfiler profiler_;
   // flag which is true when Pooled Storage Manager is used
   bool pooled_ = false;
-#if MXNET_USE_CUDA
   static int num_gpu_device;
+#if MXNET_USE_CUDA
   profiler::GpuDeviceStorageProfiler *pProfilerGPU_ = nullptr;
 #endif  // MXNET_USE_CUDA
 };  // struct Storage::Impl
 
-#if MXNET_USE_CUDA
 int StorageImpl::num_gpu_device = 0;
-#endif  // MXNET_USE_CUDA
 
-StorageManager *CreateStorageManager(const Context &ctx, const char *context, bool *pPooled) {
+StorageManager *CreateStorageManager(const Context &ctx, const char *context, int num_gpu_device, bool *pPooled) {
   const auto env_var = env_var_name(context, pool_type);
   const char *type = getenv(env_var.c_str());
   if (type == nullptr)
@@ -81,13 +79,13 @@ StorageManager *CreateStorageManager(const Context &ctx, const char *context, bo
   std::string strategy = type;
   StorageManager *ptr = nullptr;
   if (strategy == "Round") {
-    ptr = new PooledStorageManager<RoundPower2, VectorContainer>(ctx);
+    ptr = new PooledStorageManager<RoundPower2, VectorContainer>(ctx, num_gpu_device);
     *pPooled = true;
   } else if (strategy == "Naive") {
-    ptr = new PooledStorageManager<RoundMultiple, UnorderedMapContainer>(ctx);
+    ptr = new PooledStorageManager<RoundMultiple, UnorderedMapContainer>(ctx, num_gpu_device);
     *pPooled = true;
   } else if (strategy == "Unpooled") {
-    if (ctx.dev_type == Context::kCPU)
+    if (ctx.dev_type == Context::kCPU || num_gpu_device == 0)
       ptr = new NaiveStorageManager<CPUDeviceStorage>();
 #if MXNET_USE_CUDA
     else if (ctx.dev_type == Context::kGPU)
@@ -171,9 +169,8 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
       // Because, the pooled storage managers are NOT implemented yet for
       // following dev_type's, we will also use the naive storage managers
       switch (dev_type) {
-        case Context::kCPUPinned:
 #if MXNET_USE_CUDA
-                                   if (num_gpu_device > 0)
+        case Context::kCPUPinned: if (num_gpu_device > 0)
                                      break;
 #endif
         case Context::kCPUShared:  naive_storage_manager = true;
@@ -197,7 +194,6 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
 #else
         case Context::kCPUPinned:
 #endif
-              context = "CPU";
         case Context::kCPU:
               ptr = new NaiveStorageManager<CPUDeviceStorage>();
               break;
@@ -210,7 +206,7 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
     } else {
       // Some Pooled Storage Manager will be used
       storage_manager_type = "Pooled";
-      ptr = CreateStorageManager(handle->ctx, context, pPooled);
+      ptr = CreateStorageManager(handle->ctx, context, num_gpu_device, pPooled);
     }
 
     if (context)
