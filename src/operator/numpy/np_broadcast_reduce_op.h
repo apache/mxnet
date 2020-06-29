@@ -777,6 +777,13 @@ struct avg_grad_w_1D_kernel {
   }
 };
 
+// Windows has issues with #ifdefs inside MSHADOW_TYPE_SWITCH
+#ifndef __CUDACC__
+#define NP_BROADCAST_REDUCE_OP_BROADCAST(OP) BinaryBroadcastCompute<xpu, mshadow_op::OP>
+#else
+#define NP_BROADCAST_REDUCE_OP_BROADCAST(OP) BinaryBroadcastRTCCompute {#OP}
+#endif
+
 template<typename xpu, bool back = false>
 void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
                                      const OpContext& ctx,
@@ -832,13 +839,8 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
 
     // Compute weighted data
     TBlob wa = TBlob(temp_data_ptr, data.shape_, xpu::kDevMask);
-#if !defined(__CUDACC__)
-    BinaryBroadcastCompute<xpu, mshadow_op::mul>(
+    NP_BROADCAST_REDUCE_OP_BROADCAST(mul)(
       attrs, ctx, {data, weights}, {kWriteTo}, {wa});
-#else
-    BinaryBroadcastRTCCompute {"mul"}(
-      attrs, ctx, {data, weights}, {kWriteTo}, {wa});
-#endif  // !defined(__CUDACC__)
 
     // Compute sum of weighted data
     TBlob sum_of_wa = TBlob(temp_sum_ptr, small1, xpu::kDevMask);
@@ -855,13 +857,8 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
         ctx, {weights}, {kWriteTo}, {scl}, workspace, w_src_shape, w_dst_shape);
 
       // Compute avg and assign output
-#if !defined(__CUDACC__)
-      BinaryBroadcastCompute<xpu, mshadow_op::div>(
+      NP_BROADCAST_REDUCE_OP_BROADCAST(div)(
         attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
-#else
-      BinaryBroadcastRTCCompute {"div"}(
-        attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
-#endif  // !defined(__CUDACC__)
     } else {
       // Compute and assign the derivatives of a and weights
       const TBlob& igrad_a = outputs[0];
@@ -904,6 +901,8 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
     }
   });
 }
+
+#undef NP_BROADCAST_REDUCE_OP_BROADCAST
 
 template<typename xpu>
 void NumpyWeightedAverageForward(const nnvm::NodeAttrs& attrs,
