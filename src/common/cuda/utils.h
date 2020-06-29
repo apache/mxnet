@@ -168,11 +168,11 @@ inline __device__ bool __is_supported_cuda_architecture() {
   {                                                                     \
     CUresult e = (func);                                                \
     if (e != CUDA_SUCCESS) {                                            \
-      char const * err_msg = nullptr;                                         \
+      char const * err_msg = nullptr;                                   \
       if (cuGetErrorString(e, &err_msg) == CUDA_ERROR_INVALID_VALUE) {  \
         LOG(FATAL) << "CUDA Driver: Unknown error " << e;               \
       } else {                                                          \
-        LOG(FATAL) << "CUDA Driver: " << err_msg;                       \
+        LOG(FATAL) << "CUDA Driver: " << e << " " << err_msg;           \
       }                                                                 \
     }                                                                   \
   }
