@@ -321,7 +321,15 @@ name (const DType a, const DType2 b) { \
   } \
 }
 
-DEFINE_BINARY_MATH_FUNC(power, ::pow, ::powf)
+template <typename DType, typename DType2>
+__device__ inline typename type_util::mixed_type<DType, DType2>::type
+power (const DType a, const DType2 b) {
+  if (type_util::has_double<DType, DType2>::value) {
+    return ::pow ((double)a, (double)b); \
+  } else {
+    return ::powf ((float)a, (float)b);
+  }
+}
 
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type

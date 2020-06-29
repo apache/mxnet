@@ -110,7 +110,7 @@ void BinaryScalarRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
                            OP +
                            "\n" +
                            binary_scalar_kernel_fwd;
-  const int nvec = outputs[0].type_flag_ == mshadow::kFloat64 ? 2 : 4;
+  const int nvec = common::mshadow_type_info(outputs[0].type_flag_).size == 8 ? 2 : 4;
 
   const index_t size = outputs[0].Size();
   binary_scalar_kernel_params params = { {inputs[0].dptr_, nullptr},
