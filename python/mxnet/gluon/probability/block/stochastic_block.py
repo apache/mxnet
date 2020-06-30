@@ -74,7 +74,9 @@ class StochasticBlock(HybridBlock):
         if len(self._losscache) > 0:
             raise ValueError("Detect add_loss invoked inside a function not decorated " +
                              "by @StochasticBlock.collectLoss")
-        self._losses = out[1]
+        # collectLoss not used
+        if len(out) > 1:
+            self._losses = out[1]
         return out[0]
 
     @property
