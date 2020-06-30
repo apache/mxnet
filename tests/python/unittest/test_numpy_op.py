@@ -2824,6 +2824,7 @@ def test_np_mixedType_unary_funcs(func, ref_grad, low, high, ndim, dtype):
 
     shapes = [i for i in [rand_shape_nd(ndim, dim=3), (1, 0, 2)]];
     for shape in shapes:
+        print(func, dtype, shape)
         rtol = 1e-2 if dtype == np.float16 else 1e-3
         atol = 1e-4 if dtype == np.float16 else 1e-5
         # get rid of warning: divide by zero
