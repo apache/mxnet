@@ -2244,6 +2244,29 @@ def test_gluon_stochastic_block():
 
 @with_seed()
 @use_np
+def test_gluon_stochastic_block_exception():
+    class problemBlock(StochasticBlock):
+        def hybrid_forward(self, F, loc, scale):
+            qz = mgp.Normal(loc, scale)
+            # prior
+            pz = mgp.Normal(F.np.zeros_like(loc), F.np.ones_like(scale))
+            self.add_loss(mgp.kl_divergence(qz, pz))
+            self.add_loss((loc ** 2).sum(1))
+            return qz.sample()
+
+    shape = (4, 4)
+    for hybridize in [True, False]:
+        net = problemBlock()
+        if hybridize:
+            net.hybridize()
+        loc = np.random.randn(*shape)
+        scale = np.random.rand(*shape)
+        with pytest.raises(ValueError):
+            mx_out = net(loc, scale).asnumpy()
+
+
+@with_seed()
+@use_np
 def test_gluon_stochastic_sequential():
     class normalBlock(HybridBlock):
         def hybrid_forward(self, F, x):
@@ -2251,6 +2274,12 @@ def test_gluon_stochastic_sequential():
 
     class stochasticBlock(StochasticBlock):
         @StochasticBlock.collectLoss
+        def hybrid_forward(self, F, x):
+            self.add_loss(x ** 2)
+            self.add_loss(x - 1)
+            return (x + 1)
+
+    class problemBlock(StochasticBlock):
         def hybrid_forward(self, F, x):
             self.add_loss(x ** 2)
             self.add_loss(x - 1)
@@ -2277,6 +2306,18 @@ def test_gluon_stochastic_sequential():
             accumulated_loss[1][0].asnumpy(), _np.ones(shape) * 9)
         assert_almost_equal(
             accumulated_loss[1][1].asnumpy(), _np.ones(shape) + 1)
+
+    for hybridize in [True, False]:
+        initial_value = np.ones(shape)
+        net = StochasticSequential()
+        net.add(stochasticBlock())
+        net.add(normalBlock())
+        net.add(problemBlock())
+        net.add(normalBlock())
+        if hybridize:
+            net.hybridize()
+        with pytest.raises(ValueError):
+            mx_out = net(initial_value).asnumpy()
 
 
 @with_seed()
