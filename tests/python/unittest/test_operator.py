@@ -5807,7 +5807,7 @@ def test_deformable_convolution():
                         # By now we only have gpu implementation
                         if default_context().device_type == 'gpu':
                             check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
-                                                   grad_nodes=grad_nodes, ctx=mx.gpu(0))
+                                                   grad_nodes=grad_nodes, ctx=mx.gpu(0), numeric_eps=1.0/64)
 
 
 def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w, pooled_h, sample_per_part, part_size, output_dim, num_classes, trans_std, feat_h, feat_w):

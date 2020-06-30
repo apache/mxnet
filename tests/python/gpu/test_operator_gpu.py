@@ -529,9 +529,9 @@ def test_convolution_with_type():
                np.dtype(np.float64): 1e-5,
                np.dtype(np.uint8): 0,
                np.dtype(np.int32): 0}
-    check_consistency(sym, ctx_list, tol=tol)
+    check_consistency(sym, ctx_list, rtol=tol, atol=tol)
     # test ability to turn off training on bias
-    check_consistency(sym, ctx_list, grad_req={'conv_data': 'write', 'conv_weight': 'write', 'conv_bias': 'null'}, tol=tol)
+    check_consistency(sym, ctx_list, grad_req={'conv_data': 'write', 'conv_weight': 'write', 'conv_bias': 'null'}, rtol=tol, atol=tol)
 
 
 # Apply N symbols against each of M contexts, checking that all NxM combinations match.
@@ -616,7 +616,6 @@ def test_conv_deconv_guards():
     # Test cases for convolution and deconvolution via strided fft.  Ensure that the framework
     # guards against problematic CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING in cuDNN [7.3.1,7.5)
     # see https://docs.nvidia.com/deeplearning/sdk/cudnn-release-notes/rel_750.html#rel_750
-    tol = 1e-1
     for (op, opname) in [(mx.sym.Convolution, 'conv'), (mx.sym.Deconvolution, 'deconv')]:
         dataname = opname + '_data'
         ctx = {'ctx': mx.gpu(0), dataname: (32, 32, 64, 64), 'type_dict': {dataname: np.float32}}
@@ -631,7 +630,7 @@ def test_conv_deconv_guards():
             try:
                 sym = op(**test_case_args)
                 sym_no_cudnn = op(cudnn_off=True, **test_case_args)
-                check_consistency([sym, sym_no_cudnn], [ctx, ctx], tol=tol)
+                check_consistency([sym, sym_no_cudnn], [ctx, ctx], scale=0.1)
             except:
                 print('Test failure of mx.sym.{} with args: {}'.format(op.__name__, test_case_args))
                 raise
@@ -655,7 +654,7 @@ def _conv_with_num_streams(seed):
                                               cudnn_off=True, name='conv')
             try:
                 # tol can be pretty high- we're looking for a large diff due to garbaged workspace
-                check_consistency([sym, sym_no_cudnn], [ctx, ctx], tol=1e-2)
+                check_consistency([sym, sym_no_cudnn], [ctx, ctx], rtol=1e-2, atol=1e-2)
             except:
                 print('Failing conv size = {}'.format(size))
                 raise
@@ -829,8 +828,8 @@ def test_deconvolution_with_type():
                np.dtype(np.float64): 1e-5,
                np.dtype(np.uint8): 0,
                np.dtype(np.int32): 0}
-    check_consistency(sym, ctx_list, tol=tol)
-    check_consistency(sym, ctx_list, tol=tol, grad_req="add")
+    check_consistency(sym, ctx_list, rtol=tol, atol=tol)
+    check_consistency(sym, ctx_list, rtol=tol, atol=tol, grad_req="add")
 
     # 2D deconvolution
     sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), name='deconv')
@@ -845,8 +844,8 @@ def test_deconvolution_with_type():
                np.dtype(np.float64): 1e-5,
                np.dtype(np.uint8): 0,
                np.dtype(np.int32): 0}
-    check_consistency(sym, ctx_list, tol=tol)
-    check_consistency(sym, ctx_list, tol=tol, grad_req="add")
+    check_consistency(sym, ctx_list, rtol=tol, atol=tol)
+    check_consistency(sym, ctx_list, rtol=tol, atol=tol, grad_req="add")
 
 
 @with_seed()
@@ -1079,7 +1078,7 @@ def test_pooling_versions():
                                                                             pool_op))
             sym_list.append(sym)
 
-        check_consistency(sym_list, ctx_list, equal_nan=(not count_include_pad), tol=tol)
+        check_consistency(sym_list, ctx_list, equal_nan=(not count_include_pad), rtol=tol, atol=tol)
 
     def test_pooling_dim(dim, pool_type, dtype, pool_op_list, p_value=2, count_include_pad=True,
                          tol=None):
@@ -1677,7 +1676,7 @@ def test_deformable_psroipooling_with_type():
                                'deformable_psroipool_trans': np.float16}},
                 ]
 
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol,
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol,
                       grad_req={'deformable_psroipool_data': 'write',
                                 'deformable_psroipool_rois': 'null',
                                 'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
@@ -1709,9 +1708,9 @@ def test_deformable_convolution_with_type():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
 
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
     # test ability to turn off training on bias
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol,
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol,
                       grad_req={'deformable_conv_data': 'write',
                                 'deformable_conv_offset': 'write',
                                 'deformable_conv_weight': 'write',
@@ -1744,7 +1743,7 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), pad=(1,1), name='deformable_conv')
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Stride > 1
     ctx_list = [{'ctx': mx.gpu(0),
@@ -1765,7 +1764,7 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), stride=(2,2), name='deformable_conv')
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Dilate > 1
     ctx_list = [{'ctx': mx.gpu(0),
@@ -1786,7 +1785,7 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), dilate=(2,2), name='deformable_conv')
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Deformable group > 1
     ctx_list = [{'ctx': mx.gpu(0),
@@ -1807,7 +1806,7 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2, name='deformable_conv')
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
 
 def check_rnn_layer(layer):
