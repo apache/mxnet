@@ -267,18 +267,8 @@ __device__ inline void store_add_index(const VectorType<DType, nvec> value, int 
 }  // namespace op
 )code";
 
-const char function_definitions[] = R"code(
+const char function_definitions_binary[] = R"code(
 namespace op {
-
-template <typename DType>
-__device__ inline DType identity(const DType val) {
-  return val;
-}
-
-template <typename DType>
-__device__ inline DType negation(const DType val) {
-  return -val;
-}
 
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type
@@ -552,15 +542,6 @@ __device__ inline typename type_util::mixed_type<DType, DType2>::type bitwise_xo
   return static_cast<int64>(a) ^ static_cast<int64>(b);
 }
 
-template <typename DType>
-__device__ inline DType bitwise_not(const DType a) {
-  if (type_util::is_same<DType, bool>::value) {
-    return !a;
-  } else {
-    return ~static_cast<int64>(a);
-  }
-}
-
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type bitwise_or(const DType a,
                                                                        const DType2 b) {
@@ -598,6 +579,47 @@ rldexp(const DType a, const DType2 b) {
 }
 
 #undef DEFINE_BINARY_MATH_FUNC
+
+template <typename DType, typename DType2>
+__device__ inline bool np_logical_and(const DType val, const DType2 val2) {
+  return (val && val2) ? true : false;
+}
+
+template <typename DType, typename DType2>
+__device__ inline bool np_logical_or(const DType val, const DType2 val2) {
+  return (val || val2) ? true : false;
+}
+
+template <typename DType, typename DType2>
+__device__ inline bool np_logical_xor(const DType val, const DType2 val2) {
+  return ((val || val2) && !(val && val2)) ? true : false;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType left(const DType left_val, const DType2 right_val) {
+  return left_val;
+}
+
+template <typename DType, typename DType2>
+__device__ inline DType2 right(const DType left_val, const DType2 right_val) {
+  return right_val;
+}
+
+}  // namespace op
+)code";
+
+const char function_definitions_unary[] = R"code(
+namespace op {
+
+template <typename DType>
+__device__ inline DType identity(const DType val) {
+  return val;
+}
+
+template <typename DType>
+__device__ inline DType negation(const DType val) {
+  return -val;
+}
 
 template <typename OutType, typename DType>
 __device__ inline typename LoadType<OutType>::Type cast(const DType val) {
@@ -856,21 +878,6 @@ __device__ inline bool np_logical_not(const DType val) {
   return !static_cast<bool>(val);
 }
 
-template <typename DType, typename DType2>
-__device__ inline bool np_logical_and(const DType val, const DType2 val2) {
-  return (val && val2) ? true : false;
-}
-
-template <typename DType, typename DType2>
-__device__ inline bool np_logical_or(const DType val, const DType2 val2) {
-  return (val || val2) ? true : false;
-}
-
-template <typename DType, typename DType2>
-__device__ inline bool np_logical_xor(const DType val, const DType2 val2) {
-  return ((val || val2) && !(val && val2)) ? true : false;
-}
-
 template <typename DType>
 __device__ inline bool isnan(const DType val) {
   return util::isnan(val);
@@ -898,14 +905,13 @@ __device__ inline bool isfinite(const DType val) {
 
 #undef DEFINE_UNARY_MATH_FUNC
 
-template <typename DType, typename DType2>
-__device__ inline DType left(const DType left_val, const DType2 right_val) {
-  return left_val;
-}
-
-template <typename DType, typename DType2>
-__device__ inline DType2 right(const DType left_val, const DType2 right_val) {
-  return right_val;
+template <typename DType>
+__device__ inline DType bitwise_not(const DType a) {
+  if (type_util::is_same<DType, bool>::value) {
+    return !a;
+  } else {
+    return ~static_cast<int64>(a);
+  }
 }
 
 }  // namespace op
