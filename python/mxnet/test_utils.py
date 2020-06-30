@@ -75,6 +75,7 @@ def default_rtols():
     return {np.dtype(np.float16): 1e-2,
             np.dtype(np.float32): 1e-4,
             np.dtype(np.float64): 1e-5,
+            np.dtype(np.bool): 0,
             np.dtype(np.int8): 0,
             np.dtype(np.uint8): 0,
             np.dtype(np.int32): 0,
@@ -87,25 +88,13 @@ def default_atols():
     return {np.dtype(np.float16): 1e-1,
             np.dtype(np.float32): 1e-3,
             np.dtype(np.float64): 1e-20,
+            np.dtype(np.bool): 0,
             np.dtype(np.int8): 0,
             np.dtype(np.uint8): 0,
             np.dtype(np.int32): 0,
             np.dtype(np.uint32): 0,
             np.dtype(np.int64): 0,
             np.dtype(np.uint64): 0}
-
-def default_tols():
-    """Get default relative and absolute tolerances for data comparisons involving each data type."""
-    return {np.dtype(np.float16): (1e-2, 1e-1),
-            np.dtype(np.float32): (1e-4, 1e-3),
-            np.dtype(np.float64): (1e-5, 1e-20),
-            np.dtype(np.int8): (0, 0),
-            np.dtype(np.uint8): (0, 0),
-            np.dtype(np.int32): (0, 0),
-            np.dtype(np.uint32): (0, 0),
-            np.dtype(np.int64): (0, 0),
-            np.dtype(np.uint64): (0, 0)}
-
 
 def get_tolerance(dat, tol, default_tol):
     """ Return the tolerance to used for dat comparisons based on the given tol, datatype and context.

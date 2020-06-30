@@ -4603,7 +4603,7 @@ def test_np_random_grad():
                 scale = np.ones(scale)
             mx_out = getattr(np.random, op_name)(loc, scale)
             np_out = getattr(_np.random, op_name)(loc, scale)
-            assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+            assert mx_out.asnumpy().shape == np_out.shape
 
 
 @with_seed()
@@ -4649,7 +4649,7 @@ def test_np_lognormal_grad():
     for ((shape1, shape2), out_shape) in zip(param_shape, output_shapes):
         mx_out = np.random.lognormal(np.zeros(shape1), np.ones(shape2), out_shape)
         np_out = _np.random.lognormal(np.zeros(shape1).asnumpy(), np.ones(shape2).asnumpy(), out_shape)
-        assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+        assert mx_out.asnumpy().shape == np_out.shape
 
     def _test_lognormal_exception(sigma):
         output = np.random.lognormal(sigma=sigma).asnumpy()
@@ -4916,7 +4916,7 @@ def test_np_random_rayleigh():
     for shape in shapes:
         mx_out = np.random.rayleigh(np.array([1]), shape)
         np_out = _np.random.rayleigh(np.array([1]).asnumpy(), shape)
-        assert_almost_equal(mx_out.asnumpy().shape, np_out.shape)
+        assert mx_out.asnumpy().shape == np_out.shape
 
     def _test_rayleigh_exception(scale):
         output = np.random.rayleigh(scale=scale).asnumpy()
@@ -4949,7 +4949,7 @@ def test_np_exponential():
             with mx.autograd.record():
                 mx_out = test_exponential_grad(scale)
             np_out = _np.random.exponential(scale = scale.asnumpy(), size = out_shape)
-            assert_almost_equal(np_out.shape, mx_out.shape)
+            assert np_out.shape == mx_out.shape
             mx_out.backward()
             assert scale.grad.shape == out_shape
             assert_almost_equal(scale.grad.asnumpy().sum(), mx_out.asnumpy().sum(), rtol=1e-3, atol=1e-5)
