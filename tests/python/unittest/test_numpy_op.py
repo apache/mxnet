@@ -7842,7 +7842,7 @@ def test_np_tril_indices():
                 for hybridize in [True, False]:
                     # dummy nparray for hybridize
                     x = np.ones((1,1))
-                    test_trilindices = TestTrilindices(n, k, m)
+                    test_trilindices = TestTrilindices(int(n), int(k), int(m))
                     if hybridize:
                         test_trilindices.hybridize()
                     mx_out = test_trilindices(x)[1]

@@ -5231,7 +5231,7 @@ def tril_indices(n, k=0, m=None):
     """
     if m is None:
         m = n
-    return tuple(_npi.tril_indices(n, k, m))
+    return tuple(_api_internal.tril_indices(n, k, m))
 
 
 @set_module('mxnet.ndarray.numpy')

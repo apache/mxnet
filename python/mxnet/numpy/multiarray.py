@@ -5980,7 +5980,7 @@ def tril_indices(n, k=0, m=None):
     """
     if m is None:
         m = n
-    return tuple(_mx_nd_np.tril_indices(n, k, m))
+    return _mx_nd_np.tril_indices(n, k, m)
 
 
 # pylint: disable=redefined-outer-name
