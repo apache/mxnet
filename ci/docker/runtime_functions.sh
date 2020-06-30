@@ -413,6 +413,7 @@ build_ubuntu_cpu_mkl() {
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=ON \
         -DUSE_BLAS=MKL \
+        -DMKL_USE_ILP64=ON \
         -GNinja /work/mxnet
     ninja
 }
@@ -631,6 +632,7 @@ build_ubuntu_cpu_mkldnn_mkl() {
         -DUSE_TVM_OP=ON \
         -DUSE_MKL_IF_AVAILABLE=ON \
         -DUSE_BLAS=MKL \
+        -DMKL_USE_ILP64=ON \
         -GNinja /work/mxnet
     ninja
 }
