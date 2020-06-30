@@ -49,10 +49,10 @@ class StochasticBlock(HybridBlock):
         we generate samples from a Gaussian parameterized by `loc` and `scale` and
         accumulate the KL-divergence between it and its prior into the block's loss storage.:
         @StochasticBlock.collectLoss
-        def hybrid_forward(self, F, loc, scale):
+        def forward(self, loc, scale):
             qz = mgp.Normal(loc, scale)
             # prior
-            pz = mgp.Normal(F.np.zeros_like(loc), F.np.ones_like(scale))
+            pz = mgp.Normal(np.zeros_like(loc), np.ones_like(scale))
             self.add_loss(mgp.kl_divergence(qz, pz))
             return qz.sample()
         """
@@ -69,7 +69,12 @@ class StochasticBlock(HybridBlock):
     def __call__(self, *args, **kwargs):
 		# pylint: disable=arguments-differ
         out = super().__call__(*args, **kwargs)
-        self._losses.extend(out[1])
+        # self._losscache is not supposed to contain any elements
+        # at this point.
+        if len(self._losscache) > 0:
+            raise ValueError("Detect add_loss invoked inside a function not decorated " +
+                             "by @StochasticBlock.collectLoss")
+        self._losses = out[1]
         return out[0]
 
     @property

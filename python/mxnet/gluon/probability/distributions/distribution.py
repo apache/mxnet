@@ -179,7 +179,7 @@ class Distribution(object):
         mode = self.F
         args_string = ''
         if 'symbol' not in mode.__name__:
-            for k, _ in self.arg_constraints:
+            for k, _ in self.arg_constraints.items():
                 v = self.__dict__[k]
                 if isinstance(v, Number):
                     shape_v = ()
