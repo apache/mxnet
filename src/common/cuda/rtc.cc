@@ -200,22 +200,22 @@ void launch(CUfunction function,
             std::vector<const void*> *args) {
   CHECK(args->size() != 0) <<
     "Empty argument list passed to a kernel.";
-  //CUDA_DRIVER_CALL(
-      CUresult err = cuLaunchKernel(function,                    // function to launch
-        grid_dim.x, grid_dim.y, grid_dim.z,       // grid dim
-        block_dim.x, block_dim.y, block_dim.z,    // block dim
-        shared_mem_bytes,                         // shared memory
-        mshadow::Stream<gpu>::GetStream(stream),  // stream
-        const_cast<void**>(args->data()),         // arguments
-        nullptr);//);
-    if (err != CUDA_SUCCESS) {
-      LOG(FATAL) << "cuLaunchKernel failed: "
-                 << (void*)function << " "
-                 << "(" << grid_dim.x << ", " << grid_dim.y << ", " << grid_dim.z << ") "
-                 << "(" << block_dim.x << ", " << block_dim.y << ", " << block_dim.z << ") "
-                 << shared_mem_bytes << " "
-                 << args->size();
-    }
+  // CUDA_DRIVER_CALL(
+  CUresult err = cuLaunchKernel(function,                    // function to launch
+    grid_dim.x, grid_dim.y, grid_dim.z,       // grid dim
+    block_dim.x, block_dim.y, block_dim.z,    // block dim
+    shared_mem_bytes,                         // shared memory
+    mshadow::Stream<gpu>::GetStream(stream),  // stream
+    const_cast<void**>(args->data()),         // arguments
+    nullptr);  // );
+  if (err != CUDA_SUCCESS) {
+    LOG(FATAL) << "cuLaunchKernel failed: "
+               << reinterpret_cast<void*>(function) << " "
+               << "(" << grid_dim.x << ", " << grid_dim.y << ", " << grid_dim.z << ") "
+               << "(" << block_dim.x << ", " << block_dim.y << ", " << block_dim.z << ") "
+               << shared_mem_bytes << " "
+               << args->size();
+  }
 }
 
 }  // namespace rtc
