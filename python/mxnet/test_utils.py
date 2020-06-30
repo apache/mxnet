@@ -646,6 +646,12 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     if not use_broadcast:
         checkShapes(a, b)
 
+    # Tolerance analysis needs 'dtype' of 'a' and 'b', so convert numbers to numpy scalars as needed
+    if isinstance(a, numbers.Number):
+        a = np.array(a)
+    if isinstance(b, numbers.Number):
+        b = np.array(b)
+
     # If not specified, use the largest default tol for the ctx and dtype of 'a' and 'b'
     ain_rtol, ain_atol = get_tols(a, rtol, atol)
     bin_rtol, bin_atol = get_tols(b, rtol, atol)
