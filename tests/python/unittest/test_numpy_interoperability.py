@@ -2898,7 +2898,6 @@ def _add_workload_unwrap():
     phase[3:] += np.pi
     phase_s = np.vstack((phase,phase))
     OpArgMngr.add_workload('unwrap', phase)
-    print(phase_s.shape)
     OpArgMngr.add_workload('unwrap', phase_s, axis=1)
 
 
