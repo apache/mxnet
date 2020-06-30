@@ -4908,7 +4908,7 @@ def test_np_random_rayleigh():
             with mx.autograd.record():
                 mx_out = test_rayleigh(scale)
             np_out = _np.random.rayleigh(scale = scale.asnumpy(), size = shape)
-            assert_almost_equal(np_out.shape, mx_out.shape)
+            assert np_out.shape == mx_out.shape
             mx_out.backward()
             assert scale.grad.shape == shape
             assert_almost_equal(scale.grad.asnumpy().sum(), mx_out.asnumpy().sum(), rtol=1e-3, atol=1e-5)
