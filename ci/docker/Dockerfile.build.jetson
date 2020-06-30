@@ -78,5 +78,8 @@ ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/
 RUN /work/ubuntu_adduser.sh
 
+COPY install/requirements /work/
+RUN python3 -m pip install -r /work/requirements
+
 COPY runtime_functions.sh /work/
 WORKDIR /work/mxnet
