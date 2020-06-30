@@ -261,19 +261,6 @@ def compile_unix_full_gpu() {
     }]
 }
 
-def compile_unix_full_gpu_mkldnn_cpp_test() {
-    return ['GPU: CUDA10.1+cuDNN7+MKLDNN+CPPTEST': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-gpu-mkldnn-cpp') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_build_cuda', 'build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test', false)
-            utils.pack_lib('gpu_mkldnn_cpp_test', mx_lib_cpp_capi)
-          }
-        }
-      }
-    }]
-}
 
 def compile_unix_cmake_mkldnn_gpu() {
     return ['GPU: CMake MKLDNN': {
