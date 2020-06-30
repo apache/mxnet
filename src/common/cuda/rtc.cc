@@ -118,6 +118,7 @@ CUfunction get_function(const std::string &code,
         type_support_string + "\n" +
         util_string + "\n" +
         special_functions_definitions + '\n' +
+        function_definitions_util + "\n" +
         function_definitions + "\n" +
         backward_function_definitions + "\n" +
         vectorization_support_string + "\n" +

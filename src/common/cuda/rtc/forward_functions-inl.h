@@ -27,7 +27,7 @@ namespace common {
 namespace cuda {
 namespace rtc {
 
-const char function_definitions[] = R"code(
+const char function_definitions_util[] = R"code(
 
 #define INT_MAX (2147483647)
 
@@ -263,6 +263,12 @@ __device__ inline void store_add_index(const VectorType<DType, nvec> value, int 
     vector_output[i] = ret.y;
   }
 }
+
+}  // namespace op
+)code";
+
+const char function_definitions[] = R"code(
+namespace op {
 
 template <typename DType>
 __device__ inline DType identity(const DType val) {
