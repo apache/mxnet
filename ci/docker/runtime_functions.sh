@@ -867,6 +867,25 @@ build_ubuntu_gpu_cmake_mkldnn() {
     mv 3rdparty/mkldnn/src/libdnnl.so.1.tmp 3rdparty/mkldnn/src/libdnnl.so.1
 }
 
+build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
+    set -ex
+    build_ccache_wrappers
+    make \
+        DEV=1
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=1                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_CPP_PACKAGE=1                         \
+        USE_DIST_KVSTORE=1                        \
+        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        USE_SIGNAL_HANDLER=1                      \
+        -j$(nproc)
+    make test USE_CPP_PACKAGE=1 -j$(nproc)
+    make cython PYTHON=python3
+}
+
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
