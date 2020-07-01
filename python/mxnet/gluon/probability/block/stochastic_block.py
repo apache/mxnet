@@ -36,6 +36,8 @@ class StochasticBlock(HybridBlock):
         super(StochasticBlock, self).__init__(**kwargs)
         self._losses = []
         self._losscache = []
+        # Recording whether collectLoss is invoked.
+        self._flag = False
 
     def add_loss(self, loss):
         self._losscache.append(loss)
@@ -62,21 +64,19 @@ class StochasticBlock(HybridBlock):
             func_out = func(self, *args, **kwargs)
             collected_loss = self._losscache
             self._losscache = []
+            self._flag = True
             return (func_out, collected_loss)
 
         return inner
 
     def __call__(self, *args, **kwargs):
 		# pylint: disable=arguments-differ
+        self._flag = False
         out = super().__call__(*args, **kwargs)
-        # self._losscache is not supposed to contain any elements
-        # at this point.
-        if len(self._losscache) > 0:
-            raise ValueError("Detect add_loss invoked inside a function not decorated " +
-                             "by @StochasticBlock.collectLoss")
-        # collectLoss not used
-        if len(out) > 1:
-            self._losses = out[1]
+        if not self._flag:
+            raise ValueError("The forward function should be decorated by " +
+                             "StochasticBlock.collectLoss")
+        self._losses = out[1]
         return out[0]
 
     @property
