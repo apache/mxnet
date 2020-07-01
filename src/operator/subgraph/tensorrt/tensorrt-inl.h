@@ -273,7 +273,6 @@ class TensorrtProperty : public SubgraphProperty {
     auto& in_aux_names = g.GetAttr<std::vector<std::string>>("in_aux_names");
     NDArray **in_args_ptr = g.GetAttr<NDArray**>("in_args");
     NDArray **in_aux_ptr = g.GetAttr<NDArray**>("in_aux");
-    // should we check if not empty?
     in_args_dict.clear();
     in_aux_dict.clear();
     // we trust the Python API, len(in_arg_names) == len(in_args_ptr)
