@@ -653,6 +653,9 @@ then set ``gamma`` to 1 and its gradient to 0.
 NNVM_REGISTER_OP(_backward_BatchNorm)
 .set_num_inputs(8)
 .set_num_outputs(3)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs", [](const nnvm::NodeAttrs& attrs) {
+  return std::vector<uint32_t>{6, 7};   // moving_mean, moving_var
+})
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)
 #if MXNET_USE_MKLDNN == 1

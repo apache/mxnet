@@ -292,6 +292,36 @@ def test_lamb():
                               shapes, dtype, rtol=1e-3, atol=1e-3)
 
 
+@xfail_when_nonstandard_decimal_separator
+@with_seed()
+def test_lans():
+    opt1 = mx.optimizer.LANS
+    opt2 = mx.optimizer.LANS
+
+    shapes = [(3, 4, 5), (10, 4), (7,)]
+    beta1_options = [{}, {'beta1': 0.5}]
+    beta2_options = [{}, {'beta2': 0.8}]
+    cg_options = [{}, {'clip_gradient': 0.4}]
+    rg_options = [{}, {'rescale_grad': 0.14}]
+    wd_options = [{}, {'wd': 0.03}]
+    lb_options = [{'lower_bound': None}, {'lower_bound': 1e-3}]
+    ub_options = [{'upper_bound': None}, {'upper_bound': 10}]
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
+                   {'aggregate_num': 4}]
+    for dtype in [np.float16, np.float32]:
+        for params in itertools.product(beta1_options, beta2_options, cg_options, rg_options,
+                                        wd_options, lb_options, ub_options,
+                                        mp_options, agg_options):
+            kwarg = {k: v for param in params for k, v in param.items()}
+            if (dtype == np.float16 and ('multi_precision' not in kwarg or
+                                         not kwarg['multi_precision'])):
+                continue
+            compare_optimizer(opt1(use_fused_step=False, **kwarg),
+                              opt2(use_fused_step=True, **kwarg),
+                              shapes, dtype, rtol=1e-3, atol=1e-3)
+
+
 @with_seed()
 def test_sgld():
     opt1 = mx.optimizer.SGLD
