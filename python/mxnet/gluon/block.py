@@ -1060,6 +1060,19 @@ class HybridBlock(Block):
                         for name in out.list_auxiliary_states()}
             # Partition the graph.
             out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
+            # BFS to delete the delete args/aux from the block Params and its children's Params
+            input_names = out.list_inputs()
+            queue = [self]
+            while len(queue) > 0:
+                curr_block = queue.pop(0)
+                curr_params = curr_block.params if isinstance(curr_block.params, dict) else curr_block.params._params
+                curr_params_names = list(curr_params.keys())
+                for k in curr_params_names:
+                    if k not in input_names:
+                        curr_params.pop(k)
+
+                queue.extend(curr_block._children.values())
+
             #update cached graph with partitioned graph
             self._cached_graph = data, out
 

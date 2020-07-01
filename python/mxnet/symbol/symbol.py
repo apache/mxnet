@@ -1549,7 +1549,7 @@ class Symbol(SymbolBase):
         arg_names = self.list_arguments()
         new_arg_names = new_sym.list_arguments()
         deleted_arg_names = set([item for item in arg_names
-                                    if item not in set(new_arg_names)])
+                                 if item not in set(new_arg_names)])
 
         if len(deleted_arg_names) > 0:
             if args is not None:
@@ -1562,7 +1562,7 @@ class Symbol(SymbolBase):
         aux_names = self.list_auxiliary_states()
         new_aux_names = new_sym.list_auxiliary_states()
         deleted_aux_names = set([item for item in aux_names
-                                    if item not in set(new_aux_names)])
+                                 if item not in set(new_aux_names)])
         if len(deleted_aux_names) > 0:
             if aux is not None:
                 for a_n in deleted_aux_names:
