@@ -311,7 +311,7 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
         """Internal helper to figure out if node should be hidden with `hide_weights`.
         """
         idx = name.find("_quantize")
-        if idx >=0:
+        if idx >= 0:
             name = name[0:idx]
         weight_like = ('_weight', '_bias', '_beta', '_gamma',
                        '_moving_var', '_moving_mean', '_running_var', '_running_mean')
@@ -369,17 +369,17 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
             attr["fillcolor"] = cm[2]
         elif op == "Pooling" or op == "_contrib_quantized_pooling":
             label = "{op}\n{pooltype}, {kernel}/{stride}".format(op=to_shorter_name(op),
-                                                                    pooltype=node["attrs"]["pool_type"],
-                                                                    kernel="x".join(_str2tuple(node["attrs"]["kernel"]))
-                                                                    if "kernel" in node["attrs"] else "[]",
-                                                                    stride="x".join(_str2tuple(node["attrs"]["stride"]))
-                                                                    if "stride" in node["attrs"] else "1")
+                                                                 pooltype=node["attrs"]["pool_type"],
+                                                                 kernel="x".join(_str2tuple(node["attrs"]["kernel"]))
+                                                                 if "kernel" in node["attrs"] else "[]",
+                                                                 stride="x".join(_str2tuple(node["attrs"]["stride"]))
+                                                                 if "stride" in node["attrs"] else "1")
             attr["fillcolor"] = cm[4]
         elif op in ("Concat", "Flatten", "Reshape"):
             attr["fillcolor"] = cm[5]
         elif op == "Softmax":
             attr["fillcolor"] = cm[6]
-        elif op == "_contrib_dequantize" or op == "_contrib_requantize" or op =='_contrib_quantized_act':
+        elif op == "_contrib_dequantize" or op == "_contrib_requantize" or op == '_contrib_quantized_act':
             label = to_shorter_name(op)
             attr["fillcolor"] = cm[2]
         else:
