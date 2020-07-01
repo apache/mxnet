@@ -47,6 +47,25 @@ typedef enum {
 
 const std::string env_var_name(const char* dev_type, env_var_type type);
 
+#if MXNET_USE_CUDA
+#define SET_DEVICE(device_store, contextHelper, ctx, flag) \
+      const auto *device_store = flag? contextHelper.get()->SetCurrentDevice(ctx) : nullptr;
+#define UNSET_DEVICE(device_store)    delete device_store
+
+#define SET_GPU_PROFILER(prof, contextHelper)                          \
+      auto prof = contextHelper->contextGPU()?                         \
+                  profiler::GpuDeviceStorageProfiler::Get() : nullptr; \
+      if (!prof->IsProfiling()) prof = nullptr
+
+#define GPU_PROFILER_ON_FREE(prof, pntr)    if (prof) prof->OnFree(pntr)
+#else
+// empty macros when MxNet is compile without CUDA support
+#define SET_DEVICE(...)
+#define UNSET_DEVICE(...)
+#define SET_GPU_PROFILER(prof, ...)
+#define GPU_PROFILER_ON_FREE(prof, ...)
+#endif
+
 /*!
  * \brief Storage manager with a memory pool for GPU/CPU/CPUPunned memory chunks
  * memory chunks which reused based on rounded size match.
@@ -112,6 +131,8 @@ class PooledStorageManager : public StorageManager,
     std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(dev_type_));
     SET_DEVICE(device_store, contextHelper_, handle.ctx, true);
     contextHelper_->Free(handle.dptr);
+    SET_GPU_PROFILER(profilerGPU, contextHelper_);
+    GPU_PROFILER_ON_FREE(profilerGPU, handle.dptr);
     UNSET_DEVICE(device_store);
     used_memory_ -= BucketingStrategy::RoundAllocSize(handle.size);
   }
@@ -129,7 +150,7 @@ class PooledStorageManager : public StorageManager,
   }
 
   bool MemoryIsAvalable(size_t roundSize) const {
-    const size_t free = contextHelper_->freeMemorySize();
+    const auto free = contextHelper_->freeMemorySize();
     return free > roundSize && memory_allocation_limit_ <= free - roundSize;
   }
 
@@ -179,15 +200,13 @@ void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Hand
     reuse_pool->pop_back();
   }
 #if MXNET_USE_CUDA
-  if (dev_type_ == Context::kGPU) {
-    auto profilerGPU = profiler::GpuDeviceStorageProfiler::Get();
-    if (profilerGPU->IsProfiling()) {
-      if (reuse_pool)  // roundSize was not calculated
-        roundSize = BucketingStrategy::RoundAllocSizeForBucket(bucket_id);
+  SET_GPU_PROFILER(profilerGPU, contextHelper_);
+  if (profilerGPU) {
+    if (reuse_pool)  // roundSize was not calculated
+      roundSize = BucketingStrategy::RoundAllocSizeForBucket(bucket_id);
 
-      // record the allocation event in the memory profiler
-      profilerGPU->OnAlloc(*handle, roundSize, reuse_pool);
-    }
+    // record the allocation event in the memory profiler
+    profilerGPU->OnAlloc(*handle, roundSize, reuse_pool);
   }
 #endif
 }
@@ -352,11 +371,13 @@ class UnorderedMapContainer {
   }
 
   size_t ReleaseAllNoLock(const ContextHelper *contextHelper, const RoundHelper * /*rndHelper*/) {
+    SET_GPU_PROFILER(profilerGPU, contextHelper);
     size_t released_memory = 0;
     for (auto&& i : memory_pool_) {
-      for (auto&& j : i.second)
+      for (auto&& j : i.second) {
         contextHelper->Free(j);
-
+        GPU_PROFILER_ON_FREE(profilerGPU, j);
+      }
       released_memory += i.first * i.second.size();
       i.second.clear();
     }
@@ -392,14 +413,16 @@ class VectorContainer {
   }
 
   size_t ReleaseAllNoLock(const ContextHelper *contextHelper, const RoundHelper *rndHelper) {
+    SET_GPU_PROFILER(profilerGPU, contextHelper);
     size_t released_memory = 0;
     for (size_t i = first_bucket_; i < memory_pool_.size(); i++) {
       if (!memory_pool_[i].size())
         continue;
 
-      for (auto& j : memory_pool_[i])
+      for (auto &j : memory_pool_[i]) {
         contextHelper->Free(j);
-
+        GPU_PROFILER_ON_FREE(profilerGPU, j);
+      }
       released_memory += rndHelper->get_size(i) * memory_pool_[i].size();
       memory_pool_[i].clear();
     }

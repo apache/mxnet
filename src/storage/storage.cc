@@ -40,7 +40,8 @@ class StorageImpl : public Storage {
   void Alloc(Handle* handle) override;
   void Free(Handle handle) override;
   void DirectFree(Handle handle) override;
-  void ReleaseAll(Context ctx) override;
+  void ReleaseAll(Context ctx) override   { storage_manager(ctx)->ReleaseAll(); }
+
   void SharedIncrementRefCount(Handle handle) override;
   StorageImpl() = default;
   virtual ~StorageImpl() = default;
@@ -60,15 +61,9 @@ class StorageImpl : public Storage {
   // internal storage managers
   std::array<common::LazyAllocArray<StorageManager>, kMaxNumberOfDevices> storage_managers_;
   profiler::DeviceStorageProfiler profiler_;
-  // flag which is true when Pooled Storage Manager is used
-  bool pooled_ = false;
-#if MXNET_USE_CUDA
-  profiler::GpuDeviceStorageProfiler *pProfilerGPU_ = nullptr;
-#endif  // MXNET_USE_CUDA
 };  // struct Storage::Impl
 
-StorageManager *CreateStorageManager(const Context &ctx, const char *context,
-                                     int num_gpu_device, bool *pPooled) {
+StorageManager *CreateStorageManager(const Context &ctx, const char *context, int num_gpu_device) {
   const auto env_var = env_var_name(context, pool_type);
   const char *type = getenv(env_var.c_str());
   if (type == nullptr)
@@ -78,10 +73,8 @@ StorageManager *CreateStorageManager(const Context &ctx, const char *context,
   StorageManager *ptr = nullptr;
   if (strategy == "Round") {
     ptr = new PooledStorageManager<RoundPower2, VectorContainer>(ctx, num_gpu_device);
-    *pPooled = true;
   } else if (strategy == "Naive") {
     ptr = new PooledStorageManager<RoundMultiple, UnorderedMapContainer>(ctx, num_gpu_device);
-    *pPooled = true;
   } else if (strategy == "Unpooled") {
     if (ctx.dev_type == Context::kCPU || num_gpu_device == 0)
       ptr = new NaiveStorageManager<CPUDeviceStorage>();
@@ -107,27 +100,16 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
 
   // space already recycled, ignore request
   auto &&device = storage_managers_.at(handle->ctx.dev_type);
-  bool *pPooled = &pooled_;
-#if MXNET_USE_CUDA
-  profiler::GpuDeviceStorageProfiler **ppProfiler = &pProfilerGPU_;
-#else
-  void *ppProfiler = nullptr;
-#endif
   std::shared_ptr<StorageManager> manager = device.Get(
-    handle->ctx.real_dev_id(), [handle, pPooled, ppProfiler]() {
+    handle->ctx.real_dev_id(), [handle]() {
     const auto dev_type = handle->ctx.dev_type;
     int num_gpu_device = 0;
 #if MXNET_USE_CUDA
-    *ppProfiler = nullptr;
     switch (dev_type) {
       case Context::kGPU:
       case Context::kCPUPinned:
-        if (cudaGetDeviceCount(&num_gpu_device) == cudaSuccess) {
-          if (num_gpu_device > 0)
-            *ppProfiler = profiler::GpuDeviceStorageProfiler::Get();
-        } else {
+        if (cudaGetDeviceCount(&num_gpu_device) != cudaSuccess)
           num_gpu_device = 0;
-        }
       default:
         break;
     }
@@ -203,7 +185,7 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
     } else {
       // Some Pooled Storage Manager will be used
       storage_manager_type = "Pooled";
-      ptr = CreateStorageManager(handle->ctx, context, num_gpu_device, pPooled);
+      ptr = CreateStorageManager(handle->ctx, context, num_gpu_device);
     }
 
     if (context)
@@ -214,11 +196,6 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
 
   manager->Alloc(handle);
   profiler_.OnAlloc(*handle);
-#if MXNET_USE_CUDA
-  // record the allocation event in the memory profiler
-  if (pProfilerGPU_ && !pooled_)
-    pProfilerGPU_->OnAlloc(*handle, handle->size, false);
-#endif
 }
 
 void StorageImpl::Free(Storage::Handle handle) {
@@ -228,10 +205,6 @@ void StorageImpl::Free(Storage::Handle handle) {
 
   storage_manager(handle.ctx)->Free(handle);
   profiler_.OnFree(handle);
-#if MXNET_USE_CUDA
-  if (pProfilerGPU_)
-    pProfilerGPU_->OnFree(handle);
-#endif
 }
 
 void StorageImpl::DirectFree(Storage::Handle handle) {
@@ -241,14 +214,6 @@ void StorageImpl::DirectFree(Storage::Handle handle) {
 
   storage_manager(handle.ctx)->DirectFree(handle);
   profiler_.OnFree(handle);
-#if MXNET_USE_CUDA
-  if (pProfilerGPU_)
-    pProfilerGPU_->OnFree(handle);
-#endif
-}
-
-void StorageImpl::ReleaseAll(Context ctx) {
-  storage_manager(ctx)->ReleaseAll();
 }
 
 void StorageImpl::SharedIncrementRefCount(Storage::Handle handle) {

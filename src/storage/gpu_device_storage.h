@@ -25,6 +25,7 @@
 #ifndef MXNET_STORAGE_GPU_DEVICE_STORAGE_H_
 #define MXNET_STORAGE_GPU_DEVICE_STORAGE_H_
 
+#if MXNET_USE_CUDA
 #include "mxnet/storage.h"
 
 namespace mxnet {
@@ -49,31 +50,25 @@ class GPUDeviceStorage {
 
 inline void GPUDeviceStorage::Alloc(Storage::Handle* handle) {
   // NOTE: handle->size is NOT 0. See calling method: StorageImpl::Alloc
-#if MXNET_USE_CUDA
   mxnet::common::cuda::DeviceStore device_store(handle->ctx.real_dev_id(), true);
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #endif  // MXNET_USE_NCCL
   CUDA_CALL(cudaMalloc(&handle->dptr, handle->size));
-#else   // MXNET_USE_CUDA
-  LOG(FATAL) << "Please compile with CUDA enabled";
-#endif  // MXNET_USE_CUDA
+  profiler::GpuDeviceStorageProfiler::Get()->OnAlloc(*handle, handle->size, false);
 }
 
 inline void GPUDeviceStorage::Free(Storage::Handle handle) {
-#if MXNET_USE_CUDA
   mxnet::common::cuda::DeviceStore device_store(handle.ctx.real_dev_id(), true);
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> l(Storage::Get()->GetMutex(Context::kGPU));
 #endif  // MXNET_USE_NCCL
-  // throw special exception for caller to catch.
-  CUDA_CALL(cudaFree(handle.dptr));
-#else   // MXNET_USE_CUDA
-  LOG(FATAL) << "Please compile with CUDA enabled";
-#endif  // MXNET_USE_CUDA
+  CUDA_CALL(cudaFree(handle.dptr))
+  profiler::GpuDeviceStorageProfiler::Get()->OnFree(handle);
 }
 
 }  // namespace storage
 }  // namespace mxnet
 
+#endif  // MXNET_USE_CUDA
 #endif  // MXNET_STORAGE_GPU_DEVICE_STORAGE_H_

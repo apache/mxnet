@@ -23,6 +23,7 @@
 #if MXNET_USE_CUDA
 #include <cuda_runtime.h>
 #include "../common/cuda_utils.h"
+#include "../profiler/storage_profiler.h"
 typedef  mxnet::common::cuda::DeviceStore CudaDeviceStore;
 #endif  // MXNET_USE_CUDA
 
@@ -60,14 +61,8 @@ class ContextHelper {
   inline size_t freeMemorySize() const                  { return std::get<0>(getMemoryInfo()); }
 
 #if MXNET_USE_CUDA
+  virtual bool contextGPU() const                       { return false; }
   virtual const CudaDeviceStore *SetCurrentDevice(const Context &/*ctx*/) const { return nullptr; }
-#define SET_DEVICE(device_store, contextHelper, ctx, flag) \
-             const auto *device_store = flag? contextHelper.get()->SetCurrentDevice(ctx) : nullptr;
-#define UNSET_DEVICE(device_store)    delete device_store
-#else
-  // empty macros when MxNet is compile without CUDA support
-  #define SET_DEVICE(...)
-  #define UNSET_DEVICE(...)
 #endif
 
  private:
@@ -80,7 +75,7 @@ class ContextHelper {
  */
 class ContextHelperCPU : public ContextHelper {
  public:
-  std::tuple<size_t, size_t> getMemoryInfo() const  override {
+  std::tuple<size_t, size_t> getMemoryInfo() const override {
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
     MEMORYSTATUSEX status;
     status.dwLength = sizeof(status);
@@ -118,9 +113,7 @@ class ContextHelperCPU : public ContextHelper {
     return (*ppNtr = std::malloc(size))? 0 : -1;
   }
 
-  void Free(void *dptr) const override {
-    std::free(dptr);
-  }
+  void Free(void *dptr) const override                  { std::free(dptr); }
 };
 
 #if MXNET_USE_CUDA
@@ -137,13 +130,9 @@ class ContextHelperGPU : public ContextHelper {
     return std::make_tuple(free, total);
   }
 
-  int Malloc(void **ppPntr, size_t size) const override {
-    return cudaMalloc(ppPntr, size);
-  }
-
-  void Free(void *dptr) const override {
-    CUDA_CALL(cudaFree(dptr));
-  }
+  virtual bool contextGPU() const                       { return true; }
+  int Malloc(void **ppPntr, size_t size) const override { return cudaMalloc(ppPntr, size); }
+  void Free(void *dptr) const override                  { CUDA_CALL(cudaFree(dptr)); }
 
   const CudaDeviceStore *SetCurrentDevice(const Context &ctx) const override {
     return new CudaDeviceStore(ctx.real_dev_id(), true);
@@ -160,9 +149,7 @@ class ContextHelperPinned : public ContextHelperGPU {
     // make the memory available across all devices
     return cudaHostAlloc(ppPntr, size, cudaHostAllocPortable);
   }
-  void Free(void *dptr) const override {
-    CUDA_CALL(cudaFreeHost(dptr));
-  }
+  void Free(void *dptr) const override                  { CUDA_CALL(cudaFreeHost(dptr)); }
 };
 
 #else

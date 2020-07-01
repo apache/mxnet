@@ -464,6 +464,18 @@ def test_custom_operator_profiling_naive_engine():
             'test_custom_operator_profiling_multiple_custom_ops_symbolic_naive.json')
 
 
+def check_results(csv_file, csv_reader, expected_arg_name, expected_arg_size):
+    csv_file.seek(0)
+    for row in csv_reader:
+        if row['Attribute Name'] == expected_arg_name:
+            assert row['Requested Size'] == expected_arg_size, \
+                "requested size={} is not equal to the expected size={}" \
+                    .format(row['Requested Size'], expected_arg_size)
+            return
+
+    assert False, \
+        "Entry for attr_name={} has not been found".format(expected_arg_name)
+
 @pytest.mark.skipif(mx.context.num_gpus() == 0, reason="GPU memory profiler records allocation on GPUs only")
 def test_gpu_memory_profiler_symbolic():
     iter_num = 5
@@ -492,12 +504,9 @@ def test_gpu_memory_profiler_symbolic():
     profiler.dump(True)
 
     expected_alloc_entries = [
-            {'Attribute Name' : 'tensordot:in_arg:A',
-             'Requested Size' : str(4 * a.size)},
-            {'Attribute Name' : 'tensordot:in_arg:B',
-             'Requested Size' : str(4 * b.size)},
-            {'Attribute Name' : 'tensordot:dot',
-             'Requested Size' : str(4 * c.size)}]
+            {'Attribute Name' : 'tensordot:in_arg:A', 'Requested Size' : str(4 * a.size)},
+            {'Attribute Name' : 'tensordot:in_arg:B', 'Requested Size' : str(4 * b.size)},
+            {'Attribute Name' : 'tensordot:dot',      'Requested Size' : str(4 * c.size)}]
 
     # Sample gpu_memory_profile.csv:
     # "Attribute Name","Requested Size","Device","Actual Size","Reuse?"
@@ -512,20 +521,9 @@ def test_gpu_memory_profiler_symbolic():
     with open('gpu_memory_profile-pid_%d.csv' % (os.getpid()), mode='r') as csv_file:
         csv_reader = csv.DictReader(csv_file)
         for expected_alloc_entry in expected_alloc_entries:
-            csv_file.seek(0)
-            entry_found = False
-            for row in csv_reader:
-                if row['Attribute Name'] == expected_alloc_entry['Attribute Name']:
-                    assert row['Requested Size'] == expected_alloc_entry['Requested Size'], \
-                           "requested size={} is not equal to the expected size={}" \
-                           .format(row['Requested Size'],
-                                   expected_alloc_entry['Requested Size'])
-                    entry_found = True
-                    break
-            assert entry_found, \
-                   "Entry for attr_name={} has not been found" \
-                   .format(expected_alloc_entry['Attribute Name'])
-
+            expected_arg_name = expected_alloc_entry['Attribute Name']
+            expected_arg_size = expected_alloc_entry['Requested Size']
+            check_results(csv_file, csv_reader, expected_arg_name, expected_arg_size)
 
 @pytest.mark.skipif(mx.context.num_gpus() == 0, reason="GPU memory profiler records allocation on GPUs only")
 @pytest.mark.skipif(is_cd_run(), reason="flaky test - open issue #18564")
@@ -562,18 +560,8 @@ def test_gpu_memory_profiler_gluon():
             for key, nd in model.collect_params().items():
                 expected_arg_name = "%s:%s:" % (model.name, scope) + nd.name
                 expected_arg_size = str(4 * np.prod(nd.shape))
-                csv_file.seek(0)
-                entry_found = False
-                for row in csv_reader:
-                    if row['Attribute Name'] == expected_arg_name:
-                        assert row['Requested Size'] == expected_arg_size, \
-                            "requested size={} is not equal to the expected size={}" \
-                            .format(row['Requested Size'], expected_arg_size)
-                        entry_found = True
-                        break
-                assert entry_found, \
-                    "Entry for attr_name={} has not been found" \
-                    .format(expected_arg_name)
+                check_results(csv_file, csv_reader, expected_arg_name, expected_arg_size)
+
         # Make sure that there is no unknown allocation entry.
         csv_file.seek(0)
         for row in csv_reader:
