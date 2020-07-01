@@ -41,6 +41,7 @@ static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
                                 const std::vector<NDArray>& inputs,
                                 const std::vector<OpReqType>& req,
                                 const std::vector<NDArray>& outputs) {
+  if (inputs[0].shape().Size() == 0U) return;
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   if (SupportMKLDNNSoftmax(param, inputs[0], outputs[0])) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
