@@ -27,6 +27,7 @@ $(document).ready(function() {
       eventCategory: "Did this page help you?",
       eventAction: $(this).attr("data-response"),
       eventLabel: window.location.pathname || "unknown",
+      eventValue: $(this).attr("data-response") === "yes" ? 1 : 0
     });
   });
 });
