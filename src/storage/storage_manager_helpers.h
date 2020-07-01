@@ -130,7 +130,7 @@ class ContextHelperGPU : public ContextHelper {
     return std::make_tuple(free, total);
   }
 
-  virtual bool contextGPU() const                       { return true; }
+  bool contextGPU() const override                      { return true; }
   int Malloc(void **ppPntr, size_t size) const override { return cudaMalloc(ppPntr, size); }
   void Free(void *dptr) const override                  { CUDA_CALL(cudaFree(dptr)); }
 
