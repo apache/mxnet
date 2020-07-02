@@ -266,7 +266,7 @@ def _collect_layer_statistics(mod, data, collector, max_num_examples=None, logge
     num_batches = 0
     num_examples = 0
     for batch in data:
-        mod.forward(data_batch=batch, is_train=False)
+        mod.forward(data_batch=batch, is_train=False)        
         num_batches += 1
         num_examples += data.batch_size
         if max_num_examples is not None and num_examples >= max_num_examples:
@@ -899,7 +899,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         raise ValueError('data_shapes required')
     data_nd = []
     for shape in data_shapes:
-        data_nd.append(mx.nd.zeros(shape.shape))
+        data_nd.append(mx.nd.zeros(shape.shape, ctx=ctx))
     while True:
         try:
             network(*data_nd)
@@ -930,7 +930,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         prefix = os.path.join(tmpdirname, 'tmp')
         network.export(prefix, epoch=0)
         symnet, args, auxs = mx.model.load_checkpoint(prefix, 0)
-
+    
     if exclude_layers is None:
         exclude_layers = []
     if exclude_layers_match is None:
@@ -944,15 +944,31 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     if logger:
         logger.info('These layers have been excluded %s' % exclude_layers)
 
+    # visualization
+    digraph=mx.viz.plot_network(symnet, save_format = 'pdf',
+        node_attrs={"shape":'rect',"fixedsize":'false'},
+        hide_weights=False)
+    digraph.save("symnet.gv")
+
     if ctx == mx.cpu():
         symnet = symnet.get_backend_symbol('MKLDNN_QUANTIZE')
 
+    #digraph=mx.viz.plot_network(symnet, save_format = 'pdf',
+    #    node_attrs={"shape":'rect',"fixedsize":'false'},
+    #    hide_weights=False)
+    #digraph.save("symnet_aft_mkl.gv")
+    
     qsym, qarg_params, aux_params, collector = quantize_graph(
         sym=symnet, arg_params=args, aux_params=auxs, ctx=ctx,
         excluded_sym_names=exclude_layers, excluded_op_names=exclude_operators,
         calib_mode=calib_mode, quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
         quantize_granularity=quantize_granularity, LayerOutputCollector=LayerOutputCollector,
         logger=logger)
+
+    digraph=mx.viz.plot_network(qsym, save_format = 'pdf',
+        node_attrs={"shape":'rect',"fixedsize":'false'},
+        hide_weights=False)
+    digraph.save("qsym_aft_quantizepass.gv")
 
     if calib_mode is not None and calib_mode != 'none':
         if not isinstance(ctx, Context):
@@ -963,10 +979,16 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy', 'customize']:
             data_names = [pair[0] for pair in calib_data.provide_data]
-            mod = Module(symbol=symnet, context=ctx,
+            mod = Module(symbol=symnet,
                          data_names=data_names, label_names=None)
+            #print("==============================================\n")
+            #print(data_names)
+            #print(data_shapes)
+            #print(calib_data)
+            #print("==============================================\n")
             mod.bind(for_training=False, data_shapes=data_shapes)
             mod.set_params(args, auxs, allow_missing=False, force_init=True)
+            #mod.set_params(args, auxs, allow_missing=False, force_init=True)
             num_examples = _collect_layer_statistics(mod, calib_data, collector,
                                                      num_calib_examples, logger)
             if logger:
@@ -981,8 +1003,25 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     elif calib_mode is not None and calib_mode == 'none':
         data_names = [pair[0] for pair in data_shapes]
 
+    #print(list(symnet.get_internals()))
+    #print("==============================================\n")
+    #print(list(mod.get_params().keys))
+
+    digraph=mx.viz.plot_network(qsym, save_format = 'pdf',
+        node_attrs={"shape":'rect',"fixedsize":'false'},
+        hide_weights=False)
+    digraph.save("qsym_test.gv")
+
     if ctx == mx.cpu():
         qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
+    #if ctx != mx.cpu():
+    #    qsym = qsym.get_backend_symbol('GPU_QUANTIZE')
+
+    # visualization
+    digraph=mx.viz.plot_network(qsym, save_format = 'pdf',
+        node_attrs={"shape":'rect',"fixedsize":'false'},
+        hide_weights=False)
+    digraph.save("qsym.gv")
 
     from ..gluon import SymbolBlock
     data_sym = []

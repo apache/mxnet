@@ -75,11 +75,37 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
   mxnet::TShape oshape = out.shape_;
   // (m, n) * (k, n).T = (m, k)
   // A * B.T = C
-  if (dshape.ndim() != 2) {
-    CHECK(param.flatten)
-      << "Currently, QuantizedFullyConnected Op only supports flatten=true "
-      << "when ishape.ndim()!=2 for GPU.";
+
+  //printf("==========================Quantized_FC Debugging=====================================\n");
+  //std::cout << dshape <<std::endl;
+  //std::cout << wshape <<std::endl;
+  //std::cout << oshape <<std::endl;
+
+  Tensor<gpu, 2, SrcType> dataTensor;
+  Tensor<gpu, 2, DstType> outTensor;
+
+  if (!param.flatten) {
+    dataTensor = FlattenAs2DHead<gpu, SrcType>(data, ctx);
+    outTensor = FlattenAs2DHead<gpu, DstType>(out, ctx);
+  } else {
+    dataTensor = FlattenAs2DTail<gpu, SrcType>(data, ctx);
+    outTensor = FlattenAs2DTail<gpu, DstType>(out, ctx);
   }
+
+  TBlob dataT(dataTensor);
+  TBlob outT(outTensor);
+
+  //std::cout << dataT.shape_ <<std::endl;
+  //std::cout << outT.shape_ <<std::endl;
+
+  dshape = dataT.shape_;
+  oshape = outT.shape_;
+
+  //if (dshape.ndim() != 2) {
+  //  CHECK(param.flatten)
+  //    << "Currently, QuantizedFullyConnected Op only supports flatten=true "
+  //    << "when ishape.ndim()!=2 for GPU.";
+  //}
 
   // row_C = col_C(T) = cublas(col_B * col_A(T)) = cublas(row_B(T), row_A)
   // row_C = col_C(T) = cublas(col_B(T) * col_A(T)) = cublas(row_B, row_A)
@@ -99,11 +125,11 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
                            weight.dptr_,
                            src_type,
                            n,
-                           data.dptr_,
+                           dataT.dptr_,
                            src_type,
                            n,
                            &beta,
-                           out.dptr_,
+                           outT.dptr_,
                            dst_type,
                            k,
                            cmp_type,
@@ -116,8 +142,8 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
 
   if (!param.no_bias) {
     const TBlob& bias = inputs[2];
-    Kernel<QuantizedBiasAddKernel, gpu>::Launch(s, out.Size(),
-        k, out.dptr<int32_t>(), bias.dptr<int8_t>(),
+    Kernel<QuantizedBiasAddKernel, gpu>::Launch(s, outT.Size(),
+        k, outT.dptr<int32_t>(), bias.dptr<int8_t>(),
         outputs[1].dptr<float>(), outputs[2].dptr<float>(),
          inputs[7].dptr<float>(),  inputs[8].dptr<float>());
   }
