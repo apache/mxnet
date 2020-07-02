@@ -396,7 +396,7 @@ void RTCReduceM1Impl(Stream<gpu> *s, const TBlob &small, const TBlob &big,
                                             "reduce_kernel_M1", dev_id);
   launch(reduce_kernel_M1_func, config.kernel_1.gridDim,
          config.kernel_1.blockDim,
-         config.kernel_1.shMemSize, s, &args);
+         0, s, &args);
 }
 
 }  // namespace

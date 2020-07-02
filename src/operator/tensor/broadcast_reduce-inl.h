@@ -521,6 +521,8 @@ struct ReduceImplConfig {
     }
 
     workspace_size = 0;
+    kernel_1.shMemSize = 0;
+    kernel_1.do_transpose = false;
 
     if (M == 1) {
       kernel_1.blockDim.x = nthread_reduce;
