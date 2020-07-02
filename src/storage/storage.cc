@@ -63,13 +63,14 @@ class StorageImpl : public Storage {
   profiler::DeviceStorageProfiler profiler_;
 };  // struct Storage::Impl
 
-StorageManager *CreateStorageManager(const Context &ctx, const char *context, int num_gpu_device) {
+StorageManager *CreateStorageManager(const Context &ctx, const char *context,
+                                     int num_gpu_device, std::string &strategy) {
   const auto env_var = env_var_name(context, pool_type);
   const char *type = getenv(env_var.c_str());
   if (type == nullptr)
     type = "Naive";   // default pool
 
-  std::string strategy = type;
+  strategy = type;
   StorageManager *ptr = nullptr;
   if (strategy == "Round") {
     ptr = new PooledStorageManager<RoundPower2, VectorContainer>(ctx, num_gpu_device);
@@ -84,10 +85,7 @@ StorageManager *CreateStorageManager(const Context &ctx, const char *context, in
     else              // Context::kCPUPinned
       ptr = new NaiveStorageManager<PinnedMemoryStorage>();
 #endif
-  } else {
-    LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
   }
-
   return ptr;
 }
 
@@ -157,7 +155,7 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
     }
 
     StorageManager *ptr = nullptr;
-    const char *storage_manager_type;
+    std::string strategy, storage_manager_type;
     if (naive_storage_manager) {
       storage_manager_type = "Naive";
       switch (dev_type) {
@@ -184,8 +182,16 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
       }
     } else {
       // Some Pooled Storage Manager will be used
-      storage_manager_type = "Pooled";
-      ptr = CreateStorageManager(handle->ctx, context, num_gpu_device);
+      std::string strategy;
+      ptr = CreateStorageManager(handle->ctx, context, num_gpu_device, strategy);
+      if (ptr) {
+        if (strategy != "Unpooled")
+          storage_manager_type = "Pooled (" + strategy + ")";
+        else
+          storage_manager_type = "Unpooled";
+      } else {
+        LOG(FATAL) << "Unknown memory pool strategy specified: " << strategy << ".";
+      }
     }
 
     if (context)
