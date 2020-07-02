@@ -23,6 +23,7 @@ import multiprocessing as mp
 import mxnet as mx
 import numpy as np
 import pytest
+import itertools
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
 from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same
@@ -404,30 +405,20 @@ def test_batchnorm_with_type():
   ]
 
   # V2, 2D
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_2D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_2D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_2D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_2D)
+  bools = [False, True]
+  for fix_gamma, cudnn_off in itertools.product(bools, bools):
+      sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
+      check_consistency(sym, ctx_list_v2_2D)
 
   # V2, 1D
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_1D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_1D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_1D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_1D)
-  #
-  # # V2, 3D
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_3D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_3D)
+  for fix_gamma, cudnn_off in itertools.product(bools, bools):
+      sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
+      check_consistency(sym, ctx_list_v2_1D)
+
+  # V2, 3D
+  for fix_gamma, cudnn_off in itertools.product(bools, [True,]):
+      sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
+      check_consistency(sym, ctx_list_v2_3D)
 
 
 @with_seed()

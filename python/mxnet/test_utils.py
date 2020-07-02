@@ -130,9 +130,23 @@ def get_tolerance(dat, tol, default_tol):
         dtype = effective_dtype(ctx, np.dtype(dat.dtype))
         return tol.get(dtype, default_tol[dtype]) if tol is not None else default_tol[dtype]
 
-def get_tols(dat, rtol, atol):
-    return get_tolerance(dat, rtol, default_rtols()), \
-           get_tolerance(dat, atol, default_atols())
+
+def get_tols(x, y, rtol, atol):
+    """For comparing two datasets 'x' and 'y', what tolerances should be used."""
+    # Tolerance analysis needs 'dtype' of 'x' and 'y', so convert numbers to numpy scalars as needed
+    if isinstance(x, numbers.Number):
+        x = np.array(x)
+    if isinstance(y, numbers.Number):
+        y = np.array(y)
+
+    # If not specified, use the largest default tol for the ctx and dtype of 'x' and 'y'
+    rtol = max(get_tolerance(x, rtol, default_rtols()),
+               get_tolerance(y, rtol, default_rtols()))
+    atol = max(get_tolerance(x, atol, default_atols()),
+               get_tolerance(y, atol, default_atols()))
+
+    return rtol, atol
+
 
 def get_atol(atol=None, dtype=np.dtype(np.float64)):
     """Get default numerical threshold for regression test."""
@@ -635,17 +649,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     if not use_broadcast:
         checkShapes(a, b)
 
-    # Tolerance analysis needs 'dtype' of 'a' and 'b', so convert numbers to numpy scalars as needed
-    if isinstance(a, numbers.Number):
-        a = np.array(a)
-    if isinstance(b, numbers.Number):
-        b = np.array(b)
-
-    # If not specified, use the largest default tol for the ctx and dtype of 'a' and 'b'
-    ain_rtol, ain_atol = get_tols(a, rtol, atol)
-    bin_rtol, bin_atol = get_tols(b, rtol, atol)
-    rtol = max(ain_rtol, bin_rtol)
-    atol = max(ain_atol, bin_atol)
+    rtol, atol = get_tols(a, b, rtol, atol)
 
     if isinstance(a, mx.numpy.ndarray):
         a = a.asnumpy()
@@ -1548,14 +1552,31 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
 
     arg_params = {} if arg_params is None else arg_params
     aux_params = {} if aux_params is None else aux_params
-    for n, arr in exe_list[0].arg_dict.items():
+
+    # returns the least precise of two dtypes
+    def smaller_dtype(dt1, dt2):
+        return dt1 if dt2 is None or np.dtype(dt1).itemsize < np.dtype(dt2).itemsize else dt2
+
+    # For input data, use the rand_type arg if set, but otherwise determine the least-precise
+    # dtype for each input across all models.  This becomes the precision of the
+    # random input values, so each model will get the exact same input values.
+    arg_param_dtypes = {}
+    if rand_type is None:
+        for exe in exe_list:
+            for n, arr in exe.arg_dict.items():
+                if n not in arg_params:
+                    arg_param_dtypes[n] = smaller_dtype(arr.dtype, arg_param_dtypes.get(n))
+
+    # It's important to assign random inputs in a deterministic order, for reproducibility.
+    for n, arr in _sorted_items(exe_list[0].arg_dict):
         if n not in arg_params:
+            rand_dtype = rand_type if rand_type is not None else arg_param_dtypes[n]
             if use_uniform:
-                arg_params[n] = np.random.uniform(low=-0.92, high=0.92,
-                                                  size=arr.shape).astype(rand_type)
+                arg_params[n] = np.random.uniform(low=-0.92 * scale, high=0.92 * scale,
+                                                  size=arr.shape).astype(rand_dtype)
             else:
                 arg_params[n] = np.random.normal(size=arr.shape,
-                                                 scale=scale).astype(rand_type)
+                                                 scale=scale).astype(rand_dtype)
     for n, arr in exe_list[0].aux_dict.items():
         if n not in aux_params:
             aux_params[n] = 0
@@ -1574,23 +1595,22 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         exe.forward(is_train=False)
 
     dtypes = [np.dtype(exe.outputs[0].dtype) for exe in exe_list]
-    max_idx = np.argmax(dtypes)
+    # Select the ground truth as the first model having the highest precision output[0]
+    gt_idx = np.argmax(dtypes)
     gt = ground_truth
     if gt is None:
-        gt = exe_list[max_idx].output_dict.copy()
+        gt = exe_list[gt_idx].output_dict.copy()
 
     for i, exe in enumerate(exe_list):
-        if i == max_idx:
+        if i == gt_idx:
             continue
 
         for name, arr in zip(output_names, exe.outputs):
-            # Previously, the cast was to dtypes[i], but symbol may be mixed-precision,
-            # so casting the ground truth to the actual output type seems more correct.
-            gtarr = gt[name].astype(arr.dtype)
+            gtarr = gt[name]
             try:
                 assert_almost_equal(arr, gtarr, rtol=rtol, atol=atol, equal_nan=equal_nan)
             except AssertionError as e:
-                print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
+                print('Predict Err: ctx %d vs ctx %d at %s'%(i, gt_idx, name))
                 traceback.print_exc()
                 if raise_on_err:
                     raise e
@@ -1604,11 +1624,11 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             exe.backward(exe.outputs)
         gt = ground_truth
         if gt is None:
-            gt = exe_list[max_idx].output_dict.copy()
+            gt = exe_list[gt_idx].output_dict.copy()
             if grad_req != 'null':
-                gt.update(exe_list[max_idx].grad_dict)
+                gt.update(exe_list[gt_idx].grad_dict)
         for i, exe in enumerate(exe_list):
-            if i == max_idx:
+            if i == gt_idx:
                 continue
 
             curr = zip(output_names + arg_names, exe.outputs + exe.grad_arrays)
@@ -1617,13 +1637,20 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                     assert arr is None, name
                     continue
 
-                # Previous cast was to dtypes[i], but symbol may be mixed-precision,
-                # so casting the ground truth to the actual output type seems more correct.
-                gtarr = gt[name].astype(arr.dtype)
+                gtarr = gt[name]
                 try:
-                    assert_almost_equal(arr, gtarr, rtol=rtol, atol=atol, equal_nan=equal_nan)
+                    rt, at = rtol, atol
+                    # If the primary data i/o type is float16, then the tolerance used when
+                    # comparing a float32 input gradient (e.g. batchnorm gamma) should be float16.
+                    smaller_arr_dtype = smaller_dtype(arr.dtype, dtypes[i])
+                    smaller_gt_dtype = smaller_dtype(gtarr.dtype, dtypes[gt_idx])
+                    if smaller_arr_dtype != arr.dtype or \
+                       smaller_gt_dtype != gtarr.dtype:
+                        rt, at = get_tols(arr.astype(smaller_arr_dtype),
+                                          gtarr.astype(smaller_gt_dtype), rtol, atol)
+                    assert_almost_equal(arr, gtarr, rtol=rt, atol=at, equal_nan=equal_nan)
                 except AssertionError as e:
-                    print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
+                    print('Train Err: ctx %d vs ctx %d at %s'%(i, gt_idx, name))
                     traceback.print_exc()
                     if raise_on_err:
                         raise e
