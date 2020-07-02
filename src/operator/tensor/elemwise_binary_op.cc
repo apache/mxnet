@@ -164,20 +164,20 @@ void ElemwiseBinaryRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
 
-  const std::string code = std::string("const OpReqType req = ") +
-                           util::to_string(req[0]) +
-                           ";\n"
-                           "#define OP op::" +
-                           OP +
-                           "\n" +
-                           binary_kernel_fwd;
+  std::string code = "const OpReqType req = ";
+  code += util::to_string(req[0]);
+  code += ";\n"
+          "#define OP op::";
+  code += OP;
+  code += "\n";
   const int nvec = outputs[0].type_flag_ == mshadow::kFloat64 ? 2 : 4;
 
   const index_t size = outputs[0].Size();
   binary_kernel_params params = { {inputs[0].dptr_, inputs[1].dptr_, nullptr},
                                   {outputs[0].dptr_, nullptr} };
 
-  VectorizedKernelRTCLauncher(code, "binary_kernel", nvec,
+  VectorizedKernelRTCLauncher(code, "binary_kernel",
+                              binary_kernel_fwd, nvec,
                               size, 1, s, params,
                               inputs, outputs,
                               ctx.run_ctx.get_ctx().dev_id);
@@ -291,15 +291,15 @@ void ElemwiseBinaryRTCBwdUseNone::operator()(const nnvm::NodeAttrs& attrs,
                            ";\n"
                            "const bool write_right_output = " +
                            std::to_string(write_right_output) +
-                           ";\n" +
-                           binary_kernel_bwd_use_none;
+                           ";\n";
   const int nvec = outputs[0].type_flag_ == mshadow::kFloat64 ? 2 : 4;
 
   const index_t size = outputs[0].Size();
   binary_kernel_params params = { {inputs[0].dptr_, nullptr, nullptr},
                                   {outputs[0].dptr_, outputs[1].dptr_} };
 
-  VectorizedKernelRTCLauncher(code, "binary_kernel_bwd", nvec,
+  VectorizedKernelRTCLauncher(code, "binary_kernel_bwd",
+                              binary_kernel_bwd_use_none, nvec,
                               size, 1, s, params,
                               inputs, outputs,
                               ctx.run_ctx.get_ctx().dev_id);
@@ -409,8 +409,7 @@ void ElemwiseBinaryRTCBwdUseIn::operator()(const nnvm::NodeAttrs& attrs,
                            "\n"
                            "#define LOP op::" +
                            LOP +
-                           "\n" +
-                           binary_kernel_bwd_use_in;
+                           "\n";
   // Using 64 bit loads to reduce register pressure
   size_t output_type_size = common::mshadow_type_info(outputs[0].type_flag_).size;
   const int nvec = output_type_size <= sizeof(uint64_t)
@@ -421,7 +420,8 @@ void ElemwiseBinaryRTCBwdUseIn::operator()(const nnvm::NodeAttrs& attrs,
   binary_kernel_params params = { {inputs[0].dptr_, inputs[1].dptr_, inputs[2].dptr_},
                                   {outputs[0].dptr_, outputs[1].dptr_} };
 
-  VectorizedKernelRTCLauncher(code, "binary_kernel_bwd", nvec,
+  VectorizedKernelRTCLauncher(code, "binary_kernel_bwd",
+                              binary_kernel_bwd_use_in, nvec,
                               size, 1, s, params,
                               inputs, outputs,
                               ctx.run_ctx.get_ctx().dev_id);

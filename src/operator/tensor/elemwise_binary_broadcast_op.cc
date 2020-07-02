@@ -319,10 +319,13 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
                        "const int ndim = " +
                        std::to_string(ndim) +
                        ";\n";
-    std::string kernel_name;
     if (common_shape != 1) {
-      code += broadcast_kernel_fwd;
-      kernel_name = "binary_broadcast_kernel";
+      VectorizedKernelRTCLauncher(code, "binary_broadcast_kernel",
+                                  broadcast_kernel_fwd, nvec,
+                                  lead_dim, other_dim, s, params,
+                                  inputs, outputs,
+                                  ctx.run_ctx.get_ctx().dev_id,
+                                  lead_input_num);
     } else {
       if (params.stride[0][first_different] == 0) {
         lead_input_num = 1;
@@ -334,15 +337,14 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
                 "using DType = InputType0;\n"
                 "using DType2 = InputType1;\n";
       }
-      code += single_side_broadcast_kernel_fwd;
-      kernel_name = "single_side_binary_broadcast_kernel";
+      VectorizedKernelRTCLauncher(code, "single_side_binary_broadcast_kernel",
+                                  single_side_broadcast_kernel_fwd, nvec,
+                                  lead_dim, other_dim, s, params,
+                                  inputs, outputs,
+                                  ctx.run_ctx.get_ctx().dev_id,
+                                  lead_input_num);
     }
 
-    VectorizedKernelRTCLauncher(code, kernel_name, nvec,
-                                lead_dim, other_dim, s, params,
-                                inputs, outputs,
-                                ctx.run_ctx.get_ctx().dev_id,
-                                lead_input_num);
   }
 }
 

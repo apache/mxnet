@@ -102,15 +102,15 @@ void UnaryRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
                            ";\n"
                            "#define OP op::" +
                            OP +
-                           "\n" +
-                           unary_kernel_fwd;
+                           "\n";
   const int nvec = outputs[0].type_flag_ == mshadow::kFloat64 ? 2 : 4;
 
   const index_t size = outputs[0].Size();
   unary_kernel_params params = { {inputs[0].dptr_},
                                  {outputs[0].dptr_} };
 
-  VectorizedKernelRTCLauncher(code, "unary_kernel", nvec,
+  VectorizedKernelRTCLauncher(code, "unary_kernel",
+                              unary_kernel_fwd, nvec,
                               size, 1, s, params,
                               inputs, outputs,
                               ctx.run_ctx.get_ctx().dev_id);

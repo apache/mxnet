@@ -93,8 +93,9 @@ std::string GetPtx(nvrtcProgram program) {
 
 }  // namespace
 
-CUfunction get_function(const std::string &code,
+CUfunction get_function(const std::string &parameters,
                         const std::string &kernel_name,
+                        const std::string &code,
                         int dev_id) {
   constexpr int CACHESIZE_WARN_THRESHOLD = 10000;
   std::lock_guard<std::mutex> l(lock);
@@ -104,13 +105,13 @@ CUfunction get_function(const std::string &code,
     std::string ptx;
     std::vector<CUfunction> functions;
   };
-  // Maps from the cuda source code (minus header) to the ptx and jit-compiled CUfunctions.
+  // Maps from the kernel name and parameters to the ptx and jit-compiled CUfunctions.
   using KernelCache = std::unordered_map<std::string, KernelInfo>;
   // Per-gpu-architecture compiled kernel cache with jit-compiled function for each device context
   static std::unordered_map<int32_t, KernelCache> compiled_kernels;
   int sm_arch = SMArch(dev_id);
-  KernelCache& compiled_kernels_this_arch = compiled_kernels[sm_arch];  // make null map as needed
-  KernelInfo& kinfo = compiled_kernels_this_arch[code];                 // make KernelInfo as needed
+  KernelCache& compiled_kernels_this_arch = compiled_kernels[sm_arch];       // make null map as needed
+  KernelInfo& kinfo = compiled_kernels_this_arch[parameters + kernel_name];  // make KernelInfo as needed
   if (kinfo.ptx.size() == 0) {
     // It's the first time we've seen this kernel, so we need to generate the ptx and mangled_name.
     static std::string common_header =
@@ -124,7 +125,7 @@ CUfunction get_function(const std::string &code,
         backward_function_definitions + "\n" +
         vectorization_support_string + "\n" +
         reducer + "\n";
-    std::string code_with_header = common_header + code;
+    std::string code_with_header = common_header + parameters + code;
     // If verbose mode, output kernel source, though not including the common header
     if (dmlc::GetEnv("MXNET_RTC_VERBOSE", false)) {
       LOG(INFO) << "\n" << std::string(80, '-') << "\n" << code;

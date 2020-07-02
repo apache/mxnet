@@ -315,8 +315,9 @@ constexpr int vectorized_kernel_thread_num = 512;
 }  // namespace
 
 template <typename Params>
-void VectorizedKernelRTCLauncher(const std::string &code,
+void VectorizedKernelRTCLauncher(const std::string &parameters,
                                  const std::string &kernel_name,
+                                 const std::string &code,
                                  int nvec,
                                  const index_t lead_dim,
                                  const index_t other_dim,
@@ -331,18 +332,18 @@ void VectorizedKernelRTCLauncher(const std::string &code,
   if (N != 0) {
     auto align = CheckAlignment(params, lead_dim, other_dim,
                                 nvec, inputs, outputs);
-    std::stringstream kernel_builder;
+    std::string kernel_builder;
+    kernel_builder.reserve(2560);
 
     // Fill input types
     int counter = 0;
     for (const auto& input : inputs) {
       const auto& type_info = common::mshadow_type_info(input.type_flag_);
-      kernel_builder << "using InputType"
-                     << counter
-                     << " = "
-                     << type_info.name
-                     << ";"
-                     << std::endl;
+      kernel_builder += "using InputType";
+      kernel_builder += std::to_string(counter);
+      kernel_builder += " = ";
+      kernel_builder += type_info.name;
+      kernel_builder += ";\n";
       ++counter;
     }
 
@@ -350,44 +351,37 @@ void VectorizedKernelRTCLauncher(const std::string &code,
     counter = 0;
     for (const auto& output : outputs) {
       const auto& type_info = common::mshadow_type_info(output.type_flag_);
-      kernel_builder << "using OutputType"
-                     << counter
-                     << " = "
-                     << type_info.name
-                     << ";"
-                     << std::endl;
+      kernel_builder += "using OutputType";
+      kernel_builder += std::to_string(counter);
+      kernel_builder += " = ";
+      kernel_builder += type_info.name;
+      kernel_builder += ";\n";
       ++counter;
     }
 
     switch (align) {
       case Alignment::SAME_ALIGNED:
-        kernel_builder << "const bool aligned = true;"
-                       << std::endl
-                       << "const int nvec = "
-                       << nvec
-                       << ";"
-                       << std::endl;
+        kernel_builder += "const bool aligned = true;\n"
+                          "const int nvec = ";
+        kernel_builder += std::to_string(nvec);
+        kernel_builder += ";\n";
         break;
       case Alignment::SAME_UNALIGNED:
-        kernel_builder << "const bool aligned = false;"
-                       << std::endl
-                       << "const int nvec = "
-                       << nvec
-                       << ";"
-                       << std::endl;
+        kernel_builder += "const bool aligned = false;\n"
+                          "const int nvec = ";
+        kernel_builder += std::to_string(nvec);
+        kernel_builder += ";\n";
         break;
       case Alignment::DIFFERENT: {
         // If the pointers are aligned differently we cannot vectorize
-        kernel_builder << "const bool aligned = true;"
-                       << std::endl
-                       << "const int nvec = 1;"
-                       << std::endl;
+        kernel_builder += "const bool aligned = true;\n"
+                          "const int nvec = 1;\n";
         nvec = 1;
         break;
       }
     }
 
-    kernel_builder << code;
+    kernel_builder += parameters;
 
     index_t num_aligned_elements = get_num_aligned_elements(
                                     params.inputs[lead_input_num],
@@ -401,8 +395,9 @@ void VectorizedKernelRTCLauncher(const std::string &code,
                               max_blocks);
     std::vector<const void*> args = {&params, &lead_dim, &other_dim,
                                      &N, &num_aligned_elements};
-    auto function = common::cuda::rtc::get_function(kernel_builder.str(),
+    auto function = common::cuda::rtc::get_function(kernel_builder,
                                                     kernel_name,
+                                                    code,
                                                     dev_id);
 
     common::cuda::rtc::launch(function,

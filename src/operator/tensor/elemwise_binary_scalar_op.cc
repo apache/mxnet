@@ -108,8 +108,7 @@ void BinaryScalarRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
                            ";\n" +
                            "#define OP op::" +
                            OP +
-                           "\n" +
-                           binary_scalar_kernel_fwd;
+                           "\n";
   const int nvec = common::mshadow_type_info(outputs[0].type_flag_).size == 8 ? 2 : 4;
 
   const index_t size = outputs[0].Size();
@@ -117,7 +116,8 @@ void BinaryScalarRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
                                          {outputs[0].dptr_},
                                          alpha };
 
-  VectorizedKernelRTCLauncher(code, "binary_scalar_kernel", nvec,
+  VectorizedKernelRTCLauncher(code, "binary_scalar_kernel",
+                              binary_scalar_kernel_fwd, nvec,
                               size, 1, s, params,
                               inputs, outputs,
                               ctx.run_ctx.get_ctx().dev_id);
@@ -199,7 +199,7 @@ __global__ void binary_scalar_kernel_bwd(const binary_scalar_kernel_params param
                                 OP(input,
                                    static_cast<typename type_util::mixed_type<typename IType::type,
                                                                               typename OType::type>
-                                               ::type>(params.scalar));
+                                               ::type>(params.scalar)));
 
       if (req == OpReqType::kAddTo) {
         // temp2 may have a wider type than either temp
@@ -234,8 +234,7 @@ void BinaryScalarRTCBackward::operator()(const nnvm::NodeAttrs& attrs,
                            ";\n"
                            "#define OP op::" +
                            OP +
-                           "\n" +
-                           binary_scalar_kernel_bwd;
+                           "\n";
   const int nvec = outputs[0].type_flag_ == mshadow::kFloat64 ? 2 : 4;
 
   const index_t size = outputs[0].Size();
@@ -243,7 +242,8 @@ void BinaryScalarRTCBackward::operator()(const nnvm::NodeAttrs& attrs,
                                          {outputs[0].dptr_},
                                          alpha };
 
-  VectorizedKernelRTCLauncher(code, "binary_scalar_kernel_bwd", nvec,
+  VectorizedKernelRTCLauncher(code, "binary_scalar_kernel_bwd",
+                              binary_scalar_kernel_bwd, nvec,
                               size, 1, s, params,
                               inputs, outputs,
                               ctx.run_ctx.get_ctx().dev_id);

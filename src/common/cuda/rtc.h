@@ -52,8 +52,9 @@ std::string to_string(OpReqType req);
 
 extern std::mutex lock;
 
-CUfunction get_function(const std::string &code,
+CUfunction get_function(const std::string &parameters,
                         const std::string &kernel_name,
+                        const std::string &code,
                         int dev_id);
 
 void launch(CUfunction function,

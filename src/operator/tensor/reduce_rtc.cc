@@ -292,8 +292,10 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
   const auto &function_code = (lhs == nullptr)
                             ? reduce_function_code
                             : reduce_function_use_input_code;
-  auto reduce_kernel_func = get_function(code + function_code + reduce_kernel_code,
-                                         "reduce_kernel", dev_id);
+  auto reduce_kernel_func = get_function(code + function_code,
+                                         "reduce_kernel",
+                                         reduce_kernel_code,
+                                         dev_id);
   launch(reduce_kernel_func, config.kernel_1.gridDim,
          config.kernel_1.blockDim,
          config.kernel_1.shMemSize, s, &args);
@@ -306,8 +308,10 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
     args.emplace_back(&small_dptr);
     args.emplace_back(&small.dptr_);
 
-    auto reduce_lines_kernel_func = get_function(code + reduce_lines_kernel_code,
-                                                 "reduce_lines_kernel", dev_id);
+    auto reduce_lines_kernel_func = get_function(code,
+                                                 "reduce_lines_kernel",
+                                                 reduce_lines_kernel_code,
+                                                 dev_id);
     launch(reduce_lines_kernel_func, config.kernel_2.gridSize,
            config.kernel_2.blockSize, 0, s, &args);
   }
@@ -392,8 +396,10 @@ void RTCReduceM1Impl(Stream<gpu> *s, const TBlob &small, const TBlob &big,
   args.emplace_back(&small.dptr_);
   args.emplace_back(&param);
 
-  auto reduce_kernel_M1_func = get_function(code + reduce_kernel_M1_code,
-                                            "reduce_kernel_M1", dev_id);
+  auto reduce_kernel_M1_func = get_function(code,
+                                            "reduce_kernel_M1",
+                                            reduce_kernel_M1_code,
+                                            dev_id);
   launch(reduce_kernel_M1_func, config.kernel_1.gridDim,
          config.kernel_1.blockDim,
          0, s, &args);

@@ -567,7 +567,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
 CUfunction FusedOp::CompileCode(const std::string &code,
                                 const std::string &kernel_name,
                                 int dev_id) {
-  return common::cuda::rtc::get_function(code, "FusedKernel_" + kernel_name, dev_id);
+  return common::cuda::rtc::get_function(code, "FusedKernel_" + kernel_name, "", dev_id);
 }
 
 
