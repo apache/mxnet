@@ -2244,6 +2244,7 @@ def test_gluon_stochastic_block():
             net.export('dummyBlock', epoch=0)
 
 
+@pytest.mark.skip("test whether is the cause of memory leak")
 @with_seed()
 @use_np
 def test_gluon_stochastic_block_exception():
@@ -2267,6 +2268,7 @@ def test_gluon_stochastic_block_exception():
             mx_out = net(loc, scale).asnumpy()
 
 
+@pytest.mark.skip("test whether is the cause of memory leak")
 @with_seed()
 @use_np
 def test_gluon_stochastic_sequential():
