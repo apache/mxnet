@@ -666,6 +666,32 @@ def test_pool():
 
 
 @with_seed()
+@pytest.mark.parametrize('variable', ['running_var', 'running_mean'])
+def test_batchnorm_backward_synchronization(variable):
+    """
+    Tests if synchronization of BatchNorm running variables is done correctly.
+    If not, the test sometimes fails - depending on the timing.
+    """
+    ctx = mx.test_utils.default_context()
+
+    for _ in range(20):
+        layer = nn.BatchNorm()
+        layer.initialize(ctx=ctx)
+        for _ in range(3):
+            data = mx.nd.random.normal(loc=10, scale=2, shape=(1, 3, 10, 10), ctx=ctx)
+            with mx.autograd.record():
+                out = layer(data)
+            out.backward()
+
+        # check if each read give the same value
+        var1 = getattr(layer, variable).data().asnumpy()
+        for _ in range(10):
+            var2 = getattr(layer, variable).data().asnumpy()
+            if (var1 != var2).any():
+                raise AssertionError("Two consecutive reads of " + variable + " give different results")
+
+
+@with_seed()
 def test_batchnorm():
     layer = nn.BatchNorm(in_channels=10)
     check_layer_forward(layer, (2, 10, 10, 10))

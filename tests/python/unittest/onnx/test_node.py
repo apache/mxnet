@@ -123,7 +123,7 @@ class TestNode(unittest.TestCase):
                 mx_op = mx_op(**attrs)
                 mx_op.initialize()
                 mx_op(mx.nd.zeros(input_shape))
-                params = {k: v.data() for k, v in mx_op.collect_params().items()}
+                params = {p.name: p.data() for p in mx_op.collect_params().values()}
                 outsym = mx_op(input_sym)
             else:
                 params = {}
@@ -203,10 +203,9 @@ export_test_cases = [
     ("test_expand", "Expand", mx.sym.broadcast_to, (2,1,3,1), {'shape': (2,1,3,1)}),
     ("test_tile", "Tile", mx.sym.tile, (2,1,3,1), {'reps': (2,3)}),
     ("test_topk", "TopK", mx.sym.topk, (2, 10, 2), {'k': 3, 'axis': 1, 'ret_typ': 'both', 'dtype': np.int64}),
-    ("test_slice_axis", "Slice", mx.sym.slice_axis, (2, 10, 2), {'begin': 3, 'end': 7, 'axis': 1})
-    # https://github.com/apache/incubator-mxnet/issues/18596
-    # ("test_LSTM", "LSTM", mx.gluon.rnn.LSTM, (3,1,2), {'hidden_size': 3}),
-    # ("test_BiLSTM", "LSTM", mx.gluon.rnn.LSTM, (3,1,2), {'hidden_size': 3, 'bidirectional': True}),
+    ("test_slice_axis", "Slice", mx.sym.slice_axis, (2, 10, 2), {'begin': 3, 'end': 7, 'axis': 1}),
+    ("test_LSTM", "LSTM", mx.gluon.rnn.LSTM, (3,1,2), {'hidden_size': 3}),
+    ("test_BiLSTM", "LSTM", mx.gluon.rnn.LSTM, (3,1,2), {'hidden_size': 3, 'bidirectional': True}),
 ]
 
 if __name__ == '__main__':

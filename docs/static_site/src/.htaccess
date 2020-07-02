@@ -29,6 +29,7 @@ Redirect 302 /api/java/docs/api/ /versions/1.6/api/java/docs/api/
 Redirect 302 /api/clojure/docs/api/ /versions/1.6/api/clojure/docs/api/
 Redirect 302 /api/cpp/docs/api/ /versions/1.6/api/cpp/docs/api/
 Redirect 302 /api/julia/docs/api/ /versions/1.6/api/julia/docs/api/
+Redirect 302 /api/julia/docs/api/#tutorials /versions/1.6/api/julia/docs/api/#tutorials
 
 # Redirect Chinese visitors to Chinese CDN, temporary solution for slow site speed in China
 RewriteCond %{ENV:GEOIP_COUNTRY_CODE} ^CN$
@@ -42,6 +43,7 @@ RewriteCond %{REQUEST_FILENAME}\.html -f
 RewriteRule ^(.*) $1.html [NC,L]
 
 # Prettify some files like tutorials/io to tutorials/io.html
+RewriteCond %{REQUEST_URI} !/julia/
 RewriteCond %{REQUEST_FILENAME}\.html -f
 RewriteRule ^(.*) $1.html [NC,L]
 

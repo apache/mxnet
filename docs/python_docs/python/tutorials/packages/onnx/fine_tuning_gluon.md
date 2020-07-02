@@ -306,9 +306,8 @@ We add the SymbolBlock and the new dense layer to a HybridSequential network
 
 ```python
 net = gluon.nn.HybridSequential()
-with net.name_scope():
-    net.add(pre_trained)
-    net.add(dense_layer)
+net.add(pre_trained)
+net.add(dense_layer)
 ```
 
 ### Loss

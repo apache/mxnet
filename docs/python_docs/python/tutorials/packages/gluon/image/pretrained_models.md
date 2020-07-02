@@ -224,8 +224,7 @@ You can replace the output layer of your pre-trained model to fit the right numb
 
 ```python
 NUM_CLASSES = 10
-with resnet18.name_scope():
-    resnet18.output = gluon.nn.Dense(NUM_CLASSES)
+resnet18.output = gluon.nn.Dense(NUM_CLASSES)
 ```
 
 

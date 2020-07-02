@@ -91,8 +91,8 @@ class MyDense(nn.Block):
         # in_units: the number of inputs in this layer
 
         super(MyDense, self).__init__(**kwargs)
-        self.weight = self.params.get('weight', shape=(in_units, units))
-        self.bias = self.params.get('bias', shape=(units,))
+        self.weight = gluon.Parameter('weight', shape=(in_units, units))
+        self.bias = gluon.Parameter('bias', shape=(units,))
 
     def forward(self, x):
         linear = nd.dot(x, self.weight.data()) + self.bias.data()
