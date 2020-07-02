@@ -64,19 +64,19 @@ class StorageImpl : public Storage {
 };  // struct Storage::Impl
 
 StorageManager *CreateStorageManager(const Context &ctx, const char *context,
-                                     int num_gpu_device, std::string &strategy) {
+                                     int num_gpu_device, std::string *pStrategy) {
   const auto env_var = env_var_name(context, pool_type);
   const char *type = getenv(env_var.c_str());
   if (type == nullptr)
     type = "Naive";   // default pool
 
-  strategy = type;
+  *pStrategy = type;
   StorageManager *ptr = nullptr;
-  if (strategy == "Round") {
+  if (*pStrategy == "Round") {
     ptr = new PooledStorageManager<RoundPower2, VectorContainer>(ctx, num_gpu_device);
-  } else if (strategy == "Naive") {
+  } else if (*pStrategy == "Naive") {
     ptr = new PooledStorageManager<RoundMultiple, UnorderedMapContainer>(ctx, num_gpu_device);
-  } else if (strategy == "Unpooled") {
+  } else if (*pStrategy == "Unpooled") {
     if (ctx.dev_type == Context::kCPU || num_gpu_device == 0)
       ptr = new NaiveStorageManager<CPUDeviceStorage>();
 #if MXNET_USE_CUDA
@@ -183,7 +183,7 @@ void StorageImpl::Alloc(Storage::Handle *handle) {
     } else {
       // Some Pooled Storage Manager will be used
       std::string strategy;
-      ptr = CreateStorageManager(handle->ctx, context, num_gpu_device, strategy);
+      ptr = CreateStorageManager(handle->ctx, context, num_gpu_device, &strategy);
       if (ptr) {
         if (strategy != "Unpooled")
           storage_manager_type = "Pooled (" + strategy + ")";
