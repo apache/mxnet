@@ -6174,6 +6174,11 @@ def clip(a, a_min, a_max, out=None):
     >>> np.clip(a, 3, 6, out=a)
     array([3., 3., 3., 3., 4., 5., 6., 6., 6., 6.], dtype=float32)
     """
+    from numbers import Number
+    if isinstance(a, Number):
+        # In case input is a scalar, the computation would fall back to native numpy.
+        # The value returned would be a python scalar.
+        return _np.clip(a, a_min, a_max, out=None)
     return _mx_nd_np.clip(a, a_min, a_max, out=out)
 
 

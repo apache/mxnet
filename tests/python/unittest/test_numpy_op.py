@@ -3704,6 +3704,16 @@ def test_np_clip():
 
         def hybrid_forward(self, F, x):
             return x.clip(self._a_min, self._a_max)
+    
+    # Test scalar case
+    for _, a_min, a_max, throw_exception in workloads:
+        a = _np.random.uniform() # A scalar
+        if throw_exception:
+            # No need to test the exception case here.
+            continue
+        mx_ret = np.clip(a, a_min, a_max)
+        np_ret = _np.clip(a, a_min, a_max)
+        assert_almost_equal(mx_ret, np_ret, atol=1e-4, rtol=1e-3, use_broadcast=False)
 
     for shape, a_min, a_max, throw_exception in workloads:
         for dtype in dtypes:
@@ -6605,7 +6615,7 @@ def test_np_unique():
         ((5, 3, 4), True, True, True, 1),
     ]
     for dtype in ['float32', 'float64', 'int8', 'uint8', 'int32', 'int64']:
-        for hybridize in [False]:
+        for hybridize in [False, True]:
             for config in configs:
                 test_unique = TestUnique(*config[1:])
                 if hybridize:
