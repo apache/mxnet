@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <string>
 #include <utility>
+#include <unordered_map>
 #include "../tensor/matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 #include "../../common/utils.h"
@@ -566,6 +567,12 @@ struct FlipParam : public dmlc::Parameter<FlipParam> {
       DMLC_DECLARE_FIELD(axis)
           .describe("The axis which to flip elements.");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s;
+    axis_s << axis;
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 #define FLIP_MAX_DIM 10
@@ -641,6 +648,13 @@ struct NumpyRollaxisParam : public dmlc::Parameter<NumpyRollaxisParam> {
     .set_default(0)
     .describe("The axis is rolled until it lies before this position. "
               "The default, 0, results in a “complete” roll.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, start_s;
+    axis_s << axis;
+    start_s << start;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["start"] = start_s.str();
   }
 };
 

@@ -4530,7 +4530,7 @@ def stack(arrays, axis=0, out=None):
         return [arr for arr in arrays]
 
     arrays = get_list(arrays)
-    return _npi.stack(*arrays, axis=axis, out=out)
+    return _api_internal.stack(*arrays, axis, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6271,7 +6271,7 @@ def flip(m, axis=None, out=None):
     if isinstance(m, numeric_types):
         return _np.flip(m, axis)
     elif isinstance(m, ndarray):
-        return _npi.flip(m, axis, out=out)
+        return _api_internal.flip(m, axis, out)
     else:
         raise TypeError('type {} not supported'.format(str(type(m))))
 
@@ -9403,8 +9403,7 @@ def rollaxis(a, axis, start=0):
     >>> np.rollaxis(a, 1, 4).shape
     (3, 5, 6, 4)
     """
-    return _npi.rollaxis(a, axis, start)
-
+    return _api_internal.rollaxis(a, axis, start)
 
 @set_module('mxnet.ndarray.numpy')
 def diag(v, k=0):
