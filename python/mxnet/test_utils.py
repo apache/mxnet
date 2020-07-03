@@ -1619,9 +1619,24 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
 
     # train
     if grad_req != 'null':
+        # Perform forward()
         for exe in exe_list:
             exe.forward(is_train=True)
-            exe.backward(exe.outputs)
+        # Use the first executor's output data, cast to the least precise dtype,
+        # as the gradient data to pass to all executor's backward() call.
+        least_precise_dtype = [out.dtype for out in exe_list[0].outputs]
+        for exe in exe_list:
+            least_precise_dtype = [smaller_dtype(out1.dtype, dt) \
+                                    for (out1, dt) in zip(exe.outputs, least_precise_dtype)]
+        golden_data_np = [out.astype(dt).asnumpy() \
+                          for (out, dt) in zip(exe_list[0].outputs, least_precise_dtype)]
+        # Perform backward()
+        for exe in exe_list:
+            out_grads = [mx.nd.array(golden_np, ctx=exe._ctx,
+                                     dtype=out.dtype).tostype(out.stype)
+                         for (golden_np, out) in zip(golden_data_np, exe.outputs)]
+            exe.backward(out_grads)
+
         gt = ground_truth
         if gt is None:
             gt = exe_list[gt_idx].output_dict.copy()
