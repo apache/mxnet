@@ -33,10 +33,6 @@ from numpy.testing import assert_array_equal
 import pytest
 import scipy.stats as ss
 import scipy.special as scipy_special
-import warnings
-import json
-import unittest
-import random
 import itertools
 from numbers import Number
 
@@ -2209,6 +2205,7 @@ def test_gluon_kl():
                 _test_monte_carlo(lhs_dist, rhs_dist, repeated_times)
 
 
+@pytest.mark.skip("test whether is the cause of memory leak")
 @with_seed()
 @use_np
 def test_gluon_stochastic_block():
