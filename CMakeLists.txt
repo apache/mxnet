@@ -36,18 +36,6 @@ endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/Utils.cmake)
 
-if(DEFINED USE_INT64_TENSOR_SIZE AND NOT USE_INT64_TENSOR_SIZE OR CMAKE_SIZEOF_VOID_P EQUAL 4)
-  message(STATUS "Large Tensor disabled !!")
-  set(USE_INT64_TENSOR_SIZE OFF CACHE BOOL "Use int64_t to represent the total number of elements in a tensor")
-else()
-  message(STATUS "Large Tensor enabled !!")
-  set(USE_INT64_TENSOR_SIZE ON CACHE BOOL "Use int64_t to represent the total number of elements in a tensor")
-  if(USE_BLAS STREQUAL "MKL")
-    # Enable MKL ILP64 support when Large Tensor enabled
-    set(MKL_USE_ILP64 ON CACHE BOOL "enable MKL ILP64 interface.")
-  endif()
-endif()
-
 include(CMakeDependentOption)
 #Some things have order. This must be put in front alone
 option(MXNET_BUILD_SHARED_LIBS "Build shared libraries instead of static libraries" ON)
@@ -315,6 +303,14 @@ endif()
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
+
+if(DEFINED USE_INT64_TENSOR_SIZE AND NOT USE_INT64_TENSOR_SIZE OR CMAKE_SIZEOF_VOID_P EQUAL 4)
+  message(STATUS "Large Tensor disabled")
+  set(USE_INT64_TENSOR_SIZE OFF CACHE BOOL "Use int64_t to represent the total number of elements in a tensor")
+else()
+  message(STATUS "Large Tensor enabled")
+  set(USE_INT64_TENSOR_SIZE ON CACHE BOOL "Use int64_t to represent the total number of elements in a tensor")
+endif()
 
 include(cmake/ChooseBlas.cmake)
 
@@ -994,3 +990,4 @@ if(BUILD_CYTHON_MODULES)
     message(FATAL_ERROR "No python interpreter found to build cython modules")
   endif()
 endif()
+
