@@ -22,7 +22,7 @@ import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.base import py_str, MXNetError
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, default_context
 from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
@@ -805,7 +805,7 @@ def test_sync_batchnorm():
                             input2grad.asnumpy(), atol=atol, rtol=rtol)
 
     cfgs = [(1, False)]
-    num_gpus = mx.context.num_gpus()
+    num_gpus = 0 if default_context().device_type != 'gpu' else mx.context.num_gpus()
     batch_size = 24
     for i in range(1, num_gpus + 1):
         if batch_size % i == 0:
