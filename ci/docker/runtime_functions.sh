@@ -407,6 +407,7 @@ build_ubuntu_cpu_gcc8_werror() {
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_CPP_PACKAGE=ON \
         -DMXNET_USE_CPU=ON \
+        -DUSE_INT64_TENSOR_SIZE=OFF \
         -GNinja /work/mxnet
     ninja
 }
@@ -419,6 +420,7 @@ build_ubuntu_cpu_clang10_werror() {
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
        -DUSE_CPP_PACKAGE=ON \
        -DMXNET_USE_CPU=ON \
+       -DUSE_INT64_TENSOR_SIZE=OFF \
        -GNinja /work/mxnet
     ninja
 }
@@ -438,6 +440,7 @@ build_ubuntu_gpu_clang10_werror() {
        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
        -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
        -DUSE_CPP_PACKAGE=OFF \
+       -DUSE_INT64_TENSOR_SIZE=OFF \
        -GNinja /work/mxnet
     ninja
 }
