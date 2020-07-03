@@ -2235,8 +2235,6 @@ def test_gluon_stochastic_block():
         assert mx_out.shape == loc.shape
         assert kl.shape == loc.shape
         assert l2_norm.shape == shape[:-1]
-        if hybridize:
-            net.export('dummyBlock', epoch=0)
 
 
 @pytest.mark.skip("test whether is the cause of memory leak")
