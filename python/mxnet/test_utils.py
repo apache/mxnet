@@ -1650,7 +1650,9 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
                                           gtarr.astype(smaller_gt_dtype), rtol, atol)
                     assert_almost_equal(arr, gtarr, rtol=rt, atol=at, equal_nan=equal_nan)
                 except AssertionError as e:
-                    print('Train Err: ctx %d vs ctx %d at %s'%(i, gt_idx, name))
+                    print('Train Err: {} {} ctx {} vs {} {} ctx {} at {}'.format(
+                        np.dtype(arr.dtype).name, arr.ctx, i,
+                        np.dtype(gtarr.dtype).name, gtarr.ctx, gt_idx, name))
                     traceback.print_exc()
                     if raise_on_err:
                         raise e
