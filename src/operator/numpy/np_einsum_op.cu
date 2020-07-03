@@ -151,8 +151,9 @@ inline void EinsumForwardCutensor(const std::vector<TBlob>& inputs,
                                   const std::vector<TBlob>& outputs,
                                   const std::string equation,
                                   const OpContext& ctx) {
-  //nvtxRangePush("INIT");
   mxnet_op::Stream<gpu>* stream = ctx.get_stream<gpu>();
+  cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(stream));
+  nvtxRangePush("INIT");
 
   const TBlob &tensor_a = inputs[0];
   const TBlob &tensor_b = inputs[1];
@@ -223,26 +224,34 @@ inline void EinsumForwardCutensor(const std::vector<TBlob>& inputs,
                   tensor_c_ptr,
                   &descriptor_c, &alignment_req_c));
 
-    // contraction descriptor and plan
+    // Contraction descriptor
     cutensorContractionPlan_t plan;
     cutensorContractionDescriptor_t descriptor_contraction;
-    // give workspace to allow optimization, how much?
-    size_t workspace_size = 1024ULL * 1024ULL * 8ULL * 128ULL; // why?
-    Tensor<gpu, 1, char> workspace =
-        ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), stream);
+    cutensorContractionFind_t find;
+
     CUTENSOR_CALL(cutensorInitContractionDescriptor(handle, &descriptor_contraction,
                   &descriptor_a, modes_a.data(), alignment_req_a,
                   &descriptor_b, modes_b.data(), alignment_req_b,
                   &descriptor_c, modes_c.data(), alignment_req_c,
                   &descriptor_c, modes_c.data(), alignment_req_c,
                   cutensorType));
-    cutensorContractionFind_t find;
+
     CUTENSOR_CALL(cutensorInitContractionFind(handle, &find, algo));
+    // workspace to allow optimizations
+    size_t workspace_size = 0;
+    CUTENSOR_CALL(cutensorContractionGetWorkspace(handle,
+                  &descriptor_contraction,
+                  &find,
+                  CUTENSOR_WORKSPACE_RECOMMENDED, &workspace_size));
+    Tensor<gpu, 1, char> workspace =
+        ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), stream);
+
+    // Contraction Plan
     CUTENSOR_CALL(cutensorInitContractionPlan(handle, &plan, &descriptor_contraction,
                                               &find, workspace_size));
-    //cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(stream));
-    //nvtxRangePop();
-    //nvtxRangePush("einsum");
+    cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(stream));
+    nvtxRangePop();
+    nvtxRangePush("einsum");
 
     // run einsum
     typename CuTensorTypeTraits<DType>::ScalarType alpha = 1;
@@ -251,8 +260,8 @@ inline void EinsumForwardCutensor(const std::vector<TBlob>& inputs,
                   (void*) &alpha, tensor_a_ptr, tensor_b_ptr,
                   (void*) &beta,  tensor_c_ptr, tensor_c_ptr,
                   workspace.dptr_, workspace_size, mshadow::Stream<gpu>::GetStream(stream)));
-    //cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(stream));
-    //nvtxRangePop();
+    cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(stream));
+    nvtxRangePop();
   });
 }
 #endif
