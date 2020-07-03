@@ -1534,7 +1534,7 @@ def test_embedding_with_type():
                         'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
             arg_params = {'embedding_data': np.random.randint(low=-low_pad, high=V+high_pad, size=(N,))}
             check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
-                              arg_params=arg_params, scale=0.5)
+                              arg_params=arg_params, scale=0.1)
 
     data_types = [np.float16, np.float32, np.float64, np.int32]
     weight_types = [np.float16, np.float32, np.float64]
