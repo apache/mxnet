@@ -15,9 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import os
-import tempfile
-
+"""Test gluon.probability with HybridBlock.hybrid_forward api
+"""
 import mxnet as mx
 import numpy as _np
 from mxnet import np, npx, autograd
@@ -25,10 +24,9 @@ from mxnet import gluon
 import mxnet.gluon.probability as mgp
 from mxnet.gluon.probability import StochasticBlock, StochasticSequential
 from mxnet.gluon import HybridBlock
-from mxnet.test_utils import use_np, assert_almost_equal, set_default_context
+from mxnet.test_utils import use_np, assert_almost_equal
 
-from common import (setup_module, with_seed, assertRaises,
-                    assert_raises_cudnn_not_satisfied)
+from common import with_seed
 from numpy.testing import assert_array_equal
 import pytest
 import scipy.stats as ss
@@ -59,7 +57,7 @@ def _distribution_method_invoker(dist, func, *args):
     return getattr(dist, func)(*args)
 
 
-def test_mgp_getF():
+def test_mgp_getF_v1():
     # Test getF
     getF = mgp.utils.getF
     nd = mx.nd
@@ -76,7 +74,7 @@ def test_mgp_getF():
 
 @with_seed()
 @use_np
-def test_gluon_uniform():
+def test_gluon_uniform_v1():
     class TestUniform(HybridBlock):
         def __init__(self, func):
             super(TestUniform, self).__init__()
@@ -147,7 +145,7 @@ def test_gluon_uniform():
 
 @with_seed()
 @use_np
-def test_gluon_normal():
+def test_gluon_normal_v1():
     class TestNormal(HybridBlock):
         def __init__(self, func):
             super(TestNormal, self).__init__()
@@ -217,7 +215,7 @@ def test_gluon_normal():
 
 @with_seed()
 @use_np
-def test_gluon_laplace():
+def test_gluon_laplace_v1():
     class TestLaplace(HybridBlock):
         def __init__(self, func):
             super(TestLaplace, self).__init__()
@@ -287,7 +285,7 @@ def test_gluon_laplace():
 
 @with_seed()
 @use_np
-def test_gluon_cauchy():
+def test_gluon_cauchy_v1():
     class TestCauchy(HybridBlock):
         def __init__(self, func):
             self._func = func
@@ -369,7 +367,7 @@ def test_gluon_cauchy():
 
 @with_seed()
 @use_np
-def test_gluon_half_cauchy():
+def test_gluon_half_cauchy_v1():
     class TestHalfCauchy(HybridBlock):
         def __init__(self, func):
             super(TestHalfCauchy, self).__init__()
@@ -431,7 +429,7 @@ def test_gluon_half_cauchy():
 
 @with_seed()
 @use_np
-def test_gluon_poisson():
+def test_gluon_poisson_v1():
     class TestPoisson(HybridBlock):
         def __init__(self, func):
             self._func = func
@@ -466,7 +464,7 @@ def test_gluon_poisson():
 
 @with_seed()
 @use_np
-def test_gluon_geometric():
+def test_gluon_geometric_v1():
     class TestGeometric(HybridBlock):
         def __init__(self, func, is_logit=False):
             super(TestGeometric, self).__init__()
@@ -526,7 +524,7 @@ def test_gluon_geometric():
 
 @with_seed()
 @use_np
-def test_gluon_negative_binomial():
+def test_gluon_negative_binomial_v1():
     class TestNegativeBinomial(HybridBlock):
         def __init__(self, func, is_logit=False):
             super(TestNegativeBinomial, self).__init__()
@@ -580,7 +578,7 @@ def test_gluon_negative_binomial():
 
 @with_seed()
 @use_np
-def test_gluon_exponential():
+def test_gluon_exponential_v1():
     class TestExponential(HybridBlock):
         def __init__(self, func):
             self._func = func
@@ -641,7 +639,7 @@ def test_gluon_exponential():
 
 @with_seed()
 @use_np
-def test_gluon_weibull():
+def test_gluon_weibull_v1():
     class TestWeibull(HybridBlock):
         def __init__(self, func):
             super(TestWeibull, self).__init__()
@@ -711,7 +709,7 @@ def test_gluon_weibull():
 
 @with_seed()
 @use_np
-def test_gluon_pareto():
+def test_gluon_pareto_v1():
     class TestPareto(HybridBlock):
         def __init__(self, func):
             super(TestPareto, self).__init__()
@@ -780,7 +778,7 @@ def test_gluon_pareto():
 
 @with_seed()
 @use_np
-def test_gluon_gamma():
+def test_gluon_gamma_v1():
     class TestGamma(HybridBlock):
         def __init__(self, func):
             super(TestGamma, self).__init__()
@@ -829,7 +827,7 @@ def test_gluon_gamma():
 
 @with_seed()
 @use_np
-def test_gluon_dirichlet():
+def test_gluon_dirichlet_v1():
     class TestDirichlet(HybridBlock):
         def __init__(self, func):
             super(TestDirichlet, self).__init__()
@@ -899,7 +897,7 @@ def test_gluon_dirichlet():
 
 @with_seed()
 @use_np
-def test_gluon_beta():
+def test_gluon_beta_v1():
     class TestBeta(HybridBlock):
         def __init__(self, func):
             super(TestBeta, self).__init__()
@@ -947,7 +945,7 @@ def test_gluon_beta():
 
 @with_seed()
 @use_np
-def test_gluon_fisher_snedecor():
+def test_gluon_fisher_snedecor_v1():
     class TestFisherSnedecor(HybridBlock):
         def __init__(self, func):
             super(TestFisherSnedecor, self).__init__()
@@ -993,7 +991,7 @@ def test_gluon_fisher_snedecor():
 
 @with_seed()
 @use_np
-def test_gluon_student_t():
+def test_gluon_student_t_v1():
     class TestT(HybridBlock):
         def __init__(self, func):
             super(TestT, self).__init__()
@@ -1043,7 +1041,7 @@ def test_gluon_student_t():
 
 @with_seed()
 @use_np
-def test_gluon_gumbel():
+def test_gluon_gumbel_v1():
     class TestGumbel(HybridBlock):
         def __init__(self, func):
             super(TestGumbel, self).__init__()
@@ -1113,7 +1111,7 @@ def test_gluon_gumbel():
 
 @with_seed()
 @use_np
-def test_gluon_multinomial():
+def test_gluon_multinomial_v1():
     class TestMultinomial(HybridBlock):
         def __init__(self, func, num_events, total_count, is_logit, batch_shape=None, sample_shape=None):
             super(TestMultinomial, self).__init__()
@@ -1205,7 +1203,7 @@ def test_gluon_multinomial():
 
 @with_seed()
 @use_np
-def test_gluon_binomial():
+def test_gluon_binomial_v1():
     class TestBinomial(HybridBlock):
         def __init__(self, func, is_logit=False, n=1):
             super(TestBinomial, self).__init__()
@@ -1284,7 +1282,7 @@ def test_gluon_binomial():
 
 @with_seed()
 @use_np
-def test_gluon_bernoulli():
+def test_gluon_bernoulli_v1():
     class TestBernoulli(HybridBlock):
         def __init__(self, func, is_logit=False):
             super(TestBernoulli, self).__init__()
@@ -1345,7 +1343,7 @@ def test_gluon_bernoulli():
 
 @with_seed()
 @use_np
-def test_relaxed_bernoulli():
+def test_relaxed_bernoulli_v1():
     class TestRelaxedBernoulli(HybridBlock):
         def __init__(self, func, is_logit=False):
             super(TestRelaxedBernoulli, self).__init__()
@@ -1396,7 +1394,7 @@ def test_relaxed_bernoulli():
 
 @with_seed()
 @use_np
-def test_gluon_categorical():
+def test_gluon_categorical_v1():
     class TestCategorical(HybridBlock):
         def __init__(self, func, is_logit=False, batch_shape=None, num_events=None, sample_shape=None):
             super(TestCategorical, self).__init__()
@@ -1506,7 +1504,7 @@ def test_gluon_categorical():
 
 @with_seed()
 @use_np
-def test_gluon_one_hot_categorical():
+def test_gluon_one_hot_categorical_v1():
     def one_hot(a, num_classes):
         return np.identity(num_classes)[a]
 
@@ -1588,7 +1586,7 @@ def test_gluon_one_hot_categorical():
 
 @with_seed()
 @use_np
-def test_relaxed_one_hot_categorical():
+def test_relaxed_one_hot_categorical_v1():
     class TestRelaxedOneHotCategorical(HybridBlock):
         def __init__(self, func, is_logit=False, batch_shape=None, num_events=None):
                 super(TestRelaxedOneHotCategorical, self).__init__()
@@ -1657,7 +1655,7 @@ def test_relaxed_one_hot_categorical():
 
 @with_seed()
 @use_np
-def test_gluon_mvn():
+def test_gluon_mvn_v1():
     class TestMVN(HybridBlock):
         def __init__(self, func, param_type):
             super(TestMVN, self).__init__()
@@ -1776,7 +1774,7 @@ def test_gluon_mvn():
 
 @with_seed()
 @use_np
-def test_gluon_half_normal():
+def test_gluon_half_normal_v1():
     class TestHalfNormal(HybridBlock):
         def __init__(self, func):
             super(TestHalfNormal, self).__init__()
@@ -1838,7 +1836,7 @@ def test_gluon_half_normal():
 
 @with_seed()
 @use_np
-def test_affine_transform():
+def test_affine_transform_v1():
     r"""
     Test the correctness of affine transformation by performing it
     on a standard normal, since N(\mu, \sigma^2) = \mu + \sigma * N(0, 1)
@@ -1902,7 +1900,7 @@ def test_affine_transform():
 
 @with_seed()
 @use_np
-def test_compose_transform():
+def test_compose_transform_v1():
     class TestComposeTransform(HybridBlock):
         def __init__(self, func):
             super(TestComposeTransform, self).__init__()
@@ -1943,7 +1941,7 @@ def test_compose_transform():
 
 
 @use_np
-def test_cached_property():
+def test_cached_property_v1():
     x = np.random.normal()
     x.attach_grad()
     scale = 0.1
@@ -1985,7 +1983,7 @@ def test_cached_property():
 
 
 @use_np
-def test_independent():
+def test_independent_v1():
     class TestIndependent(HybridBlock):
         def __init__(self, event_dim, func):
             super(TestIndependent, self).__init__()
@@ -2014,7 +2012,7 @@ def test_independent():
 
 @with_seed()
 @use_np
-def test_gluon_kl():
+def test_gluon_kl_v1():
     def _test_zero_kl(p, shape):
         """Check if KL(p || p) = 0
         
@@ -2208,7 +2206,7 @@ def test_gluon_kl():
 @pytest.mark.skip("test whether is the cause of memory leak")
 @with_seed()
 @use_np
-def test_gluon_stochastic_block():
+def test_gluon_stochastic_block_v1():
     class dummyBlock(StochasticBlock):
         """In this test case, we generate samples from a Gaussian parameterized
         by `loc` and `scale` and accumulate the KL-divergence between it and
@@ -2237,10 +2235,9 @@ def test_gluon_stochastic_block():
         assert l2_norm.shape == shape[:-1]
 
 
-# @pytest.mark.skip("test whether is the cause of memory leak")
 @with_seed()
 @use_np
-def test_gluon_stochastic_block_exception():
+def test_gluon_stochastic_block_exception_v1():
     class problemBlock(StochasticBlock):
         def hybrid_forward(self, F, loc, scale):
             qz = mgp.Normal(loc, scale)
@@ -2264,7 +2261,7 @@ def test_gluon_stochastic_block_exception():
 @pytest.mark.skip("test whether is the cause of memory leak")
 @with_seed()
 @use_np
-def test_gluon_stochastic_sequential():
+def test_gluon_stochastic_sequential_v1():
     class normalBlock(HybridBlock):
         def hybrid_forward(self, F, x):
             return (x + 1)
@@ -2319,7 +2316,7 @@ def test_gluon_stochastic_sequential():
 
 @with_seed()
 @use_np
-def test_gluon_constraint():
+def test_gluon_constraint_v1():
     class TestConstraint(HybridBlock):
         def __init__(self, constraint_type):
             super(TestConstraint, self).__init__()
@@ -2389,7 +2386,7 @@ def test_gluon_constraint():
 
 @with_seed()
 @use_np
-def test_gluon_domain_map():
+def test_gluon_domain_map_v1():
     class TestDomainMap(HybridBlock):
         def __init__(self, constraint_type, bijective):
             super(TestDomainMap, self).__init__()
