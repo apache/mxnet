@@ -1174,6 +1174,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=None, rto
             assert_almost_equal(fd_grad, sym_grad, rtol, atol,
                                 ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
         elif grad_req[name] == 'add':
+            if isinstance(sym_grad, mx.nd.NDArray):
+                sym_grad = sym_grad.asnumpy()
             assert_almost_equal(fd_grad, sym_grad - orig_grad, rtol, atol,
                                 ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
         elif grad_req[name] == 'null':
@@ -1393,7 +1395,8 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=None, atol=
                                 ("EXPECTED_%s"%name, "BACKWARD_%s"%name),
                                 equal_nan=equal_nan)
         elif grad_req[name] == 'add':
-            assert_almost_equal(expected[name], grads[name] - args_grad_npy[name],
+            grad = grads[name].asnumpy() if isinstance(grads[name], mx.nd.NDArray) else grads[name]
+            assert_almost_equal(expected[name], grad - args_grad_npy[name],
                                 rtol, atol, ("EXPECTED_%s"%name, "BACKWARD_%s"%name),
                                 equal_nan=equal_nan)
         elif grad_req[name] == 'null':
