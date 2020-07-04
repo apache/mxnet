@@ -3071,7 +3071,6 @@ def test_np_binary_funcs():
 
 @with_seed()
 @use_np
-# @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/16848')
 def test_np_mixed_precision_binary_funcs():
     itypes = [np.bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
@@ -3084,10 +3083,10 @@ def test_np_mixed_precision_binary_funcs():
             def hybrid_forward(self, F, a, b, *args, **kwargs):
                 return getattr(F.np, self._func)(a, b)
 
-        # if (func in ['multiply', 'mod', 'equal', 'not_equal', 'greater',
-        #             'greater_equal', 'less', 'less_equal']) and \
-        #     (lshape == () or rshape == ()) :
-        #     return
+        if (func in ['multiply', 'mod', 'equal', 'not_equal', 'greater',
+                    'greater_equal', 'less', 'less_equal']) and \
+            (lshape == () or rshape == ()) :
+            return
         np_func = getattr(_np, func)
         mx_func = TestMixedBinary(func)
         np_test_x1 = _np.random.uniform(low, high, lshape).astype(ltype)
