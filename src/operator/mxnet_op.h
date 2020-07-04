@@ -849,7 +849,13 @@ struct op_with_req {
     KERNEL_ASSIGN(out[i], req, OP::Map(in[i], value));
   }
 
-#ifndef _WIN32
+  /*! \brief input is two tensors with different type and with a boolean output tensor */
+  template<typename LType, typename RType,
+           typename std::enable_if<!std::is_same<LType, RType>::value, int>::type = 0>
+  MSHADOW_XINLINE static void Map(index_t i, bool *out, const LType *lhs, const RType *rhs) {
+    KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], rhs[i]));
+  }
+
   /*! \brief inputs are two tensors with a half_t output tensor */
   template<typename DType,
            typename std::enable_if<std::is_integral<DType>::value, int>::type = 0>
@@ -903,7 +909,6 @@ struct op_with_req {
   MSHADOW_XINLINE static void Map(index_t i, double *out, const DType *lhs, const double value) {
     KERNEL_ASSIGN(out[i], req, OP::Map(lhs[i], value));
   }
-#endif
 
   /*! \brief inputs are two tensors with a float output tensor */
   template<typename DType,

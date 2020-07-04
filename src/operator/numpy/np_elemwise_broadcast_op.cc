@@ -23,27 +23,26 @@
  * \brief CPU Implementation of basic functions for elementwise numpy binary broadcast operator.
  */
 
-#include <dmlc/strtonum.h>
 #include "./np_elemwise_broadcast_op.h"
 
 namespace mxnet {
 namespace op {
 
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)              \
-  NNVM_REGISTER_OP(name)                                            \
-  .set_num_inputs(1)                                                \
-  .set_num_outputs(1)                                               \
-  .set_attr_parser([](NodeAttrs* attrs) {                           \
-      attrs->parsed = dmlc::stod(attrs->dict["scalar"]);             \
-    })                                                              \
-  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>) \
-  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)  \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                 \
-    [](const NodeAttrs& attrs){                                     \
-      return std::vector<std::pair<int, int> >{{0, 0}};             \
-    })                                                              \
-  .add_argument("data", "NDArray-or-Symbol", "source input")        \
-  .add_argument("scalar", "float", "scalar input")
+DMLC_REGISTER_PARAMETER(NumpyBinaryScalarParam);
+
+#define MXNET_OPERATOR_REGISTER_NP_BINARY_SCALAR(name)                    \
+  NNVM_REGISTER_OP(name)                                                  \
+  .set_num_inputs(1)                                                      \
+  .set_num_outputs(1)                                                     \
+  .set_attr_parser(ParamParser<NumpyBinaryScalarParam>)                   \
+  .set_attr<mxnet::FInferShape>("FInferShape", ElemwiseShape<1, 1>)       \
+  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryScalarType)        \
+  .set_attr<FResourceRequest>("FResourceRequest",                         \
+    [](const NodeAttrs& attrs) {                                          \
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};   \
+    })                                                                    \
+  .add_argument("data", "NDArray-or-Symbol", "source input")              \
+  .add_arguments(NumpyBinaryScalarParam::__FIELDS__())
 
 bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
                                    std::vector<int>* in_attrs,
@@ -61,24 +60,6 @@ bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
   return true;
 }
 
-#ifndef _WIN32
-#define MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(name)                \
-  NNVM_REGISTER_OP(name)                                                       \
-  .set_num_inputs(2)                                                           \
-  .set_num_outputs(1)                                                          \
-  .set_attr<nnvm::FListInputNames>("FListInputNames",                          \
-    [](const NodeAttrs& attrs) {                                               \
-      return std::vector<std::string>{"lhs", "rhs"};                           \
-    })                                                                         \
-  .set_attr<mxnet::FInferShape>("FInferShape", BinaryBroadcastShape)           \
-  .set_attr<nnvm::FInferType>("FInferType", NumpyBinaryMixedPrecisionType)     \
-  .set_attr<nnvm::FInplaceOption>("FInplaceOption",                            \
-    [](const NodeAttrs& attrs){                                                \
-      return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};                \
-    })                                                                         \
-  .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")     \
-  .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
-#else
 #define MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(name)                \
   NNVM_REGISTER_OP(name)                                                       \
   .set_num_inputs(2)                                                           \
@@ -94,50 +75,61 @@ bool NumpyBinaryMixedPrecisionType(const nnvm::NodeAttrs& attrs,
       return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}};                \
     })                                                                         \
   .set_attr<FResourceRequest>("FResourceRequest",                              \
-  [](const NodeAttrs& attrs) {                                                 \
-    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};          \
-  })                                                                           \
+    [](const NodeAttrs& attrs) {                                               \
+      return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};        \
+    })                                                                         \
   .add_argument("lhs", "NDArray-or-Symbol", "First input to the function")     \
   .add_argument("rhs", "NDArray-or-Symbol", "Second input to the function")
-#endif
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_add)
-#ifndef _WIN32
 .set_attr<FCompute>(
   "FCompute<cpu>",
   NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::plus, op::mshadow_op::mixed_plus,
                                       op::mshadow_op::mixed_plus>)
-#else
-.set_attr<FCompute>(
-  "FCompute<cpu>",
-  NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::plus>)
-#endif
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_add"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_add"});
+
+NNVM_REGISTER_OP(_backward_npi_broadcast_add)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", NumpyBinaryBackwardUseIn<cpu, mshadow_op::posone,
+                                                                mshadow_op::posone>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_subtract)
-#ifndef _WIN32
 .set_attr<FCompute>(
   "FCompute<cpu>",
   NumpyBinaryBroadcastCompute<cpu, op::mshadow_op::minus, op::mshadow_op::mixed_minus,
                               op::mshadow_op::mixed_rminus>)
-#else
-.set_attr<FCompute>(
-  "FCompute<cpu>",
-  NumpyBinaryBroadcastCompute<cpu, op::mshadow_op::minus>)
-#endif
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_backward_broadcast_sub"});
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_sub"});
+
+NNVM_REGISTER_OP(_backward_npi_broadcast_sub)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}, {0, 1}};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", NumpyBinaryBackwardUseIn<cpu, mshadow_op::posone,
+                                                                mshadow_op::negone>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_multiply)
-#ifndef _WIN32
 .set_attr<FCompute>(
   "FCompute<cpu>",
   NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::mul, op::mshadow_op::mixed_mul,
                                       op::mshadow_op::mixed_mul>)
-#else
-.set_attr<FCompute>(
-  "FCompute<cpu>",
-  NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::mul>)
-#endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_mul"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_mul)
@@ -155,21 +147,33 @@ NNVM_REGISTER_OP(_backward_npi_broadcast_mul)
 .set_attr<FCompute>("FCompute<cpu>", NumpyBinaryBackwardUseIn<cpu, mshadow_op::right,
                                                               mshadow_op::left>);
 
-MXNET_OPERATOR_REGISTER_BINARY_BROADCAST(_npi_mod)
-.set_attr<FCompute>("FCompute<cpu>", BinaryBroadcastCompute<cpu, mshadow_op::mod>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_broadcast_mod"});
+MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_mod)
+.set_attr<FCompute>(
+  "FCompute<cpu>",
+  NumpyBinaryBroadcastCompute<cpu, op::mshadow_op::mod, op::mshadow_op::mixed_mod,
+                                      op::mshadow_op::mixed_rmod>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_mod"});
+
+NNVM_REGISTER_OP(_backward_npi_broadcast_mod)
+.set_num_inputs(3)
+.set_num_outputs(2)
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 1}};
+  })
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<FCompute>("FCompute<cpu>", NumpyBinaryBackwardUseIn<cpu, mshadow_op::mod_grad,
+                                                              mshadow_op::mod_rgrad>);
 
 MXNET_OPERATOR_REGISTER_NP_BINARY_MIXED_PRECISION(_npi_power)
-#ifndef _WIN32
 .set_attr<FCompute>(
   "FCompute<cpu>",
   NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::power, op::mshadow_op::mixed_power,
                                       op::mshadow_op::mixed_rpower>)
-#else
-.set_attr<FCompute>(
-  "FCompute<cpu>",
-  NumpyBinaryBroadcastComputeWithBool<cpu, op::mshadow_op::power>)
-#endif
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_broadcast_power"});
 
 NNVM_REGISTER_OP(_backward_npi_broadcast_power)

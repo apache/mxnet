@@ -917,7 +917,7 @@ void NumpyConcatenateForward(const nnvm::NodeAttrs& attrs,
   ConcatParam cparam;
   cparam.num_args = param.num_args;
   cparam.dim = param.axis.has_value() ? param.axis.value() : 0;
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
     ConcatOp<xpu, DType> op;
     op.Init(cparam);
     op.Forward(ctx, data, req, outputs);
@@ -950,7 +950,7 @@ void NumpyConcatenateBackward(const nnvm::NodeAttrs& attrs,
   ConcatParam cparam;
   cparam.num_args = param.num_args;
   cparam.dim = param.axis.has_value() ? param.axis.value() : 0;
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
     ConcatOp<xpu, DType> op;
     op.Init(cparam);
     op.Backward(ctx, inputs[0], req, data);
