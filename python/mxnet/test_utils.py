@@ -96,6 +96,12 @@ def default_atols():
             np.dtype(np.int64): 0,
             np.dtype(np.uint64): 0}
 
+def default_numeric_eps():
+    """Get default epsilon for finite difference gradient calculations with data type."""
+    return {np.dtype(np.float16): 1.0 / 2**6,
+            np.dtype(np.float32): 1.0 / 2**9,
+            np.dtype(np.float64): 1.0 / 2**15}
+
 def get_tolerance(dat, tol, default_tol):
     """ Return the tolerance to used for dat comparisons based on the given tol, datatype and context.
     Parameters
@@ -655,7 +661,6 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
         a = a.asnumpy()
     if isinstance(b, mx.numpy.ndarray):
         b = b.asnumpy()
-#    print('Using rtol, atol = {}, {}'.format(rtol, atol))
     use_np_allclose = isinstance(a, np.ndarray) and isinstance(b, np.ndarray)
     if not use_np_allclose:
         if not (hasattr(a, 'ctx') and hasattr(b, 'ctx') and a.ctx == b.ctx and a.dtype == b.dtype):
@@ -1029,7 +1034,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
 
     return approx_grads
 
-def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
+def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=None, rtol=None,
                            atol=None, grad_nodes=None, use_forward_train=True, ctx=None,
                            grad_stype_dict=None, dtype=default_dtype()):
     """Verify an operation by checking backward pass via finite difference method.
@@ -1054,8 +1059,10 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         The auxiliary states required when generating the executor for the symbol.
     numeric_eps : float, optional
         Delta for the finite difference method that approximates the gradient.
-    check_eps : float, optional
-        relative error eps used when comparing numeric grad to symbolic grad.
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to ``None``.
     grad_nodes : None or list or tuple or dict, optional
         Names of the nodes to check gradient on
     use_forward_train : bool
@@ -1072,9 +1079,6 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     [1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
     assert dtype in (np.float16, np.float32, np.float64)
-    # cannot use finite differences with small eps without high precision
-    if dtype in (np.float32, np.float16):
-        assert numeric_eps >= 1e-5
     if ctx is None:
         ctx = default_context()
 
@@ -1149,18 +1153,18 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
     executor.forward(is_train=True)
     assert len(executor.outputs) == 1
+
+    eps = get_tolerance(executor.outputs[0], numeric_eps, default_numeric_eps())
+    # cannot use finite differences with small eps without high precision
+    if dtype in (np.float32, np.float16):
+        assert eps >= 1e-5
+
     executor.backward()
-    symbolic_grads = {}
-    for k in grad_nodes:
-        grad_k = executor.grad_dict[k]
-        if grad_k is not None:
-            symbolic_grads[k] = grad_k.asnumpy()
-        else:
-            symbolic_grads[k] = None
+    symbolic_grads = executor.grad_dict
 
     numeric_gradients = numeric_grad(
         executor, location_npy, aux_states_npy,
-        eps=numeric_eps, use_forward_train=use_forward_train, dtype=dtype)
+        eps=eps, use_forward_train=use_forward_train, dtype=dtype)
 
     for name in grad_nodes:
         fd_grad = numeric_gradients[name]
@@ -1178,7 +1182,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
             raise ValueError("Invalid grad_req %s for argument %s"%(grad_req[name], name))
 
 
-def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
+def check_symbolic_forward(sym, location, expected, rtol=None, atol=None,
                            aux_states=None, ctx=None, equal_nan=False,
                            dtype=default_dtype()):
     """Compares a symbol's forward results with the expected ones.
@@ -1202,8 +1206,10 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains arrays corresponding to exe.outputs.
         - if type is dict of str to np.ndarray
             Contains mapping between sym.list_output() and exe.outputs.
-    check_eps : float, optional
-        Relative error to check to.
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to ``None``.
     aux_states : list of np.ndarray of dict, optional
         - if type is list of np.ndarray
             Contains all the NumPy arrays corresponding to sym.list_auxiliary_states
@@ -1252,14 +1258,14 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
     executor.forward(is_train=False)
 
-    outputs = [x.asnumpy() for x in executor.outputs]
+    outputs = executor.outputs
     for output_name, expect, output in zip(sym.list_outputs(), expected, outputs):
         assert_almost_equal(expect, output, rtol, atol,
                             ("EXPECTED_%s"%output_name, "FORWARD_%s"%output_name),
                             equal_nan=equal_nan)
     return executor.outputs
 
-def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=None,
+def check_symbolic_backward(sym, location, out_grads, expected, rtol=None, atol=None,
                             aux_states=None, grad_req='write', ctx=None, grad_stypes=None,
                             equal_nan=False, dtype=default_dtype()):
     """Compares a symbol's backward results with the expected ones.
@@ -1290,8 +1296,10 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
             Contains arrays corresponding to exe.grad_arrays
         - if type is dict of str to np.ndarray
             Contains mapping between ``sym.list_arguments()`` and exe.outputs.
-    check_eps: float, optional
-        Relative error to check to.
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to ``None``.
     aux_states : list of np.ndarray or dict of str to np.ndarray
     grad_req : str or list of str or dict of str to str, optional
         Gradient requirements. 'write', 'add' or 'null'.
@@ -1377,7 +1385,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         assert out_grads is None
     executor.backward(out_grads)
 
-    grads = {k: v.asnumpy() for k, v in args_grad_data.items()}
+    grads = args_grad_data
 
     for name in expected:
         if grad_req[name] == 'write':

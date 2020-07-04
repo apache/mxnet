@@ -458,21 +458,26 @@ def test_symbol_pow():
 
 @with_seed()
 def test_fully_connected():
+    # Create data of given shape as a uniform distribution centered on 0.0
+    def random_data(shape, dtype=np.float32):
+        return mx.nd.random.uniform(low=-0.5,
+                                    high=0.5, shape=shape, dtype=dtype)
     data = mx.sym.var("data")
     fc_weight = mx.sym.var("weight")
     fc_bias = mx.sym.var("bias")
     fc = mx.sym.FullyConnected(data=data, weight=fc_weight, bias=fc_bias, num_hidden=10, no_bias=False, name='fc')
-    data = mx.nd.random.uniform(shape=(5, 5, 5, 13), dtype=np.float32)
-    fc_weight = mx.nd.random.uniform(shape=(10, 325), dtype=np.float32)
-    fc_bias = mx.nd.random.uniform(shape=(10), dtype=np.float32)
-    fc_bias2 = mx.nd.random.uniform(shape=(10, 1), dtype=np.float32)
+
+    data = random_data(shape=(5, 5, 5, 13))
+    fc_weight = random_data(shape=(10, 325))
+    fc_bias = random_data(shape=(10))
+    fc_bias2 = random_data(shape=(10, 1))
+
     data_np = data.asnumpy().reshape(5, 325)
     fc_weight_np = np.transpose(fc_weight.asnumpy())
     fc_bias_np = fc_bias.asnumpy()
     res = np.dot(data_np, fc_weight_np) + fc_bias.asnumpy()
     check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np}, {'fc_output': res})
-    check_numeric_gradient(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np},
-                           numeric_eps=1e-2, rtol=1e-4, atol=1e-2)
+    check_numeric_gradient(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np})
     # TODO: Fix Bug #15032 when bias has ndim > 1
     #check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias2.asnumpy()}, {'fc_output': res})
 
@@ -5900,10 +5905,11 @@ def test_deformable_psroipooling():
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
-def _gemm_test_helper(dtype, grad_check, rtol_fw = 1e-7, atol_fw = 1e-9):
-    num_eps = 1e-6
-    rtol_bw = 1e-5
-    atol_bw = 1e-6
+def _gemm_test_helper(dtype, grad_check, rtol_fw = None, atol_fw = None,
+                                         rtol_bw = None, atol_bw = None, num_eps = None):
+    def np_random_data(shape, dtype=np.float32):
+        return np.random.uniform(low=-0.5,
+                                 high=0.5, size=shape).astype(dtype)
 
     data1 = mx.symbol.Variable('data1')
     data2 = mx.symbol.Variable('data2')
@@ -5922,10 +5928,10 @@ def _gemm_test_helper(dtype, grad_check, rtol_fw = 1e-7, atol_fw = 1e-9):
     shape2 = (3, 2)
     shape3 = (3, 3)
     shape4 = (2, 2)
-    data_in1 = np.random.uniform(1, 10, shape1).astype(dtype)
-    data_in2 = np.random.uniform(1, 10, shape2).astype(dtype)
-    data_in3 = np.random.uniform(1, 10, shape3).astype(dtype)
-    data_in4 = np.random.uniform(1, 10, shape4).astype(dtype)
+    data_in1 = np_random_data(shape1, dtype)
+    data_in2 = np_random_data(shape2, dtype)
+    data_in3 = np_random_data(shape3, dtype)
+    data_in4 = np_random_data(shape4, dtype)
     # Check all transpositions of gemm operator.
     data_in1_t = np.transpose(data_in1)
     data_in2_t = np.transpose(data_in2)
@@ -6032,10 +6038,10 @@ def _gemm_test_helper(dtype, grad_check, rtol_fw = 1e-7, atol_fw = 1e-9):
 def test_gemm():
     _gemm_test_helper(np.float64, True)
     os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "0"
-    _gemm_test_helper(np.float32, False, rtol_fw = 1e-5, atol_fw = 1e-7)
+    _gemm_test_helper(np.float32, True)
     if default_context().device_type == 'gpu':
         os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "1"
-        _gemm_test_helper(np.float32, False, rtol_fw = 2e-5, atol_fw = 2e-7)
+        _gemm_test_helper(np.float32, True)
         os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "0"
 
 # Helper functions for test_laop
