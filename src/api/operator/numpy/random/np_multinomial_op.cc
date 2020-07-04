@@ -69,7 +69,6 @@ MXNET_REGISTER_API("_npi.multinomial")
   inputs = num_inputs == 0 ? nullptr : inputs;
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, 0, nullptr);
   *ret = ndoutputs[0];
-
 });
 
 }  // namespace mxnet
