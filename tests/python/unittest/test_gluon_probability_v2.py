@@ -2203,7 +2203,7 @@ def test_gluon_kl():
                 _test_monte_carlo(lhs_dist, rhs_dist, repeated_times)
 
 
-@pytest.mark.skip("test whether is the cause of memory leak")
+@pytest.mark.garbage_expected
 @with_seed()
 @use_np
 def test_gluon_stochastic_block():
@@ -2237,7 +2237,6 @@ def test_gluon_stochastic_block():
             net.export('dummyBlock', epoch=0)
 
 
-@pytest.mark.skip("test whether is the cause of memory leak")
 @with_seed()
 @use_np
 def test_gluon_stochastic_block_exception():
@@ -2261,7 +2260,7 @@ def test_gluon_stochastic_block_exception():
             mx_out = net(loc, scale).asnumpy()
 
 
-@pytest.mark.skip("test whether is the cause of memory leak")
+@pytest.mark.skip("Would cause ndarray memory leak")
 @with_seed()
 @use_np
 def test_gluon_stochastic_sequential():
