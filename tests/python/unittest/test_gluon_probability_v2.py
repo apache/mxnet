@@ -2260,7 +2260,7 @@ def test_gluon_stochastic_block_exception():
             mx_out = net(loc, scale).asnumpy()
 
 
-@pytest.mark.skip("Would cause ndarray memory leak")
+@pytest.mark.garbage_expected
 @with_seed()
 @use_np
 def test_gluon_stochastic_sequential():
