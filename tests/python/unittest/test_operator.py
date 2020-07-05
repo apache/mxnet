@@ -4079,7 +4079,7 @@ def test_order():
                 out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=a_npy.size, is_ascend=is_ascend)
             else:
                 out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=5, is_ascend=is_ascend)
-            check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, ctx=ctx)
+            check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, rtol=1e-2, ctx=ctx)
             check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
 
     b = mx.sym.topk(a, axis=1, is_ascend=is_ascend, ret_typ="indices", k=5)
@@ -4127,7 +4127,7 @@ def test_order():
                 for is_ascend in [True, False]:
                     b = mx.sym.topk(a, axis=axis, is_ascend=is_ascend, ret_typ="value", k=k)
                     out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=k, is_ascend=is_ascend)
-                    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, ctx=ctx)
+                    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, rtol=1e-2, ctx=ctx)
                     check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
 
         b = mx.sym.topk(a, axis=1, is_ascend=is_ascend, ret_typ="indices", k=5)
