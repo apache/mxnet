@@ -766,7 +766,7 @@ def test_unix_python3_mkl_cpu(lib_name) {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu') {
           try {
-            utils.unpack_and_init(lib_name, mx_lib, true)
+            utils.unpack_and_init(lib_name, mx_lib)
             python3_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
@@ -848,7 +848,7 @@ def test_unix_python3_mkldnn_mkl_cpu(lib_name) {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-mkldnn-mkl-cpu') {
           try {
-            utils.unpack_and_init(lib_name, mx_lib, true)
+            utils.unpack_and_init(lib_name, mx_lib)
             python3_ut_mkldnn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
