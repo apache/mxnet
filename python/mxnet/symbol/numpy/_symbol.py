@@ -1529,13 +1529,15 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
         if isinstance(rhs, numeric_types):
             return fn_scalar(lhs, rhs, out=out)
         else:
+            is_int = isinstance(rhs, integer_types)
             if rfn_scalar is None:
                 # commutative function
-                return lfn_scalar(rhs, float(lhs), out=out)
+                return lfn_scalar(rhs, scalar=float(lhs), is_int=is_int, out=out)
             else:
-                return rfn_scalar(rhs, float(lhs), out=out)
+                return rfn_scalar(rhs, scalar=float(lhs), is_int=is_int, out=out)
     elif isinstance(rhs, numeric_types):
-        return lfn_scalar(lhs, float(rhs), out=out)
+        is_int = isinstance(rhs, integer_types)
+        return lfn_scalar(lhs, scalar=float(rhs), is_int=is_int, out=out)
     elif isinstance(rhs, Symbol):
         return fn_array(lhs, rhs, out=out)
     else:
