@@ -1568,26 +1568,15 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     def smaller_dtype(dt1, dt2):
         return dt1 if dt2 is None or np.dtype(dt1).itemsize < np.dtype(dt2).itemsize else dt2
 
-    # For input data, use the rand_type arg if set, but otherwise determine the least-precise
-    # dtype for each input across all models.  This becomes the precision of the
-    # random input values, so each model will get the exact same input values.
-    arg_param_dtypes = {}
-    if rand_type is None:
-        for exe in exe_list:
-            for n, arr in exe.arg_dict.items():
-                if n not in arg_params:
-                    arg_param_dtypes[n] = smaller_dtype(arr.dtype, arg_param_dtypes.get(n))
-
     # It's important to assign random inputs in a deterministic order, for reproducibility.
     for n, arr in _sorted_items(exe_list[0].arg_dict):
         if n not in arg_params:
-            rand_dtype = rand_type if rand_type is not None else arg_param_dtypes[n]
             if use_uniform:
                 arg_params[n] = np.random.uniform(low=-0.92 * scale, high=0.92 * scale,
-                                                  size=arr.shape).astype(rand_dtype)
+                                                  size=arr.shape).astype(rand_type)
             else:
                 arg_params[n] = np.random.normal(size=arr.shape,
-                                                 scale=scale).astype(rand_dtype)
+                                                 scale=scale).astype(rand_type)
     for n, arr in exe_list[0].aux_dict.items():
         if n not in aux_params:
             aux_params[n] = 0
