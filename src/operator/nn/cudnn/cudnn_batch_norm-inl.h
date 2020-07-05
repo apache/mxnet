@@ -273,7 +273,8 @@ class CuDNNBatchNormOp {
         shape_[0] = in_data.shape_[0];
         shape_[1] = in_data.ndim() > 1 ? in_data.shape_[1] : 1;
         shape_[2] = 1;
-        shape_[3] = in_data.shape_.ProdShape(2, in_data.ndim());
+        shape_[3] = static_cast<dim_t>(in_data.shape_.ProdShape(2,
+              in_data.ndim()));
       }
     } else {
       // reshape to (N, C, 1, D), C is the `param_.axis` dimension
@@ -281,7 +282,7 @@ class CuDNNBatchNormOp {
       shape_[1] = in_data.shape_[param_.axis];
       shape_[2] = 1;
       shape_[3] = static_cast<dim_t>(in_data.shape_.ProdShape(param_.axis + 1,
-            static_cast<int>(in_data.ndim())));
+            in_data.ndim()));
     }
 
     CUDNN_CALL(cudnnSetTensor4dDescriptor(io_desc_,
