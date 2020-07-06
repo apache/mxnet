@@ -138,6 +138,8 @@ footer.mdl-mini-footer {
   background-color: #424242;
   padding-top: 40px;
   padding-bottom: 10px;
+  position: relative;
+  z-index: 10;
 }
 
 .footer-heading {
