@@ -344,7 +344,6 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
                                   ctx.run_ctx.get_ctx().dev_id,
                                   lead_input_num);
     }
-
   }
 }
 

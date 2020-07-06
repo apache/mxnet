@@ -194,7 +194,6 @@ build_jetson() {
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="5.2" \
-        -DENABLE_CUDA_RTC=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
         -DUSE_LAPACK=OFF \

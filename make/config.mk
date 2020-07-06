@@ -77,9 +77,6 @@ USE_CUDA = 0
 # USE_CUDA_PATH = /usr/local/cuda
 USE_CUDA_PATH = NONE
 
-# whether to enable CUDA runtime compilation
-ENABLE_CUDA_RTC = 1
-
 # whether use CuDNN R3 library
 USE_CUDNN = 0
 

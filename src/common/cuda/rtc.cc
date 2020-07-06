@@ -110,8 +110,10 @@ CUfunction get_function(const std::string &parameters,
   // Per-gpu-architecture compiled kernel cache with jit-compiled function for each device context
   static std::unordered_map<int32_t, KernelCache> compiled_kernels;
   int sm_arch = SMArch(dev_id);
-  KernelCache& compiled_kernels_this_arch = compiled_kernels[sm_arch];       // make null map as needed
-  KernelInfo& kinfo = compiled_kernels_this_arch[parameters + kernel_name];  // make KernelInfo as needed
+  // make null map as needed
+  KernelCache& compiled_kernels_this_arch = compiled_kernels[sm_arch];
+  // make KernelInfo as needed
+  KernelInfo& kinfo = compiled_kernels_this_arch[parameters + kernel_name];
   if (kinfo.ptx.size() == 0) {
     // It's the first time we've seen this kernel, so we need to generate the ptx and mangled_name.
     static std::string common_header =

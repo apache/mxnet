@@ -75,9 +75,6 @@ USE_CUDNN = 0
 # For CUDA < 6.0, comment the *_50 lines for compatibility.
 # CUDA_ARCH :=
 
-# whether use cuda runtime compiling for writing kernels in native language (i.e. Python)
-ENABLE_CUDA_RTC = 0
-
 # use openmp for parallelization
 USE_OPENMP = 0
 USE_OPERATOR_TUNING = 1

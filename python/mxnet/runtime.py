@@ -37,7 +37,7 @@ Example usage:
     True
 
     print(features)
-    [✖ CUDA, ✖ CUDNN, ✖ NCCL, ✖ CUDA_RTC, ✖ TENSORRT, ✔ CPU_SSE, ✔ CPU_SSE2, ✔ CPU_SSE3,
+    [✖ CUDA, ✖ CUDNN, ✖ NCCL, ✖ TENSORRT, ✔ CPU_SSE, ✔ CPU_SSE2, ✔ CPU_SSE3,
     ✔ CPU_SSE4_1, ✔ CPU_SSE4_2, ✖ CPU_SSE4A, ✔ CPU_AVX, ✖ CPU_AVX2, ✔ OPENMP, ✖ SSE,
     ✔ F16C, ✔ JEMALLOC, ✔ BLAS_OPEN, ✖ BLAS_ATLAS, ✖ BLAS_MKL, ✖ BLAS_APPLE, ✔ LAPACK,
     ✖ MKLDNN, ✔ OPENCV, ✖ CAFFE, ✖ DIST_KVSTORE, ✖ CXX14, ✖ INT64_TENSOR_SIZE,

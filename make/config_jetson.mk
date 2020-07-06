@@ -77,9 +77,6 @@ USE_CUDA_PATH = /usr/local/cuda
 # CUDA_ARCH setting
 CUDA_ARCH = -gencode arch=compute_53,code=sm_53 -gencode arch=compute_62,code=sm_62 -gencode arch=compute_72,code=sm_72
 
-# whether to enable CUDA runtime compilation
-ENABLE_CUDA_RTC = 0
-
 # whether use CuDNN R3 library
 USE_CUDNN = 1
 
