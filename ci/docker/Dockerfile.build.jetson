@@ -42,7 +42,8 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
  && rm -rf /var/lib/apt/lists/*
 
 # cmake on Ubuntu 18.04 is too old
-RUN python3 -m pip install cmake
+# cmake 3.17.3 does not correctly set the host compiler for NVCC, see https://gitlab.kitware.com/cmake/cmake/-/issues/20826
+RUN python3 -m pip install cmake==3.17.1
 
 # ccache on Ubuntu 18.04 is too old to support Cuda correctly
 COPY install/deb_ubuntu_ccache.sh /work/
@@ -72,6 +73,18 @@ RUN aws s3 cp s3://mxnet-ci-prod-private-slave-data/nvidia/sdkm_downloads/cuda-r
     apt-get install -y -f && \
     apt-get install -y cuda-cross-aarch64 cuda-cross-aarch64-10-0 && \
     rm -rf /var/lib/apt/lists/*
+
+RUN aws s3 cp s3://mxnet-ci-prod-private-slave-data/nvidia/sdkm_downloads/cuda-repo-l4t-10-0-local-10.0.326_1.0-1_arm64.deb && \
+    mkdir cuda_repo_l4t && \
+    dpkg -x cuda-repo-l4t-10-0-local-10.0.326_1.0-1_arm64.deb cuda_repo_l4t && \
+    rm cuda-repo-l4t-10-0-local-10.0.326_1.0-1_arm64.deb && \
+    mkdir cuda_l4t && \
+    cd cuda_l4t && \
+    for f in ../cuda_repo_l4t/var/cuda-repo-10-0-local-10.0.326/*.deb; do dpkg -x $f .; done && \
+    cp -r usr/local/cuda-10.0/targets/aarch64-linux/ /usr/local/cuda-10.0/targets && \
+    cp /usr/local/cuda/targets/aarch64-linux/lib/stubs/libcuda.so /usr/aarch64-linux-gnu/lib && \
+    cd - && \
+    rm -rf cuda_repo_l4t cuda_l4t
 
 ARG USER_ID=0
 ARG GROUP_ID=0
