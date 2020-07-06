@@ -5359,51 +5359,62 @@ def test_div_sqrt_dim():
     check_symbolic_forward(test, [data_tmp], [data_tmp / np.sqrt(data_tmp.shape[-1])])
 
 
+# helper function to identify inputs likely to fail check_numeric_gradient tol test
+# due to finite difference method inaccuracies or function discontuities at the origin
+def bad_input_finder(f, f_grad, dtype):
+    eps = default_numeric_eps()[np.dtype(dtype)]
+    rtol = default_rtols()[np.dtype(dtype)]
+    def expected_relative_error(x):
+        fd_gradient = (f(x+eps/2) - f(x-eps/2)) / eps
+        return abs(fd_gradient/f_grad(x) - 1)
+    def is_fd_problem_input(x):
+        return abs(x) < eps/2 or expected_relative_error(x) > rtol
+    return np.vectorize(is_fd_problem_input)
+
 @with_seed()
 def test_reciprocal_op():
-    eps = 2**(-11)
-    data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid possible division by 0 errors and finite difference method inaccuracies.
-    # Factor of 6 below set empirically, depends on eps.
-    # Issue exposed by seed 879579887.
-    # Replace problematic inputs with 1.0.
-    data_tmp[abs(data_tmp) < 6*eps] = 1.0
+    data_tmp = np.random.rand(3, 4).astype(np.float32) * 10 - 5
+
+    # Avoid possible division by 0 errors and finite difference method
+    # inaccuracies by replacing problem inputs with 1.0.
+    is_bad_input = bad_input_finder(np.reciprocal,
+                                    lambda x: -np.reciprocal(x)**2, np.float32)
+    data_tmp[is_bad_input(data_tmp)] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.reciprocal(data)
 
-    check_numeric_gradient(test, [data_tmp], numeric_eps = eps)
+    check_numeric_gradient(test, [data_tmp])
     check_symbolic_forward(test, [data_tmp], [np.reciprocal(data_tmp)])
 
 
 @with_seed()
 def test_cbrt_op():
-    eps = 2**(-11)
-    data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid finite difference method inaccuracies due to infinite gradient at the origin.
-    # Factor of 4 below set empirically, depends on eps.
-    # Issue exposed by seed 553872106.
-    # Replace problematic inputs with 1.0.
-    data_tmp[abs(data_tmp) < 4*eps] = 1.0
+    data_tmp = np.random.rand(3, 4).astype(np.float32) * 10 - 5
+
+    # Avoid possible division by 0 errors and finite difference method
+    # inaccuracies by replacing problem inputs with 1.0.
+    is_bad_input = bad_input_finder(np.cbrt,
+                                    lambda x: 1./(3 * np.cbrt(x)**2), np.float32)
+    data_tmp[is_bad_input(data_tmp)] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.cbrt(data)
-
-    check_numeric_gradient(test, [data_tmp], numeric_eps=eps)
+    check_numeric_gradient(test, [data_tmp])
     check_symbolic_forward(test, [data_tmp], [np.cbrt(data_tmp)])
 
 
 @with_seed()
 def test_rcbrt_op():
-    eps = 2**(-11)
-    data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid possible division by 0 errors and finite difference method inaccuracies.
-    # Factor of 4 below set empirically, depends on eps.
-    # Issue exposed by seed 788174893.
-    # Replace problematic inputs with 1.0.
-    data_tmp[abs(data_tmp) < 4*eps] = 1.0
+    data_tmp = np.random.rand(3, 4).astype(np.float32) * 10 - 5
+
+    # Avoid possible division by 0 errors and finite difference method
+    # inaccuracies by replacing problem inputs with 1.0.
+    is_bad_input = bad_input_finder(lambda x: 1./np.cbrt(x),
+                                    lambda x: -1./(3 * np.cbrt(x)**4), np.float32)
+    data_tmp[is_bad_input(data_tmp)] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.rcbrt(data)
 
-    check_numeric_gradient(test, [data_tmp], numeric_eps = eps)
+    check_numeric_gradient(test, [data_tmp])
     check_symbolic_forward(test, [data_tmp], [1/np.cbrt(data_tmp)])
 
 
