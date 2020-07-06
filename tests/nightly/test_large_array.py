@@ -27,9 +27,9 @@ sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
 from mxnet import gluon, nd
-from common import with_seed, with_post_test_cleanup
-from nose.tools import with_setup
-import unittest
+from common import with_seed
+import pytest
+
 
 # dimension constants
 MEDIUM_X = 10000
@@ -42,6 +42,7 @@ LARGE_TENSOR_SHAPE = 2**32
 RNN_LARGE_TENSOR = 2**28
 
 
+@pytest.mark.timeout(0)
 def test_nn():
     def check_gluon_embedding():
         m = gluon.nn.Embedding(SMALL_Y, MEDIUM_X)
@@ -99,36 +100,6 @@ def test_nn():
         assert_almost_equal(mx_softmax_cross_entropy.asnumpy(),
                             true_softmax_cross_entropy, rtol=1e-3, atol=1e-5)
 
-    def check_softmax_output():
-        x = mx.sym.Variable('x')
-        label = mx.sym.Variable('label')
-        x_nd = mx.nd.ones((LARGE_X, SMALL_Y))
-        grad_x = mx.nd.zeros((LARGE_X, SMALL_Y))
-        label_nd = mx.nd.ones((LARGE_X))
-        sym = mx.sym.SoftmaxOutput(data=x, label=label, ignore_label=0,
-                                   use_ignore=False)
-
-        ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
-                      args_grad=None)
-        ex.forward(is_train=False)
-        softmax_out = ex.outputs[0][0].asnumpy()
-        expected_softmax_out = (1 / SMALL_Y) * mx.nd.ones((SMALL_Y)).asnumpy()
-        assert np.isclose(softmax_out, expected_softmax_out).all()
-
-        ex = sym.bind(ctx=default_context(), args={'x': x_nd, 'label': label_nd},
-                      args_grad={'x': grad_x})
-        ex.forward(is_train=True)
-        softmax_out = ex.outputs[0][0].asnumpy()
-        expected_softmax_out = (1 / SMALL_Y) * mx.nd.ones((SMALL_Y)).asnumpy()
-        assert np.isclose(softmax_out, expected_softmax_out).all()
-
-        ex.backward(is_train=True)
-        grad_out = ex.grad_arrays[0][0].asnumpy()
-        k = int(label_nd[0].asscalar())
-        expected_grad_out = np.zeros((SMALL_Y,))
-        expected_grad_out[k] = -1
-        assert np.isclose(grad_out - softmax_out, expected_grad_out).all()
-
     def check_softmax_activation():
         data = nd.random_normal(shape=(2**29, 2, 2, 2))
         out = nd.random_normal(shape=(2**29, 2, 2, 2))
@@ -146,8 +117,8 @@ def test_nn():
         x /= np.sum(x, axis=axis, keepdims=True)
         return x
 
-    @unittest.skip("log_softmax flaky, tracked at "
-                   "https://github.com/apache/incubator-mxnet/issues/17397")
+    @pytest.mark.skip(reason="log_softmax flaky, tracked at "
+                      "https://github.com/apache/incubator-mxnet/issues/17397")
     def check_log_softmax():
         ndim = 2
         shape = (SMALL_Y, LARGE_X)
@@ -244,7 +215,7 @@ def test_nn():
         beta_s = mx.symbol.Variable('beta')
         out_s = mx.symbol.LayerNorm(data=data_s, gamma=gamma_s, beta=beta_s,
                                     axis=axis, eps=eps)
-        exe = out_s.simple_bind(ctx, data=in_shape)
+        exe = out_s._simple_bind(ctx, data=in_shape)
         exe.arg_dict['data'][:] = data
         exe.arg_dict['gamma'][:] = gamma
         exe.arg_dict['beta'][:] = beta
@@ -260,7 +231,7 @@ def test_nn():
         shape = (LARGE_X, SMALL_Y)
         x = mx.sym.var('data')
         y = mx.sym.Dropout(x, p=1, cudnn_off=True)
-        exe = y.simple_bind(ctx=default_context(), data=shape)
+        exe = y._simple_bind(ctx=default_context(), data=shape)
         exe.arg_arrays[0][:] = 1
         out = exe.forward(is_train=True)
         nd.waitall()
@@ -357,42 +328,6 @@ def test_nn():
         ya = fsigmoid(xa)
         check_symbolic_forward(y, [xa], [ya])
 
-    def check_linear_and_logistic_regression():
-        shape = (LARGE_X, SMALL_Y)
-
-        def check_regression(symbol, forward, backward, shape):
-            # init executor
-            data_s = mx.symbol.Variable('data')
-            label_s = mx.symbol.Variable('label')
-            out_s = symbol(data=data_s, label=label_s)
-            grad_req = {'data': 'write', 'label': 'null'}
-            exe = out_s.simple_bind(ctx=default_context(), data=shape, label=shape, grad_req=grad_req)
-            arg_map = dict(zip(out_s.list_arguments(), exe.arg_arrays))
-            grad_map = dict(zip(out_s.list_arguments(), exe.grad_arrays))
-            # init data
-            data = mx.random.uniform(-1, -1, shape)
-            arg_map["data"][:] = data
-            atol = 1e-5
-            density = 0.5
-            stype = 'default'
-            label = arg_map["label"]
-            label[:] = rand_ndarray(shape, stype, density=density)
-            exe.forward(is_train=True)
-            exe.backward()
-            np_out = forward(data.asnumpy())
-            out_grad = backward(np_out, label.asnumpy().reshape(np_out.shape)) / shape[1]
-            assert_almost_equal(exe.outputs[0].asnumpy(), np_out, atol=atol)
-            assert_almost_equal(grad_map["data"].asnumpy(), out_grad, atol=atol)
-
-        check_regression(mx.symbol.LogisticRegressionOutput,
-                         lambda x: 1.0 / (1.0 + np.exp(-x)),
-                         lambda x, y: x - y,
-                         shape)
-        check_regression(mx.symbol.LinearRegressionOutput,
-                         lambda x: x,
-                         lambda x, y: x - y,
-                         shape)
-
     def check_l2_normalization():
         x = nd.ones((2, LARGE_X*2))
         x[0] = 3
@@ -447,7 +382,7 @@ def test_nn():
         beta_s = mx.symbol.Variable('beta')
         out_s = mx.symbol.InstanceNorm(data=data_s, gamma=gamma_s, beta=beta_s,
                                        eps=eps)
-        exe = out_s.simple_bind(ctx, data=in_shape)
+        exe = out_s._simple_bind(ctx, data=in_shape)
         exe.arg_dict['data'][:] = data
         exe.arg_dict['gamma'][:] = gamma
         exe.arg_dict['beta'][:] = beta
@@ -469,7 +404,7 @@ def test_nn():
         assert res.shape[2] == 2
         assert res.shape[3] == 2
         assert res.shape[4] == 1
-        
+
     def check_embedding():
         data = nd.random_normal(shape=(LARGE_TENSOR_SHAPE, 1))
         weight = nd.random_normal(shape=(LARGE_TENSOR_SHAPE, 1))
@@ -480,7 +415,7 @@ def test_nn():
 
         assert out.shape[0] == LARGE_TENSOR_SHAPE
         assert out.shape[1] == 1
-        
+
     def check_spatial_transformer():
         data = nd.random_normal(shape=(2, 2**29, 1, 6))
         loc = nd.random_normal(shape=(2, 6))
@@ -495,7 +430,7 @@ def test_nn():
         assert res.shape[1] == 536870912
         assert res.shape[2] == 2
         assert res.shape[3] == 6
-        
+
     def check_ravel():
         data = nd.random_normal(shape=(2, LARGE_TENSOR_SHAPE))
         shape = (2, 10)
@@ -530,7 +465,7 @@ def test_nn():
 
         # Trigger lazy evaluation of the output NDArray and ensure that it has been filled
         assert type(out[0, 0].asscalar()).__name__ == 'float32'
-        
+
     def check_rnn():
         data = nd.random_normal(shape=(RNN_LARGE_TENSOR, 4, 4))
         parameters_relu_tanh = nd.random_normal(shape=(7,))
@@ -547,10 +482,10 @@ def test_nn():
 
         out_relu = nd.RNN(data=data, parameters=parameters_relu_tanh, state=state, mode=mode_relu,
                           state_size=state_size, num_layers=num_layers)
-        
+
         out_tanh = nd.RNN(data=data, parameters=parameters_relu_tanh, state=state, mode=mode_tanh,
                           state_size=state_size, num_layers=num_layers)
-        
+
         out_lstm = nd.RNN(data=data, parameters=parameters_lstm, state=state, mode=mode_lstm,
                           state_cell=state_cell, state_size=state_size, num_layers=num_layers)
 
@@ -569,7 +504,6 @@ def test_nn():
     check_dense()
     check_softmax()
     check_softmax_cross_entropy()
-    check_softmax_output()
     check_softmax_activation()
     check_log_softmax()
     check_leaky_relu()
@@ -580,7 +514,6 @@ def test_nn():
     check_batchnorm()
     check_relu()
     check_sigmoid()
-    check_linear_and_logistic_regression()
     check_l2_normalization()
     check_instance_norm()
     check_col2im()
@@ -592,6 +525,7 @@ def test_nn():
     check_rnn()
 
 
+@pytest.mark.timeout(0)
 def test_tensor():
     def check_ndarray_zeros():
         a = nd.zeros(shape=(LARGE_X, SMALL_Y))
@@ -609,8 +543,8 @@ def test_tensor():
         a = nd.random.uniform(shape=(LARGE_X, SMALL_Y))
         assert a[-1][0] != 0
 
-    @unittest.skip("Randint flaky, tracked at "
-                   "https://github.com/apache/incubator-mxnet/issues/16172")
+    @pytest.mark.skip(reason="Randint flaky, tracked at "
+                      "https://github.com/apache/incubator-mxnet/issues/16172")
     @with_seed()
     def check_ndarray_random_randint():
         a = nd.random.randint(100, 10000, shape=(LARGE_X, SMALL_Y))
@@ -823,8 +757,8 @@ def test_tensor():
         res = mx.nd.pick(a, b)
         assert res.shape == b.shape
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, "
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, "
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_depthtospace():
         def numpy_depth_to_space(x, blocksize):
             b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
@@ -842,8 +776,8 @@ def test_tensor():
         output = mx.nd.depth_to_space(data, 2)
         assert_almost_equal(output.asnumpy(), expected, atol=1e-3, rtol=1e-3)
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, "
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, "
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_spacetodepth():
         def numpy_space_to_depth(x, blocksize):
             b, c, h, w = x.shape[0], x.shape[1], x.shape[2], x.shape[3]
@@ -907,8 +841,8 @@ def test_tensor():
                                          shape=(LARGE_X, SMALL_Y))
         assert (indices_2d.asnumpy() == np.array(original_2d_indices)).all()
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_transpose():
         check_dtypes = [np.float32, np.int64]
         for dtype in check_dtypes:
@@ -918,16 +852,16 @@ def test_tensor():
             ref_out = np.transpose(b.asnumpy())
             assert_almost_equal(t.asnumpy(), ref_out, rtol=1e-10)
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_swapaxes():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         t = nd.swapaxes(b, dim1=0, dim2=1)
         assert np.sum(t[:, -1].asnumpy() == (LARGE_X - 1)) == b.shape[1]
         assert t.shape == (SMALL_Y, LARGE_X)
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_flip():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         t = nd.flip(b, axis=0)
@@ -1097,13 +1031,13 @@ def test_tensor():
 
     def check_load_save():
         x = create_2d_tensor(SMALL_Y, LARGE_X)
-        tmp = tempfile.mkdtemp()
-        tmpfile = os.path.join(tmp, 'large_tensor')
-        nd.save(tmpfile, [x])
-        y = nd.load(tmpfile)
-        y = y[0]
-        assert x[0][0] == y[0][0]
-        assert x[-1][-1]== y[-1][-1]
+        with tempfile.TemporaryDirectory() as tmp:
+            tmpfile = os.path.join(tmp, 'large_tensor')
+            nd.save(tmpfile, [x])
+            y = nd.load(tmpfile)
+            y = y[0]
+            assert x[0][0] == y[0][0]
+            assert x[-1][-1]== y[-1][-1]
 
     def check_pad():
         x = create_2d_tensor(rows=SMALL_Y-2, columns=LARGE_X//2-2, dtype=np.float32).reshape(1 , 1, SMALL_Y-2, LARGE_X//2-2)
@@ -1197,6 +1131,7 @@ def test_tensor():
     check_binary_broadcast()
 
 
+@pytest.mark.timeout(0)
 def test_basic():
     def check_elementwise():
         a = nd.ones(shape=(LARGE_X, SMALL_Y))
@@ -1223,16 +1158,16 @@ def test_basic():
         idx = mx.nd.argmin(a, axis=0)
         assert idx.shape[0] == SMALL_Y
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_argsort():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         s = nd.argsort(b, axis=0, is_ascend=False, dtype=np.int64)
         mx.nd.waitall()
         assert (s[0].asnumpy() == (LARGE_X - 1)).all()
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_sort():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         s = nd.sort(b, axis=0, is_ascend=False)
@@ -1240,8 +1175,8 @@ def test_basic():
         s = nd.sort(b, is_ascend=False)
         assert np.sum(s[0].asnumpy() == 0).all()
 
-    @unittest.skip("Memory doesn't free up after stacked execution with other ops, " +
-                   "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
+    @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +
+                      "tracked at https://github.com/apache/incubator-mxnet/issues/17411")
     def check_topk():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         k = nd.topk(b, k=10, axis=0, dtype=np.int64)
@@ -1546,7 +1481,7 @@ def test_basic():
     def create_input_for_rounding_ops():
         # Creates an vector with values (-LARGE_X/2 .... -2, -1, 0, 1, 2, .... , LARGE_X/2-1)
         # then divides each element by 2 i.e (-LARGE_X/4 .... -1, -0.5, 0, 0.5, 1, .... , LARGE_X/4-1)
-        # and finally broadcasts to 
+        # and finally broadcasts to
         inp = nd.arange(-LARGE_X//2, LARGE_X//2, dtype=np.float64).reshape(1, LARGE_X)
         inp = inp/2
         inp = nd.broadcast_to(inp, (SMALL_Y, LARGE_X))
@@ -1559,7 +1494,7 @@ def test_basic():
         for i in range(len(output_idx_to_inspect)):
             assert output[1][output_idx_to_inspect[i]] == expected_vals[i]
 
-    # TODO(access2rohit): merge similar tests in large vector and array into one file. 
+    # TODO(access2rohit): merge similar tests in large vector and array into one file.
     def check_rounding_ops():
         x = create_input_for_rounding_ops()
         def check_ceil():
@@ -1811,6 +1746,7 @@ def test_basic():
     check_minimum()
 
 
+@pytest.mark.timeout(0)
 def test_sparse_dot():
     shape = (2, VLARGE_X)
     sp_mat1 = nd.sparse.csr_matrix(([2], [6], [0, 1, 1]), shape=shape)
@@ -1819,7 +1755,3 @@ def test_sparse_dot():
     assert out.asnumpy()[0][0] == 2
     assert out.shape == (2, 2)
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

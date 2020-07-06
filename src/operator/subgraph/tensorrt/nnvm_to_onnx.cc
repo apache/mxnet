@@ -31,7 +31,6 @@
 #include <mxnet/base.h>
 #include <nnvm/graph.h>
 #include <nnvm/pass_functions.h>
-#include <operator/nn/deconvolution-inl.h>
 
 #include "../../../common/utils.h"
 #include "../../../ndarray/ndarray_function.h"
@@ -39,10 +38,10 @@
 #include "../../nn/activation-inl.h"
 #include "../../nn/batch_norm-inl.h"
 #include "../../nn/convolution-inl.h"
+#include "../../nn/deconvolution-inl.h"
 #include "../../nn/fully_connected-inl.h"
 #include "../../nn/pooling-inl.h"
 #include "../../nn/concat-inl.h"
-#include "../../softmax_output-inl.h"
 #include "../../tensor/matrix_op-inl.h"
 
 #if MXNET_USE_TENSORRT_ONNX_CHECKER
@@ -392,20 +391,6 @@ void ConvertFullyConnected(NodeProto* node_proto, const NodeAttrs& attrs,
       transB->set_type(AttributeProto::INT);
       transB->set_i(1);
   }
-}
-
-void ConvertSoftmaxOutput(NodeProto* node_proto, const NodeAttrs& /*attrs*/,
-                          const nnvm::IndexedGraph& /*ig*/,
-                          const array_view<IndexedGraph::NodeEntry>& /*inputs*/) {
-  node_proto->set_op_type("Softmax");
-
-  // Setting by default to 1 since MXNet doesn't provide such an attribute for softmax in its
-  // node params. This attribute is only relevant when the input is coerced to 2D, and in that
-  // case dimension 0 is assumed to be the batch dimension.
-  AttributeProto* const axis = node_proto->add_attribute();
-  axis->set_name("axis");
-  axis->set_type(AttributeProto::INT);
-  axis->set_i(1);
 }
 
 void ConvertFlatten(NodeProto* node_proto, const NodeAttrs& /*attrs*/,

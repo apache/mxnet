@@ -98,8 +98,16 @@ NNVM_REGISTER_OP(_npi_qr)
 .set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
   return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
 .set_attr<FCompute>("FCompute<cpu>", NumpyLaQrForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_npi_qr"})
 .add_argument("A", "NDArray-or-Symbol", "Input matrices to be factorized");
+
+NNVM_REGISTER_OP(_backward_npi_qr)
+.set_num_inputs(5)
+.set_num_outputs(1)
+.set_attr<FResourceRequest>("FResourceRequest", [](const NodeAttrs& attrs) {
+  return std::vector<ResourceRequest>{ResourceRequest::kTempSpace}; })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", NumpyLaQrBackward<cpu>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -48,10 +48,6 @@ ifndef DLPACK_PATH
 	DLPACK_PATH = $(ROOTDIR)/3rdparty/dlpack
 endif
 
-ifndef AMALGAMATION_PATH
-	AMALGAMATION_PATH = $(ROOTDIR)/amalgamation
-endif
-
 ifndef TVM_PATH
 	TVM_PATH = $(TPARTYDIR)/tvm
 endif
@@ -92,6 +88,8 @@ include $(DMLC_CORE)/make/dmlc.mk
 # all tge possible warning tread
 WARNFLAGS= -Wall -Wsign-compare
 CFLAGS = -DMSHADOW_FORCE_STREAM $(WARNFLAGS)
+# C++ standard
+CFLAGS+= -DDMLC_USE_CXX11=1 -DDMLC_USE_CXX11=1 -DDMLC_USE_CXX14=1
 # use old thread local implementation in DMLC-CORE
 CFLAGS += -DDMLC_MODERN_THREAD_LOCAL=0
 # disable stack trace in exception by default.
@@ -99,7 +97,9 @@ CFLAGS += -DDMLC_LOG_STACK_TRACE_SIZE=0
 CFLAGS += -DDMLC_LOG_FATAL_THROW=1
 
 ifeq ($(DEV), 1)
-	CFLAGS += -g -Werror
+  # Excluded from Werror:
+  # 1) variables used in '#pragma omp parallel' are considered unused
+	CFLAGS += -g -Werror -Wno-error=unused-variable -Wno-error=maybe-uninitialized -Wno-error=unused-function
 	NVCCFLAGS += -Werror cross-execution-space-call
 endif
 
@@ -131,9 +131,9 @@ endif
 # -L/usr/local/lib
 
 ifeq ($(DEBUG), 1)
-	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS += -std=c++14 -Xcompiler -D_FORCE_INLINES -g -G -O0 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 else
-	NVCCFLAGS += -std=c++11 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
+	NVCCFLAGS += -std=c++14 -Xcompiler -D_FORCE_INLINES -O3 -ccbin $(CXX) $(MSHADOW_NVCCFLAGS)
 endif
 
 # CFLAGS for segfault logger
@@ -459,7 +459,7 @@ ifeq ($(USE_DIST_KVSTORE), 1)
 	LDFLAGS += $(PS_LDFLAGS_A)
 endif
 
-.PHONY: clean all extra-packages test lint clean_all rcpplint rcppexport roxygen\
+.PHONY: clean all extra-packages test lint clean_all roxygen\
 	cython3 cython cyclean
 
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages extension_libs
@@ -537,7 +537,11 @@ ifeq ($(USE_CUDA), 1)
 			CFLAGS += -I$(USE_NCCL_PATH)/include
 			LDFLAGS += -L$(USE_NCCL_PATH)/lib
 		endif
+		ifdef USE_SYSTEM_CUDA
+		LDFLAGS += -lnccl_static
+		else
 		LDFLAGS += -lnccl
+		endif
 		CFLAGS += -DMXNET_USE_NCCL=1
 	else
 		CFLAGS += -DMXNET_USE_NCCL=0
@@ -567,7 +571,7 @@ ALLX_DEP= $(ALL_DEP)
 
 build/src/%.o: src/%.cc | mkldnn
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
+	$(CXX) -std=c++17 -c $(CFLAGS) -MMD -c $< -o $@
 
 build/src/%_gpu.o: src/%.cu | mkldnn
 	@mkdir -p $(@D)
@@ -578,12 +582,12 @@ build/src/%_gpu.o: src/%.cu | mkldnn
 # Use CXX to generate dependency instead.
 build/plugin/%_gpu.o: plugin/%.cu
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
+	$(CXX) -std=c++17 $(CFLAGS) -MM -MT build/plugin/$*_gpu.o $< >build/plugin/$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS)" $<
 
 build/plugin/%.o: plugin/%.cc | mkldnn
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
+	$(CXX) -std=c++17 -c $(CFLAGS) -MMD -c $< -o $@
 
 %_gpu.o: %.cu
 	@mkdir -p $(@D)
@@ -592,7 +596,7 @@ build/plugin/%.o: plugin/%.cc | mkldnn
 
 %.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
-	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
+	$(CXX) -std=c++17 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
 
 # Set install path for libmxnet.so on Mac OS
 ifeq ($(UNAME_S), Darwin)
@@ -653,13 +657,7 @@ bin/im2rec: tools/im2rec.cc $(ALLX_DEP)
 
 $(BIN) :
 	@mkdir -p $(@D)
-	$(CXX) $(CFLAGS) -std=c++11  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
-
-# CPP Package
-ifeq ($(USE_CPP_PACKAGE), 1)
-include cpp-package/cpp-package.mk
-CFLAGS += -DMXNET_USE_CPP_PACKAGE=1
-endif
+	$(CXX) $(CFLAGS) -std=c++17  -o $@ $(filter %.cpp %.o %.c %.a %.cc, $^) $(LDFLAGS)
 
 include mkldnn.mk
 include tests/cpp/unittest.mk
@@ -668,17 +666,17 @@ extra-packages: $(EXTRA_PACKAGES)
 
 test: $(TEST)
 
-lint: cpplint rcpplint jnilint pylint
+lint: cpplint pylint
 
 cpplint:
-	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin cpp-package tests \
+	3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests \
 	--exclude_path src/operator/contrib/ctc_include include/mkldnn
 
 pylint:
 	python3 -m pylint --rcfile=$(ROOTDIR)/ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
 
 # MXNet extension dynamically loading libraries
-EXT_LIBS = build/libcustomop_lib.so build/libsubgraph_lib.so
+EXT_LIBS = build/libcustomop_lib.so build/libtransposecsr_lib.so build/libtransposerowsp_lib.so build/libsubgraph_lib.so build/libpass_lib.so
 ifeq ($(USE_CUDA), 1)
         EXT_LIBS += build/libcustomop_gpu_lib.so
 endif
@@ -686,13 +684,28 @@ extension_libs: $(EXT_LIBS)
 
 build/libcustomop_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o /dev/null -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++17 example/extensions/lib_custom_op/gemm_lib.cc -o $@ -I include/mxnet
+build/libtransposecsr_lib.so:
+	@mkdir -p $(@D)
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposecsr_lib.cc -o /dev/null -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++17 example/extensions/lib_custom_op/transposecsr_lib.cc -o $@ -I include/mxnet
+build/libtransposerowsp_lib.so:
+	@mkdir -p $(@D)
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposerowsp_lib.cc -o /dev/null -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++17 example/extensions/lib_custom_op/transposerowsp_lib.cc -o $@ -I include/mxnet
 build/libcustomop_gpu_lib.so:
 	@mkdir -p $(@D)
-	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
+	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o /dev/null -I include/mxnet
+	$(NVCC) -shared -std=c++14 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
 build/libsubgraph_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o /dev/null -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++17 example/extensions/lib_subgraph/subgraph_lib.cc -o $@ -I include/mxnet
+build/libpass_lib.so:
+	@mkdir -p $(@D)
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_pass/pass_lib.cc -o /dev/null -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++17 example/extensions/lib_pass/pass_lib.cc -o $@ -I include/mxnet
 
 # Cython build
 cython:
@@ -703,28 +716,6 @@ cython3:
 
 cyclean:
 	rm -rf python/mxnet/*/*.so python/mxnet/*/*.cpp
-
-scalaclean:
-	(cd $(ROOTDIR)/scala-package && mvn clean)
-
-scalapkg:
-	(cd $(ROOTDIR)/scala-package && mvn install -DskipTests)
-
-scalainstall:
-	(cd $(ROOTDIR)/scala-package && mvn install)
-
-scalaunittest:
-	(cd $(ROOTDIR)/scala-package && mvn install)
-
-scalaintegrationtest:
-	(cd $(ROOTDIR)/scala-package && mvn integration-test -DskipTests=false)
-
-jnilint:
-	3rdparty/dmlc-core/scripts/lint.py mxnet-jnicpp cpp scala-package/native/src --exclude_path scala-package/native/src/main/native/org_apache_mxnet_native_c_api.h
-
-rclean:
-	$(RM) -r R-package/src/image_recordio.h R-package/NAMESPACE R-package/man R-package/R/mxnet_generated.R \
-		R-package/inst R-package/src/*.o R-package/src/*.so mxnet_*.tar.gz
 
 build/rat/apache-rat-0.13/apache-rat-0.13.jar:
 	mkdir -p build/rat
@@ -747,25 +738,23 @@ ratcheck: build/rat/apache-rat-0.13/apache-rat-0.13.jar
 
 
 ifneq ($(EXTRA_OPERATORS),)
-clean: rclean cyclean $(EXTRA_PACKAGES_CLEAN)
+clean: cyclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin deps *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
-	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 	$(RM) -r  $(patsubst %, %/*.d, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.d, $(EXTRA_OPERATORS))
 	$(RM) -r  $(patsubst %, %/*.o, $(EXTRA_OPERATORS)) $(patsubst %, %/*/*.o, $(EXTRA_OPERATORS))
 else
-clean: rclean mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
+clean: mkldnn_clean cyclean testclean $(EXTRA_PACKAGES_CLEAN)
 	$(RM) -r build lib bin *~ */*~ */*/*~ */*/*/*~
 	(cd scala-package && mvn clean) || true
 	cd $(DMLC_CORE); $(MAKE) clean; cd -
 	cd $(PS_PATH); $(MAKE) clean; cd -
 	cd $(NNVM_PATH); $(MAKE) clean; cd -
 	cd $(TVM_PATH); $(MAKE) clean; cd -
-	cd $(AMALGAMATION_PATH); $(MAKE) clean; cd -
 endif
 
 clean_all: clean

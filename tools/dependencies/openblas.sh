@@ -19,21 +19,21 @@
 
 # This script builds the static library of openblas that can be used as dependency of mxnet.
 set -ex
-OPENBLAS_VERSION=0.3.7
+OPENBLAS_VERSION=4a4c50a7cef9fa91f14e508722f502d956ad5192
 if [[ ((! -e $DEPS_PATH/lib/libopenblas.a) && -z "$CMAKE_STATICBUILD") ||
           ((! -e $DEPS_PATH/lib/libopenblas.so) && -v CMAKE_STATICBUILD) ]]; then
     # download and build openblas
     >&2 echo "Building openblas..."
 
     download \
-        https://github.com/xianyi/OpenBLAS/archive/v${OPENBLAS_VERSION}.zip \
+        https://github.com/xianyi/OpenBLAS/archive/${OPENBLAS_VERSION}.zip \
         ${DEPS_PATH}/openblas.zip
     unzip -q $DEPS_PATH/openblas.zip -d $DEPS_PATH
     pushd .
-    cd $DEPS_PATH/OpenBLAS-$OPENBLAS_VERSION
+    cd $DEPS_PATH/OpenBLAS-${OPENBLAS_VERSION}
 
     # Adding NO_DYNAMIC=1 flag causes make install to fail
-    CXX="g++ -fPIC" CC="gcc -fPIC" $MAKE DYNAMIC_ARCH=1 USE_OPENMP=1
+    CXX="g++ -fPIC" CC="gcc -fPIC" $MAKE DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_OPENMP=1
 
     if [[ -v CMAKE_STATICBUILD ]]; then
         # We link and redistribute libopenblas.so for cmake staticbuild
@@ -46,7 +46,7 @@ if [[ ((! -e $DEPS_PATH/lib/libopenblas.a) && -z "$CMAKE_STATICBUILD") ||
 
     if [[ -z "$CMAKE_STATICBUILD" ]]; then
         # Manually removing .so to avoid linking against it
-        rm $DEPS_PATH/lib/libopenblasp-r${OPENBLAS_VERSION}.so
+        rm $DEPS_PATH/lib/libopenblas*.so
     fi
 
     popd

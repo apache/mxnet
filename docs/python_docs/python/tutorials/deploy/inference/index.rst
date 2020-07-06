@@ -58,6 +58,18 @@ The following tutorials will help you learn how to deploy MXNet models for infer
 
       Example of running a wine detector on a raspberry pi.
 
+   .. card::
+      :title: Image Classification on Jetson
+      :link: image_classification_jetson.html
+
+      Example of running a pretrained image classification model on a Jetson module.
+   
+   .. card::
+      :title: Object Detection on Jetson
+      :link: https://gluon-cv.mxnet.io/build/examples_detection/demo_jetson.html
+
+      Example of running a pretrained object detection model on a Jetson module.
+
 
 .. toctree::
    :hidden:

@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <string>
 #include <utility>
+#include <unordered_map>
 #include "../tensor/matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 #include "../../common/utils.h"
@@ -47,6 +48,11 @@ struct NumpyTransposeParam : public dmlc::Parameter<NumpyTransposeParam> {
     .describe("By default, reverse the dimensions, otherwise permute "
               "the axes according to the values given.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axes_s;
+    axes_s << axes;
+    (*dict)["axes"] = axes_s.str();
+  }
 };
 
 struct NumpyVstackParam : public dmlc::Parameter<NumpyVstackParam> {
@@ -62,6 +68,11 @@ struct NumpyColumnStackParam : public dmlc::Parameter<NumpyColumnStackParam> {
   DMLC_DECLARE_PARAMETER(NumpyColumnStackParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be column stacked");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream ss;
+    ss << num_args;
+    (*dict)["num_args"] = ss.str();
   }
 };
 
@@ -556,6 +567,12 @@ struct FlipParam : public dmlc::Parameter<FlipParam> {
       DMLC_DECLARE_FIELD(axis)
           .describe("The axis which to flip elements.");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s;
+    axis_s << axis;
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 #define FLIP_MAX_DIM 10
@@ -631,6 +648,13 @@ struct NumpyRollaxisParam : public dmlc::Parameter<NumpyRollaxisParam> {
     .set_default(0)
     .describe("The axis is rolled until it lies before this position. "
               "The default, 0, results in a “complete” roll.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, start_s;
+    axis_s << axis;
+    start_s << start;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["start"] = start_s.str();
   }
 };
 
@@ -1143,7 +1167,7 @@ void NumpyConcatenateForward(const nnvm::NodeAttrs& attrs,
   ConcatParam cparam;
   cparam.num_args = param.num_args;
   cparam.dim = param.axis.has_value() ? param.axis.value() : 0;
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
     ConcatOp<xpu, DType> op;
     op.Init(cparam);
     op.Forward(ctx, data, req, outputs);
@@ -1176,7 +1200,7 @@ void NumpyConcatenateBackward(const nnvm::NodeAttrs& attrs,
   ConcatParam cparam;
   cparam.num_args = param.num_args;
   cparam.dim = param.axis.has_value() ? param.axis.value() : 0;
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
     ConcatOp<xpu, DType> op;
     op.Init(cparam);
     op.Backward(ctx, inputs[0], req, data);
@@ -1622,6 +1646,11 @@ struct NumpyDiagflatParam : public dmlc::Parameter<NumpyDiagflatParam> {
       .describe("Diagonal in question. The default is 0. "
                 "Use k>0 for diagonals above the main diagonal, "
                 "and k<0 for diagonals below the main diagonal. ");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream k_s;
+    k_s << k;
+    (*dict)["k"] = k_s.str();
   }
 };
 

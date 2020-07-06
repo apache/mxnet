@@ -46,10 +46,9 @@ except ImportError:
 import mxnet as mx
 from .context import Context, current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
-from .ndarray import array
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
-from .util import use_np  # pylint: disable=unused-import
+from .util import use_np, use_np_default_dtype  # pylint: disable=unused-import
 from .runtime import Features
 from .numpy_extension import get_cuda_compute_capability
 
@@ -584,7 +583,7 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     atol = get_atol(atol)
     use_np_allclose = isinstance(a, np.ndarray) and isinstance(b, np.ndarray)
     if not use_np_allclose:
-        if not (hasattr(a, 'context') and hasattr(b, 'context') and a.context == b.context and a.dtype == b.dtype):
+        if not (hasattr(a, 'ctx') and hasattr(b, 'ctx') and a.ctx == b.ctx and a.dtype == b.dtype):
             use_np_allclose = True
             if isinstance(a, mx.nd.NDArray):
                 a = a.asnumpy()
@@ -755,52 +754,6 @@ def assert_exception(f, exception_type, *args, **kwargs):
         assert(False)
     except exception_type:
         return
-
-def retry(n):
-    """Retry n times before failing for stochastic test cases."""
-    assert n > 0
-    def decorate(f):
-        """Decorate a test case."""
-        def wrapper(*args, **kwargs):
-            """Wrapper for tests function."""
-            for _ in range(n):
-                try:
-                    f(*args, **kwargs)
-                except AssertionError as e:
-                    err = e
-                    continue
-                return
-            raise err
-        return wrapper
-    return decorate
-
-
-def simple_forward(sym, ctx=None, is_train=False, **inputs):
-    """A simple forward function for a symbol.
-
-    Primarily used in doctest to test the functionality of a symbol.
-    Takes NumPy arrays as inputs and outputs are also converted to NumPy arrays.
-
-    Parameters
-    ----------
-    ctx : Context
-        If ``None``, will take the default context.
-    inputs : keyword arguments
-        Mapping each input name to a NumPy array.
-
-    Returns
-    -------
-    The result as a numpy array. Multiple results will
-    be returned as a list of NumPy arrays.
-    """
-    ctx = ctx or default_context()
-    inputs = {k: array(v) for k, v in inputs.items()}
-    exe = sym.bind(ctx, args=inputs)
-    exe.forward(is_train=is_train)
-    outputs = [x.asnumpy() for x in exe.outputs]
-    if len(outputs) == 1:
-        outputs = outputs[0]
-    return outputs
 
 
 def _parse_location(sym, location, ctx, dtype=default_dtype()):
@@ -1001,7 +954,6 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
 
     return approx_grads
 
-
 def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
                            atol=None, grad_nodes=None, use_forward_train=True, ctx=None,
                            grad_stype_dict=None, dtype=default_dtype()):
@@ -1111,18 +1063,25 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
                 args_grad[k] = mx.nd.zeros(args_grad[k].shape, args_grad[k].context,
                                            args_grad[k].dtype, v)
 
-    executor = out.bind(ctx, grad_req=grad_req,
-                        args=location, args_grad=args_grad, aux_states=aux_states)
+    grad_req["__random_proj"] = 'write'
+    executor = out._bind(ctx, grad_req=grad_req,
+                         args=location, args_grad=args_grad, aux_states=aux_states)
 
     inps = executor.arg_arrays
     if len(inps) != len(location):
         raise ValueError("Executor arg_arrays and and location len do not match."
                          "Got %d inputs and %d locations"%(len(inps), len(location)))
-    assert len(executor.outputs) == 1
 
     executor.forward(is_train=True)
+    assert len(executor.outputs) == 1
     executor.backward()
-    symbolic_grads = {k:executor.grad_dict[k].asnumpy() for k in grad_nodes}
+    symbolic_grads = {}
+    for k in grad_nodes:
+        grad_k = executor.grad_dict[k]
+        if grad_k is not None:
+            symbolic_grads[k] = grad_k.asnumpy()
+        else:
+            symbolic_grads[k] = None
 
     numeric_gradients = numeric_grad(
         executor, location_npy, aux_states_npy,
@@ -1139,8 +1098,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
             assert_almost_equal(fd_grad, sym_grad - orig_grad, rtol, atol,
                                 ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
         elif grad_req[name] == 'null':
-            assert_almost_equal(orig_grad, sym_grad, rtol, atol,
-                                ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
+            assert sym_grad is None
         else:
             raise ValueError("Invalid grad_req %s for argument %s"%(grad_req[name], name))
 
@@ -1210,7 +1168,7 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
     args_grad_data = {k:mx.nd.empty(v.shape, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype) \
                       for k, v in location.items()}
 
-    executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
+    executor = sym._bind(ctx=ctx, args=location, args_grad=args_grad_data, aux_states=aux_states)
     for g in executor.grad_arrays:
         if g.ndim == 0:
             g[()] = 0
@@ -1280,7 +1238,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     >>> mat2 = np.array([[5, 6], [7, 8]])
     >>> grad1 = mx.nd.zeros(shape)
     >>> grad2 = mx.nd.zeros(shape)
-    >>> exec_add = sym_add.bind(default_context(), args={'lhs': mat1, 'rhs': mat2},
+    >>> exec_add = sym_add._bind(default_context(), args={'lhs': mat1, 'rhs': mat2},
     ... args_grad={'lhs': grad1, 'rhs': grad2}, grad_req={'lhs': 'write', 'rhs': 'write'})
     >>> exec_add.forward(is_train=True)
     >>> ograd = mx.nd.ones(shape)
@@ -1317,29 +1275,31 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
     elif isinstance(grad_req, (list, tuple)):
         grad_req = {k:v for k, v in zip(sym.list_arguments(), grad_req)}
 
-    executor = sym.bind(ctx=ctx, args=location, args_grad=args_grad_data,
-                        aux_states=aux_states, grad_req=grad_req)
-    executor.forward(is_train=True)
+    executor = sym._bind(ctx=ctx, args=location, args_grad=args_grad_data,
+                         aux_states=aux_states, grad_req=grad_req)
+    outputs = executor.forward(is_train=True)
 
     if isinstance(out_grads, (tuple, list)):
         outg = list()
-        for arr in out_grads:
+        for i, arr in enumerate(out_grads):
+            stype = outputs[i].stype
             if isinstance(arr, np.ndarray):
-                outg.append(mx.nd.array(arr, ctx=ctx, dtype=arr.dtype if dtype == "asnumpy" else dtype))
+                dtype = arr.dtype if dtype == "asnumpy" else dtype
+                outg.append(mx.nd.array(arr, ctx=ctx, dtype=dtype).tostype(stype))
             else:
-                outg.append(arr)
+                outg.append(arr.tostype(stype))
         out_grads = outg
     elif isinstance(out_grads, dict):
         outg = dict()
         for k, v in out_grads.items():
             if isinstance(v, np.ndarray):
-                outg[k] = mx.nd.array(v, ctx=ctx, dtype=v.dtype if dtype == "asnumpy" else dtype)
+                dtype = v.dtype if dtype == "asnumpy" else dtype
+                outg[k] = mx.nd.array(v, ctx=ctx, dtype=dtype)
             else:
                 outg[k] = v
         out_grads = outg
     else:
         assert out_grads is None
-
     executor.backward(out_grads)
 
     grads = {k: v.asnumpy() for k, v in args_grad_data.items()}
@@ -1391,13 +1351,13 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
     if grad_req is None:
         grad_req = 'write'
     if location is None:
-        exe = sym.simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
+        exe = sym._simple_bind(grad_req=grad_req, ctx=ctx, **kwargs)
         location = {k: np.random.normal(size=arr.shape, scale=1.0) for k, arr in
                     exe.arg_dict.items()}
     else:
         assert isinstance(location, dict), "Expect dict, get \"location\"=%s" %str(location)
-        exe = sym.simple_bind(grad_req=grad_req, ctx=ctx,
-                              **{k: v.shape for k, v in location.items()})
+        exe = sym._simple_bind(grad_req=grad_req, ctx=ctx,
+                               **{k: v.shape for k, v in location.items()})
 
     for name, iarr in location.items():
         exe.arg_dict[name][:] = iarr.astype(exe.arg_dict[name].dtype)
@@ -1521,7 +1481,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
     for s, ctx in zip(sym, ctx_list):
         assert s.list_arguments() == arg_names
         assert s.list_outputs() == output_names
-        exe_list.append(s.simple_bind(grad_req=grad_req, **ctx))
+        exe_list.append(s._simple_bind(grad_req=grad_req, **ctx))
 
     arg_params = {} if arg_params is None else arg_params
     aux_params = {} if aux_params is None else aux_params
@@ -1546,17 +1506,15 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             for arr in exe.grad_arrays:
                 arr[:] = np.zeros(arr.shape, dtype=arr.dtype)
 
+    # test
+    for exe in exe_list:
+        exe.forward(is_train=False)
+
     dtypes = [np.dtype(exe.outputs[0].dtype) for exe in exe_list]
     max_idx = np.argmax(dtypes)
     gt = ground_truth
     if gt is None:
         gt = exe_list[max_idx].output_dict.copy()
-        if grad_req != 'null':
-            gt.update(exe_list[max_idx].grad_dict)
-
-    # test
-    for exe in exe_list:
-        exe.forward(is_train=False)
 
     for i, exe in enumerate(exe_list):
         if i == max_idx:
@@ -1583,7 +1541,11 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         for exe in exe_list:
             exe.forward(is_train=True)
             exe.backward(exe.outputs)
-
+        gt = ground_truth
+        if gt is None:
+            gt = exe_list[max_idx].output_dict.copy()
+            if grad_req != 'null':
+                gt.update(exe_list[max_idx].grad_dict)
         for i, exe in enumerate(exe_list):
             if i == max_idx:
                 continue
@@ -1593,7 +1555,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
             curr = zip(output_names + arg_names, exe.outputs + exe.grad_arrays)
             for name, arr in curr:
                 if gt[name] is None:
-                    assert arr is None
+                    assert arr is None, name
                     continue
 
                 # Previous cast was to dtypes[i], but symbol may be mixed-precision,
@@ -1692,73 +1654,8 @@ def download(url, fname=None, dirname=None, overwrite=False, retries=5):
     logging.info("downloaded %s into %s successfully", url, fname)
     return fname
 
-def download_model(model_name, dst_dir='./', meta_info=None):
-    """Download a model from data.mxnet.io
 
-    Parameters
-    ----------
-    model_name : str
-        Model name to download
-    dst_dir : str
-        Destination Directory to download the model
-    meta_info : dict of dict
-        Mapping from model_name to dict of the following structure:
-        {'symbol': url, 'params': url}
-
-    Returns
-    -------
-    Two element tuple containing model_name and epoch for the params saved
-    """
-    _base_model_url = 'http://data.mxnet.io/models/'
-    _default_model_info = {
-        'imagenet1k-inception-bn': {'symbol':_base_model_url+'imagenet/inception-bn/Inception-BN-symbol.json',
-                                    'params':_base_model_url+'imagenet/inception-bn/Inception-BN-0126.params'},
-        'imagenet1k-resnet-18': {'symbol':_base_model_url+'imagenet/resnet/18-layers/resnet-18-symbol.json',
-                                 'params':_base_model_url+'imagenet/resnet/18-layers/resnet-18-0000.params'},
-        'imagenet1k-resnet-34': {'symbol':_base_model_url+'imagenet/resnet/34-layers/resnet-34-symbol.json',
-                                 'params':_base_model_url+'imagenet/resnet/34-layers/resnet-34-0000.params'},
-        'imagenet1k-resnet-50': {'symbol':_base_model_url+'imagenet/resnet/50-layers/resnet-50-symbol.json',
-                                 'params':_base_model_url+'imagenet/resnet/50-layers/resnet-50-0000.params'},
-        'imagenet1k-resnet-101': {'symbol':_base_model_url+'imagenet/resnet/101-layers/resnet-101-symbol.json',
-                                  'params':_base_model_url+'imagenet/resnet/101-layers/resnet-101-0000.params'},
-        'imagenet1k-resnet-152': {'symbol':_base_model_url+'imagenet/resnet/152-layers/resnet-152-symbol.json',
-                                  'params':_base_model_url+'imagenet/resnet/152-layers/resnet-152-0000.params'},
-        'imagenet1k-resnext-50': {'symbol':_base_model_url+'imagenet/resnext/50-layers/resnext-50-symbol.json',
-                                  'params':_base_model_url+'imagenet/resnext/50-layers/resnext-50-0000.params'},
-        'imagenet1k-resnext-101': {'symbol':_base_model_url+'imagenet/resnext/101-layers/resnext-101-symbol.json',
-                                   'params':_base_model_url+'imagenet/resnext/101-layers/resnext-101-0000.params'},
-        'imagenet1k-resnext-101-64x4d':
-            {'symbol':_base_model_url+'imagenet/resnext/101-layers/resnext-101-64x4d-symbol.json',
-             'params':_base_model_url+'imagenet/resnext/101-layers/resnext-101-64x4d-0000.params'},
-        'imagenet11k-resnet-152':
-            {'symbol':_base_model_url+'imagenet-11k/resnet-152/resnet-152-symbol.json',
-             'params':_base_model_url+'imagenet-11k/resnet-152/resnet-152-0000.params'},
-        'imagenet11k-place365ch-resnet-152':
-            {'symbol':_base_model_url+'imagenet-11k-place365-ch/resnet-152-symbol.json',
-             'params':_base_model_url+'imagenet-11k-place365-ch/resnet-152-0000.params'},
-        'imagenet11k-place365ch-resnet-50':
-            {'symbol':_base_model_url+'imagenet-11k-place365-ch/resnet-50-symbol.json',
-             'params':_base_model_url+'imagenet-11k-place365-ch/resnet-50-0000.params'},
-    }
-
-
-    if meta_info is None:
-        meta_info = _default_model_info
-    meta_info = dict(meta_info)
-    if model_name not in meta_info:
-        return (None, 0)
-    if not os.path.isdir(dst_dir):
-        os.mkdir(dst_dir)
-    meta = dict(meta_info[model_name])
-    assert 'symbol' in meta, "missing symbol url"
-    model_name = os.path.join(dst_dir, model_name)
-    mx.test_utils.download(meta['symbol'], model_name+'-symbol.json')
-    assert 'params' in meta, "mssing parameter file url"
-    mx.test_utils.download(meta['params'], model_name+'-0000.params')
-    return (model_name, 0)
-
-
-def get_mnist():
+def get_mnist(path='data'):
     """Download and load the MNIST dataset
 
     Returns
@@ -1767,10 +1664,12 @@ def get_mnist():
         A dict containing the data
     """
     def read_data(label_url, image_url):
-        with gzip.open(mx.test_utils.download(label_url)) as flbl:
+        if not os.path.isdir(path):
+            os.makedirs(path)
+        with gzip.open(mx.gluon.utils.download(label_url, path=path)) as flbl:
             struct.unpack(">II", flbl.read(8))
             label = np.frombuffer(flbl.read(), dtype=np.int8)
-        with gzip.open(mx.test_utils.download(image_url), 'rb') as fimg:
+        with gzip.open(mx.gluon.utils.download(image_url, path=path), 'rb') as fimg:
             _, _, rows, cols = struct.unpack(">IIII", fimg.read(16))
             image = np.frombuffer(fimg.read(), dtype=np.uint8).reshape(len(label), rows, cols)
             image = image.reshape(image.shape[0], 1, 28, 28).astype(np.float32)/255
@@ -1778,53 +1677,57 @@ def get_mnist():
 
     # changed to mxnet.io for more stable hosting
     # path = 'http://yann.lecun.com/exdb/mnist/'
-    path = 'http://data.mxnet.io/data/mnist/'
+    url_path = 'http://data.mxnet.io/data/mnist/'
     (train_lbl, train_img) = read_data(
-        path+'train-labels-idx1-ubyte.gz', path+'train-images-idx3-ubyte.gz')
+        url_path+'train-labels-idx1-ubyte.gz', url_path+'train-images-idx3-ubyte.gz')
     (test_lbl, test_img) = read_data(
-        path+'t10k-labels-idx1-ubyte.gz', path+'t10k-images-idx3-ubyte.gz')
+        url_path+'t10k-labels-idx1-ubyte.gz', url_path+'t10k-images-idx3-ubyte.gz')
     return {'train_data':train_img, 'train_label':train_lbl,
             'test_data':test_img, 'test_label':test_lbl}
 
-def get_mnist_pkl():
+def get_mnist_pkl(path='data'):
     """Downloads MNIST dataset as a pkl.gz into a directory in the current directory
     with the name `data`
     """
-    if not os.path.isdir("data"):
-        os.makedirs('data')
-    if not os.path.exists('data/mnist.pkl.gz'):
-        download('http://deeplearning.net/data/mnist/mnist.pkl.gz',
-                 dirname='data')
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    if not os.path.exists(os.path.join(path, 'mnist.pkl.gz')):
+        mx.gluon.utils.download('http://deeplearning.net/data/mnist/mnist.pkl.gz',
+                                sha1_hash='0b07d663e8a02d51849faa39e226ed19d7b7ed23',
+                                path=path)
 
-def get_mnist_ubyte():
+def get_mnist_ubyte(path='data'):
     """Downloads ubyte version of the MNIST dataset into a directory in the current directory
     with the name `data` and extracts all files in the zip archive to this directory.
     """
-    if not os.path.isdir("data"):
-        os.makedirs('data')
-    if (not os.path.exists('data/train-images-idx3-ubyte')) or \
-            (not os.path.exists('data/train-labels-idx1-ubyte')) or \
-            (not os.path.exists('data/t10k-images-idx3-ubyte')) or \
-            (not os.path.exists('data/t10k-labels-idx1-ubyte')):
-        zip_file_path = download('http://data.mxnet.io/mxnet/data/mnist.zip',
-                                 dirname='data')
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    files = ['train-images-idx3-ubyte', 'train-labels-idx1-ubyte',
+             't10k-images-idx3-ubyte', 't10k-labels-idx1-ubyte']
+    if not all(os.path.exists(os.path.join(path, f)) for f in files):
+        url = 'http://data.mxnet.io/mxnet/data/mnist.zip'
+        sha1 = '74fc763958b9d6e04eb32717f80355bf895f0561'
+        zip_file_path = mx.gluon.utils.download(url, path=path, sha1_hash=sha1,
+                                                verify_ssl=False)
         with zipfile.ZipFile(zip_file_path) as zf:
-            zf.extractall('data')
+            zf.extractall(path)
 
-def get_cifar10():
+def get_cifar10(path='data'):
     """Downloads CIFAR10 dataset into a directory in the current directory with the name `data`,
     and then extracts all files into the directory `data/cifar`.
     """
-    if not os.path.isdir("data"):
-        os.makedirs('data')
-    if (not os.path.exists('data/cifar/train.rec')) or \
-            (not os.path.exists('data/cifar/test.rec')) or \
-            (not os.path.exists('data/cifar/train.lst')) or \
-            (not os.path.exists('data/cifar/test.lst')):
-        zip_file_path = download('http://data.mxnet.io/mxnet/data/cifar10.zip',
-                                 dirname='data')
+    if not os.path.isdir(path):
+        os.makedirs(path)
+    if (not os.path.exists(os.path.join(path, 'cifar', 'train.rec'))) or \
+            (not os.path.exists(os.path.join(path, 'cifar', 'test.rec'))) or \
+            (not os.path.exists(os.path.join(path, 'cifar', 'train.lst'))) or \
+            (not os.path.exists(os.path.join(path, 'cifar', 'test.lst'))):
+        url = 'http://data.mxnet.io/mxnet/data/cifar10.zip'
+        sha1 = 'b9ac287012f2dad9dfb49d8271c39ecdd7db376c'
+        zip_file_path = mx.gluon.utils.download(url, path=path, sha1_hash=sha1,
+                                                verify_ssl=False)
         with zipfile.ZipFile(zip_file_path) as zf:
-            zf.extractall('data')
+            zf.extractall(path)
 
 def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
     """Returns training and validation iterators for MNIST dataset
@@ -2509,14 +2412,14 @@ def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test
             self._np_params = np_params
 
         def _init_weight(self, name, arr):
-            arr[()] = self._np_params[name]
+            arr[()] = self._np_params[name.attrs['structure']]
     saved_out_np = None
     saved_grad_np_l = None
     params_init = None
     use_autograd_flags = [False, True] if test_grad else [False]
     for hybridize in [False, True]:
         for use_autograd in use_autograd_flags:
-            net = net_builder(prefix='net_')
+            net = net_builder()
             if params_init is None:
                 net.initialize()
             else:

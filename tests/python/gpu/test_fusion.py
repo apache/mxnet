@@ -19,6 +19,7 @@ import os
 import random
 import mxnet as mx
 import numpy as np
+from mxnet import autograd, gluon
 from mxnet.test_utils import *
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
@@ -44,9 +45,9 @@ def check_fused_symbol(sym, **kwargs):
         for grad_req in ['write', 'add']:
             type_dict = {inp : dtype for inp in inputs}
             os.environ["MXNET_USE_FUSION"] = "0"
-            orig_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
+            orig_exec = test_sym._simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
             os.environ["MXNET_USE_FUSION"] = "1"
-            fused_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
+            fused_exec = test_sym._simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
             fwd_orig = orig_exec.forward(is_train=True, **data)
             out_grads = [mx.nd.ones_like(arr) for arr in fwd_orig]
             orig_exec.backward(out_grads=out_grads)
@@ -230,11 +231,24 @@ def check_other_ops():
     arr2 = mx.random.uniform(shape=(2,2,2,3))
     check_fused_symbol(mx.sym.broadcast_like(a, b, lhs_axes=[0], rhs_axes=[0]), a=arr1, b=arr2)
 
+def check_leakyrelu_ops():
+    a = mx.sym.Variable('a')
+    b = mx.sym.Variable('b')
+    shape = rand_shape_2d()
+    arr1 = mx.random.uniform(shape=shape)
+    arr2 = mx.random.uniform(shape=shape)
+
+    # Testing gelu
+    print("Checking fusion of LeakyReLU:gelu")
+    check_fused_symbol(mx.sym.LeakyReLU(a+b, act_type='gelu'), a=arr1, b=arr2)
+
+
 @with_seed()
 def test_fusion():
     check_unary_ops()
     check_binary_ops()
     check_other_ops()
+    check_leakyrelu_ops()
 
 @with_seed()
 def test_fusion_compiler_cache():
@@ -261,8 +275,8 @@ def test_fusion_boolean_inputs():
     from mxnet.gluon import HybridBlock
 
     class Foo(HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(Foo, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(Foo, self).__init__()
 
         def hybrid_forward(self, F, valid_length):
             mask = valid_length.astype(np.float32)
@@ -280,8 +294,8 @@ def test_fusion_different_dimensions():
     from mxnet.gluon import HybridBlock
 
     class Foo(HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(Foo, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(Foo, self).__init__()
 
         def hybrid_forward(self, F, x):
             mask2 = x.astype(np.float32)
@@ -300,30 +314,35 @@ def test_fusion_different_dimensions():
     assert out.shape == (10,10,1)
 
 @with_seed()
-def test_fusion_reshape_executor():
-    a = mx.sym.Variable("data1")
-    b = mx.sym.Variable("data2")
-    c = a + b + 1
-    sym = mx.sym.relu(c)
-    orig_shape = (10,10)
-    e = sym.simple_bind(ctx=mx.gpu(), data1=orig_shape, data2=orig_shape)
-    data = mx.nd.zeros(orig_shape, ctx=mx.gpu())
-    out = e.forward(is_train=False)
-    assert out[0].sum().asscalar() == 100
-    changed_shape = (80, 2)
-    new_shape = {'data1': changed_shape, 'data2': changed_shape}
-    data = mx.nd.zeros(new_shape['data1'], ctx=mx.gpu())
-    f = e.reshape(allow_up_sizing=True, **new_shape)
-    out = f.forward(is_train=False, data1=data, data2=data)
-    assert out[0].sum().asscalar() == 160
-    # Reshape again
-    changed_shape = (30, 5)
-    new_shape = {'data1': changed_shape, 'data2': changed_shape}
-    data = mx.nd.zeros(new_shape['data1'], ctx=mx.gpu())
-    f = e.reshape(allow_up_sizing=True, **new_shape)
-    out = f.forward(is_train=False, data1=data, data2=data)
-    assert out[0].sum().asscalar() == 150
+def test_input_reorder():
+    class Block(gluon.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Block, self).__init__(**kwargs)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
+        def hybrid_forward(self, F, x, y, z):
+            s = x * 2
+            s2 = s + z
+            s = F.broadcast_add(s, y * y)
+            return F.dot(s, s2)
+
+    for static_alloc in (False, True):
+        arg_shapes = [(10, 10), (10, 1), (10, 10)]
+        arg_data = [mx.random.uniform(shape=s) for s in arg_shapes]
+
+        arrays = {}
+        for use_fusion in ('0', '1'):
+            os.environ['MXNET_USE_FUSION'] = use_fusion
+            arrays[use_fusion] = {}
+            n = Block()
+            n.hybridize(static_alloc=static_alloc)
+            args = [arg.copyto(mx.gpu()) for arg in arg_data]
+            for arg in args:
+                arg.attach_grad()
+            with autograd.record():
+                r = n(*args)
+            arrays[use_fusion]['result'] = r
+            r.backward()
+            for i, arg in enumerate(args):
+                arrays[use_fusion][i] = arg.grad
+        for key in ['result'] + list(range(len(arg_data))):
+            assert_allclose(arrays['0'][key].asnumpy(), arrays['1'][key].asnumpy())

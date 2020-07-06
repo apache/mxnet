@@ -1,1 +1,0 @@
-MXNet-Clojure for Windows is not yet available.

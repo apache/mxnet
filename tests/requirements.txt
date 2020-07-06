@@ -1,8 +1,0 @@
-# Requirements for tests, those are installed before running on the virtualenv
-# Requirements for tests run within the qemu requirement see ci/qemu/test_requirements.txt
-mock
-nose
-nose-timer
-ipython
-numpy
-scipy
