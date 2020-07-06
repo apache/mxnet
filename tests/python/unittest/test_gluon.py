@@ -3217,8 +3217,8 @@ def test_reqs_switching_training_inference():
 
 def test_getitem_hybridized():
     class picking_np(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super().__init__(prefix=prefix, params=params)
+        def __init__(self, **kwargs):
+            super(picking_np, self).__init__(**kwargs)
         def hybrid_forward(self, F, sequence, pick_ids):
             """
             new implementation in deep numpy

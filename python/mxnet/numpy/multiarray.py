@@ -679,14 +679,14 @@ class ndarray(NDArray):
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
             if prepend == _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY:
                 has_none = False
-                if type(key) == tuple:
+                if isinstance(key, tuple):
                     for i in list(key):
                         if i is None:
                             has_none = True
                             break
                 if not has_none:
                     idcs, new_axes = self._get_index_nd(key)
-                    if type(idcs) == NDArray:  # pylint: disable=unidiomatic-typecheck
+                    if isinstance(idcs, NDArray):  # pylint: disable=unidiomatic-typecheck
                         idcs = idcs.as_np_ndarray()
                     else:
                         idcs = _npi.stack(*[i if isinstance(i, self.__class__) else i.as_np_ndarray() for i in idcs])
