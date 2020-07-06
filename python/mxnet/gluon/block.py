@@ -1068,6 +1068,11 @@ class HybridBlock(Block):
         input_names = out.list_inputs()
         data_indices = []
         param_indices = []
+
+        # In the default case, _cached_ops_args contains all the parameters from params (the sets are identical)
+        # In the case of Partition API optimized graph _cached_ops_args might contain some parameters from params,
+        # might contain some new parameters created during optimization and added to `arg_dict/aux_dict`,
+        # and might not contain some parameters that were deleted during optimization.
         self._cached_op_args = []
         for i, name in enumerate(input_names):
             pair = None
@@ -1079,13 +1084,15 @@ class HybridBlock(Block):
                 if name in params:
                     param = params[name]
                 else:
-                    assert self._backend, "Parameter " + name + " is missing from block params"
+                    # The param is missing from the original params dictionary, which means the param must have
+                    # been added by the Partition API backend
                     if name in arg_dict or name:
                         param_data = arg_dict[name]
                     elif name in aux_dict:
                         param_data = aux_dict[name]
                     else:
-                        raise RuntimeError('Expected inputs missing from arg and aux after partioning. '
+                        raise RuntimeError('A parameter was added to the graph during optimization but it was not '
+                                           'added to the parameter dicts.\n'
                                            'Please check the backend.')
 
                     param = Parameter(name)

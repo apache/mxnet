@@ -1557,8 +1557,9 @@ class Symbol(SymbolBase):
                     if a_n in args:
                         args.pop(a_n)
             else:
-                warnings.warn('optimize_for deleted some argument. \n' +
-                              'Provide a dictionary to the arg argument to optimize_for')
+                warnings.warn('A param was deleted during optimization, but no args dictionary was provided.\n' +
+                              'Please ensure that your model weights match the newly optimized model.')
+
         aux_names = self.list_auxiliary_states()
         new_aux_names = new_sym.list_auxiliary_states()
         deleted_aux_names = set([item for item in aux_names
@@ -1569,8 +1570,8 @@ class Symbol(SymbolBase):
                     if a_n in aux:
                         aux.pop(a_n)
             else:
-                warnings.warn('optimize_for deleted some aux argument. \n' +
-                              'Provide a dictionary to the aux argument to optimize_for')
+                warnings.warn('A param was deleted during optimization, but no args dictionary was provided.\n' +
+                              'Please ensure that your model weights match the newly optimized model.')
 
         return new_sym
 
