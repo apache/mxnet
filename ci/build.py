@@ -362,6 +362,9 @@ def main() -> int:
                         default=1,
                         type=int)
 
+    parser.add_argument("--no-pull", action="store_true",
+                        help="Don't pull from dockerhub registry to initialize cache.")
+
     parser.add_argument("--no-cache", action="store_true",
                         help="passes --no-cache to docker build")
 
@@ -394,7 +397,7 @@ def main() -> int:
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-        if args.docker_registry:
+        if args.docker_registry and not args.no_pull:
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
             build_docker(platform=platform, registry=args.docker_registry, num_retries=args.docker_build_retries,

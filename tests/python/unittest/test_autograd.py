@@ -405,6 +405,7 @@ def test_function1():
 
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_get_symbol():
     x = mx.nd.ones((1,))
     x.attach_grad()
