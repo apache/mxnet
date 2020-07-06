@@ -100,7 +100,7 @@ def default_numeric_eps():
     """Get default epsilon for finite difference gradient calculations with data type."""
     return {np.dtype(np.float16): 1.0 / 2**6,
             np.dtype(np.float32): 1.0 / 2**9,
-            np.dtype(np.float64): 1.0 / 2**15}
+            np.dtype(np.float64): 1.0 / 2**14}
 
 def get_tolerance(dat, tol, default_tol):
     """ Return the tolerance to used for dat comparisons based on the given tol, datatype and context.
