@@ -3169,7 +3169,7 @@ def test_np_mixed_precision_binary_funcs():
     for func, func_data in funcs.items():
         low, high, lgrad, rgrad = func_data
         for lshape, rshape in shape_pairs:
-            for type1, type2 in itertools.product(ftypes, ftypes):
+            for type1, type2 in itertools.product(itypes, ftypes):
                 check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type1, type2)
                 check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type2, type1)
 
