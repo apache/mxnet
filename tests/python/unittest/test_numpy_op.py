@@ -3143,16 +3143,17 @@ def test_np_mixed_precision_binary_funcs():
         'mod': (1.0, 5.0, None, None),
         'power': (1.0, 3.0, lambda y, x1, x2: _np.power(x1, x2 - 1.0) * x2,
                             lambda y, x1, x2: _np.power(x1, x2) * _np.log(x1)),
-        'equal': (0.0, 2.0, None, None),
-        'not_equal': (0.0, 2.0, None, None),
-        'greater': (0.0, 2.0, None, None),
-        'less': (0.0, 2.0, None, None),
-        'greater_equal': (0.0, 2.0, None, None),
-        'less_equal': (0.0, 2.0, None, None),
-        'logical_and': (0.0, 2.0, None, None),
-        'logical_or': (0.0, 2.0, None, None),
-        'logical_xor': (0.0, 2.0, None, None),
     }
+    if not has_tvm_ops():
+        funcs['equal'] = (0.0, 2.0, None, None)
+        funcs['not_equal'] = (0.0, 2.0, None, None)
+        funcs['greater'] = (0.0, 2.0, None, None)
+        funcs['less'] = (0.0, 2.0, None, None)
+        funcs['greater_equal'] = (0.0, 2.0, None, None)
+        funcs['less_equal'] = (0.0, 2.0, None, None)
+        funcs['logical_and'] = (0.0, 2.0, None, None)
+        funcs['logical_or'] = (0.0, 2.0, None, None)
+        funcs['logical_xor'] = (0.0, 2.0, None, None)
 
     shape_pairs = [((3, 2), (3, 2)),
                    ((3, 2), (3, 1)),
@@ -3168,7 +3169,7 @@ def test_np_mixed_precision_binary_funcs():
     for func, func_data in funcs.items():
         low, high, lgrad, rgrad = func_data
         for lshape, rshape in shape_pairs:
-            for type1, type2 in itertools.product(itypes, ftypes):
+            for type1, type2 in itertools.product(ftypes, ftypes):
                 check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type1, type2)
                 check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type2, type1)
 
