@@ -145,10 +145,10 @@ USE_STATIC_MKL = NONE
 endif
 
 #----------------------------
-# Settings for power and arm arch
+# Settings for power, arm and s390x arch
 #----------------------------
 ARCH := $(shell uname -a)
-ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le aarch64))
+ifneq (,$(filter $(ARCH), armv6l armv7l powerpc64le ppc64le aarch64 s390x))
 	USE_SSE=0
 	USE_F16C=0
 else
