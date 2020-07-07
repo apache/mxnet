@@ -714,6 +714,18 @@ def test_sync_batchnorm():
 
         input1.attach_grad()
         inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
+
+        if cuda:
+            print("input1:", input1)
+            print("input2:", input2)
+            print("gamma1:", bn1.gamma.data())
+            print("gamma2:", bn2.gamma.data())
+            print("beta1:", bn1.beta.data())
+            print("beta2:", bn2.beta.data())
+            print("running_mean1:", bn1.running_mean.data())
+            print("running_mean2:", bn2.running_mean.data())
+            print("running_var1:", bn1.running_var.data())
+            print("running_var2:", bn2.running_var.data())
         for xi in inputs2:
             xi.attach_grad()
 
@@ -754,6 +766,12 @@ def test_sync_batchnorm():
 
         atol = 1e-2
         rtol = 1e-2
+        if cuda:
+            print("output1:", output1)
+            print("target_output:", target_output)
+            print("output2:", output2)
+            print("data_mean:", data_mean)
+            print("data_var:", data_var)
         assert_almost_equal(output1.asnumpy(), target_output.asnumpy(),
                             atol=atol, rtol=rtol)
         assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
