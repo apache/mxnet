@@ -85,14 +85,16 @@
 
         <!-- No CPU GPU for other Devices -->
         <div class="linux macos windows cloud">
-            <div class="row">
-                <div class="col-3 install-left">
-                    <span>GPU / CPU</span>
-                </div>
-                <div class="col-9 install-right">
-                    <div class="btn-group opt-group" role="group">
-                        <button type="button" class="btn btn-default processors opt active">GPU</button>
-                        <button type="button" class="btn btn-default processors opt">CPU</button>
+            <div class="python cloud devices">
+                <div class="row">
+                    <div class="col-3 install-left">
+                        <span>GPU / CPU</span>
+                    </div>
+                    <div class="col-9 install-right">
+                        <div class="btn-group opt-group" role="group">
+                            <button type="button" class="btn btn-default processors opt active">GPU</button>
+                            <button type="button" class="btn btn-default processors opt">CPU</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -133,25 +135,6 @@
             </div>
         </div>
 
-        <!-- Julia Options -->
-        <div class="linux macos windows">
-            <div class="julia">
-                <div class="cpu gpu">
-                    <div class="row">
-                        <div class="col-3 install-left">
-                            <span>Distribution</span>
-                        </div>
-                        <div class="col-9 install-right">
-                            <div class="btn-group opt-group" role="group">
-                                <button type="button" class="btn btn-default environs opt active">Pkg</button>
-                                <button type="button" class="btn btn-default environs opt">Build from Source</button>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
     </div>
 
 
@@ -198,48 +181,34 @@
 
 
             <div class="r">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/linux/r/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/linux/r/build-from-source.md %}{% endmarkdown %}
             </div> <!-- END of R -->
 
 
             <div class="scala">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/linux/scala/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/linux/scala/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of scala -->
 
 
             <div class="clojure">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/linux/clojure/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/linux/clojure/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of clojure -->
 
 
             <div class="java">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/linux/java/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/linux/java/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of java -->
 
             <div class="julia">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/linux/julia/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/linux/julia/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of julia -->
 
             <div class="perl">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/linux/perl/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- End of build from source -->
+                {% markdown %}{% include /get_started/linux/perl/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of perl -->
 
             <div class="cpp">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/linux/cpp/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- End of build from source -->
+                {% markdown %}{% include /get_started/linux/cpp/build-from-source.md %}{% endmarkdown %}
             </div> <!-- END - C++-->
         </div> <!-- END - Linux -->
 
@@ -276,48 +245,34 @@
 
 
             <div class="r">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/macos/r/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/macos/r/build-from-source.md %}{% endmarkdown %}
             </div> <!-- END of R -->
 
 
             <div class="scala">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/macos/scala/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/macos/scala/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of scala -->
 
 
             <div class="clojure">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/macos/clojure/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/macos/clojure/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of clojure -->
 
 
             <div class="java">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/macos/java/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/macos/java/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of java -->
 
             <div class="julia">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/macos/julia/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/macos/julia/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of julia -->
 
             <div class="perl">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/macos/perl/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- End of build from source -->
+                {% markdown %}{% include /get_started/macos/perl/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of perl -->
 
             <div class="cpp">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/macos/cpp/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- End of build from source -->
+                {% markdown %}{% include /get_started/macos/cpp/build-from-source.md %}{% endmarkdown %}
             </div> <!-- END - C++-->
         </div> <!-- END - MacOS -->
 
@@ -353,48 +308,34 @@
 
 
             <div class="r">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/windows/r/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/windows/r/build-from-source.md %}{% endmarkdown %}
             </div> <!-- END of R -->
 
 
             <div class="scala">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/windows/scala/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/windows/scala/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of scala -->
 
 
             <div class="clojure">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/windows/clojure/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/windows/clojure/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of clojure -->
 
 
             <div class="java">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/windows/java/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/windows/java/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of java -->
 
             <div class="julia">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/windows/julia/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- END of build from source -->
+                {% markdown %}{% include /get_started/windows/julia/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of julia -->
 
             <div class="perl">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/windows/perl/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- End of build from source -->
+                {% markdown %}{% include /get_started/windows/perl/build-from-source.md %}{% endmarkdown %}
             </div> <!-- End of perl -->
 
             <div class="cpp">
-                <div class="build-from-source">
-                    {% markdown %}{% include /get_started/windows/cpp/build-from-source.md %}{% endmarkdown %}
-                </div> <!-- End of build from source -->
+                {% markdown %}{% include /get_started/windows/cpp/build-from-source.md %}{% endmarkdown %}
             </div> <!-- END - C++-->
         </div> <!-- END - Windows -->
 
