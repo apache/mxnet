@@ -17,28 +17,32 @@
 
 # coding: utf-8
 # pylint: disable=wildcard-import
-"""Neural network module."""
+"""Chi-sqaure distribution"""
+__all__ = ['Chi2']
 
-from . import metric
+from .gamma import Gamma
+from .constraint import Positive
 
-from .parameter import *
 
-from .block import *
+class Chi2(Gamma):
+    r"""Create a Chi2 distribution object.
+    Chi2(df) is equivalent to Gamma(shape=df / 2, scale=2)
 
-from . import nn
+    Parameters
+    ----------
+    df : Tensor or scalar, default 0
+        Shape parameter of the distribution.
+    F : mx.ndarray or mx.symbol.numpy._Symbol or None
+        Variable recording running mode, will be automatically
+        inferred from parameters if declared None.
+    """
+    # pylint: disable=abstract-method
 
-from . import rnn
+    arg_constraints = {'df': Positive()}
 
-from .trainer import *
+    def __init__(self, df, F=None, validate_args=None):
+        super(Chi2, self).__init__(df / 2, 2, F, validate_args)
 
-from . import loss
-
-from . import utils
-
-from . import data
-
-from . import model_zoo
-
-from . import contrib
-
-from . import probability
+    @property
+    def df(self):
+        return self.shape * 2
