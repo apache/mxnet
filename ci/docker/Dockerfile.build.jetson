@@ -74,7 +74,7 @@ RUN aws s3 cp s3://mxnet-ci-prod-private-slave-data/nvidia/sdkm_downloads/cuda-r
     apt-get install -y cuda-cross-aarch64 cuda-cross-aarch64-10-0 && \
     rm -rf /var/lib/apt/lists/*
 
-RUN aws s3 cp s3://mxnet-ci-prod-private-slave-data/nvidia/sdkm_downloads/cuda-repo-l4t-10-0-local-10.0.326_1.0-1_arm64.deb && \
+RUN aws s3 cp s3://mxnet-ci-prod-private-slave-data/nvidia/sdkm_downloads/cuda-repo-l4t-10-0-local-10.0.326_1.0-1_arm64.deb . && \
     mkdir cuda_repo_l4t && \
     dpkg -x cuda-repo-l4t-10-0-local-10.0.326_1.0-1_arm64.deb cuda_repo_l4t && \
     rm cuda-repo-l4t-10-0-local-10.0.326_1.0-1_arm64.deb && \
