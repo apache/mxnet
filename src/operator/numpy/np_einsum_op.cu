@@ -242,7 +242,7 @@ inline void EinsumForwardCutensor(const std::vector<TBlob>& inputs,
     CUTENSOR_CALL(cutensorContractionGetWorkspace(handle,
                   &descriptor_contraction,
                   &find,
-                  CUTENSOR_WORKSPACE_RECOMMENDED, &workspace_size));
+                  CUTENSOR_WORKSPACE_MAX, &workspace_size));
     Tensor<gpu, 1, char> workspace =
         ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), stream);
 
