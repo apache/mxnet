@@ -1105,6 +1105,7 @@ def _add_workload_mean(array_pool):
     OpArgMngr.add_workload('mean', array_pool['4x1'])
     OpArgMngr.add_workload('mean', array_pool['4x1'], axis=0, keepdims=True)
     OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]))
+    OpArgMngr.add_workload('mean', np.array([]).reshape(2,0,0))
     OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]), axis=0)
     OpArgMngr.add_workload('mean', np.array([[1, 2, 3], [4, 5, 6]]), axis=1)
 
@@ -1139,6 +1140,7 @@ def _add_workload_atleast_nd():
 
 def _add_workload_prod(array_pool):
     OpArgMngr.add_workload('prod', array_pool['4x1'])
+    OpArgMngr.add_workload('prod', np.array([]).reshape(2,0,0))
 
 
 def _add_workload_product(array_pool):
@@ -1151,11 +1153,11 @@ def _add_workload_repeat(array_pool):
     m = _np.array([1, 2, 3, 4, 5, 6])
     m_rect = m.reshape((2, 3))
 
-    # OpArgMngr.add_workload('repeat', np.array(m), [1, 3, 2, 1, 1, 2]) # Argument "repeats" only supports int
+    OpArgMngr.add_workload('repeat', np.array(m), [1, 3, 2, 1, 1, 2]) # Argument "repeats" only supports int
     OpArgMngr.add_workload('repeat', np.array(m), 2)
     B = np.array(m_rect)
-    # OpArgMngr.add_workload('repeat', B, [2, 1], axis=0)  # Argument "repeats" only supports int
-    # OpArgMngr.add_workload('repeat', B, [1, 3, 2], axis=1)  # Argument "repeats" only supports int
+    OpArgMngr.add_workload('repeat', B, [2, 1], axis=0)  # Argument "repeats" only supports int
+    OpArgMngr.add_workload('repeat', B, [1, 3, 2], axis=1)  # Argument "repeats" only supports int
     OpArgMngr.add_workload('repeat', B, 2, axis=0)
     OpArgMngr.add_workload('repeat', B, 2, axis=1)
 
@@ -1163,7 +1165,7 @@ def _add_workload_repeat(array_pool):
     a = _np.arange(60).reshape(3, 4, 5)
     for axis in itertools.chain(range(-a.ndim, a.ndim), [None]):
         OpArgMngr.add_workload('repeat', np.array(a), 2, axis=axis)
-    #    OpArgMngr.add_workload('repeat', np.array(a), [2], axis=axis)   # Argument "repeats" only supports int
+        OpArgMngr.add_workload('repeat', np.array(a), [2], axis=axis)   # Argument "repeats" only supports int
 
 
 def _add_workload_reshape():
@@ -1945,6 +1947,8 @@ def _add_workload_greater(array_pool):
     # OpArgMngr.add_workload('greater', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('greater', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
     OpArgMngr.add_workload('greater', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('greater', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('greater', 2, array_pool['4x1'])
     # TODO(junwu): mxnet currently does not have a consistent behavior as NumPy in dealing with np.nan
     # OpArgMngr.add_workload('greater', np.array([np.nan]), np.array([np.nan]))
 
@@ -1954,6 +1958,8 @@ def _add_workload_greater_equal(array_pool):
     # OpArgMngr.add_workload('greater_equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('greater_equal', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
     OpArgMngr.add_workload('greater_equal', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('greater_equal', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('greater_equal', 2, array_pool['4x1'])
     # TODO(junwu): mxnet currently does not have a consistent behavior as NumPy in dealing with np.nan
     # OpArgMngr.add_workload('greater_equal', np.array([np.nan]), np.array([np.nan]))
 
@@ -1963,6 +1969,8 @@ def _add_workload_less(array_pool):
     # OpArgMngr.add_workload('less', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('less', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
     OpArgMngr.add_workload('less', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('less', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('less', 2, array_pool['4x1'])
     # TODO(junwu): mxnet currently does not have a consistent behavior as NumPy in dealing with np.nan
     # OpArgMngr.add_workload('less', np.array([np.nan]), np.array([np.nan]))
 
@@ -1972,6 +1980,8 @@ def _add_workload_less_equal(array_pool):
     # OpArgMngr.add_workload('less_equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('less_equal', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
     OpArgMngr.add_workload('less_equal', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('less_equal', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('less_equal', 2, array_pool['4x1'])
     # TODO(junwu): mxnet currently does not have a consistent behavior as NumPy in dealing with np.nan
     # OpArgMngr.add_workload('less_equal', np.array([np.nan]), np.array([np.nan]))
 
@@ -3226,6 +3236,8 @@ def check_interoperability(op_list):
         if name in ['shares_memory', 'may_share_memory', 'empty_like',
                     '__version__', 'dtype', '_NoValue']:  # skip list
             continue
+        if name in ['delete']: # https://github.com/apache/incubator-mxnet/issues/18600
+            continue
         if name in ['full_like', 'zeros_like', 'ones_like'] and \
                 StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
             continue
@@ -3274,4 +3286,3 @@ def test_np_array_ufunc_protocol():
 def test_np_fallback_ops():
     op_list = np.fallback.__all__ + ['linalg.{}'.format(op_name) for op_name in np.fallback_linalg.__all__]
     check_interoperability(op_list)
-

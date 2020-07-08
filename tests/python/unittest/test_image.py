@@ -20,7 +20,7 @@ import mxnet as mx
 import numpy as np
 import scipy.ndimage
 from mxnet.test_utils import *
-from common import assertRaises, with_seed
+from common import assertRaises, with_seed, xfail_when_nonstandard_decimal_separator
 import shutil
 import tempfile
 import unittest
@@ -366,6 +366,7 @@ class TestImage(unittest.TestCase):
             assert ratio[0] - epsilon <= float(new_w)/new_h <= ratio[1] + epsilon, \
             'ration of new width and height out of the bound{}/{}={}'.format(new_w, new_h, float(new_w)/new_h)
 
+    @xfail_when_nonstandard_decimal_separator
     @with_seed()
     def test_imrotate(self):
         # test correctness

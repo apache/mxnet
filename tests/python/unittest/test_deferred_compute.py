@@ -93,7 +93,7 @@ def _assert_dc(setup, compute, mode='all', setup_is_deterministic=True, numpy=Tr
                 xs = setup(nd=nd)
 
             args = {name: x for name, x in zip(xs_names, xs)}
-            ys_sym = sym.bind(mx.context.current_context(), args=args).forward()
+            ys_sym = sym._bind(mx.context.current_context(), args=args).forward()
 
             ys_sym_np = [y.asnumpy() for y in ys_sym]
             _all_same(ys_np, ys_sym_np)
@@ -160,6 +160,18 @@ def test_dc_no_inputs_subset_of_output():
         return [b]
 
     _all_assert_dc(_dc_empty_setup, f)
+
+
+def test_dc_numpy_tril():
+    def f(a, *, nd):
+        assert nd is mx.np
+        a = nd.ones((2, 2))
+        b = nd.tril(a, 1)
+        c = nd.tril(a, -1)
+        return [b, c]
+
+    for mode in ('all', 'symbolic', 'imperative', 'imperativewithnondccompute'):
+        _assert_dc(_dc_simple_setup, f, mode=mode)
 
 
 ###############################################################################
@@ -402,6 +414,11 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
         [p.grad() for p in net.collect_params().values()]
     else:
         ys_hybrid = net(*xs)
+
+    assert all(
+        isinstance(y, mx.numpy.ndarray) if numpy else isinstance(y, mx.ndarray.ndarray.NDArray)
+        for y in ys_hybrid)
+
     ys_hybrid_np = [y.asnumpy() for y in ys_hybrid]
 
     _all_same(ys_np, ys_hybrid_np)
@@ -413,11 +430,10 @@ def _dc_gluon_simple_setup(shape=(8, 10), *, nd):
 
 def test_dc_hybridblock():
     class MyBlock(mx.gluon.HybridBlock):
-        def __init__(self, *, prefix=None, params=None):
-            super().__init__(prefix, params)
-            with self.name_scope():
-                self.dense = mx.gluon.nn.Dense(units=10, in_units=10)
-                self.weight = self.params.get('weight', shape=(10, ))
+        def __init__(self):
+            super().__init__()
+            self.dense = mx.gluon.nn.Dense(units=10, in_units=10)
+            self.weight = mx.gluon.Parameter('weight', shape=(10, ))
 
         def forward(self, x):
             assert x.shape[1] == 10  # due to in_units=10 above
@@ -434,11 +450,10 @@ def test_dc_hybridblock():
 
 def test_dc_hybridblock_deferred_init_no_infer_shape_error():
     class MyBlock(mx.gluon.HybridBlock):
-        def __init__(self, *, prefix=None, params=None):
-            super().__init__(prefix, params)
-            with self.name_scope():
-                self.dense = mx.gluon.nn.Dense(units=10)
-                self.weight = self.params.get('weight', allow_deferred_init=True)
+        def __init__(self):
+            super().__init__()
+            self.dense = mx.gluon.nn.Dense(units=10)
+            self.weight = mx.gluon.Parameter('weight', allow_deferred_init=True)
 
         def forward(self, x):
             return self.dense(x) + self.weight.data(x.context)
@@ -452,11 +467,10 @@ def test_dc_hybridblock_deferred_init_no_infer_shape_error():
 
 def test_dc_hybridblock_deferred_init():
     class MyBlock(mx.gluon.HybridBlock):
-        def __init__(self, *, prefix=None, params=None):
-            super().__init__(prefix, params)
-            with self.name_scope():
-                self.dense = mx.gluon.nn.Dense(units=10)
-                self.weight = self.params.get('weight', allow_deferred_init=True)
+        def __init__(self):
+            super().__init__()
+            self.dense = mx.gluon.nn.Dense(units=10)
+            self.weight = mx.gluon.Parameter('weight', allow_deferred_init=True)
 
         def infer_shape(self, x):
             self.weight.shape = (x.shape[1], )
@@ -479,10 +493,9 @@ def test_dc_hybridblock_dynamic_shape():
         return
 
     class MyBlock(mx.gluon.HybridBlock):
-        def __init__(self, *, prefix=None, params=None):
-            super().__init__(prefix, params)
-            with self.name_scope():
-                self.dense = mx.gluon.nn.Dense(units=10)
+        def __init__(self):
+            super().__init__()
+            self.dense = mx.gluon.nn.Dense(units=10)
 
         def forward(self, x, idx):
             return x[idx].reshape((2, 2)), mx.np.flatnonzero(self.dense(x))

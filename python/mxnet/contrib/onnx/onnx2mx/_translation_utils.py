@@ -19,10 +19,6 @@
 """Utilities used for translating operators from Onnx to Mxnet."""
 # pylint: disable=protected-access
 from .... import symbol
-from .... import  module
-from .... import  context
-from .... import  ndarray as nd
-from .... import  io
 
 
 def _fix_attribute_names(attrs, change_map):
@@ -155,23 +151,6 @@ def _fix_bias(op_name, attrs, num_inputs):
         raise ValueError("Unexpected number of inputs for: {}".format(op_name))
     return attrs
 
-def _fix_broadcast(op_name, inputs, broadcast_axis, proto_obj):
-    """A workaround to reshape bias term to (1, num_channel)."""
-    if int(len(proto_obj._params)) > 0:
-        assert len(list(inputs)) == 2
-
-        input0_shape = get_input_shape(inputs[0], proto_obj)
-        #creating reshape shape
-        reshape_shape = list(len(input0_shape) * (1,))
-        reshape_shape[broadcast_axis] = -1
-        reshape_shape = tuple(reshape_shape)
-        reshape_op_sym = symbol.reshape(inputs[1], shape=reshape_shape)
-        op_sym = getattr(symbol, op_name)(inputs[0], reshape_op_sym)
-    else:
-        op_sym = op_name
-    return op_sym
-
-
 def _fix_channels(op_name, attrs, inputs, proto_obj):
     """A workaround for getting 'channels' or 'units' since onnx don't provide
     these attributes. We check the shape of weights provided to get the number.
@@ -211,36 +190,3 @@ def _fix_gemm(op_name, inputs, old_attr, proto_obj):
     new_inputs = [alpha*inputs[0], inputs[1], beta*inputs[2]]
     new_attr = {'num_hidden' : proto_obj._params[inputs[2].name].shape[0]}
     return op_sym, new_attr, new_inputs
-
-def get_input_shape(sym, proto_obj):
-    """Helper function to obtain the shape of an array"""
-    arg_params = proto_obj.arg_dict
-    aux_params = proto_obj.aux_dict
-
-    model_input_shape = [data[1] for data  in proto_obj.model_metadata.get('input_tensor_data')]
-    data_names = [data[0] for data  in proto_obj.model_metadata.get('input_tensor_data')]
-
-    # creating dummy inputs
-    inputs = []
-    for  in_shape in model_input_shape:
-        inputs.append(nd.ones(shape=in_shape))
-
-    data_shapes = []
-    for idx, input_name in enumerate(data_names):
-        data_shapes.append((input_name, inputs[idx].shape))
-
-    ctx = context.cpu()
-    # create a module
-    mod = module.Module(symbol=sym, data_names=data_names, context=ctx, label_names=None)
-    mod.bind(for_training=False, data_shapes=data_shapes, label_shapes=None)
-    mod.set_params(arg_params=arg_params, aux_params=aux_params)
-
-    data_forward = []
-    for idx, input_name in enumerate(data_names):
-        val = inputs[idx]
-        data_forward.append(val)
-
-    mod.forward(io.DataBatch(data_forward))
-    result = mod.get_outputs()[0].asnumpy()
-
-    return result.shape

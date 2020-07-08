@@ -32,11 +32,10 @@ def test_autograd(tmpdir):
     # define network
     def get_net():
         net = nn.Sequential()
-        net.add(nn.Dense(128, activation='relu', prefix='fc1_'))
-        net.add(nn.Dense(64, activation='relu', prefix='fc2_'))
-        net.add(nn.Dense(10, prefix='fc3_'))
+        net.add(nn.Dense(128, activation='relu'))
+        net.add(nn.Dense(64, activation='relu'))
+        net.add(nn.Dense(10))
         return net
-
     path = str(tmpdir)
     get_mnist_ubyte(path)
 
@@ -55,7 +54,7 @@ def test_autograd(tmpdir):
             batch_size=batch_size, shuffle=True, flat=True, silent=False)
 
     def score(net, ctx_list):
-        metric = mx.metric.Accuracy()
+        metric = gluon.metric.Accuracy()
         val_data.reset()
         for batch in val_data:
             datas = gluon.utils.split_and_load(batch.data[0], ctx_list, batch_axis=0)
@@ -67,9 +66,9 @@ def test_autograd(tmpdir):
         return metric.get()[1]
 
     def train(net, epoch, ctx_list):
-        net.collect_params().initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx_list)
+        net.initialize(mx.init.Xavier(magnitude=2.24), ctx=ctx_list)
         trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.5})
-        metric = mx.metric.Accuracy()
+        metric = gluon.metric.Accuracy()
         loss = gluon.loss.SoftmaxCrossEntropyLoss()
 
         for i in range(epoch):
@@ -97,9 +96,9 @@ def test_autograd(tmpdir):
     acc2 = score(net1, [mx.cpu(0), mx.cpu(1)])
     assert acc1 > 0.95
     assert abs(acc1 - acc2) < 0.01
-    net1.collect_params().save('mnist.params')
+    net1.save_parameters('mnist.params')
 
     net2 = get_net()
-    net2.collect_params().load('mnist.params', ctx=[mx.cpu(0)])
+    net2.load_parameters('mnist.params', ctx=[mx.cpu(0)])
     acc3 = score(net2, [mx.cpu(0)])
     assert abs(acc3 - acc1) < 0.0001

@@ -55,6 +55,9 @@ static bool BatchNormWithReLUShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
   CHECK_EQ(out_shape->size(), 4U);
   const mxnet::TShape &dshape = in_shape->at(batchnormrelu::kData);
+  if (!mxnet::ndim_is_known(dshape)) {
+    return false;
+  }
 
   const size_t channelAxis = static_cast<size_t>(param.axis < 0
       ? static_cast<int>(dshape.ndim()) + param.axis
@@ -62,10 +65,6 @@ static bool BatchNormWithReLUShape(const nnvm::NodeAttrs& attrs,
   CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param.axis;
 
   const int channelCount = dshape[channelAxis];
-
-  if (!mxnet::ndim_is_known(dshape)) {
-    return false;
-  }
 
   in_shape->at(batchnormrelu::kGamma) = mxnet::TShape(Shape1(channelCount));
   in_shape->at(batchnormrelu::kBeta) = mxnet::TShape(Shape1(channelCount));
@@ -84,14 +83,36 @@ static bool BatchNormWithReLUType(const nnvm::NodeAttrs& attrs,
                                   std::vector<int> *in_type, std::vector<int> *out_type) {
   using namespace mshadow;
   CHECK_GE(in_type->size(), 1U);
-  const int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
+  const size_t n_out = 4;
   // For float16 input type beta, gamma, mean, and average are stored in float32.
   // For other input types, these parameters have the same type as input
   // NOTE: This requirement is from cuDNN (v. 4 and 5)
   int dtype_param;
-  MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
+  int dtype = (*in_type)[0];
+
+  if (type_is_none(dtype)) {
+    // Input type is undefined, we try backward inference
+    if (out_type->size() == 0 || type_is_none((*out_type)[0])) {
+       // Neither the input nor the output are defined,
+       // types cannot be infered for this op
+       return false;
+    } else {
+       // Input type is undefined but output type is: backward inference
+       dtype = (*out_type)[0];
+       (*in_type)[0] = dtype;
+       MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
+         dtype_param = mshadow::DataType<AccRealX>::kFlag; });
+    }
+  } else {
+    // Input type is defined but output type is not: forward inference
+    MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
       dtype_param = mshadow::DataType<AccRealX>::kFlag; });
+    out_type->clear();
+    out_type->push_back(dtype);
+    for (size_t i = 1; i < n_out; ++i) {
+      out_type->push_back(dtype_param);
+    }
+  }
   std::vector<std::string> args{"data", "gamma", "beta", "mean", "var"};
   CHECK_LE(in_type->size(), args.size());
   for (size_t i = 1; i < in_type->size(); ++i) {
@@ -100,12 +121,6 @@ static bool BatchNormWithReLUType(const nnvm::NodeAttrs& attrs,
     } else {
       UNIFORM_TYPE_CHECK((*in_type)[i], dtype_param, args[i]);
     }
-  }
-  const size_t n_out = 4;
-  out_type->clear();
-  out_type->push_back(dtype);
-  for (size_t i = 1; i < n_out; ++i) {
-    out_type->push_back(dtype_param);
   }
   return true;
 }

@@ -39,7 +39,7 @@ set_default_context(mx.gpu(0))
 
 
 def check_rnn_layer(layer):
-    layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     with mx.gpu(0):
         x = mx.nd.ones((10, 16, 30))
         states = layer.begin_state(16)
@@ -58,7 +58,7 @@ def check_rnn_layer(layer):
 
 @with_seed()
 def check_rnn_layer_w_rand_inputs(layer):
-    layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     x = mx.nd.uniform(shape=(10, 16, 30))
     with mx.gpu(0):
         x = x.copyto(mx.gpu(0))
@@ -92,18 +92,17 @@ def test_lstmp():
               'h2r_weight': (projection_size, hidden_size)}
     weights = {k: rand_ndarray(v) for k, v in shapes.items()}
     lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
-                                input_size=input_size, prefix='lstm0_')
+                                input_size=input_size)
     lstm_cell = gluon.contrib.rnn.LSTMPCell(hidden_size=hidden_size,
                                             projection_size=projection_size,
-                                            input_size=input_size,
-                                            prefix='lstm0_l0_')
+                                            input_size=input_size)
     lstm_layer.initialize(ctx=ctx)
     lstm_cell.initialize(ctx=ctx)
     layer_params = lstm_layer.collect_params()
     cell_params = lstm_cell.collect_params()
     for k, v in weights.items():
-        layer_params['lstm0_l0_' + k].set_data(v.copy())
-        cell_params['lstm0_l0_' + k].set_data(v.copy())
+        layer_params['l0_' + k].set_data(v.copy())
+        cell_params[k].set_data(v.copy())
     with autograd.record():
         layer_output = lstm_layer(lstm_input.copy())
         cell_output = lstm_cell.unroll(seq_len, lstm_input.copy(), layout='TNC',
@@ -113,8 +112,8 @@ def test_lstmp():
     layer_output.backward()
     cell_output.backward()
     for k, v in weights.items():
-        layer_grad = layer_params['lstm0_l0_' + k].grad()
-        cell_grad = cell_params['lstm0_l0_' + k].grad()
+        layer_grad = layer_params['l0_' + k].grad()
+        cell_grad = cell_params[k].grad()
         print('checking gradient for {}'.format('lstm0_l0_' + k))
         assert_almost_equal(layer_grad, cell_grad, rtol=rtol, atol=atol)
     check_rnn_layer_forward(gluon.rnn.LSTM(
@@ -142,7 +141,7 @@ def test_lstm_clip():
     lstm_states = [mx.nd.uniform(shape=(2, batch_size, projection_size), ctx=mx.gpu(0)),
                    mx.nd.uniform(shape=(2, batch_size, hidden_size), ctx=mx.gpu(0))]
     lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
-                                input_size=input_size, prefix='lstm0_',
+                                input_size=input_size,
                                 bidirectional=True,
                                 state_clip_min=clip_min,
                                 state_clip_max=clip_max,
@@ -172,11 +171,10 @@ def check_layer_bidirectional(size, in_size, proj_size):
     class RefBiLSTM(gluon.Block):
         def __init__(self, size, proj_size, **kwargs):
             super(RefBiLSTM, self).__init__(**kwargs)
-            with self.name_scope():
-                self._lstm_fwd = gluon.rnn.LSTM(
-                    size, projection_size=proj_size, bidirectional=False, prefix='l0')
-                self._lstm_bwd = gluon.rnn.LSTM(
-                    size, projection_size=proj_size, bidirectional=False, prefix='r0')
+            self._lstm_fwd = gluon.rnn.LSTM(
+                size, projection_size=proj_size, bidirectional=False)
+            self._lstm_bwd = gluon.rnn.LSTM(
+                size, projection_size=proj_size, bidirectional=False)
 
         def forward(self, inpt):
             fwd = self._lstm_fwd(inpt)
@@ -186,32 +184,32 @@ def check_layer_bidirectional(size, in_size, proj_size):
             return nd.concat(fwd, bwd, dim=2)
     weights = {}
     for d in ['l', 'r']:
-        weights['lstm_{}0_i2h_weight'.format(d)] = mx.random.uniform(
+        weights['{}0_i2h_weight'.format(d)] = mx.random.uniform(
             shape=(size * 4, in_size))
         if proj_size:
-            weights['lstm_{}0_h2h_weight'.format(d)] = mx.random.uniform(
+            weights['{}0_h2h_weight'.format(d)] = mx.random.uniform(
                 shape=(size * 4, proj_size))
-            weights['lstm_{}0_h2r_weight'.format(d)] = mx.random.uniform(
+            weights['{}0_h2r_weight'.format(d)] = mx.random.uniform(
                 shape=(proj_size, size))
         else:
-            weights['lstm_{}0_h2h_weight'.format(
+            weights['{}0_h2h_weight'.format(
                 d)] = mx.random.uniform(shape=(size * 4, size))
-        weights['lstm_{}0_i2h_bias'.format(
+        weights['{}0_i2h_bias'.format(
             d)] = mx.random.uniform(shape=(size * 4,))
-        weights['lstm_{}0_h2h_bias'.format(
+        weights['{}0_h2h_bias'.format(
             d)] = mx.random.uniform(shape=(size * 4,))
 
     net = gluon.rnn.LSTM(size, projection_size=proj_size,
-                         bidirectional=True, prefix='lstm_')
-    ref_net = RefBiLSTM(size, proj_size, prefix='lstm_')
+                         bidirectional=True)
+    ref_net = RefBiLSTM(size, proj_size)
     net.initialize()
     ref_net.initialize()
     net_params = net.collect_params()
     ref_net_params = ref_net.collect_params()
     for k in weights:
         net_params[k].set_data(weights[k])
-        ref_net_params[k.replace('l0', 'l0l0').replace(
-            'r0', 'r0l0')].set_data(weights[k])
+        ref_net_params[k.replace('l0', '_lstm_fwd.l0').replace(
+            'r0', '_lstm_bwd.l0')].set_data(weights[k])
 
     data = mx.random.uniform(shape=(11, 10, in_size))
     mx.test_utils.assert_allclose(net(data), ref_net(data), rtol=1e-6)
@@ -221,20 +219,20 @@ def check_layer_bidirectional(size, in_size, proj_size):
 def check_layer_bidirectional_varseqlen(size, in_size):
     weights = {}
     for d in ['l', 'r']:
-        weights['lstm_{}0_i2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, in_size))
-        weights['lstm_{}0_h2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, size))
-        weights['lstm_{}0_i2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
-        weights['lstm_{}0_h2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
+        weights['{}0_i2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, in_size))
+        weights['{}0_h2h_weight'.format(d)] = mx.random.uniform(shape=(size*4, size))
+        weights['{}0_i2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
+        weights['{}0_h2h_bias'.format(d)] = mx.random.uniform(shape=(size*4,))
 
-    net = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=True, prefix='lstm_')
-    ref_net  = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=False, prefix='lstm_ref_')
+    net = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=True)
+    ref_net  = gluon.rnn.LSTM(size, bidirectional=True, use_sequence_length=False)
     net.initialize()
     ref_net.initialize()
     net_params = net.collect_params()
     ref_net_params = ref_net.collect_params()
     for k in weights:
         net_params[k].set_data(weights[k])
-        ref_net_params[k.replace("lstm_", "lstm_ref_")].set_data(weights[k])
+        ref_net_params[k].set_data(weights[k])
 
     batch_size = 10
     num_timesteps = 11
@@ -276,7 +274,7 @@ def check_layer_bidirectional_varseqlen(size, in_size):
 
     for k in weights:
         net_grad = net_params[k].grad()
-        ref_net_grad = ref_net_params[k.replace('lstm_', 'lstm_ref_')].grad()
+        ref_net_grad = ref_net_params[k].grad()
         assert_almost_equal(net_grad.asnumpy(), ref_net_grad.asnumpy(),
                             rtol=1e-2, atol=1e-6)
 
@@ -452,13 +450,15 @@ def test_symbol_block_fp16(tmpdir):
     sm = mx.sym.load(tmpfile + '-symbol.json')
     inputs = mx.sym.var('data', dtype='float16')
     net_fp16 = mx.gluon.SymbolBlock(sm, inputs)
-    net_fp16.collect_params().load(tmpfile + '-0000.params', ctx=ctx)
+    net_fp16.load_parameters(tmpfile + '-0000.params', ctx=ctx)
     # 3. Get a conv layer's weight parameter name. Conv layer's weight param is
     # expected to be of dtype casted, fp16.
-    for param_name in net_fp16.params.keys():
+    name = None    
+    for param_name, param in net_fp32.collect_params().items():
         if 'conv' in param_name and 'weight' in param_name:
+            name = param.name
             break
-    assert np.dtype(net_fp16.params[param_name].dtype) == np.dtype(np.float16)
+    assert np.dtype(net_fp16.params[name].dtype) == np.dtype(np.float16)
 
 
 @with_seed()
@@ -469,8 +469,7 @@ def test_large_models():
     net = gluon.nn.HybridSequential()
 
     largest_num_features = 256
-    with net.name_scope():
-        net.add(nn.Conv2D(largest_num_features, 3))
+    net.add(nn.Conv2D(largest_num_features, 3))
 
     net.hybridize()
     net.initialize(mx.init.Normal(sigma=0.01), ctx=ctx)
@@ -515,9 +514,8 @@ def _test_bulking_in_process(seed, time_per_iteration):
 
     def get_net(num_ops):
         net = nn.HybridSequential()
-        with net.name_scope():
-            for _ in range(num_ops):
-                net.add(Flip())
+        for _ in range(num_ops):
+            net.add(Flip())
         return net
 
     data_shape = (10,)
@@ -582,7 +580,7 @@ def _test_bulking(test_bulking_func):
         .format(fully_bulked_time - fastest_half_bulked_time, times_str)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/14970')
 def test_bulking_gluon_gpu():
     _test_bulking(_test_bulking_in_process)
 

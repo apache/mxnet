@@ -60,7 +60,8 @@ struct NumpyEyeParam : public dmlc::Parameter<NumpyEyeParam> {
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
-    .set_default(mshadow::kFloat32)
+    .set_default(-1)
+    .add_enum("None", -1)
     MXNET_ADD_ALL_TYPES
     .describe("Data-type of the returned array.");
   }
@@ -84,7 +85,8 @@ struct IndicesOpParam : public dmlc::Parameter<IndicesOpParam> {
   DMLC_DECLARE_PARAMETER(IndicesOpParam) {
     DMLC_DECLARE_FIELD(dimensions)
     .describe("The shape of the grid.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kInt32)
+    DMLC_DECLARE_FIELD(dtype).set_default(-1)
+      .add_enum("None", -1)
       MXNET_ADD_ALL_TYPES
       .describe("Target data type.");
     DMLC_DECLARE_FIELD(ctx)
@@ -259,7 +261,8 @@ struct LogspaceParam : public dmlc::Parameter<LogspaceParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
     "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    DMLC_DECLARE_FIELD(dtype).set_default(-1)
+    .add_enum("None", -1)
     MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
   }

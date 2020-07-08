@@ -31,6 +31,7 @@ def test_infer_multiout_op():
         y = mx.nd.split(data, axis=0, num_outputs=2)
     y[0].backward()
     assert data.grad.dtype == np.float64
+    mx.nd.waitall()
 
 @with_seed()
 def test_infer_multiout_op2():

@@ -46,9 +46,11 @@ from util import *
 DOCKER_COMPOSE_WHITELIST = ('centos7_cpu', 'centos7_gpu_cu92', 'centos7_gpu_cu100',
                             'centos7_gpu_cu101', 'centos7_gpu_cu102', 'ubuntu_cpu',
                             'ubuntu_build_cuda', 'ubuntu_gpu_cu101', 'publish.test.centos7_cpu',
-                            'publish.test.centos7_gpu')
+                            'publish.test.centos7_gpu', 'android_armv7', 'android_armv8',
+                            'armv6', 'armv7', 'armv8', 'test.armv7', 'test.armv8')
 # Files for docker compose
-DOCKER_COMPOSE_FILES = set(('docker/build.centos7', 'docker/build.ubuntu', 'docker/publish.test.centos7'))
+DOCKER_COMPOSE_FILES = set(('docker/build.centos7', 'docker/build.ubuntu', 'docker/build.android',
+                            'docker/build.arm', 'docker/test.arm', 'docker/publish.test.centos7'))
 
 
 def get_dockerfiles_path():
@@ -225,8 +227,9 @@ def container_run(docker_client: SafeDockerClient,
 
     # Equivalent command
     docker_cmd_list = [
-        "nvidia-docker" if nvidia_runtime else "docker",
+        "docker",
         'run',
+        "--gpus all" if nvidia_runtime else "",
         "--cap-add",
         "SYS_PTRACE", # Required by ASAN
         '--rm',
@@ -359,6 +362,9 @@ def main() -> int:
                         default=1,
                         type=int)
 
+    parser.add_argument("--no-pull", action="store_true",
+                        help="Don't pull from dockerhub registry to initialize cache.")
+
     parser.add_argument("--no-cache", action="store_true",
                         help="passes --no-cache to docker build")
 
@@ -391,7 +397,7 @@ def main() -> int:
     elif args.platform:
         platform = args.platform
         tag = get_docker_tag(platform=platform, registry=args.docker_registry)
-        if args.docker_registry:
+        if args.docker_registry and not args.no_pull:
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
             build_docker(platform=platform, registry=args.docker_registry, num_retries=args.docker_build_retries,

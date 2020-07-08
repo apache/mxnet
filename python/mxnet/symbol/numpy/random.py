@@ -17,7 +17,9 @@
 
 """Namespace for operators used in Gluon dispatched by F=symbol."""
 
+import numpy as np
 from ...context import current_context
+from ...util import is_np_default_dtype
 from . import _internal as _npi
 
 
@@ -137,7 +139,9 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         a scalar tensor containing a single value is returned if
         ``low`` and ``high`` are both scalars.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -148,8 +152,6 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from ._symbol import _Symbol as np_symbol
     input_type = (isinstance(low, np_symbol), isinstance(high, np_symbol))
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
     if out is not None:
@@ -188,7 +190,9 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         samples are drawn. If size is `None` (default), a scalar tensor containing
         a single value is returned if loc and scale are both scalars.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'.
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -199,8 +203,6 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from ._symbol import _Symbol as np_symbol
     input_type = (isinstance(loc, np_symbol), isinstance(scale, np_symbol))
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
     if size == ():
@@ -486,7 +488,9 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         a single value is returned if ``shape`` and ``scale`` are both scalars.
         Otherwise, ``np.broadcast(shape, scale).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'.
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -501,8 +505,6 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     """
     from ._symbol import _Symbol as np_symbol
     input_type = (isinstance(shape, np_symbol), isinstance(scale, np_symbol))
-    if dtype is None:
-        dtype = 'float32'
     if ctx is None:
         ctx = current_context()
     if out is not None:
@@ -587,7 +589,9 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         a single value is returned if ``a`` and ``b`` are both scalars.
         Otherwise, ``np.broadcast(a, b).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'.
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
         Dtype 'float32' or 'float64' is strongly recommended,
         since lower precision might lead to out of range issue.
     ctx : Context, optional
@@ -603,7 +607,7 @@ def beta(a, b, size=None, dtype=None, ctx=None):
         Drawn samples from the parameterized beta distribution.
     """
     if dtype is None:
-        dtype = 'float32'
+        dtype = np.float64 if is_np_default_dtype() else np.float32
     if ctx is None:
         ctx = current_context()
     if size == ():
@@ -673,7 +677,9 @@ def chisquare(df, size=None, dtype=None, ctx=None):
         a single value is returned if ``df`` is a scalar.  Otherwise,
         ``np.array(df).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'.
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -715,7 +721,7 @@ def chisquare(df, size=None, dtype=None, ctx=None):
 
     """
     if dtype is None:
-        dtype = 'float32'
+        dtype = np.float64 if is_np_default_dtype() else np.float32
     if ctx is None:
         ctx = current_context()
     if size == ():

@@ -22,7 +22,6 @@
  * \brief GPU Implementation of power (x^k for fixed k) functions.
  */
 #include "./elemwise_binary_op.h"
-#include "./elemwise_unary_op.h"
 
 namespace mxnet {
 namespace op {
