@@ -43,7 +43,7 @@ class TVMOpModule {
  public:
   // Load TVM operators binary
   void Load(const std::string& filepath);
- 
+
   void Call(const std::string& func_name,
             const mxnet::OpContext& ctx,
             const std::vector<mxnet::TBlob>& args) const;
