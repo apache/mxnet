@@ -720,19 +720,19 @@ class ndarray(NDArray):
                 key = (_np.newaxis,) + key
             return self._get_np_basic_indexing(key)
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
-            if prepend == _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY:
-                has_none = False
-                if isinstance(key, tuple):
-                    for i in list(key):
-                        if i is None:
-                            has_none = True
-                            break
-                if not has_none:
-                    idcs, new_axes = self._get_index_nd(key)
-                    if isinstance(idcs, NDArray):  # pylint: disable=unidiomatic-typecheck
-                        idcs = idcs.as_np_ndarray()
-                    else:
-                        idcs = _npi.stack(*[i if isinstance(i, self.__class__) else i.as_np_ndarray() for i in idcs])
+            if prepend == _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY and isinstance(key, (NDArray, _np.ndarray)):
+                idcs, new_axes = self._get_index_nd(key)
+                is_int_array = True
+
+                if isinstance(idcs, NDArray):  # pylint: disable=unidiomatic-typecheck
+                    idcs = idcs.as_np_ndarray()
+                    is_int_array = _np.issubdtype(idcs.dtype, _np.integer)
+                else:
+                    for i in idcs:
+                        i = i if isinstance(i, self.__class__) else i.as_np_ndarray()
+                        is_int_array = _np.issubdtype(i.dtype, _np.integer) and is_int_array
+                    idcs = _npi.stack(*[i if isinstance(i, self.__class__) else i.as_np_ndarray() for i in idcs])
+                if is_int_array:
                     sliced = _npi.advanced_indexing_multiple(self, idcs)
                     # Reshape due to `None` entries in `key`.
                     if new_axes:
