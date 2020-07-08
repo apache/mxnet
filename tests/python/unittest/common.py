@@ -361,13 +361,13 @@ def retry(n):
         @functools.wraps(orig_test)
         def test_new(*args, **kwargs):
             """Wrapper for tests function."""
-            for _ in range(n):
+            for i in range(n):
                 try:
                     orig_test(*args, **kwargs)
+                    return
                 except AssertionError as e:
-                    err = e
-                    continue
-                return
-            raise err
+                    if i == n-1:
+                        raise e
+                    mx.nd.waitall()
         return test_new
     return test_helper
