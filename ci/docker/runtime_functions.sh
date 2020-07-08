@@ -699,6 +699,7 @@ build_ubuntu_gpu_mkldnn() {
     CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CPP_PACKAGE=ON \
@@ -712,6 +713,7 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
     CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=OFF \
@@ -726,6 +728,7 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     CC=gcc-7 CXX=g++-7 cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_TVM_OP=ON \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
         -DUSE_CUDNN=ON \
@@ -762,6 +765,7 @@ build_ubuntu_gpu_cuda101_cudnn7_make() {
     make \
         USE_BLAS=openblas                         \
         USE_MKLDNN=0                              \
+        USE_TVM_OP=1                              \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
@@ -781,6 +785,7 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
     make \
         USE_BLAS=openblas                         \
         USE_MKLDNN=1                              \
+        USE_TVM_OP=0                              \
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
@@ -792,6 +797,23 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
     make test USE_CPP_PACKAGE=1 -j$(nproc)
     make cython PYTHON=python3
 }
+
+build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
+     set -ex
+     cd /work/build
+     CC=gcc-7 CXX=g++-7 cmake \
+         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
+         -DUSE_MKL_IF_AVAILABLE=OFF \
+         -DUSE_TVM_OP=OFF \
+         -DUSE_CUDA=ON \
+         -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+         -DUSE_CUDNN=ON \
+         -DUSE_MKLDNN=OFF \
+         -DBUILD_CYTHON_MODULES=ON \
+         -DUSE_DIST_KVSTORE=ON \
+         -G Ninja /work/mxnet
+     ninja
+ }
 
 build_ubuntu_gpu_cmake() {
     set -ex

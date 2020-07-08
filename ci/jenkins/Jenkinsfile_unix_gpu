@@ -42,6 +42,8 @@ core_logic: {
     custom_steps.compile_unix_cmake_gpu('cmake_gpu'),
     custom_steps.compile_unix_tensorrt_gpu('tensorrt'),
     custom_steps.compile_unix_int64_gpu('gpu_int64'),
+    custom_steps.compile_unix_full_gpu_no_tvm_op('gpu_no_tvm_op'),
+    custom_steps.compile_unix_cmake_gpu_no_tvm_op('cmake_gpu_no_tvm_op'),
     custom_steps.compile_unix_cmake_gpu_no_rtc('gpu_no_rtc'),
     custom_steps.compile_unix_full_gpu_mkldnn_cpp_test('gpu_mkldnn_cpp_test_make')
   ])
@@ -53,6 +55,8 @@ core_logic: {
     // TODO(szha): fix and reenable the hanging issue. tracked in #18098
     // custom_steps.test_unix_distributed_kvstore_gpu('gpu'),
     custom_steps.test_unix_byteps_gpu('gpu'),
+    custom_steps.test_unix_python3_gpu_no_tvm_op(),
+    custom_steps.test_unix_capi_cpp_package('gpu_mkldnn_cpp_test_make'),
   ]) 
 }
 ,
