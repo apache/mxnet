@@ -25,9 +25,9 @@
 #include "./np_einsum_op-inl.h"
 #include <nvToolsExt.h>
 
-#if MXNET_USE_CUTENSOR == 1
-#include "cutensor.h"
-#endif
+//#if MXNET_USE_CUTENSOR == 1
+//#include "cutensor.h"
+//#endif
 
 namespace mxnet {
 namespace op {
@@ -58,7 +58,6 @@ struct CuTensorTypeTraits<mshadow::half::half_t> {
 /*!
  * \brief The Operator used to perform einsum using cuTensor library.
  */
-/*
 template<typename DType>
 class CuTensorEinsumOp {
   STATIC_ASSERT_CUDNN_VERSION_GE(6000);
@@ -76,7 +75,8 @@ class CuTensorEinsumOp {
                const std::vector<OpReqType> &req,
                const std::vector<TBlob> &out_data) {
   }
-  std::unordered_map<char, int64_t> mode_2_size;
+
+  //cutensorHandle_t handle;
   // modes
   std::vector<int> modes_a;
   std::vector<int> modes_b;
@@ -88,6 +88,8 @@ class CuTensorEinsumOp {
 
   cudaDataType_t cudaType;
   cutensorComputeType_t cutensorType;
+  
+  std::unordered_map<char, int64_t> mode_2_size;
 
 };
 // end CuTensorEinsumOp class
@@ -95,7 +97,6 @@ class CuTensorEinsumOp {
 template<typename DType>
 static CuTensorEinsumOp<DType>& GetCuTensorEinsumOp() {}
 
-*/
 
 
 std::unordered_map<char, int64_t> mode_2_size;
@@ -103,20 +104,19 @@ std::vector<int> modes_a;
 std::vector<int> modes_b;
 std::vector<int> modes_c;
 
-inline cutensorHandle_t CreateHandle() {
+/*inline cutensorHandle_t CreateHandle() {
   cutensorHandle_t handle;
   cutensorInit(&handle);
   return handle;
 }
-
 inline cutensorHandle_t* GetHandle() {
   static cutensorHandle_t handle = CreateHandle();
   return &handle;
-}
+}*/
 
 inline void initialize(std::string equation,
-                        const TBlob &tensor_a,
-                        const TBlob &tensor_b) {
+                       const TBlob &tensor_a,
+                       const TBlob &tensor_b) {
  auto comma_pos = equation.find(",");
  auto arrow_pos = equation.find("->");
  auto op_a = equation.substr(0, comma_pos);
@@ -167,7 +167,7 @@ inline void EinsumForwardCutensor(const std::vector<TBlob>& inputs,
     const DType* tensor_b_ptr =  tensor_b.FlatTo2D<gpu, DType>(stream).dptr_;
     DType* tensor_c_ptr =  tensor_c.FlatTo2D<gpu, DType>(stream).dptr_;
 
-    cutensorHandle_t* handle = GetHandle();
+    //cutensorHandle_t* handle = GetHandle();
     // using defaul algo
     cutensorAlgo_t algo = CUTENSOR_ALGO_DEFAULT;
     // initialize
@@ -181,74 +181,86 @@ inline void EinsumForwardCutensor(const std::vector<TBlob>& inputs,
     std::vector<int64_t> sizes_a;
     for(auto mode : modes_a)
         sizes_a.push_back(mode_2_size[mode]);
-    CUTENSOR_CALL(cutensorInitTensorDescriptor(handle,
-                  &descriptor_a,
-                  tensor_a.ndim(),
-                  sizes_a.data(),
-                  NULL, //stride
-                  cudaType, CUTENSOR_OP_IDENTITY));
+    CUTENSOR_CALL(cutensorInitTensorDescriptor(&stream->cutensor_handle_,
+                                               &descriptor_a,
+                                               tensor_a.ndim(),
+                                               sizes_a.data(),
+                                               NULL, //stride
+                                               cudaType,
+                                               CUTENSOR_OP_IDENTITY));
     std::vector<int64_t> sizes_b;
     for(auto mode : modes_b)
         sizes_b.push_back(mode_2_size[mode]);
-    CUTENSOR_CALL(cutensorInitTensorDescriptor(handle,
-                  &descriptor_b,
-                  tensor_b.ndim(),
-                  sizes_b.data(),
-                  NULL, //stride
-                  cudaType, CUTENSOR_OP_IDENTITY));
+    CUTENSOR_CALL(cutensorInitTensorDescriptor(&stream->cutensor_handle_,
+                                               &descriptor_b,
+                                               tensor_b.ndim(),
+                                               sizes_b.data(),
+                                               NULL, //stride
+                                               cudaType, CUTENSOR_OP_IDENTITY));
 
     std::vector<int64_t> sizes_c;
     for(auto mode : modes_c)
         sizes_c.push_back(mode_2_size[mode]);
-    CUTENSOR_CALL(cutensorInitTensorDescriptor(handle,
-                  &descriptor_c,
-                  tensor_c.ndim(),
-                  sizes_c.data(),
-                  NULL, //stride
-                  cudaType, CUTENSOR_OP_IDENTITY));
+    CUTENSOR_CALL(cutensorInitTensorDescriptor(&stream->cutensor_handle_,
+                                               &descriptor_c,
+                                               tensor_c.ndim(),
+                                               sizes_c.data(),
+                                               NULL, //stride
+                                               cudaType,
+                                               CUTENSOR_OP_IDENTITY));
 
     // aligment
     uint32_t alignment_req_a;
     uint32_t alignment_req_b;
     uint32_t alignment_req_c;
 
-    CUTENSOR_CALL(cutensorGetAlignmentRequirement(handle,
-                  tensor_a_ptr,
-                  &descriptor_a, &alignment_req_a));
+    CUTENSOR_CALL(cutensorGetAlignmentRequirement(&stream->cutensor_handle_,
+                                                  tensor_a_ptr,
+                                                  &descriptor_a,
+                                                  &alignment_req_a));
 
-    CUTENSOR_CALL(cutensorGetAlignmentRequirement(handle,
-                  tensor_b_ptr,
-                  &descriptor_b, &alignment_req_b));
+    CUTENSOR_CALL(cutensorGetAlignmentRequirement(&stream->cutensor_handle_,
+                                                  tensor_b_ptr,
+                                                  &descriptor_b,
+                                                  &alignment_req_b));
 
-    CUTENSOR_CALL(cutensorGetAlignmentRequirement(handle,
-                  tensor_c_ptr,
-                  &descriptor_c, &alignment_req_c));
+    CUTENSOR_CALL(cutensorGetAlignmentRequirement(&stream->cutensor_handle_,
+                                                  tensor_c_ptr,
+                                                  &descriptor_c,
+                                                  &alignment_req_c));
 
     // Contraction descriptor
     cutensorContractionPlan_t plan;
     cutensorContractionDescriptor_t descriptor_contraction;
     cutensorContractionFind_t find;
 
-    CUTENSOR_CALL(cutensorInitContractionDescriptor(handle, &descriptor_contraction,
+    CUTENSOR_CALL(cutensorInitContractionDescriptor(
+                  &stream->cutensor_handle_,
+                  &descriptor_contraction,
                   &descriptor_a, modes_a.data(), alignment_req_a,
                   &descriptor_b, modes_b.data(), alignment_req_b,
                   &descriptor_c, modes_c.data(), alignment_req_c,
                   &descriptor_c, modes_c.data(), alignment_req_c,
                   cutensorType));
 
-    CUTENSOR_CALL(cutensorInitContractionFind(handle, &find, algo));
+    CUTENSOR_CALL(cutensorInitContractionFind(&stream->cutensor_handle_,
+                                              &find, algo));
     // workspace to allow optimizations
     size_t workspace_size = 0;
-    CUTENSOR_CALL(cutensorContractionGetWorkspace(handle,
-                  &descriptor_contraction,
-                  &find,
-                  CUTENSOR_WORKSPACE_MAX, &workspace_size));
+    CUTENSOR_CALL(cutensorContractionGetWorkspace(&stream->cutensor_handle_,
+                                                  &descriptor_contraction,
+                                                  &find,
+                                                  CUTENSOR_WORKSPACE_MAX,
+                                                  &workspace_size));
     Tensor<gpu, 1, char> workspace =
         ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), stream);
 
     // Contraction Plan
-    CUTENSOR_CALL(cutensorInitContractionPlan(handle, &plan, &descriptor_contraction,
-                                              &find, workspace_size));
+    CUTENSOR_CALL(cutensorInitContractionPlan(&stream->cutensor_handle_,
+                                              &plan,
+                                              &descriptor_contraction,
+                                              &find,
+                                              workspace_size));
     cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(stream));
     nvtxRangePop();
     nvtxRangePush("einsum");
@@ -256,10 +268,11 @@ inline void EinsumForwardCutensor(const std::vector<TBlob>& inputs,
     // run einsum
     typename CuTensorTypeTraits<DType>::ScalarType alpha = 1;
     typename CuTensorTypeTraits<DType>::ScalarType beta = 0;
-    CUTENSOR_CALL(cutensorContraction(handle, &plan,
-                  (void*) &alpha, tensor_a_ptr, tensor_b_ptr,
-                  (void*) &beta,  tensor_c_ptr, tensor_c_ptr,
-                  workspace.dptr_, workspace_size, mshadow::Stream<gpu>::GetStream(stream)));
+    CUTENSOR_CALL(cutensorContraction(&stream->cutensor_handle_,
+                                      &plan,
+                                      (void*) &alpha, tensor_a_ptr, tensor_b_ptr,
+                                      (void*) &beta,  tensor_c_ptr, tensor_c_ptr,
+                                      workspace.dptr_, workspace_size, mshadow::Stream<gpu>::GetStream(stream)));
     cudaStreamSynchronize(mshadow::Stream<gpu>::GetStream(stream));
     nvtxRangePop();
   });

@@ -262,7 +262,7 @@ ifeq ($(USE_CUDNN), 1)
 endif
 
 ifeq ($(USE_CUTENSOR), 1)
-	CFLAGS += -DMXNET_USE_CUTENSOR=1
+	CFLAGS += -DMSHADOW_USE_CUTENSOR=1
 	LDFLAGS += -lcutensor
 endif
 

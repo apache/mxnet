@@ -124,6 +124,13 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 /*!
+ * \brief use CUTENSOR support, must ensure that the cutensor include path is correct
+ */
+#ifndef MSHADOW_USE_CUTENSOR
+  #define MSHADOW_USE_CUTENSOR 0
+#endif
+
+/*!
  * \brief use CUSOLVER support
  */
 #ifndef MSHADOW_USE_CUSOLVER
@@ -185,6 +192,10 @@ extern "C" {
 
 #if MSHADOW_USE_CUDNN == 1
   #include <cudnn.h>
+#endif
+
+#if MSHADOW_USE_CUTENSOR == 1
+  #include <cutensor.h>
 #endif
 
 #if MSHADOW_USE_CUSOLVER == 1

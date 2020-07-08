@@ -53,12 +53,18 @@ struct Stream<gpu> {
   #if MSHADOW_USE_CUDNN == 1
   cudnnHandle_t dnn_handle_;
   #endif
+  /*! \brief cutensor handle */
+  #if MSHADOW_USE_CUTENSOR== 1
+  cutensorHandle_t cutensor_handle_;
+  #endif
   /*! \brief cublas handle ownership */
   HandleState blas_handle_ownership_;
   /*! \brief cusolver handle ownership */
   HandleState solver_handle_ownership_;
   /*! \brief cudnn handle ownership */
   HandleState dnn_handle_ownership_;
+  /*! \brief cutensor handle ownership */
+  HandleState cutensor_handle_ownership_;
   /*! \brief cudaDeviceProp */
   cudaDeviceProp prop;
   /*! \brief dev id */
@@ -70,9 +76,11 @@ struct Stream<gpu> {
 #if MSHADOW_USE_CUDNN == 1
       , dnn_handle_(0)
 #endif
+      //, cutensor_handle_()
       , blas_handle_ownership_(NoHandle)
       , solver_handle_ownership_(NoHandle)
-      , dnn_handle_ownership_(NoHandle) {}
+      , dnn_handle_ownership_(NoHandle)
+      , cutensor_handle_ownership_(NoHandle) {}
   /*!
    * \brief wait for all the computation associated
    *  with this stream to complete
@@ -196,6 +204,32 @@ struct Stream<gpu> {
     CHECK_EQ(err, CUDNN_STATUS_SUCCESS) << cudnnGetErrorString(err);
 #endif
   }
+#if MSHADOW_USE_CUTENSOR == 1
+  inline static cutensorHandle_t GetCuTensorHandle(Stream<gpu> *stream) {
+    //if (stream == NULL) {
+    //  return 0;
+    //} else {
+      CHECK_NE(stream->cutensor_handle_ownership_, NoHandle) << "No handle exist in source stream";
+      return stream->cutensor_handle_;
+    //}
+  }
+#endif
+  inline void DestroyCuTensorHandle() {
+#if MSHADOW_USE_CUTENSOR == 1
+    if (cutensor_handle_ownership_ == OwnHandle) {
+      // not destroy method available
+    }
+#endif
+  }
+  inline void CreateCuTensorHandle() {
+#if MSHADOW_USE_CUTENSOR == 1
+    //this->DestroyCuTensorHandle();
+    cutensorStatus_t err = cutensorInit(&cutensor_handle_);
+    CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
+    // At this point, we have the resource which may need to be freed
+    this->cutensor_handle_ownership_ = OwnHandle;
+#endif
+  }
 };
 template<>
 inline void DeleteStream<gpu>(Stream<gpu> *stream) {
@@ -222,6 +256,9 @@ inline Stream<gpu> *NewStream<gpu>(bool create_blas_handle,
   if (create_dnn_handle) {
     st->CreateDnnHandle();
   }
+#if MSHADOW_USE_CUTENSOR == 1
+  st->CreateCuTensorHandle();
+#endif
   st->dev_id = dev_id;
   if (dev_id != -1) {
     MSHADOW_CUDA_CALL(cudaGetDeviceProperties(&st->prop, dev_id));
