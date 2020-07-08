@@ -50,7 +50,7 @@ void TVMOpModule::Import(const TVMOpModule& module) {
   CHECK(module_ptr_ != nullptr) << "module_ptr_ is not initialized.";
   std::lock_guard<std::mutex> lock(mutex_);
   module_ptr_->Import(*(module.module_ptr_));
- }
+}
 
 PackedFunc GetFunction(const std::shared_ptr<Module> &module,
                        const std::string &op_name,
