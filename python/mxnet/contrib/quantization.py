@@ -825,7 +825,8 @@ def calib_graph(qsym, arg_params, aux_params, collector,
 def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quantize_granularity='tensor-wise',
                     exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
                     calib_data=None, data_shapes=None, calib_mode='none',
-                    num_calib_examples=None, ctx=cpu(), LayerOutputCollector=None, logger=None):
+                    num_calib_examples=None, ctx=cpu(), LayerOutputCollector=None, logger=None,
+                    custom_pass_bef_quant=None, custom_pass_aft_quant=None):
     """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -876,6 +877,10 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         For customize calibration method usage.
     logger : Object
         A logging object for printing information during the process of quantization.
+    custom_pass_bef_quant: function
+        A function to call custom passes for optimizing the computational graph before quantization
+    custom_pass_aft_quant: function
+        A function to call custom passes for optimizing the computational graph after quantization and calibration
 
     Returns
     -------
@@ -944,31 +949,18 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     if logger:
         logger.info('These layers have been excluded %s' % exclude_layers)
 
-    # visualization
-    digraph=mx.viz.plot_network(symnet, save_format = 'pdf',
-        node_attrs={"shape":'rect',"fixedsize":'false'},
-        hide_weights=False)
-    digraph.save("symnet.gv")
-
     if ctx == mx.cpu():
         symnet = symnet.get_backend_symbol('MKLDNN_QUANTIZE')
 
-    #digraph=mx.viz.plot_network(symnet, save_format = 'pdf',
-    #    node_attrs={"shape":'rect',"fixedsize":'false'},
-    #    hide_weights=False)
-    #digraph.save("symnet_aft_mkl.gv")
-    
+    if custom_pass_bef_quant is not None:
+        symnet, args, auxs = custom_pass_bef_quant(symnet, args, auxs)
+   
     qsym, qarg_params, aux_params, collector = quantize_graph(
         sym=symnet, arg_params=args, aux_params=auxs, ctx=ctx,
         excluded_sym_names=exclude_layers, excluded_op_names=exclude_operators,
         calib_mode=calib_mode, quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
         quantize_granularity=quantize_granularity, LayerOutputCollector=LayerOutputCollector,
         logger=logger)
-
-    digraph=mx.viz.plot_network(qsym, save_format = 'pdf',
-        node_attrs={"shape":'rect',"fixedsize":'false'},
-        hide_weights=False)
-    digraph.save("qsym_aft_quantizepass.gv")
 
     if calib_mode is not None and calib_mode != 'none':
         if not isinstance(ctx, Context):
@@ -979,16 +971,11 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy', 'customize']:
             data_names = [pair[0] for pair in calib_data.provide_data]
+            # in GPU case the context of this module is still on CPU for calibration
             mod = Module(symbol=symnet,
                          data_names=data_names, label_names=None)
-            #print("==============================================\n")
-            #print(data_names)
-            #print(data_shapes)
-            #print(calib_data)
-            #print("==============================================\n")
             mod.bind(for_training=False, data_shapes=data_shapes)
             mod.set_params(args, auxs, allow_missing=False, force_init=True)
-            #mod.set_params(args, auxs, allow_missing=False, force_init=True)
             num_examples = _collect_layer_statistics(mod, calib_data, collector,
                                                      num_calib_examples, logger)
             if logger:
@@ -1003,25 +990,11 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     elif calib_mode is not None and calib_mode == 'none':
         data_names = [pair[0] for pair in data_shapes]
 
-    #print(list(symnet.get_internals()))
-    #print("==============================================\n")
-    #print(list(mod.get_params().keys))
-
-    digraph=mx.viz.plot_network(qsym, save_format = 'pdf',
-        node_attrs={"shape":'rect',"fixedsize":'false'},
-        hide_weights=False)
-    digraph.save("qsym_test.gv")
-
     if ctx == mx.cpu():
         qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
-    #if ctx != mx.cpu():
-    #    qsym = qsym.get_backend_symbol('GPU_QUANTIZE')
 
-    # visualization
-    digraph=mx.viz.plot_network(qsym, save_format = 'pdf',
-        node_attrs={"shape":'rect',"fixedsize":'false'},
-        hide_weights=False)
-    digraph.save("qsym.gv")
+    if custom_pass_aft_quant is not None:
+        qsym, qarg_params, aux_params = custom_pass_aft_quant(qsym, qarg_params, aux_params)
 
     from ..gluon import SymbolBlock
     data_sym = []
@@ -1029,7 +1002,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         data_sym.append(mx.sym.var(name))
     net = SymbolBlock(qsym, data_sym)
     # TODO(xinyu-intel): tmp solution to save param_dict and reload for SymbolBlock
-    # will enhance SymbolBlock to load args, auxs directly.
+    # will enhance SymbolBlock to load args, auxs directly.  
     with TemporaryDirectory() as tmpdirname:
         prefix = os.path.join(tmpdirname, 'tmp')
         param_name = '%s-%04d.params' % (prefix + 'net-quantized', 0)
