@@ -130,7 +130,7 @@ CUfunction get_function(const std::string &parameters,
     std::string code_with_header = common_header + parameters + code;
     // If verbose mode, output kernel source, though not including the common header
     if (dmlc::GetEnv("MXNET_RTC_VERBOSE", false)) {
-      LOG(INFO) << "\n" << std::string(80, '-') << "\n" << code;
+      LOG(INFO) << "\n" << std::string(80, '-') << "\n" << (parameters + code);
     }
     if (compiled_kernels_this_arch.size() == CACHESIZE_WARN_THRESHOLD + 1 &&
         dmlc::GetEnv("MXNET_RTC_SIZE_WARNING", true)) {
