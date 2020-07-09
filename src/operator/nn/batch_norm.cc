@@ -435,10 +435,14 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
 
 #if MXNET_USE_MKLDNN == 1
 static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &param) {
-  mxnet::TShape shape = input.shape();
-  return SupportMKLDNN(input) && shape.ndim() == 4
-      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
-      && !mxnet::op::batchnorm::disable_mkl;
+  if (mxnet::op::batchnorm::disable_mkl) return false;
+  const mxnet::TShape shape = input.shape();
+  const int ndim = shape.ndim();
+  if (ndim == 0 || shape.Size() == 0) return false;
+  const int dtype = input.dtype();
+  return (dtype == mshadow::kFloat32 ||
+          dtype == mshadow::kBfloat16) &&
+          SupportStorageMKLDNN(input.storage_type());
 }
 
 void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
