@@ -1228,7 +1228,7 @@ def test_flatten_slice_after_conv():
 
     ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 16, 16, 16), 'type_dict': {'conv_data': np.float32}},
                 {'ctx': mx.cpu(0), 'conv_data': (2, 16, 16, 16), 'type_dict': {'conv_data': np.float32}}]
-    check_consistency(slice_sym, ctx_list)
+    check_consistency(slice_sym, ctx_list, scale=0.5)
 
 
 @with_seed()
