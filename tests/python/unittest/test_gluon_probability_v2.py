@@ -1727,14 +1727,14 @@ def test_gluon_mvn():
                     net.hybridize()
                 mx_out = net(loc, cov_param, samples)
                 assert mx_out.shape == samples.shape[:-1]
-                # Select the first element in the batch, because scipy does not support batching.
-                loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
-                sigma_t = sigma.reshape(-1, event_shape,
-                                        event_shape)[0].asnumpy()
                 if mx_out.shape == ():
                     mx_out_t = mx_out.asnumpy()
                 else:
                     mx_out_t = mx_out.asnumpy().flatten()[0]
+                # Select the first element in the batch, because scipy does not support batching.
+                loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
+                sigma_t = sigma.reshape(-1, event_shape,
+                                        event_shape)[0].asnumpy()
                 samples_t = samples.reshape(-1, event_shape).asnumpy()[0]
                 scipy_mvn = ss.multivariate_normal(loc_t, sigma_t)
                 ss_out = scipy_mvn.logpdf(samples_t)
@@ -1758,14 +1758,14 @@ def test_gluon_mvn():
                     net.hybridize()
                 mx_out = net(loc, cov_param)
                 assert mx_out.shape == sigma.shape[:-2]
-                # Select the first element in the batch, because scipy does not support batching.
-                loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
-                sigma_t = sigma.reshape(-1, event_shape,
-                                        event_shape)[0].asnumpy()
                 if mx_out.shape == ():
                     mx_out_t = mx_out.asnumpy()
                 else:
                     mx_out_t = mx_out.asnumpy().flatten()[0]
+                # Select the first element in the batch, because scipy does not support batching.
+                loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
+                sigma_t = sigma.reshape(-1, event_shape,
+                                        event_shape)[0].asnumpy()
                 scipy_mvn = ss.multivariate_normal(loc_t, sigma_t)
                 ss_out = scipy_mvn.entropy()
                 assert_almost_equal(mx_out_t, ss_out, atol=1e-4,
