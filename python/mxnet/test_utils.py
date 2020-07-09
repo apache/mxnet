@@ -685,31 +685,36 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
         b = b.asnumpy()
 
     index, rel = _find_max_violation(a, b, rtol, atol)
-    indexErr = index
-    relErr = rel
+    if index != ():
+        # a, b are the numpy arrays
+        indexErr = index
+        relErr = rel
 
-    print('\n*** Maximum errors for vector of size {}:  rtol={}, atol={}\n'.format(a.size, rtol, atol))
-    aTmp = a.copy()
-    bTmp = b.copy()
-    i = 1
-    while i <= a.size:
-        if i <= mismatches[0]:
-            print("%3d: Error %f  %s" %(i, rel, locationError(a, b, index, names)))
+        print('\n*** Maximum errors for vector of size {}:  rtol={}, atol={}\n'.format(a.size, rtol, atol))
+        aTmp = a.copy()
+        bTmp = b.copy()
+        i = 1
+        while i <= a.size:
+            if i <= mismatches[0]:
+                print("%3d: Error %f  %s" %(i, rel, locationError(a, b, index, names)))
 
-        aTmp[index] = bTmp[index] = 0
-        if almost_equal(aTmp, bTmp, rtol, atol, equal_nan=equal_nan):
-            break
+            aTmp[index] = bTmp[index] = 0
+            if almost_equal(aTmp, bTmp, rtol, atol, equal_nan=equal_nan):
+                break
 
-        i += 1
-        if i <= mismatches[1] or mismatches[1] <= 0:
-            index, rel = _find_max_violation(aTmp, bTmp, rtol, atol)
-        else:
-            break
+            i += 1
+            if i <= mismatches[1] or mismatches[1] <= 0:
+                index, rel = _find_max_violation(aTmp, bTmp, rtol, atol)
+            else:
+                break
 
-    mismatchDegree = "at least " if mismatches[1] > 0 and i > mismatches[1] else ""
-    errMsg = "Error %f exceeds tolerance rtol=%e, atol=%e (mismatch %s%f%%).\n%s" % \
-             (relErr, rtol, atol, mismatchDegree, 100*i/a.size, \
-             locationError(a, b, indexErr, names, maxError=True))
+        mismatchDegree = "at least " if mismatches[1] > 0 and i > mismatches[1] else ""
+        errMsg = "Error %f exceeds tolerance rtol=%e, atol=%e (mismatch %s%f%%).\n%s" % \
+                 (relErr, rtol, atol, mismatchDegree, 100*i/a.size, \
+                  locationError(a, b, indexErr, names, maxError=True))
+    else:
+        errMsg = "Error %f exceeds tolerance rtol=%e, atol=%e.\n" % (rel, rtol, atol)
+
     np.set_printoptions(threshold=4, suppress=True)
     msg = npt.build_err_msg([a, b], err_msg=errMsg)
 
