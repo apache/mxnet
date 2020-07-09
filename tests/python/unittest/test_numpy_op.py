@@ -10222,12 +10222,12 @@ def test_np_rollaxis():
 
 @pytest.mark.parametrize('op_name', ['sum', 'mean', 'min', 'max',
     'argmin', 'argmax'])
-@pytest.mark.parametrize('dtype, decimal', [('float16', 1), ('float32', 4),
+@pytest.mark.parametrize('dtype, decimal', [
     (np.int8, 0), (np.uint8, 0), (np.int32, 0), (np.int64, 0),
     (np.float16, 1), (np.float32, 4), (np.float64, 6)])
 @pytest.mark.parametrize('shape', [(), (1,), (5,),
-    (4, 3), (3, 5), (4, 4), (4, 5), (5, 5), (5, 6), (6, 6),
-    (6, 5, 6), (2, 3, 3, 4), (4, 2, 1, 2)])
+    (4, 3), (3, 5), (4, 4),
+    (4, 5, 6), (2, 3, 4, 5)])
 def test_np_reduce(op_name, dtype, decimal, shape):
     from numpy.testing import assert_array_equal, assert_array_almost_equal
 
