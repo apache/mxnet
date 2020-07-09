@@ -122,7 +122,6 @@ class Parameter(object):
             shape = (shape,)
         self._shape = shape
         self._name = name
-        self._structured_name = ''
         self._dtype = dtype
         self.lr_mult = lr_mult
         self.wd_mult = wd_mult
@@ -360,7 +359,7 @@ class Parameter(object):
                     zeros_fn = ndarray.zeros
                 data = zeros_fn(**kwargs)
                 initializer.create(default_init)(
-                    initializer.InitDesc(self.name, {'__init__': init, 'structure': self._structural_name}), data)
+                    initializer.InitDesc(self.name, {'__init__': init}), data)
 
             self._init_impl(data, ctx)
 
@@ -417,7 +416,7 @@ class Parameter(object):
         return data
 
     def initialize(self, init=None, ctx=None, default_init=initializer.Uniform(),
-                   force_reinit=False, structural_name=''):
+                   force_reinit=False):
         """Initializes parameter and gradient arrays. Only used for :py:class:`NDArray` API.
 
         Parameters
@@ -438,10 +437,6 @@ class Parameter(object):
             and :py:meth:`Parameter.init` are ``None``.
         force_reinit : bool, default False
             Whether to force re-initialization if parameter is already initialized.
-        structural_name : str, default ""
-            The structural name for the parameter in the block.
-            The value would be accessed in InitDesc.attrs['structure'] by self-defined initializers.
-            Users may want to initialize parameters based on the block's structure
         Examples
         --------
         >>> weight = mx.gluon.Parameter('weight', shape=(2, 2))
@@ -470,7 +465,6 @@ class Parameter(object):
                           stacklevel=2)
             return
         self._data = self._grad = None
-        self._structural_name = structural_name
         if ctx is None:
             ctx = [context.current_context()]
         if isinstance(ctx, Context):

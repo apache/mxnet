@@ -252,6 +252,12 @@ def test_dense():
     assert outs == [(17, 128)]
 
 
+def test_hybrid_sequential_unique_internals():
+    net = mx.gluon.nn.HybridSequential()
+    net.add(mx.gluon.nn.Dense(100, activation='relu'), mx.gluon.nn.Dense(10))
+    assert len(set(s.name for s in net(mx.sym.Variable('data')).get_internals())) == 8
+
+
 @with_seed()
 def test_symbol_block(tmpdir):
     model = nn.HybridSequential()
@@ -1515,7 +1521,7 @@ def test_symbol_block_save_load(tmpdir):
             backbone = gluon.model_zoo.vision.resnet18_v1()
             backbone.initialize()
             backbone.hybridize()
-            backbone(mx.nd.random.normal(shape=(1, 3, 32, 32)))
+            backbone(mx.nd.random.normal(shape=(1, 3, 32, 32), ctx=mx.cpu()))
             sym_file, params_file = backbone.export(tmpfile)
             self.backbone = gluon.SymbolBlock.imports(sym_file, 'data', params_file)
             self.body = nn.Conv2D(3, 1)

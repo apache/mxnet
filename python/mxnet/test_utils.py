@@ -2381,8 +2381,7 @@ def is_op_runnable():
 @use_np
 def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test_grad=True,
                                       rtol=1E-4, atol=1E-4):
-    """Check whether a HybridBlock has consistent output between the hybridized
-     v.s. non-hybridized versions
+    """Check whether a HybridBlock has consistent output when hybridized or not hybridized
 
     The network should not contain any random number generators.
 
@@ -2404,15 +2403,6 @@ def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test
     atol : float, optional
         The absolute error tolerance, default 1E-4. Default 1E-4.
     """
-    class _NumpyParamDictInit(mx.init.Initializer):
-        """Initializes parameters with the cached numpy ndarrays dictionary
-        """
-        def __init__(self, np_params):
-            super(_NumpyParamDictInit, self).__init__()
-            self._np_params = np_params
-
-        def _init_weight(self, name, arr):
-            arr[()] = self._np_params[name.attrs['structure']]
     saved_out_np = None
     saved_grad_np_l = None
     params_init = None
@@ -2423,7 +2413,7 @@ def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test
             if params_init is None:
                 net.initialize()
             else:
-                net.initialize(params_init)
+                net.load_dict(params_init)
             if hybridize:
                 net.hybridize()
             in_data_l = [ele.copy() for ele in data_l]
@@ -2435,9 +2425,8 @@ def check_gluon_hybridize_consistency(net_builder, data_l, numpy_func=None, test
                 out.backward(out)
             else:
                 out = net(*in_data_l)
-            if params_init is None:
-                np_params = {k: v.data().asnumpy() for k, v in net.collect_params().items()}
-                params_init = _NumpyParamDictInit(np_params)
+            if params_init is None:  # Deferred initialization finished
+                params_init = {k: v.data().asnumpy() for k, v in net.collect_params().items()}
             if saved_out_np is None:
                 saved_out_np = out.asnumpy()
             else:

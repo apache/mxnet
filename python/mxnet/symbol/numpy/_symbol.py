@@ -283,7 +283,7 @@ class _Symbol(Symbol):
         return negative(self)
 
     def __deepcopy__(self, _):
-        return super(_Symbol, self).as_np_ndarray()
+        return super().__deepcopy__(_).as_np_ndarray()
 
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""

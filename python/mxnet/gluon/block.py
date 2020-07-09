@@ -39,7 +39,7 @@ from .parameter import Parameter, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle, shape_is_known
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays
 from .. import numpy_extension as _mx_npx
-from .. import numpy as _mx_np
+from .. import numpy as _mx_np, ndarray as nd
 from .. util import is_np_array, np_shape, np_array
 
 
@@ -54,8 +54,8 @@ def _block_scope(block):
     counter = _naming_counter.get(None)
     if counter is not None:
         count = counter.get(name, 0)
-        name = '%s%d'%(name, count)
         counter[name] = count + 1
+        name = '%s%d'%(name, count)
     counter_token = _naming_counter.set({})
     prefix_token = _prefix.set(_prefix.get() + name + '_')
     with _name.Prefix(_prefix.get()):
@@ -478,7 +478,10 @@ class Block:
                     "which contains parameters %s. Set ignore_extra=True to ignore. "%(
                         name, error_str, _brief_print_list(params.keys())))
             if name in params:
-                params[name]._load_init(loaded[name], ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
+                param = loaded[name]
+                if isinstance(param, np.ndarray):
+                    param = _mx_np.array(param) if is_np_array() else nd.array(param)
+                params[name]._load_init(param, ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
 
     def register_child(self, block, name=None):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
@@ -561,8 +564,8 @@ class Block:
         params = self.collect_params()
         if verbose:
             init.set_verbosity(verbose=verbose)
-        for k, v in params.items():
-            v.initialize(None, ctx, init, force_reinit=force_reinit, structural_name=k)
+        for v in params.values():
+            v.initialize(None, ctx, init, force_reinit=force_reinit)
 
     def hybridize(self, active=True, **kwargs):
         """ Please refer description of HybridBlock hybridize().
@@ -656,6 +659,14 @@ class Block:
         which equals to
             dense1.weight = dense0.weight
             dense1.bias = dense0.bias
+
+        Note that unlike the `load_parameters` or `load_dict` functions,
+        `share_parameters` results in the `Parameter` object being shared (or
+        tied) between the models, whereas `load_parameters` or `load_dict` only
+        set the value of the data dictionary of a model. If you call
+        `load_parameters` or `load_dict` after `share_parameters`, the loaded
+        value will be reflected in all networks that use the shared (or tied)
+        `Parameter` object.
 
         Parameters
         ----------
@@ -1276,10 +1287,14 @@ class HybridBlock(Block):
                 "this block at least once before calling export.")
         sym = copy.copy(self._cached_graph[1])
 
+        # Deduplicate params (shared parameters use the same input symbol)
+        reverse_params = {v: k for k, v in self.collect_params().items()}
+        params = {v: k for k, v in reverse_params.items()}
+
         # In export we have global information on the structure of the graph
         # can rename the symbol inputs to human-readable, deterministic names.
-        # That's not true in general, which is why internally random unique identifiers are used
-        rename_map = {param.var().name: name for name, param in self.collect_params().items()}
+        # That's not true in general, which is why internally random unique identifiers are used.
+        rename_map = {param.var().name: name for name, param in params.items()}
         for var in sym.get_inputs():
             if var.name in rename_map:
                 var._set_attr(name=rename_map[var.name])
@@ -1290,7 +1305,8 @@ class HybridBlock(Block):
         arg_names = set(sym.list_arguments())
         aux_names = set(sym.list_auxiliary_states())
         arg_dict = {}
-        for name, param in self.collect_params().items():
+
+        for name, param in params.items():
             if name in arg_names:
                 arg_dict['arg:%s'%name] = param._reduce()
             else:
