@@ -20,7 +20,7 @@
 # This script assumes /work/mxnet exists and contains the mxnet code you wish to compile and
 # that /work/build exists and is the target for your output.
 
-FROM nvidia/cuda:10.0-cudnn7-devel-ubuntu18.04
+FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
 
 ENV ARCH=aarch64 \
     HOSTCC=gcc \
@@ -32,7 +32,7 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
     ninja-build \
     git \
-    curl \
+    wget \
     zip \
     unzip \
     python3 \
@@ -58,20 +58,37 @@ RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
     cd /usr/local && \
     rm -rf OpenBLAS
 
-# Install aarch64 cross depedencies based on Jetpack 4.3
-# Manually downloaded using SDK Manager tool and placed in a private S3 bucket.
-# We're not allowed to redistribute these files and there is no public version.
-RUN aws s3 cp s3://mxnet-ci-prod-private-slave-data/nvidia/sdkm_downloads/cuda-repo-ubuntu1804-10-0-local-10.0.326-410.108_1.0-1_amd64.deb . && \
-    dpkg -i cuda-repo-ubuntu1804-10-0-local-10.0.326-410.108_1.0-1_amd64.deb && \
-    rm cuda-repo-ubuntu1804-10-0-local-10.0.326-410.108_1.0-1_amd64.deb && \
-    apt-key add /var/cuda-repo-10-0-local-10.0.326-410.108/7fa2af80.pub && \
-    aws s3 cp s3://mxnet-ci-prod-private-slave-data/nvidia/sdkm_downloads/cuda-repo-cross-aarch64-10-0-local-10.0.326_1.0-1_all.deb . && \
-    dpkg -i cuda-repo-cross-aarch64-10-0-local-10.0.326_1.0-1_all.deb && \
-    rm cuda-repo-cross-aarch64-10-0-local-10.0.326_1.0-1_all.deb && \
+# Install aarch64 cross depedencies based on Jetpack 4.4
+# Dependencies require cuda-toolkit-10.2 which isn't installed in nvidia docker container
+# It contains cuda-compat instead. However deb files currently depend on cuda-toolkit alone.
+# Hence force dpkg configure
+RUN wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-cross-aarch64_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-cudart-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-cufft-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-cupti-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-curand-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-cusolver-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-cusparse-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-driver-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-misc-headers-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-npp-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-nsight-compute-addon-l4t-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-nvgraph-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-nvml-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-nvrtc-cross-aarch64-10-2_10.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cublas/libcublas-cross-aarch64_10.2.2.89-1_all.deb && \
+    wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/n/nsight-compute/nsight-compute-addon-l4t-2019.5.0_2019.5.0.14-1_all.deb && \
+    dpkg -i --force-all  *.deb && \
+    rm *.deb && \
     apt-get update && \
     apt-get install -y -f && \
-    apt-get install -y cuda-cross-aarch64 cuda-cross-aarch64-10-0 && \
+    apt-get install -y cuda-cross-aarch64 cuda-cross-aarch64-10-2 && \
     rm -rf /var/lib/apt/lists/*
+
+# nvidia jetpack 4.4 installs libcublas.so at /usr/lib/aarch64-linux-gnu
+# while previously it used to store it at /usr/local/cuda/targets/aarch64-linux/lib/stubs
+RUN ln -s /usr/lib/aarch64-linux-gnu/libcublas.so /usr/local/cuda/targets/aarch64-linux/lib/stubs/libcublas.so
 
 ARG USER_ID=0
 ARG GROUP_ID=0
