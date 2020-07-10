@@ -103,14 +103,17 @@ def default_numeric_eps():
             np.dtype(np.float32): 1.0 / 2**9,
             np.dtype(np.float64): 1.0 / 2**14}
 
-def get_tolerance(dat, tol, default_tol):
-    """ Return the tolerance to be used for dat comparisons based on the given tol, datatype and context.
+
+def effective_dtype(dat):
+    """ Return the most appropriate dtype for determining the tolerance used in dat comparisons
     Parameters
     ----------
     dat : np.ndarray or mx.nd.array or mx.np.ndarray
-    tol : float, or a dict of dtype->float
-    default_tol : default dict of dtype->float for all types
     """
+    # On arch 80 gpus, a float32-io gemm or conv op will trim the mantissa of data
+    # inputs to be of comparable precision to a float16, so float16 becomes the
+    # 'effective dtype' for tolerance tests involving such op outputs.
+
     # Is TF32 enabled in the ctx (the default on arch 80 GPUs)
     def is_TF32_enabled(ctx):
         try:
@@ -120,24 +123,31 @@ def get_tolerance(dat, tol, default_tol):
         except:  # pylint: disable=bare-except
             return False
 
-    # On arch 80 gpus, a float32-io gemm or conv op will trim the mantissa of data
-    # inputs to be of comparable precision to a float16, so float16 becomes the
-    # 'effective dtype' for tolerance tests involving such ops.
-    def effective_dtype(ctx, dtype):
-        if dtype == np.dtype(np.float32) and is_TF32_enabled(ctx):
-            return np.dtype(np.float16)
-        else:
-            return dtype
-
     ctx = dat.ctx if hasattr(dat, 'ctx') else None
+    dtype = np.dtype(dat.dtype)
+    if dtype == np.dtype(np.float32) and is_TF32_enabled(ctx):
+        return np.dtype(np.float16)
+    else:
+        return dtype
+
+
+def get_tolerance(dat, tol, default_tol):
+    """ Return the tolerance to be used for dat comparisons based on the given tol, datatype and context.
+    Parameters
+    ----------
+    dat : np.ndarray or mx.nd.array or mx.np.ndarray
+    tol : float, or a dict of dtype->float
+    default_tol : default dict of dtype->float for all types
+    """
 
     if isinstance(tol, numbers.Number):
         return tol
-    else:
-        # If the caller has supplied a tol dict, use that if it has an entry for dtype,
-        # else use the supplied default tol dict.
-        dtype = effective_dtype(ctx, np.dtype(dat.dtype))
-        return tol.get(dtype, default_tol[dtype]) if tol is not None else default_tol[dtype]
+
+    # If the caller has supplied a tol dict, use that if it has an entry for dtype,
+    # else use the supplied default tol dict.
+    dtype = effective_dtype(dat)
+    tol = {} if tol is None else tol
+    return tol.get(dtype, default_tol[dtype])
 
 
 def get_tols(x, y, rtol, atol):

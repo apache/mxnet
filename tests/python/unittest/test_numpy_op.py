@@ -30,7 +30,7 @@ from mxnet import np, npx
 from mxnet.gluon import HybridBlock
 from mxnet.base import MXNetError
 from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndarray
-from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like
+from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like, effective_dtype
 from mxnet.test_utils import new_matrix_with_real_eigvals_nd
 from mxnet.test_utils import new_sym_matrix_with_real_eigvals_nd
 from common import assertRaises, with_seed, retry, xfail_when_nonstandard_decimal_separator
@@ -5722,6 +5722,8 @@ def test_np_linalg_svd():
                 data_np = _np.random.uniform(-10.0, 10.0, shape)
                 data_np = _np.array(data_np, dtype=dtype)
                 data = np.array(data_np, dtype=dtype)
+                if effective_dtype(data) == np.dtype(np.float16):
+                    continue
                 data.attach_grad()
                 with mx.autograd.record():
                     ret = test_svd(data)
