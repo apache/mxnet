@@ -1848,15 +1848,18 @@ def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
 
             running_mean = running_mean * momentum + \
                 data_mean_flat * (1 - momentum)
+
+            m = _np.prod(shape) / shape[axis]
+            # cudnn uses m-1 in the denominator of its sample variance calculation, not m
+            sample_var_adjust = 1.0 if cudnn_off or fix_gamma else m / (m-1)
             running_var = running_var * momentum + \
-                data_var_flat * (1 - momentum)
+                data_var_flat * sample_var_adjust * (1 - momentum)
 
             W = bn_gamma.reshape(expand_shape)
             dnx = ograd * W
             xsm = data - data_mean
             nd = 1.0 / np.sqrt(data_var + epsilon)
             nx = xsm * nd
-            m = _np.prod(shape) / shape[axis]
             dvar = (dnx * xsm).sum(axis=reduce_axis, keepdims=True,
                                   ) * (-0.5) * np.power(nd, 3)
             dmean = -nd * dnx.sum(axis=reduce_axis, keepdims=True) - \
