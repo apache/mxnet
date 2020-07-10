@@ -52,7 +52,7 @@ def digamma(F):
         """
         if isinstance(value, Number):
             if sc is not None:
-                return sc.digamma(value, dtype='float32')
+                return sc.digamma(value)
             else:
                 raise ValueError('Numbers are not supported as input if scipy is not installed')
         return F.npx.digamma(value)
@@ -67,7 +67,7 @@ def gammaln(F):
         """
         if isinstance(value, Number):
             if sc is not None:
-                return sc.gammaln(value, dtype='float32')
+                return sc.gammaln(value)
             else:
                 raise ValueError('Numbers are not supported as input if scipy is not installed')
         return F.npx.gammaln(value)
@@ -80,7 +80,7 @@ def erf(F):
     def compute(value):
         if isinstance(value, Number):
             if sc is not None:
-                return sc.erf(value, dtype='float32')
+                return sc.erf(value)
             else:
                 raise ValueError('Numbers are not supported as input if scipy is not installed')
         return F.npx.erf(value)
@@ -93,7 +93,7 @@ def erfinv(F):
     def compute(value):
         if isinstance(value, Number):
             if sc is not None:
-                return sc.erfinv(value, dtype='float32')
+                return sc.erfinv(value)
             else:
                 raise ValueError('Numbers are not supported as input if scipy is not installed')
         return F.npx.erfinv(value)
