@@ -844,6 +844,8 @@ def test_sync_batchnorm():
                 _check_batchnorm_result(mx.nd.random.uniform(shape=shape,
                                                              ctx=mx.cpu(0)),
                                         num_devices=ndev, cuda=cuda)
+                if cuda:
+                    return
 
 
 @with_seed()
