@@ -52,7 +52,7 @@ def digamma(F):
         """
         if isinstance(value, Number):
             if sc is not None:
-                return sc.digamma(value)
+                return sc.digamma(value, dtype='float32')
             else:
                 raise ValueError('Numbers are not supported as input if scipy is not installed')
         return F.npx.digamma(value)
@@ -67,7 +67,7 @@ def gammaln(F):
         """
         if isinstance(value, Number):
             if sc is not None:
-                return sc.gammaln(value)
+                return sc.gammaln(value, dtype='float32')
             else:
                 raise ValueError('Numbers are not supported as input if scipy is not installed')
         return F.npx.gammaln(value)
