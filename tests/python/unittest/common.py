@@ -287,7 +287,7 @@ def setup_module():
         seed = np.random.randint(0, np.iinfo(np.int32).max)
     else:
         seed = int(module_seed_str)
-        logger.warn('*** module-level seed is set: all tests running deterministically ***')
+        logger.warning('*** module-level seed is set: all tests running deterministically ***')
     logger.info('Setting module np/mx/python random seeds, use MXNET_MODULE_SEED=%s to reproduce.', seed)
     np.random.seed(seed)
     mx.random.seed(seed)
@@ -295,7 +295,7 @@ def setup_module():
     # The MXNET_TEST_SEED environment variable will override MXNET_MODULE_SEED for tests with
     #  the 'with_seed()' decoration.  Inform the user of this once here at the module level.
     if os.getenv('MXNET_TEST_SEED') is not None:
-        logger.warn('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
+        logger.warning('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
 
 
 def teardown_module():

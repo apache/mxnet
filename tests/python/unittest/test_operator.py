@@ -2483,13 +2483,13 @@ def test_reduce():
                          args_grad={'a': grad_nd})
             net.forward(is_train=True)
 
-            equal_forward = almost_equal_ignore_nan(net.outputs[0].asnumpy(), sum_groundtruth, 1E-4, 1E-4)
-            assert equal_forward
+            # check forward
+            assert_almost_equal_ignore_nan(net.outputs[0].asnumpy(), sum_groundtruth, rtol=1e-4, atol=1e-4)
 
             net.backward(out_grads=mx.nd.array(outgrad_npy))
             bc_grad_groundtruth = np.broadcast_to(grad_groundtruth, grad_nd.shape)
-            equal_backward = almost_equal_ignore_nan(grad_nd.asnumpy(), bc_grad_groundtruth, 1E-4, 1E-4)
-            assert equal_backward
+            # check backward
+            assert_almost_equal_ignore_nan(grad_nd.asnumpy(), bc_grad_groundtruth, rtol=1e-4, atol=1e-4)
 
     test_none_axis = [True, False]
     for test_none in test_none_axis:

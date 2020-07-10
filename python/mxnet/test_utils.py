@@ -98,16 +98,17 @@ def default_atols():
 
 def default_numeric_eps():
     """Get default epsilon for finite difference gradient calculations with data type."""
+    # prefer a power-of-two eps, since no bits are dropped when serving as an input delta
     return {np.dtype(np.float16): 1.0 / 2**6,
             np.dtype(np.float32): 1.0 / 2**9,
             np.dtype(np.float64): 1.0 / 2**14}
 
 def get_tolerance(dat, tol, default_tol):
-    """ Return the tolerance to used for dat comparisons based on the given tol, datatype and context.
+    """ Return the tolerance to be used for dat comparisons based on the given tol, datatype and context.
     Parameters
     ----------
     dat : np.ndarray or mx.nd.array or mx.np.ndarray
-    tol : float or a dict of dtype->float
+    tol : float, or a dict of dtype->float
     default_tol : default dict of dtype->float for all types
     """
     # Is TF32 enabled in the ctx (the default on arch 80 GPUs)
@@ -133,19 +134,21 @@ def get_tolerance(dat, tol, default_tol):
     if isinstance(tol, numbers.Number):
         return tol
     else:
+        # If the caller has supplied a tol dict, use that if it has an entry for dtype,
+        # else use the supplied default tol dict.
         dtype = effective_dtype(ctx, np.dtype(dat.dtype))
         return tol.get(dtype, default_tol[dtype]) if tol is not None else default_tol[dtype]
 
 
 def get_tols(x, y, rtol, atol):
-    """For comparing two datasets 'x' and 'y', what tolerances should be used."""
+    """For comparing two datasets 'x' and 'y', what relative and absolute tolerances should be used."""
     # Tolerance analysis needs 'dtype' of 'x' and 'y', so convert numbers to numpy scalars as needed
     if isinstance(x, numbers.Number):
         x = np.array(x)
     if isinstance(y, numbers.Number):
         y = np.array(y)
 
-    # If not specified, use the largest default tol for the ctx and dtype of 'x' and 'y'
+    # If tols are not specified, use the largest default tol for 'x' and 'y' based on their ctx and dtype.
     rtol = max(get_tolerance(x, rtol, default_rtols()),
                get_tolerance(y, rtol, default_rtols()))
     atol = max(get_tolerance(x, atol, default_atols()),
@@ -733,16 +736,25 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
     ----------
     a : np.ndarray
     b : np.ndarray
+    rtol : None or float or dict of dtype -> float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float or dict of dtype -> float
+        The absolute threshold. Default threshold will be used if set to ``None``.
     threshold : None or float
         The checking threshold. Default threshold will be used if set to ``None``.
     etol : None or float
         The error rate threshold. If etol is float, return true if error_rate < etol even if
         any error is found.
+    names : tuple of names, optional
+        The names used in error message when an exception occurs
+    equal_nan : boolean, optional
+        The flag determining how to treat NAN values in comparison
+    mismatches : tuple of mismatches
+        Maximum number of mismatches to be printed (mismatches[0]) and determine (mismatches[1])
     """
     etol = get_etol(etol)
     if etol > 0:
-        rtol = get_rtol(rtol)
-        atol = get_atol(atol)
+        rtol, atol = get_tols(a, b, rtol, atol)
         if isinstance(a, mx.nd.NDArray):
             a = a.asnumpy()
         if isinstance(b, mx.nd.NDArray):
@@ -781,31 +793,6 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
             raise AssertionError(msg)
     else:
         assert_almost_equal(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
-
-
-def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
-    """Test that two NumPy arrays are almost equal (ignoring NaN in either array).
-    Combines a relative and absolute measure of approximate eqality.
-    If either the relative or absolute check passes, the arrays are considered equal.
-    Including an absolute check resolves issues with the relative check where all
-    array values are close to zero.
-
-    Parameters
-    ----------
-    a : np.ndarray
-    b : np.ndarray
-    rtol : None or float
-        The relative threshold. Default threshold will be used if set to ``None``.
-    atol : None or float
-        The absolute threshold. Default threshold will be used if set to ``None``.
-    """
-    a = np.copy(a)
-    b = np.copy(b)
-    nan_mask = np.logical_or(np.isnan(a), np.isnan(b))
-    a[nan_mask] = 0
-    b[nan_mask] = 0
-
-    return almost_equal(a, b, rtol, atol)
 
 
 def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b')):
