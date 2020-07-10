@@ -1459,8 +1459,8 @@ def test_batchnorm_training():
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
 @pytest.mark.parametrize('op_name', ['BatchNorm', 'SyncBatchNorm'])
-@pytest.mark.parametrize('shape', [(24, 2), (24, 3, 4),
-    (24, 8, 4, 5), (24, 5, 6, 4, 5)])
+@pytest.mark.parametrize('shape', [(4, 2), (4, 3, 4),
+    (4, 6, 4, 5), (4, 5, 6, 4, 5)])
 @pytest.mark.parametrize('fix_gamma', [False, True])
 @pytest.mark.parametrize('cudnn_off', [False, True])
 @pytest.mark.parametrize('output_mean_var', [False, True])
