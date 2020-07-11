@@ -707,6 +707,7 @@ class ndarray(NDArray):
         # prepend = _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY/-1 means there is no 0-d boolean scalar
         # prepend = _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE/0 means an zero dim must be expanded
         # prepend = _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE/1 means a new axis must be prepended
+        original_key = key
         key, prepend = indexing_key_expand_implicit_axes(key, self.shape)
         indexing_dispatch_code = get_indexing_dispatch_code(key)
         if indexing_dispatch_code == _NDARRAY_EMPTY_TUPLE_INDEXING:
@@ -720,28 +721,10 @@ class ndarray(NDArray):
                 key = (_np.newaxis,) + key
             return self._get_np_basic_indexing(key)
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
-            if prepend == _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY and isinstance(key, (NDArray, _np.ndarray)):
-                idcs, new_axes = self._get_index_nd(key)
-                is_int_array = True
-
-                if isinstance(idcs, NDArray):  # pylint: disable=unidiomatic-typecheck
-                    idcs = idcs.as_np_ndarray()
-                    is_int_array = _np.issubdtype(idcs.dtype, _np.integer)
-                else:
-                    for i in idcs:
-                        i = i if isinstance(i, self.__class__) else i.as_np_ndarray()
-                        is_int_array = _np.issubdtype(i.dtype, _np.integer) and is_int_array
-                    idcs = _npi.stack(*[i if isinstance(i, self.__class__) else i.as_np_ndarray() for i in idcs])
-                if is_int_array:
-                    sliced = _npi.advanced_indexing_multiple(self, idcs)
-                    # Reshape due to `None` entries in `key`.
-                    if new_axes:
-                        final_shape = [sliced.shape[i] for i in range(sliced.ndim)]
-                        for ax in new_axes:  # pylint: disable=invalid-name
-                            final_shape.insert(ax, 1)
-                        return sliced.reshape(tuple(final_shape))
-                    else:
-                        return sliced
+            all = __builtins__['all']  # `def all` below shadows the all builtin
+            if isinstance(original_key, tuple) and \
+            all((isinstance(arr, NDArray) and _np.issubdtype(arr.dtype, _np.integer)) for arr in original_key):
+                return _npi.advanced_indexing_multiple(self, _npi.stack(*original_key))
             if dc.is_deferred_compute():
                 raise TypeError('Advanced indexing is not supported in HybridBlock.')
             if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE:
