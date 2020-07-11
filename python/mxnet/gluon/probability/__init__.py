@@ -17,28 +17,10 @@
 
 # coding: utf-8
 # pylint: disable=wildcard-import
-"""Neural network module."""
-
-from . import metric
-
-from .parameter import *
+"""Probability module"""
 
 from .block import *
 
-from . import nn
+from .distributions import *
 
-from . import rnn
-
-from .trainer import *
-
-from . import loss
-
-from . import utils
-
-from . import data
-
-from . import model_zoo
-
-from . import contrib
-
-from . import probability
+from .transformation import *

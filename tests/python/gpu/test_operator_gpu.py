@@ -38,6 +38,8 @@ from test_operator import *
 from test_numpy_ndarray import *
 from test_numpy_op import *
 from test_numpy_interoperability import *
+from test_gluon_probability_v1 import *
+from test_gluon_probability_v2 import *
 from test_optimizer import *
 from test_random import *
 from test_exc_handling import *
