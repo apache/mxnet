@@ -59,7 +59,7 @@ const std::string env_var_name(const char* dev_type, env_var_type type);
 
 #define GPU_PROFILER_ON_FREE(prof, pntr)    if (prof) prof->OnFree(pntr)
 #else
-// empty macros when MxNet is compile without CUDA support
+// empty macros when MxNet is compiled without CUDA support
 #define SET_DEVICE(...)
 #define UNSET_DEVICE(...)
 #define SET_GPU_PROFILER(prof, ...)
@@ -122,7 +122,6 @@ class PooledStorageManager : public StorageManager,
   void Alloc(Storage::Handle* handle) override;
   void Free(Storage::Handle handle) override {
     // Insert returned memory in cache
-    // NOTE: handle.dptr is NOT nullptr. See calling method: StorageImpl::Free
     std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(dev_type_));
     StoringMethod::InsertInCache(BucketingStrategy::get_bucket(handle.size), handle.dptr);
   }
@@ -166,7 +165,6 @@ class PooledStorageManager : public StorageManager,
 
 template<typename BucketingStrategy, typename StoringMethod>
 void PooledStorageManager<BucketingStrategy, StoringMethod>::Alloc(Storage::Handle* handle) {
-  // NOTE: handle->size is NOT 0. See calling method: StorageImpl::Alloc
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(dev_type_));
   const auto bucket_id = BucketingStrategy::get_bucket(handle->size);
   size_t roundSize = 0;

@@ -47,7 +47,6 @@ class PinnedMemoryStorage {
 };
 
 inline void PinnedMemoryStorage::Alloc(Storage::Handle* handle) {
-  // NOTE: handle->size is NOT 0. See calling method: StorageImpl::Alloc
 #if MXNET_USE_NCCL
   std::lock_guard<std::mutex> lock(Storage::Get()->GetMutex(Context::kGPU));
 #endif
