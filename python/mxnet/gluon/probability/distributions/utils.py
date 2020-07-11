@@ -24,7 +24,10 @@ __all__ = ['getF', 'prob2logit', 'logit2prob', 'cached_property', 'sample_n_shap
 from functools import update_wrapper
 from numbers import Number
 import numpy as onp
-import scipy.special as sc
+try:
+    import scipy.special as sc
+except ImportError:
+    sc = None
 from .... import symbol as sym
 from .... import ndarray as nd
 
@@ -48,7 +51,10 @@ def digamma(F):
         """Return digamma(value)
         """
         if isinstance(value, Number):
-            return sc.digamma(value, dtype='float32')
+            if sc is not None:
+                return sc.digamma(value, dtype='float32')
+            else:
+                raise ValueError('Numbers are not supported as input if scipy is not installed')
         return F.npx.digamma(value)
     return compute
 
@@ -60,7 +66,10 @@ def gammaln(F):
         """Return log(gamma(value))
         """
         if isinstance(value, Number):
-            return sc.gammaln(value, dtype='float32')
+            if sc is not None:
+                return sc.gammaln(value, dtype='float32')
+            else:
+                raise ValueError('Numbers are not supported as input if scipy is not installed')
         return F.npx.gammaln(value)
     return compute
 
@@ -70,7 +79,10 @@ def erf(F):
     """
     def compute(value):
         if isinstance(value, Number):
-            return sc.erf(value)
+            if sc is not None:
+                return sc.erf(value)
+            else:
+                raise ValueError('Numbers are not supported as input if scipy is not installed')
         return F.npx.erf(value)
     return compute
 
@@ -80,7 +92,10 @@ def erfinv(F):
     """
     def compute(value):
         if isinstance(value, Number):
-            return sc.erfinv(value)
+            if sc is not None:
+                return sc.erfinv(value)
+            else:
+                raise ValueError('Numbers are not supported as input if scipy is not installed')
         return F.npx.erfinv(value)
     return compute
 
