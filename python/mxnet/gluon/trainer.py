@@ -20,9 +20,11 @@
 """Parameter optimizer."""
 __all__ = ['Trainer']
 
+from collections import OrderedDict
+
 from .. import optimizer as opt
 from ..model import _create_kvstore, _create_sparse_kvstore
-from .parameter import ParameterDict, Parameter
+from .parameter import Parameter
 from ..kvstore import KVStore
 
 
@@ -41,7 +43,7 @@ class Trainer(object):
 
     Parameters
     ----------
-    params : ParameterDict
+    params : Dict
         The set of parameters to optimize.
     optimizer : str or Optimizer
         The optimizer to use. See
@@ -76,7 +78,7 @@ class Trainer(object):
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device',
                  compression_params=None, update_on_kvstore=None):
         param_list = []
-        if isinstance(params, (dict, ParameterDict)):
+        if isinstance(params, (dict, OrderedDict)):
             for key in sorted(list(params.keys())):
                 param_list.append(params[key])
             params = param_list

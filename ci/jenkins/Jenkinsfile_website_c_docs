@@ -37,10 +37,6 @@ core_logic: {
     custom_steps.compile_unix_lite('libmxnet')
   ])
 
-  utils.parallel_stage('C Docs', [
-    custom_steps.docs_c('libmxnet')
-  ])
-
 }
 ,
 failure_handler: {

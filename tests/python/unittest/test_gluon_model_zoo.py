@@ -41,7 +41,7 @@ def eprint(*args, **kwargs):
     'mobilenetv2_1.0', 'mobilenetv2_0.75', 'mobilenetv2_0.5', 'mobilenetv2_0.25'
 ])
 def test_models(model_name):
-    pretrained_to_test = set(['squeezenet1.1'])
+    pretrained_to_test = set(['vgg19_bn'])
 
     test_pretrain = model_name in pretrained_to_test
     model = get_model(model_name, pretrained=test_pretrain, root='model/')
@@ -49,7 +49,7 @@ def test_models(model_name):
     eprint('testing forward for %s' % model_name)
     print(model)
     if not test_pretrain:
-        model.collect_params().initialize()
+        model.initialize()
     model(mx.nd.random.uniform(shape=data_shape)).wait_to_read()
 
 def parallel_download(model_name):

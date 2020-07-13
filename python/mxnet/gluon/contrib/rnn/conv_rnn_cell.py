@@ -27,6 +27,7 @@ from math import floor
 
 from ....base import numeric_types
 from ...rnn import HybridRecurrentCell
+from ...parameter import Parameter
 
 
 def _get_conv_out_size(dimensions, kernels, paddings, dilations):
@@ -42,9 +43,8 @@ class _BaseConvRNNCell(HybridRecurrentCell):
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
                  dims,
-                 conv_layout, activation,
-                 prefix=None, params=None):
-        super(_BaseConvRNNCell, self).__init__(prefix=prefix, params=params)
+                 conv_layout, activation):
+        super(_BaseConvRNNCell, self).__init__()
 
         self._hidden_channels = hidden_channels
         self._input_shape = input_shape
@@ -79,18 +79,18 @@ class _BaseConvRNNCell(HybridRecurrentCell):
         self._h2h_pad, \
         self._state_shape = self._decide_shapes()
 
-        self.i2h_weight = self.params.get('i2h_weight', shape=i2h_param_shape,
-                                          init=i2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.h2h_weight = self.params.get('h2h_weight', shape=h2h_param_shape,
-                                          init=h2h_weight_initializer,
-                                          allow_deferred_init=True)
-        self.i2h_bias = self.params.get('i2h_bias', shape=(hidden_channels*self._num_gates,),
-                                        init=i2h_bias_initializer,
-                                        allow_deferred_init=True)
-        self.h2h_bias = self.params.get('h2h_bias', shape=(hidden_channels*self._num_gates,),
-                                        init=h2h_bias_initializer,
-                                        allow_deferred_init=True)
+        self.i2h_weight = Parameter('i2h_weight', shape=i2h_param_shape,
+                                    init=i2h_weight_initializer,
+                                    allow_deferred_init=True)
+        self.h2h_weight = Parameter('h2h_weight', shape=h2h_param_shape,
+                                    init=h2h_weight_initializer,
+                                    allow_deferred_init=True)
+        self.i2h_bias = Parameter('i2h_bias', shape=(hidden_channels*self._num_gates,),
+                                  init=i2h_bias_initializer,
+                                  allow_deferred_init=True)
+        self.h2h_bias = Parameter('h2h_bias', shape=(hidden_channels*self._num_gates,),
+                                  init=h2h_bias_initializer,
+                                  allow_deferred_init=True)
 
     def _decide_shapes(self):
         channel_axis = self._conv_layout.find('C')
@@ -179,7 +179,7 @@ class _ConvRNNCell(_BaseConvRNNCell):
                  i2h_kernel, h2h_kernel, i2h_pad, i2h_dilate, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
-                 dims, conv_layout, activation, prefix, params):
+                 dims, conv_layout, activation):
         super(_ConvRNNCell, self).__init__(input_shape=input_shape,
                                            hidden_channels=hidden_channels,
                                            activation=activation,
@@ -191,8 +191,7 @@ class _ConvRNNCell(_BaseConvRNNCell):
                                            i2h_bias_initializer=i2h_bias_initializer,
                                            h2h_bias_initializer=h2h_bias_initializer,
                                            dims=dims,
-                                           conv_layout=conv_layout,
-                                           prefix=prefix, params=params)
+                                           conv_layout=conv_layout)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size,)+self._state_shape, '__layout__': self._conv_layout}]
@@ -255,18 +254,13 @@ class Conv1DRNNCell(_ConvRNNCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default ``'conv_rnn_``'
-        Prefix for name of layers (and name of weight if params is None).
-    params : RNNParams, default None
-        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
                  i2h_pad=(0,), i2h_dilate=(1,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCW', activation='tanh',
-                 prefix=None, params=None):
+                 conv_layout='NCW', activation='tanh'):
         super(Conv1DRNNCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
@@ -278,8 +272,7 @@ class Conv1DRNNCell(_ConvRNNCell):
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=1,
                                             conv_layout=conv_layout,
-                                            activation=activation,
-                                            prefix=prefix, params=params)
+                                            activation=activation)
 
 
 class Conv2DRNNCell(_ConvRNNCell):
@@ -322,18 +315,13 @@ class Conv2DRNNCell(_ConvRNNCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default ``'conv_rnn_``'
-        Prefix for name of layers (and name of weight if params is None).
-    params : RNNParams, default None
-        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
                  i2h_pad=(0, 0), i2h_dilate=(1, 1), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCHW', activation='tanh',
-                 prefix=None, params=None):
+                 conv_layout='NCHW', activation='tanh'):
         super(Conv2DRNNCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
@@ -345,8 +333,7 @@ class Conv2DRNNCell(_ConvRNNCell):
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=2,
                                             conv_layout=conv_layout,
-                                            activation=activation,
-                                            prefix=prefix, params=params)
+                                            activation=activation)
 
 
 class Conv3DRNNCell(_ConvRNNCell):
@@ -389,10 +376,6 @@ class Conv3DRNNCell(_ConvRNNCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default ``'conv_rnn_``'
-        Prefix for name of layers (and name of weight if params is None).
-    params : RNNParams, default None
-        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
@@ -400,8 +383,7 @@ class Conv3DRNNCell(_ConvRNNCell):
                  i2h_dilate=(1, 1, 1), h2h_dilate=(1, 1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCDHW', activation='tanh',
-                 prefix=None, params=None):
+                 conv_layout='NCDHW', activation='tanh'):
         super(Conv3DRNNCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
@@ -413,8 +395,7 @@ class Conv3DRNNCell(_ConvRNNCell):
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=3,
                                             conv_layout=conv_layout,
-                                            activation=activation,
-                                            prefix=prefix, params=params)
+                                            activation=activation)
 
 
 class _ConvLSTMCell(_BaseConvRNNCell):
@@ -423,7 +404,7 @@ class _ConvLSTMCell(_BaseConvRNNCell):
                  i2h_pad, i2h_dilate, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
-                 dims, conv_layout, activation, prefix, params):
+                 dims, conv_layout, activation):
         super(_ConvLSTMCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
@@ -435,8 +416,7 @@ class _ConvLSTMCell(_BaseConvRNNCell):
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=dims,
                                             conv_layout=conv_layout,
-                                            activation=activation,
-                                            prefix=prefix, params=params)
+                                            activation=activation)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size,)+self._state_shape, '__layout__': self._conv_layout},
@@ -519,10 +499,6 @@ class Conv1DLSTMCell(_ConvLSTMCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default ``'conv_lstm_``'
-        Prefix for name of layers (and name of weight if params is None).
-    params : RNNParams, default None
-        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
@@ -530,8 +506,7 @@ class Conv1DLSTMCell(_ConvLSTMCell):
                  i2h_dilate=(1,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCW', activation='tanh',
-                 prefix=None, params=None):
+                 conv_layout='NCW', activation='tanh'):
         super(Conv1DLSTMCell, self).__init__(input_shape=input_shape,
                                              hidden_channels=hidden_channels,
                                              i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
@@ -543,8 +518,7 @@ class Conv1DLSTMCell(_ConvLSTMCell):
                                              h2h_bias_initializer=h2h_bias_initializer,
                                              dims=1,
                                              conv_layout=conv_layout,
-                                             activation=activation,
-                                             prefix=prefix, params=params)
+                                             activation=activation)
 
 
 class Conv2DLSTMCell(_ConvLSTMCell):
@@ -596,10 +570,6 @@ class Conv2DLSTMCell(_ConvLSTMCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default ``'conv_lstm_``'
-        Prefix for name of layers (and name of weight if params is None).
-    params : RNNParams, default None
-        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
@@ -607,8 +577,7 @@ class Conv2DLSTMCell(_ConvLSTMCell):
                  i2h_dilate=(1, 1), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCHW', activation='tanh',
-                 prefix=None, params=None):
+                 conv_layout='NCHW', activation='tanh'):
         super(Conv2DLSTMCell, self).__init__(input_shape=input_shape,
                                              hidden_channels=hidden_channels,
                                              i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
@@ -620,8 +589,7 @@ class Conv2DLSTMCell(_ConvLSTMCell):
                                              h2h_bias_initializer=h2h_bias_initializer,
                                              dims=2,
                                              conv_layout=conv_layout,
-                                             activation=activation,
-                                             prefix=prefix, params=params)
+                                             activation=activation)
 
 
 class Conv3DLSTMCell(_ConvLSTMCell):
@@ -673,10 +641,6 @@ class Conv3DLSTMCell(_ConvLSTMCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default ``'conv_lstm_``'
-        Prefix for name of layers (and name of weight if params is None).
-    params : RNNParams, default None
-        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
@@ -684,8 +648,7 @@ class Conv3DLSTMCell(_ConvLSTMCell):
                  i2h_dilate=(1, 1, 1), h2h_dilate=(1, 1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCDHW', activation='tanh',
-                 prefix=None, params=None):
+                 conv_layout='NCDHW', activation='tanh'):
         super(Conv3DLSTMCell, self).__init__(input_shape=input_shape,
                                              hidden_channels=hidden_channels,
                                              i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
@@ -697,8 +660,7 @@ class Conv3DLSTMCell(_ConvLSTMCell):
                                              h2h_bias_initializer=h2h_bias_initializer,
                                              dims=3,
                                              conv_layout=conv_layout,
-                                             activation=activation,
-                                             prefix=prefix, params=params)
+                                             activation=activation)
 
 
 class _ConvGRUCell(_BaseConvRNNCell):
@@ -706,7 +668,7 @@ class _ConvGRUCell(_BaseConvRNNCell):
                  i2h_kernel, h2h_kernel, i2h_pad, i2h_dilate, h2h_dilate,
                  i2h_weight_initializer, h2h_weight_initializer,
                  i2h_bias_initializer, h2h_bias_initializer,
-                 dims, conv_layout, activation, prefix, params):
+                 dims, conv_layout, activation):
         super(_ConvGRUCell, self).__init__(input_shape=input_shape,
                                            hidden_channels=hidden_channels,
                                            i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
@@ -718,8 +680,7 @@ class _ConvGRUCell(_BaseConvRNNCell):
                                            h2h_bias_initializer=h2h_bias_initializer,
                                            dims=dims,
                                            conv_layout=conv_layout,
-                                           activation=activation,
-                                           prefix=prefix, params=params)
+                                           activation=activation)
 
     def state_info(self, batch_size=0):
         return [{'shape': (batch_size,)+self._state_shape, '__layout__': self._conv_layout}]
@@ -803,10 +764,6 @@ class Conv1DGRUCell(_ConvGRUCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default ``'conv_gru_``'
-        Prefix for name of layers (and name of weight if params is None).
-    params : RNNParams, default None
-        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
@@ -814,8 +771,7 @@ class Conv1DGRUCell(_ConvGRUCell):
                  i2h_dilate=(1,), h2h_dilate=(1,),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCW', activation='tanh',
-                 prefix=None, params=None):
+                 conv_layout='NCW', activation='tanh'):
         super(Conv1DGRUCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
@@ -827,8 +783,7 @@ class Conv1DGRUCell(_ConvGRUCell):
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=1,
                                             conv_layout=conv_layout,
-                                            activation=activation,
-                                            prefix=prefix, params=params)
+                                            activation=activation)
 
 
 class Conv2DGRUCell(_ConvGRUCell):
@@ -875,10 +830,6 @@ class Conv2DGRUCell(_ConvGRUCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default ``'conv_gru_``'
-        Prefix for name of layers (and name of weight if params is None).
-    params : RNNParams, default None
-        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
@@ -886,8 +837,7 @@ class Conv2DGRUCell(_ConvGRUCell):
                  i2h_dilate=(1, 1), h2h_dilate=(1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCHW', activation='tanh',
-                 prefix=None, params=None):
+                 conv_layout='NCHW', activation='tanh'):
         super(Conv2DGRUCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
@@ -899,8 +849,7 @@ class Conv2DGRUCell(_ConvGRUCell):
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=2,
                                             conv_layout=conv_layout,
-                                            activation=activation,
-                                            prefix=prefix, params=params)
+                                            activation=activation)
 
 
 class Conv3DGRUCell(_ConvGRUCell):
@@ -947,10 +896,6 @@ class Conv3DGRUCell(_ConvGRUCell):
         If argument type is string, it's equivalent to nn.Activation(act_type=str). See
         :func:`~mxnet.ndarray.Activation` for available choices.
         Alternatively, other activation blocks such as nn.LeakyReLU can be used.
-    prefix : str, default ``'conv_gru_``'
-        Prefix for name of layers (and name of weight if params is None).
-    params : RNNParams, default None
-        Container for weight sharing between cells. Created if None.
     """
     def __init__(self, input_shape, hidden_channels,
                  i2h_kernel, h2h_kernel,
@@ -958,8 +903,7 @@ class Conv3DGRUCell(_ConvGRUCell):
                  i2h_dilate=(1, 1, 1), h2h_dilate=(1, 1, 1),
                  i2h_weight_initializer=None, h2h_weight_initializer=None,
                  i2h_bias_initializer='zeros', h2h_bias_initializer='zeros',
-                 conv_layout='NCDHW', activation='tanh',
-                 prefix=None, params=None):
+                 conv_layout='NCDHW', activation='tanh'):
         super(Conv3DGRUCell, self).__init__(input_shape=input_shape,
                                             hidden_channels=hidden_channels,
                                             i2h_kernel=i2h_kernel, h2h_kernel=h2h_kernel,
@@ -971,5 +915,4 @@ class Conv3DGRUCell(_ConvGRUCell):
                                             h2h_bias_initializer=h2h_bias_initializer,
                                             dims=3,
                                             conv_layout=conv_layout,
-                                            activation=activation,
-                                            prefix=prefix, params=params)
+                                            activation=activation)

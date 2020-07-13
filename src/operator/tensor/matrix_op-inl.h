@@ -2244,6 +2244,13 @@ struct StackParam : public dmlc::Parameter<StackParam> {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be stacked.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, num_args_s;
+    axis_s << axis;
+    num_args_s << num_args;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["num_args"] = num_args_s.str();
+  }
 };
 
 

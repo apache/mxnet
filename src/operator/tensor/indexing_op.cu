@@ -851,18 +851,11 @@ void EmbeddingOpBackward<gpu>(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(Embedding)
-.set_attr<FCompute>("FCompute<gpu>", EmbeddingOpForward<gpu>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SparseEmbeddingOpForwardEx<gpu>);
-
-NNVM_REGISTER_OP(_contrib_SparseEmbedding)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SparseEmbeddingOpForwardEx<gpu>);
+.set_attr<FCompute>("FCompute<gpu>", EmbeddingOpForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_Embedding)
 .set_attr<FCompute>("FCompute<gpu>", EmbeddingOpBackward<gpu>)
 .set_attr<FComputeEx>("FComputeEx<gpu>", EmbeddingOpBackwardEx<gpu>);
-
-NNVM_REGISTER_OP(_backward_SparseEmbedding)
-.set_attr<FComputeEx>("FComputeEx<gpu>", SparseEmbeddingOpBackwardEx<gpu>);
 
 NNVM_REGISTER_OP(take)
 .set_attr<FCompute>("FCompute<gpu>", TakeOpForward<gpu>);
