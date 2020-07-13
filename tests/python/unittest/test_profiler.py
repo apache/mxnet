@@ -471,7 +471,7 @@ def test_gpu_memory_profiler_symbolic():
     enable_profiler('test_profiler.json', False, False)
     profiler.set_state('run')
 
-    with profiler.Scope("tensordot"):
+    with profiler.scope("tensordot"):
         A = mx.sym.Variable('A')
         B = mx.sym.Variable('B')
         C = mx.symbol.dot(A, B, name='dot')
@@ -559,9 +559,9 @@ def test_gpu_memory_profiler_gluon():
         for row in csv_reader:
             print(",".join(list(row.values())))
         for scope in ['in_arg', 'arg_grad']:
-            for key, nd in model.collect_params().items():
-                expected_arg_name = "%s:%s:" % (model.name, scope) + nd.name
-                expected_arg_size = str(4 * np.prod(nd.shape))
+            for key, param in model.collect_params().items():
+                expected_arg_name = "%s:%s:" % (type(model).__name__.lower(), scope) + param._uuid
+                expected_arg_size = str(4 * np.prod(param.shape))
                 csv_file.seek(0)
                 entry_found = False
                 for row in csv_reader:

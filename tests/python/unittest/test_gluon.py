@@ -1521,7 +1521,7 @@ def test_symbol_block_save_load(tmpdir):
             backbone = gluon.model_zoo.vision.resnet18_v1()
             backbone.initialize()
             backbone.hybridize()
-            backbone(mx.nd.random.normal(shape=(1, 3, 32, 32), ctx=mx.cpu()))
+            backbone(mx.nd.random.normal(shape=(1, 3, 32, 32)))
             sym_file, params_file = backbone.export(tmpfile)
             self.backbone = gluon.SymbolBlock.imports(sym_file, 'data', params_file)
             self.body = nn.Conv2D(3, 1)
@@ -1538,7 +1538,7 @@ def test_symbol_block_save_load(tmpdir):
     params_file = os.path.join(tmp, './test_symbol_block_save_load.params')
     net1.save_parameters(params_file)
     net2 = Net()
-    net2.load_parameters(params_file, ctx=mx.cpu())
+    net2.load_parameters(params_file)
 
 
 @with_seed()

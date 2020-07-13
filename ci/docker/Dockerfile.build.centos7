@@ -123,6 +123,7 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
 RUN localedef -i en_DK -f UTF-8 en_DK.UTF-8
 
 # Python dependencies
+RUN python3 -m pip install --upgrade pip
 COPY install/requirements /work/
 RUN python3 -m pip install -r /work/requirements
 

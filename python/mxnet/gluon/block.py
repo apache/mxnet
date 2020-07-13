@@ -31,7 +31,8 @@ import re
 import numpy as np
 
 from ..base import mx_real_t, MXNetError, NDArrayHandle, py_str
-from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, profiler as _profiler
+from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, \
+    profiler as _profiler, context as _context
 from ..symbol.numpy import _symbol as np_symbol
 from ..symbol import Symbol
 from ..ndarray import NDArray
@@ -471,6 +472,8 @@ class Block:
                     "Set allow_missing=True to ignore missing parameters."%(
                         name, error_str, _brief_print_list(loaded.keys()))
 
+        if ctx is None:
+            ctx = _context.current_context()
         for name in loaded:
             if not ignore_extra and name not in params:
                 raise ValueError(
@@ -480,7 +483,10 @@ class Block:
             if name in params:
                 param = loaded[name]
                 if isinstance(param, np.ndarray):
+                    param = param.as_in_ctx(ctx)
                     param = _mx_np.array(param) if is_np_array() else nd.array(param)
+                else:
+                    param = param.as_in_context(ctx)
                 params[name]._load_init(param, ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
 
     def register_child(self, block, name=None):

@@ -96,6 +96,9 @@ class Trainer(object):
                 raise ValueError(
                     "First argument must be a list or dict of Parameters, " \
                     "got list of %s."%(type(param)))
+            if param._uuid in self._param2idx:
+                # Shared parameters have same uuid; only need to store one of the shared versions
+                continue
             self._param2idx[param._uuid] = i
             self._params.append(param)
             param._set_trainer(self)
