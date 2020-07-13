@@ -53,7 +53,7 @@ layer(x)
 As can be seen, the layer's input limit of two produced a $(3,2)$ shape output from our $(3,4)$ input. You didn't specify the input size of `layer` before, though you can specify it with the argument `in_units=4` here. The system  automatically infers it during the first time you feed in data, create, and initialize the weights. You can access the weight after the first forward pass, as shown in this example.
 
 ```{.python .input  n=35}
-# layer.weight.data() # FIXME
+layer.weight.data()
 ```
 
 ## Chain layers into a neural network
