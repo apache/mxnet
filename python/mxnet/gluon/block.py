@@ -23,10 +23,8 @@ __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 import threading
 import copy
 import warnings
-import weakref
-from collections import OrderedDict, defaultdict
-
 import re
+from collections import OrderedDict, defaultdict
 import numpy as np
 
 from ..base import mx_real_t, MXNetError
@@ -48,7 +46,7 @@ class _BlockScope(object):
     _current = threading.local()
 
     def __init__(self, block):
-        self._block = weakref.ref(block) if block is not None else None
+        self._block = block
         self._counter = {}
         self._old_scope = None
         self._name_scope = None
@@ -57,8 +55,7 @@ class _BlockScope(object):
     def create(prefix, params, hint):
         """Creates prefix and params for new `Block`."""
         current = getattr(_BlockScope._current, "value", None)
-        block = current._block() if current is not None else None
-        if current is None or block is None:
+        if current is None:
             if prefix is None:
                 if not hasattr(_name.NameManager._current, "value"):
                     _name.NameManager._current.value = _name.NameManager()
@@ -74,25 +71,23 @@ class _BlockScope(object):
             prefix = '%s%d_'%(hint, count)
             current._counter[hint] = count + 1
         if params is None:
-            parent = block.params
+            parent = current._block.params
             params = ParameterDict(parent.prefix+prefix, parent._shared)
         else:
             params = ParameterDict(params.prefix, params)
-        return block.prefix + prefix, params
+        return current._block.prefix+prefix, params
 
     def __enter__(self):
-        block = self._block()
-        if block is None or block._empty_prefix:
+        if self._block._empty_prefix:
             return self
         self._old_scope = getattr(_BlockScope._current, "value", None)
         _BlockScope._current.value = self
-        self._name_scope = _name.Prefix(block.prefix)
+        self._name_scope = _name.Prefix(self._block.prefix)
         self._name_scope.__enter__()
         return self
 
     def __exit__(self, ptype, value, trace):
-        block = self._block()
-        if block is None or block._empty_prefix:
+        if self._block._empty_prefix:
             return
         self._name_scope.__exit__(ptype, value, trace)
         self._name_scope = None
