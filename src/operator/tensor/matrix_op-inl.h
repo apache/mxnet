@@ -437,11 +437,11 @@ struct TransposeExKernel {
       const int ndim
       ) {
     // tid is the index of input data
-    const dim_t *out_strides = strides + ndim;
+    const dim_t* const out_strides = strides + ndim;
     int k = tid;
     int out_id = 0;
     for (int i = 0; i < ndim; ++i) {
-      out_id = (k / strides[i]) * out_strides[i];
+      out_id += (k / strides[i]) * out_strides[i];
       k %= strides[i];
     }
     if (is_addto)
@@ -558,7 +558,7 @@ void TransposeExImpl(RunContext ctx,
     });
   } else {
     MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
-        CHECK_EQ(strides_xpu.size(), axes.ndim() * 2) << \
+        CHECK_EQ(strides_xpu.MSize(), axes.ndim() * 2) << \
           "If ndim > 6, `strides_xpu` should be allocated `ndim * 2` elements";
 
         const mxnet::TShape &in_shape = src.shape_;
@@ -585,7 +585,7 @@ void TransposeExImpl(RunContext ctx,
         strides_shape[0] = ndim * 2;
         Tensor<cpu, 1, dim_t> strides_cpu(strides.data(), strides_shape);
         // copy arguments into xpu context
-        strides_xpu = strides_cpu;
+        Copy(strides_xpu, strides_cpu, s);
         const DType *in = src.dptr<DType>();
         DType *out = ret.dptr<DType>();
         if (is_addto) {
@@ -649,7 +649,6 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape& out_shp = (*out_attrs)[0];
   if (!mxnet::ndim_is_known(shp) && !mxnet::ndim_is_known(out_shp))
     return false;  // none of the shapes is known
-  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
   if (out_shp.ndim() >= 0 && shp.ndim() >= 0)
     CHECK_EQ(out_shp.ndim(), shp.ndim());
   mxnet::TShape get(std::max(shp.ndim(), out_shp.ndim()), -1);
