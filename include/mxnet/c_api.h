@@ -3114,6 +3114,15 @@ MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
                                  EngineFnPropertyHandle prop_handle DEFAULT(NULL),
                                  int priority DEFAULT(0), const char* opr_name DEFAULT(NULL));
 
+/*!
+ * \brief This function first checks if any dynamic shape op presents in the symbol.
+ * \brief If yes, partition all static ops for execution optimization.
+ * \param sym_handle handler of the input symbol.
+ * \param ret_sym_handle handler of the result symbol.
+ */
+MXNET_DLL int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
+                                          SymbolHandle* ret_sym_handle);
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

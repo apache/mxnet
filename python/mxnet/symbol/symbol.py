@@ -2650,6 +2650,14 @@ class Symbol(SymbolBase):
     def backward(self):
         raise NotImplementedForSymbol(self.backward, None)
 
+    def optimize_for_dynamic_shape_op(self):
+        """Check if any dynamic shape op presents in the symbol, if yes, partition all static shape ops for optimization
+        returns the optimized symbol.
+        """
+        out = SymbolHandle()
+        check_call(_LIB.MXOptimizeForDynamicShapeOp(self.handle, ctypes.byref(out)))
+        return Symbol(out)
+
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         init=None, stype=None, profiler_scope=None, **kwargs):
     """Creates a symbolic variable with specified name.

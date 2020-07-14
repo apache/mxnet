@@ -1041,6 +1041,10 @@ class HybridBlock(Block):
             #update cached graph with partitioned graph
             self._cached_graph = data, out
 
+        # partition static shape ops if the graph contains any dynamic shape op
+        out = out.optimize_for_dynamic_shape_op()
+        self._cached_graph = data, out
+
         input_names = out.list_inputs()
         data_indices = []
         param_indices = []
@@ -1082,8 +1086,8 @@ class HybridBlock(Block):
 
         flags = [('data_indices', data_indices), ('param_indices', param_indices)] + \
                 self._flags
-        self._cached_op = ndarray.CachedOp(out, flags)
 
+        self._cached_op = ndarray.CachedOp(out, flags)
 
     def _deferred_infer_shape(self, *args):
         try:

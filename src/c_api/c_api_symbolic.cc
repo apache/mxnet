@@ -1485,3 +1485,36 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   *ret_sym_handle = s;
   API_END_HANDLE_ERROR(delete s);
 }
+
+int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle, SymbolHandle* ret_sym_handle) {
+  nnvm::Symbol *s = new nnvm::Symbol();
+  API_BEGIN();
+  bool* has_dynamic_shape = new bool;
+  *has_dynamic_shape = false;
+  // traverse the symbol and check if any dynamic shape presents
+  nnvm::Symbol *sym = static_cast<nnvm::Symbol *>(sym_handle);
+  *s = sym->Copy();
+  nnvm::Graph g = Symbol2Graph(*s);
+  const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
+  DFSVisit(g.outputs, [infershape, has_dynamic_shape](const nnvm::ObjectPtr n){
+    if (*has_dynamic_shape) return;
+    if (!n->is_variable() && !infershape.count(n->op())) {
+      *has_dynamic_shape = true;
+      return;
+    }
+  });
+  // partition the static shape ops only when dynamic shape op presents
+  if (*has_dynamic_shape) {
+    auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend("static_shape");
+    const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+    for (auto property : subgraph_prop_list) {
+      g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
+      g = ApplyPass(std::move(g), "BuildSubgraph");
+      g.attrs.erase("subgraph_property");
+    }
+    s->outputs = g.outputs;
+  }
+  *ret_sym_handle = s;
+  delete has_dynamic_shape;
+  API_END_HANDLE_ERROR(delete s);
+}
