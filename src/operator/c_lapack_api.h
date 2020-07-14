@@ -265,9 +265,9 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   // The following functions differ in signature from the
   // MXNET_LAPACK-signature and have to be wrapped.
   #define MXNET_LAPACK_CWRAP_GELQF(prefix, dtype) \
-  inline int MXNET_LAPACK_##prefix##gelqf(int matrix_layout, int m, int n, \
-                                          dtype *a, int lda, dtype *tau, \
-                                          dtype *work, int lwork) { \
+  inline int MXNET_LAPACK_##prefix##gelqf(int matrix_layout, index_t m, index_t n, \
+                                          dtype *a, index_t lda, dtype *tau, \
+                                          dtype *work, index_t lwork) { \
     if (lwork != -1) { \
       return LAPACKE_##prefix##gelqf(matrix_layout, m, n, a, lda, tau); \
     } \
@@ -474,9 +474,9 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   // row-major format (MXNet). Internally, the QR variants are done in column-major.
   // In particular, the matrix dimensions m and n are flipped.
   #define MXNET_LAPACK_CWRAP_GELQF(prefix, dtype) \
-  inline int MXNET_LAPACK_##prefix##gelqf(int matrix_layout, int m, int n, \
-                                          dtype *a, int lda, dtype* tau, \
-                                          dtype* work, int lwork) { \
+  inline int MXNET_LAPACK_##prefix##gelqf(int matrix_layout, index_t m, index_t n, \
+                                          dtype *a, index_t lda, dtype* tau, \
+                                          dtype* work, index_t lwork) { \
     if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
       int info(0); \
       prefix##geqrf_(&n, &m, a, &lda, tau, work, &lwork, &info); \
