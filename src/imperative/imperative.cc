@@ -233,7 +233,7 @@ void Imperative::RecordOp(
 
   nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs = std::move(attrs);
-  node->attrs.name = "node_" + std::to_string(node_count_++);
+  node_count_ += 1;
   AGInfo& info = AGInfo::Create(node);
   info.state = state;
   info.ctx = outputs[0]->ctx();
@@ -322,7 +322,7 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
   }
   node->attrs = std::move(attrs);
   // Need to support NameManager in imperative API to better name node->attrs.name
-  node->attrs.name = "node_" + std::to_string(node_count_++);
+  node_count_ += 1;
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
     outputs[i]->deferredcompute_entry_ = nnvm::NodeEntry{node, i, 0};
@@ -403,7 +403,9 @@ std::vector<NDArray*> Imperative::Backward(
   ograd_entries.reserve(ograds.size());
   for (size_t i = 0; i < outputs.size(); ++i) {
     nnvm::ObjectPtr np = Node::Create();
-    np->attrs.name = "_head_grad_" + std::to_string(i);
+    np->attrs.dict["__profiler_scope__"]
+        = outputs[i]->storage_handle().profiler_scope;
+    np->attrs.name = outputs[i]->storage_handle().name + "_head_grad";
     ograd_entries.emplace_back(NodeEntry{np, 0, 0});
     AGInfo& info = AGInfo::Create(ograd_entries.back().node);
     info.ctx = outputs[i]->ctx();
@@ -597,6 +599,16 @@ std::vector<NDArray*> Imperative::Backward(
                             shapes[eid], vctx[i], dtypes[eid]);
     }
   }
+
+  for (size_t nid = num_forward_nodes;
+       nid < idx.num_nodes(); ++nid) {
+    const nnvm::NodeAttrs& attrs = idx[nid].source->attrs;
+    for (size_t oid = 0; oid < idx[nid].source->num_outputs(); ++oid) {
+      size_t eid = idx.entry_id(nid, oid);
+      arrays[eid]->AssignStorageInfo(common::NodeAttrsGetProfilerScope(attrs),
+                                     attrs.name);
+    }
+  }  // for (nid ∈ [num_forward_nodes, idx.num_nodes()))
 
   if (dmlc::GetEnv("MXNET_MEM_PLAN_VERBOSE_LOGGING", false)) {
     common::LogMemoryPlan(graph);

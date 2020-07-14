@@ -43,7 +43,8 @@ from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
 from ..util import is_np_shape
-from ..profiler import _current_scope as _profiler_scope
+from ..profiler import scope as _profiler_scope
+from ..profiler import _current_scope as _current_profiler_scope
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
@@ -1782,15 +1783,16 @@ class Symbol(SymbolBase):
                     index = aux_names.index(name)
                     aux_states[index] = aux_states[index].totype(stype)
 
-        if grad_req == 'null':
-            args_grad = None
-        elif isinstance(grad_req, dict):
-            args_grad = {}
-            for i, name in enumerate(arg_names):
-                if grad_req[name] != 'null':
-                    args_grad[name] = args[i].copy()
-        else:
-            args_grad = [x.copy() for x in args]
+        with _profiler_scope("symbol:arg_grad:"):
+            if grad_req == 'null':
+                args_grad = None
+            elif isinstance(grad_req, dict):
+                args_grad = {}
+                for i, name in enumerate(arg_names):
+                    if grad_req[name] != 'null':
+                        args_grad[name] = args[i].copy()
+            else:
+                args_grad = [x.copy() for x in args]
         return Executor(self, ctx, args, args_grad, grad_req, aux_states)
 
     def _bind(self, ctx, args, args_grad=None, grad_req='write',
@@ -2728,7 +2730,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     if profiler_scope is not None:
         attr['__profiler_scope__'] = profiler_scope
     else:
-        attr['__profiler_scope__'] = _profiler_scope.get()
+        attr['__profiler_scope__'] = _current_profiler_scope.get()
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)

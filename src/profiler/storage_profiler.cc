@@ -23,6 +23,7 @@
 #endif  // MXNET_USE_NVML
 #include <fstream>
 #include <map>
+#include <regex>
 #include <unordered_map>
 #include <vector>
 #include "./profiler.h"
@@ -61,11 +62,17 @@ void GpuDeviceStorageProfiler::DumpProfile() const {
   std::multimap<std::string, AllocEntryDumpFmt> gpu_mem_ordered_alloc_entries;
   // map the GPU device ID to the total amount of allocations
   std::unordered_map<int, size_t> gpu_dev_id_total_alloc_map;
+  std::regex gluon_param_regex("([0-9a-fA-F]{8})_([0-9a-fA-F]{4})_"
+                               "([0-9a-fA-F]{4})_([0-9a-fA-F]{4})_"
+                               "([0-9a-fA-F]{12})_([^ ]*)");
+
   for (const std::pair<void *const, AllocEntry>& alloc_entry :
        gpu_mem_alloc_entries_) {
+    std::string alloc_entry_name
+        = std::regex_replace(alloc_entry.second.name, gluon_param_regex, "$6");
     gpu_mem_ordered_alloc_entries.emplace(
-        alloc_entry.second.profiler_scope +
-        alloc_entry.second.name, AllocEntryDumpFmt{
+        alloc_entry.second.profiler_scope + alloc_entry_name,
+        AllocEntryDumpFmt{
           alloc_entry.second.requested_size,
           alloc_entry.second.dev_id,
           alloc_entry.second.actual_size,
