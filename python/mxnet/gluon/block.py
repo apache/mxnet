@@ -483,10 +483,7 @@ class Block:
             if name in params:
                 param = loaded[name]
                 if isinstance(param, np.ndarray):
-                    param = param.as_in_ctx(ctx)
                     param = _mx_np.array(param) if is_np_array() else nd.array(param)
-                else:
-                    param = param.as_in_context(ctx)
                 params[name]._load_init(param, ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
 
     def register_child(self, block, name=None):
