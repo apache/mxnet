@@ -147,10 +147,20 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
       axes[i] = axes.ndim() - 1 - i;
     }
   }
+  mshadow::Tensor<xpu, 1, dim_t> workspace;
+  if (axes.ndim() > 6) {
+    // allocate workspace when axes.ndim() > 6
+    mshadow::Shape<1> strides_shape;
+    strides_shape[0] = axes.ndim() * 2;
+    workspace = ctx.requested[0].get_space_typed<xpu, 1, dim_t>(
+        strides_shape, ctx.get_stream<xpu>());
+  }
   if (req[0] == kAddTo) {
-    TransposeImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0], axes);
+    TransposeExImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
   } else {
-    TransposeImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0], axes);
+    TransposeExImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
   }
 }
 

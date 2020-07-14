@@ -133,6 +133,10 @@ NNVM_REGISTER_OP(_npi_transpose)
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", NumpyTranspose<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a"};
