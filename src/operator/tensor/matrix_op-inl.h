@@ -427,9 +427,9 @@ void TransposeImpl(RunContext ctx,
                    const TBlob& src,
                    const TBlob& ret,
                    const mxnet::TShape& axes) {
-  CHECK_LE(axes.ndim(), 6) << "Transpose support at most 6 dimensions";
+  CHECK_LE(axes.ndim(), 6) << "TransposeImpl supports at most 6 dimensions";
   CHECK((TransposeCommonImpl<xpu, is_addto>(ctx, src, ret, axes))) <<
-    "Running Transpose Operator failed";
+    "Failed to execute TransposeImpl Operator";
 }
 
 template <bool is_addto>
@@ -477,11 +477,9 @@ void TransposeExImpl(RunContext ctx,
    */
   using namespace mshadow;
   using namespace mshadow::expr;
-  if (axes.ndim() <= 6) {
-    CHECK((TransposeCommonImpl<xpu, is_addto>(ctx, src, ret, axes))) <<
-      "Running Transpose Operator failed";
-    return;
-  }
+  if (TransposeCommonImpl<xpu, is_addto>(ctx, src, ret, axes)) return;
+  CHECK_GT(axes.ndim(), 6) <<
+    "Failed to execute TransposeExImpl when axes.ndim() <= 6";
   Stream<xpu> *s = ctx.get_stream<xpu>();
   MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
       CHECK_EQ(strides_xpu.MSize(), axes.ndim() * 2) << \
