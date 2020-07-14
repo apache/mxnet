@@ -79,6 +79,7 @@ class Executor(object):
         self._aux_dict = None
         self._output_dict = None
         self._monitor_callback = None
+        self._monitor_all = None
         self._ctx = copy.deepcopy(ctx)
         self._grad_req = copy.deepcopy(grad_req)
         self._group2ctx = copy.deepcopy(group2ctx)
@@ -253,6 +254,7 @@ class Executor(object):
         """
         cb_type = ctypes.CFUNCTYPE(None, ctypes.c_char_p, NDArrayHandle, ctypes.c_void_p)
         self._monitor_callback = cb_type(_monitor_callback_wrapper(callback))
+        self._monitor_all = monitor_all
         check_call(_LIB.MXExecutorSetMonitorCallbackEX(
             self.handle,
             self._monitor_callback,
@@ -477,6 +479,13 @@ class Executor(object):
         executor.arg_arrays = arg_arrays
         executor.grad_arrays = grad_arrays
         executor.aux_arrays = aux_arrays
+        if (self._monitor_callback is not None) and (self._monitor_all is not None):
+            # rebind callback to the new executor if the callback is valid
+            check_call(_LIB.MXExecutorSetMonitorCallbackEX(
+                handle,
+                self._monitor_callback,
+                None,
+                ctypes.c_int(self._monitor_all)))
         return executor
 
     def debug_str(self):
