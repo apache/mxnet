@@ -25,6 +25,7 @@ import numpy as _np
 import mxnet as mx
 from mxnet import gluon, autograd, np
 from mxnet.test_utils import use_np, assert_almost_equal, check_gluon_hybridize_consistency
+from mxnet.gluon import nn
 from common import with_seed
 import random
 
@@ -421,6 +422,55 @@ def test_hybridize_boolean_dtype():
 
     assert mx.test_utils.same(out1.asnumpy(), out2.asnumpy())
 
+
+@with_seed()
+@use_np
+def test_activations_leakyrelu():
+    # Currently, all the activation tests, we will just test for runnable.
+    act_layer = nn.LeakyReLU(0.1)
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
+
+@with_seed()
+@use_np
+def test_activations_prelu():
+    act_layer = nn.PReLU()
+    act_layer.initialize()
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
+
+@with_seed()
+@use_np
+def test_activations_elu():
+    act_layer = nn.ELU(1.0)
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
+
+@with_seed()
+@use_np
+def test_activations_selu():
+    act_layer = nn.SELU()
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
+
+@with_seed()
+@use_np
+def test_activations_gelu():
+    act_layer = nn.GELU()
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
+
+
+@with_seed()
+@use_np
+def test_activations_swish():
+    act_layer = nn.Swish()
+    out = act_layer(mx.np.random.uniform(size=(10,)))
+    out.asnumpy()
 
 if __name__ == '__main__':
     import nose
