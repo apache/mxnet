@@ -91,6 +91,7 @@ def test_gpu_memory_profiler_symbolic():
 
 
 @pytest.mark.skipif(is_cd_run(), reason="flaky test - open issue #18564")
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
 def test_gpu_memory_profiler_gluon():
     enable_profiler(profile_filename='test_profiler.json',
                     run=True, continuous_dump=True)

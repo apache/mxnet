@@ -84,6 +84,7 @@ def test_profile_create_domain():
     profiler.set_state('stop')
 
 
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/15406")
 def test_profile_create_domain_dept():
     profiler.set_config(profile_symbolic=True, filename='test_profile_create_domain_dept.json')
     profiler.set_state('run')
