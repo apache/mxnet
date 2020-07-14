@@ -250,14 +250,14 @@
 
 .page-content {
   height: 100%;
-  padding: $spacing-unit 0, 0;
+  padding: $spacing-unit 0 0;
   flex: 1;
   margin-top: 100px;
 }
 
 .page-content-home {
   height: 100%;
-  padding: $spacing-unit 0, 0;
+  padding: $spacing-unit 0 0;
   margin-top: 100px;
 }
 
@@ -365,13 +365,7 @@
   }
 }
 
-#forum::before,
-#mxnet-dev-communications::before,
-#social-media::before,
-#jira::before,
-#confluence-wiki::before,
-#setup-mxnet-for-development::before,
-#your-first-contribution::before {
+:target::before {
   display: block;
   content: " ";
   margin-top: -86px;
