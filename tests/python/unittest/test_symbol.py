@@ -485,7 +485,7 @@ def test_symbol_copy():
     b._set_attr(name='b')
     assert a.name == 'a' and b.name == 'b'
 
-    a = mx.sym.numpy._Variable('a')
+    a = mx.sym.Variable('a').as_np_ndarray()
     b = copy.copy(a)
     b._set_attr(name='b')
     assert a.name == 'a' and b.name == 'b'
