@@ -1755,3 +1755,10 @@ def test_sparse_dot():
     assert out.asnumpy()[0][0] == 2
     assert out.shape == (2, 2)
 
+
+@pytest.mark.timeout(0)
+def test_linalg_gelfq():
+    shape = (2, VLARGE_X)
+    q, l = mx.nd.linalg_gelqf(mx.nd.ones(shape=(2, 2**32), ctx=mx.cpu()))
+    assert q.asnumpy()[0][0] != 0
+    assert l.asnumpy()[0][0] != 0
