@@ -93,6 +93,9 @@ option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
 cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
 
+if(DEFINED USE_INT64_TENSOR_SIZE AND USE_INT64_TENSOR_SIZE)
+	add_definitions(-DLAPACK_ILP64)
+endif()
 
 message(STATUS "CMAKE_CROSSCOMPILING ${CMAKE_CROSSCOMPILING}")
 message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")

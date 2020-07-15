@@ -1044,6 +1044,7 @@ int linalg_gelqf_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
   int ret(MXNET_LAPACK_##prefix##gelqf(MXNET_LAPACK_ROW_MAJOR, m, \
                                        A.size(1), A.dptr_ , A.stride_, &work, \
                                        &work, -1)); \
+  LOG(INFO)<<"------------- linalg---------------- gelqf"; \
   CHECK_EQ(ret, 0) << #prefix << "gelqf: Workspace query failed on CPU."; \
   int ws_size(static_cast<int>(work)); \
   ret = MXNET_LAPACK_##prefix##orglq(MXNET_LAPACK_ROW_MAJOR, m, \
@@ -1127,6 +1128,7 @@ int linalg_gelqf_workspace_query<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
   using mshadow::gpu; \
   int m(A.size(0)); \
   int work1(0); \
+  LOG(INFO)<<"--------------- cuda ------------"; \
   CUSOLVER_CALL(cusolverDn##prefix##geqrf_bufferSize(Stream<gpu>::GetSolverHandle(s), \
                 A.size(1), m, A.dptr_ , A.stride_, &work1)); \
   int work2(0);  \

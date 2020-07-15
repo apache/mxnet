@@ -278,9 +278,9 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_GELQF(d, double)
 
   #define MXNET_LAPACK_CWRAP_ORGLQ(prefix, dtype) \
-  inline int MXNET_LAPACK_##prefix##orglq(int matrix_layout, int m, int n, \
-                                          dtype *a, int lda, dtype *tau, \
-                                          dtype *work, int lwork) { \
+  inline int MXNET_LAPACK_##prefix##orglq(int matrix_layout, index_t m, index_t n, \
+                                          dtype *a, index_t lda, dtype *tau, \
+                                          dtype *work, index_t lwork) { \
     if (lwork != -1) { \
       return LAPACKE_##prefix##orglq(matrix_layout, m, n, m, a, lda, tau); \
     } \
@@ -294,6 +294,7 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   inline int MXNET_LAPACK_##prefix##geqrf(int matrix_layout, int m, int n, \
                                           dtype *a, int lda, dtype *tau, \
                                           dtype *work, int lwork) { \
+	  LOG(INFO)<<"------------------------geqrf---------------"; \
     if (lwork != -1) { \
       return LAPACKE_##prefix##geqrf(matrix_layout, m, n, a, lda, tau); \
     } \
