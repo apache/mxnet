@@ -701,10 +701,10 @@ class ndarray(NDArray):
 
 
         all = __builtins__['all']  # `def all` below shadows the all builtin
-        if (isinstance(key, tuple) and all(
-            (isinstance(arr, NDArray)
-             and _np.issubdtype(arr.dtype, _np.integer) and arr.ndim > 0)
-                for arr in key)):
+        if (isinstance(key, tuple) and all( \
+        (isinstance(arr, NDArray) \
+        and _np.issubdtype(arr.dtype, _np.integer) and arr.ndim > 0) \
+        for arr in key)):
             return _npi.advanced_indexing_multiple(self, _npi.stack(*key))
 
         # For 0-d boolean indices: A new axis is added,
