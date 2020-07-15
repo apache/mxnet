@@ -26,6 +26,7 @@
 #include <vector>
 #include "quantization_utils.h"
 #include "../nn/fully_connected-inl.h"
+#include "./quantized_fully_connected-inl.h"
 #if MXNET_USE_MKLDNN == 1
 #include "../nn/mkldnn/mkldnn_fully_connected-inl.h"
 #include "mkldnn/mkldnn_quantized_ops-inl.h"
@@ -41,7 +42,7 @@ enum QuantizedfcOpResource {kTempSpace};
 bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
                                   mxnet::ShapeVector *in_shape,
                                   mxnet::ShapeVector *out_shape) {
-  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  const QuantizedFullyConnectedParam& param = nnvm::get<QuantizedFullyConnectedParam>(attrs.parsed);
   using namespace mshadow;
   uint32_t num_inputs = param.no_bias ? 2 : 3;
   CHECK_EQ(in_shape->size(), num_inputs * 3);
@@ -89,7 +90,7 @@ bool QuantizedFullyConnectedShape(const nnvm::NodeAttrs& attrs,
 bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
                                  std::vector<int> *in_type,
                                  std::vector<int> *out_type) {
-  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  const QuantizedFullyConnectedParam& param = nnvm::get<QuantizedFullyConnectedParam>(attrs.parsed);
   uint32_t num_inputs = param.no_bias ? 2 : 3;
   CHECK_EQ(in_type->size(), num_inputs * 3);
   CHECK_EQ(out_type->size(), 3U);
@@ -108,7 +109,17 @@ bool QuantizedFullyConnectedType(const nnvm::NodeAttrs& attrs,
     TYPE_ASSIGN_CHECK(*in_type, i, mshadow::kFloat32);
   }
 
-  TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kInt32);
+  auto out_type_float = GetQuantizedFCFloatOutType(param);
+  if (out_type_float == mshadow::kInt32) {
+    TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kInt32);
+  } else if (out_type_float == mshadow::kFloat16) {
+    TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kFloat16);
+  } else if (out_type_float == mshadow::kFloat32) {
+    TYPE_ASSIGN_CHECK(*out_type, 0, mshadow::kFloat32);
+  } else {
+    LOG(FATAL) << "quantizedfc op only supports int32, float32 and float16 as output type";
+  }
+
   TYPE_ASSIGN_CHECK(*out_type, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_type, 2, mshadow::kFloat32);
   return true;
@@ -119,7 +130,7 @@ bool QuantizedFullyConnectedStorageType(const nnvm::NodeAttrs& attrs,
                                         DispatchMode* dispatch_mode,
                                         std::vector<int> *in_attrs,
                                         std::vector<int> *out_attrs) {
-  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  const QuantizedFullyConnectedParam& param = nnvm::get<QuantizedFullyConnectedParam>(attrs.parsed);
   uint32_t num_inputs = param.no_bias ? 2 : 3;
   CHECK_EQ(in_attrs->size(), num_inputs * 3);
   CHECK_EQ(out_attrs->size(), 3U);
@@ -179,7 +190,7 @@ void QuantizedFullyConnectedForwardCPU(const nnvm::NodeAttrs& attrs,
                                        const std::vector<OpReqType> &req,
                                        const std::vector<TBlob> &out_data) {
 #if MSHADOW_USE_MKL == 1
-  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  const QuantizedFullyConnectedParam& param = nnvm::get<QuantizedFullyConnectedParam>(attrs.parsed);
   using namespace mshadow;
   using namespace mxnet_op;
   Stream<cpu> *s = ctx.get_stream<cpu>();
@@ -302,6 +313,8 @@ void QuantizedFullyConnectedForwardExCPU(const nnvm::NodeAttrs &attrs,
 }
 #endif
 
+DMLC_REGISTER_PARAMETER(QuantizedFullyConnectedParam);
+
 NNVM_REGISTER_OP(_contrib_quantized_fully_connected)
 .describe(R"code(Fully Connected operator for input, weight and bias data type of int8,
 and accumulates in type int32 for the output. For each argument, two more arguments of type
@@ -313,14 +326,14 @@ and max thresholds representing the threholds for quantizing the float32 output 
     This operator only supports forward propogation. DO NOT use it in training.)code" ADD_FILELINE)
 .set_num_inputs(
   [](const NodeAttrs& attrs) {
-    const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+    const QuantizedFullyConnectedParam& param = nnvm::get<QuantizedFullyConnectedParam>(attrs.parsed);
     return param.no_bias? 6 : 9;
   })
 .set_num_outputs(3)
-.set_attr_parser(ParamParser<FullyConnectedParam>)
+.set_attr_parser(ParamParser<QuantizedFullyConnectedParam>)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
-    const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+    const QuantizedFullyConnectedParam& param = nnvm::get<QuantizedFullyConnectedParam>(attrs.parsed);
     if (param.no_bias) {
       return std::vector<std::string>{"data", "weight", "min_data", "max_data",
                                       "min_weight", "max_weight"};
@@ -358,7 +371,7 @@ and max thresholds representing the threholds for quantizing the float32 output 
 .add_argument("max_weight", "NDArray-or-Symbol", "Maximum value of weight.")
 .add_argument("min_bias", "NDArray-or-Symbol", "Minimum value of bias.")
 .add_argument("max_bias", "NDArray-or-Symbol", "Maximum value of bias.")
-.add_arguments(FullyConnectedParam::__FIELDS__());
+.add_arguments(QuantizedFullyConnectedParam::__FIELDS__());
 
 NNVM_REGISTER_OP(FullyConnected)
 .set_attr<FQuantizable>("FQuantizable", [](const NodeAttrs& attrs) {

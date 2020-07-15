@@ -61,6 +61,29 @@ def test_quantize_float32_to_int8():
     qdata_np = (np.sign(data_np) * np.minimum(np.abs(data_np) * scale + 0.5, quantized_range)).astype(np.int8)
     assert_almost_equal(qdata.asnumpy(), qdata_np, atol = 1)
 
+@with_seed()
+def test_quantizeV2_float_to_int8():
+    def check_float_to_int8(dtype='float32'):
+        shape = rand_shape_nd(4)
+        data = rand_ndarray(shape, 'default', dtype=dtype)
+        min_range = mx.nd.min(data).asscalar()
+        max_range = mx.nd.max(data).asscalar()
+        qdata, min_val, max_val = mx.nd.contrib.quantize_v2(data=data, min_calib_range=min_range, 
+                                                        max_calib_range=max_range, out_type='int8')
+        data_np = data.asnumpy()
+        real_range = np.maximum(np.abs(min_range), np.abs(max_range))
+        quantized_range = 127.0
+        scale = quantized_range / real_range
+        assert qdata.dtype == np.int8
+        assert min_val.dtype == np.float32
+        assert max_val.dtype == np.float32
+        # assert_almost_equal(min_val.asscalar(), -real_range)
+        # assert_almost_equal(max_val.asscalar(), real_range)
+        qdata_np = (np.sign(data_np) * np.minimum(np.abs(data_np) * scale + 0.5, quantized_range)).astype(np.int8)
+        assert_almost_equal(qdata.asnumpy(), qdata_np, atol = 1)
+    
+    for dtype in ['float32', 'float16']:
+        check_float_to_int8(dtype)
 
 @with_seed()
 def test_dequantize_int8_to_float32():
@@ -483,8 +506,19 @@ def test_quantized_pooling():
 
 @with_seed()
 def test_quantized_fc():
-    def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True):
+    def get_output_quantized_range(data_range, weight_range, quantized_range):
+        data_float_for_one_quant_level = data_range / quantized_range
+        weight_float_for_one_quant_level = weight_range / quantized_range
+        range_out = 2147483647.0 # range for int32
+        out_float_for_one_quant_level = data_float_for_one_quant_level * weight_float_for_one_quant_level
+        out_max = out_float_for_one_quant_level * range_out
+        out_min = -out_max
+        return out_min, out_max
+    def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True, float_out=None):
         if is_test_for_native_cpu():
+            if float_out:
+                print('skipped testing quantized_fc with float_out on cpu since it is only supported by GPU now')
+                return
             hasMKL = False
             for key in os.environ.keys():
                 if operator.eq(key, "BUILD_TAG"):
@@ -547,8 +581,19 @@ def test_quantized_fc():
         output = fc_fp32_exe.forward()[0]
 
         qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype=qdtype)
-        fc_int8 = mx.sym.contrib.quantized_fully_connected(data=qdata, num_hidden=num_hidden,
-                                                           no_bias=no_bias, flatten=flatten)
+        if float_out:
+            fc_int8 = mx.sym.contrib.quantized_fully_connected(data=qdata, num_hidden=num_hidden,
+                                                                no_bias=no_bias, flatten=flatten,
+                                                                float_out=float_out)
+            # perform requantize and dequantize in fc_fp32
+            out_min, out_max = get_output_quantized_range(data_range, weight_range, quantized_range)
+            out_range = maxabs(out_min, out_max)
+            quantized_range_int32 = 2147483647.0
+            output = output * out_range / quantized_range_int32
+            output = output.astype(float_out)
+        else:
+            fc_int8 = mx.sym.contrib.quantized_fully_connected(data=qdata, num_hidden=num_hidden,
+                                                                no_bias=no_bias, flatten=flatten)
         qarg_names = fc_int8.list_arguments()
         type_dict = {qarg_names[1]: 'int8'}
         if not no_bias:
@@ -570,13 +615,18 @@ def test_quantized_fc():
             fc_int8_exe.arg_dict[qarg_names[7]][:] = -bias_range
             fc_int8_exe.arg_dict[qarg_names[8]][:] = bias_range
         qoutput, min_range, max_range = fc_int8_exe.forward()
+        print(qoutput.dtype)
 
         if no_bias:
             assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
         else:
             # with adding bias, accuracy loss should not be greater than one
+            diff_tol = 2
+            # Precision limitations on integer values for fp16 will lead to up to 32 accuracy loss for large integers
+            if float_out == 'float16':
+                diff_tol = 32
             diff = mx.nd.abs(output - qoutput.astype(output.dtype))
-            cond = mx.nd.lesser(2, diff).sum().asscalar()
+            cond = mx.nd.lesser(diff_tol, diff).sum().asscalar()
             assert cond == 0
 
     for qdtype in ['int8', 'uint8']:
@@ -593,6 +643,16 @@ def test_quantized_fc():
         check_quantized_fc((256, 111, 2, 2), 800, False, qdtype)
         check_quantized_fc((256, 2048, 2, 2), 800, True, qdtype)
         check_quantized_fc((256, 111, 2, 2), 800, True, qdtype)
+        # float out
+        for float_outtype in ['float32', 'float16']:
+            check_quantized_fc((32, 512, 2, 2), 100, True, qdtype, float_out=float_outtype)
+            check_quantized_fc((32, 111, 2, 2), 100, True, qdtype, float_out=float_outtype)
+            check_quantized_fc((32, 512, 2, 2), 100, False, qdtype, float_out=float_outtype)
+            check_quantized_fc((32, 111, 2, 2), 100, False, qdtype, float_out=float_outtype)
+            check_quantized_fc((256, 2048, 2, 2), 800, False, qdtype, float_out=float_outtype)
+            check_quantized_fc((256, 111, 2, 2), 800, False, qdtype, float_out=float_outtype)
+            check_quantized_fc((256, 2048, 2, 2), 800, True, qdtype, float_out=float_outtype)
+            check_quantized_fc((256, 111, 2, 2), 800, True, qdtype, float_out=float_outtype)
 
 @with_seed()
 def test_quantized_embedding():

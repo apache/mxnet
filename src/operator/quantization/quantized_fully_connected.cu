@@ -26,6 +26,9 @@
 #include "./quantization_utils.h"
 #include "../mxnet_op.h"
 #include "../nn/fully_connected-inl.h"
+#include "./quantized_fully_connected-inl.h"
+#include "math.h"
+//#include "./requantize-inl.h" // for FusedRequantizeKernel when having no_bias + float_out
 
 namespace mxnet {
 namespace op {
@@ -62,25 +65,27 @@ __global__ void quantized_add_bias_kernel(DType* mat,
                                           size_t bias_length,
                                           const float *float_for_one_quant_tmp) {
 
-const index_t row = blockIdx.x;
-for (index_t i = threadIdx.x; i < bias_length; i += blockDim.x){
-  int idx = row*bias_length + i;
-  mat[idx] += bias[i] * (*float_for_one_quant_tmp);
-}
+  const index_t row = blockIdx.x;
+  for (index_t i = threadIdx.x; i < bias_length; i += blockDim.x){
+    int idx = row*bias_length + i;
+    mat[idx] += bias[i] * (*float_for_one_quant_tmp);
+  }
 
 }
 
 template<typename DType, typename BType>
-void QuantizedAddBias(Tensor<gpu, 1, BType> bias,
+void QuantizedAddBias(BType* bias,
                       Tensor<gpu, 2, BType> data,
-                      Tensor<gpu, 2, DType> out,
+                      DType* out,
                       Stream<gpu>* s,
-                      const float *float_for_one_quant_tmp) {
+                      const float *float_for_one_quant_tmp,
+                      const int bias_len) {
     
-    int bias_len = bias.shape_[0];
-
     int nthreads_quant_addbias = 256;
-    if(bias_len >= 512){
+
+    if(bias_len >= 1024){
+      nthreads_quant_addbias = 1024;
+    }else if(bias_len >= 512){
       nthreads_quant_addbias = 512;
     }else if(bias_len >= 256){
       nthreads_quant_addbias = 256;
@@ -95,22 +100,130 @@ void QuantizedAddBias(Tensor<gpu, 1, BType> bias,
     quantized_add_bias_kernel<DType, BType><<<data.size(0),
                                   nthreads_quant_addbias,
                                   0,
-                                  Stream<gpu>::GetStream(s)>>>(out.dptr_,
-                                                                bias.dptr_,
+                                  Stream<gpu>::GetStream(s)>>>(out,
+                                                                bias,
                                                                 bias_len,
                                                                 float_for_one_quant_tmp);
 }
 
+// DType->output type, BType->bias type
+template <typename DType, typename BType>
+__global__ void quantized_add_bias_redequantize_kernel(int32_t* outCUBLAS,
+                                          DType* out,
+                                          BType* bias,
+                                          size_t bias_length,
+                                          const float *float_for_one_quant_tmp,
+                                          const float *min_out,
+                                          const float *max_out) {
+
+  const index_t row = blockIdx.x;
+  for (index_t i = threadIdx.x; i < bias_length; i += blockDim.x){
+    int idx = row*bias_length + i;
+    outCUBLAS[idx] += bias[i] * (*float_for_one_quant_tmp);
+    out[idx] = static_cast<DType>(QuantizedToFloat<int32_t>(outCUBLAS[idx], *min_out, *max_out));
+  }
+
+}
+
+template<typename DType, typename BType>
+void FusedQuantizedAddBiasAndReDequantize(BType* bias,
+                      Tensor<gpu, 2, BType> data,
+                      DType* out,
+                      Tensor<gpu, 2, int32_t> outTensorCUBLAS,
+                      Stream<gpu>* s,
+                      const float *float_for_one_quant_tmp,
+                      const int bias_len,
+                      const float *min_out,
+                      const float *max_out) {
+    
+    int nthreads_quant_addbias = 256;
+
+    if(bias_len >= 1024){
+      nthreads_quant_addbias = 1024;
+    }else if(bias_len >= 512){
+      nthreads_quant_addbias = 512;
+    }else if(bias_len >= 256){
+      nthreads_quant_addbias = 256;
+    }else if(bias_len >= 128){
+      nthreads_quant_addbias = 128;
+    }else if(bias_len >= 64){
+      nthreads_quant_addbias = 64;
+    }else{
+      nthreads_quant_addbias = 32;
+    }
+
+    quantized_add_bias_redequantize_kernel<DType, BType><<<data.size(0),
+                                  nthreads_quant_addbias,
+                                  0,
+                                  Stream<gpu>::GetStream(s)>>>(outTensorCUBLAS.dptr_,
+                                                                out,
+                                                                bias,
+                                                                bias_len,
+                                                                float_for_one_quant_tmp,
+                                                                min_out,
+                                                                max_out);
+}
+
+template <typename DType, typename BType>
+__global__ void fused_requantize_dequantize_kernel(int32_t* outCUBLAS,
+                                          DType* out,
+                                          const int num_elem,
+                                          const float *min_out,
+                                          const float *max_out) {
+
+  int tid = threadIdx.x + blockIdx.x * blockDim.x;
+  while(tid < num_elem){
+    out[tid] = static_cast<DType>(QuantizedToFloat<int32_t>(outCUBLAS[tid], *min_out, *max_out));
+    tid += blockDim.x * gridDim.x;
+  }
+}
+
+template<typename DType, typename BType>
+void FusedRequantizdAndDequantize(DType* out,
+                      Tensor<gpu, 2, int32_t> outTensorCUBLAS,
+                      Stream<gpu>* s,
+                      const float *min_out,
+                      const float *max_out,
+                      const int num_elem) {
+
+    int nthreads = 256;
+
+    if(num_elem >= 1024){
+      nthreads = 1024;
+    }else if(num_elem >= 512){
+      nthreads = 512;
+    }else if(num_elem >= 256){
+      nthreads = 256;
+    }else if(num_elem >= 128){
+      nthreads = 128;
+    }else if(num_elem >= 64){
+      nthreads = 64;
+    }else{
+      nthreads = 32;
+    }
+    
+    fused_requantize_dequantize_kernel<DType, BType><<< (num_elem + nthreads - 1) / nthreads,
+                                  nthreads,
+                                  0,
+                                  Stream<gpu>::GetStream(s)>>>(outTensorCUBLAS.dptr_,
+                                                                out,
+                                                                num_elem,
+                                                                min_out,
+                                                                max_out);
+}
+
 #endif  // __CUDACC__
 
-template<typename SrcType, typename DstType, typename CmpType>
+template<typename SrcType>
 void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
                                        const OpContext &ctx,
                                        const std::vector<TBlob> &inputs,
                                        const std::vector<OpReqType> &req,
                                        const std::vector<TBlob> &outputs) {
 #if CUDA_VERSION >= 8000
-  const FullyConnectedParam& param = nnvm::get<FullyConnectedParam>(attrs.parsed);
+  typedef int32_t CmpType;
+
+  const QuantizedFullyConnectedParam& param = nnvm::get<QuantizedFullyConnectedParam>(attrs.parsed);
   using namespace mshadow;
   using namespace mxnet_op;
   size_t num_inputs = param.no_bias ? 2 : 3;
@@ -127,15 +240,57 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
   // (m, n) * (k, n).T = (m, k)
   // A * B.T = C
 
-  Tensor<gpu, 2, SrcType> dataTensor;
-  Tensor<gpu, 2, DstType> outTensor;
+  auto out_type = GetQuantizedFCFloatOutType(param);
 
-  if (!param.flatten) {
-    dataTensor = FlattenAs2DHead<gpu, SrcType>(data, ctx);
-    outTensor = FlattenAs2DHead<gpu, DstType>(out, ctx);
-  } else {
-    dataTensor = FlattenAs2DTail<gpu, SrcType>(data, ctx);
-    outTensor = FlattenAs2DTail<gpu, DstType>(out, ctx);
+  // allocate workspace for storaging both outTensorCUBLAS and FloatForOneQuant
+  size_t workspace_size = sizeof(int32_t) * out.Size() + sizeof(float);
+  auto workspace = ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
+  char* ptr = workspace.dptr_;
+
+  Tensor<gpu, 2, SrcType> dataTensor;
+  Tensor<gpu, 2, int32_t> outTensorCUBLAS;
+  Tensor<gpu, 1, float> FloatForOneQuant;
+
+  if(out_type == mshadow::kInt32){
+    if (!param.flatten) {
+      dataTensor = FlattenAs2DHead<gpu, SrcType>(data, ctx);
+      outTensorCUBLAS = FlattenAs2DHead<gpu, int32_t>(out, ctx);
+    } else {
+      dataTensor = FlattenAs2DTail<gpu, SrcType>(data, ctx);
+      outTensorCUBLAS = FlattenAs2DTail<gpu, int32_t>(out, ctx);
+    }
+    // workspace only utilizing the first element for FloatForOneQuant
+    FloatForOneQuant = Tensor<gpu, 1, float>(reinterpret_cast<float*>(ptr), Shape1(1), s);
+  }else if(out_type == mshadow::kFloat32){
+    Tensor<gpu, 2, float> outTensor;
+    if (!param.flatten) {
+      dataTensor = FlattenAs2DHead<gpu, SrcType>(data, ctx);
+      outTensor = FlattenAs2DHead<gpu, float>(out, ctx);
+    } else {
+      dataTensor = FlattenAs2DTail<gpu, SrcType>(data, ctx);
+      outTensor = FlattenAs2DTail<gpu, float>(out, ctx);
+    }
+    // workspace: temporary storage for output tensor, which is in int32 type for storaging CUBLAS output
+    outTensorCUBLAS = Tensor<gpu, 2, int32_t>(reinterpret_cast<int32_t*>(ptr), outTensor.shape_, s);
+    ptr += sizeof(int32_t) * out.Size();
+    // workspace: FloatForOneQuant
+    FloatForOneQuant = Tensor<gpu, 1, float>(reinterpret_cast<float*>(ptr), Shape1(1), s);
+  }else if(out_type == mshadow::kFloat16){
+    Tensor<gpu, 2, mshadow::half::half_t> outTensor;
+    if (!param.flatten) {
+      dataTensor = FlattenAs2DHead<gpu, SrcType>(data, ctx);
+      outTensor = FlattenAs2DHead<gpu, mshadow::half::half_t>(out, ctx);
+    } else {
+      dataTensor = FlattenAs2DTail<gpu, SrcType>(data, ctx);
+      outTensor = FlattenAs2DTail<gpu, mshadow::half::half_t>(out, ctx);
+    }
+    // workspace: temporary storage for output tensor, which is in int32 type for storaging CUBLAS output
+    outTensorCUBLAS = Tensor<gpu, 2, int32_t>(reinterpret_cast<int32_t*>(ptr), outTensor.shape_, s);
+    ptr += sizeof(int32_t) * out.Size();
+    // workspace: FloatForOneQuant
+    FloatForOneQuant = Tensor<gpu, 1, float>(reinterpret_cast<float*>(ptr), Shape1(1), s);
+  }else{
+    LOG(FATAL) << "Unsupported float_out in params: " <<param.float_out;
   }
 
   Tensor<gpu, 2, SrcType> weightTensor = weight.get<gpu, 2, SrcType>(s);
@@ -147,13 +302,13 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
   CmpType alpha = 1.0f;
   CmpType beta  = 0.0f;
   const cudaDataType src_type = mshadow::DataType<SrcType>::kCudaFlag;
-  const cudaDataType dst_type = mshadow::DataType<DstType>::kCudaFlag;
+  const cudaDataType dst_type = mshadow::DataType<int32_t>::kCudaFlag;
   const cudaDataType cmp_type = mshadow::DataType<CmpType>::kCudaFlag;
   CUBLAS_CALL(cublasGemmEx(s->blas_handle_,
                            CUBLAS_OP_T,
                            CUBLAS_OP_N,
-                           outTensor.size(1),
-                           outTensor.size(0),
+                           outTensorCUBLAS.size(1),
+                           outTensorCUBLAS.size(0),
                            weightTensor.size(1),
                            &alpha,
                            weightTensor.dptr_,
@@ -163,13 +318,14 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
                            src_type,
                            dataTensor.stride_,
                            &beta,
-                           outTensor.dptr_,
+                           outTensorCUBLAS.dptr_,
                            dst_type,
-                           outTensor.stride_,
+                           outTensorCUBLAS.stride_,
                            cmp_type,
                            CUBLAS_GEMM_DFALT));
+  
 
-  // use min/max values of output and data to update the min/max values of weight
+  // use min/max values of weight and data to update the min/max values of output
   Kernel<QuantizationRangeForS8S8MultiplicationStruct, gpu>::Launch(s, 1,
     outputs[1].dptr<float>(), outputs[2].dptr<float>(),
      inputs[num_inputs].dptr<float>(),   inputs[num_inputs+1].dptr<float>(),
@@ -185,19 +341,48 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
          " make sure all row ids are present.";
 
     // Launch FloatForOneQuantBiasAddKernel
-    // temporary storage for FloatForOneQuant values
-    size_t temp_bytes = sizeof(float);
-    Tensor<gpu, 1, float> FloatForOneQuant =
-      ctx.requested[0].get_space_typed<gpu, 1, float>(
-        Shape1(temp_bytes), s);
-
     Kernel<FloatForOneQuantBiasAddKernel, gpu>::Launch(s, 1,
       outputs[1].dptr<float>(), outputs[2].dptr<float>(),
       inputs[7].dptr<float>(), inputs[8].dptr<float>(),
       FloatForOneQuant.dptr_);
 
-    QuantizedAddBias<DstType, SrcType>(biasTensor, dataTensor, outTensor, s,
-                  FloatForOneQuant.dptr_); 
+    // with_bias case without float out
+    if(out_type == mshadow::kInt32){
+      QuantizedAddBias<int32_t, SrcType>(bias.dptr<SrcType>(), dataTensor, out.dptr<int32_t>(), s,
+                  FloatForOneQuant.dptr_, biasTensor.shape_[0]);
+    }else if(out_type == mshadow::kFloat32){// with_bias case with float32 out
+      // a kernel that fuse requantize, dequantize into add_bias
+      FusedQuantizedAddBiasAndReDequantize<float, SrcType>(bias.dptr<SrcType>(), dataTensor,
+                                          out.dptr<float>(), outTensorCUBLAS, s,
+                                          FloatForOneQuant.dptr_, biasTensor.shape_[0],
+                                          outputs[1].dptr<float>(), outputs[2].dptr<float>());
+    }else if(out_type == mshadow::kFloat16){// with_bias case with float16 out
+      // a kernel that fuse requantize, dequantize into add_bias
+      FusedQuantizedAddBiasAndReDequantize<mshadow::half::half_t, SrcType>(bias.dptr<SrcType>(), dataTensor,
+                                          out.dptr<mshadow::half::half_t>(), outTensorCUBLAS, s,
+                                          FloatForOneQuant.dptr_, biasTensor.shape_[0],
+                                          outputs[1].dptr<float>(), outputs[2].dptr<float>());
+    }else{
+      LOG(FATAL) << "Unsupported float_out in params: " <<param.float_out;
+    }
+  }else{
+    // no_bias case with float out
+    if(out_type == mshadow::kFloat32){// no_bias case with float32 out
+      FusedRequantizdAndDequantize<float, SrcType>(out.dptr<float>(),
+                                          outTensorCUBLAS, s,
+                                          outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+                                          out.Size());
+      // Kernel<FusedRequantizeKernel, gpu>::Launch(s, out.Size(),
+      //   outputs[0].dptr<float>(), outTensorCUBLAS.dptr_,
+      //   outputs[1].dptr<float>(), outputs[2].dptr<float>());
+    }else if(out_type == mshadow::kFloat16){// no_bias case with float16 out
+      FusedRequantizdAndDequantize<mshadow::half::half_t, SrcType>(out.dptr<mshadow::half::half_t>(),
+                                          outTensorCUBLAS, s,
+                                          outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+                                          out.Size());
+    }else if(out_type != mshadow::kInt32){
+      LOG(FATAL) << "Unsupported float_out in params: " <<param.float_out;
+    }
   }
 #else
   LOG(FATAL) << "QuantizedFullyConnectedForwardGPU only supports CUDA >= 8.0";
@@ -205,7 +390,7 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_quantized_fully_connected)
-.set_attr<FCompute>("FCompute<gpu>", QuantizedFullyConnectedForwardGPU<int8_t, int32_t, int32_t>);
+.set_attr<FCompute>("FCompute<gpu>", QuantizedFullyConnectedForwardGPU<int8_t>);
 
 }  // namespace op
 }  // namespace mxnet

@@ -996,6 +996,11 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     if custom_pass_aft_quant is not None:
         qsym, qarg_params, aux_params = custom_pass_aft_quant(qsym, qarg_params, aux_params)
 
+    # digraph=mx.viz.plot_network(qsym, save_format = 'pdf',
+    #     node_attrs={"shape":'rect',"fixedsize":'false'},
+    #     hide_weights=False)
+    # digraph.save("qsym.gv")
+
     from ..gluon import SymbolBlock
     data_sym = []
     for name in data_names:
