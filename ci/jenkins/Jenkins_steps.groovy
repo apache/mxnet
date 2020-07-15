@@ -51,12 +51,6 @@ def python3_ut(docker_container_name) {
   }
 }
 
-def python3_ut_serial(docker_container_name) {
-  timeout(time: max_time, unit: 'MINUTES') {
-    utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_serial', false)
-  }
-}
-
 def python3_ut_mkldnn(docker_container_name) {
   timeout(time: max_time, unit: 'MINUTES') {
     utils.docker_run(docker_container_name, 'unittest_ubuntu_python3_cpu_mkldnn', false)
@@ -177,7 +171,7 @@ def compile_unix_mkl_cpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkl', false)
-            utils.pack_lib(lib_name, mx_lib, true)
+            utils.pack_lib(lib_name, mx_lib, false)
           }
         }
       }
@@ -219,7 +213,7 @@ def compile_unix_mkldnn_mkl_cpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_mkldnn_mkl', false)
-            utils.pack_lib(lib_name, mx_mkldnn_lib, true)
+            utils.pack_lib(lib_name, mx_mkldnn_lib, false)
           }
         }
       }
@@ -772,8 +766,8 @@ def test_unix_python3_mkl_cpu(lib_name) {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-cpu') {
           try {
-            utils.unpack_and_init(lib_name, mx_lib, true)
-            python3_ut_serial('ubuntu_cpu')
+            utils.unpack_and_init(lib_name, mx_lib)
+            python3_ut('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('tests_unittest.xml', 'tests_python3_cpu_unittest.xml')
@@ -854,7 +848,7 @@ def test_unix_python3_mkldnn_mkl_cpu(lib_name) {
       node(NODE_LINUX_CPU) {
         ws('workspace/ut-python3-mkldnn-mkl-cpu') {
           try {
-            utils.unpack_and_init(lib_name, mx_lib, true)
+            utils.unpack_and_init(lib_name, mx_lib)
             python3_ut_mkldnn('ubuntu_cpu')
             utils.publish_test_coverage()
           } finally {
