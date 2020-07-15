@@ -699,6 +699,14 @@ class ndarray(NDArray):
             elif key.step == 0:
                 raise ValueError("slice step cannot be zero")
 
+
+        all = __builtins__['all']  # `def all` below shadows the all builtin
+        if (isinstance(key, tuple) and all(
+            (isinstance(arr, NDArray)
+             and _np.issubdtype(arr.dtype, _np.integer) and arr.ndim > 0)
+                for arr in key)):
+            return _npi.advanced_indexing_multiple(self, _npi.stack(*key))
+
         # For 0-d boolean indices: A new axis is added,
         # but at the same time no axis is "used". So if we have True,
         # we add a new axis (a bit like with np.newaxis). If it is
@@ -707,7 +715,6 @@ class ndarray(NDArray):
         # prepend = _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY/-1 means there is no 0-d boolean scalar
         # prepend = _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE/0 means an zero dim must be expanded
         # prepend = _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE/1 means a new axis must be prepended
-        original_key = key
         key, prepend = indexing_key_expand_implicit_axes(key, self.shape)
         indexing_dispatch_code = get_indexing_dispatch_code(key)
         if indexing_dispatch_code == _NDARRAY_EMPTY_TUPLE_INDEXING:
@@ -721,10 +728,6 @@ class ndarray(NDArray):
                 key = (_np.newaxis,) + key
             return self._get_np_basic_indexing(key)
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
-            all = __builtins__['all']  # `def all` below shadows the all builtin
-            if isinstance(original_key, tuple) and \
-            all((isinstance(arr, NDArray) and _np.issubdtype(arr.dtype, _np.integer)) for arr in original_key):
-                return _npi.advanced_indexing_multiple(self, _npi.stack(*original_key))
             if dc.is_deferred_compute():
                 raise TypeError('Advanced indexing is not supported in HybridBlock.')
             if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE:

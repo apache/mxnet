@@ -100,4 +100,5 @@ def test_getitem_hybridized_no_F_argument():
     mx.npx.reset_np()
 
     mx.test_utils.assert_almost_equal(nd_output_hybridized.asnumpy(), np_output.asnumpy())
+    mx.test_utils.assert_almost_equal(z_hybridized.asnumpy(), np_output.asnumpy())
     mx.test_utils.assert_almost_equal(seq_np.grad.asnumpy(), seq_np_hybridized.grad.asnumpy())
