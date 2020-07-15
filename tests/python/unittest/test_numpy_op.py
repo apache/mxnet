@@ -1064,14 +1064,15 @@ def test_np_moment():
     class TestMoment(HybridBlock):
         def __init__(self, name, axis=None, dtype=None, keepdims=False, ddof=0):
             super(TestMoment, self).__init__()
-            self._name = name
+            self._moment_name = name
             self._axis = axis
             self._dtype = dtype
             self._keepdims = keepdims
             self._ddof = ddof
 
         def hybrid_forward(self, F, a, *args, **kwargs):
-            return getattr(a, self._name)(axis=self._axis, dtype=self._dtype, keepdims=self._keepdims, ddof=self._ddof)
+            return getattr(a, self._moment_name)(axis=self._axis, dtype=self._dtype,
+                                                 keepdims=self._keepdims, ddof=self._ddof)
 
     def is_int(dtype):
         return 'int' in dtype
@@ -4562,9 +4563,9 @@ def test_np_random_grad():
         def __init__(self, shape, op_name):
             super(TestRandomGrad, self).__init__()
             self._shape = shape
-            self._name = op_name
+            self._dist_name = op_name
         def hybrid_forward(self, F, loc, scale):
-            op = getattr(F.np.random, self._name, None)
+            op = getattr(F.np.random, self._dist_name, None)
             assert op is not None
             return op(loc=loc, scale=scale, size=self._shape)
 

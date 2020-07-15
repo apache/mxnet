@@ -420,6 +420,7 @@ def test_get_symbol():
     assert len(get_symbol(y).list_arguments()) == 2
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_grad_with_stype():
     def check_grad_with_stype(array_stype, grad_stype, expected_stype):
         x = mx.nd.zeros((1, 1), stype=array_stype)

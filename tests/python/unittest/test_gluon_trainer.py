@@ -344,3 +344,18 @@ def test_gluon_trainer_param_order():
         expected_idx = 0 if name == 'ones_' else 1
         expected_name = '{}.weight'.format(expected_idx)
         assert trainer._params[expected_idx].name == params[expected_name].name
+
+
+def test_trainer_allreduce_hybridsequential():
+    contexts = [mx.cpu(0), mx.cpu(1)]
+    net = mx.gluon.nn.HybridSequential()
+    for _ in range(8):  # Create a network with 8 layers
+        net.add(mx.gluon.nn.Dense(1, weight_initializer='ones', bias_initializer='ones'))
+    net.initialize(ctx=contexts)
+    net.hybridize()
+    trainer = mx.gluon.Trainer(net.collect_params(), 'sgd', update_on_kvstore=False)
+    for ctx in contexts:
+        with mx.autograd.record():
+            out = net(mx.nd.ones((1, 1), ctx=ctx))
+        out.backward()
+    trainer.allreduce_grads()

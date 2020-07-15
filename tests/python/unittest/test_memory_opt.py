@@ -104,8 +104,3 @@ def test_fc():
     z = mx.sym.Activation(y, act_type='tanh', name='z')
     z = mx.sym.FullyConnected(z, num_hidden=num_hidden)
     exec = z._simple_bind(mx.cpu(), 'write', x=(num_hidden,))
-
-
-if __name__ == "__main__":
-    import nose
-    nose.runmodule()

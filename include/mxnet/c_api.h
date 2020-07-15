@@ -1749,6 +1749,14 @@ MXNET_DLL int MXSymbolGetNumOutputs(SymbolHandle symbol,
 MXNET_DLL int MXSymbolGetInternals(SymbolHandle symbol,
                                    SymbolHandle *out);
 /*!
+ * \brief Get a symbol that contains all the inputs.
+ * \param symbol The symbol
+ * \param out The output symbol whose outputs are all the internals.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetInputs(SymbolHandle symbol,
+                                SymbolHandle *out);
+/*!
  * \brief Get a symbol that contains only direct children.
  * \param symbol The symbol
  * \param out The output symbol whose outputs are the direct children.

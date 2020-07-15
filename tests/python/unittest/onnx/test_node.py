@@ -22,7 +22,6 @@ ONNX backend test framework. Once we have PRs on the ONNX repo and get
 those PRs merged, this file will get EOL'ed.
 """
 # pylint: disable=too-many-locals,wrong-import-position,import-error
-from __future__ import absolute_import
 import sys
 import os
 import unittest
@@ -34,7 +33,6 @@ import numpy.testing as npt
 from onnx import checker, numpy_helper, helper, load_model
 from onnx import TensorProto
 from mxnet.test_utils import download
-from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
 import backend
 
@@ -123,13 +121,13 @@ class TestNode(unittest.TestCase):
                 mx_op = mx_op(**attrs)
                 mx_op.initialize()
                 mx_op(mx.nd.zeros(input_shape))
-                params = {p.name: p.data() for p in mx_op.collect_params().values()}
+                params = {p.var().name: p.data() for p in mx_op.collect_params().values()}
                 outsym = mx_op(input_sym)
             else:
                 params = {}
                 outsym = mx_op(input_sym, **attrs)
-            converted_model = onnx_mxnet.export_model(outsym, params, [input_shape], np.float32,
-                                                      onnx_file_path=outsym.name + ".onnx")
+            converted_model = mx.contrib.onnx.export_model(outsym, params, [input_shape], np.float32,
+                                                           onnx_file_path=outsym.name + ".onnx")
             model = load_model(converted_model)
             checker.check_model(model)
 
