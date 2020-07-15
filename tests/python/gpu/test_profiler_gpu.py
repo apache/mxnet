@@ -34,7 +34,7 @@ def test_gpu_memory_profiler_symbolic():
     enable_profiler('test_profiler.json', False, False)
     profiler.set_state('run')
 
-    with profiler.Scope("tensordot"):
+    with profiler.scope("tensordot"):
         A = mx.sym.Variable('A')
         B = mx.sym.Variable('B')
         C = mx.symbol.dot(A, B, name='dot')
