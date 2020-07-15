@@ -317,8 +317,7 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
   else if (diff.IsDefaultData())
     diff_mem = diff.GetMKLDNNDataReorder(data_mem->get_desc());
   auto &bwd = GetBNBackward<DType>(param, ctx, data, *data_mem, diff, *diff_mem, flags);
-  auto gradi_mem = CreateMKLDNNMem(const_cast<NDArray &>(gradIn),
-      bwd.pd.diff_src_desc(), req[batchnorm::kData]);
+  auto gradi_mem = const_cast<NDArray &>(gradIn).CreateMKLDNNData(data_mem->get_desc());
 
   if (static_cast<int>(flags) & static_cast<int>(mkldnn::normalization_flags::use_scale_shift)) {
     const NDArray &gamma    = in_data[batchnorm::kGamma];
@@ -338,7 +337,7 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
 
     mkldnn_args_map_t net_args;
     net_args[MKLDNN_ARG_SRC] = *data_mem;
-    net_args[MKLDNN_ARG_DIFF_SRC] = *gradi_mem.second;
+    net_args[MKLDNN_ARG_DIFF_SRC] = *gradi_mem;
     net_args[MKLDNN_ARG_SCALE_SHIFT] = bwd.GetWeight();
     net_args[MKLDNN_ARG_DIFF_SCALE_SHIFT] = bwd.GetGradw();
     net_args[MKLDNN_ARG_DIFF_DST] = *diff_mem;
@@ -363,46 +362,26 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
       }
       net_args[MKLDNN_ARG_MEAN] = *(out_mean.GetMKLDNNData());
       net_args[MKLDNN_ARG_VARIANCE] = var_mem;
+      MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
+      MKLDNNStream::Get()->Submit();
     } else {
       net_args[MKLDNN_ARG_MEAN] =  *(moving_mean.GetMKLDNNData());
       net_args[MKLDNN_ARG_VARIANCE] = *(moving_var.GetMKLDNNData());
+      MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
+      MKLDNNStream::Get()->Submit();
     }
-    MKLDNNStream::Get()->RegisterPrimArgs(bwd.GetBwd(), net_args);
-    CommitOutput(gradIn, gradi_mem);
-    MKLDNNStream::Get()->Submit();
 
     // copy data from gradw_mem to in_grad[1] and in_grad[2]
     DType *gw_buf = reinterpret_cast<DType *>(bwd.GetGradw().get_data_handle());
-    DType *w_grad_1 = in_grad[batchnorm::kGamma].data().dptr<DType>();
-    DType *w_grad_2 = in_grad[batchnorm::kBeta].data().dptr<DType>();
-
-    // the gradient of gamma
-    if (!param.fix_gamma) {
-      if (req[batchnorm::kGamma] != kNullOp) {
-        if (req[batchnorm::kGamma] != kAddTo) {
-          memcpy(w_grad_1, gw_buf, copy_size);
-        } else {
-          for (int i = 0; i < channels_; i++) {
-            w_grad_1[i] += gw_buf[i];
-          }
-        }
-      }
-    } else {
-      for (int i = 0; i < channels_; i++) {
+    for (int i = 0; i < channels_; i++) {
+      if (!param.fix_gamma)
+        (in_grad[1].data().dptr<DType>())[i] = gw_buf[i];
+      else
         (in_grad[1].data().dptr<DType>())[i] = 0.0f;
-      }
     }
 
-    // the gradient of beta
-    if (req[batchnorm::kBeta] != kNullOp) {
-      if (req[batchnorm::kBeta] != kAddTo) {
-        memcpy(w_grad_2, &gw_buf[channels_], copy_size);
-      } else {
-        DType *grad_beta = &gw_buf[channels_];
-        for (int i = 0; i < channels_; i++) {
-          w_grad_2[i] += grad_beta[i];
-        }
-      }
+    for (int i = 0; i < channels_; i++) {
+      (in_grad[2].data().dptr<DType>())[i] = gw_buf[i + channels_];
     }
   } else {
     LOG(FATAL) << "MKLDNN batch normalization backward: should not reach here ...";
