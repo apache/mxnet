@@ -117,6 +117,16 @@ class Imperative {
     }
     return is_np_shape_thread_local_ ? 1 : 0;
   }
+
+  /*! \brief return current numpy default dtype compatibility status.
+  * */
+  bool is_np_default_dtype() const {
+    if (is_np_default_dtype_global_) {
+      return true;
+    }
+    return false;
+  }
+
   /*! \brief specify numpy compatibility off, thread local on or global on. */
   bool set_is_np_shape(int is_np_shape) {
     NumpyShape flag = static_cast<NumpyShape>(is_np_shape);
@@ -215,6 +225,7 @@ class Imperative {
   static MX_THREAD_LOCAL bool is_np_shape_thread_local_;
 #endif
   bool is_np_shape_global_{false};
+  bool is_np_default_dtype_global_{false};
   /*! \brief node count used for naming */
   std::atomic<uint64_t> node_count_{0};
   /*! \brief variable count used for naming */

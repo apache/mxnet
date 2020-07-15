@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-def max_time = 30
+def max_time = 60
 
 def buildJobs = [
     'centos-cpu',
