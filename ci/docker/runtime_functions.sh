@@ -321,21 +321,6 @@ build_centos7_cpu() {
     ninja
 }
 
-build_centos7_cpu_make() {
-    set -ex
-    cd /work/mxnet
-    source /opt/rh/devtoolset-7/enable
-    make \
-        DEV=1 \
-        USE_LAPACK=1 \
-        USE_LAPACK_PATH=/usr/lib64/liblapack.so \
-        USE_BLAS=openblas \
-        USE_MKLDNN=0 \
-        USE_DIST_KVSTORE=1 \
-        USE_SIGNAL_HANDLER=1 \
-        -j$(nproc)
-}
-
 build_centos7_mkldnn() {
     set -ex
     cd /work/build
@@ -382,24 +367,6 @@ build_ubuntu_cpu_openblas() {
         -DBUILD_CYTHON_MODULES=ON \
         -G Ninja /work/mxnet
     ninja
-}
-
-build_ubuntu_cpu_openblas_make() {
-    set -ex
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    make \
-        DEV=1                         \
-        USE_TVM_OP=1                  \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=0                  \
-        USE_DIST_KVSTORE=1            \
-        USE_LIBJPEG_TURBO=1           \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
-    make cython PYTHON=python3
 }
 
 build_ubuntu_cpu_mkl() {
@@ -589,22 +556,6 @@ build_ubuntu_cpu_clang100_mkldnn() {
     ninja
 }
 
-build_ubuntu_cpu_mkldnn_make() {
-    set -ex
-
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_TVM_OP=1                  \
-        USE_BLAS=openblas             \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
-}
-
 build_ubuntu_cpu_mkldnn() {
     set -ex
     cd /work/build
@@ -754,45 +705,6 @@ build_ubuntu_gpu_cuda101_cudnn7_debug() {
     ninja
 }
 
-build_ubuntu_gpu_cuda101_cudnn7_make() {
-    set -ex
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    make \
-        USE_BLAS=openblas                         \
-        USE_MKLDNN=0                              \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        USE_CPP_PACKAGE=1                         \
-        USE_DIST_KVSTORE=1                        \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_SIGNAL_HANDLER=1                      \
-        -j$(nproc)
-    make cython PYTHON=python3
-}
-
-build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
-    set -ex
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    make \
-        USE_BLAS=openblas                         \
-        USE_MKLDNN=1                              \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        USE_CPP_PACKAGE=1                         \
-        USE_DIST_KVSTORE=1                        \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_SIGNAL_HANDLER=1                      \
-        -j$(nproc)
-    make test USE_CPP_PACKAGE=1 -j$(nproc)
-    make cython PYTHON=python3
-}
-
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
@@ -878,8 +790,8 @@ build_ubuntu_blc() {
 sanity_check() {
     set -ex
     tools/license_header.py check
-    make cpplint
-    make pylint
+    3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests --exclude_path src/operator/contrib/ctc_include include/mkldnn
+    python3 -m pylint --rcfile=ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/tutorials/test_sanity_tutorials.py
 }
 
@@ -1257,19 +1169,7 @@ build_docs_setup() {
 }
 
 build_ubuntu_cpu_docs() {
-    set -ex
-    export CC="gcc-7"
-    export CXX="g++-7"
-    build_ccache_wrappers
-    make \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=0                  \
-        USE_DIST_KVSTORE=1            \
-        USE_LIBJPEG_TURBO=1           \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    build_ubuntu_cpu_openblas
 }
 
 
