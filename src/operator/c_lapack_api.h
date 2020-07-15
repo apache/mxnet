@@ -98,8 +98,8 @@ extern "C" {
   // Note: GELQF in row-major (MXNet) becomes GEQRF in column-major (LAPACK).
   // Also, m and n are flipped, compared to the row-major version
   #define MXNET_LAPACK_FSIG_GEQRF(func, dtype) \
-    void func##_(int *m, int *n, dtype *a, int *lda, dtype *tau, dtype *work, \
-                 int *lwork, int *info);
+    void func##_(index_t *m, index_t *n, dtype *a, index_t *lda, dtype *tau, dtype *work, \
+                 index_t *lwork, int *info);
 
   MXNET_LAPACK_FSIG_GEQRF(sgeqrf, float)
   MXNET_LAPACK_FSIG_GEQRF(dgeqrf, double)
@@ -291,10 +291,10 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_ORGLQ(d, double)
 
   #define MXNET_LAPACK_CWRAP_GEQRF(prefix, dtype) \
-  inline int MXNET_LAPACK_##prefix##geqrf(int matrix_layout, int m, int n, \
-                                          dtype *a, int lda, dtype *tau, \
-                                          dtype *work, int lwork) { \
-	  LOG(INFO)<<"------------------------geqrf---------------"; \
+  inline int MXNET_LAPACK_##prefix##geqrf(int matrix_layout, index_t m, index_t n, \
+                                          dtype *a, index_t lda, dtype *tau, \
+                                          dtype *work, index_t lwork) { \
+    LOG(INFO)<<"------------------------mxnet_lackag_prefex_geqrf---------------"; \
     if (lwork != -1) { \
       return LAPACKE_##prefix##geqrf(matrix_layout, m, n, a, lda, tau); \
     } \
@@ -480,6 +480,7 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
                                           dtype* work, index_t lwork) { \
     if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
       int info(0); \
+      LOG(INFO)<<"---------------geqrf_---------"; \  
       prefix##geqrf_(&n, &m, a, &lda, tau, work, &lwork, &info); \
       return info; \
     } else { \
@@ -508,9 +509,9 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_ORGLQ(d, double)
 
   #define MXNET_LAPACK_CWRAP_GEQRF(prefix, dtype) \
-  inline int MXNET_LAPACK_##prefix##geqrf(int matrix_layout, int m, int n, \
-                                          dtype *a, int lda, dtype* tau, \
-                                          dtype* work, int lwork) { \
+  inline int MXNET_LAPACK_##prefix##geqrf(int matrix_layout, index_t m, index_t n, \
+                                          dtype *a, index_t lda, dtype* tau, \
+                                          dtype* work, index_t lwork) { \
     if (matrix_layout == MXNET_LAPACK_ROW_MAJOR) { \
       CHECK(false) << "MXNET_LAPACK_" << #prefix << "geqrf implemented for col-major layout only"; \
       return 1; \
@@ -695,8 +696,8 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype* a, int lda);
 
   #define MXNET_LAPACK_CWRAPPER2(func, dtype) \
-  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, dtype* a, \
-                          int lda, dtype* tau, dtype* work, int lwork);
+  int MXNET_LAPACK_##func(int matrix_layout, index_t m, index_t n, dtype* a, \
+                          index_t lda, dtype* tau, dtype* work, index_t lwork);
 
   #define MXNET_LAPACK_CWRAPPER3(func, dtype) \
   int MXNET_LAPACK_##func(int matrix_layout, char uplo, int n, dtype *a, \

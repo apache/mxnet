@@ -35,8 +35,8 @@
   }
 
   #define MXNET_LAPACK_CWRAPPER2(func, dtype) \
-  int MXNET_LAPACK_##func(int matrix_layout, int m, int n, dtype* a, \
-                          int lda, dtype* tau, dtype* work, int lwork) { \
+  int MXNET_LAPACK_##func(int matrix_layout, index_t m, index_t n, dtype* a, \
+                          index_t lda, dtype* tau, dtype* work, index_t lwork) { \
     LOG(FATAL) << "MXNet build without lapack. Function " << #func << " is not available."; \
     return 1; \
   }
