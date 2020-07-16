@@ -32,11 +32,9 @@ if [[ (! -e $DEPS_PATH/lib/libopenblas.a) ]]; then
 
     # Adding NO_DYNAMIC=1 flag causes make install to fail
     CFLAGS="-fPIC" CXXFLAGS="-fPIC" $MAKE DYNAMIC_ARCH=1 DYNAMIC_OLDER=1 USE_OPENMP=1
+    patchelf --set-rpath '$ORIGIN' --force-rpath libopenblas.so
 
     $MAKE PREFIX=$DEPS_PATH install
-
-    # Manually removing .so to avoid linking against it
-    rm $DEPS_PATH/lib/libopenblas*.so
 
     popd
 fi
