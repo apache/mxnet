@@ -692,32 +692,6 @@ def test_sync_batchnorm():
             bn2.running_mean.set_data(bn1.running_mean.data(ctx))
             bn2.running_var.set_data(bn1.running_var.data(ctx))
 
-        if cuda:
-            input = mx.nd.array(
-                    [[0.09598747, 0.11375386],
-                     [0.25655177, 0.25434464],
-                     [0.94226855, 0.18708304],
-                     [0.4764183,  0.8131366 ],
-                     [0.21693859, 0.6864563 ],
-                     [0.5725503,  0.8149943 ],
-                     [0.13844976, 0.75451255],
-                     [0.19600964, 0.1027916 ],
-                     [0.5756048,  0.41257784],
-                     [0.56359816, 0.46988449],
-                     [0.01285437, 0.6327416 ],
-                     [0.4622506,  0.89027345],
-                     [0.1828535,  0.00556029],
-                     [0.11348299, 0.04499052],
-                     [0.7939917,  0.32591197],
-                     [0.3193446,  0.75737333],
-                     [0.7434559,  0.6272748 ],
-                     [0.09003141, 0.6050287 ],
-                     [0.65154195, 0.9893612 ],
-                     [0.20389462, 0.35144925],
-                     [0.07909038, 0.6846926 ],
-                     [0.10114695, 0.62155235],
-                     [0.769926,   0.92900974],
-                     [0.2362933,  0.25065088]])
         input1 = input.copy()
         input2 = input.copy()
 
@@ -740,18 +714,6 @@ def test_sync_batchnorm():
 
         input1.attach_grad()
         inputs2 = split_and_load(input2, ctx_list, batch_axis=0)
-
-        if cuda:
-            print("input1:", input1)
-            print("input2:", input2)
-            print("gamma1:", bn1.gamma.data())
-            print("gamma2:", bn2.gamma.data())
-            print("beta1:", bn1.beta.data())
-            print("beta2:", bn2.beta.data())
-            print("running_mean1:", bn1.running_mean.data())
-            print("running_mean2:", bn2.running_mean.data())
-            print("running_var1:", bn1.running_var.data())
-            print("running_var2:", bn2.running_var.data())
         for xi in inputs2:
             xi.attach_grad()
 
@@ -776,14 +738,10 @@ def test_sync_batchnorm():
 
         data_mean = data.mean(
             axis=axis, exclude=True, keepdims=True)
-        diff = data - data_mean
-        diffsq = diff.square()
-        data_var = diffsq.mean(axis=axis,
-                               exclude=True, keepdims=True)
-        data_varpluseps = data_var + epsilon
-        sqrtdatavarpluseps = data_varpluseps.sqrt()
+        data_var = (data - data_mean).square().mean(axis=axis,
+                                                    exclude=True, keepdims=True)
 
-        target_output = diff / sqrtdatavarpluseps
+        target_output = (data - data_mean) / (data_var + epsilon).sqrt()
 
         # squeeze data_mean and data_var
         data_mean_flat = data_mean.squeeze()
@@ -796,16 +754,6 @@ def test_sync_batchnorm():
 
         atol = 1e-2
         rtol = 1e-2
-        if cuda:
-            print("output1:", output1)
-            print("target_output:", target_output)
-            print("output2:", output2)
-            print("data_mean:", data_mean)
-            print("diff:", diff)
-            print("diffsq:", diffsq)
-            print("data_var:", data_var)
-            print("data_varpluseps:", data_varpluseps)
-            print("sqrtdatavarpluseps:", sqrtdatavarpluseps)
         assert_almost_equal(output1.asnumpy(), target_output.asnumpy(),
                             atol=atol, rtol=rtol)
         assert_almost_equal(_find_bn(bn1).running_mean.data(ctx_list[0]).asnumpy(),
@@ -844,8 +792,6 @@ def test_sync_batchnorm():
                 _check_batchnorm_result(mx.nd.random.uniform(shape=shape,
                                                              ctx=mx.cpu(0)),
                                         num_devices=ndev, cuda=cuda)
-                if cuda:
-                    return
 
 
 @with_seed()

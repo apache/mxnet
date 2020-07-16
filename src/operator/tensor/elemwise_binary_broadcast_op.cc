@@ -244,8 +244,6 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
                                            const std::vector<TBlob>& inputs,
                                            const std::vector<OpReqType>& req,
                                            const std::vector<TBlob>& outputs) {
-  //                                                                                                     Failing lint to not trigger the full CI
-  std::cout << "BinaryBroadcastRTCCompute " << OP << std::endl;
   using namespace mxnet::common::cuda::rtc;
   if (outputs[0].shape_.Size() == 0U) return;
   if (req[0] == kNullOp) return;
@@ -254,17 +252,12 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
   mxnet::TShape new_lshape, new_rshape, new_oshape;
   int ndim = BinaryBroadcastShapeCompact(inputs[0].shape_, inputs[1].shape_, outputs[0].shape_,
                                          &new_lshape, &new_rshape, &new_oshape);
-  std::cout << ndim << std::endl;
-  std::cout << new_lshape << std::endl;
-  std::cout << new_rshape << std::endl;
-  std::cout << new_oshape << std::endl;
   // Pad the ndim
   BROADCAST_NDIM_SWITCH(ndim, NDim, {
       if (ndim != 0) {
         ndim = NDim;
       }
   });
-  std::cout << ndim << std::endl;
 
   if (!ndim) {
     ElemwiseBinaryRTCCompute {OP}(attrs, ctx, inputs, req, outputs);
@@ -281,7 +274,6 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
     const int nvec = output_type_size <= sizeof(uint64_t)
                        ? (sizeof(uint64_t) / output_type_size)
                        : 1;
-    std::cout << nvec << std::endl;
     binary_broadcast_params params{};
     params.inputs[0] = lhs.dptr_;
     params.inputs[1] = rhs.dptr_;
@@ -290,12 +282,9 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
       params.stride[0][i] = lstride[i];
       params.stride[1][i] = rstride[i];
       params.oshape[i] = new_oshape[i];
-      std::cout << i << " " << params.stride[0][i] << " " << params.stride[1][i] << " " << params.oshape[i] << std::endl;
     }
     params.size[0] = lhs.shape_.Size();
     params.size[1] = rhs.shape_.Size();
-
-    std::cout << params.size[0] << " " << params.size[1] << std::endl;
 
     index_t lead_dim = 1;
     for (int i = ndim - 1; i >= 0; --i) {
@@ -307,9 +296,7 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
         break;
       }
     }
-    std::cout << lead_dim << std::endl;
     const index_t other_dim = output.shape_.Size() / lead_dim;
-    std::cout << other_dim << std::endl;
 
     int first_different = -1;
     int common_shape = 1;
@@ -321,8 +308,6 @@ void BinaryBroadcastRTCCompute::operator()(const nnvm::NodeAttrs& attrs,
         break;
       }
     }
-    std::cout << first_different << std::endl;
-    std::cout << common_shape << std::endl;
 
     int lead_input_num = 0;
     std::string code = std::string("const OpReqType req = ") +

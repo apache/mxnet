@@ -64,17 +64,17 @@ struct VectorType<4> {
 
 template <>
 struct VectorType<8> {
-  using type = ulong1;
+  using type = ulonglong1;
 };
 
 template <>
 struct VectorType<16> {
-  using type = ulong2;
+  using type = ulonglong2;
 };
 
 template <>
 struct VectorType<32> {
-  using type = ulong4;
+  using type = ulonglong4;
 };
 
 /* \brief Helper class that enables storing multiple values of type DType
