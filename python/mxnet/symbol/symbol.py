@@ -1652,8 +1652,9 @@ class Symbol(SymbolBase):
             raise RuntimeError('Cannot add new aux in optimize_for since aux is None\n' +
                                'Provide a dictionary to the aux argument to optimize_for')
 
-        new_sym = Symbol(out)
-
+        from .numpy import _Symbol as np_symbol
+        new_sym np_symbol(out)
+        
         arg_names = self.list_arguments()
         new_arg_names = new_sym.list_arguments()
         deleted_arg_names = set([item for item in arg_names
@@ -2656,7 +2657,8 @@ class Symbol(SymbolBase):
         """
         out = SymbolHandle()
         check_call(_LIB.MXOptimizeForDynamicShapeOp(self.handle, ctypes.byref(out)))
-        return Symbol(out)
+        from .numpy import _Symbol as np_symbol
+        return np_symbol(out)
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         init=None, stype=None, profiler_scope=None, **kwargs):
