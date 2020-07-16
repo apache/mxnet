@@ -1299,8 +1299,6 @@ build_static_libmxnet() {
     pushd .
     source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
-    export USE_SYSTEM_CUDA=1
-    export CMAKE_STATICBUILD=1
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
@@ -1374,7 +1372,6 @@ build_static_python_cu92() {
     set -ex
     pushd .
     export mxnet_variant=cu92
-    export USE_SYSTEM_CUDA=1
     source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh

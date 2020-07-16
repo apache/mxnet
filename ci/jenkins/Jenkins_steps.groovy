@@ -1052,7 +1052,7 @@ def compile_unix_lite(lib_name) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_cpu_lite', 'build_ubuntu_cpu_docs', false)
+            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_docs', false)
             utils.pack_lib(lib_name, 'lib/libmxnet.so', false)
           }
         }
