@@ -443,20 +443,20 @@ def test_symbol_block_fp16(tmpdir):
     net_fp32.hybridize()
     data = mx.nd.zeros((1, 3, 224, 224), dtype='float16', ctx=ctx)
     net_fp32.forward(data)
-    net_fp32.export(tmpfile, 0)
+    symbol_file, param_file = net_fp32.export(tmpfile, 0)
 
     # 2. Load the saved model and verify if all the params are loaded correctly.
-    # and choose one of the param to verify the type if fp16.
-    sm = mx.sym.load(tmpfile + '-symbol.json')
+    # Choose one of the parameters to verify the type is fp16.
+    sm = mx.sym.load(symbol_file)
     inputs = mx.sym.var('data', dtype='float16')
     net_fp16 = mx.gluon.SymbolBlock(sm, inputs)
-    net_fp16.load_parameters(tmpfile + '-0000.params', ctx=ctx)
+    net_fp16.load_parameters(param_file, ctx=ctx)
     # 3. Get a conv layer's weight parameter name. Conv layer's weight param is
     # expected to be of dtype casted, fp16.
-    name = None    
-    for param_name, param in net_fp32.collect_params().items():
+    name = None
+    for param_name in net_fp32.collect_params().keys():
         if 'conv' in param_name and 'weight' in param_name:
-            name = param.name
+            name = param_name
             break
     assert np.dtype(net_fp16.params[name].dtype) == np.dtype(np.float16)
 

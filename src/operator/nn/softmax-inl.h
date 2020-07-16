@@ -779,7 +779,7 @@ void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
   using namespace mxnet_op;
-  if (req[0] == kNullOp) return;
+  if (req[0] == kNullOp || inputs[0].Size() == 0U) return;
   CHECK_NE(req[0], kAddTo);
   const SoftmaxParam& param = nnvm::get<SoftmaxParam>(attrs.parsed);
   int axis = CheckAxis(param.axis, inputs[0].ndim());

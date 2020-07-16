@@ -699,6 +699,14 @@ class ndarray(NDArray):
             elif key.step == 0:
                 raise ValueError("slice step cannot be zero")
 
+
+        all = __builtins__['all']  # `def all` below shadows the all builtin
+        if (isinstance(key, tuple) and all( \
+        (isinstance(arr, NDArray) \
+        and _np.issubdtype(arr.dtype, _np.integer) and arr.ndim > 0) \
+        for arr in key)):
+            return _npi.advanced_indexing_multiple(self, _npi.stack(*key))
+
         # For 0-d boolean indices: A new axis is added,
         # but at the same time no axis is "used". So if we have True,
         # we add a new axis (a bit like with np.newaxis). If it is
@@ -5980,7 +5988,7 @@ def tril_indices(n, k=0, m=None):
     """
     if m is None:
         m = n
-    return tuple(_mx_nd_np.tril_indices(n, k, m))
+    return _mx_nd_np.tril_indices(n, k, m)
 
 
 # pylint: disable=redefined-outer-name

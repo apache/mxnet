@@ -4530,7 +4530,7 @@ def stack(arrays, axis=0, out=None):
         return [arr for arr in arrays]
 
     arrays = get_list(arrays)
-    return _npi.stack(*arrays, axis=axis, out=out)
+    return _api_internal.stack(*arrays, axis, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -5231,7 +5231,7 @@ def tril_indices(n, k=0, m=None):
     """
     if m is None:
         m = n
-    return tuple(_npi.tril_indices(n, k, m))
+    return tuple(_api_internal.tril_indices(n, k, m))
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -6271,7 +6271,7 @@ def flip(m, axis=None, out=None):
     if isinstance(m, numeric_types):
         return _np.flip(m, axis)
     elif isinstance(m, ndarray):
-        return _npi.flip(m, axis, out=out)
+        return _api_internal.flip(m, axis, out)
     else:
         raise TypeError('type {} not supported'.format(str(type(m))))
 
@@ -7171,8 +7171,9 @@ def greater(x1, x2, out=None):
     >>> np.greater(1, np.ones(1))
     array([False])
     """
-    return _ufunc_helper(x1, x2, _npi.greater, _np.greater, _npi.greater_scalar,
-                         _npi.less_scalar, out)
+    if isinstance(x1, numeric_types) and isinstance(x2, numeric_types):
+        return _np.greater(x1, x2, out=out)
+    return _api_internal.greater(x1, x2, out)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -9403,8 +9404,7 @@ def rollaxis(a, axis, start=0):
     >>> np.rollaxis(a, 1, 4).shape
     (3, 5, 6, 4)
     """
-    return _npi.rollaxis(a, axis, start)
-
+    return _api_internal.rollaxis(a, axis, start)
 
 @set_module('mxnet.ndarray.numpy')
 def diag(v, k=0):

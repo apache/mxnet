@@ -23,7 +23,7 @@ from ..numpy import _internal as _npi
 __all__ = ['bernoulli', 'normal_n', 'uniform_n']
 
 
-def bernoulli(prob, logit, size, dtype, ctx, out):
+def bernoulli(prob=None, logit=None, size=None, dtype=None, ctx=None, out=None):
     """Creates a Bernoulli distribution parameterized by :attr:`prob`
     or :attr:`logit` (but not both).
 

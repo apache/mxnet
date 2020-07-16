@@ -19,79 +19,68 @@
 
 /* Copy code to clipboard */
 
-
-function addBtn() {
-    copyBtn = '<button type="button" class="copy-btn" data-placement="bottom" title="Copy to clipboard">copy</button>'
-    codeBlock = $('figure,highlight, div.highlight');
-    codeBlock.css('position', 'relative')
-    codeBlock.prepend(copyBtn);
-    codeBlock.hover(
-        function () {
-            $(this).children().first().show();
-        }, function () {
-            $(this).children().first().hide();
-        }
-    );
-
-};
-
-function html2clipboard(content) {
-    var tmpEl = document.createElement("div");
-    tmpEl.style.opacity = 0;
-    tmpEl.style.position = "absolute";
-    tmpEl.style.pointerEvents = "none";
-    tmpEl.style.zIndex = -1;
-
-    tmpEl.innerHTML = content;
-    document.body.appendChild(tmpEl);
-
-    var range = document.createRange();
-    range.selectNode(tmpEl);
-    window.getSelection().addRange(range);
-    document.execCommand("copy");
-    document.body.removeChild(tmpEl);
-}
-
 $(document).ready(function () {
-    addBtn()
+  // Regex of prompts to be omitted when copy
+  const LANG_GP = {
+    default: [">>> ", "\\.\\.\\."],
+    python: [">>> ", "\\.\\.\\."],
+    scala: ["scala>"],
+    java: [],
+    julia: ["julia> "],
+    r: ["> "],
+    perl: ["pdl>"],
+    cpp: [""],
+    bash: ["\\$ "],
+  };
 
-    clipboard = new Clipboard('.copy-btn', {
-        target: function (trigger) {
-            return trigger.parentNode.querySelector('code');
-        }
-    });
+  /* Functions to get the language of a code block related to a copy button
+   * called one by one until a valid lang is returned 
+   * new callbacks should be added before "default"
+   */
+  const LANG_GETTER = [
+    (copyBtn) => copyBtn.nextElementSibling.children[0].dataset.lang,
+    (copyBtn) => copyBtn.parentNode.parentNode.classList[0].split("-")[1],
+    () => "default",
+  ];
 
-    clipboard.on('success', function (e) {
-        //Deal with codes with leading gap
-        var btnClass = e.trigger.classList;
-        var lang = btnClass[btnClass.length - 1];
-        var lines = e.text.split('\n');
-        var hasGap = false;
-        var continueSign = '...';
+  // Append a copy button to each code block on the page
+  $("figure.highlight, div.highlight").each(function () {
+    const copyBtn = $('<button type="button" class="copy-btn">copy</button>');
+    $(this)
+      .css("position", "relative")
+      .prepend(copyBtn)
+      .hover(
+        () => copyBtn.show(),
+        () => copyBtn.hide()
+      );
+  });
 
-        e.clearSelection();
+  // Clipboard feature based on Clipboard.js v2.0.6
+  const cleanPrompt = function (line, prompts) {
+    let res = line;
+    for (let i = 0; i < prompts.length; i++) {
+      let reg = new RegExp("(?<=^\\s*)" + prompts[i]);
+      if (reg.test(res)) {
+        res = res.replace(reg, "");
+        break;
+      }
+    }
+    return res + "\n";
+  };
 
-        for (var i = 0; i < lines.length; ++i) {
-            lines[i] = lines[i].replace(/^\s+|\s+$/g, "");
-            if (!hasGap && lines[i].startsWith(LANG_GP[lang])) hasGap = true;
-        }
+  const getCodeBlockLang = function (copyBtn, langGetFunc) {
+    return langGetFunc.reduce((res, getter) => res || getter(copyBtn), "");
+  }
 
-        if (hasGap) {
-            var content = '';
-            for (var i = 0; i < lines.length; ++i) {
-                if (lines[i].startsWith(LANG_GP[lang]) || ((lang == 'python' || lang == 'default') &&
-                    lines[i].startsWith(continueSign))) {
-                    content = content.concat(lines[i].substring(LANG_GP[lang].length, lines[i].length) + '<br />');
-                } else if (lines[i].length == 0) content = content.concat('<br />');
-            }
-            content = content.substring(0, content.length - 6);
-            html2clipboard(content);
-        }
-    });
+  const clipboard = new ClipboardJS(".copy-btn", {
+    text: function (trigger) {
+      const lang = getCodeBlockLang(trigger, LANG_GETTER);
+      const langPrompts = LANG_GP[lang] || [];
+      const lines = trigger.parentNode.querySelector("code").textContent.split("\n");
+      const cleanedCode = lines.reduce((content, line) => content.concat(cleanPrompt(line, langPrompts)), "");
+      return cleanedCode.replace(/\n$/, "");
+    },
+  });
 
-    clipboard.on('error', function (e) {
-        $(e.trigger).attr('title', 'Copy failed. Try again.')
-            .tooltip('fixTitle')
-            .tooltip('show');
-    });
+  clipboard.on("success", (e) => e.clearSelection());
 });

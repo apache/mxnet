@@ -1064,14 +1064,15 @@ def test_np_moment():
     class TestMoment(HybridBlock):
         def __init__(self, name, axis=None, dtype=None, keepdims=False, ddof=0):
             super(TestMoment, self).__init__()
-            self._name = name
+            self._moment_name = name
             self._axis = axis
             self._dtype = dtype
             self._keepdims = keepdims
             self._ddof = ddof
 
         def hybrid_forward(self, F, a, *args, **kwargs):
-            return getattr(a, self._name)(axis=self._axis, dtype=self._dtype, keepdims=self._keepdims, ddof=self._ddof)
+            return getattr(a, self._moment_name)(axis=self._axis, dtype=self._dtype,
+                                                 keepdims=self._keepdims, ddof=self._ddof)
 
     def is_int(dtype):
         return 'int' in dtype
@@ -1760,8 +1761,8 @@ def test_npx_batch_dot():
 
 @with_seed()
 @use_np
-@pytest.mark.parametrize('shape', [(24, 2), (24, 3, 4),
-    (24, 8, 4, 5), (24, 5, 6, 4, 5)])
+@pytest.mark.parametrize('shape', [(4, 2), (4, 3, 4),
+    (4, 6, 4, 5), (4, 5, 6, 4, 5)])
 @pytest.mark.parametrize('fix_gamma', [False, True])
 @pytest.mark.parametrize('cudnn_off', [False, True])
 @pytest.mark.parametrize('output_mean_var', [False, True])
@@ -1922,6 +1923,14 @@ def test_npx_softmax():
         def hybrid_forward(self, F, a):
             return F.npx.softmax(a, axis=axis)
 
+    class TestLogSoftmax(HybridBlock):
+        def __init__(self, axis):
+            super(TestLogSoftmax, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.npx.log_softmax(a, axis=axis)
+
     def np_softmax(x, axis=-1):
         if (x.shape[axis] == 0):
             return _np.sum(x, axis=axis, keepdims=True)
@@ -1930,24 +1939,34 @@ def test_npx_softmax():
         x /= _np.sum(x, axis=axis, keepdims=True)
         return x
 
+    def np_log_softmax(x, axis=-1):
+        return _np.log(np_softmax(x, axis))
+
+    #(operator, function) tuples
+    tested_ops = [(TestSoftmax, np_softmax),
+                  (TestLogSoftmax, np_log_softmax)]
+
     # only testing 0-size shaped inputs here, other input cases have been tested in test_opeartor.py
-    for hybridize in [True, False]:
-        for shape in [(3, 0, 4), (0, 0)]:
-            mx_a = np.random.uniform(size=shape)
-            mx_a.attach_grad()
-            for axis in range(-len(shape), len(shape)):
-                test_softmax = TestSoftmax(axis)
-                if hybridize:
-                    test_softmax.hybridize()
+    for SoftmaxOp, softmax_function in tested_ops:
+        for hybridize in [True, False]:
+            for shape in [(3, 0, 4), (0, 0)]:
+                mx_a = np.random.uniform(size=shape)
+                mx_a.attach_grad()
+                for axis in range(-len(shape), len(shape)):
+                    test_softmax_op = SoftmaxOp(axis)
+                    if hybridize:
+                        test_softmax_op.hybridize()
 
-                with mx.autograd.record():
-                    mx_out = test_softmax(mx_a)
+                    with mx.autograd.record():
+                        mx_out = test_softmax_op(mx_a)
 
-                np_out = np_softmax(mx_a.asnumpy(), axis)
-                assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, equal_nan=True)
+                    mx_out.wait_to_read()
 
-                mx_out.backward()
-                assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape), rtol=1e-3, atol=1e-5)
+                    np_out = softmax_function(mx_a.asnumpy(), axis)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, equal_nan=True)
+
+                    mx_out.backward()
+                    assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape), rtol=1e-3, atol=1e-5)
 
 
 @with_seed()
@@ -2421,7 +2440,11 @@ def test_np_broadcast_to_npx(src_shape, npx_dst_shape, np_dst_shape, hybridize):
     [(8, 2, 16), [(0, 2, 1), (2, 0, 1), (0, 1, 2), (2, 1, 0), (-1, -2, -3)]],
     [(8, 3, 4, 8), [(0, 2, 3, 1), (1, 2, 3, 0), (0, 3, 2, 1)]],
     [(8, 3, 2, 3, 8), [(0, 1, 3, 2, 4), (0, 1, 2, 3, 4), (4, 0, 1, 2, 3)]],
-    [(3, 4, 3, 4, 3, 2), [(0, 1, 3, 2, 4, 5), (2, 3, 4, 1, 0, 5), None]]
+    [(3, 4, 3, 4, 3, 2), [(0, 1, 3, 2, 4, 5), (2, 3, 4, 1, 0, 5), None]],
+    [(3, 4, 3, 4, 3, 2, 2), [(0, 1, 3, 2, 4, 5, 6),
+     (2, 3, 4, 1, 0, 5, 6), None]],
+    [(3, 4, 3, 4, 3, 2, 3, 2), [(0, 1, 3, 2, 4, 5, 7, 6),
+     (2, 3, 4, 1, 0, 5, 7, 6), None]],
 ])
 @pytest.mark.parametrize('grad_req', ['write', 'add'])
 def test_np_transpose(data_shape, axes_workload, hybridize, dtype, grad_req):
@@ -4544,9 +4567,9 @@ def test_np_random_grad():
         def __init__(self, shape, op_name):
             super(TestRandomGrad, self).__init__()
             self._shape = shape
-            self._name = op_name
+            self._dist_name = op_name
         def hybrid_forward(self, F, loc, scale):
-            op = getattr(F.np.random, self._name, None)
+            op = getattr(F.np.random, self._dist_name, None)
             assert op is not None
             return op(loc=loc, scale=scale, size=self._shape)
 
@@ -7842,7 +7865,7 @@ def test_np_tril_indices():
                 for hybridize in [True, False]:
                     # dummy nparray for hybridize
                     x = np.ones((1,1))
-                    test_trilindices = TestTrilindices(n, k, m)
+                    test_trilindices = TestTrilindices(int(n), int(k), int(m))
                     if hybridize:
                         test_trilindices.hybridize()
                     mx_out = test_trilindices(x)[1]
@@ -10098,7 +10121,7 @@ def test_np_rollaxis():
     dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
     for hybridize in [False, True]:
         for dtype in dtypes:
-            for ndim in [0, 1, 2, 3, 4, 5, 6]:
+            for ndim in [0, 1, 2, 3, 4, 5, 6, 7, 8]:
                 shape = rand_shape_nd(ndim, dim=5, allow_zero_size=True)
                 np_data = _np.random.uniform(low=-100, high=100, size=shape).astype(dtype)
                 mx_data = np.array(np_data, dtype=dtype)
