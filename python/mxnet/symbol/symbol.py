@@ -1653,9 +1653,9 @@ class Symbol(SymbolBase):
                                'Provide a dictionary to the aux argument to optimize_for')
 
         new_sym = Symbol(out)
-        if is_np_sym:          
+        if is_np_sym:
             from .numpy import _Symbol as np_symbol
-            new_sym = np_symbol(out) 
+            new_sym = np_symbol(out)
 
         arg_names = self.list_arguments()
         new_arg_names = new_sym.list_arguments()
@@ -2653,7 +2653,8 @@ class Symbol(SymbolBase):
         raise NotImplementedForSymbol(self.backward, None)
 
     def optimize_for_dynamic_shape_op(self, is_np_sym=False):
-        """Check if any dynamic shape op presents in the symbol, if yes, partition all static shape ops for optimization.
+        """Check if any dynamic shape op presents in the symbol.
+        If yes, partition all static shape ops for optimization.
         returns the optimized symbol.
 
         Parameters

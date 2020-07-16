@@ -1029,7 +1029,7 @@ class HybridBlock(Block):
                     params[name]._finish_deferred_init()
 
         arg_dict, aux_dict = dict(), dict()
-        
+
         is_np_sym = isinstance(out, np_sym)
         if self._backend:
             ctx = args[0].context
