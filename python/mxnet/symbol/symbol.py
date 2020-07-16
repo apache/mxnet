@@ -1654,7 +1654,7 @@ class Symbol(SymbolBase):
 
         from .numpy import _Symbol as np_symbol
         new_sym = np_symbol(out)
-        
+
         arg_names = self.list_arguments()
         new_arg_names = new_sym.list_arguments()
         deleted_arg_names = set([item for item in arg_names
