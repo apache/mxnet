@@ -1474,7 +1474,7 @@ class Symbol(SymbolBase):
 
 
     # pylint: disable=too-many-locals
-    def optimize_for(self, backend, args=None, aux=None, ctx=None,
+    def optimize_for(self, backend, args=None, aux=None, ctx=None, is_np_sym=False,
                      shape_dict=None, type_dict=None, stype_dict=None, skip_infer=False, **kwargs):
         r"""Partitions current symbol and optimizes it for a given backend.
 
@@ -1652,8 +1652,10 @@ class Symbol(SymbolBase):
             raise RuntimeError('Cannot add new aux in optimize_for since aux is None\n' +
                                'Provide a dictionary to the aux argument to optimize_for')
 
-        from .numpy import _Symbol as np_symbol
-        new_sym = np_symbol(out)
+        new_sym = Symbol(out)
+        if is_np_sym:          
+            from .numpy import _Symbol as np_symbol
+            new_sym = np_symbol(out) 
 
         arg_names = self.list_arguments()
         new_arg_names = new_sym.list_arguments()
@@ -2650,14 +2652,22 @@ class Symbol(SymbolBase):
     def backward(self):
         raise NotImplementedForSymbol(self.backward, None)
 
-    def optimize_for_dynamic_shape_op(self):
-        """Check if any dynamic shape op presents in the symbol, if yes, partition all static shape ops for optimization
+    def optimize_for_dynamic_shape_op(self, is_np_sym=False):
+        """Check if any dynamic shape op presents in the symbol, if yes, partition all static shape ops for optimization.
         returns the optimized symbol.
+
+        Parameters
+        ----------
+        is_np_sym : boolean, optional
+            Output symbol type
+            - If true, output type is np symbol, otherwise nd symbol.
         """
         out = SymbolHandle()
         check_call(_LIB.MXOptimizeForDynamicShapeOp(self.handle, ctypes.byref(out)))
-        from .numpy import _Symbol as np_symbol
-        return np_symbol(out)
+        if is_np_sym:
+            from .numpy import _Symbol as np_symbol
+            return np_symbol(out)
+        return Symbol(out)
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         init=None, stype=None, profiler_scope=None, **kwargs):

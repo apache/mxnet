@@ -35,6 +35,7 @@ from ..base import mx_real_t, MXNetError, NDArrayHandle, SymbolHandle, py_str, c
 from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, \
     profiler as _profiler, context as _context
 from ..symbol.numpy import _symbol as np_symbol
+from ..symbol.numpy import _Symbol as np_sym
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .parameter import Parameter, DeferredInitializationError
@@ -1028,6 +1029,8 @@ class HybridBlock(Block):
                     params[name]._finish_deferred_init()
 
         arg_dict, aux_dict = dict(), dict()
+        
+        is_np_sym = isinstance(out, np_sym)
         if self._backend:
             ctx = args[0].context
             # get list of params in the order of out.list_arguments
@@ -1036,13 +1039,13 @@ class HybridBlock(Block):
             aux_dict.update({name:args[data_names[name]] if name in data_names.keys() else params[name].data()
                              for name in out.list_auxiliary_states()})
             # Partition the graph.
-            out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
+            out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, is_np_sym, **self._backend_opts)
 
             #update cached graph with partitioned graph
             self._cached_graph = data, out
 
         # partition static shape ops if the graph contains any dynamic shape op
-        out = out.optimize_for_dynamic_shape_op()
+        out = out.optimize_for_dynamic_shape_op(is_np_sym)
         self._cached_graph = data, out
 
         input_names = out.list_inputs()
