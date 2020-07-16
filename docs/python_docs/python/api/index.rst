@@ -74,12 +74,6 @@ Gluon related modules
       Scheduling the learning rate.
 
    .. card::
-      :title: mxnet.metric
-      :link: metric/index.html
-
-      Metrics to evaluate the performance of a learned model.
-
-   .. card::
       :title: mxnet.kvstore
       :link: kvstore/index.html
 
