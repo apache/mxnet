@@ -127,7 +127,7 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DMXNET_CUDA_ARCH="5.2" '
+        '-DMXNET_CUDA_ARCH="7.5" '
         '-DUSE_MKL_IF_AVAILABLE=OFF '
         '-DCMAKE_BUILD_TYPE=Release')
 
@@ -142,7 +142,7 @@ CMAKE_FLAGS = {
         '-DUSE_BLAS=open '
         '-DUSE_LAPACK=ON '
         '-DUSE_DIST_KVSTORE=OFF '
-        '-DMXNET_CUDA_ARCH="5.2" '
+        '-DMXNET_CUDA_ARCH="7.5" '
         '-DUSE_MKLDNN=ON '
         '-DCMAKE_BUILD_TYPE=Release')
 
