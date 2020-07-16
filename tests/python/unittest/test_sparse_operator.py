@@ -155,6 +155,7 @@ def all_zero(var):
     return 0
 
 @with_seed()
+@pytest.mark.serial
 def test_elemwise_binary_ops():
     # skip testing on GPU because only CPU ops are implemented
     if default_context().device_type is 'gpu':
