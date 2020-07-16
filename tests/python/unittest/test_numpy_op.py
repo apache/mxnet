@@ -2440,7 +2440,11 @@ def test_np_broadcast_to_npx(src_shape, npx_dst_shape, np_dst_shape, hybridize):
     [(8, 2, 16), [(0, 2, 1), (2, 0, 1), (0, 1, 2), (2, 1, 0), (-1, -2, -3)]],
     [(8, 3, 4, 8), [(0, 2, 3, 1), (1, 2, 3, 0), (0, 3, 2, 1)]],
     [(8, 3, 2, 3, 8), [(0, 1, 3, 2, 4), (0, 1, 2, 3, 4), (4, 0, 1, 2, 3)]],
-    [(3, 4, 3, 4, 3, 2), [(0, 1, 3, 2, 4, 5), (2, 3, 4, 1, 0, 5), None]]
+    [(3, 4, 3, 4, 3, 2), [(0, 1, 3, 2, 4, 5), (2, 3, 4, 1, 0, 5), None]],
+    [(3, 4, 3, 4, 3, 2, 2), [(0, 1, 3, 2, 4, 5, 6),
+     (2, 3, 4, 1, 0, 5, 6), None]],
+    [(3, 4, 3, 4, 3, 2, 3, 2), [(0, 1, 3, 2, 4, 5, 7, 6),
+     (2, 3, 4, 1, 0, 5, 7, 6), None]],
 ])
 @pytest.mark.parametrize('grad_req', ['write', 'add'])
 def test_np_transpose(data_shape, axes_workload, hybridize, dtype, grad_req):
@@ -10117,7 +10121,7 @@ def test_np_rollaxis():
     dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
     for hybridize in [False, True]:
         for dtype in dtypes:
-            for ndim in [0, 1, 2, 3, 4, 5, 6]:
+            for ndim in [0, 1, 2, 3, 4, 5, 6, 7, 8]:
                 shape = rand_shape_nd(ndim, dim=5, allow_zero_size=True)
                 np_data = _np.random.uniform(low=-100, high=100, size=shape).astype(dtype)
                 mx_data = np.array(np_data, dtype=dtype)
