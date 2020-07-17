@@ -22,4 +22,3 @@ It allows you to mix the flavours of deep learning programs together to maximize
 
 For feature requests on the PyPI package, suggestions, and issue reports, create an issue by clicking [here](https://github.com/apache/incubator-mxnet/issues/new).
 
-

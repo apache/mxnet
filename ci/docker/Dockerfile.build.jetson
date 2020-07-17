@@ -22,11 +22,11 @@
 
 FROM nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
 
-FROM dockcross/linux-arm64
+ENV ARCH=aarch64 \
+    HOSTCC=gcc \
+    TARGET=ARMV8
 
-ENV ARCH aarch64
-ENV HOSTCC gcc
-ENV TARGET ARMV8
+WORKDIR /usr/local
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     build-essential \
@@ -41,25 +41,22 @@ RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
     crossbuild-essential-arm64 \
  && rm -rf /var/lib/apt/lists/*
 
+# cmake on Ubuntu 18.04 is too old
+RUN python3 -m pip install cmake
 
-WORKDIR /work/deps
-
-COPY install/ubuntu_arm.sh /work/
-RUN /work/ubuntu_arm.sh
-
-COPY install/arm_openblas.sh /work/
-RUN /work/arm_openblas.sh
-
-ENV OpenBLAS_HOME=${CROSS_ROOT}
-ENV OpenBLAS_DIR=${CROSS_ROOT}
-
+# ccache on Ubuntu 18.04 is too old to support Cuda correctly
 COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh
 
-# Setup CUDA build env (including configuring and copying nvcc)
-COPY --from=cudabuilder /usr/local/cuda /usr/local/cuda
-ENV TARGET_ARCH aarch64
-ENV TARGET_OS linux
+COPY toolchains/aarch64-linux-gnu-toolchain.cmake /usr
+ENV CMAKE_TOOLCHAIN_FILE=/usr/aarch64-linux-gnu-toolchain.cmake
+
+RUN git clone --recursive -b v0.3.9 https://github.com/xianyi/OpenBLAS.git && \
+    cd /usr/local/OpenBLAS && \
+    make NOFORTRAN=1 CC=aarch64-linux-gnu-gcc && \
+    make PREFIX=/usr/aarch64-linux-gnu install && \
+    cd /usr/local && \
+    rm -rf OpenBLAS
 
 # Install aarch64 cross depedencies based on Jetpack 4.4
 # Dependencies require cuda-toolkit-10.2 which isn't installed in nvidia docker container

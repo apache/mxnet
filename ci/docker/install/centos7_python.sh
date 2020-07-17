@@ -23,10 +23,11 @@
 set -ex
 
  # Python 2.7 is installed by default, install 3.6 on top
-yum -y install https://centos7.iuscommunity.org/ius-release.rpm
+yum -y install https://repo.ius.io/ius-release-el7.rpm
 yum -y install python36u
 
 # Install PIP
 curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
 python3.6 get-pip.py
-pip3 install nose pylint numpy nose-timer requests h5py scipy==1.2.3
+# Restrict numpy version to < 1.19.0 due to https://github.com/apache/incubator-mxnet/issues/18600
+pip3 install nose pylint 'numpy>1.16.0,<1.19.0' nose-timer requests h5py scipy==1.2.3

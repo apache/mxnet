@@ -1,5 +1,4 @@
-#!/usr/bin/env bash
-
+# -*- mode: dockerfile -*-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -16,16 +15,27 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
+#
+# Dockerfile to test MXNet on Ubuntu 20.04 ARMv7 CPU
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+FROM arm32v7/ubuntu:20.04
 
-set -ex
-pushd .
-git clone https://github.com/xianyi/OpenBLAS.git
-cd OpenBLAS
-make TARGET=ARMV7 HOSTCC=gcc NOFORTRAN=1 ARM_SOFTFP_ABI=1 -j$(nproc) libs
-#make PREFIX=${CROSS_ROOT} TARGET=ARMV7 HOSTCC=gcc NOFORTRAN=1 ARM_SOFTFP_ABI=1 install
-cp *.h ${CROSS_ROOT}/include
-cp libopenblas*.a ${CROSS_ROOT}/lib
-popd
+WORKDIR /usr/local
+
+RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-numpy \
+    python3-scipy \
+    python3-nose \
+    python3-nose-timer \
+    python3-requests \
+ && rm -rf /var/lib/apt/lists/*
+
+ARG USER_ID=0
+ARG GROUP_ID=0
+COPY install/ubuntu_adduser.sh /work/
+RUN /work/ubuntu_adduser.sh
+
+COPY runtime_functions.sh /work/
+WORKDIR /work/mxnet

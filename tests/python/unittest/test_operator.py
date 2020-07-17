@@ -1827,11 +1827,18 @@ def test_batchnorm():
     momentum = 0.9
     epsilon = 1e-5
 
-    def _test_batchnorm_impl(op, shape, axis, cudnn_off, output_mean_var):
-        print(str((op, shape, axis, cudnn_off)))
+    def _test_batchnorm_impl(op_name, shape, fix_gamma, cudnn_off, output_mean_var,
+                             axis,
+                             data_grad_req, gamma_grad_req, beta_grad_req):
 
+        if op_name == 'BatchNorm':
+            op = mx.nd.BatchNorm
+        elif op_name == 'SyncBatchNorm':
+            op = mx.nd.contrib.SyncBatchNorm
+        else:
+            raise ValueError('Not supported {}'.format(op_name))
         kwargs = dict(output_mean_var=output_mean_var)
-        if op == mx.nd.contrib.SyncBatchNorm:
+        if op_name == 'SyncBatchNorm':
             if axis != 1:
                 return
             key = str(op) + str(shape) + str(axis)
@@ -1842,11 +1849,14 @@ def test_batchnorm():
             kwargs.update(dict(axis=axis, cudnn_off=cudnn_off))
         nch = shape[axis]
 
-        bn_gamma = mx.nd.random.uniform(shape=(nch,))
-        bn_gamma.attach_grad()
+        if not fix_gamma:
+            bn_gamma = mx.nd.random.uniform(shape=(nch,))
+            bn_gamma.attach_grad(grad_req=gamma_grad_req)
+        else:
+            bn_gamma = mx.nd.ones(shape=(nch,))
 
         bn_beta = mx.nd.random.uniform(shape=(nch,))
-        bn_beta.attach_grad()
+        bn_beta.attach_grad(grad_req=beta_grad_req)
 
         bn_running_mean = mx.nd.zeros(nch)
         bn_running_var = mx.nd.ones(nch)
@@ -1856,18 +1866,26 @@ def test_batchnorm():
         num_iters = 10
         expand_shape = [1] * len(shape)
         expand_shape[axis] = shape[axis]
+        data = mx.nd.random.uniform(shape=shape)
+        data.attach_grad(grad_req=data_grad_req)
+        adX, adW, adb = 0, 0, 0
+        is_train = data_grad_req != 'null' or \
+            (not fix_gamma and gamma_grad_req != 'null') or \
+            beta_grad_req != 'null'
         for _ in range(num_iters):
-            data = mx.nd.random.uniform(shape=shape)
-            data.attach_grad()
+            if data_grad_req != 'add':
+                data = mx.nd.random.uniform(shape=shape)
+                data.attach_grad(grad_req=data_grad_req)
             ograd = mx.nd.random.uniform(shape=shape)
             with mx.autograd.record():
                 output = op(data, bn_gamma, bn_beta,
                             bn_running_mean, bn_running_var,
                             momentum=momentum, eps=epsilon,
-                            fix_gamma=False, **kwargs)
+                            fix_gamma=fix_gamma, **kwargs)
                 if output_mean_var:
                     output, output_mean, output_std = output
-                output.backward(ograd)
+                if is_train:
+                    output.backward(ograd)
             mx.nd.waitall()
 
             data_mean = data.mean(
@@ -1904,9 +1922,11 @@ def test_batchnorm():
             dX = dnx * nd + dvar * xsm * (2.0 / m) + dmean * (1.0 / m)
             dW = (ograd * nx).sum(axis=axis, exclude=True)
             db = ograd.sum(axis=axis, exclude=True)
+            adX = dX if data_grad_req != 'add' else adX + dX
+            adW = dW if gamma_grad_req != 'add' else adW + dW
+            adb = db if beta_grad_req != 'add' else adb + db
 
-            atol = 1e-2
-            rtol = 1e-2
+            atol, rtol = 5e-2, 5e-2
 
             if output_mean_var:
                 assert_almost_equal(output_mean.asnumpy(),
@@ -1923,26 +1943,43 @@ def test_batchnorm():
                                         atol=atol, rtol=rtol)
             assert_almost_equal(output.asnumpy(), target_output.asnumpy(),
                                 atol=atol, rtol=rtol)
-            assert_almost_equal(bn_running_mean.asnumpy(
-            ), running_mean.asnumpy(), atol=atol, rtol=rtol)
-            assert_almost_equal(bn_running_var.asnumpy(
-            ), running_var.asnumpy(), atol=atol, rtol=rtol)
+            if is_train:
+                assert_almost_equal(bn_running_mean.asnumpy(
+                ), running_mean.asnumpy(), atol=atol, rtol=rtol)
+                assert_almost_equal(bn_running_var.asnumpy(
+                ), running_var.asnumpy(), atol=atol, rtol=rtol)
 
-            assert_almost_equal(data.grad.asnumpy(),
-                                dX.asnumpy(), atol=atol, rtol=rtol)
-            assert_almost_equal(
-                bn_gamma.grad.asnumpy(), dW.asnumpy(), atol=atol, rtol=rtol)
-            assert_almost_equal(
-                bn_beta.grad.asnumpy(), db.asnumpy(), atol=atol, rtol=rtol)
+            if data_grad_req != 'null':
+                assert_almost_equal(data.grad.asnumpy(),
+                                    adX.asnumpy(), atol=atol, rtol=rtol)
+            if not fix_gamma:
+                if gamma_grad_req != 'null':
+                    assert_almost_equal(
+                        bn_gamma.grad.asnumpy(), adW.asnumpy(),
+                        atol=atol, rtol=rtol)
+            else:
+                assert((bn_gamma.asnumpy() == 1).all())
+            if beta_grad_req != 'null':
+                assert_almost_equal(
+                    bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
 
-    for op in [mx.nd.BatchNorm, mx.nd.contrib.SyncBatchNorm]:
-        for shape in [(24, 2), (24, 3, 4), (24, 4, 4, 4), (24, 8, 4, 4), (24, 5, 6, 4, 4)]:
-            for axis in range(len(shape)):
-                for cudnn_off in [False, True]:
-                    for output_mean_var in [False, True]:
-                        _test_batchnorm_impl(op, shape, axis,
-                                             cudnn_off, output_mean_var)
-
+    op_names = ['BatchNorm', 'SyncBatchNorm']
+    shapes = [(24, 2), (24, 3, 4), (24, 8, 4, 5), (24, 5, 6, 4, 5)]
+    bools = [False, True]
+    for op_name, shape, fix_gamma, cudnn_off, output_mean_var in itertools.product(
+            op_names, shapes, bools, bools, bools):
+        grad_reqs = ['write'] if len(shape) != 4 else ['null', 'write', 'add']
+        for data_grad_req in grad_reqs:
+            for gamma_grad_req in grad_reqs:
+                if fix_gamma and gamma_grad_req != 'null':
+                    continue
+                for beta_grad_req in grad_reqs:
+                    for axis in range(len(shape)):
+                        _test_batchnorm_impl(
+                            op_name, shape, fix_gamma, cudnn_off, output_mean_var,
+                            axis,
+                            data_grad_req,
+                            gamma_grad_req, beta_grad_req)
 
 @with_seed()
 def test_groupnorm():
@@ -5338,8 +5375,8 @@ def test_log_softmax():
             axis = np.random.randint(0, ndim)
             data = np.random.uniform(-2, 2, size=shape)
             sym = mx.sym.log_softmax(axis=axis-ndim)
-            check_symbolic_forward(sym, [data], [np.log(np_softmax(data, axis=axis)+1e-20)])
-            check_numeric_gradient(sym, [data], rtol=0.05, atol=1e-3)
+            check_symbolic_forward(sym, [data], [np.log(np_softmax(data, axis=axis)+1e-20)], rtol=1e-3, atol=1e-4)
+            check_numeric_gradient(sym, [data], rtol=1e-1, atol=1e-2)
 
 def test_softmax_with_large_inputs():
     def softmax_forward(input_data, true_output):
@@ -8328,6 +8365,59 @@ def test_op_all_names_monitor():
         del os.environ['MXNET_SUBGRAPH_BACKEND']
 
 @with_seed()
+def test_monitor_with_variable_input_shape():
+    output = {}
+
+    def get_output_min_callback(name, arr):
+        name = py_str(name)
+        handle = ctypes.cast(arr, NDArrayHandle)
+        arr = NDArray(handle, writable=False)
+        min_val = mx.ndarray.min(arr).asscalar()
+        if name in output:
+            output[name] = min(output[name], min_val)
+        else:
+            output[name] = min_val
+
+    def check_result(output, names):
+        assert len(output) > 0
+        for k, v in output.items():
+            assert k in names
+            assert v is not None
+
+    is_windows = sys.platform.startswith('win')
+    if (is_windows):
+        # Windows doesn't support set environment variable on the fly, so disable it for now
+        pass
+    else:
+        # Disable subgraph in case subgraph will replace symbol
+        os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
+
+        batch_size = 1
+        op_name = 'conv'
+        dshape = (batch_size, 3, 10, 10)
+        data = mx.sym.Variable('data', shape=dshape)
+        sym = mx.sym.Convolution(data, kernel=(1, 1), num_filter=1, name=op_name)
+
+        mod = mx.module.Module(symbol=sym, label_names=None)
+        mod.bind(for_training=False, data_shapes=[('data', dshape)])
+        mod.init_params()
+        mod._exec_group.execs[0].set_monitor_callback(get_output_min_callback, monitor_all=True)
+
+        new_dshape = dshape[:-1] + (dshape[-1] + 4,)
+        new_data = mx.nd.random.uniform(shape=new_dshape)
+        new_data = mx.io.NDArrayIter(data=new_data, batch_size=batch_size)
+        new_data = DummyIter(new_data)
+
+        for batch in new_data:
+            mod.forward(data_batch=batch, is_train=False)
+            mx.nd.waitall()
+            break
+
+        name_list = ['data', 'conv_data', 'conv_weight', 'conv_bias', 'conv_output']
+        check_result(output, name_list)
+        del os.environ['MXNET_SUBGRAPH_BACKEND']
+
+@with_seed()
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/13915")
 def test_activation():
     shapes = [(9,), (9, 10), (9, 10, 10), (1, 9, 10, 10)]
@@ -9895,85 +9985,6 @@ def test_elemwise_sum_for_gradient_accumulation():
         assert stored_grad['write'] == stored_grad['add']
         assert stored_grad['write'] == 2 * nrepeat
 
-@with_seed()
-def test_elementwise_ops_on_misaligned_input():
-    a = mx.nd.array([1,2,3,4], dtype='float16')
-    b = mx.nd.array([1,2,3,4], dtype='float16')
-
-    c = a[1:3]
-    d = b[1:3]
-    # Note: testing just elemwise_add since all elemwise_ops
-    #       share the implementation
-    mx.nd.elemwise_add(c, d, out=c)
-    mx.nd.waitall()
-
-    a = mx.nd.array([1,2,3,4], dtype='float16')
-    b = mx.nd.array([1,2,3,4], dtype='float16')
-
-    c = a[0:3]
-    d = b[0:3]
-    mx.nd.elemwise_add(c, d, out=c)
-    mx.nd.waitall()
-    assert a[3].asscalar() == 4.0
-
-@with_seed()
-def test_broadcast_ops_on_misaligned_input():
-    dtypes = ['float16', 'float32', 'float64']
-    lead_dims = [2,3,4,6,10]
-
-    for dtype in dtypes:
-        for lead_dim in lead_dims:
-            for both_ways in [False, True]:
-                shape = list(rand_shape_2d()) + [lead_dim]
-                small_shape = [shape[0], 1, lead_dim]
-                if both_ways:
-                    # Broadcast in both ways [1, K, L] x [M, 1, L]
-                    big_shape = [1, shape[1], lead_dim]
-                else:
-                    big_shape = shape
-                size = np.product(shape)
-                small_size = np.product(small_shape)
-                big_size = np.product(big_shape)
-                a = mx.nd.arange(5000)
-                b = mx.nd.arange(5000)
-                e = mx.nd.arange(5000)
-                c = a[1:big_size + 1].reshape(big_shape)
-                d = b[1:small_size + 1].reshape(small_shape)
-                f = e[1:size + 1].reshape(shape)
-                mx.nd.broadcast_add(c, d, out=f)
-                expected = c.asnumpy() + d.asnumpy()
-                mx.nd.waitall()
-                assert_almost_equal(f, expected)
-
-@with_seed()
-def test_broadcast_ops_on_misaligned_input_oneside():
-    dtypes = ['float16', 'float32', 'float64']
-    lead_dims = [2,3,4,6,10]
-
-    for dtype in dtypes:
-        for lead_dim in lead_dims:
-            for both_ways in [False, True]:
-                shape = list(rand_shape_2d()) + [lead_dim]
-                small_shape = [shape[0], shape[1], 1]
-                if both_ways:
-                    # Broadcast in both ways [1, K, L] x [M, 1, 1]
-                    big_shape = [1, shape[1], lead_dim]
-                else:
-                    big_shape = shape
-                size = np.product(shape)
-                small_size = np.product(small_shape)
-                big_size = np.product(big_shape)
-                a = mx.nd.arange(5000)
-                b = mx.nd.arange(5000)
-                e = mx.nd.arange(5000)
-                c = a[1:big_size + 1].reshape(big_shape)
-                d = b[1:small_size + 1].reshape(small_shape)
-                f = e[1:size + 1].reshape(shape)
-                mx.nd.broadcast_add(c, d, out=f)
-                expected = c.asnumpy() + d.asnumpy()
-                mx.nd.waitall()
-                assert_almost_equal(f, expected)
-
 def test_scalarop_locale_invariance():
     arr = mx.nd.zeros((1,))
     prev = locale.getlocale(locale.LC_NUMERIC)
@@ -9993,7 +10004,7 @@ def test_scalarop_locale_invariance():
                 break
             except locale.Error as e:
                 print("Couldn't enable locale", loc, ": ", str(e))
-                
+
         if locale_set:
             scalar = 0.3
             assert "," in locale.str(scalar)
