@@ -1030,7 +1030,6 @@ class HybridBlock(Block):
 
         arg_dict, aux_dict = dict(), dict()
 
-        is_np_sym = isinstance(out, np_sym)
         if self._backend:
             ctx = args[0].context
             # get list of params in the order of out.list_arguments
@@ -1039,13 +1038,13 @@ class HybridBlock(Block):
             aux_dict.update({name:args[data_names[name]] if name in data_names.keys() else params[name].data()
                              for name in out.list_auxiliary_states()})
             # Partition the graph.
-            out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, is_np_sym, **self._backend_opts)
+            out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
 
             #update cached graph with partitioned graph
             self._cached_graph = data, out
 
         # partition static shape ops if the graph contains any dynamic shape op
-        out = out.optimize_for_dynamic_shape_op(is_np_sym)
+        out = out._optimize_for_dynamic_shape_op(is_np_array())
         self._cached_graph = data, out
 
         input_names = out.list_inputs()

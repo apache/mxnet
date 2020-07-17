@@ -1474,7 +1474,7 @@ class Symbol(SymbolBase):
 
 
     # pylint: disable=too-many-locals
-    def optimize_for(self, backend, args=None, aux=None, ctx=None, is_np_sym=False,
+    def optimize_for(self, backend, args=None, aux=None, ctx=None,
                      shape_dict=None, type_dict=None, stype_dict=None, skip_infer=False, **kwargs):
         r"""Partitions current symbol and optimizes it for a given backend.
 
@@ -1653,10 +1653,7 @@ class Symbol(SymbolBase):
                                'Provide a dictionary to the aux argument to optimize_for')
 
         new_sym = Symbol(out)
-        if is_np_sym:
-            from .numpy import _Symbol as np_symbol
-            new_sym = np_symbol(out)
-
+        
         arg_names = self.list_arguments()
         new_arg_names = new_sym.list_arguments()
         deleted_arg_names = set([item for item in arg_names
@@ -2652,20 +2649,20 @@ class Symbol(SymbolBase):
     def backward(self):
         raise NotImplementedForSymbol(self.backward, None)
 
-    def optimize_for_dynamic_shape_op(self, is_np_sym=False):
+    def _optimize_for_dynamic_shape_op(self, is_np_array):
         """Check if any dynamic shape op presents in the symbol.
         If yes, partition all static shape ops for optimization.
         returns the optimized symbol.
 
         Parameters
         ----------
-        is_np_sym : boolean, optional
+        is_np_array : boolean
             Output symbol type
             - If true, output type is np symbol, otherwise nd symbol.
         """
         out = SymbolHandle()
         check_call(_LIB.MXOptimizeForDynamicShapeOp(self.handle, ctypes.byref(out)))
-        if is_np_sym:
+        if is_np_array:
             from .numpy import _Symbol as np_symbol
             return np_symbol(out)
         return Symbol(out)
