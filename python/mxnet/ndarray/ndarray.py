@@ -72,8 +72,27 @@ _DTYPE_NP_TO_MX = {
     np.int8: 5,
     np.int64: 6,
     np.bool_: 7,
+    np.int16: 8,
+    np.uint16 : 9,
+    np.uint32 : 10,
+    np.uint64 : 11,
     np.dtype([('bfloat16', np.uint16)]): 12,
 }
+
+def _register_platform_dependent_mx_dtype():
+    """Register platform dependent types to the fixed size counterparts."""
+    kind_map = {'i': 'int', 'u': 'uint', 'f': 'float'}
+    for np_type in [
+            np.byte, np.ubyte, np.short, np.ushort, np.intc, np.uintc, np.int_,
+            np.uint, np.longlong, np.ulonglong, np.half, np.float16, np.single,
+            np.double, np.longdouble]:
+        dtype = np.dtype(np_type)
+        kind, size = dtype.kind, dtype.itemsize
+        bits = size * 8
+        fixed_dtype = getattr(np, kind_map[kind]+str(bits))
+        if fixed_dtype in _DTYPE_NP_TO_MX:
+            _DTYPE_NP_TO_MX[np_type] = _DTYPE_NP_TO_MX[fixed_dtype]
+_register_platform_dependent_mx_dtype()
 
 _DTYPE_MX_TO_NP = {
     -1: None,
@@ -85,6 +104,10 @@ _DTYPE_MX_TO_NP = {
     5: np.int8,
     6: np.int64,
     7: np.bool_,
+    8: np.int16,
+    9: np.uint16,
+    10: np.uint32,
+    11: np.uint64,
     12: np.dtype([('bfloat16', np.uint16)]),
 }
 

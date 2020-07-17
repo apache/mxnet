@@ -185,7 +185,8 @@ def _as_mx_np_array(object, ctx=None):
     if isinstance(object, ndarray):
         return object
     elif isinstance(object, _np.ndarray):
-        return array(object, dtype=object.dtype, ctx=ctx)
+        np_dtype = _np.dtype(object.dtype).type
+        return array(object, dtype=np_dtype, ctx=ctx)
     elif isinstance(object, (integer_types, numeric_types)):
         return object
     elif isinstance(object, (list, tuple)):
