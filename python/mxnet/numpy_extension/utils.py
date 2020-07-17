@@ -16,10 +16,9 @@
 # under the License.
 
 """Util functions for the numpy module."""
-
-
-
 import ctypes
+import warnings
+
 from .. util import is_np_array, is_np_shape
 from .. base import _LIB, check_call, string_types, c_str_array, DLPackHandle
 from .. base import c_handle_array, c_str, mx_uint, NDArrayHandle, py_str
@@ -61,6 +60,7 @@ def save(file, arr):
     This function can only be called within numpy semantics, i.e., `npx.is_np_shape()`
     and `npx.is_np_array()` must both return true.
     """
+    warnings.warn("MXNet parameter serialization format is deprecated in favor of NumPy format.", DeprecationWarning)
     if not (is_np_shape() and is_np_array()):
         raise ValueError('Cannot save `mxnet.numpy.ndarray` in legacy mode. Please activate'
                          ' numpy semantics by calling `npx.set_np()` in the global scope'
@@ -109,6 +109,7 @@ def load(file):
     This function can only be called within numpy semantics, i.e., `npx.is_np_shape()`
     and `npx.is_np_array()` must both return true.
     """
+    warnings.warn("MXNet parameter serialization format is deprecated in favor of NumPy format.", DeprecationWarning)
     if not (is_np_shape() and is_np_array()):
         raise ValueError('Cannot load `mxnet.numpy.ndarray` in legacy mode. Please activate'
                          ' numpy semantics by calling `npx.set_np()` in the global scope'
