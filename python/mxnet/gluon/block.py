@@ -35,7 +35,6 @@ from ..base import mx_real_t, MXNetError, NDArrayHandle, SymbolHandle, py_str, c
 from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, \
     profiler as _profiler, context as _context
 from ..symbol.numpy import _symbol as np_symbol
-from ..symbol.numpy import _Symbol as np_sym
 from ..symbol import Symbol
 from ..ndarray import NDArray
 from .parameter import Parameter, DeferredInitializationError

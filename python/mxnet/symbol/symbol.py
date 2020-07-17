@@ -1653,7 +1653,7 @@ class Symbol(SymbolBase):
                                'Provide a dictionary to the aux argument to optimize_for')
 
         new_sym = Symbol(out)
-        
+
         arg_names = self.list_arguments()
         new_arg_names = new_sym.list_arguments()
         deleted_arg_names = set([item for item in arg_names
