@@ -25,7 +25,6 @@ utils = load('ci/Jenkinsfile_utils.groovy')
 // mxnet libraries
 mx_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/3rdparty/openmp/runtime/src/libomp.so'
 mx_lib_cython = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, python/mxnet/_cy3/*.so, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_ffi/_cy3/*.so'
-mx_lib_make = 'lib/libmxnet.so, lib/libmxnet.a, lib/libtvm_runtime.so, lib/libtvmop.so, lib/tvmop.conf, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, 3rdparty/dmlc-core/libdmlc.a, 3rdparty/tvm/nnvm/lib/libnnvm.a'
 
 // mxnet cmake libraries, in cmake builds we do not produce a libnvvm static library by default.
 mx_cmake_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/tests/mxnet_unit_tests, build/3rdparty/openmp/runtime/src/libomp.so'
@@ -1053,7 +1052,7 @@ def compile_unix_lite(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_docs', false)
-            utils.pack_lib(lib_name, 'lib/libmxnet.so', false)
+            utils.pack_lib(lib_name, mx_lib, false)
           }
         }
       }
@@ -1081,7 +1080,7 @@ def docs_python(lib_name) {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init(lib_name, 'lib/libmxnet.so', false)
+            utils.unpack_and_init(lib_name, mx_lib, false)
             utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
             if (should_pack_website()) {
               utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
