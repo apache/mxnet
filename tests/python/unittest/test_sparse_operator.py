@@ -155,6 +155,7 @@ def all_zero(var):
     return 0
 
 @with_seed()
+@pytest.mark.skip(reason="https://github.com/apache/incubator-mxnet/issues/18740")
 def test_elemwise_binary_ops():
     # skip testing on GPU because only CPU ops are implemented
     if default_context().device_type is 'gpu':
