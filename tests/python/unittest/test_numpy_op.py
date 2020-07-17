@@ -5767,42 +5767,102 @@ def test_np_linalg_qr():
         def hybrid_forward(self, F, data):
             return F.np.linalg.qr(data)
 
-    def get_expected_grad(a, q, r):
+    def get_expected_grad(a, q, r, dq, dr):
+        # all shapes (..., m, n)
+        # allow feeding different dq and dr values
         if 0 in r.shape:
             return r
-        def copyltu(M):
-                # shape of M is [batch, m, m]
-                eye = _np.array([_np.eye(M.shape[-1]) for i in range(M.shape[0])])
-                lower = _np.tril(M) - eye * M
-                lower_mask = _np.tril(_np.ones_like(M))
-                ret = lower_mask * M + lower.swapaxes(-1, -2)
-                return ret
-        shape_r = r.shape
-        shape_q = q.shape
-        shape_a = a.shape
-        r = r.reshape(-1, shape_r[-2], shape_r[-1])
-        q = q.reshape(-1, shape_q[-2], shape_q[-1])
-        dq = _np.ones_like(q)
-        dr = _np.ones_like(r)
-        dq_t = dq.swapaxes(-1, -2)
-        dr_t = dr.swapaxes(-1, -2)
-        r_inv = _np.linalg.inv(r)
-        r_inv_t = r_inv.swapaxes(-1, -2)
-        r_t = r.swapaxes(-1, -2)
-        # Get M
-        M = _np.matmul(r, dr_t) - _np.matmul(dq_t, q)
-        da = _np.matmul(dq + _np.matmul(q, copyltu(M)), r_inv_t)
-        return da.reshape(a.shape)
+        def _copyltu(M):
+            eye = _np.array([_np.eye(M.shape[-1]) for i in range(M.shape[0])])
+            lower = _np.tril(M) - eye * M
+            lower_mask = _np.tril(_np.ones_like(M))
+            ret = lower_mask * M + lower.swapaxes(-1, -2)
+            return ret
+        def _case_m_ge_n(a, q, r, dq, dr):
+                dq_t = dq.swapaxes(-1, -2)
+                dr_t = dr.swapaxes(-1, -2)
+                r_inv = _np.linalg.inv(r)
+                r_inv_t = r_inv.swapaxes(-1, -2)
+                r_t = r.swapaxes(-1, -2)
+                # Get M
+                M = _np.matmul(r, dr_t) - _np.matmul(dq_t, q)
+                da = _np.matmul(dq + _np.matmul(q, _copyltu(M)), r_inv_t)
+                return da
+        m, n = a.shape[-2], a.shape[-1]
+        x = a[..., :, :m]
+        x_shape = x.shape
+        y = a[..., :, m:]
+        y_shape = y.shape
+        u = r[..., :, :m]
+        v = r[..., :, m:]
+        dv = dr[..., :, m:]
+        du = dr[..., :, :m]
+        q = q.reshape(-1, q.shape[-2], q.shape[-1])
+        u = u.reshape(-1, u.shape[-2], u.shape[-1])
+        dq = dq.reshape(-1, q.shape[-2], q.shape[-1])
+        du = du.reshape(-1, du.shape[-2], du.shape[-1])
+        if m >= n:
+            dx = _case_m_ge_n(x, q, u, dq, du).reshape(x_shape)
+            return dx
+        else:
+            dv = dv.reshape(-1, dv.shape[-2], dv.shape[-1])
+            y = y.reshape(-1, y.shape[-2], y.shape[-1])
+            dy = _np.matmul(q, dv).reshape(y_shape)
+            dq_prime = dq + _np.matmul(y, dv.swapaxes(-1, -2))
+            dx = _case_m_ge_n(x, q, u, dq_prime, du).reshape(x_shape)
+            da = _np.concatenate([dx, dy], axis=-1)
+            return da
+
+    def _analytical_jacobian(x, dy, Q, R, Q_, R_, k):
+        x_size = _np.prod(x.shape)
+        dy_size = _np.prod(dy.shape)
+        # jacobian has data_np size number of rows and dQ or dR size number of columns
+        jacobian = _np.zeros((x_size, dy_size))
+        # dQ and dR have all elements equal to zero to begin with
+        dy_data = _np.zeros(dy.shape)
+        dy_data_flat = dy_data.ravel()
+        for col in range(dy_size):
+            # we only feed dQ or dR with 1 element changed to 1 at a time
+            dy_data_flat[col] = 1
+            ret_ = dy_data_flat.reshape(dy.shape)
+            if k == 0:
+                # k is 0 when dy is dQ
+               jacobian[:, col] = get_expected_grad(x, dy, R, ret_, R_).ravel()
+            else:
+                # k is 1 when dy is dR
+               jacobian[:, col] = get_expected_grad(x, Q, dy, Q_, ret_).ravel()
+            dy_data_flat[col] = 0
+        return jacobian
+
+    def _numerical_jacobian(x, y, delta, k, dtype):
+        # compute central differences
+        x_size = _np.prod(x.shape)
+        y_size = _np.prod(y.shape)
+        scale = _np.asarray(2 * delta)[()]
+        # jacobian has data_np size number of rows and Q or R size number of columns
+        jacobian_num = _np.zeros((x_size, y_size))
+        for row in range(x_size):
+            x_pos = x.copy()
+            x_neg = x.copy()
+            # add delta to one element of data_np at a time
+            x_pos.ravel().view(dtype)[row] += delta # one element in x is added delta
+            # get qr decomposition of new input with one changed element
+            ret_pos = np.linalg.qr(np.array(x_pos))[k]
+            # subtract delta from input data_np one element at a time
+            x_neg.ravel().view(dtype)[row] -= delta
+            # get qr decomposition of new input with one changed element
+            ret_neg = np.linalg.qr(np.array(x_neg))[k]
+            # get central differences
+            diff = (ret_pos - ret_neg) / scale
+            jacobian_num[row, :] = diff.asnumpy().ravel().view(dtype)
+        return jacobian_num
 
     def well_conditioned_rectang_matrix_2D(shape, max_cond=4):
         m, n = shape[-2], shape[-1]
         while 1:
-            M1 = _np.random.uniform(-10, 10, (m, n))
-            Q1, R1 = _np.linalg.qr(M1)
-            s = _np.ones(n)
-            D = _np.diag(s)
-            M2 =_np.random.uniform(-10, 10, (n, n))
-            Q2, R2 = _np.linalg.qr(M2)
+            Q1, R1 = _np.linalg.qr(_np.random.uniform(-10, 10, (m, m)))
+            D = _np.eye(m, n)
+            Q2, R2 = _np.linalg.qr(_np.random.uniform(-10, 10, (n, n)))
             a = _np.matmul(_np.matmul(Q1, D), _np.swapaxes(Q2, -1, -2))
             if (_np.linalg.cond(a, 2) < max_cond):
                 return a
@@ -5842,7 +5902,6 @@ def test_np_linalg_qr():
         (3, 3),
         (5, 5),
         (8, 8),
-        (4, 5),
         (4, 6),
         (5, 4),
         (6, 5),
@@ -5856,19 +5915,16 @@ def test_np_linalg_qr():
         (4, 2, 2, 1),
         (2, 3, 4, 3)
     ]
-    dtypes = ['float32', 'float64']
+    dtypes = ['float64', 'float32']
     for hybridize, shape, dtype in itertools.product([False, True], shapes, dtypes):
         rtol = atol = 0.01
         test_qr = TestQR()
         if hybridize:
             test_qr.hybridize()
-
         if 0 in shape:
             data_np = _np.ones(shape)
-        elif shape[-2] >= shape[-1]:
-            data_np = well_conditioned_rectang_matrix_nD(shape, max_cond=4)
         else:
-            data_np = _np.random.uniform(-10.0, 10.0, shape)
+            data_np = well_conditioned_rectang_matrix_nD(shape, max_cond=4)
         data_np = _np.array(data_np, dtype=dtype)
         data = np.array(data_np, dtype=dtype)
 
@@ -5878,13 +5934,24 @@ def test_np_linalg_qr():
         Q, R = ret[0], ret[1]
         check_qr(Q, R, data_np)
 
-        # Only shapes m >= n have gradient
-        if 0 not in R.shape and shape[-2] >= shape[-1]:
+        if 0 not in R.shape:
             assert data.grad.shape == data_np.shape
-            backward_expected = get_expected_grad(data_np, Q.asnumpy(), R.asnumpy())
+            backward_expected = get_expected_grad(data_np, Q.asnumpy(), R.asnumpy(),
+                                                  _np.ones(Q.shape), _np.ones(R.shape))
             mx.autograd.backward(ret)
             assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
-
+            # for a few cases, check that the analytical jacobian is equal to
+            # numerical jacobian computed via central differences
+            # restrict this check to float64 for numerical precision
+            if dtype == 'float64' and len(shape) == 2:
+                epsilon = _np.finfo(dtype).eps
+                delta = 0.1 * epsilon**(1.0 / 3.0) # Optimal delta for central differences
+                for k, b in enumerate(ret):
+                    qr_num = _numerical_jacobian(data_np, b.asnumpy(), delta, k, dtype)
+                    qr_a = _analytical_jacobian(x=data_np, dy=b.asnumpy(), Q=Q.asnumpy(),
+                                                R=R.asnumpy(), Q_=_np.zeros(Q.shape),
+                                                R_=_np.zeros(R.shape), k=k)
+                    assert_almost_equal(qr_num, qr_a, rtol=rtol, atol=atol)
         # check imperative once more; mode='reduced' is default
         # behavior and optional parameter in original numpy
         ret = np.linalg.qr(data, mode='reduced')
