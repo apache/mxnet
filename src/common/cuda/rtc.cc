@@ -139,10 +139,6 @@ CUfunction get_function(const std::string &parameters,
                    << ".  Set MXNET_RTC_SIZE_WARNING=0 to quiet this warning.";
     }
     nvrtcProgram program;
-    std::ofstream f("debug.log");
-    f << code_with_header;
-    f.close();
-
     NVRTC_CALL(nvrtcCreateProgram(&program,                                  // prog
                                   &code_with_header[0],                      // buffer
                                   (kernel_name + "_kernel.cu").c_str(),      // name
@@ -152,15 +148,25 @@ CUfunction get_function(const std::string &parameters,
 
     std::string gpu_arch_arg = "--gpu-architecture=compute_" + std::to_string(sm_arch);
     const char *opts[] = {gpu_arch_arg.c_str(),
+#if NDEBUG == 0
+                          "-G",
+#endif
                           "--std=c++11"};
     const std::string kernel_name_demangled = kernel_name;
     NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
 
-    nvrtcResult compileResult = nvrtcCompileProgram(program,  // prog
-                                                    2,        // num options
-                                                    opts);    // options
+    nvrtcResult compileResult = nvrtcCompileProgram(program,                         // prog
+                                                    sizeof(opts) / sizeof(opts[0]),  // num options
+                                                    opts);                           // options
+    static const std::string dump_file = "mxnet_rtc_debug_code.log";
+    if (compileResult != NVRTC_SUCCESS) {
+      std::ofstream f(dump_file);
+      f << code_with_header;
+      f.close();
+    }
     CHECK_EQ(compileResult, NVRTC_SUCCESS)
-        << "NVRTC Compilation failed. Please set environment variable MXNET_USE_FUSION to 0.\n"
+        << "NVRTC Compilation failed.\n"
+        << "The generated code was stored in " << dump_file << "\n"
         << GetCompileLog(program);
 
     kinfo.ptx = GetPtx(program);
@@ -184,11 +190,20 @@ CUfunction get_function(const std::string &parameters,
     CUDA_DRIVER_CALL(cuDevicePrimaryCtxRetain(&context, cu_device));
     // Jit-compile ptx for the driver's current context
     CUmodule module;
-    std::ofstream f("debug.ptx");
-    f << kinfo.ptx;
-    f.close();
 
-    CUDA_DRIVER_CALL(cuModuleLoadData(&module, kinfo.ptx.c_str()));
+#if NDEBUG == 0
+    intptr_t debug_info = 1;
+    intptr_t line_info = 1;
+#else
+    intptr_t debug_info = 0;
+    intptr_t line_info = 0;
+#endif
+
+    std::cout << debug_info << " " << line_info << std::endl;
+    CUjit_option jit_opts[] = {CU_JIT_GENERATE_DEBUG_INFO, CU_JIT_GENERATE_LINE_INFO};
+    void* jit_opt_values[] = {(void*)debug_info, (void*)line_info};
+
+    CUDA_DRIVER_CALL(cuModuleLoadDataEx(&module, kinfo.ptx.c_str(), 2, jit_opts, jit_opt_values));
     CUDA_DRIVER_CALL(cuModuleGetFunction(&kinfo.functions[dev_id],
                                          module,
                                          kinfo.mangled_name.c_str()));
