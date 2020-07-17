@@ -1212,6 +1212,55 @@ def test_linalg():
     check_syrk_batch()
 
 
+def test_linalg():
+    def check_det():
+        # creating an identity matrix input
+        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
+        for i in range(LARGE_SQ_X):
+            A[i,i] = 1
+
+        out = nd.linalg.det(A)
+        assert out == 1
+
+    def check_inverse():
+        # creating an identity matrix input
+        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
+        for i in range(LARGE_SQ_X):
+            A[i,i] = 1
+
+        out = nd.linalg.inverse(A)
+        # output should be an identity matrix
+        for i in range(LARGE_SQ_X):
+            assert out[i,i] == 1
+
+    def check_trmm():
+        # creating an identity matrix input
+        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
+        for i in range(LARGE_SQ_X):
+            A[i,i] = 1
+
+        out = nd.linalg.trmm(A, A)
+        # output should be an identity matrix
+        for i in range(LARGE_SQ_X):
+            assert out[i,i] == 1
+
+    def check_trsm():
+        # creating an identity matrix input
+        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
+        for i in range(LARGE_SQ_X):
+            A[i,i] = 1
+
+        out = nd.linalg.trsm(A, A)
+        # output should be an identity matrix
+        for i in range(LARGE_SQ_X):
+            assert out[i,i] == 1
+
+    check_det()
+    check_inverse()
+    check_trmm()
+    check_trsm()
+
+
 def test_basic():
     def check_elementwise():
         a = nd.ones(shape=(LARGE_X, SMALL_Y))
