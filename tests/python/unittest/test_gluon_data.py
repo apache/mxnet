@@ -364,11 +364,12 @@ def test_multi_worker_dataloader_release_pool():
         del the_iter
         del D
 
-
+@with_seed()
 def test_dataloader_context():
     X = np.random.uniform(size=(10, 20))
     dataset = gluon.data.ArrayDataset(X)
     default_dev_id = 0
+    custom_dev_id = 1
 
     # use non-pinned memory
     loader1 = gluon.data.DataLoader(dataset, 8)
@@ -383,7 +384,6 @@ def test_dataloader_context():
     if mx.context.num_gpus() <= 1:
         print('Bypassing custom_dev_id pinned mem test on system with < 2 gpus.')
     else:
-        custom_dev_id = 1
         # use pinned memory with custom device id
         loader3 = gluon.data.DataLoader(dataset, 8, pin_memory=True,
                                         pin_device_id=custom_dev_id)

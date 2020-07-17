@@ -17,7 +17,6 @@
 
 
 # pylint: disable=too-many-locals,wrong-import-position,import-error
-from __future__ import absolute_import
 import os, sys
 import unittest
 import logging
@@ -29,7 +28,6 @@ from mxnet import nd, sym
 from mxnet.test_utils import set_default_context
 from mxnet.gluon import nn
 from mxnet.gluon import HybridBlock
-from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
 
 logger = logging.getLogger()
@@ -58,21 +56,21 @@ def _check_onnx_export(net, group_outputs=False, shape_type=tuple, extra_params=
     data = nd.random.uniform(0, 1, (1, 1024))
     output = _force_list(net(data))  # initialize weights
     net_sym = _optional_group(net(sym.Variable('data')), group_outputs)
-    net_params = {param.name: param._reduce() for name, param in net.collect_params().items()}
+    net_params = {param.var().name: param._reduce() for param in net.collect_params().values()}
     net_params.update(extra_params)
     with tempfile.TemporaryDirectory() as tmpdirname:
         onnx_file_path = os.path.join(tmpdirname, 'net.onnx')
-        export_path = onnx_mxnet.export_model(
+        export_path = mx.contrib.onnx.export_model(
             sym=net_sym,
             params=net_params,
             input_shape=[shape_type(data.shape)],
             onnx_file_path=onnx_file_path)
         assert export_path == onnx_file_path
         # Try importing the model to symbol
-        _assert_sym_equal(net_sym, onnx_mxnet.import_model(export_path)[0])
+        _assert_sym_equal(net_sym, mx.contrib.onnx.import_model(export_path)[0])
 
         # Try importing the model to gluon
-        imported_net = onnx_mxnet.import_to_gluon(export_path, ctx=None)
+        imported_net = mx.contrib.onnx.import_to_gluon(export_path, ctx=None)
         _assert_sym_equal(net_sym, _optional_group(imported_net(sym.Variable('data')), group_outputs))
 
         # Confirm network outputs are the same

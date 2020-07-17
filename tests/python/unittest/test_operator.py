@@ -2578,9 +2578,9 @@ def test_broadcast():
 
 @with_seed()
 def test_transpose():
-    for ndim in range(1, 7):
+    for ndim in range(1, 10):
         for t in range(5):
-            dims = list(np.random.randint(1, 10, size=ndim))
+            dims = list(np.random.randint(1, 5, size=ndim))
             axes = list(range(ndim))
             random.shuffle(axes)
             axes = tuple(axes)

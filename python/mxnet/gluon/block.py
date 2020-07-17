@@ -20,82 +20,50 @@
 """Base container class for all neural network models."""
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
-import threading
 import copy
 import warnings
 import weakref
 from collections import OrderedDict, defaultdict
+import contextlib
+import contextvars
 
 import re
 import numpy as np
 
 from ..base import mx_real_t, MXNetError, NDArrayHandle, py_str
-from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc
+from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, \
+    profiler as _profiler, context as _context
 from ..symbol.numpy import _symbol as np_symbol
 from ..symbol import Symbol
 from ..ndarray import NDArray
-from .. import name as _name
-from .. import profiler as _profiler
 from .parameter import Parameter, DeferredInitializationError
 from .utils import _indent, _brief_print_list, HookHandle, shape_is_known
 from .utils import _check_same_symbol_type, _check_all_np_ndarrays
 from .. import numpy_extension as _mx_npx
-from .. import numpy as _mx_np
+from .. import numpy as _mx_np, ndarray as nd
 from .. util import is_np_array, np_shape, np_array
 
 
+_naming_counter = contextvars.ContextVar('namecounter')
+_prefix = contextvars.ContextVar('prefix', default='')
 
-class _BlockScope(object):
-    """Scope for collecting child `Block` s."""
-    _current = threading.local()
 
-    def __init__(self, block):
-        self._block = weakref.ref(block) if block is not None else None
-        self._counter = {}
-        self._local = threading.local()
-        self._local._old_scope = None
-        self._local._name_scope = None
-
-    @staticmethod
-    def count(hint):
-        """
-        Creates unique name for new `Block`.
-        The profiler scope is to support the GPU memory profiler.
-        """
-        current = getattr(_BlockScope._current, "value", None)
-        if current is None:
-            if not hasattr(_name.NameManager._current, "value"):
-                _name.NameManager._current.value = _name.NameManager()
-            block_name = _name.NameManager._current.value.get(None, hint)
-            return block_name
-
-        count = current._counter.get(hint, 0)
-        block_name = '%s%d'%(hint, count)
-        current._counter[hint] = count + 1
-        return block_name
-
-    def __enter__(self):
-        block = self._block()
-        if block is None or block.name == '':
-            return self
-        self._local._old_scope = getattr(_BlockScope._current, "value", None)
-        _BlockScope._current.value = self
-        self._local._name_scope = _name.Prefix(block.name + '_')
-        self._local._name_scope.__enter__()
-        _profiler_scope_name = block.name + ":"
-        self._local._profiler_scope = _profiler.Scope(_profiler_scope_name)
-        self._local._profiler_scope.__enter__()
-        return self
-
-    def __exit__(self, ptype, value, trace):
-        block = self._block()
-        if block is None or block.name == '':
-            return
-        self._local._name_scope.__exit__(ptype, value, trace)
-        self._local._name_scope = None
-        self._local._profiler_scope.__exit__(ptype, value, trace)
-        self._local._profiler_scope = None
-        _BlockScope._current.value = self._local._old_scope
+@contextlib.contextmanager
+def _block_scope(block):
+    """Append the classname of the current Block to the symbolic and memory profiler name scopes."""
+    name = type(block).__name__.lower()
+    counter = _naming_counter.get(None)
+    if counter is not None:
+        count = counter.get(name, 0)
+        counter[name] = count + 1
+        name = '%s%d'%(name, count)
+    counter_token = _naming_counter.set({})
+    prefix_token = _prefix.set(_prefix.get() + name + '_')
+    with _name.Prefix(_prefix.get()):
+        with _profiler.scope(name + ':'):
+            yield
+    _naming_counter.reset(counter_token)
+    _prefix.reset(prefix_token)
 
 
 def _gather_type_ctx_info(args):
@@ -230,7 +198,7 @@ def _regroup(args, fmt):
     return _merger(args, fmt)[0]
 
 
-class Block(object):
+class Block:
     """Base class for all neural network layers and models. Your models should
     subclass this class.
 
@@ -265,8 +233,6 @@ class Block(object):
         self._reg_params = {}
         self._forward_hooks = OrderedDict()
         self._forward_pre_hooks = OrderedDict()
-        self._name = _BlockScope.count(self._alias())
-        self._scope = _BlockScope(self)
 
     def __repr__(self):
         s = '{name}(\n{modstr}\n)'
@@ -322,11 +288,6 @@ class Block(object):
 
     def _alias(self):
         return self.__class__.__name__.lower()
-
-    @property
-    def name(self):
-        """Name of this :py:class:`Block`, class name + counter """
-        return self._name
 
     @property
     def params(self):
@@ -511,6 +472,8 @@ class Block(object):
                     "Set allow_missing=True to ignore missing parameters."%(
                         name, error_str, _brief_print_list(loaded.keys()))
 
+        if ctx is None:
+            ctx = _context.current_context()
         for name in loaded:
             if not ignore_extra and name not in params:
                 raise ValueError(
@@ -518,7 +481,10 @@ class Block(object):
                     "which contains parameters %s. Set ignore_extra=True to ignore. "%(
                         name, error_str, _brief_print_list(params.keys())))
             if name in params:
-                params[name]._load_init(loaded[name], ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
+                param = loaded[name]
+                if isinstance(param, np.ndarray):
+                    param = _mx_np.array(param) if is_np_array() else nd.array(param)
+                params[name]._load_init(param, ctx, cast_dtype=cast_dtype, dtype_source=dtype_source)
 
     def register_child(self, block, name=None):
         """Registers block as a child of self. :py:class:`Block` s assigned to self as
@@ -601,8 +567,8 @@ class Block(object):
         params = self.collect_params()
         if verbose:
             init.set_verbosity(verbose=verbose)
-        for k, v in params.items():
-            v.initialize(None, ctx, init, force_reinit=force_reinit, structural_name=k)
+        for v in params.values():
+            v.initialize(None, ctx, init, force_reinit=force_reinit)
 
     def hybridize(self, active=True, **kwargs):
         """ Please refer description of HybridBlock hybridize().
@@ -696,6 +662,14 @@ class Block(object):
         which equals to
             dense1.weight = dense0.weight
             dense1.bias = dense0.bias
+
+        Note that unlike the `load_parameters` or `load_dict` functions,
+        `share_parameters` results in the `Parameter` object being shared (or
+        tied) between the models, whereas `load_parameters` or `load_dict` only
+        set the value of the data dictionary of a model. If you call
+        `load_parameters` or `load_dict` after `share_parameters`, the loaded
+        value will be reflected in all networks that use the shared (or tied)
+        `Parameter` object.
 
         Parameters
         ----------
@@ -820,7 +794,7 @@ class Block(object):
 
         def _register_summary_hook(block):
             assert not isinstance(block, HybridBlock) or not block._active, \
-                    '"{}" must not be hybridized to print summary.'.format(block.name)
+                    '"{}" must not be hybridized to print summary.'.format(type(block).__name__)
             def _summary_hook(block, _, outputs):
                 class_name = block.__class__.__name__
                 block_idx = len(summary) - 1
@@ -972,8 +946,9 @@ class HybridBlock(Block):
                 else:
                     flatten_inputs.append(None)
             grouped_inputs = _regroup(flatten_inputs, self._in_format)
+
             params = {i: j.var() for i, j in self._reg_params.items()}
-            with self._scope:
+            with _block_scope(self):
                 out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out, "output")
 
@@ -1018,10 +993,10 @@ class HybridBlock(Block):
     def _build_cache(self, *args):
         data, out = self._get_graph(*args)
         data_names = {data.name: i for i, data in enumerate(data)}
-        params = self.collect_params()
-        params = {p.name: p for p in params.values()}
-        input_names = out.list_inputs()
+        params = {p.var().name: p for p in self.collect_params().values()}
+        param_serialization_names = {p.var().name: n for n, p in self.collect_params().items()}
         param_names = set(params.keys())
+        input_names = out.list_inputs()
         expected_names = set(input_names)
         for name in expected_names:
             assert name in param_names or name in data_names, \
@@ -1040,41 +1015,72 @@ class HybridBlock(Block):
             warnings.warn("Parameter %s is not used by any computation. "
                           "Is this intended?"%unused, stacklevel=4)
 
-        data_indices = []
-        param_indices = []
-        self._cached_op_args = []
-        for i, name in enumerate(input_names):
-            if name in data_names:
-                data_indices.append(i)
-                self._cached_op_args.append((True, data_names[name]))
-            else:
-                param_indices.append(i)
-                self._cached_op_args.append((False, params[name]))
-        flags = [('data_indices', data_indices), ('param_indices', param_indices)] + \
-                self._flags
-
         args, _ = _flatten(args, "input")
         try:
-            for is_arg, i in self._cached_op_args:
-                if not is_arg:
-                    i.data()
+            for name in input_names:
+                if name in params:
+                    params[name].data()
         except DeferredInitializationError:
             self._deferred_infer_shape(*args)
-            for is_arg, i in self._cached_op_args:
-                if not is_arg:
-                    i._finish_deferred_init()
+            for name in input_names:
+                if name in params:
+                    params[name]._finish_deferred_init()
 
+        arg_dict, aux_dict = dict(), dict()
         if self._backend:
             ctx = args[0].context
             # get list of params in the order of out.list_arguments
-            arg_dict = {name:args[data_names[name]] if name in data_names.keys() else params[name].data()
-                        for name in out.list_arguments()}
-            aux_dict = {name:args[data_names[name]] if name in data_names.keys() else params[name].data()
-                        for name in out.list_auxiliary_states()}
+            arg_dict.update({name:args[data_names[name]] if name in data_names.keys() else params[name].data()
+                             for name in out.list_arguments()})
+            aux_dict.update({name:args[data_names[name]] if name in data_names.keys() else params[name].data()
+                             for name in out.list_auxiliary_states()})
             # Partition the graph.
             out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
+
             #update cached graph with partitioned graph
             self._cached_graph = data, out
+
+        input_names = out.list_inputs()
+        data_indices = []
+        param_indices = []
+
+        # In the default case, _cached_ops_args contains all the parameters from params (the sets are identical)
+        # In the case of Partition API optimized graph _cached_ops_args might contain some parameters from params,
+        # might contain some new parameters created during optimization and added to `arg_dict/aux_dict`,
+        # and might not contain some parameters that were deleted during optimization.
+        self._cached_op_args = []
+        for i, name in enumerate(input_names):
+            triple = None
+            if name in data_names:
+                data_indices.append(i)
+                triple = (True, name, data_names[name])
+            else:
+                param_indices.append(i)
+                if name in params:
+                    param = params[name]
+                    serialization_name = param_serialization_names[name]  # HybridBlock.export
+                else:
+                    # The param is missing from the original params dictionary, which means the param must have
+                    # been added by the Partition API backend
+                    if name in arg_dict or name:
+                        param_data = arg_dict[name]
+                    elif name in aux_dict:
+                        param_data = aux_dict[name]
+                    else:
+                        raise RuntimeError('A parameter was added to the graph during optimization but it was not '
+                                           'added to the parameter dicts.\n'
+                                           'Please check the backend.')
+
+                    param = Parameter(name)
+                    param._var_name = name
+                    serialization_name = name  # HybridBlock.export
+                    param._load_init(param_data, args[0].context)
+                triple = (False, serialization_name, param)
+
+            self._cached_op_args.append(triple)
+
+        flags = [('data_indices', data_indices), ('param_indices', param_indices)] + \
+                self._flags
         self._cached_op = ndarray.CachedOp(out, flags)
 
 
@@ -1120,7 +1126,7 @@ class HybridBlock(Block):
 
         args_without_none = [ele for ele in args if ele is not None]
         cargs = [args_without_none[i] if is_arg else i.data()
-                 for is_arg, i in self._cached_op_args]
+                 for is_arg, name, i in self._cached_op_args]
         out = self._cached_op(*cargs)
         if isinstance(out, NDArray):
             out = [out]
@@ -1264,7 +1270,7 @@ class HybridBlock(Block):
         sdict.update({name : attr for name, attr in \
              zip(out.list_auxiliary_states(), aux_attrs)})
         for i in self.collect_params().values():
-            setattr(i, attr, sdict[i.name])
+            setattr(i, attr, sdict[i.var().name])
 
     def infer_shape(self, *args):
         """Infers shape of Parameters from inputs."""
@@ -1314,19 +1320,33 @@ class HybridBlock(Block):
             raise RuntimeError(
                 "Please first call block.hybridize() and then run forward with "
                 "this block at least once before calling export.")
-        sym = self._cached_graph[1]
+        sym = copy.copy(self._cached_graph[1])
+
+        # Deduplicate params (shared parameters use the same input symbol)
+        reverse_params = {v: k for k, v in self.collect_params().items()}
+        params = {v: k for k, v in reverse_params.items()}
+
+        # In export we have global information on the structure of the graph
+        # can rename the symbol inputs to human-readable, deterministic names.
+        # That's not true in general, which is why internally random unique identifiers are used.
+        rename_map = {param.var().name: name for name, param in params.items()}
+        for var in sym.get_inputs():
+            if var.name in rename_map:
+                var._set_attr(name=rename_map[var.name])
+
         sym_filename = '%s-symbol.json'%path
         sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
 
         arg_names = set(sym.list_arguments())
         aux_names = set(sym.list_auxiliary_states())
         arg_dict = {}
-        for param in self.collect_params().values():
-            if param.name in arg_names:
-                arg_dict['arg:%s'%param.name] = param._reduce()
-            else:
-                assert param.name in aux_names
-                arg_dict['aux:%s'%param.name] = param._reduce()
+        for is_arg, name, param in self._cached_op_args:
+            if not is_arg:
+                if name in arg_names:
+                    arg_dict['arg:{}'.format(name)] = param._reduce()
+                else:
+                    assert name in aux_names
+                    arg_dict['aux:{}'.format(name)] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         params_filename = '%s-%04d.params'%(path, epoch)
         save_fn(params_filename, arg_dict)
@@ -1420,8 +1440,9 @@ class HybridBlock(Block):
                     params = {k: v.data(ctx) for k, v in self._reg_params.items()}
 
                 return self.hybrid_forward(ndarray, x, *args, **params)
+
         params = {i: j.var() for i, j in self._reg_params.items()}
-        with self._scope:
+        with _block_scope(self):
             return self.hybrid_forward(symbol, x, *args, **params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
@@ -1437,6 +1458,23 @@ class HybridBlock(Block):
         # pylint: disable= invalid-name
         raise NotImplementedError
 
+    def reset_ctx(self, ctx):
+        """Re-assign all Parameters to other contexts. If the Block is hybridized, it will reset the _cached_op_args.
+
+        Parameters
+        ----------
+        ctx : Context or list of Context, default :py:meth:`context.current_context()`.
+            Assign Parameter to given context. If ctx is a list of Context, a
+            copy will be made for each context.
+        """
+        params = self.collect_params()
+        if self._cached_op:
+            for p in self._cached_op_args:
+                # resetting parameters creating by the partitioning backend
+                if p.name not in params:
+                    p.reset_ctx(ctx)
+        for p in params.values():
+            p.reset_ctx(ctx)
 
 class SymbolBlock(HybridBlock):
     """Construct block from symbol. This is useful for using pre-trained models
@@ -1530,15 +1568,6 @@ class SymbolBlock(HybridBlock):
 
     def __init__(self, outputs, inputs, params=None):
         super(SymbolBlock, self).__init__()
-        structure = defaultdict(list)
-        if params is None:
-            params = {}
-            self._structured_named = False
-        elif any(k.find('.') != -1 for k in params):
-            self._structured_named = True
-            for k, v in params.items():
-                structure[v.name].append(k)
-        params = {p.name : p for p in params.values()}
 
         if isinstance(inputs, symbol.Symbol) and len(inputs.list_outputs()) == 1:
             inputs = [inputs]
@@ -1573,29 +1602,31 @@ class SymbolBlock(HybridBlock):
 
         arg_types, aux_types = _infer_param_types(syms, out, arg_params, aux_params)
 
-        def _set_params_attr(name, **kwargs):
-            if params.get(name) is None:
-                param = Parameter(**kwargs)
-                param._name = name
-            else:
-                param = params[name]
-                param._check_and_setattr(**kwargs)
-            if self._structured_named:
-                lis = structure[name]
-                assert len(lis) > 0, "Can not find structured name for Parameter %s in 'params'. " \
-                    "Please check 'params' is complete!" % name
-                for structured_name in lis:
-                    self._reg_params[structured_name] = param
-            else:
-                self._reg_params[name] = param
+        if params is None:
+            params = {}
+        unused_params = set(params.keys()) - set(arg_params) - set(aux_params)
+        if len(unused_params) > 0:
+            raise ValueError('{} params are unused by the model.'.format(unused_params))
+        self._reg_params = params
 
         for i, arg in enumerate(arg_params):
-            if arg not in input_names:
-                _set_params_attr(name=arg, allow_deferred_init=True, dtype=arg_types[i])
-
+            if arg in self._reg_params:
+                self._reg_params[arg]._check_and_setattr(allow_deferred_init=True, dtype=arg_types[i])
+                if self._reg_params[arg]._var is None:
+                    self._reg_params[arg]._var_name = arg
+            elif arg not in input_names:
+                self._reg_params[arg] = Parameter(name=arg, allow_deferred_init=True, dtype=arg_types[i])
+                self._reg_params[arg]._var_name = arg
         for i, aux in enumerate(aux_params):
-            if aux not in input_names:
-                _set_params_attr(name=aux, grad_req='null', allow_deferred_init=True, dtype=aux_types[i])
+            if aux in self._reg_params:
+                self._reg_params[aux]._check_and_setattr(grad_req='null', allow_deferred_init=True,
+                                                         dtype=aux_types[i])
+                if self._reg_params[aux]._var is None:
+                    self._reg_params[aux]._var_name = aux
+            elif aux not in input_names:
+                self._reg_params[aux] = Parameter(name=aux, grad_req='null',
+                                                  allow_deferred_init=True, dtype=aux_types[i])
+                self._reg_params[aux]._var_name = aux
 
         self._cached_graph = syms, out
 
