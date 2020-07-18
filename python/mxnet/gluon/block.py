@@ -365,7 +365,7 @@ class Block:
             params[names[0]] = param._reduce().asnumpy()
             for name in names[1:]:
                 # Shared parameters are known under multiple names. We save the
-                # parameter according to it's first name and save the mapping
+                # parameter according to its first name and save the mapping
                 # to the first name for the other names.
                 params[name] = names[0]
 
