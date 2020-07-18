@@ -249,15 +249,22 @@ build_dynamic_libmxnet() {
 
 build_jetson() {
     set -ex
-    pushd .
-
-    #build_ccache_wrappers
-
-    cp make/crosscompile.jetson.mk ./config.mk
-    make -j$(nproc)
-
-    build_wheel /work/mxnet/python /work/mxnet/lib
-    popd
+    cd /work/build
+    cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DUSE_CUDA=ON \
+        -DMXNET_CUDA_ARCH="5.2" \
+        -DENABLE_CUDA_RTC=OFF \
+        -DSUPPORT_F16C=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=ON \
+        -DUSE_LAPACK=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -G Ninja /work/mxnet
+    ninja
+    build_wheel
 }
 
 #
@@ -772,7 +779,7 @@ build_ubuntu_gpu_mkldnn() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
-        USE_TVM_OP=1                              \
+        USE_TVM_OP=0                              \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
@@ -789,34 +796,13 @@ build_ubuntu_gpu_mkldnn_nocudnn() {
         USE_CUDA=1                                \
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=0                               \
-        USE_TVM_OP=1                              \
+        USE_TVM_OP=0                              \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
 }
 
 build_ubuntu_gpu_cuda101_cudnn7() {
-    set -ex
-    build_ccache_wrappers
-    make \
-        DEV=1                                     \
-        USE_BLAS=openblas                         \
-        USE_MKLDNN=0                              \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        USE_TVM_OP=1                              \
-        USE_CPP_PACKAGE=1                         \
-        USE_DIST_KVSTORE=1                        \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_SIGNAL_HANDLER=1                      \
-        -j$(nproc)
-
-    make cython PYTHON=python2
-    make cython PYTHON=python3
-}
-
-build_ubuntu_gpu_cuda101_cudnn7_no_tvm_op() {
     set -ex
     build_ccache_wrappers
     make \
@@ -867,7 +853,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
-        -DUSE_TVM_OP=1                          \
+        -DUSE_TVM_OP=0                          \
         -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKLML_MKL=1                       \
         -DCMAKE_BUILD_TYPE=Release              \
@@ -892,32 +878,6 @@ build_ubuntu_gpu_cmake() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=ON                         \
-        -DPython3_EXECUTABLE=/usr/bin/python3   \
-        -DUSE_MKL_IF_AVAILABLE=OFF              \
-        -DUSE_MKLML_MKL=OFF                     \
-        -DUSE_MKLDNN=OFF                        \
-        -DUSE_DIST_KVSTORE=ON                   \
-        -DCMAKE_BUILD_TYPE=Release              \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DBUILD_CYTHON_MODULES=1                \
-        -G Ninja                                \
-        /work/mxnet
-
-    ninja -v
-}
-
-build_ubuntu_gpu_cmake_no_tvm_op() {
-    set -ex
-    cd /work/build
-    build_ccache_wrappers
-    cmake \
-        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache    \
-        -DCMAKE_C_COMPILER_LAUNCHER=ccache      \
-        -DCMAKE_CUDA_COMPILER_LAUNCHER=ccache   \
-        -DUSE_SIGNAL_HANDLER=ON                 \
-        -DUSE_CUDA=ON                           \
-        -DUSE_CUDNN=ON                          \
         -DUSE_TVM_OP=OFF                        \
         -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
@@ -930,7 +890,31 @@ build_ubuntu_gpu_cmake_no_tvm_op() {
         -G Ninja                                \
         /work/mxnet
 
-    ninja -v
+    ninja
+}
+
+build_ubuntu_gpu_cmake_no_rtc() {
+    set -ex
+    cd /work/build
+    build_ccache_wrappers
+    cmake \
+        -DUSE_SIGNAL_HANDLER=ON                 \
+        -DUSE_CUDA=ON                           \
+        -DUSE_CUDNN=ON                          \
+        -DUSE_TVM_OP=OFF                        \
+        -DPython3_EXECUTABLE=/usr/bin/python3   \
+        -DUSE_MKL_IF_AVAILABLE=OFF              \
+        -DUSE_MKLML_MKL=OFF                     \
+        -DUSE_MKLDNN=ON                         \
+        -DUSE_DIST_KVSTORE=ON                   \
+        -DCMAKE_BUILD_TYPE=Release              \
+        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
+        -DBUILD_CYTHON_MODULES=1                \
+        -DENABLE_CUDA_RTC=OFF                   \
+        -G Ninja                                \
+        /work/mxnet
+
+    ninja
 }
 
 build_ubuntu_cpu_large_tensor() {
@@ -964,7 +948,7 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=ON                         \
+        -DUSE_TVM_OP=OFF                        \
         -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \

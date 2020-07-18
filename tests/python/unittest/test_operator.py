@@ -2637,6 +2637,10 @@ def test_convolution_dilated_impulse_response():
     for dil in [ (1,1), (2,2), (3,3) ]:
         for ks in [ (3,3), (4,4), (2,3), (3,2), (1,1) ]:
             test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
+    # 3D
+    for dil in [ (1,1,1), (2,2,2), (3,3,3) ]:
+        for ks in [ (3,3,3), (4,4,4), (2,3,4), (3,2,4), (1,1,1) ]:
+            test_run_convolution_dilated_impulse_response(dil=dil, kernel_shape=ks)
 
 
 @with_seed()
@@ -8303,6 +8307,59 @@ def test_op_all_names_monitor():
         del os.environ['MXNET_SUBGRAPH_BACKEND']
 
 @with_seed()
+def test_monitor_with_variable_input_shape():
+    output = {}
+
+    def get_output_min_callback(name, arr):
+        name = py_str(name)
+        handle = ctypes.cast(arr, NDArrayHandle)
+        arr = NDArray(handle, writable=False)
+        min_val = mx.ndarray.min(arr).asscalar()
+        if name in output:
+            output[name] = min(output[name], min_val)
+        else:
+            output[name] = min_val
+
+    def check_result(output, names):
+        assert len(output) > 0
+        for k, v in output.items():
+            assert k in names
+            assert v is not None
+
+    is_windows = sys.platform.startswith('win')
+    if (is_windows):
+        # Windows doesn't support set environment variable on the fly, so disable it for now
+        pass
+    else:
+        # Disable subgraph in case subgraph will replace symbol
+        os.environ['MXNET_SUBGRAPH_BACKEND'] = "NONE"
+
+        batch_size = 1
+        op_name = 'conv'
+        dshape = (batch_size, 3, 10, 10)
+        data = mx.sym.Variable('data', shape=dshape)
+        sym = mx.sym.Convolution(data, kernel=(1, 1), num_filter=1, name=op_name)
+
+        mod = mx.module.Module(symbol=sym, label_names=None)
+        mod.bind(for_training=False, data_shapes=[('data', dshape)])
+        mod.init_params()
+        mod._exec_group.execs[0].set_monitor_callback(get_output_min_callback, monitor_all=True)
+
+        new_dshape = dshape[:-1] + (dshape[-1] + 4,)
+        new_data = mx.nd.random.uniform(shape=new_dshape)
+        new_data = mx.io.NDArrayIter(data=new_data, batch_size=batch_size)
+        new_data = DummyIter(new_data)
+
+        for batch in new_data:
+            mod.forward(data_batch=batch, is_train=False)
+            mx.nd.waitall()
+            break
+
+        name_list = ['data', 'conv_data', 'conv_weight', 'conv_bias', 'conv_output']
+        check_result(output, name_list)
+        del os.environ['MXNET_SUBGRAPH_BACKEND']
+
+@with_seed()
 @unittest.skip("test fails intermittently. temporarily disabled till it gets fixed. tracked at https://github.com/apache/incubator-mxnet/issues/13915")
 def test_activation():
     shapes = [(9,), (9, 10), (9, 10, 10), (1, 9, 10, 10)]
@@ -9591,7 +9648,7 @@ def check_multihead_attention_encdec(dtype):
     q_proj = mx.sym.FullyConnected(q, weight=q_weight, bias=q_bias, flatten=False,
                                    num_hidden=qkv_units, no_bias=False)
     att_score = mx.sym.contrib.interleaved_matmul_encdec_qk(
-            q_proj, kv_proj, heads=num_heads) 
+            q_proj, kv_proj, heads=num_heads)
     att_score = att_score + sonde
     weighted_value = mx.sym.contrib.interleaved_matmul_encdec_valatt(
             kv_proj, att_score, heads=num_heads)

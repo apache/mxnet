@@ -29,7 +29,8 @@ static inline bool SupportMKLDNNAttr(const std::shared_ptr<NodeAttr>& node_attr)
   if (node_attr) {
     int ndim = node_attr->ishape[0].ndim();
     return (node_attr->dispatch_mode == DispatchMode::kFComputeEx) &&
-           (node_attr->itype[0] == mshadow::kFloat32) && (ndim == 1 || ndim == 2 || ndim == 4);
+           (node_attr->itype[0] == mshadow::kFloat32) &&
+           (ndim == 1 || ndim == 2 || ndim == 4 || ndim == 5);
   } else {
     return true;
   }

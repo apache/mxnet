@@ -65,7 +65,8 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
   bool Select(const nnvm::Node& n, const std::shared_ptr<NodeAttr>& node_attr) override {
     if (n.op() && n.op()->name == "Convolution") {
       const auto &param = nnvm::get<ConvolutionParam>(n.attrs.parsed);
-      if (param.kernel.ndim() == 2 && SupportMKLDNNAttr(node_attr)) {
+      if ((param.kernel.ndim() == 2 || param.kernel.ndim() == 3) &&
+           SupportMKLDNNAttr(node_attr)) {
         status_ = disable_all_ ? kSuccess : kStart;
         matched_list_.clear();
         matched_list_.push_back(&n);

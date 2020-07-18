@@ -1,5 +1,3 @@
-#!/usr/bin/env bash
-
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -17,19 +15,13 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# build and install are separated so changes to build don't invalidate
-# the whole docker cache for the image
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR "armv7l")
+set(CMAKE_C_COMPILER arm-linux-gnueabihf-gcc)
+set(CMAKE_CXX_COMPILER arm-linux-gnueabihf-g++)
+set(CMAKE_FIND_ROOT_PATH "/usr/arm-linux-gnueabihf" "/usr/local/arm-linux-gnueabihf")
 
-set -ex
-
- # Python 2.7 is installed by default, install 3.6 on top
-yum -y install https://repo.ius.io/ius-release-el7.rpm
-yum -y install python36u
-
-# Install PIP
-curl "https://bootstrap.pypa.io/get-pip.py" -o "get-pip.py"
-python2.7 get-pip.py
-python3.6 get-pip.py
-
-pip2 install nose pylint numpy nose-timer requests h5py scipy==1.2.1 decorator==4.4.0
-pip3 install nose pylint numpy nose-timer requests h5py scipy==1.2.1 decorator==4.4.0
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)

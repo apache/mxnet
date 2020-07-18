@@ -41,7 +41,6 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
                                  const NDArray &gamma, const NDArray &beta,
                                  const NDArray &mean, const NDArray &variance,
                                  const BatchNormParam *param) {
-  // TODO(Zhennan): Handle the case weight is not in dims 4.
   NDArray update_weight = NDArray(weight->storage_type(), weight->shape(),
                                   weight->ctx(), true, weight->dtype());
   NDArray update_bias = NDArray(beta.storage_type(), beta.shape(), beta.ctx(),
@@ -55,7 +54,8 @@ static void UpdateConvWeightBias(NDArray *weight, NDArray *bias, bool no_bias,
   DType *update_weight_ptr = update_weight.data().dptr<DType>();
   DType *update_bias_ptr = update_bias.data().dptr<DType>();
   size_t channel = gamma.shape()[0];
-  size_t offset = weight->shape()[1] * weight->shape()[2] * weight->shape()[3];
+  const auto wshape = weight->shape();
+  size_t offset = wshape.ProdShape(1, wshape.ndim());
 #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (int c = 0; c < static_cast<int>(channel); ++c) {
     const DType *p1 = weight_ptr + c * offset;
@@ -732,8 +732,9 @@ nnvm::NodePtr SgMKLDNNConvQuantizedOp(const NodeAttrs& attrs) {
   auto const &param = nnvm::get<MKLDNNConvFusionParam>(attrs.parsed);
   nnvm::NodePtr node = nnvm::Node::Create();
   node->attrs.op = Op::Get("_sg_mkldnn_conv");
-  CHECK_EQ(param.full_conv_param.conv_param.kernel.ndim(), 2U)
-      << "Quantized Convolution of MKL-DNN only supports 2D kernel currently."
+  const int k_ndims = param.full_conv_param.conv_param.kernel.ndim();
+  CHECK(k_ndims == 2U || k_ndims == 3U)
+      << "Quantized Convolution of MKL-DNN supports 2D/3D kernel currently."
       <<  "Please exclude this layer from the quantized model.";
   node->attrs.name = "quantized_" + attrs.name;
   node->attrs.dict = attrs.dict;
