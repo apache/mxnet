@@ -2081,10 +2081,11 @@ def test_gluon_kl():
                               _dist_factory(dist, rate),
                               repeated_times)
 
+
     # exponential, geometric
     for dist in [mgp.Exponential, mgp.Geometric]:
         for shape in shapes:
-            def s(): return np.random.uniform(size=shape)
+            def s(): return np.random.uniform(size=shape, low=1e-3)
             _test_zero_kl(_dist_factory(dist, s), shape)
             if monte_carlo_test:
                 _test_monte_carlo(_dist_factory(dist, s),
