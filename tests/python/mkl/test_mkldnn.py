@@ -24,7 +24,7 @@ import numpy as np
 import mxnet as mx
 import pytest
 from mxnet.test_utils import rand_ndarray, assert_almost_equal
-from mxnet import gluon
+from mxnet import gluon, context
 from mxnet.gluon import nn
 from mxnet.test_utils import *
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
@@ -210,7 +210,7 @@ def test_flatten_slice_after_conv():
 
     shape = (2, 16, 16, 16)
     val = np.random.rand(2, 16, 16, 16).astype(np.float32)
-    exe = slice1._simple_bind(Context.default_ctx, data=shape)
+    exe = slice1._simple_bind(context.current_context(), data=shape)
     exe.arg_arrays[0][:] = val
     exe.arg_arrays[1][:] = np.random.normal(size=exe.arg_arrays[1].shape)
     exe.arg_arrays[2][:] = np.random.normal(size=exe.arg_arrays[2].shape)

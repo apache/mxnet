@@ -252,6 +252,12 @@ def test_dense():
     assert outs == [(17, 128)]
 
 
+def test_hybrid_sequential_unique_internals():
+    net = mx.gluon.nn.HybridSequential()
+    net.add(mx.gluon.nn.Dense(100, activation='relu'), mx.gluon.nn.Dense(10))
+    assert len(set(s.name for s in net(mx.sym.Variable('data')).get_internals())) == 8
+
+
 @with_seed()
 def test_symbol_block(tmpdir):
     model = nn.HybridSequential()
@@ -265,8 +271,8 @@ def test_symbol_block(tmpdir):
 
     inputs = mx.sym.var('data')
     outputs = model(inputs).get_internals()
-
-    smodel = gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
+    params = {p.var().name: p for p in model.collect_params().values()}
+    smodel = gluon.SymbolBlock(outputs, inputs, params=params)
 
     assert len(smodel(mx.nd.zeros((16, 10)))) == 14
 
@@ -288,7 +294,8 @@ def test_symbol_block(tmpdir):
 
     inputs = mx.sym.var('data')
     outputs = model(inputs)
-    smodel = gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
+    params = {p.var().name: p for p in model.collect_params().values()}
+    smodel = gluon.SymbolBlock(outputs, inputs, params=params)
     net = Net(smodel)
     net.hybridize()
     assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
@@ -306,12 +313,10 @@ def test_symbol_block(tmpdir):
     net_fp32.hybridize()
     data = mx.nd.zeros((1,3,224,224), dtype='float64', ctx=ctx)
     net_fp32.forward(data)
-    net_fp32.export(tmpfile, 0)
+    sym_file, params_file = net_fp32.export(tmpfile, 0)
 
     # 2.a Load the saved model and verify if all the params are loaded correctly.
     # and choose one of the param to verify the type if fp64.\
-    sym_file = tmpfile + '-symbol.json'
-    params_file = tmpfile + '-0000.params'
     sm = mx.sym.load(sym_file)
     inputs = mx.sym.var('data', dtype='float64')
     net_fp64 = mx.gluon.SymbolBlock(sm, inputs)
@@ -663,6 +668,32 @@ def test_pool():
         layer = nn.MaxPool2D(3, ceil_mode=True, layout=layout)
         layer.initialize()
         assert (layer(x).shape==ceil_out_shape)
+
+
+@with_seed()
+@pytest.mark.parametrize('variable', ['running_var', 'running_mean'])
+def test_batchnorm_backward_synchronization(variable):
+    """
+    Tests if synchronization of BatchNorm running variables is done correctly.
+    If not, the test sometimes fails - depending on the timing.
+    """
+    ctx = mx.test_utils.default_context()
+
+    for _ in range(20):
+        layer = nn.BatchNorm()
+        layer.initialize(ctx=ctx)
+        for _ in range(3):
+            data = mx.nd.random.normal(loc=10, scale=2, shape=(1, 3, 10, 10), ctx=ctx)
+            with mx.autograd.record():
+                out = layer(data)
+            out.backward()
+
+        # check if each read give the same value
+        var1 = getattr(layer, variable).data().asnumpy()
+        for _ in range(10):
+            var2 = getattr(layer, variable).data().asnumpy()
+            if (var1 != var2).any():
+                raise AssertionError("Two consecutive reads of " + variable + " give different results")
 
 
 @with_seed()
@@ -1480,17 +1511,19 @@ def test_save_load_deduplicate_with_shared_params(tmpdir):
     c.load_parameters(param_path)
 
 @with_seed()
-def test_symbol_block_save_load():
+def test_symbol_block_save_load(tmpdir):
+    tmp = str(tmpdir)
+    tmpfile = os.path.join(tmp, 'resnet34_fp64')
+
     class Net(gluon.HybridBlock):
         def __init__(self):
             super(Net, self).__init__()
             backbone = gluon.model_zoo.vision.resnet18_v1()
-            data = mx.sym.var('data')
-            featnames = [backbone.features[i][1].name for i in range(4, 7)]
-            out_names = ['_'.join([featname, 'activation0_output']) for featname in featnames]
-            internals = backbone(data).get_internals()
-            outs = [internals[out_name] for out_name in out_names]
-            self.backbone = gluon.SymbolBlock(outs, data, params=backbone.collect_params())
+            backbone.initialize()
+            backbone.hybridize()
+            backbone(mx.nd.random.normal(shape=(1, 3, 32, 32)))
+            sym_file, params_file = backbone.export(tmpfile)
+            self.backbone = gluon.SymbolBlock.imports(sym_file, 'data', params_file)
             self.body = nn.Conv2D(3, 1)
 
         def hybrid_forward(self, F, x):
@@ -1501,10 +1534,11 @@ def test_symbol_block_save_load():
     net1.initialize(mx.init.Normal())
     net1.hybridize()
     net1(mx.nd.random.normal(shape=(1, 3, 32, 32)))
-    net1.save_parameters('./test_symbol_block_save_load.params')
 
+    params_file = os.path.join(tmp, './test_symbol_block_save_load.params')
+    net1.save_parameters(params_file)
     net2 = Net()
-    net2.load_parameters('./test_symbol_block_save_load.params', ctx=mx.cpu())
+    net2.load_parameters(params_file)
 
 
 @with_seed()
@@ -1695,21 +1729,21 @@ def test_op_hook_output_names():
     model.add(mx.gluon.nn.Dense(2))
     model.initialize()
     model.hybridize()
-    check_name(model, [model[0].name + "_fwd_output"])
+    check_name(model, ["hybridsequential_dense0_fwd_output"])
 
     # Test with Activation, FListInputNames not registered, input name will have _input appended
     model = mx.gluon.nn.HybridSequential()
     model.add(mx.gluon.nn.Activation("relu"))
     model.initialize()
     model.hybridize()
-    check_name(model, [model[0].name + "_fwd_output"])
+    check_name(model, ["hybridsequential_activation0_fwd_output"])
 
     # Test with Pooling, monitor_all is set to True
     model = mx.gluon.nn.HybridSequential()
     model.add(mx.gluon.nn.AvgPool1D())
     model.initialize()
     model.hybridize()
-    check_name(model, [model[0].name + '_fwd_data', model[0].name + '_fwd_output'], 
+    check_name(model, ['hybridsequential_avgpool1d0_fwd_data', 'hybridsequential_avgpool1d0_fwd_output'], 
                expected_opr_names=["Pooling"], monitor_all=True)
 
     # stack two layers and test
@@ -1719,16 +1753,16 @@ def test_op_hook_output_names():
     model.initialize()
     model.hybridize()
     check_name(model,
-               [model[0].name + '_fwd_data', model[0].name + '_fwd_weight',
-                model[0].name + '_fwd_bias', model[0].name + '_fwd_output',
-                model[1].name + '_fwd_input0', model[1].name + '_fwd_output'], monitor_all=True)
+               ['hybridsequential_dense0_fwd_data', 'hybridsequential_dense0_fwd_weight',
+                'hybridsequential_dense0_fwd_bias', 'hybridsequential_dense0_fwd_output',
+                'hybridsequential_activation0_fwd_input0', 'hybridsequential_activation0_fwd_output'], monitor_all=True)
 
     # check with different hybridize modes
     model.hybridize(static_alloc=True)
     check_name(model,
-               [model[0].name + '_fwd_data', model[0].name + '_fwd_weight',
-                model[0].name + '_fwd_bias', model[0].name + '_fwd_output',
-                model[1].name + '_fwd_input0', model[1].name + '_fwd_output'], monitor_all=True)
+               ['hybridsequential_dense0_fwd_data', 'hybridsequential_dense0_fwd_weight',
+                'hybridsequential_dense0_fwd_bias', 'hybridsequential_dense0_fwd_output',
+                'hybridsequential_activation0_fwd_input0', 'hybridsequential_activation0_fwd_output'], monitor_all=True)
 
 @with_seed()
 def test_apply():
@@ -1936,10 +1970,10 @@ def test_conv2d_16c(chn_num, kernel):
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-def test_group_conv2d_16c():
-    grp_list = [16]
+@pytest.mark.parametrize('grp', [16])
+@pytest.mark.parametrize('kernel_size', [1, 3])
+def test_group_conv2d_16c(grp, kernel_size):
     input_size_list = np.random.randint(low=3, high=65, size=10).tolist()
-    kernel_list = [1, 3]
     batch_size = 4
     class Net(gluon.HybridBlock):
         def __init__(self,
@@ -1957,10 +1991,8 @@ def test_group_conv2d_16c():
 
     for i in range(len(input_size_list)):
         x = mx.nd.random.uniform(-1.0, 1.0, shape=(batch_size, 3, input_size_list[i], input_size_list[i]))
-        for j in range(len(grp_list)):
-            for k in range(len(kernel_list)):
-                net = Net(grp_list[j], kernel_list[k])
-                check_layer_forward_withinput(net, x)
+        net = Net(grp, kernel_size)
+        check_layer_forward_withinput(net, x)
 
 @with_seed()
 @pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')

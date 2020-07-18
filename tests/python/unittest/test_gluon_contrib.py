@@ -35,7 +35,7 @@ def check_rnn_cell(cell, in_shape=(10, 50), out_shape=(10, 100), begin_state=Non
     outputs = mx.sym.Group(outputs)
     assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight',
                                                     'i2h_bias', 'i2h_weight']
-    assert outputs.list_outputs() == [cell.name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
+    assert outputs.list_outputs() == [type(cell).__name__.lower() + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=in_shape,
                                            rnn_t1_data=in_shape,
@@ -121,7 +121,7 @@ def test_lstmp():
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
     expected_params = ['h2h_bias', 'h2h_weight', 'h2r_weight', 'i2h_bias', 'i2h_weight']
-    expected_outputs = [cell.name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
+    expected_outputs = [type(cell).__name__.lower() + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
     assert sorted(cell.collect_params().keys()) == expected_params
     assert outputs.list_outputs() == expected_outputs, outputs.list_outputs()
 

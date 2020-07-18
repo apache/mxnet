@@ -1,4 +1,4 @@
-/*
+/*!
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,21 +17,17 @@
  * under the License.
  */
 
-/*!
- * Copyright (c) 2016 by Contributors
- * \file nnpack_util.cc
- * \brief
- * \author Wei Wu
-*/
-
-#if MXNET_USE_NNPACK == 1
-#include "nnpack_util.h"
-
-namespace mxnet {
-namespace op {
-
-NNPACKInitialize nnpackinitialize;
-
-}  // namespace op
-}  // namespace mxnet
-#endif  // MXNET_USE_NNPACK
+$(document).ready(function() {
+  $(".feedback-answer").on("click", function () {
+    $(".feedback-question").remove();
+    $(".feedback-answer-container").remove();
+    $(".feedback-thank-you").show();
+    ga("send", {
+      hitType: "event",
+      eventCategory: "Did this page help you?",
+      eventAction: $(this).attr("data-response"),
+      eventLabel: window.location.pathname || "unknown",
+      eventValue: $(this).attr("data-response") === "yes" ? 1 : 0
+    });
+  });
+});

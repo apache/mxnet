@@ -30,7 +30,7 @@ import warnings
 from numbers import Number
 import numpy as _numpy  # pylint: disable=relative-import
 
-from ..attribute import AttrScope
+from .. import attribute
 from ..base import _LIB, numeric_types, c_array, c_array_buf, c_str, c_str_array, c_handle_array
 from ..base import mx_uint, py_str, string_types, integer_types, mx_int, mx_int64
 from ..base import NDArrayHandle, SymbolHandle
@@ -43,7 +43,7 @@ from . import _internal
 from . import op
 from ._internal import SymbolBase, _set_symbol_class
 from ..util import is_np_shape
-from ..profiler import Scope
+from ..profiler import _current_scope as _profiler_scope
 
 __all__ = ["Symbol", "var", "Variable", "Group", "load", "load_json",
            "pow", "power", "maximum", "minimum", "hypot", "eye", "zeros",
@@ -674,6 +674,33 @@ class Symbol(SymbolBase):
                 raise ValueError("Set Attr only accepts string values")
             check_call(_LIB.MXSymbolSetAttr(
                 self.handle, c_str(key), c_str(str(value))))
+
+    def get_inputs(self):
+        """Gets a new grouped symbol `sgroup`. The output of `sgroup` is a list of inputs to this symbol.
+
+        Consider the following code:
+
+        Example
+        -------
+        >>> a = mx.sym.var('a')
+        >>> b = mx.sym.var('b')
+        >>> c = a + b
+        >>> d = c.get_inputs()
+        >>> d
+        <Symbol Grouped>
+        >>> d.list_outputs()
+        ['a', 'b']
+
+        Returns
+        -------
+        sgroup : Symbol
+            A symbol group containing all input nodes of the computation graph
+            used to compute the symbol.
+        """
+        handle = SymbolHandle()
+        check_call(_LIB.MXSymbolGetInputs(
+            self.handle, ctypes.byref(handle)))
+        return Symbol(handle=handle)
 
     def get_internals(self):
         """Gets a new grouped symbol `sgroup`. The output of `sgroup` is a list of
@@ -1446,7 +1473,8 @@ class Symbol(SymbolBase):
 
 
     # pylint: disable=too-many-locals
-    def optimize_for(self, backend, args=None, aux=None, ctx=None, **kwargs):
+    def optimize_for(self, backend, args=None, aux=None, ctx=None,
+                     shape_dict=None, type_dict=None, stype_dict=None, skip_infer=False, **kwargs):
         """Partitions current symbol and optimizes it for a given backend,
         returns new partitioned symbol.
 
@@ -1457,18 +1485,32 @@ class Symbol(SymbolBase):
 
         args : dict of str to NDArray, optional
             Input arguments to the symbol, required to infer shapes/types before partitioning
-
             - If type is a dict of str to `NDArray`, then it maps the name of arguments
-              to the corresponding `NDArray`.
+              to the corresponding `NDArray`. Non defined arguments' `NDArray`s don't have to be
+              specified in the dict.
 
         aux : dict of str to NDArray, optional
             Input auxiliary arguments to the symbol
-
             - If type is a dict of str to `NDArray`, then it maps the name of arguments
               to the corresponding `NDArray`.
 
         ctx : Context, optional
             Device context, used to infer stypes
+
+        shape_dict  : Dict of str->tuple, optional
+            Input shape dictionary.
+            Used iff input NDArray is not in `args`.
+
+        type_dict  : Dict of str->numpy.dtype, optional
+            Input type dictionary.
+            Used iff input NDArray is not in `args`.
+
+        stype_dict  : Dict of str->str, optional
+            Input storage type dictionary.
+            Used iff input NDArray is not in `args`.
+
+        skip_infer : bool, optional
+            If True, the optimization skips the shape, type and storage type inference pass.
 
         kwargs : optional arguments
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
@@ -1488,17 +1530,77 @@ class Symbol(SymbolBase):
             args_handle = c_array(NDArrayHandle, [])
         else:
             args_handle, args_ = self._get_ndarray_inputs('args', args,
-                                                          self.list_arguments(), False)
+                                                          self.list_arguments(), True)
 
         if aux is None or len(aux) == 0:
             aux_ = []
             aux_handle = c_array(NDArrayHandle, [])
         else:
             aux_handle, aux_ = self._get_ndarray_inputs('aux_states', aux,
-                                                        self.list_auxiliary_states(), False)
+                                                        self.list_auxiliary_states(), True)
         if ctx is None:
             ctx = current_context()
         assert isinstance(ctx, Context)
+
+
+        # parse input data shape dict
+        num_input_shapes = 0
+        input_shape_names = ctypes.POINTER(ctypes.c_char_p)()
+        input_shape_data = ctypes.POINTER(mx_int64)()
+        input_shape_idx = ctypes.POINTER(mx_uint)()
+        if shape_dict is not None:
+            input_shape_names = []
+            input_shape_data = []
+            input_shape_idx = [0]
+            for k, v in shape_dict.items():
+                if isinstance(v, (tuple, list)):
+                    input_shape_names.append(k)
+                    input_shape_data.extend(v)
+                    input_shape_idx.append(len(input_shape_data))
+                else:
+                    raise ValueError(str(v) + " has to be a tuple or list.")
+            num_input_shapes = mx_uint(len(input_shape_names))
+            input_shape_names = c_str_array(input_shape_names)
+            input_shape_data = c_array_buf(mx_int64, array('q', input_shape_data))
+            input_shape_idx = c_array_buf(mx_uint, array('i', input_shape_idx))
+
+        # parse input data types dict
+        num_input_types = 0
+        input_type_names = ctypes.POINTER(ctypes.c_char_p)()  # provided type argument names
+        input_type_data = ctypes.POINTER(mx_uint)()  # provided types
+        if type_dict is not None:
+            input_type_names = []
+            input_type_data = []
+            for k, v in type_dict.items():
+                v = _numpy.dtype(v).type
+                if v in _DTYPE_NP_TO_MX:
+                    input_type_names.append(k)
+                    input_type_data.append(_DTYPE_NP_TO_MX[v])
+                else:
+                    raise ValueError(str(v) + " is not a MXNet type.")
+
+            num_input_types = mx_uint(len(input_type_names))
+            input_type_names = c_str_array(input_type_names)
+            input_type_data = c_array_buf(ctypes.c_int, array('i', input_type_data))
+
+        # parse input data storage types dict
+        num_input_stypes = 0
+        # provided storage type argument names
+        input_stype_names = ctypes.POINTER(ctypes.c_char_p)()
+        input_stype_data = ctypes.POINTER(mx_uint)()  # provided storage types
+        if stype_dict is not None:
+            input_stype_names = []
+            input_stype_data = []
+            for k, v in stype_dict.items():
+                if v in _STORAGE_TYPE_STR_TO_ID:
+                    input_stype_names.append(k)
+                    input_stype_data.append(_STORAGE_TYPE_STR_TO_ID[v])
+                else:
+                    raise ValueError(str(v) + " is not a MXNet storage type.")
+
+            num_input_stypes = mx_uint(len(input_stype_names))
+            input_stype_names = c_str_array(input_stype_names)
+            input_stype_data = c_array_buf(ctypes.c_int, array('i', input_stype_data))
 
         new_args_size = ctypes.c_uint()
         new_arg_names = ctypes.POINTER(ctypes.c_char_p)()
@@ -1523,6 +1625,17 @@ class Symbol(SymbolBase):
                                              mx_uint(len(key_list)),
                                              c_str_array(key_list),
                                              c_str_array(val_list),
+                                             num_input_shapes,
+                                             input_shape_names,
+                                             input_shape_data,
+                                             input_shape_idx,
+                                             num_input_types,
+                                             input_type_names,
+                                             input_type_data,
+                                             num_input_stypes,
+                                             input_stype_names,
+                                             input_stype_data,
+                                             ctypes.c_bool(skip_infer),
                                              ctypes.byref(new_args_size),
                                              ctypes.byref(new_args_handle),
                                              ctypes.byref(new_arg_names),
@@ -1544,8 +1657,36 @@ class Symbol(SymbolBase):
             raise RuntimeError('Cannot add new aux in optimize_for since aux is None\n' +
                                'Provide a dictionary to the aux argument to optimize_for')
 
-        # return modified symbol
-        return Symbol(out)
+        new_sym = Symbol(out)
+
+        arg_names = self.list_arguments()
+        new_arg_names = new_sym.list_arguments()
+        deleted_arg_names = set([item for item in arg_names
+                                 if item not in set(new_arg_names)])
+
+        if len(deleted_arg_names) > 0:
+            if args is not None:
+                for a_n in deleted_arg_names:
+                    if a_n in args:
+                        args.pop(a_n)
+            else:
+                warnings.warn('A param was deleted during optimization, but no args dictionary was provided.\n' +
+                              'Please ensure that your model weights match the newly optimized model.')
+
+        aux_names = self.list_auxiliary_states()
+        new_aux_names = new_sym.list_auxiliary_states()
+        deleted_aux_names = set([item for item in aux_names
+                                 if item not in set(new_aux_names)])
+        if len(deleted_aux_names) > 0:
+            if aux is not None:
+                for a_n in deleted_aux_names:
+                    if a_n in aux:
+                        aux.pop(a_n)
+            else:
+                warnings.warn('A param was deleted during optimization, but no args dictionary was provided.\n' +
+                              'Please ensure that your model weights match the newly optimized model.')
+
+        return new_sym
 
     # pylint: disable=too-many-locals
     def _simple_bind(self, ctx, grad_req='write', type_dict=None, stype_dict=None,
@@ -2564,9 +2705,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     handle = SymbolHandle()
     check_call(_LIB.MXSymbolCreateVariable(c_str(name), ctypes.byref(handle)))
     ret = Symbol(handle)
-    if not hasattr(AttrScope._current, "value"):
-        AttrScope._current.value = AttrScope()
-    attr = AttrScope._current.value.get(attr)
+    attr = attribute.current().get(attr)
     attr = {} if attr is None else attr
     if shape is not None:
         attr['__shape__'] = str(shape)
@@ -2589,9 +2728,7 @@ def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
     if profiler_scope is not None:
         attr['__profiler_scope__'] = profiler_scope
     else:
-        if not hasattr(Scope._current, "value"):
-            Scope._current.value = Scope()
-        attr['__profiler_scope__'] = Scope._current.value.name
+        attr['__profiler_scope__'] = _profiler_scope.get()
     for k, v in kwargs.items():
         if k.startswith('__') and k.endswith('__'):
             attr[k] = str(v)

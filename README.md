@@ -40,7 +40,7 @@ deep learning systems, and interesting insights of DL systems for hackers.
 
 Ask Questions
 -------------
-* Please use [discuss.mxnet.io](https://discuss.mxnet.io/) for asking questions.
+* Please use [discuss.d2l.ai](https://discuss.d2l.ai/c/d2l-en/mxnet/) or [old version:discuss.mxnet.io](https://discuss.mxnet.io/) for asking questions. 
 * Please use [mxnet/issues](https://github.com/apache/incubator-mxnet/issues) for reporting bugs.
 * [Frequent Asked Questions](https://mxnet.apache.org/faq/faq.html)
 
@@ -80,6 +80,7 @@ What's New
 
 Contents
 --------
+* [Book](https://d2l.ai)
 * [Website](https://mxnet.apache.org)
 * [Documentation](https://mxnet.apache.org/api)
 * [Blog](https://mxnet.apache.org/blog)
