@@ -15,9 +15,9 @@
    specific language governing permissions and limitations
    under the License.
 
-mxnet.metric
+gluon.metric
 ============
 
-.. automodule:: mxnet.metric
+.. automodule:: mxnet.gluon.metric
     :members:
     :autosummary:
