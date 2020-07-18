@@ -440,6 +440,7 @@ def test_grad_with_stype():
             check_grad_with_stype(stype, grad_stype, grad_stype)
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_sparse_dot_grad():
     def check_sparse_dot_grad(rhs):
         lhs = rand_ndarray((2, 8), 'csr')
