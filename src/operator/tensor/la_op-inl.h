@@ -36,7 +36,8 @@ using namespace mshadow;
 // Copies lower/upper triangular part to upper/lower, i.e. to the opposite side.
 struct CopyTriangularToOppositeSide {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(index_t i, size_t matrix_size, index_t stride, DType* data, bool to_lower) {
+  MSHADOW_XINLINE static void Map(index_t i, size_t matrix_size, index_t stride,
+                                  DType* data, bool to_lower) {
     // Below computation works even when we are dealing with a batch of matrices.
     const index_t row((i % matrix_size) / stride), col(i % stride);
     if (row > col) {
