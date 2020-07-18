@@ -327,14 +327,6 @@ OpStatePtr CreateEinsumState(const NodeAttrs& attrs,
   return OpStatePtr::Create<EinsumOp>(param.num_args, param.optimize, param.subscripts);
 }
 
-inline void NumpyEinsumForwardCpu(const OpStatePtr& state_ptr,
-                                  const OpContext& ctx,
-                                  const std::vector<TBlob>& inputs,
-                                  const std::vector<OpReqType>& req,
-                                  const std::vector<TBlob>& outputs) {
-  NumpyEinsumForward<cpu>(state_ptr, ctx, inputs, req, outputs);
-}
-
 DMLC_REGISTER_PARAMETER(NumpyEinsumParam);
 
 NNVM_REGISTER_OP(_npi_einsum)
@@ -362,7 +354,7 @@ NNVM_REGISTER_OP(_npi_einsum)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>(1, ResourceRequest::kTempSpace);
   })
-.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", NumpyEinsumForwardCpu)
+.set_attr<FStatefulCompute>("FStatefulCompute<cpu>", NumpyEinsumForward<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_einsum"})
 .add_argument("data", "NDArray-or-Symbol[]", "List of eimsum operands")
 .add_arguments(NumpyEinsumParam::__FIELDS__());

@@ -52,9 +52,12 @@ using ModeType = int32_t;
 
 struct CuTensorEinsumParam : public dmlc::Parameter<CuTensorEinsumParam> {
   int num_args;
-  std::string equation;    
+  std::string equation;
   CuTensorEinsumParam(int n, std::string eq):
-    num_args(n), equation(eq) {}
+    num_args(n), equation(eq) {
+      auto end_pos = std::remove(equation.begin(), equation.end(), ' ');
+      equation.erase(end_pos, equation.end());
+    }
   bool operator==(const CuTensorEinsumParam& other) const {
     return this->num_args == other.num_args; //&&
            ! this->equation.compare(other.equation);
@@ -134,7 +137,7 @@ class CuTensorEinsumOp {
             const std::vector<TBlob>& inputs,
             const std::vector<TBlob>& outputs,
             const RunContext& rctx,
-            bool add_to_weight) {
+            bool req_write) {
     //printf("Initializing\n");
     mshadow::Stream<gpu> *s = rctx.get_stream<gpu>();
 
@@ -228,11 +231,11 @@ class CuTensorEinsumOp {
                                               workspace_size));
   }
 
-  void Forward(const OpContext &ctx,
+  void Compute(const OpContext &ctx,
                const std::vector<TBlob> &inputs,
                const std::vector<OpReqType> &req,
                const std::vector<TBlob> &outputs) {
-    //printf("Forward\n");
+    //printf("Compute\n");
     mxnet_op::Stream<gpu>* s = ctx.get_stream<gpu>();
 
     const TBlob &tensor_a = inputs[0];
@@ -292,7 +295,7 @@ static CuTensorEinsumOp<DType>& GetCuTensorEinsumOp(const CuTensorEinsumParam& p
                                                     const std::vector<TBlob>& inputs,
                                                     const std::vector<TBlob>& outputs,
                                                     const RunContext& rctx,
-                                                    bool add_to_weight) {
+                                                    bool req_write) {
   //printf("GetCuTensorEinsumOp\n");
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<EinsumSignature,
@@ -315,11 +318,11 @@ static CuTensorEinsumOp<DType>& GetCuTensorEinsumOp(const CuTensorEinsumParam& p
     ndim += s.ndim();
   key.Reserve(ndim + // for in and out shapes
               1 + // for dev_id
-              1 ); // for add_to_weight
+              1 ); // for req_write
   key.AddSign(in_shape);
   key.AddSign(out_shape);
   key.AddSign(rctx.ctx.dev_id);
-  key.AddSign(add_to_weight ? 1 : 0);
+  key.AddSign(req_write ? 1 : 0);
   /// !!!! I think we need to check Aligment as well, which will lead to:
   // InitializeModes, Initialize Tesor Descriptors & cutensorGetAlignmentRequirement
   // still will avoid: cutensorInitContractionDescriptor, cutensorInitContractionFind,
@@ -334,7 +337,7 @@ static CuTensorEinsumOp<DType>& GetCuTensorEinsumOp(const CuTensorEinsumParam& p
     it = ins_ret.first;
     it->second->Init(param, in_shape, out_shape, 
                      inputs, outputs,
-                     rctx, add_to_weight);
+                     rctx, req_write);
   }
   return *it->second;
 }
@@ -349,23 +352,94 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
   // cutensor only available for compute capability larger or equal to 6.0
   STATIC_ASSERT_CUDNN_VERSION_GE(6000);
   const EinsumOp& state = state_ptr.get_state<EinsumOp>();
-  CuTensorEinsumParam cutensor_param(state.num_args, state.subscripts);
-  auto add_to_weight = false;
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    CuTensorEinsumOp<DType> &op = GetCuTensorEinsumOp<DType>
-        (cutensor_param, inputs, outputs,
-         ctx.run_ctx, add_to_weight);
-    op.Forward(ctx, inputs, req, outputs);
-  });
+  if (state.num_args != 2) {
+    NumpyEinsumForward<gpu>(state_ptr, ctx, inputs, req, outputs);
+  } else {
+    CuTensorEinsumParam cutensor_param(state.num_args, state.subscripts);
+    auto req_write = false;
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      CuTensorEinsumOp<DType> &op = GetCuTensorEinsumOp<DType>
+          (cutensor_param, inputs, outputs,
+           ctx.run_ctx, req_write);
+      op.Compute(ctx, inputs, req, outputs);
+    });
+  }
 #else
   NumpyEinsumForward<gpu>(state_ptr, ctx, inputs, req, outputs);
 #endif
 }
 
+inline void NumpyEinsumBackwardGpu(const OpStatePtr& state_ptr,
+                                   const OpContext& ctx,
+                                   const std::vector<TBlob>& inputs,
+                                   const std::vector<OpReqType>& req,
+                                   const std::vector<TBlob>& outputs) {
+#if MXNET_USE_CUTENSOR == 1
+  // cutensor only available for compute capability larger or equal to 6.0
+  STATIC_ASSERT_CUDNN_VERSION_GE(6000);
+  const EinsumOp& state = state_ptr.get_state<EinsumOp>();
+  if (state.num_args != 2) {
+    NumpyEinsumBackward<gpu>(state_ptr, ctx, inputs, req, outputs);
+  } else {
+    std::string original_equation = state.subscripts;
+    int comma_pos = original_equation.find(",");
+    int arrow_pos = original_equation.find("->", comma_pos + 1);
+    int len_op2 = arrow_pos - comma_pos - 1;
+    auto req_write = req[0] == kWriteTo;
+
+    // inputs: out_grad, operand1, operand2
+    // outputs: grad_operand1, grad_operand2
+
+    // gradient for first operand
+    std::vector<TBlob> grad_operand1_inputs;
+    std::vector<TBlob> grad_operand1_outputs;
+    grad_operand1_inputs.push_back(inputs[0]);
+    grad_operand1_inputs.push_back(inputs[2]);
+    grad_operand1_outputs.push_back(outputs[0]);
+    std::string grad_operand1_equation = original_equation.substr(arrow_pos + 2);
+    grad_operand1_equation += ",";
+    grad_operand1_equation += original_equation.substr(comma_pos + 1, len_op2);
+    grad_operand1_equation += "->";
+    grad_operand1_equation += original_equation.substr(0, comma_pos);
+
+    CuTensorEinsumParam cutensor_param1(state.num_args, grad_operand1_equation);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      CuTensorEinsumOp<DType> &op = GetCuTensorEinsumOp<DType>
+          (cutensor_param1, grad_operand1_inputs, grad_operand1_outputs,
+           ctx.run_ctx, req_write);
+      op.Compute(ctx, grad_operand1_inputs, req, grad_operand1_outputs);
+    });
+
+    // gradient for second operand
+    std::vector<TBlob> grad_operand2_inputs;
+    std::vector<TBlob> grad_operand2_outputs;
+    grad_operand2_inputs.push_back(inputs[1]);
+    grad_operand2_inputs.push_back(inputs[0]);
+    grad_operand2_outputs.push_back(outputs[1]);
+    std::string grad_operand2_equation = original_equation.substr(0, comma_pos);
+    grad_operand2_equation += ",";
+    grad_operand2_equation += original_equation.substr(arrow_pos + 2);
+    grad_operand2_equation += "->";
+    grad_operand2_equation += original_equation.substr(comma_pos + 1, len_op2);
+
+    CuTensorEinsumParam cutensor_param2(state.num_args, grad_operand2_equation);
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      CuTensorEinsumOp<DType> &op = GetCuTensorEinsumOp<DType>
+          (cutensor_param2, grad_operand2_inputs, grad_operand2_outputs,
+           ctx.run_ctx, req_write);
+      op.Compute(ctx, grad_operand2_inputs, req, grad_operand2_outputs);
+    });
+  }
+#else
+  NumpyEinsumBackward<gpu>(state_ptr, ctx, inputs, req, outputs);
+#endif
+}
+
+
 NNVM_REGISTER_OP(_npi_einsum)
 .set_attr<FStatefulCompute>("FStatefulCompute<gpu>", NumpyEinsumForwardGpu);
 NNVM_REGISTER_OP(_backward_npi_einsum)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", NumpyEinsumBackward<gpu>);
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", NumpyEinsumBackwardGpu);
 
 }  // namespace op
 }  // namespace mxnet
