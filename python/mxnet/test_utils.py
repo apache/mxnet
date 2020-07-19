@@ -70,19 +70,110 @@ def default_dtype():
     # _TODO: get default dtype from environment variable
     return np.float32
 
+def default_rtols():
+    """Get default relative tolerances for data comparisons involving each data type."""
+    return {np.dtype(np.float16): 1e-2,
+            np.dtype(np.float32): 1e-4,
+            np.dtype(np.float64): 1e-5,
+            np.dtype(np.bool): 0,
+            np.dtype(np.int8): 0,
+            np.dtype(np.uint8): 0,
+            np.dtype(np.int32): 0,
+            np.dtype(np.uint32): 0,
+            np.dtype(np.int64): 0,
+            np.dtype(np.uint64): 0}
 
-def get_atol(atol=None):
+def default_atols():
+    """Get default absolute tolerances for data comparisons involving each data type."""
+    return {np.dtype(np.float16): 1e-1,
+            np.dtype(np.float32): 1e-3,
+            np.dtype(np.float64): 1e-20,
+            np.dtype(np.bool): 0,
+            np.dtype(np.int8): 0,
+            np.dtype(np.uint8): 0,
+            np.dtype(np.int32): 0,
+            np.dtype(np.uint32): 0,
+            np.dtype(np.int64): 0,
+            np.dtype(np.uint64): 0}
+
+def default_numeric_eps():
+    """Get default epsilon for finite difference gradient calculations with data type."""
+    # prefer a power-of-two eps, since no bits are dropped when serving as an input delta
+    return {np.dtype(np.float16): 1.0 / 2**6,
+            np.dtype(np.float32): 1.0 / 2**9,
+            np.dtype(np.float64): 1.0 / 2**14}
+
+
+def effective_dtype(dat):
+    """ Return the most appropriate dtype for determining the tolerance used in dat comparisons
+    Parameters
+    ----------
+    dat : np.ndarray or mx.nd.array or mx.np.ndarray
+    """
+    # On arch 80 gpus, a float32-io gemm or conv op will trim the mantissa of data
+    # inputs to be of comparable precision to a float16, so float16 becomes the
+    # 'effective dtype' for tolerance tests involving such op outputs.
+
+    # Is TF32 enabled in the ctx (the default on arch 80 GPUs)
+    def is_TF32_enabled(ctx):
+        try:
+            return (ctx.device_type == 'gpu' and
+                    get_cuda_compute_capability(ctx) == 80 and
+                    os.environ.get('NVIDIA_TF32_OVERRIDE') != '0')
+        except:  # pylint: disable=bare-except
+            return False
+
+    ctx = dat.ctx if hasattr(dat, 'ctx') else None
+    dtype = np.dtype(dat.dtype)
+    if dtype == np.dtype(np.float32) and is_TF32_enabled(ctx):
+        return np.dtype(np.float16)
+    else:
+        return dtype
+
+
+def get_tolerance(dat, tol, default_tol):
+    """ Return the tolerance to be used for dat comparisons based on the given tol, datatype and context.
+    Parameters
+    ----------
+    dat : np.ndarray or mx.nd.array or mx.np.ndarray
+    tol : float, or a dict of dtype->float
+    default_tol : default dict of dtype->float for all types
+    """
+
+    if isinstance(tol, numbers.Number):
+        return tol
+
+    # If the caller has supplied a tol dict, use that if it has an entry for dtype,
+    # else use the supplied default tol dict.
+    dtype = effective_dtype(dat)
+    tol = {} if tol is None else tol
+    return tol.get(dtype, default_tol[dtype])
+
+
+def get_tols(x, y, rtol, atol):
+    """For comparing two datasets 'x' and 'y', what relative and absolute tolerances should be used."""
+    # Tolerance analysis needs 'dtype' of 'x' and 'y', so convert numbers to numpy scalars as needed
+    if isinstance(x, numbers.Number):
+        x = np.array(x)
+    if isinstance(y, numbers.Number):
+        y = np.array(y)
+
+    # If tols are not specified, use the largest default tol for 'x' and 'y' based on their ctx and dtype.
+    rtol = max(get_tolerance(x, rtol, default_rtols()),
+               get_tolerance(y, rtol, default_rtols()))
+    atol = max(get_tolerance(x, atol, default_atols()),
+               get_tolerance(y, atol, default_atols()))
+
+    return rtol, atol
+
+
+def get_atol(atol=None, dtype=np.dtype(np.float64)):
     """Get default numerical threshold for regression test."""
-    # _TODO: get from env variable, different threshold might
-    # be needed for different device and dtype
-    return 1e-20 if atol is None else atol
+    return default_atols()[dtype] if atol is None else atol
 
-
-def get_rtol(rtol=None):
+def get_rtol(rtol=None, dtype=np.dtype(np.float64)):
     """Get default numerical threshold for regression test."""
-    # _TODO: get from env variable, different threshold might
-    # be needed for different device and dtype
-    return 1e-5 if rtol is None else rtol
+    return default_rtols()[dtype] if rtol is None else rtol
 
 def get_etol(etol=None):
     """Get default numerical threshold for regression test."""
@@ -499,10 +590,8 @@ def np_reduce(dat, axis, keepdims, numpy_reduce_func):
     return ret
 
 
-def find_max_violation(a, b, rtol=None, atol=None):
+def _find_max_violation(a, b, rtol, atol):
     """Finds and returns the location of maximum violation."""
-    rtol = get_rtol(rtol)
-    atol = get_atol(atol)
     # 'smart' absdiff that considers inf's as equals (to match np.allclose)
     absdiff = np.where(np.equal(a, b), 0, np.abs(a-b))
     tol = atol + rtol*np.abs(b)
@@ -565,9 +654,9 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     ----------
     a : np.ndarray or mx.nd.array
     b : np.ndarray or mx.nd.array
-    rtol : None or float
+    rtol : None or float or dict of dtype -> float
         The relative threshold. Default threshold will be used if set to ``None``.
-    atol : None or float
+    atol : None or float or dict of dtype -> float
         The absolute threshold. Default threshold will be used if set to ``None``.
     names : tuple of names, optional
         The names used in error message when an exception occurs
@@ -579,8 +668,12 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
     if not use_broadcast:
         checkShapes(a, b)
 
-    rtol = get_rtol(rtol)
-    atol = get_atol(atol)
+    rtol, atol = get_tols(a, b, rtol, atol)
+
+    if isinstance(a, mx.numpy.ndarray):
+        a = a.asnumpy()
+    if isinstance(b, mx.numpy.ndarray):
+        b = b.asnumpy()
     use_np_allclose = isinstance(a, np.ndarray) and isinstance(b, np.ndarray)
     if not use_np_allclose:
         if not (hasattr(a, 'ctx') and hasattr(b, 'ctx') and a.ctx == b.ctx and a.dtype == b.dtype):
@@ -604,32 +697,37 @@ def assert_almost_equal(a, b, rtol=None, atol=None, names=('a', 'b'), equal_nan=
         a = a.asnumpy()
         b = b.asnumpy()
 
-    index, rel = find_max_violation(a, b, rtol, atol)
-    indexErr = index
-    relErr = rel
+    index, rel = _find_max_violation(a, b, rtol, atol)
+    if index != ():
+        # a, b are the numpy arrays
+        indexErr = index
+        relErr = rel
 
-    print('\n*** Maximum errors for vector of size {}:  rtol={}, atol={}\n'.format(a.size, rtol, atol))
-    aTmp = a.copy()
-    bTmp = b.copy()
-    i = 1
-    while i <= a.size:
-        if i <= mismatches[0]:
-            print("%3d: Error %f  %s" %(i, rel, locationError(a, b, index, names)))
+        print('\n*** Maximum errors for vector of size {}:  rtol={}, atol={}\n'.format(a.size, rtol, atol))
+        aTmp = a.copy()
+        bTmp = b.copy()
+        i = 1
+        while i <= a.size:
+            if i <= mismatches[0]:
+                print("%3d: Error %f  %s" %(i, rel, locationError(a, b, index, names)))
 
-        aTmp[index] = bTmp[index] = 0
-        if almost_equal(aTmp, bTmp, rtol, atol, equal_nan=equal_nan):
-            break
+            aTmp[index] = bTmp[index] = 0
+            if almost_equal(aTmp, bTmp, rtol, atol, equal_nan=equal_nan):
+                break
 
-        i += 1
-        if i <= mismatches[1] or mismatches[1] <= 0:
-            index, rel = find_max_violation(aTmp, bTmp, rtol, atol)
-        else:
-            break
+            i += 1
+            if i <= mismatches[1] or mismatches[1] <= 0:
+                index, rel = _find_max_violation(aTmp, bTmp, rtol, atol)
+            else:
+                break
 
-    mismatchDegree = "at least " if mismatches[1] > 0 and i > mismatches[1] else ""
-    errMsg = "Error %f exceeds tolerance rtol=%e, atol=%e (mismatch %s%f%%).\n%s" % \
-             (relErr, rtol, atol, mismatchDegree, 100*i/a.size, \
-             locationError(a, b, indexErr, names, maxError=True))
+        mismatchDegree = "at least " if mismatches[1] > 0 and i > mismatches[1] else ""
+        errMsg = "Error %f exceeds tolerance rtol=%e, atol=%e (mismatch %s%f%%).\n%s" % \
+                 (relErr, rtol, atol, mismatchDegree, 100*i/a.size, \
+                  locationError(a, b, indexErr, names, maxError=True))
+    else:
+        errMsg = "Error %f exceeds tolerance rtol=%e, atol=%e.\n" % (rel, rtol, atol)
+
     np.set_printoptions(threshold=4, suppress=True)
     msg = npt.build_err_msg([a, b], err_msg=errMsg)
 
@@ -648,16 +746,25 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
     ----------
     a : np.ndarray
     b : np.ndarray
+    rtol : None or float or dict of dtype -> float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float or dict of dtype -> float
+        The absolute threshold. Default threshold will be used if set to ``None``.
     threshold : None or float
         The checking threshold. Default threshold will be used if set to ``None``.
     etol : None or float
         The error rate threshold. If etol is float, return true if error_rate < etol even if
         any error is found.
+    names : tuple of names, optional
+        The names used in error message when an exception occurs
+    equal_nan : boolean, optional
+        The flag determining how to treat NAN values in comparison
+    mismatches : tuple of mismatches
+        Maximum number of mismatches to be printed (mismatches[0]) and determine (mismatches[1])
     """
     etol = get_etol(etol)
     if etol > 0:
-        rtol = get_rtol(rtol)
-        atol = get_atol(atol)
+        rtol, atol = get_tols(a, b, rtol, atol)
         if isinstance(a, mx.nd.NDArray):
             a = a.asnumpy()
         if isinstance(b, mx.nd.NDArray):
@@ -665,7 +772,7 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
         equals = np.isclose(a, b, rtol=rtol, atol=atol)
         err = 1 - np.count_nonzero(equals) / equals.size
         if err > etol:
-            index, rel = find_max_violation(a, b, rtol, atol)
+            index, rel = _find_max_violation(a, b, rtol, atol)
             indexErr = index
             relErr = rel
 
@@ -683,7 +790,7 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
 
                 i += 1
                 if i <= mismatches[1] or mismatches[1] <= 0:
-                    index, rel = find_max_violation(aTmp, bTmp, rtol, atol)
+                    index, rel = _find_max_violation(aTmp, bTmp, rtol, atol)
                 else:
                     break
 
@@ -696,31 +803,6 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
             raise AssertionError(msg)
     else:
         assert_almost_equal(a, b, rtol=rtol, atol=atol, equal_nan=equal_nan)
-
-
-def almost_equal_ignore_nan(a, b, rtol=None, atol=None):
-    """Test that two NumPy arrays are almost equal (ignoring NaN in either array).
-    Combines a relative and absolute measure of approximate eqality.
-    If either the relative or absolute check passes, the arrays are considered equal.
-    Including an absolute check resolves issues with the relative check where all
-    array values are close to zero.
-
-    Parameters
-    ----------
-    a : np.ndarray
-    b : np.ndarray
-    rtol : None or float
-        The relative threshold. Default threshold will be used if set to ``None``.
-    atol : None or float
-        The absolute threshold. Default threshold will be used if set to ``None``.
-    """
-    a = np.copy(a)
-    b = np.copy(b)
-    nan_mask = np.logical_or(np.isnan(a), np.isnan(b))
-    a[nan_mask] = 0
-    b[nan_mask] = 0
-
-    return almost_equal(a, b, rtol, atol)
 
 
 def assert_almost_equal_ignore_nan(a, b, rtol=None, atol=None, names=('a', 'b')):
@@ -954,7 +1036,7 @@ def numeric_grad(executor, location, aux_states=None, eps=1e-4,
 
     return approx_grads
 
-def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rtol=1e-2,
+def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=None, rtol=None,
                            atol=None, grad_nodes=None, use_forward_train=True, ctx=None,
                            grad_stype_dict=None, dtype=default_dtype()):
     """Verify an operation by checking backward pass via finite difference method.
@@ -979,8 +1061,10 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         The auxiliary states required when generating the executor for the symbol.
     numeric_eps : float, optional
         Delta for the finite difference method that approximates the gradient.
-    check_eps : float, optional
-        relative error eps used when comparing numeric grad to symbolic grad.
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to ``None``.
     grad_nodes : None or list or tuple or dict, optional
         Names of the nodes to check gradient on
     use_forward_train : bool
@@ -997,9 +1081,6 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
     [1] https://github.com/Theano/Theano/blob/master/theano/gradient.py
     """
     assert dtype in (np.float16, np.float32, np.float64)
-    # cannot use finite differences with small eps without high precision
-    if dtype in (np.float32, np.float16):
-        assert numeric_eps >= 1e-5
     if ctx is None:
         ctx = default_context()
 
@@ -1074,18 +1155,18 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
 
     executor.forward(is_train=True)
     assert len(executor.outputs) == 1
+
+    eps = get_tolerance(executor.outputs[0], numeric_eps, default_numeric_eps())
+    # cannot use finite differences with small eps without high precision
+    if dtype in (np.float32, np.float16):
+        assert eps >= 1e-5
+
     executor.backward()
-    symbolic_grads = {}
-    for k in grad_nodes:
-        grad_k = executor.grad_dict[k]
-        if grad_k is not None:
-            symbolic_grads[k] = grad_k.asnumpy()
-        else:
-            symbolic_grads[k] = None
+    symbolic_grads = executor.grad_dict
 
     numeric_gradients = numeric_grad(
         executor, location_npy, aux_states_npy,
-        eps=numeric_eps, use_forward_train=use_forward_train, dtype=dtype)
+        eps=eps, use_forward_train=use_forward_train, dtype=dtype)
 
     for name in grad_nodes:
         fd_grad = numeric_gradients[name]
@@ -1095,6 +1176,8 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
             assert_almost_equal(fd_grad, sym_grad, rtol, atol,
                                 ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
         elif grad_req[name] == 'add':
+            if isinstance(sym_grad, mx.nd.NDArray):
+                sym_grad = sym_grad.asnumpy()
             assert_almost_equal(fd_grad, sym_grad - orig_grad, rtol, atol,
                                 ("NUMERICAL_%s"%name, "BACKWARD_%s"%name))
         elif grad_req[name] == 'null':
@@ -1103,7 +1186,7 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
             raise ValueError("Invalid grad_req %s for argument %s"%(grad_req[name], name))
 
 
-def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
+def check_symbolic_forward(sym, location, expected, rtol=None, atol=None,
                            aux_states=None, ctx=None, equal_nan=False,
                            dtype=default_dtype()):
     """Compares a symbol's forward results with the expected ones.
@@ -1127,8 +1210,10 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains arrays corresponding to exe.outputs.
         - if type is dict of str to np.ndarray
             Contains mapping between sym.list_output() and exe.outputs.
-    check_eps : float, optional
-        Relative error to check to.
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to ``None``.
     aux_states : list of np.ndarray of dict, optional
         - if type is list of np.ndarray
             Contains all the NumPy arrays corresponding to sym.list_auxiliary_states
@@ -1177,14 +1262,14 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
 
     executor.forward(is_train=False)
 
-    outputs = [x.asnumpy() for x in executor.outputs]
+    outputs = executor.outputs
     for output_name, expect, output in zip(sym.list_outputs(), expected, outputs):
         assert_almost_equal(expect, output, rtol, atol,
                             ("EXPECTED_%s"%output_name, "FORWARD_%s"%output_name),
                             equal_nan=equal_nan)
     return executor.outputs
 
-def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=None,
+def check_symbolic_backward(sym, location, out_grads, expected, rtol=None, atol=None,
                             aux_states=None, grad_req='write', ctx=None, grad_stypes=None,
                             equal_nan=False, dtype=default_dtype()):
     """Compares a symbol's backward results with the expected ones.
@@ -1215,8 +1300,10 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
             Contains arrays corresponding to exe.grad_arrays
         - if type is dict of str to np.ndarray
             Contains mapping between ``sym.list_arguments()`` and exe.outputs.
-    check_eps: float, optional
-        Relative error to check to.
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to ``None``.
     aux_states : list of np.ndarray or dict of str to np.ndarray
     grad_req : str or list of str or dict of str to str, optional
         Gradient requirements. 'write', 'add' or 'null'.
@@ -1302,7 +1389,7 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
         assert out_grads is None
     executor.backward(out_grads)
 
-    grads = {k: v.asnumpy() for k, v in args_grad_data.items()}
+    grads = args_grad_data
 
     for name in expected:
         if grad_req[name] == 'write':
@@ -1310,7 +1397,8 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
                                 ("EXPECTED_%s"%name, "BACKWARD_%s"%name),
                                 equal_nan=equal_nan)
         elif grad_req[name] == 'add':
-            assert_almost_equal(expected[name], grads[name] - args_grad_npy[name],
+            grad = grads[name].asnumpy() if isinstance(grads[name], mx.nd.NDArray) else grads[name]
+            assert_almost_equal(expected[name], grad - args_grad_npy[name],
                                 rtol, atol, ("EXPECTED_%s"%name, "BACKWARD_%s"%name),
                                 equal_nan=equal_nan)
         elif grad_req[name] == 'null':
@@ -1395,16 +1483,8 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
         raise ValueError('typ can only be "whole" or "forward".')
 
 
-def get_tolerance(rtol, ctx):
-    if 'atol' in ctx:
-        return ctx['atol']
-    if 'atol_mult' in ctx:
-        return ctx['atol_mult'] * rtol
-    return rtol
-
-
 def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
-                      arg_params=None, aux_params=None, tol=None,
+                      arg_params=None, aux_params=None, rtol=None, atol=None,
                       raise_on_err=True, ground_truth=None, equal_nan=False,
                       use_uniform=False, rand_type=np.float64):
     """Check symbol gives the same output for different running context
@@ -1419,6 +1499,20 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         Standard deviation of the inner normal distribution. Used in initialization.
     grad_req : str or list of str or dict of str to str
         Gradient requirement.
+    arg_params : dict of input name -> input data
+        data to use for non-aux inputs
+    aux_params : dict of input name -> input data
+        data to use for aux inputs
+    rtol : float or dictionary dtype->float, optional
+        The relative error tolerance.
+    atol : float or dictionary dtype->float, optional
+        The absolute error tolerance.
+    raise_on_err : bool, optional, defaults to True
+        Should an error raise an exception (or just output exception message)
+    ground_truth : dict of output name -> data, optional
+        Provided ideal result to be compared against
+    equal_nan : bool, optional, defaults to False
+        Should nans be treated as equal in the comparison
     use_unifrom: bool
         Optional, When flag set to true,
         random input data generated follows uniform distribution,
@@ -1454,20 +1548,6 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
   'type_dict': {'concat_arg0': np.float32, 'concat_arg1': np.float32}}]
     >>> check_consistency(sym, ctx_list)
     """
-    if tol is None:
-        tol = {np.dtype(np.float16): 1e-1,
-               np.dtype(np.float32): 1e-3,
-               np.dtype(np.float64): 1e-5,
-               np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0,
-               np.dtype(np.int64): 0}
-    elif isinstance(tol, numbers.Number):
-        tol = {np.dtype(np.float16): tol,
-               np.dtype(np.float32): tol,
-               np.dtype(np.float64): tol,
-               np.dtype(np.uint8): tol,
-               np.dtype(np.int32): tol,
-               np.dtype(np.int64): tol}
 
     assert len(ctx_list) > 1
     if isinstance(sym, Symbol):
@@ -1485,10 +1565,16 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
 
     arg_params = {} if arg_params is None else arg_params
     aux_params = {} if aux_params is None else aux_params
-    for n, arr in exe_list[0].arg_dict.items():
+
+    # returns the least precise of two dtypes
+    def smaller_dtype(dt1, dt2):
+        return dt1 if dt2 is None or np.dtype(dt1).itemsize < np.dtype(dt2).itemsize else dt2
+
+    # It's important to assign random inputs in a deterministic order, for reproducibility.
+    for n, arr in _sorted_items(exe_list[0].arg_dict):
         if n not in arg_params:
             if use_uniform:
-                arg_params[n] = np.random.uniform(low=-0.92, high=0.92,
+                arg_params[n] = np.random.uniform(low=-0.92 * scale, high=0.92 * scale,
                                                   size=arr.shape).astype(rand_type)
             else:
                 arg_params[n] = np.random.normal(size=arr.shape,
@@ -1511,25 +1597,22 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         exe.forward(is_train=False)
 
     dtypes = [np.dtype(exe.outputs[0].dtype) for exe in exe_list]
-    max_idx = np.argmax(dtypes)
+    # Select the ground truth as the first model having the highest precision output[0]
+    gt_idx = np.argmax(dtypes)
     gt = ground_truth
     if gt is None:
-        gt = exe_list[max_idx].output_dict.copy()
+        gt = exe_list[gt_idx].output_dict.copy()
 
     for i, exe in enumerate(exe_list):
-        if i == max_idx:
+        if i == gt_idx:
             continue
 
-        rtol = tol[dtypes[i]]
-        atol = get_tolerance(rtol, ctx_list[i])
         for name, arr in zip(output_names, exe.outputs):
-            # Previously, the cast was to dtypes[i], but symbol may be mixed-precision,
-            # so casting the ground truth to the actual output type seems more correct.
-            gtarr = gt[name].astype(arr.dtype)
+            gtarr = gt[name]
             try:
                 assert_almost_equal(arr, gtarr, rtol=rtol, atol=atol, equal_nan=equal_nan)
             except AssertionError as e:
-                print('Predict Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
+                print('Predict Err: ctx %d vs ctx %d at %s'%(i, gt_idx, name))
                 traceback.print_exc()
                 if raise_on_err:
                     raise e
@@ -1538,33 +1621,55 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
 
     # train
     if grad_req != 'null':
+        # Perform forward()
         for exe in exe_list:
             exe.forward(is_train=True)
-            exe.backward(exe.outputs)
+        # Use the first executor's output data, cast to the least precise dtype,
+        # as the gradient data to pass to all executor's backward() call.
+        least_precise_dtype = [out.dtype for out in exe_list[0].outputs]
+        for exe in exe_list:
+            least_precise_dtype = [smaller_dtype(out1.dtype, dt) \
+                                    for (out1, dt) in zip(exe.outputs, least_precise_dtype)]
+        golden_data_np = [out.astype(dt).asnumpy() \
+                          for (out, dt) in zip(exe_list[0].outputs, least_precise_dtype)]
+        # Perform backward()
+        for exe in exe_list:
+            out_grads = [mx.nd.array(golden_np, ctx=exe._ctx,
+                                     dtype=out.dtype).tostype(out.stype)
+                         for (golden_np, out) in zip(golden_data_np, exe.outputs)]
+            exe.backward(out_grads)
+
         gt = ground_truth
         if gt is None:
-            gt = exe_list[max_idx].output_dict.copy()
+            gt = exe_list[gt_idx].output_dict.copy()
             if grad_req != 'null':
-                gt.update(exe_list[max_idx].grad_dict)
+                gt.update(exe_list[gt_idx].grad_dict)
         for i, exe in enumerate(exe_list):
-            if i == max_idx:
+            if i == gt_idx:
                 continue
 
-            rtol = tol[dtypes[i]]
-            atol = get_tolerance(rtol, ctx_list[i])
             curr = zip(output_names + arg_names, exe.outputs + exe.grad_arrays)
             for name, arr in curr:
                 if gt[name] is None:
                     assert arr is None, name
                     continue
 
-                # Previous cast was to dtypes[i], but symbol may be mixed-precision,
-                # so casting the ground truth to the actual output type seems more correct.
-                gtarr = gt[name].astype(arr.dtype)
+                gtarr = gt[name]
                 try:
-                    assert_almost_equal(arr, gtarr, rtol=rtol, atol=atol, equal_nan=equal_nan)
+                    rt, at = rtol, atol
+                    # If the primary data i/o type is float16, then the tolerance used when
+                    # comparing a float32 input gradient (e.g. batchnorm gamma) should be float16.
+                    smaller_arr_dtype = smaller_dtype(arr.dtype, dtypes[i])
+                    smaller_gt_dtype = smaller_dtype(gtarr.dtype, dtypes[gt_idx])
+                    if smaller_arr_dtype != arr.dtype or \
+                       smaller_gt_dtype != gtarr.dtype:
+                        rt, at = get_tols(arr.astype(smaller_arr_dtype),
+                                          gtarr.astype(smaller_gt_dtype), rtol, atol)
+                    assert_almost_equal(arr, gtarr, rtol=rt, atol=at, equal_nan=equal_nan)
                 except AssertionError as e:
-                    print('Train Err: ctx %d vs ctx %d at %s'%(i, max_idx, name))
+                    print('Train Err: {} {} ctx {} vs {} {} ctx {} at {}'.format(
+                        np.dtype(arr.dtype).name, arr.ctx, i,
+                        np.dtype(gtarr.dtype).name, gtarr.ctx, gt_idx, name))
                     traceback.print_exc()
                     if raise_on_err:
                         raise e
