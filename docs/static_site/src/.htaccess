@@ -28,7 +28,6 @@ RewriteCond %{REQUEST_URI} ^/versions/1.1.0/community/contribute.html$
 RewriteCond %{HTTP_REFERER} !mxnet.apache.org
 RewriteCond %{HTTP_REFERER} !mxnet.incubator.apache.org
 Rewriterule ^(.*)$ /versions/1.6/$1 [r=307,L]
-# Rewriterule ^(.*)$ /versions/1.6/$1 [r=307,L]
 
 # TODO temporary fix for issue #18604
 Redirect 302 /api/r/docs/api/R-package/build/mxnet-r-reference-manual.pdf https://mxnet-public.s3.us-east-2.amazonaws.com/docs/v1.x/mxnet-r-reference-manual.pdf
