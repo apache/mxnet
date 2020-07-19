@@ -1633,6 +1633,7 @@ def test_sparse_axis_operations():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_sparse_square_sum():
     dim0 = 30
     dim1 = 30

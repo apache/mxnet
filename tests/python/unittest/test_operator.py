@@ -814,21 +814,26 @@ def test_symbol_pow():
 
 @with_seed()
 def test_fully_connected():
+    # Create data of given shape as a uniform distribution centered on 0.0
+    def random_data(shape, dtype=np.float32):
+        return mx.nd.random.uniform(low=-0.5,
+                                    high=0.5, shape=shape, dtype=dtype)
     data = mx.sym.var("data")
     fc_weight = mx.sym.var("weight")
     fc_bias = mx.sym.var("bias")
     fc = mx.sym.FullyConnected(data=data, weight=fc_weight, bias=fc_bias, num_hidden=10, no_bias=False, name='fc')
-    data = mx.nd.random.uniform(shape=(5, 5, 5, 13), dtype=np.float32)
-    fc_weight = mx.nd.random.uniform(shape=(10, 325), dtype=np.float32)
-    fc_bias = mx.nd.random.uniform(shape=(10), dtype=np.float32)
-    fc_bias2 = mx.nd.random.uniform(shape=(10, 1), dtype=np.float32)
+
+    data = random_data(shape=(5, 5, 5, 13))
+    fc_weight = random_data(shape=(10, 325))
+    fc_bias = random_data(shape=(10))
+    fc_bias2 = random_data(shape=(10, 1))
+
     data_np = data.asnumpy().reshape(5, 325)
     fc_weight_np = np.transpose(fc_weight.asnumpy())
     fc_bias_np = fc_bias.asnumpy()
     res = np.dot(data_np, fc_weight_np) + fc_bias.asnumpy()
     check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np}, {'fc_output': res})
-    check_numeric_gradient(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np},
-                           numeric_eps=1e-2, rtol=1e-4, atol=1e-2)
+    check_numeric_gradient(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias_np})
     # TODO: Fix Bug #15032 when bias has ndim > 1
     #check_symbolic_forward(fc, {'data': data_np, 'weight': fc_weight.asnumpy(), 'bias': fc_bias2.asnumpy()}, {'fc_output': res})
 
@@ -1905,15 +1910,18 @@ def test_batchnorm():
 
             running_mean = running_mean * momentum + \
                 data_mean_flat * (1 - momentum)
+
+            m = np.prod(shape) / shape[axis]
+            # cudnn uses m-1 in the denominator of its sample variance calculation, not m
+            sample_var_adjust = 1.0 if cudnn_off or fix_gamma else m / (m-1)
             running_var = running_var * momentum + \
-                data_var_flat * (1 - momentum)
+                data_var_flat * sample_var_adjust * (1 - momentum)
 
             W = bn_gamma.reshape(expand_shape)
             dnx = ograd * W
             xsm = data - data_mean
             nd = 1.0 / mx.nd.sqrt(data_var + epsilon)
             nx = xsm * nd
-            m = np.prod(shape) / shape[axis]
             dvar = (dnx * xsm).sum(axis=axis, keepdims=True,
                                    exclude=True) * (-0.5) * mx.nd.power(nd, 3)
             dmean = -nd * dnx.sum(axis=axis, keepdims=True, exclude=True) - \
@@ -2848,13 +2856,13 @@ def test_reduce():
                          args_grad={'a': grad_nd})
             net.forward(is_train=True)
 
-            equal_forward = almost_equal_ignore_nan(net.outputs[0].asnumpy(), sum_groundtruth, 1E-4, 1E-4)
-            assert equal_forward
+            # check forward
+            assert_almost_equal_ignore_nan(net.outputs[0].asnumpy(), sum_groundtruth, rtol=1e-4, atol=1e-4)
 
             net.backward(out_grads=mx.nd.array(outgrad_npy))
             bc_grad_groundtruth = np.broadcast_to(grad_groundtruth, grad_nd.shape)
-            equal_backward = almost_equal_ignore_nan(grad_nd.asnumpy(), bc_grad_groundtruth, 1E-4, 1E-4)
-            assert equal_backward
+            # check backward
+            assert_almost_equal_ignore_nan(grad_nd.asnumpy(), bc_grad_groundtruth, rtol=1e-4, atol=1e-4)
 
     test_none_axis = [True, False]
     for test_none in test_none_axis:
@@ -4504,7 +4512,7 @@ def test_order():
                 out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=a_npy.size, is_ascend=is_ascend)
             else:
                 out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=5, is_ascend=is_ascend)
-            check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, ctx=ctx)
+            check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, rtol=1e-2, ctx=ctx)
             check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
 
     b = mx.sym.topk(a, axis=1, is_ascend=is_ascend, ret_typ="indices", k=5)
@@ -4552,7 +4560,7 @@ def test_order():
                 for is_ascend in [True, False]:
                     b = mx.sym.topk(a, axis=axis, is_ascend=is_ascend, ret_typ="value", k=k)
                     out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=k, is_ascend=is_ascend)
-                    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, ctx=ctx)
+                    check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, rtol=1e-2, ctx=ctx)
                     check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
 
         b = mx.sym.topk(a, axis=1, is_ascend=is_ascend, ret_typ="indices", k=5)
@@ -4716,7 +4724,7 @@ def test_grid_generator():
         # check forward
         exe.arg_dict['affine'][:] = np.array([[1.0,0,0,0,1.0,0]])
         exe.forward(is_train=True)
-        output = exe.outputs[0].asnumpy()
+        output = exe.outputs[0]
         output[0,0,:,:] = (output[0,0,:,:] + 1) * (target_shape[1] - 1) / 2.0
         output[0,1,:,:] = (output[0,1,:,:] + 1) * (target_shape[0] - 1) / 2.0
         xv, yv = np.meshgrid(np.arange(target_shape[0]), np.arange(target_shape[1]))
@@ -4731,7 +4739,7 @@ def test_grid_generator():
         tmp[1] = -1.0 + (np.arange(target_shape[0]*target_shape[1]) // target_shape[1]) * (2.0 / (target_shape[0]-1))
         tmp[2] = 1
         grad_est = np.dot(out_grad[0].reshape(2,target_shape[0]*target_shape[1]),tmp.T).reshape(1,6)
-        assert_almost_equal(exe.grad_dict['affine'], grad_est, rtol=1e-3, atol=1e-5)
+        assert_almost_equal(exe.grad_dict['affine'], grad_est)
         # check addto
         exe = grid.simple_bind(ctx=default_context(), affine=(1,6), grad_req='add')
         grid_grad_npy = np.random.normal(size=exe.grad_dict['affine'].shape)
@@ -4739,7 +4747,7 @@ def test_grid_generator():
         exe.arg_dict['affine'][:] = np.array([[1.0, 0, 0, 0, 1.0, 0]])
         exe.forward(is_train=True)
         exe.backward(mx.nd.array(out_grad))
-        assert_almost_equal(exe.grad_dict['affine'], grad_est + grid_grad_npy, rtol=1e-2, atol=1e-5)
+        assert_almost_equal(exe.grad_dict['affine'], grad_est + grid_grad_npy)
 
     # transform_type = warp
     test_case = [(12,21),(4,3),(6,12)]
@@ -5784,51 +5792,62 @@ def test_div_sqrt_dim():
     check_symbolic_forward(test, [data_tmp], [data_tmp / np.sqrt(data_tmp.shape[-1])])
 
 
+# helper function to identify inputs likely to fail check_numeric_gradient tol test
+# due to finite difference method inaccuracies or function discontuities at the origin
+def bad_input_finder(f, f_grad, dtype):
+    eps = default_numeric_eps()[np.dtype(dtype)]
+    rtol = default_rtols()[np.dtype(dtype)]
+    def expected_relative_error(x):
+        fd_gradient = (f(x+eps/2) - f(x-eps/2)) / eps
+        return abs(fd_gradient/f_grad(x) - 1)
+    def is_fd_problem_input(x):
+        return abs(x) < eps/2 or expected_relative_error(x) > rtol
+    return np.vectorize(is_fd_problem_input)
+
 @with_seed()
 def test_reciprocal_op():
-    eps = 2**(-11)
-    data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid possible division by 0 errors and finite difference method inaccuracies.
-    # Factor of 6 below set empirically, depends on eps.
-    # Issue exposed by seed 879579887.
-    # Replace problematic inputs with 1.0.
-    data_tmp[abs(data_tmp) < 6*eps] = 1.0
+    data_tmp = np.random.rand(3, 4).astype(np.float32) * 10 - 5
+
+    # Avoid possible division by 0 errors and finite difference method
+    # inaccuracies by replacing problem inputs with 1.0.
+    is_bad_input = bad_input_finder(np.reciprocal,
+                                    lambda x: -np.reciprocal(x)**2, np.float32)
+    data_tmp[is_bad_input(data_tmp)] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.reciprocal(data)
 
-    check_numeric_gradient(test, [data_tmp], numeric_eps = eps)
+    check_numeric_gradient(test, [data_tmp])
     check_symbolic_forward(test, [data_tmp], [np.reciprocal(data_tmp)])
 
 
 @with_seed()
 def test_cbrt_op():
-    eps = 2**(-11)
-    data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid finite difference method inaccuracies due to infinite gradient at the origin.
-    # Factor of 4 below set empirically, depends on eps.
-    # Issue exposed by seed 553872106.
-    # Replace problematic inputs with 1.0.
-    data_tmp[abs(data_tmp) < 4*eps] = 1.0
+    data_tmp = np.random.rand(3, 4).astype(np.float32) * 10 - 5
+
+    # Avoid possible division by 0 errors and finite difference method
+    # inaccuracies by replacing problem inputs with 1.0.
+    is_bad_input = bad_input_finder(np.cbrt,
+                                    lambda x: 1./(3 * np.cbrt(x)**2), np.float32)
+    data_tmp[is_bad_input(data_tmp)] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.cbrt(data)
-
-    check_numeric_gradient(test, [data_tmp], numeric_eps=eps)
+    check_numeric_gradient(test, [data_tmp])
     check_symbolic_forward(test, [data_tmp], [np.cbrt(data_tmp)])
 
 
 @with_seed()
 def test_rcbrt_op():
-    eps = 2**(-11)
-    data_tmp = np.random.rand(3, 4) * 10 - 5
-    # Avoid possible division by 0 errors and finite difference method inaccuracies.
-    # Factor of 4 below set empirically, depends on eps.
-    # Issue exposed by seed 788174893.
-    # Replace problematic inputs with 1.0.
-    data_tmp[abs(data_tmp) < 4*eps] = 1.0
+    data_tmp = np.random.rand(3, 4).astype(np.float32) * 10 - 5
+
+    # Avoid possible division by 0 errors and finite difference method
+    # inaccuracies by replacing problem inputs with 1.0.
+    is_bad_input = bad_input_finder(lambda x: 1./np.cbrt(x),
+                                    lambda x: -1./(3 * np.cbrt(x)**4), np.float32)
+    data_tmp[is_bad_input(data_tmp)] = 1.0
     data = mx.symbol.Variable('data')
     test = mx.sym.rcbrt(data)
 
-    check_numeric_gradient(test, [data_tmp], numeric_eps = eps)
+    check_numeric_gradient(test, [data_tmp])
     check_symbolic_forward(test, [data_tmp], [1/np.cbrt(data_tmp)])
 
 
@@ -6237,7 +6256,7 @@ def test_deformable_convolution():
                         # By now we only have gpu implementation
                         if default_context().device_type == 'gpu':
                             check_numeric_gradient(op, [im_data, offset_data, weight, bias], rtol=rtol, atol=atol,
-                                                   grad_nodes=grad_nodes, ctx=mx.gpu(0))
+                                                   grad_nodes=grad_nodes, ctx=mx.gpu(0), numeric_eps=1.0/64)
 
 
 def _validate_sample_location(input_rois, input_offset, spatial_scale, pooled_w, pooled_h, sample_per_part, part_size, output_dim, num_classes, trans_std, feat_h, feat_w):
@@ -6330,10 +6349,11 @@ def test_deformable_psroipooling():
                                                grad_nodes=grad_nodes, ctx=mx.gpu(0))
 
 
-def _gemm_test_helper(dtype, grad_check, rtol_fw = 1e-7, atol_fw = 1e-9):
-    num_eps = 1e-6
-    rtol_bw = 1e-5
-    atol_bw = 1e-6
+def _gemm_test_helper(dtype, grad_check, rtol_fw = None, atol_fw = None,
+                                         rtol_bw = None, atol_bw = None, num_eps = None):
+    def np_random_data(shape, dtype=np.float32):
+        return np.random.uniform(low=-0.5,
+                                 high=0.5, size=shape).astype(dtype)
 
     data1 = mx.symbol.Variable('data1')
     data2 = mx.symbol.Variable('data2')
@@ -6352,10 +6372,10 @@ def _gemm_test_helper(dtype, grad_check, rtol_fw = 1e-7, atol_fw = 1e-9):
     shape2 = (3, 2)
     shape3 = (3, 3)
     shape4 = (2, 2)
-    data_in1 = np.random.uniform(1, 10, shape1).astype(dtype)
-    data_in2 = np.random.uniform(1, 10, shape2).astype(dtype)
-    data_in3 = np.random.uniform(1, 10, shape3).astype(dtype)
-    data_in4 = np.random.uniform(1, 10, shape4).astype(dtype)
+    data_in1 = np_random_data(shape1, dtype)
+    data_in2 = np_random_data(shape2, dtype)
+    data_in3 = np_random_data(shape3, dtype)
+    data_in4 = np_random_data(shape4, dtype)
     # Check all transpositions of gemm operator.
     data_in1_t = np.transpose(data_in1)
     data_in2_t = np.transpose(data_in2)
@@ -6462,10 +6482,10 @@ def _gemm_test_helper(dtype, grad_check, rtol_fw = 1e-7, atol_fw = 1e-9):
 def test_gemm():
     _gemm_test_helper(np.float64, True)
     os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "0"
-    _gemm_test_helper(np.float32, False, rtol_fw = 1e-5, atol_fw = 1e-7)
+    _gemm_test_helper(np.float32, True)
     if default_context().device_type == 'gpu':
         os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "1"
-        _gemm_test_helper(np.float32, False, rtol_fw = 2e-5, atol_fw = 2e-7)
+        _gemm_test_helper(np.float32, True)
         os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "0"
 
 # Helper functions for test_laop
