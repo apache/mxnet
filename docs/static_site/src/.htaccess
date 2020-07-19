@@ -27,7 +27,7 @@ RewriteCond %{REQUEST_URI} ^/versions/1.1.0/community/contribute.html$
 # RewriteCond %{REQUEST_URI} !^/versions/
 RewriteCond %{HTTP_REFERER} !mxnet.apache.org
 RewriteCond %{HTTP_REFERER} !mxnet.incubator.apache.org
-Rewriterule ^(.*)$ /versions/1.6/community/contribute.html [r=307,L]
+Rewriterule ^(.*)$ /versions/1.6/$1 [r=307,L]
 # Rewriterule ^(.*)$ /versions/1.6/$1 [r=307,L]
 
 # TODO temporary fix for issue #18604
