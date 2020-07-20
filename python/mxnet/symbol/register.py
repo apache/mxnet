@@ -22,13 +22,13 @@ import ctypes
 import numpy as _np
 
 from . import _internal
+from .. import name as _name, attribute
 from ._internal import SymbolBase, _symbol_creator
-from ..attribute import AttrScope
 from ..base import mx_uint, check_call, _LIB, py_str
 from ..symbol_doc import _build_doc
 from ..base import _Null, _init_op_module, _is_np_op, _output_is_list
 from ..name import NameManager
-from ..profiler import Scope
+from ..profiler import _current_scope as _profiler_scope
 # pylint: enable=unused-import
 
 
@@ -170,13 +170,9 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
                 dtype_name, dtype_name, dtype_name))
             code.append("""
     attr = kwargs.pop('attr', None)
-    if not hasattr(AttrScope._current, "value"):
-        AttrScope._current.value = AttrScope()
-    kwargs.update(AttrScope._current.value.get(attr))
+    kwargs.update(attribute.current().get(attr))
     name = kwargs.pop('name', None)
-    if not hasattr(NameManager._current, "value"):
-        NameManager._current.value = NameManager()
-    name = NameManager._current.value.get(name, '%s')
+    name = _name.current().get(name, '%s')
     _ = kwargs.pop('out', None)
     keys = []
     vals = []
@@ -198,9 +194,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
             code.append("""
     if 'profiler_scope' not in keys:
         keys.append('profiler_scope')
-        if not hasattr(Scope._current, "value"):
-            Scope._current.value = Scope()
-        vals.append(Scope._current.value.name)
+        vals.append(_profiler_scope.get())
     return _symbol_creator(%d, sym_args, sym_kwargs, keys, vals, name, %s, %s)"""%(
                 handle.value, str(is_np_op), str(output_is_list)))
     else:
@@ -208,9 +202,7 @@ def %s(*%s, **kwargs):"""%(func_name, arr_name))
 def %s(%s):"""%(func_name, ', '.join(signature)))
         if not signature_only:
             code.append("""
-    if not hasattr(AttrScope._current, "value"):
-        AttrScope._current.value = AttrScope()
-    kwargs.update(AttrScope._current.value.get(attr))
+    kwargs.update(attribute.current().get(attr))
     sym_kwargs = dict()
     _keys = []
     _vals = []
@@ -255,14 +247,10 @@ def %s(%s):"""%(func_name, ', '.join(signature)))
                                                   dtype_name, dtype_name))
 
             code.append("""
-    if not hasattr(NameManager._current, "value"):
-        NameManager._current.value = NameManager()
-    name = NameManager._current.value.get(name, '%s')
+    name = _name.current().get(name, '%s')
     if 'profiler_scope' not in _keys:
         _keys.append('profiler_scope')
-        if not hasattr(Scope._current, "value"):
-            Scope._current.value = Scope()
-        _vals.append(Scope._current.value.name)
+        _vals.append(_profiler_scope.get())
     return _symbol_creator(%d, None, sym_kwargs, _keys, _vals, name, %s, %s)"""%(
         func_name.lower(), handle.value, str(is_np_op), str(output_is_list)))
 

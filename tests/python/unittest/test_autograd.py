@@ -420,6 +420,7 @@ def test_get_symbol():
     assert len(get_symbol(y).list_arguments()) == 2
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_grad_with_stype():
     def check_grad_with_stype(array_stype, grad_stype, expected_stype):
         x = mx.nd.zeros((1, 1), stype=array_stype)
@@ -439,6 +440,7 @@ def test_grad_with_stype():
             check_grad_with_stype(stype, grad_stype, grad_stype)
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_sparse_dot_grad():
     def check_sparse_dot_grad(rhs):
         lhs = rand_ndarray((2, 8), 'csr')

@@ -162,16 +162,17 @@ class GpuDeviceStorageProfiler {
     }
   }
 
+  inline void OnFree(void *dptr) {
+    // In case of bug which tries to free first
+    if (gpu_mem_alloc_entries_.find(dptr) != gpu_mem_alloc_entries_.end())
+      gpu_mem_alloc_entries_.erase(dptr);
+  }
+
   void OnFree(const Storage::Handle &handle) {
     if (handle.size > 0) {
       profiler::Profiler *prof = profiler::Profiler::Get();
-      if (prof->IsProfiling(profiler::Profiler::kMemory)) {
-        // In case of bug which tries to free first
-        if (gpu_mem_alloc_entries_.find(handle.dptr) !=
-            gpu_mem_alloc_entries_.end()) {
-          gpu_mem_alloc_entries_.erase(handle.dptr);
-        }
-      }
+      if (prof->IsProfiling(profiler::Profiler::kMemory))
+        OnFree(handle.dptr);
     }
   }
 
@@ -194,6 +195,11 @@ class GpuDeviceStorageProfiler {
   }
   /*! \brief dump the allocation entries to file */
   void DumpProfile() const;
+
+  bool inline IsProfiling() const {
+    profiler::Profiler *prof = profiler::Profiler::Get();
+    return prof->IsProfiling(profiler::Profiler::kMemory);
+  }
 
  private:
   std::string filename_prefix_ = "gpu_memory_profile";

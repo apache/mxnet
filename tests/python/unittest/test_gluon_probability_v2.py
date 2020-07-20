@@ -417,7 +417,7 @@ def test_gluon_half_cauchy():
     # Test icdf
     for shape, hybridize in itertools.product(shapes, [True, False]):
         scale = np.random.uniform(0.5, 1.5, shape)
-        samples = np.random.uniform(size=shape)
+        samples = np.random.uniform(size=shape, high=1.0-1e-4)
         net = TestHalfCauchy("icdf")
         if hybridize:
             net.hybridize()
@@ -1727,14 +1727,14 @@ def test_gluon_mvn():
                     net.hybridize()
                 mx_out = net(loc, cov_param, samples)
                 assert mx_out.shape == samples.shape[:-1]
-                # Select the first element in the batch, because scipy does not support batching.
-                loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
-                sigma_t = sigma.reshape(-1, event_shape,
-                                        event_shape)[0].asnumpy()
                 if mx_out.shape == ():
                     mx_out_t = mx_out.asnumpy()
                 else:
                     mx_out_t = mx_out.asnumpy().flatten()[0]
+                # Select the first element in the batch, because scipy does not support batching.
+                loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
+                sigma_t = sigma.reshape(-1, event_shape,
+                                        event_shape)[0].asnumpy()
                 samples_t = samples.reshape(-1, event_shape).asnumpy()[0]
                 scipy_mvn = ss.multivariate_normal(loc_t, sigma_t)
                 ss_out = scipy_mvn.logpdf(samples_t)
@@ -1758,14 +1758,14 @@ def test_gluon_mvn():
                     net.hybridize()
                 mx_out = net(loc, cov_param)
                 assert mx_out.shape == sigma.shape[:-2]
-                # Select the first element in the batch, because scipy does not support batching.
-                loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
-                sigma_t = sigma.reshape(-1, event_shape,
-                                        event_shape)[0].asnumpy()
                 if mx_out.shape == ():
                     mx_out_t = mx_out.asnumpy()
                 else:
                     mx_out_t = mx_out.asnumpy().flatten()[0]
+                # Select the first element in the batch, because scipy does not support batching.
+                loc_t = loc.reshape(-1, event_shape)[0].asnumpy()
+                sigma_t = sigma.reshape(-1, event_shape,
+                                        event_shape)[0].asnumpy()
                 scipy_mvn = ss.multivariate_normal(loc_t, sigma_t)
                 ss_out = scipy_mvn.entropy()
                 assert_almost_equal(mx_out_t, ss_out, atol=1e-4,
@@ -2081,10 +2081,11 @@ def test_gluon_kl():
                               _dist_factory(dist, rate),
                               repeated_times)
 
+
     # exponential, geometric
     for dist in [mgp.Exponential, mgp.Geometric]:
         for shape in shapes:
-            def s(): return np.random.uniform(size=shape)
+            def s(): return np.random.uniform(size=shape, low=1e-3)
             _test_zero_kl(_dist_factory(dist, s), shape)
             if monte_carlo_test:
                 _test_monte_carlo(_dist_factory(dist, s),
