@@ -1612,6 +1612,7 @@ def test_npx_softmax():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, equal_nan=True)
 
                     mx_out.backward()
+                    mx_a.grad.wait_to_read()
                     assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape), rtol=1e-3, atol=1e-5)
 
 
