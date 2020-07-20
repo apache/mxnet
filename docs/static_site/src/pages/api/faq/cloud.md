@@ -66,15 +66,9 @@ unzip mnist.zip && s3cmd put t*-ubyte s3://dmlc/mnist/
 ```
 
 ### Use Pre-installed EC2 GPU Instance
-The [Deep Learning AMI](https://aws.amazon.com/marketplace/pp/B01M0AXXQB?qid=1475211685369&sr=0-1&ref_=srh_res_product_title) is an Amazon Linux image
-supported and maintained by Amazon Web Services for use on Amazon Elastic Compute Cloud (Amazon EC2).
-It contains [MXNet-v0.9.3 tag](https://github.com/apache/incubator-mxnet) and the necessary components to get going with deep learning,
-including Nvidia drivers, CUDA, cuDNN, Anaconda, Python2 and Python3.   
-The AMI IDs are the following:
-
-* us-east-1: ami-e7c96af1
-* us-west-2: ami-dfb13ebf
-* eu-west-1: ami-6e5d6808
+The [Deep Learning AMIs](https://aws.amazon.com/marketplace/search/results?x=0&y=0&searchTerms=Deep+Learning+AMI)
+are a series of images supported and maintained by Amazon Web Services for use
+on Amazon Elastic Compute Cloud (Amazon EC2) and contain the latest MXNet release.
 
 Now you can launch _MXNet_ directly on an EC2 GPU instance.  
 You can also use [Jupyter](https://jupyter.org) notebook on EC2 machine.
@@ -83,69 +77,19 @@ on how to connect to a Jupyter notebook running on an EC2 instance.
 
 ### Set Up an EC2 GPU Instance from Scratch
 
-_MXNet_ requires the following libraries:
-
-- C++ compiler with C++11 support, such as `gcc >= 4.8`
-- `CUDA` (`CUDNN` in optional) for GPU linear algebra
-- `BLAS` (cblas, open-blas, atblas, mkl, or others) for CPU linear algebra
-- `opencv` for image augmentations
-- `curl` and `openssl` for the ability to read/write to Amazon S3
-
-Installing `CUDA` on EC2 instances requires some effort. Caffe has a good
-[tutorial](https://github.com/BVLC/caffe/wiki/Install-Caffe-on-EC2-from-scratch-(Ubuntu,-CUDA-7,-cuDNN-3))
-on how to install CUDA 7.0 on Ubuntu 14.04.
-
-***Note:*** We tried CUDA 7.5 on Nov 7, 2015, but found it problematic.
-
-You can install the rest using the package manager. For example, on Ubuntu:
-
-```
-sudo apt-get update
-sudo apt-get install -y build-essential git libcurl4-openssl-dev libatlas-base-dev libopencv-dev python-numpy
-```
-
-The Amazon Machine Image (AMI) [ami-12fd8178](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#LaunchInstanceWizard:ami=ami-12fd8178) has the  packages listed above installed.
-
-
-### Build and Run MXNet on a GPU Instance
-
-The following commands build _MXNet_ with CUDA/CUDNN, Amazon S3, and distributed
-training.
-
-```bash
-git clone --recursive https://github.com/dmlc/mxnet
-cd mxnet; cp make/config.mk .
-echo "USE_CUDA=1" >>config.mk
-echo "USE_CUDA_PATH=/usr/local/cuda" >>config.mk
-echo "USE_CUDNN=1" >>config.mk
-echo "USE_BLAS=atlas" >> config.mk
-echo "USE_DIST_KVSTORE = 1" >>config.mk
-echo "USE_S3=1" >>config.mk
-make -j$(nproc)
-```
-
-To test whether everything is installed properly, we can try training a convolutional neural network (CNN) on the MNIST dataset using a GPU:
-
-```bash
-python example/image-classification/train_mnist.py
-```
-
-If you've placed the MNIST data on `s3://dmlc/mnist`, you can read the data stored on Amazon S3 directly with the following command:
-
-```bash
-sed -i.bak "s!data_dir = 'data'!data_dir = 's3://dmlc/mnist'!" example/image-classification/train_mnist.py
-```
-
-***Note:*** You can use `sudo ln /dev/null /dev/raw1394` to fix the opencv error `libdc1394 error: Failed to initialize libdc1394`.
+[Deep Learning Base AMIs](https://aws.amazon.com/marketplace/search/results?x=0&y=0&searchTerms=Deep+Learning+Base+AMI)
+provide a foundational image with NVIDIA CUDA, cuDNN, GPU drivers, Intel
+MKL-DNN, Docker and Nvidia-Docker, etc. for deploying your own custom deep
+learning environment. You may follow the [MXNet Build From Source
+instructions](<https://mxnet.apache.org/get_started/build_from_source easily on
+the Deep Learning Base AMIs.
 
 ### Set Up an EC2 GPU Cluster for Distributed Training
 
 A cluster consists of multiple computers.
 You can use one computer with _MXNet_ installed as the root computer for submitting jobs,and then launch several
 slave computers to run the jobs. For example, launch multiple instances using an
-AMI, e.g.,
-[ami-12fd8178](https://console.aws.amazon.com/ec2/v2/home?region=us-east-1#LaunchInstanceWizard:ami=ami-12fd8178),
-with dependencies installed. There are two options:
+AMI with dependencies installed. There are two options:
 
 - Make all slaves' ports accessible (same for the root) by setting type: All TCP,
    Source: Anywhere in Configure Security Group.
