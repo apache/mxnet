@@ -201,7 +201,8 @@ CUfunction get_function(const std::string &parameters,
 
     std::cout << debug_info << " " << line_info << std::endl;
     CUjit_option jit_opts[] = {CU_JIT_GENERATE_DEBUG_INFO, CU_JIT_GENERATE_LINE_INFO};
-    void* jit_opt_values[] = {(void*)debug_info, (void*)line_info};
+    void* jit_opt_values[] = {reinterpret_cast<void*>(debug_info),
+                              reinterpret_cast<void*>(line_info)};
 
     CUDA_DRIVER_CALL(cuModuleLoadDataEx(&module, kinfo.ptx.c_str(), 2, jit_opts, jit_opt_values));
     CUDA_DRIVER_CALL(cuModuleGetFunction(&kinfo.functions[dev_id],
