@@ -175,6 +175,10 @@ class QuantizeV2Operator {
       LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
                     "please switch to the context of CPU or int8 data type for GPU.";
     }
+    if (inputs[0].type_flag_ == mshadow::kFloat16 && std::is_same<xpu, cpu>::value) {
+      LOG(FATAL) << "currently, fp16 input quantization is only supported by GPU, "
+                    "please switch to the context of GPU or fp32 data input type for CPU.";
+    }
 
     if (inputs[0].type_flag_ == mshadow::kUint8 || inputs[0].type_flag_ == mshadow::kInt8) {
       if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {

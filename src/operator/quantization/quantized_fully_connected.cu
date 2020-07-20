@@ -27,8 +27,6 @@
 #include "../mxnet_op.h"
 #include "../nn/fully_connected-inl.h"
 #include "./quantized_fully_connected-inl.h"
-#include "math.h"
-//#include "./requantize-inl.h" // for FusedRequantizeKernel when having no_bias + float_out
 
 namespace mxnet {
 namespace op {
@@ -51,6 +49,23 @@ struct FloatForOneQuantBiasAddKernel {
 
     // the tmp space to store float_for_one_quant is 32 bits (1 float numbers)
     *float_for_one_quant_tmp = float_for_one_quant_bias / float_for_one_quant_out;
+  }
+};
+
+// get quantizedtofloat scale
+struct QuantizedToFloatScale {
+  MSHADOW_XINLINE static void Map(int i,
+                                  const float *min_out,
+                                  const float *max_out, 
+                                  float *quantized_to_float_scale) {
+    typedef int32_t T1;
+
+    float quantized_range = MinAbs(MinValue<T1>(), MaxValue<T1>());
+    float real_range = MaxAbs(*min_out, *max_out);
+    float scale = real_range / quantized_range;
+
+    // the tmp space to store quantized_to_float_scale is 32 bits (1 float numbers)
+    *quantized_to_float_scale = scale;
   }
 };
 #endif  // CUDA_VERSION >= 8000
@@ -107,20 +122,43 @@ void QuantizedAddBias(BType* bias,
 }
 
 // DType->output type, BType->bias type
-template <typename DType, typename BType>
+template <typename DType, typename BType, typename DLoadType>
 __global__ void quantized_add_bias_redequantize_kernel(int32_t* outCUBLAS,
                                           DType* out,
                                           BType* bias,
                                           size_t bias_length,
                                           const float *float_for_one_quant_tmp,
-                                          const float *min_out,
-                                          const float *max_out) {
+                                          const float *quantized_to_float_scale) {
+                                          
+  int row_num_each_thread = 4; // number of rows to deal with for each thread;
 
-  const index_t row = blockIdx.x;
-  for (index_t i = threadIdx.x; i < bias_length; i += blockDim.x){
-    int idx = row*bias_length + i;
-    outCUBLAS[idx] += bias[i] * (*float_for_one_quant_tmp);
-    out[idx] = static_cast<DType>(QuantizedToFloat<int32_t>(outCUBLAS[idx], *min_out, *max_out));
+  int64_t* outCUBLASload = reinterpret_cast<int64_t*>(outCUBLAS);
+  int16_t* biasload = reinterpret_cast<int16_t*>(bias);
+  DLoadType* outload = reinterpret_cast<DLoadType*>(out);
+
+  for (index_t i = threadIdx.x; i < bias_length / 2; i += blockDim.x){
+    
+    int16_t scratch_bias = *(biasload + i);
+    int8_t* scratch_bias_aft_load = reinterpret_cast<int8_t*>(&scratch_bias);
+  
+  #pragma unroll
+    for(int rw = 0; rw < row_num_each_thread; rw++){
+      int idx = (blockIdx.x * row_num_each_thread + rw) * bias_length / 2 + i;
+
+      int64_t scratch_outCUBLAS = *(outCUBLASload + idx);
+      int32_t* scratch_outCUBLAS_aft_load = reinterpret_cast<int32_t*>(&scratch_outCUBLAS);
+
+      DLoadType scratch_out = *(outload + idx);
+      DType* scratch_out_aft_load = reinterpret_cast<DType*>(&scratch_out);
+    
+      scratch_out_aft_load[0] = ( scratch_outCUBLAS_aft_load[0] + scratch_bias_aft_load[0] * (*float_for_one_quant_tmp) )
+        * (*quantized_to_float_scale);
+      scratch_out_aft_load[1] = ( scratch_outCUBLAS_aft_load[1] + scratch_bias_aft_load[1] * (*float_for_one_quant_tmp) )
+        * (*quantized_to_float_scale);
+
+      *(outload + idx) = scratch_out;
+    }     
+
   }
 
 }
@@ -133,26 +171,35 @@ void FusedQuantizedAddBiasAndReDequantize(BType* bias,
                       Stream<gpu>* s,
                       const float *float_for_one_quant_tmp,
                       const int bias_len,
-                      const float *min_out,
-                      const float *max_out) {
+                      const float *quantized_to_float_scale) {
     
     int nthreads_quant_addbias = 256;
 
-    if(bias_len >= 1024){
-      nthreads_quant_addbias = 1024;
-    }else if(bias_len >= 512){
+    if(bias_len % 512 == 0){
       nthreads_quant_addbias = 512;
-    }else if(bias_len >= 256){
+    }else if(bias_len % 256 == 0){
       nthreads_quant_addbias = 256;
-    }else if(bias_len >= 128){
+    }else if(bias_len % 128 == 0){
       nthreads_quant_addbias = 128;
-    }else if(bias_len >= 64){
+    }else if(bias_len % 64 == 0){
       nthreads_quant_addbias = 64;
-    }else{
+    }
+    
+    if(bias_len <= 32){
       nthreads_quant_addbias = 32;
     }
 
-    quantized_add_bias_redequantize_kernel<DType, BType><<<data.size(0),
+    int dltype;
+    if(sizeof(DType) == 4){ // DType is fp32
+      dltype = mshadow::kFloat64;
+    }else if(sizeof(DType) == 2){ // Dtype is fp16
+      dltype = mshadow::kFloat32;
+    }else{
+      LOG(FATAL) << "Unsupported float_out type.";
+    }
+
+    MXNET_LOAD_TYPE_SWITCH(dltype, DLoadType, {
+    quantized_add_bias_redequantize_kernel<DType, BType, DLoadType><<<data.size(0) / 4,
                                   nthreads_quant_addbias,
                                   0,
                                   Stream<gpu>::GetStream(s)>>>(outTensorCUBLAS.dptr_,
@@ -160,20 +207,19 @@ void FusedQuantizedAddBiasAndReDequantize(BType* bias,
                                                                 bias,
                                                                 bias_len,
                                                                 float_for_one_quant_tmp,
-                                                                min_out,
-                                                                max_out);
+                                                                quantized_to_float_scale);
+    });
 }
 
 template <typename DType, typename BType>
 __global__ void fused_requantize_dequantize_kernel(int32_t* outCUBLAS,
                                           DType* out,
                                           const int num_elem,
-                                          const float *min_out,
-                                          const float *max_out) {
+                                          const float *quantized_to_float_scale) {
 
   int tid = threadIdx.x + blockIdx.x * blockDim.x;
   while(tid < num_elem){
-    out[tid] = static_cast<DType>(QuantizedToFloat<int32_t>(outCUBLAS[tid], *min_out, *max_out));
+    out[tid] = outCUBLAS[tid] * (*quantized_to_float_scale);
     tid += blockDim.x * gridDim.x;
   }
 }
@@ -182,15 +228,12 @@ template<typename DType, typename BType>
 void FusedRequantizdAndDequantize(DType* out,
                       Tensor<gpu, 2, int32_t> outTensorCUBLAS,
                       Stream<gpu>* s,
-                      const float *min_out,
-                      const float *max_out,
+                      const float *quantized_to_float_scale,
                       const int num_elem) {
 
     int nthreads = 256;
 
-    if(num_elem >= 1024){
-      nthreads = 1024;
-    }else if(num_elem >= 512){
+    if(num_elem >= 512){
       nthreads = 512;
     }else if(num_elem >= 256){
       nthreads = 256;
@@ -208,8 +251,7 @@ void FusedRequantizdAndDequantize(DType* out,
                                   Stream<gpu>::GetStream(s)>>>(outTensorCUBLAS.dptr_,
                                                                 out,
                                                                 num_elem,
-                                                                min_out,
-                                                                max_out);
+                                                                quantized_to_float_scale);
 }
 
 #endif  // __CUDACC__
@@ -242,14 +284,15 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
 
   auto out_type = GetQuantizedFCFloatOutType(param);
 
-  // allocate workspace for storaging both outTensorCUBLAS and FloatForOneQuant
-  size_t workspace_size = sizeof(int32_t) * out.Size() + sizeof(float);
+  // allocate workspace for storaging both outTensorCUBLAS and FloatForOneQuant and QuantizedToFloatScaleFactor
+  size_t workspace_size = sizeof(int32_t) * out.Size() + sizeof(float) + sizeof(float);
   auto workspace = ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
   char* ptr = workspace.dptr_;
 
   Tensor<gpu, 2, SrcType> dataTensor;
   Tensor<gpu, 2, int32_t> outTensorCUBLAS;
   Tensor<gpu, 1, float> FloatForOneQuant;
+  Tensor<gpu, 1, float> QuantizedToFloatScaleFactor;
 
   if(out_type == mshadow::kInt32){
     if (!param.flatten) {
@@ -259,8 +302,11 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
       dataTensor = FlattenAs2DTail<gpu, SrcType>(data, ctx);
       outTensorCUBLAS = FlattenAs2DTail<gpu, int32_t>(out, ctx);
     }
-    // workspace only utilizing the first element for FloatForOneQuant
+    // workspace utilizing the first element for FloatForOneQuant
     FloatForOneQuant = Tensor<gpu, 1, float>(reinterpret_cast<float*>(ptr), Shape1(1), s);
+    ptr += sizeof(float);
+    // workspace: QuantizedToFloatScaleFactor
+    QuantizedToFloatScaleFactor = Tensor<gpu, 1, float>(reinterpret_cast<float*>(ptr), Shape1(1), s);
   }else if(out_type == mshadow::kFloat32){
     Tensor<gpu, 2, float> outTensor;
     if (!param.flatten) {
@@ -275,6 +321,9 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
     ptr += sizeof(int32_t) * out.Size();
     // workspace: FloatForOneQuant
     FloatForOneQuant = Tensor<gpu, 1, float>(reinterpret_cast<float*>(ptr), Shape1(1), s);
+    ptr += sizeof(float);
+    // workspace: QuantizedToFloatScaleFactor
+    QuantizedToFloatScaleFactor = Tensor<gpu, 1, float>(reinterpret_cast<float*>(ptr), Shape1(1), s);
   }else if(out_type == mshadow::kFloat16){
     Tensor<gpu, 2, mshadow::half::half_t> outTensor;
     if (!param.flatten) {
@@ -289,6 +338,9 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
     ptr += sizeof(int32_t) * out.Size();
     // workspace: FloatForOneQuant
     FloatForOneQuant = Tensor<gpu, 1, float>(reinterpret_cast<float*>(ptr), Shape1(1), s);
+    ptr += sizeof(float);
+    // workspace: QuantizedToFloatScaleFactor
+    QuantizedToFloatScaleFactor = Tensor<gpu, 1, float>(reinterpret_cast<float*>(ptr), Shape1(1), s);
   }else{
     LOG(FATAL) << "Unsupported float_out in params: " <<param.float_out;
   }
@@ -331,6 +383,11 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
      inputs[num_inputs].dptr<float>(),   inputs[num_inputs+1].dptr<float>(),
      inputs[num_inputs+2].dptr<float>(), inputs[num_inputs+3].dptr<float>());
 
+  // Launch QuantizedToFloatScale
+    Kernel<QuantizedToFloatScale, gpu>::Launch(s, 1,
+      outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+      QuantizedToFloatScaleFactor.dptr_);
+
   if (!param.no_bias) {
     const TBlob& bias = inputs[2];
 
@@ -355,13 +412,13 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
       FusedQuantizedAddBiasAndReDequantize<float, SrcType>(bias.dptr<SrcType>(), dataTensor,
                                           out.dptr<float>(), outTensorCUBLAS, s,
                                           FloatForOneQuant.dptr_, biasTensor.shape_[0],
-                                          outputs[1].dptr<float>(), outputs[2].dptr<float>());
+                                          QuantizedToFloatScaleFactor.dptr_);
     }else if(out_type == mshadow::kFloat16){// with_bias case with float16 out
       // a kernel that fuse requantize, dequantize into add_bias
       FusedQuantizedAddBiasAndReDequantize<mshadow::half::half_t, SrcType>(bias.dptr<SrcType>(), dataTensor,
                                           out.dptr<mshadow::half::half_t>(), outTensorCUBLAS, s,
                                           FloatForOneQuant.dptr_, biasTensor.shape_[0],
-                                          outputs[1].dptr<float>(), outputs[2].dptr<float>());
+                                          QuantizedToFloatScaleFactor.dptr_);
     }else{
       LOG(FATAL) << "Unsupported float_out in params: " <<param.float_out;
     }
@@ -370,15 +427,12 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
     if(out_type == mshadow::kFloat32){// no_bias case with float32 out
       FusedRequantizdAndDequantize<float, SrcType>(out.dptr<float>(),
                                           outTensorCUBLAS, s,
-                                          outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+                                          QuantizedToFloatScaleFactor.dptr_,
                                           out.Size());
-      // Kernel<FusedRequantizeKernel, gpu>::Launch(s, out.Size(),
-      //   outputs[0].dptr<float>(), outTensorCUBLAS.dptr_,
-      //   outputs[1].dptr<float>(), outputs[2].dptr<float>());
     }else if(out_type == mshadow::kFloat16){// no_bias case with float16 out
       FusedRequantizdAndDequantize<mshadow::half::half_t, SrcType>(out.dptr<mshadow::half::half_t>(),
                                           outTensorCUBLAS, s,
-                                          outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+                                          QuantizedToFloatScaleFactor.dptr_,
                                           out.Size());
     }else if(out_type != mshadow::kInt32){
       LOG(FATAL) << "Unsupported float_out in params: " <<param.float_out;

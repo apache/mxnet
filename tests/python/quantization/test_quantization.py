@@ -64,6 +64,9 @@ def test_quantize_float32_to_int8():
 @with_seed()
 def test_quantizeV2_float_to_int8():
     def check_float_to_int8(dtype='float32'):
+        if not is_test_for_gpu():
+            print('skipped testing test_quantizeV2_float_to_int8 with float_out in both fp32 and fp16 on cpu since it is only supported by GPU now')
+            return
         shape = rand_shape_nd(4)
         data = rand_ndarray(shape, 'default', dtype=dtype)
         min_range = mx.nd.min(data).asscalar()
@@ -515,10 +518,11 @@ def test_quantized_fc():
         out_min = -out_max
         return out_min, out_max
     def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True, float_out=None):
-        if is_test_for_native_cpu():
+        if not is_test_for_gpu():
             if float_out:
                 print('skipped testing quantized_fc with float_out on cpu since it is only supported by GPU now')
                 return
+        if is_test_for_native_cpu():
             hasMKL = False
             for key in os.environ.keys():
                 if operator.eq(key, "BUILD_TAG"):
@@ -615,7 +619,6 @@ def test_quantized_fc():
             fc_int8_exe.arg_dict[qarg_names[7]][:] = -bias_range
             fc_int8_exe.arg_dict[qarg_names[8]][:] = bias_range
         qoutput, min_range, max_range = fc_int8_exe.forward()
-        print(qoutput.dtype)
 
         if no_bias:
             assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
@@ -653,6 +656,74 @@ def test_quantized_fc():
             check_quantized_fc((256, 111, 2, 2), 800, False, qdtype, float_out=float_outtype)
             check_quantized_fc((256, 2048, 2, 2), 800, True, qdtype, float_out=float_outtype)
             check_quantized_fc((256, 111, 2, 2), 800, True, qdtype, float_out=float_outtype)
+
+@with_seed()
+# test the op to see if the op is working
+def test_quantized_bert_ffn1_to_ffn2_fusion_op():
+    if not is_test_for_gpu():
+        print("This op only supports GPU\n")
+        return
+    def check_quantized_bert_ffn1_to_ffn2_fusion(data_shape, num_hidden, flatten=True):
+
+        # input type is int8
+        data_low = -63.0
+        data_high = 63.0
+        quantized_range = 127.0
+
+        def maxabs(a, b):
+            return mx.nd.maximum(mx.nd.abs(a), mx.nd.abs(b))
+
+        data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
+        fc_fp32 = mx.sym.FullyConnected(data=data, num_hidden=num_hidden, no_bias=False, flatten=flatten)
+        arg_shapes, _, _ = fc_fp32.infer_shape(data=data_shape)
+
+        data = mx.nd.random.uniform(low=data_low, high=data_high,
+                                    shape=data_shape).astype('int32')
+        weight = mx.nd.random.uniform(low=data_low, high=data_high,
+                                    shape=arg_shapes[1]).astype('int32')
+        bias = mx.nd.random.uniform(low=data_low, high=data_high,
+                                    shape=arg_shapes[2]).astype('int32')       
+
+        data_min = mx.nd.min(data).astype('float32')
+        data_max = mx.nd.max(data).astype('float32')
+        weight_min = mx.nd.min(weight).astype('float32')
+        weight_max = mx.nd.max(weight).astype('float32')
+        data_range = maxabs(data_min, data_max)
+        weight_range = maxabs(weight_min, weight_max)
+
+        bias_min = mx.nd.min(bias).astype('float32')
+        bias_max = mx.nd.max(bias).astype('float32')
+        bias_range = maxabs(bias_min, bias_max)
+
+        qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype='int8')
+
+        min_range = mx.nd.min(data).asscalar()
+        max_range = mx.nd.max(data).asscalar()
+        
+        fused_int8 = mx.sym.contrib.quantized_bert_ffn1_to_ffn2_fusion(data=qdata, num_hidden=num_hidden,
+                                                            flatten=flatten, min_calib_range=min_range, 
+                                                            max_calib_range=max_range)
+
+        qarg_names = fused_int8.list_arguments()
+        type_dict = {qarg_names[1]: 'int8'}
+
+        type_dict.update({qarg_names[2]: 'int8'})
+        fused_int8_exe = fused_int8.simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
+
+        fused_int8_exe.arg_dict[qarg_names[0]][:] = data.astype('int8')
+        fused_int8_exe.arg_dict[qarg_names[1]][:] = weight.astype('int8')
+        fused_int8_exe.arg_dict[qarg_names[2]][:] = bias.astype('int8')
+        fused_int8_exe.arg_dict[qarg_names[3]][:] = -data_range
+        fused_int8_exe.arg_dict[qarg_names[4]][:] = data_range
+        fused_int8_exe.arg_dict[qarg_names[5]][:] = -weight_range
+        fused_int8_exe.arg_dict[qarg_names[6]][:] = weight_range
+        fused_int8_exe.arg_dict[qarg_names[7]][:] = -bias_range
+        fused_int8_exe.arg_dict[qarg_names[8]][:] = bias_range
+        qoutput, min_range, max_range = fused_int8_exe.forward()
+
+        qoutput.asnumpy()
+
+    check_quantized_bert_ffn1_to_ffn2_fusion((32, 512, 2, 2), 100)
 
 @with_seed()
 def test_quantized_embedding():

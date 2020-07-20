@@ -68,7 +68,8 @@ struct QuantizedFullyConnectedParam : public dmlc::Parameter<QuantizedFullyConne
   bool operator==(const QuantizedFullyConnectedParam& other) const {
     return this->num_hidden == other.num_hidden &&
            this->no_bias == other.no_bias &&
-           this->flatten == other.flatten;
+           this->flatten == other.flatten &&
+           this->float_out == other.float_out;
   }
 };
 
