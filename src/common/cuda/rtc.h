@@ -46,17 +46,35 @@ namespace rtc {
 
 namespace util {
 
+/*! \brief Convert OpReqType to string.
+ *  \param req to convert
+ */
 std::string to_string(OpReqType req);
 
 }  // namespace util
 
 extern std::mutex lock;
 
+/*! \brief Compile and get the GPU kernel. Uses cache in order to
+ *         eliminate the overhead of compilation.
+ *  \param parameters of the kernel (e.g. values of the template arguments, types used)
+ *  \param kernel_name name of the kernel
+ *  \param code used for compilation of the kernel if not found in cache
+ *  \param dev_id id of the device which the kernel will be launched on
+ */
 CUfunction get_function(const std::string &parameters,
                         const std::string &kernel_name,
                         const std::string &code,
                         int dev_id);
 
+/*! \brief Launch a GPU kernel.
+ *  \param function to launch
+ *  \param grid_dim grid dimensions
+ *  \param block_dim block dimensions
+ *  \param shared_mem_bytes amount of dynamic shared memory needed by the kernel
+ *  \param stream used for launching the kernel
+ *  \param args arguments of the kernel
+ */
 void launch(CUfunction function,
             const dim3 grid_dim,
             const dim3 block_dim,

@@ -314,6 +314,21 @@ constexpr int vectorized_kernel_thread_num = 512;
 
 }  // namespace
 
+/*! \brief Launcher helper for the kernels using vectorization.
+ *  \param parameters of the kernel (e.g. values of the template arguments)
+ *  \param kernel_name name of the kernel
+ *  \param code used for compilation of the kernel if not found in cache
+ *  \param nvec length of the vector used for loading/storing data
+ *  \param lead_dim size of leading dimension of the tensors
+ *  \param other_dim maximum of the total size of all the other dimensions of the tensors
+ *  \param s stream used to launch the kernel
+ *  \param inputs to the kernel
+ *  \param outputs of the kernel
+ *  \param dev_id id of the devide which the kernel will be launched on
+ *  \param lead_input_num number of input to use for checking alignment
+ *                        (in case only a subset of inputs is used vectorized).
+ *                        Default is 0.
+ */
 template <typename Params>
 void VectorizedKernelRTCLauncher(const std::string &parameters,
                                  const std::string &kernel_name,
