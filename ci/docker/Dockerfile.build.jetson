@@ -90,9 +90,6 @@ RUN wget https://repo.download.nvidia.com/jetson/x86_64/pool/r32.4/c/cuda/cuda-c
 # while previously it used to store it at /usr/local/cuda/targets/aarch64-linux/lib/stubs
 RUN ln -s /usr/lib/aarch64-linux-gnu/libcublas.so /usr/local/cuda/targets/aarch64-linux/lib/stubs/libcublas.so
 
-# Need the stub for libcuda.so in a place where host linker can find it to link the unit tests
-RUN ln -s /usr/local/cuda/targets/aarch64-linux/lib/stubs/libcuda.so /usr/lib/aarch64-linux-gnu/libcuda.so
-
 ARG USER_ID=0
 ARG GROUP_ID=0
 COPY install/ubuntu_adduser.sh /work/

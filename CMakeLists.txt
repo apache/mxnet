@@ -587,15 +587,11 @@ if(USE_CUDA)
 
   string(REPLACE ";" " " CUDA_ARCH_FLAGS_SPACES "${CUDA_ARCH_FLAGS}")
 
-  find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand
-    OPTIONAL_COMPONENTS nvToolsExt nvrtc)
+  find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand nvrtc cuda_driver
+    OPTIONAL_COMPONENTS nvToolsExt)
 
-  list(APPEND mxnet_LINKER_LIBS CUDA::cudart CUDA::cublas CUDA::cufft CUDA::cusolver CUDA::curand)
-  if(CUDA_nvrtc_LIBRARY)
-    list(APPEND mxnet_LINKER_LIBS CUDA::nvrtc cuda)
-  else()
-    message(FATAL_ERROR "Failed to find NVRTC. CMake will exit." )
-  endif()
+  list(APPEND mxnet_LINKER_LIBS CUDA::cudart CUDA::cublas CUDA::cufft CUDA::cusolver CUDA::curand
+                                CUDA::nvrtc CUDA::cuda_driver)
   list(APPEND SOURCE ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
 
