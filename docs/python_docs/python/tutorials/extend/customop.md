@@ -197,7 +197,7 @@ class DenseBlock(mx.gluon.Block):
     def __init__(self, in_channels, channels, bias, **kwargs):
         super(DenseBlock, self).__init__(**kwargs)
         self._bias = bias
-        self.weight = self.params.get('weight', shape=(channels, in_channels))
+        self.weight = gluon.Parameter('weight', shape=(channels, in_channels))
 
     def forward(self, x):
         ctx = x.context

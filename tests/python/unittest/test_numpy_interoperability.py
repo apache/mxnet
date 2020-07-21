@@ -29,7 +29,7 @@ from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
 from mxnet.test_utils import is_op_runnable
-from common import assertRaises, with_seed
+from common import assertRaises, with_seed, random_seed, setup_module, teardown_module
 from mxnet.numpy_dispatch_protocol import with_array_function_protocol, with_array_ufunc_protocol
 from mxnet.numpy_dispatch_protocol import _NUMPY_ARRAY_FUNCTION_LIST, _NUMPY_ARRAY_UFUNC_LIST
 
@@ -62,7 +62,14 @@ class OpArgMngr(object):
 
     @staticmethod
     def get_workloads(name):
+        if OpArgMngr._args == {}:
+            _prepare_workloads()
         return OpArgMngr._args.get(name, None)
+
+    @staticmethod
+    def randomize_workloads():
+        # Force a new _prepare_workloads(), which will be based on new random numbers
+        OpArgMngr._args = {}
 
 
 def _add_workload_all():
@@ -516,9 +523,9 @@ def _add_workload_linalg_cholesky():
     shapes = [(1, 1), (2, 2), (3, 3), (50, 50), (3, 10, 10)]
     dtypes = (np.float32, np.float64)
 
-    for shape, dtype in itertools.product(shapes, dtypes):
-        _np.random.seed(1)
-        a = _np.random.randn(*shape)
+    with random_seed(1):
+        for shape, dtype in itertools.product(shapes, dtypes):
+            a = _np.random.randn(*shape)
 
         t = list(range(len(shape)))
         t[-2:] = -1, -2
@@ -1153,11 +1160,11 @@ def _add_workload_repeat(array_pool):
     m = _np.array([1, 2, 3, 4, 5, 6])
     m_rect = m.reshape((2, 3))
 
-    # OpArgMngr.add_workload('repeat', np.array(m), [1, 3, 2, 1, 1, 2]) # Argument "repeats" only supports int
+    OpArgMngr.add_workload('repeat', np.array(m), [1, 3, 2, 1, 1, 2]) # Argument "repeats" only supports int
     OpArgMngr.add_workload('repeat', np.array(m), 2)
     B = np.array(m_rect)
-    # OpArgMngr.add_workload('repeat', B, [2, 1], axis=0)  # Argument "repeats" only supports int
-    # OpArgMngr.add_workload('repeat', B, [1, 3, 2], axis=1)  # Argument "repeats" only supports int
+    OpArgMngr.add_workload('repeat', B, [2, 1], axis=0)  # Argument "repeats" only supports int
+    OpArgMngr.add_workload('repeat', B, [1, 3, 2], axis=1)  # Argument "repeats" only supports int
     OpArgMngr.add_workload('repeat', B, 2, axis=0)
     OpArgMngr.add_workload('repeat', B, 2, axis=1)
 
@@ -1165,7 +1172,7 @@ def _add_workload_repeat(array_pool):
     a = _np.arange(60).reshape(3, 4, 5)
     for axis in itertools.chain(range(-a.ndim, a.ndim), [None]):
         OpArgMngr.add_workload('repeat', np.array(a), 2, axis=axis)
-    #    OpArgMngr.add_workload('repeat', np.array(a), [2], axis=axis)   # Argument "repeats" only supports int
+        OpArgMngr.add_workload('repeat', np.array(a), [2], axis=axis)   # Argument "repeats" only supports int
 
 
 def _add_workload_reshape():
@@ -1947,6 +1954,8 @@ def _add_workload_greater(array_pool):
     # OpArgMngr.add_workload('greater', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('greater', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
     OpArgMngr.add_workload('greater', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('greater', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('greater', 2, array_pool['4x1'])
     # TODO(junwu): mxnet currently does not have a consistent behavior as NumPy in dealing with np.nan
     # OpArgMngr.add_workload('greater', np.array([np.nan]), np.array([np.nan]))
 
@@ -1956,6 +1965,8 @@ def _add_workload_greater_equal(array_pool):
     # OpArgMngr.add_workload('greater_equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('greater_equal', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
     OpArgMngr.add_workload('greater_equal', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('greater_equal', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('greater_equal', 2, array_pool['4x1'])
     # TODO(junwu): mxnet currently does not have a consistent behavior as NumPy in dealing with np.nan
     # OpArgMngr.add_workload('greater_equal', np.array([np.nan]), np.array([np.nan]))
 
@@ -1965,6 +1976,8 @@ def _add_workload_less(array_pool):
     # OpArgMngr.add_workload('less', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('less', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
     OpArgMngr.add_workload('less', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('less', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('less', 2, array_pool['4x1'])
     # TODO(junwu): mxnet currently does not have a consistent behavior as NumPy in dealing with np.nan
     # OpArgMngr.add_workload('less', np.array([np.nan]), np.array([np.nan]))
 
@@ -1974,6 +1987,8 @@ def _add_workload_less_equal(array_pool):
     # OpArgMngr.add_workload('less_equal', np.array([0, 1, 2, 4, 2], dtype=np.float16), np.array([-2, 5, 1, 4, 3], dtype=np.float16))
     OpArgMngr.add_workload('less_equal', np.array([0, 1, 2, 4, 2], dtype=np.float32), np.array([-2, 5, 1, 4, 3], dtype=np.float32))
     OpArgMngr.add_workload('less_equal', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('less_equal', array_pool['4x1'], 2)
+    OpArgMngr.add_workload('less_equal', 2, array_pool['4x1'])
     # TODO(junwu): mxnet currently does not have a consistent behavior as NumPy in dealing with np.nan
     # OpArgMngr.add_workload('less_equal', np.array([np.nan]), np.array([np.nan]))
 
@@ -2890,7 +2905,6 @@ def _add_workload_unwrap():
     phase[3:] += np.pi
     phase_s = np.vstack((phase,phase))
     OpArgMngr.add_workload('unwrap', phase)
-    print(phase_s.shape)
     OpArgMngr.add_workload('unwrap', phase_s, axis=1)
 
 
@@ -3176,9 +3190,6 @@ def _prepare_workloads():
     _add_workload_vander()
 
 
-_prepare_workloads()
-
-
 def _get_numpy_op_output(onp_op, *args, **kwargs):
     onp_args = [arg.asnumpy() if isinstance(arg, np.ndarray) else arg for arg in args]
     onp_kwargs = {k: v.asnumpy() if isinstance(v, np.ndarray) else v for k, v in kwargs.items()}
@@ -3190,7 +3201,7 @@ def _get_numpy_op_output(onp_op, *args, **kwargs):
     return onp_op(*onp_args, **onp_kwargs)
 
 
-def _check_interoperability_helper(op_name, *args, **kwargs):
+def _check_interoperability_helper(op_name, rel_tol, abs_tol, *args, **kwargs):
     strs = op_name.split('.')
     if len(strs) == 1:
         onp_op = getattr(_np, op_name)
@@ -3206,11 +3217,11 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
         assert type(out) == type(expected_out)
         for arr, expected_arr in zip(out, expected_out):
             if isinstance(arr, np.ndarray):
-                assert_almost_equal(arr.asnumpy(), expected_arr, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
+                assert_almost_equal(arr.asnumpy(), expected_arr, rtol=rel_tol, atol=abs_tol, use_broadcast=False, equal_nan=True)
             else:
                 _np.testing.assert_equal(arr, expected_arr)
     elif isinstance(out, np.ndarray):
-        assert_almost_equal(out.asnumpy(), expected_out, rtol=1e-3, atol=1e-4, use_broadcast=False, equal_nan=True)
+        assert_almost_equal(out.asnumpy(), expected_out, rtol=rel_tol, atol=abs_tol, use_broadcast=False, equal_nan=True)
     elif isinstance(out, _np.dtype):
         _np.testing.assert_equal(out, expected_out)
     else:
@@ -3222,22 +3233,29 @@ def _check_interoperability_helper(op_name, *args, **kwargs):
 
 
 def check_interoperability(op_list):
+    OpArgMngr.randomize_workloads()
     for name in op_list:
         if name in _TVM_OPS and not is_op_runnable():
             continue
         if name in ['shares_memory', 'may_share_memory', 'empty_like',
                     '__version__', 'dtype', '_NoValue']:  # skip list
             continue
+        if name in ['delete']: # https://github.com/apache/incubator-mxnet/issues/18600
+            continue
         if name in ['full_like', 'zeros_like', 'ones_like'] and \
                 StrictVersion(platform.python_version()) < StrictVersion('3.0.0'):
             continue
+        default_tols = (1e-3, 1e-4)
+        tols = {'linalg.tensorinv': (1e-2, 5e-3),
+                'linalg.solve':     (1e-3, 5e-2)}
+        (rel_tol, abs_tol) = tols.get(name, default_tols)
         print('Dispatch test:', name)
         workloads = OpArgMngr.get_workloads(name)
         assert workloads is not None, 'Workloads for operator `{}` has not been ' \
                                       'added for checking interoperability with ' \
                                       'the official NumPy.'.format(name)
         for workload in workloads:
-            _check_interoperability_helper(name, *workload['args'], **workload['kwargs'])
+            _check_interoperability_helper(name, rel_tol, abs_tol, *workload['args'], **workload['kwargs'])
 
 
 @with_seed()

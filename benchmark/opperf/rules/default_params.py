@@ -182,14 +182,7 @@ DEFAULT_BETA_LN = [(32,), (32,)]
 # L2Normalization
 DEFAULT_MODE_L2 = ['channel', 'instance', 'spatial']
 
-# SVMOutput
-DEFAULT_LABEL_SVM = [(32, 3, 256), (32, 3, 10000)]
-
 DEFAULT_DATA_SVM_LARGE_TENSOR = [(2**29, 2, 2, 2)]
-DEFAULT_LABEL_SVM_LARGE_TENSOR = [(2**29, 2, 2)]
-
-# SoftmaxOutput
-DEFAULT_LABEL_SM = [(32, 3, 256), (32, 3, 10000)]
 
 DEFAULT_DATA_SO_LARGE_TENSOR = [(2**29, 2, 2, 2)]
 DEFAULT_LABEL_SO_LARGE_TENSOR = [(2**29, 2, 2)]
@@ -537,16 +530,6 @@ DEFAULTS_INPUTS = {"data": DEFAULT_DATA,
                    "moving_mean_batchnorm": DEFAULT_MOVING_MEAN,
                    "moving_var_batchnorm": DEFAULT_MOVING_VAR,
                    "axis_batchnorm": DEFAULT_AXIS_BN,
-                   "data_softmaxoutput": DEFAULT_DATA_NN_BASIC,
-                   "label_softmaxoutput": DEFAULT_LABEL_SM,
-                   "data_maeregressionoutput": DEFAULT_DATA_NN_BASIC,
-                   "label_maeregressionoutput": DEFAULT_LABEL_REG,
-                   "data_logisticregressionoutput": DEFAULT_DATA_NN_BASIC,
-                   "label_logisticregressionoutput": DEFAULT_LABEL_REG,
-                   "data_linearregressionoutput": DEFAULT_DATA_NN_BASIC,
-                   "label_linearregressionoutput": DEFAULT_LABEL_REG,
-                   "data_svmoutput": DEFAULT_DATA_NN_BASIC,
-                   "label_svmoutput": DEFAULT_LABEL_SVM,
                    "grad_scale": DEFAULT_GRAD_SCALE,
                    "normalization": DEFAULT_NORMALIZATION,
                    "margin": DEFAULT_MARGIN,
@@ -751,16 +734,6 @@ DEFAULTS_INPUTS_LARGE_TENSOR = {"data": DEFAULT_DATA_LARGE_TENSOR,
                                 "moving_mean_batchnorm": DEFAULT_MOVING_MEAN_LARGE_TENSOR,
                                 "moving_var_batchnorm": DEFAULT_MOVING_VAR_LARGE_TENSOR,
                                 "axis_batchnorm": DEFAULT_AXIS_BN,
-                                "data_softmaxoutput": DEFAULT_DATA_SO_LARGE_TENSOR,
-                                "label_softmaxoutput": DEFAULT_LABEL_SO_LARGE_TENSOR,
-                                "data_maeregressionoutput": DEFAULT_DATA_REG_LARGE_TENSOR,
-                                "label_maeregressionoutput": DEFAULT_LABEL_REG_LARGE_TENSOR,
-                                "data_logisticregressionoutput": DEFAULT_DATA_REG_LARGE_TENSOR,
-                                "label_logisticregressionoutput": DEFAULT_LABEL_REG_LARGE_TENSOR,
-                                "data_linearregressionoutput": DEFAULT_DATA_REG_LARGE_TENSOR,
-                                "label_linearregressionoutput": DEFAULT_LABEL_REG_LARGE_TENSOR,
-                                "data_svmoutput": DEFAULT_DATA_SVM_LARGE_TENSOR,
-                                "label_svmoutput": DEFAULT_LABEL_SVM_LARGE_TENSOR,
                                 "grad_scale": DEFAULT_GRAD_SCALE,
                                 "normalization": DEFAULT_NORMALIZATION,
                                 "margin": DEFAULT_MARGIN,

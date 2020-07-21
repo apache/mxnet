@@ -22,7 +22,6 @@ ONNX backend test framework. Once we have PRs on the ONNX repo and get
 those PRs merged, this file will get EOL'ed.
 """
 # pylint: disable=too-many-locals,wrong-import-position,import-error
-from __future__ import absolute_import
 import sys
 import os
 import unittest
@@ -34,7 +33,6 @@ import numpy.testing as npt
 from onnx import checker, numpy_helper, helper, load_model
 from onnx import TensorProto
 from mxnet.test_utils import download
-from mxnet.contrib import onnx as onnx_mxnet
 import mxnet as mx
 import backend
 
@@ -74,38 +72,6 @@ def _fix_attributes(attrs, attribute_mapping):
     return new_attrs
 
 
-def forward_pass(sym, arg, aux, data_names, input_data):
-    """ Perform forward pass on given data
-    :param sym: Symbol
-    :param arg: Arg params
-    :param aux: Aux params
-    :param data_names: Input names (list)
-    :param input_data: Input data (list). If there is only one input,
-                        pass it as a list. For example, if input is [1, 2],
-                        pass input_data=[[1, 2]]
-    :return: result of forward pass
-    """
-    data_shapes = []
-    data_forward = []
-    for idx in range(len(data_names)):
-        val = input_data[idx]
-        data_shapes.append((data_names[idx], np.shape(val)))
-        data_forward.append(mx.nd.array(val))
-    # create module
-    mod = mx.mod.Module(symbol=sym, data_names=data_names, context=mx.cpu(), label_names=None)
-    mod.bind(for_training=False, data_shapes=data_shapes, label_shapes=None)
-    if not arg and not aux:
-        mod.init_params()
-    else:
-        mod.set_params(arg_params=arg, aux_params=aux,
-                       allow_missing=True, allow_extra=True)
-    # run inference
-    batch = namedtuple('Batch', ['data'])
-    mod.forward(batch(data_forward), is_train=False)
-
-    return mod.get_outputs()[0].asnumpy()
-
-
 def get_input_tensors(input_data):
     input_tensor = []
     input_names = []
@@ -134,66 +100,6 @@ class TestNode(unittest.TestCase):
     Tests are dynamically added.
     Therefore edit test_models to add more tests.
     """
-    def test_import_export(self):
-        for test in test_cases:
-            test_name, mxnet_op, onnx_name, inputs, attrs, mxnet_specific, fix_attrs, check_value, check_shape = test
-            with self.subTest(test_name):
-                names, input_tensors, inputsym = get_input_tensors(inputs)
-                if inputs:
-                    test_op = mxnet_op(*inputsym, **attrs)
-                    mxnet_output = forward_pass(test_op, None, None, names, inputs)
-                    outputshape = np.shape(mxnet_output)
-                else:
-                    test_op = mxnet_op(**attrs)
-                    shape = attrs.get('shape', (1,))
-                    x = mx.nd.zeros(shape, dtype='float32')
-                    xgrad = mx.nd.zeros(shape, dtype='float32')
-                    exe = test_op.bind(ctx=mx.cpu(), args={'x': x}, args_grad={'x': xgrad})
-                    mxnet_output = exe.forward(is_train=False)[0].asnumpy()
-                    outputshape = np.shape(mxnet_output)
-
-                if mxnet_specific:
-                    onnxmodelfile = onnx_mxnet.export_model(test_op, {}, [np.shape(ip) for ip in inputs],
-                                                            np.float32,
-                                                            onnx_name + ".onnx")
-                    onnxmodel = load_model(onnxmodelfile)
-                else:
-                    onnx_attrs = _fix_attributes(attrs, fix_attrs)
-                    onnxmodel = get_onnx_graph(test_name, names, input_tensors, onnx_name, outputshape, onnx_attrs)
-
-                bkd_rep = backend.prepare(onnxmodel, operation='export', backend='mxnet')
-                output = bkd_rep.run(inputs)
-
-                if check_value:
-                    npt.assert_almost_equal(output[0], mxnet_output)
-
-                if check_shape:
-                    npt.assert_equal(output[0].shape, outputshape)
-
-        input1 = get_rnd((1, 10, 2, 3))
-        ipsym = mx.sym.Variable("input1")
-        for test in test_scalar_ops:
-            if test == 'Add':
-                outsym = 2 + ipsym
-            if test == "Sub":
-                outsym = ipsym - 2
-            if test == "rSub":
-                outsym = ipsym.__rsub__(2)
-            if test == "Mul":
-                outsym = 2 * ipsym
-            if test == "Div":
-                outsym = ipsym / 2
-            if test == "Pow":
-                outsym = ipsym ** 2
-            forward_op = forward_pass(outsym, None, None, ['input1'], input1)
-            converted_model = onnx_mxnet.export_model(outsym, {}, [np.shape(input1)], np.float32,
-                                                      onnx_file_path=outsym.name + ".onnx")
-
-            sym, arg_params, aux_params = onnx_mxnet.import_model(converted_model)
-        result = forward_pass(sym, arg_params, aux_params, ['input1'], input1)
-
-        npt.assert_almost_equal(result, forward_op)
-
     def test_imports(self):
         for bk in ['mxnet', 'gluon']:
             for test in import_test_cases:
@@ -208,13 +114,20 @@ class TestNode(unittest.TestCase):
                     npt.assert_almost_equal(np_out, mxnet_out, decimal=4)
 
     def test_exports(self):
-        input_shape = (2,1,3,1)
         for test in export_test_cases:
-            test_name, onnx_name, mx_op, attrs = test
+            test_name, onnx_name, mx_op, input_shape, attrs = test
             input_sym = mx.sym.var('data')
-            outsym = mx_op(input_sym, **attrs)
-            converted_model = onnx_mxnet.export_model(outsym, {}, [input_shape], np.float32,
-                                                      onnx_file_path=outsym.name + ".onnx")
+            if isinstance(mx_op, type) and issubclass(mx_op, (mx.gluon.HybridBlock, mx.gluon.SymbolBlock)):
+                mx_op = mx_op(**attrs)
+                mx_op.initialize()
+                mx_op(mx.nd.zeros(input_shape))
+                params = {p.var().name: p.data() for p in mx_op.collect_params().values()}
+                outsym = mx_op(input_sym)
+            else:
+                params = {}
+                outsym = mx_op(input_sym, **attrs)
+            converted_model = mx.contrib.onnx.export_model(outsym, params, [input_shape], np.float32,
+                                                           onnx_file_path=outsym.name + ".onnx")
             model = load_model(converted_model)
             checker.check_model(model)
 
@@ -241,10 +154,6 @@ test_cases = [
     ("test_square", mx.sym.square, "Pow", [get_rnd((2, 3), dtype=np.int32)], {}, True, {}, True, False),
     ("test_spacetodepth", mx.sym.space_to_depth, "SpaceToDepth", [get_rnd((1, 1, 4, 6))],
      {'block_size': 2}, False, {}, True, False),
-    ("test_softmax", mx.sym.SoftmaxOutput, "Softmax", [get_rnd((1000, 1000)), get_rnd(1000)],
-     {'ignore_label': 0, 'use_ignore': False}, True, {}, True, False),
-    ("test_logistic_regression", mx.sym.LogisticRegressionOutput, "Sigmoid",
-     [get_rnd((1000, 1000)), get_rnd((1000, 1000))], {}, True, {}, True, False),
     ("test_fullyconnected", mx.sym.FullyConnected, "Gemm", [get_rnd((4, 3)), get_rnd((4, 3)), get_rnd(4)],
      {'num_hidden': 4, 'name': 'FC'}, True, {}, True, False),
     ("test_lppool1", mx.sym.Pooling, "LpPool", [get_rnd((2, 3, 20, 20))],
@@ -287,10 +196,14 @@ import_test_cases = [
     ("test_lpnormalization_ord2", "LpNormalization", [get_rnd([5, 3, 3, 2])], np.linalg.norm, {'ord':2, 'axis':1})
 ]
 
-# test_case = ("test_case_name", "ONNX_op_name", mxnet_op, attribute map)
+# test_case = ("test_case_name", "ONNX_op_name", mxnet_op, input_shape, attribute map)
 export_test_cases = [
-    ("test_expand", "Expand", mx.sym.broadcast_to, {'shape': (2,1,3,1)}),
-    ("test_tile", "Tile", mx.sym.tile, {'reps': (2,3)})
+    ("test_expand", "Expand", mx.sym.broadcast_to, (2,1,3,1), {'shape': (2,1,3,1)}),
+    ("test_tile", "Tile", mx.sym.tile, (2,1,3,1), {'reps': (2,3)}),
+    ("test_topk", "TopK", mx.sym.topk, (2, 10, 2), {'k': 3, 'axis': 1, 'ret_typ': 'both', 'dtype': np.int64}),
+    ("test_slice_axis", "Slice", mx.sym.slice_axis, (2, 10, 2), {'begin': 3, 'end': 7, 'axis': 1}),
+    ("test_LSTM", "LSTM", mx.gluon.rnn.LSTM, (3,1,2), {'hidden_size': 3}),
+    ("test_BiLSTM", "LSTM", mx.gluon.rnn.LSTM, (3,1,2), {'hidden_size': 3, 'bidirectional': True}),
 ]
 
 if __name__ == '__main__':

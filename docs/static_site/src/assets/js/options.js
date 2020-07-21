@@ -22,6 +22,10 @@
 */
 
 $(document).ready(function () {
+    const dropdownVersions = $("#version-dropdown-container ul li")
+        .toArray()
+        .map((li) => li.innerText);
+
     function label(lbl) {
         lbl = lbl.replace(/[ .]/g, '-').toLowerCase();
 
@@ -33,6 +37,9 @@ $(document).ready(function () {
         let searchParams = searchString.substring(1).split("&");
         searchParams.forEach(function (element) {
             kvPair = element.split("=");
+            if (kvPair[0] === 'version' && dropdownVersions.indexOf(kvPair[1]) == -1) {
+                kvPair[1] = dropdownVersions[0];
+            }
             searchDict.set(kvPair[0], kvPair[1]);
         });
         return searchDict;

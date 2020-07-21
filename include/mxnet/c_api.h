@@ -116,9 +116,6 @@ typedef void (*EngineAsyncFunc)(void*, void*, void*);
 typedef void (*EngineSyncFunc)(void*, void*);
 /*! \brief Callback to free the param for EngineAsyncFunc/EngineSyncFunc */
 typedef void (*EngineFuncParamDeleter)(void*);
-typedef void (*ExecutorMonitorCallback)(const char*,
-                                        NDArrayHandle,
-                                        void*);
 /*! \brief Monitor callback called at operator level for cached op */
 typedef void (*CachedOpMonitorCallback)(const char*,
                                         const char*,
@@ -1414,13 +1411,10 @@ MXNET_DLL int MXCreateCachedOpEX(SymbolHandle handle,
 MXNET_DLL int MXFreeCachedOp(CachedOpHandle handle);
 
 /*!
- * \brief invoke cached operator
+ * \brief get optimized graph from the cached op
  */
-MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
-                               int num_inputs,
-                               NDArrayHandle *inputs,
-                               int *num_outputs,
-                               NDArrayHandle **outputs);
+MXNET_DLL int MXCachedOpGetOptimizedSymbol(CachedOpHandle handle,
+                                           SymbolHandle *out);
 
 /*!
  * \brief invoke a cached op
@@ -1428,6 +1422,8 @@ MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
  * \param num_inputs number of input NDArrays
  * \param inputs input NDArrays
  * \param num_outputs number of output NDArrays
+ * \param default_dev_type the default context type
+ * \param default_dev_id the default context device id
  * \param outputs output NDArrays
  * \param out_stypes output ndarrays' stypes
  * \return 0 when success, -1 when failure happens
@@ -1435,6 +1431,8 @@ MXNET_DLL int MXInvokeCachedOp(CachedOpHandle handle,
 MXNET_DLL int MXInvokeCachedOpEx(CachedOpHandle handle,
                                  int num_inputs,
                                  NDArrayHandle *inputs,
+                                 int default_dev_type,
+                                 int default_dev_id,
                                  int *num_outputs,
                                  NDArrayHandle **outputs,
                                  const int** out_stypes);
@@ -1750,6 +1748,14 @@ MXNET_DLL int MXSymbolGetNumOutputs(SymbolHandle symbol,
  */
 MXNET_DLL int MXSymbolGetInternals(SymbolHandle symbol,
                                    SymbolHandle *out);
+/*!
+ * \brief Get a symbol that contains all the inputs.
+ * \param symbol The symbol
+ * \param out The output symbol whose outputs are all the internals.
+ * \return 0 when success, -1 when failure happens
+ */
+MXNET_DLL int MXSymbolGetInputs(SymbolHandle symbol,
+                                SymbolHandle *out);
 /*!
  * \brief Get a symbol that contains only direct children.
  * \param symbol The symbol
@@ -2237,6 +2243,25 @@ MXNET_DLL int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle 
  * \param num_options number of key value pairs
  * \param keys keys for options
  * \param vals values corresponding to keys
+ * \param num_input_shapes number of input shapes
+ * \param input_shape_names names of the input shapes
+ * \param input_shape_data pointer to the contiguous data shapes
+ * \param input_shape_idx array of per shape starting idx, the shape length for the i-th input shape
+ * is calculate as input_shape_idx[i+1] - input_shape_idx[i]
+ * \param num_input_dtypes number of input data types
+ * \param input_dtype_names array of names of the input data types
+ * \param input_dtypes array of values of the input data types
+ * \param num_input_stypesnumber of input storage types
+ * \param input_stype_names array of names of the input storage types
+ * \param input_stypes array of values of input storage types
+ * \param skip_infer if the optimization should skip the attribute inferences
+ * (to use if the backend does not require shape inference)
+ * \param new_args_cnt pointer a number to store the number of new args
+ * \param new_args_handle pointer on array to store the new args handles
+ * \param new_arg_names_handle pointer on array to store the new args names
+ * \param new_aux_cnt pointer a number to store the number of new aux
+ * \param new_aux_handle pointer on array to store the new aux handles
+ * \param new_aux_names_handle pointer on array to store the new aux names
  */
 MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    const char* backend_name,
@@ -2249,6 +2274,17 @@ MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    const mx_uint num_options,
                                    const char** keys,
                                    const char** vals,
+                                   const uint32_t num_input_shapes,
+                                   const char** input_shape_names,
+                                   const int64_t* input_shape_data,
+                                   const uint32_t* input_shape_idx,
+                                   const uint32_t num_input_dtypes,
+                                   const char** input_dtype_names,
+                                   const int* input_dtypes,
+                                   const uint32_t num_input_stypes,
+                                   const char** input_stype_names,
+                                   const int* input_stypes,
+                                   bool skip_infer,
                                    int* new_args_cnt,
                                    NDArrayHandle** new_args_handle,
                                    char*** new_arg_names_handle,
@@ -2257,376 +2293,6 @@ MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    char*** new_aux_names_handle);
 
 
-//--------------------------------------------
-// Part 4: Executor interface
-//--------------------------------------------
-/*!
- * \brief Delete the executor
- * \param handle the executor.
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorFree(ExecutorHandle handle);
-/*!
- * \brief Print the content of execution plan, used for debug.
- * \param handle the executor.
- * \param out_str pointer to hold the output string of the printing.
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorPrint(ExecutorHandle handle, const char **out_str);
-/*!
- * \brief Executor forward method
- *
- * \param handle executor handle
- * \param is_train int value to indicate whether the forward pass is for evaluation
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorForward(ExecutorHandle handle, int is_train);
-/*!
- * \brief Excecutor run backward
- *
- * \param handle execute handle
- * \param len lenth
- * \param head_grads NDArray handle for heads' gradient
- *
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorBackward(ExecutorHandle handle,
-                                 uint32_t len,
-                                 NDArrayHandle *head_grads);
-/*!
- * \brief Excecutor run backward
- *
- * \param handle execute handle
- * \param len lenth
- * \param head_grads NDArray handle for heads' gradient
- * \param is_train int value to indicate whether the backward pass is for evaluation
- *
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorBackwardEx(ExecutorHandle handle,
-                                   uint32_t len,
-                                   NDArrayHandle *head_grads,
-                                   int is_train);
-/*!
- * \brief Get executor's head NDArray
- *
- * \param handle executor handle
- * \param out_size output narray vector size
- * \param out out put narray handles
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorOutputs(ExecutorHandle handle,
-                                uint32_t *out_size,
-                                NDArrayHandle **out);
-
-/*!
- * \brief Generate Executor from symbol
- *
- * \param symbol_handle symbol handle
- * \param dev_type device type
- * \param dev_id device id
- * \param len length
- * \param in_args in args array
- * \param arg_grad_store arg grads handle array
- * \param grad_req_type grad req array
- * \param aux_states_len length of auxiliary states
- * \param aux_states auxiliary states array
- * \param out output executor handle
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorBind(SymbolHandle symbol_handle,
-                             int dev_type,
-                             int dev_id,
-                             uint32_t len,
-                             NDArrayHandle *in_args,
-                             NDArrayHandle *arg_grad_store,
-                             uint32_t *grad_req_type,
-                             uint32_t aux_states_len,
-                             NDArrayHandle *aux_states,
-                             ExecutorHandle *out);
-/*!
- * \brief Generate Executor from symbol,
- *  This is advanced function, allow specify group2ctx map.
- *  The user can annotate "ctx_group" attribute to name each group.
- *
- * \param symbol_handle symbol handle
- * \param dev_type device type of default context
- * \param dev_id device id of default context
- * \param num_map_keys size of group2ctx map
- * \param map_keys keys of group2ctx map
- * \param map_dev_types device type of group2ctx map
- * \param map_dev_ids device id of group2ctx map
- * \param len length
- * \param in_args in args array
- * \param arg_grad_store arg grads handle array
- * \param grad_req_type grad req array
- * \param aux_states_len length of auxiliary states
- * \param aux_states auxiliary states array
- * \param out output executor handle
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorBindX(SymbolHandle symbol_handle,
-                              int dev_type,
-                              int dev_id,
-                              uint32_t num_map_keys,
-                              const char** map_keys,
-                              const int* map_dev_types,
-                              const int* map_dev_ids,
-                              uint32_t len,
-                              NDArrayHandle *in_args,
-                              NDArrayHandle *arg_grad_store,
-                              uint32_t *grad_req_type,
-                              uint32_t aux_states_len,
-                              NDArrayHandle *aux_states,
-                              ExecutorHandle *out);
-/*!
- * \brief Generate Executor from symbol,
- *  This is advanced function, allow specify group2ctx map.
- *  The user can annotate "ctx_group" attribute to name each group.
- *
- * \param symbol_handle symbol handle
- * \param dev_type device type of default context
- * \param dev_id device id of default context
- * \param num_map_keys size of group2ctx map
- * \param map_keys keys of group2ctx map
- * \param map_dev_types device type of group2ctx map
- * \param map_dev_ids device id of group2ctx map
- * \param len length
- * \param in_args in args array
- * \param arg_grad_store arg grads handle array
- * \param grad_req_type grad req array
- * \param aux_states_len length of auxiliary states
- * \param aux_states auxiliary states array
- * \param shared_exec input executor handle for memory sharing
- * \param out output executor handle
- * \return 0 when success, -1 when failure happens
- */
-MXNET_DLL int MXExecutorBindEX(SymbolHandle symbol_handle,
-                               int dev_type,
-                               int dev_id,
-                               uint32_t num_map_keys,
-                               const char** map_keys,
-                               const int* map_dev_types,
-                               const int* map_dev_ids,
-                               uint32_t len,
-                               NDArrayHandle *in_args,
-                               NDArrayHandle *arg_grad_store,
-                               uint32_t *grad_req_type,
-                               uint32_t aux_states_len,
-                               NDArrayHandle *aux_states,
-                               ExecutorHandle shared_exec,
-                               ExecutorHandle *out);
-/*! \brief DEPRECATED. Use MXExecutorSimpleBindEx instead.
- */
-MXNET_DLL int MXExecutorSimpleBind(SymbolHandle symbol_handle,
-                                   int dev_type,
-                                   int dev_id,
-                                   const uint32_t num_g2c_keys,
-                                   const char** g2c_keys,
-                                   const int* g2c_dev_types,
-                                   const int* g2c_dev_ids,
-                                   const uint32_t provided_grad_req_list_len,
-                                   const char** provided_grad_req_names,
-                                   const char** provided_grad_req_types,
-                                   const uint32_t num_provided_arg_shapes,
-                                   const char** provided_arg_shape_names,
-                                   const uint32_t* provided_arg_shape_data,
-                                   const uint32_t* provided_arg_shape_idx,
-                                   const uint32_t num_provided_arg_dtypes,
-                                   const char** provided_arg_dtype_names,
-                                   const int* provided_arg_dtypes,
-                                   const uint32_t num_provided_arg_stypes,
-                                   const char** provided_arg_stype_names,
-                                   const int* provided_arg_stypes,
-                                   const uint32_t num_shared_arg_names,
-                                   const char** shared_arg_name_list,
-                                   int* shared_buffer_len,
-                                   const char** shared_buffer_name_list,
-                                   NDArrayHandle* shared_buffer_handle_list,
-                                   const char*** updated_shared_buffer_name_list,
-                                   NDArrayHandle** updated_shared_buffer_handle_list,
-                                   uint32_t* num_in_args,
-                                   NDArrayHandle** in_args,
-                                   NDArrayHandle** arg_grads,
-                                   uint32_t* num_aux_states,
-                                   NDArrayHandle** aux_states,
-                                   ExecutorHandle shared_exec_handle,
-                                   ExecutorHandle* out);
-
-
-MXNET_DLL int MXExecutorSimpleBindEx(SymbolHandle symbol_handle,
-                                     int dev_type,
-                                     int dev_id,
-                                     const uint32_t num_g2c_keys,
-                                     const char** g2c_keys,
-                                     const int* g2c_dev_types,
-                                     const int* g2c_dev_ids,
-                                     const uint32_t provided_grad_req_list_len,
-                                     const char** provided_grad_req_names,
-                                     const char** provided_grad_req_types,
-                                     const uint32_t num_provided_arg_shapes,
-                                     const char** provided_arg_shape_names,
-                                     const int* provided_arg_shape_data,
-                                     const uint32_t* provided_arg_shape_idx,
-                                     const uint32_t num_provided_arg_dtypes,
-                                     const char** provided_arg_dtype_names,
-                                     const int* provided_arg_dtypes,
-                                     const uint32_t num_provided_arg_stypes,
-                                     const char** provided_arg_stype_names,
-                                     const int* provided_arg_stypes,
-                                     const uint32_t num_shared_arg_names,
-                                     const char** shared_arg_name_list,
-                                     int* shared_buffer_len,
-                                     const char** shared_buffer_name_list,
-                                     NDArrayHandle* shared_buffer_handle_list,
-                                     const char*** updated_shared_buffer_name_list,
-                                     NDArrayHandle** updated_shared_buffer_handle_list,
-                                     uint32_t* num_in_args,
-                                     NDArrayHandle** in_args,
-                                     NDArrayHandle** arg_grads,
-                                     uint32_t* num_aux_states,
-                                     NDArrayHandle** aux_states,
-                                     ExecutorHandle shared_exec_handle,
-                                     ExecutorHandle* out);
-
-
-MXNET_DLL int MXExecutorSimpleBindEx64(SymbolHandle symbol_handle,
-                                     int dev_type,
-                                     int dev_id,
-                                     const uint32_t num_g2c_keys,
-                                     const char** g2c_keys,
-                                     const int* g2c_dev_types,
-                                     const int* g2c_dev_ids,
-                                     const uint32_t provided_grad_req_list_len,
-                                     const char** provided_grad_req_names,
-                                     const char** provided_grad_req_types,
-                                     const uint32_t num_provided_arg_shapes,
-                                     const char** provided_arg_shape_names,
-                                     const int64_t* provided_arg_shape_data,
-                                     const uint32_t* provided_arg_shape_idx,
-                                     const uint32_t num_provided_arg_dtypes,
-                                     const char** provided_arg_dtype_names,
-                                     const int* provided_arg_dtypes,
-                                     const uint32_t num_provided_arg_stypes,
-                                     const char** provided_arg_stype_names,
-                                     const int* provided_arg_stypes,
-                                     const uint32_t num_shared_arg_names,
-                                     const char** shared_arg_name_list,
-                                     int* shared_buffer_len,
-                                     const char** shared_buffer_name_list,
-                                     NDArrayHandle* shared_buffer_handle_list,
-                                     const char*** updated_shared_buffer_name_list,
-                                     NDArrayHandle** updated_shared_buffer_handle_list,
-                                     uint32_t* num_in_args,
-                                     NDArrayHandle** in_args,
-                                     NDArrayHandle** arg_grads,
-                                     uint32_t* num_aux_states,
-                                     NDArrayHandle** aux_states,
-                                     ExecutorHandle shared_exec_handle,
-                                     ExecutorHandle* out);
-
-
-/*!
- * \brief DEPRECATED. Use MXExecutorReshapeEx instead.
- * Return a new executor with the same symbol and shared memory,
- * but different input/output shapes.
- *
- * \param partial_shaping Whether to allow changing the shape of unspecified arguments.
- * \param allow_up_sizing Whether to allow allocating new ndarrays that's larger than the original.
- * \param dev_type device type of default context
- * \param dev_id device id of default context
- * \param num_map_keys size of group2ctx map
- * \param map_keys keys of group2ctx map
- * \param map_dev_types device type of group2ctx map
- * \param map_dev_ids device id of group2ctx map
- * \param num_in_args length of in_args
- * \param in_args in args array
- * \param arg_grads arg grads handle array
- * \param num_aux_states length of auxiliary states
- * \param aux_states auxiliary states array
- * \param shared_exec input executor handle for memory sharing
- * \param out output executor handle
- * \return a new executor
- */
-MXNET_DLL int MXExecutorReshape(int partial_shaping,
-                                int allow_up_sizing,
-                                int dev_type,
-                                int dev_id,
-                                uint32_t num_map_keys,
-                                const char** map_keys,
-                                const int* map_dev_types,
-                                const int* map_dev_ids,
-                                const uint32_t num_provided_arg_shapes,
-                                const char** provided_arg_shape_names,
-                                const uint32_t* provided_arg_shape_data,
-                                const uint32_t* provided_arg_shape_idx,
-                                uint32_t* num_in_args,
-                                NDArrayHandle** in_args,
-                                NDArrayHandle** arg_grads,
-                                uint32_t* num_aux_states,
-                                NDArrayHandle** aux_states,
-                                ExecutorHandle shared_exec,
-                                ExecutorHandle *out);
-/*!
- * \brief Return a new executor with the same symbol and shared memory,
- * but different input/output shapes.
- *
- * \param partial_shaping Whether to allow changing the shape of unspecified arguments.
- * \param allow_up_sizing Whether to allow allocating new ndarrays that's larger than the original.
- * \param dev_type device type of default context
- * \param dev_id device id of default context
- * \param num_map_keys size of group2ctx map
- * \param map_keys keys of group2ctx map
- * \param map_dev_types device type of group2ctx map
- * \param map_dev_ids device id of group2ctx map
- * \param num_in_args length of in_args
- * \param in_args in args array
- * \param arg_grads arg grads handle array
- * \param num_aux_states length of auxiliary states
- * \param aux_states auxiliary states array
- * \param shared_exec input executor handle for memory sharing
- * \param out output executor handle
- * \return a new executor
- */
-MXNET_DLL int MXExecutorReshapeEx(int partial_shaping,
-                                  int allow_up_sizing,
-                                  int dev_type,
-                                  int dev_id,
-                                  uint32_t num_map_keys,
-                                  const char** map_keys,
-                                  const int* map_dev_types,
-                                  const int* map_dev_ids,
-                                  const uint32_t num_provided_arg_shapes,
-                                  const char** provided_arg_shape_names,
-                                  const int* provided_arg_shape_data,
-                                  const uint32_t* provided_arg_shape_idx,
-                                  uint32_t* num_in_args,
-                                  NDArrayHandle** in_args,
-                                  NDArrayHandle** arg_grads,
-                                  uint32_t* num_aux_states,
-                                  NDArrayHandle** aux_states,
-                                  ExecutorHandle shared_exec,
-                                  ExecutorHandle *out);
-
-/*!
- * \brief get optimized graph from graph executor
- */
-MXNET_DLL int MXExecutorGetOptimizedSymbol(ExecutorHandle handle,
-                                           SymbolHandle *out);
-/*!
- * \brief set a call back to notify the completion of operation
- */
-MXNET_DLL int MXExecutorSetMonitorCallback(ExecutorHandle handle,
-                                           ExecutorMonitorCallback callback,
-                                           void* callback_handle);
-
-/*!
- * \brief set a call back to notify the completion of operation
- * \param monitor_all If true, monitor both input and output, otherwise monitor output only.
- */
-MXNET_DLL int MXExecutorSetMonitorCallbackEX(ExecutorHandle handle,
-                                             ExecutorMonitorCallback callback,
-                                             void *callback_handle, bool monitor_all);
 //--------------------------------------------
 // Part 5: IO Interface
 //--------------------------------------------

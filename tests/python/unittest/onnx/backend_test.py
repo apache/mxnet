@@ -19,21 +19,6 @@
 # under the License.
 
 """ONNX test backend wrapper"""
-try:
-    import onnx.backend.test
-except ImportError:
-    raise ImportError("Onnx and protobuf need to be installed")
-
-import test_cases
-import unittest
-import backend as mxnet_backend
-import logging
-
-operations = ['import', 'export']
-backends = ['mxnet', 'gluon']
-# This is a pytest magic variable to load extra plugins
-pytest_plugins = "onnx.backend.test.report",
-
 
 def build_test_suite(backend_tests):  # type: () -> unittest.TestSuite
     '''
@@ -80,13 +65,29 @@ def prepare_tests(backend, oper):
     return BACKEND_TESTS
 
 
-for bkend in backends:
-    for operation in operations:
-        log = logging.getLogger(bkend + operation)
-        if bkend == 'gluon' and operation == 'export':
-            log.warning('Gluon->ONNX export not implemented. Skipping tests...')
-            continue
-        log.info('Executing tests for ' + bkend + ' backend: ' + operation)
-        mxnet_backend.MXNetBackend.set_params(bkend, operation)
-        BACKEND_TESTS = prepare_tests(mxnet_backend, operation)
-        unittest.TextTestRunner().run(build_test_suite(BACKEND_TESTS.enable_report()))
+if __name__ == '__main__':
+    try:
+        import onnx.backend.test
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed")
+
+    import test_cases
+    import unittest
+    import backend as mxnet_backend
+    import logging
+
+    operations = ['import', 'export']
+    backends = ['mxnet', 'gluon']
+    # This is a pytest magic variable to load extra plugins
+    pytest_plugins = "onnx.backend.test.report",
+
+    for bkend in backends:
+        for operation in operations:
+            log = logging.getLogger(bkend + operation)
+            if bkend == 'gluon' and operation == 'export':
+                log.warning('Gluon->ONNX export not implemented. Skipping tests...')
+                continue
+            log.info('Executing tests for ' + bkend + ' backend: ' + operation)
+            mxnet_backend.MXNetBackend.set_params(bkend, operation)
+            BACKEND_TESTS = prepare_tests(mxnet_backend, operation)
+            unittest.TextTestRunner().run(build_test_suite(BACKEND_TESTS.enable_report()))

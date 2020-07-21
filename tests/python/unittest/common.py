@@ -223,11 +223,13 @@ def with_seed(seed=None):
                 try:
                     orig_test(*args, **kwargs)
                 except:
-                    # With exceptions, repeat test_msg at INFO level to be sure it's seen.
-                    if log_level < logging.INFO:
-                        logger.info(test_msg)
+                    # With exceptions, repeat test_msg at WARNING level to be sure it's seen.
+                    if log_level < logging.WARNING:
+                        logger.warning(test_msg)
                     raise
                 finally:
+                    # Provide test-isolation for any test having this decorator
+                    mx.nd.waitall()
                     np.random.set_state(post_test_state)
         return test_new
     return test_helper
@@ -286,7 +288,7 @@ def setup_module():
         seed = np.random.randint(0, np.iinfo(np.int32).max)
     else:
         seed = int(module_seed_str)
-        logger.warn('*** module-level seed is set: all tests running deterministically ***')
+        logger.warning('*** module-level seed is set: all tests running deterministically ***')
     logger.info('Setting module np/mx/python random seeds, use MXNET_MODULE_SEED=%s to reproduce.', seed)
     np.random.seed(seed)
     mx.random.seed(seed)
@@ -294,7 +296,7 @@ def setup_module():
     # The MXNET_TEST_SEED environment variable will override MXNET_MODULE_SEED for tests with
     #  the 'with_seed()' decoration.  Inform the user of this once here at the module level.
     if os.getenv('MXNET_TEST_SEED') is not None:
-        logger.warn('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
+        logger.warning('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
 
 
 def teardown_module():
@@ -376,13 +378,13 @@ def retry(n):
         @functools.wraps(orig_test)
         def test_new(*args, **kwargs):
             """Wrapper for tests function."""
-            for _ in range(n):
+            for i in range(n):
                 try:
                     orig_test(*args, **kwargs)
+                    return
                 except AssertionError as e:
-                    err = e
-                    continue
-                return
-            raise err
+                    if i == n-1:
+                        raise e
+                    mx.nd.waitall()
         return test_new
     return test_helper

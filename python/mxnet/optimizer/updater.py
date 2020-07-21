@@ -21,7 +21,7 @@ import pickle
 import numpy
 from ..base import py_str
 from ..ndarray import NDArray
-from ..profiler import Scope
+from ..profiler import scope as profiler_scope
 from ..util import is_np_array
 from .utils import _as_classic
 
@@ -55,7 +55,7 @@ class Updater(object):
                 indices[i] = py_str(idx)
                 idx = indices[i]
             if idx not in self.states:
-                with Scope("updater:optimizer_state"):
+                with profiler_scope("updater:optimizer_state"):
                     self.states[idx] = self.optimizer.create_state_multi_precision(idx, weights[i])
                 self.states_synced[idx] = True
             elif not self.states_synced[idx]:

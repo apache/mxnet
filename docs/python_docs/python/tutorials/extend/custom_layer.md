@@ -111,10 +111,9 @@ Below is an example of how to create a simple neural network with a custom layer
 
 ```python
 net = gluon.nn.HybridSequential()                         # Define a Neural Network as a sequence of hybrid blocks
-with net.name_scope():                                    # Used to disambiguate saving and loading net parameters
-    net.add(Dense(5))                                     # Add Dense layer with 5 neurons
-    net.add(NormalizationHybridLayer())                   # Add our custom layer
-    net.add(Dense(1))                                     # Add Dense layer with 1 neurons
+net.add(Dense(5))                                     # Add Dense layer with 5 neurons
+net.add(NormalizationHybridLayer())                   # Add our custom layer
+net.add(Dense(1))                                     # Add Dense layer with 1 neurons
 
 
 net.initialize(mx.init.Xavier(magnitude=2.24))            # Initialize parameters of all layers
@@ -148,12 +147,11 @@ class NormalizationHybridLayer(gluon.HybridBlock):
     def __init__(self, hidden_units, scales):
         super(NormalizationHybridLayer, self).__init__()
 
-        with self.name_scope():
-            self.weights = self.params.get('weights',
-                                           shape=(hidden_units, 0),
-                                           allow_deferred_init=True)
+        self.weights = gluon.Parameter('weights',
+                                       shape=(hidden_units, 0),
+                                       allow_deferred_init=True)
 
-            self.scales = self.params.get('scales',
+        self.scales = gluon.Parameter('scales',
                                       shape=scales.shape,
                                       init=mx.init.Constant(scales.asnumpy().tolist()), # Convert to regular list to make this object serializable
                                       differentiable=False)
@@ -170,14 +168,13 @@ In the example above 2 set of parameters are defined:
 1. Parameter `scale` is a constant that doesn't change. Its shape is defined during construction.
 
 Notice a few aspects of this code:
-* `name_scope()` method is used to add a prefix to parameter names during saving and loading
 * Shape is not provided when creating `weights`. Instead it is going to be infered from the shape of the input
 * `Scales` parameter is initialized and marked as `differentiable=False`.
 * `F` backend is used for all calculations
 * The calculation of dot product is done using `F.FullyConnected()` method instead of `F.dot()` method. The one was chosen over another because the former supports automatic infering shapes of inputs while the latter doesn't. This is extremely important to know, if one doesn't want to hard code all the shapes. The best way to learn what operators supports automatic inference of input shapes at the moment is browsing C++ implementation of operators to see if one uses a method `SHAPE_ASSIGN_CHECK(*in_shape, fullc::kWeight, Shape2(param.num_hidden, num_input));`
 * `hybrid_forward()` method signature has changed. It accepts two new arguments: `weights` and `scales`.
 
-The last peculiarity is due to support of imperative and symbolic programming by `HybridBlock`. During training phase, parameters are passed to the layer by Apache MxNet framework as additional arguments to the method, because they might need to be converted to a `Symbol` depending on if the layer was hybridized. One shouldn't use `self.weights` and `self.scales` or `self.params.get` in `hybrid_forward` except to get shapes of parameters. 
+The last peculiarity is due to support of imperative and symbolic programming by `HybridBlock`. During training phase, parameters are passed to the layer by Apache MxNet framework as additional arguments to the method, because they might need to be converted to a `Symbol` depending on if the layer was hybridized. One shouldn't use `self.weights` and `self.scales` in `hybrid_forward` except to get shapes of parameters. 
 
 Running forward pass on this network is very similar to the previous example, so instead of just doing one forward pass, let's run whole training for a few epochs to show that `scales` parameter doesn't change during the training while `weights` parameter is changing.
 
@@ -194,11 +191,10 @@ def print_params(title, net):
         print('{} = {}\n'.format(key, value.data()))
 
 net = gluon.nn.HybridSequential()                             # Define a Neural Network as a sequence of hybrid blocks
-with net.name_scope():                                        # Used to disambiguate saving and loading net parameters
-    net.add(Dense(5))                                         # Add Dense layer with 5 neurons
-    net.add(NormalizationHybridLayer(hidden_units=5, 
-                                     scales = nd.array([2]))) # Add our custom layer
-    net.add(Dense(1))                                         # Add Dense layer with 1 neurons
+net.add(Dense(5))                                         # Add Dense layer with 5 neurons
+net.add(NormalizationHybridLayer(hidden_units=5, 
+                                    scales = nd.array([2]))) # Add our custom layer
+net.add(Dense(1))                                         # Add Dense layer with 1 neurons
 
 
 net.initialize(mx.init.Xavier(magnitude=2.24))                # Initialize parameters of all layers

@@ -223,8 +223,3 @@ def test_np_arange_default_dtype():
         
         check_deepnp_indices_default_dtype()
         check_np_indices_default_dtype()
-
-    
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

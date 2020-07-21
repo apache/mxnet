@@ -117,6 +117,8 @@ class _Symbol(Symbol):
                 end = []
                 step = []
                 new_shape = ()
+                result = self
+                is_symbol_tuple = False
                 if len(key) == 0:
                     return self
                 for index in key:
@@ -137,14 +139,27 @@ class _Symbol(Symbol):
                             end.append(index - 1)
                             step.append(-1)
                         new_shape += (-3,)
+                    elif isinstance(index, Symbol):
+                        if new_shape != ():
+                            new_shape += (-4,)
+                            sliced = _npi.slice(result, begin, end, step)
+                            result = _npi.reshape(sliced, new_shape)
+                        if not is_symbol_tuple:
+                            is_symbol_tuple = True
                     else:
-                        raise IndexError('Only integer, slice, or tuple of these types'
+                        raise IndexError('Only integer, slice, symbol or tuple of these types'
                                          ' are supported! Received key={}'.format(key))
+                if is_symbol_tuple:
+                    key = _npi.stack(*[i for i in key])
+                    sliced = _npi.advanced_indexing_multiple(self, key)
+                    return sliced
                 new_shape += (-4,)
                 sliced = _npi.slice(self, begin, end, step)
                 return _npi.reshape(sliced, new_shape)
+            elif isinstance(key, Symbol):
+                return _npi.advanced_indexing(self, key)
             else:
-                raise IndexError('Only integer, slice, or tuple of these types are supported! '
+                raise IndexError('Only integer, slice, tuple or Symbol of these types are supported! '
                                  'Received key={}'.format(key))
 
     def __setitem__(self, key, value):
@@ -280,10 +295,10 @@ class _Symbol(Symbol):
 
     def __neg__(self):
         """x.__neg__() <=> - x"""
-        return self.__mul__(-1.0)
+        return negative(self)
 
     def __deepcopy__(self, _):
-        return super(_Symbol, self).as_np_ndarray()
+        return super().__deepcopy__(_).as_np_ndarray()
 
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
@@ -2448,7 +2463,13 @@ def repeat(a, repeats, axis=None):
            [3, 4],
            [3, 4]])
     """
-    return _npi.repeat(a, repeats=repeats, axis=axis)
+    if isinstance(repeats, numeric_types):
+        repeats = [repeats]
+    if axis is not None:
+        tmp = swapaxes(a, 0, axis)
+        res = _npi.repeats(tmp, repeats=repeats, axis=0)
+        return swapaxes(res, 0, axis)
+    return _npi.repeats(a, repeats=repeats, axis=axis)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):

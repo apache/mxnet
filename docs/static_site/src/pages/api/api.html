@@ -52,7 +52,7 @@ docs:
 - title: Julia
   guide_link: /api/julia
   api_link: /api/julia/docs/api
-  tutorial_link: https://mxnet.incubator.apache.org/api/julia/docs/api/#tutorials
+  tutorial_link: /api/julia/docs/api/#tutorials
   description:
   icon: /assets/img/julia_logo.svg
   tag: julia
@@ -172,6 +172,18 @@ docs:
         {%- endfor -%}
         </ul>
     </div>
+</div>
+<div class="docs-dev-guide">
+  <div class="wrapper">
+      <h2>Developer Guide</h2>
+      <ul>
+        {%- for p in site.pages -%}
+          {%- if p.category == 'Developer Guide' -%}
+            <li><a href="{{p.url | relative_url}}">{{p.title}}</a></li>
+          {%- endif -%}
+        {%- endfor -%}
+      </ul>
+  </div>
 </div>
 <div class="docs-faq">
     <div class="wrapper">

@@ -30,7 +30,7 @@
 #include "./fused_op-inl.h"
 #include "../operator_common.h"
 #include "../elemwise_op_common.h"
-#include "../../executor/exec_pass.h"
+#include "../../imperative/exec_pass.h"
 #include "../../common/cuda_utils.h"
 
 namespace mxnet {

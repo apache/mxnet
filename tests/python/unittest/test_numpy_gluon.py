@@ -47,8 +47,7 @@ def test_create_np_param():
     class TestBlock1(gluon.HybridBlock):
         def __init__(self):
             super(TestBlock1, self).__init__()
-            with self.name_scope():
-                self.w = self.params.get('w', shape=(K, N), allow_deferred_init=True)
+            self.w = gluon.Parameter('w', shape=(K, N), allow_deferred_init=True)
 
         def hybrid_forward(self, F, x, w):
             return F.dot(x, w)
@@ -57,8 +56,7 @@ def test_create_np_param():
     class TestBlock2(gluon.HybridBlock):
         def __init__(self):
             super(TestBlock2, self).__init__()
-            with self.name_scope():
-                self.w = self.params.get('w', shape=(K, N), allow_deferred_init=True)
+            self.w = gluon.Parameter('w', shape=(K, N), allow_deferred_init=True)
 
         def hybrid_forward(self, F, x, w):
             return F.np.dot(x, w)
@@ -77,11 +75,10 @@ def test_optimizer_with_np_ndarrays():
     class LinearRegression(gluon.HybridBlock):
         def __init__(self, num_input_dim=0, num_hidden_dim=100, num_output_dim=10):
             super(LinearRegression, self).__init__()
-            with self.name_scope():
-                self.w1 = self.params.get('w1', shape=(num_input_dim, num_hidden_dim),
-                                          allow_deferred_init=True)
-                self.w2 = self.params.get('w2', shape=(num_hidden_dim, num_output_dim),
-                                          allow_deferred_init=True)
+            self.w1 = gluon.Parameter('w1', shape=(num_input_dim, num_hidden_dim),
+                                      allow_deferred_init=True)
+            self.w2 = gluon.Parameter('w2', shape=(num_hidden_dim, num_output_dim),
+                                      allow_deferred_init=True)
 
         def hybrid_forward(self, F, x, w1, w2):
             h = x.dot(w1)  # equivalent to F.np.dot(x, w1)
@@ -154,10 +151,10 @@ def test_np_loss_ndarray():
 
     loss = gluon.loss.SoftmaxCrossEntropyLoss()
     L = loss(output, label).asnumpy()
-    assert_almost_equal(L, _np.array([2.12692809,  0.04858733]), use_broadcast=False)
+    assert_almost_equal(L, _np.array([2.12692809,  0.04858733]), use_broadcast=False, rtol=1e-3)
 
     L = loss(output, label, weighting).asnumpy()
-    assert_almost_equal(L, _np.array([1.06346405,  0.04858733]), use_broadcast=False)
+    assert_almost_equal(L, _np.array([1.06346405,  0.04858733]), use_broadcast=False, rtol=1e-3)
 
 
 @with_seed()
@@ -166,9 +163,9 @@ def test_np_get_constant():
     const_arr = _np.random.uniform(0, 100, size=(10, 10)).astype(_np.float32)
 
     class Foo(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(Foo, self).__init__(prefix=prefix, params=params)
-            self.weight = self.params.get_constant('const', const_arr)
+        def __init__(self):
+            super(Foo, self).__init__()
+            self.weight = gluon.Constant(const_arr)
 
         def hybrid_forward(self, F, x, weight):
             return x + weight.astype(np.float32)
@@ -195,7 +192,7 @@ def test_parameters_zero_grad():
         out = net(mx.np.ones((32, 8)))
         for v in net.collect_params().values():
             v.grad()[()] = 1
-        net.collect_params().zero_grad()
+        net.zero_grad()
         for v in net.collect_params().values():
             assert_almost_equal(v.grad().asnumpy(), mx.np.zeros_like(v.grad()).asnumpy())
 
@@ -328,10 +325,9 @@ def test_symbolic_basic_slicing():
                 return x
 
         class TestSlicingWithSplit2(gluon.HybridBlock):
-            def __init__(self, prefix=None, params=None):
-                super(TestSlicingWithSplit2, self).__init__(prefix=prefix, params=params)
-                with self.name_scope():
-                    self.layer = gluon.nn.Dense(16, flatten=False, params=params)
+            def __init__(self):
+                super(TestSlicingWithSplit2, self).__init__()
+                self.layer = gluon.nn.Dense(16, flatten=False)
 
             def hybrid_forward(self, F, x, y):
                 x = F.np.split(x, 1)
@@ -384,10 +380,9 @@ def test_symbolic_basic_slicing():
 @use_np
 def test_net_symbol_save_load():
     class Case1(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(Case1, self).__init__(prefix=prefix, params=params)
-            with self.name_scope():
-                self.layer = gluon.nn.Dense(64, flatten=False, params=params)
+        def __init__(self):
+            super(Case1, self).__init__()
+            self.layer = gluon.nn.Dense(64, flatten=False)
 
         def hybrid_forward(self, F, x, y):
             x = F.np.split(x, 1)
@@ -397,11 +392,10 @@ def test_net_symbol_save_load():
                                   mx.np.random.normal(0, 1, (10, 5, 8, 6))])
 
     class Case2(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(Case2, self).__init__(prefix=prefix, params=params)
-            with self.name_scope():
-                self.layer1 = gluon.nn.Dense(64, flatten=False, params=params)
-                self.layer2 = gluon.nn.Dense(64, flatten=False, params=params)
+        def __init__(self):
+            super(Case2, self).__init__()
+            self.layer1 = gluon.nn.Dense(64, flatten=False)
+            self.layer2 = gluon.nn.Dense(64, flatten=False)
 
         def hybrid_forward(self, F, x, y):
             x = F.np.split(x, 1)
@@ -415,8 +409,8 @@ def test_net_symbol_save_load():
 @use_np
 def test_hybridize_boolean_dtype():
     class Foo(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(Foo, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(Foo, self).__init__()
 
         def hybrid_forward(self, F, valid_length):
             mask = ((F.np.ones((10,)) / 2) < valid_length)

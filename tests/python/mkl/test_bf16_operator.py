@@ -25,7 +25,7 @@ import collections
 import ctypes
 import itertools
 import mxnet.contrib.amp as amp
-from mxnet.test_utils import set_default_context, download_model, same_symbol_structure, assert_almost_equal_with_err, rand_shape_nd
+from mxnet.test_utils import set_default_context, same_symbol_structure, assert_almost_equal_with_err, rand_shape_nd
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
 from mxnet.contrib.amp import amp
@@ -70,7 +70,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
     arg_names = sym_fp32.list_arguments()
     aux_names = sym_fp32.list_auxiliary_states()
 
-    exe_fp32 = sym_fp32.simple_bind(ctx=mx.cpu(), data=data_shape)
+    exe_fp32 = sym_fp32._simple_bind(ctx=mx.cpu(), data=data_shape)
 
     arg_params_fp32 = {}
     aux_params_fp32 = {}
@@ -91,7 +91,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
 
     output_fp32 = exe_fp32.forward()[0]
 
-    exe_bf16 = sym_bf16.simple_bind(ctx=mx.cpu(), data=data_shape, type_dict=type_dict)
+    exe_bf16 = sym_bf16._simple_bind(ctx=mx.cpu(), data=data_shape, type_dict=type_dict)
 
     arg_params_bf16 = {}
     aux_params_bf16 = {}

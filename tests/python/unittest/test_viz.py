@@ -53,7 +53,6 @@ def test_plot_network():
     net = mx.sym.FullyConnected(data=net, name='fc', num_hidden=128)
     net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
     net = mx.sym.FullyConnected(data=net, name='fc', num_hidden=10)
-    net = mx.sym.SoftmaxOutput(data=net, name='out')
     with warnings.catch_warnings(record=True) as w:
         digraph = mx.viz.plot_network(net, shape={'data': (100, 200)},
                                       dtype={'data': np.float32},
@@ -61,4 +60,3 @@ def test_plot_network():
     assert len(w) == 1
     assert "There are multiple variables with the same name in your graph" in str(w[-1].message)
     assert "fc" in str(w[-1].message)
-

@@ -23,7 +23,10 @@ import multiprocessing as mp
 import mxnet as mx
 import numpy as np
 import pytest
+import itertools
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
+from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
+from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same
 from mxnet.base import MXNetError
 from mxnet import autograd
 
@@ -31,14 +34,16 @@ curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, with_environment
 from common import run_in_spawned_process
+from test_operator import check_sequence_reverse, allclose_function
 from test_operator import *
 from test_numpy_ndarray import *
 from test_numpy_op import *
 from test_numpy_interoperability import *
+from test_gluon_probability_v1 import *
+from test_gluon_probability_v2 import *
 from test_optimizer import *
 from test_random import *
 from test_exc_handling import *
-#from test_rnn import *
 from test_sparse_ndarray import *
 from test_sparse_operator import *
 from test_ndarray import *
@@ -46,11 +51,9 @@ from test_subgraph_op import *
 from test_gluon_gpu import _test_bulking
 from test_contrib_operator import test_multibox_target_op
 from test_contrib_optimizer import test_adamw
+del test_custom_op_fork  #noqa
 
 set_default_context(mx.gpu(0))
-del test_support_vector_machine_l1_svm  # noqa
-del test_support_vector_machine_l2_svm  # noqa
-del test_custom_op_fork  #noqa
 
 def check_countsketch(in_dim,out_dim,n):
     data = mx.sym.Variable("data")
@@ -97,87 +100,6 @@ def test_countsketch():
     check_countsketch(in_dim, out_dim, n)
 
 
-def check_ifft(shape):
-    shape_old = shape
-    if len(shape) == 2:
-        if shape[1]%2 != 0:
-            lst = list(shape)
-            lst[1] = lst[1]*2
-            shape = tuple(lst)
-            shape_old = shape
-        shape = (shape[0],shape[1]*2)
-    if len(shape) == 4:
-        if shape[3]%2 != 0:
-            lst = list(shape)
-            lst[3] = lst[3]*2
-            shape = tuple(lst)
-            shape_old = shape
-        shape = (shape[0],shape[1],shape[2],shape[3]*2)
-    sym = mx.sym.contrib.ifft(name='ifft', compute_size = 128)
-    init = [np.random.normal(size=shape, scale=1.0)]
-    arr_grad = [mx.nd.empty(shape)]
-    ctx_list = [{'ctx': mx.gpu(0),'ifft_data': shape, 'type_dict': {'ifft_data': np.float32}}]
-    exe_list = [sym.simple_bind(args_grad=arr_grad,**ctx) for ctx in ctx_list]
-
-    for exe in exe_list:
-        for arr, iarr in zip(exe.arg_arrays, init):
-            arr[:] = iarr.astype(arr.dtype)
-    # forward
-    for exe in exe_list:
-        exe.forward(is_train= True)
-        out1 = [exe.outputs[0].asnumpy() for exe in exe_list]
-
-    if len(shape) == 2:
-        init_complex = np.zeros(shape_old,dtype = np.complex64)
-        for i in range(0,shape_old[1]):
-            init_complex.real[:,i] = init[0][:,2*i]
-            init_complex.imag[:,i] = init[0][:,2*i+1]
-        a = np.fft.ifft(init_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, out1[0]/shape_old[1],rtol=1e-3, atol=1e-5)
-
-    if len(shape) == 4:
-        init_complex = np.zeros(shape_old,dtype = np.complex64)
-        for i in range(0,shape_old[3]):
-            init_complex.real[:,:,:,i] = init[0][:,:,:,2*i]
-            init_complex.imag[:,:,:,i] = init[0][:,:,:,2*i+1]
-        a = np.fft.ifft(init_complex, n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, out1[0]/shape_old[3],rtol=1e-3, atol=1e-5)
-    # backward
-    if len(shape) == 2:
-        out_grad = mx.nd.empty(shape_old)
-        out_grad[:] = np.random.normal(-3, 3, shape_old)
-        for exe in exe_list:
-            exe.backward([out_grad])
-            temp = exe.grad_arrays[0].asnumpy()
-            temp = np.zeros(shape_old)
-            for i in range(shape_old[1]):
-                temp[:,i] = exe.grad_arrays[0].asnumpy()[:,2*i]
-
-        a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-5)
-    if len(shape) == 4:
-        out_grad = mx.nd.empty(shape_old)
-        out_grad[:] = np.random.normal(-3, 3, shape_old)
-        for exe in exe_list:
-            exe.backward([out_grad])
-            temp = exe.grad_arrays[0].asnumpy()
-            temp = np.zeros(shape_old)
-            for i in range(shape_old[3]):
-                temp[:,:,:,i] = exe.grad_arrays[0].asnumpy()[:,:,:,2*i]
-
-        a = np.fft.fft(out_grad.asnumpy(), n=None, axis=-1, norm=None)
-        assert_almost_equal(a.real, temp, rtol=1e-3, atol=1e-5)
-
-@with_seed()
-def test_ifft():
-    nrepeat = 2
-    maxdim = 10
-    for repeat in range(nrepeat):
-        for order in [2,4]:
-            shape = tuple(np.random.randint(1, maxdim, size=order))
-            check_ifft(shape)
-
-
 def check_fft(shape):
     sym = mx.sym.contrib.fft(name='fft', compute_size = 128)
     if len(shape) == 2:
@@ -195,7 +117,7 @@ def check_fft(shape):
     init = [np.random.normal(size=shape, scale=1.0)]
     arr_grad = [mx.nd.empty(shape)]
     ctx_list = [{'ctx': mx.gpu(0),'fft_data': shape, 'type_dict': {'fft_data': np.float32}}]
-    exe_list = [sym.simple_bind(args_grad=arr_grad,**ctx) for ctx in ctx_list]
+    exe_list = [sym._simple_bind(**ctx) for ctx in ctx_list]
 
     for exe in exe_list:
         for arr, iarr in zip(exe.arg_arrays, init):
@@ -455,11 +377,6 @@ def test_preloaded_multi_sgd():
 @with_seed()
 @pytest.mark.serial
 def test_batchnorm_with_type():
-  ctx_list_v1_2D = [
-    {'ctx': mx.cpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
-    {'ctx': mx.gpu(0), 'norm_data': (10, 2, 10, 10), 'type_dict': {'norm_data': np.float32}},
-  ]
-
   ctx_list_v2_2D = [
     {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float32}},
     {'ctx': mx.cpu(0), 'norm_data': (5, 2, 5, 5), 'type_dict': {'norm_data': np.float16}},
@@ -487,38 +404,21 @@ def test_batchnorm_with_type():
     {'ctx': mx.gpu(0), 'norm_data': (3, 2, 3, 2, 3), 'type_dict': {'norm_data': np.float64}}
   ]
 
-  # V1, 2D
-  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=False)
-  check_consistency(sym, ctx_list_v1_2D)
-  sym = mx.sym.BatchNorm_v1(name='norm', fix_gamma=True)
-  check_consistency(sym, ctx_list_v1_2D)
-
-
   # V2, 2D
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_2D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_2D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_2D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_2D)
+  bools = [False, True]
+  for fix_gamma, cudnn_off in itertools.product(bools, bools):
+      sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
+      check_consistency(sym, ctx_list_v2_2D)
 
   # V2, 1D
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_1D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_1D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_1D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_1D)
-  #
-  # # V2, 3D
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=False, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_3D)
-  sym = mx.sym.BatchNorm(name='norm', fix_gamma=True, cudnn_off=True)
-  check_consistency(sym, ctx_list_v2_3D)
+  for fix_gamma, cudnn_off in itertools.product(bools, bools):
+      sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
+      check_consistency(sym, ctx_list_v2_1D)
+
+  # V2, 3D
+  for fix_gamma, cudnn_off in itertools.product(bools, [True,]):
+      sym = mx.sym.BatchNorm(name='norm', fix_gamma=fix_gamma, cudnn_off=cudnn_off)
+      check_consistency(sym, ctx_list_v2_3D)
 
 
 @with_seed()
@@ -527,19 +427,6 @@ def test_batchnorm_versions():
   def test_batchnorm_versions_helper(batchnorm_op_list, data, fix_gamma, use_global_stats):
     ctx_list = []
     sym_list = []
-    # BatchNormV1 cpu
-    if 'batchnorm_v1_cpu' in batchnorm_op_list:
-      ctx_list.append({'ctx': mx.cpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
-      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
-                                          use_global_stats=use_global_stats,
-                                          name='batchnorm'))
-
-    # BatchNormV1 gpu (organic)
-    if 'batchnorm_v1_gpu' in batchnorm_op_list:
-      ctx_list.append({'ctx': mx.gpu(0), 'batchnorm_data': data, 'type_dict': {'batchnorm_data': np.float32}})
-      sym_list.append(mx.sym.BatchNorm_v1(fix_gamma=fix_gamma,
-                                          use_global_stats=use_global_stats,
-                                          name='batchnorm'))
 
     # BatchNorm cpu
     if 'batchnorm_cpu' in batchnorm_op_list:
@@ -573,8 +460,7 @@ def test_batchnorm_versions():
 
   def test_2d_batchnorm(fix_gamma, use_global_stats):
     data = (2, 3, 10, 10)
-    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_v1_cpu', 'batchnorm_v1_gpu',
-                                                      'batchnorm_cpu',
+    test_batchnorm_versions_helper(batchnorm_op_list=['batchnorm_cpu',
                                                       'batchnorm_gpu', 'batchnorm_cudnn'],
                                    data=data,
                                    fix_gamma=fix_gamma, use_global_stats=use_global_stats)
@@ -634,9 +520,9 @@ def test_convolution_with_type():
                np.dtype(np.float64): 1e-5,
                np.dtype(np.uint8): 0,
                np.dtype(np.int32): 0}
-    check_consistency(sym, ctx_list, tol=tol)
+    check_consistency(sym, ctx_list, rtol=tol, atol=tol)
     # test ability to turn off training on bias
-    check_consistency(sym, ctx_list, grad_req={'conv_data': 'write', 'conv_weight': 'write', 'conv_bias': 'null'}, tol=tol)
+    check_consistency(sym, ctx_list, grad_req={'conv_data': 'write', 'conv_weight': 'write', 'conv_bias': 'null'}, rtol=tol, atol=tol)
 
 
 # Apply N symbols against each of M contexts, checking that all NxM combinations match.
@@ -721,7 +607,6 @@ def test_conv_deconv_guards():
     # Test cases for convolution and deconvolution via strided fft.  Ensure that the framework
     # guards against problematic CUDNN_CONVOLUTION_BWD_DATA_ALGO_FFT_TILING in cuDNN [7.3.1,7.5)
     # see https://docs.nvidia.com/deeplearning/sdk/cudnn-release-notes/rel_750.html#rel_750
-    tol = 1e-1
     for (op, opname) in [(mx.sym.Convolution, 'conv'), (mx.sym.Deconvolution, 'deconv')]:
         dataname = opname + '_data'
         ctx = {'ctx': mx.gpu(0), dataname: (32, 32, 64, 64), 'type_dict': {dataname: np.float32}}
@@ -736,7 +621,7 @@ def test_conv_deconv_guards():
             try:
                 sym = op(**test_case_args)
                 sym_no_cudnn = op(cudnn_off=True, **test_case_args)
-                check_consistency([sym, sym_no_cudnn], [ctx, ctx], tol=tol)
+                check_consistency([sym, sym_no_cudnn], [ctx, ctx], scale=0.1)
             except:
                 print('Test failure of mx.sym.{} with args: {}'.format(op.__name__, test_case_args))
                 raise
@@ -760,7 +645,7 @@ def _conv_with_num_streams(seed):
                                               cudnn_off=True, name='conv')
             try:
                 # tol can be pretty high- we're looking for a large diff due to garbaged workspace
-                check_consistency([sym, sym_no_cudnn], [ctx, ctx], tol=1e-2)
+                check_consistency([sym, sym_no_cudnn], [ctx, ctx], rtol=1e-2, atol=1e-2)
             except:
                 print('Failing conv size = {}'.format(size))
                 raise
@@ -783,20 +668,19 @@ def test_convolution_multiple_streams():
 @pytest.mark.serial
 def test_convolution_large_c():
     problematic_c = 64 * 1024
-    # The convolution accumulates many values, so set large tolerances.
-    tol = {np.dtype(np.float32): 1,
-           np.dtype(np.float64): 1}
+    # The convolution accumulates many values, so scale the input magnitude.
+    scale = 0.1
     def test_1D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, width), 'type_dict': {'conv_data': np.float64}}]
         sym = mx.sym.Convolution(layout='NCW', num_filter=8, kernel=(2,), name='conv')
-        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+        check_consistency([sym, sym], ctx_list, grad_req=grad_req, scale=scale)
 
     def test_2D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'conv_data': (1, problematic_c, 2, width), 'type_dict': {'conv_data': np.float64}}]
         sym = mx.sym.Convolution(layout='NCHW', num_filter=4, kernel=(2,2), name='conv')
-        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+        check_consistency([sym, sym], ctx_list, grad_req=grad_req, scale=scale)
 
     # Run with different data tensor shapes to run cudnnFind() multiple times.
     # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
@@ -814,20 +698,19 @@ def test_convolution_large_c():
 @pytest.mark.serial
 def test_deconvolution_large_c():
     problematic_c = 64 * 1024
-    # The deconvolution accumulates many values, so set large tolerances.
-    tol = {np.dtype(np.float32): 1,
-           np.dtype(np.float64): 1}
+    # The deconvolution accumulates many values, so scale the input magnitude.
+    scale = 0.1
     def test_1D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'deconv_data': (1, 8, width), 'type_dict': {'deconv_data': np.float64}}]
         sym = mx.sym.Deconvolution(layout='NCW', num_filter=problematic_c, kernel=(2,), name='deconv')
-        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+        check_consistency([sym, sym], ctx_list, grad_req=grad_req, scale=scale)
 
     def test_2D_with_width(width, grad_req):
         ctx_list = [{'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float32}},
                     {'ctx': mx.gpu(0), 'deconv_data': (1, 8, 2, width), 'type_dict': {'deconv_data': np.float64}}]
         sym = mx.sym.Deconvolution(layout='NCHW', num_filter=problematic_c, kernel=(2,2), name='deconv')
-        check_consistency([sym, sym], ctx_list, tol=tol, grad_req=grad_req)
+        check_consistency([sym, sym], ctx_list, grad_req=grad_req, scale=scale)
 
     # Run with different data tensor shapes to run cudnnFind() multiple times.
     # First, populate algo and op caches with models that always use cudnnFind() (req == 'write').
@@ -936,8 +819,8 @@ def test_deconvolution_with_type():
                np.dtype(np.float64): 1e-5,
                np.dtype(np.uint8): 0,
                np.dtype(np.int32): 0}
-    check_consistency(sym, ctx_list, tol=tol)
-    check_consistency(sym, ctx_list, tol=tol, grad_req="add")
+    check_consistency(sym, ctx_list, rtol=tol, atol=tol)
+    check_consistency(sym, ctx_list, rtol=tol, atol=tol, grad_req="add")
 
     # 2D deconvolution
     sym = mx.sym.Deconvolution(num_filter=2, kernel=(3,3), name='deconv')
@@ -952,8 +835,8 @@ def test_deconvolution_with_type():
                np.dtype(np.float64): 1e-5,
                np.dtype(np.uint8): 0,
                np.dtype(np.int32): 0}
-    check_consistency(sym, ctx_list, tol=tol)
-    check_consistency(sym, ctx_list, tol=tol, grad_req="add")
+    check_consistency(sym, ctx_list, rtol=tol, atol=tol)
+    check_consistency(sym, ctx_list, rtol=tol, atol=tol, grad_req="add")
 
 
 @with_seed()
@@ -1036,10 +919,11 @@ def test_bilinear_sampler_with_type():
 def test_grid_generator_with_type():
     data = mx.sym.Variable('data')
     sym = mx.sym.GridGenerator(data=data, transform_type='affine', target_shape=(20, 20))
+    scale = 1
     ctx_list = [{'ctx': mx.gpu(0), 'data': (3, 6), 'type_dict': {'data': np.float32}},
                 {'ctx': mx.cpu(0), 'data': (3, 6), 'type_dict': {'data': np.float32}}]
-    check_consistency(sym, ctx_list)
-    check_consistency(sym, ctx_list, grad_req="add")
+    check_consistency(sym, ctx_list, scale=scale)
+    check_consistency(sym, ctx_list, scale=scale, grad_req="add")
     sym = mx.sym.GridGenerator(data=data, transform_type='warp', target_shape=(20, 20))
     ctx_list = [{'ctx': mx.gpu(0), 'data': (3, 2, 20, 20), 'type_dict': {'data': np.float32}},
                 {'ctx': mx.cpu(0), 'data': (3, 2, 20, 20), 'type_dict': {'data': np.float32}}]
@@ -1185,7 +1069,7 @@ def test_pooling_versions():
                                                                             pool_op))
             sym_list.append(sym)
 
-        check_consistency(sym_list, ctx_list, equal_nan=(not count_include_pad), tol=tol)
+        check_consistency(sym_list, ctx_list, equal_nan=(not count_include_pad), rtol=tol, atol=tol)
 
     def test_pooling_dim(dim, pool_type, dtype, pool_op_list, p_value=2, count_include_pad=True,
                          tol=None):
@@ -1344,7 +1228,7 @@ def test_flatten_slice_after_conv():
 
     ctx_list = [{'ctx': mx.gpu(0), 'conv_data': (2, 16, 16, 16), 'type_dict': {'conv_data': np.float32}},
                 {'ctx': mx.cpu(0), 'conv_data': (2, 16, 16, 16), 'type_dict': {'conv_data': np.float32}}]
-    check_consistency(slice_sym, ctx_list)
+    check_consistency(slice_sym, ctx_list, scale=0.5)
 
 
 @with_seed()
@@ -1650,7 +1534,7 @@ def test_embedding_with_type():
                         'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
             arg_params = {'embedding_data': np.random.randint(low=-low_pad, high=V+high_pad, size=(N,))}
             check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
-                              arg_params=arg_params)
+                              arg_params=arg_params, scale=0.1)
 
     data_types = [np.float16, np.float32, np.float64, np.int32]
     weight_types = [np.float16, np.float32, np.float64]
@@ -1658,18 +1542,6 @@ def test_embedding_with_type():
     data_types = [np.uint8]
     weight_types = [np.float16, np.float32, np.float64]
     test_embedding_helper(data_types, weight_types, 0, 5)
-
-
-@with_seed()
-def test_svmoutput_with_type():
-    sym = mx.sym.SVMOutput(name='svmoutput', use_linear=True)
-    ctx_list = [{'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
-                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
-                {'ctx': mx.gpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float64}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float32}},
-                {'ctx': mx.cpu(0), 'svmoutput_data': (20, 10), 'type_dict': {'svmoutput_data': np.float16}}]
-    check_consistency(sym, ctx_list, use_uniform=True)
 
 
 @with_seed()
@@ -1715,114 +1587,6 @@ def test_take_with_type():
                               grad_req={'take_indices': 'null',
                                         'take_a': 'write'},
                               arg_params=arg_params)
-
-
-def check_rnn_consistency(cell1, cell2):
-    dshape = (32, 5, 200)
-    data = mx.sym.Variable('data')
-
-    sym1, _ = cell1.unroll(5, data, merge_outputs=True)
-    mod1 = mx.mod.Module(sym1, label_names=None, context=mx.gpu(0))
-    mod1.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    sym2, _ = cell2.unroll(5, data, merge_outputs=True)
-    mod2 = mx.mod.Module(sym2, label_names=None, context=mx.gpu(0))
-    mod2.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    mod1.init_params()
-    args, auxs = mod1.get_params()
-    args = cell1.unpack_weights(args)
-    args = cell2.pack_weights(args)
-    mod2.set_params(args, auxs)
-
-    batch=mx.io.DataBatch(data=[mx.random.uniform(shape=dshape)], label=[])
-    mod1.forward(batch, is_train=False)
-    mod2.forward(batch, is_train=False)
-
-    mx.test_utils.assert_allclose(mod1.get_outputs()[0], mod2.get_outputs()[0], rtol=1e-2, atol=1e-4)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_rnn():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='rnn_relu', prefix='')
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.RNNCell(100, activation='relu', prefix='l0_'))
-    stack.add(mx.rnn.RNNCell(100, activation='relu', prefix='l1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_lstm_forget_bias():
-    forget_bias = 2.0
-    fused = mx.rnn.FusedRNNCell(10, forget_bias=forget_bias, num_layers=2, mode='lstm', prefix='')
-
-    dshape = (32, 1, 20)
-    data = mx.sym.Variable('data')
-
-    sym, _ = fused.unroll(1, data, merge_outputs=True)
-    mod = mx.mod.Module(sym, label_names=None, context=mx.gpu(0))
-    mod.bind(data_shapes=[('data', dshape)], label_shapes=None)
-
-    mod.init_params()
-
-    args, auxs = mod.get_params()
-    args = fused.unpack_weights(args)
-
-    bias_name = next(x for x in args if x.endswith('f_bias'))
-    expected_bias = forget_bias * np.ones(10, )
-    mx.test_utils.assert_allclose(args[bias_name], expected_bias)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_gru():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='')
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.GRUCell(100, prefix='l0_'))
-    stack.add(mx.rnn.GRUCell(100, prefix='l1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_bidirectional():
-    fused = mx.rnn.FusedRNNCell(100, num_layers=2, mode='gru', prefix='',
-            bidirectional=True)
-
-    stack = mx.rnn.SequentialRNNCell()
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.GRUCell(100, prefix='l0_'),
-                mx.rnn.GRUCell(100, prefix='r0_'),
-                output_prefix='bi_gru_0_'))
-    stack.add(mx.rnn.BidirectionalCell(
-                mx.rnn.GRUCell(100, prefix='l1_'),
-                mx.rnn.GRUCell(100, prefix='r1_'),
-                output_prefix='bi_gru_1_'))
-
-    check_rnn_consistency(fused, stack)
-    check_rnn_consistency(stack, fused)
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-def test_unfuse():
-    for mode in ['rnn_tanh', 'rnn_relu', 'lstm', 'gru']:
-        fused = mx.rnn.FusedRNNCell(
-            100, num_layers=2, mode=mode,
-            prefix='test_%s'%mode,
-            bidirectional=True,
-            dropout=0.5)
-
-        stack = fused.unfuse()
-
-        check_rnn_consistency(fused, stack)
-        check_rnn_consistency(stack, fused)
 
 
 @with_seed()
@@ -1903,7 +1667,7 @@ def test_deformable_psroipooling_with_type():
                                'deformable_psroipool_trans': np.float16}},
                 ]
 
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol,
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol,
                       grad_req={'deformable_psroipool_data': 'write',
                                 'deformable_psroipool_rois': 'null',
                                 'deformable_psroipool_trans': 'write'}, arg_params=arg_params)
@@ -1935,9 +1699,9 @@ def test_deformable_convolution_with_type():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
 
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
     # test ability to turn off training on bias
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol,
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol,
                       grad_req={'deformable_conv_data': 'write',
                                 'deformable_conv_offset': 'write',
                                 'deformable_conv_weight': 'write',
@@ -1970,7 +1734,7 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), pad=(1,1), name='deformable_conv')
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Stride > 1
     ctx_list = [{'ctx': mx.gpu(0),
@@ -1991,7 +1755,7 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), stride=(2,2), name='deformable_conv')
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Dilate > 1
     ctx_list = [{'ctx': mx.gpu(0),
@@ -2012,7 +1776,7 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), dilate=(2,2), name='deformable_conv')
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Deformable group > 1
     ctx_list = [{'ctx': mx.gpu(0),
@@ -2033,34 +1797,11 @@ def test_deformable_convolution_options():
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
     sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2, name='deformable_conv')
-    check_consistency(sym, ctx_list, scale=0.1, tol=tol)
-
-
-@with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@pytest.mark.serial
-def test_residual_fused():
-    cell = mx.rnn.ResidualCell(
-            mx.rnn.FusedRNNCell(50, num_layers=3, mode='lstm',
-                               prefix='rnn_', dropout=0.5))
-
-    inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
-    outputs, _ = cell.unroll(2, inputs, merge_outputs=None)
-    assert sorted(cell.params._params.keys()) == \
-           ['rnn_parameters']
-
-    args, outs, auxs = outputs.infer_shape(rnn_t0_data=(10, 50), rnn_t1_data=(10, 50))
-    assert outs == [(10, 2, 50)]
-    outputs = outputs.eval(ctx=mx.gpu(0),
-                           rnn_t0_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
-                           rnn_t1_data=mx.nd.ones((10, 50), ctx=mx.gpu(0))+5,
-                           rnn_parameters=mx.nd.zeros((61200,), ctx=mx.gpu(0)))
-    expected_outputs = np.ones((10, 2, 50))+5
-    assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
+    check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
 
 def check_rnn_layer(layer):
-    layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     with mx.gpu(0):
         x = mx.nd.ones((10, 16, 30))
         states = layer.begin_state(16)
@@ -2077,7 +1818,7 @@ def check_rnn_layer(layer):
         assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
 
 def check_rnn_layer_w_rand_inputs(layer):
-    layer.collect_params().initialize(ctx=[mx.cpu(0), mx.gpu(0)])
+    layer.initialize(ctx=[mx.cpu(0), mx.gpu(0)])
     x = mx.nd.uniform(shape=(10, 16, 30))
     with mx.gpu(0):
         x = x.copyto(mx.gpu(0))
@@ -2280,8 +2021,8 @@ def kernel_error_check_symbolic():
             a = mx.sym.Variable('a')
             b = mx.sym.Variable('b')
             c = a / b
-            f = c.bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
-                                    'b':mx.nd.array([],ctx=mx.gpu(0))})
+            f = c.bind(mx.gpu(0), {'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
+                                   'b':mx.nd.array([],ctx=mx.gpu(0))})
             f.forward()
             g = f.outputs[0].asnumpy()
 
@@ -2380,9 +2121,9 @@ def test_bilinear_sampler_versions():
     for item in test_cases:
         data_shape, grid_shape = item
         # kWriteTo
-        exe_cpu = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='write')
-        exe_gpu = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
-        exe_cudnn = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_cpu = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='write')
+        exe_gpu = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
+        exe_cudnn = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='write')
         exe_list = [exe_cpu, exe_gpu, exe_cudnn]
         ref_idx = 0
         test_data = np.random.uniform(low=-0.1, high=0.1,size=data_shape).astype(np.float32)
@@ -2403,9 +2144,9 @@ def test_bilinear_sampler_versions():
         grid_grad = exe_list[ref_idx].grad_dict['grid'].asnumpy()
 
         # kAddTo
-        exe_cpu_addto = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='add')
-        exe_gpu_addto = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
-        exe_cudnn_addto = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_cpu_addto = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req='add')
+        exe_gpu_addto = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
+        exe_cudnn_addto = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req='add')
         exe_list = [exe_cpu_addto, exe_gpu_addto, exe_cudnn_addto]
         data_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['data'].shape).astype(np.float32)
         grid_initial_grad = np.random.normal(size=exe_list[ref_idx].grad_dict['grid'].shape).astype(np.float32)
@@ -2423,9 +2164,9 @@ def test_bilinear_sampler_versions():
 
         for req_dict in [{'data' : 'null', 'grid' : 'write'}, {'data' : 'write', 'grid' : 'null'}]:
             # Mixture of kWriteTo and kNullOp
-            exe_cpu_mix = sym1.simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req=req_dict)
-            exe_gpu_mix = sym2.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
-            exe_cudnn_mix = sym3.simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
+            exe_cpu_mix = sym1._simple_bind(data=data_shape, grid=grid_shape, ctx=mx.cpu(), grad_req=req_dict)
+            exe_gpu_mix = sym2._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
+            exe_cudnn_mix = sym3._simple_bind(data=data_shape, grid=grid_shape, ctx=default_context(), grad_req=req_dict)
             exe_list = [exe_cpu_mix, exe_gpu_mix, exe_cudnn_mix]
             for exe in exe_list:
                 exe.arg_dict['data'][:] = test_data
@@ -2453,7 +2194,7 @@ def _test_bulking_in_process(seed, time_per_iteration):
     x = mx.ndarray.zeros(data_shape)
     dx = mx.ndarray.zeros(data_shape)
     dy = mx.ndarray.ones(data_shape)
-    exe = sym.bind(ctx=ctx, args=[x], args_grad = {'X':dx})
+    exe = sym._bind(ctx=ctx, args=[x], args_grad = {'X':dx})
 
     # time a number of forward() and backward() executions after some warm-up iterations
     warmups = 1
@@ -2578,7 +2319,7 @@ def test_arange_like_dtype():
         y = mx.sym.reshape(x, shape=(0, 0, -1))
         z = mx.sym.contrib.arange_like(y, axis=-1)
 
-        mod = z.simple_bind(ctx=mx.gpu(0), x=(3, 4, 5, 6), grad_req='null')
+        mod = z._simple_bind(ctx=mx.gpu(0), x=(3, 4, 5, 6), grad_req='null')
         mod.arg_arrays[0][:] = np.random.normal(size=mod.arg_arrays[0].shape).astype(t)
         out = mod.forward(is_train=False)
         for v in out:

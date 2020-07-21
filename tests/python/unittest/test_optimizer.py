@@ -54,32 +54,6 @@ def test_learning_rate_expect_user_warning():
         o.set_learning_rate(0.5)
 
 
-@with_seed()
-def test_lr_wd_mult():
-    data = mx.sym.Variable('data')
-    bias = mx.sym.Variable('fc1_bias', lr_mult=1.0)
-    fc1 = mx.sym.FullyConnected(data=data, bias=bias, name='fc1', num_hidden=10, lr_mult=0)
-    fc2 = mx.sym.FullyConnected(data=fc1, name='fc2', num_hidden=10, wd_mult=0.5)
-
-    mod = mx.mod.Module(symbol=fc2, label_names=None, context=default_context())
-    mod.bind(data_shapes=[('data', (5,10))])
-    mod.init_params(initializer=mx.init.Uniform(1.0))
-    mod.init_optimizer(optimizer_params={'learning_rate': 1.0})
-    args1, _ = mod.get_params()
-    args1 = {k: v.asnumpy() for k, v in args1.items()}
-    mod.forward(mx.io.DataBatch(data=[mx.random.uniform(low=-1.0, high=1.0, shape=(5,10))], label=None), is_train=True)
-    mod.backward(mod.get_outputs())
-    mod.update()
-    args2, _ = mod.get_params()
-    args2 = {k: v.asnumpy() for k, v in args2.items()}
-
-    assert mod._optimizer.lr_mult == {'fc1_bias': 1.0, 'fc1_weight': 0.0}
-    assert mod._optimizer.wd_mult == {'fc2_bias': 0.5, 'fc2_weight': 0.5}
-    assert mx.test_utils.almost_equal(args1['fc1_weight'], args2['fc1_weight'], 1e-10)
-    assert not mx.test_utils.almost_equal(args1['fc1_bias'], args2['fc1_bias'], 1e-1)
-    assert not mx.test_utils.almost_equal(args1['fc2_weight'], args2['fc2_weight'], 1e-1)
-
-
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sgd():
@@ -318,6 +292,36 @@ def test_lamb():
                               shapes, dtype, rtol=1e-3, atol=1e-3)
 
 
+@xfail_when_nonstandard_decimal_separator
+@with_seed()
+def test_lans():
+    opt1 = mx.optimizer.LANS
+    opt2 = mx.optimizer.LANS
+
+    shapes = [(3, 4, 5), (10, 4), (7,)]
+    beta1_options = [{}, {'beta1': 0.5}]
+    beta2_options = [{}, {'beta2': 0.8}]
+    cg_options = [{}, {'clip_gradient': 0.4}]
+    rg_options = [{}, {'rescale_grad': 0.14}]
+    wd_options = [{}, {'wd': 0.03}]
+    lb_options = [{'lower_bound': None}, {'lower_bound': 1e-3}]
+    ub_options = [{'upper_bound': None}, {'upper_bound': 10}]
+    mp_options = [{'multi_precision': False}, {'multi_precision': True}]
+    agg_options = [{'aggregate_num': 0}, {'aggregate_num': 1},
+                   {'aggregate_num': 4}]
+    for dtype in [np.float16, np.float32]:
+        for params in itertools.product(beta1_options, beta2_options, cg_options, rg_options,
+                                        wd_options, lb_options, ub_options,
+                                        mp_options, agg_options):
+            kwarg = {k: v for param in params for k, v in param.items()}
+            if (dtype == np.float16 and ('multi_precision' not in kwarg or
+                                         not kwarg['multi_precision'])):
+                continue
+            compare_optimizer(opt1(use_fused_step=False, **kwarg),
+                              opt2(use_fused_step=True, **kwarg),
+                              shapes, dtype, rtol=1e-3, atol=1e-3)
+
+
 @with_seed()
 def test_sgld():
     opt1 = mx.optimizer.SGLD
@@ -518,7 +522,7 @@ def test_sparse_adam():
 
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
-@retry(3)
+@pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/18400")
 def test_adamax():
     opt1 = mx.optimizer.Adamax
     opt2 = mx.optimizer.Adamax

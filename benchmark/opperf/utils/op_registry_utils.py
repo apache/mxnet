@@ -52,7 +52,7 @@ def _select_ops(operator_names, filters=("_contrib", "_"), merge_op_forward_back
     operators_with_backward = []
 
     # Filter out deprecated operators
-    filters += ("normal", "uniform", "BatchNorm_v1", "Flatten", "contrib_CTCLoss", "Pad", "Cast",
+    filters += ("normal", "uniform", "Flatten", "contrib_CTCLoss", "Pad", "Cast",
                 "Pooling_v1", "Concat", "Reshape", "Convolution_v1", "SliceChannel", "Crop",
                 "crop", "onehot_encode", "batch_take")
 
@@ -121,8 +121,8 @@ def prepare_op_inputs(op, arg_params, int64_tensor):
     # For ops with args that need to change shape/value for different ops
     custom_data = {'Activation', 'LeakyReLU', 'Softmax', 'BilinearSampler', 'GridGenerator', 'sample_multinomial', 'linalg_maketrian',
                    'SpatialTransformer', 'col2im', 'GroupNorm', 'Dropout', 'FullyConnected',
-                   'SoftmaxOutput', 'LinearRegressionOutput', 'BatchNorm', 'LogisticRegressionOutput',
-                   'MAERegressionOutput', 'SVMOutput', 'L2Normalization', 'LayerNorm', 'InstanceNorm',
+                   'BatchNorm',
+                   'L2Normalization', 'LayerNorm', 'InstanceNorm',
                    'Embedding', 'Correlation', 'im2col', 'LRN', 'squeeze', 'fill_element_0index'}
 
     custom_data_int64 = {'random_pdf_dirichlet', 'random_pdf_exponential', 'random_pdf_gamma',
@@ -366,8 +366,8 @@ def get_all_nn_basic_operators():
     -------
     {"operator_name": {"has_backward", "nd_op_handle", "params"}}
     """
-    nn_basic_ops = ['FullyConnected', 'Dropout', 'BatchNorm', 'SoftmaxOutput', 'LinearRegressionOutput',
-                    'LogisticRegressionOutput', 'MAERegressionOutput', 'SVMOutput', 'L2Normalization',
+    nn_basic_ops = ['FullyConnected', 'Dropout', 'BatchNorm',
+                    'L2Normalization',
                     'LayerNorm', 'InstanceNorm', 'Embedding', 'Correlation', 'SpatialTransformer', 'im2col',
                     'col2im', 'GroupNorm', 'LRN']
 

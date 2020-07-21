@@ -1,6 +1,6 @@
 ---
 layout: page_api
-title: Symbol
+title: NDArray
 is_tutorial: true
 tag: r
 permalink: /api/r/docs/tutorials/symbol
@@ -30,18 +30,8 @@ The computational unit `NDArray` requires a way to construct neural networks. MX
 
 The following code creates a two-layer perceptron network:
 
-
-```r
+```
 require(mxnet)
-net <- mx.symbol.Variable("data")
-net <- mx.symbol.FullyConnected(data=net, name="fc1", num_hidden=128)
-net <- mx.symbol.Activation(data=net, name="relu1", act_type="relu")
-net <- mx.symbol.FullyConnected(data=net, name="fc2", num_hidden=64)
-net <- mx.symbol.Softmax(data=net, name="out")
-class(net)
-```
-
-```
 ## [1] "Rcpp_MXSymbol"
 ## attr(,"package")
 ## [1] "mxnet"
@@ -52,28 +42,7 @@ or free variables. Other symbols take a symbol as the input (*data*),
 and may accept other hyper parameters, such as the number of hidden neurons (*num_hidden*)
 or the activation type (*act_type*).
 
-A symbol can be viewed as a function that takes several arguments, whose
-names are automatically generated and can be retrieved with the following command:
-
-
-```r
-arguments(net)
-```
-
-```
-## [1] "data"       "fc1_weight" "fc1_bias"   "fc2_weight" "fc2_bias"
-## [6] "out_label"
-```
-
-The arguments are the parameters need by each symbol:
-
-- *data*: Input data needed by the variable *data*
-- *fc1_weight* and *fc1_bias*: The weight and bias for the first fully connected layer, *fc1*
-- *fc2_weight* and *fc2_bias*: The weight and bias for the second fully connected layer, *fc2*
-- *out_label*: The label needed by the loss
-
-We can also specify the automatically generated names explicitly:
-
+We can also specify the names explicitly:
 
 ```r
 data <- mx.symbol.Variable("data")
@@ -147,8 +116,5 @@ be more memory efficient than CXXNet and gets to the same runtime with
 greater flexibility.
 
 ## Next Steps
-* [Write and use callback functions](/api/r/docs/tutorials/callback_function)
-* [Neural Networks with MXNet in Five Minutes](/api/r/docs/tutorials/five_minutes_neural_network)
 * [Classify Real-World Images with Pre-trained Model](/api/r/docs/tutorials/classify_real_image_with_pretrained_model)
-* [Handwritten Digits Classification Competition](/api/r/docs/tutorials/mnist_competition)
 * [Character Language Model using RNN](/api/r/docs/tutorials/char_rnn_model)

@@ -257,7 +257,7 @@ void run_inference(const std::string& model_name, const std::vector<mxnet::cpp::
     int num_output = 0;
     const int *stypes;
     int ret = MXInvokeCachedOpEx(hdl, arr_handles[num].size(), arr_handles[num].data(),
-                                 &num_output, &(cached_op_handles[num]), &stypes);
+                                 cpu::kDevMask, 0, &num_output, &(cached_op_handles[num]), &stypes);
     if (ret < 0) {
       LOG(FATAL) << MXGetLastError();
     }
