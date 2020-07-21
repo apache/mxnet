@@ -77,6 +77,16 @@ struct VectorType<32> {
   using type = ulonglong4;
 };
 
+template <typename DType>
+__device__ inline DType add_elem(const DType& x, const DType& y) {
+  return x + y;
+}
+
+template <>
+__device__ inline half add_elem(const half& x, const half& y) {
+  return __float2half(__half2float(x) + __half2float(y));
+}
+
 /* \brief Helper class that enables storing multiple values of type DType
           as 1 value of type LType.
 */
@@ -92,6 +102,23 @@ class VectorizedStorage {
     inline __device__ vectorized_storage() {}
     inline __device__ ~vectorized_storage() {}
   } scratch_;
+
+  inline __device__ VectorizedStorage() {}
+  inline __device__ VectorizedStorage (const VectorizedStorage<DType, n>& y2) {
+      scratch_.aligned = y2.scratch_.aligned;
+  }
+  inline __device__ VectorizedStorage (const LType &y2) {
+      scratch_.aligned = y2;
+  }
+  inline __device__ VectorizedStorage<DType, n>& operator+=(
+      const VectorizedStorage<DType, n>& rhs) {
+    #pragma unroll
+    for (int i = 0; i < nvec; ++i) {
+      scratch_.separate[i] = add_elem(scratch_.separate[i], rhs.scratch_.separate[i]);
+    }
+    return *this;
+  }
+  inline __device__ ~VectorizedStorage() {}
 };
 
 // Returns const LType is DType is const

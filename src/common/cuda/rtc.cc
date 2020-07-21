@@ -117,11 +117,11 @@ CUfunction get_function(const std::string &parameters,
         type_support_string + "\n" +
         util_string + "\n" +
         special_functions_definitions + '\n' +
+        vectorization_support_string + "\n" +
         function_definitions_util + "\n" +
         function_definitions_binary + "\n" +
         function_definitions_unary + "\n" +
         backward_function_definitions + "\n" +
-        vectorization_support_string + "\n" +
         reducer + "\n";
     std::string code_with_header = common_header + parameters + code;
     // If verbose mode, output kernel source, though not including the common header

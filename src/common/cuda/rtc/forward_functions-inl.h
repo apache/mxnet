@@ -63,57 +63,6 @@ __device__ inline half store(const DType input, half* ref) {
   return __float2half(input);
 }
 
-template <int size>
-struct VectorConfig {
-    static_assert(size >= 4, "VectorConfig needs to have size of at least 4B");
-    using IndexType = float;
-};
-
-template <>
-struct VectorConfig<8> {
-    using IndexType = double;
-};
-
-template <>
-struct VectorConfig<16> {
-    using IndexType = double2;
-};
-
-template <>
-struct VectorConfig<32> {
-    using IndexType = double4;
-};
-
-template <typename DType>
-__device__ inline DType add_elem(const DType& x, const DType& y) {
-  return x + y;
-}
-
-template <>
-__device__ inline half add_elem(const half& x, const half& y) {
-  return __float2half(__half2float(x) + __half2float(y));
-}
-
-template <typename DType, int nvec>
-union VectorType {
-    typename VectorConfig<sizeof(DType)*nvec>::IndexType y;
-    DType x[nvec];
-    __device__ VectorType () {};
-    __device__ VectorType (const VectorType<DType, nvec>& y2) {
-        y = y2.y;
-    }
-    __device__ VectorType (const decltype(y) &y2) {
-        y = y2;
-    }
-    __device__ inline VectorType<DType, nvec>& operator+=(const VectorType<DType, nvec>& rhs) {
-      #pragma unroll
-      for (int i = 0; i < nvec; ++i) {
-        x[i] = add_elem(x[i], rhs.x[i]);
-      }
-      return *this;
-    }
-};
-
 template <int ndim>
 struct Shape {
    int x[ndim];
@@ -138,39 +87,35 @@ struct Shape<0> {
 };
 
 template <int nvec, typename DType, int ndim>
-__device__ inline VectorType<DType, nvec> load_index(const DType * input, int i,
-                                                     const Shape<ndim> &shape) {
+__device__ inline vector::VectorizedStorage<DType, nvec> load_index(const DType * input, int i,
+                                                                    const Shape<ndim> &shape) {
+  using V = vector::VectorizedStorage<DType, nvec>;
   if (i < shape.size) {
-    const auto* vector_input = reinterpret_cast<
-                                const typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(
-                                    input + i);
-    VectorType<DType, nvec> ret = {*vector_input};
-    return ret;
+    const auto* vector_input = reinterpret_cast<const typename V::LType *>(input + i);
+    return V(*vector_input);
   } else {
-    VectorType<DType, nvec> ret({0});
-    return ret;
+    return V(0);
   }
 }
 
 template <int nvec, typename DType, int ndim>
-__device__ inline VectorType<DType, nvec> global_load_index(const DType * input, int i,
-                                                            const Shape<ndim> &shape) {
+__device__ inline vector::VectorizedStorage<DType, nvec> global_load_index(const DType * input,
+                    int i, const Shape<ndim> &shape) {
+  using V = vector::VectorizedStorage<DType, nvec>;
   if (i < shape.size) {
-    const auto* vector_input = reinterpret_cast<
-                                const typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(
-                                    input + i);
-    VectorType<DType, nvec> ret = {__ldg(vector_input)};
-    return ret;
+    const auto* vector_input = reinterpret_cast<const typename V::LType *>(input + i);
+    return V(__ldg(vector_input));
   } else {
-    VectorType<DType, nvec> ret({0});
-    return ret;
+    return V(0);
   }
 }
 
 template <int nvec, typename DType, int ndim>
-__device__ inline VectorType<DType, nvec> load_slice(const DType * input, const Shape<ndim>& shape,
-                                                     Shape<ndim> begin, Shape<ndim> end,
-                                                     int offset) {
+__device__ inline vector::VectorizedStorage<DType, nvec> load_slice(const DType * input,
+                                                                    const Shape<ndim>& shape,
+                                                                    Shape<ndim> begin,
+                                                                    Shape<ndim> end,
+                                                                    int offset) {
   int idx[nvec];
 
   Shape<ndim> ref_strides;
@@ -200,20 +145,20 @@ __device__ inline VectorType<DType, nvec> load_slice(const DType * input, const 
        ref_idx = ref_idx % stride;
     }
   }
-  VectorType<DType, nvec> ret;
+  vector::VectorizedStorage<DType, nvec> ret;
   #pragma unroll
   for (int j = 0; j < nvec; j++) {
-      ret.x[j] = *(input + idx[j]);
+      ret.scratch_.separate[j] = *(input + idx[j]);
   }
   return ret;
 }
 
 template <int nvec, typename DType, int ndim>
-__device__ inline VectorType<DType, nvec> fast_load_slice(const DType * input,
-                                                          const Shape<ndim>& shape,
-                                                          Shape<ndim> begin,
-                                                          Shape<ndim> end,
-                                                          int offset) {
+__device__ inline vector::VectorizedStorage<DType, nvec> fast_load_slice(const DType * input,
+                                                                         const Shape<ndim>& shape,
+                                                                         Shape<ndim> begin,
+                                                                         Shape<ndim> end,
+                                                                         int offset) {
   int idx = 0;
 
   Shape<ndim> ref_strides;
@@ -243,24 +188,24 @@ __device__ inline VectorType<DType, nvec> fast_load_slice(const DType * input,
 }
 
 template <int nvec, typename DType, int ndim>
-__device__ inline void store_index(const VectorType<DType, nvec> value, int i,
+__device__ inline void store_index(const vector::VectorizedStorage<DType, nvec> value, int i,
                         DType * output, const Shape<ndim>& shape) {
   if (i < (shape.size + nvec - 1) / nvec) {
     auto vector_output = reinterpret_cast<
-                          typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(output);
-    vector_output[i] = value.y;
+                          typename vector::VectorizedStorage<DType, nvec>::LType *>(output);
+    vector_output[i] = value.scratch_.aligned;
   }
 }
 
 template <int nvec, typename DType, int ndim>
-__device__ inline void store_add_index(const VectorType<DType, nvec> value, int i,
+__device__ inline void store_add_index(const vector::VectorizedStorage<DType, nvec> value, int i,
                             DType * output, const Shape<ndim>& shape) {
   if (i < (shape.size + nvec - 1) / nvec) {
     auto vector_output = reinterpret_cast<
-                          typename VectorConfig<sizeof(DType)*nvec>::IndexType *>(output);
-    VectorType<DType, nvec> ret(vector_output[i]);
+                          typename vector::VectorizedStorage<DType, nvec>::LType *>(output);
+    vector::VectorizedStorage<DType, nvec> ret(vector_output[i]);
     ret += value;
-    vector_output[i] = ret.y;
+    vector_output[i] = ret.scratch_.aligned;
   }
 }
 
