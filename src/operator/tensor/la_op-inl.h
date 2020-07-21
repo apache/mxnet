@@ -53,9 +53,9 @@ struct CopyTriangularToOppositeSide {
 // Zero's lower/upper triangular part of a matrix.
 struct ZeroTriangular {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int matrix_size, int stride, DType* data,
-                                  bool zero_lower) {
-    const int row((i % matrix_size) / stride), col(i % stride);
+  MSHADOW_XINLINE static void Map(index_t i, size_t matrix_size, index_t stride,
+                                  DType* data, bool zero_lower) {
+    const index_t row((i % matrix_size) / stride), col(i % stride);
     if ((!zero_lower && (row < col)) || (zero_lower && (row > col))) data[i] = 0;
   }
 };
