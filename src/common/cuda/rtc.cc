@@ -71,11 +71,9 @@ namespace {
 std::string GetCompileLog(nvrtcProgram program) {
   size_t log_size_including_null;
   NVRTC_CALL(nvrtcGetProgramLogSize(program, &log_size_including_null));
-  // For most std::string implementations, this is probably 1 char bigger than needed.  OK though.
-  std::string log(log_size_including_null, '\0');
+  std::string log(log_size_including_null - 1, '\0');
+  // Room for terminating null character ensured since C++11
   NVRTC_CALL(nvrtcGetProgramLog(program, &log[0]));
-  // Make sure the string reflects the true size (so minus the null terminator).
-  log.resize(log_size_including_null - 1);
   return log;
 }
 
@@ -83,11 +81,9 @@ std::string GetCompileLog(nvrtcProgram program) {
 std::string GetPtx(nvrtcProgram program) {
   size_t ptx_size_including_null;
   NVRTC_CALL(nvrtcGetPTXSize(program, &ptx_size_including_null));
-  // For most std::string implementations, this is probably 1 char bigger than needed.  OK though.
-  std::string ptx(ptx_size_including_null, '\0');
+  std::string ptx(ptx_size_including_null - 1, '\0');
+  // Room for terminating null character ensured since C++11
   NVRTC_CALL(nvrtcGetPTX(program, &ptx[0]));
-  // Make sure the string reflects the true size (so minus the null terminator).
-  ptx.resize(ptx_size_including_null - 1);
   return ptx;
 }
 
@@ -151,7 +147,7 @@ CUfunction get_function(const std::string &parameters,
 #if NDEBUG == 0
                           "-G",
 #endif
-                          "--std=c++11"};
+                          "--std=c++14"};
     const std::string kernel_name_demangled = kernel_name;
     NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
 
@@ -199,7 +195,6 @@ CUfunction get_function(const std::string &parameters,
     intptr_t line_info = 0;
 #endif
 
-    std::cout << debug_info << " " << line_info << std::endl;
     CUjit_option jit_opts[] = {CU_JIT_GENERATE_DEBUG_INFO, CU_JIT_GENERATE_LINE_INFO};
     void* jit_opt_values[] = {reinterpret_cast<void*>(debug_info),
                               reinterpret_cast<void*>(line_info)};
