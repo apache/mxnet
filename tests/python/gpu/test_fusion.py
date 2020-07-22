@@ -47,9 +47,9 @@ def check_fused_symbol(sym, **kwargs):
         for grad_req in ['write', 'add']:
             type_dict = {inp : dtype for inp in inputs}
             with environment('MXNET_USE_FUSION', '0'):
-                orig_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
+                orig_exec = test_sym._simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
             with environment('MXNET_USE_FUSION', '1'):
-                fused_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
+                fused_exec = test_sym._simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
             fwd_orig = orig_exec.forward(is_train=True, **data)
             out_grads = [mx.nd.ones_like(arr) for arr in fwd_orig]
             orig_exec.backward(out_grads=out_grads)
