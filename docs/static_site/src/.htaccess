@@ -22,9 +22,8 @@ RewriteOptions AllowNoSlash
   
 </IfModule>
 
-# Set default website version to current stable (v1.6) TODO delete test code and uncomment origin code 
-RewriteCond %{REQUEST_URI} ^/versions/1.1.0/community/contribute.html$
-# RewriteCond %{REQUEST_URI} !^/versions/
+# Set default website version to current stable (v1.6)
+RewriteCond %{REQUEST_URI} !^/versions/
 RewriteCond %{HTTP_REFERER} !mxnet.apache.org
 RewriteCond %{HTTP_REFERER} !mxnet.incubator.apache.org
 RewriteRule ^(.*)$ /versions/1.6/$1 [r=307,L]
