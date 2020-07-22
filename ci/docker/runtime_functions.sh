@@ -604,17 +604,16 @@ build_ubuntu_gpu_tensorrt() {
     rm -rf build
     mkdir -p build
     cd build
-    cmake \
-        -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
-        -DBUILD_SHARED_LIBS=ON ..\
-        -G Ninja
-    ninja -j 1 -v onnx/onnx.proto
-    ninja -j 1 -v
+    cmake  -DBUILD_SHARED_LIBS=ON -GNinja ..
+    ninja onnx/onnx.proto
+    ninja
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
     popd
 
     # Build ONNX-TensorRT
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
+    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.1/targets/x86_64-linux/include/
     pushd .
     cd 3rdparty/onnx-tensorrt/
     mkdir -p build

@@ -122,14 +122,6 @@ RUN python3 -m pip install cmake==3.16.6 && \
 # Only OpenJDK 8 supported at this time..
 RUN update-java-alternatives -s java-1.8.0-openjdk-amd64
 
-# julia not available on 18.04
-COPY install/ubuntu_julia.sh /work/
-RUN /work/ubuntu_julia.sh
-
-# MXNetJS nightly needs emscripten for wasm
-COPY install/ubuntu_emscripten.sh /work/
-RUN /work/ubuntu_emscripten.sh
-
 ARG USER_ID=0
 COPY install/docker_filepermissions.sh /work/
 RUN /work/docker_filepermissions.sh
@@ -152,6 +144,23 @@ RUN cd /usr/local && \
     cd thrust && \
     git checkout 1.9.8
 
+# Install TensorRT
+# We need to redeclare ARG due to
+# https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
+ARG BASE_IMAGE
+RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
+    apt-get update && \
+    if [ ${SHORT_CUDA_VERSION} = 10.0 ]; then \
+        apt-get install -y "libnvinfer-dev=5.1.5-1+cuda10.0"; \
+    elif [ ${SHORT_CUDA_VERSION} = 10.1 ]; then \
+        apt-get install -y "libnvinfer-dev=5.1.5-1+cuda10.1"; \
+    elif [ ${SHORT_CUDA_VERSION} = 10.2 ]; then \
+        apt-get install -y "libnvinfer-dev=6.0.1-1+cuda10.2"; \
+    else \
+        echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.ubuntu"; \
+        exit 1; \
+    fi && \
+    rm -rf /var/lib/apt/lists/*
 
 FROM gpu as gpuwithcudaruntimelibs
 # Special case because the CPP-Package requires the CUDA runtime libs
