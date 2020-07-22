@@ -26,7 +26,7 @@ from mxnet.test_utils import *
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, teardown, with_seed, with_environment
+from common import setup_module, teardown_module, with_seed, with_environment
 
 def check_fused_symbol(sym, **kwargs):
     inputs = sym.list_inputs()

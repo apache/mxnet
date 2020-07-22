@@ -16,6 +16,7 @@
 # under the License.
 
 import mxnet as mx
+from numpy.testing import assert_equal
 from mxnet.base import data_dir
 from mxnet.test_utils import environment
 from mxnet.util import getenv
@@ -31,15 +32,15 @@ def test_environment():
 
     # Test that a variable can be set in the python and backend environment
     with environment(name1, '42'):
-        assert_equals(os.environ.get(name1), '42')
-        assert_equals(getenv(name1), '42')
+        assert_equal(os.environ.get(name1), '42')
+        assert_equal(getenv(name1), '42')
 
     # Test dict form of invocation
     env_var_dict = {name1: '1', name2: '2'}
     with environment(env_var_dict):
         for key, value in env_var_dict.items():
-            assert_equals(os.environ.get(key), value)
-            assert_equals(getenv(key), value)
+            assert_equal(os.environ.get(key), value)
+            assert_equal(getenv(key), value)
 
     # Further testing in 'test_with_environment()'
 
@@ -48,10 +49,10 @@ def test_with_environment():
     name1 = 'MXNET_TEST_ENV_VAR_1'
     name2 = 'MXNET_TEST_ENV_VAR_2'
     def check_background_values():
-        assert_equals(os.environ.get(name1), '10')
-        assert_equals(getenv(name1), '10')
-        assert_equals(os.environ.get(name2), None)
-        assert_equals(getenv(name2), None)
+        assert_equal(os.environ.get(name1), '10')
+        assert_equal(getenv(name1), '10')
+        assert_equal(os.environ.get(name2), None)
+        assert_equal(getenv(name2), None)
 
     check_background_values()
 
@@ -70,8 +71,8 @@ def test_with_environment():
     def test_one_var(name, value, raise_exception=False):
         try:
             with environment(name, value):
-                assert_equals(os.environ.get(name), value)
-                assert_equals(getenv(name), value)
+                assert_equal(os.environ.get(name), value)
+                assert_equal(getenv(name), value)
                 if raise_exception:
                     raise OnPurposeError
         except OnPurposeError:
@@ -96,11 +97,11 @@ def test_data_dir():
     # Test that data_dir() returns the proper default value when MXNET_HOME is not set
     with environment('MXNET_HOME', None):
         if system == 'Windows':
-            assert_equals(data_dir(), op.join(os.environ.get('APPDATA'), 'mxnet'))
+            assert_equal(data_dir(), op.join(os.environ.get('APPDATA'), 'mxnet'))
         else:
-            assert_equals(data_dir(), op.join(op.expanduser('~'), '.mxnet'))
+            assert_equal(data_dir(), op.join(op.expanduser('~'), '.mxnet'))
     # Test that data_dir() responds to an explicit setting of MXNET_HOME
     with environment('MXNET_HOME', '/tmp/mxnet_data'):
-        assert_equals(data_dir(), '/tmp/mxnet_data')
+        assert_equal(data_dir(), '/tmp/mxnet_data')
     # Test that this test has not disturbed the MXNET_HOME value existing before the test
-    assert_equals(data_dir(), prev_data_dir)
+    assert_equal(data_dir(), prev_data_dir)
