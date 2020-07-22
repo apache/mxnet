@@ -479,3 +479,13 @@ def test_infershape_happens_for_all_ops_in_graph():
 
     assert False
 
+def test_symbol_copy():
+    a = mx.sym.Variable('a')
+    b = copy.copy(a)
+    b._set_attr(name='b')
+    assert a.name == 'a' and b.name == 'b'
+
+    a = mx.sym.Variable('a').as_np_ndarray()
+    b = copy.copy(a)
+    b._set_attr(name='b')
+    assert a.name == 'a' and b.name == 'b'
