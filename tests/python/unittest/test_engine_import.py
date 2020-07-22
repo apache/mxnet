@@ -17,7 +17,7 @@
 
 import os
 from mxnet.test_utils import environment
-import unittest
+import pytest
 
 try:
     reload         # Python 2
@@ -25,7 +25,7 @@ except NameError:  # Python 3
     from importlib import reload
 
 
-@unittest.skip('test needs improving, current use of reload(mxnet) is ineffective')
+@pytest.mark.skip(reason='test needs improving, current use of reload(mxnet) is ineffective')
 def test_engine_import():
     import mxnet
     # Temporarily add an illegal entry (that is not caught) to show how the test needs improving

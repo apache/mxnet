@@ -17,7 +17,6 @@
 
 import mxnet as mx
 from mxnet.base import data_dir
-from nose.tools import *
 from mxnet.test_utils import environment
 from mxnet.util import getenv
 from common import setup_module, teardown_module, with_environment
