@@ -325,6 +325,7 @@ void MKLDNNBatchNormBackward(const OpContext &ctx, const BatchNormParam &param,
     const NDArray &beta     = in_data[batchnorm::kBeta];
     DType *weight_buf = reinterpret_cast<DType *>(bwd.GetWeight().get_data_handle());
     nnvm::dim_t channels_ = data.shape()[1];
+    const size_t copy_size = sizeof(DType) * channels_;
     for (int i = 0; i < channels_; i++) {
       if (!param.fix_gamma)
         weight_buf[i] = (gamma.data().dptr<DType>())[i];   // weight
