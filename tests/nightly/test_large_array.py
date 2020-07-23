@@ -40,6 +40,7 @@ SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
 LARGE_TENSOR_SHAPE = 2**32
 RNN_LARGE_TENSOR = 2**28
+LARGE_SQ_X = 80000
 
 
 @pytest.mark.timeout(0)
@@ -1755,3 +1756,16 @@ def test_sparse_dot():
     assert out.asnumpy()[0][0] == 2
     assert out.shape == (2, 2)
 
+
+def test_linalg_operators():
+    def check_syrk_batch():
+        A = nd.zeros((2, LARGE_SQ_X, LARGE_SQ_X))
+        for i in range(LARGE_SQ_X):
+            A[0,i,i] = 1
+            A[1,i,i] = 0.1
+        out = nd.linalg.syrk(A, alpha=2, transpose=False)
+        for i in range(LARGE_SQ_X):
+            assert out[0,i,i] == 2
+            assert_almost_equal(out[1,i,i], nd.array([0.02]), rtol=1e-3, atol=1e-5)
+
+    check_syrk_batch()
