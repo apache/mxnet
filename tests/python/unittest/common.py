@@ -217,15 +217,17 @@ def with_seed(seed=None):
                 logger = default_logger()
                 # 'pytest --logging-level=DEBUG' shows this msg even with an ensuing core dump.
                 test_count_msg = '{} of {}: '.format(i+1,test_count) if test_count > 1 else ''
-                test_msg = ('{}Setting test np/mx/python random seeds, use MXNET_TEST_SEED={}'
-                            ' to reproduce.').format(test_count_msg, this_test_seed)
-                logger.log(log_level, test_msg)
+                pre_test_msg = ('{}Setting test np/mx/python random seeds, use MXNET_TEST_SEED={}'
+                                ' to reproduce.').format(test_count_msg, this_test_seed)
+                on_err_test_msg = ('{}Error seen with seeded test, use MXNET_TEST_SEED={}'
+                                ' to reproduce.').format(test_count_msg, this_test_seed)
+                logger.log(log_level, pre_test_msg)
                 try:
                     orig_test(*args, **kwargs)
                 except:
                     # With exceptions, repeat test_msg at WARNING level to be sure it's seen.
                     if log_level < logging.WARNING:
-                        logger.warning(test_msg)
+                        logger.warning(on_err_test_msg)
                     raise
                 finally:
                     # Provide test-isolation for any test having this decorator
