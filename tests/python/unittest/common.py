@@ -354,18 +354,12 @@ def run_in_spawned_process(func, env, *args):
         return False
     else:
         seed = np.random.randint(0,1024*1024*1024)
-        orig_environ = os.environ.copy()
-        try:
-            for (key, value) in env.items():
-                os.environ[key] = str(value)
+        with environment(env):
             # Prepend seed as first arg
             p = mpctx.Process(target=func, args=(seed,)+args)
             p.start()
             p.join()
             assert p.exitcode == 0, "Non-zero exit code %d from %s()." % (p.exitcode, func.__name__)
-        finally:
-            os.environ.clear()
-            os.environ.update(orig_environ)
     return True
 
 

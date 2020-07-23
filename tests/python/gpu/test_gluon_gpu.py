@@ -558,9 +558,9 @@ def _test_bulking(test_bulking_func):
         time_per_iteration = mp.Manager().Value('d', 0.0)
 
         if not run_in_spawned_process(test_bulking_func,
-                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': seg_sizes[0],
-                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': seg_sizes[1],
-                                       'MXNET_EXEC_BULK_EXEC_TRAIN': seg_sizes[2]},
+                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': str(seg_sizes[0]),
+                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': str(seg_sizes[1]),
+                                       'MXNET_EXEC_BULK_EXEC_TRAIN': str(seg_sizes[2])},
                                       time_per_iteration):
             # skip test since the python version can't run it properly.  Warning msg was logged.
             return
