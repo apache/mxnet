@@ -21,7 +21,7 @@ import functools
 import inspect
 import threading
 
-from .base import _LIB, check_call
+from .base import _LIB, check_call, c_str, py_str
 
 
 _np_ufunc_default_kwargs = {
@@ -816,3 +816,35 @@ def get_cuda_compute_capability(ctx):
         raise RuntimeError('cuDeviceComputeCapability failed with error code {}: {}'
                            .format(ret, error_str.value.decode()))
     return cc_major.value * 10 + cc_minor.value
+
+
+def getenv(name):
+    """Get the setting of an environment variable from the C Runtime.
+
+    Parameters
+    ----------
+    name : string type
+        The environment variable name
+
+    Returns
+    -------
+    value : string
+        The value of the environment variable, or None if not set
+    """
+    ret = ctypes.c_char_p()
+    check_call(_LIB.MXGetEnv(c_str(name), ctypes.byref(ret)))
+    return None if ret.value is None else py_str(ret.value)
+
+
+def setenv(name, value):
+    """Set an environment variable in the C Runtime.
+
+    Parameters
+    ----------
+    name : string type
+        The environment variable name
+    value : string type
+        The desired value to set the environment value to
+    """
+    passed_value = None if value is None else c_str(value)
+    check_call(_LIB.MXSetEnv(c_str(name), passed_value))
