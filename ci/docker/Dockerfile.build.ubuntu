@@ -68,9 +68,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         libzmq3-dev \
         liblapack-dev \
         libopencv-dev \
-        # Caffe
-        caffe-cpu \
-        libcaffe-cpu-dev \
         # BytePS
         numactl \
         libnuma-dev \
@@ -80,23 +77,11 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python3-pip \
         python3-nose \
         python3-nose-timer \
-        # Scala
-        openjdk-8-jdk \
-        openjdk-8-jre \
-        maven \
-        scala \
-        # Clojure
-        clojure \
-        leiningen \
-        # R
-        r-base-core \
-        r-cran-devtools \
-        libcairo2-dev \
-        libxml2-dev \
         ## Documentation
         doxygen \
         pandoc \
         ## Build-dependencies for ccache 3.7.9
+        autoconf \
         gperf \
         libb2-dev \
         libzstd-dev && \
@@ -114,13 +99,15 @@ RUN cd /usr/local/src && \
     cd /usr/local/src && \
     rm -rf ccache
 
+# RAT License Checker tool
+RUN cd /usr/local/src && \
+    wget https://archive.apache.org/dist/creadur/apache-rat-0.13/apache-rat-0.13-bin.tar.gz && \
+    tar xf apache-rat-0.13-bin.tar.gz
+
 # Python & cmake
 COPY install/requirements /work/
 RUN python3 -m pip install cmake==3.16.6 && \
     python3 -m pip install -r /work/requirements
-
-# Only OpenJDK 8 supported at this time..
-RUN update-java-alternatives -s java-1.8.0-openjdk-amd64
 
 ARG USER_ID=0
 COPY install/docker_filepermissions.sh /work/
