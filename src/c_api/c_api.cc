@@ -472,7 +472,7 @@ void registerOperators(void *lib, int verbose) {
       // get extra inputs, if exists
       int extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
-        extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
       
       return num_in + extra_inputs;
     };
@@ -480,15 +480,15 @@ void registerOperators(void *lib, int verbose) {
     // lambda function to call parse attributes and return the number of inputs for subgraph ops
     auto num_subgraph_inputs = [=](const NodeAttrs& attrs) {
       // get number of inputs for subgraph
-      int num_in = DefaultSubgraphOpNumInputs(attrs);
+      int num_in = mxnet::op::DefaultSubgraphOpNumInputs(attrs);
 
       // get extra inputs, if exists
       int extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
-        extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
 
       return num_in + extra_inputs;
-    }
+    };
     
     // lambda function to call parse attributes and return the number of outputs
     auto num_outputs = [=](const NodeAttrs& attrs) {
@@ -528,7 +528,7 @@ void registerOperators(void *lib, int verbose) {
       // get extra inputs, if exists
       int extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
-        extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
 
       return num_in + extra_inputs + 2 * num_out;
     };
@@ -547,7 +547,7 @@ void registerOperators(void *lib, int verbose) {
       // get extra inputs, if exists
       int extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
-        extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
       int num_inputs = in_shape->size() - extra_inputs;
       
       std::vector<uint32_t*> inshapes(num_inputs);
@@ -658,7 +658,7 @@ void registerOperators(void *lib, int verbose) {
       // get extra inputs, if exists
       int extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
-        extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
       int num_inputs = in_type->size() - extra_inputs;
 
       // copy input types from in_type
@@ -735,7 +735,7 @@ void registerOperators(void *lib, int verbose) {
         // get extra inputs, if exists
         int extra_inputs = 0;
         if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
-          extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+          extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
         int num_inputs = in_stypes->size() - extra_inputs;
 
         // copy input types from in_stype
