@@ -68,6 +68,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         libzmq3-dev \
         liblapack-dev \
         libopencv-dev \
+        libxml2-dev \
         # BytePS
         numactl \
         libnuma-dev \
