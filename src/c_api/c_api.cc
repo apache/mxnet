@@ -1315,6 +1315,7 @@ int MXNotifyShutdown() {
   API_BEGIN();
   mxnet::op::custom::CustomOperator::Get()->Stop();
   Engine::Get()->NotifyShutdown();
+  Engine::Get()->WaitForAll();
   API_END();
 }
 
