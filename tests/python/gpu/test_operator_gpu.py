@@ -26,7 +26,7 @@ import pytest
 import itertools
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
-from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same
+from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same, environment
 from mxnet.base import MXNetError
 from mxnet import autograd
 
@@ -654,12 +654,12 @@ def _conv_with_num_streams(seed):
 @pytest.mark.skip(reason="skipping for now due to severe flakiness")
 @with_seed()
 def test_convolution_multiple_streams():
-    for num_streams in [1, 2]:
+    for num_streams in ['1', '2']:
         for engine in ['NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']:
-            print("Starting engine %s with %d streams." % (engine, num_streams), file=sys.stderr)
+            print('Starting engine {} with {} streams.'.format(engine, num_streams), file=sys.stderr)
             run_in_spawned_process(_conv_with_num_streams,
                 {'MXNET_GPU_WORKER_NSTREAMS' : num_streams, 'MXNET_ENGINE_TYPE' : engine})
-            print("Finished engine %s with %d streams." % (engine, num_streams), file=sys.stderr)
+            print('Finished engine {} with {} streams.'.format(engine, num_streams), file=sys.stderr)
 
 
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
@@ -2009,22 +2009,22 @@ def test_multi_proposal_op():
 
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
 def kernel_error_check_imperative():
-    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    with mx.np_shape(active=True):
-        a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
-        b = mx.nd.array([],ctx=mx.gpu(0))
-        c = (a / b).asnumpy()
+    with environment('MXNET_ENGINE_TYPE', 'NaiveEngine'):
+        with mx.np_shape(active=True):
+            a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
+            b = mx.nd.array([],ctx=mx.gpu(0))
+            c = (a / b).asnumpy()
 
 def kernel_error_check_symbolic():
-    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    with mx.np_shape(active=True):
-        a = mx.sym.Variable('a')
-        b = mx.sym.Variable('b')
-        c = a / b
-        f = c._bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
-                                'b':mx.nd.array([],ctx=mx.gpu(0))})
-        f.forward()
-        g = f.outputs[0].asnumpy()
+    with environment('MXNET_ENGINE_TYPE', 'NaiveEngine'):
+        with mx.np_shape(active=True):
+            a = mx.sym.Variable('a')
+            b = mx.sym.Variable('b')
+            c = a / b
+            f = c.bind(mx.gpu(0), {'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
+                                   'b':mx.nd.array([],ctx=mx.gpu(0))})
+            f.forward()
+            g = f.outputs[0].asnumpy()
 
 @pytest.mark.serial
 def test_kernel_error_checking():
@@ -2223,9 +2223,9 @@ def test_bulking():
         # Create shared variable to return measured time from test process
         time_per_iteration = mp.Manager().Value('d', 0.0)
         if not run_in_spawned_process(_test_bulking_in_process,
-                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD' : seg_sizes[0],
-                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : seg_sizes[1],
-                                       'MXNET_EXEC_BULK_EXEC_TRAIN' : seg_sizes[2]},
+                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD' : str(seg_sizes[0]),
+                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : str(seg_sizes[1]),
+                                       'MXNET_EXEC_BULK_EXEC_TRAIN' : str(seg_sizes[2])},
                                       time_per_iteration):
             # skip test since the python version can't run it properly.  Warning msg was logged.
             return
