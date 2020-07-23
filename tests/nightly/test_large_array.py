@@ -1213,12 +1213,6 @@ def test_linalg():
 
 
 def test_linalg():
-    def get_large_identity_mat():
-        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
-        for i in range(LARGE_SQ_X):
-            A[i,i] = 1
-        return A
-
     def batchify(mat):
         return nd.array([mat.asnumpy()])
 

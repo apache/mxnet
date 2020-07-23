@@ -297,6 +297,13 @@ def create_vector(size, dtype=np.int64):
     a = mx.nd.arange(0, size, dtype=dtype)
     return a
 
+# For testing Large Square Matrix with total size > 2^32 elements
+def get_large_identity_mat():
+    A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
+    for i in range(LARGE_SQ_X):
+        A[i,i] = 1
+    return A
+
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
                         shuffle_csr_indices=False, ctx=None):
