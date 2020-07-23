@@ -3086,6 +3086,9 @@ def test_np_mixed_precision_binary_funcs():
         if (func in ['multiply', 'mod', 'equal', 'not_equal', 'greater',
                     'greater_equal', 'less', 'less_equal']) and \
             (lshape == () or rshape == ()) :
+        # the behaviors of infer type in dealing with the input shape of '()' are different between np and onp
+        # logcial ops: when two numbers are only different in precision, NumPy also has a weird behavior
+        # thus, skip the tests
             return
         np_func = getattr(_np, func)
         mx_func = TestMixedBinary(func)
