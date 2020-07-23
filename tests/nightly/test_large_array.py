@@ -1213,52 +1213,80 @@ def test_linalg():
 
 
 def test_linalg():
-    def check_det():
-        # creating an identity matrix input
+    def get_large_identity_mat():
         A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
         for i in range(LARGE_SQ_X):
             A[i,i] = 1
+        return A
 
-        out = nd.linalg.det(A)
-        assert out == 1
+    def batchify(A):
+        A_np = A.asnumpy()
+        B = nd.array([A_np, A_np])
+        return B
 
-    def check_inverse():
-        # creating an identity matrix input
-        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
+    def check_diag(mat, val):
         for i in range(LARGE_SQ_X):
-            A[i,i] = 1
+            assert mat[i, i] == val
 
-        out = nd.linalg.inverse(A)
-        # output should be an identity matrix
-        for i in range(LARGE_SQ_X):
-            assert out[i,i] == 1
+    def check_batch_diag(mat, val):
+        check_diag(mat[0], val)
+        check_diag(mat[1], val)
 
-    def check_trmm():
-        # creating an identity matrix input
-        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
-        for i in range(LARGE_SQ_X):
-            A[i,i] = 1
+    def run_det(inp):
+        inp.attach_grad()
+        with mx.autograd.record():
+            out = det(inp)
+        return inp.grad, out
 
-        out = nd.linalg.trmm(A, A)
-        # output should be an identity matrix
-        for i in range(LARGE_SQ_X):
-            assert out[i,i] == 1
+    def run_inverse(inp):
+        inp.attach_grad()
+        with mx.autograd.record():
+            out = inverse(inp)
+        return inp.grad, out
 
-    def check_trsm():
-        # creating an identity matrix input
-        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
-        for i in range(LARGE_SQ_X):
-            A[i,i] = 1
+    def run_trmm(inp):
+        inp.attach_grad()
+        with mx.autograd.record():
+            out = trmm(inp, inp)
+        return inp.grad, out
 
-        out = nd.linalg.trsm(A, A)
-        # output should be an identity matrix
-        for i in range(LARGE_SQ_X):
-            assert out[i,i] == 1
+    def run_trsm(inp):
+        inp.attach_grad()
+        with mx.autograd.record():
+            out = trsm(inp, inp)
+        return inp.grad, out
 
-    check_det()
-    check_inverse()
-    check_trmm()
-    check_trsm()
+    A = get_large_identity_mat()
+
+    grad, out = run_det(A)
+    check_diag(grad, 0)
+    assert(out[0] == 1)
+
+    grad, out = run_inverse(A)
+    check_diag(grad, 0)
+    check_diag(out, 1)
+
+    grad, out = run_trmm(A)
+    check_diag(grad, 0)
+    check_diag(out, 1)
+
+    grad, out = run_trsm(A)
+    check_diag(grad, 0)
+    check_diag(out, 1)
+
+    B = batchify(A)
+
+    grad, out = run_inverse(B)
+    check_batch_diag(grad, 0)
+    check_batch_diag(out, 1)
+
+    grad, out = run_trmm(B)
+    check_batch_diag(grad, 0)
+    check_batch_diag(out, 1)
+
+    grad, out = run_trsm(B)
+    check_batch_diag(grad, 0)
+    check_batch_diag(out, 1)
 
 
 def test_basic():
