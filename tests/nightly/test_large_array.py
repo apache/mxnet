@@ -40,6 +40,7 @@ SMALL_Y = 50
 LARGE_SIZE = LARGE_X * SMALL_Y
 LARGE_TENSOR_SHAPE = 2**32
 RNN_LARGE_TENSOR = 2**28
+LARGE_SQ_X = 70000
 
 
 def test_nn():
@@ -1789,6 +1790,25 @@ def test_sparse_dot():
     out = nd.dot(sp_mat1, mat2)
     assert out.asnumpy()[0][0] == 2
     assert out.shape == (2, 2)
+
+
+def test_linalg_operators():
+     def check_syrk_batch():
+         # test both forward and backward
+         # batch syrk will be applied to the last two dimensions
+         A = nd.zeros((1, LARGE_SQ_X, LARGE_SQ_X))
+         for i in range(LARGE_SQ_X):
+             A[0,i,i] = 1
+         A.attach_grad()
+         with mx.autograd.record():
+             out = nd.linalg.syrk(A, alpha=2, transpose=False)
+         for i in range(LARGE_SQ_X):
+             assert out[0,i,i] == 2
+         out.backward()
+         for i in range(LARGE_SQ_X):
+             assert A.grad[0,0,i] == 4
+
+     check_syrk_batch()
 
 
 if __name__ == '__main__':
