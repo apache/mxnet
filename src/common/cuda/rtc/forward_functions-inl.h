@@ -94,7 +94,7 @@ __device__ inline vector::VectorizedStorage<DType, nvec> load_index(const DType 
     const auto* vector_input = reinterpret_cast<const typename V::LType *>(input + i);
     return V(*vector_input);
   } else {
-    return V(0);
+    return V({0});
   }
 }
 
@@ -106,7 +106,7 @@ __device__ inline vector::VectorizedStorage<DType, nvec> global_load_index(const
     const auto* vector_input = reinterpret_cast<const typename V::LType *>(input + i);
     return V(__ldg(vector_input));
   } else {
-    return V(0);
+    return V({0});
   }
 }
 

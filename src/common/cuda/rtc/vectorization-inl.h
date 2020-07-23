@@ -48,23 +48,23 @@ struct VectorType {
 
 template <>
 struct VectorType<1> {
-  using type = char1;
+  using type = char;
 };
 
 template <>
 struct VectorType<2> {
-  using type = short1;
+  using type = short;
 };
 
 
 template <>
 struct VectorType<4> {
-  using type = uint1;
+  using type = int;
 };
 
 template <>
 struct VectorType<8> {
-  using type = ulonglong1;
+  using type = long long;
 };
 
 template <>

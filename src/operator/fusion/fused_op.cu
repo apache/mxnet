@@ -332,7 +332,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   size_t counter = 0;
   for (const auto& entry : g.outputs()) {
     std::string var_name = "output" + std::to_string(counter);
-    code += "op::VectorType<DType_" + var_name + \
+    code += "vector::VectorizedStorage<DType_" + var_name + \
             ", nvec> vec_" + var_name + ";\n";
     ++counter;
   }
@@ -348,7 +348,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
       if (source->is_variable()) {
         if (load_index[i]) {
             code += "const auto " + var_name + " = op::load(vec_" +
-                    variables[{i, 0}] + ".x[j]);\n";
+                    variables[{i, 0}] + ".scratch_.separate[j]);\n";
             CHECK_EQ(outputs[i], 1);
             variables[{i, 0}] = var_name;
         }
@@ -370,7 +370,9 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
         }
 
         if (fusion::slice_ops.find(op_name) != fusion::slice_ops.end()) {
-          code += "const auto " + var_name + " = op::load(" + variables[{i, 0}] + ".x[j]);\n";
+          code += "const auto " + var_name +
+                  " = op::load(" + variables[{i, 0}] +
+                  ".scratch_.separate[j]);\n";
           variables[{i, 0}] = var_name;
           continue;
         }
@@ -479,7 +481,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
   for (const auto& entry : g.outputs()) {
     const std::string& var = variables[{entry.node_id, entry.index}];
     const auto var_name = "output" + std::to_string(counter);
-    code += "vec_" + var_name + ".x[j] = op::store("+ var +", " + var_name + ");\n";
+    code += "vec_" + var_name + ".scratch_.separate[j] = op::store("+ var +", " + var_name + ");\n";
     ++counter;
   }
 
