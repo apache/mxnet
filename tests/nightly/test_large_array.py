@@ -1219,10 +1219,8 @@ def test_linalg():
             A[i,i] = 1
         return A
 
-    def batchify(A):
-        A_np = A.asnumpy()
-        B = nd.array([A_np, A_np])
-        return B
+    def batchify(mat):
+        return nd.array([mat.asnumpy()])
 
     def check_diag(mat, val):
         for i in range(LARGE_SQ_X):
@@ -1230,7 +1228,6 @@ def test_linalg():
 
     def check_batch_diag(mat, val):
         check_diag(mat[0], val)
-        check_diag(mat[1], val)
 
     def run_det(inp):
         inp.attach_grad()
