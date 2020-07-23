@@ -1078,7 +1078,7 @@ def test_npx_batch_norm():
     epsilon = 1e-5
     class TestBatchNorm(HybridBlock):
         def __init__(self, eps=1e-5, fix_gamma=False, momentum=0.9, **kwargs):
-            super().__init__()
+            super(TestBatchNorm, self).__init__()
             self.eps = eps
             self.fix_gamma = fix_gamma
             self.momentum = momentum
