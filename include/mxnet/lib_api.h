@@ -49,7 +49,7 @@
 #endif
 
 /* Make sure to update the version number everytime you make changes */
-#define MX_LIBRARY_VERSION 7
+#define MX_LIBRARY_VERSION 8
 
 /*!
  * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
@@ -561,6 +561,7 @@ class OpResource {
 #define MX_STR_SUBGRAPH_SYM_JSON "subgraph_sym_json"
 #define MX_STR_DTYPE "__ext_dtype__"
 #define MX_STR_SHAPE "__ext_shape__"
+#define MX_STR_EXTRA_INPUTS "__ext_extra_inputs__"
 
 /* \brief get shape value from list of shapes string
  *

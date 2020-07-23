@@ -469,9 +469,27 @@ void registerOperators(void *lib, int verbose) {
                            &num_in, &num_out))
       << "Error calling ParseAttrs::num_inputs for custom operator '" << name_str << "'";
 
-      return num_in;
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+      
+      return num_in + extra_inputs;
     };
 
+    // lambda function to call parse attributes and return the number of inputs for subgraph ops
+    auto num_subgraph_inputs = [=](const NodeAttrs& attrs) {
+      // get number of inputs for subgraph
+      int num_in = DefaultSubgraphOpNumInputs(attrs);
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+
+      return num_in + extra_inputs;
+    }
+    
     // lambda function to call parse attributes and return the number of outputs
     auto num_outputs = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char*
@@ -506,7 +524,13 @@ void registerOperators(void *lib, int verbose) {
                            &num_in, &num_out))
       << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str << "'";
       // for backward passes, inputs + outputs + input gradients (one for each output)
-      return num_in + 2 * num_out;
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+
+      return num_in + extra_inputs + 2 * num_out;
     };
 
     // lambda function to call infer shape
@@ -520,17 +544,24 @@ void registerOperators(void *lib, int verbose) {
         attr_vals.push_back(kv.second.c_str());
       }
 
-      std::vector<uint32_t*> inshapes(in_shape->size());
-      std::vector<int> indims(in_shape->size());
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+      int num_inputs = in_shape->size() - extra_inputs;
+      
+      std::vector<uint32_t*> inshapes(num_inputs);
+      std::vector<int> indims(num_inputs);
 
       // determine amount of memory needed to store all the input shapes
       size_t buff_size = 0;
-      for (const auto& i : *in_shape) buff_size += i.ndim();
+      for (size_t i = 0; i < num_inputs; ++i)
+        buff_size += (*in_shape)[i].ndim();
 
       // copy input shapes from ShapeVector to raw memory layout
       std::vector<uint32_t> inbuff(buff_size);
       uint32_t *ptr = inbuff.data();
-      for (size_t i = 0; i < in_shape->size(); ++i) {
+      for (size_t i = 0; i < num_inputs; ++i) {
         inshapes[i] = ptr;
         indims[i] = (*in_shape)[i].ndim();
         for (int j = 0; j < (*in_shape)[i].ndim(); ++j, ++ptr) {
@@ -546,22 +577,22 @@ void registerOperators(void *lib, int verbose) {
       int* outdims = nullptr;
 
       CHECK(callInferShape(shape_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           inshapes.data(), indims.data(), in_shape->size(),
+                           inshapes.data(), indims.data(), num_inputs,
                            &mod_inshapes, &mod_indims,
                            &outshapes, &outdims, out_shape->size()))
       << "Error calling InferShape for custom operator '" << name_str << "'";
 
-      std::vector<uint32_t*> in_shapes(in_shape->size());
+      std::vector<uint32_t*> in_shapes(num_inputs);
       // determine amount of memory needed to store all the modified input shapes
       buff_size = 0;
-      for (unsigned i = 0; i < in_shape->size(); i++) {
+      for (unsigned i = 0; i < num_inputs; i++) {
         buff_size += mod_indims[i];
       }
 
       // copy modified input shapes from custom op memory to MXNet memory
       std::vector<uint32_t> mod_inbuff(buff_size);
       ptr = mod_inbuff.data();
-      for (unsigned i = 0; i < in_shape->size(); ++i) {
+      for (unsigned i = 0; i < num_inputs; ++i) {
         in_shapes[i] = ptr;
         for (int j = 0; j < mod_indims[i]; ++j, ++ptr) {
           *ptr = static_cast<uint32_t>(mod_inshapes[i][j]);
@@ -569,7 +600,7 @@ void registerOperators(void *lib, int verbose) {
       }
 
       // assign modified input shapes to ShapeVector
-      for (unsigned i = 0; i < in_shape->size(); ++i) {
+      for (unsigned i = 0; i < num_inputs; ++i) {
         SHAPE_ASSIGN_CHECK(*in_shape, i,
                            mxnet::TShape(in_shapes[i], in_shapes[i]+mod_indims[i]));
       }
@@ -599,7 +630,7 @@ void registerOperators(void *lib, int verbose) {
 
       // free memory used by custom op to allocate shapes/dims
       callFree(mod_indims);
-      for (unsigned i = 0; i < in_shape->size(); i++) {
+      for (unsigned i = 0; i < num_inputs; i++) {
         callFree(mod_inshapes[i]);
       }
       callFree(mod_inshapes);
@@ -624,6 +655,12 @@ void registerOperators(void *lib, int verbose) {
         attr_vals.push_back(kv.second.c_str());
       }
 
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+      int num_inputs = in_type->size() - extra_inputs;
+
       // copy input types from in_type
       std::vector<int> intypes(*in_type);
 
@@ -631,12 +668,12 @@ void registerOperators(void *lib, int verbose) {
       std::vector<int> outtypes(out_type->size());
 
       CHECK(callInferType(type_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           intypes.data(), in_type->size(),
+                           intypes.data(), num_inputs,
                            outtypes.data(), out_type->size()))
       << "Error calling InferType for custom operator '" << name_str << "'";
 
       // copy and assign modified input types from custom op to MXNet memory
-      for (size_t i = 0; i < in_type->size(); i++) {
+      for (size_t i = 0; i < num_inputs; i++) {
         TYPE_ASSIGN_CHECK(*in_type, i, intypes[i]);
       }
       // copy and assign output types from custom op to MXNet memory
@@ -680,7 +717,7 @@ void registerOperators(void *lib, int verbose) {
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
       if (stype_fp == nullptr) {
-        // InferSType is not defineid in customized lib.
+        // InferSType is not defined in customized lib.
         CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
         << "Error input tensors are not dense for custom operator '" << name_str << "'";
         // set outputs as dense
@@ -694,18 +731,25 @@ void registerOperators(void *lib, int verbose) {
           attr_keys.push_back(kv.first.c_str());
           attr_vals.push_back(kv.second.c_str());
         }
+
+        // get extra inputs, if exists
+        int extra_inputs = 0;
+        if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+          extra_inputs = std::stoi(attrs.dict[MX_STR_EXTRA_INPUTS]);
+        int num_inputs = in_stypes->size() - extra_inputs;
+
         // copy input types from in_stype
         std::vector<int> instypes(*in_stypes);
 
         // output types will be populated by inferType function
         std::vector<int> outstypes(out_stypes->size());
         CHECK(callInferSType(stype_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                             instypes.data(), in_stypes->size(),
+                             instypes.data(), num_inputs,
                              outstypes.data(), out_stypes->size()))
         << "Error calling InferSType for custom operator '" << name_str << "'";
 
         // copy and assign modified input storage types from custom op to MXNet memory.
-        for (size_t i = 0; i < in_stypes->size(); i++) {
+        for (size_t i = 0; i < num_inputs; i++) {
           STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, instypes[i]);
         }
         // copy and assign output storage types from custom op to MXNet memory.
@@ -835,7 +879,7 @@ void registerOperators(void *lib, int verbose) {
         regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, plevel);
     } else {
       using namespace mxnet::op;
-      regOp.set_num_inputs(DefaultSubgraphOpNumInputs);
+      regOp.set_num_inputs(num_subgraph_inputs);
       regOp.set_num_outputs(DefaultSubgraphOpNumOutputs);
       regOp.set_attr<nnvm::FInferType>("FInferType", DefaultSubgraphOpType, plevel);
       regOp.set_attr<mxnet::FInferShape>("FInferShape", DefaultSubgraphOpShape, plevel);
@@ -901,12 +945,12 @@ void registerOperators(void *lib, int verbose) {
         using namespace mxnet::op;
         auto grad_inouts = [=](const nnvm::NodeAttrs& attrs) {
           // for backward passes, inputs + outputs + input gradients (one for each output)
-          uint32_t cnt = DefaultSubgraphOpNumInputs(attrs);
+          uint32_t cnt = num_subgraph_inputs(attrs);
           cnt += 2 * DefaultSubgraphOpNumOutputs(attrs);
           return cnt;
         };
         gradOp.set_num_inputs(grad_inouts);
-        gradOp.set_num_outputs(DefaultSubgraphOpNumInputs);
+        gradOp.set_num_outputs(num_subgraph_inputs);
       }
 
       if (createop_map.size() != 0) {
