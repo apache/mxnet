@@ -118,11 +118,26 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
        inputs[1].storage_type() == kCSRStorage && inputs[2].storage_type() == kDefaultStorage) ||
       (inputs.size() > 4U && common::ContainsStorageType(inputs, kDefaultStorage) &&
        outputs[0].storage_type() == kDefaultStorage)) {
+    
     mshadow::Stream<cpu>* s = ctx.get_stream<cpu>();
     Resource rsc = ResourceManager::Get()->Request(ctx.run_ctx.get_ctx(),
         ResourceRequest(ResourceRequest::kTempSpace));
     NDArray out_nd = outputs[0];
+#if MXNET_USE_MKLDNN == 1
+      std::vector<NDArray> in_data;
+      for (const NDArray& in : inputs) {
+        // if ndarray is in default storage and MKLDNN is available,
+        // need to make sure cpu layout data is used, instead of MKL layout
+        if (in.storage_type() == kDefaultStorage) {
+          in_data.push_back(in.Reorder2Default());
+        } else {
+          in_data.push_back(in);
+        }
+      }
+    mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, in_data, &out_nd);
+#else
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
+#endif
 #if MXNET_USE_MKLDNN == 1
   } else if (IsMKLDNNData(inputs)) {
     MKLDNNRun(MKLDNNSumForward, attrs, ctx, inputs, req, outputs);
