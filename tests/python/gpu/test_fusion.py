@@ -26,7 +26,7 @@ from mxnet.test_utils import *
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, teardown_module, with_seed, with_environment
+from common import setup_module, teardown_module, with_seed
 
 def check_fused_symbol(sym, **kwargs):
     inputs = sym.list_inputs()
@@ -334,18 +334,18 @@ def test_input_reorder():
 
         arrays = {}
         for use_fusion in ('0', '1'):
-            os.environ['MXNET_USE_FUSION'] = use_fusion
-            arrays[use_fusion] = {}
-            n = Block()
-            n.hybridize(static_alloc=static_alloc)
-            args = [arg.copyto(mx.gpu()) for arg in arg_data]
-            for arg in args:
-                arg.attach_grad()
-            with autograd.record():
-                r = n(*args)
-            arrays[use_fusion]['result'] = r
-            r.backward()
-            for i, arg in enumerate(args):
-                arrays[use_fusion][i] = arg.grad
+            with environment('MXNET_USE_FUSION', use_fusion):
+                arrays[use_fusion] = {}
+                n = Block()
+                n.hybridize(static_alloc=static_alloc)
+                args = [arg.copyto(mx.gpu()) for arg in arg_data]
+                for arg in args:
+                    arg.attach_grad()
+                with autograd.record():
+                    r = n(*args)
+                arrays[use_fusion]['result'] = r
+                r.backward()
+                for i, arg in enumerate(args):
+                    arrays[use_fusion][i] = arg.grad
         for key in ['result'] + list(range(len(arg_data))):
             assert_allclose(arrays['0'][key].asnumpy(), arrays['1'][key].asnumpy())

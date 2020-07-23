@@ -2451,6 +2451,8 @@ def environment(*args):
     try:
         yield
     finally:
+        # the backend engines may still be referencing the changed env var state
+        mx.nd.waitall()
         # reinstate original env_var state per the snapshot taken earlier
         set_environ(snapshot)
 

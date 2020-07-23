@@ -26,13 +26,13 @@ import pytest
 import itertools
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
-from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same
+from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same, environment
 from mxnet.base import MXNetError
 from mxnet import autograd
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, with_environment
+from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied
 from common import run_in_spawned_process
 from test_operator import check_sequence_reverse, allclose_function
 from test_operator import *

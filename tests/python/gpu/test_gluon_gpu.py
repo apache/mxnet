@@ -21,7 +21,7 @@ import os
 import time
 import mxnet as mx
 import multiprocessing as mp
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray, environment
 import mxnet.ndarray as nd
 import numpy as np
 import math
@@ -634,13 +634,15 @@ def test_gemms_true_fp16():
     net.cast('float16')
     net.initialize(ctx=ctx)
     net.weight.set_data(weights)
-    ref_results = net(input)
 
-    os.environ["MXNET_FC_TRUE_FP16"] = "1"
-    results_trueFP16 = net(input)
+    with environment('MXNET_FC_TRUE_FP16', '0'):
+      ref_results = net(input)
+
+    with environment('MXNET_FC_TRUE_FP16', '1'):
+      results_trueFP16 = net(input)
+
     atol = 1e-2
     rtol = 1e-2
     assert_almost_equal(ref_results.asnumpy(), results_trueFP16.asnumpy(),
                         atol=atol, rtol=rtol)
-    os.environ["MXNET_FC_TRUE_FP16"] = "0"
 
