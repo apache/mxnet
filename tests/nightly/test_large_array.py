@@ -1247,7 +1247,7 @@ def test_linalg():
             out = trsm(inp, inp)
         return inp.grad, out
 
-    A = get_large_identity_mat()
+    A = get_large_identity_mat(LARGE_SQ_X)
 
     grad, out = run_det(A)
     check_diag(grad, 0)
