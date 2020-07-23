@@ -604,17 +604,16 @@ build_ubuntu_gpu_tensorrt() {
     rm -rf build
     mkdir -p build
     cd build
-    cmake \
-        -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
-        -DBUILD_SHARED_LIBS=ON ..\
-        -G Ninja
-    ninja -j 1 -v onnx/onnx.proto
-    ninja -j 1 -v
+    cmake  -DBUILD_SHARED_LIBS=ON -GNinja ..
+    ninja onnx/onnx.proto
+    ninja
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
     popd
 
     # Build ONNX-TensorRT
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
+    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.1/targets/x86_64-linux/include/
     pushd .
     cd 3rdparty/onnx-tensorrt/
     mkdir -p build
@@ -1055,15 +1054,15 @@ unittest_ubuntu_python3_arm() {
 # Functions that run the nightly Tests:
 
 #Runs Apache RAT Check on MXNet Source for License Headers
-nightly_test_rat_check() {
+test_rat_check() {
     set -e
     pushd .
 
-    cd /work/deps/0.12-release/apache-rat/target
+    cd /usr/local/src/apache-rat-0.13
 
     # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
     exec 5>&1
-    OUTPUT=$(java -jar apache-rat-0.13-SNAPSHOT.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet|tee >(cat - >&5))
+    OUTPUT=$(java -jar apache-rat-0.13.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet|tee >(cat - >&5))
     ERROR_MESSAGE="Printing headers for text files without a valid license header"
 
 
@@ -1175,7 +1174,6 @@ build_ubuntu_cpu_docs() {
 
 build_jekyll_docs() {
     set -ex
-    source /etc/profile.d/rvm.sh
 
     pushd .
     build_docs_setup

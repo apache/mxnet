@@ -31,7 +31,7 @@ The following commands can be used to run a Apache RAT check locally -
 
 Docker based 1-click-method:
 ```
-ci/build.py -p ubuntu_rat nightly_test_rat_check
+ci/build.py -p ubuntu_cpu test_rat_check
 ```
 
 Manual method:
