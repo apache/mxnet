@@ -60,8 +60,7 @@ MXReturnValue jsonPass(const std::string& in_graph, const std::string** out_grap
   MXTensor* aux_ = res.alloc_aux("test_aux",{1},MXContext::CPU(0),kFloat32);
   
   // convert json string to json object
-  JsonParser parser;
-  JsonVal json_val = parser.parse_to_json(in_graph);
+  JsonVal json_val = JsonVal::parse(in_graph);
 
   // get nodes list
   JsonVal nodes = json_val.map[JsonVal("nodes")];
@@ -86,7 +85,7 @@ MXReturnValue jsonPass(const std::string& in_graph, const std::string** out_grap
     }
   }
   
-  *out_graph = new std::string(parser.dump(json_val));
+  *out_graph = new std::string(json_val.dump());
   return MX_SUCCESS;
 }
 

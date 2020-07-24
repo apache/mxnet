@@ -473,7 +473,7 @@ void registerOperators(void *lib, int verbose) {
       int extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
         extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
-      
+
       return num_in + extra_inputs;
     };
 
@@ -489,7 +489,7 @@ void registerOperators(void *lib, int verbose) {
 
       return num_in + extra_inputs;
     };
-    
+
     // lambda function to call parse attributes and return the number of outputs
     auto num_outputs = [=](const NodeAttrs& attrs) {
       // convert attributes to vector of char*
@@ -549,7 +549,7 @@ void registerOperators(void *lib, int verbose) {
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
         extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
       int num_inputs = in_shape->size() - extra_inputs;
-      
+
       std::vector<uint32_t*> inshapes(num_inputs);
       std::vector<int> indims(num_inputs);
 
@@ -644,6 +644,28 @@ void registerOperators(void *lib, int verbose) {
       return true;
     };
 
+    // lambda function to call infer shape for subgraph ops
+    auto infer_subgraph_shape = [=] (const nnvm::NodeAttrs& attrs,
+                            mxnet::ShapeVector *in_shape,
+                            mxnet::ShapeVector *out_shape) {
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto &kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      auto in_first = in_shape->begin();
+      auto in_last  = in_first + in_shape->size() - extra_inputs; 
+      mxnet::ShapeVector *sg_in_shapes = new mxnet::ShapeVector(in_first, in_last);
+      return mxnet::op::DefaultSubgraphOpShape(attrs, sg_in_shapes, out_shape);
+    };
+
     // lambda function to call infer type
     auto infer_type = [=] (const nnvm::NodeAttrs& attrs,
                             std::vector<int> *in_type,
@@ -684,6 +706,29 @@ void registerOperators(void *lib, int verbose) {
       return true;
     };
 
+    // lambda function to call infer type for subgraph ops
+    auto infer_subgraph_type = [=] (const nnvm::NodeAttrs& attrs,
+				    std::vector<int> *in_type,
+				    std::vector<int> *out_type) {
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto &kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      auto in_first = in_type->begin();
+      auto in_last  = in_first + in_type->size() - extra_inputs;
+      std::vector<int> *sg_in_types = new std::vector<int>(in_first, in_last);
+      
+      return mxnet::op::DefaultSubgraphOpType(attrs, sg_in_types, out_type);
+    };
+    
     // lambda function to convert from external mutate_inputs to internal MXNet types
     auto mutate_inputs = [=](const nnvm::NodeAttrs& attrs) {
       // convert attributes to vector of char*
@@ -762,6 +807,25 @@ void registerOperators(void *lib, int verbose) {
       }
     };
 
+    // lambda function to set storage types for subgraph ops
+    auto infer_subgraph_storage_type = [=](const nnvm::NodeAttrs& attrs,
+					   const int dev_mask,
+					   DispatchMode* dispatch_mode,
+					   std::vector<int>* in_stypes,
+					   std::vector<int>* out_stypes) {
+        // get extra inputs, if exists
+        int extra_inputs = 0;
+        if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+          extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+	auto in_first = in_stypes->begin();
+	auto in_last  = in_first + in_stypes->size() - extra_inputs;
+	std::vector<int> *sg_in_stypes = new std::vector<int>(in_first, in_last);
+	
+	return mxnet::op::DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
+						       sg_in_stypes, out_stypes);
+    };
+    
     // FGradient register lambda
     auto grad_reg = [=](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
       // create node for gradient
@@ -881,10 +945,10 @@ void registerOperators(void *lib, int verbose) {
       using namespace mxnet::op;
       regOp.set_num_inputs(num_subgraph_inputs);
       regOp.set_num_outputs(DefaultSubgraphOpNumOutputs);
-      regOp.set_attr<nnvm::FInferType>("FInferType", DefaultSubgraphOpType, plevel);
-      regOp.set_attr<mxnet::FInferShape>("FInferShape", DefaultSubgraphOpShape, plevel);
+      regOp.set_attr<nnvm::FInferType>("FInferType", infer_subgraph_type, plevel);
+      regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_subgraph_shape, plevel);
       regOp.set_attr<FInferStorageType>("FInferStorageType",
-                                        DefaultSubgraphOpStorageType, plevel);
+                                        infer_subgraph_storage_type, plevel);
       regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs",
                                           DefaultSubgraphOpMutableInputs, plevel);
     }

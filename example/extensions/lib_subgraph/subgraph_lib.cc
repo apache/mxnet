@@ -57,8 +57,7 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
   std::cout << subgraph_sym << std::endl;
 
   // convert json string to json object
-  JsonParser parser;
-  JsonVal json_val = parser.parse_to_json(subgraph_sym);
+  JsonVal json_val = JsonVal::parse(subgraph_sym);
   // get nodes list
   JsonVal nodes = json_val.map[JsonVal("nodes")];
   //counter for inputs
@@ -148,6 +147,9 @@ class MyStatefulOp : public CustomStatefulOp {
   MXReturnValue Forward(std::vector<MXTensor>* inputs,
                         std::vector<MXTensor>* outputs,
                         const OpResource& op_res) {
+    if(attrs_.count(MX_STR_EXTRA_INPUTS) > 0 && std::stoi(attrs_.at(MX_STR_EXTRA_INPUTS)) > 0)
+      std::cout << "forward::extra_inputs(" << attrs_.at(MX_STR_EXTRA_INPUTS) << ")::inputs ["
+		<< inputs->size() << "]" << std::endl;
     return myExecutor(inputs, outputs, subgraph_sym);
   }
 
@@ -183,8 +185,7 @@ MXReturnValue mySupportedOps(const std::string& json,
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }
   //convert json string to json object
-  JsonParser parser;
-  JsonVal json_val = parser.parse_to_json(json);
+  JsonVal json_val = JsonVal::parse(json);
   //get nodes list
   JsonVal nodes = json_val.map[JsonVal("nodes")];
 
@@ -249,7 +250,6 @@ MXReturnValue myReviewSubgraph(const std::string& json, int subgraph_id, bool* a
   } else {
     *accept = true;
     std::cout << "accepting subgraph" << std::endl;
-    attrs->insert(std::pair<std::string,std::string>("myKey","myVal"));
   }
   return MX_SUCCESS;
 }
@@ -269,8 +269,7 @@ class MySelector : public CustomOpSelector {
                 << " ==> " << kv.second << std::endl;
     }
     //convert json string to json object
-    JsonParser parser;
-    JsonVal json_val = parser.parse_to_json(json);
+    JsonVal json_val = JsonVal::parse(json);
     //get nodes list
     nodes = json_val.map[JsonVal("nodes")];
   }
@@ -330,6 +329,46 @@ REGISTER_PARTITIONER(mySelect)
 .addStrategy("strategy1", "_custom_subgraph_op")
 .setCreateSelector("strategy1", createSelector)
 .setReviewSubgraph("strategy1", myReviewSubgraph);
+
+/* \brief a basic pass that adds a new input for subgraph ops */
+MXReturnValue addInputPass(const std::string& in_graph, const std::string** out_graph,
+			   const std::unordered_map<std::string, std::string>& options,
+			   const std::unordered_map<std::string, MXTensor>& args,
+			   const std::unordered_map<std::string, MXTensor>& aux,
+			   const PassResource& res) {
+  // convert graph from JSON string to Graph/Node data structure
+  Graph *g = Graph::fromString(in_graph);
+  //find node with '_custom_subgraph_op' op type
+  for(Node* n : g->nodes) {
+    if(n->op.compare("_custom_subgraph_op") == 0) {
+      //set extra input
+      n->attrs[MX_STR_EXTRA_INPUTS] = std::to_string(1);
+      
+      //create a new input Node
+      Node* input = new Node();
+      std::string input_name = n->name + "_input";
+      input->name = input_name;
+      input->op = "null";
+      //add a new node in graph
+      g->nodes.push_back(input);
+      g->inputs.push_back(input);
+      //connect new input to node
+      input->outputs.push_back({n,n->inputs.size()});
+      //connect node to new input
+      n->inputs.push_back({input,0});
+      // add a corresponding tensor for this input
+      MXTensor* arg_ = res.alloc_arg(input_name,{1},MXContext::CPU(0),kFloat32);
+    }
+  }
+
+  //convert back to JSON string from Graph/Node
+  *out_graph = new std::string(g->toString());
+  return MX_SUCCESS;
+}
+
+REGISTER_PASS(addInputPass)
+.setBody(addInputPass);
+
 
 MXReturnValue initialize(int version) {
   if (version >= 10700) {
