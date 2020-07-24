@@ -89,7 +89,7 @@ void CreateSimpleGraph(const nnvm::Graph& g,
       }
     }
     // store control flow ops in control_flow_nodes
-    if (!node->is_variable() && (node->op()->name.compare("_while_loop") == 0 
+    if (!node->is_variable() && (node->op()->name.compare("_while_loop") == 0
         || node->op()->name.compare("_cond") == 0)) {
       control_flow_nodes->emplace_back(node);
     }
@@ -871,7 +871,8 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
   }
 
   // Partition recursively for control flow ops
-  if (subg_prop->HasAttr("recursive_partition") && subg_prop->GetAttr<bool>("recursive_partition")) {
+  if (subg_prop->HasAttr("recursive_partition")
+      && subg_prop->GetAttr<bool>("recursive_partition")) {
     for (size_t i = 0; i < control_flow_nodes.size(); i++) {
       const auto &n = *control_flow_nodes[i];
       auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend("static_shape");
@@ -881,7 +882,8 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
         // convert symbol to graph
         nnvm::Graph subg_g;
         subg_g.outputs = subg_sym->outputs;
-        subg_g.attrs["mxnet_version"] = std::make_shared<nnvm::any>(static_cast<int>(MXNET_VERSION));
+        subg_g.attrs["mxnet_version"] = std::make_shared<nnvm::any>(
+          static_cast<int>(MXNET_VERSION));
         if (Imperative::Get()->is_np_shape()) {
           subg_g.attrs["is_np_shape"] = std::make_shared<nnvm::any>(
               static_cast<int>(Imperative::Get()->is_np_shape()));
