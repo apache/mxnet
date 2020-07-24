@@ -25,7 +25,7 @@ import mxnet as mx
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor, get_large_identity_mat
 from mxnet import gluon, nd
 from common import with_seed, with_post_test_cleanup
 from nose.tools import with_setup
@@ -1214,7 +1214,8 @@ def test_linalg():
 
 def test_linalg():
     def batchify(mat):
-        return nd.array([mat.asnumpy()])
+        mat_np = mat.asnumpy()
+        return nd.array([mat_np, mat_np])
 
     def check_diag(mat, val):
         for i in range(LARGE_SQ_X):
@@ -1222,6 +1223,7 @@ def test_linalg():
 
     def check_batch_diag(mat, val):
         check_diag(mat[0], val)
+        check_diag(mat[1], val)
 
     def run_det(inp):
         inp.attach_grad()
