@@ -1253,17 +1253,17 @@ def test_linalg():
     grad, out = run_det(A)
     assert(out[0] == 1)
     out.backward()
-    check_diag(grad, 0)
+    check_diag(grad, 1)
 
     grad, out = run_inverse(A)
     check_diag(out, 1)
     out.backward()
-    check_diag(grad, 0)
+    check_diag(grad, -1)
 
     grad, out = run_trmm(A)
     check_diag(out, 1)
     out.backward()
-    check_diag(grad, 0)
+    check_diag(grad, 2)
 
     grad, out = run_trsm(A)
     check_diag(out, 1)
@@ -1275,12 +1275,12 @@ def test_linalg():
     grad, out = run_inverse(B)
     check_batch_diag(out, 1)
     out.backward()
-    check_batch_diag(grad, 0)
+    check_batch_diag(grad, -1)
 
     grad, out = run_trmm(B)
     check_batch_diag(out, 1)
     out.backward()
-    check_batch_diag(grad, 0)
+    check_batch_diag(grad, 2)
 
     grad, out = run_trsm(B)
     check_batch_diag(out, 1)
