@@ -735,6 +735,7 @@ build_ubuntu_blc() {
 # Testing
 
 sanity_check() {
+    set -ex
     sanity_license
     sanity_python
     sanity_cpp
