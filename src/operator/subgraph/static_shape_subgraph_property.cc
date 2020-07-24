@@ -52,7 +52,7 @@ class StaticShapeOpSelector: public SubgraphSelector {
  */
 class StaticShapeSubgraphProperty: public SubgraphProperty {
  public:
-  StaticShapeSubgraphProperty(){
+  StaticShapeSubgraphProperty() {
     // Flag to make sure subgraph CachedOp node has input during partitioning
     attrs_["ensure_CachedOp_input"] = std::make_shared<dmlc::any>(true);
   }
