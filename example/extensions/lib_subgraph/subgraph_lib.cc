@@ -353,7 +353,7 @@ MXReturnValue addInputPass(const std::string& in_graph, const std::string** out_
       g->nodes.push_back(input);
       g->inputs.push_back(input);
       //connect new input to node
-      input->outputs.push_back({n,n->inputs.size()});
+      input->outputs.push_back({n,(int)(n->inputs.size())});
       //connect node to new input
       n->inputs.push_back({input,0});
       // add a corresponding tensor for this input
