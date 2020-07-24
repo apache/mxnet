@@ -113,7 +113,14 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   if (req[0] == kNullOp) return;
-  if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) ||
+#if MXNET_USE_MKLDNN == 1
+  if (IsMKLDNNData(inputs)) {
+    MKLDNNRun(MKLDNNSumForward, attrs, ctx, inputs, req, outputs);
+  } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
+    FallBackCompute(ElementWiseSumCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  }
+#endif
+  else if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) ||
       (inputs.size() == 3U && inputs[0].storage_type() == kDefaultStorage &&
        inputs[1].storage_type() == kCSRStorage && inputs[2].storage_type() == kDefaultStorage) ||
       (inputs.size() > 4U && common::ContainsStorageType(inputs, kDefaultStorage) &&
@@ -122,27 +129,7 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
     Resource rsc = ResourceManager::Get()->Request(ctx.run_ctx.get_ctx(),
         ResourceRequest(ResourceRequest::kTempSpace));
     NDArray out_nd = outputs[0];
-#if MXNET_USE_MKLDNN == 1
-      std::vector<NDArray> in_data;
-      for (const NDArray& in : inputs) {
-        // if ndarray is in default storage and MKLDNN is available,
-        // need to make sure cpu layout data is used, instead of MKL layout
-        if (in.storage_type() == kDefaultStorage) {
-          in_data.emplace_back(in.Reorder2Default());
-        } else {
-          in_data.emplace_back(in);
-        }
-      }
-    mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, in_data, &out_nd);
-#else
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
-#endif
-#if MXNET_USE_MKLDNN == 1
-  } else if (IsMKLDNNData(inputs)) {
-    MKLDNNRun(MKLDNNSumForward, attrs, ctx, inputs, req, outputs);
-  } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
-    FallBackCompute(ElementWiseSumCompute<cpu>, attrs, ctx, inputs, req, outputs);
-#endif
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }
