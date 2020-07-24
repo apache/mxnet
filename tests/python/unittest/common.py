@@ -23,6 +23,7 @@ import numpy as np
 import random
 import shutil
 from mxnet.base import MXNetError
+from mxnet.test_utils import environment
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../common/'))
 sys.path.insert(0, os.path.join(curr_path, '../../../python'))
@@ -30,7 +31,15 @@ sys.path.insert(0, os.path.join(curr_path, '../../../python'))
 import models
 from contextlib import contextmanager
 import pytest
-import tempfile
+from tempfile import TemporaryDirectory
+import locale
+
+xfail_when_nonstandard_decimal_separator = pytest.mark.xfail(
+    locale.localeconv()["decimal_point"] != ".",
+    reason="Some operators break when the decimal separator is set to anything other than \".\". "
+    "These operators should be rewritten to utilize the new FFI. Please see #18097 for more "
+    "information."
+)
 
 def assertRaises(expected_exception, func, *args, **kwargs):
     try:
@@ -208,17 +217,21 @@ def with_seed(seed=None):
                 logger = default_logger()
                 # 'pytest --logging-level=DEBUG' shows this msg even with an ensuing core dump.
                 test_count_msg = '{} of {}: '.format(i+1,test_count) if test_count > 1 else ''
-                test_msg = ('{}Setting test np/mx/python random seeds, use MXNET_TEST_SEED={}'
-                            ' to reproduce.').format(test_count_msg, this_test_seed)
-                logger.log(log_level, test_msg)
+                pre_test_msg = ('{}Setting test np/mx/python random seeds, use MXNET_TEST_SEED={}'
+                                ' to reproduce.').format(test_count_msg, this_test_seed)
+                on_err_test_msg = ('{}Error seen with seeded test, use MXNET_TEST_SEED={}'
+                                ' to reproduce.').format(test_count_msg, this_test_seed)
+                logger.log(log_level, pre_test_msg)
                 try:
                     orig_test(*args, **kwargs)
                 except:
-                    # With exceptions, repeat test_msg at INFO level to be sure it's seen.
-                    if log_level < logging.INFO:
-                        logger.info(test_msg)
+                    # With exceptions, repeat test_msg at WARNING level to be sure it's seen.
+                    if log_level < logging.WARNING:
+                        logger.warning(on_err_test_msg)
                     raise
                 finally:
+                    # Provide test-isolation for any test having this decorator
+                    mx.nd.waitall()
                     np.random.set_state(post_test_state)
         return test_new
     return test_helper
@@ -277,7 +290,7 @@ def setup_module():
         seed = np.random.randint(0, np.iinfo(np.int32).max)
     else:
         seed = int(module_seed_str)
-        logger.warn('*** module-level seed is set: all tests running deterministically ***')
+        logger.warning('*** module-level seed is set: all tests running deterministically ***')
     logger.info('Setting module np/mx/python random seeds, use MXNET_MODULE_SEED=%s to reproduce.', seed)
     np.random.seed(seed)
     mx.random.seed(seed)
@@ -285,21 +298,8 @@ def setup_module():
     # The MXNET_TEST_SEED environment variable will override MXNET_MODULE_SEED for tests with
     #  the 'with_seed()' decoration.  Inform the user of this once here at the module level.
     if os.getenv('MXNET_TEST_SEED') is not None:
-        logger.warn('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
+        logger.warning('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
 
-try:
-    from tempfile import TemporaryDirectory
-except:  # Python 2 support
-    # really simple implementation of TemporaryDirectory
-    class TemporaryDirectory(object):
-        def __init__(self, suffix='', prefix='', dir=''):
-            self._dirname = tempfile.mkdtemp(suffix, prefix, dir)
-
-        def __enter__(self):
-            return self._dirname
-
-        def __exit__(self, exc_type, exc_value, traceback):
-            shutil.rmtree(self._dirname)
 
 def teardown_module():
     """
@@ -308,6 +308,22 @@ def teardown_module():
     It waits for all operations in one file to finish before carrying on the next.
     """
     mx.nd.waitall()
+
+
+def with_environment(*args_):
+    """
+    Helper function that takes a dictionary of environment variables and their
+    desired settings and changes the environment in advance of running the
+    decorated code.  The original environment state is reinstated afterwards,
+    even if exceptions are raised.
+    """
+    def test_helper(orig_test):
+        @functools.wraps(orig_test)
+        def test_new(*args, **kwargs):
+            with environment(*args_):
+                orig_test(*args, **kwargs)
+        return test_new
+    return test_helper
 
 
 def run_in_spawned_process(func, env, *args):
@@ -340,18 +356,12 @@ def run_in_spawned_process(func, env, *args):
         return False
     else:
         seed = np.random.randint(0,1024*1024*1024)
-        orig_environ = os.environ.copy()
-        try:
-            for (key, value) in env.items():
-                os.environ[key] = str(value)
+        with environment(env):
             # Prepend seed as first arg
             p = mpctx.Process(target=func, args=(seed,)+args)
             p.start()
             p.join()
             assert p.exitcode == 0, "Non-zero exit code %d from %s()." % (p.exitcode, func.__name__)
-        finally:
-            os.environ.clear()
-            os.environ.update(orig_environ)
     return True
 
 
@@ -364,13 +374,13 @@ def retry(n):
         @functools.wraps(orig_test)
         def test_new(*args, **kwargs):
             """Wrapper for tests function."""
-            for _ in range(n):
+            for i in range(n):
                 try:
                     orig_test(*args, **kwargs)
+                    return
                 except AssertionError as e:
-                    err = e
-                    continue
-                return
-            raise err
+                    if i == n-1:
+                        raise e
+                    mx.nd.waitall()
         return test_new
     return test_helper

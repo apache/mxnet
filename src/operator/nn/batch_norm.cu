@@ -34,6 +34,9 @@
 #define FIX_GAMMA_FLAG        8
 #define IS_TRAINING_FLAG      16
 #define USE_GLOBAL_STATS_FLAG 32
+#define ADDTO_DATA_FLAG       (1 << 6)
+#define ADDTO_GAMMA_FLAG      (1 << 7)
+#define ADDTO_BETA_FLAG       (1 << 8)
 
 #if MXNET_USE_CUDNN == 1
 #include "./cudnn/cudnn_batch_norm-inl.h"
@@ -64,15 +67,14 @@ struct ScalarConvert {
 };
 
 // Number of threads in a block given an input size up to MAX_BLOCK_SIZE
-static unsigned getNumThreads(int nElem, const bool smaller) {
-  unsigned threadSizes[5] = {32, 64, 128, 256, MAX_BLOCK_SIZE};
-  const int maxi = smaller ? 4 : 5;
-  for (int i = 0; i != maxi; ++i) {
+static unsigned getNumThreads(int nElem) {
+  unsigned threadSizes[4] = {32, 64, 128, 256};
+  for (int i = 0; i != 4; ++i) {
     if (static_cast<unsigned>(nElem) <= threadSizes[i]) {
       return threadSizes[i];
     }
   }
-  return smaller ? (MAX_BLOCK_SIZE >> 1) : MAX_BLOCK_SIZE;
+  return MAX_BLOCK_SIZE;
 }
 
 // Returns the index of the most significant 1 bit in `val`.
@@ -362,33 +364,60 @@ static __global__ void BatchNormalizationBackwardKernel(
                                 * momentum + localVariance * (AccReal(1) - momentum);
   }
 
-  if (gradInput.Size() > 0 && (flags & WRITE_DATA_FLAG) != 0) {
-    for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
-      for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
-        const DType gradOut = gradOutput.get_ref(batch, plane, x);
-        if (is_train_and_not_global_stats) {
-          const DType inp = input.get_ref(batch, plane, x);
-          const AccReal proj = (inp - mean) * projScale;
-          gradInput.get_ref(batch, plane, x) =
-            ScalarConvert<AccReal, DType>::to((gradOut - proj - gradMean) * gradScale);
-        } else {
-          gradInput.get_ref(batch, plane, x) = ScalarConvert<AccReal, DType>::to(
-            gradOut * gradScale);
+  if (gradInput.Size() > 0 && (flags & (WRITE_DATA_FLAG | ADDTO_DATA_FLAG)) != 0) {
+    const bool grad_write = flags & WRITE_DATA_FLAG;
+    if (grad_write) {
+      for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
+        for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
+          const DType gradOut = gradOutput.get_ref(batch, plane, x);
+          if (is_train_and_not_global_stats) {
+            const DType inp = input.get_ref(batch, plane, x);
+            const AccReal proj = (inp - mean) * projScale;
+            gradInput.get_ref(batch, plane, x) =
+              ScalarConvert<AccReal, DType>::to((gradOut - proj - gradMean) * gradScale);
+          } else {
+            gradInput.get_ref(batch, plane, x) = ScalarConvert<AccReal, DType>::to(
+              gradOut * gradScale);
+          }
+        }
+      }
+    } else {
+      // grad addto
+      for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
+        for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
+          const DType gradOut = gradOutput.get_ref(batch, plane, x);
+          if (is_train_and_not_global_stats) {
+            const DType inp = input.get_ref(batch, plane, x);
+            const AccReal proj = (inp - mean) * projScale;
+            gradInput.get_ref(batch, plane, x) +=
+              ScalarConvert<AccReal, DType>::to((gradOut - proj - gradMean) * gradScale);
+          } else {
+            gradInput.get_ref(batch, plane, x) += ScalarConvert<AccReal, DType>::to(
+              gradOut * gradScale);
+          }
         }
       }
     }
   }
 
-  if (tensors.gradWeight.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_GAMMA_FLAG) != 0) {
+  if (tensors.gradWeight.numElements() > 0 && threadIdx.x == 0 &&
+      (flags & (WRITE_GAMMA_FLAG | ADDTO_GAMMA_FLAG)) != 0) {
     if ((flags & FIX_GAMMA_FLAG) == 0) {
-      tensors.gradWeight[plane] = ScalarConvert<AccReal, DType>::to(dotP * invstd);
+      if (flags & WRITE_GAMMA_FLAG)
+        tensors.gradWeight[plane] = ScalarConvert<AccReal, DType>::to(dotP * invstd);
+      else
+        tensors.gradWeight[plane] += ScalarConvert<AccReal, DType>::to(dotP * invstd);
     } else {
       tensors.gradWeight[plane] = DType(0);
     }
   }
 
-  if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_BETA_FLAG) != 0) {
-    tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
+  if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 &&
+      (flags & (WRITE_BETA_FLAG | ADDTO_BETA_FLAG)) != 0) {
+    if (flags & WRITE_BETA_FLAG)
+      tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
+    else
+      tensors.gradBias[plane] += ScalarConvert<AccReal, DType>::to(gradOutputSum);
   }
 }
 
@@ -509,7 +538,7 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
 
   if ((flags & IS_TRAINING_FLAG) == 0 || (flags & USE_GLOBAL_STATS_FLAG) != 0) {
     dim3 blocks(input.ChannelCount());
-    dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize(), false));
+    dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize()));
     BatchNormalizationUpdateOutputInferenceKernel<DType, AccReal, DeviceTensor1,
       batchnorm::BNTensor3<DType>>
       <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
@@ -517,7 +546,7 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
         saveInvStd, weight, bias, eps, flags);
   } else {
     dim3 blocks(input.ChannelCount());
-    dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize(), false));
+    dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize()));
     BatchNormalizationUpdateOutputKernel<DType, AccReal, DeviceTensor1,
       batchnorm::BNTensor3<DType>>
       << < blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >> > (
@@ -559,13 +588,8 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
   tensors.saveInvStd = devicetensor<AccReal, 1>(out_data[batchnorm::kVar]);
 
   DCHECK_GT(tensors.weight.numElements(), 0);
-#ifdef NDEBUG
-  constexpr bool SMALLER_THREADS = false;
-#else
-  constexpr bool SMALLER_THREADS = true;
-#endif
   dim3 blocks(gradOutput.ChannelCount());
-  dim3 threads(batchnorm::cuda::getNumThreads(gradOutput.InnerSize(), SMALLER_THREADS));
+  dim3 threads(batchnorm::cuda::getNumThreads(gradOutput.InnerSize()));
   BatchNormalizationBackwardKernel<DType, AccReal, DeviceTensor1, batchnorm::BNTensor3<DType>>
     <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
     input, gradOutput, gradInput, tensors, flags, momentum, eps);
@@ -585,12 +609,18 @@ static inline uint32_t SetupFlags(const OpContext &ctx,
   flags |= params.use_global_stats ? USE_GLOBAL_STATS_FLAG : 0;
   if (IsBNWriting(req[batchnorm::kData])) {
     flags |= WRITE_DATA_FLAG;
+  } else if (req[batchnorm::kData] == kAddTo) {
+    flags |= ADDTO_DATA_FLAG;
   }
   if (IsBNWriting(req[batchnorm::kGamma])) {
     flags |= WRITE_GAMMA_FLAG;
+  } else if (req[batchnorm::kGamma] == kAddTo) {
+    flags |= ADDTO_GAMMA_FLAG;
   }
   if (IsBNWriting(req[batchnorm::kBeta])) {
     flags |= WRITE_BETA_FLAG;
+  } else if (req[batchnorm::kBeta] == kAddTo) {
+    flags |= ADDTO_BETA_FLAG;
   }
   return flags;
 }
@@ -668,8 +698,7 @@ void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
 #if MXNET_USE_CUDNN == 1
-  if (!param.use_global_stats && !param.cudnn_off
-      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
+  if (!param.use_global_stats && !param.cudnn_off) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       GetCuDNNOp<DType>(param).Forward(ctx, in_data, req, outputs, aux_states);
     })
@@ -697,8 +726,7 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
 #if MXNET_USE_CUDNN == 1
-  if (!param.use_global_stats && !param.cudnn_off
-      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
+  if (!param.use_global_stats && !param.cudnn_off) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       GetCuDNNOp<DType>(param).Backward(ctx, inputs, req, outputs);
     })

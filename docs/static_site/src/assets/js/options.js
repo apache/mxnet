@@ -22,6 +22,10 @@
 */
 
 $(document).ready(function () {
+    const dropdownVersions = $("#version-dropdown-container ul li")
+        .toArray()
+        .map((li) => li.innerText);
+
     function label(lbl) {
         lbl = lbl.replace(/[ .]/g, '-').toLowerCase();
 
@@ -33,6 +37,9 @@ $(document).ready(function () {
         let searchParams = searchString.substring(1).split("&");
         searchParams.forEach(function (element) {
             kvPair = element.split("=");
+            if (kvPair[0] === 'version' && dropdownVersions.indexOf(kvPair[1]) == -1) {
+                kvPair[1] = dropdownVersions[0];
+            }
             searchDict.set(kvPair[0], kvPair[1]);
         });
         return searchDict;
@@ -51,8 +58,8 @@ $(document).ready(function () {
         if (urlParams.get('version')) {
             versionSelect = urlParams.get('version');
             $('li.versions').removeClass('active');
-            $('li.versions').each(function(){is_a_match($(this), versionSelect)});
-            $('.current-version').html( versionSelect + ' <span class="caret"></span>' );
+            $('li.versions').each(function () { is_a_match($(this), versionSelect) });
+            $('.current-version').html(versionSelect + '<svg class="dropdown-caret" viewBox="0 0 32 32" class="icon icon-caret-bottom" aria-hidden="true"><path class="dropdown-caret-path" d="M24 11.305l-7.997 11.39L8 11.305z"></path></svg>');
             queryString += 'version=' + versionSelect + '&';
         }
         if (urlParams.get('platform')) {
@@ -133,4 +140,24 @@ $(document).ready(function () {
         setSelects(urlSearchParams(window.location.search), true);
     });
 
+    let timer;
+    const toggleDropdown = function(showContent) {
+        if (timer) clearTimeout(timer);
+        if (showContent) {
+            timer = setTimeout(function() {
+                $(".version-dropdown").show()
+            }, 250);  
+        } else {
+            $(".version-dropdown").hide()
+        }
+    }
+
+    $("#version-dropdown-container")
+        .mouseenter(toggleDropdown.bind(null, true))
+        .mouseleave(toggleDropdown.bind(null, false))
+        .click(function() {$(".version-dropdown").toggle()});
+
+    $("ul.version-dropdown").click(function(e) {
+        e.preventDefault();
+    });
 });

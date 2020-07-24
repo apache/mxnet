@@ -60,6 +60,7 @@ def prepare_workloads():
     OpArgMngr.add_workload("polyval", dnp.arange(10), pool['2x2'])
     OpArgMngr.add_workload("ediff1d", pool['2x2'], pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("nan_to_num", pool['2x2'])
+    OpArgMngr.add_workload("tri", 2, 3, 4)
     OpArgMngr.add_workload("tensordot", pool['2x2'], pool['2x2'], ((1, 0), (0, 1)))
     OpArgMngr.add_workload("kron", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("cumsum", pool['3x2'], axis=0, out=pool['3x2'])
@@ -147,6 +148,13 @@ def prepare_workloads():
     OpArgMngr.add_workload("fmin", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("fmod", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("may_share_memory", pool['2x3'][:0], pool['2x3'][:1])
+    OpArgMngr.add_workload('squeeze', pool['2x2'], axis=None)
+    OpArgMngr.add_workload("pad", pool['2x2'], pad_width=((1,2),(1,2)), mode="constant")
+    OpArgMngr.add_workload("prod", pool['2x2'], axis=1, dtype="float64", keepdims=False)
+    OpArgMngr.add_workload("around", pool['2x2'], decimals=0)
+    OpArgMngr.add_workload("round", pool['2x2'], decimals=1)
+    OpArgMngr.add_workload("repeat", pool['2x2'], repeats=1, axis=None)
+    OpArgMngr.add_workload("diagflat", pool['2x2'], k=1)
     OpArgMngr.add_workload("diag", pool['2x2'], k=1)
     OpArgMngr.add_workload("diagonal", pool['2x2x2'], offset=-1, axis1=0, axis2=1)
     OpArgMngr.add_workload("diag_indices_from", pool['2x2'])
@@ -183,6 +191,10 @@ def prepare_workloads():
     OpArgMngr.add_workload("mean", pool['2x2'], axis=0, keepdims=True)
     OpArgMngr.add_workload("random.gamma", 1, size=(2, 3))
     OpArgMngr.add_workload("random.normal", 1, size=(2, 3))
+    OpArgMngr.add_workload("max", pool["2x2"], axis=0, out=pool['2'], keepdims=False)
+    OpArgMngr.add_workload("min", pool["2x2"], axis=0, out=pool['2'], keepdims=False)
+    OpArgMngr.add_workload("amax", pool["2x2"], axis=1, out=pool['2'], keepdims=False)
+    OpArgMngr.add_workload("amin", pool["2x2"], axis=1, out=pool['2'], keepdims=False)
 
     unary_ops = ['negative', 'reciprocal', 'abs', 'sign', 'rint', 'ceil', 'floor',
                  'bitwise_not', 'trunc', 'fix', 'square', 'sqrt', 'cbrt', 'exp',

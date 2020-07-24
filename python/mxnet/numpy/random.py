@@ -103,7 +103,7 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         ``np.broadcast(low, high).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples.
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
         When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
@@ -157,7 +157,7 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         ``np.broadcast(low, high).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
         Data type of output samples.
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
         When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output, default is current context.

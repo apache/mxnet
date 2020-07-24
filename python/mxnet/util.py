@@ -21,7 +21,7 @@ import functools
 import inspect
 import threading
 
-from .base import _LIB, check_call
+from .base import _LIB, check_call, c_str, py_str
 
 
 _np_ufunc_default_kwargs = {
@@ -761,7 +761,7 @@ def _set_np_array(active):
     return cur_state
 
 
-def set_np(shape=True, array=True, dtype=True):
+def set_np(shape=True, array=True, dtype=False):
     """Setting NumPy shape and array semantics at the same time.
     It is required to keep NumPy shape semantics active while activating NumPy array semantics.
     Deactivating NumPy shape semantics while NumPy array semantics is still active is not allowed.
@@ -780,9 +780,9 @@ def set_np(shape=True, array=True, dtype=True):
         instead of `mxnet.ndarray.NDArray`. For example, a `Block` would create parameters of type
         `mxnet.numpy.ndarray`.
     dtype : bool
-        A boolean value indicating whether the NumPy-dtype semantics should be turned on or off.
-        When this flag is set to `True`, default dtype is float64.
-        When this flag is set to `False`, default dtype is float32.
+         A boolean value indicating whether the NumPy-dtype semantics should be turned on or off.
+         When this flag is set to `True`, default dtype is float64.
+         When this flag is set to `False`, default dtype is float32.
     Examples
     --------
     >>> import mxnet as mx
@@ -823,8 +823,6 @@ def set_np(shape=True, array=True, dtype=True):
     array(1.)
     >>> np.ones(shape=(2, 0, 3))
     array([], shape=(2, 0, 3))
-    >>> np.ones(shape=()).dtype
-    dtype('float64')
 
     When the `array` flag is `True`, Gluon layers would create parameters and outputs of type `mx.np.ndarray`.
 
@@ -838,6 +836,10 @@ def set_np(shape=True, array=True, dtype=True):
     >>> [p.data() for p in dense.collect_params().values()]
     [array([[0.0068339 , 0.01299825],
            [0.0301265 , 0.04819721]]), array([0., 0.])]
+
+    >>> npx.set_np(dtype=True)
+    >>> np.ones(shape=()).dtype
+    dtype('float64')
     """
     if not shape and array:
         raise ValueError('NumPy Shape semantics is required in using NumPy array semantics.')
@@ -912,6 +914,32 @@ def get_cuda_compute_capability(ctx):
     return cc_major.value * 10 + cc_minor.value
 
 
+def default_array(source_array, ctx=None, dtype=None):
+    """Creates an array from any object exposing the default(nd or np) array interface.
+
+    Parameters
+    ----------
+    source_array : array_like
+        An object exposing the array interface, an object whose `__array__`
+        method returns an array, or any (nested) sequence.
+    ctx : Context, optional
+        Device context (default is the current default context).
+    dtype : str or numpy.dtype, optional
+        The data type of the output array. The default dtype is ``source_array.dtype``
+        if `source_array` is an `NDArray`, `float32` otherwise.
+
+    Returns
+    -------
+    NDArray
+        An `NDArray`(nd or np) with the same contents as the `source_array`.
+    """
+    from . import nd as _mx_nd
+    from . import np as _mx_np
+    if is_np_array():
+        return _mx_np.array(source_array, ctx=ctx, dtype=dtype)
+    else:
+        return _mx_nd.array(source_array, ctx=ctx, dtype=dtype)
+
 class _NumpyDefaultDtypeScope(object):
     """Scope for managing NumPy default dtype semantics.
     In NumPy default dtype semantics, default dtype is 'float64',
@@ -961,15 +989,15 @@ def np_default_dtype(active=True):
 
     Example::
 
-        with mx.np_default_Dtype(active=True):
+        with mx.np_default_dtype(active=True):
             # Default Dtype is 'float64', consistent with offical NumPy behavior.
-            arr = mx.nd.array([1, 2, 3])
-            assert arr.dtype == float64
+            arr = mx.np.array([1, 2, 3])
+            assert arr.dtype == 'float64'
 
         with mx.np_default_dtype(active=False):
             # Default Dtype is 'float32' in the legacy default dtype definition.
-            arr = mx.nd.array([1, 2, 3])
-            assert arr.dtype == float32
+            arr = mx.np.array([1, 2, 3])
+            assert arr.dtype == 'float32'
 
     """
     return _NumpyDefaultDtypeScope(active)
@@ -1059,6 +1087,11 @@ def is_np_default_dtype():
     -------
         A bool value indicating whether the NumPy default dtype semantics is currently on.
 
+    See Also
+    --------
+    set_np_default_dtype : Set default dtype equals to offical numpy
+    set_np : npx.set_np(dtype=True) has equal performance to npx.set_np_default_dtype(True)
+
     Example
     -------
     >>> import mxnet as mx
@@ -1112,3 +1145,35 @@ def set_np_default_dtype(is_np_default_dtype=True):  # pylint: disable=redefined
     prev = ctypes.c_bool()
     check_call(_LIB.MXSetIsNumpyDefaultDtype(ctypes.c_bool(is_np_default_dtype), ctypes.byref(prev)))
     return prev.value
+
+
+def getenv(name):
+    """Get the setting of an environment variable from the C Runtime.
+
+    Parameters
+    ----------
+    name : string type
+        The environment variable name
+
+    Returns
+    -------
+    value : string
+        The value of the environment variable, or None if not set
+    """
+    ret = ctypes.c_char_p()
+    check_call(_LIB.MXGetEnv(c_str(name), ctypes.byref(ret)))
+    return None if ret.value is None else py_str(ret.value)
+
+
+def setenv(name, value):
+    """Set an environment variable in the C Runtime.
+
+    Parameters
+    ----------
+    name : string type
+        The environment variable name
+    value : string type
+        The desired value to set the environment value to
+    """
+    passed_value = None if value is None else c_str(value)
+    check_call(_LIB.MXSetEnv(c_str(name), passed_value))

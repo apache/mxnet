@@ -46,16 +46,16 @@ __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'emp
            'logspace', 'expand_dims', 'tile', 'arange', 'array_split', 'split', 'hsplit', 'vsplit', 'dsplit',
            'concatenate', 'append', 'stack', 'vstack', 'row_stack', 'column_stack', 'hstack', 'dstack',
            'average', 'mean', 'maximum', 'fmax', 'minimum', 'fmin', 'any', 'all', 'around', 'round', 'round_',
-           'flatnonzero', 'tril_indices', 'logical_and', 'logical_or', 'logical_xor',
+           'flatnonzero', 'tril_indices', 'amax', 'amin', 'max', 'min', 'logical_and', 'logical_or', 'logical_xor',
            'swapaxes', 'clip', 'argmax', 'argmin', 'std', 'var', 'indices', 'copysign', 'ravel', 'unravel_index',
            'diag_indices_from', 'hanning', 'hamming', 'blackman', 'flip', 'flipud', 'fliplr',
            'hypot', 'bitwise_and', 'bitwise_xor', 'bitwise_or', 'rad2deg', 'deg2rad', 'unique', 'lcm', 'interp',
-           'tril', 'triu', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'cross', 'kron',
+           'tril', 'triu', 'tri', 'identity', 'take', 'ldexp', 'vdot', 'inner', 'outer', 'cross', 'kron',
            'equal', 'not_equal', 'greater', 'less', 'greater_equal', 'less_equal', 'roll', 'rot90', 'einsum',
            'true_divide', 'quantile', 'percentile', 'shares_memory', 'may_share_memory', 'diff', 'ediff1d',
            'resize', 'polyval', 'nan_to_num', 'isnan', 'isinf', 'isposinf', 'isneginf', 'isfinite',
-           'atleast_1d', 'atleast_2d', 'atleast_3d',
-           'where', 'bincount', 'rollaxis', 'pad', 'cumsum', 'sum', 'diag', 'diagonal']
+           'atleast_1d', 'atleast_2d', 'atleast_3d', 'squeeze',
+           'where', 'bincount', 'rollaxis', 'diagflat', 'repeat', 'prod', 'pad', 'cumsum', 'sum', 'diag', 'diagonal']
 
 
 @set_module('mxnet.symbol.numpy')
@@ -117,6 +117,8 @@ class _Symbol(Symbol):
                 end = []
                 step = []
                 new_shape = ()
+                result = self
+                is_symbol_tuple = False
                 if len(key) == 0:
                     return self
                 for index in key:
@@ -137,14 +139,27 @@ class _Symbol(Symbol):
                             end.append(index - 1)
                             step.append(-1)
                         new_shape += (-3,)
+                    elif isinstance(index, Symbol):
+                        if new_shape != ():
+                            new_shape += (-4,)
+                            sliced = _npi.slice(result, begin, end, step)
+                            result = _npi.reshape(sliced, new_shape)
+                        if not is_symbol_tuple:
+                            is_symbol_tuple = True
                     else:
-                        raise IndexError('Only integer, slice, or tuple of these types'
+                        raise IndexError('Only integer, slice, symbol or tuple of these types'
                                          ' are supported! Received key={}'.format(key))
+                if is_symbol_tuple:
+                    key = _npi.stack(*[i for i in key])
+                    sliced = _npi.advanced_indexing_multiple(self, key)
+                    return sliced
                 new_shape += (-4,)
                 sliced = _npi.slice(self, begin, end, step)
                 return _npi.reshape(sliced, new_shape)
+            elif isinstance(key, Symbol):
+                return _npi.advanced_indexing(self, key)
             else:
-                raise IndexError('Only integer, slice, or tuple of these types are supported! '
+                raise IndexError('Only integer, slice, tuple or Symbol of these types are supported! '
                                  'Received key={}'.format(key))
 
     def __setitem__(self, key, value):
@@ -280,10 +295,10 @@ class _Symbol(Symbol):
 
     def __neg__(self):
         """x.__neg__() <=> - x"""
-        return self.__mul__(-1.0)
+        return negative(self)
 
     def __deepcopy__(self, _):
-        return super(_Symbol, self).as_np_ndarray()
+        return super().__deepcopy__(_).as_np_ndarray()
 
     def __eq__(self, other):
         """x.__eq__(y) <=> x == y"""
@@ -468,7 +483,7 @@ class _Symbol(Symbol):
 
     def repeat(self, repeats, axis=None):  # pylint: disable=arguments-differ
         """Repeat elements of an array."""
-        return _mx_np_op.repeat(self, repeats=repeats, axis=axis)
+        return repeat(self, repeats=repeats, axis=axis)
 
     def pad(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`pad`.
@@ -585,7 +600,7 @@ class _Symbol(Symbol):
         Refer to `mxnet.numpy.argmax` for full documentation."""
         return argmin(self, axis, out)
 
-    def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ
+    def clip(self, min=None, max=None, out=None):  # pylint: disable=arguments-differ, redefined-outer-name
         """Return an array whose values are limited to [min, max].
         One of max or min must be given.
         """
@@ -730,11 +745,11 @@ class _Symbol(Symbol):
 
     def max(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the maximum along a given axis."""
-        return _mx_np_op.max(self, axis=axis, keepdims=keepdims, out=out)
+        return _npi.max(self, axis=axis, keepdims=keepdims, out=out)
 
     def min(self, axis=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the minimum along a given axis."""
-        return _mx_np_op.min(self, axis=axis, keepdims=keepdims, out=out)
+        return _npi.min(self, axis=axis, keepdims=keepdims, out=out)
 
     def norm(self, *args, **kwargs):
         """Convenience fluent method for :py:func:`norm`.
@@ -1042,7 +1057,7 @@ class _Symbol(Symbol):
 
     def squeeze(self, axis=None):  # pylint: disable=arguments-differ
         """Remove single-dimensional entries from the shape of a."""
-        return _mx_np_op.squeeze(self, axis=axis)
+        return squeeze(self, axis=axis)
 
     def broadcast_to(self, *args, **kwargs):
         raise AttributeError('_Symbol object has no attribute broadcast_to')
@@ -1063,7 +1078,7 @@ def zeros(shape, dtype=float, order='C', ctx=None):
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
         An optional value type .
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
         When npx.is_np_default_dtype() returns True, default dtype is float64.
         Note that this behavior is different from NumPy's `zeros` function where `float64`
         is the default value, here we can set 'float32' or 'float64' as your default dtype,
@@ -1100,7 +1115,7 @@ def ones(shape, dtype=None, order='C', ctx=None):
         The shape of the empty array.
     dtype : str or numpy.dtype, optional
         An optional value type.
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
         When npx.is_np_default_dtype() returns True, default dtype is float64.
         Note that this behavior is different from NumPy's `ones` function where
         `float64` is the default value.
@@ -1255,7 +1270,7 @@ def full(shape, fill_value, dtype=None, order='C', ctx=None, out=None):  # pylin
     fill_value : scalar or _Symbol
         Fill value.
     dtype : data-type, optional
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
         When npx.is_np_default_dtype() returns True, default dtype is float64.
         The desired data-type for the array. The default, `None`, means
         `np.array(fill_value).dtype`.
@@ -1454,7 +1469,7 @@ def identity(n, dtype=None, ctx=None):
         Number of rows (and columns) in `n` x `n` output.
     dtype : data-type, optional
         Data-type of the output.
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
         When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         An optional device context (default is the current default context).
@@ -1577,13 +1592,15 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
         if isinstance(rhs, numeric_types):
             return fn_scalar(lhs, rhs, out=out)
         else:
+            is_int = isinstance(rhs, integer_types)
             if rfn_scalar is None:
                 # commutative function
-                return lfn_scalar(rhs, float(lhs), out=out)
+                return lfn_scalar(rhs, scalar=float(lhs), is_int=is_int, out=out)
             else:
-                return rfn_scalar(rhs, float(lhs), out=out)
+                return rfn_scalar(rhs, scalar=float(lhs), is_int=is_int, out=out)
     elif isinstance(rhs, numeric_types):
-        return lfn_scalar(lhs, float(rhs), out=out)
+        is_int = isinstance(rhs, integer_types)
+        return lfn_scalar(lhs, scalar=float(rhs), is_int=is_int, out=out)
     elif isinstance(rhs, Symbol):
         return fn_array(lhs, rhs, out=out)
     else:
@@ -1925,7 +1942,7 @@ def eye(N, M=None, k=0, dtype=float, **kwargs):
         and a negative value to a lower diagonal.
     dtype : data-type, optional
         Data-type of the returned array.
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
         When npx.is_np_default_dtype() returns True, default dtype is float64.
 
     Returns
@@ -2371,6 +2388,88 @@ def transpose(a, axes=None):
         a with its axes permuted.
     """
     return _npi.transpose(a, axes=axes)
+
+
+@set_module('mxnet.symbol.numpy')
+def tri(N, M=None, k=0, dtype=None, ctx=None):
+    r"""
+    An array with ones at and below the given diagonal and zeros elsewhere.
+
+    Parameters
+    ----------
+    N : int
+        Number of rows in the array.
+    M : int, optional
+        Number of columns in the array.
+        By default, `M` is taken equal to `N`.
+    k : int, optional
+        The sub-diagonal at and below which the array is filled.
+        `k` = 0 is the main diagonal, while `k` < 0 is below it,
+        and `k` > 0 is above.  The default is 0.
+    dtype : dtype, optional
+        Data type of the returned array.  The default is float.
+
+    Returns
+    -------
+    tri : Symbol of shape (N, M)
+        Array with its lower triangle filled with ones and zero elsewhere;
+        in other words ``T[i,j] == 1`` for ``i <= j + k``, 0 otherwise.
+    """
+    if dtype is None:
+        dtype = 'float32'
+    if M is None:
+        M = N
+    if ctx is None:
+        ctx = current_context()
+    return _npi.tri(N, M, k, dtype, ctx)
+
+
+def repeat(a, repeats, axis=None):
+    """
+    Repeat elements of an array.
+
+    Parameters
+    ----------
+    a : array_like
+        Input array.
+    repeats : int
+        The number of repetitions for each element.
+    axis : int, optional
+        The axis along which to repeat values.  By default, use the
+        flattened input array, and return a flat output array.
+
+    Returns
+    -------
+    repeated_array : ndarray
+        Output array which has the same shape as `a`, except along
+        the given axis.
+
+    See Also
+    --------
+    tile : Tile an array.
+
+    Examples
+    --------
+    >>> np.repeat(3, 4)
+    array([3, 3, 3, 3])
+    >>> x = np.array([[1,2],[3,4]])
+    >>> np.repeat(x, 2)
+    array([1, 1, 2, 2, 3, 3, 4, 4])
+    >>> np.repeat(x, 3, axis=1)
+    array([[1, 1, 1, 2, 2, 2],
+           [3, 3, 3, 4, 4, 4]])
+    >>> np.repeat(x, [1, 2], axis=0)
+    array([[1, 2],
+           [3, 4],
+           [3, 4]])
+    """
+    if isinstance(repeats, numeric_types):
+        repeats = [repeats]
+    if axis is not None:
+        tmp = swapaxes(a, 0, axis)
+        res = _npi.repeats(tmp, repeats=repeats, axis=0)
+        return swapaxes(res, 0, axis)
+    return _npi.repeats(a, repeats=repeats, axis=axis)
 
 
 def _unary_func_helper(x, fn_array, fn_scalar, out=None, **kwargs):
@@ -3672,7 +3771,7 @@ def arange(start, stop=None, step=1, dtype=None, ctx=None):
         `start` must also be given.
     dtype : dtype
         The type of the output array.
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
         When npx.is_np_default_dtype() returns True, default dtype is float64.
 
     Returns
@@ -4334,6 +4433,190 @@ def fmin(x1, x2, out=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
+def max(a, axis=None, out=None, keepdims=False):
+    """
+    Return the maximum of an array or maximum along an axis.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default, flattened input is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+
+    Returns
+    -------
+    max : _Symbol
+        Maximum of `a`. If `axis` is None, the result is an array of dimension 1.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+
+    See Also
+    --------
+    min :
+        The minimum value of an array along a given axis, ignoring any nan.
+    maximum :
+        Element-wise maximum of two arrays, ignoring any nan.
+    argmax :
+        Return the indices of the maximum values.
+
+    Notes
+    -----
+    NaN in the orginal `numpy` is denoted as nan and will be ignored.
+
+    Don't use `max` for element-wise comparison of 2 arrays; when
+    ``a.shape[0]`` is 2, ``maximum(a[0], a[1])`` is faster than
+    ``max(a, axis=0)``.
+    """
+    return _npi.max(a, axis=axis, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def min(a, axis=None, out=None, keepdims=False):
+    """
+    Return the minimum of an array or minimum along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default, flattened input is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+
+    Returns
+    -------
+    min : ndarray
+        Minimum of `a`. If `axis` is None, the result is an array of dimension 1.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+
+    See Also
+    --------
+    max :
+        The maximum value of an array along a given axis, ignoring any nan.
+    minimum :
+        Element-wise minimum of two arrays, ignoring any nan.
+
+    Notes
+    -----
+    NaN in the orginal `numpy` is denoted as nan and will be ignored.
+
+    Don't use `min` for element-wise comparison of 2 arrays; when
+    ``a.shape[0]`` is 2, ``minimum(a[0], a[1])`` is faster than
+    ``min(a, axis=0)``.
+    """
+    return _npi.min(a, axis=axis, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def amax(a, axis=None, out=None, keepdims=False):
+    """
+    Return the maximum of an array or maximum along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default, flattened input is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+
+    Returns
+    -------
+    max : ndarray
+        Maximum of `a`. If `axis` is None, the result is an array of dimension 1.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+
+    See Also
+    --------
+    min :
+        The minimum value of an array along a given axis, ignoring any nan.
+    maximum :
+        Element-wise maximum of two arrays, ignoring any nan.
+    argmax :
+        Return the indices of the maximum values.
+
+    Notes
+    -----
+    NaN in the orginal `numpy` is denoted as nan and will be ignored.
+
+    Don't use `max` for element-wise comparison of 2 arrays; when
+    ``a.shape[0]`` is 2, ``maximum(a[0], a[1])`` is faster than
+    ``max(a, axis=0)``.
+    """
+    return _npi.amax(a, axis=axis, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
+def amin(a, axis=None, out=None, keepdims=False):
+    """
+    Return the minimum of an array or minimum along an axis.
+
+    Parameters
+    ----------
+    a : ndarray
+        Input data.
+    axis : int, optional
+        Axis along which to operate.  By default, flattened input is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result.  Must
+        be of the same shape and buffer length as the expected output.
+        See `doc.ufuncs` (Section "Output arguments") for more details.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left
+        in the result as dimensions with size one. With this option,
+        the result will broadcast correctly against the original `arr`.
+
+    Returns
+    -------
+    min : ndarray
+        Minimum of `a`. If `axis` is None, the result is an array of dimension 1.
+        If `axis` is given, the result is an array of dimension
+        ``a.ndim - 1``.
+
+    See Also
+    --------
+    max :
+        The maximum value of an array along a given axis, ignoring any nan.
+    minimum :
+        Element-wise minimum of two arrays, ignoring any nan.
+
+    Notes
+    -----
+    NaN in the orginal `numpy` is denoted as nan and will be ignored.
+
+    Don't use `min` for element-wise comparison of 2 arrays; when
+    ``a.shape[0]`` is 2, ``minimum(a[0], a[1])`` is faster than
+    ``min(a, axis=0)``.
+    """
+    return _npi.amin(a, axis=axis, keepdims=keepdims, out=out)
+
+
+@set_module('mxnet.symbol.numpy')
 def all(a, axis=None, out=None, keepdims=False):
     """
     Test whether all array elements along a given axis evaluate to True.
@@ -4581,7 +4864,7 @@ def average(a, axis=None, weights=None, returned=False, out=None):
         When returned is True, return a tuple with the average as the first element
         and the sum of the weights as the second element. sum_of_weights is of the same type as retval.
         If a is integral, the result dtype will beyour current default dtype,
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32,
+        When npx.is_np_default_dtype() returns False, default dtype is float32,
         When npx.is_np_default_dtype() returns True, default dtype is float64;
         otherwise it will be the same as dtype of a.
 
@@ -4653,7 +4936,7 @@ def mean(a, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable
         instead of a single axis or all the axes as before.
     dtype : data-type, optional
         Type to use in computing the mean.
-        For integer inputs, When npx.is_np_default_dtype() returns Flase, default dtype is float32,
+        For integer inputs, When npx.is_np_default_dtype() returns False, default dtype is float32,
         When npx.is_np_default_dtype() returns True, default dtype is float64;
         for floating point inputs, it is the same as the input dtype.
     out : _Symbol, optional
@@ -4768,7 +5051,7 @@ def var(a, axis=None, dtype=None, out=None, ddof=0, keepdims=False):  # pylint: 
     dtype : data-type, optional
         Type to use in computing the variance.
         For arrays of integer type,
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32,
+        When npx.is_np_default_dtype() returns False, default dtype is float32,
         When npx.is_np_default_dtype() returns True, default dtype is float64;
         For arrays of float types it is the same as the array type.
     out : _Symbol, optional
@@ -5057,7 +5340,7 @@ def hanning(M, dtype=None, ctx=None):
     out : _Symbol, shape(M,)
         The window, with the maximum value normalized to one (the value
         one appears only if `M` is odd).
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
         When npx.is_np_default_dtype() returns True, default dtype is float64.
         Note that you need select numpy.float32 or float64 in this operator.
 
@@ -5139,7 +5422,7 @@ def hamming(M, dtype=None, ctx=None):
     out : _Symbol, shape(M,)
         The window, with the maximum value normalized to one (the value
         one appears only if `M` is odd).
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
         When npx.is_np_default_dtype() returns True, default dtype is float64.
         Note that you need select numpy.float32 or float64 in this operator.
 
@@ -5222,7 +5505,7 @@ def blackman(M, dtype=None, ctx=None):
     out : _Symbol
         The window, with the maximum value normalized to one (the value one
         appears only if the number of samples is odd).
-        When npx.is_np_default_dtype() returns Flase, default dtype is float32;
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
         When npx.is_np_default_dtype() returns True, default dtype is float64.
         Note that you need select numpy.float32 or float64 in this operator.
 
@@ -6896,6 +7179,57 @@ def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
 
 
 @set_module('mxnet.symbol.numpy')
+def squeeze(x, axis=None):
+    """
+    Remove single-dimensional entries from the shape of an array.
+
+    Parameters
+    ----------
+    a : array_like
+        Input data.
+    axis : None or int or tuple of ints, optional
+        .. versionadded:: 1.7.0
+        Selects a subset of the single-dimensional entries in the
+        shape. If an axis is selected with shape entry greater than
+        one, an error is raised.
+
+    Returns
+    -------
+    squeezed : ndarray
+        The input array, but with all or a subset of the
+        dimensions of length 1 removed. This is always `a` itself
+        or a view into `a`.
+
+    Raises
+    ------
+    ValueError
+        If `axis` is not `None`, and an axis being squeezed is not of length 1
+
+    See Also
+    --------
+    expand_dims : The inverse operation, adding singleton dimensions
+    reshape : Insert, remove, and combine dimensions, and resize existing ones
+
+    Examples
+    --------
+    >>> x = np.array([[[0], [1], [2]]])
+    >>> x.shape
+    (1, 3, 1)
+    >>> np.squeeze(x).shape
+    (3,)
+    >>> np.squeeze(x, axis=0).shape
+    (3, 1)
+    >>> np.squeeze(x, axis=1).shape
+    Traceback (most recent call last):
+    ...
+    ValueError: cannot select an axis to squeeze out which has size not equal to one
+    >>> np.squeeze(x, axis=2).shape
+    (1, 3)
+    """
+    return _npi.squeeze(x, axis=axis)
+
+
+@set_module('mxnet.symbol.numpy')
 @wrap_np_unary_func
 def isnan(x, out=None, **kwargs):
     """
@@ -7407,7 +7741,7 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         values = kwargs.get("constant_values", 0)
         if isinstance(values, tuple):
             raise TypeError("unsupported constant_values type: {'tuple'}.")
-        _npi.pad(x, pad_width, mode='constant', constant_value=values)
+        return _npi.pad(x, pad_width, mode='constant', constant_values=values)
     elif mode == "symmetric":
         values = kwargs.get("reflect_type", "even")
         if values != "even" and values is not None:
@@ -7430,8 +7764,86 @@ def pad(x, pad_width, mode='constant', **kwargs): # pylint: disable=too-many-arg
         if values is not None:
             raise ValueError("unsupported stat_length '{}'".format(values))
         return _npi.pad(x, pad_width, mode='minimum')
-    return _npi.pad(x, pad_width, mode='constant', constant_value=0)
+    return _npi.pad(x, pad_width, mode='constant', constant_values=0)
 
+
+@set_module('mxnet.symbol.numpy')
+def prod(a, axis=None, dtype=None, keepdims=False, initial=None, output=None): # pylint: disable=too-many-arguments
+    """
+    Return the product of array elements over a given axis.
+
+    Parameters
+    ----------
+    a : array_like
+        Input data.
+    axis : None or int or tuple of ints, optional
+        Axis or axes along which a product is performed.  The default,
+        axis=None, will calculate the product of all the elements in the
+        input array. If axis is negative it counts from the last to the
+        first axis.
+        .. versionadded:: 1.7.0
+        If axis is a tuple of ints, a product is performed on all of the
+        axes specified in the tuple instead of a single axis or all the
+        axes as before.
+    dtype : dtype, optional
+        The type of the returned array, as well as of the accumulator in
+        which the elements are multiplied.  The dtype of `a` is used by
+        default unless `a` has an integer dtype of less precision than the
+        default platform integer.  In that case, if `a` is signed then the
+        platform integer is used while if `a` is unsigned then an unsigned
+        integer of the same precision as the platform integer is used.
+    out : ndarray, optional
+        Alternative output array in which to place the result. It must have
+        the same shape as the expected output, but the type of the output
+        values will be cast if necessary.
+    keepdims : bool, optional
+        If this is set to True, the axes which are reduced are left in the
+        result as dimensions with size one. With this option, the result
+        will broadcast correctly against the input array.
+        If the default value is passed, then `keepdims` will not be
+        passed through to the `prod` method of sub-classes of
+        `ndarray`, however any non-default value will be.  If the
+        sub-class' method does not implement `keepdims` any
+        exceptions will be raised.
+    initial : scalar, optional
+        The starting value for this product. See `~numpy.ufunc.reduce` for details.
+    where : not supported
+
+    Returns
+    -------
+    product_along_axis : ndarray, see `dtype` parameter above.
+        An array shaped as `a` but with the specified axis removed.
+        Returns a reference to `out` if specified.
+
+    Examples
+    --------
+    By default, calculate the product of all elements:
+    >>> np.prod([1.,2.])
+    2.0
+    Even when the input array is two-dimensional:
+    >>> np.prod([[1.,2.],[3.,4.]])
+    24.0
+    But we can also specify the axis over which to multiply:
+    >>> np.prod([[1.,2.],[3.,4.]], axis=1)
+    array([  2.,  12.])
+    Or select specific elements to include:
+    >>> np.prod([1., np.nan, 3.], where=[True, False, True])
+    3.0
+    If the type of `x` is unsigned, then the output type is
+    the unsigned platform integer:
+    >>> x = np.array([1, 2, 3], dtype=np.uint8)
+    >>> np.prod(x).dtype == np.uint
+    True
+    If `x` is of a signed integer type, then the output type
+    is the default platform integer:
+    >>> x = np.array([1, 2, 3], dtype=np.int8)
+    >>> np.prod(x).dtype == int
+    True
+    You can also start the product with a value other than one:
+    >>> np.prod([1, 2], initial=5)
+    10
+    """
+    return _npi.prod(a, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial)
 
 @set_module('mxnet.symbol.numpy')
 def cumsum(a, axis=None, dtype=None, out=None):
@@ -7523,6 +7935,47 @@ def diag(v, k=0):
     The extracted diagonal or constructed diagonal array.
     """
     return _npi.diag(v, k=k)
+
+
+@set_module('mxnet.symbol.numpy')
+def diagflat(v, k=0):
+    """
+    Create a two-dimensional array with the flattened input as a diagonal.
+
+    Parameters
+    ----------
+    v : array_like
+        Input data, which is flattened and set as the `k`-th
+        diagonal of the output.
+    k : int, optional
+        Diagonal to set; 0, the default, corresponds to the "main" diagonal,
+        a positive (negative) `k` giving the number of the diagonal above
+        (below) the main.
+
+    Returns
+    -------
+    out : ndarray
+        The 2-D output array.
+
+    See Also
+    --------
+    diag : MATLAB work-alike for 1-D and 2-D arrays.
+    diagonal : Return specified diagonals.
+    trace : Sum along diagonals.
+
+    Examples
+    --------
+    >>> np.diagflat([[1,2], [3,4]])
+    array([[1, 0, 0, 0],
+           [0, 2, 0, 0],
+           [0, 0, 3, 0],
+           [0, 0, 0, 4]])
+    >>> np.diagflat([1,2], 1)
+    array([[0, 1, 0],
+           [0, 0, 2],
+           [0, 0, 0]])
+    """
+    return _npi.diagflat(v, k=k)
 
 
 @set_module('mxnet.symbol.numpy')

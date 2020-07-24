@@ -35,7 +35,7 @@
 #define MSHADOW_CUDA_POST_KERNEL_CHECK(x) \
   /* Code block avoids redefinition of cudaError_t err */ \
   do { \
-    cudaError err = cudaPeekAtLastError(); \
+    cudaError err = cudaGetLastError(); \
     CHECK_EQ(err, cudaSuccess) << "Name: " << #x << " ErrStr:" << cudaGetErrorString(err); \
   } while (0)
 namespace mshadow {

@@ -15,60 +15,60 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Use GPUs
+# Step 6: Use GPUs to increase efficiency
 
-We often use GPUs to train and deploy neural networks, because it offers significant more computation power compared to CPUs. In this tutorial we will introduce how to use GPUs with MXNet.
+In this step, you learn how to use graphics processing units (GPUs) with MXNet. If you use GPUs to train and deploy neural networks, you get significantly more computational power when compared to central processing units (CPUs).
 
-First, make sure you have at least one Nvidia GPU in your machine and CUDA
-properly installed. Other GPUs such as AMD and Intel GPUs are not supported
-yet. Then be sure you have installed the GPU-enabled version of MXNet.
+## Prerequisites
 
-```{.python .input  n=15}
-# If you pip installed the plain `mxnet` before, uncomment the
-# following two lines to install the GPU version. You may need to
-# replace `cu92` according to your CUDA version.
-# !pip uninstall mxnet
-# !pip install mxnet-cu92
+Before you start the other steps here, make sure you have at least one Nvidia GPU in your machine and CUDA properly installed. GPUs from AMD and Intel are not supported. Install the GPU-enabled version of MXNet.
 
-from mxnet import nd, gpu, gluon, autograd
+Use the following commands to check the number GPUs that are available.
+
+```{.python .input  n=2}
+from mxnet import np, npx, gluon, autograd
 from mxnet.gluon import nn
-from mxnet.gluon.data.vision import datasets, transforms
 import time
+npx.set_np()
+
+npx.num_gpus()
 ```
 
 ## Allocate data to a GPU
 
-You may notice that MXNet's NDArray is very similar to Numpy. One major difference is NDArray has a `context` attribute that specifies which device this array is on. By default, it is `cpu()`. Now we will change it to the first GPU. You can use `gpu()` or `gpu(0)` to indicate the first GPU.
+MXNet's ndarray is very similar to NumPy. One major difference is MXNet's ndarray has a `context` attribute that specifies which device an array is on. By default, it is on `npx.cpu()`. Change it to the first GPU with the following code. Use `npx.gpu()` or `npx.gpu(0)` to indicate the first GPU.
 
 ```{.python .input  n=10}
-x = nd.ones((3,4), ctx=gpu())
+gpu = npx.gpu() if npx.num_gpus() > 0 else npx.cpu()
+x = np.ones((3,4), ctx=gpu)
 x
 ```
 
-For a CPU, MXNet will allocate data on main memory, and try to use all CPU cores as possible, even if there is more than one CPU socket. While if there are multiple GPUs, MXNet needs to specify which GPUs the NDArray will be allocated.
+If you're using a CPU, MXNet allocates data on main memory and tries to use as many CPU cores as possible.  This is true even if there is more than one CPU socket. If there are multiple GPUs, MXNet specifies which GPUs the ndarray is allocated.
 
-Let's assume there is a least one more GPU. We can create another NDArray and assign it there. (If you only have one GPU, then you will see an error). Here we copy `x` to the second GPU, `gpu(1)`:
+Assume there is a least one more GPU. Create another ndarray and assign it there. If you only have one GPU, then you get an error. In the example code here, you copy `x` to the second GPU, `npx.gpu(1)`:
 
 ```{.python .input  n=11}
-x.copyto(gpu(1))
+gpu_1 = npx.gpu(1) if npx.num_gpus() > 1 else npx.cpu()
+x.copyto(gpu_1)
 ```
 
-MXNet needs users to explicitly move data between devices. But several operators such as `print`, `asnumpy` and `asscalar`, will implicitly move data to main memory.
+MXNet requries that users explicitly move data between devices. But several operators such as `print`, and `asnumpy`, will implicitly move data to main memory.
 
 ## Run an operation on a GPU
 
-To perform an operation on a particular GPU, we only need to guarantee that the inputs of this operation are already on that GPU. The output will be allocated on the same GPU as well. Almost all operators in the `nd` module support running on a GPU.
+To perform an operation on a particular GPU, you only need to guarantee that the input of an operation is already on that GPU. The output is allocated on the same GPU as well. Almost all operators in the `np` and `npx` module support running on a GPU.
 
 ```{.python .input  n=21}
-y = nd.random.uniform(shape=(3,4), ctx=gpu())
+y = np.random.uniform(size=(3,4), ctx=gpu)
 x + y
 ```
 
-Remember that if the inputs are not on the same GPU, you will see an error.
+Remember that if the inputs are not on the same GPU, you get an error.
 
 ## Run a neural network on a GPU
 
-Similarly, to run a neural network on a GPU, we only need to copy/move the input data and parameters to the GPU. Let's reuse the previously defined LeNet.
+To run a neural network on a GPU, you only need to copy and move the input data and parameters to the GPU. Reuse the previously defined LeNet. The following code example shows this.
 
 ```{.python .input  n=16}
 net = nn.Sequential()
@@ -76,49 +76,48 @@ net.add(nn.Conv2D(channels=6, kernel_size=5, activation='relu'),
         nn.MaxPool2D(pool_size=2, strides=2),
         nn.Conv2D(channels=16, kernel_size=3, activation='relu'),
         nn.MaxPool2D(pool_size=2, strides=2),
-        nn.Flatten(),
         nn.Dense(120, activation="relu"),
         nn.Dense(84, activation="relu"),
         nn.Dense(10))
 ```
 
-And then load the saved parameters into GPU 0 directly, or use `net.collect_params().reset_ctx` to change the device.
+Load the saved parameters into GPU 0 directly as shown here, or use `net.collect_params().reset_ctx` to change the device.
 
 ```{.python .input  n=20}
-net.load_parameters('net.params', ctx=gpu(0))
+net.load_parameters('net.params', ctx=gpu)
 ```
 
-Now create input data on GPU 0. The forward function will then run on GPU 0.
+Use the following command to create input data on GPU 0. The forward function will then run on GPU 0.
 
 ```{.python .input  n=22}
-x = nd.random.uniform(shape=(1,1,28,28), ctx=gpu(0))
-net(x)
+# x = np.random.uniform(size=(1,1,28,28), ctx=gpu)
+# net(x) FIXME
 ```
 
-## [Advanced] Multi-GPU training
+## Training with multiple GPUs
 
-Finally, we show how to use multiple GPUs to jointly train a neural network through data parallelism. Let's assume there are *n* GPUs. We split each data batch into *n* parts, and then each GPU will run the forward and backward passes using one part of the data.
+Finally, you can see how to use multiple GPUs to jointly train a neural network through data parallelism. Assume there are *n* GPUs. Split each data batch into *n* parts, and then each GPU will run the forward and backward passes using one part of the data.
 
-Let's first copy the data definitions and the transform function from the [previous tutorial](5-predict.html).
+First copy the data definitions with the following commands, and the transform function from the [Predict tutorial](5-predict.md).
 
 ```{.python .input}
 batch_size = 256
-transformer = transforms.Compose([
-    transforms.ToTensor(),
-    transforms.Normalize(0.13, 0.31)])
+transformer = gluon.data.vision.transforms.Compose([
+    gluon.data.vision.transforms.ToTensor(),
+    gluon.data.vision.transforms.Normalize(0.13, 0.31)])
 train_data = gluon.data.DataLoader(
-    datasets.FashionMNIST(train=True).transform_first(transformer),
-    batch_size, shuffle=True, num_workers=4)
+    gluon.data.vision.datasets.FashionMNIST(train=True).transform_first(
+        transformer), batch_size, shuffle=True, num_workers=4)
 valid_data = gluon.data.DataLoader(
-    datasets.FashionMNIST(train=False).transform_first(transformer),
-    batch_size, shuffle=False, num_workers=4)
+    gluon.data.vision.datasets.FashionMNIST(train=False).transform_first(
+        transformer), batch_size, shuffle=False, num_workers=4)
 ```
 
-The training loop is quite similar to what we introduced before. The major differences are highlighted in the following code.
+The training loop is quite similar to that shown earlier. The major differences are highlighted in the following code.
 
 ```{.python .input}
 # Diff 1: Use two GPUs for training.
-devices = [gpu(0), gpu(1)]
+devices = [gpu, gpu_1]
 # Diff 2: reinitialize the parameters and place them on multiple GPUs
 net.collect_params().initialize(force_reinit=True, ctx=devices)
 # Loss and trainer are the same as before
@@ -139,8 +138,14 @@ for epoch in range(10):
         for l in losses:
             l.backward()
         trainer.step(batch_size)
-        # Diff 5: sum losses over all devices
-        train_loss += sum([l.sum().asscalar() for l in losses])
+        # Diff 5: sum losses over all devices. Here float will copy data
+        # into CPU.
+        train_loss += sum([float(l.sum()) for l in losses])
     print("Epoch %d: loss %.3f, in %.1f sec" % (
         epoch, train_loss/len(train_data)/batch_size, time.time()-tic))
 ```
+
+## Next steps
+
+Now you have completed training and predicting with a neural network by using NP on MXNet and
+Gluon. You can check the guides to these two front ends: [What is NP on MXNet](../deepnumpy/index.html) and [gluon](../gluon_from_experiment_to_deployment.md).

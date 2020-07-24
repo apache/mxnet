@@ -20,8 +20,11 @@ import mxnet.ndarray as nd
 from mxnet.ndarray import zeros_like
 from mxnet.autograd import *
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown_module
-from mxnet.test_utils import EnvManager
+
+from common import setup_module, with_seed, teardown_module, xfail_when_nonstandard_decimal_separator
+from mxnet.test_utils import environment
+
+import pytest
 
 
 def grad_and_loss(func, argnum=None):
@@ -107,6 +110,7 @@ def autograd_assert(*args, **kwargs):
     for a, b in zip(grad_vals, grad_res):
         assert same(a.asnumpy(), b.asnumpy())
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_unary_func():
     def check_unary_func(x):
@@ -121,7 +125,7 @@ def test_unary_func():
         autograd_assert(x, func=f_square, grad_func=f_square_grad)
     uniform = nd.uniform(shape=(4, 5))
     stypes = ['default', 'row_sparse', 'csr']
-    with EnvManager('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
+    with environment('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
         for stype in stypes:
             check_unary_func(uniform.tostype(stype))
 
@@ -140,7 +144,7 @@ def test_binary_func():
     uniform_x = nd.uniform(shape=(4, 5))
     uniform_y = nd.uniform(shape=(4, 5))
     stypes = ['default', 'row_sparse', 'csr']
-    with EnvManager('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
+    with environment('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
         for stype_x in stypes:
             for stype_y in stypes:
                 x = uniform_x.tostype(stype_x)
@@ -343,6 +347,7 @@ def test_is_train():
         assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_function():
     class func(Function):
         def forward(self, x, y):
@@ -379,6 +384,7 @@ def test_function():
 
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_function1():
     class Foo(mx.autograd.Function):
         def __init__(self):
@@ -400,6 +406,7 @@ def test_function1():
 
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_get_symbol():
     x = mx.nd.ones((1,))
     x.attach_grad()
@@ -414,6 +421,7 @@ def test_get_symbol():
     assert len(get_symbol(y).list_arguments()) == 2
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_grad_with_stype():
     def check_grad_with_stype(array_stype, grad_stype, expected_stype):
         x = mx.nd.zeros((1, 1), stype=array_stype)
@@ -433,6 +441,7 @@ def test_grad_with_stype():
             check_grad_with_stype(stype, grad_stype, grad_stype)
 
 @with_seed()
+@pytest.mark.garbage_expected
 def test_sparse_dot_grad():
     def check_sparse_dot_grad(rhs):
         lhs = rand_ndarray((2, 8), 'csr')

@@ -19,38 +19,37 @@
 import sys
 import mxnet as mx
 import numpy as np
-import tempfile
 import random
 import string
 from common import setup_module, with_seed, teardown_module
 
 @with_seed()
-def test_recordio():
-    frec = tempfile.mktemp()
+def test_recordio(tmpdir):
+    frec = tmpdir.join('rec')
     N = 255
 
-    writer = mx.recordio.MXRecordIO(frec, 'w')
+    writer = mx.recordio.MXRecordIO(str(frec), 'w')
     for i in range(N):
         writer.write(bytes(str(chr(i)), 'utf-8'))
     del writer
 
-    reader = mx.recordio.MXRecordIO(frec, 'r')
+    reader = mx.recordio.MXRecordIO(str(frec), 'r')
     for i in range(N):
         res = reader.read()
         assert res == bytes(str(chr(i)), 'utf-8')
 
 @with_seed()
-def test_indexed_recordio():
-    fidx = tempfile.mktemp()
-    frec = tempfile.mktemp()
+def test_indexed_recordio(tmpdir):
+    fidx = tmpdir.join('idx')
+    frec = tmpdir.join('rec')
     N = 255
 
-    writer = mx.recordio.MXIndexedRecordIO(fidx, frec, 'w')
+    writer = mx.recordio.MXIndexedRecordIO(str(fidx), str(frec), 'w')
     for i in range(N):
         writer.write_idx(i, bytes(str(chr(i)), 'utf-8'))
     del writer
 
-    reader = mx.recordio.MXIndexedRecordIO(fidx, frec, 'r')
+    reader = mx.recordio.MXIndexedRecordIO(str(fidx), str(frec), 'r')
     keys = reader.keys
     assert sorted(keys) == [i for i in range(N)]
     random.shuffle(keys)
@@ -60,7 +59,6 @@ def test_indexed_recordio():
 
 @with_seed()
 def test_recordio_pack_label():
-    frec = tempfile.mktemp()
     N = 255
 
     for i in range(1, N):
@@ -73,8 +71,3 @@ def test_recordio_pack_label():
             rheader, rcontent = mx.recordio.unpack(s)
             assert (label == rheader.label).all()
             assert content == rcontent
-
-if __name__ == '__main__':
-    test_recordio_pack_label()
-    test_recordio()
-    test_indexed_recordio()

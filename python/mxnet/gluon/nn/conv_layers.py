@@ -27,6 +27,7 @@ __all__ = ['Conv1D', 'Conv2D', 'Conv3D',
            'ReflectionPad2D']
 
 from ..block import HybridBlock
+from ..parameter import Parameter
 from ... import symbol
 from ...base import numeric_types
 from .activations import Activation
@@ -96,47 +97,46 @@ class _Conv(HybridBlock):
     def __init__(self, channels, kernel_size, strides, padding, dilation,
                  groups, layout, in_channels=0, activation=None, use_bias=True,
                  weight_initializer=None, bias_initializer='zeros',
-                 op_name='Convolution', adj=None, prefix=None, params=None):
-        super(_Conv, self).__init__(prefix=prefix, params=params)
-        with self.name_scope():
-            self._channels = channels
-            self._in_channels = in_channels
-            if isinstance(strides, numeric_types):
-                strides = (strides,)*len(kernel_size)
-            if isinstance(padding, numeric_types):
-                padding = (padding,)*len(kernel_size)
-            if isinstance(dilation, numeric_types):
-                dilation = (dilation,)*len(kernel_size)
-            self._op_name = op_name
-            self._kwargs = {
-                'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
-                'pad': padding, 'num_filter': channels, 'num_group': groups,
-                'no_bias': not use_bias, 'layout': layout}
-            if adj is not None:
-                self._kwargs['adj'] = adj
+                 op_name='Convolution', adj=None):
+        super(_Conv, self).__init__()
+        self._channels = channels
+        self._in_channels = in_channels
+        if isinstance(strides, numeric_types):
+            strides = (strides,)*len(kernel_size)
+        if isinstance(padding, numeric_types):
+            padding = (padding,)*len(kernel_size)
+        if isinstance(dilation, numeric_types):
+            dilation = (dilation,)*len(kernel_size)
+        self._op_name = op_name
+        self._kwargs = {
+            'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
+            'pad': padding, 'num_filter': channels, 'num_group': groups,
+            'no_bias': not use_bias, 'layout': layout}
+        if adj is not None:
+            self._kwargs['adj'] = adj
 
-            if is_np_array():
-                dshape = [-1]*(len(kernel_size) + 2)
-            else:
-                dshape = [0]*(len(kernel_size) + 2)
+        if is_np_array():
+            dshape = [-1]*(len(kernel_size) + 2)
+        else:
+            dshape = [0]*(len(kernel_size) + 2)
 
-            dshape[layout.find('N')] = 1
-            dshape[layout.find('C')] = in_channels
-            wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
-            self.weight = self.params.get('weight', shape=wshapes[1],
-                                          init=weight_initializer,
-                                          allow_deferred_init=True)
-            if use_bias:
-                self.bias = self.params.get('bias', shape=wshapes[2],
-                                            init=bias_initializer,
-                                            allow_deferred_init=True)
-            else:
-                self.bias = None
+        dshape[layout.find('N')] = 1
+        dshape[layout.find('C')] = in_channels
+        wshapes = _infer_weight_shape(op_name, dshape, self._kwargs)
+        self.weight = Parameter('weight', shape=wshapes[1],
+                                init=weight_initializer,
+                                allow_deferred_init=True)
+        if use_bias:
+            self.bias = Parameter('bias', shape=wshapes[2],
+                                  init=bias_initializer,
+                                  allow_deferred_init=True)
+        else:
+            self.bias = None
 
-            if activation is not None:
-                self.act = Activation(activation, prefix=activation+'_')
-            else:
-                self.act = None
+        if activation is not None:
+            self.act = Activation(activation)
+        else:
+            self.act = None
 
     def hybrid_forward(self, F, x, weight, bias=None):
         if is_np_array():
