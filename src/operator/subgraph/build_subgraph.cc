@@ -400,7 +400,8 @@ void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector
     std::vector<BiDirectedNode*> filtered_nodes = subgraph_selector->Filter(preselected_nodes);
 
     const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
-    if(subg_prop->HasAttr("ensure_CachedOp_input") && subg_prop->GetAttr<bool>("ensure_CachedOp_input")) {
+    if (subg_prop->HasAttr("ensure_CachedOp_input") 
+        && subg_prop->GetAttr<bool>("ensure_CachedOp_input")) {
       // check if subgraph has external input.
       // if not, reject the first op (in top order) from the subgraph
       // to make sure CachedOp gets external input.
@@ -408,7 +409,6 @@ void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector
         filtered_nodes.erase(filtered_nodes.begin());
       }
     }
-    
 
     // reset node labels that are not in filtered nodes
     for (const auto n : preselected_nodes) {
