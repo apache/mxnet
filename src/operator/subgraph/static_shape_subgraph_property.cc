@@ -62,7 +62,10 @@ class StaticShapeOpSelector: public SubgraphSelector {
 class StaticShapeSubgraphProperty: public SubgraphProperty {
  public:
   StaticShapeSubgraphProperty() {
+    // Flag to switch on recursive partitioning for control flow ops
+    attrs_["recursive_partition"] = std::make_shared<dmlc::any>(true);
     // Flag to make sure subgraph CachedOp node has input during partitioning
+    // this is required by CachedOp forward
     attrs_["ensure_CachedOp_input"] = std::make_shared<dmlc::any>(true);
   }
   static SubgraphPropertyPtr Create() { return std::make_shared<StaticShapeSubgraphProperty>(); }
