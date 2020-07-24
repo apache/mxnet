@@ -47,7 +47,7 @@ class StaticShapeOpSelector: public SubgraphSelector {
 
   // Reject partitioning when subgraph contains only a single node
   virtual std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) {
-    if(candidates.size() == 1) {
+    if (candidates.size() == 1) {
       std::cout << "single node : " << candidates[0]->attrs.name << std::endl;
       return std::vector<nnvm::Node*>();
     }
