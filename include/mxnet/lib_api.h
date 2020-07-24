@@ -971,7 +971,7 @@ class Graph {
 
       // add inputs for this node
       JsonVal& inputs_ = n_.map[JsonVal("inputs")];
-      for(int j=0; j<n->inputs.size(); j++) {
+      for (int j = 0; j < n->inputs.size(); j++) {
         inputs_.list.push_back(JsonVal(LIST));
         NodeEntry& entry = n->inputs[j];
         JsonVal& in = inputs_.list[j];
@@ -984,7 +984,7 @@ class Graph {
       if (n->subgraphs.size() > 0) {
         n_.map[JsonVal("subgraphs")] = JsonVal(LIST);
         JsonVal &subgraphs_ = n_.map[JsonVal("subgraphs")];
-        for(Graph *subgraph : n->subgraphs) {
+        for (Graph *subgraph : n->subgraphs) {
           subgraphs_.list.push_back(subgraph->toJson());
         }
       }
@@ -1010,7 +1010,7 @@ class Graph {
     to_visit->erase(n);  // remove node now that we're visiting it
     for (NodeEntry& e : n->outputs) {
       Node* o = e.node;
-      if(to_visit->count(o) != 0) {
+      if (to_visit->count(o) != 0) {
         _dfs_util(o, to_visit, handler);  // visit neighbor
       }
     }
@@ -1043,7 +1043,7 @@ class Graph {
   }
 
   /* \brief print out graph details */
-  void print(int indent=0) {
+  void print(int indent = 0) {
     std::string space = "";
     for (int i = 0; i < indent; i++) space+=" ";
 
@@ -1070,7 +1070,7 @@ class Graph {
         for (auto &subgraph : sorted[i]->subgraphs) {
           std::cout << space << "\tSubgraph:" << std::endl;
           subgraph->print(indent+2);
-	}
+        }
       }
     }
     std::cout << space << "###############################" << std::endl;

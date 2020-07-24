@@ -322,22 +322,22 @@ void CustomFComputeDispatcher(const std::string op_name,
 }
 
 template <typename RescReq, typename AttrParser, typename NumInputs, typename NumOutputs,
-	  typename NumInOuts,
-	  typename InferType, typename InferShape, typename InferSType, typename MutateInputs,
-	  typename SubgraphNumInputs, typename SubgraphInferType, typename SubgraphInferShape,
-	  typename SubgraphInferSType, typename CreateOpState, typename GradReg>
+          typename NumInOuts,
+          typename InferType, typename InferShape, typename InferSType, typename MutateInputs,
+          typename SubgraphNumInputs, typename SubgraphInferType, typename SubgraphInferShape,
+          typename SubgraphInferSType, typename CreateOpState, typename GradReg>
 void registerOp(const char* name, const std::string& name_str, bool isSubgraphOp,
-		RescReq resc_req, AttrParser attr_parser, NumInputs num_inputs,
-		NumOutputs num_outputs, NumInOuts num_inouts, InferType infer_type,
-		InferShape infer_shape, InferSType infer_storage_type,
-		MutateInputs mutate_inputs, SubgraphNumInputs num_subgraph_inputs,
-		SubgraphInferType infer_subgraph_type, SubgraphInferShape infer_subgraph_shape,
-		SubgraphInferSType infer_subgraph_storage_type, CreateOpState create_opstate,
-		GradReg grad_reg, mutateInputs_t mutate_fp,
-		std::unordered_map<std::string, createOpState_t> &createop_map,
-		std::unordered_map<std::string, fcomp_t> &forward_ctx_map,
-		std::unordered_map<std::string, fcomp_t> &backward_ctx_map,
-		opCallFComp_t callFComp, opCallFStatefulComp_t callFStatefulComp) {
+                RescReq resc_req, AttrParser attr_parser, NumInputs num_inputs,
+                NumOutputs num_outputs, NumInOuts num_inouts, InferType infer_type,
+                InferShape infer_shape, InferSType infer_storage_type,
+                MutateInputs mutate_inputs, SubgraphNumInputs num_subgraph_inputs,
+                SubgraphInferType infer_subgraph_type, SubgraphInferShape infer_subgraph_shape,
+                SubgraphInferSType infer_subgraph_storage_type, CreateOpState create_opstate,
+                GradReg grad_reg, mutateInputs_t mutate_fp,
+                const std::unordered_map<std::string, createOpState_t> &createop_map,
+                const std::unordered_map<std::string, fcomp_t> &forward_ctx_map,
+                const std::unordered_map<std::string, fcomp_t> &backward_ctx_map,
+                opCallFComp_t callFComp, opCallFStatefulComp_t callFStatefulComp) {
     // check if operator is already registered
     const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
     nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
@@ -1079,10 +1079,10 @@ void registerOperators(void *lib, int verbose) {
     /* -------------- BELOW IS THE REGISTRATION FOR CUSTOM OPERATORS --------------- */
 
     registerOp(name, name_str, isSubgraphOp, resc_req, attr_parser, num_inputs, num_outputs,
-	       num_inouts, infer_type, infer_shape, infer_storage_type, mutate_inputs,
-	       num_subgraph_inputs, infer_subgraph_type, infer_subgraph_shape,
-	       infer_subgraph_storage_type, create_opstate, grad_reg, mutate_fp,
-	       createop_map, forward_ctx_map, backward_ctx_map, callFComp, callFStatefulComp);
+               num_inouts, infer_type, infer_shape, infer_storage_type, mutate_inputs,
+               num_subgraph_inputs, infer_subgraph_type, infer_subgraph_shape,
+               infer_subgraph_storage_type, create_opstate, grad_reg, mutate_fp,
+               createop_map, forward_ctx_map, backward_ctx_map, callFComp, callFStatefulComp);
   }
 }
 
