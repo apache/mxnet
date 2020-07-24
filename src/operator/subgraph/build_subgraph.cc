@@ -342,6 +342,43 @@ void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph
   }
 }
 
+/*!
+ * \brief Given a subgraph, check if it has any external input entries.
+ * \param g pointer to the whole graph.
+ * \param simple_nods vector of simple nodes in top sorted order.
+ * \param subgraph_nodes vector of pointers of simples of a subgraph.
+ * \return true if the subgraph has external input, false otherwise.
+ */
+bool HasInputEntries(const nnvm::Graph& g,
+                      const std::vector<BiDirectedNodePtr>& simple_nodes,
+                      const std::vector<BiDirectedNode*>& subgraph_nodes) {
+  const auto& indexed_graph = g.indexed_graph();
+  int label = -1;
+  for (auto subgraph_node : subgraph_nodes) {
+    if (label == -1) {
+      label = subgraph_node->label;
+    } else {
+      CHECK_EQ(subgraph_node->label, label);
+    }
+    auto& inputs = subgraph_node->node->inputs;
+    for (auto &e : inputs) {
+      if (indexed_graph.exist(e.node.get())) {
+        // e's source node is not a subgraph node
+        const auto nid = indexed_graph.node_id(e.node.get());
+        // this is a node not belonging to the subgraph
+        if (simple_nodes[nid]->label != label) {
+          return true;
+        }
+      } else {
+        // e's source node is a subgraph node.
+        // In this case, two subgraphs are adjacent.
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector,
                          const std::vector<BiDirectedNodePtr>& simple_nodes,
                          std::vector<std::vector<BiDirectedNode*>>* subgraph_nodes,
@@ -361,6 +398,13 @@ void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector
 
     // filter out unqualified pre-selected nodes
     std::vector<BiDirectedNode*> filtered_nodes = subgraph_selector->Filter(preselected_nodes);
+
+    // check if subgraph has external input.
+    // if not, reject the first op (in top order) from the subgraph
+    // to make sure CachedOp gets external input.
+    if (filtered_nodes.size() > 0 && !HasInputEntries(*g, simple_nodes, filtered_nodes)) {
+      filtered_nodes.erase(filtered_nodes.begin());
+    }
 
     // reset node labels that are not in filtered nodes
     for (const auto n : preselected_nodes) {
