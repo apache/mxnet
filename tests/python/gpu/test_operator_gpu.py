@@ -1524,20 +1524,18 @@ def test_embedding_with_type():
     def test_embedding_helper(data_types, weight_types, low_pad, high_pad):
         NVD = [[20, 10, 20], [200, 10, 300], [10000, 4, 20]]
         for N, V, D in NVD:
-            if N > 1000:
-                os.environ['MXNET_SAFE_ACCUMULATION'] = '1'
-            sym = mx.sym.Embedding(name='embedding', input_dim=V, output_dim=D)
-            ctx_list = []
-            for data_type in data_types:
-                for weight_type in weight_types:
-                    ctx_list.append({'ctx': mx.gpu(0), 'embedding_data': (N,),
-                        'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
-                    ctx_list.append({'ctx': mx.cpu(0), 'embedding_data': (N,),
-                        'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
-            arg_params = {'embedding_data': np.random.randint(low=-low_pad, high=V+high_pad, size=(N,))}
-            check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
-                              arg_params=arg_params, scale=0.1)
-            os.environ['MXNET_SAFE_ACCUMULATION'] = '0'
+            with environment('MXNET_SAFE_ACCUMULATION', '1' if N > 1000 else None):
+                sym = mx.sym.Embedding(name='embedding', input_dim=V, output_dim=D)
+                ctx_list = []
+                for data_type in data_types:
+                    for weight_type in weight_types:
+                        ctx_list.append({'ctx': mx.gpu(0), 'embedding_data': (N,),
+                            'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
+                        ctx_list.append({'ctx': mx.cpu(0), 'embedding_data': (N,),
+                            'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
+                arg_params = {'embedding_data': np.random.randint(low=-low_pad, high=V+high_pad, size=(N,))}
+                check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
+                                  arg_params=arg_params, scale=0.1)
 
     data_types = [np.float16, np.float32, np.float64, np.int32]
     weight_types = [np.float16, np.float32, np.float64]
@@ -1592,47 +1590,46 @@ def test_take_with_type():
                               arg_params=arg_params)
 
     # check with large num of indices input (may underflow calculating gradient in FP16)
-    os.environ['MXNET_SAFE_ACCUMULATION'] = '1'
-    data_size = 4
-    indices_size = 10000
-    out_dim = 20
-    data_types = [np.float16, np.float32, np.float64]
-    indices_types = [np.float16, np.float32, np.float64, np.int32]
-    # axis 0
-    sym = mx.sym.take(name='take', axis=0)
-    ctx_list = []
-    for data_type in data_types:
-        for index_type in indices_types:
-            ctx_list.append({'ctx': mx.cpu(0), 'take_indices': (indices_size,),
-                'take_a': (data_size, out_dim),
-                'type_dict': {'take_indices': index_type, 'take_a': data_type}})
-            ctx_list.append({'ctx': mx.gpu(0), 'take_indices': (indices_size,),
-                'take_a': (data_size, out_dim),
-                'type_dict': {'take_indices': index_type, 'take_a': data_type}})
-            arg_params = {'take_indices': np.random.randint(0, data_size,
-                          size=(indices_size,)),
-                          'take_a': np.random.normal(size=(data_size, out_dim))}
-            check_consistency(sym, ctx_list,
-                              grad_req={'take_indices': 'null','take_a': 'write'},
-                              arg_params=arg_params)
-    # axis 1
-    sym = mx.sym.take(name='take', axis=1)
-    ctx_list = []
-    for data_type in data_types:
-        for index_type in indices_types:
-            ctx_list.append({'ctx': mx.cpu(0), 'take_indices': (indices_size,),
-                'take_a': (data_size, out_dim),
-                'type_dict': {'take_indices': index_type, 'take_a': data_type}})
-            ctx_list.append({'ctx': mx.gpu(0), 'take_indices': (indices_size,),
-                'take_a': (data_size, out_dim),
-                'type_dict': {'take_indices': index_type, 'take_a': data_type}})
-            arg_params = {'take_indices': np.random.randint(0, data_size,
-                          size=(indices_size,)),
-                          'take_a': np.random.normal(size=(data_size, out_dim))}
-            check_consistency(sym, ctx_list,
-                              grad_req={'take_indices': 'null','take_a': 'write'},
-                              arg_params=arg_params)
-    os.environ['MXNET_SAFE_ACCUMULATION'] = '0'
+    with environment('MXNET_SAFE_ACCUMULATION', '1'):
+        data_size = 4
+        indices_size = 10000
+        out_dim = 20
+        data_types = [np.float16, np.float32, np.float64]
+        indices_types = [np.float16, np.float32, np.float64, np.int32]
+        # axis 0
+        sym = mx.sym.take(name='take', axis=0)
+        ctx_list = []
+        for data_type in data_types:
+            for index_type in indices_types:
+                ctx_list.append({'ctx': mx.cpu(0), 'take_indices': (indices_size,),
+                    'take_a': (data_size, out_dim),
+                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                ctx_list.append({'ctx': mx.gpu(0), 'take_indices': (indices_size,),
+                    'take_a': (data_size, out_dim),
+                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                arg_params = {'take_indices': np.random.randint(0, data_size,
+                              size=(indices_size,)),
+                              'take_a': np.random.normal(size=(data_size, out_dim))}
+                check_consistency(sym, ctx_list,
+                                  grad_req={'take_indices': 'null','take_a': 'write'},
+                                  arg_params=arg_params)
+        # axis 1
+        sym = mx.sym.take(name='take', axis=1)
+        ctx_list = []
+        for data_type in data_types:
+            for index_type in indices_types:
+                ctx_list.append({'ctx': mx.cpu(0), 'take_indices': (indices_size,),
+                    'take_a': (data_size, out_dim),
+                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                ctx_list.append({'ctx': mx.gpu(0), 'take_indices': (indices_size,),
+                    'take_a': (data_size, out_dim),
+                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                arg_params = {'take_indices': np.random.randint(0, data_size,
+                              size=(indices_size,)),
+                              'take_a': np.random.normal(size=(data_size, out_dim))}
+                check_consistency(sym, ctx_list,
+                                  grad_req={'take_indices': 'null','take_a': 'write'},
+                                  arg_params=arg_params)
 
 @with_seed()
 @pytest.mark.serial
