@@ -173,17 +173,6 @@ train_set, test_set = load_data(batch_size)
 train(net, n_epoch, print_period, train_set, test_set)
 ```
 
-    Epoch0, Training loss 198.47, Validation loss 165.42
-    Epoch5, Training loss 121.50, Validation loss 120.12
-    Epoch10, Training loss 114.81, Validation loss 113.73
-    Epoch15, Training loss 111.33, Validation loss 110.75
-    Epoch20, Training loss 109.57, Validation loss 109.62
-    Epoch25, Training loss 108.31, Validation loss 108.14
-    Epoch30, Training loss 107.21, Validation loss 107.25
-    Epoch35, Training loss 106.17, Validation loss 106.22
-    Epoch40, Training loss 105.49, Validation loss 106.11
-    Epoch45, Training loss 104.90, Validation loss 105.22
-
 
 ## Reconstruction visualiztion
 
