@@ -1793,22 +1793,26 @@ def test_sparse_dot():
 
 
 def test_linalg_operators():
-     def check_syrk_batch():
-         # test both forward and backward
-         # batch syrk will be applied to the last two dimensions
-         A = nd.zeros((1, LARGE_SQ_X, LARGE_SQ_X))
-         for i in range(LARGE_SQ_X):
-             A[0,i,i] = 1
-         A.attach_grad()
-         with mx.autograd.record():
-             out = nd.linalg.syrk(A, alpha=2, transpose=False)
-         for i in range(LARGE_SQ_X):
-             assert out[0,i,i] == 2
-         out.backward()
-         for i in range(LARGE_SQ_X):
-             assert A.grad[0,0,i] == 4
+    def check_syrk_batch():
+        # test both forward and backward
+        # batch syrk will be applied to the last two dimensions
+        A = nd.zeros((2, LARGE_SQ_X, LARGE_SQ_X))
+        for i in range(LARGE_SQ_X):
+            A[0,i,i] = 1
+            A[1,i,i] = 0.1
+        A.attach_grad()
+        with mx.autograd.record():
+            out = nd.linalg.syrk(A, alpha=2, transpose=False)
+        for i in range(LARGE_SQ_X):
+            assert out[0,i,i] == 2
+            assert_almost_equal(out[1,i,i], nd.array([0.02]), rtol=1e-3, atol=1e-5)
+        out.backward()
+        for i in range(LARGE_SQ_X):
+            # check the first row
+            assert A.grad[0,0,i] == 4
+            assert_almost_equal(A.grad[1,0,i], nd.array([0.4]), rtol=1e-3, atol=1e-5)
 
-     check_syrk_batch()
+    check_syrk_batch()
 
 
 if __name__ == '__main__':
