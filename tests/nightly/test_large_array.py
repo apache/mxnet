@@ -1818,6 +1818,21 @@ def test_sparse_dot():
     assert out.shape == (2, 2)
 
 
+def test_gemm2():
+    def run_gemm2(inp1,inp2):
+        inp1.attach_grad()
+        inp2.attach_grad()
+        with mx.autograd.record():
+            out = mx.nd.linalg.gemm2(inp1,inp2)
+        return inp1.grad, inp2.grad, out
+
+    inp1=mx.nd.ones(shape=(SMALL_Y, LARGE_X))
+    inp2=mx.nd.ones(shape=(LARGE_X, SMALL_Y))
+    inp1_grad, inp2_grad2, out= run_gemm2(inp1,inp2)
+    assert out.asnumpy()[0][0] == LARGE_X
+    # pending assert for gradient
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
