@@ -29,6 +29,7 @@
 #include <queue>
 
 #include "./subgraph_property.h"
+#include "mxnet/imperative.h"
 
 #define DEBUG_SUBGRAPH 0
 
