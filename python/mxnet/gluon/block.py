@@ -1214,7 +1214,7 @@ class HybridBlock(Block):
             self._active = False
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True,  **kwargs):
+    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True, **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
@@ -1243,7 +1243,8 @@ class HybridBlock(Block):
 
         self._active = active
         self._flags = list(kwargs.items())
-        if clear: self._clear_cached_op()
+        if clear:
+            self._clear_cached_op()
         if active and self._forward_hooks or self._forward_pre_hooks:
             warnings.warn('"{block}" is being hybridized while still having forward hook/pre-hook. '
                           'If "{block}" is a child of HybridBlock, the hooks will not take effect.'
