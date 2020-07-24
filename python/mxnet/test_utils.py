@@ -299,7 +299,7 @@ def create_vector(size, dtype=np.int64):
 
 # For testing Large Square Matrix with total size > 2^32 elements
 def get_large_identity_mat(size):
-    A = nd.zeros((size, size))
+    A = mx.nd.zeros((size, size))
     for i in range(size):
         A[i, i] = 1
     return A
