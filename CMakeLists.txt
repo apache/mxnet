@@ -298,7 +298,6 @@ foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
 endforeach()
 
 include_directories("include")
-include_directories("3rdparty/nvidia_cub")
 include_directories("3rdparty/tvm/nnvm/include")
 include_directories("3rdparty/tvm/include")
 include_directories("3rdparty/dmlc-core/include")
@@ -604,6 +603,10 @@ if(USE_CUDA)
 
   include_directories(${CUDAToolkit_INCLUDE_DIRS})
   link_directories(${CUDAToolkit_LIBRARY_DIR})
+endif()
+
+if(CUDAToolkit_VERSION_MAJOR LESS "11")
+  include_directories("3rdparty/nvidia_cub")
 endif()
 
 if(MSVC)
