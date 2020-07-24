@@ -37,6 +37,7 @@ VLARGE_X = 4300000000
 LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
+LARGE_SQ_X = 80000
 LARGE_SIZE = LARGE_X * SMALL_Y
 LARGE_TENSOR_SHAPE = 2**32
 RNN_LARGE_TENSOR = 2**28
@@ -1167,6 +1168,32 @@ def test_tensor():
     check_pad()
     check_gather()
     check_binary_broadcast()
+
+def test_linalg():
+    def check_potrf():
+        # creating an identity matrix input
+        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
+        for i in range(LARGE_SQ_X):
+            A[i,i] = 1
+
+        out = nd.linalg.potrf(A)
+        # output should be an identity matrix
+        for i in range(LARGE_SQ_X):
+            assert out[i,i] == 1
+
+    def check_potri():
+        # creating an identity matrix input
+        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
+        for i in range(LARGE_SQ_X):
+            A[i,i] = 1
+
+        out = nd.linalg.potri(A)
+        # output should be an identity matrix
+        for i in range(LARGE_SQ_X):
+            assert out[i,i] == 1
+
+    check_potrf()
+    check_potri()
 
 
 def test_basic():
