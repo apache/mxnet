@@ -37,11 +37,10 @@ VLARGE_X = 4300000000
 LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
-LARGE_SQ_X = 80000
+LARGE_SQ_X = 70000
 LARGE_SIZE = LARGE_X * SMALL_Y
 LARGE_TENSOR_SHAPE = 2**32
 RNN_LARGE_TENSOR = 2**28
-LARGE_SQ_X = 70000
 
 
 def test_nn():
@@ -1191,9 +1190,26 @@ def test_linalg():
         # output should be an identity matrix
         for i in range(LARGE_SQ_X):
             assert out[i,i] == 1
+    
+    def check_syrk_batch():
+        # test both forward and backward
+        # batch syrk will be applied to the last two dimensions
+        A = nd.zeros((2, LARGE_SQ_X, LARGE_SQ_X))
+        for i in range(LARGE_SQ_X):
+            A[0,i,i] = 1
+            A[1,i,i] = 0.1
+        A.attach_grad()
+        with mx.autograd.record():
+            out = nd.linalg.syrk(A, alpha=2, transpose=False)
+        assert out[0,0,0] == 2
+        assert_almost_equal(out[1,0,0], nd.array([0.02]), rtol=1e-3, atol=1e-5)
+        out.backward()
+        assert A.grad[0,0,0] == 4
+        assert_almost_equal(A.grad[1,0,0], nd.array([0.4]), rtol=1e-3, atol=1e-5)
 
     check_potrf()
     check_potri()
+    check_syrk_batch()
 
 
 def test_basic():
@@ -1817,29 +1833,6 @@ def test_sparse_dot():
     out = nd.dot(sp_mat1, mat2)
     assert out.asnumpy()[0][0] == 2
     assert out.shape == (2, 2)
-
-
-def test_linalg_operators():
-    def check_syrk_batch():
-        # test both forward and backward
-        # batch syrk will be applied to the last two dimensions
-        A = nd.zeros((2, LARGE_SQ_X, LARGE_SQ_X))
-        for i in range(LARGE_SQ_X):
-            A[0,i,i] = 1
-            A[1,i,i] = 0.1
-        A.attach_grad()
-        with mx.autograd.record():
-            out = nd.linalg.syrk(A, alpha=2, transpose=False)
-        for i in range(LARGE_SQ_X):
-            assert out[0,i,i] == 2
-            assert_almost_equal(out[1,i,i], nd.array([0.02]), rtol=1e-3, atol=1e-5)
-        out.backward()
-        for i in range(LARGE_SQ_X):
-            # check the first row
-            assert A.grad[0,0,i] == 4
-            assert_almost_equal(A.grad[1,0,i], nd.array([0.4]), rtol=1e-3, atol=1e-5)
-
-    check_syrk_batch()
 
 
 if __name__ == '__main__':
