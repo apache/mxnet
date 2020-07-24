@@ -1228,58 +1228,65 @@ def test_linalg():
     def run_det(inp):
         inp.attach_grad()
         with mx.autograd.record():
-            out = det(inp)
+            out = mx.nd.linalg.det(inp)
         return inp.grad, out
 
     def run_inverse(inp):
         inp.attach_grad()
         with mx.autograd.record():
-            out = inverse(inp)
+            out = mx.nd.linalg.inverse(inp)
         return inp.grad, out
 
     def run_trmm(inp):
         inp.attach_grad()
         with mx.autograd.record():
-            out = trmm(inp, inp)
+            out = mx.nd.linalg.trmm(inp, inp)
         return inp.grad, out
 
     def run_trsm(inp):
         inp.attach_grad()
         with mx.autograd.record():
-            out = trsm(inp, inp)
+            out = mx.nd.linalg.trsm(inp, inp)
         return inp.grad, out
 
     A = get_large_identity_mat(LARGE_SQ_X)
 
     grad, out = run_det(A)
-    check_diag(grad, 0)
     assert(out[0] == 1)
+    out.backward()
+    check_diag(grad, 0)
 
     grad, out = run_inverse(A)
-    check_diag(grad, 0)
     check_diag(out, 1)
+    out.backward()
+    check_diag(grad, 0)
 
     grad, out = run_trmm(A)
-    check_diag(grad, 0)
     check_diag(out, 1)
+    out.backward()
+    check_diag(grad, 0)
 
     grad, out = run_trsm(A)
-    check_diag(grad, 0)
     check_diag(out, 1)
+    out.backward()
+    check_diag(grad, 0)
 
     B = batchify(A)
 
     grad, out = run_inverse(B)
-    check_batch_diag(grad, 0)
     check_batch_diag(out, 1)
+    out.backward()
+    check_batch_diag(grad, 0)
 
     grad, out = run_trmm(B)
-    check_batch_diag(grad, 0)
     check_batch_diag(out, 1)
+    out.backward()
+    check_batch_diag(grad, 0)
 
     grad, out = run_trsm(B)
-    check_batch_diag(grad, 0)
     check_batch_diag(out, 1)
+    out.backward()
+    check_batch_diag(grad, 0)
 
 
 def test_basic():
