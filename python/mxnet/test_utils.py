@@ -301,7 +301,7 @@ def create_vector(size, dtype=np.int64):
 def get_large_identity_mat(size):
     A = nd.zeros((size, size))
     for i in range(size):
-        A[i,i] = 1
+        A[i, i] = 1
     return A
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
