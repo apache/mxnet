@@ -341,7 +341,7 @@ def test_gluon_cauchy_v1():
     for shape, hybridize in itertools.product(shapes, [True, False]):
         loc = np.random.uniform(-1, 1, shape)
         scale = np.random.uniform(0.5, 1.5, shape)
-        samples = np.random.uniform(size=shape)
+        samples = np.random.uniform(size=shape, high=1.0-1e-4)
         net = TestCauchy("icdf")
         if hybridize:
             net.hybridize()
