@@ -44,6 +44,15 @@ class StaticShapeOpSelector: public SubgraphSelector {
     const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
     return !output_node.is_variable() && infershape.count(output_node.op());
   }
+
+  // Reject partitioning when subgraph contains only a single node
+  virtual std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) {
+    if(candidates.size() == 1) {
+      std::cout << "single node : " << candidates[0]->attrs.name << std::endl;
+      return std::vector<nnvm::Node*>();
+    }
+    return candidates;
+  }
 };
 
 /*
