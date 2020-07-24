@@ -929,6 +929,21 @@ def test_unix_python3_integration_gpu() {
     }]
 }
 
+def test_unix_caffe_gpu() {
+    return ['Caffe GPU': {
+        node(NODE_LINUX_GPU) {
+            ws('workspace/it-caffe') {
+            timeout(time: max_time, unit: 'MINUTES') {
+                utils.init_git()
+                utils.unpack_lib('gpu', mx_lib)
+                utils.docker_run('ubuntu_gpu_cu101', 'integrationtest_ubuntu_gpu_caffe', true)
+                utils.publish_test_coverage()
+            }
+            }
+        }
+    }]
+}
+
 def test_unix_cpp_package_gpu() {
     return ['cpp-package GPU Makefile': {
       node(NODE_LINUX_GPU_G4) {
