@@ -641,7 +641,7 @@ struct JsonVal {
     }
     return type < o.type;
   }
-  
+
   // convert JSON object back to JSON-compatible string
   std::string dump() const {
     std::string ret;
@@ -811,19 +811,19 @@ class Graph;
 
 // Representation of an input/output to a node
 struct NodeEntry {
-  Node* node; // other node thats producing/consuming inputs/outputs
-  int entry; // entry from other node (ie. which output from producing node)
+  Node* node;  // other node thats producing/consuming inputs/outputs
+  int entry;  // entry from other node (ie. which output from producing node)
 };
 
 // Representation of a node in the graph
 class Node {
  public:
-  std::string op; // operator name (ie. Convolution)
-  std::string name; // unique node name (ie. conv_0 or conv_1)
-  std::vector<NodeEntry> inputs; // set of inputs to the node
-  std::vector<NodeEntry> outputs; // set of outputs from the node
-  std::vector<Graph*> subgraphs; // set of subgraphs within this node
-  std::unordered_map<std::string, std::string> attrs; // node attributes
+  std::string op;  // operator name (ie. Convolution)
+  std::string name;  // unique node name (ie. conv_0 or conv_1)
+  std::vector<NodeEntry> inputs;  // set of inputs to the node
+  std::vector<NodeEntry> outputs;  // set of outputs from the node
+  std::vector<Graph*> subgraphs;  // set of subgraphs within this node
+  std::unordered_map<std::string, std::string> attrs;  // node attributes
 };
 
 // Representation of the graph
@@ -832,7 +832,7 @@ class Graph {
   Graph() {}
   /* \brief deleted nodes when deleting the graph */
   ~Graph() {
-    for(int i=0; i<nodes.size(); i++)
+    for (int i = 0; i < nodes.size(); i++)
       delete nodes[i];
   }
 
@@ -841,7 +841,7 @@ class Graph {
     JsonVal val = JsonVal::parse(json);
     return fromJson(val);
   }
-  
+
   /* \brief create a graph object from a parsed JSON object */
   static Graph* fromJson(JsonVal val) {
     // get nodes list
@@ -850,7 +850,7 @@ class Graph {
 
     std::map<int, Node*> nodeMap;
     // loop over nodes
-    for(int i=0; i<nodes.list.size(); i++) {
+    for (int i = 0; i < nodes.list.size(); i++) {
       Node* n = new Node();
       g->nodes.push_back(n);
       JsonVal node = nodes.list[i];
@@ -860,35 +860,35 @@ class Graph {
       n->name = node.map[JsonVal("name")].str;
 
       // if op is null its an input to the graph
-      if(n->op.compare("null") == 0)
+      if (n->op.compare("null") == 0)
         g->inputs.push_back(n);
-      
+
       // set attrs
       JsonVal attributes = node.map[JsonVal("attrs")];
-      for(auto& kv : attributes.map) {
+      for (auto& kv : attributes.map) {
         n->attrs[kv.first.str] = kv.second.str;
       }
 
       // set subgraphs, parsing each into a graph
       if (node.map.count(JsonVal("subgraphs")) > 0) {
-	JsonVal subgraphs = node.map[JsonVal("subgraphs")];
-	for (auto &subgraph : subgraphs.list) {
-	  n->subgraphs.push_back(fromJson(subgraph));
-	}
+        JsonVal subgraphs = node.map[JsonVal("subgraphs")];
+        for (auto &subgraph : subgraphs.list) {
+          n->subgraphs.push_back(fromJson(subgraph));
+        }
       }
 
       // set node inputs
       JsonVal node_inputs = node.map[JsonVal("inputs")];
       n->inputs.resize(node_inputs.list.size());
-      for(int j=0; j<node_inputs.list.size(); j++) {
+      for (int j = 0; j < node_inputs.list.size(); j++) {
         JsonVal input = node_inputs.list[j];
         NodeEntry& entry = n->inputs[j];
-        //get pointer to other node
+        // get pointer to other node
         entry.node = nodeMap[input.list[0].num];
-        //get the other node's output index
+        // get the other node's output index
         entry.entry = input.list[1].num;
-        //set other nodes output as connected to this node
-        entry.node->outputs.push_back({n,j});
+        // set other nodes output as connected to this node
+        entry.node->outputs.push_back({n, j});
       }
       nodeMap[i] = n;
     }
@@ -896,15 +896,15 @@ class Graph {
     // set graph level outputs
     JsonVal& heads = val.map[JsonVal("heads")];
     g->outputs.resize(heads.list.size());
-    for(int i=0; i<heads.list.size(); i++) {
+    for (int i = 0; i < heads.list.size(); i++) {
       JsonVal head = heads.list[i];
       g->outputs[i].node = nodeMap[head.list[0].num];
       g->outputs[i].entry = head.list[1].num;
     }
 
     // add all attributes to the graph
-    for(auto& kv : val.map) {
-      if(kv.first.str.compare("nodes") != 0 &&
+    for (auto& kv : val.map) {
+      if (kv.first.str.compare("nodes") != 0 &&
          kv.first.str.compare("heads") != 0 &&
          kv.first.str.compare("node_row_ptr") != 0 &&
          kv.first.str.compare("arg_nodes") != 0) {
@@ -913,40 +913,42 @@ class Graph {
     }
     return g;
   }
-  
+
   /* \brief convert graph object back to JSON object */
   JsonVal toJson() {
     // top level object is a map
     JsonVal val(MAP);
 
     // add attributes
-    for(auto& kv : attrs) {
+    for (auto& kv : attrs) {
       val.map[JsonVal(kv.first)] = kv.second;
     }
 
     // sort graph nodes in topological order, create mapping of node to index
     std::map<Node*, int> nodeMap;
     std::vector<Node*> sorted = topological_sort();
-    for(int i=sorted.size()-1; i>=0; i--) {
+    // nodes are in reverse topological order in the vector (back is first)
+    // so loop from end to front over the vector 'sorted'
+    for (int i = sorted.size()-1; i >= 0; i--) {
       nodeMap[sorted[i]] = sorted.size()-1-i;
     }
 
     // create node_row_ptr entry
     val.map[JsonVal("node_row_ptr")] = JsonVal(LIST);
     JsonVal& node_row_ptr = val.map[JsonVal("node_row_ptr")];
-    for(int i=0; i<nodes.size(); i++)
+    for (int i = 0; i < nodes.size(); i++)
       node_row_ptr.list.push_back(JsonVal(i));
 
     // add all input nodes
     val.map[JsonVal("arg_nodes")] = JsonVal(LIST);
     JsonVal& arg_nodes = val.map[JsonVal("arg_nodes")];
-    for(int i=0; i<inputs.size(); i++)
+    for (int i = 0; i < inputs.size(); i++)
       arg_nodes.list.push_back(JsonVal(nodeMap[inputs[i]]));
 
     // add all output nodes
     val.map[JsonVal("heads")] = JsonVal(LIST);
     JsonVal& heads = val.map[JsonVal("heads")];
-    for(int i=0; i<outputs.size(); i++) {
+    for (int i = 0; i < outputs.size(); i++) {
       heads.list.push_back(JsonVal(LIST));
       JsonVal& out = heads.list[i];
       out.list.push_back(JsonVal(nodeMap[outputs[i].node]));
@@ -957,12 +959,12 @@ class Graph {
     // add all graph nodes
     val.map[JsonVal("nodes")] = JsonVal(LIST);
     JsonVal& nodes_ = val.map[JsonVal("nodes")];
-    for(int i=sorted.size()-1; i>=0; i--) {
+    for (int i = sorted.size()-1; i >= 0; i--) {
       // each node is a map
       nodes_.list.push_back(JsonVal(MAP));
       Node* n = sorted[i];
       JsonVal& n_ = nodes_.list[nodes_.list.size()-1];
-      
+
       n_.map[JsonVal("op")] = JsonVal(n->op);
       n_.map[JsonVal("name")] = JsonVal(n->name);
       n_.map[JsonVal("inputs")] = JsonVal(LIST);
@@ -980,17 +982,17 @@ class Graph {
 
       // add subgraphs for this node, convert each back to JSON
       if (n->subgraphs.size() > 0) {
-	n_.map[JsonVal("subgraphs")] = JsonVal(LIST);
-	JsonVal &subgraphs_ = n_.map[JsonVal("subgraphs")];
-	for(Graph *subgraph : n->subgraphs) {
-	  subgraphs_.list.push_back(subgraph->toJson());
-	}
+        n_.map[JsonVal("subgraphs")] = JsonVal(LIST);
+        JsonVal &subgraphs_ = n_.map[JsonVal("subgraphs")];
+        for(Graph *subgraph : n->subgraphs) {
+          subgraphs_.list.push_back(subgraph->toJson());
+        }
       }
 
       // add attributes for this node
       n_.map[JsonVal("attrs")] = JsonVal(MAP);
       JsonVal& attrs_ = n_.map[JsonVal("attrs")];
-      for(auto& kv : n->attrs) {
+      for (auto& kv : n->attrs) {
         attrs_.map[JsonVal(kv.first)] = JsonVal(kv.second);
       }
     }
@@ -1005,28 +1007,28 @@ class Graph {
   /* \brief visits a node "n" */
   void _dfs_util(Node* n, std::unordered_set<Node*>* to_visit,
                  std::function<void(Node*)> handler) {
-    to_visit->erase(n); // remove node now that we're visiting it
-    for(NodeEntry& e : n->outputs) {
+    to_visit->erase(n);  // remove node now that we're visiting it
+    for (NodeEntry& e : n->outputs) {
       Node* o = e.node;
       if(to_visit->count(o) != 0) {
-        _dfs_util(o,to_visit,handler); // visit neighbor
+        _dfs_util(o, to_visit, handler);  // visit neighbor
       }
     }
-    handler(n); // post-order visit this node
+    handler(n);  // post-order visit this node
   }
 
   /* \brief post-order DFS graph traversal */
   void DFS(std::function<void(Node*)> handler) {
     std::unordered_set<Node*> to_visit;
-    //put all nodes in set to visit
-    for(auto& n : nodes)
+    // put all nodes in set to visit
+    for (auto& n : nodes)
       to_visit.insert(n);
-    //visit all inputs first
-    for(auto& i : inputs)
-      if(to_visit.count(i) != 0)
+    // visit all inputs first
+    for (auto& i : inputs)
+      if (to_visit.count(i) != 0)
         _dfs_util(i, &to_visit, handler);
-    //visit any nodes left
-    while(to_visit.size() > 0)
+    // visit any nodes left
+    while (to_visit.size() > 0)
       _dfs_util(*(to_visit.begin()), &to_visit, handler);
   }
 
@@ -1034,7 +1036,7 @@ class Graph {
   std::vector<Node*> topological_sort() {
     std::vector<Node*> sorted;
     auto handler = [&](Node* n) {
-      sorted.push_back(n); // when visiting each node, add it in order to the vector
+      sorted.push_back(n);  // when visiting each node, add it in order to the vector
     };
     DFS(handler);
     return sorted;
@@ -1043,35 +1045,37 @@ class Graph {
   /* \brief print out graph details */
   void print(int indent=0) {
     std::string space = "";
-    for(int i=0; i < indent; i++) space+=" ";
-    
+    for (int i = 0; i < indent; i++) space+=" ";
+
     std::cout << space << "########### Graph #############" << std::endl;
     std::cout << space << "attributes: " << std::endl;
-    for (auto &kv : attrs) 
+    for (auto &kv : attrs)
       std::cout << space << "\t" << kv.first << " : " << kv.second.str << std::endl;
     std::cout << space << "inputs: " << inputs.size() << std::endl;
     std::cout << space << "outputs: " << outputs.size() << std::endl;
     std::cout << space << "nodes: " << nodes.size() << std::endl;
     std::vector<Node*> sorted = topological_sort();
     // loop over each node and print out its inputs/outputs
-    for(int i=sorted.size()-1; i>=0; i--) {
+    for (int i = sorted.size()-1; i >= 0; i--) {
       std::cout << space << "Node: " << sorted[i]->name << std::endl;
-      for(int j=0; j<sorted[i]->inputs.size(); j++) {
-        std::cout << space << "\tInput: " << sorted[i]->inputs[j].node->name << " " << sorted[i]->inputs[j].entry << std::endl;
+      for (int j = 0; j < sorted[i]->inputs.size(); j++) {
+        std::cout << space << "\tInput: " << sorted[i]->inputs[j].node->name << " "
+                  << sorted[i]->inputs[j].entry << std::endl;
       }
-      for(int j=0; j<sorted[i]->outputs.size(); j++) {
-        std::cout << space << "\tOutput: " << sorted[i]->outputs[j].node->name << " " << sorted[i]->outputs[j].entry << std::endl;
+      for (int j = 0; j < sorted[i]->outputs.size(); j++) {
+        std::cout << space << "\tOutput: " << sorted[i]->outputs[j].node->name << " "
+                  << sorted[i]->outputs[j].entry << std::endl;
       }
-      if(sorted[i]->subgraphs.size() > 0) {
-	for(auto &subgraph : sorted[i]->subgraphs) {
-	  std::cout << space << "\tSubgraph:" << std::endl;
-	  subgraph->print(indent+2);
+      if (sorted[i]->subgraphs.size() > 0) {
+        for (auto &subgraph : sorted[i]->subgraphs) {
+          std::cout << space << "\tSubgraph:" << std::endl;
+          subgraph->print(indent+2);
 	}
       }
     }
     std::cout << space << "###############################" << std::endl;
-  }  
-  
+  }
+
   std::vector<Node*> nodes;
   std::vector<Node*> inputs;
   std::vector<NodeEntry> outputs;
