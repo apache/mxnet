@@ -1212,7 +1212,6 @@ def test_linalg():
     check_syrk_batch()
 
 
-def test_linalg():
     def batchify(mat):
         mat_np = mat.asnumpy()
         return nd.array([mat_np, mat_np])
