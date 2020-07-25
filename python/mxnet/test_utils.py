@@ -308,7 +308,7 @@ def get_identity_mat(size):
 def get_identity_mat_batch(size):
     A = get_identity_mat(size)
     A_np = A.asnumpy()
-    return nd.array([A_np, A_np])
+    return mx.nd.array([A_np, A_np])
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
