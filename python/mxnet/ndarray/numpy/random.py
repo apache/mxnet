@@ -21,7 +21,6 @@ from ...util import is_np_default_dtype
 from ...context import current_context
 from . import _internal as _npi
 from . import _api_internal
-from ..ndarray import NDArray
 
 
 __all__ = ['randint', 'uniform', 'normal', "choice", "rand", "multinomial", "multivariate_normal",

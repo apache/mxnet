@@ -634,5 +634,4 @@ MXNET_REGISTER_API("_npi.vstack")
   auto ndoutputs = Invoke(op, &attrs, param.num_args, inputs, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
-
 }  // namespace mxnet
