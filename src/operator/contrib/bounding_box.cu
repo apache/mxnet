@@ -178,7 +178,7 @@ void WorkspaceForSort(const index_t num_elem,
   const index_t sort_scores_temp_space =
     mxnet::op::SortByKeyWorkspaceSize<DType, index_t, gpu>(num_elem, false, false);
   const index_t sort_topk_scores_temp_space =
-    mxnet::op::SortByKeyWorkspaceSize<DType, index_t, gpu>(topk, false, false);
+    mxnet::op::SortByKeyWorkspaceSize<DType, index_t, gpu>(topk, 1, false, false);
   workspace->scratch_space = align(std::max(sort_scores_temp_space, sort_topk_scores_temp_space),
                                    alignment);
 }
