@@ -179,7 +179,6 @@ enum : unsigned {
   OPENCV,
 
   // Misc
-  CAFFE,
   DIST_KVSTORE,
   CXX14,
   INT64_TENSOR_SIZE,
