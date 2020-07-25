@@ -57,7 +57,7 @@ struct NumpyMultinomialParam : public dmlc::Parameter<NumpyMultinomialParam> {
       "Default is None, in which case a single value is returned.");
   }
   void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
-    std::ostringstream n, pvals, size;
+    std::ostringstream n_s, pvals_s, size_s;
     n_s << n;
     pvals_s << pvals;
     size_s << size;

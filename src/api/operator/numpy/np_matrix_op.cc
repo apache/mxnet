@@ -613,6 +613,7 @@ MXNET_REGISTER_API("_npi.tril_indices")
     ndarray_handles.emplace_back(ndoutputs[i]);
   }
   *ret = ADT(0, ndarray_handles.begin(), ndarray_handles.end());
+});
 
 MXNET_REGISTER_API("_npi.vstack")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
@@ -627,7 +628,7 @@ MXNET_REGISTER_API("_npi.vstack")
   SetAttrDict<op::NumpyVstackParam>(&attrs);
   int num_outputs = 0;
   std::vector<NDArray*> inputs_vec(args.size(), nullptr);
-  for (int i = 0; i < args_size; ++i) {
+  for (int i = 0; i < args.size(); ++i) {
     inputs_vec[i] = args[i].operator mxnet::NDArray*();
   }
   NDArray** inputs = inputs_vec.data();

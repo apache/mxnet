@@ -24,8 +24,8 @@
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
 #include <vector>
-#include "../utils.h"
-#include "../../../operator/numpy/random/np_multinomial_op.h"
+#include "../../utils.h"
+#include "../../../../operator/numpy/random/np_multinomial_op.h"
 
 namespace mxnet {
 
@@ -39,7 +39,7 @@ MXNET_REGISTER_API("_npi.multinomial")
   int num_inputs = 0;
 
   // parse int
-  param.n = arg[0].operator int();
+  param.n = args[0].operator int();
 
   // parse pvals
   if (args[1].type_code() == kNull) {
