@@ -1805,15 +1805,6 @@ class Torch(Loss):
 
 
 @register
-class Caffe(Loss):
-    """Dummy metric for caffe criterions."""
-    def __init__(self, name='caffe',
-                 output_names=None, label_names=None):
-        super(Caffe, self).__init__(
-            name, output_names=output_names, label_names=label_names)
-
-
-@register
 @use_np
 class CustomMetric(EvalMetric):
     """Computes a customized evaluation metric.

@@ -84,7 +84,6 @@ class FeatureSet {
     feature_bits.set(OPENCV, MXNET_USE_OPENCV);
 
     // Misc
-    feature_bits.set(CAFFE, MXNET_USE_CAFFE);
     feature_bits.set(DIST_KVSTORE, MXNET_USE_DIST_KVSTORE);
     feature_bits.set(INT64_TENSOR_SIZE, MXNET_USE_INT64_TENSOR_SIZE);
     feature_bits.set(SIGNAL_HANDLER, MXNET_USE_SIGNAL_HANDLER);
@@ -155,7 +154,6 @@ const std::vector<std::string> EnumNames::names = {
   "LAPACK",
   "MKLDNN",
   "OPENCV",
-  "CAFFE",
   "DIST_KVSTORE",
   "CXX14",
   "INT64_TENSOR_SIZE",
