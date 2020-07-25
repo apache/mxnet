@@ -553,7 +553,7 @@ build_ubuntu_gpu_tensorrt() {
     mkdir -p build
     cd build
     cmake  -DBUILD_SHARED_LIBS=ON -GNinja ..
-    ninja onnx/onnx.proto
+    ninja onnx/onnx-ml.proto
     ninja
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
@@ -573,7 +573,6 @@ build_ubuntu_gpu_tensorrt() {
 
     mkdir -p /work/mxnet/lib/
     cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser_runtime.so.0 /work/mxnet/lib/
     cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so.0 /work/mxnet/lib/
 
     cd /work/build
