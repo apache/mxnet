@@ -298,11 +298,17 @@ def create_vector(size, dtype=np.int64):
     return a
 
 # For testing Large Square Matrix with total size > 2^32 elements
-def get_large_identity_mat(size):
+def get_identity_mat(size):
     A = mx.nd.zeros((size, size))
     for i in range(size):
         A[i, i] = 1
     return A
+
+# For testing Batch of Large Square Matrix with total size > 2^32 elements
+def get_identity_mat_batch(size):
+    A = get_identity_mat(size)
+    A_np = A.asnumpy()
+    return nd.array([A_np, A_np])
 
 def rand_sparse_ndarray(shape, stype, density=None, dtype=None, distribution=None,
                         data_init=None, rsp_indices=None, modifier_func=None,
