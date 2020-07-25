@@ -230,7 +230,7 @@ inline void MultiBoxDetectionForward(const Tensor<gpu, 3, DType> &out,
     num_classes, num_anchors, threshold, clip,
     variances[0], variances[1], variances[2], variances[3],
     nms_threshold, force_suppress, nms_topk);
-  MULTIBOX_DETECTION_CUDA_CHECK(cudaPeekAtLastError());
+  MULTIBOX_DETECTION_CUDA_CHECK(cudaGetLastError());
 }
 }  // namespace mshadow
 

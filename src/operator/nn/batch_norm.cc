@@ -85,6 +85,31 @@ static inline void ForEachFast(const BNTensor3<DType1> &in_data,
   }
 }
 
+template<typename DType1, typename DType2, typename DType3, typename OnData>
+static inline void ForEachFast(const BNTensor3<DType1> &in_data,
+                               const BNTensor3<DType2> &in_data2,
+                               const BNTensor3<DType3> &out_data,
+                               const size_t channel,
+                               OnData onData) {
+  const size_t num         = in_data.OuterSize();
+  const size_t matrixSize  = in_data.InnerSize();
+  const size_t skipLength  = in_data.SkipLengthToNextSameChannelData();
+  const size_t startOffset = in_data.StartOffset(channel);
+
+  DType1 *data = in_data.dptr_  + startOffset;
+  DType2 *data2 = in_data2.dptr_  + startOffset;
+  DType3 *odata = out_data.dptr_ + startOffset;
+
+  for (size_t outer = 0; outer < num; ++outer) {
+    for (size_t i = 0; i < matrixSize; ++i) {
+      onData(data++, data2++, odata++);
+    }
+    data  += skipLength;
+    data2 += skipLength;
+    odata += skipLength;
+  }
+}
+
 }  // namespace batchnorm
 
 /*! \brief Forward CPU */
@@ -263,7 +288,7 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
                   dotp += (*thisInputData - mean) * (*gradOut_data);
                 });
 
-    if (!gradIn.IsEmpty() && IsBNWriting(req[batchnorm::kData])) {  // if there's a grad input
+    if (!gradIn.IsEmpty() && req[batchnorm::kData] != kNullOp) {  // if there's a grad input
       if (is_train_and_not_global_stats) {
         // when in training mode
         // Q(X) = X - E[x] ; i.e. input centered to zero mean
@@ -272,44 +297,60 @@ void BatchNormBackwardImpl(mshadow::Stream<cpu> *,
 
         // projection of gradOutput on to output scaled by std
         const AccReal k = dotp * invstd * invstd / itemCount;
-        ForEachFast(inputData, gradIn, static_cast<size_t>(channel),
-                    [&mean, &k](const DType *inputDataPtr, DType *gradIn_data) {
-                      *gradIn_data = (*inputDataPtr - mean) * k;
-                    });
-
         const AccReal iw = invstd * w;
         const AccReal gradMean = sumGradOut / itemCount;
-        ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
-                    [iw, gradMean](const DType *gradOut_data, DType *gradIn_data) {
-                      *gradIn_data = (*gradOut_data - gradMean - *gradIn_data) * iw;
-                    });
+        if (req[batchnorm::kData] != kAddTo) {
+          ForEachFast(inputData, gradIn, static_cast<size_t>(channel),
+                      [&mean, &k](const DType *inputDataPtr, DType *gradIn_data) {
+                        *gradIn_data = (*inputDataPtr - mean) * k;
+                      });
+
+          ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
+                      [iw, gradMean](const DType *gradOut_data, DType *gradIn_data) {
+                        *gradIn_data = (*gradOut_data - gradMean - *gradIn_data) * iw;
+                      });
+        } else {
+          ForEachFast(inputData, gradOut, gradIn, static_cast<size_t>(channel),
+                      [&mean, &k, iw, gradMean](const DType *inputDataPtr,
+                                                const DType *gradOut_data,
+                                                DType *gradIn_data) {
+                        DType normal_val = (*inputDataPtr - mean) * k;
+                        *gradIn_data += (*gradOut_data - gradMean -
+                            normal_val) * iw;
+                      });
+        }
       } else {
         // when in evaluation mode
         // Q(X) = X - running_mean  ; i.e. input centered to zero mean
         // Y = Q(X) / running_std    ; i.e. BN output before weight and bias
         // dL/dX = w / running_std
         const AccReal iw = invstd * w;
-        ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
-                    [iw](const DType *gradOut_data, DType *gradIn_data) {
-                      *gradIn_data = *gradOut_data * iw;
-                    });
+        if (req[batchnorm::kData] != kAddTo) {
+          ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
+                      [iw](const DType *gradOut_data, DType *gradIn_data) {
+                        *gradIn_data = *gradOut_data * iw;
+                      });
+        } else {
+          ForEachFast(gradOut, gradIn, static_cast<size_t>(channel),
+                      [iw](const DType *gradOut_data, DType *gradIn_data) {
+                        *gradIn_data += *gradOut_data * iw;
+                      });
+        }
       }
     }
 
     // May want to make this a param eventually
     const AccReal scale = 1.0f;
 
-    if (IsBNWriting(req[batchnorm::kGamma])) {
-      if (!param_.fix_gamma) {
-        gradWeightData[channel] = scale * dotp * invstd;
-      } else {
+    if (!param_.fix_gamma) {
+      KERNEL_ASSIGN(gradWeightData[channel], req[batchnorm::kGamma], scale * dotp * invstd);
+    } else {
+      if (IsBNWriting(req[batchnorm::kGamma])) {
         gradWeightData[channel] = AccReal(0);
       }
     }
 
-    if (IsBNWriting(req[batchnorm::kBeta])) {
-      gradBiasData[channel] = scale * sumGradOut;
-    }
+    KERNEL_ASSIGN(gradBiasData[channel], req[batchnorm::kBeta], scale * sumGradOut);
   }
 }
 
@@ -323,6 +364,9 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_shape->size(), 5U) << "Input:[data, gamma, beta, MovingMean, MovingVar]";
   CHECK_EQ(out_shape->size(), 3U);
   const mxnet::TShape &dshape = in_shape->at(batchnorm::kData);
+  if (!mxnet::ndim_is_known(dshape)) {
+    return false;
+  }
 
   const size_t channelAxis = static_cast<size_t>(param.axis < 0
       ? static_cast<int>(dshape.ndim()) + param.axis
@@ -330,10 +374,6 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
   CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param.axis;
 
   const index_t channelCount = dshape[channelAxis];
-
-  if (!mxnet::ndim_is_known(dshape)) {
-    return false;
-  }
 
   in_shape->at(batchnorm::kGamma) = mxnet::TShape(Shape1(channelCount));
   in_shape->at(batchnorm::kBeta) = mxnet::TShape(Shape1(channelCount));
@@ -352,14 +392,35 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
                           std::vector<int> *in_type, std::vector<int> *out_type) {
   using namespace mshadow;
   CHECK_GE(in_type->size(), 1U);
-  const int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
+  const size_t n_out = 3;
   // For float16 input type beta, gamma, mean, and average are stored in float32.
   // For other input types, these parameters have the same type as input
   // NOTE: This requirement is from cuDNN (v. 4 and 5)
   int dtype_param;
-  MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
+  int dtype = (*in_type)[0];
+  if (type_is_none(dtype)) {
+    // Input type is undefined, we try backward inference
+     if (out_type->size() == 0 || type_is_none((*out_type)[0])) {
+       // Neither the input nor the output are defined,
+       // types cannot be infered for this op
+       return false;
+     } else {
+       // Input type is undefined but output type is: backward inference
+       dtype = (*out_type)[0];
+       (*in_type)[0] = dtype;
+       MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
+         dtype_param = mshadow::DataType<AccRealX>::kFlag; });
+     }
+  } else {
+    // Input type is defined but output type is not: forward inference
+    MSHADOW_REAL_TYPE_SWITCH_EX(dtype, DTypeX, AccRealX, {
       dtype_param = mshadow::DataType<AccRealX>::kFlag; });
+    out_type->clear();
+    out_type->push_back(dtype);
+    for (size_t i = 1; i < n_out; ++i) {
+      out_type->push_back(dtype_param);
+    }
+  }
   std::vector<std::string> args{"data", "gamma", "beta", "mean", "var"};
   CHECK_LE(in_type->size(), args.size());
   for (size_t i = 1; i < in_type->size(); ++i) {
@@ -369,21 +430,19 @@ static bool BatchNormType(const nnvm::NodeAttrs& attrs,
       UNIFORM_TYPE_CHECK((*in_type)[i], dtype_param, args[i]);
     }
   }
-  const size_t n_out = 3;
-  out_type->clear();
-  out_type->push_back(dtype);
-  for (size_t i = 1; i < n_out; ++i) {
-    out_type->push_back(dtype_param);
-  }
   return true;
 }
 
 #if MXNET_USE_MKLDNN == 1
 static inline bool SupportMKLDNNBN(const NDArray &input, const BatchNormParam &param) {
-  mxnet::TShape shape = input.shape();
-  return SupportMKLDNN(input) && shape.ndim() == 4
-      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS
-      && !mxnet::op::batchnorm::disable_mkl;
+  if (mxnet::op::batchnorm::disable_mkl) return false;
+  const mxnet::TShape shape = input.shape();
+  const int ndim = shape.ndim();
+  if (ndim == 0 || shape.Size() == 0) return false;
+  const int dtype = input.dtype();
+  return (dtype == mshadow::kFloat32 ||
+          dtype == mshadow::kBfloat16) &&
+          SupportStorageMKLDNN(input.storage_type());
 }
 
 void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
@@ -393,11 +452,12 @@ void BatchNormComputeExCPU(const nnvm::NodeAttrs &attrs,
                            const std::vector<NDArray> &outputs) {
   CHECK_EQ(inputs.size(), 5U);
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  bool fuse_relu = false;
   if (SupportMKLDNNBN(inputs[0], param)) {
     MKLDNN_OPCHECK_INIT(false, outputs.size(), inputs, outputs);
     MKLDNN_REAL_TYPE_SWITCH(inputs[0].dtype(), DTYPE, {
-        MKLDNNRun(MKLDNNBatchNormForward<DTYPE>, attrs, ctx, inputs, req, outputs);
-      });
+        MKLDNNBatchNormForward<DTYPE>(attrs, ctx, inputs, req, outputs, fuse_relu);
+    });
     MKLDNN_OPCHECK_RUN(BatchNormCompute<cpu>, attrs, ctx, inputs, req, outputs);
     return;
   }
@@ -410,9 +470,10 @@ void BatchNormGradComputeExCPU(const nnvm::NodeAttrs &attrs,
                                const std::vector<OpReqType> &req,
                                const std::vector<NDArray> &outputs) {
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
+  bool fuse_relu = false;
   if (SupportMKLDNNBN(inputs[0], param)) {
       MKLDNN_OPCHECK_INIT(true, outputs.size(), inputs, outputs);
-      MKLDNNRun(MKLDNNBatchNormBackward<float>, attrs, ctx, inputs, req, outputs);
+      MKLDNNBatchNormBackward<float>(attrs, ctx, inputs, req, outputs, fuse_relu);
       MKLDNN_OPCHECK_RUN(BatchNormGradCompute<cpu>, attrs, ctx, inputs, req, outputs);
       return;
   }
@@ -596,6 +657,9 @@ then set ``gamma`` to 1 and its gradient to 0.
 NNVM_REGISTER_OP(_backward_BatchNorm)
 .set_num_inputs(8)
 .set_num_outputs(3)
+.set_attr<nnvm::FMutateInputs>("FMutateInputs", [](const nnvm::NodeAttrs& attrs) {
+  return std::vector<uint32_t>{6, 7};   // moving_mean, moving_var
+})
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr<FInferStorageType>("FInferStorageType", BatchNormStorageType)
 #if MXNET_USE_MKLDNN == 1

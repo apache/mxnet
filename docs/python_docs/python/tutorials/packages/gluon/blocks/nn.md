@@ -37,6 +37,7 @@ perceptron. A common strategy would be to construct a two-layer network as
 follows:
 
 ```{.python .input  n=1}
+import mxnet as mx
 from mxnet import nd
 from mxnet.gluon import nn
 
@@ -226,7 +227,7 @@ class FancyMLP(nn.Block):
 
         # Random weight parameters created with the get_constant are not
         # iterated during training (i.e. constant parameters).
-        self.rand_weight = self.params.get_constant(
+        self.rand_weight = mx.gluon.Constant(
             'rand_weight', nd.random.uniform(shape=(20, 20)))
         self.dense = nn.Dense(20, activation='relu')
 

@@ -353,17 +353,19 @@ def test_sync_init(gpu_tests=False):
 
 def test_invalid_operations():
     def check_invalid_gluon_trainer_reset():
-        params = mx.gluon.ParameterDict()
-        x = params.get('x', shape=(4, 2), lr_mult=1.0, stype='row_sparse')
-        params.initialize(ctx=mx.cpu(0), init='zeros')
+        x = mx.gluon.Parameter('x', shape=(4, 2), lr_mult=1.0, stype='row_sparse')
+        params = {'x': x}
+        x.initialize(ctx=mx.cpu(0), init='zeros')
         trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
-        params.save('test_gluon_trainer_reset_' + str(my_rank) + '.params')
+        params = {'x': x._reduce()}
+        mx.nd.save('test_gluon_trainer_reset_' + str(my_rank) + '.params', params)
         row_id = mx.nd.arange(0, 4)
         w = x.row_sparse_data(row_id)
         assert trainer._kv_initialized and trainer._update_on_kvstore
         mx.nd.waitall()
         # load would fail to reset kvstore since update_on_kvstore is True
-        assert_exception(params.load, RuntimeError, 'test_gluon_trainer_reset_' + str(my_rank) + '.params')
+        params = mx.nd.load('test_gluon_trainer_reset_' + str(my_rank) + '.params')
+        assert_exception(x._load_init, RuntimeError, params['x'], None)
         print('worker ' + str(my_rank) + ' passed check_invalid_gluon_trainer_reset')
 
     def check_invalid_pull():
@@ -377,10 +379,9 @@ def test_invalid_operations():
 
 def test_gluon_trainer_type():
     def check_trainer_kv_type(stype, grad_stype, update_on_kv, expected):
-        params = mx.gluon.ParameterDict()
-        x = params.get('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
-        params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-        trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1},
+        x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
+        x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+        trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},
                                    kvstore=kv, update_on_kvstore=update_on_kv)
         try:
             trainer._init_kvstore()

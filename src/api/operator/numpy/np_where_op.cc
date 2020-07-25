@@ -76,7 +76,7 @@ inline static void _npi_where_scalar2(runtime::MXNetArgs args,
   op::NumpyWhereScalar2Param param;
   nnvm::NodeAttrs attrs;
   param.x = args[1].operator double();
-  param.x = args[2].operator double();
+  param.y = args[2].operator double();
   attrs.op = op;
   attrs.parsed = param;
   SetAttrDict<op::NumpyWhereScalar2Param>(&attrs);

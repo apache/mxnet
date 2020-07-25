@@ -85,6 +85,3 @@ def test_ModulatedDeformableConvolution():
         y = net(x)
         y.backward()
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

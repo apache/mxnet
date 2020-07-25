@@ -22,13 +22,13 @@ Custom Partitioner Example and Tutorial
 
 Adding custom model partitioners in MXNet used to require deep understanding of the MXNet backend, including operator registration and other internal classes, followed by recompiling MXNet from source. This feature allows adding custom partitioners by dynamically loading external libraries at runtime.
 
-This custom partitioner feature enables users to write custom model partitioning strategies without compiling against all of MXNet header files and dependencies. When a library containing custom partitioners is loaded dynamically, the components found in the library will be re-registered in MXNet so that users can use those natively just like other built-in components.
+This custom partitioner feature enables users to write custom model partitioning strategies without compiling against all of MXNet header files and dependencies. When a library containing custom partitioners is loaded dynamically, the components found in the library will be registered in MXNet so that users can use those natively just like other built-in components.
 
 ## Getting Started
 
 ### Have MXNet Ready
 
-The custom partitioner feature was merged recently (#15969) and is not available in versions of MXNet prior to v1.7.0. To use the feature now, please install MXNet either by installing the nightly pip wheel or compiling from source. For running the following example, it doesn’t matter if it is a CUDA, MKLDNN or plain MXNet build; the custom partitioner doesn’t interact with the execution of other native MXNet features. Note that if you want to write your custom partitioners running on GPU, you still need an MXNet CUDA build. 
+To run the following example, the build type of MXNet doesn’t matter since the custom partitioner doesn’t interact with the execution of other native MXNet features. Note that if you want to use your custom partitioners with models running on GPU, you still need an MXNet CUDA build. 
 
 ### Run An Example
 

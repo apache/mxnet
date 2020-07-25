@@ -37,5 +37,11 @@ if [[ ! -f $DEPS_PATH/lib/libzmq.a ]]; then
           -D BUILD_SHARED_LIBS=OFF ..
     $MAKE
     $MAKE install
+
+    if [[ ! -f $DEPS_PATH/lib/libzmq.a ]]; then
+        mkdir -p $DEPS_PATH/lib
+        cp $DEPS_PATH/lib64/*zmq* $DEPS_PATH/lib
+    fi
+
     popd
 fi

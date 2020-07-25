@@ -41,16 +41,19 @@ namespace activation {
 
 int GradNumInputs(int act_type) {
     // check activation.cu \sa ActivationGradCompute
+    if (dmlc::GetEnv("MXNET_MEMORY_OPT", 0)) {
+      return 2;
+    }
     switch (act_type) {
-        case kReLU:
-            return 2;
-        case kSoftReLU:
-        case kSoftSign:
-        case kTanh:
-        case kSigmoid:
-            return 3;
-        default:
-            CHECK(false) << "missing activation type";
+      case kReLU:
+        return 2;
+      case kSoftReLU:
+      case kSoftSign:
+      case kTanh:
+      case kSigmoid:
+        return 3;
+      default:
+        CHECK(false) << "missing activation type";
     }
     // unreachable
     return -1;
@@ -65,27 +68,34 @@ struct ActivationGrad {
   const char *op_name;
   std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
-    // ograds, output...
+    // ograds
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
-    heads.emplace_back(n, activation::kOut, 0);
-
     const NodeAttrs& attrs = n->attrs;
     using namespace activation;
     int act_type = dmlc::get<ActivationParam>(attrs.parsed).act_type;
-    // for ReLU, no need to pass input data. This enables inplace optimization during the
-    // forward pass.
-    // check activation.cu \sa ActivationGradCompute
-    switch (act_type) {
+
+    if (dmlc::GetEnv("MXNET_MEMORY_OPT", 0)) {
+      if (act_type == kSoftSign) {
+        heads.push_back(n->inputs[activation::kData]);
+      } else {
+        heads.emplace_back(n, activation::kOut, 0);
+      }
+    } else {
+      heads.emplace_back(n, activation::kOut, 0);  // output
+      // for ReLU, no need to pass input data. This enables inplace optimization
+      // during the forward pass. check activation.cu \sa ActivationGradCompute
+      switch (act_type) {
         case kReLU:
-            break;
+          break;
         case kSoftReLU:
         case kSoftSign:
         case kTanh:
         case kSigmoid:
-            heads.push_back(n->inputs[activation::kData]);
-            break;
+          heads.push_back(n->inputs[activation::kData]);
+          break;
         default:
-            CHECK(false) << "missing activation type";
+          CHECK(false) << "missing activation type";
+      }
     }
     return MakeGradNode(op_name, n, heads, n->attrs.dict);
   }

@@ -27,18 +27,27 @@ test_kvstore() {
         "-n 4 --launcher local python3 dist_device_sync_kvstore.py"
         "-n 4 --launcher local python3 dist_device_sync_kvstore_custom.py"
         "--p3 -n 4 --launcher local python3 dist_device_sync_kvstore_custom.py"
-        "-n 4 --launcher local python3 dist_sync_kvstore.py --type=init_gpu" 
+        "-n 4 --launcher local python3 dist_sync_kvstore.py --type=init_gpu"
     )
 
     for arg in "${test_args[@]}"; do
-        echo $arg
         python3 ../../tools/launch.py $arg
         if [ $? -ne 0 ]; then
             return $?
-        fi 
+        fi
     done
 }
 
+test_horovod() {
+    echo "localhost slots=2" > hosts
+    mpirun -np 2 --hostfile hosts --bind-to none --map-by slot -mca pml ob1 \
+        -mca btl ^openib python3 dist_device_sync_kvstore_horovod.py
+    if [ $? -ne 0 ]; then
+        return $?
+    fi
+}
+
 test_kvstore
+test_horovod
 
 exit $errors

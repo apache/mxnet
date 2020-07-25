@@ -435,7 +435,13 @@ void Resource::get_cudnn_dropout_desc(
   auto state_space = static_cast<resource::SpaceAllocator*>(ptr_);
   CHECK_EQ(state_space->ctx.dev_id, stream->dev_id)
     << "The device id of cuDNN dropout state space doesn't match that from stream.";
-  if (!state_space->handle.size) {
+  CUDNN_CALL(cudnnCreateDropoutDescriptor(dropout_desc));
+  if (dropout <= 0) {
+    CUDNN_CALL(cudnnSetDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
+                                         dropout,
+                                         nullptr,
+                                         0, seed));
+  } else if (!state_space->handle.size) {
     // not initialized yet.
     size_t dropout_state_size;
     CUDNN_CALL(cudnnDropoutGetStatesSize(stream->dnn_handle_, &dropout_state_size));

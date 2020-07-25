@@ -65,26 +65,25 @@ train_data = gluon.data.DataLoader(gluon.data.vision.MNIST(train=True).transform
 
 # Build a simple convolutional network
 def build_lenet(net):    
-    with net.name_scope():
-        # First convolution
-        net.add(gluon.nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
-        net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
-        # Second convolution
-        net.add(gluon.nn.Conv2D(channels=50, kernel_size=5, activation='relu'))
-        net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
-        # Flatten the output before the fully connected layers
-        net.add(gluon.nn.Flatten())
-        # First fully connected layers with 512 neurons
-        net.add(gluon.nn.Dense(512, activation="relu"))
-        # Second fully connected layer with as many neurons as the number of classes
-        net.add(gluon.nn.Dense(num_outputs))
+    # First convolution
+    net.add(gluon.nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
+    net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
+    # Second convolution
+    net.add(gluon.nn.Conv2D(channels=50, kernel_size=5, activation='relu'))
+    net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
+    # Flatten the output before the fully connected layers
+    net.add(gluon.nn.Flatten())
+    # First fully connected layers with 512 neurons
+    net.add(gluon.nn.Dense(512, activation="relu"))
+    # Second fully connected layer with as many neurons as the number of classes
+    net.add(gluon.nn.Dense(num_outputs))
 
-        return net
+    return net
 
 # Train a given model using MNIST data
 def train_model(model):
     # Initialize the parameters with Xavier initializer
-    model.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+    model.initialize(mx.init.Xavier(), ctx=ctx)
     # Use cross entropy loss
     softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
     # Use Adam optimizer
@@ -152,8 +151,6 @@ net.save_parameters(file_name)
 
 We have successfully saved the parameters of the model into a file.
 
-Note: `Block.collect_params().save()` is not a recommended way to save parameters of a Gluon network if you plan to load the parameters back into a Gluon network using `Block.load_parameters()`.
-
 ## Loading model parameters from file
 
 Let's now create a network with the parameters we saved into the file. We build the network again using the helper first and then load the weights from the file we saved using the `load_parameters` function.
@@ -180,7 +177,7 @@ def verify_loaded_model(net):
         return data.astype(np.float32)/255, label.astype(np.float32)
 
     # Load ten random images from the test dataset
-    sample_data = mx.gluon.data.DataLoader(mx.gluon.data.vision.MNIST(train=False, transform=transform),
+    sample_data = mx.gluon.data.DataLoader(mx.gluon.data.vision.MNIST(train=False).transform(transform),
                                   10, shuffle=True)
 
     for data, label in sample_data:

@@ -21,14 +21,14 @@ Run on an EC2 Instance
 This chapter shows, how to allocate a CPU/GPU instance in AWS and how to
 setup the Deep Learning environment.
 
-We first need ``an AWS account <https://aws.amazon.com/>``\ \_\_, and
+We first need `an AWS account <https://aws.amazon.com/>`_, and
 then go the EC2 console after login in.
 
 Then click "launch instance" to select the operation system and instance
 type.
 
 AWS offers
-``Deep Learning AMIs <https://docs.aws.amazon.com/dlami/latest/devguide/options.html>``\ \_\_
+`Deep Learning AMIs <https://docs.aws.amazon.com/dlami/latest/devguide/options.html>`_
 that come with the latest versions of Deep Learning frameworks. The Deep
 Learning AMIs provide all necessary packages and drivers and allow you
 to directly start implementing and training your models. Deep Learning
@@ -38,7 +38,7 @@ Learning AMI (Ubuntu) Version 19.0:
 
 We choose "p2.xlarge", which contains a single Nvidia K80 GPU. Note that
 there is a large number of instance, refer to
-``ec2instances.info <http://www.ec2instances.info/>``\ \_\_ for detailed
+`ec2instances.info <http://www.ec2instances.info/>`_ for detailed
 configurations and fees.
 
 Note that we need to check the instance limits to guarantee that we can

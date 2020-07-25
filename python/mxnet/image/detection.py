@@ -702,7 +702,7 @@ class ImageDetIter(ImageIter):
 
     def _estimate_label_shape(self):
         """Helper function to estimate label shape"""
-        max_count = 0
+        max_count, label = 0, None
         self.reset()
         try:
             while True:
@@ -712,7 +712,7 @@ class ImageDetIter(ImageIter):
         except StopIteration:
             pass
         self.reset()
-        return (max_count, label.shape[1])
+        return (max_count, label.shape[1] if label is not None else 5)
 
     def _parse_label(self, label):
         """Helper function to parse object detection label.
