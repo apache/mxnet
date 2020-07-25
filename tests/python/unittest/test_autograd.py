@@ -407,6 +407,67 @@ def test_function1():
 
 @with_seed()
 @pytest.mark.garbage_expected
+@use_np
+def test_np_function():
+    class func(Function):
+        def forward(self, x, y):
+            m = x / y
+            n = x * y
+            self.save_for_backward(x, y)
+            return m, n
+
+        def backward(self, dm, dn):
+            x, y = self.saved_tensors
+            dx = dm/y + dn*y
+            dy = dn*x - dm * x / y / y
+            return dx, dy
+
+    f = func()
+    x = mx.np.random.uniform(size=(10,))
+    x.attach_grad()
+    y = mx.np.random.uniform(size=(10,))
+    y.attach_grad()
+    with record():
+        m, n = f(x, y)
+        backward([m, n])
+
+    dx1 = x.grad.asnumpy()
+    dy1 = y.grad.asnumpy()
+
+    with record():
+        backward([x/y, x*y])
+
+    # Non-zero atol required, as exposed by seed 630179191
+    atol = 1e-6
+    assert_almost_equal(x.grad.asnumpy(), dx1, atol=atol)
+    assert_almost_equal(y.grad.asnumpy(), dy1, atol=atol)
+
+
+@with_seed()
+@pytest.mark.garbage_expected
+@use_np
+def test_np_function1():
+    class Foo(mx.autograd.Function):
+        def __init__(self):
+            super(Foo, self).__init__()
+
+        def forward(self, X):
+            return X + 1;
+
+        def backward(self, dY):
+            return dY
+
+    with mx.autograd.record():
+        X = mx.np.zeros((3, 4))
+        #X.attach_grad()  # uncommenting this line works
+        for i in range(5):
+            f = Foo()
+            X = f(X)
+        X.wait_to_read()
+
+
+@with_seed()
+@pytest.mark.garbage_expected
 def test_get_symbol():
     x = mx.nd.ones((1,))
     x.attach_grad()
