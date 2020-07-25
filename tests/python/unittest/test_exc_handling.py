@@ -58,7 +58,7 @@ def test_exc_symbolic():
                'y': mx.nd.random.normal(0, 1, x_shape, ctx=default_context()),
                'z': mx.nd.random.normal(0, 1, z_shape, ctx=default_context())}
         arr_grad = {'x': mx.nd.empty(x_shape), 'y': mx.nd.empty(x_shape), 'z': mx.nd.empty(z_shape)}
-        exec1 = out.bind(ctx=default_context(), args=arr, args_grad=arr_grad)
+        exec1 = out._bind(ctx=default_context(), args=arr, args_grad=arr_grad)
         outputs = exec1.forward()
         if exec_backward:
             exec1.backward()
@@ -88,9 +88,9 @@ def test_exc_gluon():
         model.add(nn.Dropout(1))
         model.add(nn.Dense(64, activation='tanh', in_units=256),
                   nn.Dense(32, in_units=64))
+        model.initialize(ctx=[default_context()])
         x = mx.sym.var('data')
         y = model(x)
-        model.collect_params().initialize(ctx=[default_context()])
         z = model(mx.nd.random.normal(10, -10, (32, 2, 10), ctx=default_context()))
         if waitall:
             mx.nd.waitall()
@@ -178,11 +178,10 @@ def run_training_iteration(data):
     output = net(data)
 
     net = gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.add(gluon.nn.Dense(10))
+    net.add(gluon.nn.Dense(10))
 
     ctx = default_context()
-    net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+    net.initialize(mx.init.Xavier(), ctx=ctx)
     data = mx.nd.ones((3, 4))
     mx.profiler.set_state("run")
     run_training_iteration(data)

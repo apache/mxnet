@@ -115,10 +115,6 @@
 #define MXNET_USE_F16C MSHADOW_USE_F16C
 #endif
 
-#ifndef MXNET_USE_CAFFE
-#define MXNET_USE_CAFFE 0
-#endif
-
 #ifndef MXNET_USE_DIST_KVSTORE
 #define MXNET_USE_DIST_KVSTORE 0
 #endif
@@ -183,9 +179,7 @@ enum : unsigned {
   OPENCV,
 
   // Misc
-  CAFFE,
   DIST_KVSTORE,
-  CXX14,
   INT64_TENSOR_SIZE,
 
   // Signal handler to print stack traces on exceptions

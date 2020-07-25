@@ -50,7 +50,6 @@ Neural Network
     Concurrent
     HybridConcurrent
     Identity
-    SparseEmbedding
     SyncBatchNorm
     PixelShuffle1D
     PixelShuffle2D

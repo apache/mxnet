@@ -88,5 +88,4 @@ LICENSE.binary.dependencies
 .*FindCUDAToolkit.cmake
 .*select_compute_arch.cmake
 image-classification-predict.cc
-np_einsum_op-inl.h
 DISCLAIMER-WIP

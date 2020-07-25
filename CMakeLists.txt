@@ -54,7 +54,8 @@ option(USE_OPENMP "Build with Openmp support" ON)
 cmake_dependent_option(USE_NVML "Build with nvml support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
 cmake_dependent_option(USE_NVTX "Build with nvtx support if found" ON "USE_CUDA" OFF)
-cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
+cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
+  "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL amd64" OFF)
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
 option(USE_LAPACK "Build with lapack support" ON)
 option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
@@ -73,7 +74,6 @@ option(USE_JEMALLOC "Build with Jemalloc support" OFF)
 option(USE_LIBJPEG_TURBO "Use libjpeg-turbo" OFF)
 option(USE_DIST_KVSTORE "Build with DIST_KVSTORE support" OFF)
 option(USE_PLUGINS_WARPCTC "Use WARPCTC Plugins" OFF)
-option(USE_PLUGIN_CAFFE "Use Caffe Plugin" OFF)
 option(USE_CPP_PACKAGE "Build C++ Package" OFF)
 option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 option(USE_GPROF "Compile with gprof (profiling) flag" OFF)
@@ -385,7 +385,6 @@ endif()
 
 # ---[ OpenMP
 if(USE_OPENMP)
-
   function(load_omp)
     # Intel/llvm OpenMP: https://github.com/llvm-mirror/openmp
     set(OPENMP_STANDALONE_BUILD TRUE)
@@ -426,8 +425,12 @@ if(USE_OPENMP)
       add_definitions(-DMXNET_USE_OPENMP=1)
     endif()
   endif()
-elseif(UNIX AND NOT ANDROID)
-  list(APPEND mxnet_LINKER_LIBS pthread)
+elseif(UNIX)
+  # Prefer compiler pthread flag. This is the recommended way, but not backwards
+  # compatible and thus not the cmake default.
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+  find_package(Threads REQUIRED)
+  list(APPEND mxnet_LINKER_LIBS Threads::Threads)
 endif()
 
 
@@ -517,39 +520,6 @@ if(USE_OPERATOR_TUNING AND USE_OPENMP)
   add_definitions(-DMXNET_USE_OPERATOR_TUNING=1)
 endif()
 
-if(USE_PLUGIN_CAFFE)
-  if(NOT USE_CUDA)
-    set(CPU_ONLY ON)
-    add_definitions(-DCPU_ONLY=1)
-  endif()
-  if(NOT DEFINED CAFFE_PATH)
-    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/caffe)
-      set(CAFFE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/caffe)
-    else()
-      set(CAFFE_PATH $ENV{CAFFE_PATH})
-    endif()
-  endif()
-  list(APPEND CMAKE_MODULE_PATH ${CAFFE_PATH}/cmake)
-  include_directories(${CAFFE_PATH}/include)
-  include_directories(${CAFFE_PATH}/build/src)
-  include_directories(${CMAKE_BINARY_DIR}/caffe/include)
-  link_directories(${CAFFE_PATH}/build/lib)
-  if(NOT DEFINED CAFFE_PATH)
-    message(FATAL_ERROR "Please set CAFFE_PATH to point to the caffe source installation")
-  endif()
-  FILE(GLOB_RECURSE PLUGINS_SOURCE "plugin/caffe/*.cc" "plugin/caffe/*.h")
-  FILE(GLOB_RECURSE PLUGINS_CUSRC "plugin/caffe/*.cu")
-  list(APPEND SOURCE ${PLUGINS_SOURCE})
-  list(APPEND CUDA ${PLUGINS_CUSRC})
-  include_directories(${CMAKE_BINARY_DIR}/include)
-  add_definitions(-DMXNET_USE_CAFFE=1)
-  list(APPEND mxnet_LINKER_LIBS
-    protobuf boost_system boost_thread boost_filesystem
-    gflags glog caffe
-    ${Caffe_LINKER_LIBS}
-)
-endif()
-
 if (NOT (EXTRA_OPERATORS STREQUAL ""))
     mxnet_source_group("Extra"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cc")
     mxnet_source_group("Extra\\Cuda"   GLOB_RECURSE "${EXTRA_OPERATORS}/*.cu")
@@ -635,14 +605,6 @@ if(USE_CUDA)
   include_directories(${CUDAToolkit_INCLUDE_DIRS})
   link_directories(${CUDAToolkit_LIBRARY_DIR})
 endif()
-
-# unsupported: if caffe is a subdirectory of mxnet, load its CMakeLists.txt as well
-if(USE_PLUGIN_CAFFE)
-  if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/caffe)
-    add_subdirectory(caffe)
-  endif()
-endif()
-
 
 if(MSVC)
   set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /EHsc")
@@ -894,19 +856,11 @@ if(INSTALL_PYTHON_VERSIONS)
   endforeach()
 endif()
 
-if(USE_CPP_PACKAGE)
-  add_subdirectory(cpp-package)
-  target_compile_definitions(mxnet PUBLIC MXNET_USE_CPP_PACKAGE=1)
-  if(BUILD_CPP_EXAMPLES)
-    add_subdirectory(example/image-classification/predict-cpp)
-  endif()
-endif()
-
 add_subdirectory(tests)
 
 # ---[ Linter target
 find_package(Python3)
-set(LINT_DIRS "include src plugin cpp-package tests")
+set(LINT_DIRS "include src plugin tests")
 set(EXCLUDE_PATH "src/operator/contrib/ctc_include")
 add_custom_target(mxnet_lint COMMAND ${CMAKE_COMMAND} -DMSVC=${MSVC} -DPYTHON_EXECUTABLE=${Python3_EXECUTABLE} -DLINT_DIRS=${LINT_DIRS} -DPROJECT_SOURCE_DIR=${CMAKE_CURRENT_SOURCE_DIR} -DPROJECT_NAME=mxnet -DEXCLUDE_PATH=${EXCLUDE_PATH} -P ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake/lint.cmake)
 

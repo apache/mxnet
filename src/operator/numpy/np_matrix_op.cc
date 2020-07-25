@@ -51,7 +51,6 @@ bool NumpyTransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
   mxnet::TShape& out_shp = (*out_attrs)[0];
-  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
 
   int ndim = -1;
   if (ndim_is_known(shp)) {
@@ -133,6 +132,10 @@ NNVM_REGISTER_OP(_npi_transpose)
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", NumpyTranspose<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FListInputNames>("FListInputNames",
   [](const NodeAttrs& attrs) {
     return std::vector<std::string>{"a"};
@@ -1261,7 +1264,6 @@ bool NumpyRollaxisShape(const nnvm::NodeAttrs& attrs,
 
   // check transpose dimentions no more than 6
   mxnet::TShape& shp = (*in_attrs)[0];
-  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
 
   // check axis and start range
   CHECK_GE(param.axis, -shp.ndim())
@@ -1304,6 +1306,10 @@ until it lies in a given position.)code" ADD_FILELINE)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<FCompute>("FCompute<cpu>", NumpyRollaxisCompute<cpu>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseNone{"_npi_rollaxis_backward"})
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .add_argument("data", "NDArray-or-Symbol", "Input ndarray")
 .add_arguments(NumpyRollaxisParam::__FIELDS__());
 
@@ -1312,7 +1318,11 @@ NNVM_REGISTER_OP(_npi_rollaxis_backward)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NumpyRollaxisParam>)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
-.set_attr<FCompute>("FCompute<cpu>", NumpyRollaxisBackward<cpu>);
+.set_attr<FCompute>("FCompute<cpu>", NumpyRollaxisBackward<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  });
 
 template<>
 void NumpyFlipForwardImpl<cpu>(const OpContext& ctx,
@@ -1368,7 +1378,6 @@ bool NumpyMoveaxisShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
-  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
   CHECK_EQ(param.source.ndim(), param.destination.ndim())
     << "source and destination not equal.";
   mxnet::TShape ret(shp.ndim(), -1);

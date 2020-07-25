@@ -177,12 +177,11 @@ def test_trainer_multi_layer_init():
     class Net(gluon.Block):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                # sparse param
-                self.embed_weight = self.params.get('embed_weight', stype='row_sparse',
-                                                    shape=(4,3), grad_stype='row_sparse')
-                # dense param from a hybrid block
-                self.dense0 = nn.Dense(2)
+            # sparse param
+            self.embed_weight = gluon.Parameter('embed_weight', stype='row_sparse',
+                                                shape=(4,3), grad_stype='row_sparse')
+            # dense param from a hybrid block
+            self.dense0 = nn.Dense(2)
 
         def forward(self, x):
             embed_weight = self.embed_weight.row_sparse_data(x)
@@ -191,7 +190,7 @@ def test_trainer_multi_layer_init():
             return self.dense0(embed)
 
     def check_init(ctxes):
-        net = Net(prefix='net_')
+        net = Net()
         net.initialize(mx.init.One(), ctx=ctxes)
         trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 1})
         data = mx.nd.array([[0,2], [1,2]])
@@ -221,11 +220,11 @@ def test_trainer_multi_layer_init():
 @with_seed()
 def test_trainer_reset_kv():
     def check_trainer_reset_kv(kv):
-        params = gluon.ParameterDict()
-        x = params.get('x', shape=(10,), lr_mult=1.0)
-        params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+        x = gluon.Parameter('x', shape=(10,), lr_mult=1.0)
+        params = {'x': x}
+        x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         trainer = gluon.Trainer(params, 'sgd', {'learning_rate': 0.1}, kvstore=kv)
-        params.save('test_trainer_reset_kv.params')
+        mx.nd.save('test_trainer_reset_kv.params', {k: v._reduce() for k, v in params.items()})
         with mx.autograd.record():
             for w in x.list_data():
                 y = w + 1
@@ -234,7 +233,8 @@ def test_trainer_reset_kv():
         assert trainer._kvstore.type == kv
         # load would reset kvstore
         mx.nd.waitall()
-        params.load('test_trainer_reset_kv.params')
+        params = mx.nd.load('test_trainer_reset_kv.params')
+        x._load_init(params['x'], None)
         if trainer._update_on_kvstore:
             # drop kvstore state if new parameters are loaded
             assert trainer._kvstore is None
@@ -255,10 +255,9 @@ def test_trainer_reset_kv():
 @with_seed()
 def test_trainer_sparse_kv():
     def check_trainer_sparse_kv(kv, stype, grad_stype, update_on_kv, expected):
-        params = gluon.ParameterDict()
-        x = params.get('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
-        params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-        trainer = gluon.Trainer(params, 'sgd', {'learning_rate': 0.1},
+        x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
+        x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+        trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},
                                 kvstore=kv, update_on_kvstore=update_on_kv)
         all_rows = mx.nd.arange(0, 10, ctx=mx.cpu(0))
         try:
@@ -337,11 +336,26 @@ def test_gluon_trainer_param_order():
     layers = {'ones_': 1, 'zeros_': 0}
     for name, init in layers.items():
         net.add(mx.gluon.nn.Dense(10, in_units=10, weight_initializer=mx.init.Constant(init),
-                                  use_bias=False, prefix=name))
-    params = net.collect_params()
+                                  use_bias=False))
     net.initialize()
+    params = net.collect_params()
     trainer = gluon.Trainer(params, 'sgd')
     for name, init in layers.items():
         expected_idx = 0 if name == 'ones_' else 1
-        expected_name = name + 'weight'
-        assert trainer._params[expected_idx].name == expected_name
+        expected_name = '{}.weight'.format(expected_idx)
+        assert trainer._params[expected_idx].name == params[expected_name].name
+
+
+def test_trainer_allreduce_hybridsequential():
+    contexts = [mx.cpu(0), mx.cpu(1)]
+    net = mx.gluon.nn.HybridSequential()
+    for _ in range(8):  # Create a network with 8 layers
+        net.add(mx.gluon.nn.Dense(1, weight_initializer='ones', bias_initializer='ones'))
+    net.initialize(ctx=contexts)
+    net.hybridize()
+    trainer = mx.gluon.Trainer(net.collect_params(), 'sgd', update_on_kvstore=False)
+    for ctx in contexts:
+        with mx.autograd.record():
+            out = net(mx.nd.ones((1, 1), ctx=ctx))
+        out.backward()
+    trainer.allreduce_grads()

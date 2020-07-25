@@ -22,30 +22,30 @@ from mxnet import gluon
 from mxnet.gluon import contrib
 from mxnet.gluon import nn
 from mxnet.gluon.contrib.nn import (
-    Concurrent, HybridConcurrent, Identity, SparseEmbedding, PixelShuffle1D,
+    Concurrent, HybridConcurrent, Identity, PixelShuffle1D,
     PixelShuffle2D, PixelShuffle3D)
 from mxnet.test_utils import almost_equal, default_context, assert_almost_equal, assert_allclose
 from common import setup_module, with_seed, teardown_module
 import numpy as np
 
 
-def check_rnn_cell(cell, prefix, in_shape=(10, 50), out_shape=(10, 100), begin_state=None):
+def check_rnn_cell(cell, in_shape=(10, 50), out_shape=(10, 100), begin_state=None):
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs, begin_state=begin_state)
     outputs = mx.sym.Group(outputs)
-    assert sorted(cell.collect_params().keys()) == [prefix+'h2h_bias', prefix+'h2h_weight',
-                                                    prefix+'i2h_bias', prefix+'i2h_weight']
-    assert outputs.list_outputs() == [prefix+'t0_out_output', prefix+'t1_out_output', prefix+'t2_out_output']
+    assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight',
+                                                    'i2h_bias', 'i2h_weight']
+    assert outputs.list_outputs() == [type(cell).__name__.lower() + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
 
     args, outs, auxs = outputs.infer_shape(rnn_t0_data=in_shape,
                                            rnn_t1_data=in_shape,
                                            rnn_t2_data=in_shape)
-    assert outs == [out_shape]*3
+    assert outs == [out_shape] * 3
 
 
 def check_rnn_forward(layer, inputs):
     inputs.attach_grad()
-    layer.collect_params().initialize()
+    layer.initialize()
     with mx.autograd.record():
         layer.unroll(3, inputs, merge_outputs=True)[0].backward()
         mx.autograd.backward(layer.unroll(3, inputs, merge_outputs=False)[0])
@@ -70,38 +70,38 @@ def test_rnn_cells():
 
 @with_seed()
 def test_convrnn():
-    cell = contrib.rnn.Conv1DRNNCell((10, 50), 100, 3, 3, prefix='rnn_')
-    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 48))
+    cell = contrib.rnn.Conv1DRNNCell((10, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 50), out_shape=(1, 100, 48))
 
-    cell = contrib.rnn.Conv2DRNNCell((10, 20, 50), 100, 3, 3, prefix='rnn_')
-    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 50), out_shape=(1, 100, 18, 48))
+    cell = contrib.rnn.Conv2DRNNCell((10, 20, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 50), out_shape=(1, 100, 18, 48))
 
-    cell = contrib.rnn.Conv3DRNNCell((10, 20, 30, 50), 100, 3, 3, prefix='rnn_')
-    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
+    cell = contrib.rnn.Conv3DRNNCell((10, 20, 30, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
 @with_seed()
 def test_convlstm():
-    cell = contrib.rnn.Conv1DLSTMCell((10, 50), 100, 3, 3, prefix='rnn_')
-    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 48))
+    cell = contrib.rnn.Conv1DLSTMCell((10, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 50), out_shape=(1, 100, 48))
 
-    cell = contrib.rnn.Conv2DLSTMCell((10, 20, 50), 100, 3, 3, prefix='rnn_')
-    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 50), out_shape=(1, 100, 18, 48))
+    cell = contrib.rnn.Conv2DLSTMCell((10, 20, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 50), out_shape=(1, 100, 18, 48))
 
-    cell = contrib.rnn.Conv3DLSTMCell((10, 20, 30, 50), 100, 3, 3, prefix='rnn_')
-    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
+    cell = contrib.rnn.Conv3DLSTMCell((10, 20, 30, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
 @with_seed()
 def test_convgru():
-    cell = contrib.rnn.Conv1DGRUCell((10, 50), 100, 3, 3, prefix='rnn_')
-    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 50), out_shape=(1, 100, 48))
+    cell = contrib.rnn.Conv1DGRUCell((10, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 50), out_shape=(1, 100, 48))
 
-    cell = contrib.rnn.Conv2DGRUCell((10, 20, 50), 100, 3, 3, prefix='rnn_')
-    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 50), out_shape=(1, 100, 18, 48))
+    cell = contrib.rnn.Conv2DGRUCell((10, 20, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 50), out_shape=(1, 100, 18, 48))
 
-    cell = contrib.rnn.Conv3DGRUCell((10, 20, 30, 50), 100, 3, 3, prefix='rnn_')
-    check_rnn_cell(cell, prefix='rnn_', in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
+    cell = contrib.rnn.Conv3DGRUCell((10, 20, 30, 50), 100, 3, 3)
+    check_rnn_cell(cell, in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
 @with_seed()
@@ -116,12 +116,12 @@ def test_conv_fill_shape():
 def test_lstmp():
     nhid = 100
     nproj = 64
-    cell = contrib.rnn.LSTMPCell(nhid, nproj, prefix='rnn_')
+    cell = contrib.rnn.LSTMPCell(nhid, nproj)
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(3)]
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
-    expected_params = ['rnn_h2h_bias', 'rnn_h2h_weight', 'rnn_h2r_weight', 'rnn_i2h_bias', 'rnn_i2h_weight']
-    expected_outputs = ['rnn_t0_out_output', 'rnn_t1_out_output', 'rnn_t2_out_output']
+    expected_params = ['h2h_bias', 'h2h_weight', 'h2r_weight', 'i2h_bias', 'i2h_weight']
+    expected_outputs = [type(cell).__name__.lower() + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
     assert sorted(cell.collect_params().keys()) == expected_params
     assert outputs.list_outputs() == expected_outputs, outputs.list_outputs()
 
@@ -132,11 +132,11 @@ def test_lstmp():
 @with_seed()
 def test_vardrop():
     def check_vardrop(drop_inputs, drop_states, drop_outputs):
-        cell = contrib.rnn.VariationalDropoutCell(mx.gluon.rnn.RNNCell(100, prefix='rnn_'),
+        cell = contrib.rnn.VariationalDropoutCell(mx.gluon.rnn.RNNCell(100),
                                                   drop_outputs=drop_outputs,
                                                   drop_states=drop_states,
                                                   drop_inputs=drop_inputs)
-        cell.collect_params().initialize(init='xavier')
+        cell.initialize(init='xavier')
         input_data = mx.nd.random_uniform(shape=(10, 3, 50), ctx=mx.context.current_context())
         with mx.autograd.record():
             outputs1, _ = cell.unroll(3, input_data, merge_outputs=True)
@@ -194,18 +194,6 @@ def test_identity():
     model = Identity()
     x = mx.nd.random.uniform(shape=(128, 33, 64))
     assert_almost_equal(model(x), x)
-
-@with_seed()
-def test_sparse_embedding():
-    layer = SparseEmbedding(10, 100)
-    layer.initialize()
-    trainer = mx.gluon.Trainer(layer.collect_params(), 'sgd')
-    x = mx.nd.array([3,4,2,0,1])
-    with mx.autograd.record():
-        y = layer(x)
-        y.backward()
-    assert (layer.weight.grad().asnumpy()[:5] == 1).all()
-    assert (layer.weight.grad().asnumpy()[5:] == 0).all()
 
 def test_pixelshuffle1d():
     nchan = 2
@@ -315,9 +303,9 @@ def test_sampler():
 
 
 class RNNLayer(gluon.HybridBlock):
-    def __init__(self, cell_type, hidden_size, layout, prefix=None, params=None):
-        super(RNNLayer, self).__init__(prefix=prefix, params=params)
-        self.cell = cell_type(hidden_size, prefix='rnn_')
+    def __init__(self, cell_type, hidden_size, layout):
+        super(RNNLayer, self).__init__()
+        self.cell = cell_type(hidden_size)
         self.layout = layout
 
     def hybrid_forward(self, F, inputs, states, valid_length):
@@ -343,7 +331,7 @@ def check_unroll(cell_type, num_states, layout):
     state_shape = (batch_size, hidden_size)
     states = [mx.nd.normal(loc=0, scale=1, shape=state_shape) for i in range(num_states)]
 
-    cell = cell_type(hidden_size, prefix='rnn_')
+    cell = cell_type(hidden_size)
     cell.initialize(ctx=default_context())
     if layout == 'TNC':
         cell(rnn_data[0], states)
@@ -376,7 +364,7 @@ def check_unroll(cell_type, num_states, layout):
         res2, states2 = layer(rnn_data, states, valid_length)
         params2 = layer.collect_params()
         for key, val in orig_params1.items():
-            params2[key].set_data(copy.deepcopy(val.data()))
+            params2['cell.' + key].set_data(copy.deepcopy(val.data()))
 
         trainer = gluon.Trainer(params2, 'sgd', {'learning_rate' : 0.03})
         with mx.autograd.record():
@@ -390,7 +378,7 @@ def check_unroll(cell_type, num_states, layout):
 
         for key, val in params1.items():
             weight1 = val.data()
-            weight2 = params2[key].data()
+            weight2 = params2['cell.' + key].data()
             assert_almost_equal(weight1, weight2, rtol=0.001, atol=0.0001)
 
 

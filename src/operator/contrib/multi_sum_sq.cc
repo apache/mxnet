@@ -18,10 +18,10 @@
  */
 
 /*!
- *  Copyright (c) 2019 by Contributors
+ *  Copyright (c) 2020 by Contributors
  * \file multi_sum_sq.cc
  * \brief vectorized sum or squared over multiple arrays operators
- * \author Clement Fuji Tsang, Andrei Ivanov, Moises Hernandez
+ * \author Clement Fuji Tsang, Andrei Ivanov, Moises Hernandez, Shuai Zheng
  */
 
 #include "./multi_sum_sq-inl.h"
@@ -67,7 +67,7 @@ size_t GetRequiredStorageMultiSumSq<cpu>(const std::vector<TBlob> &inputs,
 
 template<typename DType>
 inline void CalcSumSq(const std::vector<TBlob> &inputs, int n_inputs,
-                      float *out_ptr, mshadow::Stream<cpu> *s) {
+                      float *out_ptr, mshadow::Stream<cpu> *s, float scale) {
   int i;
   size_t j;
 #pragma omp parallel for private(i, j)
@@ -75,18 +75,22 @@ inline void CalcSumSq(const std::vector<TBlob> &inputs, int n_inputs,
     float sum = 0;
     const auto address = inputs[i].FlatTo2D<cpu, DType>(s).dptr_;
     const auto j_max = inputs[i].shape_.Size();
-    for (j = 0; j < j_max; ++j)
-      sum += address[j] * address[j];
-
+    for (j = 0; j < j_max; ++j) {
+      auto val = static_cast<float>(address[j]);
+      if (scale != 1.0f) {
+         val *= scale;
+      }
+      sum += val * val;
+    }
     out_ptr[i] = sum;
   }
 }
 
 template<>
 void MultiSumSqRun<cpu>(const std::vector<TBlob> &inputs, int n_inputs,
-                        float *out_ptr, const OpContext &ctx) {
+                        float *out_ptr, const OpContext &ctx, float scale) {
   MSHADOW_REAL_TYPE_SWITCH(inputs[0].type_flag_, DType,
-    CalcSumSq<DType>(inputs, n_inputs, out_ptr, ctx.get_stream<cpu>());
+    CalcSumSq<DType>(inputs, n_inputs, out_ptr, ctx.get_stream<cpu>(), scale);
   )
 }
 

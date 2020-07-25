@@ -86,22 +86,6 @@ bool ElemwiseBinaryOp::BackwardUseInStorageType(const nnvm::NodeAttrs& attrs,
                                        dispatch_mode, dispatch_ex);
     }
   }
-  if (!dispatched && ograd_stype == kDefaultStorage &&
-      ((lhs_stype == kCSRStorage && rhs_stype == kDefaultStorage) ||
-       (lhs_stype == kDefaultStorage && rhs_stype == kCSRStorage))) {
-    const bool reverse = (lhs_stype == kCSRStorage);
-    if (reverse &&
-        type_assign(&lhs_grad_stype, kDefaultStorage) &&
-        type_assign(&rhs_grad_stype, kCSRStorage)) {
-      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
-      dispatched = true;
-    } else if (!reverse &&
-               type_assign(&lhs_grad_stype, kCSRStorage) &&
-               type_assign(&rhs_grad_stype, kDefaultStorage)) {
-      DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
-      dispatched = true;
-    }
-  }
   if (!dispatched) {
     dispatched = dispatch_fallback(out_attrs, dispatch_mode);
   }

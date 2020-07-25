@@ -47,7 +47,6 @@ For example:
 `./build_python_dockerfile.sh 1.3.0 1.3.0.post0 ~/build-docker/incubator-mxnet`
 
 ### Tests run
-* [train_mnist.py](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_mnist.py)
 * [test_mxnet.py](https://github.com/apache/incubator-mxnet/blob/master/docker/docker-python/test_mxnet.py): This script is used to make sure that the docker image builds the expected mxnet version. That is, the version picked by pip is the same as as the version passed as a parameter.
 
 ### Dockerhub Credentials

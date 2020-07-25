@@ -24,6 +24,9 @@ This script is a wrapper around `build_lib.sh. It simplifies the build by
 automatically identifing the system version, number of cores, and all
 environment variable settings. Here are examples you can run with this script:
 
+You need to install `patchelf` first, for example via `apt install patchelf` on
+Ubuntu systems.
+
 ```
 tools/staticbuild/build.sh cu102
 ```
@@ -34,16 +37,6 @@ tools/staticbuild/build.sh cpu
 ```
 
 This would build the mxnet package based on MKL-DNN.
-
-To use CMake to build the `libmxnet.so` instead of the deprecated Makefile based
-build logic, set the `CMAKE_STATICBUILD` environment variable. For example
-
-```
-CMAKE_STATICBUILD=1 tools/staticbuild/build.sh cpu
-```
-
-For the CMake build, you need to install `patchelf` first, for example via `apt
-install patchelf` on Ubuntu systems.
 
 As the result, users would have a complete static dependencies in `/staticdeps` in the root folder as well as a static-linked `libmxnet.so` file lives in `lib`. You can build your language binding by using the `libmxnet.so`.
 

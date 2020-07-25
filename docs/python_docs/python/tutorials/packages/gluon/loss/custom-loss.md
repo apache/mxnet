@@ -75,15 +75,13 @@ Our network consists of 2 convolutional and max pooling layers that downsample t
 class Siamese(gluon.HybridBlock):
     def __init__(self, **kwargs):
         super(Siamese, self).__init__(**kwargs)
-        with self.name_scope():
-            self.cnn = gluon.nn.HybridSequential()
-            with self.cnn.name_scope():
-                self.cnn.add(gluon.nn.Conv2D(64, 5, activation='relu'))
-                self.cnn.add(gluon.nn.MaxPool2D(2, 2))
-                self.cnn.add(gluon.nn.Conv2D(64, 5, activation='relu'))
-                self.cnn.add(gluon.nn.MaxPool2D(2, 2))
-                self.cnn.add(gluon.nn.Dense(256, activation='relu'))
-                self.cnn.add(gluon.nn.Dense(2, activation='softrelu'))
+        self.cnn = gluon.nn.HybridSequential()
+        self.cnn.add(gluon.nn.Conv2D(64, 5, activation='relu'))
+        self.cnn.add(gluon.nn.MaxPool2D(2, 2))
+        self.cnn.add(gluon.nn.Conv2D(64, 5, activation='relu'))
+        self.cnn.add(gluon.nn.MaxPool2D(2, 2))
+        self.cnn.add(gluon.nn.Dense(256, activation='relu'))
+        self.cnn.add(gluon.nn.Dense(2, activation='softrelu'))
 
     def hybrid_forward(self, F, input0, input1):
         out0 = self.cnn(input0)

@@ -39,7 +39,6 @@ import numpy as np
 import mxnet as mx
 import mxnet.gluon as gluon
 from mxnet import autograd
-from mxnet.test_utils import download_model
 import gluoncv as gcv
 from gluoncv.model_zoo import get_model
 
@@ -99,7 +98,7 @@ def get_network():
         warnings.simplefilter("ignore")
         net = get_model(net_name, pretrained_base=True, norm_layer=gluon.nn.BatchNorm)
         net.initialize()
-        net.collect_params().reset_ctx(ctx)
+        net.reset_ctx(ctx)
 
     return net
 ```
@@ -273,7 +272,7 @@ with mx.Context(mx.gpu(0)):
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter("ignore")
         model = get_model("resnet50_v1")
-        model.collect_params().initialize(ctx=mx.current_context())
+        model.initialize(ctx=mx.current_context())
         model.hybridize()
         model(mx.nd.zeros((1, 3, 224, 224)))
         converted_model = amp.convert_hybrid_block(model)
@@ -291,4 +290,3 @@ Also, you can force cast the params wherever possible to FP16.
 ## Current limitations of AMP
 
 - AMP's dynamic loss scaling currently supports only Gluon trainer with `update_on_kvstore=False` option set
-- Using `SoftmaxOutput`, `LinearRegressionOutput`, `LogisticRegressionOutput`, `MAERegressionOutput` with dynamic loss scaling does not work when training networks with multiple Gluon trainers and so multiple loss scales

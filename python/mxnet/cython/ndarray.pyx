@@ -126,15 +126,36 @@ cdef class CachedOp:
     def __del__(self):
         CALL(MXFreeCachedOp(self.chandle))
 
-    def __call__(self, *args, out=None):
+    def get_optimized_symbol(self):
+        """Get an optimized version of the symbol from the cached op.
+
+        Returns
+        -------
+        symbol : Symbol
+            Optimized symbol from the executor.
+        """
+        from ..symbol import Symbol
+        cdef SymbolHandle shandle
+        CALL(MXCachedOpGetOptimizedSymbol(self.chandle, &shandle))
+        ret = Symbol(_ctypes.cast(<unsigned long long>shandle, _ctypes.c_void_p))
+        return ret
+
+    def __call__(self, *args, out=None, default_ctx=None):
         """ctypes implementation of imperative invoke wrapper"""
         cdef vector[NDArrayHandle] ndvars
         cdef vector[NDArrayHandle] output_vars
         cdef NDArrayHandle* p_output_vars
         cdef NDArrayHandle ret_handle
+        cdef int default_ctx_type
+        cdef int default_ctx_dev_id
         cdef int num_output
         cdef const int* p_output_stypes
 
+        if len(args) == 1 and args[0] is None:
+            args = []
+            assert default_ctx is not None, 'default_ctx is required if no input is provided'
+        else:
+            default_ctx = args[0].ctx if default_ctx is None else default_ctx
         for i in args:
             ndvars.push_back((<NDArrayBase>i).chandle)
 
@@ -157,6 +178,8 @@ cdef class CachedOp:
             self.chandle,
             <int>len(args),
             &ndvars[0] if ndvars.size() != 0 else NULL,
+            <int>(default_ctx.device_typeid),
+            <int>(default_ctx.device_id),
             &num_output,
             &p_output_vars,
             &p_output_stypes))
