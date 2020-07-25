@@ -180,7 +180,6 @@ enum : unsigned {
 
   // Misc
   DIST_KVSTORE,
-  CXX14,
   INT64_TENSOR_SIZE,
 
   // Signal handler to print stack traces on exceptions
