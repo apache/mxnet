@@ -25,7 +25,9 @@ import os
 import logging
 import os.path as op
 import platform
+import pytest
 
+@pytest.mark.garbage_expected
 def test_environment():
     name1 = 'MXNET_TEST_ENV_VAR_1'
     name2 = 'MXNET_TEST_ENV_VAR_2'
