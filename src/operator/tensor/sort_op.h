@@ -60,7 +60,7 @@ inline void SortByKey(mshadow::Tensor<cpu, 1, KDType> keys, mshadow::Tensor<cpu,
                       bool is_ascend = true, mshadow::Tensor<cpu, 1, char>* workspace = nullptr,
                       const int begin_bit = 0, const int end_bit = sizeof(KDType)*8,
                       mshadow::Tensor<cpu, 1, KDType>* sorted_keys = nullptr,
-                      mshadow::Tensor<cpu, 1, VDType>* sorted_values = nullptr, 
+                      mshadow::Tensor<cpu, 1, VDType>* sorted_values = nullptr,
                       int batch_size = 1) {
   CHECK_EQ(keys.CheckContiguous(), true);
   CHECK_EQ(values.CheckContiguous(), true);
