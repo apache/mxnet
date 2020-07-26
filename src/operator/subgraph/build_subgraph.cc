@@ -415,6 +415,8 @@ void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector
       // to make sure CachedOp gets external input.
       if (filtered_nodes.size() > 0 && !HasInputEntries(*g, simple_nodes, filtered_nodes)) {
         filtered_nodes.erase(filtered_nodes.begin());
+        // reject subgraph if it only contains single node
+        filtered_nodes = subgraph_selector->Filter(filtered_nodes);
       }
     }
 
