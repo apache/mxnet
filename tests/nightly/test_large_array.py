@@ -1216,8 +1216,10 @@ def test_linalg():
 
         A = get_identity_mat(LARGE_SQ_X)
         grad, out = run_det(A)
+        assert(out.shape == (1,))
         assert(out[0] == 1)
         out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
         assert(grad[0, 0] == 1)
 
     def check_inverse():
@@ -1229,8 +1231,10 @@ def test_linalg():
 
         A = get_identity_mat(LARGE_SQ_X)
         grad, out = run_inverse(A)
+        assert(out.shape == (LARGE_SQ_X, LARGE_SQ_X))
         assert(out[0, 0] == 1)
         out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
         assert(grad[0, 0] == -1)
 
     def check_trmm():
@@ -1242,8 +1246,10 @@ def test_linalg():
 
         A = get_identity_mat(LARGE_SQ_X)
         grad, out = run_trmm(A)
+        assert(out.shape == (LARGE_SQ_X, LARGE_SQ_X))
         assert(out[0, 0] == 1)
         out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
         assert(grad[0, 0] == 2)
 
     def check_trsm():
@@ -1255,8 +1261,10 @@ def test_linalg():
 
         A = get_identity_mat(LARGE_SQ_X)
         grad, out = run_trsm(A)
+        assert(out.shape == (LARGE_SQ_X, LARGE_SQ_X))
         assert(out[0, 0] == 1)
         out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
         assert(grad[0, 0] == 0)
 
     def check_batch_inverse():
@@ -1268,9 +1276,11 @@ def test_linalg():
 
         B = get_identity_mat_batch(LARGE_SQ_X)
         grad, out = run_inverse(B)
+        assert(out.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
         assert(out[0, 0, 0] == 1)
         assert(out[1, 0, 0] == 1)
         out.backward()
+        assert(grad.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
         assert(grad[0, 0, 0] == -1)
         assert(grad[1, 0, 0] == -1)
 
@@ -1283,9 +1293,11 @@ def test_linalg():
 
         B = get_identity_mat_batch(LARGE_SQ_X)
         grad, out = run_trmm(B)
+        assert(out.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
         assert(out[0, 0, 0] == 1)
         assert(out[1, 0, 0] == 1)
         out.backward()
+        assert(grad.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
         assert(grad[0, 0, 0] == 2)
         assert(grad[1, 0, 0] == 2)
 
@@ -1298,9 +1310,11 @@ def test_linalg():
 
         B = get_identity_mat_batch(LARGE_SQ_X)
         grad, out = run_trsm(B)
+        assert(out.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
         assert(out[0, 0, 0] == 1)
         assert(out[1, 0, 0] == 1)
         out.backward()
+        assert(grad.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
         assert(grad[0, 0, 0] == 0)
         assert(grad[1, 0, 0] == 0)
 
