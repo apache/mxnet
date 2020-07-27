@@ -135,6 +135,43 @@ static const std::shared_ptr<NodeAttr> PrepareNodeAttr(const nnvm::Graph& g,
 }
 
 /*!
+ * \brief Given a subgraph, check if it has any external input entries.
+ * \param g pointer to the whole graph.
+ * \param simple_nods vector of simple nodes in top sorted order.
+ * \param subgraph_nodes vector of pointers of simples of a subgraph.
+ * \return true if the subgraph has external input, false otherwise.
+ */
+bool HasInputEntries(const nnvm::Graph& g,
+                      const std::vector<BiDirectedNodePtr>& simple_nodes,
+                      const std::vector<BiDirectedNode*>& subgraph_nodes) {
+  const auto& indexed_graph = g.indexed_graph();
+  int label = -1;
+  for (auto subgraph_node : subgraph_nodes) {
+    if (label == -1) {
+      label = subgraph_node->label;
+    } else {
+      CHECK_EQ(subgraph_node->label, label);
+    }
+    auto& inputs = subgraph_node->node->inputs;
+    for (auto &e : inputs) {
+      if (indexed_graph.exist(e.node.get())) {
+        // e's source node is not a subgraph node
+        const auto nid = indexed_graph.node_id(e.node.get());
+        // this is a node not belonging to the subgraph
+        if (simple_nodes[nid]->label != label) {
+          return true;
+        }
+      } else {
+        // e's source node is a subgraph node.
+        // In this case, two subgraphs are adjacent.
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/*!
  * \brief This function traverses the nodes in a computation graph from a starting
  * node following the input edges and output edges, and marks all nodes that
  * can be accessed from the starting node. Before the function returns,
@@ -337,7 +374,21 @@ void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph
     }
     ++count;
   }
-  if (!success) {
+  if (success) {
+    // CachedOp requires external input during forward pass
+    // check subgraph input. If none, reject the first op (in top order) from the subgraph
+    // to make sure CachedOp gets external input.
+    // this feature can be switched off by setting ensure_CachedOp_input to false
+    const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
+    if (subg_prop->HasAttr("ensure_CachedOp_input")
+        && subg_prop->GetAttr<bool>("ensure_CachedOp_input")) {
+      if (subgraph_nodes->size() > 0 && !HasInputEntries(g, simple_nodes, *subgraph_nodes)) {
+        // relabel the node to -1
+        (*subgraph_nodes)[0]->label = -1;
+        subgraph_nodes->erase(subgraph_nodes->begin());
+      }
+    }
+  } else {
     LOG(INFO) << "Tried " << count << " times of finding subgraphs starting from node "
               << simple_nodes[snid]->node->attrs.name
               << " without success because a loop "
@@ -348,43 +399,6 @@ void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph
     simple_nodes[snid]->label = label;
     subgraph_nodes->push_back(simple_nodes[snid].get());
   }
-}
-
-/*!
- * \brief Given a subgraph, check if it has any external input entries.
- * \param g pointer to the whole graph.
- * \param simple_nods vector of simple nodes in top sorted order.
- * \param subgraph_nodes vector of pointers of simples of a subgraph.
- * \return true if the subgraph has external input, false otherwise.
- */
-bool HasInputEntries(const nnvm::Graph& g,
-                      const std::vector<BiDirectedNodePtr>& simple_nodes,
-                      const std::vector<BiDirectedNode*>& subgraph_nodes) {
-  const auto& indexed_graph = g.indexed_graph();
-  int label = -1;
-  for (auto subgraph_node : subgraph_nodes) {
-    if (label == -1) {
-      label = subgraph_node->label;
-    } else {
-      CHECK_EQ(subgraph_node->label, label);
-    }
-    auto& inputs = subgraph_node->node->inputs;
-    for (auto &e : inputs) {
-      if (indexed_graph.exist(e.node.get())) {
-        // e's source node is not a subgraph node
-        const auto nid = indexed_graph.node_id(e.node.get());
-        // this is a node not belonging to the subgraph
-        if (simple_nodes[nid]->label != label) {
-          return true;
-        }
-      } else {
-        // e's source node is a subgraph node.
-        // In this case, two subgraphs are adjacent.
-        return true;
-      }
-    }
-  }
-  return false;
 }
 
 void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector,
@@ -405,19 +419,7 @@ void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector
                             &preselected_nodes);
 
     // filter out unqualified pre-selected nodes
-    std::vector<BiDirectedNode*> filtered_nodes = preselected_nodes;
-    // CachedOp requires external input during forward pass
-    // check subgraph input. if none, reject the first op (in top order) from the subgraph
-    // to make sure CachedOp gets external input.
-    const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
-    if (subg_prop->HasAttr("ensure_CachedOp_input")
-        && subg_prop->GetAttr<bool>("ensure_CachedOp_input")) {
-      if (filtered_nodes.size() > 0 && !HasInputEntries(*g, simple_nodes, filtered_nodes)) {
-        filtered_nodes.erase(filtered_nodes.begin());
-      }
-    }
-    // apply filter pass
-    filtered_nodes = subgraph_selector->Filter(filtered_nodes);
+    std::vector<BiDirectedNode*> filtered_nodes = subgraph_selector->Filter(preselected_nodes);
 
     // reset node labels that are not in filtered nodes
     for (const auto n : preselected_nodes) {
