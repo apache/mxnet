@@ -53,4 +53,3 @@ NDArray
 
    *
    sparse/index
-   np/index
