@@ -95,6 +95,8 @@ Shared APIs
       :title: NP on MXNet reference
       :link: np/index.html
 
+      This section contains the mxnet.np API reference documentation.
+      
 .. toctree::
    :hidden:
    :glob:
