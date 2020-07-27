@@ -220,13 +220,24 @@ class CuDNNBatchNormOp {
 
       if (param_.fix_gamma) gamma = 1.f;
 
+      bool grad_add_gamma_beta = (req[cudnnbatchnorm::kGamma] == kAddTo) ||
+                                 (req[cudnnbatchnorm::kBeta] == kAddTo);
+      if (grad_add_gamma_beta) {
+        if (IsBNWriting(req[cudnnbatchnorm::kGamma])) {
+          dgamma = 0.f;
+        }
+        if (IsBNWriting(req[cudnnbatchnorm::kBeta])) {
+          dbeta = 0.f;
+        }
+      }
+
       CUDNN_CALL(cudnnBatchNormalizationBackward(
         s->dnn_handle_,
         mode,
         &a,
-        &b,
+        req[cudnnbatchnorm::kData] == kAddTo ? &b_add : &b,
         &a,
-        req[cudnnbatchnorm::kGamma] == kWriteTo ? &b: &b_add,
+        grad_add_gamma_beta ? &b_add : &b,  // gamma and beta
         io_desc_,
         x.dptr_,
         io_desc_,

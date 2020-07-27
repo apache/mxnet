@@ -50,24 +50,21 @@ def build(mxnet_variant) {
     ci_utils.docker_run(environment, "cd_package_pypi ${mxnet_variant}", nvidia_docker)
 
     // build python docker images
-    sh "./cd/python/docker/python_images.sh build ${mxnet_variant} py3"
-    sh "./cd/python/docker/python_images.sh build ${mxnet_variant} py2"
+    sh "./cd/python/docker/python_images.sh build ${mxnet_variant}"
   }
 }
 
 def test(mxnet_variant) {
   ws("workspace/python_docker/${mxnet_variant}/${env.BUILD_NUMBER}") {
     // test python docker images
-    sh "./cd/python/docker/python_images.sh test ${mxnet_variant} py3"
-    sh "./cd/python/docker/python_images.sh test ${mxnet_variant} py2"
+    sh "./cd/python/docker/python_images.sh test ${mxnet_variant}"
   }
 }
 
 def push(mxnet_variant) {
   ws("workspace/python_docker/${mxnet_variant}/${env.BUILD_NUMBER}") {
     // push python docker images
-    sh "./cd/python/docker/python_images.sh push ${mxnet_variant} py3"
-    sh "./cd/python/docker/python_images.sh push ${mxnet_variant} py2"
+    sh "./cd/python/docker/python_images.sh push ${mxnet_variant}"
   }
 }
 

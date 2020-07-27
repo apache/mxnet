@@ -17,6 +17,7 @@
 
 import os
 import tempfile
+import gc
 
 import mxnet as mx
 from mxnet import gluon
@@ -755,6 +756,32 @@ def test_pool():
         layer = nn.MaxPool2D(3, ceil_mode=True, layout=layout)
         layer.collect_params().initialize()
         assert (layer(x).shape==ceil_out_shape)
+
+
+@with_seed()
+def test_batchnorm_backward_synchronization():
+    """
+    Tests if synchronization of BatchNorm running variables is done correctly.
+    If not, the test sometimes fails - depending on the timing.
+    """
+    ctx = mx.test_utils.default_context()
+
+    for variable in ['running_var', 'running_mean']:
+        for _ in range(20):
+            layer = nn.BatchNorm()
+            layer.initialize(ctx=ctx)
+            for _ in range(3):
+                data = mx.nd.random.normal(loc=10, scale=2, shape=(1, 3, 10, 10), ctx=ctx)
+                with mx.autograd.record():
+                    out = layer(data)
+                out.backward()
+
+            # check if each read give the same value
+            var1 = getattr(layer, variable).data().asnumpy()
+            for _ in range(10):
+                var2 = getattr(layer, variable).data().asnumpy()
+                if (var1 != var2).any():
+                    raise AssertionError("Two consecutive reads of " + variable + " give different results")
 
 
 @with_seed()
@@ -3211,6 +3238,44 @@ def test_reqs_switching_training_inference():
     grad2 = x.grad.asnumpy()
 
     mx.test_utils.assert_almost_equal(grad1, grad2)
+
+def test_no_memory_leak_in_gluon():
+    # Collect all other garbage prior to this test. Otherwise the test may fail
+    # due to unrelated memory leaks.
+    gc.collect()
+
+    gc_flags = gc.get_debug()
+    gc.set_debug(gc.DEBUG_SAVEALL)
+    net = mx.gluon.nn.Dense(10, in_units=10)
+    net.initialize()
+    del net
+    gc.collect()
+    gc.set_debug(gc_flags)  # reset gc flags
+
+    # Check for leaked NDArrays
+    seen = set()
+    def has_array(element):
+        try:
+            if element in seen:
+                return False
+            seen.add(element)
+        except TypeError:  # unhashable
+            pass
+
+        if isinstance(element, mx.nd._internal.NDArrayBase):
+            return True
+        elif hasattr(element, '__dict__'):
+            return any(has_array(x) for x in vars(element))
+        elif isinstance(element, dict):
+            return any(has_array(x) for x in element.items())
+        else:
+            try:
+                return any(has_array(x) for x in element)
+            except (TypeError, KeyError):
+                return False
+
+    assert not any(has_array(x) for x in gc.garbage), 'Found leaked NDArrays due to reference cycles'
+    del gc.garbage[:]
 
 if __name__ == '__main__':
     import nose
