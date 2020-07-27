@@ -93,13 +93,4 @@ MXNET_REGISTER_API("_npi.less_equal")
   SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
 });
 
-MXNET_REGISTER_API("_npi.greater")
-.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
-  using namespace runtime;
-  const nnvm::Op* op = Op::Get("_npi_greater");
-  const nnvm::Op* op_scalar = Op::Get("_npi_greater_scalar");
-  const nnvm::Op* op_rscalar = Op::Get("_npi_greater_scalar");
-  UFuncHelper(args, ret, op, op_scalar, op_rscalar);
-});
-
 }  // namespace mxnet

@@ -101,7 +101,6 @@ def prepare_workloads():
     OpArgMngr.add_workload("split", pool['3x3'], (0, 1, 2), axis=1)
     OpArgMngr.add_workload("vstack", (pool['3x3'], pool['3x3'], pool['3x3']))
     OpArgMngr.add_workload("argmax", pool['3x2'], axis=-1)
-    OpArgMngr.add_workload("greater", pool['2x2'], pool['2x2'])
     OpArgMngr.add_workload("argmin", pool['3x2'], axis=-1)
     OpArgMngr.add_workload("atleast_1d", pool['2'], pool['2x2'])
     OpArgMngr.add_workload("atleast_2d", pool['2'], pool['2x2'])
