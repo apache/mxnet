@@ -405,20 +405,19 @@ void SelectSubgraphNodes(nnvm::Graph* g, SubgraphSelectorV2Ptr subgraph_selector
                             &preselected_nodes);
 
     // filter out unqualified pre-selected nodes
-    std::vector<BiDirectedNode*> filtered_nodes = subgraph_selector->Filter(preselected_nodes);
-
+    std::vector<BiDirectedNode*> filtered_nodes = preselected_nodes;
+    // CachedOp requires external input during forward pass
+    // check subgraph input. if none, reject the first op (in top order) from the subgraph
+    // to make sure CachedOp gets external input.
     const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
     if (subg_prop->HasAttr("ensure_CachedOp_input")
         && subg_prop->GetAttr<bool>("ensure_CachedOp_input")) {
-      // check if subgraph has external input.
-      // if not, reject the first op (in top order) from the subgraph
-      // to make sure CachedOp gets external input.
       if (filtered_nodes.size() > 0 && !HasInputEntries(*g, simple_nodes, filtered_nodes)) {
         filtered_nodes.erase(filtered_nodes.begin());
-        // reject subgraph if it only contains single node
-        filtered_nodes = subgraph_selector->Filter(filtered_nodes);
       }
     }
+    // apply filter pass
+    filtered_nodes = subgraph_selector->Filter(filtered_nodes);
 
     // reset node labels that are not in filtered nodes
     for (const auto n : preselected_nodes) {
