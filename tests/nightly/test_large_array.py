@@ -1220,8 +1220,10 @@ def test_linalg():
         inp2=mx.nd.ones(shape=(LARGE_X, SMALL_Y))
         inp1_grad, inp2_grad, out= run_gemm2(inp1,inp2)
         assert out.asnumpy()[0][0] == LARGE_X
+        assert out.shape == (SMALL_Y, SMALL_Y)
         out.backward()
-        assert inp1_grad.asnumpy()[0][0] == SMALL_Y
+        assert inp1_grad.shape == (SMALL_Y, LARGE_X)
+        assert inp2_grad.shape == (LARGE_X, SMALL_Y)
         assert_almost_equal(inp2_grad.asnumpy()[0][0],49.1)
 
 
