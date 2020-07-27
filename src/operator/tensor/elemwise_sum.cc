@@ -120,7 +120,7 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
     FallBackCompute(ElementWiseSumCompute<cpu>, attrs, ctx, inputs, req, outputs);
   }
 #endif
-  else if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) ||
+  else if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) || // NOLINT(*)
       (inputs.size() == 3U && inputs[0].storage_type() == kDefaultStorage &&
        inputs[1].storage_type() == kCSRStorage && inputs[2].storage_type() == kDefaultStorage) ||
       (inputs.size() > 4U && common::ContainsStorageType(inputs, kDefaultStorage) &&
