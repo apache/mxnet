@@ -1523,19 +1523,22 @@ def test_lrn():
 def test_embedding_with_type():
     def test_embedding_helper(data_types, weight_types, low_pad, high_pad):
         NVD = [[20, 10, 20], [200, 10, 300], [10000, 4, 20]]
-        for N, V, D in NVD:
-            with environment('MXNET_SAFE_ACCUMULATION', '1' if N > 1000 else None):
-                sym = mx.sym.Embedding(name='embedding', input_dim=V, output_dim=D)
-                ctx_list = []
-                for data_type in data_types:
-                    for weight_type in weight_types:
-                        ctx_list.append({'ctx': mx.gpu(0), 'embedding_data': (N,),
-                            'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
-                        ctx_list.append({'ctx': mx.cpu(0), 'embedding_data': (N,),
-                            'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
-                arg_params = {'embedding_data': np.random.randint(low=-low_pad, high=V+high_pad, size=(N,))}
-                check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
-                                  arg_params=arg_params, scale=0.1)
+        for safe_accumulation in ['0', '1', None]:
+            for N, V, D in NVD:
+                with environment('MXNET_SAFE_ACCUMULATION', safe_accumulation):
+                    if N > 1000 and safe_accumulation != '1':
+                        break
+                    sym = mx.sym.Embedding(name='embedding', input_dim=V, output_dim=D)
+                    ctx_list = []
+                    for data_type in data_types:
+                        for weight_type in weight_types:
+                            ctx_list.append({'ctx': mx.gpu(0), 'embedding_data': (N,),
+                                'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
+                            ctx_list.append({'ctx': mx.cpu(0), 'embedding_data': (N,),
+                                'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
+                    arg_params = {'embedding_data': np.random.randint(low=-low_pad, high=V+high_pad, size=(N,))}
+                    check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
+                                      arg_params=arg_params, scale=0.1)
 
     data_types = [np.float16, np.float32, np.float64, np.int32]
     weight_types = [np.float16, np.float32, np.float64]
@@ -1548,48 +1551,51 @@ def test_embedding_with_type():
 @with_seed()
 def test_take_with_type():
     sym = mx.sym.take(name='take')
-    for data_ndim in range(2, 5):
-        for idx_ndim in range(1, 4):
-            data_shape = ()
-            for _ in range(data_ndim):
-                data_shape += (np.random.randint(low=3, high=6), )
-            idx_shape = ()
-            for _ in range(idx_ndim):
-                idx_shape += (np.random.randint(low=3, high=5), )
-            ctx_list = [{'ctx': mx.gpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float64,
-                                       'take_a': np.float64}},
-                        {'ctx': mx.gpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float32,
-                                       'take_a': np.float32}},
-                        {'ctx': mx.gpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float16,
-                                       'take_a': np.float16}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float64,
-                                       'take_a': np.float64}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float32,
-                                       'take_a': np.float32}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float16,
-                                       'take_a': np.float16}}]
-            arg_params = {'take_indices': np.random.randint(low=0,
-                                                            high=data_shape[0],
-                                                            size=idx_shape),
-                          'take_a': np.random.normal(size=data_shape)}
-            check_consistency(sym, ctx_list,
-                              grad_req={'take_indices': 'null',
-                                        'take_a': 'write'},
-                              arg_params=arg_params)
+    for safe_accumulation in ['0', '1', None]:
+        for data_ndim in range(2, 5):
+            for idx_ndim in range(1, 4):
+                data_shape = ()
+                for _ in range(data_ndim):
+                    data_shape += (np.random.randint(low=3, high=6), )
+                idx_shape = ()
+                for _ in range(idx_ndim):
+                    idx_shape += (np.random.randint(low=3, high=5), )
+                ctx_list = [{'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float64,
+                                           'take_a': np.float64}},
+                            {'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float32,
+                                           'take_a': np.float32}},
+                            {'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float16,
+                                           'take_a': np.float16}},
+                            {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float64,
+                                           'take_a': np.float64}},
+                            {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float32,
+                                           'take_a': np.float32}},
+                            {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float16,
+                                           'take_a': np.float16}}]
+                arg_params = {'take_indices': np.random.randint(low=0,
+                                                                high=data_shape[0],
+                                                                size=idx_shape),
+                              'take_a': np.random.normal(size=data_shape)}
+                with environment('MXNET_SAFE_ACCUMULATION', safe_accumulation):
+                    check_consistency(sym, ctx_list,
+                                      grad_req={'take_indices': 'null',
+                                                'take_a': 'write'},
+                                      arg_params=arg_params)
 
-    # check with large num of indices input (may underflow calculating gradient in FP16)
+    # check a large num of indices: may underflow calculating gradient in FP16,
+    # if MXNET_SAFE_ACCUMULATION is not activated
     with environment('MXNET_SAFE_ACCUMULATION', '1'):
         data_size = 4
         indices_size = 10000
