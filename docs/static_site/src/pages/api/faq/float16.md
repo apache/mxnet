@@ -104,77 +104,9 @@ You can check the parameters of the model by calling [summary](/api/python/docs/
 net.summary(mx.nd.uniform(shape=(1, 3, 224, 224), dtype=np.float16))
 ```
 
-## Using the Symbolic API
-
-Training a network in float16 with the Symbolic API involves the following steps.
-
-1. Add a layer at the beginning of the network, to cast the data to float16. This will ensure that all the following layers compute in float16.
-2. It is advisable to cast the output of the layers before softmax to float32, so that the softmax computation is done in float32. This is because softmax involves large reductions and it helps to keep that in float32 for more precise answer.
-3. It is advisable to use the multi-precision mode of the optimizer for more precise weight updates. Here's how you would enable this mode when creating an optimizer.
-
-```python
-optimizer = mx.optimizer.create('sgd', multi_precision=True, lr=0.01)
-```
-
-For a full example, please refer to [resnet.py](https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/symbols/resnet.py) file on GitHub. A small, relevant excerpt from that file is presented below.
-
-```python
-data = mx.sym.Variable(name="data")
-
-if dtype == 'float16':
-    data = mx.sym.Cast(data=data, dtype=np.float16)
-
-# ... the rest of the network
-net_out = net(data)
-
-if dtype == 'float16':
-    net_out = mx.sym.Cast(data=net_out, dtype=np.float32)
-
-output = mx.sym.SoftmaxOutput(data=net_out, name='softmax')
-```
-
-If you would like to train ResNet50 model on ImageNet using float16 precision, you can find the full script [here](https://github.com/apache/incubator-mxnet/blob/master/docs/static_site/src/pages/api/faq/float16.md)
-
-If you don't have ImageNet dataset at your disposal, you can still run the script above using synthetic float16 data by providing the following command:
-
-```bash
-python train_imagenet.py --network resnet-v1 --num-layers 50 --benchmark 1 --gpus 0 --batch-size 256 --dtype float16
-```
-
-There's a similar example for float16 fine tuning [here](https://github.com/apache/incubator-mxnet/tree/master/example/image-classification/fine-tune.py) of selected models: Inception v3, Inception v4, ResNetV1, ResNet50, ResNext or VGG. The command below shows how to use that script to fine-tune a Resnet50 model trained on Imagenet for the Caltech 256 dataset using float16.
-
-```bash
-python fine-tune.py --network resnet --num-layers 50 --pretrained-model imagenet1k-resnet-50 --data-train ~/.mxnet/dataset/caltech-256/caltech256-train.rec --data-val ~/data/caltech-256/caltech256-val.rec --num-examples 15420 --num-classes 256 --gpus 0 --batch-size 64 --dtype float16
-```
-
-If you don't have the `Caltech256` dataset, you can download it using the script below, and convert it into .rec file format using [im2rec utility file](https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py)
-
-```python
-import os
-from os.path import expanduser
-import tarfile
-import mxnet as mx
-
-
-data_folder = expanduser("~/.mxnet/datasets/")
-dataset_name = "256_ObjectCategories"
-archive_file = "{}.tar".format(dataset_name)
-archive_path = os.path.join(data_folder, archive_file)
-data_url = "http://www.vision.caltech.edu/Image_Datasets/Caltech256/"
-
-if not os.path.isfile(archive_path):
-    mx.test_utils.download("{}{}".format(data_url, archive_file),
-                           dirname=data_folder)
-    print('Extracting {} in {}...'.format(archive_file, data_folder))
-    tar = tarfile.open(archive_path)
-    tar.extractall(data_folder)
-    tar.close()
-    print('Data extracted.')
-```
-
 ## Example training results
 
-Let us consider training a Resnet50V1 model on the ImageNet 2012 dataset. For this model, the GPU memory usage is close to the capacity of V100 GPU with a batch size of 128 when using float32. Using float16 allows the use of 256 batch size. Shared below are results using 8 V100 GPUs on a an [AWS p3.16xlarge](https://aws.amazon.com/ec2/instance-types/p3/#Amazon_EC2_P3_Instance_Product_Details) instance.
+Let us consider training a Resnet50-V1 model on the ImageNet 2012 dataset. For this model, the GPU memory usage is close to the capacity of V100 GPU with a batch size of 128 when using float32. Using float16 allows the use of 256 batch size. Shared below are results using 8 V100 GPUs on a an [AWS p3.16xlarge](https://aws.amazon.com/ec2/instance-types/p3/#Amazon_EC2_P3_Instance_Product_Details) instance.
 
 Let us compare the three scenarios that arise here: float32 with 1024 batch size, float16 with 1024 batch size and float16 with 2048 batch size. These jobs trained for 90 epochs using a learning rate of 0.4 for 1024 batch size and 0.8 for 2048 batch size. This learning rate was decayed by a factor of 0.1 at the 30th, 60th and 80th epochs. The only changes made for the float16 jobs when compared to the float32 job were that the network and data were cast to float16, and the multi-precision mode was used for optimizer. The final accuracy at 90th epoch and the time to train are tabulated below for these three scenarios. The top-1 validation errors at the end of each epoch are also plotted below.
 
@@ -228,15 +160,6 @@ Here's how you can configure the loss to be scaled up by 128 and rescale the gra
 
 ```python
 loss = gluon.loss.SoftmaxCrossEntropyLoss(weight=128)
-optimizer = mx.optimizer.create('sgd',
-                                multi_precision=True,
-                                rescale_grad=1.0/128)
-```
-
-*Module API*
-
-```python
-mxnet.sym.SoftmaxOutput(other_args, grad_scale=128.0)
 optimizer = mx.optimizer.create('sgd',
                                 multi_precision=True,
                                 rescale_grad=1.0/128)

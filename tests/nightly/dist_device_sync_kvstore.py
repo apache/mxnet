@@ -106,11 +106,10 @@ def test_sync_init():
 
 def test_gluon_trainer_type():
     def check_trainer_kv_update(update_on_kv):
-        params = mx.gluon.ParameterDict()
-        x = params.get('x', shape=(10,1), lr_mult=1.0)
-        params.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
+        x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0)
+        x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         try:
-            trainer = mx.gluon.Trainer(params, 'sgd', {'learning_rate': 0.1},
+            trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},
                                        kvstore=kv, update_on_kvstore=update_on_kv)
             trainer._init_kvstore()
             assert trainer._kv_initialized
@@ -127,5 +126,6 @@ def test_gluon_trainer_type():
 
 if __name__ == "__main__":
     test_sync_init()
-    test_sync_push_pull()
+    # TODO(szha): disabled due to repeated failures. tracked in #18098
+    # test_sync_push_pull()
     test_gluon_trainer_type()

@@ -22,8 +22,17 @@
  * \brief Utility functions for operator invoke
  */
 #include "utils.h"
+#include "../../imperative/imperative_utils.h"
 
 namespace mxnet {
+
+bool is_recording() {
+  return Imperative::Get()->is_recording();
+}
+
+bool is_deferred_compute() {
+  return Imperative::Get()->is_deferred_compute();
+}
 
 void SetInOut(std::vector<NDArray*>* ndinputs,
               std::vector<NDArray*>* ndoutputs,
@@ -38,9 +47,11 @@ void SetInOut(std::vector<NDArray*>* ndinputs,
   for (int i = 0; i < num_inputs; ++i) {
     NDArray* inp = reinterpret_cast<NDArray*>(inputs[i]);
     if (!features::is_enabled(features::INT64_TENSOR_SIZE)) {
-      CHECK_LT(inp->shape().Size(), (int64_t{1} << 31) - 1) <<
-                "[SetNDInputsOutputs] Size of tensor you are trying to allocate is larger than "
-                "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+      if (shape_is_known(inp->shape())) {  // Shape may be unknown after dynamic shape operators
+        CHECK_LT(inp->shape().Size(), (int64_t{1} << 31) - 1)
+          << "[SetInOut] Size of tensor you are trying to allocate is larger than "
+               "2^31 elements. Please build with flag USE_INT64_TENSOR_SIZE=1";
+      }
     }
     ndinputs->emplace_back(inp);
   }
@@ -80,9 +91,16 @@ std::vector<NDArray*> Invoke(const nnvm::Op* op,
   SetInOut(&ndinputs, &ndoutputs, num_inputs, inputs,
       num_outputs, infered_num_outputs, num_visible_outputs, outputs);
 
-  auto state = Imperative::Get()->Invoke(Context::CPU(), *attrs, ndinputs, ndoutputs);
-  if (Imperative::Get()->is_recording()) {
-    Imperative::Get()->RecordOp(std::move(*attrs), ndinputs, ndoutputs, state);
+  if (Imperative::Get()->is_deferred_compute()) {
+    Imperative::Get()->RecordDeferredCompute(std::move(*attrs), ndinputs, ndoutputs);
+  } else {
+    for (NDArray *input : ndinputs) {
+      Imperative::DCInfo::Compute(*input);
+    }
+    auto state = Imperative::Get()->Invoke(Context::CPU(), *attrs, ndinputs, ndoutputs);
+    if (is_recording()) {
+      Imperative::Get()->RecordOp(std::move(*attrs), ndinputs, ndoutputs, state);
+    }
   }
   for (int i = *num_outputs; i < infered_num_outputs; ++i) delete ndoutputs[i];
   return ndoutputs;

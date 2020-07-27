@@ -18,13 +18,14 @@
 import pickle as pkl
 
 from mxnet.ndarray import NDArray
+import mxnet as mx
 from mxnet.test_utils import *
-from common import setup_module, with_seed, random_seed, teardown
+from common import setup_module, with_seed, random_seed, teardown_module
 from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
 import numpy as np
-from common import assertRaises
+from common import assertRaises, xfail_when_nonstandard_decimal_separator
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
 
@@ -318,6 +319,7 @@ def test_sparse_nd_binary():
         check_binary(lambda x, y: x == y, stype)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sparse_nd_binary_scalar_op():
     N = 3
@@ -622,7 +624,7 @@ def test_create_csr():
         # verify csr matrix dtype and ctx is consistent from the ones provided
         assert csr_created.dtype == dtype, (csr_created, dtype)
         assert csr_created.data.dtype == dtype, (csr_created.data.dtype, dtype)
-        assert csr_created.context == Context.default_ctx, (csr_created.context, Context.default_ctx)
+        assert csr_created.context == mx.context.current_context(), (csr_created.context, mx.context.current_context())
         csr_copy = mx.nd.array(csr_created)
         assert(same(csr_copy.asnumpy(), csr_created.asnumpy()))
 
@@ -640,7 +642,7 @@ def test_create_csr():
         # verify csr matrix dtype and ctx is consistent
         assert csr_created.dtype == dtype, (csr_created.dtype, dtype)
         assert csr_created.data.dtype == dtype, (csr_created.data.dtype, dtype)
-        assert csr_created.context == Context.default_ctx, (csr_created.context, Context.default_ctx)
+        assert csr_created.context == mx.context.current_context(), (csr_created.context, mx.context.current_context())
 
     def check_create_csr_from_scipy(shape, density, f):
         def assert_csr_almost_equal(nd, sp):
@@ -767,7 +769,7 @@ def test_create_sparse_nd_from_dense():
         # verify the default dtype inferred from dense arr
         arr2 = f(dense_arr)
         assert(arr2.dtype == default_dtype)
-        assert(arr2.context == Context.default_ctx)
+        assert(arr2.context == mx.context.current_context())
     shape = rand_shape_2d()
     dtype = np.int32
     src_dtype = np.float64
@@ -790,7 +792,7 @@ def test_create_sparse_nd_from_sparse():
         # verify the default dtype inferred from dense arr
         arr2 = f(sp_arr)
         assert(arr2.dtype == src_dtype)
-        assert(arr2.context == Context.default_ctx)
+        assert(arr2.context == mx.context.current_context())
 
     shape = rand_shape_2d()
     src_dtype = np.float64
@@ -829,7 +831,7 @@ def test_create_sparse_nd_empty():
         # check the default value for dtype and ctx
         arr = mx.nd.sparse.csr_matrix(shape)
         assert(arr.dtype == np.float32)
-        assert(arr.context == Context.default_ctx)
+        assert(arr.context == mx.context.current_context())
 
     def check_rsp_empty(shape, dtype, ctx):
         arr = mx.nd.sparse.row_sparse_array(shape, dtype=dtype, ctx=ctx)
@@ -840,7 +842,7 @@ def test_create_sparse_nd_empty():
         # check the default value for dtype and ctx
         arr = mx.nd.sparse.row_sparse_array(shape)
         assert(arr.dtype == np.float32)
-        assert(arr.context == Context.default_ctx)
+        assert(arr.context == mx.context.current_context())
 
     stypes = ['csr', 'row_sparse']
     shape = rand_shape_2d()
@@ -1056,6 +1058,3 @@ def test_sparse_getnnz():
         for a in axis:
             check_sparse_getnnz(d, a)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

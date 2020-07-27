@@ -321,15 +321,16 @@ inline bool IsIdentityTranspose(const TShape& axes) {
 }
 
 template<typename xpu, bool is_addto = false>
-void TransposeImpl(RunContext ctx,
+bool TransposeCommonImpl(RunContext ctx,
                    const TBlob& src,
                    const TBlob& ret,
                    const mxnet::TShape& axes) {
+  // return true when running successfully, otherwise false
   using namespace mshadow;
   using namespace mshadow::expr;
   CHECK_EQ(src.type_flag_, ret.type_flag_);
   // zero-size tensor, no need to compute
-  if (src.shape_.Size() == 0U) return;
+  if (src.shape_.Size() == 0U) return true;
   Stream<xpu> *s = ctx.get_stream<xpu>();
 #ifdef __CUDACC__
   // This transpose can be used only if there exist n and m such that:
@@ -339,7 +340,7 @@ void TransposeImpl(RunContext ctx,
     MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
       transpose_pseudo2D<DType, is_addto>(ret, src, axes, s);
     });
-    return;
+    return true;
   }
 #endif
   // Special handle the identity case
@@ -355,7 +356,7 @@ void TransposeImpl(RunContext ctx,
             s, ret.Size(), out.dptr_, in.dptr_);
       }
     });
-    return;
+    return true;
   }
   // Handle the general transpose case
   MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
@@ -413,10 +414,127 @@ void TransposeImpl(RunContext ctx,
       break;
      }
      default:
-      LOG(FATAL) << "Transpose support at most 6 dimensions";
+      // return false when dimensions > 6
+      return false;
       break;
     }
   });
+  return true;
+}
+
+template<typename xpu, bool is_addto = false>
+void TransposeImpl(RunContext ctx,
+                   const TBlob& src,
+                   const TBlob& ret,
+                   const mxnet::TShape& axes) {
+  CHECK_LE(axes.ndim(), 6) << "TransposeImpl supports at most 6 dimensions";
+  CHECK((TransposeCommonImpl<xpu, is_addto>(ctx, src, ret, axes))) <<
+    "Failed to execute TransposeImpl Operator";
+}
+
+template <bool is_addto>
+struct TransposeExKernel {
+  /*!
+   * \brief
+   * \param tid      global thread id
+   * \param out_data output data
+   * \param in_data  input data
+   * \param strides  input strides and output strides
+   * \param ndim     the number of dimension
+   */
+  template <typename DType>
+  MSHADOW_XINLINE static void Map(int tid,
+      DType *out_data,
+      const DType *in_data,
+      const dim_t *strides,
+      const int ndim
+      ) {
+    // tid is the index of input data
+    const dim_t* const out_strides = strides + ndim;
+    int k = tid;
+    int out_id = 0;
+    for (int i = 0; i < ndim; ++i) {
+      out_id += (k / strides[i]) * out_strides[i];
+      k %= strides[i];
+    }
+    if (is_addto)
+      out_data[out_id] += in_data[tid];
+    else
+      out_data[out_id] = in_data[tid];
+  }
+};
+
+template<typename xpu, bool is_addto = false>
+void TransposeExImpl(RunContext ctx,
+                   const TBlob& src,
+                   const TBlob& ret,
+                   const mxnet::TShape& axes,
+                   mshadow::Tensor<xpu, 1, dim_t>& strides_xpu
+                   ) {
+  /*
+   * If ndim <= 6, it is not necessary to allocate any space for `strides_xpu`
+   * If ndim > 6, `strides_xpu` should be allocated `ndim * 2` elements
+   */
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  if (TransposeCommonImpl<xpu, is_addto>(ctx, src, ret, axes)) return;
+  CHECK_GT(axes.ndim(), 6) <<
+    "Failed to execute TransposeExImpl when axes.ndim() <= 6";
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  MSHADOW_TYPE_SWITCH(ret.type_flag_, DType, {
+      CHECK_EQ(strides_xpu.MSize(), axes.ndim() * 2) << \
+        "If ndim > 6, `strides_xpu` should be allocated `ndim * 2` elements";
+
+      const mxnet::TShape &in_shape = src.shape_;
+      // strides: in_strides and out_strides
+      const int ndim = axes.ndim();
+      std::vector<dim_t> strides(ndim * 2);
+      // compute in_strides
+      strides[ndim - 1] = 1;
+      for (int i = ndim - 2; i >= 0; --i) {
+        strides[i] = strides[i + 1] * in_shape[i + 1];
+      }
+      // compute out_strides
+      std::vector<dim_t> tmp_strides(ndim);
+      tmp_strides[ndim - 1] = 1;
+      for (int i = ndim - 2; i >= 0; --i) {
+        tmp_strides[i] = tmp_strides[i + 1] * in_shape[axes[i + 1]];
+      }
+      // reorder tmp_strides to out_strides
+      dim_t * const out_strides = &strides[ndim];
+      for (int i = 0; i < ndim; ++i) {
+        out_strides[axes[i]] = tmp_strides[i];
+      }
+      Shape<1> strides_shape;
+      strides_shape[0] = ndim * 2;
+      Tensor<cpu, 1, dim_t> strides_cpu(strides.data(), strides_shape);
+      // copy arguments into xpu context
+      Copy(strides_xpu, strides_cpu, s);
+      const DType *in = src.dptr<DType>();
+      DType *out = ret.dptr<DType>();
+      if (is_addto) {
+        mxnet_op::Kernel<TransposeExKernel<true>, xpu>::Launch(s,
+            in_shape.Size(), out, in, strides_xpu.dptr_, ndim);
+      } else {
+        mxnet_op::Kernel<TransposeExKernel<false>, xpu>::Launch(s,
+            in_shape.Size(), out, in, strides_xpu.dptr_, ndim);
+      }
+  });
+}
+
+template<typename xpu>
+mshadow::Tensor<xpu, 1, dim_t> GetTransposeExWorkspace(
+      const OpContext& ctx,
+      const mxnet::TShape& axes
+    ) {
+  if (axes.ndim() > 6) {
+    // allocate workspace when axes.ndim() > 6
+    mshadow::Shape<1> strides_shape;
+    strides_shape[0] = axes.ndim() * 2;
+    return ctx.requested[0].get_space_typed<xpu, 1, dim_t>(
+        strides_shape, ctx.get_stream<xpu>());
+  }
+  return {};
 }
 
 // matrix transpose
@@ -441,10 +559,15 @@ void Transpose(const nnvm::NodeAttrs& attrs,
   } else {
     axes = common::CanonicalizeAxes(param.axes);
   }
+
+  mshadow::Tensor<xpu, 1, dim_t> workspace =
+    GetTransposeExWorkspace<xpu>(ctx, axes);
   if (req[0] == kAddTo) {
-    TransposeImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0], axes);
+    TransposeExImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
   } else {
-    TransposeImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0], axes);
+    TransposeExImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
   }
 }
 
@@ -456,8 +579,7 @@ inline bool TransposeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& shp = (*in_attrs)[0];
   mxnet::TShape& out_shp = (*out_attrs)[0];
-  CHECK_LE(shp.ndim(), 6) << "Transpose support at most 6 dimensions";
-  if (shp.ndim() == -1 && out_shp.ndim() == -1)
+  if (!mxnet::ndim_is_known(shp) && !mxnet::ndim_is_known(out_shp))
     return false;  // none of the shapes is known
   if (out_shp.ndim() >= 0 && shp.ndim() >= 0)
     CHECK_EQ(out_shp.ndim(), shp.ndim());
@@ -513,12 +635,12 @@ inline bool ExpandDimShape(const nnvm::NodeAttrs& attrs,
   const ExpandDimParam& param = nnvm::get<ExpandDimParam>(attrs.parsed);
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
-  if (!mxnet::ndim_is_known(in_attrs->at(0)) && !mxnet::ndim_is_known(out_attrs->at(0))) {
+  mxnet::TShape& ishape = (*in_attrs)[0];
+  mxnet::TShape& oshape = (*out_attrs)[0];
+  if (!mxnet::ndim_is_known(ishape) && !mxnet::ndim_is_known(oshape)) {
     return false;
   }
 
-  mxnet::TShape& ishape = (*in_attrs)[0];
-  mxnet::TShape& oshape = (*out_attrs)[0];
   int indim = ishape.ndim();
   bool unknown_ishape = false;
   if (-1 == indim) {
@@ -1441,6 +1563,9 @@ inline bool SliceLikeShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   mxnet::TShape& ishape = (*in_attrs)[0];
   mxnet::TShape& from_shape = (*in_attrs)[1];
+  if (!mxnet::ndim_is_known(ishape) || !mxnet::ndim_is_known(from_shape)) {
+    return false;
+  }
   if (param.axes.ndim() == 0) {
     CHECK_EQ(ishape.ndim(), from_shape.ndim())
       << "By default slice_axis performs slice on all axes, but ndim mismatch "
@@ -1605,6 +1730,14 @@ struct ClipParam : public dmlc::Parameter<ClipParam> {
     DMLC_DECLARE_FIELD(a_max)
     .describe("Maximum value");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_min_s, a_max_s;
+    a_min_s << a_min;
+    a_max_s << a_max;
+    (*dict)["a_min"] = a_min_s.str();
+    (*dict)["a_max"] = a_max_s.str();
+  }
 };
 
 
@@ -1706,6 +1839,13 @@ struct RepeatParam : public dmlc::Parameter<RepeatParam> {
                 " By default, use the flattened input array,"
                 " and return a flat output array.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream repeats_s, axis_s;
+    repeats_s << repeats;
+    axis_s << axis;
+    (*dict)["repeats"] = repeats_s.str();
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 /*!
@@ -1734,6 +1874,9 @@ inline bool RepeatOpShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape& ishape = (*in_attrs)[0];
+  if (!mxnet::ndim_is_known(ishape)) {
+    return false;
+  }
   int repeats = 0;
   dmlc::optional<int> axisOpt;
   GetRepeatParams(param, ishape, &repeats, &axisOpt);
@@ -1916,6 +2059,11 @@ struct TileParam : public dmlc::Parameter<TileParam> {
                 " If reps has length d, the result will have dimension of max(d, a.ndim);"
                 " If a.ndim < d, a is promoted to be d-dimensional by prepending new axes."
                 " If a.ndim > d, reps is promoted to a.ndim by pre-pending 1's to it.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream reps_s;
+    reps_s << reps;
+    (*dict)["reps"] = reps_s.str();
   }
 };
 
@@ -2218,6 +2366,13 @@ struct StackParam : public dmlc::Parameter<StackParam> {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be stacked.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, num_args_s;
+    axis_s << axis;
+    num_args_s << num_args;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["num_args"] = num_args_s.str();
+  }
 };
 
 
@@ -2323,6 +2478,11 @@ struct SqueezeParam : public dmlc::Parameter<SqueezeParam> {
     .describe("Selects a subset of the single-dimensional entries in the shape."
               " If an axis is selected with shape entry greater than one, an error is raised.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s;
+    axis_s << axis;
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 // Given a shape that may have dim size equal to 0,
@@ -2402,6 +2562,9 @@ inline bool DepthToSpaceOpShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape expected_out(4, -1);
 
   mxnet::TShape& in_shape = in_attrs->at(0);
+  if (!mxnet::ndim_is_known(in_shape)) {
+    return false;
+  }
   int block = param.block_size;
   CHECK_NE(block, 0) << "block_size must be a positive integer value";
   CHECK_NE(in_shape[1], 0) << "Depth dimension:1 cannot be 0";
@@ -2566,6 +2729,9 @@ inline bool SpaceToDepthOpShape(const nnvm::NodeAttrs& attrs,
   mxnet::TShape expected_out(in_attrs->at(0).ndim(), -1);
 
   mxnet::TShape& in_shape = in_attrs->at(0);
+  if (!mxnet::ndim_is_known(in_shape)) {
+    return false;
+  }
   int block = param.block_size;
   CHECK_NE(block, 0) << "block_size must be a positive integer value";
   CHECK_NE(in_shape[0], 0)

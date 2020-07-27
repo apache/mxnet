@@ -31,6 +31,7 @@
 #include <string>
 #include <algorithm>
 #include "./dist_common.h"
+#include "../../../api/operator/op_utils.h"
 #include "../../elemwise_op_common.h"
 #include "../../tensor/elemwise_binary_broadcast_op.h"
 #include "../../mshadow_op.h"
@@ -61,12 +62,25 @@ struct NumpyGammaParam : public dmlc::Parameter<NumpyGammaParam> {
       .describe("Context of output, in format [xpu|xpu|xpu_pinned](n)."
                 " Only used for imperative calls.");
     DMLC_DECLARE_FIELD(dtype)
+      .add_enum("None", -1)
       .add_enum("float32", mshadow::kFloat32)
       .add_enum("float64", mshadow::kFloat64)
       .add_enum("float16", mshadow::kFloat16)
-      .set_default(mshadow::kFloat32)
-      .describe("DType of the output in case this can't be inferred. "
-                "Defaults to float32 if not defined (dtype=None).");
+      .set_default(-1)
+      .describe("DType of the output in case this can't be inferred."
+                "Defaults to float64 or float32 if not defined (dtype=None),"
+                "which depends on your current default dtype.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s, scale_s, dtype_s, size_s;
+    shape_s << shape;
+    scale_s << scale;
+    dtype_s << dtype;
+    size_s << size;
+    (*dict)["shape"] = shape_s.str();
+    (*dict)["scale"] = scale_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+    (*dict)["size"] = size_s.str();
   }
 };
 

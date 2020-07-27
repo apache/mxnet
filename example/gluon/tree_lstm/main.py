@@ -96,7 +96,7 @@ logging.info('==> Size of test data    : %d ' % len(test_iter))
 net = SimilarityTreeLSTM(sim_hidden_size, rnn_hidden_size, vocab.size, vocab.embed.shape[1], num_classes)
 
 # use pearson correlation and mean-square error for evaluation
-metric = mx.metric.create(['pearsonr', 'mse'])
+metric = mx.gluon.metric.create(['pearsonr', 'mse'])
 
 def to_target(x):
     target = np.zeros((1, num_classes))

@@ -228,7 +228,3 @@ class TestDockerLogin(unittest.TestCase):
                 with self.assertRaises(RuntimeError):
                     main(["--secret-name", "name"])
 
-
-if __name__ == '__main__':
-    import nose
-    nose.main()

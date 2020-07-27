@@ -17,11 +17,10 @@
 
 import mxnet as mx
 import numpy as np
-import unittest
+import pytest
 import os
 import logging
-
-from mxnet.test_utils import EnvManager
+from mxnet.test_utils import environment
 
 shapes = [(10), (100), (1000), (10000), (100000), (2,2), (2,3,4,5,6,7,8)]
 keys = [1,2,3,4,5,6,7]
@@ -35,7 +34,7 @@ if num_gpus > 8 :
 
 gpus = range(1, 1+num_gpus)
 
-@unittest.skipIf(mx.context.num_gpus() < 1, "test_device_pushpull needs at least 1 GPU")
+@pytest.mark.skipif(mx.context.num_gpus() < 1, reason="test_device_pushpull needs at least 1 GPU")
 def test_device_pushpull():
     def check_dense_pushpull(kv_type):
         for shape, key in zip(shapes, keys):
@@ -51,16 +50,15 @@ def test_device_pushpull():
                 for x in range(n_gpus):
                     assert(np.sum(np.abs((res[x]-n_gpus).asnumpy()))==0)
 
-    kvstore_tree_array_bound = 'MXNET_KVSTORE_TREE_ARRAY_BOUND'
-    kvstore_usetree_values = ['','1']
-    kvstore_usetree  = 'MXNET_KVSTORE_USETREE'
-    for _ in range(2):
+    kvstore_tree_array_bound_values = [None, '1']
+    kvstore_usetree_values = [None, '1']
+    for y in kvstore_tree_array_bound_values:
         for x in kvstore_usetree_values:
-            with EnvManager(kvstore_usetree, x):
+            with environment({'MXNET_KVSTORE_USETREE': x,
+                              'MXNET_KVSTORE_TREE_ARRAY_BOUND': y}):
                 check_dense_pushpull('local')
                 check_dense_pushpull('device')
-        os.environ[kvstore_tree_array_bound] = '1'
-    del os.environ[kvstore_tree_array_bound]
+
 
 if __name__ == '__main__':
     test_device_pushpull()

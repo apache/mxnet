@@ -154,13 +154,17 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):
     """
     hdl = NDArrayHandle()
     if _int64_enabled():
+        if np.dtype(dtype) == np.dtype([('bfloat16', np.uint16)]):
+            dtype_type = np.dtype(dtype)
+        else:
+            dtype_type = np.dtype(dtype).type
         check_call(_LIB.MXNDArrayCreateEx64(
             c_array_buf(mx_int64, native_array('q', shape)),
             ctypes.c_int(len(shape)),
             ctypes.c_int(ctx.device_typeid),
             ctypes.c_int(ctx.device_id),
             ctypes.c_int(int(delay_alloc)),
-            ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
+            ctypes.c_int(int(_DTYPE_NP_TO_MX[dtype_type])),
             ctypes.byref(hdl)))
     else:
         # When shape is larger than unit32 then there is an overflow error at python end itself.
@@ -2614,12 +2618,12 @@ fixed-size items.
         <type 'numpy.int32'>
         """
 
+        if dtype is None:
+            dtype = mx_real_t
         if not copy and np.dtype(dtype) == self.dtype:
             return self
 
-        res = empty(self.shape, ctx=self.ctx, dtype=dtype)
-        self.copyto(res)
-        return res
+        return op.cast(self, dtype=dtype)
 
     def copyto(self, other):
         """Copies the value of this array to another array.
@@ -2816,7 +2820,7 @@ fixed-size items.
         """
         from . import zeros as _zeros
         if stype is not None:
-            grad = _zeros(self.shape, stype=stype)
+            grad = _zeros(self.shape, stype=stype, dtype=self.dtype)
         else:
             grad = op.zeros_like(self)  # pylint: disable=undefined-variable
         grad_req = _GRAD_REQ_MAP[grad_req]
@@ -4635,6 +4639,11 @@ def concatenate(arrays, axis=0, always_copy=True):
     NDArray
         An `NDArray` that lives on the same context as `arrays[0].context`.
     """
+    # Unsupported in deferred compute mode due to use of inplace operations.
+    from .._deferred_compute import is_deferred_compute  # pylint: disable=wrong-import-position
+    assert not is_deferred_compute(), 'nd.concatenate is deprecated and ' \
+        'unsupported in deferred compute mode. Use nd.concat instead.'
+
     assert isinstance(arrays, list)
     assert len(arrays) > 0
     assert isinstance(arrays[0], NDArray)

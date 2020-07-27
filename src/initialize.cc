@@ -63,7 +63,7 @@ namespace mxnet {
 static void SegfaultLogger(int sig) {
   fprintf(stderr, "\nSegmentation fault: %d\n\n", sig);
   fprintf(stderr, "%s", dmlc::StackTrace().c_str());
-  exit(-1);
+  abort();
 }
 #endif
 

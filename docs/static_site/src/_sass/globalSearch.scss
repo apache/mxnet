@@ -1,0 +1,217 @@
+.trigger {
+  float: right;
+}
+
+/* Search bar - wide screen */
+.gs-search-border {
+  padding-left: 25px;
+  float: right;
+}
+
+#global-search {
+  width: 0px;
+  border: 0px;
+  background-color: transparent;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  outline: none;
+  font-size: 1em;
+  color: #ffffff;
+  display: inline-block;
+  margin-bottom: 19px;
+}
+
+#gs-search-icon {
+  background: url(/assets/img/search-icon.svg) center no-repeat;
+  background-size: 1em;
+  height: 30px;
+  width: 30px;
+  position: relative;
+  top: 10px;
+  cursor: pointer;
+  display: inline-block;
+}
+
+#global-search-form {
+  display: none;
+  padding: 5px;
+  line-height: 1em;
+}
+
+#global-search-close {
+  cursor: pointer;
+}
+
+#global-search-dropdown-container {
+  display: inline-block;
+  position: relative;
+}
+
+#global-search-dropdown-container button {
+  background-color: inherit;
+  color: white;
+  font-size: 17px;
+  margin: 0px;
+  border: none;
+  min-width: 100%;
+  outline: 0;
+  height: 37px;
+  width: 90px;
+  padding: 0px;
+  cursor: pointer;
+}
+
+#global-search-dropdown-container-mobile
+  .gs-current-version-mobile
+  .gs-dropdown-caret,
+#global-search-dropdown-container .gs-current-version .gs-dropdown-caret {
+  position: relative;
+  top: 4px;
+  height: 18px;
+}
+
+ul.gs-version-dropdown {
+  display: none;
+  position: absolute;
+  text-align: center;
+  background-color: whitesmoke;
+  box-shadow: none;
+  z-index: 1;
+  margin: 0px;
+  padding: 0px;
+  list-style-type: none;
+}
+
+li.gs-opt.gs-versions {
+  padding: 10px;
+  cursor: pointer;
+}
+
+.gs-version-dropdown li:hover {
+  color: #ff4500 !important;
+}
+
+/* Search bar - mobile */
+#global-search-mobile {
+  width: 120px;
+  margin-right: 10px;
+  background-color: transparent;
+  border: 0px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+  outline: none;
+  font-size: 1em;
+  color: white;
+}
+
+#gs-search-icon-mobile {
+  background: url(/assets/img/search-icon.svg) center no-repeat;
+  background-size: 1em;
+  height: 30px;
+  width: 30px;
+  position: relative;
+  top: 10px;
+  cursor: pointer;
+  display: inline-block;
+}
+
+#global-search-dropdown-container-mobile {
+  display: inline-block;
+  position: absolute;
+  right: 10px;
+}
+
+#global-search-dropdown-container-mobile button {
+  background-color: inherit;
+  margin: 0px;
+  border: none;
+  outline: 0;
+  height: 37px;
+  padding: 0px;
+  cursor: pointer;
+}
+
+.gs-version-dropdown-mobile {
+  display: none;
+  position: absolute;
+  text-align: center;
+  background-color: whitesmoke;
+  box-shadow: none;
+  z-index: 1;
+  margin: 0px;
+  padding: 0px;
+  left: -50px;
+  list-style-type: none;
+  width: 166px;
+  left: -138px;
+}
+
+#global-search-mobile-border {
+  line-height: 25px;
+}
+
+#global-search-mobile::placeholder,
+#global-search::placeholder {
+  color: #eeeeee;
+}
+
+.gs-version-dropdown-mobile li.active,
+.gs-version-dropdown li.active {
+  color: #ff4500 !important;
+  font-weight: lighter;
+}
+
+.gs-version-dropdown-mobile li,
+.gs-version-dropdown li {
+  color: #424242;
+  text-decoration: none;
+  display: block;
+  padding-left: 5px;
+  padding-right: 5px;
+  font-size: 17px;
+}
+
+/* Main dropdown wrapper */
+.algolia-autocomplete .ds-dropdown-menu > div {
+  max-height: 60vh;
+  overflow-y: scroll;
+}
+
+#global-search-mobile-border .algolia-autocomplete .ds-dropdown-menu {
+  min-width: 80vw;
+}
+
+#global-search-mobile-border .algolia-autocomplete .ds-dropdown-menu > div {
+  min-width: 80vw;
+  max-height: 90vh;
+}
+
+.gs-search-border .algolia-autocomplete .ds-dropdown-menu {
+  min-width: 680px;
+}
+
+/* Main category */
+.algolia-autocomplete .algolia-docsearch-suggestion--category-header {
+  color: #000000;
+  text-align: center;
+}
+
+/* Category */
+.algolia-autocomplete .algolia-docsearch-suggestion--subcategory-column {
+  color: gray;
+}
+
+/* Title */
+.algolia-autocomplete .algolia-docsearch-suggestion--title {
+  color: black;
+  font-weight: 300;
+}
+
+/* Description description */
+.algolia-autocomplete .algolia-docsearch-suggestion--text {
+  font-size: 0.8rem;
+  color: gray;
+}
+
+/* Highlighted text */
+.algolia-autocomplete .algolia-docsearch-suggestion--highlight {
+  color: blue;
+}

@@ -230,6 +230,7 @@ class BaseSparseNDArray(NDArray):
         if not copy and np.dtype(dtype) == self.dtype:
             return self
 
+        # Use copyto for casting, as op.cast(self, dtype=dtype) doesn't support sparse stype
         res = zeros(shape=self.shape, ctx=self.context,
                     dtype=dtype, stype=self.stype)
         self.copyto(res)
@@ -1554,7 +1555,7 @@ def zeros(stype, shape, ctx=None, dtype=None, **kwargs):
     if stype in ('row_sparse', 'csr'):
         aux_types = _STORAGE_AUX_TYPES[stype]
     else:
-        raise ValueError("unknown storage type" + stype)
+        raise ValueError("unknown storage type: " + stype)
     out = _ndarray_cls(_new_alloc_handle(stype, shape, ctx, True, dtype, aux_types))
     return _internal._zeros(shape=shape, ctx=ctx, dtype=dtype, out=out, **kwargs)
     # pylint: enable= no-member, protected-access

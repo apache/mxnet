@@ -182,10 +182,6 @@ def run_performance_test(ops, inputs, run_backward=True,
 
 
 def run_op_benchmarks(ops, dtype, ctx, profiler, int64_tensor, warmup, runs):
-    # Running SoftmaxOutput backwards on GPU results in errors
-    # track issue here: https://github.com/apache/incubator-mxnet/issues/880
-    gpu_backwards_disabled_ops = ['SoftmaxOutput']
-
     # Running im2col either forwards or backwards on GPU results in errors
     # track issue here: https://github.com/apache/incubator-mxnet/issues/17493
     gpu_disabled_ops = ['im2col']
@@ -198,7 +194,7 @@ def run_op_benchmarks(ops, dtype, ctx, profiler, int64_tensor, warmup, runs):
             inputs = prepare_op_inputs(op, op_params, int64_tensor)
 
             # setting backward false for ops with known issue
-            if (ctx == mx.gpu() and op in gpu_backwards_disabled_ops) or op in no_backward:
+            if op in no_backward:
                 op_params["has_backward"] = False
 
             # Run benchmarks

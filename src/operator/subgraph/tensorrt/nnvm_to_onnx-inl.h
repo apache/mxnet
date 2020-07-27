@@ -120,11 +120,6 @@ void ConvertFullyConnected(NodeProto *node_proto,
                            const nnvm::IndexedGraph &ig,
                            const array_view<IndexedGraph::NodeEntry> &inputs);
 
-void ConvertSoftmaxOutput(NodeProto *node_proto,
-                          const NodeAttrs &attrs,
-                          const nnvm::IndexedGraph &ig,
-                          const array_view<IndexedGraph::NodeEntry> &inputs);
-
 void ConvertFlatten(NodeProto *node_proto,
                     const NodeAttrs &attrs,
                     const nnvm::IndexedGraph &ig,
@@ -190,7 +185,6 @@ static const std::unordered_map<std::string, ConverterFunction> converter_map = 
   {"Pad", ConvertPad},
   {"Pooling", ConvertPooling},
   {"relu", ConvertRelu},
-  {"SoftmaxOutput", ConvertSoftmaxOutput}
 };
 
 typedef void (*PreprocessFunction)(const NodeAttrs &attrs,

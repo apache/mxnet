@@ -28,7 +28,6 @@
 #include <nnvm/c_api.h>
 #include <vector>
 #include <string>
-#include "../../imperative/imperative_utils.h"
 
 namespace mxnet {
 
@@ -48,11 +47,24 @@ std::vector<NDArray*> Invoke(const nnvm::Op* op,
                              int* num_outputs,
                              NDArray** outputs);
 
+bool is_recording();
+bool is_deferred_compute();
+
 template<typename T>
 void SetAttrDict(nnvm::NodeAttrs* attrs) {
-  if (Imperative::Get()->is_recording()) {
+  if (is_recording() || is_deferred_compute()) {
     ::dmlc::get<T>(attrs->parsed).SetAttrDict(&(attrs->dict));
   }
+}
+
+template<typename ValueType, typename T>
+Tuple<ValueType> Obj2Tuple(const runtime::ObjectRef& src) {
+  runtime::ADT adt = Downcast<runtime::ADT, runtime::ObjectRef>(src);
+  Tuple<ValueType> ret(adt.size(), 0);
+  for (size_t i = 0; i < adt.size(); ++i) {
+    ret[i] = Downcast<T, runtime::ObjectRef>(adt[i])->value;
+  }
+  return ret;
 }
 
 }  // namespace mxnet

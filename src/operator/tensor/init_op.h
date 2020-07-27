@@ -35,6 +35,8 @@
 #include <string>
 #include <algorithm>
 #include <limits>
+#include "../../api/operator/op_utils.h"
+#include "../../common/utils.h"
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "../mxnet_op.h"
@@ -57,7 +59,9 @@ struct InitOpParam : public dmlc::Parameter<InitOpParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(-1)
+    .add_enum("None", -1)
     MXNET_ADD_ALL_TYPES_WITH_BOOL
     .describe("Target data type.");
   }
@@ -156,14 +160,10 @@ struct EyeParam : public dmlc::Parameter<EyeParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
-    .add_enum("float32", mshadow::kFloat32)
-    .add_enum("float64", mshadow::kFloat64)
-    .add_enum("float16", mshadow::kFloat16)
-    .add_enum("uint8", mshadow::kUint8)
-    .add_enum("int8", mshadow::kInt8)
-    .add_enum("int32", mshadow::kInt32)
-    .add_enum("int64", mshadow::kInt64)
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(-1)
+    .add_enum("None", -1)
+    MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
   }
 };
@@ -222,9 +222,26 @@ struct RangeParam : public dmlc::Parameter<RangeParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(-1)
+    .add_enum("None", -1)
     MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream start_s, stop_s, step_s, repeat_s, infer_range_s, dtype_s;
+    start_s << start;
+    stop_s << stop;
+    step_s << step;
+    repeat_s << repeat;
+    infer_range_s << infer_range;
+    dtype_s << dtype;
+    (*dict)["start"] = start_s.str();
+    (*dict)["stop"] = stop_s.str();
+    (*dict)["step"] = step_s.str();
+    (*dict)["repeat"] = repeat_s.str();
+    (*dict)["infer_range"] = infer_range_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 
@@ -272,11 +289,25 @@ struct InitOpWithScalarParam : dmlc::Parameter<InitOpWithScalarParam> {
       .set_default("")
       .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
                   "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    DMLC_DECLARE_FIELD(dtype)
+      .set_default(-1)
+      .add_enum("None", -1)
       MXNET_ADD_ALL_TYPES_WITH_BOOL
       .describe("Target data type.");
     DMLC_DECLARE_FIELD(value)
       .describe("Value with which to fill newly created tensor");
+  }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream shape_s, dtype_s, value_s;
+    shape_s << shape;
+    dtype_s << dtype;
+    value_s << value;
+    (*dict)["shape"] = shape_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
+    (*dict)["value"] = value_s.str();
+    // We do not set ctx, because ctx has been set in dict instead of InitOpParam.
+    // Setting ctx here results in an error.
   }
 };
 
@@ -312,9 +343,24 @@ struct LinspaceParam : public dmlc::Parameter<LinspaceParam> {
     .set_default("")
     .describe("Context of output, in format [cpu|gpu|cpu_pinned](n)."
               "Only used for imperative calls.");
-    DMLC_DECLARE_FIELD(dtype).set_default(mshadow::kFloat32)
+    DMLC_DECLARE_FIELD(dtype)
+    .set_default(-1)
+    .add_enum("None", -1)
     MXNET_ADD_ALL_TYPES
     .describe("Target data type.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream start_s, stop_s, num_s, endpoint_s, dtype_s;
+    start_s << start;
+    stop_s << stop;
+    num_s << num;
+    endpoint_s << endpoint;
+    dtype_s << dtype;
+    (*dict)["start"] = start_s.str();
+    (*dict)["stop"] = stop_s.str();
+    (*dict)["num"] = num_s.str();
+    (*dict)["endpoint"] = endpoint_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 
@@ -354,6 +400,17 @@ inline bool InitType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(in_attrs->size(), num_in);
   CHECK_EQ(out_attrs->size(), 1U);
   TYPE_ASSIGN_CHECK(*out_attrs, 0, param.dtype);
+  return true;
+}
+
+template<typename ParamType, int num_in = 0U>
+inline bool InitNumpyType(const nnvm::NodeAttrs& attrs,
+                          std::vector<int> *in_attrs,
+                          std::vector<int> *out_attrs) {
+  const ParamType& param = nnvm::get<ParamType>(attrs.parsed);
+  CHECK_EQ(in_attrs->size(), num_in);
+  CHECK_EQ(out_attrs->size(), 1U);
+  TYPE_ASSIGN_CHECK(*out_attrs, 0, mxnet::common::GetDefaultDtype(param.dtype));
   return true;
 }
 
