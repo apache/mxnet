@@ -53,4 +53,4 @@ NDArray
 
    *
    sparse/index
-   deepnumpy/index
+   np/index

@@ -29,4 +29,4 @@ If this is your first time using NP on MXNet, we recommend that you review the f
    :maxdepth: 1
 
    cheat-sheet
-   deepnumpy-vs-numpy
+   np-vs-numpy
