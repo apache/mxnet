@@ -90,6 +90,10 @@ Shared APIs
       :link: optimizer/index.html
 
       How to use the optimizers.
+      
+   .. card::
+      :title: NP on MXNet reference
+      :link: deepnumpy/index.html
 
 .. toctree::
    :hidden:
