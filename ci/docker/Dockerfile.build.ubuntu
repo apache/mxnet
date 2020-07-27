@@ -137,17 +137,27 @@ RUN cd /usr/local && \
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG BASE_IMAGE
 RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
+    wget -O nvidia-ml.deb https://developer.download.nvidia.com/compute/machine-learning/repos/ubuntu1804/x86_64/nvidia-machine-learning-repo-ubuntu1804_1.0.0-1_amd64.deb && \
+    dpkg -i nvidia-ml.deb && \
     apt-get update && \
     if [ ${SHORT_CUDA_VERSION} = 10.0 ]; then \
-        apt-get install -y "libnvinfer-dev=5.1.5-1+cuda10.0"; \
+        TRT_VERSION="7.0.0-1+cuda10.0"; \
+        TRT_MAJOR_VERSION=7; \
     elif [ ${SHORT_CUDA_VERSION} = 10.1 ]; then \
-        apt-get install -y "libnvinfer-dev=5.1.5-1+cuda10.1"; \
+        TRT_VERSION="6.0.1-1+cuda10.1"; \
+        TRT_MAJOR_VERSION=6; \
     elif [ ${SHORT_CUDA_VERSION} = 10.2 ]; then \
-        apt-get install -y "libnvinfer-dev=6.0.1-1+cuda10.2"; \
+        TRT_VERSION="7.0.0-1+cuda10.2"; \
+        TRT_MAJOR_VERSION=7; \
     else \
         echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.ubuntu"; \
         exit 1; \
     fi && \
+    apt-get install -y libnvinfer${TRT_MAJOR_VERSION}=${TRT_VERSION} \
+                       libnvinfer-dev=${TRT_VERSION} \
+                       libnvinfer-plugin${TRT_MAJOR_VERSION}=${TRT_VERSION} \
+                       libnvinfer-plugin-dev=${TRT_VERSION} && \
+    rm nvidia-ml.deb && \
     rm -rf /var/lib/apt/lists/*
 
 FROM gpu as gpuwithcudaruntimelibs
