@@ -746,12 +746,12 @@ sanity_license() {
     tools/license_header.py check
 }
 
-sanity_python() {
+sanity_cpp() {
     set -ex
     3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests --exclude_path src/operator/contrib/ctc_include include/mkldnn
 }
 
-sanity_cpp() {
+sanity_python() {
     set -ex
     python3 -m pylint --rcfile=ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/tutorials/test_sanity_tutorials.py
