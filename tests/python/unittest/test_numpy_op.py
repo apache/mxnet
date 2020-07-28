@@ -852,7 +852,23 @@ def test_np_max_min_error(func, shape, exception):
 
 @with_seed()
 @use_np
-def test_np_average():
+@pytest.mark.parametrize('a_shape,w_shape,axes', [
+    ((3, 5), (3, 5), None),
+    ((4, 5, 6), (4, 5, 6), (0, 2)),
+    ((3,), (3,), 0),
+    ((2, 3), (3,), 1),
+    ((2, 3, 4), (2,), 0),
+    ((2, 3, 4), (3,), 1),
+    ((2, 3, 4), (4,), -1),
+    ((2, 3, 4, 5), (5,), 3)
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.parametrize('is_weighted', [True, False])
+@pytest.mark.parametrize('returned', [True, False])
+@pytest.mark.parametrize('req_a', ['null', 'add', 'write'])
+def test_np_average(a_shape, w_shape, axes, is_weighted, req_a,
+                    hybridize, returned, dtype):
     class TestAverage(HybridBlock):
         def __init__(self, axis=None, returned=False):
             super(TestAverage, self).__init__()
@@ -894,73 +910,57 @@ def test_np_average():
             w_grad += init_w_grad.asnumpy()
         return [a_grad, w_grad]
 
-    tensor_shapes = [
-        ((3, 5), (3, 5), None),  # (a_shape, w_shape, axes)
-        ((4, 5, 6), (4, 5, 6), (0, 2)),
-        ((3,), (3,), 0),
-        ((2, 3), (3,), 1),
-        ((2, 3, 4), (2,), 0),
-        ((2, 3, 4), (3,), 1),
-        ((2, 3, 4), (4,), -1),
-        ((2, 3, 4, 5), (5,), 3)
-    ]
-
-    flags = [True, False]
-    dtypes = ['float32', 'float64']
-    reqs = ['null', 'add', 'write']
-    for hybridize, returned, (a_shape, w_shape, axes), dtype, is_weighted, req_a in \
-        itertools.product(flags, flags, tensor_shapes, dtypes, flags, reqs):
-        if req_a == 'null' and not is_weighted:
-            continue
-        rtol, atol = 1e-3, 1e-4
-        test_average = TestAverage(axes, returned)
-        if hybridize:
-            test_average.hybridize()
-        a = np.random.uniform(-1.0, 1.0, size=a_shape, dtype=dtype)
-        a.attach_grad(req_a)
-        init_a_grad = np.random.uniform(-1.0, 1.0, size=a_shape, dtype=dtype) if req_a == 'add' else None
-        init_w_grad = None
-        req_w = req_a
-        w, np_w = None, None
-        if is_weighted:
-            w = np.random.uniform(-1.0, 1.0, size=w_shape, dtype=dtype)
-            if req_a == 'null':
-                req_w = random.choice(['add', 'write'])
-            w.attach_grad(req_w)
-            if req_w == 'add':
-                init_w_grad = np.random.uniform(-1.0, 1.0, size=w_shape, dtype=dtype)
-            np_w = w.asnumpy()
-        np_out = _np.average(a.asnumpy(), axis=axes, weights=np_w, returned=returned)
-        with mx.autograd.record():
-            mx_out = test_average(a, w)
-        if returned:
-            np_out, np_sum_of_weights = np_out
-            mx_out, mx_sum_of_weights = mx_out
-            assert_almost_equal(mx_sum_of_weights.asnumpy(), np_sum_of_weights, rtol=rtol, atol=atol)
-        assert mx_out.shape == np_out.shape
-        assert_almost_equal(mx_out.asnumpy(), np_out.astype(dtype), rtol=rtol, atol=atol)
-        if req_a == 'add':
-            a.grad[:] = init_a_grad
-        if is_weighted and req_w == 'add':
-            w.grad[:] = init_w_grad
-        mx_out.backward()
-        # Code to get reference backward value
-        a_grad, w_grad = avg_backward(a.asnumpy(), np_w, np_out, axes, init_a_grad, init_w_grad)
-        if is_weighted:
-            assert_almost_equal(w.grad.asnumpy(), w_grad, rtol=rtol*10, atol=atol*10)
+    if req_a == 'null' and not is_weighted:
+        return
+    rtol, atol = 1e-3, 1e-4
+    test_average = TestAverage(axes, returned)
+    if hybridize:
+        test_average.hybridize()
+    a = np.random.uniform(-1.0, 1.0, size=a_shape, dtype=dtype)
+    a.attach_grad(req_a)
+    init_a_grad = np.random.uniform(-1.0, 1.0, size=a_shape, dtype=dtype) if req_a == 'add' else None
+    init_w_grad = None
+    req_w = req_a
+    w, np_w = None, None
+    if is_weighted:
+        w = np.random.uniform(-1.0, 1.0, size=w_shape, dtype=dtype)
         if req_a == 'null':
-            assert a.grad is None
-        else:
-            assert_almost_equal(a.grad.asnumpy(), a_grad, rtol=rtol, atol=atol)
+            req_w = random.choice(['add', 'write'])
+        w.attach_grad(req_w)
+        if req_w == 'add':
+            init_w_grad = np.random.uniform(-1.0, 1.0, size=w_shape, dtype=dtype)
+        np_w = w.asnumpy()
+    np_out = _np.average(a.asnumpy(), axis=axes, weights=np_w, returned=returned)
+    with mx.autograd.record():
+        mx_out = test_average(a, w)
+    if returned:
+        np_out, np_sum_of_weights = np_out
+        mx_out, mx_sum_of_weights = mx_out
+        assert_almost_equal(mx_sum_of_weights.asnumpy(), np_sum_of_weights, rtol=rtol, atol=atol)
+    assert mx_out.shape == np_out.shape
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+    if req_a == 'add':
+        a.grad[:] = init_a_grad
+    if is_weighted and req_w == 'add':
+        w.grad[:] = init_w_grad
+    mx_out.backward()
+    # Code to get reference backward value
+    a_grad, w_grad = avg_backward(a.asnumpy(), np_w, np_out, axes, init_a_grad, init_w_grad)
+    if is_weighted:
+        assert_almost_equal(w.grad.asnumpy(), w_grad, rtol=rtol*10, atol=atol*10)
+    if req_a == 'null':
+        assert a.grad is None
+    else:
+        assert_almost_equal(a.grad.asnumpy(), a_grad, rtol=rtol, atol=atol)
 
-        # Test imperative once again
-        np_out = _np.average(a.asnumpy(), weights=np_w, axis=axes, returned=returned)
-        mx_out = np.average(a, weights=w, axis=axes, returned=returned)
-        if returned:
-            np_out, np_sum_of_weights = np_out
-            mx_out, mx_sum_of_weights = mx_out
-            assert_almost_equal(mx_sum_of_weights.asnumpy(), np_sum_of_weights, rtol=rtol, atol=atol)
-        assert_almost_equal(mx_out.asnumpy(), np_out.astype(dtype), rtol=rtol, atol=atol)
+    # Test imperative once again
+    np_out = _np.average(a.asnumpy(), weights=np_w, axis=axes, returned=returned)
+    mx_out = np.average(a, weights=w, axis=axes, returned=returned)
+    if returned:
+        np_out, np_sum_of_weights = np_out
+        mx_out, mx_sum_of_weights = mx_out
+        assert_almost_equal(mx_sum_of_weights.asnumpy(), np_sum_of_weights, rtol=rtol, atol=atol)
+    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
 @with_seed()
@@ -1352,7 +1352,7 @@ def test_npx_index_add():
             else:
                 a[t_ind] += val
         return a
-    
+
     def index_add_bwd(out_grad, a_grad, ind, val_grad, ind_ndim, ind_num, grad_req_a, grad_req_val):
         if grad_req_a == 'add':
             init_a_grad = _np.array(a_grad)
@@ -9523,7 +9523,7 @@ def test_np_where():
             same(ret.asnumpy(), _np.where(cond.asnumpy(), x.asnumpy(), 1))
             ret_rscalar.backward()
             same(x.grad.asnumpy(), collapse_sum_like(_np.broadcast_to(cond.asnumpy(), ret.shape), shape_pair[1]))
-        
+
         # check both scalar case
         x = _np.random.randint(0, 100)
         y = _np.random.randint(0, 100)
