@@ -43,6 +43,36 @@ inline void linalg_check_batch_size(int A, int B, int C) {
 // this is int 32 max
 const index_t kInt32Limit = (int64_t{1} << 31) - 1; 
 
+template<typename xpu, typename DType>
+inline void check_large_dim(const Tensor<xpu, 2, DType>& Mat, std::string op_name) {
+}
+
+#define DEF_CHECK_LARGE_DIM(DType) \
+template<> \
+inline void check_large_dim<cpu, DType>(const Tensor<cpu, 2, DType>& Mat, std::string op_name) { \
+  CHECK_LE(Mat.size(0), kInt32Limit) \
+    << "Large dimensions (>= 2^31) are not currently supported by " + op_name + " on CPU"; \
+  CHECK_LE(Mat.size(1), kInt32Limit) \
+    << "Large dimensions (>= 2^31) are not currently supported by " + op_name + " on CPU"; \
+  CHECK_LE(Mat.stride_, kInt32Limit) \
+    << "Large dimensions (>= 2^31) are not currently supported by " + op_name + " on CPU"; \
+}
+
+DEF_CHECK_LARGE_DIM(float)
+DEF_CHECK_LARGE_DIM(double)
+
+#define CHECK_LARGE_DIM(xpu, DType, Mat, op_name) \
+  check_large_dim<xpu, DType>(Mat, #op_name);
+
+#define CHECK_LARGE_DIM_2(xpu, DType, Mat1, Mat2, op_name) \
+  check_large_dim<xpu, DType>(Mat1, #op_name); \
+  check_large_dim<xpu, DType>(Mat2, #op_name);
+
+#define CHECK_LARGE_DIM_3(xpu, DType, Mat1, Mat2, Mat3, op_name) \
+  check_large_dim<xpu, DType>(Mat1, #op_name); \
+  check_large_dim<xpu, DType>(Mat2, #op_name); \
+  check_large_dim<xpu, DType>(Mat3, #op_name);
+
 //////////////////////////////// GEMM ////////////////////////////////////////////
 
 // CPU/GPU-versions of BLAS3 function "gemm". Please refer to the BLAS3-documentation
@@ -59,6 +89,7 @@ inline void check_gemm(const Tensor<xpu, 2, DType>& A, const Tensor<xpu, 2, DTyp
     << "Non compatible matrix dimensions between inputs B and C for gemm";
   CHECK_EQ((tA ? A.size(0) : A.size(1)), (tB ? B.size(1) : B.size(0)))
     << "Non compatible matrix dimensions between inputs A and B for gemm";
+  CHECK_LARGE_DIM_3(xpu, DType, A, B, C, gemm);
 }
 
 template<typename xpu, typename DType>

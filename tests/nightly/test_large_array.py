@@ -27,7 +27,8 @@ sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor, get_identity_mat, get_identity_mat_batch
 from mxnet import gluon, nd
-from common import with_seed, with_post_test_cleanup
+from common import with_seed, with_post_test_cleanup, assertRaises
+from mxnet.base import MXNetError
 from nose.tools import with_setup
 import unittest
 
@@ -40,6 +41,7 @@ SMALL_Y = 50
 LARGE_SQ_X = 70000
 LARGE_SIZE = LARGE_X * SMALL_Y
 LARGE_TENSOR_SHAPE = 2**32
+INT_32_MAX = 2**31 - 1
 RNN_LARGE_TENSOR = 2**28
 
 
@@ -1348,6 +1350,17 @@ def test_linalg():
     check_batch_inverse()
     check_batch_trmm()
     check_batch_trsm()
+
+
+def test_linalg_large_dim():
+    def check_gemm():
+        A = mx.nd.ones(shape=(1, 2**31))
+        B = mx.nd.ones(shape=(1, 2**31))
+        C = mx.nd.ones(shape=(1,1))
+        D = mx.nd.linalg.gemm(A, B, C, transpose_b=True, alpha=2.0 , beta=10.0)
+        nd.waitall()
+
+    assertRaises(MXNetError, check_gemm)
 
 
 def test_basic():
