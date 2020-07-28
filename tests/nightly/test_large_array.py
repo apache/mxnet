@@ -1170,26 +1170,34 @@ def test_tensor():
 
 def test_linalg():
     def check_potrf():
-        # creating an identity matrix input
-        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
-        for i in range(LARGE_SQ_X):
-            A[i,i] = 1
+        def run_potrf(inp):
+            inp.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.potrf(inp)
+            return inp.grad, out
 
-        out = nd.linalg.potrf(A)
-        # output should be an identity matrix
-        for i in range(LARGE_SQ_X):
-            assert out[i,i] == 1
+        A = get_identity_mat(LARGE_SQ_X)
+        grad, out = run_potrf(A)
+        assert(out.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(out[0, 0] == 1)
+        out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(grad[0, 0] == 0.5)
 
     def check_potri():
-        # creating an identity matrix input
-        A = nd.zeros((LARGE_SQ_X, LARGE_SQ_X))
-        for i in range(LARGE_SQ_X):
-            A[i,i] = 1
+        def run_potri(inp):
+            inp.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.potri(inp)
+            return inp.grad, out
 
-        out = nd.linalg.potri(A)
-        # output should be an identity matrix
-        for i in range(LARGE_SQ_X):
-            assert out[i,i] == 1
+        A = get_identity_mat(LARGE_SQ_X)
+        grad, out = run_potri(A)
+        assert(out.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(out[0, 0] == 1)
+        out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(grad[0, 0] == -2)
     
     def check_syrk_batch():
         # test both forward and backward
