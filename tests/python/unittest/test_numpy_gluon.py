@@ -145,6 +145,13 @@ def test_np_loss_ndarray():
     loss = gluon.loss.L2Loss()
     assert float(np.sum(loss(output, label, weighting))) == 6
 
+    loss = gluon.loss.HuberLoss()
+    assert float(np.sum(loss(output, label))) == 4.5
+    loss = gluon.loss.HuberLoss(weight=0.5)
+    assert float(np.sum(loss(output, label))) == 2.25
+    loss = gluon.loss.HuberLoss()
+    assert float(np.sum(loss(output, label, weighting))) == 3.75
+    
     output = np.array([[0, 2], [1, 4]])
     label = np.array([0, 1])
     weighting = np.array([[0.5], [1.0]])
