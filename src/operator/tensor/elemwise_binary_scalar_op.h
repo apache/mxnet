@@ -281,6 +281,7 @@ class BinaryScalarOp : public UnaryOp {
     const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
     bool scalar_is_int = param.is_int;
     const double alpha = param.scalar;
+    printf("BinaryScalarOp::Compute-------scalar_is_int:%d alpha:%f\n", scalar_is_int, alpha);
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       if ((common::is_int(inputs[0].type_flag_) && !scalar_is_int) ||
           (inputs[0].type_flag_ == kBool)) {
@@ -333,6 +334,7 @@ class BinaryScalarOp : public UnaryOp {
     const NumpyBinaryScalarParam& param = nnvm::get<NumpyBinaryScalarParam>(attrs.parsed);
     bool scalar_is_int = param.is_int;
     const double alpha = param.scalar;
+    printf("BinaryScalarOp::ComputeLogic-------scalar_is_int:%d alpha:%f\n", scalar_is_int, alpha);
     TBlob temp_tblob;
     if (common::is_int(inputs[0].type_flag_) && !scalar_is_int) {
       Tensor<xpu, 1, double> temp_tensor =

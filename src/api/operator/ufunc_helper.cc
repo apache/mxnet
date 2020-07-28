@@ -77,6 +77,7 @@ void UFuncHelper(NDArray* lhs, int rhs, NDArray* out,
 void UFuncHelper(NDArray* lhs, double rhs, NDArray* out,
                  runtime::MXNetRetValue* ret, const nnvm::Op* op) {
   using namespace runtime;
+  printf("UFuncHelper(NDArray* lhs, double rhs\n");
   nnvm::NodeAttrs attrs;
   op::NumpyBinaryScalarParam param;
   param.scalar = rhs;
@@ -121,6 +122,7 @@ void UFuncHelper(int lhs, NDArray* rhs, NDArray* out,
 void UFuncHelper(double lhs, NDArray* rhs, NDArray* out,
                  runtime::MXNetRetValue* ret, const nnvm::Op* op) {
   using namespace runtime;
+  printf("UFuncHelper(double lhs, NDArray* rhs\n");
   nnvm::NodeAttrs attrs;
   op::NumpyBinaryScalarParam param;
   param.scalar = lhs;
@@ -147,18 +149,24 @@ void UFuncHelper(runtime::MXNetArgs args,
                  const nnvm::Op* rfn_scalar) {
   using namespace runtime;
   NDArray* out = args[2].operator NDArray*();
+  printf("UFuncHelper: args[0].type_code() = %d args[1].type_code() = %d\n", args[0].type_code(), args[1].type_code());
   if (args[0].type_code() == kNDArrayHandle) {
     if (args[1].type_code() == kNDArrayHandle) {
+      printf("UFuncHelper: args[0].type_code() == kNDArrayHandle args[1].type_code() == kNDArrayHandle\n");
       UFuncHelper(args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array);
     } else if (args[1].type_code() == kDLInt) {
+      printf("UFuncHelper: args[0].type_code() == kNDArrayHandle args[1].type_code() == kDLInt\n");
       UFuncHelper(args[0].operator NDArray*(), args[1].operator int(), out, ret, lfn_scalar);
     } else {
+      printf("UFuncHelper: args[0].type_code() == kNDArrayHandle args[1].type_code() == others\n");
       UFuncHelper(args[0].operator NDArray*(), args[1].operator double(), out, ret, lfn_scalar);
     }
   } else if (args[0].type_code() == kDLInt) {
+    printf("UFuncHelper: args[0].type_code() == kDLInt\n");
     UFuncHelper(args[0].operator int(), args[1].operator NDArray*(), out, ret,
                 rfn_scalar ? rfn_scalar : lfn_scalar);
   } else {
+    printf("UFuncHelper: args[0].type_code() == else\n");
     UFuncHelper(args[0].operator double(), args[1].operator NDArray*(), out, ret,
                 rfn_scalar ? rfn_scalar : lfn_scalar);
   }
