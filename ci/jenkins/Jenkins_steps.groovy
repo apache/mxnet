@@ -1051,13 +1051,8 @@ def compile_unix_lite(lib_name) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-<<<<<<< HEAD
-            utils.docker_run('ubuntu_cpu_lite', 'build_ubuntu_cpu_docs', false)
-            utils.pack_lib('libmxnet', 'lib/libmxnet.so*', false)
-=======
             utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_docs', false)
             utils.pack_lib(lib_name, mx_lib, false)
->>>>>>> origin/master
           }
         }
       }
@@ -1085,11 +1080,7 @@ def docs_python(lib_name) {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-<<<<<<< HEAD
-            utils.unpack_and_init('libmxnet', 'lib/libmxnet.so*', false)
-=======
             utils.unpack_and_init(lib_name, mx_lib, false)
->>>>>>> origin/master
             utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
             if (should_pack_website()) {
               utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
@@ -1101,120 +1092,6 @@ def docs_python(lib_name) {
 }
 
 
-<<<<<<< HEAD
-// Call this function from Jenkins to generate just the C and C++ API microsite artifacts.
-def docs_c() {
-    return ['C Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('libmxnet', 'lib/libmxnet.so*', false)
-            utils.docker_run('ubuntu_cpu_c', 'build_c_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('c-artifacts', 'docs/_build/c-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
-// Call this function from Jenkins to generate just the Julia API microsite artifacts.
-def docs_julia() {
-    return ['Julia Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('libmxnet', 'lib/libmxnet.so*', false)
-            utils.docker_run('ubuntu_cpu_julia', 'build_julia_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('julia-artifacts', 'docs/_build/julia-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
-// Call this function from Jenkins to generate just the R API PDF artifact.
-def docs_r() {
-    return ['R Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('libmxnet', 'lib/libmxnet.so*', false)
-            utils.docker_run('ubuntu_cpu_r', 'build_r_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('r-artifacts', 'docs/_build/r-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
-// Call this function from Jenkins to generate just the Scala API microsite artifacts.
-// It will also generate the Scala package.
-def docs_scala() {
-    return ['Scala Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('libmxnet', 'lib/libmxnet.so*', false)
-            utils.docker_run('ubuntu_cpu_scala', 'build_scala_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('scala-artifacts', 'docs/_build/scala-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
-// Call this function from Jenkins to generate just the Java API microsite artifacts.
-// It will also generate the Scala package.
-def docs_java() {
-    return ['Java Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('libmxnet', 'lib/libmxnet.so*', false)
-            utils.docker_run('ubuntu_cpu_scala', 'build_java_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('java-artifacts', 'docs/_build/java-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
-// Call this function from Jenkins to generate just the Clojure API microsite artifacts.
-// It will also generate the Scala package.
-def docs_clojure() {
-    return ['Clojure Docs': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.unpack_and_init('libmxnet', 'lib/libmxnet.so*', false)
-            utils.docker_run('ubuntu_cpu_scala', 'build_clojure_docs', false)
-            if (should_pack_website()) {
-              utils.pack_lib('clojure-artifacts', 'docs/_build/clojure-artifacts.tgz', false)
-            }
-          }
-        }
-      }
-    }]
-}
-
-
-=======
->>>>>>> origin/master
 // Call this function from Jenkins to generate just the main website artifacts.
 def docs_jekyll() {
     return ['Main Jekyll Website': {
