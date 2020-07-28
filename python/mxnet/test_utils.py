@@ -24,6 +24,7 @@ import traceback
 import numbers
 import sys
 import os
+import platform
 import errno
 import logging
 import bz2
@@ -48,7 +49,7 @@ from .context import current_context
 from .ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from .symbol import Symbol
 from .symbol.numpy import _Symbol as np_symbol
-from .util import use_np, use_np_default_dtype  # pylint: disable=unused-import
+from .util import use_np, use_np_default_dtype, getenv, setenv  # pylint: disable=unused-import
 from .runtime import Features
 from .numpy_extension import get_cuda_compute_capability
 
@@ -1920,27 +1921,6 @@ def get_bz2_data(data_dir, data_name, url, data_origin_name):
             bz_file.close()
         os.remove(data_origin_name)
 
-def set_env_var(key, val, default_val=""):
-    """Set environment variable
-
-    Parameters
-    ----------
-
-    key : str
-        Env var to set
-    val : str
-        New value assigned to the env var
-    default_val : str, optional
-        Default value returned if the env var doesn't exist
-
-    Returns
-    -------
-    str
-        The value of env var before it is set to the new value
-    """
-    prev_val = os.environ.get(key, default_val)
-    os.environ[key] = val
-    return prev_val
 
 def same_array(array1, array2):
     """Check whether two NDArrays sharing the same memory block
@@ -1965,9 +1945,11 @@ def same_array(array1, array2):
     array1[:] -= 1
     return same(array1.asnumpy(), array2.asnumpy())
 
+
 @contextmanager
 def discard_stderr():
-    """Discards error output of a routine if invoked as:
+    """
+    Discards error output of a routine if invoked as:
 
     with discard_stderr():
         ...
@@ -2400,22 +2382,79 @@ def same_symbol_structure(sym1, sym2):
     return True
 
 
-class EnvManager(object):
-    """Environment variable setter and unsetter via with idiom"""
-    def __init__(self, key, val):
-        self._key = key
-        self._next_val = val
-        self._prev_val = None
+@contextmanager
+def environment(*args):
+    """
+    Environment variable setter and unsetter via `with` idiom.
 
-    def __enter__(self):
-        self._prev_val = os.environ.get(self._key)
-        os.environ[self._key] = self._next_val
+    Takes a specification of env var names and desired values and adds those
+    settings to the environment in advance of running the body of the `with`
+    statement.  The original environment state is restored afterwards, even
+    if exceptions are raised in the `with` body.
 
-    def __exit__(self, ptype, value, trace):
-        if self._prev_val:
-            os.environ[self._key] = self._prev_val
-        else:
-            del os.environ[self._key]
+    Parameters
+    ----------
+    args:
+        if 2 args are passed:
+            name, desired_value strings of the single env var to update, or
+        if 1 arg is passed:
+            a dict of name:desired_value for env var's to update
+
+    """
+
+    # On Linux, env var changes made through python's os.environ are seen
+    # by the backend.  On Windows though, the C runtime gets a snapshot
+    # of the environment that cannot be altered by os.environ.  Here we
+    # check, using a wrapped version of the backend's getenv(), that
+    # the desired env var value is seen by the backend, and otherwise use
+    # a wrapped setenv() to establish that value in the backend.
+
+    # Also on Windows, a set env var can never have the value '', since
+    # the command 'set FOO= ' is used to unset the variable.  Perhaps
+    # as a result, the wrapped dmlc::GetEnv() routine returns the same
+    # value for unset variables and those set to ''.  As a result, we
+    # ignore discrepancy.
+    def validate_backend_setting(name, value, can_use_setenv=True):
+        backend_value = getenv(name)
+        if value == backend_value or \
+           value == '' and backend_value is None and platform.system() == 'Windows':
+            return
+        if not can_use_setenv:
+            raise RuntimeError('Could not set env var {}={} within C Runtime'.format(name, value))
+        setenv(name, value)
+        validate_backend_setting(name, value, can_use_setenv=False)
+
+    # Core routine to alter environment from a dict of env_var_name, env_var_value pairs
+    def set_environ(env_var_dict):
+        for env_var_name, env_var_value in env_var_dict.items():
+            if env_var_value is None:
+                os.environ.pop(env_var_name, None)
+            else:
+                os.environ[env_var_name] = env_var_value
+            validate_backend_setting(env_var_name, env_var_value)
+
+    # Create env_var name:value dict from the two calling methods of this routine
+    if len(args) == 1 and isinstance(args[0], dict):
+        env_vars = args[0]
+    else:
+        assert len(args) == 2, 'Expecting one dict arg or two args: env var name and value'
+        env_vars = {args[0]: args[1]}
+
+    # Take a snapshot of the existing environment variable state
+    # for those variables to be changed.  get() return None for unset keys.
+    snapshot = {x: os.environ.get(x) for x in env_vars.keys()}
+
+    # Alter the environment per the env_vars dict
+    set_environ(env_vars)
+
+    # Now run the wrapped code
+    try:
+        yield
+    finally:
+        # the backend engines may still be referencing the changed env var state
+        mx.nd.waitall()
+        # reinstate original env_var state per the snapshot taken earlier
+        set_environ(snapshot)
 
 
 def collapse_sum_like(a, shape):
