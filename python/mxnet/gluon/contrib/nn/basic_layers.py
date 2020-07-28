@@ -24,6 +24,7 @@ __all__ = ['Concurrent', 'HybridConcurrent', 'Identity',
            'PixelShuffle3D']
 
 import warnings
+import uuid
 from .... import ndarray as nd, context
 from ...block import HybridBlock
 from ...nn import Sequential, HybridSequential, BatchNorm
@@ -179,7 +180,7 @@ class SyncBatchNorm(BatchNorm):
         num_devices = self._get_num_devices() if num_devices is None else num_devices
         self._kwargs = {'eps': epsilon, 'momentum': momentum,
                         'fix_gamma': not scale, 'use_global_stats': use_global_stats,
-                        'ndev': num_devices, 'key': self.name}
+                        'ndev': num_devices, 'key': uuid.uuid4()}
 
     def _get_num_devices(self):
         warnings.warn("Caution using SyncBatchNorm: "

@@ -45,6 +45,11 @@ NDArray
 
       For Sparse NDArray tutorials
 
+   .. card::
+      :title: NP on MXNet reference
+      :link: deepnumpy/index.html
+
+      This section contains the mxnet.np API reference documentation
 
 .. toctree::
    :hidden:
@@ -52,3 +57,4 @@ NDArray
 
    *
    sparse/index
+   deepnumpy/index
