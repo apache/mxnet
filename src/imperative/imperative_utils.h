@@ -50,6 +50,7 @@ void InvalidateOutputs(const std::vector<T> *pArrs,
   }
 }
 
+// TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature added
 static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
                                        std::vector<NDArray> *out_arrs) {
   out_arrs->clear();
@@ -61,6 +62,7 @@ static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
   }
 }
 
+// TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature added
 static inline void CreateDefaultInputs(std::vector<NDArray> *pArrs) {
   auto &&arrs = *pArrs;
   for (size_t i = 0; i < arrs.size(); ++i)
