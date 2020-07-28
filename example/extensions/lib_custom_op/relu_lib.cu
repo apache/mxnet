@@ -26,7 +26,7 @@
 #include <iostream>
 #include "lib_api.h"
 
-using namespace	mxnet::ext;
+using namespace mxnet::ext;
 
 #define NumThreadPerBlock 256 // mxnet recommended cuda thread number per block
 
