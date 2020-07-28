@@ -1207,6 +1207,25 @@ def test_linalg():
         assert A.grad[0,0,0] == 4
         assert_almost_equal(A.grad[1,0,0], nd.array([0.4]), rtol=1e-3, atol=1e-5)
 
+    def check_gemm2():
+        def run_gemm2(inp1,inp2):
+            inp1.attach_grad()
+            inp2.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.gemm2(inp1,inp2)
+            return inp1.grad, inp2.grad, out
+
+        inp1=mx.nd.ones(shape=(SMALL_Y, LARGE_X))
+        inp1[0][0]=0.1
+        inp2=mx.nd.ones(shape=(LARGE_X, SMALL_Y))
+        inp1_grad, inp2_grad, out= run_gemm2(inp1,inp2)
+        assert out.asnumpy()[0][0] == LARGE_X
+        assert out.shape == (SMALL_Y, SMALL_Y)
+        out.backward()
+        assert inp1_grad.shape == (SMALL_Y, LARGE_X)
+        assert inp2_grad.shape == (LARGE_X, SMALL_Y)
+        assert_almost_equal(inp2_grad.asnumpy()[0][0],49.1)
+
     def check_det():
         def run_det(inp):
             inp.attach_grad()
@@ -1321,6 +1340,7 @@ def test_linalg():
     check_potrf()
     check_potri()
     check_syrk_batch()
+    check_gemm2()
     check_det()
     check_inverse()
     check_trmm()
