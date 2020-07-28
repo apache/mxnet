@@ -26,6 +26,8 @@
 #include <iostream>
 #include "lib_api.h"
 
+using namespace	mxnet::ext;
+
 #define NumThreadPerBlock 256 // mxnet recommended cuda thread number per block
 
 __global__ void relu_gpu_forward(float *out, float *in, int64_t N) {

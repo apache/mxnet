@@ -26,6 +26,8 @@
 #include <iostream>
 #include "lib_api.h"
 
+using namespace	mxnet::ext;
+
 void transpose(MXTensor& src, MXTensor& dst, const OpResource& res) {
   MXSparse* A = src.data<MXSparse>();
   MXSparse* B = dst.data<MXSparse>(); 

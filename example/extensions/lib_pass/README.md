@@ -154,7 +154,7 @@ The `Graph` class represents the model's architecture. Each `Node` in the graph 
 - `subgraph` - [vector of Graph] set of subgraphs in the node
 - `attrs` - [map of string to string] set of attributes for the node
 
-The `inputs` are a set of `NodeEntry` where each contains a pointer to a node that produces the data, and an `entry` that is the index of the output on the other node. Conversely, the `output` are a set of `NodeEntry` where each contains a pointer to a node that consumes the data, and and `entry` that is the index of the input on the other node. This bidirectional dependency will enable you to easily traverse the graph. 
+The `inputs` are a set of `NodeEntry` where each contains a pointer to a `Node` that produces the data, and an `entry` that is the index of the output on the other `Node`. Conversely, the `outputs` are a set of `NodeEntry` where each contains a pointer to a`Node` that consumes the data, and and `entry` that is the index of the input on the other `Node`. This bidirectional dependency will enable you to easily traverse the graph. 
 
 A `Graph` contains the following:
 - `nodes` - [vector of Node] set of nodes in the graph
@@ -171,14 +171,14 @@ g->nodes.push_back(n);
 ```
 Heres an example creating an edge between two nodes:
 ```c++
-n1->outputs.push_back({n2,0});
+n1->outputs.push_back({n2,1});
 n2->inputs.push_back({n1,0});
 ```
-Here node `n1` produces an output at index 0 that is consumed by node `n2` on the 0th input.
+Here node `n1` produces an output at index 0 that is consumed by node `n2` on the input at index 1.
 
 ### Pass Resource
 
-Some graph passes require allocating new NDArrays to add/replace model params. The `alloc_arg` and `alloc_aux` APIs enabling allocating new NDArrays and integrate them with the model args and aux params. Both APIs have the following signature:
+Some graph passes require allocating new NDArrays to add/replace model params. The `alloc_arg` and `alloc_aux` APIs enable allocating new NDArrays and integrate them with the model args and aux params. Both APIs have the following signature:
 
 ```c++
     MXTensor* alloc_xxx(const std::string& name,
@@ -187,7 +187,9 @@ Some graph passes require allocating new NDArrays to add/replace model params. T
                         MXDType dtype)
 ```
 
-If the `name` provided matches the name of an existing param it replaces the previous one. Otherwise it adds a new param to the appropriate arg/aux set.
+If the `name` provided matches the name of an existing param it replaces the previous one. Otherwise it adds a new param to the appropriate arg/aux set. Be sure that you add a new node in the graph that corresponds to this new param, otherwise it will be useless.
+
+If you wish to remove an existing param, just remove the node in the graph corresponding to that param. It will be deleted after the pass completes and removed from the dictionary of args or aux (whichever it is a member of).
 
 ### Parsing a JSON string
 

@@ -28,6 +28,8 @@
 #include <algorithm>
 #include "lib_api.h"
 
+using namespace	mxnet::ext;
+
 /* function to execute log operator on floats */
 void myLog(MXTensor &in, MXTensor &out) {
   float* inp = in.data<float>();

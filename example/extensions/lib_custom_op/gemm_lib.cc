@@ -26,6 +26,8 @@
 #include <iostream>
 #include "lib_api.h"
 
+using namespace mxnet::ext;
+
 // main matrix multiplication routine
 void gemm(const float* A, const float* B, float* C,
           const unsigned n, const unsigned k, const unsigned m) {

@@ -28,6 +28,8 @@
 #include <algorithm>
 #include "lib_api.h"
 
+using namespace	mxnet::ext;
+
 /* \brief a basic pass that copies the input to the output */
 MXReturnValue myPass(const std::string& in_graph, const std::string** out_graph,
                      const std::unordered_map<std::string, std::string>& options,
