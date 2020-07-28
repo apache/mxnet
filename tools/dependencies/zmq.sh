@@ -39,11 +39,11 @@ if [[ ! -f $DEPS_PATH/lib/libzmq.a ]]; then
     $MAKE install
 
     if [[ ! -f $DEPS_PATH/lib/libzmq.a ]]; then
-        rm $DEPS_PATH/lib64/*zmq*so*
+        rm $DEPS_PATH/lib64/*zmq*{so,dylib}*
         mkdir -p $DEPS_PATH/lib
         cp $DEPS_PATH/lib64/*zmq* $DEPS_PATH/lib
     else
-        rm $DEPS_PATH/lib/*zmq*so*
+        rm $DEPS_PATH/lib/*zmq*{so,dylib}*
     fi
 
     popd

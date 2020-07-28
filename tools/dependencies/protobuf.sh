@@ -41,7 +41,7 @@ if [[ ! -e $LIBPROTOBUF ]] || [[ ! -e $LIBPROTOC ]]; then
     ./configure -prefix=$DEPS_PATH
     $MAKE
     $MAKE install
-    rm $DEPS_PATH/lib/*proto*so*
+    rm $DEPS_PATH/lib/*proto*$DY_EXT*
     popd
 fi
 

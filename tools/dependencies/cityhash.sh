@@ -30,6 +30,6 @@ if [[ ! -f $DEPS_PATH/lib/libcityhash.a ]]; then
     ./configure -prefix=$DEPS_PATH --enable-sse4.2
     $MAKE CXXFLAGS="-g -O3 -msse4.2"
     $MAKE install
-    rm $DEPS_PATH/lib/*cityhash*so*
+    rm $DEPS_PATH/lib/*cityhash*{so,dylib}*
     popd
 fi
