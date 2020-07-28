@@ -1201,14 +1201,17 @@ def test_linalg():
         A.attach_grad()
         with mx.autograd.record():
             out = nd.linalg.syrk(A, alpha=2, transpose=False)
+        assert out.shape == (2, LARGE_SQ_X, LARGE_SQ_X)
         assert out[0,0,0] == 2
+
         assert_almost_equal(out[1,0,0], nd.array([0.02]), rtol=1e-3, atol=1e-5)
         out.backward()
+        assert A.grad.shape == (2, LARGE_SQ_X, LARGE_SQ_X)
         assert A.grad[0,0,0] == 4
         assert_almost_equal(A.grad[1,0,0], nd.array([0.4]), rtol=1e-3, atol=1e-5)
 
-    check_potrf()
-    check_potri()
+    #check_potrf()
+    #check_potri()
     check_syrk_batch()
 
 
