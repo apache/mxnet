@@ -72,7 +72,6 @@ struct AccType<half> {
     return __float2half(val);
   }
 };
-
 )code";
 
 }  // namespace rtc

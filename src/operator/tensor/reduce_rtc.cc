@@ -419,10 +419,9 @@ void RTCReduce(const NodeAttrs& attrs,
   using namespace mxnet::common::cuda::rtc;
   if (req == kNullOp) return;
   Stream<gpu> *s = ctx.get_stream<gpu>();
-  size_t type_size = common::mshadow_type_info(small.type_flag_).size;
-  if (small.type_flag_ == mshadow::kFloat16) {
-    type_size = sizeof(float);
-  }
+  size_t big_type_size = common::mshadow_type_info(big.type_flag_).acc_size;
+  size_t small_type_size = common::mshadow_type_info(small.type_flag_).acc_size;
+  size_t type_size = std::max(big_type_size, small_type_size);
   ReduceImplConfig config(small.shape_, big.shape_, nullptr, nullptr, type_size);
   if (config.M == 1) {
     // With M == 1 result is just (possibly reshaped) OP(big)
@@ -460,10 +459,9 @@ void RTCReduce(const NodeAttrs& attrs,
   using namespace mxnet::common::cuda::rtc;
   if (req == kNullOp) return;
   Stream<gpu> *s = ctx.get_stream<gpu>();
-  size_t type_size = common::mshadow_type_info(small.type_flag_).size;
-  if (small.type_flag_ == mshadow::kFloat16) {
-    type_size = sizeof(float);
-  }
+  size_t big_type_size = common::mshadow_type_info(big.type_flag_).acc_size;
+  size_t small_type_size = common::mshadow_type_info(small.type_flag_).acc_size;
+  size_t type_size = std::max(big_type_size, small_type_size);
   ReduceImplConfig config(small.shape_, big.shape_, &lhs.shape_, &rhs.shape_, type_size);
   std::string common_code = std::string("const OpReqType req = ") +
                             util::to_string(req) +

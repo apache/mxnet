@@ -37,6 +37,52 @@ using uint8 = unsigned char;
 using int8 = char;
 using int32 = int;
 using int64 = long long;
+)code"
+#if MSHADOW_INT64_TENSOR_SIZE == 1
+"typedef int64 index_t;\n"
+#else
+"typedef int32 index_t;\n"
+#endif
+R"code(
+// bool and int8 need to be accumulated in index_t
+template<>
+struct AccType<bool> {
+  using type = index_t;
+
+  __device__ static inline type from(const bool& val) {
+    return val;
+  }
+
+  __device__ static inline bool to(type val) {
+    return val;
+  }
+};
+
+template<>
+struct AccType<int8> {
+  using type = index_t;
+
+  __device__ static inline type from(const int8& val) {
+    return val;
+  }
+
+  __device__ static inline int8 to(type val) {
+    return val;
+  }
+};
+
+template<>
+struct AccType<uint8> {
+  using type = index_t;
+
+  __device__ static inline type from(const uint8& val) {
+    return val;
+  }
+
+  __device__ static inline uint8 to(type val) {
+    return val;
+  }
+};
 
 namespace type_util {
 
@@ -143,12 +189,7 @@ struct mixed_type<U, T, typename enable_if<is_integral<T>::value &&
 };
 
 }  // namespace type_util
-)code"
-#if MSHADOW_INT64_TENSOR_SIZE == 1
-"typedef int64 index_t;\n";
-#else
-"typedef int32 index_t;\n";
-#endif
+)code";
 
 const char util_string[] = R"code(
 enum class OpReqType {
