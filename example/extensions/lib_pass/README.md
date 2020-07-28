@@ -80,7 +80,7 @@ sym_block.optimize_for(x, backend='myPass')
 
 APIs in MXNet are available in both Symbol and Gluon APIs. For the Symbol API, the `optimize_for` API can be called on Symbol objects to return a new Symbol post graph pass.
 
-```
+```python
 optimize_for(backend, args=None, aux=None, ctx=None, **kwargs)
 ```
 
@@ -88,7 +88,7 @@ The `optimize_for` API takes at least 1 argument, `backend` which is a string th
 
 For the Gluon API, the `hybridize` API can be called on HybridBlocks to execute a graph pass on the internal CachedOp Symbol.
 
-```
+```python
 hybridize(backend=None, backend_opts=None, **kwargs)
 ```
 
@@ -96,20 +96,20 @@ The `hybridize` function prepares the HybridBlock to be converted into a backend
 
 If you just want to run a graph pass on the HybridBlock but not run a complete forward pass, you can use the `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
 
-```
+```python
 optimize_for(x, backend=None, backend_opts=None, **kwargs)
 ```
 
 When the `optimize_for` API is called on a HybridBlock it runs the graph pass immediately. This lets users export the modified model without running a complete forward pass.
 
-```
+```python
 block.optimize_for(x, backend='myPass')
 block.export('optimized')
 ```
 
 But you can also use `optimize_for` in place of `hybridize` and run inference immediately after too.
 
-```
+```python
 block.optimize_for(x, backend='myPass')
 block(x)
 ```
@@ -120,12 +120,12 @@ There are several essential building blocks for making a custom pass:
 
 * [initialize](./pass_lib.cc#44):
     * This function is the library initialization function necessary for any dynamic libraries. It lets you check if the user is using a compatible version of MXNet. Note that this `version` parameter is passed from MXNet when library is loaded.
-
+```c++
             MXReturnValue initialize(int version)
-
+```
 * [graphPass](./pass_lib.cc#31):
     * This function provides a copy of the model graph as a JSON string, and provides an interface for returning a modified model JSON string. Also this is where a custom pass can validate the options specified by the user.
-
+```c++
             MXReturnValue graphPass(
                 const std::string& in_graph,
                 const std::string** out_graph,
@@ -133,22 +133,54 @@ There are several essential building blocks for making a custom pass:
                 const std::unordered_map<std::string, MXTensor>& args,
                 const std::unordered_map<std::string, MXTensor>& aux,
                 const PassResource& res)
-
+```
 * [REGISTER_PASS(my_pass_name)](./pass_lib.cc#L41):
     * This macro registers the custom pass and its properties to MXNet by its name. The argument to `setBody` is the `graphPass` function.
-
+```c++
             REGISTER_PASS(my_pass_name)
             .setBody(graphPass);
-
+```
 Let’s take a closer look at those registry functions:
 
 * **graphPass**: This function takes six arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. The 2nd argument is a pointer to a pointer of a JSON model string. It is expected users will dereference and assign the address of their output string allocated with `new` and `delete` will be called on it automatically. The third argument is the map of options specified by the user. Users can pass custom options to the pass and they are passed to this function in the `options` map. The fourth and fifth arguments are the named tensor mapping for the args and aux params for the model. They will contain the model params if the user provides them to the `optimize_for` API. The last argument is the `PassResource` object for memory allocation and other utilities. The details of `PassResource` are covered in the section below
 
+### Graph representation
+
+The `Graph` class represents the model's architecture. Each `Node` in the graph represents an operator or weight (ie. args/aux param). Since an operator in MXNet can take multiple inputs and produce multiple outputs, each input/output is represented by a `NodeEntry`. A `Node` contains the following:
+- `op` - [string] operator name
+- `name` - [string] unique node name
+- `inputs` - [vector of NodeEntry] set of inputs to the node
+- `outputs` - [vector of NodeEntry] set of outputs from the node
+- `subgraph` - [vector of Graph] set of subgraphs in the node
+- `attrs` - [map of string to string] set of attributes for the node
+
+The `inputs` are a set of `NodeEntry` where each contains a pointer to a node that produces the data, and an `entry` that is the index of the output on the other node. Conversely, the `output` are a set of `NodeEntry` where each contains a pointer to a node that consumes the data, and and `entry` that is the index of the input on the other node. This bidirectional dependency will enable you to easily traverse the graph. 
+
+A `Graph` contains the following:
+- `nodes` - [vector of Node] set of nodes in the graph
+- `inputs` - [vector of Node] set of inputs to the graph
+- `outputs` - [vector of NodeEntry] set of outputs from the graph
+- `attrs` - [map of string to JSON object] set of attributes for the graph
+
+The `nodes` are all the nodes in the graph (superset). The `inputs` are only those nodes that are model inputs (ie. input image) or weights (ie. arg/aux params). The `outputs` are the outputs from the operators in the model that are true outputs of the model (ie. prediction results). 
+
+Heres an example creating a new node and adding it to the graph:
+```c++
+Node* n = new Node();
+g->nodes.push_back(n);
+```
+Heres an example creating an edge between two nodes:
+```c++
+n1->outputs.push_back({n2,0});
+n2->inputs.push_back({n1,0});
+```
+Here node `n1` produces an output at index 0 that is consumed by node `n2` on the 0th input.
+
 ### Pass Resource
 
-Some graph passes require allocating new NDArrays to add/replace model params. The `alloc_arg` and `alloc_aux` APIs enabling allocating new NDArrays and integrating them with the user-provide args and aux params. Both APIs have the following signature:
+Some graph passes require allocating new NDArrays to add/replace model params. The `alloc_arg` and `alloc_aux` APIs enabling allocating new NDArrays and integrate them with the model args and aux params. Both APIs have the following signature:
 
-```
+```c++
     MXTensor* alloc_xxx(const std::string& name,
                         const std::vector<int64_t>& shapes,
                         const MXContext &ctx,
@@ -162,8 +194,7 @@ If the `name` provided matches the name of an existing param it replaces the pre
 To simplify custom libraries, basic JSON parsing utility functions have been implemented in the `lib_api.h` header file. You create a `JsonParser` object and parse the string by calling the `parse_to_json` API like:
 
 ```c++
-JsonParser parser;
-JsonVal json_val = parser.parse_to_json(json_string);
+JsonVal json_val = JsonVal::parse(json);
 ```
 
 A `JsonVal` is a class that represents the nodes in a JSON structure. You can check the type of a node (num, str, list, or map) by comparing the `JsonVal.type` to `STR`, `NUM`, `LIST`, or `MAP`. Then you can get that value from the node like:
@@ -187,4 +218,4 @@ switch(json_val.type) {
 }
 ```
 
-There are also convenience constructors for creating `JsonVal` objects for strings and numbers like `JsonVal("myKey")` or `JsonVal(42)`. This makes it easy to get specific keys from a map like `json_val.map[JsonVal("nodes")]`.
+You call the `dump` function on a `JsonVal` object like `json_val.dump()` to get a JSON-compatible string. There are also convenience constructors for creating `JsonVal` objects for strings and numbers like `JsonVal("myKey")` or `JsonVal(42)`. This makes it easy to get specific keys from a map like `json_val.map[JsonVal("nodes")]`.
