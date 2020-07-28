@@ -3071,7 +3071,6 @@ def test_np_binary_funcs():
 
 @with_seed()
 @use_np
-@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/16848')
 def test_np_mixed_precision_binary_funcs():
     itypes = [np.bool, np.int8, np.int32, np.int64]
     ftypes = [np.float16, np.float32, np.float64]
@@ -3083,6 +3082,27 @@ def test_np_mixed_precision_binary_funcs():
 
             def hybrid_forward(self, F, a, b, *args, **kwargs):
                 return getattr(F.np, self._func)(a, b)
+
+        if (func in ['multiply', 'mod', 'equal', 'not_equal', 'greater',
+                    'greater_equal', 'less', 'less_equal']) and \
+            (lshape == () or rshape == ()) :
+        # the behaviors of infer type in dealing with the input shape of '()' are different between np and onp
+        # for example,
+        # mx_test_x1 = np.random.uniform(-2, 2, (2,3)).astype(np.float32)
+        # mx_test_x2 = np.random.uniform(-2, 2, ()).astype(np.float16)
+        # np_out = _np.mod(mx_test_x1.asnumpy(), mx_test_x2.asnumpy()) # float16
+        # mx_out = np.mod(mx_test_x1, mx_test_x2) # float32
+
+        # logcial ops: when two numbers are only different in precision, NumPy also has a weird behavior
+        # for example,
+        # a = np.array([[1.441]], dtype = np.float16)
+        # b = np.array(1.4413278, dtype = np.float32)
+        # c = np.array([1.4413278], dtype = np.float32)
+        # np.greater(a,b), np.greater(a,c) # True True
+        # _np.greater(a.asnumpy(),b.asnumpy()), _np.greater(a.asnumpy(),c.asnumpy()) # False True
+
+        # thus, skip the tests
+            return
 
         np_func = getattr(_np, func)
         mx_func = TestMixedBinary(func)
