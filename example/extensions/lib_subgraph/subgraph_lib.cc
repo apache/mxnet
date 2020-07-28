@@ -23,9 +23,10 @@
  * \brief subgraph operator implementation library file
  */
 
-#include <math.h>
+#include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <utility>
 #include "lib_api.h"
 
 /* function to execute log operator on floats */
@@ -69,8 +70,7 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
   std::vector<void*> to_free;
 
   // loop over nodes
-  for(int i=0; i<nodes.list.size(); i++) {
-    JsonVal node = nodes.list[i];
+  for(auto node : nodes.list) {
     // get the op name
     std::string op = node.map[JsonVal("op")].str;
     // get node ID inputs to op
@@ -137,9 +137,9 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
 
 class MyStatefulOp : public CustomStatefulOp {
  public:
-  explicit MyStatefulOp(const std::string& sym,
+  explicit MyStatefulOp(std::string  sym,
                         const std::unordered_map<std::string, std::string>& attrs)
-    : subgraph_sym(sym), attrs_(attrs) {
+    : subgraph_sym(std::move(sym)), attrs_(attrs) {
     for (auto kv : attrs) {
       std::cout << "subgraphOp attributes: " << kv.first << " ==> " << kv.second << std::endl;
     }
@@ -147,7 +147,7 @@ class MyStatefulOp : public CustomStatefulOp {
 
   MXReturnValue Forward(std::vector<MXTensor>* inputs,
                         std::vector<MXTensor>* outputs,
-                        const OpResource& op_res) {
+                        const OpResource& op_res) override {
     return myExecutor(inputs, outputs, subgraph_sym);
   }
 
@@ -299,20 +299,20 @@ class MySelector : public CustomOpSelector {
     }
     return false;
   }
-  virtual bool Select(int nodeID) {
+  bool Select(int nodeID) override {
     return chooseNode(nodeID);
   }
-  virtual bool SelectInput(int nodeID, int input_nodeID) {
+  bool SelectInput(int nodeID, int input_nodeID) override {
     return chooseNode(input_nodeID);
   }
-  virtual bool SelectOutput(int nodeID, int output_nodeID) {
+  bool SelectOutput(int nodeID, int output_nodeID) override {
     return chooseNode(output_nodeID);
   }
   virtual void Filter(std::vector<int>& candidates,
                       std::vector<int>& keep) {
     keep.insert(keep.end(), candidates.begin(), candidates.end());
   }
-  virtual void Reset() {}
+  void Reset() override {}
  private:
   std::string graph_json;
   JsonVal nodes;

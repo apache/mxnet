@@ -27,6 +27,7 @@
 #include <mxnet/io.h>
 #include <mxnet/base.h>
 #include <mxnet/resource.h>
+#include <memory>
 #include <numeric>
 #include "../common/utils.h"
 #include "./iter_batchloader.h"
@@ -52,22 +53,22 @@ DMLC_REGISTER_PARAMETER(SequentialSamplerParam);
 
 class SequentialSampler : public IIterator<DataInst> {
  public:
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.InitAllowUnknown(kwargs);
     indices_.resize(param_.length);
     std::iota(std::begin(indices_), std::end(indices_), 0);  // fill like arange
     out_.data.resize(1);
   }
 
-  virtual void BeforeFirst(void) {
+  void BeforeFirst() override {
     pos_ = 0;
   }
 
-  virtual int64_t GetLenHint(void) const {
+  int64_t GetLenHint() const override {
     return static_cast<int64_t>(indices_.size());
   }
 
-  virtual bool Next(void) {
+  bool Next() override {
     if (pos_ < indices_.size()) {
       int64_t *ptr = indices_.data() + pos_;
       out_.data[0] = TBlob(ptr, TShape({1, }), cpu::kDevMask, 0);
@@ -77,7 +78,7 @@ class SequentialSampler : public IIterator<DataInst> {
     return false;
   }
 
-  virtual const DataInst &Value(void) const {
+  const DataInst &Value() const override {
     return out_;
   }
 
@@ -117,27 +118,27 @@ DMLC_REGISTER_PARAMETER(RandomSamplerParam);
 
 class RandomSampler : public IIterator<DataInst> {
  public:
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.InitAllowUnknown(kwargs);
     indices_.resize(param_.length);
     std::iota(std::begin(indices_), std::end(indices_), 0);  // fill like arange
     mshadow::Random<cpu> *ctx_rng = ResourceManager::Get()->Request(
       Context::CPU(), ResourceRequest::kRandom).get_random<cpu, real_t>(nullptr);
-    rng_.reset(new common::RANDOM_ENGINE(ctx_rng->GetSeed()));
+    rng_ = std::make_unique<common::RANDOM_ENGINE>(ctx_rng->GetSeed());
     out_.data.resize(1);
     BeforeFirst();
   }
 
-  virtual void BeforeFirst(void) {
+  void BeforeFirst() override {
     std::shuffle(std::begin(indices_), std::end(indices_), *rng_);
     pos_ = 0;
   }
 
-  virtual int64_t GetLenHint(void) const {
+  int64_t GetLenHint() const override {
     return static_cast<int64_t>(indices_.size());
   }
 
-  virtual bool Next(void) {
+  bool Next() override {
     if (pos_ < indices_.size()) {
       int64_t *ptr = indices_.data() + pos_;
       out_.data[0] = TBlob(ptr, TShape({1, }), cpu::kDevMask, 0);
@@ -147,7 +148,7 @@ class RandomSampler : public IIterator<DataInst> {
     return false;
   }
 
-  virtual const DataInst &Value(void) const {
+  const DataInst &Value() const override {
     return out_;
   }
  private:

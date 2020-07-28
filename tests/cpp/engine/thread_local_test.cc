@@ -23,7 +23,7 @@
  * \brief Tests thread safety and lifetime of thread local store
 */
 #include <gtest/gtest.h>
-#include <time.h>
+#include <ctime>
 #include <dmlc/logging.h>
 #include <dmlc/thread_group.h>
 #include <dmlc/omp.h>

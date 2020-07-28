@@ -23,7 +23,7 @@
  * \brief initialize mxnet library
  */
 #include "initialize.h"
-#include <signal.h>
+#include <csignal>
 #include <dmlc/logging.h>
 #include <mxnet/engine.h>
 #include "./engine/openmp.h"

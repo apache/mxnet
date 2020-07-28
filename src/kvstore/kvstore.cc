@@ -23,7 +23,7 @@
  * \brief implement kv_store
  */
 #include <mxnet/kvstore.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <dmlc/logging.h>
 #include "./kvstore_local.h"
 

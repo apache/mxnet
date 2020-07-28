@@ -21,7 +21,7 @@
  * \file storage_test.cc
  * \brief cpu/gpu storage tests
 */
-#include <stdlib.h>
+#include <cstdlib>
 #include <gtest/gtest.h>
 #include <dmlc/logging.h>
 #include <mxnet/storage.h>
