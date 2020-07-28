@@ -603,7 +603,7 @@ class NDArray {
       << "AsArray is intended only for kDefaultStorage.";
     CHECK_GE(src.ptr_->shandle.size,
              shape.Size() * mshadow::mshadow_sizeof(dtype))
-      << "NDArray.AsArray: target memory size is bigger";
+      << "NDArray.AsArray: target memory size is bigger than what was allocated.";
     // We can't reuse memory in a view.
     CHECK(!src.IsView());
     *this = src;
