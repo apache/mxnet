@@ -39,6 +39,10 @@ inline void linalg_check_batch_size(int A, int B, int C) {
   CHECK_GT(A, 0) << "Zero batch size for arguments to linear algebra operator";
 }
 
+
+// this is int 32 max
+const index_t kInt32Limit = (int64_t{1} << 31) - 1; 
+
 //////////////////////////////// GEMM ////////////////////////////////////////////
 
 // CPU/GPU-versions of BLAS3 function "gemm". Please refer to the BLAS3-documentation
