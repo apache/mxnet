@@ -32,7 +32,8 @@ class StaticShapeOpSelector: public SubgraphSelector {
  public:
   virtual bool Select(const nnvm::Node &seed_node) {
     const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
-    return !seed_node.is_variable() && infershape.count(seed_node.op()) && !op_names_.count(seed_node.op()->name);
+    return !seed_node.is_variable() && infershape.count(seed_node.op()) && 
+           !op_names_.count(seed_node.op()->name);
   }
 
   virtual bool SelectInput(const nnvm::Node &cur_node, const nnvm::Node &input_node) {
@@ -50,8 +51,9 @@ class StaticShapeOpSelector: public SubgraphSelector {
     }
     return candidates;
   }
-  private:
-    // currently MXNet doesn't support these ops inside a CachedOp node
+
+   private:
+    // currently MXNet doesn't fully support these ops inside a CachedOp node
     std::unordered_set<std::string> op_names_ {"Reshape", "_npx_reshape",
                                                "transpose"};
 };
