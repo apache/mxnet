@@ -158,8 +158,8 @@ struct LaTrianParam : public dmlc::Parameter<LaTrianParam> {
 };
 
 // check if any dim will overflow 32-bit int
-inline void check_large_dim(std::vector<index_t> dims) {
-  for (index_t dim : dims) {
+inline void check_large_dim(std::vector<dim_t> dims) {
+  for (dim_t dim : dims) {
     CHECK_LE(dim, INT_MAX)
       << "Large matrix dimensions (>= 2^31) are not supported";
   }
