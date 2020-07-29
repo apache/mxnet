@@ -32,17 +32,15 @@ class StaticShapeOpSelector: public SubgraphSelector {
  public:
   virtual bool Select(const nnvm::Node &seed_node) {
     const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
-    return !seed_node.is_variable() && infershape.count(seed_node.op());
+    return !seed_node.is_variable() && infershape.count(seed_node.op()) && !op_names_.count(seed_node.op()->name);
   }
 
   virtual bool SelectInput(const nnvm::Node &cur_node, const nnvm::Node &input_node) {
-    const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
-    return !input_node.is_variable() && infershape.count(input_node.op());
+    return Select(input_node);
   }
 
   virtual bool SelectOutput(const nnvm::Node &cur_node, const nnvm::Node &output_node) {
-    const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
-    return !output_node.is_variable() && infershape.count(output_node.op());
+    return Select(output_node);
   }
 
   // Reject partitioning when subgraph contains only a single node
@@ -52,6 +50,10 @@ class StaticShapeOpSelector: public SubgraphSelector {
     }
     return candidates;
   }
+  private:
+    // currently MXNet doesn't support these ops inside a CachedOp node
+    std::unordered_set<std::string> op_names_ {"Reshape", "_npx_reshape",
+                                               "transpose"};
 };
 
 /*
