@@ -765,7 +765,9 @@ function(BuildTVMOP)
   # scope the variables in BuildTVM.cmake to avoid conflict
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")
-  set_target_properties(pslite PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+  set_target_properties(tvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+  set_target_properties(tvm_topi PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+  set_target_properties(tvm_runtime PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endfunction()
 
 if(USE_TVM_OP)
