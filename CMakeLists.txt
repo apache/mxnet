@@ -497,9 +497,9 @@ FILE(GLOB_RECURSE NNVMSOURCE
   3rdparty/tvm/nnvm/src/core/*.h
   3rdparty/tvm/nnvm/src/pass/*.h
   3rdparty/tvm/nnvm/include/*.h)
-add_library(nnvm STATIC ${NNVMSOURCE})
+add_library(nnvm OBJECT ${NNVMSOURCE})
 set_target_properties(nnvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
-list(APPEND mxnet_LINKER_LIBS nnvm)
+list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
 
 # add source group
 FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
