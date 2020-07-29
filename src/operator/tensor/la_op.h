@@ -475,6 +475,8 @@ inline bool LaEigFactShape(const nnvm::NodeAttrs& attrs,
   const mxnet::TShape& in_a = (*in_attrs)[0];
   const mxnet::TShape& out_u = (*out_attrs)[0];
   const mxnet::TShape& out_l = (*out_attrs)[1];
+  CHECK_LE(in_a.Size(), INT_MAX)
+    << "Large tensors are not supported by Linear Algebra operator syevd";
   if ( in_a.ndim() >= 2 ) {
     // Forward shape inference.
     const int ndim(in_a.ndim());
