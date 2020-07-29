@@ -50,8 +50,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         build-essential \
         ninja-build \
         git \
-        protobuf-compiler \
-        libprotobuf-dev \
         clang-6.0 \
         clang-tidy-6.0 \
         python-yaml \
@@ -83,6 +81,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         pandoc \
         ## Build-dependencies for ccache 3.7.9
         autoconf \
+        autogen \
+        libtool \
         gperf \
         libb2-dev \
         libzstd-dev && \
@@ -109,6 +109,15 @@ RUN cd /usr/local/src && \
 COPY install/requirements /work/
 RUN python3 -m pip install cmake==3.16.6 && \
     python3 -m pip install -r /work/requirements
+
+RUN git clone --recursive -b 3.5.1.1 https://github.com/google/protobuf.git && \
+    cd protobuf && \
+    ./autogen.sh && \
+    ./configure && \
+    make -j$(nproc) install && \
+    cd .. && \
+    rm -rf protobuf && \
+    ldconfig
 
 ARG USER_ID=0
 COPY install/docker_filepermissions.sh /work/

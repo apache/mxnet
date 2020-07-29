@@ -544,6 +544,7 @@ build_ubuntu_gpu_tensorrt() {
 
     export CC=gcc-7
     export CXX=g++-7
+    export ONNX_NAMESPACE=onnx
 
     # Build ONNX
     pushd .
@@ -552,22 +553,24 @@ build_ubuntu_gpu_tensorrt() {
     rm -rf build
     mkdir -p build
     cd build
-    cmake  -DBUILD_SHARED_LIBS=ON -GNinja ..
-    ninja onnx/onnx-ml.proto
-    ninja
+    cmake -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
+    make -j$(nproc) install
+    ldconfig
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
+    export CXXFLAGS=-I`pwd`
+
     popd
 
     # Build ONNX-TensorRT
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
-    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.1/targets/x86_64-linux/include/
+    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.2/targets/x86_64-linux/include/
     pushd .
     cd 3rdparty/onnx-tensorrt/
     mkdir -p build
     cd build
-    cmake ..
-    make -j$(nproc)
+    cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
+    make -j$(nproc) install
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
 
