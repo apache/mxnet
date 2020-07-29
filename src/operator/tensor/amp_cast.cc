@@ -189,6 +189,7 @@ It casts only between low precision float/FP32 and does not do anything for othe
     int num_args =
         dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
     std::vector<std::pair<int, int>> ret;
+    ret.reserve(num_args);
     for (int i = 0; i < num_args; ++i) {
       ret.emplace_back(i, i);
     }
@@ -234,6 +235,7 @@ NNVM_REGISTER_OP(_backward_amp_multicast)
   [](const NodeAttrs& attrs){
     int num_args = dmlc::get<AMPMultiCastParam>(attrs.parsed).num_outputs;
     std::vector<std::pair<int, int>> ret;
+    ret.reserve(num_args);
     for (int i = 0; i < num_args; ++i) {
       ret.emplace_back(i, i);
     }

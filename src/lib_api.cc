@@ -250,8 +250,8 @@ std::string mxnet::ext::getShapeAt(const std::string& shape, unsigned index) {
   int idx = 1;  // start at 1 to skip the first square bracket [
   // find the beginning of the output shape for the particular output index
   for (unsigned x=0; x < index; x++)
-    idx = shape.find("[", idx+1);
-  int stop = shape.find("]", idx);  // find stop index for this output shape
+    idx = shape.find('[', idx+1);
+  int stop = shape.find(']', idx);  // find stop index for this output shape
   // add this shape to the list
   return shape.substr(idx, stop-idx+1);
 }
@@ -260,9 +260,9 @@ std::string mxnet::ext::getDtypeAt(const std::string& dtype, unsigned index) {
   // find the beginning of the output dtype for the particular output index
   int idx = 0;
   for (unsigned x=0; x < index; x++)
-    idx = dtype.find(",", idx+1);
-  int stop = dtype.find(",", idx+1);  // find stop index for this output dtype
-  if (stop == -1) stop = dtype.find("]", idx+1);
+    idx = dtype.find(',', idx+1);
+  int stop = dtype.find(',', idx+1);  // find stop index for this output dtype
+  if (stop == -1) stop = dtype.find(']', idx+1);
   return dtype.substr(idx+1, stop-idx-1);
 }
 
@@ -1467,6 +1467,7 @@ MX_INT_RET _partCallReviewSubgraph(mxnet::ext::reviewSubgraph_t reviewSubgraph, 
   std::unordered_map<std::string, mxnet::ext::MXTensor> args;
   for (int i = 0; i < num_args; i++) {
     std::vector<int64_t> shapes;
+    shapes.reserve(arg_dims[i]);
     for (int j = 0; j < arg_dims[i]; j++)
       shapes.push_back(arg_shapes[i][j]);
 
@@ -1478,6 +1479,7 @@ MX_INT_RET _partCallReviewSubgraph(mxnet::ext::reviewSubgraph_t reviewSubgraph, 
   std::unordered_map<std::string, mxnet::ext::MXTensor> aux;
   for (int i = 0; i < num_aux; i++) {
     std::vector<int64_t> shapes;
+    shapes.reserve(aux_dims[i]);
     for (int j = 0; j < aux_dims[i]; j++)
       shapes.push_back(aux_shapes[i][j]);
 
@@ -1553,6 +1555,7 @@ MX_INT_RET _passCallGraphPass(mxnet::ext::graphPass_t graphPass, const char *jso
   std::unordered_map<std::string, mxnet::ext::MXTensor> args;
   for (int i = 0; i < num_args; i++) {
     std::vector<int64_t> shapes;
+    shapes.reserve(arg_dims[i]);
     for (int j = 0; j < arg_dims[i]; j++)
       shapes.push_back(arg_shapes[i][j]);
 
@@ -1565,6 +1568,7 @@ MX_INT_RET _passCallGraphPass(mxnet::ext::graphPass_t graphPass, const char *jso
   std::unordered_map<std::string, mxnet::ext::MXTensor> aux;
   for (int i = 0; i < num_aux; i++) {
     std::vector<int64_t> shapes;
+    shapes.reserve(aux_dims[i]);
     for (int j = 0; j < aux_dims[i]; j++)
       shapes.push_back(aux_shapes[i][j]);
 
