@@ -341,7 +341,7 @@ def test_gluon_cauchy_v1():
     for shape, hybridize in itertools.product(shapes, [True, False]):
         loc = np.random.uniform(-1, 1, shape)
         scale = np.random.uniform(0.5, 1.5, shape)
-        samples = np.random.uniform(size=shape, high=1.0-1e-4)
+        samples = np.random.uniform(size=shape, low=1e-4, high=1.0-1e-4)
         net = TestCauchy("icdf")
         if hybridize:
             net.hybridize()
@@ -879,7 +879,7 @@ def test_gluon_dirichlet_v1():
             for func in ['mean', 'variance', 'entropy']:
                 desired_shape = (
                     batch_shape if batch_shape is not None else ()) + (event_shape,)
-                alpha = np.random.uniform(size=desired_shape)
+                alpha = np.random.uniform(1.0, 5.0, desired_shape)
                 net = TestDirichlet(func)
                 if hybridize:
                     net.hybridize()

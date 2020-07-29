@@ -879,7 +879,7 @@ def test_gluon_dirichlet():
             for func in ['mean', 'variance', 'entropy']:
                 desired_shape = (
                     batch_shape if batch_shape is not None else ()) + (event_shape,)
-                alpha = np.random.uniform(size=desired_shape)
+                alpha = np.random.uniform(1.0, 5.0, desired_shape)
                 net = TestDirichlet(func)
                 if hybridize:
                     net.hybridize()
