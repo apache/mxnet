@@ -18,7 +18,7 @@
 
 # VAE with Gluon.probability 
 
-In this notebook, we will demonstrate how you can implement a Variational Auto-encoder(VAE) with Gluon.probability and MXNet's latest NumPy API.
+In this example, we will demonstrate how you can implement a Variational Auto-encoder(VAE) with Gluon.probability and MXNet's latest NumPy API.
 
 
 ```{.python .input}
