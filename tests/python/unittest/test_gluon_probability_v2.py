@@ -837,7 +837,7 @@ def test_gluon_dirichlet():
             dirichlet = mgp.Dirichlet(alpha, validate_args=True)
             return _distribution_method_invoker(dirichlet, self._func, *args)
 
-    event_shapes = [2, 5, 10]
+    event_shapes = [2, 4, 6]
     batch_shapes = [None, (2, 3)]
 
     # Test sampling
@@ -845,7 +845,7 @@ def test_gluon_dirichlet():
         for hybridize in [True, False]:
             desired_shape = (
                 batch_shape if batch_shape is not None else ()) + (event_shape,)
-            alpha = np.random.uniform(size=desired_shape)
+            alpha = np.random.uniform(1.0, 5.0, size=desired_shape)
             net = TestDirichlet("sample")
             if hybridize:
                 net.hybridize()
@@ -862,9 +862,9 @@ def test_gluon_dirichlet():
         for hybridize in [True, False]:
             desired_shape = (
                 batch_shape if batch_shape is not None else ()) + (event_shape,)
-            alpha = np.random.uniform(size=desired_shape)
+            alpha = np.random.uniform(1.0, 5.0, size=desired_shape)
             np_samples = _np.random.dirichlet(
-                [1 / event_shape] * event_shape, size=batch_shape)
+                [10.0 / event_shape] * event_shape, size=batch_shape)
             net = TestDirichlet("log_prob")
             if hybridize:
                 net.hybridize()
