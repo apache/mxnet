@@ -189,21 +189,11 @@ inline bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
     const int ndim((*in_attrs)[0].ndim()), axis(axis_param < 0 ? ndim + axis_param : axis_param);
     CHECK(axis >= 0 && axis < ndim-1)
       << "Invalid row axis (" << axis_param << ")";
-    // check if any dim is too large
+    // Check if input matrix dims are too large
     check_large_dim({(*in_attrs)[0][axis],
-		     (*in_attrs)[0][ndim-1],
-		     (*in_attrs)[1][axis],
-		     (*in_attrs)[1][ndim-1]});
-    /*
-    CHECK_LE((*in_attrs)[0][axis], INT_MAX)
-      << "Large matrix dimensions (>= 2^31) are not supported";
-    CHECK_LE((*in_attrs)[0][ndim-1], INT_MAX)
-      << "Large matrix dimensions (>= 2^31) are not supported";;
-    CHECK_LE((*in_attrs)[1][axis], INT_MAX)
-      << "Large matrix dimensions (>= 2^31) are not supported";;
-    CHECK_LE((*in_attrs)[1][ndim-1], INT_MAX)
-      << "Large matrix dimensions (>= 2^31) are not supported";;
-    */
+                     (*in_attrs)[0][ndim-1],
+                     (*in_attrs)[1][axis],
+                     (*in_attrs)[1][ndim-1]});
     std::vector<int> oshape(ndim);
     for ( int i = 0; i < ndim-1; ++i ) {
       if (i != axis) {
@@ -248,6 +238,10 @@ inline bool LaTriangMatrixMultOpShape(const nnvm::NodeAttrs& attrs,
         << "Shapes of inputs 0, 1 must be the same, except on last two dimensions";
       oshape[i] = (*in_attrs)[0][i];
     }
+    // Check if the input matrix dims are too large; it suffices to check the second 
+    // input only because the first is square whose size is bounded by memory
+    check_large_dim({(*in_attrs)[1][ndim-1],
+		     (*in_attrs)[1][ndim-2]});
     if ( param.rightside ) {
       // We compute B * A where A is the first and B the second input.
       CHECK_EQ((*in_attrs)[0][ndim-2], (*in_attrs)[1][ndim-1])
@@ -364,6 +358,9 @@ inline bool LaSyrkShape(const nnvm::NodeAttrs& attrs,
   bool transpose = nnvm::get<LaSyrkParam>(attrs.parsed).transpose;
   const int ndim = in_attr.ndim();
   if ( ndim >= 2 ) {
+    // Check if input matrix dims are too large
+    check_large_dim({in_attr[ndim-1],
+		     in_attr[ndim-2]});
     // Forward shape inference.
     std::vector<int> oshape(ndim);
     for ( int i = 0; i < ndim-2; ++i ) {

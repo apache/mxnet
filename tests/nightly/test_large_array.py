@@ -42,7 +42,7 @@ LARGE_SQ_X = 70000
 LARGE_SIZE = LARGE_X * SMALL_Y
 LARGE_TENSOR_SHAPE = 2**32
 RNN_LARGE_TENSOR = 2**28
-
+INT32_MAX = 2**31-1
 
 def test_nn():
     def check_gluon_embedding():
@@ -1353,21 +1353,42 @@ def test_linalg():
 
 def test_linalg_large_dim():
     def check_gemm():
-        A = mx.nd.ones(shape=(1, 2**32, 1))
-        B = mx.nd.ones(shape=(1, 2**32, 1))
-        C = mx.nd.ones(shape=(1, 1, 1))
-        assertRaises(MXNetError, mx.nd.linalg.gemm, \
-            A, B, C, transpose_b=True, alpha=1.0 , beta=1.0)
+        A = nd.ones(shape=(1, INT32_MAX + 1, 1))
+        B = nd.ones(shape=(1, INT32_MAX + 1, 1))
+        C = nd.ones(shape=(1, 1, 1))
+        assertRaises(MXNetError, nd.linalg.gemm, \
+            A, B, C, transpose_b=True)
     
     def check_gemm2():
-        A = mx.nd.ones(shape=(1, 1, 2**32))
-        B = mx.nd.ones(shape=(1, 1, 2**32))
-        assertRaises(MXNetError, mx.nd.linalg.gemm2, \
-            A, B, transpose_b=True, alpha=1.0)
+        A = nd.ones(shape=(1, 1, INT32_MAX + 1))
+        B = nd.ones(shape=(1, 1, INT32_MAX + 1))
+        assertRaises(MXNetError, nd.linalg.gemm2, \
+            A, B, transpose_b=True)
     
+    def check_trmm():
+        A = nd.ones(shape=(1, 1, 1))
+        B = nd.ones(shape=(1, INT32_MAX + 1, 1))
+        assertRaises(MXNetError, nd.linalg.trmm, \
+            A, B, rightside=True)
+    
+    def check_trsm():
+        A = nd.ones(shape=(1, 1, 1))
+        B = nd.ones(shape=(1, 1, INT32_MAX + 1))
+        assertRaises(MXNetError, nd.linalg.trsm, \
+            A, B, rightside=False)
+    
+    def check_syrk():
+        A = nd.ones(shape=(1, INT32_MAX + 1, 1))
+        assertRaises(MXNetError, nd.linalg.syrk, A)
+        assertRaises(MXNetError, nd.linalg.syrk, A, transpose=True)
+
+    # batch input
     check_gemm()
     check_gemm2()
-    
+    check_trmm()
+    check_trsm()
+    check_syrk()
+
 
 def test_basic():
     def check_elementwise():
