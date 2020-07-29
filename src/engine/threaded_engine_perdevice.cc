@@ -213,7 +213,7 @@ class ThreadedEnginePerDevice : public ThreadedEngine {
     // constructor
     ThreadWorkerBlock() = default;
     // destructor
-    ~ThreadWorkerBlock() noexcept(false) = default;
+    ~ThreadWorkerBlock() = default;
   };
 
   /*! \brief whether this is a worker thread. */

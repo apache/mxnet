@@ -61,7 +61,7 @@ class ProfilingThreadData {
   /*!
    * \brief Constructor, nothrow
    */
-  inline ProfilingThreadData() noexcept = default;
+  inline ProfilingThreadData() = default;
 
   /*!
    * \brief Retreive ProfileTask object of the given name, or create if it doesn't exist
