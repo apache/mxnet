@@ -37,6 +37,13 @@
 namespace mxnet {
 namespace op {
 
+// check if any dimension is too large
+//void check_large_dim(index_t* dims, int size) {
+  //for (int i=0; i<size; i++)
+    //CHECK_LE(dims[i], INT_MAX)
+      //<< "Large matrix dimensions (>= 2^31) are not supported";
+//} 
+
 // Parameters for general matrix-matrix multiply-accumulate (mac)
 struct LaMatrixMacParam : public dmlc::Parameter<LaMatrixMacParam> {
   bool transpose_a, transpose_b;
