@@ -53,7 +53,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         protobuf-compiler \
         libprotobuf-dev \
         clang-6.0 \
-        clang-tidy-6.0 \
         python-yaml \
         clang-10 \
         clang-tidy-10 \
