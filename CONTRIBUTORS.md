@@ -252,6 +252,7 @@ List of Contributors
 * [Oliver Kowalke](https://github.com/olk)
 * [Connor Goggins](https://github.com/connorgoggins)
 * [Joe Evans](https://github.com/josephevans)
+* [Zhaoqi Zhu](https://github.com/zha0q1)
 
 Label Bot
 ---------
