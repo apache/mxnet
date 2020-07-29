@@ -236,6 +236,27 @@ struct gamma_two_scalar_kernel {
       out[i] = sample;
     }
   }
+
+// Backward utils
+template <typename IType>
+MSHADOW_XINLINE void StandardGammaPdf(IType a, IType x) {
+  return pow(x, alpha - 1) * exp(-x)
+}
+
+template <typemame IType>
+MSHADOW_XINLINE void StandardGammaCdf(IType a, IType x) {
+  // Approximate the Gamma cdf via taylor series
+  IType numer = 1;
+  IType denom = a;
+
+  for (int i = 1; i <= 5; i++) {
+    numer *= -x / i;
+    denom += 1;
+    series1
+  }
+}
+
+
 };
 }  // namespace mxnet_op
 
@@ -392,6 +413,33 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
       });
     });
   }
+}
+
+// Allow gamma sampling to be differentiable,
+// using implicit reparameterization gradient:
+// -(d/d\alpha cdf(x;alpha)) / pdf(x;alpha)
+template<typename xpu>
+void NumpyGammaGrad(const nnvm::NodeAttrs& attrs,
+                    const OpContext& ctx,
+                    const std::vector<TBlob>& inputs,
+                    const std::vector<OpReqType>& req,
+                    const std::vector<TBlob>& outputs) {
+  // skip kernel launch for zero-size tensors
+  if (inputs[0].shape_.Size() == 0U) {
+    return;
+  }
+
+  // [scalar, scalar] case
+  if (outputs.size() == 0U) {
+    return;
+  }
+  const NumpyGammaParam &param = nnvm::get<NumpyGammaParam>(attrs.parsed)
+  
+  // [tensor tensor] case
+  if (inputs.size() == 5U) {
+
+  }
+
 }
 
 }  // namespace op
