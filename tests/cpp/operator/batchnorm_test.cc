@@ -277,7 +277,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
   typedef test::op::Validator<DType, AccReal> Super;
 
   /*! \brief Only static functions in this class */
-  BatchNormValidator() = delete;
+  BatchNormValidator() = delete;  // NOLINT
 
   /*! \brief Check batch norm output - 1D */
   static void checkBatchNorm1D(const TBlob *blob) {

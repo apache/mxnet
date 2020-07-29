@@ -68,8 +68,8 @@ class NaiveEngine final : public Engine {
     objpool_var_ref_ = common::ObjectPool<NaiveVar>::_GetSharedRef();
   }
   // virtual destructor
-  ~NaiveEngine() override {
 #if MXNET_USE_CUDA
+  ~NaiveEngine() override {
     LOG(INFO) << "Engine shutdown";
     for (size_t i = 0; i < streams_.size(); ++i) {
       if (streams_[i] != nullptr) {
@@ -84,8 +84,10 @@ class NaiveEngine final : public Engine {
         aux_streams_[i] = nullptr;
       }
     }
-#endif
   }
+#else
+  ~NaiveEngine() override = default;
+#endif
 
   void Stop() override {
   }
