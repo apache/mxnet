@@ -37,13 +37,6 @@
 namespace mxnet {
 namespace op {
 
-// check if any dimension is too large
-//void check_large_dim(index_t* dims, int size) {
-  //for (int i=0; i<size; i++)
-    //CHECK_LE(dims[i], INT_MAX)
-      //<< "Large matrix dimensions (>= 2^31) are not supported";
-//} 
-
 // Parameters for general matrix-matrix multiply-accumulate (mac)
 struct LaMatrixMacParam : public dmlc::Parameter<LaMatrixMacParam> {
   bool transpose_a, transpose_b;
@@ -164,6 +157,14 @@ struct LaTrianParam : public dmlc::Parameter<LaTrianParam> {
   }
 };
 
+// check if any dim will overflow 32-bit int
+inline void check_large_dim(std::vector<index_t> dims) {
+  for (index_t dim : dims) {
+    CHECK_LE(dim, INT_MAX)
+      << "Large matrix dimensions (>= 2^31) are not supported";
+  }
+}
+
 // Common function for shape inference for matrix mult and matrix mac.
 inline bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
                                    mxnet::ShapeVector* in_attrs,
@@ -184,11 +185,25 @@ inline bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
      axis_param  = nnvm::get<LaMatrixMacParam>(attrs.parsed).axis;
   }
   if ( (*in_attrs)[0].ndim() >= 2 && (*in_attrs)[0].ndim() == (*in_attrs)[1].ndim() ) {
-    
     // Forward shape inference.
     const int ndim((*in_attrs)[0].ndim()), axis(axis_param < 0 ? ndim + axis_param : axis_param);
     CHECK(axis >= 0 && axis < ndim-1)
       << "Invalid row axis (" << axis_param << ")";
+    // check if any dim is too large
+    check_large_dim({(*in_attrs)[0][axis],
+		     (*in_attrs)[0][ndim-1],
+		     (*in_attrs)[1][axis],
+		     (*in_attrs)[1][ndim-1]});
+    /*
+    CHECK_LE((*in_attrs)[0][axis], INT_MAX)
+      << "Large matrix dimensions (>= 2^31) are not supported";
+    CHECK_LE((*in_attrs)[0][ndim-1], INT_MAX)
+      << "Large matrix dimensions (>= 2^31) are not supported";;
+    CHECK_LE((*in_attrs)[1][axis], INT_MAX)
+      << "Large matrix dimensions (>= 2^31) are not supported";;
+    CHECK_LE((*in_attrs)[1][ndim-1], INT_MAX)
+      << "Large matrix dimensions (>= 2^31) are not supported";;
+    */
     std::vector<int> oshape(ndim);
     for ( int i = 0; i < ndim-1; ++i ) {
       if (i != axis) {
