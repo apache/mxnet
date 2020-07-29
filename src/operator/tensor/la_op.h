@@ -177,6 +177,7 @@ inline bool LaMatrixMultMacOpShape(const nnvm::NodeAttrs& attrs,
      axis_param  = nnvm::get<LaMatrixMacParam>(attrs.parsed).axis;
   }
   if ( (*in_attrs)[0].ndim() >= 2 && (*in_attrs)[0].ndim() == (*in_attrs)[1].ndim() ) {
+    
     // Forward shape inference.
     const int ndim((*in_attrs)[0].ndim()), axis(axis_param < 0 ? ndim + axis_param : axis_param);
     CHECK(axis >= 0 && axis < ndim-1)
