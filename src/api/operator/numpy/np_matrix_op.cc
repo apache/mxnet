@@ -44,7 +44,7 @@ MXNET_REGISTER_API("_npi.transpose")
   } else {
     param.axes = TShape(args[1].operator ObjectRef());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyTransposeParam>(&attrs);
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
@@ -92,7 +92,7 @@ MXNET_REGISTER_API("_npi.stack")
 
   param.num_args = i;
   param.axis = args[i].operator int64_t();
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::StackParam>(&attrs);
   NDArray* out = args[i+1].operator mxnet::NDArray*();
@@ -126,7 +126,7 @@ MXNET_REGISTER_API("_npi.flip")
   }
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_inputs = 1;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::FlipParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
@@ -150,7 +150,7 @@ MXNET_REGISTER_API("_npi.concatenate")
   } else {
     param.axis = args[arg_size - 2].operator int();
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyConcatenateParam>(&attrs);
   int num_inputs = arg_size - 2;
@@ -222,7 +222,7 @@ MXNET_REGISTER_API("_npi.split")
     }
     param.sections = 0;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::SplitParam>(&attrs);
 
@@ -256,7 +256,7 @@ MXNET_REGISTER_API("_npi.roll")
   } else {
     param.axis = TShape(args[2].operator ObjectRef());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyRollParam>(&attrs);
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
@@ -280,7 +280,7 @@ MXNET_REGISTER_API("_npi.rot90")
   } else {
     param.axes = TShape(args[2].operator ObjectRef());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyRot90Param>(&attrs);
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
@@ -351,7 +351,7 @@ MXNET_REGISTER_API("_npi.array_split")
     }
     param.sections = 0;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::SplitParam>(&attrs);
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
@@ -393,7 +393,7 @@ MXNET_REGISTER_API("_npi.dsplit")
     }
     param.sections = 0;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::SplitParam>(&attrs);
   int num_outputs = 0;
@@ -431,7 +431,7 @@ MXNET_REGISTER_API("_npi.hsplit")
     }
     param.sections = 0;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::SplitParam>(&attrs);
   int num_outputs = 0;
@@ -471,7 +471,7 @@ MXNET_REGISTER_API("_npi.vsplit")
     }
     param.sections = 0;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::SplitParam>(&attrs);
   int num_outputs = 0;
@@ -560,7 +560,7 @@ MXNET_REGISTER_API("_npi.diagflat")
   param.k = args[1].operator int();
   int num_inputs = 1;
   int num_outputs = 0;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyDiagflatParam>(&attrs);
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
@@ -583,7 +583,7 @@ MXNET_REGISTER_API("_npi.squeeze")
   }
   int num_inputs = 1;
   int num_outputs = 0;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::SqueezeParam>(&attrs);
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};

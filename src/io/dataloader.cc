@@ -63,13 +63,11 @@ DMLC_REGISTER_PARAMETER(ThreadedDataLoaderParam);
 template<typename DType = real_t>
 class ThreadedDataLoader : public IIterator<TBlobBatch> {
  public:
-  ThreadedDataLoader() {
-  }
+  ThreadedDataLoader() = default;
   // destructor
-  virtual ~ThreadedDataLoader(void) {
-  }
+  ~ThreadedDataLoader() override = default;
   // constructor
-  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.InitAllowUnknown(kwargs);
     int maxthread, threadget;
     #pragma omp parallel
@@ -90,15 +88,15 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     this->BeforeFirst();
   }
   // before first
-  void BeforeFirst(void) {
+  void BeforeFirst() override {
     sampler_->BeforeFirst();
   }
 
-  int64_t GetLenHint(void) const {
+  int64_t GetLenHint() const override {
     return sampler_->GetLenHint();
   }
 
-  bool Next(void) {
+  bool Next() override {
     bool has_next = sampler_->Next();
     if (!has_next) return false;
     auto samples = sampler_->Value();
@@ -152,7 +150,7 @@ class ThreadedDataLoader : public IIterator<TBlobBatch> {
     return true;
   }
 
-  const TBlobBatch &Value(void) const {
+  const TBlobBatch &Value() const override {
     return out_;
   }
 

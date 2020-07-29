@@ -77,7 +77,7 @@ MXNET_REGISTER_API("_npi.normal")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
