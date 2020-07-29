@@ -48,11 +48,10 @@ Packages & Modules
       MXNet's imperative interface for Python. If you're new to MXNet, start here!
 
    .. card::
-      :title: NDArray API
-      :link: packages/ndarray/index.html
+      :title: np.ndarray API
+      :link: packages/np/index.html
 
-      How to use the NDArray API to manipulate data.
-      A useful set of tutorials for beginners.
+      This section contains the `mxnet.np` API reference documentation.
 
    .. card::
       :title: Symbol API
