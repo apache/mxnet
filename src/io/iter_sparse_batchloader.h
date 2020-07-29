@@ -50,8 +50,8 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
 
   inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
     BatchLoader::Init(kwargs);
-    data_stype_ = sparse_base_->GetStorageType(true);
-    label_stype_ = sparse_base_->GetStorageType(false);
+    data_stype_ = sparse_base_->GetStorageType(0, true);
+    label_stype_ = sparse_base_->GetStorageType(0, false);
     if (param_.round_batch == 0) {
       LOG(FATAL) << "sparse batch loader doesn't support round_batch == false yet";
     }
@@ -104,12 +104,12 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     return BatchLoader::Value();
   }
 
-  virtual const NDArrayStorageType GetStorageType(bool is_data) const {
-    return sparse_base_->GetStorageType(is_data);
+  virtual const NDArrayStorageType GetStorageType(size_t ind, bool is_data) const {
+    return sparse_base_->GetStorageType(ind, is_data);
   }
 
-  virtual const mxnet::TShape GetShape(bool is_data) const {
-    mxnet::TShape inst_shape = sparse_base_->GetShape(is_data);
+  virtual const mxnet::TShape GetShape(size_t ind, bool is_data) const {
+    mxnet::TShape inst_shape = sparse_base_->GetShape(ind, is_data);
     std::vector<index_t> shape_vec;
     shape_vec.push_back(param_.batch_size);
     for (index_t dim = 0; dim < inst_shape.ndim(); ++dim) {
@@ -123,6 +123,8 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
   SparseIIterator<DataInst> *sparse_base_;
   /*! \brief data storage type */
   NDArrayStorageType data_stype_;
+  /*! \brief data shape */
+  std::vector<TShape> shape_;
   /*! \brief data label type */
   NDArrayStorageType label_stype_;
   /*! \brief tensor offsets for slicing */
@@ -134,6 +136,9 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
 
   // check whether ith position is the indptr tensor for a CSR tensor
   inline bool IsIndPtr(size_t i) {
+    if (param_.data_size > 1) {
+      return sparse_base_->IsIndPtr(i);
+    }
     auto data_num_aux = num_aux_data(data_stype_);
     auto label_num_aux = num_aux_data(label_stype_);
     auto label_indptr_offset = data_num_aux + 1 + label_num_aux;
@@ -151,7 +156,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
 
   // initialize the data holder by using from the batch
   inline void InitData(const DataInst& first_inst) {
-    CHECK(data_stype_ == kCSRStorage || label_stype_ == kCSRStorage);
+    CHECK(data_stype_ == kCSRStorage || label_stype_ == kCSRStorage || param_.data_size > 1);
     out_.data.clear();
     data_.clear();
     offsets_.clear();
@@ -162,6 +167,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
     // num_arrays will be 3 + 3 = 6.
     size_t num_arrays = first_inst.data.size();
     data_.resize(num_arrays);
+    shape_.resize(num_arrays);
     offsets_.resize(num_arrays, 0);
     indptr_.resize(num_arrays, false);
     // tensor buffer sizes
@@ -182,12 +188,24 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
       dtypes_[i] = first_inst.data[i].type_flag_;
     }
 
-    CHECK_EQ(buff_sizes[0], buff_sizes[1]);
+    // CHECK_EQ(buff_sizes[0], buff_sizes[1]);
     // allocate buffer
     for (size_t i = 0; i < num_arrays; ++i) {
       // init object attributes
-      mxnet::TShape dst_shape(mshadow::Shape1(buff_sizes[i]));
-      data_[i].resize(mshadow::Shape1(buff_sizes[i]), dtypes_[i]);
+      if ((param_.data_size > 1 && i < 2) || (param_.label_width > 1 && i + 1 == num_arrays)) {  // csv
+        mxnet::TShape src_shape = first_inst.data[i].shape_;
+        std::vector<index_t> shape_vec;
+        shape_vec.push_back(param_.batch_size);
+        for (index_t dim = 0; dim < src_shape.ndim(); ++dim) {
+          shape_vec.push_back(src_shape[dim]);
+        }
+        mxnet::TShape dst_shape(shape_vec.begin(), shape_vec.end());
+        shape_[i] = dst_shape;
+        data_[i].resize(mshadow::Shape1(dst_shape.Size()), dtypes_[i]);
+      } else {
+        mxnet::TShape dst_shape(mshadow::Shape1(buff_sizes[i]));
+        data_[i].resize(mshadow::Shape1(buff_sizes[i]), dtypes_[i]);
+      }
       CHECK(data_[i].dptr_ != nullptr);
     }
   }
@@ -195,13 +213,26 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
   /* \brief set the shape of the outputs based on actual shapes */
   inline void SetOutputShape() {
     for (size_t i = 0; i < out_.data.size(); i++) {
-      out_.data[i] = TBlob(data_[i].dptr_, mshadow::Shape1(offsets_[i]),
-                           Context::kCPU, dtypes_[i]);
+      if ( i < 2 && param_.data_size > 1) {
+        out_.data[i] = TBlob(data_[i].dptr_, shape_[i],
+                             Context::kCPU, dtypes_[i]);
+      } else {
+        if (i + 1 == out_.data.size()&& param_.label_width > 1)
+          out_.data[i] = TBlob(data_[i].dptr_, shape_[i],
+                               Context::kCPU, dtypes_[i]);
+        else
+          out_.data[i] = TBlob(data_[i].dptr_, mshadow::Shape1(offsets_[i]),
+                               Context::kCPU, dtypes_[i]);
+      }
     }
   }
 
   /* \brief increase the size of i-th data buffer by a factor of 2, while retaining the content */
-  inline void ResizeBuffer(size_t src_size, size_t i) {
+  inline void ResizeBuffer(size_t src_size, size_t i, size_t len) {
+    if ((param_.data_size > 1 && i < 2) || (param_.label_width > 1 && i == len - 1)) {  // csv
+      LOG(ERROR) << "CSV neednot resize!";
+      return;
+    }
     MSHADOW_TYPE_SWITCH(data_[i].type_flag_, DType, {
       TBlobContainer temp;
       temp.resize(mshadow::Shape1(src_size), dtypes_[i]);
@@ -220,6 +251,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
   void CopyData(const DataInst& inst, const size_t top) {
     int64_t unit_size = 0;
     out_.inst_index[top] = inst.index;
+    size_t len = inst.data.size();
     for (size_t i = 0; i < inst.data.size(); ++i) {
       if (!indptr_[i]) {
         // indices and values tensor
@@ -230,7 +262,7 @@ class SparseBatchLoader : public BatchLoader, public SparseIIterator<TBlobBatch>
           size_t capacity = data_[i].Size();
           // resize the data buffer if estimated space is not sufficient
           while (capacity < end) {
-            ResizeBuffer(begin, i);
+            ResizeBuffer(begin, i, len);
             capacity = data_[i].Size();
           }
           mshadow::Copy(data_[i].get<cpu, 1, DType>().Slice(begin, end),

@@ -148,12 +148,12 @@ class LibSVMIter: public SparseIIterator<DataInst> {
     return out_;
   }
 
-  virtual const NDArrayStorageType GetStorageType(bool is_data) const {
+  virtual const NDArrayStorageType GetStorageType(size_t ind, bool is_data) const {
     if (is_data) return kCSRStorage;
     return param_.label_shape.Size() > 1 ? kCSRStorage : kDefaultStorage;
   }
 
-  virtual const mxnet::TShape GetShape(bool is_data) const {
+  virtual const mxnet::TShape GetShape(size_t ind, bool is_data) const {
     if (is_data) return param_.data_shape;
     return param_.label_shape;
   }
@@ -161,6 +161,8 @@ class LibSVMIter: public SparseIIterator<DataInst> {
  private:
   inline TBlob AsDataBlob(const dmlc::Row<uint64_t>& row) {
     const real_t* ptr = row.value;
+    if (ptr == nullptr)
+      return TBlob((real_t*) ptr, mshadow::Shape1(0), cpu::kDevMask);  // NOLINT(*)
     mxnet::TShape shape(mshadow::Shape1(row.length));
     return TBlob((real_t*) ptr, shape, cpu::kDevMask);  // NOLINT(*)
   }
