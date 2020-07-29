@@ -26,7 +26,7 @@ def test_features():
     features = Features()
     print(features)
     assert 'CUDA' in features
-    assert len(features) >= 30
+    assert len(features) >= 20
 
 
 def test_is_singleton():

@@ -58,58 +58,6 @@ EOF
     fi
 }
 
-build_ccache_wrappers() {
-    set -ex
-
-    if [ -z ${CC+x} ]; then
-        echo "No \$CC set, defaulting to gcc";
-        export CC=gcc
-    fi
-     if [ -z ${CXX+x} ]; then
-       echo "No \$CXX set, defaulting to g++";
-       export CXX=g++
-    fi
-
-    # Recommended by CCache: https://ccache.samba.org/manual.html#_run_modes
-    # Add to the beginning of path to ensure this redirection is picked up instead
-    # of the original ones. Especially CUDA/NVCC appends itself to the beginning of the
-    # path and thus this redirect is ignored. This change fixes this problem
-    # This hacky approach with symbolic links is required because underlying build
-    # systems of our submodules ignore our CMake settings. If they use Makefile,
-    # we can't influence them at all in general and NVCC also prefers to hardcode their
-    # compiler instead of respecting the settings. Thus, we take this brutal approach
-    # and just redirect everything of this installer has been called.
-    # In future, we could do these links during image build time of the container.
-    # But in the beginning, we'll make this opt-in. In future, loads of processes like
-    # the scala make step or numpy compilation and other pip package generations
-    # could be heavily sped up by using ccache as well.
-    mkdir -p /tmp/ccache-redirects
-    export PATH=/tmp/ccache-redirects:$PATH
-    CCACHE=`which ccache`
-    ln -sf $CCACHE /tmp/ccache-redirects/gcc
-    ln -sf $CCACHE /tmp/ccache-redirects/gcc-8
-    ln -sf $CCACHE /tmp/ccache-redirects/g++
-    ln -sf $CCACHE /tmp/ccache-redirects/g++-8
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-3.9
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-3.9
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-5.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-5.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-6.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-6.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-10
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-10
-    #Doesn't work: https://github.com/ccache/ccache/issues/373
-    # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
-    # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
-    # export NVCC="/tmp/ccache-redirects/nvcc"
-
-    # Uncomment if you would like to debug CCache hit rates.
-    # You can monitor using tail -f ccache-log
-    #export CCACHE_LOGFILE=/work/mxnet/ccache-log
-    #export CCACHE_LOGFILE=/tmp/ccache-log
-    #export CCACHE_DEBUG=1
-}
-
 build_wheel() {
 
     set -ex
@@ -321,21 +269,6 @@ build_centos7_cpu() {
     ninja
 }
 
-build_centos7_cpu_make() {
-    set -ex
-    cd /work/mxnet
-    source /opt/rh/devtoolset-7/enable
-    make \
-        DEV=1 \
-        USE_LAPACK=1 \
-        USE_LAPACK_PATH=/usr/lib64/liblapack.so \
-        USE_BLAS=openblas \
-        USE_MKLDNN=0 \
-        USE_DIST_KVSTORE=1 \
-        USE_SIGNAL_HANDLER=1 \
-        -j$(nproc)
-}
-
 build_centos7_mkldnn() {
     set -ex
     cd /work/build
@@ -382,24 +315,6 @@ build_ubuntu_cpu_openblas() {
         -DBUILD_CYTHON_MODULES=ON \
         -G Ninja /work/mxnet
     ninja
-}
-
-build_ubuntu_cpu_openblas_make() {
-    set -ex
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    make \
-        DEV=1                         \
-        USE_TVM_OP=1                  \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=0                  \
-        USE_DIST_KVSTORE=1            \
-        USE_LIBJPEG_TURBO=1           \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
-    make cython PYTHON=python3
 }
 
 build_ubuntu_cpu_mkl() {
@@ -589,22 +504,6 @@ build_ubuntu_cpu_clang100_mkldnn() {
     ninja
 }
 
-build_ubuntu_cpu_mkldnn_make() {
-    set -ex
-
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-
-    make  \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_TVM_OP=1                  \
-        USE_BLAS=openblas             \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
-}
-
 build_ubuntu_cpu_mkldnn() {
     set -ex
     cd /work/build
@@ -653,17 +552,16 @@ build_ubuntu_gpu_tensorrt() {
     rm -rf build
     mkdir -p build
     cd build
-    cmake \
-        -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER}\
-        -DBUILD_SHARED_LIBS=ON ..\
-        -G Ninja
-    ninja -j 1 -v onnx/onnx.proto
-    ninja -j 1 -v
+    cmake  -DBUILD_SHARED_LIBS=ON -GNinja ..
+    ninja onnx/onnx.proto
+    ninja
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
     popd
 
     # Build ONNX-TensorRT
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
+    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.1/targets/x86_64-linux/include/
     pushd .
     cd 3rdparty/onnx-tensorrt/
     mkdir -p build
@@ -754,45 +652,6 @@ build_ubuntu_gpu_cuda101_cudnn7_debug() {
     ninja
 }
 
-build_ubuntu_gpu_cuda101_cudnn7_make() {
-    set -ex
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    make \
-        USE_BLAS=openblas                         \
-        USE_MKLDNN=0                              \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        USE_CPP_PACKAGE=1                         \
-        USE_DIST_KVSTORE=1                        \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_SIGNAL_HANDLER=1                      \
-        -j$(nproc)
-    make cython PYTHON=python3
-}
-
-build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
-    set -ex
-    export CC=gcc-7
-    export CXX=g++-7
-    build_ccache_wrappers
-    make \
-        USE_BLAS=openblas                         \
-        USE_MKLDNN=1                              \
-        USE_CUDA=1                                \
-        USE_CUDA_PATH=/usr/local/cuda             \
-        USE_CUDNN=1                               \
-        USE_CPP_PACKAGE=1                         \
-        USE_DIST_KVSTORE=1                        \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
-        USE_SIGNAL_HANDLER=1                      \
-        -j$(nproc)
-    make test USE_CPP_PACKAGE=1 -j$(nproc)
-    make cython PYTHON=python3
-}
-
 build_ubuntu_gpu_cmake() {
     set -ex
     cd /work/build
@@ -877,9 +736,24 @@ build_ubuntu_blc() {
 
 sanity_check() {
     set -ex
+    sanity_license
+    sanity_python
+    sanity_cpp
+}
+
+sanity_license() {
+    set -ex
     tools/license_header.py check
-    make cpplint
-    make pylint
+}
+
+sanity_cpp() {
+    set -ex
+    3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests --exclude_path src/operator/contrib/ctc_include include/mkldnn
+}
+
+sanity_python() {
+    set -ex
+    python3 -m pylint --rcfile=ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/tutorials/test_sanity_tutorials.py
 }
 
@@ -1143,15 +1017,15 @@ unittest_ubuntu_python3_arm() {
 # Functions that run the nightly Tests:
 
 #Runs Apache RAT Check on MXNet Source for License Headers
-nightly_test_rat_check() {
+test_rat_check() {
     set -e
     pushd .
 
-    cd /work/deps/0.12-release/apache-rat/target
+    cd /usr/local/src/apache-rat-0.13
 
     # Use shell number 5 to duplicate the log output. It get sprinted and stored in $OUTPUT at the same time https://stackoverflow.com/a/12451419
     exec 5>&1
-    OUTPUT=$(java -jar apache-rat-0.13-SNAPSHOT.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet|tee >(cat - >&5))
+    OUTPUT=$(java -jar apache-rat-0.13.jar -E /work/mxnet/tests/nightly/apache_rat_license_check/rat-excludes -d /work/mxnet|tee >(cat - >&5))
     ERROR_MESSAGE="Printing headers for text files without a valid license header"
 
 
@@ -1257,25 +1131,12 @@ build_docs_setup() {
 }
 
 build_ubuntu_cpu_docs() {
-    set -ex
-    export CC="gcc-7"
-    export CXX="g++-7"
-    build_ccache_wrappers
-    make \
-        DEV=1                         \
-        USE_CPP_PACKAGE=1             \
-        USE_BLAS=openblas             \
-        USE_MKLDNN=0                  \
-        USE_DIST_KVSTORE=1            \
-        USE_LIBJPEG_TURBO=1           \
-        USE_SIGNAL_HANDLER=1          \
-        -j$(nproc)
+    build_ubuntu_cpu_openblas
 }
 
 
 build_jekyll_docs() {
     set -ex
-    source /etc/profile.d/rvm.sh
 
     pushd .
     build_docs_setup
@@ -1399,8 +1260,6 @@ build_static_libmxnet() {
     pushd .
     source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
-    export USE_SYSTEM_CUDA=1
-    export CMAKE_STATICBUILD=1
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
@@ -1474,7 +1333,6 @@ build_static_python_cu92() {
     set -ex
     pushd .
     export mxnet_variant=cu92
-    export USE_SYSTEM_CUDA=1
     source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
