@@ -418,7 +418,7 @@ static void RandomSample(size_t set_size,
     sampled_idxs.insert(distribution(generator));
   }
   out->clear();
-  for (unsigned long sampled_idx : sampled_idxs) {
+  for (size_t sampled_idx : sampled_idxs) {
     out->push_back(sampled_idx);
   }
 }
@@ -621,15 +621,15 @@ static void SampleSubgraph(const NDArray &csr,
     // First we push the size of neighbor vector
     neighbor_list.push_back(tmp_sampled_edge_list.size());
     // Then push the vertices
-    for (long & i : tmp_sampled_src_list) {
+    for (dgl_id_t & i : tmp_sampled_src_list) {
       neighbor_list.push_back(i);
     }
     // Finally we push the edge list
-    for (long & i : tmp_sampled_edge_list) {
+    for (dgl_id_t & i : tmp_sampled_edge_list) {
       neighbor_list.push_back(i);
     }
     num_edges += tmp_sampled_src_list.size();
-    for (long & i : tmp_sampled_src_list) {
+    for (dgl_id_t & i : tmp_sampled_src_list) {
       // If we have sampled the max number of vertices, we have to stop.
       if (sub_ver_mp.size() >= max_num_vertices)
         break;

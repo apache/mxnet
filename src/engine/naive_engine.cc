@@ -178,7 +178,8 @@ class NaiveEngine final : public Engine {
       if (profiler->AggregateEnabled()) {
         attrs = std::make_unique<profiler::ProfileOperator::Attributes>();
       }
-      opr->opr_profile = std::make_unique<profiler::ProfileOperator>(opr->opr_name.c_str(), attrs.release());
+      opr->opr_profile = std::make_unique<profiler::ProfileOperator>(opr->opr_name.c_str(),
+                                                                     attrs.release());
       opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
     }
     if (exec_ctx.dev_mask() == gpu::kDevMask) {

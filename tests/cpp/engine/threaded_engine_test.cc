@@ -22,7 +22,6 @@
  * \file threaded_engine_test.cc
  * \brief threaded engine tests
 */
-#include <ctime>
 #include <dmlc/logging.h>
 #include <dmlc/thread_group.h>
 #include <dmlc/omp.h>
@@ -31,6 +30,7 @@
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <dmlc/timer.h>
+#include <ctime>
 #include <cstdio>
 #include <thread>
 #include <chrono>

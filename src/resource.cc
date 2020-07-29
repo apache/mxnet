@@ -92,8 +92,7 @@ struct SpaceAllocator {
 // Implements resource manager
 class ResourceManagerImpl : public ResourceManager {
  public:
-  ResourceManagerImpl() noexcept(false)
-       {
+  ResourceManagerImpl() noexcept(false) {
     cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 4);
     gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
     cpu_native_rand_copy_ = dmlc::GetEnv("MXNET_CPU_PARALLEL_RAND_COPY", 1);

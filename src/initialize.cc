@@ -23,7 +23,6 @@
  * \brief initialize mxnet library
  */
 #include "initialize.h"
-#include <csignal>
 #include <dmlc/logging.h>
 #include <mxnet/engine.h>
 #include "./engine/openmp.h"
@@ -33,7 +32,6 @@
 #endif  // MXNET_USE_OPENCV
 #include "common/utils.h"
 #include "engine/openmp.h"
-
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #include <windows.h>
@@ -56,6 +54,9 @@ void win_err(char **err) {
 #else
 #include <dlfcn.h>
 #endif
+
+#include <csignal>
+
 
 namespace mxnet {
 

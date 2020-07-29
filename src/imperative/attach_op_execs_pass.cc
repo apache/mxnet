@@ -188,7 +188,8 @@ class StatefulComputeExExecutor : public OpExecutor {
                                      OpStatePtr  state,
                                      FStatefulComputeEx  fcompute,
                                      ExecType exec_type)
-      : attrs_(std::move(attrs)), state_(std::move(state)), fcompute_(std::move(fcompute)), exec_type_(exec_type) {}
+      : attrs_(std::move(attrs)), state_(std::move(state)), fcompute_(std::move(fcompute)),
+        exec_type_(exec_type) {}
 
  private:
   NodeAttrs attrs_;
