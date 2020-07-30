@@ -45,32 +45,44 @@ struct QuantScaleANDSetOutRange {
 
 #if defined(__CUDACC__)
 
-template <typename SrcDType, typename DstDType, typename DstLoadType>
+// get quantization scale factor and set omin_range, omax_range for quantize_v2_zero_centered_kernel
+__global__ void QuantScaleANDSetOutRangeKernel(float *omin_range,
+                                float *omax_range,
+                                const float imin_range,
+                                const float imax_range,
+                                const float quantized_range){
+
+    float real_range = MaxAbs(imin_range, imax_range);
+
+    *omin_range = -real_range;
+    *omax_range = real_range;
+}
+
+template <typename SrcDType, typename SrcLoadType, typename DstDType, typename DstLoadType>
 __global__ void quantize_v2_zero_centered_kernel(DstDType *out,
                                                 SrcDType *in,
                                                 const float quantized_range,
-                                                const int num_elem,
                                                 const float quantization_scale_tmp,
                                                 const int elem_per_thread) {
     
     const index_t row = blockIdx.x;
     const int row_len = elem_per_thread * blockDim.x;
 
-    double* inload = reinterpret_cast<double*>(in);
+    SrcLoadType* inload = reinterpret_cast<SrcLoadType*>(in);
     DstLoadType* outload = reinterpret_cast<DstLoadType*>(out);
 
-    const int load_ratio = sizeof(DstLoadType) / sizeof(DstDType);
+    const int load_ratio = sizeof(SrcLoadType) / sizeof(SrcDType);
 
     for (index_t i = threadIdx.x; i < row_len / load_ratio; i += blockDim.x){
-      int idx = row * row_len / load_ratio + i;
+      int idx = row * row_len / load_ratio + i; // warning: divided by zero???
 
-      double scratch_in = *(inload + idx);
+      SrcLoadType scratch_in = *(inload + idx);
       SrcDType* scratch_in_aft_load = reinterpret_cast<SrcDType*>(&scratch_in);
 
       DstLoadType scratch_out = *(outload + idx);
       DstDType* scratch_out_aft_load = reinterpret_cast<DstDType*>(&scratch_out);
 
-    #pragma unroll
+    #pragma unroll // dynamic load_ration will make this not work
       for(int j = 0; j < load_ratio; j++){
         scratch_out_aft_load[j] = Sign(scratch_in_aft_load[j]) * 
                                   fminf(fabsf(scratch_in_aft_load[j]) * quantization_scale_tmp + 0.5f, quantized_range);
@@ -102,33 +114,51 @@ void QuantizeV2ZeroCenteredGPU(mshadow::Stream<gpu>* s,
       nthreads = 32;
     }
     
-    int elem_per_thread = 32;
+    int elem_per_thread = 8; // better to be dynamic - 
+    // read property of number of SMs (we want to reach the limit of number of blocks per SM)
+    // For Turing, the maximum number of thread blocks per SM is 16.
 
-    if(sizeof(SrcDType) == 2){ // SrcDType is fp16
-      quantize_v2_zero_centered_kernel<SrcDType, DstDType, int32_t>
+    int Srcltype = mxnet::common::cuda::get_load_type(num_elem * sizeof(SrcDType));
+
+    MXNET_LOAD_TYPE_SWITCH(Srcltype, SrcLoadType,{
+
+      int load_ratio = sizeof(SrcLoadType) / sizeof(SrcDType);
+  
+      if(load_ratio == 4){
+        quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType, DstDType, int32_t>
                           <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
                           nthreads,
                           0,
                           mshadow::Stream<gpu>::GetStream(s)>>>(out,
                                                                 in,
                                                                 quantized_range,
-                                                                num_elem,
                                                                 quantization_scale_tmp,
                                                                 elem_per_thread);
-    }else if(sizeof(SrcDType) == 4){ // SrcDType is fp32
-      quantize_v2_zero_centered_kernel<SrcDType, DstDType, mshadow::half::half_t>
+      }else if(load_ratio == 2){
+        quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType, DstDType, mshadow::half::half_t>
                           <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
                           nthreads,
                           0,
                           mshadow::Stream<gpu>::GetStream(s)>>>(out,
                                                                 in,
                                                                 quantized_range,
-                                                                num_elem,
                                                                 quantization_scale_tmp,
                                                                 elem_per_thread);
-    }else{
-      LOG(FATAL) << "Unsupported SrcDType.";
-    }
+      }else if(load_ratio == 1){
+        quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType, DstDType, int8_t>
+                          <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
+                          nthreads,
+                          0,
+                          mshadow::Stream<gpu>::GetStream(s)>>>(out,
+                                                                in,
+                                                                quantized_range,
+                                                                quantization_scale_tmp,
+                                                                elem_per_thread);
+      }else{
+        LOG(FATAL) << "Unsupported Load Type.";
+      }
+
+    });
 
 }
 
@@ -178,7 +208,7 @@ class QuantizeV2OperatorGPU {
 
             float real_range = MaxAbs(param.min_calib_range.value(), param.max_calib_range.value());
             float scale = MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()) / real_range;
-       
+
             QuantizeV2ZeroCenteredGPU<FloatDType, int8_t>(s,
                                     outputs[0].dptr<int8_t>(),
                                     inputs[0].dptr<FloatDType>(),
@@ -220,9 +250,8 @@ class QuantizeV2OperatorGPU {
       if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
         if (out_type == mshadow::kInt8) {  // zero-centered quantization
 
-            // Launch QuantScaleANDSetOutRange
-            Kernel<QuantScaleANDSetOutRange, gpu>::Launch(s, 1,
-                outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+            QuantScaleANDSetOutRangeKernel<<<1, 1, 0, mshadow::Stream<gpu>::GetStream(s)>>>
+                (outputs[1].dptr<float>(), outputs[2].dptr<float>(),
                 param.min_calib_range.value(), param.max_calib_range.value(),
                 MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
 

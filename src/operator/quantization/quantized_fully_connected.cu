@@ -121,6 +121,8 @@ void QuantizedAddBias(BType* bias,
                                                                 float_for_one_quant_tmp);
 }
 
+#define row_num_each_thread 1 // number of rows to deal with for each thread;
+
 // DType->output type, BType->bias type
 template <typename DType, typename BType, typename DLoadType>
 __global__ void quantized_add_bias_redequantize_kernel(int32_t* outCUBLAS,
@@ -130,8 +132,6 @@ __global__ void quantized_add_bias_redequantize_kernel(int32_t* outCUBLAS,
                                           const float *float_for_one_quant_tmp,
                                           const float *quantized_to_float_scale) {
                                           
-  int row_num_each_thread = 4; // number of rows to deal with for each thread;
-
   int64_t* outCUBLASload = reinterpret_cast<int64_t*>(outCUBLAS);
   int16_t* biasload = reinterpret_cast<int16_t*>(bias);
   DLoadType* outload = reinterpret_cast<DLoadType*>(out);
@@ -139,7 +139,7 @@ __global__ void quantized_add_bias_redequantize_kernel(int32_t* outCUBLAS,
   for (index_t i = threadIdx.x; i < bias_length / 2; i += blockDim.x){
     
     int16_t scratch_bias = *(biasload + i);
-    int8_t* scratch_bias_aft_load = reinterpret_cast<int8_t*>(&scratch_bias);
+    int8_t* scratch_bias_aft_load = reinterpret_cast<int8_t*>(&scratch_bias); // load them into shared mem before the loop
   
   #pragma unroll
     for(int rw = 0; rw < row_num_each_thread; rw++){
@@ -199,7 +199,7 @@ void FusedQuantizedAddBiasAndReDequantize(BType* bias,
     }
 
     MXNET_LOAD_TYPE_SWITCH(dltype, DLoadType, {
-    quantized_add_bias_redequantize_kernel<DType, BType, DLoadType><<<data.size(0) / 4,
+    quantized_add_bias_redequantize_kernel<DType, BType, DLoadType><<<data.size(0) / row_num_each_thread,
                                   nthreads_quant_addbias,
                                   0,
                                   Stream<gpu>::GetStream(s)>>>(outTensorCUBLAS.dptr_,
@@ -376,7 +376,6 @@ void QuantizedFullyConnectedForwardGPU(const nnvm::NodeAttrs& attrs,
                            cmp_type,
                            CUBLAS_GEMM_DFALT));
   
-
   // use min/max values of weight and data to update the min/max values of output
   Kernel<QuantizationRangeForS8S8MultiplicationStruct, gpu>::Launch(s, 1,
     outputs[1].dptr<float>(), outputs[2].dptr<float>(),
