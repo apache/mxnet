@@ -1172,26 +1172,29 @@ struct smooth_l1_gradient : public mxnet_op::tunable {
  */
 struct gamma_implicit_grad : public mxnet_op::tunable {
   template<typename DType>
-  MSHADOW_XINLINE static DType Map(DType a, DType b) {
-    auto numer = 1;
-    auto denom = a;
-    auto series1 = numer / denom;
-    auto series2 = numer / (denom * denom);
+  MSHADOW_XINLINE static DType Map(DType a, DType x) {
+    DType numer = 1;
+    DType denom = a;
+    DType series1 = numer / denom;
+    DType series2 = numer / (denom * denom);
     for (int i = 1; i <= 5; i++) {
       numer *= -x / static_cast<DType>(i);
       denom += 1;
       series1 += numer / denom;
       series2 += numer / (denom * denom);
     }
-    auto pow_x_alpha = math::pow(x, a);
-    auto gamma_pdf = math::pow(x, a - 1) * math::exp(-x);
-    auto gamma_cdf = pow_x_alpha * series1;
-    auto gamma_cdf_alpha = (math::log(x) -
+    DType pow_x_alpha = math::pow(x, a);
+    DType gamma_pdf = math::pow(x, a - 1) * math::exp(-x);
+    DType gamma_cdf = pow_x_alpha * series1;
+    DType gamma_cdf_alpha = (math::log(x) -
                             DType(special_functions::cephes::psi<float>(a)) * gamma_cdf -
                             pow_x_alpha * series2);
+    DType result = -gamma_cdf_alpha / gamma_pdf;
     return IsNan(result) ? static_cast<DType>(0.f) : result;
   }
 };  // gamma_implicit_grad
+
+MXNET_BINARY_MATH_OP_NC_WITH_BOOL(neg_div, -a / b);
 
 /*! \brief product reducer */
 struct product {

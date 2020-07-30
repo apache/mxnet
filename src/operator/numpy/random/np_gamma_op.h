@@ -136,6 +136,13 @@ struct CheckSuccessKernel {
   }
 };
 
+template<typename DType>
+struct StandarizeKernel {
+  MSHADOW_XINLINE static void Map(int i, DType* samples, float scale) {
+    samples[i] /= scale;
+  }
+};
+
 template <int ndim, typename IType, typename OType, typename FType>
 struct gamma_kernel {
   MSHADOW_XINLINE static void Map(index_t i, const Shape<ndim> &lstride,
@@ -236,27 +243,6 @@ struct gamma_two_scalar_kernel {
       out[i] = sample;
     }
   }
-
-// Backward utils
-template <typename IType>
-MSHADOW_XINLINE void StandardGammaPdf(IType a, IType x) {
-  return pow(x, alpha - 1) * exp(-x)
-}
-
-template <typemame IType>
-MSHADOW_XINLINE void StandardGammaCdf(IType a, IType x) {
-  // Approximate the Gamma cdf via taylor series
-  IType numer = 1;
-  IType denom = a;
-
-  for (int i = 1; i <= 5; i++) {
-    numer *= -x / i;
-    denom += 1;
-    series1
-  }
-}
-
-
 };
 }  // namespace mxnet_op
 
@@ -415,6 +401,35 @@ void NumpyGammaForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   }
 }
 
+template<typename xpu, int ndim, typename DType>
+inline void GammaReparamBackwardImpl(const OpContext& ctx,
+                                            const std::vector<TBlob>& inputs,
+                                            const std::vector<OpReqType>& req,
+                                            const std::vector<TBlob>& outputs,
+                                            const mxnet::TShape& new_ishape,
+                                            const mxnet::TShape& new_oshape,
+                                            const float scale) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace broadcast;
+  using namespace mxnet_op;
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  const TBlob igrad = outputs[0].reshape(new_ishape);
+  // inputs: [grad_from_samples, alpha_tensor, samples]
+  const TBlob ograd = inputs[0].reshape(new_oshape);
+  const TBlob alpha = inputs[1].reshape(new_ishape);
+  const TBlob samples = inputs[2].reshape(new_oshape);
+  size_t workspace_size =
+      ReduceWorkspaceSize<ndim, DType>(s, igrad.shape_, req[0], ograd.shape_);
+  // Convert samples to standard gamma
+  Kernel<StandarizeKernel<DType>, xpu>::Launch(
+          s, samples.Size(), samples.dptr<DType>(), scale);
+  Tensor<xpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+  Reduce<red::sum, ndim, DType, op::mshadow_op::mul, op::mshadow_op::gamma_implicit_grad>(
+      s, igrad, req[0], workspace, ograd, alpha, samples);
+}
+
 // Allow gamma sampling to be differentiable,
 // using implicit reparameterization gradient:
 // -(d/d\alpha cdf(x;alpha)) / pdf(x;alpha)
@@ -433,11 +448,27 @@ void NumpyGammaGrad(const nnvm::NodeAttrs& attrs,
   if (outputs.size() == 0U) {
     return;
   }
-  const NumpyGammaParam &param = nnvm::get<NumpyGammaParam>(attrs.parsed)
-  
-  // [tensor tensor] case
+  const NumpyGammaParam &param = nnvm::get<NumpyGammaParam>(attrs.parsed);
+  // [tensor tensor] case, not supported.
   if (inputs.size() == 5U) {
+    LOG(FATAL) << "ValueError: two tensor case not supported";
+  }
 
+  // [tensor, scalar] case, only scalar scale is supported.
+  if (inputs.size() == 4U) {
+    if (param.shape.has_value()) {
+      LOG(FATAL) << "ValueError: tensor scale case not supported";
+    }
+    mxnet::TShape new_ishape, new_oshape;
+    int ndim = FillShape(outputs[0].shape_, outputs[0].shape_, inputs[0].shape_,
+                         &new_ishape, &new_ishape, &new_oshape);
+    auto scale = param.scale.value();
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+      BROADCAST_NDIM_SWITCH(ndim, NDim, {
+        GammaReparamBackwardImpl<xpu, NDim, DType>(
+          ctx, inputs, req, outputs, new_ishape, new_oshape, scale);
+      });
+    });
   }
 
 }
