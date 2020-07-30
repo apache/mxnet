@@ -554,8 +554,7 @@ build_ubuntu_gpu_tensorrt() {
     mkdir -p build
     cd build
     cmake -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
-    make -j$(nproc) install
-    ldconfig
+    make -j$(nproc)
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
     export CXXFLAGS=-I`pwd`
@@ -570,13 +569,13 @@ build_ubuntu_gpu_tensorrt() {
     mkdir -p build
     cd build
     cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
-    make -j$(nproc) install
+    make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
 
     mkdir -p /work/mxnet/lib/
     cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so.0 /work/mxnet/lib/
+    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so /work/mxnet/lib/
 
     cd /work/build
     cmake -DUSE_CUDA=1                            \
