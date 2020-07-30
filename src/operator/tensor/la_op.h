@@ -238,10 +238,10 @@ inline bool LaTriangMatrixMultOpShape(const nnvm::NodeAttrs& attrs,
         << "Shapes of inputs 0, 1 must be the same, except on last two dimensions";
       oshape[i] = (*in_attrs)[0][i];
     }
-    // Check if the input matrix dims are too large; it suffices to check the second 
+    // Check if the input matrix dims are too large; it suffices to check the second
     // input only because the first is square whose size is bounded by memory
     check_large_dim({(*in_attrs)[1][ndim-1],
-		     (*in_attrs)[1][ndim-2]});
+                     (*in_attrs)[1][ndim-2]});
     if ( param.rightside ) {
       // We compute B * A where A is the first and B the second input.
       CHECK_EQ((*in_attrs)[0][ndim-2], (*in_attrs)[1][ndim-1])
@@ -360,7 +360,7 @@ inline bool LaSyrkShape(const nnvm::NodeAttrs& attrs,
   if ( ndim >= 2 ) {
     // Check if input matrix dims are too large
     check_large_dim({in_attr[ndim-1],
-		     in_attr[ndim-2]});
+                     in_attr[ndim-2]});
     // Forward shape inference.
     std::vector<int> oshape(ndim);
     for ( int i = 0; i < ndim-2; ++i ) {
