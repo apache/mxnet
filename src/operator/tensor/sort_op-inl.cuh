@@ -195,7 +195,7 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
     const int segment_length = (num_items + num_segments - 1) / num_segments;
 
     // Divide workspace into two parts. The first one is needed to store segment offsets.
-    auto *d_segment_offsets = reinterpret_cast<index_t *>(workspace->dptr_);
+    auto *d_segment_offsets = reinterpret_cast<int *>(workspace->dptr_);
 
     if (batch_size > 1) {
       mxnet_op::Kernel<range_fwd, gpu>::Launch(stream_, (num_segments + 1), 1, 0,
