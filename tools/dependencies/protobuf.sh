@@ -20,11 +20,6 @@
 # This script builds the static library of protobuf along with protoc, that can be used as dependency of mxnet.
 set -ex
 PROTOBUF_VERSION=3.5.1
-if [[ $PLATFORM == 'darwin' ]]; then
-    DY_EXT="dylib"
-else
-    DY_EXT="so"
-fi
 
 LIBPROTOBUF="$DEPS_PATH/lib/libprotobuf.$DY_EXT"
 LIBPROTOC="$DEPS_PATH/lib/libprotoc.$DY_EXT"
@@ -41,7 +36,6 @@ if [[ ! -e $LIBPROTOBUF ]] || [[ ! -e $LIBPROTOC ]]; then
     ./configure -prefix=$DEPS_PATH
     $MAKE
     $MAKE install
-    rm $DEPS_PATH/lib/*proto*$DY_EXT*
     popd
 fi
 
