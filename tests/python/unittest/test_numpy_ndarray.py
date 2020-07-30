@@ -1397,3 +1397,7 @@ def test_from_numpy_exception():
     assert not np_array.flags["C_CONTIGUOUS"]
     with pytest.raises(ValueError):
         mx_array = mx.nd.from_numpy(np_array)
+
+    np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
+    mx_array = mx.npx.from_numpy(np_array, zero_copy=False)
+    np_array[2, 1] = 0 # no error
