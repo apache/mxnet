@@ -42,7 +42,7 @@ LARGE_SQ_X = 70000
 LARGE_SIZE = LARGE_X * SMALL_Y
 LARGE_TENSOR_SHAPE = 2**32
 RNN_LARGE_TENSOR = 2**28
-INT32_MAX = 2**31-1
+
 
 def test_nn():
     def check_gluon_embedding():
@@ -1349,50 +1349,6 @@ def test_linalg():
     check_batch_inverse()
     check_batch_trmm()
     check_batch_trsm()
-
-
-def test_linalg_large_dim():
-    def check_gemm():
-        A = nd.ones(shape=(1, INT32_MAX + 1, 1))
-        B = nd.ones(shape=(1, INT32_MAX + 1, 1))
-        C = nd.ones(shape=(1, 1, 1))
-        assertRaises(MXNetError, nd.linalg.gemm, \
-            A, B, C, transpose_b=True)
-    
-    def check_gemm2():
-        A = nd.ones(shape=(1, 1, INT32_MAX + 1))
-        B = nd.ones(shape=(1, 1, INT32_MAX + 1))
-        assertRaises(MXNetError, nd.linalg.gemm2, \
-            A, B, transpose_b=True)
-    
-    def check_trmm():
-        A = nd.ones(shape=(1, 1, 1))
-        B = nd.ones(shape=(1, INT32_MAX + 1, 1))
-        assertRaises(MXNetError, nd.linalg.trmm, \
-            A, B, rightside=True)
-    
-    def check_trsm():
-        A = nd.ones(shape=(1, 1, 1))
-        B = nd.ones(shape=(1, 1, INT32_MAX + 1))
-        assertRaises(MXNetError, nd.linalg.trsm, \
-            A, B, rightside=False)
-    
-    def check_syrk():
-        A = nd.ones(shape=(1, INT32_MAX + 1, 1))
-        assertRaises(MXNetError, nd.linalg.syrk, A)
-        assertRaises(MXNetError, nd.linalg.syrk, A, transpose=True)
-
-    def check_gelqf():
-        A = nd.ones(shape=(1, 1, INT32_MAX + 1))
-        assertRaises(MXNetError, nd.linalg.gelqf, A)
-
-    # batch input
-    check_gemm()
-    check_gemm2()
-    check_trmm()
-    check_trsm()
-    check_syrk()
-    check_gelqf()
 
 
 def test_basic():
