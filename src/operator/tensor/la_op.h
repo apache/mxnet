@@ -391,6 +391,9 @@ inline bool LaLQFactShape(const nnvm::NodeAttrs& attrs,
     const int ndim(in_a.ndim());
     CHECK_LE(in_a[ndim-2], in_a[ndim-1])
       << "Input A shape wrong: Last dimension must be >= than second to last";
+    // Check if the last dimension is too large; it suffices to check the last dim
+    // only since the second to last dim <= last dim
+    check_large_dim({in_a[ndim-1]});
     // Q must have same shape as A
     SHAPE_ASSIGN_CHECK(*out_attrs, 0, in_a);
     std::vector<int> oshape_l(ndim);

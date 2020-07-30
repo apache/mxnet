@@ -1382,12 +1382,17 @@ def test_linalg_large_dim():
         assertRaises(MXNetError, nd.linalg.syrk, A)
         assertRaises(MXNetError, nd.linalg.syrk, A, transpose=True)
 
+    def check_gelqf():
+        A = nd.ones(shape=(1, 1, INT32_MAX + 1))
+        assertRaises(MXNetError, nd.linalg.gelqf, A)
+
     # batch input
     check_gemm()
     check_gemm2()
     check_trmm()
     check_trsm()
     check_syrk()
+    check_gelqf()
 
 
 def test_basic():
