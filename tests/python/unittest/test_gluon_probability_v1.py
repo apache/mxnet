@@ -341,7 +341,7 @@ def test_gluon_cauchy_v1():
     for shape, hybridize in itertools.product(shapes, [True, False]):
         loc = np.random.uniform(-1, 1, shape)
         scale = np.random.uniform(0.5, 1.5, shape)
-        samples = np.random.uniform(size=shape, high=1.0-1e-4)
+        samples = np.random.uniform(size=shape, low=1e-4, high=1.0-1e-4)
         net = TestCauchy("icdf")
         if hybridize:
             net.hybridize()
@@ -837,7 +837,7 @@ def test_gluon_dirichlet_v1():
             dirichlet = mgp.Dirichlet(alpha, F, validate_args=True)
             return _distribution_method_invoker(dirichlet, self._func, *args)
 
-    event_shapes = [2, 5, 10]
+    event_shapes = [2, 4, 6]
     batch_shapes = [None, (2, 3)]
 
     # Test sampling
@@ -845,7 +845,7 @@ def test_gluon_dirichlet_v1():
         for hybridize in [True, False]:
             desired_shape = (
                 batch_shape if batch_shape is not None else ()) + (event_shape,)
-            alpha = np.random.uniform(size=desired_shape)
+            alpha = np.random.uniform(1.0, 5.0, size=desired_shape)
             net = TestDirichlet("sample")
             if hybridize:
                 net.hybridize()
@@ -862,9 +862,9 @@ def test_gluon_dirichlet_v1():
         for hybridize in [True, False]:
             desired_shape = (
                 batch_shape if batch_shape is not None else ()) + (event_shape,)
-            alpha = np.random.uniform(size=desired_shape)
+            alpha = np.random.uniform(1.0, 5.0, desired_shape)
             np_samples = _np.random.dirichlet(
-                [1 / event_shape] * event_shape, size=batch_shape)
+                [10.0 / event_shape] * event_shape, size=batch_shape)
             net = TestDirichlet("log_prob")
             if hybridize:
                 net.hybridize()
@@ -879,7 +879,7 @@ def test_gluon_dirichlet_v1():
             for func in ['mean', 'variance', 'entropy']:
                 desired_shape = (
                     batch_shape if batch_shape is not None else ()) + (event_shape,)
-                alpha = np.random.uniform(size=desired_shape)
+                alpha = np.random.uniform(1.0, 5.0, desired_shape)
                 net = TestDirichlet(func)
                 if hybridize:
                     net.hybridize()
