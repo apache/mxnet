@@ -1229,7 +1229,7 @@ def test_linalg():
         assert inp1_grad.shape == (SMALL_Y, LARGE_X)
         assert inp2_grad.shape == (LARGE_X, SMALL_Y)
         assert_almost_equal(inp1_grad.asnumpy()[0][0], SMALL_Y)
-        assert_almost_equal(inp2_grad.asnumpy()[0][0], SMALL_Y-(1-perturbation))
+        assert_almost_equal(inp2_grad.asnumpy()[0][0], SMALL_Y - (1 - perturbation))
 
     def check_gemm():
         def run_gemm(inp1,inp2, inp3):
@@ -1246,14 +1246,14 @@ def test_linalg():
         inp2 = mx.nd.ones(shape=(MEDIUM_X, SMALL_Y, MEDIUM_X))
         inp3 = mx.nd.ones(shape=(MEDIUM_X, SMALL_Y, SMALL_Y))
         inp1_grad, inp2_grad, inp3_grad, out= run_gemm(inp1, inp2, inp3)
-        assert_almost_equal(out.asnumpy()[0][0][0], MEDIUM_X+perturbation)
+        assert_almost_equal(out.asnumpy()[0][0][0], MEDIUM_X + perturbation)
         assert out.shape == inp3.shape
         out.backward()
         assert inp1_grad.shape == (MEDIUM_X, SMALL_Y, MEDIUM_X)
         assert inp2_grad.shape == (MEDIUM_X, SMALL_Y, MEDIUM_X)
         assert inp3_grad.shape == (MEDIUM_X, SMALL_Y, SMALL_Y)
         assert_almost_equal(inp1_grad.asnumpy()[0][0][0], SMALL_Y)
-        assert_almost_equal(inp2_grad.asnumpy()[0][0][0], SMALL_Y-(1-perturbation))
+        assert_almost_equal(inp2_grad.asnumpy()[0][0][0], SMALL_Y - (1 - perturbation))
 
     def check_det():
         def run_det(inp):
