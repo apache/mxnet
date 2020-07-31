@@ -1369,3 +1369,35 @@ def test_dlpack(dtype, size):
     same(a_np+1, b)
     same(a_np+2, c)
     same(a_np+2, a_copy)
+
+@use_np
+@pytest.mark.parametrize('np_array', [
+    # ordinary numpy array
+    _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32"),
+    # 0-dim
+    _np.array((1, )).reshape(()),
+    # 0-size
+    _np.array(()).reshape((1, 0, 2)),
+])
+@pytest.mark.parametrize('zero_copy', [False, True])
+def test_from_numpy(np_array, zero_copy):
+    # Test zero_copy
+    mx_array = mx.npx.from_numpy(np_array, zero_copy=zero_copy)
+    mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+
+def test_from_numpy_exception():
+    np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
+    mx_array = mx.npx.from_numpy(np_array)
+    with pytest.raises(ValueError):
+        np_array[2, 1] = 0
+
+    mx_array[2, 1] = 100
+    mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+    np_array = _np.array([[1, 2], [3, 4], [5, 6]]).transpose()
+    assert not np_array.flags["C_CONTIGUOUS"]
+    with pytest.raises(ValueError):
+        mx_array = mx.nd.from_numpy(np_array)
+
+    np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
+    mx_array = mx.npx.from_numpy(np_array, zero_copy=False)
+    np_array[2, 1] = 0 # no error

@@ -119,21 +119,13 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
         yum clean all; \
     fi
 
-# Python dependencies
-RUN pip3 install --no-cache-dir --upgrade pip && \
-    pip3 install --no-cache-dir pylint cython numpy requests h5py scipy==1.2.3 wheel \
-    pytest==5.3.5 \
-    pytest-env==0.6.2 \
-    pytest-cov==2.8.1 \
-    pytest-xdist==1.31.0 \
-    pytest-timeout==1.3.4 \
-    mock==2.0.0 \
-    onnx==1.5.0 \
-    protobuf==3.5.2 \
-    tabulate==0.7.5
-
 # Fix the en_DK.UTF-8 locale to test locale invariance
 RUN localedef -i en_DK -f UTF-8 en_DK.UTF-8
+
+# Python dependencies
+RUN python3 -m pip install --upgrade pip
+COPY install/requirements /work/
+RUN python3 -m pip install -r /work/requirements
 
 ARG USER_ID=0
 COPY install/docker_filepermissions.sh /work/

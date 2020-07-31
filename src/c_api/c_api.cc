@@ -236,13 +236,13 @@ void CustomFComputeDispatcher(const std::string op_name,
     return static_cast<void*>((*cpualloc)(size));
   };
 
-  typedef decltype(gpu_alloc) alloc_type_gpu;
+  using alloc_type_gpu = decltype(gpu_alloc);
   auto gpu_malloc = [](void* _gpu_alloc, int size) {
     alloc_type_gpu* gpualloc = static_cast<alloc_type_gpu*>(_gpu_alloc);
     return static_cast<void*>((*gpualloc)(size));
   };
 
-  typedef decltype(sparse_alloc) alloc_type_sparse;
+  using alloc_type_sparse = decltype(sparse_alloc);
   auto sparse_malloc = [](void* _sparse_alloc, int index, int indices_len, int idxptr_len,
                            void** data, int64_t** indices, int64_t** indptr) {
     alloc_type_sparse* sparsealloc = static_cast<alloc_type_sparse*>(_sparse_alloc);
@@ -1209,7 +1209,7 @@ void registerPasses(void *lib, int verbose) {
       // create no-capture lambda so that we can cast it to function pointer
       // lambda with captures cannot be cast to function pointer and pass to lib_api.h
       // this needs to be a lambda function so that we can do the decltype cast
-      typedef decltype(ndarray_alloc) alloc_type_ndarray;
+      using alloc_type_ndarray = decltype(ndarray_alloc);
       auto ndarray_malloc = [](const void* _ndarray_alloc, const int64_t* shapes, int num_shapes,
                                const char* dev_str, int dev_id, int dtype, const char* name,
                                int isArg, void** data) {
@@ -1316,6 +1316,7 @@ int MXNotifyShutdown() {
   API_BEGIN();
   mxnet::op::custom::CustomOperator::Get()->Stop();
   Engine::Get()->NotifyShutdown();
+  Engine::Get()->WaitForAll();
   API_END();
 }
 
@@ -2168,7 +2169,7 @@ int MXDataIterCreateIter(DataIterCreator creator,
   iter = e->body();
   std::vector<std::pair<std::string, std::string> > kwargs;
   for (uint32_t i = 0; i < num_param; ++i) {
-    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+    kwargs.emplace_back(std::string(keys[i]), std::string(vals[i]));
   }
   iter->Init(kwargs);
   *out = iter;
@@ -2295,7 +2296,7 @@ int MXDatasetCreateDataset(DatasetCreator handle,
   DatasetReg *e = static_cast<DatasetReg *>(handle);
   std::vector<std::pair<std::string, std::string> > kwargs;
   for (uint32_t i = 0; i < num_param; ++i) {
-    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+    kwargs.emplace_back(std::string(keys[i]), std::string(vals[i]));
   }
   dataset = e->body(kwargs);
   *out = new std::shared_ptr<Dataset>(dataset);
@@ -2312,7 +2313,7 @@ int MXDatasetGetDatasetInfo(DatasetCreator creator,
   DatasetReg *e = static_cast<DatasetReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions,
-                                 NULL);
+                                 nullptr);
 }
 
 int MXDatasetFree(DatasetHandle handle) {
@@ -2383,7 +2384,7 @@ int MXBatchifyFunctionCreateFunction(BatchifyFunctionCreator handle,
   BatchifyFunctionReg *e = static_cast<BatchifyFunctionReg *>(handle);
   std::vector<std::pair<std::string, std::string> > kwargs;
   for (uint32_t i = 0; i < num_param; ++i) {
-    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+    kwargs.emplace_back(std::string(keys[i]), std::string(vals[i]));
   }
   bf = e->body(kwargs);
   *out = new BatchifyFunctionPtr(bf);
@@ -2400,7 +2401,7 @@ int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
   BatchifyFunctionReg *e = static_cast<BatchifyFunctionReg *>(creator);
   return MXAPIGetFunctionRegInfo(e, name, description, num_args,
                                  arg_names, arg_type_infos, arg_descriptions,
-                                 NULL);
+                                 nullptr);
 }
 int MXBatchifyFunctionInvoke(BatchifyFunctionHandle handle,
                              int batch_size,
@@ -3157,8 +3158,8 @@ int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *sha
   API_END();
 }
 
-typedef Engine::VarHandle VarHandle;
-typedef Engine::CallbackOnComplete CallbackOnComplete;
+using VarHandle = Engine::VarHandle;
+using CallbackOnComplete = Engine::CallbackOnComplete;
 
 void AssertValidNumberVars(int num_const_vars, int num_mutable_vars) {
   CHECK_GE(num_const_vars, 0) << "Non-negative number of const vars expected.";

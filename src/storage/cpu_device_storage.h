@@ -25,9 +25,6 @@
 #ifndef MXNET_STORAGE_CPU_DEVICE_STORAGE_H_
 #define MXNET_STORAGE_CPU_DEVICE_STORAGE_H_
 
-#include <dmlc/logging.h>
-#include <cstdlib>
-#include <new>
 #include "mxnet/base.h"
 
 namespace mxnet {
@@ -63,15 +60,11 @@ class CPUDeviceStorage {
 };  // class CPUDeviceStorage
 
 inline void CPUDeviceStorage::Alloc(Storage::Handle* handle) {
-  handle->dptr = nullptr;
-  const size_t size = handle->size;
-  if (size == 0) return;
-
 #if _MSC_VER
-  handle->dptr = _aligned_malloc(size, alignment_);
+  handle->dptr = _aligned_malloc(handle->size, alignment_);
   if (handle->dptr == nullptr) LOG(FATAL) << "Failed to allocate CPU Memory";
 #else
-  int ret = posix_memalign(&handle->dptr, alignment_, size);
+  int ret = posix_memalign(&handle->dptr, alignment_, handle->size);
   if (ret != 0) LOG(FATAL) << "Failed to allocate CPU Memory";
 #endif
 }

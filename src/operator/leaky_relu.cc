@@ -202,7 +202,7 @@ The following modified ReLU Activation functions are supported:
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
     [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
       if (index == 1 && var->attrs.dict.find("__init__") == var->attrs.dict.end()) {
-        var->attrs.dict["__init__"] = "[\"Constant\", {\"value\": 0.25}]";
+        var->attrs.dict["__init__"] = R"(["Constant", {"value": 0.25}])";
       }
     });
 

@@ -29,6 +29,12 @@ The following tutorials teach how to use MXNet.
       A quick overview of the core concepts of MXNet using the Gluon API.
 
    .. card::
+      :title: What is NP on MXNet
+      :link: np/index.html
+
+      What is NP on MXNet
+
+   .. card::
       :title: Moving from other frameworks
       :link: to-mxnet/index.html
 
@@ -57,6 +63,7 @@ The following tutorials teach how to use MXNet.
    :maxdepth: 2
 
    crash-course/index
+   np/index
    to-mxnet/index
    gluon_from_experiment_to_deployment
    logistic_regression_explained.md

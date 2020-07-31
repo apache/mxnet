@@ -73,7 +73,7 @@ MXNET_REGISTER_API("_npi.laplace")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyLaplaceParam>(&attrs);
   if (args[4].type_code() != kNull) {

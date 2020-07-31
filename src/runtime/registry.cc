@@ -44,7 +44,7 @@ struct Registry::Manager {
   std::mutex mutex;
 
   // vtable for extension type is not suported for now
-  Manager() {}
+  Manager() = default;
 
   static Manager* Global() {
     // We deliberately leak the Manager instance, to avoid leak sanitizers

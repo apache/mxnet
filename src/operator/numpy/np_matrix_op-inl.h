@@ -134,10 +134,10 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& inputs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
-  const NumpyTransposeParam& param = nnvm::get<NumpyTransposeParam>(attrs.parsed);
   if (req[0] == kNullOp) return;
   CHECK(req[0] == kWriteTo || req[0] == kAddTo)
-      << "Transpose only supports kWriteTo, kNullOp and kAddTo";
+      << "Transpose does not support inplace";
+  const NumpyTransposeParam& param = nnvm::get<NumpyTransposeParam>(attrs.parsed);
   mxnet::TShape axes;
   if (ndim_is_known(param.axes)) {
     axes = common::CanonicalizeAxes(param.axes);
@@ -147,10 +147,14 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
       axes[i] = axes.ndim() - 1 - i;
     }
   }
+  mshadow::Tensor<xpu, 1, dim_t> workspace =
+    GetTransposeExWorkspace<xpu>(ctx, axes);
   if (req[0] == kAddTo) {
-    TransposeImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0], axes);
+    TransposeExImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
   } else {
-    TransposeImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0], axes);
+    TransposeExImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
   }
 }
 
@@ -779,13 +783,21 @@ void NumpyRollaxisCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(req[0], kWriteTo) << "Rollaxis does not support inplace";
-  mxnet::TShape axes;
+  if (req[0] == kNullOp) return;
+  CHECK(req[0] == kWriteTo || req[0] == kAddTo)
+      << "Rollaxis does not support inplace";
   const NumpyRollaxisParam& param = nnvm::get<NumpyRollaxisParam>(attrs.parsed);
-  axes = NumpyRollaxisShapeImpl(param.axis, param.start, inputs[0].ndim());
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, Dtype, {
-    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
-  })
+  mxnet::TShape axes = NumpyRollaxisShapeImpl(param.axis, param.start, inputs[0].ndim());
+
+  mshadow::Tensor<xpu, 1, dim_t> workspace =
+    GetTransposeExWorkspace<xpu>(ctx, axes);
+  if (req[0] == kAddTo) {
+    TransposeExImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
+  } else {
+    TransposeExImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
+  }
 }
 
 template<typename xpu>
@@ -796,6 +808,9 @@ void NumpyRollaxisBackward(const nnvm::NodeAttrs &attrs,
                             const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
+  if (req[0] == kNullOp) return;
+  CHECK(req[0] == kWriteTo || req[0] == kAddTo)
+      << "Rollaxis Backward does not support inplace";
   const NumpyRollaxisParam& param = nnvm::get<NumpyRollaxisParam>(attrs.parsed);
   int axis_origin = param.axis;
   int start_origin = param.start;
@@ -819,11 +834,17 @@ void NumpyRollaxisBackward(const nnvm::NodeAttrs &attrs,
     axis = start_origin;
     start = axis_origin + 1;
   }
-  mxnet::TShape axes;
-  axes = NumpyRollaxisShapeImpl(axis, start, inputs[0].ndim());
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, Dtype, {
-    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
-  })
+  mxnet::TShape axes = NumpyRollaxisShapeImpl(axis, start, inputs[0].ndim());
+
+  mshadow::Tensor<xpu, 1, dim_t> workspace =
+    GetTransposeExWorkspace<xpu>(ctx, axes);
+  if (req[0] == kAddTo) {
+    TransposeExImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
+  } else {
+    TransposeExImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
+  }
 }
 
 struct NumpyRot90Param : public dmlc::Parameter<NumpyRot90Param> {

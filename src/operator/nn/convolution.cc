@@ -27,9 +27,6 @@
 #include "./convolution-inl.h"
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
-#if MXNET_USE_NNPACK == 1
-#include "../nnpack/nnpack_pooling-inl.h"
-#endif  // MXNET_USE_NNPACK
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_base-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
