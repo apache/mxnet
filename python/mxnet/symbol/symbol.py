@@ -2649,7 +2649,7 @@ class Symbol(SymbolBase):
     def backward(self):
         raise NotImplementedForSymbol(self.backward, None)
 
-    def _optimize_for_dynamic_shape_op(self, is_np_array):
+    def _optimize_for_dynamic_shape_op(self, is_np_array, flags):
         """Check if any dynamic shape op presents in the symbol.
         If yes, partition all static shape ops for optimization.
         returns the optimized symbol.
@@ -2661,11 +2661,30 @@ class Symbol(SymbolBase):
             - If true, output type is np symbol, otherwise nd symbol.
         """
         out = SymbolHandle()
-        check_call(_LIB.MXOptimizeForDynamicShapeOp(self.handle, ctypes.byref(out)))
+        has_dynamic_shape = ctypes.c_bool(False)
+
+        # Pass static_allco and static_shape flags into c_api
+        key_list = []
+        val_list = []
+        for flag in flags:
+            key, val = flag[0], flag[1]
+            if key == 'static_alloc' or key == 'static_shape':
+                key_list.append(key)
+                if val:
+                    val_list.append('true')
+                else:
+                    val_list.append('false')
+
+        check_call(_LIB.MXOptimizeForDynamicShapeOp(self.handle,
+                                                    ctypes.byref(out),
+                                                    mx_uint(len(key_list)),
+                                                    c_str_array(key_list),
+                                                    c_str_array(val_list),
+                                                    ctypes.byref(has_dynamic_shape)))
         if is_np_array:
             from .numpy import _Symbol as np_symbol
-            return np_symbol(out)
-        return Symbol(out)
+            return np_symbol(out), has_dynamic_shape.value
+        return Symbol(out), has_dynamic_shape.value
 
 def var(name, attr=None, shape=None, lr_mult=None, wd_mult=None, dtype=None,
         init=None, stype=None, profiler_scope=None, **kwargs):

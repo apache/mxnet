@@ -1043,7 +1043,7 @@ class HybridBlock(Block):
             self._cached_graph = data, out
 
         # partition static shape ops if the graph contains any dynamic shape op
-        out = out._optimize_for_dynamic_shape_op(is_np_array())
+        out, is_dynamic = out._optimize_for_dynamic_shape_op(is_np_array(), self._flags)
         self._cached_graph = data, out
 
         input_names = out.list_inputs()
@@ -1085,7 +1085,7 @@ class HybridBlock(Block):
 
             self._cached_op_args.append(triple)
 
-        flags = [('data_indices', data_indices), ('param_indices', param_indices)] + \
+        flags = [('data_indices', data_indices), ('param_indices', param_indices), ('is_dynamic', is_dynamic)] + \
                 self._flags
 
         self._cached_op = ndarray.CachedOp(out, flags)
