@@ -46,7 +46,7 @@ def test_np_einsum():
         print('{} = {}'.format(name, data))
 
     configs = [
-        ('ii', [(5, 5)], lambda *args: (_np.eye(5),)),
+        #('ii', [(5, 5)], lambda *args: (_np.eye(5),)),
         ('ii->i', [(5, 5)], lambda *args: (_np.eye(5),)),
         ('ij->i', [(5, 5)], lambda *args: (_np.ones((5, 5)),)),
         ('...j->...', [(5, 5)], lambda *args: (_np.ones((5, 5)),)),
@@ -68,6 +68,10 @@ def test_np_einsum():
                                                                   axis=-1))[:, :, None], [1, 1, 5]),
                                                                 _np.tile(_np.transpose(_np.sum(args[0],
                                                                   axis=-1))[:, :, None], [1, 1, 2]))),
+        ('ijk, jil->kl', [(33, 44, 55), (44, 33, 22)], lambda *args: (_np.tile(_np.transpose(_np.sum(args[1],
+                                                                  axis=-1))[:, :, None], [1, 1, 55]),
+                                                                _np.tile(_np.transpose(_np.sum(args[0],
+                                                                  axis=-1))[:, :, None], [1, 1, 22]))),
         ('ii->i', [(3, 3)], lambda *args: (_np.eye(3),)),
         ('ki, jk->ij', [(3, 2), (4, 3)], lambda *args: (_np.tile(args[1].sum(axis=0)[:, None], [1, 2]),
                                                         _np.tile(args[0].sum(axis=1)[None, :], [4, 1]))),
@@ -78,9 +82,20 @@ def test_np_einsum():
         #                                              _np.tile(args[0].sum(axis=1)[None, :], [4, 1]))),
         #Zero shape fails
         #('ij, jk', [(5, 0), (0, 4)], lambda *args: (_np.empty((5, 0)), _np.empty((0, 4)))),
-        (('ij,jk,kl->il'), [(2, 2), (2, 5), (5, 2)], lambda *args: (_np.dot(_np.ones((2, 2)), _np.dot(args[1], args[2]).T),
-                                                                    _np.dot(args[0].T, _np.dot(_np.ones((2, 2)), args[2].T)),
-                                                                    _np.dot(_np.dot(args[0], args[1]).T, _np.ones((2, 2))))),
+        (('ij,jk,kl->il'), [(2, 2), (2, 5), (5, 2)],
+            lambda *args: (_np.dot(_np.ones((2, 2)), _np.dot(args[1], args[2]).T),
+            _np.dot(args[0].T, _np.dot(_np.ones((2, 2)), args[2].T)),
+            _np.dot(_np.dot(args[0], args[1]).T, _np.ones((2, 2))))),
+        (('ij,jk,kl->il'), [(67, 89), (89, 55), (55, 99)],
+            lambda *args: (_np.dot(_np.ones((67, 99)), _np.dot(args[1], args[2]).T),
+            _np.dot(args[0].T, _np.dot(_np.ones((67, 99)), args[2].T)),
+            _np.dot(_np.dot(args[0], args[1]).T, _np.ones((67, 99))))),
+        (('ij,jk,kl, lm->im'), [(12, 54), (54, 32), (32, 45), (45, 67)],
+            lambda *args: (_np.dot(_np.ones((12, 67)), _np.dot(args[1], _np.dot(args[2], args[3])).T),
+            _np.dot(args[0].T, _np.dot(_np.ones((12, 67)), _np.dot(args[2], args[3]).T)),
+            _np.dot(_np.dot(args[0], args[1]).T, _np.dot(_np.ones((12, 67)), args[3].T)),
+            _np.dot(_np.dot(args[0], _np.dot(args[1], args[2])).T, _np.ones((12, 67))))),
+
         # broadcast bug
         #('ij, ij -> i', [(1, 4), (2, 4)], lambda *args: (_np.sum(args[1], axis=0)[None, :],
         #                                                 _np.tile(args[0], [2, 1]))),
@@ -111,11 +126,14 @@ def test_np_einsum():
     ]
     dtypes = ['float32', 'float64'] ##, 'int32'] not working int32
     for hybridize in [False, True]:
+        print('\n\n ----- hybridize ------- \n', hybridize)
         for dtype in dtypes:
             for config in configs:
                 for optimize in [False, True]:
-                    rtol = 1e-2 if dtype == 'float16' else 1e-3
-                    atol = 1e-4 if dtype == 'float16' else 1e-5
+                    #rtol = 1e-2 if dtype == 'float16' else 1e-3
+                    #atol = 1e-4 if dtype == 'float16' else 1e-5
+                    rtol = 1e-1 if dtype == 'float16' else 1e-3
+                    atol = 1e-1 if dtype == 'float16' else 1e-4
                     (subscripts, operands, get_grad) = config
                     print('Testing config\n', subscripts, '\n')
                     test_einsum = TestEinsum(subscripts, optimize)
@@ -135,5 +153,6 @@ def test_np_einsum():
                     assert out_mx.shape == expected_np.shape
                     assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
                     out_mx.backward()
+                    mx.nd.waitall()
                     for (iop, op) in enumerate(x):
                         assert_almost_equal(op.grad.asnumpy(), get_grad(*x_np)[iop], rtol=rtol, atol=atol)
