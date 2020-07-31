@@ -45,6 +45,7 @@ NDArray
 
       For Sparse NDArray tutorials
 
+      This section contains the mxnet.np API reference documentation
 
 .. toctree::
    :hidden:

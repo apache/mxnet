@@ -96,7 +96,10 @@ class Trainer(object):
                 raise ValueError(
                     "First argument must be a list or dict of Parameters, " \
                     "got list of %s."%(type(param)))
-            self._param2idx[param.name] = i
+            if param._uuid in self._param2idx:
+                # Shared parameters have same uuid; only need to store one of the shared versions
+                continue
+            self._param2idx[param._uuid] = i
             self._params.append(param)
             param._set_trainer(self)
             if param._stype != 'default':
@@ -164,7 +167,7 @@ class Trainer(object):
                     params_to_init.append(param)
                 else:
                     param_arrays = param._check_and_get(param._data, list)
-                    idx = self._param2idx[param.name]
+                    idx = self._param2idx[param._uuid]
                     if param._stype != 'default':
                         self._kvstore.init(idx, param_arrays[0])
                     else:
@@ -221,7 +224,7 @@ class Trainer(object):
             #    - backward()
             #    - push_and_update(grad)
             #    - pull(weight)
-            arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
+            arg_arrays = {param._uuid: param.data(self._contexts[0]) for param in self._params}
             kvstore, _ = _create_kvstore(config['kvstore'], len(self._contexts), arg_arrays)
             self._distributed = 'dist' in kvstore.type if kvstore else False
             update_on_kvstore = self._distributed
@@ -239,7 +242,7 @@ class Trainer(object):
         else:
             # Training with dense weight and dense gradients.
             # The only unsupported mode is async with update_on_kvstore=False
-            arg_arrays = {param.name: param.data(self._contexts[0]) for param in self._params}
+            arg_arrays = {param._uuid: param.data(self._contexts[0]) for param in self._params}
             kvstore, update_on_kvstore = _create_kvstore(config['kvstore'], len(self._contexts),
                                                          arg_arrays)
             self._distributed = 'dist' in kvstore.type if kvstore else False
@@ -311,7 +314,7 @@ class Trainer(object):
             self._init_kvstore()
         if self._params_to_init:
             self._init_params()
-        idx = self._param2idx[parameter.name]
+        idx = self._param2idx[parameter._uuid]
         if full_idx and 'dist' not in self._kvstore.type:
             assert row_id.size == out.shape[0]
             self._kvstore.pull(idx, out=out, priority=-idx, ignore_sparse=False)

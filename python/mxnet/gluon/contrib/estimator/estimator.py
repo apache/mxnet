@@ -242,7 +242,7 @@ class Estimator(object):
             suggested_metric = _suggest_metric_for_loss(self.loss)
             if suggested_metric:
                 self._train_metrics = [suggested_metric]
-            loss_name = self.loss.name.rstrip('1234567890')
+            loss_name = type(self.loss).__name__
             self._train_metrics.append(metric_loss(loss_name))
 
         for metric in self._train_metrics:

@@ -25,9 +25,6 @@
 */
 #include "../elemwise_op_common.h"
 #include "./pooling-inl.h"
-#if MXNET_USE_NNPACK == 1
-#include "../nnpack/nnpack_pooling-inl.h"
-#endif  // MXNET_USE_NNPACK
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_pooling-inl.h"
 #include "./mkldnn/mkldnn_base-inl.h"

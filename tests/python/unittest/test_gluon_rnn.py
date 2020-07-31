@@ -52,8 +52,10 @@ def test_rnn():
     outputs = mx.sym.Group(outputs)
     assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight',
                                                     'i2h_bias', 'i2h_weight']
-    assert outputs.list_outputs() == \
-        [cell.name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
+    assert outputs.list_outputs() == [
+        'rnncell_t0_out_output', 'rnncell_t1_out_output',
+        'rnncell_t2_out_output'
+    ]
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
@@ -65,8 +67,10 @@ def test_lstm():
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
     assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight', 'i2h_bias', 'i2h_weight']
-    assert outputs.list_outputs() == \
-        [cell.name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
+    assert outputs.list_outputs() == [
+        'lstmcell_t0_out_output', 'lstmcell_t1_out_output',
+        'lstmcell_t2_out_output'
+    ]
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
@@ -171,8 +175,10 @@ def test_gru():
     outputs, _ = cell.unroll(3, inputs)
     outputs = mx.sym.Group(outputs)
     assert sorted(cell.collect_params().keys()) == ['h2h_bias', 'h2h_weight', 'i2h_bias', 'i2h_weight']
-    assert outputs.list_outputs() == \
-        [cell.name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
+    assert outputs.list_outputs() == [
+        'grucell_t0_out_output', 'grucell_t1_out_output',
+        'grucell_t2_out_output'
+    ]
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
@@ -187,17 +193,15 @@ def test_residual():
     params = cell.collect_params()
     assert sorted(params.keys()) == \
            ['base_cell.h2h_bias', 'base_cell.h2h_weight', 'base_cell.i2h_bias', 'base_cell.i2h_weight']
-    # assert outputs.list_outputs() == \
-    #        ['rnn_t0_out_plus_residual_output', 'rnn_t1_out_plus_residual_output']
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10, 50), t1_data=(10, 50))
     assert outs == [(10, 50), (10, 50)]
-    outputs = outputs.eval(**{'t0_data':mx.nd.ones((10, 50)),
-                              't1_data':mx.nd.ones((10, 50)),
-                              params['base_cell.i2h_weight'].name:mx.nd.zeros((150, 50)),
-                              params['base_cell.i2h_bias'].name:mx.nd.zeros((150,)),
-                              params['base_cell.h2h_weight'].name:mx.nd.zeros((150, 50)),
-                              params['base_cell.h2h_bias'].name:mx.nd.zeros((150,))})
+    outputs = outputs.eval(**{'t0_data': mx.nd.ones((10, 50)),
+                              't1_data': mx.nd.ones((10, 50)),
+                              cell.base_cell.i2h_weight.var().name: mx.nd.zeros((150, 50)),
+                              cell.base_cell.i2h_bias.var().name: mx.nd.zeros((150, )),
+                              cell.base_cell.h2h_weight.var().name: mx.nd.zeros((150, 50)),
+                              cell.base_cell.h2h_bias.var().name: mx.nd.zeros((150, ))})
     expected_outputs = np.ones((10, 50))
     assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
     assert np.array_equal(outputs[1].asnumpy(), expected_outputs)
@@ -212,11 +216,11 @@ def test_residual_bidirectional():
     inputs = [mx.sym.Variable('rnn_t%d_data'%i) for i in range(2)]
     outputs, _ = cell.unroll(2, inputs, merge_outputs=False)
     outputs = mx.sym.Group(outputs)
-    params = cell.collect_params() 
+    params = cell.collect_params()
     assert sorted(params.keys()) == \
-           ['base_cell.l_cell.h2h_bias', 'base_cell.l_cell.h2h_weight', 
+           ['base_cell.l_cell.h2h_bias', 'base_cell.l_cell.h2h_weight',
             'base_cell.l_cell.i2h_bias', 'base_cell.l_cell.i2h_weight',
-            'base_cell.r_cell.h2h_bias', 'base_cell.r_cell.h2h_weight', 
+            'base_cell.r_cell.h2h_bias', 'base_cell.r_cell.h2h_weight',
             'base_cell.r_cell.i2h_bias', 'base_cell.r_cell.i2h_weight']
     # assert outputs.list_outputs() == \
     #        ['bi_t0_plus_residual_output', 'bi_t1_plus_residual_output']
@@ -225,14 +229,14 @@ def test_residual_bidirectional():
     assert outs == [(10, 50), (10, 50)]
     outputs = outputs.eval(**{'rnn_t0_data':mx.nd.ones((10, 50))+5,
                               'rnn_t1_data':mx.nd.ones((10, 50))+5,
-                              params['base_cell.l_cell.i2h_weight'].name:mx.nd.zeros((75, 50)),
-                              params['base_cell.l_cell.i2h_bias'].name:mx.nd.zeros((75,)),
-                              params['base_cell.l_cell.h2h_weight'].name:mx.nd.zeros((75, 25)),
-                              params['base_cell.l_cell.h2h_bias'].name:mx.nd.zeros((75,)),
-                              params['base_cell.r_cell.i2h_weight'].name:mx.nd.zeros((75, 50)),
-                              params['base_cell.r_cell.i2h_bias'].name:mx.nd.zeros((75,)),
-                              params['base_cell.r_cell.h2h_weight'].name:mx.nd.zeros((75, 25)),
-                              params['base_cell.r_cell.h2h_bias'].name:mx.nd.zeros((75,))})
+                              cell.base_cell.l_cell.i2h_weight.var().name:mx.nd.zeros((75, 50)),
+                              cell.base_cell.l_cell.i2h_bias.var().name:mx.nd.zeros((75,)),
+                              cell.base_cell.l_cell.h2h_weight.var().name:mx.nd.zeros((75, 25)),
+                              cell.base_cell.l_cell.h2h_bias.var().name:mx.nd.zeros((75,)),
+                              cell.base_cell.r_cell.i2h_weight.var().name:mx.nd.zeros((75, 50)),
+                              cell.base_cell.r_cell.i2h_bias.var().name:mx.nd.zeros((75,)),
+                              cell.base_cell.r_cell.h2h_weight.var().name:mx.nd.zeros((75, 25)),
+                              cell.base_cell.r_cell.h2h_bias.var().name:mx.nd.zeros((75,))})
     expected_outputs = np.ones((10, 50))+5
     assert np.array_equal(outputs[0].asnumpy(), expected_outputs)
     assert np.array_equal(outputs[1].asnumpy(), expected_outputs)
@@ -260,8 +264,7 @@ def test_stack():
     assert '1.base_cell.h2h_bias' in keys
     assert '1.base_cell.i2h_weight' in keys
     assert '1.base_cell.i2h_bias' in keys
-    assert outputs.list_outputs() == \
-        [cell[4].name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
+    assert outputs.list_outputs() == ['lstmcell_t0_out_output', 'lstmcell_t1_out_output', 'lstmcell_t2_out_output']
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
@@ -290,8 +293,7 @@ def test_hybridstack():
     assert '1.base_cell.h2h_bias' in keys
     assert '1.base_cell.i2h_weight' in keys
     assert '1.base_cell.i2h_bias' in keys
-    assert outputs.list_outputs() == \
-        [cell[4].name + name for name in ['_t0_out_output', '_t1_out_output', '_t2_out_output']]
+    assert outputs.list_outputs() == ['lstmcell_t0_out_output', 'lstmcell_t1_out_output', 'lstmcell_t2_out_output']
 
     args, outs, auxs = outputs.infer_shape(t0_data=(10,50), t1_data=(10,50), t2_data=(10,50))
     assert outs == [(10, 100), (10, 100), (10, 100)]
@@ -533,7 +535,7 @@ def test_rnn_cells_export_import():
             symbol_file="./model-symbol.json",
             input_names=["data"],
             param_file="./model-0000.params",
-            ctx=mx.Context.default_ctx
+            ctx=mx.context.current_context()
         )
         output2 = symbol(input)
         assert_almost_equal(output1.asnumpy(), output2.asnumpy())
@@ -910,4 +912,3 @@ def test_bidirectional_unroll_valid_length():
 
     _check_bidirectional_unroll_valid_length(1)
     _check_bidirectional_unroll_valid_length(3)
-

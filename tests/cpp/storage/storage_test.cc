@@ -21,11 +21,11 @@
  * \file storage_test.cc
  * \brief cpu/gpu storage tests
 */
-#include <stdlib.h>
 #include <gtest/gtest.h>
 #include <dmlc/logging.h>
 #include <mxnet/storage.h>
 #include <cstdio>
+#include <cstdlib>
 #include "test_util.h"
 
 TEST(Storage, Basic_CPU) {

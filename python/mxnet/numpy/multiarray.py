@@ -40,15 +40,16 @@ from ..ndarray import indexing_key_expand_implicit_axes, get_indexing_dispatch_c
                       get_oshape_of_gather_nd_op
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
-from ..base import check_call, _LIB, NDArrayHandle, c_array
+from ..base import check_call, _LIB, NDArrayHandle, c_array, mx_int, mx_int64
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, integer_types
+from ..runtime import Features
 from ..context import Context
 from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
                    is_np_default_dtype
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
-from ..ndarray.ndarray import _storage_type, from_numpy
+from ..ndarray.ndarray import _storage_type
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
@@ -92,6 +93,16 @@ _NDARRAY_EMPTY_TUPLE_INDEXING = 2
 _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY = -1
 _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE = 0
 _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE = 1
+_SIGNED_INT32_UPPER_LIMIT = (2**31 - 1)
+
+# Caching whether MXNet was built with INT64 support or not
+_INT64_TENSOR_SIZE_ENABLED = None
+
+def _int64_enabled():
+    global _INT64_TENSOR_SIZE_ENABLED
+    if _INT64_TENSOR_SIZE_ENABLED is None:
+        _INT64_TENSOR_SIZE_ENABLED = Features().is_enabled('INT64_TENSOR_SIZE')
+    return _INT64_TENSOR_SIZE_ENABLED
 
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
@@ -106,14 +117,37 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):  # pylint: disa
         A new empty `ndarray` handle.
     """
     hdl = NDArrayHandle()
-    check_call(_LIB.MXNDArrayCreateEx(
-        c_array_buf(mx_uint, native_array('I', shape)),
-        mx_uint(len(shape)),
-        ctypes.c_int(ctx.device_typeid),
-        ctypes.c_int(ctx.device_id),
-        ctypes.c_int(int(delay_alloc)),
-        ctypes.c_int(int(_DTYPE_NP_TO_MX[_np.dtype(dtype).type])),
-        ctypes.byref(hdl)))
+    if _int64_enabled():
+        check_call(_LIB.MXNDArrayCreateEx64(
+            c_array_buf(mx_int64, native_array('q', shape)),
+            ctypes.c_int(len(shape)),
+            ctypes.c_int(ctx.device_typeid),
+            ctypes.c_int(ctx.device_id),
+            ctypes.c_int(int(delay_alloc)),
+            ctypes.c_int(int(_DTYPE_NP_TO_MX[_np.dtype(dtype).type])),
+            ctypes.byref(hdl)))
+    else:
+        # When shape is larger than uint32 then there is an overflow error at python end itself.
+        # It needs to be caught here since the call doesn't even reach backend.
+        array_size = 1
+        for idx in shape:
+            array_size = array_size * idx
+        if array_size > _SIGNED_INT32_UPPER_LIMIT:
+            raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
+                            "larger than 2^31 elements. Please build with flag " +
+                            "USE_INT64_TENSOR_SIZE=1")
+        if _np.dtype(dtype) == _np.dtype([('bfloat16', _np.uint16)]):
+            dtype_type = _np.dtype(dtype)
+        else:
+            dtype_type = _np.dtype(dtype).type
+        check_call(_LIB.MXNDArrayCreateEx(
+            c_array_buf(mx_uint, native_array('I', shape)),
+            mx_uint(len(shape)),
+            ctypes.c_int(ctx.device_typeid),
+            ctypes.c_int(ctx.device_id),
+            ctypes.c_int(int(delay_alloc)),
+            ctypes.c_int(int(_DTYPE_NP_TO_MX[dtype_type])),
+            ctypes.byref(hdl)))
     return hdl
 
 
@@ -148,11 +182,11 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
 
 def _as_mx_np_array(object, ctx=None):
     """Convert object to mxnet.numpy.ndarray."""
-    if isinstance(object, _np.ndarray):
-        if not object.flags['C_CONTIGUOUS']:
-            object = _np.ascontiguousarray(object, dtype=object.dtype)
-        ret = from_numpy(object, array_cls=ndarray)
-        return ret if ctx is None else ret.as_in_ctx(ctx=ctx)
+    if isinstance(object, ndarray):
+        return object
+    elif isinstance(object, _np.ndarray):
+        np_dtype = _np.dtype(object.dtype).type
+        return array(object, dtype=np_dtype, ctx=ctx)
     elif isinstance(object, (integer_types, numeric_types)):
         return object
     elif isinstance(object, (list, tuple)):
@@ -399,14 +433,24 @@ class ndarray(NDArray):
             )
             handle = NDArrayHandle()
             flat_self = self.reshape_view(-1)
-            check_call(
-                _LIB.MXNDArraySlice(
-                    flat_self.handle,
-                    mx_uint(flat_begin),
-                    mx_uint(flat_end),
-                    ctypes.byref(handle),
+            if _int64_enabled():
+                check_call(
+                    _LIB.MXNDArraySlice64(
+                        flat_self.handle,
+                        ctypes.c_int64(flat_begin),
+                        ctypes.c_int64(flat_end),
+                        ctypes.byref(handle),
+                    )
                 )
-            )
+            else:
+                check_call(
+                    _LIB.MXNDArraySlice(
+                        flat_self.handle,
+                        ctypes.c_uint32(flat_begin),
+                        ctypes.c_uint32(flat_end),
+                        ctypes.byref(handle),
+                    )
+                )
             sliced_shape = self._basic_indexing_sliced_shape(slc_key, self.shape)
             sliced = self.__class__(handle=handle, writable=self.writable)
             if 0 in sliced_shape:
@@ -698,6 +742,14 @@ class ndarray(NDArray):
                     return self
             elif key.step == 0:
                 raise ValueError("slice step cannot be zero")
+
+
+        all = __builtins__['all']  # `def all` below shadows the all builtin
+        if (isinstance(key, tuple) and all( \
+        (isinstance(arr, NDArray) \
+        and _np.issubdtype(arr.dtype, _np.integer) and arr.ndim > 0) \
+        for arr in key)):
+            return _npi.advanced_indexing_multiple(self, _npi.stack(*key))
 
         # For 0-d boolean indices: A new axis is added,
         # but at the same time no axis is "used". So if we have True,
@@ -2255,7 +2307,33 @@ class ndarray(NDArray):
 
     @property
     def shape(self):
-        return super(ndarray, self).shape
+        """Tuple of array dimensions.
+
+        Examples
+        --------
+        >>> x = mx.np.array([1, 2, 3, 4])
+        >>> x.shape
+        (4L,)
+        >>> y = mx.np.zeros((2, 3, 4))
+        >>> y.shape
+        (2L, 3L, 4L)
+        >>> z = mx.np.array(3)
+        >>> z.shape
+        ()
+        """
+        num_dim = mx_int()
+        if _int64_enabled():
+            pdata = ctypes.POINTER(mx_int64)()
+            check_call(_LIB.MXNDArrayGetShapeEx64(
+                self.handle, ctypes.byref(num_dim), ctypes.byref(pdata)))
+        else:
+            pdata = ctypes.POINTER(mx_int)()
+            check_call(_LIB.MXNDArrayGetShapeEx(
+                self.handle, ctypes.byref(num_dim), ctypes.byref(pdata)))
+        if num_dim.value == -1:
+            return None
+        else:
+            return tuple(pdata[:num_dim.value])  # pylint: disable=invalid-slice-index
 
     @property
     def ndim(self):
@@ -10093,7 +10171,7 @@ def shares_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `may_share_memory` in MXNet DeepNumPy
+    - Actually it is same as `may_share_memory` in MXNet np
     """
     return _mx_nd_np.shares_memory(a, b, max_work)
 
@@ -10134,7 +10212,7 @@ def may_share_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `shares_memory` in MXNet DeepNumPy
+    - Actually it is same as `shares_memory` in MXNet np
     """
     return _mx_nd_np.may_share_memory(a, b, max_work)
 

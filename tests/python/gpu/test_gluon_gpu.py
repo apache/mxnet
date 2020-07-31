@@ -21,7 +21,7 @@ import os
 import time
 import mxnet as mx
 import multiprocessing as mp
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray, environment
 import mxnet.ndarray as nd
 import numpy as np
 import math
@@ -33,6 +33,7 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, run_in_spawned_process
 from test_gluon import *
 from test_loss import *
+from test_numpy_loss import *
 from test_gluon_rnn import *
 
 set_default_context(mx.gpu(0))
@@ -50,10 +51,9 @@ def check_rnn_layer(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    # atol of 1e-6 required, as exposed by seed 2124685726
-    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c)
 
 
 @with_seed()
@@ -70,9 +70,9 @@ def check_rnn_layer_w_rand_inputs(layer):
         states = layer.begin_state(16)
         co, cs = layer(x, states)
 
-    assert_almost_equal(go, co, rtol=1e-2, atol=1e-6)
+    assert_almost_equal(go, co)
     for g, c in zip(gs, cs):
-        assert_almost_equal(g, c, rtol=1e-2, atol=1e-6)
+        assert_almost_equal(g, c)
 
 
 @with_seed()
@@ -443,20 +443,20 @@ def test_symbol_block_fp16(tmpdir):
     net_fp32.hybridize()
     data = mx.nd.zeros((1, 3, 224, 224), dtype='float16', ctx=ctx)
     net_fp32.forward(data)
-    net_fp32.export(tmpfile, 0)
+    symbol_file, param_file = net_fp32.export(tmpfile, 0)
 
     # 2. Load the saved model and verify if all the params are loaded correctly.
-    # and choose one of the param to verify the type if fp16.
-    sm = mx.sym.load(tmpfile + '-symbol.json')
+    # Choose one of the parameters to verify the type is fp16.
+    sm = mx.sym.load(symbol_file)
     inputs = mx.sym.var('data', dtype='float16')
     net_fp16 = mx.gluon.SymbolBlock(sm, inputs)
-    net_fp16.load_parameters(tmpfile + '-0000.params', ctx=ctx)
+    net_fp16.load_parameters(param_file, ctx=ctx)
     # 3. Get a conv layer's weight parameter name. Conv layer's weight param is
     # expected to be of dtype casted, fp16.
-    name = None    
-    for param_name, param in net_fp32.collect_params().items():
+    name = None
+    for param_name in net_fp32.collect_params().keys():
         if 'conv' in param_name and 'weight' in param_name:
-            name = param.name
+            name = param_name
             break
     assert np.dtype(net_fp16.params[name].dtype) == np.dtype(np.float16)
 
@@ -485,6 +485,13 @@ def test_large_models():
     # This in the past has given cudnnFind() trouble when it needed to allocate similar I/O's
     # from the area carved out by the MXNET_GPU_MEM_POOL_RESERVE setting (by default 5%).
     (free_mem_bytes, total_mem_bytes) = mx.context.gpu_memory_info(ctx.device_id)
+    # This test needs to be 'qualified' for use with each new larger memory size
+    largest_supported_total_mem_GB = 32
+    if (total_mem_bytes > largest_supported_total_mem_GB * 1024 * 1024 * 1024):
+        sys.stderr.write(
+        ' bypassing test due to too-large global memory of size {} ... '.format(total_mem_bytes))
+        return
+
     start_size = tensor_size(0.20 * total_mem_bytes)
     num_trials = 10
     sys.stderr.write(
@@ -552,9 +559,9 @@ def _test_bulking(test_bulking_func):
         time_per_iteration = mp.Manager().Value('d', 0.0)
 
         if not run_in_spawned_process(test_bulking_func,
-                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': seg_sizes[0],
-                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': seg_sizes[1],
-                                       'MXNET_EXEC_BULK_EXEC_TRAIN': seg_sizes[2]},
+                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD': str(seg_sizes[0]),
+                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD': str(seg_sizes[1]),
+                                       'MXNET_EXEC_BULK_EXEC_TRAIN': str(seg_sizes[2])},
                                       time_per_iteration):
             # skip test since the python version can't run it properly.  Warning msg was logged.
             return
@@ -628,13 +635,15 @@ def test_gemms_true_fp16():
     net.cast('float16')
     net.initialize(ctx=ctx)
     net.weight.set_data(weights)
-    ref_results = net(input)
 
-    os.environ["MXNET_FC_TRUE_FP16"] = "1"
-    results_trueFP16 = net(input)
+    with environment('MXNET_FC_TRUE_FP16', '0'):
+      ref_results = net(input)
+
+    with environment('MXNET_FC_TRUE_FP16', '1'):
+      results_trueFP16 = net(input)
+
     atol = 1e-2
     rtol = 1e-2
     assert_almost_equal(ref_results.asnumpy(), results_trueFP16.asnumpy(),
                         atol=atol, rtol=rtol)
-    os.environ["MXNET_FC_TRUE_FP16"] = "0"
 

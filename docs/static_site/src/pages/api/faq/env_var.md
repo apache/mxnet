@@ -59,9 +59,6 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
 * MXNET_CPU_PRIORITY_NTHREADS
   - Values: Int ```(default=4)```
   - The number of threads given to prioritized CPU jobs.
-* MXNET_CPU_NNPACK_NTHREADS
-  - Values: Int ```(default=4)```
-  - The number of threads used for NNPACK. NNPACK package aims to provide high-performance implementations of some layers for multi-core CPUs. Checkout [NNPACK]({{'/api/faq/nnpack'|relative_url}}) to know more about it.
 * MXNET_MP_WORKER_NTHREADS
   - Values: Int ```(default=1)```
   - The number of scheduling threads on CPU given to multiprocess workers. Enlarge this number allows more operators to run in parallel in individual workers but please consider reducing the overall `num_workers` to avoid thread contention (not available on Windows).
@@ -85,28 +82,67 @@ $env:MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
   - Setting this to a small number can save GPU memory. It will also likely decrease the level of parallelism, which is usually acceptable.
     - MXNet internally uses graph coloring algorithm to [optimize memory consumption]({{'/api/architecture/note_memory'|relative_url}}).
   - This parameter is also used to get number of matching colors in graph and in turn how much parallelism one can get in each GPU. Color based match usually costs more memory but also enables more parallelism.
+* MXNET_GPU_MEM_POOL_TYPE
+  - Values: String ```(default=Naive)```
+  - The type of GPU memory pool.
+  - Choices:
+    - *Naive*: A simple memory pool that allocates memory for the requested size and cache memory buffers, when this memory is released. The size of memory chunk is defined by rounding the requested memory size to the nearest bigger multiple of MXNET_GPU_MEM_POOL_PAGE_SIZE (or MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE, when the result of rounding for MXNET_GPU_MEM_POOL_PAGE_SIZE is bigger than MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE) and allocates memory of the rounded size.
+    - *Round*: A memory pool that try to rounds the requested memory size to the nearest bigger power of 2. When this rounded number is bigger that 2**MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF, the *Naive* rounding algorithm is used. Caching and allocating buffered memory works in the same way as the naive memory pool.
+    - *Unpooled*: No memory pool is used.
 * MXNET_GPU_MEM_POOL_RESERVE
   - Values: Int ```(default=5)```
   - The percentage of GPU memory to reserve for things other than the GPU array, such as kernel launch or cudnn handle space.
+  - The value is used only by the GPU memory pool. If it is not possible to allocate new memory AND still save this reserve, the memory pool will free the cached memory.
   - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.
-
-* MXNET_GPU_MEM_POOL_TYPE
-  - Values: String ```(default=Naive)```
-  - The type of memory pool.
-  - Choices:
-    - Naive: A simple memory pool that allocates memory for the exact requested size and cache memory buffers. If a buffered memory chunk matches the size of a new request, the chunk from the memory pool will be returned and reused.
-    - Round: A memory pool that always rounds the requested memory size and allocates memory of the rounded size. MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF defines how to round up a memory size. Caching and allocating buffered memory works in the same way as the naive memory pool.
-    - Unpooled: No memory pool is used.
-
-* MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF
-  - Values: Int ```(default=24)```
-  - The cutoff threshold that decides the rounding strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
-
 * MXNET_GPU_MEM_LARGE_ALLOC_ROUND_SIZE
   - Values: Int ```(default=2097152)```
-  - When using the naive pool type, memory allocations larger than this threshhold are rounded up to a multiple of this value.
-  - The default was chosen to minimize global memory fragmentation within the GPU driver.  Set this to 1 to disable.
-
+  - When the rounded size of memory allocations calculated by the pool of *Naive* type is larger than this threshold, it will be rounded up to a multiple of this value.
+  - The default was chosen to minimize global memory fragmentation within the GPU driver. Set this to 1 to disable.
+* MXNET_GPU_MEM_POOL_ROUND_LINEAR_CUTOFF
+  - Values: Int ```(default=24)```
+  - The cutoff threshold used by *Round* strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
+* MXNET_CPU_MEM_POOL_TYPE
+  - Values: String ```(default=Naive)```
+  - The type of CPU memory pool.
+  - Choices:
+    - *Naive*: A simple memory pool that allocates memory for the requested size and cache memory buffers, when this memory is released. The size of memory chunk is defined by rounding the requested memory size to the nearest bigger multiple of MXNET_CPU_MEM_POOL_PAGE_SIZE (or MXNET_CPU_MEM_LARGE_ALLOC_ROUND_SIZE, when the result of rounding for MXNET_CPU_MEM_POOL_PAGE_SIZE is bigger than MXNET_CPU_MEM_LARGE_ALLOC_ROUND_SIZE) and allocates memory of the rounded size.
+    - *Round*: A memory pool that try to rounds the requested memory size to the nearest bigger power of 2. When this rounded number is bigger that 2**MXNET_CPU_MEM_POOL_ROUND_LINEAR_CUTOFF, the the *Naive* rounding algorithm is used. Caching and allocating buffered memory works in the same way as the naive memory pool.
+    - *Unpooled*: No memory pool is used.
+* MXNET_CPU_MEM_POOL_RESERVE
+  - Values: Int ```(default=5)```
+  - The percentage of CPU memory to reserve for things other than the CPU array.
+  - The value is used only by the CPU memory pool. If it is not possible to allocate new memory AND still save this reserve, the memory pool will free the cached memory.
+  - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.
+* MXNET_CPU_MEM_LARGE_ALLOC_ROUND_SIZE
+  - Values: Int ```(default=2097152)```
+  - When the rounded size of memory allocations calculated by the pool of *Naive* type is larger than this threshold, it will be rounded up to a multiple of this value.
+  - Set this to 1 to disable.
+* MXNET_CPU_MEM_POOL_ROUND_LINEAR_CUTOFF
+  - Values: Int ```(default=24)```
+  - The cutoff threshold used by *Round* strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
+* MXNET_CPU_PINNED_MEM_POOL_TYPE
+  - Values: String ```(default=Naive)```
+  - The type of CPU_PINNED memory pool.
+  - Choices:
+    - *Naive*: A simple memory pool that allocates memory for the requested size and cache memory buffers, when this memory is released. The size of memory chunk is defined by rounding the requested memory size to the nearest bigger multiple of MXNET_CPU_PINNED_MEM_POOL_PAGE_SIZE (or MXNET_CPU_PINNED_MEM_LARGE_ALLOC_ROUND_SIZE, when the result of rounding for MXNET_CPU_PINNED_MEM_POOL_PAGE_SIZE is bigger than MXNET_CPU_PINNED_MEM_LARGE_ALLOC_ROUND_SIZE) and allocates memory of the rounded size.
+    - *Round*: A memory pool that try to rounds the requested memory size to the nearest bigger power of 2. When this rounded number is bigger that 2**MXNET_CPU_PINNED_MEM_POOL_ROUND_LINEAR_CUTOFF, the the *Naive* rounding algorithm is used. Caching and allocating buffered memory works in the same way as the naive memory pool.
+    - *Unpooled*: No memory pool is used.
+* MXNET_CPU_PINNED_MEM_POOL_RESERVE
+  - Values: Int ```(default=5)```
+  - The percentage of GPU memory to reserve for things other than the GPU array.
+  - The value is used only by the CPU memory pool. If it is not possible to allocate new memory AND still save this reserve, the memory pool will free the cached memory.
+  - If you see a strange out-of-memory error from the kernel launch, after multiple iterations, try setting this to a larger value.
+* MXNET_CPU_PINNED_MEM_LARGE_ALLOC_ROUND_SIZE
+  - Values: Int ```(default=2097152)```
+  - When the rounded size of memory allocations calculated by the pool of *Naive* type is larger than this threshold, it will be rounded up to a multiple of this value.
+  - Set this to 1 to disable.
+* MXNET_CPU_PINNED_MEM_POOL_ROUND_LINEAR_CUTOFF
+  - Values: Int ```(default=24)```
+  - The cutoff threshold used by *Round* strategy. Let's denote the threshold as T. If the memory size is smaller than `2 ** T` (by default, it's 2 ** 24 = 16MB), it rounds to the smallest `2 ** n` that is larger than the requested memory size; if the memory size is larger than `2 ** T`, it rounds to the next k * 2 ** T.
+* MXNET_USE_NAIVE_STORAGE_MANAGERS
+  - Values: Int ```(default=0)```
+  - When value is not 0, no memory pools will be used for any of the following three types of memory: GPU, CPU, CPU_PINNED.
+   
 ## Engine Type
 
 * MXNET_ENGINE_TYPE
