@@ -78,18 +78,6 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
     return std::make_shared<StaticShapeOpSelector>();
   }
 
-  // create an nnvm node for a given subgraph
-  virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
-                                             const int subgraph_id = 0) const {
-    nnvm::ObjectPtr n = nnvm::Node::Create();
-    n->attrs.op = Op::Get("_CachedOp");
-    n->attrs.name = "_CachedOp" + std::to_string(subgraph_id);
-    n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
-    std::vector<std::pair<std::string, std::string> > flags{};
-    n->attrs.parsed = CachedOpPtr(new CachedOp(sym, flags));
-    return n;
-  }
-
   // create an nnvm node for a given subgraph with flags
   virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                              std::vector<std::pair<std::string, std::string>> flags,
