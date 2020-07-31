@@ -55,21 +55,6 @@ size_t RoundToMultiple(size_t x, size_t multiple) {
   size_t retVal = ((x + multiple - 1) / multiple) * multiple;
   return retVal;
 }
-
-/*struct EinsumParamGPU : public dmlc::Parameter<EinsumParamGPU> {
-  int num_args;
-  std::string equation;
-  EinsumParamGPU(){}
-  EinsumParamGPU(int n, std::string eq):
-    num_args(n), equation(eq) {
-      auto end_pos = std::remove(equation.begin(), equation.end(), ' ');
-      equation.erase(end_pos, equation.end());
-    }
-  bool operator==(const EinsumParamGPU& other) const {
-    return this->num_args == other.num_args; //&&
-           ! this->equation.compare(other.equation);
-  }
-};*/
 }  // namespace op
 }  // namespace mxnet
 
@@ -592,11 +577,11 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
     paths = einsum_path(state.subscripts, inputs, true, ctx.run_ctx, &pos, &string_repr);
     //EinsumParamGPU param(state.num_args, state.subscripts);
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      //EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
-      //    (state, inputs, outputs,
-      //     ctx.run_ctx, req_write);
-      EinsumOpGPU<DType> op = EinsumOpGPU<DType>();
-      op.Init(state, inputs, ctx.run_ctx, req_write);
+      EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
+          (state, inputs, outputs,
+           ctx.run_ctx, req_write);
+      //EinsumOpGPU<DType> op = EinsumOpGPU<DType>();
+      //op.Init(state, inputs, ctx.run_ctx, req_write);
       state.tempspace.reset<NDArray>(new NDArray(TShape(Shape1(op.temp_ouputs_size)),
                                                ctx.run_ctx.ctx,
                                                false,
@@ -622,17 +607,14 @@ inline void NumpyEinsumBackwardGpu(const OpStatePtr& state_ptr,
   if (state.num_args <= 1) {
     NumpyEinsumBackward<gpu>(state_ptr, ctx, inputs, req, outputs);
   } else {
-    //EinsumParamGPU param(state.num_args, state.subscripts);
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      //std::vector<TBlob> inputs_no_grad;
-      //for (int i = 1; i < inputs.size(); ++i) {
-      //  inputs_no_grad.push_back(inputs[i]);
-      //}
-      //EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
-      //    (state, param, inputs_no_grad, outputs,
-      //     ctx.run_ctx, req_write);
-      EinsumOpGPU<DType> op = EinsumOpGPU<DType>();
-      op.Init(state, inputs, ctx.run_ctx, req_write);
+      std::vector<TBlob> inputs_no_grad;
+      for (int i = 1; i < inputs.size(); ++i) {
+        inputs_no_grad.push_back(inputs[i]);
+      }
+      EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
+          (state, inputs_no_grad, outputs,
+           ctx.run_ctx, req_write);
       op.Backward(state, ctx, inputs, req, outputs);
     });
   }
