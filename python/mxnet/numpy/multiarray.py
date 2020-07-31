@@ -49,7 +49,7 @@ from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
-from ..ndarray.ndarray import _storage_type, from_numpy
+from ..ndarray.ndarray import _storage_type
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
@@ -182,11 +182,11 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
 
 def _as_mx_np_array(object, ctx=None):
     """Convert object to mxnet.numpy.ndarray."""
-    if isinstance(object, _np.ndarray):
-        if not object.flags['C_CONTIGUOUS']:
-            object = _np.ascontiguousarray(object, dtype=object.dtype)
-        ret = from_numpy(object, array_cls=ndarray)
-        return ret if ctx is None else ret.as_in_ctx(ctx=ctx)
+    if isinstance(object, ndarray):
+        return object
+    elif isinstance(object, _np.ndarray):
+        np_dtype = _np.dtype(object.dtype).type
+        return array(object, dtype=np_dtype, ctx=ctx)
     elif isinstance(object, (integer_types, numeric_types)):
         return object
     elif isinstance(object, (list, tuple)):
@@ -10171,7 +10171,7 @@ def shares_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `may_share_memory` in MXNet DeepNumPy
+    - Actually it is same as `may_share_memory` in MXNet np
     """
     return _mx_nd_np.shares_memory(a, b, max_work)
 
@@ -10212,7 +10212,7 @@ def may_share_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `shares_memory` in MXNet DeepNumPy
+    - Actually it is same as `shares_memory` in MXNet np
     """
     return _mx_nd_np.may_share_memory(a, b, max_work)
 

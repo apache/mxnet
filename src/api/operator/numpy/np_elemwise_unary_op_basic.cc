@@ -98,7 +98,7 @@ MXNET_REGISTER_API("_npi.around")
   nnvm::NodeAttrs attrs;
   op::AroundParam param;
   param.decimals = args[1].operator int64_t();
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::AroundParam>(&attrs);
   int num_inputs = 1;

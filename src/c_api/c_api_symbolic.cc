@@ -1066,7 +1066,7 @@ int MXQuantizeSymbol(SymbolHandle sym_handle,
   g = ApplyPass(std::move(g), "QuantizeGraph");
   const auto& calib_nodes = g.GetAttr<std::vector<std::string>>("calib_nodes");
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
-  ret->ret_vec_str = std::move(calib_nodes);
+  ret->ret_vec_str = calib_nodes;
   *out_num_calib_names = ret->ret_vec_str.size();
   ret->ret_vec_charp.clear();
   ret->ret_vec_charp.reserve(ret->ret_vec_str.size());
@@ -1130,21 +1130,21 @@ static void _UpdateSymDTypeAttrs(
   // Update args to have the right dtype attrs
   if (model_params.size() > 0) {
     // if model params provided, set dtype only for model params
-    for (size_t i = 0; i < args.size(); ++i) {
-      const std::string& node_name = args[i]->attrs.name;
+    for (const auto & arg : args) {
+      const std::string& node_name = arg->attrs.name;
       auto it_model_params = model_params.find(node_name);
       auto it_with_dtype = node_name_dtype_map.find(node_name);
       auto it_without_dtype = node_without_dtype_map.find(node_name);
       if (it_model_params != model_params.end()) {
         // need to update __dtype__ attribute if already set, else set it
         if (it_with_dtype != node_name_dtype_map.end()) {
-          args[i]->attrs.dict[dtype_keyword] =
+          arg->attrs.dict[dtype_keyword] =
               std::to_string(it_with_dtype->second);
         } else {
           CHECK(it_without_dtype != node_without_dtype_map.end())
               << "make sure all nodes without dtype have properly been added "
                  "in node_without_dtype_map";
-          args[i]->attrs.dict[dtype_keyword] =
+          arg->attrs.dict[dtype_keyword] =
               std::to_string(it_without_dtype->second);
         }
       }
@@ -1152,12 +1152,12 @@ static void _UpdateSymDTypeAttrs(
   } else {
     // if model params not provided, update __dtype__ for all inputs,
     // which already had it set, don't touch the rest
-    for (size_t i = 0; i < args.size(); ++i) {
-      auto it = node_name_dtype_map.find(args[i]->attrs.name);
+    for (const auto & arg : args) {
+      auto it = node_name_dtype_map.find(arg->attrs.name);
       if (it != node_name_dtype_map.end()) {
-        if (args[i]->attrs.dict.find(dtype_keyword) !=
-            args[i]->attrs.dict.end()) {
-          args[i]->attrs.dict[dtype_keyword] = std::to_string(it->second);
+        if (arg->attrs.dict.find(dtype_keyword) !=
+            arg->attrs.dict.end()) {
+          arg->attrs.dict[dtype_keyword] = std::to_string(it->second);
         }
       }
     }
@@ -1256,7 +1256,7 @@ int MXReducePrecisionSymbol(SymbolHandle sym_handle,
   const nnvm::DTypeVector &inferred_dtypes =
       g.GetAttr<nnvm::DTypeVector>("dtype");
 
-  g.attrs["inferred_dtypes"] = std::make_shared<dmlc::any>(std::move(inferred_dtypes));
+  g.attrs["inferred_dtypes"] = std::make_shared<dmlc::any>(inferred_dtypes);
   g.attrs["target_dtype"] = std::make_shared<nnvm::any>(target_dt);
 
   if (cast_optional_params) {
