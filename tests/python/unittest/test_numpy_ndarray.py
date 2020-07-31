@@ -1406,3 +1406,18 @@ def test_mixed_array_types():
     np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
     mx_array = mx.np.ones((3, 1))
     assert_almost_equal(mx_array + np_array, 1+np_array)
+
+def test_mixed_array_types_share_memory():
+    np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
+    mx_array = mx.npx.from_numpy(np_array)
+    assert _np.may_share_memory(np_array, mx_array)
+    assert _np.shares_memory(np_array, mx_array)
+
+    np_array_slice = np_array[:2]
+    mx_array_slice = mx_array[1:]
+    assert _np.may_share_memory(np_array_slice, mx_array)
+    assert _np.shares_memory(np_array_slice, mx_array)
+
+    mx_pinned_array = mx_array.as_in_ctx(mx.cpu_pinned(0))
+    assert not _np.may_share_memory(np_array, mx_pinned_array)
+    assert not _np.shares_memory(np_array, mx_pinned_array)

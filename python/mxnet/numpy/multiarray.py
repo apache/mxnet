@@ -50,6 +50,7 @@ from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
 from ..ndarray.ndarray import _storage_type
+from ..dlpack import ndarray_from_numpy
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
@@ -179,21 +180,20 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
                                        ctypes.byref(handle)))
     return ndarray(handle=handle, writable=a.writable)
 
-
-def _as_mx_np_array(object, ctx=None):
-    """Convert object to mxnet.numpy.ndarray."""
+def _as_mx_np_array(object, ctx=None, zero_copy=False):
+    """Convert arrays or any array member of container to mxnet.numpy.ndarray on ctx."""
     if object is None or isinstance(object, ndarray):
         return object
     elif isinstance(object, _np.ndarray):
-        np_dtype = _np.dtype(object.dtype).type
-        return array(object, dtype=np_dtype, ctx=ctx)
+        from_numpy = ndarray_from_numpy(ndarray, array)
+        return from_numpy(object, zero_copy and object.flags['C_CONTIGUOUS'])
     elif isinstance(object, (integer_types, numeric_types)):
         return object
-    elif isinstance(object, (list, tuple)):
-        tmp = [_as_mx_np_array(arr) for arr in object]
-        return object.__class__(tmp)
     elif isinstance(object, (_np.bool_, _np.bool)):
         return array(object, dtype=_np.bool_, ctx=ctx)
+    elif isinstance(object, (list, tuple)):
+        tmp = [_as_mx_np_array(arr, ctx=ctx, zero_copy=zero_copy) for arr in object]
+        return object.__class__(tmp)
     else:
         raise TypeError('Does not support converting {} to mx.np.ndarray.'.format(str(type(object))))
 
@@ -399,7 +399,8 @@ class ndarray(NDArray):
                     cur_ctx = next(a.ctx for a in args if hasattr(a, 'ctx'))
                 except StopIteration:
                     cur_ctx = next(a.ctx for a in kwargs.values() if hasattr(a, 'ctx'))
-                new_args = _as_mx_np_array(args, ctx=cur_ctx)
+                new_args = _as_mx_np_array(args, ctx=cur_ctx,
+                                           zero_copy=func_name in {'may_share_memory', 'shares_memory'})
                 new_kwargs = {k: _as_mx_np_array(v, cur_ctx) for k, v in kwargs.items()}
                 return mx_np_func(*new_args, **new_kwargs)
 
