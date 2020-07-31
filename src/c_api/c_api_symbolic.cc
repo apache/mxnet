@@ -1511,7 +1511,7 @@ int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
   if (*has_dynamic_shape) {
     // store flags into flags_map
     std::vector<std::pair<std::string, std::string>> flags_map;
-    for (mx_uint i = 0; i < num_options; ++i) {
+    for (mx_uint i = 0; i < num_flags; ++i) {
       flags_map.emplace_back(keys[i], vals[i]);
     }
     // run BuildSubgraph pass with static_shape property
