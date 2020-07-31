@@ -1299,11 +1299,11 @@ int MXLibInfoFeatures(const struct LibFeature **lib_features, size_t *size) {
   API_END();
 }
 
-int MXLibInfoCompiledWithCXX11ABI(bool* result);
+int MXLibInfoCompiledWithCXX11ABI(bool* result) {
   using namespace features;
   API_BEGIN();
   LibInfo* lib_info = LibInfo::getInstance();
-  // *result = lib_info->getFeatures().data();
+  *result = lib_info->cxx11_abi();
   API_END();
 }
 

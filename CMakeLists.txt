@@ -99,6 +99,12 @@ message(STATUS "CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR}")
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
 
+if(USE_CXX11_ABI)
+  add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
+else()
+  add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
+endif()
+
 if(USE_TVM_OP)
   add_definitions(-DMXNET_USE_TVM_OP=1)
 endif()

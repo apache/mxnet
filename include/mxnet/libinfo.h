@@ -133,6 +133,8 @@
 
 #ifndef _GLIBCXX_USE_CXX11_ABI
 #define MXNET_GLIBCXX_USE_CXX11_ABI 0
+#else
+#define MXNET_GLIBCXX_USE_CXX11_ABI _GLIBCXX_USE_CXX11_ABI
 #endif
 
 namespace mxnet {
@@ -208,9 +210,7 @@ struct LibInfo {
   const std::array<LibFeature, MAX_FEATURES>& getFeatures() {
     return m_lib_features;
   }
-  bool cxx11_abi() {
-    return MXNET_GLIBCXX_USE_CXX11_ABI == 0;
-  }
+  bool cxx11_abi();
  private:
   std::array<LibFeature, MAX_FEATURES> m_lib_features;
   static std::unique_ptr<LibInfo>  m_inst;
