@@ -320,7 +320,7 @@ class SubgraphProperty {
    */
   virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                              std::vector<std::pair<std::string, std::string>> flags,
-                                             const int subgraph_id = 0 ) const {
+                                             const int subgraph_id = 0) const {
     CHECK_EQ(GetPropertyType(), kCreate);
     LOG(FATAL) << "Not implement CreateSubgraphNode() for this subgraph property.";
     return nullptr;
@@ -337,7 +337,7 @@ class SubgraphProperty {
   virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
                                            const SubgraphSelectorPtr& subgraph_selector,
                                            std::vector<std::pair<std::string, std::string>> flags,
-                                           const int subgraph_id = 0 ) const {
+                                           const int subgraph_id = 0) const {
     return CreateSubgraphNode(sym, flags, subgraph_id);
   }
 

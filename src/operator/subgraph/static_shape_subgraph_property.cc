@@ -82,7 +82,6 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
   virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                              std::vector<std::pair<std::string, std::string>> flags,
                                              const int subgraph_id = 0) const {
-
     nnvm::ObjectPtr n = nnvm::Node::Create();
     n->attrs.op = Op::Get("_CachedOp");
     n->attrs.name = "_CachedOp" + std::to_string(subgraph_id);
