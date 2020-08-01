@@ -1428,3 +1428,16 @@ def test_mixed_array_types_share_memory():
     mx_pinned_array = mx_array.as_in_ctx(mx.cpu_pinned(0))
     assert not _np.may_share_memory(np_array, mx_pinned_array)
     assert not _np.shares_memory(np_array, mx_pinned_array)
+
+@use_np
+@pytest.mark.parametrize('np_array', [
+    # ordinary numpy array
+    _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32"),
+    # 0-dim
+    _np.array((1, )).reshape(()),
+    # 0-size
+    _np.array(()).reshape((1, 0, 2)),
+])
+def test_numpy_array(np_array):
+    mx_array = mx.npx.from_numpy(np_array)
+    mx.test_utils.assert_almost_equal(np_array, _np.array(mx_array))

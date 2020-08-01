@@ -1478,6 +1478,35 @@ class ndarray(NDArray):
         else:
             raise TypeError('copyto does not support type ' + str(type(other)))
 
+    def __array__(self, dtype=None):
+        """Returns a ``numpy.ndarray`` object with value copied from this array.
+
+        Examples
+        --------
+        >>> x = mx.np.ones((2,3))
+        >>> y = x.asnumpy()
+        >>> type(y)
+        <type 'numpy.ndarray'>
+        >>> y
+        array([[ 1.,  1.,  1.],
+               [ 1.,  1.,  1.]], dtype=float32)
+        >>> z = mx.np.ones((2,3), dtype='int32')
+        >>> z.asnumpy()
+        array([[1, 1, 1],
+               [1, 1, 1]], dtype=int32)
+        >>> z[0][0]
+        >>> z[0][0].asnumpy()
+        """
+        if dtype is None:
+            dtype = self.dtype
+        data = _np.empty(self.shape, dtype=dtype)
+        if data.size > 0:
+            check_call(_LIB.MXNDArraySyncCopyToCPU(
+                self.handle,
+                data.ctypes.data_as(ctypes.c_void_p),
+                ctypes.c_size_t(data.size)))
+        return data
+
     def asscalar(self):
         raise AttributeError('mxnet.numpy.ndarray object has no attribute asscalar')
 
