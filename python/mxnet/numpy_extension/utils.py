@@ -172,10 +172,15 @@ from_numpy_doc = """Returns an MXNet's np.ndarray backed by numpy's ndarray.
     ----------
     ndarray: np.ndarray
         input data
-    zero_copy: bool
+    zero_copy: bool, default True
         Whether we use DLPack's zero-copy conversion to convert to MXNet's
         np.ndarray.
-        This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
+        This is only available for c-arrays, i.e. array.flags['CARRAY'] == True.
+    writable: bool, default False
+        In the case of zero-copy, whether the created MXNet's np.ndarray is writeable.
+        If True, the output MXNet's np.ndarray is writable while the input array is not.
+        If False, the output MXNet's np.ndarray is not writable while the input array remains
+        writeable.
 
     Returns
     -------

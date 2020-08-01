@@ -841,6 +841,8 @@ class ndarray(NDArray):
         For imformation related to boolean indexing, please refer to
         https://docs.scipy.org/doc/numpy-1.17.0/reference/arrays.indexing.html.
         """
+        if not self.writable:
+            raise ValueError('NDArray is not writable.')
         if isinstance(value, NDArray) and not isinstance(value, ndarray):
             raise TypeError('Cannot assign mx.nd.NDArray to mxnet.numpy.ndarray')
         if isinstance(key, bool): # otherwise will be treated as 0 and 1

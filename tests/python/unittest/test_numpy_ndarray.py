@@ -1380,27 +1380,34 @@ def test_dlpack(dtype, size):
     _np.array(()).reshape((1, 0, 2)),
 ])
 @pytest.mark.parametrize('zero_copy', [False, True])
-def test_from_numpy(np_array, zero_copy):
+@pytest.mark.parametrize('writable', [False, True])
+def test_from_numpy(np_array, zero_copy, writable):
     # Test zero_copy
-    mx_array = mx.npx.from_numpy(np_array, zero_copy=zero_copy)
+    mx_array = mx.npx.from_numpy(np_array, zero_copy=zero_copy, writable=writable)
     mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
 
-def test_from_numpy_exception():
+@use_np
+@pytest.mark.parametrize('writable', [False, True])
+def test_from_numpy_zero_copy_exception(writable):
     np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
-    mx_array = mx.npx.from_numpy(np_array)
-    with pytest.raises(ValueError):
-        np_array[2, 1] = 0
+    mx_array = mx.npx.from_numpy(np_array, zero_copy=True, writable=writable)
+    if writable:
+        with pytest.raises(ValueError):
+            np_array[2, 1] = 0
+        mx_array[2, 1] = 100
+        mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+    else:
+        with pytest.raises(ValueError):
+            mx_array[2, 1] = 0
+        np_array[2, 1] = 100
+        mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
 
-    mx_array[2, 1] = 100
-    mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+@use_np
+def test_from_numpy_non_c_exception():
     np_array = _np.array([[1, 2], [3, 4], [5, 6]]).transpose()
-    assert not np_array.flags["C_CONTIGUOUS"]
+    assert not np_array.flags['CARRAY']
     with pytest.raises(ValueError):
-        mx_array = mx.nd.from_numpy(np_array)
-
-    np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
-    mx_array = mx.npx.from_numpy(np_array, zero_copy=False)
-    np_array[2, 1] = 0 # no error
+        mx_array = mx.npx.from_numpy(np_array)
 
 def test_mixed_array_types():
     np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")

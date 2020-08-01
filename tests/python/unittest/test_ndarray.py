@@ -1902,34 +1902,43 @@ def test_ndarray_nan_comparison():
         assert i == True
 
 
-def test_zero_from_numpy():
+@pytest.mark.parametrize('np_array', [
+    # ordinary numpy array
+    np.array([[1, 2], [3, 4], [5, 6]], dtype="float32"),
+    # 0-dim
+    np.array((1, )).reshape(()),
+    # 0-size
+    np.array(()).reshape((1, 0, 2)),
+])
+@pytest.mark.parametrize('zero_copy', [False, True])
+@pytest.mark.parametrize('writable', [False, True])
+def test_zero_from_numpy(np_array, zero_copy, writable):
     # Test zero_copy
-    arrays = [
-        # ordinary numpy array
-        np.array([[1, 2], [3, 4], [5, 6]], dtype="float32"),
-        # 0-dim
-        np.array((1, )).reshape(()),
-        # 0-size
-        np.array(()).reshape((1, 0, 2)),
-    ]
-    for zero_copy in [False, True]:
-        for np_array in arrays:
-            mx_array = mx.nd.from_numpy(np_array, zero_copy=zero_copy)
-            mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
-    np_array = arrays[0]
-    mx_array = mx.nd.from_numpy(np_array)
-    assertRaises(ValueError, np_array.__setitem__, (2, 1), 0)
-
-    mx_array[2, 1] = 100
+    mx_array = mx.nd.from_numpy(np_array, zero_copy=zero_copy, writable=writable)
     mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
-    np_array = np.array([[1, 2], [3, 4], [5, 6]]).transpose()
-    assert not np_array.flags["C_CONTIGUOUS"]
-    try:
-        mx_array = mx.nd.from_numpy(np_array)
-    except ValueError:
-        pass
+
+
+@pytest.mark.parametrize('writable', [False, True])
+def test_from_numpy_zero_copy_exception(writable):
+    np_array = np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
+    mx_array = mx.nd.from_numpy(np_array, zero_copy=True, writable=writable)
+    if writable:
+        with pytest.raises(ValueError):
+            np_array[2, 1] = 0
+        mx_array[2, 1] = 100
+        mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
     else:
-        assert False
+        with pytest.raises(ValueError):
+            mx_array[2, 1] = 0
+        np_array[2, 1] = 100
+        mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+
+
+def test_from_numpy_non_c_exception():
+    np_array = np.array([[1, 2], [3, 4], [5, 6]]).transpose()
+    assert not np_array.flags['CARRAY']
+    with pytest.raises(ValueError):
+        mx_array = mx.nd.from_numpy(np_array)
 
 
 @with_seed()

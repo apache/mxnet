@@ -533,6 +533,8 @@ fixed-size items.
         array([[ 6.,  5.,  5.],
                [ 6.,  0.,  4.]], dtype=float32)
         """
+        if not self.writable:
+            raise ValueError('NDArray is not writable.')
         if self.ndim == 0:
             if not isinstance(key, (tuple, py_slice)):
                 raise IndexError('scalar tensor can only accept `()` and `:` as index')
@@ -4990,9 +4992,15 @@ from_numpy_doc = """Returns an MXNet's NDArray backed by numpy's ndarray.
     ----------
     ndarray: NDArray
         input data
-    zero_copy: bool
-        Whether we use DLPack's zero-copy conversion to convert to MXNet's NDArray.
-        This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
+    zero_copy: bool, default True
+        Whether we use DLPack's zero-copy conversion to convert to MXNet's
+        NDArray.
+        This is only available for c-arrays, i.e. array.flags['CARRAY'] == True.
+    writable: bool, default False
+        In the case of zero-copy, whether the created MXNet's NDArray is writeable.
+        If True, the output MXNet's NDArray is writable while the input array is not.
+        If False, the output MXNet's NDArray is not writable while the input array remains
+        writeable.
 
     Returns
     -------
