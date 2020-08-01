@@ -22,7 +22,7 @@
  * \file np_polynomial_op.cc
 */
 
-#include <math.h>
+#include <cmath>
 #include "np_polynomial_op-inl.h"
 
 namespace mxnet {

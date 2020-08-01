@@ -32,6 +32,7 @@
 #include <dmlc/parameter.h>
 #include <dmlc/recordio.h>
 #include <dmlc/threadediter.h>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 #include <cstdlib>
@@ -53,7 +54,7 @@ class ImageRecordIOParser {
   inline void Init(const std::vector<std::pair<std::string, std::string> >& kwargs);
 
   // set record to the head
-  inline void BeforeFirst(void) {
+  inline void BeforeFirst() {
     return source_->BeforeFirst();
   }
   // parse next set of records, return an array of
@@ -111,8 +112,8 @@ inline void ImageRecordIOParser<DType>::Init(
     prnds_.emplace_back(new common::RANDOM_ENGINE((i + 1) * kRandMagic));
   }
   if (param_.path_imglist.length() != 0) {
-    label_map_.reset(new ImageLabelMap(param_.path_imglist.c_str(),
-      param_.label_width, !param_.verbose));
+    label_map_ = std::make_unique<ImageLabelMap>(param_.path_imglist.c_str(),
+      param_.label_width, !param_.verbose);
   }
   CHECK(param_.path_imgrec.length() != 0)
       << "ImageRecordIOIterator: must specify image_rec";
@@ -253,12 +254,12 @@ class ImageRecordIter : public IIterator<DataInst> {
  public:
   ImageRecordIter() : data_(nullptr) { }
   // destructor
-  virtual ~ImageRecordIter(void) {
+  ~ImageRecordIter() override {
     iter_.Destroy();
     delete data_;
   }
   // constructor
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.InitAllowUnknown(kwargs);
     // use the kwarg to init parser
     parser_.Init(kwargs);
@@ -276,13 +277,13 @@ class ImageRecordIter : public IIterator<DataInst> {
     rnd_.seed(kRandMagic + param_.seed);
   }
   // before first
-  virtual void BeforeFirst(void) {
+  void BeforeFirst() override {
     iter_.BeforeFirst();
     inst_order_.clear();
     inst_ptr_ = 0;
   }
 
-  virtual bool Next(void) {
+  bool Next() override {
     while (true) {
       if (inst_ptr_ < inst_order_.size()) {
         std::pair<unsigned, unsigned> p = inst_order_[inst_ptr_];
@@ -296,7 +297,7 @@ class ImageRecordIter : public IIterator<DataInst> {
         for (unsigned i = 0; i < data_->size(); ++i) {
           const InstVector<DType>& tmp = (*data_)[i];
           for (unsigned j = 0; j < tmp.Size(); ++j) {
-            inst_order_.push_back(std::make_pair(i, j));
+            inst_order_.emplace_back(i, j);
           }
         }
         // shuffle instance order if needed
@@ -309,7 +310,7 @@ class ImageRecordIter : public IIterator<DataInst> {
     return false;
   }
 
-  virtual const DataInst &Value(void) const {
+  const DataInst &Value() const override {
     return out_;
   }
 

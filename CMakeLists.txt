@@ -147,6 +147,7 @@ if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND UNIX AND NOT APPLE)
   # Enforce DT_PATH instead of DT_RUNPATH
   set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--disable-new-dtags")
   set(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+  set(Protobuf_USE_STATIC_LIBS ON)
 endif()
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/upstream;${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
@@ -275,6 +276,7 @@ if(USE_MKLDNN)
   include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
+  set_target_properties(dnnl PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
@@ -405,6 +407,7 @@ if(USE_OPENMP)
      AND NOT CMAKE_CROSSCOMPILING)
     load_omp()
     list(APPEND mxnet_LINKER_LIBS omp)
+    set_target_properties(omp PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
     if(UNIX)
       list(APPEND mxnet_LINKER_LIBS pthread)
     endif()
@@ -462,6 +465,8 @@ set(GTEST_MAIN_LIBRARY gtest_main)
 set(GTEST_LIBRARY gtest)
 
 add_subdirectory(${GTEST_ROOT})
+set_target_properties(gtest PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+set_target_properties(gtest_main PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 find_package(GTest REQUIRED)
 
 # cudnn detection
@@ -478,6 +483,7 @@ endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake)
   add_subdirectory("3rdparty/dmlc-core")
+  set_target_properties(dmlc PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
@@ -492,7 +498,9 @@ FILE(GLOB_RECURSE NNVMSOURCE
   3rdparty/tvm/nnvm/src/core/*.h
   3rdparty/tvm/nnvm/src/pass/*.h
   3rdparty/tvm/nnvm/include/*.h)
-list(APPEND SOURCE ${NNVMSOURCE})
+add_library(nnvm OBJECT ${NNVMSOURCE})
+set_target_properties(nnvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
 
 # add source group
 FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
@@ -635,7 +643,6 @@ if(UNIX)
   endif()
   target_link_libraries(mxnet PUBLIC mshadow)
   target_link_libraries(mxnet PUBLIC ${CMAKE_DL_LIBS})
-  target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
   if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     target_compile_options(mxnet PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
     # Ignore erroneous compiler warnings:
@@ -662,7 +669,6 @@ elseif(MSVC)
       foreach(arch ${arch_code_list})
         add_library(mxnet_${arch} SHARED ${SOURCE})
         target_link_libraries(mxnet_${arch} PUBLIC mshadow)
-        target_compile_definitions(mxnet_${arch} PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
         target_compile_options(
           mxnet_${arch}
           PRIVATE
@@ -698,10 +704,10 @@ elseif(MSVC)
     endif(USE_SPLIT_ARCH_DLL)
   else()
     add_library(mxnet SHARED ${SOURCE})
-    target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
     target_link_libraries(mxnet PUBLIC mshadow)
   endif()
 endif()
+target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
 
 # extension libraries (custom operators, custom subgraphs) are built by default
 add_library(customop_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc)
@@ -743,6 +749,7 @@ if(USE_DIST_KVSTORE)
   add_subdirectory("3rdparty/ps-lite")
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
   list(APPEND mxnet_LINKER_LIBS pslite)
+  set_target_properties(pslite PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
 
 if(USE_MKLDNN)
@@ -757,6 +764,9 @@ function(BuildTVMOP)
   # scope the variables in BuildTVM.cmake to avoid conflict
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")
+  set_target_properties(tvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+  set_target_properties(tvm_topi PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+  set_target_properties(tvm_runtime PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endfunction()
 
 if(USE_TVM_OP)

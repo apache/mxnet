@@ -73,8 +73,8 @@ class GroupBatchify : public BatchifyFunction {
     }
   }
 
-  virtual bool Batchify(const std::vector<std::vector<NDArray> >& inputs,
-                        std::vector<NDArray>* outputs) {
+  bool Batchify(const std::vector<std::vector<NDArray> >& inputs,
+                        std::vector<NDArray>* outputs) override {
     auto bs = inputs.size();
     CHECK_GT(bs, 0) << "BatchifyFunction should handle at lease 1 sample";
     auto out_size = inputs[0].size();
@@ -84,8 +84,8 @@ class GroupBatchify : public BatchifyFunction {
     for (size_t i = 0; i < out_size; ++i) {
       std::vector<std::vector<NDArray> > inp;
       inp.reserve(inputs.size());
-      for (size_t j = 0; j < inputs.size(); ++j) {
-          std::vector<NDArray> curr({inputs[j][i]});
+      for (const auto & input : inputs) {
+          std::vector<NDArray> curr({input[i]});
           inp.emplace_back(curr);
       }
       std::vector<NDArray> tmp;
@@ -128,8 +128,8 @@ class StackBatchify : public BatchifyFunction {
     param_.InitAllowUnknown(kwargs);
   }
 
-  virtual bool Batchify(const std::vector<std::vector<NDArray> >& inputs,
-                        std::vector<NDArray>* outputs) {
+  bool Batchify(const std::vector<std::vector<NDArray> >& inputs,
+                        std::vector<NDArray>* outputs) override {
     auto out_size = SanityCheck(inputs);
     auto bs = inputs.size();
     outputs->resize(out_size);
@@ -235,8 +235,8 @@ class PadBatchify : public BatchifyFunction {
     param_.InitAllowUnknown(kwargs);
   }
 
-  virtual bool Batchify(const std::vector<std::vector<NDArray> >& inputs,
-                        std::vector<NDArray>* outputs) {
+  bool Batchify(const std::vector<std::vector<NDArray> >& inputs,
+                        std::vector<NDArray>* outputs) override {
     auto bs = inputs.size();
     CHECK_GT(bs, 0) << "BatchifyFunction should handle at lease 1 sample";
     auto out_size = inputs[0].size();

@@ -183,13 +183,6 @@ Advanced modules
 
 
    .. card::
-      :title: mxnet.executor_manager
-      :link: mxnet/executor_manager/index.html
-
-      Executor manager
-
-
-   .. card::
       :title: mxnet.rtc
       :link: mxnet/rtc/index.html
 

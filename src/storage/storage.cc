@@ -44,7 +44,7 @@ class StorageImpl : public Storage {
 
   void SharedIncrementRefCount(Handle handle) override;
   StorageImpl() = default;
-  virtual ~StorageImpl() = default;
+  ~StorageImpl() override = default;
 
  private:
   std::shared_ptr<StorageManager> storage_manager(const Context &ctx) {
