@@ -1368,6 +1368,8 @@ def _add_workload_fabs():
 
 def _add_workload_add(array_pool):
     OpArgMngr.add_workload('add', array_pool['4x1'], array_pool['1x2'])
+    OpArgMngr.add_workload('add', array_pool['4x1'].asnumpy(), array_pool['1x2'])
+    OpArgMngr.add_workload('add', array_pool['4x1'], array_pool['1x2'].asnumpy())
     OpArgMngr.add_workload('add', array_pool['4x1'], 2)
     OpArgMngr.add_workload('add', 2, array_pool['4x1'])
     OpArgMngr.add_workload('add', array_pool['4x1'], array_pool['1x1x0'])
@@ -1375,6 +1377,8 @@ def _add_workload_add(array_pool):
 
 def _add_workload_arctan2():
     OpArgMngr.add_workload('arctan2', np.array([1, -1, 1]), np.array([1, 1, -1]))
+    OpArgMngr.add_workload('arctan2', np.array([1, -1, 1]).asnumpy(), np.array([1, 1, -1]))
+    OpArgMngr.add_workload('arctan2', np.array([1, -1, 1]), np.array([1, 1, -1]).asnumpy())
     OpArgMngr.add_workload('arctan2', np.array([np.PZERO, np.NZERO]), np.array([np.NZERO, np.NZERO]))
     OpArgMngr.add_workload('arctan2', np.array([np.PZERO, np.NZERO]), np.array([np.PZERO, np.PZERO]))
     OpArgMngr.add_workload('arctan2', np.array([np.PZERO, np.NZERO]), np.array([-1, -1]))
@@ -1389,6 +1393,8 @@ def _add_workload_arctan2():
 
 def _add_workload_copysign():
     OpArgMngr.add_workload('copysign', np.array([1, 0, 0]), np.array([-1, -1, 1]))
+    OpArgMngr.add_workload('copysign', np.array([1, 0, 0]).asnumpy(), np.array([-1, -1, 1]))
+    OpArgMngr.add_workload('copysign', np.array([1, 0, 0]), np.array([-1, -1, 1]).asnumpy())
     OpArgMngr.add_workload('copysign', np.array([-2, 5, 1, 4, 3], dtype=np.float16), np.array([0, 1, 2, 4, 2], dtype=np.float16))
 
 
@@ -1400,6 +1406,8 @@ def _add_workload_degrees():
 def _add_workload_true_divide():
     for dt in [np.float32, np.float64, np.float16]:
         OpArgMngr.add_workload('true_divide', np.array([10, 10, -10, -10], dt), np.array([20, -20, 20, -20], dt))
+        OpArgMngr.add_workload('true_divide', np.array([10, 10, -10, -10], dt).asnumpy(), np.array([20, -20, 20, -20], dt))
+        OpArgMngr.add_workload('true_divide', np.array([10, 10, -10, -10], dt), np.array([20, -20, 20, -20], dt).asnumpy())
 
 
 def _add_workload_inner():

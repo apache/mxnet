@@ -180,7 +180,7 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
                                        ctypes.byref(handle)))
     return ndarray(handle=handle, writable=a.writable)
 
-def _as_mx_np_array(object, ctx=None, zero_copy=False):
+def _as_mx_np_array(object, ctx=None, zero_copy=False, writable=False):
     """Convert arrays or any array member of container to mxnet.numpy.ndarray on ctx."""
     if object is None or isinstance(object, ndarray):
         return object
@@ -192,7 +192,7 @@ def _as_mx_np_array(object, ctx=None, zero_copy=False):
     elif isinstance(object, (_np.bool_, _np.bool)):
         return array(object, dtype=_np.bool_, ctx=ctx)
     elif isinstance(object, (list, tuple)):
-        tmp = [_as_mx_np_array(arr, ctx=ctx, zero_copy=zero_copy) for arr in object]
+        tmp = [_as_mx_np_array(arr, ctx=ctx, zero_copy=zero_copy, writable=writable) for arr in object]
         return object.__class__(tmp)
     else:
         raise TypeError('Does not support converting {} to mx.np.ndarray.'.format(str(type(object))))
@@ -320,9 +320,6 @@ class ndarray(NDArray):
         | `c = a + b` | onp | mx_np | mx_np |
         | `c = a + b` | mx_np | onp | mx_np |
         """
-        ufunc_list = ["add", "subtract", "multiply", "divide", "true_divide", "floor_divide", "power",
-                      "remainder", "bitwise_and", "bitwise_or", "bitwise_xor", "left_shift", "right_shift",
-                      "greater", "greater_equal", "less", "less_equal", "not_equal", "equal", "matmul"]
         if 'out' in kwargs:
             # need to unfold tuple argument in kwargs
             out = kwargs['out']
@@ -340,26 +337,26 @@ class ndarray(NDArray):
                     raise ValueError("Falling back to NumPy operator {} with autograd active is not supported."
                                      "Please consider moving the operator to the outside of the autograd scope.")\
                                      .format(name)
-                new_inputs = [arg.asnumpy() if isinstance(arg, ndarray) else arg for arg in inputs]
+                new_inputs, cur_ctx = _as_onp_array(inputs)
                 if onp_op not in _FALLBACK_ARRAY_UFUNC_WARNED_RECORD:
                     import logging
                     logging.warning("np.%s is a fallback operator, "
                                     "which is actually using official numpy's implementation", name)
                     _FALLBACK_ARRAY_UFUNC_WARNED_RECORD[onp_op] = True
                 out = onp_op(*new_inputs, **kwargs)
-                return _as_mx_np_array(out, ctx=inputs[0].ctx)
+                return _as_mx_np_array(out, ctx=cur_ctx)
             # ops with np mx_np
-            elif name in ufunc_list and isinstance(inputs[0], _np.ndarray):
-                # inplace
-                if 'out' in kwargs:
-                    new_inputs = [arg.asnumpy() if isinstance(arg, ndarray) else arg for arg in inputs]
-                    return onp_op(*new_inputs, **kwargs)
-                else:
-                    new_inputs = [_as_mx_np_array(arg, ctx=inputs[1].ctx)
-                                  if isinstance(arg, _np.ndarray) else arg for arg in inputs]
-                    return mx_ufunc(*new_inputs, **kwargs)
             else:
-                return mx_ufunc(*inputs, **kwargs)
+                if py_all(isinstance(x, ndarray) for x in inputs):
+                    return mx_ufunc(*inputs, **kwargs)
+                else:
+                    try:
+                        cur_ctx = next(a.ctx for a in inputs if hasattr(a, 'ctx'))
+                    except StopIteration:
+                        cur_ctx = next(a.ctx for a in kwargs.values() if hasattr(a, 'ctx'))
+                    new_inputs = _as_mx_np_array(inputs, ctx=cur_ctx, zero_copy=False)
+                    new_kwargs = {k: _as_mx_np_array(v, cur_ctx) for k, v in kwargs.items()}
+                    return mx_ufunc(*new_inputs, **new_kwargs)
         else:
             return NotImplemented
 
@@ -400,7 +397,9 @@ class ndarray(NDArray):
                 except StopIteration:
                     cur_ctx = next(a.ctx for a in kwargs.values() if hasattr(a, 'ctx'))
                 new_args = _as_mx_np_array(args, ctx=cur_ctx,
-                                           zero_copy=func_name in {'may_share_memory', 'shares_memory'})
+                                           zero_copy=func_name in {'may_share_memory',
+                                                                   'shares_memory'},
+                                           writable=False)
                 new_kwargs = {k: _as_mx_np_array(v, cur_ctx) for k, v in kwargs.items()}
                 return mx_np_func(*new_args, **new_kwargs)
 
