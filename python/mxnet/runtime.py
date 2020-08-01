@@ -66,6 +66,9 @@ class Feature(ctypes.Structure):
         """True if MXNet was compiled with the given compile-time feature."""
         return self._enabled
 
+    def __bool__(self):
+        return self.enabled
+
     def __repr__(self):
         if self.enabled:
             return "✔ {}".format(self.name)

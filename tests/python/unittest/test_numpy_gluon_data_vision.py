@@ -32,6 +32,7 @@ import random
 from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
 from mxnet import image
+import pytest
 
 @with_seed()
 @use_np
@@ -100,6 +101,8 @@ def test_normalize():
 
 @with_seed()
 @use_np
+@pytest.mark.skipif(not mx.runtime.Features()['OPENCV'].enabled,
+                    reason="Skip tests that require opencv as it's not enabled in mxnet.")
 def test_resize():
     def _test_resize_with_diff_type(dtype):
         # test normal case
@@ -138,6 +141,8 @@ def test_resize():
 
 @with_seed()
 @use_np
+@pytest.mark.skipif(not mx.runtime.Features()['OPENCV'].enabled,
+                    reason="Skip tests that require opencv as it's not enabled in mxnet.")
 def test_crop_resize():
     def _test_crop_resize_with_diff_type(dtype):
         # test normal case
@@ -219,6 +224,8 @@ def test_flip_top_bottom():
 
 @with_seed()
 @use_np
+@pytest.mark.skipif(not mx.runtime.Features()['OPENCV'].enabled,
+                    reason="Skip tests that require opencv as it's not enabled in mxnet.")
 def test_transformer():
     from mxnet.gluon.data.vision import transforms
 
@@ -243,6 +250,8 @@ def test_transformer():
 
 @with_seed()
 @use_np
+@pytest.mark.skipif(not mx.runtime.Features()['OPENCV'].enabled,
+                    reason="Skip tests that require opencv as it's not enabled in mxnet.")
 def test_random_crop():
     x = mx.np.ones((245, 480, 3), dtype='uint8')
     y = mx.npx.image.random_crop(x, width=100, height=100)
@@ -250,6 +259,8 @@ def test_random_crop():
 
 @with_seed()
 @use_np
+@pytest.mark.skipif(not mx.runtime.Features()['OPENCV'].enabled,
+                    reason="Skip tests that require opencv as it's not enabled in mxnet.")
 def test_random_resize_crop():
     x = mx.np.ones((245, 480, 3), dtype='uint8')
     y = mx.npx.image.random_resized_crop(x, width=100, height=100)
@@ -257,6 +268,8 @@ def test_random_resize_crop():
 
 @with_seed()
 @use_np
+@pytest.mark.skipif(not mx.runtime.Features()['OPENCV'].enabled,
+                    reason="Skip tests that require opencv as it's not enabled in mxnet.")
 def test_hybrid_transformer():
     from mxnet.gluon.data.vision import transforms
 
@@ -337,6 +350,8 @@ def test_random_rotation():
 
 @with_seed()
 @use_np
+@pytest.mark.skipif(not mx.runtime.Features()['OPENCV'].enabled,
+                    reason="Skip tests that require opencv as it's not enabled in mxnet.")
 def test_random_transforms():
     from mxnet.gluon.data.vision import transforms
 

@@ -23,6 +23,7 @@ from common import assertRaises, with_seed, setup_module, teardown_module
 import shutil
 import tempfile
 import unittest
+import pytest
 
 def _get_data(url, dirname):
     import os, tarfile
@@ -50,6 +51,8 @@ def _generate_objects():
     return [2, 5] + label
 
 
+@pytest.mark.skipif(not mx.runtime.Features()['OPENCV'].enabled,
+                    reason="Skip tests that require opencv as it's not enabled in mxnet.")
 class TestImage(unittest.TestCase):
     IMAGES_URL = "https://repo.mxnet.io/gluon/dataset/test/test_images-9cebe48a.tar.gz"
 
