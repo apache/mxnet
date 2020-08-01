@@ -345,12 +345,18 @@ __global__ void reduce_kernel_M1(const int N,
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
     index_t coord[ndim];
     util::unravel(idx, params.small_shape, coord);
-    const index_t idx_big = util::ravel(coord, params.big_shape);
-    const index_t idx_lhs = util::ravel(coord, params.lhs_shape);
-    const index_t idx_rhs = util::ravel(coord, params.rhs_shape);
-    const typename OType::type val =
-      OP1(IType0::from(big[idx_big]), OP2(IType1::from(lhs[idx_lhs]),
-                                          IType2::from(rhs[idx_rhs])));
+    index_t idx_big[1];
+    idx_big[0] = util::ravel(coord, params.big_shape);
+    index_t idx_lhs[1], idx_rhs[1];
+    if (use_input) {
+      idx_lhs[0] = util::ravel(coord, params.lhs_shape);
+      idx_rhs[0] = util::ravel(coord, params.rhs_shape);
+    }
+    typename OType::type val, residual;
+    REDUCER::SetInitValue(val, residual);
+    const int u = 0;
+    REDUCER::Reduce(val, FUNC, residual);
+    REDUCER::Finalize(val, residual);
     if (req == OpReqType::kAddTo) {
       const auto temp = op::add(val, OType::from(small[idx]));
       small[idx] = OType::to(temp);
@@ -362,7 +368,7 @@ __global__ void reduce_kernel_M1(const int N,
 )code";
 
 void RTCReduceM1Impl(Stream<gpu> *s, const TBlob &small, const TBlob &big,
-                     const TBlob &lhs, const TBlob &rhs,
+                     const TBlob *lhs, const TBlob *rhs,
                      const ReduceImplConfig &config, const int ndim,
                      const std::string &common_code, int dev_id) {
   using namespace common::cuda::rtc;
@@ -372,31 +378,52 @@ void RTCReduceM1Impl(Stream<gpu> *s, const TBlob &small, const TBlob &big,
                      common::mshadow_type_info(big.type_flag_).name +
                      ";\n"
                      "using InputType1 = " +
-                     common::mshadow_type_info(lhs.type_flag_).name +
+                     ((lhs != nullptr)
+                     ? common::mshadow_type_info(lhs->type_flag_).name
+                     : "float32") +
                      ";\n"
                      "using InputType2 = " +
-                     common::mshadow_type_info(rhs.type_flag_).name +
+                     ((rhs != nullptr)
+                     ? common::mshadow_type_info(rhs->type_flag_).name
+                     : "float32") +
                      ";\n"
                      "using OutputType0 = " +
                      common::mshadow_type_info(small.type_flag_).name +
                      ";\n";
+  if (lhs != nullptr) {
+    code += "const bool use_input = true;";
+  } else {
+    code += "const bool use_input = false;";
+  }
+
   reduce_kernel_M1_params param {};
   for (int i = 0; i < ndim; ++i) {
     param.big_shape[i] = big.shape_[i];
     param.small_shape[i] = small.shape_[i];
-    param.lhs_shape[i] = lhs.shape_[i];
-    param.rhs_shape[i] = rhs.shape_[i];
+    if (lhs != nullptr) {
+      param.lhs_shape[i] = lhs->shape_[i];
+      param.rhs_shape[i] = rhs->shape_[i];
+    }
   }
 
+  void *null_ptr = nullptr;
   std::vector<const void*> args;
   args.emplace_back(&config.N);
   args.emplace_back(&big.dptr_);
-  args.emplace_back(&lhs.dptr_);
-  args.emplace_back(&rhs.dptr_);
+  if (lhs != nullptr) {
+    args.emplace_back(&(lhs->dptr_));
+    args.emplace_back(&(rhs->dptr_));
+  } else {
+    args.emplace_back(&(null_ptr));
+    args.emplace_back(&(null_ptr));
+  }
   args.emplace_back(&small.dptr_);
   args.emplace_back(&param);
 
-  auto reduce_kernel_M1_func = get_function(code,
+  const auto &function_code = (lhs == nullptr)
+                            ? reduce_function_code
+                            : reduce_function_use_input_code;
+  auto reduce_kernel_M1_func = get_function(code + function_code,
                                             "reduce_kernel_M1",
                                             reduce_kernel_M1_code,
                                             dev_id);
@@ -423,22 +450,22 @@ void RTCReduce(const NodeAttrs& attrs,
   size_t small_type_size = common::mshadow_type_info(small.type_flag_).acc_size;
   size_t type_size = std::max(big_type_size, small_type_size);
   ReduceImplConfig config(small.shape_, big.shape_, nullptr, nullptr, type_size);
+  std::string common_code = std::string("const OpReqType req = ") +
+                            util::to_string(req) +
+                            ";\n"
+                            "#define OP op::" +
+                            OP +
+                            "\n"
+                            "#define REDUCER " +
+                            reducer +
+                            "\n"
+                            "const int ndim = " +
+                            std::to_string(ndim) +
+                            ";\n";
   if (config.M == 1) {
-    // With M == 1 result is just (possibly reshaped) OP(big)
-    UnaryRTCCompute {OP} (attrs, ctx, {big}, {req}, {small});
+    RTCReduceM1Impl(s, small, big, nullptr, nullptr, config,
+                    ndim, common_code, ctx.run_ctx.ctx.dev_id);
   } else {
-    std::string common_code = std::string("const OpReqType req = ") +
-                              util::to_string(req) +
-                              ";\n"
-                              "#define OP op::" +
-                              OP +
-                              "\n"
-                              "#define REDUCER " +
-                              reducer +
-                              "\n"
-                              "const int ndim = " +
-                              std::to_string(ndim) +
-                              ";\n";
     RTCReduceImpl(s, small, req == kAddTo, big, workspace, config,
                   ndim, common_code, ctx.run_ctx.ctx.dev_id);
   }
@@ -479,7 +506,7 @@ void RTCReduce(const NodeAttrs& attrs,
                             std::to_string(ndim) +
                             ";\n";
   if (config.M == 1) {
-    RTCReduceM1Impl(s, small, big, lhs, rhs, config, ndim, common_code, ctx.run_ctx.ctx.dev_id);
+    RTCReduceM1Impl(s, small, big, &lhs, &rhs, config, ndim, common_code, ctx.run_ctx.ctx.dev_id);
   } else {
     RTCReduceImpl(s, small, req == kAddTo, big, workspace, config,
                   ndim, common_code, ctx.run_ctx.ctx.dev_id, &lhs, &rhs);
