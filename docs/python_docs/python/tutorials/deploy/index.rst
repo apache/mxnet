@@ -52,12 +52,6 @@ The following tutorials will help you learn how to deploy MXNet models for infer
       How to deploy MXNet C++ Models
 
    .. card::
-      :title: Scala Inference
-      :link: inference/scala.html
-
-      How to run Scala inference
-
-   .. card::
       :title: GluonCV Models in a C++ Inference Application
       :link: https://gluon-cv.mxnet.io/build/examples_deployment/cpp_inference.html
 

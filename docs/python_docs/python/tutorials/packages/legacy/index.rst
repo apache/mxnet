@@ -15,10 +15,27 @@
    specific language governing permissions and limitations
    under the License.
 
-mxnet.libinfo
-===============
+Legacy
+======
 
-.. automodule:: mxnet.libinfo
-    :members:
-    :imported-members:
-    :autosummary:
+This document hosts documents for legacy modules that are being deprecated in MXNet 2.x.
+
+.. container:: cards
+
+   .. card::
+      :title: NDArray API
+      :link: ndarray/index.html
+
+      MXNet NDArray API has been deprecated. Tutorials for NDArray are kept here for reference.
+
+   .. card::
+      :title: Symbol API
+      :link: ../../../api/symbol/
+
+      MXNet Symbol API has been deprecated. API documentation is still available for reference.
+
+.. toctree::
+   :hidden:
+   :glob:
+
+   */index*

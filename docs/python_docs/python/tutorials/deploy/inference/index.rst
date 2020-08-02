@@ -40,12 +40,6 @@ The following tutorials will help you learn how to deploy MXNet models for infer
 .. container:: cards
 
    .. card::
-      :title: Scala and Java
-      :link: scala.html
-
-      How to use MXNet models in a Scala or Java environment.
-
-   .. card::
       :title: C++
       :link: cpp.html
 
@@ -63,7 +57,7 @@ The following tutorials will help you learn how to deploy MXNet models for infer
       :link: image_classification_jetson.html
 
       Example of running a pretrained image classification model on a Jetson module.
-   
+
    .. card::
       :title: Object Detection on Jetson
       :link: https://gluon-cv.mxnet.io/build/examples_detection/demo_jetson.html
