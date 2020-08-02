@@ -900,11 +900,19 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
           subg_g.attrs["is_np_shape"] = std::make_shared<nnvm::any>(
               static_cast<int>(Imperative::Get()->is_np_shape()));
         }
+        // pass flags to subgraph node
+        if (g.HasAttr("flags")) {
+          subg_g.attrs["flags"] = std::make_shared<nnvm::any>(
+            g.GetAttr<std::vector<std::pair<std::string, std::string>>>("flags"));
+        }
         // for each subgraph node in control flow op, call BuildSubgraph recursively
         for (auto property : subgraph_prop_list) {
           subg_g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
           subg_g = BuildSubgraph(std::move(subg_g));
           subg_g.attrs.erase("subgraph_property");
+        }
+        if (subg_g.HasAttr("flags")) {
+          subg_g.attrs.erase("flags");
         }
         subg_sym->outputs = subg_g.outputs;
       }
