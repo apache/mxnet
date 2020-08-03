@@ -259,7 +259,8 @@ def test_hybrid_sequential_unique_internals():
 
 
 @with_seed()
-def test_symbol_block(tmpdir):
+@pytest.mark.parametrize('compute_before_cast', [True, False])
+def test_symbol_block(tmpdir, compute_before_cast):
     model = nn.HybridSequential()
     model.add(nn.Dense(128, activation='tanh'))
     model.add(nn.Dropout(0.5))
@@ -309,6 +310,10 @@ def test_symbol_block(tmpdir):
     ctx = mx.cpu(0)
 
     net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx, root=tmp)
+    if compute_before_cast:
+        # Compute before casting to catch bugs where symbol dtype isn't casted correctly GH-18843
+        net_fp32.initialize()
+        net_fp32(mx.nd.zeros((1,3,224,224)))
     net_fp32.cast('float64')
     net_fp32.hybridize()
     data = mx.nd.zeros((1,3,224,224), dtype='float64', ctx=ctx)
