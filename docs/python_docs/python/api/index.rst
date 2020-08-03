@@ -223,7 +223,7 @@ Legacy
    :glob:
 
    np/index
-   npx
+   npx/index
    gluon/index
    autograd/index
    initializer/index
