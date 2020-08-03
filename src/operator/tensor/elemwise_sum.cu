@@ -49,6 +49,7 @@ struct elementwise_sum_params {
   void* outputs[1];
 };
 
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void elementwise_sum_kernel(
     const elementwise_sum_params params,
     const index_t lead_dim,

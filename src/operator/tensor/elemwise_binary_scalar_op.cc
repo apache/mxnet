@@ -43,6 +43,7 @@ struct binary_scalar_kernel_params {
   double scalar;
 };
 
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void binary_scalar_kernel(const binary_scalar_kernel_params params,
                                      const index_t lead_dim,
                                      const index_t other_dim,
@@ -163,6 +164,7 @@ struct binary_scalar_kernel_params {
   double scalar;
 };
 
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void binary_scalar_kernel_bwd(const binary_scalar_kernel_params params,
                                          const index_t lead_dim,
                                          const index_t other_dim,

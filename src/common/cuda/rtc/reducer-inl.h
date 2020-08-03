@@ -72,6 +72,12 @@ struct sum {
       dst_residual = t2 - (dst_val - t1);
     }
   }
+  /*! \brief finalize reduction result */
+  template<typename DType>
+  __device__ inline static void Finalize(volatile DType& dst) {}
+  /*! \brief finalize reduction result */
+  template<typename DType>
+  __device__ inline static void Finalize(volatile DType& dst, volatile DType& none) {}
   /*!
    *\brief set the initial value during reduction
    */

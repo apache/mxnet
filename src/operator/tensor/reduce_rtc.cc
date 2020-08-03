@@ -71,6 +71,7 @@ struct reduce_kernel_params {
   index_t rhs_shape[util::MAX_DIM];
 };
 
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void reduce_kernel(const int N, const int M, const bool addto,
                               const InputType0* __restrict big,
                               const InputType1* __restrict lhs,
@@ -157,6 +158,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           __syncthreads();
         }
         if (idx < N && tidy == 0) {
+          REDUCER::Finalize(shTile[tidx * 2], shTile[tidx * 2 + 1]);
           if (addto) {
             small[idx + m0 * N] = OType::to(op::add(OType::from(small[idx + m0 * N]),
                                                     shTile[tidx * 2]));
@@ -166,6 +168,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         }
       } else {
         if (idx < N) {
+          REDUCER::Finalize(val, residual);
           if (addto) {
             small[idx + m0 * N] = OType::to(op::add(OType::from(small[idx + m0 * N]),
                                                     val));
@@ -180,6 +183,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
 )code";
 
 const char reduce_lines_kernel_code[] = R"code(
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void reduce_lines_kernel(const index_t N, const index_t M,
                                     const index_t small_in_stride,
                                     const OutputType0* __restrict small_in,
@@ -195,6 +199,7 @@ __global__ void reduce_lines_kernel(const index_t N, const index_t M,
     }
 
     if (idx < N) {
+      REDUCER::Finalize(val, residual);
       if (req == OpReqType::kAddTo) {
         small_out[idx] = OType::to(op::add(OType::from(small_out[idx]), val));
       } else {
@@ -332,6 +337,7 @@ struct reduce_kernel_M1_params {
   index_t small_shape[util::MAX_DIM];
 };
 
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void reduce_kernel_M1(const int N,
                                  const InputType0* __restrict big,
                                  const InputType1* __restrict lhs,
@@ -434,8 +440,7 @@ void RTCReduceM1Impl(Stream<gpu> *s, const TBlob &small, const TBlob &big,
 
 }  // namespace
 
-void RTCReduce(const NodeAttrs& attrs,
-               const OpContext& ctx,
+void RTCReduce(const OpContext& ctx,
                const TBlob& small,
                const OpReqType req,
                const Tensor<gpu, 1, char>& workspace,
@@ -471,8 +476,7 @@ void RTCReduce(const NodeAttrs& attrs,
   }
 }
 
-void RTCReduce(const NodeAttrs& attrs,
-               const OpContext& ctx,
+void RTCReduce(const OpContext& ctx,
                const TBlob& small,
                const OpReqType req,
                const Tensor<gpu, 1, char>& workspace,

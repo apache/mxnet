@@ -199,6 +199,8 @@ enum class OpReqType {
   kAddTo
 };
 
+constexpr int kRTCMaxThreadsPerBlock = 512;
+
 namespace util {
 
 constexpr int MAX_DIM = 5;

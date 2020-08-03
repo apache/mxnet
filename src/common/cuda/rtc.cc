@@ -224,7 +224,10 @@ void launch(CUfunction function,
     const_cast<void**>(args->data()),         // arguments
     nullptr);  // );
   if (err != CUDA_SUCCESS) {
+    const char* error_string;
+    cuGetErrorString(err, &error_string);
     LOG(FATAL) << "cuLaunchKernel failed: "
+               << err << " " << error_string << ": "
                << reinterpret_cast<void*>(function) << " "
                << "(" << grid_dim.x << ", " << grid_dim.y << ", " << grid_dim.z << ") "
                << "(" << block_dim.x << ", " << block_dim.y << ", " << block_dim.z << ") "

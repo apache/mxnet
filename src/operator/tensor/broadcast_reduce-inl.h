@@ -734,8 +734,7 @@ void Reduce(Stream<cpu> *s, const TBlob& small, const OpReqType req,
 
 #if MXNET_USE_CUDA
 
-void RTCReduce(const NodeAttrs& attrs,
-               const OpContext& ctx,
+void RTCReduce(const OpContext& ctx,
                const TBlob& small,
                const OpReqType req,
                const Tensor<gpu, 1, char>& workspace,
@@ -744,8 +743,7 @@ void RTCReduce(const NodeAttrs& attrs,
                int ndim,
                const std::string& OP);
 
-void RTCReduce(const NodeAttrs& attrs,
-               const OpContext& ctx,
+void RTCReduce(const OpContext& ctx,
                const TBlob& small,
                const OpReqType req,
                const Tensor<gpu, 1, char>& workspace,

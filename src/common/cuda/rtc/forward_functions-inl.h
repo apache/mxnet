@@ -356,78 +356,110 @@ rfmod(const DType a, const DType2 b) {
 
 template <typename DType, typename DType2>
 __device__ inline DType equal(const DType a, const DType2 b) {
-  return a == static_cast<DType>(b) ? 1 : 0;
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a == real_b ? 1 : 0;
 }
 
 template <typename DType, typename DType2>
 __device__ inline DType not_equal(const DType a, const DType2 b) {
-  return a != static_cast<DType>(b) ? 1 : 0;
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a != real_b ? 1 : 0;
 }
 
 template <typename DType, typename DType2>
 __device__ inline DType greater(const DType a, const DType2 b) {
-  return a > static_cast<DType>(b) ? 1 : 0;
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a > real_b ? 1 : 0;
 }
 
 template <typename DType, typename DType2>
 __device__ inline DType greater_equal(const DType a, const DType2 b) {
-  return a >= static_cast<DType>(b) ? 1 : 0;
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a >= real_b ? 1 : 0;
 }
 
 template <typename DType, typename DType2>
 __device__ inline DType less(const DType a, const DType2 b) {
-  return a < static_cast<DType>(b) ? 1 : 0;
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a < real_b ? 1 : 0;
 }
 
 template <typename DType, typename DType2>
 __device__ inline DType less_equal(const DType a, const DType2 b) {
-  return a <= static_cast<DType>(b) ? 1 : 0;
+  return real_a <= real_b ? 1 : 0;
 }
 
 template <typename DType, typename DType2>
 __device__ inline bool np_equal(const DType a, const DType2 b) {
-  return a == static_cast<DType>(b) ? true : false;
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a == real_b ? true : false;
 }
 
 template <typename DType, typename DType2>
 __device__ inline bool np_not_equal(const DType a, const DType2 b) {
-  return a != static_cast<DType>(b) ? true : false;
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a != real_b ? true : false;
 }
 
 template <typename DType, typename DType2>
 __device__ inline bool np_greater(const DType a, const DType2 b) {
-  return a > static_cast<DType>(b) ? true : false;
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a > real_b ? true : false;
 }
 
 template <typename DType, typename DType2>
 __device__ inline bool np_greater_equal(const DType a, const DType2 b) {
-  return a >= static_cast<DType>(b) ? true : false;
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a >= real_b ? true : false;
 }
 
 template <typename DType, typename DType2>
 __device__ inline bool np_less(const DType a, const DType2 b) {
-  return a < static_cast<DType>(b) ? true : false;
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a < real_b ? true : false;
 }
 
 template <typename DType, typename DType2>
 __device__ inline bool np_less_equal(const DType a, const DType2 b) {
-  return a <= static_cast<DType>(b) ? true : false;
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a <= real_b ? true : false;
 }
 
 template <typename DType, typename DType2>
 __device__ inline DType logical_and(const DType a, const DType2 b) {
-  return a && static_cast<DType>(b) ? 1 : 0;
+  return a && b ? 1 : 0;
 }
 
 template <typename DType, typename DType2>
 __device__ inline DType logical_or(const DType a, const DType2 b) {
-  return a || static_cast<DType>(b) ? 1 : 0;
+  return a || b ? 1 : 0;
 }
 
 template <typename DType, typename DType2>
 __device__ inline DType logical_xor(const DType a, const DType2 b) {
-  const DType bb = static_cast<DType>(b);
-  return ((a || bb) && !(a && bb)) ? 1 : 0;
+  return ((a || b) && !(a && b)) ? 1 : 0;
 }
 
 template <typename DType, typename DType2>
@@ -436,7 +468,7 @@ __device__ inline DType copysign(const DType a, const DType2 b) {
 }
 
 template <typename DType, typename DType2>
-__device__ inline DType rcopysign(const DType a, const DType2 b) {
+__device__ inline DType2 rcopysign(const DType a, const DType2 b) {
   return copysign(b, a);
 }
 
@@ -484,19 +516,28 @@ lcm(const DType a, const DType2 b) {
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type bitwise_xor(const DType a,
                                                                        const DType2 b) {
-  return static_cast<int64>(a) ^ static_cast<int64>(b);
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a ^ real_b;
 }
 
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type bitwise_or(const DType a,
                                                                        const DType2 b) {
-  return static_cast<int64>(a) | static_cast<int64>(b);
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a | real_b;
 }
 
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type bitwise_and(const DType a,
                                                                        const DType2 b) {
-  return static_cast<int64>(a) & static_cast<int64>(b);
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
+  return real_a & real_b;
 }
 
 DEFINE_BINARY_MATH_FUNC(arctan2, ::atan2, ::atan2f)

@@ -105,6 +105,7 @@ struct binary_kernel_params {
   void *outputs[2];
 };
 
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void binary_kernel(const binary_kernel_params params,
                               const index_t lead_dim,
                               const index_t other_dim,
@@ -190,6 +191,7 @@ struct binary_kernel_params {
   void *outputs[2];
 };
 
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void binary_kernel_bwd(const binary_kernel_params params,
                                   const index_t lead_dim,
                                   const index_t other_dim,
@@ -312,6 +314,7 @@ struct binary_kernel_params {
   void *outputs[2];
 };
 
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void binary_kernel_bwd(const binary_kernel_params params,
                                   const index_t lead_dim,
                                   const index_t other_dim,

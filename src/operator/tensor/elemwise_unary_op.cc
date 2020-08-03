@@ -43,6 +43,7 @@ struct unary_kernel_params {
   void *outputs[1];
 };
 
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void unary_kernel(const unary_kernel_params params,
                              const index_t lead_dim,
                              const index_t other_dim,

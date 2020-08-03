@@ -53,6 +53,7 @@ struct binary_broadcast_params {
   index_t size[2];
 };
 
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void binary_broadcast_kernel(
     const binary_broadcast_params param,
     const index_t lead_dim,
@@ -137,6 +138,7 @@ struct binary_broadcast_params {
   index_t size[2];
 };
 
+__launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void single_side_binary_broadcast_kernel(
     const binary_broadcast_params param,
     const index_t lead_dim,
@@ -372,10 +374,10 @@ void BinaryBroadcastRTCBackwardUseNone::operator()(const nnvm::NodeAttrs& attrs,
           ctx.requested[0].get_space_typed<gpu, 1, char>(
               Shape1(workspace_size * sizeof(index_t)), s);
       if (out.shape_.Size() != 0) {
-        broadcast::RTCReduce(attrs, ctx, lhs, req[0],
+        broadcast::RTCReduce(ctx, lhs, req[0],
                              workspace, out,
                              "red::sum", NDim, LOP);
-        broadcast::RTCReduce(attrs, ctx, rhs, req[1],
+        broadcast::RTCReduce(ctx, rhs, req[1],
                              workspace, out,
                              "red::sum", NDim, ROP);
       } else {
@@ -431,12 +433,12 @@ void BinaryBroadcastRTCBackwardUseIn::operator()(const nnvm::NodeAttrs& attrs,
         Tensor<gpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
         if (req[0] != kNullOp) {
-          broadcast::RTCReduce(attrs, ctx, lgrad, req[0], workspace,
+          broadcast::RTCReduce(ctx, lgrad, req[0], workspace,
                                ograd, lhs, rhs, "red::sum", NDim,
                                "mul", LOP);
         }
         if (req[1] != kNullOp) {
-          broadcast::RTCReduce(attrs, ctx, rgrad, req[1], workspace,
+          broadcast::RTCReduce(ctx, rgrad, req[1], workspace,
                                ograd, lhs, rhs, "red::sum", NDim,
                                "mul", ROP);
         }
