@@ -1170,31 +1170,68 @@ struct smooth_l1_gradient : public mxnet_op::tunable {
 /* Implicti reparameterization gradient for standard x ~ Gamma(\alpha, 1)
  * according to dx/da = -cdf(x;alpha) / pdf(x;alpha)
  */
-struct gamma_implicit_grad : public mxnet_op::tunable {
-  template<typename DType>
+struct gamma_implicit_grad {
+  template <typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType x) {
-    DType numer = 1;
-    DType denom = a;
-    DType series1 = numer / denom;
-    DType series2 = numer / (denom * denom);
-    for (int i = 1; i <= 5; i++) {
-      numer *= -x / static_cast<DType>(i);
-      denom += 1;
-      series1 += numer / denom;
-      series2 += numer / (denom * denom);
+    if (x < 0.8f) {
+      DType numer = 1;
+      DType denom = a;
+      DType series1 = numer / denom;
+      DType series2 = numer / (denom * denom);
+      for (int i = 1; i <= 5; i++) {
+        numer *= -x / static_cast<DType>(i);
+        denom += 1;
+        series1 += numer / denom;
+        series2 += numer / (denom * denom);
+      }
+      DType pow_x_alpha = math::pow(x, a);
+      DType gamma_pdf = math::pow(x, a - 1) * math::exp(-x);
+      DType gamma_cdf = pow_x_alpha * series1;
+      DType gamma_cdf_alpha =
+          (math::log(x) - DType(special_functions::cephes::psi<float>(a))) *
+              gamma_cdf -
+          pow_x_alpha * series2;
+      DType result = -gamma_cdf_alpha / gamma_pdf;
+      return IsNan(result) ? static_cast<DType>( 0.f ) : static_cast<DType>(result);
     }
-    DType pow_x_alpha = math::pow(x, a);
-    DType gamma_pdf = math::pow(x, a - 1) * math::exp(-x);
-    DType gamma_cdf = pow_x_alpha * series1;
-    DType gamma_cdf_alpha = (math::log(x) -
-                            DType(special_functions::cephes::psi<float>(a)) * gamma_cdf -
-                            pow_x_alpha * series2);
-    DType result = -gamma_cdf_alpha / gamma_pdf;
-    return IsNan(result) ? static_cast<DType>(0.f) : result;
+    if (a > 8.0f) {
+      if (0.9f * a <= x && x <= 1.1f * a) {
+        DType numer_1 = 1 + 24 * a * (1 + 12 * a);
+        DType numer_2 = 1440 * (a * a) + 6 * x * (53 - 120 * x) -
+                        65 * x * x / a + a * (107 + 3600 * x);
+        DType denom = 1244160 * (a * a) * (a * a);
+        return static_cast<DType>(numer_1 * numer_2 / denom);
+      }
+      DType denom = math::sqrt(8 * a);
+      DType term2 = denom / (a - x);
+      DType term3 =
+          math::pow(x - a - a * math::log(x / a), static_cast<DType>(-1.5));
+      DType term23 = (x < a) ? term2 - term3 : term2 + term3;
+      DType term1 = math::log(x / a) * term23 -
+                    math::sqrt(2 / a) * (a + x) / ((a - x) * (a - x));
+      DType stirling = 1 + 1 / (12 * a) * (1 + 1 / (24 * a));
+      DType numer = x * term1;
+      return static_cast<DType>(-stirling * numer / denom);
+    }
+    DType u = math::log(x / a);
+    DType v = math::log(a);
+    DType coef_uv[3][8] = {
+        {0.16009398, -0.094634809, 0.025146376, -0.0030648343, 1, 0.32668115,
+         0.10406089, 0.0014179084},
+        {0.53487893, 0.1298071, 0.065735949, -0.0015649758, 0.16639465,
+         0.020070113, -0.0035938915, -0.00058392623},
+        {0.040121004, -0.0065914022, -0.0026286047, -0.0013441777, 0.017050642,
+         -0.0021309326, 0.00085092367, -1.5247877e-07},
+    };
+    DType coef_v[8];
+    for (int i = 0; i < 8; i++) {
+      coef_v[i] = coef_uv[0][i] + u * (coef_uv[1][i] + u * coef_uv[2][i]);
+    }
+    DType p = coef_v[0] + v * (coef_v[1] + v * (coef_v[2] + v * coef_v[3]));
+    DType q = coef_v[4] + v * (coef_v[5] + v * (coef_v[6] + v * coef_v[7]));
+    return static_cast<DType>(math::exp(p / q));
   }
 };  // gamma_implicit_grad
-
-MXNET_BINARY_MATH_OP_NC_WITH_BOOL(neg_div, -a / b);
 
 /*! \brief product reducer */
 struct product {

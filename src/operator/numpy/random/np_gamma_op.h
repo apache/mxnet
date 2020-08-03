@@ -422,12 +422,12 @@ inline void GammaReparamBackwardImpl(const OpContext& ctx,
   size_t workspace_size =
       ReduceWorkspaceSize<ndim, DType>(s, igrad.shape_, req[0], ograd.shape_);
   // Convert samples to standard gamma
-  Kernel<StandarizeKernel<DType>, xpu>::Launch(
-          s, samples.Size(), samples.dptr<DType>(), scale);
   Tensor<xpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   Reduce<red::sum, ndim, DType, op::mshadow_op::mul, op::mshadow_op::gamma_implicit_grad>(
       s, igrad, req[0], workspace, ograd, alpha, samples);
+  Kernel<StandarizeKernel<DType>, xpu>::Launch(
+        s, igrad.Size(), igrad.dptr<DType>(), scale);
 }
 
 // Allow gamma sampling to be differentiable,
@@ -443,7 +443,6 @@ void NumpyGammaGrad(const nnvm::NodeAttrs& attrs,
   if (inputs[0].shape_.Size() == 0U) {
     return;
   }
-
   // [scalar, scalar] case
   if (outputs.size() == 0U) {
     return;
@@ -455,7 +454,7 @@ void NumpyGammaGrad(const nnvm::NodeAttrs& attrs,
   }
 
   // [tensor, scalar] case, only scalar scale is supported.
-  if (inputs.size() == 4U) {
+  if (inputs.size() == 3U) {
     if (param.shape.has_value()) {
       LOG(FATAL) << "ValueError: tensor scale case not supported";
     }
@@ -470,7 +469,6 @@ void NumpyGammaGrad(const nnvm::NodeAttrs& attrs,
       });
     });
   }
-
 }
 
 }  // namespace op

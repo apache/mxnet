@@ -75,12 +75,12 @@ NNVM_REGISTER_OP(_npi_gamma)
         ResourceRequest::kTempSpace};
   })
 .set_attr<FCompute>("FCompute<cpu>", NumpyGammaForward<cpu, double>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_gamma"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_gamma_sample"})
 .add_argument("input1", "NDArray-or-Symbol", "Source input")
 .add_argument("input2", "NDArray-or-Symbol", "Source input")
 .add_arguments(NumpyGammaParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_gamma)
+NNVM_REGISTER_OP(_backward_gamma_sample)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)
 .set_attr_parser(ParamParser<NumpyGammaParam>)
 .set_num_inputs(
