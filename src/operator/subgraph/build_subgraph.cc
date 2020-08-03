@@ -308,8 +308,11 @@ void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph
     success = LabelSubgraph(g, subgraph_selector, label, snid, simple_nodes, subgraph_nodes,
                             &excluded_nodes);
     if (!success) {
+      // Failed to label subgraph due to a cycle
+      // If the number of excluded_nodes didn't change since the last iteration,
+      // this means that there is no possible subgraph for the current node snid, we break
+      // Otherwise, we keep trying (with the excluded nodes tagged)
       if (excluded_nodes.size() == n_excluded_nodes) {
-        // no possible subgraph for the current node snid
         break;
       }
       n_excluded_nodes = excluded_nodes.size();
