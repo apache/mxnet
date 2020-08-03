@@ -29,7 +29,6 @@
 #include <queue>
 
 #include "./subgraph_property.h"
-#include "mxnet/imperative.h"
 
 #define DEBUG_SUBGRAPH 0
 
@@ -896,10 +895,6 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
         subg_g.outputs = subg_sym->outputs;
         subg_g.attrs["mxnet_version"] = std::make_shared<nnvm::any>(
           static_cast<int>(MXNET_VERSION));
-        if (Imperative::Get()->is_np_shape()) {
-          subg_g.attrs["is_np_shape"] = std::make_shared<nnvm::any>(
-              static_cast<int>(Imperative::Get()->is_np_shape()));
-        }
         // pass flags to subgraph node
         if (g.HasAttr("flags")) {
           subg_g.attrs["flags"] = std::make_shared<nnvm::any>(
