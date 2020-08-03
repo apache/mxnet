@@ -172,4 +172,22 @@ $(function() {
 
     $('.mdl-layout').css('visibility', 'visible');
 
+    const addScrollAwareHeaderAnimation = function() {
+        let preScrollTop, curScrollTop = 0;
+        const scrollContent = $("main.mdl-layout__content");
+        scrollContent.focus();
+        const navBar = $('header.mdl-layout__header');
+        const navBarHeight = navBar.height();
+    
+        scrollContent.scroll(function () {
+            curScrollTop = scrollContent.scrollTop();
+            if (preScrollTop < curScrollTop && curScrollTop > navBarHeight) {
+                navBar.addClass("scrollUp");
+            } else if (preScrollTop > curScrollTop && !(curScrollTop <= navBarHeight)) {
+                navBar.removeClass("scrollUp");
+            }
+            preScrollTop = curScrollTop;
+        });
+    }
+    addScrollAwareHeaderAnimation();
 });
