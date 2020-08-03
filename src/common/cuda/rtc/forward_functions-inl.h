@@ -396,6 +396,9 @@ __device__ inline DType less(const DType a, const DType2 b) {
 
 template <typename DType, typename DType2>
 __device__ inline DType less_equal(const DType a, const DType2 b) {
+  using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
+  const mixed_type real_a = a;
+  const mixed_type real_b = b;
   return real_a <= real_b ? 1 : 0;
 }
 
