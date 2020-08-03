@@ -174,7 +174,8 @@ $(function() {
 
     const addScrollAwareHeaderAnimation = function() {
         let preScrollTop, curScrollTop = 0;
-        const scrollContent = $("main");
+        const scrollContent = $("main.mdl-layout__content");
+        scrollContent.focus();
         const navBar = $('header.mdl-layout__header');
         const navBarHeight = navBar.height();
     
