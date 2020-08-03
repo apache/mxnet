@@ -1527,6 +1527,5 @@ int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
     s->outputs = g.outputs;
   }
   *ret_sym_handle = s;
-  delete has_dynamic_shape;
   API_END_HANDLE_ERROR(delete s);
 }
