@@ -200,3 +200,7 @@ p {
     margin: 4px;
     cursor: pointer;
 }
+
+.scrollUp {
+    transform: translateY(-80px);
+}

@@ -18,6 +18,14 @@ body {
     display: none;
 }
 
+.mdl-layout__container {
+    height: calc(100% - 76px);
+    margin-top: 76px;
+}
+.mdl-layout__header {
+    position: fixed;
+    transition: transform 0.5s;
+}
 .mdl-layout--fixed-drawer>.mdl-layout__content {
     margin-left: 300px;    
 }
