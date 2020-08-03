@@ -19,10 +19,6 @@
     visibility: hidden;
 }
 
-.document .page-content {
-    padding: 0 10% !important;
-}
-
 .mdl-layout__header--waterfall.is-casting-shadow {
     box-shadow: none !important;
 }

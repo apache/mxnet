@@ -58,58 +58,6 @@ EOF
     fi
 }
 
-build_ccache_wrappers() {
-    set -ex
-
-    if [ -z ${CC+x} ]; then
-        echo "No \$CC set, defaulting to gcc";
-        export CC=gcc
-    fi
-     if [ -z ${CXX+x} ]; then
-       echo "No \$CXX set, defaulting to g++";
-       export CXX=g++
-    fi
-
-    # Recommended by CCache: https://ccache.samba.org/manual.html#_run_modes
-    # Add to the beginning of path to ensure this redirection is picked up instead
-    # of the original ones. Especially CUDA/NVCC appends itself to the beginning of the
-    # path and thus this redirect is ignored. This change fixes this problem
-    # This hacky approach with symbolic links is required because underlying build
-    # systems of our submodules ignore our CMake settings. If they use Makefile,
-    # we can't influence them at all in general and NVCC also prefers to hardcode their
-    # compiler instead of respecting the settings. Thus, we take this brutal approach
-    # and just redirect everything of this installer has been called.
-    # In future, we could do these links during image build time of the container.
-    # But in the beginning, we'll make this opt-in. In future, loads of processes like
-    # the scala make step or numpy compilation and other pip package generations
-    # could be heavily sped up by using ccache as well.
-    mkdir -p /tmp/ccache-redirects
-    export PATH=/tmp/ccache-redirects:$PATH
-    CCACHE=`which ccache`
-    ln -sf $CCACHE /tmp/ccache-redirects/gcc
-    ln -sf $CCACHE /tmp/ccache-redirects/gcc-8
-    ln -sf $CCACHE /tmp/ccache-redirects/g++
-    ln -sf $CCACHE /tmp/ccache-redirects/g++-8
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-3.9
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-3.9
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-5.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-5.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-6.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-6.0
-    ln -sf $CCACHE /tmp/ccache-redirects/clang++-10
-    ln -sf $CCACHE /tmp/ccache-redirects/clang-10
-    #Doesn't work: https://github.com/ccache/ccache/issues/373
-    # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
-    # ln -sf $CCACHE /tmp/ccache-redirects/nvcc
-    # export NVCC="/tmp/ccache-redirects/nvcc"
-
-    # Uncomment if you would like to debug CCache hit rates.
-    # You can monitor using tail -f ccache-log
-    #export CCACHE_LOGFILE=/work/mxnet/ccache-log
-    #export CCACHE_LOGFILE=/tmp/ccache-log
-    #export CCACHE_DEBUG=1
-}
-
 build_wheel() {
 
     set -ex
@@ -514,9 +462,8 @@ build_ubuntu_cpu_clang100() {
 build_ubuntu_cpu_clang_tidy() {
     set -ex
     cd /work/build
-    export CLANG_TIDY=/usr/lib/llvm-6.0/share/clang/run-clang-tidy.py
     # TODO(leezu) USE_OPENMP=OFF 3rdparty/dmlc-core/CMakeLists.txt:79 broken?
-    CXX=clang++-6.0 CC=clang-6.0 cmake \
+    CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=OFF \
        -DUSE_CUDA=OFF \
@@ -524,11 +471,9 @@ build_ubuntu_cpu_clang_tidy() {
        -DCMAKE_BUILD_TYPE=Debug \
        -DUSE_DIST_KVSTORE=ON \
        -DUSE_CPP_PACKAGE=ON \
-       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+       -DCMAKE_CXX_CLANG_TIDY=clang-tidy-10 \
        -G Ninja /work/mxnet
     ninja
-    cd /work/mxnet
-    $CLANG_TIDY -p /work/build -j $(nproc) -clang-tidy-binary clang-tidy-6.0 /work/mxnet/src
 }
 
 build_ubuntu_cpu_clang6_mkldnn() {
@@ -788,8 +733,23 @@ build_ubuntu_blc() {
 
 sanity_check() {
     set -ex
+    sanity_license
+    sanity_python
+    sanity_cpp
+}
+
+sanity_license() {
+    set -ex
     tools/license_header.py check
+}
+
+sanity_cpp() {
+    set -ex
     3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests --exclude_path src/operator/contrib/ctc_include include/mkldnn
+}
+
+sanity_python() {
+    set -ex
     python3 -m pylint --rcfile=ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/tutorials/test_sanity_tutorials.py
 }

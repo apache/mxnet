@@ -84,7 +84,6 @@ class FeatureSet {
     feature_bits.set(OPENCV, MXNET_USE_OPENCV);
 
     // Misc
-    feature_bits.set(CAFFE, MXNET_USE_CAFFE);
     feature_bits.set(DIST_KVSTORE, MXNET_USE_DIST_KVSTORE);
     feature_bits.set(INT64_TENSOR_SIZE, MXNET_USE_INT64_TENSOR_SIZE);
     feature_bits.set(SIGNAL_HANDLER, MXNET_USE_SIGNAL_HANDLER);
@@ -127,6 +126,9 @@ LibInfo *LibInfo::getInstance() {
         m_inst = std::make_unique<LibInfo>();
     return m_inst.get();
 }
+bool LibInfo::cxx11_abi() {
+  return MXNET_GLIBCXX_USE_CXX11_ABI;
+}
 
 std::unique_ptr<LibInfo> LibInfo::m_inst = nullptr;
 
@@ -155,9 +157,7 @@ const std::vector<std::string> EnumNames::names = {
   "LAPACK",
   "MKLDNN",
   "OPENCV",
-  "CAFFE",
   "DIST_KVSTORE",
-  "CXX14",
   "INT64_TENSOR_SIZE",
   "SIGNAL_HANDLER",
   "DEBUG",

@@ -40,7 +40,7 @@ MXNET_REGISTER_API("_npi.broadcast_to")
   } else {
     param.shape = TShape(args[1].operator ObjectRef());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::BroadcastToParam>(&attrs);
 
@@ -91,7 +91,7 @@ MXNET_REGISTER_API("_npi.sum")
     param.initial = args[4].operator double();
   }
 
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
 
   SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
 
@@ -133,7 +133,7 @@ MXNET_REGISTER_API("_npi.mean")
     param.keepdims = args[3].operator bool();
   }
   param.initial = dmlc::optional<double>();
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
   int num_inputs = 1;
@@ -177,7 +177,7 @@ MXNET_REGISTER_API("_npi.prod")
   } else {
     param.initial = args[4].operator double();
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyReduceAxesParam>(&attrs);
   int num_inputs = 1;
@@ -213,7 +213,7 @@ MXNET_REGISTER_API("_npi.max")
   param.keepdims = args[2].operator bool();
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_inputs = 1;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyReduceAxesNoDTypeParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
@@ -244,7 +244,7 @@ MXNET_REGISTER_API("_npi.min")
   param.keepdims = args[2].operator bool();
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_inputs = 1;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyReduceAxesNoDTypeParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
@@ -275,7 +275,7 @@ MXNET_REGISTER_API("_npi.amax")
   param.keepdims = args[2].operator bool();
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_inputs = 1;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyReduceAxesNoDTypeParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
@@ -306,7 +306,7 @@ MXNET_REGISTER_API("_npi.amin")
   param.keepdims = args[2].operator bool();
   NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
   int num_inputs = 1;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyReduceAxesNoDTypeParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);

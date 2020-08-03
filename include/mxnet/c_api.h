@@ -253,6 +253,12 @@ MXNET_DLL int MXLoadLib(const char *path, unsigned verbose);
 MXNET_DLL int MXLibInfoFeatures(const struct LibFeature **libFeature, size_t *size);
 
 /*!
+ * \brief return whether the mxnet library is compiled with cxx11 abi
+ * \return whether mxnet is built with cxx11 abi
+ */
+MXNET_DLL int MXLibInfoCompiledWithCXX11ABI(bool* result);
+
+/*!
  * \brief Seed all global random number generators in mxnet.
  * \param seed the random number seed.
  * \return 0 when success, -1 when failure happens.
