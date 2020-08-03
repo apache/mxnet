@@ -72,3 +72,15 @@ def load(path, verbose=True):
     for op in dir(mx_sym_op):
         func = getattr(mx_sym_op, op)
         setattr(mx_sym, op, func)
+
+def compiled_with_cxx11_abi():
+    """Check if the library is compiled with cxx11 ABI.
+
+    Returns
+    -------
+    bool
+        Whether the library is compiled with cxx11 ABI.
+    """
+    ret = ctypes.c_bool()
+    check_call(_LIB.MXLibInfoCompiledWithCXX11ABI(ctypes.byref(ret)))
+    return ret.value

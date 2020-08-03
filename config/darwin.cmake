@@ -127,3 +127,4 @@ set(USE_INT64_TENSOR_SIZE OFF CACHE BOOL "Use int64_t to represent the total num
 set(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
 set(NCCL_ROOT "" CACHE BOOL "NCCL install path. Supports autodetection.")
 set(USE_NVTX ON CACHE BOOL "Build with NVTX support")
+set(USE_CXX11_ABI ON CACHE BOOL "Build with GLIBCXX_USE_CXX11_ABI")
