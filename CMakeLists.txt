@@ -299,6 +299,7 @@ if(USE_INTGEMM)
   include_directories(3rdparty/intgemm)
   #intgemm generates a config header based on AVX512 support in the compiler.
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/3rdparty/intgemm)
+  add_definitions(-DMXNET_USE_INTGEMM=1)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
