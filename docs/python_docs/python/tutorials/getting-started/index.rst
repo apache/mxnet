@@ -30,7 +30,7 @@ The following tutorials teach how to use MXNet.
 
    .. card::
       :title: What is NP on MXNet
-      :link: deepnumpy/index.html
+      :link: np/index.html
 
       What is NP on MXNet
 
@@ -63,7 +63,7 @@ The following tutorials teach how to use MXNet.
    :maxdepth: 2
 
    crash-course/index
-   deepnumpy/index
+   np/index
    to-mxnet/index
    gluon_from_experiment_to_deployment
    logistic_regression_explained.md

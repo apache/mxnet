@@ -235,8 +235,8 @@ void AggregateStats::DumpJson(std::ostream& os, int sort_by, int ascending) {
      << "    }" << std::endl
      << "," << std::endl
      << "    \"Unit\": {" << std::endl
-     << "        \"Time\": \"ms\"," << std::endl
-     << "        \"Memory\": \"kB\"" << std::endl
+     << R"(        "Time": "ms",)" << std::endl
+     << R"(        "Memory": "kB")" << std::endl
      << "    }" << std::endl
      << "}" << std::endl
      << std::flush;

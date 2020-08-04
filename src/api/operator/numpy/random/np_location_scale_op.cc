@@ -82,7 +82,7 @@ MXNET_REGISTER_API("_npi.gumbel")
     }
     num_inputs = 1;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::NumpyLocationScaleParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(),
                           &num_outputs, outputs);
@@ -137,7 +137,7 @@ MXNET_REGISTER_API("_npi.logistic")
     }
     num_inputs = 1;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::NumpyLocationScaleParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(),
                           &num_outputs, outputs);

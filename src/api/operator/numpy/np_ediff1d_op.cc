@@ -63,7 +63,7 @@ MXNET_REGISTER_API("_npi.ediff1d")
     num_inputs++;
   }
 
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::EDiff1DParam>(&attrs);
 

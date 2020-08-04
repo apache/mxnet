@@ -35,12 +35,8 @@
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
 #include <onnx-tensorrt/NvOnnxParser.h>
-#include <onnx-tensorrt/NvOnnxParserRuntime.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
-
-#include <onnx-tensorrt/PluginFactory.hpp>
-#include <onnx-tensorrt/plugin_common.hpp>
 
 using std::cout;
 using std::cerr;

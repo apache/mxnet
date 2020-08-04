@@ -115,10 +115,6 @@
 #define MXNET_USE_F16C MSHADOW_USE_F16C
 #endif
 
-#ifndef MXNET_USE_CAFFE
-#define MXNET_USE_CAFFE 0
-#endif
-
 #ifndef MXNET_USE_DIST_KVSTORE
 #define MXNET_USE_DIST_KVSTORE 0
 #endif
@@ -133,6 +129,12 @@
 
 #ifndef MXNET_USE_TVM_OP
 #define MXNET_USE_TVM_OP 0
+#endif
+
+#ifndef _GLIBCXX_USE_CXX11_ABI
+#define MXNET_GLIBCXX_USE_CXX11_ABI 0
+#else
+#define MXNET_GLIBCXX_USE_CXX11_ABI _GLIBCXX_USE_CXX11_ABI
 #endif
 
 namespace mxnet {
@@ -183,9 +185,7 @@ enum : unsigned {
   OPENCV,
 
   // Misc
-  CAFFE,
   DIST_KVSTORE,
-  CXX14,
   INT64_TENSOR_SIZE,
 
   // Signal handler to print stack traces on exceptions
@@ -210,6 +210,7 @@ struct LibInfo {
   const std::array<LibFeature, MAX_FEATURES>& getFeatures() {
     return m_lib_features;
   }
+  bool cxx11_abi();
  private:
   std::array<LibFeature, MAX_FEATURES> m_lib_features;
   static std::unique_ptr<LibInfo>  m_inst;

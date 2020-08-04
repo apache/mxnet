@@ -73,7 +73,7 @@ MXNET_REGISTER_API("_npi.pad")
     param.reflect_type = args[4].operator std::string();
   }
   attrs.op = op;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::NumpyPadParam>(&attrs);
   int num_inputs = 1;
   int num_outputs = 0;

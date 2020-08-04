@@ -26,6 +26,7 @@
 #include <dmlc/optional.h>
 #include <algorithm>
 #include <random>
+#include <utility>
 
 #include "../elemwise_op_common.h"
 #include "../../imperative/imperative_utils.h"
@@ -63,7 +64,7 @@ class ArrayHeap {
       }
     }
   }
-  ~ArrayHeap() {}
+  ~ArrayHeap() = default;
 
   /*
    * Remove term from index (this costs O(log m) steps)
@@ -417,8 +418,8 @@ static void RandomSample(size_t set_size,
     sampled_idxs.insert(distribution(generator));
   }
   out->clear();
-  for (auto it = sampled_idxs.begin(); it != sampled_idxs.end(); it++) {
-    out->push_back(*it);
+  for (size_t sampled_idx : sampled_idxs) {
+    out->push_back(sampled_idx);
   }
 }
 
@@ -528,9 +529,9 @@ static void GetNonUniformSample(const float* probability,
 struct neigh_list {
   std::vector<dgl_id_t> neighs;
   std::vector<dgl_id_t> edges;
-  neigh_list(const std::vector<dgl_id_t> &_neighs,
-             const std::vector<dgl_id_t> &_edges)
-    : neighs(_neighs), edges(_edges) {}
+  neigh_list(std::vector<dgl_id_t> _neighs,
+             std::vector<dgl_id_t> _edges)
+    : neighs(std::move(_neighs)), edges(std::move(_edges)) {}
 };
 
 /*
@@ -620,25 +621,25 @@ static void SampleSubgraph(const NDArray &csr,
     // First we push the size of neighbor vector
     neighbor_list.push_back(tmp_sampled_edge_list.size());
     // Then push the vertices
-    for (size_t i = 0; i < tmp_sampled_src_list.size(); ++i) {
-      neighbor_list.push_back(tmp_sampled_src_list[i]);
+    for (dgl_id_t & i : tmp_sampled_src_list) {
+      neighbor_list.push_back(i);
     }
     // Finally we push the edge list
-    for (size_t i = 0; i < tmp_sampled_edge_list.size(); ++i) {
-      neighbor_list.push_back(tmp_sampled_edge_list[i]);
+    for (dgl_id_t & i : tmp_sampled_edge_list) {
+      neighbor_list.push_back(i);
     }
     num_edges += tmp_sampled_src_list.size();
-    for (size_t i = 0; i < tmp_sampled_src_list.size(); ++i) {
+    for (dgl_id_t & i : tmp_sampled_src_list) {
       // If we have sampled the max number of vertices, we have to stop.
       if (sub_ver_mp.size() >= max_num_vertices)
         break;
       // We need to add the neighbor in the hashtable here. This ensures that
       // the vertex in the queue is unique. If we see a vertex before, we don't
       // need to add it to the queue again.
-      auto ret = sub_ver_mp.insert(tmp_sampled_src_list[i]);
+      auto ret = sub_ver_mp.insert(i);
       // If the sampled neighbor is inserted to the map successfully.
       if (ret.second)
-        sub_vers.emplace_back(tmp_sampled_src_list[i], cur_node_level + 1);
+        sub_vers.emplace_back(i, cur_node_level + 1);
     }
   }
   // Let's check if there is a vertex that we haven't sampled its neighbors.
@@ -960,8 +961,8 @@ static bool DGLSubgraphStorageType(const nnvm::NodeAttrs& attrs,
 
   bool success = true;
   *dispatch_mode = DispatchMode::kFComputeEx;
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    if (!type_assign(&(*out_attrs)[i], mxnet::kCSRStorage))
+  for (int & out_attr : *out_attrs) {
+    if (!type_assign(&out_attr, mxnet::kCSRStorage))
     success = false;
   }
   return success;
@@ -999,8 +1000,8 @@ static bool DGLSubgraphType(const nnvm::NodeAttrs& attrs,
   for (size_t i = 0; i < num_g; i++) {
     CHECK_EQ(in_attrs->at(i + 1), mshadow::kInt64);
   }
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    out_attrs->at(i) = in_attrs->at(0);
+  for (int & out_attr : *out_attrs) {
+    out_attr = in_attrs->at(0);
   }
   return true;
 }
@@ -1016,7 +1017,7 @@ class Bitmap {
  public:
   Bitmap(const dgl_id_t *vid_data, int64_t len): map(size) {
     for (int64_t i = 0; i < len; ++i) {
-      map[hash(vid_data[i])] = 1;
+      map[hash(vid_data[i])] = true;
     }
   }
 
@@ -1531,8 +1532,8 @@ static bool SubgraphCompactStorageType(const nnvm::NodeAttrs& attrs,
 
   bool success = true;
   *dispatch_mode = DispatchMode::kFComputeEx;
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    if (!type_assign(&(*out_attrs)[i], mxnet::kCSRStorage))
+  for (int & out_attr : *out_attrs) {
+    if (!type_assign(&out_attr, mxnet::kCSRStorage))
       success = false;
   }
   return success;
@@ -1570,11 +1571,11 @@ static bool SubgraphCompactShape(const nnvm::NodeAttrs& attrs,
 static bool SubgraphCompactType(const nnvm::NodeAttrs& attrs,
                                 std::vector<int> *in_attrs,
                                 std::vector<int> *out_attrs) {
-  for (size_t i = 0; i < in_attrs->size(); i++) {
-    CHECK_EQ(in_attrs->at(i), mshadow::kInt64);
+  for (int & in_attr : *in_attrs) {
+    CHECK_EQ(in_attr, mshadow::kInt64);
   }
-  for (size_t i = 0; i < out_attrs->size(); i++) {
-    out_attrs->at(i) = mshadow::kInt64;
+  for (int & out_attr : *out_attrs) {
+    out_attr = mshadow::kInt64;
   }
   return true;
 }

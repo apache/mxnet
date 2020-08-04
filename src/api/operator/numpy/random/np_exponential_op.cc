@@ -58,7 +58,7 @@ MXNET_REGISTER_API("_npi.exponential")
     inputs[0] = args[0].operator mxnet::NDArray*();
     num_inputs = 1;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::NumpyExponentialParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs,
                           &num_outputs, outputs);
