@@ -189,17 +189,7 @@ class NDArray {
     ptr_->Init(shape, this->dtype_);
     this->shape_ = shape;
   }
-  /*!
-   * \brief re-initialize the NDArray
-   */
-  inline void Init(const NDArrayStorageType stype, const mxnet::TShape &shape, int dtype) {
-    shape_ = shape;
-    dtype_ = dtype;
-    storage_type_ = stype;
-    reuse_ = false;
-    byte_offset_ = 0;
-    autograd_entry_ = nnvm::NodeEntry(nullptr);
-  }
+
   void InitDetached(const NDArray *src) {
     *this = *src;
     autograd_entry_ = nnvm::NodeEntry(nullptr);
@@ -1130,6 +1120,18 @@ class NDArray {
     /*! \brief destructor */
     ~Chunk();
   };  // struct Chunk
+
+  /*!
+   * \brief initialize the NDArray
+  */
+  inline void Init(const NDArrayStorageType stype, const mxnet::TShape &shape, int dtype) {
+    shape_ = shape;
+    dtype_ = dtype;
+    storage_type_ = stype;
+    reuse_ = false;
+    byte_offset_ = 0;
+    autograd_entry_ = nnvm::NodeEntry(nullptr);
+  }
 
   void SetTBlob() const;
 
