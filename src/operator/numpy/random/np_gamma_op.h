@@ -422,12 +422,14 @@ inline void GammaReparamBackwardImpl(const OpContext& ctx,
   size_t workspace_size =
       ReduceWorkspaceSize<ndim, DType>(s, igrad.shape_, req[0], ograd.shape_);
   // Convert samples to standard gamma
+  Kernel<StandarizeKernel<DType>, xpu>::Launch(
+        s, samples.Size(), samples.dptr<DType>(), scale);
   Tensor<xpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   Reduce<red::sum, ndim, DType, op::mshadow_op::mul, op::mshadow_op::gamma_implicit_grad>(
       s, igrad, req[0], workspace, ograd, alpha, samples);
   Kernel<StandarizeKernel<DType>, xpu>::Launch(
-        s, igrad.Size(), igrad.dptr<DType>(), scale);
+        s, igrad.Size(), igrad.dptr<DType>(), 1 / scale);
 }
 
 // Allow gamma sampling to be differentiable,

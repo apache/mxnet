@@ -4787,7 +4787,7 @@ def test_gamma_grad():
             self._beta = beta
 
         def hybrid_forward(self, F, a):
-            return F.np.random.gamma(a, 1.0, self._size) * self._beta
+            return F.np.random.gamma(a, size=self._size) * self._beta
 
     shapes = [
         # shape(alpha), shape(samples)
@@ -4816,16 +4816,12 @@ def test_gamma_grad():
             eps = (0.01 * param / (1.0 + param ** 0.5)).asnumpy()
             x = samples.asnumpy().astype('float64')
             # d(cdf(x;alpha,beta))/d(alpha)
-            cdf_alpha = (cdf(x, param.asnumpy() + eps) -
-                         cdf(x, param.asnumpy() - eps)) / (2 * eps)
+            cdf_alpha = (cdf(x, param.asnumpy() + eps, scale=b) -
+                         cdf(x, param.asnumpy() - eps, scale=b)) / (2 * eps)
             # d(cdf(x;alpha,beta))/d(x)
-            log_cdf_x = log_pdf(x, _np.ones_like(x) * a)
+            log_cdf_x = log_pdf(x, param.asnumpy(), scale=b)
             expected_grad = -cdf_alpha / _np.exp(log_cdf_x)
-            # print("*************")
-            # print(a)
-            # print(b)
-            # print(param.grad)
-            # print(expected_grad / b)
+            assert_almost_equal(expected_grad, param.grad.asnumpy(), rtol=1e-2, atol=1e-3)
 
 
 @with_seed()
