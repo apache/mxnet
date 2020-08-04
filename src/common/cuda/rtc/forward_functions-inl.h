@@ -403,7 +403,7 @@ __device__ inline DType less_equal(const DType a, const DType2 b) {
 }
 
 template <typename DType, typename DType2>
-__device__ inline bool np_equal(const DType a, const DType2 b) {
+__device__ inline bool_t np_equal(const DType a, const DType2 b) {
   using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
   const mixed_type real_a = a;
   const mixed_type real_b = b;
@@ -411,7 +411,7 @@ __device__ inline bool np_equal(const DType a, const DType2 b) {
 }
 
 template <typename DType, typename DType2>
-__device__ inline bool np_not_equal(const DType a, const DType2 b) {
+__device__ inline bool_t np_not_equal(const DType a, const DType2 b) {
   using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
   const mixed_type real_a = a;
   const mixed_type real_b = b;
@@ -419,7 +419,7 @@ __device__ inline bool np_not_equal(const DType a, const DType2 b) {
 }
 
 template <typename DType, typename DType2>
-__device__ inline bool np_greater(const DType a, const DType2 b) {
+__device__ inline bool_t np_greater(const DType a, const DType2 b) {
   using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
   const mixed_type real_a = a;
   const mixed_type real_b = b;
@@ -427,7 +427,7 @@ __device__ inline bool np_greater(const DType a, const DType2 b) {
 }
 
 template <typename DType, typename DType2>
-__device__ inline bool np_greater_equal(const DType a, const DType2 b) {
+__device__ inline bool_t np_greater_equal(const DType a, const DType2 b) {
   using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
   const mixed_type real_a = a;
   const mixed_type real_b = b;
@@ -435,7 +435,7 @@ __device__ inline bool np_greater_equal(const DType a, const DType2 b) {
 }
 
 template <typename DType, typename DType2>
-__device__ inline bool np_less(const DType a, const DType2 b) {
+__device__ inline bool_t np_less(const DType a, const DType2 b) {
   using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
   const mixed_type real_a = a;
   const mixed_type real_b = b;
@@ -443,7 +443,7 @@ __device__ inline bool np_less(const DType a, const DType2 b) {
 }
 
 template <typename DType, typename DType2>
-__device__ inline bool np_less_equal(const DType a, const DType2 b) {
+__device__ inline bool_t np_less_equal(const DType a, const DType2 b) {
   using mixed_type = typename type_util::mixed_type<DType, DType2>::type;
   const mixed_type real_a = a;
   const mixed_type real_b = b;
@@ -863,7 +863,7 @@ __device__ inline DType logical_not(const DType val) {
 }
 
 template <typename DType>
-__device__ inline bool np_logical_not(const DType val) {
+__device__ inline bool_t np_logical_not(const DType val) {
   return !static_cast<bool>(val);
 }
 
@@ -873,22 +873,22 @@ __device__ inline bool isnan(const DType val) {
 }
 
 template <typename DType>
-__device__ inline bool isinf(const DType val) {
+__device__ inline bool_t isinf(const DType val) {
   return util::isinf(val);
 }
 
 template <typename DType>
-__device__ inline bool isposinf(const DType val) {
+__device__ inline bool_t isposinf(const DType val) {
   return util::isinf(val) && (val > 0);
 }
 
 template <typename DType>
-__device__ inline bool isneginf(const DType val) {
+__device__ inline bool_t isneginf(const DType val) {
   return util::isinf(val) && (val < 0);
 }
 
 template <typename DType>
-__device__ inline bool isfinite(const DType val) {
+__device__ inline bool_t isfinite(const DType val) {
   return !op::isnan(val) && !op::isinf(val);
 }
 
@@ -896,7 +896,7 @@ __device__ inline bool isfinite(const DType val) {
 
 template <typename DType>
 __device__ inline DType bitwise_not(const DType a) {
-  if (type_util::is_same<DType, bool>::value) {
+  if (type_util::is_same<DType, bool_t>::value) {
     return !a;
   } else {
     return ~static_cast<int64>(a);

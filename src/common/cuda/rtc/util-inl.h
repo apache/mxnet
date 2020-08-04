@@ -45,9 +45,32 @@ using int64 = long long;
 #endif
 R"code(
 // bool and int8 need to be accumulated in index_t
+// but bool needs to be treated in the special way
+// for ops like bitwise_not
+struct bool_t {
+  index_t value;
+
+  __device__ inline bool_t(const index_t& v) : value(v) {}
+  __device__ inline bool_t(const volatile index_t& v) : value(v) {}
+  __device__ inline bool_t() : value(0) {}
+
+  __device__ inline operator index_t() const volatile { return value; }
+  __device__ inline bool_t& operator= (const index_t& v) {
+    value = v;
+    return *this;
+  }
+  __device__ inline volatile bool_t& operator= (const index_t& v) volatile {
+    value = v;
+    return *this;
+  }
+  __device__ inline bool_t& operator= (const volatile index_t& v) {
+    value = v;
+    return *this;
+  }
+};
 template<>
 struct AccType<bool> {
-  using type = index_t;
+  using type = bool_t;
 
   __device__ static inline type from(const bool& val) {
     return val;
@@ -101,11 +124,13 @@ template <> struct is_integral<int8>  : true_type {};
 template <> struct is_integral<int32> : true_type {};
 template <> struct is_integral<int64> : true_type {};
 template <> struct is_integral<bool>  : true_type {};
+template <> struct is_integral<bool_t>  : true_type {};
 
 // is_unsigned
 template <typename T> struct is_unsigned : false_type {};
 template <> struct is_unsigned<uint8> : true_type {};
 template <> struct is_unsigned<bool>  : true_type {};
+template <> struct is_unsigned<bool_t>  : true_type {};
 
 // is_same
 template <typename T, typename U>
@@ -177,6 +202,7 @@ struct mixed_type<float16, T, typename enable_if<is_integral<T>::value>::type> {
 template <typename T, typename U>
 struct mixed_type<T, U, typename enable_if<is_integral<T>::value &&
                                            is_integral<U>::value &&
+                                           !is_same<U, bool_t>::value &&
                                            sizeof(T) <= sizeof(U)>::type> {
   using type = U;
 };
@@ -184,8 +210,27 @@ struct mixed_type<T, U, typename enable_if<is_integral<T>::value &&
 template <typename T, typename U>
 struct mixed_type<U, T, typename enable_if<is_integral<T>::value &&
                                            is_integral<U>::value &&
+                                           !is_same<U, bool_t>::value &&
                                            sizeof(T) < sizeof(U)>::type> {
   using type = U;
+};
+
+template <typename T>
+struct mixed_type<T, bool_t, typename enable_if<is_integral<T>::value &&
+                                                sizeof(T) < sizeof(bool_t)>::type> {
+  using type = index_t;
+};
+
+template <typename T>
+struct mixed_type<bool_t, T, typename enable_if<is_integral<T>::value &&
+                                                sizeof(T) < sizeof(bool_t)>::type> {
+  using type = index_t;
+};
+
+template <typename T>
+struct mixed_type<T, bool_t, typename enable_if<is_integral<T>::value &&
+                                                sizeof(T) == sizeof(bool_t)>::type> {
+  using type = T;
 };
 
 }  // namespace type_util
