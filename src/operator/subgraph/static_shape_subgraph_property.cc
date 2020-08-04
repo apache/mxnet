@@ -30,22 +30,22 @@ namespace op {
  */
 class StaticShapeOpSelector: public SubgraphSelector {
  public:
-  virtual bool Select(const nnvm::Node &seed_node) {
+  bool Select(const nnvm::Node &seed_node) override {
     const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
     return !seed_node.is_variable() && infershape.count(seed_node.op()) &&
            !op_names_.count(seed_node.op()->name);
   }
 
-  virtual bool SelectInput(const nnvm::Node &cur_node, const nnvm::Node &input_node) {
+  bool SelectInput(const nnvm::Node &cur_node, const nnvm::Node &input_node) override {
     return Select(input_node);
   }
 
-  virtual bool SelectOutput(const nnvm::Node &cur_node, const nnvm::Node &output_node) {
+  bool SelectOutput(const nnvm::Node &cur_node, const nnvm::Node &output_node) override {
     return Select(output_node);
   }
 
   // Reject partitioning when subgraph contains only a single node
-  virtual std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) {
+  std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) override {
     if (candidates.size() == 1) {
       return std::vector<nnvm::Node*>();
     }
@@ -74,19 +74,19 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
   static SubgraphPropertyPtr Create() { return std::make_shared<StaticShapeSubgraphProperty>(); }
 
   // the criteria of selecting the subgraph nodes
-  virtual SubgraphSelectorPtr CreateSubgraphSelector() const {
+  SubgraphSelectorPtr CreateSubgraphSelector() const override {
     return std::make_shared<StaticShapeOpSelector>();
   }
 
   // create an nnvm node for a given subgraph with flags
-  virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                              std::vector<std::pair<std::string, std::string>> flags,
-                                             const int subgraph_id = 0) const {
+                                             const int subgraph_id = 0) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
     n->attrs.op = Op::Get("_CachedOp");
     n->attrs.name = "_CachedOp" + std::to_string(subgraph_id);
     n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
-    n->attrs.parsed = CachedOpPtr(new CachedOp(sym, flags));
+    n->attrs.parsed = std::make_shared<CachedOp>(sym, flags);
     return n;
   }
 };
