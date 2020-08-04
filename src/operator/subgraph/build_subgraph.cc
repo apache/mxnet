@@ -29,7 +29,7 @@
 #include <queue>
 
 #include "./subgraph_property.h"
-
+#include "mxnet/imperative.h"
 #define DEBUG_SUBGRAPH 0
 
 namespace nnvm {
@@ -66,11 +66,11 @@ void PrintNodeEntries(const std::vector<nnvm::NodeEntry*>& entries) {
  * \brief Given a MXNet computational graph, create an undirected graph from it.
  * \param g the MXNet computational graph
  * \param simple_nodes the nodes of undirected graph in top sorted order
- * \param control_flow_nodes the control flow nodes for recursive partitioning
+ * \param nodes_to_partition_inside the dynamic shape nodes that need to be partitioned recursively
  */
 void CreateSimpleGraph(const nnvm::Graph& g,
                        std::vector<BiDirectedNodePtr>* simple_nodes,
-                       std::vector<std::shared_ptr<nnvm::Node>>* control_flow_nodes) {
+                       std::vector<std::shared_ptr<nnvm::Node>>* nodes_to_partition_inside) {
   const auto& indexed_graph = g.indexed_graph();
   simple_nodes->reserve(indexed_graph.num_nodes());
   DFSVisit(g.outputs, [&](const nnvm::ObjectPtr& node) {
@@ -88,10 +88,12 @@ void CreateSimpleGraph(const nnvm::Graph& g,
         it->second.push_back(i);
       }
     }
-    // store control flow ops in control_flow_nodes
-    if (!node->is_variable() && (node->op()->name.compare("_while_loop") == 0
-        || node->op()->name.compare("_cond") == 0)) {
-      control_flow_nodes->emplace_back(node);
+    // store nodes to be partitioned recursively
+    const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
+    if (!node->is_variable() && !infershape.count(node->op()) && 
+      node->attrs.subgraphs.size() > 0) {
+      std::cout << node->op()->name << std::endl;
+      nodes_to_partition_inside->emplace_back(node);
     }
     simple_nodes->emplace_back(std::move(sn));
   });
@@ -859,8 +861,8 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
   // Create double directional graph for ease of finding subgraphs
   std::vector<BiDirectedNodePtr> simple_nodes;
   // Store all control flow ops in the graph for recursive partitioning
-  std::vector<std::shared_ptr<nnvm::Node>> control_flow_nodes;
-  CreateSimpleGraph(g, &simple_nodes, &control_flow_nodes);
+  std::vector<std::shared_ptr<nnvm::Node>> nodes_to_partition_inside;
+  CreateSimpleGraph(g, &simple_nodes, &nodes_to_partition_inside);
   std::vector<std::vector<BiDirectedNode*>> subgraph_nodes;
   std::vector<SubgraphSelectorV2Ptr> subgraph_selectors;
   FindSubgraphs(&g, *subg_prop, simple_nodes, &subgraph_nodes, &subgraph_selectors);
@@ -884,8 +886,8 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
   // Partition recursively for control flow ops
   if (subg_prop->HasAttr("recursive_partition")
       && subg_prop->GetAttr<bool>("recursive_partition")) {
-    for (size_t i = 0; i < control_flow_nodes.size(); i++) {
-      const auto &n = *control_flow_nodes[i];
+    for (size_t i = 0; i < nodes_to_partition_inside.size(); i++) {
+      const auto &n = *nodes_to_partition_inside[i];
       auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend("static_shape");
       const auto& subgraph_prop_list = backend->GetSubgraphProperties();
       for (size_t j = 0; j < n.attrs.subgraphs.size(); j++) {
@@ -895,6 +897,10 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
         subg_g.outputs = subg_sym->outputs;
         subg_g.attrs["mxnet_version"] = std::make_shared<nnvm::any>(
           static_cast<int>(MXNET_VERSION));
+        if (Imperative::Get()->is_np_shape()) {
+          subg_g.attrs["is_np_shape"] = std::make_shared<nnvm::any>(
+              static_cast<int>(Imperative::Get()->is_np_shape()));
+        }
         // pass flags to subgraph node
         if (g.HasAttr("flags")) {
           subg_g.attrs["flags"] = std::make_shared<nnvm::any>(

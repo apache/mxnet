@@ -2668,7 +2668,7 @@ class Symbol(SymbolBase):
         val_list = []
         for flag in flags:
             key, val = flag[0], flag[1]
-            if key == ['static_alloc', 'static_shape']:
+            if key in ['static_alloc', 'static_shape']:
                 key_list.append(key)
                 if val:
                     val_list.append('true')
