@@ -90,7 +90,7 @@ void CreateSimpleGraph(const nnvm::Graph& g,
     }
     // store nodes to be partitioned recursively
     const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
-    if (!node->is_variable() && !infershape.count(node->op()) && 
+    if (!node->is_variable() && !infershape.count(node->op()) &&
       node->attrs.subgraphs.size() > 0) {
       std::cout << node->op()->name << std::endl;
       nodes_to_partition_inside->emplace_back(node);
