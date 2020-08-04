@@ -92,7 +92,6 @@ void CreateSimpleGraph(const nnvm::Graph& g,
     const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
     if (!node->is_variable() && !infershape.count(node->op()) &&
       node->attrs.subgraphs.size() > 0) {
-      std::cout << node->op()->name << std::endl;
       nodes_to_partition_inside->emplace_back(node);
     }
     simple_nodes->emplace_back(std::move(sn));
