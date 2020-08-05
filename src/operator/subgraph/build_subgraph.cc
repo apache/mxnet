@@ -430,7 +430,7 @@ void SortEntries(const std::unordered_map<const nnvm::NodeEntry*, size_t>& entry
 }
 
 /*!
- * \brief Given a subgraph, find the output entries of a subgraph.
+ * \brief Given a subgraph, find the input entries of a subgraph.
  * \param g pointer to the whole graph
  * \param simple_nods vector of simple nodes in top sorted order
  * \param subgraph_nodes vector of pointers of simples of a subgraph.
