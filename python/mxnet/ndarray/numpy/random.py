@@ -732,7 +732,7 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         ctx = str(ctx)
     if dtype is not None and not isinstance(dtype, str):
         dtype = np.dtype(dtype).name
-    return _api_internal.gamma(shape, scale, size, ctx, dtype, out)
+    return _api_internal.gamma(shape, 1.0, size, ctx, dtype, out) * scale
 
 
 def beta(a, b, size=None, dtype=None, ctx=None):
