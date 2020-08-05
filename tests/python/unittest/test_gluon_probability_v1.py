@@ -540,7 +540,7 @@ def test_gluon_negative_binomial_v1():
     # Test log_prob
     for shape, hybridize, use_logit in itertools.product(shapes, [True, False], [True, False]):
         n = np.random.randint(1, 10, size=shape).astype('float32')
-        prob = np.random.uniform(low=0.1, size=shape).astype('float32')
+        prob = np.random.uniform(low=0.2, high=0.6, size=shape).astype('float32')
         sample = np.random.randint(0, 10, size=shape).astype('float32')
         param = prob
         if use_logit:
@@ -559,7 +559,7 @@ def test_gluon_negative_binomial_v1():
         for func in ['mean', 'variance']:
             for use_logit in [True, False]:
                 n = np.random.randint(1, 10, size=shape).astype('float32')
-                prob = np.random.uniform(low=0.1, size=shape).astype('float32')
+                prob = np.random.uniform(low=0.2, high=0.6, size=shape).astype('float32')
                 net = TestNegativeBinomial(func, use_logit)
                 param = prob
                 if use_logit:
