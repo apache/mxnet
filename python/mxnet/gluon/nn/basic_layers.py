@@ -154,7 +154,7 @@ class Dense(HybridBlock):
     r"""Just your regular densely-connected NN layer.
 
     `Dense` implements the operation:
-    `output = activation(dot(input, weight) + bias)`
+    `output = activation(dot(input, weight.T) + bias)`
     where `activation` is the element-wise activation function
     passed as the `activation` argument, `weight` is a weights matrix
     created by the layer, and `bias` is a bias vector created by the layer
