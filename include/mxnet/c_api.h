@@ -256,7 +256,7 @@ MXNET_DLL int MXLibInfoFeatures(const struct LibFeature **libFeature, size_t *si
  * \brief return whether the mxnet library is compiled with cxx11 abi
  * \return whether mxnet is built with cxx11 abi
  */
-MXNET_DLL int MXLibInfoCompiledWithCXX11ABI(bool* result);
+MXNET_DLL int MXLibInfoCompiledWithCXX11ABI(int* result);
 
 /*!
  * \brief Seed all global random number generators in mxnet.

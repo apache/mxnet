@@ -51,4 +51,4 @@ def test_is_enabled_not_existing():
 
 def test_cxx11_abi():
     abi = mx.library.compiled_with_cxx11_abi()
-    assert abi or not abi
+    assert abi in (-1, 0, 1)
