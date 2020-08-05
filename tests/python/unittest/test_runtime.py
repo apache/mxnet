@@ -50,5 +50,5 @@ def test_is_enabled_not_existing():
         features.is_enabled('this girl is on fire')
 
 def test_cxx11_abi():
-    abi = mx.library.compiled_with_cxx11_abi()
+    abi = mx.library.compiled_with_gcc_cxx11_abi()
     assert abi in (-1, 0, 1)
