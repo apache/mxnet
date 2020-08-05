@@ -75,6 +75,22 @@ MXNET_DLL int MXRemoveSubgraphPropertyOpNames(const char* prop_name);
 MXNET_DLL int MXRemoveSubgraphPropertyOpNamesV2(const char* prop_name);
 
 
+/*!
+ * \brief Get the value of an environment variable as seen by the backend.
+ * \param name The name of the environment variable
+ * \param value The returned value of the environment variable
+ */
+MXNET_DLL int MXGetEnv(const char* name,
+                       const char** value);
+
+/*!
+ * \brief Set the value of an environment variable from the backend.
+ * \param name The name of the environment variable
+ * \param value The desired value to set the environment variable `name`
+ */
+MXNET_DLL int MXSetEnv(const char* name,
+                       const char* value);
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

@@ -23,7 +23,7 @@
  * \brief subgraph operator implementation library file
  */
 
-#include <math.h>
+#include <cmath>
 #include <iostream>
 #include <algorithm>
 #include "lib_api.h"
@@ -68,8 +68,7 @@ MXReturnValue jsonPass(const std::string& in_graph, const std::string** out_grap
   JsonVal nodes = json_val.map[JsonVal("nodes")];
 
   // loop over nodes
-  for(int i=0; i<nodes.list.size(); i++) {
-    JsonVal node = nodes.list[i];
+  for(auto node : nodes.list) {
     // get the op name
     std::string op = node.map[JsonVal("op")].str;
     // get node ID inputs to op

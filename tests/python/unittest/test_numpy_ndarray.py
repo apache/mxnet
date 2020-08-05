@@ -1369,3 +1369,55 @@ def test_dlpack(dtype, size):
     same(a_np+1, b)
     same(a_np+2, c)
     same(a_np+2, a_copy)
+
+@use_np
+@pytest.mark.parametrize('np_array', [
+    # ordinary numpy array
+    _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32"),
+    # 0-dim
+    _np.array((1, )).reshape(()),
+    # 0-size
+    _np.array(()).reshape((1, 0, 2)),
+])
+@pytest.mark.parametrize('zero_copy', [False, True])
+def test_from_numpy(np_array, zero_copy):
+    # Test zero_copy
+    mx_array = mx.npx.from_numpy(np_array, zero_copy=zero_copy)
+    mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+
+def test_from_numpy_exception():
+    np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
+    mx_array = mx.npx.from_numpy(np_array)
+    with pytest.raises(ValueError):
+        np_array[2, 1] = 0
+
+    mx_array[2, 1] = 100
+    mx.test_utils.assert_almost_equal(np_array, mx_array.asnumpy())
+    np_array = _np.array([[1, 2], [3, 4], [5, 6]]).transpose()
+    assert not np_array.flags["C_CONTIGUOUS"]
+    with pytest.raises(ValueError):
+        mx_array = mx.nd.from_numpy(np_array)
+
+    np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
+    mx_array = mx.npx.from_numpy(np_array, zero_copy=False)
+    np_array[2, 1] = 0 # no error
+
+def test_mixed_array_types():
+    np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
+    mx_array = mx.np.ones((3, 1))
+    assert_almost_equal(mx_array + np_array, 1+np_array)
+
+def test_mixed_array_types_share_memory():
+    np_array = _np.array([[1, 2], [3, 4], [5, 6]], dtype="float32")
+    mx_array = mx.npx.from_numpy(np_array)
+    assert _np.may_share_memory(np_array, mx_array)
+    assert _np.shares_memory(np_array, mx_array)
+
+    np_array_slice = np_array[:2]
+    mx_array_slice = mx_array[1:]
+    assert _np.may_share_memory(np_array_slice, mx_array)
+    assert _np.shares_memory(np_array_slice, mx_array)
+
+    mx_pinned_array = mx_array.as_in_ctx(mx.cpu_pinned(0))
+    assert not _np.may_share_memory(np_array, mx_pinned_array)
+    assert not _np.shares_memory(np_array, mx_pinned_array)

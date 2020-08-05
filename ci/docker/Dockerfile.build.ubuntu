@@ -53,9 +53,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         protobuf-compiler \
         libprotobuf-dev \
         clang-6.0 \
-        clang-tidy-6.0 \
         python-yaml \
         clang-10 \
+        clang-tidy-10 \
         g++ \
         g++-8 \
         intel-mkl-2020.0-088 \
@@ -68,9 +68,7 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         libzmq3-dev \
         liblapack-dev \
         libopencv-dev \
-        # Caffe
-        caffe-cpu \
-        libcaffe-cpu-dev \
+        libxml2-dev \
         # BytePS
         numactl \
         libnuma-dev \
@@ -80,23 +78,11 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         python3-pip \
         python3-nose \
         python3-nose-timer \
-        # Scala
-        openjdk-8-jdk \
-        openjdk-8-jre \
-        maven \
-        scala \
-        # Clojure
-        clojure \
-        leiningen \
-        # R
-        r-base-core \
-        r-cran-devtools \
-        libcairo2-dev \
-        libxml2-dev \
         ## Documentation
         doxygen \
         pandoc \
         ## Build-dependencies for ccache 3.7.9
+        autoconf \
         gperf \
         libb2-dev \
         libzstd-dev && \
@@ -114,21 +100,15 @@ RUN cd /usr/local/src && \
     cd /usr/local/src && \
     rm -rf ccache
 
+# RAT License Checker tool
+RUN cd /usr/local/src && \
+    wget https://archive.apache.org/dist/creadur/apache-rat-0.13/apache-rat-0.13-bin.tar.gz && \
+    tar xf apache-rat-0.13-bin.tar.gz
+
 # Python & cmake
 COPY install/requirements /work/
 RUN python3 -m pip install cmake==3.16.6 && \
     python3 -m pip install -r /work/requirements
-
-# Only OpenJDK 8 supported at this time..
-RUN update-java-alternatives -s java-1.8.0-openjdk-amd64
-
-# julia not available on 18.04
-COPY install/ubuntu_julia.sh /work/
-RUN /work/ubuntu_julia.sh
-
-# MXNetJS nightly needs emscripten for wasm
-COPY install/ubuntu_emscripten.sh /work/
-RUN /work/ubuntu_emscripten.sh
 
 ARG USER_ID=0
 COPY install/docker_filepermissions.sh /work/
@@ -152,6 +132,30 @@ RUN cd /usr/local && \
     cd thrust && \
     git checkout 1.9.8
 
+# Install TensorRT
+# We need to redeclare ARG due to
+# https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
+ARG BASE_IMAGE
+RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
+    apt-get update && \
+    if [ ${SHORT_CUDA_VERSION} = 10.0 ]; then \
+        TRT_VERSION="7.0.0-1+cuda10.0"; \
+        TRT_MAJOR_VERSION=7; \
+    elif [ ${SHORT_CUDA_VERSION} = 10.1 ]; then \
+        TRT_VERSION="6.0.1-1+cuda10.1"; \
+        TRT_MAJOR_VERSION=6; \
+    elif [ ${SHORT_CUDA_VERSION} = 10.2 ]; then \
+        TRT_VERSION="7.0.0-1+cuda10.2"; \
+        TRT_MAJOR_VERSION=7; \
+    else \
+        echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.ubuntu"; \
+        exit 1; \
+    fi && \
+    apt-get install -y libnvinfer${TRT_MAJOR_VERSION}=${TRT_VERSION} \
+                       libnvinfer-dev=${TRT_VERSION} \
+                       libnvinfer-plugin${TRT_MAJOR_VERSION}=${TRT_VERSION} \
+                       libnvinfer-plugin-dev=${TRT_VERSION} && \
+    rm -rf /var/lib/apt/lists/*
 
 FROM gpu as gpuwithcudaruntimelibs
 # Special case because the CPP-Package requires the CUDA runtime libs

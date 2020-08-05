@@ -225,8 +225,8 @@ static void MarkQuantizedNodes(const Graph& src,
     while (!task_queue.empty()) {
       const auto& node = task_queue.front();
       task_queue.pop();
-      for (size_t i = 0; i < node->inputs.size(); ++i) {
-        const auto& input = node->inputs[i].node;
+      for (auto & i : node->inputs) {
+        const auto& input = i.node;
         auto it = support_quantize_nodes.find(input);
         if (it != support_quantize_nodes.end()) {
           it->second = it->second | kFromInput;
@@ -243,8 +243,7 @@ static void MarkQuantizedNodes(const Graph& src,
       const auto& node = task_queue.front();
       task_queue.pop();
       const auto& outputs = node_output_map[node];
-      for (size_t i = 0; i < outputs.size(); ++i) {
-        const auto& output = outputs[i];
+      for (const auto & output : outputs) {
         auto it = support_quantize_nodes.find(output);
         if (it != support_quantize_nodes.end()) {
           it->second = it->second | kFromOutput;

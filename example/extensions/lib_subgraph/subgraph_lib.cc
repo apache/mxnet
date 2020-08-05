@@ -23,9 +23,10 @@
  * \brief subgraph operator implementation library file
  */
 
-#include <math.h>
+#include <cmath>
 #include <iostream>
 #include <algorithm>
+#include <utility>
 #include "lib_api.h"
 
 using namespace mxnet::ext;
@@ -70,8 +71,7 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
   std::vector<void*> to_free;
 
   // loop over nodes
-  for(int i=0; i<nodes.list.size(); i++) {
-    JsonVal node = nodes.list[i];
+  for(auto node : nodes.list) {
     // get the op name
     std::string op = node.map[JsonVal("op")].str;
     // get node ID inputs to op
@@ -85,7 +85,7 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
       // get input tensor based on node ID inputs from data storage
       MXTensor &input = data[node_inputs.list[0].list[0].num];
       // create temporary storage
-      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, MXContext::CPU(0), kDefaultStorage);
+      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, MXContext::CPU(0), kDefaultStorage);  // NOLINT
       // save allocated ptr to free later
       to_free.push_back(tmp.data_ptr);
       // execute log operator
@@ -96,7 +96,7 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
       // get input tensor based on node ID inputs from data storage
       MXTensor &input = data[node_inputs.list[0].list[0].num];
       // create temporary storage
-      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, MXContext::CPU(0), kDefaultStorage);
+      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, MXContext::CPU(0), kDefaultStorage);  // NOLINT
       // save allocated ptr to free later
       to_free.push_back(tmp.data_ptr);
       // execute exp operator 
@@ -107,7 +107,7 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
       std::cout << "Error! Unsupported op '" << op << "' found in myExecutor";
       // free allocated temporary storage
       for (void* ptr : to_free)
-        free(ptr);
+        free(ptr);  // NOLINT
       return MX_FAIL;
     }
   }
@@ -130,7 +130,7 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
 
   // free allocated temporary storage
   for (void* ptr : to_free) {
-    free(ptr);
+    free(ptr);  // NOLINT
   }
   
   return MX_SUCCESS;
@@ -138,9 +138,9 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
 
 class MyStatefulOp : public CustomStatefulOp {
  public:
-  explicit MyStatefulOp(const std::string& sym,
+  explicit MyStatefulOp(std::string  sym,
                         const std::unordered_map<std::string, std::string>& attrs)
-    : subgraph_sym(sym), attrs_(attrs) {
+    : subgraph_sym(std::move(sym)), attrs_(attrs) {
     for (auto kv : attrs) {
       std::cout << "subgraphOp attributes: " << kv.first << " ==> " << kv.second << std::endl;
     }
@@ -300,20 +300,20 @@ class MySelector : public CustomOpSelector {
     }
     return false;
   }
-  virtual bool Select(int nodeID) {
+  bool Select(int nodeID) override {
     return chooseNode(nodeID);
   }
-  virtual bool SelectInput(int nodeID, int input_nodeID) {
+  bool SelectInput(int nodeID, int input_nodeID) override {
     return chooseNode(input_nodeID);
   }
-  virtual bool SelectOutput(int nodeID, int output_nodeID) {
+  bool SelectOutput(int nodeID, int output_nodeID) override {
     return chooseNode(output_nodeID);
   }
   virtual void Filter(std::vector<int>& candidates,
                       std::vector<int>& keep) {
     keep.insert(keep.end(), candidates.begin(), candidates.end());
   }
-  virtual void Reset() {}
+  void Reset() override {}
  private:
   std::string graph_json;
   JsonVal nodes;

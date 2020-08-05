@@ -15,18 +15,9 @@
    specific language governing permissions and limitations
    under the License.
 
-What is NP on MXNet
-=====================
+gluon.metric
+============
 
-NP on MXNet provides a NumPy-like interface with extensions
-for deep learning. It contains two modules, ``mxnet.np``, which is similar to
-NumPy, and ``mxnet.npx``, which contains extended operators that are useful for deep
-learning. 
-
-If this is your first time using NP on MXNet, we recommend that you review the following topics in this section:
-
-.. toctree::
-   :maxdepth: 1
-
-   cheat-sheet
-   deepnumpy-vs-numpy
+.. automodule:: mxnet.gluon.metric
+    :members:
+    :autosummary:

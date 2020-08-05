@@ -278,7 +278,7 @@ def compile_unix_tensorrt_gpu(lib_name) {
         ws('workspace/build-tensorrt') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
+            utils.docker_run('ubuntu_gpu_cu102', 'build_ubuntu_gpu_tensorrt', false)
             utils.pack_lib(lib_name, mx_tensorrt_lib)
           }
         }
@@ -1228,7 +1228,7 @@ def sanity_rat_license() {
       node(NODE_LINUX_CPU) {
         ws('workspace/sanity-rat') {
           utils.init_git()
-          utils.docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
+          utils.docker_run('ubuntu_cpu', 'test_rat_check', false)
         }
       }
     }]
@@ -1250,7 +1250,6 @@ def misc_test_docker_cache_build() {
     node(NODE_LINUX_CPU) {
       ws('workspace/docker_cache') {
         utils.init_git()
-        sh "python3 ./ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} --no-publish"
         sh "cd ci && docker-compose -f docker/docker-compose.yml pull && docker-compose -f docker/docker-compose.yml build --parallel"
       }
     }

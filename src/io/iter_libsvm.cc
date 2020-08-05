@@ -66,11 +66,11 @@ struct LibSVMIterParam : public dmlc::Parameter<LibSVMIterParam> {
 
 class LibSVMIter: public SparseIIterator<DataInst> {
  public:
-  LibSVMIter() {}
-  virtual ~LibSVMIter() {}
+  LibSVMIter() = default;
+  ~LibSVMIter() override = default;
 
   // intialize iterator loads data in
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     param_.InitAllowUnknown(kwargs);
     CHECK_EQ(param_.data_shape.ndim(), 1) << "dimension of data_shape is expected to be 1";
     CHECK_GT(param_.num_parts, 0) << "number of parts should be positive";
@@ -97,7 +97,7 @@ class LibSVMIter: public SparseIIterator<DataInst> {
     }
   }
 
-  virtual void BeforeFirst() {
+  void BeforeFirst() override {
     data_parser_->BeforeFirst();
     if (label_parser_.get() != nullptr) {
       label_parser_->BeforeFirst();
@@ -108,7 +108,7 @@ class LibSVMIter: public SparseIIterator<DataInst> {
     end_ = false;
   }
 
-  virtual bool Next() {
+  bool Next() override {
     if (end_) return false;
     while (data_ptr_ >= data_size_) {
       if (!data_parser_->Next()) {
@@ -144,16 +144,16 @@ class LibSVMIter: public SparseIIterator<DataInst> {
     return true;
   }
 
-  virtual const DataInst &Value(void) const {
+  const DataInst &Value() const override {
     return out_;
   }
 
-  virtual const NDArrayStorageType GetStorageType(bool is_data) const {
+  const NDArrayStorageType GetStorageType(bool is_data) const override {
     if (is_data) return kCSRStorage;
     return param_.label_shape.Size() > 1 ? kCSRStorage : kDefaultStorage;
   }
 
-  virtual const mxnet::TShape GetShape(bool is_data) const {
+  const mxnet::TShape GetShape(bool is_data) const override {
     if (is_data) return param_.data_shape;
     return param_.label_shape;
   }
