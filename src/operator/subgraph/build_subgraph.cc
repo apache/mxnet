@@ -885,12 +885,10 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
   // Partition recursively for control flow ops
   if (subg_prop->HasAttr("recursive_partition")
       && subg_prop->GetAttr<bool>("recursive_partition")) {
-    for (size_t i = 0; i < nodes_to_partition_inside.size(); i++) {
-      const auto &n = *nodes_to_partition_inside[i];
-      auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend("static_shape");
-      const auto& subgraph_prop_list = backend->GetSubgraphProperties();
-      for (size_t j = 0; j < n.attrs.subgraphs.size(); j++) {
-        auto &subg_sym = n.attrs.subgraphs[j];
+    auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend("static_shape");
+    const auto& subgraph_prop_list = backend->GetSubgraphProperties();
+    for (auto& n : nodes_to_partition_inside) {
+      for (const auto& subg_sym : n->attrs.subgraphs) {
         // convert symbol to graph
         nnvm::Graph subg_g;
         subg_g.outputs = subg_sym->outputs;
