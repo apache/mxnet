@@ -180,38 +180,30 @@ REGISTER_OP(_custom_subgraph_op)
 
 const std::vector<std::string> op_names({"exp","log"});
 
-MXReturnValue mySupportedOps(const std::string& json,
+MXReturnValue mySupportedOps(const mxnet::ext::Graph* graph,
                              std::vector<int>* ids,
                              const std::unordered_map<std::string, std::string>& options) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }
-  //convert json string to json object
-  JsonVal json_val = JsonVal::parse(json);
-  //get nodes list
-  JsonVal nodes = json_val.map[JsonVal("nodes")];
 
   //loop over nodes
-  for(int i=0; i<nodes.list.size(); i++) {
-    JsonVal node = nodes.list[i];
-    JsonVal op = node.map[JsonVal("op")];
+  for(int i=0; i<graph->nodes.size(); i++) {
+    mxnet::ext::Node *node = graph->nodes[i];
 
     //get shape/type if available
     std::string shape;
     int dtype = -1;
-    if(node.map.find(JsonVal("attrs")) != node.map.end()) {
-      JsonVal attrs = node.map[JsonVal("attrs")];
-      if(attrs.map.find(JsonVal("shape")) != attrs.map.end()) 
-        shape = attrs.map[JsonVal("shape")].str;
-      if(attrs.map.find(JsonVal("dtype")) != attrs.map.end())
-        dtype = std::stoi(attrs.map[JsonVal("dtype")].str);
-    }
+    if(node->attrs.count("shape") > 0)
+      shape = node->attrs["shape"];
+    if(node->attrs.count("dtype") > 0)
+      dtype = std::stoi(node->attrs["dtype"]);
 
     //check if op dtype is float, and if option was specified to require float types
     if((dtype == kFloat32 && options.count("reqFloat") > 0) || options.count("reqFloat") == 0) {
-      //check if op is in whitelist
-      if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
-        // found op in whitelist, set value to -1 to include op in any subgraph
+      //check if op is in allowlist
+      if(std::find(op_names.begin(),op_names.end(),node->op.c_str()) != op_names.end()) {
+        // found op in allowlist, set value to -1 to include op in any subgraph
         ids->at(i) = -1;
       }
     }
@@ -219,7 +211,7 @@ MXReturnValue mySupportedOps(const std::string& json,
   return MX_SUCCESS;
 }
 
-MXReturnValue myReviewSubgraph(const std::string& json, int subgraph_id, bool* accept,
+MXReturnValue myReviewSubgraph(const mxnet::ext::Graph *subgraph, int subgraph_id, bool* accept,
                                const std::unordered_map<std::string, std::string>& options,
                                std::unordered_map<std::string, std::string>* attrs,
                                const std::unordered_map<std::string, MXTensor>& args,
@@ -263,38 +255,30 @@ REGISTER_PARTITIONER(myProp)
 
 class MySelector : public CustomOpSelector {
  public:
-  MySelector(const std::string& json,
+  MySelector(const mxnet::ext::Graph *graph,
              const std::unordered_map<std::string, std::string>& options) :
-    graph_json(json), options_(options) {
+    graph_(graph), options_(options) {
     for (auto kv : options) {
       std::cout << "selector options: " << kv.first
                 << " ==> " << kv.second << std::endl;
     }
-    //convert json string to json object
-    JsonVal json_val = JsonVal::parse(json);
-    //get nodes list
-    nodes = json_val.map[JsonVal("nodes")];
   }
   bool chooseNode(int nodeID) {
-    JsonVal node = nodes.list[nodeID];
-    JsonVal op = node.map[JsonVal("op")];
+    mxnet::ext::Node *node = graph_->nodes[nodeID];
 
     //get shape/type if available
     std::string shape;
     int dtype = -1;
-    if(node.map.find(JsonVal("attrs")) != node.map.end()) {
-      JsonVal attrs = node.map[JsonVal("attrs")];
-      if(attrs.map.find(JsonVal("shape")) != attrs.map.end()) 
-        shape = attrs.map[JsonVal("shape")].str;
-      if(attrs.map.find(JsonVal("dtype")) != attrs.map.end())
-        dtype = std::stoi(attrs.map[JsonVal("dtype")].str);
-    }
+    if(node->attrs.count("shape") > 0)
+      shape = node->attrs["shape"];
+    if(node->attrs.count("dtype") > 0)
+      dtype = std::stoi(node->attrs["dtype"]);
 
     //check if op dtype is float, and if option was specified to require float types
     if((dtype == kFloat32 && options_.count("reqFloat") > 0) || options_.count("reqFloat") == 0) {
-      //check if op is in whitelist
-      if(std::find(op_names.begin(),op_names.end(),op.str.c_str()) != op_names.end()) {
-        // found op in whitelist, return true to include op subgraph
+      //check if op is in allowlist
+      if(std::find(op_names.begin(),op_names.end(),node->op.c_str()) != op_names.end()) {
+        // found op in allowlist, return true to include op subgraph
 	return true;
       }
     }
@@ -315,14 +299,13 @@ class MySelector : public CustomOpSelector {
   }
   void Reset() override {}
  private:
-  std::string graph_json;
-  JsonVal nodes;
+  const mxnet::ext::Graph *graph_;
   const std::unordered_map<std::string, std::string> options_;
 };
 
-MXReturnValue createSelector(const std::string& json, CustomOpSelector** sel_inst,
+MXReturnValue createSelector(const mxnet::ext::Graph *graph, CustomOpSelector** sel_inst,
                              const std::unordered_map<std::string, std::string>& options) {
-  *sel_inst = new MySelector(json, options);
+  *sel_inst = new MySelector(graph, options);
   std::cout << "Info: selector created" << std::endl;
   return MX_SUCCESS;
 }
@@ -333,15 +316,13 @@ REGISTER_PARTITIONER(mySelect)
 .setReviewSubgraph("strategy1", myReviewSubgraph);
 
 /* \brief a basic pass that adds a new input for subgraph ops */
-MXReturnValue addInputPass(const std::string& in_graph, const std::string** out_graph,
+MXReturnValue addInputPass(mxnet::ext::Graph *graph,
 			   const std::unordered_map<std::string, std::string>& options,
 			   const std::unordered_map<std::string, MXTensor>& args,
 			   const std::unordered_map<std::string, MXTensor>& aux,
 			   const PassResource& res) {
-  // convert graph from JSON string to Graph/Node data structure
-  Graph *g = Graph::fromString(in_graph);
   //find node with '_custom_subgraph_op' op type
-  for(Node* n : g->nodes) {
+  for(Node* n : graph->nodes) {
     if(n->op.compare("_custom_subgraph_op") == 0) {
       //set extra input
       n->attrs[MX_STR_EXTRA_INPUTS] = std::to_string(1);
@@ -352,8 +333,8 @@ MXReturnValue addInputPass(const std::string& in_graph, const std::string** out_
       input->name = input_name;
       input->op = "null";
       //add a new node in graph
-      g->nodes.push_back(input);
-      g->inputs.push_back(input);
+      graph->nodes.push_back(input);
+      graph->inputs.push_back(input);
       //connect new input to node
       input->outputs.push_back({n,(int)(n->inputs.size())});
       //connect node to new input
@@ -363,8 +344,6 @@ MXReturnValue addInputPass(const std::string& in_graph, const std::string** out_
     }
   }
 
-  //convert back to JSON string from Graph/Node
-  *out_graph = new std::string(g->toString());
   return MX_SUCCESS;
 }
 

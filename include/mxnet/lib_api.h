@@ -1272,7 +1272,7 @@ class CustomOp {
 };
 
 /*! \brief Custom Pass Create function template */
-typedef MXReturnValue (*graphPass_t)(const std::string& in_graph, const std::string** out_graph,
+typedef MXReturnValue (*graphPass_t)(mxnet::ext::Graph* graph,
                                      const std::unordered_map<std::string, std::string>& options,
                                      const std::unordered_map<std::string, MXTensor>& args,
                                      const std::unordered_map<std::string, MXTensor>& aux,
@@ -1298,13 +1298,13 @@ class CustomPass {
 };
 
 /*! \brief Custom Subgraph Create function template */
-typedef MXReturnValue (*supportedOps_t)(const std::string& json, std::vector<int>* ids,
+typedef MXReturnValue (*supportedOps_t)(const mxnet::ext::Graph *graph, std::vector<int>* ids,
                                         const std::unordered_map<std::string,
                                                                  std::string>& options);
-typedef MXReturnValue (*createSelector_t)(const std::string& json, CustomOpSelector** sel_inst,
+typedef MXReturnValue (*createSelector_t)(const mxnet::ext::Graph *graph, CustomOpSelector** sel_inst,
                                           const std::unordered_map<std::string,
                                                                    std::string>& options);
-typedef MXReturnValue (*reviewSubgraph_t)(const std::string& json, int subgraph_id, bool* accept,
+typedef MXReturnValue (*reviewSubgraph_t)(const mxnet::ext::Graph *subgraph, int subgraph_id, bool* accept,
                                           const std::unordered_map<std::string,
                                                                    std::string>& options,
                                           std::unordered_map<std::string, std::string>* attrs,
@@ -2056,7 +2056,7 @@ extern "C" {
   MX_INT_RET _partCallSupportedOps(mxnet::ext::supportedOps_t supportedOps, const char *json,
                                    int num_ids, int *ids, const char* const* opt_keys,
                                    const char* const* opt_vals, int num_opts) {
-    std::string subgraph_json(json);
+    mxnet::ext::Graph *graph = mxnet::ext::Graph::fromString(json);
     // create map of options from list
     std::unordered_map<std::string, std::string> opts;
     for (int i = 0; i < num_opts; i++)
@@ -2065,7 +2065,7 @@ extern "C" {
     // create array of subgraph IDs for operator support
     std::vector<int> _ids(num_ids, -2);
     // call user's supportedOps function
-    mxnet::ext::MXReturnValue retval = supportedOps(subgraph_json, &_ids, opts);
+    mxnet::ext::MXReturnValue retval = supportedOps(graph, &_ids, opts);
     if (!retval) return retval;
 
     // copy bools in ids to ints
@@ -2079,7 +2079,7 @@ extern "C" {
   MX_INT_RET _partCallCreateSelector(mxnet::ext::createSelector_t createSelector, const char *json,
                                      void** selector, const char* const* opt_keys,
                                      const char* const* opt_vals, int num_opts) {
-    std::string symbol_json(json);
+    mxnet::ext::Graph *graph = mxnet::ext::Graph::fromString(json);
     // create map of options from list
     std::unordered_map<std::string, std::string> opts;
     for (int i = 0; i < num_opts; i++)
@@ -2090,7 +2090,7 @@ extern "C" {
     mxnet::ext::CustomOpSelector** sel_ptr = reinterpret_cast<mxnet::ext::CustomOpSelector**>(selector);
 
     // call user's createSelector function
-    return createSelector(symbol_json, sel_ptr, opts);
+    return createSelector(graph, sel_ptr, opts);
   }
 
   /*! \brief returns status of calling select function from library */
@@ -2152,7 +2152,7 @@ extern "C" {
                                      const int* aux_dims, const int* aux_types,
                                      const size_t* aux_IDs, const char* const* aux_dev_type,
                                      const int* aux_dev_id) {
-    std::string subgraph_json(json);
+    mxnet::ext::Graph *subgraph = mxnet::ext::Graph::fromString(json);
     bool accept_bool = false;
     // create map of attributes from list
     std::unordered_map<std::string, std::string> opts;
@@ -2185,7 +2185,7 @@ extern "C" {
     // attributes to set on subgraph node
     std::unordered_map<std::string, std::string> attrs;
 
-    mxnet::ext::MXReturnValue retval = reviewSubgraph(subgraph_json, subgraph_id, &accept_bool,
+    mxnet::ext::MXReturnValue retval = reviewSubgraph(subgraph, subgraph_id, &accept_bool,
                                                       opts, &attrs, args, aux);
     if (!retval) return retval;
 
@@ -2227,7 +2227,7 @@ extern "C" {
 
   /*! \brief returns status of calling graph pass function from library */
   MX_INT_RET _passCallGraphPass(mxnet::ext::graphPass_t graphPass, const char *json,
-                                char** graph, const char* const* opt_keys,
+                                char** out_graph, const char* const* opt_keys,
                                 const char* const* opt_vals, int num_opts,
                                 const char* pass_name, const char* const* arg_names, int num_args,
                                 void* const* arg_data, const int64_t* const* arg_shapes,
@@ -2239,8 +2239,7 @@ extern "C" {
                                 const size_t* aux_IDs, const char* const* aux_dev_type,
                                 const int* aux_dev_id, mxnet::ext::nd_malloc_t nd_malloc,
                                 const void* nd_alloc) {
-    std::string graph_json(json);
-    const std::string* out_graph = nullptr;
+    mxnet::ext::Graph *graph = mxnet::ext::Graph::fromString(json);
     // create map of attributes from list
     std::unordered_map<std::string, std::string> opts;
     for (int i = 0; i < num_opts; i++)
@@ -2271,17 +2270,11 @@ extern "C" {
 
     std::unordered_map<std::string, mxnet::ext::MXTensor> new_args, new_aux;
     mxnet::ext::PassResource res(&new_args, &new_aux, nd_malloc, nd_alloc);
-    mxnet::ext::MXReturnValue retval = graphPass(graph_json, &out_graph, opts, args, aux, res);
+    mxnet::ext::MXReturnValue retval = graphPass(graph, opts, args, aux, res);
     if (!retval) return retval;
 
-    if (out_graph == nullptr) {
-      std::cout << "Error calling graph pass '" << pass_name
-                << "' returned out_graph string is null" << std::endl;
-      return mxnet::ext::MX_FAIL;
-    }
-    *graph = static_cast<char*>(malloc((out_graph->length()+1) * sizeof(char)));
-    out_graph->copy(*graph, out_graph->size()+1);
-    delete out_graph;
+    std::string *tmp = new std::string(graph->toString());
+    *out_graph = const_cast<char*>(tmp->c_str());
     return retval;
   }
 

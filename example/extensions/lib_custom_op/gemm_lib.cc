@@ -198,8 +198,6 @@ class MyStatefulGemm : public CustomStatefulOp {
     return backward(attrs_, inputs, outputs, op_res);
   }
 
-  ~MyStatefulGemm() = default;
-
  private:
   int count;
   const std::unordered_map<std::string, std::string> attrs_;
