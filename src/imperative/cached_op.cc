@@ -817,9 +817,7 @@ OpStatePtr CachedOp::Forward(
 
   OpStatePtr op_state;
   try {
-    if (config_.is_dynamic || CheckDynamicShapeExists(default_ctx, inputs, true)) {
-      config_.is_dynamic = true;
-      config_.static_alloc = false;
+    if (config_.is_dynamic) {
       op_state = DynamicForward(default_ctx, inputs, outputs, true);
     } else if (config_.static_alloc) {
       op_state = StaticForward(default_ctx, inputs, outputs);
