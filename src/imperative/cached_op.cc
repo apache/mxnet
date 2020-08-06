@@ -818,6 +818,7 @@ OpStatePtr CachedOp::Forward(
   OpStatePtr op_state;
   try {
     if (config_.is_dynamic) {
+      config_.static_alloc = false;
       op_state = DynamicForward(default_ctx, inputs, outputs, true);
     } else if (config_.static_alloc) {
       op_state = StaticForward(default_ctx, inputs, outputs);
