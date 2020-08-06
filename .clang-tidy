@@ -18,7 +18,7 @@
 # The checks defined here will be run and will display by default as warnings.
 Checks: >
     -*, cppcoreguidelines-* clang-analyzer-*, modernize-*,
-    performance-faster-string-find,
+    performance-faster-string-find, performance-for-range-copy,
     performance-implicit-conversion-in-loop, performance-inefficient-algorithm,
     performance-inefficient-string-concatenation, performance-trivially-destructible,
     performance-inefficient-vector-operation, performance-move-const-arg,

@@ -30,6 +30,8 @@
 
 #include "./subgraph_property.h"
 #include "mxnet/imperative.h"
+#include "mxnet/base.h"
+
 #define DEBUG_SUBGRAPH 0
 
 namespace nnvm {
@@ -890,21 +892,14 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
     for (auto& n : nodes_to_partition_inside) {
       for (const auto& subg_sym : n->attrs.subgraphs) {
         // convert symbol to graph
-        nnvm::Graph subg_g;
-        subg_g.outputs = subg_sym->outputs;
-        subg_g.attrs["mxnet_version"] = std::make_shared<nnvm::any>(
-          static_cast<int>(MXNET_VERSION));
-        if (Imperative::Get()->is_np_shape()) {
-          subg_g.attrs["is_np_shape"] = std::make_shared<nnvm::any>(
-              static_cast<int>(Imperative::Get()->is_np_shape()));
-        }
+        nnvm::Graph subg_g = Symbol2Graph(*subg_sym);
         // pass flags to subgraph node
         if (g.HasAttr("flags")) {
           subg_g.attrs["flags"] = std::make_shared<nnvm::any>(
             g.GetAttr<std::vector<std::pair<std::string, std::string>>>("flags"));
         }
         // for each subgraph node in control flow op, call BuildSubgraph recursively
-        for (auto property : subgraph_prop_list) {
+        for (const auto property : subgraph_prop_list) {
           subg_g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
           subg_g = BuildSubgraph(std::move(subg_g));
           subg_g.attrs.erase("subgraph_property");

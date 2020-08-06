@@ -532,6 +532,9 @@ inline std::ostream& operator<<(std::ostream &out, const Context &ctx) {
   return out;
 }
 
+// convert nnvm symbol to a nnvm graph.
+nnvm::Graph Symbol2Graph(const nnvm::Symbol &s);
+
 // describe op registration point
 #define STRINGIZE_DETAIL(x) #x
 #define STRINGIZE(x) STRINGIZE_DETAIL(x)
