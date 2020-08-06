@@ -50,6 +50,7 @@ DMLC_REGISTER_PARAMETER(CTCLossOpParam);
 
 NNVM_REGISTER_OP(CTCLoss)
 .add_alias("ctc_loss")
+.add_alias("_npx_ctc_loss")
 .add_alias("_contrib_CTCLoss")
 .add_alias("_contrib_ctc_loss")
 .describe(R"code(Connectionist Temporal Classification Loss.

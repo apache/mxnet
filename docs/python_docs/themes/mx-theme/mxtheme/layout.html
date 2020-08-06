@@ -49,6 +49,7 @@
 
     .dropdown-caret {
         width: 18px;
+        height: 54px;
     }
 
     .dropdown-caret-path {
@@ -67,10 +68,12 @@
     '_static/feedback.css',
 ] %}
 
-    {%- block header %}
-        <script type="text/javascript" src="{{ pathto('_static/sphinx_materialdesign_theme.js', 1) }} "></script>
-        <script type="text/javascript" src="{{ pathto('_static/feedback.js', 1) }}"></script>
-    {% endblock %}
+{% set script_files = script_files + [
+    '_static/sphinx_materialdesign_theme.js'
+  ]
+%}
+
+{%- block header %}{% endblock %}
 {%- block relbar1 %}{% endblock %}
 {%- block relbar2 %}{% include "relations.html" %}{% endblock %}
 {%- block sidebar2 %}{% endblock %}

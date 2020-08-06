@@ -192,11 +192,11 @@ def test_parameter_str():
 
     net = Net()
     lines = str(net.collect_params()).splitlines()
-    
+
     assert 'dense0.weight' in lines[0]
     assert '(10, 5)' in lines[0]
     assert 'float32' in lines[0]
-    
+
 
 @with_seed()
 def test_collect_parameters():
@@ -259,7 +259,8 @@ def test_hybrid_sequential_unique_internals():
 
 
 @with_seed()
-def test_symbol_block(tmpdir):
+@pytest.mark.parametrize('compute_before_cast', [True, False])
+def test_symbol_block(tmpdir, compute_before_cast):
     model = nn.HybridSequential()
     model.add(nn.Dense(128, activation='tanh'))
     model.add(nn.Dropout(0.5))
@@ -309,10 +310,14 @@ def test_symbol_block(tmpdir):
     ctx = mx.cpu(0)
 
     net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx, root=tmp)
+    if compute_before_cast:
+        # Compute before casting to catch bugs where symbol dtype isn't casted correctly GH-18843
+        net_fp32.initialize()
+        net_fp32(mx.nd.zeros((1,3,224,224), ctx=ctx))
     net_fp32.cast('float64')
     net_fp32.hybridize()
     data = mx.nd.zeros((1,3,224,224), dtype='float64', ctx=ctx)
-    net_fp32.forward(data)
+    net_fp32(data)
     sym_file, params_file = net_fp32.export(tmpfile, 0)
 
     # 2.a Load the saved model and verify if all the params are loaded correctly.
@@ -1119,23 +1124,26 @@ def test_embedding():
     check_embedding_large_input(False)
 
 @with_seed()
-def test_export():
+def test_export(tmpdir):
+    tmpfile = os.path.join(str(tmpdir), 'gluon')
     ctx = mx.context.current_context()
     model = gluon.model_zoo.vision.resnet18_v1(
-        ctx=ctx, pretrained=True)
+        ctx=ctx, pretrained=False)
+    model.initialize()
     model.hybridize()
     data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out = model(data)
 
-    symbol_filename, params_filename = model.export('gluon')
-    assert symbol_filename == 'gluon-symbol.json'
-    assert params_filename == 'gluon-0000.params'
+    symbol_filename, params_filename = model.export(tmpfile)
+    assert symbol_filename == tmpfile+'-symbol.json'
+    assert params_filename == tmpfile+'-0000.params'
 
 @with_seed()
 def test_import():
     ctx = mx.context.current_context()
     net1 = gluon.model_zoo.vision.resnet18_v1(
-        ctx=ctx, pretrained=True)
+        ctx=ctx, pretrained=False)
+    net1.initialize()
     net1.hybridize()
     data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out1 = net1(data)
@@ -1440,7 +1448,9 @@ def test_req():
 
 @with_seed()
 def test_save_load(tmpdir):
-    net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True, root=str(tmpdir))
+    net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=False, root=str(tmpdir))
+    net.initialize()
+    net(mx.nd.ones((1,3,224,224)))
     net.save_parameters(os.path.join(str(tmpdir), 'test_save_load.params'))
 
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
@@ -1598,17 +1608,19 @@ def test_zero_grad():
                     _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
 
 
-def check_hybrid_static_memory(**kwargs):
+@with_seed()
+@pytest.mark.parametrize('static_alloc', [False, True])
+@pytest.mark.parametrize('static_shape', [False, True])
+def test_hybrid_static_memory(static_alloc, static_shape):
+    if static_shape and not static_alloc:
+        pytest.skip()
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
     x.attach_grad()
 
-    net1 = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
-    net2 = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
-    net2.hybridize(**kwargs)
-    net1(x)
-    net2(x)
+    net = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=False, ctx=mx.context.current_context())
+    net.initialize()
+    net(x)
 
     def test(net, x):
         with mx.autograd.record():
@@ -1619,23 +1631,25 @@ def check_hybrid_static_memory(**kwargs):
 
         return y, grads
 
-    y1, grads1 = test(net1, x)
-    y2, grads2 = test(net2, x)
+    y1, grads1 = test(net, x)
+    net.hybridize(static_alloc=static_alloc, static_shape=static_shape)
+    y2, grads2 = test(net, x)
 
     assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
     for key in grads1:
         assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-4)
 
-@with_seed()
-def test_hybrid_static_memory():
-    check_hybrid_static_memory()
-    check_hybrid_static_memory(static_alloc=True)
-    check_hybrid_static_memory(static_alloc=True, static_shape=True)
 
-def check_hybrid_static_memory_switching(**kwargs):
+@with_seed()
+@pytest.mark.parametrize('static_alloc', [False, True])
+@pytest.mark.parametrize('static_shape', [False, True])
+def test_hybrid_static_memory_switching(static_alloc, static_shape):
+    if static_shape and not static_alloc:
+        pytest.skip()
     net = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
-    net.hybridize(**kwargs)
+        1, 18, pretrained=False, ctx=mx.context.current_context())
+    net.initialize()
+    net.hybridize(static_alloc=static_alloc, static_shape=static_shape)
 
     x = mx.nd.random.uniform(shape=(4, 3, 32, 32))
     net(x)
@@ -1648,12 +1662,6 @@ def check_hybrid_static_memory_switching(**kwargs):
         y = net(x)
         y.backward()
     mx.nd.waitall()
-
-@with_seed()
-def test_hybrid_static_memory_switching():
-    check_hybrid_static_memory_switching()
-    check_hybrid_static_memory_switching(static_alloc=True)
-    check_hybrid_static_memory_switching(static_alloc=True, static_shape=True)
 
 @with_seed()
 def test_hook():
@@ -1734,7 +1742,7 @@ def test_op_hook_output_names():
     model.add(mx.gluon.nn.AvgPool1D())
     model.initialize()
     model.hybridize()
-    check_name(model, ['hybridsequential_avgpool1d0_fwd_data', 'hybridsequential_avgpool1d0_fwd_output'], 
+    check_name(model, ['hybridsequential_avgpool1d0_fwd_data', 'hybridsequential_avgpool1d0_fwd_output'],
                expected_opr_names=["Pooling"], monitor_all=True)
 
     # stack two layers and test
@@ -1850,7 +1858,8 @@ def test_sparse_hybrid_block():
 
 def test_hybrid_static_memory_recording():
     net = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
+        1, 18, pretrained=False, ctx=mx.context.current_context())
+    net.initialize()
     net.hybridize(static_alloc=True)
 
     x = mx.nd.random.uniform(shape=(1, 3, 32, 32))

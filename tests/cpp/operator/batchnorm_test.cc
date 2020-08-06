@@ -277,7 +277,7 @@ class BatchNormValidator : public test::op::Validator<DType, AccReal> {
   typedef test::op::Validator<DType, AccReal> Super;
 
   /*! \brief Only static functions in this class */
-  BatchNormValidator() = delete;
+  BatchNormValidator() = delete;  // NOLINT
 
   /*! \brief Check batch norm output - 1D */
   static void checkBatchNorm1D(const TBlob *blob) {
@@ -566,10 +566,9 @@ static const test::op::kwargs_t nfs_ugs_kwargs_nocudnn = {
 
 #if !DISABLE_VALIDATION
 static bool isUGS(const test::op::kwargs_t& kwargs) {
-  for (test::op::kwargs_t::const_iterator i = kwargs.begin(),
-         e = kwargs.end(); i != e; ++i) {
-    if (!i->first.compare("use_global_stats")) {
-      return i->second.compare("True") == 0;
+  for (const auto & kwarg : kwargs) {
+    if (!kwarg.first.compare("use_global_stats")) {
+      return kwarg.second.compare("True") == 0;
     }
   }
   return false;
@@ -725,8 +724,8 @@ static test::op::OpInfoPair<OperatorProp1, OperatorProp2, OperatorExecutor> test
 
   size_t thisCount = 0;
 
-  typedef typename OperatorExecutor::DataType DType;
-  typedef typename OperatorExecutor::AccRealType AccReal;
+  using DType = typename OperatorExecutor::DataType;
+  using AccReal = typename OperatorExecutor::AccRealType;
 
   do {
     const bool isLast = thisCount == cycleCount - 1;
@@ -1288,8 +1287,8 @@ static void testSaveAndLoad(const std::vector<size_t>& dims,
 TEST(BATCH_NORM, TestChannelAxisSaveAndLoad) {
   std::cout << std::endl << std::flush;
 
-  typedef float DType;
-  typedef float AccReal;
+  using DType = float;
+  using AccReal = float;
 
   const std::vector<std::vector<DType>> myData =
     { { 1.0f, 1.0f, 1.0f, 1.0f },
@@ -1346,8 +1345,8 @@ static void runChannelAxisTest(
   const size_t numberOfPasses = 5
 
 ) {
-  typedef float DType;
-  typedef float AccReal;
+  using DType = float;
+  using AccReal = float;
 
   size_t spatialSize = 1;
   for (size_t x = 1, n = shape.size(); x < n; ++x) {

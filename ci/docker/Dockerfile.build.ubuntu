@@ -53,9 +53,9 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         protobuf-compiler \
         libprotobuf-dev \
         clang-6.0 \
-        clang-tidy-6.0 \
         python-yaml \
         clang-10 \
+        clang-tidy-10 \
         g++ \
         g++-8 \
         intel-mkl-2020.0-088 \
@@ -139,15 +139,22 @@ ARG BASE_IMAGE
 RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     apt-get update && \
     if [ ${SHORT_CUDA_VERSION} = 10.0 ]; then \
-        apt-get install -y "libnvinfer-dev=5.1.5-1+cuda10.0"; \
+        TRT_VERSION="7.0.0-1+cuda10.0"; \
+        TRT_MAJOR_VERSION=7; \
     elif [ ${SHORT_CUDA_VERSION} = 10.1 ]; then \
-        apt-get install -y "libnvinfer-dev=5.1.5-1+cuda10.1"; \
+        TRT_VERSION="6.0.1-1+cuda10.1"; \
+        TRT_MAJOR_VERSION=6; \
     elif [ ${SHORT_CUDA_VERSION} = 10.2 ]; then \
-        apt-get install -y "libnvinfer-dev=6.0.1-1+cuda10.2"; \
+        TRT_VERSION="7.0.0-1+cuda10.2"; \
+        TRT_MAJOR_VERSION=7; \
     else \
         echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.ubuntu"; \
         exit 1; \
     fi && \
+    apt-get install -y libnvinfer${TRT_MAJOR_VERSION}=${TRT_VERSION} \
+                       libnvinfer-dev=${TRT_VERSION} \
+                       libnvinfer-plugin${TRT_MAJOR_VERSION}=${TRT_VERSION} \
+                       libnvinfer-plugin-dev=${TRT_VERSION} && \
     rm -rf /var/lib/apt/lists/*
 
 FROM gpu as gpuwithcudaruntimelibs
