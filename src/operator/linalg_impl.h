@@ -77,7 +77,7 @@ void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2
                              const Tensor<cpu, 2, DType>& C, DType alpha, DType beta, \
                              bool tA, bool tB, Stream<cpu> *s) { \
   check_gemm(A, B, C, alpha, beta, tA, tB); \
-  cblas_##fname(CblasRowMajor, (tA ? CblasTrans : CblasNoTrans), (tB ? CblasTrans : CblasNoTrans), \
+  cblas_##fname##64_(CblasRowMajor, (tA ? CblasTrans : CblasNoTrans), (tB ? CblasTrans : CblasNoTrans), \
                 C.size(0), C.size(1), (tA ? A.size(0) : A.size(1)), alpha, \
                 A.dptr_, A.stride_, B.dptr_, B.stride_, beta, C.dptr_, C.stride_); \
 }
@@ -101,7 +101,7 @@ void linalg_gemm_axis<cpu, DType>(const Tensor<cpu, 3, DType>& A, const Tensor<c
                                   bool tA, bool tB, Stream<cpu> *s) { \
   linalg_check_batch_size(A.size(1), B.size(1), C.size(1)); \
   for (index_t i = 0; i < A.size(1); ++i) { \
-     cblas_##fname(CblasRowMajor, (tA ? CblasTrans : CblasNoTrans), \
+     cblas_##fname##64_(CblasRowMajor, (tA ? CblasTrans : CblasNoTrans), \
                    (tB ? CblasTrans : CblasNoTrans), \
                    C.size(0), C.size(2), (tA ? A.size(0) : A.size(2)), alpha, \
                    A.dptr_+i*A.stride_, A.size(1)*A.stride_, \
@@ -571,7 +571,7 @@ template<> inline \
 void linalg_trsm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2, DType>& B, \
                  DType alpha, bool rightside, bool lower, bool transpose, Stream<cpu> *s) { \
   check_trsm(A, B, alpha, rightside, lower, transpose); \
-  cblas_##fname(CblasRowMajor, (rightside ? CblasRight : CblasLeft), \
+  cblas_##fname##64_(CblasRowMajor, (rightside ? CblasRight : CblasLeft), \
                 (lower ? CblasLower : CblasUpper), (transpose ? CblasTrans : CblasNoTrans), \
                 CblasNonUnit, B.size(0), B.size(1), alpha, A.dptr_, \
                 A.stride_, B.dptr_, B.stride_); \
@@ -663,7 +663,7 @@ template<> inline \
 void linalg_trmm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2, DType>& B, \
                  DType alpha, bool rightside, bool lower, bool transpose, Stream<cpu> *s) { \
   check_trmm(A, B, alpha, rightside, lower, transpose); \
-  cblas_##fname(CblasRowMajor, (rightside ? CblasRight : CblasLeft), \
+  cblas_##fname##64_(CblasRowMajor, (rightside ? CblasRight : CblasLeft), \
                 (lower ? CblasLower : CblasUpper), (transpose ? CblasTrans : CblasNoTrans), \
                 CblasNonUnit, B.size(0), B.size(1), alpha, A.dptr_, \
                 A.stride_, B.dptr_, B.stride_); \
@@ -949,7 +949,7 @@ void linalg_syrk<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                              const Tensor<cpu, 2, DType>& B, DType alpha, \
                              DType beta, bool tA, Stream<cpu> *s) { \
   check_syrk(A, B, alpha, beta, tA); \
-  cblas_##fname(CblasRowMajor, CblasLower, (tA ? CblasTrans : CblasNoTrans), \
+  cblas_##fname##64_(CblasRowMajor, CblasLower, (tA ? CblasTrans : CblasNoTrans), \
                 B.size(0), (tA ? A.size(0) : A.size(1)), alpha, \
                 A.dptr_, A.stride_, beta, B.dptr_, B.stride_); \
 }
