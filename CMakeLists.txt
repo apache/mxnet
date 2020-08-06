@@ -14,7 +14,7 @@ if(CMAKE_CROSSCOMPILING)
   set(__CMAKE_CROSSCOMPILING_OVERRIDE ON)
 endif()
 
-project(mxnet C CXX)
+project(mxnet VERSION ${ver_major}.${ver_minor}.${ver_patch} LANGUAGES C CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS ON)  # GNU extensions used by src/operator/random/shuffle_op.cc
@@ -111,8 +111,6 @@ if(USE_TVM_OP)
   add_definitions(-DMXNET_USE_TVM_OP=1)
 endif()
 
-message(STATUS "CMake version '${CMAKE_VERSION}' using generator '${CMAKE_GENERATOR}'")
-project(${PROJECT_NAME} VERSION ${ver_major}.${ver_minor}.${ver_patch} LANGUAGES C CXX)
 if(USE_CUDA)
   cmake_minimum_required(VERSION 3.13.2)  # CUDA 10 (Turing) detection available starting 3.13.2
   include(CheckLanguage)
