@@ -32,18 +32,18 @@
 using namespace mxnet::ext;
 
 /* function to execute log operator on floats */
-void myLog(MXTensor &in, MXTensor &out) {
-  float* inp = in.data<float>();
-  float* outp = out.data<float>();
-  for (int64_t i = 0; i < in.size(); i++) {
+void myLog(MXTensor *in, MXTensor *out) {
+  float* inp = in->data<float>();
+  float* outp = out->data<float>();
+  for (int64_t i = 0; i < in->size(); i++) {
     outp[i] = logf(inp[i]);
   }
 }
 /* function to execute exp operator on floats */
-void myExp(MXTensor &in, MXTensor &out) {
-  float* inp = in.data<float>();
-  float* outp =out.data<float>();
-  for (int64_t i = 0; i < in.size(); i++) {
+void myExp(MXTensor *in, MXTensor *out) {
+  float* inp = in->data<float>();
+  float* outp =out->data<float>();
+  for (int64_t i = 0; i < in->size(); i++) {
     outp[i] = expf(inp[i]);
   }
 }
@@ -55,14 +55,10 @@ void myExp(MXTensor &in, MXTensor &out) {
  */
 MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
                          std::vector<MXTensor>* outputs,
-                         const std::string& subgraph_sym) {
-  std::cout << "Info: subgraph symbol is: " << std::endl;
-  std::cout << subgraph_sym << std::endl;
+                         mxnet::ext::Graph *subgraph) {
+  std::cout << "Info: subgraph is: " << std::endl;
+  subgraph->print();
 
-  // convert json string to json object
-  JsonVal json_val = JsonVal::parse(subgraph_sym);
-  // get nodes list
-  JsonVal nodes = json_val.map[JsonVal("nodes")];
   //counter for inputs
   int input_cnt = 0;
   // temporary tensor storage
@@ -71,40 +67,40 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
   std::vector<void*> to_free;
 
   // loop over nodes
-  for(auto node : nodes.list) {
-    // get the op name
-    std::string op = node.map[JsonVal("op")].str;
-    // get node ID inputs to op
-    JsonVal node_inputs = node.map[JsonVal("inputs")];
-    
+  for(int i=0; i<subgraph->size(); i++) {
+    mxnet::ext::Node* node = subgraph->getNode(i);
     // handle each op type
-    if (op.compare("null") == 0) {
-      // null is an input data to the subgraph, add to data storage
-      data.push_back(inputs->at(input_cnt++));
-    } else if (op.compare("log") == 0) {
+    if (node->op.compare("null") == 0) {
+      // set tensor for this input to the subgraph
+      node->tensor = &inputs->at(input_cnt++);
+    } else if (node->op.compare("log") == 0) {
       // get input tensor based on node ID inputs from data storage
-      MXTensor &input = data[node_inputs.list[0].list[0].num];
+      MXTensor *input = node->inputs.at(0).node->tensor;
       // create temporary storage
-      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, MXContext::CPU(0), kDefaultStorage);  // NOLINT
+      MXTensor tmp(malloc(input->size()*4), input->shape, input->dtype, 0, MXContext::CPU(0), kDefaultStorage);  // NOLINT
       // save allocated ptr to free later
       to_free.push_back(tmp.data_ptr);
       // execute log operator
-      myLog(input,tmp);
+      myLog(input,&tmp);
       // add output tensor to data storage
       data.push_back(tmp);
-    } else if (op.compare("exp") == 0) {
+      // set tensor for this node so we can read it later
+      node->tensor = &data.back();
+    } else if (node->op.compare("exp") == 0) {
       // get input tensor based on node ID inputs from data storage
-      MXTensor &input = data[node_inputs.list[0].list[0].num];
+      MXTensor *input = node->inputs.at(0).node->tensor;
       // create temporary storage
-      MXTensor tmp(malloc(input.size()*4), input.shape, input.dtype, 0, MXContext::CPU(0), kDefaultStorage);  // NOLINT
+      MXTensor tmp(malloc(input->size()*4), input->shape, input->dtype, 0, MXContext::CPU(0), kDefaultStorage);  // NOLINT
       // save allocated ptr to free later
       to_free.push_back(tmp.data_ptr);
       // execute exp operator 
-      myExp(input,tmp);
+      myExp(input,&tmp);
       // add output tensor to data storage
       data.push_back(tmp);
+      // set tensor for this node so we can read it later
+      node->tensor = &data.back();
     } else {
-      std::cout << "Error! Unsupported op '" << op << "' found in myExecutor";
+      std::cout << "Error! Unsupported op '" << node->op << "' found in myExecutor";
       // free allocated temporary storage
       for (void* ptr : to_free)
         free(ptr);  // NOLINT
@@ -112,18 +108,16 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
     }
   }
   
-  // get list of outputs from subgraph
-  JsonVal heads = json_val.map[JsonVal("heads")];
   // copy all operator results to outputs of subgraph
-  for (int j = 0; j < heads.list.size(); j++) {
+  for (int j = 0; j < subgraph->outputs.size(); j++) {
     // get computed result
-    MXTensor &result = data[heads.list[0].list[0].num];
+    MXTensor *result = subgraph->outputs[j].node->tensor;
     // get output tensor to pass to MX
     MXTensor &out = outputs->at(j);
     float *out_data = out.data<float>();
-    float *res_data = result.data<float>();
+    float *res_data = result->data<float>();
     // loop and copy data
-    for (int64_t i = 0; i < result.size(); i++) {
+    for (int64_t i = 0; i < result->size(); i++) {
       out_data[i] = res_data[i];
     }
   }
@@ -138,12 +132,13 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
 
 class MyStatefulOp : public CustomStatefulOp {
  public:
-  explicit MyStatefulOp(std::string  sym,
+  explicit MyStatefulOp(std::string json,
                         const std::unordered_map<std::string, std::string>& attrs)
-    : subgraph_sym(std::move(sym)), attrs_(attrs) {
+    : attrs_(attrs) {
     for (auto kv : attrs) {
       std::cout << "subgraphOp attributes: " << kv.first << " ==> " << kv.second << std::endl;
     }
+    subgraph_ = mxnet::ext::Graph::fromString(json);
   }
 
   MXReturnValue Forward(std::vector<MXTensor>* inputs,
@@ -152,11 +147,11 @@ class MyStatefulOp : public CustomStatefulOp {
     if(attrs_.count(MX_STR_EXTRA_INPUTS) > 0 && std::stoi(attrs_.at(MX_STR_EXTRA_INPUTS)) > 0)
       std::cout << "forward::extra_inputs(" << attrs_.at(MX_STR_EXTRA_INPUTS) << ")::inputs ["
 		<< inputs->size() << "]" << std::endl;
-    return myExecutor(inputs, outputs, subgraph_sym);
+    return myExecutor(inputs, outputs, subgraph_);
   }
 
  private:
-  const std::string subgraph_sym;
+  mxnet::ext::Graph *subgraph_;
   const std::unordered_map<std::string, std::string> attrs_;
 };
 
@@ -188,16 +183,16 @@ MXReturnValue mySupportedOps(const mxnet::ext::Graph* graph,
   }
 
   //loop over nodes
-  for(int i=0; i<graph->nodes.size(); i++) {
-    mxnet::ext::Node *node = graph->nodes[i];
+  for(int i=0; i<graph->size(); i++) {
+    const mxnet::ext::Node *node = graph->getNode(i);
 
     //get shape/type if available
     std::string shape;
     int dtype = -1;
     if(node->attrs.count("shape") > 0)
-      shape = node->attrs["shape"];
+      shape = node->attrs.at("shape");
     if(node->attrs.count("dtype") > 0)
-      dtype = std::stoi(node->attrs["dtype"]);
+      dtype = std::stoi(node->attrs.at("dtype"));
 
     //check if op dtype is float, and if option was specified to require float types
     if((dtype == kFloat32 && options.count("reqFloat") > 0) || options.count("reqFloat") == 0) {
@@ -264,15 +259,15 @@ class MySelector : public CustomOpSelector {
     }
   }
   bool chooseNode(int nodeID) {
-    mxnet::ext::Node *node = graph_->nodes[nodeID];
+    const mxnet::ext::Node *node = graph_->getNode(nodeID);
 
     //get shape/type if available
     std::string shape;
     int dtype = -1;
     if(node->attrs.count("shape") > 0)
-      shape = node->attrs["shape"];
+      shape = node->attrs.at("shape");
     if(node->attrs.count("dtype") > 0)
-      dtype = std::stoi(node->attrs["dtype"]);
+      dtype = std::stoi(node->attrs.at("dtype"));
 
     //check if op dtype is float, and if option was specified to require float types
     if((dtype == kFloat32 && options_.count("reqFloat") > 0) || options_.count("reqFloat") == 0) {
@@ -322,18 +317,18 @@ MXReturnValue addInputPass(mxnet::ext::Graph *graph,
 			   const std::unordered_map<std::string, MXTensor>& aux,
 			   const PassResource& res) {
   //find node with '_custom_subgraph_op' op type
-  for(Node* n : graph->nodes) {
+  for(int i=0; i<graph->size(); i++) {
+    mxnet::ext::Node* n = graph->getNode(i);
     if(n->op.compare("_custom_subgraph_op") == 0) {
       //set extra input
       n->attrs[MX_STR_EXTRA_INPUTS] = std::to_string(1);
       
       //create a new input Node
-      Node* input = new Node();
+      Node* input = graph->addNode();
       std::string input_name = n->name + "_input";
       input->name = input_name;
       input->op = "null";
-      //add a new node in graph
-      graph->nodes.push_back(input);
+      //set this node as an input in the graph
       graph->inputs.push_back(input);
       //connect new input to node
       input->outputs.push_back({n,(int)(n->inputs.size())});

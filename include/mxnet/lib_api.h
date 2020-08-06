@@ -821,8 +821,10 @@ struct NodeEntry {
 // Representation of a node in the graph
 class Node {
  public:
+  Node() {tensor = nullptr;}
   std::string op;  // operator name (ie. Convolution)
   std::string name;  // unique node name (ie. conv_0 or conv_1)
+  MXTensor* tensor; // tensor data for input nodes
   std::vector<NodeEntry> inputs;  // set of inputs to the node
   std::vector<NodeEntry> outputs;  // set of outputs from the node
   std::vector<Graph*> subgraphs;  // set of subgraphs within this node
@@ -1009,7 +1011,7 @@ class Graph {
 
   /* \brief visits a node "n" */
   void _dfs_util(Node* n, std::unordered_set<Node*>* to_visit,
-                 std::function<void(Node*)> handler) {
+                 std::function<void(Node*)> handler) const {
     to_visit->erase(n);  // remove node now that we're visiting it
     for (NodeEntry& e : n->outputs) {
       Node* o = e.node;
@@ -1021,7 +1023,7 @@ class Graph {
   }
 
   /* \brief post-order DFS graph traversal */
-  void DFS(std::function<void(Node*)> handler) {
+  void DFS(std::function<void(Node*)> handler) const {
     std::unordered_set<Node*> to_visit;
     // put all nodes in set to visit
     for (auto& n : nodes)
@@ -1036,7 +1038,7 @@ class Graph {
   }
 
   /* \brief sort graph nodes in topological order */
-  std::vector<Node*> topological_sort() {
+  std::vector<Node*> topological_sort() const {
     std::vector<Node*> sorted;
     auto handler = [&](Node* n) {
       sorted.push_back(n);  // when visiting each node, add it in order to the vector
@@ -1046,7 +1048,7 @@ class Graph {
   }
 
   /* \brief print out graph details */
-  void print(int indent = 0) {
+  void print(int indent = 0) const {
     std::string space = "";
     for (int i = 0; i < indent; i++) space+=" ";
 
@@ -1078,11 +1080,45 @@ class Graph {
     }
     std::cout << space << "###############################" << std::endl;
   }
+  Node* addNode() {
+    Node* n = new Node();
+    return n;
+  }
 
-  std::vector<Node*> nodes;
+  Node* getNode(size_t idx) {
+    return nodes[idx];
+  }
+  const Node* getNode(size_t idx) const {
+    return nodes.at(idx);
+  }
+  const JsonVal& getAttr(const std::string& key) const {
+    return attrs.at(key);
+  }
+  
+  size_t size() const {
+    return nodes.size();
+  }
+  
+  void _setParams(PassResource* res_,
+                 std::unordered_map<std::string, mxnet::ext::MXTensor>& args,
+                 std::unordered_map<std::string, mxnet::ext::MXTensor>& aux) {
+    // set params for each input node
+    for(Node* node : inputs) {
+      if(args.count(node->name) > 0)
+        node->tensor = &args[node->name];
+      else if(aux.count(node->name) > 0)
+        node->tensor = &aux[node->name];
+    }
+    res = res_;
+  }
+  
   std::vector<Node*> inputs;
   std::vector<NodeEntry> outputs;
   std::map<std::string, JsonVal> attrs;
+
+ private:
+  std::vector<Node*> nodes;
+  PassResource* res;
 };
 
 /* \brief An abstract class for library authors creating custom
@@ -2270,6 +2306,7 @@ extern "C" {
 
     std::unordered_map<std::string, mxnet::ext::MXTensor> new_args, new_aux;
     mxnet::ext::PassResource res(&new_args, &new_aux, nd_malloc, nd_alloc);
+    graph->_setParams(&res,args,aux);
     mxnet::ext::MXReturnValue retval = graphPass(graph, opts, args, aux, res);
     if (!retval) return retval;
 
