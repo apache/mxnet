@@ -47,6 +47,12 @@ The following tutorials will help you learn how to customize MXNet.
       How to create new MXNet operators in MXNet's backend using C++.
       An example custom quadratic function op.
 
+   .. card::
+      :title: Using runtime compilation (RTC) to write CUDA kernels in MXNet
+      :link: https://mxnet.apache.org/api/faq/using_rtc
+
+      How to write CUDA kernels in MXNet using runtime compilation.
+
 
 .. toctree::
    :hidden:

@@ -279,10 +279,13 @@ inline int CalcAlignment(const void *ptr, const int size) {
   return ptr_as_number % size;
 }
 
-/* \brief Check alignment of the inputs and outputs when cast to LType*.
+/* \brief Check alignment of the inputs and outputs when using vectorized accesses.
    \param params Structure containing arrays with inputs' and outputs' pointers
    \param lead_dim Leading dimension of the tensors.
    \param other_dim The size of the other dimensions of the tensors.
+   \param nvec Length of the vector.
+   \param inputs Inputs to the operator.
+   \param outputs Outputs of the operator.
 */
 template <typename Params>
 Alignment CheckAlignment(const Params& params, const index_t lead_dim,
