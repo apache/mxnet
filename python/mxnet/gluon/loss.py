@@ -1033,7 +1033,8 @@ class SDMLLoss(Loss):
     def __init__(self, smoothing_parameter=0.3, weight=1., batch_axis=0, **kwargs):
         super(SDMLLoss, self).__init__(weight, batch_axis, **kwargs)
         self.kl_loss = KLDivLoss(from_logits=True)
-        self.smoothing_parameter = smoothing_parameter # Smoothing probability mass
+        # Smoothing probability mass
+        self.smoothing_parameter = smoothing_parameter
 
     def _compute_distances(self, F, x1, x2):
         """
@@ -1042,17 +1043,13 @@ class SDMLLoss(Loss):
         """
         if is_np_array():
             expand_dims_fn = F.np.expand_dims
-            broadcast_to_fn = F.np.broadcast_to
         else:
             expand_dims_fn = F.expand_dims
-            broadcast_to_fn = F.broadcast_to
 
-        # extracting sizes expecting [batch_size, dim]
-        assert x1.shape == x2.shape
-        batch_size, dim = x1.shape
-        # expanding both tensor form [batch_size, dim] to [batch_size, batch_size, dim]
-        x1_ = broadcast_to_fn(expand_dims_fn(x1, 1), [batch_size, batch_size, dim])
-        x2_ = broadcast_to_fn(expand_dims_fn(x2, 0), [batch_size, batch_size, dim])
+        # expanding x1 form [batch_size, dim] to [batch_size, 1, dim]
+        # and x2 to [1, batch_size, dim]
+        x1_ = expand_dims_fn(x1, 1)
+        x2_ = expand_dims_fn(x2, 0)
         # pointwise squared differences
         squared_diffs = (x1_ - x2_)**2
         # sum of squared differences distance

@@ -137,7 +137,7 @@ def test_bce_equal_ce2(hybridize):
         loss1.hybridize()
     loss2 = gluon.loss.SoftmaxCELoss(from_logits=True)
     if hybridize:
-        loss1.hybridize()
+        loss2.hybridize()
     out1 = mx.np.random.uniform(0.1, 0.9, size=(N, 1))
     out2 = mx.np.log(mx.np.concatenate((1-out1, out1), axis=1) + 1e-8)
     label = mx.np.round(mx.np.random.uniform(0, 1, size=(N, 1)))
@@ -207,8 +207,7 @@ def test_ctc_loss(hybridize):
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
 @use_np
-@pytest.mark.parametrize("hybridize", [False, True])
-def test_sdml_loss(hybridize):
+def test_sdml_loss():
 
     N = 5 # number of samples
     DIM = 10 # Dimensionality
@@ -221,8 +220,6 @@ def test_sdml_loss(hybridize):
 
     # Init model and trainer
     sdml_loss = gluon.loss.SDMLLoss()
-    if hybridize:
-        sdml_loss.hybridize()
     model = gluon.nn.Dense(DIM, activation='tanh') # Simple NN encoder
     model.initialize(mx.init.Xavier(), ctx=mx.current_context())
     trainer = gluon.Trainer(model.collect_params(), 'adam', {'learning_rate' : 0.1})
