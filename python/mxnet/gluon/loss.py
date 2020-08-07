@@ -1080,7 +1080,6 @@ class SDMLLoss(Loss):
         labels = gold * (1 - self.smoothing_parameter) + (1 - gold) * self.smoothing_parameter / (batch_size - 1)
         return labels
 
-
     def hybrid_forward(self, F, x1, x2):
         """
         the function computes the kl divergence between the negative distances
@@ -1099,6 +1098,7 @@ class SDMLLoss(Loss):
         learn to predict french president comparing it with all the other
         vectors in batch 2
         """
+        assert F is ndarray, 'SDMLLoss does not support symbolic '
         if is_np_array():
             log_softmax_fn = F.npx.log_softmax
         else:
