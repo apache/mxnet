@@ -77,7 +77,7 @@ void linalg_gemm<cpu, DType>(const Tensor<cpu, 2, DType>& A, const Tensor<cpu, 2
                              const Tensor<cpu, 2, DType>& C, DType alpha, DType beta, \
                              bool tA, bool tB, Stream<cpu> *s) { \
   check_gemm(A, B, C, alpha, beta, tA, tB); \
-  cblas_##fname(CblasRowMajor, (tA ? CblasTrans : CblasNoTrans), (tB ? CblasTrans : CblasNoTrans), \
+  cblas_##fname##64_(CblasRowMajor, (tA ? CblasTrans : CblasNoTrans), (tB ? CblasTrans : CblasNoTrans), \
                 C.size(0), C.size(1), (tA ? A.size(0) : A.size(1)), alpha, \
                 A.dptr_, A.stride_, B.dptr_, B.stride_, beta, C.dptr_, C.stride_); \
 }

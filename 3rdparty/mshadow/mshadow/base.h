@@ -108,13 +108,14 @@ typedef unsigned __int64 uint64_t;
   #define MSHADOW_USE_MKL   1
 #endif
 
-/*! \brief use 64_ suffix for openblas symbols */
+/*! \brief branch to use 64_ suffix for openblas symbols */
 #ifndef MSHADOW_USE_BLAS_SUFFIX
   #define MSHADOW_USE_BLAS_SUFFIX 0
 #endif
 #if MSHADOW_USE_BLAS_SUFFIX
-  #define cblas_sgemm cblas_sgemm64_
+  #define CBLAS_CALL(name) name##64_
 #endif
+#define CBLAS_CALL(name) name
 
 /*!
  * \brief use CUDA support, must ensure that the cuda include path is correct,
