@@ -32,10 +32,7 @@ using namespace mxnet::ext;
 
 /* \brief a basic pass that prints out the options and the graph */
 MXReturnValue myPass(mxnet::ext::Graph *g,
-                     const std::unordered_map<std::string, std::string>& options,
-                     const std::unordered_map<std::string, MXTensor>& args,
-                     const std::unordered_map<std::string, MXTensor>& aux,
-                     const PassResource& res) {
+                     const std::unordered_map<std::string, std::string>& options) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }

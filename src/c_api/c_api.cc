@@ -339,7 +339,8 @@ void registerOp(const char* name, const std::string& name_str, bool isSubgraphOp
                 const std::unordered_map<std::string, mxnet::ext::createOpState_t> &createop_map,
                 const std::unordered_map<std::string, mxnet::ext::fcomp_t> &forward_ctx_map,
                 const std::unordered_map<std::string, mxnet::ext::fcomp_t> &backward_ctx_map,
-                mxnet::ext::opCallFComp_t callFComp, mxnet::ext::opCallFStatefulComp_t callFStatefulComp) {
+                mxnet::ext::opCallFComp_t callFComp,
+                mxnet::ext::opCallFStatefulComp_t callFStatefulComp) {
   using namespace mxnet::ext;
 
   // check if operator is already registered
@@ -422,7 +423,7 @@ void registerOp(const char* name, const std::string& name_str, bool isSubgraphOp
     gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, plevel);
     gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
     gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
-    
+
     if (!isSubgraphOp) {
       // register attr parser and standard functions for non-subgraph ops
       gradOp.set_attr_parser(attr_parser);
@@ -440,7 +441,7 @@ void registerOp(const char* name, const std::string& name_str, bool isSubgraphOp
       gradOp.set_num_inputs(grad_inouts);
       gradOp.set_num_outputs(num_subgraph_inputs);
     }
-    
+
     if (createop_map.size() != 0) {
       // for stateful operators
       gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
@@ -1094,7 +1095,7 @@ void registerOperators(void *lib, int verbose) {
 
 void registerPartitioners(void *lib, int verbose) {
   using namespace mxnet::ext;
-  
+
   // get C type interface functions
   opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
 

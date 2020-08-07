@@ -822,6 +822,15 @@ struct NodeEntry {
 class Node {
  public:
   Node() {tensor = nullptr;}
+  void _setPassResource(PassResource* res_) {res = res_;}
+  void alloc_arg(const std::vector<int64_t>& shapes,
+                 const MXContext &ctx, MXDType dtype) {
+    tensor = res->alloc_arg(name, shapes, ctx, dtype);
+  }
+  void alloc_aux(const std::vector<int64_t>& shapes,
+                 const MXContext &ctx, MXDType dtype) {
+    tensor = res->alloc_aux(name, shapes, ctx, dtype);
+  }
   std::string op;  // operator name (ie. Convolution)
   std::string name;  // unique node name (ie. conv_0 or conv_1)
   MXTensor* tensor;  // tensor data for input nodes
@@ -829,12 +838,14 @@ class Node {
   std::vector<NodeEntry> outputs;  // set of outputs from the node
   std::vector<Graph*> subgraphs;  // set of subgraphs within this node
   std::unordered_map<std::string, std::string> attrs;  // node attributes
+ private:
+  PassResource* res;  
 };
 
 // Representation of the graph
 class Graph {
  public:
-  Graph() {}
+  Graph() : res(nullptr) {}
   /* \brief deleted nodes when deleting the graph */
   ~Graph() {
     for (int i = 0; i < nodes.size(); i++)
@@ -1080,8 +1091,12 @@ class Graph {
     }
     std::cout << space << "###############################" << std::endl;
   }
-  Node* addNode() {
+  Node* addNode(const std::string& name, const std::string& op) {
     Node* n = new Node();
+    n->name = name;
+    n->op = op;
+    if (res)
+      n->_setPassResource(res);
     return n;
   }
 
@@ -1110,6 +1125,10 @@ class Graph {
         node->tensor = &aux->at(node->name);
     }
     res = res_;
+    // set passResource for each node
+    for (Node* node : nodes) {
+      node->_setPassResource(res);
+    }
   }
 
   std::vector<Node*> inputs;
@@ -1309,10 +1328,7 @@ class CustomOp {
 
 /*! \brief Custom Pass Create function template */
 typedef MXReturnValue (*graphPass_t)(mxnet::ext::Graph* graph,
-                                     const std::unordered_map<std::string, std::string>& options,
-                                     const std::unordered_map<std::string, MXTensor>& args,
-                                     const std::unordered_map<std::string, MXTensor>& aux,
-                                     const PassResource& res);
+                                     const std::unordered_map<std::string, std::string>& options);
 
 /*!
  * \brief An abstract class for graph passes
@@ -2328,7 +2344,7 @@ extern "C" {
     std::unordered_map<std::string, mxnet::ext::MXTensor> new_args, new_aux;
     mxnet::ext::PassResource res(&new_args, &new_aux, nd_malloc, nd_alloc);
     graph->_setParams(&res, &args, &aux);
-    mxnet::ext::MXReturnValue retval = graphPass(graph, opts, args, aux, res);
+    mxnet::ext::MXReturnValue retval = graphPass(graph, opts);
     if (!retval) return retval;
 
     std::string *tmp = new std::string(graph->toString());

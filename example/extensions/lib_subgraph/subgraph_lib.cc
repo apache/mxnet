@@ -312,10 +312,7 @@ REGISTER_PARTITIONER(mySelect)
 
 /* \brief a basic pass that adds a new input for subgraph ops */
 MXReturnValue addInputPass(mxnet::ext::Graph *graph,
-			   const std::unordered_map<std::string, std::string>& options,
-			   const std::unordered_map<std::string, MXTensor>& args,
-			   const std::unordered_map<std::string, MXTensor>& aux,
-			   const PassResource& res) {
+			   const std::unordered_map<std::string, std::string>& options) {
   //find node with '_custom_subgraph_op' op type
   for(int i=0; i<graph->size(); i++) {
     mxnet::ext::Node* n = graph->getNode(i);
@@ -324,10 +321,7 @@ MXReturnValue addInputPass(mxnet::ext::Graph *graph,
       n->attrs[MX_STR_EXTRA_INPUTS] = std::to_string(1);
       
       //create a new input Node
-      Node* input = graph->addNode();
-      std::string input_name = n->name + "_input";
-      input->name = input_name;
-      input->op = "null";
+      Node* input = graph->addNode(n->name + "_input", "null");
       //set this node as an input in the graph
       graph->inputs.push_back(input);
       //connect new input to node
@@ -335,7 +329,7 @@ MXReturnValue addInputPass(mxnet::ext::Graph *graph,
       //connect node to new input
       n->inputs.push_back({input,0});
       // add a corresponding tensor for this input
-      MXTensor* arg_ = res.alloc_arg(input_name,{1},MXContext::CPU(0),kFloat32);
+      input->alloc_arg({1},MXContext::CPU(0),kFloat32);
     }
   }
 
