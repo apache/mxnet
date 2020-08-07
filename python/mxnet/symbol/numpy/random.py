@@ -512,17 +512,17 @@ def gamma(shape, scale=1.0, size=None, dtype=None, ctx=None, out=None):
     if size == ():
         size = None
     if input_type == (True, True):
-        return _npi.gamma(shape, shape=None, scale=1.0, size=size,
-                          ctx=ctx, dtype=dtype, out=out) * scale
+        return _npi.gamma(shape, scale, shape=None, scale=None, size=size,
+                          ctx=ctx, dtype=dtype, out=out)
     elif input_type == (False, True):
-        return _npi.gamma(shape=shape, scale=1.0, size=size,
-                          ctx=ctx, dtype=dtype, out=out) * scale
+        return _npi.gamma(scale, shape=shape, scale=None, size=size,
+                          ctx=ctx, dtype=dtype, out=out)
     elif input_type == (True, False):
-        return _npi.gamma(shape, shape=None, scale=1.0, size=size,
-                          ctx=ctx, dtype=dtype, out=out) * scale
+        return _npi.gamma(shape, shape=None, scale=scale, size=size,
+                          ctx=ctx, dtype=dtype, out=out)
     else:
-        return _npi.gamma(shape=shape, scale=1.0, size=size,
-                          ctx=ctx, dtype=dtype, out=out) * scale
+        return _npi.gamma(shape=shape, scale=scale, size=size,
+                          ctx=ctx, dtype=dtype, out=out)
 
     raise ValueError("Distribution parameters must be either _Symbol or numbers")
 

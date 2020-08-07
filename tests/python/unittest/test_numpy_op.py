@@ -4789,20 +4789,14 @@ def test_gamma_grad():
         def hybrid_forward(self, F, a):
             return F.np.random.gamma(a, self._beta, size=self._size)
 
-    shapes = [
-        # shape(alpha), shape(samples)
-        ((1,), (1,)),
-        ((4,), (4,)),
-        ((2, 2), (2, 2)),
-    ]
+    shapes = [(1,), (2, 2), (4, 2, 2)]
     alpha = [2.0, 5.0, 10.0]
     beta = [0.5, 1.0, 1.5]
     for (shape, a, b) in itertools.product(shapes, alpha, beta):
         for hybridize in [True, False]:
-            param = np.ones(shape[0]) * a
+            param = np.ones(shape) * a
             param.attach_grad()
-            sample_shape = shape[1]
-            net = TestRandomGamma(sample_shape, b)
+            net = TestRandomGamma(shape, b)
             if hybridize:
                 net.hybridize()
             with mx.autograd.record():
@@ -4820,8 +4814,8 @@ def test_gamma_grad():
                          cdf(x, param.asnumpy() - eps)) / (2 * eps)
             # d(cdf(x;alpha,beta))/d(x)
             log_cdf_x = log_pdf(x, param.asnumpy())
-            expected_grad = -cdf_alpha / _np.exp(log_cdf_x)
-            assert_almost_equal(expected_grad * b, param.grad.asnumpy(), rtol=1e-2, atol=1e-3)
+            expected_grad = -b * cdf_alpha / _np.exp(log_cdf_x)
+            assert_almost_equal(expected_grad, param.grad.asnumpy(), rtol=1e-2, atol=1e-3)
 
 
 @with_seed()

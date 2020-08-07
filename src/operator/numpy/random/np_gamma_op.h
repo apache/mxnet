@@ -418,18 +418,23 @@ inline void GammaReparamBackwardImpl(const OpContext& ctx,
   // inputs: [grad_from_samples, alpha_tensor, samples]
   const TBlob ograd = inputs[0].reshape(new_oshape);
   const TBlob alpha = inputs[1].reshape(new_ishape);
-  const TBlob samples = inputs[2].reshape(new_oshape);
+  TBlob samples = inputs[2].reshape(new_oshape);
   size_t workspace_size =
       ReduceWorkspaceSize<ndim, DType>(s, igrad.shape_, req[0], ograd.shape_);
   // Convert samples to standard gamma
-  Kernel<StandarizeKernel<DType>, xpu>::Launch(
-        s, samples.Size(), samples.dptr<DType>(), scale);
+  // Kernel<StandarizeKernel<DType>, xpu>::Launch(
+  //       s, samples.Size(), samples.dptr<DType>(), scale);
+  Kernel<op_with_req<mshadow_op::div, kWriteTo>, xpu>::Launch(
+    s, samples.Size(), samples.dptr<DType>(), samples.dptr<DType>(), DType(scale));
   Tensor<xpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   Reduce<red::sum, ndim, DType, op::mshadow_op::mul, op::mshadow_op::gamma_implicit_grad>(
       s, igrad, req[0], workspace, ograd, alpha, samples);
-  Kernel<StandarizeKernel<DType>, xpu>::Launch(
-        s, igrad.Size(), igrad.dptr<DType>(), 1 / scale);
+  Kernel<op_with_req<mshadow_op::mul, kWriteTo>, xpu>::Launch(
+    s, igrad.Size(), igrad.dptr<DType>(), igrad.dptr<DType>(), DType(scale));
+  // Convert samples back, otherwise the output would be corrupted.
+  Kernel<op_with_req<mshadow_op::mul, kWriteTo>, xpu>::Launch(
+    s, samples.Size(), samples.dptr<DType>(), samples.dptr<DType>(), DType(scale));
 }
 
 // Allow gamma sampling to be differentiable,
