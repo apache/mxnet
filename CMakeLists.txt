@@ -916,5 +916,4 @@ endif()
 
 if(DEFINED USE_INT64_TENSOR_SIZE AND USE_INT64_TENSOR_SIZE)
   add_definitions(-DLAPACK_ILP64)
-  add_definitions(-DMSHADOW_USE_BLAS_SUFFIX)
 endif()
