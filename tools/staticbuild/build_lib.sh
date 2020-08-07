@@ -37,7 +37,7 @@ cd -
 # Move to lib
 rm -rf lib; mkdir lib;
 if [[ $PLATFORM == 'linux' ]]; then
-    cp -L build/libmxnet.so lib/libmxnet.so
+    cp -L build/libmxnet.so* lib/
     cp -L staticdeps/lib/libopenblas.so lib/libopenblas.so.0
     cp -L $(ldd lib/libmxnet.so | grep libgfortran |  awk '{print $3}') lib/
     cp -L $(ldd lib/libmxnet.so | grep libquadmath |  awk '{print $3}') lib/
