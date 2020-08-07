@@ -146,3 +146,4 @@ class TestImage(unittest.TestCase):
             max_attempts=50)
         for batch in det_iter:
             pass
+        mx.nd.waitall()
