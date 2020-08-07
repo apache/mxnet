@@ -1,0 +1,123 @@
+I"�C<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="kvstore-api">KVStore API</h1>
+
+<p>Topics:</p>
+<ul>
+  <li><a href="#basic-push-and-pull">Basic Push and Pull</a></li>
+  <li><a href="#list-key-value-pairs">List Key-Value Pairs</a></li>
+</ul>
+
+<h2 id="basic-push-and-pull">Basic Push and Pull</h2>
+
+<p>Provides basic operation over multiple devices (GPUs) on a single device.</p>
+
+<h3 id="initialization">Initialization</h3>
+
+<p>Let’s consider a simple example. It initializes
+a (int, NDArray) pair into the store, and then pulls the value out.</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span> <span class="o">=</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">kv</span><span class="o">-&gt;</span><span class="nv">create</span><span class="p">('</span><span class="s1">local</span><span class="p">')</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$shape</span> <span class="o">=</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nv">init</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">(</span><span class="nv">$shape</span><span class="p">)</span><span class="o">*</span><span class="mi">2</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$a</span> <span class="o">=</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">zeros</span><span class="p">(</span><span class="nv">$shape</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nv">pull</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="nv">out</span> <span class="o">=&gt;</span> <span class="nv">$a</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="k">print</span> <span class="nv">$a</span><span class="o">-&gt;</span><span class="nv">aspdl</span>
+<span class="p">[</span>
+ <span class="p">[</span><span class="mi">2</span> <span class="mi">2</span> <span class="mi">2</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">2</span> <span class="mi">2</span> <span class="mi">2</span><span class="p">]</span>
+<span class="p">]</span>
+</code></pre></div></div>
+
+<h3 id="push-aggregation-and-updater">Push, Aggregation, and Updater</h3>
+
+<p>For any key that’s been initialized, you can push a new value with the same shape to the key, as follows:</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nb">push</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">(</span><span class="nv">$shape</span><span class="p">)</span><span class="o">*</span><span class="mi">8</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$a</span> <span class="o">=</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">zeros</span><span class="p">(</span><span class="nv">$shape</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nv">pull</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="nv">out</span> <span class="o">=&gt;</span> <span class="nv">$a</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="k">print</span> <span class="nv">$a</span><span class="o">-&gt;</span><span class="nv">aspdl</span>
+<span class="p">[</span>
+ <span class="p">[</span><span class="mi">8</span> <span class="mi">8</span> <span class="mi">8</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">8</span> <span class="mi">8</span> <span class="mi">8</span><span class="p">]</span>
+<span class="p">]</span>
+</code></pre></div></div>
+
+<p>The data that you want to push can be stored on any device. Furthermore, you can push multiple
+values into the same key, where KVStore first sums all of these
+values, and then you pull the aggregated value, as follows:</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nb">push</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">(</span><span class="nv">$shape</span><span class="p">,</span> <span class="nv">ctx</span><span class="o">=&gt;</span><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">cpu</span><span class="p">(</span><span class="mi">0</span><span class="p">)),</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">(</span><span class="nv">$shape</span><span class="p">,</span> <span class="nv">ctx</span><span class="o">=&gt;</span><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">cpu</span><span class="p">(</span><span class="mi">1</span><span class="p">))])</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nv">pull</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="nv">out</span> <span class="o">=&gt;</span> <span class="nv">$a</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="k">print</span> <span class="nv">$a</span><span class="o">-&gt;</span><span class="nv">aspdl</span>
+<span class="p">[</span>
+ <span class="p">[</span><span class="mi">2</span> <span class="mi">2</span> <span class="mi">2</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">2</span> <span class="mi">2</span> <span class="mi">2</span><span class="p">]</span>
+<span class="p">]</span>
+</code></pre></div></div>
+
+<p>For each push command, KVStore applies the pushed value to the value stored by an
+<code class="highlighter-rouge">updater</code>. The default updater is <code class="highlighter-rouge">ASSIGN</code>. You can replace the default to
+control how data is merged.</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$updater</span> <span class="o">=</span> <span class="k">sub </span><span class="p">{</span> <span class="k">my</span> <span class="p">(</span><span class="nv">$key</span><span class="p">,</span> <span class="nv">$input</span><span class="p">,</span> <span class="nv">$stored</span><span class="p">)</span> <span class="o">=</span> <span class="nv">@_</span><span class="p">;</span> <span class="k">print</span> <span class="p">"</span><span class="s2">update on key: </span><span class="si">$key</span><span class="se">\n</span><span class="p">";</span> <span class="nv">$stored</span> <span class="o">+=</span> <span class="nv">$input</span> <span class="o">*</span> <span class="mi">3</span><span class="p">;</span> <span class="p">}</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nv">_set_updater</span><span class="p">(</span><span class="nv">$updater</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nb">push</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="p">[</span><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">(</span><span class="nv">$shape</span><span class="p">,</span> <span class="nv">ctx</span><span class="o">=&gt;</span><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">cpu</span><span class="p">(</span><span class="mi">0</span><span class="p">)),</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">(</span><span class="nv">$shape</span><span class="p">,</span> <span class="nv">ctx</span><span class="o">=&gt;</span><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">cpu</span><span class="p">(</span><span class="mi">1</span><span class="p">))])</span>
+<span class="nv">update</span> <span class="nv">on</span> <span class="nv">key:</span> <span class="mi">3</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nv">pull</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="nv">out</span> <span class="o">=&gt;</span> <span class="nv">$a</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="k">print</span> <span class="nv">$a</span><span class="o">-&gt;</span><span class="nv">aspdl</span>
+<span class="p">[</span>
+ <span class="p">[</span><span class="mi">8</span> <span class="mi">8</span> <span class="mi">8</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">8</span> <span class="mi">8</span> <span class="mi">8</span><span class="p">]</span>
+<span class="p">]</span>
+</code></pre></div></div>
+
+<h3 id="pull">Pull</h3>
+
+<p>You’ve already seen how to pull a single key-value pair. Similar to the way that you use the push command, you can
+pull the value into several devices with a single call.</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$b</span> <span class="o">=</span> <span class="p">[</span><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">zeros</span><span class="p">(</span><span class="nv">$shape</span><span class="p">,</span> <span class="nv">ctx</span><span class="o">=&gt;</span><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">cpu</span><span class="p">(</span><span class="mi">0</span><span class="p">)),</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">zeros</span><span class="p">(</span><span class="nv">$shape</span><span class="p">,</span> <span class="nv">ctx</span><span class="o">=&gt;</span><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">cpu</span><span class="p">(</span><span class="mi">1</span><span class="p">))]</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nv">pull</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span> <span class="nv">out</span> <span class="o">=&gt;</span> <span class="nv">$b</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="k">print</span> <span class="nv">$b</span><span class="o">-&gt;</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-&gt;</span><span class="nv">aspdl</span>
+<span class="p">[</span>
+ <span class="p">[</span><span class="mi">8</span> <span class="mi">8</span> <span class="mi">8</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">8</span> <span class="mi">8</span> <span class="mi">8</span><span class="p">]</span>
+<span class="p">]</span>
+</code></pre></div></div>
+
+<h2 id="list-key-value-pairs">List Key-Value Pairs</h2>
+
+<p>All of the operations that we’ve discussed so far are performed on a single key. KVStore also provides
+the interface for generating a list of key-value pairs. For a single device, use the following:</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$keys</span> <span class="o">=</span> <span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="mi">7</span><span class="p">,</span><span class="mi">9</span><span class="p">]</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nv">init</span><span class="p">(</span><span class="nv">$keys</span><span class="p">,</span> <span class="p">[</span><span class="nb">map</span> <span class="p">{</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">(</span><span class="nv">$shape</span><span class="p">)</span> <span class="p">}</span> <span class="mi">0</span><span class="o">..</span><span class="nv">@$keys</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nb">push</span><span class="p">(</span><span class="nv">$keys</span><span class="p">,</span> <span class="p">[</span><span class="nb">map</span> <span class="p">{</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">(</span><span class="nv">$shape</span><span class="p">)</span> <span class="p">}</span> <span class="mi">0</span><span class="o">..</span><span class="nv">@$keys</span><span class="o">-</span><span class="mi">1</span><span class="p">])</span>
+<span class="nv">update</span> <span class="nv">on</span> <span class="nv">key:</span> <span class="mi">5</span>
+<span class="nv">update</span> <span class="nv">on</span> <span class="nv">key:</span> <span class="mi">7</span>
+<span class="nv">update</span> <span class="nv">on</span> <span class="nv">key:</span> <span class="mi">9</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$b</span> <span class="o">=</span> <span class="p">[</span><span class="nb">map</span> <span class="p">{</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">(</span><span class="nv">$shape</span><span class="p">)</span> <span class="p">}</span> <span class="mi">0</span><span class="o">..</span><span class="nv">@$keys</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$kv</span><span class="o">-&gt;</span><span class="nv">pull</span><span class="p">(</span><span class="nv">$keys</span><span class="p">,</span> <span class="nv">out</span> <span class="o">=&gt;</span> <span class="nv">$b</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="k">print</span> <span class="nv">$b</span><span class="o">-&gt;</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">-&gt;</span><span class="nv">aspdl</span>
+<span class="p">[</span>
+ <span class="p">[</span><span class="mi">4</span> <span class="mi">4</span> <span class="mi">4</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">4</span> <span class="mi">4</span> <span class="mi">4</span><span class="p">]</span>
+<span class="p">]</span>
+</code></pre></div></div>
+:ET

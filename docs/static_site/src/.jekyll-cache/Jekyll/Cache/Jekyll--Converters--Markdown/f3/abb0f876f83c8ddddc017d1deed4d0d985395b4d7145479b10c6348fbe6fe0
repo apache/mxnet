@@ -1,0 +1,40 @@
+I"<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="mxnet---r-api">MXNet - R API</h1>
+
+<p>See the <a href="/api/r/docs/api/R-package/build/mxnet-r-reference-manual.pdf">MXNet R Reference Manual</a>.</p>
+
+<p>MXNet supports the R programming language. The MXNet R package brings flexible and efficient GPU
+computing and state-of-art deep learning to R. It enables you to write seamless tensor/matrix computation with multiple GPUs in R. It also lets you construct and customize the state-of-art deep learning models in R,
+  and apply them to tasks, such as image classification and data science challenges.</p>
+
+<p>You can perform tensor or matrix computation in R:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">   </span><span class="o">&gt;</span><span class="w"> </span><span class="n">require</span><span class="p">(</span><span class="n">mxnet</span><span class="p">)</span><span class="w">
+   </span><span class="n">Loading</span><span class="w"> </span><span class="n">required</span><span class="w"> </span><span class="n">package</span><span class="o">:</span><span class="w"> </span><span class="n">mxnet</span><span class="w">
+   </span><span class="o">&gt;</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.nd.ones</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="m">2</span><span class="p">,</span><span class="m">3</span><span class="p">))</span><span class="w">
+   </span><span class="o">&gt;</span><span class="w"> </span><span class="n">a</span><span class="w">
+        </span><span class="p">[,</span><span class="m">1</span><span class="p">]</span><span class="w"> </span><span class="p">[,</span><span class="m">2</span><span class="p">]</span><span class="w"> </span><span class="p">[,</span><span class="m">3</span><span class="p">]</span><span class="w">
+   </span><span class="p">[</span><span class="m">1</span><span class="p">,]</span><span class="w">    </span><span class="m">1</span><span class="w">    </span><span class="m">1</span><span class="w">    </span><span class="m">1</span><span class="w">
+   </span><span class="p">[</span><span class="m">2</span><span class="p">,]</span><span class="w">    </span><span class="m">1</span><span class="w">    </span><span class="m">1</span><span class="w">    </span><span class="m">1</span><span class="w">
+   </span><span class="o">&gt;</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="m">1</span><span class="w">
+        </span><span class="p">[,</span><span class="m">1</span><span class="p">]</span><span class="w"> </span><span class="p">[,</span><span class="m">2</span><span class="p">]</span><span class="w"> </span><span class="p">[,</span><span class="m">3</span><span class="p">]</span><span class="w">
+   </span><span class="p">[</span><span class="m">1</span><span class="p">,]</span><span class="w">    </span><span class="m">2</span><span class="w">    </span><span class="m">2</span><span class="w">    </span><span class="m">2</span><span class="w">
+   </span><span class="p">[</span><span class="m">2</span><span class="p">,]</span><span class="w">    </span><span class="m">2</span><span class="w">    </span><span class="m">2</span><span class="w">    </span><span class="m">2</span><span class="w">
+</span></code></pre></div></div>
+:ET

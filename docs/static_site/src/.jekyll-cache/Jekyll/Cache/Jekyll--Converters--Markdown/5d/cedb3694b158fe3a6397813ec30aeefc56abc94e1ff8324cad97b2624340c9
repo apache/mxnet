@@ -1,0 +1,157 @@
+I"�I<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="use-tensorinspector-to-help-debug-operators">Use TensorInspector to Help Debug Operators</h1>
+
+<h2 id="introduction">Introduction</h2>
+
+<p>When developing new operators, developers need to deal with tensor objects extensively. This new utility, Tensor Inspector, mainly aims to help developers debug by providing unified interfaces to print, check, and dump the tensor value. To developers’ convenience, this utility works for all the three data types: Tensors, TBlobs, and NDArrays. Also, it supports both CPU and GPU tensors.</p>
+
+<h2 id="usage">Usage</h2>
+
+<p>This utility is located in <code class="highlighter-rouge">src/common/tensor_inspector.h</code>. To use it in any operator code, just include it using <code class="highlighter-rouge">#include "{path}/tensor_inspector.h"</code>, construct an <code class="highlighter-rouge">TensorInspector</code> object, and call the APIs on that object. You can run any script that uses the operator you just modified then.</p>
+
+<p>The screenshot below shows a sample usage in <code class="highlighter-rouge">src/operator/nn/convolution-inl.h</code>.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_example_usage.png" alt="tensor_inspector_example_usage" /></p>
+
+<h2 id="functionalitiesapis">Functionalities/APIs</h2>
+
+<h3 id="create-a-tensorinspector-object-from-tensor-tblob-and-ndarray-objects">Create a TensorInspector Object from Tensor, TBlob, and NDArray Objects</h3>
+
+<p>You can create a <code class="highlighter-rouge">TensorInspector</code> object by passing in two things: 1) an object of type <code class="highlighter-rouge">Tensor</code>, <code class="highlighter-rouge">Tbob</code>, or <code class="highlighter-rouge">NDArray</code>, and 2) an <code class="highlighter-rouge">RunContext</code> object.</p>
+
+<p>Essentially, <code class="highlighter-rouge">TensorInspector</code> can be understood as a wrapper class around <code class="highlighter-rouge">TBlob</code>. Internally, the <code class="highlighter-rouge">Tensor</code>, <code class="highlighter-rouge">Tbob</code>, or <code class="highlighter-rouge">NDArray</code> object that you passed in will be converted to a <code class="highlighter-rouge">TBlob</code> object. The <code class="highlighter-rouge">RunContext</code> object is used when the tensor is a GPU tensor; in such a case, we need to use the context information to copy the data from GPU memory to CPU/main memory.</p>
+
+<p>Following are the three constructors:</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// Construct from Tensor object</span>
+<span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">Device</span><span class="p">,</span> <span class="kt">int</span> <span class="n">dimension</span><span class="p">,</span> <span class="k">typename</span> <span class="n">DType</span> <span class="n">MSHADOW_DEFAULT_DTYPE</span><span class="o">&gt;</span>
+<span class="n">TensorInspector</span><span class="p">(</span><span class="k">const</span> <span class="n">mshadow</span><span class="o">::</span><span class="n">Tensor</span><span class="o">&lt;</span><span class="n">Device</span><span class="p">,</span> <span class="n">dimension</span><span class="p">,</span> <span class="n">DType</span><span class="o">&gt;&amp;</span> <span class="n">ts</span><span class="p">,</span> <span class="k">const</span> <span class="n">RunContext</span><span class="o">&amp;</span> <span class="n">ctx</span><span class="p">);</span>
+
+<span class="c1">// Construct from TBlob object</span>
+<span class="n">TensorInspector</span><span class="p">(</span><span class="k">const</span> <span class="n">TBlob</span><span class="o">&amp;</span> <span class="n">tb</span><span class="p">,</span> <span class="k">const</span> <span class="n">RunContext</span><span class="o">&amp;</span> <span class="n">ctx</span><span class="p">);</span>
+
+<span class="c1">// Construct from NDArray object</span>
+<span class="n">TensorInspector</span><span class="p">(</span><span class="k">const</span> <span class="n">NDArray</span><span class="o">&amp;</span> <span class="n">arr</span><span class="p">,</span> <span class="k">const</span> <span class="n">RunContext</span><span class="o">&amp;</span> <span class="n">ctx</span><span class="p">)</span><span class="o">:</span>
+</code></pre></div></div>
+
+<h3 id="print-tensor-value-static">Print Tensor Value (Static)</h3>
+
+<p>To print out the tensor value in a nicely structured way, you can use this API:</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">print_string</span><span class="p">();</span>
+</code></pre></div></div>
+
+<p>This API will print the entire tensor to <code class="highlighter-rouge">std::cout</code> and preserve the shape (it supports all dimensions from 1 and up). You can copy the output and interpret it with any <code class="highlighter-rouge">JSON</code> loader. You can find some useful information about the tensor on the last line of the output. Refer to the case below, we are able to know that this is a float-typed tensor with shape 20x1x5x5.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_to_string.png" alt="tensor_inspector_to_string" /></p>
+
+<p>If instead of printing the tensor to <code class="highlighter-rouge">std::cout</code>, you just need a <code class="highlighter-rouge">string</code>, you can use this API:</p>
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="kt">void</span> <span class="nf">to_string</span><span class="p">();</span>
+</code></pre></div></div>
+
+<h3 id="interactively-print-tensor-value-dynamic">Interactively Print Tensor Value (Dynamic)</h3>
+
+<p>Sometimes at compilation time, you may not know which part of a tensor to inspect. Also, it may be nice to pause the operator control flow to “zoom into” a specific, erroneous part of a tensor multiple times until you are satisfied. In this regard, you can use this API to interactively inspect the tensor:</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span>  <span class="nf">interactive_print</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">tag</span> <span class="o">=</span>  <span class="s">""</span><span class="p">)</span> <span class="p">{</span>
+</code></pre></div></div>
+
+<p>This API will set a “break point” in your code. When that “break point” is reached, you will enter a loop that will keep asking you for further command input. In the API call, <code class="highlighter-rouge">tag</code> is an optional parameter to give the call a name, so that you can identify it when you have multiple <code class="highlighter-rouge">interactive_print()</code> calls in different parts of your code. A visit count will tell you how many times you stepped into this particular “break point”, should this operator be called more than once. Note that all <code class="highlighter-rouge">interactive_print()</code> calls are properly locked, so you can use it in many different places without issues.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_interactive_print.png" alt="tensor_inspector_interactive_print" /></p>
+
+<p>There are many useful commands available, as described in the previous screenshot: you can type “e” to print out the entire tensor, “d” to dump the tensor to file (see below), “b” to break from this command loop, and “s” to skip all future <code class="highlighter-rouge">interactive_print()</code>. Most importantly, in this screen, you can specify a part of the tensor that you are particularly interested in and want to print out. For example, for this 64x20x24x24 tensor, you can type in “0, 0” and presss enter to check the sub-tensor with shape 24x24 at coordinate (0, 0).</p>
+
+<h3 id="check-tensor-value">Check Tensor Value</h3>
+
+<p>Sometimes, developers might want to check if the tensor contains unexpected values which could be negative values, NaNs, infinities or others. To facilitate that, you can use these APIs:</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">template</span><span class="o">&lt;</span><span class="k">typename</span> <span class="n">ValueChecker</span><span class="o">&gt;</span>
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">check_value</span><span class="p">(</span><span class="k">const</span> <span class="n">ValueChecker</span><span class="o">&amp;</span> <span class="n">checker</span><span class="p">,</span>
+		<span class="kt">bool</span> <span class="n">interactive</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">tag</span> <span class="o">=</span> <span class="s">""</span><span class="p">);</span>
+<span class="c1">// OR</span>
+<span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">check_value</span><span class="p">(</span><span class="n">CheckerType</span> <span class="n">ct</span><span class="p">,</span>
+		<span class="kt">bool</span> <span class="n">interactive</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">tag</span> <span class="o">=</span>  <span class="s">""</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>In the first API, <code class="highlighter-rouge">ValueChecker checker</code> is a bool lambda function that takes in a single parameter which is of the same data type as the tensor.  For example:</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c1">// use the same DType as in the tensor object</span>
+<span class="p">[]</span> <span class="p">(</span><span class="n">DType</span> <span class="n">x</span><span class="p">)</span> <span class="p">{</span><span class="k">return</span> <span class="n">x</span> <span class="o">==</span> <span class="mi">0</span><span class="p">};</span>
+</code></pre></div></div>
+
+<p>This checker is called on every value within the tensor. The return of the API is a <code class="highlighter-rouge">vector</code> of all the coordinates where the checker evaluates to <code class="highlighter-rouge">true</code>. The coordinates are themselves represented by <code class="highlighter-rouge">vector&lt;int&gt;</code>. If you set <code class="highlighter-rouge">interactive</code> to true, you will set a “break point” and enter a loop that asks for commands. This is similar to <code class="highlighter-rouge">interactive_print()</code>. You can type “p” to print the coordinates, “b” to break from the loop, and “s” to skip all future “break points” in <code class="highlighter-rouge">interactive_print()</code>. You can also specify a coordinate to print only a part of the tensor or type “e” to print out the entire tensor.  Just like <code class="highlighter-rouge">interactive_print()</code>, this this interactive screen is also properly locked.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_value_check.png" alt="tensor_inspector_value_check" /></p>
+
+<p>Also, there are a bunch of built-int value checkers. Refer to the Enum below:</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">enum</span>  <span class="n">CheckerType</span> <span class="p">{</span>
+	<span class="n">NegativeChecker</span><span class="p">,</span> <span class="c1">// check if negative</span>
+	<span class="n">PositiveChecker</span><span class="p">,</span> <span class="c1">// check if positive</span>
+	<span class="n">ZeroChecker</span><span class="p">,</span> <span class="c1">// check for zero</span>
+	<span class="n">NaNChecker</span><span class="p">,</span> <span class="c1">// check if for NaN, will always return false if DType is not a float type</span>
+	<span class="n">InfChecker</span><span class="p">,</span> <span class="c1">// check for infinity, will always return false if DType is not a float type</span>
+	<span class="n">PositiveInfChecker</span><span class="p">,</span> <span class="c1">// check for positive infinity,</span>
+						<span class="c1">// will always return false if DType is not a float type</span>
+	<span class="n">NegativeInfChecker</span><span class="p">,</span> <span class="c1">// check for nagative infinity,</span>
+						<span class="c1">// will always return false if DType is not a float type</span>
+	<span class="n">FiniteChecker</span><span class="p">,</span> <span class="c1">// check if finite, will always return false if DType is not a float type</span>
+	<span class="n">NormalChecker</span><span class="p">,</span> <span class="c1">// check if it is neither infinity nor NaN</span>
+	<span class="n">AbnormalChecker</span><span class="p">,</span> <span class="c1">// chekck if it is infinity or nan</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>Remember the second API?</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="kt">int</span><span class="o">&gt;&gt;</span> <span class="n">check_value</span><span class="p">(</span><span class="n">CheckerType</span> <span class="n">ct</span><span class="p">,</span>
+		<span class="kt">bool</span> <span class="n">interactive</span> <span class="o">=</span> <span class="nb">false</span><span class="p">,</span> <span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">tag</span> <span class="o">=</span>  <span class="s">""</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>You can simply pass in a value from <code class="highlighter-rouge">CheckerType</code> where you would have passed in your own lambda if you were using the first API. Note that it’s the developer’s responsibility to pass in a valid value checker.</p>
+
+<h3 id="dump-tensor-value">Dump Tensor Value</h3>
+
+<p>Sometimes, you might want to dump the tensor to a file in binary mode. Then, you might want to use a python script to further analyze the tensor value. Or, you might do that simply because a binary dump has better precision and is faster to load than the output copy-pasted from <code class="highlighter-rouge">print_string()</code> and loaded as a <code class="highlighter-rouge">JSON</code> string. Either way, you can use this API:</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span> <span class="nf">dump_to_file</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">string</span> <span class="n">tag</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>This API will create a file with name  “{tag}_{visit_count}.npy”, where tag is the name that we give to the call, and visit is the visit count, should the operated be called more than once.</p>
+
+<p>The output format is <code class="highlighter-rouge">.npy</code>, version 1.0. This is the Numpy format and we can easily load it with the following code:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import numpy as np
+a = np.load('abc_1.npy')
+print(a)
+</code></pre></div></div>
+
+<p>Let’s see how it runs:</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_dump_to_file.png" alt="tensor_inspector_dump_to_file" /></p>
+
+<p>Notice: in <code class="highlighter-rouge">interactive_print()</code>, you could also do value dumping with command “d”. You will be prompted to enter the <code class="highlighter-rouge">tag</code> value:</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/faq/tensor_inspector_tutorial/tensor_inspector_interactive_print.png" alt="tensor_inspector_interactive_print" /></p>
+
+<h3 id="test-coverage-and-limitations">Test Coverage and Limitations</h3>
+
+<p>This utility has been tested on Mac and Ubuntu with and without CUDNN and MKLDNN. Supports for <code class="highlighter-rouge">Tensor</code>, <code class="highlighter-rouge">TBlob</code>, and <code class="highlighter-rouge">NDArray</code>, as well as for CPU and GPU have been manually tested.</p>
+
+<p>Currently, this utility only supports non-empty tensors and tensors with known shapes i.e. <code class="highlighter-rouge">tb_.ndim() &gt; 0</code>. Also, this utility only supports dense <code class="highlighter-rouge">NDArray</code> objects, i.e. when the type is <code class="highlighter-rouge">kDefaultStorage</code>.</p>
+
+:ET

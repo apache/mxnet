@@ -1,0 +1,129 @@
+I"”><!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="ndarray-api">NDArray API</h1>
+
+<p>The NDArray API contains tensor operations similar to <code class="highlighter-rouge">numpy.ndarray</code>. The syntax is also similar, except for some additional calls for dealing with I/O and multiple devices.</p>
+
+<p>Topics:</p>
+
+<ul>
+  <li><a href="#create-ndarray">Create NDArray</a></li>
+  <li><a href="#ndarray-operations">NDArray Operations</a></li>
+  <li><a href="/api/clojure/docs/api/org.apache.clojure-mxnet.ndarray-api.html">NDArray API Reference</a></li>
+</ul>
+
+<p>To follow along with this documentation, you can use this namespace with the needed requires:</p>
+
+<div class="language-clojure highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="nf">ns</span><span class="w"> </span><span class="n">docs.ndarray</span><span class="w">
+  </span><span class="p">(</span><span class="no">:require</span><span class="w"> </span><span class="p">[</span><span class="n">org.apache.clojure-mxnet.ndarray</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">ndarray</span><span class="p">]</span><span class="w">
+            </span><span class="p">[</span><span class="n">org.apache.clojure-mxnet.context</span><span class="w"> </span><span class="no">:as</span><span class="w"> </span><span class="n">context</span><span class="p">]))</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="create-ndarray">Create NDArray</h2>
+
+<p>Create <code class="highlighter-rouge">mxnet.ndarray</code> as follows:</p>
+
+<div class="language-clojure highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/zeros</span><span class="w"> </span><span class="p">[</span><span class="mi">100</span><span class="w"> </span><span class="mi">50</span><span class="p">]))</span><span class="w"> </span><span class="c1">;;all zero arrray of dimension 100 x 50</span><span class="w">
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/ones</span><span class="w"> </span><span class="p">[</span><span class="mi">256</span><span class="w"> </span><span class="mi">32</span><span class="w"> </span><span class="mi">128</span><span class="w"> </span><span class="mi">1</span><span class="p">]))</span><span class="w"> </span><span class="c1">;; all one array of dimension</span><span class="w">
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">c</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/array</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="mi">6</span><span class="p">]</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="p">]))</span><span class="w"> </span><span class="c1">;; array with contents of a shape 2 x 3</span><span class="w">
+</span></code></pre></div></div>
+
+<p>There are also ways to convert a NDArray to a vec or get the shape or the NDArray as an object or vec as follows:</p>
+
+<div class="language-clojure highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="nf">ndarray/-&gt;vec</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt; [1.0 2.0 3.0 4.0 5.0 6.0]</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/shape</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt; #object[org.apache.mxnet.Shape 0x583c865 "(2,3)"]</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/shape-vec</span><span class="w"> </span><span class="n">c</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt; [2 3]</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="ndarray-operations">NDArray Operations</h2>
+
+<p>There are some basic NDArray operations, like arithmetic and slice operations.</p>
+
+<h3 id="arithmetic-operations">Arithmetic Operations</h3>
+
+<div class="language-clojure highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/ones</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="w"> </span><span class="mi">5</span><span class="p">]))</span><span class="w">
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">b</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/ones</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="w"> </span><span class="mi">5</span><span class="p">]))</span><span class="w">
+</span><span class="p">(</span><span class="nb">-&gt;</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/+</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/-&gt;vec</span><span class="p">))</span><span class="w"> </span><span class="c1">;=&gt;  [2.0 2.0 2.0 2.0 2.0]</span><span class="w">
+
+</span><span class="c1">;; original ndarrays are unchanged</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/-&gt;vec</span><span class="w"> </span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt; [1.0 1.0 1.0 1.0 1.0]</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/-&gt;vec</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt; [1.0 1.0 1.0 1.0 1.0]</span><span class="w">
+
+</span><span class="c1">;;inplace operators</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/+=</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="n">b</span><span class="p">)</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/-&gt;vec</span><span class="w"> </span><span class="n">a</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt;  [2.0 2.0 2.0 2.0 2.0]</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Other arithmetic operations are similar.</p>
+
+<h3 id="slice-operations">Slice Operations</h3>
+
+<div class="language-clojure highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/array</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="w"> </span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span><span class="w"> </span><span class="mi">5</span><span class="w"> </span><span class="mi">6</span><span class="p">]</span><span class="w"> </span><span class="p">[</span><span class="mi">3</span><span class="w"> </span><span class="mi">2</span><span class="p">]))</span><span class="w">
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">a1</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/slice</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="mi">1</span><span class="p">))</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/shape-vec</span><span class="w"> </span><span class="n">a1</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt; [1 2]</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/-&gt;vec</span><span class="w"> </span><span class="n">a1</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt; [3.0 4.0]</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">a2</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/slice</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="mi">1</span><span class="w"> </span><span class="mi">3</span><span class="p">))</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/shape-vec</span><span class="w"> </span><span class="n">a2</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt;[2 2]</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/-&gt;vec</span><span class="w"> </span><span class="n">a2</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt; [3.0 4.0 5.0 6.0]</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="dot-product">Dot Product</h3>
+
+<div class="language-clojure highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">arr1</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/array</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="p">]</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="w"> </span><span class="mi">2</span><span class="p">]))</span><span class="w">
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">arr2</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/array</span><span class="w"> </span><span class="p">[</span><span class="mi">3</span><span class="w"> </span><span class="mi">4</span><span class="p">]</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="w"> </span><span class="mi">1</span><span class="p">]))</span><span class="w">
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">res</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/dot</span><span class="w"> </span><span class="n">arr1</span><span class="w"> </span><span class="n">arr2</span><span class="p">))</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/shape-vec</span><span class="w"> </span><span class="n">res</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt; [1 1]</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/-&gt;vec</span><span class="w"> </span><span class="n">res</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt; [11.0]</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="save-and-load-ndarray">Save and Load NDArray</h3>
+
+<p>You can use MXNet functions to save and load a list or dictionary of NDArrays from file systems, as follows:</p>
+
+<div class="language-clojure highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="nf">ndarray/save</span><span class="w"> </span><span class="s">"filename"</span><span class="w"> </span><span class="p">{</span><span class="s">"arr1"</span><span class="w"> </span><span class="n">arr1</span><span class="w"> </span><span class="s">"arr2"</span><span class="w"> </span><span class="n">arr2</span><span class="p">})</span><span class="w">
+</span><span class="c1">;; you can also do "s3://path" or "hdfs"</span><span class="w">
+</span></code></pre></div></div>
+
+<p>To load:</p>
+
+<div class="language-clojure highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">from-file</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/load</span><span class="w"> </span><span class="s">"filename"</span><span class="p">))</span><span class="w">
+</span><span class="n">from-file</span><span class="w">
+</span><span class="c1">;=&gt;{"arr1" #object["org.apache.mxnet.NDArray@43d85753"], "arr2" #object["org.apache.mxnet.NDArray@5c93def4"]}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>The good thing about using the <code class="highlighter-rouge">save</code> and <code class="highlighter-rouge">load</code> interface is that you can use the format across all <code class="highlighter-rouge">mxnet</code> language bindings. They also already support Amazon S3 and HDFS.</p>
+
+<h3 id="multi-device-support">Multi-Device Support</h3>
+
+<p>Device information is stored in the <code class="highlighter-rouge">mxnet.Context</code> structure. When creating NDArray in MXNet, you can use the context argument (the default is the CPU context) to create arrays on specific devices as follows:</p>
+
+<div class="language-clojure highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">cpu-a</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/zeros</span><span class="w"> </span><span class="p">[</span><span class="mi">100</span><span class="w"> </span><span class="mi">200</span><span class="p">]))</span><span class="w">
+</span><span class="p">(</span><span class="nf">ndarray/context</span><span class="w"> </span><span class="n">cpu-a</span><span class="p">)</span><span class="w"> </span><span class="c1">;=&gt; #object[org.apache.mxnet.Context 0x3f376123 "cpu(0)"]</span><span class="w">
+
+</span><span class="p">(</span><span class="k">def</span><span class="w"> </span><span class="n">gpu-b</span><span class="w"> </span><span class="p">(</span><span class="nf">ndarray/zeros</span><span class="w"> </span><span class="p">[</span><span class="mi">100</span><span class="w"> </span><span class="mi">200</span><span class="p">]</span><span class="w"> </span><span class="p">{</span><span class="no">:ctx</span><span class="w"> </span><span class="p">(</span><span class="nf">context/gpu</span><span class="w"> </span><span class="mi">0</span><span class="p">)}))</span><span class="w"> </span><span class="c1">;; to use with gpu</span><span class="w">
+
+</span></code></pre></div></div>
+
+<h2 id="next-steps">Next Steps</h2>
+<ul>
+  <li>See <a href="kvstore">KVStore API</a> for multi-GPU and multi-host distributed training.</li>
+</ul>
+
+:ET

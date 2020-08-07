@@ -1,0 +1,340 @@
+I"�[<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="profiling">Profiling</h1>
+
+<p>Apache MXNet provides memory <a href="/api/python/docs/api/mxnet/profiler/index.html">profiler</a> which is a way to access what is happening under the hood during runtime. The common scenario is you want to use the profiler for your hybridized model and visualize the outputs via <code class="highlighter-rouge">chrome://tracing</code>. Here are the steps you need to do:</p>
+
+<ol>
+  <li>Configure the profiler</li>
+  <li><code class="highlighter-rouge">set_state('run')</code> before the model is defined</li>
+  <li>Add <code class="highlighter-rouge">mx.nd.waitall()</code> to enforce synchronization after you have done with some computation (maybe as part of training)</li>
+  <li>Then add <code class="highlighter-rouge">set_state('stop')</code></li>
+  <li>Finally <code class="highlighter-rouge">dump</code> the profiling results</li>
+</ol>
+
+<p>Here is a simple example</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">import</span> <span class="n">mxnet</span> <span class="k">as</span> <span class="n">mx</span>
+<span class="k">from</span> <span class="n">mxnet</span><span class="p">.</span><span class="n">gluon</span> <span class="n">import</span> <span class="n">nn</span>
+<span class="k">from</span> <span class="n">mxnet</span> <span class="n">import</span> <span class="n">profiler</span>
+
+<span class="n">def</span> <span class="n">enable_profiler</span><span class="p">(</span><span class="n">profile_filename</span><span class="p">,</span> <span class="nf">run</span><span class="p">=</span><span class="nb">True</span><span class="p">,</span> <span class="n">continuous_dump</span><span class="p">=</span><span class="nb">False</span><span class="p">,</span> <span class="n">aggregate_stats</span><span class="p">=</span><span class="nb">False</span><span class="p">):</span>
+    <span class="n">profiler</span><span class="p">.</span><span class="n">set_config</span><span class="p">(</span><span class="n">profile_symbolic</span><span class="p">=</span><span class="nb">True</span><span class="p">,</span>
+                        <span class="n">profile_imperative</span><span class="p">=</span><span class="nb">True</span><span class="p">,</span>
+                        <span class="n">profile_memory</span><span class="p">=</span><span class="nb">True</span><span class="p">,</span>
+                        <span class="n">profile_api</span><span class="p">=</span><span class="nb">True</span><span class="p">,</span>
+                        <span class="n">filename</span><span class="p">=</span><span class="n">profile_filename</span><span class="p">,</span>
+                        <span class="n">continuous_dump</span><span class="p">=</span><span class="n">continuous_dump</span><span class="p">,</span>
+                        <span class="n">aggregate_stats</span><span class="p">=</span><span class="n">aggregate_stats</span><span class="p">)</span>
+    <span class="k">if</span> <span class="nf">run</span><span class="p">:</span>
+        <span class="n">profiler</span><span class="p">.</span><span class="n">set_state</span><span class="p">(</span><span class="s1">'run'</span><span class="p">)</span>
+
+<span class="n">enable_profiler</span><span class="p">(</span><span class="n">profile_filename</span><span class="p">=</span><span class="s1">'test_profiler.json'</span><span class="p">,</span> <span class="nf">run</span><span class="p">=</span><span class="nb">True</span><span class="p">,</span> <span class="n">continuous_dump</span><span class="p">=</span><span class="nb">True</span><span class="p">)</span>
+<span class="n">profiler</span><span class="p">.</span><span class="n">set_state</span><span class="p">(</span><span class="s1">'run'</span><span class="p">)</span>
+
+<span class="k">model</span> <span class="p">=</span> <span class="n">nn</span><span class="p">.</span><span class="n">HybridSequential</span><span class="p">(</span><span class="n">prefix</span><span class="p">=</span><span class="s1">'net_'</span><span class="p">)</span>
+<span class="k">with</span> <span class="k">model</span><span class="p">.</span><span class="n">name_scope</span><span class="p">():</span>
+    <span class="k">model</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">nn</span><span class="p">.</span><span class="n">Dense</span><span class="p">(</span><span class="m">128</span><span class="p">,</span> <span class="n">activation</span><span class="p">=</span><span class="s1">'tanh'</span><span class="p">))</span>
+    <span class="k">model</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">nn</span><span class="p">.</span><span class="n">Dropout</span><span class="p">(</span><span class="m">0.5</span><span class="p">))</span>
+    <span class="k">model</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">nn</span><span class="p">.</span><span class="n">Dense</span><span class="p">(</span><span class="m">64</span><span class="p">,</span> <span class="n">activation</span><span class="p">=</span><span class="s1">'tanh'</span><span class="p">),</span>
+              <span class="n">nn</span><span class="p">.</span><span class="n">Dense</span><span class="p">(</span><span class="m">32</span><span class="p">,</span> <span class="n">in_units</span><span class="p">=</span><span class="m">64</span><span class="p">))</span>
+    <span class="k">model</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">nn</span><span class="p">.</span><span class="n">Activation</span><span class="p">(</span><span class="s1">'relu'</span><span class="p">))</span>
+<span class="k">model</span><span class="p">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">ctx</span><span class="p">=</span><span class="n">mx</span><span class="p">.</span><span class="n">cpu</span><span class="p">())</span>
+<span class="k">model</span><span class="p">.</span><span class="n">hybridize</span><span class="p">()</span>
+
+<span class="n">inputs</span> <span class="p">=</span> <span class="n">mx</span><span class="p">.</span><span class="n">sym</span><span class="p">.</span><span class="n">var</span><span class="p">(</span><span class="s1">'data'</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="n">mx</span><span class="p">.</span><span class="n">autograd</span><span class="p">.</span><span class="k">record</span><span class="p">():</span>
+    <span class="n">out</span> <span class="p">=</span> <span class="k">model</span><span class="p">(</span><span class="n">mx</span><span class="p">.</span><span class="n">nd</span><span class="p">.</span><span class="n">zeros</span><span class="p">((</span><span class="m">16</span><span class="p">,</span> <span class="m">10</span><span class="p">),</span> <span class="n">ctx</span><span class="p">=</span><span class="n">mx</span><span class="p">.</span><span class="n">cpu</span><span class="p">()))</span>
+<span class="n">out</span><span class="p">.</span><span class="n">backward</span><span class="p">()</span>
+<span class="n">mx</span><span class="p">.</span><span class="n">nd</span><span class="p">.</span><span class="n">waitall</span><span class="p">()</span>
+<span class="n">profiler</span><span class="p">.</span><span class="n">set_state</span><span class="p">(</span><span class="s1">'stop'</span><span class="p">)</span>
+<span class="n">profiler</span><span class="p">.</span><span class="n">dump</span><span class="p">(</span><span class="nb">True</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>And in <code class="highlighter-rouge">chrome://tracing</code> use the <code class="highlighter-rouge">load</code> and select <code class="highlighter-rouge">test_profiler.json</code>, then you will see something like this
+<img src="/assets/img/dev_guide_profilling_1.png" alt="dev_guide_profilling_1" /> To understand what is going on, we need to dive deep into the MXNet runtime.</p>
+
+<h2 id="dive-deep-into-mxnet-runtime-with-the-profiler">Dive deep into MXNet runtime with the profiler</h2>
+
+<p>Let’s start with a simple example and explain as we go on. The following code creates a 3x3 tensor, computes the diagonal and then sum’s along the diagonal (to compute the “trace”). Using the MXNet profiler, we capture internal MXNet behavior and dump it to a string and print it (<code class="highlighter-rouge">dumps()</code>) and also dump it to a file (<code class="highlighter-rouge">dump()</code>). Then we can import that file in <code class="highlighter-rouge">chrome://tracing</code> and view it graphically.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import mxnet as mx
+import numpy as np
+ 
+from mxnet import profiler
+ 
+#configure the profiler
+profiler.set_config(profile_all=True, aggregate_stats=True, filename='trace_profile.json')
+#start the profiler collecting data
+profiler.set_state('run')
+ 
+###########################################################
+#1. create our data
+data = np.linspace(1,9,9).reshape((3,3))
+ 
+#2. create an MXNet ndarray
+a = mx.nd.array(data)
+ 
+#3. compute on our data and produce results
+b = mx.nd.diag(a)
+c = mx.nd.sum(b,-1)
+ 
+#4. wait for computation to finish
+mx.nd.waitall()
+###########################################################
+ 
+#stop the profiler
+profiler.set_state('stop')
+ 
+#dump the profiling data as a string
+print(profiler.dumps())
+#dump the profiling data as a json file that can be viewed graphically
+profiler.dump()
+</code></pre></div></div>
+
+<p>When running this code, the dumps function dumps the profiling data to a string and returns it (which we promptly print). This statistical info is shown below.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>Profile Statistics:
+    Note the difference in units for different entries.
+Device Storage
+=================
+Name                          Total Count    Min Use  (kB)    Max Use  (kB)    Avg Use  (kB)
+----                          -----------    -------------    -------------    -------------
+Memory: cpu/0                           3          96.0600          96.0760           0.0080
+
+MXNET_C_API
+=================
+Name                          Total Count        Time (ms)    Min Time (ms)    Max Time (ms)    Avg Time (ms)
+----                          -----------        ---------    -------------    -------------    -------------
+MXImperativeInvokeEx                    2           0.3360           0.0990           0.2370           0.1680
+MXNet C API Calls                      17           0.2320           0.2160           0.2320           0.0080
+MXNDArraySyncCopyFromCPU                1           0.1750           0.1750           0.1750           0.1750
+MXNDArrayCreateEx                       1           0.1050           0.1050           0.1050           0.1050
+MXNDArrayGetShapeEx                    11           0.0210           0.0000           0.0160           0.0019
+MXNDArrayWaitAll                        1           0.0200           0.0200           0.0200           0.0200
+MXNDArrayGetDType                       1           0.0010           0.0010           0.0010           0.0010
+MXNet C API Concurrency                34           0.0000           0.0000           0.0010           0.0000
+
+operator
+=================
+Name                          Total Count        Time (ms)    Min Time (ms)    Max Time (ms)    Avg Time (ms)
+----                          -----------        ---------    -------------    -------------    -------------
+sum                                     1           0.0520           0.0520           0.0520           0.0520
+diag                                    1           0.0410           0.0410           0.0410           0.0410
+WaitForVar                              1           0.0220           0.0220           0.0220           0.0220
+</code></pre></div></div>
+
+<p>The dump function writes out the same data in a format that can be opened in <code class="highlighter-rouge">chrome://tracing</code> and displayed visually. This can be seen in the diagram below.</p>
+
+<p><img src="/assets/img/dev_guide_profilling_2.png" alt="dev_guide_profilling_2.png" />
+The profiling data has captured info about interesting functions that have executed while your program was running. Here are some explanations about what each one does.</p>
+
+<h3 id="the-functions-in-the-c_api-are"><strong>The functions in the C_API are:</strong></h3>
+
+<table>
+  <thead>
+    <tr>
+      <th><strong>Function Name</strong></th>
+      <th><strong>Description</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>MXImperativeInvokeEx</strong></td>
+      <td>invokes an operator to perform the computation</td>
+    </tr>
+    <tr>
+      <td><strong>MXNDArrayCreateEx</strong></td>
+      <td>creates  an ndarray</td>
+    </tr>
+    <tr>
+      <td><strong>MXNDArrayGetDType</strong></td>
+      <td>returns  the data type of the ndarray</td>
+    </tr>
+    <tr>
+      <td><strong>MXNDArrayGetShape</strong></td>
+      <td>returns  the shape of the ndarray (as a tuple where each element is the size of a  dimension)</td>
+    </tr>
+    <tr>
+      <td><strong>MXNDArraySyncCopyFromCPU</strong></td>
+      <td>called when data is initially residing outside of an MXNet data structure (ie.  numpy.ndarry rather than mxnet.numpy.ndarray). Data is copied into the MXNet  data structure</td>
+    </tr>
+    <tr>
+      <td><strong>MXNDArrayWaitAll</strong></td>
+      <td>wait for all asynchronous operations to finish in MXNet. This function is only  used in benchmarking to wait for work to happen. In a real program, there is no waiting and data dependencies are evaluated and computation executed as needed in a As Late As Possible (ALAP) way</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="the-function-in-the-engine-api-are"><strong>The function in the Engine API are:</strong></h3>
+
+<table>
+  <thead>
+    <tr>
+      <th><strong>Function Name</strong></th>
+      <th><strong>Description</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>WaitForVar</strong></td>
+      <td>Takes a variable reference as input and waits until that variable has been computed before returning</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="other-api-functions"><strong>Other API functions:</strong></h3>
+
+<table>
+  <thead>
+    <tr>
+      <th><strong>Function Name</strong></th>
+      <th><strong>Description</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>ResourceParallelRandomSetSeed</strong></td>
+      <td>sets the random number generator seed</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3 id="operators-we-intended-to-call-in-the-code"><strong>Operators we intended to call in the code:</strong></h3>
+
+<table>
+  <thead>
+    <tr>
+      <th><strong>Operator Name</strong></th>
+      <th><strong>Description</strong></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><strong>sum</strong></td>
+      <td>sum  a tensor along a particular axis</td>
+    </tr>
+    <tr>
+      <td><strong>diag</strong></td>
+      <td>compute the diagonal of the tensor</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="closer-look">Closer look</h2>
+
+<p>From the code, we can identify the major events in our test application</p>
+
+<ol>
+  <li>Initialize our input data</li>
+  <li>Creating a new MXNet ndarray using our existing data values</li>
+  <li>Compute on our data
+    <ol>
+      <li>produce the diagonal of the input data</li>
+      <li>sum along the diagonal to compute the “trace” of the matrix</li>
+    </ol>
+  </li>
+  <li>Wait for computation to finish (only needed when profiling)</li>
+</ol>
+
+<p>In the following list, #1 uses regular numpy functions to initialize data. MXNet is not involved in this process. In #2, we create an MXNet ndarray and quite a few things happen under the hood. The screenshot below shows a zoomed in portion of the timeline.</p>
+
+<p><img src="/assets/img/dev_guide_profilling_3.png" alt="dev_guide_profilling_3.png" />
+Here, the four red arrows show the important events in this sequence.</p>
+
+<ol>
+  <li>First, the <code class="highlighter-rouge">MXNDArrayCreateEx</code> is called to physically  allocate space to store the data and other necessary attributes in the <code class="highlighter-rouge">ndarray</code> class.</li>
+  <li>Then some support functions are called (<code class="highlighter-rouge">MXNDArrayGetShape,</code> <code class="highlighter-rouge">MXNDArrayGetDType</code>) while initialing the data structure.</li>
+  <li>Finally the data is copied from the non-MXNet ndarray into the newly prepared MXNet ndarray by the <code class="highlighter-rouge">MXNDArraySyncCopyFromCPU</code>  function.</li>
+</ol>
+
+<p>Next, #3 (in our code example) begins the computing process to produce our output data. The screenshot below shows this behavior.</p>
+
+<p><img src="/assets/img/dev_guide_profilling_4.png" alt="dev_guide_profilling_4.png" />
+Here you can see that the following sequence of events happen:</p>
+
+<ol>
+  <li><code class="highlighter-rouge">MXImperativeInvokeEx</code> is called the first time to launch the diagonal operator from #3 (in our code example).</li>
+  <li>Soon after that the actual <strong><code class="highlighter-rouge">diag</code></strong>  operator begins executing in another thread.</li>
+  <li>While that is happening, our main thread moves on and calls <code class="highlighter-rouge">MXImperativeInvokeEx</code> again to launch the <strong><code class="highlighter-rouge">sum</code></strong>  operator. Just like before, this returns without actually executing the operator  and continues.</li>
+  <li>Lastly, the <code class="highlighter-rouge">MXNDArrayWaitAll</code> is called as the main thread has progressed to #4 in our app. It will wait here while all the  computation finishes.</li>
+</ol>
+
+<p>Next lets look at a view of the part of the timeline zoomed to the actual operator execution.</p>
+
+<p><img src="/assets/img/dev_guide_profilling_5.png" alt="dev_guide_profilling_5.png" />
+Here there are 3 main events happening:</p>
+
+<ol>
+  <li>The <strong><code class="highlighter-rouge">diag</code></strong> operator is executing first.</li>
+  <li>Then the <code class="highlighter-rouge">ResourceParallelRandomSetSeed</code> runs.</li>
+  <li>And finally the <code class="highlighter-rouge">sum</code> operator executes  (for a very short time as shown by the big red arrow).</li>
+</ol>
+
+<p>The <code class="highlighter-rouge">diag</code> operator running makes sense (although seems to take a little longer than we’d like). At the end, the sum operator runs (very quickly!). But the weird part in the middle is <strong><code class="highlighter-rouge">ResourceParallelRandomSetSeed</code></strong> running. This is part of the MXNet resource manager. The resource manager handles temporary space and random number generators needed by the operators. The <strong><code class="highlighter-rouge">sum</code></strong> operator requests temporary space in order to compute the sum, and therefore launches the resource manager (for the first time) here. As part of its startup sequence, the random number generator is initialized by setting the seed. So this is some initialization overhead. But let’s try and run the app again, running the compute twice, and look at the 2nd run to try and remove this initialization from our profiling.</p>
+
+<p>Here is the modified code:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import mxnet as mx
+import numpy as np
+ 
+from mxnet import profiler
+ 
+profiler.set_config(profile_all=True, aggregate_stats=True, filename='trace_profile.json')
+profiler.set_state('run')
+ 
+################
+# first run
+sdata = np.linspace(1,9,9).reshape((3,3))
+ 
+sa = mx.nd.array(sdata)
+sb = mx.nd.diag(sa)
+sc = mx.nd.sum(sb,-1)
+ 
+mx.nd.waitall()
+################
+ 
+################
+# second run
+data = np.linspace(1,9,9).reshape((3,3))
+ 
+a = mx.nd.array(data)
+b = mx.nd.diag(a)
+c = mx.nd.sum(b,-1)
+ 
+mx.nd.waitall()
+################
+ 
+profiler.set_state('stop')
+ 
+print(profiler.dumps())
+profiler.dump()
+</code></pre></div></div>
+
+<p>Notice that we renamed the variables and made another copy after the <code class="highlighter-rouge">waital</code> call. This is so that MXNet doesn’t have to worry about re-using variables, and to segment the 2nd half after the first time initialization.</p>
+
+<p>Here is an overview of the <em>new</em> timeline:</p>
+
+<p><img src="/assets/img/dev_guide_profilling_6.png" alt="dev_guide_profilling_6.png" />
+The first red box is the first run, and the 2nd smaller one is the 2nd run. First off, we can see how much smaller the 2nd one is now without any of the initialization routines. Here is a zoomed in view of just the 2nd run.</p>
+
+<p><img src="/assets/img/dev_guide_profilling_7.png" alt="dev_guide_profilling_7.png" />
+We still have the same sequence of events at the beginning to initialize the MXNet ndarray (<code class="highlighter-rouge">MXNDArrayCreateEx</code>, <code class="highlighter-rouge">MXNDArrayGetShape</code>, <code class="highlighter-rouge">MXNDArrayGetDType</code>, <code class="highlighter-rouge">MXNDArraySyncCopyFromCPU</code>). Then the <strong><code class="highlighter-rouge">diag</code></strong> operator runs, followed by the <strong><code class="highlighter-rouge">sum</code></strong> operator, and finally the <code class="highlighter-rouge">waitall</code>. When you look at this, be careful about the assumptions that you make. In this version of the timeline, it appears that the operator executes after the <code class="highlighter-rouge">MXImperativeInvokeEx</code> runs, and seems to imply an inherent ordering. But realize that there is no dependency between the <strong><code class="highlighter-rouge">diag</code></strong> operator finishing and the next <strong><code class="highlighter-rouge">MXImperativeInvokeEx</code></strong> launching the <strong><code class="highlighter-rouge">sum</code></strong> operator. In this case, it just-so-happens that the <strong><code class="highlighter-rouge">diag</code></strong> operator finishes so quickly that it appears that way. But in reality the main thread is launching the operators and not waiting for them to finish. Lastly, keep in mind that in this case by the time we hit the <strong><code class="highlighter-rouge">MXNDArrayWaitAll</code></strong> everything is already done and we return immediately, but in other circumstances it may sit here waiting for everything to finish (like we saw earlier in the first run).</p>
+
+:ET

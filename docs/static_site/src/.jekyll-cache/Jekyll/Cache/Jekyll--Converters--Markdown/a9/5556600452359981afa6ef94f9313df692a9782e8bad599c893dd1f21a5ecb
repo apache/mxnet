@@ -1,0 +1,107 @@
+I"&<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="symbol-and-automatic-differentiation">Symbol and Automatic Differentiation</h1>
+
+<p>The computational unit <code class="highlighter-rouge">NDArray</code> requires a way to construct neural networks. MXNet provides a symbolic interface, named Symbol, to do this. Symbol combines both flexibility and efficiency.</p>
+
+<h2 id="basic-composition-of-symbols">Basic Composition of Symbols</h2>
+
+<p>The following code creates a two-layer perceptron network:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>require(mxnet)
+## [1] "Rcpp_MXSymbol"
+## attr(,"package")
+## [1] "mxnet"
+</code></pre></div></div>
+
+<p>Each symbol takes a (unique) string name. <em>Variable</em> often defines the inputs,
+or free variables. Other symbols take a symbol as the input (<em>data</em>),
+and may accept other hyper parameters, such as the number of hidden neurons (<em>num_hidden</em>)
+or the activation type (<em>act_type</em>).</p>
+
+<p>We can also specify the names explicitly:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">data</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.symbol.Variable</span><span class="p">(</span><span class="s2">"data"</span><span class="p">)</span><span class="w">
+</span><span class="n">w</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.symbol.Variable</span><span class="p">(</span><span class="s2">"myweight"</span><span class="p">)</span><span class="w">
+</span><span class="n">net</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.symbol.FullyConnected</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">,</span><span class="w"> </span><span class="n">weight</span><span class="o">=</span><span class="n">w</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s2">"fc1"</span><span class="p">,</span><span class="w"> </span><span class="n">num_hidden</span><span class="o">=</span><span class="m">128</span><span class="p">)</span><span class="w">
+</span><span class="n">arguments</span><span class="p">(</span><span class="n">net</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>## [1] "data"     "myweight" "fc1_bias"
+</code></pre></div></div>
+
+<h2 id="more-complicated-composition-of-symbols">More Complicated Composition of Symbols</h2>
+
+<p>MXNet provides well-optimized symbols for
+commonly used layers in deep learning. You can also define new operators
+in Python. The following example first performs an element-wise add between two
+symbols, then feeds them to the fully connected operator:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">lhs</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.symbol.Variable</span><span class="p">(</span><span class="s2">"data1"</span><span class="p">)</span><span class="w">
+</span><span class="n">rhs</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.symbol.Variable</span><span class="p">(</span><span class="s2">"data2"</span><span class="p">)</span><span class="w">
+</span><span class="n">net</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.symbol.FullyConnected</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">lhs</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">rhs</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s2">"fc1"</span><span class="p">,</span><span class="w"> </span><span class="n">num_hidden</span><span class="o">=</span><span class="m">128</span><span class="p">)</span><span class="w">
+</span><span class="n">arguments</span><span class="p">(</span><span class="n">net</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>## [1] "data1"      "data2"      "fc1_weight" "fc1_bias"
+</code></pre></div></div>
+
+<p>We can construct a symbol more flexibly than by using the single
+forward composition, for example:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">net</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.symbol.Variable</span><span class="p">(</span><span class="s2">"data"</span><span class="p">)</span><span class="w">
+</span><span class="n">net</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.symbol.FullyConnected</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">net</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s2">"fc1"</span><span class="p">,</span><span class="w"> </span><span class="n">num_hidden</span><span class="o">=</span><span class="m">128</span><span class="p">)</span><span class="w">
+</span><span class="n">net2</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.symbol.Variable</span><span class="p">(</span><span class="s2">"data2"</span><span class="p">)</span><span class="w">
+</span><span class="n">net2</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.symbol.FullyConnected</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">net2</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s2">"net2"</span><span class="p">,</span><span class="w"> </span><span class="n">num_hidden</span><span class="o">=</span><span class="m">128</span><span class="p">)</span><span class="w">
+</span><span class="n">composed.net</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.apply</span><span class="p">(</span><span class="n">net</span><span class="p">,</span><span class="w"> </span><span class="n">data</span><span class="o">=</span><span class="n">net2</span><span class="p">,</span><span class="w"> </span><span class="n">name</span><span class="o">=</span><span class="s2">"compose"</span><span class="p">)</span><span class="w">
+</span><span class="n">arguments</span><span class="p">(</span><span class="n">composed.net</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>## [1] "data2"       "net2_weight" "net2_bias"   "fc1_weight"  "fc1_bias"
+</code></pre></div></div>
+
+<p>In the example, <em>net</em> is used as a function to apply to an existing symbol
+<em>net</em>. The resulting <em>composed.net</em> will replace the original argument <em>data</em> with
+<em>net2</em> instead.</p>
+
+<h2 id="training-a-neural-net">Training a Neural Net</h2>
+
+<p>The <a href="https://github.com/apache/incubator-mxnet/blob/master/R-package/R/model.R">model API</a> is a thin wrapper around the symbolic executors to support neural net training.</p>
+
+<p>We encourage you to read <a href="/api/python/symbol_in_pictures/symbol_in_pictures.md">Symbolic Configuration and Execution in Pictures for python package</a>for a detailed explanation of concepts in pictures.</p>
+
+<h2 id="how-efficient-is-the-symbolic-api">How Efficient Is the Symbolic API?</h2>
+
+<p>The Symbolic API brings the efficient C++
+operations in powerful toolkits, such as CXXNet and Caffe, together with the
+flexible dynamic NDArray operations. All of the memory and computation resources are
+allocated statically during bind operations, to maximize runtime performance and memory
+utilization.</p>
+
+<p>The coarse-grained operators are equivalent to CXXNet layers, which are
+extremely efficient.  We also provide fine-grained operators for more flexible
+composition. Because MXNet does more in-place memory allocation, it can
+be more memory efficient than CXXNet and gets to the same runtime with
+greater flexibility.</p>
+
+<h2 id="next-steps">Next Steps</h2>
+<ul>
+  <li><a href="/api/r/docs/tutorials/classify_real_image_with_pretrained_model">Classify Real-World Images with Pre-trained Model</a></li>
+  <li><a href="/api/r/docs/tutorials/char_rnn_model">Character Language Model using RNN</a></li>
+</ul>
+:ET

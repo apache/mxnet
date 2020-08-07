@@ -1,0 +1,375 @@
+I"�<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="how-to-create-new-operators-layers">How to Create New Operators (Layers)</h1>
+
+<p>This tutorials walks you through the process of creating new MXNet operators (or layers).
+We’ve done our best to provide high-speed operators for most common use cases.
+However, if you’re engaged in research,
+there’s a good chance you’ll want to define custom layers,
+like a novel loss function. In these cases, you have two options:</p>
+
+<ul>
+  <li>
+    <p>Use CustomOp to write new operators using a front-end language (e.g., Python) that run on CPUs or GPUs.
+Depending on your implementation, this can range from very fast (if you only use operators under mx.nd) to very slow (if you copy out the data, using <code class="highlighter-rouge">.asnumpy()</code>).</p>
+  </li>
+  <li>
+    <p>Use C++/mshadow (CUDA). This provides the best performance, but can be difficult
+if you’re not familiar with MXNet, mshadow, or Cuda.</p>
+  </li>
+</ul>
+
+<h2 id="customop">CustomOp</h2>
+<p>Implementing an operator in Python is simple.
+As an example, let’s create a softmax operator.
+Start by subclassing <code class="highlighter-rouge">mxnet.operator.CustomOp</code>,
+and then override a few methods:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">mxnet</span> <span class="k">as</span> <span class="n">mx</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+
+<span class="k">class</span> <span class="nc">Softmax</span><span class="p">(</span><span class="n">mx</span><span class="o">.</span><span class="n">operator</span><span class="o">.</span><span class="n">CustomOp</span><span class="p">):</span>
+    <span class="k">def</span> <span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">is_train</span><span class="p">,</span> <span class="n">req</span><span class="p">,</span> <span class="n">in_data</span><span class="p">,</span> <span class="n">out_data</span><span class="p">,</span> <span class="n">aux</span><span class="p">):</span>
+        <span class="n">x</span> <span class="o">=</span> <span class="n">in_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">asnumpy</span><span class="p">()</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="n">x</span><span class="o">.</span><span class="nb">max</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">)))</span>
+        <span class="n">y</span> <span class="o">/=</span> <span class="n">y</span><span class="o">.</span><span class="nb">sum</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">((</span><span class="n">x</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">1</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">out_data</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">req</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>We defined the computation for the forward pass of our operator.
+The forward function takes a list of input and a list of output NDArrays.
+For convenience, we called <code class="highlighter-rouge">.asnumpy()</code> on the first NDArray in input
+and convert it to a CPU-based NumPy array.
+This can be very slow. If you want the best performance,
+keep data in the NDArray format and use operators under mx.nd to do the computation.</p>
+
+<p>At the end, we used CustomOp.assign to assign the resulting array y to out_data[0]. It handles assignment based on the value of req, which can be ‘write’, ‘add’, or ‘null’.</p>
+
+<p>Then do the same for the backward pass:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">backward</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">req</span><span class="p">,</span> <span class="n">out_grad</span><span class="p">,</span> <span class="n">in_data</span><span class="p">,</span> <span class="n">out_data</span><span class="p">,</span> <span class="n">in_grad</span><span class="p">,</span> <span class="n">aux</span><span class="p">):</span>
+    <span class="n">l</span> <span class="o">=</span> <span class="n">in_data</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">asnumpy</span><span class="p">()</span><span class="o">.</span><span class="n">ravel</span><span class="p">()</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="nb">int</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">out_data</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">asnumpy</span><span class="p">()</span>
+    <span class="n">y</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">l</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]),</span> <span class="n">l</span><span class="p">]</span> <span class="o">-=</span> <span class="mf">1.0</span>
+    <span class="bp">self</span><span class="o">.</span><span class="n">assign</span><span class="p">(</span><span class="n">in_grad</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">req</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">y</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>Softmax defines the computation of our custom operator,
+but you still need to define its input/output format
+by subclassing mx.operator.CustomOpProp.
+First, register the new operator with the name ‘softmax’:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">@</span><span class="n">mx</span><span class="o">.</span><span class="n">operator</span><span class="o">.</span><span class="n">register</span><span class="p">(</span><span class="s">"softmax"</span><span class="p">)</span>
+<span class="k">class</span> <span class="nc">SoftmaxProp</span><span class="p">(</span><span class="n">mx</span><span class="o">.</span><span class="n">operator</span><span class="o">.</span><span class="n">CustomOpProp</span><span class="p">):</span>
+</code></pre></div></div>
+
+<p>Then, call the base constructor with <code class="highlighter-rouge">need_top_grad=False</code>
+because softmax is a loss layer and you don’t need gradient input from preceding layers:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="nb">super</span><span class="p">(</span><span class="n">SoftmaxProp</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="n">need_top_grad</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Then declare the input and output:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">list_arguments</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s">'data'</span><span class="p">,</span> <span class="s">'label'</span><span class="p">]</span>
+
+<span class="k">def</span> <span class="nf">list_outputs</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+    <span class="k">return</span> <span class="p">[</span><span class="s">'output'</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>Note that list_arguments declares both input and parameter.
+We recommend ordering them as follows:  <code class="highlighter-rouge">['input1', 'input2', ... , 'weight1', 'weight2', ...]</code></p>
+
+<p>Next, provide <code class="highlighter-rouge">infer_shape</code> to declare the shape of the output/weight
+and check the consistency of the input shapes:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">infer_shape</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_shape</span><span class="p">):</span>
+    <span class="n">data_shape</span> <span class="o">=</span> <span class="n">in_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">label_shape</span> <span class="o">=</span> <span class="p">(</span><span class="n">in_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">],)</span>
+    <span class="n">output_shape</span> <span class="o">=</span> <span class="n">in_shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">data_shape</span><span class="p">,</span> <span class="n">label_shape</span><span class="p">],</span> <span class="p">[</span><span class="n">output_shape</span><span class="p">],</span> <span class="p">[]</span>
+</code></pre></div></div>
+<p>The first axis of an input/output tensor corresponds to different examples within the batch.
+The label is a set of integers, one for each data entry,
+and the output has the same shape as the input.
+The <code class="highlighter-rouge">infer_shape</code> function should always return three lists in this order:
+inputs, outputs, and auxiliary states (which we don’t have here),
+even if one of them is empty.</p>
+
+<p>Optionally, you can also define <code class="highlighter-rouge">infer_type</code> to declare the input and output data type of your operator. Supported types are <code class="highlighter-rouge">np.float32</code>, <code class="highlighter-rouge">np.float64</code>, <code class="highlighter-rouge">np.float16</code>, <code class="highlighter-rouge">np.uint8</code>, and <code class="highlighter-rouge">np.int32</code>.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">infer_type</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">in_type</span><span class="p">):</span>
+    <span class="n">dtype</span> <span class="o">=</span> <span class="n">in_type</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="k">return</span> <span class="p">[</span><span class="n">dtype</span><span class="p">,</span> <span class="n">dtype</span><span class="p">],</span> <span class="p">[</span><span class="n">dtype</span><span class="p">],</span> <span class="p">[]</span>
+</code></pre></div></div>
+
+<p>Finally, define a create_operator function that will be called by the back end to create an instance of softmax:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">def</span> <span class="nf">create_operator</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">ctx</span><span class="p">,</span> <span class="n">shapes</span><span class="p">,</span> <span class="n">dtypes</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">Softmax</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>To use the custom operator, create a mx.sym.Custom symbol with op_type as the registered name:</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">mlp</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">symbol</span><span class="o">.</span><span class="n">Custom</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">fc3</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s">'softmax'</span><span class="p">,</span> <span class="n">op_type</span><span class="o">=</span><span class="s">'softmax'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Please see the full code for this example <a href="https://github.com/dmlc/mxnet/blob/master/example/numpy-ops/custom_softmax.py">here</a>.</p>
+
+<h2 id="c">C++</h2>
+<p>With MXNet v0.9 (the NNVM refactor) or later, creating new operators has become easier.
+Operators are now registered with NNVM.
+The following code is an example on how to register an operator (checkout <a href="https://github.com/dmlc/mxnet/tree/master/src/operator/tensor">src/operator/tensor</a> for more examples):</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">NNVM_REGISTER_OP</span><span class="p">(</span><span class="n">abs</span><span class="p">)</span>
+<span class="p">.</span><span class="n">MXNET_DESCRIBE</span><span class="p">(</span><span class="s">"Take absolute value of the src"</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_num_inputs</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_num_outputs</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_attr</span><span class="o">&lt;</span><span class="n">nnvm</span><span class="o">::</span><span class="n">FInferShape</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"FInferShape"</span><span class="p">,</span> <span class="n">ElemwiseShape</span><span class="o">&lt;</span><span class="mi">1</span><span class="p">,</span><span class="mi">1</span><span class="o">&gt;</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>The syntax is quite simple, we register the operator with a name,
+then set number of inputs and outputs.
+You can register attributes with any key (<code class="highlighter-rouge">FInferShape</code> for example) to any operator,
+without having to modify a central class interface definition.</p>
+
+<h3 id="operator-attribute-system">Operator Attribute System</h3>
+
+<p>One of the biggest improvements brought by NNVM is the operator attribute system.
+This is like traits for types in common languages like C++.
+We can register any attribute to any operator, with the syntax</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">NNVM_REGISTER_OP</span><span class="p">(</span><span class="n">op</span><span class="o">-</span><span class="n">name</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_attr</span><span class="o">&lt;</span><span class="n">AttributeType</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"AttributeKey"</span><span class="p">,</span> <span class="n">CorrespondingAttributeObject</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>These attributes can be retrieved later for various purposes.
+For example, <code class="highlighter-rouge">FInferShape</code> is used for shape inference, <code class="highlighter-rouge">FCompute&lt;cpu&gt;</code> is used for carrying out actual computation on CPU.</p>
+
+<p>As long as all attributes registered with the same key have the same type,
+we can register any attributes to operators.
+The more attribute an operator provides,
+the more information the system can use for optimization.</p>
+
+<h3 id="list-of-basic-attributes">List of basic attributes</h3>
+
+<p>In this section, we will go through the basic attributes MXNet expect for all operators.
+You can find the definition for them in the following two files:</p>
+
+<ul>
+  <li><a href="https://github.com/dmlc/nnvm/blob/master/include/nnvm/op_attr_types.h">nnvm/op_attr_types.h</a></li>
+  <li><a href="https://github.com/dmlc/mxnet/blob/master/include/mxnet/op_attr_types.h">mxnet/op_attr_types.h</a></li>
+</ul>
+
+<h4 id="descriptions-optional">Descriptions (Optional)</h4>
+
+<p><code class="highlighter-rouge">.describe(comment)</code> adds a comment to the operator. Use <code class="highlighter-rouge">.MXNET_DESCRIBE(comment)</code> to add the current file name and line number to comment.</p>
+
+<h4 id="attribute-parser-optional">Attribute Parser (Optional)</h4>
+
+<p>Set attribute parser with <code class="highlighter-rouge">.set_attr_parser(PARSER)</code> where PARSER is a function with prototype <code class="highlighter-rouge">void(nnvm::NodeAttr* attrs)</code>. This function should parse the key-word arguments in <code class="highlighter-rouge">attrs-&gt;dict</code> and store the result in <code class="highlighter-rouge">attrs-&gt;parsed</code>.</p>
+
+<p>Simple arguments can be parsed like</p>
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">NNVM_REGISTER_OP</span><span class="p">(</span><span class="n">scalar_op</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_attr_parser</span><span class="p">(</span>
+  <span class="p">[](</span><span class="n">NodeAttrs</span><span class="o">*</span> <span class="n">attrs</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">attrs</span><span class="o">-&gt;</span><span class="n">parsed</span> <span class="o">=</span> <span class="n">std</span><span class="o">::</span><span class="n">stod</span><span class="p">(</span><span class="n">attrs</span><span class="o">-&gt;</span><span class="n">dict</span><span class="p">[</span><span class="s">"scalar"</span><span class="p">]);</span>
+  <span class="p">})</span>
+</code></pre></div></div>
+
+<p>The parsed arguments can then be accessed in other attribute functions with</p>
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">double</span> <span class="n">alpha</span> <span class="o">=</span> <span class="n">nnvm</span><span class="o">::</span><span class="n">get</span><span class="o">&lt;</span><span class="kt">double</span><span class="o">&gt;</span><span class="p">(</span><span class="n">attrs</span><span class="p">.</span><span class="n">parsed</span><span class="p">);</span>
+</code></pre></div></div>
+
+<p>More complex ops can use <code class="highlighter-rouge">dmlc::Parameters</code> and <code class="highlighter-rouge">ParamParser</code> (defined in operator_common.h) for parsing:</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="cp">#include &lt;dmlc/parameter.h&gt;
+#include &lt;operator_common.h&gt;
+</span><span class="k">struct</span> <span class="n">ActivationParam</span> <span class="o">:</span> <span class="k">public</span> <span class="n">dmlc</span><span class="o">::</span><span class="n">Parameter</span><span class="o">&lt;</span><span class="n">ActivationParam</span><span class="o">&gt;</span> <span class="p">{</span>
+  <span class="c1">// use int for enumeration</span>
+  <span class="kt">int</span> <span class="n">act_type</span><span class="p">;</span>
+  <span class="n">DMLC_DECLARE_PARAMETER</span><span class="p">(</span><span class="n">ActivationParam</span><span class="p">)</span> <span class="p">{</span>
+    <span class="n">DMLC_DECLARE_FIELD</span><span class="p">(</span><span class="n">act_type</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">add_enum</span><span class="p">(</span><span class="s">"relu"</span><span class="p">,</span> <span class="n">activation</span><span class="o">::</span><span class="n">kReLU</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">add_enum</span><span class="p">(</span><span class="s">"sigmoid"</span><span class="p">,</span> <span class="n">activation</span><span class="o">::</span><span class="n">kSigmoid</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">add_enum</span><span class="p">(</span><span class="s">"tanh"</span><span class="p">,</span> <span class="n">activation</span><span class="o">::</span><span class="n">kTanh</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">add_enum</span><span class="p">(</span><span class="s">"softrelu"</span><span class="p">,</span> <span class="n">activation</span><span class="o">::</span><span class="n">kSoftReLU</span><span class="p">)</span>
+    <span class="p">.</span><span class="n">describe</span><span class="p">(</span><span class="s">"Activation function to be applied."</span><span class="p">);</span>
+  <span class="p">}</span>
+<span class="p">};</span>
+<span class="n">NNVM_REGISTER_OP</span><span class="p">(</span><span class="n">Activation</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_attr_parser</span><span class="p">(</span><span class="n">ParamParser</span><span class="o">&lt;</span><span class="n">ActivationParam</span><span class="o">&gt;</span><span class="p">);</span>
+<span class="c1">// access with:</span>
+<span class="c1">// const ActivationParam&amp; param = nnvm::get&lt;ActivationParam&gt;(attrs.parsed);</span>
+</code></pre></div></div>
+
+<h4 id="inputs--outputs">Inputs &amp; Outputs</h4>
+
+<p>Number of inputs/outputs can be set with <code class="highlighter-rouge">.set_num_inputs(n_in)</code> and <code class="highlighter-rouge">.set_num_outputs(n_out)</code>
+where n_in and n_out are integers.</p>
+
+<p>Alternatively, if the number of inputs/outputs is variable and depends on arguments,
+you can set <code class="highlighter-rouge">n_in</code>/<code class="highlighter-rouge">n_out</code> to functions with prototype <code class="highlighter-rouge">uint32_t(const nnvm::NodeAttrs&amp; attrs)</code>
+that return the number of inputs/outputs based on parsed arguments.</p>
+
+<p>Outputs can be made invisible to other operators by registering <code class="highlighter-rouge">FNumVisibleOutputs</code>
+and returning an integer smaller than <code class="highlighter-rouge">n_out</code>.</p>
+
+<p>Inputs/outputs can be named by registering <code class="highlighter-rouge">FListInputNames</code> and <code class="highlighter-rouge">FListOutputNames</code> with prototype <code class="highlighter-rouge">std::vector&lt;std::string&gt;(const NodeAttrs&amp; attrs)</code>.</p>
+
+<h4 id="argument-descriptions">Argument Descriptions</h4>
+
+<p>Set argument descriptions with <code class="highlighter-rouge">.add_argument(name, type, comment)</code>.
+This is necessary for operators to be properly called imperatively.</p>
+
+<p>First, add NDArray arguments <code class="highlighter-rouge">num_inputs</code> times with type “NDArray”
+or one time with type “NDArray[]” for ops with variable length inputs.</p>
+
+<p>Then add key-word arguments with proper type (float, string, etc).
+Operators that parse key-word arguments with <code class="highlighter-rouge">dmlc::Parameter</code>
+can add argument descriptions in bulk with <code class="highlighter-rouge">.add_arguments(ActivationParam::__FIELDS__())</code>
+(NDArray arguments still need to be manually added with type “NDArray”).</p>
+
+<h4 id="finfershape-or-tisbackward-for-backward-only-ops">FInferShape or TIsBackward (for Backward Only Ops)</h4>
+
+<p>Normally operators need to have <code class="highlighter-rouge">FInferShape</code> with prototype <code class="highlighter-rouge">bool(const nnvm::NodeAttrs&amp; attrs, mxnet::ShapeVector *in_attrs, mxnet::ShapeVector *out_attrs)</code>. <code class="highlighter-rouge">FInferShape</code> fills unknown shapes (<code class="highlighter-rouge">shape.ndim() == 0</code>) in in_attrs/out_attrs based on known shapes in in_attrs/out_attrs. Use <code class="highlighter-rouge">ElemwiseShape&lt;n_in, n_out&gt;</code> for simple operators with uniform shapes.</p>
+
+<p>Operators that are only used for a backward pass can instead register <code class="highlighter-rouge">.set_attr&lt;nnvm::TIsBackward&gt;("TIsBackward", true)</code>
+and their shapes with be copied from the corresponding forward operators.</p>
+
+<h4 id="finfertype">FInferType</h4>
+
+<p>Similar to <code class="highlighter-rouge">FInferShape</code>, <code class="highlighter-rouge">FInferType</code> fills unknown types (-1) based on known types. Use <code class="highlighter-rouge">ElemwiseType&lt;n_in, n_out&gt;</code> for simple operators with uniform types. Operators that registered <code class="highlighter-rouge">TIsBackward</code> don’t need to register this.</p>
+
+<h4 id="finplaceoption-optional">FInplaceOption (Optional)</h4>
+
+<p><code class="highlighter-rouge">FInplaceOption</code> with prototype <code class="highlighter-rouge">std::vector&lt;std::pair&lt;int, int&gt; &gt;(const NodeAttrs&amp; attrs)</code>
+specifies which input/output pairs can be computed in-place
+and share memory with each other.
+Each pair (i, j) in the returned list means
+that the i-th input can share memory with the j-th output.</p>
+
+<h4 id="fgradient-optional-for-imperative-use-required-for-symbolic-use">FGradient (Optional for imperative use, required for symbolic use)</h4>
+
+<p>If an operator has gradient, it can be described with <code class="highlighter-rouge">FGradient</code> with prototype</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">nnvm</span><span class="o">::</span><span class="n">NodeEntry</span><span class="o">&gt;</span><span class="p">(</span><span class="k">const</span> <span class="n">nnvm</span><span class="o">::</span><span class="n">ObjectPtr</span><span class="o">&amp;</span> <span class="n">n</span><span class="p">,</span>
+                             <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">nnvm</span><span class="o">::</span><span class="n">NodeEntry</span><span class="o">&gt;&amp;</span> <span class="n">ograds</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Use utility functions <code class="highlighter-rouge">ElemwiseGradUseIn{op_name}</code>, <code class="highlighter-rouge">ElemwiseGradUseOut{op_name}</code>, <code class="highlighter-rouge">ElemwiseGradUseNone{op_name}</code>  for ops that need corresponding forward op’s input,
+output or nothing to calculating gradient.</p>
+
+<p>For more complicated patterns, use <code class="highlighter-rouge">MakeGradNode(op_name, n, heads, dict)</code> to create gradient entries,
+where heads are input entries to the backward op, composed from ograds and n-&gt;inputs.</p>
+
+<p>When assembling a return vector of <code class="highlighter-rouge">std::vector&lt;nnvm::NodeEntry&gt; ret;</code> a common pattern would be to
+either create nodes in place as in:</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">ret</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="n">MakeNode</span><span class="p">(</span><span class="s">"zeros_like"</span><span class="p">,</span> <span class="n">n</span><span class="o">-&gt;</span><span class="n">attrs</span><span class="p">.</span><span class="n">name</span> <span class="o">+</span> <span class="s">"_xyz_backward"</span><span class="p">,</span>
+    <span class="p">{</span><span class="n">n</span><span class="o">-&gt;</span><span class="n">inputs</span><span class="p">[</span><span class="mi">1</span><span class="p">]},</span> <span class="nb">nullptr</span><span class="p">,</span> <span class="o">&amp;</span><span class="n">n</span><span class="p">))</span>
+</code></pre></div></div>
+
+<p>Or create the node, modify and then move into NodeEntry’s constructor if this node is not to be used
+again. This avoids uneccessary copies of the shared_ptr.</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">for</span> <span class="p">(</span><span class="kt">size_t</span> <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span><span class="p">;</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="n">n</span><span class="o">-&gt;</span><span class="n">inputs</span><span class="p">.</span><span class="n">size</span><span class="p">();</span> <span class="o">++</span><span class="n">i</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">nnvm</span><span class="o">::</span><span class="n">ObjectPtr</span> <span class="n">node</span> <span class="o">=</span> <span class="n">nnvm</span><span class="o">::</span><span class="n">Node</span><span class="o">::</span><span class="n">Create</span><span class="p">();</span>
+  <span class="n">node</span><span class="o">-&gt;</span><span class="n">attrs</span><span class="p">.</span><span class="n">op</span> <span class="o">=</span> <span class="n">copy_op</span><span class="p">;</span>
+  <span class="n">node</span><span class="o">-&gt;</span><span class="n">inputs</span> <span class="o">=</span> <span class="p">{</span><span class="n">ograds</span><span class="p">[</span><span class="mi">0</span><span class="p">]};</span>
+  <span class="n">ret</span><span class="p">.</span><span class="n">emplace_back</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">move</span><span class="p">(</span><span class="n">node</span><span class="p">));</span>
+<span class="p">}</span>
+</code></pre></div></div>
+
+<p>The first case uses RVO and the second in place construction.</p>
+
+<h4 id="fcomputexpu">FCompute&lt;xpu&gt;</h4>
+
+<p>Simple operators can register FCompute<xpu> with `.set_attr<FCompute>("FCompute<cpu>", ...)` and `.set_attr<FCompute>("FCompute<gpu>", ...)` for both CPU and (optionally) GPU computation.</gpu></FCompute></cpu></FCompute></xpu></p>
+
+<p>FCompute has prototype</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kt">void</span><span class="p">(</span><span class="k">const</span> <span class="n">nnvm</span><span class="o">::</span><span class="n">NodeAttrs</span><span class="o">&amp;</span> <span class="n">attrs</span><span class="p">,</span>
+     <span class="k">const</span> <span class="n">OpContext</span><span class="o">&amp;</span> <span class="n">ctx</span><span class="p">,</span>
+     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">TBlob</span><span class="o">&gt;&amp;</span> <span class="n">inputs</span><span class="p">,</span>
+     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">OpReqType</span><span class="o">&gt;&amp;</span> <span class="n">req</span><span class="p">,</span>
+     <span class="k">const</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">TBlob</span><span class="o">&gt;&amp;</span> <span class="n">outputs</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p><code class="highlighter-rouge">req</code> has the same length as <code class="highlighter-rouge">outputs</code>.
+Each entry of <code class="highlighter-rouge">req</code> specifies
+how the corresponding <code class="highlighter-rouge">output</code> should be written to.
+<code class="highlighter-rouge">OpReqType</code> is defined as:</p>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="k">enum</span> <span class="n">OpReqType</span> <span class="p">{</span>
+  <span class="n">kNullOp</span><span class="p">,</span>
+  <span class="n">kWriteTo</span><span class="p">,</span>
+  <span class="n">kWriteInplace</span><span class="p">,</span>
+  <span class="n">kAddTo</span>
+<span class="p">};</span>
+</code></pre></div></div>
+
+<p>Normally, the <code class="highlighter-rouge">req</code> of all <code class="highlighter-rouge">outputs</code> should be <code class="highlighter-rouge">kWriteTo</code>,
+meaning that the provided <code class="highlighter-rouge">outputs</code> tensor is a <em>raw</em> memory block,
+so the operator should write results directly into it.
+In some cases, for example, when calculating the gradient tensor,
+it would be great if we could accumulate the result,
+rather than directly overwrite the tensor contents
+so that no extra space needs to be created each time.
+In such cases, the corresponding <code class="highlighter-rouge">req</code> is set to <code class="highlighter-rouge">kAddTo</code>,
+indicating that a <code class="highlighter-rouge">+=</code> should be used.</p>
+
+<h3 id="example-abs-operator">Example: abs operator</h3>
+
+<div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">NNVM_REGISTER_OP</span><span class="p">(</span><span class="n">abs</span><span class="p">)</span>
+<span class="p">.</span><span class="n">MXNET_DESCRIBE</span><span class="p">(</span><span class="s">"Take absolute value of the src"</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_num_inputs</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_num_outputs</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_attr</span><span class="o">&lt;</span><span class="n">nnvm</span><span class="o">::</span><span class="n">FInferShape</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"FInferShape"</span><span class="p">,</span> <span class="n">ElemwiseShape</span><span class="o">&lt;</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_attr</span><span class="o">&lt;</span><span class="n">nnvm</span><span class="o">::</span><span class="n">FInferType</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"FInferType"</span><span class="p">,</span> <span class="n">ElemwiseType</span><span class="o">&lt;</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_attr</span><span class="o">&lt;</span><span class="n">nnvm</span><span class="o">::</span><span class="n">FInplaceOption</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"FInplaceOption"</span><span class="p">,</span>
+<span class="p">[](</span><span class="k">const</span> <span class="n">NodeAttrs</span><span class="o">&amp;</span> <span class="n">attrs</span><span class="p">){</span>
+  <span class="k">return</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="o">&gt;</span><span class="p">{{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">}};</span>
+<span class="p">})</span>
+<span class="p">.</span><span class="n">set_attr</span><span class="o">&lt;</span><span class="n">FCompute</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"FCompute&lt;cpu&gt;"</span><span class="p">,</span> <span class="n">UnaryCompute</span><span class="o">&lt;</span><span class="n">cpu</span><span class="p">,</span> <span class="n">mshadow_op</span><span class="o">::</span><span class="n">abs</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_attr</span><span class="o">&lt;</span><span class="n">nnvm</span><span class="o">::</span><span class="n">FGradient</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"FGradient"</span><span class="p">,</span> <span class="n">ElemwiseGradUseIn</span><span class="p">{</span><span class="s">"_backward_abs"</span><span class="p">});</span>
+<span class="p">.</span><span class="n">add_argument</span><span class="p">(</span><span class="s">"data"</span><span class="p">,</span> <span class="s">"NDArray"</span><span class="p">,</span> <span class="s">"Source input"</span><span class="p">)</span>
+
+<span class="n">NNVM_REGISTER_OP</span><span class="p">(</span><span class="n">_backward_abs</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_num_inputs</span><span class="p">(</span><span class="mi">2</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_num_outputs</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_attr</span><span class="o">&lt;</span><span class="n">nnvm</span><span class="o">::</span><span class="n">FInferShape</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"FInferShape"</span><span class="p">,</span> <span class="n">ElemwiseShape</span><span class="o">&lt;</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_attr</span><span class="o">&lt;</span><span class="n">nnvm</span><span class="o">::</span><span class="n">FInferType</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"FInferType"</span><span class="p">,</span> <span class="n">ElemwiseType</span><span class="o">&lt;</span><span class="mi">2</span><span class="p">,</span> <span class="mi">1</span><span class="o">&gt;</span><span class="p">)</span>
+<span class="p">.</span><span class="n">set_attr</span><span class="o">&lt;</span><span class="n">nnvm</span><span class="o">::</span><span class="n">FInplaceOption</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"FInplaceOption"</span><span class="p">,</span>
+<span class="p">[](</span><span class="k">const</span> <span class="n">NodeAttrs</span><span class="o">&amp;</span> <span class="n">attrs</span><span class="p">){</span>
+  <span class="k">return</span> <span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">pair</span><span class="o">&lt;</span><span class="kt">int</span><span class="p">,</span> <span class="kt">int</span><span class="o">&gt;</span> <span class="o">&gt;</span><span class="p">{{</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">},</span> <span class="p">{</span><span class="mi">1</span><span class="p">,</span> <span class="mi">0</span><span class="p">}};</span>
+<span class="p">})</span>
+<span class="p">.</span><span class="n">set_attr</span><span class="o">&lt;</span><span class="n">FCompute</span><span class="o">&gt;</span><span class="p">(</span><span class="s">"FCompute&lt;cpu&gt;"</span><span class="p">,</span> <span class="n">BinaryCompute</span><span class="o">&lt;</span><span class="n">cpu</span><span class="p">,</span> <span class="n">backward_grad</span><span class="o">&lt;</span><span class="n">mshadow_op</span><span class="o">::</span><span class="n">sign</span><span class="o">&gt;</span> <span class="o">&gt;</span><span class="p">);</span>
+</code></pre></div></div>
+
+<h3 id="legacy-operators">Legacy Operators</h3>
+
+<p>For the legacy (pre 0.9) way of defining operators with C++, please see:</p>
+<ul>
+  <li><a href="/api/architecture/overview.html#operators-in-mxnet">Developer Guide - Operators</a></li>
+  <li><a href="/api/architecture/overview.html#simpleop-the-unified-operator-api">Developer Guide - SimpleOp</a></li>
+</ul>
+:ET

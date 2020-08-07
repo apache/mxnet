@@ -1,0 +1,106 @@
+I"�<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h2 id="create-a-dataset-using-recordio">Create a Dataset Using RecordIO</h2>
+
+<p>RecordIO implements a file format for a sequence of records. We recommend storing images as records and packing them together. The benefits include:</p>
+
+<ul>
+  <li>Storing images in a compact format–e.g., JPEG, for records–greatly reduces the size of the dataset on the disk.</li>
+  <li>Packing data together allows continuous reading on the disk.</li>
+  <li>RecordIO has a simple way to partition, simplifying distributed setting. We provide an example later.</li>
+</ul>
+
+<p>We provide two tools for creating a RecordIO dataset.</p>
+
+<ul>
+  <li><a href="https://github.com/dmlc/mxnet/blob/master/tools/im2rec.cc">im2rec.cc</a> - implements the tool using the C++ API.</li>
+  <li><a href="https://github.com/apache/incubator-mxnet/blob/master/tools/im2rec.py">im2rec.py</a> - implements the tool using the Python API.</li>
+</ul>
+
+<p>Both provide the same output: a RecordIO dataset.</p>
+
+<h3 id="prerequisites">Prerequisites</h3>
+
+<p>Download the data. You don’t need to resize the images manually. You can use <code class="highlighter-rouge">im2rec</code> to resize them automatically. For details, see the “Extension: Using Multiple Labels for a Single Image,” later in this topic.</p>
+
+<h3 id="step-1-make-an-image-list-file">Step 1. Make an Image List File</h3>
+
+<ul>
+  <li>Note that the im2rec.py provides a param <code class="highlighter-rouge">--list</code> to generate the list for you, but im2rec.cc doesn’t support it.</li>
+</ul>
+
+<p>After you download the data, you need to make an image list file.  The format is:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>integer_image_index \t label_index \t path_to_image
+</code></pre></div></div>
+<p>Typically, the program takes the list of names of all of the images, shuffles them, then separates them into two lists: a training filename list and a testing filename list. Write the list in the right format.
+This is an example file:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>95099  464.000000     n04467665_17283.JPEG
+10025081        412.000000     ILSVRC2010_val_00025082.JPEG
+74181   789.000000     n01915811_2739.JPEG
+10035553        859.000000     ILSVRC2010_val_00035554.JPEG
+10048727        929.000000     ILSVRC2010_val_00048728.JPEG
+94028   924.000000     n01980166_4956.JPEG
+1080682 650.000000     n11807979_571.JPEG
+972457  633.000000     n07723039_1627.JPEG
+7534    11.000000      n01630670_4486.JPEG
+1191261 249.000000     n12407079_5106.JPEG
+</code></pre></div></div>
+
+<h3 id="step-2-create-the-binary-file">Step 2. Create the Binary File</h3>
+
+<p>To generate a binary image, use <code class="highlighter-rouge">im2rec</code> in the tool folder. <code class="highlighter-rouge">im2rec</code> takes the path of the <code class="highlighter-rouge">image list file</code> you generated, the <code class="highlighter-rouge">root path</code> of the images, and the <code class="highlighter-rouge">output file path</code> as input. This process usually takes several hours, so be patient.</p>
+
+<p>Sample command:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./bin/im2rec image.lst image_root_dir output.bin <span class="nv">resize</span><span class="o">=</span>256
+</code></pre></div></div>
+<p>For more details, run <code class="highlighter-rouge">./bin/im2rec</code>.</p>
+
+<h3 id="extension-multiple-labels-for-a-single-image">Extension: Multiple Labels for a Single Image</h3>
+
+<p>The <code class="highlighter-rouge">im2rec</code> tool and <code class="highlighter-rouge">mx.io.ImageRecordIter</code> have multi-label support for a single image.
+For example, if you have four labels for a single image, you can use the following procedure to use the RecordIO tools.</p>
+
+<ol>
+  <li>Write the image list files as follows:</li>
+</ol>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>integer_image_index \t label_1 \t label_2 \t   label_3 \t label_4 \t path_to_image
+</code></pre></div></div>
+
+<ol>
+  <li>Run <code class="highlighter-rouge">im2rec</code>, adding a ‘label_width=4’ to the command argument, for example:</li>
+</ol>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>./bin/im2rec image.lst image_root_dir output.bin <span class="nv">resize</span><span class="o">=</span>256 <span class="nv">label_width</span><span class="o">=</span>4
+</code></pre></div></div>
+
+<ol>
+  <li>In the iterator generation code, set <code class="highlighter-rouge">label_width=4</code> and <code class="highlighter-rouge">path_imglist=&lt;&lt;The PATH TO YOUR image.lst&gt;&gt;</code>, for example:</li>
+</ol>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">dataiter</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">ImageRecordIter</span><span class="p">(</span>
+  <span class="n">path_imgrec</span><span class="o">=</span><span class="s">"data/cifar/train.rec"</span><span class="p">,</span>
+  <span class="n">data_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="mi">28</span><span class="p">,</span><span class="mi">28</span><span class="p">),</span>
+  <span class="n">path_imglist</span><span class="o">=</span><span class="s">"data/cifar/image.lst"</span><span class="p">,</span>
+  <span class="n">label_width</span><span class="o">=</span><span class="mi">4</span>
+<span class="p">)</span>
+</code></pre></div></div>
+:ET

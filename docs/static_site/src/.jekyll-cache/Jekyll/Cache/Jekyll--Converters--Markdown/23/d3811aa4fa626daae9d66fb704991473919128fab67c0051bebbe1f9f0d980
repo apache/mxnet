@@ -1,0 +1,174 @@
+I"�<<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="classify-images-with-a-pretrained-model">Classify Images with a PreTrained Model</h1>
+<p>MXNet is a flexible and efficient deep learning framework. One of the interesting things that a deep learning
+algorithm can do is classify real world images.</p>
+
+<p>In this tutorial, we show how to use a pre-trained Inception-BatchNorm network to predict the class of an
+image. For information about the network architecture, see  [1].</p>
+
+<p>The pre-trained Inception-BatchNorm network is able to be downloaded from <a href="https://data.mxnet.io/mxnet/data/Inception.zip">this link</a>
+This model gives the recent state-of-art prediction accuracy on image net dataset.</p>
+
+<h2 id="load-the-mxnet-package">Load the MXNet Package</h2>
+<p>To get started, load the mxnet package:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="n">require</span><span class="p">(</span><span class="n">mxnet</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    ## Loading required package: mxnet
+    ## Loading required package: methods
+</code></pre></div></div>
+
+<p>Now load the imager package to load and preprocess the images in R:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="n">require</span><span class="p">(</span><span class="n">imager</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    ## Loading required package: imager
+    ## Loading required package: plyr
+    ## Loading required package: magrittr
+    ## Loading required package: stringr
+    ## Loading required package: png
+    ## Loading required package: jpeg
+    ##
+    ## Attaching package: 'imager'
+    ##
+    ## The following object is masked from 'package:magrittr':
+    ##
+    ##     add
+    ##
+    ## The following object is masked from 'package:plyr':
+    ##
+    ##     liply
+    ##
+    ## The following objects are masked from 'package:stats':
+    ##
+    ##     convolve, spectrum
+    ##
+    ## The following object is masked from 'package:graphics':
+    ##
+    ##     frame
+    ##
+    ## The following object is masked from 'package:base':
+    ##
+    ##     save.image
+</code></pre></div></div>
+
+<h2 id="load-the-pretrained-model">Load the PreTrained Model</h2>
+<p>Make sure you unzip the pre-trained model in the current folder. Use the model
+loading function to load the model into R:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="n">model</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mx.model.load</span><span class="p">(</span><span class="s2">"Inception/Inception_BN"</span><span class="p">,</span><span class="w"> </span><span class="n">iteration</span><span class="o">=</span><span class="m">39</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Load in the mean image, which is used for preprocessing using:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="n">mean.img</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">as.array</span><span class="p">(</span><span class="n">mx.nd.load</span><span class="p">(</span><span class="s2">"Inception/mean_224.nd"</span><span class="p">)[[</span><span class="s2">"mean_img"</span><span class="p">]])</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="load-and-preprocess-the-image">Load and Preprocess the Image</h2>
+<p>Now, we are ready to classify a real image. In this example, we simply take the parrots image
+from the imager package. You can use another image, if   you prefer.</p>
+
+<p>Load and plot the image:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="n">im</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">load.image</span><span class="p">(</span><span class="n">system.file</span><span class="p">(</span><span class="s2">"extdata/parrots.png"</span><span class="p">,</span><span class="w"> </span><span class="n">package</span><span class="o">=</span><span class="s2">"imager"</span><span class="p">))</span><span class="w">
+    </span><span class="n">plot</span><span class="p">(</span><span class="n">im</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/knitr/classifyRealImageWithPretrainedModel-unnamed-chunk-5-1.png" alt="plot of chunk unnamed-chunk-5" /></p>
+
+<p>Before feeding the image to the deep network, we need to perform some preprocessing
+to make the image meet the deep network input requirements. Preprocessing
+includes cropping  and subtracting the mean.
+Because MXNet is deeply integrated with R, we can do all the processing in an R function:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="n">preproc.image</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">im</span><span class="p">,</span><span class="w"> </span><span class="n">mean.image</span><span class="p">)</span><span class="w"> </span><span class="p">{</span><span class="w">
+      </span><span class="c1"># crop the image</span><span class="w">
+      </span><span class="n">shape</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">dim</span><span class="p">(</span><span class="n">im</span><span class="p">)</span><span class="w">
+      </span><span class="n">short.edge</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">min</span><span class="p">(</span><span class="n">shape</span><span class="p">[</span><span class="m">1</span><span class="o">:</span><span class="m">2</span><span class="p">])</span><span class="w">
+      </span><span class="n">xx</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">floor</span><span class="p">((</span><span class="n">shape</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">short.edge</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="m">2</span><span class="p">)</span><span class="w">
+      </span><span class="n">yy</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">floor</span><span class="p">((</span><span class="n">shape</span><span class="p">[</span><span class="m">2</span><span class="p">]</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">short.edge</span><span class="p">)</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="m">2</span><span class="p">)</span><span class="w">
+      </span><span class="n">cropped</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">crop.borders</span><span class="p">(</span><span class="n">im</span><span class="p">,</span><span class="w"> </span><span class="n">xx</span><span class="p">,</span><span class="w"> </span><span class="n">yy</span><span class="p">)</span><span class="w">
+      </span><span class="c1"># resize to 224 x 224, needed by input of the model.</span><span class="w">
+      </span><span class="n">resized</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">resize</span><span class="p">(</span><span class="n">cropped</span><span class="p">,</span><span class="w"> </span><span class="m">224</span><span class="p">,</span><span class="w"> </span><span class="m">224</span><span class="p">)</span><span class="w">
+      </span><span class="c1"># convert to array (x, y, channel)</span><span class="w">
+      </span><span class="n">arr</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">as.array</span><span class="p">(</span><span class="n">resized</span><span class="p">)</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">255</span><span class="w">
+      </span><span class="nf">dim</span><span class="p">(</span><span class="n">arr</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">224</span><span class="p">,</span><span class="w"> </span><span class="m">224</span><span class="p">,</span><span class="w"> </span><span class="m">3</span><span class="p">)</span><span class="w">
+      </span><span class="c1"># subtract the mean</span><span class="w">
+      </span><span class="n">normed</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">arr</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">mean.img</span><span class="w">
+      </span><span class="c1"># Reshape to format needed by mxnet (width, height, channel, num)</span><span class="w">
+      </span><span class="nf">dim</span><span class="p">(</span><span class="n">normed</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="m">224</span><span class="p">,</span><span class="w"> </span><span class="m">224</span><span class="p">,</span><span class="w"> </span><span class="m">3</span><span class="p">,</span><span class="w"> </span><span class="m">1</span><span class="p">)</span><span class="w">
+      </span><span class="nf">return</span><span class="p">(</span><span class="n">normed</span><span class="p">)</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Use the defined preprocessing function to get the normalized image:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="n">normed</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">preproc.image</span><span class="p">(</span><span class="n">im</span><span class="p">,</span><span class="w"> </span><span class="n">mean.img</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<h2 id="classify-the-image">Classify the Image</h2>
+<p>Now we are ready to classify the image! Use the <code class="highlighter-rouge">predict</code> function
+to get the probability over classes:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="n">prob</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">predict</span><span class="p">(</span><span class="n">model</span><span class="p">,</span><span class="w"> </span><span class="n">X</span><span class="o">=</span><span class="n">normed</span><span class="p">)</span><span class="w">
+    </span><span class="nf">dim</span><span class="p">(</span><span class="n">prob</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    ## [1] 1000    1
+</code></pre></div></div>
+
+<p>As you can see, <code class="highlighter-rouge">prob</code> is a 1 times 1000 array, which gives the probability
+over the 1000 image classes of the input.</p>
+
+<p>Use the <code class="highlighter-rouge">max.col</code> on the transpose of <code class="highlighter-rouge">prob</code> to get the class index:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="n">max.idx</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">max.col</span><span class="p">(</span><span class="n">t</span><span class="p">(</span><span class="n">prob</span><span class="p">))</span><span class="w">
+    </span><span class="n">max.idx</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    ## [1] 89
+</code></pre></div></div>
+
+<p>The index doesn’t make much sense, so let’s see what it really means.
+Read the names of the classes from the following file:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="n">synsets</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">readLines</span><span class="p">(</span><span class="s2">"Inception/synset.txt"</span><span class="p">)</span><span class="w">
+</span></code></pre></div></div>
+
+<p>Let’s see what the image really is:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="w">    </span><span class="n">print</span><span class="p">(</span><span class="n">paste0</span><span class="p">(</span><span class="s2">"Predicted Top-class: "</span><span class="p">,</span><span class="w"> </span><span class="n">synsets</span><span class="w">  </span><span class="p">[[</span><span class="n">max.idx</span><span class="p">]]))</span><span class="w">
+</span></code></pre></div></div>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    ## [1] "Predicted Top-class: n01818515 macaw"
+</code></pre></div></div>
+
+<p>It’s a macaw!</p>
+
+<h2 id="reference">Reference</h2>
+<p>[1] Ioffe, Sergey, and Christian Szegedy. “Batch normalization: Accelerating deep network training by reducing internal covariate shift.” arXiv preprint arXiv:1502.03167 (2015).</p>
+
+<h2 id="next-steps">Next Steps</h2>
+<ul>
+  <li><a href="https://mxnet.io/tutorials/r/mnistCompetition.html">Handwritten Digits Classification Competition</a></li>
+  <li><a href="https://mxnet.io/tutorials/r/charRnnModel.html">Character Language Model using RNN</a></li>
+</ul>
+:ET

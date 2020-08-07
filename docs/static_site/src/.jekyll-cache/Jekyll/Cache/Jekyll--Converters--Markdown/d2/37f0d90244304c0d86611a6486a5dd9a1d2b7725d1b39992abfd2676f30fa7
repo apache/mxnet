@@ -1,0 +1,53 @@
+I"3<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="mxnet---c-api">MXNet - C++ API</h1>
+
+<p>The MXNet C++ Package provides C++ API bindings to the users of MXNet.  Currently, these bindings are not available as standalone package.
+The users of these bindings are required to build this package as mentioned below.</p>
+
+<h2 id="building-c-package">Building C++ Package</h2>
+
+<p>The cpp-package directory contains the implementation of C++ API. As mentioned above, users are required to build this directory or package before using it.
+<strong>The cpp-package is built while building the MXNet shared library, <em>libmxnet.so</em>.</strong></p>
+
+<h3 id="steps-to-build-the-c-package">Steps to build the C++ package:</h3>
+<ol>
+  <li>Building the MXNet C++ package requires building MXNet from source.</li>
+  <li>Clone the MXNet GitHub repository <strong>recursively</strong> to ensure the code in submodules is available for building MXNet.
+    <div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>git clone --recursive https://github.com/apache/incubator-mxnet mxnet
+</code></pre></div>    </div>
+  </li>
+  <li>Install the <a href="https://mxnet.apache.org/get_started/build_from_source#prerequisites">prerequisites</a>, desired <a href="https://mxnet.apache.org/get_started/build_from_source#blas-library">BLAS libraries</a> and optional <a href="https://mxnet.apache.org/get_started/build_from_source#optional">OpenCV, CUDA, and cuDNN</a> for building MXNet from source.</li>
+  <li>Please refer to  <a href="https://mxnet.apache.org/get_started/build_from_source#build-instructions-by-operating-system">platform specific build instructions</a> and available <a href="https://mxnet.apache.org/get_started/build_from_source#build-configurations">build configurations</a> for more details.</li>
+  <li>For enabling the build of C++ Package, set the <strong>USE_CPP_PACKAGE = 1</strong> in the config file.</li>
+</ol>
+
+<h2 id="usage">Usage</h2>
+
+<p>In order to consume the C++ API please follow the steps below.</p>
+
+<ol>
+  <li>Ensure that the MXNet shared library is built from source with the <strong>USE_CPP_PACKAGE = 1</strong>.</li>
+  <li>Include the <a href="https://github.com/apache/incubator-mxnet/blob/master/cpp-package/include/mxnet-cpp/MxNetCpp.h">MxNetCpp.h</a> in the program that is going to consume MXNet C++ API.
+    <div class="language-c++ highlighter-rouge"><div class="highlight"><pre class="highlight"><code> <span class="cp">#include &lt;mxnet-cpp/MxNetCpp.h&gt;
+</span></code></pre></div>    </div>
+  </li>
+  <li>While building the program, ensure that the correct paths to the directories containing header files and MXNet shared library.</li>
+  <li>The program links the MXNet shared library dynamically. Hence the library needs to be accessible to the program during runtime. This can be achieved by including the path to the shared library in the environment variable  <strong>LD_LIBRARY_PATH</strong> for Linux, Mac. and Ubuntu OS and <strong>PATH</strong> for Windows OS.</li>
+</ol>
+:ET

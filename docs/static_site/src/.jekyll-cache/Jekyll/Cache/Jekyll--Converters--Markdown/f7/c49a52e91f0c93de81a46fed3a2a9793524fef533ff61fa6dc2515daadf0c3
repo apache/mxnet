@@ -1,0 +1,128 @@
+I"7<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="exception-handling-in-mxnet">Exception Handling in MXNet</h1>
+
+<p>This tutorial explains the exception handling support in MXNet,
+and provides examples on how to throw and handle exceptions when in a multithreaded context.
+Although, the examples are in Python, they can be easily extended to MXNet
+language bindings.</p>
+
+<p>MXNet exceptions can be thrown from two areas:</p>
+<ul>
+  <li>MXNet main thread. For eg. Infershape and InferType.</li>
+  <li>Spawned threads:
+    <ul>
+      <li>By dependency engine for operator execution in parallel</li>
+      <li>By the iterators, during the data loading, text parsing phase etc.</li>
+    </ul>
+  </li>
+</ul>
+
+<p>In the first case, the exception is thrown and can be handled in the main thread.
+In the second case, the exception is thrown in a spawned thread, caught and transported to the
+main thread, where it is rethrown. This tutorial will give more explanation and examples on how
+to handle exceptions for the second case.</p>
+
+<h2 id="prerequisites">Prerequisites</h2>
+
+<p>To complete this tutorial, we need:</p>
+<ul>
+  <li>MXNet <a href="https://github.com/apache/incubator-mxnet/commit/7b24137ed45df605defa4ce72ec91554f6e445f0">7b24137</a>. See Instructions in <a href="https://mxnet.io/get_started">Setup and Installation</a>.</li>
+</ul>
+
+<h2 id="exception-handling-for-iterators">Exception Handling for Iterators</h2>
+
+<p>The below example shows how to handle exceptions for iterators. In this example,
+we populate files for data and labels with fewer number of labels compared to the
+number of samples. This should throw an exception.</p>
+
+<p>CSVIter uses PrefetcherIter for loading and parsing data.
+The PrefetcherIter spawns a producer thread in the background which prefetches
+the data while the main thread consumes the data. The exception is thrown in the spawned
+producer thread during the prefetching, when the label is not found corresponding to a specific sample.</p>
+
+<p>The exception is transported to the main thread, where it is rethrown when Next is
+called as part of the following line: <code class="highlighter-rouge">for batch in iter(data_train)</code>.</p>
+
+<p>In general, Exception may be rethrown as part of <code class="highlighter-rouge">Next</code> and <code class="highlighter-rouge">BeforeFirst</code> calls which correspond to <code class="highlighter-rouge">reset()</code> and <code class="highlighter-rouge">next()</code> methods in <code class="highlighter-rouge">MXDataIter</code> for Python language bindings.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">os</span>
+<span class="kn">import</span> <span class="nn">mxnet</span> <span class="k">as</span> <span class="n">mx</span>
+
+<span class="n">cwd</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">getcwd</span><span class="p">()</span>
+<span class="n">data_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cwd</span><span class="p">,</span> <span class="s">"data.csv"</span><span class="p">)</span>
+<span class="n">label_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">cwd</span><span class="p">,</span> <span class="s">"label.csv"</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">data_path</span><span class="p">,</span> <span class="s">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">fout</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">8</span><span class="p">):</span>
+        <span class="n">fout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">"1,2,3,4,5,6,7,8,9,10</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+
+<span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">label_path</span><span class="p">,</span> <span class="s">"w"</span><span class="p">)</span> <span class="k">as</span> <span class="n">fout</span><span class="p">:</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">7</span><span class="p">):</span>
+        <span class="n">fout</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s">"label"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">))</span>
+
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">data_train</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">io</span><span class="o">.</span><span class="n">CSVIter</span><span class="p">(</span><span class="n">data_csv</span><span class="o">=</span><span class="n">data_path</span><span class="p">,</span> <span class="n">label_csv</span><span class="o">=</span><span class="n">label_path</span><span class="p">,</span> <span class="n">data_shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">),</span>
+                               <span class="n">batch_size</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">batch</span> <span class="ow">in</span> <span class="nb">iter</span><span class="p">(</span><span class="n">data_train</span><span class="p">):</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">data_train</span><span class="o">.</span><span class="n">getdata</span><span class="p">()</span><span class="o">.</span><span class="n">asnumpy</span><span class="p">())</span>
+<span class="k">except</span> <span class="n">mx</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">MXNetError</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Exception handled"</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">ex</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h3 id="limitation">Limitation</h3>
+
+<p>There is a race condition when your last <code class="highlighter-rouge">next()</code> call doesnt reach the batch in your dataset where exception occurs. Exception may or may not be thrown in this case depending on which thread wins the race. To avoid this situation, you should try and iterate through your full dataset if you think it can throw exceptions which need to be handled.</p>
+
+<h2 id="exception-handling-for-operators">Exception Handling for Operators</h2>
+
+<p>The below example shows how to handle exceptions for operators in the imperative mode.</p>
+
+<p>For the operator case, the dependency engine spawns a number of threads if it is running in the <code class="highlighter-rouge">ThreadedEnginePool</code> or <code class="highlighter-rouge">ThreadedEnginePerDevice</code> mode. The final operator is executed in one of the spawned threads.</p>
+
+<p>If an operator throws an exception during execution, this exception is propagated
+down the dependency chain. Once there is a synchronizing call i.e. WaitToRead for a variable in the dependency chain, the propagated exception is rethrown.</p>
+
+<p>In the below example, I illustrate how an exception that occured in the first line is propagated down the dependency chain, and finally is rethrown when we make a synchronizing call to WaitToRead.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">mxnet</span> <span class="k">as</span> <span class="n">mx</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="n">c</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+<span class="n">d</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="n">e</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">c</span><span class="p">,</span> <span class="n">d</span><span class="p">)</span>
+<span class="n">e</span><span class="o">.</span><span class="n">wait_to_read</span><span class="p">()</span>
+</code></pre></div></div>
+
+<p>Although the above exception occurs when executing the operation which writes to the variable d in one of the child threads, it is thrown only when the synchronization happens as part of the line: <code class="highlighter-rouge">e.wait_to_read()</code>.</p>
+
+<p>Let us take another example. In the following case, we write to two variables and then <code class="highlighter-rouge">wait_to_read</code> for both. This example shows that any particular exception will not be thrown more than once.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">mxnet</span> <span class="k">as</span> <span class="n">mx</span>
+<span class="n">a</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="n">b</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">normal</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">2</span><span class="p">))</span>
+<span class="n">c</span><span class="p">,</span> <span class="n">d</span>  <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">dot</span><span class="p">(</span><span class="n">a</span><span class="p">,</span> <span class="n">b</span><span class="p">)</span>
+<span class="k">try</span><span class="p">:</span>
+    <span class="n">c</span><span class="o">.</span><span class="n">asnumpy</span><span class="p">()</span>
+<span class="k">except</span> <span class="n">mx</span><span class="o">.</span><span class="n">base</span><span class="o">.</span><span class="n">MXNetError</span> <span class="k">as</span> <span class="n">ex</span><span class="p">:</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Exception handled"</span><span class="p">)</span>
+<span class="n">d</span><span class="o">.</span><span class="n">asnumpy</span><span class="p">()</span>
+</code></pre></div></div>
+:ET

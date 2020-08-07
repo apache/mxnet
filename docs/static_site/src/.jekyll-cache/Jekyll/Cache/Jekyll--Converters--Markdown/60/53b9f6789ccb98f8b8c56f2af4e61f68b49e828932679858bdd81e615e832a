@@ -1,0 +1,214 @@
+I"�T<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="mixed-precision-training-using-float16">Mixed precision training using float16</h1>
+
+<p>In this tutorial we will walk through how one can train deep learning neural networks with mixed precision on supported hardware. We will first see how to use float16 (both with Gluon and Symbolic APIs) and then some techniques on achieving good performance and accuracy.</p>
+
+<h2 id="background">Background</h2>
+
+<p>The computational resources required for training deep neural networks have been lately increasing because of growing complexity and model size. Mixed precision training allows us to reduce the utilization of the resources by using lower precision arithmetic which is computationally less expensive and less costly in terms of space utilization. In this approach you can train using 16 bit floating point (half precision) while using 32 bit floating point (single precision) for output buffers of float16 computation. This allows one to achieve the same accuracy as training with single precision, while decreasing the required memory and training or inference time.</p>
+
+<p>The float16 data type is a 16 bit floating point representation according to the <a href="https://ieeexplore.ieee.org/document/4610935">IEEE 754 standard</a>. It has a dynamic range where the precision can go from 0.0000000596046 (highest, for values closest to 0) to 32 (lowest, for values in the range 32768-65536). Despite the inherent reduced precision when compared to single precision float (float32), using float16 has many advantages. The most obvious advantages are that you can reduce the size of the model by half allowing the training of larger models and using larger batch sizes. The reduced memory footprint also helps in reducing the pressure on memory bandwidth and lowering communication costs. On hardware with specialized support for float16 computation you can also greatly improve the speed of training and inference. The Volta range of Graphics Processing Units (GPUs) from Nvidia have <a href="https://www.nvidia.com/en-us/data-center/tensorcore/">Tensor Cores</a> which perform efficient float16 computation. A tensor core allows accumulation of half precision products into single or half precision outputs. For the rest of this tutorial we assume that we are working with Nvidia’s Tensor Cores on a Volta GPU.</p>
+
+<h2 id="prerequisites">Prerequisites</h2>
+
+<ul>
+  <li><a href="https://www.nvidia.com/en-us/data-center/volta-gpu-architecture/">Volta</a> range of Nvidia GPUs (e.g. AWS P3 instance)</li>
+  <li>CUDA 9 or higher</li>
+  <li>cuDNN v7 or higher</li>
+</ul>
+
+<p>This tutorial also assumes understanding of how to train a network with float32 (the default). Please refer to <a href="/api/python/docs/tutorials/getting-started/logistic_regression_explained.html">logistic regression tutorial</a> to get started with Apache MXNet and Gluon API. This tutorial focuses on the changes needed to switch from float32 to mixed precision and tips on achieving the best performance with mixed precision.</p>
+
+<h2 id="using-the-gluon-api">Using the Gluon API</h2>
+
+<h3 id="training-or-inference">Training or Inference</h3>
+
+<p>With Gluon API, you need to take care of three things to convert a model to support computation with float16.</p>
+
+<ol>
+  <li>Cast Gluon <code class="highlighter-rouge">Block</code>’s parameters and expected input type to float16 by calling the <a href="/api/python/docs/api/gluon/block.html?cast#mxnet.gluon.Block.cast">cast</a> method of the <code class="highlighter-rouge">Block</code> representing the network.</li>
+</ol>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">net</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="s">'float16'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<ol>
+  <li>Ensure the data input to the network is of float16 type. If your <code class="highlighter-rouge">DataLoader</code> or <code class="highlighter-rouge">Iterator</code> produces output in another datatype, then you would have to cast your data. There are different ways you can do this. The easiest would be to use the <a href="/api/python/docs/api/ndarray/ndarray.html?astype#mxnet.ndarray.NDArray.astype">astype</a> method of NDArrays.</li>
+</ol>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">'float16'</span><span class="p">,</span> <span class="n">copy</span><span class="o">=</span><span class="bp">False</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>If you are using images and DataLoader, you can also use a <a href="/api/python/docs/api/gluon/data/vision/transforms/index.html#mxnet.gluon.data.vision.transforms.Cast">Cast transform</a>.</p>
+
+<ol>
+  <li>It is preferable to use <strong>multi_precision mode of optimizer</strong> when training in float16. This mode of optimizer maintains a master copy of the weights in float32 even when the training (i.e. forward and backward pass) is in float16. This helps increase precision of the weight updates and can lead to faster convergence in some scenarios.</li>
+</ol>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">optimizer</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="s">'sgd'</span><span class="p">,</span> <span class="n">multi_precision</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.01</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>You can play around with mixed precision using the image classification <a href="https://github.com/apache/incubator-mxnet/blob/master/example/image-classification/train_imagenet.py">example</a>. We suggest using the Caltech101 dataset option in that example and using a ResNet50V1 network so you can quickly see the performance improvement and how the accuracy is unaffected. Here’s the starter command to run this example.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python image_classification.py <span class="nt">--model</span> resnet50_v1 <span class="nt">--dataset</span> caltech101 <span class="nt">--gpus</span> 0 <span class="nt">--num-worker</span> 30 <span class="nt">--dtype</span> float16
+</code></pre></div></div>
+
+<h3 id="fine-tuning">Fine-tuning</h3>
+
+<p>You can also fine-tune a model, which was originally trained in float32, to use float16. Below is an example of how to fine-tune a pretrained model from the Model Zoo. You would first need to fetch the pretrained network and then cast that network to float16.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">mxnet</span> <span class="k">as</span> <span class="n">mx</span>
+<span class="kn">from</span> <span class="nn">mxnet.gluon.model_zoo.vision</span> <span class="kn">import</span> <span class="n">get_model</span>
+
+
+<span class="n">pretrained_net</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">'resnet50_v2'</span><span class="p">,</span> <span class="n">ctx</span><span class="o">=</span><span class="n">mx</span><span class="o">.</span><span class="n">cpu</span><span class="p">(),</span>
+                           <span class="n">pretrained</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span> <span class="n">classes</span><span class="o">=</span><span class="mi">1000</span><span class="p">)</span>
+<span class="n">pretrained_net</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="s">'float16'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Then, if you have another Resnet50V2 model you want to fine-tune, you can just assign the features to that network and then cast it.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">net</span> <span class="o">=</span> <span class="n">get_model</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s">'resnet50_v2'</span><span class="p">,</span> <span class="n">ctx</span><span class="o">=</span><span class="n">mx</span><span class="o">.</span><span class="n">cpu</span><span class="p">(),</span>
+                <span class="n">pretrained</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span> <span class="n">classes</span><span class="o">=</span><span class="mi">101</span><span class="p">)</span>
+<span class="n">net</span><span class="o">.</span><span class="n">collect_params</span><span class="p">()</span><span class="o">.</span><span class="n">initialize</span><span class="p">(</span><span class="n">mx</span><span class="o">.</span><span class="n">init</span><span class="o">.</span><span class="n">Xavier</span><span class="p">(</span><span class="n">magnitude</span><span class="o">=</span><span class="mf">2.24</span><span class="p">),</span> <span class="n">ctx</span><span class="o">=</span><span class="n">mx</span><span class="o">.</span><span class="n">cpu</span><span class="p">())</span>
+<span class="n">net</span><span class="o">.</span><span class="n">features</span> <span class="o">=</span> <span class="n">pretrained_net</span><span class="o">.</span><span class="n">features</span>
+<span class="n">net</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="s">'float16'</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>You can check the parameters of the model by calling <a href="/api/python/docs/api/gluon/block.html?block%20summary#mxnet.gluon.Block.summary">summary</a> with some fake data. Notice the provided <code class="highlighter-rouge">dtype=np.float16</code> in the line below. As it was mentioned earlier, we have to provide data as float16 as well.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">net</span><span class="o">.</span><span class="n">summary</span><span class="p">(</span><span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">uniform</span><span class="p">(</span><span class="n">shape</span><span class="o">=</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="mi">224</span><span class="p">,</span> <span class="mi">224</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float16</span><span class="p">))</span>
+</code></pre></div></div>
+
+<h2 id="example-training-results">Example training results</h2>
+
+<p>Let us consider training a Resnet50-V1 model on the ImageNet 2012 dataset. For this model, the GPU memory usage is close to the capacity of V100 GPU with a batch size of 128 when using float32. Using float16 allows the use of 256 batch size. Shared below are results using 8 V100 GPUs on a an <a href="https://aws.amazon.com/ec2/instance-types/p3/#Amazon_EC2_P3_Instance_Product_Details">AWS p3.16xlarge</a> instance.</p>
+
+<p>Let us compare the three scenarios that arise here: float32 with 1024 batch size, float16 with 1024 batch size and float16 with 2048 batch size. These jobs trained for 90 epochs using a learning rate of 0.4 for 1024 batch size and 0.8 for 2048 batch size. This learning rate was decayed by a factor of 0.1 at the 30th, 60th and 80th epochs. The only changes made for the float16 jobs when compared to the float32 job were that the network and data were cast to float16, and the multi-precision mode was used for optimizer. The final accuracy at 90th epoch and the time to train are tabulated below for these three scenarios. The top-1 validation errors at the end of each epoch are also plotted below.</p>
+
+<table>
+  <thead>
+    <tr>
+      <th>Batch size</th>
+      <th>Data type</th>
+      <th>Top 1 Validation accuracy</th>
+      <th>Time to train</th>
+      <th>Speedup</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>1024</td>
+      <td>float32</td>
+      <td>76.18%</td>
+      <td>11.8 hrs</td>
+      <td>1</td>
+    </tr>
+    <tr>
+      <td>1024</td>
+      <td>float16</td>
+      <td>76.34%</td>
+      <td>7.3 hrs</td>
+      <td>1.62x</td>
+    </tr>
+    <tr>
+      <td>2048</td>
+      <td>float16</td>
+      <td>76.29%</td>
+      <td>6.5 hrs</td>
+      <td>1.82x</td>
+    </tr>
+  </tbody>
+</table>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/mixed-precision/resnet50v1b_imagenet_fp16_fp32_training.png" alt="Training curves of Resnet50V1 on Imagenet 2012" /></p>
+
+<p>The difference in accuracies above are within normal random variation, and there is no reason to expect float16 to have better accuracy than float32 in general. As the plot indicates, training behaves similarly for these cases, even though we didn’t have to change any other hyperparameters. We can also see from the table that using float16 helps train faster through faster computation with float16 as well as allowing the use of larger batch sizes.</p>
+
+<h2 id="things-to-keep-in-mind">Things to keep in mind</h2>
+
+<h3 id="for-performance">For performance</h3>
+
+<p>Typical performance gains seen for float16 typically range 1.6x-2x for convolutional networks like Resnet and even about 3x for networks with LSTMs. The performance gain you see can depend on certain things which this section will introduce.</p>
+
+<ol>
+  <li>
+    <p>Nvidia Tensor Cores essentially perform the computation <code class="highlighter-rouge">D = A * B + C</code>, where A and B are half precision matrices, while C and D could be either half precision or full precision. The tensor cores are most efficient when dimensions of these matrices are multiples of 8. This means that Tensor Cores can not be used in all cases for fast float16 computation. When training models like Resnet50 on the Cifar10 dataset, the tensors involved are sometimes smaller, and Tensor Cores can not always be used. The computation in that case falls back to slower algorithms and using float16 turns out to be slower than float32 on a single GPU. Note that when using multiple GPUs, using float16 can still be faster than float32 because of reduction in communication costs.</p>
+  </li>
+  <li>
+    <p>When you scale up the batch size ensure that IO and data pre-processing is not your bottleneck. If you see a slowdown this would be the first thing to check.</p>
+  </li>
+  <li>
+    <p>It is advisable to use batch sizes that are multiples of 8 because of the above reason when training with float16. As always, batch sizes which are powers of 2 would be best when compared to those around it.</p>
+  </li>
+  <li>
+    <p>You can check whether your program is using Tensor cores for fast float16 computation by profiling with <code class="highlighter-rouge">nvprof</code>. The operations with <code class="highlighter-rouge">s884cudnn</code> in their names represent the use of Tensor cores.</p>
+  </li>
+  <li>
+    <p>When not limited by GPU memory, it can help to set the environment variable <code class="highlighter-rouge">MXNET_CUDNN_AUTOTUNE_DEFAULT</code> to <code class="highlighter-rouge">2</code>. This configures MXNet to run tuning tests and choose the fastest convolution algorithm whose memory requirements may exceed the default memory of CUDA workspace.</p>
+  </li>
+  <li>
+    <p>Please note that float16 on CPU might not be supported for all operators, as in most cases float16 on CPU is much slower than float32.</p>
+  </li>
+</ol>
+
+<h3 id="for-accuracy">For accuracy</h3>
+
+<h4 id="multi-precision-mode">Multi precision mode</h4>
+
+<p>When training in float16, it is advisable to still store the master copy of the weights in float32 for better accuracy. The higher precision of float32 helps overcome cases where gradient update can become 0 if represented in float16. This mode can be activated by setting the parameter <code class="highlighter-rouge">multi_precision</code> of optimizer params to <code class="highlighter-rouge">True</code> as in the above example. It has been found that this is not required for all networks to achieve the same accuracy as with float32, but nevertheless recommended. Note that for distributed training, this is currently slightly slower than without <code class="highlighter-rouge">multi_precision</code>, but still much faster than using float32 for training.</p>
+
+<h4 id="large-reductions">Large reductions</h4>
+
+<p>Since float16 has low precision for large numbers, it is best to leave layers which perform large reductions in float32. This includes BatchNorm and Softmax. Ensuring that Batchnorm performs reduction in float32 is handled by default in both Gluon and Module APIs. While Softmax is set to use float32 even during float16 training in Gluon, in the Module API it needs to be a cast to float32 before softmax as the above symbolic example code shows.</p>
+
+<h4 id="loss-scaling">Loss scaling</h4>
+
+<p>For some networks just switching the training to float16 mode was not found to be enough to reach the same accuracy as when training with float32. This is because the activation gradients computed are too small and could not be represented in float16 representable range. Such networks can be made to achieve the accuracy reached by float32 with a couple of changes.</p>
+
+<p>Most of the float16 representable range is not used by activation gradients generally. So you can shift the gradients into float16 range by scaling up the loss by a factor <code class="highlighter-rouge">S</code>. By the chain rule, this scales up the loss before backward pass, and then you can scale back the gradients before updating the weights. This ensures that training in float16 can use the same hyperparameters as used during float32 training.</p>
+
+<p>Here’s how you can configure the loss to be scaled up by 128 and rescale the gradient down before updating the weights.</p>
+
+<p><em>Gluon API</em></p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">loss</span> <span class="o">=</span> <span class="n">gluon</span><span class="o">.</span><span class="n">loss</span><span class="o">.</span><span class="n">SoftmaxCrossEntropyLoss</span><span class="p">(</span><span class="n">weight</span><span class="o">=</span><span class="mi">128</span><span class="p">)</span>
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">optimizer</span><span class="o">.</span><span class="n">create</span><span class="p">(</span><span class="s">'sgd'</span><span class="p">,</span>
+                                <span class="n">multi_precision</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                                <span class="n">rescale_grad</span><span class="o">=</span><span class="mf">1.0</span><span class="o">/</span><span class="mi">128</span><span class="p">)</span>
+</code></pre></div></div>
+
+<p>Networks like Multibox SSD, R-CNN, bigLSTM and Seq2seq were found to exhibit such behavior.
+You can choose a constant scaling factor while ensuring that the absolute value of gradient when multiplied by this factor remains in the range of float16. Generally powers of 2 like 64, 128, 256, 512 are chosen. Refer to the linked articles below for more details on this.</p>
+
+<h2 id="references">References</h2>
+
+<ol>
+  <li><a href="http://docs.nvidia.com/deeplearning/sdk/mixed-precision-training/index.html">Training with Mixed Precision User Guide</a></li>
+  <li><a href="https://arxiv.org/pdf/1710.03740.pdf">Mixed Precision Training at ICLR 2018</a></li>
+  <li><a href="https://devblogs.nvidia.com/mixed-precision-training-deep-neural-networks/">Mixed-Precision Training of Deep Neural Networks</a></li>
+</ol>
+
+<h2 id="recommended-next-steps">Recommended Next Steps</h2>
+
+<ul>
+  <li>Check out our video tutorial on <a href="https://www.youtube.com/watch?v=pR4KMh1lGC0">Using Mixed Precision with MXNet</a></li>
+</ul>
+:ET

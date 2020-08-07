@@ -1,0 +1,116 @@
+I"=/<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="mxnet-scala-symbolic-api">MXNet Scala Symbolic API</h1>
+
+<p>Topics:</p>
+
+<ul>
+  <li><a href="#how-to-compose-symbols">How to Compose Symbols</a> introduces operator overloading of symbols.</li>
+  <li><a href="#symbol-attributes">Symbol Attributes</a> describes how to attach attributes to symbols.</li>
+  <li><a href="#serialization">Serialization</a> explains how to save and load symbols.</li>
+  <li><a href="#executing-symbols">Executing Symbols</a> explains how to evaluate the symbols with data.</li>
+  <li><a href="/api/scala/docs/api/#org.apache.mxnet.Executor">Execution API Reference</a> documents the execution APIs.</li>
+  <li><a href="#multiple-outputs">Multiple Outputs</a> explains how to configure multiple outputs.</li>
+  <li><a href="/api/scala/docs/api/#org.apache.mxnet.Symbol">Symbol Creation API Reference</a> documents functions.</li>
+</ul>
+
+<p>We also highly encourage you to read <a href="symbol_in_pictures">Symbolic Configuration and Execution in Pictures</a>.</p>
+
+<h2 id="how-to-compose-symbols">How to Compose Symbols</h2>
+
+<p>The symbolic API provides a way to configure computation graphs.
+You can configure the graphs either at the level of neural network layer operations or as fine-grained operations.</p>
+
+<p>The basic arithmetic operators (plus, minus, div, multiplication) are overloaded for
+<em>element-wise operations</em> of symbols.</p>
+
+<p>The following example creates a computation graph that adds two inputs together.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="k">import</span> <span class="nn">org.apache.mxnet._</span>
+    <span class="k">val</span> <span class="nv">a</span> <span class="k">=</span> <span class="nv">Symbol</span><span class="o">.</span><span class="py">Variable</span><span class="o">(</span><span class="s">"a"</span><span class="o">)</span>
+    <span class="k">val</span> <span class="nv">b</span> <span class="k">=</span> <span class="nv">Symbol</span><span class="o">.</span><span class="py">Variable</span><span class="o">(</span><span class="s">"b"</span><span class="o">)</span>
+    <span class="k">val</span> <span class="nv">c</span> <span class="k">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+</code></pre></div></div>
+
+<h2 id="symbol-attributes">Symbol Attributes</h2>
+
+<p>You can add an attribute to a symbol by providing an attribute dictionary when you create a symbol.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="k">val</span> <span class="nv">data</span> <span class="k">=</span> <span class="nv">Symbol</span><span class="o">.</span><span class="py">Variable</span><span class="o">(</span><span class="s">"data"</span><span class="o">,</span> <span class="nc">Map</span><span class="o">(</span><span class="s">"mood"</span><span class="o">-&gt;</span> <span class="s">"angry"</span><span class="o">))</span>
+    <span class="k">val</span> <span class="nv">op</span> <span class="k">=</span> <span class="nv">Symbol</span><span class="o">.</span><span class="py">api</span><span class="o">.</span><span class="py">Convolution</span><span class="o">(</span><span class="nc">Some</span><span class="o">(</span><span class="n">data</span><span class="o">),</span> <span class="n">kernel</span> <span class="k">=</span> <span class="nc">Shape</span><span class="o">(</span><span class="mi">1</span><span class="o">,</span> <span class="mi">1</span><span class="o">),</span> <span class="n">num_filter</span> <span class="k">=</span> <span class="mi">1</span><span class="o">,</span> <span class="n">attr</span> <span class="k">=</span> <span class="nc">Map</span><span class="o">(</span><span class="s">"mood"</span> <span class="o">-&gt;</span> <span class="s">"so so"</span><span class="o">))</span>
+</code></pre></div></div>
+<p>For proper communication with the C++ backend, both the key and values of the attribute dictionary should be strings. To retrieve the attributes, use <code class="highlighter-rouge">attr(key)</code>:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    data.attr("mood")
+    // Option[String] = Some(angry)
+</code></pre></div></div>
+
+<p>To attach attributes, you can use <code class="highlighter-rouge">AttrScope</code>. <code class="highlighter-rouge">AttrScope</code> automatically adds the specified attributes to all of the symbols created within that scope. The user can also inherit this object to change naming behavior. For example:</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="nf">val</span> <span class="o">(</span><span class="n">data</span><span class="o">,</span> <span class="n">gdata</span><span class="o">)</span> <span class="k">=</span>
+    <span class="nc">AttrScope</span><span class="o">(</span><span class="nc">Map</span><span class="o">(</span><span class="s">"group"</span> <span class="o">-&gt;</span> <span class="s">"4"</span><span class="o">,</span> <span class="s">"data"</span> <span class="o">-&gt;</span> <span class="s">"great"</span><span class="o">)).</span><span class="py">withScope</span> <span class="o">{</span>
+      <span class="k">val</span> <span class="nv">data</span> <span class="k">=</span> <span class="nv">Symbol</span><span class="o">.</span><span class="py">Variable</span><span class="o">(</span><span class="s">"data"</span><span class="o">,</span> <span class="n">attr</span> <span class="k">=</span> <span class="nc">Map</span><span class="o">(</span><span class="s">"dtype"</span> <span class="o">-&gt;</span> <span class="s">"data"</span><span class="o">,</span> <span class="s">"group"</span> <span class="o">-&gt;</span> <span class="s">"1"</span><span class="o">))</span>
+      <span class="k">val</span> <span class="nv">gdata</span> <span class="k">=</span> <span class="nv">Symbol</span><span class="o">.</span><span class="py">Variable</span><span class="o">(</span><span class="s">"data2"</span><span class="o">)</span>
+      <span class="o">(</span><span class="n">data</span><span class="o">,</span> <span class="n">gdata</span><span class="o">)</span>
+    <span class="o">}</span>
+    <span class="nf">assert</span><span class="o">(</span><span class="nv">gdata</span><span class="o">.</span><span class="py">attr</span><span class="o">(</span><span class="s">"group"</span><span class="o">).</span><span class="py">get</span> <span class="o">===</span> <span class="s">"4"</span><span class="o">)</span>
+    <span class="nf">assert</span><span class="o">(</span><span class="nv">data</span><span class="o">.</span><span class="py">attr</span><span class="o">(</span><span class="s">"group"</span><span class="o">).</span><span class="py">get</span> <span class="o">===</span> <span class="s">"1"</span><span class="o">)</span>
+
+    <span class="k">val</span> <span class="nv">exceedScopeData</span> <span class="k">=</span> <span class="nv">Symbol</span><span class="o">.</span><span class="py">Variable</span><span class="o">(</span><span class="s">"data3"</span><span class="o">)</span>
+    <span class="nf">assert</span><span class="o">(</span><span class="nv">exceedScopeData</span><span class="o">.</span><span class="py">attr</span><span class="o">(</span><span class="s">"group"</span><span class="o">)</span> <span class="o">===</span> <span class="nc">None</span><span class="o">,</span> <span class="s">"No group attr in global attr scope"</span><span class="o">)</span>
+</code></pre></div></div>
+
+<h2 id="serialization">Serialization</h2>
+
+<p>There are two ways to save and load the symbols. You can use the <code class="highlighter-rouge">mxnet.Symbol.save</code> and <code class="highlighter-rouge">mxnet.Symbol.load</code> functions to serialize the <code class="highlighter-rouge">Symbol</code> objects.
+The advantage of using <code class="highlighter-rouge">save</code> and <code class="highlighter-rouge">load</code> functions is that it is language agnostic and cloud friendly.
+The symbol is saved in JSON format. You can also get a JSON string directly using <code class="highlighter-rouge">mxnet.Symbol.toJson</code>.
+Refer to <a href="/api/scala/docs/api/#org.apache.mxnet.Symbol">API documentation</a> for more details.</p>
+
+<p>The following example shows how to save a symbol to an S3 bucket, load it back, and compare two symbols using a JSON string.</p>
+
+<div class="language-scala highlighter-rouge"><div class="highlight"><pre class="highlight"><code>    <span class="k">import</span> <span class="nn">org.apache.mxnet._</span>
+    <span class="k">val</span> <span class="nv">a</span> <span class="k">=</span> <span class="nv">Symbol</span><span class="o">.</span><span class="py">Variable</span><span class="o">(</span><span class="s">"a"</span><span class="o">)</span>
+    <span class="k">val</span> <span class="nv">b</span> <span class="k">=</span> <span class="nv">Symbol</span><span class="o">.</span><span class="py">Variable</span><span class="o">(</span><span class="s">"b"</span><span class="o">)</span>
+    <span class="k">val</span> <span class="nv">c</span> <span class="k">=</span> <span class="n">a</span> <span class="o">+</span> <span class="n">b</span>
+    <span class="nv">c</span><span class="o">.</span><span class="py">save</span><span class="o">(</span><span class="s">"s3://my-bucket/symbol-c.json"</span><span class="o">)</span>
+    <span class="k">val</span> <span class="nv">c2</span> <span class="k">=</span> <span class="nv">Symbol</span><span class="o">.</span><span class="py">load</span><span class="o">(</span><span class="s">"s3://my-bucket/symbol-c.json"</span><span class="o">)</span>
+    <span class="nv">c</span><span class="o">.</span><span class="py">toJson</span> <span class="o">==</span> <span class="nv">c2</span><span class="o">.</span><span class="py">toJson</span>
+    <span class="c1">// Boolean = true</span>
+</code></pre></div></div>
+
+<h2 id="executing-symbols">Executing Symbols</h2>
+
+<p>After you have assembled a set of symbols into a computation graph, the MXNet engine can evaluate them.
+If you are training a neural network, this is typically
+handled by the high-level <a href="model">Model class</a> and the [<code class="highlighter-rouge">fit()</code>] function.</p>
+
+<p>For neural networks used in “feed-forward”, “prediction”, or “inference” mode (all terms for the same
+thing: running a trained network), the input arguments are the
+input data, and the weights of the neural network that were learned during training.</p>
+
+<p>To manually execute a set of symbols, you need to create an [<code class="highlighter-rouge">Executor</code>] object,
+which is typically constructed by calling the [<code class="highlighter-rouge">simpleBind(&lt;parameters&gt;)</code>] method on a symbol.</p>
+
+<h2 id="next-steps">Next Steps</h2>
+<ul>
+  <li>See <a href="io">IO Data Loading API</a> for parsing and loading data.</li>
+  <li>See <a href="ndarray">NDArray API</a> for vector/matrix/tensor operations.</li>
+  <li>See <a href="kvstore">KVStore API</a> for multi-GPU and multi-host distributed training.</li>
+</ul>
+:ET

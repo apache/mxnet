@@ -1,0 +1,147 @@
+I"ý(<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="examine-forward-results-with-hooks">Examine forward results with hooks</h1>
+
+<p>There are currently three ways to register a function in an MXNet Gluon Block for execution:</p>
+
+<ul>
+  <li>before <code class="highlighter-rouge">forward</code> via <a href="/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_pre_hook">register_forward_pre_hook</a></li>
+  <li>after <code class="highlighter-rouge">forward</code> via <a href="/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_forward_hook">register_forward_hook</a></li>
+  <li>as a callback via <a href="/api/python/docs/api/gluon/block.html#mxnet.gluon.Block.register_op_hook">register_op_hook</a></li>
+</ul>
+
+<h2 id="pre-forward-hook">Pre-forward hook</h2>
+
+<p>To register a hook prior to forward execution, the requirement is that the registered operation <strong>should not modify the input or output</strong>. For example: <code class="highlighter-rouge">hook(block, input) -&gt; None</code>. This is useful to get a summary before execution.</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>import mxnet as mx
+from mxnet.gluon import nn
+
+block = nn.Dense(10)
+block.initialize()
+print("{}".format(block))
+# Dense(None -&gt; 10, linear)
+
+def pre_hook(block, input) -&gt; None:  # notice it has two arguments, one block and one input
+    print("{}".format(block))
+    return
+    
+# register
+pre_handle = block.register_forward_pre_hook(pre_hook)
+input = mx.nd.ones((3, 5))
+print(block(input))
+
+# Dense(None -&gt; 10, linear)
+# [[ 0.11254273  0.11162187  0.02200389 -0.04842059  0.09531345  0.00880495
+#  -0.07610667  0.1562067   0.14192852  0.04463106]
+# [ 0.11254273  0.11162187  0.02200389 -0.04842059  0.09531345  0.00880495
+#  -0.07610667  0.1562067   0.14192852  0.04463106]
+# [ 0.11254273  0.11162187  0.02200389 -0.04842059  0.09531345  0.00880495
+#  -0.07610667  0.1562067   0.14192852  0.04463106]]
+# &lt;NDArray 3x10 @cpu(0)&gt;
+</code></pre></div></div>
+
+<p>We can <code class="highlighter-rouge">detach</code> a hook from a block:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>pre_handle.detach()
+print(block(input))
+
+# [[ 0.11254273  0.11162187  0.02200389 -0.04842059  0.09531345  0.00880495
+#  -0.07610667  0.1562067   0.14192852  0.04463106]
+# [ 0.11254273  0.11162187  0.02200389 -0.04842059  0.09531345  0.00880495
+#  -0.07610667  0.1562067   0.14192852  0.04463106]
+# [ 0.11254273  0.11162187  0.02200389 -0.04842059  0.09531345  0.00880495
+#  -0.07610667  0.1562067   0.14192852  0.04463106]]
+# &lt;NDArray 3x10 @cpu(0)&gt;
+</code></pre></div></div>
+
+<p>Notice <code class="highlighter-rouge">Dense(None -&gt; 10, linear)</code> is not displayed anymore.</p>
+
+<h2 id="post-forward-hook">Post-forward hook</h2>
+
+<p>Registering a hook after forward execution is very similar to pre-forward hook (as explained above) with the difference that the hook signature should be <code class="highlighter-rouge">hook(block, input, output) -&gt; None</code> where <strong>hook should not modify the input and output.</strong> Continuing from the above example:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>def post_hook(block, intput, output) -&gt; None:
+    print("{}".format(block))
+    return
+    
+post_handle = block.register_forward_hook(post_hook)
+print(block(input))
+
+# Dense(5 -&gt; 10, linear)
+# [[ 0.11254273  0.11162187  0.02200389 -0.04842059  0.09531345  0.00880495
+#  -0.07610667  0.1562067   0.14192852  0.04463106]
+# [ 0.11254273  0.11162187  0.02200389 -0.04842059  0.09531345  0.00880495
+#  -0.07610667  0.1562067   0.14192852  0.04463106]
+# [ 0.11254273  0.11162187  0.02200389 -0.04842059  0.09531345  0.00880495
+#  -0.07610667  0.1562067   0.14192852  0.04463106]]
+# &lt;NDArray 3x10 @cpu(0)&gt;
+</code></pre></div></div>
+
+<p>Notice the difference between <code class="highlighter-rouge">pre_hook</code> and <code class="highlighter-rouge">post_hook</code> results due to shape inference after <code class="highlighter-rouge">forward</code> is done executing.</p>
+
+<h2 id="callback-hook">Callback hook</h2>
+
+<p>We can register a callback monitor to monitor all operators that are called by the <code class="highlighter-rouge">HybridBlock</code> <strong>after hybridization</strong> with <code class="highlighter-rouge">register_op_hook(callback, monitor_all=False) </code> where the callback signature should be:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>callback(node_name: str,  opr_name: str, arr: NDArray) -&gt; None
+</code></pre></div></div>
+
+<p>where <code class="highlighter-rouge">node_name</code> is the name of the tensor being inspected (str), <code class="highlighter-rouge">opr_name</code> is the name of the operator producing or consuming that tensor (str) and <code class="highlighter-rouge">arr</code> the tensor being inspected (NDArray).</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">import</span> <span class="n">mxnet</span> <span class="k">as</span> <span class="n">mx</span>
+<span class="k">from</span> <span class="n">mxnet</span><span class="p">.</span><span class="n">gluon</span> <span class="n">import</span> <span class="n">nn</span>
+
+<span class="n">def</span> <span class="n">mon_callback</span><span class="p">(</span><span class="n">node_name</span><span class="p">,</span> <span class="n">opr_name</span><span class="p">,</span> <span class="n">arr</span><span class="p">):</span>
+    <span class="n">print</span><span class="p">(</span><span class="s2">"{}"</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">node_name</span><span class="p">))</span>
+    <span class="n">print</span><span class="p">(</span><span class="s2">"{}"</span><span class="p">.</span><span class="n">format</span><span class="p">(</span><span class="n">opr_name</span><span class="p">))</span>
+    <span class="n">return</span>
+    
+<span class="k">model</span> <span class="p">=</span> <span class="n">nn</span><span class="p">.</span><span class="n">HybridSequential</span><span class="p">(</span><span class="n">prefix</span><span class="p">=</span><span class="s2">"dense_"</span><span class="p">)</span>
+<span class="k">with</span> <span class="k">model</span><span class="p">.</span><span class="n">name_scope</span><span class="p">():</span>
+     <span class="k">model</span><span class="p">.</span><span class="n">add</span><span class="p">(</span><span class="n">mx</span><span class="p">.</span><span class="n">gluon</span><span class="p">.</span><span class="n">nn</span><span class="p">.</span><span class="n">Dense</span><span class="p">(</span><span class="m">2</span><span class="p">))</span>
+
+<span class="k">model</span><span class="p">.</span><span class="n">initialize</span><span class="p">()</span>
+<span class="k">model</span><span class="p">.</span><span class="n">hybridize</span><span class="p">()</span>
+<span class="k">model</span><span class="p">.</span><span class="n">register_op_hook</span><span class="p">(</span><span class="n">mon_callback</span><span class="p">,</span> <span class="n">monitor_all</span><span class="p">=</span><span class="nb">True</span><span class="p">)</span>
+<span class="n">print</span><span class="p">(</span><span class="k">model</span><span class="p">(</span><span class="n">mx</span><span class="p">.</span><span class="n">nd</span><span class="p">.</span><span class="n">ones</span><span class="p">((</span><span class="m">2</span><span class="p">,</span> <span class="m">3</span><span class="p">,</span> <span class="m">4</span><span class="p">))))</span>
+
+<span class="p">#</span> <span class="n">b</span><span class="s1">'dense_dense0_fwd_data'</span>
+<span class="p">#</span> <span class="n">b</span><span class="s1">'FullyConnected'</span>
+<span class="p">#</span> <span class="n">b</span><span class="s1">'dense_dense0_fwd_weight'</span>
+<span class="p">#</span> <span class="n">b</span><span class="s1">'FullyConnected'</span>
+<span class="p">#</span> <span class="n">b</span><span class="s1">'dense_dense0_fwd_bias'</span>
+<span class="p">#</span> <span class="n">b</span><span class="s1">'FullyConnected'</span>
+<span class="p">#</span> <span class="n">b</span><span class="s1">'dense_dense0_fwd_output'</span>
+<span class="p">#</span> <span class="n">b</span><span class="s1">'FullyConnected'</span>
+<span class="p">#</span> <span class="p">[[-</span><span class="m">0.05979988</span> <span class="p">-</span><span class="m">0.16349721</span><span class="p">]</span>
+<span class="p">#</span>  <span class="p">[-</span><span class="m">0.05979988</span> <span class="p">-</span><span class="m">0.16349721</span><span class="p">]]</span>
+<span class="p">#</span> <span class="p">&lt;</span><span class="n">NDArray</span> <span class="m">2</span><span class="n">x2</span> <span class="p">@</span><span class="n">cpu</span><span class="p">(</span><span class="m">0</span><span class="p">)&gt;</span>
+</code></pre></div></div>
+
+<p>Setting <code class="highlighter-rouge">monitor_all=False</code> will print only the output:</p>
+
+<div class="highlighter-rouge"><div class="highlight"><pre class="highlight"><code>`# b'dense_dense0_fwd_output'`
+`# b'FullyConnected'``
+# [[-0.05979988 -0.16349721]
+#  [-0.05979988 -0.16349721]]
+# &lt;NDArray 2x2 @cpu(0)`
+</code></pre></div></div>
+
+<p>Note that to get the internal operator node names, one can use <code class="highlighter-rouge">model.collect_params().items()</code>.</p>
+:ET

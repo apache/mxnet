@@ -1,0 +1,108 @@
+I"ƒ2<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="data-loading-api">Data Loading API</h1>
+
+<h2 id="overview">Overview</h2>
+
+<p>A data iterator reads data batch by batch.</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$data</span> <span class="o">=</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span><span class="mi">10</span><span class="p">])</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$nd_iter</span> <span class="o">=</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">io</span><span class="o">-&gt;</span><span class="nv">NDArrayIter</span><span class="p">(</span><span class="nv">$data</span><span class="p">,</span> <span class="nv">batch_size</span><span class="o">=&gt;</span><span class="mi">25</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="k">for</span> <span class="k">my</span> <span class="nv">$batch</span> <span class="p">(</span><span class="nv">@</span><span class="p">{</span> <span class="nv">$nd_iter</span> <span class="p">})</span> <span class="p">{</span> <span class="k">print</span> <span class="nv">$batch</span><span class="o">-&gt;</span><span class="nv">data</span><span class="o">-&gt;</span><span class="p">[</span><span class="mi">0</span><span class="p">],"</span><span class="se">\n</span><span class="p">"</span> <span class="p">}</span>
+<span class="o">&lt;</span><span class="nn">AI::MXNet::</span><span class="nv">NDArray</span> <span class="mi">25</span><span class="nv">x10</span> <span class="nv">@cpu</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="nn">AI::MXNet::</span><span class="nv">NDArray</span> <span class="mi">25</span><span class="nv">x10</span> <span class="nv">@cpu</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="nn">AI::MXNet::</span><span class="nv">NDArray</span> <span class="mi">25</span><span class="nv">x10</span> <span class="nv">@cpu</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="nn">AI::MXNet::</span><span class="nv">NDArray</span> <span class="mi">25</span><span class="nv">x10</span> <span class="nv">@cpu</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span><span class="o">&gt;</span>
+</code></pre></div></div>
+
+<p>If <code class="highlighter-rouge">$nd_iter-&gt;reset()</code> is called, then reads the data again from beginning.</p>
+
+<p>In addition, an iterator provides information about the batch, including the
+shapes and name.</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$nd_iter</span> <span class="o">=</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">io</span><span class="o">-&gt;</span><span class="nv">NDArrayIter</span><span class="p">(</span><span class="nv">data</span><span class="o">=&gt;</span><span class="p">{</span><span class="nv">data</span> <span class="o">=&gt;</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">([</span><span class="mi">100</span><span class="p">,</span><span class="mi">10</span><span class="p">])},</span> <span class="nv">label</span><span class="o">=&gt;</span><span class="p">{</span><span class="nv">softmax_label</span> <span class="o">=&gt;</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">([</span><span class="mi">100</span><span class="p">])},</span> <span class="nv">batch_size</span><span class="o">=&gt;</span><span class="mi">25</span><span class="p">)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="k">print</span><span class="p">(</span><span class="nv">$nd_iter</span><span class="o">-&gt;</span><span class="nv">provide_data</span><span class="o">-&gt;</span><span class="p">[</span><span class="mi">0</span><span class="p">],"</span><span class="se">\n</span><span class="p">")</span>
+<span class="nv">DataDesc</span><span class="p">[</span><span class="nv">data</span><span class="p">,</span><span class="mi">25</span><span class="nv">x10</span><span class="p">,</span><span class="nv">float32</span><span class="p">,</span><span class="nv">NCHW</span><span class="p">]</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="k">print</span><span class="p">(</span><span class="nv">$nd_iter</span><span class="o">-&gt;</span><span class="nv">provide_label</span><span class="o">-&gt;</span><span class="p">[</span><span class="mi">0</span><span class="p">],"</span><span class="se">\n</span><span class="p">")</span>
+<span class="nv">DataDesc</span><span class="p">[</span><span class="nv">softmax_label</span><span class="p">,</span><span class="mi">25</span><span class="p">,</span><span class="nv">float32</span><span class="p">,</span><span class="nv">NCHW</span><span class="p">]</span>
+</code></pre></div></div>
+
+<p>So this iterator can be used to train a symbol whose input data variable has
+name <code class="highlighter-rouge">data</code> and input label variable has name <code class="highlighter-rouge">softmax_label</code>.</p>
+
+<h2 id="predefined-data-iterators">Predefined Data iterators</h2>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">io</span><span class="o">-&gt;</span><span class="nv">NDArrayIter</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">io</span><span class="o">-&gt;</span><span class="nv">CSVIter</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">io</span><span class="o">-&gt;</span><span class="nv">ImageRecordIter</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">io</span><span class="o">-&gt;</span><span class="nv">ImageRecordInt8Iter</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">io</span><span class="o">-&gt;</span><span class="nv">ImageRecordUInt8Iter</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">io</span><span class="o">-&gt;</span><span class="nv">MNISTIter</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">recordio</span><span class="o">-&gt;</span><span class="nv">MXRecordIO</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">recordio</span><span class="o">-&gt;</span><span class="nv">MXIndexedRecordIO</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">ImageIter</span>
+</code></pre></div></div>
+
+<h2 id="helper-classes-and-functions">Helper classes and functions</h2>
+
+<p>Data structures and other iterators provided in the <code class="highlighter-rouge">AI::MXNet::IO</code> package.</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nn">AI::MXNet::</span><span class="nv">DataDesc</span>
+<span class="nn">AI::MXNet::</span><span class="nv">DataBatch</span>
+<span class="nn">AI::MXNet::</span><span class="nv">DataIter</span>
+<span class="nn">AI::MXNet::</span><span class="nv">ResizeIter</span>
+<span class="nn">AI::MXNet::</span><span class="nv">MXDataIter</span>
+</code></pre></div></div>
+
+<p>A list of image modification functions provided by <code class="highlighter-rouge">AI::MXNet::Image</code>.</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">imdecode</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">scale_down</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">resize_short</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">fixed_crop</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">random_crop</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">center_crop</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">color_normalize</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">random_size_crop</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">ResizeAug</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">RandomCropAug</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">RandomSizedCropAug</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">CenterCropAug</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">RandomOrderAug</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">ColorJitterAug</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">LightingAug</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">ColorNormalizeAug</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">HorizontalFlipAug</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">CastAug</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">image</span><span class="o">-&gt;</span><span class="nv">CreateAugmenter</span>
+</code></pre></div></div>
+
+<p>Functions to read and write RecordIO files.</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">recordio</span><span class="o">-&gt;</span><span class="nb">pack</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">recordio</span><span class="o">-&gt;</span><span class="nb">unpack</span>
+<span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">recordio</span><span class="o">-&gt;</span><span class="nv">unpack_img</span>
+</code></pre></div></div>
+
+<h2 id="develop-a-new-iterator">Develop a new iterator</h2>
+
+<p>Writing a new data iterator in Perl is straightforward. Most MXNet
+training/inference programs accept an object with <code class="highlighter-rouge">provide_data</code>
+and <code class="highlighter-rouge">provide_label</code> properties.
+Please refer to AI-MXNet/examples for the examples of custom iterators.</p>
+:ET

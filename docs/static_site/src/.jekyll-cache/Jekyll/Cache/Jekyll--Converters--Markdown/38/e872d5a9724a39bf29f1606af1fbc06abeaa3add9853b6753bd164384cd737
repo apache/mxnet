@@ -1,0 +1,91 @@
+I"W<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="symbolic-configuration-and-execution-in-pictures">Symbolic Configuration and Execution in Pictures</h1>
+
+<p>This topic explains symbolic construction and execution in pictures.
+We recommend that you also read <a href="symbol">Symbolic API</a>.</p>
+
+<h2 id="compose-symbols">Compose Symbols</h2>
+
+<p>Symbols are a description of the computation that you want to perform. The symbolic construction API generates the computation
+graph that describes the computation. The following picture shows how you compose symbols to describe basic computations.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/compose_basic.png" alt="Symbol Compose" /></p>
+
+<ul>
+  <li>The <code class="highlighter-rouge">mxnet.Symbol.Variable</code> function creates argument nodes that represent input to the computation.</li>
+  <li>The symbol is overloaded with basic element-wise mathematical operations.</li>
+</ul>
+
+<h2 id="configure-neural-networks">Configure Neural Networks</h2>
+
+<p>In addition to supporting fine-grained operations, MXNet provides a way to perform big operations that are analogous to layers in neural networks.
+You can use operators to describe the configuration of a neural network.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/compose_net.png" alt="Net Compose" /></p>
+
+<h2 id="example-of-a-multi-input-network">Example of a Multi-Input Network</h2>
+
+<p>The following example shows how to configure multiple input neural networks.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/compose_multi_in.png" alt="Multi Input" /></p>
+
+<h2 id="bind-and-execute-symbol">Bind and Execute Symbol</h2>
+
+<p>When you need to execute a symbol graph, you call the bind function to bind <code class="highlighter-rouge">NDArrays</code> to the argument nodes
+in order to obtain an <code class="highlighter-rouge">Executor</code>.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/bind_basic.png" alt="Bind" /></p>
+
+<p>To get the output results, given the bound NDArrays as input, you can call <code class="highlighter-rouge">Executor.Forward</code>.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/executor_forward.png" alt="Forward" /></p>
+
+<h2 id="bind-multiple-outputs">Bind Multiple Outputs</h2>
+
+<p>To group symbols, then bind them to get outputs of both, use <code class="highlighter-rouge">mx.symbol.Group</code>.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/executor_multi_out.png" alt="MultiOut" /></p>
+
+<p>Remember: Bind only what you need, so that the system can perform more optimizations.</p>
+
+<h2 id="calculate-the-gradient">Calculate the Gradient</h2>
+
+<p>In the bind function, you can specify NDArrays that will hold gradients. Calling <code class="highlighter-rouge">Executor.backward</code> after <code class="highlighter-rouge">Executor.forward</code> gives you the corresponding gradients.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/executor_backward.png" alt="Gradient" /></p>
+
+<h2 id="simple-bind-interface-for-neural-networks">Simple Bind Interface for Neural Networks</h2>
+
+<p>It can be tedious to pass the argument NDArrays to the bind function, especially when you are binding a big
+graph. <code class="highlighter-rouge">Symbol.simple_bind</code> provides a way to simplify
+the procedure. You need to specify only input data shapes. The function allocates the arguments, and binds
+the Executor for you.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/executor_simple_bind.png" alt="SimpleBind" /></p>
+
+<h2 id="auxiliary-states">Auxiliary States</h2>
+
+<p>Auxiliary states are just like arguments, except that you can’t take the gradient of them. Although auxiliary states might not be part of the computation, they can be helpful for tracking. You can pass auxiliary states in the same way that you pass arguments.</p>
+
+<p><img src="https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/symbol/executor_aux_state.png" alt="SimpleBind" /></p>
+
+<h2 id="next-steps">Next Steps</h2>
+
+<p>See <a href="symbol">Symbolic API</a> and <a href="/api/python">Python Documentation</a>.</p>
+:ET

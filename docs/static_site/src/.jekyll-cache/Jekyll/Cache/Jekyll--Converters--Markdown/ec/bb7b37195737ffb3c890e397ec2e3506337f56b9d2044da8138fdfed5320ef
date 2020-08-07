@@ -1,0 +1,251 @@
+I"�;<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="build-mxnet-from-source">Build MXNet from Source</h1>
+
+<p>Building and installing MXNet from source is a three-step process. First, build
+the shared <code class="highlighter-rouge">libmxnet</code> which provides the MXNet backend, then install your
+preferred language binding and finally validate that MXNet was installed
+correctly by running a small example.</p>
+
+<ol>
+  <li><a href="#obtaining-the-source-code">Obtaining the source</a></li>
+  <li><a href="#installing-mxnet's-recommended-dependencies">Installing MXNet’s recommended dependencies</a></li>
+  <li><a href="#overview-of-optional-dependencies-and-optional-features">Overview of optional dependencies and optional features</a></li>
+  <li><a href="#building-mxnet">Building MXNet</a></li>
+  <li><a href="#installing-mxnet-language-bindings">Install the language API binding(s)</a> you would like to use for MXNet.</li>
+</ol>
+
+<p>MXNet’s newest and most popular API is Gluon. Gluon is built into the Python
+binding. If Python isn’t your preference, you still have more options. MXNet
+supports several other language bindings. Please see the <a href="/api">API Documentation
+page</a> for an overview of all supported languages and their APIs.</p>
+
+<h2 id="obtaining-the-source-code">Obtaining the source code</h2>
+
+<p>To obtain the source code of the latest Apache MXNet (incubating) release,
+please access the <a href="/get_started/download">Download page</a> and download the
+<code class="highlighter-rouge">.tar.gz</code> source archive corresponding to the release you wish to build.</p>
+
+<p>Developers can also obtain the unreleased development code from the git
+repository via <code class="highlighter-rouge">git clone --recursive https://github.com/apache/incubator-mxnet mxnet</code></p>
+
+<p>Building a MXNet 1.x release from source requires a C++11 compliant compiler.</p>
+
+<p>Building the development version of MXNet or any 2.x release from source
+requires a C++17 compliant compiler. The oldest compiler versions tested during
+MXNet 2 development are GCC 7, Clang 6 and MSVC 2019.</p>
+
+<h2 id="installing-mxnets-recommended-dependencies">Installing MXNet’s recommended dependencies</h2>
+<p>To install the build tools and recommended dependencies, please run the
+following commands respectively based on your Operating System. Please see the
+next section for further explanations on the set of required and optional
+dependencies of MXNet.</p>
+
+<h3 id="debian-linux-derivatives-debian-ubuntu-">Debian Linux derivatives (Debian, Ubuntu, …)</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>apt-get update
+<span class="nb">sudo </span>apt-get <span class="nb">install</span> <span class="nt">-y</span> build-essential git ninja-build ccache libopenblas-dev libopencv-dev cmake
+</code></pre></div></div>
+
+<h3 id="red-hat-enterprise-linux-derivatives-rhel-centos-fedora-">Red Hat Enterprise Linux derivatives (RHEL, CentOS, Fedora, …)</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nb">sudo </span>yum <span class="nb">install </span>epel-release centos-release-scl
+<span class="nb">sudo </span>yum <span class="nb">install </span>git make ninja-build automake autoconf libtool protobuf-compiler protobuf-devel <span class="se">\</span>
+    atlas-devel openblas-devel lapack-devel opencv-devel openssl-devel zeromq-devel python3 <span class="se">\ </span>
+    devtoolset-7
+<span class="nb">source</span> /opt/rh/devtoolset-7/enable
+</code></pre></div></div>
+<p>Here <code class="highlighter-rouge">devtoolset-7</code> refers to the <a href="https://www.softwarecollections.org/en/scls/rhscl/devtoolset-7/">Developer Toolset
+7</a> created by
+Red Hat for developers working on CentOS or Red Hat Enterprise Linux platform
+and providing the GNU Compiler Collection 7.</p>
+
+<h3 id="macos">macOS</h3>
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="c"># Install OS X Developer Tools</span>
+xcode-select <span class="nt">--install</span>
+
+<span class="c"># Install Homebrew</span>
+/usr/bin/ruby <span class="nt">-e</span> <span class="s2">"</span><span class="si">$(</span>curl <span class="nt">-fsSL</span> https://raw.githubusercontent.com/Homebrew/install/master/install<span class="si">)</span><span class="s2">"</span>
+
+<span class="c"># Install dependencies</span>
+brew <span class="nb">install </span>cmake ninja ccache opencv
+</code></pre></div></div>
+
+<p>Note: the compiler provided by Apple on macOS does not support OpenMP. To use
+OpenMP on macOS you need to install for example the Clang compiler via <code class="highlighter-rouge">brew</code>:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>brew <span class="nb">install </span>llvm
+</code></pre></div></div>
+
+<h3 id="windows">Windows</h3>
+<p>You can use Chocolatey software management solution to install some dependencies
+on Windows.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>choco <span class="nb">install </span>python git 7zip cmake ninja opencv
+</code></pre></div></div>
+
+<p>Currently OpenBLAS is not available from Chocolatey. You may download it from
+from <a href="https://github.com/xianyi/OpenBLAS/releases">the OpenBLAS release page</a>
+and compile from source. Set the <code class="highlighter-rouge">OpenBLAS_HOME</code> environment variable to point
+to the OpenBLAS directory that contains the <code class="highlighter-rouge">include</code> and <code class="highlighter-rouge">lib</code> directories for
+example by typing <code class="highlighter-rouge">set OpenBLAS_HOME=C:\utils\OpenBLAS</code>.</p>
+
+<p>If you like to compile MXNet with Visual Studio compiler, please install at
+least <a href="https://www.visualstudio.com/downloads/">VS2019</a>.</p>
+
+<h2 id="overview-of-optional-dependencies-and-optional-features">Overview of optional dependencies and optional features</h2>
+
+<h3 id="math-library-selection">Math Library Selection</h3>
+<p>MXNet relies on the
+<a href="https://en.wikipedia.org/wiki/Basic_Linear_Algebra_Subprograms">BLAS</a> (Basic
+Linear Algebra Subprograms) library for numerical computations. In addition to
+BLAS, some operators in MXNet rely on the <a href="https://github.com/Reference-LAPACK/lapack">LAPACK (Linear Algebra
+Package)</a>, an additional set of
+mathematical functions.</p>
+
+<p>Several BLAS and LAPACK implementations exist. Among them, MXNet is tested with:</p>
+
+<ul>
+  <li><a href="https://developer.apple.com/documentation/accelerate">Apple Accelerate</a></li>
+  <li><a href="http://math-atlas.sourceforge.net/">ATLAS</a></li>
+  <li><a href="https://software.intel.com/en-us/intel-mkl">Intel MKL</a></li>
+  <li><a href="https://www.openblas.net/">OpenBLAS</a></li>
+</ul>
+
+<p>Apple Accelerate and MKL are proprietary. ATLAS and OpenBLAS are Open Source. If
+you don’t have any specific requirements, MXNet recommends OpenBLAS as it
+typically outperforms ATLAS, is portable across many platforms, provides a
+LAPACK implementation and has a permissive license.</p>
+
+<h3 id="optional-gpu-support">Optional GPU support</h3>
+
+<p>MXNet optionally supports <a href="https://developer.nvidia.com/cuda-downloads">NVDIA CUDA and
+cuDNN</a> for better performance on
+NVidia devices. MXNet releases in general are tested with the last two major
+CUDA versions available at the time of the release. For example, CUDA 9.2 and
+10.2.</p>
+
+<p>To compile MXNet with CUDA support, define the <code class="highlighter-rouge">USE_CUDA</code> option. If you compile
+MXNet on a system with NVidia GPUs, the build system will automatically detect
+the CUDA Architecture. If you are compiling on a system without NVidia GPUs,
+please specify the <code class="highlighter-rouge">MXNET_CUDA_ARCH</code> option to select the CUDA Architecture and
+avoid a lengthy build targeting all common CUDA Architectures. Please see the
+MXNet build configuration instructions in the next step.</p>
+
+<p>MXNet also supports <a href="https://developer.nvidia.com/nccl">NCCL</a> - NVIDIA’s
+Collective Communications Library. NCCL is useful when using MXNet on multiple
+GPUs that require communication. Instructions for installing NCCL are found in
+the following <a href="#build-mxnet-with-nccl">Build MXNet with NCCL</a> section.</p>
+
+<p>To enable building MXNet with NCCL, install NCCL and define the <code class="highlighter-rouge">USE_NCCL</code>
+option in the MXNet build configuration in the next step.</p>
+
+<p>After building with NCCL, you may optionally use the tests in
+<code class="highlighter-rouge">tests/python/gpu/test_nccl.py</code> to ensure NCCL is enabled correctly. Please
+first delete the line containing <code class="highlighter-rouge">skip(reason="Test requires NCCL library
+installed and enabled during build")</code> before running the test. In MXNet 2.x
+versions, the test can be run via <code class="highlighter-rouge">pytest --verbose
+tests/python/gpu/test_nccl.py</code>. In MXNet 1.x it is run via <code class="highlighter-rouge">python
+tests/python/gpu/test_nccl.py</code>.</p>
+
+<p>To get the best performance out of NCCL it is recommended to set environment
+variable <code class="highlighter-rouge">NCCL_LAUNCH_MODE=PARALLEL</code> when using NCCL version 2.1 or newer.</p>
+
+<h3 id="optional-opencv-support">Optional OpenCV support</h3>
+
+<p>MXNet’s Image Loading and Augmentation features rely on
+<a href="http://opencv.org/">OpenCV</a>. Image Loading and Augmentation</p>
+
+<h2 id="building-mxnet">Building MXNet</h2>
+
+<p>MXNet 1.x can be built either with a classic Makefile setup or with the <code class="highlighter-rouge">cmake</code>
+cross platform build system. Starting with MXNet 1.7, MXNet recommends using the
+<code class="highlighter-rouge">cmake</code> cross platform build tool.</p>
+
+<p>Note: The <code class="highlighter-rouge">cmake</code> build requires CMake 3.13 or higher. If you are running an
+older version of CMake, you will see an error message like <code class="highlighter-rouge">CMake 3.13 or higher
+is required. You are running version 3.10.2</code>. Please update CMake on your
+system. You can download and install latest CMake from https://cmake.org or via
+the Python package manager <code class="highlighter-rouge">pip</code> with <code class="highlighter-rouge">python3 -m pip install --user --upgrade
+"cmake&gt;=3.13.2"</code>. After installing cmake with <code class="highlighter-rouge">pip3</code>, it is usually available at
+<code class="highlighter-rouge">~/.local/bin/cmake</code> or directly as <code class="highlighter-rouge">cmake</code>.</p>
+
+<p>Please see the <a href="https://github.com/apache/incubator-mxnet/tree/v1.x/config"><code class="highlighter-rouge">cmake configuration
+files</code></a> files for
+instructions on how to configure and build MXNet with cmake.</p>
+
+<p>Up to the MXNet 1.6 release, please follow the instructions in the
+<a href="https://github.com/apache/incubator-mxnet/blob/v1.x/make/config.mk"><code class="highlighter-rouge">make/config.mk</code></a>
+file on how to configure and compile MXNet. This method is supported on all 1.x
+releases.</p>
+
+<p>To enable the optional MXNet C++ package, please set the <code class="highlighter-rouge">USE_CPP_PACKAGE=1</code>
+option prior to compiling. See the <a href="cpp_setup">C++ guide</a> for more information.</p>
+
+<h2 id="installing-mxnet-language-bindings">Installing MXNet Language Bindings</h2>
+<p>After building MXNet’s shared library, you can install other language bindings.</p>
+
+<p><strong>NOTE:</strong> The C++ API binding must be built when you build MXNet from source. See <a href="/api/cpp.html">Build MXNet with C++</a>.</p>
+
+<h2 id="installing-language-packages-for-mxnet">Installing Language Packages for MXNet</h2>
+
+<p>After you have installed the MXNet core library. You may install MXNet interface
+packages for the programming language of your choice:</p>
+<ul>
+  <li><a href="#install-mxnet-for-python">Python</a></li>
+  <li><a href="#install-the-mxnet-package-for-c&plus;&plus;">C++</a></li>
+  <li><a href="#install-the-mxnet-package-for-clojure">Clojure</a></li>
+  <li><a href="#install-the-mxnet-package-for-julia">Julia</a></li>
+  <li><a href="#install-the-mxnet-package-for-perl">Perl</a></li>
+  <li><a href="#install-the-mxnet-package-for-r">R</a></li>
+  <li><a href="#install-the-mxnet-package-for-scala">Scala</a></li>
+  <li><a href="#install-the-mxnet-package-for-java">Java</a></li>
+</ul>
+
+<h3 id="install-mxnet-for-python">Install MXNet for Python</h3>
+
+<p>To install the MXNet Python binding navigate to the root of the MXNet folder then run the following:</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 <span class="nt">-m</span> pip <span class="nb">install</span> <span class="nt">--user</span> <span class="nt">-e</span> ./python
+</code></pre></div></div>
+
+<p>Note that the <code class="highlighter-rouge">-e</code> flag is optional. It is equivalent to <code class="highlighter-rouge">--editable</code> and means
+that if you edit the source files, these changes will be reflected in the
+package installed.</p>
+
+<p>You may optionally install <code class="highlighter-rouge">graphviz</code> library that is used for visualizing
+network graphs you build on MXNet. You may also install <a href="http://jupyter.readthedocs.io/">Jupyter
+Notebook</a> which is used for running MXNet
+tutorials and examples.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code>python3 <span class="nt">-m</span> pip <span class="nb">install</span> <span class="nt">--user</span> <span class="nv">graphviz</span><span class="o">==</span>0.8.4 jupyter
+</code></pre></div></div>
+
+<p>Please also see the <a href="/api/python">MXNet Python API</a> page.</p>
+
+<h2 id="contributions">Contributions</h2>
+
+<p>You are more than welcome to contribute easy installation scripts for other operating systems and programming languages.
+See the <a href="/community/contribute">community contributions page</a> for further information.</p>
+
+<h2 id="next-steps">Next Steps</h2>
+
+<ul>
+  <li><a href="/api">Tutorials</a></li>
+  <li><a href="/api/faq/add_op_in_backend">How To</a></li>
+  <li><a href="/api/architecture/overview">Architecture</a></li>
+</ul>
+:ET

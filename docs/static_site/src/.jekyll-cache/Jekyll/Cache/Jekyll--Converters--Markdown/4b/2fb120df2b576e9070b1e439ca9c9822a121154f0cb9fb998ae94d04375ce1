@@ -1,0 +1,136 @@
+I"W/<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
+<h1 id="validate-your-mxnet-installation">Validate Your MXNet Installation</h1>
+
+<ul>
+  <li><a href="#python">Python</a></li>
+  <li><a href="#python-with-gpu">Python with GPU</a></li>
+  <li><a href="#verify-gpu-training">Verify GPU training</a></li>
+  <li><a href="#virtualenv">Virtualenv</a></li>
+  <li><a href="#docker-with-cpu">Docker with CPU</a></li>
+  <li><a href="#docker-with-gpu">Docker with GPU</a></li>
+  <li><a href="#cloud">Cloud</a></li>
+  <li><a href="#alternative-language-bindings">C++</a></li>
+  <li><a href="#clojure">Clojure</a></li>
+  <li><a href="#julia">Julia</a></li>
+  <li><a href="#perl">Perl</a></li>
+  <li><a href="#r">R</a></li>
+  <li><a href="#scala">Scala</a></li>
+</ul>
+
+<h2 id="python">Python</h2>
+
+<p>Start the python terminal.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>python
+</code></pre></div></div>
+
+<p>Run a short <em>MXNet</em> python program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">mxnet</span> <span class="k">as</span> <span class="n">mx</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">b</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">b</span><span class="o">.</span><span class="n">asnumpy</span><span class="p">()</span>
+<span class="n">array</span><span class="p">([[</span> <span class="mf">3.</span><span class="p">,</span>  <span class="mf">3.</span><span class="p">,</span>  <span class="mf">3.</span><span class="p">],</span>
+       <span class="p">[</span> <span class="mf">3.</span><span class="p">,</span>  <span class="mf">3.</span><span class="p">,</span>  <span class="mf">3.</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">float32</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="python-with-gpu">Python with GPU</h2>
+
+<p>This is similar to the previous example, but this time we use <em>mx.gpu()</em>, to set <em>MXNet</em> context to be GPUs.</p>
+
+<div class="language-python highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="o">&gt;&gt;&gt;</span> <span class="kn">import</span> <span class="nn">mxnet</span> <span class="k">as</span> <span class="n">mx</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">a</span> <span class="o">=</span> <span class="n">mx</span><span class="o">.</span><span class="n">nd</span><span class="o">.</span><span class="n">ones</span><span class="p">((</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">),</span> <span class="n">mx</span><span class="o">.</span><span class="n">gpu</span><span class="p">())</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">b</span> <span class="o">=</span> <span class="n">a</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">b</span><span class="o">.</span><span class="n">asnumpy</span><span class="p">()</span>
+<span class="n">array</span><span class="p">([[</span> <span class="mf">3.</span><span class="p">,</span>  <span class="mf">3.</span><span class="p">,</span>  <span class="mf">3.</span><span class="p">],</span>
+       <span class="p">[</span> <span class="mf">3.</span><span class="p">,</span>  <span class="mf">3.</span><span class="p">,</span>  <span class="mf">3.</span><span class="p">]],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">float32</span><span class="p">)</span>
+</code></pre></div></div>
+
+<h2 id="alternative-language-bindings">Alternative Language Bindings</h2>
+
+<h3 id="c">C++</h3>
+
+<p>Please contribute an example!</p>
+
+<h3 id="clojure">Clojure</h3>
+
+<p>Please contribute an example!</p>
+
+<h3 id="julia">Julia</h3>
+
+<p>Please contribute an example!</p>
+
+<h3 id="perl">Perl</h3>
+
+<p>Start the pdl2 terminal.</p>
+
+<div class="language-bash highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">$ </span>pdl2
+</code></pre></div></div>
+
+<p>Run a short <em>MXNet</em> Perl program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.</p>
+
+<div class="language-perl highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="nv">pdl</span><span class="o">&gt;</span> <span class="k">use</span> <span class="nn">AI::</span><span class="nv">MXNet</span> <span class="sx">qw(mx)</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$a</span> <span class="o">=</span> <span class="nv">mx</span><span class="o">-&gt;</span><span class="nv">nd</span><span class="o">-&gt;</span><span class="nv">ones</span><span class="p">([</span><span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">])</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="nv">$b</span> <span class="o">=</span> <span class="nv">$a</span> <span class="o">*</span> <span class="mi">2</span> <span class="o">+</span> <span class="mi">1</span>
+<span class="nv">pdl</span><span class="o">&gt;</span> <span class="k">print</span> <span class="nv">$b</span><span class="o">-&gt;</span><span class="nv">aspdl</span>
+
+<span class="p">[</span>
+ <span class="p">[</span><span class="mi">3</span> <span class="mi">3</span> <span class="mi">3</span><span class="p">]</span>
+ <span class="p">[</span><span class="mi">3</span> <span class="mi">3</span> <span class="mi">3</span><span class="p">]</span>
+<span class="p">]</span>
+</code></pre></div></div>
+
+<h3 id="r">R</h3>
+
+<p>Run a short <em>MXNet</em> R program to create a 2X3 matrix of ones, multiply each element in the matrix by 2 followed by adding 1. We expect the output to be a 2X3 matrix with all elements being 3.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">mxnet</span><span class="p">)</span><span class="w">
+</span><span class="n">a</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.nd.ones</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="m">2</span><span class="p">,</span><span class="m">3</span><span class="p">),</span><span class="w"> </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mx.cpu</span><span class="p">())</span><span class="w">
+</span><span class="n">b</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="n">b</span><span class="w">
+</span></code></pre></div></div>
+
+<p>You should see the following output:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[,</span><span class="m">1</span><span class="p">]</span><span class="w"> </span><span class="p">[,</span><span class="m">2</span><span class="p">]</span><span class="w"> </span><span class="p">[,</span><span class="m">3</span><span class="p">]</span><span class="w">
+</span><span class="p">[</span><span class="m">1</span><span class="p">,]</span><span class="w">    </span><span class="m">3</span><span class="w">    </span><span class="m">3</span><span class="w">    </span><span class="m">3</span><span class="w">
+</span><span class="p">[</span><span class="m">2</span><span class="p">,]</span><span class="w">    </span><span class="m">3</span><span class="w">    </span><span class="m">3</span><span class="w">    </span><span class="m">3</span><span class="w">
+</span></code></pre></div></div>
+
+<h4 id="r-with-gpu">R with GPU</h4>
+
+<p>This is similar to the previous example, but this time we use <em>mx.gpu()</em>, to set <em>MXNet</em> context to be GPUs.</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="n">library</span><span class="p">(</span><span class="n">mxnet</span><span class="p">)</span><span class="w">
+</span><span class="n">a</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">mx.nd.ones</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="m">2</span><span class="p">,</span><span class="m">3</span><span class="p">),</span><span class="w"> </span><span class="n">ctx</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">mx.gpu</span><span class="p">())</span><span class="w">
+</span><span class="n">b</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">a</span><span class="w"> </span><span class="o">*</span><span class="w"> </span><span class="m">2</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="m">1</span><span class="w">
+</span><span class="n">b</span><span class="w">
+</span></code></pre></div></div>
+
+<p>You should see the following output:</p>
+
+<div class="language-r highlighter-rouge"><div class="highlight"><pre class="highlight"><code><span class="p">[,</span><span class="m">1</span><span class="p">]</span><span class="w"> </span><span class="p">[,</span><span class="m">2</span><span class="p">]</span><span class="w"> </span><span class="p">[,</span><span class="m">3</span><span class="p">]</span><span class="w">
+</span><span class="p">[</span><span class="m">1</span><span class="p">,]</span><span class="w">    </span><span class="m">3</span><span class="w">    </span><span class="m">3</span><span class="w">    </span><span class="m">3</span><span class="w">
+</span><span class="p">[</span><span class="m">2</span><span class="p">,]</span><span class="w">    </span><span class="m">3</span><span class="w">    </span><span class="m">3</span><span class="w">    </span><span class="m">3</span><span class="w">
+</span></code></pre></div></div>
+
+<h3 id="scala">Scala</h3>
+
+<p>Run the <a href="https://github.com/apache/incubator-mxnet/tree/master/scala-package/mxnet-demo">MXNet-Scala demo project</a> to validate your Maven package installation.</p>
+:ET
