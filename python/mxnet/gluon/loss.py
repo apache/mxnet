@@ -909,8 +909,8 @@ class PoissonNLLLoss(Loss):
             stirling_factor = target * \
                 log_fn(target) - target + 0.5 * log_fn(2 * target * np.pi)
             target_gt_1 = target > 1
-            stirling_factor *= target_gt_1
-            loss += stirling_factor
+            stirling_factor = stirling_factor * target_gt_1
+            loss = loss + stirling_factor
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return _batch_mean(F, loss, self._batch_axis)
 
