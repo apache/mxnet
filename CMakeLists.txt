@@ -658,7 +658,7 @@ if(UNIX)
     # set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
     # Symbols from statically linked libraries can be discarded via -Wl,--exclude-libs,ALL
     if(APPLE)
-      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/make/config/libmxnet.sym")
+      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
     else()
       set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--version-script=${PROJECT_SOURCE_DIR}/cmake/libmxnet.ver")
     endif()
@@ -878,7 +878,7 @@ if(INSTALL_PYTHON_VERSIONS)
   endforeach()
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
   # Staticbuild applies linker version script to hide private symbols, breaking unit tests
   add_subdirectory(tests)
 endif()
