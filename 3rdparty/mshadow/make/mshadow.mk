@@ -119,6 +119,10 @@ ifneq ($(USE_BLAS), NONE)
 endif
 endif
 
+ifeq ($(USE_INT64_TENSOR_SIZE), 1)
+	MSHADOW_CFLAGS += -DMSHADOW_USE_BLAS_SUFFIX=1
+endif
+
 ifeq ($(USE_MKLML), 1)
 	MSHADOW_CFLAGS += -I$(MKLROOT)/include
 	ifneq ($(shell uname),Darwin)

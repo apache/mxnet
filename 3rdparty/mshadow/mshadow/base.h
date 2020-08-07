@@ -108,7 +108,11 @@ typedef unsigned __int64 uint64_t;
   #define MSHADOW_USE_MKL   1
 #endif
 
-#if USE_INT64_TENSOR_SIZE
+/*! \brief use 64_ suffix for openblas symbols */
+#ifndef MSHADOW_USE_BLAS_SUFFIX
+  #define MSHADOW_USE_BLAS_SUFFIX 0
+#endif
+#if MSHADOW_USE_BLAS_SUFFIX
   #define cblas_sgemm cblas_sgemm64_
 #endif
 
