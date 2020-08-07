@@ -898,7 +898,7 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
           subg_g.attrs["flags"] = std::make_shared<nnvm::any>(
             g.GetAttr<std::vector<std::pair<std::string, std::string>>>("flags"));
         }
-        // for each subgraph node in control flow op, call BuildSubgraph recursively
+        // call BuildSubgraph recursively
         for (const auto& property : subgraph_prop_list) {
           subg_g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
           subg_g = BuildSubgraph(std::move(subg_g));
