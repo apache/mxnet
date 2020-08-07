@@ -839,7 +839,7 @@ class Node {
   std::vector<Graph*> subgraphs;  // set of subgraphs within this node
   std::unordered_map<std::string, std::string> attrs;  // node attributes
  private:
-  PassResource* res;  
+  PassResource* res;
 };
 
 // Representation of the graph
