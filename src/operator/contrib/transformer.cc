@@ -162,7 +162,7 @@ void strided_batch_sgemm(bool transA, bool transB,
                     p_ldb, p_beta, pp_C.data(), p_ldc, GROUP_SIZE, p_group_sizeb);
 #else
   for (int i = 0; i < batchCount; ++i) {
-    CBLAS_CALL(sgemm)(CblasColMajor,
+    CBLAS_CALL(cblas_sgemm)(CblasColMajor,
                 transA ? CblasTrans : CblasNoTrans,
                 transB ? CblasTrans : CblasNoTrans,
                 m, n, k,
