@@ -361,7 +361,7 @@ struct BLASEngine<cpu, float> {
                           float alpha, const float *A, int lda,
                           const float *X, int incX,
                           float beta, float *Y, int incY) {
-    cblas_sgemv64_(CblasColMajor, GetT(trans), m, n, alpha,
+    CBLAS_CALL(cblas_sgemv)(CblasColMajor, GetT(trans), m, n, alpha,
                 A, lda, X, incX, beta, Y, incY);
   }
   inline static void batched_gemv(Stream<cpu> *stream,
@@ -379,7 +379,7 @@ struct BLASEngine<cpu, float> {
                          int m, int n, float alpha,
                          const float *X, int incX,
                          const float *Y, int incY, float *A, int lda) {
-    cblas_sger64_(CblasColMajor, m, n, alpha, X, incX, Y, incY, A, lda);
+    CBLAS_CALL(cblas_sger)(CblasColMajor, m, n, alpha, X, incX, Y, incY, A, lda);
   }
   inline static void batched_ger(Stream<cpu> *stream,
                          int m, int n, float alpha,
@@ -395,7 +395,7 @@ struct BLASEngine<cpu, float> {
                          const float* X, int incX,
                          const float* Y, int incY,
                          float* ret) {
-    *ret = cblas_sdot64_(n, X, incX, Y, incY);
+    *ret = CBLAS_CALL(cblas_sdot)(n, X, incX, Y, incY);
   }
 };
 
@@ -411,7 +411,7 @@ struct BLASEngine<cpu, double> {
                           int m, int n, int k, double alpha,
                           const double *A, int lda, const double *B, int ldb,
                           double beta, double *C, int ldc) {
-    cblas_dgemm64_(CblasColMajor, GetT(transa), GetT(transb),
+    CBLAS_CALL(cblas_dgemm)(CblasColMajor, GetT(transa), GetT(transb),
                 m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
   }
   inline static void batched_gemm(Stream<cpu> *stream,
@@ -470,7 +470,7 @@ struct BLASEngine<cpu, double> {
                           const double *A, int lda,
                           const double *X, int incX,
                           double beta, double *Y, int incY) {
-    cblas_dgemv64_(CblasColMajor, GetT(trans), m, n, alpha,
+    CBLAS_CALL(cblas_dgemv)(CblasColMajor, GetT(trans), m, n, alpha,
                 A, lda, X, incX, beta, Y, incY);
   }
   inline static void batched_gemv(Stream<cpu> *stream,
@@ -488,7 +488,7 @@ struct BLASEngine<cpu, double> {
                          int m, int n, double alpha,
                          const double *X, int incX,
                          const double *Y, int incY, double *A, int lda) {
-    cblas_dger64_(CblasColMajor, m, n, alpha, X, incX, Y, incY, A, lda);
+    CBLAS_CALL(cblas_dger)(CblasColMajor, m, n, alpha, X, incX, Y, incY, A, lda);
   }
   inline static void batched_ger(Stream<cpu> *stream,
                          int m, int n, double alpha,
@@ -504,7 +504,7 @@ struct BLASEngine<cpu, double> {
                          const double* X, int incX,
                          const double* Y, int incY,
                          double* ret) {
-    *ret = cblas_ddot64_(n, X, incX, Y, incY);
+    *ret = CBLAS_CALL(cblas_ddot)(n, X, incX, Y, incY);
   }
 };
 #endif  // MSHADOW_USE_CBLAS || MSHADOW_USE_MKL || MSHADOW_STAND_ALONE
