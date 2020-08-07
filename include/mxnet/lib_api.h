@@ -824,7 +824,7 @@ class Node {
   Node() {tensor = nullptr;}
   std::string op;  // operator name (ie. Convolution)
   std::string name;  // unique node name (ie. conv_0 or conv_1)
-  MXTensor* tensor; // tensor data for input nodes
+  MXTensor* tensor;  // tensor data for input nodes
   std::vector<NodeEntry> inputs;  // set of inputs to the node
   std::vector<NodeEntry> outputs;  // set of outputs from the node
   std::vector<Graph*> subgraphs;  // set of subgraphs within this node
@@ -1094,24 +1094,24 @@ class Graph {
   const JsonVal& getAttr(const std::string& key) const {
     return attrs.at(key);
   }
-  
+
   size_t size() const {
     return nodes.size();
   }
-  
+
   void _setParams(PassResource* res_,
-                 std::unordered_map<std::string, mxnet::ext::MXTensor>& args,
-                 std::unordered_map<std::string, mxnet::ext::MXTensor>& aux) {
+                 std::unordered_map<std::string, mxnet::ext::MXTensor>* args,
+                 std::unordered_map<std::string, mxnet::ext::MXTensor>* aux) {
     // set params for each input node
-    for(Node* node : inputs) {
-      if(args.count(node->name) > 0)
-        node->tensor = &args[node->name];
-      else if(aux.count(node->name) > 0)
-        node->tensor = &aux[node->name];
+    for (Node* node : inputs) {
+      if (args->count(node->name) > 0)
+        node->tensor = &args->at(node->name);
+      else if (aux->count(node->name) > 0)
+        node->tensor = &aux->at(node->name);
     }
     res = res_;
   }
-  
+
   std::vector<Node*> inputs;
   std::vector<NodeEntry> outputs;
   std::map<std::string, JsonVal> attrs;
@@ -1337,10 +1337,12 @@ class CustomPass {
 typedef MXReturnValue (*supportedOps_t)(const mxnet::ext::Graph *graph, std::vector<int>* ids,
                                         const std::unordered_map<std::string,
                                                                  std::string>& options);
-typedef MXReturnValue (*createSelector_t)(const mxnet::ext::Graph *graph, CustomOpSelector** sel_inst,
+typedef MXReturnValue (*createSelector_t)(const mxnet::ext::Graph *graph,
+                                          CustomOpSelector** sel_inst,
                                           const std::unordered_map<std::string,
                                                                    std::string>& options);
-typedef MXReturnValue (*reviewSubgraph_t)(const mxnet::ext::Graph *subgraph, int subgraph_id, bool* accept,
+typedef MXReturnValue (*reviewSubgraph_t)(const mxnet::ext::Graph *subgraph, int subgraph_id,
+                                          bool* accept,
                                           const std::unordered_map<std::string,
                                                                    std::string>& options,
                                           std::unordered_map<std::string, std::string>* attrs,
@@ -1667,8 +1669,8 @@ typedef int (*opVersion_t)();
 #define MX_VOID_RET void
 #endif
 
-} // namespace ext
-} // namespace mxnet
+}  // namespace ext
+}  // namespace mxnet
 
 extern "C" {
   /*! \brief returns MXNet library version */
@@ -1855,13 +1857,16 @@ extern "C" {
   }
 
   /*! \brief returns status of calling Forward/Backward function for operator from library */
-  MX_INT_RET _opCallFCompute(mxnet::ext::fcomp_t fcomp, const char* const* keys, const char* const* vals,
+  MX_INT_RET _opCallFCompute(mxnet::ext::fcomp_t fcomp, const char* const* keys,
+                             const char* const* vals,
                              int num, const int64_t** inshapes, int* indims, void** indata,
                              int* intypes, size_t* inIDs, const char** indev_type, int* indev_id,
                              int num_in, const int64_t** outshapes, int* outdims, void** outdata,
                              int* outtypes, size_t* outIDs, const char** outdev_type,
-                             int* outdev_id, int num_out, mxnet::ext::xpu_malloc_t cpu_malloc, void* cpu_alloc,
-                             mxnet::ext::xpu_malloc_t gpu_malloc, void* gpu_alloc, void* cuda_stream,
+                             int* outdev_id, int num_out, mxnet::ext::xpu_malloc_t cpu_malloc,
+                             void* cpu_alloc,
+                             mxnet::ext::xpu_malloc_t gpu_malloc, void* gpu_alloc,
+                             void* cuda_stream,
                              mxnet::ext::sparse_malloc_t sparse_malloc, void* sparse_alloc,
                              int* instypes, int* outstypes, void** in_indices, void** out_indices,
                              void** in_indptr, void** out_indptr,
@@ -1924,14 +1929,16 @@ extern "C" {
           out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i],
                             out_indices_shapes[i], out_indptr[i], out_indptr_shapes[i]);
         }
-        outputs[i].setTensor(reinterpret_cast<void*>(&out_sparse[i]), (mxnet::ext::MXDType)outtypes[i],
+        outputs[i].setTensor(reinterpret_cast<void*>(&out_sparse[i]),
+                             (mxnet::ext::MXDType)outtypes[i],
                              outshapes[i], outdims[i], outIDs[i],
                              mxnet::ext::MXContext(outdev_type[i], outdev_id[i]), type);
       }
     }
 
     mxnet::ext::OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc,
-                               cuda_stream, sparse_malloc, sparse_alloc, rng_cpu_states, rng_gpu_states);
+                               cuda_stream, sparse_malloc, sparse_alloc,
+                               rng_cpu_states, rng_gpu_states);
     return fcomp(attrs, &inputs, &outputs, res);
   }
 
@@ -1974,7 +1981,8 @@ extern "C" {
 
     // void pointer to hold custom state op instance created in custom library
     // eventually state_op pointer is populated by instance from custom library
-    mxnet::ext::CustomStatefulOp** op_ptr = reinterpret_cast<mxnet::ext::CustomStatefulOp**>(state_op);
+    mxnet::ext::CustomStatefulOp** op_ptr =
+      reinterpret_cast<mxnet::ext::CustomStatefulOp**>(state_op);
     return create_op(attrs, op_ptr);
   }
 
@@ -1984,8 +1992,10 @@ extern "C" {
                                      const char** indev_type, int* indev_id, int num_in,
                                      const int64_t** outshapes, int* outdims, void** outdata,
                                      int* outtypes, size_t* outIDs, const char** outdev_type,
-                                     int* outdev_id, int num_out, mxnet::ext::xpu_malloc_t cpu_malloc,
-                                     void* cpu_alloc, mxnet::ext::xpu_malloc_t gpu_malloc, void* gpu_alloc,
+                                     int* outdev_id, int num_out,
+                                     mxnet::ext::xpu_malloc_t cpu_malloc,
+                                     void* cpu_alloc, mxnet::ext::xpu_malloc_t gpu_malloc,
+                                     void* gpu_alloc,
                                      void* stream, mxnet::ext::sparse_malloc_t sparse_malloc,
                                      void* sparse_alloc, int* instypes, int* outstypes,
                                      void** in_indices, void** out_indices, void** in_indptr,
@@ -2044,7 +2054,8 @@ extern "C" {
           out_sparse[i].set(outdata[i], outshapes[i], outdims[i], out_indices[i],
                             out_indices_shapes[i], out_indptr[i], out_indptr_shapes[i]);
         }
-        outputs[i].setTensor(reinterpret_cast<void*>(&out_sparse[i]), (mxnet::ext::MXDType)outtypes[i],
+        outputs[i].setTensor(reinterpret_cast<void*>(&out_sparse[i]),
+                             (mxnet::ext::MXDType)outtypes[i],
                              outshapes[i], outdims[i], outIDs[i],
                              mxnet::ext::MXContext(outdev_type[i], outdev_id[i]), type);
       }
@@ -2053,7 +2064,8 @@ extern "C" {
     mxnet::ext::OpResource res(cpu_malloc, cpu_alloc, gpu_malloc, gpu_alloc,
                                stream, sparse_malloc, sparse_alloc, rng_cpu_states, rng_gpu_states);
 
-    mxnet::ext::CustomStatefulOp* op_ptr = reinterpret_cast<mxnet::ext::CustomStatefulOp*>(state_op);
+    mxnet::ext::CustomStatefulOp* op_ptr =
+      reinterpret_cast<mxnet::ext::CustomStatefulOp*>(state_op);
     if (is_forward) {
       return op_ptr->Forward(&inputs, &outputs, res);
     }
@@ -2123,7 +2135,8 @@ extern "C" {
 
     // void pointer to hold selector instance created in custom library
     // eventually pointer is populated by instance from custom library
-    mxnet::ext::CustomOpSelector** sel_ptr = reinterpret_cast<mxnet::ext::CustomOpSelector**>(selector);
+    mxnet::ext::CustomOpSelector** sel_ptr =
+      reinterpret_cast<mxnet::ext::CustomOpSelector**>(selector);
 
     // call user's createSelector function
     return createSelector(graph, sel_ptr, opts);
@@ -2131,28 +2144,32 @@ extern "C" {
 
   /*! \brief returns status of calling select function from library */
   MX_VOID_RET _partCallSelect(void* sel_inst, int nodeID, int* selected) {
-    mxnet::ext::CustomOpSelector* sel_ptr = reinterpret_cast<mxnet::ext::CustomOpSelector*>(sel_inst);
+    mxnet::ext::CustomOpSelector* sel_ptr =
+      reinterpret_cast<mxnet::ext::CustomOpSelector*>(sel_inst);
     *selected = sel_ptr->Select(nodeID);
   }
 
   /*! \brief returns status of calling select input function from library */
   MX_VOID_RET _partCallSelectInput(void* sel_inst, int nodeID,
                                   int input_nodeID, int* selected) {
-    mxnet::ext::CustomOpSelector* sel_ptr = reinterpret_cast<mxnet::ext::CustomOpSelector*>(sel_inst);
+    mxnet::ext::CustomOpSelector* sel_ptr =
+      reinterpret_cast<mxnet::ext::CustomOpSelector*>(sel_inst);
     *selected = sel_ptr->SelectInput(nodeID, input_nodeID);
   }
 
   /*! \brief returns status of calling select output function from library */
   MX_VOID_RET _partCallSelectOutput(void* sel_inst, int nodeID,
                                     int output_nodeID, int* selected) {
-    mxnet::ext::CustomOpSelector* sel_ptr = reinterpret_cast<mxnet::ext::CustomOpSelector*>(sel_inst);
+    mxnet::ext::CustomOpSelector* sel_ptr =
+      reinterpret_cast<mxnet::ext::CustomOpSelector*>(sel_inst);
     *selected = sel_ptr->SelectOutput(nodeID, output_nodeID);
   }
 
   /*! \brief returns status of calling filter function from library */
   MX_VOID_RET _partCallFilter(void* sel_inst, int* candidates, int num_candidates,
                               int** keep, int* num_keep) {
-    mxnet::ext::CustomOpSelector* sel_ptr = reinterpret_cast<mxnet::ext::CustomOpSelector*>(sel_inst);
+    mxnet::ext::CustomOpSelector* sel_ptr =
+      reinterpret_cast<mxnet::ext::CustomOpSelector*>(sel_inst);
     std::vector<int> candidates_(num_candidates);
     for (int i=0; i < num_candidates; i++) {
       candidates_[i] = candidates[i];
@@ -2169,7 +2186,8 @@ extern "C" {
 
   /*! \brief returns status of calling reset selector function from library */
   MX_VOID_RET _partCallReset(void* sel_inst) {
-    mxnet::ext::CustomOpSelector* sel_ptr = reinterpret_cast<mxnet::ext::CustomOpSelector*>(sel_inst);
+    mxnet::ext::CustomOpSelector* sel_ptr =
+      reinterpret_cast<mxnet::ext::CustomOpSelector*>(sel_inst);
     sel_ptr->Reset();
   }
 
@@ -2214,7 +2232,8 @@ extern "C" {
         shapes.push_back(aux_shapes[i][j]);
 
       mxnet::ext::MXTensor tensor(aux_data[i], shapes, (mxnet::ext::MXDType)aux_types[i],
-                                  aux_IDs[i], mxnet::ext::MXContext(aux_dev_type[i], aux_dev_id[i]));
+                                  aux_IDs[i], mxnet::ext::MXContext(aux_dev_type[i],
+                                                                    aux_dev_id[i]));
       aux[aux_names[i]] = tensor;
     }
 
@@ -2289,7 +2308,8 @@ extern "C" {
         shapes.push_back(arg_shapes[i][j]);
 
       mxnet::ext::MXTensor tensor(arg_data[i], shapes, (mxnet::ext::MXDType)arg_types[i],
-                                  arg_IDs[i], mxnet::ext::MXContext(arg_dev_type[i], arg_dev_id[i]));
+                                  arg_IDs[i], mxnet::ext::MXContext(arg_dev_type[i],
+                                                                    arg_dev_id[i]));
       args[arg_names[i]] = tensor;
     }
     // create a map of named tensors for aux
@@ -2300,13 +2320,14 @@ extern "C" {
         shapes.push_back(aux_shapes[i][j]);
 
       mxnet::ext::MXTensor tensor(aux_data[i], shapes, (mxnet::ext::MXDType)aux_types[i],
-                                  aux_IDs[i], mxnet::ext::MXContext(aux_dev_type[i], aux_dev_id[i]));
+                                  aux_IDs[i], mxnet::ext::MXContext(aux_dev_type[i],
+                                                                    aux_dev_id[i]));
       aux[aux_names[i]] = tensor;
     }
 
     std::unordered_map<std::string, mxnet::ext::MXTensor> new_args, new_aux;
     mxnet::ext::PassResource res(&new_args, &new_aux, nd_malloc, nd_alloc);
-    graph->_setParams(&res,args,aux);
+    graph->_setParams(&res, &args, &aux);
     mxnet::ext::MXReturnValue retval = graphPass(graph, opts, args, aux, res);
     if (!retval) return retval;
 
@@ -2328,5 +2349,5 @@ extern "C" {
   mxnet::ext::MXReturnValue
 #endif
   initialize(int version);
-} // extern "C"
+}  // extern "C"
 #endif  // MXNET_LIB_API_H_
