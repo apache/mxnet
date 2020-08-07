@@ -1806,9 +1806,11 @@ def get_mnist_ubyte(path='data'):
     if not all(os.path.exists(os.path.join(path, f)) for f in files):
         get_mnist(path)
         for f in files:
-            zip_file_path = os.path.join(path, f) + '.gz'
+            ubyte_file_path = os.path.join(path, f)
+            zip_file_path = ubyte_file_path + '.gz'
             with gzip.GzipFile(zip_file_path) as zf:
-                zf.extractall(path)
+                with open(ubyte_file_path, 'wb') as ubyte_file:
+                    ubyte_file.write(zf.read())
 
 def get_cifar10(path='data'):
     """Downloads CIFAR10 dataset into a directory in the current directory with the name `data`,
@@ -1820,23 +1822,23 @@ def get_cifar10(path='data'):
             (not os.path.exists(os.path.join(path, 'cifar', 'test.rec'))) or \
             (not os.path.exists(os.path.join(path, 'cifar', 'train.lst'))) or \
             (not os.path.exists(os.path.join(path, 'cifar', 'test.lst'))):
-        url = 'http://data.mxnet.io/mxnet/data/cifar10.zip'
+        url = 'https://repo.mxnet.io/gluon/dataset/cifar10/cifar10-b9ac2870.zip'
         sha1 = 'b9ac287012f2dad9dfb49d8271c39ecdd7db376c'
         zip_file_path = mx.gluon.utils.download(url, path=path, sha1_hash=sha1,
                                                 verify_ssl=False)
         with zipfile.ZipFile(zip_file_path) as zf:
             zf.extractall(path)
 
-def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
+def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0, path='data'):
     """Returns training and validation iterators for MNIST dataset
     """
 
-    get_mnist_ubyte()
+    get_mnist_ubyte(path)
     flat = len(input_shape) != 3
 
     train_dataiter = mx.io.MNISTIter(
-        image="data/train-images-idx3-ubyte",
-        label="data/train-labels-idx1-ubyte",
+        image=os.path.join(path, "train-images-idx3-ubyte"),
+        label=os.path.join(path, "train-labels-idx1-ubyte"),
         input_shape=input_shape,
         batch_size=batch_size,
         shuffle=True,
@@ -1845,8 +1847,8 @@ def get_mnist_iterator(batch_size, input_shape, num_parts=1, part_index=0):
         part_index=part_index)
 
     val_dataiter = mx.io.MNISTIter(
-        image="data/t10k-images-idx3-ubyte",
-        label="data/t10k-labels-idx1-ubyte",
+        image=os.path.join(path, "t10k-images-idx3-ubyte"),
+        label=os.path.join(path, "t10k-labels-idx1-ubyte"),
         input_shape=input_shape,
         batch_size=batch_size,
         flat=flat,
