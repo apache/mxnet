@@ -26,7 +26,7 @@ import pytest
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
 @use_np
-@pytest.mark.parametrize(hybridize, [False, True])
+@pytest.mark.parametrize("hybridize", [False, True])
 def test_loss_np_ndarray(hybridize):
     output = mx.np.array([1, 2, 3, 4])
     label = mx.np.array([1, 3, 5, 7])
@@ -126,7 +126,7 @@ def test_loss_np_ndarray(hybridize):
 
 @with_seed()
 @use_np
-@pytest.mark.parametrize(hybridize, [False, True])
+@pytest.mark.parametrize("hybridize", [False, True])
 def test_bce_equal_ce2(hybridize):
     N = 100
     loss1 = gluon.loss.SigmoidBCELoss(from_sigmoid=True)
@@ -142,7 +142,7 @@ def test_bce_equal_ce2(hybridize):
 
 
 @use_np
-@pytest.mark.parametrize(hybridize, [False, True])
+@pytest.mark.parametrize("hybridize", [False, True])
 def test_logistic_loss_equal_bce(hybridize):
     N = 100
     loss_binary = gluon.loss.LogisticLoss(label_format='binary')
@@ -162,7 +162,7 @@ def test_logistic_loss_equal_bce(hybridize):
 
 @with_seed()
 @use_np
-@pytest.mark.parametrize(hybridize, [False, True])
+@pytest.mark.parametrize("hybridize", [False, True])
 def test_ctc_loss(hybridize):
     loss = gluon.loss.CTCLoss()
     if hybridize:
@@ -204,8 +204,8 @@ def test_ctc_loss(hybridize):
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
 @use_np
-@pytest.mark.parametrize(hybridize, [False, True])
-def test_sdml_loss():
+@pytest.mark.parametrize("hybridize", [False, True])
+def test_sdml_loss(hybridize):
 
     N = 5 # number of samples
     DIM = 10 # Dimensionality
@@ -242,7 +242,7 @@ def test_sdml_loss():
 
 @with_seed()
 @use_np
-@pytest.mark.parametrize(hybridize, [False, True])
+@pytest.mark.parametrize("hybridize", [False, True])
 def test_cosine_loss(hybridize):
     #Generating samples
     input1 = mx.np.random.randn(3, 2)
@@ -267,7 +267,7 @@ def test_cosine_loss(hybridize):
 
 @xfail_when_nonstandard_decimal_separator
 @use_np
-@pytest.mark.parametrize(hybridize, [False, True])
+@pytest.mark.parametrize("hybridize", [False, True])
 def test_poisson_nllloss(hybridize):
     shape=(3, 4)
     not_axis0 = tuple(range(1, len(shape)))
