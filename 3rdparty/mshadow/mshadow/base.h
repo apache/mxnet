@@ -113,7 +113,7 @@ typedef unsigned __int64 uint64_t;
   #define MSHADOW_USE_BLAS_SUFFIX 0
 #endif
 #if MSHADOW_USE_BLAS_SUFFIX
-  #define CBLAS_CALL(name) name##64_
+  #define CBLAS_CALL(name) name ## 64_
 #endif
 #define CBLAS_CALL(name) name
 
