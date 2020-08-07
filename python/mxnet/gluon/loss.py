@@ -77,18 +77,28 @@ def _reshape_like(F, x, y):
 def _batch_mean(F, loss, batch_axis):
     """Return mean on the specified batch axis, not keeping the axis"""
     if is_np_array():
-        axes = list(range(loss.ndim))
-        del axes[batch_axis]
-        return F.np.mean(loss, axis=axes)
+        if F is ndarray:
+            axes = list(range(loss.ndim))
+            del axes[batch_axis]
+            return F.np.mean(loss, axis=axes)
+        else:
+            assert batch_axis == 0, 'Currently, we have not supported the "exclude" ' \
+                                    'flag in mean. So we only support batch_axis=0.'
+            return F.npx.batch_flatten(loss).mean(axis=1)
     else:
         return F.mean(loss, axis=batch_axis, exclude=True)
 
 def _batch_sum(F, loss, batch_axis):
     """Return sum on the specified batch axis, not keeping the axis"""
     if is_np_array():
-        axes = list(range(loss.ndim))
-        del axes[batch_axis]
-        return F.np.sum(loss, axis=axes)
+        if F is ndarray:
+            axes = list(range(loss.ndim))
+            del axes[batch_axis]
+            return F.np.sum(loss, axis=axes)
+        else:
+            assert batch_axis == 0, 'Currently, we have not supported the "exclude" ' \
+                                    'flag in mean. So we only support batch_axis=0.'
+            return F.npx.batch_flatten(loss).sum(axis=1)
     else:
         return F.sum(loss, axis=batch_axis, exclude=True)
 
