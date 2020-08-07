@@ -302,7 +302,7 @@ class TensorrtProperty : public SubgraphProperty {
     TRTParam param;
     std::ostringstream params_oss;
     for (auto &param_name : new_sym.ListInputNames(nnvm::Symbol::kAll)) {
-      NDArray *cache;
+      NDArray *cache = nullptr;
       auto it_args = in_args_dict.find(param_name);
       if (it_args != in_args_dict.end()) {
         cache = it_args->second;
