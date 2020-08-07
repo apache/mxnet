@@ -108,6 +108,10 @@ typedef unsigned __int64 uint64_t;
   #define MSHADOW_USE_MKL   1
 #endif
 
+#if USE_INT64_TENSOR_SIZE
+  #define cblas_sgemm cblas_sgemm64_
+#endif
+
 /*!
  * \brief use CUDA support, must ensure that the cuda include path is correct,
  * or directly compile using nvcc
