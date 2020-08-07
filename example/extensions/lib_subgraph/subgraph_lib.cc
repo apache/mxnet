@@ -135,7 +135,7 @@ class MyStatefulOp : public CustomStatefulOp {
   explicit MyStatefulOp(std::string json,
                         const std::unordered_map<std::string, std::string>& attrs)
     : attrs_(attrs) {
-    for (auto kv : attrs) {
+    for (const auto &kv : attrs) {
       std::cout << "subgraphOp attributes: " << kv.first << " ==> " << kv.second << std::endl;
     }
     subgraph_ = mxnet::ext::Graph::fromString(json);
@@ -143,7 +143,7 @@ class MyStatefulOp : public CustomStatefulOp {
 
   MXReturnValue Forward(std::vector<MXTensor>* inputs,
                         std::vector<MXTensor>* outputs,
-                        const OpResource& op_res) {
+                        const OpResource& op_res) override {
     if(attrs_.count(MX_STR_EXTRA_INPUTS) > 0 && std::stoi(attrs_.at(MX_STR_EXTRA_INPUTS)) > 0)
       std::cout << "forward::extra_inputs(" << attrs_.at(MX_STR_EXTRA_INPUTS) << ")::inputs ["
 		<< inputs->size() << "]" << std::endl;
