@@ -913,3 +913,7 @@ if(BUILD_CYTHON_MODULES)
     message(FATAL_ERROR "No python interpreter found to build cython modules")
   endif()
 endif()
+
+if(DEFINED USE_INT64_TENSOR_SIZE AND USE_INT64_TENSOR_SIZE)
+  add_definitions(-DLAPACK_ILP64)
+endif()
