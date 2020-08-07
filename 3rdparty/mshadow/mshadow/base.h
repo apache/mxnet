@@ -113,9 +113,9 @@ typedef unsigned __int64 uint64_t;
   #define MSHADOW_USE_BLAS_SUFFIX 0
 #endif
 #if MSHADOW_USE_BLAS_SUFFIX
-  #define CBLAS_CALL(name) name ## 64_
+  #define CBLAS_CALL(name) (name ## 64_)
 #else
-  #define CBLAS_CALL(name) name
+  #define CBLAS_CALL(name) (name ## 64_)
 #endif
 /*!
  * \brief use CUDA support, must ensure that the cuda include path is correct,
