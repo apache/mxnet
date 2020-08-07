@@ -302,7 +302,7 @@ struct BLASEngine<cpu, float> {
                           int m, int n, int k, float alpha,
                           const float *A, int lda, const float *B, int ldb,
                           float beta, float *C, int ldc) {
-    cblas_sgemm64_(CblasColMajor, GetT(transa), GetT(transb),
+    cblas_sgemm(CblasColMajor, GetT(transa), GetT(transb),
                 m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
   }
   inline static void batched_gemm(Stream<cpu> *stream,
