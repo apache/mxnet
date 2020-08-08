@@ -70,7 +70,7 @@ def test_sparse_parameter():
     assert len(p.list_grad()) == 2
     # getting row_sparse data without trainer throws an exception
     assertRaises(RuntimeError, p.list_row_sparse_data, row_id)
-    trainer = mx.gluon.Trainer([p], 'sgd')
+    trainer = mx.gluon.Trainer({'p':p}, 'sgd')
     assert len(p.list_row_sparse_data(row_id)) == 2
     weight = p.row_sparse_data(row_id)
     assert weight.context == mx.cpu(1)
@@ -104,7 +104,7 @@ def test_parameter_row_sparse_data():
     dim0 = 4
     x = gluon.Parameter('x', shape=(dim0, 2), stype='row_sparse')
     x.initialize(init='xavier', ctx=[ctx0, ctx1])
-    trainer = gluon.Trainer([x], 'sgd')
+    trainer = gluon.Trainer({'x':x}, 'sgd')
     x_param = x._data[0].copy()
     assert x_param.stype == 'row_sparse'
     row_id_0 = mx.nd.array([0,1], ctx=ctx0)
