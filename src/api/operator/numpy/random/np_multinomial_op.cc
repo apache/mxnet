@@ -49,7 +49,7 @@ MXNET_REGISTER_API("_npi.multinomial")
     inputs[0] = args[1].operator mxnet::NDArray*();
     num_inputs = 1;
   } else {
-    param.pvals = Tuple<double>(args[1].operator ObjectRef());
+    param.pvals = Obj2Tuple<double, Float>(args[1].operator ObjectRef());
   }
 
   // parse size
@@ -67,7 +67,8 @@ MXNET_REGISTER_API("_npi.multinomial")
   attrs.op = op;
   SetAttrDict<op::NumpyMultinomialParam>(&attrs);
   inputs = num_inputs == 0 ? nullptr : inputs;
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, 0, nullptr);
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
   *ret = ndoutputs[0];
 });
 
