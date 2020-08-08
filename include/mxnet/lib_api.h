@@ -467,12 +467,14 @@ typedef std::mt19937 mx_cpu_rand_t;
 #define MX_NUM_CPU_RANDOM_STATES 1024
 #define MX_NUM_GPU_RANDOM_STATES 32768
 
+/* \brief Class to help allocate new args/aux params in graph passes */
 class PassResource {
  public:
   PassResource(std::unordered_map<std::string, MXTensor>* new_args,
                std::unordered_map<std::string, MXTensor>* new_aux,
                nd_malloc_t nd_malloc, const void* nd_alloc)
     : new_args_(new_args), new_aux_(new_aux), nd_malloc_(nd_malloc), nd_alloc_(nd_alloc) {}
+  // allocate new arg param, adds to args map, returns newly allocated tensor
   MXTensor* alloc_arg(const std::string& name, const std::vector<int64_t>& shapes,
                       const MXContext &ctx, MXDType dtype) const {
     void* data;
@@ -482,6 +484,7 @@ class PassResource {
     (*new_args_)[name] = tensor;
     return &(new_args_->at(name));
   }
+  // allocate new aux param, adds to aux map, returns newly allocated tensor
   MXTensor* alloc_aux(const std::string& name, const std::vector<int64_t>& shapes,
                       const MXContext &ctx, MXDType dtype) const {
     void* data;
@@ -562,10 +565,13 @@ class OpResource {
   void *rand_cpu_states, *rand_gpu_states;
 };
 
-/*! \brief Macro to help passing serialized subgraph through attribute dict */
+/*! \brief attribute key to help passing serialized subgraph through subgraph op attribute */
 #define MX_STR_SUBGRAPH_SYM_JSON "subgraph_sym_json"
+/*! \brief dtype attribute key for ops after type propagation */
 #define MX_STR_DTYPE "__ext_dtype__"
+/*! \brief shape attribute key for ops after shape propagation */
 #define MX_STR_SHAPE "__ext_shape__"
+/*! \brief extra input attribute key for ops */
 #define MX_STR_EXTRA_INPUTS "__ext_extra_inputs__"
 
 /* \brief get shape value from list of shapes string
@@ -681,6 +687,7 @@ struct JsonVal {
     }
     return ret;
   }
+  // convert JSON-compatible string to JSON object
   static JsonVal parse(const std::string& json) {
     unsigned int idx = 0;
     return JsonVal::parse(json, &idx);
@@ -815,20 +822,27 @@ class Graph;
 // Representation of an input/output to a node
 struct NodeEntry {
   Node* node;  // other node thats producing/consuming inputs/outputs
-  int entry;  // entry from other node (ie. which output from producing node)
+  int entry;  // entry index from other node (ie. output index from producing node)
 };
 
 // Representation of a node in the graph
 class Node {
  public:
   Node() {tensor = nullptr;}
+  // internally set passResource to enable tensor allocation for graph passes
   void _setPassResource(PassResource* res_) {res = res_;}
+  /* \brief allocate an arg tensor for this node */
   void alloc_arg(const std::vector<int64_t>& shapes,
                  const MXContext &ctx, MXDType dtype) {
+    if (!res)
+      throw std::runtime_error("Node not initialized. Cannot use alloc_arg outside of graph passes.");
     tensor = res->alloc_arg(name, shapes, ctx, dtype);
   }
+  /* \brief allocate an aux tensor for this node */
   void alloc_aux(const std::vector<int64_t>& shapes,
                  const MXContext &ctx, MXDType dtype) {
+    if (!res)
+      throw std::runtime_error("Node not initialized. Cannot use alloc_aux outside of graph passes.");
     tensor = res->alloc_aux(name, shapes, ctx, dtype);
   }
   std::string op;  // operator name (ie. Convolution)
@@ -1091,6 +1105,8 @@ class Graph {
     }
     std::cout << space << "###############################" << std::endl;
   }
+
+  /* \brief add a new node to this graph */
   Node* addNode(const std::string& name, const std::string& op) {
     Node* n = new Node();
     n->name = name;
@@ -1099,24 +1115,27 @@ class Graph {
       n->_setPassResource(res);
     return n;
   }
-
+  /* \brief get node at index in graph */
   Node* getNode(size_t idx) {
     return nodes[idx];
   }
+  /* \brief get const node at index in const graph */
   const Node* getNode(size_t idx) const {
     return nodes.at(idx);
   }
+  /* \brief get attribute on graph */
   const JsonVal& getAttr(const std::string& key) const {
     return attrs.at(key);
   }
-
+  /* \brief get number of nodes in the graph */
   size_t size() const {
     return nodes.size();
   }
-
-  void _setParams(PassResource* res_,
-                 std::unordered_map<std::string, mxnet::ext::MXTensor>* args,
-                 std::unordered_map<std::string, mxnet::ext::MXTensor>* aux) {
+  // internally set passResource to enable tensor allocation for graph passes
+  void _setPassResource(PassResource* res_) {res = res_;}
+  // internally set arg/aux params when available
+  void _setParams(std::unordered_map<std::string, mxnet::ext::MXTensor>* args,
+                  std::unordered_map<std::string, mxnet::ext::MXTensor>* aux) {
     // set params for each input node
     for (Node* node : inputs) {
       if (args->count(node->name) > 0)
@@ -1124,10 +1143,12 @@ class Graph {
       else if (aux->count(node->name) > 0)
         node->tensor = &aux->at(node->name);
     }
-    res = res_;
-    // set passResource for each node
-    for (Node* node : nodes) {
-      node->_setPassResource(res);
+
+    if (res) {
+      // set passResource for each node
+      for (Node* node : nodes) {
+        node->_setPassResource(res);
+      }
     }
   }
 
@@ -1360,10 +1381,7 @@ typedef MXReturnValue (*createSelector_t)(const mxnet::ext::Graph *graph,
 typedef MXReturnValue (*reviewSubgraph_t)(const mxnet::ext::Graph *subgraph, int subgraph_id,
                                           bool* accept,
                                           const std::unordered_map<std::string,
-                                                                   std::string>& options,
-                                          std::unordered_map<std::string, std::string>* attrs,
-                                          const std::unordered_map<std::string, MXTensor>& args,
-                                          const std::unordered_map<std::string, MXTensor>& aux);
+                                                                   std::string>& options);
 
 /*!
  * \brief An abstract class for subgraph property
@@ -2253,28 +2271,27 @@ extern "C" {
       aux[aux_names[i]] = tensor;
     }
 
-    // attributes to set on subgraph node
-    std::unordered_map<std::string, std::string> attrs;
-
+    subgraph->_setParams(&args, &aux);
     mxnet::ext::MXReturnValue retval = reviewSubgraph(subgraph, subgraph_id, &accept_bool,
-                                                      opts, &attrs, args, aux);
+                                                      opts);
     if (!retval) return retval;
 
     *accept = accept_bool;
 
-    if (attrs.size() > 0) {
-      *num_attrs = attrs.size();
+    if (subgraph->attrs.size() > 0) {
+      *num_attrs = subgraph->attrs.size();
       // allocate space for attributes
-      *attr_keys = static_cast<char**>(malloc (attrs.size() * sizeof(char*)));
-      *attr_vals = static_cast<char**>(malloc (attrs.size() * sizeof(char*)));
+      *attr_keys = static_cast<char**>(malloc (*num_attrs * sizeof(char*)));
+      *attr_vals = static_cast<char**>(malloc (*num_attrs * sizeof(char*)));
 
       // copy attributes
       int i = 0;
-      for (auto kv : attrs) {
+      for (auto kv : subgraph->attrs) {
         (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));
-        (*attr_vals)[i] = static_cast<char*>(malloc ((kv.second.size()+1) * sizeof(char)));
+        std::string val = kv.second.dump();  // convert JsonVal back to string
+        (*attr_vals)[i] = static_cast<char*>(malloc ((val.size()+1) * sizeof(char)));
         snprintf((*attr_keys)[i], kv.first.size()+1, "%s", kv.first.c_str());
-        snprintf((*attr_vals)[i], kv.second.size()+1, "%s", kv.second.c_str());
+        snprintf((*attr_vals)[i], val.size()+1, "%s", val.c_str());
         i++;
       }
     }
@@ -2343,7 +2360,8 @@ extern "C" {
 
     std::unordered_map<std::string, mxnet::ext::MXTensor> new_args, new_aux;
     mxnet::ext::PassResource res(&new_args, &new_aux, nd_malloc, nd_alloc);
-    graph->_setParams(&res, &args, &aux);
+    graph->_setParams(&args, &aux);
+    graph->_setPassResource(&res);
     mxnet::ext::MXReturnValue retval = graphPass(graph, opts);
     if (!retval) return retval;
 

@@ -207,28 +207,9 @@ MXReturnValue mySupportedOps(const mxnet::ext::Graph* graph,
 }
 
 MXReturnValue myReviewSubgraph(const mxnet::ext::Graph *subgraph, int subgraph_id, bool* accept,
-                               const std::unordered_map<std::string, std::string>& options,
-                               std::unordered_map<std::string, std::string>* attrs,
-                               const std::unordered_map<std::string, MXTensor>& args,
-                               const std::unordered_map<std::string, MXTensor>& aux) {
+                               const std::unordered_map<std::string, std::string>& options) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
-  }
-  for (auto kv : args) {
-    std::cout << "arg: " << kv.first << " ==> (";
-    for (auto s : kv.second.shape)
-      std::cout << s << ",";
-    std::cout << ") [";
-    for (int i=0; i<kv.second.size(); i++)
-      std::cout << kv.second.data<float>()[i] << ", ";
-    std::cout << "]" << std::endl;
-  }
-
-  // check if option `reqArgs` was specified, and if so check if args were provided
-  if(options.count("reqArgs") > 0 && args.size() == 0) {
-    *accept = false;
-    std::cout << "rejecting subgraph since args were not provided" << std::endl;
-    return MX_SUCCESS;
   }
 
   // check if option `reject` was specified, and if so check if value is 'True'
