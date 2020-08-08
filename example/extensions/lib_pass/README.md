@@ -32,22 +32,21 @@ To run the following example, the build type of MXNet doesn’t matter since the
 
 ### Run An Example
 
-You can start getting familiar with custom passes by running an example provided in the **example/extensions/lib_pass** directory. The `myPass` example just copies the input graph to the output. Go to the **lib_pass** directory and follow these steps:
+You can start getting familiar with custom passes by running an example provided in the **example/extensions/lib_pass** directory. The `myPass` example just prints out the graph. Go to the **lib_pass** directory and follow these steps:
 
 1. Run `make`. The Makefile will generate the dynamic library **libpass_lib.so** which is compiled from the `pass_lib.cc` file. This is the library you are going to load that contains everything for the custom pass.
-2. Run `python test_pass.py`. It’ll first load the above library, find the components, register them in the MXNet backend, then execute the pass on the model and execute the operators like a regular MXNet operator and output the result. Below is the output when running the `python test_pass.py` command. Notice that it loads 2 passes: myPass and jsonPass.
+2. Run `python test_pass.py`. It’ll first load the above library, find the components, register them in the MXNet backend, then execute the pass on the model and execute the operators like a regular MXNet operator and output the result. Below is the output when running the `python test_pass.py` command. Notice that it loads 1 pass: `myPass`.
 
 ```
 [10:38:03] src/c_api/c_api.cc:286: Found 0 operators in library
 [10:38:03] src/c_api/c_api.cc:785: Found 0 partitioners in library
-[07:14:00] src/c_api/c_api.cc:887: Found 2 graph passes in library
+[07:14:00] src/c_api/c_api.cc:887: Found 1 graph passes in library
 [07:14:00] src/c_api/c_api.cc:902:       Graph Pass [0] myPass
-[07:14:00] src/c_api/c_api.cc:902:       Graph Pass [1] jsonPass
 ```
 
 ### Basic Files For Custom Pass Library
 * **lib_pass/pass_lib.cc**: This file has a source code implementation of all required components to make a custom pass, it also shows registration of them so that they can be loaded by MXNet.
-* **lib_pass/Makefile**: This file compiles the source code to a dynamic shared library, with a header file `include/mxnet/lib_api.h` from MXNet source code. Currently the custom pass is compatible with C++11 onwards.
+* **lib_pass/Makefile**: This file compiles the source code to a dynamic shared library, with a header file `include/mxnet/lib_api.h` from MXNet source code. Currently the custom pass is compatible with C++11 and above.
 * **lib_pass/test_pass.py**: This file calls `mx.library.load(‘libpass_lib.so’)` to load the library containing the custom components, executes the pass on the model using the `optimize_for` API, and prints outputs of the forward passes. The outputs should be the same as the regular MXNet forward pass without running the pass.
 * **include/mxnet/lib_api.h**: This file from MXNet source code is the single header file needed to include all necessary data types and function prototypes for writing a custom library. You can either specify the include path in the `Makefile`, or copy the header file over to `example/extensions/lib_pass` folder. Note that apart from this header, the custom library is independent of MXNet source.
 ## Writing Custom Pass Library
@@ -78,18 +77,18 @@ sym_block.optimize_for(x, backend='myPass')
 
 ### Using a Custom Pass Library
 
-APIs in MXNet are available in both Symbol and Gluon APIs. For the Symbol API, the `optimize_for` API can be called on Symbol objects to return a new Symbol post graph pass.
+APIs in MXNet are available in both Symbol and Gluon APIs. For the Symbol API, `optimize_for` can be called on Symbol objects to run the graph pass and return a new Symbol.
 
 ```python
-optimize_for(backend, args=None, aux=None, ctx=None, **kwargs)
+sym.optimize_for(backend, args=None, aux=None, ctx=None, **kwargs)
 ```
 
 The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to use to optimize the model. The `args` and `aux` arguments are optional and take a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before executing the graph pass. The `ctx` argument is optional and takes a device context to infer storage types. It also takes any other user-specified options that will be passed to the backend APIs.
 
-For the Gluon API, the `hybridize` API can be called on HybridBlocks to execute a graph pass on the internal CachedOp Symbol.
+For the Gluon API, `hybridize` can be called on HybridBlocks to execute a graph pass on the internal CachedOp Symbol.
 
 ```python
-hybridize(backend=None, backend_opts=None, **kwargs)
+block.hybridize(backend=None, backend_opts=None, **kwargs)
 ```
 
 The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `backend` argument is a string that identifies which pass that will be executed on the model. The `backend_opts` takes other user-specified options that will be passed to the backend APIs. The actual pass runs once just before the first the forward pass.
@@ -97,7 +96,7 @@ The `hybridize` function prepares the HybridBlock to be converted into a backend
 If you just want to run a graph pass on the HybridBlock but not run a complete forward pass, you can use the `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
 
 ```python
-optimize_for(x, backend=None, backend_opts=None, **kwargs)
+block.optimize_for(x, backend=None, backend_opts=None, **kwargs)
 ```
 
 When the `optimize_for` API is called on a HybridBlock it runs the graph pass immediately. This lets users export the modified model without running a complete forward pass.
@@ -124,15 +123,11 @@ There are several essential building blocks for making a custom pass:
             MXReturnValue initialize(int version)
 ```
 * [graphPass](./pass_lib.cc#31):
-    * This function provides a copy of the model graph as a JSON string, and provides an interface for returning a modified model JSON string. Also this is where a custom pass can validate the options specified by the user.
+    * This function provides a copy of the model graph, and any specific options from the user.
 ```c++
             MXReturnValue graphPass(
-                const std::string& in_graph,
-                const std::string** out_graph,
-                const std::unordered_map<std::string, std::string>& options,
-                const std::unordered_map<std::string, MXTensor>& args,
-                const std::unordered_map<std::string, MXTensor>& aux,
-                const PassResource& res)
+                mxnet::ext::Graph *g,
+                const std::unordered_map<std::string, std::string>& options)
 ```
 * [REGISTER_PASS(my_pass_name)](./pass_lib.cc#L41):
     * This macro registers the custom pass and its properties to MXNet by its name. The argument to `setBody` is the `graphPass` function.
@@ -142,7 +137,7 @@ There are several essential building blocks for making a custom pass:
 ```
 Let’s take a closer look at those registry functions:
 
-* **graphPass**: This function takes six arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. The 2nd argument is a pointer to a pointer of a JSON model string. It is expected users will dereference and assign the address of their output string allocated with `new` and `delete` will be called on it automatically. The third argument is the map of options specified by the user. Users can pass custom options to the pass and they are passed to this function in the `options` map. The fourth and fifth arguments are the named tensor mapping for the args and aux params for the model. They will contain the model params if the user provides them to the `optimize_for` API. The last argument is the `PassResource` object for memory allocation and other utilities. The details of `PassResource` are covered in the section below
+* **graphPass**: This function takes two arguments. The first argument is the Graph of the model architecture, where nodes are inputs/params/weights and edges are data dependencies. The second argument is the map of options specified by the user. Users can pass custom options to the pass and they are passed to this function in the `options` map.
 
 ### Graph representation
 
@@ -166,8 +161,7 @@ The `nodes` are all the nodes in the graph (superset). The `inputs` are only tho
 
 Heres an example creating a new node and adding it to the graph:
 ```c++
-Node* n = new Node();
-g->nodes.push_back(n);
+g->addNode("myConv","Convolution");
 ```
 Heres an example creating an edge between two nodes:
 ```c++
@@ -176,20 +170,20 @@ n2->inputs.push_back({n1,0});
 ```
 Here node `n1` produces an output at index 0 that is consumed by node `n2` on the input at index 1.
 
-### Pass Resource
-
 Some graph passes require allocating new NDArrays to add/replace model params. The `alloc_arg` and `alloc_aux` APIs enable allocating new NDArrays and integrate them with the model args and aux params. Both APIs have the following signature:
 
 ```c++
-    MXTensor* alloc_xxx(const std::string& name,
-                        const std::vector<int64_t>& shapes,
+    MXTensor* alloc_xxx(const std::vector<int64_t>& shapes,
                         const MXContext &ctx,
                         MXDType dtype)
 ```
 
-If the `name` provided matches the name of an existing param it replaces the previous one. Otherwise it adds a new param to the appropriate arg/aux set. Be sure that you add a new node in the graph that corresponds to this new param, otherwise it will be useless.
+This function can be called on a node in the graph to allocate a tensor for that node like:
 
-If you wish to remove an existing param, just remove the node in the graph corresponding to that param. It will be deleted after the pass completes and removed from the dictionary of args or aux (whichever it is a member of).
+```c++
+node->alloc_arg({1},MXContext::CPU(0),kFloat32);
+```
+It adds a new param to the appropriate arg/aux set when the graph pass returns. If you wish to remove an existing param, just remove the node in the graph corresponding to that param. It will be deleted after the pass completes and removed from the dictionary of args or aux (whichever it is a member of).
 
 ### Parsing a JSON string
 

@@ -96,18 +96,18 @@ In the Gluon hybridize flow, the model is actually hybridized during the first i
 
 ### Using a Custom Partitioner Library
 
-Partitioning APIs in MXNet are available in both Symbol and Gluon APIs. For the Symbol API, the `optimize_for` API can be called on Symbol objects to return a partitioned Symbol.
+Partitioning APIs in MXNet are available in both Symbol and Gluon APIs. For the Symbol API, `optimize_for` can be called on Symbol objects to return a partitioned Symbol.
 
 ```python
-optimize_for(backend, args=None, aux=None, ctx=None, **kwargs)
+sym.optimize_for(backend, args=None, aux=None, ctx=None, **kwargs)
 ```
 
 The `optimize_for` API takes at least 1 argument, `backend` which is a string that identifies which backend to partition the model for. The `args` and `aux` arguments are optional and take a list of NDArray or dict of str to NDArray. They are used to infer shapes and types and before partitioning, and passed to the backend to use during compilation. The `ctx` argument is optional and takes a device context to infer storage types. It also takes any other user-specified options that will be passed to the backend partitioning APIs.
 
-For the Gluon API, the `hybridize` API can be called on HybridBlocks to partition the internal CachedOp Symbol.
+For the Gluon API, `hybridize` can be called on HybridBlocks to partition the internal CachedOp Symbol.
 
 ```python
-hybridize(backend=None, backend_opts=None, clear=True, **kwargs)
+block.hybridize(backend=None, backend_opts=None, clear=True, **kwargs)
 ```
 
 The `hybridize` function prepares the HybridBlock to be converted into a backend symbol. The `backend` argument is a string that identifies which backend that will partition the model. The `backend_opts` are other user-specified options (as a Python dictionary of strings mapped to strings) that will be passed to the backend partitioning APIs. The `clear` argument defaults to `True` and clears any previous optimizations done on the block. If you want to chain optimizations together, set `clear` to `False`. The actual partitioning takes place during the forward pass. If you want to use `hybridize` to chain multiple optimizations, be sure to execute a forward pass after each call to `hybridize`. 
@@ -115,13 +115,14 @@ The `hybridize` function prepares the HybridBlock to be converted into a backend
 If you just want to partition the HybridBlock but not run a complete forward pass, you can use the `optimize_for` API that combines the work done in the `hybridize` API with part of the work done in the forward pass.
 
 ```python
-optimize_for(x, backend=None, backend_opts=None, clear=True, **kwargs)
+block.optimize_for(x, backend=None, backend_opts=None, clear=True, **kwargs)
 ```
 
 When the `optimize_for` API is called on a HybridBlock it partitions immediately. This lets users export the partitioned model without running a complete forward pass. Chaining multiple optimizations is as simple as calling `optimize_for` multiple times, no need to execute a forward pass (as opposed to `hybridize`).
 
 ```python
 block.optimize_for(x, backend='myPart')
+block.optimize_for(x, backend='myOtherPart', clear=False)
 block.export('partitioned')
 ```
 
@@ -142,10 +143,10 @@ There are several essential building blocks for making a custom partitioner:
             MXReturnValue initialize(int version)
 ```
 * [supportedOps](./subgraph_lib.cc#L179):
-    * This function provides a copy of the model graph as a JSON string, and provides an interface for identifying which operators should be partitioned into a subgraph. Also this is where a custom partitioner can validate the options specified by the user.
+    * This function provides a copy of the model Graph, and an interface for identifying which operators should be partitioned into a subgraph. Also this is where a custom partitioner can validate the options specified by the user.
 ```c++
             MXReturnValue supportedOps(
-                const std::string& json,
+                const mxnet::ext::Graph* graph,
                 std::vector<int>* ids,
                 const std::unordered_map<std::string, std::string>& options)
 ```
@@ -163,28 +164,25 @@ Also there are some optional functions you can specify:
     * This function provides an opportunity to accept/reject a subgraph after MXNet partitions it. It also allows specifying custom attributes on the subgraph (ie. user-generated IDs). If you do not register this function, subgraphs will be accepted by default. 
 ```c++
             MXReturnValue reviewSubgraph(
-                const std::string& json,
+                const mxnet::ext::Graph* subgraph,
                 int subgraph_id,
                 bool* accept,
-                const std::unordered_map<std::string, std::string>& options,
-                std::unordered_map<std::string, std::string>* attrs,
-                const std::map<std::string, MXTensor>& args,
-                const std::map<std::string, MXTensor>& aux)
+                const std::unordered_map<std::string, std::string>& options)
 ```
 Let’s take a closer look at those registry functions:
 
-* **supportedOps**: This function takes four arguments. The 1st argument is a JSON string of the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. The 2nd argument is an array of booleans, one for each operator in the model. When traversing the graph, operators to be partitioned into subgraphs are identified and an entry is set to `true` for the index in the `ids` array corresponding to the node ID. The last argument is the map of options specified by the user. Users can pass custom options to the partitioner and they are passed to this function in the `options` map. 
+* **supportedOps**: This function takes 3 arguments. The 1st argument is the model architecture graph, where nodes are inputs/params/weights and edges are data dependencies. The graph is pre-sorted in topological order. The 2nd argument is an array of integers, one for each operator in the model. When traversing the graph, operators to be partitioned into subgraphs are identified and an entry is set to a value for the index in the `ids` array corresponding to the node ID. Setting a non-negative value (ie. [0, MAX_INT]) indicates the operator should be partitioned into that specific subgraph. Setting a value of -1 indicates that the operator can be partitioned into any subgraph. The last argument is the map of options specified by the user. Users can pass custom options to the partitioner and they are passed to this function in the `options` map. 
 
-* **reviewSubgraph**: This function takes five arguments. The 1st argument is a JSON string of the newly partitioned subgraph. The 2nd argument is the subgraph ID, this is just a number MXNet uses to identify this particular subgraph (it starts at zero and increments, unique for each subgraph in the model). The 3rd argument is an output to be set in this function to tell MXNet whether to accept (value: `true`) or reject (value: `false`) the subgraph. You might want to reject a subgraph if it doesnt include all the operators you want, for example. The `options` map is the same one passed to the `supportedOps` API. The 4th argument is the map of options specified by the user. The 5th argument is a map of attributes that should be set on the created subgraph. These attributes will be available later at runtime, and provides a mechanisn to pass info from partition-time to runtime. The last argument is the map of params/weights/args to the model and the associated names. For inputs the the subgraph that come directly from the params/weights of the model, you can look up the name of the input in this map to get the actual tensor values.
+* **reviewSubgraph**: This function takes four arguments. The 1st argument is the newly partitioned subgraph. The 2nd argument is the subgraph ID, this is just a number MXNet uses to identify this particular subgraph (it starts at zero and increments, unique for each subgraph in the model). The 3rd argument is an output to be set in this function to tell MXNet whether to accept (value: `true`) or reject (value: `false`) the subgraph. You might want to reject a subgraph if it doesnt include all the operators you want, for example. The `options` map is the same one passed to the `supportedOps` API. The 4th argument is the map of options specified by the user. Any custom attributes set on the Graph object will be available later at runtime, and provides a mechanisn to pass info from partition-time to runtime. For inputs to the subgraph that come directly from the params/weights of the model, you can access the raw tensor data directly from that node in the graph.
 
 ### Writing a Custom Selector
 Instead of implementing the `supportedOps` API, you can choose to implement a custom selector class for more control over partitioning instead. 
 
 * [createSelector](./subgraph_lib.cc#L321):
-    * This function provides a copy of the model graph as a JSON string for the first argument. The 2nd argument is a placeholder for CustomOpSelector object. You must define a class that inherits CustomOpSelector and override the required  functions. Then you need to create an instance of your class and assign it to the placeholder. The last argument is a map of user-specified options.
+    * This function provides a copy of the model graph as the first argument. The 2nd argument is a placeholder for CustomOpSelector object. You must define a class that inherits from the `CustomOpSelector` class and override the required functions. Then you need to create an instance of your class and assign it to the placeholder. The last argument is a map of user-specified options.
 ```c++
             MXReturnValue createSelector(
-                const std::string& json,
+                const mxnet::ext::Graph *graph,
                 CustomOpSelector** sel_inst,
                 const std::unordered_map<std::string, std::string>& options)
 ```
@@ -218,9 +216,10 @@ When implementing your own selector class, you must inherit from the `CustomOpSe
 ```
 All of these APIs refer to the model's graph that is provided to the `createSelector` API. When you implement your custom `createSelector` function, you can pass the graph and options to the constructor of your class like this:
 ```c++
-MXReturnValue myCreateSelector(const std::string& json, CustomOpSelector** sel_inst,
+MXReturnValue myCreateSelector(const mxnet::ext::Graph *graph,
+                               CustomOpSelector** sel_inst,
                                const std::unordered_map<std::string, std::string>& options) {
-  *sel_inst = new MySelector(json, options);
+  *sel_inst = new MySelector(graph, options);
   return MX_SUCCESS;
 }
 ```
@@ -250,6 +249,19 @@ When registering a custom subgraph operator, all thats needed is to register a `
 REGISTER_OP(my_subgraph_op)
 .setIsSubgraphOp()
 .setCreateOpState(createOpState, "cpu");
+```
+
+### Converting a JSON string encoded graph
+
+A Graph object can be created from a JSON string containing a graph/subgraph like:
+
+```c++
+mxnet::ext::Graph* g = mxnet::ext::Graph::fromString(json);
+```
+
+It can be converted back to a JSON string just as easily:
+```c++
+std::string json = g->toString();
 ```
 
 ### Parsing a JSON string
