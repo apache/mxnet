@@ -835,14 +835,16 @@ class Node {
   void alloc_arg(const std::vector<int64_t>& shapes,
                  const MXContext &ctx, MXDType dtype) {
     if (!res)
-      throw std::runtime_error("Node not initialized. Cannot use alloc_arg outside of graph passes.");
+      throw std::runtime_error(
+                 "Node not initialized. Cannot use alloc_arg outside of graph passes.");
     tensor = res->alloc_arg(name, shapes, ctx, dtype);
   }
   /* \brief allocate an aux tensor for this node */
   void alloc_aux(const std::vector<int64_t>& shapes,
                  const MXContext &ctx, MXDType dtype) {
     if (!res)
-      throw std::runtime_error("Node not initialized. Cannot use alloc_aux outside of graph passes.");
+      throw std::runtime_error(
+                 "Node not initialized. Cannot use alloc_aux outside of graph passes.");
     tensor = res->alloc_aux(name, shapes, ctx, dtype);
   }
   std::string op;  // operator name (ie. Convolution)
@@ -852,6 +854,7 @@ class Node {
   std::vector<NodeEntry> outputs;  // set of outputs from the node
   std::vector<Graph*> subgraphs;  // set of subgraphs within this node
   std::unordered_map<std::string, std::string> attrs;  // node attributes
+
  private:
   PassResource* res;
 };
