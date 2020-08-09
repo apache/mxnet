@@ -681,17 +681,17 @@ def numpy_fallback(func):
         else:
             return object, None
 
-    from .ndarray import from_numpy
+    from .npx import from_numpy
     from .numpy import array
     from .context import current_context
     def _as_mx_np_array(object, ctx=current_context()):
         import numpy as _np
         if isinstance(object, _np.ndarray):
             try:
-                ret = from_numpy(object).as_np_ndarray()
+                ret = from_numpy(object)
             except ValueError:
                 ret = array(object, dtype=object.dtype, ctx=ctx)
-            return (ret if ('cpu' in str(ctx)) else ret.as_in_ctx(ctx))
+            return ret if 'cpu' in ctx.device_type else ret.as_in_ctx(ctx)
         elif isinstance(object, (list, tuple)):
             tmp = [_as_mx_np_array(arr, ctx) for arr in object]
             return object.__class__(tmp)

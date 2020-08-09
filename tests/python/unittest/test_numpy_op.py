@@ -19,6 +19,7 @@
 from __future__ import absolute_import
 from distutils.version import StrictVersion
 import sys
+import operator
 import itertools
 import numpy as _np
 import platform
@@ -3203,44 +3204,36 @@ def test_np_mixed_precision_binary_funcs():
 
 @with_seed()
 @use_np
-def test_np_mixed_mxnp_op_funcs():
+@pytest.mark.parametrize('op', [
+    operator.iadd,    # +=
+    operator.isub,    # -=
+    operator.imul,    # *=
+    operator.ixor,    # ^=
+    operator.ior,     # |=
+    operator.iand,    # &=
+    operator.lshift,  # <<
+    operator.rshift,  # >>
+    operator.ne,      # !=
+    operator.eq,      # ==
+    operator.ge,      # >=
+    operator.gt,      # >
+    operator.le,      # <=
+    operator.lt,      # <
+    operator.truediv, # /
+    operator.matmul,  # @
+])
+@pytest.mark.parametrize('dtype', ['int64', 'float32'])
+def test_np_mixed_mxnp_op_funcs(op, dtype):
     # generate onp & mx_np in same type
-    onp = _np.array([1,2,3,4,5]).astype("int64")
-    mx_np = mx.np.array([1,2,3,4,5]).astype("int64")
-    # inplace onp mx_np
-    onp += mx_np
-    assert isinstance(onp, _np.ndarray)
-    onp -= mx_np
-    assert isinstance(onp, _np.ndarray)
-    onp *= mx_np
-    assert isinstance(onp, _np.ndarray)
-    # inplace mx_np onp
-    mx_np ^= onp
+    if dtype == 'int64' and op == operator.matmul:
+        pytest.skip()
+    if dtype == 'float32' and op in {operator.ixor, operator.ior, operator.iand, operator.lshift,
+                                     operator.rshift}:
+        pytest.skip()
+    onp = _np.array([1,2,3,4,5]).astype(dtype)
+    mx_np = mx.np.array([1,2,3,4,5]).astype(dtype)
+    onp = op(onp, mx_np)
     assert isinstance(mx_np, mx.np.ndarray)
-    mx_np |= onp
-    assert isinstance(mx_np, mx.np.ndarray)
-    mx_np &= onp
-    assert isinstance(mx_np, mx.np.ndarray)
-    # mxnp onp
-    out = mx_np << onp
-    assert isinstance(out, mx.np.ndarray)
-    out = mx_np >> onp
-    assert isinstance(out, mx.np.ndarray)
-    out = mx_np != onp
-    assert isinstance(out, mx.np.ndarray)
-    # onp mxnp
-    out = onp == mx_np
-    assert isinstance(out, mx.np.ndarray)
-    out = onp >= mx_np
-    assert isinstance(out, mx.np.ndarray)
-    out = onp < mx_np
-    assert isinstance(out, mx.np.ndarray)
-    onp = _np.array([1,2,3,4,5]).astype("float32")
-    mx_np = mx.np.array([1,2,3,4,5]).astype("float32")
-    out = onp @ mx_np
-    assert isinstance(out, mx.np.ndarray)
-    out = onp / mx_np
-    assert isinstance(out, mx.np.ndarray)
 
 @with_seed()
 @use_np
@@ -4586,7 +4579,14 @@ def test_npx_special_unary_func():
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
 @use_np
-def test_np_random_grad():
+@pytest.mark.parametrize('op_name', ["normal", "logistic", "gumbel"])
+@pytest.mark.parametrize('hybridize', [False, True])
+@pytest.mark.parametrize('shape1,shape2,out_shape', [
+    [(3, 2), (3, 2), (3, 2)],
+    [(3, 2, 2), (3, 2, 2), (4, 3, 2, 2)],
+    [(3, 4, 5), (4, 1), (3, 4, 5)],
+])
+def test_np_random_grad(op_name, hybridize, shape1, shape2, out_shape):
     class TestRandomGrad(HybridBlock):
         def __init__(self, shape, op_name):
             super(TestRandomGrad, self).__init__()
@@ -4596,43 +4596,33 @@ def test_np_random_grad():
             op = getattr(F.np.random, self._dist_name, None)
             assert op is not None
             return op(loc=loc, scale=scale, size=self._shape)
+    test_random_grad = TestRandomGrad(out_shape, op_name)
+    if hybridize:
+        test_random_grad.hybridize()
+    loc = np.zeros(shape1)
+    loc.attach_grad()
+    scale = np.ones(shape2)
+    scale.attach_grad()
+    with mx.autograd.record():
+        samples = test_random_grad(loc, scale)
+    samples.backward()
+    assert loc.grad.shape == shape1
+    assert scale.grad.shape == shape2
+    assert_almost_equal(loc.grad.asnumpy().sum(), _np.ones(out_shape).sum(), rtol=1e-3, atol=1e-5)
 
-    param_shape = [
-        [(3, 2), (3, 2)],
-        [(3, 2, 2), (3, 2, 2)],
-        [(3, 4, 5), (4, 1)],
-    ]
-    output_shapes = [
-        (3, 2),
-        (4, 3, 2, 2),
-        (3, 4, 5)
-    ]
-    op_names = ["normal", "logistic", "gumbel"]
-    for op_name in op_names:
-        for hybridize in [False, True]:
-            for ((shape1, shape2), out_shape) in zip(param_shape, output_shapes):
-                test_random_grad = TestRandomGrad(out_shape, op_name)
-                if hybridize:
-                    test_random_grad.hybridize()
-                loc = np.zeros(shape1)
-                loc.attach_grad()
-                scale = np.ones(shape2)
-                scale.attach_grad()
-                with mx.autograd.record():
-                    samples = test_random_grad(loc, scale)
-                samples.backward()
-                assert loc.grad.shape == shape1
-                assert scale.grad.shape == shape2
-                assert_almost_equal(loc.grad.asnumpy().sum(), _np.ones(out_shape).sum(), rtol=1e-3, atol=1e-5)
 
-        for (loc, scale) in [(2, (2,3)), ((2,3), 2), ((2,3), (2,3))]:
-            if isinstance(loc, tuple):
-                loc = np.ones(loc)
-            if isinstance(scale, tuple):
-                scale = np.ones(scale)
-            mx_out = getattr(np.random, op_name)(loc, scale)
-            np_out = getattr(_np.random, op_name)(loc, scale)
-            assert mx_out.asnumpy().shape == np_out.shape
+@pytest.mark.parametrize('op_name', ["normal", "logistic", "gumbel"])
+@pytest.mark.parametrize('loc,scale', [
+    (2, (2,3)), ((2,3), 2), ((2,3), (2,3))
+])
+def test_np_random_consistent(op_name, loc, scale):
+    if isinstance(loc, tuple):
+        loc = np.ones(loc)
+    if isinstance(scale, tuple):
+        scale = np.ones(scale)
+    mx_out = getattr(np.random, op_name)(loc, scale)
+    np_out = getattr(_np.random, op_name)(loc, scale)
+    assert mx_out.asnumpy().shape == np_out.shape
 
 
 @with_seed()

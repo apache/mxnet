@@ -8051,6 +8051,8 @@ def shares_memory(a, b, max_work=None):
     - Does not support `max_work`, it is a dummy argument
     - Actually it is same as `may_share_memory` in MXNet np
     """
+    if a.ctx != b.ctx and not ('cpu' in a.ctx.device_type and 'cpu' in b.ctx.device_type):
+        return False
     return _api_internal.share_memory(a, b).item()
 
 
@@ -8092,6 +8094,8 @@ def may_share_memory(a, b, max_work=None):
     - Does not support `max_work`, it is a dummy argument
     - Actually it is same as `shares_memory` in MXNet np
     """
+    if a.ctx != b.ctx and not ('cpu' in a.ctx.device_type and 'cpu' in b.ctx.device_type):
+        return False
     return _api_internal.share_memory(a, b).item()
 
 

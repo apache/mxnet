@@ -186,7 +186,7 @@ def _as_mx_np_array(object, ctx=None, zero_copy=False, writable=False):
         return object
     elif isinstance(object, _np.ndarray):
         from_numpy = ndarray_from_numpy(ndarray, array)
-        return from_numpy(object, zero_copy and object.flags['C_CONTIGUOUS'])
+        return from_numpy(object, zero_copy and object.flags['CARRAY'])
     elif isinstance(object, (integer_types, numeric_types)):
         return object
     elif isinstance(object, (_np.bool_, _np.bool)):
@@ -253,6 +253,7 @@ def wrap_mxnp_np_ufunc(func):
     Function
         A function wrapped with type casted.
     """
+
     @functools.wraps(func)
     def _wrap_mxnp_np_ufunc(x1, x2):
         if isinstance(x2, _np.ndarray):
@@ -1499,12 +1500,14 @@ class ndarray(NDArray):
         """
         if dtype is None:
             dtype = self.dtype
-        data = _np.empty(self.shape, dtype=dtype)
+        data = _np.empty(self.shape, dtype=self.dtype)
         if data.size > 0:
             check_call(_LIB.MXNDArraySyncCopyToCPU(
                 self.handle,
                 data.ctypes.data_as(ctypes.c_void_p),
                 ctypes.c_size_t(data.size)))
+        if dtype != self.dtype:
+            data = data.astype(dtype)
         return data
 
     def asscalar(self):

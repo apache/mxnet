@@ -45,6 +45,7 @@ flaky==3.6.1
 setuptools
 wheel
 mock==2.0.0
+scikit-learn<=0.24
 
 # TVM dependencies
 decorator==4.4.0
