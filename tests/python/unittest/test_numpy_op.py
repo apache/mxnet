@@ -1541,7 +1541,7 @@ def test_npx_batch_norm():
                 assert_almost_equal(
                     bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
 
-    shapes = [(24, 2), (24, 3, 4), (24, 8, 4, 5), (24, 5, 6, 4, 5)]
+    shapes = [(4, 2), (4, 3, 4), (4, 6, 4, 5), (4, 5, 6, 4, 5)]
     bools = [False, True]
     for shape, fix_gamma, cudnn_off, output_mean_var in itertools.product(
             shapes, bools, bools, bools):

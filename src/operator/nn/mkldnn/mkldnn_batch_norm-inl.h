@@ -157,7 +157,25 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                             const std::vector<NDArray> &inputs, const std::vector<OpReqType> &req,
                             const std::vector<NDArray> &outputs, bool fuse_relu) {
   const BatchNormParam &param = nnvm::get<BatchNormParam>(attrs.parsed);
-  const std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
+  std::vector<NDArray> in_data(inputs.begin(), inputs.begin() + batchnorm::kInMovingMean);
+
+  mxnet::TShape shape = inputs[batchnorm::kData].shape();
+  const int real_axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
+  CHECK_LT(real_axis, shape.ndim());
+  NDArray out = outputs[batchnorm::kOut];
+  if (param.axis != 1 || shape.ndim() != 4) {
+    // reshape to (N, C, 1, D)
+    mxnet::TShape new_shape{
+      static_cast<dim_t>(shape.ProdShape(0, real_axis)),
+      shape[real_axis],
+      1,
+      static_cast<dim_t>(shape.ProdShape(real_axis + 1,
+            static_cast<int>(shape.ndim())))
+    };
+    in_data[batchnorm::kData] = in_data[batchnorm::kData].Reshape(new_shape);
+    out = out.Reshape(new_shape);
+  }
+
   const std::vector<NDArray> aux_states(inputs.begin() + batchnorm::kInMovingMean, inputs.end());
   TmpMemMgr::Get()->Init(ctx.requested[batchnorm::kTempSpace]);
   mkldnn::normalization_flags flags = _GetFlags(in_data,
@@ -166,7 +184,6 @@ void MKLDNNBatchNormForward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                                                 fuse_relu);
   const NDArray &data = in_data[batchnorm::kData];
   auto &fwd = GetBNForward<DType>(param, ctx, data, flags);
-  const NDArray &out = outputs[batchnorm::kOut];
 
   // for output memory
   auto out_mem = const_cast<NDArray &>(out).CreateMKLDNNData(fwd.GetPd().dst_desc());
@@ -325,9 +342,9 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
                                                 ctx.is_train && !param.use_global_stats,
                                                 fuse_relu);
 
-  const NDArray &data         = in_data[batchnorm::kData];
-  const NDArray &diff         = out_grad[batchnorm::kOut];
-  const NDArray &gradIn       = in_grad[batchnorm::kData];
+  NDArray data         = in_data[batchnorm::kData];
+  NDArray diff         = out_grad[batchnorm::kOut];
+  NDArray gradIn       = in_grad[batchnorm::kData];
   const NDArray &moving_mean  = aux_states[batchnorm::kMovingMean];
   const NDArray &moving_var   = aux_states[batchnorm::kMovingVar];
   const NDArray &out_mean     = out_data[batchnorm::kMean];
@@ -337,6 +354,23 @@ void MKLDNNBatchNormBackward(const nnvm::NodeAttrs &attrs, const OpContext &ctx,
   CHECK(out_var.IsDefaultData());
   CHECK(moving_mean.IsDefaultData());
   CHECK(moving_var.IsDefaultData());
+
+  mxnet::TShape shape = data.shape();
+  const int real_axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
+  CHECK_LT(real_axis, shape.ndim());
+  if (param.axis != 1 || shape.ndim() != 4) {
+    // reshape to (N, C, 1, D)
+    mxnet::TShape new_shape{
+      static_cast<dim_t>(shape.ProdShape(0, real_axis)),
+      shape[real_axis],
+      1,
+      static_cast<dim_t>(shape.ProdShape(real_axis + 1,
+            static_cast<int>(shape.ndim())))
+    };
+    data = data.Reshape(new_shape);
+    diff = diff.Reshape(new_shape);
+    gradIn = gradIn.Reshape(new_shape);
+  }
 
   auto data_mem  = data.GetMKLDNNData();
   auto diff_mem  = diff.GetMKLDNNData();
