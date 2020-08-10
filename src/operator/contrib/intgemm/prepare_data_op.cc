@@ -96,6 +96,8 @@ void PrepareDataOpForwardCPU(const nnvm::NodeAttrs& attrs,
 
   const float *A = in.dptr<float>();
   int8_t *quantA = out.dptr<int8_t>();
+  CHECK_EQ(reinterpret_cast<intptr_t>(A) % 64, 0);
+  CHECK_EQ(reinterpret_cast<intptr_t>(quantA) % 64, 0);
   const float multiplier = 127.0 / *inputs[1].dptr<float>();
   ::intgemm::Int8::Quantize(A, quantA, multiplier, in.shape_.Size());
 }
