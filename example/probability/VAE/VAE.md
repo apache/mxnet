@@ -29,8 +29,10 @@ from mxnet.gluon import nn
 import mxnet.gluon.probability as mgp
 import matplotlib.pyplot as plt
 
+# Switch numpy-compatible semantics on.
 npx.set_np()
-data_ctx = mx.cpu()
+
+# Set context for model context, here we choose to use GPU. 
 model_ctx = mx.gpu(0)
 ```
 
@@ -85,12 +87,18 @@ class VAE(gluon.HybridBlock):
         Given a batch of x,
         return the encoder's output
         """
+        # [loc_1, ..., loc_n, log(scale_1), ..., log(scale_n)]
         h = self.encoder(x)
+
+        # Extract loc and log_scale from the encoder output.
         loc_scale = np.split(h, 2, 1)
         loc = loc_scale[0]
-        log_variance = loc_scale[1]
-        scale = np.exp(0.5 * log_variance)
-        self.loc = loc
+        log_scale = loc_scale[1]
+
+        # Convert log_scale back to scale.
+        scale = np.exp(log_scale)
+
+        # Return a Normal object.
         return mgp.Normal(loc, scale)
     
     def decode(self, z):
