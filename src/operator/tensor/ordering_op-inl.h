@@ -771,8 +771,8 @@ void TopK_Operation(const TopKParam& param,
     if ((axis = param.axis.value()) < 0)
       axis += s.ndim();
   }
-  const size_t batch_size = s.Size() / s[axis];
 
+  const size_t batch_size = s.Size() > 1? s.Size() / s[axis] : 1;
   topK_func F;
   size_t size;
   MSHADOW_TYPE_SWITCH(src.type_flag_, DType, {
