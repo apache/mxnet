@@ -141,12 +141,15 @@ else()
   execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND UNIX AND NOT APPLE)
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
-  set(CMAKE_INSTALL_RPATH $\{ORIGIN\})
-  # Enforce DT_PATH instead of DT_RUNPATH
-  set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--disable-new-dtags")
-  set(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
+  if(UNIX AND NOT APPLE)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+    set(CMAKE_INSTALL_RPATH $\{ORIGIN\})
+    # Enforce DT_PATH instead of DT_RUNPATH
+    set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--disable-new-dtags")
+    set(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+  endif()
+  set(Protobuf_USE_STATIC_LIBS ON)
 endif()
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/upstream;${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
@@ -228,6 +231,7 @@ if(USE_TENSORRT)
   include_directories(3rdparty/onnx-tensorrt/third_party/onnx/)
   add_definitions(-DMXNET_USE_TENSORRT=1)
   add_definitions(-DONNX_NAMESPACE=onnx)
+  add_definitions(-DONNX_ML=1)
 
   find_package(Protobuf REQUIRED)
 
@@ -237,14 +241,11 @@ if(USE_TENSORRT)
   find_library(ONNX_PROTO_LIBRARY NAMES libonnx_proto.so REQUIRED
           PATHS ${ONNX_PATH}
           DOC "Path to onnx_proto library.")
-  find_library(ONNX_TRT_RUNTIME_LIBRARY NAMES libnvonnxparser_runtime.so REQUIRED
-          PATHS ${ONNX_TRT_PATH}
-          DOC "Path to onnx_proto library.")
   find_library(ONNX_TRT_PARSER_LIBRARY NAMES libnvonnxparser.so REQUIRED
           PATHS ${ONNX_TRT_PATH}
-          DOC "Path to onnx_proto library.")
+          DOC "Path to onnx_proto parser library.")
 
-  list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY} ${ONNX_TRT_RUNTIME_LIBRARY}
+  list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY}
           ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
 endif()
 
@@ -275,6 +276,7 @@ if(USE_MKLDNN)
   include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
+  set_target_properties(dnnl PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
@@ -302,20 +304,6 @@ include_directories("3rdparty/tvm/nnvm/include")
 include_directories("3rdparty/tvm/include")
 include_directories("3rdparty/dmlc-core/include")
 include_directories("3rdparty/dlpack/include")
-
-# commented out until PR goes through
-#if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack)
-#  add_subdirectory(3rdparty/dlpack)
-#endif()
-
-# Prevent stripping out symbols (operator registrations, for example)
-if(NOT MSVC AND NOT APPLE)
-  set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
-  set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  # using regular Clang or AppleClang
-  set(BEGIN_WHOLE_ARCHIVE -Wl,-force_load)
-endif()
 
 if(UNIX)
   find_library(RTLIB rt)
@@ -405,6 +393,7 @@ if(USE_OPENMP)
      AND NOT CMAKE_CROSSCOMPILING)
     load_omp()
     list(APPEND mxnet_LINKER_LIBS omp)
+    set_target_properties(omp PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
     if(UNIX)
       list(APPEND mxnet_LINKER_LIBS pthread)
     endif()
@@ -462,6 +451,8 @@ set(GTEST_MAIN_LIBRARY gtest_main)
 set(GTEST_LIBRARY gtest)
 
 add_subdirectory(${GTEST_ROOT})
+set_target_properties(gtest PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+set_target_properties(gtest_main PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 find_package(GTest REQUIRED)
 
 # cudnn detection
@@ -478,6 +469,7 @@ endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake)
   add_subdirectory("3rdparty/dmlc-core")
+  set_target_properties(dmlc PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
@@ -492,7 +484,9 @@ FILE(GLOB_RECURSE NNVMSOURCE
   3rdparty/tvm/nnvm/src/core/*.h
   3rdparty/tvm/nnvm/src/pass/*.h
   3rdparty/tvm/nnvm/include/*.h)
-list(APPEND SOURCE ${NNVMSOURCE})
+add_library(nnvm OBJECT ${NNVMSOURCE})
+set_target_properties(nnvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
 
 # add source group
 FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
@@ -635,7 +629,6 @@ if(UNIX)
   endif()
   target_link_libraries(mxnet PUBLIC mshadow)
   target_link_libraries(mxnet PUBLIC ${CMAKE_DL_LIBS})
-  target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
   if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     target_compile_options(mxnet PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
     # Ignore erroneous compiler warnings:
@@ -651,6 +644,18 @@ if(UNIX)
     target_compile_options(mxnet PUBLIC "--coverage")
     target_link_libraries(mxnet PUBLIC gcov)
   endif()
+  if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
+    # TODO For handling mxnet's symbols the following can be replace by
+    # annotating symbol visibility in source code, specifying
+    # set(CMAKE_CXX_VISIBILITY_PRESET hidden) and
+    # set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+    # Symbols from statically linked libraries can be discarded via -Wl,--exclude-libs,ALL
+    if(APPLE)
+      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
+    else()
+      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--version-script=${PROJECT_SOURCE_DIR}/cmake/libmxnet.ver")
+    endif()
+  endif()
 elseif(MSVC)
   if(USE_CUDA)
     if(USE_SPLIT_ARCH_DLL)
@@ -662,7 +667,6 @@ elseif(MSVC)
       foreach(arch ${arch_code_list})
         add_library(mxnet_${arch} SHARED ${SOURCE})
         target_link_libraries(mxnet_${arch} PUBLIC mshadow)
-        target_compile_definitions(mxnet_${arch} PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
         target_compile_options(
           mxnet_${arch}
           PRIVATE
@@ -698,10 +702,10 @@ elseif(MSVC)
     endif(USE_SPLIT_ARCH_DLL)
   else()
     add_library(mxnet SHARED ${SOURCE})
-    target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
     target_link_libraries(mxnet PUBLIC mshadow)
   endif()
 endif()
+target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
 
 # extension libraries (custom operators, custom subgraphs) are built by default
 add_library(customop_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc)
@@ -743,6 +747,7 @@ if(USE_DIST_KVSTORE)
   add_subdirectory("3rdparty/ps-lite")
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
   list(APPEND mxnet_LINKER_LIBS pslite)
+  set_target_properties(pslite PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
 
 if(USE_MKLDNN)
@@ -757,6 +762,9 @@ function(BuildTVMOP)
   # scope the variables in BuildTVM.cmake to avoid conflict
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")
+  set_target_properties(tvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+  set_target_properties(tvm_topi PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+  set_target_properties(tvm_runtime PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endfunction()
 
 if(USE_TVM_OP)
@@ -817,8 +825,12 @@ endif()
 include(GNUInstallDirs)
 install(TARGETS mxnet
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+          COMPONENT   MXNET_Runtime
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          COMPONENT            MXNET_Runtime
+          NAMELINK_COMPONENT   MXNET_Development
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          COMPONENT   MXNET_Development
 )
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
@@ -859,7 +871,10 @@ if(INSTALL_PYTHON_VERSIONS)
   endforeach()
 endif()
 
-add_subdirectory(tests)
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
+  # Staticbuild applies linker version script to hide private symbols, breaking unit tests
+  add_subdirectory(tests)
+endif()
 
 # ---[ Linter target
 find_package(Python3)

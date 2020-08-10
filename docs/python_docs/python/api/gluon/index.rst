@@ -97,7 +97,7 @@ Training
       Loss functions for training neural networks.
 
    .. card::
-      :title: mxnet.metric
+      :title: gluon.metric
       :link: metric/index.html
 
       Metrics to evaluate the performance of a learned model.

@@ -462,9 +462,8 @@ build_ubuntu_cpu_clang100() {
 build_ubuntu_cpu_clang_tidy() {
     set -ex
     cd /work/build
-    export CLANG_TIDY=/usr/lib/llvm-6.0/share/clang/run-clang-tidy.py
     # TODO(leezu) USE_OPENMP=OFF 3rdparty/dmlc-core/CMakeLists.txt:79 broken?
-    CXX=clang++-6.0 CC=clang-6.0 cmake \
+    CXX=clang++-10 CC=clang-10 cmake \
        -DUSE_MKL_IF_AVAILABLE=OFF \
        -DUSE_MKLDNN=OFF \
        -DUSE_CUDA=OFF \
@@ -472,11 +471,9 @@ build_ubuntu_cpu_clang_tidy() {
        -DCMAKE_BUILD_TYPE=Debug \
        -DUSE_DIST_KVSTORE=ON \
        -DUSE_CPP_PACKAGE=ON \
-       -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+       -DCMAKE_CXX_CLANG_TIDY=clang-tidy-10 \
        -G Ninja /work/mxnet
     ninja
-    cd /work/mxnet
-    $CLANG_TIDY -p /work/build -j $(nproc) -clang-tidy-binary clang-tidy-6.0 /work/mxnet/src
 }
 
 build_ubuntu_cpu_clang6_mkldnn() {
@@ -544,6 +541,7 @@ build_ubuntu_gpu_tensorrt() {
 
     export CC=gcc-7
     export CXX=g++-7
+    export ONNX_NAMESPACE=onnx
 
     # Build ONNX
     pushd .
@@ -552,29 +550,29 @@ build_ubuntu_gpu_tensorrt() {
     rm -rf build
     mkdir -p build
     cd build
-    cmake  -DBUILD_SHARED_LIBS=ON -GNinja ..
-    ninja onnx/onnx.proto
-    ninja
+    cmake -DCMAKE_CXX_FLAGS=-I/usr/include/python${PYVER} -DBUILD_SHARED_LIBS=ON ..
+    make -j$(nproc)
     export LIBRARY_PATH=`pwd`:`pwd`/onnx/:$LIBRARY_PATH
     export CPLUS_INCLUDE_PATH=`pwd`:$CPLUS_INCLUDE_PATH
+    export CXXFLAGS=-I`pwd`
+
     popd
 
     # Build ONNX-TensorRT
     export LD_LIBRARY_PATH=${LD_LIBRARY_PATH}:/usr/local/lib
-    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.1/targets/x86_64-linux/include/
+    export CPLUS_INCLUDE_PATH=${CPLUS_INCLUDE_PATH}:/usr/local/cuda-10.2/targets/x86_64-linux/include/
     pushd .
     cd 3rdparty/onnx-tensorrt/
     mkdir -p build
     cd build
-    cmake ..
+    cmake -DONNX_NAMESPACE=$ONNX_NAMESPACE ..
     make -j$(nproc)
     export LIBRARY_PATH=`pwd`:$LIBRARY_PATH
     popd
 
     mkdir -p /work/mxnet/lib/
     cp 3rdparty/onnx-tensorrt/third_party/onnx/build/*.so /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser_runtime.so.0 /work/mxnet/lib/
-    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so.0 /work/mxnet/lib/
+    cp -L 3rdparty/onnx-tensorrt/build/libnvonnxparser.so /work/mxnet/lib/
 
     cd /work/build
     cmake -DUSE_CUDA=1                            \
@@ -746,12 +744,12 @@ sanity_license() {
     tools/license_header.py check
 }
 
-sanity_python() {
+sanity_cpp() {
     set -ex
     3rdparty/dmlc-core/scripts/lint.py mxnet cpp include src plugin tests --exclude_path src/operator/contrib/ctc_include include/mkldnn
 }
 
-sanity_cpp() {
+sanity_python() {
     set -ex
     python3 -m pylint --rcfile=ci/other/pylintrc --ignore-patterns=".*\.so$$,.*\.dll$$,.*\.dylib$$" python/mxnet
     OMP_NUM_THREADS=$(expr $(nproc) / 4) pytest -n 4 tests/tutorials/test_sanity_tutorials.py

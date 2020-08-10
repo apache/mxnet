@@ -100,7 +100,7 @@ mkldnn::algorithm GetMKLDNNActAlgo(const LeakyReLUParam& param) {
     case leakyrelu::kELU:
       return mkldnn::algorithm::eltwise_elu;
     case leakyrelu::kGELU:
-      return mkldnn::algorithm::eltwise_gelu;
+      return mkldnn::algorithm::eltwise_gelu_erf;
     default:
       LOG(FATAL) << "unknown activation type for LeakyReLU: " << param.act_type;
       return mkldnn::algorithm::eltwise_relu;

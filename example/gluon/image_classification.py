@@ -193,7 +193,8 @@ def train(opt, ctx):
         ctx = [ctx]
 
     train_data, val_data = get_data_iters(dataset, batch_size, opt)
-    net.collect_params().reset_ctx(ctx)
+    for p in net.collect_params().values():
+        p.reset_ctx(ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd',
                             optimizer_params={'learning_rate': opt.lr,
                                               'wd': opt.wd,

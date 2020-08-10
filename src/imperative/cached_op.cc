@@ -16,6 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#include <memory>
 #include <unordered_set>
 #include <iostream>
 #include "./imperative_utils.h"
@@ -87,8 +88,7 @@ CachedOp::CachedOp(
   SetRefCounts(&fwd_graph_, full_graph_);
 }
 
-CachedOp::~CachedOp() {
-}
+CachedOp::~CachedOp() = default;
 
 std::vector<nnvm::NodeEntry> CachedOp::Gradient(
     const nnvm::ObjectPtr& node,
@@ -1293,7 +1293,7 @@ void CachedOpParamParser(nnvm::NodeAttrs* attrs) {
     std::vector<std::pair<std::string, std::string> > flags;
     for (const auto& attr : attrs->dict)
       flags.emplace_back(attr.first, attr.second);
-    attrs->parsed = CachedOpPtr(new CachedOp(sym, flags));
+    attrs->parsed = std::make_shared<CachedOp>(sym, flags);
   }
 }
 

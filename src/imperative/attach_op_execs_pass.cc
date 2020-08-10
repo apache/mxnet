@@ -26,6 +26,8 @@
 #include <mxnet/op_attr_types.h>
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph_attr_types.h>
+
+#include <utility>
 #include "../common/utils.h"
 #include "../common/exec_utils.h"
 #include "../imperative/imperative_utils.h"
@@ -47,8 +49,8 @@ namespace exec {
 // FComputeExecutor and FStatefulComputeExecutor inherit from this class
 class StorageFallbackOpExecutor : public OpExecutor {
  public:
-  explicit StorageFallbackOpExecutor(const std::vector<uint32_t> &mutate_idx)
-      : mutate_idx_(mutate_idx) {}
+  explicit StorageFallbackOpExecutor(std::vector<uint32_t> mutate_idx)
+      : mutate_idx_(std::move(mutate_idx)) {}
 
   void Setup() override {
     init_ = false;
@@ -135,12 +137,12 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
     return state_;
   }
 
-  explicit StatefulComputeExecutor(const OpStatePtr& state,
-                                   const FStatefulCompute& fcompute,
+  explicit StatefulComputeExecutor(OpStatePtr  state,
+                                   FStatefulCompute  fcompute,
                                    ExecType exec_type,
                                    const std::vector<uint32_t> &mutate_idx)
       : StorageFallbackOpExecutor(mutate_idx),
-        state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
+        state_(std::move(state)), fcompute_(std::move(fcompute)), exec_type_(exec_type) {}
 
  private:
   OpStatePtr state_;
@@ -174,11 +176,12 @@ class StatefulComputeExExecutor : public OpExecutor {
     return state_;
   }
 
-  explicit StatefulComputeExExecutor(const NodeAttrs& attrs,
-                                     const OpStatePtr& state,
-                                     const FStatefulComputeEx& fcompute,
+  explicit StatefulComputeExExecutor(NodeAttrs  attrs,
+                                     OpStatePtr  state,
+                                     FStatefulComputeEx  fcompute,
                                      ExecType exec_type)
-      : attrs_(attrs), state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
+      : attrs_(std::move(attrs)), state_(std::move(state)), fcompute_(std::move(fcompute)),
+        exec_type_(exec_type) {}
 
  private:
   NodeAttrs attrs_;
@@ -204,10 +207,10 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
     return exec_type_;
   }
 
-  explicit FComputeExecutor(const NodeAttrs& attrs, FCompute fcompute,
+  explicit FComputeExecutor(NodeAttrs  attrs, FCompute fcompute,
                             ExecType exec_type, const std::vector<uint32_t> &mutate_idx)
       : StorageFallbackOpExecutor(mutate_idx),
-        attrs_(attrs), fcompute_(fcompute), exec_type_(exec_type) {
+        attrs_(std::move(attrs)), fcompute_(std::move(fcompute)), exec_type_(exec_type) {
   }
 
  private:
@@ -233,9 +236,9 @@ class FComputeExExecutor : public OpExecutor {
     return exec_type_;
   }
 
-  explicit FComputeExExecutor(const NodeAttrs& attrs, FComputeEx fcompute,
+  explicit FComputeExExecutor(NodeAttrs  attrs, FComputeEx fcompute,
                               ExecType exec_type)
-      : attrs_(attrs), fcompute_(fcompute), exec_type_(exec_type) {
+      : attrs_(std::move(attrs)), fcompute_(std::move(fcompute)), exec_type_(exec_type) {
   }
 
  private:

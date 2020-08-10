@@ -61,6 +61,11 @@ struct NumpyVstackParam : public dmlc::Parameter<NumpyVstackParam> {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be vstacked.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s;
+    num_args_s << num_args;
+    (*dict)["num_args"] = num_args_s.str();
+  }
 };
 
 struct NumpyColumnStackParam : public dmlc::Parameter<NumpyColumnStackParam> {

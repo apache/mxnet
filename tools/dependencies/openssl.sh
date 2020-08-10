@@ -20,8 +20,8 @@
 # This script builds the static library of openssl that can be used as dependency of mxnet.
 set -ex
 OPENSSL_VERSION=1.1.1b
-if [[ ! -f $DEPS_PATH/lib/libssl.a ]] || [[ ! -f $DEPS_PATH/lib/libcrypto.a ]]; then
-    # download and build openssl
+if [[ ( ! -f $DEPS_PATH/lib/libssl.a ) || ( ! -f $DEPS_PATH/lib/libcrypto.a ) ]] && \
+       [[ ( ! -f $DEPS_PATH/lib64/libssl.a ) || ( ! -f $DEPS_PATH/lib64/libcrypto.a ) ]]; then    # download and build openssl
     >&2 echo "Building openssl..."
     OPENSSL_VERSION=$(echo $OPENSSL_VERSION | sed 's/\./_/g')
     download \
