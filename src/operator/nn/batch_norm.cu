@@ -36,6 +36,9 @@
 #define FIX_GAMMA_FLAG        8
 #define IS_TRAINING_FLAG      16
 #define USE_GLOBAL_STATS_FLAG 32
+#define ADDTO_DATA_FLAG       (1 << 6)
+#define ADDTO_GAMMA_FLAG      (1 << 7)
+#define ADDTO_BETA_FLAG       (1 << 8)
 
 #if MXNET_USE_CUDNN == 1
 #include "./cudnn/cudnn_batch_norm-inl.h"
@@ -87,15 +90,14 @@ struct ScalarConvert {
 };
 
 // Number of threads in a block given an input size up to MAX_BLOCK_SIZE
-static unsigned getNumThreads(int nElem, const bool smaller) {
-  unsigned threadSizes[5] = {32, 64, 128, 256, MAX_BLOCK_SIZE};
-  const int maxi = smaller ? 4 : 5;
-  for (int i = 0; i != maxi; ++i) {
+static unsigned getNumThreads(int nElem) {
+  unsigned threadSizes[4] = {32, 64, 128, 256};
+  for (int i = 0; i != 4; ++i) {
     if (static_cast<unsigned>(nElem) <= threadSizes[i]) {
       return threadSizes[i];
     }
   }
-  return smaller ? (MAX_BLOCK_SIZE >> 1) : MAX_BLOCK_SIZE;
+  return MAX_BLOCK_SIZE;
 }
 
 // Returns the index of the most significant 1 bit in `val`.
@@ -457,11 +459,18 @@ __global__ void FrozenBatchNormalizationBackwardKernelCLastPhase1(
         sum_gamma[j] += static_cast<AType>(vec_gradOutput.separate[j]) *
                         (static_cast<AType>(vec_input.separate[j]) - mean[j]);
       }
-      if (flags & WRITE_DATA_FLAG) {
+      if (flags & (WRITE_DATA_FLAG | ADDTO_DATA_FLAG)) {
         // Gradient to input
 #pragma unroll
         for (int j = 0; j < nvec; ++j) {
           vec_gradOutput.separate[j] *= invstd[j] * gamma[j];
+        }
+        if (flags & ADDTO_DATA_FLAG) {
+           vec_input.aligned = gradInput_aligned[idx];
+#pragma unroll
+           for (int j = 0; j < nvec; ++j) {
+             vec_gradOutput.separate[j] += vec_input.separate[j];
+           }
         }
         gradInput_aligned[idx] = vec_gradOutput.aligned;
       }
@@ -513,16 +522,24 @@ __global__ void FrozenBatchNormalizationBackwardKernelCLastPhase2(const AType * 
       sum_gamma += temp_space[i];
       sum_beta += temp_space[i + lead_dim * n_blocks];
     }
-    if (flags & WRITE_GAMMA_FLAG) {
+    if (flags & (WRITE_GAMMA_FLAG | ADDTO_GAMMA_FLAG)) {
       if ((flags & FIX_GAMMA_FLAG) == 0) {
         const AType invstd = variance_to_invstd(runningVar[tid], epsilon);
-        out_gamma[tid] = sum_gamma * invstd;
+        if (flags & WRITE_GAMMA_FLAG) {
+          out_gamma[tid] = sum_gamma * invstd;
+        } else {
+          out_gamma[tid] += sum_gamma * invstd;
+        }
       } else {
-        out_gamma[tid] = 0;
+        if (flags & WRITE_GAMMA_FLAG) {
+          out_gamma[tid] = 0;
+        }
       }
     }
     if (flags & WRITE_BETA_FLAG) {
       out_beta[tid] = sum_beta;
+    } else if (flags & ADDTO_BETA_FLAG) {
+      out_beta[tid] += sum_beta;
     }
   }
 }
@@ -557,7 +574,7 @@ __global__ void FrozenBatchNormalizationBackwardKernel(
     __device__ inline ~vectorized_loader() {}
   };
 
-  vectorized_loader scratch_input, scratch_grad;
+  vectorized_loader vec_input, vec_gradOutput;
 
   const LType* input_aligned = reinterpret_cast<const LType*>(input);
   const LType* gradOutput_aligned = reinterpret_cast<const LType*>(gradOutput);
@@ -574,22 +591,29 @@ __global__ void FrozenBatchNormalizationBackwardKernel(
     const index_t outer_idx = i / inner_div_nvec;
     const index_t idx = inner_idx +
                         (my_channel + outer_idx * num_channels) * inner_div_nvec;
-    scratch_grad.aligned = gradOutput_aligned[idx];
-    scratch_input.aligned = input_aligned[idx];
+    vec_gradOutput.aligned = gradOutput_aligned[idx];
+    vec_input.aligned = input_aligned[idx];
 #pragma unroll
     for (int j = 0; j < nvec; ++j) {
-      sum_beta += static_cast<AType>(scratch_grad.separate[j]);
-      sum_gamma += static_cast<AType>(scratch_grad.separate[j]) *
-                   (static_cast<AType>(scratch_input.separate[j]) - mean);
+      sum_beta += static_cast<AType>(vec_gradOutput.separate[j]);
+      sum_gamma += static_cast<AType>(vec_gradOutput.separate[j]) *
+                   (static_cast<AType>(vec_input.separate[j]) - mean);
     }
 
-    if (flags & WRITE_DATA_FLAG) {
+    if (flags & (WRITE_DATA_FLAG | ADDTO_DATA_FLAG)) {
       // Gradient to input
 #pragma unroll
       for (int j = 0; j < nvec; ++j) {
-        scratch_grad.separate[j] *= invstd * gamma;
+        vec_gradOutput.separate[j] *= invstd * gamma;
       }
-      gradInput_aligned[idx] = scratch_grad.aligned;
+      if (flags & ADDTO_DATA_FLAG) {
+         vec_input.aligned = gradInput_aligned[idx];
+#pragma unroll
+         for (int j = 0; j < nvec; ++j) {
+           vec_gradOutput.separate[j] += vec_input.separate[j];
+         }
+      }
+      gradInput_aligned[idx] = vec_gradOutput.aligned;
     }
   }
 
@@ -599,15 +623,23 @@ __global__ void FrozenBatchNormalizationBackwardKernel(
                                                    [](AType a, AType b) { return a + b; });
 
   if (threadIdx.x == 0) {
-    if (flags & WRITE_GAMMA_FLAG) {
+    if (flags & (WRITE_GAMMA_FLAG | ADDTO_GAMMA_FLAG)) {
       if ((flags & FIX_GAMMA_FLAG) == 0) {
-        gradWeight[my_channel] = sum_gamma * invstd;
+        if (flags & WRITE_GAMMA_FLAG) {
+          gradWeight[my_channel] = sum_gamma * invstd;
+        } else {
+          gradWeight[my_channel] += sum_gamma * invstd;
+        }
       } else {
-        gradWeight[my_channel] = 0;
+        if (flags & WRITE_GAMMA_FLAG) {
+          gradWeight[my_channel] = 0;
+        }
       }
     }
     if (flags & WRITE_BETA_FLAG) {
       gradBias[my_channel] = sum_beta;
+    } else if (flags & ADDTO_BETA_FLAG) {
+      gradBias[my_channel] += sum_beta;
     }
   }
 }
@@ -656,28 +688,50 @@ static __global__ void BatchNormalizationBackwardKernel(
                                 * momentum + localVariance * (AccReal(1) - momentum);
   }
 
-  if (gradInput.Size() > 0 && (flags & WRITE_DATA_FLAG) != 0) {
-    for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
-      for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
-        const DType gradOut = gradOutput.get_ref(batch, plane, x);
-        const DType inp = input.get_ref(batch, plane, x);
-        const AccReal proj = (inp - mean) * projScale;
-        gradInput.get_ref(batch, plane, x) =
-          ScalarConvert<AccReal, DType>::to((gradOut - proj - gradMean) * gradScale);
+  if (gradInput.Size() > 0 && (flags & (WRITE_DATA_FLAG | ADDTO_DATA_FLAG)) != 0) {
+    const bool grad_write = flags & WRITE_DATA_FLAG;
+    if (grad_write) {
+      for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
+        for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
+          const DType gradOut = gradOutput.get_ref(batch, plane, x);
+          const DType inp = input.get_ref(batch, plane, x);
+          const AccReal proj = (inp - mean) * projScale;
+          gradInput.get_ref(batch, plane, x) =
+            ScalarConvert<AccReal, DType>::to((gradOut - proj - gradMean) * gradScale);
+        }
+      }
+    } else {
+      // grad addto
+      for (int batch = 0, nbatch = gradOutput.OuterSize(); batch < nbatch; ++batch) {
+        for (int x = threadIdx.x, nx = gradOutput.InnerSize(); x < nx; x += blockDim.x) {
+          const DType gradOut = gradOutput.get_ref(batch, plane, x);
+          const DType inp = input.get_ref(batch, plane, x);
+          const AccReal proj = (inp - mean) * projScale;
+          gradInput.get_ref(batch, plane, x) +=
+            ScalarConvert<AccReal, DType>::to((gradOut - proj - gradMean) * gradScale);
+        }
       }
     }
   }
 
-  if (tensors.gradWeight.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_GAMMA_FLAG) != 0) {
+  if (tensors.gradWeight.numElements() > 0 && threadIdx.x == 0 &&
+      (flags & (WRITE_GAMMA_FLAG | ADDTO_GAMMA_FLAG)) != 0) {
     if ((flags & FIX_GAMMA_FLAG) == 0) {
-      tensors.gradWeight[plane] = ScalarConvert<AccReal, DType>::to(dotP * invstd);
+      if (flags & WRITE_GAMMA_FLAG)
+        tensors.gradWeight[plane] = ScalarConvert<AccReal, DType>::to(dotP * invstd);
+      else
+        tensors.gradWeight[plane] += ScalarConvert<AccReal, DType>::to(dotP * invstd);
     } else {
       tensors.gradWeight[plane] = DType(0);
     }
   }
 
-  if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 && (flags & WRITE_BETA_FLAG) != 0) {
-    tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
+  if (tensors.gradBias.numElements() > 0 && threadIdx.x == 0 &&
+      (flags & (WRITE_BETA_FLAG | ADDTO_BETA_FLAG)) != 0) {
+    if (flags & WRITE_BETA_FLAG)
+      tensors.gradBias[plane] = ScalarConvert<AccReal, DType>::to(gradOutputSum);
+    else
+      tensors.gradBias[plane] += ScalarConvert<AccReal, DType>::to(gradOutputSum);
   }
 }
 
@@ -828,7 +882,7 @@ static void BatchNormalizationUpdateOutput(mshadow::Stream<gpu> *s,
     }
   } else {
     dim3 blocks(input.ChannelCount());
-    dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize(), false));
+    dim3 threads(batchnorm::cuda::getNumThreads(input.InnerSize()));
     BatchNormalizationUpdateOutputKernel<DType, AccReal, DeviceTensor1,
       batchnorm::BNTensor3<DType>>
       << < blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >> > (
@@ -880,7 +934,7 @@ static void BatchNormalizationBackward(mshadow::Stream<gpu> *s,
     constexpr bool SMALLER_THREADS = true;
 #endif
     dim3 blocks(gradOutput.ChannelCount());
-    dim3 threads(batchnorm::cuda::getNumThreads(gradOutput.InnerSize(), SMALLER_THREADS));
+    dim3 threads(batchnorm::cuda::getNumThreads(gradOutput.InnerSize()));
     BatchNormalizationBackwardKernel<DType, AccReal, DeviceTensor1, batchnorm::BNTensor3<DType>>
       <<< blocks, threads, 0, mshadow::Stream<gpu>::GetStream(s) >>> (
       input, gradOutput, gradInput, tensors, flags, momentum, eps);
@@ -966,12 +1020,18 @@ static inline uint32_t SetupFlags(const OpContext &ctx,
   flags |= params.use_global_stats ? USE_GLOBAL_STATS_FLAG : 0;
   if (IsBNWriting(req[batchnorm::kData])) {
     flags |= WRITE_DATA_FLAG;
+  } else if (req[batchnorm::kData] == kAddTo) {
+    flags |= ADDTO_DATA_FLAG;
   }
   if (IsBNWriting(req[batchnorm::kGamma])) {
     flags |= WRITE_GAMMA_FLAG;
+  } else if (req[batchnorm::kGamma] == kAddTo) {
+    flags |= ADDTO_GAMMA_FLAG;
   }
   if (IsBNWriting(req[batchnorm::kBeta])) {
     flags |= WRITE_BETA_FLAG;
+  } else if (req[batchnorm::kBeta] == kAddTo) {
+    flags |= ADDTO_BETA_FLAG;
   }
   return flags;
 }
@@ -1049,8 +1109,7 @@ void BatchNormCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
 #if MXNET_USE_CUDNN == 1
-  if (!param.use_global_stats && !param.cudnn_off
-      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
+  if (!param.use_global_stats && !param.cudnn_off) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       GetCuDNNOp<DType>(param).Forward(ctx, in_data, req, outputs, aux_states);
     })
@@ -1078,8 +1137,7 @@ void BatchNormGradCompute<gpu>(const nnvm::NodeAttrs& attrs,
 
   param.axis = mxnet::op::batchnorm::GetRealAxis(shape, param.axis);
 #if MXNET_USE_CUDNN == 1
-  if (!param.use_global_stats && !param.cudnn_off
-      && param.axis == mxnet::op::batchnorm::DEFAULT_AXIS) {
+  if (!param.use_global_stats && !param.cudnn_off) {
     MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
       GetCuDNNOp<DType>(param).Backward(ctx, inputs, req, outputs);
     })

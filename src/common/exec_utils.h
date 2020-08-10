@@ -31,7 +31,7 @@
 #include <string>
 #include <utility>
 #include "../common/utils.h"
-#include "../executor/exec_pass.h"
+#include "../imperative/exec_pass.h"
 
 namespace mxnet {
 namespace common {
@@ -367,78 +367,6 @@ inline void LogInferStorage(const nnvm::Graph& g) {
       }
     }
   }
-}
-
-// prints a helpful message after shape inference errors in executor.
-inline void HandleInferShapeError(const size_t num_forward_inputs,
-                                  const nnvm::IndexedGraph& idx,
-                                  const mxnet::ShapeVector& inferred_shapes) {
-  int cnt = 10;
-  std::ostringstream oss;
-  for (size_t i = 0; i < num_forward_inputs; ++i) {
-    const uint32_t nid = idx.input_nodes().at(i);
-    const uint32_t eid = idx.entry_id(nid, 0);
-    const mxnet::TShape& inferred_shape = inferred_shapes[eid];
-    if (!shape_is_known(inferred_shape)) {
-      const std::string& arg_name = idx[nid].source->attrs.name;
-      oss << arg_name << ": " << inferred_shape << ", ";
-      if (--cnt == 0) {
-        oss << "...";
-        break;
-      }
-    }
-  }
-  LOG(FATAL) << "InferShape pass cannot decide shapes for the following arguments "
-                "(-1 means unknown dimensions). Please consider providing them as inputs:\n"
-             << oss.str();
-}
-
-// prints a helpful message after type inference errors in executor.
-inline void HandleInferTypeError(const size_t num_forward_inputs,
-                                 const nnvm::IndexedGraph& idx,
-                                 const nnvm::DTypeVector& inferred_dtypes) {
-  int cnt = 10;
-  std::ostringstream oss;
-  for (size_t i = 0; i < num_forward_inputs; ++i) {
-    const uint32_t nid = idx.input_nodes().at(i);
-    const uint32_t eid = idx.entry_id(nid, 0);
-    const int inferred_dtype = inferred_dtypes[eid];
-    if (inferred_dtype == -1) {
-      const std::string& arg_name = idx[nid].source->attrs.name;
-      oss << arg_name << ": " << inferred_dtype << ", ";
-      if (--cnt == 0) {
-        oss << "...";
-        break;
-      }
-    }
-  }
-  LOG(FATAL) << "InferType pass cannot decide dtypes for the following arguments "
-                "(-1 means unknown dtype). Please consider providing them as inputs:\n"
-             << oss.str();
-}
-
-// prints a helpful message after storage type checking errors in executor.
-inline void HandleInferStorageTypeError(const size_t num_forward_inputs,
-                                        const nnvm::IndexedGraph& idx,
-                                        const StorageTypeVector& inferred_stypes) {
-  int cnt = 10;
-  std::ostringstream oss;
-  for (size_t i = 0; i < num_forward_inputs; ++i) {
-    const uint32_t nid = idx.input_nodes().at(i);
-    const uint32_t eid = idx.entry_id(nid, 0);
-    const int inferred_stype = inferred_stypes[eid];
-    if (inferred_stype == -1) {
-      const std::string& arg_name = idx[nid].source->attrs.name;
-      oss << arg_name << ": " << common::stype_string(inferred_stype) << ", ";
-      if (--cnt == 0) {
-        oss << "...";
-        break;
-      }
-    }
-  }
-  LOG(FATAL) << "InferStorageType pass cannot decide storage type for the following arguments "
-                "(-1 means unknown stype). Please consider providing them as inputs:\n"
-             << oss.str();
 }
 
 /*!

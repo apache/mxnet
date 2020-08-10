@@ -17,7 +17,7 @@
 
 # Restricted Boltzmann machine (RBM)
 
-An example of the binary RBM [1] learning the MNIST data. The RBM is implemented as a custom operator, and a gluon block is also provided. `binary_rbm.py` contains the implementation of the RBM. `binary_rbm_module.py` and `binary_rbm_gluon.py` train the MNIST data using the module interface and the gluon interface respectively. The MNIST data is downloaded automatically.
+An example of the binary RBM [1] learning the MNIST data. The RBM is implemented as a custom operator, and a gluon block is also provided. `binary_rbm.py` contains the implementation of the RBM. `binary_rbm_gluon.py` train the MNIST data using the gluon interface respectively. The MNIST data is downloaded automatically.
 
 The progress of the learning is monitored by estimating the log-likelihood using the annealed importance sampling [2,3]. The learning with the default hyperparameters takes about 25 minutes on GTX 1080Ti and the resulting log-likelihood is around -70 for both testing and training datasets.
 

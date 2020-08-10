@@ -44,13 +44,35 @@ MXNET_REGISTER_API("_npi.not_equal")
   UFuncHelper(args, ret, op, op_scalar, nullptr);
 });
 
+void SetUFuncHelper(runtime::MXNetArgs args, runtime::MXNetRetValue* ret,
+                     const nnvm::Op* op, const nnvm::Op* op_scalar,
+                     const nnvm::Op* op_rscalar) {
+  if (args[0].type_code() == kNDArrayHandle &&
+      args[1].type_code() == kNDArrayHandle) {
+    UFuncHelper(args, ret, op, nullptr, nullptr);
+  } else if (args[0].type_code() == kNDArrayHandle) {
+    UFuncHelper(args, ret, nullptr, op_scalar, nullptr);
+  } else {
+    UFuncHelper(args, ret, nullptr, nullptr, op_rscalar);
+  }
+}
+
+MXNET_REGISTER_API("_npi.greater")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_greater");
+  const nnvm::Op* op_scalar = Op::Get("_npi_greater_scalar");
+  const nnvm::Op* op_rscalar = Op::Get("_npi_less_scalar");
+  SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
+});
+
 MXNET_REGISTER_API("_npi.less")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_less");
   const nnvm::Op* op_scalar = Op::Get("_npi_less_scalar");
-  const nnvm::Op* op_rscalar = Op::Get("_npi_less_scalar");
-  UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+  const nnvm::Op* op_rscalar = Op::Get("_npi_greater_scalar");
+  SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
 });
 
 MXNET_REGISTER_API("_npi.greater_equal")
@@ -58,8 +80,8 @@ MXNET_REGISTER_API("_npi.greater_equal")
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_greater_equal");
   const nnvm::Op* op_scalar = Op::Get("_npi_greater_equal_scalar");
-  const nnvm::Op* op_rscalar = Op::Get("_npi_greater_equal_scalar");
-  UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+  const nnvm::Op* op_rscalar = Op::Get("_npi_less_equal_scalar");
+  SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
 });
 
 MXNET_REGISTER_API("_npi.less_equal")
@@ -67,8 +89,8 @@ MXNET_REGISTER_API("_npi.less_equal")
   using namespace runtime;
   const nnvm::Op* op = Op::Get("_npi_less_equal");
   const nnvm::Op* op_scalar = Op::Get("_npi_less_equal_scalar");
-  const nnvm::Op* op_rscalar = Op::Get("_npi_less_equal_scalar");
-  UFuncHelper(args, ret, op, op_scalar, op_rscalar);
+  const nnvm::Op* op_rscalar = Op::Get("_npi_greater_equal_scalar");
+  SetUFuncHelper(args, ret, op, op_scalar, op_rscalar);
 });
 
 }  // namespace mxnet

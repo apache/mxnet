@@ -119,11 +119,11 @@ OpStatePtr Imperative::Invoke(
   SetWriteInplaceReq(inputs, outputs, &req);
   OpStatePtr ret = InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
   // the followinng loop is used for finding out the correct shape when some shapes are dynamic
-  for (size_t i = 0; i < outputs.size(); i++) {
-    if (!shape_is_known(outputs[i]->shape())) {
+  for (auto output : outputs) {
+    if (!shape_is_known(output->shape())) {
       // the WaitToRead overhead here does not seem to be avoidable
-      outputs[i]->WaitToRead();
-      outputs[i]->SetShapeFromChunk();
+      output->WaitToRead();
+      output->SetShapeFromChunk();
     }
   }
   return ret;
@@ -219,7 +219,8 @@ void Imperative::RecordOp(
       << "will cause undefined behavior when evaluating gradients. "
       << "Please call backward first to clear the graph or do this out side of "
       << "a record section. Also note that you cannot use inplace operations "
-      << "like +=, *=, relu(x, out=x), y[idx]=x, etc inside a record section.";
+      << "like +=, *=, relu(x, out=x), y[idx]=x, etc inside a record section. "
+      << "Issue occurred while recording op: " << attrs.name;
   }
 
   bool need_grad = false;
@@ -331,7 +332,7 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
 }
 
 nnvm::Symbol Imperative::GetDeferredComputeSymbol(const std::vector<NDArray *> &outputs) {
-  Symbol s;
+  nnvm::Symbol s;
   s.outputs.reserve(outputs.size());
   for (NDArray * ndoutput : outputs) {
     CHECK(!Imperative::DCInfo::IsNone(*ndoutput))
@@ -455,7 +456,7 @@ std::vector<NDArray*> Imperative::Backward(
 
   Graph g_graph = pass::MXGradient(
       graph, graph.outputs, xs, ograd_entries,
-      exec::AggregateGradient, nullptr, nullptr,
+      mxnet::AggregateGradient, nullptr,
       zero_ops, "_copy");
   CHECK_EQ(g_graph.outputs.size(), xs.size());
   for (const auto& e : g_graph.outputs) {

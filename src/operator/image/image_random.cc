@@ -33,6 +33,7 @@ namespace op {
 namespace image {
 
 DMLC_REGISTER_PARAMETER(NormalizeParam);
+DMLC_REGISTER_PARAMETER(RandomFlipParam);
 DMLC_REGISTER_PARAMETER(RandomEnhanceParam);
 DMLC_REGISTER_PARAMETER(AdjustLightingParam);
 DMLC_REGISTER_PARAMETER(RandomLightingParam);
@@ -197,7 +198,9 @@ MXNET_REGISTER_IMAGE_AUG_OP(_image_flip_left_right)
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_flip_left_right)
 .add_alias("_npx__image_random_flip_left_right")
+.set_attr_parser(ParamParser<RandomFlipParam>)
 .describe(R"code()code" ADD_FILELINE)
+.add_arguments(RandomFlipParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", RandomFlipLeftRight);
 
 MXNET_REGISTER_IMAGE_AUG_OP(_image_flip_top_bottom)
@@ -207,7 +210,9 @@ MXNET_REGISTER_IMAGE_AUG_OP(_image_flip_top_bottom)
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_flip_top_bottom)
 .add_alias("_npx__image_random_flip_top_bottom")
+.set_attr_parser(ParamParser<RandomFlipParam>)
 .describe(R"code()code" ADD_FILELINE)
+.add_arguments(RandomFlipParam::__FIELDS__())
 .set_attr<FCompute>("FCompute<cpu>", RandomFlipTopBottom);
 
 MXNET_REGISTER_IMAGE_RND_AUG_OP(_image_random_brightness)

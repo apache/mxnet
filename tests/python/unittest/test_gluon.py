@@ -16,27 +16,27 @@
 # under the License.
 
 import os
-import tempfile
+import gc
 
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.base import py_str, MXNetError
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, default_context
 from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
 import mxnet.numpy as _mx_np
 from common import (setup_module, with_seed, assertRaises, teardown_module,
-                    assert_raises_cudnn_not_satisfied)
+                    assert_raises_cudnn_not_satisfied, xfail_when_nonstandard_decimal_separator, environment)
 import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
 from copy import deepcopy
 import warnings
 import json
-import unittest
 import random
+import tempfile
 
 @with_seed()
 def test_parameter():
@@ -46,7 +46,6 @@ def test_parameter():
     assert len(p.list_grad()) == 2
     assert p.data(mx.cpu(1)).context == mx.cpu(1)
     assert p.data(mx.cpu(0)).shape == (10, 10)
-    assert p.var().name == 'weight'
     assert p.grad(mx.cpu(0)).stype == 'default'
     assert p.data(mx.cpu(0)).stype == 'default'
 
@@ -54,14 +53,14 @@ def test_parameter():
     assert p.list_ctx() == [mx.cpu(1), mx.cpu(2)]
 
 @with_seed()
-@pytest.mark.xfail(raises=AssertionError)
 def test_invalid_parameter_stype():
-    p = gluon.Parameter('weight', shape=(10, 10), stype='invalid')
+    with pytest.raises(AssertionError):
+        p = gluon.Parameter('weight', shape=(10, 10), stype='invalid')
 
 @with_seed()
-@pytest.mark.xfail(raises=AssertionError)
 def test_invalid_parameter_grad_stype():
-    p = gluon.Parameter('weight', shape=(10, 10), grad_stype='invalid')
+    with pytest.raises(AssertionError):
+        p = gluon.Parameter('weight', shape=(10, 10), grad_stype='invalid')
 
 @with_seed()
 def test_sparse_parameter():
@@ -71,13 +70,12 @@ def test_sparse_parameter():
     assert len(p.list_grad()) == 2
     # getting row_sparse data without trainer throws an exception
     assertRaises(RuntimeError, p.list_row_sparse_data, row_id)
-    trainer = mx.gluon.Trainer([p], 'sgd')
+    trainer = mx.gluon.Trainer({'p':p}, 'sgd')
     assert len(p.list_row_sparse_data(row_id)) == 2
     weight = p.row_sparse_data(row_id)
     assert weight.context == mx.cpu(1)
     assert weight.shape == (10, 10)
     assert weight.stype == 'row_sparse'
-    assert p.var().name == 'weight'
     assert p.var().attr('__storage_type__') == str(_STORAGE_TYPE_STR_TO_ID['row_sparse'])
     assert p.grad(mx.cpu(0)).stype == 'row_sparse'
 
@@ -98,79 +96,6 @@ def test_parameter_invalid_access():
     assertRaises(RuntimeError, p1.row_sparse_data, row_id.copyto(mx.cpu(0)))
     assertRaises(RuntimeError, p1.list_row_sparse_data, row_id)
 
-@with_seed()
-def test_parameter_dict():
-    ctx = mx.cpu(1)
-    params0 = gluon.ParameterDict('net_')
-    params0.get('w0', shape=(10, 10))
-    params0.get('w1', shape=(10, 10), stype='row_sparse')
-    all_row_ids = mx.nd.arange(0, 10, ctx=ctx)
-    # check param names
-    assert list(params0.keys()) == ['net_w0', 'net_w1']
-    params0.initialize(ctx=ctx)
-    trainer0 = mx.gluon.Trainer(params0, 'sgd')
-    prev_w0 = params0.get('w0').data(ctx)
-    prev_w1 = params0.get('w1').row_sparse_data(all_row_ids)
-    # save params
-    params0.save('test_parameter_dict.params')
-
-    # load params
-    params1 = gluon.ParameterDict('net_')
-    params1.get('w0', shape=(10, 10))
-    params1.get('w1', shape=(10, 10), stype='row_sparse')
-    params1.load('test_parameter_dict.params', ctx)
-    trainer1 = mx.gluon.Trainer(params1, 'sgd')
-
-    # compare the values before and after save/load
-    cur_w0 = params1.get('w0').data(ctx)
-    cur_w1 = params1.get('w1').row_sparse_data(all_row_ids)
-    mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
-    mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
-
-    # create a new param dict with dense params, and load from the checkpoint
-    # of sparse & dense params
-    params2 = gluon.ParameterDict('net_')
-    params2.get('w0', shape=(10, 10))
-    params2.get('w1', shape=(10, 10))
-    params2.load('test_parameter_dict.params', ctx)
-
-    # compare the values before and after save/load
-    cur_w0 = params2.get('w0').data(ctx)
-    cur_w1 = params2.get('w1').data(ctx)
-    mx.test_utils.assert_almost_equal(prev_w0.asnumpy(), cur_w0.asnumpy())
-    mx.test_utils.assert_almost_equal(prev_w1.asnumpy(), cur_w1.asnumpy())
-
-    # test reset_ctx
-    params3 = gluon.ParameterDict('net_')
-    params3.get('w0', shape=(10, 10))
-    params3.get('w1', shape=(10, 10))
-    params3.initialize(ctx=ctx)
-    list_contexts = [mx.cpu(42), mx.cpu(24)]
-    params3.reset_ctx(list_contexts)
-    for p in params3.values():
-        assert set(p.list_ctx()) == set(list_contexts)
-
-    # and test list_ctx
-    assert set(params3.list_ctx()) == set(list_contexts)
-
-
-    # test the dtype casting functionality
-    params0 = gluon.ParameterDict('')
-    params0.get('w0', shape=(10, 10), dtype='float32')
-    params0.get('w1', shape=(10, 10), dtype='int8')
-    params0.initialize(mx.init.One(), ctx=ctx)
-    params0.save('test_parameter_dict.params')
-
-    params1 = gluon.ParameterDict('')
-    params1.get('w0', shape=(10, 10), dtype='float16')
-    params1.get('w1', shape=(10, 10), dtype='float64')
-    params1.load('test_parameter_dict.params', cast_dtype=True, dtype_source='current')
-    assert params1['w0'].data().dtype == np.float16
-    assert params1['w1'].data().dtype == np.float64
-    params1.load('test_parameter_dict.params', cast_dtype=True, dtype_source='saved')
-    assert params1['w0'].data().dtype == np.float32
-    assert params1['w1'].data().dtype == np.int8
-
 
 @with_seed()
 def test_parameter_row_sparse_data():
@@ -179,7 +104,7 @@ def test_parameter_row_sparse_data():
     dim0 = 4
     x = gluon.Parameter('x', shape=(dim0, 2), stype='row_sparse')
     x.initialize(init='xavier', ctx=[ctx0, ctx1])
-    trainer = gluon.Trainer([x], 'sgd')
+    trainer = gluon.Trainer({'x':x}, 'sgd')
     x_param = x._data[0].copy()
     assert x_param.stype == 'row_sparse'
     row_id_0 = mx.nd.array([0,1], ctx=ctx0)
@@ -204,7 +129,7 @@ def test_constant():
         def __init__(self, **kwargs):
             super(Test, self).__init__(**kwargs)
             self.value = np.asarray([[1,2], [3,4]])
-            self.const = self.params.get_constant('const', self.value)
+            self.const = gluon.Constant(self.value)
 
         def hybrid_forward(self, F, x, const):
             return x + const
@@ -231,31 +156,30 @@ def test_parameter_sharing():
     class Net(gluon.Block):
         def __init__(self, in_units=0, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.dense0 = nn.Dense(5, in_units=in_units)
-                self.dense1 = nn.Dense(5, in_units=in_units)
+            self.dense0 = nn.Dense(5, in_units=in_units)
+            self.dense1 = nn.Dense(5, in_units=in_units)
 
         def forward(self, x):
             return self.dense1(self.dense0(x))
 
-    net1 = Net(prefix='net1_', in_units=5)
-    net2 = Net(prefix='net2_', params=net1.collect_params())
-    net1.collect_params().initialize()
+    net1 = Net(in_units=5)
+    net2 = Net().share_parameters(net1.collect_params())
+    net1.initialize()
     net2(mx.nd.zeros((3, 5)))
 
     net1.save_parameters('net1.params')
 
-    net3 = Net(prefix='net3_')
+    net3 = Net()
     net3.load_parameters('net1.params', mx.cpu())
 
-    net4 = Net(prefix='net4_')
-    net5 = Net(prefix='net5_', in_units=5, params=net4.collect_params())
-    net4.collect_params().initialize()
+    net4 = Net()
+    net5 = Net(in_units=5).share_parameters(net4.collect_params())
+    net4.initialize()
     net5(mx.nd.zeros((3, 5)))
 
     net4.save_parameters('net4.params')
 
-    net6 = Net(prefix='net6_')
+    net6 = Net()
     net6.load_parameters('net4.params', mx.cpu())
 
 
@@ -264,31 +188,27 @@ def test_parameter_str():
     class Net(gluon.Block):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.dense0 = nn.Dense(10, in_units=5, use_bias=False)
+            self.dense0 = nn.Dense(10, in_units=5, use_bias=False)
 
-    net = Net(prefix='net1_')
+    net = Net()
     lines = str(net.collect_params()).splitlines()
 
-    assert lines[0] == 'net1_ ('
-    assert 'net1_dense0_weight' in lines[1]
-    assert '(10, 5)' in lines[1]
-    assert 'float32' in lines[1]
-    assert lines[2] == ')'
+    assert 'dense0.weight' in lines[0]
+    assert '(10, 5)' in lines[0]
+    assert 'float32' in lines[0]
 
 
 @with_seed()
 def test_collect_parameters():
-    net = nn.HybridSequential(prefix="test_")
-    with net.name_scope():
-        net.add(nn.Conv2D(10, 3))
-        net.add(nn.Dense(10, activation='relu'))
+    net = nn.HybridSequential()
+    net.add(nn.Conv2D(10, 3))
+    net.add(nn.Dense(10, activation='relu'))
     assert set(net.collect_params().keys()) == \
-        set(['test_conv0_weight', 'test_conv0_bias','test_dense0_weight','test_dense0_bias'])
+        set(['0.weight', '0.bias','1.weight','1.bias'])
     assert set(net.collect_params('.*weight').keys()) == \
-        set(['test_conv0_weight', 'test_dense0_weight'])
-    assert set(net.collect_params('test_conv0_bias|test_dense0_bias').keys()) == \
-        set(['test_conv0_bias', 'test_dense0_bias'])
+        set(['0.weight', '1.weight'])
+    assert set(net.collect_params('0.bias|1.bias').keys()) == \
+        set(['0.bias', '1.bias'])
 
 @with_seed()
 def test_basic():
@@ -298,45 +218,49 @@ def test_basic():
     model.add(nn.Dense(64, activation='tanh', in_units=256),
               nn.Dense(32, in_units=64))
     model.add(nn.Activation('relu'))
-
     # symbol
     x = mx.sym.var('data')
     y = model(x)
     assert len(y.list_arguments()) == 7
 
     # ndarray
-    model.collect_params().initialize(mx.init.Xavier(magnitude=2.24))
+    model.initialize(mx.init.Xavier(magnitude=2.24))
     x = model(mx.nd.zeros((32, 2, 10)))
     assert x.shape == (32, 32)
     x.wait_to_read()
 
-    model.collect_params().setattr('grad_req', 'null')
+    model.setattr('grad_req', 'null')
     assert list(model.collect_params().values())[0]._grad is None
-    model.collect_params().setattr('grad_req', 'write')
+    model.setattr('grad_req', 'write')
     assert list(model.collect_params().values())[0]._grad is not None
 
 
 @with_seed()
 def test_dense():
-    model = nn.Dense(128, activation='tanh', in_units=10, flatten=False, prefix='test_')
+    model = nn.Dense(128, activation='tanh', in_units=10, flatten=False)
     inputs = mx.sym.Variable('data')
     outputs = model(inputs)
-    assert set(model.collect_params().keys()) == set(['test_weight', 'test_bias'])
-    assert outputs.list_outputs() == ['test_tanh_fwd_output']
+    assert set(model.collect_params().keys()) == set(['weight', 'bias'])
     args, outs, auxs = outputs.infer_shape(data=(2, 3, 10))
     assert outs == [(2, 3, 128)]
 
-    model = nn.Dense(128, activation='relu', in_units=30, flatten=True, prefix='test2_')
+    model = nn.Dense(128, activation='relu', in_units=30, flatten=True)
     inputs = mx.sym.Variable('data')
     outputs = model(inputs)
-    assert set(model.collect_params().keys()) == set(['test2_weight', 'test2_bias'])
-    assert outputs.list_outputs() == ['test2_relu_fwd_output']
+    assert set(model.collect_params().keys()) == set(['weight', 'bias'])
     args, outs, auxs = outputs.infer_shape(data=(17, 2, 5, 3))
     assert outs == [(17, 128)]
 
 
+def test_hybrid_sequential_unique_internals():
+    net = mx.gluon.nn.HybridSequential()
+    net.add(mx.gluon.nn.Dense(100, activation='relu'), mx.gluon.nn.Dense(10))
+    assert len(set(s.name for s in net(mx.sym.Variable('data')).get_internals())) == 8
+
+
 @with_seed()
-def test_symbol_block():
+@pytest.mark.parametrize('compute_before_cast', [True, False])
+def test_symbol_block(tmpdir, compute_before_cast):
     model = nn.HybridSequential()
     model.add(nn.Dense(128, activation='tanh'))
     model.add(nn.Dropout(0.5))
@@ -348,8 +272,8 @@ def test_symbol_block():
 
     inputs = mx.sym.var('data')
     outputs = model(inputs).get_internals()
-
-    smodel = gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
+    params = {p.var().name: p for p in model.collect_params().values()}
+    smodel = gluon.SymbolBlock(outputs, inputs, params=params)
 
     assert len(smodel(mx.nd.zeros((16, 10)))) == 14
 
@@ -371,7 +295,8 @@ def test_symbol_block():
 
     inputs = mx.sym.var('data')
     outputs = model(inputs)
-    smodel = gluon.SymbolBlock(outputs, inputs, params=model.collect_params())
+    params = {p.var().name: p for p in model.collect_params().values()}
+    smodel = gluon.SymbolBlock(outputs, inputs, params=params)
     net = Net(smodel)
     net.hybridize()
     assert isinstance(net(mx.nd.zeros((16, 10))), mx.nd.NDArray)
@@ -380,25 +305,27 @@ def test_symbol_block():
     # other than fp32 param dtype.
 
     # 1. Load a resnet model, cast it to fp64 and export
-    tmp = tempfile.mkdtemp()
+    tmp = str(tmpdir)
     tmpfile = os.path.join(tmp, 'resnet34_fp64')
     ctx = mx.cpu(0)
 
     net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx, root=tmp)
+    if compute_before_cast:
+        # Compute before casting to catch bugs where symbol dtype isn't casted correctly GH-18843
+        net_fp32.initialize()
+        net_fp32(mx.nd.zeros((1,3,224,224), ctx=ctx))
     net_fp32.cast('float64')
     net_fp32.hybridize()
     data = mx.nd.zeros((1,3,224,224), dtype='float64', ctx=ctx)
-    net_fp32.forward(data)
-    net_fp32.export(tmpfile, 0)
+    net_fp32(data)
+    sym_file, params_file = net_fp32.export(tmpfile, 0)
 
     # 2.a Load the saved model and verify if all the params are loaded correctly.
     # and choose one of the param to verify the type if fp64.\
-    sym_file = tmpfile + '-symbol.json'
-    params_file = tmpfile + '-0000.params'
     sm = mx.sym.load(sym_file)
     inputs = mx.sym.var('data', dtype='float64')
     net_fp64 = mx.gluon.SymbolBlock(sm, inputs)
-    net_fp64.collect_params().load(params_file, ctx=ctx)
+    net_fp64.load_parameters(params_file, ctx=ctx)
     # Get a conv layer's weight parameter name. Conv layer's weight param is
     # expected to be of dtype casted, fp64.
     for param_name in net_fp64.params.keys():
@@ -424,26 +351,26 @@ def test_symbol_block():
     assert np.dtype(prediction.dtype) == np.dtype(np.float32)
 
 @with_seed()
-@pytest.mark.xfail(raises=AssertionError)
 def test_sparse_symbol_block():
     data = mx.sym.var('data')
     weight = mx.sym.var('weight', stype='row_sparse')
     bias = mx.sym.var('bias')
     out = mx.sym.broadcast_add(mx.sym.dot(data, weight), bias)
-    # an exception is expected when creating a SparseBlock w/ sparse param
-    net = gluon.SymbolBlock(out, data)
+    with pytest.raises(AssertionError):
+        # an exception is expected when creating a SparseBlock w/ sparse param
+        net = gluon.SymbolBlock(out, data)
 
 @with_seed()
-@pytest.mark.xfail(raises=RuntimeError)
 def test_sparse_hybrid_block():
-    params = gluon.ParameterDict('net_')
-    params.get('weight', shape=(5,5), stype='row_sparse', dtype='float32')
-    params.get('bias', shape=(5), dtype='float32')
-    net = gluon.nn.Dense(5, params=params)
+    params = {}
+    params['weight'] = gluon.Parameter('weight', shape=(5,5), stype='row_sparse', dtype='float32')
+    params['bias'] = gluon.Parameter('bias', shape=(5), dtype='float32')
+    net = gluon.nn.Dense(5).share_parameters(params)
     net.initialize()
     x = mx.nd.ones((2,5))
-    # an exception is expected when forwarding a HybridBlock w/ sparse param
-    y = net(x)
+    with pytest.raises(RuntimeError):
+        # an exception is expected when forwarding a HybridBlock w/ sparse param
+        y = net(x)
 
 @with_seed()
 def test_hybrid_block_none_args():
@@ -471,11 +398,11 @@ def test_hybrid_block_none_args():
 
 
     class FooNested(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(FooNested, self).__init__(prefix=prefix, params=params)
-            self.f1 = Foo(prefix='foo1')
-            self.f2 = Foo(prefix='foo2')
-            self.f3 = Foo(prefix='foo3')
+        def __init__(self):
+            super(FooNested, self).__init__()
+            self.f1 = Foo()
+            self.f2 = Foo()
+            self.f3 = Foo()
 
         def hybrid_forward(self, F, a, b):
             data = self.f1(a, b)
@@ -486,9 +413,9 @@ def test_hybrid_block_none_args():
     for arg_inputs in [(None, mx.nd.ones((10,))),
                        (mx.nd.ones((10,)), mx.nd.ones((10,))),
                        (mx.nd.ones((10,)), None)]:
-        foo1 = FooNested(prefix='foo_nested_hybridized')
+        foo1 = FooNested()
         foo1.hybridize()
-        foo2 = FooNested(prefix='foo_nested_nohybrid')
+        foo2 = FooNested()
         for _ in range(2): # Loop for 2 times to trigger forwarding of the cached version
             out1 = foo1(*arg_inputs)
             out2 = foo2(*arg_inputs)
@@ -580,7 +507,7 @@ def test_hybrid_block_hybrid_no_hybrid():
 @with_seed()
 def check_layer_forward(layer, dshape):
     print("checking layer {}\nshape: {}.".format(layer, dshape))
-    layer.collect_params().initialize()
+    layer.initialize()
     x = mx.nd.ones(shape=dshape)
     x.attach_grad()
     with mx.autograd.record():
@@ -602,44 +529,35 @@ def check_layer_forward(layer, dshape):
     mx.test_utils.assert_almost_equal(np_dx, x.grad.asnumpy(), rtol=1e-5, atol=1e-6)
 
 @with_seed()
-def test_conv():
-    layers1d = [
-        nn.Conv1D(16, 3, in_channels=4),
-        nn.Conv1D(16, 3, groups=2, in_channels=4),
-        nn.Conv1D(16, 3, strides=3, groups=2, in_channels=4),
-        ]
-    for layer in layers1d:
-        check_layer_forward(layer, (1, 4, 10))
+@pytest.mark.parametrize('layer,shape', [
+    (nn.Conv1D(16, 3, in_channels=4), (1, 4, 10)),
+    (nn.Conv1D(16, 3, groups=2, in_channels=4), (1, 4, 10)),
+    (nn.Conv1D(16, 3, strides=3, groups=2, in_channels=4), (1, 4, 10)),
+    (nn.Conv2D(16, (3, 4), in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (5, 4), in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), groups=2, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), strides=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), dilation=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv2D(16, (3, 4), padding=4, in_channels=4), (1, 4, 20, 20)),
+    (nn.Conv3D(16, (1, 8, 4), in_channels=4, activation='relu'), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, (5, 4, 3), in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, (3, 3, 3), groups=2, in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, 4, strides=4, in_channels=4), (1, 4, 10, 10, 10)),
+    (nn.Conv3D(16, (3, 3, 3), padding=4, in_channels=4), (1, 4, 10, 10, 10)),
+])
+def test_conv(layer, shape):
+    check_layer_forward(layer, shape)
 
-
-    layers2d = [
-        nn.Conv2D(16, (3, 4), in_channels=4),
-        nn.Conv2D(16, (5, 4), in_channels=4),
-        nn.Conv2D(16, (3, 4), groups=2, in_channels=4),
-        nn.Conv2D(16, (3, 4), strides=4, in_channels=4),
-        nn.Conv2D(16, (3, 4), dilation=4, in_channels=4),
-        nn.Conv2D(16, (3, 4), padding=4, in_channels=4),
-        ]
-    for layer in layers2d:
-        check_layer_forward(layer, (1, 4, 20, 20))
-
-
-    layers3d = [
-        nn.Conv3D(16, (1, 8, 4), in_channels=4, activation='relu'),
-        nn.Conv3D(16, (5, 4, 3), in_channels=4),
-        nn.Conv3D(16, (3, 3, 3), groups=2, in_channels=4),
-        nn.Conv3D(16, 4, strides=4, in_channels=4),
-        nn.Conv3D(16, (3, 3, 3), padding=4, in_channels=4),
-        ]
-    for layer in layers3d:
-        check_layer_forward(layer, (1, 4, 10, 10, 10))
-
-
-    layer = nn.Conv2D(16, (3, 3), layout='NHWC', in_channels=4)
-    # check_layer_forward(layer, (1, 10, 10, 4))
-
-    layer = nn.Conv3D(16, (3, 3, 3), layout='NDHWC', in_channels=4)
-    # check_layer_forward(layer, (1, 10, 10, 10, 4))
+@with_seed()
+@pytest.mark.parametrize('layer,shape', [
+    (nn.Conv2D(16, (3, 3), layout='NHWC', in_channels=4), (1, 10, 10, 4)),
+    # (nn.Conv3D(16, (3, 3, 3), layout='NDHWC', in_channels=4), (1, 10, 10, 10, 4)),
+])
+@pytest.mark.skipif(mx.context.current_context().device_type!='gpu' or
+                    not mx.runtime.Features().is_enabled('CUDNN'),
+                    reason='nhwc/ndhwc layout is only supported with CUDNN.')
+def test_conv_nhwc(layer, shape):
+    check_layer_forward(layer, shape)
 
 
 @with_seed()
@@ -749,12 +667,38 @@ def test_pool():
         x = mx.nd.zeros(xshape)
 
         layer = nn.MaxPool2D(3, ceil_mode=False, layout=layout)
-        layer.collect_params().initialize()
+        layer.initialize()
         assert (layer(x).shape==noceil_out_shape)
 
         layer = nn.MaxPool2D(3, ceil_mode=True, layout=layout)
-        layer.collect_params().initialize()
+        layer.initialize()
         assert (layer(x).shape==ceil_out_shape)
+
+
+@with_seed()
+@pytest.mark.parametrize('variable', ['running_var', 'running_mean'])
+def test_batchnorm_backward_synchronization(variable):
+    """
+    Tests if synchronization of BatchNorm running variables is done correctly.
+    If not, the test sometimes fails - depending on the timing.
+    """
+    ctx = mx.test_utils.default_context()
+
+    for _ in range(20):
+        layer = nn.BatchNorm()
+        layer.initialize(ctx=ctx)
+        for _ in range(3):
+            data = mx.nd.random.normal(loc=10, scale=2, shape=(1, 3, 10, 10), ctx=ctx)
+            with mx.autograd.record():
+                out = layer(data)
+            out.backward()
+
+        # check if each read give the same value
+        var1 = getattr(layer, variable).data().asnumpy()
+        for _ in range(10):
+            var2 = getattr(layer, variable).data().asnumpy()
+            if (var1 != var2).any():
+                raise AssertionError("Two consecutive reads of " + variable + " give different results")
 
 
 @with_seed()
@@ -763,6 +707,7 @@ def test_batchnorm():
     check_layer_forward(layer, (2, 10, 10, 10))
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sync_batchnorm():
     def _check_batchnorm_result(input, num_devices=1, cuda=False):
@@ -870,7 +815,7 @@ def test_sync_batchnorm():
                             input2grad.asnumpy(), atol=atol, rtol=rtol)
 
     cfgs = [(1, False)]
-    num_gpus = mx.context.num_gpus()
+    num_gpus = 0 if default_context().device_type != 'gpu' else mx.context.num_gpus()
     batch_size = 24
     for i in range(1, num_gpus + 1):
         if batch_size % i == 0:
@@ -921,7 +866,7 @@ def test_reflectionpad():
 def test_reshape():
     x = mx.nd.ones((2, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_channels=4)
-    layer.collect_params().initialize()
+    layer.initialize()
     with mx.autograd.record():
         x = layer(x)
         x = x.reshape((-1,))
@@ -933,7 +878,7 @@ def test_reshape():
 def test_slice():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_channels=4)
-    layer.collect_params().initialize()
+    layer.initialize()
     with mx.autograd.record():
         x = layer(x)
         x = x[1:3]
@@ -945,7 +890,7 @@ def test_slice():
 def test_at():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2, in_channels=4)
-    layer.collect_params().initialize()
+    layer.initialize()
     with mx.autograd.record():
         x = layer(x)
         x = x[1]
@@ -957,7 +902,7 @@ def test_at():
 def test_deferred_init():
     x = mx.nd.ones((5, 4, 10, 10))
     layer = nn.Conv2D(10, 2)
-    layer.collect_params().initialize()
+    layer.initialize()
     layer(x)
 
 
@@ -1023,35 +968,35 @@ def test_block_attr_hidden():
     b.a = 1
 
 
-@pytest.mark.xfail(raises=TypeError)
 @with_seed()
 def test_block_attr_block():
     b = gluon.Block()
 
-    # regular variables can't change types
-    b.b = gluon.Block()
-    b.b = (2,)
+    with pytest.raises(TypeError):
+        # regular variables can't change types
+        b.b = gluon.Block()
+        b.b = (2,)
 
 
-@pytest.mark.xfail(raises=TypeError)
 @with_seed()
 def test_block_attr_param():
     b = gluon.Block()
 
-    # regular variables can't change types
-    b.b = gluon.Parameter()
-    b.b = (2,)
+    with pytest.raises(TypeError):
+        # regular variables can't change types
+        b.b = gluon.Parameter()
+        b.b = (2,)
 
 
 @with_seed()
 def test_block_attr_regular():
     b = gluon.Block()
 
-    # set block attribute also sets _children
+    # set block attribute also sets a weakref in _children
     b.c = gluon.Block()
     c2 = gluon.Block()
     b.c = c2
-    assert b.c is c2 and list(b._children.values())[0] is c2
+    assert b.c is c2 and list(b._children.values())[0]() is c2
 
 
 @with_seed()
@@ -1059,28 +1004,24 @@ def test_block_attr_list_of_block():
     class Model1(gluon.Block):
         def __init__(self, **kwargs):
             super(Model1, self).__init__(**kwargs)
-            with self.name_scope():
-                self.layers = [nn.Dense(i * 10) for i in range(6)]
+            self.layers = [nn.Dense(i * 10) for i in range(6)]
 
     class Model2(gluon.Block):
         def __init__(self, **kwargs):
             super(Model2, self).__init__(**kwargs)
-            with self.name_scope():
-                self.layers = dict()
-                self.layers['a'] = [nn.Dense(10), nn.Dense(10)]
+            self.layers = dict()
+            self.layers['a'] = [nn.Dense(10), nn.Dense(10)]
 
     class Model3(gluon.Block):
         def __init__(self, **kwargs):
             super(Model3, self).__init__(**kwargs)
-            with self.name_scope():
-                self.layers = nn.Sequential()
-                self.layers.add(*[nn.Dense(i * 10) for i in range(6)])
+            self.layers = nn.Sequential()
+            self.layers.add(*[nn.Dense(i * 10) for i in range(6)])
 
     class Model4(gluon.Block):
         def __init__(self, **kwargs):
             super(Model4, self).__init__(**kwargs)
-            with self.name_scope():
-                self.data = {'a': '4', 'b': 123}
+            self.data = {'a': '4', 'b': 123}
 
     with warnings.catch_warnings(record=True) as w:
         warnings.simplefilter('always')
@@ -1183,36 +1124,26 @@ def test_embedding():
     check_embedding_large_input(False)
 
 @with_seed()
-def test_export():
+def test_export(tmpdir):
+    tmpfile = os.path.join(str(tmpdir), 'gluon')
     ctx = mx.context.current_context()
     model = gluon.model_zoo.vision.resnet18_v1(
-        prefix='resnet', ctx=ctx, pretrained=True)
+        ctx=ctx, pretrained=False)
+    model.initialize()
     model.hybridize()
     data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out = model(data)
 
-    symbol_filename, params_filename = model.export('gluon')
-    assert symbol_filename == 'gluon-symbol.json'
-    assert params_filename == 'gluon-0000.params'
-
-    module = mx.mod.Module.load('gluon', 0, label_names=None, context=ctx)
-    module.bind(data_shapes=[('data', data.shape)])
-    module.forward(mx.io.DataBatch([data], None), is_train=False)
-    mod_out, = module.get_outputs()
-
-    assert_almost_equal(out.asnumpy(), mod_out.asnumpy())
-
-    model2 = gluon.model_zoo.vision.resnet18_v1(prefix='resnet', ctx=ctx)
-    model2.collect_params().load('gluon-0000.params', ctx)
-    out2 = model2(data)
-
-    assert_almost_equal(out.asnumpy(), out2.asnumpy())
+    symbol_filename, params_filename = model.export(tmpfile)
+    assert symbol_filename == tmpfile+'-symbol.json'
+    assert params_filename == tmpfile+'-0000.params'
 
 @with_seed()
 def test_import():
     ctx = mx.context.current_context()
     net1 = gluon.model_zoo.vision.resnet18_v1(
-        prefix='resnet', ctx=ctx, pretrained=True)
+        ctx=ctx, pretrained=False)
+    net1.initialize()
     net1.hybridize()
     data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out1 = net1(data)
@@ -1233,8 +1164,7 @@ def test_import():
 @with_seed()
 def test_hybrid_stale_cache():
     net = mx.gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.add(mx.gluon.nn.Dense(10, weight_initializer='zeros', bias_initializer='ones', flatten=False))
+    net.add(mx.gluon.nn.Dense(10, weight_initializer='zeros', bias_initializer='ones', flatten=False))
 
     net.hybridize()
     net.initialize()
@@ -1244,11 +1174,10 @@ def test_hybrid_stale_cache():
     assert net(mx.nd.ones((2,3,5))).shape == (2, 30)
 
     net = mx.gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.fc1 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
-                                    bias_initializer='ones', flatten=False)
-        net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
-                                    bias_initializer='ones', flatten=False)
+    net.fc1 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                bias_initializer='ones', flatten=False)
+    net.fc2 = mx.gluon.nn.Dense(10, weight_initializer='zeros',
+                                bias_initializer='ones', flatten=False)
     net.hybridize()
     net.initialize()
     net(mx.nd.ones((2,3,5)))
@@ -1284,10 +1213,10 @@ def test_lambda():
 @with_seed()
 def test_fill_shape_deferred():
     net = nn.HybridSequential()
-    with net.name_scope():
-        net.add(nn.Conv2D(64, kernel_size=2, padding=1),
-                nn.BatchNorm(),
-                nn.Dense(10))
+    net.add(nn.Conv2D(64, kernel_size=2, padding=1),
+            nn.BatchNorm(),
+            nn.Dense(10))
+    net
     net.hybridize()
     net.initialize()
     net(mx.nd.ones((2,3,5,7)))
@@ -1318,9 +1247,8 @@ def test_dtype():
     class Net(gluon.Block):
         def __init__(self, in_dim, output_dim):
             super(Net, self).__init__()
-            with self.name_scope():
-                self.embed = gluon.nn.Embedding(input_dim=in_dim, output_dim=output_dim,dtype=np.float64)
-                self.dense = gluon.nn.Dense(2, dtype=np.float64)
+            self.embed = gluon.nn.Embedding(input_dim=in_dim, output_dim=output_dim,dtype=np.float64)
+            self.dense = gluon.nn.Dense(2, dtype=np.float64)
 
         def forward(self, x):
             e = self.embed(x)
@@ -1338,20 +1266,19 @@ def test_dtype():
 def test_fill_shape_load():
     ctx = mx.context.current_context()
     net1 = nn.HybridSequential()
-    with net1.name_scope():
-        net1.add(nn.Conv2D(64, kernel_size=2, padding=1),
-                 nn.BatchNorm(),
-                 nn.Dense(10))
+    net1.add(nn.Conv2D(64, kernel_size=2, padding=1),
+             nn.BatchNorm(),
+             nn.Dense(10))
+    net1
     net1.hybridize()
     net1.initialize(ctx=ctx)
     net1(mx.nd.ones((2,3,5,7), ctx))
     net1.save_parameters('net_fill.params')
 
     net2 = nn.HybridSequential()
-    with net2.name_scope():
-        net2.add(nn.Conv2D(64, kernel_size=2, padding=1),
-                 nn.BatchNorm(),
-                 nn.Dense(10))
+    net2.add(nn.Conv2D(64, kernel_size=2, padding=1),
+             nn.BatchNorm(),
+             nn.Dense(10))
     net2.hybridize()
     net2.initialize()
     net2.load_parameters('net_fill.params', ctx)
@@ -1363,10 +1290,9 @@ def test_fill_shape_load():
 @with_seed()
 def test_inline():
     net = mx.gluon.nn.HybridSequential()
-    with net.name_scope():
-        net.add(mx.gluon.nn.Dense(10))
-        net.add(mx.gluon.nn.Dense(10))
-        net.add(mx.gluon.nn.Dense(10))
+    net.add(mx.gluon.nn.Dense(10))
+    net.add(mx.gluon.nn.Dense(10))
+    net.add(mx.gluon.nn.Dense(10))
 
     net.initialize()
     net.hybridize(inline_limit=3)
@@ -1386,6 +1312,7 @@ def test_inline():
     assert len_1 == len_2 + 2
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_activations():
     point_to_validate = mx.nd.array([-0.1, 0.1] * 3)
@@ -1426,18 +1353,21 @@ def test_activations():
     prelu_multichannel.initialize()
     assert_almost_equal(prelu_multichannel(x).asnumpy(), np.array([[-0.01, 0.1], [-0.025, 0.1], [-0.05, 0.1]]))
 
-    gelu = mx.gluon.nn.GELU()
-    def gelu_test(x):
-        CUBE_CONSTANT = 0.044715
-        ROOT_TWO_OVER_PI = 0.7978845608028654
-        def g(x):
-            return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * x * x * x)
-        def f(x):
-            return 1.0 + mx.nd.tanh(g(x))
-        def gelu(x):
-            return 0.5 * x * f(x)
-        for test_point, ref_point in zip(gelu_test(point_to_validate), gelu(point_to_validate)):
-            assert test_point == ref_point
+    # https://github.com/apache/incubator-mxnet/issues/18381
+    # gelu = mx.gluon.nn.GELU()
+    # def gelu_test(x):
+    #     CUBE_CONSTANT = 0.044715
+    #     ROOT_TWO_OVER_PI = 0.7978845608028654
+    #     def g(x):
+    #         return ROOT_TWO_OVER_PI * (x + CUBE_CONSTANT * x * x * x)
+    #     def f(x):
+    #         return 1.0 + mx.nd.tanh(g(x))
+    #     def gelu(x):
+    #         return 0.5 * x * f(x)
+    #     return [gelu(x_i) for x_i in x]
+
+    # for test_point, ref_point in zip(gelu_test(point_to_validate), gelu(point_to_validate)):
+    #     assert test_point == ref_point
 
 
 @with_seed()
@@ -1501,7 +1431,7 @@ def test_req():
     for v in net.collect_params().values():
         v.grad_req = 'add'
 
-    net.collect_params().zero_grad()
+    net.zero_grad()
     with mx.autograd.record():
         pred = net(data)
         l = loss(pred, label)
@@ -1517,24 +1447,24 @@ def test_req():
 
 
 @with_seed()
-def test_save_load():
-    net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True)
-    net.save_parameters('test_save_load.params')
+def test_save_load(tmpdir):
+    net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=False, root=str(tmpdir))
+    net.initialize()
+    net(mx.nd.ones((1,3,224,224)))
+    net.save_parameters(os.path.join(str(tmpdir), 'test_save_load.params'))
 
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
     net.output = mx.gluon.nn.Dense(1000)
 
-    net.load_parameters('test_save_load.params')
+    net.load_parameters(os.path.join(str(tmpdir), 'test_save_load.params'))
 
     class Network(gluon.Block):
         def __init__(self, **kwargs):
             super(Network, self).__init__(**kwargs)
-            with self.name_scope():
-                self.encoders = gluon.nn.Sequential()
-                with self.encoders.name_scope():
-                    for _ in range(2):
-                        lstm = mx.gluon.rnn.LSTM(200, 1, bidirectional=True)
-                        self.encoders.add(lstm)
+            self.encoders = gluon.nn.Sequential()
+            for _ in range(2):
+                lstm = mx.gluon.rnn.LSTM(200, 1, bidirectional=True)
+                self.encoders.add(lstm)
 
         def forward(self, x):
             for i in range(2):
@@ -1546,18 +1476,17 @@ def test_save_load():
     x = np.random.rand(32, 10, 10)
     x = mx.nd.array(x).as_in_context(mx.cpu())
     net(x)
-    net.save_parameters('tmp.params')
+    _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
+    net.save_parameters(param_path)
     net2 = Network()
-    net2.load_parameters('tmp.params')
+    net2.load_parameters(param_path)
 
 @with_seed()
-def test_save_load_deduplicate_with_shared_params():
+def test_save_load_deduplicate_with_shared_params(tmpdir):
     class B(mx.gluon.Block):
-        def __init__(self, params=None):
-            super(B, self).__init__(params=params)
-
-            with self.name_scope():
-                self.weight = self.params.get('weight', shape=(10, 10))
+        def __init__(self):
+            super(B, self).__init__()
+            self.weight = gluon.Parameter('weight', shape=(10, 10))
 
     class C(mx.gluon.Block):
         def __init__(self, b1, b2):
@@ -1566,44 +1495,46 @@ def test_save_load_deduplicate_with_shared_params():
             self.b2 = b2
 
     b1 = B()
-    b2 = B(b1.collect_params())
+    b2 = B().share_parameters(b1.collect_params())
     c = C(b1, b2)
     c.initialize()
-    c.save_parameters('tmp.params', deduplicate=True)
+    _, param_path = tempfile.mkstemp(suffix='.params', dir=str(tmpdir))
+    c.save_parameters(param_path, deduplicate=True)
 
-    params = mx.nd.load('tmp.params')
+    params = mx.nd.load(param_path)
     assert len(params) == 1  # Only a single copy of the shared parameter is saved
 
     b1 = B()
-    b2 = B(b1.collect_params())
+    b2 = B().share_parameters(b1.collect_params())
     c = C(b1, b2)
-    c.load_parameters('tmp.params')
+    c.load_parameters(param_path)
 
     # Test default behavior
-    c.save_parameters('tmp2.params', deduplicate=False)
+    c.save_parameters(param_path, deduplicate=False)
 
-    params = mx.nd.load('tmp2.params')
+    params = mx.nd.load(param_path)
     assert len(params) == 2  # Only a single copy of the shared parameter is saved
 
     b1 = B()
-    b2 = B(b1.collect_params())
+    b2 = B().share_parameters(b1.collect_params())
     c = C(b1, b2)
-    c.load_parameters('tmp2.params')
+    c.load_parameters(param_path)
 
 @with_seed()
-def test_symbol_block_save_load():
+def test_symbol_block_save_load(tmpdir):
+    tmp = str(tmpdir)
+    tmpfile = os.path.join(tmp, 'resnet34_fp64')
+
     class Net(gluon.HybridBlock):
         def __init__(self):
             super(Net, self).__init__()
-            with self.name_scope():
-                backbone = gluon.model_zoo.vision.resnet18_v1()
-                data = mx.sym.var('data')
-                featnames = ['stage1_activation0', 'stage2_activation0', 'stage3_activation0']
-                out_names = ['_'.join([backbone.name, featname, 'output']) for featname in featnames]
-                internals = backbone(data).get_internals()
-                outs = [internals[out_name] for out_name in out_names]
-                self.backbone = gluon.SymbolBlock(outs, data, params=backbone.collect_params())
-                self.body = nn.Conv2D(3, 1)
+            backbone = gluon.model_zoo.vision.resnet18_v1()
+            backbone.initialize()
+            backbone.hybridize()
+            backbone(mx.nd.random.normal(shape=(1, 3, 32, 32)))
+            sym_file, params_file = backbone.export(tmpfile)
+            self.backbone = gluon.SymbolBlock.imports(sym_file, 'data', params_file)
+            self.body = nn.Conv2D(3, 1)
 
         def hybrid_forward(self, F, x):
             x = self.body(x)
@@ -1613,10 +1544,11 @@ def test_symbol_block_save_load():
     net1.initialize(mx.init.Normal())
     net1.hybridize()
     net1(mx.nd.random.normal(shape=(1, 3, 32, 32)))
-    net1.save_parameters('./test_symbol_block_save_load.params')
 
+    params_file = os.path.join(tmp, './test_symbol_block_save_load.params')
+    net1.save_parameters(params_file)
     net2 = Net()
-    net2.load_parameters('./test_symbol_block_save_load.params', ctx=mx.cpu())
+    net2.load_parameters(params_file)
 
 
 @with_seed()
@@ -1632,13 +1564,13 @@ def test_zero_grad():
         data = mx.nd.random.uniform(shape=(3,3), dtype=dtype, ctx=ctx)
         if embeddingType is None:
             embeddingType = dtype
-        net = nn.Embedding(3, 4, sparse_grad=sparse, prefix='test_zero_grad_', dtype=embeddingType)
+        net = nn.Embedding(3, 4, sparse_grad=sparse, dtype=embeddingType)
         net.initialize(ctx=ctx)
         with mx.autograd.record():
             l = net(data)
             l.backward()
-        net.collect_params().zero_grad()
-        grad = net.collect_params()['test_zero_grad_weight'].grad()
+        net.zero_grad()
+        grad = net.collect_params()['weight'].grad()
         assert_almost_equal(grad.asnumpy(), grad.asnumpy() * 0)
 
     def _test_multi_reset(nArrays, dtype, ctx):
@@ -1669,33 +1601,26 @@ def test_zero_grad():
         for type in [testedTypes] + testedTypes:
             _test_multi_reset(np.random.randint(1, 50), type, ctx)
 
-    # Saving value of environment variable, if it was defined
-    envVarKey = 'MXNET_STORAGE_FALLBACK_LOG_VERBOSE'
-    envVarValue = os.environ[envVarKey] if envVarKey in os.environ else None
-    # Changing value of environment variable
-    os.environ[envVarKey] = '0'
-    for type in ['float16', 'float32', 'float64']:
-        for embType in ['float32', 'float64']:
-            for sparse in [True, False]:
-                _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
+    with environment('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
+        for type in ['float16', 'float32', 'float64']:
+            for embType in ['float32', 'float64']:
+                for sparse in [True, False]:
+                    _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
 
-    # Remove or restore the value of environment variable
-    if envVarValue is None:
-        del os.environ[envVarKey]
-    else:
-        os.environ[envVarKey] = envVarValue
 
-def check_hybrid_static_memory(**kwargs):
+@with_seed()
+@pytest.mark.parametrize('static_alloc', [False, True])
+@pytest.mark.parametrize('static_shape', [False, True])
+def test_hybrid_static_memory(static_alloc, static_shape):
+    if static_shape and not static_alloc:
+        pytest.skip()
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
     x.attach_grad()
 
-    net1 = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
-    net2 = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, prefix='net_', ctx=mx.context.current_context())
-    net2.hybridize(**kwargs)
-    net1(x)
-    net2(x)
+    net = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=False, ctx=mx.context.current_context())
+    net.initialize()
+    net(x)
 
     def test(net, x):
         with mx.autograd.record():
@@ -1706,23 +1631,25 @@ def check_hybrid_static_memory(**kwargs):
 
         return y, grads
 
-    y1, grads1 = test(net1, x)
-    y2, grads2 = test(net2, x)
+    y1, grads1 = test(net, x)
+    net.hybridize(static_alloc=static_alloc, static_shape=static_shape)
+    y2, grads2 = test(net, x)
 
     assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
     for key in grads1:
         assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-4)
 
-@with_seed()
-def test_hybrid_static_memory():
-    check_hybrid_static_memory()
-    check_hybrid_static_memory(static_alloc=True)
-    check_hybrid_static_memory(static_alloc=True, static_shape=True)
 
-def check_hybrid_static_memory_switching(**kwargs):
+@with_seed()
+@pytest.mark.parametrize('static_alloc', [False, True])
+@pytest.mark.parametrize('static_shape', [False, True])
+def test_hybrid_static_memory_switching(static_alloc, static_shape):
+    if static_shape and not static_alloc:
+        pytest.skip()
     net = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
-    net.hybridize(**kwargs)
+        1, 18, pretrained=False, ctx=mx.context.current_context())
+    net.initialize()
+    net.hybridize(static_alloc=static_alloc, static_shape=static_shape)
 
     x = mx.nd.random.uniform(shape=(4, 3, 32, 32))
     net(x)
@@ -1735,12 +1662,6 @@ def check_hybrid_static_memory_switching(**kwargs):
         y = net(x)
         y.backward()
     mx.nd.waitall()
-
-@with_seed()
-def test_hybrid_static_memory_switching():
-    check_hybrid_static_memory_switching()
-    check_hybrid_static_memory_switching(static_alloc=True)
-    check_hybrid_static_memory_switching(static_alloc=True, static_shape=True)
 
 @with_seed()
 def test_hook():
@@ -1803,49 +1724,44 @@ def test_op_hook_output_names():
                 assert opr_name == expected_opr_name
 
     # Test with Dense layer
-    model = mx.gluon.nn.HybridSequential(prefix="dense_")
-    with model.name_scope():
-        model.add(mx.gluon.nn.Dense(2))
+    model = mx.gluon.nn.HybridSequential()
+    model.add(mx.gluon.nn.Dense(2))
     model.initialize()
     model.hybridize()
-    check_name(model, ["dense_dense0_fwd_output"])
+    check_name(model, ["hybridsequential_dense0_fwd_output"])
 
     # Test with Activation, FListInputNames not registered, input name will have _input appended
-    model = mx.gluon.nn.HybridSequential(prefix="relu_")
-    with model.name_scope():
-        model.add(mx.gluon.nn.Activation("relu"))
+    model = mx.gluon.nn.HybridSequential()
+    model.add(mx.gluon.nn.Activation("relu"))
     model.initialize()
     model.hybridize()
-    check_name(model, ["relu_relu0_fwd_output"])
+    check_name(model, ["hybridsequential_activation0_fwd_output"])
 
     # Test with Pooling, monitor_all is set to True
-    model = mx.gluon.nn.HybridSequential("pool_")
-    with model.name_scope():
-        model.add(mx.gluon.nn.AvgPool1D())
+    model = mx.gluon.nn.HybridSequential()
+    model.add(mx.gluon.nn.AvgPool1D())
     model.initialize()
     model.hybridize()
-    check_name(model, ['pool_pool0_fwd_data', 'pool_pool0_fwd_output'], expected_opr_names=["Pooling"],
-               monitor_all=True)
+    check_name(model, ['hybridsequential_avgpool1d0_fwd_data', 'hybridsequential_avgpool1d0_fwd_output'],
+               expected_opr_names=["Pooling"], monitor_all=True)
 
     # stack two layers and test
-    model = mx.gluon.nn.HybridSequential("dense_")
-    with model.name_scope():
-        model.add(mx.gluon.nn.Dense(2))
-        model.add(mx.gluon.nn.Activation("relu"))
+    model = mx.gluon.nn.HybridSequential()
+    model.add(mx.gluon.nn.Dense(2))
+    model.add(mx.gluon.nn.Activation("relu"))
     model.initialize()
     model.hybridize()
     check_name(model,
-               ['dense_dense0_fwd_data', 'dense_dense0_fwd_weight',
-                'dense_dense0_fwd_bias', 'dense_dense0_fwd_output',
-                'dense_relu0_fwd_input0', 'dense_relu0_fwd_output'], monitor_all=True)
+               ['hybridsequential_dense0_fwd_data', 'hybridsequential_dense0_fwd_weight',
+                'hybridsequential_dense0_fwd_bias', 'hybridsequential_dense0_fwd_output',
+                'hybridsequential_activation0_fwd_input0', 'hybridsequential_activation0_fwd_output'], monitor_all=True)
 
     # check with different hybridize modes
     model.hybridize(static_alloc=True)
     check_name(model,
-               ['dense_dense0_fwd_data', 'dense_dense0_fwd_weight',
-                'dense_dense0_fwd_bias', 'dense_dense0_fwd_output',
-                'dense_relu0_fwd_input0', 'dense_relu0_fwd_output'], monitor_all=True)
-
+               ['hybridsequential_dense0_fwd_data', 'hybridsequential_dense0_fwd_weight',
+                'hybridsequential_dense0_fwd_bias', 'hybridsequential_dense0_fwd_output',
+                'hybridsequential_activation0_fwd_input0', 'hybridsequential_activation0_fwd_output'], monitor_all=True)
 
 @with_seed()
 def test_apply():
@@ -1854,15 +1770,14 @@ def test_apply():
 
     def record_name(block):
         global called_blocks
-        called_blocks.append(block.name)
+        called_blocks.append(type(block))
 
-    block = nn.HybridSequential(prefix='test_')
-    with block.name_scope():
-        block.add(nn.Dense(10))
-        block.add(nn.Dropout(0.5))
+    block = nn.HybridSequential()
+    block.add(nn.Dense(10))
+    block.add(nn.Dropout(0.5))
     block.apply(record_name)
 
-    assert called_blocks == ['test_dense0', 'test_dropout0', 'test']
+    assert called_blocks == [type(block[0]), type(block[1]), type(block)]
 
 
 @with_seed()
@@ -1873,10 +1788,9 @@ def test_summary():
     net.summary(mx.nd.ones((32, 3, 224, 224)))
 
     net2 = nn.Sequential()
-    with net2.name_scope():
-        net2.add(nn.Embedding(40, 30))
-        net2.add(gluon.rnn.LSTM(30))
-        net2.add(nn.Dense(40, flatten=False, params=net2[0].params))
+    net2.add(nn.Embedding(40, 30))
+    net2.add(gluon.rnn.LSTM(30))
+    net2.add(nn.Dense(40, flatten=False).share_parameters(net2[0].params))
     net2.initialize()
     net2.summary(mx.nd.ones((80, 32)))
 
@@ -1888,23 +1802,6 @@ def test_summary():
     net.hybridize()
     pytest.raises(AssertionError, net.summary, mx.nd.ones((32, 3, 224, 224)))
 
-
-@with_seed()
-def test_legacy_save_params():
-    net = gluon.nn.HybridSequential(prefix='')
-    with net.name_scope():
-        net.add(gluon.nn.Conv2D(10, (3, 3)))
-        net.add(gluon.nn.Dense(50))
-    net.initialize()
-    net(mx.nd.ones((1,1,50,50)))
-    a = net(mx.sym.var('data'))
-    a.save('test.json')
-    net.save_params('test.params')
-    model = gluon.nn.SymbolBlock(outputs=mx.sym.load_json(open('test.json', 'r').read()),
-                                     inputs=mx.sym.var('data'))
-    model.load_params('test.params', ctx=mx.cpu())
-
-
 @with_seed()
 def test_sparse_hybrid_block_grad():
     class Embedding(mx.gluon.HybridBlock):
@@ -1912,9 +1809,8 @@ def test_sparse_hybrid_block_grad():
             super(Embedding, self).__init__()
             self.num_tokens = num_tokens
 
-            with self.name_scope():
-                self.embedding = mx.gluon.nn.Embedding(
-                    num_tokens, embedding_size, sparse_grad=True)
+            self.embedding = mx.gluon.nn.Embedding(
+                num_tokens, embedding_size, sparse_grad=True)
 
         def hybrid_forward(self, F, words):
             emb = self.embedding(words)
@@ -1938,8 +1834,7 @@ def test_sparse_hybrid_block():
     class Linear(mx.gluon.HybridBlock):
         def __init__(self, units):
             super(Linear, self).__init__()
-            with self.name_scope():
-                self.w = self.params.get('w', shape=(units, units))
+            self.w = gluon.Parameter('w', shape=(units, units))
 
         def hybrid_forward(self, F, x, w):
             return F.dot(x, w)
@@ -1947,8 +1842,7 @@ def test_sparse_hybrid_block():
     class SparseBlock(mx.gluon.HybridBlock):
         def __init__(self, units):
             super(SparseBlock, self).__init__()
-            with self.name_scope():
-                self.net = Linear(units)
+            self.net = Linear(units)
 
         def hybrid_forward(self, F, x):
             return self.net(x) * x
@@ -1964,7 +1858,8 @@ def test_sparse_hybrid_block():
 
 def test_hybrid_static_memory_recording():
     net = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
+        1, 18, pretrained=False, ctx=mx.context.current_context())
+    net.initialize()
     net.hybridize(static_alloc=True)
 
     x = mx.nd.random.uniform(shape=(1, 3, 32, 32))
@@ -1975,15 +1870,15 @@ def test_hybrid_static_memory_recording():
 
 def test_share_inputs_outputs():
     class TestIOBackward(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestIOBackward, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestIOBackward, self).__init__()
 
         def hybrid_forward(self, F, in1, in2):
             return in1 + in2
 
     class TestIOForward(gluon.HybridBlock):
-        def __init__(self, prefix=None, params=None):
-            super(TestIOForward, self).__init__(prefix=prefix, params=params)
+        def __init__(self):
+            super(TestIOForward, self).__init__()
 
         def hybrid_forward(self, F, in1):
             return in1
@@ -2042,7 +1937,7 @@ def check_layer_forward_withinput(net, x):
     x_hybrid = x.copy()
     x.attach_grad()
     x_hybrid.attach_grad()
-    net.collect_params().initialize()
+    net.initialize()
     with mx.autograd.record():
         out1 = net(x)
     out1.backward()
@@ -2054,10 +1949,9 @@ def check_layer_forward_withinput(net, x):
     mx.test_utils.assert_almost_equal(out1.asnumpy(), out2.asnumpy(), rtol=1e-5, atol=1e-6)
 
 @with_seed()
-def test_conv2d_16c():
-    chn_list = [16, 256]
-    kernel_list = [1, 3]
-    kernel_list.append(224)
+@pytest.mark.parametrize('chn_num', [16, 256])
+@pytest.mark.parametrize('kernel', [1, 3, 224])
+def test_conv2d_16c(chn_num, kernel):
     batch_size = 4
     class Net(gluon.HybridBlock):
         def __init__(self,
@@ -2065,24 +1959,21 @@ def test_conv2d_16c():
                      kernel,
                      **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = gluon.nn.Conv2D(chn_num, (kernel, kernel))
+            self.conv0 = gluon.nn.Conv2D(chn_num, (kernel, kernel))
 
         def hybrid_forward(self, F, x):
             out = self.conv0(x)
             return out
 
     x = mx.nd.random.uniform(-1.0, 1.0, shape=(batch_size, 3, 224, 224))
-    for i in range(len(chn_list)):
-        for j in range(len(kernel_list)):
-            net = Net(chn_list[i], kernel_list[j])
-            check_layer_forward_withinput(net, x)
+    net = Net(chn_num, kernel)
+    check_layer_forward_withinput(net, x)
 
 @with_seed()
-def test_group_conv2d_16c():
-    grp_list = [16]
+@pytest.mark.parametrize('grp', [16])
+@pytest.mark.parametrize('kernel_size', [1, 3])
+def test_group_conv2d_16c(grp, kernel_size):
     input_size_list = np.random.randint(low=3, high=65, size=10).tolist()
-    kernel_list = [1, 3]
     batch_size = 4
     class Net(gluon.HybridBlock):
         def __init__(self,
@@ -2090,9 +1981,8 @@ def test_group_conv2d_16c():
                      kernel,
                      **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = gluon.nn.Conv2D(chn_num, (1, 1))
-                self.conv1 = gluon.nn.Conv2D(chn_num, (kernel, kernel), groups=chn_num)
+            self.conv0 = gluon.nn.Conv2D(chn_num, (1, 1))
+            self.conv1 = gluon.nn.Conv2D(chn_num, (kernel, kernel), groups=chn_num)
 
         def hybrid_forward(self, F, x):
             y = self.conv0(x)
@@ -2101,13 +1991,11 @@ def test_group_conv2d_16c():
 
     for i in range(len(input_size_list)):
         x = mx.nd.random.uniform(-1.0, 1.0, shape=(batch_size, 3, input_size_list[i], input_size_list[i]))
-        for j in range(len(grp_list)):
-            for k in range(len(kernel_list)):
-                net = Net(grp_list[j], kernel_list[k])
-                check_layer_forward_withinput(net, x)
+        net = Net(grp, kernel_size)
+        check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_deconv2d_16c():
     in_chn_list = [1024, 512, 256, 128, 64, 32, 16]
     out_chn_list = [512, 256, 128, 64, 32, 16, 3]
@@ -2117,8 +2005,7 @@ def test_deconv2d_16c():
     class Net(gluon.HybridBlock):
         def __init__(self, chn_num, kernel, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.deconv0 = gluon.nn.Conv2DTranspose(chn_num, (kernel, kernel))
+            self.deconv0 = gluon.nn.Conv2DTranspose(chn_num, (kernel, kernel))
 
         def hybrid_forward(self, F, x):
             out = self.deconv0(x)
@@ -2131,7 +2018,7 @@ def test_deconv2d_16c():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_batchnorm_16c():
     chn_list = [16, 1024]
     shape = np.random.randint(low=1, high=300, size=10)
@@ -2146,9 +2033,8 @@ def test_batchnorm_16c():
                      axis,
                      **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = gluon.nn.Conv2D(chn_num, (kernel, kernel))
-                self.bn0   = gluon.nn.BatchNorm(axis=axis)
+            self.conv0 = gluon.nn.Conv2D(chn_num, (kernel, kernel))
+            self.bn0   = gluon.nn.BatchNorm(axis=axis)
 
         def hybrid_forward(self, F, x):
             conv = self.conv0(x)
@@ -2180,11 +2066,10 @@ def test_concat():
                      kernel,
                      **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                from mxnet.gluon.contrib.nn import HybridConcurrent
-                self.concat = HybridConcurrent(axis=check_dim)
-                for i in range(input_num):
-                    self.concat.add(gluon.nn.Conv2D(chn_num, (kernel, kernel)))
+            from mxnet.gluon.contrib.nn import HybridConcurrent
+            self.concat = HybridConcurrent(axis=check_dim)
+            for i in range(input_num):
+                self.concat.add(gluon.nn.Conv2D(chn_num, (kernel, kernel)))
 
         def hybrid_forward(self, F, x):
             return self.concat(x)
@@ -2202,8 +2087,7 @@ def test_reshape_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(64, (3, 3))
+            self.conv0 = nn.Conv2D(64, (3, 3))
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape((0, 0, 128, 32))
@@ -2215,14 +2099,13 @@ def test_reshape_conv():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_conv_reshape_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(64, (3, 3))
-                self.conv1 = nn.Conv2D(128, (3, 3))
+            self.conv0 = nn.Conv2D(64, (3, 3))
+            self.conv1 = nn.Conv2D(128, (3, 3))
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape((0, 0, 128, 32))
@@ -2240,8 +2123,7 @@ def test_slice_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(16, (3, 3))
+            self.conv0 = nn.Conv2D(16, (3, 3))
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=(0, 2, 0, 0), end=(4, 5, 32, 32))
@@ -2257,9 +2139,8 @@ def test_slice_conv_slice_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(32, (3, 3))
-                self.conv1 = nn.Conv2D(16, (1, 1))
+            self.conv0 = nn.Conv2D(32, (3, 3))
+            self.conv1 = nn.Conv2D(16, (1, 1))
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=(0, 0, 0, 0), end=(4, 16, 16, 16))
@@ -2274,14 +2155,13 @@ def test_slice_conv_slice_conv():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_slice_conv_reshape_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(64, (3, 3))
-                self.conv1 = nn.Conv2D(128, (3, 3))
+            self.conv0 = nn.Conv2D(64, (3, 3))
+            self.conv1 = nn.Conv2D(128, (3, 3))
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=(0, 0, 1, 1), end=(4, 16, 33, 33))
@@ -2303,9 +2183,8 @@ def test_reshape_conv_slice_conv():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(16, (3, 3))
-                self.conv1 = nn.Conv2D(32, (3, 3))
+            self.conv0 = nn.Conv2D(16, (3, 3))
+            self.conv1 = nn.Conv2D(32, (3, 3))
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape((0, 0, 64, 16))
@@ -2323,9 +2202,8 @@ def test_reshape_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                channel0 = np.random.randint(1, 17)
-                self.dense0 = nn.Dense(channel0)
+            channel0 = np.random.randint(1, 17)
+            self.dense0 = nn.Dense(channel0)
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape((8, 64, 128, -1))
@@ -2342,10 +2220,9 @@ def test_slice_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                channel0 = np.random.randint(1, 17)
-                self.dense0 = nn.Dense(channel0)
-                self.slice = slice
+            channel0 = np.random.randint(1, 17)
+            self.dense0 = nn.Dense(channel0)
+            self.slice = slice
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=tuple(self.slice[0]),
@@ -2363,12 +2240,11 @@ def test_slice_dense_slice_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                channel0 = 32
-                channel1 = np.random.randint(1, 17)
-                self.dense0 = nn.Dense(channel0)
-                self.dense1 = nn.Dense(channel1)
-                self.slice = slice
+            channel0 = 32
+            channel1 = np.random.randint(1, 17)
+            self.dense0 = nn.Dense(channel0)
+            self.dense1 = nn.Dense(channel1)
+            self.slice = slice
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=tuple(self.slice[0]), end=tuple(self.slice[1]))
@@ -2387,11 +2263,10 @@ def test_reshape_dense_reshape_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                channel0 = np.random.randint(1, 17)
-                channel1 = np.random.randint(1, 33)
-                self.dense0 = nn.Dense(channel0)
-                self.dense1 = nn.Dense(channel1)
+            channel0 = np.random.randint(1, 17)
+            channel1 = np.random.randint(1, 33)
+            self.dense0 = nn.Dense(channel0)
+            self.dense1 = nn.Dense(channel1)
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape((4, 16, 128, 32))
@@ -2410,12 +2285,11 @@ def test_slice_dense_reshape_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                channel0 = np.random.randint(1, 17)
-                channel1 = np.random.randint(1, 17)
-                self.dense0 = nn.Dense(channel0)
-                self.dense1 = nn.Dense(channel1)
-                self.slice = slice
+            channel0 = np.random.randint(1, 17)
+            channel1 = np.random.randint(1, 17)
+            self.dense0 = nn.Dense(channel0)
+            self.dense1 = nn.Dense(channel1)
+            self.slice = slice
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=tuple(self.slice[0]), end=tuple(self.slice[1]))
@@ -2435,11 +2309,10 @@ def test_reshape_dense_slice_dense():
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                channel0 = 64
-                channel1 = np.random.randint(1, 17)
-                self.dense0 = nn.Dense(channel0)
-                self.dense1 = nn.Dense(channel1)
+            channel0 = 64
+            channel1 = np.random.randint(1, 17)
+            self.dense0 = nn.Dense(channel0)
+            self.dense1 = nn.Dense(channel1)
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape((4, 16, 128, 32))
@@ -2454,15 +2327,14 @@ def test_reshape_dense_slice_dense():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(96, (1, 1))
-                self.bn0 = nn.BatchNorm()
-                self.reshape = shape
+            self.conv0 = nn.Conv2D(96, (1, 1))
+            self.bn0 = nn.BatchNorm()
+            self.reshape = shape
 
         def hybrid_forward(self, F, x):
             x_in = self.conv0(x)
@@ -2477,14 +2349,14 @@ def test_reshape_batchnorm():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(128, (1, 1))
-                self.bn0 = nn.BatchNorm()
-                self.slice = slice
+            self.conv0 = nn.Conv2D(128, (1, 1))
+            self.bn0 = nn.BatchNorm()
+            self.slice = slice
 
         def hybrid_forward(self, F, x):
             x_in = self.conv0(x)
@@ -2500,16 +2372,16 @@ def test_slice_batchnorm():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_batchnorm_slice_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(128, (1, 1))
-                self.bn0 = nn.BatchNorm()
-                self.bn1 = nn.BatchNorm()
-                self.slice = slice
+            self.conv0 = nn.Conv2D(128, (1, 1))
+            self.bn0 = nn.BatchNorm()
+            self.bn1 = nn.BatchNorm()
+            self.slice = slice
 
         def hybrid_forward(self, F, x):
             x_in = self.conv0(x)
@@ -2526,16 +2398,15 @@ def test_slice_batchnorm_slice_batchnorm():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_batchnorm_reshape_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(128, (1, 1))
-                self.bn0 = nn.BatchNorm()
-                self.bn1 = nn.BatchNorm()
-                self.reshape = shape
+            self.conv0 = nn.Conv2D(128, (1, 1))
+            self.bn0 = nn.BatchNorm()
+            self.bn1 = nn.BatchNorm()
+            self.reshape = shape
 
         def hybrid_forward(self, F, x):
             x_in = self.conv0(x)
@@ -2552,16 +2423,16 @@ def test_reshape_batchnorm_reshape_batchnorm():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_batchnorm_reshape_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(128, (1, 1))
-                self.bn0 = nn.BatchNorm()
-                self.bn1 = nn.BatchNorm()
-                self.reshape = shape
-                self.slice = slice
+            self.conv0 = nn.Conv2D(128, (1, 1))
+            self.bn0 = nn.BatchNorm()
+            self.bn1 = nn.BatchNorm()
+            self.reshape = shape
+            self.slice = slice
 
         def hybrid_forward(self, F, x):
             x_in = self.conv0(x)
@@ -2579,17 +2450,16 @@ def test_slice_batchnorm_reshape_batchnorm():
 
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_batchnorm_slice_batchnorm():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.conv0 = nn.Conv2D(128, (1, 1))
-                self.bn0 = nn.BatchNorm()
-                self.bn1 = nn.BatchNorm()
-                self.reshape = shape
-                self.slice = slice
+            self.conv0 = nn.Conv2D(128, (1, 1))
+            self.bn0 = nn.BatchNorm()
+            self.bn1 = nn.BatchNorm()
+            self.reshape = shape
+            self.slice = slice
 
         def hybrid_forward(self, F, x):
             x_in = self.conv0(x)
@@ -2606,7 +2476,7 @@ def test_reshape_batchnorm_slice_batchnorm():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2619,9 +2489,8 @@ def test_reshape_pooling2d():
                      pooling_layer,
                      **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.pool0 = pooling_layer
+            self.reshape = shape
+            self.pool0 = pooling_layer
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape(self.reshape)
@@ -2635,6 +2504,7 @@ def test_reshape_pooling2d():
         check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_pooling2d():
     # transpose shape to bring feature dimension 'c' from 2nd position to last
     def transpose(shape):
@@ -2652,9 +2522,8 @@ def test_slice_pooling2d():
                          pooling_layer,
                          **kwargs):
                 super(Net, self).__init__(**kwargs)
-                with self.name_scope():
-                    self.slice = slice
-                    self.pool0 = pooling_layer
+                self.slice = slice
+                self.pool0 = pooling_layer
 
             def hybrid_forward(self, F, x):
                 x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
@@ -2673,7 +2542,7 @@ def test_slice_pooling2d():
             check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_reshape_pooling2d_reshape_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 2), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2687,10 +2556,9 @@ def test_reshape_pooling2d_reshape_pooling2d():
                      pooling_layer2,
                      **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.pool0 = pooling_layer1
-                self.pool1 = pooling_layer2
+            self.reshape = shape
+            self.pool0 = pooling_layer1
+            self.pool1 = pooling_layer2
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape(self.reshape[0])
@@ -2709,6 +2577,7 @@ def test_reshape_pooling2d_reshape_pooling2d():
             check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_pooling2d_slice_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2722,10 +2591,9 @@ def test_slice_pooling2d_slice_pooling2d():
                      pooling_layer2,
                      **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.slice = slice
-                self.pool0 = pooling_layer1
-                self.pool1 = pooling_layer2
+            self.slice = slice
+            self.pool0 = pooling_layer1
+            self.pool1 = pooling_layer2
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=self.slice[0][0], end=self.slice[0][1])
@@ -2744,7 +2612,7 @@ def test_slice_pooling2d_slice_pooling2d():
             check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
 def test_slice_pooling2d_reshape_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2759,11 +2627,10 @@ def test_slice_pooling2d_reshape_pooling2d():
                      pooling_layer2,
                      **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.slice = slice
-                self.pool0 = pooling_layer1
-                self.pool1 = pooling_layer2
+            self.reshape = shape
+            self.slice = slice
+            self.pool0 = pooling_layer1
+            self.pool1 = pooling_layer2
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
@@ -2781,7 +2648,8 @@ def test_slice_pooling2d_reshape_pooling2d():
             check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_pooling2d_slice_pooling2d():
     max_pooling = nn.MaxPool2D(strides=(2, 3), padding=(1, 1))
     avg_pooling = nn.AvgPool2D(strides=(2, 2), padding=(1, 1))
@@ -2796,11 +2664,10 @@ def test_reshape_pooling2d_slice_pooling2d():
                      pooling_layer2,
                      **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.slice = slice
-                self.pool0 = pooling_layer1
-                self.pool1 = pooling_layer2
+            self.reshape = shape
+            self.slice = slice
+            self.pool0 = pooling_layer1
+            self.pool1 = pooling_layer2
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape(self.reshape)
@@ -2820,14 +2687,14 @@ def test_reshape_pooling2d_slice_pooling2d():
             check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.conv0 = nn.Conv2DTranspose(64, (3, 3))
+            self.reshape = shape
+            self.conv0 = nn.Conv2DTranspose(64, (3, 3))
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape(self.reshape)
@@ -2839,14 +2706,14 @@ def test_reshape_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.slice = slice
-                self.conv0 = nn.Conv2DTranspose(64, (3, 3))
+            self.slice = slice
+            self.conv0 = nn.Conv2DTranspose(64, (3, 3))
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
@@ -2858,15 +2725,15 @@ def test_slice_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_deconv_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.conv0 = nn.Conv2DTranspose(32, (3, 3))
-                self.conv1 = nn.Conv2DTranspose(64, (3, 3), strides=(2, 2))
+            self.reshape = shape
+            self.conv0 = nn.Conv2DTranspose(32, (3, 3))
+            self.conv1 = nn.Conv2DTranspose(64, (3, 3), strides=(2, 2))
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape(self.reshape[0])
@@ -2881,15 +2748,15 @@ def test_reshape_deconv_reshape_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_deconv_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.slice = slice
-                self.conv0 = nn.Conv2DTranspose(32, (3, 3))
-                self.conv1 = nn.Conv2DTranspose(64, (3, 3), strides=(2, 2))
+            self.slice = slice
+            self.conv0 = nn.Conv2DTranspose(32, (3, 3))
+            self.conv1 = nn.Conv2DTranspose(64, (3, 3), strides=(2, 2))
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=self.slice[0][0], end=self.slice[0][1])
@@ -2904,16 +2771,16 @@ def test_slice_deconv_slice_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_reshape_deconv_slice_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.slice = slice
-                self.conv0 = nn.Conv2DTranspose(32, (3, 3))
-                self.conv1 = nn.Conv2DTranspose(64, (3, 3), strides=(2, 2))
+            self.reshape = shape
+            self.slice = slice
+            self.conv0 = nn.Conv2DTranspose(32, (3, 3))
+            self.conv1 = nn.Conv2DTranspose(64, (3, 3), strides=(2, 2))
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape(self.reshape)
@@ -2929,16 +2796,16 @@ def test_reshape_deconv_slice_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
-@unittest.skip('skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.skip(reason='skippping temporarily, tracked by https://github.com/apache/incubator-mxnet/issues/11164')
+@pytest.mark.serial
 def test_slice_deconv_reshape_deconv():
     class Net(gluon.HybridBlock):
         def __init__(self, shape, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.slice = slice
-                self.conv0 = nn.Conv2DTranspose(32, (3, 3))
-                self.conv1 = nn.Conv2DTranspose(96, (3, 3), strides=(2, 2))
+            self.reshape = shape
+            self.slice = slice
+            self.conv0 = nn.Conv2DTranspose(32, (3, 3))
+            self.conv1 = nn.Conv2DTranspose(96, (3, 3), strides=(2, 2))
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
@@ -2954,13 +2821,13 @@ def test_slice_deconv_reshape_deconv():
     check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_reshape_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act, shape, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.act = nn.Activation(act)
+            self.reshape = shape
+            self.act = nn.Activation(act)
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape(self.reshape)
@@ -2975,13 +2842,13 @@ def test_reshape_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.slice = slice
-                self.act = nn.Activation(act)
+            self.slice = slice
+            self.act = nn.Activation(act)
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
@@ -2997,14 +2864,14 @@ def test_slice_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_reshape_activation_reshape_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, shape, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.act0 = nn.Activation(act0)
-                self.act1 = nn.Activation(act1)
+            self.reshape = shape
+            self.act0 = nn.Activation(act0)
+            self.act1 = nn.Activation(act1)
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape(self.reshape[0])
@@ -3024,14 +2891,14 @@ def test_reshape_activation_reshape_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_activation_slice_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.slice = slice
-                self.act0 = nn.Activation(act0)
-                self.act1 = nn.Activation(act1)
+            self.slice = slice
+            self.act0 = nn.Activation(act0)
+            self.act1 = nn.Activation(act1)
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=self.slice[0][0], end=self.slice[0][1])
@@ -3051,15 +2918,15 @@ def test_slice_activation_slice_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_reshape_activation_slice_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, shape, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.slice = slice
-                self.act0 = nn.Activation(act0)
-                self.act1 = nn.Activation(act1)
+            self.reshape = shape
+            self.slice = slice
+            self.act0 = nn.Activation(act0)
+            self.act1 = nn.Activation(act1)
 
         def hybrid_forward(self, F, x):
             x_reshape = x.reshape(self.reshape)
@@ -3080,15 +2947,15 @@ def test_reshape_activation_slice_activation():
 
 
 @with_seed()
+@pytest.mark.serial
 def test_slice_activation_reshape_activation():
     class Net(gluon.HybridBlock):
         def __init__(self, act0, act1, shape, slice, **kwargs):
             super(Net, self).__init__(**kwargs)
-            with self.name_scope():
-                self.reshape = shape
-                self.slice = slice
-                self.act0 = nn.Activation(act0)
-                self.act1 = nn.Activation(act1)
+            self.reshape = shape
+            self.slice = slice
+            self.act0 = nn.Activation(act0)
+            self.act1 = nn.Activation(act1)
 
         def hybrid_forward(self, F, x):
             x_slice = x.slice(begin=self.slice[0], end=self.slice[1])
@@ -3108,6 +2975,7 @@ def test_slice_activation_reshape_activation():
             check_layer_forward_withinput(net, x)
 
 @with_seed()
+@pytest.mark.serial
 def test_np_shape_parameters():
     class Foo(gluon.Block):
         def __init__(self, **kwargs):
@@ -3164,11 +3032,10 @@ def test_shared_parameters_with_non_default_initializer():
         def __init__(self, **kwargs):
             super(MyBlock, self).__init__(**kwargs)
 
-            with self.name_scope():
-                self.param = self.params.get("param", shape=(1, ), init=mx.init.Constant(-10.0))
+            self.param = gluon.Parameter(shape=(1, ), init=mx.init.Constant(-10.0))
 
     bl = MyBlock()
-    bl2 = MyBlock(params=bl.collect_params())
+    bl2 = MyBlock().share_parameters(bl.collect_params())
     assert bl.param is bl2.param
     bl3 = MyBlock()
     assert bl.param is not bl3.param
@@ -3215,3 +3082,12 @@ def test_reqs_switching_training_inference():
 
     mx.test_utils.assert_almost_equal(grad1, grad2)
 
+
+@pytest.mark.usefixtures("check_leak_ndarray")
+def test_no_memory_leak_in_gluon():
+    class MyNet(mx.gluon.Block):
+        def __init__(self):
+            super().__init__()
+            self.net = mx.gluon.nn.Dense(10, in_units=10)
+    net = MyNet()
+    net.initialize()

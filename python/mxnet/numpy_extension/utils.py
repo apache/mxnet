@@ -20,13 +20,15 @@
 
 
 import ctypes
-from .. util import is_np_array, is_np_shape
-from .. base import _LIB, check_call, string_types, c_str_array
-from .. base import c_handle_array, c_str, mx_uint, NDArrayHandle, py_str
-from ..numpy import ndarray
+from ..util import is_np_array, is_np_shape
+from ..base import _LIB, check_call, string_types, c_str_array
+from ..base import c_handle_array, c_str, mx_uint, NDArrayHandle, py_str
+from ..dlpack import ndarray_to_dlpack_for_read, ndarray_to_dlpack_for_write
+from ..dlpack import ndarray_from_dlpack, ndarray_from_numpy
+from ..numpy import ndarray, array
 
-__all__ = ['save', 'load']
-
+__all__ = ['save', 'load', 'to_dlpack_for_read', 'to_dlpack_for_write',
+           'from_dlpack', 'from_numpy']
 
 def save(file, arr):
     """Saves a list of `ndarray`s or a dict of `str`->`ndarray` to file.
@@ -119,3 +121,120 @@ def load(file):
         return dict(
             (py_str(names[i]), ndarray(NDArrayHandle(handles[i])))
             for i in range(out_size.value))
+
+from_dlpack = ndarray_from_dlpack(ndarray)
+from_dlpack_doc = """Returns a np.ndarray backed by a dlpack tensor.
+
+    Parameters
+    ----------
+    dlpack: PyCapsule (the pointer of DLManagedTensor)
+        input data
+
+    Returns
+    -------
+    np.ndarray
+        an ndarray backed by a dlpack tensor
+
+    Examples
+    --------
+    >>> x = mx.np.ones((2,3))
+    >>> y = mx.npx.to_dlpack_for_read(x)
+    >>> type(y)
+    <class 'PyCapsule'>
+    >>> z = mx.npx.from_dlpack(y)
+    >>> type(z)
+    <class 'mxnet.numpy.ndarray'>
+    >>> z
+    array([[1., 1., 1.],
+           [1., 1., 1.]])
+
+    >>> w = mx.npx.to_dlpack_for_write(x)
+    >>> type(w)
+    <class 'PyCapsule'>
+    >>> u = mx.npx.from_dlpack(w)
+    >>> u += 1
+    >>> x
+    array([[2., 2., 2.],
+           [2., 2., 2.]])
+    """
+from_dlpack.__doc__ = from_dlpack_doc
+
+
+from_numpy = ndarray_from_numpy(ndarray, array)
+from_numpy_doc = """Returns an MXNet's np.ndarray backed by numpy's ndarray.
+    When `zero_copy` is set to be true,
+    this API consumes numpy's ndarray and produces MXNet's np.ndarray
+    without having to copy the content. In this case, we disallow
+    users to modify the given numpy ndarray, and it is suggested
+    not to read the numpy ndarray as well for internal correctness.
+
+    Parameters
+    ----------
+    ndarray: np.ndarray
+        input data
+    zero_copy: bool
+        Whether we use DLPack's zero-copy conversion to convert to MXNet's
+        np.ndarray.
+        This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
+
+    Returns
+    -------
+    np.ndarray
+        a np.ndarray backed by a dlpack tensor
+    """
+from_numpy.__doc__ = from_numpy_doc
+
+to_dlpack_for_read = ndarray_to_dlpack_for_read()
+to_dlpack_for_read_doc = """Returns a reference view of np.ndarray that represents
+as DLManagedTensor until all previous write operations on the current array are finished.
+
+    Parameters
+    ----------
+    data: np.ndarray
+        input data.
+
+    Returns
+    -------
+    PyCapsule (the pointer of DLManagedTensor)
+        a reference view of ndarray that represents as DLManagedTensor.
+
+    Examples
+    --------
+    >>> x = mx.np.ones((2,3))
+    >>> y = mx.npx.to_dlpack_for_read(x)
+    >>> type(y)
+    <class 'PyCapsule'>
+    >>> z = mx.npx.from_dlpack(y)
+    >>> z
+    array([[1., 1., 1.],
+           [1., 1., 1.]])
+    """
+to_dlpack_for_read.__doc__ = to_dlpack_for_read_doc
+
+to_dlpack_for_write = ndarray_to_dlpack_for_write()
+to_dlpack_for_write_doc = """Returns a reference view of ndarray that represents
+as DLManagedTensor until all previous read/write operations on the current array are finished.
+
+    Parameters
+    ----------
+    data: np.ndarray
+        input data.
+
+    Returns
+    -------
+    PyCapsule (the pointer of DLManagedTensor)
+        a reference view of np.ndarray that represents as DLManagedTensor.
+
+    Examples
+    --------
+    >>> x = mx.np.ones((2,3))
+    >>> w = mx.npx.to_dlpack_for_write(x)
+    >>> type(w)
+    <class 'PyCapsule'>
+    >>> u = mx.npx.from_dlpack(w)
+    >>> u += 1
+    >>> x
+    array([[2., 2., 2.],
+           [2., 2., 2.]])
+    """
+to_dlpack_for_write.__doc__ = to_dlpack_for_write_doc

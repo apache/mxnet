@@ -36,9 +36,10 @@ def eprint(*args, **kwargs):
 VAL_DATA='data/val-5k-256.rec'
 def download_data():
     return mx.test_utils.download(
-        'http://data.mxnet.io/data/val-5k-256.rec', VAL_DATA)
+        'https://repo.mxnet.io/gluon/dataset/test/val-5k-256-9e70d85e0.rec', VAL_DATA)
 
 @with_seed()
+@pytest.mark.serial
 @pytest.mark.parametrize('model_name', ['resnet50_v1', 'vgg19_bn', 'alexnet', 'densenet201', 'squeezenet1.0', 'mobilenet0.25'])
 def test_inference(model_name):
     batch_size = 10
@@ -64,17 +65,16 @@ def test_inference(model_name):
     # This is to create a model and run the model once to initialize
     # all parameters.
     cpu_model = get_model(model_name)
-    cpu_model.collect_params().initialize(ctx=mx.cpu())
+    cpu_model.initialize(ctx=mx.cpu())
     cpu_model(mx.nd.array(data, ctx=mx.cpu()))
     gpu_model = get_model(model_name)
-    gpu_model.collect_params().initialize(ctx=mx.gpu())
+    gpu_model.initialize(ctx=mx.gpu())
     gpu_model(mx.nd.array(data, ctx=mx.gpu()))
 
     # Force the two models have the same parameters.
     cpu_params = cpu_model.collect_params()
     gpu_params = gpu_model.collect_params()
     for k in cpu_params.keys():
-        k = k.replace(cpu_params.prefix, '')
         cpu_param = cpu_params.get(k)
         gpu_param = gpu_params.get(k)
         gpu_param.set_data(cpu_param.data().as_in_context(mx.gpu()))
@@ -89,7 +89,7 @@ def test_inference(model_name):
         max_val = np.max(np.abs(cpu_out.asnumpy()))
         gpu_max_val = np.max(np.abs(gpu_out.asnumpy()))
         eprint(model_name + ": CPU " + str(max_val) + ", GPU " + str(gpu_max_val))
-        assert_almost_equal(cpu_out / max_val, gpu_out / gpu_max_val, rtol=1e-3, atol=1e-3)
+        assert_almost_equal(cpu_out / max_val, gpu_out / gpu_max_val)
 
 def get_nn_model(name):
     if "densenet" in name:
@@ -101,6 +101,7 @@ def get_nn_model(name):
 # on 2/16/2018 that was not reproducible.  Problem could be timing related or
 # based on non-deterministic algo selection.
 @with_seed()
+@pytest.mark.serial
 def test_training():
     # We use network models without dropout for testing.
     # TODO(zhengda) mobilenet can't pass this test even without MKLDNN.
@@ -133,17 +134,16 @@ def test_training():
         # This is to create a model and run the model once to initialize
         # all parameters.
         cpu_model = get_nn_model(model_name)
-        cpu_model.collect_params().initialize(ctx=mx.cpu())
+        cpu_model.initialize(ctx=mx.cpu())
         cpu_model(mx.nd.array(data, ctx=mx.cpu()))
         gpu_model = get_nn_model(model_name)
-        gpu_model.collect_params().initialize(ctx=mx.gpu())
+        gpu_model.initialize(ctx=mx.gpu())
         gpu_model(mx.nd.array(data, ctx=mx.gpu()))
 
         # Force the two models have the same parameters.
         cpu_params = cpu_model.collect_params()
         gpu_params = gpu_model.collect_params()
         for k in cpu_params.keys():
-            k = k.replace(cpu_params.prefix, '')
             cpu_param = cpu_params.get(k)
             gpu_param = gpu_params.get(k)
             gpu_param.set_data(cpu_param.data().as_in_context(mx.gpu()))

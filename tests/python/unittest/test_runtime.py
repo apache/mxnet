@@ -26,7 +26,7 @@ def test_features():
     features = Features()
     print(features)
     assert 'CUDA' in features
-    assert len(features) >= 30
+    assert len(features) >= 20
 
 
 def test_is_singleton():
@@ -44,8 +44,11 @@ def test_is_enabled():
             assert not features.is_enabled(f)
 
 
-@pytest.mark.xfail(raises=RuntimeError)
 def test_is_enabled_not_existing():
     features = Features()
-    features.is_enabled('this girl is on fire')
+    with pytest.raises(RuntimeError):
+        features.is_enabled('this girl is on fire')
 
+def test_cxx11_abi():
+    abi = mx.library.compiled_with_gcc_cxx11_abi()
+    assert abi in (-1, 0, 1)

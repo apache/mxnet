@@ -84,14 +84,14 @@ MXNET_REGISTER_API("_npi.gamma")
     param.size = Tuple<int>(args[2].operator ObjectRef());
   }
   if (args[4].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
+    param.dtype = mxnet::common::GetDefaultDtype();
   } else {
     param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
   }
   NDArray* out = args[5].operator mxnet::NDArray*();
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();

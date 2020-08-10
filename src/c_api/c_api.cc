@@ -236,13 +236,13 @@ void CustomFComputeDispatcher(const std::string op_name,
     return static_cast<void*>((*cpualloc)(size));
   };
 
-  typedef decltype(gpu_alloc) alloc_type_gpu;
+  using alloc_type_gpu = decltype(gpu_alloc);
   auto gpu_malloc = [](void* _gpu_alloc, int size) {
     alloc_type_gpu* gpualloc = static_cast<alloc_type_gpu*>(_gpu_alloc);
     return static_cast<void*>((*gpualloc)(size));
   };
 
-  typedef decltype(sparse_alloc) alloc_type_sparse;
+  using alloc_type_sparse = decltype(sparse_alloc);
   auto sparse_malloc = [](void* _sparse_alloc, int index, int indices_len, int idxptr_len,
                            void** data, int64_t** indices, int64_t** indptr) {
     alloc_type_sparse* sparsealloc = static_cast<alloc_type_sparse*>(_sparse_alloc);
@@ -1209,7 +1209,7 @@ void registerPasses(void *lib, int verbose) {
       // create no-capture lambda so that we can cast it to function pointer
       // lambda with captures cannot be cast to function pointer and pass to lib_api.h
       // this needs to be a lambda function so that we can do the decltype cast
-      typedef decltype(ndarray_alloc) alloc_type_ndarray;
+      using alloc_type_ndarray = decltype(ndarray_alloc);
       auto ndarray_malloc = [](const void* _ndarray_alloc, const int64_t* shapes, int num_shapes,
                                const char* dev_str, int dev_id, int dtype, const char* name,
                                int isArg, void** data) {
@@ -1299,6 +1299,17 @@ int MXLibInfoFeatures(const struct LibFeature **lib_features, size_t *size) {
   API_END();
 }
 
+int MXLibInfoCompiledWithCXX11ABI(int* result) {
+  API_BEGIN();
+#ifdef _GLIBCXX_USE_CXX11_ABI
+  *result = _GLIBCXX_USE_CXX11_ABI;
+#else
+  *result = -1;
+#endif
+  API_END();
+}
+
+
 int MXRandomSeed(int seed) {
   API_BEGIN();
   mxnet::RandomSeed(seed);
@@ -1316,6 +1327,7 @@ int MXNotifyShutdown() {
   API_BEGIN();
   mxnet::op::custom::CustomOperator::Get()->Stop();
   Engine::Get()->NotifyShutdown();
+  Engine::Get()->WaitForAll();
   API_END();
 }
 
@@ -1759,7 +1771,7 @@ int MXNDArrayAt64(NDArrayHandle handle,
   API_END_HANDLE_ERROR(delete ptr);
 }
 
-MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
+int MXNDArrayReshape(NDArrayHandle handle,
                                int ndim,
                                int *dims,
                                NDArrayHandle *out) {
@@ -1795,7 +1807,7 @@ MXNET_DLL int MXNDArrayReshape(NDArrayHandle handle,
   API_END_HANDLE_ERROR(delete ptr);
 }
 
-MXNET_DLL int MXNDArrayReshape64(NDArrayHandle handle,
+int MXNDArrayReshape64(NDArrayHandle handle,
                                  int ndim,
                                  dim_t *dims,
                                  bool reverse,
@@ -2159,7 +2171,7 @@ int MXDataIterCreateIter(DataIterCreator creator,
   iter = e->body();
   std::vector<std::pair<std::string, std::string> > kwargs;
   for (uint32_t i = 0; i < num_param; ++i) {
-    kwargs.push_back({std::string(keys[i]), std::string(vals[i])});
+    kwargs.emplace_back(std::string(keys[i]), std::string(vals[i]));
   }
   iter->Init(kwargs);
   *out = iter;
@@ -2178,6 +2190,12 @@ int MXDataIterBeforeFirst(DataIterHandle handle) {
   API_END();
 }
 
+int MXDataIterGetLenHint(DataIterHandle handle, int64_t *len) {
+  API_BEGIN();
+  *len = static_cast<IIterator<DataBatch>* >(handle)->GetLenHint();
+  API_END();
+}
+
 int MXDataIterNext(DataIterHandle handle, int *out) {
   API_BEGIN();
   *out = static_cast<IIterator<DataBatch>* >(handle)->Next();
@@ -2187,16 +2205,53 @@ int MXDataIterNext(DataIterHandle handle, int *out) {
 int MXDataIterGetLabel(DataIterHandle handle, NDArrayHandle *out) {
   API_BEGIN();
   const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  bool no_label = db.data.size() < 2U;
   NDArray* pndarray = new NDArray();
   // temp hack to make label 1D
   // TODO(tianjun) make label 1D when label_width=0
-  mxnet::TShape shape = db.data[1].shape();
-  if (shape.ndim() > 1 && shape[1] == 1) {
+  mxnet::TShape shape = no_label ? TShape({1, }) : db.data[1].shape();
+  if (no_label || shape.Size() < 1) {
+    // it's possible that label is not available and not required
+    // but we need to bypass the invalid copy
+    *pndarray = NDArray(TShape({1}), mxnet::Context::CPU(0));
+  } else if (shape.ndim() > 1 && shape[1] == 1) {
     *pndarray = db.data[1].Reshape(mshadow::Shape1(shape[0]));
   } else {
     *pndarray = db.data[1];
   }
   *out = pndarray;
+  API_END();
+}
+
+int MXDataIterGetItems(DataIterHandle handle, int* num_outputs, NDArrayHandle **outputs) {
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
+  API_BEGIN();
+  const DataBatch& db = static_cast<IIterator<DataBatch>* >(handle)->Value();
+  std::vector<NDArray*> ndoutputs;
+  ndoutputs.reserve(db.data.size());
+  if (*outputs == nullptr) {
+    *num_outputs = db.data.size();
+    for (int i = 0; i < *num_outputs; ++i) ndoutputs.push_back(new NDArray());
+  } else {
+    CHECK_EQ(*num_outputs, db.data.size())
+        << "MXDataIterGetItems expects " << db.data.size() << " outputs, but "
+        << *num_outputs << " was given.";
+    for (int i = 0; i < *num_outputs; ++i) {
+      ndoutputs.push_back(reinterpret_cast<NDArray*>((*outputs)[i]));
+    }
+  }
+
+  // copy outputs
+  for (int i = 0; i < *num_outputs; ++i) *ndoutputs[i] = db.data[i];
+
+  if (*outputs == nullptr) {
+    ret->ret_handles.clear();
+    ret->ret_handles.reserve(*num_outputs);
+    for (int i = 0; i < *num_outputs; ++i) {
+      ret->ret_handles.push_back(ndoutputs[i]);
+    }
+    *outputs = dmlc::BeginPtr(ret->ret_handles);
+  }
   API_END();
 }
 
@@ -2223,6 +2278,192 @@ int MXDataIterGetPadNum(DataIterHandle handle, int *pad) {
   *pad = db.num_batch_padd;
   API_END();
 }
+
+int MXListDatasets(uint32_t *out_size,
+                             DatasetCreator **out_array) {
+  API_BEGIN();
+  auto &vec = dmlc::Registry<DatasetReg>::List();
+  *out_size = static_cast<uint32_t>(vec.size());
+  *out_array = (DatasetCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
+  API_END();
+}
+
+int MXDatasetCreateDataset(DatasetCreator handle,
+                           uint32_t num_param,
+                           const char **keys,
+                           const char **vals,
+                           DatasetHandle *out) {
+  Dataset *dataset = nullptr;
+  API_BEGIN();
+  DatasetReg *e = static_cast<DatasetReg *>(handle);
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  for (uint32_t i = 0; i < num_param; ++i) {
+    kwargs.emplace_back(std::string(keys[i]), std::string(vals[i]));
+  }
+  dataset = e->body(kwargs);
+  *out = new std::shared_ptr<Dataset>(dataset);
+  API_END_HANDLE_ERROR(delete dataset);
+}
+
+int MXDatasetGetDatasetInfo(DatasetCreator creator,
+                                      const char **name,
+                                      const char **description,
+                                      uint32_t *num_args,
+                                      const char ***arg_names,
+                                      const char ***arg_type_infos,
+                                      const char ***arg_descriptions) {
+  DatasetReg *e = static_cast<DatasetReg *>(creator);
+  return MXAPIGetFunctionRegInfo(e, name, description, num_args,
+                                 arg_names, arg_type_infos, arg_descriptions,
+                                 nullptr);
+}
+
+int MXDatasetFree(DatasetHandle handle) {
+  API_BEGIN();
+  delete static_cast<std::shared_ptr<Dataset>*>(handle);
+  API_END();
+}
+
+int MXDatasetGetLen(DatasetHandle handle, uint64_t *out) {
+  API_BEGIN();
+  uint64_t len = (*static_cast<std::shared_ptr<Dataset>*>(handle))->GetLen();
+  *out = len;
+  API_END();
+}
+
+int MXDatasetGetItems(DatasetHandle handle,
+                      uint64_t index,
+                      int* num_outputs,
+                      NDArrayHandle **outputs) {
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
+  API_BEGIN();
+  std::vector<NDArray> res;
+  CHECK((*static_cast<std::shared_ptr<Dataset>*>(handle))->GetItem(index, &res))
+    << "Error getting item at index: " << index;
+  std::vector<NDArray*> ndoutputs;
+  ndoutputs.reserve(res.size());
+  if (*outputs == nullptr) {
+    *num_outputs = res.size();
+    for (int i = 0; i < *num_outputs; ++i) ndoutputs.push_back(new NDArray());
+  } else {
+    CHECK_EQ(*num_outputs, res.size())
+        << "MXDatasetGetItems expects " << res.size() << " outputs, but "
+        << *num_outputs << " was given.";
+    for (int i = 0; i < *num_outputs; ++i) {
+      ndoutputs.push_back(reinterpret_cast<NDArray*>((*outputs)[i]));
+    }
+  }
+  // copy ndarrays
+  for (int i = 0; i < *num_outputs; ++i) *(ndoutputs[i]) = res[i];
+
+  if (*outputs == nullptr) {
+    ret->ret_handles.clear();
+    ret->ret_handles.reserve(*num_outputs);
+    for (int i = 0; i < *num_outputs; ++i) {
+      ret->ret_handles.push_back(ndoutputs[i]);
+    }
+    *outputs = dmlc::BeginPtr(ret->ret_handles);
+  }
+  API_END();
+}
+
+int MXListBatchifyFunctions(uint32_t *out_size,
+                            BatchifyFunctionCreator **out_array) {
+  API_BEGIN();
+  auto &vec = dmlc::Registry<BatchifyFunctionReg>::List();
+  *out_size = static_cast<uint32_t>(vec.size());
+  *out_array = (BatchifyFunctionCreator*)(dmlc::BeginPtr(vec));  //  NOLINT(*)
+  API_END();
+}
+
+int MXBatchifyFunctionCreateFunction(BatchifyFunctionCreator handle,
+                                     uint32_t num_param,
+                                     const char **keys,
+                                     const char **vals,
+                                     BatchifyFunctionHandle *out) {
+  BatchifyFunction *bf = nullptr;
+  API_BEGIN();
+  BatchifyFunctionReg *e = static_cast<BatchifyFunctionReg *>(handle);
+  std::vector<std::pair<std::string, std::string> > kwargs;
+  for (uint32_t i = 0; i < num_param; ++i) {
+    kwargs.emplace_back(std::string(keys[i]), std::string(vals[i]));
+  }
+  bf = e->body(kwargs);
+  *out = new BatchifyFunctionPtr(bf);
+  API_END_HANDLE_ERROR(delete bf);
+}
+
+int MXBatchifyFunctionGetFunctionInfo(BatchifyFunctionCreator creator,
+                                      const char **name,
+                                      const char **description,
+                                      uint32_t *num_args,
+                                      const char ***arg_names,
+                                      const char ***arg_type_infos,
+                                      const char ***arg_descriptions) {
+  BatchifyFunctionReg *e = static_cast<BatchifyFunctionReg *>(creator);
+  return MXAPIGetFunctionRegInfo(e, name, description, num_args,
+                                 arg_names, arg_type_infos, arg_descriptions,
+                                 nullptr);
+}
+int MXBatchifyFunctionInvoke(BatchifyFunctionHandle handle,
+                             int batch_size,
+                             int num_output,
+                             NDArrayHandle *inputs,
+                             NDArrayHandle **outputs) {
+  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
+  API_BEGIN();
+  CHECK_GT(batch_size, 0);
+  CHECK_GT(num_output, 0);
+  std::vector<std::vector<NDArray> > ndinputs;
+  ndinputs.reserve(batch_size);
+  int pos = 0;
+  for (int i = 0; i < batch_size; ++i) {
+    std::vector<NDArray> tmp;
+    tmp.reserve(num_output);
+    for (int j = 0; j < num_output; ++j) {
+      tmp.emplace_back(*reinterpret_cast<NDArray*>(inputs[pos++]));
+      tmp.back().WaitToRead();
+    }
+    ndinputs.emplace_back(tmp);
+  }
+  std::vector<NDArray> res;
+  CHECK((*static_cast<BatchifyFunctionPtr*>(handle))->Batchify(ndinputs, &res))
+    << "Error call batchify with " << ndinputs.size() << " inputs";
+  std::vector<NDArray*> ndoutputs;
+  ndoutputs.reserve(res.size());
+  if (*outputs == nullptr) {
+    for (int i = 0; i < num_output; ++i) ndoutputs.push_back(new NDArray());
+  } else {
+    CHECK_EQ(num_output, res.size())
+        << "MXBatchifyFunctionInvoke expects " << res.size() << " outputs, but "
+        << num_output << " was given.";
+    for (int i = 0; i < num_output; ++i) {
+      ndoutputs.push_back(reinterpret_cast<NDArray*>((*outputs)[i]));
+    }
+  }
+
+  // copy ndarrays
+  for (int i = 0; i < num_output; ++i) *(ndoutputs[i]) = res[i];
+
+  if (*outputs == nullptr) {
+    ret->ret_handles.clear();
+    ret->ret_handles.reserve(num_output);
+    for (int i = 0; i < num_output; ++i) {
+      ret->ret_handles.push_back(ndoutputs[i]);
+    }
+    *outputs = dmlc::BeginPtr(ret->ret_handles);
+  }
+  API_END();
+}
+
+int MXBatchifyFunctionFree(BatchifyFunctionHandle handle) {
+  API_BEGIN();
+  delete static_cast<BatchifyFunctionPtr*>(handle);
+  API_END();
+}
+//--------------------------------------------
+// Part 6: basic KVStore interface
+//--------------------------------------------
 
 int MXKVStoreCreate(const char *type,
                     KVStoreHandle *out) {
@@ -2919,8 +3160,8 @@ int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *sha
   API_END();
 }
 
-typedef Engine::VarHandle VarHandle;
-typedef Engine::CallbackOnComplete CallbackOnComplete;
+using VarHandle = Engine::VarHandle;
+using CallbackOnComplete = Engine::CallbackOnComplete;
 
 void AssertValidNumberVars(int num_const_vars, int num_mutable_vars) {
   CHECK_GE(num_const_vars, 0) << "Non-negative number of const vars expected.";

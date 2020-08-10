@@ -46,7 +46,7 @@ MXNET_REGISTER_API("_npi.cumsum")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::CumsumParam>(&attrs);
   // inputs

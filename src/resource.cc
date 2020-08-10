@@ -31,6 +31,7 @@
 #include <mxnet/resource.h>
 #include <limits>
 #include <atomic>
+#include <memory>
 #include "./common/lazy_alloc_array.h"
 #include "./common/utils.h"
 #include "./common/cuda_utils.h"
@@ -91,8 +92,7 @@ struct SpaceAllocator {
 // Implements resource manager
 class ResourceManagerImpl : public ResourceManager {
  public:
-  ResourceManagerImpl() noexcept(false)
-      : global_seed_(0) {
+  ResourceManagerImpl() noexcept(false) {
     cpu_temp_space_copy_ = dmlc::GetEnv("MXNET_CPU_TEMP_COPY", 4);
     gpu_temp_space_copy_ = dmlc::GetEnv("MXNET_GPU_TEMP_COPY", 1);
     cpu_native_rand_copy_ = dmlc::GetEnv("MXNET_CPU_PARALLEL_RAND_COPY", 1);
@@ -102,14 +102,14 @@ class ResourceManagerImpl : public ResourceManager {
 #endif  // MXNET_USE_CUDNN == 1
     engine_ref_ = Engine::_GetSharedRef();
     storage_ref_ = Storage::_GetSharedRef();
-    cpu_rand_.reset(new ResourceRandom<cpu>(
-        Context::CPU(), global_seed_));
-    cpu_space_.reset(new ResourceTempSpace<ResourceRequest::kTempSpace>(
-        Context::CPU(), cpu_temp_space_copy_));
-    cpu_parallel_rand_.reset(new ResourceParallelRandom<cpu>(
-        Context::CPU(), cpu_native_rand_copy_, global_seed_));
+    cpu_rand_ = std::make_unique<ResourceRandom<cpu>>(
+        Context::CPU(), global_seed_);
+    cpu_space_ = std::make_unique<ResourceTempSpace<ResourceRequest::kTempSpace>>(
+        Context::CPU(), cpu_temp_space_copy_);
+    cpu_parallel_rand_ = std::make_unique<ResourceParallelRandom<cpu>>(
+        Context::CPU(), cpu_native_rand_copy_, global_seed_);
   }
-  ~ResourceManagerImpl() {
+  ~ResourceManagerImpl() override {
     // need explicit delete, before engine get killed
     cpu_rand_.reset(nullptr);
     cpu_space_.reset(nullptr);
@@ -390,7 +390,7 @@ class ResourceManagerImpl : public ResourceManager {
   /*! \brief Reference to the storage */
   std::shared_ptr<Storage> storage_ref_;
   /*! \brief internal seed to the random number generator */
-  uint32_t global_seed_;
+  uint32_t global_seed_{0};
   /*! \brief CPU random number resources */
   std::unique_ptr<ResourceRandom<cpu> > cpu_rand_;
   /*! \brief CPU temp space resources */
@@ -435,7 +435,13 @@ void Resource::get_cudnn_dropout_desc(
   auto state_space = static_cast<resource::SpaceAllocator*>(ptr_);
   CHECK_EQ(state_space->ctx.dev_id, stream->dev_id)
     << "The device id of cuDNN dropout state space doesn't match that from stream.";
-  if (!state_space->handle.size) {
+  CUDNN_CALL(cudnnCreateDropoutDescriptor(dropout_desc));
+  if (dropout <= 0) {
+    CUDNN_CALL(cudnnSetDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
+                                         dropout,
+                                         nullptr,
+                                         0, seed));
+  } else if (!state_space->handle.size) {
     // not initialized yet.
     size_t dropout_state_size;
     CUDNN_CALL(cudnnDropoutGetStatesSize(stream->dnn_handle_, &dropout_state_size));

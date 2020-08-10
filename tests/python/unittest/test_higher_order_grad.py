@@ -22,7 +22,7 @@ from functools import reduce
 from operator import mul
 import random
 
-from common import with_seed
+from common import with_seed, xfail_when_nonstandard_decimal_separator
 import mxnet
 from mxnet import nd, autograd, gluon
 from mxnet.test_utils import (
@@ -163,6 +163,7 @@ def test_arccos():
         check_second_order_unary(array, arccos, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_arctan():
     def arctan(x):
@@ -214,6 +215,7 @@ def test_arccosh():
         check_second_order_unary(array, arccosh, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_arctanh():
     def arctanh(x):
@@ -276,6 +278,7 @@ def test_log():
         check_nth_order_unary(array, log, [grad_op, grad_grad_op], [1, 2])
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_log2():
     def log2(x):
@@ -290,6 +293,7 @@ def test_log2():
         check_second_order_unary(array, log2, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_log10():
     def log10(x):
@@ -304,6 +308,7 @@ def test_log10():
         check_second_order_unary(array, log10, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_square():
     def grad_grad_op(x):
@@ -415,6 +420,7 @@ def test_sigmoid():
         check_nth_order_unary(array, sigmoid, grad_grad_op, 2)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_sqrt():
     def sqrt(x):
@@ -455,6 +461,7 @@ def test_cbrt():
         check_second_order_unary(array, cbrt, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_rsqrt():
     def rsqrt(x):
@@ -475,6 +482,7 @@ def test_rsqrt():
         check_second_order_unary(array, rsqrt, grad_grad_op)
 
 
+@xfail_when_nonstandard_decimal_separator
 @with_seed()
 def test_rcbrt():
     def rcbrt(x):
@@ -620,8 +628,7 @@ def test_dense_backward_flatten():
     for x in NDArrayGenerator(4,2):
         hidden = random.randrange(1, 4)
         net = gluon.nn.Sequential()
-        with net.name_scope():
-            net.add(gluon.nn.Dense(hidden, flatten=True))
+        net.add(gluon.nn.Dense(hidden, flatten=True))
         net.initialize(mxnet.initializer.Constant(.5))
         x.attach_grad()
         with autograd.record():
@@ -665,8 +672,7 @@ def test_dense_backward_no_flatten():
     for x in NDArrayGenerator(5,3):
         hidden = random.randrange(1, 4)
         net = gluon.nn.Sequential()
-        with net.name_scope():
-            net.add(gluon.nn.Dense(hidden, flatten=False))
+        net.add(gluon.nn.Dense(hidden, flatten=False))
         net.initialize(mxnet.initializer.Constant(.5))
         x.attach_grad()
         with autograd.record():

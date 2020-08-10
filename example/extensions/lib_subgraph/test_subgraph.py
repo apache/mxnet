@@ -49,32 +49,31 @@ d2 = mx.sym.exp(a)
 sym2 = mx.sym.log(d2)
 
 def test(backend):
+    args = {'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))}
     ###############################################
     # Test with subgraph not consuming params
     ###############################################
     #execute in MXNet
     print('-------------------------------')
     print('Testing regular MXNet execution')
-    exe = sym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    exe = sym.bind(ctx=mx.cpu(), args=args)
     out = exe.forward()
     print(out)
 
     # with propogating shapes/types
     print('-------------------------------')
     print('Testing %s partitioning with shapes/types' % backend)
-    arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
-    mysym2 = sym.optimize_for(backend,arg_array)
+    mysym2 = sym.optimize_for(backend,args)
     print(mysym2.tojson())
-    exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    exe2 = mysym2.bind(ctx=mx.cpu(), args=args)
     out2 = exe2.forward()
     print(out2)
 
     # with propogating shapes/types, rejecting subgraph
     print('-------------------------------')
     print('Testing %s partitioning with shapes/types - rejecting subgraph' % backend)
-    arg_array = [mx.nd.ones((3,2),dtype='float32'), mx.nd.ones((3,2),dtype='float32')]
-    mysym2 = sym.optimize_for(backend, arg_array, reject=True)
-    exe2 = mysym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    mysym2 = sym.optimize_for(backend, args, reject=True)
+    exe2 = mysym2.bind(ctx=mx.cpu(), args=args)
     out2 = exe2.forward()
     print(out2)
 
@@ -82,7 +81,7 @@ def test(backend):
     print('-------------------------------')
     print('Testing %s partitioning without shapes/types' % backend)
     mysym3 = sym.optimize_for(backend, myOpt='yello')
-    exe3 = mysym3.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
+    exe3 = mysym3.bind(ctx=mx.cpu(), args=args)
     out3 = exe3.forward()
     print(out3)
 
@@ -108,20 +107,20 @@ def test(backend):
     ###############################################
     # Test with subgraph directly consuming params
     ###############################################
+    args = {'a':mx.nd.ones((3,2))}
     #execute in MXNet
     print('-------------------------------')
     print('Testing regular MXNet execution')
-    exe5 = sym2.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
+    exe5 = sym2.bind(ctx=mx.cpu(), args=args)
     out5 = exe5.forward()
     print(out5)
 
     # with propogating shapes/types
     print('-------------------------------')
     print('Testing %s partitioning with shapes/types' % backend)
-    arg_array = [mx.nd.ones((3,2),dtype='float32')]
-    mysym6 = sym2.optimize_for(backend, arg_array, reqArgs=True)
+    mysym6 = sym2.optimize_for(backend, args, reqArgs=True)
     print(mysym6.tojson())
-    exe6 = mysym6.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
+    exe6 = mysym6.bind(ctx=mx.cpu(), args=args)
     out6 = exe6.forward()
     print(out6)
 
@@ -129,7 +128,7 @@ def test(backend):
     print('-------------------------------')
     print('Testing %s partitioning without shapes/types' % backend)
     mysym7 = sym2.optimize_for(backend, reqArgs=True)
-    exe7 = mysym7.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2))})
+    exe7 = mysym7.bind(ctx=mx.cpu(), args=args)
     out7 = exe7.forward()
     print(out7)
 
