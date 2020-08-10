@@ -953,7 +953,7 @@ inline int GetDefaultDtype(int dtype) {
 inline bool AlignedMemAlloc(void** ptr, size_t size, size_t alignment) {
 #if _MSC_VER
   *ptr = _aligned_malloc(size, alignment);
-  if(*ptr == nullptr)
+  if (*ptr == nullptr)
     return false;
 #else
   int res = posix_memalign(ptr, alignment, size);

@@ -59,7 +59,7 @@ TEST(Storage, CPU_MemAlign) {
   auto&& storage = mxnet::Storage::Get();
   mxnet::Context context_cpu = mxnet::Context::CPU(0);
 
-  for(int i=0; i < 5; ++i) {
+  for (int i = 0; i < 5; ++i) {
     const size_t kSize = (std::rand() % 1024) + 1;
     auto&& handle = storage->Alloc(kSize, context_cpu);
     EXPECT_EQ(handle.ctx, context_cpu);

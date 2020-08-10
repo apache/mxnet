@@ -117,7 +117,7 @@ class ContextHelperCPU : public ContextHelper {
 
   void Free(void *dptr) const override {
     mxnet::common::AlignedMemFree(dptr);
- }
+  }
 
  private:
 #if MXNET_USE_MKLDNN == 1
