@@ -201,16 +201,6 @@ class CuDNNDeconvolutionOp {
         req[deconv::kData] == kAddTo ? 1.0f : 0.0f;
       typename DataType<DType>::ScaleType weight_beta =
         req[deconv::kWeight] == kAddTo ? 1.0f : 0.0f;
-      if (!param_.no_bias && (req[deconv::kBias] != kNullOp)) {
-        Tensor<gpu, 1, DType> gbias = in_grad[deconv::kBias].get<gpu, 1, DType>(s);
-        CUDNN_CALL(cudnnConvolutionBackwardBias(s->dnn_handle_,
-                                                &alpha,
-                                                out_desc_,
-                                                grad_ptr + out_offset_ * g,
-                                                &bias_beta,
-                                                bias_desc_,
-                                                gbias.dptr_ + bias_offset_ * g));
-      }
       if (req[deconv::kWeight] != kNullOp) {
        CHECK_EQ(add_to_weight_, req[deconv::kWeight] == kAddTo);
         CUDNN_CALL(cudnnConvolutionBackwardFilter(
@@ -227,6 +217,16 @@ class CuDNNDeconvolutionOp {
           &weight_beta,
           filter_desc_,
           gwmat_ptr + weight_offset_ * g));
+      }
+      if (!param_.no_bias && (req[deconv::kBias] != kNullOp)) {
+        Tensor<gpu, 1, DType> gbias = in_grad[deconv::kBias].get<gpu, 1, DType>(s);
+        CUDNN_CALL(cudnnConvolutionBackwardBias(s->dnn_handle_,
+                                                &alpha,
+                                                out_desc_,
+                                                grad_ptr + out_offset_ * g,
+                                                &bias_beta,
+                                                bias_desc_,
+                                                gbias.dptr_ + bias_offset_ * g));
       }
       if (req[deconv::kData] != kNullOp) {
         CUDNN_CALL(cudnnConvolutionForward(s->dnn_handle_,
@@ -460,13 +460,14 @@ class CuDNNDeconvolutionOp {
     if (!param_.no_bias) {
       mxnet::TShape bias = in_shape[deconv::kBias];
       bias_offset_ = bias[0] / param_.num_group;
+      int bias_dim = static_cast<int>(bias_offset_);
       std::vector<int> bias_shape = {1,
-                                     static_cast<int>(bias[0] / param_.num_group),
+                                     bias_dim,
                                      1, 1};
-      std::vector<int> bias_stride = {static_cast<int>(bias_offset_), 1, 1, 1};
+      std::vector<int> bias_stride = {bias_dim, 1, bias_dim, bias_dim};
       if (param_.kernel.ndim() == 3) {
         bias_shape.push_back(1);
-        bias_stride.push_back(1);
+        bias_stride.push_back(bias_dim);
       }
       CUDNN_CALL(cudnnSetTensorNdDescriptor(bias_desc_,
                                             dtype_,

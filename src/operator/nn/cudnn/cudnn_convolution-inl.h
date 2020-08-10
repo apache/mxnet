@@ -212,16 +212,6 @@ class CuDNNConvolutionOp {
     typename DataType<DType>::ScaleType alpha = 1.0f;
     typename DataType<DType>::ScaleType beta = 0.0f;
     typename DataType<DType>::ScaleType beta_add = 1.0f;
-    if (!param_.no_bias && (req[conv::kBias] != kNullOp)) {
-        Tensor<gpu, 1, DType> gbias = in_grad[conv::kBias].get<gpu, 1, DType>(s);
-        CUDNN_CALL(cudnnConvolutionBackwardBias(s->dnn_handle_,
-                                            &alpha,
-                                            out_desc_,
-                                            grad_ptr,
-                                            req[conv::kBias] == kAddTo ? &beta_add : &beta,
-                                            bias_desc_,
-                                            gbias.dptr_));
-    }
     if (req[conv::kWeight] != kNullOp) {
         CHECK_EQ(add_to_weight_, req[conv::kWeight] == kAddTo);
         CUDNN_CALL(cudnnConvolutionBackwardFilter(s->dnn_handle_,
@@ -237,6 +227,16 @@ class CuDNNConvolutionOp {
             req[conv::kWeight] == kAddTo? &beta_add : &beta,
             filter_desc_,
             gwmat_ptr));
+    }
+    if (!param_.no_bias && (req[conv::kBias] != kNullOp)) {
+        Tensor<gpu, 1, DType> gbias = in_grad[conv::kBias].get<gpu, 1, DType>(s);
+        CUDNN_CALL(cudnnConvolutionBackwardBias(s->dnn_handle_,
+                                            &alpha,
+                                            out_desc_,
+                                            grad_ptr,
+                                            req[conv::kBias] == kAddTo ? &beta_add : &beta,
+                                            bias_desc_,
+                                            gbias.dptr_));
     }
     if (req[conv::kData] != kNullOp) {
         CUDNN_CALL(cudnnConvolutionBackwardData(s_dgrad.GetStream()->dnn_handle_,
@@ -459,13 +459,14 @@ class CuDNNConvolutionOp {
 
     if (!param_.no_bias) {
       mxnet::TShape bias = in_shape[conv::kBias];
+      int bias_dim = static_cast<int>(bias[0]);
       std::vector<int> bias_shape = {1,
-                                     static_cast<int>(bias[0]),
+                                     bias_dim,
                                      1, 1};
-      std::vector<int> bias_stride = {static_cast<int>(bias[0]), 1, 1, 1};
+      std::vector<int> bias_stride = {bias_dim, 1, bias_dim, bias_dim};
       if (param_.kernel.ndim() == 3) {
         bias_shape.push_back(1);
-        bias_stride.push_back(1);
+        bias_stride.push_back(bias_dim);
       }
       CUDNN_CALL(cudnnSetTensorNdDescriptor(bias_desc_,
                                           dtype_,
