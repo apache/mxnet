@@ -1520,7 +1520,7 @@ class Registry {
   MX_STR_CONCAT(MX_REGISTER_PASS_DEF_(Name), __COUNTER__) = \
     Registry<CustomPass>::get()->add(MX_TOSTRING(Name))
 
-/* \brief Class to store error messages from extensions to pass to MXNet */ 
+/* \brief Class to store error messages from extensions to pass to MXNet */
 class MXerrorMsgs {
  public:
   /*!
