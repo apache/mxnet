@@ -38,7 +38,7 @@ except ImportError:
 
 __all__ = ['zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'empty_like', 'bitwise_not', 'invert',
            'delete', 'add', 'broadcast_to', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod',
-           'power', 'arctan2', 'trace', 'transpose',
+           'power', 'arctan2', 'trace', 'transpose', 'copy', 'moveaxis', 'reshape', 'dot',
            'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp',
            'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log', 'degrees', 'log2', 'log1p', 'matmul', 'median',
            'rint', 'radians', 'reciprocal', 'square', 'negative', 'fix', 'ceil', 'floor', 'histogram', 'insert',
@@ -354,7 +354,7 @@ class _Symbol(Symbol):
         return self.transpose()
     # pylint: enable= invalid-name, undefined-variable
 
-    def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):  # pylint: disable=arguments-differ,unused-argument,too-many-arguments
+    def astype(self, dtype, order='K', casting='unsafe', subok=True, copy=True):  # pylint: disable=arguments-differ,unused-argument,too-many-arguments,redefined-outer-name
         """
         Copy of the array, cast to a specified type.
 
@@ -414,7 +414,7 @@ class _Symbol(Symbol):
     def dot(self, b, out=None):
         """Dot product of two arrays.
         Refer to ``numpy.dot`` for full documentation."""
-        return _mx_np_op.dot(self, b, out=out)
+        return _npi.dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Returns a copy of the array with a new shape.
@@ -1822,6 +1822,67 @@ def sort(a, axis=-1, kind=None, order=None):
 
     return _npi.sort(data=a, axis=axis, is_ascend=True)
 
+@set_module('mxnet.symbol.numpy')
+def dot(a, b, out=None):
+    """
+    Dot product of two arrays. Specifically,
+
+    - If both `a` and `b` are 1-D arrays, it is inner product of vectors
+
+    - If both `a` and `b` are 2-D arrays, it is matrix multiplication,
+
+    - If either `a` or `b` is 0-D (scalar), it is equivalent to :func:`multiply`
+      and using ``np.multiply(a, b)`` or ``a * b`` is preferred.
+
+    - If `a` is an N-D array and `b` is a 1-D array, it is a sum product over
+      the last axis of `a` and `b`.
+
+    - If `a` is an N-D array and `b` is a 2-D array, it is a
+      sum product over the last axis of `a` and the second-to-last axis of `b`::
+
+        dot(a, b)[i,j,k] = sum(a[i,j,:] * b[:,k])
+
+    Parameters
+    ----------
+    a : _Symbol
+        First argument.
+    b : _Symbol
+        Second argument.
+
+    out : _Symbol, optional
+        Output argument. It must have the same shape and type as the expected output.
+
+    Returns
+    -------
+    output : _Symbol
+        Returns the dot product of `a` and `b`.  If `a` and `b` are both
+        scalars or both 1-D arrays then a scalar is returned; otherwise
+        an array is returned.
+        If `out` is given, then it is returned
+
+    Examples
+    --------
+    >>> a = np.array(3)
+    >>> b = np.array(4)
+    >>> np.dot(a, b)
+    array(12.)
+
+    For 2-D arrays it is the matrix product:
+
+    >>> a = np.array([[1, 0], [0, 1]])
+    >>> b = np.array([[4, 1], [2, 2]])
+    >>> np.dot(a, b)
+    array([[4., 1.],
+           [2., 2.]])
+
+    >>> a = np.arange(3*4*5*6).reshape((3,4,5,6))
+    >>> b = np.arange(5*6)[::-1].reshape((6,5))
+    >>> np.dot(a, b)[2,3,2,2]
+    array(29884.)
+    >>> np.sum(a[2,3,2,:] * b[:,2])
+    array(29884.)
+    """
+    return _npi.dot(a, b, out=out)
 
 @set_module('mxnet.symbol.numpy')
 def tensordot(a, b, axes=2):
@@ -5219,7 +5280,7 @@ def ravel(x, order='C'):
     if isinstance(x, numeric_types):
         return _np.reshape(x, -1)
     elif isinstance(x, _Symbol):
-        return _npi.reshape(x, -1)
+        return reshape(x, -1)
     else:
         raise TypeError('type {} not supported'.format(str(type(x))))
 
@@ -7113,7 +7174,7 @@ def resize(a, new_shape):
     """
     return _npi.resize_fallback(a, new_shape=new_shape)
 
-
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.symbol.numpy')
 def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
     """
@@ -7879,6 +7940,142 @@ def cumsum(a, axis=None, dtype=None, out=None):
     """
     return _npi.cumsum(a, axis=axis, dtype=dtype, out=out)
 
+@set_module('mxnet.symbol.numpy')
+def reshape(a, newshape, reverse=False, order='C'):
+    """
+    Gives a new shape to an array without changing its data.
+    This function always returns a copy of the input array if
+    ``out`` is not provided.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Array to be reshaped.
+
+    newshape : int or tuple of ints
+        The new shape should be compatible with the original shape. If
+        an integer, then the result will be a 1-D array of that length.
+        One shape dimension can be -1. In this case, the value is
+        inferred from the length of the array and remaining dimensions.
+
+    order : {'C'}, optional
+        Read the elements of `a` using this index order, and place the
+        elements into the reshaped array using this index order.  'C'
+        means to read / write the elements using C-like index order,
+        with the last axis index changing fastest, back to the first
+        axis index changing slowest. Other order types such as 'F'/'A'
+        may be added in the future.
+
+    Returns
+    -------
+    reshaped_array : _Symbol
+        It will be always a copy of the original array. This behavior is different
+        from the official NumPy ``reshape`` operator where views of the original array may be
+        generated.
+
+    See Also
+    --------
+    ndarray.reshape : Equivalent method.
+
+    Examples
+    --------
+    >>> a = np.arange(6).reshape((3, 2))
+    >>> a
+    array([[0., 1.],
+           [2., 3.],
+           [4., 5.]])
+
+    >>> np.reshape(a, (2, 3)) # C-like index ordering
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+
+    >>> np.reshape(np.ravel(a), (2, 3)) # equivalent to C ravel then C reshape
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+
+    >>> a = np.array([[1,2,3], [4,5,6]])
+    >>> np.reshape(a, 6)
+    array([1., 2., 3., 4., 5., 6.])
+
+    >>> np.reshape(a, (3,-1))       # the unspecified value is inferred to be 2
+    array([[1., 2.],
+           [3., 4.],
+           [5., 6.]])
+    """
+    return _npi.reshape(a, newshape, reverse, order)
+
+@set_module('mxnet.symbol.numpy')
+def moveaxis(a, source, destination):
+    """Move axes of an array to new positions.
+    Other axes remain in their original order.
+
+    Parameters
+    ----------
+    a : _Symbol
+        The array whose axes should be reordered.
+        source : int or sequence of int
+        Original positions of the axes to move. These must be unique.
+        destination : int or sequence of int
+        Destination positions for each of the original axes. These must also be
+        unique.
+
+    Returns
+    -------
+    result : _Symbol
+        Array with moved axes. This array is a view of the input array.
+
+    See Also
+    --------
+        transpose: Permute the dimensions of an array.
+        swapaxes: Interchange two axes of an array.
+
+    Examples
+    --------
+    >>> x = np.zeros((3, 4, 5))
+    >>> np.moveaxis(x, 0, -1).shape
+    (4, 5, 3)
+    >>> np.moveaxis(x, -1, 0).shape
+    (5, 3, 4)
+    These all achieve the same result:
+    >>> np.transpose(x).shape
+    (5, 4, 3)
+    >>> np.swapaxes(x, 0, -1).shape
+    (5, 4, 3)
+    >>> np.moveaxis(x, [0, 1], [-1, -2]).shape
+    (5, 4, 3)
+    >>> np.moveaxis(x, [0, 1, 2], [-1, -2, -3]).shape
+    (5, 4, 3)
+    """
+    return _npi.moveaxis(a, source, destination)
+
+@set_module('mxnet.symbol.numpy')
+def copy(a):  # pylint: disable=redefined-outer-name
+    """
+    Return an array copy of the given object.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+
+    Returns
+    -------
+    arr : _Symbol
+        Array interpretation of a.
+
+    -----
+    Examples
+    --------
+    >>> x = np.array([1, 2, 3])
+    >>> y = x
+    >>> z = np.copy(x)
+    >>> x[0] = 10
+    >>> x[0] == y[0]
+        True
+    >>> x[0] == z[0]
+        False
+    """
+    return _npi.copy(a)
 
 @set_module('mxnet.symbol.numpy')
 def rollaxis(a, axis, start=0):
@@ -7887,7 +8084,7 @@ def rollaxis(a, axis, start=0):
 
     Parameters
     ----------
-    a : ndarray
+    a : _Symbol
         Input array.
     axis : integer
         The axis to roll backwards. The positions of the other axes do not
@@ -7898,7 +8095,7 @@ def rollaxis(a, axis, start=0):
 
     Returns
     -------
-    res : ndarray
+    res : _Symbol
         A view after applying rollaxis to `a` is returned.
 
     -----

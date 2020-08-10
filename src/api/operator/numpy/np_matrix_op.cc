@@ -519,6 +519,61 @@ MXNET_REGISTER_API("_npi.rollaxis")
   *ret = ndoutputs[0];
 });
 
+MXNET_REGISTER_API("_npi.reshape")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_reshape");
+  nnvm::NodeAttrs attrs;
+  op::NumpyXReshapeParam param;
+  if (args[1].type_code() == kNull) {
+    param.newshape = TShape(-1, 0);
+  } else if (args[1].type_code() == kDLInt) {
+    param.newshape = TShape(1, args[1].operator int64_t());
+  } else {
+    param.newshape = TShape(args[1].operator ObjectRef());
+  }
+  param.reverse = args[2].operator bool();
+  param.order = args[3].operator std::string();
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::NumpyXReshapeParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
+MXNET_REGISTER_API("_npi.moveaxis")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_moveaxis");
+  nnvm::NodeAttrs attrs;
+  op::NumpyMoveaxisParam param;
+  if (args[1].type_code() == kNull) {
+    param.source = TShape(-1, 0);
+  } else if (args[1].type_code() == kDLInt) {
+    param.source = TShape(1, args[1].operator int64_t());
+  } else {
+    param.source = TShape(args[1].operator ObjectRef());
+  }
+  if (args[2].type_code() == kNull) {
+    param.destination = TShape(-1, 0);
+  } else if (args[2].type_code() == kDLInt) {
+    param.destination = TShape(1, args[2].operator int64_t());
+  } else {
+    param.destination = TShape(args[2].operator ObjectRef());
+  }
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::NumpyMoveaxisParam>(&attrs);
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
 MXNET_REGISTER_API("_npi.diagonal")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;
