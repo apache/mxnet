@@ -24,6 +24,7 @@
  */
 
 #include <iostream>
+#include <utility>
 #include "lib_api.h"
 
 void transpose(MXTensor& src, MXTensor& dst, const OpResource& res) {
@@ -151,19 +152,19 @@ REGISTER_OP(my_transposecsr)
 class MyStatefulTransposeCSR : public CustomStatefulOp {
   public:
     explicit MyStatefulTransposeCSR(int count,
-                                    const std::unordered_map<std::string, std::string>& attrs)
-      : count(count), attrs_(attrs) {}
+                                    std::unordered_map<std::string, std::string>  attrs)
+      : count(count), attrs_(std::move(attrs)) {}
 
     MXReturnValue Forward(std::vector<MXTensor>* inputs,
                           std::vector<MXTensor>* outputs,
-                          const OpResource& op_res) {
+                          const OpResource& op_res) override {
       std::cout << "Info: keyword + number of forward: " << ++count << std::endl;
       return forward(attrs_, inputs, outputs, op_res);
     }
 
     MXReturnValue Backward(std::vector<MXTensor>* inputs,
                            std::vector<MXTensor>* outputs,
-                           const OpResource& op_res) {
+                           const OpResource& op_res) override {
       return backward(attrs_, inputs, outputs, op_res);
     }
 

@@ -87,6 +87,7 @@ Examples::
   norm(csr) = [5.47722578]
 
 )code" ADD_FILELINE)
+.add_alias("_npx_norm")
 .set_num_inputs(1)
 .set_num_outputs(1)
 .set_attr_parser(ParamParser<NormParam>)

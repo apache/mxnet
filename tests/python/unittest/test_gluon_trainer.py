@@ -36,7 +36,7 @@ def test_multi_trainer():
     x = gluon.Parameter('x', shape=(10,), stype='row_sparse')
     x.initialize()
     # test set trainer
-    trainer0 = gluon.Trainer([x], 'sgd')
+    trainer0 = gluon.Trainer({'x':x}, 'sgd')
     assert(x._trainer() is trainer0)
     # test unset trainer
     x._set_trainer(None)
@@ -44,13 +44,13 @@ def test_multi_trainer():
     x._set_trainer(trainer0)
     with pytest.raises(RuntimeError):
         # multiple trainers for a sparse Parameter is not allowed
-        trainer1 = gluon.Trainer([x], 'sgd')
+        trainer1 = gluon.Trainer({'x':x}, 'sgd')
 
 @with_seed()
 def test_trainer_with_sparse_grad_on_single_context():
     x = gluon.Parameter('x', shape=(10,), grad_stype='row_sparse')
     x.initialize(ctx=[mx.cpu(0)], init='zeros')
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
+    trainer = gluon.Trainer({'x':x}, 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
     with mx.autograd.record():
         for w in x.list_data():
             y = w + 1
@@ -66,7 +66,7 @@ def test_trainer_with_teststore():
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
     kv = mx.kv.create('teststore')
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5}, kvstore=kv)
+    trainer = gluon.Trainer({'x':x}, 'sgd', {'learning_rate': 1.0, 'momentum': 0.5}, kvstore=kv)
     with mx.autograd.record():
         for w in x.list_data():
             y = w + 1
@@ -77,14 +77,14 @@ def test_trainer_with_teststore():
     assert (x.data(mx.cpu(1)).asnumpy() == -2).all()
     # Expect exceptions if update_on_kvstore is set to True,
     # because TestStore does not support that
-    invalid_trainer = gluon.Trainer([x], 'sgd', kvstore=kv, update_on_kvstore=True)
+    invalid_trainer = gluon.Trainer({'x':x}, 'sgd', kvstore=kv, update_on_kvstore=True)
     pytest.raises(ValueError, invalid_trainer._init_kvstore)
 
 @with_seed()
 def test_trainer():
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
+    trainer = gluon.Trainer({'x':x}, 'sgd', {'learning_rate': 1.0, 'momentum': 0.5})
     with mx.autograd.record():
         for w in x.list_data():
             y = w + 1
@@ -119,7 +119,7 @@ def test_trainer():
 
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-    trainer2 = gluon.Trainer([x], 'sgd', {'learning_rate': 1.0, 'momentum': 0.5},
+    trainer2 = gluon.Trainer({'x':x}, 'sgd', {'learning_rate': 1.0, 'momentum': 0.5},
                              update_on_kvstore=False)
     with mx.autograd.record():
         for i, w in enumerate(x.list_data()):
@@ -139,7 +139,7 @@ def test_trainer_save_load():
 
     x = gluon.Parameter('x', shape=(10,), lr_mult=1.0)
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
+    trainer = gluon.Trainer({'x':x}, 'sgd', {'learning_rate': 0.1})
     with mx.autograd.record():
         for w in x.list_data():
             y = w + 1
@@ -158,7 +158,7 @@ def test_trainer_sparse_save_load():
     x = gluon.Parameter('x', shape=(10, 1), lr_mult=1.0,
                         stype='row_sparse', grad_stype='row_sparse')
     x.initialize(ctx=[mx.cpu(0)], init='zeros')
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1})
+    trainer = gluon.Trainer({'x':x}, 'sgd', {'learning_rate': 0.1})
     all_rows = mx.nd.arange(0, 10, ctx=mx.cpu(0))
     with mx.autograd.record():
         for w in x.list_row_sparse_data(all_rows):
@@ -257,7 +257,7 @@ def test_trainer_sparse_kv():
     def check_trainer_sparse_kv(kv, stype, grad_stype, update_on_kv, expected):
         x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
         x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
-        trainer = gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},
+        trainer = gluon.Trainer({'x':x}, 'sgd', {'learning_rate': 0.1},
                                 kvstore=kv, update_on_kvstore=update_on_kv)
         all_rows = mx.nd.arange(0, 10, ctx=mx.cpu(0))
         try:
@@ -297,7 +297,7 @@ def test_trainer_lr_sched():
     factor = 0.1
     lr = 1
     lr_sched = mx.lr_scheduler.FactorScheduler(freq, factor=factor, base_lr=lr)
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': lr, 'lr_scheduler': lr_sched})
+    trainer = gluon.Trainer({'x':x}, 'sgd', {'learning_rate': lr, 'lr_scheduler': lr_sched})
     for i in range(10):
         with mx.autograd.record():
             for w in x.list_data():
@@ -316,7 +316,7 @@ def test_trainer_lr_sched():
     factor = 0.1
     lr = 1
     lr_sched = mx.lr_scheduler.FactorScheduler(freq, factor=factor, base_lr=lr)
-    trainer = gluon.Trainer([x], 'sgd', {'learning_rate': lr, 'lr_scheduler': lr_sched},
+    trainer = gluon.Trainer({'x':x}, 'sgd', {'learning_rate': lr, 'lr_scheduler': lr_sched},
                             update_on_kvstore=False)
     for i in range(10):
         with mx.autograd.record():
@@ -359,3 +359,43 @@ def test_trainer_allreduce_hybridsequential():
             out = net(mx.nd.ones((1, 1), ctx=ctx))
         out.backward()
     trainer.allreduce_grads()
+
+
+def test_trainer_share_parameters():
+    class Net(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            self.dense1 = gluon.nn.Dense(5, in_units=2, use_bias=False)
+            params = self.dense1.collect_params()
+            self.dense2 = gluon.nn.Dense(5, in_units=2,
+                                         use_bias=False).share_parameters(params)
+            self.dense3 = gluon.nn.Dense(5, in_units=5, use_bias=False)
+
+        def forward(self, x):
+            hidden = self.dense1(x) + self.dense2(x)
+            out = self.dense3(hidden)
+            return out
+
+    net = Net()
+    ctxes = [mx.cpu(0), mx.cpu(1)]
+    net.initialize(mx.init.One(), ctx=ctxes)
+    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 1})
+    data = mx.nd.array([[1, 1], [1, 1]])
+    xs = gluon.utils.split_and_load(data, ctxes)
+    ys = []
+    with mx.autograd.record():
+        for x in xs:
+            y = net(x)
+            ys.append(y)
+    for y in ys:
+        y.backward()
+    trainer.step(1)
+    params = net.collect_params()
+    shared_params = []
+    for param in params.values():
+        p = param.data(mx.cpu(0)).asnumpy()
+        if p.shape[1] == 2:
+            shared_params.append(p)
+
+    assert((shared_params[0] == shared_params[1]).all())
+

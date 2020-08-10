@@ -148,4 +148,4 @@ for epoch in range(10):
 ## Next steps
 
 Now you have completed training and predicting with a neural network by using NP on MXNet and
-Gluon. You can check the guides to these two front ends: [What is NP on MXNet](../deepnumpy/index.html) and [gluon](../gluon_from_experiment_to_deployment.md).
+Gluon. You can check the guides to these two front ends: [What is NP on MXNet](../np/index.html) and [gluon](../gluon_from_experiment_to_deployment.md).

@@ -33,6 +33,7 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, run_in_spawned_process
 from test_gluon import *
 from test_loss import *
+from test_numpy_loss import *
 from test_gluon_rnn import *
 
 set_default_context(mx.gpu(0))

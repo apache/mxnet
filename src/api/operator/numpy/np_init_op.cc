@@ -47,7 +47,7 @@ MXNET_REGISTER_API("_npi.zeros")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::InitOpParam>(&attrs);
   if (args[2].type_code() != kNull) {
@@ -70,7 +70,7 @@ MXNET_REGISTER_API("_npi.full_like")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[2].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
@@ -107,7 +107,7 @@ MXNET_REGISTER_API("_npi.indices")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::IndicesOpParam>(&attrs);
   // param.ctx
@@ -223,7 +223,7 @@ MXNET_REGISTER_API("_npi.arange")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::RangeParam>(&attrs);
   if (args[4].type_code() != kNull) {
@@ -252,7 +252,7 @@ MXNET_REGISTER_API("_npi.eye")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyEyeParam>(&attrs);
   if (args[3].type_code() != kNull) {
@@ -282,7 +282,7 @@ MXNET_REGISTER_API("_npi.linspace")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[5].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::LinspaceParam>(&attrs);
   if (args[4].type_code() != kNull) {
@@ -317,7 +317,7 @@ MXNET_REGISTER_API("_npi.logspace")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[6].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::LogspaceParam>(&attrs);
   if (args[5].type_code() != kNull) {
@@ -344,7 +344,7 @@ MXNET_REGISTER_API("_npi.ones")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   if (args[2].type_code() != kNull) {
     attrs.dict["ctx"] = args[2].operator std::string();
@@ -372,7 +372,7 @@ MXNET_REGISTER_API("_npi.full")
     param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
   param.value = args[2].operator double();
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
@@ -401,7 +401,7 @@ MXNET_REGISTER_API("_npi.identity")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[1].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   if (args[2].type_code() != kNull) {
     attrs.dict["ctx"] = args[2].operator std::string();

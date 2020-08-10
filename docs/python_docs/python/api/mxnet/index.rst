@@ -32,7 +32,6 @@ mxnet
     mxnet.contrib
     mxnet.engine
     mxnet.executor
-    mxnet.executor_manager
     mxnet.gluon
     mxnet.image
     mxnet.initializer

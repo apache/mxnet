@@ -1,0 +1,20 @@
+name: Greetings
+
+on: [pull_request, issues]
+
+jobs:
+  greeting:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/first-interaction@v1
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        issue-message: |
+          Welcome to Apache MXNet (incubating)! We are on a mission to democratize AI, and we are glad that you are contributing to it by opening this issue.
+          Please make sure to include all the relevant context, and one of the @apache/mxnet-committers will be here shortly.
+          If you are interested in contributing to our project, let us know! Also, be sure to check out our guide on [contributing to MXNet](https://mxnet.apache.org/community/contribute) and our [development guides wiki](https://cwiki.apache.org/confluence/display/MXNET/Developments).
+        pr-message: |
+          Welcome to Apache MXNet (incubating)! We are on a mission to democratize AI, and we are glad that you are contributing to it by opening this pull request.
+          Please make sure that the changes are covered by tests. One of the @apache/mxnet-committers will be here shortly.
+          If you run into any issue with the CI and tests, we recommend that you first check out our guide on [developer guides wiki](https://cwiki.apache.org/confluence/display/MXNET/Developments).
+          Let our @apache/mxnet-committers know if you need any help!
