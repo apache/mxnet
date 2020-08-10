@@ -45,6 +45,7 @@
 #include <stdexcept>
 #include <functional>
 #include <random>
+#include <sstream>
 
 #if defined(__NVCC__)
   #include <curand_kernel.h>
@@ -1519,6 +1520,43 @@ class Registry {
   MX_STR_CONCAT(MX_REGISTER_PASS_DEF_(Name), __COUNTER__) = \
     Registry<CustomPass>::get()->add(MX_TOSTRING(Name))
 
+
+ 
+class MXerrorMsgs {
+ public:
+  /*!
+   * \brief get singleton pointer to class
+   * \returns pointer to class
+   */
+  static MXerrorMsgs* get() {
+    static MXerrorMsgs inst;
+    return &inst;
+  }
+  /*!
+   * \brief add a new error message
+   */
+  std::stringstream& add(const char* file, int line) {
+    messages.push_back(std::stringstream());
+    messages.back() << file << "[" << line << "]: ";
+    return messages.back();
+  }
+  int size() {
+    return messages.size();
+  }
+  const std::string* get(int idx) {
+    return new std::string(messages.at(idx).str());
+  }
+
+ private:
+  /*! \brief constructor */
+  MXerrorMsgs() {}
+  /*! \brief destructor */
+  ~MXerrorMsgs() {}
+  /*! \brief map of entries in registry */
+  std::vector<std::stringstream> messages;
+};
+#define MX_ERROR_MSG MXerrorMsgs::get()->add(__FILE__,__LINE__)
+ 
 /* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
 /*!
@@ -1697,6 +1735,12 @@ typedef int (*initialize_t)(int version);
 
 #define MXLIB_OPVERSION_STR "_opVersion"
 typedef int (*opVersion_t)();
+
+#define MXLIB_MSGSIZE_STR "_msgSize"
+typedef int (*msgSize_t)(void);
+
+#define MXLIB_MSGGET_STR "_msgGet"
+typedef int (*msgGet_t)(int idx, const char** msg);
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #define MX_INT_RET  __declspec(dllexport) int __cdecl
@@ -2386,5 +2430,14 @@ extern "C" {
   mxnet::ext::MXReturnValue
 #endif
   initialize(int version);
+
+  MX_INT_RET _msgSize() {
+    return mxnet::ext::MXerrorMsgs::get()->size();
+  }
+
+  /*! \brief returns operator registration at specified index */
+  MX_VOID_RET _msgGet(int idx, const char** msg) {
+    *msg = mxnet::ext::MXerrorMsgs::get()->get(idx)->c_str();
+  }
 }  // extern "C"
 #endif  // MXNET_LIB_API_H_

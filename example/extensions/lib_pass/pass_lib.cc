@@ -48,7 +48,7 @@ MXReturnValue initialize(int version) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {
-    std::cout << "MXNet version " << version << " not supported" << std::endl;
+    MX_ERROR_MSG << "MXNet version " << version << " not supported" << std::endl;
     return MX_FAIL;
   }
 }

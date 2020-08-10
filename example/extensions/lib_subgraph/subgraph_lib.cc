@@ -100,7 +100,7 @@ MXReturnValue myExecutor(std::vector<MXTensor>* inputs,
       // set tensor for this node so we can read it later
       node->tensor = &data.back();
     } else {
-      std::cout << "Error! Unsupported op '" << node->op << "' found in myExecutor";
+      MX_ERROR_MSG << "Error! Unsupported op '" << node->op << "' found in myExecutor";
       // free allocated temporary storage
       for (void* ptr : to_free)
         free(ptr);  // NOLINT
@@ -326,7 +326,7 @@ MXReturnValue initialize(int version) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {
-    std::cout << "MXNet version " << version << " not supported" << std::endl;
+    MX_ERROR_MSG << "MXNet version " << version << " not supported by custom library" << std::endl;
     return MX_FAIL;
   }
 }
