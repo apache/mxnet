@@ -1520,8 +1520,7 @@ class Registry {
   MX_STR_CONCAT(MX_REGISTER_PASS_DEF_(Name), __COUNTER__) = \
     Registry<CustomPass>::get()->add(MX_TOSTRING(Name))
 
-
- 
+/* \brief Class to store error messages from extensions to pass to MXNet */ 
 class MXerrorMsgs {
  public:
   /*!
@@ -1555,8 +1554,10 @@ class MXerrorMsgs {
   /*! \brief map of entries in registry */
   std::vector<std::stringstream> messages;
 };
-#define MX_ERROR_MSG MXerrorMsgs::get()->add(__FILE__,__LINE__)
- 
+
+// Add a new error message, example: MX_ERROR_MSG << "my error msg";
+#define MX_ERROR_MSG MXerrorMsgs::get()->add(__FILE__, __LINE__)
+
 /* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
 /*!

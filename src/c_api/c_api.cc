@@ -105,7 +105,7 @@ std::string getExtensionMsgs(mxnet::ext::msgSize_t msgSize,
     str = "\nExtension Traceback:\n";
     for (int i = 0; i < msgSize(); i++) {
       const char* tmp;
-      msgGet(i,&tmp);
+      msgGet(i, &tmp);
       // format: [i] message
       str += std::string("\t[") + std::to_string(i) + std::string("] ")
         + std::string(tmp) + std::string("\n");
@@ -305,10 +305,12 @@ void CustomFComputeDispatcher(const std::string op_name,
                            in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
                            in_verIDs.data(), in_dev_type.data(), in_dev_id.data(), in_data.size(),
                            out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
-                           out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
+                           out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
+                           out_data.size(),
                            cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
                            sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
-                           in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
+                           in_indices.data(), out_indices.data(), in_indptr.data(),
+                           out_indptr.data(),
                            in_indices_shapes.data(), out_indices_shapes.data(),
                            in_indptr_shapes.data(), out_indptr_shapes.data(),
                            rng_cpu_states, rng_gpu_states);
@@ -326,21 +328,24 @@ void CustomFComputeDispatcher(const std::string op_name,
 
     // call fcompute function
     int retval = callFStatefulComp(stateful_forward_flag, state_op_inst,
-                                   in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
+                                   in_shapes.data(), in_dims.data(), in_data.data(),
+                                   in_types.data(),
                                    in_verIDs.data(), in_dev_type.data(), in_dev_id.data(),
                                    in_data.size(),
-                                   out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
+                                   out_shapes.data(), out_dims.data(), out_data.data(),
+                                   out_types.data(),
                                    out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
                                    out_data.size(),
                                    cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
-                                   sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
-                                   in_indices.data(), out_indices.data(),
+                                   sparse_malloc, &sparse_alloc, in_stypes.data(),
+                                   out_stypes.data(), in_indices.data(), out_indices.data(),
                                    in_indptr.data(), out_indptr.data(),
                                    in_indices_shapes.data(), out_indices_shapes.data(),
                                    in_indptr_shapes.data(), out_indptr_shapes.data(),
                                    rng_cpu_states, rng_gpu_states);
     msgs = getExtensionMsgs(msgSize, msgGet);
-    CHECK(retval) << "Error calling FStatefulCompute for custom operator '" << op_name << "'" << msgs;
+    CHECK(retval) << "Error calling FStatefulCompute for custom operator '" << op_name << "'"
+                  << msgs;
   }
 }
 
@@ -409,7 +414,8 @@ void registerOp(const char* name, const std::string& name_str, bool isSubgraphOp
                               const std::vector<OpReqType>& req,
                               const std::vector<NDArray>& outputs) {
       CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
-                               callFStatefulComp, 1, &state_ptr, ctx, inputs, req, outputs, msgSize, msgGet);
+                               callFStatefulComp, 1, &state_ptr, ctx, inputs, req, outputs,
+                               msgSize, msgGet);
     };
     if (createop_map.count("cpu") > 0)
       regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_forward, plevel);
@@ -474,7 +480,8 @@ void registerOp(const char* name, const std::string& name_str, bool isSubgraphOp
                                  const std::vector<OpReqType>& req,
                                  const std::vector<NDArray>& outputs) {
         CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
-                                 callFStatefulComp, 0, &state_ptr, ctx, inputs, req, outputs, msgSize, msgGet);
+                                 callFStatefulComp, 0, &state_ptr, ctx, inputs, req, outputs,
+                                 msgSize, msgGet);
       };
       gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_backward, plevel);
       gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_backward, plevel);
@@ -946,7 +953,8 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       int retval = callMutateInputs(mutate_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
                                     &mutate_indices, &indices_size);
       std::string msgs = getExtensionMsgs(msgSize, msgGet);
-      CHECK(retval) << "Error calling MutateInputs for custom operator '" << name_str << "'" << msgs;
+      CHECK(retval) << "Error calling MutateInputs for custom operator '" << name_str << "'"
+      << msgs;
 
       std::vector<uint32_t> mutate_indices_list(indices_size);
       for (int i=0; i < indices_size; i++) {
@@ -993,7 +1001,8 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
                                     instypes.data(), num_inputs,
                                     outstypes.data(), out_stypes->size());
         std::string msgs = getExtensionMsgs(msgSize, msgGet);
-        CHECK(retval) << "Error calling InferSType for custom operator '" << name_str << "'" << msgs;
+        CHECK(retval) << "Error calling InferSType for custom operator '" << name_str << "'"
+        << msgs;
 
         // copy and assign modified input storage types from custom op to MXNet memory.
         for (size_t i = 0; i < num_inputs; i++) {
@@ -1103,14 +1112,16 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         int retval = callCreateOpState(createop_map.at("cpu"), attr_keys.data(), attr_vals.data(),
                                        attr_keys.size(), &state_op_inst);
         std::string msgs = getExtensionMsgs(msgSize, msgGet);
-        CHECK(retval) << "Error calling CreateOpState CPU for custom operator '" << name_str << "'" << msgs;
+        CHECK(retval) << "Error calling CreateOpState CPU for custom operator '" << name_str << "'"
+                      << msgs;
       } else if (ctx.dev_mask() == Context::kGPU) {
         CHECK(createop_map.count("gpu") > 0)
           << "GPU CreateOpState not implemented for '" << name_str << "'";
         int retval = callCreateOpState(createop_map.at("gpu"), attr_keys.data(), attr_vals.data(),
                                        attr_keys.size(), &state_op_inst);
         std::string msgs = getExtensionMsgs(msgSize, msgGet);
-        CHECK(retval) << "Error calling CreateOpState GPU for custom operator '" << name_str << "'" << msgs;
+        CHECK(retval) << "Error calling CreateOpState GPU for custom operator '" << name_str << "'"
+        << msgs;
       }
 
       std::string msgs = getExtensionMsgs(msgSize, msgGet);
@@ -1477,7 +1488,7 @@ int MXLoadLib(const char *path, unsigned verbose) {
     std::string msgs = getExtensionMsgs(msgSize, msgGet);
     LOG(FATAL) << "Library failed to initialize" << msgs;
   }
-  
+
   // find ops, partitioners, and passes in library
   registerOperators(lib, verbose, msgSize, msgGet);
   registerPartitioners(lib, verbose, msgSize, msgGet);
