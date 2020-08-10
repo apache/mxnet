@@ -77,11 +77,11 @@ inline typename std::enable_if<!std::is_same<KDType, m_half>::value, size_t>::ty
 SortPairsWorkspaceSize(const size_t num_keys, const size_t batch_size) {
   size_t sortpairs_bytes = 0;
   if (batch_size > 1) {
-    cub::DeviceSegmentedRadixSort::SortPairs<KDType, VDType>(NULL, sortpairs_bytes,
-      NULL, NULL, NULL, NULL, num_keys, batch_size, (int*) nullptr, (int*) nullptr);
+    cub::DeviceSegmentedRadixSort::SortPairs<KDType, VDType>(nullptr, sortpairs_bytes,
+      nullptr, nullptr, nullptr, nullptr, num_keys, batch_size, (int*) nullptr, (int*) nullptr);
   } else {
-    cub::DeviceRadixSort::SortPairs<KDType, VDType>(NULL, sortpairs_bytes,
-      NULL, NULL, NULL, NULL, num_keys);
+    cub::DeviceRadixSort::SortPairs<KDType, VDType>(nullptr, sortpairs_bytes,
+      nullptr, nullptr, nullptr, nullptr, num_keys);
   }
   return sortpairs_bytes;
 }
@@ -91,11 +91,11 @@ inline typename std::enable_if<std::is_same<KDType, m_half>::value, size_t>::typ
 SortPairsWorkspaceSize(const size_t num_keys, const size_t batch_size) {
   size_t sortpairs_bytes = 0;
   if (batch_size > 1) {
-    cub::DeviceSegmentedRadixSort::SortPairs<__half, VDType>(NULL, sortpairs_bytes,
-      NULL, NULL, NULL, NULL, num_keys, batch_size, (int*) nullptr, (int*) nullptr);
+    cub::DeviceSegmentedRadixSort::SortPairs<__half, VDType>(nullptr, sortpairs_bytes,
+      nullptr, nullptr, nullptr, nullptr, num_keys, batch_size, (int*) nullptr, (int*) nullptr);
   } else {
-    cub::DeviceRadixSort::SortPairs<__half, VDType>(NULL, sortpairs_bytes,
-      NULL, NULL, NULL, NULL, num_keys);
+    cub::DeviceRadixSort::SortPairs<__half, VDType>(nullptr, sortpairs_bytes,
+      nullptr, nullptr, nullptr, nullptr, num_keys);
   }
   return sortpairs_bytes;
 }
@@ -145,26 +145,6 @@ GetDevicePntr(mshadow::Tensor<gpu, 1, DType> *pntr, mshadow::Tensor<gpu, 1, DTyp
 }
 
 template<typename KDType, typename VDType>
-inline typename std::enable_if<!std::is_same<KDType, m_half>::value, void>::type
-StableSortByKey(mshadow::Tensor<gpu, 1, KDType>* keys,
-                mshadow::Tensor<gpu, 1, KDType>* sorted_keys,
-                mshadow::Tensor<gpu, 1, VDType>* values,
-                mshadow::Tensor<gpu, 1, VDType>* sorted_values,
-                const size_t num_keys, const bool is_ascend, cudaStream_t stream) {
-  const auto key_iter = thrust::device_pointer_cast(GetDevicePntr(keys, sorted_keys));
-  const auto val_iter = thrust::device_pointer_cast(GetDevicePntr(values, sorted_values));
-  if (is_ascend) {
-  thrust::stable_sort_by_key(
-    thrust::cuda::par.on(stream),
-    key_iter, key_iter + num_keys, val_iter, thrust::less<KDType>());
-  } else {
-  thrust::stable_sort_by_key(
-    thrust::cuda::par.on(stream),
-    key_iter, key_iter + num_keys, val_iter, thrust::greater<KDType>());
-  }
-}
-
-template<typename KDType, typename VDType>
 inline typename std::enable_if<!(std::is_same<KDType, m_half>::value ||
                                  std::is_same<VDType, m_half>::value), void>::type
 SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
@@ -206,23 +186,23 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
     size_t sortpairs_bytes = 0;
     if (is_ascend) {
       if (batch_size > 1) {
-        cub::DeviceSegmentedRadixSort::SortPairs<KDType, VDType>(NULL, sortpairs_bytes,
-          NULL, NULL, NULL, NULL,
+        cub::DeviceSegmentedRadixSort::SortPairs<KDType, VDType>(nullptr, sortpairs_bytes,
+          nullptr, nullptr, nullptr, nullptr,
           num_items, num_segments, d_segment_offsets, d_segment_offsets + 1,
           begin_bit, end_bit, stream);
       } else {
-        cub::DeviceRadixSort::SortPairs<KDType, VDType>(NULL, sortpairs_bytes,
-          NULL, NULL, NULL, NULL, num_keys, begin_bit, end_bit, stream);
+        cub::DeviceRadixSort::SortPairs<KDType, VDType>(nullptr, sortpairs_bytes,
+          nullptr, nullptr, nullptr, nullptr, num_keys, begin_bit, end_bit, stream);
       }
     } else {
       if (batch_size > 1) {
-        cub::DeviceSegmentedRadixSort::SortPairsDescending<KDType, VDType>(NULL, sortpairs_bytes,
-          NULL, NULL, NULL, NULL,
+        cub::DeviceSegmentedRadixSort::SortPairsDescending<KDType, VDType>(nullptr, sortpairs_bytes,
+          nullptr, nullptr, nullptr, nullptr,
           num_items, num_segments, d_segment_offsets, d_segment_offsets + 1,
           begin_bit, end_bit, stream);
       } else {
-        cub::DeviceRadixSort::SortPairsDescending<KDType, VDType>(NULL, sortpairs_bytes,
-          NULL, NULL, NULL, NULL, num_keys, begin_bit, end_bit, stream);
+        cub::DeviceRadixSort::SortPairsDescending<KDType, VDType>(nullptr, sortpairs_bytes,
+          nullptr, nullptr, nullptr, nullptr, num_keys, begin_bit, end_bit, stream);
       }
     }
 
@@ -233,9 +213,7 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
       << "Workspace given to SortByKey is too small: requested " << required_storage <<
       " B and got " << workspace->size(0) << " B.";
 
-    size_t start_keys = 0;
-    // Skip segment offsets for batch_size > 1 case
-    start_keys += (batch_size > 1) ? sizeof(index_t) * (num_segments + 1) : 0;
+    const size_t start_keys = (batch_size > 1) ? sizeof(index_t) * (num_segments + 1) : 0;
     const auto start_values = start_keys + keys_bytes;
     KDType* keys_out_ptr = sorted_keys == nullptr ?
                            reinterpret_cast<KDType *>(workspace->dptr_ + start_keys) :
@@ -280,8 +258,17 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
     }
   } else {
 #endif // SORT_WITH_THRUST
-    // No workspace, sort using thrust
-    StableSortByKey(keys, sorted_keys, values, sorted_values, is_ascend, num_keys, stream);
+    const auto key_iter = thrust::device_pointer_cast(GetDevicePntr(keys, sorted_keys));
+    const auto val_iter = thrust::device_pointer_cast(GetDevicePntr(values, sorted_values));
+    if (is_ascend) {
+    thrust::stable_sort_by_key(
+      thrust::cuda::par.on(stream),
+      key_iter, key_iter + num_keys, val_iter, thrust::less<KDType>());
+    } else {
+    thrust::stable_sort_by_key(
+      thrust::cuda::par.on(stream),
+      key_iter, key_iter + num_keys, val_iter, thrust::greater<KDType>());
+    }
 #ifndef SORT_WITH_THRUST
   }
 #endif // SORT_WITH_THRUST
@@ -298,7 +285,17 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
               mshadow::Tensor<gpu, 1, VDType>* sorted_values, int batch_size) {
   const size_t num_keys = keys->size(0);
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(keys->stream_);
-  StableSortByKey(keys, sorted_keys, values, sorted_values, is_ascend, num_keys, stream);
+  const auto key_iter = thrust::device_pointer_cast(GetDevicePntr(keys, sorted_keys));
+  const auto val_iter = thrust::device_pointer_cast(GetDevicePntr(values, sorted_values));
+  if (is_ascend) {
+    thrust::stable_sort_by_key(
+      thrust::cuda::par.on(stream),
+      key_iter, key_iter + num_keys, val_iter, thrust::less<KDType>());
+  } else {
+    thrust::stable_sort_by_key(
+      thrust::cuda::par.on(stream),
+      key_iter, key_iter + num_keys, val_iter, thrust::greater<KDType>());
+  }
 }
 
 template<typename KDType, typename VDType>

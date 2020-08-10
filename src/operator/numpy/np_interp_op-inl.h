@@ -269,7 +269,7 @@ void NumpyInterpForward(const nnvm::NodeAttrs& attrs,
     std::vector<TBlob> ret = {idx};
 
     TopKImplwithWorkspace<xpu, double, index_t>(ctx.run_ctx, req_TopK, norm_xp, ret, topk_param,
-                                                workspace_curr_ptr, topk_temp_size, s);
+                                                workspace_curr_ptr, topk_temp_size);
     Kernel<interp_period, xpu>::Launch(
       s, norm_x.Size(), out.dptr<double>(), norm_x.dptr<double>(), norm_xp.dptr<double>(),
       fp.dptr<double>(), idx.dptr<index_t>(), norm_xp.Size(), period_value);
