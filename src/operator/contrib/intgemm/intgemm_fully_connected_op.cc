@@ -155,7 +155,8 @@ bool IntgemmFullyConnectedOpType(const nnvm::NodeAttrs& attrs,
   if (type_is_none((*in_attrs)[indices.data])) {
     return false;
   }
-  return ((*in_attrs)[indices.data] == mshadow::kInt8 || (*in_attrs)[indices.data] == mshadow::kFloat32);
+  return ((*in_attrs)[indices.data] == mshadow::kInt8 ||
+      (*in_attrs)[indices.data] == mshadow::kFloat32);
 }
 
 void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
@@ -200,7 +201,7 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
   if (indices.HaveScaling()) {
     out_float_multiplier = *inputs[indices.scaling].dptr<float>();
   } else {
-    out_float_multiplier = 0.0; // Unused; stop compiler from complaining.
+    out_float_multiplier = 0.0;  // Unused; stop compiler from complaining.
   }
 
   int8_t *A_quant;
@@ -221,8 +222,10 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
     A_quant = A.dptr<int8_t>();
   }
   const int8_t *B_quant = B.dptr<int8_t>();
-  CHECK_EQ(reinterpret_cast<intptr_t>(A_quant) % 64, 0) << "Pointers should be aligned to a multiple of 64.";
-  CHECK_EQ(reinterpret_cast<intptr_t>(B_quant) % 64, 0) << "Pointers should be aligned to a multiple of 64.";
+  CHECK_EQ(reinterpret_cast<intptr_t>(A_quant) % 64, 0) <<
+    "Pointers should be aligned to a multiple of 64.";
+  CHECK_EQ(reinterpret_cast<intptr_t>(B_quant) % 64, 0) <<
+    "Pointers should be aligned to a multiple of 64.";
   if (C.type_flag_ == mshadow::kFloat32) {
     CHECK_EQ(reinterpret_cast<intptr_t>(C.dptr<float>()) % 64, 0) <<
       "Pointers should be aligned to a multiple of 64.";
@@ -244,7 +247,9 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
       // int32
       CHECK_EQ(reinterpret_cast<intptr_t>(inputs[indices.bias].dptr<int32_t>()) % 64, 0) <<
         "Pointers should be aligned to a multiple of 64.";
-      ::intgemm::callbacks::AddBiasAndWrite cb(inputs[indices.bias].dptr<int32_t>(), C.dptr<int32_t>());
+      ::intgemm::callbacks::AddBiasAndWrite cb(
+          inputs[indices.bias].dptr<int32_t>(),
+          C.dptr<int32_t>());
       ::intgemm::Int8::Multiply(A_quant, B_quant, A_rows, inner, B_cols, cb);
     }
   } else {
