@@ -1964,7 +1964,7 @@ def test_batchnorm():
                     bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
 
     op_names = ['BatchNorm', 'SyncBatchNorm']
-    shapes = [(24, 2), (24, 3, 4), (24, 8, 4, 5), (24, 5, 6, 4, 5)]
+    shapes = [(4, 2), (4, 3, 4), (4, 6, 4, 5), (4, 5, 6, 4, 5)]
     bools = [False, True]
     for op_name, shape, fix_gamma, cudnn_off, output_mean_var in itertools.product(
             op_names, shapes, bools, bools, bools):
