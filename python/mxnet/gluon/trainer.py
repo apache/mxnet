@@ -20,6 +20,7 @@
 """Parameter optimizer."""
 __all__ = ['Trainer']
 
+import sys
 from collections import OrderedDict
 
 from .. import optimizer as opt
@@ -77,25 +78,34 @@ class Trainer(object):
     """
     def __init__(self, params, optimizer, optimizer_params=None, kvstore='device',
                  compression_params=None, update_on_kvstore=None):
+        self._param2name = {}
+        self._param2idx = {}
+        py_version = sys.version_info
+        assert isinstance(params, (dict, OrderedDict)), \
+            'invalid params type: {}. Expected dict type'.format(type(params))
+        names = list(params.keys())
         param_list = []
-        if isinstance(params, (dict, OrderedDict)):
-            for key in sorted(list(params.keys())):
-                param_list.append(params[key])
-            params = param_list
-        if not isinstance(params, (list, tuple)):
-            raise ValueError(
-                "First argument must be a list or dict of Parameters, " \
-                "got %s."%(type(params)))
+        # only python 3.5 requires sorting
+        if py_version[0] == 3 and py_version[1] == 5:
+            names = sorted(names)
+        for name in names:
+            p = params[name]
+            if not isinstance(p, Parameter):
+                raise ValueError(
+                    "First argument must be a dict of Parameters, " \
+                    "got list of %s."%(type(p)))
+            param_list.append(p)
+            # Shared parameters have same uuid; only need to store one of the shared versions
+            if p._uuid in self._param2name:
+                continue
+            self._param2name[p._uuid] = name
+        params = param_list
+
         self._params = []
         # parameters to initialize on the kvstore
         self._contains_sparse_weight = False
         self._contains_sparse_grad = False
-        self._param2idx = {}
         for i, param in enumerate(params):
-            if not isinstance(param, Parameter):
-                raise ValueError(
-                    "First argument must be a list or dict of Parameters, " \
-                    "got list of %s."%(type(param)))
             if param._uuid in self._param2idx:
                 # Shared parameters have same uuid; only need to store one of the shared versions
                 continue
@@ -388,25 +398,25 @@ class Trainer(object):
             return
         for i, param in enumerate(self._params):
             if param.grad_req != 'null':
-
+                idx = self._param2idx[param._uuid]
                 grad_list = param.list_grad()
                 # sparse gradients, call push and pull separately
                 if grad_list[0].stype != 'default':
-                    self._kvstore.push(i, grad_list, priority=-i)
+                    self._kvstore.push(idx, grad_list, priority=-i)
                     if param._stype == 'default':
                         if self._update_on_kvstore:
                             pull_list = param.list_data()
                         else:
                             pull_list = param.list_grad()
-                        self._kvstore.pull(i, pull_list, priority=-i,
+                        self._kvstore.pull(idx, pull_list, priority=-i,
                                            ignore_sparse=self._distributed)
                 else:
                     # allreduce dense gradients if not update_on_kvstore,
                     # otherwise push dense gradients, pull dense weights
                     if self._update_on_kvstore:
-                        self._kvstore.pushpull(i, grad_list, out=param.list_data(), priority=-i)
+                        self._kvstore.pushpull(idx, grad_list, out=param.list_data(), priority=-i)
                     else:
-                        self._kvstore.pushpull(i, grad_list, priority=-i)
+                        self._kvstore.pushpull(idx, grad_list, priority=-i)
 
     def update(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update.

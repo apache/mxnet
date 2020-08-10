@@ -131,12 +131,6 @@
 #define MXNET_USE_TVM_OP 0
 #endif
 
-#ifndef _GLIBCXX_USE_CXX11_ABI
-#define MXNET_GLIBCXX_USE_CXX11_ABI 0
-#else
-#define MXNET_GLIBCXX_USE_CXX11_ABI _GLIBCXX_USE_CXX11_ABI
-#endif
-
 namespace mxnet {
 namespace features {
 // Check compile flags such as CMakeLists.txt
@@ -210,7 +204,6 @@ struct LibInfo {
   const std::array<LibFeature, MAX_FEATURES>& getFeatures() {
     return m_lib_features;
   }
-  bool cxx11_abi();
  private:
   std::array<LibFeature, MAX_FEATURES> m_lib_features;
   static std::unique_ptr<LibInfo>  m_inst;

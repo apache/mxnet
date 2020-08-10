@@ -73,14 +73,23 @@ def load(path, verbose=True):
         func = getattr(mx_sym_op, op)
         setattr(mx_sym, op, func)
 
-def compiled_with_cxx11_abi():
-    """Check if the library is compiled with cxx11 ABI.
+
+def compiled_with_gcc_cxx11_abi():
+    """Check if the library is compiled with _GLIBCXX_USE_CXX11_ABI.
+
+    Please see
+    https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html for
+    more information. When building libraries relying on MXNet C++ headers, it
+    is required to use the same C++ ABI in the library as well as in libmxnet.
 
     Returns
     -------
-    bool
-        Whether the library is compiled with cxx11 ABI.
+    int
+        1 If compiled with _GLIBCXX_USE_CXX11_ABI=1
+        0 If compiled with _GLIBCXX_USE_CXX11_ABI=0
+       -1 If compiled with a compiler that does not support _GLIBCXX_USE_CXX11_ABI
+
     """
-    ret = ctypes.c_bool()
+    ret = ctypes.c_int()
     check_call(_LIB.MXLibInfoCompiledWithCXX11ABI(ctypes.byref(ret)))
     return ret.value

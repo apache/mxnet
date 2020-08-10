@@ -96,7 +96,6 @@ cmake_dependent_option(ENABLE_TESTCOVERAGE "Enable compilation with test coverag
 option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(BUILD_CYTHON_MODULES "Build cython modules." OFF)
 option(LOG_FATAL_THROW "Log exceptions but do not abort" ON)
-option(USE_CXX11_ABI "Build with GLIBCXX_USE_CXX11_ABI" ON)
 cmake_dependent_option(USE_SPLIT_ARCH_DLL "Build a separate DLL for each Cuda arch (Windows only)." ON "MSVC" OFF)
 cmake_dependent_option(USE_CCACHE "Attempt using CCache to wrap the compilation" ON "UNIX" OFF)
 
@@ -106,12 +105,6 @@ message(STATUS "CMAKE_HOST_SYSTEM_PROCESSOR ${CMAKE_HOST_SYSTEM_PROCESSOR}")
 message(STATUS "CMAKE_SYSTEM_PROCESSOR ${CMAKE_SYSTEM_PROCESSOR}")
 
 message(STATUS "CMAKE_SYSTEM_NAME ${CMAKE_SYSTEM_NAME}")
-
-if(USE_CXX11_ABI)
-  add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
-else()
-  add_definitions(-D_GLIBCXX_USE_CXX11_ABI=0)
-endif()
 
 if(USE_TVM_OP)
   add_definitions(-DMXNET_USE_TVM_OP=1)
@@ -155,12 +148,14 @@ else()
   execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND UNIX AND NOT APPLE)
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
-  set(CMAKE_INSTALL_RPATH $\{ORIGIN\})
-  # Enforce DT_PATH instead of DT_RUNPATH
-  set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--disable-new-dtags")
-  set(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
+  if(UNIX AND NOT APPLE)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+    set(CMAKE_INSTALL_RPATH $\{ORIGIN\})
+    # Enforce DT_PATH instead of DT_RUNPATH
+    set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--disable-new-dtags")
+    set(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+  endif()
   set(Protobuf_USE_STATIC_LIBS ON)
 endif()
 
@@ -243,6 +238,7 @@ if(USE_TENSORRT)
   include_directories(3rdparty/onnx-tensorrt/third_party/onnx/)
   add_definitions(-DMXNET_USE_TENSORRT=1)
   add_definitions(-DONNX_NAMESPACE=onnx)
+  add_definitions(-DONNX_ML=1)
 
   find_package(Protobuf REQUIRED)
 
@@ -252,14 +248,11 @@ if(USE_TENSORRT)
   find_library(ONNX_PROTO_LIBRARY NAMES libonnx_proto.so REQUIRED
           PATHS ${ONNX_PATH}
           DOC "Path to onnx_proto library.")
-  find_library(ONNX_TRT_RUNTIME_LIBRARY NAMES libnvonnxparser_runtime.so REQUIRED
-          PATHS ${ONNX_TRT_PATH}
-          DOC "Path to onnx_proto library.")
   find_library(ONNX_TRT_PARSER_LIBRARY NAMES libnvonnxparser.so REQUIRED
           PATHS ${ONNX_TRT_PATH}
-          DOC "Path to onnx_proto library.")
+          DOC "Path to onnx_proto parser library.")
 
-  list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY} ${ONNX_TRT_RUNTIME_LIBRARY}
+  list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY}
           ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
 endif()
 
@@ -327,20 +320,6 @@ include_directories("3rdparty/tvm/nnvm/include")
 include_directories("3rdparty/tvm/include")
 include_directories("3rdparty/dmlc-core/include")
 include_directories("3rdparty/dlpack/include")
-
-# commented out until PR goes through
-#if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack)
-#  add_subdirectory(3rdparty/dlpack)
-#endif()
-
-# Prevent stripping out symbols (operator registrations, for example)
-if(NOT MSVC AND NOT APPLE)
-  set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
-  set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  # using regular Clang or AppleClang
-  set(BEGIN_WHOLE_ARCHIVE -Wl,-force_load)
-endif()
 
 if(UNIX)
   find_library(RTLIB rt)
@@ -688,6 +667,18 @@ if(UNIX)
     target_compile_options(mxnet PUBLIC "--coverage")
     target_link_libraries(mxnet PUBLIC gcov)
   endif()
+  if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
+    # TODO For handling mxnet's symbols the following can be replace by
+    # annotating symbol visibility in source code, specifying
+    # set(CMAKE_CXX_VISIBILITY_PRESET hidden) and
+    # set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+    # Symbols from statically linked libraries can be discarded via -Wl,--exclude-libs,ALL
+    if(APPLE)
+      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
+    else()
+      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--version-script=${PROJECT_SOURCE_DIR}/cmake/libmxnet.ver")
+    endif()
+  endif()
 elseif(MSVC)
   if(USE_CUDA)
     if(USE_SPLIT_ARCH_DLL)
@@ -857,8 +848,12 @@ endif()
 include(GNUInstallDirs)
 install(TARGETS mxnet
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+          COMPONENT   MXNET_Runtime
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          COMPONENT            MXNET_Runtime
+          NAMELINK_COMPONENT   MXNET_Development
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          COMPONENT   MXNET_Development
 )
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
@@ -899,7 +894,10 @@ if(INSTALL_PYTHON_VERSIONS)
   endforeach()
 endif()
 
-add_subdirectory(tests)
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
+  # Staticbuild applies linker version script to hide private symbols, breaking unit tests
+  add_subdirectory(tests)
+endif()
 
 # ---[ Linter target
 find_package(Python3)
