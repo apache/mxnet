@@ -893,7 +893,7 @@ class Graph {
       n->op = node.map[JsonVal("op")].str;
       n->name = node.map[JsonVal("name")].str;
 
-      // if op is null its an input to the graph
+      // if op is null it is an input to the graph
       if (n->op.compare("null") == 0)
         g->inputs.push_back(n);
 
