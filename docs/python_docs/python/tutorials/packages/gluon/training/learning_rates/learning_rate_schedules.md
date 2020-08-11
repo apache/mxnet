@@ -156,20 +156,19 @@ train_dataloader = mx.gluon.data.DataLoader(train_dataset, batch_size, shuffle=T
 # Build a simple convolutional network
 def build_cnn():
     net = nn.HybridSequential()
-    with net.name_scope():
-        # First convolution
-        net.add(nn.Conv2D(channels=10, kernel_size=5, activation='relu'))
-        net.add(nn.MaxPool2D(pool_size=2, strides=2))
-        # Second convolution
-        net.add(nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
-        net.add(nn.MaxPool2D(pool_size=2, strides=2))
-        # Flatten the output before the fully connected layers
-        net.add(nn.Flatten())
-        # First fully connected layers with 512 neurons
-        net.add(nn.Dense(512, activation="relu"))
-        # Second fully connected layer with as many neurons as the number of classes
-        net.add(nn.Dense(num_outputs))
-        return net
+    # First convolution
+    net.add(nn.Conv2D(channels=10, kernel_size=5, activation='relu'))
+    net.add(nn.MaxPool2D(pool_size=2, strides=2))
+    # Second convolution
+    net.add(nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
+    net.add(nn.MaxPool2D(pool_size=2, strides=2))
+    # Flatten the output before the fully connected layers
+    net.add(nn.Flatten())
+    # First fully connected layers with 512 neurons
+    net.add(nn.Dense(512, activation="relu"))
+    # Second fully connected layer with as many neurons as the number of classes
+    net.add(nn.Dense(num_outputs))
+    return net
     
 net = build_cnn()
 ```
@@ -179,7 +178,7 @@ We then initialize our network (technically deferred until we pass the first bat
 
 ```python
 # Initialize the parameters with Xavier initializer
-net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+net.initialize(mx.init.Xavier(), ctx=ctx)
 # Use cross entropy loss
 softmax_cross_entropy = mx.gluon.loss.SoftmaxCrossEntropyLoss()
 ```
@@ -280,7 +279,7 @@ We replicate the example above, but now keep track of the `iteration_idx`, call 
 
 ```python
 net = build_cnn()
-net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+net.initialize(mx.init.Xavier(), ctx=ctx)
 
 schedule = mx.lr_scheduler.MultiFactorScheduler(step=steps_iterations, factor=0.1)
 schedule.base_lr = 0.03

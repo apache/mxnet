@@ -88,6 +88,30 @@ MXNET_REGISTER_API("_npi.lcm")
   UFuncHelper(args, ret, op, op_scalar, nullptr);
 });
 
+MXNET_REGISTER_API("_npi.logical_and")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_logical_and");
+  const nnvm::Op* op_scalar = Op::Get("_npi_logical_and_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
+});
+
+MXNET_REGISTER_API("_npi.logical_or")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_logical_or");
+  const nnvm::Op* op_scalar = Op::Get("_npi_logical_or_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
+});
+
+MXNET_REGISTER_API("_npi.logical_xor")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_logical_xor");
+  const nnvm::Op* op_scalar = Op::Get("_npi_logical_xor_scalar");
+  UFuncHelper(args, ret, op, op_scalar, nullptr);
+});
+
 MXNET_REGISTER_API("_npi.bitwise_or")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   using namespace runtime;

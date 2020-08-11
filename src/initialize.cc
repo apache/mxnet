@@ -23,7 +23,6 @@
  * \brief initialize mxnet library
  */
 #include "initialize.h"
-#include <signal.h>
 #include <dmlc/logging.h>
 #include <mxnet/engine.h>
 #include "./engine/openmp.h"
@@ -33,7 +32,6 @@
 #endif  // MXNET_USE_OPENCV
 #include "common/utils.h"
 #include "engine/openmp.h"
-
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #include <windows.h>
@@ -57,13 +55,16 @@ void win_err(char **err) {
 #include <dlfcn.h>
 #endif
 
+#include <csignal>
+
+
 namespace mxnet {
 
 #if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
 static void SegfaultLogger(int sig) {
   fprintf(stderr, "\nSegmentation fault: %d\n\n", sig);
   fprintf(stderr, "%s", dmlc::StackTrace().c_str());
-  exit(-1);
+  abort();
 }
 #endif
 

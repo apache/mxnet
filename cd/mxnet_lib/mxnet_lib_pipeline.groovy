@@ -42,16 +42,6 @@ def get_pipeline(mxnet_variant, build_fn) {
           }
         }
 
-        if (mxnet_variant.startsWith('cu')) {
-          tests["${mxnet_variant}: Quantization Python 3"] = {
-            stage("${mxnet_variant}: Quantization Python 3") {
-              timeout(time: max_time, unit: 'MINUTES') {
-                test_gpu_quantization_py3(mxnet_variant)
-              }
-            }
-          }
-        }
-
         parallel tests
       }
 
@@ -75,9 +65,9 @@ def get_stash(mxnet_variant) {
 // The environment corresponds to the docker files in the 'docker' directory
 def get_environment(mxnet_variant) {
   if (mxnet_variant.startsWith("cu")) {
-    return "publish.centos7_gpu_${mxnet_variant}"
+    return "centos7_gpu_${mxnet_variant}"
   }
-  return "publish.centos7_cpu"
+  return "centos7_cpu"
 }
 
 // Returns the variant appropriate jenkins node test in which
@@ -99,17 +89,6 @@ def unittest_py3(mxnet_variant) {
       def use_nvidia_docker = mxnet_variant.startsWith('cu')
       ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
       ci_utils.docker_run(image, "cd_unittest_ubuntu ${mxnet_variant}", use_nvidia_docker)
-    }
-  }
-}
-
-// Tests quantization in P3 instance using Python 3
-def test_gpu_quantization_py3(mxnet_variant) {
-  node(NODE_LINUX_GPU_P3) {
-    ws("workspace/mxnet_${libtype}/${mxnet_variant}/${env.BUILD_NUMBER}") {
-      def image = get_environment(mxnet_variant)
-      ci_utils.unpack_and_init("mxnet_${mxnet_variant}", get_stash(mxnet_variant), false)
-      ci_utils.docker_run(image, "unittest_ubuntu_python3_quantization_gpu", true)
     }
   }
 }

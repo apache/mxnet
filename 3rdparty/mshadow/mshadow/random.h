@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2014 by Contributors
  *  \file random.h
@@ -46,13 +65,13 @@ class Random<cpu, DType> {
    */
   inline void Seed(int seed) {
     rnd_engine_.seed(seed);
-    this->rseed_ = static_cast<uint64_t>(seed);
+    this->rseed_ = static_cast<unsigned>(seed);
   }
   /*!
    * \brief get random seed used in random generator
    * \return seed in unsigned
    */
-  inline uint64_t GetSeed() const {
+  inline unsigned GetSeed() const {
     return rseed_;
   }
   /*!
@@ -260,7 +279,7 @@ class Random<cpu, DType> {
   /*! \brief use c++11 random engine. */
   std::mt19937 rnd_engine_;
   /*! \brief random number seed used in random engine */
-  uint64_t rseed_;
+  unsigned rseed_;
   /*! \brief temporal space used to store random numbers */
   TensorContainer<cpu, 1, DType> buffer_;
 };  // class Random<cpu, DType>
@@ -303,22 +322,16 @@ class Random<gpu, DType> {
     // Now set the seed.
     curandStatus_t status;
     status = curandSetPseudoRandomGeneratorSeed(gen_, static_cast<uint64_t>(seed));
-    this->rseed_ = static_cast<uint64_t>(seed);
     CHECK_EQ(status, CURAND_STATUS_SUCCESS) << "Set CURAND seed failed.";
-  }
-  /*!
-    * \brief get random seed used in random generator
-    * \return seed in unsigned
-    */
-  inline uint64_t GetSeed() const {
-    return rseed_;
   }
   /*!
    * \brief get a set of random integers
    */
   inline void GetRandInt(const Tensor<gpu, 1, unsigned>& dst) {
-    curandStatus_t status = curandGenerate(gen_, dst.dptr_, dst.size(0));
-    CHECK_EQ(status, CURAND_STATUS_SUCCESS) << "CURAND Gen rand ints failed.";
+    curandStatus_t status;
+    status = curandGenerate(gen_, dst.dptr_, dst.size(0));
+    CHECK_EQ(status, CURAND_STATUS_SUCCESS) << "CURAND Gen rand ints failed."
+                                            << " size = " << dst.size(0);
   }
   /*!
    * \brief generate data from uniform [a,b)
@@ -373,7 +386,6 @@ class Random<gpu, DType> {
   uniform(Shape<dim> shape);
 
  private:
-  uint64_t rseed_;
   inline void GenGaussian(float *dptr, size_t size, float mu, float sigma) {
     curandStatus_t status;
     status = curandGenerateNormal(gen_, dptr, size, mu, sigma);

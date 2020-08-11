@@ -35,10 +35,3 @@ To install:
 ```bash
 pip install mxnet-native
 ```
-
-Nightly Builds
---------------
-To install the latest nightly build, use:
-```bash
-pip install --pre mxnet-native -f https://dist.mxnet.io/python
-```

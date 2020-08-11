@@ -564,6 +564,7 @@ void LstmBackward(DType* ws,
   const index_t w_size1 = (I + H) * H * 4;      // first layer
   const index_t w_size2 = (D * H + H) * H * 4;  // other layers
   const index_t cell_size = N * H;
+  const index_t y_size = T * N * H * D;
   DType* dy_tmp_ptr = ws2 + T * cell_size * 4 + cell_size * 3;
   for (int i = L - 1; i >= 0; --i) {
     const index_t input_size = i ? H * D : I;
@@ -594,6 +595,10 @@ void LstmBackward(DType* ws,
                                      x, hx[idx], cx[idx], y, dy, dx, dhx[idx], dcx[idx],
                                      dhy_cur_ptr, dcy_cur_ptr, w_cur_ptr, dw_cur_ptr, db_cur_ptr,
                                      req_data, req_params, req_state, req_statecell);
+
+      // Prevent overwritting dy while calculating dx in left2right layer
+      const int loop_iteration = (L - 1) - i;
+      dy_tmp_ptr = loop_iteration % 2 ? dy_tmp_ptr - y_size : dy_tmp_ptr + y_size;
     }
     if (dropout > 0.0f && i > 0 && req_data != kNullOp) {
       dropout_random = dropout_random - T * N * D * H;
@@ -1507,7 +1512,7 @@ void GruBackward(DType* ws,
       if (dhy_l)
         dhy_l = dhy_l - D * N * H;
       y_l = y_l - T * N * H * D;
-      y_tmp = y_l;
+      y_tmp = y_tmp - T * N * H * D;
       if (l == 1) {
         wx_l = wx_l - (inputsize + H) * H * 3 * D;
         wh_l = wx_l + inputsize * 3 * H;

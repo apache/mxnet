@@ -4,8 +4,10 @@ project(mshadow C CXX)
 include(CMakeDependentOption)
 option(USE_CUDA "Build with CUDA support" ON)
 option(USE_CUDNN ON)
-cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
-option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
+cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
+  "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL amd64" OFF)
+cmake_dependent_option(USE_F16C "Build with x86 F16C instruction support" ON
+  "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL amd64" OFF)   # autodetects support if ON
 option(USE_INT64_TENSOR_SIZE "Use int64_t to represent the total number of elements in a tensor" OFF)
 option(MSHADOW_IN_CXX11 ON)
 

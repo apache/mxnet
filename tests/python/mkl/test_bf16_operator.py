@@ -25,15 +25,14 @@ import collections
 import ctypes
 import itertools
 import mxnet.contrib.amp as amp
-from nose.tools import assert_raises
-from mxnet.test_utils import set_default_context, download_model, same_symbol_structure, assert_almost_equal_with_err, rand_shape_nd
+from mxnet.test_utils import set_default_context, same_symbol_structure, assert_almost_equal_with_err, rand_shape_nd
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
 from mxnet.contrib.amp import amp
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import with_seed
-import unittest
+import pytest
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
@@ -55,7 +54,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
         the relative threshold
     atol: float
         the absolute threshold
-    etol: float 
+    etol: float
         The error rate threshold, allow a small amount of value not consistent between bf16 and fp32
     """
     if not isinstance(data_shape, tuple):
@@ -71,7 +70,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
     arg_names = sym_fp32.list_arguments()
     aux_names = sym_fp32.list_auxiliary_states()
 
-    exe_fp32 = sym_fp32.simple_bind(ctx=mx.cpu(), data=data_shape)
+    exe_fp32 = sym_fp32._simple_bind(ctx=mx.cpu(), data=data_shape)
 
     arg_params_fp32 = {}
     aux_params_fp32 = {}
@@ -92,7 +91,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
 
     output_fp32 = exe_fp32.forward()[0]
 
-    exe_bf16 = sym_bf16.simple_bind(ctx=mx.cpu(), data=data_shape, type_dict=type_dict)
+    exe_bf16 = sym_bf16._simple_bind(ctx=mx.cpu(), data=data_shape, type_dict=type_dict)
 
     arg_params_bf16 = {}
     aux_params_bf16 = {}
@@ -105,7 +104,7 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
             exe_bf16.arg_dict[arg_name][:] = arg_params_fp32[arg_name]
         else:
             exe_bf16.arg_dict[arg_name][:] = mx.nd.amp_cast(arg_params_fp32[arg_name], dtype=bfloat16)
-    
+
     for aux_name in aux_names:
         if bf16_use_fp32_params:
             exe_bf16.aux_dict[aux_name][:] = aux_params_fp32[aux_name]
@@ -169,7 +168,7 @@ def test_bf16_pooling():
     pool_conventions = ["full", "valid"]
     for new_params in itertools.product(data_shapes, pool_types, pool_conventions):
         pool_params.update({"pool_type": new_params[1], "pooling_convention": new_params[2]})
-        
+
         data_sym_fp32 = mx.sym.Variable(name='data')
         data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
         pool_fp32 = mx.sym.Pooling(data_sym_fp32, **pool_params)
@@ -203,7 +202,7 @@ def test_bf16_elemwiseadd():
 
     check_operator_accuracy(sym_fp32, sym_bf16, dshape, num_input_data=2, bf16_use_fp32_params=True)
 
-@unittest.skip("env dependent, need check further.")
+@pytest.mark.skip(reason="env dependent, need check further.")
 @with_seed()
 def test_bf16_concat():
     dshape = rand_shape_nd(4)
@@ -230,7 +229,7 @@ def test_bf16_abs():
         data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
         sym_fp32 = mx.sym.abs(data_sym_fp32)
         sym_bf16 = mx.sym.abs(data_sym_bf16)
-        
+
         check_operator_accuracy(sym_fp32, sym_bf16, data_shape, bf16_use_fp32_params=True)
 
 @with_seed()
@@ -285,6 +284,3 @@ def test_bf16_fallback():
     conv_bf16 = mx.sym.Convolution(data_sym_bf16, **conv_params)
     check_operator_accuracy(sym_fp32=conv_fp32, sym_bf16=conv_bf16, data_shape=(3, 32, 28, 28, 4), bf16_use_fp32_params=False)
 
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()

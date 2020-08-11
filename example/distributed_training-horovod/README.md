@@ -71,7 +71,7 @@ To run MXNet with Horovod, make the following additions to your training script:
 3. Scale the learning rate by number of workers. Effective batch size in synchronous distributed training is scaled by
     the number of workers. An increase in learning rate compensates for the increased batch size.
 
-4. Create `hvd.DistributedTrainer` with optimizer when using Gluon API or wrap optimizer in `hvd.DistributedOptimizer` when using Module API.  The distributed trainer or optimizer delegates gradient computation
+4. Create `hvd.DistributedTrainer` with optimizer when using Gluon API.  The distributed trainer or optimizer delegates gradient computation
     to the original optimizer, averages gradients using *allreduce*, and then applies those averaged
     gradients.
 
@@ -132,50 +132,6 @@ for epoch in range(num_epoch):
             loss = loss_fn(output, label)
         loss.backward()
         trainer.step(batch_size)
-```
-
-## Module API
-```python
-import mxnet as mx
-import horovod.mxnet as hvd
-
-# Initialize Horovod
-hvd.init()
-
-# Set context to current process
-context = mx.cpu(hvd.local_rank()) if args.no_cuda else mx.gpu(hvd.local_rank())
-num_workers = hvd.size()
-
-# Build model
-model = ...
-
-# Define hyper parameters
-optimizer_params = ...
-
-# Add Horovod Distributed Optimizer
-opt = mx.optimizer.create('sgd', **optimizer_params)
-opt = hvd.DistributedOptimizer(opt)
-
-# Initialize parameters
-initializer = mx.init.Xavier(rnd_type='gaussian', factor_type="in",
-                             magnitude=2)
-model.bind(data_shapes=train_data.provide_data,
-           label_shapes=train_data.provide_label)
-model.init_params(initializer)
-
-# Fetch and broadcast parameters
-(arg_params, aux_params) = model.get_params()
-if arg_params:
-    hvd.broadcast_parameters(arg_params, root_rank=0)
-if aux_params:
-    hvd.broadcast_parameters(aux_params, root_rank=0)
-model.set_params(arg_params=arg_params, aux_params=aux_params)
-
-# Train model
-model.fit(train_data,
-          kvstore=None,
-          optimizer=opt,
-          num_epoch=num_epoch)
 ```
 
 

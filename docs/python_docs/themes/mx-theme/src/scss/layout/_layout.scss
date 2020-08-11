@@ -4,7 +4,7 @@
  $layout: (
     document: (
         xl: (
-            width: 1400px,
+            width: 100%,
         )
     ),
     drawer-container: (
@@ -25,14 +25,9 @@
     )
 );
 
-.mdl-layout {
-    margin-top: 76px;
-}
-
-
 .document {
     width: 100%;
-    margin: 0 auto;
+    margin: 84px auto;
     display: flex;
 
     @media (min-width: $xl-breakpoint) {
@@ -61,10 +56,12 @@
             display: none;
         } 
         &--content {
-            position: fixed;
+            position: sticky;
             overflow-x: auto;
             overflow-y: auto;
             width: inherit;
+            right: 0px;
+            top: 80px;
             &::-webkit-scrollbar {
                 width: 6px;
             }

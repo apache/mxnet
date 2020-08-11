@@ -43,15 +43,16 @@ static bool LayerNormShape(const nnvm::NodeAttrs& attrs,
   using namespace mshadow;
   CHECK_EQ(in_shape->size(), 3U) << "Input:[data, gamma, beta]";
   const mxnet::TShape &dshape = in_shape->at(layernorm::kData);
+  if (!mxnet::ndim_is_known(dshape)) {
+    return false;
+  }
+
   int axis = GetRealAxis(param.axis, dshape.ndim());
   CHECK(axis >= 0 && axis < dshape.ndim())
     << "Channel axis out of range: axis=" << param.axis;
 
   const index_t channelCount = dshape[axis];
 
-  if (!mxnet::ndim_is_known(dshape)) {
-    return false;
-  }
   SHAPE_ASSIGN_CHECK(*in_shape,
                      layernorm::kGamma,
                      mxnet::TShape(Shape1(channelCount)));

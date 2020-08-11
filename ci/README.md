@@ -20,33 +20,10 @@
 This folder contains scripts and dockerfiles used to build and test MXNet using
 Docker containers
 
-You need docker and nvidia docker if you have a GPU.
-
-Also you need to run `pip3 install docker` as it uses the [docker python module](https://docker-py.readthedocs.io/en/stable/containers.html#)
-
-If you are in ubuntu an easy way to install Docker CE is executing the
-following script:
-
-
-```
-#!/bin/bash
-set -e
-set -x
-export DEBIAN_FRONTEND=noninteractive
-apt-get -y install curl
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
-add-apt-repository \
-   "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
-      $(lsb_release -cs) \
-         stable"
-apt-get update
-apt-get -y install docker-ce
-service docker restart
-usermod -a -G docker $SUDO_USER
-```
-
-For detailed instructions go to the [docker installation instructions](https://docs.docker.com/engine/installation/linux/ubuntu/#install-using-the-repository).
-
+You need `docker` and `docker-compose`. Install them on Ubuntu via `sudo apt-get
+install docker.io docker-compose python3-docker`. To run docker without
+administrative priviledges as your local user, further run `sudo usermod -a -G
+docker $USER`.
 
 ## build.py
 
@@ -68,7 +45,6 @@ To build for armv7 for example:
 ./build.py -p armv7
 ```
 
-
 To work inside a container with a shell you can do:
 
 ```
@@ -77,39 +53,6 @@ To work inside a container with a shell you can do:
 
 When building, the artifacts are located in the build/ directory in the project root. In case
 `build.py -a` is invoked, the artifacts are located in build.<platform>/
-
-# Docker container cleanup (Zombie containers)
-Docker has a client-server architecture, so when the program that is executing the docker client
-dies or receieves a signal, the container keeps running as it's started by the docker daemon.
-We implement signal handlers that catch sigterm and sigint and cleanup containers before exit. In
-Jenkins there's not enough time between sigterm and sigkill so we guarantee that containers are not
-left running by propagating environment variables used by the Jenkins process tree killer to
-identify which process to kill when the job is stopped. This has the effect of stopping the
-container given that the process inside the container is terminated.
-
-How to test this is working propperly: On the console you can hit ^C while a container is running
-(not just building) and see that the container is stopped by running `docker ps` on another
-terminal. In Jenkins this has been tested by stopping the job which has containers running and
-verifying that the container stops shortly afterwards by running docker ps.
-
-## Add a platform
-
-To add a platform, you should add the appropriate dockerfile in
-docker/Dockerfile.build.<platform> and add a shell function named
-build_<platform> to the file docker/runtime_functions.sh with build
-instructions for that platform.
-
-## Warning
-Due to current limitations of the CMake build system creating artifacts in the
-source 3rdparty folder of the parent mxnet sources concurrent builds of
-different platforms is NOT SUPPORTED.
-
-## ccache
-For all builds a directory from the host system is mapped where ccache will store cached
-compiled object files (defaults to /tmp/ci_ccache). This will speed up rebuilds
-significantly. You can set this directory explicitly by setting CCACHE_DIR environment
-variable. All ccache instances are currently set to be 10 Gigabytes max in size.
-
 
 ## Testing with ARM / Edge devices with QEMU
 
@@ -145,3 +88,33 @@ binaries from their Docker image with your kernel:
 ```
 docker run --rm --privileged multiarch/qemu-user-static --reset -p yes
 ```
+
+# Development
+
+## Add a platform
+
+To add a platform, you should add the appropriate dockerfile in
+docker/Dockerfile.build.<platform> and add a shell function named
+build_<platform> to the file docker/runtime_functions.sh with build
+instructions for that platform.
+
+## ccache
+For all builds a directory from the host system is mapped where ccache will store cached
+compiled object files (defaults to /tmp/ci_ccache). This will speed up rebuilds
+significantly. You can set this directory explicitly by setting CCACHE_DIR environment
+variable. All ccache instances are currently set to be 10 Gigabytes max in size.
+
+## Docker container cleanup (Zombie containers)
+
+Docker has a client-server architecture, so when the program that is executing the docker client
+dies or receieves a signal, the container keeps running as it's started by the docker daemon.
+We implement signal handlers that catch sigterm and sigint and cleanup containers before exit. In
+Jenkins there's not enough time between sigterm and sigkill so we guarantee that containers are not
+left running by propagating environment variables used by the Jenkins process tree killer to
+identify which process to kill when the job is stopped. This has the effect of stopping the
+container given that the process inside the container is terminated.
+
+How to test this is working propperly: On the console you can hit ^C while a container is running
+(not just building) and see that the container is stopped by running `docker ps` on another
+terminal. In Jenkins this has been tested by stopping the job which has containers running and
+verifying that the container stops shortly afterwards by running docker ps.

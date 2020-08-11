@@ -496,7 +496,7 @@ def sanitize_path_array(paths: List[str]) -> List[str]:
     :return: A sanitized list of paths
     :raises FileNotFoundError if a file does not exist
     """
-    expanded_paths = list(chain(*[glob.glob(path.strip()) for path in paths if path.strip() != '']))
+    expanded_paths = list(chain.from_iterable(glob.glob(path.strip()) for path in paths if path.strip() != ''))
     return [path.strip() for path in expanded_paths if path.strip() != '' and is_file(path)]
 
 

@@ -24,6 +24,7 @@
 #include "ufunc_helper.h"
 #include "utils.h"
 #include "../../imperative/imperative_utils.h"
+#include "../../operator/tensor/elemwise_binary_scalar_op.h"
 
 namespace mxnet {
 
@@ -51,14 +52,61 @@ void UFuncHelper(NDArray* lhs, NDArray* rhs, NDArray* out,
   }
 }
 
+void UFuncHelper(NDArray* lhs, int rhs, NDArray* out,
+                 runtime::MXNetRetValue* ret, const nnvm::Op* op) {
+  using namespace runtime;
+  nnvm::NodeAttrs attrs;
+  op::NumpyBinaryScalarParam param;
+  param.scalar = rhs;
+  param.is_int = true;
+  attrs.op = op;
+  attrs.parsed = param;
+  SetAttrDict<op::NumpyBinaryScalarParam>(&attrs);
+  NDArray** inputs = &lhs;
+  int num_inputs = 1;
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (outputs) {
+    *ret = PythonArg(2);
+  } else {
+    *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);
+  }
+}
+
 void UFuncHelper(NDArray* lhs, double rhs, NDArray* out,
                  runtime::MXNetRetValue* ret, const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
+  op::NumpyBinaryScalarParam param;
+  param.scalar = rhs;
+  param.is_int = false;
   attrs.op = op;
-  attrs.parsed = rhs;
-  SetAttrDict<double>(&attrs);
+  attrs.parsed = param;
+  SetAttrDict<op::NumpyBinaryScalarParam>(&attrs);
   NDArray** inputs = &lhs;
+  int num_inputs = 1;
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (outputs) {
+    *ret = PythonArg(2);
+  } else {
+    *ret = reinterpret_cast<NDArray*>(ndoutputs[0]);
+  }
+}
+
+void UFuncHelper(int lhs, NDArray* rhs, NDArray* out,
+                 runtime::MXNetRetValue* ret, const nnvm::Op* op) {
+  using namespace runtime;
+  nnvm::NodeAttrs attrs;
+  op::NumpyBinaryScalarParam param;
+  param.scalar = lhs;
+  param.is_int = true;
+  attrs.op = op;
+  attrs.parsed = param;
+  SetAttrDict<op::NumpyBinaryScalarParam>(&attrs);
+  NDArray** inputs = &rhs;
   int num_inputs = 1;
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
@@ -74,9 +122,12 @@ void UFuncHelper(double lhs, NDArray* rhs, NDArray* out,
                  runtime::MXNetRetValue* ret, const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
+  op::NumpyBinaryScalarParam param;
+  param.scalar = lhs;
+  param.is_int = false;
   attrs.op = op;
-  attrs.parsed = lhs;
-  SetAttrDict<double>(&attrs);
+  attrs.parsed = param;
+  SetAttrDict<op::NumpyBinaryScalarParam>(&attrs);
   NDArray** inputs = &rhs;
   int num_inputs = 1;
   NDArray** outputs = out == nullptr ? nullptr : &out;
@@ -99,9 +150,14 @@ void UFuncHelper(runtime::MXNetArgs args,
   if (args[0].type_code() == kNDArrayHandle) {
     if (args[1].type_code() == kNDArrayHandle) {
       UFuncHelper(args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array);
+    } else if (args[1].type_code() == kDLInt) {
+      UFuncHelper(args[0].operator NDArray*(), args[1].operator int(), out, ret, lfn_scalar);
     } else {
       UFuncHelper(args[0].operator NDArray*(), args[1].operator double(), out, ret, lfn_scalar);
     }
+  } else if (args[0].type_code() == kDLInt) {
+    UFuncHelper(args[0].operator int(), args[1].operator NDArray*(), out, ret,
+                rfn_scalar ? rfn_scalar : lfn_scalar);
   } else {
     UFuncHelper(args[0].operator double(), args[1].operator NDArray*(), out, ret,
                 rfn_scalar ? rfn_scalar : lfn_scalar);

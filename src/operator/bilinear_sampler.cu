@@ -178,7 +178,7 @@ inline void BilinearSamplerForward(const Tensor<gpu, 4, DType> &output,
     cuda::BilinearSamplerForwardKernel<DType> << <num_blocks, threads_per_block, 0, stream >> >(
       i_c, i_h, i_w, data, grid, o_n, o_c, o_h, o_w, out);
     // post kernel check
-    cudaError err = cudaPeekAtLastError();
+    cudaError err = cudaGetLastError();
     CHECK_EQ(err, cudaSuccess) << cudaGetErrorString(err);
 }
 
@@ -217,7 +217,7 @@ inline void BilinearSamplerBackward(const Tensor<gpu, 4, DType> &input_grad,
     });
   });
   // post kernel check
-  cudaError err = cudaPeekAtLastError();
+  cudaError err = cudaGetLastError();
   CHECK_EQ(err, cudaSuccess) << cudaGetErrorString(err);
 }
 

@@ -62,51 +62,6 @@ def sample_multinomial(attrs, inputs, proto_obj):
     new_attrs['dtype'] = TENSOR_TYPE_TO_NP_TYPE[int(attrs.get('dtype', 6))]
     return 'sample_multinomial', new_attrs, inputs
 
-# Arithmetic Operations
-def add(attrs, inputs, proto_obj):
-    """Adding two tensors"""
-    new_attr = {}
-
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        op_value = translation_utils._fix_broadcast('broadcast_add', inputs,
-                                                    broadcast_axis, proto_obj)
-        return op_value, new_attr, inputs
-    return 'broadcast_add', new_attr, inputs
-
-def subtract(attrs, inputs, proto_obj):
-    """Subtracting two tensors"""
-    new_attr = {}
-
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        op_value = translation_utils._fix_broadcast('broadcast_sub', inputs,
-                                                    broadcast_axis, proto_obj)
-        return op_value, new_attr, inputs
-    return 'broadcast_sub', new_attr, inputs
-
-def multiply(attrs, inputs, proto_obj):
-    """Multiply two tensors"""
-    new_attr = {}
-
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        op_value = translation_utils._fix_broadcast('broadcast_mul', inputs,
-                                                    broadcast_axis, proto_obj)
-        return op_value, new_attr, inputs
-    return 'broadcast_mul', new_attr, inputs
-
-def divide(attrs, inputs, proto_obj):
-    """Divide two tensors"""
-    new_attr = {}
-
-    if 'broadcast' in attrs and attrs['broadcast'] == 1:
-        broadcast_axis = attrs['axis']
-        op_value = translation_utils._fix_broadcast('broadcast_div', inputs,
-                                                    broadcast_axis, proto_obj)
-        return op_value, new_attr, inputs
-    return 'broadcast_div', new_attr, inputs
-
 def mean(attrs, inputs, proto_obj):
     """Mean of all the input tensors."""
     concat_input = [symbol.expand_dims(op_input, axis=0) for op_input in inputs]
@@ -334,14 +289,25 @@ def conv(attrs, inputs, proto_obj):
     no_bias = new_attrs['no_bias'] if 'no_bias' in new_attrs else 0
     bias = None if no_bias is True else inputs[2]
 
-    # Unlike ONNX, MXNet's convolution operator does not support asymmetric padding, so we first
-    # use 'Pad' operator, which supports asymmetric padding. Then use the convolution operator.
-    pad_width = (0, 0, 0, 0) + translation_utils._pad_sequence_fix(padding, kernel_dim=len(kernel))
-    pad_op = symbol.pad(inputs[0], mode='constant', pad_width=pad_width)
+    mxnet_pad = translation_utils._pad_sequence_fix(padding, kernel_dim=len(kernel))
 
-    conv_op = symbol.Convolution(pad_op, inputs[1], bias,
-                                 kernel=kernel, stride=stride, dilate=dilations,
-                                 num_filter=num_filter, num_group=num_group, no_bias=no_bias)
+    left_pads = mxnet_pad[0::2]
+    right_pads = mxnet_pad[1::2]
+    is_pad_sym = left_pads == right_pads
+
+    if not is_pad_sym:
+        # Unlike ONNX, MXNet's convolution operator does not support asymmetric padding, so we first
+        # use 'Pad' operator, which supports asymmetric padding. Then use the convolution operator.
+        pad_width = (0, 0, 0, 0) + mxnet_pad
+        pad_op = symbol.pad(inputs[0], mode='constant', pad_width=pad_width)
+        conv_op = symbol.Convolution(pad_op, inputs[1], bias,
+                                     kernel=kernel, stride=stride, dilate=dilations,
+                                     num_filter=num_filter, num_group=num_group, no_bias=no_bias)
+    else:
+        pad_width = left_pads
+        conv_op = symbol.Convolution(inputs[0], inputs[1], bias,
+                                     kernel=kernel, stride=stride, dilate=dilations, pad=pad_width,
+                                     num_filter=num_filter, num_group=num_group, no_bias=no_bias)
 
     return conv_op, new_attrs, inputs
 

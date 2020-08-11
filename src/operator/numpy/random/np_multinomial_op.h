@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include "../../mshadow_op.h"
 #include "../../mxnet_op.h"
 #include "../../operator_common.h"
@@ -54,6 +55,15 @@ struct NumpyMultinomialParam : public dmlc::Parameter<NumpyMultinomialParam> {
       .describe("Output shape. If the given shape is, "
       "e.g., (m, n, k), then m * n * k samples are drawn. "
       "Default is None, in which case a single value is returned.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream n_s, pvals_s, size_s;
+    n_s << n;
+    pvals_s << pvals;
+    size_s << size;
+    (*dict)["n"] = n_s.str();
+    (*dict)["pvals"] = pvals_s.str();
+    (*dict)["size"] = size_s.str();
   }
 };
 
