@@ -170,6 +170,8 @@ n2->inputs.push_back({n1,0});
 ```
 Here node `n1` produces an output at index 0 that is consumed by node `n2` on the input at index 1.
 
+![example connection](example_connection.png)
+
 Some graph passes require allocating new NDArrays to add/replace model params. The `alloc_arg` and `alloc_aux` APIs enable allocating new NDArrays and integrate them with the model args and aux params. Both APIs have the following signature:
 
 ```c++

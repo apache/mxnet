@@ -1,0 +1,11 @@
+--2020-08-11 06:18:48--  https://user-images.githubusercontent.com/1541993/88966633-7aac6300-d261-11ea-80de-ae3490640ff7.png
+Resolving user-images.githubusercontent.com (user-images.githubusercontent.com)... 151.101.52.133
+Connecting to user-images.githubusercontent.com (user-images.githubusercontent.com)|151.101.52.133|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 8443 (8.2K) [image/png]
+Saving to: ‘88966633-7aac6300-d261-11ea-80de-ae3490640ff7.png’
+
+     0K ........                                              100% 38.9M=0s
+
+2020-08-11 06:18:48 (38.9 MB/s) - ‘88966633-7aac6300-d261-11ea-80de-ae3490640ff7.png’ saved [8443/8443]
+
