@@ -422,8 +422,6 @@ inline void GammaReparamBackwardImpl(const OpContext& ctx,
   size_t workspace_size =
       ReduceWorkspaceSize<ndim, DType>(s, igrad.shape_, req[0], ograd.shape_);
   // Convert samples to standard gamma
-  // Kernel<StandarizeKernel<DType>, xpu>::Launch(
-  //       s, samples.Size(), samples.dptr<DType>(), scale);
   Kernel<op_with_req<mshadow_op::div, kWriteTo>, xpu>::Launch(
     s, samples.Size(), samples.dptr<DType>(), samples.dptr<DType>(), DType(scale));
   Tensor<xpu, 1, char> workspace =
