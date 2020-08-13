@@ -662,6 +662,7 @@ class Parameter(object):
             The new data type.
         """
         self._dtype = dtype
+        self._var = None  # Clear Symbol Variable as it caches the dtype
         if self._data is None:
             return
         with autograd.pause():

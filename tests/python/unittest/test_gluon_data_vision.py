@@ -194,18 +194,20 @@ def test_crop_resize():
 
 @with_seed()
 def test_flip_left_right():
-    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    flip_in = data_in[:, ::-1, :]
-    data_trans = nd.image.flip_left_right(nd.array(data_in, dtype='uint8'))
-    assert_almost_equal(flip_in, data_trans.asnumpy())
+    for width in range(3, 301, 7):
+        data_in = np.random.uniform(0, 255, (300, width, 3)).astype(dtype=np.uint8)
+        flip_in = data_in[:, ::-1, :]
+        data_trans = nd.image.flip_left_right(nd.array(data_in, dtype='uint8'))
+        assert_almost_equal(flip_in, data_trans.asnumpy())
 
 
 @with_seed()
 def test_flip_top_bottom():
-    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    flip_in = data_in[::-1, :, :]
-    data_trans = nd.image.flip_top_bottom(nd.array(data_in, dtype='uint8'))
-    assert_almost_equal(flip_in, data_trans.asnumpy())
+    for height in range(3, 301, 7):
+        data_in = np.random.uniform(0, 255, (height, 300, 3)).astype(dtype=np.uint8)
+        flip_in = data_in[::-1, :, :]
+        data_trans = nd.image.flip_top_bottom(nd.array(data_in, dtype='uint8'))
+        assert_almost_equal(flip_in, data_trans.asnumpy())
 
 
 @with_seed()
@@ -445,4 +447,3 @@ def test_bbox_crop():
     im_out, im_bbox = transform(img, bbox)
     assert im_out.shape == (3, 3, 3)
     assert im_bbox[0][2] == 3
-
