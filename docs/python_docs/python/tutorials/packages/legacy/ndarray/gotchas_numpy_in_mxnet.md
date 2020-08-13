@@ -20,6 +20,8 @@
 
 The goal of this tutorial is to explain some common misconceptions about using [NumPy](http://www.numpy.org/) arrays in Apache MXNet. We are going to explain why you need to minimize or completely remove usage of NumPy from your Apache MXNet code. We also going to show how to minimize NumPy performance impact, when you have to use NumPy.
 
+Warning: The latest MXNet offers NumPy-compatible array class `mx.np.ndarray` and NDArray is now a legacy array class in MXNet 1.x. This tutorial is just for reference for the legacy NDArray.
+
 ## Asynchronous and non-blocking nature of Apache MXNet
 
 Instead of using NumPy arrays Apache MXNet offers its own array implementation named [NDArray](/api/python/docs/api/ndarray/index.html). `NDArray API` was intentionally designed to be similar to `NumPy`, but there are differences.

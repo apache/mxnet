@@ -88,12 +88,6 @@ Data
 
       A guide to loading data using the Gluon API.
 
-   .. card::
-      :title: NDArray - Scientific computing on CPU and GPU
-      :link: ../ndarray/index.html
-
-      A guide to the NDArray data structure.
-
 Training
 --------
 
@@ -107,7 +101,7 @@ Training
 
    .. card::
       :title: Normalization Blocks
-      :link: data/normalization/normalization.html
+      :link: training/normalization/index.html
 
       Understand usage of normalization layers (such as BatchNorm).
 
@@ -190,15 +184,9 @@ Advanced Topics
 
    .. card::
       :title: Custom Loss
-      :link: loss/custom-loss.md
+      :link: loss/custom-loss.html
 
       A guide to implementing custom losses.
-
-   .. card::
-      :title: Gotchas using NumPy in Apache MXNet
-      :link: ../ndarray/gotchas_numpy_in_mxnet.md
-
-      Common misconceptions when using NumPy in Apache MXNet.
 
    .. card::
       :title: Hybridize

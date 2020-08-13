@@ -34,23 +34,11 @@ The following tutorials will help you learn how to deploy MXNet models for infer
 
       How to use quantized GluonCV models for inference on Intel Xeon Processors to gain higher performance.
 
-
-The following tutorials will help you learn how to deploy MXNet models for inference applications.
-
-.. container:: cards
-
    .. card::
       :title: C++
       :link: cpp.html
 
       How to use MXNet models in a C++ environment.
-
-
-   .. card::
-      :title: Raspberry Pi
-      :link: wine_detector.html
-
-      Example of running a wine detector on a raspberry pi.
 
    .. card::
       :title: Image Classification on Jetson

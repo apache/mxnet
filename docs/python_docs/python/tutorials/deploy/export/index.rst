@@ -25,23 +25,16 @@ but you also have the option to export most models to the ONNX format.
 .. container:: cards
 
    .. card::
-      :title: Export ONNX Models
-      :link: onnx.html
-
-      Export your MXNet model to the Open Neural Exchange Format
-
-   .. card::
-      :title: Save / Load Parameters
-      :link: ../../packages/gluon/blocks/save_load_params.html
-
-      Save and Load your model parameters with MXnet
-
-
-   .. card::
       :title: Export with GluonCV
       :link: https://gluon-cv.mxnet.io/build/examples_deployment/export_network.html
 
       How to export models trained with MXNet GluonCV.
+
+   .. card::
+      :title: Export ONNX Models
+      :link: onnx.html
+
+      Export your MXNet model to the Open Neural Exchange Format
 
 .. toctree::
    :hidden:

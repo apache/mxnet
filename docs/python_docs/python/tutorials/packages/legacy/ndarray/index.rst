@@ -47,6 +47,12 @@ NDArray
 
       This section contains the mxnet.np API reference documentation
 
+   .. card::
+      :title: Gotchas using NumPy in Apache MXNet
+      :link: gotchas_numpy_in_mxnet.md
+
+      Common misconceptions when using NumPy in Apache MXNet.
+
 .. toctree::
    :hidden:
    :glob:
