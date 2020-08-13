@@ -281,8 +281,8 @@ void NumpyPercentileForward(const nnvm::NodeAttrs& attrs,
     TBlob src = a_trans.reshape(t_shape);
     std::vector<TBlob> ret = {a_sort, a_idx};
 
-    TopKImplwithWorkspace<xpu, DType, index_t>(ctx.run_ctx, req_TopK, src, ret, topk_param,
-                                               workspace_curr_ptr, temp_size);
+    TopKImpl<xpu, DType, index_t>(ctx.run_ctx, req_TopK, src, ret, topk_param,
+                                  workspace_curr_ptr, temp_size);
     MSHADOW_TYPE_SWITCH(percentile.type_flag_, QType, {
       MSHADOW_SGL_DBL_TYPE_SWITCH(out.type_flag_, OType, {
         MXNET_NDIM_SWITCH(small.ndim()+1, NDim, {
