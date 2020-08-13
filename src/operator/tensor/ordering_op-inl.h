@@ -388,7 +388,7 @@ size_t GetMemorySize(const TBlob& src, const size_t batch_size = 1) {
                      mxnet::op::SortByKeyWorkspaceSize<DType, index_t, xpu>(srcSize, batch_size),
                      mxnet::op::SortByKeyWorkspaceSize<index_t, DType, xpu>(srcSize, batch_size));
   temp_size = std::max(temp_size,
-                       mxnet::op::SortByKeyWorkspaceSize<index_t, index_t, xpu>(srcSize, batch_size));
+              mxnet::op::SortByKeyWorkspaceSize<index_t, index_t, xpu>(srcSize, batch_size));
   // Additional temp space for gpu full sorts for batch ids.
   temp_size += PadBytes(sizeof(index_t) * srcSize, alignment);
   // Additional temp space for gpu full sorts for segment offsets
@@ -638,7 +638,6 @@ void TopKImplwithWorkspace(const RunContext &ctx,
     if (do_transpose) {
       flattened_data = Tensor<xpu, 1, DType>(reinterpret_cast<DType*>(workspace_curr_ptr),
                                              shape1, s);
-      workspace_curr_ptr += sizeof(DType) * srcSize;
       flattened_data = reshape(transpose(dat, Shape3(0, 2, 1)), shape1);
       CHECK_EQ(flattened_data.CheckContiguous(), true);
     } else {
@@ -656,7 +655,6 @@ void TopKImplwithWorkspace(const RunContext &ctx,
     }
     CHECK_EQ(sorted_dat.CheckContiguous(), true);
     temp_workspace = Tensor<xpu, 1, char>(workspace_curr_ptr, Shape1(temp_size), s);  // temp space
-    workspace_curr_ptr += temp_size;
   }
 
   mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size * element_num, 1, index_t{0}, index_t{1},
