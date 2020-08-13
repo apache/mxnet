@@ -46,7 +46,6 @@ struct RequantizeParam : public dmlc::Parameter<RequantizeParam> {
       .add_enum("auto", QuantizeOutType::kAuto)
       .add_enum("int8", QuantizeOutType::kInt8)
       .add_enum("uint8", QuantizeOutType::kUint8)
-      .add_enum("float", QuantizeOutType::kFloat32)
       .set_default(QuantizeOutType::kInt8)
       .describe("Output data type. `auto` can be specified to automatically determine output type "
                 "according to min_calib_range.");
@@ -77,24 +76,13 @@ inline bool RequantizeType(const nnvm::NodeAttrs& attrs,
     TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kUint8);
   } else if (out_type == mshadow::kInt8) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kInt8);
-  } else if (out_type == mshadow::kFloat32) {
-    TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kFloat32);
   } else {
-    LOG(FATAL) << "requantize op only supports int8 and uint8 as output type (partially support float32 as output type when fusing requantize and dequantize)";
+    LOG(FATAL) << "requantize op only supports int8 and uint8 as output type";
   }
   TYPE_ASSIGN_CHECK(*out_attrs, 1, mshadow::kFloat32);
   TYPE_ASSIGN_CHECK(*out_attrs, 2, mshadow::kFloat32);
   return (*in_attrs)[0] != -1;
 }
-
-// fuse continuous requantize and dequantize kernels to gain float output type
-struct FusedRequantizeKernel {
-  template<typename T1, typename T2>
-  MSHADOW_XINLINE static void Map(int i, T2 *output, const T1 *input,
-    const float *imin_range, const float *imax_range) {
-    output[i] = QuantizedToFloat<T1>(input[i], *imin_range, *imax_range);
-  }
-};
 
 struct RequantizeKernel {
   template<typename T1, typename T2>
@@ -133,22 +121,12 @@ void RequantizeForward(const nnvm::NodeAttrs& attrs,
     LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
                   "please switch to the context of CPU or int8 data type for GPU.";
   }
-  if (out_type == mshadow::kFloat32 && (!param.min_calib_range.has_value() ||
-   !param.max_calib_range.has_value()) ) {
-    LOG(FATAL) << "currently, fused requantize and dequantize to have float output type is only supported by calibrated model";
-  }
 
   if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
-    if (out_type == mshadow::kFloat32){
-      Kernel<FusedRequantizeKernel, xpu>::Launch(s, inputs[0].Size(),
-      outputs[0].dptr<float>(), inputs[0].dptr<SrcDType>(),
-      inputs[1].dptr<float>(), inputs[2].dptr<float>());
-    }else{
-      Kernel<RequantizeKernel, xpu>::Launch(s, inputs[0].Size(),
+    Kernel<RequantizeKernel, xpu>::Launch(s, inputs[0].Size(),
         outputs[0].dptr<DstDType>(), outputs[1].dptr<float>(), outputs[2].dptr<float>(),
         inputs[0].dptr<SrcDType>(), inputs[1].dptr<float>(), inputs[2].dptr<float>(),
         MaxAbs(param.min_calib_range.value(), param.max_calib_range.value()));
-    }
   } else {  // model is not calibrated
     mxnet::TShape src_shape, dst_shape;
     const size_t actual_float_size = sizeof(float);

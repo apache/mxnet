@@ -266,7 +266,7 @@ def _collect_layer_statistics(mod, data, collector, max_num_examples=None, logge
     num_batches = 0
     num_examples = 0
     for batch in data:
-        mod.forward(data_batch=batch, is_train=False)        
+        mod.forward(data_batch=batch, is_train=False)
         num_batches += 1
         num_examples += data.batch_size
         if max_num_examples is not None and num_examples >= max_num_examples:
@@ -825,8 +825,7 @@ def calib_graph(qsym, arg_params, aux_params, collector,
 def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quantize_granularity='tensor-wise',
                     exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
                     calib_data=None, data_shapes=None, calib_mode='none',
-                    num_calib_examples=None, ctx=cpu(), LayerOutputCollector=None, logger=None,
-                    custom_pass_bef_quant=None, custom_pass_aft_quant=None):
+                    num_calib_examples=None, ctx=cpu(), LayerOutputCollector=None, logger=None):
     """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -877,10 +876,6 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         For customize calibration method usage.
     logger : Object
         A logging object for printing information during the process of quantization.
-    custom_pass_bef_quant: function
-        A function to call custom passes for optimizing the computational graph before quantization
-    custom_pass_aft_quant: function
-        A function to call custom passes for optimizing the computational graph after quantization and calibration
 
     Returns
     -------
@@ -904,7 +899,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         raise ValueError('data_shapes required')
     data_nd = []
     for shape in data_shapes:
-        data_nd.append(mx.nd.zeros(shape.shape, ctx=ctx))
+        data_nd.append(mx.nd.zeros(shape.shape))
     while True:
         try:
             network(*data_nd)
@@ -935,7 +930,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         prefix = os.path.join(tmpdirname, 'tmp')
         network.export(prefix, epoch=0)
         symnet, args, auxs = mx.model.load_checkpoint(prefix, 0)
-    
+
     if exclude_layers is None:
         exclude_layers = []
     if exclude_layers_match is None:
@@ -952,9 +947,6 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     if ctx == mx.cpu():
         symnet = symnet.get_backend_symbol('MKLDNN_QUANTIZE')
 
-    if custom_pass_bef_quant is not None:
-        symnet, args, auxs = custom_pass_bef_quant(symnet, args, auxs)
-   
     qsym, qarg_params, aux_params, collector = quantize_graph(
         sym=symnet, arg_params=args, aux_params=auxs, ctx=ctx,
         excluded_sym_names=exclude_layers, excluded_op_names=exclude_operators,
@@ -971,8 +963,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy', 'customize']:
             data_names = [pair[0] for pair in calib_data.provide_data]
-            # in GPU case the context of this module is still on CPU for calibration
-            mod = Module(symbol=symnet,
+            mod = Module(symbol=symnet, context=ctx,
                          data_names=data_names, label_names=None)
             mod.bind(for_training=False, data_shapes=data_shapes)
             mod.set_params(args, auxs, allow_missing=False, force_init=True)
@@ -993,21 +984,13 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     if ctx == mx.cpu():
         qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
 
-    if custom_pass_aft_quant is not None:
-        qsym, qarg_params, aux_params = custom_pass_aft_quant(qsym, qarg_params, aux_params)
-
-    # digraph=mx.viz.plot_network(qsym, save_format = 'pdf',
-    #     node_attrs={"shape":'rect',"fixedsize":'false'},
-    #     hide_weights=False)
-    # digraph.save("qsym.gv")
-
     from ..gluon import SymbolBlock
     data_sym = []
     for name in data_names:
         data_sym.append(mx.sym.var(name))
     net = SymbolBlock(qsym, data_sym)
     # TODO(xinyu-intel): tmp solution to save param_dict and reload for SymbolBlock
-    # will enhance SymbolBlock to load args, auxs directly.  
+    # will enhance SymbolBlock to load args, auxs directly.
     with TemporaryDirectory() as tmpdirname:
         prefix = os.path.join(tmpdirname, 'tmp')
         param_name = '%s-%04d.params' % (prefix + 'net-quantized', 0)
