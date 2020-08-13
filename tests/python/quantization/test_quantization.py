@@ -509,14 +509,6 @@ def test_quantized_pooling():
 
 @with_seed()
 def test_quantized_fc():
-    def get_output_quantized_range(data_range, weight_range, quantized_range):
-        data_float_for_one_quant_level = data_range / quantized_range
-        weight_float_for_one_quant_level = weight_range / quantized_range
-        range_out = 2147483647.0 # range for int32
-        out_float_for_one_quant_level = data_float_for_one_quant_level * weight_float_for_one_quant_level
-        out_max = out_float_for_one_quant_level * range_out
-        out_min = -out_max
-        return out_min, out_max
     def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True, float_out=None):
         if not is_test_for_gpu():
             if float_out:
@@ -585,19 +577,8 @@ def test_quantized_fc():
         output = fc_fp32_exe.forward()[0]
 
         qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype=qdtype)
-        if float_out:
-            fc_int8 = mx.sym.contrib.quantized_fully_connected(data=qdata, num_hidden=num_hidden,
-                                                                no_bias=no_bias, flatten=flatten,
-                                                                float_out=float_out)
-            # perform requantize and dequantize in fc_fp32
-            out_min, out_max = get_output_quantized_range(data_range, weight_range, quantized_range)
-            out_range = maxabs(out_min, out_max)
-            quantized_range_int32 = 2147483647.0
-            output = output * out_range / quantized_range_int32
-            output = output.astype(float_out)
-        else:
-            fc_int8 = mx.sym.contrib.quantized_fully_connected(data=qdata, num_hidden=num_hidden,
-                                                                no_bias=no_bias, flatten=flatten)
+        fc_int8 = mx.sym.contrib.quantized_fully_connected(data=qdata, num_hidden=num_hidden,
+                                                            no_bias=no_bias, flatten=flatten)
         qarg_names = fc_int8.list_arguments()
         type_dict = {qarg_names[1]: 'int8'}
         if not no_bias:
@@ -624,12 +605,8 @@ def test_quantized_fc():
             assert_almost_equal(output.asnumpy(), qoutput.asnumpy())
         else:
             # with adding bias, accuracy loss should not be greater than one
-            diff_tol = 2
-            # Precision limitations on integer values for fp16 will lead to up to 32 accuracy loss for large integers
-            if float_out == 'float16':
-                diff_tol = 32
             diff = mx.nd.abs(output - qoutput.astype(output.dtype))
-            cond = mx.nd.lesser(diff_tol, diff).sum().asscalar()
+            cond = mx.nd.lesser(2, diff).sum().asscalar()
             assert cond == 0
 
     for qdtype in ['int8', 'uint8']:
@@ -646,84 +623,6 @@ def test_quantized_fc():
         check_quantized_fc((256, 111, 2, 2), 800, False, qdtype)
         check_quantized_fc((256, 2048, 2, 2), 800, True, qdtype)
         check_quantized_fc((256, 111, 2, 2), 800, True, qdtype)
-        # float out
-        for float_outtype in ['float32', 'float16']:
-            check_quantized_fc((32, 512, 2, 2), 100, True, qdtype, float_out=float_outtype)
-            check_quantized_fc((32, 111, 2, 2), 100, True, qdtype, float_out=float_outtype)
-            check_quantized_fc((32, 512, 2, 2), 100, False, qdtype, float_out=float_outtype)
-            check_quantized_fc((32, 111, 2, 2), 100, False, qdtype, float_out=float_outtype)
-            check_quantized_fc((256, 2048, 2, 2), 800, False, qdtype, float_out=float_outtype)
-            check_quantized_fc((256, 111, 2, 2), 800, False, qdtype, float_out=float_outtype)
-            check_quantized_fc((256, 2048, 2, 2), 800, True, qdtype, float_out=float_outtype)
-            check_quantized_fc((256, 111, 2, 2), 800, True, qdtype, float_out=float_outtype)
-
-@with_seed()
-# test the op to see if the op is working
-def test_quantized_bert_ffn1_to_ffn2_fusion_op():
-    if not is_test_for_gpu():
-        print("This op only supports GPU\n")
-        return
-    def check_quantized_bert_ffn1_to_ffn2_fusion(data_shape, num_hidden, flatten=True):
-
-        # input type is int8
-        data_low = -63.0
-        data_high = 63.0
-        quantized_range = 127.0
-
-        def maxabs(a, b):
-            return mx.nd.maximum(mx.nd.abs(a), mx.nd.abs(b))
-
-        data = mx.sym.Variable(name='data', shape=data_shape, dtype='float32')
-        fc_fp32 = mx.sym.FullyConnected(data=data, num_hidden=num_hidden, no_bias=False, flatten=flatten)
-        arg_shapes, _, _ = fc_fp32.infer_shape(data=data_shape)
-
-        data = mx.nd.random.uniform(low=data_low, high=data_high,
-                                    shape=data_shape).astype('int32')
-        weight = mx.nd.random.uniform(low=data_low, high=data_high,
-                                    shape=arg_shapes[1]).astype('int32')
-        bias = mx.nd.random.uniform(low=data_low, high=data_high,
-                                    shape=arg_shapes[2]).astype('int32')       
-
-        data_min = mx.nd.min(data).astype('float32')
-        data_max = mx.nd.max(data).astype('float32')
-        weight_min = mx.nd.min(weight).astype('float32')
-        weight_max = mx.nd.max(weight).astype('float32')
-        data_range = maxabs(data_min, data_max)
-        weight_range = maxabs(weight_min, weight_max)
-
-        bias_min = mx.nd.min(bias).astype('float32')
-        bias_max = mx.nd.max(bias).astype('float32')
-        bias_range = maxabs(bias_min, bias_max)
-
-        qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype='int8')
-
-        min_range = mx.nd.min(data).asscalar()
-        max_range = mx.nd.max(data).asscalar()
-        
-        fused_int8 = mx.sym.contrib.quantized_bert_ffn1_to_ffn2_fusion(data=qdata, num_hidden=num_hidden,
-                                                            flatten=flatten, min_calib_range=min_range, 
-                                                            max_calib_range=max_range)
-
-        qarg_names = fused_int8.list_arguments()
-        type_dict = {qarg_names[1]: 'int8'}
-
-        type_dict.update({qarg_names[2]: 'int8'})
-        fused_int8_exe = fused_int8.simple_bind(ctx=mx.current_context(), type_dict=type_dict, grad_req='null')
-
-        fused_int8_exe.arg_dict[qarg_names[0]][:] = data.astype('int8')
-        fused_int8_exe.arg_dict[qarg_names[1]][:] = weight.astype('int8')
-        fused_int8_exe.arg_dict[qarg_names[2]][:] = bias.astype('int8')
-        fused_int8_exe.arg_dict[qarg_names[3]][:] = -data_range
-        fused_int8_exe.arg_dict[qarg_names[4]][:] = data_range
-        fused_int8_exe.arg_dict[qarg_names[5]][:] = -weight_range
-        fused_int8_exe.arg_dict[qarg_names[6]][:] = weight_range
-        fused_int8_exe.arg_dict[qarg_names[7]][:] = -bias_range
-        fused_int8_exe.arg_dict[qarg_names[8]][:] = bias_range
-        qoutput, min_range, max_range = fused_int8_exe.forward()
-
-        qoutput.asnumpy()
-
-    check_quantized_bert_ffn1_to_ffn2_fusion((32, 512, 2, 2), 100)
 
 @with_seed()
 def test_quantized_embedding():
