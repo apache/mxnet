@@ -31,7 +31,7 @@ def test_gluon_trainer_type():
         x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=weight_stype)
         x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
         try:
-            trainer = mx.gluon.Trainer({'x':x}, 'sgd', {'learning_rate': 0.1},
+            trainer = mx.gluon.Trainer([x], 'sgd', {'learning_rate': 0.1},
                                        kvstore=kv, update_on_kvstore=update_on_kv)
             trainer._init_kvstore()
             assert trainer._kv_initialized

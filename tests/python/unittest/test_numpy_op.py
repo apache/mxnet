@@ -4803,6 +4803,46 @@ def test_gamma_exception():
 
 @with_seed()
 @use_np
+@pytest.mark.parametrize("shape", [(1,), (2, 2), (4, 2, 2)])
+@pytest.mark.parametrize("a", [2.0, 5.0, 10.0])
+@pytest.mark.parametrize("b", [0.5, 1.0, 1.5])
+def test_gamma_grad(shape, a, b):
+    class TestGammaGrad(HybridBlock):
+        def __init__(self, size, beta):
+            super(TestGammaGrad, self).__init__()
+            self._size = size
+            self._beta = beta
+
+        def hybrid_forward(self, F, a):
+            return F.np.random.gamma(a, self._beta, size=self._size)
+
+    for hybridize in [True, False]:
+        param = np.ones(shape) * a
+        param.attach_grad()
+        net = TestGammaGrad(shape, b)
+        if hybridize:
+            net.hybridize()
+        with mx.autograd.record():
+            samples = net(param)
+        samples.backward()
+        # Check shape
+        assert param.grad.shape == param.shape
+        # Check correctness
+        cdf = ss.gamma.cdf
+        log_pdf = ss.gamma.logpdf
+        eps = (0.01 * param / (1.0 + param ** 0.5)).asnumpy()
+        x = samples.asnumpy().astype('float64') / b
+        # d(cdf(x;alpha,beta))/d(alpha)
+        cdf_alpha = (cdf(x, param.asnumpy() + eps) -
+                        cdf(x, param.asnumpy() - eps)) / (2 * eps)
+        # d(cdf(x;alpha,beta))/d(x)
+        log_cdf_x = log_pdf(x, param.asnumpy())
+        expected_grad = -b * cdf_alpha / _np.exp(log_cdf_x)
+        assert_almost_equal(expected_grad, param.grad.asnumpy(), rtol=1e-2, atol=1e-3)
+
+
+@with_seed()
+@use_np
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_beta():
     class TestRandomBeta(HybridBlock):
