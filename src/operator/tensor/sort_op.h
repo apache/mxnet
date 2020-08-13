@@ -59,9 +59,9 @@ template<typename KDType, typename VDType>
 inline void SortByKey(mshadow::Tensor<cpu, 1, KDType> keys, mshadow::Tensor<cpu, 1, VDType> values,
                       bool is_ascend = true, mshadow::Tensor<cpu, 1, char>* workspace = nullptr,
                       const int begin_bit = 0, const int end_bit = sizeof(KDType)*8,
+                      const int batch_size = 1,
                       mshadow::Tensor<cpu, 1, KDType>* sorted_keys = nullptr,
-                      mshadow::Tensor<cpu, 1, VDType>* sorted_values = nullptr,
-                      int batch_size = 1) {
+                      mshadow::Tensor<cpu, 1, VDType>* sorted_values = nullptr) {
   CHECK_EQ(keys.CheckContiguous(), true);
   CHECK_EQ(values.CheckContiguous(), true);
   CHECK_EQ(keys.size(0), values.size(0))
@@ -131,8 +131,9 @@ template<typename KDType, typename VDType>
 inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu, 1, VDType> values,
                       bool is_ascend = true, mshadow::Tensor<gpu, 1, char>* workspace = nullptr,
                       const int begin_bit = 0, const int end_bit = sizeof(KDType)*8,
+                      const int batch_size = 1,
                       mshadow::Tensor<gpu, 1, KDType>* sorted_keys = nullptr,
-                      mshadow::Tensor<gpu, 1, VDType>* sorted_values = nullptr, int batch_size = 1);
+                      mshadow::Tensor<gpu, 1, VDType>* sorted_values = nullptr);
 /*!
  * \brief CPU/GPU: Return the amount of temporary storage in bytes required for SortByKey
  * \param num_keys number of keys to sort

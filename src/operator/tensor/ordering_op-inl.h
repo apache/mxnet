@@ -201,7 +201,6 @@ inline void ParseTopKParam(const TShape& src_shape,
 
 using namespace mshadow;
 
-
 struct fill_ind_to_one {
   template<typename DType>
   MSHADOW_XINLINE static void Map(int i, const index_t* indices, DType* out) {
@@ -352,27 +351,22 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
                                    const Tensor<gpu, 1, index_t>& ind,
                                    const Tensor<gpu, 1, char>& work,
                                    index_t K, index_t N, bool is_ascend,
-                                   Stream<gpu> *s, bool useBatch = true) {
+                                   Stream<gpu> *s, size_t id_size = 0) {
   // Use full sort for all but very small K for which we
   // can do a partial sort entirely within shared memory.
-  const bool full_sort(K > 5);
+  const auto full_sort(K > 5);
   // Batch size.
   const index_t M(dat.size(0)/N);
   if (full_sort) {
-    // Divide workspace into two parts. The first one is needed to store batch ids.
-    const size_t alignment = std::max(sizeof(DType), sizeof(index_t));
-    const size_t id_size = PadBytes(sizeof(index_t) * ind.size(0), alignment);
+    // If id_size != 0, divide workspace into two parts. The first one will store batch ids.
     Tensor<gpu, 1, char> sort_work(work.dptr_+id_size, Shape1(work.size(0)-id_size), s);
-    mxnet::op::SortByKey(dat, ind, is_ascend, &sort_work, 0, sizeof(DType)*8,
-                         (mshadow::Tensor<gpu, 1, DType>*) nullptr,
-                         (mshadow::Tensor<gpu, 1, index_t>*) nullptr, useBatch? M : 1);
-    if (M > 1) {
+    mxnet::op::SortByKey(dat, ind, is_ascend, &sort_work, 0, sizeof(DType)*8, id_size? 1 : M);
+    if (id_size && M > 1) {
       Tensor<gpu, 1, index_t> batch_id(reinterpret_cast<index_t*>(work.dptr_),
                                        Shape1(ind.size(0)), s);
       // Back to back sorting. Note that mxnet::op::SortByKey is a stable sort.
       batch_id = ind / N;
       mxnet::op::SortByKey(batch_id, dat, true, &sort_work);
-//      batch_id = ind / N;
       mxnet::op::SortByKey(batch_id, ind, true, &sort_work);
     }
   } else {
@@ -389,14 +383,12 @@ template<typename xpu, typename DType>
 size_t GetMemorySize(const TBlob& src, const size_t batch_size = 1) {
   const auto srcSize = src.Size();
   const auto alignment = std::max(sizeof(DType), sizeof(index_t));
-  size_t temp_size = 0;
   // Temp space needed by the gpu-based full sorts.
+  size_t temp_size = std::max(
+                     mxnet::op::SortByKeyWorkspaceSize<DType, index_t, xpu>(srcSize, batch_size),
+                     mxnet::op::SortByKeyWorkspaceSize<index_t, DType, xpu>(srcSize, batch_size));
   temp_size = std::max(temp_size,
-                     mxnet::op::SortByKeyWorkspaceSize<index_t, index_t, xpu>(srcSize, batch_size));
-  temp_size = std::max(temp_size,
-                       mxnet::op::SortByKeyWorkspaceSize<index_t, DType, xpu>(srcSize, batch_size));
-  temp_size = std::max(temp_size,
-                       mxnet::op::SortByKeyWorkspaceSize<DType, index_t, xpu>(srcSize, batch_size));
+                       mxnet::op::SortByKeyWorkspaceSize<index_t, index_t, xpu>(srcSize, batch_size));
   // Additional temp space for gpu full sorts for batch ids.
   temp_size += PadBytes(sizeof(index_t) * srcSize, alignment);
   // Additional temp space for gpu full sorts for segment offsets
@@ -468,10 +460,7 @@ void TopKImpl(const RunContext &ctx,
   Tensor<xpu, 1, DType>sorted_dat(reinterpret_cast<DType*>(workspace_curr_ptr), shape1, s);
   Tensor<xpu, 1, index_t> indices(reinterpret_cast<index_t*>(workspace_curr_ptr += size_1),
                                   shape1, s);  // indices in the original matrix
-  workspace_curr_ptr += size_2;
-
-  if (retMask)
-    workspace_curr_ptr += size_3;
+  workspace_curr_ptr += size_2 + size_3;
 
   Tensor<xpu, 3, DType> dat = src.FlatTo3D<xpu, DType>(axis, axis, s);
   Tensor<xpu, 1, char> temp_workspace;
@@ -581,7 +570,6 @@ template<typename xpu, typename DType>
 size_t TopKWorkspaceSize(const TBlob& src,
                          const TopKParam& param,
                          size_t *temp_size_ptr) {
-  using namespace mshadow;
   using namespace mshadow::expr;
   size_t batch_size = 0;
   index_t element_num = 0;  // number of batches + the size of each batch
@@ -628,10 +616,10 @@ void TopKImplwithWorkspace(const RunContext &ctx,
     << element_num << ", but the selected index_t can only represent "
     << mxnet::common::MaxIntegerValue<index_t>() << " elements";
 
-  const auto retMask = param.ret_typ == topk_enum::kReturnMask;
-  const auto alignment = std::max(sizeof(DType), sizeof(index_t));
   const auto srcSize = src.Size();
   const auto total_size = batch_size * k;
+  const auto retMask = param.ret_typ == topk_enum::kReturnMask;
+  const auto alignment = std::max(sizeof(DType), sizeof(index_t));
   const auto size_1 = PadBytes(sizeof(DType) * srcSize, alignment);
   const auto size_2 = PadBytes(sizeof(index_t) * srcSize, alignment);
   const auto size_3 = retMask ? PadBytes(sizeof(index_t) * total_size, alignment) : 0;
@@ -640,10 +628,8 @@ void TopKImplwithWorkspace(const RunContext &ctx,
   Tensor<xpu, 1, index_t> indices(reinterpret_cast<index_t*>(workspace_curr_ptr += size_1),
                                   shape1, s);  // indices in the original matrix
 
-  workspace_curr_ptr += size_2;
-
-  if (retMask)
-    workspace_curr_ptr += size_3;
+  const auto id_size = PadBytes(sizeof(index_t) * indices.size(0), alignment);
+  workspace_curr_ptr += size_2 + size_3;
 
   Tensor<xpu, 3, DType> dat = src.FlatTo3D<xpu, DType>(axis, axis, s);
   Tensor<xpu, 1, char> temp_workspace;
@@ -682,7 +668,7 @@ void TopKImplwithWorkspace(const RunContext &ctx,
   // up to the k-th element and the `indices` will contain the corresponding index in `sorted_dat`
   // `temp_workspace` is used to store the flattened source data for CPU device, and it's used as
   // a temporal buffer for GPU device.
-  TopKSort(sorted_dat, indices, temp_workspace, k, element_num, is_ascend, s, false);
+  TopKSort(sorted_dat, indices, temp_workspace, k, element_num, is_ascend, s, id_size);
 
   // 3. Assign results to the ret blob
   // When returning indices, only update(modulo) required elements instead of full elements
@@ -692,7 +678,7 @@ void TopKImplwithWorkspace(const RunContext &ctx,
   if (retMask) {
     if (req[0] == kNullOp)
       return;
-    if (req[0] == kWriteTo)
+    if (req[0] != kWriteTo)
       LOG(FATAL) << "req=" << req[0] << " is not supported yet.";
 
     Tensor<xpu, 1, index_t> sel_indices(reinterpret_cast<index_t*>(workspace_curr_ptr - size_3),

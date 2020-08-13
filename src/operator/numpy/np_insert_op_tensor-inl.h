@@ -203,7 +203,7 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
     Kernel<ObjToIndices, xpu>::Launch(s, indices_len, indices_ptr, N,
                                       inputs[obj_pos].dptr<int64_t>());
     Kernel<range_fwd, xpu>::Launch(s, indices_len, 1, 0, 1, kWriteTo, order_ptr);
-    mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, &sorted_indices);
+    mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, 1, &sorted_indices);
     Kernel<IndicesModify, xpu>::Launch(s, indices_len, indices_ptr, order_ptr);
 
     mxnet_op::Kernel<mxnet_op::set_zero, xpu>::Launch(s, outshape[axis], is_insert);

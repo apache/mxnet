@@ -150,9 +150,9 @@ inline typename std::enable_if<!(std::is_same<KDType, m_half>::value ||
 SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
               mshadow::Tensor<gpu, 1, VDType>* values, bool is_ascend,
               mshadow::Tensor<gpu, 1, char>* workspace,
-              const int begin_bit, const int end_bit,
+              const int begin_bit, const int end_bit, const int batch_size,
               mshadow::Tensor<gpu, 1, KDType>* sorted_keys,
-              mshadow::Tensor<gpu, 1, VDType>* sorted_values, int batch_size) {
+              mshadow::Tensor<gpu, 1, VDType>* sorted_values) {
   const size_t num_keys = keys->size(0);
   auto stream_ = keys->stream_;
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(stream_);
@@ -174,8 +174,12 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
     const int num_segments = batch_size;
     const int segment_length = (num_items + num_segments - 1) / num_segments;
 
-    // Divide workspace into two parts. The first one is needed to store segment offsets.
-    auto *d_segment_offsets = reinterpret_cast<int *>(workspace->dptr_);
+    KDType* keys_out_ptr = sorted_keys? sorted_keys->dptr_ :
+                           reinterpret_cast<KDType *>(workspace->dptr_);
+    VDType* values_out_ptr = sorted_values? sorted_values->dptr_ :
+                             reinterpret_cast<VDType *>(workspace->dptr_ + keys_bytes);
+    auto *d_segment_offsets = reinterpret_cast<int *>(workspace->dptr_ + keys_bytes + values_bytes);
+    void* temp_storage = reinterpret_cast<void *>(d_segment_offsets + (batch_size > 1? 2 : 0));
 
     if (batch_size > 1) {
       mxnet_op::Kernel<range_fwd, gpu>::Launch(stream_, (num_segments + 1), 1, 0,
@@ -213,16 +217,6 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
       << "Workspace given to SortByKey is too small: requested " << required_storage <<
       " B and got " << workspace->size(0) << " B.";
 
-    const size_t start_keys = (batch_size > 1) ? sizeof(index_t) * (num_segments + 1) : 0;
-    const auto start_values = start_keys + keys_bytes;
-    KDType* keys_out_ptr = sorted_keys == nullptr ?
-                           reinterpret_cast<KDType *>(workspace->dptr_ + start_keys) :
-                           sorted_keys->dptr_;
-    VDType* values_out_ptr = sorted_values == nullptr ?
-                             reinterpret_cast<VDType *>(workspace->dptr_ + start_values) :
-                             sorted_values->dptr_;
-
-    void* temp_storage = reinterpret_cast<void *>(workspace->dptr_ + start_values + values_bytes);
     // Sort
     if (is_ascend) {
       if (batch_size > 1) {
@@ -280,9 +274,9 @@ inline typename std::enable_if<!std::is_same<KDType, m_half>::value &&
 SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
               mshadow::Tensor<gpu, 1, VDType>* values, bool is_ascend,
               mshadow::Tensor<gpu, 1, char>* workspace,
-              const int begin_bit, const int end_bit,
+              const int begin_bit, const int end_bit, const int batch_size,
               mshadow::Tensor<gpu, 1, KDType>* sorted_keys,
-              mshadow::Tensor<gpu, 1, VDType>* sorted_values, int batch_size) {
+              mshadow::Tensor<gpu, 1, VDType>* sorted_values) {
   const size_t num_keys = keys->size(0);
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(keys->stream_);
   const auto key_iter = thrust::device_pointer_cast(GetDevicePntr(keys, sorted_keys));
@@ -303,9 +297,9 @@ inline typename std::enable_if<std::is_same<KDType, m_half>::value, void>::type
 SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
               mshadow::Tensor<gpu, 1, VDType>* values, bool is_ascend,
               mshadow::Tensor<gpu, 1, char>* workspace,
-              const int begin_bit, const int end_bit,
+              const int begin_bit, const int end_bit, const int batch_size,
               mshadow::Tensor<gpu, 1, KDType>* sorted_keys,
-              mshadow::Tensor<gpu, 1, VDType>* sorted_values, int batch_size) {
+              mshadow::Tensor<gpu, 1, VDType>* sorted_values) {
   const size_t num_keys = keys->size(0);
   cudaStream_t stream = mshadow::Stream<gpu>::GetStream(keys->stream_);
   const auto key_iter = thrust::device_pointer_cast(GetDevicePntr(keys, sorted_keys));
@@ -324,9 +318,9 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
 template<typename KDType, typename VDType>
 inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu, 1, VDType> values,
                       bool is_ascend, mshadow::Tensor<gpu, 1, char>* workspace,
-                      const int begin_bit, const int end_bit,
+                      const int begin_bit, const int end_bit, const int batch_size,
                       mshadow::Tensor<gpu, 1, KDType>* sorted_keys,
-                      mshadow::Tensor<gpu, 1, VDType>* sorted_values, int batch_size) {
+                      mshadow::Tensor<gpu, 1, VDType>* sorted_values) {
 #if CUDA_VERSION < 9000
 #if CUDA_VERSION < 7000
   LOG(FATAL) << "SortByKey is only supported for CUDA version >=7.0!";
@@ -337,7 +331,8 @@ inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu,
 
   CHECK_EQ(keys.CheckContiguous(), true);
   CHECK_EQ(values.CheckContiguous(), true);
-  SortByKeyImpl(&keys, &values, is_ascend, workspace, begin_bit, end_bit, sorted_keys, sorted_values, batch_size);
+  SortByKeyImpl(&keys, &values, is_ascend, workspace,
+                begin_bit, end_bit, batch_size, sorted_keys, sorted_values);
   MSHADOW_CUDA_POST_KERNEL_CHECK(SortByKey);
 }
 
