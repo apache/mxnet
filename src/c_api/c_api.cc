@@ -1505,11 +1505,13 @@ int MXLibInfoFeatures(const struct LibFeature **lib_features, size_t *size) {
   API_END();
 }
 
-int MXLibInfoCompiledWithCXX11ABI(bool* result) {
-  using namespace features;
+int MXLibInfoCompiledWithCXX11ABI(int* result) {
   API_BEGIN();
-  LibInfo* lib_info = LibInfo::getInstance();
-  *result = lib_info->cxx11_abi();
+#ifdef _GLIBCXX_USE_CXX11_ABI
+  *result = _GLIBCXX_USE_CXX11_ABI;
+#else
+  *result = -1;
+#endif
   API_END();
 }
 

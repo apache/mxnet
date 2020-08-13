@@ -56,11 +56,12 @@
             display: none;
         } 
         &--content {
-            position: fixed;
+            position: sticky;
             overflow-x: auto;
             overflow-y: auto;
             width: inherit;
             right: 0px;
+            top: 80px;
             &::-webkit-scrollbar {
                 width: 6px;
             }

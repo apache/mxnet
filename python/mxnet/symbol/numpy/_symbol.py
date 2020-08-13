@@ -8012,7 +8012,7 @@ def diagonal(a, offset=0, axis1=0, axis2=1):
 
 # pylint:disable=redefined-outer-name, too-many-arguments
 @set_module('mxnet.symbol.numpy')
-def sum(a, axis=None, dtype=None, out=None, keepdims=None, initial=None, where=None):
+def sum(a, axis=None, dtype=None, out=None, keepdims=False, initial=None, where=None):
     r"""
     Sum of array elements over a given axis.
 

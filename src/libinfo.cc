@@ -126,9 +126,6 @@ LibInfo *LibInfo::getInstance() {
         m_inst = std::make_unique<LibInfo>();
     return m_inst.get();
 }
-bool LibInfo::cxx11_abi() {
-  return MXNET_GLIBCXX_USE_CXX11_ABI;
-}
 
 std::unique_ptr<LibInfo> LibInfo::m_inst = nullptr;
 
