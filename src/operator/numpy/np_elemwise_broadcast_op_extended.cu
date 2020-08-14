@@ -77,13 +77,13 @@ NNVM_REGISTER_OP(_npi_arctan2_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::arctan2>);
 
 NNVM_REGISTER_OP(_backward_npi_arctan2_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::arctan2_grad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::arctan2_grad>);
 
 NNVM_REGISTER_OP(_npi_rarctan2_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rarctan2>);
 
 NNVM_REGISTER_OP(_backward_npi_rarctan2_scalar)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, mshadow_op::rarctan2_grad>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Backward<gpu, mshadow_op::rarctan2_grad>);
 
 NNVM_REGISTER_OP(_npi_lcm_scalar)
 .set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::ComputeInt<gpu, mshadow_op::lcm>);
