@@ -81,7 +81,7 @@ def test_softmax():
 @pytest.mark.skip(reason="CI hasn't switch to ILP64 OpenBLAS yet")
 @use_np
 def test_dot():
-    A = np.ones((1, INT_MAX + 1))
-    B = np.ones((INT_MAX + 1, 1))
+    A = np.ones((1, INT_32_MAX + 1))
+    B = np.ones((INT_32_MAX + 1, 1))
     C = np.dot(A, B)
-    assert_almost_equal(C.asnumpy(), [INT_MAX + 1], rtol=1e-5, atol=1e-5)
+    assert_almost_equal(C.asnumpy(), [INT_32_MAX + 1], rtol=1e-5, atol=1e-5)
