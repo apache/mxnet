@@ -39,7 +39,7 @@ def md2ipynb():
         print('%s: Evaluated %s in %f sec'%(src_fn, input_fn, time.time()-tic))
     # need to add language info to for syntax highlight
     notebook['metadata'].update({'language_info':{'name':'python'}})
-    with open(output_fn, 'w') as f:
+    with open(output_fn, 'w', encoding='utf-8') as f:
         f.write(nbformat.writes(notebook))
     print('%s: Write results into %s'%(src_fn, output_fn))
 

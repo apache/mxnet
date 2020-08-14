@@ -76,8 +76,6 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         # Python
         python3 \
         python3-pip \
-        python3-nose \
-        python3-nose-timer \
         ## Documentation
         doxygen \
         pandoc \
