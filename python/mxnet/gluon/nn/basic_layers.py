@@ -788,6 +788,14 @@ class GroupNorm(HybridBlock):
         Initializer for the beta weight.
     gamma_initializer: str or `Initializer`, default 'ones'
         Initializer for the gamma weight.
+    v2: bool, default False
+        If True, a correct implementation of the group normalization operator from the original
+        paper will be used. This is the only version of this operator that will be available in
+        MXNet 2.0.
+        If False, an incorrect implementation of group normalization will be used. This setting is
+        only present for backward compatibility with older MXNet 1.x models. Please see
+        `#18199 <https://github.com/apache/incubator-mxnet/pull/18199>`_ and
+        `#17139 <https://github.com/apache/incubator-mxnet/issues/17139>`_ for more information.
 
 
     Inputs:
@@ -824,26 +832,39 @@ class GroupNorm(HybridBlock):
     """
     def __init__(self, num_groups=1, epsilon=1e-5, center=True, scale=True,
                  beta_initializer='zeros', gamma_initializer='ones',
-                 prefix=None, params=None):
+                 in_channels=0, v2=False, prefix=None, params=None):
         super(GroupNorm, self).__init__(prefix=prefix, params=params)
         self._kwargs = {'eps': epsilon, 'num_groups': num_groups, 'center': center, 'scale': scale}
         self._num_groups = num_groups
         self._epsilon = epsilon
         self._center = center
         self._scale = scale
+        self._v2 = v2
+
+        if not v2:
+            warnings.warn("You are using an incorrect implementation of GroupNorm. To use a "
+                          "corrected implementation, pass v2=True into GroupNorm's constructor. "
+                          "The current (broken) implementation will be removed in MXNet 2.0. "
+                          "Please see #18199 and #17139 for more details.")
+
         self.gamma = self.params.get('gamma', grad_req='write' if scale else 'null',
-                                     shape=(num_groups,), init=gamma_initializer,
-                                     allow_deferred_init=True)
+                                     shape=(in_channels if v2 else num_groups,),
+                                     init=gamma_initializer, allow_deferred_init=True)
         self.beta = self.params.get('beta', grad_req='write' if center else 'null',
-                                    shape=(num_groups,), init=beta_initializer,
-                                    allow_deferred_init=True)
+                                    shape=(in_channels if v2 else num_groups,),
+                                    init=beta_initializer, allow_deferred_init=True)
 
     def hybrid_forward(self, F, data, gamma, beta):
-        norm_data = F.GroupNorm(data, gamma=gamma, beta=beta, num_groups=self._num_groups, eps=self._epsilon)
+        norm_data = F.GroupNorm(data, gamma=gamma, beta=beta, num_groups=self._num_groups, eps=self._epsilon,
+                                v2=self._v2)
         return norm_data
 
     def __repr__(self):
-        s = '{name}({content})'
+        s = '{name}({content}'
+        in_channels = self.gamma.shape[0]
+        s += ', in_channels={0}'.format(in_channels)
+        s += ', v2={0}'.format(self._v2)
+        s += ')'
         return s.format(name=self.__class__.__name__,
                         content=', '.join(['='.join([k, v.__repr__()])
                                            for k, v in self._kwargs.items()]))
