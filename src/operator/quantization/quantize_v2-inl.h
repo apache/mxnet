@@ -251,13 +251,10 @@ class QuantizeV2Operator {
               outputs[2].dptr<float>(), inputs[0].dptr<FP16DType>(), param.min_calib_range.value(),
               param.max_calib_range.value(), MinValue<uint8_t>(), MaxValue<uint8_t>());
         } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
-        std::cout << "=====================Debugging quantize===================" << std::endl;
-        std::cout << outputs[0].Size() << std::endl;
           Kernel<quantize_v2_zero_centered, xpu>::Launch(
               s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
               outputs[2].dptr<float>(), inputs[0].dptr<FP16DType>(), param.min_calib_range.value(),
               param.max_calib_range.value(), MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
-        std::cout << "=====================quantize OK===================" << std::endl;
         } else {
           LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
         }

@@ -80,8 +80,6 @@ def test_quantizeV2_float_to_int8():
         assert qdata.dtype == np.int8
         assert min_val.dtype == np.float32
         assert max_val.dtype == np.float32
-        # assert_almost_equal(min_val.asscalar(), -real_range)
-        # assert_almost_equal(max_val.asscalar(), real_range)
         qdata_np = (np.sign(data_np) * np.minimum(np.abs(data_np) * scale + 0.5, quantized_range)).astype(np.int8)
         assert_almost_equal(qdata.asnumpy(), qdata_np, atol = 1)
     
@@ -509,11 +507,7 @@ def test_quantized_pooling():
 
 @with_seed()
 def test_quantized_fc():
-    def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True, float_out=None):
-        if not is_test_for_gpu():
-            if float_out:
-                print('skipped testing quantized_fc with float_out on cpu since it is only supported by GPU now')
-                return
+    def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True):
         if is_test_for_native_cpu():
             hasMKL = False
             for key in os.environ.keys():
@@ -578,7 +572,7 @@ def test_quantized_fc():
 
         qdata = mx.sym.Variable(name='qdata', shape=data_shape, dtype=qdtype)
         fc_int8 = mx.sym.contrib.quantized_fully_connected(data=qdata, num_hidden=num_hidden,
-                                                            no_bias=no_bias, flatten=flatten)
+                                                           no_bias=no_bias, flatten=flatten)
         qarg_names = fc_int8.list_arguments()
         type_dict = {qarg_names[1]: 'int8'}
         if not no_bias:

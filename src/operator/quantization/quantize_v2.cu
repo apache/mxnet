@@ -45,19 +45,6 @@ struct QuantScaleANDSetOutRange {
 
 #if defined(__CUDACC__)
 
-// get quantization scale factor and set omin_range, omax_range for quantize_v2_zero_centered_kernel
-__global__ void QuantScaleANDSetOutRangeKernel(float *omin_range,
-                                float *omax_range,
-                                const float imin_range,
-                                const float imax_range,
-                                const float quantized_range){
-
-    float real_range = MaxAbs(imin_range, imax_range);
-
-    *omin_range = -real_range;
-    *omax_range = real_range;
-}
-
 template <typename SrcDType, typename SrcLoadType, typename DstDType, typename DstLoadType>
 __global__ void quantize_v2_zero_centered_kernel(DstDType *out,
                                                 SrcDType *in,
@@ -74,7 +61,7 @@ __global__ void quantize_v2_zero_centered_kernel(DstDType *out,
     const int load_ratio = sizeof(SrcLoadType) / sizeof(SrcDType);
 
     for (index_t i = threadIdx.x; i < row_len / load_ratio; i += blockDim.x){
-      int idx = row * row_len / load_ratio + i; // warning: divided by zero???
+      int idx = row * row_len / load_ratio + i;
 
       SrcLoadType scratch_in = *(inload + idx);
       SrcDType* scratch_in_aft_load = reinterpret_cast<SrcDType*>(&scratch_in);
@@ -82,7 +69,7 @@ __global__ void quantize_v2_zero_centered_kernel(DstDType *out,
       DstLoadType scratch_out = *(outload + idx);
       DstDType* scratch_out_aft_load = reinterpret_cast<DstDType*>(&scratch_out);
 
-    #pragma unroll // dynamic load_ration will make this not work
+    #pragma unroll
       for(int j = 0; j < load_ratio; j++){
         scratch_out_aft_load[j] = Sign(scratch_in_aft_load[j]) * 
                                   fminf(fabsf(scratch_in_aft_load[j]) * quantization_scale_tmp + 0.5f, quantized_range);
@@ -114,9 +101,7 @@ void QuantizeV2ZeroCenteredGPU(mshadow::Stream<gpu>* s,
       nthreads = 32;
     }
     
-    int elem_per_thread = 8; // better to be dynamic - 
-    // read property of number of SMs (we want to reach the limit of number of blocks per SM)
-    // For Turing, the maximum number of thread blocks per SM is 16.
+    int elem_per_thread = 8;
 
     int Srcltype = mxnet::common::cuda::get_load_type(num_elem * sizeof(SrcDType));
 
@@ -250,8 +235,8 @@ class QuantizeV2OperatorGPU {
       if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
         if (out_type == mshadow::kInt8) {  // zero-centered quantization
 
-            QuantScaleANDSetOutRangeKernel<<<1, 1, 0, mshadow::Stream<gpu>::GetStream(s)>>>
-                (outputs[1].dptr<float>(), outputs[2].dptr<float>(),
+            Kernel<QuantScaleANDSetOutRange, gpu>::Launch(s, 1,
+                outputs[1].dptr<float>(), outputs[2].dptr<float>(),
                 param.min_calib_range.value(), param.max_calib_range.value(),
                 MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
 
