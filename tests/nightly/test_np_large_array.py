@@ -36,6 +36,7 @@ MEDIUM_X = 10000
 LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
+INT_32_MAX = 2 ** 31 - 1
 
 
 @use_np
@@ -76,3 +77,11 @@ def test_softmax():
         true_output = np.full((SMALL_Y, LARGE_X), (1 / input_data.shape[axis]))
         output = npx.softmax(input_data, axis=axis)
         assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
+
+@pytest.mark.skip(reason="CI hasn't switch to ILP64 OpenBLAS yet")
+@use_np
+def test_dot():
+    A = np.ones((1, INT_MAX + 1))
+    B = np.ones((INT_MAX + 1, 1))
+    C = np.dot(A, B)
+    assert_almost_equal(C.asnumpy(), [INT_MAX + 1], rtol=1e-5, atol=1e-5)
