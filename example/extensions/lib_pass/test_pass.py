@@ -51,6 +51,7 @@ def test_model(pass_name):
     # execute in MXNet
     print('-------------------------------')
     print('Testing regular MXNet execution')
+
     exe = sym.bind(ctx=mx.cpu(), args={'a':mx.nd.ones((3,2)), 'b':mx.nd.ones((3,2))})
     out = exe.forward()
     print(out)
@@ -95,4 +96,3 @@ def test_model(pass_name):
     sym_block2.export('modified')
 
 test_model('myPass')
-test_model('jsonPass')
