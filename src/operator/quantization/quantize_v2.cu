@@ -33,8 +33,7 @@ struct QuantScaleANDSetOutRange {
                                 float *omin_range,
                                 float *omax_range,
                                 const float imin_range,
-                                const float imax_range,
-                                const float quantized_range){
+                                const float imax_range){
 
     float real_range = MaxAbs(imin_range, imax_range);
 
@@ -149,9 +148,10 @@ void QuantizeV2ZeroCenteredGPU(mshadow::Stream<gpu>* s,
 
 #endif  // __CUDACC__
 
-class QuantizeV2OperatorGPU {
+template<>
+class QuantizeV2Operator<gpu> {
  public:
-  explicit QuantizeV2OperatorGPU(const nnvm::NodeAttrs &attrs) : attrs_(attrs) {}
+  explicit QuantizeV2Operator(const nnvm::NodeAttrs &attrs) : attrs_(attrs) {}
 
   void Forward(const OpContext &ctx, const std::vector<TBlob> &inputs,
                const std::vector<OpReqType> &req, const std::vector<TBlob> &outputs) {
@@ -185,15 +185,12 @@ class QuantizeV2OperatorGPU {
       typedef float FloatDType;
       if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
         if (out_type == mshadow::kInt8) {  // zero-centered quantization
-            // Launch QuantScaleANDSetOutRange
+
             Kernel<QuantScaleANDSetOutRange, gpu>::Launch(s, 1,
                 outputs[1].dptr<float>(), outputs[2].dptr<float>(),
-                param.min_calib_range.value(), param.max_calib_range.value(),
-                MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
-
+                param.min_calib_range.value(), param.max_calib_range.value());
             float real_range = MaxAbs(param.min_calib_range.value(), param.max_calib_range.value());
             float scale = MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()) / real_range;
-
             QuantizeV2ZeroCenteredGPU<FloatDType, int8_t>(s,
                                     outputs[0].dptr<int8_t>(),
                                     inputs[0].dptr<FloatDType>(),
@@ -237,12 +234,9 @@ class QuantizeV2OperatorGPU {
 
             Kernel<QuantScaleANDSetOutRange, gpu>::Launch(s, 1,
                 outputs[1].dptr<float>(), outputs[2].dptr<float>(),
-                param.min_calib_range.value(), param.max_calib_range.value(),
-                MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
-
+                param.min_calib_range.value(), param.max_calib_range.value());
             float real_range = MaxAbs(param.min_calib_range.value(), param.max_calib_range.value());
             float scale = MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()) / real_range;
-        
             QuantizeV2ZeroCenteredGPU<FP16DType, int8_t>(s,
                                     outputs[0].dptr<int8_t>(),
                                     inputs[0].dptr<FP16DType>(),
@@ -288,15 +282,8 @@ class QuantizeV2OperatorGPU {
   nnvm::NodeAttrs attrs_;
 };
 
-static void QuantizeV2ForwardGPU(const OpStatePtr &state_ptr, const OpContext &ctx,
-                              const std::vector<TBlob> &inputs, const std::vector<OpReqType> &req,
-                              const std::vector<TBlob> &outputs) {
-  auto &op = state_ptr.get_state<QuantizeV2OperatorGPU>();
-  op.Forward(ctx, inputs, req, outputs);
-}
-
 NNVM_REGISTER_OP(_contrib_quantize_v2)
-.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", QuantizeV2ForwardGPU);
+.set_attr<FStatefulCompute>("FStatefulCompute<gpu>", QuantizeV2Forward<gpu>);
 
 }  // namespace op
 }  // namespace mxnet
