@@ -31,6 +31,9 @@ import time
 if (os.name=='posix'):
     path = os.path.abspath('librelu_lib.so')
     mx.library.load(path)
+elif (os.name=='nt'):
+    path = os.path.abspath('librelu_lib.dll')
+    mx.library.load(path)
 
 a = mx.nd.array([[-2,-1],[1,2]], ctx=mx.cpu())
 b = mx.nd.array([[-2,-1],[1,2]], ctx=mx.gpu())
