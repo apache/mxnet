@@ -31,7 +31,7 @@ The only instance method needed to be implemented is [forward(self, x)](https://
 In the example below, we define a new layer and implement `forward()` method to normalize input data by fitting it into a range of [0, 1].
 
 
-```python
+```{.python .input}
 # Do some initial imports used throughout this tutorial 
 from __future__ import print_function
 import mxnet as mx
@@ -41,7 +41,7 @@ mx.random.seed(1)                      # Set seed for reproducable results
 ```
 
 
-```python
+```{.python .input}
 class NormalizationLayer(gluon.Block):
     def __init__(self):
         super(NormalizationLayer, self).__init__()
@@ -69,7 +69,7 @@ To support hybridization, it is important to use only methods avaible directly f
 Knowing this, we can can rewrite our example layer, using HybridBlock:
 
 
-```python
+```{.python .input}
 class NormalizationHybridLayer(gluon.HybridBlock):
     def __init__(self):
         super(NormalizationHybridLayer, self).__init__()
@@ -81,7 +81,7 @@ class NormalizationHybridLayer(gluon.HybridBlock):
 Thanks to inheriting from HybridBlock, one can easily do forward pass on a given ndarray, either on CPU or GPU:
 
 
-```python
+```{.python .input}
 layer = NormalizationHybridLayer()
 layer(nd.array([1, 2, 3], ctx=mx.cpu()))
 ```
@@ -109,7 +109,7 @@ Depending on which class you used as a base one, you can use either [Sequential]
 Below is an example of how to create a simple neural network with a custom layer. In this example, `NormalizationHybridLayer` gets as an input the output from `Dense(5)` layer and pass its output as an input to `Dense(1)` layer.
 
 
-```python
+```{.python .input}
 net = gluon.nn.HybridSequential()                         # Define a Neural Network as a sequence of hybrid blocks
 net.add(Dense(5))                                     # Add Dense layer with 5 neurons
 net.add(NormalizationHybridLayer())                   # Add our custom layer
@@ -142,7 +142,7 @@ Usually, a layer has a set of associated parameters, sometimes also referred as 
 All parameters of a block are stored and accessed via [ParameterDict](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/gluon/parameter.py#L508) class. This class helps with initialization, updating, saving and loading of the parameters. Each layer can have multiple set of parameters, and all of them can be stored in a single instance of the `ParameterDict` class. On a block level, the instance of the `ParameterDict` class is accessible via `self.params` field, and outside of a block one can access all parameters of the network via [collect_params()](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Block.collect_params) method called on a `container`. `ParameterDict` uses [Parameter](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.Parameter) class to represent parameters inside of Apache MxNet neural network. If parameter doesn't exist, trying to get a parameter via `self.params` will create it automatically.
 
 
-```python
+```{.python .input}
 class NormalizationHybridLayer(gluon.HybridBlock):
     def __init__(self, hidden_units, scales):
         super(NormalizationHybridLayer, self).__init__()
@@ -179,7 +179,7 @@ The last peculiarity is due to support of imperative and symbolic programming by
 Running forward pass on this network is very similar to the previous example, so instead of just doing one forward pass, let's run whole training for a few epochs to show that `scales` parameter doesn't change during the training while `weights` parameter is changing.
 
 
-```python
+```{.python .input}
 def print_params(title, net):
     """
     Helper function to print out the state of parameters of NormalizationHybridLayer

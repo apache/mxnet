@@ -55,7 +55,7 @@ If a required operator is missing from `NDArray API`, there are few things you c
 There are a situation, when you can assemble a higher level operator using existing operators. An example for that is the [np.full_like()](https://docs.scipy.org/doc/numpy-1.14.0/reference/generated/numpy.full_like.html) operator. This operator doesn't exist in `NDArray API`, but can be easily replaced with a combination of existing operators.
 
 
-```python
+```{.python .input}
 from mxnet import nd
 import numpy as np
 
@@ -80,7 +80,7 @@ Some operators may have slightly different name, but are similar in terms of fun
 One particular example of different input requirements is [nd.pad()](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.pad). The trick is that it can only work with 4-dimensional tensors. If your input has less dimensions, then you need to expand its number before using `nd.pad()` as it is shown in the code block below:
 
 
-```python
+```{.python .input}
 def pad_array(data, max_length):
     # expand dimensions to 4, because nd.pad can work only with 4 dims
     data_expanded = data.reshape(1, 1, 1, data.shape[0])
@@ -115,7 +115,7 @@ There are cases, when you have to use either `.asnumpy()` or `.asscalar()` metho
 You can minimize the impact of a blocking call by calling `.asnumpy()` or `.asscalar()` in the moment, when you think the calculation of this value is already done. In the example below, we introduce the `LossBuffer` class. It is used to cache the previous value of a loss function. By doing so, we delay printing by one iteration in hope that the `Execution Engine` would finish the previous iteration and blocking time would be minimized.
 
 
-```python
+```{.python .input}
 from __future__ import print_function
 
 import mxnet as mx

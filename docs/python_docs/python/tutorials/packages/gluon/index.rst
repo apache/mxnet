@@ -59,12 +59,6 @@ Getting started
 
       Saving and loading trained models.
 
-   .. card::
-      :title: Using pre-trained models in MXNet
-      :link: image/pretrained_models.html
-
-      Using pre-trained models with Apache MXNet.
-
 Data
 ----
 
@@ -73,12 +67,6 @@ Data
    .. card::
       :title: Data Augmentation
       :link: data/data_augmentation.html
-
-      A guide to data augmentation.
-
-   .. card::
-      :title: Image Augmentation
-      :link: image/image-augmentation.html
 
       Boost your training dataset with image augmentation.
 

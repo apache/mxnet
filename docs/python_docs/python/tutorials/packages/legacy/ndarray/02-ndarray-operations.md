@@ -35,12 +35,12 @@ Such as element-wise addition:
 <!-- keeping it
 easy -->
 
-```python
+```{.python .input}
 import mxnet as mx
 from mxnet import nd
 ```
 
-```python
+```{.python .input}
 x = nd.ones((3, 4))
 y = nd.random_normal(0, 1, shape=(3, 4))
 print('x=', x)
@@ -51,7 +51,7 @@ print('x = x + y, x=', x)
 
 Multiplication:
 
-```python
+```{.python .input}
 x = nd.array([1, 2, 3])
 y = nd.array([2, 2, 2])
 x * y
@@ -61,7 +61,7 @@ And exponentiation:
 <!-- with these next ones we'll just have to take your word
 for it... -->
 
-```python
+```{.python .input}
 nd.exp(x)
 ```
 
@@ -69,7 +69,7 @@ We can also grab a matrix's transpose to compute a proper matrix-matrix product.
 <!-- because we need to do that before we have coffee every day... and you know
 how those dirty, improper matrixeses can be... -->
 
-```python
+```{.python .input}
 nd.dot(x, y.T)
 ```
 
@@ -93,7 +93,7 @@ detail, and quite possibily in its own notebook since I think it will help to
 show some gotchas like you mentioned verbally. I am still leaning toward
 delaying the introduction of this topic....-->
 
-```python
+```{.python .input}
 print('y=', y)
 print('id(y):', id(y))
 y = y + x
@@ -104,7 +104,7 @@ print('id(y):', id(y))
 We can assign the result to a previously allocated array with slice notation,
 e.g., `result[:] = ...`.
 
-```python
+```{.python .input}
 print('x=', x)
 z = nd.zeros_like(x)
 print('z is zeros_like x, z=', z)
@@ -120,7 +120,7 @@ before copying it to z. To make better use of memory, we can perform operations
 in place, avoiding temporary buffers. To do this we specify the `out` keyword
 argument every operator supports:
 
-```python
+```{.python .input}
 print('x=', x, 'is in id(x):', id(x))
 print('y=', y, 'is in id(y):', id(y))
 print('z=', z, 'is in id(z):', id(z))
@@ -136,7 +136,7 @@ itself. There are two ways to do this in MXNet.
 = x op y
 2. By using the op-equals operators like `+=`
 
-```python
+```{.python .input}
 print('x=', x, 'is in id(x):', id(x))
 x += y
 print('x=', x, 'is in id(x):', id(x))
@@ -155,7 +155,7 @@ the whole array: a[:]
 
 Here's an example of reading the second and third rows from `x`.
 
-```python
+```{.python .input}
 x = nd.array([1, 2, 3])
 print('1D complete array, x=', x)
 s = x[1:3]
@@ -168,7 +168,7 @@ print('slicing the 2nd and 3rd elements, s=', s)
 
 Now let's try writing to a specific element.
 
-```python
+```{.python .input}
 print('original x, x=', x)
 x[2] = 9.0
 print('replaced entire row with x[2] = 9.0, x=', x)
@@ -180,7 +180,7 @@ print('replaced range of elements with x[1:2,1:3] = 5.0, x=', x)
 
 Multi-dimensional slicing is also supported.
 
-```python
+```{.python .input}
 x = nd.array([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12]])
 print('original x, x=', x)
 s = x[1:2,1:3]
@@ -214,7 +214,7 @@ a shape like (3,3) you lose some of the impact and miss some errors if people
 play with the values. Better to have a distinct shape so that it is more obvious
 what is happening and what can break.-->
 
-```python
+```{.python .input}
 x = nd.ones(shape=(3,6))
 print('x = ', x)
 y = nd.arange(6)
@@ -230,7 +230,7 @@ That's because broadcasting prefers to duplicate along the left most axis.
 We can alter this behavior by explicitly giving `y` a $2$D shape using `.reshape`.
 You can also chain `.arange` and `.reshape` to do this in one step.
 
-```python
+```{.python .input}
 y = y.reshape((3,1))
 print('y = ', y)
 print('x + y = ', x+y)
@@ -242,12 +242,12 @@ print('y = ', y)
 Converting MXNet NDArrays to and from
 NumPy is easy. The converted arrays do not share memory.
 
-```python
+```{.python .input}
 a = x.asnumpy()
 type(a)
 ```
 
-```python
+```{.python .input}
 y = nd.array(a)
 print('id(a)=', id(a), 'id(x)=', id(x), 'id(y)=', id(y))
 ```
