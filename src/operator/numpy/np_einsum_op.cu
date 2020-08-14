@@ -73,60 +73,300 @@ struct hash<mxnet::op::EinsumOp> {
 
 namespace mxnet {
 namespace op {
+
+template<typename ComputeType,
+         typename IntType, int kMaxNumModes_>
+struct Einsum
+{
+    Einsum(const std::string &equation,
+           const mxnet::TShape &A_shape,
+           const mxnet::TShape &B_shape) :
+        numModesA_(A_shape.ndim()),
+        numModesB_(B_shape.ndim()),
+        numModesC_(0),
+        isInitialized_(false)
+    {
+        const auto arrow_pos = equation.find("->");
+        const auto comma_pos = equation.find(",");
+        const auto dots = equation.find("...");
+        const bool isBroadcast = (dots != std::string::npos);
+        const bool isImplicit = (arrow_pos == std::string::npos);
+        if (isBroadcast) // TODO
+        {
+            printf("not supported yet.\n");
+            return;
+        }
+        const bool usesB = (comma_pos != std::string::npos);
+
+        size_t a_start = 0;
+        size_t a_end = isImplicit ? ((comma_pos == std::string::npos) ? equation.size() : comma_pos) : 
+                                    ((comma_pos == std::string::npos) ? arrow_pos : comma_pos);
+        size_t b_start = usesB ? comma_pos + 1 : 0;
+        size_t b_end   = usesB ? (isImplicit ? equation.size() : arrow_pos) : 0;
+        size_t c_start = isImplicit ? equation.size() : arrow_pos + 2;
+        size_t c_end = equation.size();
+
+        const char* modeA = equation.c_str();
+        const char* modeB = equation.c_str() + b_start;
+        const char* modeC = equation.c_str() + c_start;
+
+        if ((a_end - a_start != numModesA_) || (b_end - b_start != numModesB_))
+        {
+            // substring size and shape don't match
+            return;
+        }
+        if (numModesA_ > kMaxNumModes_ || numModesB_ > kMaxNumModes_)
+        {
+            // too many modes
+            return;
+        }
+
+        /**
+         * Copy all modes from modeA to modeC if they don't appear in modeB
+         */
+        auto copyModesIf = [](const char* modeA, uint32_t numModesA,
+                const char* modeB, uint32_t numModesB,
+                char* modeC, uint32_t &numModesC)
+        {
+            for (uint32_t i = 0; i < numModesA; i++)
+            {
+                auto mode = modeA[i];
+                bool found = false;
+                for(uint32_t j=0; j < numModesB; ++j){
+                    if(mode == modeB[j])
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found) // is non-contracted mode
+                {
+                    modeC[numModesC++] = mode;
+                    if (numModesC > kMaxNumModes_)
+                    {
+                        // too many modes
+                        return false;
+                    }
+                }
+            }
+            return true;
+        };
+
+
+        std::array<char, kMaxNumModes_+1> implicitModeC;
+        if (isImplicit)
+        {
+            // we have to copy all non-contracted modes from A over to C
+            if (copyModesIf(modeA, numModesA_, modeB, numModesB_, implicitModeC.data(), numModesC_) == false)
+            {
+                return;
+            }
+            // we have to copy all non-contracted modes from B over to C
+            if (copyModesIf(modeB, numModesB_, modeA, numModesA_, implicitModeC.data(), numModesC_) == false)
+            {
+                return;
+            }
+            std::sort(implicitModeC.begin(), std::next(implicitModeC.begin(), numModesC_)); // modes are sorted w.r.t. lexical order
+            implicitModeC[numModesC_] = '\0';
+            modeC = implicitModeC.data();
+        }
+        else
+        {
+            numModesC_ = c_end - c_start;
+        }
+
+        for (uint32_t i = 0; i < numModesA_; i++)
+        {
+            modesA_[i] = modeA[numModesA_ - i - 1];
+            extentA_[i] = A_shape[numModesA_ - i - 1];
+        }
+
+        for (uint32_t i = 0; i < numModesB_; i++)
+        {
+            modesB_[i] = modeB[numModesB_ - i - 1];
+            extentB_[i] = B_shape[numModesB_ - i - 1];
+        }
+
+        for (uint32_t i = 0; i < numModesC_; i++)
+        {
+            const auto mode = modeC[numModesC_ - i - 1];
+            modesC_[i] = mode;
+            bool found = false;
+            for (uint32_t j=0; j < numModesA_; ++j)
+            {
+                if (modesA_[j] == mode)
+                {
+                    extentC_[i] = extentA_[j];
+                    found = true;
+                    break;
+                }
+            }
+            for (uint32_t j=0; !found && j < numModesB_; ++j)
+            {
+                if (modesB_[j] == mode)
+                {
+                    extentC_[i] = extentB_[j];
+                    break;
+                }
+            }
+        }
+
+        isInitialized_ = true;
+    }
+
+    size_t getWorksize() const { return kWorksize_; }
+
+    std::vector<IntType> getOutputShape() const
+    {
+        if (!isInitialized_) return {};
+        std::vector<IntType> extentC(numModesC_);
+        for (int i=0; i < numModesC_; ++i)
+        {
+            extentC[i] = extentC_.at(numModesC_ - i - 1);
+        }
+
+        return extentC;
+    }
+
+    /**
+     * Computes the einsum call A,B->C
+     *
+     * \param[in] A_raw device pointer of A
+     * \param[in] B_raw device pointer of B
+     * \param[out] C_raw device pointer of C
+     * \param[out] wor_raw device pointer to the scratchpad memory
+     * Dispatch to contraction
+     */
+    bool execute(const cutensorHandle_t *handle,
+                 const void* A_raw,
+                 const void* B_raw,
+                 void* C_raw,
+                 void *work_raw, cudaStream_t stream) const
+    {
+        if (!isInitialized_) return false;
+
+        cudaDataType_t cudaType = CuTensorTypeTraits<ComputeType>::cudaType;
+        cutensorComputeType_t computeType = CuTensorTypeTraits<ComputeType>::cutensorType;
+
+        cutensorTensorDescriptor_t descA;
+        CUTENSOR_CALL(cutensorInitTensorDescriptor(handle,
+                    &descA,
+                    numModesA_,
+                    extentA_.data(),
+                    NULL /* = stride */,
+                    cudaType, CUTENSOR_OP_IDENTITY));
+
+        cutensorTensorDescriptor_t descC;
+        CUTENSOR_CALL(cutensorInitTensorDescriptor(handle,
+                    &descC,
+                    numModesC_,
+                    extentC_.data(),
+                    NULL /* = stride*/,
+                    cudaType, CUTENSOR_OP_IDENTITY));
+
+        uint32_t alignmentRequirementA;
+        CUTENSOR_CALL(cutensorGetAlignmentRequirement(handle,
+                    A_raw, &descA, &alignmentRequirementA));
+
+        uint32_t alignmentRequirementC;
+        CUTENSOR_CALL(cutensorGetAlignmentRequirement(handle,
+                    C_raw, &descC, &alignmentRequirementC));
+
+
+        cutensorTensorDescriptor_t descB;
+        uint32_t alignmentRequirementB;
+        if (numModesB_ > 0)
+        {
+            // dispatch to contraction
+            CUTENSOR_CALL(cutensorInitTensorDescriptor(handle,
+                        &descB,
+                        numModesB_,
+                        extentB_.data(),
+                        NULL /* = stride*/,
+                        cudaType, CUTENSOR_OP_IDENTITY));
+
+            CUTENSOR_CALL(cutensorGetAlignmentRequirement(handle,
+                        B_raw, &descB, &alignmentRequirementB));
+
+            cutensorContractionDescriptor_t desc;
+            CUTENSOR_CALL(cutensorInitContractionDescriptor(handle, &desc,
+                        &descA, modesA_.data(), alignmentRequirementA,
+                        &descB, modesB_.data(), alignmentRequirementB,
+                        &descC, modesC_.data(), alignmentRequirementC,
+                        &descC, modesC_.data(), alignmentRequirementC,
+                        computeType));
+
+            cutensorAlgo_t algo = CUTENSOR_ALGO_DEFAULT;
+            cutensorContractionFind_t find;
+            CUTENSOR_CALL(cutensorInitContractionFind( 
+                        handle, &find, 
+                        algo));
+
+            cutensorContractionPlan_t plan;
+            CUTENSOR_CALL(cutensorInitContractionPlan(handle,
+                        &plan, &desc, &find, kWorksize_));
+
+            typename CuTensorTypeTraits<ComputeType>::ScalarType alpha = 1;
+            typename CuTensorTypeTraits<ComputeType>::ScalarType beta = 0;
+
+            CUTENSOR_CALL(cutensorContraction(handle, &plan,
+                        (void*) &alpha, A_raw, B_raw,
+                        (void*) &beta,  C_raw, C_raw,
+                        work_raw, kWorksize_, stream));
+        }
+        else
+        {
+            // dispatch to reduction
+            typename CuTensorTypeTraits<ComputeType>::ScalarType alpha = 1;
+            typename CuTensorTypeTraits<ComputeType>::ScalarType beta = 0;
+            CUTENSOR_CALL(cutensorReduction(handle,
+                        (const void*)&alpha, A_raw, &descA, modesA_.data(),
+                        (const void*)&beta,  A_raw, &descC, modesC_.data(), // beta == 0 => will not be used
+                        C_raw, &descC, modesC_.data(),
+                        CUTENSOR_OP_ADD, computeType, work_raw, kWorksize_, stream));
+        }
+        return true;
+    }
+
+    bool isInitialized() const { return isInitialized_; }
+
+    const int64_t* getExtentsA() const { return extentA_.data(); }
+    const int64_t* getExtentsB() const { return extentB_.data(); }
+    const int64_t* getExtentsC() const { return extentC_.data(); }
+
+    const int* getModesA() const { return modesA_.data(); }
+    const int* getModesB() const { return modesB_.data(); }
+    const int* getModesC() const { return modesC_.data(); }
+
+    private:
+    static const size_t kWorksize_ = 1024ULL * 1024ULL * 8ULL * 128ULL;
+    uint32_t numModesA_;
+    uint32_t numModesB_;
+    uint32_t numModesC_;
+    bool isInitialized_;
+    std::array<int, kMaxNumModes_> modesA_;
+    std::array<int, kMaxNumModes_> modesB_;
+    std::array<int, kMaxNumModes_> modesC_;
+    std::array<int64_t, kMaxNumModes_> extentA_;
+    std::array<int64_t, kMaxNumModes_> extentB_;
+    std::array<int64_t, kMaxNumModes_> extentC_;
+};
+
 /*!
  * \brief The Operator used to perform einsum using cuTensor library.
  */
 template<typename DType>
 class CuTensorEinsum {
   STATIC_ASSERT_CUDNN_VERSION_GE(6000);
+  static_assert(CUTENSOR_MAJOR >= 1 && CUTENSOR_MINOR >= 2 && CUTENSOR_PATCH >= 0, "minimal cuTENSOR 1.2.0 is required.");
  public:
   CuTensorEinsum() {
   }
   ~CuTensorEinsum() {
   }
-  void InitializeModes(std::string subscripts,
-                       const mxnet::TShape& a_shape,
-                       const mxnet::TShape& b_shape,
-                       std::unordered_map<ModeType, int64_t>& mode_2_size,
-                       std::vector<ModeType>& modes_a,
-                       std::vector<ModeType>& modes_b,
-                       std::vector<ModeType>& modes_c) {
-    std::string equation(subscripts);
-    auto end_pos = std::remove(equation.begin(), equation.end(), ' ');
-    equation.erase(end_pos, equation.end());
-    int comma_pos = equation.find(",");
-    int arrow_pos = equation.find("->", comma_pos + 1);
-    int a_begin = 0;
-    int a_end = comma_pos;
-    int b_begin = comma_pos + 1;
-    int b_end = arrow_pos;
-    int c_begin = arrow_pos + 2;
-    int c_end = equation.size();
 
-    assert((a_end - a_begin) == a_shape.ndim());
-    for (int i = a_begin; i < a_end; i++) {
-      mode_2_size[equation.at(i)] = a_shape[i - a_begin];
-    }
-    assert((b_end - b_begin) == b_shape.ndim());
-    for (int i = b_begin; i < b_end; i++) {
-      if (mode_2_size.find(equation.at(i)) == mode_2_size.end()) {
-        mode_2_size[equation.at(i)] = b_shape[i - b_begin];
-      } else {
-        assert(b_shape[i - b_begin] == mode_2_size[equation.at(i)]);
-      }
-    }
-    for (int i = a_end-1; i >= a_begin; i--) {
-      modes_a.push_back(equation.at(i));
-    }
-    for (int i = b_end-1; i >= b_begin; i--) {
-      modes_b.push_back(equation.at(i));
-    }
-    for (int i = c_end-1; i >= c_begin; i--) {
-      modes_c.push_back(equation.at(i));
-    }
-  }
-
-  void Init(std::string equation,
+  void Init(const std::string &equation,
             const std::vector<TBlob>& inputs,
             const std::vector<TBlob>& outputs,
             const OpContext& ctx,
@@ -139,43 +379,35 @@ class CuTensorEinsum {
     mxnet::TShape b_shape = inputs[1].shape_;
     mxnet::TShape c_shape = outputs[0].shape_;
 
-    cudaType = CuTensorTypeTraits<DType>::cudaType;
-    cutensorType = CuTensorTypeTraits<DType>::cutensorType;
-    // using defaul algo
-    algo = CUTENSOR_ALGO_DEFAULT;
-    
-    // initialize modes
-    InitializeModes(equation.c_str(),
-                    a_shape, b_shape,
-                    mode_2_size, 
-                    modes_a, modes_b, modes_c);
+    constexpr cudaDataType_t cudaType = CuTensorTypeTraits<DType>::cudaType;
+    constexpr cutensorComputeType_t cutensorType = CuTensorTypeTraits<DType>::cutensorType;
+    constexpr cutensorAlgo_t algo = CUTENSOR_ALGO_DEFAULT;
 
-    std::vector<int64_t> sizes_a;
-    for(auto mode : modes_a)
-        sizes_a.push_back(mode_2_size[mode]);
+    Einsum<DType, int, kMaxTensorRank> myEinsum(equation, a_shape, b_shape);
+    if (!myEinsum.isInitialized()) {
+        CUTENSOR_CALL(CUTENSOR_STATUS_NOT_SUPPORTED);
+    }
+
+    cutensorTensorDescriptor_t descriptor_a;
     CUTENSOR_CALL(cutensorInitTensorDescriptor(&s->cutensor_handle_,
                                                &descriptor_a,
                                                a_shape.ndim(),
-                                               sizes_a.data(),
+                                               myEinsum.getExtentsA(),
                                                NULL, //stride
                                                cudaType,
                                                CUTENSOR_OP_IDENTITY));
-    std::vector<int64_t> sizes_b;
-    for(auto mode : modes_b)
-        sizes_b.push_back(mode_2_size[mode]);
+    cutensorTensorDescriptor_t descriptor_b;
     CUTENSOR_CALL(cutensorInitTensorDescriptor(&s->cutensor_handle_,
                                                &descriptor_b,
                                                b_shape.ndim(),
-                                               sizes_b.data(),
+                                               myEinsum.getExtentsB(),
                                                NULL, //stride
                                                cudaType, CUTENSOR_OP_IDENTITY));
-    std::vector<int64_t> sizes_c;
-    for(auto mode : modes_c)
-        sizes_c.push_back(mode_2_size[mode]);
+    cutensorTensorDescriptor_t descriptor_c;
     CUTENSOR_CALL(cutensorInitTensorDescriptor(&s->cutensor_handle_,
                                                &descriptor_c,
                                                c_shape.ndim(),
-                                               sizes_c.data(),
+                                               myEinsum.getExtentsC(),
                                                NULL, //stride
                                                cudaType,
                                                CUTENSOR_OP_IDENTITY));
@@ -183,16 +415,19 @@ class CuTensorEinsum {
     const DType* tensor_a_ptr =  inputs[0].FlatTo2D<gpu, DType>(s).dptr_;
     const DType* tensor_b_ptr =  inputs[1].FlatTo2D<gpu, DType>(s).dptr_;
     DType* tensor_c_ptr =  outputs[0].FlatTo2D<gpu, DType>(s).dptr_;
+    uint32_t alignment_req_a;
     CUTENSOR_CALL(cutensorGetAlignmentRequirement(&s->cutensor_handle_,
                                                   tensor_a_ptr,
                                                   &descriptor_a,
                                                   &alignment_req_a));
 
+    uint32_t alignment_req_b;
     CUTENSOR_CALL(cutensorGetAlignmentRequirement(&s->cutensor_handle_,
                                                   tensor_b_ptr,
                                                   &descriptor_b,
                                                   &alignment_req_b));
 
+    uint32_t alignment_req_c;
     CUTENSOR_CALL(cutensorGetAlignmentRequirement(&s->cutensor_handle_,
                                                   tensor_c_ptr,
                                                   &descriptor_c,
@@ -201,10 +436,10 @@ class CuTensorEinsum {
     CUTENSOR_CALL(cutensorInitContractionDescriptor(
                   &s->cutensor_handle_,
                   &descriptor_contraction,
-                  &descriptor_a, modes_a.data(), alignment_req_a,
-                  &descriptor_b, modes_b.data(), alignment_req_b,
-                  &descriptor_c, modes_c.data(), alignment_req_c,
-                  &descriptor_c, modes_c.data(), alignment_req_c,
+                  &descriptor_a, myEinsum.getModesA(), alignment_req_a,
+                  &descriptor_b, myEinsum.getModesB(), alignment_req_b,
+                  &descriptor_c, myEinsum.getModesC(), alignment_req_c,
+                  &descriptor_c, myEinsum.getModesC(), alignment_req_c,
                   cutensorType));
 
     CUTENSOR_CALL(cutensorInitContractionFind(&s->cutensor_handle_,
@@ -251,26 +486,11 @@ class CuTensorEinsum {
                                       mshadow::Stream<gpu>::GetStream(s)));
   }
 
-  // modes
-  std::unordered_map<ModeType, int64_t> mode_2_size;
-  std::vector<int> modes_a;
-  std::vector<int> modes_b;
-  std::vector<int> modes_c;
+  static const uint32_t kMaxTensorRank = 12; // maximal tensor rank that is supported by cuTENSOR
 
-  // descriptors
-  cutensorTensorDescriptor_t descriptor_a;
-  cutensorTensorDescriptor_t descriptor_b;
-  cutensorTensorDescriptor_t descriptor_c;
-  cutensorContractionDescriptor_t descriptor_contraction;
-  // aligments
-  uint32_t alignment_req_a;
-  uint32_t alignment_req_b;
-  uint32_t alignment_req_c;
-
-  // contraction plan and algo
-  cutensorContractionPlan_t plan;
-  cutensorContractionFind_t find;
-  cutensorAlgo_t algo;
+  cutensorContractionDescriptor_t descriptor_contraction; // encodes the strucutre of the contraction
+  cutensorContractionPlan_t plan; // encodes the execution plan
+  cutensorContractionFind_t find; // limits the search space (of viable candidates/implementations)
 
   // workspace
   size_t previous_workspace_size = 0;
@@ -279,9 +499,6 @@ class CuTensorEinsum {
   
   typename CuTensorTypeTraits<DType>::ScalarType alpha = 1;
   typename CuTensorTypeTraits<DType>::ScalarType beta = 0;
-
-  cudaDataType_t cudaType;
-  cutensorComputeType_t cutensorType;
 };
 // end CuTensorEinsum class
 
@@ -364,7 +581,7 @@ class EinsumOpGPU {
     }
   }
 
-  void ComputeGradients(std::string equation,
+  void ComputeGradients(const std::string &equation,
                         const std::vector<TBlob> &inputs,
                         const std::vector<TBlob> &outputs,
                         const OpContext &ctx){
