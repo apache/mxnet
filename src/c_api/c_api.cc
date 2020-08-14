@@ -98,21 +98,41 @@ inline int MXAPIGetFunctionRegInfo(const FunRegType *e,
 
 // NOTE: return value is added in API_END
 
+std::string getExtensionMsgs(mxnet::ext::msgSize_t msgSize,
+                             mxnet::ext::msgGet_t msgGet) {
+  std::string str;
+  if (msgSize() > 0) {
+    str = "\nExtension Traceback:\n";
+    for (int i = 0; i < msgSize(); i++) {
+      const char* tmp;
+      msgGet(i, &tmp);
+      // format: [i] message
+      str += std::string("\t[") + std::to_string(i) + std::string("] ")
+        + std::string(tmp) + std::string("\n");
+    }
+  }
+  return str;
+}
+
 /*!
  * \brief Common compute function dispatcher for forward/backward and stateful forward/backward
  * state_ptr will be nullptr for regular ops; fcomp_fp is nullptr for stateful ops
  */
 void CustomFComputeDispatcher(const std::string op_name,
-                              const opCallFComp_t callFComp,
-                              const fcomp_t fcomp_fp,
+                              const mxnet::ext::opCallFComp_t callFComp,
+                              const mxnet::ext::fcomp_t fcomp_fp,
                               const nnvm::NodeAttrs* attrs,
-                              const opCallFStatefulComp_t callFStatefulComp,
+                              const mxnet::ext::opCallFStatefulComp_t callFStatefulComp,
                               int stateful_forward_flag,
                               const OpStatePtr* state_ptr,
                               const OpContext& ctx,
                               const std::vector<NDArray>& inputs,
                               const std::vector<OpReqType>& req,
-                              const std::vector<NDArray>& outputs) {
+                              const std::vector<NDArray>& outputs,
+                              mxnet::ext::msgSize_t msgSize,
+                              mxnet::ext::msgGet_t msgGet) {
+  using namespace mxnet::ext;
+
   std::vector<void*> in_data, out_data;
   std::vector<const int64_t*> in_shapes, out_shapes;
   std::vector<int> in_dims, out_dims;
@@ -281,47 +301,225 @@ void CustomFComputeDispatcher(const std::string op_name,
     }
 
     // call fcompute function
-    CHECK(callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                    in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
-                    in_verIDs.data(), in_dev_type.data(), in_dev_id.data(), in_data.size(),
-                    out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
-                    out_verIDs.data(), out_dev_type.data(), out_dev_id.data(), out_data.size(),
-                    cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
-                    sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
-                    in_indices.data(), out_indices.data(), in_indptr.data(), out_indptr.data(),
-                    in_indices_shapes.data(), out_indices_shapes.data(),
-                    in_indptr_shapes.data(), out_indptr_shapes.data(),
-                    rng_cpu_states, rng_gpu_states))
-      << "Error calling FCompute for custom operator '" << op_name << "'";
+    int retval = callFComp(fcomp_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                           in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
+                           in_verIDs.data(), in_dev_type.data(), in_dev_id.data(), in_data.size(),
+                           out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
+                           out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
+                           out_data.size(),
+                           cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
+                           sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
+                           in_indices.data(), out_indices.data(), in_indptr.data(),
+                           out_indptr.data(),
+                           in_indices_shapes.data(), out_indices_shapes.data(),
+                           in_indptr_shapes.data(), out_indptr_shapes.data(),
+                           rng_cpu_states, rng_gpu_states);
+    std::string msgs = getExtensionMsgs(msgSize, msgGet);
+    CHECK(retval) << "Error calling FCompute for custom operator '" << op_name << "'" << msgs;
   }
 
   if (state_ptr != nullptr) {
     // retrieve op state object created from CreateOpState
     CustomStatefulOpWrapper& op = state_ptr->get_state<CustomStatefulOpWrapper>();
     CustomStatefulOp* state_op_inst = op.get_instance();
+    std::string msgs = getExtensionMsgs(msgSize, msgGet);
     CHECK(state_op_inst != nullptr)
-      << "Error custom stateful operator is null for operator '" << op_name << "'";
+      << "Error custom stateful operator is null for operator '" << op_name << "'" << msgs;
 
     // call fcompute function
-    CHECK(callFStatefulComp(stateful_forward_flag, state_op_inst,
-                            in_shapes.data(), in_dims.data(), in_data.data(), in_types.data(),
-                            in_verIDs.data(), in_dev_type.data(), in_dev_id.data(),
-                            in_data.size(),
-                            out_shapes.data(), out_dims.data(), out_data.data(), out_types.data(),
-                            out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
-                            out_data.size(),
-                            cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
-                            sparse_malloc, &sparse_alloc, in_stypes.data(), out_stypes.data(),
-                            in_indices.data(), out_indices.data(),
-                            in_indptr.data(), out_indptr.data(),
-                            in_indices_shapes.data(), out_indices_shapes.data(),
-                            in_indptr_shapes.data(), out_indptr_shapes.data(),
-                            rng_cpu_states, rng_gpu_states))
-      << "Error calling FStatefulCompute for custom operator '" << op_name << "'";
+    int retval = callFStatefulComp(stateful_forward_flag, state_op_inst,
+                                   in_shapes.data(), in_dims.data(), in_data.data(),
+                                   in_types.data(),
+                                   in_verIDs.data(), in_dev_type.data(), in_dev_id.data(),
+                                   in_data.size(),
+                                   out_shapes.data(), out_dims.data(), out_data.data(),
+                                   out_types.data(),
+                                   out_verIDs.data(), out_dev_type.data(), out_dev_id.data(),
+                                   out_data.size(),
+                                   cpu_malloc, &cpu_alloc, gpu_malloc, &gpu_alloc, cuda_stream,
+                                   sparse_malloc, &sparse_alloc, in_stypes.data(),
+                                   out_stypes.data(), in_indices.data(), out_indices.data(),
+                                   in_indptr.data(), out_indptr.data(),
+                                   in_indices_shapes.data(), out_indices_shapes.data(),
+                                   in_indptr_shapes.data(), out_indptr_shapes.data(),
+                                   rng_cpu_states, rng_gpu_states);
+    msgs = getExtensionMsgs(msgSize, msgGet);
+    CHECK(retval) << "Error calling FStatefulCompute for custom operator '" << op_name << "'"
+                  << msgs;
   }
 }
 
-void registerOperators(void *lib, int verbose) {
+template <typename RescReq, typename AttrParser, typename NumInputs, typename NumOutputs,
+          typename NumInOuts,
+          typename InferType, typename InferShape, typename InferSType, typename MutateInputs,
+          typename SubgraphNumInputs, typename SubgraphInferType, typename SubgraphInferShape,
+          typename SubgraphInferSType, typename CreateOpState, typename GradReg>
+void registerOp(const char* name, const std::string& name_str, bool isSubgraphOp,
+                RescReq resc_req, AttrParser attr_parser, NumInputs num_inputs,
+                NumOutputs num_outputs, NumInOuts num_inouts, InferType infer_type,
+                InferShape infer_shape, InferSType infer_storage_type,
+                MutateInputs mutate_inputs, SubgraphNumInputs num_subgraph_inputs,
+                SubgraphInferType infer_subgraph_type, SubgraphInferShape infer_subgraph_shape,
+                SubgraphInferSType infer_subgraph_storage_type, CreateOpState create_opstate,
+                GradReg grad_reg, mxnet::ext::mutateInputs_t mutate_fp,
+                const std::unordered_map<std::string, mxnet::ext::createOpState_t> &createop_map,
+                const std::unordered_map<std::string, mxnet::ext::fcomp_t> &forward_ctx_map,
+                const std::unordered_map<std::string, mxnet::ext::fcomp_t> &backward_ctx_map,
+                mxnet::ext::opCallFComp_t callFComp,
+                mxnet::ext::opCallFStatefulComp_t callFStatefulComp,
+                mxnet::ext::msgSize_t msgSize,
+                mxnet::ext::msgGet_t msgGet) {
+  using namespace mxnet::ext;
+
+  // check if operator is already registered
+  const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
+  nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
+  int plevel = 10;
+  if (regOpPtr != nullptr) {
+    // overwrite registration of existing op with custom op
+    regOp.arguments.clear();
+    // set attribute with higher plevel (11) to allow re-registering once
+    // TODO(samskalicky): enable constant overwriting of registertion multiple times
+    plevel++;
+  }
+  // define supported resources for both subgraph ops and regular ops
+  regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
+  if (!isSubgraphOp) {
+    regOp.set_attr_parser(attr_parser);
+    regOp.set_num_inputs(num_inputs);
+    regOp.set_num_outputs(num_outputs);
+    regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
+    regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
+    regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
+    // optionally add fmutate inputs if user specified a function
+    if (mutate_fp != nullptr)
+      regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, plevel);
+  } else {
+    using namespace mxnet::op;
+    regOp.set_num_inputs(num_subgraph_inputs);
+    regOp.set_num_outputs(DefaultSubgraphOpNumOutputs);
+    regOp.set_attr<nnvm::FInferType>("FInferType", infer_subgraph_type, plevel);
+    regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_subgraph_shape, plevel);
+    regOp.set_attr<FInferStorageType>("FInferStorageType",
+                                      infer_subgraph_storage_type, plevel);
+    regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs",
+                                        DefaultSubgraphOpMutableInputs, plevel);
+  }
+  // optionally add stateful forward
+  if (createop_map.size() != 0) {
+    regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
+    auto fstate_forward = [=](const OpStatePtr& state_ptr,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+      CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
+                               callFStatefulComp, 1, &state_ptr, ctx, inputs, req, outputs,
+                               msgSize, msgGet);
+    };
+    if (createop_map.count("cpu") > 0)
+      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_forward, plevel);
+    if (createop_map.count("gpu") > 0)
+      regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_forward, plevel);
+  } else {
+    auto forward_lambda = [=](const nnvm::NodeAttrs& attrs,
+                              const OpContext& ctx,
+                              const std::vector<NDArray>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<NDArray>& outputs) {
+      if (ctx.run_ctx.ctx.dev_mask() == Context::kCPU) {
+        CHECK_GT(forward_ctx_map.count("cpu"), 0);
+        fcomp_t fcomp = forward_ctx_map.at("cpu");
+        CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
+                                 nullptr, 0, nullptr, ctx, inputs, req, outputs, msgSize, msgGet);
+      } else if (ctx.run_ctx.ctx.dev_mask() == Context::kGPU) {
+        CHECK_GT(forward_ctx_map.count("gpu"), 0);
+        fcomp_t fcomp = forward_ctx_map.at("gpu");
+        CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
+                                 nullptr, 0, nullptr, ctx, inputs, req, outputs, msgSize, msgGet);
+      }
+    };
+    if (forward_ctx_map.count("cpu") > 0)
+      regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
+    if (forward_ctx_map.count("gpu") > 0)
+      regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_lambda, plevel);
+  }
+  // optionally add fgradient if user specified a function, or for stateful ops
+  if (backward_ctx_map.size() != 0 || createop_map.size() != 0) {
+    std::string grad_name = "_backward_" + name_str;
+    nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
+    regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);
+    gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, plevel);
+    gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
+    gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
+
+    if (!isSubgraphOp) {
+      // register attr parser and standard functions for non-subgraph ops
+      gradOp.set_attr_parser(attr_parser);
+      gradOp.set_num_inputs(num_inouts);
+      gradOp.set_num_outputs(num_inputs);
+    } else {
+      // for subgraph ops use special functions that do not invoke attr_parser
+      using namespace mxnet::op;
+      auto grad_inouts = [=](const nnvm::NodeAttrs& attrs) {
+        // for backward passes, inputs + outputs + input gradients (one for each output)
+        uint32_t cnt = num_subgraph_inputs(attrs);
+        cnt += 2 * DefaultSubgraphOpNumOutputs(attrs);
+        return cnt;
+      };
+      gradOp.set_num_inputs(grad_inouts);
+      gradOp.set_num_outputs(num_subgraph_inputs);
+    }
+
+    if (createop_map.size() != 0) {
+      // for stateful operators
+      gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
+      auto fstate_backward = [=](const OpStatePtr& state_ptr,
+                                 const OpContext& ctx,
+                                 const std::vector<NDArray>& inputs,
+                                 const std::vector<OpReqType>& req,
+                                 const std::vector<NDArray>& outputs) {
+        CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
+                                 callFStatefulComp, 0, &state_ptr, ctx, inputs, req, outputs,
+                                 msgSize, msgGet);
+      };
+      gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_backward, plevel);
+      gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_backward, plevel);
+    } else {
+      // for stateless operators
+      if (backward_ctx_map.count("cpu") > 0) {
+        fcomp_t fcomp_back_cpu = backward_ctx_map.at("cpu");
+        auto backward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs) {
+          CustomFComputeDispatcher(name_str, callFComp, fcomp_back_cpu, &attrs,
+                                   nullptr, 0, nullptr, ctx, inputs, req, outputs, msgSize, msgGet);
+        };
+        gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_cpu_lambda, plevel);
+      }
+      if (backward_ctx_map.count("gpu") > 0) {
+        fcomp_t fcomp_back_gpu = backward_ctx_map.at("gpu");
+        auto backward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
+                                       const OpContext& ctx,
+                                       const std::vector<NDArray>& inputs,
+                                       const std::vector<OpReqType>& req,
+                                       const std::vector<NDArray>& outputs) {
+          CustomFComputeDispatcher(name_str, callFComp, fcomp_back_gpu, &attrs,
+                                   nullptr, 0, nullptr, ctx, inputs, req, outputs, msgSize, msgGet);
+        };
+        gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_gpu_lambda, plevel);
+      }
+    }
+    }
+  regOp.add_argument("data", "NDArray[]", "Source inputs");
+}
+
+void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
+                       mxnet::ext::msgGet_t msgGet) {
+  using namespace mxnet::ext;
+
   // get C type interface functions
   opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
 
@@ -447,9 +645,10 @@ void registerOperators(void *lib, int verbose) {
 
       int num_in = -1;
       int num_out = -1;
-      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           &num_in, &num_out))
-      << "Error calling ParseAttrs for custom operator '" << name_str << "'";
+      int retval = callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                  &num_in, &num_out);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling ParseAttrs for custom operator '" << name_str << "'" << msgs;
 
       // return type void
     };
@@ -465,11 +664,31 @@ void registerOperators(void *lib, int verbose) {
 
       int num_in = -1;
       int num_out = -1;
-      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           &num_in, &num_out))
-      << "Error calling ParseAttrs::num_inputs for custom operator '" << name_str << "'";
+      int retval = callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                  &num_in, &num_out);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling ParseAttrs::num_inputs for custom operator '" << name_str
+      << "'" << msgs;
 
-      return num_in;
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      return num_in + extra_inputs;
+    };
+
+    // lambda function to call parse attributes and return the number of inputs for subgraph ops
+    auto num_subgraph_inputs = [=](const NodeAttrs& attrs) {
+      // get number of inputs for subgraph
+      int num_in = mxnet::op::DefaultSubgraphOpNumInputs(attrs);
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      return num_in + extra_inputs;
     };
 
     // lambda function to call parse attributes and return the number of outputs
@@ -483,9 +702,11 @@ void registerOperators(void *lib, int verbose) {
 
       int num_in = -1;
       int num_out = -1;
-      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           &num_in, &num_out))
-      << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str << "'";
+      int retval = callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                  &num_in, &num_out);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str
+      << "'" << msgs;
 
       return num_out;
     };
@@ -502,11 +723,19 @@ void registerOperators(void *lib, int verbose) {
 
       int num_in = -1;
       int num_out = -1;
-      CHECK(callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           &num_in, &num_out))
-      << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str << "'";
+      int retval = callParseAttrs(parse_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                  &num_in, &num_out);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling ParseAttrs::num_outputs for custom operator '" << name_str
+      << "'" << msgs;
       // for backward passes, inputs + outputs + input gradients (one for each output)
-      return num_in + 2 * num_out;
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      return num_in + extra_inputs + 2 * num_out;
     };
 
     // lambda function to call infer shape
@@ -520,17 +749,24 @@ void registerOperators(void *lib, int verbose) {
         attr_vals.push_back(kv.second.c_str());
       }
 
-      std::vector<uint32_t*> inshapes(in_shape->size());
-      std::vector<int> indims(in_shape->size());
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+      int num_inputs = in_shape->size() - extra_inputs;
+
+      std::vector<uint32_t*> inshapes(num_inputs);
+      std::vector<int> indims(num_inputs);
 
       // determine amount of memory needed to store all the input shapes
       size_t buff_size = 0;
-      for (const auto& i : *in_shape) buff_size += i.ndim();
+      for (size_t i = 0; i < num_inputs; ++i)
+        buff_size += (*in_shape)[i].ndim();
 
       // copy input shapes from ShapeVector to raw memory layout
       std::vector<uint32_t> inbuff(buff_size);
       uint32_t *ptr = inbuff.data();
-      for (size_t i = 0; i < in_shape->size(); ++i) {
+      for (size_t i = 0; i < num_inputs; ++i) {
         inshapes[i] = ptr;
         indims[i] = (*in_shape)[i].ndim();
         for (int j = 0; j < (*in_shape)[i].ndim(); ++j, ++ptr) {
@@ -545,23 +781,24 @@ void registerOperators(void *lib, int verbose) {
       uint32_t** outshapes = nullptr;
       int* outdims = nullptr;
 
-      CHECK(callInferShape(shape_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           inshapes.data(), indims.data(), in_shape->size(),
-                           &mod_inshapes, &mod_indims,
-                           &outshapes, &outdims, out_shape->size()))
-      << "Error calling InferShape for custom operator '" << name_str << "'";
+      int retval = callInferShape(shape_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                  inshapes.data(), indims.data(), num_inputs,
+                                  &mod_inshapes, &mod_indims,
+                                  &outshapes, &outdims, out_shape->size());
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling InferShape for custom operator '" << name_str << "'" << msgs;
 
-      std::vector<uint32_t*> in_shapes(in_shape->size());
+      std::vector<uint32_t*> in_shapes(num_inputs);
       // determine amount of memory needed to store all the modified input shapes
       buff_size = 0;
-      for (unsigned i = 0; i < in_shape->size(); i++) {
+      for (unsigned i = 0; i < num_inputs; i++) {
         buff_size += mod_indims[i];
       }
 
       // copy modified input shapes from custom op memory to MXNet memory
       std::vector<uint32_t> mod_inbuff(buff_size);
       ptr = mod_inbuff.data();
-      for (unsigned i = 0; i < in_shape->size(); ++i) {
+      for (unsigned i = 0; i < num_inputs; ++i) {
         in_shapes[i] = ptr;
         for (int j = 0; j < mod_indims[i]; ++j, ++ptr) {
           *ptr = static_cast<uint32_t>(mod_inshapes[i][j]);
@@ -569,7 +806,7 @@ void registerOperators(void *lib, int verbose) {
       }
 
       // assign modified input shapes to ShapeVector
-      for (unsigned i = 0; i < in_shape->size(); ++i) {
+      for (unsigned i = 0; i < num_inputs; ++i) {
         SHAPE_ASSIGN_CHECK(*in_shape, i,
                            mxnet::TShape(in_shapes[i], in_shapes[i]+mod_indims[i]));
       }
@@ -599,7 +836,7 @@ void registerOperators(void *lib, int verbose) {
 
       // free memory used by custom op to allocate shapes/dims
       callFree(mod_indims);
-      for (unsigned i = 0; i < in_shape->size(); i++) {
+      for (unsigned i = 0; i < num_inputs; i++) {
         callFree(mod_inshapes[i]);
       }
       callFree(mod_inshapes);
@@ -613,6 +850,28 @@ void registerOperators(void *lib, int verbose) {
       return true;
     };
 
+    // lambda function to call infer shape for subgraph ops
+    auto infer_subgraph_shape = [=] (const nnvm::NodeAttrs& attrs,
+                            mxnet::ShapeVector *in_shape,
+                            mxnet::ShapeVector *out_shape) {
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto &kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      auto in_first = in_shape->begin();
+      auto in_last  = in_first + in_shape->size() - extra_inputs;
+      mxnet::ShapeVector *sg_in_shapes = new mxnet::ShapeVector(in_first, in_last);
+      return mxnet::op::DefaultSubgraphOpShape(attrs, sg_in_shapes, out_shape);
+    };
+
     // lambda function to call infer type
     auto infer_type = [=] (const nnvm::NodeAttrs& attrs,
                             std::vector<int> *in_type,
@@ -624,19 +883,26 @@ void registerOperators(void *lib, int verbose) {
         attr_vals.push_back(kv.second.c_str());
       }
 
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+      int num_inputs = in_type->size() - extra_inputs;
+
       // copy input types from in_type
       std::vector<int> intypes(*in_type);
 
       // output types will be populated by inferType function
       std::vector<int> outtypes(out_type->size());
 
-      CHECK(callInferType(type_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                           intypes.data(), in_type->size(),
-                           outtypes.data(), out_type->size()))
-      << "Error calling InferType for custom operator '" << name_str << "'";
+      int retval = callInferType(type_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                 intypes.data(), num_inputs,
+                                 outtypes.data(), out_type->size());
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling InferType for custom operator '" << name_str << "'" << msgs;
 
       // copy and assign modified input types from custom op to MXNet memory
-      for (size_t i = 0; i < in_type->size(); i++) {
+      for (size_t i = 0; i < num_inputs; i++) {
         TYPE_ASSIGN_CHECK(*in_type, i, intypes[i]);
       }
       // copy and assign output types from custom op to MXNet memory
@@ -645,6 +911,29 @@ void registerOperators(void *lib, int verbose) {
       }
 
       return true;
+    };
+
+    // lambda function to call infer type for subgraph ops
+    auto infer_subgraph_type = [=] (const nnvm::NodeAttrs& attrs,
+                                    std::vector<int> *in_type,
+                                    std::vector<int> *out_type) {
+      // convert attributes to vector of char*
+      std::vector<const char*> attr_keys, attr_vals;
+      for (auto &kv : attrs.dict) {
+        attr_keys.push_back(kv.first.c_str());
+        attr_vals.push_back(kv.second.c_str());
+      }
+
+      // get extra inputs, if exists
+      int extra_inputs = 0;
+      if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+        extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+      auto in_first = in_type->begin();
+      auto in_last  = in_first + in_type->size() - extra_inputs;
+      std::vector<int> *sg_in_types = new std::vector<int>(in_first, in_last);
+
+      return mxnet::op::DefaultSubgraphOpType(attrs, sg_in_types, out_type);
     };
 
     // lambda function to convert from external mutate_inputs to internal MXNet types
@@ -661,9 +950,11 @@ void registerOperators(void *lib, int verbose) {
       int indices_size = 0;
 
       // call mutate inputs function
-      CHECK(callMutateInputs(mutate_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                      &mutate_indices, &indices_size))
-      << "Error calling MutateInputs for custom operator '" << name_str << "'";
+      int retval = callMutateInputs(mutate_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                    &mutate_indices, &indices_size);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling MutateInputs for custom operator '" << name_str << "'"
+      << msgs;
 
       std::vector<uint32_t> mutate_indices_list(indices_size);
       for (int i=0; i < indices_size; i++) {
@@ -680,7 +971,7 @@ void registerOperators(void *lib, int verbose) {
                                 std::vector<int>* in_stypes,
                                 std::vector<int>* out_stypes) {
       if (stype_fp == nullptr) {
-        // InferSType is not defineid in customized lib.
+        // InferSType is not defined in customized lib.
         CHECK(mxnet::common::ContainsOnlyStorage(*in_stypes, mxnet::kDefaultStorage))
         << "Error input tensors are not dense for custom operator '" << name_str << "'";
         // set outputs as dense
@@ -694,18 +985,27 @@ void registerOperators(void *lib, int verbose) {
           attr_keys.push_back(kv.first.c_str());
           attr_vals.push_back(kv.second.c_str());
         }
+
+        // get extra inputs, if exists
+        int extra_inputs = 0;
+        if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+          extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+        int num_inputs = in_stypes->size() - extra_inputs;
+
         // copy input types from in_stype
         std::vector<int> instypes(*in_stypes);
 
         // output types will be populated by inferType function
         std::vector<int> outstypes(out_stypes->size());
-        CHECK(callInferSType(stype_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
-                             instypes.data(), in_stypes->size(),
-                             outstypes.data(), out_stypes->size()))
-        << "Error calling InferSType for custom operator '" << name_str << "'";
+        int retval = callInferSType(stype_fp, attr_keys.data(), attr_vals.data(), attr_keys.size(),
+                                    instypes.data(), num_inputs,
+                                    outstypes.data(), out_stypes->size());
+        std::string msgs = getExtensionMsgs(msgSize, msgGet);
+        CHECK(retval) << "Error calling InferSType for custom operator '" << name_str << "'"
+        << msgs;
 
         // copy and assign modified input storage types from custom op to MXNet memory.
-        for (size_t i = 0; i < in_stypes->size(); i++) {
+        for (size_t i = 0; i < num_inputs; i++) {
           STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, instypes[i]);
         }
         // copy and assign output storage types from custom op to MXNet memory.
@@ -716,6 +1016,25 @@ void registerOperators(void *lib, int verbose) {
         DISPATCH_MODE_ASSIGN_CHECK(dispatch_mode, 0, DispatchMode::kFComputeEx);
         return true;
       }
+    };
+
+    // lambda function to set storage types for subgraph ops
+    auto infer_subgraph_storage_type = [=](const nnvm::NodeAttrs& attrs,
+                                           const int dev_mask,
+                                           DispatchMode* dispatch_mode,
+                                           std::vector<int>* in_stypes,
+                                           std::vector<int>* out_stypes) {
+        // get extra inputs, if exists
+        int extra_inputs = 0;
+        if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
+          extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
+
+        auto in_first = in_stypes->begin();
+        auto in_last  = in_first + in_stypes->size() - extra_inputs;
+        std::vector<int> *sg_in_stypes = new std::vector<int>(in_first, in_last);
+
+        return mxnet::op::DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
+                                                       sg_in_stypes, out_stypes);
     };
 
     // FGradient register lambda
@@ -790,19 +1109,24 @@ void registerOperators(void *lib, int verbose) {
       if (ctx.dev_mask() == Context::kCPU) {
         CHECK(createop_map.count("cpu") > 0)
           << "CPU CreateOpState not implemented for '" << name_str << "'";
-        CHECK(callCreateOpState(createop_map.at("cpu"), attr_keys.data(), attr_vals.data(),
-                                attr_keys.size(), &state_op_inst))
-          << "Error calling CreateOpState CPU for custom operator '" << name_str << "'";
+        int retval = callCreateOpState(createop_map.at("cpu"), attr_keys.data(), attr_vals.data(),
+                                       attr_keys.size(), &state_op_inst);
+        std::string msgs = getExtensionMsgs(msgSize, msgGet);
+        CHECK(retval) << "Error calling CreateOpState CPU for custom operator '" << name_str << "'"
+                      << msgs;
       } else if (ctx.dev_mask() == Context::kGPU) {
         CHECK(createop_map.count("gpu") > 0)
           << "GPU CreateOpState not implemented for '" << name_str << "'";
-        CHECK(callCreateOpState(createop_map.at("gpu"), attr_keys.data(), attr_vals.data(),
-                                attr_keys.size(), &state_op_inst))
-          << "Error calling CreateOpState GPU for custom operator '" << name_str << "'";
+        int retval = callCreateOpState(createop_map.at("gpu"), attr_keys.data(), attr_vals.data(),
+                                       attr_keys.size(), &state_op_inst);
+        std::string msgs = getExtensionMsgs(msgSize, msgGet);
+        CHECK(retval) << "Error calling CreateOpState GPU for custom operator '" << name_str << "'"
+        << msgs;
       }
 
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
       CHECK(state_op_inst != nullptr)
-        << "Error custom library failed to create stateful operator '" << name_str << "'";
+      << "Error custom library failed to create stateful operator '" << name_str << "'" << msgs;
 
       CustomStatefulOp* state_op = reinterpret_cast<CustomStatefulOp*>(state_op_inst);
       return OpStatePtr::Create<CustomStatefulOpWrapper>(state_op);
@@ -810,151 +1134,19 @@ void registerOperators(void *lib, int verbose) {
 
     /* -------------- BELOW IS THE REGISTRATION FOR CUSTOM OPERATORS --------------- */
 
-    // check if operator is already registered
-    const nnvm::Op *regOpPtr = dmlc::Registry<nnvm::Op>::Get()->Find(name);
-    nnvm::Op &regOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(name);
-    int plevel = 10;
-    if (regOpPtr != nullptr) {
-      // overwrite registration of existing op with custom op
-      regOp.arguments.clear();
-      // set attribute with higher plevel (11) to allow re-registering once
-      // TODO(samskalicky): enable constant overwriting of registertion multiple times
-      plevel++;
-    }
-    // define supported resources for both subgraph ops and regular ops
-    regOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
-    if (!isSubgraphOp) {
-      regOp.set_attr_parser(attr_parser);
-      regOp.set_num_inputs(num_inputs);
-      regOp.set_num_outputs(num_outputs);
-      regOp.set_attr<nnvm::FInferType>("FInferType", infer_type, plevel);
-      regOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
-      regOp.set_attr<mxnet::FInferShape>("FInferShape", infer_shape, plevel);
-      // optionally add fmutate inputs if user specified a function
-      if (mutate_fp != nullptr)
-        regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs", mutate_inputs, plevel);
-    } else {
-      using namespace mxnet::op;
-      regOp.set_num_inputs(DefaultSubgraphOpNumInputs);
-      regOp.set_num_outputs(DefaultSubgraphOpNumOutputs);
-      regOp.set_attr<nnvm::FInferType>("FInferType", DefaultSubgraphOpType, plevel);
-      regOp.set_attr<mxnet::FInferShape>("FInferShape", DefaultSubgraphOpShape, plevel);
-      regOp.set_attr<FInferStorageType>("FInferStorageType",
-                                        DefaultSubgraphOpStorageType, plevel);
-      regOp.set_attr<nnvm::FMutateInputs>("FMutateInputs",
-                                          DefaultSubgraphOpMutableInputs, plevel);
-    }
-    // optionally add stateful forward
-    if (createop_map.size() != 0) {
-      regOp.set_attr<FCreateOpState>("FCreateOpState", create_opstate, plevel);
-      auto fstate_forward = [=](const OpStatePtr& state_ptr,
-                                const OpContext& ctx,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& outputs) {
-        CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
-                                 callFStatefulComp, 1, &state_ptr, ctx, inputs, req, outputs);
-      };
-      if (createop_map.count("cpu") > 0)
-        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_forward, plevel);
-      if (createop_map.count("gpu") > 0)
-        regOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_forward, plevel);
-    } else {
-      auto forward_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                const OpContext& ctx,
-                                const std::vector<NDArray>& inputs,
-                                const std::vector<OpReqType>& req,
-                                const std::vector<NDArray>& outputs) {
-        if (ctx.run_ctx.ctx.dev_mask() == Context::kCPU) {
-          CHECK_GT(forward_ctx_map.count("cpu"), 0);
-          fcomp_t fcomp = forward_ctx_map.at("cpu");
-          CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
-                                   nullptr, 0, nullptr, ctx, inputs, req, outputs);
-        } else if (ctx.run_ctx.ctx.dev_mask() == Context::kGPU) {
-          CHECK_GT(forward_ctx_map.count("gpu"), 0);
-          fcomp_t fcomp = forward_ctx_map.at("gpu");
-          CustomFComputeDispatcher(name_str, callFComp, fcomp, &attrs,
-                                   nullptr, 0, nullptr, ctx, inputs, req, outputs);
-        }
-      };
-      if (forward_ctx_map.count("cpu") > 0)
-        regOp.set_attr<FComputeEx>("FComputeEx<cpu>", forward_lambda, plevel);
-      if (forward_ctx_map.count("gpu") > 0)
-        regOp.set_attr<FComputeEx>("FComputeEx<gpu>", forward_lambda, plevel);
-    }
-    // optionally add fgradient if user specified a function, or for stateful ops
-    if (backward_ctx_map.size() != 0 || createop_map.size() != 0) {
-      std::string grad_name = "_backward_" + name_str;
-      nnvm::Op &gradOp = dmlc::Registry<nnvm::Op>::Get()->__REGISTER_OR_GET__(grad_name);
-      regOp.set_attr<nnvm::FGradient>("FGradient", grad_reg, plevel);
-      gradOp.set_attr<nnvm::TIsBackward>("TIsBackward", true, plevel);
-      gradOp.set_attr<FInferStorageType>("FInferStorageType", infer_storage_type, plevel);
-      gradOp.set_attr<FResourceRequest>("FResourceRequest", resc_req, plevel);
-
-      if (!isSubgraphOp) {
-        // register attr parser and standard functions for non-subgraph ops
-        gradOp.set_attr_parser(attr_parser);
-        gradOp.set_num_inputs(num_inouts);
-        gradOp.set_num_outputs(num_inputs);
-      } else {
-        // for subgraph ops use special functions that do not invoke attr_parser
-        using namespace mxnet::op;
-        auto grad_inouts = [=](const nnvm::NodeAttrs& attrs) {
-          // for backward passes, inputs + outputs + input gradients (one for each output)
-          uint32_t cnt = DefaultSubgraphOpNumInputs(attrs);
-          cnt += 2 * DefaultSubgraphOpNumOutputs(attrs);
-          return cnt;
-        };
-        gradOp.set_num_inputs(grad_inouts);
-        gradOp.set_num_outputs(DefaultSubgraphOpNumInputs);
-      }
-
-      if (createop_map.size() != 0) {
-        // for stateful operators
-        gradOp.set_attr<bool>("TIsLayerOpBackward", true, plevel);
-        auto fstate_backward = [=](const OpStatePtr& state_ptr,
-                                   const OpContext& ctx,
-                                   const std::vector<NDArray>& inputs,
-                                   const std::vector<OpReqType>& req,
-                                   const std::vector<NDArray>& outputs) {
-          CustomFComputeDispatcher(name_str, nullptr, nullptr, nullptr,
-                                   callFStatefulComp, 0, &state_ptr, ctx, inputs, req, outputs);
-        };
-        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<cpu>", fstate_backward, plevel);
-        gradOp.set_attr<FStatefulComputeEx>("FStatefulComputeEx<gpu>", fstate_backward, plevel);
-      } else {
-        // for stateless operators
-        if (backward_ctx_map.count("cpu") > 0) {
-          fcomp_t fcomp_back_cpu = backward_ctx_map.at("cpu");
-          auto backward_cpu_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                         const OpContext& ctx,
-                                         const std::vector<NDArray>& inputs,
-                                         const std::vector<OpReqType>& req,
-                                         const std::vector<NDArray>& outputs) {
-            CustomFComputeDispatcher(name_str, callFComp, fcomp_back_cpu, &attrs,
-                                     nullptr, 0, nullptr, ctx, inputs, req, outputs);
-          };
-          gradOp.set_attr<FComputeEx>("FComputeEx<cpu>", backward_cpu_lambda, plevel);
-        }
-        if (backward_ctx_map.count("gpu") > 0) {
-          fcomp_t fcomp_back_gpu = backward_ctx_map.at("gpu");
-          auto backward_gpu_lambda = [=](const nnvm::NodeAttrs& attrs,
-                                         const OpContext& ctx,
-                                         const std::vector<NDArray>& inputs,
-                                         const std::vector<OpReqType>& req,
-                                         const std::vector<NDArray>& outputs) {
-            CustomFComputeDispatcher(name_str, callFComp, fcomp_back_gpu, &attrs,
-                                     nullptr, 0, nullptr, ctx, inputs, req, outputs);
-          };
-          gradOp.set_attr<FComputeEx>("FComputeEx<gpu>", backward_gpu_lambda, plevel);
-        }
-      }
-    }
-    regOp.add_argument("data", "NDArray[]", "Source inputs");
+    registerOp(name, name_str, isSubgraphOp, resc_req, attr_parser, num_inputs, num_outputs,
+               num_inouts, infer_type, infer_shape, infer_storage_type, mutate_inputs,
+               num_subgraph_inputs, infer_subgraph_type, infer_subgraph_shape,
+               infer_subgraph_storage_type, create_opstate, grad_reg, mutate_fp,
+               createop_map, forward_ctx_map, backward_ctx_map, callFComp, callFStatefulComp,
+               msgSize, msgGet);
   }
 }
 
-void registerPartitioners(void *lib, int verbose) {
+void registerPartitioners(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
+                       mxnet::ext::msgGet_t msgGet) {
+  using namespace mxnet::ext;
+
   // get C type interface functions
   opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
 
@@ -1036,7 +1228,10 @@ void registerPartitioners(void *lib, int verbose) {
   }
 }
 
-void registerPasses(void *lib, int verbose) {
+void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
+                       mxnet::ext::msgGet_t msgGet) {
+  using namespace mxnet::ext;
+
   // get C type interface functions
   opCallFree_t callFree = get_func<opCallFree_t>(lib, const_cast<char*>(MXLIB_OPCALLFREE_STR));
 
@@ -1231,17 +1426,18 @@ void registerPasses(void *lib, int verbose) {
       };
 
       char* out_json;
-      CHECK(callGraphPass(pass_fp, in_json.c_str(), &out_json, opt_keys.data(),
-                          opt_vals.data(), opt_keys.size(), pass_name,
-                          arg_names.data(), arg_names.size(), arg_data.data(),
-                          arg_shapes.data(), arg_dims.data(), arg_types.data(),
-                          arg_verIDs.data(), arg_dev_type.data(),
-                          arg_dev_id.data(), aux_names.data(), aux_names.size(),
-                          aux_data.data(), aux_shapes.data(), aux_dims.data(),
-                          aux_types.data(), aux_verIDs.data(),
-                          aux_dev_type.data(), aux_dev_id.data(),
-                          ndarray_malloc, &ndarray_alloc))
-      << "Error calling graph pass for '" << pass_name << "'";
+      int retval = callGraphPass(pass_fp, in_json.c_str(), &out_json, opt_keys.data(),
+                                 opt_vals.data(), opt_keys.size(), pass_name,
+                                 arg_names.data(), arg_names.size(), arg_data.data(),
+                                 arg_shapes.data(), arg_dims.data(), arg_types.data(),
+                                 arg_verIDs.data(), arg_dev_type.data(),
+                                 arg_dev_id.data(), aux_names.data(), aux_names.size(),
+                                 aux_data.data(), aux_shapes.data(), aux_dims.data(),
+                                 aux_types.data(), aux_verIDs.data(),
+                                 aux_dev_type.data(), aux_dev_id.data(),
+                                 ndarray_malloc, &ndarray_alloc);
+      std::string msgs = getExtensionMsgs(msgSize, msgGet);
+      CHECK(retval) << "Error calling graph pass for '" << pass_name << "'" << msgs;
 
       std::string out_string(out_json);
       nnvm::Graph out_graph = nnvm::pass::LoadJSON(out_string);
@@ -1272,21 +1468,31 @@ int MXLoadLib(const char *path, unsigned verbose) {
     LOG(FATAL) << "Unable to load library";
 
   // check that library and MXNet use same version of library API
-  opVersion_t opVersion = get_func<opVersion_t>(lib, const_cast<char*>(MXLIB_OPVERSION_STR));
+  mxnet::ext::opVersion_t opVersion =
+    get_func<mxnet::ext::opVersion_t>(lib, const_cast<char*>(MXLIB_OPVERSION_STR));
   int libVersion =  opVersion();
   if (MX_LIBRARY_VERSION != libVersion)
     LOG(FATAL) << "Library version (" << libVersion << ") does not match MXNet version ("
                << MX_LIBRARY_VERSION << ")";
 
+  // get error messaging APIs
+  mxnet::ext::msgSize_t msgSize =
+    get_func<mxnet::ext::msgSize_t>(lib, const_cast<char*>(MXLIB_MSGSIZE_STR));
+  mxnet::ext::msgGet_t msgGet =
+    get_func<mxnet::ext::msgGet_t>(lib, const_cast<char*>(MXLIB_MSGGET_STR));
+
   // initialize library by passing MXNet version
-  initialize_t initialize = get_func<initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
-  if (!initialize(static_cast<int>(MXNET_VERSION)))
-    LOG(FATAL) << "Library failed to initialize";
+  mxnet::ext::initialize_t initialize =
+    get_func<mxnet::ext::initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
+  if (!initialize(static_cast<int>(MXNET_VERSION))) {
+    std::string msgs = getExtensionMsgs(msgSize, msgGet);
+    LOG(FATAL) << "Library failed to initialize" << msgs;
+  }
 
   // find ops, partitioners, and passes in library
-  registerOperators(lib, verbose);
-  registerPartitioners(lib, verbose);
-  registerPasses(lib, verbose);
+  registerOperators(lib, verbose, msgSize, msgGet);
+  registerPartitioners(lib, verbose, msgSize, msgGet);
+  registerPasses(lib, verbose, msgSize, msgGet);
   API_END();
 }
 
