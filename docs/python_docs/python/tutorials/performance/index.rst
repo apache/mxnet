@@ -107,8 +107,8 @@ Distributed Training
       An overview of using multiple GPUs when training an LSTM.
 
    .. card::
-      :title: Data Parallelism in MXNet
-      :link: /api/faq/multi_device
+      :title: Distributed training in MXNet
+      :link: /api/faq/distributed_training
 
       An overview of distributed training strategies.
 
