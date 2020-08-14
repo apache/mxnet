@@ -129,7 +129,7 @@ class CuTensorEinsum {
   void Init(std::string equation,
             const std::vector<TBlob>& inputs,
             const std::vector<TBlob>& outputs,
-            const OpContext &ctx,
+            const OpContext& ctx,
             bool req_write,
             size_t prev_workspace_size) {
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
@@ -296,10 +296,15 @@ class EinsumOpGPU {
 
   void Init(const EinsumOp& state,
             const std::vector<TBlob>& inputs,
-            const RunContext& rctx,
+            const std::vector<TBlob>& outputs,
+            const OpContext& ctx,
             bool req_write) {
     if (state.num_args == 2) {
       fwd_cutensor_ops.push_back(CuTensorEinsum<DType>());
+      fwd_cutensor_ops[0].Init(state.subscripts,
+                               inputs, outputs,
+                               ctx, req_write,
+                               0);
     } else {
       // more than 2 operands, compute optimal path
       int paths_len = state.paths.size();
@@ -318,10 +323,10 @@ class EinsumOpGPU {
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
     bool req_write = false;
     if (state.num_args == 2) {
-      fwd_cutensor_ops[0].Init(state.subscripts,
-                               inputs, outputs,
-                               ctx, req_write,
-                               0);
+      //fwd_cutensor_ops[0].Init(state.subscripts,
+      //                         inputs, outputs,
+      //                         ctx, req_write,
+      //                         0);
       fwd_cutensor_ops[0].Compute(ctx, inputs, req_write, outputs);
     } else {
       // more than 2 operands, compute optimal path
@@ -514,7 +519,7 @@ template<typename DType>
 static EinsumOpGPU<DType>& GetEinsumOpGPU(const EinsumOp& state,
                                           const std::vector<TBlob>& inputs,
                                           const std::vector<TBlob>& outputs,
-                                          const RunContext& rctx,
+                                          const OpContext& ctx,
                                           bool req_write) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<EinsumSignature,
@@ -540,7 +545,7 @@ static EinsumOpGPU<DType>& GetEinsumOpGPU(const EinsumOp& state,
               1 ); // for req_write
   key.AddSign(in_shape);
   key.AddSign(out_shape);
-  key.AddSign(rctx.ctx.dev_id);
+  key.AddSign(ctx.run_ctx.ctx.dev_id);
   key.AddSign(req_write ? 1 : 0);
 
   auto it = ops.find(key);
@@ -551,8 +556,8 @@ static EinsumOpGPU<DType>& GetEinsumOpGPU(const EinsumOp& state,
     CHECK(ins_ret.second);
     it = ins_ret.first;
     it->second->Init(state,
-                     inputs,
-                     rctx, req_write);
+                     inputs, outputs,
+                     ctx, req_write);
   }
   return *it->second;
 }
@@ -571,15 +576,17 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
   if (state.num_args <= 1) {
     NumpyEinsumForward<gpu>(state_ptr, ctx, inputs, req, outputs);
   } else {
-    std::vector<Step>& paths = state.paths;
-    std::vector<std::vector<int> > pos;
-    std::string string_repr;
-    paths = einsum_path(state.subscripts, inputs, true, ctx.run_ctx, &pos, &string_repr);
+    if (state.num_args > 2) {
+      std::vector<Step>& paths = state.paths;
+      std::vector<std::vector<int> > pos;
+      std::string string_repr;
+      paths = einsum_path(state.subscripts, inputs, true, ctx.run_ctx, &pos, &string_repr);
+    }
     //EinsumParamGPU param(state.num_args, state.subscripts);
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
           (state, inputs, outputs,
-           ctx.run_ctx, req_write);
+           ctx, req_write);
       //EinsumOpGPU<DType> op = EinsumOpGPU<DType>();
       //op.Init(state, inputs, ctx.run_ctx, req_write);
       state.tempspace.reset<NDArray>(new NDArray(TShape(Shape1(op.temp_ouputs_size)),
@@ -609,12 +616,14 @@ inline void NumpyEinsumBackwardGpu(const OpStatePtr& state_ptr,
   } else {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       std::vector<TBlob> inputs_no_grad;
+      std::vector<TBlob> out_grad;
       for (int i = 1; i < inputs.size(); ++i) {
         inputs_no_grad.push_back(inputs[i]);
       }
+      out_grad.push_back(inputs[0]);
       EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
-          (state, inputs_no_grad, outputs,
-           ctx.run_ctx, req_write);
+          (state, inputs_no_grad, out_grad,
+           ctx, req_write);
       op.Backward(state, ctx, inputs, req, outputs);
     });
   }
