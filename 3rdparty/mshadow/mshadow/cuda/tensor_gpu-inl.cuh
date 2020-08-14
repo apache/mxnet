@@ -641,6 +641,43 @@ __global__ void AddTakeGradKernel(DstPlan dst,
   }
 }
 
+template<bool clip, int x_bits, typename DstPlan, typename ATypePlan,
+         typename SrcPlan1, typename SrcPlan2>
+__global__ void AddTakeGradKernel(DstPlan dst,
+                                  ATypePlan temp,
+                                  SrcPlan1 index, SrcPlan2 src,
+                                  index_t ymax, index_t xmax, const int K) {
+  const unsigned x_size = 1 << x_bits;
+  const int xindex = blockIdx.x * x_size + threadIdx.x;
+  __shared__ int ptr;
+  if (xindex < xmax) {
+    for (unsigned y = 0; y < K; ++y) {
+      temp.REval(y, xindex) = dst.Eval(y, xindex);
+    }
+  }
+  for (unsigned y = 0; y < ymax; ++y) {
+    if (threadIdx.x == 0) {
+      ptr = index.Eval(0, y);
+      if (clip) {
+        if (ptr <= 0) ptr = 0;
+        else if (ptr >= K) ptr = K - 1;
+      } else {
+        ptr %= K;
+        if (ptr < 0) ptr += K;
+      }
+    }
+    __syncthreads();
+    if (xindex < xmax) {
+      temp.REval(ptr, xindex) += src.Eval(y, xindex);
+    }
+  }
+  if (xindex < xmax) {
+    for (unsigned y = 0; y < K; ++y) {
+      dst.REval(y, xindex) = temp.Eval(y, xindex);
+    }
+  }
+}
+
 template<int warp_bits, int SZ, typename DType, typename IdxType>
 __global__ void AddTakeGradLargeBatchKernel(DType* dst,
                                             const IdxType *sorted, const IdxType *index,
@@ -725,6 +762,46 @@ inline void AddTakeGrad(Tensor<gpu, 2, DType> dst,
     AddTakeGradKernel<false, kUnitBits, DType>
       <<<dimGrid, dimBlock, 0, stream>>>
       (expr::MakePlan(dst),
+       expr::MakePlan(index),
+       expr::MakePlan(src),
+       src.size(0),
+       src.size(1), K);
+  }
+  MSHADOW_CUDA_POST_KERNEL_CHECK(AddTakeGradKernel);
+}
+
+template<bool clip = true, typename IndexType, typename DType, typename AType>
+inline void AddTakeGrad(Tensor<gpu, 2, DType> dst,
+                        Tensor<gpu, 2, AType> temp,
+                        const Tensor<gpu, 1, IndexType>& index,
+                        const Tensor<gpu, 2, DType> &src) {
+  CHECK_EQ(dst.CheckContiguous(), true);
+  CHECK_EQ(index.CheckContiguous(), true);
+  CHECK_EQ(src.CheckContiguous(), true);
+  const int kUnitBits = kMemUnitBits + 1;
+  dim3 dimBlock(1 << kUnitBits);
+  dim3 dimGrid((dst.size(1) + (1 << kUnitBits) - 1) >> kUnitBits);
+
+  CHECK_EQ(dst.size(1), src.size(1)) << "AddTakeGrad: shape mismatch";
+  CHECK_EQ(index.size(0), src.size(0)) << "AddTakeGrad: shape mismatch";
+  CheckLaunchParam(dimGrid, dimBlock, "AddTakeGrad");
+  cudaStream_t stream = Stream<gpu>::GetStream(dst.stream_);
+  const int K = dst.shape_[0];
+
+  if (clip) {
+    AddTakeGradKernel<true, kUnitBits>
+      <<<dimGrid, dimBlock, 0, stream>>>
+      (expr::MakePlan(dst),
+       expr::MakePlan(temp),
+       expr::MakePlan(index),
+       expr::MakePlan(src),
+       src.size(0),
+       src.size(1), K);
+  } else {
+    AddTakeGradKernel<false, kUnitBits>
+      <<<dimGrid, dimBlock, 0, stream>>>
+      (expr::MakePlan(dst),
+       expr::MakePlan(temp),
        expr::MakePlan(index),
        expr::MakePlan(src),
        src.size(0),
