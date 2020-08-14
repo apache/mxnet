@@ -950,6 +950,28 @@ inline int GetDefaultDtype(int dtype) {
          mshadow::kFloat32;
 }
 
+inline bool AlignedMemAlloc(void** ptr, size_t size, size_t alignment) {
+#if _MSC_VER
+  *ptr = _aligned_malloc(size, alignment);
+  if (*ptr == nullptr)
+    return false;
+#else
+  int res = posix_memalign(ptr, alignment, size);
+  if (res != 0)
+    return false;
+#endif
+  return true;
+}
+
+inline void AlignedMemFree(void* ptr) {
+#if _MSC_VER
+  _aligned_free(ptr);
+#else
+  free(ptr);
+#endif
+}
+
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_
