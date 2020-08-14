@@ -41,9 +41,9 @@ during runtime of the user script.
 In this tutorial we will cover the reasons for using RTC instead of the other methods, show how to
 do it, as well as tips on what to keep in mind when doing it.
 
-# Why RTC?
+## Why RTC?
 
-## Problems with kernels compiled ahead of time
+### Problems with kernels compiled ahead of time
 
 The use of kernels compiled ahead of time in MXNet leads to a few problems, which unfortunately
 are mostly invisible in any single PR, but grow over the course of many contributions and result in
@@ -89,7 +89,7 @@ reducing the amount of memory available for useful work.
 The third issue, mostly affecting MXNet developers, is the compilation time of the MXNet library.
 The more kernels versions need to be compiled, the more time and hardware resources is needed.
 
-## RTC to the rescue!
+### RTC to the rescue!
 
 All of the issues mentioned in the previous paragraph are solved when using runtime compilation.
 Using this paradigm, only the kernels actually invoked in the user script are compiled. They do not
@@ -102,9 +102,9 @@ RTC also enables more features:
  - writing kernels accepting any combinations of input and output types
  - (in the future) fusing more operations into the generated kernels.
 
-# RTC for kernel developers
+## RTC for kernel developers
 
-## Example: unary operators
+### Example: unary operators
 
 Let us start with an example of the simple kernel written using RTC: a kernel which performs unary
 operation (with a concrete example of sigmoid) on its input. It is not a toy example though: it is
@@ -194,7 +194,7 @@ NNVM_REGISTER_OP(sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"sigmoid"});
 ```
 
-## Kernels are text...
+### Kernels are text...
 
 The main difference when writing kernels using RTC is that the kernel code becomes the text string.
 This means that it is possible to change or compose the code at runtime, as is done here:
@@ -221,7 +221,7 @@ NNVM_REGISTER_OP(sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", UnaryRTCCompute{"sigmoid"});
 ```
 
-## and do not know MXNet source code
+### and do not know MXNet source code
 
 How does the kernel know what operation it should perform? The kernel's source code uses `OP`,
 which shows up in the `code` variable and is equal to `op::sigmoid`. Let us compare this to how the
@@ -250,7 +250,7 @@ __device__ inline DType sigmoid(const DType val) {
 }
 ```
 
-## Handling of data types
+### Handling of data types
 
 MXNet has support for many datatypes. Some of those datatypes, like `float16`, `int8` or `bool` are
 useful when storing the results, but in many computations they are too limiting as they can easily
@@ -275,7 +275,7 @@ add(const DType a, const DType2 b) {
 `U` - e.g. `mixed_type<float64, float32>::type = float64` and `mixed_type<float32, int32>::type =
 float32`.
 
-## Compiling and launching RTC kernels
+### Compiling and launching RTC kernels
 
 The kernel code stored in `unary_kernel_fwd` is generic and relies on multiple names to be defined,
 like `req`, `OP` or `InputType`. This is handled in the specific operator using the kernel by
@@ -319,9 +319,9 @@ To launch the kernel, the `mxnet::common::cuda::rtc::launch` method is used:
 It takes the kernel object, grid and block dimensions, size of dynamic shared memory, stream and
 kernel parameters.
 
-# Other features enabled by RTC
+## Other features enabled by RTC
 
-## Vectorization
+### Vectorization
 
 The actual kernel used for application of unary operator in MXNet looks slightly different compared
 to the simple example shown in the previous paragraph. Differences come from using vectorization.

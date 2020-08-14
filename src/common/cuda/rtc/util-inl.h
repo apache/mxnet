@@ -37,6 +37,15 @@ using uint8 = unsigned char;
 using int8 = char;
 using int32 = int;
 using int64 = long long;
+
+static_assert(sizeof(float32) == 4, "Size of float32 is expected to be 4B");
+static_assert(sizeof(float64) == 8, "Size of float64 is expected to be 8B");
+static_assert(sizeof(float16) == 2, "Size of float16 is expected to be 2B");
+static_assert(sizeof(uint8) == 1, "Size of uint8 is expected to be 1B");
+static_assert(sizeof(int8) == 1, "Size of int8 is expected to be 1B");
+static_assert(sizeof(int32) == 4, "Size of int32 is expected to be 4B");
+static_assert(sizeof(int64) == 8, "Size of int64 is expected to be 8B");
+
 )code"
 #if MSHADOW_INT64_TENSOR_SIZE == 1
 "typedef int64 index_t;\n"
