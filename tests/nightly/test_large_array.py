@@ -25,9 +25,10 @@ import mxnet as mx
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor, get_identity_mat, get_identity_mat_batch
 from mxnet import gluon, nd
-from common import with_seed, with_post_test_cleanup
+from common import with_seed, with_post_test_cleanup, assertRaises
+from mxnet.base import MXNetError
 from nose.tools import with_setup
 import unittest
 
@@ -37,8 +38,10 @@ VLARGE_X = 4300000000
 LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
+LARGE_SQ_X = 70000
 LARGE_SIZE = LARGE_X * SMALL_Y
 LARGE_TENSOR_SHAPE = 2**32
+RNN_LARGE_TENSOR = 2**28
 
 
 def test_nn():
@@ -479,7 +482,6 @@ def test_nn():
 
         assert out.shape[0] == LARGE_TENSOR_SHAPE
         assert out.shape[1] == 1
-        assert out.shape[2] == 1
         
     def check_spatial_transformer():
         data = nd.random_normal(shape=(2, 2**29, 1, 6))
@@ -504,6 +506,39 @@ def test_nn():
 
         assert out.shape[0] == LARGE_TENSOR_SHAPE
 
+    def check_rnn():
+        data = nd.random_normal(shape=(RNN_LARGE_TENSOR, 4, 4))
+        parameters_relu_tanh = nd.random_normal(shape=(7,))
+        parameters_lstm = nd.random_normal(shape=(28,))
+        parameters_gru = nd.random_normal(shape=(21,))
+        state = nd.random_normal(shape=(1, 4, 1))
+        state_cell = nd.random_normal(shape=(1, 4, 1))
+        mode_relu = 'rnn_relu'
+        mode_tanh = 'rnn_tanh'
+        mode_lstm = 'lstm'
+        mode_gru = 'gru'
+        state_size = 1
+        num_layers = 1
+
+        out_relu = nd.RNN(data=data, parameters=parameters_relu_tanh, state=state, mode=mode_relu,
+                          state_size=state_size, num_layers=num_layers)
+        
+        out_tanh = nd.RNN(data=data, parameters=parameters_relu_tanh, state=state, mode=mode_tanh,
+                          state_size=state_size, num_layers=num_layers)
+        
+        out_lstm = nd.RNN(data=data, parameters=parameters_lstm, state=state, mode=mode_lstm,
+                          state_cell=state_cell, state_size=state_size, num_layers=num_layers)
+
+        out_gru = nd.RNN(data=data, parameters=parameters_gru, state=state, mode=mode_gru,
+                         state_size=state_size, num_layers=num_layers)
+
+        for out in [out_relu, out_tanh, out_lstm, out_gru]:
+            assert out.shape[0] == RNN_LARGE_TENSOR
+            assert out.shape[1] == 4
+            assert out.shape[2] == 1
+
+            assert type(out[0, 0, 0].asscalar()).__name__ == 'float32'
+
     check_gluon_embedding()
     check_fully_connected()
     check_dense()
@@ -527,6 +562,7 @@ def test_nn():
     check_embedding()
     check_spatial_transformer()
     check_ravel()
+    check_rnn()
 
 
 def test_tensor():
@@ -1132,6 +1168,234 @@ def test_tensor():
     check_pad()
     check_gather()
     check_binary_broadcast()
+
+def test_linalg():
+    def check_potrf():
+        def run_potrf(inp):
+            inp.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.potrf(inp)
+            return inp.grad, out
+
+        A = get_identity_mat(LARGE_SQ_X)
+        grad, out = run_potrf(A)
+        assert(out.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(out[0, 0] == 1)
+        out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(grad[0, 0] == 0.5)
+
+    def check_potri():
+        def run_potri(inp):
+            inp.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.potri(inp)
+            return inp.grad, out
+
+        A = get_identity_mat(LARGE_SQ_X)
+        grad, out = run_potri(A)
+        assert(out.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(out[0, 0] == 1)
+        out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(grad[0, 0] == -2)
+    
+    def check_syrk_batch():
+        # test both forward and backward
+        # batch syrk will be applied to the last two dimensions
+        A = nd.zeros((2, LARGE_SQ_X, LARGE_SQ_X))
+        for i in range(LARGE_SQ_X):
+            A[0,i,i] = 1
+            A[1,i,i] = 0.1
+        A.attach_grad()
+        with mx.autograd.record():
+            out = nd.linalg.syrk(A, alpha=2, transpose=False)
+        assert out.shape == (2, LARGE_SQ_X, LARGE_SQ_X)
+        assert out[0,0,0] == 2
+        assert_almost_equal(out[1,0,0], nd.array([0.02]), rtol=1e-3, atol=1e-5)
+        out.backward()
+        assert A.grad.shape == (2, LARGE_SQ_X, LARGE_SQ_X)
+        assert A.grad[0,0,0] == 4
+        assert_almost_equal(A.grad[1,0,0], nd.array([0.4]), rtol=1e-3, atol=1e-5)
+
+    def check_gemm2():
+        def run_gemm2(inp1, inp2):
+            inp1.attach_grad()
+            inp2.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.gemm2(inp1, inp2)
+            return inp1.grad, inp2.grad, out
+
+        inp1 = mx.nd.ones(shape=(SMALL_Y, LARGE_X))
+        perturbation = 0.2
+        inp1[0][0] = perturbation
+        inp2 = mx.nd.ones(shape=(LARGE_X, SMALL_Y))
+        inp1_grad, inp2_grad, out = run_gemm2(inp1, inp2)
+        assert out.asnumpy()[0][0] == LARGE_X
+        assert out.shape == (SMALL_Y, SMALL_Y)
+        out.backward()
+        assert inp1_grad.shape == (SMALL_Y, LARGE_X)
+        assert inp2_grad.shape == (LARGE_X, SMALL_Y)
+        assert_almost_equal(inp1_grad.asnumpy()[0][0], SMALL_Y)
+        assert_almost_equal(inp2_grad.asnumpy()[0][0], SMALL_Y - (1 - perturbation))
+
+    def check_gemm():
+        def run_gemm(inp1,inp2, inp3):
+            inp1.attach_grad()
+            inp2.attach_grad()
+            inp3.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.gemm(inp1, inp2, inp3, transpose_b=True)
+            return inp1.grad, inp2.grad, inp3.grad, out
+
+        inp1 = mx.nd.ones(shape=(MEDIUM_X, SMALL_Y, MEDIUM_X))
+        perturbation = 0.2
+        inp1[0][0][0] = perturbation
+        inp2 = mx.nd.ones(shape=(MEDIUM_X, SMALL_Y, MEDIUM_X))
+        inp3 = mx.nd.ones(shape=(MEDIUM_X, SMALL_Y, SMALL_Y))
+        inp1_grad, inp2_grad, inp3_grad, out= run_gemm(inp1, inp2, inp3)
+        assert_almost_equal(out.asnumpy()[0][0][0], MEDIUM_X + perturbation)
+        assert out.shape == inp3.shape
+        out.backward()
+        assert inp1_grad.shape == (MEDIUM_X, SMALL_Y, MEDIUM_X)
+        assert inp2_grad.shape == (MEDIUM_X, SMALL_Y, MEDIUM_X)
+        assert inp3_grad.shape == (MEDIUM_X, SMALL_Y, SMALL_Y)
+        assert_almost_equal(inp1_grad.asnumpy()[0][0][0], SMALL_Y)
+        assert_almost_equal(inp2_grad.asnumpy()[0][0][0], SMALL_Y - (1 - perturbation))
+
+    def check_det():
+        def run_det(inp):
+            inp.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.det(inp)
+            return inp.grad, out
+
+        A = get_identity_mat(LARGE_SQ_X)
+        grad, out = run_det(A)
+        assert(out.shape == (1,))
+        assert(out[0] == 1)
+        out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(grad[0, 0] == 1)
+
+    def check_inverse():
+        def run_inverse(inp):
+            inp.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.inverse(inp)
+            return inp.grad, out
+
+        A = get_identity_mat(LARGE_SQ_X)
+        grad, out = run_inverse(A)
+        assert(out.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(out[0, 0] == 1)
+        out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(grad[0, 0] == -1)
+
+    def check_trmm():
+        def run_trmm(inp):
+            inp.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.trmm(inp, inp)
+            return inp.grad, out
+
+        A = get_identity_mat(LARGE_SQ_X)
+        grad, out = run_trmm(A)
+        assert(out.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(out[0, 0] == 1)
+        out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(grad[0, 0] == 2)
+
+    def check_trsm():
+        def run_trsm(inp):
+            inp.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.trsm(inp, inp)
+            return inp.grad, out
+
+        A = get_identity_mat(LARGE_SQ_X)
+        grad, out = run_trsm(A)
+        assert(out.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(out[0, 0] == 1)
+        out.backward()
+        assert(grad.shape == (LARGE_SQ_X, LARGE_SQ_X))
+        assert(grad[0, 0] == 0)
+
+    def check_batch_inverse():
+        def run_inverse(inp):
+            inp.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.inverse(inp)
+            return inp.grad, out
+
+        B = get_identity_mat_batch(LARGE_SQ_X)
+        grad, out = run_inverse(B)
+        assert(out.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
+        assert(out[0, 0, 0] == 1)
+        assert(out[1, 0, 0] == 1)
+        out.backward()
+        assert(grad.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
+        assert(grad[0, 0, 0] == -1)
+        assert(grad[1, 0, 0] == -1)
+
+    def check_batch_trmm():
+        def run_trmm(inp):
+            inp.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.trmm(inp, inp)
+            return inp.grad, out
+
+        B = get_identity_mat_batch(LARGE_SQ_X)
+        grad, out = run_trmm(B)
+        assert(out.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
+        assert(out[0, 0, 0] == 1)
+        assert(out[1, 0, 0] == 1)
+        out.backward()
+        assert(grad.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
+        assert(grad[0, 0, 0] == 2)
+        assert(grad[1, 0, 0] == 2)
+
+    def check_batch_trsm():
+        def run_trsm(inp):
+            inp.attach_grad()
+            with mx.autograd.record():
+                out = mx.nd.linalg.trsm(inp, inp)
+            return inp.grad, out
+
+        B = get_identity_mat_batch(LARGE_SQ_X)
+        grad, out = run_trsm(B)
+        assert(out.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
+        assert(out[0, 0, 0] == 1)
+        assert(out[1, 0, 0] == 1)
+        out.backward()
+        assert(grad.shape == (2, LARGE_SQ_X, LARGE_SQ_X))
+        assert(grad[0, 0, 0] == 0)
+        assert(grad[1, 0, 0] == 0)
+
+    check_gemm()
+    check_potrf()
+    check_potri()
+    check_syrk_batch()
+    check_gemm2()
+    check_det()
+    check_inverse()
+    check_trmm()
+    check_trsm()
+    check_batch_inverse()
+    check_batch_trmm()
+    check_batch_trsm()
+
+
+def test_linalg_errors():
+    def check_syevd_error():
+        A = get_identity_mat(LARGE_SQ_X)
+        for i in range(LARGE_SQ_X):
+            A[i,i] = 1
+        assertRaises(MXNetError, mx.nd.linalg.syevd, A)
+
+    check_syevd_error()
 
 
 def test_basic():

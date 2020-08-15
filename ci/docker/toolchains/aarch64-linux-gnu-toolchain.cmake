@@ -15,24 +15,15 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# /etc/inittab
-# busybox init configuration for debian-installer
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR "aarch64")
+set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+set(CMAKE_CUDA_COMPILER nvcc)
+set(CMAKE_CUDA_HOST_COMPILER aarch64-linux-gnu-gcc)
+set(CMAKE_FIND_ROOT_PATH "/usr/aarch64-linux-gnu")
 
-# main rc script
-::sysinit:/sbin/reopen-console /sbin/debian-installer-startup
-
-# main setup program
-::respawn:/sbin/reopen-console /sbin/debian-installer
-
-# convenience shells
-tty2::askfirst:-/bin/sh
-tty3::askfirst:-/bin/sh
-
-# logging
-#tty4::respawn:/usr/bin/tail -f /var/log/syslog
-
-# Stuff to do before rebooting
-::ctrlaltdel:/sbin/shutdown > /dev/null 2>&1
-
-# re-exec init on receipt of SIGHUP/SIGUSR1
-::restart:/sbin/init
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)

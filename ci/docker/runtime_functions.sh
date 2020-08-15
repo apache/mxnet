@@ -248,15 +248,22 @@ build_dynamic_libmxnet() {
 
 build_jetson() {
     set -ex
-    pushd .
-
-    #build_ccache_wrappers
-
-    cp make/crosscompile.jetson.mk ./config.mk
-    make -j$(nproc)
-
-    build_wheel /work/mxnet/python /work/mxnet/lib
-    popd
+    cd /work/build
+    cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DUSE_CUDA=ON \
+        -DMXNET_CUDA_ARCH="5.2" \
+        -DENABLE_CUDA_RTC=OFF \
+        -DSUPPORT_F16C=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=ON \
+        -DUSE_LAPACK=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -G Ninja /work/mxnet
+    ninja
+    build_wheel
 }
 
 #
@@ -286,7 +293,7 @@ build_armv6() {
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
         -DBUILD_CPP_EXAMPLES=OFF \
-        -Dmxnet_LINKER_LIBS=-lgfortran \
+        -Dmxnet_LINKER_LIBS=-latomic \
         -G Ninja /work/mxnet
 
     ninja
@@ -316,7 +323,6 @@ build_armv7() {
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_LAPACK=OFF \
         -DBUILD_CPP_EXAMPLES=OFF \
-        -Dmxnet_LINKER_LIBS=-lgfortran \
         -G Ninja /work/mxnet
 
     ninja
@@ -325,19 +331,32 @@ build_armv7() {
 }
 
 build_armv8() {
+    set -ex
+    pushd .
+    cd /work/build
+
+    # Lapack functionality will be included and statically linked to openblas.
+    # But USE_LAPACK needs to be set to OFF, otherwise the main CMakeLists.txt
+    # file tries to add -llapack. Lapack functionality though, requires -lgfortran
+    # to be linked additionally.
+
     build_ccache_wrappers
     cmake \
-        -DUSE_CUDA=OFF\
-        -DSUPPORT_F16C=OFF\
-        -DUSE_OPENCV=OFF\
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DCMAKE_CROSSCOMPILING=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
-        -DUSE_LAPACK=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=Release\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
+        -DUSE_LAPACK=OFF \
+        -DBUILD_CPP_EXAMPLES=OFF \
         -G Ninja /work/mxnet
+
     ninja
     build_wheel
+    popd
 }
 
 
@@ -350,16 +369,18 @@ build_android_armv7() {
     cd /work/build
     build_ccache_wrappers
     cmake \
-        -DANDROID=ON\
-        -DUSE_CUDA=OFF\
-        -DUSE_SSE=OFF\
-        -DSUPPORT_F16C=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DANDROID_ABI="armeabi-v7a" \
+        -DANDROID_STL="c++_shared" \
+        -DANDROID=ON \
+        -DUSE_CUDA=OFF \
+        -DUSE_SSE=OFF \
+        -DSUPPORT_F16C=OFF \
+        -DUSE_LAPACK=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja
 }
@@ -367,17 +388,18 @@ build_android_armv7() {
 build_android_armv8() {
     set -ex
     cd /work/build
-    build_ccache_wrappers
-    cmake\
+    cmake \
+        -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
+        -DANDROID_ABI="arm64-v8a" \
+        -DANDROID_STL="c++_shared" \
         -DANDROID=ON \
-        -DUSE_CUDA=OFF\
-        -DUSE_SSE=OFF\
-        -DUSE_LAPACK=OFF\
-        -DUSE_OPENCV=OFF\
-        -DUSE_OPENMP=OFF\
-        -DUSE_SIGNAL_HANDLER=ON\
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo\
-        -DUSE_MKL_IF_AVAILABLE=OFF\
+        -DUSE_CUDA=OFF \
+        -DUSE_SSE=OFF \
+        -DUSE_LAPACK=OFF \
+        -DUSE_OPENCV=OFF \
+        -DUSE_OPENMP=OFF \
+        -DUSE_SIGNAL_HANDLER=ON \
+        -DUSE_MKL_IF_AVAILABLE=OFF \
         -G Ninja /work/mxnet
     ninja
 }
@@ -772,7 +794,6 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     set -ex
     build_ccache_wrappers
     make \
-        DEV=1                                     \
         USE_BLAS=openblas                         \
         USE_MKLDNN=0                              \
         USE_CUDA=1                                \
@@ -791,7 +812,6 @@ build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
     set -ex
     build_ccache_wrappers
     make \
-        DEV=1                                     \
         USE_BLAS=openblas                         \
         USE_MKLDNN=1                              \
         USE_CUDA=1                                \
@@ -1392,6 +1412,18 @@ test_ubuntu_cpu_python3() {
     python3 -m "nose" $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --verbose tests/python/unittest
 
     popd
+}
+
+# QEMU based ARM tests
+unittest_ubuntu_python3_arm() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=0  # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    python3 -m nose --verbose tests/python/unittest/test_engine.py
 }
 
 # Functions that run the nightly Tests:

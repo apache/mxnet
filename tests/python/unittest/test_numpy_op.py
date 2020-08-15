@@ -1404,6 +1404,220 @@ def test_npx_batch_dot():
 
 @with_seed()
 @use_np
+def test_npx_batch_norm():
+    momentum = 0.9
+    epsilon = 1e-5
+    class TestBatchNorm(HybridBlock):
+        def __init__(self, eps=1e-5, fix_gamma=False, momentum=0.9, **kwargs):
+            super().__init__()
+            self.eps = eps
+            self.fix_gamma = fix_gamma
+            self.momentum = momentum
+            self.kwargs = kwargs
+        def hybrid_forward(self, F, data, bn_gamma, bn_beta,
+                           bn_running_mean, bn_running_var):
+            op = F.npx.batch_norm
+            output = op(data, bn_gamma, bn_beta,
+                        bn_running_mean, bn_running_var,
+                        momentum=self.momentum, eps=self.eps,
+                        fix_gamma=self.fix_gamma, **self.kwargs)
+            return output
+
+    def _test_batchnorm_impl(shape, fix_gamma, cudnn_off, output_mean_var,
+                             axis,
+                             data_grad_req, gamma_grad_req, beta_grad_req):
+        kwargs = dict(output_mean_var=output_mean_var)
+        kwargs.update(dict(axis=axis, cudnn_off=cudnn_off))
+        op = TestBatchNorm(eps=epsilon, fix_gamma=fix_gamma, momentum=momentum, **kwargs)
+        nch = shape[axis]
+
+        if not fix_gamma:
+            bn_gamma = np.random.uniform(size=(nch,))
+            bn_gamma.attach_grad(grad_req=gamma_grad_req)
+        else:
+            bn_gamma = np.ones((nch,))
+
+        bn_beta = np.random.uniform(size=(nch,))
+        bn_beta.attach_grad(grad_req=beta_grad_req)
+
+        bn_running_mean = np.zeros(nch)
+        bn_running_var = np.ones(nch)
+
+        running_mean = np.zeros(nch)
+        running_var = np.ones(nch)
+        num_iters = 10
+        expand_shape = [1] * len(shape)
+        expand_shape[axis] = shape[axis]
+        expand_shape = tuple(expand_shape)
+        data = np.random.uniform(size=shape)
+        data.attach_grad(grad_req=data_grad_req)
+        adX, adW, adb = 0, 0, 0
+        is_train = data_grad_req != 'null' or \
+            (not fix_gamma and gamma_grad_req != 'null') or \
+            beta_grad_req != 'null'
+        for _ in range(num_iters):
+            if data_grad_req != 'add':
+                data = np.random.uniform(size=shape)
+                data.attach_grad(grad_req=data_grad_req)
+            ograd = np.random.uniform(size=shape)
+            with mx.autograd.record():
+                output = op(data, bn_gamma, bn_beta,
+                            bn_running_mean, bn_running_var)
+                if output_mean_var:
+                    output, output_mean, output_std = output
+                if is_train:
+                    output.backward(ograd)
+            mx.nd.waitall()
+
+            assert 0 <= axis < data.ndim
+            reduce_axis = tuple(i for i in range(data.ndim) if i != axis)
+            assert len(reduce_axis) == data.ndim - 1
+            data_mean = data.mean(
+                axis=reduce_axis, keepdims=True)
+            data_var = ((data - data_mean) ** 2).mean(axis=reduce_axis,
+                                                        keepdims=True)
+
+            target_output = (data - data_mean) / \
+                np.sqrt(data_var + epsilon) * \
+                bn_gamma.reshape(expand_shape) + \
+                bn_beta.reshape(expand_shape)
+
+            # squeeze data_mean and data_var
+            data_mean_flat = data_mean.squeeze()
+            data_var_flat = data_var.squeeze()
+
+            running_mean = running_mean * momentum + \
+                data_mean_flat * (1 - momentum)
+            running_var = running_var * momentum + \
+                data_var_flat * (1 - momentum)
+
+            W = bn_gamma.reshape(expand_shape)
+            dnx = ograd * W
+            xsm = data - data_mean
+            nd = 1.0 / np.sqrt(data_var + epsilon)
+            nx = xsm * nd
+            m = _np.prod(shape) / shape[axis]
+            dvar = np.sum(dnx * xsm, axis=reduce_axis, keepdims=True,
+                                  ) * (-0.5) * np.power(nd, 3)
+            dmean = -nd * np.sum(dnx, axis=reduce_axis, keepdims=True) - \
+                dvar * xsm.mean(axis=reduce_axis, keepdims=True,
+                                ) * 2.0
+            dX = dnx * nd + dvar * xsm * (2.0 / m) + dmean * (1.0 / m)
+            dW = np.sum(ograd * nx, axis=reduce_axis)
+            db = np.sum(ograd, axis=reduce_axis)
+            adX = dX if data_grad_req != 'add' else adX + dX
+            adW = dW if gamma_grad_req != 'add' else adW + dW
+            adb = db if beta_grad_req != 'add' else adb + db
+
+            atol, rtol = 5e-2, 5e-2
+
+            if output_mean_var:
+                assert_almost_equal(output_mean.asnumpy(),
+                                    data_mean_flat.asnumpy(),
+                                    atol=atol, rtol=rtol)
+                assert_almost_equal(output_std.asnumpy(),
+                                    (1.0 / np.sqrt(data_var_flat +
+                                            epsilon)).asnumpy(),
+                                    atol=atol, rtol=rtol)
+            assert_almost_equal(output.asnumpy(), target_output.asnumpy(),
+                                atol=atol, rtol=rtol)
+            if is_train:
+                assert_almost_equal(bn_running_mean.asnumpy(
+                ), running_mean.asnumpy(), atol=atol, rtol=rtol)
+                assert_almost_equal(bn_running_var.asnumpy(
+                ), running_var.asnumpy(), atol=atol, rtol=rtol)
+
+            if data_grad_req != 'null':
+                assert_almost_equal(data.grad.asnumpy(),
+                                    adX.asnumpy(), atol=atol, rtol=rtol)
+            if not fix_gamma:
+                if gamma_grad_req != 'null':
+                    assert_almost_equal(
+                        bn_gamma.grad.asnumpy(), adW.asnumpy(),
+                        atol=atol, rtol=rtol)
+            else:
+                assert((bn_gamma.asnumpy() == 1).all())
+            if beta_grad_req != 'null':
+                assert_almost_equal(
+                    bn_beta.grad.asnumpy(), adb.asnumpy(), atol=atol, rtol=rtol)
+
+    shapes = [(4, 2), (4, 3, 4), (4, 6, 4, 5), (4, 5, 6, 4, 5)]
+    bools = [False, True]
+    for shape, fix_gamma, cudnn_off, output_mean_var in itertools.product(
+            shapes, bools, bools, bools):
+        grad_reqs = ['write'] if len(shape) != 4 else ['null', 'write', 'add']
+        for data_grad_req in grad_reqs:
+            for gamma_grad_req in grad_reqs:
+                if fix_gamma and gamma_grad_req != 'null':
+                    continue
+                for beta_grad_req in grad_reqs:
+                    for axis in range(len(shape)):
+                        _test_batchnorm_impl(
+                            shape, fix_gamma, cudnn_off, output_mean_var,
+                            axis,
+                            data_grad_req,
+                            gamma_grad_req, beta_grad_req)
+
+@with_seed()
+@use_np
+def test_npx_softmax():
+    class TestSoftmax(HybridBlock):
+        def __init__(self, axis):
+            super(TestSoftmax, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.npx.softmax(a, axis=axis)
+
+    class TestLogSoftmax(HybridBlock):
+        def __init__(self, axis):
+            super(TestLogSoftmax, self).__init__()
+            self._axis = axis
+
+        def hybrid_forward(self, F, a):
+            return F.npx.log_softmax(a, axis=axis)
+
+    def np_softmax(x, axis=-1):
+        if (x.shape[axis] == 0):
+            return _np.sum(x, axis=axis, keepdims=True)
+        x = x - _np.max(x, axis=axis, keepdims=True)
+        x = _np.exp(x)
+        x /= _np.sum(x, axis=axis, keepdims=True)
+        return x
+
+    def np_log_softmax(x, axis=-1):
+        return _np.log(np_softmax(x, axis))
+
+    #(operator, function) tuples
+    tested_ops = [(TestSoftmax, np_softmax),
+                  (TestLogSoftmax, np_log_softmax)]
+
+    # only testing 0-size shaped inputs here, other input cases have been tested in test_opeartor.py
+    for SoftmaxOp, softmax_function in tested_ops:
+        for hybridize in [True, False]:
+            for shape in [(3, 0, 4), (0, 0)]:
+                mx_a = np.random.uniform(size=shape)
+                mx_a.attach_grad()
+                for axis in range(-len(shape), len(shape)):
+                    test_softmax_op = SoftmaxOp(axis)
+                    if hybridize:
+                        test_softmax_op.hybridize()
+
+                    with mx.autograd.record():
+                        mx_out = test_softmax_op(mx_a)
+
+                    mx_out.wait_to_read()
+
+                    np_out = softmax_function(mx_a.asnumpy(), axis)
+                    assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, equal_nan=True)
+
+                    mx_out.backward()
+                    mx_a.grad.wait_to_read()
+                    assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape), rtol=1e-3, atol=1e-5)
+
+
+@with_seed()
+@use_np
 def test_npi_boolean_assign():
     class TestBooleanAssignScalar(HybridBlock):
         def __init__(self, val, start_axis):

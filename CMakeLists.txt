@@ -7,6 +7,9 @@ if(CMAKE_CROSSCOMPILING)
 endif()
 
 project(mxnet C CXX)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 if(CMAKE_PROJECT_NAME STREQUAL PROJECT_NAME AND EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/config.cmake)
   # Load config.cmake only if mxnet is not compiled as a dependency of another project
@@ -202,7 +205,7 @@ endif(MSVC)
 
 if(NOT mxnet_LINKER_LIBS)
   set(mxnet_LINKER_LIBS "")
-endif(NOT mxnet_LINKER_LIBS)
+endif()
 
 if(USE_GPROF)
   message(STATUS "Using GPROF")
@@ -279,24 +282,26 @@ if(USE_MKLDNN)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} /EHsc /Gy /MT")
   endif()
 
-  set(MKLDNN_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
-  set(MKLDNN_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
-  set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
-  set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
-  set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
-  set(DNNL_ENABLE_CONCURRENT_EXEC ON CACHE INTERNAL "" FORCE)
+  function(load_mkldnn)
+    set(MKLDNN_BUILD_TESTS OFF CACHE INTERNAL "" FORCE)
+    set(MKLDNN_BUILD_EXAMPLES OFF CACHE INTERNAL "" FORCE)
+    set(MKLDNN_ARCH_OPT_FLAGS "" CACHE INTERNAL "" FORCE)
+    set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
+    set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
+    set(DNNL_ENABLE_CONCURRENT_EXEC ON CACHE INTERNAL "" FORCE)
 
-  if(NOT USE_OPENMP)
+    if(NOT USE_OPENMP)
       set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
-  endif()
+    endif()
 
-  add_subdirectory(3rdparty/mkldnn)
-
+    set(CMAKE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}/mkldnn")
+    add_subdirectory(3rdparty/mkldnn)
+  endfunction()
+  load_mkldnn()
   include_directories(3rdparty/mkldnn/include)
   include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
-  set(INSTALL_MKLDNN ON)
 endif()
 
 if(USE_CPP_PACKAGE)
@@ -853,22 +858,17 @@ if(MSVC AND USE_MXNET_LIB_NAMING)
 endif()
 
 
+# NOTE: Public headers will be installed into ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}, see
+#       https://cmake.org/cmake/help/v3.13/variable/CMAKE_INSTALL_PREFIX.html
+#       https://cmake.org/cmake/help/v3.13/module/GNUInstallDirs.html
 include(GNUInstallDirs)
 install(TARGETS ${MXNET_INSTALL_TARGETS}
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
 )
-
-# NOTE: Public headers will be installed into ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR}, see
-#       https://cmake.org/cmake/help/v3.0/variable/CMAKE_INSTALL_PREFIX.html
-#       https://cmake.org/cmake/help/v3.0/module/GNUInstallDirs.html
-
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-if(USE_MKLDNN)
-  install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mkldnn/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
-endif()
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/mshadow/mshadow/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mshadow)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/mxnet)
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/tvm/nnvm/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})

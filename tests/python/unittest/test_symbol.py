@@ -272,36 +272,6 @@ def check_symbol_consistency(sym1, sym2, ctx, skip_grad=False, equal_nan=False):
                                     grad_req='null' if skip_grad else 'write',
                                     equal_nan=equal_nan)
 
-def test_load_000800():
-    with mx.AttrScope(ctx_group='stage1'):
-        data = mx.symbol.Variable('data', lr_mult=0.2)
-        weight = mx.sym.Variable(name='fc1_weight', lr_mult=1.2)
-        fc1  = mx.symbol.FullyConnected(data = data, weight=weight, name='fc1', num_hidden=128, wd_mult=0.3)
-        act1 = mx.symbol.Activation(data = fc1, name='relu1', act_type="relu")
-
-    set_stage1 = set(act1.list_arguments())
-    with mx.AttrScope(ctx_group='stage2'):
-        fc2  = mx.symbol.FullyConnected(data = act1, name = 'fc2', num_hidden = 64, lr_mult=0.01)
-        act2 = mx.symbol.Activation(data = fc2, name='relu2', act_type="relu")
-        fc3  = mx.symbol.FullyConnected(data = act2, name='fc3', num_hidden=10)
-        fc3 = mx.symbol.BatchNorm(fc3, name='batchnorm0')
-        sym1  = mx.symbol.SoftmaxOutput(data = fc3, name = 'softmax')
-
-    curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-    sym2 = mx.sym.load(os.path.join(curr_path, 'save_000800.json'))
-
-    attr1 = sym1.attr_dict()
-    attr2 = sym2.attr_dict()
-    for k, v1 in attr1.items():
-        assert k in attr2, k
-        v2 = attr2[k]
-        for kk, vv1 in v1.items():
-            if kk.startswith('__') and kk.endswith('__'):
-                assert kk in v2 and v2[kk] == vv1, k + str(v1) + str(v2)
-
-    check_symbol_consistency(sym1, sym2,
-        {'ctx': mx.cpu(0), 'group2ctx': {'stage1' : mx.cpu(1), 'stage2' : mx.cpu(2)}, 'data': (1,200)})
-
 
 def test_blockgrad():
     a = mx.sym.Variable('a')

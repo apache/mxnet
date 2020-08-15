@@ -66,7 +66,7 @@ void NonzeroForwardCPU(const nnvm::NodeAttrs& attrs,
   CHECK_LE(in.shape().ndim(), MAXDIM) << "ndim of input cannot larger than " << MAXDIM;
   // 0-dim
   if (0 == in.shape().ndim()) {
-    MSHADOW_TYPE_SWITCH(in.dtype(), DType, {
+    MSHADOW_TYPE_SWITCH_WITH_BOOL(in.dtype(), DType, {
       DType* in_dptr = in.data().dptr<DType>();
       if (*in_dptr) {
         mxnet::TShape s(2, 1);
