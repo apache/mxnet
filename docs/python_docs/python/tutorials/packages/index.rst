@@ -48,7 +48,7 @@ Shared APIs
       :title: Symbol API
       :link: ../../api/symbol/
 
-      MXNet Symbol API has been deprecated. API documentation is still available for reference.
+      MXNet Symbol API has been deprecated for Gluon API. API documentation is still available for reference.
 
    .. card::
       :title: Autograd API
