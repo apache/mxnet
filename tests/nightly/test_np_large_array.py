@@ -79,68 +79,68 @@ def test_softmax():
         assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
 
 @use_np
-def test_np_abs():
+def test_abs():
     A = np.ones((INT_OVERFLOW, 2))
     B = np.abs(A)
     print(B)
     assert B.shape == (INT_OVERFLOW, 2)
 
 @use_np
-def test_np_absolute():
+def test_absolute():
     A = np.ones((INT_OVERFLOW, 2))
     B = np.abs(A)
     print(B)
     assert B.shape == (INT_OVERFLOW, 2)
 
-def test_np_add():
+def test_add():
     A = np.ones((INT_OVERFLOW, 2))
     B = np.ones((INT_OVERFLOW, 2))
     C = np.add(A, B)
     print(C)
     assert C.shape == (X, 2)
 
-def test_np_add_broadcast():
+def test_add_broadcast():
     A = np.ones((INT_OVERFLOW, 2))
     B = np.ones((INT_OVERFLOW, 1))
     C = np.add(A, B)
     print(C)
     assert C.shape == (INT_OVERFLOW, 2)
 
-def test_np_all():
+def test_all():
     A = np.ones((INT_OVERFLOW, 2))
     B = np.all(A)
     print(B)
     assert B.asnumpy() == True
 
-def test_np_amin():
+def test_amin():
     A = np.ones((INT_OVERFLOW, 2))
     A[100][1] = -1
     B = np.amin(A)
     print(B)
     assert B.asnumpy() == -1.0
 
-def test_np_amax():
+def test_amax():
     A = np.zeros((INT_OVERFLOW, 2))
     A[100][1] = 1
     B = np.amax(A)
     print(B)
     assert B.asnumpy() == 1.0
 
-def test_np_argmin():
+def test_argmin():
     A = np.ones((INT_OVERFLOW, 2))
     A[10][1] = -1
     B = np.argmin(A)
     print(B)
     assert B.asnumpy() == 21
     
-def test_np_argmax():
+def test_argmax():
     A = np.zeros((INT_OVERFLOW, 2))
     A[10][1] = 1
     B = np.argmax(A)
     print(B)
     assert B.asnumpy() == 21
 
-def test_np_trigonometric_family():
+def test_trigonometric_family():
     def batch_check(x, funcs):
         for f in funcs:
             y = f(x)
