@@ -1535,7 +1535,7 @@ class MXerrorMsgs {
    * \brief add a new error message
    */
   std::stringstream& add(const char* file, int line) {
-    messages.push_back(std::stringstream());
+    messages.resize(messages.size()+1);
     messages.back() << file << "[" << line << "]: ";
     return messages.back();
   }
