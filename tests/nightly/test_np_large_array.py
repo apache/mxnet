@@ -37,6 +37,7 @@ LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
 INT_OVERFLOW = 2**31
+HALF_INT_OVERFLOW = 2**30
 
 
 @use_np
@@ -159,3 +160,54 @@ def test_trigonometric_family():
     batch_check(A, [np.arccos, np.arccosh, np.arcsin, \
         np.arcsin, np.arctan, np.arctanh, np.sin, np.cos, \
         np.tan, np.sinh, np.cosh, np.tanh])
+
+def test_any():
+    A = np.zeros((10, 2))
+    B = np.any(A)
+    print(B)
+    assert B.asnumpy() == False
+
+def test_append():
+    A = np.ones((1, INT_OVERFLOW))
+    B = np.ones((2, INT_OVERFLOW))
+    C = np.append(A, B, axis=0)
+    print(C.shape)
+    assert C.shape == (3, INT_OVERFLOW)
+
+def test_arange():
+    A = np.arange(INT_OVERFLOW)
+    print(A)
+    assert A.shape == (INT_OVERFLOW, )
+
+def test_argsort():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.argsort(A)
+    print(B)
+    assert B.shape == (INT_OVERFLOW, 2)
+
+# broken
+@use_np
+def test_round():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.round(A)
+    print(B)
+    assert B.shape == (INT_OVERFLOW, 2)
+
+# broken
+@use_np
+def test_array_split():
+    A = np.zeros((INT_OVERFLOW, 2))
+    B = np.array_split(A, 2)
+    print(B)
+    assert B[0].shape ==(HALF_INT_OVERFLOW, 2)
+    assert B[1].shape ==(HALF_INT_OVERFLOW, 2)
+
+def test_atleast_xd_family():
+    def batch_check(x, funcs, shapes):
+        for f, s in zip(funcs, shapes):
+            y = f(x)
+            print(y.shape)
+            assert y.shape == s
+    A = np.zeros((INT_OVERFLOW))
+    batch_check(A, [np.atleast_1d, np.atleast_2d, np.atleast_3d], \
+            [(INT_OVERFLOW, ), (1, INT_OVERFLOW), (1, INT_OVERFLOW, 1)])
