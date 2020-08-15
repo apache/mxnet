@@ -91,7 +91,8 @@ def test_absolute():
     B = np.abs(A)
     print(B)
     assert B.shape == (INT_OVERFLOW, 2)
-
+    
+@use_np
 def test_add():
     A = np.ones((INT_OVERFLOW, 2))
     B = np.ones((INT_OVERFLOW, 2))
@@ -99,6 +100,7 @@ def test_add():
     print(C)
     assert C.shape == (INT_OVERFLOW, 2)
 
+@use_np
 def test_add_broadcast():
     A = np.ones((INT_OVERFLOW, 2))
     B = np.ones((INT_OVERFLOW, 1))
@@ -106,12 +108,14 @@ def test_add_broadcast():
     print(C)
     assert C.shape == (INT_OVERFLOW, 2)
 
+@use_np
 def test_all():
     A = np.ones((INT_OVERFLOW, 2))
     B = np.all(A)
     print(B)
     assert B.asnumpy() == True
 
+@use_np
 def test_amin():
     A = np.ones((INT_OVERFLOW, 2))
     A[100][1] = -1
@@ -119,6 +123,7 @@ def test_amin():
     print(B)
     assert B.asnumpy() == -1.0
 
+@use_np
 def test_amax():
     A = np.zeros((INT_OVERFLOW, 2))
     A[100][1] = 1
@@ -126,6 +131,7 @@ def test_amax():
     print(B)
     assert B.asnumpy() == 1.0
 
+@use_np
 def test_argmin():
     A = np.ones((INT_OVERFLOW, 2))
     A[10][1] = -1
@@ -133,6 +139,7 @@ def test_argmin():
     print(B)
     assert B.asnumpy() == 21
     
+@use_np
 def test_argmax():
     A = np.zeros((INT_OVERFLOW, 2))
     A[10][1] = 1
@@ -140,6 +147,7 @@ def test_argmax():
     print(B)
     assert B.asnumpy() == 21
 
+@use_np
 def test_trigonometric_family():
     def batch_check(x, funcs):
         for f in funcs:
