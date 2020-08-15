@@ -97,7 +97,7 @@ def test_add():
     B = np.ones((INT_OVERFLOW, 2))
     C = np.add(A, B)
     print(C)
-    assert C.shape == (X, 2)
+    assert C.shape == (INT_OVERFLOW, 2)
 
 def test_add_broadcast():
     A = np.ones((INT_OVERFLOW, 2))
@@ -145,7 +145,7 @@ def test_trigonometric_family():
         for f in funcs:
             y = f(x)
             print(y)
-            assert y.shape == (X, 2)
+            assert y.shape == (INT_OVERFLOW, 2)
     A = np.ones((INT_OVERFLOW, 2))
     batch_check(A, [np.arccos, np.arccosh, np.arcsin, \
         np.arcsin, np.arctan, np.arctanh, np.sin, np.cos, \
