@@ -922,7 +922,7 @@ class Graph {
         // get the other node's output index
         entry.entry = input.list[1].num;
         // set other nodes output as connected to this node
-        entry.node->outputs.push_back({n, (int)j});
+        entry.node->outputs.push_back({n, static_cast<int>(j)});
       }
       nodeMap[i] = n;
     }
