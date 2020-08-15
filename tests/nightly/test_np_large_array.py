@@ -100,6 +100,7 @@ def test_add():
     print(C)
     assert C.shape == (INT_OVERFLOW, 2)
 
+# this will fail; broadcast needs to be fixed
 @use_np
 def test_add_broadcast():
     A = np.ones((INT_OVERFLOW, 2))
