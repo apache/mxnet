@@ -36,6 +36,7 @@ MEDIUM_X = 10000
 LARGE_X = 100000000
 SMALL_X = 100
 SMALL_Y = 50
+INT_OVERFLOW = 2**31
 
 
 @use_np
@@ -76,3 +77,76 @@ def test_softmax():
         true_output = np.full((SMALL_Y, LARGE_X), (1 / input_data.shape[axis]))
         output = npx.softmax(input_data, axis=axis)
         assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
+
+@use_np
+def test_np_abs():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.abs(A)
+    print(B)
+    assert B.shape == (INT_OVERFLOW, 2)
+
+@use_np
+def test_np_absolute():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.abs(A)
+    print(B)
+    assert B.shape == (INT_OVERFLOW, 2)
+
+def test_np_add():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.ones((INT_OVERFLOW, 2))
+    C = np.add(A, B)
+    print(C)
+    assert C.shape == (X, 2)
+
+def test_np_add_broadcast():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.ones((INT_OVERFLOW, 1))
+    C = np.add(A, B)
+    print(C)
+    assert C.shape == (INT_OVERFLOW, 2)
+
+def test_np_all():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.all(A)
+    print(B)
+    assert B.asnumpy() == True
+
+def test_np_amin():
+    A = np.ones((INT_OVERFLOW, 2))
+    A[100][1] = -1
+    B = np.amin(A)
+    print(B)
+    assert B.asnumpy() == -1.0
+
+def test_np_amax():
+    A = np.zeros((INT_OVERFLOW, 2))
+    A[100][1] = 1
+    B = np.amax(A)
+    print(B)
+    assert B.asnumpy() == 1.0
+
+def test_np_argmin():
+    A = np.ones((INT_OVERFLOW, 2))
+    A[10][1] = -1
+    B = np.argmin(A)
+    print(B)
+    assert B.asnumpy() == 21
+    
+def test_np_argmax():
+    A = np.zeros((INT_OVERFLOW, 2))
+    A[10][1] = 1
+    B = np.argmax(A)
+    print(B)
+    assert B.asnumpy() == 21
+
+def test_np_trigonometric_family():
+    def batch_check(x, funcs):
+        for f in funcs:
+            y = f(x)
+            print(y)
+            assert y.shape == (X, 2)
+    A = np.ones((INT_OVERFLOW, 2))
+    batch_check(A, [np.arccos, np.arccosh, np.arcsin, \
+        np.arcsin, np.arctan, np.arctanh, np.sin, np.cos, \
+        np.tan, np.sinh, np.cosh, np.tanh])
