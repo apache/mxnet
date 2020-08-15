@@ -257,7 +257,7 @@ where the batch size for Alexnet is increased by 16x.
 
 If more than one GPU or machine are used, MXNet uses `kvstore` to communicate data.
 It's critical to use the proper type of `kvstore` to get the best performance.
-Refer to [multi_device.md](https://mxnet.io/api/faq/distributed_training.html) for more
+Refer to [Distributed Training](https://mxnet.apache.org/api/faq/distributed_training.html) for more
 details.
 
 Besides, we can use [tools/bandwidth](https://github.com/dmlc/mxnet/tree/master/tools/bandwidth)

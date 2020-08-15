@@ -26,7 +26,7 @@ When training a deep learning model using the MXNet [gluon API](/api/python/docs
 Here is an example of how a trainer with an optimizer is created for, a simple Linear (Dense) Network.
 
 
-```python
+```{.python .input}
 from mxnet import gluon, optimizer
 
 net = gluon.nn.Dense(1)
@@ -40,7 +40,7 @@ In model training, the code snippet above would be followed by a training loop w
 We can also create the trainer by passing in the optimizer name and optimizer params into the trainer constructor directly, as shown below.
 
 
-```python
+```{.python .input}
 trainer = gluon.Trainer(net.collect_params(), optimizer='adam', optimizer_params={'learning_rate':1})
 ```
 
@@ -97,7 +97,7 @@ The use of SGD with momentum for learning in neural networks was introduced by R
 To create an SGD optimizer with momentum $\gamma$ and weight decay in MXNet simply use the following code.
 
 
-```python
+```{.python .input}
 sgd_optimizer = optimizer.SGD(learning_rate=0.1, wd=0., momentum=0.8)
 ```
 
@@ -124,7 +124,7 @@ The effects of using NAG over SGD and classical momentum are discussed in this [
 The NAG optimizer can be initialized in MXNet by using the code snippet below or by creating a trainer with argument `optimizer='nag'`.
 
 
-```python
+```{.python .input}
 nag_optimizer = optimizer.NAG(learning_rate=0.1, momentum=0.8)
 ```
 
@@ -148,7 +148,7 @@ The overaching benefit of AdaGrad over SGD is that it ensures the overall conver
 To instantiate the Adagrad optimizer in MXNet you can use the following line of code.
 
 
-```python
+```{.python .input}
 adagrad_optimizer = optimizer.AdaGrad(learning_rate=0.1, eps=1e-07)
 ```
 
@@ -180,7 +180,7 @@ $$ w_{i+1} = w_i + v_{i+1} $$
 Here is an example snippet creating the RMSProp optimizer in MXNet.
 
 
-```python
+```{.python .input}
 rmsprop_optimizer = optimizer.RMSProp(learning_rate=0.001, rho=0.9, momentum=0.9, epsilon=1e-07, centered=False)
 ```
 
@@ -201,7 +201,7 @@ As evident from the above equations, AdaDelta is similar to RMSProp but does not
 Here is the code snippet creating the AdaDelta optimizer in MXNet. The argument `rho` in the code is $\beta$ in the update equations. Notice there is no learning rate argument in the code.
 
 
-```python
+```{.python .input}
 adadelta_optimizer = optimizer.AdaDelta(rho=0.9, epsilon=1e-07)
 ```
 
@@ -219,7 +219,7 @@ $$ w_{i+1} = w_i + \dfrac{lr}{\sqrt{\tilde{\mathbb{E}[g^2]}_{i+1}} + \epsilon} \
 In MXNet, you can construct the Adam optimizer with the following line of code.
 
 
-```python
+```{.python .input}
 adam_optimizer = optimizer.Adam(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-08)
 ```
 
@@ -234,7 +234,7 @@ $$ w_{i+1} = w_i + \dfrac{lr}{g^\infty_{i+1} + \epsilon} \cdot - \tilde{v}_{i+1}
 See the code snippet below for how to construct Adamax in MXNet.
 
 
-```python
+```{.python .input}
 adamax_optimizer = optimizer.Adamax(learning_rate=0.002, beta1=0.9, beta2=0.999)
 ```
 
@@ -252,7 +252,7 @@ $$ w_{i+1} = w_i + \dfrac{lr}{\sqrt{\tilde{\mathbb{E}[g^2]}_{i+1}} + \epsilon}\c
 Here is the line of code to create the NAdam optimizer in MXNet.
 
 
-```python
+```{.python .input}
 nadam_optimizer = optimizer.Nadam(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-08)
 ```
 
@@ -277,7 +277,7 @@ $$ w_{i+1} =  w_i - lr \cdot sign(v_{i+1}) $$
 Here is how to create the signum optimizer in MXNet.
 
 
-```python
+```{.python .input}
 signum_optimizer = optimizer.Signum(learning_rate=0.01, momentum=0.9, wd_lh=0.0)
 ```
 
@@ -293,7 +293,7 @@ $$ w_{i+\tau+1} = w_{i+\tau} − lr \cdot (grad(w_i) + \lambda \cdot grad(w_i)^2
 The DCASGD optimizer in MXNet can be initialized using the code below.
 
 
-```python
+```{.python .input}
 dcasgd_optimizer = optimizer.DCASGD(momentum=0.0, lamda=0.04)
 ```
 
@@ -321,7 +321,7 @@ $$ w_{i+1} = (|z_{i+1}| > \lambda) \cdot \left[ \dfrac{-lr}{\beta + \sqrt{\eta_{
 Here is how to initialize the FTRL optimizer in MXNet
 
 
-```python
+```{.python .input}
 ftrl_optimizer = optimizer.Ftrl(lamda1=0.01, learning_rate=0.1, beta=1)
 ```
 
@@ -344,7 +344,7 @@ $$ w_{i+1} = \dfrac{-z_{i+1}}{d_{i+1}} $$
 In MXNet, you can initialize the FTML optimizer using
 
 
-```python
+```{.python .input}
 ftml_optimizer = optimizer.FTML(beta1=0.6, beta2=0.999, epsilon=1e-08)
 ```
 
@@ -365,7 +365,7 @@ where $ \eta_{i+1} \sim N(0, lr_{i+1})$ i.e $\eta_{i+1}$ is drawn from a zero ce
 SGLD was introduced by [Patterson and Teh](https://papers.nips.cc/paper/4883-stochastic-gradient-riemannian-langevin-dynamics-on-the-probability-simplex.pdf) and the optimizer can be created in MXNet with the following line of code.
 
 
-```python
+```{.python .input}
 sgld_optimizer = optimizer.SGLD()
 ```
 

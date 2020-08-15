@@ -67,9 +67,7 @@ RUN yum -y check-update || true && \
         gperf \
         libb2-devel \
         libzstd-devel && \
-    yum clean all && \
-    # Centos 7 only provides ninja-build
-    ln -s /usr/bin/ninja-build /usr/bin/ninja
+    yum clean all
 
 # Make GCC7, Python 3.5 and Maven 3.3 Software Collections available by default
 # during build and runtime of this container
