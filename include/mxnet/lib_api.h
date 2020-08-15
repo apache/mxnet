@@ -993,7 +993,7 @@ class Graph {
     // add all graph nodes
     val.map[JsonVal("nodes")] = JsonVal(LIST);
     JsonVal& nodes_ = val.map[JsonVal("nodes")];
-    for (size_t i = sorted.size()-1; i >= 0; i--) {
+    for (int i = sorted.size()-1; i >= 0; i--) {
       // each node is a map
       nodes_.list.push_back(JsonVal(MAP));
       Node* n = sorted[i];
@@ -1090,7 +1090,7 @@ class Graph {
     std::cout << space << "nodes: " << nodes.size() << std::endl;
     std::vector<Node*> sorted = topological_sort();
     // loop over each node and print out its inputs/outputs
-    for (size_t i = sorted.size()-1; i >= 0; i--) {
+    for (int i = static_cast<int>(sorted.size()-1); i >= 0; i--) {
       std::cout << space << "Node: " << sorted[i]->name << std::endl;
       for (size_t j = 0; j < sorted[i]->inputs.size(); j++) {
         std::cout << space << "\tInput: " << sorted[i]->inputs[j].node->name << " "
@@ -1101,7 +1101,7 @@ class Graph {
                   << sorted[i]->outputs[j].entry << std::endl;
       }
       if (sorted[i]->subgraphs.size() > 0) {
-        for (auto &subgraph : sorted[i]->subgraphs) {
+        for (auto &subgraph : sorted[i]->subgraphs) {          
           std::cout << space << "\tSubgraph:" << std::endl;
           subgraph->print(indent+2);
         }
