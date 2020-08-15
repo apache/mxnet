@@ -161,12 +161,14 @@ def test_trigonometric_family():
         np.arcsin, np.arctan, np.arctanh, np.sin, np.cos, \
         np.tan, np.sinh, np.cosh, np.tanh])
 
+@use_np
 def test_any():
     A = np.zeros((10, 2))
     B = np.any(A)
     print(B)
     assert B.asnumpy() == False
 
+@use_np
 def test_append():
     A = np.ones((1, INT_OVERFLOW))
     B = np.ones((2, INT_OVERFLOW))
@@ -174,11 +176,13 @@ def test_append():
     print(C.shape)
     assert C.shape == (3, INT_OVERFLOW)
 
+@use_np
 def test_arange():
     A = np.arange(INT_OVERFLOW)
     print(A)
     assert A.shape == (INT_OVERFLOW, )
 
+@use_np
 def test_argsort():
     A = np.ones((INT_OVERFLOW, 2))
     B = np.argsort(A)
@@ -202,6 +206,7 @@ def test_array_split():
     assert B[0].shape ==(HALF_INT_OVERFLOW, 2)
     assert B[1].shape ==(HALF_INT_OVERFLOW, 2)
 
+@use_np
 def test_atleast_xd_family():
     def batch_check(x, funcs, shapes):
         for f, s in zip(funcs, shapes):
@@ -211,3 +216,35 @@ def test_atleast_xd_family():
     A = np.zeros((INT_OVERFLOW))
     batch_check(A, [np.atleast_1d, np.atleast_2d, np.atleast_3d], \
             [(INT_OVERFLOW, ), (1, INT_OVERFLOW), (1, INT_OVERFLOW, 1)])
+
+@use_np
+def test_average():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.average(A)
+    print(B)
+    assert B.asnumpy() == 1
+
+@use_np
+def test_bincount():
+    A = np.ones((INT_OVERFLOW), dtype='int32')
+    A[0] = 0
+    B = np.bincount(A)
+    print(B)
+    assert B.shape == (2,)
+
+# broken
+@use_np
+def test_bitwise_family():
+    def batch_check(x1, x2, funcs):
+        for f in funcs:
+            y = f(x1, x2)
+            print(y)
+            assert y.shape == (INT_OVERFLOW, 2)
+    # test on broadcast input
+    A = np.ones((INT_OVERFLOW, 1), dtype='int32')
+    B = np.ones((INT_OVERFLOW, 2), dtype='int32')
+    batch_check(A, B, [np.bitwise_and, np.bitwise_or, np.bitwise_xor])
+    C = np.bitwise_not(A)
+    print(C)
+    assert C.shape == (INT_OVERFLOW, 1)
+
