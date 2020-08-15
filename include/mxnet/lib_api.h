@@ -866,7 +866,7 @@ class Graph {
   Graph() : res(nullptr) {}
   /* \brief deleted nodes when deleting the graph */
   ~Graph() {
-    for (int i = 0; i < nodes.size(); i++)
+    for (size_t i = 0; i < nodes.size(); i++)
       delete nodes[i];
   }
 
@@ -884,7 +884,7 @@ class Graph {
 
     std::map<int, Node*> nodeMap;
     // loop over nodes
-    for (int i = 0; i < nodes.list.size(); i++) {
+    for (size_t i = 0; i < nodes.list.size(); i++) {
       Node* n = new Node();
       g->nodes.push_back(n);
       JsonVal node = nodes.list[i];
@@ -914,7 +914,7 @@ class Graph {
       // set node inputs
       JsonVal node_inputs = node.map[JsonVal("inputs")];
       n->inputs.resize(node_inputs.list.size());
-      for (int j = 0; j < node_inputs.list.size(); j++) {
+      for (size_t j = 0; j < node_inputs.list.size(); j++) {
         JsonVal input = node_inputs.list[j];
         NodeEntry& entry = n->inputs[j];
         // get pointer to other node
@@ -930,7 +930,7 @@ class Graph {
     // set graph level outputs
     JsonVal& heads = val.map[JsonVal("heads")];
     g->outputs.resize(heads.list.size());
-    for (int i = 0; i < heads.list.size(); i++) {
+    for (size_t i = 0; i < heads.list.size(); i++) {
       JsonVal head = heads.list[i];
       g->outputs[i].node = nodeMap[head.list[0].num];
       g->outputs[i].entry = head.list[1].num;
@@ -970,19 +970,19 @@ class Graph {
     // create node_row_ptr entry
     val.map[JsonVal("node_row_ptr")] = JsonVal(LIST);
     JsonVal& node_row_ptr = val.map[JsonVal("node_row_ptr")];
-    for (int i = 0; i < nodes.size(); i++)
+    for (size_t i = 0; i < nodes.size(); i++)
       node_row_ptr.list.push_back(JsonVal(i));
 
     // add all input nodes
     val.map[JsonVal("arg_nodes")] = JsonVal(LIST);
     JsonVal& arg_nodes = val.map[JsonVal("arg_nodes")];
-    for (int i = 0; i < inputs.size(); i++)
+    for (size_t i = 0; i < inputs.size(); i++)
       arg_nodes.list.push_back(JsonVal(nodeMap[inputs[i]]));
 
     // add all output nodes
     val.map[JsonVal("heads")] = JsonVal(LIST);
     JsonVal& heads = val.map[JsonVal("heads")];
-    for (int i = 0; i < outputs.size(); i++) {
+    for (size_t i = 0; i < outputs.size(); i++) {
       heads.list.push_back(JsonVal(LIST));
       JsonVal& out = heads.list[i];
       out.list.push_back(JsonVal(nodeMap[outputs[i].node]));
@@ -993,7 +993,7 @@ class Graph {
     // add all graph nodes
     val.map[JsonVal("nodes")] = JsonVal(LIST);
     JsonVal& nodes_ = val.map[JsonVal("nodes")];
-    for (int i = sorted.size()-1; i >= 0; i--) {
+    for (size_t i = sorted.size()-1; i >= 0; i--) {
       // each node is a map
       nodes_.list.push_back(JsonVal(MAP));
       Node* n = sorted[i];
@@ -1005,7 +1005,7 @@ class Graph {
 
       // add inputs for this node
       JsonVal& inputs_ = n_.map[JsonVal("inputs")];
-      for (int j = 0; j < n->inputs.size(); j++) {
+      for (size_t j = 0; j < n->inputs.size(); j++) {
         inputs_.list.push_back(JsonVal(LIST));
         NodeEntry& entry = n->inputs[j];
         JsonVal& in = inputs_.list[j];
@@ -1090,13 +1090,13 @@ class Graph {
     std::cout << space << "nodes: " << nodes.size() << std::endl;
     std::vector<Node*> sorted = topological_sort();
     // loop over each node and print out its inputs/outputs
-    for (int i = sorted.size()-1; i >= 0; i--) {
+    for (size_t i = sorted.size()-1; i >= 0; i--) {
       std::cout << space << "Node: " << sorted[i]->name << std::endl;
-      for (int j = 0; j < sorted[i]->inputs.size(); j++) {
+      for (size_t j = 0; j < sorted[i]->inputs.size(); j++) {
         std::cout << space << "\tInput: " << sorted[i]->inputs[j].node->name << " "
                   << sorted[i]->inputs[j].entry << std::endl;
       }
-      for (int j = 0; j < sorted[i]->outputs.size(); j++) {
+      for (size_t j = 0; j < sorted[i]->outputs.size(); j++) {
         std::cout << space << "\tOutput: " << sorted[i]->outputs[j].node->name << " "
                   << sorted[i]->outputs[j].entry << std::endl;
       }
@@ -1535,24 +1535,27 @@ class MXerrorMsgs {
    * \brief add a new error message
    */
   std::stringstream& add(const char* file, int line) {
-    messages.resize(messages.size()+1);
-    messages.back() << file << "[" << line << "]: ";
-    return messages.back();
+    messages.push_back(new std::stringstream());
+    *(messages.back()) << file << "[" << line << "]: ";
+    return *(messages.back());
   }
   int size() {
     return messages.size();
   }
   const std::string* get(int idx) {
-    return new std::string(messages.at(idx).str());
+    return new std::string(messages.at(idx)->str());
   }
 
  private:
   /*! \brief constructor */
   MXerrorMsgs() {}
   /*! \brief destructor */
-  ~MXerrorMsgs() {}
+  ~MXerrorMsgs() {
+    for (auto &msg : messages)
+      delete msg;
+  }
   /*! \brief map of entries in registry */
-  std::vector<std::stringstream> messages;
+  std::vector<std::stringstream*> messages;
 };
 
 // Add a new error message, example: MX_ERROR_MSG << "my error msg";

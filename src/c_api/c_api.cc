@@ -670,7 +670,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       << "'" << msgs;
 
       // get extra inputs, if exists
-      int extra_inputs = 0;
+      size_t extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
         extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
 
@@ -683,7 +683,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       int num_in = mxnet::op::DefaultSubgraphOpNumInputs(attrs);
 
       // get extra inputs, if exists
-      int extra_inputs = 0;
+      size_t extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
         extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
 
@@ -730,7 +730,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       // for backward passes, inputs + outputs + input gradients (one for each output)
 
       // get extra inputs, if exists
-      int extra_inputs = 0;
+      size_t extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
         extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
 
@@ -749,10 +749,10 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       }
 
       // get extra inputs, if exists
-      int extra_inputs = 0;
+      size_t extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
         extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
-      int num_inputs = in_shape->size() - extra_inputs;
+      size_t num_inputs = in_shape->size() - extra_inputs;
 
       std::vector<uint32_t*> inshapes(num_inputs);
       std::vector<int> indims(num_inputs);
@@ -790,14 +790,14 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       std::vector<uint32_t*> in_shapes(num_inputs);
       // determine amount of memory needed to store all the modified input shapes
       buff_size = 0;
-      for (unsigned i = 0; i < num_inputs; i++) {
+      for (size_t i = 0; i < num_inputs; i++) {
         buff_size += mod_indims[i];
       }
 
       // copy modified input shapes from custom op memory to MXNet memory
       std::vector<uint32_t> mod_inbuff(buff_size);
       ptr = mod_inbuff.data();
-      for (unsigned i = 0; i < num_inputs; ++i) {
+      for (size_t i = 0; i < num_inputs; ++i) {
         in_shapes[i] = ptr;
         for (int j = 0; j < mod_indims[i]; ++j, ++ptr) {
           *ptr = static_cast<uint32_t>(mod_inshapes[i][j]);
@@ -805,7 +805,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       }
 
       // assign modified input shapes to ShapeVector
-      for (unsigned i = 0; i < num_inputs; ++i) {
+      for (size_t i = 0; i < num_inputs; ++i) {
         SHAPE_ASSIGN_CHECK(*in_shape, i,
                            mxnet::TShape(in_shapes[i], in_shapes[i]+mod_indims[i]));
       }
@@ -813,14 +813,14 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       std::vector<uint32_t*> out_shapes(out_shape->size());
       // determine amount of memory needed to store all the output shapes
       buff_size = 0;
-      for (unsigned i = 0; i < out_shape->size(); i++) {
+      for (size_t i = 0; i < out_shape->size(); i++) {
         buff_size += outdims[i];
       }
 
       // copy output shapes from custom op memory to MXNet memory
       std::vector<uint32_t> outbuff(buff_size);
       ptr = outbuff.data();
-      for (unsigned i = 0; i < out_shape->size(); ++i) {
+      for (size_t i = 0; i < out_shape->size(); ++i) {
         out_shapes[i] = ptr;
         for (int j = 0; j < outdims[i]; ++j, ++ptr) {
           *ptr = static_cast<uint32_t>(outshapes[i][j]);
@@ -828,20 +828,20 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       }
 
       // assign output shapes to ShapeVector
-      for (unsigned i = 0; i < out_shape->size(); ++i) {
+      for (size_t i = 0; i < out_shape->size(); ++i) {
         SHAPE_ASSIGN_CHECK(*out_shape, i,
                            mxnet::TShape(out_shapes[i], out_shapes[i]+outdims[i]));
       }
 
       // free memory used by custom op to allocate shapes/dims
       callFree(mod_indims);
-      for (unsigned i = 0; i < num_inputs; i++) {
+      for (size_t i = 0; i < num_inputs; i++) {
         callFree(mod_inshapes[i]);
       }
       callFree(mod_inshapes);
 
       callFree(outdims);
-      for (unsigned i = 0; i < out_shape->size(); i++) {
+      for (size_t i = 0; i < out_shape->size(); i++) {
         callFree(outshapes[i]);
       }
       callFree(outshapes);
@@ -861,7 +861,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       }
 
       // get extra inputs, if exists
-      int extra_inputs = 0;
+      size_t extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
         extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
 
@@ -883,10 +883,10 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       }
 
       // get extra inputs, if exists
-      int extra_inputs = 0;
+      size_t extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
         extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
-      int num_inputs = in_type->size() - extra_inputs;
+      size_t num_inputs = in_type->size() - extra_inputs;
 
       // copy input types from in_type
       std::vector<int> intypes(*in_type);
@@ -924,7 +924,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       }
 
       // get extra inputs, if exists
-      int extra_inputs = 0;
+      size_t extra_inputs = 0;
       if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
         extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
 
@@ -986,10 +986,10 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         }
 
         // get extra inputs, if exists
-        int extra_inputs = 0;
+        size_t extra_inputs = 0;
         if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
           extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
-        int num_inputs = in_stypes->size() - extra_inputs;
+        size_t num_inputs = in_stypes->size() - extra_inputs;
 
         // copy input types from in_stype
         std::vector<int> instypes(*in_stypes);
@@ -1024,7 +1024,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
                                            std::vector<int>* in_stypes,
                                            std::vector<int>* out_stypes) {
         // get extra inputs, if exists
-        int extra_inputs = 0;
+        size_t extra_inputs = 0;
         if (attrs.dict.count(MX_STR_EXTRA_INPUTS) > 0)
           extra_inputs = std::stoi(attrs.dict.at(MX_STR_EXTRA_INPUTS));
 
