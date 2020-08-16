@@ -248,3 +248,29 @@ def test_bitwise_family():
     print(C)
     assert C.shape == (INT_OVERFLOW, 1)
 
+@use_np
+def test_blackman():
+    A = np.blackman((INT_OVERFLOW))
+    print(A)
+    assert A.shape == (INT_OVERFLOW, )
+
+@use_np
+def test_broadcast_to():
+    A = np.ones((2))
+    B = np.broadcast_to(A, (INT_OVERFLOW, 2))
+    print(B)
+    assert B.shape == (INT_OVERFLOW, 2)
+    B = np.broadcast_to(A.reshape(2, 1), (2, INT_OVERFLOW))
+    print(B)
+    assert B.shape == (2, INT_OVERFLOW)
+
+@use_np
+def test_root_family():
+    def batch_check(x, funcs):
+        for f in funcs:
+            y = f(x)
+            print(y)
+            assert y.shape == (INT_OVERFLOW, 2)
+    A = np.ones((INT_OVERFLOW, 2))
+    batch_check(A, [np.sqrt, np.cbrt])
+
