@@ -35,7 +35,7 @@ mxnet::ext::MXContext::MXContext() : dev_type("error"), dev_id(-1) {}
 mxnet::ext::MXContext::MXContext(std::string dev_type_, int dev_id_)
   : dev_type(dev_type_), dev_id(dev_id_) {}
 mxnet::ext::MXContext::MXContext(const char* dev_type_, int dev_id_)
-    : dev_type(dev_type_), dev_id(dev_id_) {}
+  : dev_type(std::move(dev_type_)), dev_id(dev_id_) {}
 mxnet::ext::MXContext mxnet::ext::MXContext::CPU() { return MXContext("cpu", 0); }
 mxnet::ext::MXContext mxnet::ext::MXContext::GPU() { return MXContext("gpu", 0); }
 mxnet::ext::MXContext mxnet::ext::MXContext::CPU(int dev_id) { return MXContext("cpu", dev_id); }
@@ -69,9 +69,10 @@ mxnet::ext::MXTensor::MXTensor(const MXTensor& oth) : data_ptr(oth.data_ptr), sh
   setDLTensor();
 }
 
-mxnet::ext::MXTensor::MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
+mxnet::ext::MXTensor::MXTensor(void *data_ptr, const std::vector<int64_t> shape, MXDType dtype,
                                size_t vID, MXContext mx_ctx, MXStorageType stype)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(mx_ctx), stype(stype) {
+  : data_ptr(data_ptr), shape(std::move(shape)), dtype(dtype), verID(vID), ctx(std::move(mx_ctx)),
+    stype(stype) {
   setDLTensor();
 }
 
@@ -149,9 +150,8 @@ void mxnet::ext::MXTensor::setDLTensor() {
 
 int64_t mxnet::ext::MXTensor::size() const {
   int64_t size = 1;
-  for (unsigned int i = 0; i < shape.size(); i++) {
-    size *= shape[i];
-  }
+  for (auto &s : shape)
+    size *= s;
   return size;
 }
 
@@ -251,9 +251,10 @@ std::string mxnet::ext::getDtypeAt(const std::string& dtype, unsigned index) {
 
 mxnet::ext::JsonVal::JsonVal() : type(ERR), num(-1), str("") {}
 mxnet::ext::JsonVal::JsonVal(mxnet::ext::JsonType t) : type(t), num(-1), str("") {}
-mxnet::ext::JsonVal::JsonVal(std::string s) : type(STR), num(-1), str(s) {}
+mxnet::ext::JsonVal::JsonVal(std::string s) : type(STR), num(-1), str(std::move(s)) {}
 mxnet::ext::JsonVal::JsonVal(int n) : type(NUM), num(n), str(std::to_string(n)) {}
-mxnet::ext::JsonVal::JsonVal(JsonType t, int n, std::string s) : type(t), num(n), str(s) {}
+mxnet::ext::JsonVal::JsonVal(JsonType t, int n, std::string s) : type(t), num(n),
+                                                                 str(std::move(s)) {}
 
 bool mxnet::ext::JsonVal::operator<(const mxnet::ext::JsonVal &o) const {
   // for string JSON objects compare the string
@@ -457,8 +458,8 @@ void mxnet::ext::Node::alloc_aux(const std::vector<int64_t>& shapes,
 mxnet::ext::Graph::Graph() : res(nullptr) {}
 
 mxnet::ext::Graph::~Graph() {
-  for (int i = 0; i < nodes.size(); i++)
-    delete nodes[i];
+  for (auto &node : nodes)
+    delete node;
 }
 
 mxnet::ext::Graph* mxnet::ext::Graph::fromString(const std::string& json) {
@@ -560,23 +561,23 @@ mxnet::ext::JsonVal mxnet::ext::Graph::toJson() {
   val.map[JsonVal("node_row_ptr")] = JsonVal(LIST);
   JsonVal& node_row_ptr = val.map[JsonVal("node_row_ptr")];
   for (int i = 0; i < nodes.size(); i++)
-    node_row_ptr.list.push_back(JsonVal(i));
+    node_row_ptr.list.emplace_back(i);
 
   // add all input nodes
   val.map[JsonVal("arg_nodes")] = JsonVal(LIST);
   JsonVal& arg_nodes = val.map[JsonVal("arg_nodes")];
-  for (int i = 0; i < inputs.size(); i++)
-    arg_nodes.list.push_back(JsonVal(nodeMap[inputs[i]]));
+  for (auto &input : inputs)
+    arg_nodes.list.emplace_back(nodeMap[input]);
 
   // add all output nodes
   val.map[JsonVal("heads")] = JsonVal(LIST);
   JsonVal& heads = val.map[JsonVal("heads")];
   for (int i = 0; i < outputs.size(); i++) {
-    heads.list.push_back(JsonVal(LIST));
+    heads.list.emplace_back(LIST);
     JsonVal& out = heads.list[i];
-    out.list.push_back(JsonVal(nodeMap[outputs[i].node]));
-    out.list.push_back(JsonVal(outputs[i].entry));
-    out.list.push_back(JsonVal(0));
+    out.list.emplace_back(nodeMap[outputs[i].node]);
+    out.list.emplace_back(outputs[i].entry);
+    out.list.emplace_back(0);
   }
 
   // add all graph nodes
@@ -584,7 +585,7 @@ mxnet::ext::JsonVal mxnet::ext::Graph::toJson() {
   JsonVal& nodes_ = val.map[JsonVal("nodes")];
   for (int i = sorted.size()-1; i >= 0; i--) {
     // each node is a map
-    nodes_.list.push_back(JsonVal(MAP));
+    nodes_.list.emplace_back(MAP);
     Node* n = sorted[i];
     JsonVal& n_ = nodes_.list[nodes_.list.size()-1];
 
@@ -598,9 +599,9 @@ mxnet::ext::JsonVal mxnet::ext::Graph::toJson() {
       inputs_.list.push_back(JsonVal(LIST));
       NodeEntry& entry = n->inputs[j];
       JsonVal& in = inputs_.list[j];
-      in.list.push_back(JsonVal(nodeMap[entry.node]));
-      in.list.push_back(JsonVal(entry.entry));
-      in.list.push_back(JsonVal(0));
+      in.list.emplace_back(nodeMap[entry.node]);
+      in.list.emplace_back(entry.entry);
+      in.list.emplace_back(0);
     }
 
     // add subgraphs for this node, convert each back to JSON
@@ -681,13 +682,13 @@ void mxnet::ext::Graph::print(int indent) const {
   // loop over each node and print out its inputs/outputs
   for (int i = sorted.size()-1; i >= 0; i--) {
     std::cout << space << "Node: " << sorted[i]->name << std::endl;
-    for (int j = 0; j < sorted[i]->inputs.size(); j++) {
-      std::cout << space << "\tInput: " << sorted[i]->inputs[j].node->name << " "
-                << sorted[i]->inputs[j].entry << std::endl;
+    for (auto &input : sorted[i]->inputs) {
+      std::cout << space << "\tInput: " << input.node->name << " "
+                << input.entry << std::endl;
     }
-    for (int j = 0; j < sorted[i]->outputs.size(); j++) {
-      std::cout << space << "\tOutput: " << sorted[i]->outputs[j].node->name << " "
-                << sorted[i]->outputs[j].entry << std::endl;
+    for (auto &output : sorted[i]->outputs) {
+      std::cout << space << "\tOutput: " << output.node->name << " "
+                << output.entry << std::endl;
     }
     if (sorted[i]->subgraphs.size() > 0) {
       for (auto &subgraph : sorted[i]->subgraphs) {
@@ -751,8 +752,8 @@ void mxnet::ext::Graph::_setParams(std::unordered_map<std::string, mxnet::ext::M
 }
 
 mxnet::ext::CustomOp::CustomOp(const char* op_name)
-  : name(op_name), parse_attrs(NULL), infer_type(NULL), infer_storage_type(NULL), infer_shape(NULL),
-    mutate_inputs(NULL), isSGop(false) {}
+  : name(op_name), parse_attrs(nullptr), infer_type(nullptr), infer_storage_type(nullptr),
+    infer_shape(nullptr), mutate_inputs(nullptr), isSGop(false) {}
 
 mxnet::ext::CustomOp& mxnet::ext::CustomOp::setForward(mxnet::ext::fcomp_t fcomp, const char* ctx) {
   if (forward_ctx_map.count(ctx) > 0)
