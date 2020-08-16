@@ -24,9 +24,15 @@ The following tutorials will help you learn how to customize MXNet.
 
    .. card::
       :title: Custom Layers for Gluon
-      :link: custom_layer.html
+      :link: ../packages/gluon/blocks/custom-layer.html
 
       How to add new layer functionality to MXNet's imperative interface.
+
+   .. card::
+      :title: Custom Loss
+      :link: ../packages/gluon/loss/custom-loss.html
+
+      A guide to implementing custom losses.
 
    .. card::
       :title: Custom Operators Using Numpy

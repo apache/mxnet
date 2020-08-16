@@ -31,7 +31,7 @@ The Model architecture of `Hybrid` models stays static and don't change during e
 
 Let's look at the above methods in more detail. Let's start by importing the modules we'll need.
 
-```python
+```{.python .input}
 from __future__ import print_function
 
 import mxnet as mx
@@ -48,7 +48,7 @@ We need a trained model before we can save it to a file. So let's go ahead and b
 
 Let's define a helper function to build a LeNet model and another helper to train LeNet with MNIST.
 
-```python
+```{.python .input}
 # Use GPU if one exists, else use CPU
 ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
 
@@ -115,7 +115,7 @@ def train_model(model):
 
 Let's build a model and train it. After training, we will save and restore this model from a file.
 
-```python
+```{.python .input}
 net = build_lenet(gluon.nn.Sequential())
 train_model(net)
 ```
@@ -144,7 +144,7 @@ Epoch: 0; Batch 900; Loss 0.008402 <!--notebook-skip-line-->
 
 Okay, we now have a model (`net`) that we can save to a file. Let's save the parameters of this model to a file using the `save_parameters` function.
 
-```python
+```{.python .input}
 file_name = "net.params"
 net.save_parameters(file_name)
 ```
@@ -155,7 +155,7 @@ We have successfully saved the parameters of the model into a file.
 
 Let's now create a network with the parameters we saved into the file. We build the network again using the helper first and then load the weights from the file we saved using the `load_parameters` function.
 
-```python
+```{.python .input}
 new_net = build_lenet(gluon.nn.Sequential())
 new_net.load_parameters(file_name, ctx=ctx)
 ```
@@ -166,7 +166,7 @@ If our network is [Hybrid](https://mxnet.apache.org/tutorials/gluon/hybrid.html)
 
 Let's test the model we just loaded from file.
 
-```python
+```{.python .input}
 import matplotlib.pyplot as plt
 
 def verify_loaded_model(net):
@@ -209,7 +209,7 @@ Model predictions:  [1. 1. 4. 5. 0. 5. 7. 0. 3. 6.] <!--notebook-skip-line-->
 
 Note that the network we created above is not a Hybrid network and therefore cannot be serialized into a JSON file. So, let's create a Hybrid version of the same network and train it.
 
-```python
+```{.python .input}
 net = build_lenet(gluon.nn.HybridSequential())
 net.hybridize()
 train_model(net)
@@ -238,7 +238,7 @@ Epoch: 0; Batch 900; Loss 0.037809 <!--notebook-skip-line-->
 
 We now have a trained hybrid network. This can be exported into files using the `export` function. The `export` function will export the model architecture into a `.json` file and model parameters into a `.params` file.
 
-```python
+```{.python .input}
 net.export("lenet", epoch=1)
 ```
 
@@ -256,7 +256,7 @@ One of the main reasons to serialize model architecture into a JSON file is to l
 
 Serialized Hybrid networks (saved as .JSON and .params file) can be loaded and used inside Python frontend using `gluon.nn.SymbolBlock`. To demonstrate that, let's load the network we serialized above.
 
-```python
+```{.python .input}
 import warnings
 with warnings.catch_warnings():
     warnings.simplefilter("ignore")
@@ -265,7 +265,7 @@ with warnings.catch_warnings():
 
 `deserialized_net` now contains the network we deserialized from files. Let's test the deserialized network to make sure it works.
 
-```python
+```{.python .input}
 verify_loaded_model(deserialized_net)
 ```
 
