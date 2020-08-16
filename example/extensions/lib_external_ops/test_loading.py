@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -15,11 +17,25 @@
 # specific language governing permissions and limitations
 # under the License.
 
-all:
-	g++ -shared -fPIC -std=c++11 init_lib.cc min_ex.cc.o ../../../src/lib_api.cc -o libmin_ex.so -I../../../include
+# coding: utf-8
+# pylint: disable=arguments-differ
 
-test:
-	g++ -std=c++11 -O3 -o libtest libtest.cc -ldl
+# This test checks if dynamic loading of library into MXNet is successful
 
-clean:
-	rm -rf libmin_ex.so
+import mxnet as mx
+import os
+
+try:
+    print(mx.nd.min_ex())
+except Exception as ex:
+    print('Operator not registered yet. %s: %s' %(type(ex).__name__,ex))
+
+# test loading library
+if (os.name=='posix'):
+    path = os.path.abspath('libmin_ex.so')
+    mx.library.load(path)
+elif (os.name=='nt'):
+    path = os.path.abspath('libmin_ex.dll')
+    mx.library.load(path)
+
+print(mx.nd.min_ex())

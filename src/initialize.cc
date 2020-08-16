@@ -126,7 +126,13 @@ void* LibraryInitializer::lib_load(const char* path) {
       return nullptr;
     }
 #else
-    handle = dlopen(path, RTLD_LAZY);
+    /* library loading flags:
+     *  RTLD_LAZY - Perform lazy binding. Only resolve symbols as the code that
+     *              references them is executed.
+     *  RTLD_LOCAL - Symbols defined in this library are not made available to
+     *              resolve references in subsequently loaded libraries.
+     */
+    handle = dlopen(path, RTLD_LAZY | RTLD_LOCAL);
     if (!handle) {
       LOG(FATAL) << "Error loading library: '" << path << "'\n" << dlerror();
       return nullptr;

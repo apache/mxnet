@@ -15,4 +15,28 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
+External Operators Example and Tutorial
+=======================================
+
+## Introduction
+
 TBD
+
+## Getting Started
+
+### Have MXNet Ready
+
+For this tutorial, clone MXNet from source but dont build it yet.
+
+### Run An Example
+
+This example shows compiling a custom backend operator and then dynamically loading it into MXNet at runtime. Go to the **lib_external_ops** directory and follow these steps:
+
+1. Copy **min_ex.cc** and **min_ex-inl.h** into the src/operator directory.
+2. Build MXNet.
+3. Find the **min_ex.cc.o** file and copy it back to the **lib_external_ops** directory.
+4. Delete the **min_ex.cc** and **min_ex-inl.h** from the src/operator directory.
+5. Clean the build folder.
+6. Rebuild MXNet.
+7. Run `make` in the **lib_external_ops** directory to produce the libmin_ex.so with your custom operator inside.
+8. Run `python test_loading.py`.
