@@ -1101,7 +1101,7 @@ class Graph {
                   << sorted[i]->outputs[j].entry << std::endl;
       }
       if (sorted[i]->subgraphs.size() > 0) {
-        for (auto &subgraph : sorted[i]->subgraphs) {          
+        for (auto &subgraph : sorted[i]->subgraphs) {
           std::cout << space << "\tSubgraph:" << std::endl;
           subgraph->print(indent+2);
         }
