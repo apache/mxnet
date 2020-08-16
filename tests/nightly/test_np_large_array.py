@@ -274,3 +274,46 @@ def test_root_family():
     A = np.ones((INT_OVERFLOW, 2))
     batch_check(A, [np.sqrt, np.cbrt])
 
+@use_np
+def test_ceil_floor():
+    def batch_check(x, funcs):
+        for f in funcs:
+            y = f(x)
+            print(y)
+            assert y.shape == (INT_OVERFLOW, 2)
+    A = np.ones((INT_OVERFLOW, 2))
+    batch_check(A, [np.ceil, np.floor])
+
+@use_np
+def test_clip():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.clip(A, 1, 1)
+    print(B)
+    assert B.shape == (INT_OVERFLOW, 2)
+
+@use_np
+def test_column_stack():
+    A = np.ones(INT_OVERFLOW)
+    B = np.column_stack((A, A))
+    print(B)
+    assert B.shape == (INT_OVERFLOW, 2)
+
+@use_np
+def test_concatenate():
+    def batch_check(x1, x2, axises, shapes):
+        for a, s in zip(axises, shapes):
+            y = np.concatenate((x1, x2), axis=a)
+            print(y)
+            print(y.shape)
+            #assert y.shape == s
+    A = np.ones((2, INT_OVERFLOW))
+    B = np.ones((1, INT_OVERFLOW))
+    batch_check(A, B, [0, None], \
+            [(3, INT_OVERFLOW), (int(INT_OVERFLOW * 3), )])
+
+@use_np
+def test_copysign():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.copysign(A, -1)
+    print(B)
+    assert B.shape == (INT_OVERFLOW, 2)
