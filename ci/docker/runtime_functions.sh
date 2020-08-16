@@ -874,7 +874,7 @@ build_ubuntu_gpu_cmake_mkldnn() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=1                            \
         -DUSE_CUDNN=1                           \
-        -DUSE_TVM_OP=1                          \
+        -DUSE_TVM_OP=0                          \
         -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKLML_MKL=1                       \
         -DCMAKE_BUILD_TYPE=Release              \
@@ -916,7 +916,7 @@ build_ubuntu_gpu_cmake_no_rtc() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=ON                         \
+        -DUSE_TVM_OP=OFF                         \
         -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
@@ -980,7 +980,7 @@ build_ubuntu_gpu_large_tensor() {
         -DUSE_SIGNAL_HANDLER=ON                 \
         -DUSE_CUDA=ON                           \
         -DUSE_CUDNN=ON                          \
-        -DUSE_TVM_OP=ON                         \
+        -DUSE_TVM_OP=OFF                         \
         -DPython3_EXECUTABLE=/usr/bin/python3   \
         -DUSE_MKL_IF_AVAILABLE=OFF              \
         -DUSE_MKLML_MKL=OFF                     \
