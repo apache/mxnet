@@ -331,7 +331,7 @@ struct MXSparse {
 struct MXTensor {
   MXTensor();
   MXTensor(const MXTensor& oth);
-  MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
+  MXTensor(void *data_ptr, std::vector<int64_t> shape, MXDType dtype,
            size_t vID, MXContext mx_ctx, MXStorageType stype = kDefaultStorage);
 
   /*! \brief populate internal tensor fields */

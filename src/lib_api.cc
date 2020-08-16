@@ -69,9 +69,9 @@ mxnet::ext::MXTensor::MXTensor(const MXTensor& oth) : data_ptr(oth.data_ptr), sh
   setDLTensor();
 }
 
-mxnet::ext::MXTensor::MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
+mxnet::ext::MXTensor::MXTensor(void *data_ptr, std::vector<int64_t> shape, MXDType dtype,
                                size_t vID, MXContext mx_ctx, MXStorageType stype)
-  : data_ptr(data_ptr), shape(shape), dtype(dtype), verID(vID), ctx(std::move(mx_ctx)),
+  : data_ptr(data_ptr), shape(std::move(shape)), dtype(dtype), verID(vID), ctx(std::move(mx_ctx)),
     stype(stype) {
   setDLTensor();
 }
