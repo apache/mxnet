@@ -340,7 +340,7 @@ struct MXTensor {
 
   /*! \brief populate DLTensor fields */
   void setDLTensor();
-  
+
   /*! \brief helper function to cast data pointer */
   template<typename data_type>
   inline data_type* data() {
@@ -406,11 +406,11 @@ class PassResource {
   PassResource(std::unordered_map<std::string, MXTensor>* new_args,
                std::unordered_map<std::string, MXTensor>* new_aux,
                nd_malloc_t nd_malloc, const void* nd_alloc);
-  
+
   // allocate new arg param, adds to args map, returns newly allocated tensor
   MXTensor* alloc_arg(const std::string& name, const std::vector<int64_t>& shapes,
                       const MXContext &ctx, MXDType dtype) const;
-  
+
   // allocate new aux param, adds to aux map, returns newly allocated tensor
   MXTensor* alloc_aux(const std::string& name, const std::vector<int64_t>& shapes,
                       const MXContext &ctx, MXDType dtype) const;
@@ -431,7 +431,7 @@ class OpResource {
              xpu_malloc_t gpu_malloc_fp, void* gpu_alloc_fp, void* stream,
              sparse_malloc_t sparse_malloc_fp, void* sparse_alloc_fp,
              void* rng_cpu_states, void* rng_gpu_states);
-  
+
   /*! \brief allocate cpu memory controlled by MXNet */
   void* alloc_cpu(int size) const;
 
@@ -516,16 +516,16 @@ struct JsonVal {
 
   // convert JSON object back to JSON-compatible string
   std::string dump() const;
-  
+
   // convert JSON-compatible string to JSON object
   static JsonVal parse(const std::string& json);
-  
+
   // parse a string JSON object
   static JsonVal parse_string(const std::string& json, unsigned int* idx);
-  
+
   // parse a number JSON object
   static JsonVal parse_num(const std::string& json, unsigned int* idx);
-  
+
   // parse a list of JSON objects
   static JsonVal parse_list(const std::string& json, unsigned int* idx);
 
@@ -534,10 +534,10 @@ struct JsonVal {
 
   // generic parse function
   static JsonVal parse(const std::string& json, unsigned int *idx);
-  
+
   // debug function to convert data structure to a debugstring
   std::string toString() const;
-  
+
   JsonType type;
   int num;
   std::string str;
@@ -561,18 +561,18 @@ struct NodeEntry {
 class Node {
  public:
   Node();
-  
+
   // internally set passResource to enable tensor allocation for graph passes
   void _setPassResource(PassResource* res_);
 
   /* \brief allocate an arg tensor for this node */
   void alloc_arg(const std::vector<int64_t>& shapes,
                  const MXContext &ctx, MXDType dtype);
-  
+
   /* \brief allocate an aux tensor for this node */
   void alloc_aux(const std::vector<int64_t>& shapes,
                  const MXContext &ctx, MXDType dtype);
-  
+
   std::string op;  // operator name (ie. Convolution)
   std::string name;  // unique node name (ie. conv_0 or conv_1)
   MXTensor* tensor;  // tensor data for input nodes
@@ -589,7 +589,7 @@ class Node {
 class Graph {
  public:
   Graph();
-  
+
   /* \brief deleted nodes when deleting the graph */
   ~Graph();
 
@@ -604,7 +604,7 @@ class Graph {
 
   /* \brief convert graph object to JSON string */
   std::string toString();
-  
+
   /* \brief visits a node "n" */
   void _dfs_util(Node* n, std::unordered_set<Node*>* to_visit,
                  std::function<void(Node*)> handler) const;
@@ -620,26 +620,26 @@ class Graph {
 
   /* \brief add a new node to this graph */
   Node* addNode(const std::string& name, const std::string& op);
-  
+
   /* \brief get node at index in graph */
   Node* getNode(size_t idx);
-    
+
   /* \brief get const node at index in const graph */
   const Node* getNode(size_t idx) const;
-  
+
   /* \brief get attribute on graph */
   const JsonVal& getAttr(const std::string& key) const;
-  
+
   /* \brief get number of nodes in the graph */
   size_t size() const;
-  
+
   // internally set passResource to enable tensor allocation for graph passes
   void _setPassResource(PassResource* res_);
 
   // internally set arg/aux params when available
   void _setParams(std::unordered_map<std::string, mxnet::ext::MXTensor>* args,
                   std::unordered_map<std::string, mxnet::ext::MXTensor>* aux);
-  
+
   std::vector<Node*> inputs;
   std::vector<NodeEntry> outputs;
   std::map<std::string, JsonVal> attrs;
@@ -746,21 +746,21 @@ typedef MXReturnValue (*createOpState_t)(const std::unordered_map<std::string,
 class CustomOp {
  public:
   explicit CustomOp(const char* op_name);
-  
+
   CustomOp& setForward(fcomp_t fcomp, const char* ctx);
-  
+
   CustomOp& setBackward(fcomp_t fgrad, const char* ctx);
-  
+
   CustomOp& setParseAttrs(parseAttrs_t func);
-  
+
   CustomOp& setInferType(inferType_t func);
 
   CustomOp& setInferSType(inferSType_t func);
-  
+
   CustomOp& setInferShape(inferShape_t func);
-  
+
   CustomOp& setMutateInputs(mutateInputs_t func);
-    
+
   CustomOp& setCreateOpState(createOpState_t func, const char* ctx);
 
   CustomOp& setIsSubgraphOp();
@@ -802,7 +802,7 @@ class CustomPass {
  public:
   CustomPass();
   explicit CustomPass(const char* pass_name);
-  
+
   CustomPass& setBody(graphPass_t fn);
 
   /*! \brief pass name */
@@ -830,22 +830,22 @@ typedef MXReturnValue (*reviewSubgraph_t)(const mxnet::ext::Graph *subgraph, int
 class CustomPartitioner {
  public:
   CustomPartitioner();
-  
+
   explicit CustomPartitioner(const char* backend_name);
-    
+
   CustomPartitioner& addStrategy(const char* prop_name,
                                  const char* sg_name);
-  
+
   CustomPartitioner& setSupportedOps(const char* prop_name, supportedOps_t fn);
-  
+
   CustomPartitioner& setCreateSelector(const char* prop_name, createSelector_t fn);
-  
+
   CustomPartitioner& setReviewSubgraph(const char* prop_name, reviewSubgraph_t fn);
-  
+
   supportedOps_t getSupportedOps(int stg_id);
-  
+
   createSelector_t getCreateSelector(int stg_id);
-  
+
   reviewSubgraph_t getReviewSubgraph(int stg_id);
 
   /*! \brief partitioner name */
