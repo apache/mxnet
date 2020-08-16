@@ -764,7 +764,7 @@ class CustomOp {
   CustomOp& setCreateOpState(createOpState_t func, const char* ctx);
 
   CustomOp& setIsSubgraphOp();
-  
+
   void mapToVector();
 
   /*! \brief operator name */
