@@ -33,9 +33,9 @@
 
 mxnet::ext::MXContext::MXContext() : dev_type("error"), dev_id(-1) {}
 mxnet::ext::MXContext::MXContext(std::string dev_type_, int dev_id_)
-  : dev_type(dev_type_), dev_id(dev_id_) {}
-mxnet::ext::MXContext::MXContext(const char* dev_type_, int dev_id_)
   : dev_type(std::move(dev_type_)), dev_id(dev_id_) {}
+mxnet::ext::MXContext::MXContext(const char* dev_type_, int dev_id_)
+  : dev_type(dev_type_), dev_id(dev_id_) {}
 mxnet::ext::MXContext mxnet::ext::MXContext::CPU() { return MXContext("cpu", 0); }
 mxnet::ext::MXContext mxnet::ext::MXContext::GPU() { return MXContext("gpu", 0); }
 mxnet::ext::MXContext mxnet::ext::MXContext::CPU(int dev_id) { return MXContext("cpu", dev_id); }
@@ -69,7 +69,7 @@ mxnet::ext::MXTensor::MXTensor(const MXTensor& oth) : data_ptr(oth.data_ptr), sh
   setDLTensor();
 }
 
-mxnet::ext::MXTensor::MXTensor(void *data_ptr, const std::vector<int64_t> shape, MXDType dtype,
+mxnet::ext::MXTensor::MXTensor(void *data_ptr, const std::vector<int64_t> &shape, MXDType dtype,
                                size_t vID, MXContext mx_ctx, MXStorageType stype)
   : data_ptr(data_ptr), shape(std::move(shape)), dtype(dtype), verID(vID), ctx(std::move(mx_ctx)),
     stype(stype) {
@@ -596,7 +596,7 @@ mxnet::ext::JsonVal mxnet::ext::Graph::toJson() {
     // add inputs for this node
     JsonVal& inputs_ = n_.map[JsonVal("inputs")];
     for (int j = 0; j < n->inputs.size(); j++) {
-      inputs_.list.push_back(JsonVal(LIST));
+      inputs_.list.emplace_back(LIST);
       NodeEntry& entry = n->inputs[j];
       JsonVal& in = inputs_.list[j];
       in.list.emplace_back(nodeMap[entry.node]);
