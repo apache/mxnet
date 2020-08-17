@@ -620,7 +620,7 @@ void TopK_Operation(const TopKParam& param,
   }
 
   const size_t batch_size = s.Size() > 1? s.Size() / s[axis] : 1;
-  topK_func F;
+  topK_func F = nullptr;
   size_t size;
   MSHADOW_TYPE_SWITCH(src.type_flag_, DType, {
     size = GetMemorySize<xpu, DType>(src, batch_size);
@@ -631,6 +631,7 @@ void TopK_Operation(const TopKParam& param,
     }
   });
 
+  CHECK_NE(F, nullptr) << "TopK function was not defined";
   (*F)(ctx.run_ctx, req, src, outputs, param, nullptr, size, &ctx.requested[0]);
 }
 
@@ -760,7 +761,7 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
   const TopKParam& param = nnvm::get<TopKParam>(attrs.parsed);
   const bool flag = param.ret_typ == topk_enum::kReturnBoth;
   if (flag || param.ret_typ == topk_enum::kReturnValue) {
-    topKBackward_func F;
+    topKBackward_func F = nullptr;
     MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
       if (flag) {
         MSHADOW_TYPE_SWITCH(param.dtype, IDType, F = TopKBackwardImpl<xpu, DType, IDType>;)
@@ -769,6 +770,7 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
       }
     });
 
+    CHECK_NE(F, nullptr) << "TopK backward function was not defined";
     (*F)(ctx, inputs, req, outputs, param);
   } else {
     LOG(FATAL) << "Not Implemented";
