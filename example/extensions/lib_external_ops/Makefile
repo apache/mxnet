@@ -15,11 +15,22 @@
 # specific language governing permissions and limitations
 # under the License.
 
+SRCS=init_lib.cc \
+     min_ex.cc \
+     ../../../src/lib_api.cc
+
+INC_PATH=-I../../../include \
+    -I../../../src/operator/
+
+LIB_PATH=-L../../../build
+
+LIBS=-lmxnet
+
 all:
 	g++ -shared -fPIC -std=c++11 init_lib.cc min_ex.cc.o ../../../src/lib_api.cc -o libmin_ex.so -I../../../include -L../../../build -lmxnet
 
 test:
-	g++ -std=c++11 -O3 -o libtest libtest.cc -ldl
+	g++ -shared -fPIC -std=c++11 ${SRCS} -o libmin_ex.so ${INC_PATH} ${LIB_PATH} ${LIBS}
 
 clean:
 	rm -rf libmin_ex.so
