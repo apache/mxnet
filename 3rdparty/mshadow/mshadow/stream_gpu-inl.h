@@ -274,11 +274,11 @@ struct Stream<gpu> {
 template<>
 inline void DeleteStream<gpu>(Stream<gpu> *stream) {
   if (stream) {
+    stream->DestroyCuTensorHandle();
     MSHADOW_CUDA_CALL(cudaStreamDestroy(stream->stream_));
     stream->DestroyBlasHandle();
     stream->DestroySolverHandle();
     stream->DestroyDnnHandle();
-    stream->DestroyCuTensorHandle();
     delete stream;
   }
 }

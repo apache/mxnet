@@ -93,7 +93,6 @@ struct Einsum
         const bool isImplicit = (arrow_pos == std::string::npos);
         if (isBroadcast) // TODO
         {
-            printf("not supported yet.\n");
             return;
         }
         const bool usesB = (comma_pos != std::string::npos);
@@ -106,11 +105,35 @@ struct Einsum
         size_t c_start = isImplicit ? equation.size() : arrow_pos + 2;
         size_t c_end = equation.size();
 
-        const char* modeA = equation.c_str();
-        const char* modeB = equation.c_str() + b_start;
-        const char* modeC = equation.c_str() + c_start;
 
-        if ((a_end - a_start != numModesA_) || (b_end - b_start != numModesB_))
+        char modeA[kMaxNumModes_ + 2];
+        uint32_t numModesA = 0;
+        for (int i = a_start; i < a_end && numModesA < kMaxNumModes_ + 2; ++i){
+            if (equation.at(i) != ' ') // skip spaces
+            {
+                modeA[numModesA++] = equation.at(i);
+            }
+        }
+
+        char modeB[kMaxNumModes_ + 2];
+        uint32_t numModesB = 0;
+        for (int i = b_start; i < b_end && numModesB < kMaxNumModes_ + 2; ++i){
+            if (equation.at(i) != ' ') // skip spaces
+            {
+                modeB[numModesB++] = equation.at(i);
+            }
+        }
+
+        char modeC[kMaxNumModes_ + 2];
+        uint32_t numModesC = 0;
+        for (int i = c_start; i < c_end && numModesC < kMaxNumModes_ + 2; ++i){
+            if (equation.at(i) != ' ') // skip spaces
+            {
+                modeC[numModesC++] = equation.at(i);
+            }
+        }
+
+        if ((numModesA != numModesA_) || (numModesB != numModesB_))
         {
             // substring size and shape don't match
             return;
@@ -155,6 +178,7 @@ struct Einsum
 
 
         std::array<char, kMaxNumModes_+1> implicitModeC;
+        char* redirectModeC;
         if (isImplicit)
         {
             // we have to copy all non-contracted modes from A over to C
@@ -169,11 +193,12 @@ struct Einsum
             }
             std::sort(implicitModeC.begin(), std::next(implicitModeC.begin(), numModesC_)); // modes are sorted w.r.t. lexical order
             implicitModeC[numModesC_] = '\0';
-            modeC = implicitModeC.data();
+            redirectModeC = implicitModeC.data();
         }
         else
         {
-            numModesC_ = c_end - c_start;
+            redirectModeC = modeC;
+            numModesC_ = numModesC;
         }
 
         for (uint32_t i = 0; i < numModesA_; i++)
@@ -190,7 +215,7 @@ struct Einsum
 
         for (uint32_t i = 0; i < numModesC_; i++)
         {
-            const auto mode = modeC[numModesC_ - i - 1];
+            const auto mode = redirectModeC[numModesC_ - i - 1];
             modesC_[i] = mode;
             bool found = false;
             for (uint32_t j=0; j < numModesA_; ++j)
