@@ -865,9 +865,6 @@ inline bool CheckAndInferShape(nnvm::Graph* p_g, mxnet::ShapeVector&& shapes,
   if (node_range.second > node_range.first) {
     g.attrs["node_range"] = std::make_shared<dmlc::any>(node_range);
   }
-  if (node_range.second > node_range.first) {
-    g.attrs["node_range"] = std::make_shared<dmlc::any>(node_range);
-  }
   if (use_inputs) {
     g = exec::InferShape(std::move(g), std::move(shapes));
   } else {
