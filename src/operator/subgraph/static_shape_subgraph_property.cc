@@ -79,7 +79,7 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
   }
 
   void PrePartition(const nnvm::Graph& g,
-                    const std::unordered_map<std::string, std::string>& options_map) {
+                    const std::unordered_map<std::string, std::string>& options_map) override {
     for (auto& kv : options_map) {
       options_map_.push_back(kv);
     }
