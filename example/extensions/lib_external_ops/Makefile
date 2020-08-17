@@ -16,7 +16,7 @@
 # under the License.
 
 all:
-	g++ -shared -fPIC -std=c++11 init_lib.cc min_ex.cc.o ../../../src/lib_api.cc -o libmin_ex.so -I../../../include
+	g++ -shared -fPIC -std=c++11 init_lib.cc min_ex.cc.o ../../../src/lib_api.cc -o libmin_ex.so -I../../../include -L../../../build -lmxnet
 
 test:
 	g++ -std=c++11 -O3 -o libtest libtest.cc -ldl

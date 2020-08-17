@@ -99,7 +99,6 @@ LibraryInitializer::LibraryInitializer()
 }
 
 LibraryInitializer::~LibraryInitializer() {
-  close_open_libs();
 }
 
 bool LibraryInitializer::lib_is_loaded(const std::string& path) const {
@@ -239,12 +238,6 @@ void LibraryInitializer::install_signal_handlers() {
       signal(SIGSEGV, SegfaultLogger);
   }
 #endif
-}
-
-void LibraryInitializer::close_open_libs() {
-  for (const auto& l : loaded_libs) {
-    lib_close(l.second);
-  }
 }
 
 /**
