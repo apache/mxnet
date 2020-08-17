@@ -79,29 +79,49 @@ def test_softmax():
         output = npx.softmax(input_data, axis=axis)
         assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
 
+'''
+  _ _ _  _ _ __  _ __ _  _
+ | ' \ || | '  \| '_ \ || |
+ |_||_\_,_|_|_|_| .__/\_, |
+                |_|   |__/
+'''
+
 @use_np
 def test_abs():
     A = np.ones((INT_OVERFLOW, 2))
-    B = np.abs(A)
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.abs(A)
     print(B)
     assert B.shape == (INT_OVERFLOW, 2)
+    B.backward()
+    assert A.grad.shape == (INT_OVERFLOW, 2)
 
 @use_np
 def test_absolute():
     A = np.ones((INT_OVERFLOW, 2))
-    B = np.abs(A)
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.absolute(A)
     print(B)
     assert B.shape == (INT_OVERFLOW, 2)
-    
+    B.backward()
+    assert A.grad.shape == (INT_OVERFLOW, 2)
+
 @use_np
 def test_add():
     A = np.ones((INT_OVERFLOW, 2))
     B = np.ones((INT_OVERFLOW, 2))
-    C = np.add(A, B)
+    A.attach_grad()
+    with mx.autograd.record():
+        C = np.add(A, B)
     print(C)
     assert C.shape == (INT_OVERFLOW, 2)
+    C.backward()
+    assert A.grad.shape == (INT_OVERFLOW, 2)
 
 # this will fail; broadcast needs to be fixed
+# TODO add backward test
 @use_np
 def test_add_broadcast():
     A = np.ones((INT_OVERFLOW, 2))
@@ -113,41 +133,61 @@ def test_add_broadcast():
 @use_np
 def test_all():
     A = np.ones((INT_OVERFLOW, 2))
-    B = np.all(A)
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.all(A)
     print(B)
     assert B.asnumpy() == True
+    B.backward()
+    assert A.grad.shape == (INT_OVERFLOW, 2)
 
 @use_np
 def test_amin():
     A = np.ones((INT_OVERFLOW, 2))
     A[100][1] = -1
-    B = np.amin(A)
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.amin(A)
     print(B)
     assert B.asnumpy() == -1.0
+    B.backward()
+    assert A.grad.shape == (INT_OVERFLOW, 2)
 
 @use_np
 def test_amax():
     A = np.zeros((INT_OVERFLOW, 2))
     A[100][1] = 1
-    B = np.amax(A)
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.amax(A)
     print(B)
     assert B.asnumpy() == 1.0
+    B.backward()
+    assert A.grad.shape == (INT_OVERFLOW, 2)
 
 @use_np
 def test_argmin():
     A = np.ones((INT_OVERFLOW, 2))
     A[10][1] = -1
-    B = np.argmin(A)
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.argmin(A)
     print(B)
     assert B.asnumpy() == 21
-    
+    B.backward()
+    assert A.grad.shape == (INT_OVERFLOW, 2)
+
 @use_np
 def test_argmax():
     A = np.zeros((INT_OVERFLOW, 2))
     A[10][1] = 1
-    B = np.argmax(A)
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.argmax(A)
     print(B)
     assert B.asnumpy() == 21
+    B.backward()
+    assert A.grad.shape == (INT_OVERFLOW, 2)
 
 @use_np
 def test_trigonometric_family():
@@ -211,3 +251,31 @@ def test_atleast_xd_family():
     A = np.zeros((INT_OVERFLOW))
     batch_check(A, [np.atleast_1d, np.atleast_2d, np.atleast_3d], \
             [(INT_OVERFLOW, ), (1, INT_OVERFLOW), (1, INT_OVERFLOW, 1)])
+
+'''
+                                     _               _
+  _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
+ | ' \ || | '  \| '_ \ || | / -_) \ /  _/ -_) ' \(_-< / _ \ ' \
+ |_||_\_,_|_|_|_| .__/\_, | \___/_\_\\__\___|_||_/__/_\___/_||_|
+                |_|   |__/
+'''
+
+def test_activation():
+    A = np.zeros((INT_OVERFLOW, 2))
+    A.attach_grad()
+    with mx.autograd.record():
+        B = npx.activation(A, act_type='sigmoid')
+    print(B)
+    assert B.shape == (INT_OVERFLOW, 2)
+    B.backward()
+    assert A.grad.shape == (INT_OVERFLOW, 2)
+
+def test_arange_like():
+    A = np.zeros((INT_OVERFLOW, 2))
+    A.attach_grad()
+    with mx.autograd.record():
+        B = npx.arange_like(A)
+    print(B)
+    assert B.shape == (INT_OVERFLOW, 2)
+    B.backward()
+    assert A.grad.shape == (INT_OVERFLOW, 2)
