@@ -36,10 +36,6 @@ Essential
 
       How to profile MXNet models.
 
-   .. card::
-      :title: Tuning NumPy Operations
-      :link: ../packages/ndarray/gotchas_numpy_in_mxnet.html
-      Gotchas using NumPy in MXNet.
 
 Compression
 -----------
@@ -73,7 +69,7 @@ Accelerated Backend
 
    .. card::
       :title: TensorRT
-      :link: backend/tensorrt/tensorrt.html
+      :link: backend/tensorrt/index.html
 
       How to use NVIDIA's TensorRT to boost inference performance.
 
@@ -91,6 +87,7 @@ Accelerated Backend
 
          How to use TVM to boost performance.
    ..
+
 
 Distributed Training
 --------------------
@@ -110,8 +107,8 @@ Distributed Training
       An overview of using multiple GPUs when training an LSTM.
 
    .. card::
-      :title: Data Parallelism in MXNet
-      :link: /api/faq/multi_device
+      :title: Distributed training in MXNet
+      :link: /api/faq/distributed_training
 
       An overview of distributed training strategies.
 

@@ -1504,9 +1504,9 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     g.attrs["in_aux_names"] = std::make_shared<nnvm::any>(aux_names);
   }
   // create a data structure from pointer array
-  std::vector<std::pair<std::string, std::string>> options_map;
+  std::unordered_map<std::string, std::string> options_map;
   for (mx_uint i = 0; i < num_options; ++i)
-    options_map.emplace_back(keys[i], vals[i]);
+    options_map.emplace(keys[i], vals[i]);
 
   if (mxnet::op::SubgraphBackendRegistry::Get()->backend_map_.count(backend_name) > 0) {
     // use subgraph backend

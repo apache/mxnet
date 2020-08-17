@@ -47,6 +47,29 @@ TEST(Storage, Basic_CPU) {
   storage->Free(handle);
 }
 
+TEST(Storage, CPU_MemAlign) {
+  #if MXNET_USE_MKLDNN == 1
+  // MKLDNN requires special alignment. 64 is used by the MKLDNN library in
+  // memory allocation.
+    static constexpr size_t alignment_ = mxnet::kMKLDNNAlign;
+  #else
+    static constexpr size_t alignment_ = 16;
+  #endif
+
+  auto&& storage = mxnet::Storage::Get();
+  mxnet::Context context_cpu = mxnet::Context::CPU(0);
+
+  for (int i = 0; i < 5; ++i) {
+    const size_t kSize = (std::rand() % 1024) + 1;
+    auto&& handle = storage->Alloc(kSize, context_cpu);
+    EXPECT_EQ(handle.ctx, context_cpu);
+    EXPECT_EQ(handle.size, kSize);
+    EXPECT_EQ(reinterpret_cast<intptr_t>(handle.dptr) % alignment_, 0);
+    storage->Free(handle);
+  }
+}
+
+
 #if MXNET_USE_CUDA
 TEST(Storage_GPU, Basic_GPU) {
   if (mxnet::test::unitTestsWithCuda) {
