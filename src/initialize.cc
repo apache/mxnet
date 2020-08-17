@@ -98,8 +98,7 @@ LibraryInitializer::LibraryInitializer()
   install_pthread_atfork_handlers();
 }
 
-LibraryInitializer::~LibraryInitializer() {
-}
+LibraryInitializer::~LibraryInitializer() = default;
 
 bool LibraryInitializer::lib_is_loaded(const std::string& path) const {
   return loaded_libs.count(path) > 0;
