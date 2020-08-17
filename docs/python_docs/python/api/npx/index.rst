@@ -1,5 +1,5 @@
-NP Extensions
-====================
+NPX: NumPy Neural Network Extension
+===================================
 
 .. currentmodule:: mxnet.npx
 

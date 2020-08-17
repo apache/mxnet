@@ -26,7 +26,7 @@ the weights of models with sparse datasets, the derived gradients of the weights
 Let's say we perform a matrix multiplication of ``X``  and ``W``, where ``X`` is a 1x2 matrix, and ``W`` is a 2x3 matrix. Let ``Y`` be the matrix multiplication of the two matrices:
 
 
-```python
+```{.python .input}
 import mxnet as mx
 X = mx.nd.array([[1,0]])
 W = mx.nd.array([[3,4,5], [6,7,8]])
@@ -67,7 +67,7 @@ grad_W[1][2] = X[0][1] = 0
 As a matter of fact, you can calculate ``grad_W`` by multiplying the transpose of ``X`` with a matrix of ones:
 
 
-```python
+```{.python .input}
 grad_W = mx.nd.dot(X, mx.nd.ones_like(Y), transpose_a=True)
 grad_W
 ```
@@ -124,7 +124,7 @@ A RowSparseNDArray is typically used to represent non-zero row slices of a large
 Given this two-dimension matrix:
 
 
-```python
+```{.python .input}
 [[ 1, 2, 3],
  [ 0, 0, 0],
  [ 4, 0, 5],
@@ -137,7 +137,7 @@ The row sparse representation would be:
 - `indices` array stores the row index for each row slice with non-zero elements.
 
 
-```python
+```{.python .input}
 data = [[1, 2, 3], [4, 0, 5]]
 indices = [0, 2]
 ```
@@ -145,7 +145,7 @@ indices = [0, 2]
 `RowSparseNDArray` supports multidimensional arrays. Given this 3D tensor:
 
 
-```python
+```{.python .input}
 [[[1, 0],
   [0, 2],
   [3, 4]],
@@ -162,7 +162,7 @@ indices = [0, 2]
 The row sparse representation would be (with `data` and `indices` defined the same as above):
 
 
-```python
+```{.python .input}
 data = [[[1, 0], [0, 2], [3, 4]], [[5, 0], [6, 0], [0, 0]]]
 indices = [0, 1]
 ```
@@ -175,7 +175,7 @@ the value will be **"row_sparse"**.
 You can create a `RowSparseNDArray` with data and indices by using the `row_sparse_array` function:
 
 
-```python
+```{.python .input}
 import mxnet as mx
 import numpy as np
 # Create a RowSparseNDArray with python lists
@@ -216,7 +216,7 @@ Similar to `CSRNDArray`, the are several functions with `RowSparseNDArray` that 
 You can create a `RowSparseNDArray` from another specifying the element data type with the option `dtype`, which accepts a numpy type. By default, `float32` is used.
 
 
-```python
+```{.python .input}
 # Float32 is used by default
 c = mx.nd.sparse.array(a)
 # Create a 16-bit float array
@@ -237,7 +237,7 @@ As with `CSRNDArray`, you can inspect the contents of a `RowSparseNDArray` by fi
 its contents into a dense `numpy.ndarray` using the `asnumpy` function.
 
 
-```python
+```{.python .input}
 a.asnumpy()
 ```
 
@@ -256,7 +256,7 @@ array([[ 0.,  0.],
 You can inspect the internal storage of a RowSparseNDArray by accessing attributes such as `indices` and `data`:
 
 
-```python
+```{.python .input}
 # Access data array
 data = a.data
 # Access indices array
@@ -281,7 +281,7 @@ indices = a.indices
 You can convert an NDArray to a RowSparseNDArray and vice versa by using the `tostype` function:
 
 
-```python
+```{.python .input}
 # Create a dense NDArray
 ones = mx.nd.ones((2,2))
 # Cast the storage type from `default` to `row_sparse`
@@ -305,7 +305,7 @@ dense = rsp.tostype('default')
 You can also convert the storage type by using the `cast_storage` operator:
 
 
-```python
+```{.python .input}
 # Create a dense NDArray
 ones = mx.nd.ones((2,2))
 # Cast the storage type to `row_sparse`
@@ -332,7 +332,7 @@ You can use the `copy` method which makes a deep copy of the array and its data,
 We can also use the `copyto` method or the slice operator `[]` to deep copy to an existing array.
 
 
-```python
+```{.python .input}
 a = mx.nd.ones((2,2)).tostype('row_sparse')
 b = a.copy()
 c = mx.nd.sparse.zeros('row_sparse', (2,2))
@@ -356,7 +356,7 @@ If the storage types of source array and destination array do not match,
 the storage type of destination array will not change when copying with `copyto` or the slice operator `[]`. The source array will be temporarily converted to desired storage type before the copy.
 
 
-```python
+```{.python .input}
 e = mx.nd.sparse.zeros('row_sparse', (2,2))
 f = mx.nd.sparse.zeros('row_sparse', (2,2))
 g = mx.nd.ones(e.shape)
@@ -377,7 +377,7 @@ g.copyto(f)
 You can retain a subset of row slices from a RowSparseNDArray specified by their row indices.
 
 
-```python
+```{.python .input}
 data = [[1, 2], [3, 4], [5, 6]]
 indices = [0, 2, 3]
 rsp = mx.nd.sparse.row_sparse_array((data, indices), shape=(5, 2))
@@ -407,7 +407,7 @@ rsp_retained = mx.nd.sparse.retain(rsp, mx.nd.array([0, 1]))
 Operators that have specialized implementation for sparse arrays can be accessed in ``mx.nd.sparse``. You can read the [mxnet.ndarray.sparse API documentation](http://mxnet.apache.org/api/python/ndarray/sparse.html) to find what sparse operators are available.
 
 
-```python
+```{.python .input}
 shape = (3, 5)
 data = [7, 8, 9]
 indptr = [0, 2, 2, 3]
@@ -436,7 +436,7 @@ transpose_dot = mx.nd.sparse.dot(lhs, rhs, transpose_a=True)
 For any sparse operator, the storage type of output array is inferred based on inputs. You can either read the documentation or inspect the `stype` attribute of output array to know what storage type is inferred:
 
 
-```python
+```{.python .input}
 a = transpose_dot.copy()
 b = a * 2  # b will be a RowSparseNDArray since zero multiplied by 2 is still zero
 c = a + mx.nd.ones((5, 2))  # c will be a dense NDArray
@@ -460,7 +460,7 @@ If sparse outputs are provided, MXNet will convert the dense outputs generated b
 For operators that don't specialize in sparse arrays, you can still use them with sparse inputs with some performance penalty.
 
 
-```python
+```{.python .input}
 e = mx.nd.sparse.zeros('row_sparse', a.shape)
 d = mx.nd.log(a) # dense operator with a sparse input
 e = mx.nd.log(a, out=e) # dense operator with a sparse output
@@ -501,7 +501,7 @@ This means that the lazy update leads to different optimization results if `weig
 To disable lazy update, please set `lazy_update` to be False when creating the optimizer.
 
 
-```python
+```{.python .input}
 # Create weight
 shape = (4, 2)
 weight = mx.nd.ones(shape).tostype('row_sparse')
@@ -534,7 +534,7 @@ momentum = sgd.create_state(0, weight)
 
 
 
-```python
+```{.python .input}
 sgd.update(0, weight, grad, momentum)
 # Only row 0 and row 2 are updated for both weight and momentum
 {"weight.asnumpy()":weight.asnumpy(), "momentum.asnumpy()":momentum.asnumpy()}
@@ -566,7 +566,7 @@ By default, RowSparseNDArray operators are executed on CPU. To create a RowSpars
 **Note** If a GPU is not available, an error will be reported in the following section. In order to execute it on a cpu, set gpu_device to mx.cpu().
 
 
-```python
+```{.python .input}
 import sys
 gpu_device=mx.gpu() # Change this to mx.cpu() in absence of GPUs.
 try:

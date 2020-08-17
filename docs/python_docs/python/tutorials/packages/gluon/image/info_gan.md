@@ -22,7 +22,7 @@ This notebook shows how to implement an InfoGAN based on Gluon. InfoGAN is an ex
 The codes are made meaningful by maximizing the mutual information between code and generator output. InfoGAN learns a disentangled representation in a completely unsupervised manner. It can be used for many applications such as image similarity search. This notebook uses the DCGAN example from the [Straight Dope Book](https://gluon.mxnet.io/chapter14_generative-adversarial-networks/dcgan.html) and extends it to create an InfoGAN. 
 
 
-```python
+```{.python .input}
 from __future__ import print_function
 from datetime import datetime
 import logging
@@ -46,7 +46,7 @@ from mxnet import autograd
 The latent code vector can contain several variables, which can be categorical and/or continuous. We set `n_continuous` to 2 and `n_categories` to 10.
 
 
-```python
+```{.python .input}
 batch_size   = 64
 z_dim        = 100
 n_continuous = 2
@@ -57,7 +57,7 @@ ctx = mx.gpu() if mx.context.num_gpus() else mx.cpu()
 Some functions to load and normalize images.
 
 
-```python
+```{.python .input}
 lfw_url = 'http://vis-www.cs.umass.edu/lfw/lfw-deepfunneled.tgz'
 data_path = 'lfw_dataset'
 if not os.path.exists(data_path):
@@ -69,7 +69,7 @@ if not os.path.exists(data_path):
 ```
 
 
-```python
+```{.python .input}
 def transform(data, width=64, height=64):
     data = mx.image.imresize(data, width, height)
     data = nd.transpose(data, (2,0,1))
@@ -80,7 +80,7 @@ def transform(data, width=64, height=64):
 ```
 
 
-```python
+```{.python .input}
 def get_files(data_dir):
     images    = []
     filenames = []
@@ -99,7 +99,7 @@ def get_files(data_dir):
 Load the dataset `lfw_dataset` which contains images of celebrities.
 
 
-```python
+```{.python .input}
 data_dir = 'lfw_dataset'
 images, filenames = get_files(data_dir)
 split = int(len(images)*0.8)
@@ -116,7 +116,7 @@ train_dataloader = gluon.data.DataLoader(train_data, batch_size=batch_size, shuf
 Define the Generator model. Architecture is taken from the DCGAN implementation in [Straight Dope Book](https://gluon.mxnet.io/chapter14_generative-adversarial-networks/dcgan.html). The Generator consist of  4 layers where each layer involves a strided convolution, batch normalization, and rectified nonlinearity. It takes as input random noise and the latent code and produces an `(64,64,3)` output image.
 
 
-```python
+```{.python .input}
 class Generator(gluon.HybridBlock):
     def __init__(self, **kwargs):
         super(Generator, self).__init__(**kwargs)
@@ -149,7 +149,7 @@ class Generator(gluon.HybridBlock):
 Define the Discriminator and Q model. The Q model shares many layers with the Discriminator. Its task is to estimate the code `c` for a given fake image.  It is used to maximize the lower bound to the mutual information.
 
 
-```python
+```{.python .input}
 class Discriminator(gluon.HybridBlock):
     def __init__(self, **kwargs):
         super(Discriminator, self).__init__(**kwargs)
@@ -195,7 +195,7 @@ Discriminator and Generator are the same as in the DCGAN example. On top of the 
 Initialize Generator and Discriminator and define correspoing trainer function.
 
 
-```python
+```{.python .input}
 generator = Generator()
 generator.hybridize()
 generator.initialize(mx.init.Normal(0.002), ctx=ctx)
@@ -215,7 +215,7 @@ q_trainer = gluon.Trainer(discriminator.Q.collect_params(), 'adam', {'learning_r
 Create vectors with real (=1) and fake labels (=0).
 
 
-```python
+```{.python .input}
 real_label = nd.ones((batch_size,), ctx=ctx)
 fake_label = nd.zeros((batch_size,),ctx=ctx)
 ```
@@ -223,7 +223,7 @@ fake_label = nd.zeros((batch_size,),ctx=ctx)
 Load a pretrained model.
 
 
-```python
+```{.python .input}
 if os.path.isfile('infogan_d_latest.params') and os.path.isfile('infogan_g_latest.params'):
     discriminator.load_parameters('infogan_d_latest.params', ctx=ctx, allow_missing=True, ignore_extra=True)
     generator.load_parameters('infogan_g_latest.params', ctx=ctx, allow_missing=True, ignore_extra=True)
@@ -243,7 +243,7 @@ where `V(D,G)` is the GAN loss and the mutual information `I(c, G(z, c))` goes i
 Define the loss functions. `SoftmaxCrossEntropyLoss` for the categorical code,  `L2Loss` for the continious code and `SigmoidBinaryCrossEntropyLoss` for the normal GAN loss.
 
 
-```python
+```{.python .input}
 loss1 = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 loss2 = gluon.loss.L2Loss()
 loss3 = gluon.loss.SoftmaxCrossEntropyLoss()
@@ -252,7 +252,7 @@ loss3 = gluon.loss.SoftmaxCrossEntropyLoss()
 This function samples `c`, `z`, and concatenates them to create the generator input.
 
 
-```python
+```{.python .input}
 def create_generator_input():
     
     #create random noise
@@ -273,7 +273,7 @@ Define the training loop.
 4. Update Generator and Q
 
 
-```python
+```{.python .input}
 with SummaryWriter(logdir='./logs/') as sw:
     
     epochs = 1
@@ -351,7 +351,7 @@ Once the InfoGAN is trained, we can use the Discriminator to do an image similar
 Load the trained discriminator and retrieve one of its last layers.
 
 
-```python
+```{.python .input}
 discriminator = Discriminator()
 discriminator.load_parameters("infogan_d_latest.params", ctx=ctx, ignore_extra=True)
 
@@ -364,7 +364,7 @@ discriminator.hybridize()
 Nearest neighbor function, which takes a matrix of features and an input feature vector. It returns the 3 closest features.
 
 
-```python
+```{.python .input}
 def get_knn(features, input_vector, k=3):
     dist = (nd.square(features - input_vector).sum(axis=1))/features.shape[0]
     indices = dist.asnumpy().argsort()[:k]
@@ -374,7 +374,7 @@ def get_knn(features, input_vector, k=3):
 A helper function to visualize image data.
 
 
-```python
+```{.python .input}
 def visualize(img_array):
     plt.imshow(((img_array.asnumpy().transpose(1, 2, 0) + 1.0) * 127.5).astype(np.uint8))
     plt.axis('off')
@@ -383,7 +383,7 @@ def visualize(img_array):
 Take some images from the test data, obtain its feature vector from `discriminator.D[:11]` and plot images of the corresponding closest vectors in the feature space.
 
 
-```python
+```{.python .input}
 feature_size = 8192 
 
 features = nd.zeros((len(test_images), feature_size), ctx=ctx)
@@ -425,7 +425,7 @@ We trained the Generator for a couple of epochs and stored a couple of fake imag
 The following function computes the TSNE on the feature matrix and stores the result in a json-file. This file can be loaded with [TSNEViewer](https://ml4a.github.io/guides/ImageTSNEViewer/) 
 
 
-```python
+```{.python .input}
 import json
 
 from sklearn.manifold import TSNE

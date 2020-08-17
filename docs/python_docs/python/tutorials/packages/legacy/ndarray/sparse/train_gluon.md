@@ -23,7 +23,7 @@ When working on machine learning problems, you may encounter situations where th
 MXNet supports a number of sparse storage types (often called `stype` for short) for these situations. In this tutorial, we'll start by generating some sparse data, write it to disk in the LibSVM format and then read back using the [LibSVMIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter) for training. We use the Gluon API to train the model and leverage sparse storage types such as [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) and [RowSparseNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.RowSparseNDArray) to maximise performance and memory efficiency.
 
 
-```python
+```{.python .input}
 import mxnet as mx
 import numpy as np
 import time
@@ -34,7 +34,7 @@ import time
 You will most likely have a sparse dataset in mind already if you're reading this tutorial, but let's create a dummy dataset to use in the examples that follow. Using `rand_ndarray` we will generate 1000 samples, each with 1,000,000 features of which 99.999% of values will be zero (i.e. 10 non-zero features for each sample). We take this as our input data for training and calculate a label based on an arbitrary rule: whether the feature sum is higher than average.
 
 
-```python
+```{.python .input}
 num_samples = 1000
 num_features = 1000000
 data = mx.test_utils.rand_ndarray((num_samples, num_features), stype='csr', density=0.00001)
@@ -43,7 +43,7 @@ label = data.sum(axis=1) > data.sum(axis=1).mean()
 ```
 
 
-```python
+```{.python .input}
 print(type(data))
 print(data[:10].asnumpy())
 print('{:,.0f} elements'.format(np.product(data.shape)))
@@ -66,7 +66,7 @@ print('{:,.0f} non-zero elements'.format(data.data.size))
 Our storage type is CSR (Compressed Sparse Row) which is the ideal type for sparse data along multiple axes. See [this in-depth tutorial](/api/python/docs/tutorials/packages/ndarray/sparse/csr.html) for more information. Just to confirm the generation process ran correctly, we can see that the vast majority of values are indeed zero. One of the first questions to ask would be how much memory is saved by storing this data in a [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) versus a standard [NDArray](/api/python/docs/api/ndarray/ndarray.html#module-mxnet.ndarray). Since sparse arrays are constructed from many components (e.g. `data`, `indices` and `indptr`) we define a function called `get_nbytes` to calculate the number of bytes taken in memory to store an array. We compare the same data stored in a standard [NDArray](/api/python/docs/api/ndarray/ndarray.html#module-mxnet.ndarray) (with `data.tostype('default')`) to the [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray).
 
 
-```python
+```{.python .input}
 def get_nbytes(array):
     fn = lambda a: a.size * np.dtype(a).itemsize
     if isinstance(array, mx.ndarray.sparse.CSRNDArray):
@@ -80,7 +80,7 @@ def get_nbytes(array):
 ```
 
 
-```python
+```{.python .input}
 print('NDarray:', get_nbytes(data.tostype('default'))/1000000, 'MBs')
 print('CSRNDArray', get_nbytes(data)/1000000, 'MBs')
 ```
@@ -99,7 +99,7 @@ Since there is such a large size difference between dense and sparse storage for
 A LibSVM file has a row for each sample, and each row starts with the label: in this case `0.0` or `1.0` since we have a classification task. After this we have a variable number of `key:value` pairs separated by spaces, where the key is column/feature index and the value is the value of that feature. When working with your own sparse data in a custom format you should try to convert your data into this format. We define a `save_as_libsvm` function to save the `data` ([CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray)) and `label` (`NDArray`) to disk in LibSVM format.
 
 
-```python
+```{.python .input}
 def save_as_libsvm(filepath, data, label):
     with open(filepath, 'w') as openfile:
         for row_idx in range(data.shape[0]):
@@ -115,7 +115,7 @@ def save_as_libsvm(filepath, data, label):
 ```
 
 
-```python
+```{.python .input}
 filepath = 'dataset.libsvm'
 save_as_libsvm(filepath, data, label)
 ```
@@ -123,7 +123,7 @@ save_as_libsvm(filepath, data, label)
 We have now written the `data` and `label` to disk, and can inspect the first 10 lines of the file:
 
 
-```python
+```{.python .input}
 with open(filepath, 'r') as openfile:
     lines = [openfile.readline() for _ in range(10)]
 for line in lines:
@@ -152,7 +152,7 @@ Using [LibSVMIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter)
 
 Similar to using a [DataLoader](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.DataLoader), you must specify the required `batch_size`. Since we're dealing with sparse data and the column shape isn't explicitly stored in the LibSVM file, we additionally need to provide the shape of the data and label. Our [LibSVMIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.LibSVMIter) returns batches in a slightly different form to a [DataLoader](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.DataLoader). We get `DataBatch` objects instead of `tuple`. 
 
-```python
+```{.python .input}
 data_iter = mx.io.LibSVMIter(data_libsvm=filepath, data_shape=(num_features,), label_shape=(1,), batch_size=10)
 for batch in data_iter:
     data = batch.data[0]
@@ -170,12 +170,12 @@ label.stype: default
 We can see that `data` and `label` are in the appropriate storage formats, given their sparse and dense values respectively. We can avoid out-of-memory issues that might have occurred if `data` was in dense storage format. Another benefit of storing the data efficiently is the reduced data transfer time when using GPUs. Although the transfer time for a single batch is small, we transfer `data` and `label` to the GPU every iteration so this time can become significant. We will time the transfer of the sparse `data` to GPU (if available) and compare to the time for its dense counterpart.
 
 
-```python
+```{.python .input}
 ctx = mx.gpu() if mx.test_utils.list_gpus() else mx.cpu()
 ```
 
 
-```python
+```{.python .input}
 %%timeit
 data_on_ctx = data.as_in_context(ctx)
 data_on_ctx.wait_to_read()
@@ -186,7 +186,7 @@ data_on_ctx.wait_to_read()
 ```
 
 
-```python
+```{.python .input}
 print('sparse batch: {} MBs'.format(get_nbytes(data)/1000000))
 data = data.tostype('default')  # avoid timing this sparse to dense conversion
 print('dense batch: {} MBs'.format(get_nbytes(data)/1000000))
@@ -198,7 +198,7 @@ dense batch: 40.0 MBs
 ```
 
 
-```python
+```{.python .input}
 %%timeit
 data_on_ctx = data.as_in_context(ctx)
 data_on_ctx.wait_to_read()
@@ -217,7 +217,7 @@ Our next step is to define a network. We have an input of 1,000,000 features and
 Gluon's [nn.Dense](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) block can used with [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) input arrays but it doesn't exploit the sparsity. Under the hood, [Dense](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) uses the [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operator which isn't optimized for [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) arrays. We'll implement a `Block` that does exploit this sparsity, *but first*, let's just remind ourselves of the [Dense](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) implementation by creating an equivalent `Block` called `FullyConnected`.
 
 
-```python
+```{.python .input}
 class FullyConnected(mx.gluon.HybridBlock):
     def __init__(self, in_units, units):
         super(FullyConnected, self).__init__()
@@ -240,7 +240,7 @@ $$Y = XW^T + b$$
 We could instead have created our parameter with shape `(in_units, units)` and avoid the transpose of the weight matrix. We'll see why this is so important later on. And instead of [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) we could have used [mx.sparse.dot](/api/python/docs/api/ndarray/sparse/index.html?#mxnet.ndarray.sparse.dot) to fully exploit the sparsity of the [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) input arrays. We'll now implement an alternative `Block` called `FullyConnectedSparse` using these ideas. We take `grad_stype` of the `weight` as an argument (called `weight_grad_stype`), since we're going to change this later on.
 
 
-```python
+```{.python .input}
 class FullyConnectedSparse(mx.gluon.HybridBlock):
     def __init__(self, in_units, units, weight_grad_stype='default'):
         super(FullyConnectedSparse, self).__init__()
@@ -261,7 +261,7 @@ Once again, we're using a dense `weight`, so both `FullyConnected` and `FullyCon
 We will use [timeit](https://docs.python.org/2/library/timeit.html) to check the performance of these two variants, and analyse some [MXNet Profiler](/api/python/docs/tutorials/performance/backend/profiler.html) traces that have been created from these benchmarks. Additionally, we will inspect the memory usage of the weights (and gradients) using the `print_memory_allocation` function defined below:
 
 
-```python
+```{.python .input}
 def print_memory_allocation(net, block_idxs):
     blocks = [net[block_idx] for block_idx in block_idxs]
     weight_nbytes = [get_nbytes(b.weight.data()) for b in blocks]
@@ -284,7 +284,7 @@ def print_memory_allocation(net, block_idxs):
 
 We'll create a network using `nn.Dense` and benchmark the training.
 
-```python
+```{.python .input}
 net = mx.gluon.nn.Sequential()
 net.add(
     mx.gluon.nn.Dense(in_units=num_features, units=128),
@@ -300,7 +300,7 @@ loss_fn = mx.gluon.loss.SigmoidBinaryCrossEntropyLoss()
 ```
 
 
-```python
+```{.python .input}
 %%timeit
 data_iter.reset()
 for batch in data_iter:
@@ -324,7 +324,7 @@ for batch in data_iter:
 We can see the first [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operator takes a significant proportion of time to execute (~25% of the iteration) because there are 1,000,000 input features (to 128). After this, the other [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) operators are much faster because they have input features of 128 (to 8) and 8 (to 1). On the backward pass, we see the same pattern (but in reverse). And finally, the parameter update step takes a large amount of time on the weight matrix of the first `FullyConnected` `Block`. When checking the memory allocations below, we can see the weight matrix of the first `FullyConnected` `Block` is responsible for 99.999% of the memory compared to other [FullyConnected](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.FullyConnected) weight matrices.
 
 
-```python
+```{.python .input}
 print_memory_allocation(net, block_idxs=[0, 2, 4])
 ```
 
@@ -344,7 +344,7 @@ Memory Allocation for Weight Gradient:
 We will now switch the first layer from `FullyConnected` to `FullyConnectedSparse`.
 
 
-```python
+```{.python .input}
 net = mx.gluon.nn.Sequential()
 net.add(
     FullyConnectedSparse(in_units=num_features, units=128),
@@ -360,7 +360,7 @@ loss_fn = mx.gluon.loss.SigmoidBinaryCrossEntropyLoss()
 ```
 
 
-```python
+```{.python .input}
 %%timeit
 data_iter.reset()
 for batch in data_iter:
@@ -388,7 +388,7 @@ We see the forward pass of `dot` and `add` (equivalent to [FullyConnected](/api/
 Our first weight matrix and its gradients still take up the same amount of memory as before.
 
 
-```python
+```{.python .input}
 print_memory_allocation(net, block_idxs=[0, 2, 4])
 ```
 
@@ -408,7 +408,7 @@ Memory Allocation for Weight Gradient:
 One useful outcome of sparsity in our [CSRNDArray](/api/python/docs/api/ndarray/sparse/index.html#mxnet.ndarray.sparse.CSRNDArray) input is that our gradients will be row sparse. We can exploit this fact to give us potentially huge memory savings and speed improvements. Creating our `weight` parameter with shape `(units, in_units)` and not transposing in the forward pass are important pre-requisite for obtaining row sparse gradients. Using [nn.Dense](/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Dense) would have led to column sparse gradients which are not supported in MXNet. We previously had `grad_stype` of the `weight` parameter in the first layer set to `'default'` so we were handling the gradient as a dense array. Switching this to `'row_sparse'` can give us these potential improvements.
 
 
-```python
+```{.python .input}
 net = mx.gluon.nn.Sequential()
 net.add(
     FullyConnectedSparse(in_units=num_features, units=128, weight_grad_stype='row_sparse'),
@@ -424,7 +424,7 @@ loss_fn = mx.gluon.loss.SigmoidBinaryCrossEntropyLoss()
 ```
 
 
-```python
+```{.python .input}
 %%timeit
 data_iter.reset()
 for batch in data_iter:
@@ -448,7 +448,7 @@ for batch in data_iter:
 We can see a huge reduction in the time taken for the backward pass and parameter update step: 3.99ms vs 0.18ms. And this reduces the overall time of the epoch significantly. Our gradient consumes a much smaller amount of memory and means only a subset of parameters need updating as part of the `sgd_update` step. Some optimizers don't support sparse gradients however, so reference the specific optimizer's documentation for more details.
 
 
-```python
+```{.python .input}
 print_memory_allocation(net, block_idxs=[0, 2, 4])
 ```
 

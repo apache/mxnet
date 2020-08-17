@@ -268,7 +268,7 @@ class TensorrtProperty : public SubgraphProperty {
   }
 
   void PrePartition(const nnvm::Graph& g,
-    const std::vector<std::pair<std::string, std::string>>& options_map) override {
+    const std::unordered_map<std::string, std::string>& options_map) override {
     auto& in_arg_names = g.GetAttr<std::vector<std::string>>("in_arg_names");
     auto& in_aux_names = g.GetAttr<std::vector<std::string>>("in_aux_names");
     NDArray **in_args_ptr = g.GetAttr<NDArray**>("in_args");

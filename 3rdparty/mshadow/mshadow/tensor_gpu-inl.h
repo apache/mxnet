@@ -239,6 +239,14 @@ inline void AddTakeGrad(Tensor<gpu, 2, DType> dst,
   cuda::AddTakeGrad<clip, IndexType, DType>(dst, index, src);
 }
 
+template<bool clip, typename IndexType, typename DType, typename AType>
+inline void AddTakeGrad(Tensor<gpu, 2, DType> dst,
+                        Tensor<gpu, 2, AType> temp,
+                        const Tensor<gpu, 1, IndexType>& index,
+                        const Tensor<gpu, 2, DType> &src) {
+  cuda::AddTakeGrad<clip, IndexType, DType>(dst, temp, index, src);
+}
+
 template<typename IndexType, typename DType>
 inline void AddTakeGradLargeBatch(Tensor<gpu, 2, DType> dst,
                                   const Tensor<gpu, 1, IndexType>& sorted,

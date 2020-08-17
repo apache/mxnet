@@ -29,12 +29,6 @@ Comparison Guides
 
       This guide compares PyTorch and MXNet when implementing MNIST.
 
-   .. card::
-      :title: Caffe to MXNet
-      :link: /api/faq/caffe.html
-
-      How to convert Caffe models to MXNet and how to call Caffe operators from MXNet.
-
 .. toctree::
    :hidden:
    :maxdepth: 1
