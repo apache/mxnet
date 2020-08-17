@@ -47,6 +47,10 @@ def test_contrib_intgemm_prepare_data():
     for shape in shapes:
         for max_quant in [2.0]:#, 1.0, 3.0]:
             m = mx.nd.random_uniform(low=-3.0, high=3.0, shape=shape)
+            scaled = m * 127.0 / max_quant
+            # Rounding 0.5 can go up or down.  Move values away from 0.5.
+            too_close = mx.nd.abs(mx.nd.round(scaled) - scaled) > 0.45
+            m += max_quant / 127.0 * 0.05 * too_close
             test = mx.nd.contrib.intgemm_prepare_data(m, mx.nd.array([max_quant]))
             # Reference: scale and round
             ref = mx.nd.round(m * 127.0 / max_quant)
