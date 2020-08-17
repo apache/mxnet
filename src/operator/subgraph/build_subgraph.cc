@@ -712,15 +712,7 @@ void CreateSubgraphNode(nnvm::Graph* g,
     subg_prop->InitSubgraphInputs(&unique_input_entries, &unique_orig_entries);
   else
     subg_prop->InitSubgraphInputs(&input_entries, &orig_input_entries);
-  nnvm::ObjectPtr n;
-  // Pass flags to subgraph nodes if needed
-  if (g->HasAttr("flags")) {
-    std::vector<std::pair<std::string, std::string>> flags =
-                          g->GetAttr<std::vector<std::pair<std::string, std::string>>>("flags");
-    n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, flags, subgraph_id);
-  } else {
-    n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);
-  }
+  nnvm::ObjectPtr n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);
   // CreateSubgraphNode returns NULL if subgraph property determines that subgraph is sub-optimal
   // In that case, subgraph node is not created and graph is not modified
   if (n) {

@@ -315,36 +315,6 @@ class SubgraphProperty {
    * \brief Create an nnvm node for a given subgraph. Here users can customize how to
    *        execute the operators in the subgraph.
    * \param sym the symbol to create subgraph node
-   * \param flags the flags attached to this subgraph
-   * \param subgraph_id subgraph id
-   */
-  virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
-                                             std::vector<std::pair<std::string, std::string>> flags,
-                                             const int subgraph_id = 0) const {
-    CHECK_EQ(GetPropertyType(), kCreate);
-    LOG(FATAL) << "Not implement CreateSubgraphNode() for this subgraph property.";
-    return nullptr;
-  }
-
-  /*!
-   * \brief Create an nnvm node for a given subgraph. Here users can customize how to
-   *        execute the operators in the subgraph.
-   * \param sym the symbol to create subgraph node
-   * \param subgraph_selector the selector used for creating this subgraph
-   * \param flags the flags attached to this subgraph
-   * \param subgraph_id subgraph id
-   */
-  virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
-                                           const SubgraphSelectorPtr& subgraph_selector,
-                                           std::vector<std::pair<std::string, std::string>> flags,
-                                           const int subgraph_id = 0) const {
-    return CreateSubgraphNode(sym, flags, subgraph_id);
-  }
-
-  /*!
-   * \brief Create an nnvm node for a given subgraph. Here users can customize how to
-   *        execute the operators in the subgraph.
-   * \param sym the symbol to create subgraph node
    * \param subgraph_selector The selector used for selecting this node set
    * \param subgraph_id subgraph id
    */
@@ -354,23 +324,6 @@ class SubgraphProperty {
     CHECK_EQ(GetPropertyType(), kCreate);
     const auto bridge = static_cast<SubgraphSelectorV2Bridge*>(subgraph_selector.get());
     return CreateSubgraphNode(sym, bridge->GetV1ptr(), subgraph_id);
-  }
-
-  /*!
-   * \brief Create an nnvm node for a given subgraph. Here users can customize how to
-   *        execute the operators in the subgraph.
-   * \param sym the symbol to create subgraph node
-   * \param subgraph_selector The selector used for selecting this node set
-   * \param flags the flags attached to this subgraph
-   * \param subgraph_id subgraph id
-   */
-  virtual nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol& sym,
-                                           const SubgraphSelectorV2Ptr& subgraph_selector,
-                                           std::vector<std::pair<std::string, std::string>> flags,
-                                           const int subgraph_id = 0) const {
-    CHECK_EQ(GetPropertyType(), kCreate);
-    const auto bridge = static_cast<SubgraphSelectorV2Bridge*>(subgraph_selector.get());
-    return CreateSubgraphNode(sym, bridge->GetV1ptr(), flags, subgraph_id);
   }
 
   /*!

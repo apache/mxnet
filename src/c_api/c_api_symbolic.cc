@@ -1509,17 +1509,17 @@ int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
   });
   // partition the static shape ops only when dynamic shape op presents
   if (*has_dynamic_shape) {
-    // store flags into flags_map
-    std::vector<std::pair<std::string, std::string>> flags_map;
+    // store flags in options_map
+    std::vector<std::pair<std::string, std::string>> options_map;
     for (mx_uint i = 0; i < num_flags; ++i) {
-      flags_map.emplace_back(keys[i], vals[i]);
+      options_map.emplace_back(keys[i], vals[i]);
     }
     // run BuildSubgraph pass with static_shape property
     auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend("static_shape");
     const auto& subgraph_prop_list = backend->GetSubgraphProperties();
     for (auto property : subgraph_prop_list) {
+      property->PrePartition(g, options_map);
       g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
-      g.attrs["flags"] = std::make_shared<nnvm::any>(flags_map);
       g = ApplyPass(std::move(g), "BuildSubgraph");
       g.attrs.erase("subgraph_property");
       g.attrs.erase("flags");

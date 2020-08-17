@@ -30,10 +30,11 @@ namespace op {
  */
 class StaticShapeOpSelector: public SubgraphSelector {
  public:
+  // select nodes with FInferShape attribute
   bool Select(const nnvm::Node &seed_node) override {
     const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
     return !seed_node.is_variable() && infershape.count(seed_node.op()) &&
-           !op_names_.count(seed_node.op()->name);
+           !unsupported_op_names_.count(seed_node.op()->name);
   }
 
   bool SelectInput(const nnvm::Node &cur_node, const nnvm::Node &input_node) override {
@@ -44,7 +45,7 @@ class StaticShapeOpSelector: public SubgraphSelector {
     return Select(output_node);
   }
 
-  // Reject partitioning when subgraph contains only a single node
+  // reject single node subgraph
   std::vector<nnvm::Node*> Filter(const std::vector<nnvm::Node*>& candidates) override {
     if (candidates.size() == 1) {
       return std::vector<nnvm::Node*>();
@@ -53,9 +54,9 @@ class StaticShapeOpSelector: public SubgraphSelector {
   }
 
  private:
-    // currently MXNet doesn't fully support these ops inside a CachedOp node
-    std::unordered_set<std::string> op_names_ {"Reshape", "_npx_reshape",
-                                               "transpose"};
+    // static shape ops that fail backward pass inside subgraph CachedOp
+    // GitHub issue: https://github.com/apache/incubator-mxnet/issues/18823
+    std::unordered_set<std::string> unsupported_op_names_ {"Reshape", "_npx_reshape", "transpose"};
 };
 
 /*
@@ -65,30 +66,36 @@ class StaticShapeOpSelector: public SubgraphSelector {
 class StaticShapeSubgraphProperty: public SubgraphProperty {
  public:
   StaticShapeSubgraphProperty() {
-    // Flag to switch on recursive partitioning for control flow ops
+    // flag to recursively partition dynamic shape op nodes containing subgraphs
     attrs_["recursive_partition"] = std::make_shared<dmlc::any>(true);
-    // Flag to make sure subgraph CachedOp node has input during partitioning
-    // this is required by CachedOp forward
+    // flag to ensure subgraph CachedOp has at least one external input
+    // as required by CachedOp::Forward
     attrs_["ensure_CachedOp_input"] = std::make_shared<dmlc::any>(true);
   }
   static SubgraphPropertyPtr Create() { return std::make_shared<StaticShapeSubgraphProperty>(); }
 
-  // the criteria of selecting the subgraph nodes
   SubgraphSelectorPtr CreateSubgraphSelector() const override {
     return std::make_shared<StaticShapeOpSelector>();
   }
 
-  // create an nnvm node for a given subgraph with flags
+  void PrePartition(const nnvm::Graph& g,
+		    const std::vector<std::pair<std::string, std::string>>& options_map) {
+    for (auto& kv : options_map)
+      options_map_.push_back(kv);
+  }
+
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
-                                             std::vector<std::pair<std::string, std::string>> flags,
-                                             const int subgraph_id = 0) const override {
+                                     const int subgraph_id = 0) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
     n->attrs.op = Op::Get("_CachedOp");
-    n->attrs.name = "_CachedOp" + std::to_string(subgraph_id);
+    n->attrs.name = "_static_shape_CachedOp" + std::to_string(subgraph_id);
     n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
-    n->attrs.parsed = std::make_shared<CachedOp>(sym, flags);
+    n->attrs.parsed = std::make_shared<CachedOp>(sym, options_map_);
     return n;
   }
+
+ private:
+  std::vector<std::pair<std::string, std::string>> options_map_;
 };
 
 MXNET_REGISTER_SUBGRAPH_BACKEND(static_shape);
