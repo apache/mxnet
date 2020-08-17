@@ -444,6 +444,23 @@ class CuTensorEinsum {
 
     CUTENSOR_CALL(cutensorInitContractionFind(&s->cutensor_handle_,
                                               &find, algo));
+
+    const cutensorAutotuneMode_t autotuneMode = CUTENSOR_AUTOTUNE_INCREMENTAL;
+    CUTENSOR_CALL(cutensorContractionFindSetAttribute(
+        &s->cutensor_handle_,
+        &find,
+        CUTENSOR_CONTRACTION_FIND_AUTOTUNE_MODE,
+        &autotuneMode,
+        sizeof(cutensorAutotuneMode_t)));
+
+    const uint32_t incCount = 5;
+    CUTENSOR_CALL(cutensorContractionFindSetAttribute(
+        &s->cutensor_handle_,
+        &find,
+        CUTENSOR_CONTRACTION_FIND_INCREMENTAL_COUNT,
+        &incCount,
+        sizeof(uint32_t)));
+
     previous_workspace_size = prev_workspace_size * sizeof(DType);
     CUTENSOR_CALL(cutensorContractionGetWorkspace(&s->cutensor_handle_,
                                                   &descriptor_contraction,
@@ -451,12 +468,6 @@ class CuTensorEinsum {
                                                   CUTENSOR_WORKSPACE_MAX,
                                                   &my_workspace_size));
     total_workspace_size = previous_workspace_size + my_workspace_size;
-
-    CUTENSOR_CALL(cutensorInitContractionPlan(&s->cutensor_handle_,
-                                              &plan,
-                                              &descriptor_contraction,
-                                              &find,
-                                              my_workspace_size));
   }
 
   void Compute(const OpContext &ctx,
@@ -464,6 +475,12 @@ class CuTensorEinsum {
                bool req_write,
                const std::vector<TBlob> &outputs) {
     mxnet_op::Stream<gpu>* s = ctx.get_stream<gpu>();
+
+    CUTENSOR_CALL(cutensorInitContractionPlan(&s->cutensor_handle_,
+                                              &plan,
+                                              &descriptor_contraction,
+                                              &find,
+                                              my_workspace_size));
 
     const TBlob &tensor_a = inputs[0];
     const TBlob &tensor_b = inputs[1];
