@@ -25,12 +25,14 @@ from .ndarray.register import _make_ndarray_function
 from .symbol.register import _make_symbol_function
 
 class MXlib:
-    def __init__(self,handle):
+    """Holds a pointed to a loaded shared library and closes it on destruction"""
+    def __init__(self, handle):
         self.handle = handle
     def __del__(self):
         libdl = ctypes.CDLL("libdl.so")
-        libdl.dlclose(handle)
-
+        libdl.dlclose(self.handle)
+        print("DLClose'd")
+# set of libraries loaded
 loaded_libs = []
 
 def load(path, verbose=True):
@@ -65,7 +67,8 @@ def load(path, verbose=True):
     byt_obj = path.encode('utf-8')
     chararr = ctypes.c_char_p(byt_obj)
     lib_ptr = ctypes.c_void_p(0)
-    check_call(_LIB.MXLoadLib(chararr, mx_uint(verbose_val),ctypes.byref(lib_ptr)))
+    check_call(_LIB.MXLoadLib(chararr, mx_uint(verbose_val), ctypes.byref(lib_ptr)))
+    # add library pointer to list so it can be closed later
     loaded_libs.append(MXlib(lib_ptr))
 
     #regenerate operators
