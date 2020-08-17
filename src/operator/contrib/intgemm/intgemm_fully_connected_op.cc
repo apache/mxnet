@@ -291,10 +291,10 @@ out_type: type of the output.
     std::vector<std::string> ret{"data", "weight"};
     ParameterIndices indices(nnvm::get<IntgemmFullyConnectedParam>(attrs.parsed));
     if (indices.HaveScaling()) {
-      ret.push_back("scaling");
+      ret.emplace_back("scaling");
     }
     if (indices.HaveBias()) {
-      ret.push_back("bias");
+      ret.emplace_back("bias");
     }
     return ret;
   })
