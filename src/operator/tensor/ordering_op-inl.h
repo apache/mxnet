@@ -631,7 +631,7 @@ void TopK_Operation(const TopKParam& param,
     }
   });
 
-  CHECK_NE(F, nullptr) << "TopK function was not defined";
+  CHECK(F != nullptr) << "TopK function was not defined";
   (*F)(ctx.run_ctx, req, src, outputs, param, nullptr, size, &ctx.requested[0]);
 }
 
@@ -770,7 +770,7 @@ void TopKBackward_(const nnvm::NodeAttrs& attrs,
       }
     });
 
-    CHECK_NE(F, nullptr) << "TopK backward function was not defined";
+    CHECK(F != nullptr) << "TopK backward function was not defined";
     (*F)(ctx, inputs, req, outputs, param);
   } else {
     LOG(FATAL) << "Not Implemented";
