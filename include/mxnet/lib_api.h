@@ -1136,7 +1136,13 @@ class Graph {
     return nodes.size();
   }
   // internally set passResource to enable tensor allocation for graph passes
-  void _setPassResource(PassResource* res_) {res = res_;}
+  void _setPassResource(PassResource* res_) {
+    res = res_;
+    // set passResource for each node
+    for (Node* node : nodes) {
+      node->_setPassResource(res);
+    }
+  }
   // internally set arg/aux params when available
   void _setParams(std::unordered_map<std::string, mxnet::ext::MXTensor>* args,
                   std::unordered_map<std::string, mxnet::ext::MXTensor>* aux) {
@@ -1146,13 +1152,6 @@ class Graph {
         node->tensor = &args->at(node->name);
       else if (aux->count(node->name) > 0)
         node->tensor = &aux->at(node->name);
-    }
-
-    if (res) {
-      // set passResource for each node
-      for (Node* node : nodes) {
-        node->_setPassResource(res);
-      }
     }
   }
 
