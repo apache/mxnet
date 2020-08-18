@@ -912,6 +912,8 @@ class HybridBlock(Block):
         self._monitor_all = False
         self._backend = None
         self._backend_opts = {}
+        self._final_partitioned = False
+        self._cached_op_args = []
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -1042,10 +1044,6 @@ class HybridBlock(Block):
             #update cached graph with partitioned graph
             self._cached_graph = data, out
 
-        # partition static shape ops if the graph contains any dynamic shape op
-        out, is_dynamic = out._optimize_for_dynamic_shape_op(is_np_array(), self._flags)
-        self._cached_graph = data, out
-
         input_names = out.list_inputs()
         data_indices = []
         param_indices = []
@@ -1085,10 +1083,7 @@ class HybridBlock(Block):
 
             self._cached_op_args.append(triple)
 
-        flags = [('data_indices', data_indices), ('param_indices', param_indices), ('is_dynamic', is_dynamic)] + \
-                self._flags
-
-        self._cached_op = ndarray.CachedOp(out, flags)
+        self._flags = [('data_indices', data_indices), ('param_indices', param_indices)] + self._flags
 
     def _deferred_infer_shape(self, *args):
         try:
@@ -1099,8 +1094,18 @@ class HybridBlock(Block):
             raise ValueError(error_msg)
 
     def _call_cached_op(self, *args):
-        if self._cached_op is None:
+        if not self._cached_op_args:
             self._build_cache(*args)
+
+        if not self._final_partitioned:
+            # partition static shape ops if the graph contains any dynamic shape op
+            self._final_partitioned = True
+            data, out = self._cached_graph
+            out, is_dynamic = out._optimize_for_dynamic_shape_op(is_np_array(), self._flags)
+            self._flags = [('is_dynamic', is_dynamic)] + self._flags
+            self._cached_graph = data, out
+            self._cached_op = ndarray.CachedOp(out, self._flags)
+
         assert self._cached_op, "Gluon failed to build the cache. " \
                                 "This should never happen. " \
                                 "Please submit an issue on Github" \
@@ -1494,7 +1499,7 @@ class HybridBlock(Block):
             copy will be made for each context.
         """
         params = self.collect_params()
-        if self._cached_op:
+        if self._cached_op_args:
             for p in self._cached_op_args:
                 # resetting parameters creating by the partitioning backend
                 if p.name not in params:
