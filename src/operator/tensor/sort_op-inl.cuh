@@ -170,6 +170,7 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
       if (sorted_values)
         values_bytes = 0;
     }
+    const auto useBatch = batch_size > 1;
     const int num_items = num_keys;
     const int num_segments = batch_size;
     const int segment_length = (num_items + num_segments - 1) / num_segments;
@@ -179,9 +180,9 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
     VDType* values_out_ptr = sorted_values? sorted_values->dptr_ :
                              reinterpret_cast<VDType *>(workspace->dptr_ + keys_bytes);
     auto *d_segment_offsets = reinterpret_cast<int *>(workspace->dptr_ + keys_bytes + values_bytes);
-    void* temp_storage = reinterpret_cast<void *>(d_segment_offsets + (batch_size > 1? 2 : 0));
+    void* temp_storage = reinterpret_cast<void *>(d_segment_offsets + (useBatch? 2 : 0));
 
-    if (batch_size > 1) {
+    if (useBatch) {
       mxnet_op::Kernel<range_fwd, gpu>::Launch(stream_, (num_segments + 1), 1, 0,
                                                segment_length, kWriteTo, d_segment_offsets);
     }
@@ -189,7 +190,7 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
     // Get the size of internal storage (for checking purposes only)
     size_t sortpairs_bytes = 0;
     if (is_ascend) {
-      if (batch_size > 1) {
+      if (useBatch) {
         cub::DeviceSegmentedRadixSort::SortPairs<KDType, VDType>(nullptr, sortpairs_bytes,
           nullptr, nullptr, nullptr, nullptr,
           num_items, num_segments, d_segment_offsets, d_segment_offsets + 1,
@@ -199,7 +200,7 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
           nullptr, nullptr, nullptr, nullptr, num_keys, begin_bit, end_bit, stream);
       }
     } else {
-      if (batch_size > 1) {
+      if (useBatch) {
         cub::DeviceSegmentedRadixSort::SortPairsDescending<KDType, VDType>(nullptr, sortpairs_bytes,
           nullptr, nullptr, nullptr, nullptr,
           num_items, num_segments, d_segment_offsets, d_segment_offsets + 1,
@@ -219,7 +220,7 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
 
     // Sort
     if (is_ascend) {
-      if (batch_size > 1) {
+      if (useBatch) {
         cub::DeviceSegmentedRadixSort::SortPairs(temp_storage, sortpairs_bytes,
           keys->dptr_, keys_out_ptr, values->dptr_, values_out_ptr,
           num_items, num_segments, d_segment_offsets, d_segment_offsets + 1,
@@ -230,7 +231,7 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
           num_keys, begin_bit, end_bit, stream);
       }
     } else {
-      if (batch_size > 1) {
+      if (useBatch) {
         cub::DeviceSegmentedRadixSort::SortPairsDescending(temp_storage, sortpairs_bytes,
           keys->dptr_, keys_out_ptr, values->dptr_, values_out_ptr,
           num_items, num_segments, d_segment_offsets, d_segment_offsets + 1,

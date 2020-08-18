@@ -465,6 +465,7 @@ void TopKImpl(const RunContext &ctx,
     const auto workspace_size = temp_size + size_1 + size_2 + size_3;
     workspace = pResource->get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
     workspace_curr_ptr = workspace.dptr_;
+    id_size = size_2;
   } else {
     id_size = size_2;
   }
@@ -621,7 +622,7 @@ void TopK_Operation(const TopKParam& param,
 
   const size_t batch_size = s.Size() > 1? s.Size() / s[axis] : 1;
   topK_func F = nullptr;
-  size_t size;
+  size_t size = 0;
   MSHADOW_TYPE_SWITCH(src.type_flag_, DType, {
     size = GetMemorySize<xpu, DType>(src, batch_size);
     if (flag) {
