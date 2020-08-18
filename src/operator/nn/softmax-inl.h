@@ -350,7 +350,7 @@ __global__ void softmax_stride1_compute_kernel(const DType *in, OType *out, ITyp
     __syncthreads();
   }
   if (my_id < warp_size) {
-    AType my_value = warp_reduce(scratch[threadIdx.x],
+    AType my_value = common::cuda::warp_reduce(scratch[threadIdx.x],
                                  [](AType x, AType y) { return ::max(x, y); });
     scratch[threadIdx.x] = my_value;
   }
@@ -374,7 +374,7 @@ __global__ void softmax_stride1_compute_kernel(const DType *in, OType *out, ITyp
     __syncthreads();
   }
   if (my_id < warp_size) {
-    AType my_value = warp_reduce(scratch[threadIdx.x],
+    AType my_value = common::cuda::warp_reduce(scratch[threadIdx.x],
                                  [](AType x, AType y) { return x + y;});
     scratch[threadIdx.x] = my_value;
   }
@@ -488,7 +488,7 @@ __global__ void softmax_stride1_grad_kernel(const OType *out, const OType *ograd
     __syncthreads();
   }
   if (my_id < warp_size) {
-    AType my_value = warp_reduce(scratch[threadIdx.x],
+    AType my_value = common::cuda::warp_reduce(scratch[threadIdx.x],
                                  [](AType x, AType y) { return x + y; });
     scratch[threadIdx.x] = my_value;
   }
