@@ -1035,7 +1035,7 @@ class HybridBlock(Block):
             out = [out]
         return _regroup(out, self._out_format)
 
-    def optimize_for(self, x, *args, backend=None, backend_opts=None, **kwargs):
+    def optimize_for(self, x, *args, backend=None, backend_opts=None, clear=True, **kwargs):
         """Partitions the current HybridBlock and optimizes it for a given backend
         without executing a forward pass. Modifies the HybridBlock in-place.
 
@@ -1065,6 +1065,7 @@ class HybridBlock(Block):
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
         backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
+        clear : clears any previous optimizations
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
         static_shape : bool, default False
@@ -1074,7 +1075,7 @@ class HybridBlock(Block):
         """
 
         # do hybrize API call
-        self.hybridize(True, backend, backend_opts, **kwargs)
+        self.hybridize(True, backend, backend_opts, clear, **kwargs)
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
@@ -1112,7 +1113,7 @@ class HybridBlock(Block):
         super(HybridBlock, self).register_child(block, name)
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend=None, backend_opts=None, **kwargs):
+    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True, **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
@@ -1124,6 +1125,7 @@ class HybridBlock(Block):
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
         backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
+        clear : clears any previous optimizations
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
         static_shape : bool, default False
@@ -1140,7 +1142,8 @@ class HybridBlock(Block):
 
         self._active = active
         self._flags = list(kwargs.items())
-        self._clear_cached_op()
+        if clear:
+            self._clear_cached_op()
         if active and self._forward_hooks or self._forward_pre_hooks:
             warnings.warn('"{block}" is being hybridized while still having forward hook/pre-hook. '
                           'If "{block}" is a child of HybridBlock, the hooks will not take effect.'

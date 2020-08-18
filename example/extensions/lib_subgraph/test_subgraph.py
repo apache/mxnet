@@ -93,8 +93,8 @@ def test(backend):
     sym_block = nn.SymbolBlock(sym, inputs)
     sym_block.initialize()
     sym_block.hybridize(backend=backend)
-    out4 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
-    print(out4)
+    out2 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
+    print(out2)
 
     # Gluon Hybridize partitioning with shapes/types without inference
     print('-------------------------------')
@@ -105,6 +105,13 @@ def test(backend):
     sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend=backend)
     sym_block2.export('partitioned')
 
+    # Test with additional input to subgraph op
+    print('-------------------------------')
+    print('Testing %s Gluon Hybridize partitioning with extra input' % backend)
+    sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend="addInputPass", clear=False)
+    out3 = sym_block2(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
+    print(out3)
+    
     ###############################################
     # Test with subgraph directly consuming params
     ###############################################

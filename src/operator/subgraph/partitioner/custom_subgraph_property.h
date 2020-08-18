@@ -49,12 +49,12 @@ namespace op {
 class CustomContainOpSelector: public SubgraphSelector {
  public:
   explicit CustomContainOpSelector(std::unordered_map<std::string, int> supported_nodes,
-                                   void* sel_inst, partCallSelect_t callSelect,
-                                   partCallSelectInput_t callSelectInput,
-                                   partCallSelectOutput_t callSelectOutput,
-                                   partCallFilter_t callFilter,
-                                   partCallReset_t callReset,
-                                   opCallFree_t callFree,
+                                   void* sel_inst, mxnet::ext::partCallSelect_t callSelect,
+                                   mxnet::ext::partCallSelectInput_t callSelectInput,
+                                   mxnet::ext::partCallSelectOutput_t callSelectOutput,
+                                   mxnet::ext::partCallFilter_t callFilter,
+                                   mxnet::ext::partCallReset_t callReset,
+                                   mxnet::ext::opCallFree_t callFree,
                                    std::unordered_map<const nnvm::Node*, unsigned> node2id) :
   supported_nodes_(supported_nodes), sel_inst_(sel_inst), callSelect_(callSelect),
     callSelectInput_(callSelectInput), callSelectOutput_(callSelectOutput),
@@ -123,12 +123,12 @@ class CustomContainOpSelector: public SubgraphSelector {
 
   std::unordered_map<std::string, int> supported_nodes_;
   void* sel_inst_;
-  partCallSelect_t callSelect_;
-  partCallSelectInput_t callSelectInput_;
-  partCallSelectOutput_t callSelectOutput_;
-  partCallFilter_t callFilter_;
-  partCallReset_t callReset_;
-  opCallFree_t callFree_;
+  mxnet::ext::partCallSelect_t callSelect_;
+  mxnet::ext::partCallSelectInput_t callSelectInput_;
+  mxnet::ext::partCallSelectOutput_t callSelectOutput_;
+  mxnet::ext::partCallFilter_t callFilter_;
+  mxnet::ext::partCallReset_t callReset_;
+  mxnet::ext::opCallFree_t callFree_;
   std::unordered_map<const nnvm::Node*, unsigned> node2id_;
 };
 
@@ -155,18 +155,18 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     review_subgraph_(nullptr),
     subgraph_op_name("error") {}
   CustomSubgraphProperty(std::string subgraph_prop_name,
-                         partCallSupportedOps_t call_supported_ops,
-                         supportedOps_t supported_ops,
-                         partCallCreateSelector_t call_create_selector,
-                         createSelector_t create_selector,
-                         partCallSelect_t callSelect,
-                         partCallSelectInput_t callSelectInput,
-                         partCallSelectOutput_t callSelectOutput,
-                         partCallFilter_t callFilter,
-                         partCallReset_t callReset,
-                         partCallReviewSubgraph_t call_review_subgraph,
-                         reviewSubgraph_t review_subgraph,
-                         opCallFree_t call_free,
+                         mxnet::ext::partCallSupportedOps_t call_supported_ops,
+                         mxnet::ext::supportedOps_t supported_ops,
+                         mxnet::ext::partCallCreateSelector_t call_create_selector,
+                         mxnet::ext::createSelector_t create_selector,
+                         mxnet::ext::partCallSelect_t callSelect,
+                         mxnet::ext::partCallSelectInput_t callSelectInput,
+                         mxnet::ext::partCallSelectOutput_t callSelectOutput,
+                         mxnet::ext::partCallFilter_t callFilter,
+                         mxnet::ext::partCallReset_t callReset,
+                         mxnet::ext::partCallReviewSubgraph_t call_review_subgraph,
+                         mxnet::ext::reviewSubgraph_t review_subgraph,
+                         mxnet::ext::opCallFree_t call_free,
                          std::string op_name) :
       subgraph_prop(subgraph_prop_name),
       call_supported_ops_(call_supported_ops),
@@ -429,7 +429,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
           if (e.node->attrs.dict.count(MX_STR_SHAPE) > 0) {
             std::string& shape = e.node->attrs.dict[MX_STR_SHAPE];
             // add this shape to the list
-            ss << getShapeAt(shape, e.index);
+            ss << mxnet::ext::getShapeAt(shape, e.index);
           }
           if (i < sym.outputs.size()-1)
             ss << ",";
@@ -446,7 +446,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
           if (e.node->attrs.dict.count(MX_STR_DTYPE) > 0) {
             std::string& dtype = e.node->attrs.dict[MX_STR_DTYPE];
             // add this dtype to the list
-            ss << getDtypeAt(dtype, e.index);
+            ss << mxnet::ext::getDtypeAt(dtype, e.index);
           }
           if (i < sym.outputs.size()-1)
             ss << ",";
@@ -489,7 +489,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         // get dtype string from other node
         std::string& dtype = orig.node->attrs.dict[MX_STR_DTYPE];
         std::stringstream ss;
-        ss << "[" << getDtypeAt(dtype, orig.index) << "]";
+        ss << "[" << mxnet::ext::getDtypeAt(dtype, orig.index) << "]";
         e->node->attrs.dict[MX_STR_DTYPE] = ss.str();
       }
 
@@ -498,7 +498,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
         std::string& shape = orig.node->attrs.dict[MX_STR_SHAPE];
         // create new shape string for this node
         std::stringstream ss;
-        ss << "[" << getShapeAt(shape, orig.index) << "]";
+        ss << "[" << mxnet::ext::getShapeAt(shape, orig.index) << "]";
         e->node->attrs.dict[MX_STR_SHAPE] = ss.str();
       }
     }
@@ -512,18 +512,18 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   }
 
   std::string subgraph_prop;
-  partCallSupportedOps_t call_supported_ops_;
-  supportedOps_t supported_ops_;
-  partCallCreateSelector_t call_create_selector_;
-  createSelector_t create_selector_;
-  partCallSelect_t callSelect_;
-  partCallSelectInput_t callSelectInput_;
-  partCallSelectOutput_t callSelectOutput_;
-  partCallFilter_t callFilter_;
-  partCallReset_t callReset_;
-  partCallReviewSubgraph_t call_review_subgraph_;
-  reviewSubgraph_t review_subgraph_;
-  opCallFree_t call_free_;
+  mxnet::ext::partCallSupportedOps_t call_supported_ops_;
+  mxnet::ext::supportedOps_t supported_ops_;
+  mxnet::ext::partCallCreateSelector_t call_create_selector_;
+  mxnet::ext::createSelector_t create_selector_;
+  mxnet::ext::partCallSelect_t callSelect_;
+  mxnet::ext::partCallSelectInput_t callSelectInput_;
+  mxnet::ext::partCallSelectOutput_t callSelectOutput_;
+  mxnet::ext::partCallFilter_t callFilter_;
+  mxnet::ext::partCallReset_t callReset_;
+  mxnet::ext::partCallReviewSubgraph_t call_review_subgraph_;
+  mxnet::ext::reviewSubgraph_t review_subgraph_;
+  mxnet::ext::opCallFree_t call_free_;
   std::unordered_map<std::string, int> supported_nodes;
   std::string subgraph_op_name;
   std::vector<std::pair<std::string, std::string>> options_map_;
