@@ -233,13 +233,6 @@ services:
       dockerfile: Dockerfile.build.ubuntu_cpu_jekyll
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu_jekyll:latest
-  ubuntu_cpu_python:
-    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu_python:latest
-    build:
-      context: .
-      dockerfile: Dockerfile.build.ubuntu_cpu_python
-      cache_from:
-        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_cpu_python:latest
   ubuntu_blc:
     image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_blc:latest
     build:
