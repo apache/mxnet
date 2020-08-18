@@ -65,6 +65,6 @@ The following tutorials will help you learn how to customize MXNet.
    :glob:
 
    *
-   New Operator Creation </api/faq/new_op>
-   New Operator in MXNet Backend </api/faq/add_op_in_backend>
-   Using RTC for CUDA kernels </api/faq/using_rtc>
+   New Operator Creation <https://mxnet.apache.org/api/faq/new_op>
+   New Operator in MXNet Backend <https://mxnet.apache.org/api/faq/add_op_in_backend>
+   Using RTC for CUDA kernels <https://mxnet.apache.org/api/faq/using_rtc>
