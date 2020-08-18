@@ -66,22 +66,22 @@ class nvtx {
   static const uint32_t kCyan    = 0x2AA198;
   static const uint32_t kGreen1  = 0x859900;
 
-  static void gpuRangeStart(const uint32_t rgb, const char *range_name) {
+  static void gpuRangeStart(const uint32_t rgb, const std::string& range_name) {
     nvtxEventAttributes_t att;
     att.version = NVTX_VERSION;
     att.size = NVTX_EVENT_ATTRIB_STRUCT_SIZE;
     att.colorType = NVTX_COLOR_ARGB;
     att.color = rgb | 0xff000000;
     att.messageType = NVTX_MESSAGE_TYPE_ASCII;
-    att.message.ascii = range_name;
+    att.message.ascii = range_name.c_str();
     nvtxRangePushEx(&att);
   }
 
   // Utility to map a range name prefix to a random color based on its hash
-  static uint32_t nameToColor(const char *range_name, int prefix_len) {
+  static uint32_t nameToColor(const std::string& range_name, int prefix_len) {
     static std::vector<uint32_t> colors{kRed, kGreen, kBlue, kYellow, kOrange, kRed1, kMagenta,
                                         kViolet, kBlue1, kCyan, kGreen1};
-    std::string s(range_name, prefix_len);
+    std::string s(range_name, 0, prefix_len);
     std::hash<std::string> hash_fn;
     return colors[hash_fn(s) % colors.size()];
   }
