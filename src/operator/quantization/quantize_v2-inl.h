@@ -86,7 +86,7 @@ struct quantize_v2_unsigned {
                                   const SrcDType *in, const RgDType *imin_range,
                                   const RgDType *imax_range, const double min_limit,
                                   const double max_limit) {
-    Map(i, out, omin_range, omax_range, in, (float)*imin_range, (float)*imax_range, min_limit, max_limit);
+    Map(i, out, omin_range, omax_range, in, static_cast<float>(*imin_range), static_cast<float>(*imax_range), min_limit, max_limit);
   }
 };
 
@@ -115,7 +115,7 @@ struct quantize_v2_zero_centered {
   MSHADOW_XINLINE static void Map(int i, DstDType *out, float *omin_range, float *omax_range,
                                   const SrcDType *in, const RgDType *imin_range,
                                   const RgDType *imax_range, const float quantized_range) {
-    Map(i, out, omin_range, omax_range, in, (float)*imin_range, (float)*imax_range, quantized_range);
+    Map(i, out, omin_range, omax_range, in, static_cast<float>(*imin_range), static_cast<float>(*imax_range), quantized_range);
   }
 };
 
@@ -258,7 +258,7 @@ class QuantizeV2Operator {
         } else {
           LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
         }
-      }else{// model is not calibrated
+      } else {  // model is not calibrated
         mxnet::TShape src_shape, dst_shape;
         const size_t actual_float16_size = sizeof(FP16DType);
         const size_t temp_reduce_size = ConfigReduce<xpu, FP16DType>(

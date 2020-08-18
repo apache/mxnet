@@ -34,7 +34,6 @@ struct QuantScaleANDSetOutRange {
                                 float *omax_range,
                                 const float imin_range,
                                 const float imax_range){
-
     float real_range = MaxAbs(imin_range, imax_range);
 
     *omin_range = -real_range;
@@ -50,7 +49,6 @@ __global__ void quantize_v2_zero_centered_kernel(DstDType *out,
                                                 const float quantized_range,
                                                 const float quantization_scale_tmp,
                                                 const int elem_per_thread) {
-    
     const index_t row = blockIdx.x;
     const int row_len = elem_per_thread * blockDim.x;
 
@@ -59,7 +57,7 @@ __global__ void quantize_v2_zero_centered_kernel(DstDType *out,
 
     const int load_ratio = sizeof(SrcLoadType) / sizeof(SrcDType);
 
-    for (index_t i = threadIdx.x; i < row_len / load_ratio; i += blockDim.x){
+    for (index_t i = threadIdx.x; i < row_len / load_ratio; i += blockDim.x) {
       int idx = row * row_len / load_ratio + i;
 
       SrcLoadType scratch_in = *(inload + idx);
@@ -69,8 +67,8 @@ __global__ void quantize_v2_zero_centered_kernel(DstDType *out,
       DstDType* scratch_out_aft_load = reinterpret_cast<DstDType*>(&scratch_out);
 
     #pragma unroll
-      for(int j = 0; j < load_ratio; j++){
-        scratch_out_aft_load[j] = Sign(scratch_in_aft_load[j]) * 
+      for (int j = 0; j < load_ratio; j++) {
+        scratch_out_aft_load[j] = Sign(scratch_in_aft_load[j]) *
                                   fminf(fabsf(scratch_in_aft_load[j]) * quantization_scale_tmp + 0.5f, quantized_range);
       }
 
@@ -85,30 +83,28 @@ void QuantizeV2ZeroCenteredGPU(mshadow::Stream<gpu>* s,
                                 const float quantized_range,
                                 const int num_elem,
                                 const float quantization_scale_tmp) {
-
     int nthreads = 256;
 
-    if(num_elem >= 512){
+    if (num_elem >= 512) {
       nthreads = 512;
-    }else if(num_elem >= 256){
+    } else if (num_elem >= 256) {
       nthreads = 256;
-    }else if(num_elem >= 128){
+    } else if (num_elem >= 128) {
       nthreads = 128;
-    }else if(num_elem >= 64){
+    } else if (num_elem >= 64) {
       nthreads = 64;
-    }else{
+    } else {
       nthreads = 32;
     }
-    
+
     int elem_per_thread = 8;
 
     int Srcltype = mxnet::common::cuda::get_load_type(num_elem * sizeof(SrcDType));
 
-    MXNET_LOAD_TYPE_SWITCH(Srcltype, SrcLoadType,{
-
+    MXNET_LOAD_TYPE_SWITCH(Srcltype, SrcLoadType, {
       int load_ratio = sizeof(SrcLoadType) / sizeof(SrcDType);
-  
-      if(load_ratio == 4){
+
+      if (load_ratio == 4) {
         quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType, DstDType, int32_t>
                           <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
                           nthreads,
@@ -118,7 +114,7 @@ void QuantizeV2ZeroCenteredGPU(mshadow::Stream<gpu>* s,
                                                                 quantized_range,
                                                                 quantization_scale_tmp,
                                                                 elem_per_thread);
-      }else if(load_ratio == 2){
+      } else if (load_ratio == 2) {
         quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType, DstDType, mshadow::half::half_t>
                           <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
                           nthreads,
@@ -128,7 +124,7 @@ void QuantizeV2ZeroCenteredGPU(mshadow::Stream<gpu>* s,
                                                                 quantized_range,
                                                                 quantization_scale_tmp,
                                                                 elem_per_thread);
-      }else if(load_ratio == 1){
+      } else if (load_ratio == 1) {
         quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType, DstDType, int8_t>
                           <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
                           nthreads,
@@ -138,12 +134,10 @@ void QuantizeV2ZeroCenteredGPU(mshadow::Stream<gpu>* s,
                                                                 quantized_range,
                                                                 quantization_scale_tmp,
                                                                 elem_per_thread);
-      }else{
+      } else {
         LOG(FATAL) << "Unsupported Load Type.";
       }
-
     });
-
 }
 
 #endif  // __CUDACC__
@@ -166,7 +160,7 @@ class QuantizeV2Operator<gpu> {
       LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
                     "please switch to the context of CPU or int8 data type for GPU.";
     }
-  
+
     if (inputs[0].type_flag_ == mshadow::kUint8 || inputs[0].type_flag_ == mshadow::kInt8) {
       if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
         *outputs[1].dptr<float>() = param.min_calib_range.value();
@@ -185,7 +179,6 @@ class QuantizeV2Operator<gpu> {
       typedef float FloatDType;
       if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
         if (out_type == mshadow::kInt8) {  // zero-centered quantization
-
             Kernel<QuantScaleANDSetOutRange, gpu>::Launch(s, 1,
                 outputs[1].dptr<float>(), outputs[2].dptr<float>(),
                 param.min_calib_range.value(), param.max_calib_range.value());
@@ -231,7 +224,6 @@ class QuantizeV2Operator<gpu> {
       typedef mshadow::half::half_t FP16DType;
       if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
         if (out_type == mshadow::kInt8) {  // zero-centered quantization
-
             Kernel<QuantScaleANDSetOutRange, gpu>::Launch(s, 1,
                 outputs[1].dptr<float>(), outputs[2].dptr<float>(),
                 param.min_calib_range.value(), param.max_calib_range.value());
@@ -246,7 +238,7 @@ class QuantizeV2Operator<gpu> {
         } else {
           LOG(FATAL) << "quantize op on GPU only supports int8 as output type";
         }
-      }else{// model is not calibrated
+      } else {  // model is not calibrated
         mxnet::TShape src_shape, dst_shape;
         const size_t actual_float16_size = sizeof(FP16DType);
         const size_t temp_reduce_size = ConfigReduce<gpu, FP16DType>(

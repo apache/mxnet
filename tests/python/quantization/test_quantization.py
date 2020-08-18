@@ -71,8 +71,8 @@ def test_quantizeV2_float_to_int8():
         data = rand_ndarray(shape, 'default', dtype=dtype)
         min_range = mx.nd.min(data).asscalar()
         max_range = mx.nd.max(data).asscalar()
-        qdata, min_val, max_val = mx.nd.contrib.quantize_v2(data=data, min_calib_range=min_range, 
-                                                        max_calib_range=max_range, out_type='int8')
+        qdata, min_val, max_val = mx.nd.contrib.quantize_v2(data=data, min_calib_range=min_range,
+                                                            max_calib_range=max_range, out_type='int8')
         data_np = data.asnumpy()
         real_range = np.maximum(np.abs(min_range), np.abs(max_range))
         quantized_range = 127.0
@@ -81,8 +81,8 @@ def test_quantizeV2_float_to_int8():
         assert min_val.dtype == np.float32
         assert max_val.dtype == np.float32
         qdata_np = (np.sign(data_np) * np.minimum(np.abs(data_np) * scale + 0.5, quantized_range)).astype(np.int8)
-        assert_almost_equal(qdata.asnumpy(), qdata_np, atol = 1)
-    
+        assert_almost_equal(qdata.asnumpy(), qdata_np, atol=1)
+
     for dtype in ['float32', 'float16']:
         check_float_to_int8(dtype)
 
