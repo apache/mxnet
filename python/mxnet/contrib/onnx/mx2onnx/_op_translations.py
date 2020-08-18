@@ -654,8 +654,8 @@ def convert_pooling(node, **kwargs):
             pooling_warning = "Pooling: ONNX lower than 1.5.0 doesn't support pooling_convention. " \
                               "This might lead to shape or accuracy issues. " \
                               "https://github.com/onnx/onnx/issues/549"
+            logging.warning(pooling_warning)
         ceil_mode = True
-        logging.warning(pooling_warning)
 
     pad_dims = list(parse_helper(attrs, "pad", [0, 0]))
     pad_dims = pad_dims + pad_dims
