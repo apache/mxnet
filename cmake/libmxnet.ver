@@ -4,7 +4,6 @@
         *MX*;
         *nn*;
         *mx*;
-    Java_org_apache_mxnet*;
         *NDArray*;
         *Engine*Get*;
         *Storage*Get*;
@@ -12,4 +11,3 @@
         *on_exit_api*;
     local: *;
 };
-
