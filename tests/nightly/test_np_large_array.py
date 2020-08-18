@@ -498,4 +498,39 @@ def test_broadcast_like():
     C.backward()
     assert A.grad.shape == (1, 2)
 
+@use_np
+def test_constraint_check():
+    A = np.ones((2, INT_OVERFLOW))
+    constraint = (A > 0)
+    B = npx.constraint_check(constraint)
+    assert B.asnumpy() == True
 
+# broken
+@use_np
+@pytest.mark.skip(reason='Does not support large tensor; to be fixed')
+def test_batch_flatten():
+    A = np.ones((2, 1, INT_OVERFLOW))
+    A.attach_grad()
+    with mx.autograd.record():
+        B = npx.batch_flatten(A)
+    print(B)
+    assert B.shape == (2, INT_OVERFLOW)
+    B.backward()
+    assert A.grad.shape == (2, 1, INT_OVERFLOW)
+
+# broken
+@use_np
+@pytest.mark.skip(reason='Does not support large tensor; to be fixed')
+def test_batch_norm():
+    A = np.ones((2, INT_OVERFLOW))
+    gamma = np.ones((2))
+    beta = np.zeros((2))
+    mov_mean = np.ones((2))
+    mov_var = np.ones((2))
+    A.attach_grad() 
+    with mx.autograd.record():
+        B = npx.batch_norm(A, gamma, beta, mov_mean, mov_var)
+    print(B)
+    assert B.shape == (2, INT_OVERFLOW)
+    B.backward()
+    assert A.grad.shape == (2, INT_OVERFLOW)
