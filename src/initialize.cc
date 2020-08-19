@@ -45,10 +45,12 @@ void win_err(char **err) {
         0, nullptr);
 }
 #else
-#include <dlfcn.h>
-#include <execinfo.h>
-#include <errno.h>
 #include <cxxabi.h>
+#include <dlfcn.h>
+#if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
+#include <execinfo.h>
+#endif
+#include <cerrno>
 #endif
 
 #include <dmlc/logging.h>
@@ -256,9 +258,9 @@ static inline void printStackTrace(FILE *out = stderr,
   // iterate over the returned symbol lines. skip the first, it is the
   // address of this function.
   for (unsigned int i = 4; i < addrlen ; i++) {
-    char* begin_name   = NULL;
-    char* begin_offset = NULL;
-    char* end_offset   = NULL;
+    char* begin_name   = nullptr;
+    char* begin_offset = nullptr;
+    char* end_offset   = nullptr;
 
     // find parentheses and +address offset surrounding the mangled name
 #ifdef DARWIN
