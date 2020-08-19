@@ -1140,7 +1140,7 @@ class HybridBlock(Block):
                 kv = self._flags[i]
                 if kv[0] in ['data_indices', 'param_indices']:
                     self._flags.remove(kv)
-            self._flags = [('data_indices', data_indices), ('param_indices', param_indices), 
+            self._flags = [('data_indices', data_indices), ('param_indices', param_indices),
                            ('is_dynamic', is_dynamic)] + self._flags
 
             self._cached_op = ndarray.CachedOp(out, self._flags)
