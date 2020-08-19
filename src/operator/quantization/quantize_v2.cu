@@ -69,7 +69,8 @@ __global__ void quantize_v2_zero_centered_kernel(DstDType *out,
     #pragma unroll
       for (int j = 0; j < load_ratio; j++) {
         scratch_out_aft_load[j] = Sign(scratch_in_aft_load[j]) *
-                                  fminf(fabsf(scratch_in_aft_load[j]) * quantization_scale_tmp + 0.5f, quantized_range);
+                                  fminf(fabsf(scratch_in_aft_load[j]) * quantization_scale_tmp
+                                          + 0.5f, quantized_range);
       }
 
       *(outload + idx) = scratch_out;
@@ -105,35 +106,38 @@ void QuantizeV2ZeroCenteredGPU(mshadow::Stream<gpu>* s,
       int load_ratio = sizeof(SrcLoadType) / sizeof(SrcDType);
 
       if (load_ratio == 4) {
-        quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType, DstDType, int32_t>
-                          <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
-                          nthreads,
-                          0,
-                          mshadow::Stream<gpu>::GetStream(s)>>>(out,
-                                                                in,
-                                                                quantized_range,
-                                                                quantization_scale_tmp,
-                                                                elem_per_thread);
+        quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType,
+                                          DstDType, int32_t>
+          <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
+          nthreads,
+          0,
+          mshadow::Stream<gpu>::GetStream(s)>>>(out,
+                                                in,
+                                                quantized_range,
+                                                quantization_scale_tmp,
+                                                elem_per_thread);
       } else if (load_ratio == 2) {
-        quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType, DstDType, mshadow::half::half_t>
-                          <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
-                          nthreads,
-                          0,
-                          mshadow::Stream<gpu>::GetStream(s)>>>(out,
-                                                                in,
-                                                                quantized_range,
-                                                                quantization_scale_tmp,
-                                                                elem_per_thread);
+        quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType,
+                                          DstDType, mshadow::half::half_t>
+          <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
+          nthreads,
+          0,
+          mshadow::Stream<gpu>::GetStream(s)>>>(out,
+                                                in,
+                                                quantized_range,
+                                                quantization_scale_tmp,
+                                                elem_per_thread);
       } else if (load_ratio == 1) {
-        quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType, DstDType, int8_t>
-                          <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
-                          nthreads,
-                          0,
-                          mshadow::Stream<gpu>::GetStream(s)>>>(out,
-                                                                in,
-                                                                quantized_range,
-                                                                quantization_scale_tmp,
-                                                                elem_per_thread);
+        quantize_v2_zero_centered_kernel<SrcDType, SrcLoadType,
+                                          DstDType, int8_t>
+          <<< (num_elem + (elem_per_thread*nthreads) - 1) / (elem_per_thread*nthreads),
+          nthreads,
+          0,
+          mshadow::Stream<gpu>::GetStream(s)>>>(out,
+                                                in,
+                                                quantized_range,
+                                                quantization_scale_tmp,
+                                                elem_per_thread);
       } else {
         LOG(FATAL) << "Unsupported Load Type.";
       }
@@ -198,13 +202,14 @@ class QuantizeV2Operator<gpu> {
         const size_t actual_float_size = sizeof(float);
         const size_t temp_reduce_size = ConfigReduce<gpu, FloatDType>(
             s, inputs[0].shape_, mxnet::TShape(1, 1), &src_shape, &dst_shape);
-        Tensor<gpu, 1, char> temp_space = ctx.requested[0].get_space_typed<gpu, 1, char>(
-            Shape1(2 * actual_float_size + temp_reduce_size), s);
+        Tensor<gpu, 1, char> temp_space =
+          ctx.requested[0].get_space_typed<gpu, 1, char>
+            (Shape1(2 * actual_float_size + temp_reduce_size), s);
         const int dev_id = ctx.run_ctx.ctx.dev_id;
-        TBlob in_min_t(reinterpret_cast<FloatDType *>(temp_space.dptr_), Shape1(1), gpu::kDevMask,
-                       dev_id);
-        TBlob in_max_t(reinterpret_cast<FloatDType *>(temp_space.dptr_) + 1, Shape1(1), gpu::kDevMask,
-                       dev_id);
+        TBlob in_min_t(reinterpret_cast<FloatDType *>(temp_space.dptr_),
+                        Shape1(1), gpu::kDevMask, dev_id);
+        TBlob in_max_t(reinterpret_cast<FloatDType *>(temp_space.dptr_) + 1,
+                        Shape1(1), gpu::kDevMask, dev_id);
         Tensor<gpu, 1, char> workspace(temp_space.dptr_ + 2 * actual_float_size,
                                        Shape1(temp_reduce_size), s);
         broadcast::Reduce<red::minimum, 2, FloatDType, mshadow::op::identity>(
@@ -243,13 +248,14 @@ class QuantizeV2Operator<gpu> {
         const size_t actual_float16_size = sizeof(FP16DType);
         const size_t temp_reduce_size = ConfigReduce<gpu, FP16DType>(
             s, inputs[0].shape_, mxnet::TShape(1, 1), &src_shape, &dst_shape);
-        Tensor<gpu, 1, char> temp_space = ctx.requested[0].get_space_typed<gpu, 1, char>(
-            Shape1(2 * actual_float16_size + temp_reduce_size), s);
+        Tensor<gpu, 1, char> temp_space =
+          ctx.requested[0].get_space_typed<gpu, 1, char>
+            (Shape1(2 * actual_float16_size + temp_reduce_size), s);
         const int dev_id = ctx.run_ctx.ctx.dev_id;
-        TBlob in_min_t(reinterpret_cast<FP16DType *>(temp_space.dptr_), Shape1(1), gpu::kDevMask,
-                       dev_id);
-        TBlob in_max_t(reinterpret_cast<FP16DType *>(temp_space.dptr_) + 1, Shape1(1), gpu::kDevMask,
-                       dev_id);
+        TBlob in_min_t(reinterpret_cast<FP16DType *>(temp_space.dptr_),
+                        Shape1(1), gpu::kDevMask, dev_id);
+        TBlob in_max_t(reinterpret_cast<FP16DType *>(temp_space.dptr_) + 1,
+                        Shape1(1), gpu::kDevMask, dev_id);
         Tensor<gpu, 1, char> workspace(temp_space.dptr_ + 2 * actual_float16_size,
                                        Shape1(temp_reduce_size), s);
         broadcast::Reduce<red::minimum, 2, FP16DType, mshadow::op::identity>(

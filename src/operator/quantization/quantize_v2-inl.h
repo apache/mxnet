@@ -86,7 +86,8 @@ struct quantize_v2_unsigned {
                                   const SrcDType *in, const RgDType *imin_range,
                                   const RgDType *imax_range, const double min_limit,
                                   const double max_limit) {
-    Map(i, out, omin_range, omax_range, in, static_cast<float>(*imin_range), static_cast<float>(*imax_range), min_limit, max_limit);
+    Map(i, out, omin_range, omax_range, in, static_cast<float>(*imin_range),
+        static_cast<float>(*imax_range), min_limit, max_limit);
   }
 };
 
@@ -115,7 +116,8 @@ struct quantize_v2_zero_centered {
   MSHADOW_XINLINE static void Map(int i, DstDType *out, float *omin_range, float *omax_range,
                                   const SrcDType *in, const RgDType *imin_range,
                                   const RgDType *imax_range, const float quantized_range) {
-    Map(i, out, omin_range, omax_range, in, static_cast<float>(*imin_range), static_cast<float>(*imax_range), quantized_range);
+    Map(i, out, omin_range, omax_range, in, static_cast<float>(*imin_range),
+        static_cast<float>(*imax_range), quantized_range);
   }
 };
 
@@ -266,10 +268,10 @@ class QuantizeV2Operator {
         Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
             Shape1(2 * actual_float16_size + temp_reduce_size), s);
         const int dev_id = ctx.run_ctx.ctx.dev_id;
-        TBlob in_min_t(reinterpret_cast<FP16DType *>(temp_space.dptr_), Shape1(1), xpu::kDevMask,
-                       dev_id);
-        TBlob in_max_t(reinterpret_cast<FP16DType *>(temp_space.dptr_) + 1, Shape1(1), xpu::kDevMask,
-                       dev_id);
+        TBlob in_min_t(reinterpret_cast<FP16DType *>(temp_space.dptr_),
+                        Shape1(1), xpu::kDevMask, dev_id);
+        TBlob in_max_t(reinterpret_cast<FP16DType *>(temp_space.dptr_) + 1,
+                        Shape1(1), xpu::kDevMask, dev_id);
         Tensor<xpu, 1, char> workspace(temp_space.dptr_ + 2 * actual_float16_size,
                                        Shape1(temp_reduce_size), s);
         broadcast::Reduce<red::minimum, 2, FP16DType, mshadow::op::identity>(
