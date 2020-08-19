@@ -1,0 +1,22 @@
+
+{
+    local:
+        cblas_*;
+        *portrf_;
+        *portri_;
+        *gelqf_;
+        *orglq_;
+        *geqrf_;
+        *orgqr_;
+        *syevd_;
+        *gesvd_;
+        *gesdd_;
+        *geev_;
+        *getrf_;
+        *getri_;
+        *gesv_;
+        *gelsd_;
+        *posv*;
+};
+
+
