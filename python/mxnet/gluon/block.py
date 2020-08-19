@@ -1094,7 +1094,7 @@ class HybridBlock(Block):
             raise ValueError(error_msg)
 
     def _call_cached_op(self, *args):
-        if not self._cached_op_args:
+        if not self._cached_op_args or not self._cached_graph:
             self._build_cache(*args)
 
         if not self._final_partitioned:
@@ -1249,6 +1249,7 @@ class HybridBlock(Block):
     def _clear_cached_op(self):
         self._cached_graph = ()
         self._cached_op = None
+        self._final_partitioned = False
 
     def register_child(self, block, name=None):
         if not isinstance(block, HybridBlock):
