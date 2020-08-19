@@ -4112,7 +4112,8 @@ def test_order():
                            expected=[gt_topk(dat=a_npy, axis=1, ret_typ="indices", k=1,
                                              is_ascend=True)])
 
-    for dtype in [np.float16, np.float32, np.float64]:
+    tested_types = [np.int32, np.int64, np.float16, np.float32, np.float64]
+    for dtype in tested_types:
         dshape = (5, 5, 5, 5)
         a_npy = np.arange(np.prod(dshape)).astype(dtype)
         np.random.shuffle(a_npy)

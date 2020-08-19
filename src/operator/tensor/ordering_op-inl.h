@@ -410,17 +410,18 @@ typedef void (*topK_func)(const RunContext &ctx,
                           const Resource *pResource);
 /*!
    * \brief Implementation of the TopK operation
-   *
-   *
-   * \param ctx the running context
-   * \param resource temporary resource handler
-   * \param src the Source blob
-   * \param ret the destination blobs
-   * \param k the K elements to keep
-   * \param param the topk parameters
    * \tparam xpu the device type.
    * \tparam DType type of the output value/mask.
    * \tparam IDType type of the output indices.
+   *
+   * \param ctx the running context
+   * \param req the operation request types to Forward and Backward
+   * \param src the Source blob
+   * \param ret the destination blobs
+   * \param param the topk parameters
+   * \param workspace_curr_ptr allocated memory
+   * \param temp_size length of allocated memory
+   * \param resource temporary resource handler
    */
 template<typename xpu, typename DType, typename IDType>
 void TopKImpl(const RunContext &ctx,
@@ -465,7 +466,6 @@ void TopKImpl(const RunContext &ctx,
     const auto workspace_size = temp_size + size_1 + size_2 + size_3;
     workspace = pResource->get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
     workspace_curr_ptr = workspace.dptr_;
-    id_size = size_2;
   } else {
     id_size = size_2;
   }

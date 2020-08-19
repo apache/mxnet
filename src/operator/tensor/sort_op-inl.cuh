@@ -175,17 +175,21 @@ SortByKeyImpl(mshadow::Tensor<gpu, 1, KDType>* keys,
     const int num_segments = batch_size;
     const int segment_length = (num_items + num_segments - 1) / num_segments;
 
-    KDType* keys_out_ptr = sorted_keys? sorted_keys->dptr_ :
-                           reinterpret_cast<KDType *>(workspace->dptr_);
-    VDType* values_out_ptr = sorted_values? sorted_values->dptr_ :
-                             reinterpret_cast<VDType *>(workspace->dptr_ + keys_bytes);
-    auto *d_segment_offsets = reinterpret_cast<int *>(workspace->dptr_ + keys_bytes + values_bytes);
-    void* temp_storage = reinterpret_cast<void *>(d_segment_offsets + (useBatch? 2 : 0));
-
+    auto *d_segment_offsets = reinterpret_cast<int *>(workspace->dptr_);
+    size_t start_keys = 0;
     if (useBatch) {
+      const auto alignment = std::max(sizeof(KDType), sizeof(index_t));
+      start_keys = PadBytes(sizeof(index_t) * (num_segments + 1), alignment);
       mxnet_op::Kernel<range_fwd, gpu>::Launch(stream_, (num_segments + 1), 1, 0,
                                                segment_length, kWriteTo, d_segment_offsets);
     }
+
+    const auto start_values = start_keys + keys_bytes;
+    auto* keys_out_ptr = sorted_keys? sorted_keys->dptr_ :
+                         reinterpret_cast<KDType *>(workspace->dptr_ + start_keys);
+    auto* values_out_ptr = sorted_values? sorted_values->dptr_ :
+                           reinterpret_cast<VDType *>(workspace->dptr_ + start_values);
+    auto* temp_storage = reinterpret_cast<void *>(workspace->dptr_ + start_values + values_bytes);
 
     // Get the size of internal storage (for checking purposes only)
     size_t sortpairs_bytes = 0;
