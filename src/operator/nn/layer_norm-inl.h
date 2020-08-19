@@ -115,7 +115,7 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
   });
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
 
-  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
   if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
     common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for float16 inputs for LayerNorm. "
                     "See https://mxnet.apache.org/api/faq/env_var "
@@ -259,7 +259,7 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
                                                {normalized_data, std},
                                                {kWriteTo}, {normalized_data});
   // Calculate grad_beta
-  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
   if (req[2] != kNullOp) {
     MSHADOW_REAL_TYPE_SWITCH(outputs[2].type_flag_, DType, {
       BROADCAST_NDIM_SWITCH(red_exclude_dst_shape.ndim(), NDim, {

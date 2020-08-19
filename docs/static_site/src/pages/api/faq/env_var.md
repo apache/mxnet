@@ -377,7 +377,7 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - Set ```MXNET_SUBGRAPH_BACKEND=NONE``` to disable subgraph backend.
 
 * MXNET_SAFE_ACCUMULATION
-  - Values: Values: 0(false) or 1(true) ```(default=0)```
+  - Values: Values: 0(false) or 1(true) ```(default=1)```
   - If this variable is set, the accumulation will enter the safe mode, meaning accumulation is done in a data type of higher precision than
     the input data type, leading to more accurate accumulation results with a possible performance loss and backward compatibility loss.
     For example, when the variable is set to 1(true), if the input data type is float16, then the accumulation will be done
