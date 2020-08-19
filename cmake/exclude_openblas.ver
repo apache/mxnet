@@ -16,7 +16,6 @@
         *getri_;
         *gesv_;
         *gelsd_;
-        *posv*;
 };
 
 
