@@ -17,7 +17,7 @@
 
 # Step 1: Manipulate data with NP on MXNet
 
-This getting started exercise introduces the `np` package, which is similar to Numpy. For more information, please see [Differences between NP on MXNet and NumPy](/api/python/docs/tutorials/getting-started/deepnumpy/deepnumpy-vs-numpy.html).
+This getting started exercise introduces the `np` package, which is similar to Numpy. For more information, please see [Differences between NP on MXNet and NumPy](/api/python/docs/tutorials/getting-started/np/np-vs-numpy.html).
 
 ## Import packages and create an array
 

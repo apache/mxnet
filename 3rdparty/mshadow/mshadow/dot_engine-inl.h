@@ -299,17 +299,17 @@ struct BLASEngine<cpu, float> {
   }
   inline static void gemm(Stream<cpu> *stream,
                           bool transa, bool transb,
-                          int m, int n, int k, float alpha,
-                          const float *A, int lda, const float *B, int ldb,
-                          float beta, float *C, int ldc) {
+                          index_t m, index_t n, index_t k, float alpha,
+                          const float *A, index_t lda, const float *B, index_t ldb,
+                          float beta, float *C, index_t ldc) {
     cblas_sgemm(CblasColMajor, GetT(transa), GetT(transb),
                 m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
   }
   inline static void batched_gemm(Stream<cpu> *stream,
                                   bool transa, bool transb,
-                                  int m, int n, int k, float alpha,
-                                  const float *A, int lda, const float *B, int ldb,
-                                  float beta, float *C, int ldc, int batch_count,
+                                  index_t m, index_t n, index_t k, float alpha,
+                                  const float *A, index_t lda, const float *B, index_t ldb,
+                                  float beta, float *C, index_t ldc, index_t batch_count,
                                   float **workspace) {
 #if (MSHADOW_USE_MKL && INTEL_MKL_VERSION >= 20160000)
   // since same m/n/k is used for all single gemms, so we put all gemms into one group
@@ -408,17 +408,17 @@ struct BLASEngine<cpu, double> {
   }
   inline static void gemm(Stream<cpu> *stream,
                           bool transa, bool transb,
-                          int m, int n, int k, double alpha,
-                          const double *A, int lda, const double *B, int ldb,
-                          double beta, double *C, int ldc) {
+                          index_t m, index_t n, index_t k, double alpha,
+                          const double *A, index_t lda, const double *B, index_t ldb,
+                          double beta, double *C, index_t ldc) {
     cblas_dgemm(CblasColMajor, GetT(transa), GetT(transb),
                 m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
   }
   inline static void batched_gemm(Stream<cpu> *stream,
                                   bool transa, bool transb,
-                                  int m, int n, int k, double alpha,
-                                  const double *A, int lda, const double *B, int ldb,
-                                  double beta, double *C, int ldc, int batch_count,
+                                  index_t m, index_t n, index_t k, double alpha,
+                                  const double *A, index_t lda, const double *B, index_t ldb,
+                                  double beta, double *C, index_t ldc, index_t batch_count,
                                   double **workspace) {
 #if (MSHADOW_USE_MKL && INTEL_MKL_VERSION >= 20160000)
   // since same m/n/k is used for all single gemms, so we put all gemms into one group

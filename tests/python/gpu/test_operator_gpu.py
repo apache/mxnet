@@ -26,7 +26,7 @@ import pytest
 import itertools
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
-from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same
+from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same, environment
 from mxnet.base import MXNetError
 from mxnet import autograd
 
@@ -654,12 +654,12 @@ def _conv_with_num_streams(seed):
 @pytest.mark.skip(reason="skipping for now due to severe flakiness")
 @with_seed()
 def test_convolution_multiple_streams():
-    for num_streams in [1, 2]:
+    for num_streams in ['1', '2']:
         for engine in ['NaiveEngine', 'ThreadedEngine', 'ThreadedEnginePerDevice']:
-            print("Starting engine %s with %d streams." % (engine, num_streams), file=sys.stderr)
+            print('Starting engine {} with {} streams.'.format(engine, num_streams), file=sys.stderr)
             run_in_spawned_process(_conv_with_num_streams,
                 {'MXNET_GPU_WORKER_NSTREAMS' : num_streams, 'MXNET_ENGINE_TYPE' : engine})
-            print("Finished engine %s with %d streams." % (engine, num_streams), file=sys.stderr)
+            print('Finished engine {} with {} streams.'.format(engine, num_streams), file=sys.stderr)
 
 
 # This test is designed to expose an issue with cudnn v7.1.4 algo find() when invoked with large c.
@@ -1522,19 +1522,23 @@ def test_lrn():
                     reason="Testing with naive engine consistently triggers illegal memory access. Tracked in #17713")
 def test_embedding_with_type():
     def test_embedding_helper(data_types, weight_types, low_pad, high_pad):
-        NVD = [[20, 10, 20], [200, 10, 300]]
-        for N, V, D in NVD:
-            sym = mx.sym.Embedding(name='embedding', input_dim=V, output_dim=D)
-            ctx_list = []
-            for data_type in data_types:
-                for weight_type in weight_types:
-                    ctx_list.append({'ctx': mx.gpu(0), 'embedding_data': (N,),
-                        'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
-                    ctx_list.append({'ctx': mx.cpu(0), 'embedding_data': (N,),
-                        'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
-            arg_params = {'embedding_data': np.random.randint(low=-low_pad, high=V+high_pad, size=(N,))}
-            check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
-                              arg_params=arg_params, scale=0.1)
+        NVD = [[20, 10, 20], [200, 10, 300], [10000, 4, 20]]
+        for safe_accumulation in ['0', '1', None]:
+            for N, V, D in NVD:
+                with environment('MXNET_SAFE_ACCUMULATION', safe_accumulation):
+                    if N > 1000 and safe_accumulation != '1':
+                        break
+                    sym = mx.sym.Embedding(name='embedding', input_dim=V, output_dim=D)
+                    ctx_list = []
+                    for data_type in data_types:
+                        for weight_type in weight_types:
+                            ctx_list.append({'ctx': mx.gpu(0), 'embedding_data': (N,),
+                                'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
+                            ctx_list.append({'ctx': mx.cpu(0), 'embedding_data': (N,),
+                                'type_dict': {'embedding_data': data_type, 'embedding_weight': weight_type}})
+                    arg_params = {'embedding_data': np.random.randint(low=-low_pad, high=V+high_pad, size=(N,))}
+                    check_consistency(sym, ctx_list, grad_req={'embedding_data': 'null','embedding_weight': 'write'},
+                                      arg_params=arg_params, scale=0.1)
 
     data_types = [np.float16, np.float32, np.float64, np.int32]
     weight_types = [np.float16, np.float32, np.float64]
@@ -1547,47 +1551,91 @@ def test_embedding_with_type():
 @with_seed()
 def test_take_with_type():
     sym = mx.sym.take(name='take')
-    for data_ndim in range(2, 5):
-        for idx_ndim in range(1, 4):
-            data_shape = ()
-            for _ in range(data_ndim):
-                data_shape += (np.random.randint(low=3, high=6), )
-            idx_shape = ()
-            for _ in range(idx_ndim):
-                idx_shape += (np.random.randint(low=3, high=5), )
-            ctx_list = [{'ctx': mx.gpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float64,
-                                       'take_a': np.float64}},
-                        {'ctx': mx.gpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float32,
-                                       'take_a': np.float32}},
-                        {'ctx': mx.gpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float16,
-                                       'take_a': np.float16}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float64,
-                                       'take_a': np.float64}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float32,
-                                       'take_a': np.float32}},
-                        {'ctx': mx.cpu(0), 'take_indices': idx_shape,
-                         'take_a': data_shape,
-                         'type_dict': {'take_indices': np.float16,
-                                       'take_a': np.float16}}]
-            arg_params = {'take_indices': np.random.randint(low=0,
-                                                            high=data_shape[0],
-                                                            size=idx_shape),
-                          'take_a': np.random.normal(size=data_shape)}
-            check_consistency(sym, ctx_list,
-                              grad_req={'take_indices': 'null',
-                                        'take_a': 'write'},
-                              arg_params=arg_params)
+    for safe_accumulation in ['0', '1', None]:
+        for data_ndim in range(2, 5):
+            for idx_ndim in range(1, 4):
+                data_shape = ()
+                for _ in range(data_ndim):
+                    data_shape += (np.random.randint(low=3, high=6), )
+                idx_shape = ()
+                for _ in range(idx_ndim):
+                    idx_shape += (np.random.randint(low=3, high=5), )
+                ctx_list = [{'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float64,
+                                           'take_a': np.float64}},
+                            {'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float32,
+                                           'take_a': np.float32}},
+                            {'ctx': mx.gpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float16,
+                                           'take_a': np.float16}},
+                            {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float64,
+                                           'take_a': np.float64}},
+                            {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float32,
+                                           'take_a': np.float32}},
+                            {'ctx': mx.cpu(0), 'take_indices': idx_shape,
+                             'take_a': data_shape,
+                             'type_dict': {'take_indices': np.float16,
+                                           'take_a': np.float16}}]
+                arg_params = {'take_indices': np.random.randint(low=0,
+                                                                high=data_shape[0],
+                                                                size=idx_shape),
+                              'take_a': np.random.normal(size=data_shape)}
+                with environment('MXNET_SAFE_ACCUMULATION', safe_accumulation):
+                    check_consistency(sym, ctx_list,
+                                      grad_req={'take_indices': 'null',
+                                                'take_a': 'write'},
+                                      arg_params=arg_params)
 
+    # check a large num of indices: may underflow calculating gradient in FP16,
+    # if MXNET_SAFE_ACCUMULATION is not activated
+    with environment('MXNET_SAFE_ACCUMULATION', '1'):
+        data_size = 4
+        indices_size = 10000
+        out_dim = 20
+        data_types = [np.float16, np.float32, np.float64]
+        indices_types = [np.float16, np.float32, np.float64, np.int32]
+        # axis 0
+        sym = mx.sym.take(name='take', axis=0)
+        ctx_list = []
+        for data_type in data_types:
+            for index_type in indices_types:
+                ctx_list.append({'ctx': mx.cpu(0), 'take_indices': (indices_size,),
+                    'take_a': (data_size, out_dim),
+                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                ctx_list.append({'ctx': mx.gpu(0), 'take_indices': (indices_size,),
+                    'take_a': (data_size, out_dim),
+                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                arg_params = {'take_indices': np.random.randint(0, data_size,
+                              size=(indices_size,)),
+                              'take_a': np.random.normal(size=(data_size, out_dim))}
+                check_consistency(sym, ctx_list,
+                                  grad_req={'take_indices': 'null','take_a': 'write'},
+                                  arg_params=arg_params)
+        # axis 1
+        sym = mx.sym.take(name='take', axis=1)
+        ctx_list = []
+        for data_type in data_types:
+            for index_type in indices_types:
+                ctx_list.append({'ctx': mx.cpu(0), 'take_indices': (indices_size,),
+                    'take_a': (data_size, out_dim),
+                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                ctx_list.append({'ctx': mx.gpu(0), 'take_indices': (indices_size,),
+                    'take_a': (data_size, out_dim),
+                    'type_dict': {'take_indices': index_type, 'take_a': data_type}})
+                arg_params = {'take_indices': np.random.randint(0, data_size,
+                              size=(indices_size,)),
+                              'take_a': np.random.normal(size=(data_size, out_dim))}
+                check_consistency(sym, ctx_list,
+                                  grad_req={'take_indices': 'null','take_a': 'write'},
+                                  arg_params=arg_params)
 
 @with_seed()
 @pytest.mark.serial
@@ -2009,22 +2057,22 @@ def test_multi_proposal_op():
 
 # The following 2 functions launch 0-thread kernels, an error that should be caught and signaled.
 def kernel_error_check_imperative():
-    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    with mx.np_shape(active=True):
-        a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
-        b = mx.nd.array([],ctx=mx.gpu(0))
-        c = (a / b).asnumpy()
+    with environment('MXNET_ENGINE_TYPE', 'NaiveEngine'):
+        with mx.np_shape(active=True):
+            a = mx.nd.array([1,2,3],ctx=mx.gpu(0))
+            b = mx.nd.array([],ctx=mx.gpu(0))
+            c = (a / b).asnumpy()
 
 def kernel_error_check_symbolic():
-    os.environ['MXNET_ENGINE_TYPE'] = 'NaiveEngine'
-    with mx.np_shape(active=True):
-        a = mx.sym.Variable('a')
-        b = mx.sym.Variable('b')
-        c = a / b
-        f = c._bind(mx.gpu(0), { 'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
-                                'b':mx.nd.array([],ctx=mx.gpu(0))})
-        f.forward()
-        g = f.outputs[0].asnumpy()
+    with environment('MXNET_ENGINE_TYPE', 'NaiveEngine'):
+        with mx.np_shape(active=True):
+            a = mx.sym.Variable('a')
+            b = mx.sym.Variable('b')
+            c = a / b
+            f = c.bind(mx.gpu(0), {'a':mx.nd.array([1,2,3],ctx=mx.gpu(0)),
+                                   'b':mx.nd.array([],ctx=mx.gpu(0))})
+            f.forward()
+            g = f.outputs[0].asnumpy()
 
 @pytest.mark.serial
 def test_kernel_error_checking():
@@ -2223,9 +2271,9 @@ def test_bulking():
         # Create shared variable to return measured time from test process
         time_per_iteration = mp.Manager().Value('d', 0.0)
         if not run_in_spawned_process(_test_bulking_in_process,
-                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD' : seg_sizes[0],
-                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : seg_sizes[1],
-                                       'MXNET_EXEC_BULK_EXEC_TRAIN' : seg_sizes[2]},
+                                      {'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_FWD' : str(seg_sizes[0]),
+                                       'MXNET_EXEC_BULK_EXEC_MAX_NODE_TRAIN_BWD' : str(seg_sizes[1]),
+                                       'MXNET_EXEC_BULK_EXEC_TRAIN' : str(seg_sizes[2])},
                                       time_per_iteration):
             # skip test since the python version can't run it properly.  Warning msg was logged.
             return

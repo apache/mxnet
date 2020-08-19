@@ -56,16 +56,6 @@ def test_loss_ndarray():
     assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]), rtol=1e-3, atol=1e-4)
 
 
-def get_net(num_hidden, flatten=True):
-    data = mx.symbol.Variable('data')
-    fc1 = mx.symbol.FullyConnected(data, name='fc1', num_hidden=128, flatten=flatten)
-    act1 = mx.symbol.Activation(fc1, name='relu1', act_type="relu")
-    fc2 = mx.symbol.FullyConnected(act1, name = 'fc2', num_hidden = 64, flatten=flatten)
-    act2 = mx.symbol.Activation(fc2, name='relu2', act_type="relu")
-    fc3 = mx.symbol.FullyConnected(act2, name='fc3', num_hidden=num_hidden, flatten=flatten)
-    return fc3
-
-
 @with_seed()
 def test_bce_equal_ce2():
     N = 100
@@ -163,7 +153,7 @@ def test_cosine_loss():
     denominator = mx.nd.sqrt(mx.nd.sum(input1**2, axis=1, keepdims=True)) \
     * mx.nd.sqrt(mx.nd.sum(input2**2, axis=1, keepdims=True))
     numpy_loss = mx.nd.where(label == 1, 1-numerator/denominator, \
-    mx.nd.broadcast_maximum(mx.nd.array([0]), numerator/denominator, axis=1))
+    mx.nd.broadcast_maximum(mx.nd.array([0]), numerator/denominator, axis=1)).reshape((-1,))
     assert_almost_equal(loss.asnumpy(), numpy_loss.asnumpy(), rtol=1e-3, atol=1e-5)
 
 @xfail_when_nonstandard_decimal_separator
@@ -186,25 +176,23 @@ def test_poisson_nllloss():
     #Calculating by brute formula for default value of from_logits = True
 
     # 1) Testing for flag logits = True
-    brute_loss = np.mean(np.exp(pred.asnumpy()) - target.asnumpy() * pred.asnumpy())
+    brute_loss = np.mean(np.exp(pred.asnumpy()) - target.asnumpy() * pred.asnumpy(), axis=1)
     loss_withlogits = Loss(pred, target)
-    assert_almost_equal(brute_loss, loss_withlogits.asscalar())
+    assert_almost_equal(brute_loss, loss_withlogits)
 
     #2) Testing for flag logits = False
     loss_no_logits = Loss_no_logits(pred, target)
-    np_loss_no_logits = np.mean(pred.asnumpy() - target.asnumpy() * np.log(pred.asnumpy() + 1e-08))
-    if np.isnan(loss_no_logits.asscalar()):
-        assert_almost_equal(np.isnan(np_loss_no_logits), np.isnan(loss_no_logits.asscalar()))
-    else:
-        assert_almost_equal(np_loss_no_logits, loss_no_logits.asscalar())
+    np_loss_no_logits = np.mean(pred.asnumpy() - target.asnumpy() * np.log(pred.asnumpy() + 1e-08),
+                                axis=1)
+    assert_almost_equal(np_loss_no_logits, loss_no_logits.asnumpy())
 
     #3) Testing for Sterling approximation
     shape=(2, 3)
     np_pred = np.random.uniform(1, 5, shape)
     np_target = np.random.uniform(1, 5, shape)
     np_compute_full = np.mean((np_pred - np_target * np.log(np_pred + 1e-08)) + ((np_target * np.log(np_target)-\
-     np_target + 0.5 * np.log(2 * np_target * np.pi))*(np_target > 1)))
+     np_target + 0.5 * np.log(2 * np_target * np.pi))*(np_target > 1)), axis=1)
     Loss_compute_full = gluon.loss.PoissonNLLLoss(from_logits=False, compute_full=True)
     loss_compute_full = Loss_compute_full(mx.nd.array(np_pred), mx.nd.array(np_target))
-    assert_almost_equal(np_compute_full, loss_compute_full.asscalar())
+    assert_almost_equal(np_compute_full, loss_compute_full)
 

@@ -854,7 +854,7 @@ def _ufunc_helper(lhs, rhs, fn_array, fn_scalar, lfn_scalar, rfn_scalar=None, ou
         result array or scalar
     """
     from ...numpy import ndarray
-    from ..ndarray import from_numpy  # pylint: disable=unused-import
+    from ...numpy_extension import from_numpy  # pylint: disable=unused-import
     if isinstance(lhs, numeric_types):
         if isinstance(rhs, numeric_types):
             return fn_scalar(lhs, rhs, out=out)
@@ -1620,7 +1620,7 @@ def argsort(a, axis=-1, kind=None, order=None):
     if order is not None:
         raise NotImplementedError("order not supported here")
 
-    return _npi.argsort(data=a, axis=axis, is_ascend=True, dtype='int64')
+    return _api_internal.argsort(a, axis, True, 'int64')
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -1664,7 +1664,7 @@ def sort(a, axis=-1, kind=None, order=None):
     """
     if order is not None:
         raise NotImplementedError("order not supported here")
-    return _npi.sort(data=a, axis=axis, is_ascend=True)
+    return _api_internal.sort(a, axis, True)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4581,7 +4581,7 @@ def vstack(arrays, out=None):
         return [arr for arr in arrays]
 
     arrays = get_list(arrays)
-    return _npi.vstack(*arrays)
+    return _api_internal.vstack(*arrays)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -4626,7 +4626,7 @@ def row_stack(arrays):
         return [arr for arr in arrays]
 
     arrays = get_list(arrays)
-    return _npi.vstack(*arrays)
+    return _api_internal.vstack(*arrays)
 
 
 @set_module('mxnet.ndarray.numpy')
@@ -8049,7 +8049,7 @@ def shares_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `may_share_memory` in MXNet DeepNumPy
+    - Actually it is same as `may_share_memory` in MXNet np
     """
     return _api_internal.share_memory(a, b).item()
 
@@ -8090,7 +8090,7 @@ def may_share_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `shares_memory` in MXNet DeepNumPy
+    - Actually it is same as `shares_memory` in MXNet np
     """
     return _api_internal.share_memory(a, b).item()
 

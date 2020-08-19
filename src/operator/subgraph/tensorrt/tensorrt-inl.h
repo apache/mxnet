@@ -267,6 +267,23 @@ class TensorrtProperty : public SubgraphProperty {
     return std::make_shared<TensorrtProperty>();
   }
 
+  void PrePartition(const nnvm::Graph& g,
+    const std::unordered_map<std::string, std::string>& options_map) override {
+    auto& in_arg_names = g.GetAttr<std::vector<std::string>>("in_arg_names");
+    auto& in_aux_names = g.GetAttr<std::vector<std::string>>("in_aux_names");
+    NDArray **in_args_ptr = g.GetAttr<NDArray**>("in_args");
+    NDArray **in_aux_ptr = g.GetAttr<NDArray**>("in_aux");
+    in_args_dict.clear();
+    in_aux_dict.clear();
+    // we trust the Python API, len(in_arg_names) == len(in_args_ptr)
+    for (unsigned i = 0; i < in_arg_names.size(); ++i) {
+      in_args_dict[in_arg_names[i]] = in_args_ptr[i];
+    }
+    for (unsigned i = 0; i < in_aux_names.size(); ++i) {
+      in_aux_dict[in_aux_names[i]] = in_aux_ptr[i];
+    }
+  }
+
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
@@ -280,16 +297,33 @@ class TensorrtProperty : public SubgraphProperty {
     n->attrs.op = Op::Get("_TensorRT");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
+
+    // Mapping subgraph params with NDArrays
+    TRTParam param;
     std::ostringstream params_oss;
-    for (auto &e : new_sym.ListInputNames(nnvm::Symbol::kAll)) {
-      params_oss << e << ";";
+    for (auto &param_name : new_sym.ListInputNames(nnvm::Symbol::kAll)) {
+      NDArray *cache = nullptr;
+      auto it_args = in_args_dict.find(param_name);
+      if (it_args != in_args_dict.end()) {
+        cache = it_args->second;
+      } else {
+        auto it_aux = in_aux_dict.find(param_name);
+        if (it_aux != in_aux_dict.end()) {
+          cache = it_aux->second;
+        }
+      }
+      if (cache != nullptr) {
+        param.params_map.emplace(param_name, cache->Copy(Context()));
+        param.params_map[param_name].WaitToRead();
+        params_oss << param_name << ";";
+      }
     }
     auto tensorrt_params_names = params_oss.str();
-    tensorrt_params_names.pop_back();
-    n->attrs.dict["subgraph_params_names"] = tensorrt_params_names;
-    TRTParam param;
+    if (!tensorrt_params_names.empty()) {
+      tensorrt_params_names.pop_back();
+    }
     n->attrs.parsed = param;
-    n->op()->attr_parser(&(n->attrs));
+    n->attrs.dict["subgraph_params_names"] = tensorrt_params_names;
     return n;
   }
 
@@ -328,6 +362,8 @@ class TensorrtProperty : public SubgraphProperty {
     }
     subgraph_node->attrs.parsed = std::move(_params);
   }
+
+  std::unordered_map<std::string, NDArray*> in_args_dict, in_aux_dict;
 };
 
 

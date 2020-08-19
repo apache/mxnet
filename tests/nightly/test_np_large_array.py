@@ -40,7 +40,6 @@ INT_OVERFLOW = 2**31
 HALF_INT_OVERFLOW = 2**30
 DOUBLE_INT_OVERFLOW = 2**32
 
-'''
 @use_np
 def test_gluon_embedding():
     m = gluon.nn.Embedding(SMALL_Y, MEDIUM_X)
@@ -80,7 +79,6 @@ def test_softmax():
         output = npx.softmax(input_data, axis=axis)
         assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
 
-'''
 '''
   _ _ _  _ _ __  _ __ _  _
  | ' \ || | '  \| '_ \ || |
@@ -464,6 +462,19 @@ def test_copysign():
     #B.backward()
     #assert A.grad.shape == (INT_OVERFLOW, 2)
     
+@pytest.mark.skip(reason="CI hasn't switch to ILP64 OpenBLAS yet")
+@use_np
+def test_dot():
+    A = np.ones((1, INT_OVERFLOW), dtype='float32')
+    B = np.ones((INT_OVERFLOW, 1), dtype='float32')
+    A.attach_grad()
+    with mx.autograd.record():
+        C = np.dot(A, B)
+    assert_almost_equal(C, [INT_OVERFLOW], rtol=1e-5, atol=1e-5)
+    C.backward()
+    assert A.grad.shape == (1, INT_OVERFLOW)
+    assert A.grad[0][0] == 1
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
@@ -734,4 +745,3 @@ def test_smooth_l1():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, )
     assert A.grad[0][0] == 0
-

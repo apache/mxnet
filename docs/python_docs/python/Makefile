@@ -30,12 +30,12 @@ OBJ = $(patsubst %.rst, build/%.rst, $(RST)) \
 
 build/%.ipynb: %.md
 	@mkdir -p $(@D)
-	python scripts/md2ipynb.py $< $@
+	python3 scripts/md2ipynb.py $< $@
 
 
 build/%.rst: %.rst
 	@mkdir -p $(@D)
-	# python scripts/process_rst.py $< $@
+	# python3 scripts/process_rst.py $< $@
 	cp $< $@
 
 build/%: %

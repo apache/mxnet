@@ -278,7 +278,7 @@ def compile_unix_tensorrt_gpu(lib_name) {
         ws('workspace/build-tensorrt') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_tensorrt', 'build_ubuntu_gpu_tensorrt', false)
+            utils.docker_run('ubuntu_gpu_cu102', 'build_ubuntu_gpu_tensorrt', false)
             utils.pack_lib(lib_name, mx_tensorrt_lib)
           }
         }
@@ -1044,22 +1044,6 @@ def test_qemu_armv8_cpu(lib_name) {
     }]
 }
 
-// This creates the MXNet binary needed for generating different docs sets
-def compile_unix_lite(lib_name) {
-    return ['MXNet lib': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_docs', false)
-            utils.pack_lib(lib_name, mx_lib, false)
-          }
-        }
-      }
-    }]
-}
-
-
 def should_pack_website() {
   if (env.BRANCH_NAME) {
     if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
@@ -1081,7 +1065,7 @@ def docs_python(lib_name) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib, false)
-            utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
+            utils.docker_run('ubuntu_cpu', 'build_python_docs', false)
             if (should_pack_website()) {
               utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
             }
@@ -1228,7 +1212,7 @@ def sanity_rat_license() {
       node(NODE_LINUX_CPU) {
         ws('workspace/sanity-rat') {
           utils.init_git()
-          utils.docker_run('ubuntu_rat', 'nightly_test_rat_check', false)
+          utils.docker_run('ubuntu_cpu', 'test_rat_check', false)
         }
       }
     }]
@@ -1250,7 +1234,6 @@ def misc_test_docker_cache_build() {
     node(NODE_LINUX_CPU) {
       ws('workspace/docker_cache') {
         utils.init_git()
-        sh "python3 ./ci/docker_cache.py --docker-registry ${env.DOCKER_CACHE_REGISTRY} --no-publish"
         sh "cd ci && docker-compose -f docker/docker-compose.yml pull && docker-compose -f docker/docker-compose.yml build --parallel"
       }
     }

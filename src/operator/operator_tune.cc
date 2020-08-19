@@ -16,7 +16,7 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <float.h>
+#include <cfloat>
 #include <atomic>
 #include "./mxnet_op.h"
 #include "./mshadow_op.h"

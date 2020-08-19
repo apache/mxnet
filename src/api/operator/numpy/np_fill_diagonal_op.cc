@@ -44,7 +44,7 @@ MXNET_REGISTER_API("_npi.fill_diagonal")
   }
   param.wrap = args[2].operator bool();
 
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyFillDiagonalParam>(&attrs);
 

@@ -44,7 +44,7 @@ We will use the [Oxford 102 Category Flower Dataset](http://www.robots.ox.ac.uk/
 We have prepared a utility file to help you download and organize your data into train, test, and validation sets. Run the following Python code to download and prepare the data:
 
 
-```python
+```{.python .input}
 import mxnet as mx
 data_util_file = "oxford_102_flower_dataset.py"
 base_url = "https://raw.githubusercontent.com/apache/incubator-mxnet/master/docs/tutorial_utils/data/{}?raw=true"
@@ -65,7 +65,7 @@ Now your data will be organized into train, test, and validation sets, images be
 Now let's first import necessary packages:
 
 
-```python
+```{.python .input}
 import math
 import os
 import time
@@ -80,7 +80,7 @@ from mxnet.gluon.model_zoo.vision import resnet50_v2
 Next, we define the hyper-parameters that we will use for fine-tuning. We will use the [MXNet learning rate scheduler](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules.html) to adjust learning rates during training.
 Here we set the `epochs` to 1 for quick demonstration, please change to 40 for actual training.
 
-```python
+```{.python .input}
 classes = 102
 epochs = 1
 lr = 0.001
@@ -108,7 +108,7 @@ Now we will apply data augmentations on training images. This makes minor altera
 
 For validation and inference, we only need to apply step 1, 4, and 5. We also need to save the mean and standard deviation values for [inference using C++](/api/cpp/docs/tutorials/cpp_inference).
 
-```python
+```{.python .input}
 jitter_param = 0.4
 lighting_param = 0.1
 
@@ -165,7 +165,7 @@ Before we go to training, one unique Gluon feature you should be aware of is hyb
 
 
 
-```python
+```{.python .input}
 # load pre-trained resnet50_v2 from model zoo
 finetune_net = resnet50_v2(pretrained=True, ctx=ctx)
 
@@ -195,7 +195,7 @@ Now let's define the test metrics and start fine-tuning.
 
 
 
-```python
+```{.python .input}
 def test(net, val_data, ctx):
     metric = mx.metric.Accuracy()
     for i, (data, label) in enumerate(val_data):
@@ -254,7 +254,7 @@ We now have a trained our custom model. This can be serialized into model files 
 
 
 
-```python
+```{.python .input}
 finetune_net.export("flower-recognition", epoch=epochs)
 
 ```
