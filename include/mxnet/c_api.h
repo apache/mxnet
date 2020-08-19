@@ -2166,6 +2166,25 @@ MXNET_DLL int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle 
  * \param num_options number of key value pairs
  * \param keys keys for options
  * \param vals values corresponding to keys
+ * \param num_input_shapes number of input shapes
+ * \param input_shape_names names of the input shapes
+ * \param input_shape_data pointer to the contiguous data shapes
+ * \param input_shape_idx array of per shape starting idx, the shape length for the i-th input shape
+ * is calculate as input_shape_idx[i+1] - input_shape_idx[i]
+ * \param num_input_dtypes number of input data types
+ * \param input_dtype_names array of names of the input data types
+ * \param input_dtypes array of values of the input data types
+ * \param num_input_stypesnumber of input storage types
+ * \param input_stype_names array of names of the input storage types
+ * \param input_stypes array of values of input storage types
+ * \param skip_infer if the optimization should skip the attribute inferences
+ * (to use if the backend does not require shape inference)
+ * \param new_args_cnt pointer a number to store the number of new args
+ * \param new_args_handle pointer on array to store the new args handles
+ * \param new_arg_names_handle pointer on array to store the new args names
+ * \param new_aux_cnt pointer a number to store the number of new aux
+ * \param new_aux_handle pointer on array to store the new aux handles
+ * \param new_aux_names_handle pointer on array to store the new aux names
  */
 MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    const char* backend_name,
@@ -2178,6 +2197,17 @@ MXNET_DLL int MXOptimizeForBackend(SymbolHandle sym_handle,
                                    const mx_uint num_options,
                                    const char** keys,
                                    const char** vals,
+                                   const uint32_t num_input_shapes,
+                                   const char** input_shape_names,
+                                   const int64_t* input_shape_data,
+                                   const uint32_t* input_shape_idx,
+                                   const uint32_t num_input_dtypes,
+                                   const char** input_dtype_names,
+                                   const int* input_dtypes,
+                                   const uint32_t num_input_stypes,
+                                   const char** input_stype_names,
+                                   const int* input_stypes,
+                                   bool skip_infer,
                                    int* new_args_cnt,
                                    NDArrayHandle** new_args_handle,
                                    char*** new_arg_names_handle,

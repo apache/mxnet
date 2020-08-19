@@ -239,6 +239,7 @@ if(USE_TENSORRT)
   include_directories(3rdparty/onnx-tensorrt/third_party/onnx/)
   add_definitions(-DMXNET_USE_TENSORRT=1)
   add_definitions(-DONNX_NAMESPACE=onnx)
+  add_definitions(-DONNX_ML=1)
 
   find_package(Protobuf REQUIRED)
 
@@ -248,14 +249,11 @@ if(USE_TENSORRT)
   find_library(ONNX_PROTO_LIBRARY NAMES libonnx_proto.so REQUIRED
           PATHS ${ONNX_PATH}
           DOC "Path to onnx_proto library.")
-  find_library(ONNX_TRT_RUNTIME_LIBRARY NAMES libnvonnxparser_runtime.so REQUIRED
-          PATHS ${ONNX_TRT_PATH}
-          DOC "Path to onnx_proto library.")
   find_library(ONNX_TRT_PARSER_LIBRARY NAMES libnvonnxparser.so REQUIRED
           PATHS ${ONNX_TRT_PATH}
-          DOC "Path to onnx_proto library.")
+          DOC "Path to onnx_proto parser library.")
 
-  list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY} ${ONNX_TRT_RUNTIME_LIBRARY}
+  list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY}
           ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
 endif()
 
