@@ -1124,10 +1124,10 @@ class HybridBlock(Block):
                         param = params[name]
                         serialization_name = param_serialization_names[name]  # HybridBlock.export
                     else:
-                        if name in param_dict: 
+                        if name in param_dict:
                             serialization_name = name
                             param = param_dict[name]
-                        else:    
+                        else:
                             raise RuntimeError('A parameter was added to the graph during optimization but it was not '
                                                'added to the parameter dicts.\n'
                                                'Please check the backend.')
@@ -1140,7 +1140,8 @@ class HybridBlock(Block):
                 kv = self._flags[i]
                 if kv[0] in ['data_indices', 'param_indices']:
                     self._flags.remove(kv)
-            self._flags = [('data_indices', data_indices), ('param_indices', param_indices), ('is_dynamic', is_dynamic)] + self._flags
+            self._flags = [('data_indices', data_indices), ('param_indices', param_indices), 
+                           ('is_dynamic', is_dynamic)] + self._flags
 
             self._cached_op = ndarray.CachedOp(out, self._flags)
 
