@@ -268,7 +268,7 @@ class SubgraphProperty {
   }
 
   virtual void PrePartition(const nnvm::Graph& g,
-    const std::vector<std::pair<std::string, std::string>>& options_map) {}
+    const std::unordered_map<std::string, std::string>& options_map) {}
 
   virtual void PostPartition(const nnvm::Graph& g) {}
 

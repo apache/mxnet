@@ -28,6 +28,7 @@
 #include <mutex>
 #include <memory>
 #include <functional>
+#include <unordered_map>
 #include <utility>
 #include "dmlc/base.h"
 #include "dmlc/logging.h"
@@ -1262,8 +1263,8 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       // get pass name
       const char* pass_name = g.GetAttr<const char*>("pass_name");
       // get options
-      const std::vector<std::pair<std::string, std::string>>& options_map =
-            g.GetAttr<const std::vector<std::pair<std::string, std::string>>>("options_map");
+      const std::unordered_map<std::string, std::string>& options_map =
+            g.GetAttr<const std::unordered_map<std::string, std::string>>("options_map");
       // convert options_map_ to char* to pass to backend library
       std::vector<const char*> opt_keys, opt_vals;
       for (auto& kv : options_map) {
