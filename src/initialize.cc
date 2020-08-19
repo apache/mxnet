@@ -367,7 +367,7 @@ std::shared_ptr<void(int)> HANDLER_NAME(                             \
       }                                                              \
     }                                                                \
   }),                                                                \
-  [](auto f) { signal(SIGFPE, f); });
+  [](auto f) { signal(SIGNAL, f); });
 
 SIGNAL_HANDLER(SIGSEGV, SIGSEGVHandler, true);
 SIGNAL_HANDLER(SIGFPE, SIGFPEHandler, false);
