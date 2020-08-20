@@ -28,7 +28,7 @@
 
 #include <algorithm>
 
-#include "cuda_utils.h"
+#include "utils.h"
 
 #if MXNET_USE_CUDA
 

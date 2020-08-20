@@ -359,6 +359,14 @@ void MatrixRankNoneTolForward(const nnvm::NodeAttrs& attrs,
   MatrixRankNoneTolForwardImpl<xpu>(a, rank, attrs, ctx, req);
 }
 
+// Windows has issues with #ifdefs inside MSHADOW_TYPE_SWITCH
+#ifndef __CUDACC__
+#define NP_LINALG_MATRIX_RANK_BROADCAST(OP, RTCOP) \
+  mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::OP>
+#else
+#define NP_LINALG_MATRIX_RANK_BROADCAST(OP, RTCOP) mxnet::op::BinaryBroadcastRTCCompute {#RTCOP}
+#endif
+
 template<typename xpu>
 void MatrixRankForwardImpl(const TBlob& a,
                            const TBlob& tol,
@@ -410,9 +418,9 @@ void MatrixRankForwardImpl(const TBlob& a,
       if (new_tol_data.dptr<DType>() != tol.dptr<DType>()) {
         Copy(new_tol_data.FlatTo1D<xpu, DType>(s), tol.FlatTo1D<xpu, DType>(s), s);
       }
-      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::gt>(attrs, ctx,
-                                                                 {s_data, new_tol_data},
-                                                                 {kWriteTo}, {broadcast_data});
+      NP_LINALG_MATRIX_RANK_BROADCAST(gt, greater)(attrs, ctx,
+                                                   {s_data, new_tol_data},
+                                                   {kWriteTo}, {broadcast_data});
       // Step5: Calculate rank.
       const int b_ndim  = broadcast_shape.ndim();
       const int data_size = broadcast_data.size(b_ndim - 1);
@@ -424,6 +432,8 @@ void MatrixRankForwardImpl(const TBlob& a,
     });
   });
 }
+
+#undef NP_LINALG_MATRIX_RANK_BROADCAST
 
 template<typename xpu>
 void MatrixRankForward(const nnvm::NodeAttrs& attrs,

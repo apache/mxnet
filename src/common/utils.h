@@ -950,6 +950,20 @@ inline int GetDefaultDtype(int dtype) {
          mshadow::kFloat32;
 }
 
+struct MShadowTypeInfo {
+  std::string name;
+  int size;
+  int acc_size;
+
+  MShadowTypeInfo(const std::string name, const int size, const int acc_size) :
+    name(std::move(name)), size(size), acc_size(acc_size) {}
+
+  MShadowTypeInfo(const std::string name, const int size) :
+    MShadowTypeInfo(name, size, size) {}
+};
+
+MShadowTypeInfo mshadow_type_info(const int type_flag);
+
 inline bool AlignedMemAlloc(void** ptr, size_t size, size_t alignment) {
 #if _MSC_VER
   *ptr = _aligned_malloc(size, alignment);

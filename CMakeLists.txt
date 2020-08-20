@@ -79,7 +79,6 @@ option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 option(USE_GPROF "Compile with gprof (profiling) flag" OFF)
 option(USE_VTUNE "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
 option(USE_TVM_OP "Enable use of TVM operator build system." OFF)
-option(ENABLE_CUDA_RTC "Build with CUDA runtime compilation support" ON)
 option(BUILD_CPP_EXAMPLES "Build cpp examples" ON)
 option(INSTALL_EXAMPLES "Install the example source files." OFF)
 option(USE_SIGNAL_HANDLER "Print stack traces on segfaults." ON)
@@ -547,18 +546,11 @@ if(USE_CUDA)
 
   string(REPLACE ";" " " CUDA_ARCH_FLAGS_SPACES "${CUDA_ARCH_FLAGS}")
 
-  find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand
-    OPTIONAL_COMPONENTS nvToolsExt nvrtc)
+  find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand nvrtc cuda_driver
+    OPTIONAL_COMPONENTS nvToolsExt)
 
-  list(APPEND mxnet_LINKER_LIBS CUDA::cudart CUDA::cublas CUDA::cufft CUDA::cusolver CUDA::curand)
-  if(ENABLE_CUDA_RTC)
-    if(CUDA_nvrtc_LIBRARY)
-      list(APPEND mxnet_LINKER_LIBS CUDA::nvrtc cuda)
-      add_definitions(-DMXNET_ENABLE_CUDA_RTC=1)
-    else()
-      message(FATAL_ERROR "ENABLE_CUDA_RTC=ON, but failed to find NVRTC. CMake will exit." )
-    endif()
-  endif()
+  list(APPEND mxnet_LINKER_LIBS CUDA::cudart CUDA::cublas CUDA::cufft CUDA::cusolver CUDA::curand
+                                CUDA::nvrtc CUDA::cuda_driver)
   list(APPEND SOURCE ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
 
