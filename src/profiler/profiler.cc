@@ -31,7 +31,7 @@
 #include "./profiler.h"
 
 #if MXNET_USE_CUDA
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #endif
 
 #if defined(_MSC_VER) && _MSC_VER <= 1800

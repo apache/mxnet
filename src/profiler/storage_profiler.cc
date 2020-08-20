@@ -27,7 +27,7 @@
 #include <vector>
 #include "./profiler.h"
 #include "../common/utils.h"
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 
 namespace mxnet {
 namespace profiler {

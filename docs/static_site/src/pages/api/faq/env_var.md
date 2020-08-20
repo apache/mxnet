@@ -390,10 +390,10 @@ If ctypes is used, it must be `mxnet._ctypes.ndarray.NDArrayBase`.
   - It works in Symbolic execution as well as in Gluon models hybridized with ```static_alloc=True``` option.
   - Only applies to MXNet that has been compiled with CUDA (```pip install mxnet-cuXX``` or built from source with ```USE_CUDA=1```) and running on GPU.
 
-* MXNET_FUSION_VERBOSE
+* MXNET_RTC_VERBOSE
   - Values: 0(false) or 1(true) ```(default=0)```
-  - Only applies to MXNet that has been compiled with CUDA and when ```MXNET_USE_FUSION``` option is enabled.
-  - If this variable is set, MXNet will print the code for fused operators that it generated.
+  - Only applies to MXNet that has been compiled with CUDA.
+  - If this variable is set, MXNet will print the code for operators compiled at runtime.
 
 * MXNET_ELIMINATE_COMMON_EXPR
   - Values: 0(false) or 1(true) ```(default=1)```

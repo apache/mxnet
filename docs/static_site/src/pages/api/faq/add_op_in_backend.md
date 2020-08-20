@@ -721,3 +721,4 @@ and
 
 ## Additional Resources
 - [Use TensorInspector to Help Debug Operators](./tensor_inspector_tutorial)
+- [Use RTC to write CUDA kernels](./using_rtc)

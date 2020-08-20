@@ -35,7 +35,7 @@
 #include "../engine/openmp.h"
 
 #ifdef __CUDACC__
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #endif  // __CUDACC__
 
 namespace mxnet {

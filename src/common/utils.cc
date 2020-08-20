@@ -108,5 +108,30 @@ void ExecuteMonOutputCallback(
   }
 }
 
+MShadowTypeInfo mshadow_type_info(const int type_flag) {
+  using namespace mshadow;
+  switch (type_flag) {
+    case kFloat32:
+      return MShadowTypeInfo("float32", sizeof(float));
+    case kFloat64:
+      return MShadowTypeInfo("float64", sizeof(double));
+    case kFloat16:
+      return MShadowTypeInfo("float16", 2, sizeof(float));
+    case kUint8:
+      return MShadowTypeInfo("uint8", sizeof(uint8_t), sizeof(index_t));
+    case kInt32:
+      return MShadowTypeInfo("int32", sizeof(int32_t));
+    case kInt8:
+      return MShadowTypeInfo("int8", sizeof(int8_t), sizeof(index_t));
+    case kInt64:
+      return MShadowTypeInfo("int64", sizeof(int64_t));
+    case kBool:
+      return MShadowTypeInfo("bool", sizeof(bool), sizeof(index_t));
+    default:
+      LOG(FATAL) << "Unknown type flag " << type_flag;
+      return MShadowTypeInfo("INVALID", 1);
+  }
+}
+
 }  // namespace common
 }  // namespace mxnet
