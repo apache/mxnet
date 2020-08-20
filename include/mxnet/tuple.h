@@ -685,6 +685,7 @@ inline bool ndim_is_known(const TShape& x) {
 inline bool dim_size_is_known(const TShape& x, const int idx) {
   CHECK(idx >= 0 && idx < x.ndim())
       << "idx = " << idx << " exceeds shape dimension range [0, " << x.ndim() << ")";
+  std::cout << x[idx] << std::endl;
   return dim_size_is_known(x[idx]);
 }
 
