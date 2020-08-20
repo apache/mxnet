@@ -1128,11 +1128,6 @@ build_docs_setup() {
     mkdir -p $mxnetlib_folder
 }
 
-build_ubuntu_cpu_docs() {
-    build_ubuntu_cpu_openblas
-}
-
-
 build_jekyll_docs() {
     set -ex
 
@@ -1156,11 +1151,11 @@ build_python_docs() {
    build_docs_setup
 
    pushd docs/python_docs
-   eval "$(/work/miniconda/bin/conda shell.bash hook)"
-   conda env create -f environment.yml -p /work/conda_env
-   conda activate /work/conda_env
-   pip install themes/mx-theme
-   pip install -e /work/mxnet/python --user
+   python3 -m pip install -r requirements
+   python3 -m pip install themes/mx-theme
+   python3 -m pip install -e /work/mxnet/python --user
+
+   export PATH=/home/jenkins_slave/.local/bin:$PATH
 
    pushd python
    make clean

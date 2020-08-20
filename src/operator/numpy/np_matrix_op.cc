@@ -1391,7 +1391,7 @@ bool NumpyMoveaxisShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(ret);
 }
 
-NNVM_REGISTER_OP(_np_moveaxis)
+NNVM_REGISTER_OP(_npi_moveaxis)
 .describe(R"code(Move axes of an array to new positions.
 Other axes remain in their original order.
 )code" ADD_FILELINE)
@@ -1407,7 +1407,7 @@ Other axes remain in their original order.
      os1 << param.source;
      std::ostringstream os2;
      os2 << param.destination;
-     return MakeNonlossGradNode("_np_moveaxis", n, ograds, {},
+     return MakeNonlossGradNode("_npi_moveaxis", n, ograds, {},
                                 {{"source", os2.str()}, {"destination", os1.str()}});
 })
 .set_attr<FCompute>("FCompute<cpu>", NumpyMoveaxisCompute<cpu>)
