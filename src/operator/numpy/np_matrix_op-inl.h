@@ -131,6 +131,15 @@ struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
                   " Note that currently only C-like order is"
                   " supported");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream newshape_s, reverse_s, order_s;
+    newshape_s << newshape;
+    reverse_s << reverse;
+    order_s << order;
+    (*dict)["newshape"] = newshape_s.str();
+    (*dict)["reverse"] = reverse_s.str();
+    (*dict)["order"] = order_s.str();
+  }
 };
 
 template<typename xpu>
@@ -703,6 +712,13 @@ struct NumpyMoveaxisParam : public dmlc::Parameter<NumpyMoveaxisParam> {
     DMLC_DECLARE_FIELD(destination)
     .describe("Destination positions for each of the original axes. "
               "These must also be unique.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream source_s, destination_s;
+    source_s << source;
+    destination_s << destination;
+    (*dict)["source"] = source_s.str();
+    (*dict)["destination"] = destination_s.str();
   }
 };
 

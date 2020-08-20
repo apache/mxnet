@@ -33,7 +33,7 @@ NNVM_REGISTER_OP(_npx_relu)
 NNVM_REGISTER_OP(_npx_sigmoid)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::Compute<gpu, mshadow_op::sigmoid>);
 
-NNVM_REGISTER_OP(_np_copy)
+NNVM_REGISTER_OP(_npi_copy)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 #define MXNET_OPERATOR_REGISTER_NUMPY_UNARY_GPU(__name$, __kernel$)       \

@@ -843,7 +843,7 @@ void EmbeddingOpBackward<gpu>(const nnvm::NodeAttrs& attrs,
 
   CHECK_NE(req[embedding::kWeight], kWriteInplace)
     << "Backward of Embedding does not support writing in place.";
-  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
   if (!safe_acc && outputs[1].type_flag_ == mshadow::kFloat16) {
     common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for EmbeddingOpBackward "
                     "with float16 inputs. "
