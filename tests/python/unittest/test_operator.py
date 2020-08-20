@@ -4022,135 +4022,88 @@ def test_init():
 
 @with_seed()
 def test_order():
+    from test_ndarray import gt_topk, get_large_matrix
     ctx = default_context()
 
-    def gt_topk(dat, axis, ret_typ, k, is_ascend):
-        if ret_typ == "indices":
-            if is_ascend:
-                indices = np.arange(k)
-            else:
-                indices = np.arange(-1, -k-1, -1)
-            ret = np.take(dat.argsort(axis=axis), axis=axis, indices=indices, mode='wrap')
-        elif ret_typ == "value":
-            if is_ascend:
-                indices = np.arange(k)
-            else:
-                indices = np.arange(-1, -k-1, -1)
-            ret = np.take(np.sort(dat, axis=axis), axis=axis, indices=indices, mode='wrap')
-        else:
-            assert dat.shape == (5, 5, 5, 5)
-            assert axis is None or axis == 1
-            ret = np.zeros(dat.shape)
-            if is_ascend:
-                indices = np.arange(k)
-            else:
-                indices = np.arange(-1, -k-1, -1)
-            gt_argsort = np.take(dat.argsort(axis=axis), axis=axis, indices=indices, mode='wrap')
-            if axis is None:
-                ret.ravel()[gt_argsort] = 1
-            else:
-                for i in range(5):
-                    for j in range(5):
-                        for k in range(5):
-                            ret[i, gt_argsort[i, :, j, k], j, k] = 1
-        return ret
-
     dshape = (5, 5, 5, 5)
-    a_npy = np.arange(np.prod(dshape)).astype(np.float32)
-    np.random.shuffle(a_npy)
-    a_npy = a_npy.reshape(dshape)
+    large_matrix_npy = get_large_matrix()
     a = mx.sym.Variable('a')
 
-    def get_large_matrix():
-        data = np.array([np.arange(300096).astype(np.float32)])
-        data = np.repeat(data, 100, axis=0)
-        np.apply_along_axis(np.random.shuffle, 1, data)
-        return data
-
-    large_matrix_npy = get_large_matrix()
-
-    for axis in [1, 3, None]:
-        for is_ascend in [True, False]:
-            b = mx.sym.sort(a, axis=axis, is_ascend=is_ascend)
-            if axis is None:
-                out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=a_npy.size, is_ascend=is_ascend)
-            else:
-                out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=5, is_ascend=is_ascend)
-            check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, rtol=1e-2, ctx=ctx)
-            check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
-
-    b = mx.sym.topk(a, axis=1, is_ascend=is_ascend, ret_typ="indices", k=5)
-    check_symbolic_backward(sym=b, location={'a': large_matrix_npy},
-                            out_grads=[np.random.normal(size=(100, 5))],
-                            expected=[np.zeros((100, 300096))])
-    check_symbolic_forward(b, location={'a': large_matrix_npy},
-                           expected=[gt_topk(dat=large_matrix_npy, axis=1,
-                                             ret_typ="indices", k=5,
-                                             is_ascend=is_ascend)])
-
-    b = mx.sym.argsort(a, axis=1, is_ascend=False)
-    check_symbolic_backward(sym=b, location={'a': a_npy},
-                            out_grads=[np.random.normal(size=(5, 5, 5, 5))],
-                            expected=[np.zeros((5, 5, 5, 5))])
-    check_symbolic_forward(b, location={'a': a_npy},
-                           expected=[gt_topk(dat=a_npy, axis=1, ret_typ="indices", k=5,
-                                             is_ascend=False)])
-
-    b = mx.sym.argmax(a, axis=1, keepdims=True)
-    check_symbolic_backward(sym=b, location={'a': a_npy},
-                            out_grads=[np.random.normal(size=(5, 5, 5, 5))],
-                            expected=[np.zeros((5, 5, 5, 5))])
-    check_symbolic_forward(b, location={'a': a_npy},
-                           expected=[gt_topk(dat=a_npy, axis=1, ret_typ="indices", k=1,
-                                             is_ascend=False)])
-
-    b = mx.sym.argmin(a, axis=1, keepdims=True)
-    check_symbolic_backward(sym=b, location={'a': a_npy},
-                            out_grads=[np.random.normal(size=(5, 5, 5, 5))],
-                            expected=[np.zeros((5, 5, 5, 5))])
-    check_symbolic_forward(b, location={'a': a_npy},
-                           expected=[gt_topk(dat=a_npy, axis=1, ret_typ="indices", k=1,
-                                             is_ascend=True)])
-
-    tested_types = [np.int32, np.int64, np.float16, np.float32, np.float64]
-    for dtype in tested_types:
-        dshape = (5, 5, 5, 5)
-        a_npy = np.arange(np.prod(dshape)).astype(dtype)
-        np.random.shuffle(a_npy)
-        a_npy = a_npy.reshape(dshape)
-        a = mx.sym.Variable('a')
+    def run_test(a_npy, use_topK = True):
         for axis in [1, 3, None]:
-            K = [1, 3, 5, 7] if axis is None else [1, 3, 5]
-            for k in K:
-                for is_ascend in [True, False]:
-                    b = mx.sym.topk(a, axis=axis, is_ascend=is_ascend, ret_typ="value", k=k)
-                    out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=k, is_ascend=is_ascend)
+            if use_topK:
+                K = [1, 3, 5, 7] if axis is None else [1, 3, 5]
+            else:
+                K = [a_npy.size] if axis is None else [5]
+
+            for is_ascend in [True, False]:
+                for k in K:
+                    if use_topK:
+                        b = mx.sym.topk(a, axis=axis, is_ascend=is_ascend, ret_typ="value", k=k)
+                    else:
+                        b = mx.sym.sort(a, axis=axis, is_ascend=is_ascend)
+                    out_npy = gt_topk(dat=a_npy, axis=axis, ret_typ="value", k=k, is_ascend=is_ascend, shape=dshape)
                     check_numeric_gradient(b, location={'a': a_npy}, numeric_eps=1e-2, rtol=1e-2, ctx=ctx)
                     check_symbolic_forward(b, location={'a': a_npy}, expected=[out_npy])
 
-        b = mx.sym.topk(a, axis=1, is_ascend=is_ascend, ret_typ="indices", k=5)
-        check_symbolic_backward(sym=b, location={'a': large_matrix_npy},
-                                out_grads=[np.random.normal(size=(100, 5))],
-                                expected=[np.zeros((100, 300096))])
-        check_symbolic_forward(b, location={'a': large_matrix_npy},
-                               expected=[gt_topk(dat=large_matrix_npy, axis=1,
-                                                 ret_typ="indices", k=5, is_ascend=is_ascend)])
+                    if ctx.device_type != 'gpu' and (use_topK and k != 5 or axis != 1):
+                        continue     # just to make this test faster on CPU
 
-        b = mx.sym.topk(a, axis=3, is_ascend=is_ascend, ret_typ="indices", k=3)
+                    b = mx.sym.topk(a, axis=axis, is_ascend=is_ascend, ret_typ="indices", k=k)
+                    check_symbolic_backward(sym=b, location={'a': large_matrix_npy},
+                                            out_grads=[np.random.normal(size=(100, k))],
+                                            expected=[np.zeros((100, 300096))])
+                    check_symbolic_forward(b, location={'a': large_matrix_npy},
+                                           expected=[gt_topk(dat=large_matrix_npy, axis=axis,
+                                           ret_typ="indices", k=k, is_ascend=is_ascend, shape=dshape)])
+
+    tested_types = [np.int32, np.int64, np.float16, np.float32, np.float64]
+    for dtype in tested_types:
+        a_npy = np.arange(np.prod(dshape)).astype(dtype)
+        np.random.shuffle(a_npy)
+        a_npy = a_npy.reshape(dshape)
+        for use_topK in [True, False]:
+            run_test(a_npy, use_topK=use_topK)
+
+        b = mx.sym.argsort(a, axis=1, is_ascend=False)
         check_symbolic_backward(sym=b, location={'a': a_npy},
-                                out_grads=[np.random.normal(size=(5, 5, 5, 3))],
-                                expected=[np.zeros((5, 5, 5, 5))])
+                                out_grads=[np.random.normal(size=dshape)],
+                                expected=[np.zeros(dshape)])
+        check_symbolic_forward(b, location={'a': a_npy},
+                               expected=[gt_topk(dat=a_npy, axis=1, ret_typ="indices", k=5,
+                                                 is_ascend=False, shape=dshape)])
+
+        b = mx.sym.argmax(a, axis=1, keepdims=True)
+        check_symbolic_backward(sym=b, location={'a': a_npy},
+                                out_grads=[np.random.normal(size=dshape)],
+                                expected=[np.zeros(dshape)])
+        check_symbolic_forward(b, location={'a': a_npy},
+                               expected=[gt_topk(dat=a_npy, axis=1, ret_typ="indices", k=1,
+                                                 is_ascend=False, shape=dshape)])
+
+        b = mx.sym.argmin(a, axis=1, keepdims=True)
+        check_symbolic_backward(sym=b, location={'a': a_npy},
+                                out_grads=[np.random.normal(size=dshape)],
+                                expected=[np.zeros(dshape)])
+        check_symbolic_forward(b, location={'a': a_npy},
+                               expected=[gt_topk(dat=a_npy, axis=1, ret_typ="indices", k=1,
+                                                 is_ascend=True, shape=dshape)])
+
+        b = mx.sym.topk(a, axis=3, is_ascend=False, ret_typ="indices", k=3)
+        check_symbolic_backward(sym=b, location={'a': a_npy},
+                                out_grads=[np.random.normal(size=dshape)],
+                                expected=[np.zeros(dshape)])
         check_symbolic_forward(b, location={'a': a_npy},
                                expected=[gt_topk(dat=a_npy, axis=3, ret_typ="indices", k=3,
-                                                 is_ascend=False)])
+                                                 is_ascend=False, shape=dshape)])
 
         b = mx.sym.topk(a, axis=1, is_ascend=True, ret_typ="mask", k=3)
         check_symbolic_backward(sym=b, location={'a': a_npy},
-                                out_grads=[np.random.normal(size=(5, 5, 5, 5))],
-                                expected=[np.zeros((5, 5, 5, 5))])
+                                out_grads=[np.random.normal(size=dshape)],
+                                expected=[np.zeros(dshape)])
         check_symbolic_forward(b, location={'a': a_npy},
                                expected=[gt_topk(dat=a_npy, axis=1, ret_typ="mask", k=3,
-                                                 is_ascend=True)])
+                                                 is_ascend=True, shape=dshape)])
 
 @with_seed()
 def test_blockgrad():
