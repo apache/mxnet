@@ -728,7 +728,8 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
   const BipartiteMatchingParam& param = nnvm::get<BipartiteMatchingParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   mxnet::TShape dshape = inputs[0].shape_;
-  CHECK(mxnet::shape_is_known(dshape)) << "Found unknown shape in BipartiteMatchingForward, received: " << dshape;
+  CHECK(mxnet::shape_is_known(dshape)) << "Found unknown shape in BipartiteMatchingForward, "
+                                       << "received: " << dshape;
   if (dshape.Size() == 0) {
     return;  // noop for unknown shape or empty array
   }
