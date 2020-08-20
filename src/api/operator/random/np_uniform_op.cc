@@ -68,6 +68,7 @@ MXNET_REGISTER_API("_npi.uniform")
   } else if (args[2].type_code() == kDLInt ||
              args[2].type_code() == kDLFloat) {
     param.size = Tuple<index_t>(1, args[2].operator int64_t());
+    std::cout << param.size[0] << std::endl;
   } else {
     param.size = Tuple<index_t>(args[2].operator ObjectRef());
   }
