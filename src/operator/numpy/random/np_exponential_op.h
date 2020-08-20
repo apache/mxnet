@@ -44,13 +44,13 @@ namespace op {
 
 struct NumpyExponentialParam : public dmlc::Parameter<NumpyExponentialParam> {
   dmlc::optional<float> scale;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   std::string ctx;
   DMLC_DECLARE_PARAMETER(NumpyExponentialParam) {
       DMLC_DECLARE_FIELD(scale)
       .set_default(dmlc::optional<float>(1.0));
       DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
       .describe("Output shape. If the given shape is, "
           "e.g., (m, n, k), then m * n * k samples are drawn. "
           "Default is None, in which case a single value is returned.");
