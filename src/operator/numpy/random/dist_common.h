@@ -154,7 +154,7 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
   std::vector<dim_t> oshape_vec;
   if (param.size.has_value()) {
     // Size declared.
-    const mxnet::Tuple<int> &size = param.size.value();
+    const decltype(param.size.value()) &size = param.size.value();
     int head = size[0];
     if (head == -2) {
       concat_mode = true;
@@ -213,7 +213,7 @@ inline bool UnaryDistOpShape(const nnvm::NodeAttrs &attrs,
   if (param.size.has_value()) {
     // Size declared.
     std::vector<dim_t> oshape_vec;
-    const mxnet::Tuple<int> &size = param.size.value();
+    const decltype(param.size.value()) &size = param.size.value();
     for (int i = 0; i < size.ndim(); ++i) {
       oshape_vec.emplace_back(size[i]);
     }
@@ -259,7 +259,7 @@ inline bool TwoparamsDistOpConcatShape(const nnvm::NodeAttrs &attrs,
   if (param.size.has_value()) {
     // Size declared.
     std::vector<dim_t> oshape_vec;
-    const mxnet::Tuple<int> &size = param.size.value();
+    const decltype(param.size.value()) &size = param.size.value();
     for (int i = 0; i < size.ndim(); ++i) {
       oshape_vec.emplace_back(size[i]);
     }
