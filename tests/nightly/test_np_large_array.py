@@ -40,6 +40,7 @@ INT_OVERFLOW = 2**31
 HALF_INT_OVERFLOW = 2**30
 DOUBLE_INT_OVERFLOW = 2**32
 
+
 @use_np
 def test_gluon_embedding():
     m = gluon.nn.Embedding(SMALL_Y, MEDIUM_X)
@@ -745,7 +746,7 @@ def test_smooth_l1():
     assert B[1] == 0.5
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, )
-    assert A.grad[0][0] == 0
+    assert A.grad[0] == 0
 
 @use_np
 @pytest.mark.skip(reason='np.random broken on large tensor; npx.random \
@@ -960,6 +961,7 @@ def test_roi_pooling():
     assert A.grad[0][0][0][0] == 1
 
 @use_np
+@pytest.mark.skip(reason='times out on (generally speaking) large tensors')
 def test_save_load():
     A = np.ones((2, INT_OVERFLOW), dtype='int8')
     A[0][100] = 100
