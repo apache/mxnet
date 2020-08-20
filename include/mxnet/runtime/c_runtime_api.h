@@ -179,6 +179,13 @@ MXNET_DLL int MXNetObjectTypeKey2Index(const char* type_key, unsigned* out_tinde
 }  // extern "C"
 #endif
 
+
+/*!
+ * \brief Macros to guard beginning and end section of all functions
+ * every function starts with API_BEGIN()
+ * and finishes with API_END() or API_END_HANDLE_ERROR()
+ * The finally clause contains procedure to cleanup states when an error happens.
+ */
 #define MX_API_BEGIN()                                                         \
   try {                                                                        \
     on_enter_api(__FUNCTION__);
