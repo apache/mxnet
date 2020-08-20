@@ -754,8 +754,7 @@ def test_random():
     prob = np.random.uniform(size=(INT_OVERFLOW, 2))
     A = npx.random.bernoulli(prob=prob, size=(INT_OVERFLOW, 2))
     assert A.shape == (INT_OVERFLOW, 2)
-    assert int((A.asnumpy() == 0).sum() + \
-            (A.asnumpy() == 1).sum()) == A.size
+    assert int((A == 0).sum() + (A == 1).sum()) == A.size
 
 @use_np
 def test_gamma():
@@ -811,7 +810,7 @@ def test_rnn():
                 state=np.random.normal(0, 1, (1, 4, 1)), \
                 state_size=1, num_layers=1)
             assert y.shape == (INT_OVERFLOW, 4, 1)
-            assert type(y.asnumpy()).__name__ == 'ndarray'
+            assert type(y).__name__ == 'ndarray'
             #y.backward()
             #assert x.grad.shape == x.shape
             #assert type(x.grad[0]).__name__ == 'ndarray'
@@ -929,6 +928,36 @@ def test_dlpack():
     assert type(C).__name__ == 'ndarray'
     assert C.shape == (2, INT_OVERFLOW)
     assert C[0][100] == 101
+
+@use_np
+@pytest.mark.skip(reason='broken on large tensors')
+#TODO add 3d pooling test after large tensor is fixed
+def test_pooling():
+    A = np.ones((1, 2, INT_OVERFLOW))
+    A[0][0][2] = 100
+    A.attach_grad()
+    with mx.autograd.record():
+        B = npx.pooling(data=A, kernel=(2), stride=2, pool_type='max')
+    assert B.shape == (1, 2, HALF_INT_OVERFLOW)
+    assert B[0][0][1] == 100
+    B.backward()
+    assert A.grad.shape == (1, 2, INT_OVERFLOW)
+    assert A.grad[0][0][0] == 1
+
+@use_np
+@pytest.mark.skip(reason='forward gives wrong value on large tensor')
+def test_roi_pooling():
+    A = np.ones((1, 1, 5, INT_OVERFLOW))
+    A[0][0][0][2] = 100
+    roi = np.array([[0, 0, 0, 3, 3]])
+    A.attach_grad()
+    with mx.autograd.record():
+        B = npx.roi_pooling(A, roi, pooled_size=(2, 2), spatial_scale=1)
+    assert B.shape == (1, 1, 2, 2)
+    assert B[0][0][0][1] == 100
+    B.backward()
+    assert A.grad.shape == (1, 1, 5, INT_OVERFLOW)
+    assert A.grad[0][0][0][0] == 1
 
 @use_np
 def test_save_load():
