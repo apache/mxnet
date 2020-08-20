@@ -110,6 +110,7 @@ def check_unary_ops():
             'gammaln',
             'erf',
             'negative',
+            'logical_not',
             ]
 
     def announce_check(op_name):

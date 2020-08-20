@@ -29,7 +29,7 @@
 
 #include <algorithm>
 
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #include "mxnet_op.h"
 
 // Convenience functions.

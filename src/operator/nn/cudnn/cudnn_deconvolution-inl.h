@@ -33,7 +33,7 @@
 #include <string>
 #include "../deconvolution-inl.h"
 #include "./cudnn_algoreg-inl.h"
-#include "../../../common/cuda_utils.h"
+#include "../../../common/cuda/utils.h"
 
 namespace mxnet {
 namespace op {
