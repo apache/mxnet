@@ -192,7 +192,7 @@ def windows_build(args):
             logging.info("Generating project with CMake:\n{}".format(cmd))
             check_call(cmd, shell=True, env=env)
 
-            cmd = "\"{}\" && ninja".format(args.vcvars)
+            cmd = "\"{}\" && ninja -v".format(args.vcvars)
             logging.info("Building:\n{}".format(cmd))
 
             t0 = int(time.time())
