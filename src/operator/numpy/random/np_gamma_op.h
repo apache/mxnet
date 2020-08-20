@@ -48,12 +48,12 @@ struct NumpyGammaParam : public dmlc::Parameter<NumpyGammaParam> {
   dmlc::optional<float> scale;
   std::string ctx;
   int dtype;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   DMLC_DECLARE_PARAMETER(NumpyGammaParam) {
     DMLC_DECLARE_FIELD(shape);
     DMLC_DECLARE_FIELD(scale);
     DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
       .describe("Output shape. If the given shape is, "
                 "e.g., (m, n, k), then m * n * k samples are drawn. "
                 "Default is None, in which case a single value is returned.");
