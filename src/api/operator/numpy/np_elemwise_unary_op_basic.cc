@@ -114,4 +114,17 @@ MXNET_REGISTER_API("_npi.around")
   }
 });
 
+MXNET_REGISTER_API("_npi.copy")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_copy");
+  nnvm::NodeAttrs attrs;
+  attrs.op = op;
+  NDArray* inputs[] = {args[0].operator NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
+
 }  // namespace mxnet
