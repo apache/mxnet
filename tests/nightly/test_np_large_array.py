@@ -157,7 +157,7 @@ def test_all():
     A.attach_grad()
     with mx.autograd.record():
         B = np.all(A)
-    assert B.asnumpy() == True
+    assert B == True
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0 
@@ -169,7 +169,7 @@ def test_amin():
     A.attach_grad()
     with mx.autograd.record():
         B = np.amin(A)
-    assert B.asnumpy() == -1.0
+    assert B == -1.0
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
@@ -182,7 +182,7 @@ def test_amax():
     with mx.autograd.record():
         B = np.amax(A)
     print(B)
-    assert B.asnumpy() == 1.0
+    assert B == 1.0
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
@@ -195,7 +195,7 @@ def test_argmin():
     with mx.autograd.record():
         B = np.argmin(A)
     print(B)
-    assert B.asnumpy() == 21
+    assert B == 21
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
@@ -208,7 +208,7 @@ def test_argmax():
     with mx.autograd.record():
         B = np.argmax(A)
     print(B)
-    assert B.asnumpy() == 21
+    assert B == 21
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
@@ -240,7 +240,7 @@ def test_any():
     A.attach_grad()
     with mx.autograd.record():
         B = np.any(A)
-    assert B.asnumpy() == False
+    assert B == False
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
@@ -319,7 +319,7 @@ def test_average():
     A.attach_grad()
     with mx.autograd.record():
         B = np.average(A)
-    assert B.asnumpy() == 1
+    assert B == 1
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert_almost_equal(A.grad[0][0], np.array([1.0 / DOUBLE_INT_OVERFLOW]), \
@@ -551,7 +551,7 @@ def test_constraint_check():
     A = np.ones((2, INT_OVERFLOW))
     constraint = (A > 0)
     B = npx.constraint_check(constraint)
-    assert B.asnumpy() == True
+    assert B == True
 
 # broken
 @use_np
