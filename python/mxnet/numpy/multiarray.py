@@ -119,7 +119,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):  # pylint: disa
     """
     hdl = NDArrayHandle()
     if _int64_enabled():
-        check_call(_LIB.MXNDArrayCreateEx64(
+        check_call(_LIB.MXNDArrayCreate64(
             c_array_buf(mx_int64, native_array('q', shape)),
             ctypes.c_int(len(shape)),
             ctypes.c_int(ctx.device_typeid),
@@ -141,7 +141,7 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):  # pylint: disa
             dtype_type = _np.dtype(dtype)
         else:
             dtype_type = _np.dtype(dtype).type
-        check_call(_LIB.MXNDArrayCreateEx(
+        check_call(_LIB.MXNDArrayCreate(
             c_array_buf(mx_uint, native_array('I', shape)),
             mx_uint(len(shape)),
             ctypes.c_int(ctx.device_typeid),
@@ -2331,11 +2331,11 @@ class ndarray(NDArray):
         num_dim = mx_int()
         if _int64_enabled():
             pdata = ctypes.POINTER(mx_int64)()
-            check_call(_LIB.MXNDArrayGetShapeEx64(
+            check_call(_LIB.MXNDArrayGetShape64(
                 self.handle, ctypes.byref(num_dim), ctypes.byref(pdata)))
         else:
             pdata = ctypes.POINTER(mx_int)()
-            check_call(_LIB.MXNDArrayGetShapeEx(
+            check_call(_LIB.MXNDArrayGetShape(
                 self.handle, ctypes.byref(num_dim), ctypes.byref(pdata)))
         if num_dim.value == -1:
             return None
