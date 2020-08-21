@@ -487,6 +487,7 @@ def test_random_normal():
     assert type(A[0]).__name__ == 'ndarray'
 
 @use_np
+@pytest.mark.skip(reason='times out (20 mins)')
 def test_random_gamma():
     A = np.random.gamma(shape=1.0, size=(INT_OVERFLOW))
     assert type(A[0]).__name__ == 'ndarray'
