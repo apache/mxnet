@@ -31,7 +31,7 @@ class MXlib:
     def __del__(self):
         libdl = ctypes.CDLL("libdl.so")
         libdl.dlclose(self.handle)
-        print("DLClose'd")
+
 # set of libraries loaded
 loaded_libs = []
 
