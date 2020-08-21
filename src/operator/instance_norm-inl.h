@@ -70,8 +70,15 @@ void InstanceNormForward(const nnvm::NodeAttrs& attrs,
   const InstanceNormParam& param = nnvm::get<InstanceNormParam>(attrs.parsed);
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  int n = in_data[instance_norm::kData].size(0);
-  int c = in_data[instance_norm::kData].size(1);
+  mxnet::TShape dshape = in_data[instance_norm::kData].shape_;
+  CHECK(mxnet::shape_is_known(dshape)) << "Found unknown shape in InstanceNormForward, "
+                                       << "received: " << dshape;
+  if (dshape.Size() == 0) {
+    return;  // noop for empty array
+  }
+
+  int n = dshape[0];
+  int c = dshape[1];
   int rest_dim =
       static_cast<int>(in_data[instance_norm::kData].Size() / n / c);
   Shape<2> s2 = Shape2(n * c, rest_dim);

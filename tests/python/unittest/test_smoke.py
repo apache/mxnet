@@ -16,10 +16,27 @@
 # under the License.
 
 from mxnet import np, npx, use_np
-from common import setup_module, teardown_module
+from common import setup_module, teardown_module, with_environment
 
 @use_np
+@with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
 def test_18927():
     """test for no error when dealing with zero-size array in bipartite matching"""
     arr = np.random.rand(0,2)
     npx.bipartite_matching(arr, threshold=0.1)
+
+@use_np
+@with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
+def test_18933_batch_0():
+    arr = np.random.rand(0,1,1) # batch = 0
+    gamma = np.random.rand(1)
+    beta = np.random.rand(1)
+    npx.instance_norm(arr, gamma, beta)
+
+@use_np
+@with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
+def test_18933_channel_0():
+    arr = np.random.rand(1,0,1) # channel = 0
+    gamma = np.random.rand(1)
+    beta = np.random.rand(1)
+    npx.instance_norm(arr, gamma, beta)
