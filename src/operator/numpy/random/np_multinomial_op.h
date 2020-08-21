@@ -88,7 +88,7 @@ inline bool NumpyMultinomialOpShape(const nnvm::NodeAttrs& attrs,
     pvals_length = ishape[0];
   }
   if (param.size.has_value()) {
-    const mxnet::Tuple<int>& size = param.size.value();
+    const mxnet::Tuple<index_t>& size = param.size.value();
     for (int i = 0; i < size.ndim(); ++i) {
       oshape_vec.emplace_back(size[i]);
     }
