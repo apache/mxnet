@@ -48,11 +48,12 @@
 #include <sstream>
 
 #if defined(__NVCC__)
+  #include <cuda_runtime.h>
   #include <curand_kernel.h>
 #endif
 
 /* Make sure to update the version number everytime you make changes */
-#define MX_LIBRARY_VERSION 8
+#define MX_LIBRARY_VERSION 9
 
 /*!
  * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
@@ -439,7 +440,9 @@ class OpResource {
   void* alloc_gpu(int size) const;
 
   /*! \brief return the cuda stream object with correct type */
-  mx_stream_t get_cuda_stream() const;
+  inline mx_stream_t get_cuda_stream() const {
+    return static_cast<mx_stream_t>(cuda_stream);
+  }
 
   /*! \brief allocate sparse memory controlled by MXNet */
   void alloc_sparse(MXSparse* sparse, int index, int indices_len, int indptr_len = 0) const;
@@ -451,7 +454,9 @@ class OpResource {
   /*! \brief get pointer to initialized and seeded random number states located on GPU */
   /* Access each state by states[id], but this id should be <= MX_NUM_GPU_RANDOM_STATES */
   /* Note that if you are using cpu build, it will return a nullptr */
-  mx_gpu_rand_t* get_gpu_rand_states() const;
+  inline mx_gpu_rand_t* get_gpu_rand_states() const {
+    return static_cast<mx_gpu_rand_t*>(rand_gpu_states);
+  }
 
  private:
   /*! \brief allocation lambda function */

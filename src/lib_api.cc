@@ -211,10 +211,6 @@ void* mxnet::ext::OpResource::alloc_gpu(int size) const {
   return gpu_malloc(gpu_alloc, size);
 }
 
-mxnet::ext::mx_stream_t mxnet::ext::OpResource::get_cuda_stream() const {
-  return static_cast<mx_stream_t>(cuda_stream);
-}
-
 void mxnet::ext::OpResource::alloc_sparse(mxnet::ext::MXSparse* sparse, int index,
                                           int indices_len, int indptr_len) const {
   sparse_malloc(sparse_alloc, index, indices_len, indptr_len,
@@ -223,10 +219,6 @@ void mxnet::ext::OpResource::alloc_sparse(mxnet::ext::MXSparse* sparse, int inde
 
 mxnet::ext::mx_cpu_rand_t* mxnet::ext::OpResource::get_cpu_rand_states() const {
   return static_cast<mx_cpu_rand_t*>(rand_cpu_states);
-}
-
-mxnet::ext::mx_gpu_rand_t* mxnet::ext::OpResource::get_gpu_rand_states() const {
-  return static_cast<mx_gpu_rand_t*>(rand_gpu_states);
 }
 
 std::string mxnet::ext::getShapeAt(const std::string& shape, unsigned index) {
