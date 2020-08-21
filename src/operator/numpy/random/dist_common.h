@@ -214,7 +214,7 @@ inline bool UnaryDistOpShape(const nnvm::NodeAttrs &attrs,
   if (param.size.has_value()) {
     // Size declared.
     std::vector<dim_t> oshape_vec;
-    const decltype(param.size.value()) &size = param.size.value();
+    const auto &size = param.size.value();
     for (int i = 0; i < size.ndim(); ++i) {
       oshape_vec.emplace_back(size[i]);
     }
@@ -260,7 +260,7 @@ inline bool TwoparamsDistOpConcatShape(const nnvm::NodeAttrs &attrs,
   if (param.size.has_value()) {
     // Size declared.
     std::vector<dim_t> oshape_vec;
-    const decltype(param.size.value()) &size = param.size.value();
+    const auto &size = param.size.value();
     for (int i = 0; i < size.ndim(); ++i) {
       oshape_vec.emplace_back(size[i]);
     }
