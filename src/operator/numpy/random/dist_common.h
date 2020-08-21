@@ -156,7 +156,6 @@ inline bool TwoparamsDistOpShape(const nnvm::NodeAttrs &attrs,
     // Size declared.
     const decltype(param.size.value()) &size = param.size.value();
     index_t head = size[0];
-    
     if (head == -2) {
       concat_mode = true;
     } else {
