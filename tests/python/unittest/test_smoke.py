@@ -15,11 +15,44 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from mxnet import np, npx, use_np
-from common import setup_module, teardown_module
+from mxnet import np, npx, use_np, autograd
+from common import setup_module, teardown_module, with_environment
 
 @use_np
+@with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
 def test_18927():
     """test for no error when dealing with zero-size array in bipartite matching"""
     arr = np.random.rand(0,2)
-    npx.bipartite_matching(arr, threshold=0.1)
+    arr_grad = np.empty_like(arr)
+    autograd.mark_variables([arr], [arr_grad])
+    with autograd.record():
+        a = npx.bipartite_matching(arr, threshold=0.1)
+    a[0].backward()
+
+@use_np
+@with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
+def test_18933_batch_0():
+    arr = np.random.rand(0,1,1) # batch = 0
+    arr_grad = np.empty_like(arr)
+    gamma = np.random.rand(1)
+    gamma_grad = np.empty_like(gamma)
+    beta = np.random.rand(1)
+    beta_grad = np.empty_like(beta)
+    autograd.mark_variables([arr, gamma, beta], [arr_grad, gamma_grad, beta_grad])
+    with autograd.record():
+        a = npx.instance_norm(arr, gamma, beta)
+    a.backward()
+
+@use_np
+@with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
+def test_18933_channel_0():
+    arr = np.random.rand(1,0,1) # channel = 0
+    arr_grad = np.empty_like(arr)
+    gamma = np.random.rand(1)
+    gamma_grad = np.empty_like(gamma)
+    beta = np.random.rand(1)
+    beta_grad = np.empty_like(beta)
+    autograd.mark_variables([arr, gamma, beta], [arr_grad, gamma_grad, beta_grad])
+    with autograd.record():
+        a = npx.instance_norm(arr, gamma, beta)
+    a.backward()
