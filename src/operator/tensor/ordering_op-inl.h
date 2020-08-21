@@ -361,7 +361,7 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
   if (full_sort) {
     // If id_size != 0, divide workspace into two parts. The first one will store batch ids.
     Tensor<gpu, 1, char> sort_work(work.dptr_+id_size, Shape1(work.size(0)-id_size), s);
-    mxnet::op::SortByKey(dat, ind, is_ascend, &sort_work, 0, sizeof(DType)*8, id_size? 1 : M);
+    mxnet::op::SortByKey(dat, ind, is_ascend, &sort_work, 0, sizeof(DType)*8, M);
     if (id_size && M > 1) {
       Tensor<gpu, 1, index_t> batch_id(reinterpret_cast<index_t*>(work.dptr_),
                                        Shape1(ind.size(0)), s);
