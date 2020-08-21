@@ -125,6 +125,12 @@ void InstanceNormBackward(const nnvm::NodeAttrs& attrs,
   const InstanceNormParam& param = nnvm::get<InstanceNormParam>(attrs.parsed);
 
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  mxnet::TShape dshape = inputs[3].shape_;
+  CHECK(mxnet::shape_is_known(dshape)) << "Found unknown shape in InstanceNormBackward, "
+                                       << "received: " << dshape;
+  if (dshape.Size() == 0) {
+    return;  // noop for unknown shape or empty array
+  }
   int n = inputs[3].size(0);
   int c = inputs[3].size(1);
   int rest_dim =
