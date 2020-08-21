@@ -39,7 +39,7 @@ namespace op {
 struct NumpyMultinomialParam : public dmlc::Parameter<NumpyMultinomialParam> {
   int n;
   dmlc::optional<mxnet::Tuple<double>> pvals;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   DMLC_DECLARE_PARAMETER(NumpyMultinomialParam) {
     DMLC_DECLARE_FIELD(n)
       .describe("Number of experiments.");
@@ -51,7 +51,7 @@ struct NumpyMultinomialParam : public dmlc::Parameter<NumpyMultinomialParam> {
       "Note that this is for internal usage only. "
       "This operator will only have either input mx.ndarray or this list of pvals");
     DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
       .describe("Output shape. If the given shape is, "
       "e.g., (m, n, k), then m * n * k samples are drawn. "
       "Default is None, in which case a single value is returned.");
