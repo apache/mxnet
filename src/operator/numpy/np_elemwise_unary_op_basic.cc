@@ -228,7 +228,7 @@ The sign function returns -1 if x < 0, 0 if x==0, 1 if x > 0.
 Example::
    sign([-2, 0, 3]) = [-1, 0, 1]
 )code" ADD_FILELINE)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sign"});
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // rint
 MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY(_npi_rint, "x", mshadow_op::rint)

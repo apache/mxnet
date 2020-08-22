@@ -37,7 +37,7 @@ from common import assertRaises, with_seed, retry, xfail_when_nonstandard_decima
 import random
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
-from mxnet.test_utils import is_op_runnable, has_tvm_ops
+from mxnet.test_utils import is_op_runnable, has_tvm_ops, rand_shape_2d
 from mxnet.operator import get_all_registered_operators
 
 
@@ -10210,6 +10210,7 @@ def test_np_rollaxis():
                         assert same(mx_out.asnumpy(), np_out)
 
 
+@with_seed()
 @use_np
 def test_npx_stop_gradient():
     class TestStopGradient(HybridBlock):
@@ -10237,3 +10238,81 @@ def test_npx_stop_gradient():
                 elif grad_req == 'add':
                     assert_almost_equal(new_grad, old_grad + 1)
 
+
+@with_seed()
+@use_np
+def test_np_elementwise_ops_on_misaligned_input():
+    a = np.array([1,2,3,4], dtype='float16')
+    b = np.array([1,2,3,4], dtype='float16')
+
+    c = a[1:3]
+    d = b[1:3]
+    # Note: testing just elemwise_add since all elemwise_ops
+    #       share the implementation
+    c[:] = c + d
+    mx.nd.waitall()
+
+    a = np.array([1,2,3,4], dtype='float16')
+    b = np.array([1,2,3,4], dtype='float16')
+
+    c = a[0:3]
+    d = b[0:3]
+    c[:] = c + d
+    mx.nd.waitall()
+    assert a[3] == 4.0
+
+
+@with_seed()
+@use_np
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
+@pytest.mark.parametrize('lead_dim', [2, 3, 4, 6, 10])
+@pytest.mark.parametrize('both_ways', [False, True])
+def test_np_broadcast_ops_on_misaligned_input(dtype, lead_dim, both_ways):
+    shape = list(rand_shape_2d()) + [lead_dim]
+    small_shape = [shape[0], 1, lead_dim]
+    if both_ways:
+        # Broadcast in both ways [1, K, L] x [M, 1, L]
+        big_shape = [1, shape[1], lead_dim]
+    else:
+        big_shape = shape
+    size = _np.product(shape)
+    small_size = _np.product(small_shape)
+    big_size = _np.product(big_shape)
+    a = np.arange(5000)
+    b = np.arange(5000)
+    e = np.arange(5000)
+    c = a[1:big_size + 1].reshape(tuple(big_shape))
+    d = b[1:small_size + 1].reshape(tuple(small_shape))
+    f = e[1:size + 1].reshape(tuple(shape))
+    f[:] = c + d
+    expected = c.asnumpy() + d.asnumpy()
+    mx.nd.waitall()
+    assert_almost_equal(f, expected)
+
+
+@with_seed()
+@use_np
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
+@pytest.mark.parametrize('lead_dim', [2, 3, 4, 6, 10])
+@pytest.mark.parametrize('both_ways', [False, True])
+def test_np_broadcast_ops_on_misaligned_input_oneside(dtype, lead_dim, both_ways):
+    shape = list(rand_shape_2d()) + [lead_dim]
+    small_shape = [shape[0], shape[1], 1]
+    if both_ways:
+        # Broadcast in both ways [1, K, L] x [M, 1, 1]
+        big_shape = [1, shape[1], lead_dim]
+    else:
+        big_shape = shape
+    size = _np.product(shape)
+    small_size = _np.product(small_shape)
+    big_size = _np.product(big_shape)
+    a = np.arange(5000)
+    b = np.arange(5000)
+    e = np.arange(5000)
+    c = a[1:big_size + 1].reshape(tuple(big_shape))
+    d = b[1:small_size + 1].reshape(tuple(small_shape))
+    f = e[1:size + 1].reshape(tuple(shape))
+    f[:] = c + d
+    expected = c.asnumpy() + d.asnumpy()
+    mx.nd.waitall()
+    assert_almost_equal(f, expected)

@@ -37,8 +37,6 @@
 
 namespace mxnet {
 
-// #define PROFILE_API_INCLUDE_AS_EVENT
-
 static profiler::ProfileDomain api_domain("MXNET_C_API");
 static profiler::ProfileCounter api_call_counter("MXNet C API Calls", &api_domain);
 static profiler::ProfileCounter api_concurrency_counter("MXNet C API Concurrency",
@@ -48,9 +46,6 @@ static profiler::ProfileCounter api_concurrency_counter("MXNet C API Concurrency
 struct APICallTimingData {
   const char *name_;
   profiler::ProfileTask *task_;
-#ifdef PROFILE_API_INCLUDE_AS_EVENT
-  profiler::ProfileEvent *event_;
-#endif  // PROFILE_API_INCLUDE_AS_EVENT
 };
 
 /*!
@@ -79,23 +74,6 @@ class ProfilingThreadData {
     return iter->second.get();
   }
 
-#ifdef PROFILE_API_INCLUDE_AS_EVENT
-  /*!
-   * \brief Retreive ProfileEvent object of the given name, or create if it doesn't exist
-   * \param name Name of the event
-   * \return Pointer to the stored or created ProfileEvent object
-   */
-  profiler::ProfileEvent *profile_event(const char *name) {
-    // Per-thread so no lock necessary
-    auto iter = events_.find(name);
-    if (iter == events_.end()) {
-      iter = events_.emplace(std::make_pair(name,
-        std::make_unique<profiler::ProfileEvent>(name))).first;
-    }
-    return iter->second.get();
-  }
-#endif  // PROFILE_API_INCLUDE_AS_EVENT
-
   /*! \brief nestable call stack */
   std::stack<APICallTimingData> calls_;
   /*! \brief Whether profiling actions should be ignored/excluded */
@@ -104,10 +82,6 @@ class ProfilingThreadData {
  private:
   /*! \brief tasks */
   std::unordered_map<std::string, std::unique_ptr<profiler::ProfileTask>> tasks_;
-#ifdef PROFILE_API_INCLUDE_AS_EVENT
-  /*! \brief events */
-  std::unordered_map<std::string, std::unique_ptr<profiler::ProfileEvent>> events_;
-#endif  // PROFILE_API_INCLUDE_AS_EVENT
 };
 
 #if DMLC_CXX11_THREAD_LOCAL
@@ -124,15 +98,9 @@ extern void on_enter_api(const char *function) {
       APICallTimingData data = {
         function
         , thread_profiling_data.profile_task(function, &api_domain)
-#ifdef PROFILE_API_INCLUDE_AS_EVENT
-        , thread_profiling_data.profile_event(function)
-#endif  // PROFILE_API_INCLUDE_AS_EVENT
       };
       thread_profiling_data.calls_.push(data);
       data.task_->start();
-#ifdef PROFILE_API_INCLUDE_AS_EVENT
-      data.event_->start();
-#endif  // PROFILE_API_INCLUDE_AS_EVENT
     }
   }
 }
@@ -141,9 +109,6 @@ extern void on_exit_api() {
     if (!thread_profiling_data.ignore_call_) {
       CHECK(!thread_profiling_data.calls_.empty());
       APICallTimingData data = thread_profiling_data.calls_.top();
-#ifdef PROFILE_API_INCLUDE_AS_EVENT
-      data.event_->stop();
-#endif  // PROFILE_API_INCLUDE_AS_EVENT
       data.task_->stop();
       thread_profiling_data.calls_.pop();
       --api_concurrency_counter;

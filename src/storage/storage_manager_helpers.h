@@ -22,7 +22,7 @@
 
 #if MXNET_USE_CUDA
 #include <cuda_runtime.h>
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #include "../profiler/storage_profiler.h"
 typedef  mxnet::common::cuda::DeviceStore CudaDeviceStore;
 #endif  // MXNET_USE_CUDA

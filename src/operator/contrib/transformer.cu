@@ -30,7 +30,7 @@
 
 #include <mxnet/base.h>
 #include "./transformer-inl.h"
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 
 namespace mxnet {
 namespace op {

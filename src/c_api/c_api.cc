@@ -1583,6 +1583,15 @@ int MXGetVersion(int *out) {
 int MXLoadTVMOp(const char *libpath) {
   API_BEGIN();
   tvm::runtime::TVMOpModule::Get()->Load(libpath);
+  tvm::runtime::TVMOpModule *global_module =  tvm::runtime::TVMOpModule::Get();
+  global_module->Load(libpath);
+#if MXNET_USE_CUDA
+  std::string libpathstr(libpath);
+  std::string cubinpath = libpathstr.substr(0, libpathstr.size() - 11) + "libtvmop.cubin";
+  tvm::runtime::TVMOpModule cubin_module;
+  cubin_module.Load(cubinpath);
+  global_module->Import(cubin_module);
+#endif
   API_END();
 }
 
@@ -3248,24 +3257,24 @@ int MXRtcCudaModuleCreate(const char* source, int num_options,
                           const char** options, int num_exports,
                           const char** exports, CudaModuleHandle *out) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   std::vector<std::string> str_opts;
   for (int i = 0; i < num_options; ++i) str_opts.emplace_back(options[i]);
   std::vector<std::string> str_exports;
   for (int i = 0; i < num_exports; ++i) str_exports.emplace_back(exports[i]);
   *out = new rtc::CudaModule(source, str_opts, str_exports);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
 
 int MXRtcCudaModuleFree(CudaModuleHandle handle) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   delete reinterpret_cast<rtc::CudaModule*>(handle);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
@@ -3274,7 +3283,7 @@ int MXRtcCudaKernelCreate(CudaModuleHandle handle, const char* name, int num_arg
                           int* is_ndarray, int* is_const, int* arg_types,
                           CudaKernelHandle *out) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   auto module = reinterpret_cast<rtc::CudaModule*>(handle);
   std::vector<rtc::CudaModule::ArgType> signature;
   for (int i = 0; i < num_args; ++i) {
@@ -3285,17 +3294,17 @@ int MXRtcCudaKernelCreate(CudaModuleHandle handle, const char* name, int num_arg
   auto kernel = module->GetKernel(name, signature);
   *out = new std::shared_ptr<rtc::CudaModule::Kernel>(kernel);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
 
 int MXRtcCudaKernelFree(CudaKernelHandle handle) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   delete reinterpret_cast<std::shared_ptr<rtc::CudaModule::Kernel>*>(handle);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
@@ -3306,7 +3315,7 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
                         uint32_t block_dim_y, uint32_t block_dim_z,
                         uint32_t shared_mem) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   auto kernel = reinterpret_cast<std::shared_ptr<rtc::CudaModule::Kernel>*>(handle);
   const auto& signature = (*kernel)->signature();
   std::vector<dmlc::any> any_args;
@@ -3322,7 +3331,7 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
   (*kernel)->Launch(Context::GPU(dev_id), any_args, grid_dim_x, grid_dim_y,
                     grid_dim_z, block_dim_x, block_dim_y, block_dim_z, shared_mem);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }

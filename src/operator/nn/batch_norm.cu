@@ -27,7 +27,7 @@
 #include <cuda_runtime_api.h>
 #include <algorithm>
 #include "batch_norm-inl.h"
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 
 
 #define WRITE_DATA_FLAG       1
@@ -44,7 +44,6 @@
 #include "./cudnn/cudnn_batch_norm-inl.h"
 #endif
 
-#include "../../common/cuda_utils.h"
 #include "../../../include/mxnet/tensor_blob.h"
 
 using namespace mxnet;
