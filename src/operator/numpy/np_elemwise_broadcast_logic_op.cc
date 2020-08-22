@@ -99,11 +99,16 @@ struct TVMBinaryBroadcastCompute {
 
     const TBlob& a = inputs[0];
     const TBlob& b = inputs[1];
+
+#if MXNET_USE_CUDA
+
     if (a.type_flag_ != b.type_flag_) {
       BinaryBroadcastRTCCompute mixedTypeCompute{OP};
       mixedTypeCompute(attrs, ctx, inputs, req, outputs);
       return;
     }
+
+#endif  // MXNET_USE_CUDA
 
     const int ondim = outputs[0].shape_.ndim();
     const size_t num_args = inputs.size() + outputs.size();
