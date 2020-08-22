@@ -476,6 +476,73 @@ def test_dot():
     assert A.grad.shape == (1, INT_OVERFLOW)
     assert A.grad[0][0] == 1
 
+@use_np
+def test_random_uniform():
+    A = np.random.uniform(low=0, high=1.0, size=(INT_OVERFLOW))
+    assert A[0] <= 1 and A[0] >= 0
+
+@use_np
+def test_random_normal():
+    A = np.random.normal(loc=0, scale=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+@pytest.mark.skip(reason='times out (20 mins)')
+def test_random_gamma():
+    A = np.random.gamma(shape=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_exponential():
+    A = np.random.exponential(size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_laplace():
+    A = np.random.laplace(loc=0, scale=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_choice():
+    A = np.random.choice(a=10, size=(INT_OVERFLOW))
+    assert A[0] <= 10 and A[0] >= 0
+
+@use_np
+def test_random_gumbel():
+    A = np.random.gumbel(loc=0, scale=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_logistic():
+    A = np.random.logistic(loc=0, scale=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+@pytest.mark.skip(reason='times out (20 mins)')
+def test_random_multinomial():
+    A = np.random.multinomial(pvals=np.zeros(INT_OVERFLOW), n=1)
+    assert A[-1] == 1
+
+@use_np
+def test_random_pareto():
+    A = np.random.pareto(a=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_power():
+    A = np.random.power(a=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_rayleigh():
+    A = np.random.rayleigh(scale=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_weibull():
+    A = np.random.weibull(a=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
@@ -969,3 +1036,4 @@ def test_save_load():
     B = np.array(npx.load('my_tensor'))
     assert B[0].shape == (2, INT_OVERFLOW)
     assert B[0][0][100] == 100
+
