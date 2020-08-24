@@ -86,7 +86,7 @@ def bench_dot(lhs_row_dim, lhs_col_dim, rhs_col_dim, density,
         rhs_nd = rand_ndarray((lhs_col_dim, rhs_col_dim), rhs_stype,
                               density=rhs_density, distribution=distribution)
         out = dot_func(lhs_nd, rhs_nd, trans_lhs)
-    mx.nd.waitall()
+    mx.waitall()
 
 
 if __name__ == '__main__':

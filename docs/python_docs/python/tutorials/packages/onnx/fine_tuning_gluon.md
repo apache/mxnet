@@ -387,7 +387,7 @@ for epoch in range(5):
         loss.backward()
         trainer.step(data.shape[0])
 
-    nd.waitall() # wait at the end of the epoch
+    mx.waitall() # wait at the end of the epoch
     new_val_accuracy = evaluate_accuracy_gluon(dataloader_test, net)
     print("Epoch [{0}] Test Accuracy {1:.4f} ".format(epoch, new_val_accuracy))
 

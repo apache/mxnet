@@ -291,7 +291,7 @@ def test_aggregate_duplication():
     y = mx.nd.sqrt(inp)
     inp = inp + 1
     inp = inp + 1
-    mx.nd.waitall()
+    mx.waitall()
     profiler.dump(False)
     debug_str = profiler.dumps(format='json')
     target_dict = json.loads(debug_str)
@@ -352,7 +352,7 @@ def test_custom_operator_profiling(seed=None, file_name=None):
     with mx.autograd.record():
         y = mx.nd.Custom(x, op_type='MySigmoid')
     y.backward()
-    mx.nd.waitall()
+    mx.waitall()
     profiler.dump(False)
     debug_str = profiler.dumps(format='json')
     target_dict = json.loads(debug_str)
@@ -432,7 +432,7 @@ def custom_operator_profiling_multiple_custom_ops(seed, mode, file_name):
         z = c._bind(mx.cpu(), {'a': inp})
         yy = y.forward()
         zz = z.forward()
-    mx.nd.waitall()
+    mx.waitall()
     profiler.dump(False)
     debug_str = profiler.dumps(format='json')
     check_custom_operator_profiling_multiple_custom_ops_output(debug_str)

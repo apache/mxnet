@@ -231,7 +231,7 @@ def with_seed(seed=None):
                     raise
                 finally:
                     # Provide test-isolation for any test having this decorator
-                    mx.nd.waitall()
+                    mx.waitall()
                     np.random.set_state(post_test_state)
         return test_new
     return test_helper
@@ -307,7 +307,7 @@ def teardown_module():
 
     It waits for all operations in one file to finish before carrying on the next.
     """
-    mx.nd.waitall()
+    mx.waitall()
 
 
 def with_environment(*args_):
@@ -381,6 +381,6 @@ def retry(n):
                 except AssertionError as e:
                     if i == n-1:
                         raise e
-                    mx.nd.waitall()
+                    mx.waitall()
         return test_new
     return test_helper

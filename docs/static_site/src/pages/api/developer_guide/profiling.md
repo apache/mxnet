@@ -27,8 +27,8 @@ Apache MXNet provides memory [profiler]({{"/api/python/docs/api/mxnet/profiler/i
 
 1. Configure the profiler
 2. `set_state('run')` before the model is defined
-3. Add `mx.nd.waitall()` to enforce synchronization after you have done with some computation (maybe as part of training)
-4. Then add `set_state('stop')` 
+3. Add `mx.waitall()` to enforce synchronization after you have done with some computation (maybe as part of training)
+4. Then add `set_state('stop')`
 5. Finally `dump` the profiling results
 
 
@@ -68,7 +68,7 @@ inputs = mx.sym.var('data')
 with mx.autograd.record():
     out = model(mx.nd.zeros((16, 10), ctx=mx.cpu()))
 out.backward()
-mx.nd.waitall()
+mx.waitall()
 profiler.set_state('stop')
 profiler.dump(True)
 ```
@@ -83,32 +83,32 @@ Let's start with a simple example and explain as we go on. The following code cr
 ```
 import mxnet as mx
 import numpy as np
- 
+
 from mxnet import profiler
- 
+
 #configure the profiler
 profiler.set_config(profile_all=True, aggregate_stats=True, filename='trace_profile.json')
 #start the profiler collecting data
 profiler.set_state('run')
- 
+
 ###########################################################
 #1. create our data
 data = np.linspace(1,9,9).reshape((3,3))
- 
+
 #2. create an MXNet ndarray
 a = mx.nd.array(data)
- 
+
 #3. compute on our data and produce results
 b = mx.nd.diag(a)
 c = mx.nd.sum(b,-1)
- 
+
 #4. wait for computation to finish
-mx.nd.waitall()
+mx.waitall()
 ###########################################################
- 
+
 #stop the profiler
 profiler.set_state('stop')
- 
+
 #dump the profiling data as a string
 print(profiler.dumps())
 #dump the profiling data as a json file that can be viewed graphically
@@ -231,36 +231,36 @@ Here is the modified code:
 ```
 import mxnet as mx
 import numpy as np
- 
+
 from mxnet import profiler
- 
+
 profiler.set_config(profile_all=True, aggregate_stats=True, filename='trace_profile.json')
 profiler.set_state('run')
- 
+
 ################
 # first run
 sdata = np.linspace(1,9,9).reshape((3,3))
- 
+
 sa = mx.nd.array(sdata)
 sb = mx.nd.diag(sa)
 sc = mx.nd.sum(sb,-1)
- 
-mx.nd.waitall()
+
+mx.waitall()
 ################
- 
+
 ################
 # second run
 data = np.linspace(1,9,9).reshape((3,3))
- 
+
 a = mx.nd.array(data)
 b = mx.nd.diag(a)
 c = mx.nd.sum(b,-1)
- 
-mx.nd.waitall()
+
+mx.waitall()
 ################
- 
+
 profiler.set_state('stop')
- 
+
 print(profiler.dumps())
 profiler.dump()
 ```
@@ -270,10 +270,10 @@ Notice that we renamed the variables and made another copy after the `waital` ca
 Here is an overview of the *new* timeline:
 
 ![dev_guide_profilling_6.png](/assets/img/dev_guide_profilling_6.png)
-The first red box is the first run, and the 2nd smaller one is the 2nd run. First off, we can see how much smaller the 2nd one is now without any of the initialization routines. Here is a zoomed in view of just the 2nd run. 
+The first red box is the first run, and the 2nd smaller one is the 2nd run. First off, we can see how much smaller the 2nd one is now without any of the initialization routines. Here is a zoomed in view of just the 2nd run.
 
 
 ![dev_guide_profilling_7.png](/assets/img/dev_guide_profilling_7.png)
-We still have the same sequence of events at the beginning to initialize the MXNet ndarray (`MXNDArrayCreate`, `MXNDArrayGetShape`, `MXNDArrayGetDType`, `MXNDArraySyncCopyFromCPU`). Then the **`diag`** operator runs, followed by the **`sum`** operator, and finally the `waitall`. When you look at this, be careful about the assumptions that you make. In this version of the timeline, it appears that the operator executes after the `MXImperativeInvoke` runs, and seems to imply an inherent ordering. But realize that there is no dependency between the **`diag`** operator finishing and the next **`MXImperativeInvoke`** launching the **`sum`** operator. In this case, it just-so-happens that the **`diag`** operator finishes so quickly that it appears that way. But in reality the main thread is launching the operators and not waiting for them to finish. Lastly, keep in mind that in this case by the time we hit the **`MXNDArrayWaitAll`** everything is already done and we return immediately, but in other circumstances it may sit here waiting for everything to finish (like we saw earlier in the first run). 
+We still have the same sequence of events at the beginning to initialize the MXNet ndarray (`MXNDArrayCreate`, `MXNDArrayGetShape`, `MXNDArrayGetDType`, `MXNDArraySyncCopyFromCPU`). Then the **`diag`** operator runs, followed by the **`sum`** operator, and finally the `waitall`. When you look at this, be careful about the assumptions that you make. In this version of the timeline, it appears that the operator executes after the `MXImperativeInvoke` runs, and seems to imply an inherent ordering. But realize that there is no dependency between the **`diag`** operator finishing and the next **`MXImperativeInvoke`** launching the **`sum`** operator. In this case, it just-so-happens that the **`diag`** operator finishes so quickly that it appears that way. But in reality the main thread is launching the operators and not waiting for them to finish. Lastly, keep in mind that in this case by the time we hit the **`MXNDArrayWaitAll`** everything is already done and we return immediately, but in other circumstances it may sit here waiting for everything to finish (like we saw earlier in the first run).
 
 

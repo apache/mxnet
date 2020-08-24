@@ -1462,7 +1462,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
         for _ in range(N):
             exe.forward(is_train=True)
             exe.backward(out_grads=exe.outputs)
-        mx.nd.waitall()
+        mx.waitall()
         toc = time.time()
         forward_backward_time = (toc - tic) * 1.0 / N
         return forward_backward_time
@@ -1476,7 +1476,7 @@ def check_speed(sym, location=None, ctx=None, N=20, grad_req=None, typ="whole",
         tic = time.time()
         for _ in range(N):
             exe.forward(is_train=False)
-        mx.nd.waitall()
+        mx.waitall()
         toc = time.time()
         forward_time = (toc - tic) * 1.0 / N
         return forward_time
@@ -2421,7 +2421,7 @@ def environment(*args):
         yield
     finally:
         # the backend engines may still be referencing the changed env var state
-        mx.nd.waitall()
+        mx.waitall()
         # reinstate original env_var state per the snapshot taken earlier
         set_environ(snapshot)
 

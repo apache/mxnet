@@ -234,7 +234,7 @@ def test_nn():
         exe = y._simple_bind(ctx=default_context(), data=shape)
         exe.arg_arrays[0][:] = 1
         out = exe.forward(is_train=True)
-        nd.waitall()
+        mx.waitall()
         assert out[0].shape == shape
 
     def check_activation():
@@ -939,18 +939,18 @@ def test_tensor():
 
     def check_shape():
         b = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
-        mx.nd.waitall()
+        mx.waitall()
         assert b.shape == (SMALL_Y, LARGE_X)
 
     def check_size():
         b = create_2d_tensor(rows=SMALL_Y, columns=LARGE_X)
-        mx.nd.waitall()
+        mx.waitall()
         assert b.size == LARGE_SIZE
 
     def check_copy():
         a = nd.ones((SMALL_Y, LARGE_X))
         b = a.copy()
-        nd.waitall()
+        mx.waitall()
         assert b.shape == a.shape
         assert b.size == LARGE_SIZE
 
@@ -1163,7 +1163,7 @@ def test_basic():
     def check_argsort():
         b = create_2d_tensor(rows=LARGE_X, columns=SMALL_Y)
         s = nd.argsort(b, axis=0, is_ascend=False, dtype=np.int64)
-        mx.nd.waitall()
+        mx.waitall()
         assert (s[0].asnumpy() == (LARGE_X - 1)).all()
 
     @pytest.mark.skip(reason="Memory doesn't free up after stacked execution with other ops, " +

@@ -362,7 +362,7 @@ def test_invalid_operations():
         row_id = mx.nd.arange(0, 4)
         w = x.row_sparse_data(row_id)
         assert trainer._kv_initialized and trainer._update_on_kvstore
-        mx.nd.waitall()
+        mx.waitall()
         # load would fail to reset kvstore since update_on_kvstore is True
         params = mx.nd.load('test_gluon_trainer_reset_' + str(my_rank) + '.params')
         assert_exception(x._load_init, RuntimeError, params['x'], None)

@@ -107,7 +107,7 @@ def run_benchmark(cell_type, ctx, seq_len, batch_size, hidden_dim):
                     res = layer(inputs, states)
             if is_train:
                 res.backward()
-            mx.nd.waitall()
+            mx.waitall()
             tock = time()
             times.append((tock - tick) * 1000.0)
         times = times[args.warmup_rounds: ]

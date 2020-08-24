@@ -39,7 +39,7 @@ def test_sync_push_pull():
             kv.push(key, mx.nd.ones(shape, dtype='float32') * (my_rank+1))
             val = mx.nd.zeros(shape, dtype='float32')
             kv.pull(key, out=val)
-            mx.nd.waitall()
+            mx.waitall()
     check_default_keys(kv, my_rank)
 
 if __name__ == "__main__":

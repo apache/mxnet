@@ -33,8 +33,8 @@ x = nd.random_uniform(shape=(2000,2000))
 y = nd.dot(x, x)
 print('Time for matrix multiplication: %f sec\n' % (time() - start))
 
-start = time()                                
-y_np = y.asnumpy()                             
+start = time()
+y_np = y.asnumpy()
 print('Time for converting to numpy: %f sec' % (time() - start))
 ```
 
@@ -151,7 +151,7 @@ profiler.set_state('run')
 run_training_iteration(*next(itr))
 
 # Make sure all operations have completed
-mx.nd.waitall()
+mx.waitall()
 # Ask the profiler to stop recording
 profiler.set_state('stop')
 # Dump all results to log file before download
@@ -200,7 +200,7 @@ You can also dump the information collected by the profiler into a `json` file u
 profiler.dump(finished=False)
 ```
 
-`dump()` creates a `json` file which can be viewed using a trace consumer like `chrome://tracing` in the Chrome browser. Here is a snapshot that shows the output of the profiling we did above. Note that setting the `finished` parameter to `False` will prevent the profiler from finishing dumping to file. If you just use `profiler.dump()`, you will no longer be able to profile the remaining sections of your model. 
+`dump()` creates a `json` file which can be viewed using a trace consumer like `chrome://tracing` in the Chrome browser. Here is a snapshot that shows the output of the profiling we did above. Note that setting the `finished` parameter to `False` will prevent the profiler from finishing dumping to file. If you just use `profiler.dump()`, you will no longer be able to profile the remaining sections of your model.
 
 ![Tracing Screenshot](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/tutorials/python/profiler/profiler_output_chrome.png)
 
@@ -241,7 +241,7 @@ Let's try profiling custom operators with the following code example:
 
 ```{.python .input}
 class MyAddOne(mx.operator.CustomOp):
-    def forward(self, is_train, req, in_data, out_data, aux):  
+    def forward(self, is_train, req, in_data, out_data, aux):
         self.assign(out_data[0], req[0], in_data[0]+1)
 
     def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
@@ -273,7 +273,7 @@ profiler.set_state('run')
 
 w = nd.Custom(inp, op_type="MyAddOne")
 
-mx.nd.waitall()
+mx.waitall()
 
 profiler.set_state('stop')
 print(profiler.dumps())
@@ -286,9 +286,9 @@ Here, we have created a custom operator called `MyAddOne`, and within its `forwa
 
 As shown by the screenshot, in the **Custom Operator** domain where all the custom operator-related events fall into, we can easily visualize the execution time of each segment of `MyAddOne`. We can tell that `MyAddOne::pure_python` is executed first. We also know that `CopyCPU2CPU` and `_plus_scalr` are two "sub-operators" of `MyAddOne` and the sequence in which they are executed.
 
-Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.apache.org/versions/master/tutorials/basic/symbol.html) (refer to the code snippet below, which is the symbolic-mode equivelent of the code example above). The reason is that within custom operators, pure python code and sub-operators are still called imperatively. 
+Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.apache.org/versions/master/tutorials/basic/symbol.html) (refer to the code snippet below, which is the symbolic-mode equivelent of the code example above). The reason is that within custom operators, pure python code and sub-operators are still called imperatively.
 
-```{.python .input} 
+```{.python .input}
 # Set profile_all to True
 profiler.set_config(profile_all=True, aggregate_stats=True, continuous_dump=True)
 # OR, Explicitly Set profile_symbolic and profile_imperative to True
@@ -301,7 +301,7 @@ a = mx.symbol.Variable('a')
 b = mx.symbol.Custom(data=a, op_type='MyAddOne')
 c = b.bind(mx.cpu(), {'a': inp})
 y = c.forward()
-mx.nd.waitall()
+mx.waitall()
 profiler.set_state('stop')
 print(profiler.dumps())
 profiler.dump()

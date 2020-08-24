@@ -57,7 +57,7 @@ def nd_forward_backward_and_profile(op, runs, **kwargs):
             else:
                 res = op(**kwargs_new)
         res.backward()
-        nd.waitall()
+        mx.waitall()
     return res
 
 
@@ -95,7 +95,7 @@ def nd_forward_and_profile(op, runs, **kwargs):
             res = op(*args, **kwargs_new)
         else:
             res = op(**kwargs_new)
-        nd.waitall()
+        mx.waitall()
     return res
 
 

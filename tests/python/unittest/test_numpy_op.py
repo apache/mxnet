@@ -1828,7 +1828,7 @@ def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
                     output, output_mean, output_std = output
                 if is_train:
                     output.backward(ograd)
-            mx.nd.waitall()
+            mx.waitall()
 
             assert 0 <= axis < data.ndim
             reduce_axis = tuple(i for i in range(data.ndim) if i != axis)
@@ -4350,11 +4350,11 @@ def test_np_argmin_argmax():
                 if throw_exception:
                     # Cannot use assert_exception because sometimes the main thread
                     # proceeds to `assert False` before the exception is thrown
-                    # in the worker thread. Have to use mx.nd.waitall() here
+                    # in the worker thread. Have to use mx.waitall() here
                     # to block the main thread.
                     try:
                         getattr(np, op_name)(a, axis)
-                        mx.nd.waitall()
+                        mx.waitall()
                         assert False
                     except mx.MXNetError:
                         pass
@@ -4371,7 +4371,7 @@ def test_np_argmin_argmax():
                     if throw_exception:
                         try:
                             net(a)
-                            mx.nd.waitall()
+                            mx.waitall()
                             assert False
                         except mx.MXNetError:
                             pass
@@ -4424,11 +4424,11 @@ def test_np_clip():
             if throw_exception:
                 # Cannot use assert_exception because sometimes the main thread
                 # proceeds to `assert False` before the exception is thrown
-                # in the worker thread. Have to use mx.nd.waitall() here
+                # in the worker thread. Have to use mx.waitall() here
                 # to block the main thread.
                 try:
                     a.clip(min=a_min, max=a_max)
-                    mx.nd.waitall()
+                    mx.waitall()
                     assert False
                 except:
                     pass
@@ -4444,7 +4444,7 @@ def test_np_clip():
                 if throw_exception:
                     try:
                         net(a)
-                        mx.nd.waitall()
+                        mx.waitall()
                         assert False
                     except:
                         pass
@@ -10249,7 +10249,7 @@ def test_np_elementwise_ops_on_misaligned_input():
     # Note: testing just elemwise_add since all elemwise_ops
     #       share the implementation
     c[:] = c + d
-    mx.nd.waitall()
+    mx.waitall()
 
     a = np.array([1,2,3,4], dtype='float16')
     b = np.array([1,2,3,4], dtype='float16')
@@ -10257,7 +10257,7 @@ def test_np_elementwise_ops_on_misaligned_input():
     c = a[0:3]
     d = b[0:3]
     c[:] = c + d
-    mx.nd.waitall()
+    mx.waitall()
     assert a[3] == 4.0
 
 
@@ -10285,7 +10285,7 @@ def test_np_broadcast_ops_on_misaligned_input(dtype, lead_dim, both_ways):
     f = e[1:size + 1].reshape(tuple(shape))
     f[:] = c + d
     expected = c.asnumpy() + d.asnumpy()
-    mx.nd.waitall()
+    mx.waitall()
     assert_almost_equal(f, expected)
 
 
@@ -10313,5 +10313,5 @@ def test_np_broadcast_ops_on_misaligned_input_oneside(dtype, lead_dim, both_ways
     f = e[1:size + 1].reshape(tuple(shape))
     f[:] = c + d
     expected = c.asnumpy() + d.asnumpy()
-    mx.nd.waitall()
+    mx.waitall()
     assert_almost_equal(f, expected)

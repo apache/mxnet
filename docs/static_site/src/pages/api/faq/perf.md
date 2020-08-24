@@ -300,14 +300,14 @@ Briefly, the Python code looks like:
 
 ```python
     # wait for previous operations to complete
-    mx.nd.waitall() 
+    mx.waitall() 
     mx.profiler.set_config(profile_all=True, aggregate_stats=True, filename='profile_output.json')
     mx.profiler.set_state('run')
 
     # Code to be profiled goes here...
 
     # wait for previous operations to complete
-    mx.nd.waitall() 
+    mx.waitall() 
     mx.profiler.set_state('stop')
 ```
 

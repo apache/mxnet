@@ -23,11 +23,11 @@ from mxnet import np, npx
 def measure_cost(repeat, func_name, *args, **kwargs):
     """Measure time cost of running a function
     """
-    mx.nd.waitall()
+    mx.waitall()
     start = time.time()
     for _ in range(repeat):
         func_name(*args, **kwargs)
-    mx.nd.waitall()
+    mx.waitall()
     end = time.time()
     diff = end - start
     return diff / repeat

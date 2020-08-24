@@ -191,4 +191,4 @@ def test_subgraph_with_customOp():
     c = mx.symbol.Custom(data=a, op_type='MyAdd2')
     b._bind(mx.cpu(), {'a': inp}).forward()
     c._bind(mx.cpu(), {'a': inp}).forward()
-    mx.nd.waitall()
+    mx.waitall()

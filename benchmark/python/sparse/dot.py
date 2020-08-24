@@ -110,7 +110,7 @@ SYNTHETIC2 = {
 def measure_cost(repeat, scipy_trans_lhs, scipy_dns_lhs, func_name, *args, **kwargs):
     """Measure time cost of running a function
     """
-    mx.nd.waitall()
+    mx.waitall()
     args_list = []
     for arg in args:
         args_list.append(arg)
@@ -119,7 +119,7 @@ def measure_cost(repeat, scipy_trans_lhs, scipy_dns_lhs, func_name, *args, **kwa
         args_list[0] = np.transpose(args_list[0]) if scipy_dns_lhs else sp.spmatrix.transpose(args_list[0])
     for _ in range(repeat):
         func_name(*args_list, **kwargs)
-    mx.nd.waitall()
+    mx.waitall()
     end = time.time()
     diff = end - start
     return diff / repeat

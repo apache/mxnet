@@ -1530,7 +1530,7 @@ def test_batchnorm(op_name, shape, fix_gamma, cudnn_off, output_mean_var):
                     output, output_mean, output_std = output
                 if is_train:
                     output.backward(ograd)
-            mx.nd.waitall()
+            mx.waitall()
 
             data_mean = data.mean(
                 axis=axis, exclude=True, keepdims=True)
@@ -9347,7 +9347,7 @@ def test_elementwise_ops_on_misaligned_input():
     # Note: testing just elemwise_add since all elemwise_ops
     #       share the implementation
     mx.nd.elemwise_add(c, d, out=c)
-    mx.nd.waitall()
+    mx.waitall()
 
     a = mx.nd.array([1,2,3,4], dtype='float16')
     b = mx.nd.array([1,2,3,4], dtype='float16')
@@ -9355,7 +9355,7 @@ def test_elementwise_ops_on_misaligned_input():
     c = a[0:3]
     d = b[0:3]
     mx.nd.elemwise_add(c, d, out=c)
-    mx.nd.waitall()
+    mx.waitall()
     assert a[3].asscalar() == 4.0
 
 @with_seed()
@@ -9381,7 +9381,7 @@ def test_broadcast_ops_on_misaligned_input(dtype, lead_dim, both_ways):
     f = e[1:size + 1].reshape(shape)
     mx.nd.broadcast_add(c, d, out=f)
     expected = c.asnumpy() + d.asnumpy()
-    mx.nd.waitall()
+    mx.waitall()
     assert_almost_equal(f, expected)
 
 @with_seed()
@@ -9407,6 +9407,6 @@ def test_broadcast_ops_on_misaligned_input_oneside(dtype, lead_dim, both_ways):
     f = e[1:size + 1].reshape(shape)
     mx.nd.broadcast_add(c, d, out=f)
     expected = c.asnumpy() + d.asnumpy()
-    mx.nd.waitall()
+    mx.waitall()
     assert_almost_equal(f, expected)
 

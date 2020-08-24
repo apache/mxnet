@@ -38,7 +38,7 @@ set_default_context(mx.gpu(0))
 @pytest.fixture()
 def amp_tests(request):
     def teardown():
-        mx.nd.waitall()
+        mx.waitall()
 
     request.addfinalizer(teardown)
 

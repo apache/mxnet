@@ -41,7 +41,7 @@ from ..dlpack import ndarray_to_dlpack_for_read, ndarray_to_dlpack_for_write
 from ..dlpack import ndarray_from_dlpack, ndarray_from_numpy
 from ..runtime import Features
 from ..context import Context, current_context
-from ..util import is_np_array
+from ..util import is_np_array, waitall
 from . import _internal
 from . import op
 from ._internal import NDArrayBase
@@ -226,18 +226,6 @@ def _new_from_shared_mem(shared_pid, shared_id, shape, dtype):
         ctypes.c_int(int(_DTYPE_NP_TO_MX[np.dtype(dtype).type])),
         ctypes.byref(hdl)))
     return hdl
-
-
-def waitall():
-    """Wait for all async operations to finish in MXNet.
-
-    This function is used for benchmarking only.
-
-    .. note::
-
-       If your mxnet code throws an exception, then waitall can cause performance impact.
-    """
-    check_call(_LIB.MXNDArrayWaitAll())
 
 
 def _storage_type(handle):

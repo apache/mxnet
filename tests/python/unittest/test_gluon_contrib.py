@@ -49,7 +49,7 @@ def check_rnn_forward(layer, inputs):
     with mx.autograd.record():
         layer.unroll(3, inputs, merge_outputs=True)[0].backward()
         mx.autograd.backward(layer.unroll(3, inputs, merge_outputs=False)[0])
-    mx.nd.waitall()
+    mx.waitall()
 
 
 @with_seed()
@@ -140,7 +140,7 @@ def test_vardrop():
         input_data = mx.nd.random_uniform(shape=(10, 3, 50), ctx=mx.context.current_context())
         with mx.autograd.record():
             outputs1, _ = cell.unroll(3, input_data, merge_outputs=True)
-            mx.nd.waitall()
+            mx.waitall()
             outputs2, _ = cell.unroll(3, input_data, merge_outputs=True)
         assert not almost_equal(outputs1.asnumpy(), outputs2.asnumpy())
 
@@ -155,7 +155,7 @@ def test_vardrop():
         cell.hybridize()
         with mx.autograd.record():
             outputs3, _ = cell.unroll(3, input_data, merge_outputs=True)
-            mx.nd.waitall()
+            mx.waitall()
             outputs4, _ = cell.unroll(3, input_data, merge_outputs=True)
         assert not almost_equal(outputs3.asnumpy(), outputs4.asnumpy())
         assert not almost_equal(outputs1.asnumpy(), outputs3.asnumpy())

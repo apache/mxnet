@@ -88,7 +88,7 @@ for epoch in range(args.num_epoch):
             out = rbm(batch)
         out[0].backward()
         trainer.step(batch.shape[0])
-    mx.nd.waitall() # To restrict memory usage
+    mx.waitall() # To restrict memory usage
 
     # Monitor the performace of the model
     params = get_non_auxiliary_params(rbm)

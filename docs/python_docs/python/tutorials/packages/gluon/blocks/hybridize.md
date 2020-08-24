@@ -133,7 +133,7 @@ def benchmark(net, x):
     start = time.time()
     for i in range(1000):
         _ = net(x)
-    nd.waitall()  # To facilitate timing, we wait for all computations to be completed.
+    mx.waitall()  # To facilitate timing, we wait for all computations to be completed.
     return time.time() - start
 
 net = get_net()

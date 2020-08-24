@@ -1242,7 +1242,7 @@ def test_dtype():
     net.cast('float64')
     net(mx.nd.ones((16, 3, 32, 32), dtype='float64'))
 
-    mx.nd.waitall()
+    mx.waitall()
 
     class Net(gluon.Block):
         def __init__(self, in_dim, output_dim):
@@ -1260,7 +1260,7 @@ def test_dtype():
     net = Net(5, 10)
     net.initialize()
     out = net(mx.nd.ones((3,), dtype=np.float64))
-    mx.nd.waitall()
+    mx.waitall()
 
 @with_seed()
 def test_fill_shape_load():
@@ -1661,7 +1661,7 @@ def test_hybrid_static_memory_switching(static_alloc, static_shape):
     with mx.autograd.record():
         y = net(x)
         y.backward()
-    mx.nd.waitall()
+    mx.waitall()
 
 @with_seed()
 def test_hook():
@@ -2998,7 +2998,7 @@ def test_gluon_param_load():
     net.save_parameters('test_gluon_param_load.params')
     net.cast('float16')
     net.load_parameters('test_gluon_param_load.params', cast_dtype=True)
-    mx.nd.waitall()
+    mx.waitall()
 
 @with_seed()
 def test_gluon_param_load_dtype_source():
@@ -3009,7 +3009,7 @@ def test_gluon_param_load_dtype_source():
     net.cast('float32')
     net.load_parameters('test_gluon_param_load_dtype_source.params', cast_dtype=True, dtype_source="saved")
     assert net.weight.dtype == np.float16
-    mx.nd.waitall()
+    mx.waitall()
 
 @with_seed()
 def test_squeeze_consistency():

@@ -63,12 +63,12 @@ def test_exc_symbolic():
         if exec_backward:
             exec1.backward()
             if waitall:
-                mx.nd.waitall()
+                mx.waitall()
             else:
                 exec1.grad_arrays[0].asnumpy()
         else:
             if waitall:
-                mx.nd.waitall()
+                mx.waitall()
             else:
                 outputs[0].asnumpy()
 
@@ -93,7 +93,7 @@ def test_exc_gluon():
         y = model(x)
         z = model(mx.nd.random.normal(10, -10, (32, 2, 10), ctx=default_context()))
         if waitall:
-            mx.nd.waitall()
+            mx.waitall()
         elif exec_wait:
             z.wait_to_read()
 
@@ -112,7 +112,7 @@ def test_exc_multiple_waits():
         try:
             a = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_context())
             if waitall:
-                mx.nd.waitall()
+                mx.waitall()
             else:
                 a.wait_to_read()
         except MXNetError:
@@ -121,7 +121,7 @@ def test_exc_multiple_waits():
         try:
             b = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_context())
             if waitall:
-                mx.nd.waitall()
+                mx.waitall()
             else:
                 b.wait_to_read()
         except MXNetError:
@@ -140,7 +140,7 @@ def test_exc_post_fail():
         try:
             a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_context())
             if waitall:
-                mx.nd.waitall()
+                mx.waitall()
             else:
                 a.asnumpy()
         except MXNetError:
@@ -156,7 +156,7 @@ def test_exc_mutable_var_fail():
         a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_context())
         a = mx.nd.dot(a, a)
         if waitall:
-            mx.nd.waitall()
+            mx.waitall()
         else:
             a.asnumpy()
     pytest.raises(MXNetError, mutable_var_check, waitall=False)
@@ -167,11 +167,11 @@ def test_multiple_waitalls():
     caught = False
     try:
         a = mx.nd.random.normal(0, -1, (2, 2)).copyto(default_context())
-        mx.nd.waitall()
+        mx.waitall()
     except MXNetError:
         caught = True
     assert caught, "No exception thrown"
-    mx.nd.waitall()
+    mx.waitall()
 
 @with_seed()
 def run_training_iteration(data):
@@ -185,7 +185,7 @@ def run_training_iteration(data):
     data = mx.nd.ones((3, 4))
     mx.profiler.set_state("run")
     run_training_iteration(data)
-    mx.nd.waitall()
+    mx.waitall()
     mx.profiler.set_state("stop")
 
 

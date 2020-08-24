@@ -232,7 +232,7 @@ def test_trainer_reset_kv():
         trainer.step(1)
         assert trainer._kvstore.type == kv
         # load would reset kvstore
-        mx.nd.waitall()
+        mx.waitall()
         params = mx.nd.load('test_trainer_reset_kv.params')
         x._load_init(params['x'], None)
         if trainer._update_on_kvstore:
@@ -271,7 +271,7 @@ def test_trainer_sparse_kv():
             assert trainer._kv_initialized
             assert trainer._update_on_kvstore is expected
             # the updated parameter should be based on the loaded checkpoint
-            mx.nd.waitall()
+            mx.waitall()
             updated_w = x.data(mx.cpu(0)) if stype == 'default' else x.row_sparse_data(all_rows)
             assert (updated_w == -0.2).asnumpy().all(), updated_w
         except Exception as err:
@@ -307,7 +307,7 @@ def test_trainer_lr_sched():
         if i % freq == 0:
             assert trainer.learning_rate == lr, (lr, trainer.learning_rate, i)
             lr *= factor
-    mx.nd.waitall()
+    mx.waitall()
 
     # Update on kvstore = False
     x = gluon.Parameter('x', shape=(10,))
@@ -327,7 +327,7 @@ def test_trainer_lr_sched():
         if i % freq == 0:
             assert trainer.learning_rate == lr, (lr, trainer.learning_rate, i)
             lr *= factor
-    mx.nd.waitall()
+    mx.waitall()
 
 @with_seed()
 def test_gluon_trainer_param_order():

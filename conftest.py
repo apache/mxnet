@@ -196,7 +196,7 @@ def function_scope_seed(request):
 
     try:
         import mxnet as mx
-        mx.nd.waitall()
+        mx.waitall()
     except:
         logging.warning('Unable to import mxnet. Skipping for mxnet engine.')
 

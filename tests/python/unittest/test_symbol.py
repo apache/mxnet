@@ -269,7 +269,7 @@ def test_zero_prop2():
                         type_dict={'x': np.float32, 'idx': np.int32})
     exe.forward(is_train=True)
     exe.backward()
-    mx.nd.waitall()
+    mx.waitall()
 
 
 def test_simple_bind_incomplete_shape_inference_in_one_forward_pass():

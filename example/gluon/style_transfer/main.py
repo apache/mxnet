@@ -100,7 +100,7 @@ def train(args):
                 total_loss.backward()
 
             trainer.step(args.batch_size)
-            mx.nd.waitall()
+            mx.waitall()
 
             agg_content_loss += content_loss[0]
             agg_style_loss += style_loss[0]

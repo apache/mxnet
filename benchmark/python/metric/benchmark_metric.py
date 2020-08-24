@@ -70,10 +70,10 @@ def run_metric(name, data_gen_cls, i, n, c, pred_ctx, label_ctx, **kwargs):
     data_gen = data_gen_cls(n, c, pred_ctx, label_ctx)
     try:
         label, pred = data_gen.data()
-        mx.nd.waitall()
+        mx.waitall()
         before = time.time()
         metric.update([label] * i, [pred] * i)
-        mx.nd.waitall()
+        mx.waitall()
         elapsed = time.time() - before
         elapsed_str = "{:<.5}".format(elapsed)
     except mx.MXNetError:

@@ -543,7 +543,7 @@ robust for the machine translation task.
                               label_smoothing, loss_function, grad_interval,
                               average_param_dict, update_average_param_dict,
                               step_num, ctx)
-        mx.nd.waitall()
+        mx.waitall()
         # We define evaluation function as follows. The `evaluate` function use beam search translator
         # to generate outputs for the validation and testing datasets.
         valid_loss, _ = utils.evaluate(model, val_data_loader,

@@ -52,7 +52,7 @@ def test_gpu_memory_profiler_symbolic():
     for i in range(iter_num):
         executor.forward()
         c = executor.outputs[0]
-        mx.nd.waitall()
+        mx.waitall()
     profiler.set_state('stop')
     profiler.dump(True)
 
@@ -113,7 +113,7 @@ def test_gpu_memory_profiler_gluon():
     with mx.autograd.record():
         out = model(mx.nd.zeros((16, 10), ctx=mx.gpu()))
     out.backward()
-    mx.nd.waitall()
+    mx.waitall()
     profiler.set_state('stop')
     profiler.dump(True)
 

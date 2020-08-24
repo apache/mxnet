@@ -1177,3 +1177,15 @@ def setenv(name, value):
     """
     passed_value = None if value is None else c_str(value)
     check_call(_LIB.MXSetEnv(c_str(name), passed_value))
+
+
+def waitall():
+    """Wait for all async operations to finish in MXNet.
+
+    This function is used for benchmarking only.
+
+    .. note::
+
+       If your mxnet code throws an exception, then waitall can cause performance impact.
+    """
+    check_call(_LIB.MXNDArrayWaitAll())
