@@ -103,6 +103,7 @@ void PrepareDataOpForwardCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_prepare_data)
+.add_alias("_npx_intgemm_prepare_data")
 .describe(R"code(This operator converts quantizes float32 to int8 while also banning -128.
 
 It it suitable for preparing an data matrix for use by intgemm's C=data * weights operation.

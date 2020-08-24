@@ -265,6 +265,7 @@ void IntgemmFullyConnectedOpForwardCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_fully_connected)
+.add_alias("_npx_intgemm_fully_connected")
 .describe(R"code(Multiply matrices using 8-bit integers.  data * weight.
 
 Input tensor arguments are: data weight [scaling] [bias]

@@ -122,6 +122,7 @@ void TakeWeightOpForwardCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_take_weight)
+.add_alias("_npx_intgemm_take_weight")
 .describe(R"code(Index a weight matrix stored in intgemm's weight format.
 The indices select the outputs of matrix multiplication, not the inner dot product dimension.
 )code" ADD_FILELINE)

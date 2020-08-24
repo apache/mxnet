@@ -95,6 +95,7 @@ void MaxAbsoluteOpForwardCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_maxabsolute)
+.add_alias("_npx_intgemm_maxabsolute")
 .describe(R"code(Compute the maximum absolute value in a tensor of float32 fast on a CPU.  The tensor's total size must be a multiple of 16 and aligned to a multiple of 64 bytes.
 mxnet.nd.contrib.intgemm_maxabsolute(arr) == arr.abs().max()
 )code" ADD_FILELINE)

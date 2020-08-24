@@ -142,6 +142,7 @@ void PrepareWeightOpForwardCPU(const nnvm::NodeAttrs& attrs,
 }
 
 NNVM_REGISTER_OP(_contrib_intgemm_prepare_weight)
+.add_alias("_npx_intgemm_prepare_weight")
 .describe(R"code(This operator converts a weight matrix in column-major format to intgemm's internal fast representation of weight matrices.  MXNet customarily stores weight matrices in column-major (transposed) format. This operator is not meant to be fast; it is meant to be run offline to quantize a model.
 
 In other words, it prepares weight for the operation C = data * weight^T.
