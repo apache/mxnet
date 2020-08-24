@@ -123,6 +123,11 @@ def test_np_einsum():
         # commented due to long running time on CPU
         # ('abiz,abjz->abij', [(64, 8, 128, 512), (64, 8, 128, 512)], lambda *args: (_np.matmul(_np.ones((64, 8, 128, 128)), args[1]),
         #                                                                            _np.matmul(_np.ones((64, 8, 128, 128)), args[0]))),
+        # test with cuTensor using workspace
+        (('ij,jk,kl->il'), [(64, 2000), (2000, 64), (64, 64)],
+            lambda *args: (_np.dot(_np.ones((64, 64)), _np.dot(args[1], args[2]).T),
+            _np.dot(args[0].T, _np.dot(_np.ones((64, 64)), args[2].T)),
+            _np.dot(_np.dot(args[0], args[1]).T, _np.ones((64, 64)))))
     ]
     dtypes = ['float32', 'float64'] ##, 'int32'] not working int32
     for hybridize in [False, True]:
@@ -142,7 +147,7 @@ def test_np_einsum():
                     x = []
                     x_np = []
                     for shape in operands:
-                        tmp = _np.array(_np.random.uniform(-1.0, 1.0, shape), dtype=dtype)
+                        tmp = _np.array(_np.random.uniform(0.1, 1.0, shape), dtype=dtype)
                         x_np.append(tmp)
                         x.append(np.array(tmp, dtype=dtype))
                         x[-1].attach_grad()
