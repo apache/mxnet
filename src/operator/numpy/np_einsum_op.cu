@@ -240,8 +240,6 @@ struct Einsum
         isInitialized_ = true;
     }
 
-    size_t getWorksize() const { return kWorksize_; }
-
     std::vector<IntType> getOutputShape() const
     {
         if (!isInitialized_) return {};
@@ -252,106 +250,6 @@ struct Einsum
         }
 
         return extentC;
-    }
-
-    /**
-     * Computes the einsum call A,B->C
-     *
-     * \param[in] A_raw device pointer of A
-     * \param[in] B_raw device pointer of B
-     * \param[out] C_raw device pointer of C
-     * \param[out] wor_raw device pointer to the scratchpad memory
-     * Dispatch to contraction
-     */
-    bool execute(const cutensorHandle_t *handle,
-                 const void* A_raw,
-                 const void* B_raw,
-                 void* C_raw,
-                 void *work_raw, cudaStream_t stream) const
-    {
-        if (!isInitialized_) return false;
-
-        cudaDataType_t cudaType = CuTensorTypeTraits<ComputeType>::cudaType;
-        cutensorComputeType_t computeType = CuTensorTypeTraits<ComputeType>::cutensorType;
-
-        cutensorTensorDescriptor_t descA;
-        CUTENSOR_CALL(cutensorInitTensorDescriptor(handle,
-                    &descA,
-                    numModesA_,
-                    extentA_.data(),
-                    NULL /* = stride */,
-                    cudaType, CUTENSOR_OP_IDENTITY));
-
-        cutensorTensorDescriptor_t descC;
-        CUTENSOR_CALL(cutensorInitTensorDescriptor(handle,
-                    &descC,
-                    numModesC_,
-                    extentC_.data(),
-                    NULL /* = stride*/,
-                    cudaType, CUTENSOR_OP_IDENTITY));
-
-        uint32_t alignmentRequirementA;
-        CUTENSOR_CALL(cutensorGetAlignmentRequirement(handle,
-                    A_raw, &descA, &alignmentRequirementA));
-
-        uint32_t alignmentRequirementC;
-        CUTENSOR_CALL(cutensorGetAlignmentRequirement(handle,
-                    C_raw, &descC, &alignmentRequirementC));
-
-
-        cutensorTensorDescriptor_t descB;
-        uint32_t alignmentRequirementB;
-        if (numModesB_ > 0)
-        {
-            // dispatch to contraction
-            CUTENSOR_CALL(cutensorInitTensorDescriptor(handle,
-                        &descB,
-                        numModesB_,
-                        extentB_.data(),
-                        NULL /* = stride*/,
-                        cudaType, CUTENSOR_OP_IDENTITY));
-
-            CUTENSOR_CALL(cutensorGetAlignmentRequirement(handle,
-                        B_raw, &descB, &alignmentRequirementB));
-
-            cutensorContractionDescriptor_t desc;
-            CUTENSOR_CALL(cutensorInitContractionDescriptor(handle, &desc,
-                        &descA, modesA_.data(), alignmentRequirementA,
-                        &descB, modesB_.data(), alignmentRequirementB,
-                        &descC, modesC_.data(), alignmentRequirementC,
-                        &descC, modesC_.data(), alignmentRequirementC,
-                        computeType));
-
-            cutensorAlgo_t algo = CUTENSOR_ALGO_DEFAULT;
-            cutensorContractionFind_t find;
-            CUTENSOR_CALL(cutensorInitContractionFind( 
-                        handle, &find, 
-                        algo));
-
-            cutensorContractionPlan_t plan;
-            CUTENSOR_CALL(cutensorInitContractionPlan(handle,
-                        &plan, &desc, &find, kWorksize_));
-
-            typename CuTensorTypeTraits<ComputeType>::ScalarType alpha = 1;
-            typename CuTensorTypeTraits<ComputeType>::ScalarType beta = 0;
-
-            CUTENSOR_CALL(cutensorContraction(handle, &plan,
-                        (void*) &alpha, A_raw, B_raw,
-                        (void*) &beta,  C_raw, C_raw,
-                        work_raw, kWorksize_, stream));
-        }
-        else
-        {
-            // dispatch to reduction
-            typename CuTensorTypeTraits<ComputeType>::ScalarType alpha = 1;
-            typename CuTensorTypeTraits<ComputeType>::ScalarType beta = 0;
-            CUTENSOR_CALL(cutensorReduction(handle,
-                        (const void*)&alpha, A_raw, &descA, modesA_.data(),
-                        (const void*)&beta,  A_raw, &descC, modesC_.data(), // beta == 0 => will not be used
-                        C_raw, &descC, modesC_.data(),
-                        CUTENSOR_OP_ADD, computeType, work_raw, kWorksize_, stream));
-        }
-        return true;
     }
 
     bool isInitialized() const { return isInitialized_; }
@@ -365,7 +263,6 @@ struct Einsum
     const int* getModesC() const { return modesC_.data(); }
 
     private:
-    static const size_t kWorksize_ = 1024ULL * 1024ULL * 8ULL * 128ULL;
     uint32_t numModesA_;
     uint32_t numModesB_;
     uint32_t numModesC_;
@@ -447,21 +344,24 @@ class CuTensorEinsum {
     CUTENSOR_CALL(cutensorInitContractionFind(&s->cutensor_handle_,
                                               &find, algo));
 
-    const cutensorAutotuneMode_t autotuneMode = CUTENSOR_AUTOTUNE_INCREMENTAL;
-    CUTENSOR_CALL(cutensorContractionFindSetAttribute(
-        &s->cutensor_handle_,
-        &find,
-        CUTENSOR_CONTRACTION_FIND_AUTOTUNE_MODE,
-        &autotuneMode,
-        sizeof(cutensorAutotuneMode_t)));
+    if (s->cutensor_cachelines_ != nullptr)
+    {
+        const cutensorAutotuneMode_t autotuneMode = CUTENSOR_AUTOTUNE_INCREMENTAL;
+        CUTENSOR_CALL(cutensorContractionFindSetAttribute(
+                    &s->cutensor_handle_,
+                    &find,
+                    CUTENSOR_CONTRACTION_FIND_AUTOTUNE_MODE,
+                    &autotuneMode,
+                    sizeof(cutensorAutotuneMode_t)));
 
-    const uint32_t incCount = 5;
-    CUTENSOR_CALL(cutensorContractionFindSetAttribute(
-        &s->cutensor_handle_,
-        &find,
-        CUTENSOR_CONTRACTION_FIND_INCREMENTAL_COUNT,
-        &incCount,
-        sizeof(uint32_t)));
+        const uint32_t incCount = 5;
+        CUTENSOR_CALL(cutensorContractionFindSetAttribute(
+                    &s->cutensor_handle_,
+                    &find,
+                    CUTENSOR_CONTRACTION_FIND_INCREMENTAL_COUNT,
+                    &incCount,
+                    sizeof(uint32_t)));
+    } 
 
     previous_workspace_size = prev_workspace_size * sizeof(DType);
     CUTENSOR_CALL(cutensorContractionGetWorkspace(&s->cutensor_handle_,
@@ -469,6 +369,14 @@ class CuTensorEinsum {
                                                   &find,
                                                   CUTENSOR_WORKSPACE_MAX,
                                                   &my_workspace_size));
+    if (s->cutensor_cachelines_ == nullptr){
+        CUTENSOR_CALL(cutensorInitContractionPlan(&s->cutensor_handle_,
+                                              &plan,
+                                              &descriptor_contraction,
+                                              &find,
+                                              my_workspace_size));
+    }
+
     return my_workspace_size;
   }
 
@@ -479,11 +387,14 @@ class CuTensorEinsum {
                char* workspace) {
     mxnet_op::Stream<gpu>* s = ctx.get_stream<gpu>();
 
-    CUTENSOR_CALL(cutensorInitContractionPlan(&s->cutensor_handle_,
+    if (s->cutensor_cachelines_ != nullptr)
+    {
+        CUTENSOR_CALL(cutensorInitContractionPlan(&s->cutensor_handle_,
                                               &plan,
                                               &descriptor_contraction,
                                               &find,
                                               my_workspace_size));
+    }
 
     const TBlob &tensor_a = inputs[0];
     const TBlob &tensor_b = inputs[1];

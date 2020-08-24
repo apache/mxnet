@@ -244,16 +244,16 @@ struct Stream<gpu> {
     cutensorStatus_t err = cutensorInit(&cutensor_handle_);
     CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
 
-    constexpr int32_t numCachelines = 1024;
-    size_t sizeCache = numCachelines * sizeof(cutensorPlanCacheline_t);
-    cutensor_cachelines_ = (cutensorPlanCacheline_t*) malloc(sizeCache);
-
-    err = cutensorHandleAttachPlanCachelines(&cutensor_handle_, cutensor_cachelines_, numCachelines);
-    CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
-
     const char* cacheFilename = getenv("MXNET_CUTENSOR_CACHEFILE");
     if (cacheFilename != nullptr)
     {
+        constexpr int32_t numCachelines = 1024;
+        size_t sizeCache = numCachelines * sizeof(cutensorPlanCacheline_t);
+        cutensor_cachelines_ = (cutensorPlanCacheline_t*) malloc(sizeCache);
+
+        err = cutensorHandleAttachPlanCachelines(&cutensor_handle_, cutensor_cachelines_, numCachelines);
+        CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
+
         uint32_t numCachelinesRead = 0;
         cutensorStatus_t status = cutensorHandleReadCacheFromFile(&cutensor_handle_, cacheFilename, &numCachelinesRead);
         if (status == CUTENSOR_STATUS_IO_ERROR)
