@@ -543,6 +543,18 @@ def test_random_weibull():
     A = np.random.weibull(a=1.0, size=(INT_OVERFLOW))
     assert type(A[0]).__name__ == 'ndarray'
 
+@use_np
+def test_random_shuffle():
+    A = np.ones((INT_OVERFLOW, 2))
+    np.random.shuffle(A)
+    assert A.shape == (INT_OVERFLOW, 2)
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_lognormal():
+    A = np.random.lognormal(mean=0, sigma=1.0, size=(2**31))
+    assert type(A[0]).__name__ == 'ndarray'
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
@@ -1037,3 +1049,11 @@ def test_save_load():
     assert B[0].shape == (2, INT_OVERFLOW)
     assert B[0][0][100] == 100
 
+@use_np
+def test_random_bernoulli():
+    prob = np.zeros((INT_OVERFLOW))
+    prob[0] = 1
+    A = npx.random.bernoulli(prob=prob, size=(INT_OVERFLOW))
+    assert A.shape == (INT_OVERFLOW, )
+    assert A[0] == 1
+    assert A[1] == 0
