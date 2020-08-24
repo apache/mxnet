@@ -832,15 +832,6 @@ def test_smooth_l1():
     assert A.grad[0] == 0
 
 @use_np
-@pytest.mark.skip(reason='np.random broken on large tensor; npx.random \
-    to be re-examined after np.random is fixed')
-def test_random():
-    prob = np.random.uniform(size=(INT_OVERFLOW, 2))
-    A = npx.random.bernoulli(prob=prob, size=(INT_OVERFLOW, 2))
-    assert A.shape == (INT_OVERFLOW, 2)
-    assert int((A == 0).sum() + (A == 1).sum()) == A.size
-
-@use_np
 def test_gamma():
     A = np.ones((2, INT_OVERFLOW))
     A[0][0] = 5
