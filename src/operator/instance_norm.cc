@@ -28,31 +28,32 @@
 
 namespace mxnet {
 namespace op {
-template <>
-Operator* CreateOp<cpu>(InstanceNormParam param, int dtype) {
-  return new InstanceNormOp<cpu>(param);
-}
-
-// DO_BIND_DISPATCH comes from operator_common.h
-Operator* InstanceNormProp::CreateOperatorEx(Context ctx,
-                                             mxnet::ShapeVector* in_shape,
-                                             std::vector<int>* in_type) const {
-  DO_BIND_DISPATCH(CreateOp, param_, (*in_type)[0]);
-}
 
 DMLC_REGISTER_PARAMETER(InstanceNormParam);
 
-MXNET_REGISTER_OP_PROPERTY(InstanceNorm, InstanceNormProp)
-.add_argument("data", "NDArray-or-Symbol",
-              "An n-dimensional input array (n > 2) of the form [batch, "
-              "channel, spatial_dim1, spatial_dim2, ...].")
-.add_argument("gamma", "NDArray-or-Symbol",
-              "A vector of length \'channel\', which multiplies the "
-              "normalized input.")
-.add_argument("beta", "NDArray-or-Symbol",
-              "A vector of length \'channel\', which is added to the "
-              "product of the normalized input and the weight.")
-.add_arguments(InstanceNormParam::__FIELDS__())
+struct InstanceNormGrad {
+  const char *op_name;
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
+                                          const std::vector<nnvm::NodeEntry>& ograds) const {
+    std::vector<nnvm::NodeEntry> out_data;
+    out_data.reserve(n->num_outputs());
+    for (size_t i = 0; i < n->num_outputs(); ++i)
+      out_data.emplace_back(n, i, 0);
+    std::vector<nnvm::NodeEntry> heads;
+    heads.reserve(5);
+    heads.emplace_back(ograds.at(instance_norm::kOut));
+    heads.emplace_back(out_data.at(instance_norm::kMean));
+    heads.emplace_back(out_data.at(instance_norm::kVar));
+    heads.emplace_back(n->inputs.at(instance_norm::kData));
+    heads.emplace_back(n->inputs.at(instance_norm::kGamma));
+
+    return MakeGradNode(op_name, n, heads, n->attrs.dict);
+  }
+};
+
+
+NNVM_REGISTER_OP(InstanceNorm)
+.add_alias("_npx_instance_norm")
 .describe(R"code(Applies instance normalization to the n-dimensional input array.
 
 This operator takes an n-dimensional input array where (n>2) and normalizes
@@ -92,6 +93,44 @@ Examples::
   InstanceNorm(x,gamma,beta) = [[[-0.997527  ,  1.99752665]],
                                 [[-0.99752653,  1.99752724]]]
 
-)code" ADD_FILELINE);
+)code" ADD_FILELINE)
+.add_argument("data", "NDArray-or-Symbol",
+              "An n-dimensional input array (n > 2) of the form [batch, "
+              "channel, spatial_dim1, spatial_dim2, ...].")
+.add_argument("gamma", "NDArray-or-Symbol",
+              "A vector of length \'channel\', which multiplies the "
+              "normalized input.")
+.add_argument("beta", "NDArray-or-Symbol",
+              "A vector of length \'channel\', which is added to the "
+              "product of the normalized input and the weight.")
+.add_arguments(InstanceNormParam::__FIELDS__())
+.set_num_inputs(3)
+.set_num_outputs(3)
+.set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
+  return std::vector<std::string>{"data", "gamma", "beta"};
+})
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"output"};
+})
+.set_attr<nnvm::FNumVisibleOutputs>("FNumVisibleOutputs",
+  [](const NodeAttrs& attrs) { return 1; })
+.set_attr_parser(ParamParser<InstanceNormParam>)
+.set_attr<mxnet::FInferShape>("FInferShape", InstanceNormShape)
+.set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
+.set_attr<nnvm::FGradient>("FGradient", InstanceNormGrad{"_backward_instance_norm"})
+.set_attr<FCompute>("FCompute<cpu>", InstanceNormForward<cpu>);
+
+NNVM_REGISTER_OP(_backward_instance_norm)
+.set_num_inputs(5)
+.set_num_outputs(3)
+.set_attr_parser(ParamParser<InstanceNormParam>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
+.set_attr<nnvm::TIsBackward>("TIsBackward", true)
+.set_attr<FCompute>("FCompute<cpu>", InstanceNormBackward<cpu>);
+
 }  // namespace op
 }  // namespace mxnet

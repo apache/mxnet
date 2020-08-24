@@ -64,12 +64,12 @@ MXNET_REGISTER_API("_npi.uniform")
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
   if (args[2].type_code() == kNull) {
-    param.size = dmlc::optional<mxnet::Tuple<int>>();
+    param.size = dmlc::optional<mxnet::Tuple<index_t>>();
   } else if (args[2].type_code() == kDLInt ||
              args[2].type_code() == kDLFloat) {
-    param.size = Tuple<int>(1, args[2].operator int64_t());
+    param.size = Tuple<index_t>(1, args[2].operator int64_t());
   } else {
-    param.size = Tuple<int>(args[2].operator ObjectRef());
+    param.size = Tuple<index_t>(args[2].operator ObjectRef());
   }
   if (args[4].type_code() == kNull) {
     param.dtype = mxnet::common::GetDefaultDtype();

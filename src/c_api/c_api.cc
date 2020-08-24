@@ -1583,6 +1583,15 @@ int MXGetVersion(int *out) {
 int MXLoadTVMOp(const char *libpath) {
   API_BEGIN();
   tvm::runtime::TVMOpModule::Get()->Load(libpath);
+  tvm::runtime::TVMOpModule *global_module =  tvm::runtime::TVMOpModule::Get();
+  global_module->Load(libpath);
+#if MXNET_USE_CUDA
+  std::string libpathstr(libpath);
+  std::string cubinpath = libpathstr.substr(0, libpathstr.size() - 11) + "libtvmop.cubin";
+  tvm::runtime::TVMOpModule cubin_module;
+  cubin_module.Load(cubinpath);
+  global_module->Import(cubin_module);
+#endif
   API_END();
 }
 
@@ -1638,41 +1647,25 @@ void CreateNDArray(const DataType* shape,
   *out = nd;
 }
 
-int MXNDArrayCreate(const uint32_t *shape,
-                    uint32_t ndim,
-                    int dev_type,
-                    int dev_id,
-                    int delay_alloc,
-                    NDArrayHandle *out) {
-  API_BEGIN();
-  NDArray* nd = new NDArray(mxnet::TShape(shape, shape + ndim),
-                            Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
-                            delay_alloc != 0);
-  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
-                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
-  *out = nd;
-  API_END();
-}
-
-int MXNDArrayCreateEx64(const int64_t *shape,
-                        int ndim,
-                        int dev_type,
-                        int dev_id,
-                        int delay_alloc,
-                        int dtype,
-                        NDArrayHandle *out) {
-  API_BEGIN();
-  CreateNDArray<int64_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
-  API_END();
-}
-
-int MXNDArrayCreateEx(const uint32_t *shape,
-                      uint32_t ndim,
+int MXNDArrayCreate64(const int64_t *shape,
+                      int ndim,
                       int dev_type,
                       int dev_id,
                       int delay_alloc,
                       int dtype,
                       NDArrayHandle *out) {
+  API_BEGIN();
+  CreateNDArray<int64_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  API_END();
+}
+
+int MXNDArrayCreate(const uint32_t *shape,
+                    uint32_t ndim,
+                    int dev_type,
+                    int dev_id,
+                    int delay_alloc,
+                    int dtype,
+                    NDArrayHandle *out) {
   API_BEGIN();
   CreateNDArray<uint32_t>(shape, static_cast<int>(ndim), dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
@@ -2041,25 +2034,6 @@ int MXNDArrayGetStorageType(NDArrayHandle handle,
   API_END();
 }
 
-int MXNDArrayGetShape(NDArrayHandle handle,
-                      uint32_t *out_dim,
-                      const uint32_t **out_pdata) {
-  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
-  API_BEGIN();
-  NDArray *arr = static_cast<NDArray*>(handle);
-  if (!arr->is_none()) {
-    const mxnet::TShape &s = arr->shape();
-    *out_dim = s.ndim();
-    std::vector<uint32_t>& buffer = ret->arg_shape_buffer;
-    buffer.resize(s.ndim());
-    nnvm::ShapeTypeCast(s.begin(), s.end(), buffer.data());
-    *out_pdata = buffer.data();
-  } else {
-    *out_dim = 0;
-  }
-  API_END();
-}
-
 template<typename dtype>
 inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim,
                      MXAPIThreadLocalEntry<dtype>* ret) {
@@ -2099,18 +2073,18 @@ inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim
   }
 }
 
-int MXNDArrayGetShapeEx(NDArrayHandle handle,
-                        int *out_dim,
-                        const int **out_pdata) {
+int MXNDArrayGetShape(NDArrayHandle handle,
+                      int *out_dim,
+                      const int **out_pdata) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   GetShape<int>(handle, out_pdata, out_dim, ret);
   API_END();
 }
 
-int MXNDArrayGetShapeEx64(NDArrayHandle handle,
-                          int *out_dim,
-                          const int64_t **out_pdata) {
+int MXNDArrayGetShape64(NDArrayHandle handle,
+                        int *out_dim,
+                        const int64_t **out_pdata) {
   MXAPIThreadLocalEntry<int64_t> *ret = MXAPIThreadLocalStore<int64_t>::Get();
   API_BEGIN();
   GetShape<int64_t>(handle, out_pdata, out_dim, ret);
@@ -2144,13 +2118,8 @@ int MXNDArrayToDLPack(NDArrayHandle handle,
 }
 
 int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
+                        const bool transient_handle,
                         NDArrayHandle *out_handle) {
-  return MXNDArrayFromDLPackEx(dlpack, false, out_handle);
-}
-
-int MXNDArrayFromDLPackEx(DLManagedTensorHandle dlpack,
-                          const bool transient_handle,
-                          NDArrayHandle *out_handle) {
   API_BEGIN();
   *out_handle = new NDArray(NDArray::FromDLPack(
               static_cast<DLManagedTensor*>(dlpack),
@@ -2310,21 +2279,6 @@ int MXFuncDescribe(FunctionHandle fun,
 }
 
 int MXFuncInvoke(FunctionHandle fun,
-                 NDArrayHandle *use_vars,
-                 float *scalar_args,
-                 NDArrayHandle *mutate_vars) {
-  API_BEGIN();
-  auto *f = static_cast<const NDArrayFunctionReg*>(fun);
-  f->body((NDArray**)(use_vars),  //  NOLINT(*)
-          scalar_args,
-          (NDArray**)(mutate_vars),  //  NOLINT(*)
-          0,
-          nullptr,
-          nullptr);
-  API_END();
-}
-
-int MXFuncInvokeEx(FunctionHandle fun,
                  NDArrayHandle *use_vars,
                  float *scalar_args,
                  NDArrayHandle *mutate_vars,
@@ -3347,18 +3301,8 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shar
   API_END();
 }
 
-int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const uint32_t *shape,
-                                 uint32_t ndim, int dtype, NDArrayHandle *out) {
-  API_BEGIN();
-  NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
-  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
-                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
-  *out = nd;
-  API_END();
-}
-
-int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *shape,
-                                   int ndim, int dtype, NDArrayHandle *out) {
+int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const int *shape,
+                                 int ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
   NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
   nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
