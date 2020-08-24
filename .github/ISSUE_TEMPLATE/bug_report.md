@@ -30,7 +30,7 @@ assignees: ''
 
 We recommend using our script for collecting the diagnositc information. Run the following command and paste the outputs below:
 ```
-curl --retry 10 -s https://raw.githubusercontent.com/dmlc/gluon-nlp/master/tools/diagnose.py | python
+curl --retry 10 -s https://raw.githubusercontent.com/apache/incubator-mxnet/master/tools/diagnose.py | python
 
 # paste outputs here
 ```
