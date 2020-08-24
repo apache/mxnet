@@ -20,7 +20,7 @@
 #ifndef MXNET_RTC_H_
 #define MXNET_RTC_H_
 #include "./base.h"
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
 #include <nvrtc.h>
 #include <cuda.h>
 
@@ -132,5 +132,5 @@ class CudaModule {
 }  // namespace rtc
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#endif  // MXNET_USE_CUDA
 #endif  // MXNET_RTC_H_

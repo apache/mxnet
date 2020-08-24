@@ -258,20 +258,6 @@ def compile_unix_cmake_gpu(lib_name) {
     }]
 }
 
-def compile_unix_cmake_gpu_no_rtc(lib_name) {
-    return ['GPU: CMake CUDA RTC OFF': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cmake-gpu-no-rtc') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake_no_rtc', false)
-            utils.pack_lib(lib_name, mx_cmake_lib)
-          }
-        }
-      }
-    }]
-}
-
 def compile_unix_tensorrt_gpu(lib_name) {
     return ['TensorRT': {
       node(NODE_LINUX_CPU) {
@@ -1044,22 +1030,6 @@ def test_qemu_armv8_cpu(lib_name) {
     }]
 }
 
-// This creates the MXNet binary needed for generating different docs sets
-def compile_unix_lite(lib_name) {
-    return ['MXNet lib': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_docs', false)
-            utils.pack_lib(lib_name, mx_lib, false)
-          }
-        }
-      }
-    }]
-}
-
-
 def should_pack_website() {
   if (env.BRANCH_NAME) {
     if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
@@ -1081,7 +1051,7 @@ def docs_python(lib_name) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib, false)
-            utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
+            utils.docker_run('ubuntu_cpu', 'build_python_docs', false)
             if (should_pack_website()) {
               utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
             }

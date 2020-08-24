@@ -142,7 +142,6 @@ build_jetson() {
         -DCMAKE_TOOLCHAIN_FILE=${CMAKE_TOOLCHAIN_FILE} \
         -DUSE_CUDA=ON \
         -DMXNET_CUDA_ARCH="5.2" \
-        -DENABLE_CUDA_RTC=OFF \
         -DUSE_OPENCV=OFF \
         -DUSE_OPENMP=ON \
         -DUSE_LAPACK=OFF \
@@ -670,27 +669,6 @@ build_ubuntu_gpu_cmake() {
     ninja
 }
 
-build_ubuntu_gpu_cmake_no_rtc() {
-    set -ex
-    cd /work/build
-    CC=gcc-7 CXX=g++-7 cmake \
-        -DUSE_SIGNAL_HANDLER=ON                 \
-        -DUSE_CUDA=ON                           \
-        -DUSE_CUDNN=ON                          \
-        -DUSE_MKL_IF_AVAILABLE=OFF              \
-        -DUSE_MKLML_MKL=OFF                     \
-        -DUSE_MKLDNN=ON                         \
-        -DUSE_DIST_KVSTORE=ON                   \
-        -DCMAKE_BUILD_TYPE=Release              \
-        -DMXNET_CUDA_ARCH="$CI_CMAKE_CUDA_ARCH" \
-        -DBUILD_CYTHON_MODULES=1                \
-        -DENABLE_CUDA_RTC=OFF                   \
-        -G Ninja                                \
-        /work/mxnet
-
-    ninja
-}
-
 build_ubuntu_cpu_large_tensor() {
     set -ex
     cd /work/build
@@ -1128,11 +1106,6 @@ build_docs_setup() {
     mkdir -p $mxnetlib_folder
 }
 
-build_ubuntu_cpu_docs() {
-    build_ubuntu_cpu_openblas
-}
-
-
 build_jekyll_docs() {
     set -ex
 
@@ -1156,11 +1129,11 @@ build_python_docs() {
    build_docs_setup
 
    pushd docs/python_docs
-   eval "$(/work/miniconda/bin/conda shell.bash hook)"
-   conda env create -f environment.yml -p /work/conda_env
-   conda activate /work/conda_env
-   pip install themes/mx-theme
-   pip install -e /work/mxnet/python --user
+   python3 -m pip install -r requirements
+   python3 -m pip install themes/mx-theme
+   python3 -m pip install -e /work/mxnet/python --user
+
+   export PATH=/home/jenkins_slave/.local/bin:$PATH
 
    pushd python
    make clean

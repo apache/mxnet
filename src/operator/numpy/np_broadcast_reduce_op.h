@@ -777,6 +777,13 @@ struct avg_grad_w_1D_kernel {
   }
 };
 
+// Windows has issues with #ifdefs inside MSHADOW_TYPE_SWITCH
+#ifndef __CUDACC__
+#define NP_BROADCAST_REDUCE_OP_BROADCAST(OP) BinaryBroadcastCompute<xpu, mshadow_op::OP>
+#else
+#define NP_BROADCAST_REDUCE_OP_BROADCAST(OP) BinaryBroadcastRTCCompute {#OP}
+#endif
+
 template<typename xpu, bool back = false>
 void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
                                      const OpContext& ctx,
@@ -820,10 +827,8 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
     TShape src_shape, dst_shape;
     BroadcastReduceShapeCompact(data.shape_, small1, &src_shape, &dst_shape);
     size_t workspace_size = 0;
-    MXNET_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-      workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
-        s, dst_shape, {kWriteTo}, src_shape);
-    });
+    workspace_size = broadcast::ReduceWorkspaceSize(
+      s, dst_shape, {kWriteTo}, src_shape, sizeof(DType));
     size_t temp_mem_size = temp_data_size + temp_sum_size + workspace_size;
     Tensor<xpu, 1, char> temp_mem =
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
@@ -834,7 +839,7 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
 
     // Compute weighted data
     TBlob wa = TBlob(temp_data_ptr, data.shape_, xpu::kDevMask);
-    BinaryBroadcastCompute<xpu, mshadow_op::mul>(
+    NP_BROADCAST_REDUCE_OP_BROADCAST(mul)(
       attrs, ctx, {data, weights}, {kWriteTo}, {wa});
 
     // Compute sum of weighted data
@@ -852,7 +857,7 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
         ctx, {weights}, {kWriteTo}, {scl}, workspace, w_src_shape, w_dst_shape);
 
       // Compute avg and assign output
-      BinaryBroadcastCompute<xpu, mshadow_op::div>(
+      NP_BROADCAST_REDUCE_OP_BROADCAST(div)(
         attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
     } else {
       // Compute and assign the derivatives of a and weights
@@ -896,6 +901,8 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
     }
   });
 }
+
+#undef NP_BROADCAST_REDUCE_OP_BROADCAST
 
 template<typename xpu>
 void NumpyWeightedAverageForward(const nnvm::NodeAttrs& attrs,
@@ -993,10 +1000,8 @@ void NumpyMomentsForward(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, OType, {
       // Get workspace and temp space for data - mean
       size_t workspace_size = 0;
-      BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-        workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
-          s, dst_shape, req[0], src_shape);;
-      });
+      workspace_size = broadcast::ReduceWorkspaceSize(
+        s, dst_shape, req[0], src_shape, sizeof(DType));
       size_t temp_data_size = data.shape_.Size() * sizeof(DType);
       size_t temp_mem_size = temp_data_size + workspace_size;
       Tensor<xpu, 1, char> temp_mem =

@@ -1583,6 +1583,15 @@ int MXGetVersion(int *out) {
 int MXLoadTVMOp(const char *libpath) {
   API_BEGIN();
   tvm::runtime::TVMOpModule::Get()->Load(libpath);
+  tvm::runtime::TVMOpModule *global_module =  tvm::runtime::TVMOpModule::Get();
+  global_module->Load(libpath);
+#if MXNET_USE_CUDA
+  std::string libpathstr(libpath);
+  std::string cubinpath = libpathstr.substr(0, libpathstr.size() - 11) + "libtvmop.cubin";
+  tvm::runtime::TVMOpModule cubin_module;
+  cubin_module.Load(cubinpath);
+  global_module->Import(cubin_module);
+#endif
   API_END();
 }
 
@@ -1638,41 +1647,25 @@ void CreateNDArray(const DataType* shape,
   *out = nd;
 }
 
-int MXNDArrayCreate(const uint32_t *shape,
-                    uint32_t ndim,
-                    int dev_type,
-                    int dev_id,
-                    int delay_alloc,
-                    NDArrayHandle *out) {
-  API_BEGIN();
-  NDArray* nd = new NDArray(mxnet::TShape(shape, shape + ndim),
-                            Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
-                            delay_alloc != 0);
-  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
-                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
-  *out = nd;
-  API_END();
-}
-
-int MXNDArrayCreateEx64(const int64_t *shape,
-                        int ndim,
-                        int dev_type,
-                        int dev_id,
-                        int delay_alloc,
-                        int dtype,
-                        NDArrayHandle *out) {
-  API_BEGIN();
-  CreateNDArray<int64_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
-  API_END();
-}
-
-int MXNDArrayCreateEx(const uint32_t *shape,
-                      uint32_t ndim,
+int MXNDArrayCreate64(const int64_t *shape,
+                      int ndim,
                       int dev_type,
                       int dev_id,
                       int delay_alloc,
                       int dtype,
                       NDArrayHandle *out) {
+  API_BEGIN();
+  CreateNDArray<int64_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  API_END();
+}
+
+int MXNDArrayCreate(const uint32_t *shape,
+                    uint32_t ndim,
+                    int dev_type,
+                    int dev_id,
+                    int delay_alloc,
+                    int dtype,
+                    NDArrayHandle *out) {
   API_BEGIN();
   CreateNDArray<uint32_t>(shape, static_cast<int>(ndim), dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
@@ -2041,25 +2034,6 @@ int MXNDArrayGetStorageType(NDArrayHandle handle,
   API_END();
 }
 
-int MXNDArrayGetShape(NDArrayHandle handle,
-                      uint32_t *out_dim,
-                      const uint32_t **out_pdata) {
-  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
-  API_BEGIN();
-  NDArray *arr = static_cast<NDArray*>(handle);
-  if (!arr->is_none()) {
-    const mxnet::TShape &s = arr->shape();
-    *out_dim = s.ndim();
-    std::vector<uint32_t>& buffer = ret->arg_shape_buffer;
-    buffer.resize(s.ndim());
-    nnvm::ShapeTypeCast(s.begin(), s.end(), buffer.data());
-    *out_pdata = buffer.data();
-  } else {
-    *out_dim = 0;
-  }
-  API_END();
-}
-
 template<typename dtype>
 inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim,
                      MXAPIThreadLocalEntry<dtype>* ret) {
@@ -2099,18 +2073,18 @@ inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim
   }
 }
 
-int MXNDArrayGetShapeEx(NDArrayHandle handle,
-                        int *out_dim,
-                        const int **out_pdata) {
+int MXNDArrayGetShape(NDArrayHandle handle,
+                      int *out_dim,
+                      const int **out_pdata) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   GetShape<int>(handle, out_pdata, out_dim, ret);
   API_END();
 }
 
-int MXNDArrayGetShapeEx64(NDArrayHandle handle,
-                          int *out_dim,
-                          const int64_t **out_pdata) {
+int MXNDArrayGetShape64(NDArrayHandle handle,
+                        int *out_dim,
+                        const int64_t **out_pdata) {
   MXAPIThreadLocalEntry<int64_t> *ret = MXAPIThreadLocalStore<int64_t>::Get();
   API_BEGIN();
   GetShape<int64_t>(handle, out_pdata, out_dim, ret);
@@ -2144,13 +2118,8 @@ int MXNDArrayToDLPack(NDArrayHandle handle,
 }
 
 int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
+                        const bool transient_handle,
                         NDArrayHandle *out_handle) {
-  return MXNDArrayFromDLPackEx(dlpack, false, out_handle);
-}
-
-int MXNDArrayFromDLPackEx(DLManagedTensorHandle dlpack,
-                          const bool transient_handle,
-                          NDArrayHandle *out_handle) {
   API_BEGIN();
   *out_handle = new NDArray(NDArray::FromDLPack(
               static_cast<DLManagedTensor*>(dlpack),
@@ -2310,21 +2279,6 @@ int MXFuncDescribe(FunctionHandle fun,
 }
 
 int MXFuncInvoke(FunctionHandle fun,
-                 NDArrayHandle *use_vars,
-                 float *scalar_args,
-                 NDArrayHandle *mutate_vars) {
-  API_BEGIN();
-  auto *f = static_cast<const NDArrayFunctionReg*>(fun);
-  f->body((NDArray**)(use_vars),  //  NOLINT(*)
-          scalar_args,
-          (NDArray**)(mutate_vars),  //  NOLINT(*)
-          0,
-          nullptr,
-          nullptr);
-  API_END();
-}
-
-int MXFuncInvokeEx(FunctionHandle fun,
                  NDArrayHandle *use_vars,
                  float *scalar_args,
                  NDArrayHandle *mutate_vars,
@@ -3248,24 +3202,24 @@ int MXRtcCudaModuleCreate(const char* source, int num_options,
                           const char** options, int num_exports,
                           const char** exports, CudaModuleHandle *out) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   std::vector<std::string> str_opts;
   for (int i = 0; i < num_options; ++i) str_opts.emplace_back(options[i]);
   std::vector<std::string> str_exports;
   for (int i = 0; i < num_exports; ++i) str_exports.emplace_back(exports[i]);
   *out = new rtc::CudaModule(source, str_opts, str_exports);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
 
 int MXRtcCudaModuleFree(CudaModuleHandle handle) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   delete reinterpret_cast<rtc::CudaModule*>(handle);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
@@ -3274,7 +3228,7 @@ int MXRtcCudaKernelCreate(CudaModuleHandle handle, const char* name, int num_arg
                           int* is_ndarray, int* is_const, int* arg_types,
                           CudaKernelHandle *out) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   auto module = reinterpret_cast<rtc::CudaModule*>(handle);
   std::vector<rtc::CudaModule::ArgType> signature;
   for (int i = 0; i < num_args; ++i) {
@@ -3285,17 +3239,17 @@ int MXRtcCudaKernelCreate(CudaModuleHandle handle, const char* name, int num_arg
   auto kernel = module->GetKernel(name, signature);
   *out = new std::shared_ptr<rtc::CudaModule::Kernel>(kernel);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
 
 int MXRtcCudaKernelFree(CudaKernelHandle handle) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   delete reinterpret_cast<std::shared_ptr<rtc::CudaModule::Kernel>*>(handle);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
@@ -3306,7 +3260,7 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
                         uint32_t block_dim_y, uint32_t block_dim_z,
                         uint32_t shared_mem) {
   API_BEGIN();
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
   auto kernel = reinterpret_cast<std::shared_ptr<rtc::CudaModule::Kernel>*>(handle);
   const auto& signature = (*kernel)->signature();
   std::vector<dmlc::any> any_args;
@@ -3322,7 +3276,7 @@ int MXRtcCudaKernelCall(CudaKernelHandle handle, int dev_id, void** args,
   (*kernel)->Launch(Context::GPU(dev_id), any_args, grid_dim_x, grid_dim_y,
                     grid_dim_z, block_dim_x, block_dim_y, block_dim_z, shared_mem);
 #else
-  LOG(FATAL) << "Compile with USE_CUDA=1 and ENABLE_CUDA_RTC=1 to have CUDA runtime compilation.";
+  LOG(FATAL) << "Compile with USE_CUDA=1 to have CUDA runtime compilation.";
 #endif
   API_END();
 }
@@ -3347,18 +3301,8 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shar
   API_END();
 }
 
-int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const uint32_t *shape,
-                                 uint32_t ndim, int dtype, NDArrayHandle *out) {
-  API_BEGIN();
-  NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
-  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
-                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
-  *out = nd;
-  API_END();
-}
-
-int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *shape,
-                                   int ndim, int dtype, NDArrayHandle *out) {
+int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const int *shape,
+                                 int ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
   NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
   nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),

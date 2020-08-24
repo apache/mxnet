@@ -757,9 +757,7 @@ The storage type of ``sign`` output depends upon the input storage type:
    - sign(csr) = csr
 
 )code" ADD_FILELINE)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sign"});
-
-MXNET_OPERATOR_REGISTER_BINARY_WITH_SPARSE_CPU(_backward_sign, unary_bwd<mshadow_op::sign_grad>);
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // round
 MXNET_OPERATOR_REGISTER_UNARY_WITH_RSP_CSR(round, cpu, mshadow_op::round)
