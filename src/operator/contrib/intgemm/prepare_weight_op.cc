@@ -118,22 +118,21 @@ void PrepareWeightOpForwardCPU(const nnvm::NodeAttrs& attrs,
     "weight matrix) to be a multiple of " << ::intgemm::Int8::tile_info.b_cols << ".";
 
   int8_t *quantB = out.dptr<int8_t>();
+  CHECK_EQ(reinterpret_cast<intptr_t>(quantB) % 64, 0) <<
+    "Pointers should be aligned to a multiple of 64.";
   CHECK(in.type_flag_ == mshadow::kFloat32 || in.type_flag_ == mshadow::kInt8) <<
     "Expected either 32-bit values to be quantized or 8-bit values to rearrange.";
   if (in.type_flag_ == mshadow::kInt8) {
     const int8_t *B = in.dptr<int8_t>();
+    CHECK_EQ(reinterpret_cast<intptr_t>(B) % 64, 0) <<
+      "Pointers should be aligned to a multiple of 64.";
     ::intgemm::Int8::PrepareBQuantizedTransposed(B, quantB, inner, B_cols);
   } else if (in.type_flag_ == mshadow::kFloat32) {
     const float *B = in.dptr<float>();
-    // TODO(kpuatamazon): eliminate transpose here with https://github.com/kpu/intgemm/pull/56
-    intgemm::AlignedVector<float> B_transpose(inner * B_cols);
-    for (size_t i = 0; i < inner; ++i) {
-      for (size_t j = 0; j < B_cols; ++j) {
-        B_transpose[i * B_cols + j] = B[i + inner * j];
-      }
-    }
-    ::intgemm::Int8::PrepareB(
-        B_transpose.begin(),
+    CHECK_EQ(reinterpret_cast<intptr_t>(B) % 64, 0) <<
+      "Pointers should be aligned to a multiple of 64.";
+    ::intgemm::Int8::PrepareBTransposed(
+        B,
         quantB,
         127.0 / *inputs[1].dptr<float>(),
         inner,
