@@ -744,7 +744,6 @@ def test_sigmoid():
                 rtol=1e-3, atol=1e-5)
 
 @use_np
-#@pytest.mark.skip(reason='Does not support large tensor; to be fixed')
 def test_shape_array():
     A = np.zeros((INT_OVERFLOW, 2))
     A.attach_grad()
