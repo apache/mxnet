@@ -59,9 +59,9 @@ inline int FillShape(const mxnet::TShape &lshape, const mxnet::TShape &rshape,
   int j = 0;
   dim_t lprod = 1, rprod = 1, oprod = 1;
   for (int i = 0; i < oshape.ndim(); ++i) {
-    int l = 1;
-    int r = 1;
-    int o = oshape[i];
+    index_t l = 1;
+    index_t r = 1;
+    index_t o = oshape[i];
     if (i >= bl) l = lshape[i - bl];
     if (i >= br) r = rshape[i - br];
     if ((lprod != rprod || lprod != oprod || l != r || l != o) &&
