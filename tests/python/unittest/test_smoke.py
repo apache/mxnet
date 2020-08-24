@@ -56,3 +56,14 @@ def test_18933_channel_0():
     with autograd.record():
         a = npx.instance_norm(arr, gamma, beta)
     a.backward()
+
+@use_np
+@with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
+def test_18934_empty_leaky_relu():
+    arr = np.random.rand(0,2)
+    arr_grad = np.empty_like(arr)
+
+    autograd.mark_variables([arr], [arr_grad])
+    with autograd.record():
+        res = npx.leaky_relu(arr)
+    res.backward()
