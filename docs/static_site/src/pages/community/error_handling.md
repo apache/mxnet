@@ -33,14 +33,8 @@ directly raise the specific error object in python. In other languages
 like c++, you simply add `<ErrorType>:` prefix to the error message(see
 below).
 
-::: {.note}
-::: {.title}
-Note
-:::
+{% include note.html content="Please refer to [/python/mxnet/error.py](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/error.py) for the list of errors." %}
 
-Please refer to [/python/mxnet/error.py](https://github.com/apache/incubator-mxnet/blob/master/python/mxnet/error.py)
-for the list of errors.
-:::
 
 Raise a Specific Error in C++
 -----------------------------
@@ -52,7 +46,7 @@ raised by default when there is no error type prefix in the message.
 This mechanism works for both `LOG(FATAL)` and `CHECK` macros. The
 following code gives an example on how to do so.
 
-``` {.c}
+```cpp
 // Python frontend receives the following error type:
 // ValueError: Check failed: x == y (0 vs. 1) : expect x and y to be equal.
 CHECK_EQ(0, 1) << "ValueError: expect x and y to be equal."
@@ -85,7 +79,7 @@ We also recommend to use less abstraction when creating the short error
 messages. The code is more readable in this way, and also opens path to
 craft specific error messages when necessary.
 
-``` {.python}
+```python
 def preferred():
     # Very clear about what is being raised and what is the error message.
     raise OpNotImplemented("Operator relu is not implemented in the MXNet frontend")

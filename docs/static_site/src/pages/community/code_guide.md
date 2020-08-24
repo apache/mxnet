@@ -48,7 +48,7 @@ different version of `cpplint` might change by its version, it is
 recommended to use the same version of the `cpplint` as the master.
 You can also use the following command via docker.
 
-``` {.bash}
+```bash
 ci/build.py -R --docker-registry mxnetci --platform ubuntu_cpu --docker-build-retries 3 --shm-size 500m /work/runtime_functions.sh sanity_cpp
 ```
 

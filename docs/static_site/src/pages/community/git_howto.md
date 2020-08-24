@@ -32,7 +32,7 @@ Here are some tips for git workflow.
 
 -   First rebase to most recent master
 
-``` {.bash}
+```bash
 # The first two steps can be skipped after you do it once.
 git remote add upstream git@github.com:apache/incubator-mxnet.git
 git fetch upstream
@@ -44,19 +44,19 @@ git rebase upstream/master
     -   Manually modify the file to resolve the conflict.
     -   After you resolved the conflict, mark it as resolved by
 
-``` {.bash}
+```bash
 git add conflicted.py
 ```
 
 -   Then you can continue rebase by
 
-``` {.bash}
+```bash
 git rebase --continue
 ```
 
 -   Finally push to your fork, you may need to force push here.
 
-``` {.bash}
+```bash
 git push --force
 ```
 
@@ -66,14 +66,14 @@ How to manage branches
 We recommend to always reserve the master branch for synchronizing with upstream.
 For development of new features, create a new branch for each feature:
 
-``` {.bash}
+```bash
 git checkout -b fancy_new_feature
 ```
 
 The benefit of this practices is that you can easily rebase onto the latest master
 changes with little effort
 
-``` {.bash}
+```bash
 git pull upstream master --rebase
 ```
 
@@ -87,13 +87,13 @@ meaningful commits. You can do it by following steps.
 -   Before doing so, configure the default editor of git if you haven\'t
     done so before.
 
-``` {.bash}
+```bash
 git config core.editor [the-editor-you-like]
 ```
 
 -   Assume we want to merge last 3 commits, type the following commands
 
-``` {.bash}
+```bash
 git rebase -i HEAD~3
 ```
 
@@ -103,7 +103,7 @@ git rebase -i HEAD~3
     you modify the combined commit message.
 -   Push the changes to your fork, you need to force push.
 
-``` {.bash}
+```bash
 git push --force
 ```
 
@@ -115,7 +115,7 @@ master. Note that all your **\*local changes will get lost**\*. So only
 do it when you do not have local changes or when your pull request just
 get merged.
 
-``` {.bash}
+```bash
 git reset --hard [hash tag of master]
 ```
 
@@ -126,7 +126,7 @@ Sometimes we could mistakenly reset a branch to a wrong commit. When
 that happens, you can use the following command to show the list of
 recent commits
 
-``` {.bash}
+```bash
 git reflog
 ```
 
@@ -144,7 +144,7 @@ can be safely discarded).
 
 You can instead use the following command
 
-``` {.bash}
+```bash
 # k is the concrete number
 # Put HEAD~2 for the last 1 commit.
 git rebase --onto upstream/master HEAD~k

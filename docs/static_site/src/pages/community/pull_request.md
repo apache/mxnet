@@ -32,7 +32,7 @@ detailed guidelines.
 -   Before submit, please rebase your code on the most recent version of
     master, you can do it by
 
-    ``` {.bash}
+    ```bash
     git remote add upstream git@github.com:apache/incubator-mxnet.git
     git fetch upstream
     git rebase upstream/master
@@ -41,7 +41,7 @@ detailed guidelines.
 -   Make sure code style check pass by typing the following command, and
     all the existing test-cases pass.
 
-    ``` {.bash}
+    ```bash
     # Reproduce the lint procedure in the CI.
     ci/build.py -R --docker-registry mxnetci --platform ubuntu_cpu --docker-build-retries 3 --shm-size 500m /work/runtime_functions.sh sanity
     ```
@@ -96,7 +96,7 @@ C++ tests are maintained in [/tests/cpp](https://github.com/apache/incubator-mxn
 
 The dependencies for testing pipelines can be found in [/ci/docker/install/requirements](https://github.com/apache/incubator-mxnet/blob/master/ci/docker/install/requirements). To install these dependencies:
 
-``` {.bash}
+```bash
 pip install --user -r ci/docker/install/requirements
 ```
 

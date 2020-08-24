@@ -41,7 +41,7 @@ example docstring. We always document all the public functions, when
 necessary, provide an usage example of the features we support(as shown
 below).
 
-``` {.python}
+```python
 def myfunction(arg1, arg2, arg3=3):
     """Briefly describe my function.
 
@@ -88,7 +88,7 @@ Document C++
 We use the doxgen format to document c++ functions. The following
 snippet shows an example of c++ docstring.
 
-``` {.c++}
+```cpp
 /*!
  * \brief Description of my function
  * \param arg1 Description of arg1
