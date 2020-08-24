@@ -547,13 +547,17 @@ def test_random_weibull():
 def test_random_shuffle():
     A = np.ones((INT_OVERFLOW, 2))
     np.random.shuffle(A)
-    assert A.shape == (INT_OVERFLOW, 2)
     assert type(A[0]).__name__ == 'ndarray'
 
 @use_np
 def test_random_lognormal():
     A = np.random.lognormal(mean=0, sigma=1.0, size=(2**31))
     assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_randint():
+    A = np.random.randint(low=0, high=5, size=(2, 2**31))
+    assert A[0][0] < 5 and A[0][0] >= 0
 
 '''
                                      _               _
