@@ -28,7 +28,7 @@ NNVM_REGISTER_OP(min_ex)
 .set_num_outputs(0)
 .set_attr<mxnet::FInferShape>("FInferShape", MinExOpShape)
 .set_attr<nnvm::FInferType>("FInferType", MinExOpType)
-.set_attr<FCompute>("FCompute<cpu>", MinExForward);
+.set_attr<FCompute>("FCompute<cpu>", MinExForward<cpu>);
 
 }  // namespace op                                                                                                                                                                     
 }  // namespace mxnet      

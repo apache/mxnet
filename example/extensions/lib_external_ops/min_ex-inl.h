@@ -30,6 +30,7 @@
 namespace mxnet {
 namespace op {
 
+template<typename xpu>
 void MinExForward(const nnvm::NodeAttrs& attrs,
                   const OpContext& ctx,
                   const std::vector<TBlob>& inputs,
