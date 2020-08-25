@@ -178,7 +178,7 @@ class ROIPoolingProp : public OperatorProperty {
     CHECK_EQ(dshape.ndim(), 4U) << "data should be a 4D tensor";
 
     for (int i=0; i<dshape.ndim(); i++) {
-        CHECK_LT(dshape[i], (int64_t{1} << 31) - 1) <<
+        CHECK_LT(dshape[i], (int64_t{1} << 31) - 1) << 
             "ROI Pooling does not support large dimensions (>= 2^31).";
     }
 
