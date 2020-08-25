@@ -112,7 +112,6 @@ def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
     quantize_granularity: str
         The granularity of quantization, currently supports 'tensor-wise' and 'channel-wise'
         quantization. The default value is 'tensor-wise'.
-
     """
     num_excluded_symbols = 0
     if excluded_symbols is not None:
@@ -474,6 +473,8 @@ def quantize_model(sym, arg_params, aux_params,
     http://on-demand.gputechconf.com/gtc/2017/presentation/s7310-8-bit-inference-with-tensorrt.pdf
     and adapts the method to MXNet.
 
+    .. _`quantize_model_params`:
+
     Parameters
     ----------
     sym : str or Symbol
@@ -528,9 +529,8 @@ def quantize_model(sym, arg_params, aux_params,
 
     Returns
     -------
-    tuple
+    quantized_model: tuple
         A tuple of quantized symbol, quantized arg_params, and aux_params.
-    -------
     """
     if excluded_sym_names is None:
         excluded_sym_names = []
@@ -618,13 +618,13 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
 
     Parameters
     ----------
-    same with quantize_model
+    all
+        :ref:`As in quantize_model<quantize_model_params>`
 
     Returns
     -------
-    tuple
+    quantized_model: tuple
         A tuple of quantized symbol, quantized arg_params, and aux_params.
-    -------
     """
     if not isinstance(ctx, Context):
         raise ValueError('currently only supports single ctx, while received %s' % str(ctx))
@@ -699,9 +699,8 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
         A logging object for printing information during the process of quantization.
     Returns
     -------
-    tuple
+    quantized_model : tuple
         A tuple of quantized symbol, quantized arg_params, aux_params and collector.
-    -------
     """
     if excluded_sym_names is None:
         excluded_sym_names = []
@@ -794,9 +793,8 @@ def calib_graph(qsym, arg_params, aux_params, collector,
         A logging object for printing information during the process of quantization.
     Returns
     -------
-    tuple
+    quantized_model : tuple
         A tuple of calibrated symbol, quantized arg_params, aux_params.
-    -------
     """
     th_dict = {}
     if calib_mode is not None and calib_mode != 'none':
@@ -881,7 +879,6 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     -------
     network : Gluon SymbolBlock
         Defines the structure of a neural network for INT8 data types.
-    -------
     """
 
     if logger:
