@@ -29,7 +29,8 @@ from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, d
 from mxnet import gluon, np, npx
 from common import with_seed
 import pytest
-
+from tests.python.unittest.common import assertRaises
+from mxnet.base import MXNetError
 
 # dimension constants
 MEDIUM_X = 10000
@@ -1005,33 +1006,44 @@ def test_dlpack():
     assert C[0][100] == 101
 
 @use_np
-@pytest.mark.skip(reason='broken on large tensors')
-#TODO add 3d pooling test after large tensor is fixed
 def test_pooling():
-    A = np.ones((1, 2, INT_OVERFLOW))
-    A[0][0][2] = 100
+    def test_pooling_large_dim():
+        A = np.ones((1, 1, INT_OVERFLOW))
+        assertRaises(MXNetError, npx.pooling, data=A, kernel=(2), stride=(2), \
+                pool_type='max')
+    
+    test_pooling_large_dim()
+    A = np.ones((1, 1, 2**12, 2**10, 2**10))
+    A[0, 0, 0, 0, 2] = 100
     A.attach_grad()
     with mx.autograd.record():
-        B = npx.pooling(data=A, kernel=(2), stride=2, pool_type='max')
-    assert B.shape == (1, 2, HALF_INT_OVERFLOW)
-    assert B[0][0][1] == 100
+        B = npx.pooling(data=A, kernel=(2, 2, 2), stride=(2, 2, 2), \
+                pool_type='max')
+    assert B.shape == (1, 1, 2**11, 2**9, 2**9)
+    assert B[0, 0, 0, 0, 1] == 100
     B.backward()
-    assert A.grad.shape == (1, 2, INT_OVERFLOW)
-    assert A.grad[0][0][0] == 1
+    assert A.grad.shape == (1, 1, 2**12, 2**10, 2**10)
+    assert A.grad[0, 0, 0, 0, 0] == 1
 
 @use_np
-@pytest.mark.skip(reason='forward gives wrong value on large tensor')
 def test_roi_pooling():
-    A = np.ones((1, 1, 5, INT_OVERFLOW))
-    A[0][0][0][2] = 100
-    roi = np.array([[0, 0, 0, 3, 3]])
+    def test_roi_pooling_large_dim():
+        A = np.ones((1, 1, INT_OVERFLOW, 5))
+        roi = np.array([[0, 0, 0, 5, 5]])
+        assertRaises(MXNetError, npx.roi_pooling, A, roi, pooled_size=(3, 3), \
+            spatial_scale=1)
+    
+    test_roi_pooling_large_dim()
+    A = np.ones((1, 1, 2**16, 2**16))
+    A[0, 0, 0, 2] = 100
+    roi = np.array([[0, 0, 0, 5, 5]])
     A.attach_grad()
     with mx.autograd.record():
-        B = npx.roi_pooling(A, roi, pooled_size=(2, 2), spatial_scale=1)
-    assert B.shape == (1, 1, 2, 2)
+        B = npx.roi_pooling(A, roi, pooled_size=(3, 3), spatial_scale=1)
+    assert B.shape == (1, 1, 3, 3)
     assert B[0][0][0][1] == 100
     B.backward()
-    assert A.grad.shape == (1, 1, 5, INT_OVERFLOW)
+    assert A.grad.shape == (1, 1, 2**16, 2**16)
     assert A.grad[0][0][0][0] == 1
 
 @use_np
