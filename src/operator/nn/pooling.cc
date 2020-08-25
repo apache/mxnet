@@ -117,6 +117,11 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       << " Or 4D in (batch, channel, y, x) "
       << " Or 5D in (batch, channel, d, y, x)";
 
+  for (int i=0; i<dshap.ndim(); i++) {
+    CHECK_LT(dshape[i], (int64_t{1} << 31) - 1) <<
+      "Pooling does not support large dimensions (>= 2^31).";
+  }
+
   int layout = param.GetLayout(dshape.ndim());
   if (param.global_pool) {
     mxnet::TShape oshape = dshape;
