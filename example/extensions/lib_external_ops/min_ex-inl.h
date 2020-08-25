@@ -23,9 +23,9 @@
 #include <dmlc/parameter.h>
 #include <vector>
 #include <algorithm>
-#include "mxnet_op.h"
-#include "operator_common.h"
-#include "elemwise_op_common.h"
+#include "operator/mxnet_op.h"
+#include "operator/operator_common.h"
+#include "operator/elemwise_op_common.h"
 
 namespace mxnet {
 namespace op {

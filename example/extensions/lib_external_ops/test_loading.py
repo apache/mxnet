@@ -32,10 +32,10 @@ except Exception as ex:
 
 # test loading library
 if (os.name=='posix'):
-    path = os.path.abspath('libmin_ex.so')
+    path = os.path.abspath('../../../build/libexternal_lib.so')
     mx.library.load(path)
 elif (os.name=='nt'):
-    path = os.path.abspath('libmin_ex.dll')
+    path = os.path.abspath('../../../build/libexternal_lib.dll')
     mx.library.load(path)
 
 print(mx.nd.min_ex())
