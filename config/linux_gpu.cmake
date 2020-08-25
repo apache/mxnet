@@ -33,6 +33,14 @@
 # Specify `cmake --build . --parallel N` to set the number of parallel compilation jobs.
 # Default is derived from CPUs available.
 #
+# By default, cmake will try and discover which GPU architecture to use by looking at
+# the available GPUs on the machine that you're building on. If you want to build for
+# a specific GPU architecture or are building on a machine without a GPU, then
+# specify the MXNET_CUDA_ARCH option like:
+#
+# $ cmake .. -DMXNET_CUDA_ARCH=7.0
+#
+# In the example above we're building for sm_70 which is the Volta architecture.
 #-------------------------------------------------------------------------------
 
 #---------------------------------------------
