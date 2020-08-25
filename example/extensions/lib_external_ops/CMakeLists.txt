@@ -8,8 +8,8 @@ FILE(GLOB CXX_SRCS
   )
 
 # create library & set libraries
-add_library(external_lib SHARED $<TARGET_OBJECTS:nnvm> ${CXX_SRCS})
-target_link_libraries(external_lib PUBLIC mshadow mxnet dmlc)
+add_library(external_lib SHARED ${CXX_SRCS})
+target_link_libraries(external_lib PUBLIC mshadow mxnet)
 
 # generic GPU stuff
 if(USE_CUDA)

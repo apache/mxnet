@@ -696,6 +696,8 @@ elseif(MSVC)
     add_library(mxnet SHARED ${SOURCE})
     target_link_libraries(mxnet PUBLIC mshadow)
   endif()
+  # export all symbols for external ops
+  set_target_properties(mxnet PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS)
 endif()
 target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
 
