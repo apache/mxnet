@@ -374,7 +374,7 @@ class SoftmaxCrossEntropyLoss(Loss):
           `sparse_label` is False, `label`'s shape must be the same as `pred`
           and values should be floats in the range `[0, 1]`.
         - **sample_weight**: element-wise weighting tensor. Must be broadcastable
-          to the same shape as label. For example, if label has shape (64, 10)
+          to the same shape as pred. For example, if pred has shape (64, 10)
           and you want to weigh each sample in the batch separately,
           sample_weight should have shape (64, 1).
 

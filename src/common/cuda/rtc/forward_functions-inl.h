@@ -215,6 +215,31 @@ __device__ inline void store_add_index(const vector::VectorizedStorage<DType, nv
 const char function_definitions_binary[] = R"code(
 namespace op {
 
+template <typename DType>
+__device__ inline bool isnan(const DType val) {
+  return util::isnan(val);
+}
+
+template <typename DType>
+__device__ inline bool_t isinf(const DType val) {
+  return util::isinf(val);
+}
+
+template <typename DType>
+__device__ inline bool_t isposinf(const DType val) {
+  return util::isinf(val) && (val > 0);
+}
+
+template <typename DType>
+__device__ inline bool_t isneginf(const DType val) {
+  return util::isinf(val) && (val < 0);
+}
+
+template <typename DType>
+__device__ inline bool_t isfinite(const DType val) {
+  return !op::isnan(val) && !op::isinf(val);
+}
+
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type
 add(const DType a, const DType2 b) {
@@ -865,31 +890,6 @@ __device__ inline DType logical_not(const DType val) {
 template <typename DType>
 __device__ inline bool_t np_logical_not(const DType val) {
   return !static_cast<bool>(val);
-}
-
-template <typename DType>
-__device__ inline bool isnan(const DType val) {
-  return util::isnan(val);
-}
-
-template <typename DType>
-__device__ inline bool_t isinf(const DType val) {
-  return util::isinf(val);
-}
-
-template <typename DType>
-__device__ inline bool_t isposinf(const DType val) {
-  return util::isinf(val) && (val > 0);
-}
-
-template <typename DType>
-__device__ inline bool_t isneginf(const DType val) {
-  return util::isinf(val) && (val < 0);
-}
-
-template <typename DType>
-__device__ inline bool_t isfinite(const DType val) {
-  return !op::isnan(val) && !op::isinf(val);
 }
 
 #undef DEFINE_UNARY_MATH_FUNC

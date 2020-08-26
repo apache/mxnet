@@ -727,16 +727,12 @@ def test_deconvolution_large_c():
 def test_convolution_versions():
     # 2D convolution NCHW
     ctx_list = [{'ctx': mx.cpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float32}},
-                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float32}},
-                {'ctx': mx.gpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float32}},
                 {'ctx': mx.cpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float32}},
                 {'ctx': mx.gpu(0), 'conv_data': (2, 2, 7, 7), 'type_dict': {'conv_data': np.float32}}]
-    conv_v1_cpu = mx.sym.Convolution_v1(num_filter=3, kernel=(3,3), pad=(1,1), name='conv')
-    conv_v1_gpu = mx.sym.Convolution_v1(num_filter=3, kernel=(3,3), pad=(1,1), cudnn_off=True, name='conv')
     conv_cudnn = mx.sym.Convolution(num_filter=3, kernel=(3,3), pad=(1,1), name='conv')
     conv_cpu = mx.sym.Convolution(num_filter=3, kernel=(3,3), pad=(1,1), name='conv')
     conv_gpu = mx.sym.Convolution(num_filter=3, kernel=(3,3), pad=(1,1), cudnn_off=True, name='conv')
-    syms = [conv_v1_cpu, conv_v1_gpu, conv_cudnn, conv_cpu, conv_gpu]
+    syms = [conv_cudnn, conv_cpu, conv_gpu]
     check_consistency(syms, ctx_list)
 
     # 3D convolution NCDHW
@@ -1043,30 +1039,27 @@ def test_pooling_versions():
                 if not is_default_stride(stride) or random_choice():
                     pool_op_args.update({'stride' : stride})
 
-            expected_pool_ops = ['pool', 'pool_transposed', 'pool_v1']
-            if pool_op == 'pool_v1':
-                sym = mx.sym.Pooling_v1(**pool_op_args)
+            expected_pool_ops = ['pool', 'pool_transposed']
+            pool_op_args.update({'p_value' : p_value, 'count_include_pad' : count_include_pad})
+            if ctx_type != 'cpu':
+                pool_op_args['cudnn_off'] = ctx_type == 'gpu'
+            if pool_op == 'pool':
+                # isolate pooling input from symbol input to test shared tensor optimizations
+                buffered_input = mx.sym.identity(name='pool')
+                sym = mx.sym.Pooling(buffered_input, **pool_op_args)
+            elif pool_op == 'pool_transposed':
+                ndim = len(data)
+                # NCW->NWC axes=(0,2,1) NCHW->NHWC axes=(0,2,3,1) NCDHW->NDHWC axes=(0,2,3,4,1);
+                axes = (0,) + tuple(range(2,ndim)) + (1,)
+                transposed = mx.sym.transpose(axes=axes, name='pool')
+                pooled = mx.sym.Pooling(data=transposed, layout=transposed_layout(ndim),
+                                        **pool_op_args)
+                # NWC->NCW axes=(0,2,1) NHWC->NCHW axes=(0,3,1,2) NDHWC->NCDHW axes=(0,4,1,2,3);
+                axes = (0, ndim-1) + tuple(range(1,ndim-1))
+                sym = mx.sym.transpose(data=pooled, axes=axes, name='pool')
             else:
-                pool_op_args.update({'p_value' : p_value, 'count_include_pad' : count_include_pad})
-                if ctx_type != 'cpu':
-                    pool_op_args['cudnn_off'] = ctx_type == 'gpu'
-                if pool_op == 'pool':
-                    # isolate pooling input from symbol input to test shared tensor optimizations
-                    buffered_input = mx.sym.identity(name='pool')
-                    sym = mx.sym.Pooling(buffered_input, **pool_op_args)
-                elif pool_op == 'pool_transposed':
-                    ndim = len(data)
-                    # NCW->NWC axes=(0,2,1) NCHW->NHWC axes=(0,2,3,1) NCDHW->NDHWC axes=(0,2,3,4,1);
-                    axes = (0,) + tuple(range(2,ndim)) + (1,)
-                    transposed = mx.sym.transpose(axes=axes, name='pool')
-                    pooled = mx.sym.Pooling(data=transposed, layout=transposed_layout(ndim),
-                                            **pool_op_args)
-                    # NWC->NCW axes=(0,2,1) NHWC->NCHW axes=(0,3,1,2) NDHWC->NCDHW axes=(0,4,1,2,3);
-                    axes = (0, ndim-1) + tuple(range(1,ndim-1))
-                    sym = mx.sym.transpose(data=pooled, axes=axes, name='pool')
-                else:
-                    raise RuntimeError('Expected one of {}, saw {}.'.format(expected_pool_ops,
-                                                                            pool_op))
+                raise RuntimeError('Expected one of {}, saw {}.'.format(expected_pool_ops,
+                                                                        pool_op))
             sym_list.append(sym)
 
         check_consistency(sym_list, ctx_list, equal_nan=(not count_include_pad), rtol=tol, atol=tol)
@@ -1128,10 +1121,6 @@ def test_pooling_versions():
     std_pool_op_list = ['pool_cpu', 'pool_transposed_cpu',
                         'pool_gpu', 'pool_transposed_gpu',
                         'pool_cudnn', 'pool_transposed_cudnn']
-    # The implementations of the 'v1' pooling operator
-    v1_pool_op_list = ['pool_v1_cpu', 'pool_v1_gpu']
-    # For those cases when all implementations should match- the combined implementation list.
-    combo_pool_op_list = std_pool_op_list + v1_pool_op_list
 
     for dtype in [np.float32, np.float64, np.float16]:
         # Testing of the standard (not 'v1') pooling operator is universal across all
@@ -1144,47 +1133,6 @@ def test_pooling_versions():
             test_pooling_dim(dim, 'lp', dtype, std_pool_op_list, p_value=1)
             test_pooling_dim(dim, 'lp', dtype, std_pool_op_list, p_value=2)
             test_pooling_dim(dim, 'lp', dtype, std_pool_op_list, p_value=3)
-
-        # Testing of the 'v1' pooling operator is over its restricted support domain of
-        # 2D data only and not with the 'lp' pooling type.  The 'v1' cpu and gpu versions are
-        # always tested against each other, and sometimes against the standard operator versions.
-        # The slightly different 'v1' definition prevents this in the following cases:
-        #
-        #     1. In max pooling, when multiple input values are the maximum in the input window,
-        #        the 'v1' implementation backprops the gradient to all maxima, whereas the standard
-        #        pooling operator backprops the gradient to the lowest-indexed maximum only.
-        #     2. In max pooling, the 'v1' operator pads with 0's and this value can become the
-        #        maximum output value in the case of an all-negative input.  The standard pooling
-        #        operator effectively considers the padding to be the largest negative value, so
-        #        only input values should appear in the output.
-        #     3. In avg pooling, the 'v1' operator divides the sum by the same window size factor,
-        #        even at the edges, and so does not support count_include_pad = False.
-        #     4. The float16 'v1' pooling operator performs forward sums and averages in
-        #        float16, whereas the std operators perform those calculations in float32, so
-        #        greater float16 tolerances are needed when comparing across implementations.
-
-        # Double the float16 tol when comparing v1 and non-v1 implemenations, per note 4 above.
-        relaxed_tol = {np.dtype(np.float16): 2e-1,
-               np.dtype(np.float32): 1e-3,
-               np.dtype(np.float64): 1e-5,
-               np.dtype(np.uint8): 0,
-               np.dtype(np.int32): 0,
-               np.dtype(np.int64): 0}
-
-        # Exclude std implementations due to points 1 and 2 above.
-        test_pooling_dim('2D', 'max', dtype, v1_pool_op_list)
-        # The standard and 'v1' implementations match for this case.
-        test_pooling_dim('2D', 'avg', dtype, combo_pool_op_list, count_include_pad=True,
-                         tol=relaxed_tol)
-        # Exclude std implementations due to point 3 above.
-        test_pooling_dim('2D', 'avg', dtype, v1_pool_op_list, count_include_pad=False)
-        # The standard and 'v1' implementations match for this case.
-        test_pooling_dim('2D', 'sum', dtype, combo_pool_op_list, tol=relaxed_tol)
-
-    # We can compare the standard and 'v1' max pooling implementations if we eliminate padding
-    # (see point 2 above) and use np.float64 data so that no two random input window values are
-    # likely to be the same (see point 1 above).
-    test_pooling_dim('2D_no_padding', 'max', np.float64, combo_pool_op_list)
 
 
 @with_seed()
@@ -1317,19 +1265,6 @@ def test_global_pooling():
         sym_list = []
 
         pooling_convention = 'valid'
-
-        if pool_type != 'lp':
-            ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-            sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,
-                                              pooling_convention=pooling_convention, global_pool=True, name='pool'))
-
-            ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-            sym_list.append(mx.sym.Pooling_v1(kernel=kernel, pool_type=pool_type,
-                                              pooling_convention=pooling_convention, global_pool=True, name='pool'))
-
-            ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
-            sym_list.append(mx.sym.Pooling_v1(pool_type=pool_type,
-                                              pooling_convention=pooling_convention, global_pool=True, name='pool'))
 
         ctx_list.append({'ctx': mx.cpu(0), 'pool_data': data, 'type_dict': {'pool_data': np.float32}})
         sym_list.append(mx.sym.Pooling(kernel=kernel, pad=pad, stride=stride, pool_type=pool_type,

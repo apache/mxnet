@@ -1242,9 +1242,9 @@ class Symbol(SymbolBase):
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int64))()
             if partial:
-                infer_func = _LIB.MXSymbolInferShapePartialEx64
+                infer_func = _LIB.MXSymbolInferShapePartial64
             else:
-                infer_func = _LIB.MXSymbolInferShapeEx64
+                infer_func = _LIB.MXSymbolInferShape64
             check_call(infer_func(
                 self.handle,
                 mx_uint(len(indptr) - 1),
@@ -1271,9 +1271,9 @@ class Symbol(SymbolBase):
             out_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
             aux_shape_data = ctypes.POINTER(ctypes.POINTER(mx_int))()
             if partial:
-                infer_func = _LIB.MXSymbolInferShapePartialEx
+                infer_func = _LIB.MXSymbolInferShapePartial
             else:
-                infer_func = _LIB.MXSymbolInferShapeEx
+                infer_func = _LIB.MXSymbolInferShape
             check_call(infer_func(
                 self.handle,
                 mx_uint(len(indptr) - 1),

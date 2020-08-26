@@ -108,16 +108,15 @@ void InvokeOperator(const nnvm::IndexedGraph& idx,
     invoke(OpStatePtr());
   }
   for (const auto& j : node.inputs) {
-    size_t eid = idx.entry_id(j);
-    --ref_count[eid];
-    if (ref_count[eid] == 0) {
-      *arrays[eid] = NDArray();
+    const size_t eid = idx.entry_id(j);
+    if (--ref_count[eid] == 0) {
+      arrays[eid]->ReInit();
     }
   }
   for (size_t j = 0; j < ndoutputs.size(); ++j) {
-    size_t eid = idx.entry_id(node_idx, j);
+    const size_t eid = idx.entry_id(node_idx, j);
     if (ref_count[eid] == 0) {
-      *arrays[eid] = NDArray();
+      arrays[eid]->ReInit();
     }
   }
 }

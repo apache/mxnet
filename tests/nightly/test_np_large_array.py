@@ -476,6 +476,89 @@ def test_dot():
     assert A.grad.shape == (1, INT_OVERFLOW)
     assert A.grad[0][0] == 1
 
+@use_np
+def test_random_uniform():
+    A = np.random.uniform(low=0, high=1.0, size=(INT_OVERFLOW))
+    assert A[0] <= 1 and A[0] >= 0
+
+@use_np
+def test_random_normal():
+    A = np.random.normal(loc=0, scale=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+@pytest.mark.skip(reason='times out (20 mins)')
+def test_random_gamma():
+    A = np.random.gamma(shape=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_exponential():
+    A = np.random.exponential(size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_laplace():
+    A = np.random.laplace(loc=0, scale=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_choice():
+    A = np.random.choice(a=10, size=(INT_OVERFLOW))
+    assert A[0] <= 10 and A[0] >= 0
+
+@use_np
+def test_random_gumbel():
+    A = np.random.gumbel(loc=0, scale=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_logistic():
+    A = np.random.logistic(loc=0, scale=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+@pytest.mark.skip(reason='times out (20 mins)')
+def test_random_multinomial():
+    A = np.random.multinomial(pvals=np.zeros(INT_OVERFLOW), n=1)
+    assert A[-1] == 1
+
+@use_np
+def test_random_pareto():
+    A = np.random.pareto(a=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_power():
+    A = np.random.power(a=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_rayleigh():
+    A = np.random.rayleigh(scale=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_weibull():
+    A = np.random.weibull(a=1.0, size=(INT_OVERFLOW))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_shuffle():
+    A = np.ones((INT_OVERFLOW, 2))
+    np.random.shuffle(A)
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_lognormal():
+    A = np.random.lognormal(mean=0, sigma=1.0, size=(2**31))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_randint():
+    A = np.random.randint(low=0, high=5, size=(2, 2**31))
+    assert A[0][0] < 5 and A[0][0] >= 0
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
@@ -677,7 +760,6 @@ def test_sigmoid():
                 rtol=1e-3, atol=1e-5)
 
 @use_np
-@pytest.mark.skip(reason='Does not support large tensor; to be fixed')
 def test_shape_array():
     A = np.zeros((INT_OVERFLOW, 2))
     A.attach_grad()
@@ -747,15 +829,6 @@ def test_smooth_l1():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, )
     assert A.grad[0] == 0
-
-@use_np
-@pytest.mark.skip(reason='np.random broken on large tensor; npx.random \
-    to be re-examined after np.random is fixed')
-def test_random():
-    prob = np.random.uniform(size=(INT_OVERFLOW, 2))
-    A = npx.random.bernoulli(prob=prob, size=(INT_OVERFLOW, 2))
-    assert A.shape == (INT_OVERFLOW, 2)
-    assert int((A == 0).sum() + (A == 1).sum()) == A.size
 
 @use_np
 def test_gamma():
@@ -985,3 +1058,12 @@ def test_gather_nd():
     assert A.grad.shape == (1, 2, INT_OVERFLOW)
     assert A.grad[0, 0, 0] == 0
     assert A.grad[0, 0, INT_OVERFLOW-1] == 1
+
+@use_np
+def test_random_bernoulli():
+    prob = np.zeros((INT_OVERFLOW))
+    prob[0] = 1
+    A = npx.random.bernoulli(prob=prob, size=(INT_OVERFLOW))
+    assert A.shape == (INT_OVERFLOW, )
+    assert A[0] == 1
+    assert A[1] == 0

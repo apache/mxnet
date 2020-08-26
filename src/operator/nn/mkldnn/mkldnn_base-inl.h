@@ -522,27 +522,6 @@ mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &out_arr,
 /* This function has to be used with one of the functions above. */
 void CommitOutput(const NDArray &arr, const mkldnn_output_t &res);
 
-static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
-                                     const std::vector<OpReqType> &reqs) {
-  for (size_t i = 0; i < arrs.size(); i++) {
-    if (reqs[i] == kWriteTo || reqs[i] == kNullOp) {
-      const_cast<NDArray &>(arrs[i]).InvalidateMKLDNNData();
-    }
-  }
-}
-
-// TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature added
-static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
-                                       std::vector<NDArray> *out_arrs) {
-  out_arrs->clear();
-  for (size_t i = 0; i < arrs.size(); ++i) {
-    if (arrs[i].IsMKLDNNData())
-      out_arrs->push_back(arrs[i].Reorder2Default());
-    else
-      out_arrs->push_back(arrs[i]);
-  }
-}
-
 const mkldnn::memory *GetWeights(const NDArray &arr, int num_groups);
 
 const mkldnn::memory *GetWeights(const NDArray &arr,

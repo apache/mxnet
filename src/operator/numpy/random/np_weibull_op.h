@@ -44,13 +44,13 @@ namespace op {
 
 struct NumpyWeibullParam : public dmlc::Parameter<NumpyWeibullParam> {
   dmlc::optional<float> a;
-  dmlc::optional<mxnet::Tuple<int>> size;
+  dmlc::optional<mxnet::Tuple<index_t>> size;
   std::string ctx;
   DMLC_DECLARE_PARAMETER(NumpyWeibullParam) {
       DMLC_DECLARE_FIELD(a)
       .set_default(dmlc::optional<float>());
       DMLC_DECLARE_FIELD(size)
-      .set_default(dmlc::optional<mxnet::Tuple<int>>())
+      .set_default(dmlc::optional<mxnet::Tuple<index_t>>())
       .describe("Output shape. If the given shape is, "
           "e.g., (m, n, k), then m * n * k samples are drawn. "
           "Default is None, in which case a single value is returned.");
