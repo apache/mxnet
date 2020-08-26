@@ -2394,3 +2394,93 @@ def test_deconvolution():
     assert out[0][0][kernel[0]//2][kernel[1]] == channel * num_filter
     assert inp.grad.shape == inp.shape
     assert inp.grad[0][0][0][0] == 0
+
+
+def test_dropout():
+    shape = (LARGE_X, SMALL_Y)
+    inp = mx.np.ones(shape=shape)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = npx.dropout(inp, p=0.5, cudnn_off=True)
+        out.backward()
+    assert out.shape == shape
+    assert _np.count_nonzero(out[0] == 2) != 0
+    assert inp.grad.shape == shape
+    assert _np.count_nonzero(inp.grad[0] == 2) != 0
+
+@use_np
+def test_log_softmax():
+    LOG_SOFTMAX_VAL = -18.420681
+    ndim = 2
+    shape = (LARGE_X, SMALL_Y)
+    axis = 1
+    inp = np.ones(shape=shape)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = npx.log_softmax(inp, axis=0)
+        out.backward()
+    assert out.shape == shape
+    assert_almost_equal(out[-1][-1], LOG_SOFTMAX_VAL, atol=1e-3, rtol=1e-3)
+    assert inp.grad.shape == shape
+    assert_almost_equal(inp.grad[0][0], 0.0, atol=1e-3, rtol=1e-3)
+
+
+@use_np
+def test_relu():
+    shape = (LARGE_X, SMALL_Y)
+    inp = np.ones(shape)
+    inp[:, shape[1] // 2:shape[1]] = -1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = npx.relu(inp)
+        out.backward()
+    assert out.shape == shape
+    assert out[0][0] == 1
+    assert out[-1][-1] == 0
+    assert inp.grad.shape == shape
+    assert inp.grad[0][0] == 1
+
+
+@use_np
+def test_leaky_relu():
+    a = -1 * mx.np.ones(shape=(LARGE_X, SMALL_Y))
+
+    def check_leaky():
+        res = mx.npx.leaky_relu(a, act_type="leaky", slope=0.3)
+        assert_almost_equal(res[-1][-1], 0.3*a[-1][-1], atol=1e-3, rtol=1e-3)
+
+    def check_elu():
+        res = mx.npx.leaky_relu(a, act_type="elu", slope=0.3)
+        assert_almost_equal(res[-1][-1], 0.3*(_np.exp(a[-1][-1])-1), atol=1e-3, rtol=1e-3)
+
+    def check_selu():
+        lam = 1.0507009873554804934193349852946
+        alpha = 1.6732632423543772848170429916717
+        res = mx.npx.leaky_relu(a, act_type="selu")
+        assert_almost_equal(res[-1][-1], (lam * alpha * (_np.exp(a[-1][-1])-1)), atol=1e-3, rtol=1e-3)
+
+    def check_rrelu():
+        lower = 0.125
+        upper = 0.333999991
+        res = mx.npx.leaky_relu(a, act_type="rrelu")
+        assert_almost_equal(res[0][-1][-1], (lower + upper) / 2 * a[-1][-1], atol=1e-3, rtol=1e-3)
+
+    check_leaky()
+    check_elu()
+    check_selu()
+    check_rrelu()
+
+
+@use_np
+def test_norm():
+    shape = (LARGE_X * 2, SMALL_Y // 2)
+    inp = np.ones(shape)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = npx.norm(inp, ord=2, axis=1)
+        out.backward()
+    assert out.shape == (shape[0],)
+    assert out[shape[0] - 1] == 5
+    assert inp.grad.shape == shape
+    assert_almost_equal(inp.grad[0][0], 1/5, atol=1e-3, rtol=1e-3)
+
