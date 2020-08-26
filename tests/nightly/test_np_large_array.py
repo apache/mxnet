@@ -670,15 +670,16 @@ def test_batch_norm():
     assert A.grad[0][0] == 0
 
 @use_np
-@pytest.mark.skip(reason='segfault on (2, large)')
 def test_nonzero():
     A = np.zeros((2, INT_OVERFLOW))
-    A[0][0] = 1
+    A[0, 1] = 1
+    A[1, -1] = 1
     A.attach_grad()
     with mx.autograd.record():
         B = npx.nonzero(A)
-    assert B.shape == (1, 2)
-    assert B[0][0] == 0
+    assert B.shape == (2, 2)
+    assert B[0, 0] == 0 and B[0, 1] == 1
+    assert B[1, 0] == 1 and B[1, 1] == int(INT_OVERFLOW - 1)
     B.backward()
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
