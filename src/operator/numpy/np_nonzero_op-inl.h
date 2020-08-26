@@ -44,12 +44,12 @@ namespace op {
 
 struct NonzeroForwardKernel {
   template<int ndim>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   int64_t* out,
-                                  const int32_t* idx,
+                                  const index_t* idx,
                                   const mshadow::Shape<ndim> shape) {
-    int32_t prev = (i == 0) ? 0 : idx[i - 1];
-    int32_t curr = idx[i];
+    index_t prev = (i == 0) ? 0 : idx[i - 1];
+    index_t curr = idx[i];
     if (prev != curr) {
       mshadow::Shape<ndim> coord = mxnet_op::unravel<ndim>(i, shape);
       for (int j = 0; j < ndim; j++) {
