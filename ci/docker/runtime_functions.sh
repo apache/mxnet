@@ -111,7 +111,7 @@ build_dynamic_libmxnet() {
     gather_licenses
 
     cd /work/build
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/devtoolset-9/enable
     if [[ ${mxnet_variant} = "cpu" ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
@@ -1229,7 +1229,7 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/devtoolset-9/enable
     source /opt/rh/rh-python36/enable
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
@@ -1294,7 +1294,7 @@ build_static_python_cpu() {
     set -ex
     pushd .
     export mxnet_variant=cpu
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/devtoolset-9/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
@@ -1304,7 +1304,7 @@ build_static_python_cu92() {
     set -ex
     pushd .
     export mxnet_variant=cu92
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/devtoolset-9/enable
     source /opt/rh/rh-python36/enable
     ./ci/publish/python/build.sh
     popd
