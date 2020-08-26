@@ -483,9 +483,9 @@ FILE(GLOB_RECURSE NNVMSOURCE
   3rdparty/tvm/nnvm/src/core/*.h
   3rdparty/tvm/nnvm/src/pass/*.h
   3rdparty/tvm/nnvm/include/*.h)
-add_library(nnvm OBJECT ${NNVMSOURCE})
+add_library(nnvm SHARED ${NNVMSOURCE})
 set_target_properties(nnvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
-list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
+#list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
 
 # add source group
 FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
@@ -791,13 +791,13 @@ if(MSVC)
   if(USE_SPLIT_ARCH_DLL AND USE_CUDA)
     foreach(arch ${arch_code_list})
       target_link_libraries(mxnet_${arch} PUBLIC ${mxnet_LINKER_LIBS})
-      target_link_libraries(mxnet_${arch} PUBLIC dmlc)
+      target_link_libraries(mxnet_${arch} PUBLIC dmlc nnvm)
     endforeach()
   endif()
 endif()
 
 target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
-target_link_libraries(mxnet PUBLIC dmlc)
+target_link_libraries(mxnet PUBLIC dmlc nnvm)
 
 if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
   add_executable(im2rec "tools/im2rec.cc")
@@ -806,6 +806,7 @@ if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
     ${OpenCV_LIBS}
     mxnet
     dmlc
+    nnvm
     )
 else()
     message(WARNING "OpenCV_VERSION_MAJOR: ${OpenCV_VERSION_MAJOR}, version 3 with imgcodecs \
