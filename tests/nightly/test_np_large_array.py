@@ -971,16 +971,17 @@ def test_save_load():
     assert B[0][0][100] == 100
 
 @use_np
-@pytest.mark.skip(reason='foward gives wrong result on large tensors (~2**26); \
-    core dump on (2, INT_OVERFLOW)')
 def test_gather_nd():
-    A = np.ones((2, INT_OVERFLOW))
-    A [1][100] = 100
+    A = np.ones((1, 2, INT_OVERFLOW))
+    A [0, 1, 100] = 100
     A.attach_grad()
     with mx.autograd.record():
-        B = npx.gather_nd(data=A, indices=np.array([[0, 1],[0, 100]]))
+        B = npx.gather_nd(data=A, \
+            indices=np.array([[0, 0] , [0, 1], [INT_OVERFLOW-1, 100]], \
+            dtype='int64'))
     assert B.shape == (2, )
     assert B[0] == 1 and B[1] == 100
     B.backward()
-    assert A.grad.shape == (2, INT_OVERFLOW)
-    assert A.grad[0][0] == 1
+    assert A.grad.shape == (1, 2, INT_OVERFLOW)
+    assert A.grad[0, 0, 0] == 0
+    assert A.grad[0, 0, INT_OVERFLOW-1] == 1
