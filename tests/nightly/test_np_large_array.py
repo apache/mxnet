@@ -1013,16 +1013,17 @@ def test_pooling():
                 pool_type='max')
     
     test_pooling_large_dim()
-    A = np.ones((1, 1, 2**12, 2**10, 2**10))
+    D, H, W = 2**12, 2**10, 2**10
+    A = np.ones((1, 1, D, H ,W))
     A[0, 0, 0, 0, 2] = 100
     A.attach_grad()
     with mx.autograd.record():
         B = npx.pooling(data=A, kernel=(2, 2, 2), stride=(2, 2, 2), \
                 pool_type='max')
-    assert B.shape == (1, 1, 2**11, 2**9, 2**9)
+    assert B.shape == (1, 1, int(D/2), int(H/2), int(W/2))
     assert B[0, 0, 0, 0, 1] == 100
     B.backward()
-    assert A.grad.shape == (1, 1, 2**12, 2**10, 2**10)
+    assert A.grad.shape == (1, 1, D, H, W)
     assert A.grad[0, 0, 0, 0, 0] == 1
 
 @use_np
@@ -1034,7 +1035,8 @@ def test_roi_pooling():
             spatial_scale=1)
     
     test_roi_pooling_large_dim()
-    A = np.ones((1, 1, 2**16, 2**16))
+    H, W = 2**16, 2**16
+    A = np.ones((1, 1, H, W))
     A[0, 0, 0, 2] = 100
     roi = np.array([[0, 0, 0, 5, 5]])
     A.attach_grad()
@@ -1043,7 +1045,7 @@ def test_roi_pooling():
     assert B.shape == (1, 1, 3, 3)
     assert B[0][0][0][1] == 100
     B.backward()
-    assert A.grad.shape == (1, 1, 2**16, 2**16)
+    assert A.grad.shape == (1, 1, H, W)
     assert A.grad[0][0][0][0] == 1
 
 @use_np

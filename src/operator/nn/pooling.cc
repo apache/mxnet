@@ -118,8 +118,8 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       << " Or 5D in (batch, channel, d, y, x)";
 
   for (int i=0; i<dshape.ndim(); i++) {
-    CHECK_LT(dshape[i], (int64_t{1} << 31) - 1) << 
-      "Pooling does not support large dimensions (>= 2^31).";
+    CHECK_LT(dshape[i], INT32_MAX) << "Pooling does not support large"
+        << " dimensions (>= 2^31).";
   }
 
   int layout = param.GetLayout(dshape.ndim());
