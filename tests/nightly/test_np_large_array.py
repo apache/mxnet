@@ -83,6 +83,7 @@ def test_softmax():
         output = npx.softmax(input_data, axis=axis)
         assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
 
+
 '''
   _ _ _  _ _ __  _ __ _  _
  | ' \ || | '  \| '_ \ || |
@@ -1321,6 +1322,7 @@ def test_polyval():
                 |_|   |__/
 '''
 
+
 @use_np
 def test_activation():
     A = np.zeros((INT_OVERFLOW, 2))
@@ -1716,6 +1718,7 @@ def test_rnn_lstm():
     npx.waitall()
 
 
+
 @use_np
 def test_ctc_loss():
     def test_ctc_loss_size_check(A, label):
@@ -1876,6 +1879,7 @@ def test_roi_pooling():
     B.backward()
     assert A.grad.shape == (1, 1, H, W)
     assert A.grad[0][0][0][0] == 1
+
 
 @use_np
 @pytest.mark.skip(reason='times out on (generally speaking) large tensors')
@@ -2345,3 +2349,26 @@ def test_insert():
     assert out[0, 1] == 1 and out[-1, 1] == 2
     assert out2[1] == 5 and out2[2] == 6
     assertRaises(MXNetError, np.insert, arr=inp3, obj=np.array([2, 2], dtype=np.int64), values=np.array([5, 6]))
+
+
+def test_convolution():
+    dim = 2
+    batch_size = 1
+    channel = 3
+    height = SMALL_Y
+    width = LARGE_X // 3
+    num_filter = 4
+    kernel = (3,) * dim   # => shape = (3, 3)
+
+    inp=mx.np.ones(shape=(batch_size, channel, height, width))
+    weight = mx.np.ones(shape=(num_filter, channel, kernel[0], kernel[1]))
+    bias = mx.np.array(num_filter,)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = mx.npx.convolution(data=inp, weight=weight, num_filter=num_filter, \
+                                 kernel=kernel, stride=(SMALL_Y, SMALL_Y), no_bias=True)
+    assert out.shape == (batch_size, channel + 1, 1, (width + SMALL_Y - 1)// SMALL_Y)
+    assert out[0][0][0][0] == channel * kernel[0] * kernel[1]
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0][0][0][0] == 0
+
