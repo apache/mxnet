@@ -81,6 +81,7 @@ def test_softmax():
         output = npx.softmax(input_data, axis=axis)
         assert_almost_equal(output.asnumpy(), true_output, rtol=1e-5, atol=1e-5)
 
+
 '''
   _ _ _  _ _ __  _ __ _  _
  | ' \ || | '  \| '_ \ || |
@@ -568,6 +569,7 @@ def test_random_randint():
                 |_|   |__/
 '''
 
+
 @use_np
 def test_activation():
     A = np.zeros((INT_OVERFLOW, 2))
@@ -580,6 +582,8 @@ def test_activation():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert_almost_equal(A.grad[0][0], np.array([0.25]), \
                 rtol=1e-3, atol=1e-5)
+
+
 @use_np
 def test_arange_like():
     A = np.zeros((INT_OVERFLOW, 2))
@@ -598,6 +602,7 @@ def test_arange_like():
 @pytest.mark.skip(reason='dot is known to not work on large tensors. PR to fix: https://github.com/apache/incubator-mxnet/pull/18925')
 def test_batch_dot():
     assert False 
+
 
 @use_np
 def test_cast():
@@ -630,6 +635,7 @@ def test_broadcast_like():
     assert A.grad.shape == (1, 2)
     assert_almost_equal(A.grad[0][0], np.array([INT_OVERFLOW]), \
                             rtol=1e-3, atol=1e-5)
+
 
 @use_np
 def test_constraint_check():
@@ -670,6 +676,7 @@ def test_batch_norm():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
 
+
 @use_np
 @pytest.mark.skip(reason='segfault on (2, large)')
 def test_nonzero():
@@ -684,6 +691,7 @@ def test_nonzero():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
 
+
 @use_np
 def test_one_hot():
     A = np.zeros((INT_OVERFLOW))
@@ -695,6 +703,7 @@ def test_one_hot():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, )
     assert A.grad[0] == 0
+
 
 @use_np
 @pytest.mark.skip(reason='backward value broken on large tensor')
@@ -712,16 +721,19 @@ def test_pick():
     assert B.grad.shape == (INT_OVERFLOW, )
     assert A.grad[0][0] == 1
 
+
 @use_np
 def test_scalar_poisson():
     A = npx.scalar_poisson(lam=4, shape=(2, INT_OVERFLOW))
     assert A.shape == (2, INT_OVERFLOW)
+
 
 @use_np
 def test_tensor_poisson():
     lam = np.array([2.0, 4.0])
     A = npx.tensor_poisson(lam, shape=(INT_OVERFLOW))
     assert A.shape == (2, INT_OVERFLOW)
+
 
 @use_np
 def test_reshape():
@@ -735,6 +747,7 @@ def test_reshape():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 1
 
+
 @use_np
 def test_reshape_like():
     A = np.ones((INT_OVERFLOW, 2))
@@ -746,6 +759,7 @@ def test_reshape_like():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 1
+
 
 @use_np
 def test_sigmoid():
@@ -771,6 +785,7 @@ def test_shape_array():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
 
+
 @use_np
 def test_stop_gradient():
     A = np.ones((INT_OVERFLOW, 2))
@@ -782,7 +797,8 @@ def test_stop_gradient():
     B.backward()
     # should be 3 if not for stop_gradient()
     assert A.grad[0][0] == 0
-    
+
+
 @use_np
 def test_sequence_mask():
     A = np.ones((2, 2, INT_OVERFLOW))
@@ -796,6 +812,7 @@ def test_sequence_mask():
     B.backward()
     assert A.grad.shape == (2, 2, INT_OVERFLOW)
     assert A.grad[0][0][0] == 1
+
 
 @use_np
 def test_topk():
@@ -811,6 +828,7 @@ def test_topk():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
 
+
 @use_np
 def test_slice():
     A = np.ones((INT_OVERFLOW, 3))
@@ -818,6 +836,7 @@ def test_slice():
     B = npx.slice(A, begin=(100,1), end=(200,3))
     assert B.shape == (100, 2)
     assert B[0][0] == 2
+
 
 @use_np
 def test_smooth_l1():
@@ -830,6 +849,7 @@ def test_smooth_l1():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, )
     assert A.grad[0] == 0
+
 
 @use_np
 def test_gamma():
@@ -844,6 +864,7 @@ def test_gamma():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert_almost_equal(A.grad[0][0], np.array([36.1428]), \
                 rtol=1e-3, atol=1e-5)
+
 
 @use_np
 def test_gammaln():
@@ -873,6 +894,7 @@ def test_digamma():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert_almost_equal(A.grad[0][0], np.array([0.22132295]), \
                 rtol=1e-3, atol=1e-5)
+
 
 @use_np
 @pytest.mark.skip(reason='broken on large tensors; also backward errors out')
@@ -904,6 +926,7 @@ def test_rnn():
     assert out.shape == (INT_OVERFLOW, 4, 1)
     assert type(out[0]).__name__ == 'ndarray'
 
+
 @use_np
 def test_ctc_loss():
     def test_ctc_loss_size_check(A, label):
@@ -926,6 +949,7 @@ def test_ctc_loss():
     B.backward()
     assert A.grad.shape == (L_SEQ, BAT, L_ALP)
     assert type(A[0]).__name__ == 'ndarray'
+
 
 @use_np
 def test_erf():
@@ -956,6 +980,7 @@ def test_erfinv():
     assert_almost_equal(A.grad[0][0], np.array([1.112585]), \
                 rtol=1e-3, atol=1e-5)
 
+
 @use_np
 def test_index_add():
     A = np.zeros((2, INT_OVERFLOW))
@@ -984,6 +1009,7 @@ def test_index_update():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
 
+
 @use_np
 def test_layer_norm():
     A = np.ones((2, INT_OVERFLOW))
@@ -995,6 +1021,7 @@ def test_layer_norm():
     B.backward()
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
+
 
 @use_np
 def test_dlpack():
@@ -1013,6 +1040,7 @@ def test_dlpack():
     assert type(C).__name__ == 'ndarray'
     assert C.shape == (2, INT_OVERFLOW)
     assert C[0][100] == 101
+
 
 @use_np
 def test_pooling():
@@ -1034,6 +1062,7 @@ def test_pooling():
     B.backward()
     assert A.grad.shape == (1, 1, D, H, W)
     assert A.grad[0, 0, 0, 0, 0] == 1
+
 
 @use_np
 def test_roi_pooling():
@@ -1057,6 +1086,7 @@ def test_roi_pooling():
     assert A.grad.shape == (1, 1, H, W)
     assert A.grad[0][0][0][0] == 1
 
+
 @use_np
 @pytest.mark.skip(reason='times out on (generally speaking) large tensors')
 def test_save_load():
@@ -1066,6 +1096,7 @@ def test_save_load():
     B = np.array(npx.load('my_tensor'))
     assert B[0].shape == (2, INT_OVERFLOW)
     assert B[0][0][100] == 100
+
 
 @use_np
 def test_gather_nd():
@@ -1091,3 +1122,139 @@ def test_random_bernoulli():
     assert A.shape == (INT_OVERFLOW, )
     assert A[0] == 1
     assert A[1] == 0
+
+
+@use_np
+@pytest.mark.timeout(2400)
+def test_convolution():
+    dim = 2
+    batch_size = 1
+    channel = 3
+    height = SMALL_Y
+    width = LARGE_X // 3
+    num_filter = 4
+    kernel = (3,) * dim   # => shape = (3, 3)
+
+    inp=mx.np.ones(shape=(batch_size, channel, height, width))
+    weight = mx.np.ones(shape=(num_filter, channel, kernel[0], kernel[1]))
+    bias = mx.np.array(num_filter,)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = mx.npx.convolution(data=inp, weight=weight, num_filter=num_filter, \
+                                 kernel=kernel, no_bias=True)
+    assert out.shape == (batch_size, channel + 1, height - 2 * (kernel[0] // 2), \
+                         width - 2 * (kernel[1] // 2))
+    assert out[0][0][0][0] == channel * kernel[0] * kernel[1]
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0][0][0][0] == 0
+
+
+@use_np
+@pytest.mark.timeout(1800)
+def test_deconvolution():
+    dim = 2
+    batch_size = 1
+    channel = 3
+    height = SMALL_X
+    width = LARGE_X // 3
+    num_filter = 4
+    kernel = (3,) * dim   # => shape = (3, 3)
+
+    inp=mx.np.ones(shape=(batch_size, channel, height, width))
+    weight = mx.np.ones(shape=(channel, num_filter, kernel[0], kernel[1]))
+    bias = mx.np.array(num_filter,)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = mx.npx.deconvolution(data=inp, weight=weight, num_filter=num_filter, \
+                                   kernel=kernel, no_bias=True)
+    assert out.shape == (batch_size, num_filter, height + 2 * (kernel[0] // 2), \
+                         width + 2 * (kernel[0] // 2))
+    assert out[0][0][2 * (kernel[0]//2)][2 * (kernel[1]//2)] == channel * kernel[0] * kernel[1]
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0][0][0][0] == 0
+
+
+@use_np
+def test_dl_layers():
+    def check_dropout():
+        shape = (LARGE_X, SMALL_Y)
+        inp = mx.np.ones(shape=shape)
+        inp.attach_grad()
+        with mx.autograd.record():
+            out = npx.dropout(inp, p=0.5, cudnn_off=True)
+        assert out.shape == shape
+        assert _np.count_nonzero(out[0] == 2) != 0
+        assert inp.grad.shape == shape
+        assert inp.grad[0][0] == 0
+
+    def check_log_softmax():
+        LOG_SOFTMAX_VAL = -16.635532
+        ndim = 2
+        shape = (LARGE_X, SMALL_Y)
+        axis = 1
+        inp = np.ones(shape=shape)
+        inp.attach_grad()
+        with mx.autograd.record():
+            out = npx.log_softmax(inp, axis=0)
+        assert out.shape == shape
+        assert_almost_equal(out[-1][-1].asnumpy(), LOG_SOFTMAX_VAL, atol=1e-3, rtol=1e-3)
+        assert inp.grad.shape == shape
+        assert inp.grad[0][0] == 0
+
+    def check_relu():
+        shape = (LARGE_X, SMALL_Y)
+        inp = np.ones(shape)
+        inp[:, shape[1] // 2:shape[1]] = -1
+        inp.attach_grad()
+        with mx.autograd.record():
+            out = npx.relu(inp)
+        assert out.shape == shape
+        assert out[0][0] == 1
+        assert out[-1][-1] == 0
+        assert inp.grad.shape == shape
+        assert inp.grad[0][0] == 0
+
+    # TODO: correctness of prelu (currently flaky)
+    def check_leaky_relu():
+        a = -1 * mx.np.ones(shape=(LARGE_X, SMALL_Y))
+
+        def check_leaky():
+            res = mx.npx.leaky_relu(a, act_type="leaky", slope=0.3)
+            assert_almost_equal(res[-1][-1], 0.3*a[-1][-1], atol=1e-3, rtol=1e-3)
+
+        def check_elu():
+            res = mx.npx.leaky_relu(a, act_type="elu", slope=0.3)
+            assert_almost_equal(res[-1][-1], 0.3*(_np.exp(a[-1][-1])-1), atol=1e-3, rtol=1e-3)
+
+        def check_selu():
+            lam = 1.0507009873554804934193349852946
+            alpha = 1.6732632423543772848170429916717
+            res = mx.npx.leaky_relu(a, act_type="selu")
+            assert_almost_equal(res[-1][-1], (lam * alpha * (_np.exp(a[-1][-1])-1)), atol=1e-3, rtol=1e-3)
+
+        def check_rrelu():
+            lower = 0.125
+            upper = 0.333999991
+            res = mx.npx.leaky_relu(a, act_type="rrelu")
+            assert_almost_equal(res[0][-1][-1], (lower + upper) / 2 * a[-1][-1], atol=1e-3, rtol=1e-3)
+
+        check_leaky()
+        check_elu()
+        check_selu()
+        check_rrelu()
+
+    def check_norm():
+        shape = (LARGE_X * 2, SMALL_Y // 2)
+        inp = np.ones(shape)
+        inp.attach_grad()
+        with mx.autograd.record():
+            out = npx.norm(inp, ord=2, axis=1)
+        assert out.shape == (shape[0],)
+        assert out[shape[0] - 1] == 5
+        assert inp.grad.shape == shape
+        assert inp.grad[0][0] == 0
+
+    check_dropout()
+    check_relu()
+    check_leaky_relu()
+    check_norm()
