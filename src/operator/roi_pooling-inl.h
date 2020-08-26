@@ -179,7 +179,7 @@ class ROIPoolingProp : public OperatorProperty {
 
     for (int i = 0; i < dshape.ndim(); i++) {
         CHECK_LT(dshape[i], INT32_MAX) << "ROI Pooling does not support large"
-	    << "dimensions (>= 2^31).";
+            << "dimensions (>= 2^31).";
     }
 
     // bbox: [num_rois, 5]
