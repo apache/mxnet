@@ -65,6 +65,7 @@ struct Stream<gpu> {
   HandleState dnn_handle_ownership_;
   /*! \brief cutensor handle ownership */
   HandleState cutensor_handle_ownership_;
+  cutensorPlanCacheline_t* cutensor_cachelines_ = nullptr;
   /*! \brief cudaDeviceProp */
   cudaDeviceProp prop;
   /*! \brief dev id */
@@ -80,7 +81,8 @@ struct Stream<gpu> {
       , blas_handle_ownership_(NoHandle)
       , solver_handle_ownership_(NoHandle)
       , dnn_handle_ownership_(NoHandle)
-      , cutensor_handle_ownership_(NoHandle) {}
+      , cutensor_handle_ownership_(NoHandle)
+      , cutensor_cachelines_(nullptr){}
   /*!
    * \brief wait for all the computation associated
    *  with this stream to complete
@@ -218,6 +220,21 @@ struct Stream<gpu> {
 #if MSHADOW_USE_CUTENSOR == 1
     if (cutensor_handle_ownership_ == OwnHandle) {
       // not destroy method available
+      if (cutensor_cachelines_ != nullptr)
+      {
+          cutensorStatus_t err;
+          const char* cacheFilename = getenv("MXNET_CUTENSOR_CACHEFILE");
+          if (cacheFilename != nullptr)
+          {
+              err = cutensorHandleWriteCacheToFile(&cutensor_handle_, cacheFilename);
+              CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
+          }
+          err = cutensorHandleDetachPlanCachelines(&cutensor_handle_);
+          CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
+          free(cutensor_cachelines_);
+          cutensor_cachelines_ = nullptr;
+      }
+      this->cutensor_handle_ownership_ = NoHandle;
     }
 #endif
   }
@@ -226,6 +243,29 @@ struct Stream<gpu> {
     //this->DestroyCuTensorHandle();
     cutensorStatus_t err = cutensorInit(&cutensor_handle_);
     CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
+
+    const char* cacheFilename = getenv("MXNET_CUTENSOR_CACHEFILE");
+    if (cacheFilename != nullptr)
+    {
+        constexpr int32_t numCachelines = 1024;
+        size_t sizeCache = numCachelines * sizeof(cutensorPlanCacheline_t);
+        cutensor_cachelines_ = (cutensorPlanCacheline_t*) malloc(sizeCache);
+
+        err = cutensorHandleAttachPlanCachelines(&cutensor_handle_, cutensor_cachelines_, numCachelines);
+        CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
+
+        uint32_t numCachelinesRead = 0;
+        cutensorStatus_t status = cutensorHandleReadCacheFromFile(&cutensor_handle_, cacheFilename, &numCachelinesRead);
+        if (status == CUTENSOR_STATUS_IO_ERROR)
+        {
+            printf("File (%s) doesn't seem to exist.\n", cacheFilename);
+        }
+        else if (status == CUTENSOR_STATUS_INSUFFICIENT_WORKSPACE)
+        {
+            printf("Cannot read cache: Please attach at least %d cachelines to the handle.\n", numCachelinesRead);
+        }
+    }
+
     // At this point, we have the resource which may need to be freed
     this->cutensor_handle_ownership_ = OwnHandle;
 #endif
@@ -234,6 +274,7 @@ struct Stream<gpu> {
 template<>
 inline void DeleteStream<gpu>(Stream<gpu> *stream) {
   if (stream) {
+    stream->DestroyCuTensorHandle();
     MSHADOW_CUDA_CALL(cudaStreamDestroy(stream->stream_));
     stream->DestroyBlasHandle();
     stream->DestroySolverHandle();
