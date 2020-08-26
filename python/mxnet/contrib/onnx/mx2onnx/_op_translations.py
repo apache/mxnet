@@ -961,13 +961,31 @@ def convert_dropout(node, **kwargs):
 
     probability = float(attrs.get("p", 0.5))
 
-    dropout_node = onnx.helper.make_node(
-        "Dropout",
-        input_nodes,
-        [name],
-        ratio=probability,
-        name=name
-    )
+    if onnx.defs.onnx_opset_version() >= 12:
+        # opset >= 12 requires the ratio to be an input
+        initializer = kwargs["initializer"]
+        ratio_input_name = name + "_ratio"
+        initializer.append(
+            onnx.helper.make_tensor(ratio_input_name, onnx.TensorProto.FLOAT, 
+                                    (), [probability])
+        )
+        #onnx.helper.make_tensor_value_info(ratio_input_name,
+        #                                   onnx.TensorProto.FLOAT, ()) 
+        dropout_node = onnx.helper.make_node(
+            "Dropout",
+            [input_nodes[0], ratio_input_name],
+            [name],
+            name=name
+        )
+    else:
+        dropout_node = onnx.helper.make_node(
+            "Dropout",
+            input_nodes,
+            [name],
+            ratio=probability,
+            name=name
+        )
+
     return [dropout_node]
 
 
