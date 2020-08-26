@@ -483,9 +483,9 @@ FILE(GLOB_RECURSE NNVMSOURCE
   3rdparty/tvm/nnvm/src/core/*.h
   3rdparty/tvm/nnvm/src/pass/*.h
   3rdparty/tvm/nnvm/include/*.h)
-add_library(nnvm SHARED ${NNVMSOURCE})
+add_library(nnvm OBJECT ${NNVMSOURCE})
 set_target_properties(nnvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
-#list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
+list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
 
 # add source group
 FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
@@ -696,8 +696,6 @@ elseif(MSVC)
     add_library(mxnet SHARED ${SOURCE})
     target_link_libraries(mxnet PUBLIC mshadow)
   endif()
-  # export all symbols for external ops
-  set_target_properties(mxnet PROPERTIES WINDOWS_EXPORT_ALL_SYMBOLS TRUE)
 endif()
 target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
 
@@ -707,8 +705,6 @@ add_library(transposecsr_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensio
 add_library(transposerowsp_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/transposerowsp_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
 add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_subgraph/subgraph_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
 add_library(pass_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_pass/pass_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_external_ops ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_external_ops/build)
 
 target_include_directories(customop_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 target_include_directories(transposecsr_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
@@ -791,13 +787,13 @@ if(MSVC)
   if(USE_SPLIT_ARCH_DLL AND USE_CUDA)
     foreach(arch ${arch_code_list})
       target_link_libraries(mxnet_${arch} PUBLIC ${mxnet_LINKER_LIBS})
-      target_link_libraries(mxnet_${arch} PUBLIC dmlc nnvm)
+      target_link_libraries(mxnet_${arch} PUBLIC dmlc)
     endforeach()
   endif()
 endif()
 
 target_link_libraries(mxnet PUBLIC ${mxnet_LINKER_LIBS})
-target_link_libraries(mxnet PUBLIC dmlc nnvm)
+target_link_libraries(mxnet PUBLIC dmlc)
 
 if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
   add_executable(im2rec "tools/im2rec.cc")
@@ -806,7 +802,6 @@ if(USE_OPENCV AND OpenCV_VERSION_MAJOR GREATER 2)
     ${OpenCV_LIBS}
     mxnet
     dmlc
-    nnvm
     )
 else()
     message(WARNING "OpenCV_VERSION_MAJOR: ${OpenCV_VERSION_MAJOR}, version 3 with imgcodecs \
