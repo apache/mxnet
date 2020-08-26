@@ -58,8 +58,10 @@ struct NonzeroForwardKernel {
       }
     }
   }
+};
 
-  // for gpu version because it does not support int 64 indexing
+struct NonzeroForwardKernelGPU {
+  // for gpu implementation because it does not support int 64 indexing
   template<int ndim>
   MSHADOW_XINLINE static void Map(int i,
                                   int64_t* out,
