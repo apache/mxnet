@@ -88,7 +88,7 @@ void NonzeroForwardCPU(const nnvm::NodeAttrs& attrs,
     const_cast<NDArray &>(out).Init(s);
     return;
   }
-  std::vector<intdex_t> prefix_sum(in_size, 0);
+  std::vector<index_t> prefix_sum(in_size, 0);
   size_t valid_num = 0;
   // Calculate prefix sum
   MSHADOW_TYPE_SWITCH_WITH_BOOL(in.dtype(), DType, {
