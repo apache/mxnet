@@ -62,32 +62,47 @@ void Shuffle1D(DType* const out, const index_t size, Rand* const prnd) {
 
 template <typename DType, typename Rand>
 void ShuffleND(DType* const out,
+               DType* const in,
                const index_t size,
                const index_t first_axis_len,
                Rand* const prnd,
-               const OpContext& ctx) {
-  // Fisher-Yates shuffling
+               const OpContext& ctx,
+               OpReqType reqT) {
+  // Optimized Fisher-Yates shuffling
   using namespace mxnet_op;
   const index_t stride = size / first_axis_len;
-  auto rand_n          = [prnd](index_t n) {
-    std::uniform_int_distribution<index_t> dist(0, n - 1);
-    return dist(*prnd);
-  };
   CHECK_GT(first_axis_len, 0U);
   const size_t stride_bytes = sizeof(DType) * stride;
-  Tensor<cpu, 1, char> buf =
-      ctx.requested[1].get_space_typed<cpu, 1, char>(Shape1(stride_bytes), ctx.get_stream<cpu>());
-  for (index_t i = first_axis_len - 1; i > 0; --i) {
-    const index_t j = rand_n(i + 1);
-    if (i != j) {
-#pragma GCC diagnostic push
-#if __GNUC__ >= 8
-#pragma GCC diagnostic ignored "-Wclass-memaccess"
-#endif
-      std::memcpy(buf.dptr_, out + stride * i, stride_bytes);
-      std::memcpy(out + stride * i, out + stride * j, stride_bytes);
-      std::memcpy(out + stride * j, buf.dptr_, stride_bytes);
-#pragma GCC diagnostic pop
+  std::vector<index_t> index(first_axis_len);
+  std::iota(index.begin(), index.end(), 0);
+  std::shuffle(index.begin(), index.end(), *prnd);
+  if (reqT != kWriteInplace) {
+    for (index_t i = 0; i < first_axis_len; ++i) {
+      auto j = index[i];
+      std::memcpy(out + stride * j, in + stride * i, stride_bytes);
+    }
+  } else {
+    std::vector<bool> done(first_axis_len, false);
+    Tensor<cpu, 1, DType> tmp_buf =
+        ctx.requested[1].get_space_typed<cpu, 1, DType>(Shape1(stride), ctx.get_stream<cpu>());
+    for (index_t i = 0; i < first_axis_len; ++i) {
+      if (!done[i]) {
+        index_t pos = index[i];
+        if (pos != i) {
+          std::memcpy(tmp_buf.dptr_, in + stride * i, stride_bytes);
+          std::memcpy(out + stride * i, in + stride * pos, stride_bytes);
+          done[i] = true;
+          // go through indexes until return to the starting one
+          while (index[pos] != i) {
+            index_t next_pos = index[pos];
+            std::memcpy(out + stride * pos, in + stride * next_pos, stride_bytes);
+            done[pos] = true;
+            pos       = next_pos;
+          }
+          std::memcpy(out + stride * pos, tmp_buf.dptr_, stride_bytes);
+          done[pos] = true;
+        }
+      }
     }
   }
 }
@@ -112,13 +127,13 @@ void ShuffleForwardCPU(const nnvm::NodeAttrs& attrs,
     Tensor<cpu, 1, DType> in  = inputs[0].get_with_shape<cpu, 1, DType>(Shape1(size), s);
     Tensor<cpu, 1, DType> out = outputs[0].get_with_shape<cpu, 1, DType>(Shape1(size), s);
     auto& prnd = ctx.requested[0].get_random<cpu, index_t>(ctx.get_stream<cpu>())->GetRndEngine();
-    if (req[0] != kWriteInplace) {
-      std::copy(in.dptr_, in.dptr_ + size, out.dptr_);
-    }
     if (input_shape.ndim() == 1) {
+      if (req[0] != kWriteInplace) {
+        std::copy(in.dptr_, in.dptr_ + size, out.dptr_);
+      }
       Shuffle1D(out.dptr_, size, &prnd);
     } else {
-      ShuffleND(out.dptr_, size, first_axis_len, &prnd, ctx);
+      ShuffleND(out.dptr_, in.dptr_, size, first_axis_len, &prnd, ctx, req[0]);
     }
   });
 }
