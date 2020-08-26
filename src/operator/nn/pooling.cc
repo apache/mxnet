@@ -117,7 +117,7 @@ static bool PoolingShape(const nnvm::NodeAttrs &attrs,
       << " Or 4D in (batch, channel, y, x) "
       << " Or 5D in (batch, channel, d, y, x)";
 
-  for (int i=0; i<dshape.ndim(); i++) {
+  for (int i = 0; i < dshape.ndim(); i++) {
     CHECK_LT(dshape[i], INT32_MAX) << "Pooling does not support large"
         << " dimensions (>= 2^31).";
   }

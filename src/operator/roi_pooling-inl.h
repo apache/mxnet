@@ -177,7 +177,7 @@ class ROIPoolingProp : public OperatorProperty {
     mxnet::TShape dshape = in_shape->at(roipool::kData);
     CHECK_EQ(dshape.ndim(), 4U) << "data should be a 4D tensor";
 
-    for (int i=0; i<dshape.ndim(); i++) {
+    for (int i = 0; i < dshape.ndim(); i++) {
         CHECK_LT(dshape[i], INT32_MAX) << "ROI Pooling does not support large"
 	    << "dimensions (>= 2^31).";
     }
