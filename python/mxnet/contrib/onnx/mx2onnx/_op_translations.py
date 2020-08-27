@@ -966,9 +966,9 @@ def convert_dropout(node, **kwargs):
         initializer = kwargs["initializer"]
         ratio_input_name = name + "_ratio"
         value_node = onnx.helper.make_tensor_value_info(ratio_input_name,
-                                                         onnx.TensorProto.FLOAT, ())
+                                                        onnx.TensorProto.FLOAT, ())
         tensor_node = onnx.helper.make_tensor(ratio_input_name, onnx.TensorProto.FLOAT,
-                                    (), [probability])
+                                              (), [probability])
         initializer.append(tensor_node)
         dropout_node = onnx.helper.make_node(
             "Dropout",
