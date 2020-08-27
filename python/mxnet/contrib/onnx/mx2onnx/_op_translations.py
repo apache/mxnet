@@ -1002,18 +1002,44 @@ def convert_clip(node, **kwargs):
     """
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
-    a_min = np.float(attrs.get('a_min', -np.inf))
-    a_max = np.float(attrs.get('a_max', np.inf))
+    a_min = float(attrs.get('a_min', -np.inf))
+    a_max = float(attrs.get('a_max', np.inf))
 
-    clip_node = onnx.helper.make_node(
-        "Clip",
-        input_nodes,
-        [name],
-        name=name,
-        min=a_min,
-        max=a_max
-    )
-    return [clip_node]
+    if onnx.defs.onnx_opset_version() >= 11:
+        # opset >= 11 requires min/max to be inputs
+        initializer = kwargs["initializer"]
+        min_input_name = name + "_min"
+        max_input_name = name + "_max"
+        min_value_node = onnx.helper.make_tensor_value_info(min_input_name,
+                                                            onnx.TensorProto.FLOAT, ())
+        max_value_node = onnx.helper.make_tensor_value_info(max_input_name,
+                                                            onnx.TensorProto.FLOAT, ())
+        min_tensor_node = onnx.helper.make_tensor(min_input_name, onnx.TensorProto.FLOAT,
+                                                  (), [a_min])
+        max_tensor_node = onnx.helper.make_tensor(max_input_name, onnx.TensorProto.FLOAT,
+                                                  (), [a_max])
+        initializer.append(min_tensor_node)
+        initializer.append(max_tensor_node)
+        input_nodes.append(min_input_name)
+        input_nodes.append(max_input_name)
+        clip_node = onnx.helper.make_node(
+            "Clip",
+            input_nodes,
+            [name],
+            name=name
+        )
+        return [min_value_node, max_value_node, clip_node]
+
+    else:
+        clip_node = onnx.helper.make_node(
+            "Clip",
+            input_nodes,
+            [name],
+            name=name,
+            min=a_min,
+            max=a_max
+        )
+        return [clip_node]
 
 
 def scalar_op_helper(node, op_name, **kwargs):
