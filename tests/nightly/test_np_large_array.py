@@ -696,16 +696,16 @@ def test_one_hot():
     assert A.grad[0] == 0
 
 @use_np
-@pytest.mark.skip(reason='backward value broken on large tensor')
 def test_pick():
     A = np.zeros((INT_OVERFLOW, 2))
     B = np.zeros((INT_OVERFLOW))
+    A[0, 0] = 3
     A.attach_grad()
     B.attach_grad()
     with mx.autograd.record():
         C = npx.pick(A, B)
     assert C.shape == (INT_OVERFLOW, )
-    assert C[0] == 0
+    assert C[0] == 3
     C.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert B.grad.shape == (INT_OVERFLOW, )
