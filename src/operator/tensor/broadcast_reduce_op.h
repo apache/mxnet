@@ -1630,7 +1630,7 @@ template<int ndim, bool clip = true>
 struct pick {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out, const DType* a,
-                                  const IType *idx, index_t M, int stride,
+                                  const IType *idx, index_t M, index_t stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
     using namespace mxnet_op;
@@ -1652,7 +1652,7 @@ template<int ndim, bool clip = true>
 struct pick_grad {
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(index_t i, DType* igrad, const DType* ograd,
-                                  const IType *idx, index_t M, int stride,
+                                  const IType *idx, index_t M, index_t stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
     using namespace mxnet_op;
@@ -1717,7 +1717,7 @@ void PickOpForward(const nnvm::NodeAttrs& attrs,
 
   const mxnet::TShape& ishape = inputs[0].shape_;
   index_t axis = CheckAxis(param.axis.value(), ishape.ndim());
-  int leading = 1, trailing = 1, M = ishape[axis];
+  index_t leading = 1, trailing = 1, M = ishape[axis];
   for (index_t i = 0; i < axis; ++i) leading *= ishape[i];
   for (index_t i = axis+1; i < ishape.ndim(); ++i) trailing *= ishape[i];
 
@@ -1764,7 +1764,7 @@ void PickOpBackward(const nnvm::NodeAttrs& attrs,
 
   const mxnet::TShape& ishape = outputs[0].shape_;
   const index_t axis = CheckAxis(param.axis.value(), ishape.ndim());
-  int leading = 1, trailing = 1, M = ishape[axis];
+  index_t leading = 1, trailing = 1, M = ishape[axis];
   for (index_t i = 0; i < axis; ++i) leading *= ishape[i];
   for (index_t i = axis+1; i < ishape.ndim(); ++i) trailing *= ishape[i];
 
