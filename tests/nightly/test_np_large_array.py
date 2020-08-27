@@ -706,6 +706,7 @@ def test_pick():
         C = npx.pick(A, B)
     assert C.shape == (INT_OVERFLOW, )
     assert C[0] == 3
+    assert C[-1] == 0
     C.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert B.grad.shape == (INT_OVERFLOW, )
