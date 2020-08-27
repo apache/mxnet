@@ -225,10 +225,10 @@ inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, broadcast::MAX_DIM, DType> workspace;
       size_t ws_size = 0;
       if (ograd.shape_ != dx.shape_ || ograd.shape_ != dy.shape_) {
-        size_t ws_size1 = broadcast::ReduceWorkspaceSize<broadcast::MAX_DIM, DType>(
-            s, expanded_lshape, req[0], expanded_oshape);
-        size_t ws_size2 = broadcast::ReduceWorkspaceSize<broadcast::MAX_DIM, DType>(
-            s, expanded_rshape, req[1], expanded_oshape);
+        size_t ws_size1 = broadcast::ReduceWorkspaceSize(
+            s, expanded_lshape, req[0], expanded_oshape, sizeof(DType));
+        size_t ws_size2 = broadcast::ReduceWorkspaceSize(
+            s, expanded_rshape, req[1], expanded_oshape, sizeof(DType));
         ws_size = std::max(ws_size1, ws_size2);
       }
       // process left output
@@ -366,8 +366,8 @@ inline void NumpyWhereScalarOpBackward(const nnvm::NodeAttrs& attrs,
       Tensor<xpu, broadcast::MAX_DIM, DType> workspace;
       size_t ws_size = 0;
       if (ograd.shape_ != dx.shape_) {
-        ws_size = broadcast::ReduceWorkspaceSize<broadcast::MAX_DIM, DType>(
-            s, expanded_lshape, req[0], expanded_oshape);
+        ws_size = broadcast::ReduceWorkspaceSize(s, expanded_lshape, req[0],
+                                                 expanded_oshape, sizeof(DType));
       }
       // If lscalar, then process right output, `is_left` should be false
       if (ograd.shape_ == dx.shape_) {

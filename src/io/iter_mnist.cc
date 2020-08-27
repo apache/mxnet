@@ -79,15 +79,15 @@ struct MNISTParam : public dmlc::Parameter<MNISTParam> {
 
 class MNISTIter: public IIterator<TBlobBatch> {
  public:
-  MNISTIter(void) : loc_(0), inst_offset_(0) {
+  MNISTIter()  {
     img_.dptr_ = nullptr;
     out_.data.resize(2);
   }
-  virtual ~MNISTIter(void) {
+  ~MNISTIter() override {
     delete []img_.dptr_;
   }
   // intialize iterator loads data in
-  virtual void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) {
+  void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     std::map<std::string, std::string> kmap(kwargs.begin(), kwargs.end());
     param_.InitAllowUnknown(kmap);
     this->LoadImage();
@@ -115,10 +115,10 @@ class MNISTIter: public IIterator<TBlobBatch> {
       }
     }
   }
-  virtual void BeforeFirst(void) {
+  void BeforeFirst() override {
     this->loc_ = 0;
   }
-  virtual bool Next(void) {
+  bool Next() override {
     if (loc_ + param_.batch_size <= img_.size(0)) {
       batch_data_.dptr_ = img_[loc_].dptr_;
       batch_label_.dptr_ = &labels_[loc_];
@@ -135,7 +135,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
       return false;
     }
   }
-  virtual const TBlobBatch &Value(void) const {
+  const TBlobBatch &Value() const override {
     return out_;
   }
 
@@ -151,7 +151,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
         static_cast<double>(count) / param_.num_parts * (param_.part_index+1));
   }
 
-  inline void LoadImage(void) {
+  inline void LoadImage() {
     dmlc::SeekStream* stdimg
         = dmlc::SeekStream::CreateForRead(param_.image.c_str());
     ReadInt(stdimg);
@@ -184,7 +184,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
     img_ *= 1.0f / 256.0f;
     delete stdimg;
   }
-  inline void LoadLabel(void) {
+  inline void LoadLabel() {
     dmlc::SeekStream* stdlabel
         = dmlc::SeekStream::CreateForRead(param_.label.c_str());
     ReadInt(stdlabel);
@@ -206,7 +206,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
     }
     delete stdlabel;
   }
-  inline void Shuffle(void) {
+  inline void Shuffle() {
     std::shuffle(inst_.begin(), inst_.end(), common::RANDOM_ENGINE(kRandMagic + param_.seed));
     std::vector<float> tmplabel(labels_.size());
     mshadow::TensorContainer<cpu, 3> tmpimg(img_.shape_);
@@ -238,7 +238,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
   /*! \brief output */
   TBlobBatch out_;
   /*! \brief current location */
-  index_t loc_;
+  index_t loc_{0};
   /*! \brief image content */
   mshadow::Tensor<cpu, 3> img_;
   /*! \brief label content */
@@ -248,7 +248,7 @@ class MNISTIter: public IIterator<TBlobBatch> {
   /*! \brief batch label tensor  */
   mshadow::Tensor<cpu, 2> batch_label_;
   /*! \brief instance index offset */
-  unsigned inst_offset_;
+  unsigned inst_offset_{0};
   /*! \brief instance index */
   std::vector<unsigned> inst_;
   // magic number to setup randomness

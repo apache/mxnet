@@ -950,6 +950,42 @@ inline int GetDefaultDtype(int dtype) {
          mshadow::kFloat32;
 }
 
+struct MShadowTypeInfo {
+  std::string name;
+  int size;
+  int acc_size;
+
+  MShadowTypeInfo(const std::string name, const int size, const int acc_size) :
+    name(std::move(name)), size(size), acc_size(acc_size) {}
+
+  MShadowTypeInfo(const std::string name, const int size) :
+    MShadowTypeInfo(name, size, size) {}
+};
+
+MShadowTypeInfo mshadow_type_info(const int type_flag);
+
+inline bool AlignedMemAlloc(void** ptr, size_t size, size_t alignment) {
+#if _MSC_VER
+  *ptr = _aligned_malloc(size, alignment);
+  if (*ptr == nullptr)
+    return false;
+#else
+  int res = posix_memalign(ptr, alignment, size);
+  if (res != 0)
+    return false;
+#endif
+  return true;
+}
+
+inline void AlignedMemFree(void* ptr) {
+#if _MSC_VER
+  _aligned_free(ptr);
+#else
+  free(ptr);
+#endif
+}
+
+
 }  // namespace common
 }  // namespace mxnet
 #endif  // MXNET_COMMON_UTILS_H_

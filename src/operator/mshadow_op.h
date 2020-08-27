@@ -746,21 +746,7 @@ MXNET_BINARY_MATH_OP_NC(negone, -1);
 
 MXNET_BINARY_MATH_OP(div_grad, 1.0f / math::id(b));
 
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t div_grad::Map<mshadow::half::half2_t>
-                                               (mshadow::half::half2_t a,
-                                                mshadow::half::half2_t b) {
-  return mshadow::half::half2_t(1) / b;
-}
-
 MXNET_BINARY_MATH_OP(div_rgrad, -math::id(a) / math::sqr(b));
-
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t div_rgrad::Map<mshadow::half::half2_t>
-                                               (mshadow::half::half2_t a,
-                                                mshadow::half::half2_t b) {
-  return -a / (b * b);
-}
 
 MXNET_BINARY_MATH_OP(rdiv, math::id(b) / math::id(a));
 
@@ -773,8 +759,6 @@ MXNET_BINARY_MATH_OP(copysign_grad, (a >= 0 && b >= 0) || (a < 0 && b < 0) ? 1: 
 MXNET_BINARY_MATH_OP(copysign_rgrad, 0);
 
 MXNET_BINARY_MATH_OP(rcopysign, (b >= 0 && a >= 0) || (b < 0 && a < 0) ? b : -b);
-
-MXNET_BINARY_MATH_OP(rcopysign_grad, 0);
 
 struct mod : public mxnet_op::tunable {
   template<typename DType>
@@ -879,13 +863,6 @@ struct rfmod : public mxnet_op::tunable {
   }
 };
 
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t mod::Map<mshadow::half::half2_t>
-                                               (mshadow::half::half2_t a,
-                                                mshadow::half::half2_t b) {
-  return a%b;
-}
-
 struct mod_grad : public mxnet_op::tunable  {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
@@ -906,19 +883,6 @@ MSHADOW_XINLINE mshadow::half::half_t mod_grad::Map<mshadow::half::half_t>
                                                    (mshadow::half::half_t a,
                                                     mshadow::half::half_t b) {
   return mshadow::half::half_t(1.0f);
-}
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t mod_grad::Map<mshadow::half::half2_t>
-                                                    (mshadow::half::half2_t a,
-                                                     mshadow::half::half2_t b) {
-  mshadow::half::half2_t result = mshadow::half::half2_t();
-#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
-  result.half2_ = ::__float2half2_rn(1.0f);
-#else
-  result.half_t2[0] = mshadow::half::half_t(0.0f);
-  result.half_t2[1] = mshadow::half::half_t(1.0f);
-#endif
-  return result;
 }
 
 struct mod_rgrad : public mxnet_op::tunable {
@@ -941,19 +905,6 @@ MSHADOW_XINLINE mshadow::half::half_t mod_rgrad::Map<mshadow::half::half_t>
                                                     (mshadow::half::half_t a,
                                                      mshadow::half::half_t b) {
   return mshadow::half::half_t(-::floorf(static_cast<float>(a/b)));
-}
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t mod_rgrad::Map<mshadow::half::half2_t>
-                                                     (mshadow::half::half2_t a,
-                                                      mshadow::half::half2_t b) {
-#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
-  return mshadow::half::half2_t(__hneg2(::h2floor((a/b).half2_)));
-#else
-  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
-                                  static_cast<float>(a.half_t2[0]/b.half_t2[0]))),
-                                mshadow::half::half_t(-::floorf(
-                                  static_cast<float>(a.half_t2[1]/b.half_t2[1]))));
-#endif
 }
 
 struct rmod : public mxnet_op::tunable {
@@ -991,13 +942,6 @@ struct rmod : public mxnet_op::tunable {
   }
 };
 
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t rmod::Map<mshadow::half::half2_t>
-                                                (mshadow::half::half2_t a,
-                                                 mshadow::half::half2_t b) {
-  return b%a;
-}
-
 struct rmod_grad {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
@@ -1018,19 +962,6 @@ MSHADOW_XINLINE mshadow::half::half_t rmod_grad::Map<mshadow::half::half_t>
                                                    (mshadow::half::half_t a,
                                                     mshadow::half::half_t b) {
   return mshadow::half::half_t(-::floorf(static_cast<float>(b/a)));
-}
-template<>
-MSHADOW_XINLINE mshadow::half::half2_t rmod_grad::Map<mshadow::half::half2_t>
-                                                     (mshadow::half::half2_t a,
-                                                      mshadow::half::half2_t b) {
-#if (defined(__CUDACC__) && MSHADOW_CUDA_HALF2)
-  return mshadow::half::half2_t(::__hneg2(::h2floor((b/a).half2_)));
-#else
-  return mshadow::half::half2_t(mshadow::half::half_t(-::floorf(
-                                  static_cast<float>(b.half_t2[0]/a.half_t2[0]))),
-                                mshadow::half::half_t(-::floorf(
-                                  static_cast<float>(b.half_t2[1]/a.half_t2[1]))));
-#endif
 }
 
 struct clip : public mxnet_op::tunable {
@@ -1166,6 +1097,72 @@ struct smooth_l1_gradient : public mxnet_op::tunable {
     }
   }
 };  // struct smooth_l1_derivative
+
+/* Implicti reparameterization gradient for standard x ~ Gamma(\alpha, 1)
+ * according to dx/da = -cdf(x;alpha) / pdf(x;alpha)
+ */
+struct gamma_implicit_grad {
+  template <typename DType>
+  MSHADOW_XINLINE static DType Map(DType a, DType x) {
+    if (x < 0.8f) {
+      DType numer = 1;
+      DType denom = a;
+      DType series1 = numer / denom;
+      DType series2 = numer / (denom * denom);
+      for (int i = 1; i <= 5; i++) {
+        numer *= -x / static_cast<DType>(i);
+        denom += 1;
+        series1 += numer / denom;
+        series2 += numer / (denom * denom);
+      }
+      DType pow_x_alpha = math::pow(x, a);
+      DType gamma_pdf = math::pow(x, a - 1) * math::exp(-x);
+      DType gamma_cdf = pow_x_alpha * series1;
+      DType gamma_cdf_alpha =
+          (math::log(x) - DType(special_functions::cephes::psi<float>(a))) *
+              gamma_cdf -
+          pow_x_alpha * series2;
+      DType result = -gamma_cdf_alpha / gamma_pdf;
+      return IsNan(result) ? static_cast<DType>( 0.f ) : static_cast<DType>(result);
+    }
+    if (a > 8.0f) {
+      if (0.9f * a <= x && x <= 1.1f * a) {
+        DType numer_1 = 1 + 24 * a * (1 + 12 * a);
+        DType numer_2 = 1440 * (a * a) + 6 * x * (53 - 120 * x) -
+                        65 * x * x / a + a * (107 + 3600 * x);
+        DType denom = 1244160 * (a * a) * (a * a);
+        return static_cast<DType>(numer_1 * numer_2 / denom);
+      }
+      DType denom = math::sqrt(8 * a);
+      DType term2 = denom / (a - x);
+      DType term3 =
+          math::pow(x - a - a * math::log(x / a), static_cast<DType>(-1.5));
+      DType term23 = (x < a) ? term2 - term3 : term2 + term3;
+      DType term1 = math::log(x / a) * term23 -
+                    math::sqrt(2 / a) * (a + x) / ((a - x) * (a - x));
+      DType stirling = 1 + 1 / (12 * a) * (1 + 1 / (24 * a));
+      DType numer = x * term1;
+      return static_cast<DType>(-stirling * numer / denom);
+    }
+    DType u = math::log(x / a);
+    DType v = math::log(a);
+    DType coef_uv[3][8] = {
+        {0.16009398, -0.094634809, 0.025146376, -0.0030648343, 1, 0.32668115,
+         0.10406089, 0.0014179084},
+        {0.53487893, 0.1298071, 0.065735949, -0.0015649758, 0.16639465,
+         0.020070113, -0.0035938915, -0.00058392623},
+        {0.040121004, -0.0065914022, -0.0026286047, -0.0013441777, 0.017050642,
+         -0.0021309326, 0.00085092367, -1.5247877e-07},
+    };
+    DType coef_v[8];
+    for (int i = 0; i < 8; i++) {
+      coef_v[i] = coef_uv[0][i] + u * (coef_uv[1][i] + u * coef_uv[2][i]);
+    }
+    DType p = coef_v[0] + v * (coef_v[1] + v * (coef_v[2] + v * coef_v[3]));
+    DType q = coef_v[4] + v * (coef_v[5] + v * (coef_v[6] + v * coef_v[7]));
+    return static_cast<DType>(math::exp(p / q));
+  }
+};  // gamma_implicit_grad
 
 /*! \brief product reducer */
 struct product {

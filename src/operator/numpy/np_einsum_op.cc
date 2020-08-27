@@ -56,8 +56,8 @@
  */
 
 #include "./np_einsum_op-inl.h"
-#include <stdlib.h>
-#include <string.h>
+#include <cstdlib>
+#include <cstring>
 
 namespace mxnet {
 namespace op {

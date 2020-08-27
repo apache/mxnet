@@ -119,11 +119,11 @@ OpStatePtr Imperative::Invoke(
   SetWriteInplaceReq(inputs, outputs, &req);
   OpStatePtr ret = InvokeOp(ctx, attrs, inputs, outputs, req, dispatch_mode);
   // the followinng loop is used for finding out the correct shape when some shapes are dynamic
-  for (size_t i = 0; i < outputs.size(); i++) {
-    if (!shape_is_known(outputs[i]->shape())) {
+  for (auto output : outputs) {
+    if (!shape_is_known(output->shape())) {
       // the WaitToRead overhead here does not seem to be avoidable
-      outputs[i]->WaitToRead();
-      outputs[i]->SetShapeFromChunk();
+      output->WaitToRead();
+      output->SetShapeFromChunk();
     }
   }
   return ret;
@@ -592,13 +592,9 @@ std::vector<NDArray*> Imperative::Backward(
     auto num_outputs = idx[i].source->num_outputs();
     for (size_t j = 0; j < num_outputs; ++j) {
       auto eid = idx.entry_id(i, j);
-      if (!arrays[eid]->is_none()) continue;
-      if (stypes[eid] == kDefaultStorage) {
-        *arrays[eid] = NDArray(shapes[eid], vctx[i], true, dtypes[eid]);
-      } else {
-        *arrays[eid] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                               shapes[eid], vctx[i], true, dtypes[eid]);
-      }
+      if (arrays[eid]->is_none())
+        arrays[eid]->ReInit(static_cast<NDArrayStorageType>(stypes[eid]),
+                            shapes[eid], vctx[i], dtypes[eid]);
     }
   }
 

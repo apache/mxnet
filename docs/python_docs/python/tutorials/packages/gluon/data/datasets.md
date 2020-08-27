@@ -27,7 +27,7 @@ One of the most critical steps for model training and inference is loading the d
 We first start by generating random data `X` (with 3 variables) and corresponding random labels `y` to simulate a typical supervised learning task. We generate 10 samples and we pass them all to the `ArrayDataset`.
 
 
-```python
+```{.python .input}
 import mxnet as mx
 import os
 import tarfile
@@ -41,7 +41,7 @@ dataset = mx.gluon.data.dataset.ArrayDataset(X, y)
 A key feature of a `Dataset` is the __*ability to retrieve a single sample given an index*__. Our random data and labels were generated in memory, so this `ArrayDataset` doesn't have to load anything from disk, but the interface is the same for all `Dataset`'s.
 
 
-```python
+```{.python .input}
 sample_idx = 4
 sample = dataset[sample_idx]
 
@@ -67,7 +67,7 @@ A [DataLoader](/api/python/docs/api/gluon/data/index.html#dataloader) is used to
 Another benefit of using `DataLoader` is the ability to easily load data in parallel using [multiprocessing](https://docs.python.org/3.6/library/multiprocessing.html). You can set the `num_workers` parameter to the number of CPUs available on your machine for maximum performance, or limit it to a lower number to spare resources.
 
 
-```python
+```{.python .input}
 from multiprocessing import cpu_count
 CPU_COUNT = cpu_count()
 
@@ -95,7 +95,7 @@ Using Gluon `Dataset` objects, we define the data to be included in each of thes
 Many of the image `Dataset`'s accept a function (via the optional `transform` parameter) which is applied to each sample returned by the `Dataset`. It's useful for performing data augmentation, but can also be used for more simple data type conversion and pixel value scaling as seen below.
 
 
-```python
+```{.python .input}
 def transform(data, label):
     data = data.astype('float32')/255
     return data, label
@@ -105,7 +105,7 @@ valid_dataset = mx.gluon.data.vision.datasets.FashionMNIST(train=False, transfor
 ```
 
 
-```python
+```{.python .input}
 %matplotlib inline
 from matplotlib.pylab import imshow
 
@@ -136,7 +136,7 @@ When training machine learning models it is important to shuffle the training sa
 If you have more complex shuffling requirements (e.g. when handling sequential data), take a look at [mxnet.gluon.data.BatchSampler](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.BatchSampler) and pass this to your `DataLoader` instead.
 
 
-```python
+```{.python .input}
 batch_size = 32
 train_data_loader = mx.gluon.data.DataLoader(train_dataset, batch_size, shuffle=True, num_workers=CPU_COUNT)
 valid_data_loader = mx.gluon.data.DataLoader(valid_dataset, batch_size, num_workers=CPU_COUNT)
@@ -145,7 +145,7 @@ valid_data_loader = mx.gluon.data.DataLoader(valid_dataset, batch_size, num_work
 With both `DataLoader`s defined, we can now train a model to classify each image and evaluate the validation loss at each epoch. Our Fashion MNIST dataset has 10 classes including shirt, dress, sneakers, etc. We define a simple fully connected network with a softmax output and use cross entropy as our loss.
 
 
-```python
+```{.python .input}
 from mxnet import gluon, autograd, ndarray
 
 def construct_net():
@@ -166,7 +166,7 @@ criterion = gluon.loss.SoftmaxCrossEntropyLoss()
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
 ```
 
-```python
+```{.python .input}
 
 
 epochs = 5
@@ -224,7 +224,7 @@ We will run through an example for image classification, but a similar process a
 
 You can download the Caltech 101 dataset if you don't already have images to work with for this example, but please note the download is 126MB.
 
-```python
+```{.python .input}
 
 data_folder = "data"
 dataset_name = "101_ObjectCategories"
@@ -243,7 +243,7 @@ if not os.path.isfile(archive_path):
 
 After downloading and extracting the data archive, we have two folders: `data/101_ObjectCategories` and `data/101_ObjectCategories_test`. We load the data into separate training and testing  [ImageFolderDataset](/api/python/docs/api/gluon/data/vision/datasets/index.html#mxnet.gluon.data.vision.datasets.ImageFolderDataset)s.
 
-```python
+```{.python .input}
 training_path = os.path.join(data_folder, dataset_name)
 testing_path = os.path.join(data_folder, "{}_test".format(dataset_name))
 ```
@@ -253,7 +253,7 @@ We instantiate the [ImageFolderDataset](https://mxnet.incubator.apache.org/api/p
 Optionally, you can pass a `transform` parameter to these `Dataset`'s as we've seen before.
 
 
-```python
+```{.python .input}
 train_dataset = mx.gluon.data.vision.datasets.ImageFolderDataset(training_path)
 test_dataset = mx.gluon.data.vision.datasets.ImageFolderDataset(testing_path)
 ```
@@ -263,7 +263,7 @@ Samples from these datasets are tuples of data and label. Images are loaded from
 As with the Fashion MNIST dataset the labels will be integer encoded. You can use the `synsets` property of the [ImageFolderDataset](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=imagefolderdataset#mxnet.gluon.data.vision.datasets.ImageFolderDataset)s to retrieve the original descriptions (e.g. `train_dataset.synsets[i]`).
 
 
-```python
+```{.python .input}
 sample_idx = 539
 sample = train_dataset[sample_idx]
 data = sample[0]
@@ -299,7 +299,7 @@ Before Gluon's [DataLoader](/api/python/docs/api/gluon/data/index.html#dataloade
 So you can get up and running with Gluon quicker if you have already implemented complex pre-processing steps using `DataIter`, we have provided a simple class to wrap existing `DataIter` objects so they can be used in a typical Gluon training loop. You can use this class for `DataIter`s such as [mxnet.image.ImageIter](/api/python/docs/api/mxnet/image/index.html#mxnet.image.ImageIter) and [mxnet.io.ImageRecordIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.ImageDetRecordIter) that have single data and label arrays.
 
 
-```python
+```{.python .input}
 class DataIterLoader():
     def __init__(self, data_iter):
         self.data_iter = data_iter
@@ -320,7 +320,7 @@ class DataIterLoader():
 ```
 
 
-```python
+```{.python .input}
 data_iter = mx.io.NDArrayIter(data=X, label=y, batch_size=5)
 data_iter_loader = DataIterLoader(data_iter)
 for X_batch, y_batch in data_iter_loader:

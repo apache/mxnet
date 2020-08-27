@@ -185,11 +185,11 @@ def dumps(reset=False, format='table', sort_by='total', ascending=False):
             "Invalid value provided for ascending: {0}. Support: False, True".format(ascending)
     assert  reset in reset_to_int.keys(),\
             "Invalid value provided for reset: {0}. Support: False, True".format(reset)
-    check_call(_LIB.MXAggregateProfileStatsPrintEx(ctypes.byref(debug_str),
-                                                   reset_to_int[reset],
-                                                   format_to_int[format],
-                                                   sort_by_to_int[sort_by],
-                                                   asc_to_int[ascending]))
+    check_call(_LIB.MXAggregateProfileStatsPrint(ctypes.byref(debug_str),
+                                                 reset_to_int[reset],
+                                                 format_to_int[format],
+                                                 sort_by_to_int[sort_by],
+                                                 asc_to_int[ascending]))
     return py_str(debug_str.value)
 
 

@@ -40,15 +40,17 @@ from ..ndarray import indexing_key_expand_implicit_axes, get_indexing_dispatch_c
                       get_oshape_of_gather_nd_op
 from ..ndarray._internal import _set_np_ndarray_class
 from . import _op as _mx_np_op
-from ..base import check_call, _LIB, NDArrayHandle, c_array
+from ..base import check_call, _LIB, NDArrayHandle, c_array, mx_int, mx_int64
 from ..base import mx_real_t, c_array_buf, mx_uint, numeric_types, integer_types
+from ..runtime import Features
 from ..context import Context
 from ..util import set_module, wrap_np_unary_func, wrap_np_binary_func,\
                    is_np_default_dtype
 from ..context import current_context
 from ..ndarray import numpy as _mx_nd_np
 from ..ndarray.numpy import _internal as _npi
-from ..ndarray.ndarray import _storage_type, from_numpy
+from ..ndarray.ndarray import _storage_type
+from ..dlpack import ndarray_from_numpy
 from .utils import _get_np_op
 from .fallback import *  # pylint: disable=wildcard-import,unused-wildcard-import
 from . import fallback
@@ -57,7 +59,7 @@ from . import fallback
 __all__ = ['ndarray', 'empty', 'empty_like', 'array', 'shape', 'median',
            'zeros', 'zeros_like', 'ones', 'ones_like', 'full', 'full_like', 'all', 'any', 'broadcast_to',
            'add', 'subtract', 'multiply', 'divide', 'mod', 'remainder', 'fmod', 'power', 'bitwise_not',
-           'delete', 'trace', 'transpose',
+           'delete', 'trace', 'transpose', 'copy', 'moveaxis', 'reshape', 'dot',
            'arctan2', 'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'log10', 'invert',
            'sqrt', 'cbrt', 'abs', 'absolute', 'fabs', 'exp', 'expm1', 'arcsin', 'arccos', 'arctan', 'sign', 'log',
            'degrees', 'log2', 'log1p', 'rint', 'radians', 'reciprocal', 'square', 'negative', 'histogram',
@@ -92,6 +94,16 @@ _NDARRAY_EMPTY_TUPLE_INDEXING = 2
 _NDARRAY_NO_ZERO_DIM_BOOL_ARRAY = -1
 _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE = 0
 _NDARRAY_ZERO_DIM_BOOL_ARRAY_TRUE = 1
+_SIGNED_INT32_UPPER_LIMIT = (2**31 - 1)
+
+# Caching whether MXNet was built with INT64 support or not
+_INT64_TENSOR_SIZE_ENABLED = None
+
+def _int64_enabled():
+    global _INT64_TENSOR_SIZE_ENABLED
+    if _INT64_TENSOR_SIZE_ENABLED is None:
+        _INT64_TENSOR_SIZE_ENABLED = Features().is_enabled('INT64_TENSOR_SIZE')
+    return _INT64_TENSOR_SIZE_ENABLED
 
 # This function is copied from ndarray.py since pylint
 # keeps giving false alarm error of undefined-all-variable
@@ -106,14 +118,37 @@ def _new_alloc_handle(shape, ctx, delay_alloc, dtype=mx_real_t):  # pylint: disa
         A new empty `ndarray` handle.
     """
     hdl = NDArrayHandle()
-    check_call(_LIB.MXNDArrayCreateEx(
-        c_array_buf(mx_uint, native_array('I', shape)),
-        mx_uint(len(shape)),
-        ctypes.c_int(ctx.device_typeid),
-        ctypes.c_int(ctx.device_id),
-        ctypes.c_int(int(delay_alloc)),
-        ctypes.c_int(int(_DTYPE_NP_TO_MX[_np.dtype(dtype).type])),
-        ctypes.byref(hdl)))
+    if _int64_enabled():
+        check_call(_LIB.MXNDArrayCreate64(
+            c_array_buf(mx_int64, native_array('q', shape)),
+            ctypes.c_int(len(shape)),
+            ctypes.c_int(ctx.device_typeid),
+            ctypes.c_int(ctx.device_id),
+            ctypes.c_int(int(delay_alloc)),
+            ctypes.c_int(int(_DTYPE_NP_TO_MX[_np.dtype(dtype).type])),
+            ctypes.byref(hdl)))
+    else:
+        # When shape is larger than uint32 then there is an overflow error at python end itself.
+        # It needs to be caught here since the call doesn't even reach backend.
+        array_size = 1
+        for idx in shape:
+            array_size = array_size * idx
+        if array_size > _SIGNED_INT32_UPPER_LIMIT:
+            raise Exception("[_new_alloc_handle] Size of tensor you are trying to allocate is " +
+                            "larger than 2^31 elements. Please build with flag " +
+                            "USE_INT64_TENSOR_SIZE=1")
+        if _np.dtype(dtype) == _np.dtype([('bfloat16', _np.uint16)]):
+            dtype_type = _np.dtype(dtype)
+        else:
+            dtype_type = _np.dtype(dtype).type
+        check_call(_LIB.MXNDArrayCreate(
+            c_array_buf(mx_uint, native_array('I', shape)),
+            mx_uint(len(shape)),
+            ctypes.c_int(ctx.device_typeid),
+            ctypes.c_int(ctx.device_id),
+            ctypes.c_int(int(delay_alloc)),
+            ctypes.c_int(int(_DTYPE_NP_TO_MX[dtype_type])),
+            ctypes.byref(hdl)))
     return hdl
 
 
@@ -145,21 +180,20 @@ def _reshape_view(a, *shape):  # pylint: disable=redefined-outer-name
                                        ctypes.byref(handle)))
     return ndarray(handle=handle, writable=a.writable)
 
-
-def _as_mx_np_array(object, ctx=None):
-    """Convert object to mxnet.numpy.ndarray."""
-    if isinstance(object, _np.ndarray):
-        if not object.flags['C_CONTIGUOUS']:
-            object = _np.ascontiguousarray(object, dtype=object.dtype)
-        ret = from_numpy(object, array_cls=ndarray)
-        return ret if ctx is None else ret.as_in_ctx(ctx=ctx)
+def _as_mx_np_array(object, ctx=None, zero_copy=False):
+    """Convert arrays or any array member of container to mxnet.numpy.ndarray on ctx."""
+    if object is None or isinstance(object, ndarray):
+        return object
+    elif isinstance(object, _np.ndarray):
+        from_numpy = ndarray_from_numpy(ndarray, array)
+        return from_numpy(object, zero_copy and object.flags['C_CONTIGUOUS'])
     elif isinstance(object, (integer_types, numeric_types)):
         return object
-    elif isinstance(object, (list, tuple)):
-        tmp = [_as_mx_np_array(arr) for arr in object]
-        return object.__class__(tmp)
     elif isinstance(object, (_np.bool_, _np.bool)):
         return array(object, dtype=_np.bool_, ctx=ctx)
+    elif isinstance(object, (list, tuple)):
+        tmp = [_as_mx_np_array(arr, ctx=ctx, zero_copy=zero_copy) for arr in object]
+        return object.__class__(tmp)
     else:
         raise TypeError('Does not support converting {} to mx.np.ndarray.'.format(str(type(object))))
 
@@ -358,11 +392,18 @@ class ndarray(NDArray):
             out = func(*new_args, **new_kwargs)
             return _as_mx_np_array(out, ctx=cur_ctx)
         else:
-            # Note: this allows subclasses that don't override
-            # __array_function__ to handle mxnet.numpy.ndarray objects
-            if not py_all(issubclass(t, ndarray) for t in types):
-                return NotImplemented
-            return mx_np_func(*args, **kwargs)
+            if py_all(issubclass(t, ndarray) for t in types):
+                return mx_np_func(*args, **kwargs)
+            else:
+                try:
+                    cur_ctx = next(a.ctx for a in args if hasattr(a, 'ctx'))
+                except StopIteration:
+                    cur_ctx = next(a.ctx for a in kwargs.values() if hasattr(a, 'ctx'))
+                new_args = _as_mx_np_array(args, ctx=cur_ctx,
+                                           zero_copy=func_name in {'may_share_memory', 'shares_memory'})
+                new_kwargs = {k: _as_mx_np_array(v, cur_ctx) for k, v in kwargs.items()}
+                return mx_np_func(*new_args, **new_kwargs)
+
 
     def _get_np_basic_indexing(self, key):
         """
@@ -399,14 +440,24 @@ class ndarray(NDArray):
             )
             handle = NDArrayHandle()
             flat_self = self.reshape_view(-1)
-            check_call(
-                _LIB.MXNDArraySlice(
-                    flat_self.handle,
-                    mx_uint(flat_begin),
-                    mx_uint(flat_end),
-                    ctypes.byref(handle),
+            if _int64_enabled():
+                check_call(
+                    _LIB.MXNDArraySlice64(
+                        flat_self.handle,
+                        ctypes.c_int64(flat_begin),
+                        ctypes.c_int64(flat_end),
+                        ctypes.byref(handle),
+                    )
                 )
-            )
+            else:
+                check_call(
+                    _LIB.MXNDArraySlice(
+                        flat_self.handle,
+                        ctypes.c_uint32(flat_begin),
+                        ctypes.c_uint32(flat_end),
+                        ctypes.byref(handle),
+                    )
+                )
             sliced_shape = self._basic_indexing_sliced_shape(slc_key, self.shape)
             sliced = self.__class__(handle=handle, writable=self.writable)
             if 0 in sliced_shape:
@@ -1512,7 +1563,7 @@ class ndarray(NDArray):
     def dot(self, b, out=None):
         """Dot product of two arrays.
         Refer to ``numpy.dot`` for full documentation."""
-        return _mx_np_op.dot(self, b, out=out)
+        return dot(self, b, out=out)
 
     def reshape(self, *args, **kwargs):  # pylint: disable=arguments-differ
         """Returns a copy of the array with a new shape.
@@ -2263,7 +2314,33 @@ class ndarray(NDArray):
 
     @property
     def shape(self):
-        return super(ndarray, self).shape
+        """Tuple of array dimensions.
+
+        Examples
+        --------
+        >>> x = mx.np.array([1, 2, 3, 4])
+        >>> x.shape
+        (4L,)
+        >>> y = mx.np.zeros((2, 3, 4))
+        >>> y.shape
+        (2L, 3L, 4L)
+        >>> z = mx.np.array(3)
+        >>> z.shape
+        ()
+        """
+        num_dim = mx_int()
+        if _int64_enabled():
+            pdata = ctypes.POINTER(mx_int64)()
+            check_call(_LIB.MXNDArrayGetShape64(
+                self.handle, ctypes.byref(num_dim), ctypes.byref(pdata)))
+        else:
+            pdata = ctypes.POINTER(mx_int)()
+            check_call(_LIB.MXNDArrayGetShape(
+                self.handle, ctypes.byref(num_dim), ctypes.byref(pdata)))
+        if num_dim.value == -1:
+            return None
+        else:
+            return tuple(pdata[:num_dim.value])  # pylint: disable=invalid-slice-index
 
     @property
     def ndim(self):
@@ -10101,7 +10178,7 @@ def shares_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `may_share_memory` in MXNet DeepNumPy
+    - Actually it is same as `may_share_memory` in MXNet np
     """
     return _mx_nd_np.shares_memory(a, b, max_work)
 
@@ -10142,7 +10219,7 @@ def may_share_memory(a, b, max_work=None):
     the following way(s):
 
     - Does not support `max_work`, it is a dummy argument
-    - Actually it is same as `shares_memory` in MXNet DeepNumPy
+    - Actually it is same as `shares_memory` in MXNet np
     """
     return _mx_nd_np.may_share_memory(a, b, max_work)
 
@@ -10623,7 +10700,7 @@ def fill_diagonal(a, val, wrap=False):
     """
     _mx_nd_np.fill_diagonal(a, val=val, wrap=wrap)
 
-
+# pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
 def nan_to_num(x, copy=True, nan=0.0, posinf=None, neginf=None, **kwargs):
     """
@@ -11469,6 +11546,67 @@ def prod(a, axis=None, dtype=None, out=None, keepdims=False, initial=None): # py
     """
     return _mx_nd_np.prod(a, axis=axis, dtype=dtype, keepdims=keepdims, initial=initial, out=out)
 
+@set_module('mxnet.numpy')
+def dot(a, b, out=None):
+    """
+    Dot product of two arrays. Specifically,
+
+    - If both `a` and `b` are 1-D arrays, it is inner product of vectors
+
+    - If both `a` and `b` are 2-D arrays, it is matrix multiplication,
+
+    - If either `a` or `b` is 0-D (scalar), it is equivalent to :func:`multiply`
+      and using ``np.multiply(a, b)`` or ``a * b`` is preferred.
+
+    - If `a` is an N-D array and `b` is a 1-D array, it is a sum product over
+      the last axis of `a` and `b`.
+
+    - If `a` is an N-D array and `b` is a 2-D array, it is a
+      sum product over the last axis of `a` and the second-to-last axis of `b`::
+
+        dot(a, b)[i,j,k] = sum(a[i,j,:] * b[:,k])
+
+    Parameters
+    ----------
+    a : ndarray
+        First argument.
+    b : ndarray
+        Second argument.
+
+    out : ndarray, optional
+        Output argument. It must have the same shape and type as the expected output.
+
+    Returns
+    -------
+    output : ndarray
+        Returns the dot product of `a` and `b`.  If `a` and `b` are both
+        scalars or both 1-D arrays then a scalar is returned; otherwise
+        an array is returned.
+        If `out` is given, then it is returned
+
+    Examples
+    --------
+    >>> a = np.array(3)
+    >>> b = np.array(4)
+    >>> np.dot(a, b)
+    array(12.)
+
+    For 2-D arrays it is the matrix product:
+
+    >>> a = np.array([[1, 0], [0, 1]])
+    >>> b = np.array([[4, 1], [2, 2]])
+    >>> np.dot(a, b)
+    array([[4., 1.],
+           [2., 2.]])
+
+    >>> a = np.arange(3*4*5*6).reshape((3,4,5,6))
+    >>> b = np.arange(5*6)[::-1].reshape((6,5))
+    >>> np.dot(a, b)[2,3,2,2]
+    array(29884.)
+    >>> np.sum(a[2,3,2,:] * b[:,2])
+    array(29884.)
+    """
+    return _mx_nd_np.dot(a, b, out=out)
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')
@@ -11522,6 +11660,142 @@ def cumsum(a, axis=None, dtype=None, out=None):
     """
     return _mx_nd_np.cumsum(a, axis=axis, dtype=dtype, out=out)
 
+@set_module('mxnet.numpy')
+def reshape(a, newshape, reverse, order='C'):
+    """
+    Gives a new shape to an array without changing its data.
+    This function always returns a copy of the input array if
+    ``out`` is not provided.
+
+    Parameters
+    ----------
+    a : ndarray
+        Array to be reshaped.
+
+    newshape : int or tuple of ints
+        The new shape should be compatible with the original shape. If
+        an integer, then the result will be a 1-D array of that length.
+        One shape dimension can be -1. In this case, the value is
+        inferred from the length of the array and remaining dimensions.
+
+    order : {'C'}, optional
+        Read the elements of `a` using this index order, and place the
+        elements into the reshaped array using this index order.  'C'
+        means to read / write the elements using C-like index order,
+        with the last axis index changing fastest, back to the first
+        axis index changing slowest. Other order types such as 'F'/'A'
+        may be added in the future.
+
+    Returns
+    -------
+    reshaped_array : ndarray
+        It will be always a copy of the original array. This behavior is different
+        from the official NumPy ``reshape`` operator where views of the original array may be
+        generated.
+
+    See Also
+    --------
+    ndarray.reshape : Equivalent method.
+
+    Examples
+    --------
+    >>> a = np.arange(6).reshape((3, 2))
+    >>> a
+    array([[0., 1.],
+           [2., 3.],
+           [4., 5.]])
+
+    >>> np.reshape(a, (2, 3)) # C-like index ordering
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+
+    >>> np.reshape(np.ravel(a), (2, 3)) # equivalent to C ravel then C reshape
+    array([[0., 1., 2.],
+           [3., 4., 5.]])
+
+    >>> a = np.array([[1,2,3], [4,5,6]])
+    >>> np.reshape(a, 6)
+    array([1., 2., 3., 4., 5., 6.])
+
+    >>> np.reshape(a, (3,-1))       # the unspecified value is inferred to be 2
+    array([[1., 2.],
+           [3., 4.],
+           [5., 6.]])
+    """
+    return _mx_nd_np.reshape(a, newshape, reverse, order)
+
+@set_module('mxnet.numpy')
+def moveaxis(a, source, destination):
+    """Move axes of an array to new positions.
+    Other axes remain in their original order.
+
+    Parameters
+    ----------
+    a : ndarray
+        The array whose axes should be reordered.
+        source : int or sequence of int
+        Original positions of the axes to move. These must be unique.
+        destination : int or sequence of int
+        Destination positions for each of the original axes. These must also be
+        unique.
+
+    Returns
+    -------
+    result : ndarray
+        Array with moved axes. This array is a view of the input array.
+
+    See Also
+    --------
+        transpose: Permute the dimensions of an array.
+        swapaxes: Interchange two axes of an array.
+
+    Examples
+    --------
+    >>> x = np.zeros((3, 4, 5))
+    >>> np.moveaxis(x, 0, -1).shape
+    (4, 5, 3)
+    >>> np.moveaxis(x, -1, 0).shape
+    (5, 3, 4)
+    These all achieve the same result:
+    >>> np.transpose(x).shape
+    (5, 4, 3)
+    >>> np.swapaxes(x, 0, -1).shape
+    (5, 4, 3)
+    >>> np.moveaxis(x, [0, 1], [-1, -2]).shape
+    (5, 4, 3)
+    >>> np.moveaxis(x, [0, 1, 2], [-1, -2, -3]).shape
+    (5, 4, 3)
+    """
+    return _mx_nd_np.moveaxis(a, source, destination)
+
+@set_module('mxnet.numpy')
+def copy(a): # pylint: disable=redefined-outer-name
+    """
+    Return an array copy of the given object.
+
+    Parameters
+    ----------
+    a : _Symbol
+        Input array.
+
+    Returns
+    -------
+    arr : _Symbol
+        Array interpretation of a.
+
+    -----
+    Examples
+    --------
+    >>> x = np.array([1, 2, 3])
+    >>> y = x
+    >>> z = np.copy(x)
+    >>> x[0] = 10
+    >>> x[0] == y[0]
+        True
+    >>> x[0] == z[0]
+        False
+    """
+    return _mx_nd_np.copy(a)
 
 # pylint: disable=redefined-outer-name
 @set_module('mxnet.numpy')

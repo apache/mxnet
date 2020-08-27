@@ -22,7 +22,7 @@ In gluon, each Parameter or Block has a name. Parameter names and Block names ca
 In this tutorial we talk about the best practices on naming. First, let's import MXNet and Gluon:
 
 
-```python
+```{.python .input}
 from __future__ import print_function
 import mxnet as mx
 from mxnet import gluon
@@ -33,7 +33,7 @@ from mxnet import gluon
 When creating a block, you can simply do as follows:
 
 
-```python
+```{.python .input}
 mydense = gluon.nn.Dense(100)
 print(mydense.name)
 ```
@@ -41,7 +41,7 @@ print(mydense.name)
 When you create more Blocks of the same kind, they will be named with incrementing suffixes to avoid collision:
 
 
-```python
+```{.python .input}
 dense1 = gluon.nn.Dense(100)
 print(dense1.name)
 ```
@@ -51,7 +51,7 @@ print(dense1.name)
 Parameters will be named automatically by a unique name in the format of `param_{uuid4}_{name}`:
 
 
-```python
+```{.python .input}
 param = gluon.Parameter(name = 'bias')
 print(param.name)
 ```
@@ -61,7 +61,7 @@ print(param.name)
 When getting parameters within a Block, you should use the structure based name as the key:
 
 
-```python
+```{.python .input}
 print(dense0.collect_params())
 ```
 
@@ -70,7 +70,7 @@ print(dense0.collect_params())
 In MXNet 2, we don't have to define children blocks within a `name_scope` any more. Let's demonstrate this by defining and initiating a simple neural net:
 
 
-```python
+```{.python .input}
 class Model(gluon.HybridBlock):
     def __init__(self):
         super(Model, self).__init__()
@@ -92,7 +92,7 @@ model0(mx.nd.zeros((1, 20)))
 The same principle also applies to container blocks like Sequential. We can simply do as follows:
 
 
-```python
+```{.python .input}
 net = gluon.nn.Sequential()
 net.add(gluon.nn.Dense(20))
 net.add(gluon.nn.Dense(20))
@@ -105,7 +105,7 @@ net.add(gluon.nn.Dense(20))
 For `HybridBlock`, we use `save_parameters`/`load_parameters`, which uses model structure, instead of parameter name, to match parameters.
 
 
-```python
+```{.python .input}
 model0.save_parameters('model.params')
 model1.load_parameters('model.params')
 print(mx.nd.load('model.params').keys())
@@ -113,7 +113,7 @@ print(mx.nd.load('model.params').keys())
 
 For `SymbolBlock.imports`, we use `export`, which uses parameter name `param.name`, to save parameters.
 
-```python
+```{.python .input}
 model0.export('model0')
 model2 = gluon.SymbolBlock.imports('model0-symbol.json', ['data'], 'model0-0000.params')
 ```
@@ -130,7 +130,7 @@ To see how to do this, we first load a pretrained AlexNet.
 - Note that the output layer is a dense block with 1000 dimension outputs.
 
 
-```python
+```{.python .input}
 alexnet = gluon.model_zoo.vision.alexnet(pretrained=True)
 print(alexnet.output)
 ```
@@ -139,7 +139,7 @@ print(alexnet.output)
 To change the output to 100 dimension, we replace it with a new block.
 
 
-```python
+```{.python .input}
 alexnet.output = gluon.nn.Dense(100)
 alexnet.output.initialize()
 ```

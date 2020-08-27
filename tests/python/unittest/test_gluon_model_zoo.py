@@ -41,7 +41,7 @@ def eprint(*args, **kwargs):
     'mobilenetv2_1.0', 'mobilenetv2_0.75', 'mobilenetv2_0.5', 'mobilenetv2_0.25'
 ])
 def test_models(model_name):
-    pretrained_to_test = set(['vgg19_bn'])
+    pretrained_to_test = set(['mobilenetv2_0.25'])
 
     test_pretrain = model_name in pretrained_to_test
     model = get_model(model_name, pretrained=test_pretrain, root='model/')

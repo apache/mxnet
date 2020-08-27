@@ -19,8 +19,8 @@
 
 /*!
  *  Copyright (c) 2015 by Contributors
- * \file c_api_error.h
- * \brief Error handling for C API.
+ * \file c_api_common.h
+ * \brief Common C API utils
  */
 #ifndef MXNET_C_API_C_API_COMMON_H_
 #define MXNET_C_API_C_API_COMMON_H_
@@ -29,7 +29,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/thread_local.h>
 #include <mxnet/c_api.h>
-#include <mxnet/c_api_error.h>
+#include <mxnet/runtime/c_runtime_api.h>
 #include <mxnet/base.h>
 #include <mxnet/op_attr_types.h>
 #include <nnvm/graph.h>

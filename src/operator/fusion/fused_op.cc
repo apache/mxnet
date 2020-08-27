@@ -23,7 +23,7 @@
 #include "../operator_common.h"
 #include "../../imperative/exec_pass.h"
 
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 
@@ -302,4 +302,4 @@ NNVM_REGISTER_OP(_FusedOpOutHelper)
 
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#endif  // MXNET_USE_CUDA

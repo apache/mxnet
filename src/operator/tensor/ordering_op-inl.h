@@ -30,11 +30,13 @@
 #include <mshadow/tensor.h>
 #include <algorithm>
 #include <vector>
+#include <string>
 #include <type_traits>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "./sort_op.h"
 #include "./indexing_op.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mshadow {
 template<typename xpu, int src_dim, typename DType, int dst_dim>
@@ -105,6 +107,13 @@ struct SortParam : public dmlc::Parameter<SortParam> {
     DMLC_DECLARE_FIELD(is_ascend).set_default(true)
       .describe("Whether to sort in ascending or descending order.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, is_ascend_s;
+    axis_s << axis;
+    is_ascend_s << is_ascend;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["is_ascend_s"] = is_ascend_s.str();
+  }
 };
 
 struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
@@ -129,6 +138,15 @@ struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
     .describe("DType of the output indices. It is only valid when ret_typ is \"indices\" or"
               " \"both\". An error will be raised if the selected data type cannot precisely "
               "represent the indices.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, is_ascend_s, dtype_s;
+    axis_s << axis;
+    is_ascend_s << is_ascend;
+    dtype_s << dtype;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["is_ascend_s"] = is_ascend_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 

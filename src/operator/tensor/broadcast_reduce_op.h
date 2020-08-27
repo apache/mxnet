@@ -634,8 +634,8 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
       const TBlob in_data = inputs[0].reshape(src_shape);
       const TBlob out_data = outputs[0].reshape(dst_shape);
       BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-        size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
-            s, out_data.shape_, req[0], in_data.shape_);
+        size_t workspace_size = broadcast::ReduceWorkspaceSize(
+            s, out_data.shape_, req[0], in_data.shape_, sizeof(OType));
         Tensor<xpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
         broadcast::Reduce<reducer, NDim, DType, OP, safe_acc>(
@@ -667,8 +667,8 @@ void ReduceAxesComputeBoolImpl(const OpContext& ctx,
       const TBlob in_data = inputs[0].reshape(src_shape);
       const TBlob out_data = outputs[0].reshape(dst_shape);
       BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-        size_t workspace_size = broadcast::ReduceWorkspaceSize<NDim, DType>(
-            s, out_data.shape_, req[0], in_data.shape_);
+        size_t workspace_size = broadcast::ReduceWorkspaceSize(
+            s, out_data.shape_, req[0], in_data.shape_, sizeof(OType));
         Tensor<xpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
         broadcast::ReduceBool<reducer, NDim, DType, OP>(
@@ -1480,7 +1480,7 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   } else {
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
-  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
   if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
     common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for LpNorm with float16 inputs. "
                     "See https://mxnet.apache.org/api/faq/env_var "
@@ -1633,7 +1633,7 @@ struct pick {
                                   const IType *idx, index_t M, int stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
-    using namespace broadcast;
+    using namespace mxnet_op;
     index_t j = static_cast<index_t>(idx[i]);
     if (clip) {
       if (j <= 0) j = 0;
@@ -1655,7 +1655,7 @@ struct pick_grad {
                                   const IType *idx, index_t M, int stride,
                                   mshadow::Shape<ndim> bshape,
                                   mshadow::Shape<ndim> sshape) {
-    using namespace broadcast;
+    using namespace mxnet_op;
     index_t j = static_cast<index_t>(idx[i]);
     if (clip) {
       if (j <= 0) j = 0;

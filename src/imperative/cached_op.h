@@ -330,7 +330,7 @@ void OptimizeGraph(nnvm::Graph* full_graph, nnvm::Graph* fwd_graph, nnvm::Graph*
                    size_t num_forward_outputs, const bool inlining) {
   input_map->resize(full_graph->indexed_graph().input_nodes().size());
   std::iota(input_map->begin(), input_map->end(), 0);
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
+#if MXNET_USE_CUDA && !defined(_WIN32)
   if (context.dev_mask() == kGPU &&
       !inlining &&
       dmlc::GetEnv("MXNET_USE_FUSION", true)) {
@@ -375,7 +375,7 @@ void OptimizeGraph(nnvm::Graph* full_graph, nnvm::Graph* fwd_graph, nnvm::Graph*
       dmlc::GetEnv("MXNET_USE_FUSION", false)) {
     exec::WarnFusionNotSupported();
   }
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC && !defined(_WIN32)
+#endif  // MXNET_USE_CUDA && !defined(_WIN32)
 
   *fwd_graph = nnvm::Graph();
   fwd_graph->outputs = std::vector<nnvm::NodeEntry>(full_graph->outputs.begin(),

@@ -61,6 +61,11 @@ struct NumpyVstackParam : public dmlc::Parameter<NumpyVstackParam> {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be vstacked.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s;
+    num_args_s << num_args;
+    (*dict)["num_args"] = num_args_s.str();
+  }
 };
 
 struct NumpyColumnStackParam : public dmlc::Parameter<NumpyColumnStackParam> {
@@ -125,6 +130,15 @@ struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
                   " back to the first axis index changing slowest."
                   " Note that currently only C-like order is"
                   " supported");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream newshape_s, reverse_s, order_s;
+    newshape_s << newshape;
+    reverse_s << reverse;
+    order_s << order;
+    (*dict)["newshape"] = newshape_s.str();
+    (*dict)["reverse"] = reverse_s.str();
+    (*dict)["order"] = order_s.str();
   }
 };
 
@@ -698,6 +712,13 @@ struct NumpyMoveaxisParam : public dmlc::Parameter<NumpyMoveaxisParam> {
     DMLC_DECLARE_FIELD(destination)
     .describe("Destination positions for each of the original axes. "
               "These must also be unique.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream source_s, destination_s;
+    source_s << source;
+    destination_s << destination;
+    (*dict)["source"] = source_s.str();
+    (*dict)["destination"] = destination_s.str();
   }
 };
 

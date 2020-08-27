@@ -19,7 +19,7 @@ import mxnet as mx
 import numpy as np
 import scipy.ndimage
 from mxnet.test_utils import *
-from common import assertRaises, with_seed
+from common import assertRaises, with_seed, setup_module, teardown_module
 import shutil
 import tempfile
 import unittest
@@ -51,7 +51,7 @@ def _generate_objects():
 
 
 class TestImage(unittest.TestCase):
-    IMAGES_URL = "http://data.mxnet.io/data/test_images.tar.gz"
+    IMAGES_URL = "https://repo.mxnet.io/gluon/dataset/test/test_images-9cebe48a.tar.gz"
 
     def setUp(self):
         self.IMAGES_DIR = tempfile.mkdtemp()
@@ -63,10 +63,11 @@ class TestImage(unittest.TestCase):
             print("cleanup {}".format(self.IMAGES_DIR))
             shutil.rmtree(self.IMAGES_DIR)
 
+    @with_seed()
     @use_np
     def test_imageiter(self):
         im_list = [[np.random.randint(0, 5), x] for x in self.IMAGES]
-        fname = './data/test_imageiter.lst'
+        fname = './data/test_numpy_imageiter.lst'
         file_list = ['\t'.join([str(k), str(np.random.randint(0, 5)), x])
                         for k, x in enumerate(self.IMAGES)]
         with open(fname, 'w') as f:
@@ -95,6 +96,7 @@ class TestImage(unittest.TestCase):
                     for batch in it:
                         pass
 
+    @with_seed()
     @use_np
     def test_image_bbox_iter(self):
         im_list = [_generate_objects() + [x] for x in self.IMAGES]
@@ -110,7 +112,7 @@ class TestImage(unittest.TestCase):
             pass
 
         # test file list with last batch handle
-        fname = './data/test_imagedetiter.lst'
+        fname = './data/test_numpy_imagedetiter.lst'
         im_list = [[k] + _generate_objects() + [x] for k, x in enumerate(self.IMAGES)]
         with open(fname, 'w') as f:
             for line in im_list:
@@ -130,6 +132,7 @@ class TestImage(unittest.TestCase):
                 path_imglist=fname, path_root='', last_batch='keep')
         ]
 
+    @with_seed()
     @use_np
     def test_bbox_augmenters(self):
         # only test if all augmenters will work
