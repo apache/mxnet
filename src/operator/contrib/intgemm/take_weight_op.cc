@@ -31,7 +31,7 @@
 #include "../../operator_common.h"
 #include "../../tensor/init_op.h"
 
-#include "../../../../3rdparty/intgemm/intgemm.h"
+#include "intgemm.h"
 
 namespace mxnet {
 namespace op {

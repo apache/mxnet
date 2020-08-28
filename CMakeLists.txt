@@ -285,10 +285,20 @@ endif()
 
 if(USE_INTGEMM)
   message(STATUS "Using intgemm")
-  add_subdirectory(3rdparty/intgemm EXCLUDE_FROM_ALL)
-  include_directories(3rdparty/intgemm)
+  include(FetchContent)
+  FetchContent_Declare(
+    intgemm
+    GIT_REPOSITORY https://github.com/kpu/intgemm.git
+    GIT_TAG        0f05c3ebd037eacdf8cff165736fea2b0d125023
+  )
+  FetchContent_GetProperties(intgemm)
+  if(NOT intgemm_POPULATED)
+    FetchContent_Populate(intgemm)
+    add_subdirectory(${intgemm_SOURCE_DIR} ${intgemm_BINARY_DIR} EXCLUDE_FROM_ALL)
+  endif()
+  include_directories(${intgemm_SOURCE_DIR})
   #intgemm generates a config header based on AVX512 support in the compiler.
-  include_directories(${CMAKE_CURRENT_BINARY_DIR}/3rdparty/intgemm)
+  include_directories(${intgemm_BINARY_DIR})
   add_definitions(-DMXNET_USE_INTGEMM=1)
 endif()
 
@@ -489,7 +499,7 @@ FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
 if (USE_INTGEMM)
-  list(APPEND SOURCE "3rdparty/intgemm/intgemm.cc")
+  list(APPEND SOURCE "${intgemm_SOURCE_DIR}/intgemm.cc")
 else()
   FILE(GLOB_RECURSE INTGEMM_OPERATOR_SOURCE "src/operator/contrib/intgemm/*.cc" "src/operator/contrib/intgemm/*.h")
   list(REMOVE_ITEM SOURCE ${INTGEMM_OPERATOR_SOURCE})
