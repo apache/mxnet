@@ -446,12 +446,25 @@ def local_response_norm(attrs, inputs, proto_obj):
 def dropout(attrs, inputs, proto_obj):
     """Dropout Regularization."""
     mode = 'training'
+    try:
+        from onnx.defs import onnx_opset_version
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          "Instructions to install - https://github.com/onnx/onnx")
+
     if 'is_test' in attrs and attrs['is_test'] == 0:
         mode = 'always'
-    new_attrs = translation_utils._fix_attribute_names(attrs,
-                                                       {'ratio': 'p'})
-    new_attrs = translation_utils._remove_attributes(new_attrs, ['is_test'])
+    new_attrs = translation_utils._remove_attributes(attrs, ['is_test'])
     new_attrs = translation_utils._add_extra_attributes(new_attrs, {'mode': mode})
+    if onnx_opset_version() >= 12:
+        new_attrs = translation_utils._remove_attributes(new_attrs, ['seed'])
+        if len(inputs) == 2:
+            ratio_float = proto_obj._params[inputs[1].name].asnumpy()[0]
+            new_attrs = translation_utils._remove_attributes(new_attrs, ['p'])
+            new_attrs = translation_utils._add_extra_attributes(new_attrs, {'p': ratio_float})
+        return 'Dropout', new_attrs, inputs[0]
+    else:
+        new_attrs = translation_utils._fix_attribute_names(new_attrs, {'ratio': 'p'})
     return 'Dropout', new_attrs, inputs
 
 # Changing shape and type.
