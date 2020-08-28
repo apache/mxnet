@@ -69,6 +69,10 @@ static bool RNNShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(dshape.ndim(), 3U) \
       << "Input data should be rank-3 tensor of dim [sequence length, batch size, input size]";
   // data: [sequence len, batch, input dimension]
+  for (int i = 0; i < dshape.ndim(); i++) {
+    CHECK_LT(dshape[i], INT32_MAX) << "ValueError: RNN does not support large"
+      << "dimensions (>= 2^31).";
+  }
   int batch_size = dshape[1];
   int input_size = dshape[2];
   int numDirections = param_.bidirectional ? 2 : 1;
