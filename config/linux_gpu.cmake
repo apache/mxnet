@@ -49,7 +49,7 @@ set(USE_CUDNN ON CACHE BOOL "Build with cudnn support, if found")
 #   - "All" for all available GPU architectures supported by the version of CUDA installed
 #   - "specific GPU architectures" by giving the compute capability number such as
 #            "7.0" or "7.0;7.5" (ie. sm_70 or sm_75) or you can specify the name like:
-#            "Volta" or "Volta;Turing".
+#            "Volta" or "Volta;Turing", be sure not to use quotes (ie. just set to 7.0)
 # The value specified here is passed to cmake's CUDA_SELECT_NVCC_ARCH_FLAGS to
 # obtain the compilation flags for nvcc.
 #

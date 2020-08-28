@@ -37,7 +37,7 @@ mxnet::ext::MXerrorMsgs* mxnet::ext::MXerrorMsgs::get() {
   }
 
 std::stringstream& mxnet::ext::MXerrorMsgs::add(const char* file, int line) {
-  messages.push_back(std::stringstream());
+  messages.emplace_back();
   messages.back() << file << "[" << line << "]: ";
   return messages.back();
 }
