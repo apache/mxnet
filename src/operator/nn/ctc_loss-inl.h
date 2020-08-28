@@ -238,7 +238,7 @@ inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
     CHECK_GE(dshape[0], lshape[1]) << "The max number of labels cannot exceed "
                                       "the maximum sequence length of the "
                                       "data.";
-    CHECK_LT(dshape.Size(), INT32_MAX) << "CTC Loss does not support large"
+    CHECK_LT(dshape.Size(), INT32_MAX) << "ValueError: CTC Loss does not support large"
         << " tensors where total size >= 2^31.";
 
     mxnet::TShape oshape(1, -1);
@@ -396,4 +396,3 @@ void CTCLossOpBackward(const nnvm::NodeAttrs& attrs,
 }  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_NN_CTC_LOSS_INL_H_
-
