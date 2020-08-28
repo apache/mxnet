@@ -1370,7 +1370,7 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
       return;  // slice_assign of zero-sized subspaced needs no operation.
     }
     for (index_t i = 0; i < param.begin.ndim(); ++i) {
-      const int b = begin[i], e = end[i], s = step[i];
+      const index_t b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(data.shape_, i, b, e, s, &vshape);
     }
     MSHADOW_TYPE_SWITCH_WITH_BOOL(out.type_flag_, DType, {
