@@ -498,9 +498,7 @@ endif()
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
-if (USE_INTGEMM)
-  list(APPEND SOURCE "${intgemm_SOURCE_DIR}/intgemm.cc")
-else()
+if(NOT USE_INTGEMM)
   FILE(GLOB_RECURSE INTGEMM_OPERATOR_SOURCE "src/operator/contrib/intgemm/*.cc" "src/operator/contrib/intgemm/*.h")
   list(REMOVE_ITEM SOURCE ${INTGEMM_OPERATOR_SOURCE})
 endif()
@@ -779,6 +777,10 @@ if(USE_MKLDNN)
       ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/
       COMMAND ${CMAKE_COMMAND} -E copy
       ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/)
+endif()
+
+if(USE_INTGEMM)
+  target_link_libraries(mxnet PRIVATE intgemm)
 endif()
 
 function(BuildTVMOP)
