@@ -385,7 +385,7 @@ class CuTensorEinsum {
                bool req_write,
                const std::vector<TBlob> &outputs,
                char* workspace) {
-    mxnet_op::Stream<gpu>* s = ctx.get_stream<gpu>();
+    Stream<gpu>* s = ctx.get_stream<gpu>();
 
     if (s->cutensor_cachelines_ != nullptr)
     {
@@ -409,7 +409,7 @@ class CuTensorEinsum {
                                       (void*) &beta,  tensor_c_ptr, tensor_c_ptr,
                                       my_workspace,
                                       my_workspace_size,
-                                      mshadow::Stream<gpu>::GetStream(s)));
+                                      s->stream_));
   }
 
   static const uint32_t kMaxTensorRank = 12; // maximal tensor rank that is supported by cuTENSOR
