@@ -222,7 +222,7 @@ class MXerrorMsgs {
  public:
   /* \brief get singleton pointer to class */
   static MXerrorMsgs* get();
-  
+
   /* \brief add a new error message */
   std::stringstream& add(const char* file, int line);
 
@@ -231,7 +231,7 @@ class MXerrorMsgs {
 
   /* \brief get error message at index */
   const std::string* get(int idx);
-  
+
  private:
   /*! \brief constructor */
   MXerrorMsgs() {}
