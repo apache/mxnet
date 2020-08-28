@@ -29,7 +29,8 @@ from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, d
 from mxnet import gluon, np, npx
 from common import with_seed
 import pytest
-
+from tests.python.unittest.common import assertRaises
+from mxnet.base import MXNetError
 
 # dimension constants
 MEDIUM_X = 10000
@@ -543,6 +544,22 @@ def test_random_weibull():
     A = np.random.weibull(a=1.0, size=(INT_OVERFLOW))
     assert type(A[0]).__name__ == 'ndarray'
 
+@use_np
+def test_random_shuffle():
+    A = np.ones((INT_OVERFLOW, 2))
+    np.random.shuffle(A)
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_lognormal():
+    A = np.random.lognormal(mean=0, sigma=1.0, size=(2**31))
+    assert type(A[0]).__name__ == 'ndarray'
+
+@use_np
+def test_random_randint():
+    A = np.random.randint(low=0, high=5, size=(2, 2**31))
+    assert A[0][0] < 5 and A[0][0] >= 0
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
@@ -744,7 +761,6 @@ def test_sigmoid():
                 rtol=1e-3, atol=1e-5)
 
 @use_np
-@pytest.mark.skip(reason='Does not support large tensor; to be fixed')
 def test_shape_array():
     A = np.zeros((INT_OVERFLOW, 2))
     A.attach_grad()
@@ -814,15 +830,6 @@ def test_smooth_l1():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, )
     assert A.grad[0] == 0
-
-@use_np
-@pytest.mark.skip(reason='np.random broken on large tensor; npx.random \
-    to be re-examined after np.random is fixed')
-def test_random():
-    prob = np.random.uniform(size=(INT_OVERFLOW, 2))
-    A = npx.random.bernoulli(prob=prob, size=(INT_OVERFLOW, 2))
-    assert A.shape == (INT_OVERFLOW, 2)
-    assert int((A == 0).sum() + (A == 1).sum()) == A.size
 
 @use_np
 def test_gamma():
@@ -998,33 +1005,46 @@ def test_dlpack():
     assert C[0][100] == 101
 
 @use_np
-@pytest.mark.skip(reason='broken on large tensors')
-#TODO add 3d pooling test after large tensor is fixed
 def test_pooling():
-    A = np.ones((1, 2, INT_OVERFLOW))
-    A[0][0][2] = 100
+    def test_pooling_large_dim():
+        A = np.ones((1, 1, INT_OVERFLOW))
+        assertRaises(MXNetError, npx.pooling, data=A, kernel=(2), stride=(2), \
+                pool_type='max')
+    
+    test_pooling_large_dim()
+    D, H, W = 2**12, 2**10, 2**10
+    A = np.ones((1, 1, D, H ,W))
+    A[0, 0, 0, 0, 2] = 100
     A.attach_grad()
     with mx.autograd.record():
-        B = npx.pooling(data=A, kernel=(2), stride=2, pool_type='max')
-    assert B.shape == (1, 2, HALF_INT_OVERFLOW)
-    assert B[0][0][1] == 100
+        B = npx.pooling(data=A, kernel=(2, 2, 2), stride=(2, 2, 2), \
+                pool_type='max')
+    assert B.shape == (1, 1, int(D/2), int(H/2), int(W/2))
+    assert B[0, 0, 0, 0, 1] == 100
     B.backward()
-    assert A.grad.shape == (1, 2, INT_OVERFLOW)
-    assert A.grad[0][0][0] == 1
+    assert A.grad.shape == (1, 1, D, H, W)
+    assert A.grad[0, 0, 0, 0, 0] == 1
 
 @use_np
-@pytest.mark.skip(reason='forward gives wrong value on large tensor')
 def test_roi_pooling():
-    A = np.ones((1, 1, 5, INT_OVERFLOW))
-    A[0][0][0][2] = 100
-    roi = np.array([[0, 0, 0, 3, 3]])
+    def test_roi_pooling_large_dim():
+        A = np.ones((1, 1, INT_OVERFLOW, 5))
+        roi = np.array([[0, 0, 0, 5, 5]])
+        assertRaises(MXNetError, npx.roi_pooling, A, roi, pooled_size=(3, 3), \
+            spatial_scale=1)
+    
+    test_roi_pooling_large_dim()
+    H, W = 2**16, 2**16
+    A = np.ones((1, 1, H, W))
+    A[0, 0, 0, 2] = 100
+    roi = np.array([[0, 0, 0, 5, 5]])
     A.attach_grad()
     with mx.autograd.record():
-        B = npx.roi_pooling(A, roi, pooled_size=(2, 2), spatial_scale=1)
-    assert B.shape == (1, 1, 2, 2)
+        B = npx.roi_pooling(A, roi, pooled_size=(3, 3), spatial_scale=1)
+    assert B.shape == (1, 1, 3, 3)
     assert B[0][0][0][1] == 100
     B.backward()
-    assert A.grad.shape == (1, 1, 5, INT_OVERFLOW)
+    assert A.grad.shape == (1, 1, H, W)
     assert A.grad[0][0][0][0] == 1
 
 @use_np
@@ -1037,3 +1057,27 @@ def test_save_load():
     assert B[0].shape == (2, INT_OVERFLOW)
     assert B[0][0][100] == 100
 
+@use_np
+def test_gather_nd():
+    A = np.ones((1, 2, INT_OVERFLOW))
+    A [0, 1, 100] = 100
+    A.attach_grad()
+    with mx.autograd.record():
+        B = npx.gather_nd(data=A, \
+            indices=np.array([[0, 0] , [0, 1], [INT_OVERFLOW-1, 100]], \
+            dtype='int64'))
+    assert B.shape == (2, )
+    assert B[0] == 1 and B[1] == 100
+    B.backward()
+    assert A.grad.shape == (1, 2, INT_OVERFLOW)
+    assert A.grad[0, 0, 0] == 0
+    assert A.grad[0, 0, INT_OVERFLOW-1] == 1
+
+@use_np
+def test_random_bernoulli():
+    prob = np.zeros((INT_OVERFLOW))
+    prob[0] = 1
+    A = npx.random.bernoulli(prob=prob, size=(INT_OVERFLOW))
+    assert A.shape == (INT_OVERFLOW, )
+    assert A[0] == 1
+    assert A[1] == 0
