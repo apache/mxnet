@@ -65,7 +65,7 @@ struct Stream<gpu> {
   HandleState dnn_handle_ownership_;
   /*! \brief cutensor handle ownership */
   HandleState cutensor_handle_ownership_;
-  cutensorPlanCacheline_t* cutensor_cachelines_ = nullptr;
+  void* cutensor_cachelines_ = nullptr;
   /*! \brief cudaDeviceProp */
   cudaDeviceProp prop;
   /*! \brief dev id */
