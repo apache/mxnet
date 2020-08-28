@@ -562,13 +562,32 @@ def flatten(attrs, inputs, proto_obj):
 
 def clip(attrs, inputs, proto_obj):
     """Clips (limits) the values in an array."""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'min' : 'a_min',
-                                                               'max' : 'a_max'})
-    if 'a_max' not in new_attrs:
-        new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_max' : np.inf})
-    if 'a_min' not in new_attrs:
-        new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_min' : -np.inf})
-    return 'clip', new_attrs, inputs
+    try:
+        from onnx.defs import onnx_opset_version
+    except ImportError:
+        raise ImportError("Onnx and protobuf need to be installed. "
+                          "Instructions to install - https://github.com/onnx/onnx")
+    if onnx_opset_version() >= 11:
+        if len(inputs) == 1:
+            new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_max' : np.inf,
+                                                                            'a_min' : -np.inf})
+        elif len(inputs) == 2:
+            min_float = proto_obj._params[inputs[1].name].asnumpy()
+            new_attrs = translation_utils._add_extra_attributes(attrs, {'a_min': min_float[0],
+                                                                        'a_max': np.inf})
+        elif len(inputs) == 3:
+            min_float = proto_obj._params[inputs[1].name].asnumpy()
+            max_float = proto_obj._params[inputs[2].name].asnumpy()
+            new_attrs = translation_utils._add_extra_attributes(attrs, {'a_min': min_float[0],
+                                                                        'a_max': max_float[0]})
+    else:
+        new_attrs = translation_utils._fix_attribute_names(attrs, {'min' : 'a_min',
+                                                                   'max' : 'a_max'})
+        if 'a_max' not in new_attrs:
+            new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_max' : np.inf})
+        if 'a_min' not in new_attrs:
+            new_attrs = translation_utils._add_extra_attributes(new_attrs, {'a_min' : -np.inf})
+    return 'clip', new_attrs, inputs[0]
 
 def gather(attrs, inputs, proto_obj):
     """Gather elements from an input array along the given axis."""
