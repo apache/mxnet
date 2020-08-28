@@ -496,7 +496,7 @@ def test_random_gamma():
 @use_np
 def test_random_exponential():
     A = np.random.exponential(size=(INT_OVERFLOW))
-    #assert type(A[0]).__name__ == 'ndarray'
+    assert type(A[0]).__name__ == 'ndarray'
 
 @use_np
 def test_random_laplace():
