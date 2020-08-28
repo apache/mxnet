@@ -907,7 +907,7 @@ def test_rnn():
 @use_np
 def test_ctc_loss():
     def test_ctc_loss_size_check(A, label):
-        assertRaises(MXNetError, npx.ctc_loss, A, label)
+        assertRaises(ValueError, npx.ctc_loss, A, label)
     
     L_SEQ, L_ALP, L_LAB, BAT = 2**10, 2**20, 2**6, 2
     A = np.zeros((L_SEQ, BAT, L_ALP))
