@@ -906,12 +906,15 @@ def test_rnn():
 
 @use_np
 def test_ctc_loss():
-    # test size check
+    def test_ctc_loss_size_check(A, label):
+        assertRaises(MXNetError, npx.ctc_loss, A, label)
+    
     L_SEQ, L_ALP, L_LAB, BAT = 2**10, 2**20, 2**6, 2
     A = np.zeros((L_SEQ, BAT, L_ALP))
     label = np.random.randint(0, L_ALP, (BAT, L_LAB))
-    assertRaises(MXNetError, npx.ctc_loss, A, label)
-    # now we shrink the size a little bit
+    # test for expected exception
+    test_ctc_loss_size_check(A, label)
+    # now we shrink the size a little bit and test for an allowed case
     L_ALP = 2**20 - 1
     A = np.zeros((L_SEQ, BAT, L_ALP))
     label = np.random.randint(0, L_ALP, (BAT, L_LAB))
