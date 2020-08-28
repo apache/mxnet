@@ -285,7 +285,7 @@ endif()
 
 if(USE_INTGEMM)
   message(STATUS "Using intgemm")
-  add_subdirectory(3rdparty/intgemm)
+  add_subdirectory(3rdparty/intgemm EXCLUDE_FROM_ALL)
   include_directories(3rdparty/intgemm)
   #intgemm generates a config header based on AVX512 support in the compiler.
   include_directories(${CMAKE_CURRENT_BINARY_DIR}/3rdparty/intgemm)
