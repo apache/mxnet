@@ -560,6 +560,17 @@ def test_random_randint():
     A = np.random.randint(low=0, high=5, size=(2, 2**31))
     assert A[0][0] < 5 and A[0][0] >= 0
 
+@use_np
+def test_slice_assign():
+    # test _slice_assign
+    A = np.zeros((INT_OVERFLOW, 2))
+    A[-1] = np.ones((1))
+    assert A[-1, 0] == 1 and A[-1, 1] == 1
+    # test _slice_assign_scalar
+    B = np.zeros((INT_OVERFLOW, 2))
+    B[-1] = 2
+    assert B[-1, 0] == 2 and B[-1, 1] == 2
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
