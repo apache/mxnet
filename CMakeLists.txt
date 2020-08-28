@@ -289,16 +289,14 @@ if(USE_INTGEMM)
   FetchContent_Declare(
     intgemm
     GIT_REPOSITORY https://github.com/kpu/intgemm.git
-    GIT_TAG        0f05c3ebd037eacdf8cff165736fea2b0d125023
+    GIT_TAG        2ea4d8681eb553bd5311ccfa740ce6b8c0b055e3
   )
   FetchContent_GetProperties(intgemm)
   if(NOT intgemm_POPULATED)
     FetchContent_Populate(intgemm)
-    add_subdirectory(${intgemm_SOURCE_DIR} ${intgemm_BINARY_DIR} EXCLUDE_FROM_ALL)
   endif()
+  add_subdirectory(${intgemm_SOURCE_DIR} ${intgemm_BINARY_DIR} EXCLUDE_FROM_ALL)
   include_directories(${intgemm_SOURCE_DIR})
-  #intgemm generates a config header based on AVX512 support in the compiler.
-  include_directories(${intgemm_BINARY_DIR})
   add_definitions(-DMXNET_USE_INTGEMM=1)
 endif()
 
