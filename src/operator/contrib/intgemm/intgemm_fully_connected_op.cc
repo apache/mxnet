@@ -30,7 +30,8 @@
 #include "../../operator_common.h"
 #include "../../tensor/init_op.h"
 
-#include "intgemm.h"
+#include "../../../../3rdparty/intgemm/aligned.h"
+#include "../../../../3rdparty/intgemm/intgemm.h"
 
 namespace mxnet {
 namespace op {
