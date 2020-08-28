@@ -21,7 +21,10 @@ gemm_lib:
 	g++ -shared -fPIC -std=c++11 gemm_lib.cc ../../../src/lib_api.cc -o libgemm_lib.so -I ../../../include
 
 relu_lib:
-	nvcc -shared -std=c++11 -Xcompiler -fPIC relu_lib.cu ../../../src/lib_api.cc -o librelu_lib.so -I ../../../include
+	g++ -fPIC -c -std=c++11 relu_lib.cc -o relu_lib.cc.o -I ../../../include
+	g++ -fPIC -c -std=c++11 ../../../src/lib_api.cc -o lib_api.cc.o -I ../../../include
+	nvcc -c -std=c++11 -Xcompiler -fPIC relu_lib.cu -o relu_lib.cu.o -I ../../../include
+	nvcc -shared relu_lib.cc.o lib_api.cc.o relu_lib.cu.o -o librelu_lib.so
 
 transposecsr_lib:
 	g++ -shared -fPIC -std=c++11 transposecsr_lib.cc ../../../src/lib_api.cc -o libtransposecsr_lib.so -I ../../../include

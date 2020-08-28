@@ -31,14 +31,39 @@
 
 #include "mxnet/lib_api.h"
 
+mxnet::ext::MXerrorMsgs* mxnet::ext::MXerrorMsgs::get() {
+    static MXerrorMsgs inst;
+    return &inst;
+  }
+
+std::stringstream& mxnet::ext::MXerrorMsgs::add(const char* file, int line) {
+  messages.push_back(std::stringstream());
+  messages.back() << file << "[" << line << "]: ";
+  return messages.back();
+}
+
+int mxnet::ext::MXerrorMsgs::size() {
+  return messages.size();
+}
+
+const std::string* mxnet::ext::MXerrorMsgs::get(int idx) {
+  return new std::string(messages.at(idx).str());
+}
+
 mxnet::ext::MXContext::MXContext() : dev_type("error"), dev_id(-1) {}
+
 mxnet::ext::MXContext::MXContext(std::string dev_type_, int dev_id_)
   : dev_type(std::move(dev_type_)), dev_id(dev_id_) {}
+
 mxnet::ext::MXContext::MXContext(const char* dev_type_, int dev_id_)
   : dev_type(dev_type_), dev_id(dev_id_) {}
+
 mxnet::ext::MXContext mxnet::ext::MXContext::CPU() { return MXContext("cpu", 0); }
+
 mxnet::ext::MXContext mxnet::ext::MXContext::GPU() { return MXContext("gpu", 0); }
+
 mxnet::ext::MXContext mxnet::ext::MXContext::CPU(int dev_id) { return MXContext("cpu", dev_id); }
+
 mxnet::ext::MXContext mxnet::ext::MXContext::GPU(int dev_id) { return MXContext("gpu", dev_id); }
 
 void mxnet::ext::MXSparse::set(void *data_ptr, const int64_t* dims, int ndims, void *idx,

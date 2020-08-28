@@ -220,29 +220,18 @@ namespace ext {
 /* \brief Class to store error messages from extensions to pass to MXNet */
 class MXerrorMsgs {
  public:
-  /*!
-   * \brief get singleton pointer to class
-   * \returns pointer to class
-   */
-  static MXerrorMsgs* get() {
-    static MXerrorMsgs inst;
-    return &inst;
-  }
-  /*!
-   * \brief add a new error message
-   */
-  std::stringstream& add(const char* file, int line) {
-    messages.push_back(std::stringstream());
-    messages.back() << file << "[" << line << "]: ";
-    return messages.back();
-  }
-  int size() {
-    return messages.size();
-  }
-  const std::string* get(int idx) {
-    return new std::string(messages.at(idx).str());
-  }
+  /* \brief get singleton pointer to class */
+  static MXerrorMsgs* get();
+  
+  /* \brief add a new error message */
+  std::stringstream& add(const char* file, int line);
 
+  /* \brief return number of error messages */
+  int size();
+
+  /* \brief get error message at index */
+  const std::string* get(int idx);
+  
  private:
   /*! \brief constructor */
   MXerrorMsgs() {}
