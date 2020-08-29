@@ -31,7 +31,7 @@ needs_sphinx = '1.5.6'
 # General information about the project.
 project = u'Apache MXNet'
 author = u'%s developers' % project
-copyright = u'2015-2019, %s' % author
+copyright = u'2015-2020, %s' % author
 github_doc_root = 'https://github.com/apache/incubator-mxnet/tree/master/docs/'
 doc_root = 'https://mxnet.apache.org/'
 
@@ -54,11 +54,8 @@ extensions = [
     # 'sphinxcontrib.fulltoc',
     'nbsphinx',
     'IPython.sphinxext.ipython_console_highlighting',
-    # 'sphinx.ext.autodoc',
     'sphinx.ext.autosummary',
     'sphinx.ext.napoleon',
-    # 'sphinx.ext.mathjax',
-    # 'sphinx.ext.viewcode',
     'breathe',
 #    'mxdoc'
     'autodocsumm',
@@ -236,6 +233,16 @@ nbsphinx_execute = 'never'
 
 # let the source file format to be xxx.ipynb instead of xxx.ipynb.txt
 html_sourcelink_suffix = ''
+
+html_context = {
+    'display_github': True,
+    'github_user': 'apache',
+    'github_repo': 'mxnet',
+    'github_version': 'master',
+    'conf_py_path': '/docs/python_docs/python/',
+    'last_updated': False,
+    'commit': True
+}
 
 def setup(app):
     app.add_transform(AutoStructify)
