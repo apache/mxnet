@@ -34,7 +34,7 @@ from common import assertRaises
 import pytest
 from itertools import zip_longest
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def cifar10(tmpdir):
     path = str(tmpdir)
     get_cifar10(path)
