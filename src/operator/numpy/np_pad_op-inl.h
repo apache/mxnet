@@ -545,8 +545,7 @@ template <typename xpu, int req>
 struct pad_grad {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a){
-    using namespace mxnet_op;
-    KERNEL_ASSIGN(out[i], req, 1);
+    KERNEL_ASSIGN(out[i], req, a[i]);
   }
 };
 
