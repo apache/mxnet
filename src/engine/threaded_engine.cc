@@ -30,7 +30,7 @@
 #include <mutex>
 #include <utility>
 #include "./threaded_engine.h"
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 
 namespace mxnet {
 namespace engine {

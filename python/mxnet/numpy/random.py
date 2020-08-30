@@ -102,7 +102,9 @@ def uniform(low=0.0, high=1.0, size=None, dtype=None, ctx=None, out=None):
         ``low`` and ``high`` are both scalars. Otherwise,
         ``np.broadcast(low, high).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output. Default is current context.
 
@@ -154,7 +156,9 @@ def normal(loc=0.0, scale=1.0, size=None, dtype=None, ctx=None, out=None):
         a single value is returned if loc and scale are both scalars. Otherwise,
         ``np.broadcast(low, high).size`` samples are drawn.
     dtype : {'float16', 'float32', 'float64'}, optional
-        Data type of output samples. Default is 'float32'
+        Data type of output samples.
+        When npx.is_np_default_dtype() returns False, default dtype is float32;
+        When npx.is_np_default_dtype() returns True, default dtype is float64.
     ctx : Context, optional
         Device context of output, default is current context.
     out : ``ndarray``, optional
@@ -426,7 +430,7 @@ def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
 
     This operator is a little different from the one in official NumPy.
     The official NumPy operator only accepts 1-D ndarray as mean and 2-D ndarray as cov,
-    whereas the operator in DeepNumPy supports batch operation and auto-broadcasting.
+    whereas the operator in MXNet np supports batch operation and auto-broadcasting.
 
     Both `mean` and `cov` may have any number of leading dimensions, which correspond
     to a batch shape. They are not necessarily assumed to have the same batch shape,

@@ -20,7 +20,8 @@
 # pylint: disable=too-many-branches, too-many-statements
 """Profiler setting methods."""
 import ctypes
-import threading
+import contextlib
+import contextvars
 import warnings
 from .base import _LIB, check_call, c_str, ProfileHandle, c_str_array, py_str, KVStoreHandle
 
@@ -184,11 +185,11 @@ def dumps(reset=False, format='table', sort_by='total', ascending=False):
             "Invalid value provided for ascending: {0}. Support: False, True".format(ascending)
     assert  reset in reset_to_int.keys(),\
             "Invalid value provided for reset: {0}. Support: False, True".format(reset)
-    check_call(_LIB.MXAggregateProfileStatsPrintEx(ctypes.byref(debug_str),
-                                                   reset_to_int[reset],
-                                                   format_to_int[format],
-                                                   sort_by_to_int[sort_by],
-                                                   asc_to_int[ascending]))
+    check_call(_LIB.MXAggregateProfileStatsPrint(ctypes.byref(debug_str),
+                                                 reset_to_int[reset],
+                                                 format_to_int[format],
+                                                 sort_by_to_int[sort_by],
+                                                 asc_to_int[ascending]))
     return py_str(debug_str.value)
 
 
@@ -489,7 +490,7 @@ class Marker(object):
         self.name = name
         self.domain = domain
 
-    def mark(self, scope='process'):
+    def mark(self, scope='process'):  # pylint: disable=redefined-outer-name
         """Set up the profiler state to record operator.
 
         Parameters
@@ -502,50 +503,27 @@ class Marker(object):
         check_call(_LIB.MXProfileSetMarker(self.domain.handle, c_str(self.name), c_str(scope)))
 
 
-class Scope(object):
-    """
-    The `_profiler.Scope` was developed to assign the profiler scope for the GPU
-    memory profiler. It is implicitly invoked when the Gluon API is used.
+@contextlib.contextmanager
+def scope(name='<unk>:', append_mode=False):
+    """Assign the profiler scope for the GPU memory profiler.
+
+    It is implicitly invoked when the Gluon API is used.
 
     Parameters
     ==========
     name : Name of the Profiler Scope
     append_mode : Whether to append the old profiler scope at the front.
+
     """
-    _current = threading.local()
-
-    def __init__(self, name='<unk>:', append_mode=False):
-        self._name = name + ":" if not name.endswith(":") else name
-        self._old_scope = None
-        if append_mode:
-            if not hasattr(Scope._current, "value"):
-                Scope._current.value = Scope()
-            self._name = Scope._current.value.name + self._name
-
-    def __enter__(self):
-        if not hasattr(Scope._current, "value"):
-            Scope._current.value = Scope()
-        self._old_scope = Scope._current.value
-        Scope._current.value = self
-        # Invoke the C API to propagate the profiler scope information to the
-        # C++ backend.
-        check_call(_LIB.MXSetProfilerScope(c_str(self.name)))
-        return self
-
-    def __exit__(self, ptype, value, trace):
-        assert self._old_scope
-        Scope._current.value = self._old_scope
-        # If the old profiler scope is also of type `profiler.Scope`, invoke the
-        # C API once again to recover the previous scope information. Otherwise,
-        # the default scope `<unk>:` will be set.
-        if isinstance(self._old_scope, Scope):
-            check_call(_LIB.MXSetProfilerScope(c_str(self._old_scope.name)))
-        else:
-            check_call(_LIB.MXSetProfilerScope(c_str("<unk>:")))
-
-    @property
-    def name(self):
-        return self._name
+    name = name + ":" if not name.endswith(":") else name
+    token = _current_scope.set(_current_scope.get() + name if append_mode else name)
+    # Invoke the C API to propagate the profiler scope information to the
+    # C++ backend.
+    check_call(_LIB.MXSetProfilerScope(c_str(name)))
+    yield name
+    _current_scope.reset(token)
+    # Invoke the C API once again to recover the previous scope information.
+    check_call(_LIB.MXSetProfilerScope(c_str(_current_scope.get())))
 
 # initialize the default profiler scope
-Scope._current.value = Scope()
+_current_scope = contextvars.ContextVar('profilerscope', default='<unk>:')

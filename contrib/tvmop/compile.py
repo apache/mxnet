@@ -152,6 +152,8 @@ if __name__ == "__main__":
     # we create libtvmop.o first, which gives us chance to link tvm_runtime together with the libtvmop
     # to allow mxnet find external helper functions in libtvm_runtime
     func_binary.save(arguments.target_path + "/libtvmop.o")
+    if len(func_binary.imported_modules):
+        func_binary.imported_modules[0].save(arguments.target_path + "/libtvmop.cubin")
     ld_path = arguments.target_path if arguments.ld_path is None else arguments.ld_path
     create_shared(arguments.target_path + "/libtvmop.so",
                   arguments.target_path + "/libtvmop.o",

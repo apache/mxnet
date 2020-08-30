@@ -64,7 +64,8 @@ class BinaryDistribution(Distribution):
 DEPENDENCIES = [
     'numpy<2.0.0,>1.16.0',
     'requests>=2.20.0,<3',
-    'graphviz<0.9.0,>=0.8.1'
+    'graphviz<0.9.0,>=0.8.1',
+    'contextvars;python_version<"3.7"'
 ]
 
 shutil.rmtree(os.path.join(CURRENT_DIR, 'mxnet'), ignore_errors=True)
@@ -87,7 +88,6 @@ shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/im2rec.py'), os.path.jo
 shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/kill-mxnet.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
 shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/parse_log.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
 shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/tools/diagnose.py'), os.path.join(CURRENT_DIR, 'mxnet/tools'))
-shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/tools/caffe_converter'), os.path.join(CURRENT_DIR, 'mxnet/tools/caffe_converter'))
 shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/tools/bandwidth'), os.path.join(CURRENT_DIR, 'mxnet/tools/bandwidth'))
 
 # copy headers to mxnet package
@@ -142,17 +142,16 @@ else:
     elif variant.startswith('CU92'):
         libraries.append('CUDA-9.2')
 
-if variant != 'native':
+if variant != 'NATIVE':
     libraries.append('MKLDNN')
 
 short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 
 package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
-if variant.endswith('MKL'):
-    if platform.system() == 'Darwin':
-        shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/build/install/include'),
-                        os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
+if variant != 'NATIVE':
+    shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/include'),
+                    os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':
     libdir, mxdir = os.path.dirname(LIB_PATH[0]), os.path.join(CURRENT_DIR, 'mxnet')
     if os.path.exists(os.path.join(libdir, 'libgfortran.so.3')):
@@ -194,12 +193,8 @@ setup(name=package_name,
           'Intended Audience :: Education',
           'Intended Audience :: Science/Research',
           'License :: OSI Approved :: Apache Software License',
-          'Programming Language :: C++',
           'Programming Language :: Cython',
-          'Programming Language :: Other',  # R, Scala
-          'Programming Language :: Perl',
           'Programming Language :: Python',
-          'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
           'Programming Language :: Python :: 3.7',
           'Programming Language :: Python :: 3.8',

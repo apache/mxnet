@@ -728,6 +728,11 @@ void BipartiteMatchingForward(const nnvm::NodeAttrs& attrs,
   const BipartiteMatchingParam& param = nnvm::get<BipartiteMatchingParam>(attrs.parsed);
   Stream<xpu> *s = ctx.get_stream<xpu>();
   mxnet::TShape dshape = inputs[0].shape_;
+  CHECK(mxnet::shape_is_known(dshape)) << "Found unknown shape in BipartiteMatchingForward, "
+                                       << "received: " << dshape;
+  if (dshape.Size() == 0) {
+    return;  // noop for unknown shape or empty array
+  }
   int row = dshape[dshape.ndim() - 2];
   int col = dshape[dshape.ndim() - 1];
   int batch_size = dshape.Size() / row / col;
@@ -780,6 +785,12 @@ void BipartiteMatchingBackward(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(inputs.size(), 2U);
   CHECK_EQ(outputs.size(), 1U);
   Stream<xpu> *s = ctx.get_stream<xpu>();
+  mxnet::TShape dshape = outputs[0].shape_;
+  CHECK(mxnet::shape_is_known(dshape)) << "Found unknown shape in BipartiteMatchingBackward, "
+                                       << "received: " << dshape;
+  if (dshape.Size() == 0) {
+    return;  // noop for unknown shape or empty array
+  }
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 2, DType> in_grad = outputs[0].FlatTo2D<xpu, DType>(s);
     // TODO(Joshua Zhang): allow backprop?

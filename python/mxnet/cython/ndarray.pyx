@@ -116,25 +116,47 @@ cdef class CachedOp:
         from ..symbol.numpy._symbol import _Symbol
         self.is_np_sym = bool(isinstance(sym, _Symbol))
 
-        CALL(MXCreateCachedOpEx(
+        CALL(MXCreateCachedOp(
             <SymbolHandle>(<unsigned long long>sym.handle.value),
             len(flags),
             CBeginPtr(c_flag_keys),
             CBeginPtr(c_flag_vals),
-            &self.chandle))
+            &self.chandle,
+            False))
 
     def __del__(self):
         CALL(MXFreeCachedOp(self.chandle))
 
-    def __call__(self, *args, out=None):
+    def get_optimized_symbol(self):
+        """Get an optimized version of the symbol from the cached op.
+
+        Returns
+        -------
+        symbol : Symbol
+            Optimized symbol from the executor.
+        """
+        from ..symbol import Symbol
+        cdef SymbolHandle shandle
+        CALL(MXCachedOpGetOptimizedSymbol(self.chandle, &shandle))
+        ret = Symbol(_ctypes.cast(<unsigned long long>shandle, _ctypes.c_void_p))
+        return ret
+
+    def __call__(self, *args, out=None, default_ctx=None):
         """ctypes implementation of imperative invoke wrapper"""
         cdef vector[NDArrayHandle] ndvars
         cdef vector[NDArrayHandle] output_vars
         cdef NDArrayHandle* p_output_vars
         cdef NDArrayHandle ret_handle
+        cdef int default_ctx_type
+        cdef int default_ctx_dev_id
         cdef int num_output
         cdef const int* p_output_stypes
 
+        if len(args) == 1 and args[0] is None:
+            args = []
+            assert default_ctx is not None, 'default_ctx is required if no input is provided'
+        else:
+            default_ctx = args[0].ctx if default_ctx is None else default_ctx
         for i in args:
             ndvars.push_back((<NDArrayBase>i).chandle)
 
@@ -153,10 +175,12 @@ cdef class CachedOp:
         else:
             p_output_vars = &output_vars[0]
 
-        CALL(MXInvokeCachedOpEx(
+        CALL(MXInvokeCachedOp(
             self.chandle,
             <int>len(args),
             &ndvars[0] if ndvars.size() != 0 else NULL,
+            <int>(default_ctx.device_typeid),
+            <int>(default_ctx.device_id),
             &num_output,
             &p_output_vars,
             &p_output_stypes))
@@ -216,7 +240,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op=0, output_is_li
     cdef vector[const char*] param_keys = SVec2Ptr(ckeys)
     cdef vector[const char*] param_vals = SVec2Ptr(cvals)
 
-    CALL(MXImperativeInvokeEx(
+    CALL(MXImperativeInvoke(
         chandle,
         <int>ndvars.size(),
         &ndvars[0] if ndvars.size() != 0 else NULL,

@@ -588,8 +588,8 @@ void PdfOpBackward(const nnvm::NodeAttrs& attrs,
   const TShape src_shape(Shape2(N, outputs[0].Size() / N)), dst_shape(Shape2(N, 1));
   // Inputs to PdfOpBackward: grad, samples, parm1, parm2, pdf.
   MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    const size_t red_work_size(broadcast::ReduceWorkspaceSize<2, DType>(
-            s, dst_shape, kAddTo, src_shape));
+    const size_t red_work_size(broadcast::ReduceWorkspaceSize(
+            s, dst_shape, kAddTo, src_shape, sizeof(DType)));
     const size_t tmp_size(outputs[0].Size() * pnum * sizeof(DType) + red_work_size);
     Tensor<xpu, 1, char> tmp_space =
             ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(tmp_size), s);

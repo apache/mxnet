@@ -250,7 +250,6 @@ def plot_network(symbol, title="plot", save_format='pdf', shape=None, dtype=None
     >>> net = mx.sym.FullyConnected(data=net, name='fc1', num_hidden=128)
     >>> net = mx.sym.Activation(data=net, name='relu1', act_type="relu")
     >>> net = mx.sym.FullyConnected(data=net, name='fc2', num_hidden=10)
-    >>> net = mx.sym.SoftmaxOutput(data=net, name='out')
     >>> digraph = mx.viz.plot_network(net, shape={'data':(100,200)},
     ... node_attrs={"fixedsize":"false"})
     >>> digraph.view()

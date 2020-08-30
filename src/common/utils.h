@@ -29,6 +29,7 @@
 #include <dmlc/omp.h>
 #include <nnvm/graph.h>
 #include <nnvm/node.h>
+#include <mxnet/imperative.h>
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <mxnet/storage.h>
@@ -882,6 +883,11 @@ inline bool is_float(const int dtype) {
   return dtype == mshadow::kFloat32 || dtype == mshadow::kFloat64 || dtype == mshadow::kFloat16;
 }
 
+inline bool is_int(const int dtype) {
+  return dtype == mshadow::kUint8 || dtype == mshadow::kInt8 ||
+         dtype == mshadow::kInt32 || dtype == mshadow::kInt64;
+}
+
 inline int get_more_precise_type(const int type1, const int type2) {
   if (type1 == type2) return type1;
   if (is_float(type1) && is_float(type2)) {
@@ -930,6 +936,55 @@ NodeAttrsGetProfilerScope(const nnvm::NodeAttrs& attrs) {
   }
   return profiler_scope;
 }
+
+inline int GetDefaultDtype() {
+  return Imperative::Get()->is_np_default_dtype() ?
+         mshadow::kFloat64 :
+         mshadow::kFloat32;
+}
+
+inline int GetDefaultDtype(int dtype) {
+  if (dtype != -1) return dtype;
+  return Imperative::Get()->is_np_default_dtype() ?
+         mshadow::kFloat64 :
+         mshadow::kFloat32;
+}
+
+struct MShadowTypeInfo {
+  std::string name;
+  int size;
+  int acc_size;
+
+  MShadowTypeInfo(const std::string name, const int size, const int acc_size) :
+    name(std::move(name)), size(size), acc_size(acc_size) {}
+
+  MShadowTypeInfo(const std::string name, const int size) :
+    MShadowTypeInfo(name, size, size) {}
+};
+
+MShadowTypeInfo mshadow_type_info(const int type_flag);
+
+inline bool AlignedMemAlloc(void** ptr, size_t size, size_t alignment) {
+#if _MSC_VER
+  *ptr = _aligned_malloc(size, alignment);
+  if (*ptr == nullptr)
+    return false;
+#else
+  int res = posix_memalign(ptr, alignment, size);
+  if (res != 0)
+    return false;
+#endif
+  return true;
+}
+
+inline void AlignedMemFree(void* ptr) {
+#if _MSC_VER
+  _aligned_free(ptr);
+#else
+  free(ptr);
+#endif
+}
+
 
 }  // namespace common
 }  // namespace mxnet

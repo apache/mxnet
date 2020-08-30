@@ -32,7 +32,6 @@ FP16_FUNCS = [
 # are dtype neutral (can work in both fp16 and fp32)
 FP16_FP32_FUNCS = [
     'BatchNorm',
-    'BatchNorm_v1',
     'BilinearSampler',
     'BlockGrad',
     'Cast',
@@ -86,7 +85,6 @@ FP16_FP32_FUNCS = [
     '_cond',
     '_contrib_AdaptiveAvgPooling2D',
     '_contrib_BilinearResize2D',
-    '_contrib_SparseEmbedding',
     '_contrib_bipartite_matching',
     '_contrib_dequantize',
     '_contrib_div_sqrt_dim',
@@ -94,7 +92,6 @@ FP16_FP32_FUNCS = [
     '_contrib_getnnz',
     '_contrib_gradientmultiplier',
     '_contrib_group_adagrad_update',
-    '_contrib_ifft',
     '_contrib_index_array',
     '_contrib_index_copy',
     '_contrib_quadratic',
@@ -187,8 +184,6 @@ FP16_FP32_FUNCS = [
     '_sample_poisson',
     '_sample_uniform',
     '_sample_unique_zipfian',
-    '_scatter_minus_scalar',
-    '_scatter_plus_scalar',
     '_scatter_set_nd',
     '_set_value',
     '_shuffle',
@@ -472,7 +467,6 @@ FP32_FUNCS = [
     'topk',
 
     # Neural network
-    'SoftmaxOutput',
     'softmax',
     'Softmax',
     'log_softmax',
@@ -482,13 +476,6 @@ FP32_FUNCS = [
     'L2Normalization',
     'LRN',
     'SoftmaxActivation',
-    'LinearRegressionOutput',
-    'LogisticRegressionOutput',
-    'MAERegressionOutput',
-    '_sparse_LinearRegressionOutput',
-    '_sparse_LogisticRegressionOutput',
-    '_sparse_MAERegressionOutput',
-    'SVMOutput',
     'softmax_cross_entropy',
     'smooth_l1',
     'MakeLoss',
@@ -519,7 +506,6 @@ WIDEST_TYPE_CASTS = [
     '_Mul',
     '_Div',
     '_div',
-    '_scatter_elemwise_div',
     '_Mod',
     '_Not_Equal',
     '_Equal',
@@ -629,8 +615,4 @@ WIDEST_TYPE_CASTS = [
     ]
 
 LOSS_OUTPUT_FUNCTIONS = [
-    'SoftmaxOutput',
-    'LinearRegressionOutput',
-    'LogisticRegressionOutput',
-    'MAERegressionOutput',
     ]

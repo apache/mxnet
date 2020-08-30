@@ -23,6 +23,7 @@
  */
 #include <mxnet/api_registry.h>
 #include <mxnet/runtime/packed_func.h>
+#include <vector>
 #include "../../utils.h"
 #include "../../../../operator/numpy/random/np_location_scale_op.h"
 
@@ -45,11 +46,11 @@ MXNET_REGISTER_API("_npi.gumbel")
   nnvm::NodeAttrs attrs;
   attrs.op = op;
   if (args[2].type_code() == kDLInt) {
-      param.size = Tuple<int>(1, args[2].operator int64_t());
+      param.size = Tuple<index_t>(1, args[2].operator int64_t());
   } else if (args[2].type_code() == kNull) {
-      param.size = Tuple<int>({1});
+      param.size = dmlc::optional<mxnet::Tuple<index_t>>();
   } else {
-      param.size = Tuple<int>(args[2].operator ObjectRef());
+      param.size = Tuple<index_t>(args[2].operator ObjectRef());
   }
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
@@ -58,7 +59,7 @@ MXNET_REGISTER_API("_npi.gumbel")
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
   int scalar = scalar_number(args);
-  NDArray* inputs[2];
+  std::vector<NDArray*> inputs;
   int num_inputs = 0;
   if (scalar == 2) {
     param.loc = args[0].operator double();
@@ -66,24 +67,24 @@ MXNET_REGISTER_API("_npi.gumbel")
   } else if (scalar == 0) {
     param.loc = dmlc::nullopt;
     param.scale = dmlc::nullopt;
-    inputs[0] = args[0].operator mxnet::NDArray*();
-    inputs[1] = args[1].operator mxnet::NDArray*();
+    inputs.push_back(args[0].operator mxnet::NDArray*());
+    inputs.push_back(args[1].operator mxnet::NDArray*());
     num_inputs = 2;
   } else {
     if (args[0].type_code() == kDLFloat || args[0].type_code() == kDLInt) {
-      param.loc = dmlc::nullopt;
-      param.scale = args[1].operator double();
-      inputs[0] = args[0].operator mxnet::NDArray*();
-    } else {
       param.loc = args[0].operator double();
       param.scale = dmlc::nullopt;
-      inputs[0] = args[1].operator mxnet::NDArray*();
+      inputs.push_back(args[1].operator mxnet::NDArray*());
+    } else {
+      param.loc = dmlc::nullopt;
+      param.scale = args[1].operator double();
+      inputs.push_back(args[0].operator mxnet::NDArray*());
     }
     num_inputs = 1;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::NumpyLocationScaleParam>(&attrs);
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs,
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(),
                           &num_outputs, outputs);
   if (out) {
     *ret = PythonArg(4);
@@ -100,11 +101,11 @@ MXNET_REGISTER_API("_npi.logistic")
   nnvm::NodeAttrs attrs;
   attrs.op = op;
   if (args[2].type_code() == kDLInt) {
-      param.size = Tuple<int>(1, args[2].operator int64_t());
+      param.size = Tuple<index_t>(1, args[2].operator int64_t());
   } else if (args[2].type_code() == kNull) {
       param.size = dmlc::nullopt;
   } else {
-      param.size = Tuple<int>(args[2].operator ObjectRef());
+      param.size = Tuple<index_t>(args[2].operator ObjectRef());
   }
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
@@ -113,7 +114,7 @@ MXNET_REGISTER_API("_npi.logistic")
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
   int scalar = scalar_number(args);
-  NDArray* inputs[2];
+  std::vector<NDArray*> inputs;
   int num_inputs = 0;
   if (scalar == 2) {
     param.loc = args[0].operator double();
@@ -121,24 +122,24 @@ MXNET_REGISTER_API("_npi.logistic")
   } else if (scalar == 0) {
     param.loc = dmlc::nullopt;
     param.scale = dmlc::nullopt;
-    inputs[0] = args[0].operator mxnet::NDArray*();
-    inputs[1] = args[1].operator mxnet::NDArray*();
+    inputs.push_back(args[0].operator mxnet::NDArray*());
+    inputs.push_back(args[1].operator mxnet::NDArray*());
     num_inputs = 2;
   } else {
     if (args[0].type_code() == kDLFloat || args[0].type_code() == kDLInt) {
-      param.loc = dmlc::nullopt;
-      param.scale = args[1].operator double();
-      inputs[0] = args[0].operator mxnet::NDArray*();
-    } else {
       param.loc = args[0].operator double();
       param.scale = dmlc::nullopt;
-      inputs[0] = args[1].operator mxnet::NDArray*();
+      inputs.push_back(args[1].operator mxnet::NDArray*());
+    } else {
+      param.loc = dmlc::nullopt;
+      param.scale = args[1].operator double();
+      inputs.push_back(args[0].operator mxnet::NDArray*());
     }
     num_inputs = 1;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::NumpyLocationScaleParam>(&attrs);
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs,
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(),
                           &num_outputs, outputs);
   if (out) {
     *ret = PythonArg(4);

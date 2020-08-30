@@ -29,6 +29,7 @@
 #include <algorithm>
 #include <string>
 #include <utility>
+#include <unordered_map>
 #include "../tensor/matrix_op-inl.h"
 #include "../nn/concat-inl.h"
 #include "../../common/utils.h"
@@ -59,6 +60,11 @@ struct NumpyVstackParam : public dmlc::Parameter<NumpyVstackParam> {
   DMLC_DECLARE_PARAMETER(NumpyVstackParam) {
     DMLC_DECLARE_FIELD(num_args).set_lower_bound(1)
     .describe("Number of inputs to be vstacked.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream num_args_s;
+    num_args_s << num_args;
+    (*dict)["num_args"] = num_args_s.str();
   }
 };
 
@@ -125,6 +131,15 @@ struct NumpyXReshapeParam : public dmlc::Parameter<NumpyXReshapeParam> {
                   " Note that currently only C-like order is"
                   " supported");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream newshape_s, reverse_s, order_s;
+    newshape_s << newshape;
+    reverse_s << reverse;
+    order_s << order;
+    (*dict)["newshape"] = newshape_s.str();
+    (*dict)["reverse"] = reverse_s.str();
+    (*dict)["order"] = order_s.str();
+  }
 };
 
 template<typename xpu>
@@ -133,10 +148,10 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
                     const std::vector<TBlob>& inputs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
-  const NumpyTransposeParam& param = nnvm::get<NumpyTransposeParam>(attrs.parsed);
   if (req[0] == kNullOp) return;
   CHECK(req[0] == kWriteTo || req[0] == kAddTo)
-      << "Transpose only supports kWriteTo, kNullOp and kAddTo";
+      << "Transpose does not support inplace";
+  const NumpyTransposeParam& param = nnvm::get<NumpyTransposeParam>(attrs.parsed);
   mxnet::TShape axes;
   if (ndim_is_known(param.axes)) {
     axes = common::CanonicalizeAxes(param.axes);
@@ -146,10 +161,14 @@ void NumpyTranspose(const nnvm::NodeAttrs& attrs,
       axes[i] = axes.ndim() - 1 - i;
     }
   }
+  mshadow::Tensor<xpu, 1, dim_t> workspace =
+    GetTransposeExWorkspace<xpu>(ctx, axes);
   if (req[0] == kAddTo) {
-    TransposeImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0], axes);
+    TransposeExImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
   } else {
-    TransposeImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0], axes);
+    TransposeExImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
   }
 }
 
@@ -566,6 +585,12 @@ struct FlipParam : public dmlc::Parameter<FlipParam> {
       DMLC_DECLARE_FIELD(axis)
           .describe("The axis which to flip elements.");
   }
+
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s;
+    axis_s << axis;
+    (*dict)["axis"] = axis_s.str();
+  }
 };
 
 #define FLIP_MAX_DIM 10
@@ -642,6 +667,13 @@ struct NumpyRollaxisParam : public dmlc::Parameter<NumpyRollaxisParam> {
     .describe("The axis is rolled until it lies before this position. "
               "The default, 0, results in a “complete” roll.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, start_s;
+    axis_s << axis;
+    start_s << start;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["start"] = start_s.str();
+  }
 };
 
 inline mxnet::TShape NumpyRollaxisShapeImpl(int axis,
@@ -680,6 +712,13 @@ struct NumpyMoveaxisParam : public dmlc::Parameter<NumpyMoveaxisParam> {
     DMLC_DECLARE_FIELD(destination)
     .describe("Destination positions for each of the original axes. "
               "These must also be unique.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream source_s, destination_s;
+    source_s << source;
+    destination_s << destination;
+    (*dict)["source"] = source_s.str();
+    (*dict)["destination"] = destination_s.str();
   }
 };
 
@@ -765,13 +804,21 @@ void NumpyRollaxisCompute(const nnvm::NodeAttrs& attrs,
   using namespace mshadow::expr;
   CHECK_EQ(inputs.size(), 1U);
   CHECK_EQ(outputs.size(), 1U);
-  CHECK_EQ(req[0], kWriteTo) << "Rollaxis does not support inplace";
-  mxnet::TShape axes;
+  if (req[0] == kNullOp) return;
+  CHECK(req[0] == kWriteTo || req[0] == kAddTo)
+      << "Rollaxis does not support inplace";
   const NumpyRollaxisParam& param = nnvm::get<NumpyRollaxisParam>(attrs.parsed);
-  axes = NumpyRollaxisShapeImpl(param.axis, param.start, inputs[0].ndim());
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, Dtype, {
-    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
-  })
+  mxnet::TShape axes = NumpyRollaxisShapeImpl(param.axis, param.start, inputs[0].ndim());
+
+  mshadow::Tensor<xpu, 1, dim_t> workspace =
+    GetTransposeExWorkspace<xpu>(ctx, axes);
+  if (req[0] == kAddTo) {
+    TransposeExImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
+  } else {
+    TransposeExImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
+  }
 }
 
 template<typename xpu>
@@ -782,6 +829,9 @@ void NumpyRollaxisBackward(const nnvm::NodeAttrs &attrs,
                             const std::vector<TBlob> &outputs) {
   using namespace mshadow;
   using namespace mshadow::expr;
+  if (req[0] == kNullOp) return;
+  CHECK(req[0] == kWriteTo || req[0] == kAddTo)
+      << "Rollaxis Backward does not support inplace";
   const NumpyRollaxisParam& param = nnvm::get<NumpyRollaxisParam>(attrs.parsed);
   int axis_origin = param.axis;
   int start_origin = param.start;
@@ -805,11 +855,17 @@ void NumpyRollaxisBackward(const nnvm::NodeAttrs &attrs,
     axis = start_origin;
     start = axis_origin + 1;
   }
-  mxnet::TShape axes;
-  axes = NumpyRollaxisShapeImpl(axis, start, inputs[0].ndim());
-  MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, Dtype, {
-    TransposeImpl<xpu>(ctx.run_ctx, inputs[0], outputs[0], axes);
-  })
+  mxnet::TShape axes = NumpyRollaxisShapeImpl(axis, start, inputs[0].ndim());
+
+  mshadow::Tensor<xpu, 1, dim_t> workspace =
+    GetTransposeExWorkspace<xpu>(ctx, axes);
+  if (req[0] == kAddTo) {
+    TransposeExImpl<xpu, true>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
+  } else {
+    TransposeExImpl<xpu, false>(ctx.run_ctx, inputs[0], outputs[0],
+        axes, workspace);
+  }
 }
 
 struct NumpyRot90Param : public dmlc::Parameter<NumpyRot90Param> {
@@ -1153,7 +1209,7 @@ void NumpyConcatenateForward(const nnvm::NodeAttrs& attrs,
   ConcatParam cparam;
   cparam.num_args = param.num_args;
   cparam.dim = param.axis.has_value() ? param.axis.value() : 0;
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
     ConcatOp<xpu, DType> op;
     op.Init(cparam);
     op.Forward(ctx, data, req, outputs);
@@ -1186,7 +1242,7 @@ void NumpyConcatenateBackward(const nnvm::NodeAttrs& attrs,
   ConcatParam cparam;
   cparam.num_args = param.num_args;
   cparam.dim = param.axis.has_value() ? param.axis.value() : 0;
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+  MSHADOW_TYPE_SWITCH_WITH_BOOL(inputs[0].type_flag_, DType, {
     ConcatOp<xpu, DType> op;
     op.Init(cparam);
     op.Backward(ctx, inputs[0], req, data);
@@ -1632,6 +1688,11 @@ struct NumpyDiagflatParam : public dmlc::Parameter<NumpyDiagflatParam> {
       .describe("Diagonal in question. The default is 0. "
                 "Use k>0 for diagonals above the main diagonal, "
                 "and k<0 for diagonals below the main diagonal. ");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream k_s;
+    k_s << k;
+    (*dict)["k"] = k_s.str();
   }
 };
 

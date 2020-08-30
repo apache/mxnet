@@ -48,6 +48,7 @@ MXNET_REGISTER_API("_npi.normal")
       num_inputs = 1;
       param.loc = args[0].operator double();
       param.scale = dmlc::nullopt;
+      inputs.push_back(args[1].operator mxnet::NDArray*());
     }
   } else {
     if (args[1].type_code() == kDLFloat || args[1].type_code() == kDLInt) {
@@ -55,28 +56,28 @@ MXNET_REGISTER_API("_npi.normal")
       num_inputs = 1;
       param.loc = dmlc::nullopt;
       param.scale = args[1].operator double();
+      inputs.push_back(args[0].operator mxnet::NDArray*());
     } else {
       // nither 'loc' or 'scale' is numeric types
       num_inputs = 2;
+      inputs.push_back(args[0].operator mxnet::NDArray*());
+      inputs.push_back(args[1].operator mxnet::NDArray*());
     }
   }
-  for (int i = 0; i < num_inputs; ++i) {
-    inputs.push_back(args[i].operator mxnet::NDArray*());
-  }
   if (args[2].type_code() == kNull) {
-    param.size = dmlc::optional<mxnet::Tuple<int>>();
+    param.size = dmlc::optional<mxnet::Tuple<index_t>>();
   } else if (args[2].type_code() == kDLInt ||
              args[2].type_code() == kDLFloat) {
-    param.size = Tuple<int>(1, args[2].operator int64_t());
+    param.size = Tuple<index_t>(1, args[2].operator int64_t());
   } else {
-    param.size = Tuple<int>(args[2].operator ObjectRef());
+    param.size = Tuple<index_t>(args[2].operator ObjectRef());
   }
   if (args[4].type_code() == kNull) {
-    param.dtype = mshadow::kFloat32;
+    param.dtype = mxnet::common::GetDefaultDtype();
   } else {
     param.dtype = String2MXNetTypeWithBool(args[4].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   if (args[3].type_code() != kNull) {
     attrs.dict["ctx"] = args[3].operator std::string();
@@ -85,7 +86,8 @@ MXNET_REGISTER_API("_npi.normal")
   NDArray** outputs = out == nullptr ? nullptr : &out;
   int num_outputs = out != nullptr;
   SetAttrDict<op::NumpyNormalParam>(&attrs);
-  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(), &num_outputs, outputs);
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs.data(),
+                          &num_outputs, outputs);
   if (out) {
     *ret = PythonArg(5);
   } else {

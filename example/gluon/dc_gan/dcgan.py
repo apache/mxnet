@@ -143,20 +143,20 @@ def get_dataset(dataset_name):
     # mnist
     if dataset == "mnist":
         train_data = gluon.data.DataLoader(
-            gluon.data.vision.MNIST('./data', train=True, transform=transformer),
+            gluon.data.vision.MNIST('./data', train=True).transform(transformer),
             batch_size, shuffle=True, last_batch='discard')
 
         val_data = gluon.data.DataLoader(
-            gluon.data.vision.MNIST('./data', train=False, transform=transformer),
+            gluon.data.vision.MNIST('./data', train=False).transform(transformer),
             batch_size, shuffle=False)
     # cifar10
     elif dataset == "cifar10":
         train_data = gluon.data.DataLoader(
-            gluon.data.vision.CIFAR10('./data', train=True, transform=transformer),
+            gluon.data.vision.CIFAR10('./data', train=True).transform(transformer),
             batch_size, shuffle=True, last_batch='discard')
 
         val_data = gluon.data.DataLoader(
-            gluon.data.vision.CIFAR10('./data', train=False, transform=transformer),
+            gluon.data.vision.CIFAR10('./data', train=False).transform(transformer),
             batch_size, shuffle=False)
 
     return train_data, val_data
@@ -259,7 +259,7 @@ def main():
     real_label = mx.nd.ones((opt.batch_size,), ctx=ctx)
     fake_label = mx.nd.zeros((opt.batch_size,), ctx=ctx)
 
-    metric = mx.metric.Accuracy()
+    metric = mx.gluon.metric.Accuracy()
     print('Training... ')
     stamp = datetime.now().strftime('%Y_%m_%d-%H_%M')
 

@@ -62,8 +62,6 @@ set(USE_TVM_OP OFF CACHE BOOL "Enable use of TVM operator build system.")
 # set(CMAKE_CXX_COMPILER "" CACHE BOOL "C++ compiler")
 # set(CMAKE_CUDA_COMPILER "" CACHE BOOL "Cuda compiler (nvcc)")
 
-# Uncomment the following line to compile with debug information
-# set(CMAKE_BUILD_TYPE Debug CACHE STRING "CMake build type")
 
 #---------------------------------------------
 # CPU instruction sets: The support is autodetected if turned ON
@@ -128,5 +126,4 @@ set(USE_INT64_TENSOR_SIZE OFF CACHE BOOL "Use int64_t to represent the total num
 # Other GPU features
 set(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
 set(NCCL_ROOT "" CACHE BOOL "NCCL install path. Supports autodetection.")
-set(ENABLE_CUDA_RTC ON CACHE BOOL "Build with CUDA runtime compilation support")
 set(USE_NVTX ON CACHE BOOL "Build with NVTX support")

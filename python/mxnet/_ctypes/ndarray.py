@@ -24,7 +24,7 @@ import ctypes
 
 from ..base import _LIB
 from ..base import c_str_array, c_handle_array
-from ..base import NDArrayHandle, CachedOpHandle
+from ..base import NDArrayHandle, CachedOpHandle, SymbolHandle
 from ..base import check_call
 from .. import _global_var
 
@@ -79,7 +79,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op, output_is_list
     # a handle's stype in _ndarray_cls
     out_stypes = ctypes.POINTER(ctypes.c_int)()
 
-    check_call(_LIB.MXImperativeInvokeEx(
+    check_call(_LIB.MXImperativeInvoke(
         ctypes.c_void_p(handle),
         ctypes.c_int(len(ndargs)),
         c_handle_array(ndargs),
@@ -105,26 +105,42 @@ class CachedOp(object):
     """Cached operator handle."""
     __slots__ = ["handle", "is_np_sym", "_monitor_callback"]
 
-    def __init__(self, sym, flags=()):
+    def __init__(self, sym, flags=(), thread_safe=False):
         self.handle = CachedOpHandle()
         self._monitor_callback = None
 
         from ..symbol.numpy._symbol import _Symbol
         self.is_np_sym = bool(isinstance(sym, _Symbol))
 
-        check_call(_LIB.MXCreateCachedOpEx(
+        check_call(_LIB.MXCreateCachedOp(
             sym.handle,
             len(flags),
             c_str_array([key for key, _ in flags]),
             c_str_array([str(val) for _, val in flags]),
-            ctypes.byref(self.handle)))
+            ctypes.byref(self.handle),
+            ctypes.c_bool(thread_safe)))
 
     def __del__(self):
         check_call(_LIB.MXFreeCachedOp(self.handle))
 
+    def get_optimized_symbol(self):
+        """Get an optimized version of the symbol from the cached op.
+
+        Returns
+        -------
+        symbol : Symbol
+            Optimized symbol from the executor.
+        """
+        from ..symbol import Symbol
+        sym_handle = SymbolHandle()
+        check_call(_LIB.MXCachedOpGetOptimizedSymbol(self.handle, ctypes.byref(sym_handle)))
+        ret = Symbol(sym_handle)
+        return ret
+
     def __call__(self, *args, **kwargs):
         """ctypes implementation of imperative invoke wrapper"""
         out = kwargs.pop('out', None)
+        default_ctx = kwargs.pop('default_ctx', None)
         if out is not None:
             original_output = out
             if isinstance(out, NDArrayBase):
@@ -145,10 +161,19 @@ class CachedOp(object):
         # a handle's stype in _ndarray_cls
         out_stypes = ctypes.POINTER(ctypes.c_int)()
 
-        check_call(_LIB.MXInvokeCachedOpEx(
+        # (None, ) -> []
+        if len(args) == 1 and args[0] is None:
+            args = []
+            assert default_ctx is not None, 'default_ctx is required if no input is provided'
+        else:
+            default_ctx = args[0].ctx if default_ctx is None else default_ctx
+
+        check_call(_LIB.MXInvokeCachedOp(
             self.handle,
             ctypes.c_int(len(args)),
             c_handle_array(args),
+            ctypes.c_int(default_ctx.device_typeid),
+            ctypes.c_int(default_ctx.device_id),
             ctypes.byref(num_output),
             ctypes.byref(output_vars),
             ctypes.byref(out_stypes)))

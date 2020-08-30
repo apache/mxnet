@@ -32,6 +32,7 @@ BF16_FP32_FUNCS = [
     'abs',
     '_add',
     'BatchNorm',
+    'BatchNormWithReLU',
     'clip',
     'Concat',
     'concat',
@@ -47,7 +48,8 @@ BF16_FP32_FUNCS = [
 
 # Functions that when running with Bfloat16, the params that still need float32.
 BF16_USE_FP32_PARAMS = {
-    'BatchNorm': ["", "gamma", "beta", "moving_mean", "moving_var"]
+    'BatchNormWithReLU': ["", "gamma", "beta", "moving_mean", "moving_var"],
+    'BatchNorm': ["", "gamma", "beta", "moving_mean", "moving_var"],
 }
 
 # Functions that have to be cast to FP32 due to possible
@@ -55,7 +57,6 @@ BF16_USE_FP32_PARAMS = {
 FP32_FUNCS = [
     'Deconvolution',
     'RNN',
-    'BatchNorm_v1',
     'BilinearSampler',
     'BlockGrad',
     'Cast',
@@ -107,7 +108,6 @@ FP32_FUNCS = [
     '_cond',
     '_contrib_AdaptiveAvgPooling2D',
     '_contrib_BilinearResize2D',
-    '_contrib_SparseEmbedding',
     '_contrib_bipartite_matching',
     '_contrib_dequantize',
     '_contrib_div_sqrt_dim',
@@ -115,7 +115,6 @@ FP32_FUNCS = [
     '_contrib_getnnz',
     '_contrib_gradientmultiplier',
     '_contrib_group_adagrad_update',
-    '_contrib_ifft',
     '_contrib_index_array',
     '_contrib_index_copy',
     '_contrib_quadratic',
@@ -476,7 +475,6 @@ FP32_FUNCS = [
     'topk',
 
     # Neural network
-    'SoftmaxOutput',
     'softmax',
     'Softmax',
     'log_softmax',
@@ -485,13 +483,6 @@ FP32_FUNCS = [
     'GroupNorm',
     'L2Normalization',
     'SoftmaxActivation',
-    'LinearRegressionOutput',
-    'LogisticRegressionOutput',
-    'MAERegressionOutput',
-    '_sparse_LinearRegressionOutput',
-    '_sparse_LogisticRegressionOutput',
-    '_sparse_MAERegressionOutput',
-    'SVMOutput',
     'softmax_cross_entropy',
     'smooth_l1',
     'MakeLoss',
@@ -628,8 +619,4 @@ WIDEST_TYPE_CASTS = [
     ]
 
 LOSS_OUTPUT_FUNCTIONS = [
-    'SoftmaxOutput',
-    'LinearRegressionOutput',
-    'LogisticRegressionOutput',
-    'MAERegressionOutput',
     ]

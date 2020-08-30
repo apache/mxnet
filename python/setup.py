@@ -30,7 +30,7 @@ if "--inplace" in sys.argv:
 else:
     from setuptools import setup
     from setuptools.extension import Extension
-    kwargs = {'install_requires': ['numpy>1.16.0,<2.0.0', 'requests>=2.20.0,<3', 'graphviz<0.9.0,>=0.8.1'], 'zip_safe': False}
+    kwargs = {'install_requires': ['numpy>=1.17', 'requests>=2.20.0,<3', 'graphviz<0.9.0,>=0.8.1', 'contextvars;python_version<"3.7"'], 'zip_safe': False}
 
 with_cython = False
 if '--with-cython' in sys.argv:
@@ -131,15 +131,11 @@ setup(name='mxnet',
           'Intended Audience :: Education',
           'Intended Audience :: Science/Research',
           'License :: OSI Approved :: Apache Software License',
-          'Programming Language :: C++',
           'Programming Language :: Cython',
-          'Programming Language :: Other',  # R, Scala
-          'Programming Language :: Perl',
           'Programming Language :: Python',
-          'Programming Language :: Python :: 2.7',
-          'Programming Language :: Python :: 3.4',
-          'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
+          'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
           'Programming Language :: Python :: Implementation :: CPython',
           'Topic :: Scientific/Engineering',
           'Topic :: Scientific/Engineering :: Artificial Intelligence',

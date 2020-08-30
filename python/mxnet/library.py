@@ -20,16 +20,20 @@
 import ctypes
 import sys
 import os
-from .base import _LIB, check_call, MXNetError, _init_op_module
+from .base import _LIB, check_call, MXNetError, _init_op_module, mx_uint
 from .ndarray.register import _make_ndarray_function
 from .symbol.register import _make_symbol_function
 
-def load(path):
+def load(path, verbose=True):
     """Loads library dynamically.
 
     Parameters
     ---------
-    path : Path to library .so/.dll file
+    path : string
+        Path to library .so/.dll file
+
+    verbose : boolean
+        defaults to True, set to False to avoid printing library info
 
     Returns
     ---------
@@ -46,9 +50,10 @@ def load(path):
     if not file_ext in ['.so', '.dll']:
         raise MXNetError("load path %s is NOT a library file" % path)
 
+    verbose_val = 1 if verbose else 0
     byt_obj = path.encode('utf-8')
     chararr = ctypes.c_char_p(byt_obj)
-    check_call(_LIB.MXLoadLib(chararr))
+    check_call(_LIB.MXLoadLib(chararr, mx_uint(verbose_val)))
 
     #regenerate operators
     _init_op_module('mxnet', 'ndarray', _make_ndarray_function)
@@ -67,3 +72,24 @@ def load(path):
     for op in dir(mx_sym_op):
         func = getattr(mx_sym_op, op)
         setattr(mx_sym, op, func)
+
+
+def compiled_with_gcc_cxx11_abi():
+    """Check if the library is compiled with _GLIBCXX_USE_CXX11_ABI.
+
+    Please see
+    https://gcc.gnu.org/onlinedocs/libstdc++/manual/using_dual_abi.html for
+    more information. When building libraries relying on MXNet C++ headers, it
+    is required to use the same C++ ABI in the library as well as in libmxnet.
+
+    Returns
+    -------
+    int
+        1 If compiled with _GLIBCXX_USE_CXX11_ABI=1
+        0 If compiled with _GLIBCXX_USE_CXX11_ABI=0
+       -1 If compiled with a compiler that does not support _GLIBCXX_USE_CXX11_ABI
+
+    """
+    ret = ctypes.c_int()
+    check_call(_LIB.MXLibInfoCompiledWithCXX11ABI(ctypes.byref(ret)))
+    return ret.value

@@ -36,11 +36,11 @@ MXNET_REGISTER_API("_npi.powerd")
   nnvm::NodeAttrs attrs;
   attrs.op = op;
   if (args[1].type_code() == kDLInt) {
-      param.size = Tuple<int>(1, args[1].operator int64_t());
+      param.size = Tuple<index_t>(1, args[1].operator int64_t());
   } else if (args[1].type_code() == kNull) {
       param.size = dmlc::nullopt;
   } else {
-      param.size = Tuple<int>(args[1].operator ObjectRef());
+      param.size = Tuple<index_t>(args[1].operator ObjectRef());
   }
   if (args[2].type_code() != kNull) {
     attrs.dict["ctx"] = args[2].operator std::string();
@@ -58,7 +58,7 @@ MXNET_REGISTER_API("_npi.powerd")
     inputs[0] = args[0].operator mxnet::NDArray*();
     num_inputs = 1;
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   SetAttrDict<op::NumpyPowerParam>(&attrs);
   auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs,
                           &num_outputs, outputs);

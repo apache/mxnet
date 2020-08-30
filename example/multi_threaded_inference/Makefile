@@ -19,7 +19,6 @@
 CFLAGS=-std=c++17 -g -Wno-unknown-pragmas -Wall -DMXNET_USE_CUDA=1 -DMXNET_USE_CUDNN=1 -DMXNET_USE_MKLDNN=1
 
 export MXNET_ROOT = `pwd`/../..
-export CPP_PACKAGE = $(MXNET_ROOT)/cpp-package
 
 CFLAGS += `pkg-config --cflags opencv`
 LDFLAGS += `pkg-config --libs opencv`
@@ -42,7 +41,7 @@ ifndef MKLDNN_INCLUDE_DIR
     #export MKLDNN_INCLUDE_DIR = $(MXNET_ROOT)/3rdparty/mkldnn/include
 endif
 
-CFLAGS += -I$(MXNET_ROOT)/include -I$(CPP_PACKAGE)/include -I$(USE_CUDA_PATH)/include -I$(MKLDNN_INCLUDE_DIR) -I$(MKLDNN_BUILD_DIR)/include
+CFLAGS += -I$(MXNET_ROOT)/include -I$(USE_CUDA_PATH)/include -I$(MKLDNN_INCLUDE_DIR) -I$(MKLDNN_BUILD_DIR)/include
 
 # If MXNET_LIB_DIR env variable set use that, otherwise defaults to MXNET_ROOT/build
 ifndef MXNET_LIB_DIR

@@ -25,6 +25,7 @@
 #include <mxnet/runtime/packed_func.h>
 #include "../utils.h"
 #include "../ufunc_helper.h"
+#include "../../../operator/tensor/elemwise_unary_op.h"
 
 namespace mxnet {
 
@@ -89,5 +90,41 @@ MXNET_REGISTER_UNARY_API(tanh);
 MXNET_REGISTER_UNARY_API(arcsinh);
 MXNET_REGISTER_UNARY_API(arccosh);
 MXNET_REGISTER_UNARY_API(arctanh);
+
+MXNET_REGISTER_API("_npi.around")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_around");
+  nnvm::NodeAttrs attrs;
+  op::AroundParam param;
+  param.decimals = args[1].operator int64_t();
+  attrs.parsed = param;
+  attrs.op = op;
+  SetAttrDict<op::AroundParam>(&attrs);
+  int num_inputs = 1;
+  NDArray* inputs[] = {args[0].operator mxnet::NDArray*()};
+  NDArray* out = args[2].operator mxnet::NDArray*();
+  NDArray** outputs = out == nullptr ? nullptr : &out;
+  int num_outputs = out != nullptr;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, outputs);
+  if (out) {
+    *ret = PythonArg(2);
+  } else {
+    *ret = ndoutputs[0];
+  }
+});
+
+MXNET_REGISTER_API("_npi.copy")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_copy");
+  nnvm::NodeAttrs attrs;
+  attrs.op = op;
+  NDArray* inputs[] = {args[0].operator NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
+});
 
 }  // namespace mxnet
