@@ -19,15 +19,15 @@ RewriteOptions AllowNoSlash
 
   # Web fonts
   ExpiresByType application/font-woff     "access plus 1 month"
-  
+
 </IfModule>
 
-# Set default website version to current stable (v1.6)
+# Set default website version to current stable (v1.7)
 RewriteCond %{REQUEST_URI} !^/versions/
 RewriteCond %{HTTP_REFERER} !mxnet.apache.org
 RewriteCond %{HTTP_REFERER} !mxnet.incubator.apache.org
 RewriteCond %{HTTP_REFERER} !mxnet.cdn.apache.org
-RewriteRule ^(.*)$ /versions/1.6/$1 [r=307,L]
+RewriteRule ^(.*)$ /versions/1.7/$1 [r=307,L]
 
 # Redirect Chinese visitors to Chinese CDN, temporary solution for slow site speed in China
 RewriteCond %{ENV:GEOIP_COUNTRY_CODE} ^CN$
