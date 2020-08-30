@@ -25,9 +25,9 @@ __all__ = ['Conv1DRNNCell', 'Conv2DRNNCell', 'Conv3DRNNCell',
 
 from math import floor
 
-from ....base import numeric_types
-from ...rnn import HybridRecurrentCell
-from ...parameter import Parameter
+from ...base import numeric_types
+from .rnn_cell import HybridRecurrentCell
+from ..parameter import Parameter
 
 
 def _get_conv_out_size(dimensions, kernels, paddings, dilations):

@@ -25,7 +25,6 @@ import os
 from ....context import cpu
 from ...block import HybridBlock
 from ... import nn
-from ...contrib.nn import HybridConcurrent, Identity
 from .... import base
 
 # Helpers
@@ -46,8 +45,8 @@ def _make_dense_layer(growth_rate, bn_size, dropout):
     if dropout:
         new_features.add(nn.Dropout(dropout))
 
-    out = HybridConcurrent(axis=1)
-    out.add(Identity())
+    out = nn.HybridConcatenate(axis=1)
+    out.add(nn.Identity())
     out.add(new_features)
 
     return out

@@ -93,9 +93,9 @@ def test_lstmp():
     weights = {k: rand_ndarray(v) for k, v in shapes.items()}
     lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
                                 input_size=input_size)
-    lstm_cell = gluon.contrib.rnn.LSTMPCell(hidden_size=hidden_size,
-                                            projection_size=projection_size,
-                                            input_size=input_size)
+    lstm_cell = gluon.rnn.LSTMPCell(hidden_size=hidden_size,
+                                    projection_size=projection_size,
+                                    input_size=input_size)
     lstm_layer.initialize(ctx=ctx)
     lstm_cell.initialize(ctx=ctx)
     layer_params = lstm_layer.collect_params()
@@ -351,9 +351,9 @@ def test_global_norm_clip_multi_device():
 def _check_batchnorm_result(input, num_devices=1, cuda=False):
     from mxnet.gluon.utils import split_and_load
     def _find_bn(module):
-        if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+        if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.nn.SyncBatchNorm)):
             return module
-        elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+        elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.nn.SyncBatchNorm)):
             return module.module
 
         raise RuntimeError('BN not found')
@@ -376,7 +376,7 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
 
     nch = input.shape[1]
     bn1 = mx.gluon.nn.BatchNorm(in_channels=nch)
-    bn2 = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=nch, num_devices=num_devices)
+    bn2 = mx.gluon.nn.SyncBatchNorm(in_channels=nch, num_devices=num_devices)
 
     bn1.initialize(ctx=ctx_list[0])
     bn2.initialize(ctx=ctx_list)
