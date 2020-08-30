@@ -356,7 +356,20 @@ class SubgraphProperty {
   virtual void ConnectSubgraphInputs(const nnvm::ObjectPtr subgraph_node,
                                      std::vector<nnvm::NodeEntry*>* input_entries,
                                      std::vector<nnvm::NodeEntry>* orig_input_entries) const {
-    subgraph_node->inputs = *orig_input_entries;
+    // connect unique inputs
+    unordered_set<std::string> name_count_map;
+    for(size_t i = 0; i< orig_input_entries.size(); ++i) {
+      //get name
+      nnvm::Symbol sym;
+      sym.outputs.push_back(orig_input_entries[i]);
+      const auto output_names = sym.ListOutputNames();
+      CHECK_EQ(output_names.size(), 1U);
+      const std::string& var_name = output_names[0];
+      
+      //only add node once
+      if(name_count_map.count(var_name) == 0)
+        subgraph_node->inputs.push_back(orig_input_entries[i]);
+    }
   }
   /*!
    * \brief Initialize subgraph internal inputs with external input entries.
