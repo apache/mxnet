@@ -8431,8 +8431,8 @@ def test_np_pad():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol = rtol, atol = atol)
 
             # test gradient
-            mx_out.backward()
-            np_backward = np.ones(shape)
+            mx_out.backward(x)
+            np_backward = x
             assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
 
             # test imperative once again
