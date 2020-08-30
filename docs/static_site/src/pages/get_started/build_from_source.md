@@ -74,11 +74,11 @@ sudo apt-get install -y build-essential git ninja-build ccache libopenblas-dev l
 sudo yum install epel-release centos-release-scl
 sudo yum install git make ninja-build automake autoconf libtool protobuf-compiler protobuf-devel \
     atlas-devel openblas-devel lapack-devel opencv-devel openssl-devel zeromq-devel python3 \ 
-    devtoolset-9
+    devtoolset-8
 source /opt/rh/devtoolset-7/enable
 ```
-Here `devtoolset-9` refers to the [Developer Toolset
-9](https://www.softwarecollections.org/en/scls/rhscl/devtoolset-9/) created by
+Here `devtoolset-8` refers to the [Developer Toolset
+8](https://www.softwarecollections.org/en/scls/rhscl/devtoolset-8/) created by
 Red Hat for developers working on CentOS or Red Hat Enterprise Linux platform
 and providing the GNU Compiler Collection 9.
 
