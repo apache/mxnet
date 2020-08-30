@@ -53,15 +53,6 @@ Features
 * Support for [Python](https://mxnet.apache.org/api/python), [Java](https://mxnet.apache.org/api/java), [C++](https://mxnet.apache.org/api/cpp), [R](https://mxnet.apache.org/api/r), [Scala](https://mxnet.apache.org/api/scala), [Clojure](https://mxnet.apache.org/api/clojure), [Go](https://github.com/jdeng/gomxnet/), [Javascript](https://github.com/dmlc/mxnet.js/), [Perl](https://mxnet.apache.org/api/perl), and [Julia](https://mxnet.apache.org/api/julia)
 * Cloud-friendly and directly compatible with AWS and Azure.
 
-### Ecosystem Features
-
-* [MKLDNN for Faster CPU Performance](docs/python_docs/python/tutorials/performance/backend/mkldnn/mkldnn_readme.md)
-* [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
-* [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
-* [MXNet.js: Javascript Package for Deep Learning in Browser (without server)](https://github.com/dmlc/mxnet.js/)
-* [Guide to Creating New Operators (Layers)](https://mxnet.apache.org/api/faq/new_op)
-* [Go binding for inference](https://github.com/songtianyi/go-mxnet-predictor)
-
 Contents
 --------
 * [Installation](https://mxnet.apache.org/get_started)
@@ -93,6 +84,15 @@ What's New
 * [0.9.3 Release](./docs/architecture/release_note_0_9.md) - First 0.9 official release.
 * [0.9.1 Release (NNVM refactor)](./docs/architecture/release_note_0_9.md) - NNVM branch is merged into master now. An official release will be made soon.
 * [0.8.0 Release](https://github.com/dmlc/mxnet/releases/tag/v0.8.0)
+
+### Ecosystem News
+
+* [MKLDNN for Faster CPU Performance](docs/python_docs/python/tutorials/performance/backend/mkldnn/mkldnn_readme.md)
+* [MXNet Memory Monger, Training Deeper Nets with Sublinear Memory Cost](https://github.com/dmlc/mxnet-memonger)
+* [Tutorial for NVidia GTC 2016](https://github.com/dmlc/mxnet-gtc-tutorial)
+* [MXNet.js: Javascript Package for Deep Learning in Browser (without server)](https://github.com/dmlc/mxnet.js/)
+* [Guide to Creating New Operators (Layers)](https://mxnet.apache.org/api/faq/new_op)
+* [Go binding for inference](https://github.com/songtianyi/go-mxnet-predictor)
 
 Stay Connected
 --------------
