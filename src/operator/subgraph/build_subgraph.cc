@@ -537,7 +537,7 @@ void FindOutputEntries(nnvm::Graph* g,
  */
 void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
                     std::vector<nnvm::NodeEntry> *orig_entries,
-                    std::vector<nnvm::NodeEntry*> *unique_inputs
+                    std::vector<nnvm::NodeEntry> *unique_inputs,
                     const bool skip_var = false) {
   orig_entries->resize(input_entries.size());
   // map for creating unique var nodes for deduplicating entries from the same node
@@ -558,7 +558,7 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
     auto it = name_count_map.find(var_name);
     if (name_count_map.end() == it) {
       // first use of this node as input to subgraph
-      unique_inputs.push_back(e);
+      unique_inputs->push_back(*e);
       nnvm::ObjectPtr n = nnvm::CreateVariableNode(var_name + std::to_string(0));
       *e = nnvm::NodeEntry{n, 0, 0};
       // store node for re-use
@@ -599,7 +599,7 @@ void CreateSubgraphNode(nnvm::Graph* g,
   std::vector<nnvm::NodeEntry*> input_entries;
   FindInputEntries(*g, simple_nodes, subgraph_nodes, *entry_top_order_map, &input_entries);
   std::vector<nnvm::NodeEntry> orig_input_entries;
-  std::vector<nnvm::NodeEntry*> unique_inputs;
+  std::vector<nnvm::NodeEntry> unique_inputs;
   CutGraphInputs(input_entries, &orig_input_entries, &unique_inputs, false);
 #if DEBUG_SUBGRAPH
   PrintNodeEntries(input_entries);
