@@ -35,8 +35,8 @@ import pytest
 from itertools import zip_longest
 
 @pytest.fixture(scope="session")
-def cifar10(tmpdir):
-    path = str(tmpdir)
+def cifar10(tmpdir_factory):
+    path = str(tmpdir_factory.mktemp('cifar'))
     get_cifar10(path)
     return path
 
