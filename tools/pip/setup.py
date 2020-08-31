@@ -157,9 +157,12 @@ if platform.system() == 'Linux':
     if os.path.exists(os.path.join(libdir, 'libgfortran.so.3')):
         shutil.copy(os.path.join(libdir, 'libgfortran.so.3'), mxdir)
         package_data['mxnet'].append('mxnet/libgfortran.so.3')
-    else:
+    elif os.path.exists(os.path.join(libdir, 'libgfortran.so.4')):
         shutil.copy(os.path.join(libdir, 'libgfortran.so.4'), mxdir)
         package_data['mxnet'].append('mxnet/libgfortran.so.4')
+    else:
+        shutil.copy(os.path.join(libdir, 'libgfortran.so.5'), mxdir)
+        package_data['mxnet'].append('mxnet/libgfortran.so.5')
     shutil.copy(os.path.join(libdir, 'libquadmath.so.0'), mxdir)
     package_data['mxnet'].append('mxnet/libquadmath.so.0')
     if os.path.exists(os.path.join(libdir, 'libopenblas.so.0')):
