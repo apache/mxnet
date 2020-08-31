@@ -160,10 +160,6 @@ class Dense(HybridBlock):
     created by the layer, and `bias` is a bias vector created by the layer
     (only applicable if `use_bias` is `True`).
 
-    .. note::
-        the input must be a tensor with rank 2. Use `flatten` to convert it
-        to rank 2 manually if necessary.
-
     Parameters
     ----------
     units : int

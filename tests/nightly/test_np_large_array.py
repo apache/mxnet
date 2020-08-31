@@ -29,7 +29,8 @@ from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, d
 from mxnet import gluon, np, npx
 from common import with_seed
 import pytest
-
+from tests.python.unittest.common import assertRaises
+from mxnet.base import MXNetError
 
 # dimension constants
 MEDIUM_X = 10000
@@ -559,6 +560,17 @@ def test_random_randint():
     A = np.random.randint(low=0, high=5, size=(2, 2**31))
     assert A[0][0] < 5 and A[0][0] >= 0
 
+@use_np
+def test_slice_assign():
+    # test _slice_assign
+    A = np.zeros((INT_OVERFLOW, 2))
+    A[-1] = np.ones((1))
+    assert A[-1, 0] == 1 and A[-1, 1] == 1
+    # test _slice_assign_scalar
+    B = np.zeros((INT_OVERFLOW, 2))
+    B[-1] = 2
+    assert B[-1, 0] == 2 and B[-1, 1] == 2
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
@@ -670,15 +682,16 @@ def test_batch_norm():
     assert A.grad[0][0] == 0
 
 @use_np
-@pytest.mark.skip(reason='segfault on (2, large)')
 def test_nonzero():
     A = np.zeros((2, INT_OVERFLOW))
-    A[0][0] = 1
+    A[0, 1] = 1
+    A[0, -2] = 1
     A.attach_grad()
     with mx.autograd.record():
         B = npx.nonzero(A)
-    assert B.shape == (1, 2)
-    assert B[0][0] == 0
+    assert B.shape == (2, 2)
+    assert B[0, 0] == 0 and B[0, 1] == 1
+    assert B[1, 0] == 0 and B[1, 1] == int(INT_OVERFLOW - 2)
     B.backward()
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
@@ -875,47 +888,88 @@ def test_digamma():
                 rtol=1e-3, atol=1e-5)
 
 @use_np
-@pytest.mark.skip(reason='broken on large tensors; also backward errors out')
-def test_rnn():
-    def batch_check(x, modes, params):
-        for m, p in zip(modes, params):
-            #x.attach_grad()
-            #with mx.autograd.record():
-            y = npx.rnn(data=x, parameters=p, mode=m, \
-                state=np.random.normal(0, 1, (1, 4, 1)), \
-                state_size=1, num_layers=1)
-            assert y.shape == (INT_OVERFLOW, 4, 1)
-            assert type(y).__name__ == 'ndarray'
-            #y.backward()
-            #assert x.grad.shape == x.shape
-            #assert type(x.grad[0]).__name__ == 'ndarray'
-    data = np.random.normal(0, 1, (INT_OVERFLOW, 4, 4))
-    modes = ['rnn_relu', 'rnn_tanh', 'gru']
-    params = [np.random.normal(0, 1, (7,)), \
-        np.random.normal(0, 1, (7,)), \
-        np.random.normal(0, 1, (21,))]
-    batch_check(data, modes, params)
-    # check lstm seperately because it has an extra param
-    out = npx.rnn(data=data, parameters=np.random.normal(0, 1, (28,)), \
-        mode='lstm', \
-        state=np.random.normal(0, 1, (1, 4, 1)), \
-        state_cell=np.random.normal(0, 1, (1, 4, 1)), \
-        state_size=1, num_layers=1)
-    assert out.shape == (INT_OVERFLOW, 4, 1)
-    assert type(out[0]).__name__ == 'ndarray'
+def test_rnn_dim_check():
+    L_SEQ, BAT, L_INP, L_STA = 2**31, 4, 2**10, 2
+    data = np.random.uniform(-1, 1, (L_SEQ, BAT, L_INP))
+    state = np.random.normal(0, 1, (1, BAT, L_STA))
+    params = np.random.normal(0, 1, (2056,))
+    assertRaises(ValueError, npx.rnn, data=data, parameters=params, \
+        mode='rnn_relu', state=state, state_size=L_STA, num_layers=1)
+
 
 @use_np
-@pytest.mark.skip(reason='backward errors out')
+def test_rnn_vanilla():
+    L_SEQ, BAT, L_INP, L_STA = 2**20, 4, 2**10, 2
+    def batch_check(x, modes, params):
+        state = np.random.normal(0, 1, (1, BAT, L_STA))
+        for m, p in zip(modes, params):
+            x.attach_grad()
+            with mx.autograd.record():
+                y = npx.rnn(data=x, parameters=p, mode=m, \
+                    state=state, state_size=L_STA, num_layers=1)
+            assert y.shape == (L_SEQ, BAT, L_STA)
+            y.backward()
+            npx.waitall()
+    data = np.random.uniform(-1, 1, (L_SEQ, BAT, L_INP))
+    modes = ['rnn_tanh', 'rnn_relu']
+    params = [np.random.normal(0, 1, (2056,)), \
+        np.random.normal(0, 1, (2056,))]
+    batch_check(data, modes, params)
+
+
+@use_np
+def test_rnn_gru():
+    L_SEQ, BAT, L_INP, L_STA = 2**20, 4, 2**10, 2
+    data = np.random.uniform(-1, 1, (L_SEQ, BAT, L_INP))
+    state = np.random.normal(0, 1, (1, BAT, L_STA))
+    params = np.random.normal(0, 1, (6168,))
+    data.attach_grad()
+    with mx.autograd.record():
+        out = npx.rnn(data=data, parameters=params, mode='gru', \
+            state=state, state_size=L_STA, num_layers=1)
+    assert out.shape == (L_SEQ, BAT, L_STA)
+    out.backward()
+    npx.waitall()
+
+
+@use_np
+def test_rnn_lstm():
+    L_SEQ, BAT, L_INP, L_STA= 2**20, 4, 2**10, 2
+    data = np.random.uniform(-1, 1, (L_SEQ, BAT, L_INP))
+    state = np.random.normal(0, 1, (1, BAT, L_STA))
+    state_cell = np.random.normal(0, 1, (1, BAT, L_STA))
+    params = np.random.normal(0, 1, (8224,))
+    data.attach_grad()
+    with mx.autograd.record():
+        out = npx.rnn(data=data, parameters=params, mode='lstm', \
+            state=state, state_size=L_STA, state_cell=state_cell, num_layers=1)
+    assert out.shape == (L_SEQ, BAT, L_STA)
+    out.backward()
+    npx.waitall()
+
+
+@use_np
 def test_ctc_loss():
-    A = np.ones((2, INT_OVERFLOW, 4))
+    def test_ctc_loss_size_check(A, label):
+        assertRaises(ValueError, npx.ctc_loss, A, label)
+    
+    L_SEQ, L_ALP, L_LAB, BAT = 2**10, 2**20, 2**6, 2
+    A = np.zeros((L_SEQ, BAT, L_ALP))
+    label = np.random.randint(0, L_ALP, (BAT, L_LAB))
+    # test for expected exception
+    test_ctc_loss_size_check(A, label)
+    # now we shrink the size a little bit and test for an allowed case
+    L_ALP = 2**20 - 1
+    A = np.zeros((L_SEQ, BAT, L_ALP))
+    label = np.random.randint(0, L_ALP, (BAT, L_LAB))
     A.attach_grad()
     with mx.autograd.record():
-        B = npx.ctc_loss(A, np.ones((INT_OVERFLOW, 2)))
-    assert B.shape == (INT_OVERFLOW, )
-    assert type(B).__name__ == 'ndarray'
+        B = npx.ctc_loss(A, label)
+    assert B.shape == (BAT, )
+    assert type(B[0]).__name__ == 'ndarray'
     B.backward()
-    assert A.grad.shape == (2, INT_OVERFLOW, 4)
-    assert A.grad[0][0][0] == 0
+    assert A.grad.shape == (L_SEQ, BAT, L_ALP)
+    assert type(A[0]).__name__ == 'ndarray'
 
 @use_np
 def test_erf():
@@ -1005,33 +1059,46 @@ def test_dlpack():
     assert C[0][100] == 101
 
 @use_np
-@pytest.mark.skip(reason='broken on large tensors')
-#TODO add 3d pooling test after large tensor is fixed
 def test_pooling():
-    A = np.ones((1, 2, INT_OVERFLOW))
-    A[0][0][2] = 100
+    def test_pooling_large_dim():
+        A = np.ones((1, 1, INT_OVERFLOW))
+        assertRaises(MXNetError, npx.pooling, data=A, kernel=(2), stride=(2), \
+                pool_type='max')
+    
+    test_pooling_large_dim()
+    D, H, W = 2**12, 2**10, 2**10
+    A = np.ones((1, 1, D, H ,W))
+    A[0, 0, 0, 0, 2] = 100
     A.attach_grad()
     with mx.autograd.record():
-        B = npx.pooling(data=A, kernel=(2), stride=2, pool_type='max')
-    assert B.shape == (1, 2, HALF_INT_OVERFLOW)
-    assert B[0][0][1] == 100
+        B = npx.pooling(data=A, kernel=(2, 2, 2), stride=(2, 2, 2), \
+                pool_type='max')
+    assert B.shape == (1, 1, int(D/2), int(H/2), int(W/2))
+    assert B[0, 0, 0, 0, 1] == 100
     B.backward()
-    assert A.grad.shape == (1, 2, INT_OVERFLOW)
-    assert A.grad[0][0][0] == 1
+    assert A.grad.shape == (1, 1, D, H, W)
+    assert A.grad[0, 0, 0, 0, 0] == 1
 
 @use_np
-@pytest.mark.skip(reason='forward gives wrong value on large tensor')
 def test_roi_pooling():
-    A = np.ones((1, 1, 5, INT_OVERFLOW))
-    A[0][0][0][2] = 100
-    roi = np.array([[0, 0, 0, 3, 3]])
+    def test_roi_pooling_large_dim():
+        A = np.ones((1, 1, INT_OVERFLOW, 5))
+        roi = np.array([[0, 0, 0, 5, 5]])
+        assertRaises(MXNetError, npx.roi_pooling, A, roi, pooled_size=(3, 3), \
+            spatial_scale=1)
+    
+    test_roi_pooling_large_dim()
+    H, W = 2**16, 2**16
+    A = np.ones((1, 1, H, W))
+    A[0, 0, 0, 2] = 100
+    roi = np.array([[0, 0, 0, 5, 5]])
     A.attach_grad()
     with mx.autograd.record():
-        B = npx.roi_pooling(A, roi, pooled_size=(2, 2), spatial_scale=1)
-    assert B.shape == (1, 1, 2, 2)
+        B = npx.roi_pooling(A, roi, pooled_size=(3, 3), spatial_scale=1)
+    assert B.shape == (1, 1, 3, 3)
     assert B[0][0][0][1] == 100
     B.backward()
-    assert A.grad.shape == (1, 1, 5, INT_OVERFLOW)
+    assert A.grad.shape == (1, 1, H, W)
     assert A.grad[0][0][0][0] == 1
 
 @use_np
@@ -1043,6 +1110,22 @@ def test_save_load():
     B = np.array(npx.load('my_tensor'))
     assert B[0].shape == (2, INT_OVERFLOW)
     assert B[0][0][100] == 100
+
+@use_np
+def test_gather_nd():
+    A = np.ones((1, 2, INT_OVERFLOW))
+    A [0, 1, 100] = 100
+    A.attach_grad()
+    with mx.autograd.record():
+        B = npx.gather_nd(data=A, \
+            indices=np.array([[0, 0] , [0, 1], [INT_OVERFLOW-1, 100]], \
+            dtype='int64'))
+    assert B.shape == (2, )
+    assert B[0] == 1 and B[1] == 100
+    B.backward()
+    assert A.grad.shape == (1, 2, INT_OVERFLOW)
+    assert A.grad[0, 0, 0] == 0
+    assert A.grad[0, 0, INT_OVERFLOW-1] == 1
 
 @use_np
 def test_random_bernoulli():
