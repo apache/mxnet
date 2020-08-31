@@ -739,6 +739,9 @@ void NumpyPadOpBackImpl(const TBlob& in_data,
     using namespace mshadow;
     int mode = param.mode;
     int ndim = in_data.ndim();
+    if (mode != 0) {
+        LOG(FATAL) << "Other modes are not supported. ";
+    }
     MXNET_NDIM_SWITCH(ndim, NDim, {
       mshadow::Shape<NDim*2> width;
       int dimcounter = 0;
@@ -753,17 +756,13 @@ void NumpyPadOpBackImpl(const TBlob& in_data,
         }
       }
       index_t* idptr = reinterpret_cast<index_t*>(ishape);
-      if (mode != 0) {
-        LOG(FATAL) << "Other modes are not supported. ";
-      } else {
-        MSHADOW_TYPE_SWITCH_WITH_BOOL(out_data.type_flag_, DType, {
-          MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
-            Kernel<pad_grad<xpu, req_type, NDim>, xpu>::Launch(
-              s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
-              idptr, odptr, width);
-          });
+      MSHADOW_TYPE_SWITCH_WITH_BOOL(out_data.type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req[0], req_type, {
+          Kernel<pad_grad<xpu, req_type, NDim>, xpu>::Launch(
+            s, dsize, out_data.dptr<DType>(), in_data.dptr<DType>(),
+            idptr, odptr, width);
         });
-      }
+      });
     })
 }
 

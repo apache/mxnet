@@ -8432,7 +8432,7 @@ def test_np_pad():
 
             # test gradient
             if m == "constant":
-                ctx = mx.gpu()
+                ctx = mx.context.current_context()
                 x = mx.np.random.uniform(-1.0, 1.0, size=shape)
                 x = mx.np.array(x, ctx=ctx)
                 x.attach_grad()
