@@ -27,9 +27,6 @@
 #include "./convolution-inl.h"
 #include "../elemwise_op_common.h"
 #include "../operator_common.h"
-#if MXNET_USE_NNPACK == 1
-#include "../nnpack/nnpack_pooling-inl.h"
-#endif  // MXNET_USE_NNPACK
 #if MXNET_USE_MKLDNN == 1
 #include "./mkldnn/mkldnn_base-inl.h"
 #include "./mkldnn/mkldnn_ops-inl.h"
@@ -285,7 +282,16 @@ static bool ConvolutionType(const nnvm::NodeAttrs& attrs,
   const ConvolutionParam& param_ = nnvm::get<ConvolutionParam>(attrs.parsed);
   CHECK_GE(in_type->size(), 1U);
   int dtype = (*in_type)[0];
-  CHECK_NE(dtype, -1) << "First input must have specified type";
+  if (type_is_none(dtype)) {
+    if (out_type->size() == 0 || type_is_none((*out_type)[0])) {
+      return false;
+    } else {
+      dtype = (*out_type)[0];
+    }
+  } else {
+    out_type->clear();
+    out_type->push_back(dtype);
+  }
   for (size_t i = 0; i < in_type->size(); ++i) {
     if ((*in_type)[i] == -1) {
       (*in_type)[i] = dtype;
@@ -293,8 +299,6 @@ static bool ConvolutionType(const nnvm::NodeAttrs& attrs,
       UNIFORM_TYPE_CHECK((*in_type)[i], dtype, ListArguments(param_)[i]);
     }
   }
-  out_type->clear();
-  out_type->push_back(dtype);
   return true;
 }
 

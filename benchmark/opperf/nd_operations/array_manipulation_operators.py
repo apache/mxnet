@@ -97,7 +97,7 @@ def run_rearrange_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
     mx_rearrange_ops = get_all_rearrange_operators()
 
     # Run benchmarks
-    mx_rearrange_op_results = run_op_benchmarks(mx_rearrange_ops, dtype, ctx, profiler, warmup, runs)
+    mx_rearrange_op_results = run_op_benchmarks(mx_rearrange_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return mx_rearrange_op_results
 
 
@@ -129,7 +129,7 @@ def run_shape_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='nati
     mx_shape_ops = get_all_shape_operators()
 
     # Run benchmarks
-    mx_shape_op_results = run_op_benchmarks(mx_shape_ops, dtype, ctx, profiler, warmup, runs)
+    mx_shape_op_results = run_op_benchmarks(mx_shape_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return mx_shape_op_results
 
 
@@ -161,7 +161,7 @@ def run_expanding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='
     mx_expanding_ops = get_all_expanding_operators()
 
     # Run benchmarks
-    mx_expanding_op_results = run_op_benchmarks(mx_expanding_ops, dtype, ctx, profiler, warmup, runs)
+    mx_expanding_op_results = run_op_benchmarks(mx_expanding_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return mx_expanding_op_results
 
 
@@ -193,7 +193,7 @@ def run_rounding_operators_benchmarks(ctx=mx.cpu(), dtype='float32', profiler='n
     mx_rounding_ops = get_all_rounding_operators()
 
     # Run benchmarks
-    mx_rounding_op_results = run_op_benchmarks(mx_rounding_ops, dtype, ctx, profiler, warmup, runs)
+    mx_rounding_op_results = run_op_benchmarks(mx_rounding_ops, dtype, ctx, profiler, int64_tensor, warmup, runs)
     return mx_rounding_op_results
 
 

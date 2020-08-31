@@ -25,7 +25,7 @@ If you are looking to answer the question, 'which activation function should I u
 In order to compare the various activation functions and to understand the nuances of their differences we have a snippet of code to plot the activation functions (used in the forward pass) and their gradients (used in the backward pass).
 
 
-```python
+```{.python .input}
 import numpy as np
 import mxnet as mx
 from matplotlib import pyplot as plt
@@ -62,7 +62,7 @@ $$ \sigma(x) = \dfrac{e^x}{e^x + 1} $$
 Warning: the term sigmoid is overloaded and can be used to refer to the class of 's' shaped functions or particularly to the logistic function that we've just described. In MxNet the sigmoid activation specifically refers to logistic function sigmoid.
 
 
-```python
+```{.python .input}
 visualize_activation(mx.gluon.nn.Activation('sigmoid'))
 ```
 
@@ -90,7 +90,7 @@ which shows its direct relation to sigmoid by the following equation:
 $$ tanh(x) = 2\sigma(2x) - 1$$
 
 
-```python
+```{.python .input}
 visualize_activation(mx.gluon.nn.Activation('tanh'))
 ```
 
@@ -107,7 +107,7 @@ The SoftSign activation is an alternative to tanh that is also centered at zero 
 $$ softsign(x) = \dfrac{x}{abs(x) + 1} $$
 
 
-```python
+```{.python .input}
 visualize_activation(mx.gluon.nn.Activation('softsign'))
 ```
 
@@ -129,7 +129,7 @@ ReLU was introduced to neural networks in the [paper by Hahnloser et al](https:/
 ReLU is the most widely used activation due to its simplicity and performance across multiple datasets and although there have been efforts to introduce activation functions, many of them described in this tutorial, that improve on ReLU, they have not gained as much widespread adoption.
 
 
-```python
+```{.python .input}
 visualize_activation(mx.gluon.nn.Activation('relu'))
 ```
 
@@ -148,7 +148,7 @@ $$ SoftReLU(x) = log(1 + e^x)$$
 The SoftReLU can be seen as a smooth version of the ReLU by observing that its derivative is the sigmoid, seen below, which is a smooth version of the gradient of the ReLU shown above.
 
 
-```python
+```{.python .input}
 visualize_activation(mx.gluon.nn.Activation('softrelu'))
 ```
 
@@ -170,7 +170,7 @@ where $\alpha > 0$ is small positive number. In MXNet, by default the $\alpha$ p
 Here is a visualization for the LeakyReLU with $\alpha = 0.05$
 
 
-```python
+```{.python .input}
 visualize_activation(mx.gluon.nn.LeakyReLU(0.05))
 ```
 
@@ -184,7 +184,7 @@ As shown in the graph, the LeakyReLU's gradient is non-zero everywhere, in an at
 The PReLU activation function, or Parametric Leaky ReLU introduced by [He et al](https://arxiv.org/pdf/1502.01852.pdf), is a version of LeakyReLU that learns the parameter $\alpha$ during training. An initialization parameter is passed into the PreLU activation layer and this is treated as a learnable parameter that is updated via gradient descent during training. This is in contrast to LeakyReLU where $\alpha$ is a hyperparameter.
 
 
-```python
+```{.python .input}
 prelu = mx.gluon.nn.PReLU(mx.init.Normal(0.05))
 prelu.initialize()
 visualize_activation(prelu)
@@ -208,7 +208,7 @@ $$ ELU(\alpha, x) = \begin{cases}
 \end{cases}$$
 
 
-```python
+```{.python .input}
 visualize_activation(mx.gluon.nn.ELU())
 ```
 
@@ -229,7 +229,7 @@ $$ SELU(\alpha, x) = \lambda \cdot\begin{cases}
 In SELU, unlike ELU, the parameters $\alpha$ and $\lambda$ are fixed parameters calculated from the data. For standard scaled inputs, these values are $$\alpha=1.6732, \lambda=1.0507$$ as calculated in the paper.
 
 
-```python
+```{.python .input}
 visualize_activation(mx.gluon.nn.SELU())
 ```
 
@@ -247,7 +247,7 @@ $$ swish(x) = x\cdot\sigma(\beta x)$$
 where $\sigma$ is the sigmoid activation function $\sigma(x) = \frac{1}{1 + e^{-x}}$ described above and $\beta$ is a hyperparameter set to 1 by default in MXNet.
 
 
-```python
+```{.python .input}
 visualize_activation(mx.gluon.nn.Swish())
 ```
 

@@ -30,7 +30,7 @@ Each language documentation is built in a modular way, so that if you are a cont
 
 You can also use the project's CI tools to emulate any changes with Docker. You can use these tools to install dependencies and run the parts of the build you want to test.
 
-Refer to the [MXNet Developer Wiki](https://cwiki.apache.org/confluence/display/MXNET/Building+the+New+Website) for instructions on building the docs locally.
+Refer to the [MXNet Developer Wiki](https://cwiki.apache.org/confluence/pages/viewpage.action?pageId=125309983) for instructions on building the docs locally.
 
 If you plan to contribute changes to the documentation or website, please submit a pull request. Contributions are welcome!
 

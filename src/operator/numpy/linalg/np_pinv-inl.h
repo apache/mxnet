@@ -27,6 +27,7 @@
 
 #include <mxnet/operator_util.h>
 #include <vector>
+#include <string>
 #include <algorithm>
 #include "../../operator_common.h"
 #include "../../mshadow_op.h"
@@ -48,6 +49,11 @@ struct PinvParam : public dmlc::Parameter<PinvParam> {
     .set_default(false)
     .describe("If True, A is assumed to be Hermitian (symmetric if real-valued).");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream hermitian_s;
+    hermitian_s << hermitian;
+    (*dict)["hermitian"] = hermitian_s.str();
+  }
 };
 
 struct PinvScalarRcondParam : public dmlc::Parameter<PinvScalarRcondParam> {
@@ -60,6 +66,14 @@ struct PinvScalarRcondParam : public dmlc::Parameter<PinvScalarRcondParam> {
     DMLC_DECLARE_FIELD(hermitian)
     .set_default(false)
     .describe("If True, A is assumed to be Hermitian (symmetric if real-valued).");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream rcond_s;
+    std::ostringstream hermitian_s;
+    rcond_s << rcond;
+    hermitian_s << hermitian;
+    (*dict)["rcond"] = rcond_s.str();
+    (*dict)["hermitian"] = hermitian_s.str();
   }
 };
 
@@ -450,6 +464,14 @@ inline mxnet::TShape GetTransAxis(const mxnet::TShape& in_shape) {
   return mxnet::TShape(trans_axis.begin(), trans_axis.end());
 }
 
+// Windows has issues with #ifdefs inside MSHADOW_TYPE_SWITCH
+#ifndef __CUDACC__
+#define NP_LINALG_PINV_BROADCAST(OP, RTCOP) \
+  mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::OP>
+#else
+#define NP_LINALG_PINV_BROADCAST(OP, RTCOP) mxnet::op::BinaryBroadcastRTCCompute {#RTCOP}
+#endif
+
 template<typename xpu>
 void PinvOpForwardImpl(const TBlob& a,
                        const TBlob& rcond,
@@ -539,13 +561,13 @@ void PinvOpForwardImpl(const TBlob& a,
         s, S.size(0), Smax.dptr_, S.dptr_, S.size(1), S.stride_);
       // Step3: Calculate Cutoff.
       std::vector<OpReqType> temp_req({kWriteTo});
-      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx,
-                                                                  {rcond_data, smax_data},
-                                                                  temp_req, {cutoff_data});
+      NP_LINALG_PINV_BROADCAST(mul, mul)(attrs, ctx,
+                                         {rcond_data, smax_data},
+                                         temp_req, {cutoff_data});
       // Step4: Calculte Large.
-      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::gt>(attrs, ctx,
-                                                                 {s_data, cutoff_data},
-                                                                 temp_req, {large_data});
+      NP_LINALG_PINV_BROADCAST(gt, greater)(attrs, ctx,
+                                            {s_data, cutoff_data},
+                                            temp_req, {large_data});
       // Step5: Discard small singular values.
       mxnet_op::Kernel<DiscardSmallSingularVal, xpu>::Launch(
         s, s_data.Size(), s_data.dptr<DType>(), large_data.dptr<DType>());
@@ -559,8 +581,8 @@ void PinvOpForwardImpl(const TBlob& a,
       }
       s_data = s_data.reshape(s_shape_newaxis);
       u_data = ut_data.reshape(ut_shape);
-      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, {s_data, ut_data},
-                                                                  temp_req, {u_data});
+      NP_LINALG_PINV_BROADCAST(mul, mul)(attrs, ctx, {s_data, ut_data},
+                                         temp_req, {u_data});
       gemm2::op(vt_data.FlatToKD<xpu, 3, DType>(s),
                 u_data.FlatToKD<xpu, 3, DType>(s),
                 pinv_a.FlatToKD<xpu, 3, DType>(s),
@@ -698,8 +720,8 @@ void PinvScalarRcondOpForwardImpl(const TBlob& a,
       }
       s_data = s_data.reshape(s_shape_newaxis);
       u_data = ut_data.reshape(ut_shape);
-      mxnet::op::BinaryBroadcastCompute<xpu, op::mshadow_op::mul>(attrs, ctx, {s_data, ut_data},
-                                                                  {kWriteTo}, {u_data});
+      NP_LINALG_PINV_BROADCAST(mul, mul)(attrs, ctx, {s_data, ut_data},
+                                         {kWriteTo}, {u_data});
       gemm2::op(vt_data.FlatToKD<xpu, 3, DType>(s),
                 u_data.FlatToKD<xpu, 3, DType>(s),
                 pinv_a.FlatToKD<xpu, 3, DType>(s),
@@ -707,6 +729,8 @@ void PinvScalarRcondOpForwardImpl(const TBlob& a,
     });
   });
 }
+
+#undef NP_LINALG_PINV_BROADCAST
 
 template<typename xpu>
 void PinvScalarRcondOpForward(const nnvm::NodeAttrs& attrs,

@@ -22,8 +22,17 @@
  * \brief Utility functions for operator invoke
  */
 #include "utils.h"
+#include "../../imperative/imperative_utils.h"
 
 namespace mxnet {
+
+bool is_recording() {
+  return Imperative::Get()->is_recording();
+}
+
+bool is_deferred_compute() {
+  return Imperative::Get()->is_deferred_compute();
+}
 
 void SetInOut(std::vector<NDArray*>* ndinputs,
               std::vector<NDArray*>* ndoutputs,
@@ -89,7 +98,7 @@ std::vector<NDArray*> Invoke(const nnvm::Op* op,
       Imperative::DCInfo::Compute(*input);
     }
     auto state = Imperative::Get()->Invoke(Context::CPU(), *attrs, ndinputs, ndoutputs);
-    if (Imperative::Get()->is_recording()) {
+    if (is_recording()) {
       Imperative::Get()->RecordOp(std::move(*attrs), ndinputs, ndoutputs, state);
     }
   }

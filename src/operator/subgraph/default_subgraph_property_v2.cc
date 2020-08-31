@@ -18,6 +18,8 @@
  */
 
 
+#include <memory>
+
 #include "./common.h"
 #include "./subgraph_property.h"
 #include "../../imperative/cached_op.h"
@@ -68,7 +70,7 @@ class DefaultSubgraphProperty: public SubgraphProperty {
     n->attrs.subgraphs.push_back(std::make_shared<nnvm::Symbol>(sym));
 
     std::vector<std::pair<std::string, std::string> > flags{{"static_alloc", "true"}};
-    n->attrs.parsed = CachedOpPtr(new CachedOp(sym, flags));
+    n->attrs.parsed = std::make_shared<CachedOp>(sym, flags);
 
     return n;
   }

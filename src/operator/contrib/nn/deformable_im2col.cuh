@@ -67,7 +67,7 @@
 #include <cstring>
 #include <vector>
 #include "../../mxnet_op.h"
-#include "../../../common/cuda_utils.h"
+#include "../../../common/cuda/utils.h"
 
 
 

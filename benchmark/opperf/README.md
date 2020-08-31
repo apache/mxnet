@@ -76,6 +76,8 @@ python incubator-mxnet/benchmark/opperf/opperf.py --output-format json --output-
 4. **profiler** : `native` or `python`. By default, 'native'. You can override and set the global profiler for all operator benchmarks. Example: --profiler 'python'.
 Native profiler uses MXNet C++ based built-in profiler. Python profiler uses Python package time. Generally, native profiler is used by developers and python profiler is used by users.
 
+5. **int64-tensor** : `on` or `off`. By default, 'off'. You can override and set the large tensor flag to ON. Example: --int64-tensor ON
+
 ## Usecase 2 - Run benchmarks for all the operators in a specific category
 
 For example, you want to run benchmarks for all NDArray Broadcast Binary Operators, Ex: broadcast_add, broadcast_mod, broadcast_pow etc., You just run the following python script.
@@ -165,6 +167,45 @@ Output for the above benchmark run, on a CPU machine, would look something like 
              ]}
 
 ```
+
+## Usecase 5 - Profile internal operators locally
+Currently, opperf supports operators in `mx.nd.*` namespace.
+However, locally, one can profile internal operators in `mx.nd.internal.*` namespace.
+
+#### Changes
+Remove the hasattr check for `op.__name__` to be in `mx.nd`
+
+The resulting diff would look like :
+##### Old Code
+```
+-        if hasattr(mx.nd, op.__name__):
+-            benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list, profiler)
+-        else:
+-            raise ValueError("Unknown NDArray operator provided to benchmark. -  ", op.__name__)
+```
+##### New Code
+```
++        #if hasattr(mx.nd, op.__name__):
++        benchmark_result = _run_nd_operator_performance_test(op, inputs, run_backward, warmup, runs, kwargs_list, profiler)
++        #else:
++            #raise ValueError("Unknown NDArray operator provided to benchmark. -  ", op.__name__)
+```
+
+#### Result
+This should allow profiling of any operator in MXNet provided user provides valid parameters [`inputs`, `run_backward`, etc] to the `run_performance_test` function.
+
+#### Example
+Provided the source code change is made in the `benchmark/opperf/utils/benchmark_utils.py`
+```
+>>> import mxnet as mx
+>>> from mxnet import nd
+>>> from benchmark.opperf.utils.benchmark_utils import run_performance_test
+>>> run_performance_test(mx.nd._internal._copyto,inputs=[{"data":mx.nd.array([1,2]),"out":mx.nd.empty(shape=mx.nd.array([1,2]).shape,ctx=mx.cpu())}])
+INFO:root:Begin Benchmark - _copyto
+INFO:root:Complete Benchmark - _copyto
+[{'_copyto': [{'inputs': {'data': '<NDArray 2 @cpu(0)>', 'out': '<NDArray 2 @cpu(0)>'}, 'max_storage_mem_alloc_cpu/0': 0.004}]}]
+```
+
 # How does it work under the hood?
 
 Under the hood, executes NDArray operator using randomly generated data. Use MXNet profiler to get summary of the operator execution:
@@ -195,11 +236,12 @@ add_res = run_performance_test([nd.add, nd.subtract], run_backward=True, dtype='
 ```
 By default, MXNet profiler is used as the profiler engine.
 
+
 # TODO
 
 All contributions are welcome. Below is the list of desired features:
 
-1. Cover all MXNet operators.
+1. ~~Cover all MXNet operators~~.
 2. Enhance MXNet profiler with additional APIs to programmatically fetch and process profiler data.
 3. Integration with CI/CD system to run operator benchmarks for PR builds, nightly builds.
 4. Dashboards and other modes of presentation of results for analyzing and planning tasks such as operator performance improvements.

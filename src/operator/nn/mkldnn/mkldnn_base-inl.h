@@ -153,9 +153,8 @@ static inline bool SupportMKLDNN(int dtype, const mxnet::TShape &shape) {
     // MKLDNN currently does not support 0-dim Tensor and 0-size Tensor
     return false;
   }
-
   return (dtype == mshadow::kFloat32 || dtype == mshadow::kBfloat16) &&
-         (ndim == 1 || ndim == 2 || ndim == 4);
+                    (ndim == 1 || ndim == 2 || ndim == 4);
 }
 
 static inline bool SupportMKLDNNQuantize(int dtype) {
@@ -201,7 +200,6 @@ struct LeakyReLUParam;
 struct ConvolutionParam;
 struct DeconvolutionParam;
 struct SoftmaxParam;
-struct SoftmaxOutputParam;
 struct TransposeParam;
 struct ReshapeParam;
 bool SupportMKLDNNAct(const ActivationParam& param);
@@ -212,7 +210,8 @@ bool SupportQuantizedMKLDNNAct(const ActivationParam &param);
 bool SupportMKLDNNConv(const ConvolutionParam &params, const NDArray &input);
 bool SupportMKLDNNDeconv(const DeconvolutionParam& params, const NDArray &input);
 bool SupportMKLDNNSoftmax(const SoftmaxParam& param, const NDArray &input, const NDArray &output);
-bool SupportMKLDNNSoftmaxOutput(const SoftmaxOutputParam &param);
+bool SupportMKLDNNLogSoftmax(const SoftmaxParam& param, const NDArray &input,
+                             const NDArray &output);
 bool SupportMKLDNNTranspose(const TransposeParam& param, const NDArray &data);
 }  // namespace op
 
@@ -324,20 +323,32 @@ inline static mkldnn::memory::desc GetWeightDesc(const NDArray &arr,
   if (num_groups == 1) {
     return GetMemDesc(arr, dtype);
   } else {
-    auto ndim = arr.shape().ndim();
-    CHECK((ndim == 3) || (ndim == 4))
-        << "MKL-DNN weight currectly supports 3d and 4d layout";
+    const auto ndim = arr.shape().ndim();
+    CHECK((ndim == 3) || (ndim == 4) || (ndim == 5))
+        << "MKL-DNN weight currently supports 3d or 4d or 5d layout";
     auto tz = mkldnn::memory::dims{0};
-    const int N = 0, H = 2, W = 3, C = 1;
-    if (ndim == 3) {
-      tz = mkldnn::memory::dims{
-          num_groups, static_cast<int>(arr.shape()[N] / num_groups),
-          static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H])};
-    } else {
-      tz = mkldnn::memory::dims{
-          num_groups, static_cast<int>(arr.shape()[N] / num_groups),
-          static_cast<int>(arr.shape()[C]), static_cast<int>(arr.shape()[H]),
-          static_cast<int>(arr.shape()[W])};
+    int N = 0, C = 1, H = 2, W = 3;
+    int D = -1;
+    if (ndim == 5) {
+      D = 2;
+      H = 3;
+      W = 4;
+    }
+    switch (ndim) {
+      case 3:
+        tz = mkldnn::memory::dims{
+                num_groups, arr.shape()[N] / num_groups,
+                arr.shape()[C], arr.shape()[H]};
+        break;
+      case 4:
+        tz = mkldnn::memory::dims{
+                num_groups, arr.shape()[N] / num_groups,
+                arr.shape()[C], arr.shape()[H], arr.shape()[W]};
+        break;
+      case 5:
+        tz = mkldnn::memory::dims{
+                num_groups, arr.shape()[N] / num_groups,
+                arr.shape()[C], arr.shape()[D], arr.shape()[H], arr.shape()[W]};
     }
     return mkldnn::memory::desc{tz, get_mkldnn_type(dtype), mkldnn::memory::format_tag::any};
   }
@@ -510,27 +521,6 @@ mkldnn_output_t CreateMKLDNNWeightGrad(const NDArray &out_arr,
                                        OpReqType req);
 /* This function has to be used with one of the functions above. */
 void CommitOutput(const NDArray &arr, const mkldnn_output_t &res);
-
-static inline void InvalidateOutputs(const std::vector<NDArray> &arrs,
-                                     const std::vector<OpReqType> &reqs) {
-  for (size_t i = 0; i < arrs.size(); i++) {
-    if (reqs[i] == kWriteTo || reqs[i] == kNullOp) {
-      const_cast<NDArray &>(arrs[i]).InvalidateMKLDNNData();
-    }
-  }
-}
-
-// TODO(alexzai): (MXNET-856) Remove helper function after subgraph feature added
-static inline void CreateDefaultInputs(const std::vector<NDArray> &arrs,
-                                       std::vector<NDArray> *out_arrs) {
-  out_arrs->clear();
-  for (size_t i = 0; i < arrs.size(); ++i) {
-    if (arrs[i].IsMKLDNNData())
-      out_arrs->push_back(arrs[i].Reorder2Default());
-    else
-      out_arrs->push_back(arrs[i]);
-  }
-}
 
 const mkldnn::memory *GetWeights(const NDArray &arr, int num_groups);
 

@@ -39,7 +39,7 @@ def run_test_trials(args):
 
     new_env = os.environ.copy()
     new_env["MXNET_TEST_COUNT"] = str(args.num_trials)
-    
+
     if args.seed is None:
         logging.info("No test seed provided, using random seed")
     else:
@@ -47,17 +47,17 @@ def run_test_trials(args):
 
     verbosity = "--verbosity=" + str(args.verbosity)
 
-    code = subprocess.call(["nosetests", verbosity, test_path], 
+    code = subprocess.call(["pytest", verbosity, test_path],
                            env = new_env)
-    
-    logging.info("Nosetests terminated with exit code %d", code)
+
+    logging.info("Test terminated with exit code %d", code)
 
 def find_test_path(test_file):
     """Searches for the test file and returns the path if found
     As a default, the currend working directory is the top of the search.
     If a directory was provided as part of the argument, the directory will be
     joined with cwd unless it was an absolute path, in which case, the
-    absolute path will be used instead. 
+    absolute path will be used instead.
     """
     test_file += ".py"
     test_path = os.path.split(test_file)
@@ -66,7 +66,7 @@ def find_test_path(test_file):
     for (path, dirs, files) in os.walk(top):
         if test_path[1] in files:
             return  os.path.join(path, test_path[1])
-    raise FileNotFoundError("Could not find " + test_path[1] + 
+    raise FileNotFoundError("Could not find " + test_path[1] +
                             "in directory: " + top)
 
 class NameAction(argparse.Action):
@@ -82,12 +82,12 @@ class NameAction(argparse.Action):
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Check test for flakiness")
-    
+
     parser.add_argument("test", action=NameAction,
                         help="file name and and function name of test, "
                         "provided in the format: <file-name>.<test-name> "
                         "or <directory>/<file>:<test-name>")
-    
+
     parser.add_argument("-n", "--num-trials", metavar="N",
                         default=DEFAULT_NUM_TRIALS, type=int,
                         help="number of test trials, passed as "
@@ -95,11 +95,11 @@ def parse_args():
 
     parser.add_argument("-s", "--seed", type=int,
                         help="test seed, passed as MXNET_TEST_SEED, "
-                        "defaults to random seed") 
+                        "defaults to random seed")
 
     parser.add_argument("-v", "--verbosity",
                         default=DEFAULT_VERBOSITY, type=int,
-                        help="logging level, passed to nosetests")
+                        help="logging level, passed to pytest")
 
 
     args = parser.parse_args()

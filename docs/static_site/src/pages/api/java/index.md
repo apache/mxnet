@@ -31,7 +31,7 @@ The goal of the MXNet Java package is to provide an efficient and easy to use in
 The MXNet Java package makes it easy to quickly deploy an existing model into a production level Java ecosystem.
 
 ## Installation
-* [MXNet Java Inference API setup instructions]({{'/get_started/java_setup'|relative_url}})
+Please see the [Get Started]({{'/get_started'|relative_url}}) page.
 
 ## Tutorials
 See the [Java tutorial page]({{'/api/java/docs/tutorials'|relative_url}}) for detailed tutorials and examples using the Java Inference API.

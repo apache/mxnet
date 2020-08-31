@@ -34,8 +34,8 @@ NNVM_REGISTER_OP(_contrib_gradientmultiplier)
 .set_attr<FCompute>("FCompute<gpu>", UnaryOp::IdentityCompute<gpu>);
 
 NNVM_REGISTER_OP(_contrib_backward_gradientmultiplier)
-.set_attr<FCompute>("FCompute<gpu>", BinaryScalarOp::Compute<gpu, op::mshadow_op::mul>)
-.set_attr<FComputeEx>("FComputeEx<gpu>", BinaryScalarOp::ComputeEx<gpu, op::mshadow_op::mul>);
+.set_attr<FCompute>("FCompute<gpu>", BinaryScalarRTCCompute{"mul"})
+.set_attr<FComputeEx>("(FComputeEx<gpu>", BinaryScalarRTCCompute{"mul"});
 
 }  // namespace op
 }  // namespace mxnet

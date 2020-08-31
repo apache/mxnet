@@ -30,6 +30,7 @@
 #include <dmlc/parameter.h>
 #include <mxnet/operator.h>
 #include <algorithm>
+#include <random>
 #include <map>
 #include <vector>
 #include <string>
@@ -139,7 +140,8 @@ void LstmForwardTraining(DType* ws,
                          DType* y_ptr,
                          DType* hy_ptr,
                          DType* cy_ptr,
-                         const float dropout) {
+                         const float dropout,
+                         std::mt19937 &rnd_engine) {  // NOLINT(runtime/references)
   DType* dropout_random = rs;
   DType* rs2 = dropout_random + (L - 1) * D * T * N * H;
   const int total_layers = D * L;
@@ -149,7 +151,6 @@ void LstmForwardTraining(DType* ws,
   const index_t r_size = D * T * N * H * 6;
   const index_t y_offset = T * N * H * 5;
   const index_t cell_size = N * H;
-  unsigned int seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   int idx = 0;  // state & cell state's idx;
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
   for (int i = 0; i < L; ++i) {
@@ -174,10 +175,9 @@ void LstmForwardTraining(DType* ws,
       w_ptr += w_size;
       b_ptr += b_size;
       if (dropout > 0.0f) {
-        #pragma omp parallel for num_threads(omp_threads)
+        std::uniform_real_distribution<float> distribution(0, 1);
         for (index_t j = 0; j < T * N * H * D; j++) {
-          int rand_data = rand_r(&seed_);
-          if (static_cast<float>(rand_data % 1000) < static_cast<float>(1000 * dropout)) {
+          if (distribution(rnd_engine) < dropout) {
             dropout_random[i * T * N * H * D + j] = 0;
             y.dptr_[j] = 0;
           } else {
@@ -564,6 +564,7 @@ void LstmBackward(DType* ws,
   const index_t w_size1 = (I + H) * H * 4;      // first layer
   const index_t w_size2 = (D * H + H) * H * 4;  // other layers
   const index_t cell_size = N * H;
+  const index_t y_size = T * N * H * D;
   DType* dy_tmp_ptr = ws2 + T * cell_size * 4 + cell_size * 3;
   for (int i = L - 1; i >= 0; --i) {
     const index_t input_size = i ? H * D : I;
@@ -594,6 +595,10 @@ void LstmBackward(DType* ws,
                                      x, hx[idx], cx[idx], y, dy, dx, dhx[idx], dcx[idx],
                                      dhy_cur_ptr, dcy_cur_ptr, w_cur_ptr, dw_cur_ptr, db_cur_ptr,
                                      req_data, req_params, req_state, req_statecell);
+
+      // Prevent overwritting dy while calculating dx in left2right layer
+      const int loop_iteration = (L - 1) - i;
+      dy_tmp_ptr = loop_iteration % 2 ? dy_tmp_ptr - y_size : dy_tmp_ptr + y_size;
     }
     if (dropout > 0.0f && i > 0 && req_data != kNullOp) {
       dropout_random = dropout_random - T * N * D * H;
@@ -1000,7 +1005,8 @@ void GruForwardTraining(DType* ws,
                         DType* w_ptr,
                         DType* y_ptr,
                         DType* hy_ptr,
-                        const float dropout) {
+                        const float dropout,
+                        std::mt19937 &rnd_engine) {  // NOLINT(runtime/references)
   DType* wx = w_ptr;
   DType* wh = wx + I * H * 3;
   DType* bx = wh + H * H * 3 + (D - 1) * (H * H * 3 + I * H * 3)
@@ -1021,18 +1027,15 @@ void GruForwardTraining(DType* ws,
   DType* bx_l = bx;
   DType* bh_l = bh;
   DType* y_tmp = x_ptr;
-  unsigned int seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   for (int l = 0; l < L; l++) {
     if (l != 0) {
       y_tmp = y_l;
       y_l = y_l + T * N * H * D;
     }
     if (dropout > 0.0f && l > 0) {
-      const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-      #pragma omp parallel for num_threads(omp_threads)
+      std::uniform_real_distribution<float> distribution(0, 1);
       for (index_t i = 0; i < T * N * I; i++) {
-        int rand_data = rand_r(&seed_);
-        if (static_cast<float>(rand_data % 1000) < static_cast<float>(1000 * dropout)) {
+        if (distribution(rnd_engine) < dropout) {
           dropout_random[(l - 1) * T * N * I + i] = 0;
           y_tmp[i] = 0;
         } else {
@@ -1509,7 +1512,7 @@ void GruBackward(DType* ws,
       if (dhy_l)
         dhy_l = dhy_l - D * N * H;
       y_l = y_l - T * N * H * D;
-      y_tmp = y_l;
+      y_tmp = y_tmp - T * N * H * D;
       if (l == 1) {
         wx_l = wx_l - (inputsize + H) * H * 3 * D;
         wh_l = wx_l + inputsize * 3 * H;
@@ -1889,7 +1892,8 @@ void VanillaRNNForwardTraining(DType* ws,
                                DType* y_ptr,
                                DType* hy_ptr,
                                const float dropout,
-                               int mode) {
+                               int mode,
+                               std::mt19937 &rnd_engine) {  // NOLINT(runtime/references)
   DType* wx = w_ptr;
   DType* wh = wx + I * H;
   DType* bx = wh + H * H + (D - 1) * (H * H + I * H)
@@ -1908,17 +1912,15 @@ void VanillaRNNForwardTraining(DType* ws,
   DType* bh_l = bh;
   DType* y_tmp = x_ptr;
   const int omp_threads = mxnet::engine::OpenMP::Get()->GetRecommendedOMPThreadCount();
-  unsigned int seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   for (int l = 0; l < L; l++) {
     if (l != 0) {
       y_tmp = y_l;
       y_l = y_l + T * N * H * D;
     }
     if (dropout > 0.0f && l > 0) {
-      #pragma omp parallel for num_threads(omp_threads)
+      std::uniform_real_distribution<float> distribution(0, 1);
       for (index_t i = 0; i < T * N * I; i++) {
-        int rand_data = rand_r(&seed_);
-        if (static_cast<float>(rand_data % 1000) < static_cast<float>(1000 * dropout)) {
+        if (distribution(rnd_engine) < dropout) {
           dropout_random[(l - 1) * T * N * I + i] = 0;
           y_tmp[i] = 0;
         } else {

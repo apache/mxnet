@@ -30,7 +30,7 @@ if "--inplace" in sys.argv:
 else:
     from setuptools import setup
     from setuptools.extension import Extension
-    kwargs = {'install_requires': ['numpy>1.16.0,<2.0.0', 'requests>=2.20.0,<3', 'graphviz<0.9.0,>=0.8.1'], 'zip_safe': False}
+    kwargs = {'install_requires': ['numpy>=1.17', 'requests>=2.20.0,<3', 'graphviz<0.9.0,>=0.8.1', 'contextvars;python_version<"3.7"'], 'zip_safe': False}
 
 with_cython = False
 if '--with-cython' in sys.argv:
@@ -94,7 +94,7 @@ def config_cython():
                 libraries=libraries,
                 extra_link_args=extra_link_args,
                 language="c++"))
-        
+
         path = "mxnet/_ffi/_cython"
         for fn in os.listdir(path):
             if not fn.endswith(".pyx"):
@@ -105,7 +105,7 @@ def config_cython():
                 include_dirs=["../include/", "../3rdparty/tvm/nnvm/include"],
                 library_dirs=library_dirs,
                 libraries=libraries,
-                extra_compile_args=["-std=c++11"],
+                extra_compile_args=["-std=c++17"],
                 extra_link_args=extra_link_args,
                 language="c++"))
 
@@ -131,15 +131,11 @@ setup(name='mxnet',
           'Intended Audience :: Education',
           'Intended Audience :: Science/Research',
           'License :: OSI Approved :: Apache Software License',
-          'Programming Language :: C++',
           'Programming Language :: Cython',
-          'Programming Language :: Other',  # R, Scala
-          'Programming Language :: Perl',
           'Programming Language :: Python',
-          'Programming Language :: Python :: 2.7',
-          'Programming Language :: Python :: 3.4',
-          'Programming Language :: Python :: 3.5',
           'Programming Language :: Python :: 3.6',
+          'Programming Language :: Python :: 3.7',
+          'Programming Language :: Python :: 3.8',
           'Programming Language :: Python :: Implementation :: CPython',
           'Topic :: Scientific/Engineering',
           'Topic :: Scientific/Engineering :: Artificial Intelligence',

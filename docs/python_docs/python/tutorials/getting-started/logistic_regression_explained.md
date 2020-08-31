@@ -23,7 +23,7 @@ Logistic Regression is one of the first models newcomers to Deep Learning are im
 Before anything else, let's import required packages for this tutorial.
 
 
-```python
+```{.python .input}
 import numpy as np
 import mxnet as mx
 from mxnet import nd, autograd, gluon
@@ -36,7 +36,7 @@ mx.random.seed(12345)  # Added for reproducibility
 In this tutorial we will use fake dataset, which contains 10 features drawn from a normal distribution with mean equals to 0 and standard deviation equals to 1, and a class label, which can be either 0 or 1. The size of the dataset is an arbitrary value. The function below helps us to generate a dataset. Class label `y` is generated via a non-random logic, so the network would have a pattern to look for. Boundary of 3 is selected to make sure that number of positive examples smaller than negative, but not too small
 
 
-```python
+```{.python .input}
 def get_random_data(size, ctx):
     x = nd.normal(0, 1, shape=(size, 10), ctx=ctx)
     y = x.sum(axis=1) > 3
@@ -46,7 +46,7 @@ def get_random_data(size, ctx):
 Also, let's define a set of hyperparameters, that we are going to use later. Since our model is simple and dataset is small, we are going to use CPU for calculations. Feel free to change it to GPU for a more advanced scenario.
 
 
-```python
+```{.python .input}
 ctx = mx.cpu()
 train_data_size = 1000
 val_data_size = 100
@@ -60,7 +60,7 @@ To work with data, Apache MXNet provides [Dataset](https://mxnet.apache.org/api/
 Below we define training and validation datasets, which we are going to use in the tutorial.
 
 
-```python
+```{.python .input}
 train_x, train_ground_truth_class = get_random_data(train_data_size, ctx)
 train_dataset = ArrayDataset(train_x, train_ground_truth_class)
 train_dataloader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
@@ -77,14 +77,13 @@ The only requirement for the logistic regression is that the last layer of the n
 Below, we define a model which has an input layer of 10 neurons, a couple of inner layers of 10 neurons each, and output layer of 1 neuron. We stack the layers using [HybridSequential](https://mxnet.apache.org/api/python/gluon/gluon.html#mxnet.gluon.nn.HybridSequential) block and initialize parameters of the network using [Xavier](https://mxnet.apache.org/api/python/optimization/optimization.html#mxnet.initializer.Xavier) initialization.
 
 
-```python
+```{.python .input}
 net = nn.HybridSequential()
 
-with net.name_scope():
-    net.add(nn.Dense(units=10, activation='relu'))  # input layer
-    net.add(nn.Dense(units=10, activation='relu'))   # inner layer 1
-    net.add(nn.Dense(units=10, activation='relu'))   # inner layer 2
-    net.add(nn.Dense(units=1))   # output layer: notice, it must have only 1 neuron
+net.add(nn.Dense(units=10, activation='relu'))  # input layer
+net.add(nn.Dense(units=10, activation='relu'))   # inner layer 1
+net.add(nn.Dense(units=10, activation='relu'))   # inner layer 2
+net.add(nn.Dense(units=1))   # output layer: notice, it must have only 1 neuron
 
 net.initialize(mx.init.Xavier())
 ```
@@ -100,7 +99,7 @@ Metric helps us to estimate how good our model is in terms of a problem we are t
 Below we define these objects.
 
 
-```python
+```{.python .input}
 loss = gluon.loss.SigmoidBinaryCrossEntropyLoss()
 trainer = Trainer(params=net.collect_params(), optimizer='sgd',
                   optimizer_params={'learning_rate': 0.1})
@@ -111,7 +110,7 @@ f1 = mx.metric.F1()
 The next step is to define the training function in which we iterate over all batches of training data, execute the forward pass on each batch and calculate training loss. On line 19, we sum losses of every batch per epoch into a single variable, because we calculate loss per single batch, but want to display it per epoch.
 
 
-```python
+```{.python .input}
 def train_model():
     cumulative_train_loss = 0
 
@@ -160,7 +159,7 @@ For `F1` metric to work, instead of one number per class, we must pass probabili
 Then we pass this stacked matrix to `F1` score.
 
 
-```python
+```{.python .input}
 def validate_model(threshold):
     cumulative_val_loss = 0
 
@@ -194,7 +193,7 @@ def validate_model(threshold):
 By using the defined above functions, we can finally write our main training loop.
 
 
-```python
+```{.python .input}
 epochs = 10
 threshold = 0.5
 
@@ -243,9 +242,9 @@ Despite that there are 2 classes, there should be only one output neuron, becaus
 
 For `SigmoidBinaryCrossEntropyLoss` to work it is required that classes were encoded as 0 and 1. In some datasets the class encoding might be different, like -1 and 1 or 1 and 2. If this is how your dataset looks like, then you need to re-encode the data before using `SigmoidBinaryCrossEntropyLoss`.
 
-## Tip 3: Use SigmoidBinaryCrossEntropyLoss instead of LogisticRegressionOutput
+## Tip 3: Use SigmoidBinaryCrossEntropyLoss
 
-NDArray API has two options to calculate logistic regression loss: [SigmoidBinaryCrossEntropyLoss](https://mxnet.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss) and [LogisticRegressionOutput](https://mxnet.apache.org/api/python/ndarray/ndarray.html#mxnet.ndarray.LogisticRegressionOutput). `LogisticRegressionOutput` is designed to be an output layer when using the Module API, and is not supposed to be used when using Gluon API.
+NDArray API has an options to calculate logistic regression loss: [SigmoidBinaryCrossEntropyLoss](https://mxnet.apache.org/api/python/gluon/loss.html#mxnet.gluon.loss.SigmoidBinaryCrossEntropyLoss).
 
 ## Conclusion
 

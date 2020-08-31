@@ -44,7 +44,7 @@ We will use the [Oxford 102 Category Flower Dataset](http://www.robots.ox.ac.uk/
 We have prepared a utility file to help you download and organize your data into train, test, and validation sets. Run the following Python code to download and prepare the data:
 
 
-```python
+```{.python .input}
 import mxnet as mx
 data_util_file = "oxford_102_flower_dataset.py"
 base_url = "https://raw.githubusercontent.com/apache/incubator-mxnet/master/docs/tutorial_utils/data/{}?raw=true"
@@ -65,7 +65,7 @@ Now your data will be organized into train, test, and validation sets, images be
 Now let's first import necessary packages:
 
 
-```python
+```{.python .input}
 import math
 import os
 import time
@@ -80,7 +80,7 @@ from mxnet.gluon.model_zoo.vision import resnet50_v2
 Next, we define the hyper-parameters that we will use for fine-tuning. We will use the [MXNet learning rate scheduler](/api/python/docs/tutorials/packages/gluon/training/learning_rates/learning_rate_schedules.html) to adjust learning rates during training.
 Here we set the `epochs` to 1 for quick demonstration, please change to 40 for actual training.
 
-```python
+```{.python .input}
 classes = 102
 epochs = 1
 lr = 0.001
@@ -108,7 +108,7 @@ Now we will apply data augmentations on training images. This makes minor altera
 
 For validation and inference, we only need to apply step 1, 4, and 5. We also need to save the mean and standard deviation values for [inference using C++](/api/cpp/docs/tutorials/cpp_inference).
 
-```python
+```{.python .input}
 jitter_param = 0.4
 lighting_param = 0.1
 
@@ -165,13 +165,12 @@ Before we go to training, one unique Gluon feature you should be aware of is hyb
 
 
 
-```python
+```{.python .input}
 # load pre-trained resnet50_v2 from model zoo
 finetune_net = resnet50_v2(pretrained=True, ctx=ctx)
 
 # change last softmax layer since number of classes are different
-with finetune_net.name_scope():
-    finetune_net.output = nn.Dense(classes)
+finetune_net.output = nn.Dense(classes)
 finetune_net.output.initialize(init.Xavier(), ctx=ctx)
 # hybridize for better performance
 finetune_net.hybridize()
@@ -196,7 +195,7 @@ Now let's define the test metrics and start fine-tuning.
 
 
 
-```python
+```{.python .input}
 def test(net, val_data, ctx):
     metric = mx.metric.Accuracy()
     for i, (data, label) in enumerate(val_data):
@@ -255,58 +254,12 @@ We now have a trained our custom model. This can be serialized into model files 
 
 
 
-```python
+```{.python .input}
 finetune_net.export("flower-recognition", epoch=epochs)
 
 ```
 
-`export` creates `flower-recognition-symbol.json` and `flower-recognition-0040.params` (`0040` is for 40 epochs we ran) in the current directory. These files can be used for model deployment in the next section.
-
-## Load the model and run inference using the MXNet Module API
-
-MXNet provides various useful tools and interfaces for deploying your model for inference. For example, you can use [MXNet Model Server](https://github.com/awslabs/mxnet-model-server) to start a service and host your trained model easily.
-Besides that, you can also use MXNet's different language APIs to integrate your model with your existing service. We provide [Python](/api/python.html),    [Java](/api/java.html), [Scala](/api/scala.html), and [C++](/api/cpp) APIs.
-
-Here we will briefly introduce how to run inference using Module API in Python. In general, prediction consists of the following steps:
-1. Load the model architecture (symbol file) and trained parameter values (params file)
-2. Load the synset file for label names
-3. Load the image and apply the same transformation we did on validation dataset during training
-4. Run a forward pass on the image data
-5. Convert output probabilities to predicted label name
-
-```python
-import numpy as np
-from collections import namedtuple
-
-ctx = mx.cpu()
-# load model symbol and params
-sym, arg_params, aux_params = mx.model.load_checkpoint('flower-recognition', epochs)
-mod = mx.mod.Module(symbol=sym, context=ctx, label_names=None)
-mod.bind(for_training=False, data_shapes=[('data', (1, 3, 224, 224))], label_shapes=mod._label_shapes)
-mod.set_params(arg_params, aux_params, allow_missing=True)
-
-# load synset for label names
-with open('synset.txt', 'r') as f:
-    labels = [l.rstrip() for l in f]
-
-# load an image for prediction
-img = mx.image.imread('./data/test/lotus/image_01832.jpg')
-# apply transform we did during training
-img = validation_transformer(img)
-# batchify
-img = img.expand_dims(axis=0)
-Batch = namedtuple('Batch', ['data'])
-mod.forward(Batch([img]))
-prob = mod.get_outputs()[0].asnumpy()
-prob = np.squeeze(prob)
-idx = np.argmax(prob)
-print('probability=%f, class=%s' % (prob[idx], labels[idx]))
-```
-
-Following is the output, you can see the image has been classified as lotus correctly.
-```text
-probability=9.798435, class=lotus
-```
+`export` creates `flower-recognition-symbol.json` and `flower-recognition-0040.params` (`0040` is for 40 epochs we ran) in the current directory. These files can be used for model deployment using the `HybridBlock.import` API.
 
 ## What's next
 

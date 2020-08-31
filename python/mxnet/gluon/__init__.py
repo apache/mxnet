@@ -19,6 +19,8 @@
 # pylint: disable=wildcard-import
 """Neural network module."""
 
+from . import metric
+
 from .parameter import *
 
 from .block import *
@@ -38,3 +40,5 @@ from . import data
 from . import model_zoo
 
 from . import contrib
+
+from . import probability

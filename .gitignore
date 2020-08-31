@@ -33,6 +33,8 @@ doc/html
 doc/latex
 doc/doc
 docs/web-data
+.jekyll-cache
+*.lock
 
 #dmlc
 config.mk
@@ -120,6 +122,10 @@ cmake_install.cmake
 
 # Mac OS X
 .DS_Store
+
+# Windows
+windows_package.7z
+windows_package
 
 #Notebook Automated Test
 !tests/nightly/test_tutorial_config.txt

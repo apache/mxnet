@@ -23,7 +23,8 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
-from common import with_seed, assert_raises_cudnn_not_satisfied
+from common import with_seed, assert_raises_cudnn_not_satisfied, \
+    xfail_when_nonstandard_decimal_separator
 import unittest
 
 def test_box_nms_op():
@@ -44,7 +45,7 @@ def test_box_nms_op():
         op = mx.contrib.sym.box_nms(in_var, overlap_thresh=thresh, valid_thresh=valid, topk=topk,
                                     coord_start=coord, score_index=score, id_index=cid, background_id=bid,
                                     force_suppress=force, in_format=in_format, out_format=out_format)
-        exe = op.bind(ctx=default_context(), args=[arr_data], args_grad=[arr_grad])
+        exe = op._bind(ctx=default_context(), args=[arr_data], args_grad=[arr_grad])
         exe.forward(is_train=True)
         exe.backward(mx.nd.array(grad))
         assert_almost_equal(arr_grad.asnumpy(), expected)
@@ -285,6 +286,7 @@ def test_multibox_target_op():
     assert_array_equal(loc_mask.asnumpy(), expected_loc_mask)
     assert_array_equal(cls_target.asnumpy(), expected_cls_target)
 
+@xfail_when_nonstandard_decimal_separator
 def test_gradient_multiplier_op():
     # We use the quadratic function in combination with gradient multiplier
     def f(x, a, b, c):
@@ -444,7 +446,3 @@ def test_modulated_deformable_convolution():
                         else:
                             rtol, atol = 0.05, 1e-3
 
-
-if __name__ == '__main__':
-    import nose
-    nose.runmodule()
