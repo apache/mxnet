@@ -51,7 +51,7 @@ extern "C" {
 #define MXNET_DLL __declspec(dllimport)
 #endif
 #else
-#define MXNET_DLL
+#define MXNET_DLL __attribute__((visibility("default")))
 #endif
 
 /*! \brief manually define unsigned int */
