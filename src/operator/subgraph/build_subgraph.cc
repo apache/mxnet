@@ -609,11 +609,22 @@ void CreateSubgraphNode(nnvm::Graph* g,
   FindOutputEntries(g, simple_nodes, subgraph_nodes, *entry_top_order_map, &output_entries);
 
   // Create a subgraph for the subgraph node
+  // entries are in topological order, with duplicates being neighbors
   nnvm::Symbol sym;
+  size_t idx = 0;
+  nnvm::NodeEntryEqual node_equal;
   sym.outputs.resize(output_entries.size());
   for (size_t i = 0; i < output_entries.size(); ++i) {
-    sym.outputs[i] = *output_entries[i];
+    if (i == 0) {  // add first entry
+      sym.outputs[idx] = *output_entries[i];
+    } else if (!node_equal(sym.outputs[idx], *output_entries[i])) {  // compare to see if unique
+      // add non-dupe entries
+      idx++;
+      sym.outputs[idx] = *output_entries[i];
+    }  // else skip over dupe entries
   }
+  sym.outputs.resize(idx+1);
+
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
   subg_prop->InitSubgraphInputs(&input_entries, &unique_inputs);
   nnvm::ObjectPtr n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);

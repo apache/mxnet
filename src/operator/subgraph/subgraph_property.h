@@ -343,26 +343,15 @@ class SubgraphProperty {
   virtual void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node,
                                       std::vector<nnvm::NodeEntry*>* output_entries) const {
     // Collapse output_entries pointing to same NodeEntry
-    // Outputs are ordered, only neighboring nodes can point to same NodeEntry
-    std::unordered_map<std::string, nnvm::NodeEntry> name_count_map;
-
+    // Outputs are ordered, duplicates are neighbors
+    nnvm::NodeEntryEqual node_equal;
     uint32_t idx = 0;
     for (size_t i = 0; i < output_entries->size(); ++i) {
-      // get node name
-      nnvm::Symbol sym;
-      sym.outputs.push_back(*output_entries->at(i));
-      const auto output_names = sym.ListOutputNames();
-      CHECK_EQ(output_names.size(), 1U);
-      const std::string& var_name = output_names[0];
-
-      auto it = name_count_map.find(var_name);
-      // if it is not in the map yet, add it and increment the output index
-      if (name_count_map.end() == it) {
-        name_count_map.emplace(var_name, nnvm::NodeEntry{subgraph_node, idx, 0});
+      // increment the output idx for each unique output of the subgraph
+      if (i != 0 && !node_equal(*output_entries->at(i-1), *output_entries->at(i)))
         idx++;
-      }
-      // set output to index from map
-      *output_entries->at(i) = name_count_map[var_name];
+      // change output entry to point to subgraph instead of original node
+      *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, idx, 0};
     }
   }
   /*!
