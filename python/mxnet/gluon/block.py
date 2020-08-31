@@ -912,7 +912,7 @@ class HybridBlock(Block):
         self._monitor_all = False
         self._backend = None
         self._backend_opts = {}
-        self._final_partitioned = False
+        self._first_forward = True
         self._cached_op_args = []
 
     def __setattr__(self, name, value):
@@ -1097,9 +1097,9 @@ class HybridBlock(Block):
         if not self._cached_op_args or not self._cached_graph:
             self._build_cache(*args)
 
-        if not self._final_partitioned:
+        if self._first_forward:
             # partition static shape ops if the graph contains any dynamic shape op
-            self._final_partitioned = True
+            self._first_forward = False
             data, out = self._cached_graph
             out, is_dynamic = out._optimize_for_dynamic_shape_op(is_np_array(), self._flags)
             self._cached_graph = data, out
@@ -1249,7 +1249,7 @@ class HybridBlock(Block):
     def _clear_cached_op(self):
         self._cached_graph = ()
         self._cached_op = None
-        self._final_partitioned = False
+        self._first_forward = True
 
     def register_child(self, block, name=None):
         if not isinstance(block, HybridBlock):

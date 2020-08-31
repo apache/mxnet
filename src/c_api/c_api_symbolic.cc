@@ -1522,7 +1522,6 @@ int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
       g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
       g = ApplyPass(std::move(g), "BuildSubgraph");
       g.attrs.erase("subgraph_property");
-      g.attrs.erase("flags");
     }
     s->outputs = g.outputs;
   }

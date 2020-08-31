@@ -885,19 +885,11 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
       for (const auto& subg_sym : n->attrs.subgraphs) {
         // convert symbol to graph
         nnvm::Graph subg_g = Symbol2Graph(*subg_sym);
-        // pass flags to subgraph node
-        if (g.HasAttr("flags")) {
-          subg_g.attrs["flags"] = std::make_shared<nnvm::any>(
-            g.GetAttr<std::vector<std::pair<std::string, std::string>>>("flags"));
-        }
         // call BuildSubgraph recursively
         for (const auto& property : subgraph_prop_list) {
           subg_g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
           subg_g = BuildSubgraph(std::move(subg_g));
           subg_g.attrs.erase("subgraph_property");
-        }
-        if (subg_g.HasAttr("flags")) {
-          subg_g.attrs.erase("flags");
         }
         subg_sym->outputs = subg_g.outputs;
       }
