@@ -634,7 +634,7 @@ def compile_static_python_gpu() {
         ws('workspace/ut-publish-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_gpu_cu92', 'build_static_python_cu92')
+            utils.docker_run('centos7_gpu_cu102', 'build_static_python_cu102')
           }
         }
     }
