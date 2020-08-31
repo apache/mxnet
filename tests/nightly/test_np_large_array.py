@@ -101,6 +101,20 @@ def test_zeros():
     assert A[0][0] == 0
 
 @use_np
+def test_ones_like():
+    A = np.ones((2, INT_OVERFLOW))
+    B = np.ones_like(A)
+    assert B.shape == A.shape
+    assert B[0, 0] == 1 and B[-1, -1] == 1
+
+@use_np
+def test_zeros_like():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.zeros_like(A)
+    assert B.shape == A.shape
+    assert B[0, 0] == 0 and B[-1, -1] == 0
+
+@use_np
 def test_abs():
     A = np.ones((INT_OVERFLOW, 2))
     A[0][0] = -1
@@ -570,6 +584,63 @@ def test_slice_assign():
     B = np.zeros((INT_OVERFLOW, 2))
     B[-1] = 2
     assert B[-1, 0] == 2 and B[-1, 1] == 2
+
+@use_np
+@pytest.mark.skip(reason='breaks on large tensor')
+def test_cumsum():
+    A = np.ones((INT_OVERFLOW, 2))
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.cumsum(A, axis=0, dtype='float64')
+    assert B.shape == A.shape
+    assert_almost_equal(B[-1, -1], np.array([INT_OVERFLOW]), rtol=1e-5, atol=1e-5)
+    B.backward()
+    assert A.grad.shape == A.shape
+    assert_almost_equal(A.grad[0, 0], np.array([INT_OVERFLOW]), rtol=1e-5, atol=1e-5)
+    assert A.grad[-1, -1] == 1
+
+@use_np
+@pytest.mark.skip(reason='breaks on large tensor')
+def test_cross():
+    A = np.ones((INT_OVERFLOW, 3))
+    B = np.ones((INT_OVERFLOW, 2))
+    A[-1] = np.array([1, 2, 3])
+    B[-1] = np.array([4, 5])
+    A.attach_grad()
+    with mx.autograd.record():
+        C = np.cross(A, B)
+    assert C.shape == (INT_OVERFLOW, 3)
+    assert C[0, 0] == -1 and C[0, 1] == 1 and C[0, 2] == 0
+    assert C[-1, 0] == -15 and C[-1, 1] == 12 and C[-1, 2] == -3
+    C.backward()
+    assert A.grad.shape == A.shape
+    assert A.grad[0, 0] == 1 and A.grad[0, 1] == -1 and A.grad[0, 2] == 0
+    assert A.grad[-1, 0] == 5 and A.grad[-1, 1] == -4 and A.grad[-1, 2] == -1
+
+@use_np
+def test_logical_family():
+    def batch_check(x1, x2, funcs):
+        x1.attach_grad()
+        for f in funcs:
+            with mx.autograd.record():
+                y = f(x1, x2)
+            assert y.shape == x1.shape
+            assert y[0] == f(x1[0], x2[0])
+            y.backward()
+            assert x1.grad.shape == x1.shape
+            assert x1.grad[0] == 0
+
+    A = np.zeros((INT_OVERFLOW), dtype='int32')
+    B = np.ones((INT_OVERFLOW), dtype='int32')
+    batch_check(A, B, [np.logical_and, np.logical_or, np.logical_xor])
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.logical_not(B)
+    assert C.shape == B.shape
+    assert C[0] == 0
+    C.backward()
+    assert B.grad.shape == B.shape
+    assert B.grad[0] == 0
 
 '''
                                      _               _
