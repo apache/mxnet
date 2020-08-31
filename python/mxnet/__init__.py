@@ -20,10 +20,6 @@
 # coding: utf-8
 """MXNet: a concise, fast and flexible framework for deep learning."""
 
-import multiprocessing
-import sys
-import traceback
-
 from .context import Context, current_context, cpu, gpu, cpu_pinned
 from . import engine, error
 from .base import MXNetError
@@ -110,13 +106,3 @@ from . import _global_var
 from . import _api_internal
 from . import api
 from . import container
-
-# Clean subprocesses when MXNet is interrupted
-def mxnet_excepthook(exctype, value, trbk):
-    print('\n'.join(traceback.format_exception(exctype, value, trbk)))
-    if hasattr(multiprocessing, 'active_children'):
-        # pylint: disable=not-callable
-        for p in multiprocessing.active_children():
-            p.terminate()
-
-sys.excepthook = mxnet_excepthook
