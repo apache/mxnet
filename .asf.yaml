@@ -1,0 +1,15 @@
+notifications:
+    commits:      commits@mxnet.apache.org
+    issues:       issues@mxnet.apache.org
+    pullrequests: commits@mxnet.apache.org
+
+github:
+  features:
+    wiki: true
+    issues: true
+    projects: true
+
+  enabled_merge_buttons:
+    squash:  true
+    merge:   false
+    rebase:  true
