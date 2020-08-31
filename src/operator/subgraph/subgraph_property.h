@@ -346,19 +346,19 @@ class SubgraphProperty {
     // Outputs are ordered, only neighboring nodes can point to same NodeEntry
     std::unordered_map<std::string, nnvm::NodeEntry> name_count_map;
 
-    size_t idx = 0;
+    uint32_t idx = 0;
     for (size_t i = 0; i < output_entries->size(); ++i) {
       // get node name
       nnvm::Symbol sym;
-      sym.outputs.push_back(*e);
+      sym.outputs.push_back(*output_entries->at(i));
       const auto output_names = sym.ListOutputNames();
       CHECK_EQ(output_names.size(), 1U);
       const std::string& var_name = output_names[0];
-      
+
       auto it = name_count_map.find(var_name);
       // if it is not in the map yet, add it and increment the output index
       if (name_count_map.end() == it) {
-        name_count_map.emplace(var_name, {subgraph_node, idx, 0});
+        name_count_map.emplace(var_name, nnvm::NodeEntry{subgraph_node, idx, 0});
         idx++;
       }
       // set output to index from map
