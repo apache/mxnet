@@ -204,6 +204,9 @@ class CustomOperator {
   CustomOperator() {
     this->Start();
   }
+  ~CustomOperator() {
+    this->Stop();
+  }
   void ThreadTarget() {
     std::unique_lock<std::mutex> lock(mutex_);
     while (!q_.empty() || !destructing_) {
