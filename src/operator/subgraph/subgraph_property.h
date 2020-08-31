@@ -342,8 +342,27 @@ class SubgraphProperty {
    */
   virtual void ConnectSubgraphOutputs(const nnvm::ObjectPtr subgraph_node,
                                       std::vector<nnvm::NodeEntry*>* output_entries) const {
+    // Collapse output_entries pointing to same NodeEntry
+    // Outputs are ordered, only neighboring nodes can point to same NodeEntry
+    std::unordered_map<std::string, nnvm::NodeEntry> name_count_map;
+
+    size_t idx = 0;
     for (size_t i = 0; i < output_entries->size(); ++i) {
-      *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, static_cast<uint32_t>(i), 0};
+      // get node name
+      nnvm::Symbol sym;
+      sym.outputs.push_back(*e);
+      const auto output_names = sym.ListOutputNames();
+      CHECK_EQ(output_names.size(), 1U);
+      const std::string& var_name = output_names[0];
+      
+      auto it = name_count_map.find(var_name);
+      // if it is not in the map yet, add it and increment the output index
+      if (name_count_map.end() == it) {
+        name_count_map.emplace(var_name, {subgraph_node, idx, 0});
+        idx++;
+      }
+      // set output to index from map
+      *output_entries->at(i) = name_count_map[var_name];
     }
   }
   /*!
