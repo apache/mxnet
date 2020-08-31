@@ -19,7 +19,7 @@
 """Autograd for NDArray."""
 
 from array import array
-from threading import Lock
+import itertools
 import traceback
 import ctypes
 from ctypes import c_int, c_void_p, CFUNCTYPE, POINTER, cast
@@ -411,16 +411,14 @@ class Function(object):
         """CustomOp registry."""
         def __init__(self):
             self.ref_holder = {}
-            self.counter = 0
-            self.lock = Lock()
+            self.counter = itertools.count()
 
         def inc(self):
             """Get index for new entry."""
-            self.lock.acquire()
-            cur = self.counter
-            self.counter += 1
-            self.lock.release()
-            return cur
+            return next(self.counter)
+
+        def __del__(self):
+            self.ref_holder = {}
 
     _registry = _Registry()
 
@@ -488,7 +486,8 @@ class Function(object):
         def delete_entry(_):
             """C Callback for CustomFunction::delete"""
             try:
-                del Function._registry.ref_holder[key]
+                if key in Function._registry.ref_holder:
+                    del Function._registry.ref_holder[key]
             except Exception:  # pylint: disable=broad-except
                 print('Error in autograd.Function.delete: %s' % traceback.format_exc())
                 return False
@@ -523,3 +522,7 @@ class Function(object):
         and returns as many NDArrays as forward's inputs.
         """
         raise NotImplementedError
+
+    def __del__(self):
+        """Destructor of Function"""
+        self.saved_tensors = ()

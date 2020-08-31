@@ -363,6 +363,9 @@ std::shared_ptr<void(int)> HANDLER_NAME(                             \
         case SIGBUS:                                                 \
           LOG(FATAL) << "IOError: " << strsignal(SIGNAL);            \
           break;                                                     \
+        case SIGPIPE:                                                \
+          LOG(FATAL) << "IOError: " << strsignal(SIGNAL);            \
+          break;                                                     \
         default:                                                     \
           LOG(FATAL) << "RuntimeError: " << strsignal(SIGNAL);       \
           break;                                                     \
@@ -374,6 +377,7 @@ std::shared_ptr<void(int)> HANDLER_NAME(                             \
 SIGNAL_HANDLER(SIGSEGV, SIGSEGVHandler, true);
 SIGNAL_HANDLER(SIGFPE, SIGFPEHandler, false);
 SIGNAL_HANDLER(SIGBUS, SIGBUSHandler, false);
+SIGNAL_HANDLER(SIGPIPE, SIGPIPEHandler, false);
 
 #endif
 

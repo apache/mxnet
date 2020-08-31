@@ -130,7 +130,6 @@ def ndarray_to_dlpack_for_write():
     fn : tensor -> dlpack
     """
     def to_dlpack_for_write(data):
-
         check_call(_LIB.MXNDArrayWaitToWrite(data.handle))
         dlpack = DLPackHandle()
         check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
