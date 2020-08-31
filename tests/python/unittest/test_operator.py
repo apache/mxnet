@@ -3231,7 +3231,15 @@ def test_correlation():
         unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
         unittest_correlation((5,1,6,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
         unittest_correlation((5,1,11,11), kernel_size = 5,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
-
+        
+        with pytest.raises(MXNetError):
+            unittest_correlation((1,3,10,10), kernel_size = 1,max_displacement = 4,stride1 = 0,stride2 = 1,pad_size = 4,is_multiply = False, dtype = dtype)
+        with pytest.raises(MXNetError):
+            unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 0,pad_size = 5,is_multiply = False, dtype = dtype)
+        with pytest.raises(MXNetError):
+            unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 0,pad_size = 5,is_multiply = True, dtype = dtype)
+        with pytest.raises(MXNetError):
+            unittest_correlation((1,3,10,10), kernel_size = 1,max_displacement = 4,stride1 = 0,stride2 = 1,pad_size = 4,is_multiply = True, dtype = dtype)
 
 # Seed set because the test is not robust enough to operate on random data
 @with_seed(1234)

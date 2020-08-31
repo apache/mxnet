@@ -24,6 +24,8 @@ import mxnet as mx
 import numpy as np
 import pytest
 import itertools
+import scipy.sparse as sps
+import mxnet.ndarray.sparse as mxsps
 from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, assert_allclose
 from mxnet.test_utils import check_symbolic_forward, check_symbolic_backward, discard_stderr
 from mxnet.test_utils import default_context, rand_shape_2d, rand_ndarray, same, environment
@@ -2308,3 +2310,12 @@ def test_arange_like_dtype():
         for v in out:
             assert v.dtype == t
 
+
+def test_fp16_spmm():
+    inp = mxsps.csr_matrix(sps.coo_matrix(([2.0], ([150], [100000]))).tocsr())
+    inp = inp.astype('float16', copy=False)
+    weight = mx.nd.random.randn(100001, 151)
+    weight = weight.astype('float16', copy=False)
+    out = mxsps.dot(inp, weight)
+    out_np = mx.nd.dot(inp, weight)
+    assert_almost_equal(out.asnumpy(), out_np, rtol=1e-3, atol=1e-5)

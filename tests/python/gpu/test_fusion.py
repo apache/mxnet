@@ -160,6 +160,9 @@ def check_unary_ops():
     # clip requires a_min, a_max
     announce_check('clip')
     check_fused_symbol(mx.sym.clip(a, a_min=0.3, a_max=0.7), a=arr)
+    check_fused_symbol(mx.sym.clip(a, a_min=-np.inf, a_max=0.7), a=arr)
+    check_fused_symbol(mx.sym.clip(a, a_min=-np.inf, a_max=np.inf), a=arr)
+    check_fused_symbol(mx.sym.clip(a, a_min=0, a_max=np.nan), a=arr)
 
     # smooth_l1 requires a scalar
     announce_check('smooth_l1')

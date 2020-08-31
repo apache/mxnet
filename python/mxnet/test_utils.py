@@ -1514,7 +1514,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         Provided ideal result to be compared against
     equal_nan : bool, optional, defaults to False
         Should nans be treated as equal in the comparison
-    use_unifrom: bool
+    use_uniform: bool
         Optional, When flag set to true,
         random input data generated follows uniform distribution,
         not normal distribution

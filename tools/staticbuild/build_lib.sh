@@ -40,7 +40,6 @@ if [[ $PLATFORM == 'linux' ]]; then
     cp -L build/libmxnet.so lib/libmxnet.so
     cp -L staticdeps/lib/libopenblas.so lib/libopenblas.so.0
     cp -L $(ldd lib/libmxnet.so | grep libgfortran |  awk '{print $3}') lib/
-    cp -L $(ldd lib/libmxnet.so | grep libquadmath |  awk '{print $3}') lib/
 elif [[ $PLATFORM == 'darwin' ]]; then
     cp -L build/libmxnet.dylib lib/libmxnet.dylib
 fi
