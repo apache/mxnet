@@ -65,7 +65,7 @@ struct Stream<gpu> {
   HandleState dnn_handle_ownership_;
   /*! \brief cutensor handle ownership */
   HandleState cutensor_handle_ownership_;
-  cutensorPlanCacheline_t* cutensor_cachelines_ = nullptr;
+  void* cutensor_cachelines_ = nullptr;
   /*! \brief cudaDeviceProp */
   cudaDeviceProp prop;
   /*! \brief dev id */
@@ -249,9 +249,9 @@ struct Stream<gpu> {
     {
         constexpr int32_t numCachelines = 1024;
         size_t sizeCache = numCachelines * sizeof(cutensorPlanCacheline_t);
-        cutensor_cachelines_ = (cutensorPlanCacheline_t*) malloc(sizeCache);
+        cutensor_cachelines_ = malloc(sizeCache);
 
-        err = cutensorHandleAttachPlanCachelines(&cutensor_handle_, cutensor_cachelines_, numCachelines);
+        err = cutensorHandleAttachPlanCachelines(&cutensor_handle_, (cutensorPlanCacheline_t*) cutensor_cachelines_, numCachelines);
         CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
 
         uint32_t numCachelinesRead = 0;
