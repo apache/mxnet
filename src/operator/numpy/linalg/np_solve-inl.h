@@ -41,13 +41,13 @@ using namespace mshadow;
 template<typename xpu, typename DType>
 void linalg_solve(const Tensor<xpu, 2, DType>& A,
                   const Tensor<xpu, 2, DType>& X,
-                  const Tensor<xpu, 1, int>& ipiv,
+                  const Tensor<xpu, 1, lapack_index_t>& ipiv,
                   Stream<xpu> *s);
 
 template<typename xpu, typename DType>
 void linalg_batch_solve(const Tensor<xpu, 3, DType>& A,
                         const Tensor<xpu, 3, DType>& X,
-                        const Tensor<xpu, 2, int>& ipiv,
+                        const Tensor<xpu, 2, lapack_index_t>& ipiv,
                         const mxnet::OpContext& ctx);
 
 template<typename xpu, typename DType> inline
@@ -86,7 +86,7 @@ inline void check_solve(const Tensor<xpu, 2, DType>& A,
 template<> inline \
 void linalg_solve<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                               const Tensor<cpu, 2, DType>& X, \
-                              const Tensor<cpu, 1, int>& ipiv, \
+                              const Tensor<cpu, 1, lapack_index_t>& ipiv, \
                               Stream<cpu> *s) { \
   check_solve(A, X); \
   const int N = X.size(1), nrhs = X.size(0); \
@@ -159,7 +159,7 @@ void linalg_dn_getrs<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
 template<> inline \
 void linalg_solve<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
                               const Tensor<gpu, 2, DType>& X, \
-                              const Tensor<gpu, 1, int>& ipiv, \
+                              const Tensor<gpu, 1, lapack_index_t>& ipiv, \
                               Stream<gpu> *s) { \
   using namespace mxnet; \
   using mshadow::gpu; \
@@ -199,7 +199,7 @@ void linalg_dn_getrs<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
 template<> inline \
 void linalg_solve<gpu, DType>(const Tensor<gpu, 2, DType>& A, \
                               const Tensor<gpu, 2, DType>& X, \
-                              const Tensor<gpu, 1, int>& ipiv, \
+                              const Tensor<gpu, 1, lapack_index_t>& ipiv, \
                               Stream<gpu> *s) { \
   LOG(FATAL) << "gpu solve requires CUDA version >= 8.0!"; \
 }
@@ -224,7 +224,7 @@ LINALG_GPU_SOLVE(double)
 template<> inline \
 void linalg_batch_solve<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
                                     const Tensor<xpu, 3, DType>& X, \
-                                    const Tensor<xpu, 2, int>& ipiv, \
+                                    const Tensor<xpu, 2, lapack_index_t>& ipiv, \
                                     const mxnet::OpContext& ctx) { \
   Stream<xpu> *s = ctx.get_stream<xpu>(); \
   for (index_t i = 0; i < A.size(0); ++i) { \
@@ -245,7 +245,7 @@ struct solve {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& A,
                  const Tensor<xpu, 3, DType>& X,
-                 const Tensor<xpu, 2, int>& ipiv,
+                 const Tensor<xpu, 2, lapack_index_t>& ipiv,
                  const OpContext& ctx,
                  const nnvm::NodeAttrs& attrs) {
     linalg_batch_solve(A, X, ipiv, ctx);  // ipiv for work_space in Lapacke_#gesv
@@ -279,8 +279,9 @@ void LaOpForwardSolve(const nnvm::NodeAttrs& attrs,
     if (0 == a_shape[ndim - 1] || 0 == a_shape[ndim - 2] ||
         0 == b_shape[ndim - 1] || 0 == b_shape[ndim - 2]) { return; }
 
-    const int work_space_size =
-      sizeof(OType) * (a_shape.Size() + b_shape.Size()) + sizeof(int) * ipiv_shape.Size();
+    const size_t work_space_size =
+      sizeof(OType) * (a_shape.Size() + b_shape.Size()) +
+      sizeof(lapack_index_t) * ipiv_shape.Size();
     Tensor<xpu, 1, char> work_buffer =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(work_space_size), s);
     MSHADOW_TYPE_SWITCH(a_tblob.type_flag_, AType, {
@@ -300,20 +301,20 @@ void LaOpForwardSolve(const nnvm::NodeAttrs& attrs,
         b_shape[ndim - 1], b_shape[ndim - 2], b_shape[ndim - 1] * b_shape[ndim - 2]);
     });
     // transpose shape
-    int temp = b_shape[ndim - 1];
+    lapack_index_t temp = b_shape[ndim - 1];
     b_shape[ndim - 1] = b_shape[ndim - 2];
     b_shape[ndim - 2] = temp;
     mxnet::TBlob a_transpose_tblob(reinterpret_cast<OType*>(work_buffer.dptr_),
       a_shape, a_tblob.dev_mask(), a_tblob.dev_id());
     mxnet::TBlob b_transpose_tblob(reinterpret_cast<OType*>(work_buffer.dptr_) + a_shape.Size(),
       b_shape, b_tblob.dev_mask(), b_tblob.dev_id());
-    mxnet::TBlob ipiv_tblob(reinterpret_cast<int*>(
+    mxnet::TBlob ipiv_tblob(reinterpret_cast<lapack_index_t*>(
       reinterpret_cast<OType*>(work_buffer.dptr_) + a_shape.Size() + b_shape.Size()),
       ipiv_shape, b_tblob.dev_mask(), b_tblob.dev_id());
 
     laop::op(a_transpose_tblob.FlatToKD<xpu, idim + 1, OType>(s),
              b_transpose_tblob.FlatToKD<xpu, idim + 1, OType>(s),
-             ipiv_tblob.FlatToKD<xpu, idim, int>(s),
+             ipiv_tblob.FlatToKD<xpu, idim, lapack_index_t>(s),
              ctx,
              attrs);
     // X = transpose(B)
@@ -347,14 +348,14 @@ struct solve_backward {
 template<typename xpu, typename DType>
 inline void batch_inverse(const Tensor<xpu, 3, DType>& inv_A,
                           const Tensor<xpu, 3, DType>& LU,
-                          const Tensor<xpu, 2, int>& pivot,
+                          const Tensor<xpu, 2, lapack_index_t>& pivot,
                           const mxnet::OpContext& ctx);
 
 #define CPU_BATCH_INVERSE(xpu, DType) \
 template<> inline \
 void batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& inv_A, \
                                const Tensor<xpu, 3, DType>& LU, \
-                               const Tensor<xpu, 2, int>& pivot, \
+                               const Tensor<xpu, 2, lapack_index_t>& pivot, \
                                const mxnet::OpContext& ctx) { \
   Stream<xpu> *s = ctx.get_stream<xpu>(); \
   for (index_t i = 0; i < inv_A.size(0); ++i) { \
@@ -376,7 +377,7 @@ CPU_BATCH_INVERSE(cpu, double)
 template<> inline \
 void batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& inv_A, \
                                const Tensor<xpu, 3, DType>& LU, \
-                               const Tensor<xpu, 2, int>& pivot, \
+                               const Tensor<xpu, 2, lapack_index_t>& pivot, \
                                const mxnet::OpContext& ctx) { \
   Stream<xpu> *s = ctx.get_stream<xpu>(); \
   if (LU.dptr_ != inv_A.dptr_) Copy(LU, inv_A, s); \
@@ -390,7 +391,7 @@ void batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& inv_A, \
 template<> inline \
 void batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& inv_A, \
                                const Tensor<xpu, 3, DType>& LU, \
-                               const Tensor<xpu, 2, int>& pivot, \
+                               const Tensor<xpu, 2, lapack_index_t>& pivot, \
                                const mxnet::OpContext& ctx) { \
   LOG(FATAL) << "gpu matrix inverse requires CUDA version >= 8.0!"; \
 }
@@ -425,7 +426,7 @@ void LaOpBackwardSolve(const nnvm::NodeAttrs& attrs,
       b_shape[a_shape.ndim() - 1] = b_tblob.shape_[a_shape.ndim() - 1];
     }
     const int ndim = a_shape.ndim();
-    const int N = a_shape[ndim - 1];
+    const lapack_index_t N = a_shape[ndim - 1];
     if (0 == a_shape[ndim - 1] || 0 == a_shape[ndim - 2] ||
         0 == b_shape[ndim - 1] || 0 == b_shape[ndim - 2]) { return; }
 
@@ -433,7 +434,7 @@ void LaOpBackwardSolve(const nnvm::NodeAttrs& attrs,
     int work_space_size = sizeof(OType) * a_shape.Size();  // for inverse(A)
     work_space_size += sizeof(OType) * a_shape.Size();  // for getri work space
     work_space_size += 2 * sizeof(OType) * b_shape.Size();  // for B and X
-    work_space_size += sizeof(int) * A.size(0) * N;  // for pivot work space
+    work_space_size += sizeof(lapack_index_t) * A.size(0) * N;  // for pivot work space
     Tensor<xpu, 1, char> work_buffer =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(work_space_size), s);
 
@@ -472,10 +473,11 @@ void LaOpBackwardSolve(const nnvm::NodeAttrs& attrs,
       b_shape, b_tblob.dev_mask(), b_tblob.dev_id());
     const Tensor<xpu, idim + 1, OType> X = x_cp_tblob.FlatToKD<xpu, idim + 1, OType>(s);
 
-    mxnet::TBlob pivot_tblob(reinterpret_cast<int*>(
+    mxnet::TBlob pivot_tblob(reinterpret_cast<lapack_index_t*>(
       reinterpret_cast<OType*>(work_buffer.dptr_) + 2 * a_shape.Size() + 2 * b_shape.Size()),
       Shape2(A.size(0), N), a_tblob.dev_mask(), a_tblob.dev_id());
-    const Tensor<xpu, idim, int> pivot = pivot_tblob.FlatToKD<xpu, idim, int>(s);
+    const Tensor<xpu, idim, lapack_index_t> pivot =
+      pivot_tblob.FlatToKD<xpu, idim, lapack_index_t>(s);
 
     // calculate inverse(A) on CPU or GPU
     batch_inverse(inv_A, LU, pivot, ctx);

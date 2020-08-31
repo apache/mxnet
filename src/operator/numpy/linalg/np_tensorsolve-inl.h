@@ -148,7 +148,7 @@ struct tensorsolve {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 2, DType>& A,
                  const Tensor<xpu, 2, DType>& X,
-                 const Tensor<xpu, 1, int>& ipiv,
+                 const Tensor<xpu, 1, lapack_index_t>& ipiv,
                  const OpContext& ctx) {
     mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
     linalg_solve(A, X, ipiv, s);  // ipiv for work_space in Lapacke_#gesv
@@ -203,8 +203,8 @@ void TensorsolveOpForward(const nnvm::NodeAttrs& attrs,
         reinterpret_cast<DType*>(workspace.dptr_);
       DType* b_ptr =
         reinterpret_cast<DType*>(workspace.dptr_+ a.Size() * sizeof(DType));
-      int* ipiv_ptr =
-        reinterpret_cast<int*>(workspace.dptr_ + (a.Size() + b.Size()) * sizeof(DType));
+      lapack_index_t* ipiv_ptr =
+        reinterpret_cast<lapack_index_t*>(workspace.dptr_ + (a.Size() + b.Size()) * sizeof(DType));
 
       // Cast type
       MSHADOW_TYPE_SWITCH(a.type_flag_, AType, {
@@ -221,7 +221,7 @@ void TensorsolveOpForward(const nnvm::NodeAttrs& attrs,
       mxnet::TBlob ipiv_tblob(ipiv_ptr, Shape1(1), out.dev_mask(), out.dev_id());
       Tensor<xpu, 2, DType> a_tensor = a_tblob.get<xpu, 2, DType>(s);
       Tensor<xpu, 2, DType> b_tensor = b_tblob.get<xpu, 2, DType>(s);
-      Tensor<xpu, 1, int> ipiv_tensor = ipiv_tblob.get<xpu, 1, int>(s);
+      Tensor<xpu, 1, lapack_index_t> ipiv_tensor = ipiv_tblob.get<xpu, 1, lapack_index_t>(s);
 
       // Solve linear equation
       laop::op(a_tensor, b_tensor, ipiv_tensor, ctx);
@@ -235,7 +235,7 @@ void TensorsolveOpForward(const nnvm::NodeAttrs& attrs,
       Tuple<int> a_axes;
       GetReorderedAxes(a_axes_param, &a_axes_remained, &a_axes, a_shape);
       mxnet::TShape a_transpose_shape = GetReorderedShape(a_shape, a_axes);
-      const int N = b_shape.Size();
+      const lapack_index_t N = b_shape.Size();
 
       DType* a_ptr =
         reinterpret_cast<DType*>(workspace.dptr_);
@@ -243,8 +243,8 @@ void TensorsolveOpForward(const nnvm::NodeAttrs& attrs,
         reinterpret_cast<DType*>(workspace.dptr_ + a.Size() * sizeof(DType));
       DType* b_ptr =
         reinterpret_cast<DType*>(workspace.dptr_ + 2 * a.Size() * sizeof(DType));
-      int* ipiv_ptr =
-        reinterpret_cast<int*>(workspace.dptr_ + (2 * a.Size() + b.Size()) * sizeof(DType));
+      lapack_index_t* ipiv_ptr = reinterpret_cast<lapack_index_t*>(
+        workspace.dptr_ + (2 * a.Size() + b.Size()) * sizeof(DType));
 
       // Cast type
       MSHADOW_TYPE_SWITCH(a.type_flag_, AType, {
@@ -272,8 +272,8 @@ void TensorsolveOpForward(const nnvm::NodeAttrs& attrs,
 
       Tensor<xpu, 2, DType> a_tensor =
         a_tblob.get_with_shape<xpu, 2, DType>(Shape2(N, N), s);
-      Tensor<xpu, 1, int> ipiv_tensor =
-        ipiv_tblob.get_with_shape<xpu, 1, int>(Shape1(N), s);
+      Tensor<xpu, 1, lapack_index_t> ipiv_tensor =
+        ipiv_tblob.get_with_shape<xpu, 1, lapack_index_t>(Shape1(N), s);
       Tensor<xpu, 2, DType> b_tensor =
         b_tblob.get_with_shape<xpu, 2, DType>(Shape2(1, N), s);
       Tensor<xpu, 2, DType> out_tensor =
@@ -392,7 +392,8 @@ void TensorsolveBackwardImpl(const Tuple<int>& a_axes_param,
       // Allocate workspace.
       DType *tensorinv_a_ptr = reinterpret_cast<DType*>(workspace.dptr_);
       DType *lu_ptr = reinterpret_cast<DType*>(workspace.dptr_ + a_shape.Size() * sizeof(DType));
-      int *ipiv_ptr = reinterpret_cast<int*>(workspace.dptr_ + 2 * a_shape.Size() * sizeof(DType));
+      lapack_index_t *ipiv_ptr =
+        reinterpret_cast<lapack_index_t*>(workspace.dptr_ + 2 * a_shape.Size() * sizeof(DType));
       TBlob tensorinv_a(tensorinv_a_ptr, a_shape, xpu::kDevMask);
       TBlob lu(lu_ptr, a_shape, xpu::kDevMask);
       TBlob ipiv(ipiv_ptr, b_shape, xpu::kDevMask);
@@ -408,8 +409,8 @@ void TensorsolveBackwardImpl(const Tuple<int>& a_axes_param,
         tensorinv_a.get_with_shape<xpu, 3, DType>(Shape3(1, 1, 1), s);
       Tensor<xpu, 3, DType> lu_tensor =
         lu.get_with_shape<xpu, 3, DType>(Shape3(1, 1, 1), s);
-      Tensor<xpu, 2, int> ipiv_tensor =
-        ipiv.get_with_shape<xpu, 2, int>(Shape2(1, 1), s);
+      Tensor<xpu, 2, lapack_index_t> ipiv_tensor =
+        ipiv.get_with_shape<xpu, 2, lapack_index_t>(Shape2(1, 1), s);
       batch_inverse(tensorinv_a_tensor, lu_tensor, ipiv_tensor, ctx);
 
       MSHADOW_TYPE_SWITCH(x.type_flag_, XType, {
@@ -420,7 +421,7 @@ void TensorsolveBackwardImpl(const Tuple<int>& a_axes_param,
       });
     } else {
       // Two tensors of at least 1 dimensions.
-      const int N = b_shape.Size();
+      const lapack_index_t N = b_shape.Size();
       Tuple<int> a_axes_remained;
       Tuple<int> a_axes;
       Tuple<int> a_origin_axes;
@@ -443,7 +444,7 @@ void TensorsolveBackwardImpl(const Tuple<int>& a_axes_param,
         workspace.dptr_ + 2 * (a_shape.Size() + b_shape.Size()) * sizeof(DType));
       DType *grad_b_ptr = reinterpret_cast<DType*>(
         workspace.dptr_ + (3 * a_shape.Size() + 2 * b_shape.Size()) * sizeof(DType));
-      int *ipiv_ptr = reinterpret_cast<int*>(
+      lapack_index_t *ipiv_ptr = reinterpret_cast<lapack_index_t*>(
         workspace.dptr_ + 3 * (a_shape.Size() + b_shape.Size()) * sizeof(DType));
 
       TBlob tensorinv_a_data(tensorinv_a_ptr, a_shape, xpu::kDevMask);
@@ -490,8 +491,8 @@ void TensorsolveBackwardImpl(const Tuple<int>& a_axes_param,
         grad_a_data.get_with_shape<xpu, 3, DType>(Shape3(1, N, N), s);
       Tensor<xpu, 3, DType> grad_b_tensor =
         grad_b_data.get_with_shape<xpu, 3, DType>(Shape3(1, N, 1), s);
-      Tensor<xpu, 2, int> ipiv_tensor =
-        ipiv_data.get_with_shape<xpu, 2, int>(Shape2(1, N), s);
+      Tensor<xpu, 2, lapack_index_t> ipiv_tensor =
+        ipiv_data.get_with_shape<xpu, 2, lapack_index_t>(Shape2(1, N), s);
 
       // Calculate tensorinv(a).
       batch_inverse(tensorinv_a_tensor, lu_tensor, ipiv_tensor, ctx);

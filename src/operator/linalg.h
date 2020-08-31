@@ -188,9 +188,9 @@ void linalg_syevd(const Tensor<xpu, 2, DType>& A,
 // This function determines the amount of workspace needed for linalg_syevd
 // which is returned as number of elements of type DType.
 template<typename xpu, typename DType>
-int linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
-                                 const Tensor<xpu, 1, DType>& L,
-                                 Stream<xpu> *s = 0);
+lapack_index_t linalg_syevd_workspace_query(const Tensor<xpu, 2, DType>& A,
+                                            const Tensor<xpu, 1, DType>& L,
+                                            Stream<xpu> *s = 0);
 
 //////////////////////////////// GESVD ////////////////////////////////////////////
 
@@ -224,13 +224,13 @@ int linalg_gesvd_workspace_query(const Tensor<xpu, 2, DType>& UT,
 //   don't throw error when A is non-invertible matrix.
 template<typename xpu, typename DType>
 void linalg_getrf(const Tensor<xpu, 2, DType>& A,
-                  const Tensor<xpu, 1, int>& pivot,
+                  const Tensor<xpu, 1, lapack_index_t>& pivot,
                   bool check_singular,
                   Stream<xpu> *s = 0);
 
 template<typename xpu, typename DType>
 void linalg_batch_getrf(const Tensor<xpu, 3, DType>& A,
-                        const Tensor<xpu, 2, int>& pivot,
+                        const Tensor<xpu, 2, lapack_index_t>& pivot,
                         bool check_singular,
                         Stream<xpu> *s = 0);
 
@@ -244,7 +244,7 @@ void linalg_batch_getrf(const Tensor<xpu, 3, DType>& A,
 // - LU is also the output parameter (overwritten by inverse(A))
 template<typename xpu, typename DType>
 void linalg_getri(const Tensor<xpu, 2, DType>& LU,
-                  const Tensor<xpu, 1, int>& pivot, \
+                  const Tensor<xpu, 1, lapack_index_t>& pivot, \
                   const Tensor<xpu, 1, DType>& work,
                   Stream<xpu> *s = 0);
 
@@ -274,7 +274,7 @@ void linalg_batch_inverse(const Tensor<xpu, 3, DType>& A,
 // from LU and pivot using temp workspace, the result is stored back to LU
 template<typename xpu, typename DType>
 void linalg_batch_det_backward_helper(const Tensor<xpu, 3, DType>& LU,
-                                      const Tensor<xpu, 2, int>& pivot,
+                                      const Tensor<xpu, 2, lapack_index_t>& pivot,
                                       const Tensor<xpu, 1, DType>& det,
                                       const Tensor<xpu, 3, DType>& temp,
                                       const DType zero_det,
