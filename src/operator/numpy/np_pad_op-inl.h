@@ -778,7 +778,8 @@ void NumpyPadOpForward(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(inputs.size(), 1U);
     CHECK_EQ(outputs.size(), 1U);
     CHECK_EQ(req.size(), 1U);
-    CHECK_EQ(req[0], kWriteTo);
+    CHECK(req[0] != kNullOp);
+    CHECK(req[0] != kWriteInplace);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TBlob& in_data = inputs[0];
     const TBlob& out_data = outputs[0];
@@ -830,7 +831,8 @@ void NumpyPadOpBackward(const nnvm::NodeAttrs& attrs,
     CHECK_EQ(inputs.size(), 1U);
     CHECK_EQ(outputs.size(), 1U);
     CHECK_EQ(req.size(), 1U);
-    CHECK_EQ(req[0], kWriteTo);
+    CHECK(req[0] != kNullOp);
+    CHECK(req[0] != kWriteInplace);
     Stream<xpu> *s = ctx.get_stream<xpu>();
     const TBlob& in_data = inputs[0];
     const TBlob& out_data = outputs[0];
