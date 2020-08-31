@@ -8435,17 +8435,24 @@ def test_np_pad():
                 ctx = mx.context.current_context()
                 x = mx.np.random.uniform(-1.0, 1.0, size=shape)
                 x = mx.np.array(x, ctx=ctx)
-                x.attach_grad()
-                with mx.autograd.record():
-                    mx_out = mx.np.pad(x, pad_width=pw, mode="constant")
-                    out_grad = mx.np.random.normal(0, 1, mx_out.shape)
-                    out_grad = mx.np.array(out_grad, ctx=ctx)
-                    loss = mx_out * out_grad
-                    loss = loss.sum()
-                    loss.backward()
-                in_grad = mx.np.pad(mx.np.ones_like(x.grad), pad_width=pw, mode="constant") * mx.np.array(out_grad, ctx=ctx)
-                mx_grad = x.grad
-                assert_almost_equal(mx.np.pad(mx_grad, pad_width=pw, mode="constant"), in_grad.asnumpy(), rtol=rtol, atol=atol)
+                for grad_req in ['write', 'add']:
+                    x.attach_grad(grad_req)
+                    if grad_req == 'add':
+                        init_grad = mx.np.random.uniform(-1.0, 1.0, size=shape, ctx=ctx)
+                        x.grad[:] = init_grad
+                    with mx.autograd.record():
+                        mx_out = mx.np.pad(x, pad_width=pw, mode="constant")
+                        out_grad = mx.np.random.normal(0, 1, mx_out.shape)
+                        out_grad = mx.np.array(out_grad, ctx=ctx)
+                        loss = mx_out * out_grad
+                        loss = loss.sum()
+                        loss.backward()
+                    gt_in_grad = mx.np.pad(mx.np.ones_like(x.grad), pad_width=pw, mode="constant") * mx.np.array(out_grad, ctx=ctx)
+                    mx_grad = x.grad
+                    if grad_req == 'add':
+                        assert_almost_equal(mx.np.pad(mx_grad - init_grad, pad_width=pw, mode="constant"), gt_in_grad.asnumpy(), rtol=rtol, atol=atol)
+                    else:
+                        assert_almost_equal(mx.np.pad(mx_grad, pad_width=pw, mode="constant"), gt_in_grad.asnumpy(), rtol=rtol, atol=atol)
 
 
 @with_seed()
