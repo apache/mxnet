@@ -443,7 +443,7 @@ struct syevd {
     if (A.dptr_ != U.dptr_) Copy(U, A, s);
     // From here on, we work on U only
     // Reserve workspace (size determined by query)
-    int lwork(linalg_syevd_workspace_query(U[0], L[0], s));
+    lapack_index_t lwork(linalg_syevd_workspace_query(U[0], L[0], s));
     Tensor<xpu, 1, DType> work = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
     // Loop over items in batch
@@ -474,12 +474,12 @@ struct inverse {
 // this kernel computes sign(det(A)), log(abs(det(A))) from LU decomposition
 struct SignedLogDet {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int N, int* pivot,
+  MSHADOW_XINLINE static void Map(int i, int N, lapack_index_t* pivot,
                                   DType *LU, DType* sign, DType *logdet) {
     int changes(0);
     DType diag_sign(1);
     DType diag_logsum(0);
-    int *pivot_mat = pivot + i * N;
+    lapack_index_t *pivot_mat = pivot + i * N;
     DType *LU_mat = LU + i * N * N;
     for (int j = 0; j < N; ++j) {
       changes += (pivot_mat[j] != (j + 1));
@@ -501,7 +501,7 @@ struct SignedLogDet {
 struct det {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& det,
-                 const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, int>& pivot,
+                 const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, lapack_index_t>& pivot,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     if (A.shape_.Size() == 0U) {
       return;
@@ -526,7 +526,7 @@ struct slogdet {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& sign,
                  const Tensor<xpu, 1, DType>& logabsdet, const Tensor<xpu, 3, DType>& LU,
-                 const Tensor<xpu, 2, int>& pivot, const OpContext& ctx,
+                 const Tensor<xpu, 2, lapack_index_t>& pivot, const OpContext& ctx,
                  const nnvm::NodeAttrs& attrs) {
     if (A.shape_.Size() == 0U) {
       return;
@@ -922,7 +922,7 @@ struct det_backward {
   static void op(const Tensor<xpu, 1, DType>& ddet,
                  const Tensor<xpu, 1, DType>& det,
                  const Tensor<xpu, 3, DType>& LU,
-                 const Tensor<xpu, 2, int>& pivot,
+                 const Tensor<xpu, 2, lapack_index_t>& pivot,
                  const Tensor<xpu, 3, DType>& dA,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     using namespace mshadow;
@@ -953,7 +953,7 @@ struct slogdet_backward {
                  const Tensor<xpu, 1, DType>& sign,
                  const Tensor<xpu, 1, DType>& logabsdet,
                  const Tensor<xpu, 3, DType>& LU,
-                 const Tensor<xpu, 2, int>& pivot,
+                 const Tensor<xpu, 2, lapack_index_t>& pivot,
                  const Tensor<xpu, 3, DType>& dA,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     using namespace mshadow;

@@ -1194,12 +1194,18 @@ void linalg_syevd<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                               const Tensor<cpu, 1, DType>& work, \
                               Stream<cpu> *s) { \
   check_syevd(A, L); \
-  int liwork(0); \
+  DType workTmp(0); \
+  lapack_index_t liwork(0); \
   MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
-                       A.dptr_, A.stride_, L.dptr_, work.dptr_, -1, &liwork, \
-                      -1); \
-  int lwork(static_cast<int>(*work.dptr_)); \
-  int *iwork = static_cast<int *>(static_cast<void *>(work.dptr_ + lwork)); \
+                       A.dptr_, A.stride_, L.dptr_, &workTmp, -1, \
+                       &liwork, -1); \
+  lapack_index_t lwork = static_cast<lapack_index_t>(workTmp); \
+  if constexpr (sizeof(lapack_index_t) > sizeof(DType) ) { \
+    /* For alligning iwork pointer address */ \
+    constexpr lapack_index_t round_mask = sizeof(lapack_index_t) / sizeof(DType) - 1; \
+    lwork = (lwork + round_mask) & ~round_mask; \
+  }\
+  lapack_index_t *iwork = static_cast<lapack_index_t *>(static_cast<void *>(work.dptr_ + lwork)); \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
                                A.dptr_, A.stride_, L.dptr_, work.dptr_, \
                                lwork, iwork, liwork)); \
@@ -1216,16 +1222,28 @@ LINALG_CPU_SYEVD(dsyevd, double)
 // to the work space query on GPU.
 #define LINALG_CPU_SYEVD_WORKSPACE_QUERY(func, DType) \
 template<> inline \
-int linalg_syevd_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
+lapack_index_t linalg_syevd_workspace_query<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
                                              const Tensor<cpu, 1, DType>& L, \
                                              Stream<cpu> *s) { \
-  DType work(0.0); \
-  int iwork(0); \
+  DType work(0); \
+  lapack_index_t liwork(0); \
   MXNET_LAPACK_##func(MXNET_LAPACK_ROW_MAJOR, 'L', A.size(0), \
-                      A.dptr_, A.stride_, L.dptr_, &work, -1, &iwork, \
+                      A.dptr_, A.stride_, L.dptr_, &work, -1, &liwork, \
                       -1); \
-  iwork = (sizeof(int) * iwork + sizeof(DType) - 1) / sizeof(DType); \
-  return static_cast<int>(work) + iwork; \
+  lapack_index_t lwork = static_cast<lapack_index_t>(work); \
+  if constexpr (sizeof(DType) != sizeof(lapack_index_t)) { \
+    if constexpr (sizeof(DType) > sizeof(lapack_index_t)) { \
+      /* Convert liwork to lwork units */ \
+      liwork = (sizeof(lapack_index_t) * liwork + sizeof(DType) - 1) / sizeof(DType); \
+    } else { \
+      /* Convert liwork to lwork units */ \
+      liwork *= sizeof(lapack_index_t) / sizeof(DType); \
+      /* For alligning iwork pointer address */ \
+      constexpr lapack_index_t round_mask = sizeof(lapack_index_t) / sizeof(DType) - 1; \
+      lwork = (lwork + round_mask) & ~round_mask; \
+    } \
+  } \
+  return lwork + liwork; \
 }
 LINALG_CPU_SYEVD_WORKSPACE_QUERY(ssyevd, float)
 LINALG_CPU_SYEVD_WORKSPACE_QUERY(dsyevd, double)
@@ -1430,7 +1448,7 @@ LINALG_GPU_GESVD_WORKSPACE_QUERY(DnDgesvd, double)
 #define LINALG_CPU_GETRF(fname, DType) \
 template<> inline \
 void linalg_getrf<cpu, DType>(const Tensor<cpu, 2, DType>& A, \
-                              const Tensor<cpu, 1, int>& pivot, \
+                              const Tensor<cpu, 1, lapack_index_t>& pivot, \
                               bool check_singular, Stream<cpu> *s) { \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, A.size(1), A.size(0), \
                                A.dptr_, A.stride_, pivot.dptr_)); \
@@ -1447,7 +1465,7 @@ LINALG_CPU_GETRF(dgetrf, double)
 #define LINALG_CPU_BATCH_GETRF(fname, DType) \
 template<> inline \
 void linalg_batch_getrf<cpu, DType>(const Tensor<cpu, 3, DType>& A, \
-                                    const Tensor<cpu, 2, int>& pivot, \
+                                    const Tensor<cpu, 2, lapack_index_t>& pivot, \
                                     bool check_singular, \
                                     Stream<cpu> *s) { \
   for (index_t i = 0; i < A.size(0); ++i) { \
@@ -1527,7 +1545,7 @@ LINALG_GPU_BATCH_GETRF(DgetrfBatched, double)
 #define LINALG_CPU_GETRI(fname, DType) \
 template<> inline \
 void linalg_getri<cpu, DType>(const Tensor<cpu, 2, DType>& LU, \
-                              const Tensor<cpu, 1, int>& pivot, \
+                              const Tensor<cpu, 1, lapack_index_t>& pivot, \
                               const Tensor<cpu, 1, DType>& work, \
                               Stream<cpu> *s) { \
   int ret(MXNET_LAPACK_##fname(MXNET_LAPACK_COL_MAJOR, LU.size(0), LU.dptr_, \
@@ -1633,12 +1651,12 @@ void linalg_batch_inverse<xpu, DType>(const Tensor<xpu, 3, DType>& A, \
     sizeof(DType) - 1) / sizeof(DType); \
   Tensor<xpu, 1, DType> workspace = ctx.requested[0].\
     get_space_typed<xpu, 1, DType>(Shape1(workspace_size), s); \
-  const Tensor<xpu, 1, int> pivot(reinterpret_cast<int *>(workspace.dptr_), \
+  const Tensor<xpu, 1, lapack_index_t> pivot(reinterpret_cast<lapack_index_t *>(workspace.dptr_), \
                                   Shape1(A.size(1))); \
   const Tensor<xpu, 1, DType> work(reinterpret_cast<DType *>(pivot.dptr_ + pivot.MSize()), \
                                    Shape1(lwork)); \
   if (A.dptr_ != B.dptr_) Copy(A, B, s); \
-  for (index_t i = 0; i < A.size(0); ++i) { \
+  for (lapack_index_t i = 0; i < A.size(0); ++i) { \
     linalg_getrf(A[i], pivot, true, s); \
     linalg_getri(A[i], pivot, work, s); \
   } \
@@ -1698,7 +1716,7 @@ LINALG_GPU_BATCH_INVERSE(gpu, double)
 #define LINALG_CPU_BATCH_DET_HELPER(xpu, DType) \
 template<> inline \
 void linalg_batch_det_backward_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
-                                         const Tensor<xpu, 2, int>& pivot, \
+                                         const Tensor<xpu, 2, lapack_index_t>& pivot, \
                                          const Tensor<xpu, 1, DType>& det, \
                                          const Tensor<xpu, 3, DType>& temp, \
                                          const DType zero_det, \
@@ -1738,7 +1756,7 @@ void linalg_batch_det_backward_helper<xpu, DType>(const Tensor<xpu, 3, DType>& L
 #define LINALG_GPU_BATCH_DET_HELPER(xpu, DType) \
 template<> inline \
 void linalg_batch_det_backward_helper<xpu, DType>(const Tensor<xpu, 3, DType>& LU, \
-                                         const Tensor<xpu, 2, int>& pivot, \
+                                         const Tensor<xpu, 2, lapack_index_t>& pivot, \
                                          const Tensor<xpu, 1, DType>& det, \
                                          const Tensor<xpu, 3, DType>& temp, \
                                          const DType zero_det, \

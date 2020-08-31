@@ -78,11 +78,11 @@ struct PinvScalarRcondParam : public dmlc::Parameter<PinvScalarRcondParam> {
 };
 
 template<typename xpu, typename DType>
-int linalg_gesdd_workspace_query(const int m, const int n,
-                                 const Tensor<xpu, 2, DType>& UT,
-                                 const Tensor<xpu, 1, DType>& S,
-                                 const Tensor<xpu, 2, DType>& V,
-                                 Stream<xpu>* s = 0);
+lapack_index_t linalg_gesdd_workspace_query(const int m, const int n,
+                                            const Tensor<xpu, 2, DType>& UT,
+                                            const Tensor<xpu, 1, DType>& S,
+                                            const Tensor<xpu, 2, DType>& V,
+                                            Stream<xpu>* s = 0);
 
 template<typename xpu, typename DType>
 void linalg_gesdd(const int m, const int n,
@@ -102,13 +102,13 @@ void BatchSVDImpl(const int m, const int n,
 
 #define LINALG_CPU_GESDD_WORKSPACE_QUERY(func, DType) \
 template<> inline \
-int linalg_gesdd_workspace_query<cpu, DType>(const int m, const int n, \
-                                             const Tensor<cpu, 2, DType>& UT, \
-                                             const Tensor<cpu, 1, DType>& S, \
-                                             const Tensor<cpu, 2, DType>& V, \
-                                             Stream<cpu> *s) { \
+lapack_index_t linalg_gesdd_workspace_query<cpu, DType>(const int m, const int n, \
+                                                        const Tensor<cpu, 2, DType>& UT, \
+                                                        const Tensor<cpu, 1, DType>& S, \
+                                                        const Tensor<cpu, 2, DType>& V, \
+                                                        Stream<cpu> *s) { \
   DType work(0.0); \
-  std::vector<int> iwork(8 * std::min(m, n), 0); \
+  std::vector<lapack_index_t> iwork(8 * std::min(m, n), 0); \
   if (m > n) { \
     MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, n, m, \
                         UT.dptr_, UT.stride_, S.dptr_, \
@@ -122,7 +122,7 @@ int linalg_gesdd_workspace_query<cpu, DType>(const int m, const int n, \
                         UT.dptr_, UT.stride_, \
                         &work, -1, iwork.data()); \
   } \
-  return static_cast<int>(work); \
+  return static_cast<lapack_index_t>(work); \
 }
 
 #define LINALG_CPU_GESDD(func, DType) \
@@ -134,7 +134,7 @@ void linalg_gesdd<cpu, DType>(const int m, \
                               const Tensor<cpu, 2, DType>& V, \
                               const Tensor<cpu, 1, DType>& work, \
                               Stream<cpu> *s) { \
-  std::vector<int> iwork(8 * std::min(m, n), 0); \
+  std::vector<lapack_index_t> iwork(8 * std::min(m, n), 0); \
   int res(0); \
   if (m > n) { \
     res = MXNET_LAPACK_##func(MXNET_LAPACK_COL_MAJOR, n, m, \

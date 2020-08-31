@@ -467,7 +467,7 @@ inline bool DetType(const nnvm::NodeAttrs& attrs,
     TYPE_ASSIGN_CHECK(*out_type, i, dtype);  /* sign or det or logdet */
   }
   TYPE_ASSIGN_CHECK(*out_type, onum, dtype);  /* LU */
-  TYPE_ASSIGN_CHECK(*out_type, onum + 1, kInt32);  /* pivot */
+  TYPE_ASSIGN_CHECK(*out_type, onum + 1, blas_index_type_flag);  /* pivot */
   return true;
 }
 
@@ -831,7 +831,7 @@ struct LaOpDetForwardCaller<xpu, DType, 1, laop> {
     laop::op(inputs[0].FlatToKD<xpu, 3, DType>(s),
              outputs[0].FlatToKD<xpu, 1, DType>(s),
              outputs[1].FlatToKD<xpu, 3, DType>(s),
-             outputs[2].FlatToKD<xpu, 2, int>(s), ctx, attrs);
+             outputs[2].FlatToKD<xpu, 2, lapack_index_t>(s), ctx, attrs);
   }
 };
 template<typename xpu, typename DType, typename laop>
@@ -845,7 +845,7 @@ struct LaOpDetForwardCaller<xpu, DType, 2, laop> {
              outputs[0].FlatToKD<xpu, 1, DType>(s),
              outputs[1].FlatToKD<xpu, 1, DType>(s),
              outputs[2].FlatToKD<xpu, 3, DType>(s),
-             outputs[3].FlatToKD<xpu, 2, int>(s), ctx, attrs);
+             outputs[3].FlatToKD<xpu, 2, lapack_index_t>(s), ctx, attrs);
   }
 };
 template<typename xpu, int onum, typename laop>
@@ -881,7 +881,7 @@ struct LaOpDetBackwardCaller<xpu, DType, 1, laop> {
     laop::op(inputs[0].FlatToKD<xpu, 1, DType>(s),
              inputs[1].FlatToKD<xpu, 1, DType>(s),
              inputs[2].FlatToKD<xpu, 3, DType>(s),
-             inputs[3].FlatToKD<xpu, 2, int>(s),
+             inputs[3].FlatToKD<xpu, 2, lapack_index_t>(s),
              outputs[0].FlatToKD<xpu, 3, DType>(s), ctx, attrs);
   }
 };
@@ -896,7 +896,7 @@ struct LaOpDetBackwardCaller<xpu, DType, 2, laop> {
              inputs[1].FlatToKD<xpu, 1, DType>(s),
              inputs[2].FlatToKD<xpu, 1, DType>(s),
              inputs[3].FlatToKD<xpu, 3, DType>(s),
-             inputs[4].FlatToKD<xpu, 2, int>(s),
+             inputs[4].FlatToKD<xpu, 2, lapack_index_t>(s),
              outputs[0].FlatToKD<xpu, 3, DType>(s), ctx, attrs);
   }
 };
