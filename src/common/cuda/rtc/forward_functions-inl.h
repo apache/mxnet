@@ -835,7 +835,13 @@ __device__ inline DType trunc(const DType val) {
 
 template <typename DType>
 __device__ inline DType clip(const DType val, const float a_min, const float a_max) {
-  return max(min(val, a_max), a_min);
+  if (val > a_max) {
+    return a_max;
+  } else if (val < a_min) {
+    return a_min;
+  } else {
+    return val;
+  }
 }
 
 template <typename DType>
