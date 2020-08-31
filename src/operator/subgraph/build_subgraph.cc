@@ -617,8 +617,8 @@ void CreateSubgraphNode(nnvm::Graph* g,
   for (size_t i = 0; i < output_entries.size(); ++i) {
     if (i == 0) {  // add first entry
       sym.outputs[idx] = *output_entries[i];
-    } else if (!node_equal(sym.outputs[idx], *output_entries[i])) {  // compare to see if unique
-      // add non-dupe entries
+    } else if (!node_equal(sym.outputs[idx], *output_entries[i])) {  // compare to see if diff
+      // add new entries
       idx++;
       sym.outputs[idx] = *output_entries[i];
     }  // else skip over dupe entries
