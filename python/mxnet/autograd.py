@@ -19,7 +19,7 @@
 """Autograd for NDArray."""
 
 from array import array
-import itertools
+from threading import Lock
 import traceback
 import ctypes
 from ctypes import c_int, c_void_p, CFUNCTYPE, POINTER, cast
@@ -411,11 +411,14 @@ class Function(object):
         """CustomOp registry."""
         def __init__(self):
             self.ref_holder = {}
-            self.counter = itertools.count()
+            self.counter = 0
+            self.lock = Lock()
 
         def inc(self):
             """Get index for new entry."""
-            return next(self.counter)
+            with self.lock:
+                self.counter += 1
+                return self.counter
 
         def __del__(self):
             self.ref_holder = {}
