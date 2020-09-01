@@ -397,7 +397,7 @@ output.shape
 ]
 ```
 
-## Deciding the paradim for your NN
+## Deciding the paradigm for your NN
 
 MXNet includes two types of programming paradigms:
 
