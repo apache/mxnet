@@ -269,7 +269,7 @@ Simirly, you can the following code to implement a famous network called
 ```{.python .input  n=120}
 class LeNet(Block):
     def __init__(self):
-        super(LeNet, self).__init__()
+        super().__init__()
         self.conv1  = nn.Conv2D(channels=6, kernel_size=3, activation='relu')
         self.pool1  = nn.MaxPool2D(pool_size=2, strides=2)
         self.conv2  = nn.Conv2D(channels=16, kernel_size=3, activation='relu')
