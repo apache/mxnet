@@ -526,7 +526,7 @@ def isnan(data):
 
     Parameters
     ----------
-    input : NDArray
+    data : NDArray
         An N-D NDArray.
 
     Returns
