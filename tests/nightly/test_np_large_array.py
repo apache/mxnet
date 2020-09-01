@@ -142,11 +142,8 @@ def test_add():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 1
 
-# this will fail; broadcast needs to be fixed
-# TODO add backward test after forward is fixed
 @use_np
-@pytest.mark.skip(reason='Does not support large tensor; to be fixed')
-def test_add_broadcast():
+def test_binary_broadcast():
     A = np.ones((INT_OVERFLOW, 2))
     B = np.ones((INT_OVERFLOW, 1))
     C = np.add(A, B)
@@ -570,6 +567,7 @@ def test_slice_assign():
     B = np.zeros((INT_OVERFLOW, 2))
     B[-1] = 2
     assert B[-1, 0] == 2 and B[-1, 1] == 2
+
 
 '''
                                      _               _
