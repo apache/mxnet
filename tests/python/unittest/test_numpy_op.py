@@ -10317,3 +10317,42 @@ def test_np_broadcast_ops_on_misaligned_input_oneside(dtype, lead_dim, both_ways
     expected = c.asnumpy() + d.asnumpy()
     mx.nd.waitall()
     assert_almost_equal(f, expected)
+
+@with_seed()
+@use_np
+@pytest.mark.parametrize('num_batch', [1, 2])
+@pytest.mark.parametrize('num_channel_data', [4, 8])
+@pytest.mark.parametrize('num_deformable_group', [1, 2])
+@pytest.mark.parametrize('input_height', [5, 6])
+@pytest.mark.parametrize('input_width', [5, 6])
+@pytest.mark.parametrize('dilate', [(1, 1), (2, 2)])
+@pytest.mark.parametrize('grad_nodes', [['im_data'], ['offset_data'], ['weight']])
+def test_modulated_deformable_convolution(num_batch, num_channel_data, num_deformable_group,
+                                          input_height, input_width, dilate, grad_nodes):
+    output_height = input_height
+    output_width = input_width
+    im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
+    offset_data = \
+        np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
+        * 0.8 + 0.1
+    mask_data = np.random.rand(num_batch, num_deformable_group * 3 * 3, output_height, output_width)
+    mask_data = 0.5 * (1 + np.tanh(0.5 * mask_data)) # sigmoid
+    weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
+    bias = np.zeros(num_channel_data)
+
+    im_data_var = mx.symbol.Variable(name="im_data").as_np_ndarray()
+    offset_data_var = mx.symbol.Variable(name="offset_data").as_np_ndarray()
+    mask_data_var = mx.symbol.Variable(name="mask_data").as_np_ndarray()
+    weight_var = mx.symbol.Variable(name="weight").as_np_ndarray()
+    bias_var = mx.symbol.Variable(name="bias").as_np_ndarray()
+    op = mx.sym.npx.modulated_deformable_convolution(name='test_op', data=im_data_var,
+                                                     offset=offset_data_var, mask=mask_data_var,
+                                                     weight=weight_var, bias=bias_var,
+                                                     num_filter=num_channel_data, pad=dilate,
+                                                     kernel=(3, 3), stride=(1, 1), dilate=dilate,
+                                                     num_deformable_group=num_deformable_group)
+    if grad_nodes[0] == 'offset_data':
+        # wider tolerance needed for coordinate differential
+        rtol, atol = 1.0, 1e-2
+    else:
+        rtol, atol = 0.05, 1e-3

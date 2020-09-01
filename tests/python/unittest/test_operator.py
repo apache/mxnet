@@ -5798,16 +5798,16 @@ def test_deformable_convolution():
                         weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
                         bias = np.zeros(num_channel_data)
 
-                        im_data_var = mx.symbol.Variable(name="im_data")
-                        offset_data_var = mx.symbol.Variable(name="offset_data")
-                        weight_var = mx.symbol.Variable(name="weight")
-                        bias_var = mx.symbol.Variable(name="bias")
-                        op = mx.sym.contrib.DeformableConvolution(name='test_op', data=im_data_var,
-                                                                  offset=offset_data_var,
-                                                                  weight=weight_var, bias=bias_var,
-                                                                  num_filter=num_channel_data, pad=dilate,
-                                                                  kernel=(3, 3), stride=(1, 1), dilate=dilate,
-                                                                  num_deformable_group=num_deformable_group)
+                        im_data_var = mx.symbol.Variable(name="im_data").as_np_ndarray()
+                        offset_data_var = mx.symbol.Variable(name="offset_data").as_np_ndarray()
+                        weight_var = mx.symbol.Variable(name="weight").as_np_ndarray()
+                        bias_var = mx.symbol.Variable(name="bias").as_np_ndarray()
+                        op = mx.sym.npx.deformable_convolution(name='test_op', data=im_data_var,
+                                                               offset=offset_data_var,
+                                                               weight=weight_var, bias=bias_var,
+                                                               num_filter=num_channel_data, pad=dilate,
+                                                               kernel=(3, 3), stride=(1, 1), dilate=dilate,
+                                                               num_deformable_group=num_deformable_group)
                         if grad_nodes[0] == 'offset_data':
                             # wider tolerance needed for coordinate differential
                             rtol, atol = 1.0, 1e-2

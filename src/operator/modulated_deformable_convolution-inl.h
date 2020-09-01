@@ -26,8 +26,8 @@
  * \ref: https://arxiv.org/abs/1811.11168
  * \author Yuwen Xiong, Haozhi Qi, Jifeng Dai, Xizhou Zhu, Han Hu
 */
-#ifndef MXNET_OPERATOR_CONTRIB_MODULATED_DEFORMABLE_CONVOLUTION_INL_H_
-#define MXNET_OPERATOR_CONTRIB_MODULATED_DEFORMABLE_CONVOLUTION_INL_H_
+#ifndef MXNET_OPERATOR_MODULATED_DEFORMABLE_CONVOLUTION_INL_H_
+#define MXNET_OPERATOR_MODULATED_DEFORMABLE_CONVOLUTION_INL_H_
 
 #include <mxnet/io.h>
 #include <mxnet/base.h>
@@ -41,10 +41,10 @@
 #include <vector>
 #include <string>
 #include <utility>
-#include "../operator_common.h"
-#include "../nn/im2col.h"
-#include "./nn/modulated_deformable_im2col.h"
-#include "../linalg.h"
+#include "./operator_common.h"
+#include "./nn/im2col.h"
+#include "./contrib/nn/modulated_deformable_im2col.h"
+#include "./linalg.h"
 
 
 namespace mxnet {
@@ -537,7 +537,7 @@ class ModulatedDeformableConvolutionProp : public OperatorProperty {
   }
 
   std::string TypeString() const override {
-    return "_contrib_ModulatedDeformableConvolution";
+    return "_npx_modulated_deformable_convolution";
   }
 
   std::vector<int> DeclareBackwardDependency(
@@ -573,4 +573,4 @@ class ModulatedDeformableConvolutionProp : public OperatorProperty {
 #endif  // DMLC_USE_CXX11
 }  // namespace op
 }  // namespace mxnet
-#endif  // MXNET_OPERATOR_CONTRIB_MODULATED_DEFORMABLE_CONVOLUTION_INL_H_
+#endif  // MXNET_OPERATOR_MODULATED_DEFORMABLE_CONVOLUTION_INL_H_

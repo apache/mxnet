@@ -3095,6 +3095,11 @@ def test_DeformableConvolution():
     """test of the deformable convolution layer with possible combinations of arguments,
     currently this layer only supports gpu
     """
+    try:
+        ctx = mx.gpu()
+        _ = mx.nd.array([0], ctx=ctx)
+    except mx.base.MXNetError:
+        pytest.skip("deformable_convolution only supports GPU")
     net = nn.HybridSequential()
     net.add(
         nn.DeformableConvolution(10, kernel_size=(3, 3), strides=1, padding=0),
@@ -3109,12 +3114,6 @@ def test_DeformableConvolution():
         nn.DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False),
         nn.DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
     )
-
-    try:
-        ctx = mx.gpu()
-        _ = mx.nd.array([0], ctx=ctx)
-    except mx.base.MXNetError:
-        pytest.skip("deformable_convolution only supports GPU")
 
     net.initialize(force_reinit=True, ctx=ctx)
     net.hybridize()

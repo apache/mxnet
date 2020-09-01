@@ -32,7 +32,7 @@ from ..parameter import Parameter
 from ... import symbol
 from ...base import numeric_types
 from .activations import Activation
-from ...util import is_np_array
+from ...util import is_np_array, np_array
 
 
 def _infer_weight_shape(op_name, data_shape, kwargs):
@@ -85,7 +85,7 @@ class _Conv(HybridBlock):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias: bool
@@ -219,7 +219,7 @@ class Conv1D(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -300,7 +300,7 @@ class Conv2D(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -384,7 +384,7 @@ class Conv3D(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -473,7 +473,7 @@ class Conv1DTranspose(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -564,7 +564,7 @@ class Conv2DTranspose(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -658,7 +658,7 @@ class Conv3DTranspose(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -1280,7 +1280,7 @@ class DeformableConvolution(HybridBlock):
         initialization will be deferred to the first time `forward` is called
         and input channels will be inferred from the shape of input data.
     activation : str, (Default value = None)
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     weight_initializer : str or `Initializer`, (Default value = None)
@@ -1352,10 +1352,8 @@ class DeformableConvolution(HybridBlock):
         dshape[layout.find('N')] = 1
         dshape[layout.find('C')] = in_channels
 
-        op = getattr(symbol, 'Convolution')
-        offset = op(symbol.var('data', shape=dshape), **self._kwargs_offset)
-
-        offsetshapes = offset.infer_shape_partial()[0]
+        op_name = 'convolution' if is_np_array() else 'Convolution'
+        offsetshapes = _infer_weight_shape(op_name, dshape, self._kwargs_offset)
 
         self.offset_weight = Parameter('offset_weight', shape=offsetshapes[1],
                                        init=offset_weight_initializer,
@@ -1391,22 +1389,31 @@ class DeformableConvolution(HybridBlock):
             self.act = None
 
     def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
+        if not is_np_array():
+            x = x.as_np_ndarray()
+            offset_weight = offset_weight.as_np_ndarray()
+            deformable_conv_weight = deformable_conv_weight.as_np_ndarray()
+            if offset_bias is not None:
+                offset_bias = offset_bias.as_np_ndarray()
+            if deformable_conv_bias is not None:
+                deformable_conv_bias = deformable_conv_bias.as_np_ndarray()
         if offset_bias is None:
-            offset = F.Convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
+            offset = F.npx.convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
         else:
-            offset = F.Convolution(x, offset_weight, offset_bias, cudnn_off=True, **self._kwargs_offset)
+            offset = F.npx.convolution(x, offset_weight, offset_bias, cudnn_off=True, **self._kwargs_offset)
 
         if deformable_conv_bias is None:
-            act = F.contrib.DeformableConvolution(data=x, offset=offset, weight=deformable_conv_weight,
-                                                  name='fwd', **self._kwargs_deformable_conv)
+            act = F.npx.deformable_convolution(data=x, offset=offset, weight=deformable_conv_weight,
+                                               name='fwd', **self._kwargs_deformable_conv)
         else:
-            act = F.contrib.DeformableConvolution(data=x, offset=offset, weight=deformable_conv_weight,
-                                                  bias=deformable_conv_bias, name='fwd',
-                                                  **self._kwargs_deformable_conv)
+            act = F.npx.deformable_convolution(data=x, offset=offset, weight=deformable_conv_weight,
+                                               bias=deformable_conv_bias, name='fwd',
+                                               **self._kwargs_deformable_conv)
 
         if self.act:
-            act = self.act(act)
-        return act
+            with np_array(True):
+                act = self.act(act)
+        return act if is_np_array() else act.as_nd_ndarray()
 
     def _alias(self):
         return 'deformable_conv'
@@ -1584,28 +1591,37 @@ class ModulatedDeformableConvolution(HybridBlock):
             self.act = None
 
     def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
+        if not is_np_array():
+            x = x.as_np_ndarray()
+            offset_weight = offset_weight.as_np_ndarray()
+            deformable_conv_weight = deformable_conv_weight.as_np_ndarray()
+            if offset_bias is not None:
+                offset_bias = offset_bias.as_np_ndarray()
+            if deformable_conv_bias is not None:
+                deformable_conv_bias = deformable_conv_bias.as_np_ndarray()
         if offset_bias is None:
-            offset = F.Convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
+            offset = F.npx.convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
         else:
-            offset = F.Convolution(x, offset_weight, offset_bias, cudnn_off=True, **self._kwargs_offset)
+            offset = F.npx.convolution(x, offset_weight, offset_bias, cudnn_off=True, **self._kwargs_offset)
 
-        offset_t = F.slice_axis(offset, axis=1, begin=0, end=self.offset_split_index)
-        mask = F.slice_axis(offset, axis=1, begin=self.offset_split_index, end=None)
-        mask = F.sigmoid(mask) * 2
+        offset_t = F.npx.slice_axis(offset, axis=1, begin=0, end=self.offset_split_index)
+        mask = F.npx.slice_axis(offset, axis=1, begin=self.offset_split_index, end=None)
+        mask = F.npx.sigmoid(mask) * 2
 
         if deformable_conv_bias is None:
-            act = F.contrib.ModulatedDeformableConvolution(data=x, offset=offset_t, mask=mask,
-                                                           weight=deformable_conv_weight,
-                                                           name='fwd', **self._kwargs_deformable_conv)
+            act = F.npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
+                                                         weight=deformable_conv_weight,
+                                                         name='fwd', **self._kwargs_deformable_conv)
         else:
-            act = F.contrib.ModulatedDeformableConvolution(data=x, offset=offset_t, mask=mask,
-                                                           weight=deformable_conv_weight,
-                                                           bias=deformable_conv_bias, name='fwd',
-                                                           **self._kwargs_deformable_conv)
+            act = F.npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
+                                                         weight=deformable_conv_weight,
+                                                         bias=deformable_conv_bias, name='fwd',
+                                                         **self._kwargs_deformable_conv)
 
         if self.act:
-            act = self.act(act)
-        return act
+            with np_array(True):
+                act = self.act(act)
+        return act if is_np_array() else act.as_nd_ndarray()
 
     def _alias(self):
         return 'modulated_deformable_conv'
@@ -1649,11 +1665,13 @@ class PixelShuffle1D(HybridBlock):
     def hybrid_forward(self, F, x):
         """Perform pixel-shuffling on the input."""
         f = self._factor
+        if not is_np_array():
+            x = x.as_np_ndarray()
                                              # (N, C*f, W)
-        x = F.reshape(x, (0, -4, -1, f, 0))  # (N, C, f, W)
-        x = F.transpose(x, (0, 1, 3, 2))     # (N, C, W, f)
-        x = F.reshape(x, (0, 0, -3))         # (N, C, W*f)
-        return x
+        x = F.npx.reshape(x, (-2, -6, -1, f, -2))  # (N, C, f, W)
+        x = F.np.transpose(x, (0, 1, 3, 2))     # (N, C, W, f)
+        x = F.npx.reshape(x, (-2, -2, -5))         # (N, C, W*f)
+        return x if is_np_array() else x.as_nd_ndarray()
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self._factor)
@@ -1710,12 +1728,14 @@ class PixelShuffle2D(HybridBlock):
     def hybrid_forward(self, F, x):
         """Perform pixel-shuffling on the input."""
         f1, f2 = self._factors
+        if not is_np_array():
+            x = x.as_np_ndarray()
                                                       # (N, f1*f2*C, H, W)
-        x = F.reshape(x, (0, -4, -1, f1 * f2, 0, 0))  # (N, C, f1*f2, H, W)
-        x = F.reshape(x, (0, 0, -4, f1, f2, 0, 0))    # (N, C, f1, f2, H, W)
-        x = F.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
-        x = F.reshape(x, (0, 0, -3, -3))              # (N, C, H*f1, W*f2)
-        return x
+        x = F.npx.reshape(x, (-2, -6, -1, f1 * f2, -2, -2))  # (N, C, f1*f2, H, W)
+        x = F.npx.reshape(x, (-2, -2, -6, f1, f2, -2, -2))    # (N, C, f1, f2, H, W)
+        x = F.np.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
+        x = F.npx.reshape(x, (-2, -2, -5, -5))              # (N, C, H*f1, W*f2)
+        return x if is_np_array() else x.as_nd_ndarray()
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self._factors)
@@ -1773,17 +1793,19 @@ class PixelShuffle3D(HybridBlock):
         """Perform pixel-shuffling on the input."""
         # `transpose` doesn't support 8D, need other implementation
         f1, f2, f3 = self._factors
+        if not is_np_array():
+            x = x.as_np_ndarray()
                                                               # (N, C*f1*f2*f3, D, H, W)
-        x = F.reshape(x, (0, -4, -1, f1 * f2 * f3, 0, 0, 0))  # (N, C, f1*f2*f3, D, H, W)
-        x = F.swapaxes(x, 2, 3)                               # (N, C, D, f1*f2*f3, H, W)
-        x = F.reshape(x, (0, 0, 0, -4, f1, f2*f3, 0, 0))      # (N, C, D, f1, f2*f3, H, W)
-        x = F.reshape(x, (0, 0, -3, 0, 0, 0))                 # (N, C, D*f1, f2*f3, H, W)
-        x = F.swapaxes(x, 3, 4)                               # (N, C, D*f1, H, f2*f3, W)
-        x = F.reshape(x, (0, 0, 0, 0, -4, f2, f3, 0))         # (N, C, D*f1, H, f2, f3, W)
-        x = F.reshape(x, (0, 0, 0, -3, 0, 0))                 # (N, C, D*f1, H*f2, f3, W)
-        x = F.swapaxes(x, 4, 5)                               # (N, C, D*f1, H*f2, W, f3)
-        x = F.reshape(x, (0, 0, 0, 0, -3))                    # (N, C, D*f1, H*f2, W*f3)
-        return x
+        x = F.npx.reshape(x, (-2, -6, -1, f1 * f2 * f3, -2, -2, -2))  # (N, C, f1*f2*f3, D, H, W)
+        x = F.np.swapaxes(x, 2, 3)                               # (N, C, D, f1*f2*f3, H, W)
+        x = F.npx.reshape(x, (-2, -2, -2, -6, f1, f2*f3, -2, -2))      # (N, C, D, f1, f2*f3, H, W)
+        x = F.npx.reshape(x, (-2, -2, -5, -2, -2, -2))                 # (N, C, D*f1, f2*f3, H, W)
+        x = F.np.swapaxes(x, 3, 4)                               # (N, C, D*f1, H, f2*f3, W)
+        x = F.npx.reshape(x, (-2, -2, -2, -2, -6, f2, f3, -2))         # (N, C, D*f1, H, f2, f3, W)
+        x = F.npx.reshape(x, (-2, -2, -2, -5, -2, -2))                 # (N, C, D*f1, H*f2, f3, W)
+        x = F.np.swapaxes(x, 4, 5)                               # (N, C, D*f1, H*f2, W, f3)
+        x = F.npx.reshape(x, (-2, -2, -2, -2, -5))                    # (N, C, D*f1, H*f2, W*f3)
+        return x if is_np_array() else x.as_nd_ndarray()
 
     def __repr__(self):
         return "{}({})".format(self.__class__.__name__, self._factors)

@@ -970,7 +970,10 @@ class Concatenate(Sequential):
         out = []
         for block in self._children.values():
             out.append(block()(x))
-        out = nd.concat(*out, dim=self.axis)
+        if is_np_array():
+            out = np.concatenate(out, axis=self.axis)
+        else:
+            out = nd.concat(*out, dim=self.axis)
         return out
 
 
@@ -1001,7 +1004,10 @@ class HybridConcatenate(HybridSequential):
         out = []
         for block in self._children.values():
             out.append(block()(x))
-        out = F.concat(*out, dim=self.axis)
+        if is_np_array():
+            out = F.np.concatenate(out, axis=self.axis)
+        else:
+            out = F.concat(*out, dim=self.axis)
         return out
 
 
