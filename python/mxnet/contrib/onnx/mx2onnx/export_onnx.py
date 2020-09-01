@@ -172,6 +172,8 @@ class MXNetGraph(object):
             Input data type e.g. np.float32
         verbose : Boolean
             If true will print logs of the model conversion
+        opset_version : Int
+            ONNX opset version to use for export, defaults to latest supported by onnx package
 
         Returns
         -------
