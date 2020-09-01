@@ -172,7 +172,7 @@ Some common task and loss function pairs include:
 You can also create custom loss functions using **Loss Blocks**. For more
 information see []()
 
-You can inherit the base `Loss` class and write your own `hybrid_forward`
+You can inherit the base `Loss` class and write your own `forward`
 method. The backward propagation will be automatically computed by autograd.
 However that only holds true if you can build your loss from existing operators.
 
