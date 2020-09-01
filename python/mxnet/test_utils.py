@@ -1040,8 +1040,10 @@ def check_numeric_gradient(sym, location, aux_states=None, numeric_eps=1e-3, rto
         The auxiliary states required when generating the executor for the symbol.
     numeric_eps : float, optional
         Delta for the finite difference method that approximates the gradient.
-    check_eps : float, optional
-        relative error eps used when comparing numeric grad to symbolic grad.
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to ``None``.
     grad_nodes : None or list or tuple or dict, optional
         Names of the nodes to check gradient on
     use_forward_train : bool
@@ -1182,8 +1184,10 @@ def check_symbolic_forward(sym, location, expected, rtol=1E-4, atol=None,
             Contains arrays corresponding to exe.outputs.
         - if type is dict of str to np.ndarray
             Contains mapping between sym.list_output() and exe.outputs.
-    check_eps : float, optional
-        Relative error to check to.
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to ``None``.
     aux_states : list of np.ndarray of dict, optional
         - if type is list of np.ndarray
             Contains all the NumPy arrays corresponding to sym.list_auxiliary_states
@@ -1270,8 +1274,10 @@ def check_symbolic_backward(sym, location, out_grads, expected, rtol=1e-5, atol=
             Contains arrays corresponding to exe.grad_arrays
         - if type is dict of str to np.ndarray
             Contains mapping between ``sym.list_arguments()`` and exe.outputs.
-    check_eps: float, optional
-        Relative error to check to.
+    rtol : None or float
+        The relative threshold. Default threshold will be used if set to ``None``.
+    atol : None or float
+        The absolute threshold. Default threshold will be used if set to ``None``.
     aux_states : list of np.ndarray or dict of str to np.ndarray
     grad_req : str or list of str or dict of str to str, optional
         Gradient requirements. 'write', 'add' or 'null'.
