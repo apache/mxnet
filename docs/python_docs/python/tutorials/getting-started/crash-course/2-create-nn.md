@@ -235,7 +235,7 @@ class Net(gluon.Block):
 ```{.python .input  n=54}
 class MLP(Block):
     def __init__(self):
-        super(MLP, self).__init__()
+        super().__init__()
         self.dense1 = nn.Dense(5,activation='relu')
         self.dense2 = nn.Dense(25,activation='relu')
         self.dense3 = nn.Dense(2)
