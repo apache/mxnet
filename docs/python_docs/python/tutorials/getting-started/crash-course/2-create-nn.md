@@ -225,11 +225,11 @@ code.
 
 ```
 class Net(gluon.Block):
-    def __init__(self, **kwargs):
-        super(Net, self).__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
 
     def forward(self, x):
-        pass
+        return x
 ```
 
 ```{.python .input  n=54}
