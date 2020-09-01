@@ -651,7 +651,6 @@ def test_constraint_check():
 
 # broken
 @use_np
-@pytest.mark.skip(reason='Does not support large tensor; to be fixed')
 def test_batch_flatten():
     A = np.ones((2, 1, INT_OVERFLOW))
     A.attach_grad()
