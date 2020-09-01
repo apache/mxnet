@@ -184,19 +184,19 @@ class Object {
    * \param tindex The type index.
    * \return the result.
    */
-  MXNET_DLL static std::string TypeIndex2Key(uint32_t tindex);
+  static std::string TypeIndex2Key(uint32_t tindex);
   /*!
    * \brief Get the type key hash of the corresponding index from runtime.
    * \param tindex The type index.
    * \return the related key-hash.
    */
-  MXNET_DLL static size_t TypeIndex2KeyHash(uint32_t tindex);
+  static size_t TypeIndex2KeyHash(uint32_t tindex);
   /*!
    * \brief Get the type index of the corresponding key from runtime.
    * \param key The type key.
    * \return the result.
    */
-  MXNET_DLL static uint32_t TypeKey2Index(const std::string& key);
+  static uint32_t TypeKey2Index(const std::string& key);
 
 #if MXNET_OBJECT_ATOMIC_REF_COUNTER
   using RefCounterType = std::atomic<int32_t>;
@@ -274,7 +274,7 @@ class Object {
    * \param type_child_slots_can_overflow Whether to allow child to overflow the slots.
    * \return The allocated type index.
    */
-  MXNET_DLL static uint32_t GetOrAllocRuntimeTypeIndex(
+  static uint32_t GetOrAllocRuntimeTypeIndex(
       const std::string& key,
       uint32_t static_tindex,
       uint32_t parent_tindex,
@@ -301,7 +301,7 @@ class Object {
    * \param parent_tindex The parent type index.
    * \return The derivation results.
    */
-  MXNET_DLL bool DerivedFrom(uint32_t parent_tindex) const;
+  bool DerivedFrom(uint32_t parent_tindex) const;
   // friend classes
   template<typename>
   friend class ObjAllocatorBase;

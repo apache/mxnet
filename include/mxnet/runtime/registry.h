@@ -58,7 +58,7 @@ class Registry {
    * \brief set the body of the function to be f
    * \param f The body of the function.
    */
-  MXNET_DLL Registry& set_body(PackedFunc f);  // NOLINT(*)
+  Registry& set_body(PackedFunc f);  // NOLINT(*)
   /*!
    * \brief set the body of the function to be f
    * \param f The body of the function.
@@ -253,25 +253,25 @@ class Registry {
    * \param override Whether allow oveeride existing function.
    * \return Reference to theregistry.
    */
-  MXNET_DLL static Registry& Register(const std::string& name, bool override = false);  // NOLINT(*)
+  static Registry& Register(const std::string& name, bool override = false);  // NOLINT(*)
   /*!
    * \brief Erase global function from registry, if exist.
    * \param name The name of the function.
    * \return Whether function exist.
    */
-  MXNET_DLL static bool Remove(const std::string& name);
+  static bool Remove(const std::string& name);
   /*!
    * \brief Get the global function by name.
    * \param name The name of the function.
    * \return pointer to the registered function,
    *   nullptr if it does not exist.
    */
-  MXNET_DLL static const PackedFunc* Get(const std::string& name);  // NOLINT(*)
+  static const PackedFunc* Get(const std::string& name);  // NOLINT(*)
   /*!
    * \brief Get the names of currently registered global function.
    * \return The names
    */
-  MXNET_DLL static std::vector<std::string> ListNames();
+  static std::vector<std::string> ListNames();
 
   // Internal class.
   struct Manager;
