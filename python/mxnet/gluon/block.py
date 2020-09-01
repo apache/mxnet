@@ -1348,17 +1348,11 @@ class HybridBlock(Block):
                 if name in arg_names:
                     arg_dict['arg:{}'.format(name)] = param._reduce()
                 else:
-                    if name.endswith('running_mean') or name.endswith('running_var') \
-                        or name.endswith('moving_mean') or name.endswith('moving_var'):
-                        if name not in aux_names:
-                            warnings.warn('Parameter "{name}" is not found in '
-                                          'the graph. '
-                                          .format(name=name), stacklevel=3)
-                    else:
-                        warnings.warn('Parameter "{name}" is not found in '
-                                      'the graph. '
+                    if name not in aux_names:
+                        warnings.warn('Parameter "{name}" is not found in the graph. '
                                       .format(name=name), stacklevel=3)
-                    arg_dict['aux:%s'%name] = param._reduce()
+                    else:
+                        arg_dict['aux:%s'%name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         params_filename = '%s-%04d.params'%(path, epoch)
         save_fn(params_filename, arg_dict)
