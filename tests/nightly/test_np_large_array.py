@@ -586,17 +586,18 @@ def test_slice_assign():
     assert B[-1, 0] == 2 and B[-1, 1] == 2
 
 @use_np
-@pytest.mark.skip(reason='breaks on large tensor')
+@pytest.mark.skip(reason='This test will pass;  will fail if the dim along \
+    the axis is large. Need to add dim check')
 def test_cumsum():
-    A = np.ones((INT_OVERFLOW, 2))
+    A = np.ones((INT_OVERFLOW, 3))
     A.attach_grad()
     with mx.autograd.record():
-        B = np.cumsum(A, axis=0, dtype='float64')
+        B = np.cumsum(A, axis=1, dtype='float64')
     assert B.shape == A.shape
-    assert_almost_equal(B[-1, -1], np.array([INT_OVERFLOW]), rtol=1e-5, atol=1e-5)
+    assert B[-1, -1] == 3
     B.backward()
     assert A.grad.shape == A.shape
-    assert_almost_equal(A.grad[0, 0], np.array([INT_OVERFLOW]), rtol=1e-5, atol=1e-5)
+    assert A.grad[0, 0] == 3
     assert A.grad[-1, -1] == 1
 
 @use_np
@@ -641,6 +642,54 @@ def test_logical_family():
     C.backward()
     assert B.grad.shape == B.shape
     assert B.grad[0] == 0
+
+@use_np
+def test_deg_rad():
+    A = np.zeros((INT_OVERFLOW, 2))
+    A[-1, -1] = 180
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.deg2rad(A)
+    assert B.shape == A.shape
+    assert B[0, 0] == 0
+    assert_almost_equal(B[-1, -1], np.array([np.pi]), rtol=1e-5, atol=1e-5)
+    B.backward()
+    assert A.grad.shape == A.shape
+    assert_almost_equal(A.grad[0, 0], np.array([1.0 / 180 * np.pi]), rtol=1e-5, atol=1e-5)
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.degrees(B)
+    assert C.shape == B.shape
+    assert C[0, 0] == 0 and C[-1, -1] == 180
+    C.backward()
+    assert B.grad.shape == B.shape
+    assert_almost_equal(B.grad[0, 0], np.array([180.0 / np.pi]), rtol=1e-5, atol=1e-5)
+
+@use_np
+@pytest.mark.skip(reason='breaks on large (>=2**31) tensor; times out \
+    on large tensors')
+def test_delete():
+    A = np.zeros((INT_OVERFLOW, 2))
+    A[-1, -1] = 2
+    A[-2, -1] = 1
+    A.attach_grad()
+    B = np.delete(A, INT_OVERFLOW-1, axis=0)
+    assert B.shape == (INT_OVERFLOW-1, 2)
+    assert B[-1, -1] == 1
+
+@use_np
+@pytest.mark.skip(reason='segfault on large tensor ~2**31')
+def test_diff():
+    A = np.zeros((2, INT_OVERFLOW))
+    A[-1, -1] = 100
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.diff(A)
+    assert B.shape == (2, INT_OVERFLOW-1)
+    assert B[-1,-1] == 100
+    B.backward()
+    assert A.grad.shape == A.shape
+    assert A[-1, -1] == 100
 
 '''
                                      _               _
