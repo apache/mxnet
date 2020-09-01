@@ -175,7 +175,7 @@ def convert_weights_and_inputs(node, **kwargs):
                 data_type=data_type,
                 dims=dims,
                 vals=np_arr.flatten().tolist(),
-                raw=False,
+                raw=False
             )
         )
 
@@ -462,6 +462,7 @@ def convert_pad(node, **kwargs):
     """Map MXNet's pad operator attributes to onnx's Pad operator
     and return the created node.
     """
+    opset_version = kwargs["opset_version"]
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     mxnet_pad_width = convert_string_to_list(attrs.get("pad_width"))
@@ -470,17 +471,42 @@ def convert_pad(node, **kwargs):
     pad_mode = attrs.get("mode")
 
     if pad_mode == "constant":
-        pad_value = float(attrs.get("constant_value")) \
-            if "constant_value" in attrs else 0.0
-        node = onnx.helper.make_node(
-            'Pad',
-            inputs=input_nodes,
-            outputs=[name],
-            mode='constant',
-            value=pad_value,
-            pads=onnx_pad_width,
-            name=name
-        )
+        pad_value = float(attrs.get("constant_value", 0.0))
+        if opset_version >= 11:
+            # starting with opset 11, pads and constant_value are inputs instead of attributes
+            from onnx.helper import make_tensor, make_tensor_value_info
+            initializer = kwargs["initializer"]
+            pads_input_name = name + "_pads"
+            pads_input_type = onnx.TensorProto.INT64
+            pads_input_shape = np.shape(np.array(onnx_pad_width))
+            pads_value_node = make_tensor_value_info(pads_input_name, pads_input_type, pads_input_shape)
+            pads_tensor_node = make_tensor(pads_input_name, pads_input_type, pads_input_shape, onnx_pad_width)
+            initializer.append(pads_tensor_node)
+            input_nodes.append(pads_input_name)
+
+            const_input_name = name + "_constant"
+            const_input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[pad_value.dtype]
+            const_value_node = make_tensor_value_info(const_input_name, const_input_type, ())
+            const_tensor_node = make_tensor(const_input_name, const_input_type, (), [pad_value])
+            initializer.append(const_tensor_node)
+            input_nodes.append(const_input_name)
+            pad_node = onnx.helper.make_node(
+                "Pad",
+                input_nodes,
+                [name],
+                name=name
+            )
+            return [pads_value_node, const_value_node, pad_node]
+        else:
+            node = onnx.helper.make_node(
+                'Pad',
+                inputs=input_nodes,
+                outputs=[name],
+                mode='constant',
+                value=pad_value,
+                pads=onnx_pad_width,
+                name=name
+            )
     else:
         node = onnx.helper.make_node(
             'Pad',
@@ -639,6 +665,7 @@ def convert_pooling(node, **kwargs):
     MaxPool/AveragePool/GlobalMaxPool/GlobalAveragePool operators
     based on the input node's attributes and return the created node.
     """
+    opset_version = kwargs["opset_version"]
     name, input_nodes, attrs = get_inputs(node, kwargs)
 
     kernel = eval(attrs["kernel"])
@@ -650,7 +677,7 @@ def convert_pooling(node, **kwargs):
     pooling_convention = attrs.get('pooling_convention', 'valid')
     ceil_mode = False
     if pooling_convention == 'full':
-        if onnx.__version__ < "1.5.0":
+        if opset_version < 10:
             pooling_warning = "Pooling: ONNX lower than 1.5.0 doesn't support pooling_convention. " \
                               "This might lead to shape or accuracy issues. " \
                               "https://github.com/onnx/onnx/issues/549"
@@ -695,7 +722,7 @@ def convert_pooling(node, **kwargs):
                 name=name
             )
         else:
-            if onnx.__version__ >= "1.5.0":
+            if opset_version >= 10:
                 node = onnx.helper.make_node(
                     pool_types[pool_type],
                     input_nodes,  # input
