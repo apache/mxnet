@@ -172,9 +172,9 @@ Some common task and loss function pairs include:
 You can also create custom loss functions using **Loss Blocks**. For more
 information see []()
 
-You can inherit the base `Loss` class and write your own `hybrid_forward`
-method. The backward propagation will be automatically computed by autograd.
-However that only holds true if you can build your loss from existing operators.
+You can inherit the base `Loss` class and write your own `forward` method. The
+backward propagation will be automatically computed by autograd. However that
+only holds true if you can build your loss from existing operators.
 
 ```{.python .input  n=6}
 from mxnet.gluon.loss import Loss
@@ -183,7 +183,7 @@ class custom_L1_loss(Loss):
     def __init__(self,weight=None, batch_axis=0, **kwargs):
         super(custom_L1_loss,self).__init__(weight, batch_axis, **kwargs)
 
-    def hybrid_forward(self, F, pred, label):
+    def forward(self, pred, label):
         l = np.abs(label - pred)
         l = l.reshape(len(l),)
         return l
@@ -373,7 +373,7 @@ algorithm will be used to update the parameters every training iteration when
 CHANGE](https://mxnet.apache.org/versions/1.6/api/python/docs/api/optimizer/index.html)
 
 ```{.python .input  n=17}
-curr_weight = net.weight.data().copy()
+curr_weight = net.weight.data()
 print(curr_weight)
 ```
 

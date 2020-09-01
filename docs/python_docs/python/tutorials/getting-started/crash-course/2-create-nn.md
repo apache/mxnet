@@ -11,7 +11,7 @@ network layers in the following two modules:
 
 Use the following commands to import the packages required for this step.
 
-```{.python .input  n=52}
+```{.python .input  n=1}
 from mxnet import np, npx
 from mxnet.gluon import nn, Block
 npx.set_np()  # Change MXNet to the numpy-like mode.
@@ -25,18 +25,18 @@ inside the neural network. One of the simplest layers you can create is a
 in the input that are connected to every node in the next layer. Use the
 following code example to start with a dense layer with two output units.
 
-```{.python .input  n=19}
+```{.python .input  n=2}
 layer = nn.Dense(5)
 layer
 ```
 
-```{.json .output n=19}
+```{.json .output n=2}
 [
  {
   "data": {
    "text/plain": "Dense(-1 -> 5, linear)"
   },
-  "execution_count": 19,
+  "execution_count": 2,
   "metadata": {},
   "output_type": "execute_result"
  }
@@ -49,18 +49,18 @@ specified during initialization.
 You can also call the **Dense** layer with an `in_units` parameter if you know
 the shape of your input unit.
 
-```{.python .input  n=22}
+```{.python .input  n=3}
 layer = nn.Dense(5,in_units=3)
 layer
 ```
 
-```{.json .output n=22}
+```{.json .output n=3}
 [
  {
   "data": {
    "text/plain": "Dense(3 -> 5, linear)"
   },
-  "execution_count": 22,
+  "execution_count": 3,
   "metadata": {},
   "output_type": "execute_result"
  }
@@ -75,7 +75,7 @@ $$ output = \sigma(W \cdot X + b) $$
 Call the Dense layer wtih an `activation` parameter to use an activation
 function.
 
-```{.python .input  n=37}
+```{.python .input  n=4}
 layer = nn.Dense(5, in_units=3,activation='relu')
 ```
 
@@ -92,7 +92,7 @@ Almost!! we just need to initialize the network weights with the default
 initialization method, which draws random values uniformly from $[-0.7, 0.7]$.
 You can see this in the following example.
 
-```{.python .input  n=38}
+```{.python .input  n=5}
 layer.initialize()
 ```
 
@@ -101,41 +101,44 @@ is also called a forward pass. Do a forward pass with random data, shown in the
 following example. We create a $(10,3)$ shape random input `x` and feed into the
 layer to compute the output.
 
-```{.python .input  n=40}
+```{.python .input  n=6}
 x = np.random.uniform(-1,1,(10,3))
 layer(x)
 ```
 
-```{.json .output n=40}
+```{.json .output n=6}
 [
  {
   "data": {
-   "text/plain": "array([[0.        , 0.        , 0.02514516, 0.03788552, 0.        ],\n       [0.00586026, 0.05775406, 0.        , 0.        , 0.03826544],\n       [0.01782359, 0.02893867, 0.        , 0.        , 0.02829976],\n       [0.02690828, 0.        , 0.        , 0.        , 0.00545937],\n       [0.03234754, 0.        , 0.02270631, 0.02974202, 0.        ],\n       [0.00555724, 0.01362655, 0.        , 0.        , 0.01144097],\n       [0.        , 0.04869641, 0.        , 0.        , 0.        ],\n       [0.        , 0.        , 0.00969722, 0.00794899, 0.        ],\n       [0.01007228, 0.        , 0.02497568, 0.03668693, 0.        ],\n       [0.        , 0.        , 0.04090203, 0.05625763, 0.        ]])"
+   "text/plain": "array([[-0.        , -0.        ,  0.04437108,  0.01096384, -0.        ],\n       [ 0.01540359,  0.01735983, -0.        , -0.        ,  0.03530429],\n       [ 0.00381139,  0.02891595,  0.0071606 ,  0.01262893, -0.        ],\n       [ 0.02378628,  0.04612946, -0.        , -0.        ,  0.05157538],\n       [-0.        ,  0.00375629, -0.        , -0.        ,  0.00060787],\n       [-0.        , -0.        ,  0.01947428,  0.00730047, -0.        ],\n       [ 0.03439108,  0.04268821,  0.02091249, -0.        ,  0.03359453],\n       [ 0.01674652,  0.05354869, -0.        , -0.        ,  0.05611669],\n       [ 0.01591048,  0.04680086,  0.05175146,  0.03321034, -0.        ],\n       [ 0.00959048,  0.03363482,  0.03384075,  0.02388959, -0.        ]])"
   },
-  "execution_count": 40,
+  "execution_count": 6,
   "metadata": {},
   "output_type": "execute_result"
  }
 ]
 ```
 
-As can be seen, the layer's input limit of two produced a $(10,5)$ shape output
-from our $(10,3)$ input. When you dont specify the `in_unit` parameter, the
-system  automatically infers it during the first time you feed in data, create,
-and initialize the weights. You can access the weight after the first forward
-pass, as shown in this example.
+The layer produced a $(10,5)$ shape output from our $(10,3)$ input.
 
-```{.python .input  n=41}
+**When you dont specify the `in_unit` parameter, the system  automatically
+infers it during the first time you feed in data during the first forward step
+after you create and initialize the weights.**
+
+You can access the weight after the first forward pass, as shown in this
+example.
+
+```{.python .input  n=7}
 layer.weight.data()
 ```
 
-```{.json .output n=41}
+```{.json .output n=7}
 [
  {
   "data": {
-   "text/plain": "array([[ 0.0252179 ,  0.0193032 , -0.06099349],\n       [-0.04770225, -0.05782406,  0.02741051],\n       [ 0.01796688,  0.01117834,  0.02134723],\n       [ 0.02854334,  0.00740966,  0.03457288],\n       [ 0.00836869, -0.02033399, -0.0502243 ]])"
+   "text/plain": "array([[ 0.0068339 ,  0.01299825,  0.0301265 ],\n       [ 0.04819721,  0.01438687,  0.05011239],\n       [ 0.00628365,  0.04861524, -0.01068833],\n       [ 0.01729892,  0.02042518, -0.01618656],\n       [-0.00873779, -0.02834515,  0.05484822]])"
   },
-  "execution_count": 41,
+  "execution_count": 7,
   "metadata": {},
   "output_type": "execute_result"
  }
@@ -154,7 +157,7 @@ example of Dense layers and create a 3-layer multi layer perceptron. You can
 create a sequential block using `nn.Sequential()` method and add layers using
 `add()` method.
 
-```{.python .input  n=47}
+```{.python .input  n=8}
 net = nn.Sequential()
 
 net.add(nn.Dense(5,in_units=3,activation='relu'),
@@ -165,13 +168,13 @@ net.add(nn.Dense(5,in_units=3,activation='relu'),
 net
 ```
 
-```{.json .output n=47}
+```{.json .output n=8}
 [
  {
   "data": {
    "text/plain": "Sequential(\n  (0): Dense(3 -> 5, Activation(relu))\n  (1): Dense(-1 -> 25, Activation(relu))\n  (2): Dense(-1 -> 2, linear)\n)"
   },
-  "execution_count": 47,
+  "execution_count": 8,
   "metadata": {},
   "output_type": "execute_result"
  }
@@ -182,17 +185,17 @@ The layers are ordered exactly the way you defined your neural network with
 numbers starting from 0. You can access the layers by indexing the network using
 `[]`.
 
-```{.python .input  n=49}
+```{.python .input  n=9}
 net[1]
 ```
 
-```{.json .output n=49}
+```{.json .output n=9}
 [
  {
   "data": {
    "text/plain": "Dense(-1 -> 25, Activation(relu))"
   },
-  "execution_count": 49,
+  "execution_count": 9,
   "metadata": {},
   "output_type": "execute_result"
  }
@@ -204,7 +207,7 @@ net[1]
 `nn.Sequential()` allows you to create your multi-layer neural network with
 existing layers from `gluon.nn`. It also includes a pre-defined `forward()`
 function that sequentially execututes added layers. But what if we want to add
-more computation during your forward pass or createa  new/novel network. How do
+more computation during your forward pass or create a new/novel network. How do
 we create a network?
 
 In gluon, every neural network layer is defined by using a base class
@@ -225,17 +228,17 @@ code.
 
 ```
 class Net(gluon.Block):
-    def __init__(self, **kwargs):
-        super(Net, self).__init__(**kwargs)
+    def __init__(self):
+        super().__init__()
 
     def forward(self, x):
-        pass
+        return x
 ```
 
-```{.python .input  n=54}
+```{.python .input  n=10}
 class MLP(Block):
     def __init__(self):
-        super(MLP, self).__init__()
+        super().__init__()
         self.dense1 = nn.Dense(5,activation='relu')
         self.dense2 = nn.Dense(25,activation='relu')
         self.dense3 = nn.Dense(2)
@@ -250,13 +253,13 @@ net = MLP()
 net
 ```
 
-```{.json .output n=54}
+```{.json .output n=10}
 [
  {
   "data": {
    "text/plain": "MLP(\n  (dense1): Dense(-1 -> 5, Activation(relu))\n  (dense2): Dense(-1 -> 25, Activation(relu))\n  (dense3): Dense(-1 -> 2, linear)\n)"
   },
-  "execution_count": 54,
+  "execution_count": 10,
   "metadata": {},
   "output_type": "execute_result"
  }
@@ -266,10 +269,10 @@ net
 Simirly, you can the following code to implement a famous network called
 [LeNet](http://yann.lecun.com/exdb/lenet/) through `nn.Sequential`.
 
-```{.python .input  n=120}
+```{.python .input  n=11}
 class LeNet(Block):
     def __init__(self):
-        super(LeNet, self).__init__()
+        super().__init__()
         self.conv1  = nn.Conv2D(channels=6, kernel_size=3, activation='relu')
         self.pool1  = nn.MaxPool2D(pool_size=2, strides=2)
         self.conv2  = nn.Conv2D(channels=16, kernel_size=3, activation='relu')
@@ -292,20 +295,20 @@ net = LeNet()
 net
 ```
 
-```{.json .output n=120}
+```{.json .output n=11}
 [
  {
   "data": {
    "text/plain": "LeNet(\n  (conv1): Conv2D(-1 -> 6, kernel_size=(3, 3), stride=(1, 1), Activation(relu))\n  (pool1): MaxPool2D(size=(2, 2), stride=(2, 2), padding=(0, 0), ceil_mode=False, global_pool=False, pool_type=max, layout=NCHW)\n  (conv2): Conv2D(-1 -> 16, kernel_size=(3, 3), stride=(1, 1), Activation(relu))\n  (pool2): MaxPool2D(size=(2, 2), stride=(2, 2), padding=(0, 0), ceil_mode=False, global_pool=False, pool_type=max, layout=NCHW)\n  (dense1): Dense(-1 -> 120, Activation(relu))\n  (dense2): Dense(-1 -> 84, Activation(relu))\n  (dense3): Dense(-1 -> 10, linear)\n)"
   },
-  "execution_count": 120,
+  "execution_count": 11,
   "metadata": {},
   "output_type": "execute_result"
  }
 ]
 ```
 
-```{.python .input  n=102}
+```{.python .input  n=12}
 image_data = np.random.uniform(-1,1, (1,1,28,28))
 
 net.initialize()
@@ -313,18 +316,13 @@ net.initialize()
 net(image_data)
 ```
 
-```{.json .output n=102}
+```{.json .output n=12}
 [
  {
-  "name": "stderr",
-  "output_type": "stream",
-  "text": "/home/ec2-user/anaconda3/envs/mxnet_p36/lib/python3.6/site-packages/mxnet/gluon/block.py:571: UserWarning: Parameter 'weight' is already initialized, ignoring. Set force_reinit=True to re-initialize.\n  v.initialize(None, ctx, init, force_reinit=force_reinit)\n/home/ec2-user/anaconda3/envs/mxnet_p36/lib/python3.6/site-packages/mxnet/gluon/block.py:571: UserWarning: Parameter 'bias' is already initialized, ignoring. Set force_reinit=True to re-initialize.\n  v.initialize(None, ctx, init, force_reinit=force_reinit)\n"
- },
- {
   "data": {
-   "text/plain": "array([[ 9.5244788e-05,  2.9054983e-03, -6.9242873e-04,  2.2817445e-03,\n        -8.9324836e-04, -6.6934002e-04, -2.7392569e-03,  3.3438532e-04,\n        -4.0528120e-04,  2.8272711e-03]])"
+   "text/plain": "array([[ 0.00052316, -0.00139668,  0.00031271,  0.00159006, -0.00019339,\n         0.00017942,  0.00140935, -0.00048231, -0.00016249,  0.00099462]])"
   },
-  "execution_count": 102,
+  "execution_count": 12,
   "metadata": {},
   "output_type": "execute_result"
  }
@@ -338,18 +336,18 @@ function.
 You can use `[]` to index a particular layer. For example, the following
 accesses the first layer's weight and sixth layer's bias.
 
-```{.python .input  n=108}
+```{.python .input  n=13}
 net.conv1.weight.data().shape, net.dense1.bias.data().shape
 
 ```
 
-```{.json .output n=108}
+```{.json .output n=13}
 [
  {
   "data": {
    "text/plain": "((6, 1, 3, 3), (120,))"
   },
-  "execution_count": 108,
+  "execution_count": 13,
   "metadata": {},
   "output_type": "execute_result"
  }
@@ -371,7 +369,7 @@ architectures include:
 
 Lets look at an example
 
-```{.python .input  n=117}
+```{.python .input  n=18}
 from mxnet.gluon import model_zoo
 
 net = model_zoo.vision.resnet50_v2(pretrained=True)
@@ -379,25 +377,23 @@ net.hybridize()
 
 dummy_input = np.ones(shape=(1,3,224,224))
 output = net(dummy_input)
-
 output.shape
-        
 ```
 
-```{.json .output n=117}
+```{.json .output n=18}
 [
  {
   "data": {
    "text/plain": "(1, 1000)"
   },
-  "execution_count": 117,
+  "execution_count": 18,
   "metadata": {},
   "output_type": "execute_result"
  }
 ]
 ```
 
-## Deciding the paradim for your NN
+## Deciding the paradigm for your NN
 
 MXNet includes two types of programming paradigms:
 
@@ -406,10 +402,9 @@ prototyping, easy debugging and natural control flow for people familiar with
 python programming.
 2. Symbolic or Declarative API for creating static graphs with low level
 optimizations on operators and allows for support in multiple languages, cross-
-compatibility with other frameworks (via ONNX) and as a backend for other high
-level APIs like keras. However, it’s less flexible because any logic must be
-encoded into the graph as special operators like scan, while_loop and cond. It’s
-also hard to debug.
+compatibility with other frameworks (via ONNX). However, it’s less flexible
+because any logic must be encoded into the graph as special operators like scan,
+while_loop and cond. It’s also hard to debug.
 
 So how can we make use of Symbolic API while getting the flexibility of an
 Imperative API to quickly protype and debug??
@@ -421,7 +416,7 @@ functions acting on real inputs. But they’re also capable of running
 symbolically, acting on placeholders. Gluon hides most of this under the hood so
 you’ll only need to know how it works when you want to write your own layers.
 
-```{.python .input  n=122}
+```{.python .input  n=19}
 net_hybrid_seq = nn.HybridSequential()
 
 net_hybrid_seq.add(nn.Dense(5,in_units=3,activation='relu'),
@@ -432,13 +427,13 @@ net_hybrid_seq.add(nn.Dense(5,in_units=3,activation='relu'),
 net_hybrid_seq
 ```
 
-```{.json .output n=122}
+```{.json .output n=19}
 [
  {
   "data": {
    "text/plain": "HybridSequential(\n  (0): Dense(3 -> 5, Activation(relu))\n  (1): Dense(-1 -> 25, Activation(relu))\n  (2): Dense(-1 -> 2, linear)\n)"
   },
-  "execution_count": 122,
+  "execution_count": 19,
   "metadata": {},
   "output_type": "execute_result"
  }
@@ -448,7 +443,7 @@ net_hybrid_seq
 To compile and optimize the `HybridSequential`, we can then call its `hybridize
 method`.
 
-```{.python .input  n=124}
+```{.python .input  n=20}
 net_hybrid_seq.hybridize()
 ```
 
@@ -458,12 +453,13 @@ To get a sense of the speedup from hybridizing, we can compare the performance
 before and after hybridizing by measuring in either case the time it takes to
 make 1000 forward passes through the network.
 
-```{.python .input  n=137}
+```{.python .input  n=21}
 from time import time
 
 def bench(net, x):
+    y = net(x)
     start = time()
-    for i in range(1000):
+    for i in range(1,1000):
         y = net(x)
     return time() - start
 
@@ -480,16 +476,14 @@ net_hybrid_seq.initialize()
 print('Before hybridizing: %.4f sec'%(bench(net_hybrid_seq, x)))
 net_hybrid_seq.hybridize()
 print('After hybridizing: %.4f sec'%(bench(net_hybrid_seq, x)))
-
-
 ```
 
-```{.json .output n=137}
+```{.json .output n=21}
 [
  {
   "name": "stdout",
   "output_type": "stream",
-  "text": "Before hybridizing: 0.6753 sec\nAfter hybridizing: 0.2139 sec\n"
+  "text": "Before hybridizing: 0.6364 sec\nAfter hybridizing: 0.1622 sec\n"
  }
 ]
 ```
@@ -508,7 +502,7 @@ from mxnet.gluon import HybridBlock
 
 class MLP_Hybrid(HybridBlock):
     def __init__(self):
-        super(MLP_Hybrid, self).__init__()
+        super().__init__()
         self.dense1 = nn.Dense(256,activation='relu')
         self.dense2 = nn.Dense(128,activation='relu')
         self.dense3 = nn.Dense(2)
@@ -525,8 +519,6 @@ net_Hybrid.initialize()
 print('Before hybridizing: %.4f sec'%(bench(net_Hybrid, x)))
 net_Hybrid.hybridize()
 print('After hybridizing: %.4f sec'%(bench(net_hybrid_seq, x)))
-
-
 ```
 
 ```{.json .output n=152}
@@ -547,7 +539,7 @@ All of MXNet’s predefined layers are HybridBlocks. This means that any network
 consisting entirely of predefined MXNet layers can be compiled and run at much
 faster speeds by calling `.hybridize()`.
 
-## Next steps
+## Next steps: TODO: UPDATE
 
 After you create a neural network, learn how to automatically
 compute the gradients in [Step 3: Automatic differentiation with
