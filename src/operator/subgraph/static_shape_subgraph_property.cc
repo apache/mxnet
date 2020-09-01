@@ -56,7 +56,7 @@ class StaticShapeOpSelector: public SubgraphSelector {
  private:
     // static shape ops that fail backward pass inside subgraph CachedOp
     // GitHub issue: https://github.com/apache/incubator-mxnet/issues/18823
-    std::unordered_set<std::string> unsupported_op_names_ {"Reshape", "_npx_reshape", "transpose",
+    std::unordered_set<std::string> unsupported_op_names_ {"Reshape", "_np_reshape", "transpose",
                                                            "_npi_dstack", "_npi_hstack"};
 };
 
