@@ -677,28 +677,28 @@ extension_libs: $(EXT_LIBS)
 
 build/libcustomop_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/gemm_lib.cc src/lib_api.cc -o $@ -I include/mxnet
 build/libcustomop_gpu_lib.so:
 	@mkdir -p $(@D)
-	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
+	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu src/lib_api.cc -o $@ -I include/mxnet
 build/libsubgraph_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc src/lib_api.cc -o $@ -I include/mxnet
 build/libtransposecsr_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposecsr_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposecsr_lib.cc src/lib_api.cc -o $@ -I include/mxnet
 build/libtransposerowsp_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposerowsp_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_custom_op/transposerowsp_lib.cc src/lib_api.cc -o $@ -I include/mxnet
 build/libcustomop_gpu_lib.so:
 	@mkdir -p $(@D)
-	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu -o $@ -I include/mxnet
+	$(NVCC) -shared -std=c++11 -Xcompiler -fPIC example/extensions/lib_custom_op/relu_lib.cu src/lib_api.cc -o $@ -I include/mxnet
 build/libsubgraph_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_subgraph/subgraph_lib.cc src/lib_api.cc -o $@ -I include/mxnet
 build/libpass_lib.so:
 	@mkdir -p $(@D)
-	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_pass/pass_lib.cc -o $@ -I include/mxnet
+	$(CXX) -shared -fPIC -std=c++11 example/extensions/lib_pass/pass_lib.cc src/lib_api.cc -o $@ -I include/mxnet
 
 # Cython build
 cython:
