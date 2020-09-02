@@ -31,15 +31,20 @@
 
 #include <mxnet/lib_api.h>
 
+mxnet::ext::MXerrorMsgs::~MXerrorMsgs() {
+  for (auto &ss : messages)
+    delete ss;
+}
+
 mxnet::ext::MXerrorMsgs* mxnet::ext::MXerrorMsgs::get() {
     static MXerrorMsgs inst;
     return &inst;
   }
 
 std::stringstream& mxnet::ext::MXerrorMsgs::add(const char* file, int line) {
-  messages.resize(messages.size()+1);
-  messages.back() << file << "[" << line << "]: ";
-  return messages.back();
+  messages.push_back(new std::stringstream());
+  *messages.back() << file << "[" << line << "]: ";
+  return *messages.back();
 }
 
 int mxnet::ext::MXerrorMsgs::size() {
@@ -47,7 +52,7 @@ int mxnet::ext::MXerrorMsgs::size() {
 }
 
 const std::string* mxnet::ext::MXerrorMsgs::get(int idx) {
-  return new std::string(messages.at(idx).str());
+  return new std::string(messages.at(idx)->str());
 }
 
 mxnet::ext::MXContext::MXContext() : dev_type("error"), dev_id(-1) {}

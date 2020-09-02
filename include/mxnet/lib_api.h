@@ -236,9 +236,9 @@ class MXerrorMsgs {
   /*! \brief constructor */
   MXerrorMsgs() {}
   /*! \brief destructor */
-  ~MXerrorMsgs() {}
+  ~MXerrorMsgs();
   /*! \brief map of entries in registry */
-  std::vector<std::stringstream> messages;
+  std::vector<std::stringstream*> messages;
 };
 
 // Add a new error message, example: MX_ERROR_MSG << "my error msg";
