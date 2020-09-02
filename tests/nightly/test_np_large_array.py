@@ -181,7 +181,7 @@ def test_all():
 @use_np
 def test_amin():
     A = np.ones((INT_OVERFLOW, 2))
-    A[100][1] = -1
+    A[-1, -1] = -1
     A.attach_grad()
     with mx.autograd.record():
         B = np.amin(A)
@@ -193,11 +193,10 @@ def test_amin():
 @use_np
 def test_amax():
     A = np.zeros((INT_OVERFLOW, 2))
-    A[100][1] = 1
+    A[-1, -1] = 1
     A.attach_grad()
     with mx.autograd.record():
         B = np.amax(A)
-    print(B)
     assert B == 1.0
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
@@ -691,6 +690,85 @@ def test_diff():
     assert A.grad.shape == A.shape
     assert A[-1, -1] == 100
 
+# Note that np.divide and np.true_divide are the same thing
+@use_np
+#TODO
+def test_divide():
+    A = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = 10
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.divide(A, np.array([2, 3]))
+    assert B.shape == A.shape
+    assert_almost_equal(B[-1, -1], np.array([10 / 3]), rtol=1e-5, atol=1e-5)
+    B.backward()
+    assert A.grad.shape == A.shape
+    assert_almost_equal(A.grad[-1, -1], np.array([1.0 / 3]), rtol=1e-5, atol=1e-5)
+
+@use_np
+@pytest.mark.skip(reason='errors out on 2**31')
+# TODO test other split operators: dsplit vsplit hsplit
+def test_split():
+    A = np.ones((INT_OVERFLOW, 2))
+    A[INT_OVERFLOW // 2] = 2
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.split(A, 2, axis = 0)
+    assert B[0].shape == (INT_OVERFLOW // 2, 2)
+    assert B[1][0, 0] == 2
+    B[1].backward()
+    assert A.grad.shape == A.shape
+    assert A.grad[0, 0] == 0 and A.grad[-1, -1] == 1
+
+@use_np
+#TODO
+def test_minimum():
+    A = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = -1
+    B = np.zeros((INT_OVERFLOW, 1))
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.minimum(A, B)
+    assert C.shape == A.shape
+    assert C[-1, -1] == -1
+    C.backward()
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 1 and A.grad[0, 0] == 0
+    assert B.grad.shape == B.shape
+    assert B.grad[-1] == 1 and B.grad[0] == 2
+
+@use_np
+#TODO
+def test_maximum():
+    A = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = -1
+    B = np.zeros((INT_OVERFLOW, 1))
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.maximum(A, B)
+    assert C.shape == A.shape
+    assert C[-1, -1] == 0
+    C.backward()
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 0 and A.grad[0, 0] == 1
+    assert B.grad.shape == B.shape
+    assert B.grad[-1] == 1 and B.grad[0] == 0
+
+@use_np
+def test_eye():
+    N = 2**16
+    A = np.eye(N)
+    assert A.shape == (N, N)
+    for i in range(N):
+        assert A[i, i] == 1
+    assert A[-1, -2] == 0 and A[0, 1] == 0
+    B = np.eye(N, M=N-1,  k=-1)
+    assert B.shape == (N, N-1)
+    for i in range(1, N):
+        assert B[i, i-1] == 1
+    assert B[0, 0] == 0 and B[-1, -2] == 0
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
