@@ -102,29 +102,17 @@ def test_zeros():
 
 @use_np
 def test_abs():
-    A = np.ones((INT_OVERFLOW, 2))
-    A[0][0] = -1
+    # abs absolute and fabs are the same thing
+    A = np.zeros((INT_OVERFLOW, 2))
+    A[-1, -1] = -1
     A.attach_grad()
     with mx.autograd.record():
         B = np.abs(A)
     assert B.shape == (INT_OVERFLOW, 2)
-    assert B[0][0] == 1
+    assert B[-1, -1] == 1
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
-    assert A.grad[0][0] == -1
-
-@use_np
-def test_absolute():
-    A = np.ones((INT_OVERFLOW, 2))
-    A[0][0] = -1
-    A.attach_grad()
-    with mx.autograd.record():
-        B = np.absolute(A)
-    assert B.shape == (INT_OVERFLOW, 2)
-    assert B[0][0] == 1
-    B.backward()
-    assert A.grad.shape == (INT_OVERFLOW, 2)
-    assert A.grad[0][0] == -1
+    assert A.grad[-1, -1] == -1
 
 @use_np
 @pytest.mark.skip(reason='backward errors out on (2^30,2), gives wrong result \
