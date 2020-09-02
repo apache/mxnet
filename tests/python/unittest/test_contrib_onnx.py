@@ -24,7 +24,6 @@ import os
 import shutil
 import tempfile
 
-from PIL import Image
 
 def test_cv_model_inference_onnxruntime():
     def get_gluon_cv_model(model_name, tmp):
@@ -47,7 +46,7 @@ def test_cv_model_inference_onnxruntime():
         return onnx_file
 
     def normalize_image(imgfile):
-        image = Image.open(imgfile)
+        image = mx.image.imread(imgfile).asnumpy()
         image_data = np.array(image).transpose(2, 0, 1)
         img_data = image_data.astype('float32')
         mean_vec = np.array([0.485, 0.456, 0.406])
