@@ -539,7 +539,7 @@ def use_np(func):
     Parameters
     ----------
     func : a user-provided callable function or class to be scoped by the
-    NumPy-shape and NumPy-array semantics.
+        NumPy-shape and NumPy-array semantics.
 
     Returns
     -------

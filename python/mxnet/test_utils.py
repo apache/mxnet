@@ -751,8 +751,6 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
         The relative threshold. Default threshold will be used if set to ``None``.
     atol : None or float or dict of dtype -> float
         The absolute threshold. Default threshold will be used if set to ``None``.
-    threshold : None or float
-        The checking threshold. Default threshold will be used if set to ``None``.
     etol : None or float
         The error rate threshold. If etol is float, return true if error_rate < etol even if
         any error is found.
