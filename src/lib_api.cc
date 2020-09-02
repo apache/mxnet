@@ -37,7 +37,7 @@ mxnet::ext::MXerrorMsgs* mxnet::ext::MXerrorMsgs::get() {
   }
 
 std::stringstream& mxnet::ext::MXerrorMsgs::add(const char* file, int line) {
-  messages.push_back(std::stringstream());
+  messages.resize(messages.size()+1);
   messages.back() << file << "[" << line << "]: ";
   return messages.back();
 }
@@ -529,7 +529,7 @@ mxnet::ext::Graph* mxnet::ext::Graph::fromJson(mxnet::ext::JsonVal val) {
       // get the other node's output index
       entry.entry = input.list[1].num;
       // set other nodes output as connected to this node
-      entry.node->outputs.push_back({n, j});
+      entry.node->outputs.push_back({n, (int)j});
     }
     nodeMap[i] = n;
   }
