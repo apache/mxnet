@@ -301,7 +301,6 @@ Adds support for extending MXNet with custom operators, partitioning strategies,
  - [OpPerf] Implement all linalg ops (#17528)
  - [OpPerf] Fixed native output ordering, added warmup & runs command line args (#17571)
  - [OpPerf] Add norm, cast ops, remaining optimizer ops (#17542)
- - [Large Tensor] Fixed Embedding op (#17599)
  - [OpPerf] Fixed Python profiler bug (#17642)
 
 #### MKL-DNN
@@ -420,6 +419,7 @@ Adds support for extending MXNet with custom operators, partitioning strategies,
  - Sparse int64 Large tensor support (#16898)
  - Re-Enabling Large Tensor Nightly on GPU (#16164)
  - enabling build stage gpu_int64 to enable large tensor nightly runs (#17546)
+ - [Large Tensor] Fixed Embedding op (#17599)
 
 #### MKL-DNN enhancement
  - MKLDNN FC : Add error info when mkldnn fc bias dimension is wrong (#16692)
