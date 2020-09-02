@@ -21,10 +21,9 @@ This script shows a simple example how to do image classification with Gluon.
 The model is trained on MNIST digits image dataset and the goal is to classify the digits ```0-9```.  The model has the following layout:
 ```
 net = nn.Sequential()
-with net.name_scope():
-    net.add(nn.Dense(128, activation='relu'))
-    net.add(nn.Dense(64, activation='relu'))
-    net.add(nn.Dense(10))
+net.add(nn.Dense(128, activation='relu'))
+net.add(nn.Dense(64, activation='relu'))
+net.add(nn.Dense(10))
 ```
 
 The script provides the following commandline arguments: 
