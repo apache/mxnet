@@ -954,7 +954,7 @@ MX_VOID_RET _opRegGet(int idx, const char** name, int *isSGop,
 
 /*! \brief calls free from the external library for library allocated arrays */
 MX_VOID_RET _opCallFree(void* ptr) {
-  free(ptr);
+  free(ptr);  // NOLINT
 }
 
 /*! \brief returns status of calling parse attributes function for operator from library */
@@ -996,26 +996,27 @@ MX_INT_RET _opCallInferShape(mxnet::ext::inferShape_t inferShape, const char* co
   if (!retval) return retval;
 
   // allocate space for modified input dims, shape
-  *mod_indims = static_cast<int*>(malloc (num_in * sizeof(int)));
-  *mod_inshapes = static_cast<unsigned**>(malloc (num_in * sizeof(unsigned*)));
+  *mod_indims = static_cast<int*>(malloc (num_in * sizeof(int)));  // NOLINT
+  *mod_inshapes = static_cast<unsigned**>(malloc (num_in * sizeof(unsigned*)));  // NOLINT
 
   // copy modified input shapes
   for (int i = 0; i < num_in; i++) {
     (*mod_indims)[i] = in_shapes[i].size();
-    (*mod_inshapes)[i] = static_cast<unsigned*>(malloc ((*mod_indims)[i] * sizeof(unsigned)));
+    (*mod_inshapes)[i] = static_cast<unsigned*>(
+                           malloc ((*mod_indims)[i] * sizeof(unsigned)));  // NOLINT
     for (int j = 0; j < (*mod_indims)[i]; j++) {
       (*mod_inshapes)[i][j] = in_shapes[i][j];
     }
   }
 
   // allocate space for output dims, shape
-  *outdims = static_cast<int*>(malloc (num_out * sizeof(int)));
-  *outshapes = static_cast<unsigned**>(malloc (num_out * sizeof(unsigned*)));
+  *outdims = static_cast<int*>(malloc (num_out * sizeof(int)));  // NOLINT
+  *outshapes = static_cast<unsigned**>(malloc (num_out * sizeof(unsigned*)));  // NOLINT
 
   // copy output shapes
   for (int i = 0; i < num_out; i++) {
     (*outdims)[i] = out_shapes[i].size();
-    (*outshapes)[i] = static_cast<unsigned*>(malloc ((*outdims)[i] * sizeof(unsigned)));
+    (*outshapes)[i] = static_cast<unsigned*>(malloc ((*outdims)[i] * sizeof(unsigned)));  // NOLINT
     for (int j = 0; j < (*outdims)[i]; j++) {
       (*outshapes)[i][j] = out_shapes[i][j];
     }
@@ -1199,7 +1200,7 @@ MX_INT_RET _opCallMutateInputs(mxnet::ext::mutateInputs_t mutate, const char* co
 
   // output the input indices
   *indices_size = mut_ind.size();
-  *mutate_indices = static_cast<int*>(malloc (*indices_size * sizeof(int)));
+  *mutate_indices = static_cast<int*>(malloc (*indices_size * sizeof(int)));  // NOLINT
   for (int i = 0; i < *indices_size; i++) {
     (*mutate_indices)[i] = mut_ind[i];
   }
@@ -1417,7 +1418,7 @@ MX_VOID_RET _partCallFilter(void* sel_inst, int* candidates, int num_candidates,
   sel_ptr->Filter(candidates_, &keep_);
 
   *num_keep = keep_.size();
-  *keep = static_cast<int*>(malloc(keep_.size() * sizeof(int)));
+  *keep = static_cast<int*>(malloc(keep_.size() * sizeof(int)));  // NOLINT
   for (unsigned i=0; i < keep_.size(); i++)
     (*keep)[i] = keep_[i];
 }
@@ -1485,15 +1486,15 @@ MX_INT_RET _partCallReviewSubgraph(mxnet::ext::reviewSubgraph_t reviewSubgraph, 
   if (subgraph->attrs.size() > 0) {
     *num_attrs = subgraph->attrs.size();
     // allocate space for attributes
-    *attr_keys = static_cast<char**>(malloc (*num_attrs * sizeof(char*)));
-    *attr_vals = static_cast<char**>(malloc (*num_attrs * sizeof(char*)));
+    *attr_keys = static_cast<char**>(malloc (*num_attrs * sizeof(char*)));  // NOLINT
+    *attr_vals = static_cast<char**>(malloc (*num_attrs * sizeof(char*)));  // NOLINT
 
     // copy attributes
     int i = 0;
     for (auto kv : subgraph->attrs) {
-      (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));
+      (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));  // NOLINT
       std::string val = kv.second.dump();  // convert JsonVal back to string
-      (*attr_vals)[i] = static_cast<char*>(malloc ((val.size()+1) * sizeof(char)));
+      (*attr_vals)[i] = static_cast<char*>(malloc ((val.size()+1) * sizeof(char)));  // NOLINT
       snprintf((*attr_keys)[i], kv.first.size()+1, "%s", kv.first.c_str());
       snprintf((*attr_vals)[i], val.size()+1, "%s", val.c_str());
       i++;
