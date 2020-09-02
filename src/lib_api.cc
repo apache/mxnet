@@ -37,7 +37,7 @@ mxnet::ext::MXerrorMsgs* mxnet::ext::MXerrorMsgs::get() {
   }
 
 std::stringstream& mxnet::ext::MXerrorMsgs::add(const char* file, int line) {
-  messages.emplace_back();
+  messages.push_back(std::stringstream());
   messages.back() << file << "[" << line << "]: ";
   return messages.back();
 }
@@ -491,7 +491,7 @@ mxnet::ext::Graph* mxnet::ext::Graph::fromJson(mxnet::ext::JsonVal val) {
 
   std::map<int, Node*> nodeMap;
   // loop over nodes
-  for (int i = 0; i < nodes.list.size(); i++) {
+  for (size_t i = 0; i < nodes.list.size(); i++) {
     Node* n = new Node();
     g->nodes.push_back(n);
     JsonVal node = nodes.list[i];
@@ -521,7 +521,7 @@ mxnet::ext::Graph* mxnet::ext::Graph::fromJson(mxnet::ext::JsonVal val) {
     // set node inputs
     JsonVal node_inputs = node.map[JsonVal("inputs")];
     n->inputs.resize(node_inputs.list.size());
-    for (int j = 0; j < node_inputs.list.size(); j++) {
+    for (size_t j = 0; j < node_inputs.list.size(); j++) {
       JsonVal input = node_inputs.list[j];
       NodeEntry& entry = n->inputs[j];
       // get pointer to other node
@@ -537,7 +537,7 @@ mxnet::ext::Graph* mxnet::ext::Graph::fromJson(mxnet::ext::JsonVal val) {
   // set graph level outputs
   JsonVal& heads = val.map[JsonVal("heads")];
   g->outputs.resize(heads.list.size());
-  for (int i = 0; i < heads.list.size(); i++) {
+  for (size_t i = 0; i < heads.list.size(); i++) {
     JsonVal head = heads.list[i];
     g->outputs[i].node = nodeMap[head.list[0].num];
     g->outputs[i].entry = head.list[1].num;
@@ -577,7 +577,7 @@ mxnet::ext::JsonVal mxnet::ext::Graph::toJson() {
   // create node_row_ptr entry
   val.map[JsonVal("node_row_ptr")] = JsonVal(LIST);
   JsonVal& node_row_ptr = val.map[JsonVal("node_row_ptr")];
-  for (int i = 0; i < nodes.size(); i++)
+  for (size_t i = 0; i < nodes.size(); i++)
     node_row_ptr.list.emplace_back(i);
 
   // add all input nodes
@@ -589,7 +589,7 @@ mxnet::ext::JsonVal mxnet::ext::Graph::toJson() {
   // add all output nodes
   val.map[JsonVal("heads")] = JsonVal(LIST);
   JsonVal& heads = val.map[JsonVal("heads")];
-  for (int i = 0; i < outputs.size(); i++) {
+  for (size_t i = 0; i < outputs.size(); i++) {
     heads.list.emplace_back(LIST);
     JsonVal& out = heads.list[i];
     out.list.emplace_back(nodeMap[outputs[i].node]);
@@ -612,7 +612,7 @@ mxnet::ext::JsonVal mxnet::ext::Graph::toJson() {
 
     // add inputs for this node
     JsonVal& inputs_ = n_.map[JsonVal("inputs")];
-    for (int j = 0; j < n->inputs.size(); j++) {
+    for (size_t j = 0; j < n->inputs.size(); j++) {
       inputs_.list.emplace_back(LIST);
       NodeEntry& entry = n->inputs[j];
       JsonVal& in = inputs_.list[j];
