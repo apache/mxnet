@@ -284,6 +284,7 @@ List of Contributors
 * [Connor Goggins](https://github.com/connorgoggins)
 * [Wei Chu](https://github.com/waytrue17)
 * [Joe Evans](https://github.com/josephevans)
+* [Nikolay Ulmasov](https://github.com/r3stl355)
 
 Label Bot
 ---------

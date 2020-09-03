@@ -18,7 +18,7 @@
 all: subgraph_lib
 
 subgraph_lib:
-	g++ -shared -fPIC -std=c++11 subgraph_lib.cc -o libsubgraph_lib.so -I ../../../include/mxnet
+	g++ -shared -fPIC -std=c++11 subgraph_lib.cc ../../../src/lib_api.cc -o libsubgraph_lib.so -I ../../../include
 
 clean:
 	rm -rf libsubgraph_lib.so

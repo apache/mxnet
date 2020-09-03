@@ -3200,8 +3200,6 @@ def linspace(start, stop, num, endpoint=True, name=None, dtype=None):
     endpoint : bool
         If True, stop is the last sample. Otherwise, it is not included.
         The default is True.
-    ctx : Context, optional
-        Device context. Default context is the current default context.
     dtype : str or numpy.dtype, optional
         The data type of the `NDArray`. The default datatype is `np.float32`.
 

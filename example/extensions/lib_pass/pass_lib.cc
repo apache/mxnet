@@ -26,7 +26,7 @@
 #include <cmath>
 #include <iostream>
 #include <algorithm>
-#include "lib_api.h"
+#include "mxnet/lib_api.h"
 
 using namespace mxnet::ext;
 

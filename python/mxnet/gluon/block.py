@@ -1348,8 +1348,11 @@ class HybridBlock(Block):
                 if name in arg_names:
                     arg_dict['arg:{}'.format(name)] = param._reduce()
                 else:
-                    assert name in aux_names
-                    arg_dict['aux:{}'.format(name)] = param._reduce()
+                    if name not in aux_names:
+                        warnings.warn('Parameter "{name}" is not found in the graph. '
+                                      .format(name=name), stacklevel=3)
+                    else:
+                        arg_dict['aux:%s'%name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         params_filename = '%s-%04d.params'%(path, epoch)
         save_fn(params_filename, arg_dict)

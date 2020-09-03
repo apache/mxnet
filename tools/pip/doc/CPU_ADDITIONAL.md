@@ -25,6 +25,14 @@ This package supports Linux, Mac OSX, and Windows platforms. You may also want t
 - [mxnet](https://pypi.python.org/pypi/mxnet/).
 - [mxnet-native](https://pypi.python.org/pypi/mxnet-native/) CPU variant without MKLDNN.
 
+To use this package on Linux you need the `libquadmath.so.0` shared library. On
+Debian based systems, including Ubuntu, run `sudo apt install libquadmath0` to
+install the shared library. On RHEL based systems, including CentOS, run `sudo
+yum install libquadmath` to install the shared library. As `libquadmath.so.0` is
+a GPL library and MXNet part of the Apache Software Foundation, MXNet must not
+redistribute `libquadmath.so.0` as part of the Pypi package and users must
+manually install it.
+
 To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other versions, check [Installing MXNet](https://mxnet.apache.org/versions/master/install/index.html) for instructions on building from source.
 
 Installation

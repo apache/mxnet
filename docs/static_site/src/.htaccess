@@ -19,10 +19,10 @@ RewriteOptions AllowNoSlash
 
   # Web fonts
   ExpiresByType application/font-woff     "access plus 1 month"
-  
+
 </IfModule>
 
-# Set default website version to current stable (v1.6)
+# Set default website version to old stable (v1.6)
 RewriteCond %{REQUEST_URI} !^/versions/
 RewriteCond %{HTTP_REFERER} !mxnet.apache.org
 RewriteCond %{HTTP_REFERER} !mxnet.incubator.apache.org

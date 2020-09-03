@@ -58,7 +58,7 @@ inline bool BinaryBroadcastShape(const nnvm::NodeAttrs& attrs,
   const int bl = out.ndim() - lhs.ndim();
   const int br = out.ndim() - rhs.ndim();
   for (int i = 0; i < out.ndim(); ++i) {
-    int l = 1, r = 1;
+    dim_t l = 1, r = 1;
     if (i >= bl) l = lhs[i-bl];
     if (i >= br) r = rhs[i-br];
     if (!mxnet::dim_size_is_known(l) || !mxnet::dim_size_is_known(r)) continue;
