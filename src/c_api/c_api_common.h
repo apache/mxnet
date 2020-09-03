@@ -29,7 +29,7 @@
 #include <dmlc/logging.h>
 #include <dmlc/thread_local.h>
 #include <mxnet/c_api.h>
-#include <mxnet/runtime/c_runtime_api.h>
+#include <mxnet/c_api_error.h>
 #include <mxnet/base.h>
 #include <mxnet/op_attr_types.h>
 #include <nnvm/graph.h>
