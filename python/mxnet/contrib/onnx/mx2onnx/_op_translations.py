@@ -508,6 +508,7 @@ def convert_pad(node, **kwargs):
                 pads=onnx_pad_width,
                 name=name
             )
+            return [node]
     else:
         if opset_version >= 11:
             # starting with opset 11, pads and constant_value are inputs instead of attributes
