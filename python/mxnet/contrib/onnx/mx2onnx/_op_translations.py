@@ -471,7 +471,7 @@ def convert_pad(node, **kwargs):
     pad_mode = attrs.get("mode")
 
     if pad_mode == "constant":
-        pad_value = float(attrs.get("constant_value", 0.0))
+        pad_value = np.float32(attrs.get("constant_value", 0.0))
         if opset_version >= 11:
             # starting with opset 11, pads and constant_value are inputs instead of attributes
             from onnx.helper import make_tensor, make_tensor_value_info
@@ -494,6 +494,7 @@ def convert_pad(node, **kwargs):
                 "Pad",
                 input_nodes,
                 [name],
+                mode='constant',
                 name=name
             )
             return [pads_value_node, const_value_node, pad_node]
@@ -508,16 +509,35 @@ def convert_pad(node, **kwargs):
                 name=name
             )
     else:
-        node = onnx.helper.make_node(
-            'Pad',
-            inputs=input_nodes,
-            outputs=[name],
-            mode=pad_mode,
-            pads=onnx_pad_width,
-            name=name
-        )
-
-    return [node]
+        if opset_version >= 11:
+            # starting with opset 11, pads and constant_value are inputs instead of attributes
+            from onnx.helper import make_tensor, make_tensor_value_info
+            initializer = kwargs["initializer"]
+            pads_input_name = name + "_pads"
+            pads_input_type = onnx.TensorProto.INT64
+            pads_input_shape = np.shape(np.array(onnx_pad_width))
+            pads_value_node = make_tensor_value_info(pads_input_name, pads_input_type, pads_input_shape)
+            pads_tensor_node = make_tensor(pads_input_name, pads_input_type, pads_input_shape, onnx_pad_width)
+            initializer.append(pads_tensor_node)
+            input_nodes.append(pads_input_name)
+            pad_node = onnx.helper.make_node(
+                "Pad",
+                input_nodes,
+                [name],
+                mode=pad_mode,
+                name=name
+            )
+            return [pads_value_node, pad_node]
+        else:
+            node = onnx.helper.make_node(
+                'Pad',
+                inputs=input_nodes,
+                outputs=[name],
+                mode=pad_mode,
+                pads=onnx_pad_width,
+                name=name
+            )
+            return [node]
 
 
 def create_helper_trans_node(op_name, input_node, node_name):
@@ -2155,14 +2175,34 @@ def convert_topk(node, **kwargs):
     else:
         raise NotImplementedError("ONNX expects both value and indices as output")
 
-    topk_node = onnx.helper.make_node(
-        "TopK",
-        input_nodes,
-        outputs,
-        axis=axis,
-        k=k,
-        name=name
-    )
+    opset_version = kwargs['opset_version']
+    if opset_version >= 10:
+        from onnx.helper import make_tensor, make_tensor_value_info
+        initializer = kwargs["initializer"]
+        k_input_name = name + "_k"
+        k_input_type = onnx.TensorProto.INT64
+        k_value_node = make_tensor_value_info(k_input_name, k_input_type, ())
+        k_tensor_node = make_tensor(k_input_name, k_input_type, (), k)
+        initializer.append(k_tensor_node)
+        input_nodes.append(k_input_name)
+
+        topk_node = onnx.helper.make_node(
+            "TopK",
+            input_nodes,
+            outputs,
+            axis=axis,
+            name=name
+        )
+        return [k_value_node, topk_node]
+    else:
+        topk_node = onnx.helper.make_node(
+            "TopK",
+            input_nodes,
+            outputs,
+            axis=axis,
+            k=k,
+            name=name
+        )
 
     return [topk_node]
 

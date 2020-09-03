@@ -240,11 +240,24 @@ def relu(attrs, inputs, proto_obj):
 
 def pad(attrs, inputs, proto_obj):
     """ Add padding to input tensor"""
-    new_attrs = translation_utils._fix_attribute_names(attrs, {'pads'  : 'pad_width',
-                                                               'value' : 'constant_value'
-                                                              })
-    new_attrs['pad_width'] = translation_utils._pad_sequence_fix(new_attrs.get('pad_width'))
-    return 'pad', new_attrs, inputs
+    opset_version = proto_obj.opset_version
+    if 'mode' not in attrs.keys():
+        attrs['mode'] = 'constant'
+    if opset_version >= 11:
+        pads = list(proto_obj._params[inputs[1].name].asnumpy())
+        pads = tuple([int(i) for i in pads])
+        new_attrs = translation_utils._add_extra_attributes(attrs, {'pad_width': pads})
+        if len(inputs) == 3:
+            const = proto_obj._params[inputs[2].name].asnumpy()[0]
+            new_attrs = translation_utils._add_extra_attributes(new_attrs, {'constant_value': const})
+        new_attrs['pad_width'] = translation_utils._pad_sequence_fix(new_attrs.get('pad_width'))
+        return 'pad', new_attrs, inputs[0]
+    else:
+        new_attrs = translation_utils._fix_attribute_names(attrs, {'pads'  : 'pad_width',
+                                                                   'value' : 'constant_value'
+                                                                  })
+        new_attrs['pad_width'] = translation_utils._pad_sequence_fix(new_attrs.get('pad_width'))
+        return 'pad', new_attrs, inputs
 
 def matrix_multiplication(attrs, inputs, proto_obj):
     """Performs general matrix multiplication"""
@@ -367,7 +380,7 @@ def deconv(attrs, inputs, proto_obj):
     new_attrs = translation_utils._fix_bias('Deconvolution', new_attrs, len(inputs))
 
     new_attrs = translation_utils._fix_channels('Deconvolution', new_attrs, inputs, proto_obj)
-    kernel = new_attrs['kernel']
+    kernel = new_attrs['kernel'] if 'kernel' in new_attrs else []
     stride = new_attrs['stride'] if 'stride' in new_attrs else []
     padding = new_attrs['pad'] if 'pad' in new_attrs else []
     dilations = new_attrs['dilate'] if 'dilate' in new_attrs else []
@@ -522,15 +535,30 @@ def _slice(attrs, inputs, proto_obj):
     """Returns a slice of the input tensor along multiple axes."""
     input_tensor_data = proto_obj.model_metadata.get('input_tensor_data')[0]
     input_shape = input_tensor_data[1]
-    new_attrs = translation_utils._fix_attribute_names(attrs,
-                                                       {'axes' : 'axis',
-                                                        'ends' : 'end',
-                                                        'starts' : 'begin'})
-    # onnx slice provides slicing on multiple axis. Adding multiple slice_axis operator
-    # for multiple axes from mxnet
-    begin = new_attrs.get('begin')
-    end = list(new_attrs.get('end'))
-    axes = new_attrs.get('axis', tuple(range(len(begin))))
+
+    if proto_obj.opset_version >= 10:
+        begin = proto_obj._params[inputs[1].name].asnumpy()
+        end = proto_obj._params[inputs[2].name].asnumpy()
+        if len(inputs) >= 4:
+            axes = list(proto_obj._params[inputs[3].name].asnumpy())
+            axes = tuple([int(i) for i in axes])
+        else:
+            axes = tuple(range(len(begin)))
+        new_attrs = translation_utils._add_extra_attributes(attrs, {'axes' : axes,
+                                                                    'begin' : begin,
+                                                                    'end' : end
+                                                                   })
+    else:
+        new_attrs = translation_utils._fix_attribute_names(attrs,
+                                                           {'axes' : 'axis',
+                                                            'ends' : 'end',
+                                                            'starts' : 'begin'})
+        # onnx slice provides slicing on multiple axis. Adding multiple slice_axis operator
+        # for multiple axes from mxnet
+        begin = new_attrs.get('begin')
+        end = list(new_attrs.get('end'))
+        axes = new_attrs.get('axis', tuple(range(len(begin))))
+
     for i, axis in enumerate(axes):
         end[i] = None if end[i] >= input_shape[axis] else end[i]
     slice_op = symbol.slice_axis(inputs[0], axis=axes[0], begin=begin[0], end=end[0])
@@ -826,4 +854,10 @@ def topk(attrs, inputs, proto_obj):
     new_attrs = translation_utils._add_extra_attributes(attrs,
                                                         {'ret_typ': 'both',
                                                          'dtype': 'int64'})
-    return 'topk', new_attrs, inputs
+    opset_version = proto_obj.opset_version
+    if opset_version >= 10:
+        k_vals = proto_obj._params[inputs[1].name].asnumpy()
+        new_attrs = translation_utils._add_extra_attributes(new_attrs, {'k': k_vals})
+        return 'topk', new_attrs, inputs[0]
+    else:
+        return 'topk', new_attrs, inputs
