@@ -24,12 +24,12 @@
  */
 
 #include <iostream>
-#include "lib_api.h"
+#include "mxnet/lib_api.h"
 
 using namespace mxnet::ext;
 
 MXReturnValue initialize(int version) {
-  if (version >= 10700) {
+  if (version >= 10800) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {
