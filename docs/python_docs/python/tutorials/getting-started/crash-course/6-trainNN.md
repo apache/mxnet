@@ -1,3 +1,7 @@
+```python
+!pip install --pre --user mxnet -f https://dist.mxnet.io/python/cpu
+```
+
 # Training a Neural Network
 
 We have seen all the necessary components for creating a neural network, we are
@@ -134,7 +138,7 @@ plt.imshow(data.asnumpy())
 print(f"Data type: {data.dtype}")
 print(f"Label: {label}")
 print(f"Label description: {train_dataset.synsets[label]}")
-
+print(f"Image shape: {data.shape}")
 ```
 
 As you can see from the plot, the image size is very big 4000 x 6000 pixels.
