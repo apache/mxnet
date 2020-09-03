@@ -116,29 +116,17 @@ def test_zeros_like():
 
 @use_np
 def test_abs():
-    A = np.ones((INT_OVERFLOW, 2))
-    A[0][0] = -1
+    # abs absolute and fabs are the same thing
+    A = np.zeros((INT_OVERFLOW, 2))
+    A[-1, -1] = -1
     A.attach_grad()
     with mx.autograd.record():
         B = np.abs(A)
     assert B.shape == (INT_OVERFLOW, 2)
-    assert B[0][0] == 1
+    assert B[-1, -1] == 1
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
-    assert A.grad[0][0] == -1
-
-@use_np
-def test_absolute():
-    A = np.ones((INT_OVERFLOW, 2))
-    A[0][0] = -1
-    A.attach_grad()
-    with mx.autograd.record():
-        B = np.absolute(A)
-    assert B.shape == (INT_OVERFLOW, 2)
-    assert B[0][0] == 1
-    B.backward()
-    assert A.grad.shape == (INT_OVERFLOW, 2)
-    assert A.grad[0][0] == -1
+    assert A.grad[-1, -1] == -1
 
 @use_np
 @pytest.mark.skip(reason='backward errors out on (2^30,2), gives wrong result \
@@ -375,6 +363,7 @@ def test_bitwise_family():
 @use_np
 def test_blackman():
     A = np.blackman((INT_OVERFLOW))
+    npx.waitall()
     assert A.shape == (INT_OVERFLOW, )
 
 @use_np
@@ -469,13 +458,14 @@ def test_concatenate():
 # backward not working https://github.com/apache/incubator-mxnet/issues/18952
 def test_copysign():
     A = np.ones((INT_OVERFLOW, 2))
-    #A.attach_grad()
-    #with mx.autograd.record():
-    B = np.copysign(A, -1)
-    assert B.shape == (INT_OVERFLOW, 2)
-    assert B[0][0] == -1
-    #B.backward()
-    #assert A.grad.shape == (INT_OVERFLOW, 2)
+    A.attach_grad()
+    B = np.array([-1])
+    with mx.autograd.record():
+        C = np.copysign(A, B)
+    assert C.shape == (INT_OVERFLOW, 2)
+    assert C[0][0] == -1
+    C.backward()
+    assert A.grad.shape == (INT_OVERFLOW, 2)
     
 @pytest.mark.skip(reason="CI hasn't switch to ILP64 OpenBLAS yet")
 @use_np
@@ -644,6 +634,8 @@ def test_logical_family():
 
 @use_np
 def test_deg_rad():
+    # deg2rad is the same thing as radians
+    # rad2deg is the same thing as degrees
     A = np.zeros((INT_OVERFLOW, 2))
     A[-1, -1] = 180
     A.attach_grad()
@@ -657,7 +649,7 @@ def test_deg_rad():
     assert_almost_equal(A.grad[0, 0], np.array([1.0 / 180 * np.pi]), rtol=1e-5, atol=1e-5)
     B.attach_grad()
     with mx.autograd.record():
-        C = np.degrees(B)
+        C = np.rad2deg(B)
     assert C.shape == B.shape
     assert C[0, 0] == 0 and C[-1, -1] == 180
     C.backward()
@@ -769,6 +761,191 @@ def test_eye():
     for i in range(1, N):
         assert B[i, i-1] == 1
     assert B[0, 0] == 0 and B[-1, -2] == 0
+
+@use_np
+def test_fix():
+    A = np.ones((2, INT_OVERFLOW))
+    A[-1, -1] = -2.9
+    A[0, 0] = 2.9
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.fix(A)
+    assert B.shape == A.shape
+    assert B[0, 0] == 2 and B[-1, -1] == -2
+    B.backward()
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 0
+
+@use_np
+def test_flip():
+    A = np.zeros((2, INT_OVERFLOW))
+    A[0, 0] = 2
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.flip(A, axis=0)
+    assert B.shape == A.shape
+    assert B[1, 0] == 2
+    B.backward()
+    assert A.grad.shape == A.shape
+    assert A.grad[0, 0] == 1
+    C = np.flip(A, axis=1)
+    assert C[0, -1] == 2
+
+@use_np
+def test_fliplr():
+    A = np.zeros((1, 2, INT_OVERFLOW))
+    A[0, 0, 0] = 2
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.fliplr(A)
+    assert B.shape == A.shape
+    assert B[0, 1, 0] == 2
+    B.backward()
+    assert A.grad.shape == A.shape
+    assert A.grad[0, 0, 0] == 1
+
+@use_np
+def test_flipud():
+    A = np.zeros((2, 1, INT_OVERFLOW))
+    A[0, 0, 0] = 2
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.flipud(A)
+    assert B.shape == A.shape
+    assert B[1, 0, 0] == 2
+    B.backward()
+    assert A.grad.shape == A.shape
+    assert A.grad[0, 0, 0] == 1
+
+@use_np
+def test_full():
+    A = np.full((INT_OVERFLOW, 2), np.array([1, 2]))
+    assert A.shape == (INT_OVERFLOW, 2)
+    assert A[-1, 0] == 1 and A [-1, 1] == 2
+    B = np.full((2, INT_OVERFLOW), 3)
+    assert B.shape == (2, INT_OVERFLOW)
+    assert B[-1, -1] == 3
+
+@use_np
+def test_full_like():
+    A = np.zeros((INT_OVERFLOW, 2))
+    B = np.full_like(A, 2)
+    assert B.shape == A.shape
+    assert B[-1, -1] == 2
+
+@use_np
+def test_comparison_family():
+    def batch_check(funcs, exp):
+        A.attach_grad()
+        for f, e in zip(funcs, exp):
+            with mx.autograd.record():
+                C = f(A, B)
+            assert C.shape == A.shape
+            assert (C[0, 0], C[-1, -1]) == e
+            C.backward()
+            assert A.grad.shape == A.shape
+            assert A.grad[-1, -1] == 0
+    
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.zeros((INT_OVERFLOW, 2))
+    B[-1, -1] = 1
+    batch_check([np.greater, np.greater_equal, \
+        np.less, np.less_equal, np.equal, np.not_equal], \
+        [(True, False), (True, True), \
+        (False, False), (False, True), (False, True), (True, False)])
+
+@use_np
+def test_lcm():
+    A = np.ones((2, INT_OVERFLOW), dtype='int32')
+    B = np.ones((2, INT_OVERFLOW), dtype='int32')
+    A[-1, -1] = 3
+    B[-1, -1] = 5
+    A.attach_grad()
+    with mx.autograd.record():
+        C = np.lcm(A, B)
+    assert C.shape == A.shape
+    assert C[-1, -1] == 15
+    C.backward()
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 0
+
+@use_np
+def test_log_family():
+    def batch_check(funcs, exp):
+        A.attach_grad()
+        for f, e in zip(funcs, exp):
+            with mx.autograd.record():
+                B = f(A)
+            assert B.shape == A.shape
+            assert_almost_equal(B[-1, -1], np.array([e[0]]), \
+                rtol=1e-5, atol=1e-5)
+            B.backward()
+            assert A.grad.shape == A.shape
+            assert_almost_equal(A.grad[-1, -1], np.array([e[1]]), \
+                rtol=1e-5, atol=1e-5)
+
+    A = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = 100
+    batch_check([np.log, np.log10, np.log2, np.log1p], \
+        [(4.6051702, 0.01), (2, 0.00434294), \
+        (6.643856, 0.01442695), (4.6151204, 0.00990099)])
+
+@use_np
+@pytest.mark.skip(reason='errors out on 2**31')
+def test_empty_like():
+    A = np.zeros((INT_OVERFLOW, 2))
+    B = np.empty_like(A)
+    assert B.shape == A.shape
+    npx.waitall()
+    B[-1, -1] = 1
+    assert B[-1, -1] == 1
+
+@use_np
+def test_expand_dims():
+    A = np.zeros((INT_OVERFLOW))
+    B = np.expand_dims(A, axis=0)
+    C = np.expand_dims(B, axis=2)
+    npx.waitall()
+    assert B.shape == (1, INT_OVERFLOW)
+    assert C.shape == (1, INT_OVERFLOW, 1)
+
+@use_np
+def test_hamming():
+    A = np.hamming((INT_OVERFLOW))
+    npx.waitall()
+    assert A.shape == (INT_OVERFLOW, )
+
+@use_np
+def test_hanning():
+    A = np.hanning((INT_OVERFLOW))
+    npx.waitall()
+    assert A.shape == (INT_OVERFLOW, )
+
+@use_np
+@pytest.mark.skip(reason='seg fault on 2**31')
+def test_histogram():
+    A = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = 2
+    hist, _ = np.histogram(A, np.array([0.5, 1.5, 2.5]))
+    assert hist.shape == (2, )
+    assert hist[0] == int(2 * INT_OVERFLOW - 1) and hist[1] == 1
+
+@use_np
+@pytest.mark.skip(reason='backward segfaults on 2**31')
+# problem is probably here https://github.com/apache/incubator-mxnet/blob/master/src/operator/tensor/elemwise_binary_op.h#L153
+def test_hypot():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1], B[-1, -1] = 3, 4
+    A.attach_grad()
+    with mx.autograd.record():
+        C = np.hypot(A, B)
+    assert C.shape == A.shape
+    assert C[-1, -1] == 5
+    C.backward()
+    assert A.grad.shape == A.shape
+    assert_almost_equal(A.grad[-1, -1], np.array([0.6]), rtol=1e-5, atol=1e-5)
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
