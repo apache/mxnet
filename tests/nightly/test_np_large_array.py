@@ -1044,6 +1044,45 @@ def test_rint():
     assert A.grad.shape == A.shape
     assert A.grad[-1, -1] == 0
 
+@use_np
+@pytest.mark.skip(reason='segfaults on large tensor ~2**30')
+def test_insert():
+    A = np.zeros((INT_OVERFLOW, 2))
+    B = np.ones((INT_OVERFLOW))
+    B[-1] = 2
+    C = np.insert(A, 1, B, axis=1)
+    assert C.shape == (INT_OVERFLOW, 3)
+    assert C[0, 1] == 1 and C[-1, 1] == 2
+
+@use_np
+@pytest.mark.skip(reason='segfaults on large tensor ~2**30')
+# problem might be on total size
+def test_interp():
+    xp = np.array([1, 2, 3])
+    fp = np.array([3, 2, 1])
+    A = np.ones((2, INT_OVERFLOW))
+    A[-1, -1] = 2.5
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.interp(A, xp, fp)
+        B.backward()
+    assert B.shape == A.shape
+    assert B[-1, -1] == 1.5
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 0
+
+@use_np
+def test_invert():
+    A = np.zeros((2, INT_OVERFLOW), dtype='uint8')
+    A[-1, -1] = 1
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.invert(A)
+        B.backward()
+    assert B.shape == A.shape
+    assert B[0, 0] == 255 and B[-1, -1] == 254
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 0
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
