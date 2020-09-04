@@ -710,7 +710,6 @@ def test_split():
     assert A.grad[0, 0] == 0 and A.grad[-1, -1] == 1
 
 @use_np
-#TODO
 def test_minimum():
     A = np.ones((INT_OVERFLOW, 2))
     A[-1, -1] = -1
@@ -728,7 +727,6 @@ def test_minimum():
     assert B.grad[-1] == 1 and B.grad[0] == 2
 
 @use_np
-#TODO
 def test_maximum():
     A = np.ones((INT_OVERFLOW, 2))
     A[-1, -1] = -1
@@ -942,6 +940,109 @@ def test_hypot():
     C.backward()
     assert A.grad.shape == A.shape
     assert_almost_equal(A.grad[-1, -1], np.array([0.6]), rtol=1e-5, atol=1e-5)
+
+@use_np
+def test_fmax():
+    A = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = -1
+    B = np.zeros((INT_OVERFLOW, 1))
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.fmax(A, B)
+    assert C.shape == A.shape
+    assert C[-1, -1] == 0
+    C.backward()
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 0 and A.grad[0, 0] == 1
+    assert B.grad.shape == B.shape
+    assert B.grad[-1] == 1 and B.grad[0] == 0
+
+@use_np
+def test_fmin():
+    A = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = -1
+    B = np.zeros((INT_OVERFLOW, 1))
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.fmin(A, B)
+    assert C.shape == A.shape
+    assert C[-1, -1] == -1
+    C.backward()
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 1 and A.grad[0, 0] == 0
+    assert B.grad.shape == B.shape
+    assert B.grad[-1] == 1 and B.grad[0] == 2
+
+@use_np
+def test_fmod():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.ones((INT_OVERFLOW, 1))
+    A[-1, -1], B[-1, -1] = 11, 7
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.fmod(A, B)
+        C.backward()
+    assert C.shape == A.shape
+    assert C[-1, -1] == 4
+    assert A.grad.shape == A.shape
+    assert A.grad[0, 0] == 1
+    assert B.grad.shape == B.shape
+    assert B.grad[-1] == -1 and B.grad[0] == -2
+
+@use_np
+def test_value_check_family():
+    def batch_check(funcs, ref):
+        A.attach_grad()
+        for f, r in zip(funcs, ref):
+            with mx.autograd.record():
+                B = f(A)
+                B.backward()
+            assert B.shape == A.shape
+            for i in range(4):
+                assert B[i, -1] == r[i]
+            assert A.grad.shape == A.shape
+            assert A.grad[-1, -1] == 0
+
+    A = np.zeros((4, INT_OVERFLOW))
+    A[1:, -1] = np.array([np.inf, -np.inf, np.nan])
+    batch_check([np.isinf, np.isneginf, np.isposinf, np.isnan, np.isfinite], \
+        [(False, True, True, False), (False, False, True, False), \
+        (False, True, False, False), (False, False, False, True), \
+        (True, False, False, False)])
+
+@use_np
+@pytest.mark.skip(reason='segfaults on 2**31')
+# problem is probably here https://github.com/apache/incubator-mxnet/blob/master/src/operator/numpy/np_kron-inl.h#L48
+def test_kron():
+    A = np.array([5, 10], dtype="float64")
+    B = np.ones((INT_OVERFLOW), dtype = 'float64')
+    B[-1] = 3
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.kron(A, B)
+        C.backward()
+    assert C.shape == (int(2 * INT_OVERFLOW), )
+    assert C[INT_OVERFLOW-1] == 15 and C[-1] == 30
+    assert A.grad.shape == A.shape and B.grad.shape == B.shape
+    assert A.grad[0] == INT_OVERFLOW + 3 - 1
+    assert B.grad[-1] == 15
+
+@use_np
+def test_rint():
+    A = np.zeros((INT_OVERFLOW, 2))
+    A[0, 0], A[-1, -1] = 2.1,  2.9
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.rint(A)
+        B.backward()
+    assert B.shape == A.shape
+    assert B[0, 0] == 2 and B[-1, -1] == 3
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 0
 
 '''
                                      _               _
