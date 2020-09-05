@@ -612,3 +612,9 @@ def test_batchify_group():
                          [[ 4.,  5.,  6., -1.], [-1., -1., -1., -1.]],
                          [[ 9., 10., -1., -1.], [-1., -1., -1., -1.]]])
     assert mx.test_utils.almost_equal(d[1].asnumpy(), expected)
+
+def test_sampler():
+    interval_sampler = mx.gluon.data.IntervalSampler(10, 3)
+    assert sorted(list(interval_sampler)) == list(range(10))
+    interval_sampler = mx.gluon.data.IntervalSampler(10, 3, rollover=False)
+    assert list(interval_sampler) == [0, 3, 6, 9]
