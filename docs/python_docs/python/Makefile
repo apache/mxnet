@@ -50,7 +50,10 @@ html: $(OBJ)
 	# make -C build linkcheck doctest html
 	make -C build html
 	sed -i.bak 's/33\,150\,243/23\,141\,201/g'  build/_build/html/_static/material-design-lite-1.3.0/material.blue-deep_orange.min.css
-
+	for f in $(shell find build/_build/html/tutorials -type f -name '*.html'); do \
+		echo "Updating github edit link for $$f."; \
+		sed -i.bak 's/\(href="https:\/\/github.com\/apache\/mxnet\/edit\/master\/docs\/python_docs\/python\/tutorials\/[^"]*\).ipynb"/\1.md"/g' $$f; \
+	done;
 
 clean:
 	rm -rf build

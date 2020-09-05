@@ -63,6 +63,7 @@ extensions = [
 
 doctest_global_setup = '''
 import mxnet as mx
+from mxnet import np, npx
 '''
 
 autodoc_member_order = 'alphabetical'
