@@ -5,4 +5,7 @@ contact_links:
     about: Use GitHub Discussions to ask and answer questions, exchange ideas, and share learning.
   - name: Discourse Forum
     url: https://discuss.mxnet.io/
-    about: Discuss forum for usage questions.
+r   about: Discuss forum for usage questions.
+  - name: Stack Overflow
+    url: https://stackoverflow.com/questions/tagged/mxnet
+    about: Ask and answer usage questions on Stack Overflow
