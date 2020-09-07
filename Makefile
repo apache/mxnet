@@ -86,6 +86,12 @@ ifeq ($(USE_MKLDNN), 1)
 	MKLDNNROOT = $(ROOTDIR)/3rdparty/mkldnn/build/install
 endif
 
+ifndef USE_INTGEMM
+ifeq ($(UNAME_P), x86_64)
+  USE_INTGEMM=1
+endif
+endif
+
 include $(TPARTYDIR)/mshadow/make/mshadow.mk
 include $(DMLC_CORE)/make/dmlc.mk
 
@@ -463,6 +469,39 @@ endif
 all: lib/libmxnet.a lib/libmxnet.so $(BIN) extra-packages extension_libs
 
 SRC = $(wildcard src/*/*/*/*.cc src/*/*/*.cc src/*/*.cc src/*.cc)
+
+ifeq ($(USE_INTGEMM), 1)
+	ifndef INTGEMM_PATH
+		INTGEMM_PATH = build/3rdparty/intgemm
+	endif
+	CFLAGS += -DMXNET_USE_INTGEMM=1
+	LIB_DEP += $(INTGEMM_PATH)/libintgemm.a
+
+# Download intgemm if it isn't already
+$(INTGEMM_PATH)/compile_test_avx512bw.cc:
+	@mkdir -p $(INTGEMM_PATH)
+	rm -rf $(INTGEMM_PATH)
+	git clone https://github.com/kpu/intgemm $(INTGEMM_PATH)
+	cd $(INTGEMM_PATH) && git checkout -q 02f671cf537fdbc818cf8111d1d9e557a8650d7a
+
+# Compiler tests for AVX512BW and AVX512VNNI.  This also depends on compile_test_avx512vnni.cc which comes with the above git pull.
+$(INTGEMM_PATH)/intgemm/intgemm_config.h: $(INTGEMM_PATH)/compile_test_avx512bw.cc
+	echo '#pragma once' >$(INTGEMM_PATH)/intgemm/intgemm_config.h
+	$(CXX) $(CFLAGS) $(INTGEMM_PATH)/compile_test_avx512bw.cc 2>/dev/null && echo \#define INTGEMM_COMPILER_SUPPORTS_AVX512BW >>$(INTGEMM_PATH)/intgemm/intgemm_config.h || echo Your compiler is missing AVX512BW support
+	$(CXX) $(CFLAGS) $(INTGEMM_PATH)/compile_test_avx512vnni.cc 2>/dev/null && echo \#define INTGEMM_COMPILER_SUPPORTS_AVX512VNNI >>$(INTGEMM_PATH)/intgemm/intgemm_config.h || echo Your compiler is missing AVX512VNNI support
+
+$(INTGEMM_PATH)/intgemm/intgemm.o: $(INTGEMM_PATH)/intgemm/intgemm_config.h $(INTGEMM_PATH)/intgemm/intgemm.cc $(wildcard $(INTGEMM_PATH)/intgemm/*.h $(INTGEMM_PATH)/intgemm/*/*.h)
+	$(CXX) $(CFLAGS) -I$(INTGEMM_PATH) -std=c++11 -c $(INTGEMM_PATH)/intgemm/intgemm.cc -o $@
+
+$(INTGEMM_PATH)/libintgemm.a: $(INTGEMM_PATH)/intgemm/intgemm.o
+	@mkdir -p $(@D)
+	ar crv $@ $(filter %.o, $?)
+else
+	#If we're not using intgemm, remove the operators from src.
+	INTGEMM_OPS := $(wildcard src/operator/contrib/intgemm/*.cc)
+	SRC := $(filter-out $(INTGEMM_OPS),$(SRC))
+endif
+
 OBJ = $(patsubst %.cc, build/%.o, $(SRC))
 CUSRC = $(wildcard src/*/*/*/*.cu src/*/*/*.cu src/*/*.cu src/*.cu)
 CUOBJ = $(patsubst %.cu, build/%_gpu.o, $(CUSRC))
@@ -581,6 +620,12 @@ build/plugin/%.o: plugin/%.cc | mkldnn
 	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" --generate-dependencies -MT $*_gpu.o $< >$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" $<
 
+ifeq ($(USE_INTGEMM), 1)
+# Enforce a dependency on $(INTGEMM_PATH)/intgemm/intgemm_config.h which is a generated header based on compiler support.
+build/src/operator/contrib/intgemm/%.o: src/operator/contrib/intgemm/%.cc $(CORE_INC) $(INTGEMM_PATH)/intgemm/intgemm_config.h
+	@mkdir -p $(@D)
+	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -I$(INTGEMM_PATH) -Isrc/operator -c $< -o $@
+endif
 %.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
