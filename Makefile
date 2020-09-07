@@ -478,14 +478,21 @@ ifeq ($(USE_INTGEMM), 1)
 	LIB_DEP += $(INTGEMM_PATH)/libintgemm.a
 
 # Download intgemm if it isn't already
-$(INTGEMM_PATH)/compile_test_avx512bw.cc:
+$(INTGEMM_PATH):
 	@mkdir -p $(INTGEMM_PATH)
 	rm -rf $(INTGEMM_PATH)
 	git clone https://github.com/kpu/intgemm $(INTGEMM_PATH)
 	cd $(INTGEMM_PATH) && git checkout -q 02f671cf537fdbc818cf8111d1d9e557a8650d7a
 
-# Compiler tests for AVX512BW and AVX512VNNI.  This also depends on compile_test_avx512vnni.cc which comes with the above git pull.
-$(INTGEMM_PATH)/intgemm/intgemm_config.h: $(INTGEMM_PATH)/compile_test_avx512bw.cc
+$(INTGEMM_PATH)/compile_test_avx512bw.cc: $(INTGEMM_PATH)
+	@
+$(INTGEMM_PATH)/compile_test_avx512vnni.cc: $(INTGEMM_PATH)
+	@
+$(INTGEMM_PATH)/intgemm/intgemm.cc: $(INTGEMM_PATH)
+	@
+
+# Compiler tests for AVX512BW and AVX512VNNI.
+$(INTGEMM_PATH)/intgemm/intgemm_config.h: $(INTGEMM_PATH)/compile_test_avx512bw.cc $(INTGEMM_PATH)/compile_test_avx512vnni.cc
 	echo '#pragma once' >$(INTGEMM_PATH)/intgemm/intgemm_config.h
 	$(CXX) $(CFLAGS) $(INTGEMM_PATH)/compile_test_avx512bw.cc 2>/dev/null && echo \#define INTGEMM_COMPILER_SUPPORTS_AVX512BW >>$(INTGEMM_PATH)/intgemm/intgemm_config.h || echo Your compiler is missing AVX512BW support
 	$(CXX) $(CFLAGS) $(INTGEMM_PATH)/compile_test_avx512vnni.cc 2>/dev/null && echo \#define INTGEMM_COMPILER_SUPPORTS_AVX512VNNI >>$(INTGEMM_PATH)/intgemm/intgemm_config.h || echo Your compiler is missing AVX512VNNI support
