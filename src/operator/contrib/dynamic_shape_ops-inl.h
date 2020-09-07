@@ -59,9 +59,11 @@ inline void DynamicReshapeForward(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
   MSHADOW_TYPE_SWITCH(out.dtype(), DType, {
-      mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
           s, inputs[0].data().Size(), out.data().dptr<DType>(),
           inputs[0].data().dptr<DType>());
+    });
   });
 }
 
@@ -76,9 +78,11 @@ inline void DynamicReshapeBackward(const nnvm::NodeAttrs& attrs,
   mshadow::Stream<xpu> *s = ctx.get_stream<xpu>();
 
   MSHADOW_TYPE_SWITCH(outputs[0].dtype(), DType, {
-      mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, kWriteTo>, xpu>::Launch(
+    MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+      mxnet_op::Kernel<mxnet_op::op_with_req<mshadow_op::identity, Req>, xpu>::Launch(
           s, inputs[0].data().Size(), outputs[0].data().dptr<DType>(),
           inputs[0].data().dptr<DType>());
+    });
   });
 }
 
