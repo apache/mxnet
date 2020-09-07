@@ -602,6 +602,13 @@ endif
 # For quick compile test, used smaller subset
 ALLX_DEP= $(ALL_DEP)
 
+ifeq ($(USE_INTGEMM), 1)
+# Enforce a dependency on $(INTGEMM_PATH)/intgemm/intgemm_config.h which is a generated header based on compiler support.
+build/src/operator/contrib/intgemm/%.o: src/operator/contrib/intgemm/%.cc $(INTGEMM_PATH)/intgemm/intgemm_config.h | mkldnn
+	@mkdir -p $(@D)
+	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -I$(INTGEMM_PATH) -Isrc/operator -c $< -o $@
+endif
+
 build/src/%.o: src/%.cc | mkldnn
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -c $< -o $@
@@ -627,12 +634,6 @@ build/plugin/%.o: plugin/%.cc | mkldnn
 	$(NVCC) $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" --generate-dependencies -MT $*_gpu.o $< >$*_gpu.d
 	$(NVCC) -c -o $@ $(NVCCFLAGS) $(CUDA_ARCH) -Xcompiler "$(CFLAGS) -Isrc/operator" $<
 
-ifeq ($(USE_INTGEMM), 1)
-# Enforce a dependency on $(INTGEMM_PATH)/intgemm/intgemm_config.h which is a generated header based on compiler support.
-build/src/operator/contrib/intgemm/%.o: src/operator/contrib/intgemm/%.cc $(CORE_INC) $(INTGEMM_PATH)/intgemm/intgemm_config.h
-	@mkdir -p $(@D)
-	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -I$(INTGEMM_PATH) -Isrc/operator -c $< -o $@
-endif
 %.o: %.cc $(CORE_INC)
 	@mkdir -p $(@D)
 	$(CXX) -std=c++11 -c $(CFLAGS) -MMD -Isrc/operator -c $< -o $@
