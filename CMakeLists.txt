@@ -47,6 +47,7 @@ if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PR
 else()
   option(USE_MKLDNN "Build with MKL-DNN support" OFF)
 endif()
+cmake_dependent_option(USE_INTGEMM "Build with x86_64 intgemm library for low-precision multiplication" ON "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64" OFF)
 if(NOT MSVC)
   option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON)
 else()
@@ -306,6 +307,22 @@ if(USE_CPP_PACKAGE)
     add_definitions(-DMXNET_USE_CPP_PACKAGE=1)
 endif()
 
+if(USE_INTGEMM)
+  message(STATUS "Using intgemm")
+  include(FetchContent)
+  FetchContent_Declare(
+    intgemm
+    GIT_REPOSITORY https://github.com/kpu/intgemm.git
+    GIT_TAG        02f671cf537fdbc818cf8111d1d9e557a8650d7a
+  )
+  FetchContent_GetProperties(intgemm)
+  if(NOT intgemm_POPULATED)
+    FetchContent_Populate(intgemm)
+  endif()
+  add_subdirectory(${intgemm_SOURCE_DIR} ${intgemm_BINARY_DIR} EXCLUDE_FROM_ALL)
+  add_definitions(-DMXNET_USE_INTGEMM=1)
+endif()
+
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -496,6 +513,11 @@ endif()
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
+
+if(NOT USE_INTGEMM)
+  FILE(GLOB_RECURSE INTGEMM_OPERATOR_SOURCE "src/operator/contrib/intgemm/*.cc" "src/operator/contrib/intgemm/*.h")
+  list(REMOVE_ITEM SOURCE ${INTGEMM_OPERATOR_SOURCE})
+endif()
 
 # add nnvm to source
 FILE(GLOB_RECURSE NNVMSOURCE
@@ -784,6 +806,10 @@ if(USE_MKLDNN)
       ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/
       COMMAND ${CMAKE_COMMAND} -E copy
       ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/)
+endif()
+
+if(USE_INTGEMM)
+  target_link_libraries(mxnet_static PRIVATE intgemm)
 endif()
 
 function(BuildTVMOP)

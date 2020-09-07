@@ -309,6 +309,8 @@
          Licensed MIT © Zeno Rocha
     11. mx-theme - For details, see docs/python_docs/themes/mx-theme/LICENSE
          Copyright (c) 2016 myyasuda
+    12. intgemm - Refer to 3rdparty/intgemm/LICENSE
+         Copyright (c) 2017--2019 University of Edinburgh, Nikolay Bogoychev, Mateusz Chudyk, Kenneth Heafield, and Microsoft Corporation
 
 
     =======================================================================================
