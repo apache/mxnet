@@ -569,7 +569,7 @@ class BaseModule(object):
 
             #----------------------------------------
             # evaluation on validation set
-            if eval_data:
+            if eval_data is not None:
                 res = self.score(eval_data, validation_metric,
                                  score_end_callback=eval_end_callback,
                                  batch_end_callback=eval_batch_end_callback, epoch=epoch)
