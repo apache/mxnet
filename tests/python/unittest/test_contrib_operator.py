@@ -428,7 +428,7 @@ def test_dynamic_reshape():
         args_grad = {
             'data': mx.nd.empty(src_shape)
         }
-        exe = net.bind(default_context(), args, args_grad)
+        exe = net._bind(default_context(), args, args_grad)
         exe.forward(is_train=True)
         assert np.square(exe.outputs[0].asnumpy() - dat_npy.reshape(dst_shape)).mean() < 1E-7
         exe.backward(out_grads=mx.nd.array(grad_npy))
