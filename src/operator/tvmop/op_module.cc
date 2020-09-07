@@ -46,6 +46,12 @@ void TVMOpModule::Load(const std::string &filepath) {
   *module_ptr_ = module;
 }
 
+void TVMOpModule::Import(const TVMOpModule& module) {
+  CHECK(module_ptr_ != nullptr) << "module_ptr_ is not initialized.";
+  std::lock_guard<std::mutex> lock(mutex_);
+  module_ptr_->Import(*(module.module_ptr_));
+}
+
 PackedFunc GetFunction(const std::shared_ptr<Module> &module,
                        const std::string &op_name,
                        const std::vector<mxnet::TBlob> &args) {
@@ -94,7 +100,7 @@ void TVMOpModule::Call(const std::string &func_name,
   type_codes.resize(args.size());
   values.resize(args.size());
   for (size_t i = 0; i < args.size(); ++i) {
-    type_codes[i] = kArrayHandle;
+    type_codes[i] = kTVMDLTensorHandle;
     values[i].v_handle = const_cast<DLTensor *>(&(args[i].dltensor()));
   }
 
@@ -141,7 +147,7 @@ void TVMOpModule::CallEx(const std::string &func_name,
 
 const TVMOpConfig& GetOpConfig(const std::string& name) {
   const TVMOpConfig* ret = ::dmlc::Registry<TVMOpConfig>::Get()->Find(name);
-  CHECK(ret != NULL)
+  CHECK(ret != nullptr)
     << "op " << name << "does not exist.";
   return *ret;
 }

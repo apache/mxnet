@@ -33,10 +33,9 @@ one input layer, one hidden layer, and one output layer.
    # When instantiated, Sequential stores a chain of neural network layers.
    # Once presented with data, Sequential executes each layer in turn, using
    # the output of one layer as the input for the next
-   with net.name_scope():
-       net.add(gluon.nn.Dense(256, activation="relu")) # 1st layer (256 nodes)
-       net.add(gluon.nn.Dense(256, activation="relu")) # 2nd hidden layer
-       net.add(gluon.nn.Dense(num_outputs))
+   net.add(gluon.nn.Dense(256, activation="relu")) # 1st layer (256 nodes)
+   net.add(gluon.nn.Dense(256, activation="relu")) # 2nd hidden layer
+   net.add(gluon.nn.Dense(num_outputs))
 
 
 .. automodule:: mxnet.gluon
@@ -49,7 +48,7 @@ Tutorials
 
    .. card::
       :title: Gluon Guide
-      :link: ../../guide/packages/gluon/
+      :link: ../../tutorials/packages/gluon/index.html
 
       The Gluon guide. Start here!
 
@@ -98,14 +97,20 @@ Training
       Loss functions for training neural networks.
 
    .. card::
+      :title: gluon.metric
+      :link: metric/index.html
+
+      Metrics to evaluate the performance of a learned model.
+
+   .. card::
       :title: gluon.Parameter
-      :link: mxnet.gluon.Parameter.html
+      :link: parameter.html
 
       Parameter getting and setting functions.
 
    .. card::
       :title: gluon.Trainer
-      :link: mxnet.gluon.Trainer.html
+      :link: trainer.html
 
       Functions for applying an optimizer on a set of parameters.
 
@@ -128,7 +133,7 @@ Data
 
    .. card::
       :title: gluon.model_zoo.vision
-      :link: model_zoo/index.vision.html
+      :link: model_zoo/index.html
 
       A module for loading pre-trained neural network models.
 

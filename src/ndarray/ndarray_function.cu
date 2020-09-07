@@ -31,7 +31,7 @@
 #include "../operator/tensor/init_op.h"
 #include "../operator/tensor/util/tensor_util-inl.h"
 #include "../operator/tensor/util/tensor_util-inl.cuh"
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #include "./ndarray_function.h"
 #include "./ndarray_function-inl.h"
 #include "./ndarray_function-inl.cuh"
@@ -88,7 +88,7 @@ void Copy<gpu, gpu>(const TBlob &from, TBlob *to,
     CHECK_EQ(to->type_flag_, from.type_flag_)
       << "Source and target must have the same data type when copying across devices.";
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
-    CHECK(s != NULL) << "need stream in GPU context";
+    CHECK(s != nullptr) << "need stream in GPU context";
     cudaMemcpyPeerAsync(to->dptr_,
                         to_ctx.dev_id,
                         from.dptr_,
@@ -126,8 +126,8 @@ void ElementwiseSumRspImpl(mshadow::Stream<gpu>* s,
   MSHADOW_TYPE_SWITCH(out->dtype(), DType, {  // data type
     MSHADOW_IDX_TYPE_SWITCH(out->aux_type(kIdx), IType, {  // row_idx type
       // Allocate temporary storage for row_flg array and cub's prefix sum operation
-      IType* row_flg = NULL;
-      void* d_temp_storage = NULL;
+      IType* row_flg = nullptr;
+      void* d_temp_storage = nullptr;
       size_t temp_storage_bytes = 0;
       cudaStream_t stream = mshadow::Stream<gpu>::GetStream(s);
       cub::DeviceScan::InclusiveSum(d_temp_storage,

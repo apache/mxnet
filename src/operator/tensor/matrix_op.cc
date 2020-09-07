@@ -289,7 +289,7 @@ static void TransposeComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
 
   if (SupportMKLDNNTranspose(param, inputs[0]) && req[0] == kWriteTo) {
-    MKLDNNTransposeForward(attrs, ctx, inputs[0], req[0], outputs[0]);
+    MKLDNNRun(MKLDNNTransposeForward, attrs, ctx, inputs[0], req[0], outputs[0]);
     return;
   }
   FallBackCompute(Transpose<cpu>, attrs, ctx, inputs, req, outputs);
@@ -332,7 +332,7 @@ Examples::
 .set_attr<mxnet::FInferShape>("FInferShape", TransposeShape)
 .set_attr<nnvm::FInferType>("FInferType", ElemwiseType<1, 1>)
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const TransposeParam& param = nnvm::get<TransposeParam>(n->attrs.parsed);
     if (param.axes.ndim() == 0) {
       return MakeNonlossGradNode(
@@ -351,6 +351,10 @@ Examples::
     }
   })
 .set_attr<FCompute>("FCompute<cpu>", Transpose<cpu>)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& n) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+})
 #if MXNET_USE_MKLDNN == 1
 .set_attr<bool>("TIsMKLDNN", true)
 .set_attr<FComputeEx>("FComputeEx<cpu>", TransposeComputeExCPU)
@@ -725,7 +729,7 @@ NNVM_REGISTER_OP(_backward_clip)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 NNVM_REGISTER_OP(repeat)
-.add_alias("_np_repeat")
+.add_alias("_npi_repeat")
 .describe(R"code(Repeats elements of an array.
 By default, ``repeat`` flattens the input array into 1-D and then repeats the
 elements::
@@ -1038,6 +1042,7 @@ Example::
 
 NNVM_REGISTER_OP(_split_v2)
 .add_alias("_npi_split")
+.add_alias("_npi_array_split")
 .describe(R"code(Splits an array along a particular axis into multiple sub-arrays.
 Example::
    x  = [[[ 1.]

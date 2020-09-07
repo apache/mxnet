@@ -34,5 +34,20 @@ NNVM_REGISTER_OP(_npi_where)
 NNVM_REGISTER_OP(_backward_np_where)
 .set_attr<FCompute>("FCompute<gpu>", NumpyWhereOpBackward<gpu>);
 
+NNVM_REGISTER_OP(_npi_where_lscalar)
+.set_attr<FCompute>("FCompute<gpu>", NumpyWhereScalarOpForward<gpu, true>);
+
+NNVM_REGISTER_OP(_npi_where_rscalar)
+.set_attr<FCompute>("FCompute<gpu>", NumpyWhereScalarOpForward<gpu, false>);
+
+NNVM_REGISTER_OP(_backward_np_where_lscalar)
+.set_attr<FCompute>("FCompute<gpu>", NumpyWhereScalarOpBackward<gpu, true>);
+
+NNVM_REGISTER_OP(_backward_np_where_rscalar)
+.set_attr<FCompute>("FCompute<gpu>", NumpyWhereScalarOpBackward<gpu, false>);
+
+NNVM_REGISTER_OP(_npi_where_scalar2)
+.set_attr<FCompute>("FCompute<gpu>", NumpyWhereScalar2OpForward<gpu>);
+
 }  // namespace op
 }  // namespace mxnet

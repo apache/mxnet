@@ -116,7 +116,7 @@ void NonzeroForwardGPU(const nnvm::NodeAttrs& attrs,
   // get the shape from the input
   MXNET_NDIM_SWITCH(in.shape().ndim(), ndim, {
     mshadow::Shape<ndim> shape = in.shape().get<ndim>();
-    mxnet_op::Kernel<NonzeroForwardKernel, gpu>::Launch(
+    mxnet_op::Kernel<NonzeroForwardKernelGPU, gpu>::Launch(
       stream, in_size, out.data().dptr<int64_t>(), prefix_sum, shape);
   })
 }

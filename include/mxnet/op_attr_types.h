@@ -329,7 +329,7 @@ using FQuantizable = std::function<QuantizeType (const NodeAttrs& attrs)>;
  * \brief Register a quantized node creation function based on the attrs of the node
  * \note Register under "FQuantizedOp" for non-quantized operators
  */
-using FQuantizedOp = std::function<nnvm::NodePtr (const NodeAttrs& attrs)>;
+using FQuantizedOp = std::function<nnvm::ObjectPtr (const NodeAttrs& attrs)>;
 
 /*!
  * \brief Register a function to determine if the output of a quantized operator

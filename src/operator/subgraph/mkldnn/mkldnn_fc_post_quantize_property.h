@@ -156,13 +156,13 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
     return property;
   }
 
-  nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id = 0) const override {
-    nnvm::NodePtr fc_node = nullptr;
-    nnvm::NodePtr requantize_node = nullptr;
-    nnvm::NodePtr dequantize_node = nullptr;
+    nnvm::ObjectPtr fc_node = nullptr;
+    nnvm::ObjectPtr requantize_node = nullptr;
+    nnvm::ObjectPtr dequantize_node = nullptr;
 
-    DFSVisit(sym.outputs, [&](const nnvm::NodePtr &node) {
+    DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->is_variable()) return;
       if (node->op() == Op::Get(QUANTIZED_FC_NAME)) {
         fc_node = node;
@@ -202,7 +202,7 @@ class SgMKLDNNFCPostQuantizeProperty : public SubgraphProperty {
   }
 
   void ConnectSubgraphOutputs(
-      const nnvm::NodePtr n,
+      const nnvm::ObjectPtr n,
       std::vector<nnvm::NodeEntry *> *output_entries) const override {
     for (size_t i = 0; i < output_entries->size(); ++i) {
       auto entry_ptr = output_entries->at(i);

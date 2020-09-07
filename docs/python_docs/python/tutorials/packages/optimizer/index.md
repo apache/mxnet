@@ -21,12 +21,12 @@ Deep learning models are comprised of a model architecture and the model paramet
 
 To learn the parameters, we start with an initialization scheme and iteratively refine the parameter initial values by moving them along a direction that is opposite to the (approximate) gradient of the loss function. The extent to which the parameters are updated in this direction is governed by a hyperparameter called the learning rate. This process, known as gradient descent, is the backbone of optimization algorithms in deep learning. In MXNet, this functionality is abstracted by the [Optimizer API](/api/python/docs/api/optimizer/index.html#module-mxnet.optimizer).
 
-When training a deep learning model using the MXNet [gluon API](/api/python/docs/tutorials/packages/gluon/index.html), a gluon [Trainer](/api/python/docs/tutorials/packages/gluon/training/trainer.html) is initialized with the all the learnable parameters and the optimizer to be used to learn those parameters. A single step of iterative refinement of model parameters in MXNet is achieved by calling [`trainer.step`](/api/python/docs/api/gluon/trainer.html#mxnet.gluon.Trainer.step) which in turn uses the gradient (and perhaps some state information) to update the parameters by calling `optimizer.update`.
+When training a deep learning model using the MXNet [gluon API](/api/python/docs/tutorials/packages/gluon/index.html), a gluon [Trainer](/api/python/docs/tutorials/packages/gluon/training/trainer.html) is initialized with the all the learnable parameters and the optimizer to be used to learn those parameters. A single step of iterative refinement of model parameters in MXNet is achieved by calling [trainer.step](/api/python/docs/api/gluon/trainer.html#mxnet.gluon.Trainer.step) which in turn uses the gradient (and perhaps some state information) to update the parameters by calling `optimizer.update`.
 
 Here is an example of how a trainer with an optimizer is created for, a simple Linear (Dense) Network.
 
 
-```python
+```{.python .input}
 from mxnet import gluon, optimizer
 
 net = gluon.nn.Dense(1)
@@ -40,12 +40,12 @@ In model training, the code snippet above would be followed by a training loop w
 We can also create the trainer by passing in the optimizer name and optimizer params into the trainer constructor directly, as shown below.
 
 
-```python
+```{.python .input}
 trainer = gluon.Trainer(net.collect_params(), optimizer='adam', optimizer_params={'learning_rate':1})
 ```
 
 ### What should I use?
-For many deep learning model architectures, the `sgd` and `adam` optimizers are a really good place to start. If you are implementing a deep learning model and trying to pick an optimizer, start with [`'sgd'`](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.SGD) as you will often get good enough results as long as your learning problem is tractable. If you already have a trainable model and you want to improve the convergence then you can try [`'adam'`](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.Adam). If you would like to improve your model training process further, there are a number of specialized optimizers out there with many of them already implemented in MXNet. This guide walks through these optimizers in some detail.
+For many deep learning model architectures, the `sgd` and `adam` optimizers are a really good place to start. If you are implementing a deep learning model and trying to pick an optimizer, start with [sgd](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.SGD) as you will often get good enough results as long as your learning problem is tractable. If you already have a trainable model and you want to improve the convergence then you can try [adam](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.Adam). If you would like to improve your model training process further, there are a number of specialized optimizers out there with many of them already implemented in MXNet. This guide walks through these optimizers in some detail.
 
 ## Stochastic Gradient Descent
 [Gradient descent](https://en.wikipedia.org/wiki/Gradient_descent) is a general purpose algorithm for minimizing a function using information from the gradient of the function with respect to its parameters. In deep learning, the function we are interested in minimizing is the [loss function](/api/python/docs/tutorials/packages/gluon/loss/loss.html). Our model accepts training data as inputs and the loss function tells us how good our model predictions are. Since the training data can routinely consist of millions of examples, computing the loss gradient on the full batch of training data is very computationally expensive. Luckily, we can effectively approximate the full gradient with the gradient of the loss function on randomly chosen minibatches of our training data. This variant of gradient descent is [stochastic gradient descent](https://en.wikipedia.org/wiki/Stochastic_gradient_descent).
@@ -97,7 +97,7 @@ The use of SGD with momentum for learning in neural networks was introduced by R
 To create an SGD optimizer with momentum $\gamma$ and weight decay in MXNet simply use the following code.
 
 
-```python
+```{.python .input}
 sgd_optimizer = optimizer.SGD(learning_rate=0.1, wd=0., momentum=0.8)
 ```
 
@@ -124,7 +124,7 @@ The effects of using NAG over SGD and classical momentum are discussed in this [
 The NAG optimizer can be initialized in MXNet by using the code snippet below or by creating a trainer with argument `optimizer='nag'`.
 
 
-```python
+```{.python .input}
 nag_optimizer = optimizer.NAG(learning_rate=0.1, momentum=0.8)
 ```
 
@@ -148,7 +148,7 @@ The overaching benefit of AdaGrad over SGD is that it ensures the overall conver
 To instantiate the Adagrad optimizer in MXNet you can use the following line of code.
 
 
-```python
+```{.python .input}
 adagrad_optimizer = optimizer.AdaGrad(learning_rate=0.1, eps=1e-07)
 ```
 
@@ -180,11 +180,11 @@ $$ w_{i+1} = w_i + v_{i+1} $$
 Here is an example snippet creating the RMSProp optimizer in MXNet.
 
 
-```python
-rmsprop_optimizer = optimizer.RMSProp(learning_rate=0.001, gamma1=0.9, gamma2=0.9, epsilon=1e-07, centered=False)
+```{.python .input}
+rmsprop_optimizer = optimizer.RMSProp(learning_rate=0.001, rho=0.9, momentum=0.9, epsilon=1e-07, centered=False)
 ```
 
-In the code snippet above, `gamma1` is $\beta$ in the equations above and `gamma2` is $\gamma$, which is only used where `centered=True`.
+In the code snippet above, `rho` is $\beta$ in the equations above and `momentum` is $\gamma$, which is only used where `centered=True`.
 
 ### [AdaDelta](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.AdaDelta)
 
@@ -201,7 +201,7 @@ As evident from the above equations, AdaDelta is similar to RMSProp but does not
 Here is the code snippet creating the AdaDelta optimizer in MXNet. The argument `rho` in the code is $\beta$ in the update equations. Notice there is no learning rate argument in the code.
 
 
-```python
+```{.python .input}
 adadelta_optimizer = optimizer.AdaDelta(rho=0.9, epsilon=1e-07)
 ```
 
@@ -219,7 +219,7 @@ $$ w_{i+1} = w_i + \dfrac{lr}{\sqrt{\tilde{\mathbb{E}[g^2]}_{i+1}} + \epsilon} \
 In MXNet, you can construct the Adam optimizer with the following line of code.
 
 
-```python
+```{.python .input}
 adam_optimizer = optimizer.Adam(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-08)
 ```
 
@@ -234,7 +234,7 @@ $$ w_{i+1} = w_i + \dfrac{lr}{g^\infty_{i+1} + \epsilon} \cdot - \tilde{v}_{i+1}
 See the code snippet below for how to construct Adamax in MXNet.
 
 
-```python
+```{.python .input}
 adamax_optimizer = optimizer.Adamax(learning_rate=0.002, beta1=0.9, beta2=0.999)
 ```
 
@@ -252,7 +252,7 @@ $$ w_{i+1} = w_i + \dfrac{lr}{\sqrt{\tilde{\mathbb{E}[g^2]}_{i+1}} + \epsilon}\c
 Here is the line of code to create the NAdam optimizer in MXNet.
 
 
-```python
+```{.python .input}
 nadam_optimizer = optimizer.Nadam(learning_rate=0.001, beta1=0.9, beta2=0.999, epsilon=1e-08)
 ```
 
@@ -277,36 +277,10 @@ $$ w_{i+1} =  w_i - lr \cdot sign(v_{i+1}) $$
 Here is how to create the signum optimizer in MXNet.
 
 
-```python
+```{.python .input}
 signum_optimizer = optimizer.Signum(learning_rate=0.01, momentum=0.9, wd_lh=0.0)
 ```
 
-### [LBSGD](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.LBSGD)
-LBSGD stands for Large Batch Stochastic Gradient Descent and implements a technique where Layer-wise Adaptive Rate Scaling (LARS) is used to maintain a separate learning rate for each layer of the neural network. LBSGD has no additional modifications to SGD and performs the same parameter update steps as the SGD optimizer described above.
-
-LBSGD was introduced by [You et al](https://arxiv.org/pdf/1708.03888.pdf) for distributed training with data-parallel synchronous SGD across multiple worker nodes to overcome the issue of reduced model accuracy when the number of workers, and by extension effective batch size, is increased.
-
-Here is how to initialize the LBSGD optimizer in MXNet.
-
-
-```python
-lbsgd_optimizer = optimizer.LBSGD(momentum=0.0,
-                                  multi_precision=False,
-                                  warmup_strategy='linear',
-                                  warmup_epochs=5,
-                                  batch_scale=1,
-                                  updates_per_epoch=32,
-                                  begin_epoch=0,
-                                  num_epochs=60)
-```
-
-LBSGD has a number of extra keyword arguments described below
-* `multi_precision` - When True performs updates with float32 precision weights regardless of whether weights are initialized with lower precision. When False perform updates with same precision as the weights when initialized. Set to True to improve performance when training with low precision weight represenations.
-* `warmup_strategy` - The warmup is period where the learning rate is increased through the first few epochs. The following strategies are supported:  ['linear', 'power2', 'sqrt','lars']
-* `warmup_epochs` - How many epochs to perform warmup for
-* `batch_scale` - use batch size*numworkers
-* `updates_per_epoch` - How many updates to the learning rate to perform every epoch. For example during warmup the warmup strategy is applied to increase the learning rate a total of `warmup_epochs*updates_per_epoch` number of times.
-* `begin_epoch` - The epoch at which to start warmup.
 
 ### [DCASGD](/api/python/docs/api/optimizer/index.html#mxnet.optimizer.DCASGD)
 
@@ -319,7 +293,7 @@ $$ w_{i+\tau+1} = w_{i+\tau} − lr \cdot (grad(w_i) + \lambda \cdot grad(w_i)^2
 The DCASGD optimizer in MXNet can be initialized using the code below.
 
 
-```python
+```{.python .input}
 dcasgd_optimizer = optimizer.DCASGD(momentum=0.0, lamda=0.04)
 ```
 
@@ -347,7 +321,7 @@ $$ w_{i+1} = (|z_{i+1}| > \lambda) \cdot \left[ \dfrac{-lr}{\beta + \sqrt{\eta_{
 Here is how to initialize the FTRL optimizer in MXNet
 
 
-```python
+```{.python .input}
 ftrl_optimizer = optimizer.Ftrl(lamda1=0.01, learning_rate=0.1, beta=1)
 ```
 
@@ -370,7 +344,7 @@ $$ w_{i+1} = \dfrac{-z_{i+1}}{d_{i+1}} $$
 In MXNet, you can initialize the FTML optimizer using
 
 
-```python
+```{.python .input}
 ftml_optimizer = optimizer.FTML(beta1=0.6, beta2=0.999, epsilon=1e-08)
 ```
 
@@ -391,7 +365,7 @@ where $ \eta_{i+1} \sim N(0, lr_{i+1})$ i.e $\eta_{i+1}$ is drawn from a zero ce
 SGLD was introduced by [Patterson and Teh](https://papers.nips.cc/paper/4883-stochastic-gradient-riemannian-langevin-dynamics-on-the-probability-simplex.pdf) and the optimizer can be created in MXNet with the following line of code.
 
 
-```python
+```{.python .input}
 sgld_optimizer = optimizer.SGLD()
 ```
 

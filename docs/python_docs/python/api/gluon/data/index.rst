@@ -39,6 +39,7 @@ Sampling
    SequentialSampler
    RandomSampler
    BatchSampler
+   IntervalSampler
 
 DataLoader
 ----------

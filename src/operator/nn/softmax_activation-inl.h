@@ -82,9 +82,9 @@ void SoftmaxActivationCompute(const nnvm::NodeAttrs& attrs,
   } else {
     CHECK_GE(in_data.ndim(), 3)
         << "Input need to have a least 3 dimensions when mode=channel";
-    int n = in_data.size(0);
-    int k = in_data.size(1);
-    Shape<3> s3 = Shape3(n, k, static_cast<int>(in_data.Size()/n/k));
+    index_t n = in_data.size(0);
+    index_t k = in_data.size(1);
+    Shape<3> s3 = Shape3(n, k, static_cast<index_t>(in_data.Size()/n/k));
     Tensor<xpu, 3, real_t> data = in_data.get_with_shape<xpu, 3, real_t>(s3, s);
     Tensor<xpu, 3, real_t> out = out_data.get_with_shape<xpu, 3, real_t>(s3, s);
     Softmax(out, data);
@@ -107,10 +107,10 @@ void SoftmaxActivationGradCompute(const nnvm::NodeAttrs& attrs,
   const OpReqType &req = reqs[0];
   const TBlob &in_grad = outputs[0];
   // Use 3d tensor for both mode -> {instance, channel}. Get shapes
-  int total_size = in_grad.Size();
-  int batch_size = in_grad.shape_[0];
-  int channel_num = in_grad.shape_[1];
-  int rest_size = total_size / (batch_size * channel_num);
+  index_t total_size = in_grad.Size();
+  index_t batch_size = in_grad.shape_[0];
+  index_t channel_num = in_grad.shape_[1];
+  index_t rest_size = total_size / (batch_size * channel_num);
   const Shape<3> data_shape = Shape3(batch_size, channel_num, rest_size);
   // Get tensors
   Stream<xpu> *s = ctx.get_stream<xpu>();

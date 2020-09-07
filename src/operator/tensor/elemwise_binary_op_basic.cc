@@ -32,8 +32,8 @@ namespace op {
 
 bool SupportMKLDNNSum(const NDArray& input) {
   int ndim = input.shape().ndim();
-  return input.dtype() == mshadow::kFloat32 && (ndim >= 1 && ndim <= 4) &&
-         input.storage_type() == kDefaultStorage;
+  return (input.dtype() == mshadow::kFloat32 || input.dtype() == mshadow::kBfloat16) &&
+         (ndim >= 1 && ndim <= 4) && input.storage_type() == kDefaultStorage;
 }
 
 static void ElemwiseAddEx(const nnvm::NodeAttrs& attrs,
@@ -274,8 +274,6 @@ NNVM_REGISTER_OP(_backward_div)
                                   return std::vector<std::pair<int, int> >{{0, 1}};
                                 })
 .set_attr<FCompute>("FCompute<cpu>", ElemwiseBinaryOp::BackwardUseIn<
-  cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>)
-.set_attr<FComputeEx>("FComputeEx<cpu>", ElemwiseBinaryOp::BackwardUseInEx<
   cpu, mshadow_op::div_grad, mshadow_op::div_rgrad>);
 
 MXNET_OPERATOR_REGISTER_BINARY(_mod)

@@ -172,16 +172,16 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
     return property;
   }
 
-  nnvm::NodePtr CreateSubgraphNode(const nnvm::Symbol &sym,
+  nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id = 0) const override {
-    nnvm::NodePtr n = nnvm::Node::Create();
+    nnvm::ObjectPtr n = nnvm::Node::Create();
     // This op has single output, remove duplicated.
     auto last_node = sym.outputs[0].node;
     nnvm::Symbol new_sym;
     new_sym.outputs.emplace_back(last_node);
     std::ostringstream node_name;
     node_name << "sg_mkldnn_";
-    DFSVisit(new_sym.outputs, [&](const nnvm::NodePtr &node) {
+    DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->is_variable()) return;
       auto &sub_name = node->op()->name;
       if (sub_name == "FullyConnected") {
@@ -207,7 +207,7 @@ class SgMKLDNNFCProperty : public SubgraphProperty {
   }
 
   void ConnectSubgraphOutputs(
-      const nnvm::NodePtr n,
+      const nnvm::ObjectPtr n,
       std::vector<nnvm::NodeEntry *> *output_entries) const override {
     // Connect all extern output entries to output[0]
     for (size_t i = 0; i < output_entries->size(); ++i) {

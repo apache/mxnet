@@ -106,7 +106,7 @@ static bool UpSamplingType(const nnvm::NodeAttrs& attrs,
 
 struct UpSamplingGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) const {
     const UpSamplingParam& param_ = nnvm::get<UpSamplingParam>(n->attrs.parsed);
     std::vector<nnvm::NodeEntry> heads(ograds.begin(), ograds.end());
@@ -203,7 +203,7 @@ Example::
               "For bilinear upsampling, there should be 2 inputs - 1 data and 1 weight.")
 .add_arguments(UpSamplingParam::__FIELDS__())
 .set_attr<nnvm::FSetInputVarAttrOnCompose>("FSetInputVarAttrOnCompose",
-    [](const nnvm::NodeAttrs& attrs, nnvm::NodePtr var, const int index) {
+    [](const nnvm::NodeAttrs& attrs, nnvm::ObjectPtr var, const int index) {
       if (var->attrs.dict.find("__init__") != var->attrs.dict.end()) return;
       if (index == 1) {
         var->attrs.dict["__init__"] = "[\"bilinear\", {}]";

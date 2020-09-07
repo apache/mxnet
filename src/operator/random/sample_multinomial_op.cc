@@ -32,6 +32,7 @@ DMLC_REGISTER_PARAMETER(SampleMultinomialParam);
 
 NNVM_REGISTER_OP(_sample_multinomial)
 .add_alias("sample_multinomial")
+.add_alias("_npx__random_categorical")
 .describe(R"code(Concurrent sampling from multiple multinomial distributions.
 
 *data* is an *n* dimensional array whose last dimension has length *k*, where
@@ -75,7 +76,7 @@ Examples::
         ResourceRequest::kRandom, ResourceRequest::kTempSpace};
     })
 .set_attr<nnvm::FGradient>("FGradient",
-  [](const nnvm::NodePtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
+  [](const nnvm::ObjectPtr& n, const std::vector<nnvm::NodeEntry>& ograds) {
     const SampleMultinomialParam& param = nnvm::get<SampleMultinomialParam>(n->attrs.parsed);
     if (param.get_prob) {
       return MakeGradNode("_backward_sample_multinomial", n,

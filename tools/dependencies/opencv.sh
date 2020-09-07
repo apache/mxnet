@@ -46,7 +46,7 @@ if [[ ! -f $DEPS_PATH/lib/libopencv_core.a ]] || [[ ! -f $DEPS_PATH/lib/libopenc
     mkdir -p $DEPS_PATH/opencv-$OPENCV_VERSION/build
     pushd .
     cd $DEPS_PATH/opencv-$OPENCV_VERSION/build
-    cmake \
+    CFLAGS="-fPIC" CXXFLAGS="-fPIC"  cmake \
           -D OPENCV_ENABLE_NONFREE=OFF \
           -D WITH_1394=OFF \
           -D WITH_ARAVIS=OFF \
@@ -161,7 +161,7 @@ if [[ ! -f $DEPS_PATH/lib/libopencv_core.a ]] || [[ ! -f $DEPS_PATH/lib/libopenc
           -D BUILD_opencv_gpuoptflow=OFF \
           -D BUILD_opencv_gpustereo=OFF \
           -D BUILD_opencv_gpuwarping=OFF \
-          -D BUILD_opencv_highgui=OFF \
+          -D BUILD_opencv_highgui=ON \
           -D BUILD_opencv_java=OFF \
           -D BUILD_opencv_js=OFF \
           -D BUILD_opencv_ml=OFF \

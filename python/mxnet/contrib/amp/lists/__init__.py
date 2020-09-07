@@ -18,4 +18,5 @@
 # coding: utf-8
 """Lists of functions whitelisted/blacklisted for automatic mixed precision."""
 
-from . import symbol
+from . import symbol_fp16
+from . import symbol_bf16

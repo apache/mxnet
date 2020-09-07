@@ -42,7 +42,7 @@ struct ElementWiseSumParam : public dmlc::Parameter<ElementWiseSumParam> {
 DMLC_REGISTER_PARAMETER(ElementWiseSumParam);
 
 std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
-    const nnvm::NodePtr& n,
+    const nnvm::ObjectPtr& n,
     const std::vector<nnvm::NodeEntry>& ograds) {
   // identity constraints in the beginning for easier shape inference.
   const nnvm::Op* copy_op =
@@ -50,7 +50,7 @@ std::vector<nnvm::NodeEntry> ElementWiseSumGrad(
   CHECK_EQ(ograds.size(), 1);
   std::vector<nnvm::NodeEntry> ret;
   for (size_t i = 0; i < n->inputs.size(); ++i) {
-    nnvm::NodePtr node = nnvm::Node::Create();
+    nnvm::ObjectPtr node = nnvm::Node::Create();
     node->attrs.op = copy_op;
     node->inputs = {ograds[0]};
     ret.emplace_back(std::move(node));
@@ -113,7 +113,14 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(outputs.size(), 1U);
   CHECK_EQ(req.size(), 1U);
   if (req[0] == kNullOp) return;
-  if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) ||
+#if MXNET_USE_MKLDNN == 1
+  if (IsMKLDNNData(inputs)) {
+    MKLDNNRun(MKLDNNSumForward, attrs, ctx, inputs, req, outputs);
+  } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
+    FallBackCompute(ElementWiseSumCompute<cpu>, attrs, ctx, inputs, req, outputs);
+  }
+#endif
+  else if (common::ContainsOnlyStorage(inputs, kRowSparseStorage) || // NOLINT(*)
       (inputs.size() == 3U && inputs[0].storage_type() == kDefaultStorage &&
        inputs[1].storage_type() == kCSRStorage && inputs[2].storage_type() == kDefaultStorage) ||
       (inputs.size() > 4U && common::ContainsStorageType(inputs, kDefaultStorage) &&
@@ -123,12 +130,6 @@ void ElementWiseSumComputeExCPU(const nnvm::NodeAttrs& attrs,
         ResourceRequest(ResourceRequest::kTempSpace));
     NDArray out_nd = outputs[0];
     mxnet::ndarray::ElementwiseSum<cpu>(s, rsc, inputs, &out_nd);
-#if MXNET_USE_MKLDNN == 1
-  } else if (IsMKLDNNData(inputs)) {
-    MKLDNNRun(MKLDNNSumForward, attrs, ctx, inputs, req, outputs);
-  } else if (common::ContainsOnlyStorage(inputs, kDefaultStorage)) {
-    FallBackCompute(ElementWiseSumCompute<cpu>, attrs, ctx, inputs, req, outputs);
-#endif
   } else {
     LogUnimplementedOp(attrs, ctx, inputs, req, outputs);
   }

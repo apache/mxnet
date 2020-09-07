@@ -30,11 +30,13 @@
 #include <mshadow/tensor.h>
 #include <algorithm>
 #include <vector>
+#include <string>
 #include <type_traits>
 #include "../mshadow_op.h"
 #include "../elemwise_op_common.h"
 #include "./sort_op.h"
 #include "./indexing_op.h"
+#include "../../api/operator/op_utils.h"
 
 namespace mshadow {
 template<typename xpu, int src_dim, typename DType, int dst_dim>
@@ -105,6 +107,13 @@ struct SortParam : public dmlc::Parameter<SortParam> {
     DMLC_DECLARE_FIELD(is_ascend).set_default(true)
       .describe("Whether to sort in ascending or descending order.");
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, is_ascend_s;
+    axis_s << axis;
+    is_ascend_s << is_ascend;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["is_ascend_s"] = is_ascend_s.str();
+  }
 };
 
 struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
@@ -129,6 +138,15 @@ struct ArgSortParam : public dmlc::Parameter<ArgSortParam> {
     .describe("DType of the output indices. It is only valid when ret_typ is \"indices\" or"
               " \"both\". An error will be raised if the selected data type cannot precisely "
               "represent the indices.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axis_s, is_ascend_s, dtype_s;
+    axis_s << axis;
+    is_ascend_s << is_ascend;
+    dtype_s << dtype;
+    (*dict)["axis"] = axis_s.str();
+    (*dict)["is_ascend_s"] = is_ascend_s.str();
+    (*dict)["dtype"] = MXNetTypeWithBool2String(dtype);
   }
 };
 
@@ -362,7 +380,7 @@ MSHADOW_FORCE_INLINE void TopKSort(const Tensor<gpu, 1, DType>& dat,
     }
   } else {
     const int nthreads(mshadow::cuda::kBaseThreadNum);
-    PartialSortSmallK<<<M, nthreads, nthreads*K*(sizeof(int)+sizeof(DType)),
+    PartialSortSmallK<<<M, nthreads, nthreads*K*(sizeof(index_t)+sizeof(DType)),
                         mshadow::Stream<gpu>::GetStream(s)>>>
                         (K, N, dat.dptr_, ind.dptr_, is_ascend);
   }
@@ -436,6 +454,202 @@ void TopKImpl(const RunContext &ctx,
   }
   workspace = resource.get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
   char* workspace_curr_ptr = workspace.dptr_;
+  sorted_dat = Tensor<xpu, 1, DType>(reinterpret_cast<DType*>(workspace_curr_ptr),
+      Shape1(src.Size()), s);  // contain sorted dat
+  workspace_curr_ptr += PadBytes(sizeof(DType) * src.Size(), alignment);
+  indices = Tensor<xpu, 1, index_t>(reinterpret_cast<index_t*>(workspace_curr_ptr),
+      Shape1(src.Size()), s);  // indices in the original matrix
+  workspace_curr_ptr += PadBytes(sizeof(index_t) * src.Size(), alignment);
+
+  if (param.ret_typ == topk_enum::kReturnMask) {
+    sel_indices = Tensor<xpu, 1, index_t>(reinterpret_cast<index_t*>(workspace_curr_ptr),
+                                      Shape1(batch_size * k), s);
+    workspace_curr_ptr += PadBytes(sizeof(index_t) * batch_size * k, alignment);
+    CHECK_EQ(sel_indices.CheckContiguous(), true);
+  }
+
+  if (std::is_same<xpu, cpu>::value) {
+    Tensor<xpu, 1, DType> flattened_data;
+    if (do_transpose) {
+      flattened_data = Tensor<xpu, 1, DType>(reinterpret_cast<DType*>(workspace_curr_ptr),
+                                              Shape1(src.Size()), s);
+      workspace_curr_ptr += sizeof(DType) * src.Size();
+      flattened_data = reshape(transpose(dat, Shape3(0, 2, 1)), Shape1(src.Size()));
+      CHECK_EQ(flattened_data.CheckContiguous(), true);
+    } else {
+      flattened_data = src.FlatTo1D<xpu, DType>(s);
+    }
+    // `temp_workspace` stores the flattened data
+    temp_workspace = Tensor<xpu, 1, char>(reinterpret_cast<char*>(flattened_data.dptr_),
+                                          Shape1(sizeof(DType)*src.Size()), s);
+    CHECK_EQ(temp_workspace.CheckContiguous(), true);
+  } else {
+    if (do_transpose) {
+      sorted_dat = reshape(transpose(dat, Shape3(0, 2, 1)), Shape1(src.Size()));
+    } else {
+      sorted_dat = reshape(dat, Shape1(src.Size()));
+    }
+    CHECK_EQ(sorted_dat.CheckContiguous(), true);
+    temp_workspace = Tensor<xpu, 1, char>(workspace_curr_ptr, Shape1(temp_size), s);  // temp space
+    workspace_curr_ptr += temp_size;
+  }
+
+  mxnet_op::Kernel<range_fwd, xpu>::Launch(s, batch_size * element_num, 1, index_t{0}, index_t{1},
+    kWriteTo, indices.dptr_);
+  CHECK_EQ(indices.CheckContiguous(), true);
+
+  // 2. Perform inplace batch sort.
+  // After sorting, each batch in `sorted_dat` will be sorted in the corresponding order
+  // up to the k-th element and the `indices` will contain the corresponding index in `sorted_dat`
+  // `temp_workspace` is used to store the flattend source data for CPU device, and it's used as
+  // a temporal buffer for GPU device.
+  TopKSort(sorted_dat, indices, temp_workspace, k, element_num, is_ascend, s);
+
+  // 3. Assign results to the ret blob
+  // When returning indices, only update(modulo) required elements instead of full elements
+  // to avoid redundant calculation.
+  // Cast `ret_indices` from int to real_t could introduce conversion error when the element_num
+  // is large enough.
+  if (param.ret_typ == topk_enum::kReturnMask) {
+    Tensor<xpu, 1, DType> ret_mask = ret[0].FlatTo1D<xpu, DType>(s);
+    ret_mask = scalar<DType>(0);
+    sel_indices = reshape(slice<1>(
+                              inplace_reshape(indices,
+                                              Shape2(batch_size,
+                                                     element_num)), 0, k),
+                              Shape1(batch_size * k));
+    if (do_transpose) {
+      mxnet::TShape src_shape = src.shape_.FlatTo3D(axis);
+      CHECK_EQ(sel_indices.CheckContiguous(), true);
+      sel_indices = transpose_indices(sel_indices, Shape3(src_shape[0], src_shape[2], src_shape[1]),
+                                      Shape3(0, 2, 1));
+    }
+    if (req[0] == kNullOp) {
+      return;
+    } else if (req[0] == kWriteTo) {
+      mxnet_op::Kernel<fill_ind_to_one, xpu>::Launch(s, batch_size * k,
+                                                     sel_indices.dptr_, ret_mask.dptr_);
+    } else {
+      LOG(FATAL) << "req=" << req[0] << " is not supported yet.";
+    }
+  } else if (param.ret_typ == topk_enum::kReturnIndices) {
+    if (do_transpose) {
+      Tensor<xpu, 3, IDType> ret_indices = ret[0].FlatTo3D<xpu, IDType>(axis, axis, s);
+      ASSIGN_DISPATCH(ret_indices, req[0], tcast<IDType>(F<mshadow_op::mod>(transpose(
+                      slice<2>(inplace_reshape(indices,
+                                               Shape3(ret_indices.shape_[0],
+                                                      ret_indices.shape_[2],
+                                                      element_num)),
+                               0, k),
+                      Shape3(0, 2, 1)), element_num)));
+    } else {
+      Tensor<xpu, 2, IDType> ret_indices =
+        ret[0].get_with_shape<xpu, 2, IDType>(Shape2(batch_size, k), s);
+      ASSIGN_DISPATCH(ret_indices, req[0], tcast<IDType>(F<mshadow_op::mod>(slice<1>(
+                      inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k),
+                      element_num)));
+    }
+  } else {
+    if (do_transpose) {
+      Tensor<xpu, 3, DType> ret_value = ret[0].FlatTo3D<xpu, DType>(axis, axis, s);
+      Tensor<xpu, 3, IDType> ret_indices = ret[1].FlatTo3D<xpu, IDType>(axis, axis, s);
+      ASSIGN_DISPATCH(ret_value, req[0], transpose(
+                   slice<2>(inplace_reshape(sorted_dat,
+                                    Shape3(ret_value.shape_[0], ret_value.shape_[2], element_num)),
+                            0, k), Shape3(0, 2, 1)));
+      ASSIGN_DISPATCH(ret_indices, req[1], tcast<IDType>(F<mshadow_op::mod>(transpose(
+                      slice<2>(inplace_reshape(indices,
+                                               Shape3(ret_indices.shape_[0],
+                                                      ret_indices.shape_[2],
+                                                      element_num)),
+                               0, k), Shape3(0, 2, 1)), element_num)));
+    } else {
+      Tensor<xpu, 2, DType> ret_value =
+        ret[0].get_with_shape<xpu, 2, DType>(Shape2(batch_size, k), s);
+      Tensor<xpu, 2, IDType> ret_indices =
+        ret[1].get_with_shape<xpu, 2, IDType>(Shape2(batch_size, k), s);
+      ASSIGN_DISPATCH(ret_value, req[0],
+             slice<1>(inplace_reshape(sorted_dat, Shape2(batch_size, element_num)), 0, k));
+      ASSIGN_DISPATCH(ret_indices, req[1], tcast<IDType>(F<mshadow_op::mod>(slice<1>(
+                 inplace_reshape(indices, Shape2(batch_size, element_num)), 0, k), element_num)));
+    }
+  }
+}
+
+template<typename xpu, typename DType>
+size_t TopKWorkspaceSize(const TBlob& src,
+                         const TopKParam& param,
+                         size_t *temp_size_ptr) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+
+  size_t batch_size = 0;
+  size_t temp_size;
+  index_t element_num = 0;  // number of batches + the size of each batch
+  int axis = 0;
+  bool do_transpose = false;
+  bool is_ascend = false;
+  index_t k = 0;
+  size_t alignment = std::max(sizeof(DType), sizeof(index_t));
+  mxnet::TShape target_shape;
+  ParseTopKParam(src.shape_, param,
+                 &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
+
+  // Temp space needed by the full sorts.
+  temp_size = std::max(
+      mxnet::op::SortByKeyWorkspaceSize<index_t, DType, xpu>(src.Size()),
+      mxnet::op::SortByKeyWorkspaceSize<DType, index_t, xpu>(src.Size()));
+
+  temp_size = std::max(temp_size,
+      mxnet::op::SortByKeyWorkspaceSize<index_t, index_t, xpu>(src.Size()));
+  // Additional temp space for gpu full sorts for batch ids.
+  temp_size += PadBytes(sizeof(index_t) * src.Size(), alignment);
+  // Temp space for cpu sorts.
+  temp_size = std::max(temp_size, sizeof(DType) * src.Size());
+  *temp_size_ptr = temp_size;
+
+  size_t workspace_size = temp_size + PadBytes(sizeof(DType) * src.Size(), alignment)
+                                    + PadBytes(sizeof(index_t) * src.Size(), alignment);
+  if (param.ret_typ == topk_enum::kReturnMask) {
+    workspace_size += PadBytes(sizeof(index_t) * batch_size * k, alignment);
+  }
+  return workspace_size;
+}
+
+template<typename xpu, typename DType, typename IDType>
+void TopKImplwithWorkspace(const RunContext &ctx,
+                           const std::vector<OpReqType>& req,
+                           const TBlob& src,
+                           const std::vector<TBlob>& ret,
+                           const TopKParam& param,
+                           char* workspace_curr_ptr,
+                           const size_t &temp_size,
+                           Stream<xpu>* s) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  // 0. If input shape is 0-shape, directly return
+  if (src.Size() == 0) return;
+  // 1. Parse and initialize information
+  Tensor<xpu, 1, char> workspace;
+  Tensor<xpu, 1, char> temp_workspace;
+  Tensor<xpu, 1, DType> sorted_dat;
+  Tensor<xpu, 1, index_t> indices, sel_indices;
+  size_t batch_size = 0;
+  index_t element_num = 0;  // number of batches + the size of each batch
+  int axis = 0;
+  bool do_transpose = false;
+  bool is_ascend = false;
+  index_t k = 0;
+  size_t alignment = std::max(sizeof(DType), sizeof(index_t));
+  mxnet::TShape target_shape;
+  ParseTopKParam(src.shape_, param,
+                 &target_shape, &batch_size, &element_num, &axis, &k, &do_transpose, &is_ascend);
+  CHECK_LE(element_num, mxnet::common::MaxIntegerValue<index_t>())
+    << "'index_t' does not have a sufficient precision to represent "
+    << "the indices of the input array. The total element_num is "
+    << element_num << ", but the selected index_t can only represent "
+    << mxnet::common::MaxIntegerValue<index_t>() << " elements";
+  Tensor<xpu, 3, DType> dat = src.FlatTo3D<xpu, DType>(axis, axis, s);
   sorted_dat = Tensor<xpu, 1, DType>(reinterpret_cast<DType*>(workspace_curr_ptr),
       Shape1(src.Size()), s);  // contain sorted dat
   workspace_curr_ptr += PadBytes(sizeof(DType) * src.Size(), alignment);

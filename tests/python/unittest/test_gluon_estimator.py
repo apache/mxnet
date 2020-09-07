@@ -20,24 +20,19 @@
 import sys
 import unittest
 import warnings
+import pytest
 
 import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.gluon.contrib.estimator import *
 from mxnet.gluon.contrib.estimator.event_handler import *
-from nose.tools import assert_raises
 
 
 def _get_test_network(params=None):
-    net = nn.Sequential(params=params)
+    net = nn.Sequential()
     net.add(nn.Dense(4, activation='relu', flatten=False))
-    return net
-
-def _get_test_network_with_namescope(params=None):
-    net = nn.Sequential(params=params)
-    with net.name_scope():
-        net.add(nn.Dense(4, activation='relu', flatten=False))
+    net.share_parameters(params)
     return net
 
 def _get_test_data():
@@ -58,7 +53,7 @@ def test_fit():
     num_epochs = 1
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
@@ -70,12 +65,12 @@ def test_fit():
     est.fit(train_data=dataloader,
             epochs=num_epochs)
 
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=dataiter,
                 epochs=num_epochs)
 
     # Input NDArray
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=[mx.nd.ones(shape=(10, 3))],
                 epochs=num_epochs)
 
@@ -87,7 +82,7 @@ def test_validation():
     num_epochs = 1
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     val_loss = gluon.loss.L1Loss()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
@@ -107,18 +102,17 @@ def test_validation():
     val_metrics = est.val_metrics
     validation_handler = ValidationHandler(val_data=dataloader, eval_fn=est.evaluate)
 
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=dataiter,
                 val_data=dataiter,
                 epochs=num_epochs)
     # Input NDArray
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=[mx.nd.ones(shape=(10, 3))],
                 val_data=[mx.nd.ones(shape=(10, 3))],
                 epochs=num_epochs)
 
 
-@unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
 def test_initializer():
     ''' test with no initializer, inconsistent initializer '''
     net = _get_test_network()
@@ -127,7 +121,7 @@ def test_initializer():
     ctx = mx.cpu()
 
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     # no initializer
     est = Estimator(net=net,
                     loss=loss,
@@ -150,7 +144,9 @@ def test_initializer():
                         context=ctx)
         assert 'Network already fully initialized' in str(w[-1].message)
     # net partially initialized, fine tuning use case
-    net = gluon.model_zoo.vision.resnet18_v1(pretrained=True, ctx=ctx)
+    net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
+    net.features.initialize(ctx=ctx)
+    net.features(mx.nd.zeros((1, 3, 224, 224)))
     net.output = gluon.nn.Dense(10) #last layer not initialized
     est = Estimator(net, loss=loss, train_metrics=acc, context=ctx)
     dataset =  gluon.data.ArrayDataset(mx.nd.zeros((10, 3, 224, 224)), mx.nd.zeros((10, 10)))
@@ -159,7 +155,6 @@ def test_initializer():
             epochs=num_epochs)
 
 
-@unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
 def test_trainer():
     ''' test with no trainer and invalid trainer '''
     net = _get_test_network()
@@ -168,7 +163,7 @@ def test_trainer():
     ctx = mx.cpu()
 
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     net.initialize(ctx=ctx)
     # input no trainer
     with warnings.catch_warnings(record=True) as w:
@@ -182,7 +177,7 @@ def test_trainer():
 
     # input invalid trainer
     trainer = 'sgd'
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est = Estimator(net=net,
                         loss=loss,
                         train_metrics=acc,
@@ -208,7 +203,7 @@ def test_metric():
     est.fit(train_data=train_data,
             epochs=num_epochs)
     # input list of metrics
-    metrics = [mx.metric.Accuracy(), mx.metric.Accuracy()]
+    metrics = [mx.gluon.metric.Accuracy(), mx.gluon.metric.Accuracy()]
     est = Estimator(net=net,
                     loss=loss,
                     train_metrics=metrics,
@@ -217,7 +212,7 @@ def test_metric():
     est.fit(train_data=train_data,
             epochs=num_epochs)
     # input invalid metric
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est = Estimator(net=net,
                         loss=loss,
                         train_metrics='acc',
@@ -229,18 +224,18 @@ def test_metric():
                     loss=loss,
                     trainer=trainer,
                     context=ctx)
-    assert isinstance(est.train_metrics[0], mx.metric.Accuracy)
+    assert isinstance(est.train_metrics[0], mx.gluon.metric.Accuracy)
 
 
 def test_loss():
     ''' test with invalid loss '''
     net = _get_test_network()
     ctx = mx.cpu()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     # input invalid loss
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est = Estimator(net=net,
                         loss='mse',
                         train_metrics=acc,
@@ -252,7 +247,7 @@ def test_context():
     ''' test with no context, list of context, invalid context '''
     net = _get_test_network()
     loss = gluon.loss.L2Loss()
-    metrics = mx.metric.Accuracy()
+    metrics = mx.gluon.metric.Accuracy()
     # input no context
     est = Estimator(net=net,
                     loss=loss,
@@ -266,13 +261,13 @@ def test_context():
                     train_metrics=metrics,
                     context=ctx)
     # input invalid context
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est = Estimator(net=net,
                         loss=loss,
                         train_metrics=metrics,
                         context='cpu')
 
-    with assert_raises(AssertionError):
+    with pytest.raises(AssertionError):
         est = Estimator(net=net,
                         loss=loss,
                         train_metrics=metrics,
@@ -324,7 +319,6 @@ def test_categorize_handlers():
     assert len(train_end) == 2
 
 
-@unittest.skipIf(sys.version_info.major < 3, 'Test on python 3')
 def test_default_handlers():
     net = _get_test_network()
     train_data, _ = _get_test_data()
@@ -335,7 +329,7 @@ def test_default_handlers():
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
 
-    train_acc = mx.metric.RMSE()
+    train_acc = mx.gluon.metric.RMSE()
     loss = gluon.loss.L2Loss()
 
     est = Estimator(net=net,
@@ -362,8 +356,8 @@ def test_default_handlers():
 
     # handler with mixed metrics, some handler use metrics prepared by estimator
     # some handler use metrics user prepared
-    logging = LoggingHandler(metrics=[mx.metric.RMSE("val acc")])
-    with assert_raises(ValueError):
+    logging = LoggingHandler(metrics=[mx.gluon.metric.RMSE("val acc")])
+    with pytest.raises(ValueError):
         est.fit(train_data=train_data, epochs=num_epochs, event_handlers=[logging])
 
     # test handler order
@@ -378,7 +372,6 @@ def test_default_handlers():
 
 def test_val_net():
     ''' test estimator with different training and validation networks '''
-    ''' test weight sharing of sequential networks without namescope '''
     net = _get_test_network()
     val_net = _get_test_network(params=net.collect_params())
     dataloader, dataiter = _get_test_data()
@@ -386,25 +379,7 @@ def test_val_net():
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
     val_loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
-    net.initialize(ctx=ctx)
-    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
-    est = Estimator(net=net,
-                    loss=loss,
-                    train_metrics=acc,
-                    trainer=trainer,
-                    context=ctx,
-                    val_loss=val_loss,
-                    val_net=val_net)
-
-    with assert_raises(RuntimeError):
-        est.fit(train_data=dataloader,
-                val_data=dataloader,
-                epochs=num_epochs)
-
-    ''' test weight sharing of sequential networks with namescope '''
-    net = _get_test_network_with_namescope()
-    val_net = _get_test_network_with_namescope(params=net.collect_params())
+    acc = mx.gluon.metric.Accuracy()
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
     est = Estimator(net=net,
@@ -419,11 +394,11 @@ def test_val_net():
             val_data=dataloader,
             epochs=num_epochs)
 
-    ''' test weight sharing of two resnets '''
+    ''' test partial weight sharing of two resnets '''
     net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
     net.output = gluon.nn.Dense(10)
     val_net = gluon.model_zoo.vision.resnet18_v1(pretrained=False, ctx=ctx)
-    val_net.output = gluon.nn.Dense(10, params=net.collect_params())
+    val_net.output = net.output
     dataset = gluon.data.ArrayDataset(mx.nd.zeros((10, 3, 224, 224)), mx.nd.zeros((10, 10)))
     dataloader = gluon.data.DataLoader(dataset=dataset, batch_size=5)
     net.initialize(ctx=ctx)
@@ -451,7 +426,7 @@ def test_val_handlers():
     net.initialize(ctx=ctx)
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
 
-    train_acc = mx.metric.RMSE()
+    train_acc = mx.gluon.metric.RMSE()
     loss = gluon.loss.L2Loss()
 
     est = Estimator(net=net,

@@ -23,7 +23,8 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
-from common import with_seed, assert_raises_cudnn_not_satisfied
+from common import with_seed, assert_raises_cudnn_not_satisfied, \
+    xfail_when_nonstandard_decimal_separator
 import unittest
 
 def test_box_nms_op():
@@ -44,7 +45,7 @@ def test_box_nms_op():
         op = mx.contrib.sym.box_nms(in_var, overlap_thresh=thresh, valid_thresh=valid, topk=topk,
                                     coord_start=coord, score_index=score, id_index=cid, background_id=bid,
                                     force_suppress=force, in_format=in_format, out_format=out_format)
-        exe = op.bind(ctx=default_context(), args=[arr_data], args_grad=[arr_grad])
+        exe = op._bind(ctx=default_context(), args=[arr_data], args_grad=[arr_grad])
         exe.forward(is_train=True)
         exe.backward(mx.nd.array(grad))
         assert_almost_equal(arr_grad.asnumpy(), expected)
@@ -285,6 +286,7 @@ def test_multibox_target_op():
     assert_array_equal(loc_mask.asnumpy(), expected_loc_mask)
     assert_array_equal(cls_target.asnumpy(), expected_cls_target)
 
+@xfail_when_nonstandard_decimal_separator
 def test_gradient_multiplier_op():
     # We use the quadratic function in combination with gradient multiplier
     def f(x, a, b, c):
@@ -408,41 +410,6 @@ def test_op_mrcnn_mask_target():
 
     assert_almost_equal(mask_targets.asnumpy(), gt_mask_targets.asnumpy())
     assert_almost_equal(mask_cls.asnumpy(), gt_mask_cls.asnumpy())
-
-@with_seed()
-def test_modulated_deformable_convolution():
-    for num_batch in [1, 2]:
-        for num_channel_data, num_deformable_group in itertools.product([4, 8], [1, 2]):
-            for input_height, input_width in itertools.product([5, 6], [5, 6]):
-                for dilate in [(1, 1), (2, 2)]:
-                    for grad_nodes in [['im_data'], ['offset_data'], ['weight']]:
-                        output_height = input_height
-                        output_width = input_width
-                        im_data = np.random.rand(num_batch, num_channel_data, input_height, input_width)
-                        offset_data = \
-                            np.random.rand(num_batch, num_deformable_group * 3 * 3 * 2, output_height, output_width)\
-                            * 0.8 + 0.1
-                        mask_data = np.random.rand(num_batch, num_deformable_group * 3 * 3, output_height, output_width)
-                        mask_data = 0.5 * (1 + np.tanh(0.5 * mask_data)) # sigmoid
-                        weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
-                        bias = np.zeros(num_channel_data)
-
-                        im_data_var = mx.symbol.Variable(name="im_data")
-                        offset_data_var = mx.symbol.Variable(name="offset_data")
-                        mask_data_var = mx.symbol.Variable(name="mask_data")
-                        weight_var = mx.symbol.Variable(name="weight")
-                        bias_var = mx.symbol.Variable(name="bias")
-                        op = mx.sym.contrib.ModulatedDeformableConvolution(name='test_op', data=im_data_var,
-                                                                           offset=offset_data_var, mask=mask_data_var,
-                                                                           weight=weight_var, bias=bias_var,
-                                                                           num_filter=num_channel_data, pad=dilate,
-                                                                           kernel=(3, 3), stride=(1, 1), dilate=dilate,
-                                                                           num_deformable_group=num_deformable_group)
-                        if grad_nodes[0] == 'offset_data':
-                            # wider tolerance needed for coordinate differential
-                            rtol, atol = 1.0, 1e-2
-                        else:
-                            rtol, atol = 0.05, 1e-3
 
 @with_seed()
 def test_dynamic_reshape():

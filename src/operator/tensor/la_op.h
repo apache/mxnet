@@ -29,6 +29,7 @@
 #include <mxnet/imperative.h>
 #include <vector>
 #include <algorithm>
+#include <string>
 #include "../mshadow_op.h"
 #include "../mxnet_op.h"
 #include "../operator_common.h"
@@ -90,6 +91,11 @@ struct LaCholeskyParam : public dmlc::Parameter<LaCholeskyParam> {
       .set_default(true)
       .describe
          ("True if the triangular matrix is lower triangular, false if it is upper triangular.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream lower_s;
+    lower_s << lower;
+    (*dict)["lower"] = lower_s.str();
   }
 };
 
@@ -929,7 +935,7 @@ void LaOpDetBackward(const nnvm::NodeAttrs& attrs,
 template<int onum>
 struct ReduceDetGrad {
   const char *op_name;
-  std::vector<nnvm::NodeEntry> operator()(const nnvm::NodePtr& n,
+  std::vector<nnvm::NodeEntry> operator()(const nnvm::ObjectPtr& n,
                                           const std::vector<nnvm::NodeEntry>& ograds) {
     std::vector<nnvm::NodeEntry> heads;
     heads.push_back(ograds[onum - 1]);

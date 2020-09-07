@@ -20,6 +20,12 @@
 # This script builds the static library of cityhash that can be used as dependency of mxnet.
 set -ex
 CITYHASH_VERSION=1.1.1
+if [[ $PLATFORM == 'darwin' ]]; then
+    DY_EXT="dylib"
+else
+    DY_EXT="so"
+fi
+
 if [[ ! -f $DEPS_PATH/lib/libcityhash.a ]]; then
     # Download and build cityhash
     >&2 echo "Building cityhash..."
@@ -30,5 +36,6 @@ if [[ ! -f $DEPS_PATH/lib/libcityhash.a ]]; then
     ./configure -prefix=$DEPS_PATH --enable-sse4.2
     $MAKE CXXFLAGS="-g -O3 -msse4.2"
     $MAKE install
+    rm $DEPS_PATH/lib/*cityhash*$DY_EXT*
     popd
 fi

@@ -1,0 +1,49 @@
+name: continuous build
+
+on: [push, pull_request]
+
+jobs:
+  macosx-x86_64:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Compilation cache
+        uses: actions/cache@v2
+        with:
+          path: ~/.ccache
+          # We include the commit sha in the cache key, as new cache entries are
+          # only created if there is no existing entry for the key yet.
+          key: ${{ runner.os }}-ccache-${{ github.sha }}
+          # Restore any ccache cache entry, if none for
+          # ${{ runner.os }}-ccache-${{ github.sha }} exists
+          restore-keys: |
+            ${{ runner.os }}-ccache
+
+      - name: Setup python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.6'
+          architecture: x64
+
+      - name: Install Dependencies
+        run: |
+          brew install nasm automake ninja libtool cmake pkgconfig protobuf hdf5 zlib ccache
+          ccache -M 500M  # Limit the ccache size; Github's overall cache limit is 5GB
+          python -m pip install -r ci/docker/install/requirements
+        shell: bash
+
+      - name: Build project
+        run: |
+          CMAKE_STATICBUILD=1 ./tools/staticbuild/build.sh cpu
+
+      - name: Setup Python
+        run: |
+          python -m pip install --user -e python
+
+      - name: Test project
+        run: |
+          python3 -m pytest -n 4 --durations=50 --verbose tests/python/unittest/ -k 'not test_operator and not (test_subgraph or test_custom_op or test_recordimage_dataset_with_data_loader_multiworker or test_multi_worker or test_multi_worker_shape or test_multi_worker_forked_data_loader or test_multi_worker_dataloader_release_pool)' -m 'not serial'
+          MXNET_ENGINE_TYPE=NaiveEngine python3 -m pytest -n 4 --durations=50 --verbose tests/python/unittest/ -k 'test_operator and not (test_subgraph or test_custom_op or test_recordimage_dataset_with_data_loader_multiworker or test_multi_worker or test_multi_worker_shape or test_multi_worker_forked_data_loader or test_multi_worker_dataloader_release_pool)' -m 'not serial'
+          python3 -m pytest --durations=50 --verbose tests/python/unittest/ -k 'not (test_subgraph or test_custom_op or test_recordimage_dataset_with_data_loader_multiworker or test_multi_worker or test_multi_worker_shape or test_multi_worker_forked_data_loader or test_multi_worker_dataloader_release_pool)' -m 'serial'

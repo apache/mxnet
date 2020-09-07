@@ -20,10 +20,10 @@
 #include <mxnet/rtc.h>
 #include <typeinfo>
 
-#include "../common/cuda_utils.h"
+#include "cuda/utils.h"
 #include "../operator/operator_common.h"
 
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 namespace rtc {
@@ -32,7 +32,7 @@ CudaModule::Chunk::Chunk(
     const char* source,
     const std::vector<std::string>& options,
     const std::vector<std::string>& exports) {
-  NVRTC_CALL(nvrtcCreateProgram(&prog_, source, "source.cu", 0, NULL, NULL));
+  NVRTC_CALL(nvrtcCreateProgram(&prog_, source, "source.cu", 0, nullptr, nullptr));
   for (const auto& i : exports) exports_.insert(i);
 #if CUDA_VERSION >= 8000
   for (const auto& func : exports) {
@@ -186,4 +186,4 @@ void CudaModule::Kernel::Launch(
 }  // namespace rtc
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#endif  // MXNET_USE_CUDA

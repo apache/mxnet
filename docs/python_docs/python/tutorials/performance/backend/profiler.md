@@ -23,7 +23,7 @@ It is often helpful to check the execution time of each operation in a neural ne
 
 If you have just started to use MXNet, you might be tempted to measure the execution time of your model using Python's `time` module like shown below:
 
-```python
+```{.python .input}
 from time import time
 from mxnet import autograd, nd
 import mxnet as mx
@@ -44,15 +44,15 @@ print('Time for converting to numpy: %f sec' % (time() - start))
 
 From the timings above, it seems as if converting to numpy takes lot more time than multiplying two large matrices. That doesn't seem right.
 
-This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. However, [`asnumpy`](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=asnumpy#mxnet.ndarray.NDArray.asnumpy) has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include [`asscalar`](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=asscalar#mxnet.ndarray.NDArray.asscalar) and [`wait_to_read`](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=wait_to_read#mxnet.ndarray.NDArray.wait_to_read).
+This is because, in MXNet, all operations are executed asynchronously. So, when `nd.dot(x, x)` returns, the matrix multiplication is not complete, it has only been queued for execution. However, [asnumpy](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=asnumpy#mxnet.ndarray.NDArray.asnumpy) has to wait for the result to be calculated in order to convert it to numpy array on CPU, hence taking a longer time. Other examples of 'blocking' operations include [asscalar](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=asscalar#mxnet.ndarray.NDArray.asscalar) and [wait_to_read](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=wait_to_read#mxnet.ndarray.NDArray.wait_to_read).
 
-While it is possible to use [`NDArray.waitall()`](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=waitall#mxnet.ndarray.waitall) before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a [`Sequential`](https://mxnet.apache.org/api/python/gluon/gluon.html?highlight=sequential#mxnet.gluon.nn.Sequential) or hybridized network.
+While it is possible to use [NDArray.waitall()](https://mxnet.apache.org/api/python/ndarray/ndarray.html?highlight=waitall#mxnet.ndarray.waitall) before and after operations to get running time of operations, it is not a scalable method to measure running time of multiple sets of operations, especially in a [Sequential](https://mxnet.apache.org/api/python/gluon/gluon.html?highlight=sequential#mxnet.gluon.nn.Sequential) or hybridized network.
 
 ## The correct way to profile
 
 The correct way to measure running time of MXNet models is to use MXNet profiler. In the rest of this tutorial, we will learn how to use the MXNet profiler to measure the running time and memory consumption of MXNet models. You can import the profiler and configure it from Python code.
 
-```python
+```{.python .input}
 from mxnet import profiler
 
 profiler.set_config(profile_all=True,
@@ -74,23 +74,22 @@ profiler.set_config(profile_all=True,
 
 Let's build a small convolutional neural network that we can use to demonstrate profiling.
 
-```python
+```{.python .input}
 from mxnet import gluon
 
 net = gluon.nn.HybridSequential()
-with net.name_scope():
-    net.add(gluon.nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
-    net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
-    net.add(gluon.nn.Conv2D(channels=50, kernel_size=5, activation='relu'))
-    net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
-    net.add(gluon.nn.Flatten())
-    net.add(gluon.nn.Dense(512, activation="relu"))
-    net.add(gluon.nn.Dense(10))
+net.add(gluon.nn.Conv2D(channels=20, kernel_size=5, activation='relu'))
+net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
+net.add(gluon.nn.Conv2D(channels=50, kernel_size=5, activation='relu'))
+net.add(gluon.nn.MaxPool2D(pool_size=2, strides=2))
+net.add(gluon.nn.Flatten())
+net.add(gluon.nn.Dense(512, activation="relu"))
+net.add(gluon.nn.Dense(10))
 ```
 
 We need data that we can run through the network for profiling. We'll use the MNIST dataset.
 
-```python
+```{.python .input}
 from mxnet.gluon.data.vision import transforms
 
 dataset = gluon.data.vision.MNIST(train=True)
@@ -100,7 +99,7 @@ dataloader = gluon.data.DataLoader(dataset, batch_size=64, shuffle=True)
 
 Let's define a function that will run a single training iteration given `data` and `label`.
 
-```python
+```{.python .input}
 # Use GPU if available
 if mx.context.num_gpus():
     ctx=mx.gpu()
@@ -108,7 +107,7 @@ else:
     ctx=mx.cpu()
 
 # Initialize the parameters with random weights
-net.collect_params().initialize(mx.init.Xavier(), ctx=ctx)
+net.initialize(mx.init.Xavier(), ctx=ctx)
 
 # Use SGD optimizer
 trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
@@ -135,7 +134,7 @@ def run_training_iteration(data, label):
 
 When the first forward pass is run on a network, MXNet does a number of housekeeping tasks including inferring the shapes of various parameters, allocating memory for intermediate and final outputs, etc. For these reasons, profiling the first iteration doesn't provide representative results for the rest of training. We will, therefore, skip the first iteration.
 
-```python
+```{.python .input}
 # Run the first iteration without profiling
 itr = iter(dataloader)
 run_training_iteration(*next(itr))
@@ -143,7 +142,7 @@ run_training_iteration(*next(itr))
 
 We'll run the next iteration with the profiler turned on.
 
-```python
+```{.python .input}
 data, label = next(itr)
 
 # Ask the profiler to start recording
@@ -185,7 +184,7 @@ There are a few ways to view the information collected by the profiler. You can 
 
 You can use the `profiler.dumps()` method to view the information collected by the profiler in the console. The collected information contains time taken by each operator, time taken by each C API and memory consumed in both CPU and GPU.
 
-```python
+```{.python .input}
 profiler.set_state('run')
 profiler.set_state('stop')
 print(profiler.dumps())
@@ -197,7 +196,7 @@ print(profiler.dumps())
 
 You can also dump the information collected by the profiler into a `json` file using the `profiler.dump()` function and view it in a browser.
 
-```python
+```{.python .input}
 profiler.dump(finished=False)
 ```
 
@@ -240,7 +239,7 @@ Should the existing NDArray operators fail to meet all your model's needs, MXNet
 
 Let's try profiling custom operators with the following code example:
 
-```python
+```{.python .input}
 class MyAddOne(mx.operator.CustomOp):
     def forward(self, is_train, req, in_data, out_data, aux):  
         self.assign(out_data[0], req[0], in_data[0]+1)
@@ -289,7 +288,7 @@ As shown by the screenshot, in the **Custom Operator** domain where all the cust
 
 Please note that: to be able to see the previously described information, you need to set `profile_imperative` to `True` even when you are using custom operators in [symbolic mode](https://mxnet.apache.org/versions/master/tutorials/basic/symbol.html) (refer to the code snippet below, which is the symbolic-mode equivelent of the code example above). The reason is that within custom operators, pure python code and sub-operators are still called imperatively. 
 
-```python 
+```{.python .input} 
 # Set profile_all to True
 profiler.set_config(profile_all=True, aggregate_stats=True, continuous_dump=True)
 # OR, Explicitly Set profile_symbolic and profile_imperative to True

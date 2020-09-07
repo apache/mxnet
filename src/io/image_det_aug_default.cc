@@ -404,7 +404,7 @@ class ImageDetLabel {
 class DefaultImageDetAugmenter : public ImageAugmenter {
  public:
   // contructor
-  DefaultImageDetAugmenter() {}
+  DefaultImageDetAugmenter() = default;
 
   void Init(const std::vector<std::pair<std::string, std::string> >& kwargs) override {
     std::vector<std::pair<std::string, std::string> > kwargs_left;

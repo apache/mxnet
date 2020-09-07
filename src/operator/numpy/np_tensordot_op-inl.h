@@ -25,6 +25,7 @@
 #define MXNET_OPERATOR_NUMPY_NP_TENSORDOT_OP_INL_H_
 
 #include <vector>
+#include <string>
 #include "../tensor/matrix_op-inl.h"
 
 namespace mxnet {
@@ -37,6 +38,13 @@ struct TensordotParam : public dmlc::Parameter<TensordotParam> {
   DMLC_DECLARE_PARAMETER(TensordotParam) {
     DMLC_DECLARE_FIELD(a_axes_summed);
     DMLC_DECLARE_FIELD(b_axes_summed);
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream a_axes_summed_s, b_axes_summed_s;
+    a_axes_summed_s << a_axes_summed;
+    b_axes_summed_s << b_axes_summed;
+    (*dict)["a_axes_summed"] = a_axes_summed_s.str();
+    (*dict)["b_axes_summed"] = b_axes_summed_s.str();
   }
 };
 
@@ -52,10 +60,10 @@ inline void ShiftAxes(Tuple<int>* axes_summed, const int ndim) {
 /**
  * Gets matrix dimensions of a and b after transpose and reshape.
  */
-inline void GetMatrixDimensions(int* ad1,
-                                int* ad2,
-                                int* bd1,
-                                int* bd2,
+inline void GetMatrixDimensions(index_t* ad1,
+                                index_t* ad2,
+                                index_t* bd1,
+                                index_t* bd2,
                                 const mxnet::Tuple<int>& a_axes_remained,
                                 const mxnet::Tuple<int>& a_axes_summed,
                                 const mxnet::Tuple<int>& b_axes_remained,
@@ -149,10 +157,10 @@ void MatrixDot(const OpContext& ctx,
                const TBlob& b,
                const TBlob& out,
                const OpReqType req,
-               const int ad1,
-               const int ad2,
-               const int bd1,
-               const int bd2,
+               const index_t ad1,
+               const index_t ad2,
+               const index_t bd1,
+               const index_t bd2,
                const bool aT = false,
                const bool bT = false) {
   using namespace mshadow;
@@ -258,7 +266,7 @@ void TensordotImpl(const Tuple<int>& a_axes_summed,
       GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
                        &b_axes, a_shape, b_shape);
 
-      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      index_t ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
       GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
                           b_axes_remained, b_axes_summed, a_shape, b_shape);
 
@@ -427,7 +435,7 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
       GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
                       &b_axes, a_shape, b_shape);
 
-      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      index_t ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
       GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
                           b_axes_remained, b_axes_summed, a_shape, b_shape);
 
@@ -553,6 +561,11 @@ struct TensordotIntAxesParam : public dmlc::Parameter<TensordotIntAxesParam> {
   DMLC_DECLARE_PARAMETER(TensordotIntAxesParam) {
     DMLC_DECLARE_FIELD(axes);
   }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream axes_s;
+    axes_s << axes;
+    (*dict)["axes"] = axes_s.str();
+  }
 };
 
 /**
@@ -640,7 +653,7 @@ void TensordotIntAxesImpl(const int axes,
       GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
                       &b_axes, a_shape, b_shape);
 
-      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      index_t ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
       GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
                           b_axes_remained, b_axes_summed, a_shape, b_shape);
       MatrixDot<xpu>(ctx, a, b, out, req, ad1, ad2, bd1, bd2);
@@ -733,7 +746,7 @@ void TensordotIntAxesBackwardImpl(const int axes,
       GetReorderedAxes(a_axes_summed, &a_axes_remained, &a_axes, b_axes_summed, &b_axes_remained,
                       &b_axes, a_shape, b_shape);
 
-      int ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
+      index_t ad1 = 1, ad2 = 1, bd1 = 1, bd2 = 1;
       GetMatrixDimensions(&ad1, &ad2, &bd1, &bd2, a_axes_remained, a_axes_summed,
                           b_axes_remained, b_axes_summed, a_shape, b_shape);
 

@@ -230,7 +230,7 @@ inline void MultiBoxDetectionForward(const Tensor<gpu, 3, DType> &out,
     num_classes, num_anchors, threshold, clip,
     variances[0], variances[1], variances[2], variances[3],
     nms_threshold, force_suppress, nms_topk);
-  MULTIBOX_DETECTION_CUDA_CHECK(cudaPeekAtLastError());
+  MULTIBOX_DETECTION_CUDA_CHECK(cudaGetLastError());
 }
 }  // namespace mshadow
 
@@ -238,7 +238,7 @@ namespace mxnet {
 namespace op {
 template<>
 Operator *CreateOp<gpu>(MultiBoxDetectionParam param, int dtype) {
-  Operator *op = NULL;
+  Operator *op = nullptr;
   MSHADOW_REAL_TYPE_SWITCH(dtype, DType, {
     op = new MultiBoxDetectionOp<gpu, DType>(param);
   });

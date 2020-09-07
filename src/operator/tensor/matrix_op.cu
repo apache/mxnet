@@ -94,7 +94,7 @@ void SliceDimTwoCsrImpl<gpu>(const mxnet::TShape &begin, const mxnet::TShape &en
                                                 in_idx,
                                                 in_indptr + begin_row,
                                                 begin_col, end_col);
-        void* d_temp_storage = NULL;
+        void* d_temp_storage = nullptr;
         size_t temp_storage_bytes = 0;
         cub::DeviceScan::InclusiveSum(d_temp_storage,
                                       temp_storage_bytes,

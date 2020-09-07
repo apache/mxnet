@@ -16,23 +16,16 @@
 # under the License.
 
 function(add_cython_modules python_version)
-  unset(PYTHON_EXECUTABLE CACHE)
-  set(PYTHONINTERP_FOUND FALSE)
-  find_package(PythonInterp ${python_version} EXACT)
-  if(PYTHONINTERP_FOUND)
-    find_program(CYTHON_EXECUTABLE NAMES cython)
-    if(CYTHON_EXECUTABLE)
-      add_custom_command(COMMAND ${CMAKE_COMMAND} POST_BUILD
-                          -E env MXNET_LIBRARY_PATH=${CMAKE_BINARY_DIR}/libmxnet.so
-                          ${PYTHON_EXECUTABLE} setup.py build_ext --inplace --with-cython
-                          TARGET mxnet
-                          WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/python")
-      message("-- Cython modules for python${python_version} will be built")
-      set(PYTHON${python_version}_FOUND 1 PARENT_SCOPE)
-    else()
-      message(FATAL_ERROR "-- Cython not found")
-    endif()
+  find_package(Python3)
+  find_program(CYTHON_EXECUTABLE NAMES cython cython.bat cython3)
+  if(CYTHON_EXECUTABLE AND Python3_EXECUTABLE)
+    add_custom_command(COMMAND ${CMAKE_COMMAND} POST_BUILD
+                        -E env MXNET_LIBRARY_PATH=${CMAKE_BINARY_DIR}/libmxnet.so
+                        ${Python3_EXECUTABLE} setup.py build_ext --inplace --with-cython
+                        TARGET mxnet
+                        WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}/python")
+    message("-- Cython modules will be built")
   else()
-    set(PYTHON${python_version}_FOUND 0 PARENT_SCOPE)
+    message(FATAL_ERROR "-- Cython not found")
   endif()
 endfunction()

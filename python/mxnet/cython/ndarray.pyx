@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License
 
-from __future__ import absolute_import as _abs
 
 import sys as _sys
 import ctypes as _ctypes
@@ -23,6 +22,7 @@ import numpy as np
 from ..ndarray_doc import _build_doc
 from libc.stdint cimport uint32_t, int64_t
 from ..base import _LIB
+from .. import _global_var
 
 include "./base.pyi"
 
@@ -37,7 +37,10 @@ cdef class NDArrayBase:
         if handle is None:
             self.chandle = NULL
         else:
-            ptr = handle.value
+            if isinstance(handle, (int, long)):
+                ptr = handle
+            else:
+                ptr = handle.value
             self.chandle = <SymbolHandle>(ptr)
 
     property handle:
@@ -60,20 +63,11 @@ cdef class NDArrayBase:
         CALL(MXNDArrayFree(self.chandle))
 
     def __reduce__(self):
-        return (_ndarray_cls, (None,), self.__getstate__())
+        return (_global_var._ndarray_cls, (None,), self.__getstate__())
 
+    def _get_handle(self):
+        return <size_t>self.chandle
 
-_ndarray_cls = None
-_np_ndarray_cls = None
-
-def _set_ndarray_class(cls):
-    global _ndarray_cls
-    _ndarray_cls = cls
-
-
-def _set_np_ndarray_class(cls):
-    global _np_ndarray_cls
-    _np_ndarray_cls = cls
 
 def _monitor_callback_wrapper(callback):
     def callback_handle(name, opr_name, arr, _):
@@ -82,7 +76,7 @@ def _monitor_callback_wrapper(callback):
 
 cdef NewArray(NDArrayHandle handle, int stype=-1, int is_np_array=0):
     """Create a new array given handle"""
-    create_array_fn = _np_ndarray_cls if is_np_array else _ndarray_cls
+    create_array_fn = _global_var._np_ndarray_cls if is_np_array else _global_var._ndarray_cls
     return create_array_fn(_ctypes.cast(<unsigned long long>handle, _ctypes.c_void_p), stype=stype)
 
 
@@ -122,25 +116,47 @@ cdef class CachedOp:
         from ..symbol.numpy._symbol import _Symbol
         self.is_np_sym = bool(isinstance(sym, _Symbol))
 
-        CALL(MXCreateCachedOpEx(
+        CALL(MXCreateCachedOp(
             <SymbolHandle>(<unsigned long long>sym.handle.value),
             len(flags),
             CBeginPtr(c_flag_keys),
             CBeginPtr(c_flag_vals),
-            &self.chandle))
+            &self.chandle,
+            False))
 
     def __del__(self):
         CALL(MXFreeCachedOp(self.chandle))
 
-    def __call__(self, *args, out=None):
+    def get_optimized_symbol(self):
+        """Get an optimized version of the symbol from the cached op.
+
+        Returns
+        -------
+        symbol : Symbol
+            Optimized symbol from the executor.
+        """
+        from ..symbol import Symbol
+        cdef SymbolHandle shandle
+        CALL(MXCachedOpGetOptimizedSymbol(self.chandle, &shandle))
+        ret = Symbol(_ctypes.cast(<unsigned long long>shandle, _ctypes.c_void_p))
+        return ret
+
+    def __call__(self, *args, out=None, default_ctx=None):
         """ctypes implementation of imperative invoke wrapper"""
         cdef vector[NDArrayHandle] ndvars
         cdef vector[NDArrayHandle] output_vars
         cdef NDArrayHandle* p_output_vars
         cdef NDArrayHandle ret_handle
+        cdef int default_ctx_type
+        cdef int default_ctx_dev_id
         cdef int num_output
         cdef const int* p_output_stypes
 
+        if len(args) == 1 and args[0] is None:
+            args = []
+            assert default_ctx is not None, 'default_ctx is required if no input is provided'
+        else:
+            default_ctx = args[0].ctx if default_ctx is None else default_ctx
         for i in args:
             ndvars.push_back((<NDArrayBase>i).chandle)
 
@@ -159,10 +175,12 @@ cdef class CachedOp:
         else:
             p_output_vars = &output_vars[0]
 
-        CALL(MXInvokeCachedOpEx(
+        CALL(MXInvokeCachedOp(
             self.chandle,
             <int>len(args),
             &ndvars[0] if ndvars.size() != 0 else NULL,
+            <int>(default_ctx.device_typeid),
+            <int>(default_ctx.device_id),
             &num_output,
             &p_output_vars,
             &p_output_stypes))
@@ -222,7 +240,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op=0, output_is_li
     cdef vector[const char*] param_keys = SVec2Ptr(ckeys)
     cdef vector[const char*] param_vals = SVec2Ptr(cvals)
 
-    CALL(MXImperativeInvokeEx(
+    CALL(MXImperativeInvoke(
         chandle,
         <int>ndvars.size(),
         &ndvars[0] if ndvars.size() != 0 else NULL,

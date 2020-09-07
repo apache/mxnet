@@ -45,7 +45,7 @@ def reduce_axes(X, axes, reducer, atype=None):
     
     ishape = X.shape
     odim = (len(ishape) + 1 - axes[0]) // 2
-    oshape = [tvm.var() for _ in range(odim)]
+    oshape = [tvm.size_var() for _ in range(odim)]
     ridx = [tvm.reduce_axis((0, ishape[i])) for (i, val) in enumerate(axes) if val == 1]
     ret = tvm.compute(oshape, lambda *idx: reducer(X[get_index(idx, ridx)].astype(atype)
                                                    if atype else X[get_index(idx, ridx)],

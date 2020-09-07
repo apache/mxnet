@@ -87,7 +87,7 @@ static std::vector<float> GetWeightScales(const NDArray &weight, const NDArray *
 }
 
 static void ConvertWeightBias2MKLDNN(NDArray *weight, NDArray *bias, bool has_bias,
-                                     const mkldnn::memory::desc weight_md,
+                                     const mkldnn::memory::desc &weight_md,
                                      const mkldnn::memory::desc *bias_md,
                                      const int num_group, float data_scale,
                                      const std::vector<float> &weight_scales,

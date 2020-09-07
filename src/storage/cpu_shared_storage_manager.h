@@ -25,23 +25,14 @@
 #ifndef _WIN32
 #include <sys/mman.h>
 #include <sys/fcntl.h>
-#include <unistd.h>
-#include <sys/types.h>
 #include <sys/stat.h>
 #else
 #include <Windows.h>
 #include <process.h>
 #endif  // _WIN32
 
-#include <unordered_map>
-#include <vector>
-#include <atomic>
-#include <iostream>
-#include <mutex>
-#include <new>
 #include <string>
 #include <limits>
-
 #include "./storage_manager.h"
 
 namespace mxnet {
@@ -115,11 +106,6 @@ class CPUSharedStorageManager final : public StorageManager {
 };  // class CPUSharedStorageManager
 
 void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
-  if (handle->size == 0) {
-    handle->dptr = nullptr;
-    return;
-  }
-
   std::lock_guard<std::recursive_mutex> lock(mutex_);
   std::uniform_int_distribution<> dis(0, std::numeric_limits<int>::max());
   int fid = -1;
@@ -138,9 +124,9 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
       handle->shared_id = dis(rand_gen_);
       filename = SharedHandleToString(handle->shared_pid, handle->shared_id);
       map_handle = CreateFileMapping(INVALID_HANDLE_VALUE,
-                                     NULL, PAGE_READWRITE, 0, size, filename.c_str());
+                                     nullptr, PAGE_READWRITE, 0, size, filename.c_str());
       if ((error = GetLastError()) == ERROR_SUCCESS) {
-        break;;
+        break;
       }
     }
   } else {
@@ -189,7 +175,7 @@ void CPUSharedStorageManager::Alloc(Storage::Handle* handle) {
 
   if (is_new) CHECK_EQ(ftruncate(fid, size), 0);
 
-  ptr = mmap(NULL, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
+  ptr = mmap(nullptr, size, PROT_READ|PROT_WRITE, MAP_SHARED, fid, 0);
   CHECK_NE(ptr, MAP_FAILED)
       << "Failed to map shared memory. mmap failed with error " << strerror(errno);
 #ifdef __linux__

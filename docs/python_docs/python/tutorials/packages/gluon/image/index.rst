@@ -33,12 +33,6 @@ Basic Image Tutorials
 
       How to create a convolutional neural network for handwritten digit recognition.
 
-   .. card::
-      :title: Image Recognition with Pretrained Models
-      :link: pre-trained_models.html
-
-      How to use pretrained models to recognize what is in an image.
-
 
 GluonCV Toolkit Tutorials
 -------------------------

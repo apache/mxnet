@@ -30,7 +30,7 @@
 #include <algorithm>
 #include "../mxnet_op.h"
 #include "../operator_common.h"
-#include "../../src/operator/tensor/init_op.h"
+#include "./init_op.h"
 #ifdef __CUDACC__
 #include "./cast_storage-inl.cuh"
 #endif  // __CUDACC__
@@ -283,7 +283,7 @@ struct CopyCsrDataToDns {
    * \param num_cols  number of columns of the dns tensor
    */
   template<typename DType, typename IType, typename CType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   DType* dns_data,
                                   const CType* col_idx,
                                   const IType* indptr,

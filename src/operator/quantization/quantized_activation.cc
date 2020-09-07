@@ -119,7 +119,7 @@ the float32 data into int8.
 NNVM_REGISTER_OP(Activation)
 .set_attr<FQuantizedOp>("FQuantizedOp", [](const NodeAttrs& attrs) {
   const ActivationParam& param = nnvm::get<ActivationParam>(attrs.parsed);
-  nnvm::NodePtr node = nnvm::Node::Create();
+  nnvm::ObjectPtr node = nnvm::Node::Create();
   if (param.act_type == activation::kReLU) {
     node->attrs.op = Op::Get("_contrib_quantized_act");
     node->attrs.name = "quantized_" + attrs.name;

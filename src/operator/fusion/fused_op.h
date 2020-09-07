@@ -28,7 +28,7 @@
 #include <mutex>
 #include <tuple>
 
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
 
 namespace mxnet {
 
@@ -58,7 +58,6 @@ struct FusedOpEntry {
 class FusedOp {
  public:
   static const int NTHREADS = 512;
-  static const int CACHESIZE_WARN_THRESHOLD = 10000;
 
   explicit FusedOp(const nnvm::NodeAttrs* attrs, const FusedOpConfig& config);
   ~FusedOp() {}
@@ -85,13 +84,13 @@ class FusedOp {
                  std::vector<int> *out_attrs);
 
   template <typename Attr>
-  std::tuple<const nnvm::NodePtr,
+  std::tuple<const nnvm::ObjectPtr,
              std::vector<Attr>,
              std::vector<Attr>>
     GetAttrs(const std::string& attr_name,
              const uint32_t node_id);
 
-  void ProvideShape(const std::vector<nnvm::NodePtr>& nodes,
+  void ProvideShape(const std::vector<nnvm::ObjectPtr>& nodes,
                     const std::vector<std::vector<mxnet::TShape>> &in_attrs,
                     const std::vector<std::vector<mxnet::TShape>> &out_attrs) {
     aux_nodes_ = nodes;
@@ -99,7 +98,7 @@ class FusedOp {
     aux_out_shapes_ = out_attrs;
   }
 
-  void ProvideType(const std::vector<nnvm::NodePtr>& nodes,
+  void ProvideType(const std::vector<nnvm::ObjectPtr>& nodes,
                    const std::vector<std::vector<int>> &in_attrs,
                    const std::vector<std::vector<int>> &out_attrs) {
     aux_nodes_ = nodes;
@@ -107,7 +106,7 @@ class FusedOp {
     aux_out_types_ = out_attrs;
   }
 
-  std::tuple<const nnvm::NodePtr,
+  std::tuple<const nnvm::ObjectPtr,
              std::vector<mxnet::TShape>,
              std::vector<mxnet::TShape>>
     GetAuxShape(const int node_id) const {
@@ -116,7 +115,7 @@ class FusedOp {
                            aux_out_shapes_[node_id]);
   }
 
-  std::tuple<const nnvm::NodePtr,
+  std::tuple<const nnvm::ObjectPtr,
              std::vector<int>,
              std::vector<int>>
     GetAuxType(const int node_id) const {
@@ -169,7 +168,7 @@ class FusedOp {
   std::vector<IntermediateAttr<mxnet::TShape> > intermediate_shapes_;
   std::vector<IntermediateAttr<int> > intermediate_dtypes_;
 
-  std::vector<nnvm::NodePtr> aux_nodes_;
+  std::vector<nnvm::ObjectPtr> aux_nodes_;
   std::vector<std::vector<mxnet::TShape>> aux_in_shapes_;
   std::vector<std::vector<mxnet::TShape>> aux_out_shapes_;
   std::vector<std::vector<int>> aux_in_types_;
@@ -201,6 +200,6 @@ using FusedOpHelperParamPtr = std::shared_ptr<FusedOpHelperParam>;
 
 }  // namespace mxnet
 
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#endif  // MXNET_USE_CUDA
 
 #endif  // MXNET_OPERATOR_FUSION_FUSED_OP_H_

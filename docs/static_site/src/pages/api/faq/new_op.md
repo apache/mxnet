@@ -290,7 +290,7 @@ that the i-th input can share memory with the j-th output.
 If an operator has gradient, it can be described with `FGradient` with prototype
 
 ```c++
-std::vector<nnvm::NodeEntry>(const nnvm::NodePtr& n,
+std::vector<nnvm::NodeEntry>(const nnvm::ObjectPtr& n,
                              const std::vector<nnvm::NodeEntry>& ograds)
 ```
 
@@ -313,7 +313,7 @@ again. This avoids uneccessary copies of the shared_ptr.
 
 ```c++
 for (size_t i = 0; i < n->inputs.size(); ++i) {
-  nnvm::NodePtr node = nnvm::Node::Create();
+  nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs.op = copy_op;
   node->inputs = {ograds[0]};
   ret.emplace_back(std::move(node));

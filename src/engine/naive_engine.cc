@@ -22,6 +22,7 @@
  * \file naive_engine.cc
  * \brief Implementation of NaiveEngine
  */
+#include <memory>
 #include <vector>
 #include <atomic>
 #include <thread>
@@ -55,7 +56,7 @@ class NaiveEngine final : public Engine {
     std::vector<VarHandle> const_vars;
     std::vector<VarHandle> mutable_vars;
     FnProperty prop;
-    const char* opr_name;
+    std::string opr_name;
     /*! \brief indicate whether to profile this operator */
     bool profiling{false};
     /*! \brief operator execution statistics */
@@ -67,8 +68,8 @@ class NaiveEngine final : public Engine {
     objpool_var_ref_ = common::ObjectPool<NaiveVar>::_GetSharedRef();
   }
   // virtual destructor
-  virtual ~NaiveEngine() {
 #if MXNET_USE_CUDA
+  ~NaiveEngine() override {
     LOG(INFO) << "Engine shutdown";
     for (size_t i = 0; i < streams_.size(); ++i) {
       if (streams_[i] != nullptr) {
@@ -83,8 +84,10 @@ class NaiveEngine final : public Engine {
         aux_streams_[i] = nullptr;
       }
     }
-#endif
   }
+#else
+  ~NaiveEngine() override = default;
+#endif
 
   void Stop() override {
   }
@@ -108,7 +111,7 @@ class NaiveEngine final : public Engine {
     opr->const_vars = const_vars;
     opr->mutable_vars = mutable_vars;
     opr->prop = prop;
-    opr->opr_name = opr_name;
+    opr->opr_name = opr_name ? std::string(opr_name) : std::string();
     return opr;
   }
 
@@ -125,9 +128,10 @@ class NaiveEngine final : public Engine {
         if (opr->profiling) {
           std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
           if (profiler->AggregateEnabled()) {
-            attrs.reset(new profiler::ProfileOperator::Attributes());
+            attrs = std::make_unique<profiler::ProfileOperator::Attributes>();
           }
-          opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name, attrs.release()));
+          opr->opr_profile = std::make_unique<profiler::ProfileOperator>(opr->opr_name.c_str(),
+                                                               attrs.release());
           opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
         }
         opr->fn(ctx, on_complete);
@@ -140,11 +144,11 @@ class NaiveEngine final : public Engine {
       opr->mutable_vars,
       opr->prop,
       priority,
-      opr->opr_name);
+      opr->opr_name.c_str());
   }
 
 /*!
- * \brief NaiveEngine's PushAsync was intentionally synchronous. 
+ * \brief NaiveEngine's PushAsync was intentionally synchronous.
  * User should not make any assumption about execution order when using async interface of any engine.
  */
   void PushAsync(AsyncFn exec_fun,
@@ -174,14 +178,16 @@ class NaiveEngine final : public Engine {
       opr->profiling = profiling;
       std::unique_ptr<profiler::ProfileOperator::Attributes> attrs;
       if (profiler->AggregateEnabled()) {
-        attrs.reset(new profiler::ProfileOperator::Attributes());
+        attrs = std::make_unique<profiler::ProfileOperator::Attributes>();
       }
-      opr->opr_profile.reset(new profiler::ProfileOperator(opr->opr_name, attrs.release()));
+      opr->opr_profile = std::make_unique<profiler::ProfileOperator>(opr->opr_name.c_str(),
+                                                                     attrs.release());
       opr->opr_profile->startForDevice(exec_ctx.dev_type, exec_ctx.dev_id);
     }
     if (exec_ctx.dev_mask() == gpu::kDevMask) {
 #if MXNET_USE_CUDA
       size_t dev_id = static_cast<size_t>(exec_ctx.dev_id);
+      cudaGetLastError();  // reset cuda error
       MSHADOW_CATCH_ERROR(mshadow::SetDevice<gpu>(exec_ctx.dev_id));
       if (streams_.size() <= dev_id) {
         streams_.resize(dev_id + 1, nullptr);

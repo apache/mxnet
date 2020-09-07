@@ -21,7 +21,7 @@
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
-max_time = 180
+max_time = 240
 
 
 node('utility') {
@@ -35,14 +35,15 @@ utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_
 utils.main_wrapper(
 core_logic: {
   utils.parallel_stage('Build', [
-    custom_steps.compile_unix_asan_cpu(),
-    custom_steps.compile_unix_amalgamation_min(),
-    custom_steps.compile_unix_amalgamation()
-  ]) 
+    custom_steps.compile_unix_asan_cpu('cpu_asan'),
+    custom_steps.compile_unix_gcc8_werror('cpu_gcc8'),
+    custom_steps.compile_unix_clang10_werror('cpu_clang10'),
+    custom_steps.compile_unix_clang10_cuda_werror('gpu_clang10')
+  ])
 
   utils.parallel_stage('Tests', [
-    custom_steps.misc_asan_cpu()
-  ]) 
+    custom_steps.misc_test_docker_cache_build()
+  ])
 }
 ,
 failure_handler: {

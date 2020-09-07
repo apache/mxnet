@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
@@ -18,38 +18,6 @@
 # under the License.
 
 from common import *
-
-
-def test_module_checkpoint_api():
-    model_name = 'module_checkpoint_api'
-    print ('Performing inference for model/API %s' % model_name)
-
-    # For each MXNet version that has the saved models
-    for folder in get_top_level_folders_in_bucket(s3, model_bucket_name):
-        logging.info('Fetching files for MXNet version : %s and model %s' % (folder, model_name))
-        model_files = download_model_files_from_s3(model_name, folder)
-        if len(model_files) == 0:
-            logging.warn('No training files found for %s for MXNet version : %s' % (model_name, folder))
-            continue
-
-        data = mx.nd.load(''.join([model_name, '-data']))
-        data_iter = mx.io.NDArrayIter(data['data'], data['labels'], batch_size=10)
-        # Load the model and perform inference
-        loaded_model = get_module_api_model_definition()
-
-        sym, arg_params, aux_params = mx.model.load_checkpoint(model_name, 1)
-        loaded_model.bind(data_shapes=data_iter.provide_data, label_shapes=data_iter.provide_label)
-        loaded_model.set_params(arg_params, aux_params)
-
-        old_inference_results = load_inference_results(model_name)
-        inference_results = loaded_model.predict(data_iter)
-        # Check whether they are equal or not ?
-        assert_almost_equal(inference_results.asnumpy(), old_inference_results.asnumpy(), rtol=rtol_default, atol=atol_default)
-        clean_model_files(model_files, model_name)
-        logging.info('=================================')
-
-    logging.info('Assertion passed for model : %s' % model_name)
-
 
 def test_lenet_gluon_load_params_api():
     model_name = 'lenet_gluon_save_params_api'
@@ -131,7 +99,6 @@ def test_lstm_gluon_load_parameters_api():
 
 
 if __name__ == '__main__':
-    test_module_checkpoint_api()
     test_lenet_gluon_load_params_api()
     test_lenet_gluon_hybrid_imports_api()
     test_lstm_gluon_load_parameters_api()

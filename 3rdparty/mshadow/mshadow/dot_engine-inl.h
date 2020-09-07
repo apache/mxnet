@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 /*!
  *  Copyright (c) 2014 by Contributors
  * \file dot_engine-inl.h
@@ -280,17 +299,17 @@ struct BLASEngine<cpu, float> {
   }
   inline static void gemm(Stream<cpu> *stream,
                           bool transa, bool transb,
-                          int m, int n, int k, float alpha,
-                          const float *A, int lda, const float *B, int ldb,
-                          float beta, float *C, int ldc) {
+                          index_t m, index_t n, index_t k, float alpha,
+                          const float *A, index_t lda, const float *B, index_t ldb,
+                          float beta, float *C, index_t ldc) {
     cblas_sgemm(CblasColMajor, GetT(transa), GetT(transb),
                 m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
   }
   inline static void batched_gemm(Stream<cpu> *stream,
                                   bool transa, bool transb,
-                                  int m, int n, int k, float alpha,
-                                  const float *A, int lda, const float *B, int ldb,
-                                  float beta, float *C, int ldc, int batch_count,
+                                  index_t m, index_t n, index_t k, float alpha,
+                                  const float *A, index_t lda, const float *B, index_t ldb,
+                                  float beta, float *C, index_t ldc, index_t batch_count,
                                   float **workspace) {
 #if (MSHADOW_USE_MKL && INTEL_MKL_VERSION >= 20160000)
   // since same m/n/k is used for all single gemms, so we put all gemms into one group
@@ -389,17 +408,17 @@ struct BLASEngine<cpu, double> {
   }
   inline static void gemm(Stream<cpu> *stream,
                           bool transa, bool transb,
-                          int m, int n, int k, double alpha,
-                          const double *A, int lda, const double *B, int ldb,
-                          double beta, double *C, int ldc) {
+                          index_t m, index_t n, index_t k, double alpha,
+                          const double *A, index_t lda, const double *B, index_t ldb,
+                          double beta, double *C, index_t ldc) {
     cblas_dgemm(CblasColMajor, GetT(transa), GetT(transb),
                 m, n, k, alpha, A, lda, B, ldb, beta, C, ldc);
   }
   inline static void batched_gemm(Stream<cpu> *stream,
                                   bool transa, bool transb,
-                                  int m, int n, int k, double alpha,
-                                  const double *A, int lda, const double *B, int ldb,
-                                  double beta, double *C, int ldc, int batch_count,
+                                  index_t m, index_t n, index_t k, double alpha,
+                                  const double *A, index_t lda, const double *B, index_t ldb,
+                                  double beta, double *C, index_t ldc, index_t batch_count,
                                   double **workspace) {
 #if (MSHADOW_USE_MKL && INTEL_MKL_VERSION >= 20160000)
   // since same m/n/k is used for all single gemms, so we put all gemms into one group
@@ -421,12 +440,9 @@ struct BLASEngine<cpu, double> {
   CBLAS_TRANSPOSE p_transa[GROUP_SIZE] = {cblas_a_trans};
   CBLAS_TRANSPOSE p_transb[GROUP_SIZE] = {cblas_b_trans};
 
-  std::vector<const double*> pp_A;
-  std::vector<const double*> pp_B;
-  std::vector<double*> pp_C;
-  pp_A.reserve(batch_count);
-  pp_B.reserve(batch_count);
-  pp_C.reserve(batch_count);
+  std::vector<const double*> pp_A(batch_count, nullptr);
+  std::vector<const double*> pp_B(batch_count, nullptr);
+  std::vector<double*> pp_C(batch_count, nullptr);
 
   auto m_k = m * k;
   auto k_n = k * n;

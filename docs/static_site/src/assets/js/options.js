@@ -22,6 +22,10 @@
 */
 
 $(document).ready(function () {
+    const dropdownVersions = $("#version-dropdown-container ul li")
+        .toArray()
+        .map((li) => li.innerText);
+
     function label(lbl) {
         lbl = lbl.replace(/[ .]/g, '-').toLowerCase();
 
@@ -33,6 +37,9 @@ $(document).ready(function () {
         let searchParams = searchString.substring(1).split("&");
         searchParams.forEach(function (element) {
             kvPair = element.split("=");
+            if (kvPair[0] === 'version' && dropdownVersions.indexOf(kvPair[1]) == -1) {
+                kvPair[1] = dropdownVersions[0];
+            }
             searchDict.set(kvPair[0], kvPair[1]);
         });
         return searchDict;
@@ -45,34 +52,49 @@ $(document).ready(function () {
         }
     }
 
-    function setSelects(urlParams) {
-        if (urlParams.get('version'))
-            versionSelect = urlParams.get('version');
-        $('.current-version').html( versionSelect + ' <span class="caret"></span>' );
-        if (urlParams.get('platform'))
-            platformSelect = label(urlParams.get('platform'));
-        if (urlParams.get('language'))
-            languageSelect = label(urlParams.get('language'));
-        if (urlParams.get('processor'))
-            processorSelect = label(urlParams.get('processor'));
-        if (urlParams.get('environ'))
-            environSelect = label(urlParams.get('environ'));
-
-        $('li.versions').removeClass('active');
-        $('li.versions').each(function(){is_a_match($(this), versionSelect)});
+    function setSelects(urlParams, dontPushState) {
+        let queryString = '?';
         $('button.opt').removeClass('active');
-        $('button.opt').each(function(){is_a_match($(this), platformSelect)});
-        $('button.opt').each(function(){
-            if (label($(this).text()) === label(languageSelect)) {
-                $(this).addClass(('active'))
-            }
-        });
-        $('button.opt').each(function(){is_a_match($(this), processorSelect)});
-        $('button.opt').each(function(){is_a_match($(this), environSelect)});
+        if (urlParams.get('version')) {
+            versionSelect = urlParams.get('version');
+            $('li.versions').removeClass('active');
+            $('li.versions').each(function () { is_a_match($(this), versionSelect) });
+            $('.current-version').html(versionSelect + '<svg class="dropdown-caret" viewBox="0 0 32 32" class="icon icon-caret-bottom" aria-hidden="true"><path class="dropdown-caret-path" d="M24 11.305l-7.997 11.39L8 11.305z"></path></svg>');
+            queryString += 'version=' + versionSelect + '&';
+        }
+        if (urlParams.get('platform')) {
+            platformSelect = label(urlParams.get('platform'));
+            $('button.opt').each(function(){is_a_match($(this), platformSelect)});
+            queryString += 'platform=' + platformSelect + '&';
+        }
+        if (urlParams.get('language')) {
+            languageSelect = label(urlParams.get('language'));
+            $('button.opt').each(function(){
+                if (label($(this).text()) === label(languageSelect)) {
+                    $(this).addClass(('active'))
+                }
+            });
+            queryString += 'language=' + languageSelect + '&';
+        }
+        if (urlParams.get('processor')) {
+            processorSelect = label(urlParams.get('processor'));
+            $('button.opt').each(function(){is_a_match($(this), processorSelect)});
+            queryString += 'processor=' + processorSelect + '&';
+        }
+        if (urlParams.get('environ')) {
+            environSelect = label(urlParams.get('environ'));
+            $('button.opt').each(function(){is_a_match($(this), environSelect)});
+            queryString += 'environ=' + environSelect + '&';
+        }
+        if (urlParams.get('iot')) {
+            iotSelect = label(urlParams.get('iot'));
+            $('button.opt').each(function(){is_a_match($(this), iotSelect)});
+            queryString += 'iot=' + iotSelect + '&';
+        }
 
         showContent();
-        let queryString = '?version=' + versionSelect + '&platform=' + platformSelect + '&language=' + languageSelect + '&environ=' + environSelect + '&processor=' + processorSelect
-        if (window.location.href.indexOf("/get_started") >= 0) {
+
+        if (window.location.href.indexOf("/get_started") >= 0 && !dontPushState) {
             history.pushState(null, null, queryString);
         }
     }
@@ -104,6 +126,9 @@ $(document).ready(function () {
             urlParams.set("processor", label($(this).text()));
         } else if ($(this).hasClass("environs")) {
             urlParams.set("environ", label($(this).text()));
+        } else if ($(this).hasClass("iots")) {
+            console.log($(this));
+            urlParams.set("iot", label($(this).text()));
         }
         setSelects(urlParams);
     }
@@ -111,5 +136,28 @@ $(document).ready(function () {
     $('.opt-group').on('click', '.opt', setContent);
     $('.install-widget').css("visibility", "visible");
     $('.install-content').css("visibility", "visible");
+    $(window).on('popstate', function(){
+        setSelects(urlSearchParams(window.location.search), true);
+    });
 
+    let timer;
+    const toggleDropdown = function(showContent) {
+        if (timer) clearTimeout(timer);
+        if (showContent) {
+            timer = setTimeout(function() {
+                $(".version-dropdown").show()
+            }, 250);  
+        } else {
+            $(".version-dropdown").hide()
+        }
+    }
+
+    $("#version-dropdown-container")
+        .mouseenter(toggleDropdown.bind(null, true))
+        .mouseleave(toggleDropdown.bind(null, false))
+        .click(function() {$(".version-dropdown").toggle()});
+
+    $("ul.version-dropdown").click(function(e) {
+        e.preventDefault();
+    });
 });

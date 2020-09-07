@@ -47,10 +47,6 @@
 # pylint: disable=invalid-name,too-many-locals,no-self-use,too-many-arguments,
 # pylint: disable=maybe-no-member,too-many-nested-blocks
 """MXNet to ONNX graph converter functions"""
-from __future__ import absolute_import
-from __future__ import division
-from __future__ import print_function
-from __future__ import unicode_literals
 import logging
 import json
 
@@ -120,7 +116,7 @@ class MXNetGraph(object):
         return arg_params, aux_params
 
     @staticmethod
-    def get_outputs(sym, params, in_shape, in_label):
+    def get_outputs(sym, params, in_shape, in_label, verbose=True):
         """ Infer output shapes and return dictionary of output name to shape
 
         :param :class:`~mxnet.symbol.Symbol` sym: symbol to perform infer shape on
@@ -128,6 +124,7 @@ class MXNetGraph(object):
         :param list of tuple(int, ...) in_shape: list of all input shapes
         :param  in_label: name of label typically used in loss that may be left in graph. This name is
             removed from list of inputs required by symbol
+        :param verbose: If false, info logging messages are deactivated
         :return: dictionary of output name to shape
         :rtype: dict of (str, tuple(int, ...))
         """
@@ -146,7 +143,8 @@ class MXNetGraph(object):
             if name.endswith('_output'):
                 out_names.append(name[:-len('_output')])
             else:
-                logging.info("output '%s' does not end with '_output'", name)
+                if verbose:
+                    logging.info("output '%s' does not end with '_output'", name)
                 out_names.append(name)
 
         assert len(out_shapes) == len(out_names)
@@ -207,8 +205,9 @@ class MXNetGraph(object):
         onnx_processed_outputs = []
         index_lookup = []
 
-        # Determine output shape
+        # Determine output and internal shapes
         graph_outputs = MXNetGraph.get_outputs(sym, params, in_shape, output_label)
+        graph_shapes = MXNetGraph.get_outputs(sym.get_internals(), params, in_shape, output_label, verbose=False)
 
         graph_input_idx = 0
         for idx, node in enumerate(mx_graph):
@@ -234,6 +233,7 @@ class MXNetGraph(object):
                     in_shape=in_shape[graph_input_idx],
                     in_type=in_type,
                     proc_nodes=all_processed_nodes,
+                    graph_shapes=graph_shapes,
                     initializer=initializer,
                     index_lookup=index_lookup)
                 graph_input_idx += 1
@@ -248,6 +248,7 @@ class MXNetGraph(object):
                     in_shape=in_shape,
                     in_type=in_type,
                     proc_nodes=all_processed_nodes,
+                    graph_shapes=graph_shapes,
                     initializer=initializer,
                     index_lookup=index_lookup,
                     idx=idx

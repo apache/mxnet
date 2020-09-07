@@ -27,8 +27,10 @@
 #include <nnvm/graph.h>
 #include <nnvm/node.h>
 
+#include <utility>
+
 namespace nnvm {
-NodePtr CreateVariableNode(const std::string& name);
+ObjectPtr CreateVariableNode(const std::string& name);
 }
 
 namespace mxnet {
@@ -67,13 +69,13 @@ bool CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
                     bool skip_var, std::vector<nnvm::NodeEntry> *orig_entries) {
   struct pred_entry {
     nnvm::NodeEntry e;
-    explicit pred_entry(const nnvm::NodeEntry &_e): e(_e) {}
+    explicit pred_entry(nnvm::NodeEntry _e): e(std::move(_e)) {}
     bool operator()(const nnvm::NodeEntry e1) {
       return e.node == e1.node && e.index == e1.index;
     }
   };
 
-  std::vector<nnvm::NodePtr> var_nodes;
+  std::vector<nnvm::ObjectPtr> var_nodes;
   orig_entries->clear();
   orig_entries->reserve(input_entries.size());
   for (auto input_entry : input_entries) {
@@ -85,7 +87,7 @@ bool CutGraphInputs(const std::vector<nnvm::NodeEntry *> &input_entries,
                            pred_entry(*input_entry));
     bool exist = (it != orig_entries->end());
     orig_entries->push_back(*input_entry);
-    nnvm::NodePtr n;
+    nnvm::ObjectPtr n;
     // If we haven't seen the entry before, we need to create a new var node
     // for the node entry.
     if (!exist) {

@@ -59,7 +59,7 @@ struct LARSParam : public dmlc::Parameter<LARSParam> {
 };
 
 struct MultiLARSKernel {
-  MSHADOW_XINLINE static void Map(int i, float* out_data, const float* lrs,
+  MSHADOW_XINLINE static void Map(index_t i, float* out_data, const float* lrs,
                                   const float* weights_sum_sq, const float* grads_sum_sq,
                                   const float* wds, const float eta, const float eps,
                                   const float rescale_grad, const OpReqType req) {

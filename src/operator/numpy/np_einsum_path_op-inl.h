@@ -914,7 +914,7 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
     ret[i].do_blas = do_blas;
   }
 
-  if (ret_path == NULL || ret_string_repr == NULL) {
+  if (ret_path == nullptr || ret_string_repr == nullptr) {
     return ret;
   }
 

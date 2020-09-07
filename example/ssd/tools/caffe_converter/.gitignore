@@ -1,5 +1,0 @@
-model/
-*.caffemodel
-*.prototxt
-*.json
-*.params

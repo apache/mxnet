@@ -25,6 +25,7 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_DELETE_OP_INL_H_
 #define MXNET_OPERATOR_NUMPY_NP_DELETE_OP_INL_H_
 
+#include <string>
 #include <vector>
 #include <memory>
 #include <algorithm>
@@ -69,6 +70,19 @@ struct NumpyDeleteParam : public dmlc::Parameter<NumpyDeleteParam> {
     DMLC_DECLARE_FIELD(axis)
     .set_default(dmlc::optional<int>())
     .describe("Axis along which to insert `values`.");
+  }
+  void SetAttrDict(std::unordered_map<std::string, std::string>* dict) {
+    std::ostringstream start_s, stop_s, step_s, int_ind_s, axis_s;
+    start_s << start;
+    stop_s << stop;
+    step_s << step;
+    int_ind_s << int_ind;
+    axis_s << axis;
+    (*dict)["start"] = start_s.str();
+    (*dict)["stop"] = stop_s.str();
+    (*dict)["step"] = step_s.str();
+    (*dict)["int_ind"] = int_ind_s.str();
+    (*dict)["axis"] = axis_s.str();
   }
 };
 
@@ -263,9 +277,9 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
     numtodel = inputs[delete_::kObj].shape().Size();
   }
 
-  char* out_pos_ptr = NULL;
-  char* indices_ptr = NULL;
-  char* is_delete_ptr = NULL;
+  char* out_pos_ptr = nullptr;
+  char* indices_ptr = nullptr;
+  char* is_delete_ptr = nullptr;
   MSHADOW_TYPE_SWITCH(((inputs.size() == 2U) ?  // obj is tensor
                       inputs[delete_::kObj].dtype() :
                       mshadow::DataType<int64_t>::kFlag), IType, {

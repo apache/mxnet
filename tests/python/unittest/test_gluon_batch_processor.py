@@ -27,7 +27,7 @@ from mxnet.gluon import nn
 from mxnet.gluon.contrib.estimator import *
 from mxnet.gluon.contrib.estimator.event_handler import *
 from mxnet.gluon.contrib.estimator.batch_processor import BatchProcessor
-from nose.tools import assert_raises
+import pytest
 
 def _get_test_network():
     net = nn.Sequential()
@@ -52,7 +52,7 @@ def test_batch_processor_fit():
     num_epochs = 1
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     net.initialize(ctx=ctx)
     processor = BatchProcessor()
     trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.001})
@@ -66,12 +66,12 @@ def test_batch_processor_fit():
     est.fit(train_data=dataloader,
             epochs=num_epochs)
 
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=dataiter,
                 epochs=num_epochs)
 
     # Input NDArray
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=[mx.nd.ones(shape=(10, 3))],
                 epochs=num_epochs)
 
@@ -83,7 +83,7 @@ def test_batch_processor_validation():
     num_epochs = 1
     ctx = mx.cpu()
     loss = gluon.loss.L2Loss()
-    acc = mx.metric.Accuracy()
+    acc = mx.gluon.metric.Accuracy()
     val_loss = gluon.loss.L1Loss()
     net.initialize(ctx=ctx)
     processor = BatchProcessor()
@@ -105,12 +105,12 @@ def test_batch_processor_validation():
     val_metrics = est.val_metrics
     validation_handler = ValidationHandler(val_data=dataloader, eval_fn=est.evaluate)
 
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=dataiter,
                 val_data=dataiter,
                 epochs=num_epochs)
     # Input NDArray
-    with assert_raises(ValueError):
+    with pytest.raises(ValueError):
         est.fit(train_data=[mx.nd.ones(shape=(10, 3))],
                 val_data=[mx.nd.ones(shape=(10, 3))],
                 epochs=num_epochs)
