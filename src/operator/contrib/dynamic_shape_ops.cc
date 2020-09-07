@@ -113,6 +113,7 @@ Example::
    out = mx.sym.contrib.dynamic_reshape(data = data, shape = shape)
    // out will be of shape (2,75)
 )code" ADD_FILELINE)
+.add_alias("_npx_dynamic_reshape")
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<nnvm::FListInputNames>("FListInputNames",
