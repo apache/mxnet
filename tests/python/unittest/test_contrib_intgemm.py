@@ -15,84 +15,91 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import pytest
 import mxnet as mx
 from mxnet import np, npx
 from mxnet.test_utils import same, use_np, assert_almost_equal
 from common import with_seed
 import random
-import pytest
+from itertools import product
+
+
+# with_seed() from MXNet 1.x breaks @pytest.mark.parametrize so all randomized
+# tests use a for loop over a Cartesian product of parameters.
 
 @use_np
 @with_seed()
-@pytest.mark.parametrize('shape',
-    [(3, 2), (9,17), (2, 7, 1, 8)] + [(i,) for i in range(1,65)])
-def test_contrib_intgemm_maxabsolute(shape):
+def test_contrib_intgemm_maxabsolute():
     if "intgemm_maxabsolute" not in dir(mx.nd.contrib):
         return
-    # mx.nd API
-    m = mx.nd.random_uniform(low=-100.0, high=100.0, shape=shape)
-    fast = mx.nd.contrib.intgemm_maxabsolute(m)
-    slow = mx.nd.max(mx.nd.abs(m))
-    assert same(fast, slow)
-    # np API
-    m = np.random.uniform(low=-100.0, high=100.0, size=shape)
-    fast = npx.intgemm_maxabsolute(m).reshape(())
-    slow = np.max(np.abs(m))
-    assert same(fast, slow)
-
+    for shape in ([(3, 2), (9,17), (2, 7, 1, 8)] + [(i,) for i in range(1,65)]):
+        # mx.nd API
+        m = mx.nd.random_uniform(low=-100.0, high=100.0, shape=shape)
+        fast = mx.nd.contrib.intgemm_maxabsolute(m)
+        slow = mx.nd.max(mx.nd.abs(m))
+        assert same(fast, slow)
+        # np API
+        m = np.random.uniform(low=-100.0, high=100.0, size=shape)
+        fast = npx.intgemm_maxabsolute(m).reshape(())
+        slow = np.max(np.abs(m))
+        assert same(fast, slow)
+    
 @use_np
 @with_seed()
-@pytest.mark.parametrize('shape', [(i,) for i in range(1, 67)] + [(2,3), (130, 12)])
-@pytest.mark.parametrize('max_quant', [2.0])
-def test_contrib_intgemm_prepare_data(shape, max_quant):
+def test_contrib_intgemm_prepare_data():
     if "intgemm_prepare_data" not in dir(mx.nd.contrib):
         return
-    m = mx.nd.random_uniform(low=-3.0, high=3.0, shape=shape)
-    scaled = m * 127.0 / max_quant
-    # Rounding 0.5 can go up or down.  Move values away from 0.5.
-    too_close = mx.nd.abs(mx.nd.round(scaled) - scaled) > 0.45
-    m += max_quant / 127.0 * 0.05 * too_close
-
-    # Reference: scale and round
-    ref = mx.nd.round(m * 127.0 / max_quant)
-    # Clip to [-127, 127].  Because otherwise e.g. -129 casts to +127.
-    ref = mx.nd.broadcast_maximum(ref, mx.nd.array([-127.0]))
-    ref = mx.nd.broadcast_minimum(ref, mx.nd.array([127.0]))
-    # Reference: cast to int8
-    ref = mx.nd.cast(ref, dtype='int8')
-    # Reference: ban -128
-    ref = mx.nd.broadcast_maximum(ref, mx.nd.array([-127], dtype = 'int8'))
-
-    test = mx.nd.contrib.intgemm_prepare_data(m, mx.nd.array([max_quant]))
-    assert same(test, ref)
-    test = npx.intgemm_prepare_data(m.as_np_ndarray(), np.array([max_quant]))
-    assert same(test, ref.as_np_ndarray())
-
-@use_np  
+    for shape, max_quant in product([(i,) for i in range(1, 67)] + [(2,3), (130, 12)], [2.0, 2.5]):
+        m = mx.nd.random_uniform(low=-3.0, high=3.0, shape=shape)
+        scaled = m * 127.0 / max_quant
+        # Rounding 0.5 can go up or down.  Move values away from 0.5.
+        too_close = mx.nd.abs(mx.nd.round(scaled) - scaled) > 0.45
+        m += max_quant / 127.0 * 0.05 * too_close
+    
+        # Reference: scale and round
+        ref = mx.nd.round(m * 127.0 / max_quant)
+        # Clip to [-127, 127].  Because otherwise e.g. -129 casts to +127.
+        ref = mx.nd.broadcast_maximum(ref, mx.nd.array([-127.0]))
+        ref = mx.nd.broadcast_minimum(ref, mx.nd.array([127.0]))
+        # Reference: cast to int8
+        ref = mx.nd.cast(ref, dtype='int8')
+        # Reference: ban -128
+        ref = mx.nd.broadcast_maximum(ref, mx.nd.array([-127], dtype = 'int8'))
+    
+        test = mx.nd.contrib.intgemm_prepare_data(m, mx.nd.array([max_quant]))
+        assert same(test, ref)
+        test = npx.intgemm_prepare_data(m.as_np_ndarray(), np.array([max_quant]))
+        assert same(test, ref.as_np_ndarray())
+    
+@use_np
 @with_seed()
-@pytest.mark.parametrize('shape', [(8, 64), (16, 64), (8, 128), (16, 128), (2, 4, 64)])
-@pytest.mark.parametrize('max_quant', [0.2, 3.0])
-@pytest.mark.parametrize('api', [(mx.nd.contrib, mx.nd), (npx, np)])
-def test_contrib_intgemm_weight_consistent(shape, max_quant, api):
+def test_contrib_intgemm_weight_consistent():
     # The weight format is actually CPU-dependent so we don't directly test the
     # output, but indirectly test that it works.
     if "intgemm_prepare_weight" not in dir(mx.nd.contrib):
         return
-    contrib, top = api
-    max_array = top.array([max_quant])
-    if top == mx.nd:
-        m = top.random_uniform(low=-3.0, high=3.0, shape=shape)
-    else:
-        m = np.random.uniform(size=shape)
-    direct = contrib.intgemm_prepare_weight(m, max_array)
-    quant = contrib.intgemm_prepare_data(m, max_array) 
-    indirect = contrib.intgemm_prepare_weight(quant, already_quantized=True)
-    # Should get the same data from direct call and already_quantized version.
-    assert same(direct, indirect)
+    for shape, max_quant, api in product(
+            [(8, 64), (16, 64), (8, 128), (16, 128), (2, 4, 64)],
+            [0.2, 3.0],
+            [(mx.nd.contrib, mx.nd), (npx, np)]):
+        contrib, top = api
+        max_array = top.array([max_quant])
+        if top == mx.nd:
+            m = top.random_uniform(low=-3.0, high=3.0, shape=shape)
+        else:
+            m = np.random.uniform(size=shape)
+        direct = contrib.intgemm_prepare_weight(m, max_array)
+        quant = contrib.intgemm_prepare_data(m, max_array) 
+        indirect = contrib.intgemm_prepare_weight(quant, already_quantized=True)
+        # Should get the same data from direct call and already_quantized version.
+        assert same(direct, indirect)
     
 @use_np
 @with_seed()
-@pytest.mark.parametrize('indices', [
+def test_contrib_intgemm_take_weight():
+    if "intgemm_take_weight" not in dir(mx.nd.contrib):
+        return
+    test_indices = [
         [0,1,2,3,4,5,6,7],
         [1,2,1,2,1,2,1,2],
         [7,6,5,4,3,2,1,0],
@@ -101,23 +108,20 @@ def test_contrib_intgemm_weight_consistent(shape, max_quant, api):
         [random.randint(0,15) for i in range(8)],
         [random.randint(0,15) for i in range(16)],
         [random.randint(0,15) for i in range(24)]
-    ])
-@pytest.mark.parametrize('api', [(mx.nd.contrib, mx.nd), (npx, np)])
-def test_contrib_intgemm_take_weight(indices, api):
-    if "intgemm_take_weight" not in dir(mx.nd.contrib):
-        return
-    contrib, top = api
-    m = top.array([random.randint(-127,127) for i in range(16 * 64)], dtype='int8')
-    m = m.reshape((16, 64))
-    indices = top.array(indices, dtype='int32')
-    # Prepare weight then take.
-    test = contrib.intgemm_prepare_weight(m, already_quantized=True)
-    test = contrib.intgemm_take_weight(test, indices)
-    # Take then prepare.
-    ref = m.take(indices, axis=0)
-    ref = contrib.intgemm_prepare_weight(ref, already_quantized=True)
-    assert same(test, ref)
-
+    ]
+    for indices, api in product(test_indices, [(mx.nd.contrib, mx.nd), (npx, np)]):
+        contrib, top = api
+        m = top.array([random.randint(-127,127) for i in range(16 * 64)], dtype='int8')
+        m = m.reshape((16, 64))
+        indices = top.array(indices, dtype='int32')
+        # Prepare weight then take.
+        test = contrib.intgemm_prepare_weight(m, already_quantized=True)
+        test = contrib.intgemm_take_weight(test, indices)
+        # Take then prepare.
+        ref = m.take(indices, axis=0)
+        ref = contrib.intgemm_prepare_weight(ref, already_quantized=True)
+        assert same(test, ref)
+    
 @use_np
 @pytest.mark.parametrize('data_rows', range(1, 5))
 @pytest.mark.parametrize('inner', range(64, 256, 64))
@@ -152,7 +156,7 @@ def test_contrib_intgemm_multiply(data_rows, inner, weight_cols, api):
                           no_bias=True,
                           flatten=False,
                           num_hidden=weight_cols)
-    assert_almost_equal(cast(test, dtype='float32'), ref, rtol=0.01, atol=0.01)
+    assert_almost_equal(cast(test, dtype='float32').as_nd_ndarray(), ref.as_nd_ndarray(), rtol=0.01, atol=0.01)
 
     # float32 output, no bias
     scale = 3.0
@@ -163,7 +167,7 @@ def test_contrib_intgemm_multiply(data_rows, inner, weight_cols, api):
                                            flatten=False,
                                            out_type='float32',
                                            num_hidden=weight_cols)
-    assert_almost_equal(test, ref * scale, rtol=0.01, atol=0.01)
+    assert_almost_equal(test.as_nd_ndarray(), (ref * scale).as_nd_ndarray(), rtol=0.01, atol=0.01)
 
     # int32 output, bias
     bias = top.array([random.randint(-60000, 60000) for i in range(weight_cols)], dtype = 'int32')
@@ -180,7 +184,7 @@ def test_contrib_intgemm_multiply(data_rows, inner, weight_cols, api):
                                no_bias=False,
                                flatten=False,
                                num_hidden=weight_cols)
-    assert_almost_equal(cast(test, dtype='float32'), ref, rtol=0.01, atol=0.01)
+    assert_almost_equal(cast(test, dtype='float32').as_nd_ndarray(), ref.as_nd_ndarray(), rtol=0.01, atol=0.01)
 
     # float32 output, bias
     # Scaling is applied before bias (and bias is not scaled). So to make the
@@ -193,7 +197,7 @@ def test_contrib_intgemm_multiply(data_rows, inner, weight_cols, api):
                                            flatten=False,
                                            out_type='float32',
                                            num_hidden=weight_cols)
-    assert_almost_equal(test, ref * scale, rtol=0.01, atol=0.01)
+    assert_almost_equal(test.as_nd_ndarray(), (ref * scale).as_nd_ndarray(), rtol=0.01, atol=0.01)
 
     # float32 input should work the same as manually prepared int8 input.
     data_float = top.array([random.uniform(-3.14, 3.14) for i in range(data_rows * inner)])
@@ -216,4 +220,4 @@ def test_contrib_intgemm_multiply(data_rows, inner, weight_cols, api):
                                              flatten=False,
                                              out_type='float32',
                                              num_hidden=weight_cols)
-    assert_almost_equal(direct, cooked, rtol=0.01, atol=0.01)
+    assert_almost_equal(direct.as_nd_ndarray(), cooked.as_nd_ndarray(), rtol=0.01, atol=0.01)
