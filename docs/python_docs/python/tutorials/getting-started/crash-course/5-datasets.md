@@ -20,40 +20,6 @@
 
 One of the most critical steps for model training and inference is loading the data: without data you can't do Machine Learning! In this tutorial we use the Gluon API to define a [Dataset](/api/python/docs/api/gluon/data/index.html#datasets) and use a [DataLoader](/api/python/docs/api/gluon/data/index.html#dataloader) to iterate through the dataset in mini-batches.
 
-# Install MXNet 2.0
-
-
-```python
-!pip install --pre mxnet -f https://dist.mxnet.io/python
-```
-
-    Looking in links: https://dist.mxnet.io/python
-    Collecting mxnet
-      Downloading https://repo.mxnet.io/dist/python/cpu/mxnet-2.0.0b20200831-py2.py3-none-manylinux2014_x86_64.whl (51.5 MB)
-    [K     |████████████████████████████████| 51.5 MB 7.1 MB/s eta 0:00:01
-    [?25hRequirement already satisfied: numpy<2.0.0,>1.16.0 in /home/ec2-user/anaconda3/envs/mxnet_p36/lib/python3.6/site-packages (from mxnet) (1.18.1)
-    Collecting contextvars; python_version < "3.7"
-      Downloading contextvars-2.4.tar.gz (9.6 kB)
-    Requirement already satisfied: requests<3,>=2.20.0 in /home/ec2-user/anaconda3/envs/mxnet_p36/lib/python3.6/site-packages (from mxnet) (2.23.0)
-    Requirement already satisfied: graphviz<0.9.0,>=0.8.1 in /home/ec2-user/anaconda3/envs/mxnet_p36/lib/python3.6/site-packages (from mxnet) (0.8.4)
-    Collecting immutables>=0.9
-      Downloading immutables-0.14-cp36-cp36m-manylinux1_x86_64.whl (98 kB)
-    [K     |████████████████████████████████| 98 kB 3.6 MB/s eta 0:00:011
-    [?25hRequirement already satisfied: idna<3,>=2.5 in /home/ec2-user/anaconda3/envs/mxnet_p36/lib/python3.6/site-packages (from requests<3,>=2.20.0->mxnet) (2.9)
-    Requirement already satisfied: chardet<4,>=3.0.2 in /home/ec2-user/anaconda3/envs/mxnet_p36/lib/python3.6/site-packages (from requests<3,>=2.20.0->mxnet) (3.0.4)
-    Requirement already satisfied: urllib3!=1.25.0,!=1.25.1,<1.26,>=1.21.1 in /home/ec2-user/anaconda3/envs/mxnet_p36/lib/python3.6/site-packages (from requests<3,>=2.20.0->mxnet) (1.25.8)
-    Requirement already satisfied: certifi>=2017.4.17 in /home/ec2-user/anaconda3/envs/mxnet_p36/lib/python3.6/site-packages (from requests<3,>=2.20.0->mxnet) (2020.6.20)
-    Building wheels for collected packages: contextvars
-      Building wheel for contextvars (setup.py) ... [?25ldone
-    [?25h  Created wheel for contextvars: filename=contextvars-2.4-py3-none-any.whl size=7664 sha256=c4195e935f5505bed92acbaa71e886731fa08e6496d9dc8de3ee4453cf5613ec
-      Stored in directory: /home/ec2-user/.cache/pip/wheels/41/11/53/911724983aa48deb94792432e14e518447212dd6c5477d49d3
-    Successfully built contextvars
-    Installing collected packages: immutables, contextvars, mxnet
-    Successfully installed contextvars-2.4 immutables-0.14 mxnet-2.0.0b20200831
-    [33mWARNING: You are using pip version 20.0.2; however, version 20.2.2 is available.
-    You should consider upgrading via the '/home/ec2-user/anaconda3/envs/mxnet_p36/bin/python -m pip install --upgrade pip' command.[0m
-
-
 
 ```python
 import mxnet as mx
@@ -62,18 +28,6 @@ import time
 import tarfile
 
 ```
-
-
-```python
-mx.__version__
-```
-
-
-
-
-    '2.0.0'
-
-
 
 ## Introduction to `Dataset`s
 
@@ -190,7 +144,7 @@ print("Label description: {}".format(label_desc[label]))
 
 
 
-![png](output_13_1.png)
+![png](output_10_1.png)
 
 
 
@@ -379,7 +333,7 @@ assert label == 1
 
 
 
-![png](output_30_1.png)
+![png](output_27_1.png)
 
 
 
@@ -392,42 +346,6 @@ assert label == 1
 Sometimes you have data that doesn't quite fit the format expected by the included [Dataset](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.Dataset)s. You might be able to preprocess your data to fit the expected format, but it is easy to create your own dataset to do this.
 
 All you need to do is create a class that implements a `__getitem__` method, that returns a sample (i.e. a tuple of [mx.nd.NDArray](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.NDArray)'s).
-
-# Appendix: Upgrading from Module `DataIter` to Gluon `DataLoader`
-
-Before Gluon's [DataLoader](/api/python/docs/api/gluon/data/index.html#dataloader), MXNet used [DataIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.DataIter) objects for loading data for training and testing. `DataIter` has a similar interface for iterating through data, but it isn't directly compatible with typical Gluon `DataLoader` loops. Unlike Gluon `DataLoader` which often returns a tuple of `(data, label)`, a `DataIter` returns a [DataBatch](/api/python/docs/api/mxnet/io/index.html#mxnet.io.DataBatch) object that has `data` and `label` properties. Switching to `DataLoader`'s is highly recommended when using Gluon, but you'll need to take care of pre-processing steps such as augmentations in a `transform` function.
-
-So you can get up and running with Gluon quicker if you have already implemented complex pre-processing steps using `DataIter`, we have provided a simple class to wrap existing `DataIter` objects so they can be used in a typical Gluon training loop. You can use this class for `DataIter`s such as [mxnet.image.ImageIter](/api/python/docs/api/mxnet/image/index.html#mxnet.image.ImageIter) and [mxnet.io.ImageRecordIter](/api/python/docs/api/mxnet/io/index.html#mxnet.io.ImageDetRecordIter) that have single data and label arrays.
-
-
-```python
-class DataIterLoader():
-    def __init__(self, data_iter):
-        self.data_iter = data_iter
-
-    def __iter__(self):
-        self.data_iter.reset()
-        return self
-
-    def __next__(self):
-        batch = self.data_iter.__next__()
-        assert len(batch.data) == len(batch.label) == 1
-        data = batch.data[0]
-        label = batch.label[0]
-        return data, label
-
-    def next(self):
-        return self.__next__() # for Python 2
-```
-
-
-```python
-data_iter = mx.io.NDArrayIter(data=X, label=y, batch_size=5)
-data_iter_loader = DataIterLoader(data_iter)
-for X_batch, y_batch in data_iter_loader:
-    assert X_batch.shape == (5, 3)
-    assert y_batch.shape == (5, 1)
-```
 
 ## New in MXNet 2.0: C++ backend dataloaders
 
@@ -453,8 +371,8 @@ This new dataloader provides:
 - common C++ batchify functions that are split and context aware
 - a C++ MultithreadingDataLoader which inherit the same arguments as gluon.data.DataLoader but use MXNet internal multithreading rather than python multiprocessing.
 - fallback to python multiprocessing whenever the dataset is not fully supported by backend(e.g., there are custom python datasets)
-- the transform is not fully hybridizable
-- batchify is not fully supported by backend
+    - the transform is not fully hybridizable
+    - batchify is not fully supported by backend
 
 Users can continue to with the traditional gluon.data.Dataloader and the C++ backend will be applied automatically. The 'try_nopython' default is 'Auto', which detects whether the C++ backend is available given the dataset and transforms. 
 
@@ -535,9 +453,4 @@ print('Elapsed time for python dataloader:', time.time() - start)
 
 ```python
 # <!-- INSERT SOURCE DOWNLOAD BUTTONS -->
-```
-
-
-```python
-
 ```
