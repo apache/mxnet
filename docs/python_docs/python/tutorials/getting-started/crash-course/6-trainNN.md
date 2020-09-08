@@ -1,7 +1,3 @@
-```python
-!pip install --pre --user mxnet -f https://dist.mxnet.io/python/cpu
-```
-
 # Training a Neural Network
 
 We have seen all the necessary components for creating a neural network, we are
@@ -15,12 +11,12 @@ images](https://data.mendeley.com/datasets/hb74ynkjcn/1) that consist of healthy
 and diseased leaf images of 12 different plant species. To get this dataset we
 first download and extract it
 
-```python
+```{.python .input}
 # Download dataset
 !wget https://md-datasets-cache-zipfiles-prod.s3.eu-west-1.amazonaws.com/hb74ynkjcn-1.zip
 ```
 
-```python
+```{.python .input}
 # Extract the dataset in a folder that we create and call plants
 !mkdir plants
 !unzip hb74ynkjcn-1.zip -d plants
@@ -49,7 +45,6 @@ plants
 |-- Mango (P0)
     |-- diseased
     |-- healthy
-
 ```
 
 So for each plant species we might have examples of diseased leaves or healthy
@@ -68,7 +63,7 @@ small utility code to get our dataset ready. Once we run that utility code on
 our data, because our structure will be already organized in folders, we can use
 the `ImageFolderDataset` class.
 
-```python
+```{.python .input}
 # Import all the necessary libraries to train
 import time
 
@@ -86,7 +81,7 @@ from prepare_dataset import process_dataset #utility code to rearrange the data
 mx.random.seed(42)
 ```
 
-```python
+```{.python .input}
 # Call the utility function to rearrange the images
 process_dataset('plants')
 ```
@@ -109,14 +104,13 @@ datasets
         |-- .
         |-- .
         |-- imagen.JPG
-
 ```
 
 Now we just create three different Dataset objects from the `train`,
 `validation` and `test` folders and the `ImageFolderDataset` class will take
 care of inferring the classes from the directory names.
 
-```python
+```{.python .input}
 # Use ImageFolderDataset to create a Dataset object from directory structure
 train_dataset = gluon.data.vision.ImageFolderDataset('./datasets/train')
 val_dataset = gluon.data.vision.ImageFolderDataset('./datasets/validation')
@@ -128,7 +122,7 @@ the $i$-th element from the dataset. The $i$-th element is a tuple with two
 objects, the first one is the image in array form and the second one the
 corresponding label for that training example.
 
-```python
+```{.python .input}
 sample_idx = 888 # choose a random sample
 sample = train_dataset[sample_idx]
 data = sample[0]
@@ -152,7 +146,7 @@ transformation pipelines, one for training and the other one for validations and
 testing. This is because we don't need to randomly flip or do color jitter to
 the images we'll be classifying later on.
 
-```python
+```{.python .input}
 # Import transforms as compose a series of transformations to the images
 from mxnet.gluon.data.vision import transforms
 
@@ -186,7 +180,7 @@ this step we also need to decide the batch size, which is how many images we
 will be presenting to the network at the same time, and whether we want to
 shuffle the data before passing it to the network.
 
-```python
+```{.python .input}
 # Create data loaders
 batch_size = 4
 train_loader = gluon.data.DataLoader(train_dataset.transform_first(training_transformer),batch_size=batch_size, shuffle=True)
@@ -196,7 +190,7 @@ test_loader = gluon.data.DataLoader(test_dataset.transform_first(validation_tran
 
 Now we can see the transformations that we made to the images.
 
-```python
+```{.python .input}
 # Function to plot batch
 def show_batch(batch, columns=4):
     labels = batch[1].asnumpy()
@@ -211,13 +205,13 @@ def show_batch(batch, columns=4):
     plt.show()
 ```
 
-```python
+```{.python .input}
 for batch in train_loader:
     a = batch
     break
 ```
 
-```python
+```{.python .input}
 show_batch(a)
 ```
 
@@ -234,7 +228,7 @@ network. First we create two functions that will create the two type of blocks
 we'll use, the convolutional and the dense block and then we will create an
 entire network based on these two blocks.
 
-```python
+```{.python .input}
 # The convolutional block has a convolution layer, a max pool layer and a batch normalization layer
 def conv_block(filters, kernel_size=2, stride=2, batch_norm=True):
     conv_block = nn.HybridSequential()
@@ -253,7 +247,7 @@ def dense_block(neurons, activation='relu', dropout=0.2):
     return dense_block
 ```
 
-```python
+```{.python .input}
 # Create neural network blueprint using the blocks
 class LeafNetwork(nn.HybridBlock):
     def __init__(self):
@@ -262,8 +256,8 @@ class LeafNetwork(nn.HybridBlock):
         self.conv2 = conv_block(64)
         self.conv3 = conv_block(128)
         self.flatten = nn.Flatten()
-        self.dense1 = dense_block(512)
-        self.dense2 = dense_block(100)
+        self.dense1 = dense_block(100)
+        self.dense2 = dense_block(10)
         self.dense3 = nn.Dense(2)
         
     def forward(self, batch):
@@ -283,7 +277,7 @@ create an instance from the architecture. As we have seen previously in this
 course, to be able to use the network we need to initialize the parameters and
 hybridize the model.
 
-```python
+```{.python .input}
 # Create the model based on the blueprint we built and initialize the parameters
 ctx = mx.cpu() 
 
@@ -308,7 +302,7 @@ function to optimize the parameters.
 For this particular dataset we choose Stochastic Gradient Descent as the
 optimizer and Cross Entropy as the loss function.
 
-```python
+```{.python .input}
 # SGD optimizer
 optimizer = 'sgd'
 
@@ -325,7 +319,7 @@ loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
 Finally we create a function to evaluate the performance of the network in the
 validation set and then set up the training loop.
 
-```python
+```{.python .input}
 # Function to return the accuracy for the validation and test set
 def test(ctx, val_data):
     acc = gluon.metric.Accuracy()
@@ -345,7 +339,7 @@ We have everything set so we can start training our network. This might take
 some time to train depending on the hardware and number of layers and images you
 use. For this particular case we only choose to train for 2 epochs.
 
-```python
+```{.python .input}
 # Start the training loop
 epochs = 2
 accuracy = gluon.metric.Accuracy()
@@ -386,7 +380,7 @@ Now that our network is trained and we reached a decent accuracy we can evaluate
 the performance on the test set. To that end we use the `test_loader` and the
 test function
 
-```python
+```{.python .input}
 test(ctx, test_loader)
 ```
 
@@ -400,7 +394,7 @@ If we want to preserve the trained weights of the network we can save the
 parameters in a file. Later when we want to use the network to make predictions
 we can load the parameters back
 
-```python
+```{.python .input}
 # Save parameters in the 
 model.save_parameters('leaf_models.params')
 ```
