@@ -993,6 +993,24 @@ def test_fmod():
     assert B.grad[-1] == -1 and B.grad[0] == -2
 
 @use_np
+def test_mod():
+    # np.mod and np.remainder are the same thing
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.ones((INT_OVERFLOW, 1))
+    A[-1, -1], B[-1, -1] = 11, 7
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.mod(A, B)
+        C.backward()
+    assert C.shape == A.shape
+    assert C[-1, -1] == 4
+    assert A.grad.shape == A.shape
+    assert A.grad[0, 0] == 1
+    assert B.grad.shape == B.shape
+    assert B.grad[-1] == -1 and B.grad[0] == -2
+
+@use_np
 def test_value_check_family():
     def batch_check(funcs, ref):
         A.attach_grad()
@@ -1083,6 +1101,156 @@ def test_invert():
     assert B[0, 0] == 255 and B[-1, -1] == 254
     assert A.grad.shape == A.shape
     assert A.grad[-1, -1] == 0
+
+@use_np
+def test_exp():
+    A = np.ones((2, INT_OVERFLOW))
+    A[-1, -1] = 2
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.exp(A)
+        B.backward()
+    assert B.shape == A.shape
+    assert_almost_equal(B[0, 0], np.array(np.e**1), rtol=1e-5, atol=1e-5)
+    assert_almost_equal(B[-1, -1], np.array(np.e**2), rtol=1e-5, atol=1e-5)
+    assert A.grad.shape == A.shape
+    assert_almost_equal(A.grad[-1, -1], B[-1, -1], rtol=1e-5, atol=1e-5)
+
+@use_np
+def test_expm1():
+    A = np.ones((2, INT_OVERFLOW))
+    A[-1, -1] = 2
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.expm1(A)
+        B.backward()
+    assert B.shape == A.shape
+    assert_almost_equal(B[0, 0], np.array(np.e**1 - 1), rtol=1e-5, atol=1e-5)
+    assert_almost_equal(B[-1, -1], np.array(np.e**2 - 1), rtol=1e-5, atol=1e-5)
+    assert A.grad.shape == A.shape
+    assert_almost_equal(A.grad[-1, -1], np.array(np.e**2), rtol=1e-5, atol=1e-5)
+
+@use_np
+@pytest.mark.skip(reason='segfaults on large tensor ~2**30')
+def test_power():
+    INT_OVERFLOW = 2**30
+    A = np.full((2, INT_OVERFLOW), 2)
+    B = np.ones((2, INT_OVERFLOW))
+    B[-1, -1] = 3
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.power(A, B)
+        C.backward()
+    assert C.shape == A.shape
+    assert C[-1, -1] == 8
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 12
+    assert B.grad.shape == B.shape
+    assert_almost_equal(B.grad[-1, -1], 2**3 * np.log(2), rtol=1e-5, atol=1e-5)
+
+@use_np
+def test_frexp():
+    A = np.ones((2, INT_OVERFLOW))
+    A[-1, -1] = 9
+    B, C = np.frexp(A)
+    assert_almost_equal(A[-1, -1], B[-1, -1] * 2 ** C[-1, -1], \
+        rtol=1e-5, atol=1e-5)
+
+@use_np
+@pytest.mark.skip(reason='segfaults on large tensor ~2**30, likely the same \
+    issue as with power')
+def test_ldexp():
+    INT_OVERFLOW = 2**30
+    A = np.ones((2, INT_OVERFLOW))
+    B = np.ones((2, INT_OVERFLOW))
+    A[-1, -1], B[-1, -1] = 5, 2
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.ldexp(A, B)
+        C.backward()
+    assert C.shape == A.shape
+    assert C[-1, -1] == 20
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 4
+    assert B.grad.shape == B.shape
+    assert_almost_equal(B.grad[-1, -1], A[-1, -1] * 2**B[-1, -1] * np.log(2), \
+        rtol=1e-5, atol=1e-5)
+
+@use_np
+def test_reciprocal():
+    A = np.ones((2, INT_OVERFLOW))
+    A[-1, -1] = 3
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.reciprocal(A)
+        B.backward()
+    assert B.shape == A.shape
+    assert_almost_equal(B[-1, -1], np.array([1.0/3]), rtol=1e-5, atol=1e-5)
+    assert A.grad.shape == A.shape
+    assert_almost_equal(A.grad[-1, -1], np.array([-1.0/3**2]), \
+        rtol=1e-5, atol=1e-5)
+
+@use_np
+def test_sum():
+    A = np.zeros((2, INT_OVERFLOW))
+    A[-1, -1] = 10
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.sum(A, axis=1)
+        B.backward()
+    assert B.shape == (2, )
+    assert B[0] == 0 and B[1] == 10
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 1
+    with mx.autograd.record():
+        C = np.sum(A, axis=0)
+        C.backward()
+    assert C.shape == (INT_OVERFLOW, )
+    assert B[0] == 0 and B[-1] == 10
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 1
+
+@use_np
+def test_negative():
+    A = np.ones((2, INT_OVERFLOW))
+    A[-1, -1] = -2
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.negative(A)
+        B.backward()
+    assert B.shape == A.shape
+    assert B[0, 0] == -1 and B[-1, -1] == 2
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == -1
+
+@use_np
+@pytest.mark.skip(reason='segfaults on large tensor ~2**30, likely the same \
+    issue as with power')
+def test_multiply():
+    INT_OVERFLOW = 2**30
+    A = np.ones((2, INT_OVERFLOW))
+    B = np.ones((2, INT_OVERFLOW))
+    A[-1, -1], B[-1, -1] = 2, 3
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.multiply(A, B)
+        C.backward()
+    assert C.shape == A.shape
+    assert C[0, 0] == 1 and C[-1, -1] == 6
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == B[-1, -1]
+    assert B.grad.shape == B.shape
+    assert B.grad[-1, -1] == A[-1, -1]
+
+@use_np
+def test_identity():
+    M = 2**16
+    A = np.identity(M)
+    assert A.shape == (M, M)
+    assert A[0, 0] == 1 and A[-1, -1] == 1 and A[-1, -2] == 0
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
