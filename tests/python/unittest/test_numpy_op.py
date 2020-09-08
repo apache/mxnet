@@ -10220,6 +10220,8 @@ def test_np_rollaxis():
                         assert same(mx_out.asnumpy(), np_out)
 
 
+@with_seed()
+@use_np
 @pytest.mark.parametrize('op_name', ['sum', 'mean', 'min', 'max',
     'argmin', 'argmax'])
 @pytest.mark.parametrize('dtype, decimal', [
