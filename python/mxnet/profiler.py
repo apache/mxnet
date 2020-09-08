@@ -504,7 +504,7 @@ class Marker(object):
 
 
 @contextlib.contextmanager
-def scope(name='<unk>:', append_mode=False):
+def scope(name='<unk>:', append_mode=True):
     """Assign the profiler scope for the GPU memory profiler.
 
     It is implicitly invoked when the Gluon API is used.
@@ -516,7 +516,9 @@ def scope(name='<unk>:', append_mode=False):
 
     """
     name = name + ":" if not name.endswith(":") else name
-    token = _current_scope.set(_current_scope.get() + name if append_mode else name)
+    if append_mode and _current_scope.get() != "<unk>:":
+        name = _current_scope.get() + name
+    token = _current_scope.set(name)
     # Invoke the C API to propagate the profiler scope information to the
     # C++ backend.
     check_call(_LIB.MXSetProfilerScope(c_str(name)))
