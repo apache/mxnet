@@ -403,9 +403,7 @@ std::vector<NDArray*> Imperative::Backward(
   ograd_entries.reserve(ograds.size());
   for (size_t i = 0; i < outputs.size(); ++i) {
     nnvm::ObjectPtr np = Node::Create();
-    np->attrs.dict["__profiler_scope__"]
-        = outputs[i]->storage_handle().profiler_scope;
-    np->attrs.name = outputs[i]->storage_handle().name + "_head_grad";
+    np->attrs.name = "_head_grad_" + std::to_string(i);
     ograd_entries.emplace_back(NodeEntry{np, 0, 0});
     AGInfo& info = AGInfo::Create(ograd_entries.back().node);
     info.ctx = outputs[i]->ctx();
