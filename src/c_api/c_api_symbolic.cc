@@ -1517,7 +1517,7 @@ int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
     }
     // create param indice list and attach it to the graph
     std::vector<int> param_indice_list;
-    if(param_indices[0] == '['){
+    if (param_indices[0] == '[') {
       std::string indice_string;
       indice_string.assign(param_indices, std::strlen(param_indices)-1);
       indice_string = indice_string.substr(1);
@@ -1529,11 +1529,10 @@ int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
           param_indice_list.emplace_back(std::stoi(token));
           indice_string.erase(0, pos + delimiter.length());
       }
-      if(indice_string.length() > 0) {
+      if (indice_string.length() > 0) {
         param_indice_list.emplace_back(std::stoi(indice_string));
       }
     }
-    
     // run BuildSubgraph pass with static_shape property
     auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend("static_shape");
     const auto& subgraph_prop_list = backend->GetSubgraphProperties();

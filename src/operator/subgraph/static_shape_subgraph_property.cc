@@ -105,7 +105,7 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                      const int subgraph_id = 0) const override {
     std::vector<std::pair<std::string, std::string>> flags;
-    _set_cachedop_flags(sym, flags);
+    _set_cachedop_flags(sym, &flags);
     nnvm::ObjectPtr n = nnvm::Node::Create();
     n->attrs.op = Op::Get("_CachedOp");
     n->attrs.name = "_static_shape_CachedOp" + std::to_string(subgraph_id);
@@ -117,12 +117,12 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
  private:
     // generate data_indices and param_indices for subgraph CachedOp node
     void _set_cachedop_flags(nnvm::Symbol symbol,
-             std::vector<std::pair<std::string, std::string>>& flags) const {
+             std::vector<std::pair<std::string, std::string>>* flags) const {
     std::vector<std::string> input_names = symbol.ListInputNames(nnvm::Symbol::ListInputOption(0));
     std::string data_indices = "[";
     std::string param_indices = "[";
     for (int i = 0; i < input_names.size(); i++) {
-      if (param_name_set_.count(input_names[i].substr(0,input_names[i].length()-1)) == 0) {
+      if (param_name_set_.count(input_names[i].substr(0, input_names[i].length()-1)) == 0) {
         if (data_indices.compare("[") == 0) {
           data_indices = data_indices + std::to_string(i);
         } else {
@@ -139,11 +139,11 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
     data_indices = data_indices + "]";
     param_indices = param_indices + "]";
     for (auto kv : options_map_) {
-      flags.emplace_back(kv);
+      flags->emplace_back(kv);
     }
-    flags.emplace_back("data_indices", data_indices);
-    flags.emplace_back("param_indices", param_indices);
-  } 
+    flags->emplace_back("data_indices", data_indices);
+    flags->emplace_back("param_indices", param_indices);
+  }
 
   std::vector<std::pair<std::string, std::string>> options_map_;
   std::set<std::string> param_name_set_;
