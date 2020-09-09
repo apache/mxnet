@@ -568,6 +568,31 @@ def test_slice_assign():
     B[-1] = 2
     assert B[-1, 0] == 2 and B[-1, 1] == 2
 
+@use_np
+def test_flatnonzero():
+    A = np.zeros((2, INT_OVERFLOW))
+    A[-1, -1] = 1
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.flatnonzero(A)
+        B.backward()
+    assert B.shape == (1, )
+    assert B[0] == int(2 * INT_OVERFLOW - 1)
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 0
+
+@use_np
+def test_ravel():
+    A = np.zeros((2, INT_OVERFLOW))
+    A[0, -1], A[-1, -1] = 1, 2
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.ravel(A)
+        B.backward()
+    assert B.shape == (DOUBLE_INT_OVERFLOW, )
+    assert B[INT_OVERFLOW-1] == 1 and B[-1] == 2
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 1
 
 '''
                                      _               _
