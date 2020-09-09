@@ -453,18 +453,19 @@ def test_concatenate():
             [(3, INT_OVERFLOW), (int(INT_OVERFLOW * 3), )])
 
 @use_np
-# backward not working https://github.com/apache/incubator-mxnet/issues/18952
 def test_copysign():
     A = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = 2
     A.attach_grad()
     B = np.array([-1])
     with mx.autograd.record():
         C = np.copysign(A, B)
         C.backward()
     assert C.shape == (INT_OVERFLOW, 2)
-    assert C[0][0] == -1
+    assert C[-1 ,-1] == -2
     assert A.grad.shape == (INT_OVERFLOW, 2)
-    
+    assert A.grad[-1, -1] == -1
+
 @pytest.mark.skip(reason="CI hasn't switch to ILP64 OpenBLAS yet")
 @use_np
 def test_dot():
