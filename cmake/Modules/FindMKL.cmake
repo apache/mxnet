@@ -28,7 +28,7 @@
 # This module defines the following variables:
 #
 #   MKL_FOUND            : True mkl is found
-#   MKL_INCLUDE_DIR      : unclude directory
+#   MKL_INCLUDE_DIR      : include directory
 #   MKL_LIBRARIES        : the libraries to link against.
 #
 # cjolivier01: Changed to also look for MKLDNN library (subset of mkl) instead of standard MKL package
@@ -39,7 +39,8 @@ if(MKL_FOUND)
 endif()
 
 # ---[ Root folders
-set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
+set(INTEL_HOME_ROOT "$ENV{HOME}/intel" CACHE PATH "Folder contains user-installed intel libs")
+set(INTEL_OPT_ROOT "/opt/intel" CACHE PATH "Folder contains root-installed intel libs")
 
 
   # ---[ Options
@@ -55,7 +56,7 @@ set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
   option(MKL_USE_ILP64 "Use ilp64 data model" OFF)
   cmake_dependent_option(MKL_USE_CLUSTER "Use cluster functions" OFF "CMAKE_SIZEOF_VOID_P EQUAL 4" OFF)
 
-  find_path(MKL_ROOT include/mkl.h PATHS $ENV{MKL_ROOT} ${INTEL_ROOT}/mkl
+  find_path(MKL_ROOT include/mkl.h PATHS $ENV{MKLROOT} ${INTEL_HOME_ROOT}/mkl ${INTEL_OPT_ROOT}/mkl
     DOC "Folder contains MKL")
 
   # ---[ Find include dir
@@ -134,12 +135,12 @@ set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
     endif()
 
     if(WIN32)
-      find_path(INTEL_INCLUDE_DIR omp.h PATHS ${INTEL_ROOT} PATH_SUFFIXES include)
+      find_path(INTEL_INCLUDE_DIR omp.h PATHS ${MKL_ROOT} PATH_SUFFIXES include)
       list(APPEND __looked_for INTEL_INCLUDE_DIR)
     endif()
 
     find_library(IOMP_LIBRARY ${__iomp5_libs}
-      PATHS ${INTEL_RTL_ROOT} ${INTEL_ROOT}/compiler ${MKL_ROOT}/.. ${MKL_ROOT}/../compiler
+      PATHS ${MKL_ROOT} ${MKL_ROOT}/compiler ${MKL_ROOT}/.. ${MKL_ROOT}/../compiler
       PATH_SUFFIXES ${__path_suffixes}
       DOC "Path to Path to OpenMP runtime library")
 
