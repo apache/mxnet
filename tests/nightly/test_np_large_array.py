@@ -353,6 +353,7 @@ def test_bitwise_family():
     A = np.ones((INT_OVERFLOW, 1), dtype='int32')
     B = np.ones((INT_OVERFLOW, 2), dtype='int32')
     batch_check(A, B, [np.bitwise_and, np.bitwise_or, np.bitwise_xor])
+    # np.invert and np.bitwise_not are the same thing
     C = np.bitwise_not(A)
     assert C.shape == (INT_OVERFLOW, 1)
     assert C[0] == np.bitwise_not(np.ones((1), dtype='int32')) 
