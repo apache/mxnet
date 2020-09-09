@@ -3129,6 +3129,7 @@ MXNET_DLL int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
                                           const mx_uint num_flags,
                                           const char** keys,
                                           const char** vals,
+                                          const char* param_indices,
                                           bool* has_dynamic_shape);
 
 #ifdef __cplusplus

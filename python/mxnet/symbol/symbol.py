@@ -2666,6 +2666,7 @@ class Symbol(SymbolBase):
         # Pass static_allco and static_shape flags into c_api
         key_list = []
         val_list = []
+        param_indices = 'null'
         for flag in flags:
             key, val = flag[0], flag[1]
             if key in ['static_alloc', 'static_shape']:
@@ -2674,12 +2675,15 @@ class Symbol(SymbolBase):
                     val_list.append('true')
                 else:
                     val_list.append('false')
+            if key in ['param_indices']:
+                param_indices = str(val)
 
         check_call(_LIB.MXOptimizeForDynamicShapeOp(self.handle,
                                                     ctypes.byref(out),
                                                     mx_uint(len(key_list)),
                                                     c_str_array(key_list),
                                                     c_str_array(val_list),
+                                                    c_str(param_indices),
                                                     ctypes.byref(has_dynamic_shape)))
         if is_np_array:
             from .numpy import _Symbol as np_symbol
