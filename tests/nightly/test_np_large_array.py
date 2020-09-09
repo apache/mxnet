@@ -983,6 +983,51 @@ def test_identity():
     assert A.shape == (M, M)
     assert A[0, 0] == 1 and A[-1, -1] == 1 and A[-1, -2] == 0
 
+@use_np
+def test_square():
+    A = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = 3
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.square(A)
+        B.backward()
+    assert B.shape == A.shape
+    assert B[-1, -1] == 9
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 6
+
+@use_np
+def test_sign():
+    A = np.zeros((INT_OVERFLOW, 2))
+    A[-1, -1], A[-2, -1] = 2, -2
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.sign(A)
+        B.backward()
+    assert B.shape == A.shape
+    assert B[0, 0] == 0 and B[-1, -1] == 1 and B[-2, -1] == -1
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 0
+
+@use_np
+def test_prod():
+    A = np.ones((2, INT_OVERFLOW))
+    A[0, 0], A[-1, -1] = 2, 10
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.prod(A, axis=1)
+        B.backward()
+    assert B.shape == (2, )
+    assert B[0] == 2 and B[1] == 10
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 1
+    with mx.autograd.record():
+        C = np.sum(A, axis=0)
+        C.backward()
+    assert C.shape == (INT_OVERFLOW, )
+    assert B[0] == 2 and B[-1] == 10
+    assert A.grad.shape == A.shape
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
