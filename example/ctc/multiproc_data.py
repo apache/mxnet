@@ -48,7 +48,7 @@ class MPData(object):
         self.queue = mp.Queue(maxsize=int(max_queue_size))
         self.alive = mp.Value(c_bool, False, lock=False)
         self.num_proc = num_processes
-        self.proc = list()
+        self.proc = []
         self.fn = fn
 
     def start(self):
@@ -122,4 +122,5 @@ class MPData(object):
         print("Queue size on reset: {}".format(qsize))
         for i, p in enumerate(self.proc):
             p.join()
-        self.proc.clear()
+        if self.proc:
+            self.proc = []
