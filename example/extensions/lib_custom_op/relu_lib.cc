@@ -116,12 +116,18 @@ MXReturnValue MyStatefulReluGPU::Backward(std::vector<MXTensor>* inputs,
 
 
 MXReturnValue createOpStateCPU(const std::unordered_map<std::string, std::string>& attrs,
+                               const MXContext& ctx,
+                               const std::vector<std::vector<unsigned int> >& in_shapes,
+                               const std::vector<int> in_types,
                                CustomStatefulOp** op_inst) {
   *op_inst = new MyStatefulReluCPU(attrs);
   return MX_SUCCESS;
 }
 
 MXReturnValue createOpStateGPU(const std::unordered_map<std::string, std::string>& attrs,
+                               const MXContext& ctx,
+                               const std::vector<std::vector<unsigned int> >& in_shapes,
+                               const std::vector<int> in_types,
                                CustomStatefulOp** op_inst) {
   *op_inst = new MyStatefulReluGPU(attrs);
   return MX_SUCCESS;

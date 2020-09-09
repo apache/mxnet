@@ -1093,6 +1093,28 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         attr_vals.push_back(kv.second.c_str());
       }
 
+      // string repr of supported context for custom library, currently only "cpu" and "gpu"
+      const char* ctx_str = ctx.dev_mask() == Context::kCPU ? "cpu" : "gpu";
+
+      std::vector<uint32_t*> inshapes(in_shapes.size());
+      std::vector<int> indims(in_shapes.size());
+
+      // determine amount of memory needed to store all the input shapes
+      size_t buff_size = 0;
+      for (size_t i = 0; i < in_shapes.size(); ++i)
+        buff_size += in_shapes[i].ndim();
+
+      // copy input shapes to raw memory layout
+      std::vector<uint32_t> inbuff(buff_size);
+      uint32_t *ptr = inbuff.data();
+      for (size_t i = 0; i < in_shapes.size(); ++i) {
+        inshapes[i] = ptr;
+        indims[i] = in_shapes[i].ndim();
+        for (int j = 0; j < in_shapes[i].ndim(); ++j, ++ptr) {
+          *ptr = static_cast<uint32_t>(in_shapes[i][j]);
+        }
+      }
+
       // convert subgraph symbol from node attributes to char*
       std::string subgraph_json;
       if (!attrs.subgraphs.empty()) {
@@ -1111,7 +1133,9 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         CHECK(createop_map.count("cpu") > 0)
           << "CPU CreateOpState not implemented for '" << name_str << "'";
         int retval = callCreateOpState(createop_map.at("cpu"), attr_keys.data(), attr_vals.data(),
-                                       attr_keys.size(), &state_op_inst);
+                                       attr_keys.size(), ctx_str, ctx.real_dev_id(),
+                                       inshapes.data(), indims.data(),
+                                       in_shapes.size(), in_types.data(), &state_op_inst);
         std::string msgs = getExtensionMsgs(msgSize, msgGet);
         CHECK(retval) << "Error calling CreateOpState CPU for custom operator '" << name_str << "'"
                       << msgs;
@@ -1119,7 +1143,9 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         CHECK(createop_map.count("gpu") > 0)
           << "GPU CreateOpState not implemented for '" << name_str << "'";
         int retval = callCreateOpState(createop_map.at("gpu"), attr_keys.data(), attr_vals.data(),
-                                       attr_keys.size(), &state_op_inst);
+                                       attr_keys.size(), ctx_str, ctx.real_dev_id(),
+                                       inshapes.data(), indims.data(),
+                                       in_shapes.size(), in_types.data(), &state_op_inst);
         std::string msgs = getExtensionMsgs(msgSize, msgGet);
         CHECK(retval) << "Error calling CreateOpState GPU for custom operator '" << name_str << "'"
         << msgs;

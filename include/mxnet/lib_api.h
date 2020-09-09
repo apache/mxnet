@@ -732,6 +732,9 @@ typedef MXReturnValue (*mutateInputs_t)(const std::unordered_map<std::string,
                                         std::vector<int>* input_indices);
 typedef MXReturnValue (*createOpState_t)(const std::unordered_map<std::string,
                                          std::string>& attributes,
+                                         const MXContext& ctx,
+                                         const std::vector<std::vector<unsigned int> >& in_shapes,
+                                         const std::vector<int> in_types,
                                          CustomStatefulOp**);
 
 /*!
@@ -1000,8 +1003,9 @@ typedef int (*opCallMutateInputs_t)(mutateInputs_t mutate, const char* const* ke
 
 #define MXLIB_OPCALLCREATEOPSTATE_STR "_opCallCreateOpState"
 typedef int (*opCallCreateOpState_t)(createOpState_t create_op, const char* const* keys,
-                                     const char* const* vals, int num,
-                                     void** state_op);
+                                     const char* const* vals, int num, const char* dev_type,
+                                     int dev_id, unsigned int** inshapes, int* indims,
+                                     int num_in, const int* intypes, void** state_op);
 
 #define MXLIB_OPCALLFSTATEFULCOMP_STR "_opCallFStatefulCompute"
 typedef int (*opCallFStatefulComp_t)(int is_forward, void* state_op,
@@ -1190,9 +1194,10 @@ extern "C" {
 
   /*! \brief returns status of calling createStatefulOp function for operator from library */
   MX_INT_RET _opCallCreateOpState(mxnet::ext::createOpState_t create_op, const char* const* keys,
-                                  const char* const* vals, int num,
-                                  void** state_op);
-
+                                  const char* const* vals, int num, const char* dev_type,
+                                  int dev_id, unsigned int** inshapes, int* indims,
+                                  int num_in, const int* intypes, void** state_op);
+  
   /*! \brief returns status of calling Stateful Forward/Backward for operator from library */
   MX_INT_RET _opCallFStatefulCompute(int is_forward, void* state_op, const int64_t** inshapes,
                                      int* indims, void** indata, int* intypes, size_t* inIDs,
