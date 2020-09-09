@@ -11,7 +11,7 @@ network layers in the following two modules:
 
 Use the following commands to import the packages required for this step.
 
-```{.python .input  n=1}
+```python
 from mxnet import np, npx
 from mxnet.gluon import nn, Block
 npx.set_np()  # Change MXNet to the numpy-like mode.
@@ -25,22 +25,9 @@ inside the neural network. One of the simplest layers you can create is a
 in the input that are connected to every node in the next layer. Use the
 following code example to start with a dense layer with two output units.
 
-```{.python .input  n=2}
+```python
 layer = nn.Dense(5)
 layer
-```
-
-```{.json .output n=2}
-[
- {
-  "data": {
-   "text/plain": "Dense(-1 -> 5, linear)"
-  },
-  "execution_count": 2,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
 ```
 
 In the example above, the **-1** denotes that the size of the input layer is not
@@ -49,22 +36,9 @@ specified during initialization.
 You can also call the **Dense** layer with an `in_units` parameter if you know
 the shape of your input unit.
 
-```{.python .input  n=3}
+```python
 layer = nn.Dense(5,in_units=3)
 layer
-```
-
-```{.json .output n=3}
-[
- {
-  "data": {
-   "text/plain": "Dense(3 -> 5, linear)"
-  },
-  "execution_count": 3,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
 ```
 
 In addition to the `in_units` param, you can also add an activation function to
@@ -75,11 +49,11 @@ $$ output = \sigma(W \cdot X + b) $$
 Call the Dense layer wtih an `activation` parameter to use an activation
 function.
 
-```{.python .input  n=4}
+```python
 layer = nn.Dense(5, in_units=3,activation='relu')
 ```
 
-Viola! Congratulations on creating a simple neural network. But for your use
+Voila! Congratulations on creating a simple neural network. But for your use
 cases, you will need to create a neural network with more than one dense layer
 and other layers. In additional to the `Dense` layer, you can find more layers
 at [mxnet nn layers TODO: Change 1.6
@@ -92,7 +66,9 @@ Almost!! we just need to initialize the network weights with the default
 initialization method, which draws random values uniformly from $[-0.7, 0.7]$.
 You can see this in the following example.
 
-```{.python .input  n=5}
+**Note**: We will dive a little deeper into initialization in the next notebook
+
+```python
 layer.initialize()
 ```
 
@@ -101,22 +77,9 @@ is also called a forward pass. Do a forward pass with random data, shown in the
 following example. We create a $(10,3)$ shape random input `x` and feed into the
 layer to compute the output.
 
-```{.python .input  n=6}
+```python
 x = np.random.uniform(-1,1,(10,3))
 layer(x)
-```
-
-```{.json .output n=6}
-[
- {
-  "data": {
-   "text/plain": "array([[-0.        , -0.        ,  0.04437108,  0.01096384, -0.        ],\n       [ 0.01540359,  0.01735983, -0.        , -0.        ,  0.03530429],\n       [ 0.00381139,  0.02891595,  0.0071606 ,  0.01262893, -0.        ],\n       [ 0.02378628,  0.04612946, -0.        , -0.        ,  0.05157538],\n       [-0.        ,  0.00375629, -0.        , -0.        ,  0.00060787],\n       [-0.        , -0.        ,  0.01947428,  0.00730047, -0.        ],\n       [ 0.03439108,  0.04268821,  0.02091249, -0.        ,  0.03359453],\n       [ 0.01674652,  0.05354869, -0.        , -0.        ,  0.05611669],\n       [ 0.01591048,  0.04680086,  0.05175146,  0.03321034, -0.        ],\n       [ 0.00959048,  0.03363482,  0.03384075,  0.02388959, -0.        ]])"
-  },
-  "execution_count": 6,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
 ```
 
 The layer produced a $(10,5)$ shape output from our $(10,3)$ input.
@@ -128,21 +91,8 @@ after you create and initialize the weights.**
 You can access the weight after the first forward pass, as shown in this
 example.
 
-```{.python .input  n=7}
+```python
 layer.weight.data()
-```
-
-```{.json .output n=7}
-[
- {
-  "data": {
-   "text/plain": "array([[ 0.0068339 ,  0.01299825,  0.0301265 ],\n       [ 0.04819721,  0.01438687,  0.05011239],\n       [ 0.00628365,  0.04861524, -0.01068833],\n       [ 0.01729892,  0.02042518, -0.01618656],\n       [-0.00873779, -0.02834515,  0.05484822]])"
-  },
-  "execution_count": 7,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
 ```
 
 ## Chain layers into a neural network using nn.Sequential
@@ -157,7 +107,7 @@ example of Dense layers and create a 3-layer multi layer perceptron. You can
 create a sequential block using `nn.Sequential()` method and add layers using
 `add()` method.
 
-```{.python .input  n=8}
+```python
 net = nn.Sequential()
 
 net.add(nn.Dense(5,in_units=3,activation='relu'),
@@ -168,38 +118,12 @@ net.add(nn.Dense(5,in_units=3,activation='relu'),
 net
 ```
 
-```{.json .output n=8}
-[
- {
-  "data": {
-   "text/plain": "Sequential(\n  (0): Dense(3 -> 5, Activation(relu))\n  (1): Dense(-1 -> 25, Activation(relu))\n  (2): Dense(-1 -> 2, linear)\n)"
-  },
-  "execution_count": 8,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
-```
-
 The layers are ordered exactly the way you defined your neural network with
 numbers starting from 0. You can access the layers by indexing the network using
 `[]`.
 
-```{.python .input  n=9}
+```python
 net[1]
-```
-
-```{.json .output n=9}
-[
- {
-  "data": {
-   "text/plain": "Dense(-1 -> 25, Activation(relu))"
-  },
-  "execution_count": 9,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
 ```
 
 ## Create a custom neural network architecture flexibly
@@ -235,7 +159,7 @@ class Net(gluon.Block):
         return x
 ```
 
-```{.python .input  n=10}
+```python
 class MLP(Block):
     def __init__(self):
         super().__init__()
@@ -253,23 +177,10 @@ net = MLP()
 net
 ```
 
-```{.json .output n=10}
-[
- {
-  "data": {
-   "text/plain": "MLP(\n  (dense1): Dense(-1 -> 5, Activation(relu))\n  (dense2): Dense(-1 -> 25, Activation(relu))\n  (dense3): Dense(-1 -> 2, linear)\n)"
-  },
-  "execution_count": 10,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
-```
-
 Simirly, you can the following code to implement a famous network called
 [LeNet](http://yann.lecun.com/exdb/lenet/) through `nn.Sequential`.
 
-```{.python .input  n=11}
+```python
 class LeNet(Block):
     def __init__(self):
         super().__init__()
@@ -291,42 +202,15 @@ class LeNet(Block):
         x = self.dense3(x)
         return x
     
-net = LeNet()
-net
+Lenet = LeNet()
 ```
 
-```{.json .output n=11}
-[
- {
-  "data": {
-   "text/plain": "LeNet(\n  (conv1): Conv2D(-1 -> 6, kernel_size=(3, 3), stride=(1, 1), Activation(relu))\n  (pool1): MaxPool2D(size=(2, 2), stride=(2, 2), padding=(0, 0), ceil_mode=False, global_pool=False, pool_type=max, layout=NCHW)\n  (conv2): Conv2D(-1 -> 16, kernel_size=(3, 3), stride=(1, 1), Activation(relu))\n  (pool2): MaxPool2D(size=(2, 2), stride=(2, 2), padding=(0, 0), ceil_mode=False, global_pool=False, pool_type=max, layout=NCHW)\n  (dense1): Dense(-1 -> 120, Activation(relu))\n  (dense2): Dense(-1 -> 84, Activation(relu))\n  (dense3): Dense(-1 -> 10, linear)\n)"
-  },
-  "execution_count": 11,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
-```
-
-```{.python .input  n=12}
+```python
 image_data = np.random.uniform(-1,1, (1,1,28,28))
 
-net.initialize()
+Lenet.initialize()
 
-net(image_data)
-```
-
-```{.json .output n=12}
-[
- {
-  "data": {
-   "text/plain": "array([[ 0.00052316, -0.00139668,  0.00031271,  0.00159006, -0.00019339,\n         0.00017942,  0.00140935, -0.00048231, -0.00016249,  0.00099462]])"
-  },
-  "execution_count": 12,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
+Lenet(image_data)
 ```
 
 In this example, you can use `print` to get the intermediate results between
@@ -336,22 +220,9 @@ function.
 You can use `[]` to index a particular layer. For example, the following
 accesses the first layer's weight and sixth layer's bias.
 
-```{.python .input  n=13}
-net.conv1.weight.data().shape, net.dense1.bias.data().shape
+```python
+Lenet.conv1.weight.data().shape, Lenet.dense1.bias.data().shape
 
-```
-
-```{.json .output n=13}
-[
- {
-  "data": {
-   "text/plain": "((6, 1, 3, 3), (120,))"
-  },
-  "execution_count": 13,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
 ```
 
 ## Using predefined (pretrained) architectures
@@ -369,7 +240,7 @@ architectures include:
 
 Lets look at an example
 
-```{.python .input  n=18}
+```python
 from mxnet.gluon import model_zoo
 
 net = model_zoo.vision.resnet50_v2(pretrained=True)
@@ -380,34 +251,18 @@ output = net(dummy_input)
 output.shape
 ```
 
-```{.json .output n=18}
-[
- {
-  "data": {
-   "text/plain": "(1, 1000)"
-  },
-  "execution_count": 18,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
-```
-
 ## Deciding the paradigm for your NN
 
-MXNet includes two types of programming paradigms:
+In MXNet you can use the Gluon API (Imperative programming) that is very user
+friendly and allows for quick prototyping, easy debugging and natural control
+flow for people familiar with python programming. However, at the backend, MXNET
+can also convert the network using Symbolic or Declarative programming into
+static graphs with low level optimizations on operators. However, static graphs
+are less flexible because any logic must be encoded into the graph as special
+operators like scan, while_loop and cond. It’s also hard to debug.
 
-1. Imperative API - Gluon that is very user friendly and allows for quick
-prototyping, easy debugging and natural control flow for people familiar with
-python programming.
-2. Symbolic or Declarative API for creating static graphs with low level
-optimizations on operators and allows for support in multiple languages, cross-
-compatibility with other frameworks (via ONNX). However, it’s less flexible
-because any logic must be encoded into the graph as special operators like scan,
-while_loop and cond. It’s also hard to debug.
-
-So how can we make use of Symbolic API while getting the flexibility of an
-Imperative API to quickly protype and debug??
+So how can we make use of Symbolic programming while getting the flexibility of
+an Imperative programming to quickly protype and debug?
 
 Enter **HybridBlocks**
 
@@ -416,7 +271,7 @@ functions acting on real inputs. But they’re also capable of running
 symbolically, acting on placeholders. Gluon hides most of this under the hood so
 you’ll only need to know how it works when you want to write your own layers.
 
-```{.python .input  n=19}
+```python
 net_hybrid_seq = nn.HybridSequential()
 
 net_hybrid_seq.add(nn.Dense(5,in_units=3,activation='relu'),
@@ -427,23 +282,10 @@ net_hybrid_seq.add(nn.Dense(5,in_units=3,activation='relu'),
 net_hybrid_seq
 ```
 
-```{.json .output n=19}
-[
- {
-  "data": {
-   "text/plain": "HybridSequential(\n  (0): Dense(3 -> 5, Activation(relu))\n  (1): Dense(-1 -> 25, Activation(relu))\n  (2): Dense(-1 -> 2, linear)\n)"
-  },
-  "execution_count": 19,
-  "metadata": {},
-  "output_type": "execute_result"
- }
-]
-```
-
 To compile and optimize the `HybridSequential`, we can then call its `hybridize
 method`.
 
-```{.python .input  n=20}
+```python
 net_hybrid_seq.hybridize()
 ```
 
@@ -453,17 +295,17 @@ To get a sense of the speedup from hybridizing, we can compare the performance
 before and after hybridizing by measuring in either case the time it takes to
 make 1000 forward passes through the network.
 
-```{.python .input  n=21}
+```python
 from time import time
 
-def bench(net, x):
+def benchmark(net, x):
     y = net(x)
     start = time()
     for i in range(1,1000):
         y = net(x)
     return time() - start
 
-x = np.random.normal(size=(1,512))
+x_bench = np.random.normal(size=(1,512))
 
 net_hybrid_seq = nn.HybridSequential()
 
@@ -473,19 +315,9 @@ net_hybrid_seq.add(nn.Dense(256,activation='relu'),
        )
 net_hybrid_seq.initialize()
 
-print('Before hybridizing: %.4f sec'%(bench(net_hybrid_seq, x)))
+print('Before hybridizing: %.4f sec'%(benchmark(net_hybrid_seq, x_bench)))
 net_hybrid_seq.hybridize()
-print('After hybridizing: %.4f sec'%(bench(net_hybrid_seq, x)))
-```
-
-```{.json .output n=21}
-[
- {
-  "name": "stdout",
-  "output_type": "stream",
-  "text": "Before hybridizing: 0.6364 sec\nAfter hybridizing: 0.1622 sec\n"
- }
-]
+print('After hybridizing: %.4f sec'%(benchmark(net_hybrid_seq, x_bench)))
 ```
 
 Peeling another layer, we also have a `HybridBlock` which is the hybrid version
@@ -497,7 +329,7 @@ define a `HybridBlock`, we create the same `forward` function. MXNet takes care
 of hybridizing the model at the backend so you don't have to make changes to
 your code to convert it to a symbolic paradigm
 
-```{.python .input  n=152}
+```python
 from mxnet.gluon import HybridBlock
 
 class MLP_Hybrid(HybridBlock):
@@ -511,24 +343,14 @@ class MLP_Hybrid(HybridBlock):
         layer1 = self.dense1(x)
         layer2 = self.dense2(layer1)
         layer3 = self.dense3(layer2)
-        return x
+        return layer3
     
 net_Hybrid = MLP_Hybrid()
 net_Hybrid.initialize()
 
-print('Before hybridizing: %.4f sec'%(bench(net_Hybrid, x)))
+print('Before hybridizing: %.4f sec'%(benchmark(net_Hybrid, x_bench)))
 net_Hybrid.hybridize()
-print('After hybridizing: %.4f sec'%(bench(net_hybrid_seq, x)))
-```
-
-```{.json .output n=152}
-[
- {
-  "name": "stdout",
-  "output_type": "stream",
-  "text": "Before hybridizing: 0.6658 sec\nAfter hybridizing: 0.2191 sec\n"
- }
-]
+print('After hybridizing: %.4f sec'%(benchmark(net_Hybrid, x_bench)))
 ```
 
 Given a HybridBlock whose forward computation consists of going through other
@@ -539,12 +361,130 @@ All of MXNet’s predefined layers are HybridBlocks. This means that any network
 consisting entirely of predefined MXNet layers can be compiled and run at much
 faster speeds by calling `.hybridize()`.
 
+## Saving and Loading your models
+
+Now that you've trained your model, it is a good idea to save the trained model
+so that you can host the model on cloud or avoid training the model again from
+scratch if you want to retrain the model that is suffering from concept drift.
+Another reason would be to train your model using one language (like Python that
+has a lot of tools for training) and run inference using a different language
+(like Scala probably because your application is built on Scala).
+
+There are two ways to save your model in mxnet.
+1. Save/load the model weights/parameters only
+2. Save/load the model weights/parameters and the architectures
+
+#### 1. Save/load the model weights/parameters only
+
+You can use `save_parameters` and `load_parameters` method to save and load the
+model weights. Let's take our simplest model `layer` and save our parameters
+first. The model parameters are the params that you save **after** you train
+your model.
+
+```python
+file_name = 'layer.params'
+layer.save_parameters(file_name)
+```
+
+And now let's load this model again. To load the parameters into a model, you
+will first have to build the model. Since we have a simple model, let's create a
+simple function to build it
+
+```python
+def build_model():
+    layer = nn.Dense(5, in_units=3,activation='relu')
+    return layer
+
+layer_new = build_model()
+```
+
+```python
+layer_new.load_parameters('layer.params')
+```
+
+**Note**: The `save_parameters` and `load_parameters` method is used for models
+that use a `Block` method instead of  `HybridBlock` method to build the model.
+These models may have complex architectures where the model architectures may
+change during execution. E.g. if you have a model that uses an if-else
+conditional statement to choose between two different architectures.
+
+#### 2. Save/load the model weights/parameters and the architectures
+
+For models that use the **HybridBlock**, the model architecture stays static and
+do no change during execution. Therefore both model parameters AND architecture
+can be saved and loaded using `export`, `imports` methods.
+
+Let's look at our `MLP_Hybrid` model and export the model into files using the
+export function. The export function will export the model architecture into a
+.json file and model parameters into a .params file.
+
+```python
+net_Hybrid.export('MLP_hybrid')
+```
+
+```python
+net_Hybrid.export('MLP_hybrid')
+```
+
+Similarly, to load this model back, you will use `gluon.nn.SymbolBlock`. To
+demonstrate that, let’s load the network we serialized above.
+
+```python
+import warnings
+with warnings.catch_warnings():
+    warnings.simplefilter("ignore")
+    net_loaded = nn.SymbolBlock.imports("MLP_hybrid-symbol.json", ['data'], "MLP_hybrid-0000.params",ctx=None)
+```
+
+```python
+net_loaded(x_bench)
+```
+
+## Visualizing your models
+
+In MXNet, you can use `Block.summary()` method to print a summary of the model's
+outputs and parameters. Currently, the method works for networks that use
+`HybridBlocks` and `Blocks`, however, the method should be called **before** the
+`net.hybridize()` method and after the network has been initialized. The
+`Block.summary()` method requires one forward pass through your network so we
+will be providing our original data that we have used above.
+
+Let's look at the following examples
+
+- layer: our single layer network
+- Lenet: a non-hybridized LeNet network
+- net_Hybrid: our MLP Hybrid network
+
+```python
+layer.summary(x)
+```
+
+```python
+Lenet.summary(image_data)
+```
+
+We were able to print the summaries of the two networks `layer` and `Lenet`
+easily since we didn't hybridize them above. However the last network
+`net_Hybrid` was hybridized above and will throw out an `AssertionError` if you
+try `net_Hybrid.summary(x_bench)`. Let's first call another instance of the same
+network and instantiate it for our summary and then hybridize it
+
+```python
+net_Hybrid_summary = MLP_Hybrid()
+
+net_Hybrid_summary.initialize()
+
+net_Hybrid_summary.summary(x_bench)
+
+net_Hybrid_summary.hybridize()
+```
+
 ## Next steps: TODO: UPDATE
 
 After you create a neural network, learn how to automatically
 compute the gradients in [Step 3: Automatic differentiation with
 autograd](3-autograd.md).
 
-```{.python .input}
+```python
 
 ```
