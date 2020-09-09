@@ -1197,7 +1197,7 @@ extern "C" {
                                   const char* const* vals, int num, const char* dev_type,
                                   int dev_id, unsigned int** inshapes, int* indims,
                                   int num_in, const int* intypes, void** state_op);
-  
+
   /*! \brief returns status of calling Stateful Forward/Backward for operator from library */
   MX_INT_RET _opCallFStatefulCompute(int is_forward, void* state_op, const int64_t** inshapes,
                                      int* indims, void** indata, int* intypes, size_t* inIDs,
