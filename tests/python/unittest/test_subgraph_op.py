@@ -85,7 +85,19 @@ def network_structure_7():
     ret = ret1 + ret2
     return (ret, ['data'], [(1,)])
 
-def get_graphs(): 
+def network_structure_8():
+    # in this graph, two nodes in the subgraph consume the same input, and
+    # and two nodes outside the subgraph consume a single output from the subgraph
+    data = mx.sym.Variable('data', shape=(1,))
+    sin1 = mx.sym.sin(data)
+    sin2 = mx.sym.sin(data)
+    plus = sin1 + sin2
+    ret1 = mx.sym.cos(plus)
+    ret2 = mx.sym.cos(plus)
+    ret = ret1 - ret2
+    return (ret, ['data'], [(1,)])
+
+def get_graphs():
     return [
             (network_structure_1(), ['Convolution']),
             (network_structure_2(), ['exp', 'sin', '_Plus', 'elemwise_add', '_plus']),
@@ -102,7 +114,8 @@ def get_graphs():
             (network_structure_6(), [mx.sym.sin.__name__]),
             (network_structure_6(), [mx.sym.Convolution.__name__]),
             (network_structure_6(), [mx.sym.sin.__name__, mx.sym.Convolution.__name__]),
-            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus'])
+            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus']),
+            (network_structure_8(), ['sin', 'elemwise_add'])
             ]
 
 def check_subgraph_exe1(sym, subgraph_backend, op_names):
@@ -157,7 +170,6 @@ def check_subgraph_exe2(sym, subgraph_backend, op_names):
             check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
             del os.environ['MXNET_SUBGRAPH_BACKEND']
         return exe
-
     original_exec = get_executor(sym)
     partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
     outputs1 = original_exec.outputs
