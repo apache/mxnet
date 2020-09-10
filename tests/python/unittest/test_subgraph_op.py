@@ -87,6 +87,18 @@ def network_structure_7():
     ret = ret1 + ret2
     return (ret, ['data'], [(1,)])
 
+def network_structure_8():
+    # in this graph, two nodes in the subgraph consume the same input, and
+    # and two nodes outside the subgraph consume a single output from the subgraph
+    data = mx.sym.Variable('data', shape=(1,))
+    sin1 = mx.sym.sin(data)
+    sin2 = mx.sym.sin(data)
+    plus = sin1 + sin2
+    ret1 = mx.sym.cos(plus)
+    ret2 = mx.sym.cos(plus)
+    ret = ret1 - ret2
+    return (ret, ['data'], [(1,)])
+
 def get_graphs():
     return [
             (network_structure_1(), ['Convolution']),
@@ -104,20 +116,25 @@ def get_graphs():
             (network_structure_6(), [mx.sym.sin.__name__]),
             (network_structure_6(), [mx.sym.Convolution.__name__]),
             (network_structure_6(), [mx.sym.sin.__name__, mx.sym.Convolution.__name__]),
-            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus'])
+            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus']),
+            (network_structure_8(), ['sin', 'elemwise_add'])
             ]
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe1(sym, subgraph_backend, op_names):
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    print('%s(%s, %s)' % ('test_subgraph_exe1',subgraph_backend, op_names))
     """Use the partitioned sym to _simple_bind an executor and compare the outputs
     with those of the original executor"""
     sym, _, _ = sym
+    print(sym.tojson())
     out = SymbolHandle()
     check_call(_LIB.MXBuildSubgraphByOpNames(sym.handle, c_str(subgraph_backend), mx_uint(len(op_names)),
                                               c_str_array(op_names), ctypes.byref(out)))
 
     partitioned_sym = Symbol(out)
+    print(partitioned_sym.tojson())
     assert partitioned_sym.list_inputs() == sym.list_inputs()
     assert partitioned_sym.list_arguments() == sym.list_arguments()
     assert partitioned_sym.list_auxiliary_states() == sym.list_auxiliary_states()
@@ -142,6 +159,8 @@ def test_subgraph_exe1(sym, subgraph_backend, op_names):
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe2(sym, subgraph_backend, op_names):
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    print('%s(%s, %s)' % ('test_subgraph_exe2',subgraph_backend, op_names))
     """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in _simple_bind
     and compare results of the partitioned sym and the original sym."""
     def get_executor(sym, subgraph_backend=None, op_names=None, original_exec=None):
@@ -158,6 +177,7 @@ def test_subgraph_exe2(sym, subgraph_backend, op_names):
         exe.forward()
         return exe
     sym, _, _ = sym
+    print(sym.tojson())
 
     original_exec = get_executor(sym)
     with environment('MXNET_SUBGRAPH_BACKEND', subgraph_backend):
@@ -174,9 +194,12 @@ def test_subgraph_exe2(sym, subgraph_backend, op_names):
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe3(sym, subgraph_backend, op_names):
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    print('%s(%s, %s)' % ('test_subgraph_exe3',subgraph_backend, op_names))
     """Use the partitioned sym to bind an executor and compare the outputs
     with those of the original executor"""
     sym, _, _ = sym
+    print(sym.tojson())
     out = SymbolHandle()
     check_call(_LIB.MXBuildSubgraphByOpNames(sym.handle, c_str(subgraph_backend), mx_uint(len(op_names)),
                                               c_str_array(op_names), ctypes.byref(out)))
@@ -204,6 +227,8 @@ def test_subgraph_exe3(sym, subgraph_backend, op_names):
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe4(sym, subgraph_backend, op_names):
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    print('%s(%s, %s)' % ('test_subgraph_exe4',subgraph_backend, op_names))
     """Use env var MXNET_SUBGRAPH_BACKEND=default to trigger graph partitioning in bind
     and compare results of the partitioned sym and the original sym."""
     def get_executor(sym, subgraph_backend=None, op_names=None, original_exec=None):
@@ -222,6 +247,7 @@ def test_subgraph_exe4(sym, subgraph_backend, op_names):
         return exe
 
     sym, _, _ = sym
+    print(sym.tojson())
     original_exec = get_executor(sym)
     with environment('MXNET_SUBGRAPH_BACKEND', subgraph_backend):
         check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
@@ -255,10 +281,13 @@ def copy_inputs_between_executors(exe1, exe2, input_names):
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe5(sym, subgraph_backend, op_names):
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    print('%s(%s, %s)' % ('test_subgraph_exe5',subgraph_backend, op_names))
     """Call optimize_for to trigger graph partitioning without infer shapes/types before,
     then _simple_bind and compare results of the partitioned sym and the original sym."""
     # _simple_bind
     sym, _, _ = sym
+    print(sym.tojson())
     exe1 = sym._simple_bind(ctx=mx.current_context(), grad_req='null')
     input_names = sym.list_inputs()
     set_random_inputs(exe1, input_names)
@@ -284,10 +313,13 @@ def test_subgraph_exe5(sym, subgraph_backend, op_names):
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe6(sym, subgraph_backend, op_names):
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    print('%s(%s, %s)' % ('test_subgraph_exe6',subgraph_backend, op_names))
     """Call optimize_for to trigger graph partitioning with shapes/types, then _simple_bind
     and compare results of the partitioned sym and the original sym."""
     # _simple_bind
     sym, _, _ = sym
+    print(sym.tojson())
     exe1 = sym._simple_bind(ctx=mx.current_context(), grad_req='null')
     input_names = sym.list_inputs()
     set_random_inputs(exe1, input_names)
@@ -313,10 +345,13 @@ def test_subgraph_exe6(sym, subgraph_backend, op_names):
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe7(sym, subgraph_backend, op_names):
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    print('%s(%s, %s)' % ('test_subgraph_exe7',subgraph_backend, op_names))
     """Call optimize_for to trigger graph partitioning without infer shapes/types before,
     then bind and compare results of the partitioned sym and the original sym."""
     # bind
     sym, _, _ = sym
+    print(sym.tojson())
     arg_shapes, _, aux_shapes = sym.infer_shape()
     arg_array = [mx.nd.random.uniform(shape=shape) for shape in arg_shapes]
     aux_array = [mx.nd.random.uniform(shape=shape) for shape in aux_shapes]
@@ -342,10 +377,13 @@ def test_subgraph_exe7(sym, subgraph_backend, op_names):
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_exe8(sym, subgraph_backend, op_names):
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    print('%s(%s, %s)' % ('test_subgraph_exe8',subgraph_backend, op_names))
     """Call optimize_for to infer shapes, types and dtypes followed by graph partitioning,
     then bind and compare results of the partitioned sym and the original sym."""
     # bind
     sym, _, _ = sym
+    print(sym.tojson())
     arg_shapes, _, aux_shapes = sym.infer_shape()
     arg_names = sym.list_arguments()
     aux_names = sym.list_auxiliary_states()
@@ -373,6 +411,9 @@ def test_subgraph_exe8(sym, subgraph_backend, op_names):
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir):
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    print('%s(%s, %s)' % ('test_subgraph_backend_gluon',subgraph_backend, op_names))
+    print(sym[0].tojson())
     """Call hybridize() to partition the graph, and then compare results of the partitioned
     sym and the original sym. Here do an inference before hybridizing with the subgraph_backend
     which means we'll pass shapes/types"""
@@ -407,7 +448,9 @@ def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir):
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridSequential.
 @pytest.mark.serial
 def test_subgraph_backend_gluon_ext1(tmpdir):
-    def get_net():
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    print('test_subgraph_backend_gluon_ext1')
+    def get_net():  
         net = nn.HybridSequential()  # Here we use the class HybridSequential.
         net.add(nn.Dense(256, activation='relu'),
                 nn.Dense(128, activation='relu'),
@@ -441,6 +484,8 @@ def test_subgraph_backend_gluon_ext1(tmpdir):
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridBlock.
 @pytest.mark.serial
 def test_subgraph_backend_gluon_ext2(tmpdir):
+    print('@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@')
+    print('test_subgraph_backend_gluon_ext2')
     class Net(gluon.HybridBlock):
         def __init__(self, **kwargs):
             super(Net, self).__init__(**kwargs)
@@ -476,3 +521,23 @@ def test_subgraph_backend_gluon_ext2(tmpdir):
     for i in range(len(outputs1)):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
+
+if __name__ == "__main__":
+    import datetime
+    tmpdir = datetime.datetime.now().strftime('mylogfile_%H_%M_%S_%f_%d_%m_%Y.log')
+    os.mkdir(tmpdir)
+    subgraph_backends = ['default', 'default_v2']
+    graphs = get_graphs()
+    for subgraph_backend in subgraph_backends:
+        for sym,op_names in graphs:
+            test_subgraph_exe1(sym, subgraph_backend, op_names)
+            test_subgraph_exe2(sym, subgraph_backend, op_names)
+            test_subgraph_exe3(sym, subgraph_backend, op_names)
+            test_subgraph_exe4(sym, subgraph_backend, op_names)
+            test_subgraph_exe5(sym, subgraph_backend, op_names)
+            test_subgraph_exe6(sym, subgraph_backend, op_names)
+            test_subgraph_exe7(sym, subgraph_backend, op_names)
+            test_subgraph_exe8(sym, subgraph_backend, op_names)
+            test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir)
+            test_subgraph_backend_gluon_ext1(tmpdir)
+            test_subgraph_backend_gluon_ext2(tmpdir)

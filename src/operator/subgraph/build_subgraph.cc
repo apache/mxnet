@@ -537,7 +537,8 @@ void FindOutputEntries(nnvm::Graph* g,
  */
 void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
                     std::vector<nnvm::NodeEntry> *orig_entries,
-                    std::vector<nnvm::NodeEntry> *unique_inputs,
+                    std::vector<nnvm::NodeEntry> *unique_orig_entries,
+                    std::vector<nnvm::NodeEntry*> *unique_input_entries,
                     const bool skip_var = false) {
   orig_entries->resize(input_entries.size());
   // map for creating unique var nodes for deduplicating entries from the same node
@@ -548,17 +549,20 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
     if (e->node->is_variable() && skip_var) {
       continue;
     }
-
+    // save all original entries
     orig_entries->at(i) = *e;
+    // get unique name for this entry
     nnvm::Symbol sym;
     sym.outputs.push_back(*e);
     const auto output_names = sym.ListOutputNames();
     CHECK_EQ(output_names.size(), 1U);
     const std::string& var_name = output_names[0];
+    // check if this entry is a duplicate
     auto it = name_count_map.find(var_name);
     if (name_count_map.end() == it) {
       // first use of this node as input to subgraph
-      unique_inputs->push_back(*e);
+      unique_orig_entries->push_back(*e);
+      unique_input_entries->push_back(e);
       nnvm::ObjectPtr n = nnvm::CreateVariableNode(var_name + std::to_string(0));
       *e = nnvm::NodeEntry{n, 0, 0};
       // store node for re-use
@@ -596,11 +600,12 @@ void CreateSubgraphNode(nnvm::Graph* g,
 #if DEBUG_SUBGRAPH
   LOG(INFO) << "Searching for input entries...";
 #endif
-  std::vector<nnvm::NodeEntry*> input_entries;
+  std::vector<nnvm::NodeEntry*> input_entries;  // nodes that produce inputs to subgraph nodes
   FindInputEntries(*g, simple_nodes, subgraph_nodes, *entry_top_order_map, &input_entries);
-  std::vector<nnvm::NodeEntry> orig_input_entries;
-  std::vector<nnvm::NodeEntry> unique_inputs;
-  CutGraphInputs(input_entries, &orig_input_entries, &unique_inputs, false);
+  std::vector<nnvm::NodeEntry> orig_input_entries;  // original input entries (dupes)
+  std::vector<nnvm::NodeEntry> unique_orig_entries;  // unique original input entries
+  std::vector<nnvm::NodeEntry*> unique_input_entries;  // unique modified subgraph inputs
+  CutGraphInputs(input_entries, &orig_input_entries, &unique_orig_entries, &unique_input_entries, false);
 #if DEBUG_SUBGRAPH
   PrintNodeEntries(input_entries);
   LOG(INFO) << "Searching for output entries...";
@@ -626,14 +631,14 @@ void CreateSubgraphNode(nnvm::Graph* g,
   sym.outputs.resize(idx+1);
 
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
-  subg_prop->InitSubgraphInputs(&input_entries, &unique_inputs);
+  subg_prop->InitSubgraphInputs(&unique_input_entries, &unique_orig_entries);
   nnvm::ObjectPtr n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);
   // CreateSubgraphNode returns NULL if subgraph property determines that subgraph is sub-optimal
   // In that case, subgraph node is not created and graph is not modified
   if (n) {
     // Connect the external nodes to the subgraph node.
     subg_prop->ConnectSubgraphOutputs(n, &output_entries);
-    subg_prop->ConnectSubgraphInputs(n, &input_entries, &unique_inputs);
+    subg_prop->ConnectSubgraphInputs(n, &unique_input_entries, &unique_orig_entries);
 
     const auto& indexed_graph = g->indexed_graph();
     for (size_t i = 0; i < n->inputs.size(); ++i) {
