@@ -605,7 +605,8 @@ void CreateSubgraphNode(nnvm::Graph* g,
   std::vector<nnvm::NodeEntry> orig_input_entries;  // original input entries (dupes)
   std::vector<nnvm::NodeEntry> unique_orig_entries;  // unique original input entries
   std::vector<nnvm::NodeEntry*> unique_input_entries;  // unique modified subgraph inputs
-  CutGraphInputs(input_entries, &orig_input_entries, &unique_orig_entries, &unique_input_entries, false);
+  CutGraphInputs(input_entries, &orig_input_entries, &unique_orig_entries,
+                 &unique_input_entries, false);
 #if DEBUG_SUBGRAPH
   PrintNodeEntries(input_entries);
   LOG(INFO) << "Searching for output entries...";
