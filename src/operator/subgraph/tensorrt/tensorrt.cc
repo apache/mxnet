@@ -28,6 +28,8 @@
 
 #include "./tensorrt-inl.h"
 
+#include <NvInfer.h>
+
 namespace mxnet {
 namespace op {
 
@@ -311,7 +313,13 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
   graph.attrs["dtype"]        = std::make_shared<nnvm::any>(std::move(dtypes));
   graph.attrs["shape"]        = std::make_shared<nnvm::any>(std::move(shapes));
   auto onnx_graph = op::nnvm_to_onnx::ConvertNnvmGraphToOnnx(graph, &params_map);
-  auto trt_tuple = ::onnx_to_tensorrt::onnxToTrtCtx(onnx_graph, max_batch_size, 1 << 30);
+  uint32_t verbose = dmlc::GetEnv("MXNET_TENSORRT_VERBOSE", 0);
+  auto log_lvl = nvinfer1::ILogger::Severity::kWARNING;
+  if (verbose != 0) {
+    log_lvl = nvinfer1::ILogger::Severity::kVERBOSE;
+  }
+
+  auto trt_tuple = ::onnx_to_tensorrt::onnxToTrtCtx(onnx_graph, max_batch_size, 1 << 30, log_lvl);
   return OpStatePtr::Create<TRTEngineParam>(std::move(std::get<0>(trt_tuple)),
                                             std::move(std::get<1>(trt_tuple)),
                                             std::move(std::get<2>(trt_tuple)),
