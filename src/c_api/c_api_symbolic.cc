@@ -1491,7 +1491,8 @@ int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
                                 const mx_uint num_flags,
                                 const char** keys,
                                 const char** vals,
-                                const char* param_indices,
+                                const mx_uint num_params,
+                                const int* param_indices,
                                 bool* has_dynamic_shape) {
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
@@ -1515,34 +1516,21 @@ int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
     for (mx_uint i = 0; i < num_flags; ++i) {
       options_map.emplace(keys[i], vals[i]);
     }
-    // create param indice list and attach it to the graph
-    std::vector<int> param_indice_list;
-    if (param_indices[0] == '[') {
-      std::string indice_string;
-      indice_string.assign(param_indices, std::strlen(param_indices)-1);
-      indice_string = indice_string.substr(1);
-      std::string delimiter = ", ";
-      size_t pos = 0;
-      std::string token;
-      while ((pos = indice_string.find(delimiter)) != std::string::npos) {
-          token = indice_string.substr(0, pos);
-          param_indice_list.emplace_back(std::stoi(token));
-          indice_string.erase(0, pos + delimiter.length());
-      }
-      if (indice_string.length() > 0) {
-        param_indice_list.emplace_back(std::stoi(indice_string));
-      }
+    // create param indices list and attach it to the graph
+    std::vector<int> param_indices_list;
+    for(int i = 0; i < num_params; i++) {
+      param_indices_list.emplace_back(param_indices[i]);
     }
     // run BuildSubgraph pass with static_shape property
     auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend("static_shape");
     const auto& subgraph_prop_list = backend->GetSubgraphProperties();
     for (auto property : subgraph_prop_list) {
       g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
-      g.attrs["param_indice_list"] = std::make_shared<nnvm::any>(param_indice_list);
+      g.attrs["param_indices_list"] = std::make_shared<nnvm::any>(param_indices_list);
       property->PrePartition(g, options_map);
       g = ApplyPass(std::move(g), "BuildSubgraph");
       g.attrs.erase("subgraph_property");
-      g.attrs.erase("param_indice_list");
+      g.attrs.erase("param_indices_list");
     }
     s->outputs = g.outputs;
   }

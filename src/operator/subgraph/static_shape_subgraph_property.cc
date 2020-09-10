@@ -91,13 +91,34 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
       param_name_set_.clear();
     }
     // generate param_name_set_ for data_indices and param_indices
-    if (g.HasAttr("param_indice_list")) {
-      const std::vector<int>& param_indice_list = g.GetAttr<std::vector<int>>("param_indice_list");
+    if (g.HasAttr("param_indices_list")) {
+      const std::vector<int>& param_indices_list = g.GetAttr<std::vector<int>>("param_indices_list");
       const auto& indexed_graph = g.indexed_graph();
-      for (const auto index : param_indice_list) {
+      for (const auto index : param_indices_list) {
           auto nid = indexed_graph.input_nodes()[index];
           nnvm::Node n = *(indexed_graph[nid].source);
           param_name_set_.emplace(n.attrs.name);
+      }
+    }
+  }
+
+  void InitSubgraphInputs(std::vector<nnvm::NodeEntry*>* input_entries,
+                          std::vector<nnvm::NodeEntry>* orig_input_entries) override {
+    for (size_t i = 0; i < input_entries->size(); ++i) {
+      nnvm::NodeEntry *e = input_entries->at(i);
+      nnvm::NodeEntry& orig = orig_input_entries->at(i);
+      // set attribute for subgraph input nodes
+      if (orig.node->is_variable()) {
+        // get name of original output entry
+        nnvm::Symbol sym;
+        sym.outputs.push_back(orig);
+        const auto output_names = sym.ListOutputNames();
+        CHECK_EQ(output_names.size(), 1U);
+        const std::string& var_name = output_names[0];
+        e->node->attrs.dict["isArg"] = "True";
+        e->node->attrs.dict["argName"] = var_name;
+      } else {
+        e->node->attrs.dict["isArg"] = "False";
       }
     }
   }
@@ -118,21 +139,22 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
     // generate data_indices and param_indices for subgraph CachedOp node
     void _set_cachedop_flags(nnvm::Symbol symbol,
              std::vector<std::pair<std::string, std::string>>* flags) const {
-    std::vector<std::string> input_names = symbol.ListInputNames(nnvm::Symbol::ListInputOption(0));
+    std::vector<std::string> inputs = symbol.ListInputs(nnvm::Symbol::ListInputOption(0));
     std::string data_indices = "[";
     std::string param_indices = "[";
-    for (int i = 0; i < input_names.size(); i++) {
-      if (param_name_set_.count(input_names[i].substr(0, input_names[i].length()-1)) == 0) {
-        if (data_indices.compare("[") == 0) {
-          data_indices = data_indices + std::to_string(i);
-        } else {
-          data_indices = data_indices + ", " + std::to_string(i);
-        }
-      } else {
+    for(int i = 0; i < inputs.size(); i++) {
+      nnvm::ObjectPtr node = inputs[i];
+      if (node->attrs.dict["isArg"] == "True" && param_name_set_.count(node->attrs.dict["argName"]) > 0) {
         if (param_indices.compare("[") == 0) {
           param_indices = param_indices + std::to_string(i);
         } else {
           param_indices = param_indices + ", " + std::to_string(i);
+        }
+      } else {
+        if (data_indices.compare("[") == 0) {
+          data_indices = data_indices + std::to_string(i);
+        } else {
+          data_indices = data_indices + ", " + std::to_string(i);
         }
       }
     }

@@ -3121,6 +3121,8 @@ MXNET_DLL int MXEnginePushSyncND(EngineSyncFunc sync_func, void* func_param,
  * \param num_flags number of flags.
  * \param keys Key of flags.
  * \param vals Value of flags.
+ * \param num_params number of param nodes.
+ * \param param_indices array of param node indices.
  * \param has_dynamic_shape Flag to indicate if the symbol contains dynamic shape op.
  * \param ret_sym_handle handler of the result symbol.
  */
@@ -3129,7 +3131,8 @@ MXNET_DLL int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
                                           const mx_uint num_flags,
                                           const char** keys,
                                           const char** vals,
-                                          const char* param_indices,
+                                          const mx_uint num_params,
+                                          const int* param_indices,
                                           bool* has_dynamic_shape);
 
 #ifdef __cplusplus
