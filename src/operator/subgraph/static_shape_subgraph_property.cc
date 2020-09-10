@@ -92,7 +92,8 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
     }
     // generate param_name_set_ for data_indices and param_indices
     if (g.HasAttr("param_indices_list")) {
-      const std::vector<int>& param_indices_list = g.GetAttr<std::vector<int>>("param_indices_list");
+      const std::vector<int>& param_indices_list
+          = g.GetAttr<std::vector<int>>("param_indices_list");
       const auto& indexed_graph = g.indexed_graph();
       for (const auto index : param_indices_list) {
           auto nid = indexed_graph.input_nodes()[index];
@@ -142,9 +143,10 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
     std::vector<std::string> inputs = symbol.ListInputs(nnvm::Symbol::ListInputOption(0));
     std::string data_indices = "[";
     std::string param_indices = "[";
-    for(int i = 0; i < inputs.size(); i++) {
+    for (int i = 0; i < inputs.size(); i++) {
       nnvm::ObjectPtr node = inputs[i];
-      if (node->attrs.dict["isArg"] == "True" && param_name_set_.count(node->attrs.dict["argName"]) > 0) {
+      if (node->attrs.dict["isArg"] == "True"
+          && param_name_set_.count(node->attrs.dict["argName"]) > 0) {
         if (param_indices.compare("[") == 0) {
           param_indices = param_indices + std::to_string(i);
         } else {

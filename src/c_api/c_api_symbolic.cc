@@ -1518,7 +1518,7 @@ int MXOptimizeForDynamicShapeOp(SymbolHandle sym_handle,
     }
     // create param indices list and attach it to the graph
     std::vector<int> param_indices_list;
-    for(int i = 0; i < num_params; i++) {
+    for (int i = 0; i < num_params; i++) {
       param_indices_list.emplace_back(param_indices[i]);
     }
     // run BuildSubgraph pass with static_shape property
