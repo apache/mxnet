@@ -140,7 +140,7 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
     // generate data_indices and param_indices for subgraph CachedOp node
     void _set_cachedop_flags(nnvm::Symbol symbol,
              std::vector<std::pair<std::string, std::string>>* flags) const {
-    std::vector<std::string> inputs = symbol.ListInputs(nnvm::Symbol::ListInputOption(0));
+    std::vector<nnvm::ObjectPtr> inputs = symbol.ListInputs(nnvm::Symbol::ListInputOption(0));
     std::string data_indices = "[";
     std::string param_indices = "[";
     for (int i = 0; i < inputs.size(); i++) {
