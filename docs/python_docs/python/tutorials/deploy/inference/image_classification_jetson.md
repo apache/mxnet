@@ -45,7 +45,7 @@ To complete this tutorial, you need:
 
 To install MXNet with Jetson support, you can follow the [installation guide](https://mxnet.apache.org/get_started/jetson_setup) on MXNet official website.
 
-Alternatively, you can also directly install MXNet v1.x wheel with Jetson support, hosted on a public s3 bucket. Here are the steps to install this wheel:
+Alternatively, you can also directly install MXNet v1.6 wheel with Jetson support, hosted on a public s3 bucket. Here are the steps to install this wheel:
 
 *WARNING: this MXNet wheel is provided for your convenience but it contains packages that are not provided nor endorsed by the Apache Software Foundation.
 As such, they might contain software components with more restrictive licenses than the Apache License and you'll need to decide whether they are appropriate for your usage. Like all Apache Releases, the
@@ -58,7 +58,7 @@ sudo apt-get install -y git build-essential libopenblas-dev libopencv-dev python
 sudo pip3 install -U pip
 ```
 
-Then we download and install MXNet v1.x wheel with Jetson support
+Then we download and install MXNet v1.6 wheel with Jetson support
 ```bash
 wget https://mxnet-public.s3.us-east-2.amazonaws.com/install/jetson/1.6.0/mxnet_cu102-1.6.0-py2.py3-none-linux_aarch64.whl
 sudo pip3 install mxnet_cu102-1.6.0-py2.py3-none-linux_aarch64.whl
