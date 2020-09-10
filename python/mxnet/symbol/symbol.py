@@ -2676,6 +2676,8 @@ class Symbol(SymbolBase):
                 else:
                     val_list.append('false')
             if key in ['param_indices']:
+                if(isinstance(val, int)):
+                    val = [val]
                 param_indices = val
 
         check_call(_LIB.MXOptimizeForDynamicShapeOp(self.handle,
