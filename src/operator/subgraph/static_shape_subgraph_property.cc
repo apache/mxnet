@@ -104,7 +104,7 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
   }
 
   void InitSubgraphInputs(std::vector<nnvm::NodeEntry*>* input_entries,
-                          std::vector<nnvm::NodeEntry>* orig_input_entries) override {
+                          std::vector<nnvm::NodeEntry>* orig_input_entries) const override {
     for (size_t i = 0; i < input_entries->size(); ++i) {
       nnvm::NodeEntry *e = input_entries->at(i);
       nnvm::NodeEntry& orig = orig_input_entries->at(i);
