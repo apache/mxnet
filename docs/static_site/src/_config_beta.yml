@@ -41,6 +41,7 @@ github_username:  apache/incubator-mxnet
 youtube_username: apachemxnet
 versions: 
   - master
+  - 1.7
   - 1.6
   - 1.5.0
   - 1.4.1
