@@ -148,7 +148,7 @@ set(INTEL_ROOT "/opt/intel" CACHE PATH "Folder contains intel libs")
   endif()
 
   if(MKL_USE_STATIC_LIBS AND UNIX)
-    set(MKL_LIBRARIES -Wl,--start-group "${MKL_LIBRARIES}" -Wl,--end-group)
+    set(MKL_LIBRARIES -Wl,--exclude-libs,ALL -Wl,--start-group "${MKL_LIBRARIES}" -Wl,--end-group)
   endif()
 
 
