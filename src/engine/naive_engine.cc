@@ -206,11 +206,11 @@ class NaiveEngine final : public Engine {
     } else {
       exec_fun(RunContext{exec_ctx, &cpu_stream_, nullptr, false}, callback);
     }
+    future.wait();
     // increment mutable var version
     for (auto var : mutable_vars) {
       ++var->version_;
     }
-    future.wait();
     if (profiling) {
       opr->opr_profile->stop();
     }
