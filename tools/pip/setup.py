@@ -26,8 +26,13 @@ import shutil
 import platform
 
 if platform.system() == 'Linux':
-    sys.argv.append('--universal')
+    sys.argv.append('--python-tag')
+    sys.argv.append('py3')
     sys.argv.append('--plat-name=manylinux2014_x86_64')
+elif platform.system() == 'Darwin':
+    sys.argv.append('--python-tag')
+    sys.argv.append('py3')
+    sys.argv.append('--plat-name=macosx_10_13_x86_64')
 
 from setuptools import setup, find_packages
 from setuptools.dist import Distribution
