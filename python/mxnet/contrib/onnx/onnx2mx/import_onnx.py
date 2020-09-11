@@ -36,6 +36,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         self.aux_dict = {}
         self.arg_dict = {}
         self.model_metadata = {}
+        self.opset_version = 0
 
     def _convert_operator(self, node_name, op_name, attrs, inputs):
         """Convert from onnx operator to mxnet operator.
@@ -72,7 +73,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
             return mxnet_sym
         return op_name
 
-    def from_onnx(self, graph):
+    def from_onnx(self, graph, opset_version):
         """Construct symbol from onnx graph.
 
         Parameters
@@ -87,6 +88,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         params : dict
             A dict of name: nd.array pairs, used as pretrained weights
         """
+        self.opset_version = opset_version
         # get input, output shapes
         self.model_metadata = self.get_graph_metadata(graph)
         # parse network inputs, aka parameters
@@ -156,7 +158,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
                    }
         return metadata
 
-    def graph_to_gluon(self, graph, ctx):
+    def graph_to_gluon(self, graph, ctx, opset_version):
         """Construct SymbolBlock from onnx graph.
 
         Parameters
@@ -171,7 +173,7 @@ class GraphProto(object): # pylint: disable=too-few-public-methods
         sym_block :gluon.nn.SymbolBlock
             The returned gluon SymbolBlock
         """
-        sym, arg_params, aux_params = self.from_onnx(graph)
+        sym, arg_params, aux_params = self.from_onnx(graph, opset_version)
         metadata = self.get_graph_metadata(graph)
         data_names = [input_tensor[0] for input_tensor in metadata['input_tensor_data']]
         data_inputs = [symbol.var(data_name) for data_name in data_names]
