@@ -565,7 +565,7 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
     if (name_map.end() == it) {
       // first use of this node as input to subgraph
       name_count_map.emplace(var_name, 0);
-      if(dedup) {
+      if (dedup) {
         unique_orig_entries->push_back(*e);
         unique_input_entries->push_back(e);
         nnvm::ObjectPtr n = nnvm::CreateVariableNode(var_name + std::to_string(0));
@@ -576,11 +576,11 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
     } else {
       // other use of same node as input to subgraph
       name_count_map[var_name]++;
-      if(dedup)
+      if (dedup)
         *e = it->second;
     }
 
-    if(!dedup) {
+    if (!dedup) {
       nnvm::ObjectPtr n = nnvm::CreateVariableNode(
         var_name + std::to_string(name_count_map[var_name]));
       *e = nnvm::NodeEntry{n, 0, 0};
@@ -635,7 +635,7 @@ void CreateSubgraphNode(nnvm::Graph* g,
   nnvm::NodeEntryEqual node_equal;
   sym.outputs.resize(output_entries.size());
   for (size_t i = 0; i < output_entries.size(); ++i) {
-    if(g->HasAttr("dedup_subgraph")) {
+    if (g->HasAttr("dedup_subgraph")) {
       if (i == 0) {  // add first entry
         sym.outputs[idx] = *output_entries[i];
       } else if (!node_equal(sym.outputs[idx], *output_entries[i])) {  // compare to see if diff
@@ -650,7 +650,7 @@ void CreateSubgraphNode(nnvm::Graph* g,
   sym.outputs.resize(idx+1);
 
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
-  if(g->HasAttr("dedup_subgraph"))
+  if (g->HasAttr("dedup_subgraph"))
     subg_prop->InitSubgraphInputs(&input_entries, &orig_input_entries);
   else
     subg_prop->InitSubgraphInputs(&unique_input_entries, &unique_orig_entries);
@@ -660,7 +660,7 @@ void CreateSubgraphNode(nnvm::Graph* g,
   if (n) {
     // Connect the external nodes to the subgraph node.
     subg_prop->ConnectSubgraphOutputs(n, &output_entries);
-    if(g->HasAttr("dedup_subgraph"))
+    if (g->HasAttr("dedup_subgraph"))
       subg_prop->ConnectSubgraphInputs(n, &unique_input_entries, &unique_orig_entries);
     else
       subg_prop->ConnectSubgraphInputs(n, &input_entries, &orig_input_entries);
