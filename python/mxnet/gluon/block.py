@@ -1411,7 +1411,8 @@ class HybridBlock(Block):
                 # HybridBlock is a child block of a HybridBlock that has been hybridized.
                 return super().__call__(x, *args)
 
-            return self._call_cached_op(x, *args)
+            with x.ctx:
+                return self._call_cached_op(x, *args)
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
