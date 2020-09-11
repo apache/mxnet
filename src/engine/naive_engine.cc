@@ -239,8 +239,8 @@ class NaiveEngine final : public Engine {
 
  private:
   // callback to oncomplete
-  static void OnComplete(Engine *engine, void *param,
-                         const dmlc::Error* error) {
+  static void OnComplete(Engine* engine, void* param,
+                         const std::exception* error) {
     bool *req_completed = static_cast<bool*>(param);
     *req_completed = true;
   }

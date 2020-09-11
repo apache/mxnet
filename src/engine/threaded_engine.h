@@ -383,14 +383,12 @@ class ThreadedEngine : public Engine {
             callback();
           }
         } catch (const std::exception& e) {
-          threaded_opr->opr_exception =
-              std::make_shared<std::exception_ptr>(std::current_exception());
-          callback();
+          callback(&e);
         }
         if (debug_info) {
           LOG(INFO) << "Fin ExecuteOprFn ";
         }
-      } catch (std::exception& e) {
+      } catch (const std::exception& e) {
         std::string what = e.what();
         if (what.find("driver shutting down") == std::string::npos &&
             !shutdown_phase_) {
@@ -489,8 +487,8 @@ class ThreadedEngine : public Engine {
     }
   }
 
-  static void OnCompleteStatic(Engine *engine, void *threaded_opr,
-                               const dmlc::Error* error);
+  static void OnCompleteStatic(Engine* engine, void* threaded_opr,
+                               const std::exception* error);
   /*!
    * \brief find exception in global_exception_refs and add it if missing
    * \param opr_exception the exception to be added to global_exception_refs

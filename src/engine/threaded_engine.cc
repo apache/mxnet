@@ -507,8 +507,8 @@ void ThreadedEngine::Throw(VarHandle var) {
   ThrowException(threaded_var);
 }
 
-void ThreadedEngine::OnCompleteStatic(Engine *engine, void *opr_block_,
-                                      const dmlc::Error* error) {
+void ThreadedEngine::OnCompleteStatic(Engine* engine, void* opr_block_,
+                                      const std::exception* error) {
   OprBlock *opr_block = static_cast<OprBlock*>(opr_block_);
   ThreadedOpr *threaded_opr = opr_block->opr;
   if (error != nullptr) {
