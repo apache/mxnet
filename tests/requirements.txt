@@ -6,3 +6,4 @@ nose-timer
 ipython
 numpy>1.16.0,<1.19.0  # Restrict numpy version to < 1.19.0 due to https://github.com/apache/incubator-mxnet/issues/18600
 scipy
+onnxruntime
