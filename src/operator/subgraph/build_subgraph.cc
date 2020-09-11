@@ -568,14 +568,17 @@ void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
 
       unique_orig_entries->push_back(*e);
       unique_input_entries->push_back(e);
-      nnvm::ObjectPtr n = nnvm::CreateVariableNode(var_name + std::to_string(0));
-      *e = nnvm::NodeEntry{n, 0, 0};
-      // store node for re-use
-      name_map.emplace(var_name, *e);
+      if(dedup) {
+        nnvm::ObjectPtr n = nnvm::CreateVariableNode(var_name + std::to_string(0));
+        *e = nnvm::NodeEntry{n, 0, 0};
+        // store node for re-use
+        name_map.emplace(var_name, *e);
+      }
     } else {
       // other use of same node as input to subgraph
       name_count_map[var_name]++;
-      *e = it->second;
+      if(dedup)
+        *e = it->second;
     }
 
     if(!dedup) {
