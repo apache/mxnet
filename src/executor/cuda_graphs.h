@@ -476,11 +476,20 @@ class CudaGraphsExec {
 
   // Is the Op OK to make part of a CUDA Graph?
   bool OpOK(const std::shared_ptr<exec::OpExecutor> &exec) {
-    static bool allow_dropout_resource =
-      dmlc::GetEnv("MXNET_CUDA_GRAPHS_ALLOW_DROPOUT", false);
+    static auto& fstateful = Op::GetAttr<FCreateOpState>("FCreateOpState");
+    static auto& fgraphcompatible = Op::GetAttr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible");
+    const auto& attrs = exec->attrs;
+    if (attrs.op != nullptr) {
+      const auto& f = fgraphcompatible.get(attrs.op, nullptr);
+      if (f != nullptr) {
+        return f(attrs, exec->op_ctx.is_train);
+      }
+      if (fstateful.get(attrs.op, nullptr) != nullptr) {
+        return false;
+      }
+    }
     for (auto& resource : exec->op_ctx.requested) {
-      if (!(resource.req.type == ResourceRequest::kTempSpace ||
-            (resource.req.type == ResourceRequest::kCuDNNDropoutDesc && allow_dropout_resource))) {
+      if (!resource.req.type == ResourceRequest::kTempSpace) {
         return false;
       }
     }
