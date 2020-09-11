@@ -1210,19 +1210,36 @@ MX_INT_RET _opCallMutateInputs(mxnet::ext::mutateInputs_t mutate, const char* co
 
 /*! \brief returns status of calling createStatefulOp function for operator from library */
 MX_INT_RET _opCallCreateOpState(mxnet::ext::createOpState_t create_op, const char* const* keys,
-                                const char* const* vals, int num,
-                                void** state_op) {
+                                const char* const* vals, int num, const char* dev_type,
+                                int dev_id, unsigned int** inshapes, int* indims,
+                                int num_in, const int* intypes, void** state_op) {
   // create map of attributes from list
   std::unordered_map<std::string, std::string> attrs;
   for (int i = 0; i < num; i++) {
     attrs[std::string(keys[i])] = std::string(vals[i]);
   }
 
+  mxnet::ext::MXContext ctx(dev_type, dev_id);
+
+  // create a vector of shapes for inputs
+  std::vector<std::vector<unsigned int> > in_shapes(num_in);
+  for (int i = 0; i < num_in; i++) {
+    for (int j = 0; j < indims[i]; j++) {
+      in_shapes[i].push_back(inshapes[i][j]);
+    }
+  }
+
+  // create a vector of types for inputs
+  std::vector<int> in_types(num_in);
+  for (int i = 0; i < num_in; i++) {
+    in_types[i] = intypes[i];
+  }
+
   // void pointer to hold custom state op instance created in custom library
   // eventually state_op pointer is populated by instance from custom library
   mxnet::ext::CustomStatefulOp** op_ptr =
     reinterpret_cast<mxnet::ext::CustomStatefulOp**>(state_op);
-  return create_op(attrs, op_ptr);
+  return create_op(attrs, ctx, in_shapes, in_types, op_ptr);
 }
 
 /*! \brief returns status of calling Stateful Forward/Backward for operator from library */
