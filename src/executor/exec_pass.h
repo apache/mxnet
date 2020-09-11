@@ -31,6 +31,7 @@
 #include <mxnet/graph_attr_types.h>
 #include <nnvm/graph.h>
 #include <nnvm/graph_attr_types.h>
+#include <utility>
 #include <vector>
 #include <memory>
 #include <string>
@@ -86,6 +87,9 @@ class OpExecutor {
   std::vector<OpReqType> req;
   /*! \brief runtime op context, contains allocated resources */
   OpContext op_ctx;
+  /*! \brief attributes of the node */
+  NodeAttrs attrs;
+  explicit OpExecutor(NodeAttrs  attrs) : attrs(std::move(attrs)) {}
   /*! \brief virtual destructor */
   virtual ~OpExecutor() {}
   /*!
