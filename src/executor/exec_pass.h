@@ -100,6 +100,16 @@ class OpExecutor {
    * \param rctx The runtime context passed in by environment.
    */
   virtual void Run(RunContext rctx, bool is_gpu) = 0;
+  /*!
+   * \brief run the operators of a vector of execs, given runtime context on device.
+   *  This function call does not synchronize the stream.
+   * \param rctx The runtime context passed in by environment.
+   */
+  static void RunAll(const std::vector<std::shared_ptr<OpExecutor> > &execs,
+                     RunContext rctx, bool is_gpu) {
+    for (auto &exec : execs)
+      exec->Run(rctx, is_gpu);
+  }
   /*! \return the execution type */
   virtual ExecType exec_type() const = 0;
   /*! \return return engine variable for operator states */
