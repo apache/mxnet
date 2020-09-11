@@ -25,7 +25,8 @@ graphviz<0.9.0,>=0.8.1
 contextvars;python_version<"3.7"
 
 # Optional dependencies
-onnx==1.5.0
+onnx==1.7.0
+onnxruntime==1.4.0
 # protobuf version frozen due to ps-lite
 protobuf==3.5.2
 scipy==1.4.1
