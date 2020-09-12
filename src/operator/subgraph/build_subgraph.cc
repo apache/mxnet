@@ -647,7 +647,8 @@ void CreateSubgraphNode(nnvm::Graph* g,
       sym.outputs[i] = *output_entries[i];
     }
   }
-  sym.outputs.resize(idx+1);
+  if (g->HasAttr("dedup_subgraph"))
+    sym.outputs.resize(idx+1);
 
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
   if (g->HasAttr("dedup_subgraph"))
