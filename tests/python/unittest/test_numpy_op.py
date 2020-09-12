@@ -4112,8 +4112,8 @@ def test_np_random_beta():
         mx_out = test_random_beta(mx_data, mx_data)
         mx_out_imperative = mx.np.random.beta(mx_data, mx_data, size=param_shape, dtype=out_dtype)
 
-        assert_almost_equal(np_out.shape, mx_out.shape)
-        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+        assert np_out.shape == mx_out.shape
+        assert np_out.shape == mx_out_imperative.shape
         assert _test_random_beta_range(mx_out.asnumpy()) == True
         assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
 
@@ -4153,8 +4153,8 @@ def test_np_random_chisquare():
         mx_out = test_random_chisquare(mx_df)
         mx_out_imperative = mx.np.random.chisquare(mx_df, size=param_shape, dtype=out_dtype)
 
-        assert_almost_equal(np_out.shape, mx_out.shape)
-        assert_almost_equal(np_out.shape, mx_out_imperative.shape)
+        assert np_out.shape == mx_out.shape
+        assert np_out.shape == mx_out_imperative.shape
 
 
 @with_seed()
@@ -4959,7 +4959,7 @@ def test_np_linalg_svd():
                 data_np = _np.random.uniform(-10.0, 10.0, shape)
                 data_np = _np.array(data_np, dtype=dtype)
                 data = np.array(data_np, dtype=dtype)
-                if effective_dtype(data) == np.dtype(np.float16):
+                if effective_dtype(data) == _np.dtype(_np.float16):
                     continue
                 data.attach_grad()
                 with mx.autograd.record():
