@@ -89,7 +89,11 @@ class OpExecutor {
   OpContext op_ctx;
   /*! \brief attributes of the node */
   NodeAttrs attrs;
-  explicit OpExecutor(NodeAttrs  attrs) : attrs(std::move(attrs)) {}
+  /*! \brief dispatch mode of the executor */
+  DispatchMode dispatch_mode;
+
+  explicit OpExecutor(NodeAttrs  attrs, DispatchMode dispatch_mode) :
+    attrs(std::move(attrs)), dispatch_mode(dispatch_mode) {}
   /*! \brief virtual destructor */
   virtual ~OpExecutor() {}
   /*!

@@ -46,8 +46,9 @@ namespace exec {
 class StorageFallbackOpExecutor : public OpExecutor {
  public:
   explicit StorageFallbackOpExecutor(const NodeAttrs& attrs,
+                                     const DispatchMode& dispatch_mode,
                                      const std::vector<uint32_t> &mutate_idx)
-      : OpExecutor(attrs), mutate_idx_(mutate_idx) {}
+      : OpExecutor(attrs, dispatch_mode), mutate_idx_(mutate_idx) {}
 
   void Setup() override {
     init_ = false;
@@ -138,11 +139,12 @@ class StatefulComputeExecutor : public StorageFallbackOpExecutor {
   }
 
   explicit StatefulComputeExecutor(const NodeAttrs& attrs,
+                                   const DispatchMode dispatch_mode,
                                    const OpStatePtr& state,
                                    const FStatefulCompute& fcompute,
                                    ExecType exec_type,
                                    const std::vector<uint32_t> &mutate_idx)
-      : StorageFallbackOpExecutor(attrs, mutate_idx),
+      : StorageFallbackOpExecutor(attrs, dispatch_mode, mutate_idx),
         state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
 
  private:
@@ -185,10 +187,12 @@ class StatefulComputeExExecutor : public OpExecutor {
   }
 
   explicit StatefulComputeExExecutor(const NodeAttrs& attrs,
+                                     const DispatchMode& dispatch_mode,
                                      const OpStatePtr& state,
                                      const FStatefulComputeEx& fcompute,
                                      ExecType exec_type)
-      : OpExecutor(attrs), state_(state), fcompute_(fcompute), exec_type_(exec_type) {}
+      : OpExecutor(attrs, dispatch_mode), state_(state), fcompute_(fcompute),
+        exec_type_(exec_type) {}
 
  private:
   OpStatePtr state_;
@@ -215,9 +219,10 @@ class FComputeExecutor : public StorageFallbackOpExecutor {
     return exec_type_;
   }
 
-  explicit FComputeExecutor(const NodeAttrs& attrs, FCompute fcompute,
-                            ExecType exec_type, const std::vector<uint32_t> &mutate_idx)
-      : StorageFallbackOpExecutor(attrs, mutate_idx),
+  explicit FComputeExecutor(const NodeAttrs& attrs, const DispatchMode dispatch_mode,
+                            FCompute fcompute, ExecType exec_type,
+                            const std::vector<uint32_t> &mutate_idx)
+      : StorageFallbackOpExecutor(attrs, dispatch_mode, mutate_idx),
         fcompute_(fcompute), exec_type_(exec_type) {
   }
 
@@ -250,9 +255,9 @@ class FComputeExExecutor : public OpExecutor {
     return exec_type_;
   }
 
-  explicit FComputeExExecutor(const NodeAttrs& attrs, FComputeEx fcompute,
-                              ExecType exec_type)
-      : OpExecutor(attrs), fcompute_(fcompute), exec_type_(exec_type) {
+  explicit FComputeExExecutor(const NodeAttrs& attrs, const DispatchMode dispatch_mode,
+                              FComputeEx fcompute, ExecType exec_type)
+      : OpExecutor(attrs, dispatch_mode), fcompute_(fcompute), exec_type_(exec_type) {
   }
 
  private:
@@ -309,7 +314,8 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, 
         op, "FStatefulComputeEx", vctx[i]);
     // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
     if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
-      ret[i] = std::make_shared<StatefulComputeExExecutor>(inode.source->attrs, state,
+      ret[i] = std::make_shared<StatefulComputeExExecutor>(inode.source->attrs,
+                                                           dispatch_modes[i], state,
                                                            fcompute_ex, exec_type);
     } else {
       FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
@@ -318,6 +324,7 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, 
           << "One of FStatefulCompute and FStatefulComputeEx must be registered "
           << "for stateful operator " << op->name;
       ret[i] = std::make_shared<StatefulComputeExecutor>(inode.source->attrs,
+                                                         dispatch_modes[i],
                                                          state, fcompute,
                                                          exec_type, mutate_index);
     }
@@ -331,8 +338,8 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, 
     // FStatefulComputeEx is dispatched only when dispatch_mode is DispatchMode::kFComputeEx
     if (fcompute_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
       ret[i] = std::make_shared<StatefulComputeExExecutor>(
-          inode.source->attrs, ret[fwd_id].get()->state(), fcompute_ex,
-          exec_type);
+          inode.source->attrs, dispatch_modes[i], ret[fwd_id].get()->state(),
+          fcompute_ex, exec_type);
     } else {
       FStatefulCompute fcompute = common::GetFCompute<FStatefulCompute>(
           op, "FStatefulCompute", vctx[i]);
@@ -340,17 +347,18 @@ void CreateOpExecs(const Graph& g, OpExecVector* p_ret, OpStateVector* p_state, 
           << "One of FStatefulCompute and FStatefulComputeEx must be registered "
           << "for stateful operator " << op->name;
       ret[i] = std::make_shared<StatefulComputeExecutor>(inode.source->attrs,
-          ret[fwd_id].get()->state(), fcompute, exec_type, mutate_index);
+          dispatch_modes[i], ret[fwd_id].get()->state(), fcompute, exec_type,
+          mutate_index);
     }
   } else {
     FCompute fcompute = common::GetFCompute<FCompute>(op, "FCompute", vctx[i]);
     FComputeEx fcomp_ex = common::GetFCompute<FComputeEx>(op, "FComputeEx", vctx[i]);
     if (fcomp_ex != nullptr && dispatch_modes[i] == DispatchMode::kFComputeEx) {
       ret[i] = std::make_shared<FComputeExExecutor>(
-          inode.source->attrs, fcomp_ex, exec_type);
+          inode.source->attrs, dispatch_modes[i], fcomp_ex, exec_type);
     } else if (fcompute != nullptr) {
       ret[i] = std::make_shared<FComputeExecutor>(
-          inode.source->attrs, fcompute, exec_type, mutate_index);
+          inode.source->attrs, dispatch_modes[i], fcompute, exec_type, mutate_index);
     } else {
       LOG(INFO) << "Neither FCompute nor FComputeEx registered " << op->name;
     }
