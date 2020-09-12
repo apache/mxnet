@@ -512,12 +512,17 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     nnvm::NodeEntry prevNodeEntry;
     uint32_t idx = 0;
     for (size_t i = 0; i < output_entries->size(); ++i) {
-      // increment the output idx for each unique output of the subgraph
-      if (i != 0 && !node_equal(prevNodeEntry, *output_entries->at(i)))
-        idx++;
-      prevNodeEntry = *output_entries->at(i);  // make a copy so we can compare before modifying
-      // change output entry to point to subgraph instead of original node
-      *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, idx, 0};
+      if (options_map_.count("dedup_subgraph") > 0 &&
+          options_map_.at("dedup_subgraph").compare("True") == 0) {
+        // increment the output idx for each unique output of the subgraph
+        if (i != 0 && !node_equal(prevNodeEntry, *output_entries->at(i)))
+          idx++;
+        prevNodeEntry = *output_entries->at(i);  // make a copy so we can compare before modifying
+        // change output entry to point to subgraph instead of original node
+        *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, idx, 0};
+      } else {
+        *output_entries->at(i) = nnvm::NodeEntry{subgraph_node, static_cast<uint32_t>(i), 0};
+      }
     }
   }
 
