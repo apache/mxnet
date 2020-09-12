@@ -1492,6 +1492,9 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
     for (auto property : subgraph_prop_list) {
       property->PrePartition(g, options_map);
       g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
+      if (options_map.count("dedup_subgraph") > 0 &&
+          options_map.at("dedup_subgraph").compare("True") == 0)
+        g.attrs["dedup_subgraph"] = std::make_shared<nnvm::any>(std::string("True"));
       g = ApplyPass(std::move(g), "BuildSubgraph");
       g.attrs.erase("subgraph_property");
       property->PostPartition(g);
