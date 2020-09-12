@@ -390,6 +390,36 @@ def check_subgraph_exe9(sym, subgraph_backend, op_names):
     for i in range(len(outputs1)):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
+def check_subgraph_exe10(sym, subgraph_backend, op_names):
+    """Call optimize_for to infer shapes, types and dtypes followed by graph partitioning and
+    dedup subgraph, then bind and compare results of the partitioned sym and the original sym."""
+    # bind
+    arg_shapes, _, aux_shapes = sym.infer_shape()
+    arg_names = sym.list_arguments()
+    aux_names = sym.list_auxiliary_states()
+    arg_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(arg_names,arg_shapes)}
+    aux_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(aux_names,aux_shapes)}
+    exe1 = sym.bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe1.forward()
+
+    # infer shape/type before partition before bind
+    check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                   c_str_array(op_names)))
+    print(sym.tojson())
+    part_sym = sym.optimize_for(subgraph_backend, arg_dict, aux_dict, dedup_subgraph=True)
+    print(part_sym.tojson())
+    check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
+
+    exe2 = part_sym.bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe2.forward()
+
+    # compare outputs
+    outputs1 = exe1.outputs
+    outputs2 = exe2.outputs
+    assert len(outputs1) == len(outputs2)
+    for i in range(len(outputs1)):
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+
 def check_subgraph(subgraph_backend):
     for sym, op_names in get_graphs():
         check_subgraph_exe1(sym[0], subgraph_backend, op_names)
@@ -403,6 +433,7 @@ def check_subgraph_backend_sym(subgraph_backend):
         check_subgraph_exe6(sym[0], subgraph_backend, op_names)
         check_subgraph_exe7(sym[0], subgraph_backend, op_names)
         check_subgraph_exe8(sym[0], subgraph_backend, op_names)
+        check_subgraph_exe10(sym[0], subgraph_backend, op_names)
 
 def check_subgraph_backend_gluon(subgraph_backend):
     for sym, op_names in get_graphs():
