@@ -319,9 +319,8 @@ class  CustomSubgraphProperty: public SubgraphProperty {
     opt_vals_.clear();
     options_map_.clear();
     // store options in map in subgraph property to re-use later for reviewSubgraph
-    for (auto& kv : options_map) {
-      options_map_.push_back(kv);
-    }
+    options_map_.insert(options_map.begin(), options_map.end());
+
     // convert options_map_ to char* to pass to backend library
     for (auto& kv : options_map_) {
       opt_keys_.push_back(kv.first.c_str());
@@ -548,7 +547,7 @@ class  CustomSubgraphProperty: public SubgraphProperty {
   mxnet::ext::opCallFree_t call_free_;
   std::unordered_map<std::string, int> supported_nodes;
   std::string subgraph_op_name;
-  std::vector<std::pair<std::string, std::string>> options_map_;
+  std::unordered_map<std::string, std::string> options_map_;
   std::vector<const char*> opt_keys_, opt_vals_;
   std::vector<std::string> in_arg_names, in_aux_names;
   NDArray **in_args_ptr;
