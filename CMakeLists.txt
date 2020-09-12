@@ -51,6 +51,7 @@ Format: Auto | Common | All | LIST(ARCH_AND_PTX ...)
 option(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
 option(USE_OPENCV "Build with OpenCV support" ON)
 option(USE_OPENMP "Build with Openmp support" ON)
+option(USE_FATBIN_COMPRESSION "Compress nvcc fatbin output" ON)
 cmake_dependent_option(USE_NVML "Build with nvml support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
 cmake_dependent_option(USE_NVTX "Build with nvtx support if found" ON "USE_CUDA" OFF)
@@ -632,6 +633,10 @@ endif()
 # Add cmake targets
 add_subdirectory("3rdparty/mshadow")
 
+if(USE_CUDA AND USE_FATBIN_COMPRESSION)
+  string(APPEND CMAKE_CUDA_FLAGS "--fatbin-options -compress-all ")
+  message("-- CUDA: Adding NVCC options: --fatbin-options -compress-all ")
+endif()
 if(UNIX)
   string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
   # Create dummy file since we want an empty shared library before linking
