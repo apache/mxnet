@@ -2319,3 +2319,37 @@ def test_fp16_spmm():
     out = mxsps.dot(inp, weight)
     out_np = mx.nd.dot(inp, weight)
     assert_almost_equal(out.asnumpy(), out_np, rtol=1e-3, atol=1e-5)
+
+@with_seed()
+@pytest.mark.serial
+def test_split_v2_fwd():
+    dim = random.randint(2, 6)
+    shape = rand_shape_nd(dim)
+    axis = random.randint(-dim, dim-1)
+    axis_size = shape[axis]
+    samples = random.randint(0, axis_size - 1)
+    indices = sorted(random.sample([i for i in range(1, axis_size)], samples))
+    indices = tuple(indices)
+    dtypes = ["float16", "float32", "float64"]
+    for dtype in dtypes:
+        mx_data = rand_ndarray(shape, dtype=dtype)
+        np_data = mx_data.asnumpy()
+        np_out = np.split(np_data, indices_or_sections=indices, axis=axis)
+        data = mx.sym.Variable("data")
+        sym = mx.sym.split_v2(data, indices_or_sections=indices, axis=axis)
+        check_symbolic_forward(sym, {"data": mx_data}, np_out, rtol=1e-3, atol=1e-5)
+    # test load types with dtpye fp16/fp32
+    multiple_fp64 = random.randint(1,8) * 4
+    shape = (multiple_fp64, multiple_fp64, multiple_fp64, multiple_fp64)
+    dtypes = ["float16", "float32"]
+    axes = [-1, -2, -3, -4]
+    n_sections = [1, 2, 4]
+    for dtype in dtypes:
+        for axis in axes:
+            for n_sec in n_sections:
+                mx_data = rand_ndarray(shape, dtype=dtype)
+                np_data = mx_data.asnumpy()
+                np_out = np.split(np_data, n_sec, axis=axis)
+                data = mx.sym.Variable("data")
+                sym = mx.sym.split_v2(data, n_sec, axis=axis)
+                check_symbolic_forward(sym, {"data": mx_data}, np_out, rtol=1e-3, atol=1e-5)

@@ -447,6 +447,64 @@ void SliceExCPU(const nnvm::NodeAttrs& attrs,
   }
 }
 
+template<>
+inline void SplitOpForwardImpl<cpu>(const nnvm::NodeAttrs& attrs,
+                                    const OpContext& ctx,
+                                    const std::vector<TBlob>& inputs,
+                                    const std::vector<OpReqType>& req,
+                                    const std::vector<TBlob>& outputs,
+                                    const int real_axis) {
+  using namespace mshadow;
+  using namespace mshadow::expr;
+  using namespace mxnet_op;
+  const SplitParam& param = nnvm::get<SplitParam>(attrs.parsed);
+  Stream<cpu> *s = ctx.get_stream<cpu>();
+  const TBlob& input_data = inputs[split_enum::kData];
+  size_t leading = 1, trailing = 1;
+  CHECK_LT(real_axis, input_data.ndim());
+  size_t mid = input_data.shape_[real_axis];
+  for (int i = 0; i < real_axis; ++i) {
+    leading *= input_data.shape_[i];
+  }
+  for (int i = real_axis + 1; i < input_data.ndim(); ++i) {
+    trailing *= input_data.shape_[i];
+  }
+
+  size_t workspace_size = 0;
+  const mxnet::TShape& ishape = input_data.shape_;
+  const mxnet::TShape split_pts =
+    (param.sections > 0) ? GetSplitIndices(ishape, real_axis, param.sections) : param.indices;
+  std::vector<size_t> indices;
+  for (const auto& section : split_pts) {
+    indices.push_back(section);
+  }
+  if (param.sections == 0) {
+    indices.push_back(ishape[real_axis]);
+  }
+  workspace_size += indices.size() * sizeof(size_t);
+  MSHADOW_TYPE_SWITCH(input_data.type_flag_, DType, {
+    std::vector<DType*> output_data;
+    for (const TBlob& data : outputs) {
+      output_data.push_back(data.dptr<DType>());
+    }
+    workspace_size += output_data.size() * sizeof(DType*);
+    Tensor<cpu, 1, char> workspace =
+      ctx.requested[0].get_space_typed<cpu, 1, char>(Shape1(workspace_size), s);
+    Tensor<cpu, 1, size_t> indices_cpu_tensor(indices.data(), Shape1(indices.size()));
+    Tensor<cpu, 1, size_t> indices_xpu_tensor(
+      reinterpret_cast<size_t*>(workspace.dptr_), Shape1(indices.size()));
+    Tensor<cpu, 1, DType*> ptrs_cpu_tensor(output_data.data(), Shape1(output_data.size()));
+    Tensor<cpu, 1, DType*> ptrs_xpu_tensor(
+      reinterpret_cast<DType**>(workspace.dptr_ + indices.size() * sizeof(size_t)),
+      Shape1(output_data.size()));
+    mshadow::Copy(indices_xpu_tensor, indices_cpu_tensor, s);
+    mshadow::Copy(ptrs_xpu_tensor, ptrs_cpu_tensor, s);
+    Kernel<SplitKernel, cpu>::Launch(
+      s, input_data.Size(), input_data.dptr<DType>(), ptrs_xpu_tensor.dptr_,
+      indices_xpu_tensor.dptr_, indices.size() - 1, mid, trailing);
+  });
+}
+
 NNVM_REGISTER_OP(slice)
 MXNET_ADD_SPARSE_OP_ALIAS(slice)
 .add_alias("crop")
