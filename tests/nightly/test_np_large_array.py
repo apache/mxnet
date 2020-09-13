@@ -568,6 +568,102 @@ def test_slice_assign():
     B[-1] = 2
     assert B[-1, 0] == 2 and B[-1, 1] == 2
 
+@use_np
+def test_add():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = 2
+    A.attach_grad()
+    with mx.autograd.record():
+        C = np.add(A, B)
+        C.backward()
+    assert C.shape == (INT_OVERFLOW, 2)
+    assert C[-1, -1] == 3
+    assert A.grad.shape == (INT_OVERFLOW, 2)
+    assert A.grad[-1, -1] == 1
+
+@use_np
+def test_hypot():
+    A = np.ones((INT_OVERFLOW, 2))
+    B = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1], B[-1, -1] = 3, 4
+    A.attach_grad()
+    with mx.autograd.record():
+        C = np.hypot(A, B)
+        C.backward()
+    assert C.shape == A.shape
+    assert C[-1, -1] == 5
+    assert A.grad.shape == A.shape
+    assert_almost_equal(A.grad[-1, -1], np.array([0.6]), rtol=1e-5, atol=1e-5)
+
+@use_np
+def test_power():
+    A = np.full((2, INT_OVERFLOW), 2)
+    B = np.ones((2, INT_OVERFLOW))
+    B[-1, -1] = 3
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.power(A, B)
+        C.backward()
+    assert C.shape == A.shape
+    assert C[-1, -1] == 8
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 12
+    assert B.grad.shape == B.shape
+    assert_almost_equal(B.grad[-1, -1], 2**3 * np.log(2), rtol=1e-5, atol=1e-5)
+
+@use_np
+def test_ldexp():
+    A = np.ones((2, INT_OVERFLOW))
+    B = np.ones((2, INT_OVERFLOW))
+    A[-1, -1], B[-1, -1] = 5, 2
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.ldexp(A, B)
+        C.backward()
+    assert C.shape == A.shape
+    assert C[-1, -1] == 20
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 4
+    assert B.grad.shape == B.shape
+    assert_almost_equal(B.grad[-1, -1], A[-1, -1] * 2**B[-1, -1] * np.log(2), \
+        rtol=1e-5, atol=1e-5)
+
+@use_np
+def test_multiply():
+    A = np.ones((2, INT_OVERFLOW))
+    B = np.ones((2, INT_OVERFLOW))
+    A[-1, -1], B[-1, -1] = 2, 3
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.multiply(A, B)
+        C.backward()
+    assert C.shape == A.shape
+    assert C[0, 0] == 1 and C[-1, -1] == 6
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == B[-1, -1]
+    assert B.grad.shape == B.shape
+    assert B.grad[-1, -1] == A[-1, -1]
+
+@use_np
+def test_subtract():
+    A = np.zeros((INT_OVERFLOW, 2))
+    B = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = 3
+    A.attach_grad()
+    B.attach_grad()
+    with mx.autograd.record():
+        C = np.subtract(A, B)
+        C.backward()
+    assert C.shape == (INT_OVERFLOW, 2)
+    assert C[0, 0] == -1 and C[-1][-1] == 2
+    assert A.grad.shape == (INT_OVERFLOW, 2)
+    assert A.grad[0][0] == 1
+    assert B.grad.shape == (INT_OVERFLOW, 2)
+    assert B.grad[0][0] == -1
 
 '''
                                      _               _
