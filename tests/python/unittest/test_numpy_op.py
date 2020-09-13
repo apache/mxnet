@@ -4096,7 +4096,8 @@ def test_np_random_beta():
         smaller_than_one = _np.all(output < 1)
         return bigger_than_zero and smaller_than_one
 
-    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    # Starting with numpy 1.19.0: "Output size () is not compatible with broadcast dimensions of inputs (1,)."
+    shape_list = [(1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
     # since fp16 might incur precision issue, the corresponding test is skipped
     dtype_list = [np.float32, np.float64]
     hybridize_list = [False, True]
@@ -4135,7 +4136,8 @@ def test_np_random_chisquare():
         def hybrid_forward(self, F, df):
             return F.np.random.chisquare(df, size=self._size, dtype=self._dtype, ctx=self._ctx)
 
-    shape_list = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
+    # Starting with numpy 1.19.0: "Output size () is not compatible with broadcast dimensions of inputs (1,)."
+    shape_list = [(1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
 
     dtype_list = [np.float16, np.float32, np.float64]
     hybridize_list = [False, True]
