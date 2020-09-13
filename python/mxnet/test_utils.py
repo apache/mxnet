@@ -119,7 +119,7 @@ def effective_dtype(dat):
     def is_TF32_enabled(ctx):
         try:
             return (ctx.device_type == 'gpu' and
-                    get_cuda_compute_capability(ctx) == 80 and
+                    get_cuda_compute_capability(ctx) >= 80 and
                     os.environ.get('NVIDIA_TF32_OVERRIDE') != '0')
         except:  # pylint: disable=bare-except
             return False
