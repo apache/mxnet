@@ -495,7 +495,7 @@ $(INTGEMM_PATH):
 	@mkdir -p $(INTGEMM_PATH)
 	rm -rf $(INTGEMM_PATH)
 	git clone https://github.com/kpu/intgemm $(INTGEMM_PATH)
-	cd $(INTGEMM_PATH) && git checkout -q 9c36b961a003f2a230fa2934e766bffc98d8afb9
+	cd $(INTGEMM_PATH) && git checkout -q cce978d4f7e9732a63a3b57e64cf83f6171743db
 
 $(INTGEMM_PATH)/compile_test_avx512bw.cc: $(INTGEMM_PATH)
 	@
