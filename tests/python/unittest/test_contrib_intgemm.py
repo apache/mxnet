@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import pytest
 import mxnet as mx
 from mxnet import np, npx
 from mxnet.test_utils import same, use_np, assert_almost_equal
@@ -123,101 +122,100 @@ def test_contrib_intgemm_take_weight():
         assert same(test, ref)
     
 @use_np
-@pytest.mark.parametrize('data_rows', range(1, 5))
-@pytest.mark.parametrize('inner', range(64, 256, 64))
-@pytest.mark.parametrize('weight_cols', range(8, 24, 8))
-@pytest.mark.parametrize('api', [
-    (mx.nd.contrib, mx.nd, mx.nd.FullyConnected, mx.nd.cast),
-    (npx, np, npx.fully_connected, npx.cast)])
-def test_contrib_intgemm_multiply(data_rows, inner, weight_cols, api):
+def test_contrib_intgemm_multiply():
     if "intgemm_fully_connected" not in dir(mx.nd.contrib):
         return
-    contrib, top, fully_connected, cast = api
-    #The multiplication routine has approximations so everything is tested
-    #deterministically to ensure bounds are met.
-    random.seed(1)
-
-    # Don't use full range (-127, 127) to avoid saturation.
-    data = [random.randint(-64, 64) for i in range(data_rows * inner)]
-    data = top.array(data, dtype='int8').reshape((data_rows, inner))
-    weight = [random.randint(-64, 64) for i in range(inner * weight_cols)]
-    weight = top.array(weight, dtype='int8').reshape((weight_cols, inner))
-    weight_prepared = contrib.intgemm_prepare_weight(weight, already_quantized=True)
-
-    # int32 output, no bias
-    test = contrib.intgemm_fully_connected(data,
-                                           weight_prepared,
-                                           no_bias=True,
-                                           flatten=False,
-                                           out_type='int32',
-                                           num_hidden=weight_cols)
-    ref = fully_connected(cast(data, dtype='float32'),
-                          cast(weight, dtype='float32'),
-                          no_bias=True,
-                          flatten=False,
-                          num_hidden=weight_cols)
-    assert_almost_equal(cast(test, dtype='float32').as_nd_ndarray(), ref.as_nd_ndarray(), rtol=0.01, atol=0.01)
-
-    # float32 output, no bias
-    scale = 3.0
-    test = contrib.intgemm_fully_connected(data,
-                                           weight_prepared,
-                                           top.array([scale]),
-                                           no_bias=True,
-                                           flatten=False,
-                                           out_type='float32',
-                                           num_hidden=weight_cols)
-    assert_almost_equal(test.as_nd_ndarray(), (ref * scale).as_nd_ndarray(), rtol=0.01, atol=0.01)
-
-    # int32 output, bias
-    bias = top.array([random.randint(-60000, 60000) for i in range(weight_cols)], dtype = 'int32')
-    test = contrib.intgemm_fully_connected(data,
-                                           weight_prepared,
-                                           bias,
-                                           no_bias=False,
-                                           flatten=False,
-                                           out_type='int32',
-                                           num_hidden=weight_cols)
-    ref = fully_connected(cast(data, dtype='float32'),
-                               cast(weight, dtype='float32'),
-                               cast(bias, dtype='float32'),
-                               no_bias=False,
-                               flatten=False,
-                               num_hidden=weight_cols)
-    assert_almost_equal(cast(test, dtype='float32').as_nd_ndarray(), ref.as_nd_ndarray(), rtol=0.01, atol=0.01)
-
-    # float32 output, bias
-    # Scaling is applied before bias (and bias is not scaled). So to make the
-    # reference comparison easy, just scale the bias beforehand.
-    test = contrib.intgemm_fully_connected(data,
-                                           weight_prepared,
-                                           top.array([scale]),
-                                           cast(bias, dtype='float32') * scale,
-                                           no_bias=False,
-                                           flatten=False,
-                                           out_type='float32',
-                                           num_hidden=weight_cols)
-    assert_almost_equal(test.as_nd_ndarray(), (ref * scale).as_nd_ndarray(), rtol=0.01, atol=0.01)
-
-    # float32 input should work the same as manually prepared int8 input.
-    data_float = top.array([random.uniform(-3.14, 3.14) for i in range(data_rows * inner)])
-    data_float = data_float.reshape(data_rows, inner)
-    direct = contrib.intgemm_fully_connected(data_float,
-                                             weight_prepared,
-                                             top.array([scale]),
-                                             cast(bias, dtype='float32'),
-                                             no_bias=False,
-                                             flatten=False,
-                                             out_type='float32',
-                                             num_hidden=weight_cols)
-    maxabs = contrib.intgemm_maxabsolute(data_float)
-    data_prepared = contrib.intgemm_prepare_data(data_float, maxabs)
-    cooked = contrib.intgemm_fully_connected(data_prepared,
-                                             weight_prepared,
-                                             top.array(scale * maxabs / 127.0),
-                                             cast(bias, dtype='float32'),
-                                             no_bias=False,
-                                             flatten=False,
-                                             out_type='float32',
-                                             num_hidden=weight_cols)
-    assert_almost_equal(direct.as_nd_ndarray(), cooked.as_nd_ndarray(), rtol=0.01, atol=0.01)
+    apis = [(mx.nd.contrib, mx.nd, mx.nd.FullyConnected, mx.nd.cast), (npx, np, npx.fully_connected, npx.cast)]
+    for data_rows, inner, weight_cols, api in product(range(1, 5),
+                                                      range(64, 256, 64),
+                                                      range(8, 24, 8),
+                                                      apis):
+        contrib, top, fully_connected, cast = api
+        #The multiplication routine has approximations so everything is tested
+        #deterministically to ensure bounds are met.
+        random.seed(1)
+    
+        # Don't use full range (-127, 127) to avoid saturation.
+        data = [random.randint(-64, 64) for i in range(data_rows * inner)]
+        data = top.array(data, dtype='int8').reshape((data_rows, inner))
+        weight = [random.randint(-64, 64) for i in range(inner * weight_cols)]
+        weight = top.array(weight, dtype='int8').reshape((weight_cols, inner))
+        weight_prepared = contrib.intgemm_prepare_weight(weight, already_quantized=True)
+    
+        # int32 output, no bias
+        test = contrib.intgemm_fully_connected(data,
+                                               weight_prepared,
+                                               no_bias=True,
+                                               flatten=False,
+                                               out_type='int32',
+                                               num_hidden=weight_cols)
+        ref = fully_connected(cast(data, dtype='float32'),
+                              cast(weight, dtype='float32'),
+                              no_bias=True,
+                              flatten=False,
+                              num_hidden=weight_cols)
+        assert_almost_equal(cast(test, dtype='float32').as_nd_ndarray(), ref.as_nd_ndarray(), rtol=0.01, atol=0.01)
+    
+        # float32 output, no bias
+        scale = 3.0
+        test = contrib.intgemm_fully_connected(data,
+                                               weight_prepared,
+                                               top.array([scale]),
+                                               no_bias=True,
+                                               flatten=False,
+                                               out_type='float32',
+                                               num_hidden=weight_cols)
+        assert_almost_equal(test.as_nd_ndarray(), (ref * scale).as_nd_ndarray(), rtol=0.01, atol=0.01)
+    
+        # int32 output, bias
+        bias = top.array([random.randint(-60000, 60000) for i in range(weight_cols)], dtype = 'int32')
+        test = contrib.intgemm_fully_connected(data,
+                                               weight_prepared,
+                                               bias,
+                                               no_bias=False,
+                                               flatten=False,
+                                               out_type='int32',
+                                               num_hidden=weight_cols)
+        ref = fully_connected(cast(data, dtype='float32'),
+                                   cast(weight, dtype='float32'),
+                                   cast(bias, dtype='float32'),
+                                   no_bias=False,
+                                   flatten=False,
+                                   num_hidden=weight_cols)
+        assert_almost_equal(cast(test, dtype='float32').as_nd_ndarray(), ref.as_nd_ndarray(), rtol=0.01, atol=0.01)
+    
+        # float32 output, bias
+        # Scaling is applied before bias (and bias is not scaled). So to make the
+        # reference comparison easy, just scale the bias beforehand.
+        test = contrib.intgemm_fully_connected(data,
+                                               weight_prepared,
+                                               top.array([scale]),
+                                               cast(bias, dtype='float32') * scale,
+                                               no_bias=False,
+                                               flatten=False,
+                                               out_type='float32',
+                                               num_hidden=weight_cols)
+        assert_almost_equal(test.as_nd_ndarray(), (ref * scale).as_nd_ndarray(), rtol=0.01, atol=0.01)
+    
+        # float32 input should work the same as manually prepared int8 input.
+        data_float = top.array([random.uniform(-3.14, 3.14) for i in range(data_rows * inner)])
+        data_float = data_float.reshape(data_rows, inner)
+        direct = contrib.intgemm_fully_connected(data_float,
+                                                 weight_prepared,
+                                                 top.array([scale]),
+                                                 cast(bias, dtype='float32'),
+                                                 no_bias=False,
+                                                 flatten=False,
+                                                 out_type='float32',
+                                                 num_hidden=weight_cols)
+        maxabs = contrib.intgemm_maxabsolute(data_float)
+        data_prepared = contrib.intgemm_prepare_data(data_float, maxabs)
+        cooked = contrib.intgemm_fully_connected(data_prepared,
+                                                 weight_prepared,
+                                                 top.array(scale * maxabs / 127.0),
+                                                 cast(bias, dtype='float32'),
+                                                 no_bias=False,
+                                                 flatten=False,
+                                                 out_type='float32',
+                                                 num_hidden=weight_cols)
+        assert_almost_equal(direct.as_nd_ndarray(), cooked.as_nd_ndarray(), rtol=0.01, atol=0.01)
