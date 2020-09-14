@@ -53,7 +53,7 @@
 #endif
 
 /* Make sure to update the version number everytime you make changes */
-#define MX_LIBRARY_VERSION 9
+#define MX_LIBRARY_VERSION 10
 
 /*!
  * \brief For loading multiple custom op libraries in Linux, exporting same symbol multiple
