@@ -947,8 +947,8 @@ class HybridBlock(Block):
                     flatten_inputs.append(None)
             grouped_inputs = _regroup(flatten_inputs, self._in_format)
 
+            params = {i: j.var() for i, j in self._reg_params.items()}
             with _block_scope(self):
-                params = {i: j.var() for i, j in self._reg_params.items()}
                 out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out, "output")
 
@@ -1448,8 +1448,8 @@ class HybridBlock(Block):
 
                 return self.hybrid_forward(ndarray, x, *args, **params)
 
+        params = {i: j.var() for i, j in self._reg_params.items()}
         with _block_scope(self):
-            params = {i: j.var() for i, j in self._reg_params.items()}
             return self.hybrid_forward(symbol, x, *args, **params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
