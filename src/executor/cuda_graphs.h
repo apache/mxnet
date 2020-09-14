@@ -538,9 +538,9 @@ class CudaGraphsExec {
   bool is_enabled_;
 };
 
-#endif  // CUDA_GRAPHS_AVAILABLE
-
-
 }  // namespace cuda_graphs
 }  // namespace mxnet
+
+#endif  // CUDA_GRAPHS_AVAILABLE
+
 #endif  // MXNET_EXECUTOR_CUDA_GRAPHS_H_
