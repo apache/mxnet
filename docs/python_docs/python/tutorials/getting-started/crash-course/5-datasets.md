@@ -341,13 +341,13 @@ assert label == 1
 # ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/caltech101_face.png)<!--notebook-skip-line-->
 ```
 
-# Using own data with custom `Dataset`s
+# Using your own data with custom `Dataset`s
 
 Sometimes you have data that doesn't quite fit the format expected by the included [Dataset](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.Dataset)s. You might be able to preprocess your data to fit the expected format, but it is easy to create your own dataset to do this.
 
 All you need to do is create a class that implements a `__getitem__` method, that returns a sample (i.e. a tuple of [mx.nd.NDArray](/api/python/docs/api/ndarray/ndarray.html#mxnet.ndarray.NDArray)'s).
 
-## New in MXNet 2.0: C++ backend dataloaders
+# New in MXNet 2.0: faster C++ backend dataloaders
 
 As part of an effort to speed up the current data loading pipeline using gluon dataset and dataloader, a new dataloader was created that uses only a C++ backend and avoids potentially slow calls to Python functions.
 
@@ -370,13 +370,13 @@ Performance concerns include slow python dataset/transform functions, multithrea
 This new dataloader provides: 
 - common C++ batchify functions that are split and context aware
 - a C++ MultithreadingDataLoader which inherit the same arguments as gluon.data.DataLoader but use MXNet internal multithreading rather than python multiprocessing.
-- fallback to python multiprocessing whenever the dataset is not fully supported by backend(e.g., there are custom python datasets)
+- fallback to python multiprocessing whenever the dataset is not fully supported by backend (e.g., there are custom python datasets) in the case that:
     - the transform is not fully hybridizable
     - batchify is not fully supported by backend
 
 Users can continue to with the traditional gluon.data.Dataloader and the C++ backend will be applied automatically. The 'try_nopython' default is 'Auto', which detects whether the C++ backend is available given the dataset and transforms. 
 
-Here we show a slight performance increase for the CIFAR10 dataset with the C++ backend.
+Here we show a performance increase on a t3.2xl instance for the CIFAR10 dataset with the C++ backend.
 
 ### Using the C++ backend:
 
@@ -402,30 +402,6 @@ print('Elapsed time for backend dataloader:', time.time() - start)
     Elapsed time for backend dataloader: 2.421664237976074
 
 
-### With default:
-
-
-```python
-cpp_dl = mx.gluon.data.DataLoader(
-    mx.gluon.data.vision.CIFAR10(train=True, transform=None), batch_size=32, num_workers=2)#,try_nopython=True)
-```
-
-
-```python
-start = time.time()
-for _ in range(3):
-    print(len(cpp_dl))
-    for _ in cpp_dl:
-        pass
-print('Elapsed time for backend dataloader:', time.time() - start)
-```
-
-    1563
-    1563
-    1563
-    Elapsed time for backend dataloader: 2.7070932388305664
-
-
 ### Using the Python backend:
 
 
@@ -449,6 +425,9 @@ print('Elapsed time for python dataloader:', time.time() - start)
     1563
     Elapsed time for python dataloader: 6.896752119064331
 
+
+### The C++ backend loader was almost 3X faster for this particular use case
+This improvement in performance will not be seen in all cases, but when possible we encourage users to compare the dataloader throughput for these two options.
 
 
 ```python
