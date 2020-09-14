@@ -35,7 +35,7 @@
 #include "../common/cuda_utils.h"
 
 #if MXNET_USE_CUDA
-#define CUDA_GRAPHS_AVAILABLE (CUDA_VERSION >= 10010)
+#define CUDA_GRAPHS_AVAILABLE (CUDA_VERSION >= 10020)
 #else
 #define CUDA_GRAPHS_AVAILABLE (0)
 #endif
