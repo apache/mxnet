@@ -643,6 +643,7 @@ endif()
 
 if(CUDAToolkit_VERSION_MAJOR LESS "11")
   include_directories("3rdparty/nvidia_cub")
+    add_definitions(-DCUB_IGNORE_DEPRECATED_CPP_DIALECT)
 endif()
 
 # unsupported: if caffe is a subdirectory of mxnet, load its CMakeLists.txt as well
