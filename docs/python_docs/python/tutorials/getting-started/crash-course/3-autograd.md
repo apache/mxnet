@@ -72,7 +72,7 @@ with autograd.record():
     y = np.sum(2 * x * x)
 y.backward(retain_graph=True)
 print(x.grad)
-print("since we retained our previous graph we can run backward again")
+print("Since we retained our previous graph we can run backward again")
 y.backward()
 print(x.grad)
 
@@ -172,9 +172,8 @@ print(x.grad)
 ```
 
 Additionally, MXNet records the execution trace and computes the gradient
-accordingly.Consider the following function `f` in the following example code.
-The function doubles the inputs until its `norm` reaches 1000. Then it selects
-one element depending on the sum of its elements.
+accordingly. The following function `f` doubles the inputs until its `norm`
+reaches 1000. Then it selects one element depending on the sum of its elements.
 
 ```python
 def f(a):

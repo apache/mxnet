@@ -1,7 +1,3 @@
-```python
-!pip install --pre --upgrade mxnet-cu102 -f https://dist.mxnet.io/python
-```
-
 # Step 1: Manipulate data with NP on MXNet
 
 This getting started exercise introduces the MXNet `np` package for ndarrays.
@@ -87,7 +83,7 @@ x.dtype
 
 ## Performing operations on an array
 
-An ndarray supports a large number of standard mathematical operations. Here are
+A ndarray supports a large number of standard mathematical operations. Here are
 some examples. You can perform element-wise multiplication by using the
 following code example.
 
