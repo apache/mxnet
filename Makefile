@@ -88,7 +88,20 @@ endif
 
 ifndef USE_INTGEMM
 ifeq ($(UNAME_P), x86_64)
-  USE_INTGEMM=1
+	COMPILER := $(shell $(CXX) --version |head -n 1 |cut -d " " -f 1)
+	COMPILER_VERSION := $(shell $(CXX) -dumpversion |cut -d . -f 1)
+	ifeq ($(COMPILER), clang)
+		USE_INTGEMM=1
+	endif
+	ifeq ($(COMPILER), Apple)
+		USE_INTGEMM=1
+	endif
+	# If it's not clang and not Apple clang, it's probably gcc and we need at least 5.
+	# gcc --version gives the name of the program it was called with, which makes it hard to detect.
+	COMPILER_VERSION_GE_5 := $(shell expr $(COMPILER_VERSION) \>= 5)
+	ifeq ($(COMPILER_VERSION_GE_5), 1)
+		USE_INTGEMM=1
+	endif
 endif
 endif
 
