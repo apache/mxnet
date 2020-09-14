@@ -30,7 +30,7 @@ Build-in recurrent neural network layers are provided in the following two modul
 .. currentmodule:: mxnet.gluon
 
 Recurrent Cells
-----------------
+---------------
 
 .. autosummary::
     :nosignatures:
@@ -38,11 +38,29 @@ Recurrent Cells
     rnn.LSTMCell
     rnn.GRUCell
     rnn.RecurrentCell
+    rnn.LSTMPCell
     rnn.SequentialRNNCell
     rnn.BidirectionalCell
     rnn.DropoutCell
+    rnn.VariationalDropoutCell
     rnn.ZoneoutCell
     rnn.ResidualCell
+
+Convolutional Recurrent Cells
+-----------------------------
+
+.. autosummary::
+    :nosignatures:
+
+    rnn.Conv1DLSTMCell
+    rnn.Conv2DLSTMCell
+    rnn.Conv3DLSTMCell
+    rnn.Conv1DGRUCell
+    rnn.Conv2DGRUCell
+    rnn.Conv3DGRUCell
+    rnn.Conv1DRNNCell
+    rnn.Conv2DRNNCell
+    rnn.Conv3DRNNCell
 
 Recurrent Layers
 ----------------

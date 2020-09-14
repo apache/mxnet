@@ -46,21 +46,39 @@ c = mx.sym.Variable('c')
 d = mx.sym.Variable('d')
 e = mx.sym.my_relu(c)
 base = mx.sym.relu(d)
-in_grad = [mx.nd.empty((2,2), ctx=mx.gpu())]
-in_grad_base = [mx.nd.empty((2,2), ctx=mx.gpu())]
-exe = e.bind(ctx=mx.gpu(), args={'c':b}, args_grad=in_grad)
-exe_base = base.bind(ctx=mx.gpu(), args={'d':b}, args_grad=in_grad_base)
-out = exe.forward()
-out_base = exe_base.forward()
-print(out)
-print(out_base)
-
-print("--------backward compute--------")
+#in_grad = [mx.nd.empty((2,2), ctx=mx.gpu())]
+#in_grad_base = [mx.nd.empty((2,2), ctx=mx.gpu())]
 out_grad = mx.nd.ones((2,2), ctx=mx.gpu())
-exe.backward([out_grad])
-exe_base.backward([out_grad])
-print(in_grad)
-print(in_grad_base)
+#exe = e.bind(ctx=mx.gpu(), args={'c':b}, args_grad=in_grad)
+block = mx.gluon.nn.SymbolBlock(e,[c])
+#exe_base = base.bind(ctx=mx.gpu(), args={'d':b}, args_grad=in_grad_base)
+block_base = mx.gluon.nn.SymbolBlock(base,[d])
+
+# base
+with mx.autograd.record():
+    b_ = mx.nd.array([[-2,-1],[1,2]], ctx=mx.gpu())
+    b_.attach_grad()
+    # foward
+    out_base = block_base(b_)
+    print(out_base)
+    print('+++++')
+    # backward
+    out_base.backward(out_grad)
+    print(b_.grad)
+    print("-------")
+
+# custom relu
+with mx.autograd.record():
+    b_ = mx.nd.array([[-2,-1],[1,2]], ctx=mx.gpu())
+    b_.attach_grad()
+    # foward
+    out = block(b_)
+    print(out)
+    print('+++++')
+    # backward
+    out.backward(out_grad)
+    print(b_.grad)
+    print("-------")
 
 print("--------test ndarray with size of 1 million---------")
 b = mx.nd.uniform(shape=(100,100,100), ctx=mx.gpu())

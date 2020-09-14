@@ -115,7 +115,7 @@ class ElemwiseBinaryOp : public OpBase {
                                const std::vector<TBlob> &outputs) {
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       using namespace mxnet_op;
-      const int size = static_cast<int>((outputs[0].Size() + DataType<DType>::kLanes - 1)
+      const size_t size = static_cast<size_t>((outputs[0].Size() + DataType<DType>::kLanes - 1)
                                         / DataType<DType>::kLanes);
       const DType *ograd_dptr = inputs[0].dptr<DType>();
       if (std::is_same<LOP, mshadow_op::identity>::value && req[0] == kWriteInplace) {
@@ -150,7 +150,7 @@ class ElemwiseBinaryOp : public OpBase {
       const DType *lhs_dptr = inputs[1].dptr<DType>();
       const DType *rhs_dptr = inputs[2].dptr<DType>();
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        const int size = static_cast<int>(
+        const size_t size = static_cast<size_t>(
           (outputs[0].Size() + mxnet_op::DataType<DType>::kLanes - 1)
           / mxnet_op::DataType<DType>::kLanes);
         DType * lgrad_dptr = outputs[0].dptr<DType>();
@@ -159,7 +159,7 @@ class ElemwiseBinaryOp : public OpBase {
             s, size, lgrad_dptr, ograd_dptr, lhs_dptr, rhs_dptr);
       });
       MXNET_ASSIGN_REQ_SWITCH(req[1], Req, {
-        const int size = static_cast<int>(
+        const size_t size = static_cast<size_t>(
           (outputs[1].Size() + mxnet_op::DataType<DType>::kLanes - 1)
           / mxnet_op::DataType<DType>::kLanes);
         DType * rgrad_dptr = outputs[1].dptr<DType>();

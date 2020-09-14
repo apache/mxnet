@@ -485,7 +485,7 @@ FP32_FUNCS = [
     '_contrib_CTCLoss',
     '_contrib_ctc_loss',
     'ctc_loss',
-    '_contrib_DeformableConvolution',
+    '_npx_deformable_convolution',
     '_contrib_DeformablePSROIPooling',
     ]
 

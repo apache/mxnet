@@ -24,10 +24,11 @@ from uuid import uuid4
 import numpy as _np
 import mxnet as mx
 from mxnet import gluon, autograd, np
-from mxnet.test_utils import use_np, assert_almost_equal, check_gluon_hybridize_consistency
+from mxnet.test_utils import use_np, assert_almost_equal, check_gluon_hybridize_consistency, assert_allclose
 from mxnet.gluon import nn
 from common import with_seed
 import random
+import pytest
 
 
 @with_seed()
@@ -475,3 +476,117 @@ def test_activations_swish():
     act_layer = nn.Swish()
     out = act_layer(mx.np.random.uniform(size=(10,)))
     out.asnumpy()
+
+@use_np
+def test_concatenate():
+    model = nn.HybridConcatenate(axis=1)
+    model.add(nn.Dense(128, activation='tanh', in_units=10))
+    model.add(nn.Dense(64, activation='tanh', in_units=10))
+    model.add(nn.Dense(32, in_units=10))
+    model2 = nn.Concatenate(axis=1)
+    model2.add(nn.Dense(128, activation='tanh', in_units=10))
+    model2.add(nn.Dense(64, activation='tanh', in_units=10))
+    model2.add(nn.Dense(32, in_units=10))
+
+    # ndarray
+    model.initialize(mx.init.Xavier(magnitude=2.24))
+    model2.initialize(mx.init.Xavier(magnitude=2.24))
+    x = model(mx.np.zeros((32, 10)))
+    x2 = model2(mx.np.zeros((32, 10)))
+    assert x.shape == (32, 224)
+    assert x2.shape == (32, 224)
+    x.wait_to_read()
+    x2.wait_to_read()
+
+@use_np
+@with_seed()
+def test_identity():
+    model = nn.Identity()
+    x = mx.np.random.uniform(size=(128, 33, 64))
+    assert_almost_equal(model(x), x)
+
+@use_np
+def test_pixelshuffle1d():
+    nchan = 2
+    up_x = 2
+    nx = 3
+    shape_before = (1, nchan * up_x, nx)
+    shape_after = (1, nchan, nx * up_x)
+    layer = nn.PixelShuffle1D(up_x)
+    x = mx.np.reshape(mx.np.arange(_np.prod(shape_before)), shape_before)
+    y = layer(x)
+    assert y.shape == shape_after
+    assert_allclose(
+        y,
+        [[[0, 3, 1, 4, 2, 5],
+          [6, 9, 7, 10, 8, 11]]]
+    )
+
+@use_np
+def test_pixelshuffle2d():
+    nchan = 2
+    up_x = 2
+    up_y = 3
+    nx = 2
+    ny = 3
+    shape_before = (1, nchan * up_x * up_y, nx, ny)
+    shape_after = (1, nchan, nx * up_x, ny * up_y)
+    layer = nn.PixelShuffle2D((up_x, up_y))
+    x = mx.np.reshape(mx.np.arange(_np.prod(shape_before)), shape_before)
+    y = layer(x)
+    assert y.shape == shape_after
+    # - Channels are reshaped to form 2x3 blocks
+    # - Within each block, the increment is `nx * ny` when increasing the column
+    #   index by 1
+    # - Increasing the block index adds an offset of 1
+    # - Increasing the channel index adds an offset of `nx * up_x * ny * up_y`
+    assert_allclose(
+        y,
+        [[[[ 0,  6, 12,  1,  7, 13,  2,  8, 14],
+           [18, 24, 30, 19, 25, 31, 20, 26, 32],
+           [ 3,  9, 15,  4, 10, 16,  5, 11, 17],
+           [21, 27, 33, 22, 28, 34, 23, 29, 35]],
+
+          [[36, 42, 48, 37, 43, 49, 38, 44, 50],
+           [54, 60, 66, 55, 61, 67, 56, 62, 68],
+           [39, 45, 51, 40, 46, 52, 41, 47, 53],
+           [57, 63, 69, 58, 64, 70, 59, 65, 71]]]]
+    )
+
+@use_np
+def test_pixelshuffle3d():
+    nchan = 1
+    up_x = 2
+    up_y = 1
+    up_z = 2
+    nx = 2
+    ny = 3
+    nz = 4
+    shape_before = (1, nchan * up_x * up_y * up_z, nx, ny, nz)
+    shape_after = (1, nchan, nx * up_x, ny * up_y, nz * up_z)
+    layer = nn.PixelShuffle3D((up_x, up_y, up_z))
+    x = mx.np.arange(_np.prod(shape_before)).reshape(shape_before)
+    y = layer(x)
+    assert y.shape == shape_after
+    # - Channels are reshaped to form 2x1x2 blocks
+    # - Within each block, the increment is `nx * ny * nz` when increasing the
+    #   column index by 1, e.g. the block [[[ 0, 24]], [[48, 72]]]
+    # - Increasing the block index adds an offset of 1
+    assert_allclose(
+        y,
+        [[[[[ 0, 24,  1, 25,  2, 26,  3, 27],
+            [ 4, 28,  5, 29,  6, 30,  7, 31],
+            [ 8, 32,  9, 33, 10, 34, 11, 35]],
+
+           [[48, 72, 49, 73, 50, 74, 51, 75],
+            [52, 76, 53, 77, 54, 78, 55, 79],
+            [56, 80, 57, 81, 58, 82, 59, 83]],
+
+           [[12, 36, 13, 37, 14, 38, 15, 39],
+            [16, 40, 17, 41, 18, 42, 19, 43],
+            [20, 44, 21, 45, 22, 46, 23, 47]],
+
+           [[60, 84, 61, 85, 62, 86, 63, 87],
+            [64, 88, 65, 89, 66, 90, 67, 91],
+            [68, 92, 69, 93, 70, 94, 71, 95]]]]]
+    )

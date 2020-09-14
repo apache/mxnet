@@ -47,36 +47,59 @@ s = mx.sym.Variable('s')
 t = mx.sym.Variable('t')
 c = mx.sym.my_gemm(s,t)
 d = mx.sym.state_gemm(s,t,test_kw=200)
-
-in_grad = [mx.nd.empty((2,3)),mx.nd.empty((3,1))]
-in_grad2 = [mx.nd.empty((2,3)),mx.nd.empty((3,1))]
-
-exe = c.bind(ctx=mx.cpu(),args={'s':a,'t':b},args_grad=in_grad)
-exe2 = d.bind(ctx=mx.cpu(),args={'s':a,'t':b},args_grad=in_grad2)
-
-out = exe.forward()
-print(out)
-print("-------")
-
-out2 = exe2.forward()
-out2 = exe2.forward()
-print(out2)
-print("-------")
-
-# baseline forward
 e = mx.sym.linalg.gemm2(s,t)
-in_grad3 = [mx.nd.empty((2,3)),mx.nd.empty((3,1))]
-exe3 = e.bind(ctx=mx.cpu(),args={'s':a,'t':b},args_grad=in_grad3)
-out3 = exe3.forward()
-print(out3)
 
-print("--------start backward compute--------")
 out_grad = mx.nd.ones((2,1))
-exe.backward([out_grad])
-print(in_grad)
-print("-------")
-exe2.backward([out_grad])
-print(in_grad2)
-print("-------")
-exe3.backward([out_grad])
-print(in_grad3)
+
+# stateless
+block = mx.gluon.nn.SymbolBlock(c,[s,t])
+with mx.autograd.record():
+    a_ = mx.nd.array([[1,2,3],[4,5,6]])
+    b_ = mx.nd.array([[7],[8],[9]])
+    a_.attach_grad()
+    b_.attach_grad()
+    # foward
+    out = block(a_,b_)
+    print(out)
+    print('+++++')
+    # backward
+    out.backward(out_grad)
+    print(a_.grad)
+    print(b_.grad)
+    print("-------")
+
+# stateful
+block2 = mx.gluon.nn.SymbolBlock(d,[s,t])
+block2.hybridize(static_alloc=True, static_shape=True)
+out2 = block2(a,b)
+out2 = block2(a,b)
+print(out2)
+with mx.autograd.record():
+    a_ = mx.nd.array([[1,2,3],[4,5,6]])
+    b_ = mx.nd.array([[7],[8],[9]])
+    a_.attach_grad()
+    b_.attach_grad()
+    # forward
+    out2 = block2(a_,b_)
+    print('+++++')
+    # backward
+    out2.backward(out_grad)
+    print(a_.grad)
+    print(b_.grad)
+    print("-------")
+
+# baseline
+block3 = mx.gluon.nn.SymbolBlock(e,[s,t])
+with mx.autograd.record():
+    a_ = mx.nd.array([[1,2,3],[4,5,6]])
+    b_ = mx.nd.array([[7],[8],[9]])
+    a_.attach_grad()
+    b_.attach_grad()
+    # forward
+    out3 = block3(a_,b_)
+    print(out3)
+    print('+++++')
+    # backward
+    out3.backward(out_grad)
+    print(a_.grad)
+    print(b_.grad)

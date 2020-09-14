@@ -1664,7 +1664,7 @@ def test_deformable_convolution_with_type():
     tol = {np.dtype(np.float32): 1e-1,
            np.dtype(np.float64): 1e-3}
 
-    sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), name='deformable_conv')
+    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3,3), name='deformable_conv')
     # since atomicAdd does not support fp16 (which deformable conv uses in backward), we do not test fp16 here
     ctx_list = [{'ctx': mx.gpu(0),
                  'deformable_conv_data': (2, 2, 10, 10),
@@ -1718,7 +1718,7 @@ def test_deformable_convolution_options():
                  'deformable_conv_offset': (2, 18, 7, 7),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
-    sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), pad=(1,1), name='deformable_conv')
+    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3,3), pad=(1,1), name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Stride > 1
@@ -1739,7 +1739,7 @@ def test_deformable_convolution_options():
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
-    sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), stride=(2,2), name='deformable_conv')
+    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3,3), stride=(2,2), name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Dilate > 1
@@ -1760,7 +1760,7 @@ def test_deformable_convolution_options():
                  'deformable_conv_offset': (2, 18, 3, 3),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
-    sym = mx.sym.contrib.DeformableConvolution(num_filter=3, kernel=(3,3), dilate=(2,2), name='deformable_conv')
+    sym = mx.sym.npx.deformable_convolution(num_filter=3, kernel=(3,3), dilate=(2,2), name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
     # Deformable group > 1
@@ -1781,7 +1781,7 @@ def test_deformable_convolution_options():
                  'deformable_conv_offset': (2, 36, 5, 5),
                  'type_dict': {'deformable_conv_data': np.float32, 'deformable_conv_offset': np.float32}},
                 ]
-    sym = mx.sym.contrib.DeformableConvolution(num_filter=4, kernel=(3,3), num_deformable_group=2, name='deformable_conv')
+    sym = mx.sym.npx.deformable_convolution(num_filter=4, kernel=(3,3), num_deformable_group=2, name='deformable_conv')
     check_consistency(sym, ctx_list, scale=0.1, rtol=tol, atol=tol)
 
 

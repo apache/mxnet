@@ -572,7 +572,7 @@ def test_parallel_random_seed_setting_for_context():
 def test_sample_multinomial(dtype, x):
     x = mx.nd.array(x) / 10.0
     dx = mx.nd.ones_like(x)
-    mx.contrib.autograd.mark_variables([x], [dx])
+    mx.autograd.mark_variables([x], [dx])
     # Adding rtol and increasing samples needed to pass with seed 2951820647
     samples = 10000
     with mx.autograd.record():

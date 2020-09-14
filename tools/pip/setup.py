@@ -18,19 +18,21 @@
 # coding: utf-8
 # pylint: disable=invalid-name, exec-used
 """Setup mxnet package for pip."""
-from __future__ import absolute_import
 from datetime import datetime
 import os
 import sys
 import shutil
 import platform
+from setuptools import setup, find_packages
 
 if platform.system() == 'Linux':
-    sys.argv.append('--universal')
+    sys.argv.append('--python-tag')
+    sys.argv.append('py3')
     sys.argv.append('--plat-name=manylinux2014_x86_64')
-
-from setuptools import setup, find_packages
-from setuptools.dist import Distribution
+elif platform.system() == 'Darwin':
+    sys.argv.append('--python-tag')
+    sys.argv.append('py3')
+    sys.argv.append('--plat-name=macosx_10_13_x86_64')
 
 # We can not import `mxnet.info.py` in setup.py directly since mxnet/__init__.py
 # Will be invoked which introduces dependences
@@ -55,10 +57,6 @@ if not travis_tag and not is_release:
 # patch build tag
 elif travis_tag.startswith('patch-'):
     __version__ = os.environ['TRAVIS_TAG'].split('-')[1]
-
-class BinaryDistribution(Distribution):
-    def has_ext_modules(self):
-        return platform.system() == 'Darwin'
 
 
 DEPENDENCIES = [
@@ -179,7 +177,6 @@ setup(name=package_name,
       package_data=package_data,
       include_package_data=True,
       install_requires=DEPENDENCIES,
-      distclass=BinaryDistribution,
       license='Apache 2.0',
       classifiers=[ # https://pypi.org/pypi?%3Aaction=list_classifiers
           'Development Status :: 5 - Production/Stable',

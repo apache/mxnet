@@ -379,7 +379,7 @@ def test_dc_numpy_indexing_error():
 ###############################################################################
 # Gluon
 ###############################################################################
-def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autograd=True):
+def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autograd=True, ctx=None):
     """Compare results of deferred compute and normal imperative mode.
 
     Parameters
@@ -397,9 +397,14 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
         Wrap in autograd
 
     """
+
     nd = mx.np if numpy else mx.nd
 
-    xs = setup(nd=nd)
+    if ctx is None:
+        ctx = mx.context.current_context()
+    with ctx:
+        xs = setup(nd=nd)
+
     ys = net(*xs)
     ys_np = [y.asnumpy() for y in ys]
 
@@ -439,13 +444,18 @@ def test_dc_hybridblock():
             assert x.shape[1] == 10  # due to in_units=10 above
             return self.dense(x) + self.weight.data(x.context)
 
-    net = MyBlock()
-    net.initialize()
-    _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False)
-    with mx.util.np_array(True):
+    if mx.context.current_context() == mx.cpu(0):  # CPU tests
+        contexts = [mx.cpu(0), mx.cpu(1)]
+    else:  # Use default context, GPU tests
+        contexts = [mx.context.current_context()]
+    for ctx in contexts:
         net = MyBlock()
-        net.initialize()
-        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
+        net.initialize(ctx=contexts)
+        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False, ctx=ctx)
+        with mx.util.np_array(True):
+            net = MyBlock()
+            net.initialize(ctx=contexts)
+            _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True, ctx=ctx)
 
 
 def test_dc_hybridblock_deferred_init_no_infer_shape_error():
