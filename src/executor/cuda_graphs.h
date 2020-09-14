@@ -56,20 +56,11 @@ inline std::string CudaDim3ToString(const dim3& dims) {
   return ss.str();
 }
 
-#define CU_CALL(func)                                                         \
-  {                                                                           \
-    CUresult e = (func);                                                      \
-    if (e != CUDA_SUCCESS) {                                                  \
-      std::cerr << "cuda driver failure code: " << e << std::endl;            \
-      exit(1);                                                                \
-    }                                                                         \
-  }
-
 // Get the type of a CUDA Graph node (e.g. kernel launch, memcpy, etc.)
 inline CUgraphNodeType CudaGraphNodeType(const cudaGraphNode_t node) {
   CUgraphNode cu_node = node;
   CUgraphNodeType t;
-  CU_CALL(cuGraphNodeGetType(cu_node, &t));
+  CUDA_DRIVER_CALL(cuGraphNodeGetType(cu_node, &t));
   return t;
 }
 
@@ -92,7 +83,7 @@ inline std::string CudaGraphNodeToString(const cudaGraphNode_t node) {
 
   CUgraphNode cu_node = node;
   CUgraphNodeType t;
-  CU_CALL(cuGraphNodeGetType(cu_node, &t));
+  CUDA_DRIVER_CALL(cuGraphNodeGetType(cu_node, &t));
   switch (t) {
     case CU_GRAPH_NODE_TYPE_KERNEL:
       {
