@@ -17,11 +17,11 @@
 
 # Step 6: Use GPUs to increase efficiency
 
-In this step, you learn how to use graphics processing units (GPUs) with MXNet. If you use GPUs to train and deploy neural networks, you get significantly more computational power when compared to central processing units (CPUs).
+In this step, you learn how to use graphics processing units (GPUs) with MXNet. If you use GPUs to train and deploy neural networks, you get significantly more computational power and speed when compared to central processing units (CPUs).
 
 ## Prerequisites
 
-Before you start the other steps here, make sure you have at least one Nvidia GPU in your machine and CUDA properly installed. GPUs from AMD and Intel are not supported. Install the GPU-enabled version of MXNet.
+Before you start the other steps here, make sure you have at least one Nvidia GPU in your machine and CUDA properly installed. GPUs from AMD and Intel are not supported. Install the GPU-enabled version of MXNet. You can find information about how to install the GPU version of MXNET for your setup, [here](https://mxnet.apache.org/versions/1.7/get_started/?).
 
 Use the following commands to check the number GPUs that are available.
 
@@ -54,6 +54,9 @@ x.copyto(gpu_1)
 ```
 
 MXNet requries that users explicitly move data between devices. But several operators such as `print`, and `asnumpy`, will implicitly move data to main memory.
+
+## Choosing GPU Ids
+If you have multiple GPUs on your machine, MXNET can access each of them through 0-indexing. As you saw before, the first GPU was accessed using `npx.gpu(1)`, and the second using `npx.gpu(1)`. This extends to however many GPUs your machine has. So if your machine has 8 GPUs, the last GPU is accessed using `npx.gpu(7)`. This allows you to select what GPUs to use for operations and training. You might find it particularly useful when you want to training multiple networks on separate GPUs.  
 
 ## Run an operation on a GPU
 
@@ -90,8 +93,8 @@ net.load_parameters('net.params', ctx=gpu)
 Use the following command to create input data on GPU 0. The forward function will then run on GPU 0.
 
 ```{.python .input  n=22}
-# x = np.random.uniform(size=(1,1,28,28), ctx=gpu)
-# net(x) FIXME
+x = np.random.uniform(size=(1,1,28,28), ctx=gpu)
+net(x)
 ```
 
 ## Training with multiple GPUs
@@ -105,9 +108,11 @@ batch_size = 256
 transformer = gluon.data.vision.transforms.Compose([
     gluon.data.vision.transforms.ToTensor(),
     gluon.data.vision.transforms.Normalize(0.13, 0.31)])
+
 train_data = gluon.data.DataLoader(
     gluon.data.vision.datasets.FashionMNIST(train=True).transform_first(
         transformer), batch_size, shuffle=True, num_workers=4)
+
 valid_data = gluon.data.DataLoader(
     gluon.data.vision.datasets.FashionMNIST(train=False).transform_first(
         transformer), batch_size, shuffle=False, num_workers=4)
@@ -117,7 +122,10 @@ The training loop is quite similar to that shown earlier. The major differences 
 
 ```{.python .input}
 # Diff 1: Use two GPUs for training.
-devices = [gpu, gpu_1]
+available_gpus = [npx.gpu(i) for i in range(npx.num_gpus())]
+num_gpus = 2
+devices = available_gpus[:num_gpus]
+print('Using {} GPUs'.format(len(devices)))
 # Diff 2: reinitialize the parameters and place them on multiple GPUs
 net.collect_params().initialize(force_reinit=True, ctx=devices)
 # Loss and trainer are the same as before
