@@ -1357,8 +1357,8 @@ class SymbolBlock(HybridBlock):
     >>> print(feat_model(x))
     """
     @staticmethod
-def imports(symbol_file, input_names, param_file=None, ctx=None, allow_missing=False,
-            ignore_extra=False):
+    def imports(symbol_file, input_names, param_file=None, ctx=None, allow_missing=False,
+                ignore_extra=False):
         """Import model previously saved by `gluon.HybridBlock.export` or
         `Module.save_checkpoint` as a `gluon.SymbolBlock` for use in Gluon.
 
