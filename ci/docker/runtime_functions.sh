@@ -816,7 +816,7 @@ build_ubuntu_gpu_cuda110_cudnn8() {
         USE_CUDA_PATH=/usr/local/cuda             \
         USE_CUDNN=1                               \
         USE_TVM_OP=0                              \
-        USE_CPP_PACKAGE=0                         \
+        USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
         CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
         USE_SIGNAL_HANDLER=1                      \
