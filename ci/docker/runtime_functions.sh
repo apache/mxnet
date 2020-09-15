@@ -1069,6 +1069,22 @@ unittest_ubuntu_python3_gpu_nocudnn() {
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_gpu.xml --verbose tests/python/gpu
 }
 
+unittest_ubuntu_tensorrt_gpu() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export LD_LIBRARY_PATH=/work/mxnet/lib:$LD_LIBRARY_PATH
+    export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    pip3 install --extra-index-url https://developer.download.nvidia.com/compute/redist nvidia-dali-cuda100==0.24
+    wget -nc http://data.mxnet.io/data/val_256_q90.rec
+    python3.6 tests/python/tensorrt/rec2idx.py val_256_q90.rec val_256_q90.idx
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_trt_gpu.xml --verbose --nocapture tests/python/tensorrt/
+    rm val_256_q90*
+}
+
 # quantization gpu currently only runs on P3 instances
 # need to separte it from unittest_ubuntu_python3_gpu()
 unittest_ubuntu_python3_quantization_gpu() {

@@ -20,10 +20,10 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2019-2020 by Contributors
  * \file onnx_to_tensorrt.h
  * \brief TensorRT integration with the MXNet executor
- * \author Marek Kolodziej, Clement Fuji Tsang
+ * \author Marek Kolodziej, Clement Fuji Tsang, Serge Panev
  */
 
 #if MXNET_USE_TENSORRT
@@ -32,12 +32,15 @@
 #include <NvInfer.h>
 
 #include <fstream>
+#include <future>
 #include <memory>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <ctime>
 #include <tuple>
+
+#include "./tensorrt_int8_calibrator.h"
 
 namespace onnx_to_tensorrt {
 
@@ -56,7 +59,7 @@ using unique_ptr = std::unique_ptr<T, InferDeleter>;
 template<typename T>
 inline unique_ptr<T> InferObject(T* obj) {
   if ( !obj ) {
-    throw std::runtime_error("Failed to create object");
+    throw std::runtime_error("Failed to create TensorRT object");
   }
   return unique_ptr<T>(obj, InferDeleter());
 }
@@ -85,10 +88,13 @@ class TRT_Logger : public nvinfer1::ILogger {
 
 std::tuple<unique_ptr<nvinfer1::ICudaEngine>,
            unique_ptr<nvonnxparser::IParser>,
-           std::unique_ptr<TRT_Logger> > onnxToTrtCtx(
+           std::unique_ptr<TRT_Logger>,
+           std::future<onnx_to_tensorrt::unique_ptr<nvinfer1::ICudaEngine> > >  onnxToTrtCtx(
         const std::string& onnx_model,
+        bool fp16_mode,
         int32_t max_batch_size = 32,
         size_t max_workspace_size = 1L << 30,
+        TRTInt8Calibrator* calibrator = nullptr,
         nvinfer1::ILogger::Severity verbosity = nvinfer1::ILogger::Severity::kWARNING,
         bool debug_builder = false);
 }  // namespace onnx_to_tensorrt
