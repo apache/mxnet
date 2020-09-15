@@ -1003,8 +1003,7 @@ inline Engine::OprHandle CreateEngineOp(
     if (is_async) {
       execs[0]->op_ctx.async_on_complete = on_complete;
     }
-    for (const auto& exec : execs) exec->Run(ctx, is_gpu);
-    OpExecutor::RunAll(execs, ctx, is_gpu);
+    exec::OpExecutor::RunAll(execs, ctx, is_gpu);
 #endif
     // call on complete only if it is async op
     if (!is_async) {
