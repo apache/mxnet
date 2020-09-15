@@ -21,6 +21,7 @@
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
 import copy
+import inspect
 import warnings
 import weakref
 from collections import OrderedDict, defaultdict
@@ -984,7 +985,7 @@ class HybridBlock(Block):
 
     def _get_graph(self, *args):
         if not self._cached_graph:
-            if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:  # Gluon 1
+            if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
                 return self._get_graph_v1(*args)
             else:  # Gluon 2 based on deferred compute mode
                 return self._get_graph_v2(*args)
@@ -1277,7 +1278,7 @@ class HybridBlock(Block):
 
     def infer_shape(self, *args):
         """Infers shape of Parameters from inputs."""
-        if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:
+        if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
             # Gluon 1 based on F:  hybrid_forward is defined by user
             self._infer_attrs('infer_shape', 'shape', *args)
         else:
@@ -1388,7 +1389,7 @@ class HybridBlock(Block):
             cld()._monitor_all = monitor_all
 
     def __call__(self, x, *args):
-        if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:
+        if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
             # Gluon 1 based on F:  hybrid_forward is defined by user
             return super().__call__(x, *args)
         else:  # Gluon 2 based on deferred compute mode

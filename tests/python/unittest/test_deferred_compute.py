@@ -17,6 +17,7 @@
 
 import functools
 import operator
+import tempfile
 
 import numpy as np
 
@@ -306,8 +307,7 @@ def test_dc_dynamic_shape():
     def f(a, *, nd):
         return [mx.nd.np.flatnonzero(a)]
 
-    # Skip GraphExecutor test due to https://github.com/apache/incubator-mxnet/issues/17810
-    for mode in ('imperative', 'imperativewithnondccompute'):
+    for mode in ('imperative', 'imperativewithnondccompute', 'symbolic', 'all'):
         _assert_dc(_dc_simple_setup, f, mode=mode, numpy=True)
 
 
@@ -338,10 +338,6 @@ def test_dc_tuple_indexing():
 
 
 def test_dc_simple_boolean_indexing():
-    if mx.test_utils.default_context() == mx.gpu(0) and mx.runtime.Features().is_enabled("TVM_OP"):
-        # Skip due to https://github.com/apache/incubator-mxnet/issues/17886
-        return
-
     def setup(*, nd):
         assert nd is mx.np
         x = mx.np.array([[0, 1], [1, 1], [2, 2]])
@@ -350,10 +346,6 @@ def test_dc_simple_boolean_indexing():
     def f(a, idx, *, nd):
         assert nd is mx.np
         return [a[idx].reshape((2, 2))]
-
-    # Skip GraphExecutor test due to https://github.com/apache/incubator-mxnet/issues/17810
-    for mode in ('imperative', 'imperativewithnondccompute'):
-        _assert_dc(setup, f, mode=mode)
 
 
 def test_dc_list_indexing_error():
@@ -428,6 +420,8 @@ def _assert_dc_gluon(setup, net, setup_is_deterministic=True, numpy=True, autogr
 
     _all_same(ys_np, ys_hybrid_np)
 
+    with tempfile.TemporaryDirectory() as root:
+        net.export(root)
 
 def _dc_gluon_simple_setup(shape=(8, 10), *, nd):
     return [nd.ones(shape=shape, ctx=mx.context.current_context())]
@@ -452,10 +446,27 @@ def test_dc_hybridblock():
         net = MyBlock()
         net.initialize(ctx=contexts)
         _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False, ctx=ctx)
-        with mx.util.np_array(True):
+        with mx.util.np_shape(True), mx.util.np_array(True):
             net = MyBlock()
             net.initialize(ctx=contexts)
             _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True, ctx=ctx)
+
+
+def test_dc_hybridblock_wrapped():
+    @mx.util.use_np
+    class MyBlock(mx.gluon.HybridBlock):
+        def __init__(self):
+            super().__init__()
+            self.dense = mx.gluon.nn.Dense(units=10, in_units=10)
+            self.weight = mx.gluon.Parameter('weight', shape=(10, ))
+
+        def forward(self, x):
+            assert x.shape[1] == 10  # due to in_units=10 above
+            return self.dense(x) + self.weight.data(x.context)
+
+    net = MyBlock()
+    net.initialize()
+    _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
 
 
 def test_dc_hybridblock_deferred_init_no_infer_shape_error():
@@ -491,17 +502,13 @@ def test_dc_hybridblock_deferred_init():
     net = MyBlock()
     net.initialize()
     _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False)
-    with mx.util.np_array(True):
+    with mx.util.np_shape(True), mx.util.np_array(True):
         net = MyBlock()
         net.initialize()
         _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
 
 
 def test_dc_hybridblock_dynamic_shape():
-    if mx.test_utils.default_context() == mx.gpu(0) and mx.runtime.Features().is_enabled("TVM_OP"):
-        # Skip due to https://github.com/apache/incubator-mxnet/issues/17886
-        return
-
     class MyBlock(mx.gluon.HybridBlock):
         def __init__(self):
             super().__init__()
@@ -515,7 +522,7 @@ def test_dc_hybridblock_dynamic_shape():
         x = mx.np.array([[0, 1], [1, 1], [2, 2]])
         return [x, x < 2]
 
-    with mx.util.np_array(True):
+    with mx.util.np_shape(True), mx.util.np_array(True):
         net = MyBlock()
         net.initialize()
         _assert_dc_gluon(setup, net, numpy=True)
