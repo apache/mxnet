@@ -317,7 +317,7 @@ if(USE_INTGEMM)
   FetchContent_Declare(
     intgemm
     GIT_REPOSITORY https://github.com/kpu/intgemm.git
-    GIT_TAG        02f671cf537fdbc818cf8111d1d9e557a8650d7a
+    GIT_TAG        4172dcc209e6793dd920dec9cf9c9fc81605bd9d
   )
   FetchContent_GetProperties(intgemm)
   if(NOT intgemm_POPULATED)
