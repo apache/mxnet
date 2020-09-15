@@ -6,10 +6,11 @@ now ready put all the pieces together and train a model end to end.
 ## 1. Data preparation
 
 The typical process to create and train a model starts with loading and
-preparing the datasets. For this Network we will use a [dataset of leaf
+preparing the datasets. For this Network you will use a [dataset of leaf
 images](https://data.mendeley.com/datasets/hb74ynkjcn/1) that consist of healthy
-and diseased leaf images of 12 different plant species. To get this dataset we
-first download and extract it
+and diseased examples of leafs from 12 different plant species. To get this
+dataset you
+have to download and extract it
 
 ```{.python .input}
 # Download dataset
@@ -25,7 +26,7 @@ first download and extract it
 
 #### Data inspection
 
-If we take a look at the dataset we find that the structure of the directories
+If you take a look at the dataset you find that the structure of the directories
 is as follows
 
 ```
@@ -47,21 +48,27 @@ plants
     |-- healthy
 ```
 
-So for each plant species we might have examples of diseased leaves or healthy
-leaves or both. With this dataset we can formulate different classification
-problems, for example we can create a multi-class classifier that determines the
-species of a plant based on the leaves, we can also create a binary classifier
-that tells you whether the plant is healthy or diseased, finally we could create
+For each plant species you might have examples of diseased leaves, healthy
+leaves or both. With this dataset you can formulate different classification
+problems, for example you can create a multi-class classifier that determines
+the
+species of a plant based on the leaves, you can instead create a binary
+classifier
+that tells you whether the plant is healthy or diseased, finally you can create
 a multi-class, multi-label classifier that tells you both: what species is a
-plant and whether is diseased or healthy. We will stick to the simplest
+plant and whether it is diseased or healthy. In this example you will stick to
+the simplest
 classification question, which is whether a plant is healthy or not.
 
-To do this, we need to manipulate the dataset in two ways. First we need to
-combine all images of healthy and diseased no matter the species and then we
-need to split the data in the train, validation and test sets. We prepared a
-small utility code to get our dataset ready. Once we run that utility code on
-our data, because our structure will be already organized in folders, we can use
-the `ImageFolderDataset` class.
+To do this, you need to manipulate the dataset in two ways. First you need to
+combine all images of healthy and diseased no matter the species and then you
+need to split the data into train, validation and test sets. We prepared a
+small utility code to get the dataset ready for you. Once you run that utility
+code on
+the data, because the structure will be already organized in folders that
+contain the right
+images in each of the classes, you can use
+the `ImageFolderDataset` class to import the images from the file to MXNet.
 
 ```{.python .input}
 # Import all the necessary libraries to train
@@ -81,12 +88,12 @@ from prepare_dataset import process_dataset #utility code to rearrange the data
 mx.random.seed(42)
 ```
 
-```{.python .input}
+```python
 # Call the utility function to rearrange the images
 process_dataset('plants')
 ```
 
-The new dataset will be located in the `datasets` folder and the new structure
+The dataset is located in the `datasets` folder and the new structure
 looks like this:
 
 ```
@@ -106,8 +113,8 @@ datasets
         |-- imagen.JPG
 ```
 
-Now we just create three different Dataset objects from the `train`,
-`validation` and `test` folders and the `ImageFolderDataset` class will take
+Now you just need to create three different Dataset objects from the `train`,
+`validation` and `test` folders and the `ImageFolderDataset` class takes
 care of inferring the classes from the directory names.
 
 ```{.python .input}
@@ -117,8 +124,11 @@ val_dataset = gluon.data.vision.ImageFolderDataset('./datasets/validation')
 test_dataset = gluon.data.vision.ImageFolderDataset('./datasets/test')
 ```
 
-The result from this will be a Dataset object, we can index this object to get
-the $i$-th element from the dataset. The $i$-th element is a tuple with two
+The result from this operation is a different Dataset object for each folder.
+These objects hold a list of the images and labels and as such they can be
+indexed
+to get the $i$-th element from the dataset. The $i$-th element is a tuple with
+two
 objects, the first one is the image in array form and the second one the
 corresponding label for that training example.
 
@@ -141,10 +151,11 @@ greatly speeds up the training time. It is also customary to make slight
 modifications to the images to improve generalization. That is why we add
 transformations to our data in a process called Data Augmentation.
 
-We can augmented data in MXNet using `transforms`. We compose two different
+You can augment data in MXNet using `transforms`. You have to compose two
+different
 transformation pipelines, one for training and the other one for validations and
-testing. This is because we don't need to randomly flip or do color jitter to
-the images we'll be classifying later on.
+testing. This is because we don't need to randomly flip or add color jitter to
+the images you will be classifying later on.
 
 ```{.python .input}
 # Import transforms as compose a series of transformations to the images
@@ -157,8 +168,8 @@ mean = [0.485, 0.456, 0.406]
 std = [0.229, 0.224, 0.225]
 
 training_transformer = transforms.Compose([
-    transforms.Resize((350, 500)),
-    transforms.CenterCrop(224),
+    transforms.Resize(size=224, keep_ratio=True),
+    transforms.CenterCrop(128),
     transforms.RandomFlipLeftRight(),
     transforms.RandomColorJitter(contrast=jitter_param),
     transforms.ToTensor(),
@@ -166,42 +177,47 @@ training_transformer = transforms.Compose([
 ])
 
 validation_transformer = transforms.Compose([
-    transforms.Resize((350, 500)),
-    transforms.CenterCrop(224),
+    transforms.Resize(size=224, keep_ratio=True),
+    transforms.CenterCrop(128),
     transforms.ToTensor(),
     transforms.Normalize(mean, std)
 ])
 ```
 
-We now have a our augmentations ready so we can create our `DataLoaders`. To do
-this we use the `gluon.data.DataLoader` and we pass the dataset with the applied
-transformations (notice the `.transform_first()` method on the datasets). In
-this step we also need to decide the batch size, which is how many images we
-will be presenting to the network at the same time, and whether we want to
-shuffle the data before passing it to the network.
+You now have a your augmentations ready so we can create the `DataLoaders`. To
+do
+this `gluon.data.DataLoader` comes in handy. You have to pass the dataset with
+the applied
+transformations (notice the `.transform_first()` method on the datasets) to
+`gluon.data.DataLoader`. In
+this step you also need to decide the batch size, which is how many images you
+will be passing to the network at the same time, and whether you want to
+shuffle the data before that.
 
 ```{.python .input}
 # Create data loaders
 batch_size = 4
-train_loader = gluon.data.DataLoader(train_dataset.transform_first(training_transformer),batch_size=batch_size, shuffle=True)
-validation_loader = gluon.data.DataLoader(val_dataset.transform_first(validation_transformer), batch_size=batch_size)
-test_loader = gluon.data.DataLoader(test_dataset.transform_first(validation_transformer), batch_size=batch_size)
+train_loader = gluon.data.DataLoader(train_dataset.transform_first(training_transformer),batch_size=batch_size, shuffle=True, try_nopython=True)
+validation_loader = gluon.data.DataLoader(val_dataset.transform_first(validation_transformer), batch_size=batch_size, try_nopython=True)
+test_loader = gluon.data.DataLoader(test_dataset.transform_first(validation_transformer), batch_size=batch_size, try_nopython=True)
 ```
 
-Now we can see the transformations that we made to the images.
+Now you can inspect the transformations that you made to the images. We prepared
+a utility function for this.
 
 ```{.python .input}
 # Function to plot batch
-def show_batch(batch, columns=4):
+def show_batch(batch, columns=4, fig_size=(9, 5), pad=1):
     labels = batch[1].asnumpy()
     batch = batch[0] / 2 + 0.5     # unnormalize
-    batch = batch.asnumpy()
+    batch = np.clip(batch.asnumpy(), 0, 1) # clip values
     size = batch.shape[0]
     rows = int(size / columns)
-    fig, axes = plt.subplots(rows, columns)
+    fig, axes = plt.subplots(rows, columns, figsize=fig_size)
     for ax, img, label in zip(axes.flatten(), batch, labels):
         ax.imshow(np.transpose(img, (1, 2, 0)))
         ax.set(title=f"Label: {label}")
+    fig.tight_layout(h_pad=pad, w_pad=pad)
     plt.show()
 ```
 
@@ -215,17 +231,20 @@ for batch in train_loader:
 show_batch(a)
 ```
 
-We can see that the original images changed to have different size, variations
-in color and lighting and we are now ready to go to the next step: **Create the
+You can see that the original images changed to have different size, variations
+in color and lighting. This changes follow the specified transformations stated
+in the pipeline and you are now ready to go to the next step: **Create the
 architecture**.
 
 ## 2. Create Neural Network
 
 Convolutional neural networks are a great tool to capture the spatial
-relationship of images, for this reason they have become the gold standard for
-computer vision. For this example we will create a small convolutional neural
-network. First we create two functions that will create the two type of blocks
-we'll use, the convolutional and the dense block and then we will create an
+relationship of pixel values within images, for this reason they have become the
+gold standard for
+computer vision. In this example you will create a small convolutional neural
+network using what you learned from the [3. Create a Neural Network]() part of the tutorial.
+First you can set up two functions that will generate the two type of blocks
+you will use, the convolutional and the dense block. Then you will create an
 entire network based on these two blocks.
 
 ```{.python .input}
@@ -272,9 +291,10 @@ class LeafNetwork(nn.HybridBlock):
         return batch
 ```
 
-We have concluded the architecting part of the network, so now we can actually
-create an instance from the architecture. As we have seen previously in this
-course, to be able to use the network we need to initialize the parameters and
+You have concluded the architecting part of the network, so now you can actually
+build an instance from that architecture for training. As you have [seen
+previously]() in this
+course, to be able to use the network you need to initialize the parameters and
 hybridize the model.
 
 ```{.python .input}
@@ -285,16 +305,18 @@ initializer = mx.initializer.Xavier()
 
 model = LeafNetwork()
 model.initialize(initializer, ctx=ctx)
-model.summary(mx.nd.random.uniform(shape=(4, 3, 224, 224)))
+model.summary(mx.nd.random.uniform(shape=(4, 3, 128, 128)))
 model.hybridize()
 ```
 
 ## 3. Choose Optimizer and Loss function
 
-With the network created we can move on to choosing an optimizer and a loss
-function. We used these to make an informed decision on how to tune the
-parameters to fit the final objective better. We use the `gluon.Trainer` to help
-us with optimizing the parameters. The `gluon.Trainer` needs two things to work
+With the network created you can move on to choosing an optimizer and a loss
+function. The network uses these components to make an informed decision on how
+to tune the
+parameters to fit the final objective better. You can use `gluon.Trainer` to
+help with
+optimizing the parameters. The `gluon.Trainer` needs two things to work
 properly, the parameters that need to be tuned and the optimizer with its
 corresponding hyperparameters. The trainer uses the error reported by the loss
 function to optimize the parameters.
@@ -316,34 +338,37 @@ trainer = gluon.Trainer(model.collect_params(), optimizer, optimizer_params)
 loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
 ```
 
-Finally we create a function to evaluate the performance of the network in the
-validation set and then set up the training loop.
+Finally you have to create a function to evaluate the performance of the network
+in the
+validation set and set up the training loop.
 
 ```{.python .input}
 # Function to return the accuracy for the validation and test set
-def test(ctx, val_data):
+def test(val_data):
     acc = gluon.metric.Accuracy()
     for batch in val_data:
         data = batch[0]
         labels = batch[1]
         outputs = model(data)
-        acc.update(labels, outputs)
-
+        acc.update([labels], [outputs])
+        
     _, accuracy = acc.get()
     return accuracy
 ```
 
 ## 4. Training Loop
 
-We have everything set so we can start training our network. This might take
-some time to train depending on the hardware and number of layers and images you
+You now have everything set so you can start training your network. This might
+take
+some time to train depending on the hardware, number of layers, batch size and
+images you
 use. For this particular case we only choose to train for 2 epochs.
 
 ```{.python .input}
 # Start the training loop
 epochs = 2
 accuracy = gluon.metric.Accuracy()
-log_interval = 100
+log_interval = 5
 
 for epoch in range(epochs):
     tic = time.time()
@@ -358,43 +383,49 @@ for epoch in range(epochs):
             loss = loss_fn(outputs, label)
         mx.autograd.backward(loss)
         trainer.step(batch_size)
-        accuracy.update(label, outputs)
-        if log_interval and not (idx + 1) % log_interval:
+        accuracy.update([label], [outputs])
+        if log_interval and (idx + 1) % log_interval == 0:
             _, acc = accuracy.get()
      
             print(f"""Epoch[{epoch + 1}] Batch[{idx + 1}] Speed: {batch_size / (time.time() - btic)} samples/sec \
-                  loss = {loss.mean().asscalar()} | accuracy = {acc}""")
+                  batch loss = {loss.mean().asscalar()} | accuracy = {acc}""")
             btic = time.time()
 
     _, acc = accuracy.get()
     
-    acc_val = test(ctx, validation_loader)
+    acc_val = test(validation_loader)
     print(f"[Epoch {epoch + 1}] training: accuracy={acc}")
-    print(f"[Epoch {epoch + 1}] time cost: {time.time()-tic}")
+    print(f"[Epoch {epoch + 1}] time cost: {time.time() - tic}")
     print(f"[Epoch {epoch + 1}] validation: validation accuracy={acc_val}")
 ```
 
 ## 5. Test on the test set
 
-Now that our network is trained and we reached a decent accuracy we can evaluate
-the performance on the test set. To that end we use the `test_loader` and the
-test function
+Now that your network is trained and you reached a decent accuracy, you can
+evaluate
+the performance on the test set. To that end you can use the `test_loader` data
+loader and the
+test function you created previously
 
 ```{.python .input}
 test(ctx, test_loader)
 ```
 
-We have a trained network that can confidently discriminate between plants that
-are healthy and the ones that are diseased. We can now start our garden and set
+You have a trained network that can confidently discriminate between plants that
+are healthy and the ones that are diseased. You can now start your garden and
+set
 cameras to automatically detect plants in distress!
 
 ## 6. Save the parameters
 
-If we want to preserve the trained weights of the network we can save the
-parameters in a file. Later when we want to use the network to make predictions
-we can load the parameters back
+If you want to preserve the trained weights of the network you can save the
+parameters in a file. Later when you want to use the network to make predictions
+you can load the parameters back!
 
 ```{.python .input}
 # Save parameters in the 
 model.save_parameters('leaf_models.params')
 ```
+
+This is the end of the this tutorial to see how you can speed up the training by
+using GPU hardware continue to the [next tutorial]()
