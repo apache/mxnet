@@ -177,13 +177,13 @@ devices = available_gpus[:num_gpus]
 print('Using {} GPUs'.format(len(devices)))
 
 # Diff 2: reinitialize the parameters and place them on multiple GPUs
-net.collect_params().initialize(force_reinit=True, ctx=devices)
+net.initialize(force_reinit=True, ctx=devices)
 
 # Loss and trainer are the same as before
 loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
 optimizer = 'sgd'
 optimizer_params = {'learning_rate': 0.001}
-trainer = gluon.Trainer(model.collect_params(), optimizer, optimizer_params)
+trainer = gluon.Trainer(net.collect_params(), optimizer, optimizer_params)
 
 epochs = 2
 accuracy = gluon.metric.Accuracy()
@@ -194,7 +194,7 @@ for epoch in range(10):
     tic = time.time()
     btic = time.time()
     accuracy.reset()
-    for idx, batch in enumerate(train_data):
+    for idx, batch in enumerate(train_loader):
         data, label = batch[0], batch[1]
 
         # Diff 3: split batch and load into corresponding devices
@@ -220,7 +220,7 @@ for epoch in range(10):
             _, acc = accuracy.get()
      
             print(f"""Epoch[{epoch + 1}] Batch[{idx + 1}] Speed: {batch_size / (time.time() - btic)} samples/sec \
-                  batch loss = {loss.mean().asscalar()} | accuracy = {acc}""")
+                  batch loss = {train_loss} | accuracy = {acc}""")
             btic = time.time()
 
     _, acc = accuracy.get()
