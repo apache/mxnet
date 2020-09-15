@@ -853,6 +853,24 @@ def test_unix_python3_mkldnn_nocudnn_gpu() {
     }]
 }
 
+def test_unix_python3_tensorrt_gpu() {
+    return ['Python3: TensorRT GPU': {
+      node(NODE_LINUX_GPU_P3) {
+        ws('workspace/build-tensorrt') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            try {
+              utils.unpack_and_init('tensorrt', mx_tensorrt_lib)
+              utils.docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
+              utils.publish_test_coverage()
+            } finally {
+              utils.collect_test_results_unix('nosetests_tensorrt.xml', 'nosetests_python3_tensorrt_gpu.xml')
+            }
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_python3_integration_gpu() {
     return ['Python Integration GPU': {
       node(NODE_LINUX_GPU_G4) {
