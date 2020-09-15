@@ -90,28 +90,28 @@ def test_softmax():
 
 @use_np
 def test_ones():
-    A = np.ones((INT_OVERFLOW, 2))
-    assert A.shape == (INT_OVERFLOW, 2)
-    assert A[0][0] == 1
+    data = np.ones((INT_OVERFLOW, 2))
+    assert data.shape == (INT_OVERFLOW, 2)
+    assert data[0][0] == 1
 
 @use_np
 def test_zeros():
-    A = np.zeros((INT_OVERFLOW, 2))
-    assert A.shape == (INT_OVERFLOW, 2)
-    assert A[0][0] == 0
+    data = np.zeros((INT_OVERFLOW, 2))
+    assert data.shape == (INT_OVERFLOW, 2)
+    assert data[0][0] == 0
 
 @use_np
 def test_abs():
-    A = np.ones((INT_OVERFLOW, 2))
-    A[0][0] = -1
-    A.attach_grad()
+    data = np.ones((INT_OVERFLOW, 2))
+    data[0][0] = -1
+    data.attach_grad()
     with mx.autograd.record():
-        B = np.abs(A)
-    assert B.shape == (INT_OVERFLOW, 2)
-    assert B[0][0] == 1
-    B.backward()
-    assert A.grad.shape == (INT_OVERFLOW, 2)
-    assert A.grad[0][0] == -1
+        out = np.abs(data)
+        out.backward()
+    assert out.shape == (INT_OVERFLOW, 2)
+    assert out[0][0] == 1
+    assert data.grad.shape == (INT_OVERFLOW, 2)
+    assert data.grad[0][0] == -1
 
 @use_np
 def test_absolute():
