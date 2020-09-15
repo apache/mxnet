@@ -21,7 +21,7 @@
 # package generation, requiring the actual CUDA library to be
 # present
 
-FROM nvidia/cuda:11.0-devel-ubuntu16.04
+FROM nvidia/cuda:11.0-cudnn8-devel-ubuntu16.04
 
 WORKDIR /work/deps
 
@@ -44,16 +44,6 @@ COPY install/ubuntu_clang.sh /work/
 RUN /work/ubuntu_clang.sh
 COPY install/ubuntu_binutils.sh /work/
 RUN /work/ubuntu_binutils.sh
-
-ENV CUDA_VERSION=11.0.221
-ENV CUDNN_VERSION=8.0.3.33
-COPY install/ubuntu_cudnn.sh /work/
-RUN /work/ubuntu_cudnn.sh
-
-# Special case because the CPP-Package requires the CUDA runtime libs
-# and not only stubs (which are provided by the base image)
-COPY install/ubuntu_nvidia.sh /work/
-RUN /work/ubuntu_nvidia.sh
 
 # Keep this at the end since this command is not cachable
 ARG USER_ID=0
