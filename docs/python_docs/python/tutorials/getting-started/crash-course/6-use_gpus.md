@@ -71,29 +71,60 @@ Remember that if the inputs are not on the same GPU, you get an error.
 
 ## Run a neural network on a GPU
 
-To run a neural network on a GPU, you only need to copy and move the input data and parameters to the GPU. Reuse the previously defined LeNet. The following code example shows this.
+To run a neural network on a GPU, you only need to copy and move the input data and parameters to the GPU. Reuse the previously defined LeafNetwork in [Training Neural Networks](trainNN.md). The following code example shows this.
 
 ```{.python .input  n=16}
-net = nn.Sequential()
-net.add(nn.Conv2D(channels=6, kernel_size=5, activation='relu'),
-        nn.MaxPool2D(pool_size=2, strides=2),
-        nn.Conv2D(channels=16, kernel_size=3, activation='relu'),
-        nn.MaxPool2D(pool_size=2, strides=2),
-        nn.Dense(120, activation="relu"),
-        nn.Dense(84, activation="relu"),
-        nn.Dense(10))
+# The convolutional block has a convolution layer, a max pool layer and a batch normalization layer
+def conv_block(filters, kernel_size=2, stride=2, batch_norm=True):
+    conv_block = nn.HybridSequential()
+    conv_block.add(nn.Conv2D(channels=filters, kernel_size=kernel_size, activation='relu'),
+              nn.MaxPool2D(pool_size=4, strides=stride))
+    if batch_norm:
+        conv_block.add(nn.BatchNorm())
+    return conv_block
+
+# The dense block consists of a dense layer and a dropout layer
+def dense_block(neurons, activation='relu', dropout=0.2):
+    dense_block = nn.HybridSequential()
+    dense_block.add(nn.Dense(neurons, activation=activation))
+    if dropout:
+        dense_block.add(nn.Dropout(dropout))
+    return dense_block
+
+# Create neural network blueprint using the blocks
+class LeafNetwork(nn.HybridBlock):
+    def __init__(self):
+        super(LeafNetwork, self).__init__()
+        self.conv1 = conv_block(32)
+        self.conv2 = conv_block(64)
+        self.conv3 = conv_block(128)
+        self.flatten = nn.Flatten()
+        self.dense1 = dense_block(100)
+        self.dense2 = dense_block(10)
+        self.dense3 = nn.Dense(2)
+        
+    def forward(self, batch):
+        batch = self.conv1(batch)
+        batch = self.conv2(batch)
+        batch = self.conv3(batch)
+        batch = self.flatten(batch)
+        batch = self.dense1(batch)
+        batch = self.dense2(batch)
+        batch = self.dense3(batch)
+        
+        return batch
 ```
 
-Load the saved parameters into GPU 0 directly as shown here, or use `net.collect_params().reset_ctx` to change the device.
+Load the saved parameters into GPU 0 directly as shown here, or use `net.collect_params().reset_ctx(gpu)` to change the device.
 
 ```{.python .input  n=20}
-net.load_parameters('net.params', ctx=gpu)
+net.load_parameters('leaf_models.params', ctx=gpu)
 ```
 
 Use the following command to create input data on GPU 0. The forward function will then run on GPU 0.
 
 ```{.python .input  n=22}
-x = np.random.uniform(size=(1,1,28,28), ctx=gpu)
+x = np.random.uniform(size=(1, 3, 128, 128), ctx=gpu)
 net(x)
 ```
 
@@ -101,21 +132,39 @@ net(x)
 
 Finally, you can see how to use multiple GPUs to jointly train a neural network through data parallelism. Assume there are *n* GPUs. Split each data batch into *n* parts, and then each GPU will run the forward and backward passes using one part of the data.
 
-First copy the data definitions with the following commands, and the transform function from the [Predict tutorial](5-predict.md).
+First copy the data definitions with the following commands, and the transform functions from the tutorial [Training Neural Networks](trainNN.md).
 
 ```{.python .input}
-batch_size = 256
-transformer = gluon.data.vision.transforms.Compose([
-    gluon.data.vision.transforms.ToTensor(),
-    gluon.data.vision.transforms.Normalize(0.13, 0.31)])
+# Import transforms as compose a series of transformations to the images
+from mxnet.gluon.data.vision import transforms
 
-train_data = gluon.data.DataLoader(
-    gluon.data.vision.datasets.FashionMNIST(train=True).transform_first(
-        transformer), batch_size, shuffle=True, num_workers=4)
+jitter_param = 0.05
 
-valid_data = gluon.data.DataLoader(
-    gluon.data.vision.datasets.FashionMNIST(train=False).transform_first(
-        transformer), batch_size, shuffle=False, num_workers=4)
+# mean and std for normalizing image value in range (0,1)
+mean = [0.485, 0.456, 0.406]
+std = [0.229, 0.224, 0.225]
+
+training_transformer = transforms.Compose([
+    transforms.Resize(size=224, keep_ratio=True),
+    transforms.CenterCrop(128),
+    transforms.RandomFlipLeftRight(),
+    transforms.RandomColorJitter(contrast=jitter_param),
+    transforms.ToTensor(),
+    transforms.Normalize(mean, std)
+])
+
+validation_transformer = transforms.Compose([
+    transforms.Resize(size=224, keep_ratio=True),
+    transforms.CenterCrop(128),
+    transforms.ToTensor(),
+    transforms.Normalize(mean, std)
+])
+
+# Create data loaders
+batch_size = 4
+train_loader = gluon.data.DataLoader(train_dataset.transform_first(training_transformer),batch_size=batch_size, shuffle=True, try_nopython=True)
+validation_loader = gluon.data.DataLoader(val_dataset.transform_first(validation_transformer), batch_size=batch_size, try_nopython=True)
+test_loader = gluon.data.DataLoader(test_dataset.transform_first(validation_transformer), batch_size=batch_size, try_nopython=True)
 ```
 
 The training loop is quite similar to that shown earlier. The major differences are highlighted in the following code.
@@ -126,31 +175,60 @@ available_gpus = [npx.gpu(i) for i in range(npx.num_gpus())]
 num_gpus = 2
 devices = available_gpus[:num_gpus]
 print('Using {} GPUs'.format(len(devices)))
+
 # Diff 2: reinitialize the parameters and place them on multiple GPUs
 net.collect_params().initialize(force_reinit=True, ctx=devices)
+
 # Loss and trainer are the same as before
-softmax_cross_entropy = gluon.loss.SoftmaxCrossEntropyLoss()
-trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 0.1})
+loss_fn = gluon.loss.SoftmaxCrossEntropyLoss()
+optimizer = 'sgd'
+optimizer_params = {'learning_rate': 0.001}
+trainer = gluon.Trainer(model.collect_params(), optimizer, optimizer_params)
+
+epochs = 2
+accuracy = gluon.metric.Accuracy()
+log_interval = 5
+
 for epoch in range(10):
     train_loss = 0.
     tic = time.time()
-    for data, label in train_data:
+    btic = time.time()
+    accuracy.reset()
+    for idx, batch in enumerate(train_data):
+        data, label = batch[0], batch[1]
+
         # Diff 3: split batch and load into corresponding devices
         data_list = gluon.utils.split_and_load(data, devices)
         label_list = gluon.utils.split_and_load(label, devices)
+
         # Diff 4: run forward and backward on each devices.
         # MXNet will automatically run them in parallel
         with autograd.record():
-            losses = [softmax_cross_entropy(net(X), y)
-                      for X, y in zip(data_list, label_list)]
+            outputs = [net(X)
+                      for X in data_list]
+            losses = [loss_fn(output, label)
+                      for output, label in zip(outputs, label_list)]
         for l in losses:
             l.backward()
         trainer.step(batch_size)
-        # Diff 5: sum losses over all devices. Here float will copy data
-        # into CPU.
+
+        # Diff 5: sum losses over all devices. Here, the float 
+        # function will copy data into CPU.
         train_loss += sum([float(l.sum()) for l in losses])
-    print("Epoch %d: loss %.3f, in %.1f sec" % (
-        epoch, train_loss/len(train_data)/batch_size, time.time()-tic))
+        accuracy.update(label_list, outputs)
+        if log_interval and (idx + 1) % log_interval == 0:
+            _, acc = accuracy.get()
+     
+            print(f"""Epoch[{epoch + 1}] Batch[{idx + 1}] Speed: {batch_size / (time.time() - btic)} samples/sec \
+                  batch loss = {loss.mean().asscalar()} | accuracy = {acc}""")
+            btic = time.time()
+
+    _, acc = accuracy.get()
+    
+    acc_val = test(validation_loader)
+    print(f"[Epoch {epoch + 1}] training: accuracy={acc}")
+    print(f"[Epoch {epoch + 1}] time cost: {time.time() - tic}")
+    print(f"[Epoch {epoch + 1}] validation: validation accuracy={acc_val}")
 ```
 
 ## Next steps
