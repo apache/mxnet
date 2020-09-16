@@ -32,6 +32,8 @@ RUN /work/deb_ubuntu_ccache.sh
 COPY install/ubuntu_python.sh /work/
 COPY install/requirements /work/
 RUN /work/ubuntu_python.sh
+COPY install/ubuntu_binutils.sh /work/
+RUN /work/ubuntu_binutils.sh
 
 # Keep this at the end since this command is not cachable
 ARG USER_ID=0
