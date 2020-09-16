@@ -39,7 +39,6 @@ from ..ndarray import save as nd_save
 from ..ndarray import NDArray
 from ..io import DataIter, DataDesc, DataBatch
 from ..context import cpu, Context
-from ..module import Module
 
 
 def _quantize_params(qsym, params, th_dict):
@@ -186,13 +185,11 @@ class _LayerHistogramCollector(object):
         self.include_layer = include_layer
         self.logger = logger
 
-    def collect(self, name, arr):
+    def collect(self, name, opname, arr, *args):
         """Callback function for collecting layer output NDArrays."""
-        name = py_str(name)
         if name not in self.include_layer:
             return
-        handle = ctypes.cast(arr, NDArrayHandle)
-        arr = NDArray(handle, writable=False).copyto(cpu()).asnumpy()
+        arr = arr.copyto(cpu()).asnumpy()
         if self.logger:
             self.logger.debug("Collecting layer %s histogram of shape %s" % (name, arr.shape))
         min_range = np.min(arr)
@@ -214,15 +211,13 @@ class _LayerOutputMinMaxCollector(object):
         self.include_layer = include_layer
         self.logger = logger
 
-    def collect(self, name, arr):
+    def collect(self, name, op_name, arr, *args):
         """Callback function for collecting min and max values from an NDArray."""
-        name = py_str(name)
         if name not in self.include_layer:
             return
-        handle = ctypes.cast(arr, NDArrayHandle)
-        arr = NDArray(handle, writable=False)
-        min_range = ndarray.min(arr).asscalar()
-        max_range = ndarray.max(arr).asscalar()
+        arr = arr.copyto(cpu()).asnumpy()
+        min_range = np.min(arr)
+        max_range = np.max(arr)
         if name in self.min_max_dict:
             cur_min_max = self.min_max_dict[name]
             self.min_max_dict[name] = (min(cur_min_max[0], min_range),
