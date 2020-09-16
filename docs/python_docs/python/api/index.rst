@@ -18,7 +18,7 @@
 Python API
 ==========
 
-Overview
+Recent-ver_
 --------
 
 This API section details functions, modules, and objects included in MXNet,
@@ -217,7 +217,7 @@ Legacy
       Functions for Symbol visualization.
 
 
-.. toctree::
+.. toxtree::
    :maxdepth: 1
    :hidden:
    :glob:
