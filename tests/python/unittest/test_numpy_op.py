@@ -74,7 +74,7 @@ def test_np_tensordot(a_shape, b_shape, axes, hybridize, dtype):
         def hybrid_forward(self, F, a, b):
             return F.np.tensordot(a, b, self._axes)
 
-    def tensordot_backward(a, b, axes=2):
+    def tensordot_backward(out_grad, a, b, axes=2):
         if (a.ndim < 1) or (b.ndim < 1):
             raise ValueError('An input is zero-dim')
 
@@ -116,7 +116,7 @@ def test_np_tensordot(a_shape, b_shape, axes, hybridize, dtype):
         bd1 = _np.prod([b.shape[i] for i in b_axes_summed]) if len(b_axes_summed) > 0 else 1
         bd2 = _np.prod([b.shape[i] for i in b_axes_remained]) if len(b_axes_remained) > 0 else 1
 
-        out_grad = _np.ones((ad1, bd2))
+        out_grad = out_grad.reshape((ad1, bd2))
 
         new_a = _np.transpose(a, a_axes)
         new_a_shape = new_a.shape[:]
@@ -154,7 +154,7 @@ def test_np_tensordot(a_shape, b_shape, axes, hybridize, dtype):
     assert mx_out.shape == np_out.shape
     assert_almost_equal(mx_out.asnumpy(), np_out, rtol = 1e-3, atol = 1e-5)
     mx_out.backward()
-    np_backward = tensordot_backward(a.asnumpy(), b.asnumpy(), axes)
+    np_backward = tensordot_backward(_np.ones(np_out.shape), a.asnumpy(), b.asnumpy(), axes)
     assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol = 1e-3, atol=1e-5)
     assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol = 1e-3, atol=1e-5)
 
@@ -170,6 +170,42 @@ def test_np_tensordot(a_shape, b_shape, axes, hybridize, dtype):
         mx_sym = mx.sym.np.tensordot(a_sym, b_sym, axes).as_nd_ndarray()
         check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
           rtol=1e-1, atol=1e-1, dtype = dtype)
+    
+    # General Gradient Test
+    for a_grad_status in ['add', 'write']:
+        for b_grad_status in ['add', 'write']:
+            a = mx.np.random.normal(0, 1, a_shape)
+            b = mx.np.random.normal(0, 1, b_shape)
+            a.attach_grad(a_grad_status)
+            b.attach_grad(b_grad_status)
+            if a_grad_status == 'add':
+                ori_a_grad = mx.np.random.normal(0, 1, a_shape)
+                if a.ndim == 0:
+                    a.grad[()] = ori_a_grad
+                else:
+                    a.grad[:] = ori_a_grad
+            if b_grad_status == 'add':
+                ori_b_grad = mx.np.random.normal(0, 1, b_shape)
+                if b.ndim == 0:
+                    b.grad[()] = ori_b_grad
+                else:
+                    b.grad[:] = ori_b_grad
+
+            with mx.autograd.record():
+                mx_out = mx.np.tensordot(a, b, axes)
+                out_grad = mx.np.random.normal(0, 1, mx_out.shape)
+                loss = (mx_out * out_grad).sum()
+                loss.backward()
+
+            gt_in_grad = tensordot_backward(out_grad.asnumpy(), a.asnumpy(), b.asnumpy(), axes)
+
+            if(a_grad_status == 'add'):
+                gt_in_grad[0] += ori_a_grad
+            if(b_grad_status == 'add'):
+                gt_in_grad[1] += ori_b_grad
+
+            assert_almost_equal(a.grad.asnumpy(), gt_in_grad[0], rtol=1e-2, atol=1e-2)
+            assert_almost_equal(b.grad.asnumpy(), gt_in_grad[1], rtol=1e-2, atol=1e-2)
 
 
 @with_seed()
