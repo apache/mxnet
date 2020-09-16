@@ -1,26 +1,16 @@
-!pip install --pre mxnet -f https://dist.mxnet.io/python --upgrade
-!pip install contextvars
-
-```python
-import mxnet 
-```
-
-```python
-mxnet.__version__
-```
-
 # Necessary components that are not in the network
 
 The data and algorithms are not the only components that you need to create your
-trained deep learning model. In this notebook, we will talk about some of the
-common components that you will use for training your own machine learning
-models. Here is a list of components that we will talk about in this notebook
+trained deep learning model. In this notebook, you will learn about some of the
+common components used for training your own machine learning models. Here is a
+list of components that are commonly found in training a model in MXNet.
 
 1. Initialization
 2. Loss function
     1. Built-in
     2. Custom
 3. Optimizers
+4. Metrics
 
 ```python
 from mxnet import np, npx,gluon
@@ -37,9 +27,8 @@ In the previous notebook, you used `net.initialize()` to initialize the network
 before you could do a forward pass. Let's look at initialization in a little
 more detail here.
 
-We will define the `sequential` network that we used earlier and initialize it.
-After you initialize it, we will look at the parameters using `collect_params()`
-method.
+First, define the `sequential` network that you used earlier and initialize it.
+After you initialize it, print the parameters using `collect_params()` method.
 
 ```python
 net = nn.Sequential()
@@ -91,7 +80,7 @@ some of the commonly used initialzers like
 For more information, see [Initializers TODO: CHANGE
 LINK](https://mxnet.apache.org/versions/1.6/api/python/docs/api/initializer/index.html)
 
-When we used `net.intialize()`, MXNet initializes the weight matrices uniformly
+When you used `net.intialize()`, MXNet initializes the weight matrices uniformly
 by drawing random values with uniform-distribution between −0.07 and 0.07 and
 updates the bias parameters by setting them all to 0.
 
@@ -117,7 +106,7 @@ net.initialize(init=init.Normal(sigma=0.2),force_reinit=True,ctx=ctx)
 print(net[0].weight.data()[0])
 ```
 
-## Components
+## Components used in a training loop
 
 Till now you have seen how to create an algorithm and initialized it using mxnet
 APIs as well as learned the basics of using mxnet. When you start training the
@@ -139,10 +128,9 @@ deeper into initialization.
 ## Loss function
 
 Loss functions are used to train neural networks and help the algorithm learn
-the data distribution. In a loss function, we compute the difference between
-output that we get from the neural network and ground truth value. This score is
-used to update the neural network weights during training. Let's look at a
-simple example first.
+the data distribution. The loss function computes the difference between output
+from the neural network and ground truth value. This score is used to update the
+neural network weights during training. Let's look at a simple example first.
 
 Suppose you have a neural network `net` and the data is stored in variable
 `data`. Let's take 5 total records and the output from the neural network after
@@ -168,9 +156,9 @@ groundtruth_label = np.array([[0.0083],
                              [0.00639]]).reshape(5,1)
 ```
 
-For this problem, we will use the L2 Loss. L2Loss, also called Mean Squared
-Error, is a regression loss function that computes the squared distances between
-the target values and the output of the neural network. It is defined as:
+For this problem, use the L2 Loss. L2Loss, also called Mean Squared Error, is a
+regression loss function that computes the squared distances between the target
+values and the output of the neural network. It is defined as:
 
 $$L = \frac{1}{2N}\sum_i{|label_i − pred_i|)^2}$$
 
@@ -185,7 +173,7 @@ def L2Loss(output_values, true_values):
 L2Loss(nn_output,groundtruth_label)
 ```
 
-Now we do the same thing using the mxnet API
+Now, do the same thing using the mxnet API
 
 ```python
 from mxnet.gluon import nn, loss as gloss
@@ -280,4 +268,94 @@ print(net.weight.data())
 ```python
 print(curr_weight - net.weight.grad() * 1 / 5)
 
+```
+
+## Metrics
+
+MXNet includes a `metrics` API that you can use to evaluate how your model is
+doing. This is typically used during training to monitor performance on the
+validation set. MXNet includes commonly used metrics:
+
+-
+[Accuracy](https://mxnet.apache.org/versions/2.0/api/python/docs/api/metric/index.html#mxnet.metric.Accuracy)
+-
+[CrossEntropy](https://mxnet.apache.org/versions/2.0/api/python/docs/api/metric/index.html#mxnet.metric.CrossEntropy)
+- [Mean squared
+error](https://mxnet.apache.org/versions/1.6/api/python/docs/api/metric/index.html#mxnet.metric.MSE)
+- [Root mean squared error
+(RMSE)](https://mxnet.apache.org/versions/1.6/api/python/docs/api/metric/index.html#mxnet.metric.RMSE)
+
+Lets look at an binary class classification example.
+
+```python
+# Vector of likelihoods for all the classes
+pred = np.array([[0.1, 0.9], [0.05, 0.95], [0.83, 0.17],[0.63,0.37]])
+
+labels = np.array([1,1,0,1])
+```
+
+Before you can calculate the accuracy of your model, the metric (accuracy)
+should be instantiated before the training loop
+
+```python
+from mxnet.gluon.metric import Accuracy
+
+acc = Accuracy()
+```
+
+To run and calculate the updated accuracy for each batch or epoch, you can call
+the `update()` method. This method uses labels and predictions which can be
+either class index or vector of likelihoods for all classes.
+
+```python
+acc.update(labels=labels, preds = pred)
+```
+
+#### Creating custom metrics
+
+In addition to built-in metrics, if you want to create a custom metric, you can
+use the following skeleton code. The code inherits from the `EvalMetric` base
+class.
+
+```
+def custom_metric(EvalMetric):
+    def __init__(self):
+        super().init()
+
+    def update(self,labels, preds):
+        pass
+
+```
+
+Here is an example using the Precision metric. First, define the two values
+`labels` and `preds`.
+
+```python
+labels = np.array([0,1,1,0,0,1,0,0,1,0,1,1])
+preds = np.array([0,1,1,1,1,0,0,1,0,0,0,0])
+```
+
+Next, define the custom metric class `precision` and instantiate it
+
+```python
+from mxnet.gluon.metric import EvalMetric
+
+class precision(EvalMetric):
+    def __init__(self):
+        super().__init__(name='Precision')
+        
+    def update(self,labels, preds):
+        tp_labels = (labels == 1)
+        true_positives = sum(preds[tp_labels]== 1)
+        fp_labels = (labels == 0)
+        false_positives = sum(preds[fp_labels]== 1)
+        return true_positives / (true_positives + false_positives)
+        
+p = precision()
+```
+
+And finally, call the `update` method to return the precision for your data
+
+```python
+p.update(np.array(y_true),np.array(y_pred))
 ```
