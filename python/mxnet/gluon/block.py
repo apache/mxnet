@@ -21,6 +21,7 @@
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
 import copy
+import inspect
 import warnings
 import weakref
 from collections import OrderedDict, defaultdict
@@ -947,8 +948,8 @@ class HybridBlock(Block):
                     flatten_inputs.append(None)
             grouped_inputs = _regroup(flatten_inputs, self._in_format)
 
-            params = {i: j.var() for i, j in self._reg_params.items()}
             with _block_scope(self):
+                params = {i: j.var() for i, j in self._reg_params.items()}
                 out = self.hybrid_forward(symbol, *grouped_inputs, **params)  # pylint: disable=no-value-for-parameter
             out, self._out_format = _flatten(out, "output")
 
@@ -984,7 +985,7 @@ class HybridBlock(Block):
 
     def _get_graph(self, *args):
         if not self._cached_graph:
-            if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:  # Gluon 1
+            if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
                 return self._get_graph_v1(*args)
             else:  # Gluon 2 based on deferred compute mode
                 return self._get_graph_v2(*args)
@@ -1132,7 +1133,7 @@ class HybridBlock(Block):
             out = [out]
         return _regroup(out, self._out_format)
 
-    def optimize_for(self, x, *args, backend=None, backend_opts=None, **kwargs):
+    def optimize_for(self, x, *args, backend=None, backend_opts=None, clear=True, **kwargs):
         """Partitions the current HybridBlock and optimizes it for a given backend
         without executing a forward pass. Modifies the HybridBlock in-place.
 
@@ -1162,6 +1163,7 @@ class HybridBlock(Block):
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
         backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
+        clear : clears any previous optimizations
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
         static_shape : bool, default False
@@ -1171,7 +1173,7 @@ class HybridBlock(Block):
         """
 
         # do hybrize API call
-        self.hybridize(True, backend, backend_opts, **kwargs)
+        self.hybridize(True, backend, backend_opts, clear, **kwargs)
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
@@ -1213,7 +1215,7 @@ class HybridBlock(Block):
             self._active = False
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend=None, backend_opts=None, **kwargs):
+    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True, **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
@@ -1225,6 +1227,7 @@ class HybridBlock(Block):
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
         backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
+        clear : clears any previous optimizations
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
         static_shape : bool, default False
@@ -1241,7 +1244,8 @@ class HybridBlock(Block):
 
         self._active = active
         self._flags = list(kwargs.items())
-        self._clear_cached_op()
+        if clear:
+            self._clear_cached_op()
         if active and self._forward_hooks or self._forward_pre_hooks:
             warnings.warn('"{block}" is being hybridized while still having forward hook/pre-hook. '
                           'If "{block}" is a child of HybridBlock, the hooks will not take effect.'
@@ -1274,7 +1278,7 @@ class HybridBlock(Block):
 
     def infer_shape(self, *args):
         """Infers shape of Parameters from inputs."""
-        if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:
+        if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
             # Gluon 1 based on F:  hybrid_forward is defined by user
             self._infer_attrs('infer_shape', 'shape', *args)
         else:
@@ -1345,8 +1349,11 @@ class HybridBlock(Block):
                 if name in arg_names:
                     arg_dict['arg:{}'.format(name)] = param._reduce()
                 else:
-                    assert name in aux_names
-                    arg_dict['aux:{}'.format(name)] = param._reduce()
+                    if name not in aux_names:
+                        warnings.warn('Parameter "{name}" is not found in the graph. '
+                                      .format(name=name), stacklevel=3)
+                    else:
+                        arg_dict['aux:%s'%name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
         params_filename = '%s-%04d.params'%(path, epoch)
         save_fn(params_filename, arg_dict)
@@ -1382,7 +1389,7 @@ class HybridBlock(Block):
             cld()._monitor_all = monitor_all
 
     def __call__(self, x, *args):
-        if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:
+        if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
             # Gluon 1 based on F:  hybrid_forward is defined by user
             return super().__call__(x, *args)
         else:  # Gluon 2 based on deferred compute mode
@@ -1405,7 +1412,8 @@ class HybridBlock(Block):
                 # HybridBlock is a child block of a HybridBlock that has been hybridized.
                 return super().__call__(x, *args)
 
-            return self._call_cached_op(x, *args)
+            with x.ctx:
+                return self._call_cached_op(x, *args)
 
     def forward(self, x, *args):
         """Defines the forward computation. Arguments can be either
@@ -1441,8 +1449,8 @@ class HybridBlock(Block):
 
                 return self.hybrid_forward(ndarray, x, *args, **params)
 
-        params = {i: j.var() for i, j in self._reg_params.items()}
         with _block_scope(self):
+            params = {i: j.var() for i, j in self._reg_params.items()}
             return self.hybrid_forward(symbol, x, *args, **params)
 
     def hybrid_forward(self, F, x, *args, **kwargs):
