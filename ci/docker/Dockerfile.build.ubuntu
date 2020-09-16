@@ -74,7 +74,8 @@ RUN export DEBIAN_FRONTEND=noninteractive && \
         libnuma-dev \
         ## Frontend languages
         # Python
-        python3 \
+        python3.8 \
+        python3.8-dev \
         python3-pip \
         ## Documentation
         doxygen \
@@ -97,6 +98,8 @@ RUN cd /usr/local/src && \
     make install && \
     cd /usr/local/src && \
     rm -rf ccache
+
+RUN rm /usr/bin/python3 && ln -s /usr/bin/python3.8 /usr/bin/python3
 
 # RAT License Checker tool
 RUN cd /usr/local/src && \

@@ -275,7 +275,7 @@ class ImageBboxRandomExpand(Block):
         else:
             F = nd
         if isinstance(self._fill, numeric_types):
-            dst = F.full(shape=(oh, ow, c), val=self._fill, dtype=img.dtype)
+            dst = F.full(shape=(oh, ow, c), val=self._fill, dtype=img.dtype) # pylint: disable= unexpected-keyword-arg, no-value-for-parameter
         else:
             fill = F.array(self._fill, dtype=img.dtype, ctx=img.ctx)
             if not c == fill.size:

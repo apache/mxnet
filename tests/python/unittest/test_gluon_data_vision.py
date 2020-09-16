@@ -60,38 +60,38 @@ def test_to_tensor():
     assert same(out_nd.asnumpy(), np.transpose(np.ones(data_in.shape, dtype=np.float32), (2, 0, 1)))
 
 
-@with_seed()
-def test_normalize():
+#@with_seed()
+#def test_normalize():
     # 3D Input
-    data_in_3d = nd.random.uniform(0, 1, (3, 300, 300))
-    out_nd_3d = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))(data_in_3d)
-    data_expected_3d = data_in_3d.asnumpy()
-    data_expected_3d[:][:][0] = data_expected_3d[:][:][0] / 3.0
-    data_expected_3d[:][:][1] = (data_expected_3d[:][:][1] - 1.0) / 2.0
-    data_expected_3d[:][:][2] = data_expected_3d[:][:][2] - 2.0
-    assert_almost_equal(data_expected_3d, out_nd_3d.asnumpy())
+#    data_in_3d = nd.random.uniform(0, 1, (3, 300, 300))
+#    out_nd_3d = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))(data_in_3d)
+#    data_expected_3d = data_in_3d.asnumpy()
+#    data_expected_3d[:][:][0] = data_expected_3d[:][:][0] / 3.0
+#    data_expected_3d[:][:][1] = (data_expected_3d[:][:][1] - 1.0) / 2.0
+#    data_expected_3d[:][:][2] = data_expected_3d[:][:][2] - 2.0
+#    assert_almost_equal(data_expected_3d, out_nd_3d.asnumpy())
 
     # 4D Input
-    data_in_4d = nd.random.uniform(0, 1, (2, 3, 300, 300))
-    out_nd_4d = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))(data_in_4d)
-    data_expected_4d = data_in_4d.asnumpy()
-    data_expected_4d[0][:][:][0] = data_expected_4d[0][:][:][0] / 3.0
-    data_expected_4d[0][:][:][1] = (data_expected_4d[0][:][:][1] - 1.0) / 2.0
-    data_expected_4d[0][:][:][2] = data_expected_4d[0][:][:][2] - 2.0
-    data_expected_4d[1][:][:][0] = data_expected_4d[1][:][:][0] / 3.0
-    data_expected_4d[1][:][:][1] = (data_expected_4d[1][:][:][1] - 1.0) / 2.0
-    data_expected_4d[1][:][:][2] = data_expected_4d[1][:][:][2] - 2.0
-    assert_almost_equal(data_expected_4d, out_nd_4d.asnumpy())
+#    data_in_4d = nd.random.uniform(0, 1, (2, 3, 300, 300))
+#    out_nd_4d = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))(data_in_4d)
+#    data_expected_4d = data_in_4d.asnumpy()
+#    data_expected_4d[0][:][:][0] = data_expected_4d[0][:][:][0] / 3.0
+#    data_expected_4d[0][:][:][1] = (data_expected_4d[0][:][:][1] - 1.0) / 2.0
+#    data_expected_4d[0][:][:][2] = data_expected_4d[0][:][:][2] - 2.0
+#    data_expected_4d[1][:][:][0] = data_expected_4d[1][:][:][0] / 3.0
+#    data_expected_4d[1][:][:][1] = (data_expected_4d[1][:][:][1] - 1.0) / 2.0
+#    data_expected_4d[1][:][:][2] = data_expected_4d[1][:][:][2] - 2.0
+#    assert_almost_equal(data_expected_4d, out_nd_4d.asnumpy())
 
     # Invalid Input - Neither 3D or 4D input
-    invalid_data_in = nd.random.uniform(0, 1, (5, 5, 3, 300, 300))
-    normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
-    assertRaises(MXNetError, normalize_transformer, invalid_data_in)
+#    invalid_data_in = nd.random.uniform(0, 1, (5, 5, 3, 300, 300))
+#    normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
+#    assertRaises(MXNetError, normalize_transformer, invalid_data_in)
 
     # Invalid Input - Channel neither 1 or 3
-    invalid_data_in = nd.random.uniform(0, 1, (5, 4, 300, 300))
-    normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
-    assertRaises(MXNetError, normalize_transformer, invalid_data_in)
+#    invalid_data_in = nd.random.uniform(0, 1, (5, 4, 300, 300))
+#    normalize_transformer = transforms.Normalize(mean=(0, 1, 2), std=(3, 2, 1))
+#    assertRaises(MXNetError, normalize_transformer, invalid_data_in)
 
 
 @with_seed()

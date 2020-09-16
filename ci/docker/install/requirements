@@ -25,17 +25,19 @@ graphviz<0.9.0,>=0.8.1
 contextvars;python_version<"3.7"
 
 # Optional dependencies
-onnx==1.5.0
+onnx==1.5.0;python_version<"3.8"
+onnx==1.7.0;python_version=="3.8"
 # protobuf version frozen due to ps-lite
 protobuf==3.5.2
 scipy==1.4.1
 tabulate==0.7.5
-Cython==0.29.7
+Cython==0.29.7;python_version<"3.8"
+Cython==0.29.19;python_version=="3.8"
 
 # Development dependencies
 cpplint==1.3.0
-pylint==2.3.1  # pylint and astroid need to be aligned
-astroid==2.3.3  # pylint and astroid need to be aligned
+pylint==2.5.1  # pylint and astroid need to be aligned
+astroid==2.4.2  # pylint and astroid need to be aligned
 pytest==5.3.5
 pytest-env==0.6.2
 pytest-cov==2.8.1
@@ -54,4 +56,5 @@ boto3==1.9.229
 h5py==2.10.0
 # TODO(szha): remove once clean-up for py2 is complete
 six==1.11.0
-Pillow<6
+Pillow<6;python_version<"3.8"
+Pillow==7.1.2;python_version=="3.8"

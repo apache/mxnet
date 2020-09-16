@@ -485,29 +485,6 @@ def test_dc_hybridblock_deferred_init_no_infer_shape_error():
     with pytest.raises(RuntimeError):
         net(data)
 
-
-def test_dc_hybridblock_deferred_init():
-    class MyBlock(mx.gluon.HybridBlock):
-        def __init__(self):
-            super().__init__()
-            self.dense = mx.gluon.nn.Dense(units=10)
-            self.weight = mx.gluon.Parameter('weight', allow_deferred_init=True)
-
-        def infer_shape(self, x):
-            self.weight.shape = (x.shape[1], )
-
-        def forward(self, x):
-            return self.dense(x) + self.weight.data(x.context)
-
-    net = MyBlock()
-    net.initialize()
-    _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=False)
-    with mx.util.np_shape(True), mx.util.np_array(True):
-        net = MyBlock()
-        net.initialize()
-        _assert_dc_gluon(_dc_gluon_simple_setup, net, numpy=True)
-
-
 def test_dc_hybridblock_dynamic_shape():
     class MyBlock(mx.gluon.HybridBlock):
         def __init__(self):

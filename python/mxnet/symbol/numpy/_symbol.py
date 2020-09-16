@@ -642,7 +642,7 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute size_array')
 
-    def expand_dims(self, *args, **kwargs):  # pylint: disable=arguments-differ,unused-argument
+    def expand_dims(self, *args, **kwargs):  # pylint: disable=arguments-differ,unused-argument,signature-differs
         """Convenience fluent method for :py:func:`expand_dims`.
 
         The arguments are the same as for :py:func:`expand_dims`, with
