@@ -619,6 +619,41 @@ def test_np_kron(a_shape, b_shape, dtype, hybridize):
     assert_almost_equal(a.grad.asnumpy(), np_backward[0], rtol=1e-2, atol=1e-2)
     assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol=1e-2, atol=1e-2)
 
+    # General Gradient Test
+    for a_grad_status in ['add', 'write']:
+        for b_grad_status in ['add', 'write']:
+            a = mx.np.random.normal(0, 1, a_shape)
+            b = mx.np.random.normal(0, 1, b_shape)
+            a.attach_grad(a_grad_status)
+            b.attach_grad(b_grad_status)
+            if a_grad_status == 'add':
+                ori_a_grad = mx.np.random.normal(0, 1, a_shape)
+                if a.ndim == 0:
+                    a.grad[()] = ori_a_grad
+                else:
+                    a.grad[:] = ori_a_grad
+            if b_grad_status == 'add':
+                ori_b_grad = mx.np.random.normal(0, 1, b_shape)
+                if b.ndim == 0:
+                    b.grad[()] = ori_b_grad
+                else:
+                    b.grad[:] = ori_b_grad
+
+            with mx.autograd.record():
+                mx_out = mx.np.kron(a, b)
+                out_grad = mx.np.random.normal(0, 1, mx_out.shape)
+                loss = (mx_out * out_grad).sum()
+                loss.backward()
+
+            gt_in_grad = np_kron_backward(out_grad.asnumpy(), a.asnumpy(), b.asnumpy())
+            if(a_grad_status == 'add'):
+                gt_in_grad[0] += ori_a_grad
+            if(b_grad_status == 'add'):
+                gt_in_grad[1] += ori_b_grad
+
+            assert_almost_equal(a.grad.asnumpy(), gt_in_grad[0], rtol=1e-2, atol=1e-2)
+            assert_almost_equal(b.grad.asnumpy(), gt_in_grad[1], rtol=1e-2, atol=1e-2)
+
 
 @with_seed()
 @use_np
