@@ -809,6 +809,9 @@ build_ubuntu_gpu_cuda101_cudnn7() {
 build_ubuntu_gpu_cuda110_cudnn8() {
     set -ex
     build_ccache_wrappers
+    local CUDA_ARCH="-gencode=arch=compute_52,code=sm_52 \
+        -gencode=arch=compute_70,code=sm_70 \
+        -gencode=arch=compute_80,code=sm_80"
     make \
         USE_BLAS=openblas                         \
         USE_MKLDNN=0                              \
@@ -818,7 +821,7 @@ build_ubuntu_gpu_cuda110_cudnn8() {
         USE_TVM_OP=0                              \
         USE_CPP_PACKAGE=1                         \
         USE_DIST_KVSTORE=1                        \
-        CUDA_ARCH="$CI_CUDA_COMPUTE_CAPABILITIES" \
+        CUDA_ARCH="$CUDA_ARCH"                    \
         USE_SIGNAL_HANDLER=1                      \
         -j$(nproc)
     make cython PYTHON=python3
