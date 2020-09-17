@@ -115,7 +115,7 @@ class _Symbol(Symbol):
                     raise ValueError("slice step cannot be zero")
             elif isinstance(key, Symbol):
                 return _npi.advanced_indexing(self, key)
-            elif isinstance(key, tuple) and all(isinstance(key, Symbol) for arr in key):
+            elif isinstance(key, tuple) and all(isinstance(k, Symbol) for k in key):
                 key = _npi.stack(*[i for i in key])
                 sliced = _npi.advanced_indexing_multiple(self, key)
                 return sliced
