@@ -22,7 +22,7 @@ import tempfile
 import time
 import mxnet as mx
 import multiprocessing as mp
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray, rand_shape_nd
 import mxnet.ndarray as nd
 import numpy as np
 import math
@@ -635,6 +635,78 @@ def test_gemms_true_fp16():
                         atol=atol, rtol=rtol)
     os.environ["MXNET_FC_TRUE_FP16"] = "0"
 
+@with_seed()
+def test_cuda_graphs():
+    class GraphTester(gluon.HybridBlock):
+        def __init__(self, function_to_test, **kwargs)
+            super(GraphTester, self).__init__(**kwargs)
+            with self.name_scope():
+                self.f = function_to_test()
+
+        def hybrid_forward(self, F, *args):
+            # We need to isolate the operation to be fully inside the graph
+            # in order for graphs usage to be possible
+            copied_args = [F.identity(a) for a in args]
+            outputs = self.f(copied_args)
+            if isinstance(outputs, (list, tuple)):
+                return [F.identity(o) for o in outputs]
+            else:
+                return F.identity(outputs)
+
+    class TestDesc:
+        def __init__(self, name, f, num_inputs=1, input_dim=4):
+            self.name = name
+            self.f = f
+            self.num_inputs = num_inputs
+            self.input_dim = input_dim
+
+        def generate_inputs(self):
+            shape = rand_shape_nd(self.input_dim)
+            return [mx.random.uniform(shape=shape) for _ in num_inputs]
+
+    tested_ops = [
+            TestDesc('add', lambda: (lambda x, y: x + y), num_inputs = 2),
+            TestDesc('add_scalar', lambda: (lambda x: x + 0.5)),
+            TestDesc('Conv', lambda: mx.gluon.nn.Conv2D(channels=32, kernel_size=(3,3))),
+            TestDesc('Dense', lambda: mx.gluon.nn.Dense(units=128)),
+            TestDesc('Activation', lambda: mx.gluon.nn.Activation(act_type='tanh')),
+        ]
+
+    N = 5
+
+    graph_env = 'MXNET_ENABLE_CUDA_GRAPHS'
+    if graph_env in os.environ:
+        old_env_value = os.environ[graph_env]
+    else:
+        old_env_value = None
+
+    os.environ[graph_env] = '1'
+
+    for test_desc in tested_ops:
+        print("Testing ", test_desc.name)
+        inputs = test_desc.generate_inputs()
+        net = GraphTester(test_desc.f)
+        netg = GraphTester(test_desc.f)
+
+        # initialize parameters
+        net.initialize()
+        netg.initialize()
+
+        net(inputs)
+
+        for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
+            p2.set_data(p1.data())
+
+        netg.hybridize(static_alloc=True, static_shape=True)
+
+        for _ in range(N):
+            assert_almost_equal(net(inputs), netg(inputs))
+
+
+    if old_env_value is not None:
+        os.environ[graph_env] = old_env_value
+    else:
+        del(os.environ[graph_env])
 
 if __name__ == '__main__':
     import nose
