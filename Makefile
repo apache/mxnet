@@ -448,7 +448,7 @@ endif
 # be JIT-compiled by the updated driver from the included PTX.
 ifeq ($(USE_CUDA), 1)
 ifeq ($(CUDA_ARCH),)
-	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70 75
+	KNOWN_CUDA_ARCHS := 30 35 50 52 60 61 70 75 80
 	# Run nvcc on a zero-length file to check architecture-level support.
 	# Create args to include SASS in the fat binary for supported levels.
 	CUDA_ARCH := $(foreach arch,$(KNOWN_CUDA_ARCHS), \
