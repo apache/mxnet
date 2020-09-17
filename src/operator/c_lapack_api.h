@@ -250,7 +250,7 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   
   #if MSHADOW_USE_MKL
     #include <mkl_lapacke.h>
-  #elif
+  #else
     #if MXNET_USE_INT64_TENSOR_SIZE
       #define lapack_int int64_t
     #endif
