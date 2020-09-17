@@ -468,6 +468,7 @@ class CudaGraphsExec {
   bool OpOK(const std::shared_ptr<exec::OpExecutor> &exec) {
     static auto& fstateful = Op::GetAttr<FCreateOpState>("FCreateOpState");
     static auto& fgraphcompatible = Op::GetAttr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible");
+    static auto& fcompute_ex = Op::GetAttr<FComputeEx>("FComputeEx<gpu>");
     const auto& attrs = exec->attrs;
     if (attrs.op != nullptr) {
       const auto f = fgraphcompatible.get(attrs.op, nullptr);
@@ -476,14 +477,15 @@ class CudaGraphsExec {
       }
       if (fstateful.get(attrs.op, nullptr) != nullptr) {
         if (verbose_) {
-          LOG(INFO) << "Omitting stateful operator" << attrs.op->name  << " from CUDA graph.";
+          LOG(INFO) << "Omitting stateful operator " << attrs.op->name  << " from CUDA graph.";
         }
         return false;
       }
-      if (exec->dispatch_mode == DispatchMode::kFComputeEx ||
+      if ((fcompute_ex.get(attrs.op, nullptr) != nullptr &&
+           exec->dispatch_mode == DispatchMode::kFComputeEx) ||
           exec->dispatch_mode == DispatchMode::kFComputeFallback) {
         if (verbose_) {
-          LOG(INFO) << "Omitting operator" << attrs.op->name
+          LOG(INFO) << "Omitting operator " << attrs.op->name
                     << " from CUDA graph due to dispatch mode "
                     << static_cast<int>(exec->dispatch_mode);
         }
@@ -493,7 +495,7 @@ class CudaGraphsExec {
     for (auto& resource : exec->op_ctx.requested) {
       if (!(resource.req.type == ResourceRequest::kTempSpace)) {
         if (verbose_) {
-          LOG(INFO) << "Omitting operator" << attrs.op->name
+          LOG(INFO) << "Omitting operator " << attrs.op->name
                     << " from CUDA graph due to using the resource type "
                     << static_cast<int>(resource.req.type);
         }

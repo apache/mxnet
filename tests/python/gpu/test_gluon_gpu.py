@@ -20,9 +20,10 @@ import sys
 import os
 import tempfile
 import time
+import random
 import mxnet as mx
 import multiprocessing as mp
-from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray, rand_shape_nd
+from mxnet.test_utils import check_consistency, set_default_context, assert_almost_equal, rand_ndarray
 import mxnet.ndarray as nd
 import numpy as np
 import math
@@ -30,7 +31,7 @@ from mxnet import autograd
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, run_in_spawned_process
+from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, run_in_spawned_process, random_seed
 from test_gluon import *
 from test_loss import *
 from test_gluon_rnn import *
@@ -638,7 +639,7 @@ def test_gemms_true_fp16():
 @with_seed()
 def test_cuda_graphs():
     class GraphTester(gluon.HybridBlock):
-        def __init__(self, function_to_test, **kwargs)
+        def __init__(self, function_to_test, **kwargs):
             super(GraphTester, self).__init__(**kwargs)
             with self.name_scope():
                 self.f = function_to_test()
@@ -647,7 +648,7 @@ def test_cuda_graphs():
             # We need to isolate the operation to be fully inside the graph
             # in order for graphs usage to be possible
             copied_args = [F.identity(a) for a in args]
-            outputs = self.f(copied_args)
+            outputs = self.f(*copied_args)
             if isinstance(outputs, (list, tuple)):
                 return [F.identity(o) for o in outputs]
             else:
@@ -661,30 +662,48 @@ def test_cuda_graphs():
             self.input_dim = input_dim
 
         def generate_inputs(self):
-            shape = rand_shape_nd(self.input_dim)
-            return [mx.random.uniform(shape=shape) for _ in num_inputs]
+            shape = tuple(np.random.randint(4, 11, size=self.input_dim))
+            ret = [mx.random.uniform(shape=shape) for _ in range(self.num_inputs)]
+            for r in ret:
+                r.attach_grad()
+            return ret
 
     tested_ops = [
             TestDesc('add', lambda: (lambda x, y: x + y), num_inputs = 2),
             TestDesc('add_scalar', lambda: (lambda x: x + 0.5)),
-            TestDesc('Conv', lambda: mx.gluon.nn.Conv2D(channels=32, kernel_size=(3,3))),
+            TestDesc('Conv', lambda: mx.gluon.nn.Conv2D(channels=32, kernel_size=(1,1))),
+            TestDesc('ConvTranspose', lambda: mx.gluon.nn.Conv2DTranspose(channels=32, kernel_size=(1,1))),
             TestDesc('Dense', lambda: mx.gluon.nn.Dense(units=128)),
-            TestDesc('Activation', lambda: mx.gluon.nn.Activation(act_type='tanh')),
+            TestDesc('Activation', lambda: mx.gluon.nn.Activation('tanh')),
+            #TestDesc('Dropout', lambda: mx.gluon.nn.Dropout(0.5)),
+            TestDesc('Flatten', lambda: mx.gluon.nn.Flatten()),
+            TestDesc('MaxPool', lambda: mx.gluon.nn.MaxPool2D()),
+            TestDesc('AvgPool', lambda: mx.gluon.nn.AvgPool2D()),
+            TestDesc('GlobalMaxPool', lambda: mx.gluon.nn.GlobalMaxPool2D()),
+            TestDesc('GlobalAvgPool', lambda: mx.gluon.nn.GlobalAvgPool2D()),
+            TestDesc('ReflectionPad2D', lambda: mx.gluon.nn.ReflectionPad2D()),
+            TestDesc('BatchNorm', lambda: mx.gluon.nn.BatchNorm()),
+            TestDesc('InstanceNorm', lambda: mx.gluon.nn.InstanceNorm()),
+            TestDesc('LayerNorm', lambda: mx.gluon.nn.LayerNorm()),
+            TestDesc('LeakyReLU', lambda: mx.gluon.nn.LeakyReLU(0.1)),
+            TestDesc('PReLU', lambda: mx.gluon.nn.PReLU()),
+            TestDesc('ELU', lambda: mx.gluon.nn.ELU()),
+            TestDesc('SELU', lambda: mx.gluon.nn.SELU()),
+            TestDesc('Swish', lambda: mx.gluon.nn.Swish()),
         ]
 
-    N = 5
+    N = 10
 
-    graph_env = 'MXNET_ENABLE_CUDA_GRAPHS'
-    if graph_env in os.environ:
-        old_env_value = os.environ[graph_env]
-    else:
-        old_env_value = None
-
-    os.environ[graph_env] = '1'
+    os.environ['MXNET_ENABLE_CUDA_GRAPHS'] = '1'
+    os.environ['MXNET_USE_FUSION'] = '0'
 
     for test_desc in tested_ops:
         print("Testing ", test_desc.name)
         inputs = test_desc.generate_inputs()
+        inputsg = [i.copy() for i in inputs]
+        for i in inputsg:
+            i.attach_grad()
+        seed = random.randint(0, 10000)
         net = GraphTester(test_desc.f)
         netg = GraphTester(test_desc.f)
 
@@ -692,21 +711,41 @@ def test_cuda_graphs():
         net.initialize()
         netg.initialize()
 
-        net(inputs)
+        net(*inputs)
 
         for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
             p2.set_data(p1.data())
 
         netg.hybridize(static_alloc=True, static_shape=True)
 
+        print("Testing inference mode")
+        with random_seed(seed):
+            for _ in range(N):
+                assert_almost_equal(net(*inputs), netg(*inputsg))
+
+        mx.nd.waitall()
+        print("Testing training mode")
         for _ in range(N):
-            assert_almost_equal(net(inputs), netg(inputs))
+            with random_seed(seed):
+                with mx.autograd.record():
+                    out = net(*inputs)
+                out.backward()
 
+            with random_seed(seed):
+                with mx.autograd.record():
+                    outg = netg(*inputsg)
+                outg.backward()
 
-    if old_env_value is not None:
-        os.environ[graph_env] = old_env_value
-    else:
-        del(os.environ[graph_env])
+            assert_almost_equal(out, outg)
+            for i, ig in zip(inputs, inputsg):
+                assert_almost_equal(i.grad, ig.grad)
+
+            for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
+                assert_almost_equal(p1.data(), p2.data())
+                if p1.grad_req != 'null':
+                    assert_almost_equal(p1.grad(), p2.grad())
+        mx.nd.waitall()
+
 
 if __name__ == '__main__':
     import nose
