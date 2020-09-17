@@ -806,6 +806,27 @@ build_ubuntu_gpu_cuda101_cudnn7() {
     make cython PYTHON=python3
 }
 
+build_ubuntu_gpu_cuda110_cudnn8() {
+    set -ex
+    build_ccache_wrappers
+    local CUDA_ARCH="-gencode=arch=compute_52,code=sm_52 \
+        -gencode=arch=compute_70,code=sm_70 \
+        -gencode=arch=compute_80,code=sm_80"
+    make \
+        USE_BLAS=openblas                         \
+        USE_MKLDNN=0                              \
+        USE_CUDA=1                                \
+        USE_CUDA_PATH=/usr/local/cuda             \
+        USE_CUDNN=1                               \
+        USE_TVM_OP=0                              \
+        USE_CPP_PACKAGE=1                         \
+        USE_DIST_KVSTORE=1                        \
+        CUDA_ARCH="$CUDA_ARCH"                    \
+        USE_SIGNAL_HANDLER=1                      \
+        -j$(nproc)
+    make cython PYTHON=python3
+}
+
 build_ubuntu_gpu_cuda101_cudnn7_mkldnn_cpp_test() {
     set -ex
     build_ccache_wrappers
@@ -1094,6 +1115,18 @@ unittest_ubuntu_python3_quantization_gpu() {
     export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
     export MXNET_SUBGRAPH_VERBOSE=0
     export CUDNN_VERSION=${CUDNN_VERSION:-7.0.3}
+    export MXNET_ENABLE_CYTHON=0
+    export DMLC_LOG_STACK_TRACE_DEPTH=10
+    nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
+}
+
+unittest_ubuntu_python3_quantization_gpu_cu110() {
+    set -ex
+    export PYTHONPATH=./python/
+    export MXNET_MKLDNN_DEBUG=0 # Ignored if not present
+    export MXNET_STORAGE_FALLBACK_LOG_VERBOSE=0
+    export MXNET_SUBGRAPH_VERBOSE=0
+    export CUDNN_VERSION=${CUDNN_VERSION:-8.0.33}
     export MXNET_ENABLE_CYTHON=0
     export DMLC_LOG_STACK_TRACE_DEPTH=10
     nosetests-3.4 $NOSE_COVERAGE_ARGUMENTS $NOSE_TIMER_ARGUMENTS --with-xunit --xunit-file nosetests_quantization_gpu.xml --verbose tests/python/quantization_gpu
