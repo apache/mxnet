@@ -31,6 +31,7 @@ def buildJobs = [
     'miscellaneous',
     'unix-cpu',
     'unix-gpu',
+    'unix-gpu-cu110',
     'website',
     'windows-cpu',
     'windows-gpu'

@@ -239,6 +239,20 @@ def compile_unix_full_gpu() {
     }]
 }
 
+def compile_unix_full_gpu_cu110() {
+    return ['GPU: CUDA11.0+cuDNN8': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/build-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+            utils.docker_run('ubuntu_build_cuda110', 'build_ubuntu_gpu_cuda110_cudnn8', false)
+            utils.pack_lib('gpu_cu110', mx_lib_cpp_examples)
+          }
+        }
+      }
+    }]
+}
+
 def compile_unix_full_gpu_mkldnn_cpp_test() {
     return ['GPU: CUDA10.1+cuDNN7+MKLDNN+CPPTEST': {
       node(NODE_LINUX_CPU) {
@@ -737,6 +751,22 @@ def test_unix_python3_gpu() {
     }]
 }
 
+def test_unix_python3_gpu_cu110() {
+    return ['Python3+CUDA11.0: GPU': {
+      node(NODE_LINUX_GPU_G4) {
+        ws('workspace/ut-python3-gpu') {
+          try {
+            utils.unpack_and_init('gpu_cu110', mx_lib_cython)
+            python3_gpu_ut_cython('ubuntu_gpu_cu110')
+            utils.publish_test_coverage()
+          } finally {
+            utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_gpu.xml')
+          }
+        }
+      }
+    }]
+}
+
 def test_unix_python3_quantize_gpu() {
     return ['Python3: Quantize GPU': {
       node(NODE_LINUX_GPU_P3) {
@@ -745,6 +775,24 @@ def test_unix_python3_quantize_gpu() {
             try {
               utils.unpack_and_init('gpu', mx_lib)
               utils.docker_run('ubuntu_gpu_cu101', 'unittest_ubuntu_python3_quantization_gpu', true)
+              utils.publish_test_coverage()
+            } finally {
+              utils.collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python3_quantize_gpu.xml')
+            }
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_python3_quantize_gpu_cu110() {
+    return ['Python3+CUDA11.0: Quantize GPU': {
+      node(NODE_LINUX_GPU_P3) {
+        ws('workspace/ut-python3-quantize-gpu') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            try {
+              utils.unpack_and_init('gpu_cu110', mx_lib)
+              utils.docker_run('ubuntu_gpu_cu110', 'unittest_ubuntu_python3_quantization_gpu', true)
               utils.publish_test_coverage()
             } finally {
               utils.collect_test_results_unix('nosetests_quantization_gpu.xml', 'nosetests_python3_quantize_gpu.xml')
@@ -847,6 +895,24 @@ def test_unix_python3_mkldnn_nocudnn_gpu() {
             utils.publish_test_coverage()
           } finally {
             utils.collect_test_results_unix('nosetests_gpu.xml', 'nosetests_python3_mkldnn_gpu_nocudnn.xml')
+          }
+        }
+      }
+    }]
+}
+
+def test_unix_python3_tensorrt_gpu() {
+    return ['Python3: TensorRT GPU': {
+      node(NODE_LINUX_GPU_P3) {
+        ws('workspace/build-tensorrt') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            try {
+              utils.unpack_and_init('tensorrt', mx_tensorrt_lib)
+              utils.docker_run('ubuntu_gpu_tensorrt', 'unittest_ubuntu_tensorrt_gpu', true)
+              utils.publish_test_coverage()
+            } finally {
+              utils.collect_test_results_unix('nosetests_tensorrt.xml', 'nosetests_python3_tensorrt_gpu.xml')
+            }
           }
         }
       }
