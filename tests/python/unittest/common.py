@@ -16,7 +16,7 @@
 # under the License.
 
 from __future__ import print_function
-import sys, os, logging
+import sys, os, logging, functools
 import multiprocessing as mp
 import mxnet as mx
 import numpy as np
