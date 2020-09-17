@@ -70,8 +70,8 @@
 
 using namespace mshadow;
 
-// Will cause clash with MKL fortran layer headers
-#if MSHADOW_USE_MKL == 0
+// Will cause clash with MKL/OpenBLAS fortran layer headers
+#if MSHADOW_USE_MKL == 0 && MXNET_USE_BLAS_OPEN == 0
 
 extern "C" {
 
@@ -243,11 +243,19 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
 }
 
 
-#if (MSHADOW_USE_MKL && MXNET_USE_LAPACK)
+#if ((MSHADOW_USE_MKL || MXNET_USE_BLAS_OPEN) && MXNET_USE_LAPACK)
 
-  // We interface with the C-interface of MKL
+  // We interface with the LAPACKE C-interface of MKL/OpenBLAS
   // as this is the preferred way.
-  #include <mkl_lapacke.h>
+  
+  #if MSHADOW_USE_MKL
+    #include <mkl_lapacke.h>
+  #elif
+    #if MXNET_USE_INT64_TENSOR_SIZE
+      #define lapack_int int64_t
+    #endif
+    #include <lapacke.h>
+  #endif
 
   #define MXNET_LAPACK_ROW_MAJOR LAPACK_ROW_MAJOR
   #define MXNET_LAPACK_COL_MAJOR LAPACK_COL_MAJOR
