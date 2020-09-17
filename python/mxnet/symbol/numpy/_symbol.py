@@ -99,7 +99,7 @@ class _Symbol(Symbol):
                 raise TypeError('indices of symbol group must be integers or slices, not {}'
                                 .format(type(key)))
         else:
-            all = __builtins__['all']  # `def all` below shadows the all builtin
+            all = __builtins__['all']  # pylint: disable=redefined-outer-name
             if isinstance(key, integer_types):
                 if key == -1:
                     sliced = _npi.slice(self, [key], [None])
