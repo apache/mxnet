@@ -594,6 +594,48 @@ def test_ravel():
     assert A.grad.shape == A.shape
     assert A.grad[-1, -1] == 1
 
+@use_np
+def test_mean():
+    A = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.mean(A, axis=1)
+        B.backward()
+    assert B.shape == (2, )
+    assert_almost_equal(B[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+                rtol=1e-3, atol=1e-5)
+    assert A.grad.shape == A.shape
+    assert_almost_equal(A.grad[-1, -1], np.array((1.0/INT_OVERFLOW)), \
+                rtol=1e-3, atol=1e-5)
+
+@use_np
+def test_median():
+    A = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.median(A, axis=1)
+        B.backward()
+    assert B.shape == (2, )
+    assert_almost_equal(B[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+                rtol=1e-3, atol=1e-5)
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 0
+
+@use_np
+def test_percentile():
+    # np.percentile and np.quantile are the same thing
+    A = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    A.attach_grad()
+    with mx.autograd.record():
+        B = np.percentile(A, 50, axis=1)
+        B.backward()
+    assert B.shape == (2, )
+    assert_almost_equal(B[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+                rtol=1e-3, atol=1e-5)
+    assert A.grad.shape == A.shape
+    assert A.grad[-1, -1] == 0
+
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
