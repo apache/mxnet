@@ -99,6 +99,7 @@ class _Symbol(Symbol):
                 raise TypeError('indices of symbol group must be integers or slices, not {}'
                                 .format(type(key)))
         else:
+            all = __builtins__['all']  # `def all` below shadows the all builtin
             if isinstance(key, integer_types):
                 if key == -1:
                     sliced = _npi.slice(self, [key], [None])
@@ -112,13 +113,17 @@ class _Symbol(Symbol):
                     return _npi.slice(self, start, stop, key.step)
                 else:
                     raise ValueError("slice step cannot be zero")
+            elif isinstance(key, Symbol):
+                return _npi.advanced_indexing(self, key)
+            elif isinstance(key, tuple) and all(isinstance(key, Symbol) for arr in key):
+                key = _npi.stack(*[i for i in key])
+                sliced = _npi.advanced_indexing_multiple(self, key)
+                return sliced
             elif isinstance(key, tuple):
                 begin = []
                 end = []
                 step = []
                 new_shape = ()
-                result = self
-                is_symbol_tuple = False
                 if len(key) == 0:
                     return self
                 for index in key:
@@ -139,25 +144,12 @@ class _Symbol(Symbol):
                             end.append(index - 1)
                             step.append(-1)
                         new_shape += (-3,)
-                    elif isinstance(index, Symbol):
-                        if new_shape != ():
-                            new_shape += (-4,)
-                            sliced = _npi.slice(result, begin, end, step)
-                            result = _npi.reshape(sliced, new_shape)
-                        if not is_symbol_tuple:
-                            is_symbol_tuple = True
                     else:
                         raise IndexError('Only integer, slice, symbol or tuple of these types'
                                          ' are supported! Received key={}'.format(key))
-                if is_symbol_tuple:
-                    key = _npi.stack(*[i for i in key])
-                    sliced = _npi.advanced_indexing_multiple(self, key)
-                    return sliced
                 new_shape += (-4,)
                 sliced = _npi.slice(self, begin, end, step)
                 return _npi.reshape(sliced, new_shape)
-            elif isinstance(key, Symbol):
-                return _npi.advanced_indexing(self, key)
             else:
                 raise IndexError('Only integer, slice, tuple or Symbol of these types are supported! '
                                  'Received key={}'.format(key))

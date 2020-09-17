@@ -724,6 +724,7 @@ class ndarray(NDArray):
         if isinstance(key, ndarray) and key.dtype == _np.bool_:
             return self._get_np_boolean_indexing(key, ndim, shape)
 
+        all = __builtins__['all']  # `def all` below shadows the all builtin
         if ndim == 0 and key != ():
             raise IndexError('scalar tensor can only accept `()` as index')
         # Handle simple cases for higher speed
@@ -736,28 +737,69 @@ class ndarray(NDArray):
                 out = out[idx]
             return out
         if isinstance(key, integer_types):
+            # Equivalent to isinstance(key, integer_types) case in numpy/_symbol.py
             if key > shape[0] - 1:
                 raise IndexError(
                     'index {} is out of bounds for axis 0 with size {}'.format(
                         key, shape[0]))
             return self._at(key)
         elif isinstance(key, py_slice):
+            # Unlike numpy/_symbol.py, calls MXNDArraySlice64 writable memory
+            # sharing if key.step not in [None, 1]. Equivalent otherwise to
+            # isinstance(key, py_slice) case in _symbol.py otherwise.
             if key.step is None or key.step == 1:
                 if key.start is not None or key.stop is not None:
                     return self._slice(key.start, key.stop)
                 else:
                     return self
-            elif key.step == 0:
+            elif key.step != 0:
+                start = [None] if key.start is None else key.start
+                stop = [None] if key.stop is None else key.stop
+                return _npi.slice(self, start, stop, key.step)
+            else:
                 raise ValueError("slice step cannot be zero")
-
-
-        all = __builtins__['all']  # `def all` below shadows the all builtin
-        if (isinstance(key, tuple) and all( \
-        (isinstance(arr, NDArray) \
-        and _np.issubdtype(arr.dtype, _np.integer) and arr.ndim > 0) \
-        for arr in key)):
+        elif isinstance(key, tuple) and \
+           all((isinstance(arr, NDArray) and _np.issubdtype(arr.dtype, _np.integer) and \
+                arr.ndim > 0) for arr in key):
+            # Equivalent case in numpy/_symbol.py
             return _npi.advanced_indexing_multiple(self, _npi.stack(*key))
+        elif isinstance(key, tuple):
+            # Equivalent to isinstance(key, tuple) case in numpy/_symbol.py
+            begin = []
+            end = []
+            step = []
+            new_shape = ()
+            assert len(key)  # len(key) == 0 is handled a above
+            unsupported = False
+            for index in key:
+                if isinstance(index, py_slice):
+                    if index.step is not None and index.step == 0:
+                        raise ValueError("slice step cannot be zero")
+                    begin.append(index.start)
+                    end.append(index.stop)
+                    step.append(index.step)
+                    new_shape += (-2,)
+                elif isinstance(index, integer_types):
+                    if index >= 0:
+                        begin.append(index)
+                        end.append(index+1)
+                        step.append(1)
+                    else:
+                        begin.append(index)
+                        end.append(index - 1)
+                        step.append(-1)
+                    new_shape += (-3,)
+                else:
+                    unsupported = True
+                    break
+            if not unsupported:
+                new_shape += (-4,)
+                sliced = _npi.slice(self, begin, end, step)
+                return _npi.reshape(sliced, new_shape)
 
+        # Special handling for cases only supported in imperative mode
+        if dc.is_deferred_compute():
+            raise TypeError('The type of indexing used is not supported in HybridBlock.')
         # For 0-d boolean indices: A new axis is added,
         # but at the same time no axis is "used". So if we have True,
         # we add a new axis (a bit like with np.newaxis). If it is
@@ -779,8 +821,6 @@ class ndarray(NDArray):
                 key = (_np.newaxis,) + key
             return self._get_np_basic_indexing(key)
         elif indexing_dispatch_code == _NDARRAY_ADVANCED_INDEXING:
-            if dc.is_deferred_compute():
-                raise TypeError('Advanced indexing is not supported in HybridBlock.')
             if prepend == _NDARRAY_ZERO_DIM_BOOL_ARRAY_FALSE:
                 return empty((0,) + self._get_np_adanced_indexing(key).shape,
                              dtype=self.dtype, ctx=self.ctx)
