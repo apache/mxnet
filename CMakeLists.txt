@@ -36,6 +36,7 @@ Format: Auto | Common | All | LIST(ARCH_AND_PTX ...)
 option(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
 option(USE_OPENCV "Build with OpenCV support" ON)
 option(USE_OPENMP "Build with Openmp support" ON)
+option(USE_FATBIN_COMPRESSION "Compress nvcc fatbin output" ON)
 cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
 cmake_dependent_option(USE_NVTX "Build with nvtx support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON "NOT ARM" OFF)
@@ -46,6 +47,11 @@ if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PR
   option(USE_MKLDNN "Build with MKL-DNN support" ON)
 else()
   option(USE_MKLDNN "Build with MKL-DNN support" OFF)
+endif()
+if ((CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64) AND ((NOT CMAKE_COMPILER_IS_GNUCC) OR (CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 5.0)))
+  option(USE_INTGEMM "Build with x86_64 intgemm library for low-precision multiplication" ON)
+else()
+  option(USE_INTGEMM "Build with x86_64 intgemm library for low-precision multiplication" OFF)
 endif()
 if(NOT MSVC)
   option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON)
@@ -306,6 +312,22 @@ if(USE_CPP_PACKAGE)
     add_definitions(-DMXNET_USE_CPP_PACKAGE=1)
 endif()
 
+if(USE_INTGEMM)
+  message(STATUS "Using intgemm")
+  include(FetchContent)
+  FetchContent_Declare(
+    intgemm
+    GIT_REPOSITORY https://github.com/kpu/intgemm.git
+    GIT_TAG        4172dcc209e6793dd920dec9cf9c9fc81605bd9d
+  )
+  FetchContent_GetProperties(intgemm)
+  if(NOT intgemm_POPULATED)
+    FetchContent_Populate(intgemm)
+  endif()
+  add_subdirectory(${intgemm_SOURCE_DIR} ${intgemm_BINARY_DIR} EXCLUDE_FROM_ALL)
+  add_definitions(-DMXNET_USE_INTGEMM=1)
+endif()
+
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
@@ -327,11 +349,11 @@ foreach(var ${C_CXX_INCLUDE_DIRECTORIES})
 endforeach()
 
 include_directories("include")
-include_directories("3rdparty/nvidia_cub")
 include_directories("3rdparty/tvm/nnvm/include")
 include_directories("3rdparty/tvm/include")
 include_directories("3rdparty/dmlc-core/include")
 include_directories("3rdparty/dlpack/include")
+
 
 # commented out until PR goes through
 #if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack)
@@ -497,6 +519,11 @@ endif()
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
 
+if(NOT USE_INTGEMM)
+  FILE(GLOB_RECURSE INTGEMM_OPERATOR_SOURCE "src/operator/contrib/intgemm/*.cc" "src/operator/contrib/intgemm/*.h")
+  list(REMOVE_ITEM SOURCE ${INTGEMM_OPERATOR_SOURCE})
+endif()
+
 # add nnvm to source
 FILE(GLOB_RECURSE NNVMSOURCE
   3rdparty/tvm/nnvm/src/c_api/*.cc
@@ -641,6 +668,11 @@ if(USE_CUDA)
   link_directories(${CUDAToolkit_LIBRARY_DIR})
 endif()
 
+if(CUDAToolkit_VERSION_MAJOR LESS "11")
+  include_directories("3rdparty/nvidia_cub")
+    add_definitions(-DCUB_IGNORE_DEPRECATED_CPP_DIALECT)
+endif()
+
 # unsupported: if caffe is a subdirectory of mxnet, load its CMakeLists.txt as well
 if(USE_PLUGIN_CAFFE)
   if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/caffe)
@@ -664,8 +696,12 @@ endif()
 add_subdirectory("3rdparty/mshadow")
 
 set(MXNET_INSTALL_TARGETS mxnet)
+if(USE_CUDA AND USE_FATBIN_COMPRESSION)
+  string(APPEND CMAKE_CUDA_FLAGS " --fatbin-options --compress-all")
+  message("-- CUDA: Adding NVCC options: --fatbin-options --compress-all")
+endif()
 if(UNIX)
-  string(APPEND CMAKE_CUDA_FLAGS "${CUDA_ARCH_FLAGS_SPACES}")
+  string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
   # Create dummy file since we want an empty shared library before linking
   set(DUMMY_SOURCE ${CMAKE_BINARY_DIR}/dummy.c)
   file(WRITE ${DUMMY_SOURCE} "")
@@ -712,7 +748,7 @@ elseif(MSVC)
           COMMAND gen_warp $<TARGET_FILE:mxnet_${mxnet_first_arch}> WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/ DEPENDS $<TARGET_FILE:mxnet_${mxnet_first_arch}>)
       else(USE_SPLIT_ARCH_DLL)
         string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
-        set(CMAKE_CUDA_FLAGS "${CUDA_ARCH_FLAGS_SPACES}")
+        string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
         add_library(mxnet SHARED ${SOURCE})
         target_link_libraries(mxnet PUBLIC mshadow)
         target_compile_options(
@@ -784,6 +820,10 @@ if(USE_MKLDNN)
       ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_config.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/
       COMMAND ${CMAKE_COMMAND} -E copy
       ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/)
+endif()
+
+if(USE_INTGEMM)
+  target_link_libraries(mxnet_static PRIVATE intgemm)
 endif()
 
 function(BuildTVMOP)

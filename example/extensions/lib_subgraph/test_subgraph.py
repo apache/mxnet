@@ -63,7 +63,8 @@ def test(backend):
     # with propogating shapes/types
     print('-------------------------------')
     print('Testing %s partitioning with shapes/types' % backend)
-    mysym2 = sym.optimize_for(backend,args)
+    print(sym.tojson())
+    mysym2 = sym.optimize_for(backend, args, dedup_subgraph=True)
     print(mysym2.tojson())
     exe2 = mysym2.bind(ctx=mx.cpu(), args=args)
     out2 = exe2.forward()
@@ -72,7 +73,7 @@ def test(backend):
     # with propogating shapes/types, rejecting subgraph
     print('-------------------------------')
     print('Testing %s partitioning with shapes/types - rejecting subgraph' % backend)
-    mysym2 = sym.optimize_for(backend, args, reject=True)
+    mysym2 = sym.optimize_for(backend, args, reject=True, dedup_subgraph=True)
     exe2 = mysym2.bind(ctx=mx.cpu(), args=args)
     out2 = exe2.forward()
     print(out2)
@@ -80,7 +81,7 @@ def test(backend):
     # without propogating shapes/types
     print('-------------------------------')
     print('Testing %s partitioning without shapes/types' % backend)
-    mysym3 = sym.optimize_for(backend, myOpt='yello')
+    mysym3 = sym.optimize_for(backend, myOpt='yello', dedup_subgraph=True)
     exe3 = mysym3.bind(ctx=mx.cpu(), args=args)
     out3 = exe3.forward()
     print(out3)
@@ -91,7 +92,7 @@ def test(backend):
     inputs = [a,b]
     sym_block = nn.SymbolBlock(sym, inputs)
     sym_block.initialize()
-    sym_block.hybridize(backend=backend)
+    sym_block.hybridize(backend=backend, backend_opts={'dedup_subgraph':True})
     out2 = sym_block(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     print(out2)
 
@@ -101,13 +102,15 @@ def test(backend):
     inputs = [a,b]
     sym_block2 = nn.SymbolBlock(sym, inputs)
     sym_block2.initialize()
-    sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend=backend)
+    sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend=backend,
+                            backend_opts={'dedup_subgraph':True})
     sym_block2.export('partitioned')
 
     # Test with additional input to subgraph op
     print('-------------------------------')
     print('Testing %s Gluon Hybridize partitioning with extra input' % backend)
-    sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend="addInputPass", clear=False)
+    sym_block2.optimize_for(mx.nd.ones((3,2)), mx.nd.ones((3,2)), backend="addInputPass",
+                            clear=False, backend_opts={'dedup_subgraph':True})
     out3 = sym_block2(mx.nd.ones((3,2)),mx.nd.ones((3,2)))
     print(out3)
     
@@ -125,7 +128,7 @@ def test(backend):
     # with propogating shapes/types
     print('-------------------------------')
     print('Testing %s partitioning with shapes/types' % backend)
-    mysym6 = sym2.optimize_for(backend, args, reqArgs=True)
+    mysym6 = sym2.optimize_for(backend, args, reqArgs=True, dedup_subgraph=True)
     print(mysym6.tojson())
     exe6 = mysym6.bind(ctx=mx.cpu(), args=args)
     out6 = exe6.forward()
@@ -134,7 +137,7 @@ def test(backend):
     # without propogating shapes/types
     print('-------------------------------')
     print('Testing %s partitioning without shapes/types' % backend)
-    mysym7 = sym2.optimize_for(backend, reqArgs=True)
+    mysym7 = sym2.optimize_for(backend, reqArgs=True, dedup_subgraph=True)
     exe7 = mysym7.bind(ctx=mx.cpu(), args=args)
     out7 = exe7.forward()
     print(out7)

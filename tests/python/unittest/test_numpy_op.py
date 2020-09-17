@@ -7167,19 +7167,28 @@ def test_np_pad():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol = rtol, atol = atol)
 
             # test gradient
-            mx_out.backward()
-            np_backward = np.ones(shape)
-            assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
-
-            # test imperative once again
-
-            if(m != 'constant'):
-                np_out = _np.pad(x.asnumpy(), pw, mode=m)
-                mx_out = np.pad(x, pw, mode=m)
-            else:
-                np_out = _np.pad(x.asnumpy(), pw, constant_values=0, mode=m)
-                mx_out = np.pad(x, pw, mode=m, constant_values=0)
-            assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+            if m == "constant":
+                ctx = mx.context.current_context()
+                x = mx.np.random.uniform(-1.0, 1.0, size=shape)
+                x = mx.np.array(x, ctx=ctx)
+                for grad_req in ['write', 'add']:
+                    x.attach_grad(grad_req)
+                    if grad_req == 'add':
+                        init_grad = mx.np.random.uniform(-1.0, 1.0, size=shape, ctx=ctx)
+                        x.grad[:] = init_grad
+                    with mx.autograd.record():
+                        mx_out = mx.np.pad(x, pad_width=pw, mode="constant")
+                        out_grad = mx.np.random.normal(0, 1, mx_out.shape)
+                        out_grad = mx.np.array(out_grad, ctx=ctx)
+                        loss = mx_out * out_grad
+                        loss = loss.sum()
+                        loss.backward()
+                    gt_in_grad = mx.np.pad(mx.np.ones_like(x.grad), pad_width=pw, mode="constant") * mx.np.array(out_grad, ctx=ctx)
+                    mx_grad = x.grad
+                    if grad_req == 'add':
+                        assert_almost_equal(mx.np.pad(mx_grad - init_grad, pad_width=pw, mode="constant"), gt_in_grad.asnumpy(), rtol=rtol, atol=atol)
+                    else:
+                        assert_almost_equal(mx.np.pad(mx_grad, pad_width=pw, mode="constant"), gt_in_grad.asnumpy(), rtol=rtol, atol=atol)
 
 
 @with_seed()

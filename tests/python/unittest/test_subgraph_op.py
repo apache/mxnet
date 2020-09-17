@@ -85,7 +85,19 @@ def network_structure_7():
     ret = ret1 + ret2
     return (ret, ['data'], [(1,)])
 
-def get_graphs(): 
+def network_structure_8():
+    # in this graph, two nodes in the subgraph consume the same input, and
+    # and two nodes outside the subgraph consume a single output from the subgraph
+    data = mx.sym.Variable('data', shape=(1,))
+    sin1 = mx.sym.sin(data)
+    sin2 = mx.sym.sin(data)
+    plus = sin1 + sin2
+    ret1 = mx.sym.cos(plus)
+    ret2 = mx.sym.cos(plus)
+    ret = ret1 - ret2
+    return (ret, ['data'], [(1,)])
+
+def get_graphs():
     return [
             (network_structure_1(), ['Convolution']),
             (network_structure_2(), ['exp', 'sin', '_Plus', 'elemwise_add', '_plus']),
@@ -102,7 +114,8 @@ def get_graphs():
             (network_structure_6(), [mx.sym.sin.__name__]),
             (network_structure_6(), [mx.sym.Convolution.__name__]),
             (network_structure_6(), [mx.sym.sin.__name__, mx.sym.Convolution.__name__]),
-            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus'])
+            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus']),
+            (network_structure_8(), ['sin', 'elemwise_add'])
             ]
 
 def check_subgraph_exe1(sym, subgraph_backend, op_names):
@@ -157,7 +170,6 @@ def check_subgraph_exe2(sym, subgraph_backend, op_names):
             check_call(_LIB.MXRemoveSubgraphPropertyOpNames(c_str(subgraph_backend)))
             del os.environ['MXNET_SUBGRAPH_BACKEND']
         return exe
-
     original_exec = get_executor(sym)
     partitioned_exec = get_executor(sym, subgraph_backend, op_names, original_exec)
     outputs1 = original_exec.outputs
@@ -378,6 +390,36 @@ def check_subgraph_exe9(sym, subgraph_backend, op_names):
     for i in range(len(outputs1)):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
+def check_subgraph_exe10(sym, subgraph_backend, op_names):
+    """Call optimize_for to infer shapes, types and dtypes followed by graph partitioning and
+    dedup subgraph, then bind and compare results of the partitioned sym and the original sym."""
+    # bind
+    arg_shapes, _, aux_shapes = sym.infer_shape()
+    arg_names = sym.list_arguments()
+    aux_names = sym.list_auxiliary_states()
+    arg_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(arg_names,arg_shapes)}
+    aux_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(aux_names,aux_shapes)}
+    exe1 = sym.bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe1.forward()
+
+    # infer shape/type before partition before bind
+    check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                   c_str_array(op_names)))
+    print(sym.tojson())
+    part_sym = sym.optimize_for(subgraph_backend, arg_dict, aux_dict, dedup_subgraph=True)
+    print(part_sym.tojson())
+    check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
+
+    exe2 = part_sym.bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe2.forward()
+
+    # compare outputs
+    outputs1 = exe1.outputs
+    outputs2 = exe2.outputs
+    assert len(outputs1) == len(outputs2)
+    for i in range(len(outputs1)):
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+
 def check_subgraph(subgraph_backend):
     for sym, op_names in get_graphs():
         check_subgraph_exe1(sym[0], subgraph_backend, op_names)
@@ -391,6 +433,7 @@ def check_subgraph_backend_sym(subgraph_backend):
         check_subgraph_exe6(sym[0], subgraph_backend, op_names)
         check_subgraph_exe7(sym[0], subgraph_backend, op_names)
         check_subgraph_exe8(sym[0], subgraph_backend, op_names)
+        check_subgraph_exe10(sym[0], subgraph_backend, op_names)
 
 def check_subgraph_backend_gluon(subgraph_backend):
     for sym, op_names in get_graphs():
