@@ -59,6 +59,7 @@ cmake_dependent_option(USE_SSE "Build with x86 SSE instruction support" ON
   "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64 OR CMAKE_SYSTEM_PROCESSOR STREQUAL amd64" OFF)
 option(USE_F16C "Build with x86 F16C instruction support" ON) # autodetects support if ON
 option(USE_LAPACK "Build with lapack support" ON)
+option(USE_LAPACKE "Build with lapack support" OFF)
 option(USE_MKL_IF_AVAILABLE "Use MKL if found" ON)
 if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PROCESSOR STREQUAL "x86_64") AND (NOT CMAKE_CROSSCOMPILING))
   option(USE_MKLDNN "Build with MKL-DNN support" ON)
@@ -448,6 +449,11 @@ if(USE_LAPACK)
   # that already provide lapack symbols. Thus -llapack would be wrong.
   if (NOT MSVC AND NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
     list(APPEND mxnet_LINKER_LIBS lapack)
+  endif()
+  add_definitions(-DMXNET_USE_LAPACKE_INTERFACE=0)
+else 
+  if(USE_LAPACKE_INTERFACE)
+    add_definitions(-DMXNET_USE_LAPACKE_INTERFACE=1)
   endif()
 endif()
 
