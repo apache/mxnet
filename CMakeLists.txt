@@ -451,7 +451,7 @@ if(USE_LAPACK)
     list(APPEND mxnet_LINKER_LIBS lapack)
   endif()
   add_definitions(-DMXNET_USE_LAPACKE_INTERFACE=0)
-else 
+else()
   if(USE_LAPACKE_INTERFACE)
     add_definitions(-DMXNET_USE_LAPACKE_INTERFACE=1)
   endif()
