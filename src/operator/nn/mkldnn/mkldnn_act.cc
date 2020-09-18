@@ -74,7 +74,7 @@ bool SupportMKLDNNLeakyRelu(const LeakyReLUParam& param, const NDArray &input) {
 bool SupportQuantizedMKLDNNAct(const ActivationParam &param) {
   // TODO(zhennan): Add more activation type when mkldnn supports.
   //                Remove this when it's identity to SupportMKLDNNAct.
-  return param.act_type == activation::kReLU;
+  return param.act_type == activation::kReLU || param.act_type == activation::kTanh;
 }
 
 mkldnn::algorithm GetMKLDNNActAlgo(const ActivationParam& param) {
