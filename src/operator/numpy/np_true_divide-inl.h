@@ -58,14 +58,17 @@ void TrueDivideScalarCompute(const nnvm::NodeAttrs &attrs,
     });
   } else {
 #ifndef _WIN32
-    CHECK_EQ(outputs[0].type_flag_, kFloat32) << "true_divide only supports float32 output "
-                                                 "when input's dtype is "
-                                              << type_string(inputs[0].type_flag_);
-    MXNET_INT_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-      MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        Kernel<op_with_req<OP, Req>, xpu>::Launch(
-          s, data.Size(), out.dptr<float>(), data.dptr<DType>(),
-          static_cast<float>(alpha));
+    CHECK(out.type_flag_ == mshadow::kFloat32 || out.type_flag_ == mshadow::kFloat64)
+      << "true_divide only supports float32 and float64"
+         " output when input's dtype is "
+      << type_string(inputs[0].type_flag_);
+    MSHADOW_REAL_TYPE_SWITCH(out.type_flag_, ODType, {
+      MXNET_INT_TYPE_SWITCH(inputs[0].type_flag_, DType, {
+        MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
+          Kernel<op_with_req<OP, Req>, xpu>::Launch(
+            s, data.Size(), out.dptr<ODType>(), data.dptr<DType>(),
+            static_cast<ODType>(alpha));
+        });
       });
     });
 #else

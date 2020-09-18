@@ -23,13 +23,13 @@ import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.base import py_str, MXNetError
-from mxnet.test_utils import assert_almost_equal
+from mxnet.test_utils import assert_almost_equal, default_context
 from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
 import mxnet.numpy as _mx_np
 from common import (setup_module, with_seed, assertRaises, teardown,
-                    assert_raises_cudnn_not_satisfied)
+                    assert_raises_cudnn_not_satisfied, environment)
 import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
@@ -897,7 +897,7 @@ def test_sync_batchnorm():
                             input2grad.asnumpy(), atol=atol, rtol=rtol)
 
     cfgs = [(1, False)]
-    num_gpus = mx.context.num_gpus()
+    num_gpus = 0 if default_context().device_type != 'gpu' else mx.context.num_gpus()
     batch_size = 24
     for i in range(1, num_gpus + 1):
         if batch_size % i == 0:
@@ -1694,21 +1694,12 @@ def test_zero_grad():
         for type in [testedTypes] + testedTypes:
             _test_multi_reset(np.random.randint(1, 50), type, ctx)
 
-    # Saving value of environment variable, if it was defined
-    envVarKey = 'MXNET_STORAGE_FALLBACK_LOG_VERBOSE'
-    envVarValue = os.environ[envVarKey] if envVarKey in os.environ else None
-    # Changing value of environment variable
-    os.environ[envVarKey] = '0'
-    for type in ['float16', 'float32', 'float64']:
-        for embType in ['float32', 'float64']:
-            for sparse in [True, False]:
-                _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
+    with environment('MXNET_STORAGE_FALLBACK_LOG_VERBOSE', '0'):
+        for type in ['float16', 'float32', 'float64']:
+            for embType in ['float32', 'float64']:
+                for sparse in [True, False]:
+                    _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
 
-    # Remove or restore the value of environment variable
-    if envVarValue is None:
-        del os.environ[envVarKey]
-    else:
-        os.environ[envVarKey] = envVarValue
 
 def check_hybrid_static_memory(**kwargs):
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
