@@ -28,6 +28,8 @@ namespace mxnet {
 namespace op {
 
 #if MXNET_USE_CUTENSOR == 1
+static const uint32_t kMaxTensorRank = 12; // maximal tensor rank that is supported by cuTENSOR
+
 template<typename U>
 struct CuTensorTypeTraits;
 template<>
@@ -75,7 +77,8 @@ namespace mxnet {
 namespace op {
 
 template<typename ComputeType,
-         typename IntType, int kMaxNumModes_>
+         typename IntType,
+         int kMaxNumModes_>
 struct Einsum
 {
     Einsum(const std::string &equation,
@@ -91,11 +94,11 @@ struct Einsum
         const auto dots = equation.find("...");
         const bool isBroadcast = (dots != std::string::npos);
         const bool isImplicit = (arrow_pos == std::string::npos);
+        const bool usesB = (comma_pos != std::string::npos);
         if (isBroadcast) // TODO
         {
             return;
         }
-        const bool usesB = (comma_pos != std::string::npos);
 
         size_t a_start = 0;
         size_t a_end = isImplicit ? ((comma_pos == std::string::npos) ? equation.size() : comma_pos) : 
@@ -104,7 +107,6 @@ struct Einsum
         size_t b_end   = usesB ? (isImplicit ? equation.size() : arrow_pos) : 0;
         size_t c_start = isImplicit ? equation.size() : arrow_pos + 2;
         size_t c_end = equation.size();
-
 
         char modeA[kMaxNumModes_ + 2];
         uint32_t numModesA = 0;
@@ -176,11 +178,9 @@ struct Einsum
             return true;
         };
 
-
         std::array<char, kMaxNumModes_+1> implicitModeC;
         char* redirectModeC;
-        if (isImplicit)
-        {
+        if (isImplicit) {
             // we have to copy all non-contracted modes from A over to C
             if (copyModesIf(modeA, numModesA_, modeB, numModesB_, implicitModeC.data(), numModesC_) == false)
             {
@@ -194,9 +194,7 @@ struct Einsum
             std::sort(implicitModeC.begin(), std::next(implicitModeC.begin(), numModesC_)); // modes are sorted w.r.t. lexical order
             implicitModeC[numModesC_] = '\0';
             redirectModeC = implicitModeC.data();
-        }
-        else
-        {
+        } else {
             redirectModeC = modeC;
             numModesC_ = numModesC;
         }
@@ -261,6 +259,8 @@ struct Einsum
     const int* getModesA() const { return modesA_.data(); }
     const int* getModesB() const { return modesB_.data(); }
     const int* getModesC() const { return modesC_.data(); }
+
+    int GetNumModesC() const { return numModesC_; }
 
     private:
     uint32_t numModesA_;
@@ -412,8 +412,6 @@ class CuTensorEinsum {
                                       s->stream_));
   }
 
-  static const uint32_t kMaxTensorRank = 12; // maximal tensor rank that is supported by cuTENSOR
-
   cutensorContractionDescriptor_t descriptor_contraction; // encodes the strucutre of the contraction
   cutensorContractionPlan_t plan; // encodes the execution plan
   cutensorContractionFind_t find; // limits the search space (of viable candidates/implementations)
@@ -447,6 +445,22 @@ class EinsumOpGPU {
     int comma_pos = equation.find(",");
     int arrow_pos = equation.find("->", comma_pos + 1);
     int len_op2 = arrow_pos - comma_pos - 1;
+    const bool isImplicit = (arrow_pos == std::string::npos);
+    std::string my_equation;
+    if (isImplicit) {
+      // get explicit equation
+      Einsum<DType, int, kMaxTensorRank> my_einsum(equation, in_shape[0], in_shape[1]);
+      const int* modes_c = my_einsum.getModesC();
+      my_equation = equation;
+      my_equation.append("->");
+      for (int i = my_einsum.GetNumModesC() - 1; i>=0; --i) {
+        my_equation += (char)modes_c[i];
+      }
+      arrow_pos = my_equation.find("->", comma_pos + 1);
+      len_op2 = arrow_pos - comma_pos - 1;
+    } else {
+      my_equation = equation;
+    }
 
     // gradient for first operand
     mxnet::ShapeVector grad_op1_input_shapes;
@@ -454,11 +468,11 @@ class EinsumOpGPU {
     grad_op1_input_shapes.push_back(in_shape[0]);
     grad_op1_input_shapes.push_back(in_shape[2]);
     grad_op1_output_shapes.push_back(out_shape[0]);
-    std::string grad_operand1_equation = equation.substr(arrow_pos + 2);
+    std::string grad_operand1_equation = my_equation.substr(arrow_pos + 2);
     grad_operand1_equation += ",";
-    grad_operand1_equation += equation.substr(comma_pos + 1, len_op2);
+    grad_operand1_equation += my_equation.substr(comma_pos + 1, len_op2);
     grad_operand1_equation += "->";
-    grad_operand1_equation += equation.substr(0, comma_pos);
+    grad_operand1_equation += my_equation.substr(0, comma_pos);
     bwd_cutensor_ops.push_back(CuTensorEinsum<DType>());
     size_t req_workspace =
       bwd_cutensor_ops[pos_cutensor_op].Init(grad_operand1_equation,
@@ -476,11 +490,11 @@ class EinsumOpGPU {
     grad_op2_input_shapes.push_back(in_shape[1]);
     grad_op2_input_shapes.push_back(in_shape[0]);
     grad_op2_output_shapes.push_back(out_shape[1]);
-    std::string grad_operand2_equation = equation.substr(0, comma_pos);
+    std::string grad_operand2_equation = my_equation.substr(0, comma_pos);
     grad_operand2_equation += ",";
-    grad_operand2_equation += equation.substr(arrow_pos + 2);
+    grad_operand2_equation += my_equation.substr(arrow_pos + 2);
     grad_operand2_equation += "->";
-    grad_operand2_equation += equation.substr(comma_pos + 1, len_op2);
+    grad_operand2_equation += my_equation.substr(comma_pos + 1, len_op2);
     bwd_cutensor_ops.push_back(CuTensorEinsum<DType>());
     req_workspace =
       bwd_cutensor_ops[pos_cutensor_op].Init(grad_operand2_equation,

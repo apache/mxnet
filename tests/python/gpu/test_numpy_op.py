@@ -82,6 +82,13 @@ def test_np_einsum():
         #                                              _np.tile(args[0].sum(axis=1)[None, :], [4, 1]))),
         #Zero shape fails
         #('ij, jk', [(5, 0), (0, 4)], lambda *args: (_np.empty((5, 0)), _np.empty((0, 4)))),
+        (('ij,jk'), [(2, 5), (5, 2)],
+            lambda *args: (_np.dot(_np.ones((2, 2)), args[1].T),
+            _np.dot(args[0].T, _np.ones((2, 2))))),
+        (('ij,jk,kl'), [(2, 2), (2, 5), (5, 2)],
+            lambda *args: (_np.dot(_np.ones((2, 2)), _np.dot(args[1], args[2]).T),
+            _np.dot(args[0].T, _np.dot(_np.ones((2, 2)), args[2].T)),
+            _np.dot(_np.dot(args[0], args[1]).T, _np.ones((2, 2))))),
         (('ij,jk,kl->il'), [(2, 2), (2, 5), (5, 2)],
             lambda *args: (_np.dot(_np.ones((2, 2)), _np.dot(args[1], args[2]).T),
             _np.dot(args[0].T, _np.dot(_np.ones((2, 2)), args[2].T)),
