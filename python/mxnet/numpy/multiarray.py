@@ -763,8 +763,11 @@ class ndarray(NDArray):
                 arr.ndim > 0) for arr in key):
             # Equivalent case in numpy/_symbol.py
             return _npi.advanced_indexing_multiple(self, _npi.stack(*key))
-        elif isinstance(key, tuple):
+        elif isinstance(key, tuple) and dc.is_deferred_compute():
             # Equivalent to isinstance(key, tuple) case in numpy/_symbol.py
+            # Only enabled in deferred compute mode, as this codepath prevents
+            # memory sharing which may be desired in non-deferred compute
+            # imperative mode.
             begin = []
             end = []
             step = []
