@@ -30,7 +30,7 @@ from mxnet.test_utils import *
 from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
 from common import setup_module, with_seed, teardown, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
-from common import run_in_spawned_process
+from common import run_in_spawned_process, with_environment
 from nose.tools import assert_raises, ok_
 import unittest
 import os
@@ -3918,83 +3918,77 @@ def test_norm():
                 np.int32: np.int32, np.int64: np.int64}
     dtype_to_str = {np.float16: 'float16', np.float32: 'float32', np.float64: 'float64',
                     np.int32: 'int32', np.int64: 'int64'}
-    is_windows = sys.platform.startswith('win')
-    for enforce_safe_acc in ["1", "0"]:
-        if is_windows:
-            if enforce_safe_acc == "0":
-                break
-            enforce_safe_acc = "0" if "MXNET_SAFE_ACCUMULATION" not in os.environ else os.environ["MXNET_SAFE_ACCUMULATION"]
-        else:
-            os.environ["MXNET_SAFE_ACCUMULATION"] = enforce_safe_acc
-        for order in [1, 2]:
-            for dtype in [np.float16, np.float32, np.float64]:
-                for i in range(in_data_dim):
-                    for out_dtype in ['float32', 'float64']:
-                        backward_dtype = np.float32 if out_dtype == 'float32' else np.float64
-                        accumulation_type = acc_type[dtype]
-                        if enforce_safe_acc == "0":
-                            backward_dtype = dtype
-                            out_dtype = dtype_to_str[dtype]
-                            accumulation_type = dtype
-                        skip_backward = 'int' in out_dtype
-                        in_data = np.random.uniform(-1, 1, in_shape).astype(accumulation_type)
-                        in_data[abs(in_data) < epsilon] = 2 * epsilon
-                        norm_sym = mx.symbol.norm(data=data, ord=order, axis=i, out_dtype=out_dtype, keepdims=True)
-                        npy_out = l1norm(in_data, i) if order is 1 else l2norm(in_data, i)
-                        npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
-                        check_symbolic_forward(norm_sym, [in_data.astype(dtype)], [npy_out.astype(out_dtype)],
-                                               rtol=1e-2 if dtype == np.float16 else 1e-3,
-                                               atol=1e-4 if dtype == np.float16 else 1e-5, ctx=ctx, dtype=dtype)
-                        if dtype is not np.float16 and not skip_backward:
-                            check_symbolic_backward(norm_sym, [in_data.astype(dtype)],
-                                                    [np.ones(npy_out.shape).astype(out_dtype)],
-                                                    [npy_out_backward], rtol=1e-3, atol=1e-5, ctx=ctx,
-                                                    dtype=backward_dtype)
-                        # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
-                        # check gradient
-                        if dtype is not np.float16 and not skip_backward:
-                            check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
-                                                   rtol=1e-1, atol=1e-3, dtype=backward_dtype)
-                        if i < in_data_dim-1:
-                            norm_sym = mx.symbol.norm(data=data, ord=order, axis=(i, i+1), keepdims=True)
-                            npy_out = l1norm(in_data, (i, i+1)) if order is 1 else l2norm(in_data, (i, i+1))
+    for enforce_safe_acc in ['1', '0']:
+        with environment('MXNET_SAFE_ACCUMULATION', enforce_safe_acc):
+            for order in [1, 2]:
+                for dtype in [np.float16, np.float32, np.float64]:
+                    for i in range(in_data_dim):
+                        for out_dtype in ['float32', 'float64']:
+                            backward_dtype = np.float32 if out_dtype == 'float32' else np.float64
+                            accumulation_type = acc_type[dtype]
+                            if enforce_safe_acc == "0":
+                                backward_dtype = dtype
+                                out_dtype = dtype_to_str[dtype]
+                                accumulation_type = dtype
+                            skip_backward = 'int' in out_dtype
+                            in_data = np.random.uniform(-1, 1, in_shape).astype(accumulation_type)
+                            in_data[abs(in_data) < epsilon] = 2 * epsilon
+                            norm_sym = mx.symbol.norm(data=data, ord=order, axis=i, out_dtype=out_dtype, keepdims=True)
+                            npy_out = l1norm(in_data, i) if order is 1 else l2norm(in_data, i)
                             npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
-                            check_symbolic_forward(norm_sym, [in_data], [npy_out.astype(dtype)],
-                                                   rtol=1e-2 if dtype is np.float16 else 1e-3,
-                                                   atol=1e-4 if dtype is np.float16 else 1e-5, ctx=ctx)
+                            check_symbolic_forward(norm_sym, [in_data.astype(dtype)], [npy_out.astype(out_dtype)],
+                                                   rtol=1e-2 if dtype == np.float16 else 1e-3,
+                                                   atol=1e-4 if dtype == np.float16 else 1e-5, ctx=ctx, dtype=dtype)
                             if dtype is not np.float16 and not skip_backward:
-                                check_symbolic_backward(norm_sym, [in_data],
+                                check_symbolic_backward(norm_sym, [in_data.astype(dtype)],
                                                         [np.ones(npy_out.shape).astype(out_dtype)],
-                                                        [npy_out_backward.astype(out_dtype)],
-                                                        rtol=1e-3, atol=1e-5, ctx=ctx, dtype=backward_dtype)
-                            # check gradient
-                            if dtype is not np.float16 and not skip_backward:
-                                check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
-                                                       rtol=1e-1, atol=1e-3, dtype=backward_dtype)
+                                                        [npy_out_backward], rtol=1e-3, atol=1e-5, ctx=ctx,
+                                                        dtype=backward_dtype)
+                                # Disable numeric gradient https://github.com/apache/incubator-mxnet/issues/11509
+                                # check gradient
+                                if dtype is not np.float16 and not skip_backward:
+                                    check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
+                                                   rtol=1e-1, atol=1e-3, dtype=backward_dtype)
+                            if i < in_data_dim-1:
+                                norm_sym = mx.symbol.norm(data=data, ord=order, axis=(i, i+1), keepdims=True)
+                                npy_out = l1norm(in_data, (i, i+1)) if order is 1 else l2norm(in_data, (i, i+1))
+                                npy_out_backward = np.sign(in_data) if order is 1 else in_data/npy_out
+                                check_symbolic_forward(norm_sym, [in_data], [npy_out.astype(dtype)],
+                                                       rtol=1e-2 if dtype is np.float16 else 1e-3,
+                                                       atol=1e-4 if dtype is np.float16 else 1e-5, ctx=ctx)
+                                if dtype is not np.float16 and not skip_backward:
+                                    check_symbolic_backward(norm_sym, [in_data],
+                                                            [np.ones(npy_out.shape).astype(out_dtype)],
+                                                            [npy_out_backward.astype(out_dtype)],
+                                                            rtol=1e-3, atol=1e-5, ctx=ctx, dtype=backward_dtype)
+                                # check gradient
+                                if dtype is not np.float16 and not skip_backward:
+                                    check_numeric_gradient(norm_sym, [in_data], numeric_eps=epsilon,
+                                                           rtol=1e-1, atol=1e-3, dtype=backward_dtype)
 
 
 def test_layer_norm():
     for enforce_safe_acc in ["1", "0"]:
-        os.environ["MXNET_SAFE_ACCUMULATION"] = enforce_safe_acc
-        for dtype, forward_check_eps, backward_check_eps in zip([np.float16, np.float32, np.float64],
-                                                                [1E-2, 1E-3, 1E-4],
-                                                                [1E-2, 1E-3, 1E-4]):
-            if dtype != np.float16:
-                in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10), (128 * 32, 512)], [True, True, False]
-            else:
-                in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10)], [True, True]  # large input + fp16 does not pass the forward check
-            for in_shape, finite_grad_check in zip(in_shape_l, finite_grad_check_l):
-                for axis in range(-len(in_shape), len(in_shape)):
-                    for eps in [1E-2, 1E-3]:
-                        if dtype == np.float16:
-                            npy_grad_check = False
-                        else:
-                            npy_grad_check = True
-                        check_layer_normalization(in_shape, axis, eps, dtype=dtype,
-                                                  forward_check_eps=forward_check_eps,
-                                                  backward_check_eps=backward_check_eps,
-                                                  npy_grad_check=npy_grad_check,
-                                                  finite_grad_check=finite_grad_check)
+        with environment('MXNET_SAFE_ACCUMULATION', enforce_safe_acc):
+            for dtype, forward_check_eps, backward_check_eps in zip([np.float16, np.float32, np.float64],
+                                                                    [1E-2, 1E-3, 1E-4],
+                                                                    [1E-2, 1E-3, 1E-4]):
+                if dtype != np.float16:
+                    in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10), (128 * 32, 512)], [True, True, False]
+                else:
+                    in_shape_l, finite_grad_check_l = [(10, 6, 5), (10, 10)], [True, True]  # large input + fp16 does not pass the forward check
+                for in_shape, finite_grad_check in zip(in_shape_l, finite_grad_check_l):
+                    for axis in range(-len(in_shape), len(in_shape)):
+                        for eps in [1E-2, 1E-3]:
+                            if dtype == np.float16:
+                                npy_grad_check = False
+                            else:
+                                npy_grad_check = True
+                            check_layer_normalization(in_shape, axis, eps, dtype=dtype,
+                                                      forward_check_eps=forward_check_eps,
+                                                      backward_check_eps=backward_check_eps,
+                                                      npy_grad_check=npy_grad_check,
+                                                      finite_grad_check=finite_grad_check)
 
 
 # Numpy Implementation of Sequence Ops
@@ -5401,6 +5395,7 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
 @with_seed()
+@with_environment('MXNET_SAFE_ACCUMULATION', '1')
 def test_softmax_dtype():
     def check_dtypes_almost_equal(op_name,
                                   atol, rtol,
@@ -5420,27 +5415,22 @@ def test_softmax_dtype():
         ref_softmax.backward()
         assert_almost_equal(dtype_input.grad, ref_input.grad, rtol=grad_rtol, atol=grad_atol)
 
-    import sys
-    is_windows = sys.platform.startswith('win')
-    enforce_safe_acc = os.environ.get("MXNET_SAFE_ACCUMULATION", "0")
-    if not is_windows or enforce_safe_acc == "1":
-        os.environ["MXNET_SAFE_ACCUMULATION"] = "1"
-        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
-        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
-        check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
-        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
-        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
-        check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
-        check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                                  'float16', 'float32')
-        check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
-                                  'float16', 'float32', 'float32')
-        check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                                  'float32', 'float64')
-        check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
-                                  'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmax', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64')
+    check_dtypes_almost_equal('softmin', 1e-5, 1e-5, 1e-5, 1e-5, 'float32', 'float64', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-2, 1e-2, 1e-2, 1e-2,
+                              'float16', 'float32', 'float32')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64')
+    check_dtypes_almost_equal('log_softmax', 1e-3, 1e-3, 1e-3, 1e-3,
+                              'float32', 'float64', 'float64')
 
 
 @with_seed()
@@ -6481,12 +6471,12 @@ def _gemm_test_helper(dtype, grad_check, rtol_fw = None, atol_fw = None,
 @with_seed()
 def test_gemm():
     _gemm_test_helper(np.float64, True)
-    os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "0"
-    _gemm_test_helper(np.float32, True)
-    if default_context().device_type == 'gpu':
-        os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "1"
+    with environment('MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION', '0'):
         _gemm_test_helper(np.float32, True)
-        os.environ["MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION"] = "0"
+    if default_context().device_type == 'gpu':
+        with environment('MXNET_CUDA_TENSOR_OP_MATH_ALLOW_CONVERSION', '1'):
+            _gemm_test_helper(np.float32, True)
+
 
 # Helper functions for test_laop
 
