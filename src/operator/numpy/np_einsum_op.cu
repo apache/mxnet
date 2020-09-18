@@ -449,7 +449,10 @@ class EinsumOpGPU {
     std::string my_equation;
     if (isImplicit) {
       // get explicit equation
-      Einsum<DType, int, kMaxTensorRank> my_einsum(equation, in_shape[0], in_shape[1]);
+      Einsum<DType, int, kMaxTensorRank> my_einsum(equation, in_shape[1], in_shape[2]);
+      if (!my_einsum.isInitialized()) {
+        CUTENSOR_CALL(CUTENSOR_STATUS_NOT_SUPPORTED);
+      }
       const int* modes_c = my_einsum.getModesC();
       my_equation = equation;
       my_equation.append("->");
