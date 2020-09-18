@@ -702,57 +702,56 @@ def test_cuda_graphs():
 
     N = 10
 
-    os.environ['MXNET_ENABLE_CUDA_GRAPHS'] = '1'
-    os.environ['MXNET_USE_FUSION'] = '0'
+    with environment({'MXNET_ENABLE_CUDA_GRAPHS': '1',
+                      'MXNET_USE_FUSION': '0'}):
+        for test_desc in tested_ops:
+            print("Testing ", test_desc.name)
+            inputs = test_desc.generate_inputs()
+            inputsg = [i.copy() for i in inputs]
+            for i in inputsg:
+                i.attach_grad()
+            seed = random.randint(0, 10000)
+            net = GraphTester(test_desc.f)
+            netg = GraphTester(test_desc.f)
 
-    for test_desc in tested_ops:
-        print("Testing ", test_desc.name)
-        inputs = test_desc.generate_inputs()
-        inputsg = [i.copy() for i in inputs]
-        for i in inputsg:
-            i.attach_grad()
-        seed = random.randint(0, 10000)
-        net = GraphTester(test_desc.f)
-        netg = GraphTester(test_desc.f)
+            # initialize parameters
+            net.initialize()
+            netg.initialize()
 
-        # initialize parameters
-        net.initialize()
-        netg.initialize()
-
-        net(*inputs)
-
-        for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
-            p2.set_data(p1.data())
-
-        netg.hybridize(static_alloc=True, static_shape=True)
-
-        print("Testing inference mode")
-        with random_seed(seed):
-            for _ in range(N):
-                assert_almost_equal(net(*inputs), netg(*inputsg))
-
-        mx.nd.waitall()
-        print("Testing training mode")
-        for _ in range(N):
-            with random_seed(seed):
-                with mx.autograd.record():
-                    out = net(*inputs)
-                out.backward()
-
-            with random_seed(seed):
-                with mx.autograd.record():
-                    outg = netg(*inputsg)
-                outg.backward()
-
-            assert_almost_equal(out, outg)
-            for i, ig in zip(inputs, inputsg):
-                assert_almost_equal(i.grad, ig.grad)
+            net(*inputs)
 
             for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
-                assert_almost_equal(p1.data(), p2.data())
-                if p1.grad_req != 'null':
-                    assert_almost_equal(p1.grad(), p2.grad())
-        mx.nd.waitall()
+                p2.set_data(p1.data())
+
+            netg.hybridize(static_alloc=True, static_shape=True)
+
+            print("Testing inference mode")
+            with random_seed(seed):
+                for _ in range(N):
+                    assert_almost_equal(net(*inputs), netg(*inputsg))
+
+            mx.nd.waitall()
+            print("Testing training mode")
+            for _ in range(N):
+                with random_seed(seed):
+                    with mx.autograd.record():
+                        out = net(*inputs)
+                    out.backward()
+
+                with random_seed(seed):
+                    with mx.autograd.record():
+                        outg = netg(*inputsg)
+                    outg.backward()
+
+                assert_almost_equal(out, outg)
+                for i, ig in zip(inputs, inputsg):
+                    assert_almost_equal(i.grad, ig.grad)
+
+                for p1, p2 in zip(net.collect_params().values(), netg.collect_params().values()):
+                    assert_almost_equal(p1.data(), p2.data())
+                    if p1.grad_req != 'null':
+                        assert_almost_equal(p1.grad(), p2.grad())
+            mx.nd.waitall()
 
 
 if __name__ == '__main__':
