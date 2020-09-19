@@ -7266,6 +7266,51 @@ def test_np_vstack():
                 expected_np = _np.vstack(v_np)
                 assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
 
+                # General Gradient Test
+                for a_grad_status in ['add', 'write']:
+                    for b_grad_status in ['add', 'write']:
+                        for c_grad_status in ['add', 'write']:
+                            a = mx.np.random.uniform(0, 1, config[0])
+                            b = mx.np.random.uniform(0, 1, config[1])
+                            c = mx.np.random.uniform(0, 1, config[2])
+                            a.attach_grad(a_grad_status)
+                            b.attach_grad(b_grad_status)
+                            c.attach_grad(c_grad_status)
+                            if a_grad_status == 'add':
+                                ori_a_grad = mx.np.random.uniform(0, 1, config[0])
+                                if a.ndim == 0:
+                                    a.grad[()] = ori_a_grad
+                                else:
+                                    a.grad[:] = ori_a_grad
+                            else:
+                                ori_a_grad = mx.np.zeros(config[0])
+                            if b_grad_status == 'add':
+                                ori_b_grad = mx.np.random.uniform(0, 1, config[1])
+                                if b.ndim == 0:
+                                    b.grad[()] = ori_b_grad
+                                else:
+                                    b.grad[:] = ori_b_grad
+                            else:
+                                ori_b_grad = mx.np.zeros(config[1])
+                            if c_grad_status == 'add':
+                                ori_c_grad = mx.np.random.uniform(0, 1, config[2])
+                                if c.ndim == 0:
+                                    c.grad[()] = ori_c_grad
+                                else:
+                                    c.grad[:] = ori_c_grad
+                            else:
+                                ori_c_grad = mx.np.zeros(config[2])
+
+                            with mx.autograd.record():
+                                m = np.vstack((a,b,c))
+                                out_grad = np.random.uniform(0,1,m.shape)
+                                loss = (out_grad * m).sum()
+                                loss.backward()
+
+                            gt_grad = out_grad.asnumpy() + _np.vstack((ori_a_grad.asnumpy(), ori_b_grad.asnumpy(), ori_c_grad.asnumpy()))
+                            mx_grad = np.vstack((a.grad, b.grad, c.grad))
+                            assert_almost_equal(gt_grad, mx_grad.asnumpy(), rtol=1e-2, atol=1e-2)
+
 
 @with_seed()
 @use_np
