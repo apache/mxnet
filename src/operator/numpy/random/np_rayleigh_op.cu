@@ -27,7 +27,12 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(_npi_rayleigh).set_attr<FCompute>("FCompute<gpu>", NumpyRayleighForward<gpu>);
+NNVM_REGISTER_OP(_npi_rayleigh)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+        [](const NodeAttrs&, const bool) {
+          return false;
+        })
+    .set_attr<FCompute>("FCompute<gpu>", NumpyRayleighForward<gpu>);
 
 NNVM_REGISTER_OP(_backward_broadcast_rayleigh)
     .set_attr<FCompute>("FCompute<gpu>", RayleighReparamBackward<gpu>);

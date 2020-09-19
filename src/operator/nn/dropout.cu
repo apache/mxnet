@@ -28,7 +28,13 @@
 namespace mxnet {
 namespace op {
 
-NNVM_REGISTER_OP(Dropout).set_attr<FStatefulCompute>("FStatefulCompute<gpu>", DropoutCompute<gpu>);
+NNVM_REGISTER_OP(Dropout)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+                                       [](const NodeAttrs&, const bool is_train) {
+        // Dropout is just passthrough during inference
+        return !is_train;
+        })
+    .set_attr<FStatefulCompute>("FStatefulCompute<gpu>", DropoutCompute<gpu>);
 
 NNVM_REGISTER_OP(_backward_Dropout)
     .set_attr<FStatefulCompute>("FStatefulCompute<gpu>", DropoutGradCompute<gpu>);
