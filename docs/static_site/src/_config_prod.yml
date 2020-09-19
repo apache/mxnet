@@ -41,8 +41,8 @@ youtube_username: apachemxnet
 google_analytics: UA-96378503-1
 versions: 
   - master
-  - 1.7
-  - 1.6
+  - 1.7.0
+  - 1.6.0
   - 1.5.0
   - 1.4.1
   - 1.3.1
