@@ -370,6 +370,11 @@ NNVM_REGISTER_OP(_TensorRT)
     .set_attr<nnvm::FListInputNames>("FListInputNames", TRTListInputNames)
     .set_attr<nnvm::FListOutputNames>("FListOutputNames", DefaultSubgraphOpListOutputs)
     .set_attr<FCreateOpState>("FCreateOpState", TRTCreateState)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+        [](const NodeAttrs& attrs, const bool) {
+          const TRTParam& param = nnvm::get<TRTParam>(attrs.parsed);
+          return !param.int8_mode;
+        })
     .set_attr<FInferStorageType>("FInferStorageType", TRTInferStorageType);
 
 MXNET_REGISTER_SUBGRAPH_BACKEND(TensorRT);
