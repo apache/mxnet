@@ -314,6 +314,21 @@ def teardown():
     """
     mx.nd.waitall()
 
+def with_environment(*args_):
+    """
+    Helper function that takes a dictionary of environment variables and their
+    desired settings and changes the environment in advance of running the
+    decorated code.  The original environment state is reinstated afterwards,
+    even if exceptions are raised.
+    """
+    def test_helper(orig_test):
+        @functools.wraps(orig_test)
+        def test_new(*args, **kwargs):
+            with environment(*args_):
+                orig_test(*args, **kwargs)
+        return test_new
+    return test_helper
+
 def run_in_spawned_process(func, env, *args):
     """
     Helper function to run a test in its own process.
