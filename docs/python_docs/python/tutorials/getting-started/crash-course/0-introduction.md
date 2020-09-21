@@ -1,9 +1,26 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
+
 # Introduction
 
 
 # WHAT IS MXNet
 
-Apache MXNet is a fully featured, flexibly programmable, and ultra-scalable  open-source deep learning framework supporting state of the art in deep learning models, including convolutional neural networks (CNNs) and long short-term memory networks (LSTMs). MXNet has its roots in academia and came about through the collaboration and contributions of researchers at several top universities  and the preferred choice of AWS (Amazon Web Services), as well as many colleges and companies. .
+Apache MXNet is a fully featured, flexibly programmable, and ultra-scalable open-source deep learning framework supporting state of the art deep learning models, including convolutional neural networks (CNNs) and long short-term memory networks (LSTMs). MXNet has its roots in academia and came about through the collaboration and contributions of researchers at several top universities  and the preferred choice of AWS (Amazon Web Services), as well as many colleges and companies.
 
 Some key features of MXNet:
 1.  **Fast and Scalable:** Easily supports multiple GPU's and distributed multi-host jobs. 
@@ -141,7 +158,7 @@ Output:
 
 # Gluon
 
-Gluon is an imperative high-level  front end API in MXNet for deep learning that’s flexible and easy-to-use which comes with a lot of great features, and it can provide you everything you need: from experimentation to deploying the model without sacrificing training speed. Gluon provides State of the Art models for many of the standard tasks such as Classification, Object Detection, Segmentation, etc. In next sections of   the  tutorial, we will walk you through a common use case on how to build a model using gluon, train it on your data, and deploy it for inference.
+Gluon is an imperative high-level front end API in MXNet for deep learning that’s flexible and easy-to-use which comes with a lot of great features, and it can provide you everything you need: from experimentation to deploying the model without sacrificing training speed. Gluon provides State of the Art models for many of the standard tasks such as Classification, Object Detection, Segmentation, etc. In one of the next sections of the tutorial, you will walk through a common use case on how to build a model using gluon, train it on your data, and deploy it for inference.
 
 
 # References

@@ -1,7 +1,23 @@
+<!--- Licensed to the Apache Software Foundation (ASF) under one -->
+<!--- or more contributor license agreements.  See the NOTICE file -->
+<!--- distributed with this work for additional information -->
+<!--- regarding copyright ownership.  The ASF licenses this file -->
+<!--- to you under the Apache License, Version 2.0 (the -->
+<!--- "License"); you may not use this file except in compliance -->
+<!--- with the License.  You may obtain a copy of the License at -->
+
+<!---   http://www.apache.org/licenses/LICENSE-2.0 -->
+
+<!--- Unless required by applicable law or agreed to in writing, -->
+<!--- software distributed under the License is distributed on an -->
+<!--- "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY -->
+<!--- KIND, either express or implied.  See the License for the -->
+<!--- specific language governing permissions and limitations -->
+<!--- under the License. -->
 # Necessary components that are not in the network
 
 The data and algorithms are not the only components that you need to create your
-trained deep learning model. In this notebook, you will learn about some of the
+trained deep learning models. In this notebook, you will learn about some of the
 common components used for training your own machine learning models. Here is a
 list of components that are commonly found in training a model in MXNet.
 
@@ -24,8 +40,8 @@ ctx = mx.cpu()
 ## Initialization
 
 In the previous notebook, you used `net.initialize()` to initialize the network
-before you could do a forward pass. Let's look at initialization in a little
-more detail here.
+before you could do a forward pass. Now, you will look at initialization in a little
+more detail.
 
 First, define the `sequential` network that you used earlier and initialize it.
 After you initialize it, print the parameters using `collect_params()` method.
@@ -51,11 +67,11 @@ for key,value in params.items():
 
 ```
 
-The weights for the 1st layer and second layer are **-1** since the shape is
+The weights for the first layer and second layer are **-1** since the shape is
 deferred to runtime. After the first forward computation/pass, the shape is
 inferred from the shape of the data and the parameters are not initialized.
-After the first forward pass, the shape and parameters are initialized. Let's
-look at what the shape looks like after the first forward pass.
+After the first forward pass, the shape and parameters are initialized. Look at 
+what the shape looks like after the first forward pass.
 
 ```python
 x = np.random.uniform(-1,1,(10,3))
@@ -85,7 +101,7 @@ by drawing random values with uniform-distribution between −0.07 and 0.07 and
 updates the bias parameters by setting them all to 0.
 
 To initialize your network using different built-in types, you have to use the
-`init` keyword argument in the `initialize()` method. Let's look at how to do
+`init` keyword argument in the `initialize()` method. Now, look at how to do
 this using a `constant` init and a `normal` init.
 
 ```python
@@ -121,8 +137,8 @@ optimize the parameters
 3. Optimizer which is used to update the parameters based on an optimization
 algorithm
 
-We have already talked about autograd in the previous notebook. In this
-notebook, we will talk about the remaining components as well as dive a little
+You have already learned about autograd in the previous notebook. In this
+notebook, you will learn about the remaining components as well as dive a little
 deeper into initialization.
 
 ## Loss function
@@ -130,10 +146,10 @@ deeper into initialization.
 Loss functions are used to train neural networks and help the algorithm learn
 the data distribution. The loss function computes the difference between output
 from the neural network and ground truth value. This score is used to update the
-neural network weights during training. Let's look at a simple example first.
+neural network weights during training. First, you should look at a simple example.
 
 Suppose you have a neural network `net` and the data is stored in variable
-`data`. Let's take 5 total records and the output from the neural network after
+`data`. Take 5 total records and the output from the neural network after
 the first epoch is given by the following variable. The values are in millions.
 
 ```python

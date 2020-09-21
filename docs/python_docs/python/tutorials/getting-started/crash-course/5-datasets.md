@@ -18,7 +18,7 @@
 
 # Gluon `Dataset`s and `DataLoader`
 
-One of the most critical steps for model training and inference is loading the data: without data you can't do Machine Learning! In this tutorial we use the Gluon API to define a [Dataset](/api/python/docs/api/gluon/data/index.html#datasets) and use a [DataLoader](/api/python/docs/api/gluon/data/index.html#dataloader) to iterate through the dataset in mini-batches.
+One of the most critical steps for model training and inference is loading the data: without data you can't do Machine Learning! In this tutorial you will use the Gluon API to define a [Dataset](/api/python/docs/api/gluon/data/index.html#datasets) and use a [DataLoader](/api/python/docs/api/gluon/data/index.html#dataloader) to iterate through the dataset in mini-batches.
 
 
 ```python
@@ -31,9 +31,9 @@ import tarfile
 
 ## Introduction to `Dataset`s
 
-[Dataset](/api/python/docs/api/gluon/data/index.html#datasets) objects are used to represent collections of data, and include methods to load and parse the data (that is often stored on disk). Gluon has a number of different `Dataset` classes for working with image data straight out-of-the-box, but we'll use the [ArrayDataset](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.ArrayDataset) to introduce the idea of a `Dataset`.
+[Dataset](/api/python/docs/api/gluon/data/index.html#datasets) objects are used to represent collections of data, and include methods to load and parse the data (that is often stored on disk). Gluon has a number of different `Dataset` classes for working with image data straight out-of-the-box, but you'll use the [ArrayDataset](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.ArrayDataset) to introduce the idea of a `Dataset`.
 
-We first start by generating random data `X` (with 3 variables) and corresponding random labels `y` to simulate a typical supervised learning task. We generate 10 samples and we pass them all to the `ArrayDataset`.
+You can start by generating random data `X` (with 3 variables) and corresponding random labels `y` to simulate a typical supervised learning task. You generate 10 samples and pass them all to the `ArrayDataset`.
 
 
 
@@ -46,7 +46,7 @@ y = mx.random.uniform(shape=(10, 1))
 dataset = mx.gluon.data.dataset.ArrayDataset(X, y)
 ```
 
-A key feature of a `Dataset` is the __*ability to retrieve a single sample given an index*__. Our random data and labels were generated in memory, so this `ArrayDataset` doesn't have to load anything from disk, but the interface is the same for all `Dataset`'s.
+A key feature of a `Dataset` is the __*ability to retrieve a single sample given an index*__. Your random data and labels were generated in memory, so this `ArrayDataset` doesn't have to load anything from disk, but the interface is the same for all `Dataset`'s.
 
 
 
@@ -70,7 +70,7 @@ print(sample)
 
 
 
-We get a tuple of a data sample and its corresponding label, which makes sense because we passed the data `X` and the labels `y` in that order when we instantiated the `ArrayDataset`. We don't usually retrieve individual samples from `Dataset` objects though (unless we're quality checking the output samples). Instead we use a `DataLoader`.
+You get a tuple of a data sample and its corresponding label, which makes sense because you passed the data `X` and the labels `y` in that order when we instantiated the `ArrayDataset`. We don't usually retrieve individual samples from `Dataset` objects though (unless we're quality checking the output samples). Instead we use a `DataLoader`.
 
 ## Introduction to `DataLoader`
 
