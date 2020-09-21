@@ -51,7 +51,8 @@ def test_contrib_intgemm_prepare_data(shape, max_quant):
     scaled = m * 127.0 / max_quant
     # Rounding 0.5 can go up or down.  Move values away from 0.5.
     too_close = mx.nd.abs(mx.nd.round(scaled) - scaled) > 0.45
-    m += max_quant / 127.0 * 0.05 * too_close
+    # Add 0.2 in scaled space so (0.45, 0.55) maps to (0.65, 0.75) which will round consistently.
+    m += max_quant / 127.0 * 0.2 * too_close
 
     # Reference: scale and round
     ref = mx.nd.round(m * 127.0 / max_quant)
