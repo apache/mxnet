@@ -28,6 +28,7 @@ import os
 import shutil
 import warnings
 import numpy as np
+import mxnet as mx
 from ..base import _LIB, check_call, py_str
 from ..base import c_array, c_str, mx_uint, c_str_array
 from ..base import NDArrayHandle, SymbolHandle
@@ -39,7 +40,6 @@ from ..ndarray import save as nd_save
 from ..ndarray import NDArray
 from ..io import DataIter, DataDesc, DataBatch
 from ..context import cpu, Context
-
 
 def _quantize_params(qsym, params, th_dict):
     """Given a quantized symbol and a dict of params that have not been quantized,
@@ -253,15 +253,15 @@ def _calibrate_quantized_sym(qsym, th_dict):
     return Symbol(calibrated_sym)
 
 
-def _collect_layer_statistics(mod, data, collector, max_num_examples=None, logger=None):
+def _collect_layer_statistics(sym_block, data, collector, max_num_examples=None, logger=None):
     if not isinstance(data, DataIter):
         raise ValueError('Only supports data as a type of DataIter, while received type %s'
                          % str(type(data)))
-    mod._exec_group.execs[0].set_monitor_callback(collector.collect, monitor_all=True)
+    sym_block.register_op_hook(collector.collect, monitor_all=True)
     num_batches = 0
     num_examples = 0
     for batch in data:
-        mod.forward(data_batch=batch, is_train=False)
+        sym_block(batch[0]) #TODO: without indexing
         num_batches += 1
         num_examples += data.batch_size
         if max_num_examples is not None and num_examples >= max_num_examples:
@@ -272,22 +272,22 @@ def _collect_layer_statistics(mod, data, collector, max_num_examples=None, logge
     return num_examples
 
 
-def _collect_layer_output_min_max(mod, data, quantized_dtype, include_layer=None,
+def _collect_layer_output_min_max(sym_block, data, quantized_dtype, include_layer=None,
                                   max_num_examples=None, logger=None):
     """Collect min and max values from layer outputs and save them in
     a dictionary mapped by layer names.
     """
     collector = _LayerOutputMinMaxCollector(quantized_dtype=quantized_dtype,
                                             include_layer=include_layer, logger=logger)
-    num_examples = _collect_layer_statistics(mod, data, collector, max_num_examples, logger)
+    num_examples = _collect_layer_statistics(sym_block, data, collector, max_num_examples, logger)
     return collector.min_max_dict, num_examples
 
 
-def _collect_layer_histogram(mod, data, include_layer=None,
+def _collect_layer_histogram(sym_block, data, include_layer=None,
                              max_num_examples=None, logger=None):
     """Collect layer outputs and save them in a dictionary mapped by layer names."""
     collector = _LayerHistogramCollector(include_layer=include_layer, logger=logger)
-    num_examples = _collect_layer_statistics(mod, data, collector, max_num_examples, logger)
+    num_examples = _collect_layer_statistics(sym_block, data, collector, max_num_examples, logger)
     return collector.hist_dict, num_examples
 
 
@@ -566,15 +566,14 @@ def quantize_model(sym, arg_params, aux_params,
             raise ValueError('calib_data must be of DataIter type when calib_mode=%s,'
                              ' while received type %s' % (calib_mode, str(type(calib_data))))
 
-        mod = Module(symbol=sym, data_names=data_names, label_names=label_names, context=ctx)
-        if len(calib_data.provide_label) > 0:
-            mod.bind(for_training=False, data_shapes=calib_data.provide_data,
-                     label_shapes=calib_data.provide_label)
-        else:
-            mod.bind(for_training=False, data_shapes=calib_data.provide_data)
-        mod.set_params(arg_params, aux_params)
+        inputs = mx.sym.var('data') #TODO: create inputs list (change or infer from data_names)
+        param_dict = arg_params
+        param_dict.update(aux_params)
+        sym_block = mx.gluon.SymbolBlock(sym, inputs)
+        sym_block.load_dict(param_dict)
+
         if calib_mode == 'entropy':
-            hist_dict, num_examples = _collect_layer_histogram(mod, calib_data,
+            hist_dict, num_examples = _collect_layer_histogram(sym_block, calib_data,
                                                                include_layer=calib_layer,
                                                                max_num_examples=num_calib_examples,
                                                                logger=logger)
@@ -584,7 +583,7 @@ def quantize_model(sym, arg_params, aux_params,
             th_dict = _get_optimal_thresholds(hist_dict, quantized_dtype, logger=logger)
         elif calib_mode == 'naive':
             th_dict, num_examples = _collect_layer_output_min_max(
-                mod, calib_data, quantized_dtype, include_layer=calib_layer, max_num_examples=num_calib_examples,
+                sym_block, calib_data, quantized_dtype, include_layer=calib_layer, max_num_examples=num_calib_examples,
                 logger=logger)
             if logger:
                 logger.info('Collected layer output min/max values from FP32 model using %d examples'
