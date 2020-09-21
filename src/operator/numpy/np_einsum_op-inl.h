@@ -428,7 +428,7 @@ class EinsumOp {
   }
   bool operator==(const EinsumOp& other) const {
     return this->num_args == other.num_args &&
-           ! this->subscripts.compare(other.subscripts);
+           !this->subscripts.compare(other.subscripts);
   }
 };  // class EinsumOp
 

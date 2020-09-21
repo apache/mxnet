@@ -28,7 +28,8 @@ namespace mxnet {
 namespace op {
 
 #if MXNET_USE_CUTENSOR == 1
-static const uint32_t kMaxTensorRank = 12; // maximal tensor rank that is supported by cuTENSOR
+// maximal tensor rank that is supported by cuTENSOR
+static const uint32_t kMaxTensorRank = 12;
 
 template<typename U>
 struct CuTensorTypeTraits;
@@ -112,10 +113,8 @@ struct Einsum {
 
     char modeC[kMaxNumModes_ + 2];
     uint32_t numModesC = 0;
-    for (int i = c_start; i < c_end && numModesC < kMaxNumModes_ + 2; ++i){
-      if (equation.at(i) != ' ') { // skip spaces
-        modeC[numModesC++] = equation.at(i);
-      }
+    for (int i = c_start; i < c_end && numModesC < kMaxNumModes_ + 2; ++i) {
+      modeC[numModesC++] = equation.at(i);
     }
 
     if ((numModesA != numModesA_) || (numModesB != numModesB_)) {
@@ -136,13 +135,13 @@ struct Einsum {
       for (uint32_t i = 0; i < numModesA; i++) {
         auto mode = modeA[i];
         bool found = false;
-        for(uint32_t j=0; j < numModesB; ++j){
-          if(mode == modeB[j]) {
+        for (uint32_t j = 0; j < numModesB; ++j) {
+          if (mode == modeB[j]) {
             found = true;
             break;
           }
         }
-        if (!found) { // is non-contracted mode
+        if (!found) {  // is non-contracted mode
           modeC[numModesC++] = mode;
           if (numModesC > kMaxNumModes_) {
             // too many modes
@@ -157,11 +156,13 @@ struct Einsum {
     char* redirectModeC;
     if (isImplicit) {
       // we have to copy all non-contracted modes from A over to C
-      if (copyModesIf(modeA, numModesA_, modeB, numModesB_, implicitModeC.data(), numModesC_) == false) {
+      if (copyModesIf(modeA, numModesA_, modeB, numModesB_,
+                      implicitModeC.data(), numModesC_) == false) {
         return;
       }
       // we have to copy all non-contracted modes from B over to C
-      if (copyModesIf(modeB, numModesB_, modeA, numModesA_, implicitModeC.data(), numModesC_) == false) {
+      if (copyModesIf(modeB, numModesB_, modeA, numModesA_,
+                      implicitModeC.data(), numModesC_) == false) {
         return;
       }
       std::sort(implicitModeC.begin(), std::next(implicitModeC.begin(), numModesC_));
@@ -224,17 +225,17 @@ struct Einsum {
 
   int GetNumModesC() const { return numModesC_; }
 
-  private:
-  uint32_t numModesA_;
-  uint32_t numModesB_;
-  uint32_t numModesC_;
-  bool isInitialized_;
-  std::array<int, kMaxNumModes_> modesA_;
-  std::array<int, kMaxNumModes_> modesB_;
-  std::array<int, kMaxNumModes_> modesC_;
-  std::array<int64_t, kMaxNumModes_> extentA_;
-  std::array<int64_t, kMaxNumModes_> extentB_;
-  std::array<int64_t, kMaxNumModes_> extentC_;
+   private:
+    uint32_t numModesA_;
+    uint32_t numModesB_;
+    uint32_t numModesC_;
+    bool isInitialized_;
+    std::array<int, kMaxNumModes_> modesA_;
+    std::array<int, kMaxNumModes_> modesB_;
+    std::array<int, kMaxNumModes_> modesC_;
+    std::array<int64_t, kMaxNumModes_> extentA_;
+    std::array<int64_t, kMaxNumModes_> extentB_;
+    std::array<int64_t, kMaxNumModes_> extentC_;
 };
 
 /*!
@@ -243,7 +244,8 @@ struct Einsum {
 template<typename DType>
 class CuTensorEinsum {
   STATIC_ASSERT_CUDNN_VERSION_GE(6000);
-  static_assert(CUTENSOR_MAJOR >= 1 && CUTENSOR_MINOR >= 2 && CUTENSOR_PATCH >= 0, "minimal cuTENSOR 1.2.0 is required.");
+  static_assert(CUTENSOR_MAJOR >= 1 && CUTENSOR_MINOR >= 2 &&
+                CUTENSOR_PATCH >= 0, "minimal cuTENSOR 1.2.0 is required.");
  public:
   CuTensorEinsum() {
   }
@@ -274,7 +276,7 @@ class CuTensorEinsum {
                                                &descriptor_a,
                                                in_shape[0].ndim(),
                                                myEinsum.getExtentsA(),
-                                               NULL, //stride
+                                               NULL,  // stride
                                                cudaType,
                                                CUTENSOR_OP_IDENTITY));
     cutensorTensorDescriptor_t descriptor_b;
@@ -282,14 +284,14 @@ class CuTensorEinsum {
                                                &descriptor_b,
                                                in_shape[1].ndim(),
                                                myEinsum.getExtentsB(),
-                                               NULL, //stride
+                                               NULL,  // stride
                                                cudaType, CUTENSOR_OP_IDENTITY));
     cutensorTensorDescriptor_t descriptor_c;
     CUTENSOR_CALL(cutensorInitTensorDescriptor(&s->cutensor_handle_,
                                                &descriptor_c,
                                                out_shape[0].ndim(),
                                                myEinsum.getExtentsC(),
-                                               NULL, //stride
+                                               NULL,  // stride
                                                cudaType,
                                                CUTENSOR_OP_IDENTITY));
 
@@ -305,8 +307,7 @@ class CuTensorEinsum {
     CUTENSOR_CALL(cutensorInitContractionFind(&s->cutensor_handle_,
                                               &find, algo));
 
-    if (s->cutensor_cachelines_ != nullptr)
-    {
+    if (s->cutensor_cachelines_ != nullptr) {
         const cutensorAutotuneMode_t autotuneMode = CUTENSOR_AUTOTUNE_INCREMENTAL;
         CUTENSOR_CALL(cutensorContractionFindSetAttribute(
                     &s->cutensor_handle_,
@@ -322,7 +323,7 @@ class CuTensorEinsum {
                     CUTENSOR_CONTRACTION_FIND_INCREMENTAL_COUNT,
                     &incCount,
                     sizeof(uint32_t)));
-    } 
+    }
 
     previous_workspace_size = prev_workspace_size * sizeof(DType);
     CUTENSOR_CALL(cutensorContractionGetWorkspace(&s->cutensor_handle_,
@@ -330,7 +331,7 @@ class CuTensorEinsum {
                                                   &find,
                                                   CUTENSOR_WORKSPACE_MAX,
                                                   &my_workspace_size));
-    if (s->cutensor_cachelines_ == nullptr){
+    if (s->cutensor_cachelines_ == nullptr) {
         CUTENSOR_CALL(cutensorInitContractionPlan(&s->cutensor_handle_,
                                               &plan,
                                               &descriptor_contraction,
@@ -348,8 +349,7 @@ class CuTensorEinsum {
                char* workspace) {
     Stream<gpu>* s = ctx.get_stream<gpu>();
 
-    if (s->cutensor_cachelines_ != nullptr)
-    {
+    if (s->cutensor_cachelines_ != nullptr) {
         CUTENSOR_CALL(cutensorInitContractionPlan(&s->cutensor_handle_,
                                               &plan,
                                               &descriptor_contraction,
@@ -366,22 +366,24 @@ class CuTensorEinsum {
     char* my_workspace(&workspace[previous_workspace_size]);
     CUTENSOR_CALL(cutensorContraction(&s->cutensor_handle_,
                                       &plan,
-                                      (void*) &alpha, tensor_a_ptr, tensor_b_ptr,
-                                      (void*) &beta,  tensor_c_ptr, tensor_c_ptr,
+                                      reinterpret_cast<void*>(&alpha),
+                                      tensor_a_ptr, tensor_b_ptr,
+                                      reinterpret_cast<void*>(&beta),
+                                      tensor_c_ptr, tensor_c_ptr,
                                       my_workspace,
                                       my_workspace_size,
                                       s->stream_));
   }
 
-  cutensorContractionDescriptor_t descriptor_contraction; // encodes the strucutre of the contraction
-  cutensorContractionPlan_t plan; // encodes the execution plan
-  cutensorContractionFind_t find; // limits the search space (of viable candidates/implementations)
+  cutensorContractionDescriptor_t descriptor_contraction;  // strucutre of the contraction
+  cutensorContractionPlan_t plan;  // encodes the execution plan
+  cutensorContractionFind_t find;  // limits the search space (of viable candidates)
 
   // workspace
   size_t previous_workspace_size = 0;
   size_t my_workspace_size = 0;
   size_t total_workspace_size = 0;
-  
+
   typename CuTensorTypeTraits<DType>::ScalarType alpha = 1;
   typename CuTensorTypeTraits<DType>::ScalarType beta = 0;
 };
@@ -389,7 +391,6 @@ class CuTensorEinsum {
 
 template<typename DType>
 class EinsumOpGPU {
-
  public:
   EinsumOpGPU() {
   }
@@ -400,8 +401,8 @@ class EinsumOpGPU {
                         const mxnet::ShapeVector& in_shape,
                         const mxnet::ShapeVector& out_shape,
                         const OpContext &ctx,
-                        size_t &pos_cutensor_op,
-                        size_t temp_grad_size_aligned){
+                        size_t pos_cutensor_op,
+                        size_t temp_grad_size_aligned) {
     bool req_write = true;
     int comma_pos = equation.find(",");
     int arrow_pos = equation.find("->", comma_pos + 1);
@@ -417,8 +418,8 @@ class EinsumOpGPU {
       const int* modes_c = my_einsum.getModesC();
       my_equation = equation;
       my_equation.append("->");
-      for (int i = my_einsum.GetNumModesC() - 1; i>=0; --i) {
-        my_equation += (char)modes_c[i];
+      for (int i = my_einsum.GetNumModesC() - 1; i >= 0; --i) {
+        my_equation += static_cast<char>(modes_c[i]);
       }
       arrow_pos = my_equation.find("->", comma_pos + 1);
       len_op2 = arrow_pos - comma_pos - 1;
@@ -446,7 +447,6 @@ class EinsumOpGPU {
                                              temp_grad_size_aligned,
                                              dptr_alignment);
     if (req_workspace > max_workspace_cutensor) max_workspace_cutensor = req_workspace;
-    pos_cutensor_op++;
 
     // gradient for second operand
     mxnet::ShapeVector grad_op2_input_shapes;
@@ -461,14 +461,13 @@ class EinsumOpGPU {
     grad_operand2_equation += my_equation.substr(comma_pos + 1, len_op2);
     bwd_cutensor_ops.push_back(CuTensorEinsum<DType>());
     req_workspace =
-      bwd_cutensor_ops[pos_cutensor_op].Init(grad_operand2_equation,
-                                             grad_op2_input_shapes,
-                                             grad_op2_output_shapes,
-                                             ctx, req_write,
-                                             temp_grad_size_aligned,
-                                             dptr_alignment);
+      bwd_cutensor_ops[pos_cutensor_op+1].Init(grad_operand2_equation,
+                                               grad_op2_input_shapes,
+                                               grad_op2_output_shapes,
+                                               ctx, req_write,
+                                               temp_grad_size_aligned,
+                                               dptr_alignment);
     if (req_workspace > max_workspace_cutensor) max_workspace_cutensor = req_workspace;
-    pos_cutensor_op++;
   }
 
   void Init(const EinsumOp& state,
@@ -477,8 +476,6 @@ class EinsumOpGPU {
             const OpContext& ctx,
             bool req_write,
             bool is_backward) {
-    const std::vector<Step>& paths = state.paths;
-
     if (!is_backward) {
       paths_len = state.paths.size();
       max_workspace_cutensor = 0;
@@ -492,8 +489,11 @@ class EinsumOpGPU {
           tmp_in_shape.push_back(operands_shape[p]);
           operands_shape.erase(operands_shape.begin() + p);
         }
-        if (handle_out) tmp_out_shape.push_back(out_shape[0]);
-        else tmp_out_shape.push_back(state.paths[i].oshape);
+        if (handle_out) {
+          tmp_out_shape.push_back(out_shape[0]);
+        } else {
+          tmp_out_shape.push_back(state.paths[i].oshape);
+        }
         fwd_cutensor_ops.push_back(CuTensorEinsum<DType>());
 
         size_t req_workspace = fwd_cutensor_ops[i].Init(state.paths[i].einsum_str,
@@ -563,6 +563,7 @@ class EinsumOpGPU {
                          temp_in_shape, temp_out_shape,
                          ctx, pos_cutensor_bwd_op,
                          temp_grads_size_aligned);
+        pos_cutensor_bwd_op = pos_cutensor_bwd_op + 2;
       }
       total_workspace = max_workspace_cutensor/sizeof(DType) +
                         temp_grads_size;
@@ -614,9 +615,9 @@ class EinsumOpGPU {
                         const std::vector<TBlob> &inputs,
                         const std::vector<TBlob> &outputs,
                         const OpContext &ctx,
-                        size_t &pos_cutensor_op,
-                        Tensor<gpu, 1, DType> &workspace){
-    char* workspace_ptr = reinterpret_cast<char*>(workspace.dptr_);
+                        size_t pos_cutensor_op,
+                        Tensor<gpu, 1, DType> *workspace) {
+    char* workspace_ptr = reinterpret_cast<char*>(workspace->dptr_);
     bool req_write = true;
     // gradient for first operand
     std::vector<TBlob> grad_operand1_inputs;
@@ -624,24 +625,22 @@ class EinsumOpGPU {
     grad_operand1_inputs.push_back(inputs[0]);
     grad_operand1_inputs.push_back(inputs[2]);
     grad_operand1_outputs.push_back(outputs[0]);
-    bwd_cutensor_ops[pos_cutensor_op].Compute(ctx, 
+    bwd_cutensor_ops[pos_cutensor_op].Compute(ctx,
                                               grad_operand1_inputs, 
                                               req_write,
                                               grad_operand1_outputs,
                                               workspace_ptr);
-    pos_cutensor_op ++;
     // gradient for second operand
     std::vector<TBlob> grad_operand2_inputs;
     std::vector<TBlob> grad_operand2_outputs;
     grad_operand2_inputs.push_back(inputs[1]);
     grad_operand2_inputs.push_back(inputs[0]);
     grad_operand2_outputs.push_back(outputs[1]);
-    bwd_cutensor_ops[pos_cutensor_op].Compute(ctx, 
-                                              grad_operand2_inputs, 
-                                              req_write,
-                                              grad_operand2_outputs,
-                                              workspace_ptr);
-    pos_cutensor_op++;
+    bwd_cutensor_ops[pos_cutensor_op+1].Compute(ctx,
+                                                grad_operand2_inputs,
+                                                req_write,
+                                                grad_operand2_outputs,
+                                                workspace_ptr);
   }
 
   void Backward(const EinsumOp& state,
@@ -674,11 +673,11 @@ class EinsumOpGPU {
     }
     // go through the paths in the reversed order
     std::vector<TBlob> temp_inputs, temp_outputs;
-    //std::vector<OpReqType> temp_req;
+    // std::vector<OpReqType> temp_req;
     for (int i = paths_len - 1; i >= 0; i--) {
       temp_inputs.clear();
       temp_outputs.clear();
-      //temp_req.clear();
+      // temp_req.clear();
       bool handle_out = (i == paths_len - 1);
       if (handle_out) {
         // grad_out
@@ -691,32 +690,32 @@ class EinsumOpGPU {
         if (idx >= 1) {
           temp_inputs.push_back(inputs[idx]);
           temp_outputs.push_back(outputs[idx - 1]);
-          //temp_req.push_back(req[idx - 1]);
+          // temp_req.push_back(req[idx - 1]);
         } else {
           temp_inputs.push_back(temp_data[-idx]);
           temp_outputs.push_back(temp_grad[-idx]);
-          //temp_req.push_back(OpReqType::kWriteTo);
+          // temp_req.push_back(OpReqType::kWriteTo);
         }
       }
       CHECK_EQ(temp_inputs.size(), 3U);
       CHECK_EQ(temp_outputs.size(), 2U);
-      //CHECK_EQ(temp_req.size(), 2U);
+      // CHECK_EQ(temp_req.size(), 2U);
 
       ComputeGradients(state.paths[i].einsum_str,
                        temp_inputs, temp_outputs,
                        ctx, pos_cutensor_op,
-                       temp_space);
+                       &temp_space);
+      pos_cutensor_op = pos_cutensor_op + 2;
     }
   }
-  std::vector<std::string> sub_equations;
   int paths_len = 0;
   // cutensor ops for the forward and backward passs:
   std::vector<CuTensorEinsum<DType>> fwd_cutensor_ops;
   std::vector<CuTensorEinsum<DType>> bwd_cutensor_ops;
   std::vector<std::vector<int> > bwd_op_idx;
-  
+
   const size_t dptr_alignment = 512;
-  size_t temp_ouputs_size = 0; 
+  size_t temp_ouputs_size = 0;
   size_t temp_grads_size = 0;
   size_t temp_grads_size_aligned = 0;
   size_t max_workspace_cutensor = 0;
@@ -746,10 +745,10 @@ static EinsumOpGPU<DType>& GetEinsumOpGPU(const EinsumOp& state,
     ndim += s.ndim();
   for (auto &s : out_shape)
     ndim += s.ndim();
-  key.Reserve(ndim + // for in and out shapes
-              1 + // for dev_id
-              1 + // for req_write
-              1 ); // is_backward
+  key.Reserve(ndim +  // for in and out shapes
+              1 +  // for dev_id
+              1 +  // for req_write
+              1);  // for is_backward
   key.AddSign(in_shape);
   key.AddSign(out_shape);
   key.AddSign(ctx.run_ctx.ctx.dev_id);
@@ -784,12 +783,10 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
   if (state.num_args <= 1) {
     NumpyEinsumForward<gpu>(state_ptr, ctx, inputs, req, outputs);
   } else {
-    //if (state.num_args > 2) {
     std::vector<Step>& paths = state.paths;
     std::vector<std::vector<int> > pos;
     std::string string_repr;
     paths = einsum_path(state.subscripts, inputs, true, ctx.run_ctx, &pos, &string_repr);
-    //}
     mxnet::ShapeVector in_shape(inputs.size());
     mxnet::ShapeVector out_shape(1, outputs[0].shape_);
     for (size_t i = 0; i < in_shape.size(); i++)
