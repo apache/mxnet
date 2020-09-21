@@ -39,7 +39,20 @@ twitter_username: apachemxnet
 github_username:  apache/incubator-mxnet
 youtube_username: apachemxnet
 google_analytics: UA-96378503-1
-
+baseurl: /versions/1.7
+versions: 
+  - master
+  - 1.7
+  - 1.6
+  - 1.5.0
+  - 1.4.1
+  - 1.3.1
+  - 1.2.1
+  - 1.1.0
+  - 1.0.0
+  - 0.12.1
+  - 0.11.0
+  
 # Build settings
 markdown: redcarpet
 redcarpet:

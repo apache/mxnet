@@ -32,6 +32,7 @@ Please note that the security mailing list should only be used for reporting und
 
 
 Questions about:
+
 * if a vulnerability applies to your particular application
 * obtaining further information on a published vulnerability
 * availability of patches and/or new releases
