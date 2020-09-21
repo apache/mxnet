@@ -225,17 +225,17 @@ struct Einsum {
 
   int GetNumModesC() const { return numModesC_; }
 
-   private:
-    uint32_t numModesA_;
-    uint32_t numModesB_;
-    uint32_t numModesC_;
-    bool isInitialized_;
-    std::array<int, kMaxNumModes_> modesA_;
-    std::array<int, kMaxNumModes_> modesB_;
-    std::array<int, kMaxNumModes_> modesC_;
-    std::array<int64_t, kMaxNumModes_> extentA_;
-    std::array<int64_t, kMaxNumModes_> extentB_;
-    std::array<int64_t, kMaxNumModes_> extentC_;
+ private:
+  uint32_t numModesA_;
+  uint32_t numModesB_;
+  uint32_t numModesC_;
+  bool isInitialized_;
+  std::array<int, kMaxNumModes_> modesA_;
+  std::array<int, kMaxNumModes_> modesB_;
+  std::array<int, kMaxNumModes_> modesC_;
+  std::array<int64_t, kMaxNumModes_> extentA_;
+  std::array<int64_t, kMaxNumModes_> extentB_;
+  std::array<int64_t, kMaxNumModes_> extentC_;
 };
 
 /*!
@@ -246,6 +246,7 @@ class CuTensorEinsum {
   STATIC_ASSERT_CUDNN_VERSION_GE(6000);
   static_assert(CUTENSOR_MAJOR >= 1 && CUTENSOR_MINOR >= 2 &&
                 CUTENSOR_PATCH >= 0, "minimal cuTENSOR 1.2.0 is required.");
+
  public:
   CuTensorEinsum() {
   }
@@ -626,7 +627,7 @@ class EinsumOpGPU {
     grad_operand1_inputs.push_back(inputs[2]);
     grad_operand1_outputs.push_back(outputs[0]);
     bwd_cutensor_ops[pos_cutensor_op].Compute(ctx,
-                                              grad_operand1_inputs, 
+                                              grad_operand1_inputs,
                                               req_write,
                                               grad_operand1_outputs,
                                               workspace_ptr);
