@@ -76,203 +76,165 @@ struct hash<mxnet::op::EinsumOp> {
 namespace mxnet {
 namespace op {
 
-template<typename ComputeType,
-         typename IntType,
-         int kMaxNumModes_>
-struct Einsum
-{
-    Einsum(const std::string &equation,
-           const mxnet::TShape &A_shape,
-           const mxnet::TShape &B_shape) :
-        numModesA_(A_shape.ndim()),
-        numModesB_(B_shape.ndim()),
-        numModesC_(0),
-        isInitialized_(false)
-    {
-        const auto arrow_pos = equation.find("->");
-        const auto comma_pos = equation.find(",");
-        const auto dots = equation.find("...");
-        const bool isBroadcast = (dots != std::string::npos);
-        const bool isImplicit = (arrow_pos == std::string::npos);
-        const bool usesB = (comma_pos != std::string::npos);
-        if (isBroadcast) // TODO
-        {
-            return;
-        }
+template<typename ComputeType, typename IntType, int kMaxNumModes_>
+struct Einsum {
+  Einsum(const std::string &equation,
+         const mxnet::TShape &A_shape,
+         const mxnet::TShape &B_shape):
+         numModesA_(A_shape.ndim()),
+         numModesB_(B_shape.ndim()),
+         numModesC_(0),
+         isInitialized_(false) {
+    const auto arrow_pos = equation.find("->");
+    const auto comma_pos = equation.find(",");
+    const bool isImplicit = (arrow_pos == std::string::npos);
+    const bool usesB = (comma_pos != std::string::npos);
 
-        size_t a_start = 0;
-        size_t a_end = isImplicit ? ((comma_pos == std::string::npos) ? equation.size() : comma_pos) : 
-                                    ((comma_pos == std::string::npos) ? arrow_pos : comma_pos);
-        size_t b_start = usesB ? comma_pos + 1 : 0;
-        size_t b_end   = usesB ? (isImplicit ? equation.size() : arrow_pos) : 0;
-        size_t c_start = isImplicit ? equation.size() : arrow_pos + 2;
-        size_t c_end = equation.size();
+    size_t a_start = 0;
+    size_t a_end = isImplicit ? ((comma_pos == std::string::npos) ? equation.size() : comma_pos):
+                                ((comma_pos == std::string::npos) ? arrow_pos : comma_pos);
+    size_t b_start = usesB ? comma_pos + 1 : 0;
+    size_t b_end   = usesB ? (isImplicit ? equation.size() : arrow_pos) : 0;
+    size_t c_start = isImplicit ? equation.size() : arrow_pos + 2;
+    size_t c_end = equation.size();
 
-        char modeA[kMaxNumModes_ + 2];
-        uint32_t numModesA = 0;
-        for (int i = a_start; i < a_end && numModesA < kMaxNumModes_ + 2; ++i){
-            if (equation.at(i) != ' ') // skip spaces
-            {
-                modeA[numModesA++] = equation.at(i);
-            }
-        }
+    char modeA[kMaxNumModes_ + 2];
+    uint32_t numModesA = 0;
+    for (int i = a_start; i < a_end && numModesA < kMaxNumModes_ + 2; ++i) {
+      modeA[numModesA++] = equation.at(i);
+    }
 
-        char modeB[kMaxNumModes_ + 2];
-        uint32_t numModesB = 0;
-        for (int i = b_start; i < b_end && numModesB < kMaxNumModes_ + 2; ++i){
-            if (equation.at(i) != ' ') // skip spaces
-            {
-                modeB[numModesB++] = equation.at(i);
-            }
-        }
+    char modeB[kMaxNumModes_ + 2];
+    uint32_t numModesB = 0;
+    for (int i = b_start; i < b_end && numModesB < kMaxNumModes_ + 2; ++i) {
+      modeB[numModesB++] = equation.at(i);
+    }
 
-        char modeC[kMaxNumModes_ + 2];
-        uint32_t numModesC = 0;
-        for (int i = c_start; i < c_end && numModesC < kMaxNumModes_ + 2; ++i){
-            if (equation.at(i) != ' ') // skip spaces
-            {
-                modeC[numModesC++] = equation.at(i);
-            }
-        }
+    char modeC[kMaxNumModes_ + 2];
+    uint32_t numModesC = 0;
+    for (int i = c_start; i < c_end && numModesC < kMaxNumModes_ + 2; ++i){
+      if (equation.at(i) != ' ') { // skip spaces
+        modeC[numModesC++] = equation.at(i);
+      }
+    }
 
-        if ((numModesA != numModesA_) || (numModesB != numModesB_))
-        {
-            // substring size and shape don't match
-            return;
+    if ((numModesA != numModesA_) || (numModesB != numModesB_)) {
+      // substring size and shape don't match
+      return;
+    }
+    if (numModesA_ > kMaxNumModes_ || numModesB_ > kMaxNumModes_) {
+      // too many modes
+      return;
+    }
+
+    /**
+    * Copy all modes from modeA to modeC if they don't appear in modeB
+    */
+    auto copyModesIf = [](const char* modeA, uint32_t numModesA,
+                          const char* modeB, uint32_t numModesB,
+                          char* modeC, uint32_t &numModesC) {
+      for (uint32_t i = 0; i < numModesA; i++) {
+        auto mode = modeA[i];
+        bool found = false;
+        for(uint32_t j=0; j < numModesB; ++j){
+          if(mode == modeB[j]) {
+            found = true;
+            break;
+          }
         }
-        if (numModesA_ > kMaxNumModes_ || numModesB_ > kMaxNumModes_)
-        {
+        if (!found) { // is non-contracted mode
+          modeC[numModesC++] = mode;
+          if (numModesC > kMaxNumModes_) {
             // too many modes
-            return;
+            return false;
+          }
         }
+      }
+      return true;
+    };
 
-        /**
-         * Copy all modes from modeA to modeC if they don't appear in modeB
-         */
-        auto copyModesIf = [](const char* modeA, uint32_t numModesA,
-                const char* modeB, uint32_t numModesB,
-                char* modeC, uint32_t &numModesC)
-        {
-            for (uint32_t i = 0; i < numModesA; i++)
-            {
-                auto mode = modeA[i];
-                bool found = false;
-                for(uint32_t j=0; j < numModesB; ++j){
-                    if(mode == modeB[j])
-                    {
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found) // is non-contracted mode
-                {
-                    modeC[numModesC++] = mode;
-                    if (numModesC > kMaxNumModes_)
-                    {
-                        // too many modes
-                        return false;
-                    }
-                }
-            }
-            return true;
-        };
-
-        std::array<char, kMaxNumModes_+1> implicitModeC;
-        char* redirectModeC;
-        if (isImplicit) {
-            // we have to copy all non-contracted modes from A over to C
-            if (copyModesIf(modeA, numModesA_, modeB, numModesB_, implicitModeC.data(), numModesC_) == false)
-            {
-                return;
-            }
-            // we have to copy all non-contracted modes from B over to C
-            if (copyModesIf(modeB, numModesB_, modeA, numModesA_, implicitModeC.data(), numModesC_) == false)
-            {
-                return;
-            }
-            std::sort(implicitModeC.begin(), std::next(implicitModeC.begin(), numModesC_)); // modes are sorted w.r.t. lexical order
-            implicitModeC[numModesC_] = '\0';
-            redirectModeC = implicitModeC.data();
-        } else {
-            redirectModeC = modeC;
-            numModesC_ = numModesC;
-        }
-
-        for (uint32_t i = 0; i < numModesA_; i++)
-        {
-            modesA_[i] = modeA[numModesA_ - i - 1];
-            extentA_[i] = A_shape[numModesA_ - i - 1];
-        }
-
-        for (uint32_t i = 0; i < numModesB_; i++)
-        {
-            modesB_[i] = modeB[numModesB_ - i - 1];
-            extentB_[i] = B_shape[numModesB_ - i - 1];
-        }
-
-        for (uint32_t i = 0; i < numModesC_; i++)
-        {
-            const auto mode = redirectModeC[numModesC_ - i - 1];
-            modesC_[i] = mode;
-            bool found = false;
-            for (uint32_t j=0; j < numModesA_; ++j)
-            {
-                if (modesA_[j] == mode)
-                {
-                    extentC_[i] = extentA_[j];
-                    found = true;
-                    break;
-                }
-            }
-            for (uint32_t j=0; !found && j < numModesB_; ++j)
-            {
-                if (modesB_[j] == mode)
-                {
-                    extentC_[i] = extentB_[j];
-                    break;
-                }
-            }
-        }
-
-        isInitialized_ = true;
+    std::array<char, kMaxNumModes_+1> implicitModeC;
+    char* redirectModeC;
+    if (isImplicit) {
+      // we have to copy all non-contracted modes from A over to C
+      if (copyModesIf(modeA, numModesA_, modeB, numModesB_, implicitModeC.data(), numModesC_) == false) {
+        return;
+      }
+      // we have to copy all non-contracted modes from B over to C
+      if (copyModesIf(modeB, numModesB_, modeA, numModesA_, implicitModeC.data(), numModesC_) == false) {
+        return;
+      }
+      std::sort(implicitModeC.begin(), std::next(implicitModeC.begin(), numModesC_));
+      // modes are sorted w.r.t. lexical order
+      implicitModeC[numModesC_] = '\0';
+      redirectModeC = implicitModeC.data();
+    } else {
+      redirectModeC = modeC;
+      numModesC_ = numModesC;
     }
 
-    std::vector<IntType> getOutputShape() const
-    {
-        if (!isInitialized_) return {};
-        std::vector<IntType> extentC(numModesC_);
-        for (int i=0; i < numModesC_; ++i)
-        {
-            extentC[i] = extentC_.at(numModesC_ - i - 1);
+    for (uint32_t i = 0; i < numModesA_; i++) {
+      modesA_[i] = modeA[numModesA_ - i - 1];
+      extentA_[i] = A_shape[numModesA_ - i - 1];
+    }
+    for (uint32_t i = 0; i < numModesB_; i++) {
+      modesB_[i] = modeB[numModesB_ - i - 1];
+      extentB_[i] = B_shape[numModesB_ - i - 1];
+    }
+    for (uint32_t i = 0; i < numModesC_; i++) {
+      const auto mode = redirectModeC[numModesC_ - i - 1];
+      modesC_[i] = mode;
+      bool found = false;
+      for (uint32_t j=0; j < numModesA_; ++j) {
+        if (modesA_[j] == mode) {
+          extentC_[i] = extentA_[j];
+          found = true;
+          break;
         }
-
-        return extentC;
+      }
+      for (uint32_t j=0; !found && j < numModesB_; ++j) {
+        if (modesB_[j] == mode) {
+          extentC_[i] = extentB_[j];
+          break;
+        }
+      }
     }
 
-    bool isInitialized() const { return isInitialized_; }
+    isInitialized_ = true;
+  }
 
-    const int64_t* getExtentsA() const { return extentA_.data(); }
-    const int64_t* getExtentsB() const { return extentB_.data(); }
-    const int64_t* getExtentsC() const { return extentC_.data(); }
+  std::vector<IntType> getOutputShape() const {
+    if (!isInitialized_) return {};
+    std::vector<IntType> extentC(numModesC_);
+    for (int i=0; i < numModesC_; ++i) {
+      extentC[i] = extentC_.at(numModesC_ - i - 1);
+    }
+    return extentC;
+  }
 
-    const int* getModesA() const { return modesA_.data(); }
-    const int* getModesB() const { return modesB_.data(); }
-    const int* getModesC() const { return modesC_.data(); }
+  bool isInitialized() const { return isInitialized_; }
 
-    int GetNumModesC() const { return numModesC_; }
+  const int64_t* getExtentsA() const { return extentA_.data(); }
+  const int64_t* getExtentsB() const { return extentB_.data(); }
+  const int64_t* getExtentsC() const { return extentC_.data(); }
 
-    private:
-    uint32_t numModesA_;
-    uint32_t numModesB_;
-    uint32_t numModesC_;
-    bool isInitialized_;
-    std::array<int, kMaxNumModes_> modesA_;
-    std::array<int, kMaxNumModes_> modesB_;
-    std::array<int, kMaxNumModes_> modesC_;
-    std::array<int64_t, kMaxNumModes_> extentA_;
-    std::array<int64_t, kMaxNumModes_> extentB_;
-    std::array<int64_t, kMaxNumModes_> extentC_;
+  const int* getModesA() const { return modesA_.data(); }
+  const int* getModesB() const { return modesB_.data(); }
+  const int* getModesC() const { return modesC_.data(); }
+
+  int GetNumModesC() const { return numModesC_; }
+
+  private:
+  uint32_t numModesA_;
+  uint32_t numModesB_;
+  uint32_t numModesC_;
+  bool isInitialized_;
+  std::array<int, kMaxNumModes_> modesA_;
+  std::array<int, kMaxNumModes_> modesB_;
+  std::array<int, kMaxNumModes_> modesC_;
+  std::array<int64_t, kMaxNumModes_> extentA_;
+  std::array<int64_t, kMaxNumModes_> extentB_;
+  std::array<int64_t, kMaxNumModes_> extentC_;
 };
 
 /*!
@@ -302,7 +264,6 @@ class CuTensorEinsum {
     constexpr cudaDataType_t cudaType = CuTensorTypeTraits<DType>::cudaType;
     constexpr cutensorComputeType_t cutensorType = CuTensorTypeTraits<DType>::cutensorType;
     constexpr cutensorAlgo_t algo = CUTENSOR_ALGO_DEFAULT;
-
     Einsum<DType, int, kMaxTensorRank> myEinsum(equation, in_shape[0], in_shape[1]);
     if (!myEinsum.isInitialized()) {
         CUTENSOR_CALL(CUTENSOR_STATUS_NOT_SUPPORTED);
@@ -516,111 +477,95 @@ class EinsumOpGPU {
             const OpContext& ctx,
             bool req_write,
             bool is_backward) {
-    if (!is_backward) {
-      // forward
-      if (state.num_args == 2) {
-        fwd_cutensor_ops.push_back(CuTensorEinsum<DType>());
-        max_workspace_cutensor = fwd_cutensor_ops[0].Init(state.subscripts,
-                                                          in_shape, out_shape,
-                                                          ctx, req_write,
-                                                          0, dptr_alignment);
-      } else {
-        // more than 2 operands, optimal path
-        paths_len = state.paths.size();
-        max_workspace_cutensor = 0;
-        mxnet::ShapeVector operands_shape(in_shape);
-        for (int i = 0; i < paths_len; ++i) {
-          bool handle_out = (i == paths_len - 1);
-          mxnet::ShapeVector tmp_in_shape;
-          mxnet::ShapeVector tmp_out_shape;
-          // remove inds from right to left
-          for (const int& p : state.paths[i].contract_inds) {
-            tmp_in_shape.push_back(operands_shape[p]);
-            operands_shape.erase(operands_shape.begin() + p);
-          }
-          if (handle_out) tmp_out_shape.push_back(out_shape[0]);
-          else tmp_out_shape.push_back(state.paths[i].oshape);
-          fwd_cutensor_ops.push_back(CuTensorEinsum<DType>());
+    const std::vector<Step>& paths = state.paths;
 
-          size_t req_workspace = fwd_cutensor_ops[i].Init(state.paths[i].einsum_str,
-                                                          tmp_in_shape,
-                                                          tmp_out_shape,
-                                                          ctx, req_write,
-                                                          0, dptr_alignment);
-          if (req_workspace > max_workspace_cutensor) max_workspace_cutensor = req_workspace;
-          temp_ouputs_size += state.paths[i].oshape.Size();
-          if (!handle_out) {
-            operands_shape.push_back(state.paths[i].oshape);
-          }
+    if (!is_backward) {
+      paths_len = state.paths.size();
+      max_workspace_cutensor = 0;
+      mxnet::ShapeVector operands_shape(in_shape);
+      for (int i = 0; i < paths_len; ++i) {
+        bool handle_out = (i == paths_len - 1);
+        mxnet::ShapeVector tmp_in_shape;
+        mxnet::ShapeVector tmp_out_shape;
+        // remove inds from right to left
+        for (const int& p : state.paths[i].contract_inds) {
+          tmp_in_shape.push_back(operands_shape[p]);
+          operands_shape.erase(operands_shape.begin() + p);
+        }
+        if (handle_out) tmp_out_shape.push_back(out_shape[0]);
+        else tmp_out_shape.push_back(state.paths[i].oshape);
+        fwd_cutensor_ops.push_back(CuTensorEinsum<DType>());
+
+        size_t req_workspace = fwd_cutensor_ops[i].Init(state.paths[i].einsum_str,
+                                                        tmp_in_shape,
+                                                        tmp_out_shape,
+                                                        ctx, req_write,
+                                                        0, dptr_alignment);
+        if (req_workspace > max_workspace_cutensor) max_workspace_cutensor = req_workspace;
+        temp_ouputs_size += state.paths[i].oshape.Size();
+        if (!handle_out) {
+          operands_shape.push_back(state.paths[i].oshape);
         }
       }
     } else {
       // backward
       max_workspace_cutensor = 0;
       size_t pos_cutensor_bwd_op = 0;
-      if (state.num_args == 2) {
-        InitCuTensorGrad(state.subscripts,
-                         in_shape, out_shape,
-                         ctx, pos_cutensor_bwd_op, 0);
-        total_workspace = max_workspace_cutensor/sizeof(DType);
-      } else {
-        // more than 2 operands, optimal path
-        paths_len = state.paths.size();
-        // replay the forward process
-        bwd_op_idx.resize(paths_len + 1);
-        for (int i = 0; i <= paths_len; ++i) {
-          if (i == 0) {
-            bwd_op_idx[i].reserve(state.num_args);
-            for (int j = 0; j < state.num_args; ++j) {
-              bwd_op_idx[i].push_back(j + 1);
-            }
-          } else {
-            bwd_op_idx[i] = bwd_op_idx[i - 1];
-            // remove inds from right to left
-            for (const int& p : state.paths[i - 1].contract_inds) {
-              bwd_op_idx[i].erase(bwd_op_idx[i].begin() + p);
-            }
-            bwd_op_idx[i].push_back(-static_cast<int>(i - 1));
+      paths_len = state.paths.size();
+      // replay the forward process
+      bwd_op_idx.resize(paths_len + 1);
+      for (int i = 0; i <= paths_len; ++i) {
+        if (i == 0) {
+          bwd_op_idx[i].reserve(state.num_args);
+          for (int j = 0; j < state.num_args; ++j) {
+            bwd_op_idx[i].push_back(j + 1);
           }
-        }
-        // calculate amount mem for temporal grads
-        for (int i = 0; i + 1 < paths_len; ++i) {
-          temp_grads_size += state.paths[i].oshape.Size();
-        }
-        temp_grads_size_aligned = RoundToMultiple(temp_grads_size, dptr_alignment);
-        // go through the paths in the reversed order
-        mxnet::ShapeVector temp_in_shape, temp_out_shape;
-        for (int i = paths_len - 1; i >= 0; i--) {
-          temp_in_shape.clear();
-          temp_out_shape.clear();
-          bool handle_out = (i == paths_len - 1);
-          if (handle_out) {
-            // grad_out
-            temp_in_shape.push_back(in_shape[0]);
-          } else {
-            temp_in_shape.push_back(state.paths[i].oshape);
+        } else {
+          bwd_op_idx[i] = bwd_op_idx[i - 1];
+          // remove inds from right to left
+          for (const int& p : state.paths[i - 1].contract_inds) {
+            bwd_op_idx[i].erase(bwd_op_idx[i].begin() + p);
           }
-          for (auto p : state.paths[i].contract_inds) {
-            int idx = bwd_op_idx[i][p];
-            if (idx >= 1) {
-              temp_in_shape.push_back(in_shape[idx]);
-              temp_out_shape.push_back(out_shape[idx - 1]);
-            } else {
-              temp_in_shape.push_back(state.paths[-idx].oshape);
-              temp_out_shape.push_back(state.paths[-idx].oshape);
-            }
-          }
-          CHECK_EQ(temp_in_shape.size(), 3U);
-          CHECK_EQ(temp_out_shape.size(), 2U);
-
-          InitCuTensorGrad(state.paths[i].einsum_str,
-                           temp_in_shape, temp_out_shape,
-                           ctx, pos_cutensor_bwd_op,
-                           temp_grads_size_aligned);
+          bwd_op_idx[i].push_back(-static_cast<int>(i - 1));
         }
-        total_workspace = max_workspace_cutensor/sizeof(DType) +
-                          temp_grads_size;
       }
+      // calculate amount mem for temporal grads
+      for (int i = 0; i + 1 < paths_len; ++i) {
+        temp_grads_size += state.paths[i].oshape.Size();
+      }
+      temp_grads_size_aligned = RoundToMultiple(temp_grads_size, dptr_alignment);
+      // go through the paths in the reversed order
+      mxnet::ShapeVector temp_in_shape, temp_out_shape;
+      for (int i = paths_len - 1; i >= 0; i--) {
+        temp_in_shape.clear();
+        temp_out_shape.clear();
+        bool handle_out = (i == paths_len - 1);
+        if (handle_out) {
+          // grad_out
+          temp_in_shape.push_back(in_shape[0]);
+        } else {
+          temp_in_shape.push_back(state.paths[i].oshape);
+        }
+        for (auto p : state.paths[i].contract_inds) {
+          int idx = bwd_op_idx[i][p];
+          if (idx >= 1) {
+            temp_in_shape.push_back(in_shape[idx]);
+            temp_out_shape.push_back(out_shape[idx - 1]);
+          } else {
+            temp_in_shape.push_back(state.paths[-idx].oshape);
+            temp_out_shape.push_back(state.paths[-idx].oshape);
+          }
+        }
+        CHECK_EQ(temp_in_shape.size(), 3U);
+        CHECK_EQ(temp_out_shape.size(), 2U);
+
+        InitCuTensorGrad(state.paths[i].einsum_str,
+                         temp_in_shape, temp_out_shape,
+                         ctx, pos_cutensor_bwd_op,
+                         temp_grads_size_aligned);
+      }
+      total_workspace = max_workspace_cutensor/sizeof(DType) +
+                        temp_grads_size;
     }
   }
 
@@ -635,37 +580,32 @@ class EinsumOpGPU {
     Tensor<gpu, 1, char> cutensor_workspace =
         ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(max_workspace_cutensor), s);
 
-    if (state.num_args == 2) {
-      fwd_cutensor_ops[0].Compute(ctx, inputs, req_write, outputs, cutensor_workspace.dptr_);
-    } else {
-      // more than 2 operands, compute optimal path
-      std::vector<TBlob> operands(inputs);
-      std::vector<TBlob> tmp_operands;
+    std::vector<TBlob> operands(inputs);
+    std::vector<TBlob> tmp_operands;
 
-      // temporal space shared with backward: stateful
-      std::vector<TBlob> temp_space_vec(paths_len - 1);
-      Tensor<gpu, 1, DType> temp_space = state.tempspace->data().FlatTo1D<gpu, DType>();
-      size_t begin = 0;
-      for (int i = 0; i < paths_len - 1; ++i) {
-        TBlob tblob = TBlob(temp_space.Slice(begin, begin + state.paths[i].oshape.Size()));
-        temp_space_vec[i] = tblob.reshape(state.paths[i].oshape);
-        begin = begin + state.paths[i].oshape.Size();
+    // temporal space shared with backward: stateful
+    std::vector<TBlob> temp_space_vec(paths_len - 1);
+    Tensor<gpu, 1, DType> temp_space = state.tempspace->data().FlatTo1D<gpu, DType>();
+    size_t begin = 0;
+    for (int i = 0; i < paths_len - 1; ++i) {
+      TBlob tblob = TBlob(temp_space.Slice(begin, begin + state.paths[i].oshape.Size()));
+      temp_space_vec[i] = tblob.reshape(state.paths[i].oshape);
+      begin = begin + state.paths[i].oshape.Size();
+    }
+    for (int i = 0; i < paths_len; ++i) {
+      bool handle_out = (i == paths_len - 1);
+      tmp_operands.clear();
+      // remove inds from right to left
+      for (const int& p : state.paths[i].contract_inds) {
+        tmp_operands.push_back(operands[p]);
+        operands.erase(operands.begin() + p);
       }
-      for (int i = 0; i < paths_len; ++i) {
-        bool handle_out = (i == paths_len - 1);
-        tmp_operands.clear();
-        // remove inds from right to left
-        for (const int& p : state.paths[i].contract_inds) {
-          tmp_operands.push_back(operands[p]);
-          operands.erase(operands.begin() + p);
-        }
-        fwd_cutensor_ops[i].Compute(ctx, tmp_operands, req_write,
-                                    handle_out ? outputs :
-                                                 std::vector<TBlob>{temp_space_vec[i]},
-                                    cutensor_workspace.dptr_);
-        if (!handle_out) {
-          operands.push_back(temp_space_vec[i]);
-        }
+      fwd_cutensor_ops[i].Compute(ctx, tmp_operands, req_write,
+                                  handle_out ? outputs :
+                                               std::vector<TBlob>{temp_space_vec[i]},
+                                  cutensor_workspace.dptr_);
+      if (!handle_out) {
+        operands.push_back(temp_space_vec[i]);
       }
     }
   }
@@ -712,75 +652,63 @@ class EinsumOpGPU {
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
     auto req_write = req[0] == kWriteTo;
     size_t pos_cutensor_op = 0;
-    if (state.num_args == 2) {
-      // workspace for cuTensor
-      Tensor<gpu, 1, DType> temp_space =
-        ctx.requested[0].get_space_typed<gpu, 1, DType>(Shape1(total_workspace), s);
-      // inputs: out_grad, operand1, operand2
-      // outputs: grad_operand1, grad_operand2
-      ComputeGradients(state.subscripts,
-                       inputs, outputs,
+
+    // outputs from forward pass, no need to be re-computed, take from state
+    Tensor<gpu, 1, DType> ndarray_space = state.tempspace->data().FlatTo1D<gpu, DType>();
+    std::vector<TBlob> temp_data(paths_len - 1);
+    size_t begin = 0;
+    for (int i = 0; i + 1 < paths_len; ++i) {
+      TBlob tblob = TBlob(ndarray_space.Slice(begin, begin + state.paths[i].oshape.Size()));
+      temp_data[i] = tblob.reshape(state.paths[i].oshape);
+      begin = begin + state.paths[i].oshape.Size();
+    }
+    // workspace (temporal grad + cuTensor)
+    std::vector<TBlob> temp_grad(paths_len - 1);
+    Tensor<gpu, 1, DType> temp_space =
+      ctx.requested[0].get_space_typed<gpu, 1, DType>(Shape1(total_workspace), s);
+    begin = 0;
+    for (int i = 0; i + 1 < paths_len; ++i) {
+      TBlob tblob = TBlob(temp_space.Slice(begin, begin + state.paths[i].oshape.Size()));
+      temp_grad[i] = tblob.reshape(state.paths[i].oshape);
+      begin = begin + state.paths[i].oshape.Size();
+    }
+    // go through the paths in the reversed order
+    std::vector<TBlob> temp_inputs, temp_outputs;
+    //std::vector<OpReqType> temp_req;
+    for (int i = paths_len - 1; i >= 0; i--) {
+      temp_inputs.clear();
+      temp_outputs.clear();
+      //temp_req.clear();
+      bool handle_out = (i == paths_len - 1);
+      if (handle_out) {
+        // grad_out
+        temp_inputs.push_back(inputs[0]);
+      } else {
+        temp_inputs.push_back(temp_grad[i]);
+      }
+      for (auto p : state.paths[i].contract_inds) {
+        int idx = bwd_op_idx[i][p];
+        if (idx >= 1) {
+          temp_inputs.push_back(inputs[idx]);
+          temp_outputs.push_back(outputs[idx - 1]);
+          //temp_req.push_back(req[idx - 1]);
+        } else {
+          temp_inputs.push_back(temp_data[-idx]);
+          temp_outputs.push_back(temp_grad[-idx]);
+          //temp_req.push_back(OpReqType::kWriteTo);
+        }
+      }
+      CHECK_EQ(temp_inputs.size(), 3U);
+      CHECK_EQ(temp_outputs.size(), 2U);
+      //CHECK_EQ(temp_req.size(), 2U);
+
+      ComputeGradients(state.paths[i].einsum_str,
+                       temp_inputs, temp_outputs,
                        ctx, pos_cutensor_op,
                        temp_space);
-    } else {
-      // more than 2 operands, compute optimal path
-      // outputs from forward pass, no need to be re-computed, take from state
-      Tensor<gpu, 1, DType> ndarray_space = state.tempspace->data().FlatTo1D<gpu, DType>();
-      std::vector<TBlob> temp_data(paths_len - 1);
-      size_t begin = 0;
-      for (int i = 0; i + 1 < paths_len; ++i) {
-        TBlob tblob = TBlob(ndarray_space.Slice(begin, begin + state.paths[i].oshape.Size()));
-        temp_data[i] = tblob.reshape(state.paths[i].oshape);
-        begin = begin + state.paths[i].oshape.Size();
-      }
-      // workspace (temporal grad + cuTensor)
-      std::vector<TBlob> temp_grad(paths_len - 1);
-      Tensor<gpu, 1, DType> temp_space =
-        ctx.requested[0].get_space_typed<gpu, 1, DType>(Shape1(total_workspace), s);
-      begin = 0;
-      for (int i = 0; i + 1 < paths_len; ++i) {
-        TBlob tblob = TBlob(temp_space.Slice(begin, begin + state.paths[i].oshape.Size()));
-        temp_grad[i] = tblob.reshape(state.paths[i].oshape);
-        begin = begin + state.paths[i].oshape.Size();
-      }
-      // go through the paths in the reversed order
-      std::vector<TBlob> temp_inputs, temp_outputs;
-      //std::vector<OpReqType> temp_req;
-      for (int i = paths_len - 1; i >= 0; i--) {
-        temp_inputs.clear();
-        temp_outputs.clear();
-        //temp_req.clear();
-        bool handle_out = (i == paths_len - 1);
-        if (handle_out) {
-          // grad_out
-          temp_inputs.push_back(inputs[0]);
-        } else {
-          temp_inputs.push_back(temp_grad[i]);
-        }
-        for (auto p : state.paths[i].contract_inds) {
-          int idx = bwd_op_idx[i][p];
-          if (idx >= 1) {
-            temp_inputs.push_back(inputs[idx]);
-            temp_outputs.push_back(outputs[idx - 1]);
-            //temp_req.push_back(req[idx - 1]);
-          } else {
-            temp_inputs.push_back(temp_data[-idx]);
-            temp_outputs.push_back(temp_grad[-idx]);
-            //temp_req.push_back(OpReqType::kWriteTo);
-          }
-        }
-        CHECK_EQ(temp_inputs.size(), 3U);
-        CHECK_EQ(temp_outputs.size(), 2U);
-        //CHECK_EQ(temp_req.size(), 2U);
-
-        ComputeGradients(state.paths[i].einsum_str,
-                         temp_inputs, temp_outputs,
-                         ctx, pos_cutensor_op,
-                         temp_space);
-      }
     }
   }
-
+  std::vector<std::string> sub_equations;
   int paths_len = 0;
   // cutensor ops for the forward and backward passs:
   std::vector<CuTensorEinsum<DType>> fwd_cutensor_ops;
@@ -856,12 +784,12 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
   if (state.num_args <= 1) {
     NumpyEinsumForward<gpu>(state_ptr, ctx, inputs, req, outputs);
   } else {
-    if (state.num_args > 2) {
-      std::vector<Step>& paths = state.paths;
-      std::vector<std::vector<int> > pos;
-      std::string string_repr;
-      paths = einsum_path(state.subscripts, inputs, true, ctx.run_ctx, &pos, &string_repr);
-    }
+    //if (state.num_args > 2) {
+    std::vector<Step>& paths = state.paths;
+    std::vector<std::vector<int> > pos;
+    std::string string_repr;
+    paths = einsum_path(state.subscripts, inputs, true, ctx.run_ctx, &pos, &string_repr);
+    //}
     mxnet::ShapeVector in_shape(inputs.size());
     mxnet::ShapeVector out_shape(1, outputs[0].shape_);
     for (size_t i = 0; i < in_shape.size(); i++)
