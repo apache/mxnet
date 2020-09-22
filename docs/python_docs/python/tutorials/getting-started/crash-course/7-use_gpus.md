@@ -15,13 +15,13 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# Step 6: Use GPUs to increase efficiency
+# Step 7: Load and Run a NN using GPU
 
 In this step, you learn how to use graphics processing units (GPUs) with MXNet. If you use GPUs to train and deploy neural networks, you get significantly more computational power and speed when compared to central processing units (CPUs).
 
 ## Prerequisites
 
-Before you start the other steps here, make sure you have at least one Nvidia GPU in your machine and CUDA properly installed. GPUs from AMD and Intel are not supported. Install the GPU-enabled version of MXNet. You can find information about how to install the GPU version of MXNET for your setup, [here](https://mxnet.apache.org/versions/1.7/get_started/?).
+Before you start the other steps here, make sure you have at least one Nvidia GPU in your machine and CUDA properly installed. GPUs from AMD and Intel are not supported. Install the GPU-enabled version of MXNet. You can find information about how to install the GPU version of MXNet for your setup, [here](https://mxnet.apache.org/versions/1.7/get_started/?).
 
 Use the following commands to check the number GPUs that are available.
 
@@ -56,7 +56,7 @@ x.copyto(gpu_1)
 MXNet requries that users explicitly move data between devices. But several operators such as `print`, and `asnumpy`, will implicitly move data to main memory.
 
 ## Choosing GPU Ids
-If you have multiple GPUs on your machine, MXNET can access each of them through 0-indexing. As you saw before, the first GPU was accessed using `npx.gpu(1)`, and the second using `npx.gpu(1)`. This extends to however many GPUs your machine has. So if your machine has 8 GPUs, the last GPU is accessed using `npx.gpu(7)`. This allows you to select what GPUs to use for operations and training. You might find it particularly useful when you want to training multiple networks on separate GPUs.  
+If you have multiple GPUs on your machine, MXNet can access each of them through 0-indexing. As you saw before, the first GPU was accessed using `npx.gpu(1)`, and the second using `npx.gpu(1)`. This extends to however many GPUs your machine has. So if your machine has 8 GPUs, the last GPU is accessed using `npx.gpu(7)`. This allows you to select what GPUs to use for operations and training. You might find it particularly useful when you want to training multiple networks on separate GPUs.  
 
 ## Run an operation on a GPU
 
@@ -165,6 +165,22 @@ batch_size = 4
 train_loader = gluon.data.DataLoader(train_dataset.transform_first(training_transformer),batch_size=batch_size, shuffle=True, try_nopython=True)
 validation_loader = gluon.data.DataLoader(val_dataset.transform_first(validation_transformer), batch_size=batch_size, try_nopython=True)
 test_loader = gluon.data.DataLoader(test_dataset.transform_first(validation_transformer), batch_size=batch_size, try_nopython=True)
+```
+
+### Define a helper function 
+This is the same test function defined previously in the **Step 6**.
+```{.python .input}
+# Function to return the accuracy for the validation and test set
+def test(val_data):
+    acc = gluon.metric.Accuracy()
+    for batch in val_data:
+        data = batch[0]
+        labels = batch[1]
+        outputs = model(data)
+        acc.update([labels], [outputs])
+        
+    _, accuracy = acc.get()
+    return accuracy
 ```
 
 The training loop is quite similar to that shown earlier. The major differences are highlighted in the following code.
