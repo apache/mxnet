@@ -443,9 +443,9 @@ struct NumpyRollParam : public dmlc::Parameter<NumpyRollParam> {
 template<int req>
 struct RollAxisNone_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
-                                  const int size, const int shift) {
-    int new_index = i - shift < 0 ? i - shift + size : i - shift;
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
+                                  const index_t size, const int shift) {
+    index_t new_index = i - shift < 0 ? i - shift + size : i - shift;
     KERNEL_ASSIGN(out_data[i], req, in_data[new_index]);
   }
 };
@@ -453,7 +453,7 @@ struct RollAxisNone_forward {
 template<int req>
 struct RollAxis_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
                                   const size_t* new_index) {
     KERNEL_ASSIGN(out_data[i], req, in_data[new_index[i]]);
   }
