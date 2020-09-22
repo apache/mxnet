@@ -337,24 +337,26 @@ def test_bincount():
     assert A.grad.shape == (INT_OVERFLOW, )
     assert A.grad[0] == 0
 
-# broken
-# TODO add backward test after forward is fixed
 @use_np
-@pytest.mark.skip(reason='Does not support large tensor; to be fixed')
 def test_bitwise_family():
     def batch_check(x1, x2, funcs):
+        x1.attach_grad()
         for f in funcs:
-            y = f(x1, x2)
+            with mx.autograd.record():
+                y = f(x1, x2)
+                y.backward()
             one = np.ones((1), dtype='int32')
             assert y.shape == (INT_OVERFLOW, 2)
-            assert y[0][0] == f(one, one)
+            assert y[-1, -1] == f(one, one)
+            assert x1.grad.shape == x1.shape
+            assert x1.grad[-1, -1] == 0
     # test on broadcast input
-    A = np.ones((INT_OVERFLOW, 1), dtype='int32')
-    B = np.ones((INT_OVERFLOW, 2), dtype='int32')
-    batch_check(A, B, [np.bitwise_and, np.bitwise_or, np.bitwise_xor])
-    C = np.bitwise_not(A)
-    assert C.shape == (INT_OVERFLOW, 1)
-    assert C[0] == np.bitwise_not(np.ones((1), dtype='int32')) 
+    inp1 = np.ones((INT_OVERFLOW, 1), dtype='int32')
+    inp2 = np.ones((INT_OVERFLOW, 2), dtype='int32')
+    batch_check(inp1, inp2, [np.bitwise_and, np.bitwise_or, np.bitwise_xor])
+    out = np.bitwise_not(inp1)
+    assert out.shape == (INT_OVERFLOW, 1)
+    assert out[0] == np.bitwise_not(np.ones((1), dtype='int32')) 
 
 @use_np
 def test_blackman():
@@ -570,70 +572,70 @@ def test_slice_assign():
 
 @use_np
 def test_flatnonzero():
-    A = np.zeros((2, INT_OVERFLOW))
-    A[-1, -1] = 1
-    A.attach_grad()
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.flatnonzero(A)
-        B.backward()
-    assert B.shape == (1, )
-    assert B[0] == int(2 * INT_OVERFLOW - 1)
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 0
+        out = np.flatnonzero(inp)
+        out.backward()
+    assert out.shape == (1, )
+    assert out[0] == int(2 * INT_OVERFLOW - 1)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
 
 @use_np
 def test_ravel():
-    A = np.zeros((2, INT_OVERFLOW))
-    A[0, -1], A[-1, -1] = 1, 2
-    A.attach_grad()
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[0, -1], inp[-1, -1] = 1, 2
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.ravel(A)
-        B.backward()
-    assert B.shape == (DOUBLE_INT_OVERFLOW, )
-    assert B[INT_OVERFLOW-1] == 1 and B[-1] == 2
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 1
+        out = np.ravel(inp)
+        out.backward()
+    assert out.shape == (DOUBLE_INT_OVERFLOW, )
+    assert out[INT_OVERFLOW-1] == 1 and out[-1] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
 
 @use_np
 def test_mean():
-    A = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
-    A.attach_grad()
+    inp = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.mean(A, axis=1)
-        B.backward()
-    assert B.shape == (2, )
-    assert_almost_equal(B[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+        out = np.mean(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    assert_almost_equal(out[0], np.array((HALF_INT_OVERFLOW-0.5)), \
                 rtol=1e-3, atol=1e-5)
-    assert A.grad.shape == A.shape
-    assert_almost_equal(A.grad[-1, -1], np.array((1.0/INT_OVERFLOW)), \
+    assert inp.grad.shape == inp.shape
+    assert_almost_equal(inp.grad[-1, -1], np.array((1.0/INT_OVERFLOW)), \
                 rtol=1e-3, atol=1e-5)
 
 @use_np
 def test_median():
-    A = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
-    A.attach_grad()
+    inp = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.median(A, axis=1)
-        B.backward()
-    assert B.shape == (2, )
-    assert_almost_equal(B[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+        out = np.median(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    assert_almost_equal(out[0], np.array((HALF_INT_OVERFLOW-0.5)), \
                 rtol=1e-3, atol=1e-5)
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
 
 @use_np
 def test_percentile():
     # np.percentile and np.quantile are the same thing
-    A = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
-    A.attach_grad()
+    inp = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.percentile(A, 50, axis=1)
-        B.backward()
-    assert B.shape == (2, )
-    assert_almost_equal(B[0], np.array((HALF_INT_OVERFLOW-0.5)), \
+        out = np.percentile(inp, 50, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    assert_almost_equal(out[0], np.array((HALF_INT_OVERFLOW-0.5)), \
                 rtol=1e-3, atol=1e-5)
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
 
 
 '''
