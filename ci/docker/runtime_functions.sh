@@ -1181,6 +1181,27 @@ build_c_docs() {
 build_docs() {
     pushd docs/_build
     tar -xzf jekyll-artifacts.tgz
+    
+    # check if .htaccess file exists
+    if [ ! -f ".htaccess" ]; then
+        echo ".htaccess file does not exist. Exiting 1"
+        exit 1
+    fi
+    # get the version
+    version=$(grep "RewriteRule" .htaccess | grep -E "versions\/[0-9]" | sed -nre 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
+    # count how many versions are found
+    lines=$(echo "$version" | wc -l)
+    # check if multiple versions are found
+    if [ "$lines" != "1" ]; then
+        echo "multiple versions detected: $lines. Exiting 1"
+        exit 1
+    fi
+    # check if no version is found
+    if [ "$version" == "" ]; then
+        echo "no version found. Exiting 1"
+        exit 1
+    fi
+    
     api_folder='html/api'
     # Python has it's own landing page/site so we don't put it in /docs/api
     mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
