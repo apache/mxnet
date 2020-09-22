@@ -196,6 +196,7 @@ struct Resource {
    *
    * \param dropout_desc  reference to previously created cuDNN dropout descriptor.
    * \param stream  the stream of returning tensor.
+   * \param dropout the ratio of inputs to keep.
    * \param name    the name of the operator requesting the resource.
    * \return the mshadow tensor requested.
    */
