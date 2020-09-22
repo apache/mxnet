@@ -111,7 +111,9 @@ build_dynamic_libmxnet() {
     gather_licenses
 
     cd /work/build
-    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/devtoolset-7/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     if [[ ${mxnet_variant} = "cpu" ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
@@ -257,6 +259,8 @@ build_centos7_cpu() {
     set -ex
     cd /work/build
     source /opt/rh/devtoolset-7/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DENABLE_TESTCOVERAGE=ON \
@@ -272,6 +276,8 @@ build_centos7_mkldnn() {
     set -ex
     cd /work/build
     source /opt/rh/devtoolset-7/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     cmake \
         -DUSE_MKL_IF_AVAILABLE=OFF \
         -DUSE_MKLDNN=ON \
@@ -284,6 +290,8 @@ build_centos7_gpu() {
     set -ex
     cd /work/build
     source /opt/rh/devtoolset-7/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     cmake \
         -DCMAKE_BUILD_TYPE="RelWithDebInfo" \
         -DUSE_MKL_IF_AVAILABLE=OFF \
@@ -1229,8 +1237,10 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     source tools/staticbuild/build.sh ${mxnet_variant}
     popd
@@ -1254,6 +1264,8 @@ cd_package_pypi() {
     pushd .
     source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     local mxnet_variant=${1:?"This function requires a python command as the first argument"}
     ./cd/python/pypi/pypi_package.sh ${mxnet_variant}
     popd
@@ -1294,18 +1306,22 @@ build_static_python_cpu() {
     set -ex
     pushd .
     export mxnet_variant=cpu
-    source /opt/rh/devtoolset-8/enable
+    source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh
     popd
 }
 
-build_static_python_cu102() {
+build_static_python_cu92() {
     set -ex
     pushd .
-    export mxnet_variant=cu102
-    source /opt/rh/devtoolset-8/enable
+    export mxnet_variant=cu92
+    source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
+    # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
+    export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     ./ci/publish/python/build.sh
     popd
 }
