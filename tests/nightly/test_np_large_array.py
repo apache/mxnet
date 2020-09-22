@@ -625,7 +625,7 @@ def test_median():
 
 @use_np
 def test_percentile():
-    # np.percentile and np.quantile are the same thing
+    # np.percentile and np.quantile share the same implementation
     inp = np.arange(DOUBLE_INT_OVERFLOW).reshape((2, INT_OVERFLOW))
     inp.attach_grad()
     with mx.autograd.record():
@@ -637,6 +637,13 @@ def test_percentile():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1, -1] == 0
 
+@use_np
+def test_shares_memory():
+    # np.shares_memory and np.may_share_memory share the same implementation
+    inp = np.ones((2, INT_OVERFLOW))
+    out = np.shares_memory(inp[0,:100], inp[0,100:])
+    out2 = np.shares_memory(inp[1,:101], inp[1,100:])
+    assert out == False and out2 == True
 
 '''
                                      _               _
