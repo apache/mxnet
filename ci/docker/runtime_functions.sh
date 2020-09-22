@@ -1201,6 +1201,15 @@ build_docs() {
         echo "no version found. Exiting 1"
         exit 1
     fi
+    # print the one and only default mxnet version
+    echo "detected version is $version"         
+    # check if the artifacts for this version exist
+    if [ -d "versions/$version/api" ]; then
+        echo "version/$version/api directory exists"
+    else
+        echo "version/$version/api directory does not exist! Exiting 1"
+        exit 1
+    fi  
     
     api_folder='html/api'
     # Python has it's own landing page/site so we don't put it in /docs/api
