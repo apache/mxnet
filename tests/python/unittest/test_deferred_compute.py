@@ -561,3 +561,17 @@ def test_dc_hybridblock_symbolblock_error():
     net.hybridize()
     with pytest.raises(RuntimeError):
         out_hybrid = net(data)  # Raises RuntimeError
+
+
+def test_indexing_shape_change():
+    class ConcatBlock(mx.gluon.nn.HybridBlock):
+        def forward(self, inputs):
+            return mx.np.concatenate([
+                inputs,
+                mx.np.pad(inputs[:,1:], ((0,0), (0,1))),
+            ])
+
+    net = ConcatBlock()
+    net.hybridize()
+    net(mx.np.random.uniform(size=(8, 16)))
+    net(mx.np.random.uniform(size=(8, 8)))
