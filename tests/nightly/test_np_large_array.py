@@ -665,6 +665,37 @@ def test_subtract():
     assert B.grad.shape == (INT_OVERFLOW, 2)
     assert B.grad[0][0] == -1
 
+@use_np
+def test_std():
+    N = 2*20
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = N
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.std(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    ref = ((float(N)/INT_OVERFLOW)**2 * (INT_OVERFLOW-1))**0.5
+    assert_almost_equal(out[1], ref, rtol=1e-5, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+@use_np
+def test_var():
+    N = 2*20
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = N
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.var(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    ref = (float(N)/INT_OVERFLOW)**2 * (INT_OVERFLOW-1)
+    assert_almost_equal(out[1], ref, rtol=1e-5, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _

@@ -77,7 +77,7 @@ inline bool MomentsType(const nnvm::NodeAttrs& attrs,
 
 struct VarBroadcastKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   DType *out,
                                   const DType *data,
                                   const DType *mean,
