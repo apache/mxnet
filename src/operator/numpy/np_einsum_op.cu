@@ -256,14 +256,17 @@ class CuTensorEinsum {
   size_t Init(std::string equation,
               const mxnet::ShapeVector& in_shape,
               const mxnet::ShapeVector& out_shape,
-              const OpContext& ctx,
               bool req_write,
+              const OpContext& ctx,
               size_t prev_workspace_size,
               size_t alignment) {
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
     CHECK_EQ(in_shape.size(), 2);
     CHECK_EQ(out_shape.size(), 1);
 
+    if (!req_write) {
+      beta = 1.0;  // kAddTo
+    }
     constexpr cudaDataType_t cudaType = CuTensorTypeTraits<DType>::cudaType;
     constexpr cutensorComputeType_t cutensorType = CuTensorTypeTraits<DType>::cutensorType;
     constexpr cutensorAlgo_t algo = CUTENSOR_ALGO_DEFAULT;
@@ -345,7 +348,6 @@ class CuTensorEinsum {
 
   void Compute(const OpContext &ctx,
                const std::vector<TBlob> &inputs,
-               bool req_write,
                const std::vector<TBlob> &outputs,
                char* workspace) {
     Stream<gpu>* s = ctx.get_stream<gpu>();
@@ -401,10 +403,14 @@ class EinsumOpGPU {
   void InitCuTensorGrad(std::string equation,
                         const mxnet::ShapeVector& in_shape,
                         const mxnet::ShapeVector& out_shape,
+                        const std::vector<OpReqType> &req,
                         const OpContext &ctx,
                         size_t pos_cutensor_op,
                         size_t temp_grad_size_aligned) {
-    bool req_write = true;
+    CHECK_EQ(in_shape.size(), 3U);
+    CHECK_EQ(out_shape.size(), 2U);
+    CHECK_EQ(req.size(), 2U);
+
     int comma_pos = equation.find(",");
     int arrow_pos = equation.find("->", comma_pos + 1);
     int len_op2 = arrow_pos - comma_pos - 1;
@@ -444,7 +450,7 @@ class EinsumOpGPU {
       bwd_cutensor_ops[pos_cutensor_op].Init(grad_operand1_equation,
                                              grad_op1_input_shapes,
                                              grad_op1_output_shapes,
-                                             ctx, req_write,
+                                             req[0]==kWriteTo, ctx,
                                              temp_grad_size_aligned,
                                              dptr_alignment);
     if (req_workspace > max_workspace_cutensor) max_workspace_cutensor = req_workspace;
@@ -465,7 +471,7 @@ class EinsumOpGPU {
       bwd_cutensor_ops[pos_cutensor_op+1].Init(grad_operand2_equation,
                                                grad_op2_input_shapes,
                                                grad_op2_output_shapes,
-                                               ctx, req_write,
+                                               req[1]==kWriteTo, ctx,
                                                temp_grad_size_aligned,
                                                dptr_alignment);
     if (req_workspace > max_workspace_cutensor) max_workspace_cutensor = req_workspace;
@@ -474,10 +480,11 @@ class EinsumOpGPU {
   void Init(const EinsumOp& state,
             const mxnet::ShapeVector& in_shape,
             const mxnet::ShapeVector& out_shape,
+            const std::vector<OpReqType> &req,
             const OpContext& ctx,
-            bool req_write,
             bool is_backward) {
     if (!is_backward) {
+      bool req_write = true;
       paths_len = state.paths.size();
       max_workspace_cutensor = 0;
       mxnet::ShapeVector operands_shape(in_shape);
@@ -500,7 +507,7 @@ class EinsumOpGPU {
         size_t req_workspace = fwd_cutensor_ops[i].Init(state.paths[i].einsum_str,
                                                         tmp_in_shape,
                                                         tmp_out_shape,
-                                                        ctx, req_write,
+                                                        req_write, ctx,
                                                         0, dptr_alignment);
         if (req_workspace > max_workspace_cutensor) max_workspace_cutensor = req_workspace;
         temp_ouputs_size += state.paths[i].oshape.Size();
@@ -537,9 +544,11 @@ class EinsumOpGPU {
       temp_grads_size_aligned = RoundToMultiple(temp_grads_size, dptr_alignment);
       // go through the paths in the reversed order
       mxnet::ShapeVector temp_in_shape, temp_out_shape;
+      std::vector<OpReqType> temp_req;
       for (int i = paths_len - 1; i >= 0; i--) {
         temp_in_shape.clear();
         temp_out_shape.clear();
+        temp_req.clear();
         bool handle_out = (i == paths_len - 1);
         if (handle_out) {
           // grad_out
@@ -552,9 +561,11 @@ class EinsumOpGPU {
           if (idx >= 1) {
             temp_in_shape.push_back(in_shape[idx]);
             temp_out_shape.push_back(out_shape[idx - 1]);
+            temp_req.push_back(req[idx - 1]);
           } else {
             temp_in_shape.push_back(state.paths[-idx].oshape);
             temp_out_shape.push_back(state.paths[-idx].oshape);
+            temp_req.push_back(OpReqType::kWriteTo);
           }
         }
         CHECK_EQ(temp_in_shape.size(), 3U);
@@ -562,6 +573,7 @@ class EinsumOpGPU {
 
         InitCuTensorGrad(state.paths[i].einsum_str,
                          temp_in_shape, temp_out_shape,
+                         temp_req,
                          ctx, pos_cutensor_bwd_op,
                          temp_grads_size_aligned);
         pos_cutensor_bwd_op = pos_cutensor_bwd_op + 2;
@@ -574,10 +586,8 @@ class EinsumOpGPU {
   void Forward(const EinsumOp& state,
                const OpContext &ctx,
                const std::vector<TBlob> &inputs,
-               const std::vector<OpReqType>& req,
                const std::vector<TBlob>& outputs) {
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
-    bool req_write = false;
     // cuTensor workspace
     Tensor<gpu, 1, char> cutensor_workspace =
         ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(max_workspace_cutensor), s);
@@ -602,7 +612,7 @@ class EinsumOpGPU {
         tmp_operands.push_back(operands[p]);
         operands.erase(operands.begin() + p);
       }
-      fwd_cutensor_ops[i].Compute(ctx, tmp_operands, req_write,
+      fwd_cutensor_ops[i].Compute(ctx, tmp_operands,
                                   handle_out ? outputs :
                                                std::vector<TBlob>{temp_space_vec[i]},
                                   cutensor_workspace.dptr_);
@@ -619,7 +629,6 @@ class EinsumOpGPU {
                         size_t pos_cutensor_op,
                         Tensor<gpu, 1, DType> *workspace) {
     char* workspace_ptr = reinterpret_cast<char*>(workspace->dptr_);
-    bool req_write = true;
     // gradient for first operand
     std::vector<TBlob> grad_operand1_inputs;
     std::vector<TBlob> grad_operand1_outputs;
@@ -628,7 +637,6 @@ class EinsumOpGPU {
     grad_operand1_outputs.push_back(outputs[0]);
     bwd_cutensor_ops[pos_cutensor_op].Compute(ctx,
                                               grad_operand1_inputs,
-                                              req_write,
                                               grad_operand1_outputs,
                                               workspace_ptr);
     // gradient for second operand
@@ -639,7 +647,6 @@ class EinsumOpGPU {
     grad_operand2_outputs.push_back(outputs[1]);
     bwd_cutensor_ops[pos_cutensor_op+1].Compute(ctx,
                                                 grad_operand2_inputs,
-                                                req_write,
                                                 grad_operand2_outputs,
                                                 workspace_ptr);
   }
@@ -647,10 +654,8 @@ class EinsumOpGPU {
   void Backward(const EinsumOp& state,
                 const OpContext &ctx,
                 const std::vector<TBlob> &inputs,
-                const std::vector<OpReqType>& req,
                 const std::vector<TBlob>& outputs) {
     mshadow::Stream<gpu> *s = ctx.get_stream<gpu>();
-    auto req_write = req[0] == kWriteTo;
     size_t pos_cutensor_op = 0;
 
     // outputs from forward pass, no need to be re-computed, take from state
@@ -674,11 +679,9 @@ class EinsumOpGPU {
     }
     // go through the paths in the reversed order
     std::vector<TBlob> temp_inputs, temp_outputs;
-    // std::vector<OpReqType> temp_req;
     for (int i = paths_len - 1; i >= 0; i--) {
       temp_inputs.clear();
       temp_outputs.clear();
-      // temp_req.clear();
       bool handle_out = (i == paths_len - 1);
       if (handle_out) {
         // grad_out
@@ -691,16 +694,13 @@ class EinsumOpGPU {
         if (idx >= 1) {
           temp_inputs.push_back(inputs[idx]);
           temp_outputs.push_back(outputs[idx - 1]);
-          // temp_req.push_back(req[idx - 1]);
         } else {
           temp_inputs.push_back(temp_data[-idx]);
           temp_outputs.push_back(temp_grad[-idx]);
-          // temp_req.push_back(OpReqType::kWriteTo);
         }
       }
       CHECK_EQ(temp_inputs.size(), 3U);
       CHECK_EQ(temp_outputs.size(), 2U);
-      // CHECK_EQ(temp_req.size(), 2U);
 
       ComputeGradients(state.paths[i].einsum_str,
                        temp_inputs, temp_outputs,
@@ -728,8 +728,8 @@ template<typename DType>
 static EinsumOpGPU<DType>& GetEinsumOpGPU(const EinsumOp& state,
                                           const mxnet::ShapeVector& in_shape,
                                           const mxnet::ShapeVector& out_shape,
+                                          const std::vector<OpReqType> &req,
                                           const OpContext& ctx,
-                                          bool req_write,
                                           bool is_backward) {
 #if DMLC_CXX11_THREAD_LOCAL
   static thread_local std::unordered_map<EinsumSignature,
@@ -748,12 +748,14 @@ static EinsumOpGPU<DType>& GetEinsumOpGPU(const EinsumOp& state,
     ndim += s.ndim();
   key.Reserve(ndim +  // for in and out shapes
               1 +  // for dev_id
-              1 +  // for req_write
+              req.size() +
               1);  // for is_backward
   key.AddSign(in_shape);
   key.AddSign(out_shape);
   key.AddSign(ctx.run_ctx.ctx.dev_id);
-  key.AddSign(req_write ? 1 : 0);
+  for (int i = 0; i < req.size(); ++i) {
+    key.AddSign(req[i]);
+  }
   key.AddSign(is_backward ? 1 : 0);
 
   auto it = ops.find(key);
@@ -765,7 +767,7 @@ static EinsumOpGPU<DType>& GetEinsumOpGPU(const EinsumOp& state,
     it = ins_ret.first;
     it->second->Init(state,
                      in_shape, out_shape,
-                     ctx, req_write, is_backward);
+                     req, ctx, is_backward);
   }
   return *it->second;
 }
@@ -780,7 +782,6 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
   // cutensor only available for compute capability larger or equal to 6.0
   STATIC_ASSERT_CUDNN_VERSION_GE(6000);
   EinsumOp& state = state_ptr.get_state<EinsumOp>();
-  auto req_write = false;
   if (state.num_args <= 1) {
     NumpyEinsumForward<gpu>(state_ptr, ctx, inputs, req, outputs);
   } else {
@@ -796,12 +797,12 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
           (state, in_shape, out_shape,
-           ctx, req_write, false);
+           req, ctx, false);
       state.tempspace.reset<NDArray>(new NDArray(TShape(Shape1(op.temp_ouputs_size)),
                                                ctx.run_ctx.ctx,
                                                false,
                                                outputs[0].type_flag_));
-      op.Forward(state, ctx, inputs, req, outputs);
+      op.Forward(state, ctx, inputs, outputs);
     });
   }
 #else
@@ -818,7 +819,6 @@ inline void NumpyEinsumBackwardGpu(const OpStatePtr& state_ptr,
   // cutensor only available for compute capability larger or equal to 6.0
   STATIC_ASSERT_CUDNN_VERSION_GE(6000);
   const EinsumOp& state = state_ptr.get_state<EinsumOp>();
-  auto req_write = req[0] == kWriteTo;
   if (state.num_args <= 1) {
     NumpyEinsumBackward<gpu>(state_ptr, ctx, inputs, req, outputs);
   } else {
@@ -831,8 +831,8 @@ inline void NumpyEinsumBackwardGpu(const OpStatePtr& state_ptr,
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
           (state, in_shape, out_shape,
-           ctx, req_write, true);
-      op.Backward(state, ctx, inputs, req, outputs);
+           req, ctx, true);
+      op.Backward(state, ctx, inputs, outputs);
     });
   }
 #else
