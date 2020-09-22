@@ -190,7 +190,7 @@ class ResourceManagerImpl : public ResourceManager {
 #if MXNET_USE_CUDNN == 1
     gpu_cudnn_dropout_state_.ForEach([seed](size_t i,
                                             ResourceCUDNNDropout *p) {
-        ResourceManagerImpl::SeedCUDNNDropout(p, seed);
+        ResourceManagerImpl::SeedCUDNNDropout(p, seed, "cudnn_dropout_state");
     });
 #endif  // MXNET_USE_CUDNN
 #endif  // MXNET_USE_CUDA
@@ -211,7 +211,7 @@ class ResourceManagerImpl : public ResourceManager {
       auto dropout_state = gpu_cudnn_dropout_state_.Get(ctx.dev_id, [ctx, seed, this]() {
         return new ResourceCUDNNDropout(ctx, gpu_cudnn_dropout_state_copy_, seed);
         });
-      ResourceManagerImpl::SeedCUDNNDropout(dropout_state.get(), seed);
+      ResourceManagerImpl::SeedCUDNNDropout(dropout_state.get(), seed, "cudnn_dropout_state");
 #endif  // MXNET_USE_CUDNN
     }
 
@@ -315,11 +315,11 @@ class ResourceManagerImpl : public ResourceManager {
   struct ResourceCUDNNDropout : public ResourceTempSpace<ResourceRequest::kCuDNNDropoutDesc> {
     explicit ResourceCUDNNDropout(Context ctx, size_t ncopy, uint32_t global_seed) :
       ResourceTempSpace<ResourceRequest::kCuDNNDropoutDesc>(ctx, ncopy) {
-        ResourceManagerImpl::SeedCUDNNDropout(this, global_seed);
+        ResourceManagerImpl::SeedCUDNNDropout(this, global_seed, "cudnn_dropout_state");
     }
   };
 
-  static void SeedCUDNNDropout(ResourceCUDNNDropout *p, uint32_t seed) {
+  static void SeedCUDNNDropout(ResourceCUDNNDropout *p, uint32_t seed, const std::string &name) {
     for (size_t i = 0; i < p->space.size(); ++i) {
       uint32_t current_seed = p->ctx.dev_id + i * kMaxNumGPUs + seed * kRandMagic;
       Resource* r = &(p->resource[i]);
@@ -336,7 +336,7 @@ class ResourceManagerImpl : public ResourceManager {
           // reserve GPU space
           Storage::Get()->DirectFree(
             Storage::Get()->Alloc(dropout_state_size, state_space->ctx));
-          state_space->GetSpace(dropout_state_size);
+          state_space->GetSpace(dropout_state_size, name);
         }
         cudnnDropoutDescriptor_t temp_descriptor;
         CUDNN_CALL(cudnnCreateDropoutDescriptor(&temp_descriptor));
@@ -497,7 +497,7 @@ void Resource::get_cudnn_dropout_desc(
     CUDNN_CALL(cudnnSetDropoutDescriptor(*dropout_desc, stream->dnn_handle_,
                                          dropout,
                                          nullptr,
-                                         0, seed));
+                                         0, 0));
   } else {
     CHECK(state_space->handle.size > 0)
       << "CUDNN dropout descriptor was not initialized yet!";
