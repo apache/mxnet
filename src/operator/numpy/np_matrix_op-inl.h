@@ -462,7 +462,7 @@ struct RollAxis_forward {
 inline void RollDfs(const std::vector<std::vector<size_t>>& new_axes,
                     const std::vector<size_t>& value,
                     std::vector<size_t>* new_index,
-                    int index, int ndim, int mid) {
+                    index_t index, int ndim, index_t mid) {
   for (int a : new_axes[index]) {
     if (index == ndim - 1) {
       std::vector<size_t>& out = (*new_index);
@@ -487,7 +487,7 @@ void NumpyRollCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   if (inputs[0].Size() == 0U) return;
   const NumpyRollParam& param = nnvm::get<NumpyRollParam>(attrs.parsed);
-  const index_t ndim(inputs[0].shape_.ndim());
+  const int ndim(inputs[0].shape_.ndim());
   Stream<xpu> *s = ctx.get_stream<xpu>();
   std::vector<index_t> shifts(ndim, 0);
   index_t input_size = inputs[0].Size();
