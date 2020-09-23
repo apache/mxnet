@@ -16,18 +16,24 @@
 <!--- under the License. -->
 
 # Introduction
+This crash course will give you a quick overview of  basics of MXNet, the core concept of NDArray (manipulating multiple dimensional arrays) and Gluon (create and train neural networks on CPU and GPU). The intended audience for this crash course is someone who are already familiar with machine learning or other deep learning frameworks.For a deep dive into the details of MXNet and deep learning architectures, please refer to [Dive Into Deep learning](http://d2l.ai/) textbook or [Introduction to Deep Learning Course](https://courses.d2l.ai/berkeley-stat-157/index.html)
 
 
-# WHAT IS MXNet
+# What is MXNet
 
 Apache MXNet is a fully featured, flexibly programmable, and ultra-scalable open-source deep learning framework supporting state of the art deep learning models, including convolutional neural networks (CNNs) and long short-term memory networks (LSTMs). MXNet has its roots in academia and came about through the collaboration and contributions of researchers at several top universities  and the preferred choice of AWS (Amazon Web Services), as well as many colleges and companies.
 
 Some key features of MXNet:
 1.  **Fast and Scalable:** Easily supports multiple GPU's and distributed multi-host jobs. 
 2.  **Multiple Programming language support:**  Python, Scala,  R, Java, C++, Julia, Matlab, JavaScript and Go interfaces.
-3.  **Supported:** Backed by the AWS Deep Learning Team and a healthy open source community.
+3.  **Supported:** Backed by Apache Software Foundation and supported by Amazon Web Services (AWS), Microsoft Azure and highly active open-source community.
 4. **Portable:** Supports an efficient deployment of a trained model for inference   on wide range of hardware configurations across various platforms of choice i.e.  low end devices, internet of things devices , serverless computing and containers.
 5. **Flexible:** Supports both imperative and symbolic programming.
+
+# Gluon
+
+Gluon is an imperative high-level front end API in MXNet for deep learning that’s flexible and easy-to-use which comes with a lot of great features, and it can provide you everything you need: from experimentation to deploying the model without sacrificing training speed. Gluon provides S:tate of the Art models for many of the standard tasks such as Classification, Object Detection, Segmentation, etc. In one of the next sections of the tutorial, you will walk through a common use case on how to build a model using gluon, train it on your data, and deploy it for inference.
+
 
 # Basic building blocks
 
@@ -72,10 +78,10 @@ Please refer to the chapter  Use GPUs in tutorial to save and access tensors on 
 # Computing paradigms
 
 ## Block
-Neural network designs like [ResNet-152](https://www.cv-foundation.org/openaccess/content_cvpr_2016/papers/He_Deep_Residual_Learning_CVPR_2016_paper.pdf) have a fair degree of regularity.They consist of _blocks_ of repeated (or at least similarly designed) layers; these blocks then form the basis of more complex network designs.A block is a single layer, a component consisting of multiple layers, or the entire model of  complex neural network itself! One benefit of working with the block abstraction is that they can be combined into larger artifacts, often recursively. By defining code to generate blocks of arbitrary complexity on demand, you can write surprisingly compact code and still implement complex neural networks.
+Neural network designs like [ResNet-152](https://www.cv-foundation.org/openaccess/content_cvpr_2016/papers/He_Deep_Residual_Learning_CVPR_2016_paper.pdf) have a fair degree of regularity. They consist of _blocks_ of repeated (or at least similarly designed) layers; these blocks then form the basis of more complex network designs. A block is a single layer, a component consisting of multiple layers, or the entire model of  complex neural network itself! One benefit of working with the block abstraction is that they can be combined into larger artifacts, often recursively. By defining code to generate blocks of arbitrary complexity on demand, you can write surprisingly compact code and still implement complex neural networks.
 
 
-From a programing standpoint, a block is represented by a class and [Block](https://mxnet.apache.org/versions/1.7/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block)  is the base class for all neural networks layers in MXNet . Any subclass of it must define a forward propagation function that transforms its input into output and must store any necessary parameters if required. 
+From a programming standpoint, a block is represented by a class and [Block](https://mxnet.apache.org/versions/1.7/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.Block)  is the base class for all neural networks layers in MXNet. Any subclass of it must define a forward propagation function that transforms its input into output and must store any necessary parameters if required.
 The following code generates a network with first fully-connected hidden layer with 256 units and ReLU activation, second fully connected hidden layer with 128 units and ReLU activation followed by a fully-connected output layer with 2 units (no activation function).
 
 ```{.python .input n=2}
@@ -107,17 +113,18 @@ Output:
 
 Imperative and symbolic  programming represents two styles or paradigms of deep learning programming interface and historically most deep learning frameworks choose either imperative or symbolic programming. For example, both Theano and TensorFlow (inspired by the latter) make use of symbolic programming, while Chainer and its predecessor PyTorch utilize imperative programming. 
 
-The differences between imperative (interpreted) programming and symbolic programming are as follows:
+The differences bet
+en imperative (interpreted) programming and symbolic programming are as follows:
 
--   Imperative programming is easier. When imperative programming is used in Python, the majority of the code is straightforward and easy to write. It is also easier to debug imperative programming code. This is because it is easier to obtain and print all relevant intermediate variable values, or use Pythonʼs built-in debugging tools.
+— Imperative programming is easier. When imperative programming is used in Python, the majority of the code is straightforward and easy to write. It is also easier to debug imperative programming code. This is because it is easier to obtain and print all relevant intermediate variable values, or use Pythonʼs built-in debugging tools.
     
--   Symbolic programming is more efficient and easier to port. It makes it easier to optimize the code during compilation, while also having the ability to port the program into a format independent of Python. This allows the program to be run in a non-Python environment, thus avoiding any potential performance issues related to the Python interpreter.
-- 
+— Symbolic programming is more efficient and easier to port. It makes it easier to optimize the code during compilation, while also having the ability to port the program into a format independent of Python. This allows the program to be run in a non-Python environment, thus avoiding any potential performance issues related to the Python interpreter.
+
 You can learn more about the difference between symbolic vs. imperative programming from this [deep learning programming paradigm](https://mxnet.apache.org/versions/1.6/api/architecture/program_model) article
 
 When designing Gluon, developers considered whether it was possible to harness the benefits of both imperative and symbolic programming. The developers believed that users should be able to develop and debug using pure imperative programming, while having the ability to convert most programs into symbolic programming to be run when product-level computing performance and deployment are required. This was achieved by Gluon through the introduction of hybrid programming.
 
-In hybrid programming, you can build models using either the [HybridBlock](https://mxnet.apache.org/versions/1.7/api/python/docs/api/gluon/hybrid_block.html) or the [HybridSequential](https://mxnet.apache.org/versions/1.6/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.HybridSequential) and [HybridConcurrent](https://mxnet.incubator.apache.org/versions/1.7/api/python/docs/api/gluon/contrib/index.html#mxnet.gluon.contrib.nn.HybridConcurrent) classes classes. By default, they are executed in the same way Block or Sequential  and Concurrent  classes are executed in imperative programming. When the  `hybridize`  function is called, Gluon will convert the program’s execution into the style used in symbolic programming. This allows one to optimize the compute-intensive components without sacrifices in the way a model is implemented. In fact, most models can make use of hybrid programming’s execution style.
+In hybrid programming, you can build models using either the [HybridBlock](https://mxnet.apache.org/versions/1.7/api/python/docs/api/gluon/hybrid_block.html) or the [HybridSequential](https://mxnet.apache.org/versions/1.6/api/python/docs/api/gluon/nn/index.html#mxnet.gluon.nn.HybridSequential) and [HybridConcurrent](https://mxnet.incubator.apache.org/versions/1.7/api/python/docs/api/gluon/contrib/index.html#mxnet.gluon.contrib.nn.HybridConcurrent) classes. By default, they are executed in the same way Block or Sequential  and Concurrent  classes are executed in imperative programming. When the  `hybridize`  function is called, Gluon will convert the program’s execution into the style used in symbolic programming. This allows one to optimize the compute-intensive components without sacrifices in the way a model is implemented. In fact, most models can make use of hybrid programming’s execution style.
 
 ```{.python .input n=2}
 from mxnet import nd, npx
@@ -156,9 +163,6 @@ Output:
 <NDArray 1x2 @cpu(0)>
 ```
 
-# Gluon
-
-Gluon is an imperative high-level front end API in MXNet for deep learning that’s flexible and easy-to-use which comes with a lot of great features, and it can provide you everything you need: from experimentation to deploying the model without sacrificing training speed. Gluon provides State of the Art models for many of the standard tasks such as Classification, Object Detection, Segmentation, etc. In one of the next sections of the tutorial, you will walk through a common use case on how to build a model using gluon, train it on your data, and deploy it for inference.
 
 
 # References
