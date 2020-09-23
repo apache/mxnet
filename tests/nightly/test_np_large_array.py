@@ -665,6 +665,22 @@ def test_subtract():
     assert B.grad.shape == (INT_OVERFLOW, 2)
     assert B.grad[0][0] == -1
 
+@use_np
+def test_roll():
+    INT_OVERFLOW = 2**31
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.roll(inp, 1)
+        # equivalent but slower
+        # out = np.roll(inp, shift=(1, 1), axis=(0, 1))
+        out.backward()
+    assert out.shape == (2, INT_OVERFLOW)
+    assert out[0, 0] == 1, out[-1, -1] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
