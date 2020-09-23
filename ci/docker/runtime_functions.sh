@@ -1180,9 +1180,12 @@ build_c_docs() {
 
 build_docs() {
     pushd docs/_build
-    tar -xzf jekyll-artifacts.tgz
+    tar -xzf jekyll-artifacts.tgz 
+    api_folder='html/api'
+    # Python has it's own landing page/site so we don't put it in /docs/api
+    mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
     
-    # check if .htaccess file exists
+     # check if .htaccess file exists
     if [ ! -f ".htaccess" ]; then
         echo ".htaccess file does not exist. Exiting 1"
         exit 1
@@ -1211,9 +1214,6 @@ build_docs() {
         exit 1
     fi  
     
-    api_folder='html/api'
-    # Python has it's own landing page/site so we don't put it in /docs/api
-    mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
     GZIP=-9 tar -zcvf full_website.tgz -C html .
     popd
 }
