@@ -444,7 +444,7 @@ template<int req>
 struct RollAxisNone_forward {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
-                                  const index_t size, const int shift) {
+                                  const index_t size, const index_t shift) {
     index_t new_index = i - shift < 0 ? i - shift + size : i - shift;
     KERNEL_ASSIGN(out_data[i], req, in_data[new_index]);
   }
