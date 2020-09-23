@@ -447,7 +447,7 @@ class EinsumOpGPU {
       bwd_cutensor_ops[pos_cutensor_op].Init(grad_operand1_equation,
                                              grad_op1_input_shapes,
                                              grad_op1_output_shapes,
-                                             req[0]==kWriteTo, ctx,
+                                             req[0] == kWriteTo, ctx,
                                              temp_grad_size_aligned,
                                              dptr_alignment);
     if (req_workspace > max_workspace_cutensor) max_workspace_cutensor = req_workspace;
@@ -468,7 +468,7 @@ class EinsumOpGPU {
       bwd_cutensor_ops[pos_cutensor_op+1].Init(grad_operand2_equation,
                                                grad_op2_input_shapes,
                                                grad_op2_output_shapes,
-                                               req[1]==kWriteTo, ctx,
+                                               req[1] == kWriteTo, ctx,
                                                temp_grad_size_aligned,
                                                dptr_alignment);
     if (req_workspace > max_workspace_cutensor) max_workspace_cutensor = req_workspace;
@@ -771,7 +771,7 @@ static EinsumOpGPU<DType>& GetEinsumOpGPU(const EinsumOp& state,
 
 bool IsCutensorCompatible(const EinsumOp state,
                          const std::vector<TBlob>& inputs,
-                         const std::vector<TBlob>& outputs){
+                         const std::vector<TBlob>& outputs) {
   if (state.num_args <= 1) return false;
   for (size_t i = 0; i < inputs.size(); i++) {
     for (size_t j = 0; j < inputs[i].ndim(); j++) {
