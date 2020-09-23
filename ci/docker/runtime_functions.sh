@@ -1180,7 +1180,7 @@ build_c_docs() {
 
 build_docs() {
     pushd docs/_build
-    tar -xzf jekyll-artifacts.tgz 
+    tar -xzf jekyll-artifacts.tgz
     api_folder='html/api'
     # Python has it's own landing page/site so we don't put it in /docs/api
     mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
