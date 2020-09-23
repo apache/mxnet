@@ -80,70 +80,70 @@ namespace op {
 template<typename ComputeType, typename IntType, int kMaxNumModes_>
 struct Einsum {
   Einsum(const std::string &equation,
-         const mxnet::TShape &A_shape,
-         const mxnet::TShape &B_shape):
-         numModesA_(A_shape.ndim()),
-         numModesB_(B_shape.ndim()),
-         numModesC_(0),
-         isInitialized_(false) {
+         const mxnet::TShape &a_shape,
+         const mxnet::TShape &b_shape):
+         num_modes_a_(a_shape.ndim()),
+         num_modes_b_(b_shape.ndim()),
+         num_modes_c_(0),
+         is_initialized_(false) {
     const auto arrow_pos = equation.find("->");
     const auto comma_pos = equation.find(",");
-    const bool isImplicit = (arrow_pos == std::string::npos);
-    const bool usesB = (comma_pos != std::string::npos);
+    const bool is_implicit = (arrow_pos == std::string::npos);
+    const bool uses_b = (comma_pos != std::string::npos);
 
     size_t a_start = 0;
-    size_t a_end = isImplicit ? ((comma_pos == std::string::npos) ? equation.size() : comma_pos):
-                                ((comma_pos == std::string::npos) ? arrow_pos : comma_pos);
-    size_t b_start = usesB ? comma_pos + 1 : 0;
-    size_t b_end   = usesB ? (isImplicit ? equation.size() : arrow_pos) : 0;
-    size_t c_start = isImplicit ? equation.size() : arrow_pos + 2;
+    size_t a_end = is_implicit ? (uses_b ? comma_pos : equation.size()):
+                                 (uses_b ? comma_pos : arrow_pos);
+    size_t b_start = uses_b ? comma_pos + 1 : 0;
+    size_t b_end   = uses_b ? (is_implicit ? equation.size() : arrow_pos) : 0;
+    size_t c_start = is_implicit ? equation.size() : arrow_pos + 2;
     size_t c_end = equation.size();
 
-    char modeA[kMaxNumModes_ + 2];
-    uint32_t numModesA = 0;
-    for (int i = a_start; i < a_end && numModesA < kMaxNumModes_ + 2; ++i) {
-      modeA[numModesA++] = equation.at(i);
+    char mode_a[kMaxNumModes_ + 2];
+    uint32_t num_modes_a = 0;
+    for (int i = a_start; i < a_end && num_modes_a < kMaxNumModes_ + 2; ++i) {
+      mode_a[num_modes_a++] = equation.at(i);
     }
 
-    char modeB[kMaxNumModes_ + 2];
-    uint32_t numModesB = 0;
-    for (int i = b_start; i < b_end && numModesB < kMaxNumModes_ + 2; ++i) {
-      modeB[numModesB++] = equation.at(i);
+    char mode_b[kMaxNumModes_ + 2];
+    uint32_t num_modes_b = 0;
+    for (int i = b_start; i < b_end && num_modes_b < kMaxNumModes_ + 2; ++i) {
+      mode_b[num_modes_b++] = equation.at(i);
     }
 
-    char modeC[kMaxNumModes_ + 2];
-    uint32_t numModesC = 0;
-    for (int i = c_start; i < c_end && numModesC < kMaxNumModes_ + 2; ++i) {
-      modeC[numModesC++] = equation.at(i);
+    char mode_c[kMaxNumModes_ + 2];
+    uint32_t num_modes_c = 0;
+    for (int i = c_start; i < c_end && num_modes_c < kMaxNumModes_ + 2; ++i) {
+      mode_c[num_modes_c++] = equation.at(i);
     }
 
-    if ((numModesA != numModesA_) || (numModesB != numModesB_)) {
+    if ((num_modes_a != num_modes_a_) || (num_modes_b != num_modes_b_)) {
       // substring size and shape don't match
       return;
     }
-    if (numModesA_ > kMaxNumModes_ || numModesB_ > kMaxNumModes_) {
+    if (num_modes_a_ > kMaxNumModes_ || num_modes_b_ > kMaxNumModes_) {
       // too many modes
       return;
     }
 
     /**
-    * Copy all modes from modeA to modeC if they don't appear in modeB
+    * Copy all modes from mode_a to mode_a if they don't appear in modeB
     */
-    auto copyModesIf = [](const char* modeA, uint32_t numModesA,
-                          const char* modeB, uint32_t numModesB,
-                          char* modeC, uint32_t &numModesC) {
-      for (uint32_t i = 0; i < numModesA; i++) {
-        auto mode = modeA[i];
+    auto CopyModesIf = [](const char* mode_a, uint32_t num_modes_a,
+                          const char* mode_b, uint32_t num_modes_b,
+                          char* mode_c, uint32_t &num_modes_c) {
+      for (uint32_t i = 0; i < num_modes_a; i++) {
+        auto mode = mode_a[i];
         bool found = false;
-        for (uint32_t j = 0; j < numModesB; ++j) {
-          if (mode == modeB[j]) {
+        for (uint32_t j = 0; j < num_modes_b; ++j) {
+          if (mode == mode_b[j]) {
             found = true;
             break;
           }
         }
         if (!found) {  // is non-contracted mode
-          modeC[numModesC++] = mode;
-          if (numModesC > kMaxNumModes_) {
+          mode_c[num_modes_c++] = mode;
+          if (num_modes_c > kMaxNumModes_) {
             // too many modes
             return false;
           }
@@ -152,90 +152,89 @@ struct Einsum {
       return true;
     };
 
-    std::array<char, kMaxNumModes_+1> implicitModeC;
-    char* redirectModeC;
-    if (isImplicit) {
-      // we have to copy all non-contracted modes from A over to C
-      if (copyModesIf(modeA, numModesA_, modeB, numModesB_,
-                      implicitModeC.data(), numModesC_) == false) {
+    std::array<char, kMaxNumModes_+1> implicit_mode_c;
+    char* redirect_mode_c;
+    if (is_implicit) {
+      // we have to copy all non-contracted modes from a over to c
+      if (CopyModesIf(mode_a, num_modes_a_, mode_b, num_modes_b_,
+                      implicit_mode_c.data(), num_modes_c_) == false) {
         return;
       }
-      // we have to copy all non-contracted modes from B over to C
-      if (copyModesIf(modeB, numModesB_, modeA, numModesA_,
-                      implicitModeC.data(), numModesC_) == false) {
+      // we have to copy all non-contracted modes from b over to c
+      if (CopyModesIf(mode_b, num_modes_b_, mode_a, num_modes_a_,
+                      implicit_mode_c.data(), num_modes_c_) == false) {
         return;
       }
-      std::sort(implicitModeC.begin(), std::next(implicitModeC.begin(), numModesC_));
+      std::sort(implicit_mode_c.begin(), std::next(implicit_mode_c.begin(), num_modes_c_));
       // modes are sorted w.r.t. lexical order
-      implicitModeC[numModesC_] = '\0';
-      redirectModeC = implicitModeC.data();
+      implicit_mode_c[num_modes_c_] = '\0';
+      redirect_mode_c = implicit_mode_c.data();
     } else {
-      redirectModeC = modeC;
-      numModesC_ = numModesC;
+      redirect_mode_c = mode_c;
+      num_modes_c_ = num_modes_c;
     }
 
-    for (uint32_t i = 0; i < numModesA_; i++) {
-      modesA_[i] = modeA[numModesA_ - i - 1];
-      extentA_[i] = A_shape[numModesA_ - i - 1];
+    for (uint32_t i = 0; i < num_modes_a_; i++) {
+      modes_a_[i] = mode_a[num_modes_a_ - i - 1];
+      extent_a_[i] = a_shape[num_modes_a_ - i - 1];
     }
-    for (uint32_t i = 0; i < numModesB_; i++) {
-      modesB_[i] = modeB[numModesB_ - i - 1];
-      extentB_[i] = B_shape[numModesB_ - i - 1];
+    for (uint32_t i = 0; i < num_modes_b_; i++) {
+      modes_b_[i] = mode_b[num_modes_b_ - i - 1];
+      extent_b_[i] = b_shape[num_modes_b_ - i - 1];
     }
-    for (uint32_t i = 0; i < numModesC_; i++) {
-      const auto mode = redirectModeC[numModesC_ - i - 1];
-      modesC_[i] = mode;
+    for (uint32_t i = 0; i < num_modes_c_; i++) {
+      const auto mode = redirect_mode_c[num_modes_c_ - i - 1];
+      modes_c_[i] = mode;
       bool found = false;
-      for (uint32_t j=0; j < numModesA_; ++j) {
-        if (modesA_[j] == mode) {
-          extentC_[i] = extentA_[j];
+      for (uint32_t j=0; j < num_modes_a_; ++j) {
+        if (modes_a_[j] == mode) {
+          extent_c_[i] = extent_a_[j];
           found = true;
           break;
         }
       }
-      for (uint32_t j=0; !found && j < numModesB_; ++j) {
-        if (modesB_[j] == mode) {
-          extentC_[i] = extentB_[j];
+      for (uint32_t j=0; !found && j < num_modes_b_; ++j) {
+        if (modes_b_[j] == mode) {
+          extent_c_[i] = extent_b_[j];
           break;
         }
       }
     }
-
-    isInitialized_ = true;
+    is_initialized_ = true;
   }
 
-  std::vector<IntType> getOutputShape() const {
-    if (!isInitialized_) return {};
-    std::vector<IntType> extentC(numModesC_);
-    for (int i=0; i < numModesC_; ++i) {
-      extentC[i] = extentC_.at(numModesC_ - i - 1);
+  std::vector<IntType> GetOutputShape() const {
+    if (!is_initialized_) return {};
+    std::vector<IntType> extent_c(num_modes_c_);
+    for (int i=0; i < num_modes_c_; ++i) {
+      extent_c[i] = extent_c_.at(num_modes_c_ - i - 1);
     }
-    return extentC;
+    return extent_c;
   }
 
-  bool isInitialized() const { return isInitialized_; }
+  bool IsInitialized() const { return is_initialized_; }
 
-  const int64_t* getExtentsA() const { return extentA_.data(); }
-  const int64_t* getExtentsB() const { return extentB_.data(); }
-  const int64_t* getExtentsC() const { return extentC_.data(); }
+  const int64_t* GetExtentsA() const { return extent_a_.data(); }
+  const int64_t* GetExtentsB() const { return extent_b_.data(); }
+  const int64_t* GetExtentsC() const { return extent_c_.data(); }
 
-  const int* getModesA() const { return modesA_.data(); }
-  const int* getModesB() const { return modesB_.data(); }
-  const int* getModesC() const { return modesC_.data(); }
+  const int* GetModesA() const { return modes_a_.data(); }
+  const int* GetModesB() const { return modes_b_.data(); }
+  const int* GetModesC() const { return modes_c_.data(); }
 
-  int GetNumModesC() const { return numModesC_; }
+  int GetNumModesC() const { return num_modes_c_; }
 
  private:
-  uint32_t numModesA_;
-  uint32_t numModesB_;
-  uint32_t numModesC_;
-  bool isInitialized_;
-  std::array<int, kMaxNumModes_> modesA_;
-  std::array<int, kMaxNumModes_> modesB_;
-  std::array<int, kMaxNumModes_> modesC_;
-  std::array<int64_t, kMaxNumModes_> extentA_;
-  std::array<int64_t, kMaxNumModes_> extentB_;
-  std::array<int64_t, kMaxNumModes_> extentC_;
+  uint32_t num_modes_a_;
+  uint32_t num_modes_b_;
+  uint32_t num_modes_c_;
+  bool is_initialized_;
+  std::array<int, kMaxNumModes_> modes_a_;
+  std::array<int, kMaxNumModes_> modes_b_;
+  std::array<int, kMaxNumModes_> modes_c_;
+  std::array<int64_t, kMaxNumModes_> extent_a_;
+  std::array<int64_t, kMaxNumModes_> extent_b_;
+  std::array<int64_t, kMaxNumModes_> extent_c_;
 };
 
 /*!
@@ -270,8 +269,8 @@ class CuTensorEinsum {
     constexpr cudaDataType_t cudaType = CuTensorTypeTraits<DType>::cudaType;
     constexpr cutensorComputeType_t cutensorType = CuTensorTypeTraits<DType>::cutensorType;
     constexpr cutensorAlgo_t algo = CUTENSOR_ALGO_DEFAULT;
-    Einsum<DType, int, kMaxTensorRank> myEinsum(equation, in_shape[0], in_shape[1]);
-    if (!myEinsum.isInitialized()) {
+    Einsum<DType, int, kMaxTensorRank> my_einsum(equation, in_shape[0], in_shape[1]);
+    if (!my_einsum.IsInitialized()) {
         CUTENSOR_CALL(CUTENSOR_STATUS_NOT_SUPPORTED);
     }
 
@@ -279,7 +278,7 @@ class CuTensorEinsum {
     CUTENSOR_CALL(cutensorInitTensorDescriptor(&s->cutensor_handle_,
                                                &descriptor_a,
                                                in_shape[0].ndim(),
-                                               myEinsum.getExtentsA(),
+                                               my_einsum.GetExtentsA(),
                                                NULL,  // stride
                                                cudaType,
                                                CUTENSOR_OP_IDENTITY));
@@ -287,14 +286,14 @@ class CuTensorEinsum {
     CUTENSOR_CALL(cutensorInitTensorDescriptor(&s->cutensor_handle_,
                                                &descriptor_b,
                                                in_shape[1].ndim(),
-                                               myEinsum.getExtentsB(),
+                                               my_einsum.GetExtentsB(),
                                                NULL,  // stride
                                                cudaType, CUTENSOR_OP_IDENTITY));
     cutensorTensorDescriptor_t descriptor_c;
     CUTENSOR_CALL(cutensorInitTensorDescriptor(&s->cutensor_handle_,
                                                &descriptor_c,
                                                out_shape[0].ndim(),
-                                               myEinsum.getExtentsC(),
+                                               my_einsum.GetExtentsC(),
                                                NULL,  // stride
                                                cudaType,
                                                CUTENSOR_OP_IDENTITY));
@@ -302,10 +301,10 @@ class CuTensorEinsum {
     CUTENSOR_CALL(cutensorInitContractionDescriptor(
                   &s->cutensor_handle_,
                   &descriptor_contraction,
-                  &descriptor_a, myEinsum.getModesA(), alignment,
-                  &descriptor_b, myEinsum.getModesB(), alignment,
-                  &descriptor_c, myEinsum.getModesC(), alignment,
-                  &descriptor_c, myEinsum.getModesC(), alignment,
+                  &descriptor_a, my_einsum.GetModesA(), alignment,
+                  &descriptor_b, my_einsum.GetModesB(), alignment,
+                  &descriptor_c, my_einsum.GetModesC(), alignment,
+                  &descriptor_c, my_einsum.GetModesC(), alignment,
                   cutensorType));
 
     CUTENSOR_CALL(cutensorInitContractionFind(&s->cutensor_handle_,
@@ -342,7 +341,6 @@ class CuTensorEinsum {
                                               &find,
                                               my_workspace_size));
     }
-
     return my_workspace_size;
   }
 
@@ -359,7 +357,6 @@ class CuTensorEinsum {
                                               &find,
                                               my_workspace_size));
     }
-
     const TBlob &tensor_a = inputs[0];
     const TBlob &tensor_b = inputs[1];
     const TBlob &tensor_c = outputs[0];
@@ -419,10 +416,10 @@ class EinsumOpGPU {
     if (isImplicit) {
       // get explicit equation
       Einsum<DType, int, kMaxTensorRank> my_einsum(equation, in_shape[1], in_shape[2]);
-      if (!my_einsum.isInitialized()) {
+      if (!my_einsum.IsInitialized()) {
         CUTENSOR_CALL(CUTENSOR_STATUS_NOT_SUPPORTED);
       }
-      const int* modes_c = my_einsum.getModesC();
+      const int* modes_c = my_einsum.GetModesC();
       my_equation = equation;
       my_equation.append("->");
       for (int i = my_einsum.GetNumModesC() - 1; i >= 0; --i) {
@@ -771,6 +768,24 @@ static EinsumOpGPU<DType>& GetEinsumOpGPU(const EinsumOp& state,
   }
   return *it->second;
 }
+
+bool IsCutensorCompatible(const EinsumOp state,
+                         const std::vector<TBlob>& inputs,
+                         const std::vector<TBlob>& outputs){
+  if (state.num_args <= 1) return false;
+  for (size_t i = 0; i < inputs.size(); i++) {
+    for (size_t j = 0; j < inputs[i].ndim(); j++) {
+      if (inputs[i].size(j) <= 0) return false;
+    }
+  }
+  for (size_t i = 0; i < outputs.size(); i++) {
+    for (size_t j = 0; j < outputs[i].ndim(); j++) {
+      if (outputs[i].size(j) <= 0) return false;
+    }
+  }
+  return true;
+}
+
 #endif
 
 inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
@@ -782,7 +797,8 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
   // cutensor only available for compute capability larger or equal to 6.0
   STATIC_ASSERT_CUDNN_VERSION_GE(6000);
   EinsumOp& state = state_ptr.get_state<EinsumOp>();
-  if (state.num_args <= 1) {
+  bool use_cutensor = IsCutensorCompatible(state, inputs, outputs);
+  if (!use_cutensor) {
     NumpyEinsumForward<gpu>(state_ptr, ctx, inputs, req, outputs);
   } else {
     std::vector<Step>& paths = state.paths;

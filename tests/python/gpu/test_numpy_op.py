@@ -46,12 +46,17 @@ def test_np_einsum():
         print('{} = {}'.format(name, data))
 
     configs = [
+        # no using cuTensor
         ('ii', [(5, 5)], lambda *args: (_np.eye(5),)),
         ('ii->i', [(5, 5)], lambda *args: (_np.eye(5),)),
         ('ij->i', [(5, 5)], lambda *args: (_np.ones((5, 5)),)),
         ('...j->...', [(5, 5)], lambda *args: (_np.ones((5, 5)),)),
         ('ji', [(2, 3)], lambda *args: (_np.ones((2, 3)),)),
         ('ij->ji', [(2, 3)], lambda *args: (_np.ones((2, 3)),)),
+        # fails with original implementation
+        # ('ij, jk', [(5, 0), (0, 4)], lambda *args: (_np.empty((5, 0)), _np.empty((0, 4)))),
+
+        #using cuTensor
         ('i, i', [(5,), (5,)], lambda *args: (args[1], args[0])),
         ('ij, j', [(5, 5), (5,)], lambda *args: (_np.tile(args[1][None, :], [5, 1]),
                                                  args[0].sum(axis=0))),
@@ -77,8 +82,6 @@ def test_np_einsum():
                                                             _np.tile(args[0].sum(axis=1)[None, :], [4, 1]))),
         ('k..., jk', [(3, 2), (4, 3)], lambda *args: (_np.tile(args[1].sum(axis=0)[:, None], [1, 2]),
                                                       _np.tile(args[0].sum(axis=1)[None, :], [4, 1]))),
-        #Zero shape fails
-        #('ij, jk', [(5, 0), (0, 4)], lambda *args: (_np.empty((5, 0)), _np.empty((0, 4)))),
         (('ij,jk'), [(2, 5), (5, 2)],
             lambda *args: (_np.dot(_np.ones((2, 2)), args[1].T),
             _np.dot(args[0].T, _np.ones((2, 2))))),
@@ -130,6 +133,7 @@ def test_np_einsum():
             _np.dot(args[0].T, _np.dot(_np.ones((64, 64)), args[2].T)),
             _np.dot(_np.dot(args[0], args[1]).T, _np.ones((64, 64)))))
     ]
+
     dtypes = ['float32', 'float64'] ##, 'int32'] not working int32
     for hybridize in [False, True]:
         for dtype in dtypes:
