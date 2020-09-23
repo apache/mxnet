@@ -1186,12 +1186,12 @@ build_docs() {
     mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
     
      # check if .htaccess file exists
-    if [ ! -f ".htaccess" ]; then
-        echo ".htaccess file does not exist. Exiting 1"
+    if [ ! -f "html/.htaccess" ]; then
+        echo "html/.htaccess file does not exist. Exiting 1"
         exit 1
     fi
     # get the version
-    version=$(grep "RewriteRule" .htaccess | grep -E "versions\/[0-9]" | sed -nre 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
+    version=$(grep "RewriteRule" html/.htaccess | grep -E "versions\/[0-9]" | sed -nre 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
     # count how many versions are found
     lines=$(echo "$version" | wc -l)
     # check if multiple versions are found
@@ -1207,10 +1207,10 @@ build_docs() {
     # print the one and only default mxnet version
     echo "detected version is $version"         
     # check if the artifacts for this version exist
-    if [ -d "versions/$version/api" ]; then
-        echo "version/$version/api directory exists"
+    if [ -d "html/versions/$version/api" ]; then
+        echo "html/version/$version/api directory exists"
     else
-        echo "version/$version/api directory does not exist! Exiting 1"
+        echo "html/version/$version/api directory does not exist! Exiting 1"
         exit 1
     fi  
     
