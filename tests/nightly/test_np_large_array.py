@@ -691,6 +691,58 @@ def test_diag():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1] == 1
 
+@use_np
+def test_diag_indices_from():
+    N = 2**16
+    inp = np.zeros((N, N))
+    inp.attach_grad()
+    with mx.autograd.record():
+        dim1, dim2 = np.diag_indices_from(inp)
+        dim1.backward()
+    assert dim1.shape == (N, ) and dim2.shape == (N, )
+    assert dim1[-1] == N-1 and dim2[-1] == N-1
+    assert inp.grad.shape == inp.shape
+    assert inp[0, 0] == 0
+
+@use_np
+def test_diagflat():
+    N = 2**15
+    inp = np.ones((2, N))
+    inp[-1, -1] = 2
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.diagflat(inp)
+        out.backward()
+    assert out.shape == (N*2, N*2)
+    assert out[-1, -1] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
+
+@use_np
+def test_diagonal():
+    inp = np.zeros((2, INT_OVERFLOW+2))
+    inp[-1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.diagonal(inp, offset=INT_OVERFLOW)
+        out.backward()
+    assert out.shape == (2, )
+    assert out[1] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[1, -1] == 1 and inp.grad[0, -2] == 1
+    # now test with axes specified
+    N = 2**16
+    inp = np.zeros((N, N, 2))
+    inp[-1, -1] = np.array([1, 2])
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.diagonal(inp, offset=0, axis1=0, axis2=1)
+        out.backward()
+    assert out.shape == (2, N)
+    assert out[0, -1] == 1 and out[1, -1] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1, 0] == 1 and inp.grad[-1, -1, 1] == 1
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _

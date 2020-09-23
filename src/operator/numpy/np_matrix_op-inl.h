@@ -1455,7 +1455,7 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
 }
 
 struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
-  int offset;
+  index_t offset;
   int axis1;
   int axis2;
   DMLC_DECLARE_PARAMETER(NumpyDiagonalParam) {
@@ -1485,7 +1485,7 @@ struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
   }
 };
 
-inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const int k,
+inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const index_t k,
                                             const int axis1, const int axis2) {
   int x1 = CheckAxis(axis1, ishape.ndim());
   int x2 = CheckAxis(axis2, ishape.ndim());
@@ -1609,7 +1609,7 @@ void NumpyDiagonalOpImpl(const TBlob& in_data,
 
   if (x1 == maxx) std::swap(stride1, stride2);
   index_t offset;
-  int k = param.offset;
+  index_t k = param.offset;
   if (k > 0) {
     offset = stride2 * k;
   } else if (k < 0) {

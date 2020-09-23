@@ -583,7 +583,10 @@ MXNET_REGISTER_API("_npi.diagonal")
   const nnvm::Op* op = Op::Get("_npi_diagonal");
   nnvm::NodeAttrs attrs;
   op::NumpyDiagonalParam param;
-  param.offset = args[1].operator int();
+  if (typeid(index_t) == typeid(int))
+    param.offset = args[1].operator int();
+  else
+    param.offset = args[1].operator int64_t();
   param.axis1 = args[2].operator int();
   param.axis2 = args[3].operator int();
   attrs.parsed = param;
