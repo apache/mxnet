@@ -490,7 +490,10 @@ MXNET_REGISTER_API("_npi.diag")
   const nnvm::Op* op = Op::Get("_npi_diag");
   nnvm::NodeAttrs attrs;
   op::NumpyDiagParam param;
-  param.k = args[1].operator int();
+  if (typeid(index_t) == typeid(int))
+    param.k = args[1].operator int();
+  else
+    param.k = args[1].operator int64_t();
   attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyDiagParam>(&attrs);
