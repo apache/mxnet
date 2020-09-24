@@ -155,13 +155,3 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
                        libnvinfer-plugin-dev=${TRT_VERSION} && \
     rm -rf /var/lib/apt/lists/*
 
-FROM gpu as gpuwithcudaruntimelibs
-# Special case because the CPP-Package requires the CUDA runtime libs
-# and not only stubs (which are provided by the base image)
-# This prevents usage of this image for actual GPU tests with Docker.
-# This is a bug in CPP-Package and should be fixed.
-RUN export DEBIAN_FRONTEND=noninteractive && \
-    apt-get update && \
-    apt install -y  --no-install-recommends \
-        cuda-10-1 && \
-    rm -rf /var/lib/apt/lists/*
