@@ -134,7 +134,11 @@ RUN cd /usr/local && \
 # We need to redeclare ARG due to
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG BASE_IMAGE
-RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
+# due to issue https://gitlab.com/nvidia/container-images/cuda/-/issues/92, we
+#  get the cuda version from installed deb package if CUDA_VERSION is not set
+RUN if [ -z "$CUDA_VERSION" ]; then export CUDA_VERSION=$( \
+    dpkg --list cuda-libraries*| grep "cuda-libraries-dev-" | awk '{print $3}' | sed 's/-1$//'); \
+    fi && export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     apt-get update && \
     if [ ${SHORT_CUDA_VERSION} = 10.0 ]; then \
         TRT_VERSION="7.0.0-1+cuda10.0"; \
