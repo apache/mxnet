@@ -36,20 +36,44 @@ struct CuTensorTypeTraits;
 template<>
 struct CuTensorTypeTraits<double> {
   static const cudaDataType_t cudaType = CUDA_R_64F;
-  static const cutensorComputeType_t cutensorType = CUTENSOR_R_MIN_64F;
+  static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_64F;
   typedef double ScalarType;
 };
 template<>
 struct CuTensorTypeTraits<float> {
   static const cudaDataType_t cudaType = CUDA_R_32F;
-  static const cutensorComputeType_t cutensorType = CUTENSOR_R_MIN_32F;
+  static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_32F;
   typedef float ScalarType;
 };
 template<>
 struct CuTensorTypeTraits<mshadow::half::half_t> {
   static const cudaDataType_t cudaType = CUDA_R_16F;
-  static const cutensorComputeType_t cutensorType = CUTENSOR_R_MIN_16F;
+  static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_16F;
   typedef float ScalarType;
+};
+template<>
+struct CuTensorTypeTraits<int64_t> {
+  static const cudaDataType_t cudaType = CUDA_R_64I;
+  static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_32I;
+  typedef int ScalarType;
+};
+template<>
+struct CuTensorTypeTraits<int32_t> {
+  static const cudaDataType_t cudaType = CUDA_R_32I;
+  static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_32I;
+  typedef int ScalarType;
+};
+template<>
+struct CuTensorTypeTraits<int8_t> {
+  static const cudaDataType_t cudaType = CUDA_R_8I;
+  static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_8I;
+  typedef int ScalarType;
+};
+template<>
+struct CuTensorTypeTraits<uint8_t> {
+  static const cudaDataType_t cudaType = CUDA_R_8U;
+  static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_8U;
+  typedef int ScalarType;
 };
 using ModeType = int32_t;
 
@@ -505,11 +529,11 @@ class EinsumOpGPU {
                                                           0, dptr_alignment);
 
           if (req_workspace > max_workspace_cutensor) max_workspace_cutensor = req_workspace;
-          if (i != paths_len - 1) {
-            size_t new_aligned_mem_required = RoundToMultiple(state.paths[i].oshape.Size(),
-                                                              dptr_alignment, sizeof(DType));
-            temp_ouputs_size_aligned += new_aligned_mem_required;
-          }
+        }
+        if (i != paths_len - 1) {
+          size_t new_aligned_mem_required = RoundToMultiple(state.paths[i].oshape.Size(),
+                                                            dptr_alignment, sizeof(DType));
+          temp_ouputs_size_aligned += new_aligned_mem_required;
         }
         if (!handle_out) {
           operands_shape.push_back(state.paths[i].oshape);
@@ -614,13 +638,14 @@ class EinsumOpGPU {
         tmp_operands.push_back(operands[p]);
         operands.erase(operands.begin() + p);
       }
-      if (state.paths[i].do_blas) {
+      if (state.paths[i].do_blas && false) {
         fwd_cutensor_ops[i].Compute(ctx, tmp_operands,
                                     handle_out ? outputs :
                                                  std::vector<TBlob>{temp_space_vec[i]},
                                     req,
                                     cutensor_workspace.dptr_);
       } else {
+      std::string eq = state.paths[i].einsum_str.c_str();
         // special cases do not use cuTensor: diagonal, trace,
         // implicit summation, dimension collapse, broadcasting
         NumpyEinsumProcess<gpu, 0>(tmp_operands,
@@ -641,7 +666,6 @@ class EinsumOpGPU {
                         const OpContext &ctx,
                         size_t pos_cutensor_op,
                         Tensor<gpu, 1, DType> *workspace) {
-
     char* workspace_ptr = reinterpret_cast<char*>(workspace->dptr_);
     // gradient for first operand
     std::vector<TBlob> grad_operand1_inputs;
@@ -827,7 +851,7 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
     for (size_t i = 0; i < in_shape.size(); i++)
       in_shape[i] = inputs[i].shape_;
 
-    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
           (state, in_shape, out_shape,
            req, ctx, false);
@@ -853,7 +877,6 @@ inline void NumpyEinsumBackwardGpu(const OpStatePtr& state_ptr,
   STATIC_ASSERT_CUDNN_VERSION_GE(6000);
   const EinsumOp& state = state_ptr.get_state<EinsumOp>();
   if (state.num_args <= 1) {
-    // does not require mma: cuTensor not required for performance
     NumpyEinsumBackward<gpu>(state_ptr, ctx, inputs, req, outputs);
   } else {
     mxnet::ShapeVector in_shape(inputs.size());
@@ -862,7 +885,7 @@ inline void NumpyEinsumBackwardGpu(const OpStatePtr& state_ptr,
       in_shape[i] = inputs[i].shape_;
     for (size_t i = 0; i < out_shape.size(); i++)
       out_shape[i] = outputs[i].shape_;
-    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
           (state, in_shape, out_shape,
            req, ctx, true);

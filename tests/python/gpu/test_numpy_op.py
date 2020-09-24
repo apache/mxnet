@@ -130,7 +130,7 @@ def test_np_einsum():
             _np.dot(_np.dot(args[0], args[1]).T, _np.ones((64, 64)))))
     ]
 
-    dtypes = ['float16', 'float32', 'float64'] ##, 'int32'] not working int32
+    dtypes = ['float16', 'float32', 'float64', 'int32']
     for hybridize in [False, True]:
         for dtype in dtypes:
             for config in configs:
@@ -144,7 +144,7 @@ def test_np_einsum():
                     x = []
                     x_np = []
                     for shape in operands:
-                        tmp = _np.array(_np.random.uniform(-0.4, 0.4, shape), dtype=dtype)
+                        tmp = _np.array(_np.random.uniform(-0.3, 0.3, shape), dtype=dtype)
                         x_np.append(tmp)
                         x.append(np.array(tmp, dtype=dtype))
                         x[-1].attach_grad()
