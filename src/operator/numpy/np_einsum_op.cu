@@ -53,9 +53,9 @@ struct CuTensorTypeTraits<mshadow::half::half_t> {
 };
 using ModeType = int32_t;
 
-// Round a value 'x' up to the next multiple of 'multiple'
-size_t RoundToMultiple(size_t x, size_t multiple) {
-  size_t retVal = ((x + multiple - 1) / multiple) * multiple;
+// Round num elements 'x' to be mem aligned according to 'multiple' and 'dtype_size'
+size_t RoundToMultiple(size_t x, size_t multiple, size_t dtype_size) {
+  size_t retVal = ((x*dtype_size + multiple - 1) / multiple) * multiple;
   return retVal;
 }
 }  // namespace op
@@ -104,13 +104,11 @@ struct Einsum {
     for (int i = a_start; i < a_end && num_modes_a < kMaxNumModes_ + 2; ++i) {
       mode_a[num_modes_a++] = equation.at(i);
     }
-
     char mode_b[kMaxNumModes_ + 2];
     uint32_t num_modes_b = 0;
     for (int i = b_start; i < b_end && num_modes_b < kMaxNumModes_ + 2; ++i) {
       mode_b[num_modes_b++] = equation.at(i);
     }
-
     char mode_c[kMaxNumModes_ + 2];
     uint32_t num_modes_c = 0;
     for (int i = c_start; i < c_end && num_modes_c < kMaxNumModes_ + 2; ++i) {
@@ -127,7 +125,7 @@ struct Einsum {
     }
 
     /**
-    * Copy all modes from mode_a to mode_a if they don't appear in modeB
+    * Copy all modes from mode_a to mode_c if they don't appear in mode_b
     */
     auto CopyModesIf = [](const char* mode_a, uint32_t num_modes_a,
                           const char* mode_b, uint32_t num_modes_b,
@@ -200,6 +198,7 @@ struct Einsum {
         }
       }
     }
+
     is_initialized_ = true;
   }
 
@@ -222,6 +221,8 @@ struct Einsum {
   const int* GetModesB() const { return modes_b_.data(); }
   const int* GetModesC() const { return modes_c_.data(); }
 
+  int GetNumModesA() const { return num_modes_a_; }
+  int GetNumModesB() const { return num_modes_b_; }
   int GetNumModesC() const { return num_modes_c_; }
 
  private:
@@ -277,7 +278,7 @@ class CuTensorEinsum {
     cutensorTensorDescriptor_t descriptor_a;
     CUTENSOR_CALL(cutensorInitTensorDescriptor(&s->cutensor_handle_,
                                                &descriptor_a,
-                                               in_shape[0].ndim(),
+                                               my_einsum.GetNumModesA(),
                                                my_einsum.GetExtentsA(),
                                                NULL,  // stride
                                                cudaType,
@@ -285,14 +286,14 @@ class CuTensorEinsum {
     cutensorTensorDescriptor_t descriptor_b;
     CUTENSOR_CALL(cutensorInitTensorDescriptor(&s->cutensor_handle_,
                                                &descriptor_b,
-                                               in_shape[1].ndim(),
+                                               my_einsum.GetNumModesB(),
                                                my_einsum.GetExtentsB(),
                                                NULL,  // stride
                                                cudaType, CUTENSOR_OP_IDENTITY));
     cutensorTensorDescriptor_t descriptor_c;
     CUTENSOR_CALL(cutensorInitTensorDescriptor(&s->cutensor_handle_,
                                                &descriptor_c,
-                                               out_shape[0].ndim(),
+                                               my_einsum.GetNumModesC(),
                                                my_einsum.GetExtentsC(),
                                                NULL,  // stride
                                                cudaType,
@@ -507,7 +508,11 @@ class EinsumOpGPU {
                                                         req_write, ctx,
                                                         0, dptr_alignment);
         if (req_workspace > max_workspace_cutensor) max_workspace_cutensor = req_workspace;
-        temp_ouputs_size += state.paths[i].oshape.Size();
+        if (i != paths_len - 1) {
+          size_t new_aligned_mem_required = RoundToMultiple(state.paths[i].oshape.Size(),
+                                                            dptr_alignment, sizeof(DType));
+          temp_ouputs_size_aligned += new_aligned_mem_required;
+        }
         if (!handle_out) {
           operands_shape.push_back(state.paths[i].oshape);
         }
@@ -536,9 +541,11 @@ class EinsumOpGPU {
       }
       // calculate amount mem for temporal grads
       for (int i = 0; i + 1 < paths_len; ++i) {
-        temp_grads_size += state.paths[i].oshape.Size();
+        size_t new_aligned_mem_required = RoundToMultiple(state.paths[i].oshape.Size(),
+                                                          dptr_alignment, sizeof(DType));
+        temp_grads_offsets.push_back(new_aligned_mem_required);
+        temp_grads_size_aligned += new_aligned_mem_required;
       }
-      temp_grads_size_aligned = RoundToMultiple(temp_grads_size, dptr_alignment);
       // go through the paths in the reversed order
       mxnet::ShapeVector temp_in_shape, temp_out_shape;
       std::vector<OpReqType> temp_req;
@@ -576,7 +583,7 @@ class EinsumOpGPU {
         pos_cutensor_bwd_op = pos_cutensor_bwd_op + 2;
       }
       total_workspace = max_workspace_cutensor/sizeof(DType) +
-                        temp_grads_size;
+                        temp_grads_size_aligned;
     }
   }
 
@@ -599,7 +606,9 @@ class EinsumOpGPU {
     for (int i = 0; i < paths_len - 1; ++i) {
       TBlob tblob = TBlob(temp_space.Slice(begin, begin + state.paths[i].oshape.Size()));
       temp_space_vec[i] = tblob.reshape(state.paths[i].oshape);
-      begin = begin + state.paths[i].oshape.Size();
+      size_t aligned_mem_required = RoundToMultiple(state.paths[i].oshape.Size(),
+                                                    dptr_alignment, sizeof(DType));
+      begin = begin + aligned_mem_required;
     }
     for (int i = 0; i < paths_len; ++i) {
       bool handle_out = (i == paths_len - 1);
@@ -659,20 +668,22 @@ class EinsumOpGPU {
     Tensor<gpu, 1, DType> ndarray_space = state.tempspace->data().FlatTo1D<gpu, DType>();
     std::vector<TBlob> temp_data(paths_len - 1);
     size_t begin = 0;
-    for (int i = 0; i + 1 < paths_len; ++i) {
+    for (int i = 0; i < paths_len -1; ++i) {
       TBlob tblob = TBlob(ndarray_space.Slice(begin, begin + state.paths[i].oshape.Size()));
       temp_data[i] = tblob.reshape(state.paths[i].oshape);
-      begin = begin + state.paths[i].oshape.Size();
+      size_t aligned_mem_required = RoundToMultiple(state.paths[i].oshape.Size(),
+                                                    dptr_alignment, sizeof(DType));
+      begin = begin + aligned_mem_required;
     }
     // workspace (temporal grad + cuTensor)
     std::vector<TBlob> temp_grad(paths_len - 1);
     Tensor<gpu, 1, DType> temp_space =
       ctx.requested[0].get_space_typed<gpu, 1, DType>(Shape1(total_workspace), s);
     begin = 0;
-    for (int i = 0; i + 1 < paths_len; ++i) {
+    for (int i = 0; i < paths_len - 1; ++i) {
       TBlob tblob = TBlob(temp_space.Slice(begin, begin + state.paths[i].oshape.Size()));
       temp_grad[i] = tblob.reshape(state.paths[i].oshape);
-      begin = begin + state.paths[i].oshape.Size();
+      begin = begin + temp_grads_offsets[i];
     }
     // go through the paths in the reversed order
     std::vector<TBlob> temp_inputs, temp_outputs;
@@ -712,10 +723,10 @@ class EinsumOpGPU {
   std::vector<CuTensorEinsum<DType>> bwd_cutensor_ops;
   std::vector<std::vector<int> > bwd_op_idx;
 
-  const size_t dptr_alignment = 512;
-  size_t temp_ouputs_size = 0;
-  size_t temp_grads_size = 0;
+  const size_t dptr_alignment = 128;
+  size_t temp_ouputs_size_aligned = 0; // temporal outputs saved in FWD
   size_t temp_grads_size_aligned = 0;
+  std::vector<size_t> temp_grads_offsets;
   size_t max_workspace_cutensor = 0;
   size_t total_workspace = 0;
 };
@@ -814,7 +825,7 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
       EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
           (state, in_shape, out_shape,
            req, ctx, false);
-      state.tempspace.reset<NDArray>(new NDArray(TShape(Shape1(op.temp_ouputs_size)),
+      state.tempspace.reset<NDArray>(new NDArray(TShape(Shape1(op.temp_ouputs_size_aligned)),
                                                ctx.run_ctx.ctx,
                                                false,
                                                outputs[0].type_flag_));
