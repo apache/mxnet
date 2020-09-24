@@ -1,9 +1,9 @@
 # Necessary components that are not in the network
 
-The data and algorithms like Neural Networks are not the only components that
-you need to create your trained deep learning model. In this notebook, you will
+The data and Neural Networks are not the only components that
+you need to train your deep learning model. In this notebook, you will
 learn about some of the common components used for training your own machine
-learning models. Here is a list of components that are commonly found in
+learning models. Here is a list of components that are necessary for
 training a model in MXNet.
 
 1. Initialization
@@ -24,18 +24,18 @@ ctx = mx.cpu()
 
 ## Initialization
 
-In the previous notebook, you used `net.initialize()` to initialize the network
+In a previous notebook, you used `net.initialize()` to initialize the network
 before a forward pass. Now, you will learn about initialization in a little more
-detail here.
+detail.
 
 First, define the `sequential` network that you used earlier and initialize it.
-After you initialize it, print the parameters using `collect_params()` method.
+After that, print the parameters using the `collect_params()` method.
 
 ```python
 net = nn.Sequential()
 
-net.add(nn.Dense(5,in_units=3,activation='relu'),
-        nn.Dense(25, activation='relu'),
+net.add(nn.Dense(5, in_units=3, activation="relu"),
+        nn.Dense(25, activation="relu"),
         nn.Dense(2)
        )
 
@@ -46,8 +46,8 @@ net
 net.initialize()
 params = net.collect_params()
 
-for key,value in params.items():
-    print(key,value)
+for key, value in params.items():
+    print(key, value)
 
 
 ```
@@ -55,12 +55,12 @@ for key,value in params.items():
 Next, you will print shape and params after the first forward pass.
 
 ```python
-x = np.random.uniform(-1,1,(10,3))
+x = np.random.uniform(-1, 1, (10, 3))
 net(x)  # Forward computation
 
 params = net.collect_params()
-for key,value in params.items():
-    print(key,value)
+for key, value in params.items():
+    print(key, value)
 
 
 ```
@@ -89,7 +89,7 @@ To initialize your network using different built-in types, you have to use the
 from mxnet import init
 
 # Constant init initializes the weights to be a constant value for all the params
-net.initialize(init=init.Constant(3),ctx=ctx)
+net.initialize(init=init.Constant(3), ctx=ctx)
 print(net[0].weight.data()[0])
 ```
 
@@ -99,7 +99,7 @@ already initialized the weight but want to reinitialize the weight, set the
 `force_reinit` flag to `True`.
 
 ```python
-net.initialize(init=init.Normal(sigma=0.2),force_reinit=True,ctx=ctx)
+net.initialize(init=init.Normal(sigma=0.2), force_reinit=True, ctx=ctx)
 print(net[0].weight.data()[0])
 ```
 
@@ -136,11 +136,11 @@ variable `nn_output`.
 net = gluon.nn.Dense(1)
 net.initialize()
 
-nn_input = np.array([[1.2,0.56],
-                     [3.0,0.72],
-                     [0.89,0.9],
-                     [0.89,2.3],
-                     [0.99,0.52]])
+nn_input = np.array([[1.2, 0.56],
+                     [3.0, 0.72],
+                     [0.89, 0.9],
+                     [0.89, 2.3],
+                     [0.99, 0.52]])
 
 nn_output = net(nn_input)
 nn_output
@@ -153,7 +153,7 @@ groundtruth_label = np.array([[0.0083],
                              [0.00382],
                              [0.02061],
                              [0.00495],
-                             [0.00639]]).reshape(5,1)
+                             [0.00639]]).reshape(5, 1)
 ```
 
 For this problem, use the L2 Loss. L2Loss, also called Mean Squared Error, is a
@@ -168,9 +168,9 @@ squaring it puts high weight on outliers.
 
 ```python
 def L2Loss(output_values, true_values):
-    return np.mean((output_values - true_values)**2,axis=1)/2
+    return np.mean((output_values - true_values) ** 2, axis=1) / 2
 
-L2Loss(nn_output,groundtruth_label)
+L2Loss(nn_output, groundtruth_label)
 ```
 
 Now, do the same thing using the mxnet API
@@ -179,7 +179,7 @@ Now, do the same thing using the mxnet API
 from mxnet.gluon import nn, loss as gloss
 loss = gloss.L2Loss()
 
-loss(nn_output,groundtruth_label)
+loss(nn_output, groundtruth_label)
 ```
 
 A network can improve by iteratively updating its weights to minimise this loss.
@@ -200,14 +200,14 @@ You can also create custom loss functions using **Loss Blocks**.
 
 You can inherit the base `Loss` class and write your own `forward` method. The
 backward propagation will be automatically computed by autograd. However that
-only holds true if you can build your loss from existing mxnet operators.
+only holds true if you can build your loss from existing MXNet operators.
 
 ```python
 from mxnet.gluon.loss import Loss
 
 class custom_L1_loss(Loss):
-    def __init__(self,weight=None, batch_axis=0, **kwargs):
-        super(custom_L1_loss,self).__init__(weight, batch_axis, **kwargs)
+    def __init__(self, weight=None, batch_axis=0, **kwargs):
+        super(custom_L1_loss, self).__init__(weight, batch_axis, **kwargs)
 
     def forward(self, pred, label):
         l = np.abs(label - pred)
@@ -215,12 +215,12 @@ class custom_L1_loss(Loss):
         return l
     
 L1 = custom_L1_loss()
-L1(nn_output,groundtruth_label)
+L1(nn_output, groundtruth_label)
 ```
 
 ```python
 l1=gloss.L1Loss()
-l1(nn_output,groundtruth_label)
+l1(nn_output, groundtruth_label)
 ```
 
 ## Optimizer
@@ -238,10 +238,10 @@ from mxnet import optimizer
 
 ```python
 trainer = gluon.Trainer(net.collect_params(),
-                       optimizer='Adam',
+                       optimizer="Adam",
                        optimizer_params={
-                           'learning_rate':0.1,
-                           'wd':0.001
+                           "learning_rate":0.1,
+                           "wd":0.001
                        })
 ```
 
@@ -288,9 +288,9 @@ Now, you will define two arrays for a dummy binary class classification example.
 
 ```python
 # Vector of likelihoods for all the classes
-pred = np.array([[0.1, 0.9], [0.05, 0.95], [0.83, 0.17],[0.63,0.37]])
+pred = np.array([[0.1, 0.9], [0.05, 0.95], [0.83, 0.17], [0.63, 0.37]])
 
-labels = np.array([1,1,0,1])
+labels = np.array([1, 1, 0, 1])
 ```
 
 Before you can calculate the accuracy of your model, the metric (accuracy)
@@ -307,7 +307,7 @@ the `update()` method. This method uses labels and predictions which can be
 either class index or vector of likelihoods for all classes.
 
 ```python
-acc.update(labels=labels, preds = pred)
+acc.update(labels=labels, preds=pred)
 ```
 
 #### Creating custom metrics
@@ -321,7 +321,7 @@ def custom_metric(EvalMetric):
     def __init__(self):
         super().init()
 
-    def update(self,labels, preds):
+    def update(self, labels, preds):
         pass
 
 ```
@@ -330,8 +330,8 @@ Here is an example using the Precision metric. First, define the two values
 `labels` and `preds`.
 
 ```python
-labels = np.array([0,1,1,0,0,1,0,0,1,0,1,1])
-preds = np.array([0,1,1,1,1,0,0,1,0,0,0,0])
+labels = np.array([0, 1, 1, 0, 0, 1, 0, 0, 1, 0, 1, 1])
+preds = np.array([0, 1, 1, 1, 1, 0, 0, 1, 0, 0, 0, 0])
 ```
 
 Next, define the custom metric class `precision` and instantiate it
@@ -341,13 +341,13 @@ from mxnet.gluon.metric import EvalMetric
 
 class precision(EvalMetric):
     def __init__(self):
-        super().__init__(name='Precision')
+        super().__init__(name="Precision")
         
     def update(self,labels, preds):
         tp_labels = (labels == 1)
-        true_positives = sum(preds[tp_labels]== 1)
+        true_positives = sum(preds[tp_labels] == 1)
         fp_labels = (labels == 0)
-        false_positives = sum(preds[fp_labels]== 1)
+        false_positives = sum(preds[fp_labels] == 1)
         return true_positives / (true_positives + false_positives)
         
 p = precision()
@@ -356,11 +356,11 @@ p = precision()
 And finally, call the `update` method to return the precision for your data
 
 ```python
-p.update(np.array(y_true),np.array(y_pred))
+p.update(np.array(y_true), np.array(y_pred))
 ```
 
 ## Next steps
 
 Now that you have learned all the components required to train a neural network,
-you will learn about how to load your data using the Gluon API in [Step 5: Gluon
+you will see how to load your data using the Gluon API in [Step 5: Gluon
 Datasets and DataLoader](5-datasets.md)
