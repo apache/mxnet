@@ -1184,6 +1184,36 @@ build_docs() {
     api_folder='html/api'
     # Python has it's own landing page/site so we don't put it in /docs/api
     mkdir -p $api_folder/python/docs && tar -xzf python-artifacts.tgz --directory $api_folder/python/docs
+    
+     # check if .htaccess file exists
+    if [ ! -f "html/.htaccess" ]; then
+        echo "html/.htaccess file does not exist. Exiting 1"
+        exit 1
+    fi
+    # get the version
+    version=$(grep "RewriteRule" html/.htaccess | grep -E "versions\/[0-9]" | sed -nre 's/^[^0-9]*(([0-9]+\.)*[0-9]+).*/\1/p')
+    # count how many versions are found
+    lines=$(echo "$version" | wc -l)
+    # check if multiple versions are found
+    if [ "$lines" != "1" ]; then
+        echo "multiple versions detected: $lines. Exiting 1"
+        exit 1
+    fi
+    # check if no version is found
+    if [ "$version" == "" ]; then
+        echo "no version found. Exiting 1"
+        exit 1
+    fi
+    # print the one and only default mxnet version
+    echo "detected version is $version"         
+    # check if the artifacts for this version exist
+    if [ -d "html/versions/$version/api" ]; then
+        echo "html/version/$version/api directory exists"
+    else
+        echo "html/version/$version/api directory does not exist! Exiting 1"
+        exit 1
+    fi  
+    
     GZIP=-9 tar -zcvf full_website.tgz -C html .
     popd
 }
