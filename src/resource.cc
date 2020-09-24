@@ -346,6 +346,8 @@ class ResourceManagerImpl : public ResourceManager {
                                              state_space->handle.size,
                                              current_seed));
         CUDNN_CALL(cudnnDestroyDropoutDescriptor(temp_descriptor));
+        cudaStream_t cuda_stream = mshadow::Stream<gpu>::GetStream(stream);
+        cudaStreamSynchronize(cuda_stream);
         on_complete();
       }, p->ctx, {}, {r->var}, FnProperty::kNormal, 0,
       "CUDNNDropoutDescriptorSeed");
