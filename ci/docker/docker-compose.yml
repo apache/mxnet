@@ -138,8 +138,6 @@ services:
         BASE_IMAGE: nvidia/cuda:11.0-cudnn8-devel-ubuntu18.04
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu110:latest
-    environment:
-      - CUDA_VERSION=11.0.3
   ubuntu_build_cuda:
     image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_build_cuda:latest
     build:
