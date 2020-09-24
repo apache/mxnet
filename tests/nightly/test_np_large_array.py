@@ -645,6 +645,39 @@ def test_shares_memory():
     out2 = np.shares_memory(inp[1,:101], inp[1,100:])
     assert out == False and out2 == True
 
+@use_np
+def test_where():
+    inp1 = np.zeros((2, INT_OVERFLOW))
+    inp1[-1, -1] = 1
+    inp2 = inp1 + 1
+    inp1.attach_grad()
+    inp2.attach_grad()
+    with mx.autograd.record():
+        out = np.where(inp1==0, inp1, inp2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[0, 0] == 0 and out[-1, -1] == 2
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[0, 0] == 1 and inp1.grad[-1 ,-1] == 0
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[0, 0] == 0 and inp2.grad[-1 ,-1] == 1
+    # onse side is scalar
+    with mx.autograd.record():
+        out = np.where(inp1==0, inp1, 2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[0, 0] == 0 and out[-1, -1] == 2
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[0, 0] == 1 and inp1.grad[-1 ,-1] == 0
+    # both sides ar scalar
+    with mx.autograd.record():
+        out = np.where(inp1==0, 0, 2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[0, 0] == 0 and out[-1, -1] == 2
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1 ,-1] == 0
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
