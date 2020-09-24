@@ -831,7 +831,7 @@ static EinsumOpGPU<DType>& GetEinsumOpGPU(const EinsumOp& state,
 
 bool IsCutensorCompatible(const EinsumOp state,
                           const std::vector<TBlob>& inputs,
-                          const std::vector<TBlob>& outputs){
+                          const std::vector<TBlob>& outputs) {
   if (state.num_args <= 1) return false;
   for (size_t i = 0; i < inputs.size(); i++) {
     for (size_t j = 0; j < inputs[i].ndim(); j++) {
