@@ -43,13 +43,13 @@ class LossScaler(object):
         return self._loss_scale
 
     def has_overflow(self, params):
+        """Check gradients for overflow."""
         if is_np_array():
             all_finite_f = ndarray.numpy._internal.multi_all_finite
             ones_f = ndarray.numpy.ones
         else:
             all_finite_f = ndarray.multi_all_finite
             ones_f = ndarray.ones
-        """Check gradients for overflow."""
         with ag.pause():
             chunk_size = 200
             valid_params = [p._grad[0] for p in params if p._grad is not None]
