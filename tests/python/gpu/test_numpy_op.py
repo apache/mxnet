@@ -52,8 +52,7 @@ def test_np_einsum():
         ('...j->...', [(5, 5)], lambda *args: (_np.ones((5, 5)),)),
         ('ji', [(2, 3)], lambda *args: (_np.ones((2, 3)),)),
         ('ij->ji', [(2, 3)], lambda *args: (_np.ones((2, 3)),)),
-        # fails with original implementation
-        # ('ij, jk', [(5, 0), (0, 4)], lambda *args: (_np.empty((5, 0)), _np.empty((0, 4)))),
+        ('ij, jk', [(5, 0), (0, 4)], lambda *args: (_np.empty((5, 0)), _np.empty((0, 4)))),
 
         ('i, i', [(5,), (5,)], lambda *args: (args[1], args[0])),
         ('ij, j', [(5, 5), (5,)], lambda *args: (_np.tile(args[1][None, :], [5, 1]),

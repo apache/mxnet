@@ -828,6 +828,23 @@ static EinsumOpGPU<DType>& GetEinsumOpGPU(const EinsumOp& state,
   }
   return *it->second;
 }
+
+bool IsCutensorCompatible(const EinsumOp state,
+                          const std::vector<TBlob>& inputs,
+                          const std::vector<TBlob>& outputs){
+  if (state.num_args <= 1) return false;
+  for (size_t i = 0; i < inputs.size(); i++) {
+    for (size_t j = 0; j < inputs[i].ndim(); j++) {
+      if (inputs[i].size(j) <= 0) return false;
+    }
+  }
+  for (size_t i = 0; i < outputs.size(); i++) {
+    for (size_t j = 0; j < outputs[i].ndim(); j++) {
+      if (outputs[i].size(j) <= 0) return false;
+    }
+  }
+  return true;
+}
 #endif
 
 inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
@@ -839,7 +856,8 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
   // cutensor only available for compute capability larger or equal to 6.0
   STATIC_ASSERT_CUDNN_VERSION_GE(6000);
   EinsumOp& state = state_ptr.get_state<EinsumOp>();
-  if (state.num_args <= 1) {
+  bool use_cutensor = IsCutensorCompatible(state, inputs, outputs);
+  if (!use_cutensor) {
     NumpyEinsumForward<gpu>(state_ptr, ctx, inputs, req, outputs);
   } else {
     std::vector<Step>& paths = state.paths;
@@ -876,7 +894,8 @@ inline void NumpyEinsumBackwardGpu(const OpStatePtr& state_ptr,
   // cutensor only available for compute capability larger or equal to 6.0
   STATIC_ASSERT_CUDNN_VERSION_GE(6000);
   const EinsumOp& state = state_ptr.get_state<EinsumOp>();
-  if (state.num_args <= 1) {
+  bool use_cutensor = IsCutensorCompatible(state, inputs, outputs);
+  if (!use_cutensor) {
     NumpyEinsumBackward<gpu>(state_ptr, ctx, inputs, req, outputs);
   } else {
     mxnet::ShapeVector in_shape(inputs.size());
