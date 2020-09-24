@@ -648,7 +648,6 @@ def test_gemms_true_fp16():
                         atol=atol, rtol=rtol)
 
 @with_seed()
-@assert_raises_cudnn_not_satisfied(min_version='7.0.0')
 def test_cudnn_dropout_reproducibility():
     d = nn.Dropout(0.5)
     d.initialize()
