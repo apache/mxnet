@@ -40,7 +40,9 @@ from ...ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from . import lists
 from ...gluon import trainer
 from ... import base
-from ...base import c_str_array, SymbolHandle, check_call, _LIB, mx_uint, c_array_buf
+from ...base import (_NP_OP_PREFIX, _NP_OP_SUBMODULE_LIST, _NP_EXT_OP_PREFIX,
+                     _NP_EXT_OP_SUBMODULE_LIST, _NP_INTERNAL_OP_PREFIX,
+                     c_str_array, SymbolHandle, check_call, _LIB, mx_uint, c_array_buf)
 from ... import optimizer as opt
 from .loss_scaler import LossScaler
 from ...operator import get_all_registered_operators_grouped
@@ -80,12 +82,15 @@ def _get_nd_fun_to_wrap(name, module, submodule_dict):
     return func_name, cur_module
 
 def _get_np_fun_to_wrap(name, ns_prefix):
-    if name.startswith('_np_'):
-        return name[4:], sys.modules[f'{ns_prefix}.numpy._op']
-    if name.startswith('_npi_'):
-        return name[5:], sys.modules[f'{ns_prefix}.numpy._internal']
-    if name.startswith('_npx_'):
-        return name[5:], sys.modules[f'{ns_prefix}.numpy_extension._op']
+    for p, b, s, subs in ((_NP_OP_PREFIX, 'numpy', '._op', _NP_OP_SUBMODULE_LIST),
+                          (_NP_EXT_OP_PREFIX, 'numpy_extension', '._op', _NP_EXT_OP_SUBMODULE_LIST),
+                          (_NP_INTERNAL_OP_PREFIX, 'numpy._internal', '', [])):
+        if name.startswith(p):
+            name = name[len(p):]
+            for sub in subs:
+                if name.startswith(sub):
+                    return name[len(sub):], sys.modules[f'{ns_prefix}.{b}.{sub[1:-1]}']
+            return name, sys.modules[f'{ns_prefix}.{b}{s}']
     assert False
     return None  # for pylint
 
