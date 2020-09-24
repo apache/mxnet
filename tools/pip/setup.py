@@ -142,22 +142,16 @@ else:
         libraries.append('CUDA-10.0')
     elif variant.startswith('CU92'):
         libraries.append('CUDA-9.2')
-    elif variant.startswith('CU91'):
-        libraries.append('CUDA-9.1')
-    elif variant.startswith('CU90'):
-        libraries.append('CUDA-9.0')
-    elif variant.startswith('CU80'):
-        libraries.append('CUDA-8.0')
-    elif variant.startswith('CU75'):
-        libraries.append('CUDA-7.5')
-    if variant.endswith('MKL'):
-        libraries.append('MKLDNN')
+
+from mxnet.runtime import Features
+if Features().is_enabled("MKLDNN"):
+    libraries.append('MKLDNN')
 
 short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 
 package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
-if variant != 'NATIVE':
+if Features().is_enabled("MKLDNN"):
     shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/include'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':
