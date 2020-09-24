@@ -46,7 +46,6 @@ def test_np_einsum():
         print('{} = {}'.format(name, data))
 
     configs = [
-        # no using cuTensor
         ('ii', [(5, 5)], lambda *args: (_np.eye(5),)),
         ('ii->i', [(5, 5)], lambda *args: (_np.eye(5),)),
         ('ij->i', [(5, 5)], lambda *args: (_np.ones((5, 5)),)),
@@ -56,7 +55,6 @@ def test_np_einsum():
         # fails with original implementation
         # ('ij, jk', [(5, 0), (0, 4)], lambda *args: (_np.empty((5, 0)), _np.empty((0, 4)))),
 
-        #using cuTensor
         ('i, i', [(5,), (5,)], lambda *args: (args[1], args[0])),
         ('ij, j', [(5, 5), (5,)], lambda *args: (_np.tile(args[1][None, :], [5, 1]),
                                                  args[0].sum(axis=0))),
@@ -103,9 +101,9 @@ def test_np_einsum():
             _np.dot(_np.dot(args[0], args[1]).T, _np.dot(_np.ones((12, 67)), args[3].T)),
             _np.dot(_np.dot(args[0], _np.dot(args[1], args[2])).T, _np.ones((12, 67))))),
 
-        # broadcast fails
-        #('ij, ij -> i', [(1, 4), (2, 4)], lambda *args: (_np.sum(args[1], axis=0)[None, :],
-        #                                                 _np.tile(args[0], [2, 1]))),
+        # broadcast axis
+        ('ij, ij -> i', [(1, 4), (2, 4)], lambda *args: (_np.sum(args[1], axis=0)[None, :],
+                                                         _np.tile(args[0], [2, 1]))),
         ('...ij, ...jk -> ...ik', [(1, 4), (4, 2)], lambda *args: (args[1].sum(axis=1)[None, :],
                                                                    _np.tile(args[0].sum(axis=0)[: ,None], [1, 2]))),
         ('...ij, ...jk -> ...ik', [(2, 4), (4, 2)], lambda *args: (_np.tile(args[1].sum(axis=1)[None, :], [2, 1]),
