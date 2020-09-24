@@ -126,7 +126,9 @@ libraries = []
 if variant == 'CPU':
     libraries.append('openblas')
 else:
-    if variant.startswith('CU102'):
+    if variant.startswith('CU110'):
+        libraries.append('CUDA-11.0')
+    elif variant.startswith('CU102'):
         libraries.append('CUDA-10.2')
     elif variant.startswith('CU101'):
         libraries.append('CUDA-10.1')
