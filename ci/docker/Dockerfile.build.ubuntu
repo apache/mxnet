@@ -145,6 +145,9 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     elif [ ${SHORT_CUDA_VERSION} = 10.2 ]; then \
         TRT_VERSION="7.0.0-1+cuda10.2"; \
         TRT_MAJOR_VERSION=7; \
+    elif [ ${SHORT_CUDA_VERSION} = 11.0 ]; then \
+        TRT_VERSION="7.2.0-1+cuda11.0"; \
+        TRT_MAJOR_VERSION=7; \
     else \
         echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.ubuntu"; \
         exit 1; \
