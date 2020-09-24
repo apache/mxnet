@@ -21,6 +21,7 @@
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
 import copy
+import ctypes
 import inspect
 import warnings
 import weakref
@@ -31,7 +32,7 @@ import contextvars
 import re
 import numpy as np
 
-from ..base import mx_real_t, MXNetError, NDArrayHandle, py_str
+from ..base import mx_real_t, MXNetError, NDArrayHandle, SymbolHandle, py_str, check_call, _LIB
 from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, \
     profiler as _profiler, context as _context
 from ..symbol.numpy import _symbol as np_symbol
@@ -1306,13 +1307,16 @@ class HybridBlock(Block):
 
         Parameters
         ----------
-        path : str
+        path : str or None
             Path to save model. Two files `path-symbol.json` and `path-xxxx.params`
             will be created, where xxxx is the 4 digits epoch number.
+            If None, do not export to file but return Python Symbol object and
+            corresponding dictionary of parameters.
         epoch : int
             Epoch number of saved model.
         remove_amp_cast : bool, optional
             Whether to remove the amp_cast and amp_multicast operators, before saving the model.
+
         Returns
         -------
         symbol_filename : str
@@ -1338,8 +1342,9 @@ class HybridBlock(Block):
             if var.name in rename_map:
                 var._set_attr(name=rename_map[var.name])
 
-        sym_filename = '%s-symbol.json'%path
-        sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
+        sym_filename = '%s-symbol.json' % (path if path is not None else "")
+        if path is not None:
+            sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
 
         arg_names = set(sym.list_arguments())
         aux_names = set(sym.list_auxiliary_states())
@@ -1355,9 +1360,17 @@ class HybridBlock(Block):
                     else:
                         arg_dict['aux:%s'%name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
-        params_filename = '%s-%04d.params'%(path, epoch)
-        save_fn(params_filename, arg_dict)
-        return (sym_filename, params_filename)
+        params_filename = '%s-%04d.params'%((path if path is not None else ""), epoch)
+
+        if path is not None:
+            save_fn(params_filename, arg_dict)
+            return (sym_filename, params_filename)
+
+        if remove_amp_cast:
+            handle = SymbolHandle()
+            check_call(_LIB.MXSymbolRemoveAmpCast(sym.handle, ctypes.byref(handle)))
+            sym = type(sym)(handle)
+        return sym, arg_dict
 
     def register_op_hook(self, callback, monitor_all=False):
         """Install op hook for block recursively.
