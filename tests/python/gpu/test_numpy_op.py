@@ -123,43 +123,36 @@ def test_np_einsum():
         ('...ij, ...jc -> ...ic', [(2, 1, 5, 4), (2, 1, 4, 2)], lambda *args: (
                                                             _np.tile(args[1].sum(axis=3)[:, :, None, :], [1, 1, 5, 1]),
                                                              _np.tile(args[0].sum(axis=2)[:, :, : ,None], [1, 1, 1, 2]))),
-        ('abiz,abjz->abij', [(64, 8, 128, 512), (64, 8, 128, 512)], lambda *args: (_np.matmul(_np.ones((64, 8, 128, 128)), args[1]),
-                                                                                   _np.matmul(_np.ones((64, 8, 128, 128)), args[0]))),
         # test with cuTensor using workspace
-        (('ij,jk,kl->il'), [(64, 2000), (2000, 64), (64, 64)],
+        (('ij,jk,kl->il'), [(64, 200), (200, 64), (64, 64)],
             lambda *args: (_np.dot(_np.ones((64, 64)), _np.dot(args[1], args[2]).T),
             _np.dot(args[0].T, _np.dot(_np.ones((64, 64)), args[2].T)),
             _np.dot(_np.dot(args[0], args[1]).T, _np.ones((64, 64)))))
     ]
 
-    dtypes = ['float32', 'float64'] ##, 'int32'] not working int32
+    dtypes = ['float16', 'float32', 'float64'] ##, 'int32'] not working int32
     for hybridize in [False, True]:
         for dtype in dtypes:
             for config in configs:
                 for optimize in [False, True]:
-                    #rtol = 1e-2 if dtype == 'float16' else 1e-3
-                    #atol = 1e-4 if dtype == 'float16' else 1e-5
                     rtol = 1e-1 if dtype == 'float16' else 1e-3
                     atol = 1e-1 if dtype == 'float16' else 1e-4
                     (subscripts, operands, get_grad) = config
-                    print('Testing config\n', subscripts, '\n')
                     test_einsum = TestEinsum(subscripts, optimize)
                     if hybridize:
                         test_einsum.hybridize()
                     x = []
                     x_np = []
                     for shape in operands:
-                        tmp = _np.array(_np.random.uniform(0.1, 1.0, shape), dtype=dtype)
+                        tmp = _np.array(_np.random.uniform(-0.4, 0.4, shape), dtype=dtype)
                         x_np.append(tmp)
                         x.append(np.array(tmp, dtype=dtype))
                         x[-1].attach_grad()
-                    expected_np = _np.einsum(subscripts, *x_np, optimize=optimize).astype(dtype)
+                    expected_np = _np.einsum(subscripts, *x_np, optimize=False, dtype=dtype).astype(dtype)
                     with mx.autograd.record():
                         out_mx = test_einsum(*x)
-                    mx.nd.waitall()
                     assert out_mx.shape == expected_np.shape
                     assert_almost_equal(out_mx.asnumpy(), expected_np, rtol=rtol, atol=atol)
                     out_mx.backward()
-                    mx.nd.waitall()
                     for (iop, op) in enumerate(x):
                         assert_almost_equal(op.grad.asnumpy(), get_grad(*x_np)[iop], rtol=rtol, atol=atol)

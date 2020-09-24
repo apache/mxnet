@@ -641,9 +641,6 @@ class EinsumOpGPU {
                         const OpContext &ctx,
                         size_t pos_cutensor_op,
                         Tensor<gpu, 1, DType> *workspace) {
-    CHECK_EQ(inputs.size(), 3U);
-    CHECK_EQ(outputs.size(), 2U);
-    CHECK_EQ(req.size(), 2U);
 
     char* workspace_ptr = reinterpret_cast<char*>(workspace->dptr_);
     // gradient for first operand
@@ -727,6 +724,7 @@ class EinsumOpGPU {
       }
       CHECK_EQ(temp_inputs.size(), 3U);
       CHECK_EQ(temp_outputs.size(), 2U);
+      CHECK_EQ(temp_req.size(), 2U);
 
       if (state.paths[i].do_blas) {
         ComputeGradients(state.paths[i].einsum_str,
