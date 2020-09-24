@@ -374,7 +374,7 @@ static bool BatchNormShape(const nnvm::NodeAttrs& attrs,
       : param.axis);
   CHECK_LT(channelAxis, dshape.ndim()) << "Channel axis out of range: " << param.axis;
 
-  const int channelCount = dshape[channelAxis];
+  const index_t channelCount = dshape[channelAxis];
 
   in_shape->at(batchnorm::kGamma) = mxnet::TShape(Shape1(channelCount));
   in_shape->at(batchnorm::kBeta) = mxnet::TShape(Shape1(channelCount));
