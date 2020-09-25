@@ -506,7 +506,11 @@ inline bool _can_cutensor(const std::vector<std::string>& inputs,
       // This would exclude BERT einsums !!!
       // https://github.com/dmlc/gluon-nlp/blob/master/src/gluonnlp/attention_cell.py#L561
 
-      // ik,km->im fails
+      // following case fails:
+      // 'ij, ij -> i', [(1, 4), (2, 4)],
+      // CUTENSOR ERROR: extent of mode 1 does not match.
+      // 9409
+
     }
   }
   return true;
