@@ -374,7 +374,6 @@ class CuTensorEinsum {
     if (!req_write) {
       beta = 1.0;  // kAddTo
     }
-
     if (s->cutensor_cachelines_ != nullptr) {
         CUTENSOR_CALL(cutensorInitContractionPlan(&s->cutensor_handle_,
                                               &plan,
@@ -521,7 +520,7 @@ class EinsumOpGPU {
           tmp_out_shape.push_back(state.paths[i].oshape);
         }
         fwd_cutensor_ops.push_back(CuTensorEinsum<DType>());
-        if (state.paths[i].do_blas) {
+        if (state.paths[i].do_cutensor) {
           size_t req_workspace = fwd_cutensor_ops[i].Init(state.paths[i].einsum_str,
                                                           tmp_in_shape,
                                                           tmp_out_shape,
@@ -593,7 +592,7 @@ class EinsumOpGPU {
         CHECK_EQ(temp_in_shape.size(), 3U);
         CHECK_EQ(temp_out_shape.size(), 2U);
 
-        if (state.paths[i].do_blas) {
+        if (state.paths[i].do_cutensor) {
           InitCuTensorGrad(state.paths[i].einsum_str,
                            temp_in_shape, temp_out_shape,
                            ctx, pos_cutensor_bwd_op,
@@ -638,14 +637,13 @@ class EinsumOpGPU {
         tmp_operands.push_back(operands[p]);
         operands.erase(operands.begin() + p);
       }
-      if (state.paths[i].do_blas && false) {
+      if (state.paths[i].do_cutensor) {
         fwd_cutensor_ops[i].Compute(ctx, tmp_operands,
                                     handle_out ? outputs :
                                                  std::vector<TBlob>{temp_space_vec[i]},
                                     req,
                                     cutensor_workspace.dptr_);
       } else {
-      std::string eq = state.paths[i].einsum_str.c_str();
         // special cases do not use cuTensor: diagonal, trace,
         // implicit summation, dimension collapse, broadcasting
         NumpyEinsumProcess<gpu, 0>(tmp_operands,
@@ -750,7 +748,7 @@ class EinsumOpGPU {
       CHECK_EQ(temp_outputs.size(), 2U);
       CHECK_EQ(temp_req.size(), 2U);
 
-      if (state.paths[i].do_blas) {
+      if (state.paths[i].do_cutensor) {
         ComputeGradients(state.paths[i].einsum_str,
                          temp_inputs, temp_outputs, temp_req,
                          ctx, pos_cutensor_op,

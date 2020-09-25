@@ -90,7 +90,7 @@ struct Step {
   std::bitset<MAXAXIS> idx_removed;
   std::string einsum_str, blas2einsum_str, einsum2blas_str;
   std::vector<std::string> input_list;
-  bool do_blas, do_einsum;
+  bool do_blas, do_cutensor, do_einsum;
   TShape oshape, tshape;
   Tuple<int> left_pos, right_pos;
 };
@@ -467,6 +467,51 @@ inline bool _can_dot(const std::vector<std::string>& inputs,
   return true;
 }
 
+#if MXNET_USE_CUTENSOR == 1
+inline bool _can_cutensor(const std::vector<std::string>& inputs,
+                          const std::bitset<MAXAXIS>& result,
+                          const std::bitset<MAXAXIS>& idx_removed) {
+  // remove indices
+  if (!idx_removed.any()) {
+    return false;
+  }
+
+  // cuTensor can only handle two operands
+  if (inputs.size() != 2) {
+    return false;
+  }
+
+  const std::string& input_left = inputs[0];
+  const std::string& input_right = inputs[1];
+
+  if (input_left.size() == 0 || input_right.size() == 0) {
+    return false;
+  }
+
+  for (int i = 0; i < 2; ++i) {
+    for (const char& c : inputs[i]) {
+      // can't deal with repeated indices on same input or more than 2 total
+      size_t nl = std::count(input_left.begin(), input_left.end(), c);
+      size_t nr = std::count(input_right.begin(), input_right.end(), c);
+      if (nl > 1 || nr > 1 || nl + nr > 2) {
+        return false;
+      }
+
+      // can't do implicit summation or dimension collapse e.g.
+      // "ab,bc->c" (implicitly sum over 'a')
+      // "ab,ca->ca" (take diagonal of 'a')
+      // if (nl + nr == static_cast<size_t>(result.test(c)) + 1) {
+      //   return false;
+      // }
+      // This would exclude BERT einsums !!!
+      // https://github.com/dmlc/gluon-nlp/blob/master/src/gluonnlp/attention_cell.py#L561
+
+      // ik,km->im fails
+    }
+  }
+  return true;
+}
+#endif
 
 inline int _count_substring(const std::string& str,
                             const std::string& sub) {
@@ -831,6 +876,16 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
     } else {
       do_blas = _can_dot(tmp_inputs, contract.new_result, contract.idx_removed);
     }
+#if MXNET_USE_CUTENSOR == 1
+    bool do_cutensor = false;
+    if ((contract.idx_removed & bcast).any() ||
+        !_tensordot_type_check(operands[0].type_flag_, run_ctx)) {
+      do_cutensor = false;
+    } else {
+      do_cutensor = _can_cutensor(tmp_inputs, contract.new_result, contract.idx_removed);
+    }
+    ret[i].do_cutensor = do_cutensor;
+#endif
 
     // Last contraction
     std::string idx_result;

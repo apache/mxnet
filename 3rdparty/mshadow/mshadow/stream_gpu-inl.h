@@ -206,33 +206,21 @@ struct Stream<gpu> {
     CHECK_EQ(err, CUDNN_STATUS_SUCCESS) << cudnnGetErrorString(err);
 #endif
   }
-#if MSHADOW_USE_CUTENSOR == 1
-  inline static cutensorHandle_t GetCuTensorHandle(Stream<gpu> *stream) {
-    //if (stream == NULL) {
-    //  return 0;
-    //} else {
-      CHECK_NE(stream->cutensor_handle_ownership_, NoHandle) << "No handle exist in source stream";
-      return stream->cutensor_handle_;
-    //}
-  }
-#endif
   inline void DestroyCuTensorHandle() {
 #if MSHADOW_USE_CUTENSOR == 1
     if (cutensor_handle_ownership_ == OwnHandle) {
       // not destroy method available
-      if (cutensor_cachelines_ != nullptr)
-      {
-          cutensorStatus_t err;
-          const char* cacheFilename = getenv("MXNET_CUTENSOR_CACHEFILE");
-          if (cacheFilename != nullptr)
-          {
-              err = cutensorHandleWriteCacheToFile(&cutensor_handle_, cacheFilename);
-              CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
-          }
-          err = cutensorHandleDetachPlanCachelines(&cutensor_handle_);
+      if (cutensor_cachelines_ != nullptr) {
+        cutensorStatus_t err;
+        const char* cacheFilename = getenv("MXNET_CUTENSOR_CACHEFILE");
+        if (cacheFilename != nullptr) {
+          err = cutensorHandleWriteCacheToFile(&cutensor_handle_, cacheFilename);
           CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
-          free(cutensor_cachelines_);
-          cutensor_cachelines_ = nullptr;
+        }
+        err = cutensorHandleDetachPlanCachelines(&cutensor_handle_);
+        CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
+        free(cutensor_cachelines_);
+        cutensor_cachelines_ = nullptr;
       }
       this->cutensor_handle_ownership_ = NoHandle;
     }
@@ -240,32 +228,25 @@ struct Stream<gpu> {
   }
   inline void CreateCuTensorHandle() {
 #if MSHADOW_USE_CUTENSOR == 1
-    //this->DestroyCuTensorHandle();
+    this->DestroyCuTensorHandle();
     cutensorStatus_t err = cutensorInit(&cutensor_handle_);
     CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
-
     const char* cacheFilename = getenv("MXNET_CUTENSOR_CACHEFILE");
-    if (cacheFilename != nullptr)
-    {
-        constexpr int32_t numCachelines = 1024;
-        size_t sizeCache = numCachelines * sizeof(cutensorPlanCacheline_t);
-        cutensor_cachelines_ = malloc(sizeCache);
+    if (cacheFilename != nullptr) {
+      constexpr int32_t numCachelines = 1024;
+      size_t sizeCache = numCachelines * sizeof(cutensorPlanCacheline_t);
+      cutensor_cachelines_ = malloc(sizeCache);
+      err = cutensorHandleAttachPlanCachelines(&cutensor_handle_, (cutensorPlanCacheline_t*) cutensor_cachelines_, numCachelines);
+      CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
 
-        err = cutensorHandleAttachPlanCachelines(&cutensor_handle_, (cutensorPlanCacheline_t*) cutensor_cachelines_, numCachelines);
-        CHECK_EQ(err, CUTENSOR_STATUS_SUCCESS) << cutensorGetErrorString(err);
-
-        uint32_t numCachelinesRead = 0;
-        cutensorStatus_t status = cutensorHandleReadCacheFromFile(&cutensor_handle_, cacheFilename, &numCachelinesRead);
-        if (status == CUTENSOR_STATUS_IO_ERROR)
-        {
-            printf("File (%s) doesn't seem to exist.\n", cacheFilename);
-        }
-        else if (status == CUTENSOR_STATUS_INSUFFICIENT_WORKSPACE)
-        {
-            printf("Cannot read cache: Please attach at least %d cachelines to the handle.\n", numCachelinesRead);
-        }
+      uint32_t numCachelinesRead = 0;
+      cutensorStatus_t status = cutensorHandleReadCacheFromFile(&cutensor_handle_, cacheFilename, &numCachelinesRead);
+      if (status == CUTENSOR_STATUS_IO_ERROR) {
+        printf("File (%s) doesn't seem to exist.\n", cacheFilename);
+      } else if (status == CUTENSOR_STATUS_INSUFFICIENT_WORKSPACE) {
+        printf("Cannot read cache: Please attach at least %d cachelines to the handle.\n", numCachelinesRead);
+      }
     }
-
     // At this point, we have the resource which may need to be freed
     this->cutensor_handle_ownership_ = OwnHandle;
 #endif
