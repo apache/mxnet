@@ -21,7 +21,6 @@
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
 import copy
-import ctypes
 import inspect
 import warnings
 import weakref
@@ -1368,6 +1367,7 @@ class HybridBlock(Block):
 
         if remove_amp_cast:
             handle = SymbolHandle()
+            import ctypes
             check_call(_LIB.MXSymbolRemoveAmpCast(sym.handle, ctypes.byref(handle)))
             sym = type(sym)(handle)
         return sym, arg_dict
