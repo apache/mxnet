@@ -1625,7 +1625,7 @@ def docs_upload_s3() {
 
             unstash 'full_website-artifacts'
 
-            utils.docker_run('ubuntu_cpu_jekyll', 'push_docs', false)
+            utils.docker_run('ubuntu_cpu', 'push_docs', false)
 
             archiveArtifacts 'docs/_build/versions.zip'
           }
