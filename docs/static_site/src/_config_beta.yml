@@ -39,6 +39,7 @@ url: https://thomasdelteil.github.io
 twitter_username: apachemxnet
 github_username:  apache/incubator-mxnet
 youtube_username: apachemxnet
+baseurl: /versions/master
 versions:
   - master
   - 1.7.0

@@ -39,7 +39,8 @@ twitter_username: apachemxnet
 github_username:  apache/incubator-mxnet
 youtube_username: apachemxnet
 google_analytics: UA-96378503-1
-versions: 
+baseurl: /versions/master
+versions:
   - master
   - 1.7.0
   - 1.6.0
@@ -51,7 +52,7 @@ versions:
   - 1.0.0
   - 0.12.1
   - 0.11.0
-  
+
 # Build settings
 markdown: kramdown
 plugins:
