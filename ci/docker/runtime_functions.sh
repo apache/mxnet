@@ -1924,7 +1924,7 @@ build_docs_beta() {
 
 push_docs() {
     set -ex
-    pip3 install --user awscli
+    pip3 install awscli --ignore-installed six
     pushd docs/_build
     wget https://mxnet-website-static-artifacts.s3.us-east-2.amazonaws.com/versions.zip && unzip versions.zip && rm versions.zip
     mkdir 1.8 && tar -xzf full_website.tgz -C 1.8 --strip-components 1
