@@ -1922,6 +1922,17 @@ build_docs_beta() {
     popd
 }
 
+push_docs() {
+    set -ex
+    pip3 install --user awscli
+    pushd docs/_build
+    wget https://mxnet-website-static-artifacts.s3.us-east-2.amazonaws.com/versions.zip && unzip versions.zip && rm versions.zip
+    mkdir 1.7 && tar -xzf full_website-artifacts.tgz -C 1.7 --strip-components 1
+    mv 1.7 versions
+    zip -r9 versions.zip versions/.
+    popd
+}
+
 create_repo() {
    repo_folder=$1
    mxnet_url=$2

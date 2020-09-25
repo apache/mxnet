@@ -1587,6 +1587,53 @@ def docs_jekyll() {
     }]
 }
 
+// This is for building the full website
+// Assumes you have run all of the docs generation functions
+def docs_full_website() {
+    return ['Build artifacts full_website.tgz': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+
+            unstash 'jekyll-artifacts'
+            unstash 'c-artifacts'
+            unstash 'python-artifacts'
+            unstash 'r-artifacts'
+            unstash 'julia-artifacts'
+            unstash 'scala-artifacts'
+            unstash 'java-artifacts'
+            unstash 'clojure-artifacts'
+
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
+            utils.pack_lib('full_website-artifacts', 'docs/_build/full_website.tgz', false)
+
+            // archive so the publish pipeline can access the artifact
+            archiveArtifacts 'docs/_build/full_website.tgz'
+          }
+        }
+      }
+    }]
+}
+
+def docs_upload_s3() {
+    return ['Upload artifacts to s3 bucket': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+
+            unstash 'full_website-artifacts'
+
+            utils.docker_run('ubuntu_cpu_jekyll', 'push_docs', false)
+
+            archiveArtifacts 'docs/_build/versions.zip'
+          }
+        }
+      }
+    }]
+}
+
 
 // This is for publishing the full website
 // Assumes you have run all of the docs generation functions

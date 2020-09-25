@@ -38,7 +38,7 @@ core_logic: {
     custom_steps.compile_unix_lite()
   ])
 
-  utils.parallel_stage('Build Docs', [
+  utils.parallel_stage('Build Api Docs', [
     custom_steps.docs_jekyll(),
     custom_steps.docs_c(),
     custom_steps.docs_python(),
@@ -49,8 +49,12 @@ core_logic: {
     custom_steps.docs_clojure()
   ])
 
-  utils.parallel_stage('Prepare', [
-    custom_steps.docs_prepare()
+  utils.parallel_stage('Build Full Website', [
+    custom_steps.docs_full_website()
+  ])
+
+  utils.parallel_stage('Upload Docs', [
+    custom_steps.docs_upload_s3()
   ])
 }
 ,
