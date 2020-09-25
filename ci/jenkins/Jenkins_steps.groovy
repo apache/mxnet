@@ -1606,7 +1606,7 @@ def docs_full_website() {
             unstash 'clojure-artifacts'
 
             utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
-            utils.pack_lib('full_website-artifacts', 'docs/_build/full_website.tgz', false)
+            utils.pack_lib('full_website', 'docs/_build/full_website.tgz', false)
 
             // archive so the publish pipeline can access the artifact
             archiveArtifacts 'docs/_build/full_website.tgz'
@@ -1623,7 +1623,7 @@ def docs_upload_s3() {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init('libmxnet', mx_lib, false)
 
-            unstash 'full_website-artifacts'
+            unstash 'full_website'
 
             utils.docker_run('ubuntu_cpu', 'push_docs', false)
 
