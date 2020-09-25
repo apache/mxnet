@@ -1924,7 +1924,6 @@ build_docs_beta() {
 
 push_docs() {
     set -ex
-    pip3 install --user awscli
     pushd docs/_build
     wget https://mxnet-website-static-artifacts.s3.us-east-2.amazonaws.com/versions.zip && unzip versions.zip && rm versions.zip
     mkdir 1.7 && tar -xzf full_website-artifacts.tgz -C 1.7 --strip-components 1
