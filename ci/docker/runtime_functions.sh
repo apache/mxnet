@@ -1924,11 +1924,13 @@ build_docs_beta() {
 
 push_docs() {
     set -ex
+    pip3 install --user awscli
     pushd docs/_build
     wget https://mxnet-website-static-artifacts.s3.us-east-2.amazonaws.com/versions.zip && unzip versions.zip && rm versions.zip
     mkdir 1.8 && tar -xzf full_website.tgz -C 1.8 --strip-components 1
     mv 1.8 versions
-    zip -r9 versions.zip versions/.
+    zip -r9 versions-test.zip versions/.
+    aws s3 cp versions-test.zip s3://mxnet-website-static-artifacts
     popd
 }
 

@@ -1627,7 +1627,7 @@ def docs_upload_s3() {
 
             utils.docker_run('ubuntu_cpu', 'push_docs', false)
 
-            archiveArtifacts 'docs/_build/versions.zip'
+            archiveArtifacts 'docs/_build/versions-test.zip'
           }
         }
       }
