@@ -1621,7 +1621,7 @@ def docs_upload_s3() {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
+            utils.unpack_and_init('libmxnet', mx_lib, false)
 
             unstash 'full_website-artifacts'
 
