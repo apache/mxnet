@@ -52,7 +52,7 @@ You can also use the following command via docker.
 ci/build.py -R --docker-registry mxnetci --platform ubuntu_cpu --docker-build-retries 3 --shm-size 500m /work/runtime_functions.sh sanity_cpp
 ```
 
-`cpplint` is also not perfect, when necessary, you can use disble
+`cpplint` is also not perfect, when necessary, you can use disable
 `cpplint` on certain code regions.
 
 Python Code Styles

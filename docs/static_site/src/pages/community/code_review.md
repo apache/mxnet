@@ -105,7 +105,7 @@ Minimum Dependency
 Always be cautious in introducing dependencies. While it is important to
 reuse code and avoid reinventing the wheel, dependencies can increase
 burden of users in deployment. A good design principle is that a feature
-or function should only have a dependecy if/when a user actually use it.
+or function should only have a dependency if/when a user actually use it.
 
 Ensure Readability
 ------------------
