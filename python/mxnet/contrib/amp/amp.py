@@ -82,15 +82,15 @@ def _get_nd_fun_to_wrap(name, module, submodule_dict):
     return func_name, cur_module
 
 def _get_np_fun_to_wrap(name, ns_prefix):
-    for p, b, s, subs in ((_NP_OP_PREFIX, 'numpy', '._op', _NP_OP_SUBMODULE_LIST),
-                          (_NP_EXT_OP_PREFIX, 'numpy_extension', '._op', _NP_EXT_OP_SUBMODULE_LIST),
-                          (_NP_INTERNAL_OP_PREFIX, 'numpy._internal', '', [])):
-        if name.startswith(p):
-            name = name[len(p):]
+    for pre, mod, subs in ((_NP_OP_PREFIX, 'numpy', _NP_OP_SUBMODULE_LIST),
+                           (_NP_EXT_OP_PREFIX, 'numpy_extension', _NP_EXT_OP_SUBMODULE_LIST),
+                           (_NP_INTERNAL_OP_PREFIX, 'numpy._internal', [])):
+        if name.startswith(pre):
+            name = name[len(pre):]
             for sub in subs:
                 if name.startswith(sub):
-                    return name[len(sub):], sys.modules[f'{ns_prefix}.{b}.{sub[1:-1]}']
-            return name, sys.modules[f'{ns_prefix}.{b}{s}']
+                    return name[len(sub):], sys.modules[f'{ns_prefix}.{mod}.{sub[1:-1]}']
+            return name, sys.modules[f'{ns_prefix}.{mod}']
     assert False
     return None  # for pylint
 
@@ -213,7 +213,7 @@ def _wrap_module_functions(module, is_numpy_module, target_dtype, get_aliases, g
             f_to_wrap = getattr(cur_module, fun_name)
             fp32_param = fp32_param_list[fun_name] if (fp32_param_list and fun_name in fp32_param_list) else None
             setattr(cur_module, fun_name, _wrapper(f_to_wrap, target_dtype, fp32_param=fp32_param))
-            if cur_module == module:
+            if not is_numpy_module and cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, target_dtype, fp32_param=fp32_param))
         except AttributeError:
             raise
@@ -224,7 +224,7 @@ def _wrap_module_functions(module, is_numpy_module, target_dtype, get_aliases, g
             fun_name, cur_module = get_fun_to_wrap(fun_name, module)
             f_to_wrap = getattr(cur_module, fun_name)
             setattr(cur_module, fun_name, _wrapper(f_to_wrap, np.float32))
-            if cur_module == module:
+            if not is_numpy_module and cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32))
         except AttributeError:
             raise
@@ -236,7 +236,7 @@ def _wrap_module_functions(module, is_numpy_module, target_dtype, get_aliases, g
             fun_name, cur_module = get_fun_to_wrap(fun_name, module)
             f_to_wrap = getattr(cur_module, fun_name)
             setattr(cur_module, fun_name, _wrapper(f_to_wrap, np.float32, cond_arg=(arg, arg_values)))
-            if cur_module == module:
+            if not is_numpy_module and cur_module == module:
                 setattr(module.op, fun_name, _wrapper(f_to_wrap, np.float32, cond_arg=(arg, arg_values)))
         except AttributeError:
             raise
@@ -247,7 +247,7 @@ def _wrap_module_functions(module, is_numpy_module, target_dtype, get_aliases, g
             fun_name, cur_module = get_fun_to_wrap(fun_name, module)
             f_to_wrap = getattr(cur_module, fun_name)
             setattr(cur_module, fun_name, _symbol_widest_wrapper(f_to_wrap))
-            if cur_module == module:
+            if not is_numpy_module and cur_module == module:
                 setattr(module.op, fun_name, _symbol_widest_wrapper(f_to_wrap))
         except AttributeError:
             raise
