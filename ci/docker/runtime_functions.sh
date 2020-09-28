@@ -1923,16 +1923,16 @@ build_docs_beta() {
 }
 
 push_docs() {
+    version_name=$1
     set -ex
     pip3 install --user awscli
     export PATH=~/.local/bin:$PATH
     pushd docs/_build
-    echo "env var is: $1"
     wget https://mxnet-website-static-artifacts.s3.us-east-2.amazonaws.com/versions.zip && unzip versions.zip && rm versions.zip
-    mkdir $1 && tar -xzf full_website.tgz -C $1 --strip-components 1
-    mv $1 versions
+    mkdir $version_name && tar -xzf full_website.tgz -C $version_name --strip-components 1
+    mv $version_name versions
     zip -r9 versions-test.zip versions/.
-    aws s3 cp versions-test.zip s3://mxnet-website-static-artifacts
+    aws s3 cp versions-test.zip s3://mxnet-website-static-artifacts --acl bucket-owner-full-control
     popd
 }
 
