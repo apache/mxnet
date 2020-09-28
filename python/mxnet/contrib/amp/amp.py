@@ -25,6 +25,7 @@ __all__ = ['init', 'init_trainer', 'scale_loss', 'unscale', 'convert_model',
 
 from array import array
 import ctypes
+import inspect
 import logging
 import contextlib
 import sys
@@ -38,7 +39,7 @@ from ...symbol import contrib as symbol_contrib
 from ... import ndarray
 from ...ndarray import NDArray, _DTYPE_NP_TO_MX, _DTYPE_MX_TO_NP
 from . import lists
-from ...gluon import trainer
+from ...gluon import Block, trainer
 from ... import base
 from ...base import (_NP_OP_PREFIX, _NP_OP_SUBMODULE_LIST, _NP_EXT_OP_PREFIX,
                      _NP_EXT_OP_SUBMODULE_LIST, _NP_INTERNAL_OP_PREFIX,
@@ -298,6 +299,14 @@ def scale_loss(loss, optimizer_or_trainer):
     else:
         yield optimizer_or_trainer._amp_loss_scaler.loss_scale * loss
 
+def warn_if_model_exists():
+    for f in inspect.stack():
+        for k, v in f.frame.f_locals.items():
+            if isinstance(v, Block):
+                logging.warning('Block %s created in [%s:%d] before AMP init.',
+                                k, f.filename, f.lineno)
+                return
+
 def init(target_dtype='float16', target_precision_ops=None,
          conditional_fp32_ops=None, fp32_ops=None):
     """Initialize AMP (automatic mixed precision).
@@ -330,6 +339,8 @@ def init(target_dtype='float16', target_precision_ops=None,
             target_dtype = bfloat16
         else:
             target_dtype = np.dtype(target_dtype)
+
+        warn_if_model_exists()
 
         ops = get_all_registered_operators_grouped()
         get_aliases_nd = lambda l: [a for op in l for a in ops[op] if not base._is_np_op(a)]
