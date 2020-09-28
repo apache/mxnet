@@ -1,13 +1,12 @@
 # Necessary components that are not in the network
 
-The data and algorithms like Neural Networks are not the only components that
-you need to create your trained deep learning model. In this notebook, you will
-learn about some of the common components used for training your own machine
-learning models. Here is a list of components that are commonly found in
-training a model in MXNet.
+Data and models are not the only components that
+you need to train a deep learning model. In this notebook, you will
+learn about the common components involved in training deep learning models. 
+Here is a list of components necessary for training models in MXNet.
 
 1. Initialization
-2. Loss function
+2. Loss functions
     1. Built-in
     2. Custom
 3. Optimizers
@@ -26,9 +25,9 @@ ctx = mx.cpu()
 
 In the previous notebook, you used `net.initialize()` to initialize the network
 before a forward pass. Now, you will learn about initialization in a little more
-detail here.
+detail.
 
-First, define the `sequential` network that you used earlier and initialize it.
+First, define and initialize the `sequential` network from earlier.
 After you initialize it, print the parameters using `collect_params()` method.
 
 ```python
@@ -67,23 +66,21 @@ for key,value in params.items():
 
 #### Built-in Initialization
 
-MXNet includes some common initializers built-in for ease of use. They include
-some of the commonly used initializers like
+MXNet makes it easy to initialize by providing many common initializers. A subset that you will be using in the following sections include:
 
 - Constant
 - Normal
-- Xavier
 
 For more information, see
 [Initializers](https://mxnet.apache.org/versions/1.6/api/python/docs/api/initializer/index.html)
 
-When you use `net.intialize()`, MXNet initializes the weight matrices uniformly
-by drawing random values with uniform-distribution between −0.07 and 0.07 and
+When you use `net.intialize()`, MXNet, by default, initializes the weight matrices uniformly
+by drawing random values with a uniform-distribution between −0.07 and 0.07 and
 updates the bias parameters by setting them all to 0.
 
 To initialize your network using different built-in types, you have to use the
-`init` keyword argument in the `initialize()` method. Here is an example using a
-`constant` init and a `normal` init.
+`init` keyword argument in the `initialize()` method. Here is an example using
+`constant` and `normal` initialization.
 
 ```python
 from mxnet import init
@@ -93,7 +90,7 @@ net.initialize(init=init.Constant(3),ctx=ctx)
 print(net[0].weight.data()[0])
 ```
 
-Normal Init initializes weights with random values sampled from a normal
+If you use Normal to initialize your weights then you will use a normal
 distribution with a mean of zero and standard deviation of sigma. If you have
 already initialized the weight but want to reinitialize the weight, set the
 `force_reinit` flag to `True`.
@@ -105,14 +102,14 @@ print(net[0].weight.data()[0])
 
 ## Components used in a training loop
 
-Till now you have seen how to create an algorithm and initialized it using mxnet
-APIs as well as learned the basics of using mxnet. When you start training the
-ML algorithm, how does it actually learn or train?
+Till now you have seen how to create an algorithm and how to initialize it using mxnet
+APIs; additionally you have learned the basics of using mxnet. When you start training the
+ML algorithm, how do you actually teach the algorithm to learn or train?
 
-There are three main components of what happens during training an algorithm.
+There are three main components for training an algorithm.
 
 1. Loss function: calculates how far the model is from the true distribution
-2. Autograd: the mxnet auto differentiation tool to calculate the gradients to
+2. Autograd: the mxnet auto differentiation tool that calculates the gradients to
 optimize the parameters
 3. Optimizer: updates the parameters based on an optimization algorithm
 
@@ -122,12 +119,12 @@ notebook, you will learn more about loss functions and optimizers.
 ## Loss function
 
 Loss functions are used to train neural networks and help the algorithm learn
-the data distribution. The loss function computes the difference between the
-output from the neural network and ground truth value. This score is used to
+from the data. The loss function computes the difference between the
+output from the neural network and ground truth. This output is used to
 update the neural network weights during training. Next, you will look at a
 simple example.
 
-Suppose you have a neural network `net` and the data is stored in variable
+Suppose you have a neural network `net` and the data is stored in a variable
 `data`. The data consists of 5 total records (rows) and two features (columns)
 and the output from the neural network after the first epoch is given by the
 variable `nn_output`.
@@ -156,15 +153,14 @@ groundtruth_label = np.array([[0.0083],
                              [0.00639]]).reshape(5,1)
 ```
 
-For this problem, use the L2 Loss. L2Loss, also called Mean Squared Error, is a
+For this problem, you will use the L2 Loss. L2Loss, also called Mean Squared Error, is a
 regression loss function that computes the squared distances between the target
 values and the output of the neural network. It is defined as:
 
 $$L = \frac{1}{2N}\sum_i{|label_i − pred_i|)^2}$$
 
-L2 loss function creates larger gradients for large loss values due to the
-square operator and also smooths the loss function space. However due to the
-squaring it puts high weight on outliers.
+The L2 loss function creates larger gradients for loss values which are farther apart due to the
+square operator and it also smooths the loss function space. 
 
 ```python
 def L2Loss(output_values, true_values):
@@ -173,7 +169,7 @@ def L2Loss(output_values, true_values):
 L2Loss(nn_output,groundtruth_label)
 ```
 
-Now, do the same thing using the mxnet API
+Now, you can do the same thing using the mxnet API
 
 ```python
 from mxnet.gluon import nn, loss as gloss
@@ -182,10 +178,10 @@ loss = gloss.L2Loss()
 loss(nn_output,groundtruth_label)
 ```
 
-A network can improve by iteratively updating its weights to minimise this loss.
+A network can improve by iteratively updating its weights to minimise the loss.
 Some tasks use a combination of multiple loss functions, but often you will just
 use one. MXNet Gluon provides a number of the most commonly used loss functions.
-The choise of your loss function will depend on your network and task. Some
+The choice of your loss function will depend on your network and task. Some
 common tasks and loss function pairs include:
 
 - regression: L1Loss, L2Loss
@@ -199,7 +195,7 @@ common tasks and loss function pairs include:
 You can also create custom loss functions using **Loss Blocks**.
 
 You can inherit the base `Loss` class and write your own `forward` method. The
-backward propagation will be automatically computed by autograd. However that
+backward propagation will be automatically computed by autograd. However, that
 only holds true if you can build your loss from existing mxnet operators.
 
 ```python
@@ -225,8 +221,8 @@ l1(nn_output,groundtruth_label)
 
 ## Optimizer
 
-The loss function is how much to change the parameters based on how far the
-model is from the minima or from the groundtruth. Optimizer is how the model
+The loss function determines how much to change the parameters based on how far the
+model is from the groundtruth. Optimizer determines how the model
 weights or parameters are updated based on the loss function. In Gluon, this
 optimization step is performed by the `gluon.Trainer`.
 
@@ -272,8 +268,8 @@ print(curr_weight - net.weight.grad() * 1 / 5)
 ## Metrics
 
 MXNet includes a `metrics` API that you can use to evaluate how your model is
-doing. This is typically used during training to monitor performance on the
-validation set. MXNet includes commonly used metrics:
+performing. This is typically used during training to monitor performance on the
+validation set. MXNet includes many commonly used metrics, a few are listed below:
 
 -
 [Accuracy](https://mxnet.apache.org/versions/1.6/api/python/docs/api/metric/index.html#mxnet.metric.Accuracy)
@@ -284,7 +280,7 @@ error](https://mxnet.apache.org/versions/1.6/api/python/docs/api/metric/index.ht
 - [Root mean squared error
 (RMSE)](https://mxnet.apache.org/versions/1.6/api/python/docs/api/metric/index.html#mxnet.metric.RMSE)
 
-Now, you will define two arrays for a dummy binary class classification example.
+Now, you will define two arrays for a dummy binary classification example.
 
 ```python
 # Vector of likelihoods for all the classes
@@ -304,7 +300,7 @@ acc = Accuracy()
 
 To run and calculate the updated accuracy for each batch or epoch, you can call
 the `update()` method. This method uses labels and predictions which can be
-either class index or vector of likelihoods for all classes.
+either class indexes or a vector of likelihoods for all of the classes.
 
 ```python
 acc.update(labels=labels, preds = pred)
@@ -313,7 +309,7 @@ acc.update(labels=labels, preds = pred)
 #### Creating custom metrics
 
 In addition to built-in metrics, if you want to create a custom metric, you can
-use the following skeleton code. The code inherits from the `EvalMetric` base
+use the following skeleton code. This code inherits from the `EvalMetric` base
 class.
 
 ```
@@ -353,7 +349,7 @@ class precision(EvalMetric):
 p = precision()
 ```
 
-And finally, call the `update` method to return the precision for your data
+And finally, call the `update` method to return the results of `precision` for your data
 
 ```python
 p.update(np.array(y_true),np.array(y_pred))
