@@ -1622,9 +1622,6 @@ def docs_upload_s3() {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             if(env.RELEASE_WEBSITE_VERSION) {
-              sh 'echo Can not find website version for release. Please specify env var RELEASE_WEBSITE_VERSION in Jenkins'
-              sh 'exit 1'
-            } else {
               utils.unpack_and_init('libmxnet', mx_lib, false)
 
               unstash 'full_website'
@@ -1647,6 +1644,9 @@ return 0
 """
 
               archiveArtifacts 'docs/_build/versions-test.zip'
+            } else {
+              sh 'echo Can not find website version for release. Please specify env var RELEASE_WEBSITE_VERSION in Jenkins'
+              sh 'exit 1'
             }
             
           }
