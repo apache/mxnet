@@ -1626,22 +1626,7 @@ def docs_upload_s3() {
 
               unstash 'full_website'
 
-              // utils.docker_run('ubuntu_cpu', 'push_docs', false)
-              sh returnStatus: true, script: """
-set +e
-echo "website version: ${env.RELEASE_WEBSITE_VERSION}"
-echo "Uploading website artifacts to S3..."
-pip3 install --user awscli
-export PATH=~/.local/bin:$PATH
-pushd docs/_build
-wget https://mxnet-website-static-artifacts.s3.us-east-2.amazonaws.com/versions.zip && unzip versions.zip && rm versions.zip
-mkdir ${env.RELEASE_WEBSITE_VERSION} && tar -xzf full_website.tgz -C ${env.RELEASE_WEBSITE_VERSION} --strip-components 1
-mv ${env.RELEASE_WEBSITE_VERSION} versions
-zip -r9 versions-test.zip versions/.
-aws s3 cp versions-test.zip s3://mxnet-website-static-artifacts
-popd
-return 0
-"""
+              utils.docker_run('ubuntu_cpu', "push_docs ${env.RELEASE_WEBSITE_VERSION}", false)
 
               archiveArtifacts 'docs/_build/versions-test.zip'
             } else {
