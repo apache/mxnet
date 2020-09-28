@@ -18,7 +18,7 @@
 from mxnet.test_utils import *
 from mxnet.base import MXNetError
 import pytest
-from common import setup_module, with_seed, teardown_module, assertRaises
+from common import with_seed, assertRaises
 import random
 import warnings
 

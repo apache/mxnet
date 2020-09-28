@@ -15,7 +15,6 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from __future__ import print_function
 import sys, os, logging, functools
 import multiprocessing as mp
 import mxnet as mx
@@ -235,79 +234,6 @@ def with_seed(seed=None):
                     np.random.set_state(post_test_state)
         return test_new
     return test_helper
-
-
-def setup_module():
-    """
-    A function with a 'magic name' executed automatically before each pytest module
-    (file of tests) that helps reproduce a test segfault by setting and outputting the rng seeds.
-
-    The segfault-debug procedure on a module called test_module.py is:
-
-    1. run "pytest --verbose test_module.py".  A seg-faulting output might be:
-
-       [INFO] np, mx and python random seeds = 4018804151
-       test_module.test1 ... ok
-       test_module.test2 ... Illegal instruction (core dumped)
-
-    2. Copy the module-starting seed into the next command, then run:
-
-       MXNET_MODULE_SEED=4018804151 pytest --logging-level=DEBUG --verbose test_module.py
-
-       Output might be:
-
-       [WARNING] **** module-level seed is set: all tests running deterministically ****
-       [INFO] np, mx and python random seeds = 4018804151
-       test_module.test1 ... [DEBUG] np and mx random seeds = 3935862516
-       ok
-       test_module.test2 ... [DEBUG] np and mx random seeds = 1435005594
-       Illegal instruction (core dumped)
-
-    3. Copy the segfaulting-test seed into the command:
-       MXNET_TEST_SEED=1435005594 pytest --logging-level=DEBUG --verbose test_module.py:test2
-       Output might be:
-
-       [INFO] np, mx and python random seeds = 2481884723
-       test_module.test2 ... [DEBUG] np and mx random seeds = 1435005594
-       Illegal instruction (core dumped)
-
-    3. Finally reproduce the segfault directly under gdb (might need additional os packages)
-       by editing the bottom of test_module.py to be
-
-       if __name__ == '__main__':
-           logging.getLogger().setLevel(logging.DEBUG)
-           test2()
-
-       MXNET_TEST_SEED=1435005594 gdb -ex r --args python test_module.py
-
-    4. When finished debugging the segfault, remember to unset any exported MXNET_ seed
-       variables in the environment to return to non-deterministic testing (a good thing).
-    """
-
-    module_seed_str = os.getenv('MXNET_MODULE_SEED')
-    logger = default_logger()
-    if module_seed_str is None:
-        seed = np.random.randint(0, np.iinfo(np.int32).max)
-    else:
-        seed = int(module_seed_str)
-        logger.warning('*** module-level seed is set: all tests running deterministically ***')
-    logger.info('Setting module np/mx/python random seeds, use MXNET_MODULE_SEED=%s to reproduce.', seed)
-    np.random.seed(seed)
-    mx.random.seed(seed)
-    random.seed(seed)
-    # The MXNET_TEST_SEED environment variable will override MXNET_MODULE_SEED for tests with
-    #  the 'with_seed()' decoration.  Inform the user of this once here at the module level.
-    if os.getenv('MXNET_TEST_SEED') is not None:
-        logger.warning('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
-
-
-def teardown_module():
-    """
-    A function with a 'magic name' executed automatically after each pytest test module.
-
-    It waits for all operations in one file to finish before carrying on the next.
-    """
-    mx.nd.waitall()
 
 
 def with_environment(*args_):
