@@ -261,7 +261,7 @@ def _collect_layer_statistics(sym_block, data, collector, max_num_examples=None,
     num_batches = 0
     num_examples = 0
     for batch in data:
-        sym_block(batch[0]) #TODO: without indexing
+        sym_block(batch.data[0])  # TODO(bgawrych): without indexing
         num_batches += 1
         num_examples += data.batch_size
         if max_num_examples is not None and num_examples >= max_num_examples:
@@ -957,11 +957,11 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy', 'customize']:
             data_names = [pair[0] for pair in calib_data.provide_data]
-            mod = Module(symbol=symnet, context=ctx,
-                         data_names=data_names, label_names=None)
-            mod.bind(for_training=False, data_shapes=data_shapes)
-            mod.set_params(args, auxs, allow_missing=False, force_init=True)
-            num_examples = _collect_layer_statistics(mod, calib_data, collector,
+            sym_block = mx.gluon.SymbolBlock(outputs=symnet, inputs=mx.sym.Variable('data'))
+            all_params = args
+            all_params.update(auxs)
+            sym_block.load_dict(all_params, cast_dtype=True, dtype_source='saved', allow_missing=False)
+            num_examples = _collect_layer_statistics(sym_block, calib_data, collector,
                                                      num_calib_examples, logger)
             if logger:
                 logger.info('Collected layer output values from FP32 model using %d examples'
@@ -993,8 +993,8 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         save_dict.update({('aux:%s' % k): v.as_in_context(cpu())
                           for k, v in aux_params.items()})
         nd_save(param_name, save_dict)
-        net.collect_params().load(param_name, cast_dtype=True, dtype_source='saved')
-        net.collect_params().reset_ctx(ctx)
+        net.load_parameters(param_name, cast_dtype=True, dtype_source='saved')
+        net.reset_ctx(ctx)
     return net
 
 def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
