@@ -1616,21 +1616,23 @@ def docs_full_website() {
     }]
 }
 
+// This is for uploading website artifacts to S3 bucket
+// Assumes you have run docs_full_website function
 def docs_upload_s3() {
     return ['Upload artifacts to s3 bucket': {
       node(NODE_LINUX_CPU) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
-            if(env.RELEASE_WEBSITE_VERSION) {
-              utils.unpack_and_init('libmxnet', mx_lib, false)
+            if(env.FOLDER_NAME) {
+              utils.init_git()
 
               unstash 'full_website'
 
-              utils.docker_run('ubuntu_cpu', "push_docs ${env.RELEASE_WEBSITE_VERSION}", false)
+              utils.docker_run('ubuntu_cpu', "push_docs ${env.FOLDER_NAME}", false)
 
               archiveArtifacts 'docs/_build/versions-test.zip'
             } else {
-              sh 'echo Can not find website version for release. Please specify env var RELEASE_WEBSITE_VERSION in Jenkins'
+              sh 'echo Can not find website version for release. Please specify env var FOLDER_NAME in Jenkins'
               sh 'exit 1'
             }
             
