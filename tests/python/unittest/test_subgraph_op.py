@@ -536,6 +536,7 @@ if __name__ == "__main__":
             test_subgraph_exe6(sym, subgraph_backend, op_names)
             test_subgraph_exe7(sym, subgraph_backend, op_names)
             test_subgraph_exe8(sym, subgraph_backend, op_names)
+            test_subgraph_exe9(sym, subgraph_backend, op_names)
             test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir)
             test_subgraph_backend_gluon_ext1(tmpdir)
             test_subgraph_backend_gluon_ext2(tmpdir)
