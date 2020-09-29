@@ -394,6 +394,7 @@ def init_trainer(optimizer_or_trainer):
     if isinstance(optimizer_or_trainer, trainer.Trainer):
         optimizer_or_trainer._amp_loss_scaler = loss_scaler
         optimizer_or_trainer._amp_original_scale = optimizer_or_trainer._scale
+        trainer.Trainer.amp_loss_scale = property(lambda self: self._amp_loss_scaler.loss_scale)
     elif isinstance(optimizer_or_trainer, opt.Optimizer):
         raise TypeError("AMP is currently only compatible with Gluon Trainer")
     else:
