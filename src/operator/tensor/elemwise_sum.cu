@@ -128,10 +128,12 @@ void VectorizedElementwiseSum(const nnvm::NodeAttrs &attrs,
         params.inputs[j] = inputs[i + j].dptr_;
       }
       params.outputs[0] = outputs[0].dptr_;
+      const std::vector<TBlob> new_inputs(inputs.begin() + i,
+                                          inputs.begin() + i + params.num_inputs);
       VectorizedKernelRTCLauncher(code, "elementwise_sum_kernel",
                                   elementwise_sum_kernel, nvec,
                                   size, 1, s, params,
-                                  inputs, outputs,
+                                  new_inputs, outputs,
                                   ctx.run_ctx.get_ctx().dev_id);
     } else {
       /* During subsequent launches we need to
@@ -144,7 +146,8 @@ void VectorizedElementwiseSum(const nnvm::NodeAttrs &attrs,
         params.inputs[j] = inputs[i + j].dptr_;
       }
       params.outputs[0] = outputs[0].dptr_;
-      const std::vector<TBlob> new_inputs(inputs.begin() + i, inputs.end());
+      const std::vector<TBlob> new_inputs(inputs.begin() + i,
+                                          inputs.begin() + i + params.num_inputs);
       VectorizedKernelRTCLauncher(code, "elementwise_sum_kernel",
                                   elementwise_sum_kernel, nvec,
                                   size, 1, s, params,
