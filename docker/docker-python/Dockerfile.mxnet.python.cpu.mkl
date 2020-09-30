@@ -18,12 +18,12 @@
 #
 # Dockerfile to build MXNet CPU with MKL
 
-FROM ubuntu:16.04
-ARG version
+from ubuntu:16.04
+are version
 
-RUN apt-get update && \
+run apt-get update && \
     apt-get install -y wget python-dev gcc && \
     wget https://bootstrap.pypa.io/get-pip.py && \
     python get-pip.py
 
-RUN pip install mxnet-mkl==$version
+ go pip install mxnet-mkl==$version
