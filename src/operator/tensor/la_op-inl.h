@@ -439,11 +439,12 @@ struct syevd {
                  const Tensor<xpu, 2, DType>& L, const OpContext& ctx,
                  const nnvm::NodeAttrs& attrs) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
+    using IndexT = typename LapackIndex<xpu>::IndexT;
     linalg_check_batch_size(A.size(0), U.size(0), L.size(0));
     if (A.dptr_ != U.dptr_) Copy(U, A, s);
     // From here on, we work on U only
     // Reserve workspace (size determined by query)
-    lapack_index_t lwork(linalg_syevd_workspace_query(U[0], L[0], s));
+    IndexT lwork(linalg_syevd_workspace_query(U[0], L[0], s));
     Tensor<xpu, 1, DType> work = ctx.requested[0]
       .get_space_typed<xpu, 1, DType>(Shape1(lwork), s);
     // Loop over items in batch
@@ -467,21 +468,21 @@ struct inverse {
     if (B.shape_.Size() == 0U) {
       return;
     }
-    linalg_batch_inverse(A, B, ctx);
+    linalg_batch_inverse<xpu>(A, B, ctx);
   }
 };
 
 // this kernel computes sign(det(A)), log(abs(det(A))) from LU decomposition
 struct SignedLogDet {
-  template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, int N, lapack_index_t* pivot,
+  template<typename DType, typename IndexT>
+  MSHADOW_XINLINE static void Map(size_t i, size_t N, IndexT* pivot,
                                   DType *LU, DType* sign, DType *logdet) {
-    int changes(0);
+    IndexT changes(0);
     DType diag_sign(1);
     DType diag_logsum(0);
-    lapack_index_t *pivot_mat = pivot + i * N;
+    IndexT *pivot_mat = pivot + i * N;
     DType *LU_mat = LU + i * N * N;
-    for (int j = 0; j < N; ++j) {
+    for (IndexT j = 0; j < N; ++j) {
       changes += (pivot_mat[j] != (j + 1));
       DType diag = LU_mat[j * (N + 1)];
       diag_sign *= ((DType(0) < diag) - (diag < DType(0)));
@@ -499,9 +500,9 @@ struct SignedLogDet {
 //     det(U) = prod(diag(U))
 // LU and pivot store the LU decomposition output which will be used in computing gradient
 struct det {
-  template<typename xpu, typename DType>
+  template<typename xpu, typename DType, typename IndexT>
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& det,
-                 const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, lapack_index_t>& pivot,
+                 const Tensor<xpu, 3, DType>& LU, const Tensor<xpu, 2, IndexT>& pivot,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     if (A.shape_.Size() == 0U) {
       return;
@@ -523,10 +524,10 @@ struct det {
 // sign = sign(det(A))
 // logabsdet = log(abs(det(A)))
 struct slogdet {
-  template<typename xpu, typename DType>
+  template<typename xpu, typename DType, typename IndexT>
   static void op(const Tensor<xpu, 3, DType>& A, const Tensor<xpu, 1, DType>& sign,
                  const Tensor<xpu, 1, DType>& logabsdet, const Tensor<xpu, 3, DType>& LU,
-                 const Tensor<xpu, 2, lapack_index_t>& pivot, const OpContext& ctx,
+                 const Tensor<xpu, 2, IndexT>& pivot, const OpContext& ctx,
                  const nnvm::NodeAttrs& attrs) {
     if (A.shape_.Size() == 0U) {
       return;
@@ -918,11 +919,11 @@ struct StopZeroDetGrad {
 // The closed form solution is pretty easy when A is invertible.
 // For non-invertible A, grad is not backwarded.
 struct det_backward {
-  template<typename xpu, typename DType>
+  template<typename xpu, typename DType, typename IndexT>
   static void op(const Tensor<xpu, 1, DType>& ddet,
                  const Tensor<xpu, 1, DType>& det,
                  const Tensor<xpu, 3, DType>& LU,
-                 const Tensor<xpu, 2, lapack_index_t>& pivot,
+                 const Tensor<xpu, 2, IndexT>& pivot,
                  const Tensor<xpu, 3, DType>& dA,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     using namespace mshadow;
@@ -948,12 +949,12 @@ struct det_backward {
 // For non-invertible A, grad is not backwarded.
 // Grad is not properly defined on sign, so it's not backwarded either.
 struct slogdet_backward {
-  template<typename xpu, typename DType>
+  template<typename xpu, typename DType, typename IndexT>
   static void op(const Tensor<xpu, 1, DType>& dlogabsdet,
                  const Tensor<xpu, 1, DType>& sign,
                  const Tensor<xpu, 1, DType>& logabsdet,
                  const Tensor<xpu, 3, DType>& LU,
-                 const Tensor<xpu, 2, lapack_index_t>& pivot,
+                 const Tensor<xpu, 2, IndexT>& pivot,
                  const Tensor<xpu, 3, DType>& dA,
                  const OpContext& ctx, const nnvm::NodeAttrs& attrs) {
     using namespace mshadow;

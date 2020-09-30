@@ -61,7 +61,7 @@ inline bool LstsqOpType(const nnvm::NodeAttrs& attrs,
     mshadow::kFloat64;
   TYPE_ASSIGN_CHECK(*out_attrs, 0, floatFlag);
   TYPE_ASSIGN_CHECK(*out_attrs, 1, floatFlag);
-  TYPE_ASSIGN_CHECK(*out_attrs, 2, mshadow::blas_index_type_flag);
+  TYPE_ASSIGN_CHECK(*out_attrs, 2, index_type_flag);
   TYPE_ASSIGN_CHECK(*out_attrs, 3, floatFlag);
 
   return out_attrs->at(0) != -1 &&
