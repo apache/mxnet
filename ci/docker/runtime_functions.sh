@@ -1939,7 +1939,7 @@ push_docs() {
     popd
     mv $folder_name versions
     zip -r9 versions.zip versions/.
-    aws s3 cp versions.zip s3://mxnet-website-static-artifacts --acl bucket-owner-full-control
+    aws s3 cp versions.zip s3://mxnet-website-static-artifacts --acl public-read
     popd
 }
 
