@@ -115,29 +115,29 @@ class My_First_Custom_Operation(autograd.Function):
     def __init__(self):
         super().__init__()
     def forward(self,x,y):
-        return 2*x,2*x*y,2*y
-    def backward(self,dx,dxy,dy):
+        return 2 * x, 2 * x * y, 2 * y
+    def backward(self, dx, dxy, dy):
         """
         The input number of arguments must match the number of outputs from forward.
         Furthermore, the number of output arguments must match the number of inputs from forward.
         """
-        return x,y
+        return x, y
 ```
 
 Now you can use the first custom operation you have built.
 
 ```python
-x = np.random.uniform(-1,1,(2,3)) 
-y = np.random.uniform(-1,1,(2,3))
+x = np.random.uniform(-1, 1, (2, 3)) 
+y = np.random.uniform(-1, 1, (2, 3))
 x.attach_grad()
 y.attach_grad()
 with autograd.record():
     z = My_First_Custom_Operation()
-    z1,z2,z3 = z(x,y)
+    z1, z2, z3 = z(x, y)
     out = z1 + z2 + z3 
 out.backward()
-print(np.array_equiv(x.asnumpy(),x.asnumpy()))
-print(np.array_equiv(y.asnumpy(),y.asnumpy()))
+print(np.array_equiv(x.asnumpy(), x.asnumpy()))
+print(np.array_equiv(y.asnumpy(), y.asnumpy()))
 ```
 
 Alternatively, you may want to have a function which is different depending on
@@ -146,19 +146,19 @@ if you are training or not.
 ```python
 def my_first_function(x):
     if autograd.is_training(): # Return something else when training
-        return(4*x)
+        return(4 * x)
     else:
         return(x)
 ```
 
 ```python
 y = my_first_function(x)
-print(np.array_equiv(y.asnumpy(),x.asnumpy()))
+print(np.array_equiv(y.asnumpy(), x.asnumpy()))
 with autograd.record(train_mode=False):
     y = my_first_function(x)
 y.backward()
 print(x.grad)
-with autograd.record(train_mode=True):# train_mode = True by default
+with autograd.record(train_mode=True): # train_mode = True by default
     y = my_first_function(x)
 y.backward()
 print(x.grad)
@@ -169,7 +169,7 @@ You could create functions with `autograd.record()`.
 ```python
 def my_second_function(x):
     with autograd.record():
-        return(2*x)
+        return(2 * x)
 ```
 
 ```python
@@ -220,16 +220,16 @@ c/a[1]]`, depending on which element from `b` is picked. You see the results of
 this example with this code:
 
 ```python
-a.grad == c/a
+a.grad == c / a
 ```
 
-As you can see there are 3 values along the dimension 0, so taking a `mean`
-along this access is the same as summing that axis and multiplying by `1/3`.
+As you can notice there are 3 values along the dimension 0, so taking a `mean`
+along this axis is the same as summing that axis and multiplying by `1/3`.
 
 ## Advanced MXNet ndarray operations with Autograd
 
 You can control gradients for different ndarray operations. For instance,
-perhaps you want to check that the gradients are propogating properly?
+perhaps you want to check that the gradients are propagating properly?
 the `attach_grad()` method automatically detaches itself from the gradient.
 Therefore, the input up until y will no longer look like it has `x`. To
 illustrate this notice that `x.grad` and `y.grad` is not the same in the second
@@ -237,9 +237,9 @@ example.
 
 ```python
 with autograd.record():
-    y = 3*x
+    y = 3 * x
     y.attach_grad()
-    z = 4*y+2*x
+    z = 4 * y + 2 * x
 z.backward()
 print(x.grad)
 print(y.grad)
@@ -249,8 +249,8 @@ Is not the same as:
 
 ```python
 with autograd.record():
-    y = 3*x
-    z = 4*y+2*x
+    y = 3 * x
+    z = 4 * y + 2 * x
 z.backward()
 print(x.grad)
 print(y.grad)
@@ -258,5 +258,5 @@ print(y.grad)
 
 ## Next steps
 
-Learn how to construct a neural network with the Gluon module: [Step 2: Create a
-neural network](2-nn.md).
+Learn how to initialize weights, choose loss function, metrics and optimizers for training your neural network [Step 4: Necessary components
+to train the neural network](4-components.md).

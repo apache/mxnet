@@ -21,7 +21,7 @@ npx.set_np()  # Change MXNet to the numpy-like mode.
 ## Create your neural network's first layer
 
 In this section, you will create a simple neural network with Gluon. One of the
-simplest network you can create is a single **Dense** layer or **densely-
+simplest networks you can create is a single **Dense** layer or **densely-
 connected** layer. A dense layer consists of nodes in the input that are
 connected to every node in the next layer. Use the following code example to
 start with a dense layer with five output units.
@@ -41,7 +41,7 @@ You can also call the **Dense** layer with an `in_units` parameter if you know
 the shape of your input unit.
 
 ```python
-layer = nn.Dense(5,in_units=3)
+layer = nn.Dense(5, in_units=3)
 layer
 ```
 
@@ -54,47 +54,46 @@ Call the Dense layer with an `activation` parameter to use an activation
 function.
 
 ```python
-layer = nn.Dense(5, in_units=3,activation='relu')
+layer = nn.Dense(5, in_units=3, activation="relu")
 ```
 
-Voila! Congratulations on creating a simple neural network. But for most of your
+Voilà! Congratulations on creating a simple neural network. But for most of your
 use cases, you will need to create a neural network with more than one dense
-layer or with multiple types of other layers. In addition to the `Dense` layer,
+layer or with multiple types of other layers. In addition to `Dense`,
 you can find more layers at [mxnet nn
 layers](https://mxnet.apache.org/versions/1.6/api/python/docs/api/gluon/nn/index.html#module-
 mxnet.gluon.nn)
 
-So now that you have created a neural network, you are probably wondering how to
+Now that you have created a neural network, you are probably wondering how to
 pass data into your network?
 
 First, you need to initialize the network weights, if you use the default
-initialization method which draws random values uniformly in the range $[-0.7,
+initialization method your weights will take a random value distributed uniformly in the range $[-0.7,
 0.7]$. You can see this in the following example.
 
-**Note**: Initialization is discussed at a little deeper detail in the next
-notebook
+**Note**: Initialization is discussed at a little deeper detail in the [next
+notebook](4-components.md)
 
 ```python
 layer.initialize()
 ```
 
-Now that you have initialized your network, you can give it data. Passing data
+Now that you have initialized your network, you can feed it data. Passing data
 through a network is also called a forward pass. You can do a forward pass with
 random data, shown in the following example. First, you create a `(10,3)` shape
 random input `x` and feed the data into the layer to compute the output.
 
 ```python
-x = np.random.uniform(-1,1,(10,3))
+x = np.random.uniform(-1, 1, (10, 3))
 layer(x)
 ```
 
-The layer produces a `(10,5)` shape output from your `(10,3)` input.
+The layer produces a `(10, 5)` shape output from your `(10, 3)` input.
 
 **When you don't specify the `in_unit` parameter, the system  automatically
-infers it during the first time you feed in data during the first forward step
-after you create and initialize the weights.**
+infers it during the first time you feed in data (first forward pas).**
 
-You can access the weight after the first forward pass, as shown in this
+You can access the weights after the first forward pass, as shown in this
 example.
 
 ```python
@@ -103,21 +102,22 @@ layer.weight.data()
 
 ## Chain layers into a neural network using nn.Sequential
 
-Sequential provides a special way of rapidly building networks when when the
+`Sequential` provides a special way of rapidly build networks when the
 network architecture follows a common design pattern: the layers look like a
 stack of pancakes. Many networks follow this pattern: a bunch of layers, one
 stacked on top of another, where the output of each layer is fed directly to the
-input to the next layer. To use sequential, simply provide a list of layers
+input to the next layer. To use `Sequential`, simply provide a list of layers
 (pass in the layers by calling `net.add(<Layer goes here!>`). To do this you can
-use your previous example of Dense layers and create a 3-layer multi layer
-perceptron. You can create a sequential block using `nn.Sequential()` method and
+stack `Dense` blocks from  previous example and create a 3-layer [multilayer
+perceptron](https://en.wikipedia.org/wiki/Multilayer_perceptron). 
+You can create a sequential block using `nn.Sequential()` method and
 add layers using `add()` method.
 
 ```python
 net = nn.Sequential()
 
-net.add(nn.Dense(5,in_units=3,activation='relu'),
-        nn.Dense(25, activation='relu'),
+net.add(nn.Dense(5, in_units=3, activation="relu"),
+        nn.Dense(25, activation="relu"),
         nn.Dense(2)
        )
 
@@ -138,7 +138,7 @@ net[1]
 existing layers from `gluon.nn`. It also includes a pre-defined `forward()`
 function that sequentially executes added layers. But what if the built-in
 layers are not sufficient for your needs. If you want to create networks like
-ResNet which has complex but repeatable components, how do you create such a
+ResNet ,which has complex but repeatable components, how do you create such a
 network?
 
 In gluon, every neural network layer is defined by using a base class
@@ -169,8 +169,8 @@ class Net(nn.Block):
 class MLP(nn.Block):
     def __init__(self):
         super().__init__()
-        self.dense1 = nn.Dense(5,activation='relu')
-        self.dense2 = nn.Dense(25,activation='relu')
+        self.dense1 = nn.Dense(5, activation="relu")
+        self.dense2 = nn.Dense(25, activation="relu")
         self.dense3 = nn.Dense(2)
 
     def forward(self, x):
@@ -190,9 +190,9 @@ Similarly, you can use the following code to implement a famous network called
 class LeNet(nn.Block):
     def __init__(self):
         super().__init__()
-        self.conv1  = nn.Conv2D(channels=6, kernel_size=3, activation='relu')
+        self.conv1  = nn.Conv2D(channels=6, kernel_size=3, activation="relu")
         self.pool1  = nn.MaxPool2D(pool_size=2, strides=2)
-        self.conv2  = nn.Conv2D(channels=16, kernel_size=3, activation='relu')
+        self.conv2  = nn.Conv2D(channels=16, kernel_size=3, activation="relu")
         self.pool2  = nn.MaxPool2D(pool_size=2, strides=2)
         self.dense1 = nn.Dense(120, activation="relu")
         self.dense2 = nn.Dense(84, activation="relu")
@@ -212,7 +212,7 @@ Lenet = LeNet()
 ```
 
 ```python
-image_data = np.random.uniform(-1,1, (1,1,28,28))
+image_data = np.random.uniform(-1, 1, (1, 1, 28, 28))
 
 Lenet.initialize()
 
@@ -254,14 +254,14 @@ output.shape
 
 ## Deciding the paradigm for your network
 
-In MXNet, Gluon API (Imperative programming paradigm) provides a user friendly
+In MXNet, the Gluon API (Imperative programming paradigm) provides a user friendly
 way for quick prototyping, easy debugging and natural control flow for people
 familiar with python programming.
 
-However, at the backend, MXNET can also convert the network using Symbolic or
+However, at the backend, MXNet can convert the network using Symbolic or
 Declarative programming into static graphs with low level optimizations on
-operators. However, static graphs are less flexible because any logic must be
-encoded into the graph as special operators like scan, while_loop and cond. It’s
+operators. Static graphs are less flexible because any logic must be
+encoded into the graph as special operators like scan, while loop and cond. It’s
 also hard to debug.
 
 So how can you make use of symbolic programming while getting the flexibility of
@@ -269,17 +269,17 @@ imperative programming to quickly prototype and debug?
 
 Enter **HybridBlock**
 
-HybridBlocks can run in a fully imperatively way where you define their
+HybridBlocks can run in a fully imperative way where you define their
 computation with real functions acting on real inputs. But they’re also capable
-of running symbolically, acting on placeholders. Gluon hides most of this under
+of turning into symbols, acting on placeholders. Gluon hides most of this under
 the hood so you will only need to know how it works when you want to write your
 own layers.
 
 ```python
 net_hybrid_seq = nn.HybridSequential()
 
-net_hybrid_seq.add(nn.Dense(5,in_units=3,activation='relu'),
-        nn.Dense(25, activation='relu'),
+net_hybrid_seq.add(nn.Dense(5, in_units=3, activation="relu"),
+        nn.Dense(25, activation="relu"),
         nn.Dense(2)
        )
 
@@ -304,23 +304,23 @@ from time import time
 def benchmark(net, x):
     y = net(x)
     start = time()
-    for i in range(1,1000):
+    for i in range(1, 1000):
         y = net(x)
     return time() - start
 
-x_bench = np.random.normal(size=(1,512))
+x_bench = np.random.normal(size=(1, 512))
 
 net_hybrid_seq = nn.HybridSequential()
 
-net_hybrid_seq.add(nn.Dense(256,activation='relu'),
-        nn.Dense(128, activation='relu'),
+net_hybrid_seq.add(nn.Dense(256, activation="relu"),
+        nn.Dense(128, activation="relu"),
         nn.Dense(2)
        )
 net_hybrid_seq.initialize()
 
-print('Before hybridizing: %.4f sec'%(benchmark(net_hybrid_seq, x_bench)))
+print("Before hybridizing: %.4f sec"%(benchmark(net_hybrid_seq, x_bench)))
 net_hybrid_seq.hybridize()
-print('After hybridizing: %.4f sec'%(benchmark(net_hybrid_seq, x_bench)))
+print("After hybridizing: %.4f sec"%(benchmark(net_hybrid_seq, x_bench)))
 ```
 
 Peeling back another layer, you also have a `HybridBlock` which is the hybrid
@@ -337,8 +337,8 @@ from mxnet.gluon import HybridBlock
 class MLP_Hybrid(HybridBlock):
     def __init__(self):
         super().__init__()
-        self.dense1 = nn.Dense(256,activation='relu')
-        self.dense2 = nn.Dense(128,activation='relu')
+        self.dense1 = nn.Dense(256, activation="relu")
+        self.dense2 = nn.Dense(128, activation="relu")
         self.dense3 = nn.Dense(2)
 
     def forward(self, x):
@@ -350,9 +350,9 @@ class MLP_Hybrid(HybridBlock):
 net_Hybrid = MLP_Hybrid()
 net_Hybrid.initialize()
 
-print('Before hybridizing: %.4f sec'%(benchmark(net_Hybrid, x_bench)))
+print("Before hybridizing: %.4f sec"%(benchmark(net_Hybrid, x_bench)))
 net_Hybrid.hybridize()
-print('After hybridizing: %.4f sec'%(benchmark(net_Hybrid, x_bench)))
+print("After hybridizing: %.4f sec"%(benchmark(net_Hybrid, x_bench)))
 ```
 
 Given a HybridBlock whose forward computation consists of going through other
@@ -383,7 +383,7 @@ The model parameters are the params that you save **after** you train your
 model.
 
 ```python
-file_name = 'layer.params'
+file_name = "layer.params"
 layer.save_parameters(file_name)
 ```
 
@@ -393,14 +393,14 @@ function to build it.
 
 ```python
 def build_model():
-    layer = nn.Dense(5, in_units=3,activation='relu')
+    layer = nn.Dense(5, in_units=3, activation="relu")
     return layer
 
 layer_new = build_model()
 ```
 
 ```python
-layer_new.load_parameters('layer.params')
+layer_new.load_parameters("layer.params")
 ```
 
 **Note**: The `save_parameters` and `load_parameters` method is used for models
@@ -420,11 +420,11 @@ function. The export function will export the model architecture into a `.json`
 file and model parameters into a `.params` file.
 
 ```python
-net_Hybrid.export('MLP_hybrid')
+net_Hybrid.export("MLP_hybrid")
 ```
 
 ```python
-net_Hybrid.export('MLP_hybrid')
+net_Hybrid.export("MLP_hybrid")
 ```
 
 Similarly, to load this model back, you can use `gluon.nn.SymbolBlock`. To

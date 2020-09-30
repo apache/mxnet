@@ -39,21 +39,21 @@ example creates a matrix with values from two sets of numbers: 1, 2, 3 and 4, 5,
 6. This might also be referred to as a tuple of a tuple of integers.
 
 ```python
-np.array(((1,2,3),(5,6,7)))
+np.array(((1, 2, 3), (5, 6, 7)))
 ```
 
 You can also create a very simple matrix with the same shape (2 rows by 3
 columns), but fill it with 1's.
 
 ```python
-x = np.full((2,3),1) 
+x = np.full((2, 3), 1) 
 x
 ```
 
 Alternatively, you could use the following array creation routine.
 
 ```python
-x = np.ones((2,3)) 
+x = np.ones((2, 3)) 
 x
 ```
 
@@ -62,7 +62,7 @@ values uniformly between -1 and 1. The following code example creates the same
 shape, but with random sampling.
 
 ```python
-y = np.random.uniform(-1,1, (2,3))
+y = np.random.uniform(-1, 1, (2, 3))
 y
 ```
 
@@ -80,21 +80,21 @@ NumPy arrays.
 You could also specifiy the datatype when you create your ndarray.
 
 ```python
-x = np.full((2,3),1,dtype='int8') 
+x = np.full((2, 3), 1, dtype="int8") 
 x.dtype
 ```
 
 Versus the default of `float32`.
 
 ```python
-x = np.full((2,3),1) 
+x = np.full((2, 3), 1) 
 x.dtype
 ```
 
 When we multiply, by default we use the datatype with the most precision.
 
 ```python
-x = x.astype('int8') + x.astype(int) + x.astype('float32')
+x = x.astype("int8") + x.astype(int) + x.astype("float32")
 x.dtype
 ```
 
@@ -121,10 +121,10 @@ by using the following code example.
 np.dot(x, y.T)
 ```
 
-Alternatively, we could use the matrix multiplication function.
+Alternatively, you could use the matrix multiplication function.
 
 ```python
-np.matmul(x,y.T)
+np.matmul(x, y.T)
 ```
 
 You can leverage built in operators, like summation.
@@ -146,7 +146,7 @@ x.flatten()
 ```
 
 ```python
-x.reshape(6,1)
+x.reshape(6, 1)
 ```
 
 ## Indexing an array
@@ -156,19 +156,19 @@ The following code example shows how to read a particular element, which returns
 a 1D array with shape `(1,)`.
 
 ```python
-y[1,2]
+y[1, 2]
 ```
 
 This example shows how to read the second and third columns from `y`.
 
 ```python
-y[:,1:3]
+y[:, 1:3]
 ```
 
 This example shows how to write to a specific element.
 
 ```python
-y[:,1:3] = 2
+y[:, 1:3] = 2
 y
 ```
 
@@ -176,7 +176,7 @@ You can perform multi-dimensional slicing, which is shown in the following code
 example.
 
 ```python
-y[1:2,0:2] = 4
+y[1:2, 0:2] = 4
 y
 ```
 
@@ -192,10 +192,10 @@ a = x.asnumpy()
 
 ```python
 a = np.array(a)
-(type(a),a)
+(type(a), a)
 ```
 
-Additionally, you can move them to different GPU contexts. We will dive more
+Additionally, you can move them to different GPU contexts. You will dive more
 into this later, but here is an example for now.
 
 ```python
@@ -206,6 +206,6 @@ a.copyto(mx.gpu(0))
 
 Ndarrays also have some additional features which make Deep Learning possible
 and efficient. Namely, differentiation, and being able to leverage GPU's.
-Although we will discuss using ndarray's on gpus later, later we will discuss
-autograd. Next we will abstract an additional level and talk about building
-Neural Network Layers [Step 2: Create a neural network](2-nn.md)
+Another important feature of ndarrays that we will discuss later is 
+autograd. But first, we will abstract an additional level and talk about building
+Neural Network Layers [Step 2: Create a neural network](2-create-nn.md)
