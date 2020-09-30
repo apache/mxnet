@@ -92,7 +92,7 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
 
     switch (status_) {
       case kStart:
-        // Currently, For INT8 FC fusion, only supports relu/bounded_relu(clip)/abs/tanh.
+        // Currently, For INT8 FC fusion, only supports relu/bounded_relu(clip)/abs.
         if (new_node.op() == Op::Get("Activation")) {
           const ActivationParam &param = nnvm::get<ActivationParam>(new_node.attrs.parsed);
           if ((quantized_ && SupportQuantizedMKLDNNAct(param)) ||
@@ -123,11 +123,6 @@ class SgMKLDNNFCSelector : public SubgraphSelector {
           }
           status_ = kSuccess;
           return false;
-        }
-        if (new_node.op() == Op::Get("tanh")) {
-          matched_list_.push_back(&new_node);
-          status_ = kSuccess;
-          return true;
         }
       default:
         status_ = kSuccess;
