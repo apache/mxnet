@@ -337,7 +337,7 @@ const float kPi = 3.1415926f;
   typedef index_t openmp_index_t;
 #endif
 
-#if MSHADOW_USE_MKL && not MSHADOW_USE_CUDA
+#if MSHADOW_USE_MKL
   // lapack_index_t could be replaced by index_t and removed when all blas library support large tensor
   typedef index_t lapack_index_t;
 #else
@@ -472,10 +472,7 @@ struct DataType<bool> {
 const int default_type_flag = DataType<default_real_t>::kFlag;
 
 /*! \brief TypeFlag value for type of indexes */
-const int index_type_flag = DataType<index_t>::kFlag;
-
-/*! \brief TypeFlag value for type of indexes */
-const int blas_index_type_flag = DataType<lapack_index_t>::kFlag;
+const int index_type_flag = DataType<lapack_index_t>::kFlag;
 
 /*! layout flag */
 enum LayoutFlag {
