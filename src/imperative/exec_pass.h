@@ -204,22 +204,14 @@ Graph DetectInplaceAddTo(Graph g);
 Graph EliminateCommonExpr(Graph && g);
 
 /*!
- * \brief Fuse pointwise operations in the forward pass.
+ * \brief Fuse pointwise operations in the graph.
  *
  * \param g input graph (needs to be entire graph, not just forward part)
+ * \param num_forward_outputs number of outputs in the graph produced by the forward pass
  *
- * \return graph with fused pointwise operations in the forward pass
+ * \return copy of the graph with fused pointwise operations
  */
-Graph FusePointwiseForward(Graph&& g);
-
-/*!
- * \brief Fuse pointwise operations in the backward pass.
- *
- * \param g input graph (needs to be entire graph, not just forward part)
- *
- * \return graph with fused pointwise operations in the backward pass
- */
-Graph FusePointwiseBackward(Graph&& g);
+Graph FusePointwise(const Graph& g, const size_t num_forward_outputs);
 
 /*!
  * \brief Issue a one-time warning that fusion is not possible for this platform or build.
