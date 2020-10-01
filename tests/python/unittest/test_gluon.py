@@ -29,6 +29,8 @@ from mxnet.test_utils import use_np
 import mxnet.numpy as _mx_np
 from common import (setup_module, with_seed, assertRaises, teardown,
                     assert_raises_cudnn_not_satisfied, environment)
+import mxnet.ndarray.sparse as mxsps
+import scipy.sparse as sps
 import numpy as np
 from numpy.testing import assert_array_equal
 from nose.tools import raises, assert_raises
@@ -3228,6 +3230,15 @@ def test_reqs_switching_training_inference():
     grad2 = x.grad.asnumpy()
 
     mx.test_utils.assert_almost_equal(grad1, grad2)
+
+
+def test_split_and_load():
+    ctx_list = (mx.gpu(0), mx.gpu(0))
+    csr_arr = mxsps.csr_matrix(sps.coo_matrix(([2.0], ([99], [999]))).tocsr(), ctx=mx.gpu(0))
+    arr_list = gluon.utils.split_and_load(csr_arr, ctx_list)
+    assert hasattr(arr_list[0], 'indices')
+    assert isinstance(arr_list[0], mxsps.CSRNDArray)
+
 
 if __name__ == '__main__':
     import nose
