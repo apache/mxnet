@@ -24,8 +24,8 @@ from ..ndarray import (zeros, clip, array,
                        where, ones_like)
 from ..ndarray import (sgd_update, sgd_mom_update,
                        mp_sgd_update, mp_sgd_mom_update,
-                       preloaded_multi_sgd_update, preloaded_multi_sgd_mom_update,
-                       preloaded_multi_mp_sgd_update, preloaded_multi_mp_sgd_mom_update)
+                       lars_multi_sgd_update, lars_multi_sgd_mom_update,
+                       lars_multi_mp_sgd_update, lars_multi_mp_sgd_mom_update)
 from .optimizer import Optimizer, register
 from .utils import _flatten_list
 
@@ -88,6 +88,7 @@ class LARS(Optimizer):
         self.eta = eta
         self.epsilon = epsilon
         self.lazy_update = lazy_update
+        self.last_lr = {}
 
     def create_state(self, index, weight):
         momentum = None
@@ -225,12 +226,12 @@ class LARS(Optimizer):
             multi_precision = self.multi_precision and weights[0].dtype == numpy.float16
             if not multi_precision:
                 if self.momentum > 0:
-                    preloaded_multi_sgd_mom_update(
+                    lars_multi_sgd_mom_update(
                         *(_flatten_list(zip(new_weights, new_grads, new_states)) +
                           [new_lrs, new_wds]), out=new_weights, num_weights=len(new_weights),
                         **kwargs)
                 else:
-                    preloaded_multi_sgd_update(
+                    lars_multi_sgd_update(
                         *(_flatten_list(zip(new_weights, new_grads)) +
                           [new_lrs, new_wds]), out=new_weights, num_weights=len(new_weights),
                         **kwargs)
@@ -238,20 +239,29 @@ class LARS(Optimizer):
                 states = list(zip(*states))
                 weights32, moms = states
                 if self.momentum > 0:
-                    preloaded_multi_mp_sgd_mom_update(
+                    lars_multi_mp_sgd_mom_update(
                         *(_flatten_list(zip(new_weights, new_grads, moms, weights32)) +
                           [new_lrs, new_wds]), out=new_weights, num_weights=len(new_weights),
                         **kwargs)
                 else:
-                    preloaded_multi_mp_sgd_update(
+                    lars_multi_mp_sgd_update(
                         *(_flatten_list(zip(new_weights, new_grads, weights32)) +
                           [new_lrs, new_wds]), out=new_weights, num_weights=len(new_weights),
                         **kwargs)
         else:
+            kwargs_old = kwargs
             for i, (index, weight, grad, state) in enumerate(zip(indices, weights, grads, states)):
+                kwargs = kwargs_old.copy()
                 wd = wds[i]
                 lr = lrs[i]
                 lr *= self._get_lars(index, weight, grad, wd)
+                if state is not None:
+                    # normal SGD picks up momentum correction by default,
+                    # so need to modify the momentum to undo that.
+                    # The correction term is previous_lr / current_lr.
+                    kwargs['momentum'] = (self.momentum * (self.last_lr.get(index, lr) / lr)) \
+                                         if lr != 0 else self.momentum
+                self.last_lr[index] = lr
                 multi_precision = self.multi_precision and weights[0].dtype == numpy.float16
                 if not multi_precision:
                     mom = state
