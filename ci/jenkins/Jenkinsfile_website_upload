@@ -17,7 +17,7 @@
 // specific language governing permissions and limitations
 // under the License.
 //
-// Jenkins pipeline
+// Jenkins pipeline to build website artifacit and upload to private s3 bucket
 // See documents at https://jenkins.io/doc/book/pipeline/jenkinsfile/
 
 // timeout in minutes
