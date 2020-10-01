@@ -1632,7 +1632,7 @@ def docs_upload_s3() {
 
               archiveArtifacts 'docs/_build/versions.zip'
             } else {
-              sh 'echo Can not find website version for release. Please specify env var FOLDER_NAME in Jenkins'
+              sh 'echo Can not find website version for release. Please specify env var FOLDER_NAME in Jenkins pipeline'
               sh 'exit 1'
             }
             
