@@ -98,6 +98,7 @@ def test_amp_coverage(amp_tests):
         f"\n{guidelines}"
 
 @with_seed()
+@pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_amp_conversion_rnn(amp_tests):
     with mx.Context(mx.gpu(0)):
