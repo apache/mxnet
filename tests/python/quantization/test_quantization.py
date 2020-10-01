@@ -29,14 +29,22 @@ import unittest
 import operator
 
 
-def initialize_symbolblock_params(sym_block, initializer):
-    for name, param in sym_block.collect_params('.*gamma|.*running_var|.*moving_var').items():
+def initialize_block_params(block, initializer):
+    for name, param in block.collect_params('.*gamma|.*running_var|.*moving_var').items():
         param.initialize(mx.init.Constant(1))
-    for name, param in sym_block.collect_params('.*beta|.*bias|.*moving_mean|.*running_mean').items():
+    for name, param in block.collect_params('.*beta|.*bias|.*moving_mean|.*running_mean').items():
         param.initialize(mx.init.Constant(0))
-    for name, param in sym_block.collect_params('.*weight').items():
+    for name, param in block.collect_params('.*weight').items():
         param.initialize(initializer)
 
+def collect_block_args_aux(block, sym):
+  arg_params, aux_params = dict(), dict()
+  for k, v in block.collect_params().items():
+    if k in sym.list_arguments():
+      arg_params[k]= v._reduce()
+    elif k in sym.list_auxiliary_states():
+      aux_params[k]= v._reduce()
+  return arg_params, aux_params
 
 def is_test_for_gpu():
     return mx.current_context().device_type == 'gpu'
@@ -937,18 +945,10 @@ def test_quantize_model():
                                      (label_shape, msym_label_shape)):
             data = mx.sym.Variable('data')
             sym_block = mx.gluon.SymbolBlock(outputs=s, inputs=data)
-            initialize_symbolblock_params(sym_block, mx.init.One())
+            initialize_block_params(sym_block, mx.init.One())
             data = mx.nd.random.uniform(low=0, high=1, shape=dshape)
             sym_block.forward(data)
-            arg_list = s.list_arguments()
-            aux_list = s.list_auxiliary_states()
-            arg_params = {}
-            aux_params = {}
-            for k, v in sym_block.collect_params().items():
-                if k in arg_list:
-                    arg_params[k] = v._reduce()
-                elif k in aux_list:
-                    aux_params[k] = v._reduce()
+            arg_params, aux_params = collect_block_args_aux(sym_block, sym)
 
             qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=s,
                                                                              arg_params=arg_params,

@@ -20,8 +20,14 @@ import os
 import mxnet as mx
 import numpy as np
 import unittest
-import ctypes
+import tempfile
 import pytest
+import ctypes
+
+curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
+sys.path.append(os.path.join(curr_path, '../unittest/'))
+from mxnet.contrib import quant
+from mxnet.test_utils import assert_almost_equal, assert_almost_equal_with_err, DummyIter
 
 def test_float64_fallback():
     sym = mx.sym.FullyConnected(
@@ -58,6 +64,24 @@ DATA_SHAPE=[(64, 4, 10, 10), (4, 3, 24, 24), (1, 16, 32, 32)]
 fc_post_ops_list=['relu', 'sigmoid', 'tanh', 'softrelu',
                   'square', 'square_root', 'abs', 'exp', 'bounded_relu']
 
+
+def initialize_block_params(block, initializer):
+  for name, param in block.collect_params('.*gamma|.*moving_var|.*running_var').items():
+      param.initialize(mx.init.Constant(1))
+  for name, param in block.collect_params('.*beta|.*moving_mean|.*running_mean|.*bias').items():
+      param.initialize(mx.init.Constant(0))
+  for name, param in block.collect_params('.*weight').items():
+      param.initialize(initializer)
+
+def collect_block_args_aux(block, sym):
+  arg_params, aux_params = dict(), dict()
+  for k, v in block.collect_params().items():
+    if k in sym.list_arguments():
+      arg_params[k]= v._reduce()
+    elif k in sym.list_auxiliary_states():
+      aux_params[k]= v._reduce()
+  return arg_params, aux_params
+  
 def check_qsym_calibrated(qsym, out_type, name='conv'):
   quantized_op_name = 'quantized_' + name
   assert ''.join(qsym.attr_dict().keys()).find(quantized_op_name) != -1
@@ -85,27 +109,29 @@ def check_qsym_scale_align(qsym):
         assert min_calib_range == v['min_calib_range']
         assert max_calib_range == v['max_calib_range']
 
-def check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape):
-  mod = Module(symbol=qsym, label_names=None, context=mx.current_context())
-  mod.bind(for_training=False,
-           data_shapes=[('data', data_shape)])
-  mod.set_params(qarg_params, qaux_params)
-  mod.forward(batch, is_train=False)
-  for output in mod.get_outputs():
-    output.wait_to_read()
-  return mod.get_outputs()
+def check_qsym_forward(qsym, qarg_params, qaux_params, data, data_shape):
+  inputs = mx.sym.var('data', dtype='float32')
+  sym_block = mx.gluon.SymbolBlock(qsym, inputs)
+  qparams = qarg_params
+  qparams.update(qaux_params)
+  sym_block.load_dict(qparams, cast_dtype=True, dtype_source='saved')
 
-def check_qsym_dummy_forward(qsym, batch, data_shape):
-  mod = Module(symbol=qsym, label_names=None, context=mx.current_context())
-  mod.bind(for_training=False,
-           data_shapes=[('data', data_shape)])
-  mod.init_params(initializer=mx.init.Xavier(magnitude=2.))
-  mod.forward(batch, is_train=False)
-  for output in mod.get_outputs():
+  outputs = sym_block(data)
+  for output in outputs:
     output.wait_to_read()
-  return mod.get_outputs()
+  return outputs
 
-def check_qsym_gluon_forward(path, qsym, qarg_params, qaux_params, data_shape):
+def check_qsym_dummy_forward(qsym, data, data_shape):
+  inputs = mx.sym.var('data', dtype='float32')
+  sym_block = mx.gluon.SymbolBlock(qsym, inputs)
+  initialize_block_params(sym_block, mx.init.One())
+
+  outputs = sym_block(data)
+  for output in outputs:
+    output.wait_to_read()
+  return outputs
+
+def check_qsym_gluon_forward(path, qsym, qarg_params, qaux_params, data_shape, qdtype):
   # save qsym to JSON file
   _, json_path = tempfile.mkstemp(suffix='-symbol.json', dir=path)
   params_path = json_path.replace('-symbol.json', '-0000.params')
@@ -116,25 +142,11 @@ def check_qsym_gluon_forward(path, qsym, qarg_params, qaux_params, data_shape):
   mx.nd.save(params_path, save_dict)
   # load back with SymbolBlock
   net = mx.gluon.SymbolBlock.imports(json_path, ['data'], params_path)
-  net.collect_params().reset_ctx(ctx = mx.current_context())
+  net.reset_ctx(ctx = mx.current_context())
   net.hybridize()
-
-  data = mx.random.uniform(-1.0, 1.0, shape=data_shape)
+  min_value = -1. if qdtype != 'uint8' else 0.0
+  data = mx.random.uniform(min_value, 1.0, shape=data_shape, dtype='float32')
   net(data)
-
-
-class CalibIter(mx.io.DataIter):
-    def __init__(self, batch, data_shape, batch_size):
-        super(CalibIter, self).__init__(batch_size)
-        self.data_shape = data_shape
-        self.label_shape = (batch_size,)
-        self.provide_data = [('data', self.data_shape)]
-        self.provide_label = []
-        self.batch = batch
-
-    def __iter__(self):
-        yield self.batch
-
 
 def check_quantize(sym, data_shape, out_type, path, name='conv',
                    check_calibration=True, gluon_forward=False, check_scale_align=False):
@@ -145,30 +157,27 @@ def check_quantize(sym, data_shape, out_type, path, name='conv',
   if name in config:
     name = config[name][OP_NAME]
   sym_sg = sym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
-  mod = Module(symbol=sym, label_names=None)
-  mod.bind(for_training=False,
-            data_shapes=[('data', data_shape)])
-  mod.init_params(mx.init.Normal(0.5))
-  arg_params, aux_params = mod.get_params()
 
-  if out_type == 'uint8':
-    data = [mx.random.uniform(0.0, 1.0, shape=shape, ctx=mx.current_context()) for _, shape in mod.data_shapes]
-  else:
-    data = [mx.random.uniform(-1.0, 1.0, shape=shape, ctx=mx.current_context()) for _, shape in mod.data_shapes]
-  batch = mx.io.DataBatch(data, [])
+  inputs = mx.sym.var('data', dtype='float32')
+  sym_block = mx.gluon.SymbolBlock(sym, inputs)
+  initialize_block_params(sym_block, mx.init.Normal(0.5))
 
-  mod.forward(batch, is_train=False)
-  for output in mod.get_outputs():
+  min_value = -1 if out_type != 'uint8' else 0
+  data = mx.random.uniform(min_value, 1.0, shape=data_shape, dtype='float32', ctx=mx.current_context())
+
+  outputs = sym_block(data)
+  for output in outputs:
       output.wait_to_read()
-  ref_out = mod.get_outputs()
+  ref_out = outputs
+  arg_params, aux_params = collect_block_args_aux(sym_block, sym)
 
   excluded_sym_names = []
   excluded_op_names = []
   if mx.current_context() == mx.cpu() and gluon_forward == True:
     excluded_op_names += ['_sg_mkldnn_fully_connected']
 
-  calib_data = CalibIter(batch, data_shape, 1)
-
+  calib_data = mx.io.NDArrayIter(data=data, batch_size=1)
+  calib_data = DummyIter(calib_data)
   for quantize_granularity in quantize_granularity_list:
     qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
                                                                     arg_params=arg_params,
@@ -189,27 +198,27 @@ def check_quantize(sym, data_shape, out_type, path, name='conv',
     if check_scale_align:
       check_qsym_scale_align(qsym)
     if gluon_forward == True:
-      check_qsym_gluon_forward(path, qsym, qarg_params, qaux_params, data_shape)
+      check_qsym_gluon_forward(path, qsym, qarg_params, qaux_params, data_shape, out_type)
     else:
-      quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, batch, data_shape)
+      quantized_out = check_qsym_forward(qsym, qarg_params, qaux_params, data, data_shape)
       for i in range(len(ref_out)):
         min_range = mx.nd.min(ref_out[i]).asscalar()
         max_range = mx.nd.max(ref_out[i]).asscalar()
         atol = 0.1 * max(abs(min_range), abs(max_range))
         assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
-      check_qsym_dummy_forward(qsym, batch, data_shape)
+      check_qsym_dummy_forward(qsym, data, data_shape)
 
 @with_seed()
-def check_quantize_whole_model_with_forward():
-  def check_qsym_forward(qsym, qarg_params, qaux_params, data_shape):
-    mod = Module(symbol=qsym, label_names=None, context=mx.current_context())
-    mod.bind(for_training=False,
-             data_shapes=[('data', data_shape)])
-    mod.set_params(qarg_params, qaux_params)
-    data = [mx.random.uniform(-1.0, 1.0, shape=shape) for _, shape in mod.data_shapes]
-    batch = mx.io.DataBatch(data, [])
-    mod.forward(batch, is_train=False)
-    for output in mod.get_outputs():
+def test_quantize_whole_model_with_forward():
+  def check_qsym_forward(qsym, qarg_params, qaux_params, data_shape, qdtype):
+    sym_block = mx.gluon.SymbolBlock(qsym, mx.sym.var('data'))
+    param_dict = qarg_params
+    param_dict.update(qaux_params)
+    sym_block.load_dict(param_dict, cast_dtype=True, dtype_source='saved')
+
+    data = mx.random.uniform(0.0 if qdtype=='uint8' else -1.0, 1.0, shape=data_shape)
+    outputs = sym_block(data)
+    for output in outputs:
         output.wait_to_read()
 
   def check_quantize_whole_model(out_type):
@@ -219,19 +228,16 @@ def check_quantize_whole_model_with_forward():
     conv0 = mx.sym.Convolution(data, kernel=(1, 1), num_filter=16, name='conv0')
     sym = mx.sym.Convolution(conv0, kernel=(1, 1), num_filter=16, name='conv1')
     sym_sg = sym.get_backend_symbol('MKLDNN_QUANTIZE')
-    mod = Module(symbol=sym, label_names=None)
-    mod.bind(for_training=False,
-             data_shapes=[('data', data_shape)])
+    sym_block = mx.gluon.SymbolBlock(outputs=sym, inputs=data)
+    initialize_block_params(sym_block, mx.init.Normal(0.5))
+    sym_block(mx.nd.random.uniform(shape=data_shape))
 
-    mod.init_params(mx.init.Normal(0.5))
-    arg_params, aux_params = mod.get_params()
-
+    arg_params, aux_params = collect_block_args_aux(sym_block, sym)
     excluded_sym_names = []
 
     calib_data = mx.nd.random.uniform(shape=data_shape)
-    calib_data = mx.io.NDArrayIter(data=calib_data)
-    calib_data = DummyIter(calib_data)
-    qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
+    calib_data = mx.io.NDArrayIter(data=calib_data, batch_size=batch_size)
+    qsym, qarg_params, qaux_params = mx.contrib.quantization.quantize_model(sym=sym_sg,
                                                                      arg_params=arg_params,
                                                                      aux_params=aux_params,
                                                                      ctx=mx.current_context(),
@@ -243,7 +249,7 @@ def check_quantize_whole_model_with_forward():
                                                                      num_calib_examples=1,
                                                                      quantize_mode='full')
     qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
-    check_qsym_forward(qsym, qarg_params, qaux_params, data_shape)
+    check_qsym_forward(qsym, qarg_params, qaux_params, data_shape, out_type)
 
   for qdtype in ['uint8', 'int8', 'auto']:
     check_quantize_whole_model(qdtype)
@@ -273,12 +279,12 @@ def check_fusion(sym, data_shape, attrs_dict, path, check_fp32_fusion=True, chec
                 assert v[attr_name].lower() == attr_value.lower()
           assert found
     arg_shapes, _, aux_shapes = sym.infer_shape()
-    arg_array = [mx.nd.random.uniform(data_min, data_max, shape=shape) for shape in arg_shapes]
-    aux_array = [mx.nd.random.uniform(shape=shape) for shape in aux_shapes]
-    exe = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
+    arg_array = [mx.nd.random.uniform(data_min, data_max, shape=shape, dtype='float32') for shape in arg_shapes]
+    aux_array = [mx.nd.random.uniform(shape=shape, dtype='float32') for shape in aux_shapes]
+    exe = sym._bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe.forward()
     os.environ['MXNET_SUBGRAPH_BACKEND'] = SG_PASS_NAME
-    exe_sg = sym.bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
+    exe_sg = sym._bind(ctx=mx.current_context(), args=arg_array, aux_states=aux_array, grad_req='null')
     exe_sg.forward()
     del os.environ['MXNET_SUBGRAPH_BACKEND']
     for i in range(len(exe.outputs)):
@@ -300,7 +306,7 @@ def check_neg_fusion(syms, attrs_name=None, excluded_attrs=None,
 
   for sym, attrs, excluded_attr in zip(syms, attrs_name, excluded_attrs):
     sym_sg = sym.get_backend_symbol(SG_PASS_NAME)
-    exe_sg = sym_sg.simple_bind(mx.cpu(), data=date_shape, grad_req='null')
+    exe_sg = sym_sg._simple_bind(mx.cpu(), data=date_shape, grad_req='null')
 
     attrs_dict = sym_sg.attr_dict()
     for k, v in attrs_dict.items():
@@ -532,7 +538,7 @@ def tail_neg_symbol(sym1, sym2):
   fc1 = mx.sym.FullyConnected(data=sym1, num_hidden=10, flatten=True, name='fc1')
   fc2 = mx.sym.FullyConnected(data=sym2, num_hidden=10, flatten=True, name='fc2')
   concat = mx.sym.Concat(*[fc1, fc2], name="concat")
-  sym = mx.sym.SoftmaxOutput(data=concat, name='softmax')
+  sym = mx.sym.softmax(data=concat, name='softmax')
   return sym
 
 # conv + bn can't be fusion case
@@ -784,11 +790,12 @@ def test_pos_conv_bn(tmpdir):
     net, attrs = conv_bn(True, data_shape)
     check_fusion(net, data_shape, attrs, str(tmpdir))
 
-@with_seed()
-@pytest.mark.parametrize('data_shape', DATA_SHAPE)
-def test_mobilenetv2_struct(data_shape, tmpdir):
-      net, attrs = mobilenetv2_struct(data_shape)
-      check_fusion(net, data_shape, attrs, str(tmpdir), out_types=['int8', 'auto'])
+# TODO(bgawrych): Enable this test once https://github.com/apache/incubator-mxnet/pull/19246 merged
+# @with_seed()
+# @pytest.mark.parametrize('data_shape', DATA_SHAPE)
+# def test_mobilenetv2_struct(data_shape, tmpdir):
+#       net, attrs = mobilenetv2_struct(data_shape)
+#       check_fusion(net, data_shape, attrs, str(tmpdir), out_types=['int8', 'auto'])
 
 @with_seed()
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
@@ -865,22 +872,18 @@ def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max
   weight_nd = mx.random.uniform(weight_min, weight_max, shape=[64, 32, 1, 1], ctx=mx.cpu())
   bias_nd = mx.random.uniform(-1, +1, shape=[64], ctx=mx.cpu())
   arg_params = {
-      'data': data_nd,
       'weight': weight_nd,
       'bias': bias_nd
   }
 
-  ex = sym.bind(mx.cpu(), arg_params, args_grad=None)
-  ex.forward()
+  ex = sym._bind(mx.cpu(), arg_params, args_grad=None)
+  ex.forward(data = data_nd)
   ex.outputs[0].wait_to_read()
   sym_sg = sym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
-  batch = mx.io.DataBatch([data_nd], [])
-  calib_data = CalibIter(batch, data_shape, 1)
+  
+  calib_data = mx.io.NDArrayIter(data=data_nd, batch_size=data_shape[0])
   qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
-                                                                   arg_params={
-                                                                       'weight': weight_nd,
-                                                                       'bias': bias_nd
-                                                                   },
+                                                                   arg_params=arg_params,
                                                                    aux_params={},
                                                                    ctx=mx.cpu(),
                                                                    excluded_sym_names=None,
@@ -893,7 +896,7 @@ def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max
                                                                    quantize_mode='full')
   qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
   qarg_params['data'] = data_nd
-  qex = qsym.bind(mx.cpu(), qarg_params, args_grad=None)
+  qex = qsym._bind(mx.cpu(), qarg_params, args_grad=None)
   qex.forward()
   qex.outputs[0].wait_to_read()
   assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
@@ -918,22 +921,18 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
   weight_nd = mx.random.uniform(weight_min, weight_max, shape=[64, 32], ctx=mx.cpu())
   bias_nd = mx.random.uniform(-1, +1, shape=[64], ctx=mx.cpu())
   arg_params = {
-      'data': data_nd,
       'weight': weight_nd,
       'bias': bias_nd
   }
 
-  ex = sym.bind(mx.cpu(), arg_params, args_grad=None)
-  ex.forward()
+  ex = sym._bind(mx.cpu(), arg_params, args_grad=None)
+  ex.forward(data = data_nd)
   ex.outputs[0].wait_to_read()
   sym_sg = sym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
-  batch = mx.io.DataBatch([data_nd], [])
-  calib_data = CalibIter(batch, data_shape, 1)
+  
+  calib_data = mx.io.NDArrayIter(data=data_nd, batch_size=1)
   qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
-                                                                   arg_params={
-                                                                       'weight': weight_nd,
-                                                                       'bias': bias_nd
-                                                                   },
+                                                                   arg_params=arg_params,
                                                                    aux_params={},
                                                                    ctx=mx.cpu(),
                                                                    excluded_sym_names=None,
@@ -946,7 +945,7 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
                                                                    quantize_mode='full')
   qarg_params['data'] = data_nd
   qsym = qsym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
-  qex = qsym.bind(mx.cpu(), qarg_params, args_grad=None)
+  qex = qsym._bind(mx.cpu(), qarg_params, args_grad=None)
   qex.forward()
   qex.outputs[0].wait_to_read()
   assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
