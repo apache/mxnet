@@ -1419,7 +1419,7 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
       g.attrs["dedup_subgraph"] = std::make_shared<nnvm::any>(std::string("True"));
     return g;
   };
-  
+
   if (mxnet::op::SubgraphBackendRegistry::Get()->backend_map_.count(backend_name) > 0) {
     // use subgraph backend
     const auto backend = mxnet::op::SubgraphBackendRegistry
