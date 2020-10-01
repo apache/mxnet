@@ -1410,6 +1410,11 @@ int MXOptimizeForBackend(SymbolHandle sym_handle,
   for (mx_uint i = 0; i < num_options; ++i)
     options_map.emplace(keys[i], vals[i]);
 
+  // set dedup option as attribute on graph to enable dedup during partitioning
+  if (options_map.count("dedup_subgraph") > 0 &&
+      options_map.at("dedup_subgraph").compare("True") == 0)
+    g.attrs["dedup_subgraph"] = std::make_shared<nnvm::any>(std::string("True"));
+
   if (mxnet::op::SubgraphBackendRegistry::Get()->backend_map_.count(backend_name) > 0) {
     // use subgraph backend
     const auto backend = mxnet::op::SubgraphBackendRegistry
