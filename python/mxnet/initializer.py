@@ -507,7 +507,7 @@ class Uniform(Initializer):
 
     def _init_weight(self, _, arr):
         uniform_fn = _mx_np.random.uniform if is_np_array() else random.uniform
-        uniform_fn(-self.scale, self.scale, arr.shape, out=arr)
+        uniform_fn(-self.scale, self.scale, arr.shape, dtype=arr.dtype, out=arr)
 
 @register
 class Normal(Initializer):
