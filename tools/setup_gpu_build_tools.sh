@@ -23,6 +23,8 @@
 # the following environment variables:
 # PATH, CPLUS_INCLUDE_PATH, C_INCLUDE_PATH, LIBRARY_PATH, LD_LIBRARY_PATH, NVCC
 
+set -e
+
 VARIANT=$1
 DEPS_PATH=$2
 
