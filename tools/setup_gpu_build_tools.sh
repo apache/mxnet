@@ -360,3 +360,4 @@ if [[ ! -d $DEPS_PATH/usr/local/cuda-${CUDA_MAJOR_VERSION} ]]; then
     cp -f ${prefix}/usr/include/nccl.h ${prefix}/include/nccl.h
     ln -sf libnccl_static.a ${prefix}/usr/lib/x86_64-linux-gnu/libnccl.a
 fi
+
