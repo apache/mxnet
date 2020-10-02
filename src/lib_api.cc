@@ -556,7 +556,7 @@ mxnet::ext::Graph* mxnet::ext::Graph::fromJson(mxnet::ext::JsonVal val) {
 }
 
 /* \brief convert graph object back to JSON object */
-mxnet::ext::JsonVal mxnet::ext::Graph::toJson() {
+mxnet::ext::JsonVal mxnet::ext::Graph::toJson() const {
   // top level object is a map
   JsonVal val(MAP);
 
@@ -641,7 +641,7 @@ mxnet::ext::JsonVal mxnet::ext::Graph::toJson() {
 }
 
 /* \brief convert graph object to JSON string */
-std::string mxnet::ext::Graph::toString() {
+std::string mxnet::ext::Graph::toString() const {
   return toJson().dump();
 }
 
@@ -1488,26 +1488,27 @@ MX_INT_RET _partCallReviewSubgraph(mxnet::ext::reviewSubgraph_t reviewSubgraph, 
   }
 
   subgraph->_setParams(&args, &aux);
+
+  std::unordered_map<std::string, std::string> attrs;
   mxnet::ext::MXReturnValue retval = reviewSubgraph(subgraph, subgraph_id, &accept_bool,
-                                                    opts);
+                                                    opts, &attrs);
   if (!retval) return retval;
 
   *accept = accept_bool;
 
-  if (subgraph->attrs.size() > 0) {
-    *num_attrs = subgraph->attrs.size();
+  if (attrs.size() > 0) {
+    *num_attrs = attrs.size();
     // allocate space for attributes
     *attr_keys = static_cast<char**>(malloc (*num_attrs * sizeof(char*)));
     *attr_vals = static_cast<char**>(malloc (*num_attrs * sizeof(char*)));
 
     // copy attributes
     int i = 0;
-    for (auto kv : subgraph->attrs) {
-      (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));
-      std::string val = kv.second.dump();  // convert JsonVal back to string
-      (*attr_vals)[i] = static_cast<char*>(malloc ((val.size()+1) * sizeof(char)));
+    for (auto kv : attrs) {
+      (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));  // NOLINT
+      (*attr_vals)[i] = static_cast<char*>(malloc ((kv.second.size()+1) * sizeof(char)));  // NOLINT
       snprintf((*attr_keys)[i], kv.first.size()+1, "%s", kv.first.c_str());
-      snprintf((*attr_vals)[i], val.size()+1, "%s", val.c_str());
+      snprintf((*attr_vals)[i], kv.second.size()+1, "%s", kv.second.c_str());
       i++;
     }
   }
