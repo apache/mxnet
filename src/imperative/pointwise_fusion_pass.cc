@@ -179,7 +179,7 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
 
   std::vector<SubgraphInfo> subgraphs(num_subgraphs);
 
-  for (auto& info: subgraphs) {
+  for (auto& info : subgraphs) {
     info.subgraph_node = nnvm::Node::Create();
   }
 
@@ -200,7 +200,7 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
     const int subgraph_id = subgraph_assignment[i];
     if (subgraph_id != -1) {
       auto& info = subgraphs[subgraph_id];
-      for (const auto& input: idx[i].inputs) {
+      for (const auto& input : idx[i].inputs) {
         const int their_subgraph = subgraph_assignment[input.node_id];
         if (their_subgraph == subgraph_id) {
           node_copy->inputs.emplace_back(new_nodes[input.node_id],
@@ -238,7 +238,7 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
         }
       }
     } else {
-      for (const auto& input: idx[i].inputs) {
+      for (const auto& input : idx[i].inputs) {
         const int subgraph_id = subgraph_assignment[input.node_id];
         if (subgraph_id == -1) {
           node_copy->inputs.emplace_back(new_nodes[input.node_id],
@@ -257,7 +257,7 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
     }
 
     // Control deps
-    for (const auto& dep: idx[i].control_deps) {
+    for (const auto& dep : idx[i].control_deps) {
       if (subgraph_id == subgraph_assignment[dep]) {
         node_copy->control_deps.emplace_back(new_nodes[dep]);
       }
@@ -265,7 +265,7 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
   }
 
   ret.outputs.reserve(idx.outputs().size());
-  for (const auto& output: idx.outputs()) {
+  for (const auto& output : idx.outputs()) {
     const int subgraph_id = subgraph_assignment[output.node_id];
     if (subgraph_id == -1) {
       ret.outputs.emplace_back(new_nodes[output.node_id],
@@ -281,9 +281,9 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
     }
   }
 
-  for (auto& info: subgraphs) {
+  for (auto& info : subgraphs) {
     info.graph.outputs.reserve(info.outputs.size());
-    for (const auto& entry_info: info.outputs) {
+    for (const auto& entry_info : info.outputs) {
       info.graph.outputs.emplace_back(new_nodes[entry_info.source_node],
                                       entry_info.index,
                                       0);
@@ -333,12 +333,12 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
       }
     }
   }
-  for (auto& info: subgraphs) {
+  for (auto& info : subgraphs) {
     const auto& idx = info.graph.indexed_graph();
     const auto& input_nodes = idx.input_nodes();
     std::vector<nnvm::NodeEntry> subgraph_inputs;
     subgraph_inputs.reserve(info.subgraph_node->inputs.size());
-    for (const int input: input_nodes) {
+    for (const int input : input_nodes) {
       for (size_t i = 0; i < info.input_nodes.size(); ++i) {
         const auto& input_ptr = info.input_nodes[i].get();
         if (input_ptr == idx[input].source) {
@@ -359,7 +359,7 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
 }
 
 Graph FusePointwise(const Graph &g, const size_t num_forward_outputs) {
-  auto [subset_assignment, num_subsets] = GetCompatibleSubsets(g, num_forward_outputs,
+  auto [subset_assignment, num_subsets] = GetCompatibleSubsets(g, num_forward_outputs,  // NOLINT(*)
                                                                IsFusionCompatible,
                                                                IsInputsOnlyCompatible);
   Graph ret = CopyAndReplaceSubgraphs(g, subset_assignment, num_subsets,

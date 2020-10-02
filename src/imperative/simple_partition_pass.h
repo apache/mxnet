@@ -34,6 +34,7 @@
 #include <deque>
 #include <algorithm>
 #include <vector>
+#include <tuple>
 
 #include "exec_pass.h"
 
@@ -166,7 +167,7 @@ std::tuple<std::vector<int>, int> GetCompatibleSubsets(
 
   std::vector<int> set_reorder(num_sets, 0);
   // First count the number of elements in each set.
-  for (int& set: sets) {
+  for (int& set : sets) {
     if (set != -1) {
       ++set_reorder[set];
     }
@@ -174,7 +175,7 @@ std::tuple<std::vector<int>, int> GetCompatibleSubsets(
   // Then reorder them, removing sets that have
   // only a single element.
   int final_num_sets = 0;
-  for (int& set: set_reorder) {
+  for (int& set : set_reorder) {
     if (set > 1) {
       set = final_num_sets++;
     } else {
