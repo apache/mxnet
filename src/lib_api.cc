@@ -767,7 +767,7 @@ void mxnet::ext::Graph::_setParams(std::unordered_map<std::string, mxnet::ext::M
   // set params for each input node
   for (Node* node : inputs) {
     std::string name = node->name;
-    if(node->attrs.count("isArg") > 0 && node->attrs["isArg"].compare("True") == 0)
+    if (node->attrs.count("isArg") > 0 && node->attrs["isArg"].compare("True") == 0)
       // mapping name back to original node name from subgraph input name
       name = node->attrs["argName"];
     if (args->count(name) > 0)
