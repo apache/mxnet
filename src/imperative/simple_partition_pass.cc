@@ -135,14 +135,14 @@ void AddSet(std::vector<Interval>** sets, const int set_to_add,
 int GetSetMapping(int set, std::vector<int>* set_mapping) {
   if (set == -1) return -1;
   int temp = set;
-  while((*set_mapping)[temp] != temp) {
+  while ((*set_mapping)[temp] != temp) {
     temp = (*set_mapping)[temp];
   }
   (*set_mapping)[set] = temp;
   return temp;
 }
 
-}
+}  // namespace detail
 
 }  // namespace exec
 }  // namespace mxnet
