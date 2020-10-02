@@ -115,6 +115,7 @@ inline static bool AMPMultiCastStorageType(const nnvm::NodeAttrs& attrs, const i
 #endif  // MXNET_USE_MKLDNN == 1
 
 NNVM_REGISTER_OP(amp_cast)
+.add_alias("_npi_amp_cast")
 .describe(R"code(Cast function between low precision float/FP32 used by AMP.
 
 It casts only between low precision float/FP32 and does not do anything for other types.
@@ -158,6 +159,7 @@ NNVM_REGISTER_OP(_backward_amp_cast)
 .set_attr<FCompute>("FCompute<cpu>", AMPCastCompute<cpu>);
 
 NNVM_REGISTER_OP(amp_multicast)
+.add_alias("_npi_amp_multicast")
 .describe(R"code(Cast function used by AMP, that casts its inputs to the common widest type.
 
 It casts only between low precision float/FP32 and does not do anything for other types.
