@@ -23,6 +23,8 @@
 # the following environment variables:
 # PATH, CPLUS_INCLUDE_PATH, C_INCLUDE_PATH, LIBRARY_PATH, LD_LIBRARY_PATH, NVCC
 
+set -e
+
 VARIANT=$1
 DEPS_PATH=$2
 
@@ -358,3 +360,4 @@ if [[ ! -d $DEPS_PATH/usr/local/cuda-${CUDA_MAJOR_VERSION} ]]; then
     cp -f ${prefix}/usr/include/nccl.h ${prefix}/include/nccl.h
     ln -sf libnccl_static.a ${prefix}/usr/lib/x86_64-linux-gnu/libnccl.a
 fi
+
