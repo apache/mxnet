@@ -790,12 +790,11 @@ def test_pos_conv_bn(tmpdir):
     net, attrs = conv_bn(True, data_shape)
     check_fusion(net, data_shape, attrs, str(tmpdir))
 
-# TODO(bgawrych): Enable this test once https://github.com/apache/incubator-mxnet/pull/19246 merged
-# @with_seed()
-# @pytest.mark.parametrize('data_shape', DATA_SHAPE)
-# def test_mobilenetv2_struct(data_shape, tmpdir):
-#       net, attrs = mobilenetv2_struct(data_shape)
-#       check_fusion(net, data_shape, attrs, str(tmpdir), out_types=['int8', 'auto'])
+@with_seed()
+@pytest.mark.parametrize('data_shape', DATA_SHAPE)
+def test_mobilenetv2_struct(data_shape, tmpdir):
+      net, attrs = mobilenetv2_struct(data_shape)
+      check_fusion(net, data_shape, attrs, str(tmpdir), out_types=['int8', 'auto'])
 
 @with_seed()
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
