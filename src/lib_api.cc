@@ -343,7 +343,8 @@ mxnet::ext::JsonVal mxnet::ext::JsonVal::parse(const std::string& json) {
 mxnet::ext::JsonVal mxnet::ext::JsonVal::parse_string(const std::string& json, unsigned int* idx) {
   JsonVal ret(STR);
   while (*idx < json.size()) {
-    if (json[*idx] == '"') {
+    if (json[*idx] == '"' && (ret.str.size() == 0 ||
+                              (ret.str.size() > 0 && ret.str.back() != '\\'))) {
       ++(*idx);
       return ret;
     } else {
