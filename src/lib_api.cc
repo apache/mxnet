@@ -726,6 +726,7 @@ void mxnet::ext::Graph::print(int indent) const {
 /* \brief add a new node to this graph */
 mxnet::ext::Node* mxnet::ext::Graph::addNode(const std::string& name, const std::string& op) {
   Node* n = new Node();
+  g->nodes.push_back(n);
   n->name = name;
   n->op = op;
   if (res)
