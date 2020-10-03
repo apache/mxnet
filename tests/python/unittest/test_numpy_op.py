@@ -9217,11 +9217,10 @@ def test_np_diag():
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-
 @with_seed()
 @use_np
 @pytest.mark.parametrize('config', [
-    [(1, 5), (0, 1)], [(2, 2),(0, 1)],
+    [(1, 5), (0, 1)], [(2, 2), (0, 1)],
     [(2, 5), (0, 1)], [(5, 5), (0, 1)],
     [(2, 2, 2), (0, 1)], [(2, 4, 4), (0, 2)],
     [(3, 3, 3), (1, 2)], [(4, 8, 8), (1, 2)],
@@ -9244,20 +9243,23 @@ def test_np_diagonal(config, k, dtype, hybridize):
 
     rtol = 1e-2 if dtype == np.float16 else 1e-3
     atol = 1e-4 if dtype == np.float16 else 1e-5
-    shape = config[0]
-    axis = config[1]
-    axis1 = axis[0]
-    axis2 = axis[1]
+    shape, (axis1, axis2) = config
     x = np.random.uniform(-5.0, 5.0, size=shape).astype(dtype)
     x.attach_grad()
     test_diagonal = TestDiagonal(k, axis1, axis2)
     if hybridize:
         test_diagonal.hybridize()
-    np_out = _np.diagonal(x.asnumpy(), offset=k, axis1=axis[0], axis2=axis[1])
+
+    np_out = _np.diagonal(x.asnumpy(), offset=k, axis1=axis1, axis2=axis2)
     with mx.autograd.record():
         mx_out = test_diagonal(x)
     assert mx_out.shape == np_out.shape
     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
+
+    np_method_out = x.asnumpy().diagonal(offset=k, axis1=axis1, axis2=axis2)
+    mx_method_out = x.diagonal(offset=k, axis1=axis1, axis2=axis2)
+    assert mx_method_out.shape == np_method_out.shape
+    assert_almost_equal(mx_method_out.asnumpy(), np_method_out, rtol=rtol, atol=atol)
 
     # check backward function
     mx_out.backward()
@@ -9290,8 +9292,8 @@ def test_np_diagonal(config, k, dtype, hybridize):
     assert_almost_equal(x.grad.asnumpy(), np_backward, rtol=rtol, atol=atol)
 
     # Test imperative once again
-    mx_out = np.diagonal(x, k, axis[0], axis[1])
-    np_out = _np.diagonal(x.asnumpy(), offset=k, axis1=axis[0], axis2=axis[1])
+    mx_out = np.diagonal(x, k, axis1, axis2)
+    np_out = _np.diagonal(x.asnumpy(), offset=k, axis1=axis1, axis2=axis2)
     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
