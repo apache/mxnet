@@ -68,33 +68,28 @@ Testing
 
 Our tests are maintained in the [/tests](https://github.com/apache/incubator-mxnet/tree/master/tests) folder. We use the following testing tools:
 -   For Python, we use [pytest](https://pytest.org).
-    -   An example of setting up and running tests using Conda environment on MacOS:
+    -   An example of setting up and running tests (tested on MacOS with Python 3.6):
         -   follow the [build from source](https://mxnet.apache.org/get_started/build_from_source) guide to build MXNet
-        -   create and activate a Conda environment:
-            ```
-            conda create -n mxnet-v2.x-py3.6 python=3.6
-            conda activate mxnet-v2.x-py3.6
-            ```
         -   install python libraries
             ```
-            pip install opencv-python
-            pip install -r ci/docker/install/requirements
+            python3 -m pip install opencv-python
+            python3 -m pip install -r ci/docker/install/requirements
             ```
         -   install MXNet Python bindings:
             ```
-            pip install -e ./python
+            python3 -m pip install -e ./python
             ```
         -   run tests in a specific module
             ```
-            python -m pytest tests/python/unittest/test_smoke.py
+            python3 -m pytest tests/python/unittest/test_smoke.py
             ```
         -   or run a specific test in a module
             ```
-            python -m pytest tests/python/unittest/test_smoke.py::test_18927
+            python3 -m pytest tests/python/unittest/test_smoke.py::test_18927
             ```
         -   or run all the Python unittests
             ```
-            python -m pytest tests/python/unittest/
+            python3 -m pytest tests/python/unittest/
             ```
 -   For C++, we use [gtest](https://github.com/google/googletest).
 
