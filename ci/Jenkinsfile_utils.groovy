@@ -162,6 +162,9 @@ def collect_test_results_windows(original_file_name, new_file_name) {
 def docker_run(platform, function_name, use_nvidia = false, shared_mem = '500m', env_vars = [],
                build_args = "") {
   def command = "ci/build.py %ENV_VARS% %BUILD_ARGS% --docker-registry ${env.DOCKER_CACHE_REGISTRY} %USE_NVIDIA% --platform %PLATFORM% --docker-build-retries 3 --shm-size %SHARED_MEM% /work/runtime_functions.sh %FUNCTION_NAME%"
+  if (env_vars instanceof String) {
+    env_vars = [env_vars]
+  }
   env_vars << "BRANCH=${env.BRANCH_NAME}"
   env_vars = env_vars.collect { "-e ${it}" }
   def env_vars_str = env_vars.join(' ')
