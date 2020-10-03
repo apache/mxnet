@@ -1593,8 +1593,9 @@ MX_INT_RET _passCallGraphPass(mxnet::ext::graphPass_t graphPass, const char *jso
   mxnet::ext::MXReturnValue retval = graphPass(graph, opts);
   if (!retval) return retval;
 
-  std::string *tmp = new std::string(graph->toString());
-  *out_graph = const_cast<char*>(tmp->c_str());
+  std::string tmp = graph->toString();
+  *out_graph = static_cast<char*>(malloc ((tmp.size()+1) * sizeof(char)));  // NOLINT
+  snprintf((*out_graph), tmp.size()+1, "%s", tmp.c_str());
   return retval;
 }
 
