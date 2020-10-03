@@ -111,17 +111,17 @@ class PrimExpr : public BaseExpr {
    * \brief construct from integer.
    * \param value The value to be constructed.
    */
-  MXNET_DLL PrimExpr(int32_t value);  // NOLINT(*)
+  PrimExpr(int32_t value);  // NOLINT(*)
   /*!
    * \brief construct from float.
    * \param value The value to be constructed.
    */
-  MXNET_DLL PrimExpr(float value);  // NOLINT(*)
+  PrimExpr(float value);  // NOLINT(*)
   /*!
    * \brief construct from string.
    * \param str The value to be constructed.
    */
-  MXNET_DLL PrimExpr(std::string str);  // NOLINT(*)
+  PrimExpr(std::string str);  // NOLINT(*)
 
   /*! \return the data type of this expression. */
   MXNetDataType dtype() const {
@@ -164,7 +164,7 @@ class IntImm : public PrimExpr {
    * \param dtype The data type of the value.
    * \param value The internal value.
    */
-  MXNET_DLL IntImm(MXNetDataType dtype, int64_t value);
+  IntImm(MXNetDataType dtype, int64_t value);
   /*!
    * \brief Get pointer to the internal value.
    * \return the content of the integer.
@@ -209,7 +209,7 @@ class FloatImm : public PrimExpr {
    * \param dtype The data type of the value.
    * \param value The internal value.
    */
-  MXNET_DLL FloatImm(MXNetDataType dtype, double value);
+  FloatImm(MXNetDataType dtype, double value);
   /*!
    * \brief Get pointer to the container.
    * \return The pointer.

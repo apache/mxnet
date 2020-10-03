@@ -143,6 +143,8 @@ else()
 endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
+  set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+  set(CMAKE_VISIBILITY_INLINES_HIDDEN YES)
   if(UNIX AND NOT APPLE)
     set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
     set(CMAKE_INSTALL_RPATH $\{ORIGIN\})
@@ -665,15 +667,12 @@ if(UNIX)
     target_link_libraries(mxnet PUBLIC gcov)
   endif()
   if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
-    # TODO For handling mxnet's symbols the following can be replace by
-    # annotating symbol visibility in source code, specifying
-    # set(CMAKE_CXX_VISIBILITY_PRESET hidden) and
-    # set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
-    # Symbols from statically linked libraries can be discarded via -Wl,--exclude-libs,ALL
-    if(APPLE)
-      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
+    if(NOT APPLE)
+      # Do not export symbols from statically linked dependencies such as zmq, opencv, etc.
+      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--exclude-libs,ALL")
     else()
-      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--version-script=${PROJECT_SOURCE_DIR}/cmake/libmxnet.ver")
+      # Apple does not support -Wl,--exclude-libs,ALL
+      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
     endif()
   endif()
 elseif(MSVC)
