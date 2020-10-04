@@ -9230,36 +9230,39 @@ def test_np_diag():
 @pytest.mark.parametrize('k', [0, 2, 4, 6])
 @pytest.mark.parametrize('dtype', [np.int8, np.uint8, np.int32, np.int64, np.float16, np.float32, np.float64])
 @pytest.mark.parametrize('hybridize', [True, False])
-def test_np_diagonal(config, k, dtype, hybridize):
+@pytest.mark.parametrize('call_by_instance', [True, False])
+def test_np_diagonal(config, k, dtype, hybridize, call_by_instance):
     class TestDiagonal(HybridBlock):
-        def __init__(self, k=0, axis1=0, axis2=1):
+        def __init__(self, k=0, axis1=0, axis2=1, call_by_instance=False):
             super(TestDiagonal, self).__init__()
             self._k = k
             self._axis1 = axis1
             self._axis2 = axis2
+            self._call_by_instance = call_by_instance
 
         def hybrid_forward(self, F, a):
-            return F.np.diagonal(a, self._k, self._axis1, self._axis2)
+            if self._call_by_instance:
+                return a.diagonal(self._k, self._axis1, self._axis2)
+            else:
+                return F.np.diagonal(a, self._k, self._axis1, self._axis2)
 
     rtol = 1e-2 if dtype == np.float16 else 1e-3
     atol = 1e-4 if dtype == np.float16 else 1e-5
     shape, (axis1, axis2) = config
     x = np.random.uniform(-5.0, 5.0, size=shape).astype(dtype)
     x.attach_grad()
-    test_diagonal = TestDiagonal(k, axis1, axis2)
+    test_diagonal = TestDiagonal(k, axis1, axis2, call_by_instance)
     if hybridize:
         test_diagonal.hybridize()
 
-    np_out = _np.diagonal(x.asnumpy(), offset=k, axis1=axis1, axis2=axis2)
+    if call_by_instance:
+        np_out = x.asnumpy().diagonal(offset=k, axis1=axis1, axis2=axis2)
+    else:
+        np_out = _np.diagonal(x.asnumpy(), offset=k, axis1=axis1, axis2=axis2)
     with mx.autograd.record():
         mx_out = test_diagonal(x)
     assert mx_out.shape == np_out.shape
     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
-
-    np_method_out = x.asnumpy().diagonal(offset=k, axis1=axis1, axis2=axis2)
-    mx_method_out = x.diagonal(offset=k, axis1=axis1, axis2=axis2)
-    assert mx_method_out.shape == np_method_out.shape
-    assert_almost_equal(mx_method_out.asnumpy(), np_method_out, rtol=rtol, atol=atol)
 
     # check backward function
     mx_out.backward()
