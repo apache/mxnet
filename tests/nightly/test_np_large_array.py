@@ -746,11 +746,13 @@ def test_log_family():
 @use_np
 def test_expand_dims():
     inp = np.zeros((INT_OVERFLOW))
+    inp[-1] = 1
     out1 = np.expand_dims(inp, axis=0)
     out2 = np.expand_dims(out1, axis=2)
-    npx.waitall()
     assert out1.shape == (1, INT_OVERFLOW)
     assert out2.shape == (1, INT_OVERFLOW, 1)
+    assert out1[0, -1] == 1
+    assert out2[0, -1, 0] == 1
 
 @use_np
 def test_hamming():
