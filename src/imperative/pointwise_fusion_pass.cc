@@ -62,7 +62,7 @@ bool IsFusionCompatible(const nnvm::Node* n) {
   using namespace mxnet::fusion;
   if (n->op() == nullptr)
     return false;
-  std::string op_name = n->op()->name;
+  const std::string& op_name = n->op()->name;
   if (ops_desc.count(op_name))
     return true;
   if (slice_ops.count(op_name))
@@ -93,7 +93,7 @@ bool IsInputsOnlyCompatible(const nnvm::Node* n) {
   using namespace mxnet::fusion;
   if (n->op() == nullptr)
     return false;
-  std::string op_name = n->op()->name;
+  const std::string& op_name = n->op()->name;
   if (slice_ops.count(op_name)) {
     if (op_name == "slice") {
       // slice with non-default step attribute is not supported

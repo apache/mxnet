@@ -63,11 +63,11 @@ void MergeSets(std::vector<Interval>** my_set,
     } else if (other.first > mine.second + 1) {
       // other interval is after ours
       if (last_end >= mine.first - 1) {
-        new_set->back().second = mine.second;
+        new_set->back().second = std::max(mine.second, last_end);
       } else {
         new_set->emplace_back(mine);
       }
-      last_end = mine.second;
+      last_end = new_set->back().second;
       ++current_interval;
     } else {
       // Intervals can be merged together
@@ -84,10 +84,36 @@ void MergeSets(std::vector<Interval>** my_set,
     }
   }
   // Add the rest of entries
-  new_set->insert(new_set->end(), (*my_set)->begin() + current_interval,
-                 (*my_set)->end());
-  new_set->insert(new_set->end(), other_set->begin() + current_other_interval,
-                 other_set->end());
+  for (size_t i = current_interval; i < (*my_set)->size(); ++i) {
+    auto& mine = new_set->back();
+    const auto& other = (**my_set)[i];
+    if (other.second < mine.first - 1) {
+      // other interval is before ours, should never happen
+      continue;
+    } else if (other.first > mine.second + 1) {
+      // other interval is after ours
+      new_set->emplace_back(other);
+    } else {
+      // Intervals can be merged together
+      mine.first = std::min(mine.first, other.first);
+      mine.second = std::max(mine.second, other.second);
+    }
+  }
+  for (size_t i = current_other_interval; i < other_set->size(); ++i) {
+    auto& mine = new_set->back();
+    const auto& other = (*other_set)[i];
+    if (other.second < mine.first - 1) {
+      // other interval is before ours, should never happen
+      continue;
+    } else if (other.first > mine.second + 1) {
+      // other interval is after ours
+      new_set->emplace_back(other);
+    } else {
+      // Intervals can be merged together
+      mine.first = std::min(mine.first, other.first);
+      mine.second = std::max(mine.second, other.second);
+    }
+  }
   *my_set = new_set.get();
 }
 
@@ -117,7 +143,7 @@ void AddSet(std::vector<Interval>** sets, const int set_to_add,
   if (*sets != nullptr && (*sets)->size() != 0) {
     bool found = false;
     for (auto& interval : (**sets)) {
-      if (set_to_add >= interval.first - 1 ||
+      if (set_to_add >= interval.first - 1 &&
           set_to_add <= interval.second + 1) {
         interval.first = std::min(set_to_add, interval.first);
         interval.second = std::max(set_to_add, interval.second);
