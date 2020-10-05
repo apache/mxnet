@@ -894,9 +894,10 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
         nnvm::Graph subg_g = Symbol2Graph(*subg_sym);
         // find param_indice for the subgraph
         std::vector<int> subg_param_indice_list;
-        std::vector<std::string> input_names = subg_sym->ListInputNames(nnvm::Symbol::ListInputOption(0));
-        for (int i = 0; i < input_names.size(); i++){
-          if (param_name_set.count(input_names[i])>0) {
+        std::vector<std::string> input_names = 
+                    subg_sym->ListInputNames(nnvm::Symbol::ListInputOption(0));
+        for (int i = 0; i < input_names.size(); i++) {
+          if (param_name_set.count(input_names[i]) > 0) {
             subg_param_indice_list.emplace_back(i);
           }
         }
