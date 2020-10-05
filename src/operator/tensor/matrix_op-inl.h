@@ -443,7 +443,7 @@ struct TransposeExKernel {
    * \param ndim     the number of dimension
    */
   template <typename DType>
-  MSHADOW_XINLINE static void Map(int tid,
+  MSHADOW_XINLINE static void Map(index_t tid,
       DType *out_data,
       const DType *in_data,
       const dim_t *strides,
@@ -451,8 +451,8 @@ struct TransposeExKernel {
       ) {
     // tid is the index of input data
     const dim_t* const out_strides = strides + ndim;
-    int k = tid;
-    int out_id = 0;
+    index_t k = tid;
+    index_t out_id = 0;
     for (int i = 0; i < ndim; ++i) {
       out_id += (k / strides[i]) * out_strides[i];
       k %= strides[i];
