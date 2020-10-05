@@ -948,11 +948,12 @@ endif()
 
 if(USE_CPP_PACKAGE)
   add_subdirectory(cpp-package)
+  target_compile_definitions(mxnet PUBLIC MXNET_USE_CPP_PACKAGE=1)
+  if(BUILD_CPP_EXAMPLES)
+    add_subdirectory(example/image-classification/predict-cpp)
+  endif()
 endif()
 
-if(BUILD_CPP_EXAMPLES)
-  add_subdirectory(example/image-classification/predict-cpp)
-endif()
 add_subdirectory(tests)
 
 # ---[ Linter target
