@@ -222,8 +222,8 @@ struct TakeNonzeroAxis {
    */
   template<typename DType, typename IType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
-                                  const IType* idx, const int out_prev_stride,
-                                  const int in_prev_stride, const int in_stride,
+                                  const IType* idx, const index_t out_prev_stride,
+                                  const index_t in_prev_stride, const index_t in_stride,
                                   const int in_ndims, const int out_ndims, const int idx_ndims,
                                   const int axis_dim, const int axis) {
     // i is the global flattened index in the output
