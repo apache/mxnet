@@ -111,7 +111,7 @@ build_dynamic_libmxnet() {
     gather_licenses
 
     cd /work/build
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/devtoolset-8/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
     if [[ ${mxnet_variant} = "cpu" ]]; then
@@ -1278,7 +1278,7 @@ checkout() {
 build_static_libmxnet() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
@@ -1303,7 +1303,7 @@ ci_package_pypi() {
 cd_package_pypi() {
     set -ex
     pushd .
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
@@ -1347,7 +1347,7 @@ build_static_python_cpu() {
     set -ex
     pushd .
     export mxnet_variant=cpu
-    source /opt/rh/devtoolset-7/enable
+    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
@@ -1355,11 +1355,11 @@ build_static_python_cpu() {
     popd
 }
 
-build_static_python_cu92() {
+build_static_python_cu102() {
     set -ex
     pushd .
-    export mxnet_variant=cu92
-    source /opt/rh/devtoolset-7/enable
+    export mxnet_variant=cu102
+    source /opt/rh/devtoolset-8/enable
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
     export CXXFLAGS="-fabi-version=11 -fabi-compat-version=7"
