@@ -745,110 +745,114 @@ def test_log_family():
 
 @use_np
 def test_expand_dims():
-    A = np.zeros((INT_OVERFLOW))
-    B = np.expand_dims(A, axis=0)
-    C = np.expand_dims(B, axis=2)
+    inp = np.zeros((INT_OVERFLOW))
+    out1 = np.expand_dims(inp, axis=0)
+    out2 = np.expand_dims(out1, axis=2)
     npx.waitall()
-    assert B.shape == (1, INT_OVERFLOW)
-    assert C.shape == (1, INT_OVERFLOW, 1)
+    assert out1.shape == (1, INT_OVERFLOW)
+    assert out2.shape == (1, INT_OVERFLOW, 1)
 
 @use_np
 def test_hamming():
-    A = np.hamming((INT_OVERFLOW))
-    npx.waitall()
-    assert A.shape == (INT_OVERFLOW, )
+    data = np.hamming((INT_OVERFLOW))
+    ind = int(INT_OVERFLOW / 6)
+    ref = 0.54 - 0.46*math.cos(2*math.pi*ind/(INT_OVERFLOW-1))
+    assert data.shape == (INT_OVERFLOW, )
+    assert_almost_equal(data[ind], ref, rtol=1e-3, atol=1e-5)
 
 @use_np
 def test_hanning():
-    A = np.hanning((INT_OVERFLOW))
-    npx.waitall()
-    assert A.shape == (INT_OVERFLOW, )
+    data = np.hanning((INT_OVERFLOW))
+    ind = int(INT_OVERFLOW / 6)
+    ref = 0.5 - 0.5*math.cos(2*math.pi*ind/(INT_OVERFLOW-1))
+    assert data.shape == (INT_OVERFLOW, )
+    assert_almost_equal(data[ind], ref, rtol=1e-3, atol=1e-5)
 
 @use_np
 def test_fmax():
-    A = np.ones((INT_OVERFLOW, 2))
-    A[-1, -1] = -1
-    B = np.zeros((INT_OVERFLOW, 1))
-    A.attach_grad()
-    B.attach_grad()
+    inp1 = np.ones((INT_OVERFLOW, 2))
+    inp1[-1, -1] = -1
+    inp2 = np.zeros((INT_OVERFLOW, 1))
+    inp1.attach_grad()
+    inp2.attach_grad()
     with mx.autograd.record():
-        C = np.fmax(A, B)
-        C.backward()
-    assert C.shape == A.shape
-    assert C[-1, -1] == 0
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 0 and A.grad[0, 0] == 1
-    assert B.grad.shape == B.shape
-    assert B.grad[-1] == 1 and B.grad[0] == 0
+        out = np.fmax(inp1, inp2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[-1, -1] == 0
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1, -1] == 0 and inp1.grad[0, 0] == 1
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[-1] == 1 and inp2.grad[0] == 0
 
 @use_np
 def test_fmin():
-    A = np.ones((INT_OVERFLOW, 2))
-    A[-1, -1] = -1
-    B = np.zeros((INT_OVERFLOW, 1))
-    A.attach_grad()
-    B.attach_grad()
+    inp1 = np.ones((INT_OVERFLOW, 2))
+    inp1[-1, -1] = -1
+    inp2 = np.zeros((INT_OVERFLOW, 1))
+    inp1.attach_grad()
+    inp2.attach_grad()
     with mx.autograd.record():
-        C = np.fmin(A, B)
-        C.backward()
-    assert C.shape == A.shape
-    assert C[-1, -1] == -1
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 1 and A.grad[0, 0] == 0
-    assert B.grad.shape == B.shape
-    assert B.grad[-1] == 1 and B.grad[0] == 2
+        out = np.fmin(inp1, inp2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[-1, -1] == -1
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1, -1] == 1 and inp1.grad[0, 0] == 0
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[-1] == 1 and inp2.grad[0] == 2
 
 @use_np
 def test_fmod():
-    A = np.ones((INT_OVERFLOW, 2))
-    B = np.ones((INT_OVERFLOW, 1))
-    A[-1, -1], B[-1, -1] = 11, 7
-    A.attach_grad()
-    B.attach_grad()
+    inp1 = np.ones((INT_OVERFLOW, 2))
+    inp2 = np.ones((INT_OVERFLOW, 1))
+    inp1[-1, -1], inp2[-1, -1] = 11, 7
+    inp1.attach_grad()
+    inp2.attach_grad()
     with mx.autograd.record():
-        C = np.fmod(A, B)
-        C.backward()
-    assert C.shape == A.shape
-    assert C[-1, -1] == 4
-    assert A.grad.shape == A.shape
-    assert A.grad[0, 0] == 1
-    assert B.grad.shape == B.shape
-    assert B.grad[-1] == -1 and B.grad[0] == -2
+        out = np.fmod(inp1, inp2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[-1, -1] == 4
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[0, 0] == 1
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[-1] == -1 and inp2.grad[0] == -2
 
 @use_np
 def test_mod():
     # np.mod and np.remainder are the same thing
-    A = np.ones((INT_OVERFLOW, 2))
-    B = np.ones((INT_OVERFLOW, 1))
-    A[-1, -1], B[-1, -1] = 11, 7
-    A.attach_grad()
-    B.attach_grad()
+    inp1 = np.ones((INT_OVERFLOW, 2))
+    inp2 = np.ones((INT_OVERFLOW, 1))
+    inp1[-1, -1], inp2[-1, -1] = 11, 7
+    inp1.attach_grad()
+    inp2.attach_grad()
     with mx.autograd.record():
-        C = np.mod(A, B)
-        C.backward()
-    assert C.shape == A.shape
-    assert C[-1, -1] == 4
-    assert A.grad.shape == A.shape
-    assert A.grad[0, 0] == 1
-    assert B.grad.shape == B.shape
-    assert B.grad[-1] == -1 and B.grad[0] == -2
+        out = np.mod(inp1, inp2)
+        out.backward()
+    assert out.shape == inp1.shape
+    assert out[-1, -1] == 4
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[0, 0] == 1
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[-1] == -1 and inp2.grad[0] == -2
 
 @use_np
 def test_value_check_family():
     def batch_check(funcs, ref):
-        A.attach_grad()
+        inp.attach_grad()
         for f, r in zip(funcs, ref):
             with mx.autograd.record():
-                B = f(A)
-                B.backward()
-            assert B.shape == A.shape
+                out = f(inp)
+                out.backward()
+            assert out.shape == inp.shape
             for i in range(4):
-                assert B[i, -1] == r[i]
-            assert A.grad.shape == A.shape
-            assert A.grad[-1, -1] == 0
+                assert out[i, -1] == r[i]
+            assert inp.grad.shape == inp.shape
+            assert inp.grad[-1, -1] == 0
 
-    A = np.zeros((4, INT_OVERFLOW))
-    A[1:, -1] = np.array([np.inf, -np.inf, np.nan])
+    inp = np.zeros((4, INT_OVERFLOW))
+    inp[1:, -1] = np.array([np.inf, -np.inf, np.nan])
     batch_check([np.isinf, np.isneginf, np.isposinf, np.isnan, np.isfinite], \
         [(False, True, True, False), (False, False, True, False), \
         (False, True, False, False), (False, False, False, True), \
@@ -856,164 +860,164 @@ def test_value_check_family():
 
 @use_np
 def test_rint():
-    A = np.zeros((INT_OVERFLOW, 2))
-    A[0, 0], A[-1, -1] = 2.1,  2.9
-    A.attach_grad()
+    inp = np.zeros((INT_OVERFLOW, 2))
+    inp[0, 0], inp[-1, -1] = 2.1,  2.9
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.rint(A)
-        B.backward()
-    assert B.shape == A.shape
-    assert B[0, 0] == 2 and B[-1, -1] == 3
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 0
+        out = np.rint(inp)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[0, 0] == 2 and out[-1, -1] == 3
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
 
 @use_np
 def test_invert():
-    A = np.zeros((2, INT_OVERFLOW), dtype='uint8')
-    A[-1, -1] = 1
-    A.attach_grad()
+    inp = np.zeros((2, INT_OVERFLOW), dtype='uint8')
+    inp[-1, -1] = 1
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.invert(A)
-        B.backward()
-    assert B.shape == A.shape
-    assert B[0, 0] == 255 and B[-1, -1] == 254
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 0
+        out = np.invert(inp)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[0, 0] == 255 and out[-1, -1] == 254
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
 
 @use_np
 def test_exp():
-    A = np.ones((2, INT_OVERFLOW))
-    A[-1, -1] = 2
-    A.attach_grad()
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = 2
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.exp(A)
-        B.backward()
-    assert B.shape == A.shape
-    assert_almost_equal(B[0, 0], np.array(np.e**1), rtol=1e-5, atol=1e-5)
-    assert_almost_equal(B[-1, -1], np.array(np.e**2), rtol=1e-5, atol=1e-5)
-    assert A.grad.shape == A.shape
-    assert_almost_equal(A.grad[-1, -1], B[-1, -1], rtol=1e-5, atol=1e-5)
+        out = np.exp(inp)
+        out.backward()
+    assert out.shape == inp.shape
+    assert_almost_equal(out[0, 0], np.array(np.e**1), rtol=1e-5, atol=1e-5)
+    assert_almost_equal(out[-1, -1], np.array(np.e**2), rtol=1e-5, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert_almost_equal(inp.grad[-1, -1], out[-1, -1], rtol=1e-5, atol=1e-5)
 
 @use_np
 def test_expm1():
-    A = np.ones((2, INT_OVERFLOW))
-    A[-1, -1] = 2
-    A.attach_grad()
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = 2
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.expm1(A)
-        B.backward()
-    assert B.shape == A.shape
-    assert_almost_equal(B[0, 0], np.array(np.e**1 - 1), rtol=1e-5, atol=1e-5)
-    assert_almost_equal(B[-1, -1], np.array(np.e**2 - 1), rtol=1e-5, atol=1e-5)
-    assert A.grad.shape == A.shape
-    assert_almost_equal(A.grad[-1, -1], np.array(np.e**2), rtol=1e-5, atol=1e-5)
+        out = np.expm1(inp)
+        out.backward()
+    assert out.shape == inp.shape
+    assert_almost_equal(out[0, 0], np.array(np.e**1 - 1), rtol=1e-5, atol=1e-5)
+    assert_almost_equal(out[-1, -1], np.array(np.e**2 - 1), rtol=1e-5, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert_almost_equal(inp.grad[-1, -1], np.array(np.e**2), rtol=1e-5, atol=1e-5)
 
 @use_np
 def test_frexp():
-    A = np.ones((2, INT_OVERFLOW))
-    A[-1, -1] = 9
-    B, C = np.frexp(A)
-    assert_almost_equal(A[-1, -1], B[-1, -1] * 2 ** C[-1, -1], \
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = 9
+    out1, out2 = np.frexp(inp)
+    assert_almost_equal(inp[-1, -1], out1[-1, -1] * 2 ** out2[-1, -1], \
         rtol=1e-5, atol=1e-5)
 
 @use_np
 def test_reciprocal():
-    A = np.ones((2, INT_OVERFLOW))
-    A[-1, -1] = 3
-    A.attach_grad()
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = 3
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.reciprocal(A)
-        B.backward()
-    assert B.shape == A.shape
-    assert_almost_equal(B[-1, -1], np.array([1.0/3]), rtol=1e-5, atol=1e-5)
-    assert A.grad.shape == A.shape
-    assert_almost_equal(A.grad[-1, -1], np.array([-1.0/3**2]), \
+        out = np.reciprocal(inp)
+        out.backward()
+    assert out.shape == inp.shape
+    assert_almost_equal(out[-1, -1], np.array([1.0/3]), rtol=1e-5, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert_almost_equal(inp.grad[-1, -1], np.array([-1.0/3**2]), \
         rtol=1e-5, atol=1e-5)
 
 @use_np
 def test_sum():
-    A = np.zeros((2, INT_OVERFLOW))
-    A[-1, -1] = 10
-    A.attach_grad()
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = 10
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.sum(A, axis=1)
-        B.backward()
-    assert B.shape == (2, )
-    assert B[0] == 0 and B[1] == 10
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 1
+        out1 = np.sum(inp, axis=1)
+        out1.backward()
+    assert out1.shape == (2, )
+    assert out1[0] == 0 and out1[1] == 10
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
     with mx.autograd.record():
-        C = np.sum(A, axis=0)
-        C.backward()
-    assert C.shape == (INT_OVERFLOW, )
-    assert B[0] == 0 and B[-1] == 10
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 1
+        out2 = np.sum(inp, axis=0)
+        out2.backward()
+    assert out2.shape == (INT_OVERFLOW, )
+    assert out2[0] == 0 and out2[-1] == 10
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
 
 @use_np
 def test_negative():
-    A = np.ones((2, INT_OVERFLOW))
-    A[-1, -1] = -2
-    A.attach_grad()
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = -2
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.negative(A)
-        B.backward()
-    assert B.shape == A.shape
-    assert B[0, 0] == -1 and B[-1, -1] == 2
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == -1
+        out = np.negative(inp)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[0, 0] == -1 and out[-1, -1] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == -1
 
 @use_np
 def test_identity():
     M = 2**16
-    A = np.identity(M)
-    assert A.shape == (M, M)
-    assert A[0, 0] == 1 and A[-1, -1] == 1 and A[-1, -2] == 0
+    data = np.identity(M)
+    assert data.shape == (M, M)
+    assert data[0, 0] == 1 and data[-1, -1] == 1 and data[-1, -2] == 0
 
 @use_np
 def test_square():
-    A = np.ones((INT_OVERFLOW, 2))
-    A[-1, -1] = 3
-    A.attach_grad()
+    inp = np.ones((INT_OVERFLOW, 2))
+    inp[-1, -1] = 3
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.square(A)
-        B.backward()
-    assert B.shape == A.shape
-    assert B[-1, -1] == 9
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 6
+        out = np.square(inp)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[-1, -1] == 9
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 6
 
 @use_np
 def test_sign():
-    A = np.zeros((INT_OVERFLOW, 2))
-    A[-1, -1], A[-2, -1] = 2, -2
-    A.attach_grad()
+    inp = np.zeros((INT_OVERFLOW, 2))
+    inp[-1, -1], inp[-2, -1] = 2, -2
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.sign(A)
-        B.backward()
-    assert B.shape == A.shape
-    assert B[0, 0] == 0 and B[-1, -1] == 1 and B[-2, -1] == -1
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 0
+        out = np.sign(inp)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[0, 0] == 0 and out[-1, -1] == 1 and out[-2, -1] == -1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
 
 @use_np
 def test_prod():
-    A = np.ones((2, INT_OVERFLOW))
-    A[0, 0], A[-1, -1] = 2, 10
-    A.attach_grad()
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[0, 0], inp[-1, -1] = 2, 10
+    inp.attach_grad()
     with mx.autograd.record():
-        B = np.prod(A, axis=1)
-        B.backward()
-    assert B.shape == (2, )
-    assert B[0] == 2 and B[1] == 10
-    assert A.grad.shape == A.shape
-    assert A.grad[-1, -1] == 1
+        out1 = np.prod(inp, axis=1)
+        out1.backward()
+    assert out1.shape == (2, )
+    assert out1[0] == 2 and out1[1] == 10
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
     with mx.autograd.record():
-        C = np.sum(A, axis=0)
-        C.backward()
-    assert C.shape == (INT_OVERFLOW, )
-    assert B[0] == 2 and B[-1] == 10
-    assert A.grad.shape == A.shape
+        out2 = np.sum(inp, axis=0)
+        out2.backward()
+    assert out2.shape == (INT_OVERFLOW, )
+    assert out2[0] == 2 and out2[-1] == 10
+    assert inp.grad.shape == inp.shape
 
 @use_np
 def test_add():
