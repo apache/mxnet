@@ -664,17 +664,10 @@ if(UNIX)
     target_compile_options(mxnet PUBLIC "--coverage")
     target_link_libraries(mxnet PUBLIC gcov)
   endif()
-  if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
-    # TODO For handling mxnet's symbols the following can be replace by
-    # annotating symbol visibility in source code, specifying
-    # set(CMAKE_CXX_VISIBILITY_PRESET hidden) and
-    # set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
-    # Symbols from statically linked libraries can be discarded via -Wl,--exclude-libs,ALL
-    if(APPLE)
-      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
-    else()
-      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--version-script=${PROJECT_SOURCE_DIR}/cmake/libmxnet.ver")
-    endif()
+  if(APPLE)
+    set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
+  else()
+    set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--exclude-libs,ALL")
   endif()
 elseif(MSVC)
   if(USE_CUDA)
