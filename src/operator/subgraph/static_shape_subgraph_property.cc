@@ -100,6 +100,7 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
           nnvm::Node n = *(indexed_graph[nid].source);
           param_name_set_.emplace(n.attrs.name);
       }
+      attrs_["param_name_set"] = std::make_shared<nnvm::any>(param_name_set_);
     }
   }
 

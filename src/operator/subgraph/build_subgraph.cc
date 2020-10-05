@@ -879,17 +879,36 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
   // Partition recursively for control flow ops
   if (subg_prop->HasAttr("recursive_partition")
       && subg_prop->GetAttr<bool>("recursive_partition")) {
+    std::set<std::string> param_name_set;
+    // get param node names from subg_prop
+    if (subg_prop->HasAttr("param_name_set")) {
+      for (auto name : subg_prop->GetAttr<std::set<std::string>>("param_name_set")) {
+        param_name_set.emplace(name);
+      }
+    }
     auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend("static_shape");
     const auto& subgraph_prop_list = backend->GetSubgraphProperties();
     for (auto& n : nodes_to_partition_inside) {
       for (const auto& subg_sym : n->attrs.subgraphs) {
         // convert symbol to graph
         nnvm::Graph subg_g = Symbol2Graph(*subg_sym);
+        // find param_indice for the subgraph
+        std::vector<int> subg_param_indice_list;
+        std::vector<std::string> input_names = subg_sym->ListInputNames(nnvm::Symbol::ListInputOption(0));
+        for (int i = 0; i < input_names.size(); i++){
+          if (param_name_set.count(input_names[i])>0) {
+            subg_param_indice_list.emplace_back(i);
+          }
+        }
         // call BuildSubgraph recursively
         for (const auto& property : subgraph_prop_list) {
+          std::unordered_map<std::string, std::string> options_map;
           subg_g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
+          subg_g.attrs["param_indice_list"] = std::make_shared<nnvm::any>(subg_param_indice_list);
+          property->PrePartition(subg_g, options_map);
           subg_g = BuildSubgraph(std::move(subg_g));
           subg_g.attrs.erase("subgraph_property");
+          subg_g.attrs.erase("param_indice_list");
         }
         subg_sym->outputs = subg_g.outputs;
       }
