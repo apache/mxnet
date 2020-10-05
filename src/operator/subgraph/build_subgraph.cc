@@ -703,6 +703,7 @@ void AdjustSubgraphNode(nnvm::Graph* g,
                         const SubgraphSelectorV2Ptr& subgraph_selector,
                         const size_t subgraph_id) {
   std::vector<nnvm::Node*> node_list;
+  node_list.reserve(subgraph_nodes.size());
   for (auto node : subgraph_nodes) {
     node_list.push_back(node->node);
   }

@@ -39,11 +39,19 @@ WarningsAsErrors: >
     modernize-use-emplace, modernize-use-equals-default, modernize-use-equals-delete,
     modernize-use-noexcept, modernize-use-nullptr, modernize-use-override,
     modernize-use-transparent-functors, modernize-use-using,
-    performance-unnecessary-copy-initialization, performance-move-const-arg
+    performance-faster-string-find, performance-implicit-conversion-in-loop,
+    performance-inefficient-algorithm, performance-inefficient-string-concatenation,
+    performance-trivially-destructible, performance-inefficient-vector-operation,
+    performance-move-const-arg, performance-move-constructor-init,
+    performance-noexcept-move-constructor, performance-no-automatic-move,
+    performance-unnecessary-copy-initialization, performance-type-promotion-in-math-fn
 
 # modernize checks not enforced:
 # modernize-use-auto
 # modernize-avoid-bind
+
+# performance checks not enforced due to segmentation fault
+# performance-for-range-copy
 
 # Todo: define a better regex match that includes most project headers, but excludes third party
 # code.
