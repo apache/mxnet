@@ -696,6 +696,16 @@ class _Symbol(Symbol):
         """
         raise AttributeError('_Symbol object has no attribute diag')
 
+    def diagonal(self, offset=0, axis1=0, axis2=1):  # pylint: disable=arguments-differ
+        """Return the diagonal with the given offset.
+
+        If array has more than two dimensions, then the axes specified by axis1 and
+        axis2 are used to determine the 2-D sub-array whose diagonal is returned.
+
+        Refer to `mxnet.symbol.numpy.diagonal` for full documents.
+        """
+        return diagonal(self, offset=offset, axis1=axis1, axis2=axis2)
+
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the sum of the array elements over the given axis."""
         return _npi.sum(self, axis=axis, dtype=dtype, out=out, keepdims=keepdims)
