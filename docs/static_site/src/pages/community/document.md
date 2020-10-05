@@ -101,7 +101,7 @@ int myfunction(int arg1, int arg2) {
 ```
 
 Besides documenting function usages, we also highly recommend
-contributors to add comments about code logic's to improve readability.
+contributors to add comments about code logic to improve readability.
 
 Write Tutorials
 ---------------
