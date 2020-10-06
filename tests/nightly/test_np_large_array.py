@@ -706,7 +706,7 @@ def test_diag_indices_from():
 
 @use_np
 def test_diagflat():
-    N = 2**15
+    N = 2**16
     inp = np.ones((2, N))
     inp[-1, -1] = 2
     inp.attach_grad()
