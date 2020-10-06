@@ -1344,10 +1344,10 @@ build_static_python_cpu() {
     popd
 }
 
-build_static_python_cu92() {
+build_static_python_cu102() {
     set -ex
     pushd .
-    export mxnet_variant=cu92
+    export mxnet_variant=cu102
     source /opt/rh/devtoolset-7/enable
     source /opt/rh/rh-python36/enable
     # Opt in to newer GCC C++ ABI. devtoolset defaults to ABI Version 2.
