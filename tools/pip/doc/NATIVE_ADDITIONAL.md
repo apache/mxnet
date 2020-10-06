@@ -34,7 +34,7 @@ a GPL library and MXNet part of the Apache Software Foundation, MXNet must not
 redistribute `libquadmath.so.0` as part of the Pypi package and users must
 manually install it.
 
-To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other versions, check [Installing MXNet](https://mxnet.apache.org/versions/master/install/index.html) for instructions on building from source.
+To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other versions, check [Installing MXNet](https://mxnet.apache.org/versions/master) for instructions on building from source.
 
 Installation
 ------------
