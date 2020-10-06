@@ -470,22 +470,22 @@ inline bool _can_dot(const std::vector<std::string>& inputs,
 #if MXNET_USE_CUTENSOR == 1
 inline bool check_cutensor_indices(const std::string &indices,
                                    const TShape& shape,
-                                   std::unordered_map<char, int> &count,
-                                   std::unordered_map<char, int> &countAll,
-                                   std::unordered_map<char, dim_t> &extents) {
+                                   std::unordered_map<char, int> *count,
+                                   std::unordered_map<char, int> *countAll,
+                                   std::unordered_map<char, dim_t> *extents) {
   for (int i = 0; i < indices.size(); i++) {
     const char c = indices[i];
-    auto pos = count.find(c);
-    if (pos != count.end()) {
+    auto pos = count->find(c);
+    if (pos != count->end()) {
       // don't allow duplicated incides inside of the same tensor
       return false;
     } else {
-      count[c] = 1;
+      (*count)[c] = 1;
     }
-    auto pos2 = countAll.find(c);
-    if (pos2 != countAll.end()) {
+    auto pos2 = countAll->find(c);
+    if (pos2 != countAll->end()) {
       pos2->second += 1;
-      if (shape[i] != extents[c]) {
+      if (shape[i] != (*extents)[c]) {
         // Catch cases for which one index has an extent/dimension of 1 in one of the inputs
         // while it has an extent greater than 1 in the other input; the einsum convention
         // treats those indices as broadcasted indices (in the tensor for which the extent is 1),
@@ -498,8 +498,8 @@ inline bool check_cutensor_indices(const std::string &indices,
         return false;
       }
     } else {
-      countAll[c] = 1;
-      extents[c] = shape[i];
+      (*countAll)[c] = 1;
+      (*extents)[c] = shape[i];
     }
   }
   return true;
@@ -525,9 +525,9 @@ inline bool _can_cutensor(const std::vector<std::string>& inputs,
   std::unordered_map<char, int> count_input_1;
   std::unordered_map<char, int> count_output;
 
-  if (!check_cutensor_indices(inputs[0], inputs_shape[0], count_input_0, count_all, extents) ||
-      !check_cutensor_indices(inputs[1], inputs_shape[1], count_input_1, count_all, extents) ||
-      !check_cutensor_indices(output, output_shape, count_output, count_all, extents)) {
+  if (!check_cutensor_indices(inputs[0], inputs_shape[0], &count_input_0, &count_all, &extents) ||
+      !check_cutensor_indices(inputs[1], inputs_shape[1], &count_input_1, &count_all, &extents) ||
+      !check_cutensor_indices(output, output_shape, &count_output, &count_all, &extents)) {
     return false;
   }
   return true;
