@@ -51,6 +51,7 @@ def test_gluon_embedding():
     assert b.shape == (MEDIUM_X, SMALL_Y, MEDIUM_X)
     assert b.asnumpy().size == MEDIUM_X * SMALL_Y * MEDIUM_X
 
+
 @use_np
 def test_fully_connected():
     a = np.ones(shape=(LARGE_X, SMALL_Y))
@@ -65,6 +66,7 @@ def test_fully_connected():
     res = mx.npx.fully_connected(a, b, c, num_hidden=b.shape[0], no_bias=False)
     assert np.sum(res[-1] == a.shape[1] + 1) == b.shape[0]
 
+
 @use_np
 def test_dense():
     data = np.ones(shape=(LARGE_X, SMALL_X))
@@ -72,6 +74,7 @@ def test_dense():
     linear.initialize()
     res = linear(data)
     assert res.shape == (LARGE_X, SMALL_Y)
+
 
 @use_np
 def test_softmax():
@@ -94,11 +97,13 @@ def test_ones():
     assert A.shape == (INT_OVERFLOW, 2)
     assert A[0][0] == 1
 
+
 @use_np
 def test_zeros():
     A = np.zeros((INT_OVERFLOW, 2))
     assert A.shape == (INT_OVERFLOW, 2)
     assert A[0][0] == 0
+
 
 @use_np
 def test_abs():
@@ -112,6 +117,7 @@ def test_abs():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == -1
+
 
 @use_np
 def test_absolute():
@@ -142,6 +148,7 @@ def test_add():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 1
 
+
 @use_np
 def test_binary_broadcast():
     A = np.ones((INT_OVERFLOW, 2))
@@ -149,6 +156,7 @@ def test_binary_broadcast():
     C = np.add(A, B)
     assert C.shape == (INT_OVERFLOW, 2)
     assert C[0][0] == 2
+
 
 @use_np
 def test_all():
@@ -161,6 +169,7 @@ def test_all():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0 
 
+
 @use_np
 def test_amin():
     A = np.ones((INT_OVERFLOW, 2))
@@ -172,6 +181,7 @@ def test_amin():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
+
 
 @use_np
 def test_amax():
@@ -186,6 +196,7 @@ def test_amax():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
 
+
 @use_np
 def test_argmin():
     A = np.ones((INT_OVERFLOW, 2))
@@ -199,6 +210,7 @@ def test_argmin():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
 
+
 @use_np
 def test_argmax():
     A = np.zeros((INT_OVERFLOW, 2))
@@ -211,6 +223,7 @@ def test_argmax():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
+
 
 @use_np
 def test_trigonometric_family():
@@ -233,6 +246,7 @@ def test_trigonometric_family():
         np.arcsin, np.arctan, np.arctanh, np.sin, np.cos, \
         np.tan, np.sinh, np.cosh, np.tanh])
 
+
 @use_np
 def test_any():
     A = np.zeros((INT_OVERFLOW, 2))
@@ -243,6 +257,7 @@ def test_any():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
+
 
 @use_np
 def test_append():
@@ -257,11 +272,13 @@ def test_append():
     assert A.grad.shape == (1, INT_OVERFLOW)
     assert A[0][0] == 1
 
+
 @use_np
 def test_arange():
     A = np.arange(INT_OVERFLOW, dtype='int32')
     assert A.shape == (INT_OVERFLOW, )
     assert A[100] == 100
+
 
 @use_np
 def test_argsort():
@@ -297,6 +314,7 @@ def test_array_split():
     assert B[1].shape ==(HALF_INT_OVERFLOW, 2)
     assert B[0][0][0] == 0
 
+
 @use_np
 def test_atleast_xd_family():
     def batch_check(x, funcs, shapes):
@@ -312,6 +330,7 @@ def test_atleast_xd_family():
     batch_check(A, [np.atleast_1d, np.atleast_2d, np.atleast_3d], \
             [(INT_OVERFLOW, ), (1, INT_OVERFLOW), (1, INT_OVERFLOW, 1)])
 
+
 @use_np
 def test_average():
     A = np.ones((INT_OVERFLOW, 2))
@@ -323,6 +342,7 @@ def test_average():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert_almost_equal(A.grad[0][0], np.array([1.0 / DOUBLE_INT_OVERFLOW]), \
             rtol=1e-3, atol=1e-5)
+
 
 @use_np
 def test_bincount():
@@ -356,10 +376,12 @@ def test_bitwise_family():
     assert C.shape == (INT_OVERFLOW, 1)
     assert C[0] == np.bitwise_not(np.ones((1), dtype='int32')) 
 
+
 @use_np
 def test_blackman():
     A = np.blackman((INT_OVERFLOW))
     assert A.shape == (INT_OVERFLOW, )
+
 
 @use_np
 def test_broadcast_to():
@@ -378,6 +400,7 @@ def test_broadcast_to():
     B.backward()
     assert A.grad.shape == (2, )
 
+
 @use_np
 def test_root_family():
     def batch_check(x, funcs, grads):
@@ -394,6 +417,7 @@ def test_root_family():
     A = np.ones((INT_OVERFLOW, 2))
     batch_check(A, [np.sqrt, np.cbrt], [0.5, 1.0 / 3])
 
+
 @use_np
 def test_ceil_floor():
     def batch_check(x, funcs):
@@ -409,6 +433,7 @@ def test_ceil_floor():
     A = np.ones((INT_OVERFLOW, 2))
     batch_check(A, [np.ceil, np.floor])
 
+
 @use_np
 def test_clip():
     A = np.ones((INT_OVERFLOW, 2))
@@ -421,6 +446,7 @@ def test_clip():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 1
 
+
 @use_np
 def test_column_stack():
     A = np.ones(INT_OVERFLOW)
@@ -432,6 +458,7 @@ def test_column_stack():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, )
     assert A.grad[0] == 2
+
 
 @use_np
 def test_concatenate():
@@ -474,10 +501,12 @@ def test_dot():
     assert A.grad.shape == (1, INT_OVERFLOW)
     assert A.grad[0][0] == 1
 
+
 @use_np
 def test_random_uniform():
     A = np.random.uniform(low=0, high=1.0, size=(INT_OVERFLOW))
     assert A[0] <= 1 and A[0] >= 0
+
 
 @use_np
 def test_random_normal():
@@ -490,25 +519,30 @@ def test_random_gamma():
     A = np.random.gamma(shape=1.0, size=(INT_OVERFLOW))
     assert type(A[0]).__name__ == 'ndarray'
 
+
 @use_np
 def test_random_exponential():
     A = np.random.exponential(size=(INT_OVERFLOW))
     assert type(A[0]).__name__ == 'ndarray'
+
 
 @use_np
 def test_random_laplace():
     A = np.random.laplace(loc=0, scale=1.0, size=(INT_OVERFLOW))
     assert type(A[0]).__name__ == 'ndarray'
 
+
 @use_np
 def test_random_choice():
     A = np.random.choice(a=10, size=(INT_OVERFLOW))
     assert A[0] <= 10 and A[0] >= 0
 
+
 @use_np
 def test_random_gumbel():
     A = np.random.gumbel(loc=0, scale=1.0, size=(INT_OVERFLOW))
     assert type(A[0]).__name__ == 'ndarray'
+
 
 @use_np
 def test_random_logistic():
@@ -526,20 +560,24 @@ def test_random_pareto():
     A = np.random.pareto(a=1.0, size=(INT_OVERFLOW))
     assert type(A[0]).__name__ == 'ndarray'
 
+
 @use_np
 def test_random_power():
     A = np.random.power(a=1.0, size=(INT_OVERFLOW))
     assert type(A[0]).__name__ == 'ndarray'
+
 
 @use_np
 def test_random_rayleigh():
     A = np.random.rayleigh(scale=1.0, size=(INT_OVERFLOW))
     assert type(A[0]).__name__ == 'ndarray'
 
+
 @use_np
 def test_random_weibull():
     A = np.random.weibull(a=1.0, size=(INT_OVERFLOW))
     assert type(A[0]).__name__ == 'ndarray'
+
 
 @use_np
 def test_random_shuffle():
@@ -547,15 +585,18 @@ def test_random_shuffle():
     np.random.shuffle(A)
     assert type(A[0]).__name__ == 'ndarray'
 
+
 @use_np
 def test_random_lognormal():
     A = np.random.lognormal(mean=0, sigma=1.0, size=(2**31))
     assert type(A[0]).__name__ == 'ndarray'
 
+
 @use_np
 def test_random_randint():
     A = np.random.randint(low=0, high=5, size=(2, 2**31))
     assert A[0][0] < 5 and A[0][0] >= 0
+
 
 @use_np
 def test_slice_assign():
@@ -567,6 +608,7 @@ def test_slice_assign():
     B = np.zeros((INT_OVERFLOW, 2))
     B[-1] = 2
     assert B[-1, 0] == 2 and B[-1, 1] == 2
+
 
 @use_np
 def test_add():
@@ -582,6 +624,7 @@ def test_add():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[-1, -1] == 1
 
+
 @use_np
 def test_hypot():
     A = np.ones((INT_OVERFLOW, 2))
@@ -595,6 +638,7 @@ def test_hypot():
     assert C[-1, -1] == 5
     assert A.grad.shape == A.shape
     assert_almost_equal(A.grad[-1, -1], np.array([0.6]), rtol=1e-5, atol=1e-5)
+
 
 @use_np
 def test_power():
@@ -612,6 +656,7 @@ def test_power():
     assert A.grad[-1, -1] == 12
     assert B.grad.shape == B.shape
     assert_almost_equal(B.grad[-1, -1], 2**3 * np.log(2), rtol=1e-5, atol=1e-5)
+
 
 @use_np
 def test_ldexp():
@@ -631,6 +676,7 @@ def test_ldexp():
     assert_almost_equal(B.grad[-1, -1], A[-1, -1] * 2**B[-1, -1] * np.log(2), \
         rtol=1e-5, atol=1e-5)
 
+
 @use_np
 def test_multiply():
     A = np.ones((2, INT_OVERFLOW))
@@ -647,6 +693,7 @@ def test_multiply():
     assert A.grad[-1, -1] == B[-1, -1]
     assert B.grad.shape == B.shape
     assert B.grad[-1, -1] == A[-1, -1]
+
 
 @use_np
 def test_subtract():
@@ -685,6 +732,8 @@ def test_activation():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert_almost_equal(A.grad[0][0], np.array([0.25]), \
                 rtol=1e-3, atol=1e-5)
+
+
 @use_np
 def test_arange_like():
     A = np.zeros((INT_OVERFLOW, 2))
@@ -704,6 +753,7 @@ def test_arange_like():
 def test_batch_dot():
     assert False 
 
+
 @use_np
 def test_cast():
     A = np.ones((INT_OVERFLOW, 2))
@@ -715,6 +765,7 @@ def test_cast():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 1
+
 
 @use_np
 def test_broadcast_like():
@@ -735,6 +786,7 @@ def test_broadcast_like():
     assert A.grad.shape == (1, 2)
     assert_almost_equal(A.grad[0][0], np.array([INT_OVERFLOW]), \
                             rtol=1e-3, atol=1e-5)
+
 
 @use_np
 def test_constraint_check():
@@ -774,6 +826,7 @@ def test_batch_norm():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
 
+
 @use_np
 def test_nonzero():
     A = np.zeros((2, INT_OVERFLOW))
@@ -789,6 +842,7 @@ def test_nonzero():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
 
+
 @use_np
 def test_one_hot():
     A = np.zeros((INT_OVERFLOW))
@@ -800,6 +854,7 @@ def test_one_hot():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, )
     assert A.grad[0] == 0
+
 
 @use_np
 def test_pick():
@@ -819,16 +874,19 @@ def test_pick():
     assert B.grad.shape == (INT_OVERFLOW, )
     assert A.grad[0][0] == 1
 
+
 @use_np
 def test_scalar_poisson():
     A = npx.scalar_poisson(lam=4, shape=(2, INT_OVERFLOW))
     assert A.shape == (2, INT_OVERFLOW)
+
 
 @use_np
 def test_tensor_poisson():
     lam = np.array([2.0, 4.0])
     A = npx.tensor_poisson(lam, shape=(INT_OVERFLOW))
     assert A.shape == (2, INT_OVERFLOW)
+
 
 @use_np
 def test_reshape():
@@ -842,6 +900,7 @@ def test_reshape():
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 1
 
+
 @use_np
 def test_reshape_like():
     A = np.ones((INT_OVERFLOW, 2))
@@ -853,6 +912,7 @@ def test_reshape_like():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 1
+
 
 @use_np
 def test_sigmoid():
@@ -867,6 +927,7 @@ def test_sigmoid():
     assert_almost_equal(A.grad[0][0], np.array([0.25]), \
                 rtol=1e-3, atol=1e-5)
 
+
 @use_np
 def test_shape_array():
     A = np.zeros((INT_OVERFLOW, 2))
@@ -877,6 +938,7 @@ def test_shape_array():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, 2)
     assert A.grad[0][0] == 0
+
 
 @use_np
 def test_stop_gradient():
@@ -889,7 +951,8 @@ def test_stop_gradient():
     B.backward()
     # should be 3 if not for stop_gradient()
     assert A.grad[0][0] == 0
-    
+
+
 @use_np
 def test_sequence_mask():
     A = np.ones((2, 2, INT_OVERFLOW))
@@ -903,6 +966,7 @@ def test_sequence_mask():
     B.backward()
     assert A.grad.shape == (2, 2, INT_OVERFLOW)
     assert A.grad[0][0][0] == 1
+
 
 @use_np
 def test_topk():
@@ -918,6 +982,7 @@ def test_topk():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
 
+
 @use_np
 def test_slice():
     A = np.ones((INT_OVERFLOW, 3))
@@ -925,6 +990,7 @@ def test_slice():
     B = npx.slice(A, begin=(100,1), end=(200,3))
     assert B.shape == (100, 2)
     assert B[0][0] == 2
+
 
 @use_np
 def test_smooth_l1():
@@ -937,6 +1003,7 @@ def test_smooth_l1():
     B.backward()
     assert A.grad.shape == (INT_OVERFLOW, )
     assert A.grad[0] == 0
+
 
 @use_np
 def test_gamma():
@@ -952,6 +1019,7 @@ def test_gamma():
     assert_almost_equal(A.grad[0][0], np.array([36.1428]), \
                 rtol=1e-3, atol=1e-5)
 
+
 @use_np
 def test_gammaln():
     A = np.ones((2, INT_OVERFLOW))
@@ -966,6 +1034,8 @@ def test_gammaln():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert_almost_equal(A.grad[0][0], np.array([1.5061178]), \
                 rtol=1e-3, atol=1e-5)
+
+
 @use_np
 def test_digamma():
     A = np.ones((2, INT_OVERFLOW)) 
@@ -980,6 +1050,7 @@ def test_digamma():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert_almost_equal(A.grad[0][0], np.array([0.22132295]), \
                 rtol=1e-3, atol=1e-5)
+
 
 @use_np
 def test_rnn_dim_check():
@@ -1065,6 +1136,7 @@ def test_ctc_loss():
     assert A.grad.shape == (L_SEQ, BAT, L_ALP)
     assert type(A[0]).__name__ == 'ndarray'
 
+
 @use_np
 def test_erf():
     A = np.ones((2, INT_OVERFLOW))
@@ -1078,6 +1150,7 @@ def test_erf():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert_almost_equal(A.grad[0][0], np.array([4.2e-44]), \
                 rtol=1e-3, atol=1e-5)
+
 
 @use_np
 def test_erfinv():
@@ -1094,6 +1167,7 @@ def test_erfinv():
     assert_almost_equal(A.grad[0][0], np.array([1.112585]), \
                 rtol=1e-3, atol=1e-5)
 
+
 @use_np
 def test_index_add():
     A = np.zeros((2, INT_OVERFLOW))
@@ -1107,6 +1181,7 @@ def test_index_add():
     B.backward()
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 1
+
 
 @use_np
 def test_index_update():
@@ -1122,6 +1197,7 @@ def test_index_update():
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
 
+
 @use_np
 def test_layer_norm():
     A = np.ones((2, INT_OVERFLOW))
@@ -1133,6 +1209,7 @@ def test_layer_norm():
     B.backward()
     assert A.grad.shape == (2, INT_OVERFLOW)
     assert A.grad[0][0] == 0
+
 
 @use_np
 def test_dlpack():
@@ -1151,6 +1228,7 @@ def test_dlpack():
     assert type(C).__name__ == 'ndarray'
     assert C.shape == (2, INT_OVERFLOW)
     assert C[0][100] == 101
+
 
 @use_np
 def test_pooling():
@@ -1172,6 +1250,7 @@ def test_pooling():
     B.backward()
     assert A.grad.shape == (1, 1, D, H, W)
     assert A.grad[0, 0, 0, 0, 0] == 1
+
 
 @use_np
 def test_roi_pooling():
@@ -1205,6 +1284,7 @@ def test_save_load():
     assert B[0].shape == (2, INT_OVERFLOW)
     assert B[0][0][100] == 100
 
+
 @use_np
 def test_gather_nd():
     A = np.ones((1, 2, INT_OVERFLOW))
@@ -1221,6 +1301,7 @@ def test_gather_nd():
     assert A.grad[0, 0, 0] == 0
     assert A.grad[0, 0, INT_OVERFLOW-1] == 1
 
+
 @use_np
 def test_random_bernoulli():
     prob = np.zeros((INT_OVERFLOW))
@@ -1229,3 +1310,17 @@ def test_random_bernoulli():
     assert A.shape == (INT_OVERFLOW, )
     assert A[0] == 1
     assert A[1] == 0
+
+
+@use_np
+def test_cumsum():
+    input = np.ones((INT_OVERFLOW, 3), dtype='int64')
+    input.attach_grad()
+    with mx.autograd.record():
+        output = np.cumsum(input, axis=0, dtype='int64')
+        output.backward()
+    assert output.shape == input.shape
+    assert output[-1, -1] == INT_OVERFLOW
+    assert input.grad.shape == input.shape
+    assert input.grad[0, 0] == INT_OVERFLOW
+    assert input.grad[-1, -1] == 1
