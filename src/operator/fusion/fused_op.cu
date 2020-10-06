@@ -233,7 +233,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
           const auto& var_name = g[node_id].source->attrs.name;
           const auto vec_name = "vec_" + var_name + "_" + std::to_string(i);
           load_index[node_id] = 0;
-          auto parse_tuple = [ndim](const std::string& input, const std::string def) {
+          auto parse_tuple = [ndim](const std::string& input, const std::string& def) {
             std::string out = input;
             replaceString(&out, " ", "");
             if (out[0] == '(') {
@@ -242,7 +242,7 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
               // First check if out is ()
               int n_entries = out.size() != 2;
               for (size_t i = 1; i < out.size() - 1; ++i) {
-                if (i == ',') {
+                if (out[i] == ',') {
                   ++n_entries;
                 }
               }
@@ -260,6 +260,12 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
               }
               out += "}";
             }
+            replaceString(&out, "None", def);
+            return out;
+          };
+          auto parse_int = [](const std::string& input, const std::string& def) {
+            std::string out = input;
+            replaceString(&out, " ", "");
             replaceString(&out, "None", def);
             return out;
           };
@@ -311,12 +317,15 @@ std::string FusedOp::GenerateCode(const std::vector<OpReqType> &req,
             }
             end = extra_var_name;
           } else {
-            begin = parse_tuple(source->attrs.dict.at("begin"), "0");
-            end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
             if (op_name == "slice_axis") {
+              begin = parse_int(source->attrs.dict.at("begin"), "0");
+              end = parse_int(source->attrs.dict.at("end"), "INT_MAX");
               int axis = std::stoi(source->attrs.dict.at("axis"));
               begin = build_tuple(axis, begin, "0");
               end = build_tuple(axis, end, "INT_MAX");
+            } else {
+              begin = parse_tuple(source->attrs.dict.at("begin"), "0");
+              end = parse_tuple(source->attrs.dict.at("end"), "INT_MAX");
             }
             if (check_shapes) {
               if (check_tuple(begin) && check_tuple(end)) {
