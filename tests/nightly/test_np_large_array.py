@@ -157,7 +157,7 @@ def test_amin():
         out.backward()
     assert out == -1.0
     assert inp.grad.shape == (INT_OVERFLOW, 2)
-    assert inp.grad[0][0] == 0
+    assert inp.grad[0, 0] == 0 and inp.grad[-1, -1] == 1
 
 @use_np
 def test_amax():
@@ -169,7 +169,7 @@ def test_amax():
         out.backward()
     assert out == 1.0
     assert inp.grad.shape == (INT_OVERFLOW, 2)
-    assert inp.grad[0][0] == 0
+    assert inp.grad[0, 0] == 0 and inp.grad[-1, -1] == 1
 
 @use_np
 def test_argmin():
