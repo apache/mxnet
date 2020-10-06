@@ -60,8 +60,8 @@ Contents
 * [Ecosystem](https://mxnet.apache.org/ecosystem)
 * [API Documentation](https://mxnet.apache.org/api)
 * [Examples](https://github.com/apache/incubator-mxnet-examples)
-* [Social Media](https://mxnet.apache.org/community#social-media)
-* [Contribute to MXNet](https://mxnet.apache.org/community/)
+* [Stay Connected](#stay-connected)
+* [Social Media](#social-media)
 
 What's New
 ----------

@@ -70,6 +70,11 @@ void GpuDeviceStorageProfiler::DumpProfile() const {
        gpu_mem_alloc_entries_) {
     std::string alloc_entry_name
         = std::regex_replace(alloc_entry.second.name, gluon_param_regex, "$6");
+    if (alloc_entry_name == "") {
+      // If the entry name becomes none after the regex replacement, we revert
+      // back to the original.
+      alloc_entry_name = alloc_entry.second.name;
+    }
     gpu_mem_ordered_alloc_entries.emplace(
         alloc_entry.second.profiler_scope + alloc_entry_name,
         AllocEntryDumpFmt{

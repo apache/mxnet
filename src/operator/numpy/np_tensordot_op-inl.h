@@ -476,7 +476,10 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
                                     mxnet::TShape(a_T_axes.begin(), a_T_axes.end()));
       mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, b, b_res2,
                                     mxnet::TShape(b_T_axes.begin(), b_T_axes.end()));
-
+      mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, grad_a, a_res,
+                                    mxnet::TShape(a_axes.begin(), a_axes.end()));
+      mxnet::op::TransposeImpl<xpu>(ctx.run_ctx, grad_b, b_res,
+                                    mxnet::TShape(b_axes.begin(), b_axes.end()));
       MatrixDot<xpu>(ctx, a_res2, out_grad, b_res, req[1], ad2, ad1, ad1, bd2);
       MatrixDot<xpu>(ctx, out_grad, b_res2, a_res, req[0], ad1, bd2, bd2, bd1);
 

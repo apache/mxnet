@@ -21,6 +21,7 @@
 __all__ = ['Block', 'HybridBlock', 'SymbolBlock']
 
 import copy
+import inspect
 import warnings
 import weakref
 from collections import OrderedDict, defaultdict
@@ -30,7 +31,7 @@ import contextvars
 import re
 import numpy as np
 
-from ..base import mx_real_t, MXNetError, NDArrayHandle, py_str
+from ..base import mx_real_t, MXNetError, NDArrayHandle, SymbolHandle, py_str, check_call, _LIB
 from .. import symbol, ndarray, initializer, autograd, _deferred_compute as dc, name as _name, \
     profiler as _profiler, context as _context
 from ..symbol.numpy import _symbol as np_symbol
@@ -984,7 +985,7 @@ class HybridBlock(Block):
 
     def _get_graph(self, *args):
         if not self._cached_graph:
-            if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:  # Gluon 1
+            if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
                 return self._get_graph_v1(*args)
             else:  # Gluon 2 based on deferred compute mode
                 return self._get_graph_v2(*args)
@@ -1277,7 +1278,7 @@ class HybridBlock(Block):
 
     def infer_shape(self, *args):
         """Infers shape of Parameters from inputs."""
-        if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:
+        if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
             # Gluon 1 based on F:  hybrid_forward is defined by user
             self._infer_attrs('infer_shape', 'shape', *args)
         else:
@@ -1305,13 +1306,16 @@ class HybridBlock(Block):
 
         Parameters
         ----------
-        path : str
+        path : str or None
             Path to save model. Two files `path-symbol.json` and `path-xxxx.params`
             will be created, where xxxx is the 4 digits epoch number.
+            If None, do not export to file but return Python Symbol object and
+            corresponding dictionary of parameters.
         epoch : int
             Epoch number of saved model.
         remove_amp_cast : bool, optional
             Whether to remove the amp_cast and amp_multicast operators, before saving the model.
+
         Returns
         -------
         symbol_filename : str
@@ -1337,8 +1341,9 @@ class HybridBlock(Block):
             if var.name in rename_map:
                 var._set_attr(name=rename_map[var.name])
 
-        sym_filename = '%s-symbol.json'%path
-        sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
+        sym_filename = '%s-symbol.json' % (path if path is not None else "")
+        if path is not None:
+            sym.save(sym_filename, remove_amp_cast=remove_amp_cast)
 
         arg_names = set(sym.list_arguments())
         aux_names = set(sym.list_auxiliary_states())
@@ -1354,9 +1359,18 @@ class HybridBlock(Block):
                     else:
                         arg_dict['aux:%s'%name] = param._reduce()
         save_fn = _mx_npx.save if is_np_array() else ndarray.save
-        params_filename = '%s-%04d.params'%(path, epoch)
-        save_fn(params_filename, arg_dict)
-        return (sym_filename, params_filename)
+        params_filename = '%s-%04d.params'%((path if path is not None else ""), epoch)
+
+        if path is not None:
+            save_fn(params_filename, arg_dict)
+            return (sym_filename, params_filename)
+
+        if remove_amp_cast:
+            handle = SymbolHandle()
+            import ctypes
+            check_call(_LIB.MXSymbolRemoveAmpCast(sym.handle, ctypes.byref(handle)))
+            sym = type(sym)(handle)
+        return sym, arg_dict
 
     def register_op_hook(self, callback, monitor_all=False):
         """Install op hook for block recursively.
@@ -1388,7 +1402,7 @@ class HybridBlock(Block):
             cld()._monitor_all = monitor_all
 
     def __call__(self, x, *args):
-        if self.hybrid_forward.__func__ is not HybridBlock.hybrid_forward:
+        if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
             # Gluon 1 based on F:  hybrid_forward is defined by user
             return super().__call__(x, *args)
         else:  # Gluon 2 based on deferred compute mode
@@ -1515,7 +1529,8 @@ class SymbolBlock(HybridBlock):
     >>> print(feat_model(x))
     """
     @staticmethod
-    def imports(symbol_file, input_names, param_file=None, ctx=None):
+    def imports(symbol_file, input_names, param_file=None, ctx=None, allow_missing=False,
+                ignore_extra=False):
         """Import model previously saved by `gluon.HybridBlock.export`
         as a `gluon.SymbolBlock` for use in Gluon.
 
@@ -1529,6 +1544,11 @@ class SymbolBlock(HybridBlock):
             Path to parameter file.
         ctx : Context, default None
             The context to initialize `gluon.SymbolBlock` on.
+        allow_missing : bool, default False
+            Whether to silently skip loading parameters not represents in the file.
+        ignore_extra : bool, default False
+            Whether to silently ignore parameters from the file that are not
+            present in this Block.
 
         Returns
         -------
@@ -1561,7 +1581,7 @@ class SymbolBlock(HybridBlock):
             inputs = [symbol.var(i).as_np_ndarray() if is_np_array() else symbol.var(i) for i in input_names]
         ret = SymbolBlock(sym, inputs)
         if param_file is not None:
-            ret.load_parameters(param_file, ctx=ctx, cast_dtype=True, dtype_source='saved')
+            ret.load_parameters(param_file, ctx, allow_missing, ignore_extra, True, 'saved')
         return ret
 
     def __repr__(self):

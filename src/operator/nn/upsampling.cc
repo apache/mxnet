@@ -77,6 +77,7 @@ static bool UpSamplingShape(const nnvm::NodeAttrs& attrs,
 static inline std::vector<std::string> ListArguments(const UpSamplingParam& param) {
   if (param.sample_type == up_enum::kNearest) {
     std::vector<std::string> ret;
+    ret.reserve(param.num_args);
     for (int i = 0; i < param.num_args; ++i) {
       ret.push_back(std::string("arg") + std::to_string(i));
     }

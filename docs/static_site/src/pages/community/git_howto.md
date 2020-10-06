@@ -151,7 +151,7 @@ git rebase --onto upstream/master HEAD~k
 ```
 
 You can then force push to the master. Note that the above command will
-discard all the commits before tha last k ones.
+discard all the commits before the last k ones.
 
 What is the consequence of force push
 -------------------------------------
