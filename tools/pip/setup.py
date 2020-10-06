@@ -137,10 +137,6 @@ else:
         libraries.append('CUDA-10.2')
     elif variant.startswith('CU101'):
         libraries.append('CUDA-10.1')
-    elif variant.startswith('CU100'):
-        libraries.append('CUDA-10.0')
-    elif variant.startswith('CU92'):
-        libraries.append('CUDA-9.2')
 
 from mxnet.runtime import Features
 if Features().is_enabled("MKLDNN"):

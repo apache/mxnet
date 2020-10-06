@@ -17,7 +17,7 @@
 
 # Artifact Repository - Pushing and Pulling libmxnet
 
-The artifact repository is an S3 bucket accessible only to restricted Jenkins nodes. It is used to store compiled MXNet artifacts that can be used by downstream CD pipelines to package the compiled libraries for different delivery channels (e.g. DockerHub, PyPI, Maven, etc.). The S3 object keys for the files being posted will be prefixed with the following distinguishing characteristics of the binary: branch, commit id, operating system, variant and dependency linking strategy (static or dynamic). For instance, s3://bucket/73b29fa90d3eac0b1fae403b7583fdd1529942dc/ubuntu16.04/cu92mkl/static/libmxnet.so
+The artifact repository is an S3 bucket accessible only to restricted Jenkins nodes. It is used to store compiled MXNet artifacts that can be used by downstream CD pipelines to package the compiled libraries for different delivery channels (e.g. DockerHub, PyPI, Maven, etc.). The S3 object keys for the files being posted will be prefixed with the following distinguishing characteristics of the binary: branch, commit id, operating system, variant and dependency linking strategy (static or dynamic). For instance, s3://bucket/73b29fa90d3eac0b1fae403b7583fdd1529942dc/ubuntu16.04/cu102mkl/static/libmxnet.so
 
 An MXNet artifact is defined as the following set of files:
 
@@ -53,13 +53,13 @@ If not set, derived through the value of sys.platform (https://docs.python.org/3
 
 **Variant**
 
-Manually configured through the --variant argument. The current variants are: cpu, native, cu92, cu100, cu101, cu102 and cu110.
+Manually configured through the --variant argument. The current variants are: cpu, native, cu100, cu101, cu102 and cu110.
 
 As long as the tool is being run from the MXNet code base, the runtime feature detection tool (https://github.com/larroy/mxnet/blob/dd432b7f241c9da2c96bcb877c2dc84e6a1f74d4/docs/api/python/libinfo/libinfo.md) can be used to detect whether the library has been compiled with MKL (library has MKL-DNN feature enabled) and/or CUDA support (compiled with CUDA feature enabled).
 
 If it has been compiled with CUDA support, the output of /usr/local/cuda/bin/nvcc --version can be mined for the exact CUDA version (eg. 8.0, 9.0, etc.).
 
-By knowing which features are enabled on the binary, and if necessary, which CUDA version is installed on the machine, the value for the variant argument can be calculated. Eg. if CUDA features are enabled, and nvcc reports cuda version 10, then the variant would be cu100. If neither MKL-DNN nor CUDA features are enabled, the variant would be native. 
+By knowing which features are enabled on the binary, and if necessary, which CUDA version is installed on the machine, the value for the variant argument can be calculated. Eg. if CUDA features are enabled, and nvcc reports cuda version 10.2, then the variant would be cu102. If neither MKL-DNN nor CUDA features are enabled, the variant would be native. 
 
 **Dependency Linking**
 

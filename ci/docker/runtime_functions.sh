@@ -224,7 +224,7 @@ build_ubuntu_gpu_mkldnn_release() {
 
 # Compiles the dynamic mxnet library
 # Parameters:
-# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, cu100, cu92mkl, etc.
+# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu100, cu101, cu102, cu110, etc.
 build_dynamic_libmxnet() {
     set -ex
 
