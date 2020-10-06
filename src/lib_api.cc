@@ -343,7 +343,8 @@ mxnet::ext::JsonVal mxnet::ext::JsonVal::parse(const std::string& json) {
 mxnet::ext::JsonVal mxnet::ext::JsonVal::parse_string(const std::string& json, unsigned int* idx) {
   JsonVal ret(STR);
   while (*idx < json.size()) {
-    if (json[*idx] == '"') {
+    if (json[*idx] == '"' && (ret.str.size() == 0 ||
+                              (ret.str.size() > 0 && ret.str.back() != '\\'))) {
       ++(*idx);
       return ret;
     } else {
@@ -556,7 +557,7 @@ mxnet::ext::Graph* mxnet::ext::Graph::fromJson(mxnet::ext::JsonVal val) {
 }
 
 /* \brief convert graph object back to JSON object */
-mxnet::ext::JsonVal mxnet::ext::Graph::toJson() {
+mxnet::ext::JsonVal mxnet::ext::Graph::toJson() const {
   // top level object is a map
   JsonVal val(MAP);
 
@@ -641,7 +642,7 @@ mxnet::ext::JsonVal mxnet::ext::Graph::toJson() {
 }
 
 /* \brief convert graph object to JSON string */
-std::string mxnet::ext::Graph::toString() {
+std::string mxnet::ext::Graph::toString() const {
   return toJson().dump();
 }
 
@@ -720,6 +721,7 @@ void mxnet::ext::Graph::print(int indent) const {
 /* \brief add a new node to this graph */
 mxnet::ext::Node* mxnet::ext::Graph::addNode(const std::string& name, const std::string& op) {
   Node* n = new Node();
+  nodes.push_back(n);
   n->name = name;
   n->op = op;
   if (res)
@@ -761,10 +763,14 @@ void mxnet::ext::Graph::_setParams(std::unordered_map<std::string, mxnet::ext::M
                                    std::unordered_map<std::string, mxnet::ext::MXTensor>* aux) {
   // set params for each input node
   for (Node* node : inputs) {
-    if (args->count(node->name) > 0)
-      node->tensor = &args->at(node->name);
-    else if (aux->count(node->name) > 0)
-      node->tensor = &aux->at(node->name);
+    std::string name = node->name;
+    if (node->attrs.count("isArg") > 0 && node->attrs["isArg"].compare("True") == 0)
+      // mapping name back to original node name from subgraph input name
+      name = node->attrs["argName"];
+    if (args->count(name) > 0)
+      node->tensor = &args->at(name);
+    else if (aux->count(name) > 0)
+      node->tensor = &aux->at(name);
   }
 }
 
@@ -1490,26 +1496,27 @@ MX_INT_RET _partCallReviewSubgraph(mxnet::ext::reviewSubgraph_t reviewSubgraph, 
   }
 
   subgraph->_setParams(&args, &aux);
+
+  std::unordered_map<std::string, std::string> attrs;
   mxnet::ext::MXReturnValue retval = reviewSubgraph(subgraph, subgraph_id, &accept_bool,
-                                                    opts);
+                                                    opts, &attrs);
   if (!retval) return retval;
 
   *accept = accept_bool;
 
-  if (subgraph->attrs.size() > 0) {
-    *num_attrs = subgraph->attrs.size();
+  if (attrs.size() > 0) {
+    *num_attrs = attrs.size();
     // allocate space for attributes
     *attr_keys = static_cast<char**>(malloc (*num_attrs * sizeof(char*)));
     *attr_vals = static_cast<char**>(malloc (*num_attrs * sizeof(char*)));
 
     // copy attributes
     int i = 0;
-    for (auto kv : subgraph->attrs) {
-      (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));
-      std::string val = kv.second.dump();  // convert JsonVal back to string
-      (*attr_vals)[i] = static_cast<char*>(malloc ((val.size()+1) * sizeof(char)));
+    for (auto kv : attrs) {
+      (*attr_keys)[i] = static_cast<char*>(malloc ((kv.first.size()+1) * sizeof(char)));  // NOLINT
+      (*attr_vals)[i] = static_cast<char*>(malloc ((kv.second.size()+1) * sizeof(char)));  // NOLINT
       snprintf((*attr_keys)[i], kv.first.size()+1, "%s", kv.first.c_str());
-      snprintf((*attr_vals)[i], val.size()+1, "%s", val.c_str());
+      snprintf((*attr_vals)[i], kv.second.size()+1, "%s", kv.second.c_str());
       i++;
     }
   }
@@ -1585,8 +1592,9 @@ MX_INT_RET _passCallGraphPass(mxnet::ext::graphPass_t graphPass, const char *jso
   mxnet::ext::MXReturnValue retval = graphPass(graph, opts);
   if (!retval) return retval;
 
-  std::string *tmp = new std::string(graph->toString());
-  *out_graph = const_cast<char*>(tmp->c_str());
+  std::string tmp = graph->toString();
+  *out_graph = static_cast<char*>(malloc ((tmp.size()+1) * sizeof(char)));  // NOLINT
+  snprintf((*out_graph), tmp.size()+1, "%s", tmp.c_str());
   return retval;
 }
 
