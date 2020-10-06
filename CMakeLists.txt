@@ -485,6 +485,18 @@ if(USE_CUDNN)
   endif()
 endif()
 
+# cutensor detection
+if(USE_CUTENSOR)
+  find_package(CUTENSOR)
+  if(CUTENSOR_FOUND)
+    add_definitions(-DUSE_CUTENSOR)
+    include_directories(SYSTEM ${CUTENSOR_INCLUDE})
+    list(APPEND mxnet_LINKER_LIBS ${CUTENSOR_LIBRARY})
+  else()
+    set(USE_CUTENSOR OFF)
+  endif()
+endif()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake)
   add_subdirectory("3rdparty/dmlc-core")
   set_target_properties(dmlc PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
