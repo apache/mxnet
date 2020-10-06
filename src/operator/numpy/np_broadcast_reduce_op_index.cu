@@ -28,7 +28,7 @@ namespace mxnet {
 namespace op {
 
 NNVM_REGISTER_OP(_npi_argmax)
-.set_attr<FCompute>("FCompute<gpu>", NumpySearchAxisCompute<gpu, mshadow::red::maximum>);
+.set_attr<FCompute>("FCompute<gpu>", NumpyArgMaxCompute<gpu>);
 
 NNVM_REGISTER_OP(_npi_argmin)
 .set_attr<FCompute>("FCompute<gpu>", NumpySearchAxisCompute<gpu, mshadow::red::minimum>);

@@ -425,6 +425,27 @@ void NumpyReduceAxesBoolCompute(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeBoolImpl<xpu, reducer, false, false, OP>(ctx, inputs, req, outputs, small);
 }
 
+template<xpu>
+void NumpyArgMaxCompute(const nnvm::NodeAttrs& attrs,
+                        const OpContext& ctx,
+                        const std::vector<TBlob>& inputs,
+                        const std::vector<OpReqType>& req,
+                        const std::vector<TBlob>& outputs) {
+  
+  struct Num {
+    float max;
+    size_t idx;
+  }
+  
+  Stream<xpu> *s = ctx.get_stream<xpu>();
+  Tensor<xpu, 2, Num> temp =
+      outputs[0].get_with_shape<xpu, 2, Num>(inputs[0].shape_, s);
+
+  NumpySearchAxisCompute<xpu, mshadow::red::maximum>(attrs,
+    ctx, inputs, req, outputs);
+
+}
+
 template<typename xpu, typename reducer>
 void NumpySearchAxisCompute(const nnvm::NodeAttrs& attrs,
                             const OpContext& ctx,
