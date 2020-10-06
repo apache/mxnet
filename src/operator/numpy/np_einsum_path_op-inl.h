@@ -468,50 +468,67 @@ inline bool _can_dot(const std::vector<std::string>& inputs,
 }
 
 #if MXNET_USE_CUTENSOR == 1
-inline bool _can_cutensor(const std::vector<std::string>& inputs,
-                          const std::bitset<MAXAXIS>& result,
-                          const std::bitset<MAXAXIS>& idx_removed) {
-  // remove indices
-  if (!idx_removed.any()) {
-    return false;
+inline bool check_cutensor_indices(const std::string &indices,
+                                   const TShape& shape,
+                                   std::unordered_map<char, int> &count,
+                                   std::unordered_map<char, int> &countAll,
+                                   std::unordered_map<char, dim_t> &extents) {
+  for (int i = 0; i < indices.size(); i++) {
+    const char c = indices[i];
+    auto pos = count.find(c);
+    if (pos != count.end()) {
+      // don't allow duplicated incides inside of the same tensor
+      return false;
+    } else {
+      count[c] = 1;
+    }
+    auto pos2 = countAll.find(c);
+    if (pos2 != countAll.end()) {
+      pos2->second += 1;
+      if (shape[i] != extents[c]) {
+        // Catch cases for which one index has an extent/dimension of 1 in one of the inputs
+        // while it has an extent greater than 1 in the other input; the einsum convention
+        // treats those indices as broadcasted indices (in the tensor for which the extent is 1),
+        // however, cuTENSOR would report an mismatch between the extents
+        // (e.g., 'ij, ij -> i', [(1, 4), (2, 4)]).
+        // Details: Such cases are generally supported by cuTENSOR, however, they'd
+        // require a small rewrite of the equation. For instance, the above equation (and
+        // shape) would have to become 'j, ij -> i', [(4), (2, 4)] (i.e., we removed the 'i'
+        // mode/dimension from the first input operand).
+        return false;
+      }
+    } else {
+      countAll[c] = 1;
+      extents[c] = shape[i];
+    }
   }
-
+  return true;
+}
+inline bool _can_cutensor(const std::vector<std::string>& inputs,
+                          const std::vector<TShape> inputs_shape,
+                          const std::string& output,
+                          const TShape& output_shape) {
   // cuTensor can only handle two operands
   if (inputs.size() != 2) {
     return false;
   }
-
   const std::string& input_left = inputs[0];
   const std::string& input_right = inputs[1];
-
   if (input_left.size() == 0 || input_right.size() == 0) {
     return false;
   }
+  // maps each mode/index to its extent/dimension
+  std::unordered_map<char, dim_t> extents;
+  // occurences of each index
+  std::unordered_map<char, int> count_all;
+  std::unordered_map<char, int> count_input_0;
+  std::unordered_map<char, int> count_input_1;
+  std::unordered_map<char, int> count_output;
 
-  for (int i = 0; i < 2; ++i) {
-    for (const char& c : inputs[i]) {
-      // can't deal with repeated indices on same input or more than 2 total
-      size_t nl = std::count(input_left.begin(), input_left.end(), c);
-      size_t nr = std::count(input_right.begin(), input_right.end(), c);
-      if (nl > 1 || nr > 1 || nl + nr > 2) {
-        return false;
-      }
-
-      // can't do implicit summation or dimension collapse e.g.
-      // "ab,bc->c" (implicitly sum over 'a')
-      // "ab,ca->ca" (take diagonal of 'a')
-      // if (nl + nr == static_cast<size_t>(result.test(c)) + 1) {
-      //   return false;
-      // }
-      // This would exclude BERT einsums !!!
-      // https://github.com/dmlc/gluon-nlp/blob/master/src/gluonnlp/attention_cell.py#L561
-
-      // following case fails:
-      // 'ij, ij -> i', [(1, 4), (2, 4)],
-      // CUTENSOR ERROR: extent of mode 1 does not match.
-      // 9409
-
-    }
+  if (!check_cutensor_indices(inputs[0], inputs_shape[0], count_input_0, count_all, extents) ||
+      !check_cutensor_indices(inputs[1], inputs_shape[1], count_input_1, count_all, extents) ||
+      !check_cutensor_indices(output, output_shape, count_output, count_all, extents)) {
+    return false;
   }
   return true;
 }
@@ -752,6 +769,11 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
                                      const RunContext& run_ctx,
                                      std::vector<std::vector<int> >* ret_path,
                                      std::string* ret_string_repr) {
+#if MXNET_USE_CUTENSOR == 1
+  mxnet::ShapeVector operands_shape(operands.size());
+  for (size_t i = 0; i < operands_shape.size(); i++)
+    operands_shape[i] = operands[i].shape_;
+#endif
   // Parsing
   std::vector<std::string> parsed_subscripts = _parse_einsum_input(subscripts, operands);
 
@@ -880,16 +902,6 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
     } else {
       do_blas = _can_dot(tmp_inputs, contract.new_result, contract.idx_removed);
     }
-#if MXNET_USE_CUTENSOR == 1
-    bool do_cutensor = false;
-    if ((contract.idx_removed & bcast).any() ||
-        !_tensordot_type_check(operands[0].type_flag_, run_ctx)) {
-      do_cutensor = false;
-    } else {
-      do_cutensor = _can_cutensor(tmp_inputs, contract.new_result, contract.idx_removed);
-    }
-    ret[i].do_cutensor = do_cutensor;
-#endif
 
     // Last contraction
     std::string idx_result;
@@ -911,6 +923,24 @@ inline std::vector<Step> einsum_path(const std::string& subscripts,
     for (int j = 0; j < len_idx_result; ++j) {
       ret[i].oshape[j] = dimension_dict[static_cast<int>(idx_result[j])];
     }
+
+#if MXNET_USE_CUTENSOR == 1
+    std::vector<TShape> tmp_inputs_shape;
+    for (const int& x : contract_inds) {
+      tmp_inputs_shape.push_back(operands_shape[x]);
+      operands_shape.erase(operands_shape.begin() + x);
+    }
+    bool do_cutensor = true;
+    if (!_tensordot_type_check(operands[0].type_flag_, run_ctx)) {
+      do_cutensor = false;
+    } else {
+      do_cutensor = _can_cutensor(tmp_inputs, tmp_inputs_shape, idx_result, ret[i].oshape);
+    }
+    ret[i].do_cutensor = do_cutensor;
+    if (i + 1 != size_path) {
+      operands_shape.push_back(ret[i].oshape);
+    }
+#endif
 
     if (do_blas) {
       CHECK_EQ(tmp_inputs.size(), 2U)
