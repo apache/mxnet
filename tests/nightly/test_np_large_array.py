@@ -667,7 +667,6 @@ def test_subtract():
 
 @use_np
 def test_roll():
-    INT_OVERFLOW = 2**31
     inp = np.zeros((2, INT_OVERFLOW))
     inp[-1, -1] = 1
     inp.attach_grad()
