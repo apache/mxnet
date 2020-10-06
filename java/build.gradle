@@ -1,0 +1,37 @@
+plugins {
+    id 'java-library'
+    id 'org.bytedeco.gradle-javacpp-build' version '1.5.4'
+}
+
+group = 'org.apache'
+version = '2.0-SNAPSHOT'
+
+repositories {
+    mavenLocal()
+    mavenCentral()
+    maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
+}
+
+dependencies {
+    api "org.bytedeco:javacpp:$javacppVersion"
+    api "org.bytedeco:javacpp:$javacppVersion:$javacppPlatform"
+    testImplementation 'junit:junit:4.12'
+}
+
+tasks.withType(org.bytedeco.gradle.javacpp.BuildTask) {
+    includePath = ["$buildDir/$javacppPlatform/include"]
+    linkPath = ["$buildDir/$javacppPlatform/lib"]
+}
+
+javacppBuildCommand {
+    buildCommand = ['bash', 'build.sh']
+}
+
+javacppBuildParser {
+    classOrPackageNames = ['org.apache.mxnet.internal.c_api.presets.*']
+    outputDirectory = file("$buildDir/generated/sources/javacpp/")
+}
+
+javacppBuildCompiler {
+    copyLibs = true
+}
