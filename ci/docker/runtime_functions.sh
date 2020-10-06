@@ -101,7 +101,7 @@ gather_licenses() {
 
 # Compiles the dynamic mxnet library
 # Parameters:
-# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu100, cu92, etc.
+# $1 -> mxnet_variant: the mxnet variant to build, e.g. cpu, native, cu101, cu102, etc.
 build_dynamic_libmxnet() {
     set -ex
 
