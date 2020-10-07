@@ -667,7 +667,6 @@ def test_subtract():
 
 @use_np
 def test_polyval():
-    INT_OVERFLOW = 2**31
     poly = np.array([1, 1, 5])
     inp = np.zeros((2, INT_OVERFLOW))
     inp[-1, -1] = 2
