@@ -490,10 +490,7 @@ MXNET_REGISTER_API("_npi.diag")
   const nnvm::Op* op = Op::Get("_npi_diag");
   nnvm::NodeAttrs attrs;
   op::NumpyDiagParam param;
-  if (features::is_enabled(features::INT64_TENSOR_SIZE))
-    param.k = args[1].operator int64_t();
-  else
-    param.k = args[1].operator int();
+  param.k = args[1].operator index_t();
   attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyDiagParam>(&attrs);
@@ -583,10 +580,7 @@ MXNET_REGISTER_API("_npi.diagonal")
   const nnvm::Op* op = Op::Get("_npi_diagonal");
   nnvm::NodeAttrs attrs;
   op::NumpyDiagonalParam param;
-  if (features::is_enabled(features::INT64_TENSOR_SIZE))
-    param.offset = args[1].operator int64_t();
-  else
-    param.offset = args[1].operator int();
+  param.offset = args[1].operator index_t();
   param.axis1 = args[2].operator int();
   param.axis2 = args[3].operator int();
   attrs.parsed = param;
