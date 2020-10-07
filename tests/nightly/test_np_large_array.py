@@ -702,11 +702,11 @@ def test_diag_indices_from():
     assert dim1.shape == (N, ) and dim2.shape == (N, )
     assert dim1[-1] == N-1 and dim2[-1] == N-1
     assert inp.grad.shape == inp.shape
-    assert inp[0, 0] == 0
+    assert inp.grad[0, 0] == 0
 
 @use_np
 def test_diagflat():
-    N = 2**16
+    N = 2**15
     inp = np.ones((2, N))
     inp[-1, -1] = 2
     inp.attach_grad()
@@ -714,7 +714,7 @@ def test_diagflat():
         out = np.diagflat(inp)
         out.backward()
     assert out.shape == (N*2, N*2)
-    assert out[-1, -1] == 2
+    assert out[-1, -1] == 2 and out[-1, -2] == 0
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1, -1] == 1
 
