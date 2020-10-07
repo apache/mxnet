@@ -36,6 +36,7 @@ Currently, below variants are supported. All of these variants except native hav
 * *cu100*: CUDA 10
 * *cu101*: CUDA 10.1
 * *cu102*: CUDA 10.2
+* *cu110*: CUDA 11.0
 
 *For more on variants, see [here](https://github.com/apache/incubator-mxnet/issues/8671)*
 
