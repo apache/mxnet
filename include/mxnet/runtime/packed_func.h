@@ -406,16 +406,6 @@ class MXNetPODValue_ {
     MXNET_CHECK_TYPE_CODE(type_code_, kDLInt);
     return value_.v_int64;
   }
-  operator index_t() const {
-    MXNET_CHECK_TYPE_CODE(type_code_, kDLInt);
-    if (features::is_enabled(features::INT64_TENSOR_SIZE)) {
-      return value_.v_int64;
-    } else {
-      CHECK_LE(value_.v_int64,
-             std::numeric_limits<int>::max());
-      return static_cast<int>(value_.v_int64);
-    }
-  }
   operator int() const {
     MXNET_CHECK_TYPE_CODE(type_code_, kDLInt);
     CHECK_LE(value_.v_int64,
