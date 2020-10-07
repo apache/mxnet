@@ -168,6 +168,7 @@ int MXCreateCachedOp(SymbolHandle handle,
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
   API_BEGIN();
   std::vector<std::pair<std::string, std::string> > flags;
+  flags.reserve(num_flags);
   for (int i = 0; i < num_flags; ++i) {
     flags.emplace_back(keys[i], vals[i]);
   }

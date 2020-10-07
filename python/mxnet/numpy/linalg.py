@@ -428,6 +428,11 @@ def qr(a, mode='reduced'):
     MXNetError
         If factoring fails.
 
+    Notes
+    -----
+    Currently, the gradient for the QR factorization is well-defined
+    only when the first K columns of the input matrix are linearly independent.
+
     Examples
     --------
     >>> from mxnet import np

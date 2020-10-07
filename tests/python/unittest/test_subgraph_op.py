@@ -384,6 +384,37 @@ def test_subgraph_exe8(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+def test_subgraph_exe9(sym, subgraph_backend, op_names):
+    """Call optimize_for to infer shapes, types and dtypes followed by graph partitioning and
+    dedup subgraph, then bind and compare results of the partitioned sym and the original sym."""
+    # bind
+    sym, _, _ = sym
+    arg_shapes, _, aux_shapes = sym.infer_shape()
+    arg_names = sym.list_arguments()
+    aux_names = sym.list_auxiliary_states()
+    arg_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(arg_names,arg_shapes)}
+    aux_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(aux_names,aux_shapes)}
+    exe1 = sym._bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe1.forward()
+
+    # infer shape/type before partition before bind
+    check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                   c_str_array(op_names)))
+    part_sym = sym.optimize_for(subgraph_backend, arg_dict, aux_dict, dedup_subgraph=True)
+    check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
+
+    exe2 = part_sym._bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe2.forward()
+
+    # compare outputs
+    outputs1 = exe1.outputs
+    outputs2 = exe2.outputs
+    assert len(outputs1) == len(outputs2)
+    for i in range(len(outputs1)):
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        
+@pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
+@pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir):
     """Call hybridize() to partition the graph, and then compare results of the partitioned
     sym and the original sym. Here do an inference before hybridizing with the subgraph_backend
@@ -505,6 +536,7 @@ if __name__ == "__main__":
             test_subgraph_exe6(sym, subgraph_backend, op_names)
             test_subgraph_exe7(sym, subgraph_backend, op_names)
             test_subgraph_exe8(sym, subgraph_backend, op_names)
+            test_subgraph_exe9(sym, subgraph_backend, op_names)
             test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir)
             test_subgraph_backend_gluon_ext1(tmpdir)
             test_subgraph_backend_gluon_ext2(tmpdir)

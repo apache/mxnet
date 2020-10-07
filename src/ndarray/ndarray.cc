@@ -300,10 +300,15 @@ NDArray NDArray::ReshapeWithRecord(const mxnet::TShape &shape) {
   }
 
   nnvm::NodeAttrs attrs;
-  attrs.op = nnvm::Op::Get("Reshape");;
   std::ostringstream os;
   os << shape;
-  attrs.dict.insert({"shape", os.str()});
+  if (!Imperative::Get()->is_np_shape()) {
+      attrs.op = nnvm::Op::Get("Reshape");;
+      attrs.dict.insert({"shape", os.str()});
+  } else {
+      attrs.op = nnvm::Op::Get("_np_reshape");;
+      attrs.dict.insert({"newshape", os.str()});
+  }
   attrs.op->attr_parser(&attrs);
   std::vector<NDArray*> inputs(1, this), outputs(1, &ret);
 
