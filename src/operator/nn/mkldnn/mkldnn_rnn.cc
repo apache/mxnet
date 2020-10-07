@@ -50,7 +50,7 @@ inline int GetRnnGatesNum(int mode) {
 // Bug in oneDNN >= 1.6  in memory descriptor comparision operators.
 // for specific dims and strides in descriptors == operator can return `true`
 // but get_size() function will return different size
-// TODO(bgawrych): Remove with oneDNN 1.7 upgrade 
+// TODO(bgawrych): Remove with oneDNN 1.7 upgrade
 bool CheckMemDescEquality(const mkldnn::memory::desc &left, const mkldnn::memory::desc &right) {
   return left == right && left.get_size() == right.get_size();
 }
@@ -830,13 +830,11 @@ void MKLDNNRnnBackward::SetDataGradsMem(
 
 void MKLDNNRnnBackward::SetNativeWeightsGrads() const {
   if (!CheckMemDescEquality(this->diff_weights_layer_->get_desc(),
-                            this->diff_weights_layer_r_->get_desc()))
-  {
+                            this->diff_weights_layer_r_->get_desc())) {
     MKLDNNMemoryReorder(*this->diff_weights_layer_, *this->diff_weights_layer_r_);
   }
   if (!CheckMemDescEquality(this->diff_weights_iter_->get_desc(),
-                            this->diff_weights_iter_r_->get_desc()))
-  {
+                            this->diff_weights_iter_r_->get_desc())) {
     MKLDNNMemoryReorder(*this->diff_weights_iter_, *this->diff_weights_iter_r_);
   }
 }
