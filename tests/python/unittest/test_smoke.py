@@ -15,8 +15,9 @@
 # specific language governing permissions and limitations
 # under the License.
 
-from mxnet import np, npx, use_np, autograd
+from mxnet import np, npx, use_np, autograd, initializer, gluon
 from common import setup_module, teardown_module, with_environment
+import pytest
 
 @use_np
 @with_environment('MXNET_ENGINE_TYPE', 'NaiveEngine')
@@ -67,3 +68,27 @@ def test_18934_empty_leaky_relu():
     with autograd.record():
         res = npx.leaky_relu(arr)
     res.backward()
+
+@use_np
+@pytest.mark.parametrize('initializer',[
+    'zeros', 'ones', initializer.Constant(3),
+    initializer.Uniform(),
+    initializer.Normal(),
+    initializer.Orthogonal(),
+    initializer.Orthogonal(rand_type='normal'),
+    initializer.Xavier(),
+    initializer.Xavier(rnd_type='gaussian'),
+    initializer.MSRAPrelu(),
+    initializer.MSRAPrelu(factor_type='in'),
+    initializer.MSRAPrelu(factor_type='out'),
+    initializer.LSTMBias(),
+])
+@pytest.mark.parametrize('dtype', [
+    'float32', 'float64'
+])
+def test_19118(initializer, dtype):
+    net = gluon.nn.Dense(16, in_units=16)
+    net.cast(dtype)
+    net.initialize(initializer)
+    net.hybridize()
+    net(np.zeros((16, 16), dtype=dtype))
