@@ -1188,7 +1188,6 @@ unittest_ubuntu_minimal_R() {
     mkdir -p /tmp/r-site-library
     # build R packages in parallel
     mkdir -p ~/.R/
-    build_ccache_wrappers
     echo  "MAKEFLAGS = -j"$(nproc) > ~/.R/Makevars
     # make -j not supported
     make -f R-package/Makefile rpkg \
