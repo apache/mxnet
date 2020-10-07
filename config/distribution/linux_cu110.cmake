@@ -34,4 +34,4 @@ set(USE_LIBJPEG_TURBO ON CACHE BOOL "Build with libjpeg-turbo")
 set(USE_DIST_KVSTORE ON CACHE BOOL "Build with DIST_KVSTORE support")
 
 set(CUDACXX "/usr/local/cuda-11.0/bin/nvcc" CACHE STRING "Cuda compiler")
-set(MXNET_CUDA_ARCH "3.0;5.0;6.0;7.0;8.0" CACHE STRING "Cuda architectures")
+set(MXNET_CUDA_ARCH "5.0;6.0;7.0;8.0" CACHE STRING "Cuda architectures")
