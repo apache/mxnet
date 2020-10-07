@@ -1200,6 +1200,28 @@ def test_subtract():
     assert B.grad.shape == (INT_OVERFLOW, 2)
     assert B.grad[0][0] == -1
 
+
+@use_np
+def test_vstack():
+    inp1 = np.zeros((INT_OVERFLOW, 1))
+    inp2 = np.ones((INT_OVERFLOW, 1))
+    inp1.attach_grad()
+    inp2.attach_grad()
+    with mx.autograd.record():
+        out1 = np.vstack((inp1, inp2))
+        out1.backward()
+    assert out1.shape == (DOUBLE_INT_OVERFLOW, 1)
+    assert out1[INT_OVERFLOW-1, 0] == 0 and out1[-1, 0] == 1
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1, -1] == 1
+    with mx.autograd.record():
+        out2 = np.vstack((inp1.flatten(), inp2.flatten()))
+        out2.backward()
+    assert out2.shape == (2, INT_OVERFLOW)
+    assert out2[0, -1] == 0 and out2[1, -1] == 1
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[-1, -1] == 1
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
