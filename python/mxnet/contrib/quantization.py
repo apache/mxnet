@@ -843,10 +843,16 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         Defines the structure of a neural network for INT8 data types.
     -------
     """
-
+    import mxnet as mx
     if logger:
         logger.info('Export HybridBlock')
-    network.hybridize()
+
+    backend = None
+    if ctx == mx.cpu():
+        backend = 'MKLDNN_QUANTIZE'
+
+    network.hybridize(backend=backend, backend_opts={'dedup_subgraph': False, 'skip_infer': True})
+
     import mxnet as mx
     if data_shapes is None:
         if calib_data is None:
@@ -874,26 +880,14 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         else:
             break
 
-    import tempfile
-    try:
-        from tempfile import TemporaryDirectory
-    except ImportError:
-        # really simple implementation of TemporaryDirectory
-        class TemporaryDirectory(object):
-            def __init__(self, suffix='', prefix='', dir=''):
-                self._dirname = tempfile.mkdtemp(suffix, prefix, dir)
-
-            def __enter__(self):
-                return self._dirname
-
-            def __exit__(self, exc_type, exc_value, traceback):
-                shutil.rmtree(self._dirname)
-    # TODO(xinyu-intel): tmp solution to save and reload for mxnet.mod.Module.
-    # will enhance `export` function to return `sym, args, auxs` directly.
-    with TemporaryDirectory() as tmpdirname:
-        prefix = os.path.join(tmpdirname, 'tmp')
-        network.export(prefix, epoch=0)
-        symnet, args, auxs = mx.model.load_checkpoint(prefix, 0)
+    symnet, params = network.export(None)
+    args, auxs = dict(), dict()
+    for k, v in params.items():
+        ptype, pname = k[:3], k[4:]
+        if ptype == "arg":
+            args[pname] = v
+        else:
+            auxs[pname] = v
 
     if exclude_layers is None:
         exclude_layers = []
@@ -907,9 +901,6 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
                 exclude_layers.append(layers.name)
     if logger:
         logger.info('These layers have been excluded %s' % exclude_layers)
-
-    if ctx == mx.cpu():
-        symnet = symnet.get_backend_symbol('MKLDNN_QUANTIZE')
 
     qsym, qarg_params, aux_params, collector = quantize_graph(
         sym=symnet, arg_params=args, aux_params=auxs, ctx=ctx,
@@ -927,11 +918,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy', 'customize']:
             inputs = [mx.sym.var(d.name) for d in data_shapes]
-            sym_block = mx.gluon.SymbolBlock(outputs=symnet, inputs=inputs)
-            all_params = args
-            all_params.update(auxs)
-            sym_block.load_dict(all_params, cast_dtype=True, dtype_source='saved', allow_missing=False)
-            num_examples = _collect_layer_statistics(sym_block, calib_data, collector,
+            num_examples = _collect_layer_statistics(network, calib_data, collector,
                                                      num_calib_examples, logger)
             if logger:
                 logger.info('Collected layer output values from FP32 model using %d examples'
@@ -945,23 +932,17 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     elif calib_mode is not None and calib_mode == 'none':
         inputs = [mx.sym.var(d.name) for d in data_shapes]
 
-    if ctx == mx.cpu():
-        qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
 
     from ..gluon import SymbolBlock
     net = SymbolBlock(qsym, inputs)
-    # TODO(xinyu-intel): tmp solution to save param_dict and reload for SymbolBlock
-    # will enhance SymbolBlock to load args, auxs directly.
-    with TemporaryDirectory() as tmpdirname:
-        prefix = os.path.join(tmpdirname, 'tmp')
-        param_name = '%s-%04d.params' % (prefix + 'net-quantized', 0)
-        save_dict = {('arg:%s' % k): v.as_in_context(cpu())
-                     for k, v in qarg_params.items()}
-        save_dict.update({('aux:%s' % k): v.as_in_context(cpu())
-                          for k, v in aux_params.items()})
-        nd_save(param_name, save_dict)
-        net.load_parameters(param_name, cast_dtype=True, dtype_source='saved')
-        net.reset_ctx(ctx)
+    net.hybridize(backend=backend, backend_opts={'dedup_subgraph': False, 'skip_infer': True})
+
+    all_params = {('arg:%s' % k): v.as_in_context(cpu())
+                    for k, v in qarg_params.items()}
+    all_params.update({('aux:%s' % k): v.as_in_context(cpu())
+                        for k, v in aux_params.items()})
+    net.load_dict(all_params, cast_dtype=True, dtype_source='saved')
+    net.reset_ctx(ctx)
     return net
 
 def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
