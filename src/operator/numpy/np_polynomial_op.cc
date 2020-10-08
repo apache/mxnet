@@ -31,7 +31,7 @@ namespace op {
 template<int req>
 struct polyval_backward_x {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType* p_dptr, const DType* x_dptr,
+  MSHADOW_XINLINE static void Map(index_t i, const DType* p_dptr, const DType* x_dptr,
                                   DType* igrad_x_dptr, const DType* ograd_dptr,
                                   const index_t p_size) {
     DType igrad_x = 0;
@@ -47,7 +47,7 @@ struct polyval_backward_x {
 template<int req>
 struct polyval_backward_p {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType* p_dptr, const DType* x_dptr,
+  MSHADOW_XINLINE static void Map(index_t i, const DType* p_dptr, const DType* x_dptr,
                                   DType* igrad_p_dptr, const DType* ograd_dptr,
                                   const index_t p_size, const index_t x_size) {
     DType igrad_p = 0;

@@ -1216,6 +1216,25 @@ def test_ediff1d():
     assert inp.grad.shape == inp.shape
     assert inp.grad[0, 0] == -1 and inp.grad[-1, -1] == 1
 
+    
+@use_np
+def test_polyval():
+    poly = np.array([1, 1, 5])
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = 2
+    poly.attach_grad()
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.polyval(poly, inp)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[-1, -1] == 11 and out[0, 0] == 5
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 5
+    assert poly.grad.shape == poly.shape
+    assert poly.grad[0] == 4
+
+
 '''
                                      _               _
   _ _ _  _ _ __  _ __ _  _   _____ _| |_ ___ _ _  __(_)___ _ _
@@ -1828,3 +1847,12 @@ def test_cumsum():
     assert input.grad.shape == input.shape
     assert input.grad[0, 0] == INT_OVERFLOW
     assert input.grad[-1, -1] == 1
+
+
+@use_np
+def test_round():
+    input = np.ones((INT_OVERFLOW, 2))
+    input[INT_OVERFLOW-1][0] = 1.6
+    output = np.round(input)
+    assert output.shape == (INT_OVERFLOW, 2)
+    assert output[-1][0] == 2
