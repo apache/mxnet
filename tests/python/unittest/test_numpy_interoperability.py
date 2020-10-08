@@ -29,7 +29,7 @@ from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
 from mxnet.test_utils import is_op_runnable
-from common import assertRaises, with_seed, random_seed
+from common import assertRaises, random_seed
 from mxnet.numpy_dispatch_protocol import with_array_function_protocol, with_array_ufunc_protocol
 from mxnet.numpy_dispatch_protocol import _NUMPY_ARRAY_FUNCTION_LIST, _NUMPY_ARRAY_UFUNC_LIST
 
@@ -3258,7 +3258,6 @@ def check_interoperability(op_list):
             _check_interoperability_helper(name, rel_tol, abs_tol, *workload['args'], **workload['kwargs'])
 
 
-@with_seed()
 @use_np
 @with_array_function_protocol
 @pytest.mark.serial
@@ -3272,7 +3271,6 @@ def test_np_memory_array_function():
         assert op(data_mx, np.ones((5, 0))) == op(data_np, _np.ones((5, 0)))
 
 
-@with_seed()
 @use_np
 @with_array_function_protocol
 @pytest.mark.serial
@@ -3280,7 +3278,6 @@ def test_np_array_function_protocol():
     check_interoperability(_NUMPY_ARRAY_FUNCTION_LIST)
 
 
-@with_seed()
 @use_np
 @with_array_ufunc_protocol
 @pytest.mark.serial
@@ -3288,7 +3285,6 @@ def test_np_array_ufunc_protocol():
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
 
 
-@with_seed()
 @use_np
 @pytest.mark.serial
 def test_np_fallback_ops():

@@ -31,7 +31,6 @@ from mxnet.gluon import SymbolBlock, nn, rnn
 from mxnet.contrib.amp import amp
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import with_seed
 import pytest
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
@@ -116,7 +115,6 @@ def check_operator_accuracy(sym_fp32, sym_bf16, data_shape, num_input_data=1, bf
     output_bf16_2_fp32 = mx.nd.amp_cast(output_bf16, dtype="float32")
     assert_almost_equal_with_err(output_bf16_2_fp32, output_fp32, rtol=rtol, atol=atol, etol=etol)
 
-@with_seed()
 def test_bf16_bn():
     data_sym_fp32 = mx.sym.Variable(name='data')
     data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
@@ -128,7 +126,6 @@ def test_bf16_bn():
     check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(3, 32, 28, 28), bf16_use_fp32_params=True, etol=1e-2)
     check_operator_accuracy(sym_fp32=bn_fp32, sym_bf16=bn_bf16, data_shape=(32, 16, 64, 64), bf16_use_fp32_params=True, etol=1e-2)
 
-@with_seed()
 def test_bf16_conv():
     data_sym_fp32 = mx.sym.Variable(name='data')
     data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
@@ -145,7 +142,6 @@ def test_bf16_conv():
     check_operator_accuracy(sym_fp32=conv_fp32, sym_bf16=conv_bf16, data_shape=(3, 32, 28, 28), bf16_use_fp32_params=False)
     check_operator_accuracy(sym_fp32=conv_fp32, sym_bf16=conv_bf16, data_shape=(128, 56, 14, 14), bf16_use_fp32_params=False)
 
-@with_seed()
 def test_bf16_fc():
     data_sym_fp32 = mx.sym.Variable(name='data')
     data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
@@ -160,7 +156,6 @@ def test_bf16_fc():
     fc_bf16 = mx.sym.FullyConnected(data_sym_bf16, **fc_params)
     check_operator_accuracy(fc_fp32, fc_bf16, data_shape=(3, 3, 16, 16), bf16_use_fp32_params=False)
 
-@with_seed()
 def test_bf16_pooling():
     pool_params = {"kernel": (3, 3), "stride": (1, 1), "pad": (0, 0), "name": "pool"}
     data_shapes = [(3, 16, 28, 28), (3, 32, 7, 7)]
@@ -175,7 +170,6 @@ def test_bf16_pooling():
         pool_bf16 = mx.sym.Pooling(data_sym_bf16, **pool_params)
         check_operator_accuracy(pool_fp32, pool_bf16, data_shape=new_params[0], bf16_use_fp32_params=False)
 
-@with_seed()
 def test_bf16_activation():
     data_sym_fp32 = mx.sym.Variable(name='data')
     data_sym_bf16 = mx.sym.Variable(name='data', dtype=bfloat16)
@@ -188,7 +182,6 @@ def test_bf16_activation():
 
         check_operator_accuracy(act_fp32, act_bf16, data_shape, bf16_use_fp32_params=True)
 
-@with_seed()
 def test_bf16_elemwiseadd():
     dshape = rand_shape_nd(4)
 
@@ -203,7 +196,6 @@ def test_bf16_elemwiseadd():
     check_operator_accuracy(sym_fp32, sym_bf16, dshape, num_input_data=2, bf16_use_fp32_params=True)
 
 @pytest.mark.skip(reason="env dependent, need check further.")
-@with_seed()
 def test_bf16_concat():
     dshape = rand_shape_nd(4)
     a_shape = tuple(dshape)
@@ -221,7 +213,6 @@ def test_bf16_concat():
 
         check_operator_accuracy(concat_sym_fp32, concat_sym_bf16, dshape, num_input_data=2, bf16_use_fp32_params=True)
 
-@with_seed()
 def test_bf16_abs():
     dshapes = [(16,), (3, 16), (3, 16, 16), (3, 16, 16, 16)]
     for data_shape in dshapes:
@@ -232,7 +223,6 @@ def test_bf16_abs():
 
         check_operator_accuracy(sym_fp32, sym_bf16, data_shape, bf16_use_fp32_params=True)
 
-@with_seed()
 def test_bf16_sqrt():
     dshapes = [(16,), (3, 16), (3, 16, 16), (3, 16, 16, 16)]
     for data_shape in dshapes:
@@ -243,7 +233,6 @@ def test_bf16_sqrt():
 
         check_operator_accuracy(sym_fp32, sym_bf16, data_shape, bf16_use_fp32_params=True)
 
-@with_seed()
 def test_bf16_square():
     dshapes = [(16,), (3, 16), (3, 16, 16), (3, 16, 16, 16)]
     for data_shape in dshapes:
@@ -254,7 +243,6 @@ def test_bf16_square():
 
         check_operator_accuracy(sym_fp32, sym_bf16, data_shape, bf16_use_fp32_params=True)
 
-@with_seed()
 def test_bf16_flatten_slice_after_conv():
     data_fp32 = mx.symbol.Variable('data')
     data_bf16 = mx.symbol.Variable('data', dtype=bfloat16)

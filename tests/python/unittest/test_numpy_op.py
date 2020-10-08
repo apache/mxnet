@@ -33,7 +33,7 @@ from mxnet.test_utils import same, assert_almost_equal, rand_shape_nd, rand_ndar
 from mxnet.test_utils import check_numeric_gradient, use_np, collapse_sum_like, effective_dtype
 from mxnet.test_utils import new_matrix_with_real_eigvals_nd
 from mxnet.test_utils import new_sym_matrix_with_real_eigvals_nd
-from common import assertRaises, with_seed, retry, xfail_when_nonstandard_decimal_separator
+from common import assertRaises, retry, xfail_when_nonstandard_decimal_separator
 import random
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf
 from mxnet.numpy_op_signature import _get_builtin_op
@@ -41,7 +41,6 @@ from mxnet.test_utils import is_op_runnable, has_tvm_ops, rand_shape_2d
 from mxnet.operator import get_all_registered_operators
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('hybridize', [True, False])
 @pytest.mark.parametrize('dtype', [_np.float32, _np.float64])
@@ -208,7 +207,6 @@ def test_np_tensordot(a_shape, b_shape, axes, hybridize, dtype):
             assert_almost_equal(b.grad.asnumpy(), gt_in_grad[1], rtol=1e-2, atol=1e-2)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('shape_a,shape_b', [
     ((3, 0), (0, 4)),
@@ -244,7 +242,6 @@ def test_np_dot(shape_a, shape_b):
         check_numeric_gradient(mx_sym, {"a": a, "b": b}, numeric_eps=eps, rtol=1e-2, atol=1e-3)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('shape_a,shape_b', [
     ((4, 5), (2, 3)),
@@ -257,7 +254,6 @@ def test_np_dot_error(shape_a, shape_b):
         mx_res = np.dot(a.as_np_ndarray(), b.as_np_ndarray())
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('shape', [(), (5,), (3, 3)])
 @pytest.mark.parametrize('hybridize', [True, False])
@@ -305,7 +301,6 @@ def test_np_vdot(shape, dtype, hybridize):
           rtol=1e-1, atol=1e-1, dtype=dtype)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('a_shape,b_shape', [
     ((3,), (3,)),
@@ -398,7 +393,6 @@ def test_np_inner(a_shape, b_shape, dtype, hybridize):
       rtol=1e-1, atol=1e-1, dtype=dtype)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('a_shape,b_shape', [
     ((3,), (3,)),
@@ -443,7 +437,6 @@ def test_np_outer(a_shape, b_shape, dtype, hybridize):
                            rtol=1e-1, atol=1e-1, dtype=dtype)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('shape_a,shape_b', [
     ((3,), (3,)),
@@ -578,7 +571,6 @@ def test_np_matmul_error(shape_a, shape_b):
         np.matmul(a, b)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('a_shape,b_shape', [
     ((3,), (3,)),
@@ -656,7 +648,6 @@ def test_np_kron(a_shape, b_shape, dtype, hybridize):
     assert_almost_equal(b.grad.asnumpy(), np_backward[1], rtol=1e-2, atol=1e-2)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('shape', [rand_shape_nd(4, dim=4), (4, 0, 4, 0)])
 @pytest.mark.parametrize('axis', [0, 1, 2, 3, (), None])
@@ -755,7 +746,6 @@ def test_np_sum(shape, axis, keepdims, itype, acc_type, dtype, hybridize):
     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('bool_agg', ['all', 'any'])
 @pytest.mark.parametrize('shape', [
@@ -794,7 +784,6 @@ def test_np_bool_agg(bool_agg, shape, axis, keepdim, dtype, hybridize):
     assert_almost_equal(mx_outs.asnumpy(), np_outs)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('func', ['max', 'min'])
 @pytest.mark.parametrize('in_data_dim', [2, 3, 4])
@@ -886,7 +875,6 @@ def test_np_max_min_error(func, shape, exception):
         _test_np_exception(func, shape, dim)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('a_shape,w_shape,axes', [
     ((3, 5), (3, 5), None),
@@ -999,7 +987,6 @@ def test_np_average(a_shape, w_shape, axes, is_weighted, req_a,
     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_mean():
     class TestMean(HybridBlock):
@@ -1094,7 +1081,6 @@ def test_np_mean():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_moment():
     class TestMoment(HybridBlock):
@@ -1159,7 +1145,6 @@ def test_np_moment():
                                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol, use_broadcast=False, equal_nan=True)
 
 
-@with_seed()
 @use_np
 def test_np_shape():
     shapes = [
@@ -1179,7 +1164,6 @@ def test_np_shape():
         assert mx_shape == np_shape
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('config', [
     (0.0, 1.0, 10),
@@ -1260,7 +1244,6 @@ def test_np_linspace_arange():
         assert_almost_equal(mx.np.linspace(0, test_index, test_index + 1).asnumpy(), _np.arange(test_index + 1))
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('config', [
     (0.0, 1.0, 20),
@@ -1306,7 +1289,6 @@ def test_np_logspace(config, dtype, endpoint, hybridize, base):
         assert mx_out.dtype == np_out.dtype
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('start,end,step', [
     ([], [], None),
@@ -1360,7 +1342,6 @@ def test_npx_slice(start, end, step, hybridize):
     expected_grad[basic_index] = 1
     assert same(a.grad.asnumpy(), expected_grad)
 
-@with_seed()
 @use_np
 def test_npx_index_add():
     class TestIndexAdd(HybridBlock):
@@ -1514,7 +1495,6 @@ def test_npx_index_add():
             assert_almost_equal(mx_out.asnumpy(), expected_ret, rtol=eps, atol=eps)
 
 
-@with_seed()
 @use_np
 def test_npx_index_update():
     class TestIndexUpdate(HybridBlock):
@@ -1676,7 +1656,6 @@ def test_npx_index_update():
             check_index_update_forward(mx_out.asnumpy(), a.asnumpy(), ind.astype(indtype), val.asnumpy(), ind_ndim, ind_num, eps)
 
 
-@with_seed()
 @use_np
 def test_npx_batch_dot():
     ctx = mx.context.current_context()
@@ -1795,7 +1774,6 @@ def test_npx_batch_dot():
                                                                transpose_b=transpose_b))
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('shape', [(4, 2), (4, 3, 4),
     (4, 6, 4, 5), (4, 5, 6, 4, 5)])
@@ -1951,7 +1929,6 @@ def test_npx_batch_norm(shape, fix_gamma, cudnn_off, output_mean_var):
                     _test_batchnorm_impl(axis,
                         data_grad_req, gamma_grad_req, beta_grad_req)
 
-@with_seed()
 @use_np
 def test_npx_softmax():
     class TestSoftmax(HybridBlock):
@@ -2009,7 +1986,6 @@ def test_npx_softmax():
                     assert_almost_equal(mx_a.grad.asnumpy(), _np.zeros(shape), rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_npi_boolean_assign():
     class TestBooleanAssignScalar(HybridBlock):
@@ -2097,7 +2073,6 @@ def test_npi_boolean_assign():
                 assert_almost_equal(mx_data2.asnumpy(), np_data, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_np_reshape():
     class TestReshape(HybridBlock):
@@ -2131,7 +2106,6 @@ def test_np_reshape():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_np_argsort():
     class TestArgsort(HybridBlock):
@@ -2166,7 +2140,6 @@ def test_np_argsort():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('kind', ['quicksort', 'mergesort', 'heapsort'])
 @pytest.mark.parametrize('shape', [
@@ -2219,7 +2192,6 @@ def test_np_sort(kind, shape, dtype, hybridize):
         assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_np_squeeze():
     config = [((), None),
@@ -2259,7 +2231,6 @@ def test_np_squeeze():
 
 
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 @use_np
 def test_np_tri():
     class TestTri(HybridBlock):
@@ -2293,7 +2264,6 @@ def test_np_tri():
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_np_prod():
     class TestProd(HybridBlock):
@@ -2345,7 +2315,6 @@ def test_np_prod():
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_np_flatten():
     class TestFlatten(HybridBlock):
@@ -2370,7 +2339,6 @@ def test_np_flatten():
             assert_almost_equal(a_mx.grad.asnumpy(), _np.ones_like(a_np), rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('src_shape,dst_shape', [
     ((), (1, 2, 4, 5)),
@@ -2423,7 +2391,6 @@ def test_np_broadcast_to(src_shape, dst_shape, hybridize):
         ret = test_scalar_broadcast_to(np.empty(()))
     assert_almost_equal(ret.asnumpy(), expected_ret, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('src_shape,npx_dst_shape,np_dst_shape', [
     ((5,), (3, 4, -2), (3, 4, 5)),
@@ -2467,7 +2434,6 @@ def test_np_broadcast_to_npx(src_shape, npx_dst_shape, np_dst_shape, hybridize):
     assert_almost_equal(a_mx.grad.asnumpy(), expected_grad, rtol=1e-5, atol=1e-6, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('hybridize', [True, False])
 @pytest.mark.parametrize('dtype', [_np.float32, _np.float16, _np.int32])
@@ -2546,7 +2512,6 @@ def test_np_transpose_error():
     pytest.raises(MXNetError, lambda: dat.transpose((0, 1, 3)))
 
 
-@with_seed()
 @use_np
 def test_np_meshgrid():
     nx, ny = (4, 5)
@@ -2560,7 +2525,6 @@ def test_np_meshgrid():
     assert same(zv.asnumpy(), zv_expected)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('shapes', [
     [(), (2, 1), (1, 3), (4, 1, 1), (5, 4, 2, 3)],
@@ -2575,7 +2539,6 @@ def test_np_broadcast_arrays(shapes):
         assert same(expected_ret, ret.asnumpy())
 
 
-@with_seed()
 @use_np
 def test_np_tile():
     config = [
@@ -2616,7 +2579,6 @@ def test_np_tile():
             assert same(ret_mx.asnumpy(), ret_np)
 
 
-@with_seed()
 @use_np
 def test_np_tril():
     # numpy tril does not support scalar array (zero-dim)
@@ -2677,7 +2639,6 @@ def test_np_tril():
                 assert same(ret_mx.asnumpy(), ret_np)
 
 
-@with_seed()
 @use_np
 def test_np_triu():
     # numpy triu does not support scalar array (zero-dim)
@@ -2738,7 +2699,6 @@ def test_np_triu():
                 assert same(ret_mx.asnumpy(), ret_np)
 
 
-@with_seed()
 @use_np
 def test_np_unary_funcs():
     def check_unary_func(func, ref_grad, shape, low, high):
@@ -2822,7 +2782,6 @@ def test_negation():
             assert_almost_equal(y.asnumpy(), -np_test_data)
 
 
-@with_seed()
 @use_np
 @retry(3)
 @pytest.mark.parametrize('func,ref_grad,low,high', [
@@ -2915,7 +2874,6 @@ def test_np_mixedType_unary_funcs(func, ref_grad, low, high, ndim, dtype):
         assertRaises(NotImplementedError, getattr(np, func), mx_test_data, order='mxnet')
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('ndim', [2, 3, 4])
 @pytest.mark.parametrize('func,low,high', [
@@ -2966,7 +2924,6 @@ def test_np_bitwise_not(func, low, high, ndim):
         check_unary_func(func, shape, low, high)
 
 
-@with_seed()
 @use_np
 def test_np_binary_funcs():
     def check_binary_func(func, lshape, rshape, low, high, lgrads, rgrads=None, alltypes=None):
@@ -3107,7 +3064,6 @@ def test_np_binary_funcs():
             check_binary_func(func, lshape, rshape, low, high, lgrads, rgrads, dtypes)
 
 
-@with_seed()
 @use_np
 def test_np_mixed_precision_binary_funcs():
     itypes = [np.bool, np.int8, np.int32, np.int64]
@@ -3239,7 +3195,6 @@ def test_np_mixed_precision_binary_funcs():
                     continue
                 check_mixed_precision_binary_func(func, low, high, lshape, rshape, lgrad, rgrad, type1, type2)
 
-@with_seed()
 @use_np
 def test_np_mixed_mxnp_op_funcs():
     # generate onp & mx_np in same type
@@ -3280,7 +3235,6 @@ def test_np_mixed_mxnp_op_funcs():
     out = onp / mx_np
     assert isinstance(out, mx.np.ndarray)
 
-@with_seed()
 @use_np
 def test_np_binary_scalar_funcs():
     itypes = [np.int8, np.int32, np.int64]
@@ -3341,7 +3295,6 @@ def test_np_binary_scalar_funcs():
                 check_binary_scalar_func(func, low, high, shape, lgrad, ltype, is_int, hybridize)
 
 
-@with_seed()
 @use_np
 def test_np_boolean_binary_funcs():
     def check_boolean_binary_func(func, mx_x1, mx_x2):
@@ -3395,7 +3348,6 @@ def test_np_boolean_binary_funcs():
             check_boolean_binary_func(func, x1, x2)
 
 
-@with_seed()
 @use_np
 def test_npx_relu():
     def np_relu(x):
@@ -3432,7 +3384,6 @@ def test_npx_relu():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_npx_sigmoid():
     def np_sigmoid(x):
@@ -3469,7 +3420,6 @@ def test_npx_sigmoid():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_atleast_nd():
     class TestAtleastND(HybridBlock):
@@ -3523,7 +3473,6 @@ def test_np_atleast_nd():
             same(mx_out[i].asnumpy(), np_out[i])
 
 
-@with_seed()
 @use_np
 def test_np_arange():
     configs = [
@@ -3586,7 +3535,6 @@ def test_np_arange():
                 assert same(mx_out.asnumpy(), np_out)
 
 
-@with_seed()
 @use_np
 def test_np_insert():
     class TestInsert(HybridBlock):
@@ -3699,7 +3647,6 @@ def test_np_insert():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_split():
     class TestSplit(HybridBlock):
@@ -3752,7 +3699,6 @@ def test_np_split():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_array_split():
     class TestArray_split(HybridBlock):
@@ -3809,7 +3755,6 @@ def test_np_array_split():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_vsplit():
     class TestVsplit(HybridBlock):
@@ -3864,7 +3809,6 @@ def test_np_vsplit():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_concat():
     class TestConcat(HybridBlock):
@@ -3933,7 +3877,6 @@ def test_np_concat():
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_append():
     class TestAppend(HybridBlock):
@@ -3989,7 +3932,6 @@ def test_np_append():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_stack():
     class TestStack(HybridBlock):
@@ -4039,7 +3981,6 @@ def test_np_stack():
                 assert same(mx_out.asnumpy(), np_out)
 
 
-@with_seed()
 @use_np
 def test_np_hstack():
     class TestHStack(HybridBlock):
@@ -4103,7 +4044,6 @@ def test_np_hstack():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_dstack():
     class TestDStack(HybridBlock):
@@ -4164,7 +4104,6 @@ def test_np_dstack():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_ravel():
     class TestRavel(HybridBlock):
@@ -4197,7 +4136,6 @@ def test_np_ravel():
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_randint():
     ctx = mx.context.current_context()
@@ -4243,7 +4181,6 @@ def test_np_randint():
             verify_generator(generator=generator_mx_same_seed, buckets=buckets, probs=probs, nrepeat=100)
 
 
-@with_seed()
 @use_np
 def test_np_swapaxes():
     config = [((0, 1, 2), 0, 0),
@@ -4277,7 +4214,6 @@ def test_np_swapaxes():
             assert same(ret_mx.asnumpy(), ret_np)
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_delete():
@@ -4353,7 +4289,6 @@ def test_np_delete():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_argmin_argmax():
     workloads = [
@@ -4419,7 +4354,6 @@ def test_np_argmin_argmax():
                         assert same(mx_ret.asnumpy(), np_ret)
 
 
-@with_seed()
 @use_np
 def test_np_clip():
     workloads = [
@@ -4491,7 +4425,6 @@ def test_np_clip():
                     assert_almost_equal(mx_ret.asnumpy(), np_ret, atol=1e-4, rtol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_npx_random_bernoulli():
     def _test_bernoulli_exception(prob, logit):
@@ -4526,7 +4459,6 @@ def test_npx_random_bernoulli():
                 assertRaises(ValueError, _test_bernoulli_exception, scaled_prob, None)
 
 
-@with_seed()
 @use_np
 def test_npx_constraint_check():
     msg = "condition violated"
@@ -4567,7 +4499,6 @@ def test_npx_constraint_check():
         assert (input_tensor.asnumpy() == out.asnumpy()).all()
 
 
-@with_seed()
 @use_np
 def test_npx_special_unary_func():
     def check_unary_func(func, ref_grad, shape, low, high):
@@ -4622,7 +4553,6 @@ def test_npx_special_unary_func():
 
 
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 @use_np
 def test_np_random_grad():
     class TestRandomGrad(HybridBlock):
@@ -4673,7 +4603,6 @@ def test_np_random_grad():
             assert mx_out.asnumpy().shape == np_out.shape
 
 
-@with_seed()
 @use_np
 def test_np_lognormal_grad():
     class TestLognormalGrad(HybridBlock):
@@ -4723,7 +4652,6 @@ def test_np_lognormal_grad():
     assertRaises(ValueError, _test_lognormal_exception, -1)
 
 
-@with_seed()
 @use_np
 def test_npx_sample_n():
     def shape_formatter(s):
@@ -4761,7 +4689,6 @@ def test_npx_sample_n():
             assert out.shape == expected_shape
 
 
-@with_seed()
 @use_np
 def test_np_random():
     shapes = [(), (1,), (2, 3), (4, 0, 5), 6, (7, 8), None]
@@ -4813,7 +4740,6 @@ def test_np_random():
                 assert out.shape == expected_shape
 
 
-@with_seed()
 @use_np
 def test_gamma_exception():
     def _test_gamma_exception(shape, scale):
@@ -4839,7 +4765,6 @@ def test_gamma_exception():
         assertRaises(ValueError, _test_gamma_exception, shape, scale)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize("shape", [(1,), (2, 2), (4, 2, 2)])
 @pytest.mark.parametrize("a", [2.0, 5.0, 10.0])
@@ -4879,7 +4804,6 @@ def test_gamma_grad(shape, a, b):
         assert_almost_equal(expected_grad, param.grad.asnumpy(), rtol=1e-2, atol=1e-3)
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_beta():
@@ -4924,7 +4848,6 @@ def test_np_random_beta():
         assert _test_random_beta_range(mx_out_imperative.asnumpy()) == True
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_f():
@@ -4956,7 +4879,6 @@ def test_np_random_f():
         assert_almost_equal(np_out.shape, mx_out_imperative.shape)
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18600')
 def test_np_random_chisquare():
@@ -4992,7 +4914,6 @@ def test_np_random_chisquare():
         assert_almost_equal(np_out.shape, mx_out_imperative.shape)
 
 
-@with_seed()
 @use_np
 def test_np_random_rayleigh():
     class TestRayleigh(HybridBlock):
@@ -5030,7 +4951,6 @@ def test_np_random_rayleigh():
     assertRaises(ValueError, _test_rayleigh_exception, -1)
 
 
-@with_seed()
 @use_np
 def test_np_exponential():
     class TestRandomExp(HybridBlock):
@@ -5066,7 +4986,6 @@ def test_np_exponential():
     assertRaises(ValueError, _test_exponential_exception, -1)
 
 
-@with_seed()
 @use_np
 def test_np_random_a():
     op_names = ['pareto', 'power', 'weibull']
@@ -5135,7 +5054,6 @@ def test_np_random_a():
             assertRaises(ValueError, _test_exception, 0)
 
 
-@with_seed()
 @use_np
 def test_np_weibull_grad():
     class TestRandomW(HybridBlock):
@@ -5168,7 +5086,6 @@ def test_np_weibull_grad():
             assert_almost_equal(a.grad.asnumpy().sum(), formula_grad.asnumpy().sum(), rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_pareto_grad():
     class TestRandomP(HybridBlock):
@@ -5202,7 +5119,6 @@ def test_np_pareto_grad():
             assert_almost_equal(a.grad.asnumpy().sum(), formula_grad.asnumpy().sum(), rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_randn():
     # Test shapes.
@@ -5224,7 +5140,6 @@ def test_np_randn():
             assert data_mx.shape == shape
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='Test hangs. Tracked in #18144')
 def test_np_multivariate_normal():
@@ -5271,7 +5186,6 @@ def test_np_multivariate_normal():
         assert list(desired_shape) == list(actual_shape)
 
 
-@with_seed()
 @use_np
 def test_npx_categorical():
     class TestNumpyCategorical(HybridBlock):
@@ -5298,7 +5212,6 @@ def test_npx_categorical():
             assert mx_out.shape == desired_shape
 
 
-@with_seed()
 @use_np
 def test_random_seed():
     for seed in [234, 594, 7240, 20394]:
@@ -5309,7 +5222,6 @@ def test_random_seed():
         assert_almost_equal(ret[0].asnumpy(), ret[1].asnumpy(), rtol=1e-4, atol=1e-5, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_np_cumsum():
     def np_cumsum_backward(ograd, axis=None, dtype=None):
@@ -5360,7 +5272,6 @@ def test_np_cumsum():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='Skipped as the test is flaky and the feature causes curand error. Tracked in #18100')
 def test_np_histogram():
@@ -5378,7 +5289,6 @@ def test_np_histogram():
             assert_almost_equal(mx_bins.asnumpy(), np_bins, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='Skipped as the test is flaky and the feature causes curand error. Tracked in #18100')
 def test_np_choice():
@@ -5477,7 +5387,6 @@ def test_np_choice():
                 test_indexing_mode(test_choice_weighted, num_classes, num_classes // 2, replace, weight)
 
 
-@with_seed()
 @use_np
 def test_np_eye():
     configs = [
@@ -5545,7 +5454,6 @@ def test_np_eye():
                 assert same(mx_out.asnumpy(), np_out)
 
 
-@with_seed()
 @use_np
 def test_np_indices():
     dtypes = ['int32', 'int64', 'float16', 'float32', 'float64']
@@ -5590,7 +5498,6 @@ def test_np_indices():
                 assert mx_out.shape == np_out.shape
 
 
-@with_seed()
 @use_np
 def test_np_repeat():
     config = [
@@ -5628,7 +5535,6 @@ def test_np_repeat():
             assert same(ret_mx.asnumpy(), ret_np)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_norm():
     class TestLinalgNorm(HybridBlock):
@@ -5747,7 +5653,6 @@ def test_np_linalg_norm():
         assert_almost_equal(mx_ret.asnumpy(), np_ret, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_svd():
     class TestSVD(HybridBlock):
@@ -5855,7 +5760,6 @@ def test_np_linalg_svd():
                 check_svd(UT, L, V, data_np)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_qr():
     class TestQR(HybridBlock):
@@ -5995,7 +5899,6 @@ def test_np_linalg_qr():
         check_qr(Q, R, data_np)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_cholesky():
     class TestCholesky(HybridBlock):
@@ -6116,7 +6019,6 @@ def test_np_linalg_cholesky():
         check_cholesky(L, data_np)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('hybridize', [True, False])
 @pytest.mark.parametrize('dtype', ['float32', 'float64'])
@@ -6203,7 +6105,6 @@ def test_np_linalg_inv(hybridize, dtype, shape):
     check_inv(A_inv, data_np)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_solve():
     class TestSolve(HybridBlock):
@@ -6400,7 +6301,6 @@ def test_np_linalg_tensorinv():
     check_tensorinv(mx_out, a, ind)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_tensorsolve():
     class TestTensorsolve(HybridBlock):
@@ -6552,7 +6452,6 @@ def test_np_linalg_tensorsolve():
                 check_tensorsolve(mx_out, a.asnumpy(), b.asnumpy(), axes)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_lstsq():
     class TestLstsq(HybridBlock):
@@ -6628,7 +6527,6 @@ def test_np_linalg_lstsq():
                 check_lstsq(a_np, b_np, rcond, x, residuals, rank, s)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_matrix_rank():
     class TestMatrixRank(HybridBlock):
@@ -6705,7 +6603,6 @@ def test_np_linalg_matrix_rank():
                     check_matrix_rank(rank, a.asnumpy(), tol.asnumpy(), hermitian=False)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_pinv():
     class TestPinv(HybridBlock):
@@ -6784,7 +6681,6 @@ def test_np_linalg_pinv():
                 check_pinv(mx_out, a.asnumpy(), rcond.asnumpy(), hermitian, use_rcond)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_eigvals():
     class TestEigvals(HybridBlock):
@@ -6852,7 +6748,6 @@ def test_np_linalg_eigvals():
             check_eigvals(mx_out, a.asnumpy())
 
 
-@with_seed()
 @use_np
 def test_np_linalg_eigvalsh():
     class TestEigvalsh(HybridBlock):
@@ -6929,7 +6824,6 @@ def test_np_linalg_eigvalsh():
             check_eigvalsh(mx_out, a.asnumpy(), UPLO)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_eig():
     class TestEig(HybridBlock):
@@ -7009,7 +6903,6 @@ def test_np_linalg_eig():
             check_eig(mx_w, mx_v, a.asnumpy())
 
 
-@with_seed()
 @use_np
 def test_np_linalg_eigh():
     class TestEigh(HybridBlock):
@@ -7115,7 +7008,6 @@ def test_np_linalg_eigh():
             check_eigh(w, v, a.asnumpy(), UPLO)
 
 
-@with_seed()
 @use_np
 def test_np_linalg_det():
     class TestDet(HybridBlock):
@@ -7165,7 +7057,6 @@ def test_np_linalg_det():
             check_numeric_gradient(mx_sym, [a.as_nd_ndarray()], rtol=1e-1, atol=1e-1, dtype=dtype)
 
 
-@with_seed()
 @use_np
 @retry(3)
 @pytest.mark.parametrize('grad_req', ['write', 'add', 'null'])
@@ -7212,7 +7103,6 @@ def test_np_linalg_slogdet(a_shape, grad_req, dtype, hybridize):
     assert_almost_equal(mx_out[1].asnumpy(), np_out[1], rtol=1e-1, atol=1e-1)
 
 
-@with_seed()
 @use_np
 def test_np_vstack():
     class TestVstack(HybridBlock):
@@ -7268,7 +7158,6 @@ def test_np_vstack():
                 assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_full():
     class TestFull(HybridBlock):
@@ -7319,7 +7208,6 @@ def test_np_full():
                 assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='Skipped as the test is flaky and the feature causes curand error. Tracked in #18100')
 def test_np_full_like():
@@ -7367,7 +7255,6 @@ def test_np_full_like():
         assert_almost_equal(ret.asnumpy(), expected_ret, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_roll():
     class TestRoll(HybridBlock):
@@ -7425,7 +7312,6 @@ def test_np_roll():
                                            numeric_eps=1e-3, rtol=1e-3, atol=1e-5, dtype=i_dtype[dtype])
 
 
-@with_seed()
 @use_np
 def test_np_trace():
     class TestTrace(HybridBlock):
@@ -7507,7 +7393,6 @@ def test_np_trace():
         assert False
 
 
-@with_seed()
 @use_np
 def test_np_windows():
     class TestWindows(HybridBlock):
@@ -7542,7 +7427,6 @@ def test_np_windows():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_flip():
     class TestFlip(HybridBlock):
@@ -7582,7 +7466,6 @@ def test_np_flip():
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_flipud_fliplr():
     class TestFlipud(HybridBlock):
@@ -7636,7 +7519,6 @@ def test_np_flipud_fliplr():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_around():
     class TestAround(HybridBlock):
@@ -7668,7 +7550,6 @@ def test_np_around():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_flatnonzero():
     class TestFlatnonzero(HybridBlock):
@@ -7698,7 +7579,6 @@ def test_np_flatnonzero():
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_round():
     class TestRound(HybridBlock):
@@ -7731,7 +7611,6 @@ def test_np_round():
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_nonzero():
     class TestNonzero(HybridBlock):
@@ -7763,7 +7642,6 @@ def test_np_nonzero():
                 assert_almost_equal(mx_out.asnumpy(), np_out, rtol, atol)
 
 
-@with_seed()
 @use_np
 def test_np_unique():
     class TestUnique(HybridBlock):
@@ -7823,7 +7701,6 @@ def test_np_unique():
                         assert_almost_equal(mx_out[i].asnumpy(), np_out[i], rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_take():
     configs = [
@@ -7929,7 +7806,6 @@ def test_np_take():
                 check_output_n_grad(config[0], config[1], config[2], mode)
 
 
-@with_seed()
 def test_np_builtin_op_signature():
     import inspect
     from mxnet import _numpy_op_doc
@@ -7944,7 +7820,6 @@ def test_np_builtin_op_signature():
         assert str(op.__signature__) == str(inspect.signature(_op_from_doc))
 
 
-@with_seed()
 @use_np
 def test_np_tril_indices():
     class TestTrilindices(HybridBlock):
@@ -7981,7 +7856,6 @@ def test_np_tril_indices():
                         assert same(np_data, mx_data.asnumpy())
 
 
-@with_seed()
 @use_np
 def test_np_fill_diagonal():
     class TestFillDiagonal(HybridBlock):
@@ -8026,7 +7900,6 @@ def test_np_fill_diagonal():
                 assert same(np_data, mx_data.asnumpy())
 
 
-@with_seed()
 @use_np
 def test_np_moveaxis():
     class TestMoveaxis(HybridBlock):
@@ -8070,7 +7943,6 @@ def test_np_moveaxis():
                     assert same(mx_out.asnumpy(), np_out)
 
 
-@with_seed()
 @use_np
 def test_np_rot90():
     class TestTRot90(HybridBlock):
@@ -8123,7 +7995,6 @@ def test_np_rot90():
                 assert same(mx_out.asnumpy(), np_out)
 
 
-@with_seed()
 @use_np
 def test_np_hsplit():
     class TestHSplit(HybridBlock):
@@ -8174,7 +8045,6 @@ def test_np_hsplit():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_dsplit():
     class TestDSplit(HybridBlock):
@@ -8223,7 +8093,6 @@ def test_np_dsplit():
                     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_einsum():
     class TestEinsum(HybridBlock):
@@ -8381,7 +8250,6 @@ def test_np_einsum():
                     assert_almost_equal(grad[0][iop], grad[1][iop], rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='Skipped as the test is flaky and the feature causes curand error. Tracked in #18100')
 def test_np_diagflat():
@@ -8424,7 +8292,6 @@ def test_np_diagflat():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_pad():
     class TestPad(HybridBlock):
@@ -8491,7 +8358,6 @@ def test_np_pad():
                         assert_almost_equal(mx.np.pad(mx_grad, pad_width=pw, mode="constant"), gt_in_grad.asnumpy(), rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_rand():
     # Test shapes.
@@ -8541,7 +8407,6 @@ def test_np_rand():
                          probs=probs, nsamples=samples, nrepeat=trials)
 
 
-@with_seed()
 @use_np
 def test_np_true_divide():
     shapes = [
@@ -8600,7 +8465,6 @@ def test_np_true_divide():
         assert_almost_equal(out_mx.asnumpy(), out_np, rtol=1e-3, atol=1e-3, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_np_column_stack():
     class TestColumnStack(HybridBlock):
@@ -8715,7 +8579,6 @@ def test_npx_reshape():
                 assert_almost_equal(npx_out.asnumpy(), expected_out, rtol=1e-3, atol=1e-5)
 
 
-@with_seed()
 @use_np
 def test_np_share_memory():
     ops = [np.shares_memory, np.may_share_memory]
@@ -8778,7 +8641,6 @@ def test_np_median():
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
-@with_seed()
 @use_np
 def test_np_quantile():
     class TestQuantile(HybridBlock):
@@ -8839,7 +8701,6 @@ def test_np_quantile():
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
-@with_seed()
 @use_np
 def test_np_percentile():
     class TestPercentile(HybridBlock):
@@ -8902,7 +8763,6 @@ def test_np_percentile():
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
-@with_seed()
 @use_np
 def test_np_diff():
     def np_diff_backward(ograd, n, axis):
@@ -8954,7 +8814,6 @@ def test_np_diff():
                         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_ediff1d():
     def np_diff_backward(size, shape):
@@ -9068,7 +8927,6 @@ def test_np_ediff1d():
                     assert_almost_equal(arg.grad.asnumpy(), np.ones_like(arg), atol=atol, rtol=rtol)
 
 
-@with_seed()
 @use_np
 def test_np_column_stack():
     class TestColumnStack(HybridBlock):
@@ -9122,7 +8980,6 @@ def test_np_column_stack():
         assert_almost_equal(mx_out.asnumpy(), expected_np, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='Test hangs. Tracked in #18144')
 def test_np_resize():
@@ -9158,7 +9015,6 @@ def test_np_resize():
         assert_almost_equal(ret.asnumpy(), expected_ret, atol=1e-5, rtol=1e-5, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_np_diag():
     class TestDiag(HybridBlock):
@@ -9217,7 +9073,6 @@ def test_np_diag():
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('config', [
     [(1, 5), (0, 1)], [(2, 2), (0, 1)],
@@ -9300,7 +9155,6 @@ def test_np_diagonal(config, k, dtype, hybridize, call_by_instance):
     assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_nan_to_num():
     def take_ele_grad(ele):
@@ -9402,7 +9256,6 @@ def test_np_nan_to_num():
             assert_almost_equal(mx_out.asnumpy(), np_out, rtol=1e-3, atol=1e-5, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 def test_np_unary_bool_funcs():
     def check_unary_func(func):
@@ -9509,7 +9362,6 @@ def test_np_unary_bool_funcs():
     check_unary_func("isfinite")
 
 
-@with_seed()
 @use_np
 def test_np_polyval():
     class TestPolyval(HybridBlock):
@@ -9576,7 +9428,6 @@ def test_np_polyval():
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
-@with_seed()
 @use_np
 def test_np_where():
     class TestWhere(HybridBlock):
@@ -9644,7 +9495,6 @@ def test_np_where():
         same(mx_out, np_out)
 
 
-@with_seed()
 @use_np
 def test_np_expand_dims():
     class TestExpandDims(HybridBlock):
@@ -9698,7 +9548,6 @@ def test_np_expand_dims():
                 assert_almost_equal(y.asnumpy(), expected, use_broadcast=False)
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='Test hangs. Tracked in #18144')
 def test_np_unravel_index():
@@ -9751,7 +9600,6 @@ def test_np_unravel_index():
             assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_diag_indices_from():
     class TestDiag_indices_from(HybridBlock):
@@ -9788,7 +9636,6 @@ def test_np_diag_indices_from():
             assert_almost_equal(elem_mx.asnumpy(), elem_np, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 def test_np_interp():
     class TestInterp(HybridBlock):
@@ -9855,7 +9702,6 @@ def test_np_interp():
         assert_almost_equal(mx_out.asnumpy(), np_out, atol=atol, rtol=rtol)
 
 
-@with_seed()
 @use_np
 def test_np_bincount():
     class TestBincount(HybridBlock):
@@ -9905,7 +9751,6 @@ def test_np_bincount():
         assert_almost_equal(mx_out.asnumpy(), np_out, rtol=rtol, atol=atol)
 
 
-@with_seed()
 @use_np
 @pytest.mark.skip(reason='Test hangs. Tracked in #18144')
 def test_np_empty_like():
@@ -9964,7 +9809,6 @@ def test_np_empty_like():
         assert ret.asnumpy().shape == expected_ret.shape
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('hybridize', [True, False])
 @pytest.mark.parametrize('dtype', [np.float32, np.float64])
@@ -10221,7 +10065,6 @@ def test_np_cross(a_shape, b_shape, axes, dtype, hybridize):
     check_np_cross(mx_out, a.asnumpy(), b.asnumpy(), axes)
 
 
-@with_seed()
 @use_np
 def test_np_rollaxis():
     class TestRollaxis(HybridBlock):
@@ -10261,7 +10104,6 @@ def test_np_rollaxis():
                         assert same(mx_out.asnumpy(), np_out)
 
 
-@with_seed()
 @use_np
 def test_npx_stop_gradient():
     class TestStopGradient(HybridBlock):
@@ -10290,7 +10132,6 @@ def test_npx_stop_gradient():
                     assert_almost_equal(new_grad, old_grad + 1)
 
 
-@with_seed()
 @use_np
 def test_np_elementwise_ops_on_misaligned_input():
     a = np.array([1,2,3,4], dtype='float16')
@@ -10313,7 +10154,6 @@ def test_np_elementwise_ops_on_misaligned_input():
     assert a[3] == 4.0
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
 @pytest.mark.parametrize('lead_dim', [2, 3, 4, 6, 10])
@@ -10341,7 +10181,6 @@ def test_np_broadcast_ops_on_misaligned_input(dtype, lead_dim, both_ways):
     assert_almost_equal(f, expected)
 
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
 @pytest.mark.parametrize('lead_dim', [2, 3, 4, 6, 10])
@@ -10368,7 +10207,6 @@ def test_np_broadcast_ops_on_misaligned_input_oneside(dtype, lead_dim, both_ways
     mx.nd.waitall()
     assert_almost_equal(f, expected)
 
-@with_seed()
 @use_np
 @pytest.mark.parametrize('num_batch', [1, 2])
 @pytest.mark.parametrize('num_channel_data', [4, 8])

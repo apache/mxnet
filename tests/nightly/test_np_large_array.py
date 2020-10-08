@@ -27,7 +27,6 @@ sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor, use_np
 from mxnet import gluon, np, npx
-from common import with_seed
 import pytest
 from tests.python.unittest.common import assertRaises
 from mxnet.base import MXNetError

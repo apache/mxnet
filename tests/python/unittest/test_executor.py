@@ -17,7 +17,6 @@
 
 import numpy as np
 import mxnet as mx
-from common import with_seed
 from mxnet.test_utils import assert_almost_equal, environment
 
 
@@ -72,7 +71,6 @@ def check_bind_with_uniform(uf, gf, dim, sf=None, lshape=None, rshape=None):
     assert_almost_equal(rhs_grad.asnumpy(), rhs_grad2, rtol=1e-5, atol=1e-5)
 
 
-@with_seed()
 def test_bind():
     for enable_bulking in ['0', '1']:
         with environment({'MXNET_EXEC_BULK_EXEC_INFERENCE': enable_bulking,
@@ -106,7 +104,6 @@ def test_bind():
 
 # @roywei: Removing fixed seed as flakiness in this test is fixed
 # tracked at https://github.com/apache/incubator-mxnet/issues/11686
-@with_seed()
 def test_dot():
     nrepeat = 10
     maxdim = 4
@@ -128,7 +125,6 @@ def test_dot():
                                 sf = mx.symbol.dot)
 
 
-@with_seed()
 def test_reshape():
     x = mx.sym.Variable('x')
     y = mx.sym.FullyConnected(x, num_hidden=4)
@@ -152,7 +148,6 @@ def test_reshape():
     # weight ndarray is shared between exe and new_exe
     assert np.all(exe.arg_arrays[1].asnumpy() == 1)
 
-@with_seed()
 def test_cached_op_init():
     def check_init(static_alloc, static_shape):
         out = mx.sym.zeros((3,3))

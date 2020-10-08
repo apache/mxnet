@@ -31,7 +31,6 @@ from mxnet.gluon import SymbolBlock, nn, rnn
 from mxnet.contrib.amp import amp
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import with_seed
 
 bfloat16 = np.dtype([('bfloat16', np.uint16)])
 
@@ -95,7 +94,6 @@ def test_amp_coverage():
                        - If you are not sure which list to choose, FP32_FUNCS is the
                          safest option""")
 
-@with_seed()
 def test_bf16_casting():
     data = mx.sym.var("data")
     out1 = mx.sym.amp_cast(data, dtype=bfloat16)
