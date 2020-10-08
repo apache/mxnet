@@ -843,7 +843,6 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         Defines the structure of a neural network for INT8 data types.
     -------
     """
-    import mxnet as mx
     if logger:
         logger.info('Export HybridBlock')
 
@@ -853,7 +852,6 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
 
     network.hybridize(backend=backend, backend_opts={'dedup_subgraph': False, 'skip_infer': True})
 
-    import mxnet as mx
     if data_shapes is None:
         if calib_data is None:
             raise ValueError('At least one of data_shapes or calib_data has to be provided.')
@@ -932,15 +930,12 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     elif calib_mode is not None and calib_mode == 'none':
         inputs = [mx.sym.var(d.name) for d in data_shapes]
 
-
     from ..gluon import SymbolBlock
     net = SymbolBlock(qsym, inputs)
     net.hybridize(backend=backend, backend_opts={'dedup_subgraph': False, 'skip_infer': True})
 
-    all_params = {('arg:%s' % k): v.as_in_context(cpu())
-                    for k, v in qarg_params.items()}
-    all_params.update({('aux:%s' % k): v.as_in_context(cpu())
-                        for k, v in aux_params.items()})
+    all_params = {('arg:%s' % k): v.as_in_context(cpu()) for k, v in qarg_params.items()}
+    all_params.update({('aux:%s' % k): v.as_in_context(cpu()) for k, v in aux_params.items()})
     net.load_dict(all_params, cast_dtype=True, dtype_source='saved')
     net.reset_ctx(ctx)
     return net
