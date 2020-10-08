@@ -169,8 +169,7 @@ def check_quantize(sym, data_shape, out_type, name='conv',
   excluded_sym_names = []
   excluded_op_names = []
 
-  calib_data = mx.io.NDArrayIter(data=data, batch_size=1)
-  calib_data = DummyIter(calib_data)
+  calib_data = mx.gluon.data.DataLoader(data, batch_size=1)
   for quantize_granularity in quantize_granularity_list:
     qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
                                                                     arg_params=arg_params,
@@ -229,7 +228,7 @@ def test_quantize_whole_model_with_forward():
     excluded_sym_names = []
 
     calib_data = mx.nd.random.uniform(shape=data_shape)
-    calib_data = mx.io.NDArrayIter(data=calib_data, batch_size=batch_size)
+    calib_data = mx.gluon.data.DataLoader(calib_data, batch_size=batch_size)
     qsym, qarg_params, qaux_params = mx.contrib.quantization.quantize_model(sym=sym_sg,
                                                                      arg_params=arg_params,
                                                                      aux_params=aux_params,
@@ -866,7 +865,7 @@ def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max
   ex.outputs[0].wait_to_read()
   sym_sg = sym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
   
-  calib_data = mx.io.NDArrayIter(data=data_nd, batch_size=data_shape[0])
+  calib_data = mx.gluon.data.DataLoader(data_nd, batch_size=data_shape[0])
   qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
                                                                    arg_params=arg_params,
                                                                    aux_params={},
@@ -915,7 +914,7 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
   ex.outputs[0].wait_to_read()
   sym_sg = sym.get_backend_symbol(QUANTIZE_SG_PASS_NAME)
   
-  calib_data = mx.io.NDArrayIter(data=data_nd, batch_size=1)
+  calib_data = mx.gluon.data.DataLoader(data_nd, batch_size=1)
   qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
                                                                    arg_params=arg_params,
                                                                    aux_params={},

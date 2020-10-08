@@ -254,16 +254,18 @@ def _calibrate_quantized_sym(qsym, th_dict):
 
 
 def _collect_layer_statistics(sym_block, data, collector, max_num_examples=None, logger=None):
-    if not isinstance(data, DataIter):
-        raise ValueError('Only supports data as a type of DataIter, while received type %s'
+    if not isinstance(data, mx.gluon.data.DataLoader):
+        raise ValueError('Only supports data as a type of DataLoader, while received type %s'
                          % str(type(data)))
     sym_block.register_op_hook(collector.collect, monitor_all=True)
     num_batches = 0
     num_examples = 0
     for batch in data:
-        sym_block(batch.data[0])  # TODO(bgawrych): without indexing
+        if not isinstance(batch, list):
+            batch = [batch]
+        sym_block(*batch)
         num_batches += 1
-        num_examples += data.batch_size
+        num_examples += data._batch_sampler._batch_size
         if max_num_examples is not None and num_examples >= max_num_examples:
             break
     if logger is not None:
@@ -404,55 +406,18 @@ def _load_params(params, logger=None):
         raise ValueError('Unsupported params provided. Must be either a path to the param file or'
                          ' a pair of dictionaries representing arg_params and aux_params')
 
-# pylint: disable=super-init-not-called
-class _DataIterWrapper(DataIter):
-    """DataIter wrapper for general iterator, e.g., gluon dataloader"""
-    def __init__(self, calib_data):
-        self._data = calib_data
-        try:
-            calib_iter = iter(calib_data)
-        except TypeError as e:
-            raise TypeError('calib_data is not a valid iterator. {}'.format(str(e)))
-        data_example = next(calib_iter)
-        if isinstance(data_example, (list, tuple)):
-            data_example = list(data_example)
+
+def _list_of_tuple_to_list_of_data_desc(data_shapes):
+    """"Convert list ot tuples to list of DataDesc."""
+    if isinstance(data_shapes, list) and all(isinstance(x, tuple) for x in data_shapes):
+        if len(data_shapes) == 1:
+            data_shapes = [DataDesc(name='data', shape=data_shapes[0])]
         else:
-            data_example = [data_example]
-        # suppose there must be one label in data_example
-        # TODO(xinyu-intel): little tricky here, need to refactor.
-        num_data = len(data_example)
-        assert num_data > 0
-        # here reshape is to handle the 5D/6D input data
-        if len(data_example[0].shape) > 4:
-            data_example[0] = data_example[0].reshape((-1,) + data_example[0].shape[2:])
-        self.provide_data = [DataDesc(name='data', shape=(data_example[0].shape))]
-        self.provide_data += [DataDesc(name='data{}'.format(i), shape=x.shape) for i, x in enumerate(data_example[1:])]
-        # data0, data1, ..., label
-        if num_data >= 3:
-            self.provide_data = [DataDesc(name='data{}'.format(i), shape=x.shape)
-                                 for i, x in enumerate(data_example[0:])]
-        self.batch_size = data_example[0].shape[0]
-        self.reset()
+            data_shapes = [DataDesc(name='data' + str(i), shape=data_shapes[i]) for i in range(len(data_shapes))]
+        return data_shapes
+    if not (isinstance(data_shapes, list) and all(isinstance(x, DataDesc) for x in data_shapes)):
+        raise ValueError('data_shapes must be either a list of DataDesc or a list of Tuple')
 
-    def reset(self):
-        self._iter = iter(self._data)
-
-    def next(self):
-        next_data = next(self._iter)
-        # here reshape is to handle the 5D/6D input data
-        if len(next_data[0].shape) > 4:
-            next_data[0] = next_data[0].reshape((-1,) + next_data[0].shape[2:])
-        return DataBatch(data=next_data)
-# pylint: enable=super-init-not-called
-
-def _as_data_iter(calib_data):
-    """Convert normal iterator to mx.io.DataIter while parsing the data_shapes"""
-    if isinstance(calib_data, DataIter):
-        # already validated DataIter, just return
-        return calib_data, calib_data.provide_data
-
-    calib_data = _DataIterWrapper(calib_data)
-    return calib_data, calib_data.provide_data
 
 def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
@@ -502,8 +467,8 @@ def quantize_model(sym, arg_params, aux_params,
         If calib_mode='entropy' (default mode), the thresholds for quantization will be
         derived such that the KL divergence between the distributions of FP32 layer outputs and
         quantized layer outputs is minimized based upon the calibration dataset.
-    calib_data : DataIter
-        A data iterator initialized by the calibration dataset.
+    calib_data : DataLoader
+        A DataLoader initialized by the calibration dataset.
     num_calib_examples : int or None
         The maximum number of examples that user would like to use for calibration. If not provided,
         the whole calibration dataset will be used.
@@ -562,11 +527,11 @@ def quantize_model(sym, arg_params, aux_params,
             raise ValueError('currently only supports single ctx, while received %s' % str(ctx))
         if calib_data is None:
             raise ValueError('calib_data must be provided when calib_mode=%s' % calib_mode)
-        if not isinstance(calib_data, DataIter):
-            raise ValueError('calib_data must be of DataIter type when calib_mode=%s,'
+        if not isinstance(calib_data, mx.gluon.data.DataLoader):
+            raise ValueError('calib_data must be of DataLoader type when calib_mode=%s,'
                              ' while received type %s' % (calib_mode, str(type(calib_data))))
 
-        inputs = mx.sym.var('data') #TODO: create inputs list (change or infer from data_names)
+        inputs = [mx.sym.var(dname) for dname in data_names]
         param_dict = arg_params
         param_dict.update(aux_params)
         sym_block = mx.gluon.SymbolBlock(sym, inputs)
@@ -846,10 +811,11 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         from being quantized.
     exclude_operators : list of strings
         A list of strings representing the names of the operators that users want to excluding
-    calib_data : mx.io.DataIter or gluon.DataLoader
+    calib_data : gluon.DataLoader
         A iterable data loading object.
-    data_shapes : list
-        List of DataDesc, required if calib_data is not provided
+    data_shapes : list of DataDesc or list of tuple
+        A list of data shapes. Required if calib_data is not provided. In case of tuples,
+        the names of inputs are generated.
     calib_mode : str
         If calib_mode='none', no calibration will be used and the thresholds for
         requantization after the corresponding layers will be calculated at runtime by
@@ -882,16 +848,21 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         logger.info('Export HybridBlock')
     network.hybridize()
     import mxnet as mx
-    if calib_data is not None:
-        if isinstance(calib_data, DataIter):
-            dshapes = calib_data.provide_data
+    if data_shapes is None:
+        if calib_data is None:
+            raise ValueError('At least one of data_shapes or calib_data has to be provided.')
         else:
-            calib_data, dshapes = _as_data_iter(calib_data)
-    if not data_shapes:
-        data_shapes = dshapes
-    if not data_shapes:
-        raise ValueError('data_shapes required')
+            if isinstance(calib_data, mx.gluon.data.DataLoader):
+                x = iter(calib_data)
+                batch = next(x)
+                if isinstance(batch, list):
+                    data_shapes = [b.shape for b in batch]
+                else:
+                    data_shapes = [batch.shape]
+            else:
+                raise ValueError('calib_data expects mx.gluon.data.DataLoader')
     data_nd = []
+    data_shapes = _list_of_tuple_to_list_of_data_desc(data_shapes)
     for shape in data_shapes:
         data_nd.append(mx.nd.zeros(shape.shape))
     while True:
@@ -899,7 +870,6 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
             network(*data_nd)
         except TypeError:
             del data_nd[-1]
-            del calib_data.provide_data[-1]
             continue
         else:
             break
@@ -956,8 +926,8 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
             raise ValueError(
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy', 'customize']:
-            data_names = [pair[0] for pair in calib_data.provide_data]
-            sym_block = mx.gluon.SymbolBlock(outputs=symnet, inputs=mx.sym.Variable('data'))
+            inputs = [mx.sym.var(d.name) for d in data_shapes]
+            sym_block = mx.gluon.SymbolBlock(outputs=symnet, inputs=inputs)
             all_params = args
             all_params.update(auxs)
             sym_block.load_dict(all_params, cast_dtype=True, dtype_source='saved', allow_missing=False)
@@ -973,16 +943,13 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
             raise ValueError(
                 'please set calibration mode to naive or entropy.')
     elif calib_mode is not None and calib_mode == 'none':
-        data_names = [pair[0] for pair in data_shapes]
+        inputs = [mx.sym.var(d.name) for d in data_shapes]
 
     if ctx == mx.cpu():
         qsym = qsym.get_backend_symbol('MKLDNN_QUANTIZE')
 
     from ..gluon import SymbolBlock
-    data_sym = []
-    for name in data_names:
-        data_sym.append(mx.sym.var(name))
-    net = SymbolBlock(qsym, data_sym)
+    net = SymbolBlock(qsym, inputs)
     # TODO(xinyu-intel): tmp solution to save param_dict and reload for SymbolBlock
     # will enhance SymbolBlock to load args, auxs directly.
     with TemporaryDirectory() as tmpdirname:
