@@ -109,6 +109,7 @@ def test_gpu_memory_profiler_symbolic():
                 assert False, "Unknown allocation entry has been encountered"
 
 
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
 def test_gpu_memory_profiler_gluon():
     enable_profiler(profile_filename='test_profiler.json')
     profiler.set_state('run')

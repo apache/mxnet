@@ -518,7 +518,8 @@ struct QrBackHelper_G2 {
   }
 };
 
-
+// QR backward methodology is explained in detail in
+// https://arxiv.org/abs/2009.10071
 struct qr_backward {
   template<typename xpu, typename DType>
   static void op(const Tensor<xpu, 3, DType>& dA,

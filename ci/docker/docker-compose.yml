@@ -41,26 +41,6 @@ services:
         BASE_IMAGE: centos:7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.centos7_cpu:latest
-  centos7_gpu_cu92:
-    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu92:latest
-    build:
-      context: .
-      dockerfile: Dockerfile.build.centos7
-      target: base
-      args:
-        BASE_IMAGE: nvidia/cuda:9.2-cudnn7-devel-centos7
-      cache_from:
-        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu92:latest
-  centos7_gpu_cu100:
-    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu100:latest
-    build:
-      context: .
-      dockerfile: Dockerfile.build.centos7
-      target: base
-      args:
-        BASE_IMAGE: nvidia/cuda:10.0-cudnn7-devel-centos7
-      cache_from:
-        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu100:latest
   centos7_gpu_cu101:
     image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu101:latest
     build:
@@ -81,6 +61,16 @@ services:
         BASE_IMAGE: nvidia/cuda:10.2-cudnn7-devel-centos7
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu102:latest
+  centos7_gpu_cu110:
+    image: ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu110:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.centos7
+      target: base
+      args:
+        BASE_IMAGE: nvidia/cuda:11.0-cudnn8-devel-centos7
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.centos7_gpu_cu110:latest
   ###################################################################################################
   # Dockerfile.build.ubuntu based images. On Ubuntu we test more recent
   # toolchain and dependency versions compared to CentOS7. We attempt to update
@@ -118,12 +108,22 @@ services:
         BASE_IMAGE: nvidia/cuda:10.2-cudnn7-devel-ubuntu18.04
       cache_from:
         - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu102:latest
+  ubuntu_gpu_cu110:
+    image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu110:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.build.ubuntu
+      target: gpu
+      args:
+        BASE_IMAGE: nvidia/cuda:11.0-cudnn8-devel-ubuntu18.04
+      cache_from:
+        - ${DOCKER_CACHE_REGISTRY}/build.ubuntu_gpu_cu110:latest
   ubuntu_build_cuda:
     image: ${DOCKER_CACHE_REGISTRY}/build.ubuntu_build_cuda:latest
     build:
       context: .
       dockerfile: Dockerfile.build.ubuntu
-      target: gpuwithcudaruntimelibs
+      target: gpu
       args:
         BASE_IMAGE: nvidia/cuda:10.1-cudnn7-devel-ubuntu18.04
       cache_from:

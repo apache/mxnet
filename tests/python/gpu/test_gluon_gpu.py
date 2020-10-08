@@ -647,3 +647,31 @@ def test_gemms_true_fp16():
     assert_almost_equal(ref_results.asnumpy(), results_trueFP16.asnumpy(),
                         atol=atol, rtol=rtol)
 
+@with_seed()
+def test_cudnn_dropout_reproducibility():
+    d = nn.Dropout(0.5)
+    d.initialize()
+    a = mx.random.uniform(shape=(100,100))
+    b = a.copy()
+    a.attach_grad()
+    b.attach_grad()
+    seed = np.random.randint(0, 100000)
+    N = 10
+    mx.random.seed(seed)
+    out1 = []
+    for _ in range(N):
+        with autograd.record():
+            out1.append(d(a))
+    out1[0].backward()
+    mx.random.seed(seed)
+    out2 = []
+    for _ in range(N):
+        with autograd.record():
+            out2.append(d(b))
+    out2[0].backward()
+
+    for first, second in zip(out1, out2):
+        assert_almost_equal(first, second)
+
+    assert_almost_equal(a.grad, b.grad)
+

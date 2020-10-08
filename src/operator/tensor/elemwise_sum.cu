@@ -118,39 +118,22 @@ void VectorizedElementwiseSum(const nnvm::NodeAttrs &attrs,
                      : 1;
   const index_t size = inputs[0].Size();
   for (size_t i = 0; i < inputs.size(); i += num_inputs_per_kernel) {
-    if (i == 0) {
-      const std::string code = std::string("const OpReqType req = ") +
-                               util::to_string(req[0]) +
-                               ";\n";
-      elementwise_sum_params params{};
-      params.num_inputs = std::min(num_inputs_per_kernel, inputs.size() - i);
-      for (int j = 0; j < params.num_inputs; ++j) {
-        params.inputs[j] = inputs[i + j].dptr_;
-      }
-      params.outputs[0] = outputs[0].dptr_;
-      VectorizedKernelRTCLauncher(code, "elementwise_sum_kernel",
-                                  elementwise_sum_kernel, nvec,
-                                  size, 1, s, params,
-                                  inputs, outputs,
-                                  ctx.run_ctx.get_ctx().dev_id);
-    } else {
-      /* During subsequent launches we need to
-         accumulate into the previous outputs
-      */
-      const std::string code = "const OpReqType req = OpReqType::kAddTo;\n";
-      elementwise_sum_params params{};
-      params.num_inputs = std::min(num_inputs_per_kernel, inputs.size() - i);
-      for (int j = 0; j < params.num_inputs; ++j) {
-        params.inputs[j] = inputs[i + j].dptr_;
-      }
-      params.outputs[0] = outputs[0].dptr_;
-      const std::vector<TBlob> new_inputs(inputs.begin() + i, inputs.end());
-      VectorizedKernelRTCLauncher(code, "elementwise_sum_kernel",
-                                  elementwise_sum_kernel, nvec,
-                                  size, 1, s, params,
-                                  new_inputs, outputs,
-                                  ctx.run_ctx.get_ctx().dev_id);
+    const std::string code = std::string("const OpReqType req = ") +
+                             util::to_string(i == 0 ? req[0] : kAddTo) +
+                             ";\n";
+    elementwise_sum_params params{};
+    params.num_inputs = std::min(num_inputs_per_kernel, inputs.size() - i);
+    for (int j = 0; j < params.num_inputs; ++j) {
+      params.inputs[j] = inputs[i + j].dptr_;
     }
+    params.outputs[0] = outputs[0].dptr_;
+    const std::vector<TBlob> new_inputs(inputs.begin() + i,
+                                        inputs.begin() + i + params.num_inputs);
+    VectorizedKernelRTCLauncher(code, "elementwise_sum_kernel",
+                                elementwise_sum_kernel, nvec,
+                                size, 1, s, params,
+                                new_inputs, outputs,
+                                ctx.run_ctx.get_ctx().dev_id);
   }
 }
 

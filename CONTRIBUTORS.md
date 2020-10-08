@@ -23,11 +23,11 @@ the project. We actively invite contributors who have earned the merit to be par
 development community. See [MXNet Community Guide][https://mxnet.apache.org/community/community].
 
 
-PMC
+PPMC
 ---
-The Project Management Committee(PMC) consists group of active committers that moderate the
-discussion, manage the project release, and proposes new committer/PMC members. Here's the list of
-PMC members in alphabetical order by first name.
+The Podling Project Management Committee (PPMC) is a group of active committers that moderate the
+discussion, manage the project release, and appoint new committers and PPMC members. Here's the list of
+PPMC members in alphabetical order by first name:
 
 * [Anirudh Subramanian](https://github.com/anirudh2290)
 * [Bing Xu](https://github.com/antinucleon)
@@ -52,11 +52,12 @@ PMC members in alphabetical order by first name.
 * [Ly Nguyen](https://github.com/lxn2)
 * [Madan Jampani](https://github.com/madjam)
 * [Marco de Abreu](https://github.com/marcoabreu)
- - Marco is the creator of the current MXNet CI.
+  - Marco is the creator of the current MXNet CI.
 * [Mu Li](https://github.com/mli)
   - Mu is the contributor of the distributed key-value store in MXNet.
 * [Nan Zhu](https://github.com/CodingCat)
 * [Naveen Swamy](https://github.com/nswamy)
+* [Przemek Tredak](https://github.com/ptrendx)
 * [Qiang Kou](https://github.com/thirdwing)
   - KK is a R ninja, he makes mxnet available for R users.
 * [Qing Lan](https://github.com/lanking520)
@@ -91,11 +92,11 @@ PMC members in alphabetical order by first name.
 
 Committers
 ----------
-Committers are individuals who are granted the write access to the project. A committer is usually
+Committers are individuals who are granted write access to the project. A committer is usually
 responsible for a certain area or several areas of the code where they oversee the code review
 process. The area of contribution can take all forms, including code contributions and code
 reviews, documents, education, and outreach. Committers are essential for a high quality and
-healthy project. The community actively look for new committers from contributors.
+healthy project. The PPMC actively seeks to appoint new committers from the list of contributors.
 
 * [Aaron Markham](https://github.com/aaronmarkham)
 * [Alex Zai](https://github.com/azai91)
@@ -119,7 +120,7 @@ healthy project. The community actively look for new committers from contributor
 * [Manu Seth](https://github.com/mseth10/)
 * [Nicolas Modrzyk](https://github.com/hellonico)
 * [Patric Zhao](https://github.com/pengzhao-intel)
-* - Patric is a parallel computing expert and a major contributor to the MXNet MKL-DNN backend.
+  - Patric is a parallel computing expert and a major contributor to the MXNet MKL-DNN backend.
 * [Przemysław Trędak](https://github.com/ptrendx)
 * [Rahul Huilgol](https://github.com/rahul003)
 * [Roshani Nagmote](https://github.com/roshrini)
@@ -150,7 +151,7 @@ List of Contributors
 * [Nan Xiao](https://github.com/road2stat)
 * [Wei Wu](https://github.com/tornadomeet)
 * [Michaël Benesty](https://github.com/pommedeterresautee)
-  -Michaël contributes the R visualization module of MXNet
+  - Michaël contributes the R visualization module of MXNet
 * [Kublai Jing](https://github.com/Kublai-Jing)
 * [chenjx1005](https://github.com/chenjx1005)
 * [ry](https://github.com/ry)

@@ -1,4 +1,4 @@
-Options -Indexes
+ Options -Indexes
 DirectorySlash off
 RewriteEngine on
 RewriteOptions AllowNoSlash
@@ -22,12 +22,12 @@ RewriteOptions AllowNoSlash
 
 </IfModule>
 
-# Set default website version to old stable (v1.7)
+# Set default website version to old stable (v1.7.0)
 RewriteCond %{REQUEST_URI} !^/versions/
 RewriteCond %{HTTP_REFERER} !mxnet.apache.org
 RewriteCond %{HTTP_REFERER} !mxnet.incubator.apache.org
 RewriteCond %{HTTP_REFERER} !mxnet.cdn.apache.org
-RewriteRule ^(.*)$ /versions/1.7/$1 [r=307,L]
+RewriteRule ^(.*)$ /versions/1.7.0/$1 [r=307,L]
 
 # Redirect Chinese visitors to Chinese CDN, temporary solution for slow site speed in China
 RewriteCond %{ENV:GEOIP_COUNTRY_CODE} ^CN$

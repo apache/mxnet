@@ -1532,8 +1532,10 @@ def test_symbol_block_save_load(tmpdir):
             backbone.initialize()
             backbone.hybridize()
             backbone(mx.nd.random.normal(shape=(1, 3, 32, 32)))
-            sym_file, params_file = backbone.export(tmpfile)
-            self.backbone = gluon.SymbolBlock.imports(sym_file, 'data', params_file)
+            sym, params = backbone.export(None)
+            data = mx.sym.var('data')
+            self.backbone = gluon.SymbolBlock(sym, data)
+            self.backbone.load_dict(params)
             self.body = nn.Conv2D(3, 1)
 
         def hybrid_forward(self, F, x):

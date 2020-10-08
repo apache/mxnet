@@ -485,6 +485,18 @@ if(USE_CUDNN)
   endif()
 endif()
 
+# cutensor detection
+if(USE_CUTENSOR)
+  find_package(CUTENSOR)
+  if(CUTENSOR_FOUND)
+    add_definitions(-DUSE_CUTENSOR)
+    include_directories(SYSTEM ${CUTENSOR_INCLUDE})
+    list(APPEND mxnet_LINKER_LIBS ${CUTENSOR_LIBRARY})
+  else()
+    set(USE_CUTENSOR OFF)
+  endif()
+endif()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake)
   add_subdirectory("3rdparty/dmlc-core")
   set_target_properties(dmlc PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
@@ -664,17 +676,10 @@ if(UNIX)
     target_compile_options(mxnet PUBLIC "--coverage")
     target_link_libraries(mxnet PUBLIC gcov)
   endif()
-  if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
-    # TODO For handling mxnet's symbols the following can be replace by
-    # annotating symbol visibility in source code, specifying
-    # set(CMAKE_CXX_VISIBILITY_PRESET hidden) and
-    # set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
-    # Symbols from statically linked libraries can be discarded via -Wl,--exclude-libs,ALL
-    if(APPLE)
-      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
-    else()
-      set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--version-script=${PROJECT_SOURCE_DIR}/cmake/libmxnet.ver")
-    endif()
+  if(APPLE)
+    set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
+  else()
+    set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--exclude-libs,ALL")
   endif()
 elseif(MSVC)
   if(USE_CUDA)

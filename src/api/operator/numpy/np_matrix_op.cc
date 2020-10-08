@@ -155,6 +155,7 @@ MXNET_REGISTER_API("_npi.concatenate")
   SetAttrDict<op::NumpyConcatenateParam>(&attrs);
   int num_inputs = arg_size - 2;
   std::vector<NDArray*> inputs;
+  inputs.reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
@@ -303,6 +304,7 @@ MXNET_REGISTER_API("_npi.column_stack")
   SetAttrDict<op::NumpyColumnStackParam>(&attrs);
   int num_outputs = 0;
   std::vector<NDArray*> inputs;
+  inputs.reserve(param.num_args);
   for (int i = 0; i < param.num_args; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
@@ -323,6 +325,7 @@ MXNET_REGISTER_API("_npi.hstack")
   SetAttrDict<op::ConcatParam>(&attrs);
   int num_outputs = 0;
   std::vector<NDArray*> inputs;
+  inputs.reserve(param.num_args);
   for (int i = 0; i < param.num_args; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }

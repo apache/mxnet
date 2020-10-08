@@ -226,6 +226,7 @@ class DropoutOp {
       CUDNN_CALL(cudnnCreateTensorDescriptor(&y_desc_));
       CUDNN_CALL(cudnnCreateTensorDescriptor(&dx_desc_));
       CUDNN_CALL(cudnnCreateTensorDescriptor(&dy_desc_));
+      CUDNN_CALL(cudnnCreateDropoutDescriptor(&dropout_desc_));
     }
 #endif  // MXNET_USE_CUDNN_DROPOUT
   }
@@ -237,6 +238,7 @@ class DropoutOp {
       CUDNN_CALL(cudnnDestroyTensorDescriptor(y_desc_));
       CUDNN_CALL(cudnnDestroyTensorDescriptor(dx_desc_));
       CUDNN_CALL(cudnnDestroyTensorDescriptor(dy_desc_));
+      CUDNN_CALL(cudnnDestroyDropoutDescriptor(dropout_desc_));
     }
 #endif  // MXNET_USE_CUDNN_DROPOUT
   }
@@ -253,7 +255,7 @@ class DropoutOp {
       Stream<xpu> *s = ctx.get_stream<xpu>();
 
       // set dropout state.
-      ctx.requested[0].get_cudnn_dropout_desc(&dropout_desc_, s, 1.0f - this->pkeep_, seed_);
+      ctx.requested[0].get_cudnn_dropout_desc(&dropout_desc_, s, 1.0f - this->pkeep_);
 
       // describe input/output tensor
       int dim[4], stride[4];
@@ -490,7 +492,6 @@ class DropoutOp {
   Context ctx_;
   cudnnDataType_t dtype_;
   cudnnDropoutDescriptor_t dropout_desc_;
-  uint64_t seed_ = 17 + rand() % 4096;  // NOLINT(runtime/threadsafe_fn)
   size_t dropout_reserve_byte_;
   cudnnTensorDescriptor_t x_desc_, y_desc_, dx_desc_, dy_desc_;
 #endif  // MXNET_USE_CUDNN_DROPOUT
