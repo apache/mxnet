@@ -1830,3 +1830,12 @@ def test_cumsum():
     assert input.grad.shape == input.shape
     assert input.grad[0, 0] == INT_OVERFLOW
     assert input.grad[-1, -1] == 1
+
+
+@use_np
+def test_round():
+    input = np.ones((INT_OVERFLOW, 2))
+    input[INT_OVERFLOW-1][0] = 1.6
+    output = np.round(input)
+    assert output.shape == (INT_OVERFLOW, 2)
+    assert output[-1][0] == 2
