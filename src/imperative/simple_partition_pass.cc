@@ -43,7 +43,8 @@ void PrintSets(const IntervalVec* const sets_p) {
   for (size_t i = 0; i < sets.size() - 1; ++i) {
     std::cout << "[" << sets[i].first << "," << sets[i].second << "], ";
   }
-  std::cout << "[" << sets[sets.size()-1].first << "," << sets[sets.size()-1].second << "]}" << std::endl;
+  std::cout << "[" << sets[sets.size()-1].first << ","
+            << sets[sets.size()-1].second << "]}" << std::endl;
 }
 
 const IntervalVec* LargerSet(const IntervalVec* const first,
