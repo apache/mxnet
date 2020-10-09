@@ -1855,3 +1855,22 @@ def test_round():
     output = np.round(input)
     assert output.shape == (INT_OVERFLOW, 2)
     assert output[-1][0] == 2
+
+
+@use_np
+def test_cross():
+    inp = np.ones((INT_OVERFLOW, 3))
+    inp2 = np.ones((INT_OVERFLOW, 2))
+    inp[-1] = np.array([1, 2, 3])
+    inp2[-1] = np.array([4, 5])
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.cross(inp, inp2)
+        out.backward()
+    assert out.shape == (INT_OVERFLOW, 3)
+    assert out[0, 0] == -1 and out[0, 1] == 1 and out[0, 2] == 0
+    assert out[-1, 0] == -15 and out[-1, 1] == 12 and out[-1, 2] == -3
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == 1 and inp.grad[0, 1] == -1 and inp.grad[0, 2] == 0
+    assert inp.grad[-1, 0] == 5 and inp.grad[-1, 1] == -4 and inp.grad[-1, 2] == -1
+
