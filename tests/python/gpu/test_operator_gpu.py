@@ -2322,7 +2322,8 @@ def test_fp16_spmm():
 
 @with_seed()
 @pytest.mark.serial
-def test_split_v2_fwd():
+@pytest.mark.parametrize('dtype', ["float16", "float32", "float64"])
+def test_split_v2_fwd(dtype):
     dim = random.randint(2, 9)
     shape = rand_shape_nd(dim)
     axis = random.randint(-dim, dim-1)
@@ -2330,11 +2331,9 @@ def test_split_v2_fwd():
     samples = random.randint(0, axis_size - 1)
     indices = sorted(random.sample([i for i in range(1, axis_size)], samples))
     indices = tuple(indices)
-    dtypes = ["float16", "float32", "float64"]
-    for dtype in dtypes:
-        mx_data = rand_ndarray(shape, dtype=dtype)
-        np_data = mx_data.asnumpy()
-        np_out = np.split(np_data, indices_or_sections=indices, axis=axis)
-        data = mx.sym.Variable("data")
-        sym = mx.sym.split_v2(data, indices_or_sections=indices, axis=axis)
-        check_symbolic_forward(sym, {"data": mx_data}, np_out, rtol=1e-3, atol=1e-5)
+    mx_data = rand_ndarray(shape, dtype=dtype)
+    np_data = mx_data.asnumpy()
+    np_out = np.split(np_data, indices_or_sections=indices, axis=axis)
+    data = mx.sym.Variable("data")
+    sym = mx.sym.split_v2(data, indices_or_sections=indices, axis=axis)
+    check_symbolic_forward(sym, {"data": mx_data}, np_out, rtol=1e-3, atol=1e-5)
