@@ -575,3 +575,18 @@ def test_indexing_shape_change():
     net.hybridize()
     net(mx.np.random.uniform(size=(8, 16)))
     net(mx.np.random.uniform(size=(8, 8)))
+
+
+def test_indexing_empty_shape():
+    @mx.util.use_np
+    class TestModel(mx.gluon.HybridBlock):
+        def forward(self, x):
+            return x[0]
+
+    net = TestModel()
+    net.hybridize()
+    try:
+        mx.npx.set_np()
+        net(mx.np.zeros((2, 2, 4, 0, 128)))
+    finally:
+        mx.npx.reset_np()
