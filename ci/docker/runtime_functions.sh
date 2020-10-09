@@ -124,6 +124,13 @@ build_dynamic_libmxnet() {
             -DUSE_MKLDNN=OFF \
             -DUSE_CUDA=OFF \
             -G Ninja /work/mxnet
+    elif [[ ${mxnet_variant} = "cu110" ]]; then
+        cmake -DUSE_MKL_IF_AVAILABLE=OFF \
+            -DUSE_MKLDNN=ON \
+            -DUSE_DIST_KVSTORE=ON \
+            -DUSE_CUDA=ON \
+            -MXNET_CUDA_ARCH="5.0;6.0;7.0;8.0" \
+            -G Ninja /work/mxnet
     elif [[ ${mxnet_variant} =~ cu[0-9]+$ ]]; then
         cmake -DUSE_MKL_IF_AVAILABLE=OFF \
             -DUSE_MKLDNN=ON \
