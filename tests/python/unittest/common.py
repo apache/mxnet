@@ -31,6 +31,7 @@ sys.path.insert(0, os.path.join(curr_path, '../../../python'))
 import models
 from contextlib import contextmanager
 import pytest
+from _pytest.runner import Skipped
 from tempfile import TemporaryDirectory
 import locale
 
@@ -224,6 +225,9 @@ def with_seed(seed=None):
                 logger.log(log_level, pre_test_msg)
                 try:
                     orig_test(*args, **kwargs)
+                except Skipped:
+                    # No need to log seed info for skipped pytests
+                    raise
                 except:
                     # With exceptions, repeat test_msg at WARNING level to be sure it's seen.
                     if log_level < logging.WARNING:
