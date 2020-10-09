@@ -2586,7 +2586,7 @@ def convert_topk(node, **kwargs):
         k_input_name = name + "_k"
         k_input_type = onnx.TensorProto.INT64
         k_value_node = make_tensor_value_info(k_input_name, k_input_type, ())
-        k_tensor_node = make_tensor(k_input_name, k_input_type, (), k)
+        k_tensor_node = make_tensor(k_input_name, k_input_type, (), (k, ))
         initializer.append(k_tensor_node)
         input_nodes.append(k_input_name)
 
