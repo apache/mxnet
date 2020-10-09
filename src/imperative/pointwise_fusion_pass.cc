@@ -31,6 +31,7 @@
 #include <nnvm/pass_functions.h>
 #include <algorithm>
 #include <queue>
+#include <chrono>
 #include "./simple_partition_pass.h"
 #include "../operator/fusion/fused_op-inl.h"
 #include "../operator/fusion/fused_op.h"
@@ -359,11 +360,19 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
 }
 
 Graph FusePointwise(const Graph &g, const size_t num_forward_outputs) {
+  auto start = std::chrono::steady_clock::now();
   auto [subset_assignment, num_subsets] = GetCompatibleSubsets(g, num_forward_outputs,  // NOLINT(*)
                                                                IsFusionCompatible,
                                                                IsInputsOnlyCompatible);
   Graph ret = CopyAndReplaceSubgraphs(g, subset_assignment, num_subsets,
                                       CreateSubgraphNode);
+  auto end = std::chrono::steady_clock::now();
+  if (dmlc::GetEnv("MXNET_RTC_VERBOSE", false)) {
+    auto diff = end - start;
+    LOG(INFO) << "Pointwise fusion graph pass took: "
+              << std::chrono::duration<double, std::milli>(diff).count()
+              << "ms.";
+  }
   return ret;
 }
 #endif  // MXNET_USE_CUDA
