@@ -140,9 +140,10 @@ void SliceDimTwoCsrImpl<gpu>(const mxnet::TShape &begin, const mxnet::TShape &en
 template <typename DType>
 struct split_tensor_data {
   static const int max_sections = 128;
+  static const int max_indices = 129;
   size_t num_sections;
   DType* outputs[max_sections];
-  size_t indices[max_sections+1];
+  size_t indices[max_indices];
   DType* inputs[1];
 };
 
