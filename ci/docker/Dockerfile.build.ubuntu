@@ -105,7 +105,8 @@ RUN cd /usr/local/src && \
 
 # Python & cmake
 COPY install/requirements /work/
-RUN python3 -m pip install cmake==3.16.6 && \
+RUN python3 -m pip install --upgrade pip && \
+    python3 -m pip install cmake==3.16.6 && \
     python3 -m pip install -r /work/requirements
 
 ARG USER_ID=0
