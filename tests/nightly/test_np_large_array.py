@@ -1200,6 +1200,7 @@ def test_subtract():
     assert B.grad.shape == (INT_OVERFLOW, 2)
     assert B.grad[0][0] == -1
 
+    
 @use_np
 def test_diag():
     # test diag extraction
@@ -1226,6 +1227,7 @@ def test_diag():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1] == 1
 
+    
 @use_np
 def test_diag_indices_from():
     N = 2**16
@@ -1239,6 +1241,7 @@ def test_diag_indices_from():
     assert inp.grad.shape == inp.shape
     assert inp.grad[0, 0] == 0
 
+    
 @use_np
 def test_diagflat():
     N = 2**15
@@ -1253,6 +1256,7 @@ def test_diagflat():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1, -1] == 1
 
+    
 @use_np
 def test_diagonal():
     inp = np.zeros((2, INT_OVERFLOW+2))
@@ -1277,6 +1281,21 @@ def test_diagonal():
     assert out[0, -1] == 1 and out[1, -1] == 2
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1, -1, 0] == 1 and inp.grad[-1, -1, 1] == 1
+
+
+def test_roll():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.roll(inp, 1)
+        # equivalent but slower
+        # out = np.roll(inp, shift=(1, 1), axis=(0, 1))
+        out.backward()
+    assert out.shape == (2, INT_OVERFLOW)
+    assert out[0, 0] == 1, out[-1, -1] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
 
     
 def test_polyval():
@@ -1908,3 +1927,12 @@ def test_cumsum():
     assert input.grad.shape == input.shape
     assert input.grad[0, 0] == INT_OVERFLOW
     assert input.grad[-1, -1] == 1
+
+
+@use_np
+def test_round():
+    input = np.ones((INT_OVERFLOW, 2))
+    input[INT_OVERFLOW-1][0] = 1.6
+    output = np.round(input)
+    assert output.shape == (INT_OVERFLOW, 2)
+    assert output[-1][0] == 2
