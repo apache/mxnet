@@ -134,7 +134,11 @@ RUN cd /usr/local && \
 # We need to redeclare ARG due to
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG BASE_IMAGE
-RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
+# due to issue https://gitlab.com/nvidia/container-images/cuda/-/issues/92, we
+#  get the cuda version from installed deb package if CUDA_VERSION is not set
+RUN if [ -z "$CUDA_VERSION" ]; then export CUDA_VERSION=$( \
+    dpkg --list cuda-libraries*| grep "cuda-libraries-dev-" | awk '{print $3}' | sed 's/-1$//'); \
+    fi && export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
     apt-get update && \
     if [ ${SHORT_CUDA_VERSION} = 10.0 ]; then \
         TRT_VERSION="7.0.0-1+cuda10.0"; \
@@ -144,6 +148,9 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
         TRT_MAJOR_VERSION=6; \
     elif [ ${SHORT_CUDA_VERSION} = 10.2 ]; then \
         TRT_VERSION="7.0.0-1+cuda10.2"; \
+        TRT_MAJOR_VERSION=7; \
+    elif [ ${SHORT_CUDA_VERSION} = 11.0 ]; then \
+        TRT_VERSION="7.2.0-1+cuda11.0"; \
         TRT_MAJOR_VERSION=7; \
     else \
         echo "ERROR: Cuda ${SHORT_CUDA_VERSION} not yet supported in Dockerfile.build.ubuntu"; \
@@ -155,13 +162,3 @@ RUN export SHORT_CUDA_VERSION=${CUDA_VERSION%.*} && \
                        libnvinfer-plugin-dev=${TRT_VERSION} && \
     rm -rf /var/lib/apt/lists/*
 
-FROM gpu as gpuwithcudaruntimelibs
-# Special case because the CPP-Package requires the CUDA runtime libs
-# and not only stubs (which are provided by the base image)
-# This prevents usage of this image for actual GPU tests with Docker.
-# This is a bug in CPP-Package and should be fixed.
-RUN export DEBIAN_FRONTEND=noninteractive && \
-    apt-get update && \
-    apt install -y  --no-install-recommends \
-        cuda-10-1 && \
-    rm -rf /var/lib/apt/lists/*

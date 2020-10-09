@@ -982,7 +982,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         // InferSType is defined in customized lib.
         // convert attributes to vector of char*
         std::vector<const char*> attr_keys, attr_vals;
-        for (auto kv : attrs.dict) {
+        for (const auto& kv : attrs.dict) {
           attr_keys.push_back(kv.first.c_str());
           attr_vals.push_back(kv.second.c_str());
         }
@@ -1047,7 +1047,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       p->attrs.name = n->attrs.name + "_backward";
       // copy attributes and subgraphs
       p->attrs.dict = n->attrs.dict;
-      for (auto s : n->attrs.subgraphs)
+      for (const auto& s : n->attrs.subgraphs)
         p->attrs.subgraphs.push_back(s);
       // set control dependency and attr parser
       p->control_deps.emplace_back(n);
@@ -1101,8 +1101,8 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
 
       // determine amount of memory needed to store all the input shapes
       size_t buff_size = 0;
-      for (size_t i = 0; i < in_shapes.size(); ++i)
-        buff_size += in_shapes[i].ndim();
+      for (const auto & in_shape : in_shapes)
+        buff_size += in_shape.ndim();
 
       // copy input shapes to raw memory layout
       std::vector<uint32_t> inbuff(buff_size);

@@ -126,23 +126,22 @@ libraries = []
 if variant == 'CPU':
     libraries.append('openblas')
 else:
-    if variant.startswith('CU102'):
+    if variant.startswith('CU110'):
+        libraries.append('CUDA-11.0')
+    elif variant.startswith('CU102'):
         libraries.append('CUDA-10.2')
     elif variant.startswith('CU101'):
         libraries.append('CUDA-10.1')
-    elif variant.startswith('CU100'):
-        libraries.append('CUDA-10.0')
-    elif variant.startswith('CU92'):
-        libraries.append('CUDA-9.2')
 
-if variant != 'NATIVE':
+from mxnet.runtime import Features
+if Features().is_enabled("MKLDNN"):
     libraries.append('MKLDNN')
 
 short_description += ' This version uses {0}.'.format(' and '.join(libraries))
 
 package_data = {'mxnet': [os.path.join('mxnet', os.path.basename(LIB_PATH[0]))],
                 'dmlc_tracker': []}
-if variant != 'NATIVE':
+if Features().is_enabled("MKLDNN"):
     shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mkldnn/include'),
                     os.path.join(CURRENT_DIR, 'mxnet/include/mkldnn'))
 if platform.system() == 'Linux':

@@ -50,6 +50,7 @@ using NodeInput = std::pair<const Node*, uint32_t>;
  */
 std::vector<NodeInput> ConvertInputs(const std::vector<nnvm::NodeEntry>& inputs) {
   std::vector<NodeInput> ret;
+  ret.reserve(inputs.size());
   for (const auto& entry : inputs) {
     ret.emplace_back(entry.node.get(), entry.index);
   }

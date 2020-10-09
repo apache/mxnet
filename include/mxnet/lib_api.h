@@ -594,10 +594,10 @@ class Graph {
   static Graph* fromJson(JsonVal val);
 
   /* \brief convert graph object back to JSON object */
-  JsonVal toJson();
+  JsonVal toJson() const;
 
   /* \brief convert graph object to JSON string */
-  std::string toString();
+  std::string toString() const;
 
   /* \brief visits a node "n" */
   void _dfs_util(Node* n, std::unordered_set<Node*>* to_visit,
@@ -819,7 +819,9 @@ typedef MXReturnValue (*createSelector_t)(const mxnet::ext::Graph *graph,
 typedef MXReturnValue (*reviewSubgraph_t)(const mxnet::ext::Graph *subgraph, int subgraph_id,
                                           bool* accept,
                                           const std::unordered_map<std::string,
-                                                                   std::string>& options);
+                                                                   std::string>& options,
+                                          std::unordered_map<std::string,
+                                                             std::string>* attrs);
 
 /*!
  * \brief An abstract class for subgraph property
