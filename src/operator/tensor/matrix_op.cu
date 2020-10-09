@@ -139,11 +139,10 @@ void SliceDimTwoCsrImpl<gpu>(const mxnet::TShape &begin, const mxnet::TShape &en
 
 template <typename DType>
 struct split_tensor_data {
-  static const int max_sections = 128;
-  static const int max_indices = 129;
+  static const int MaxSections = 128;
   size_t num_sections;
-  DType* outputs[max_sections];
-  size_t indices[max_indices];
+  DType* outputs[MaxSections];
+  size_t indices[MaxSections+1];
   DType* inputs[1];
 };
 
@@ -304,7 +303,7 @@ inline void SplitOpForwardGPU(const nnvm::NodeAttrs& attrs,
       MSHADOW_TYPE_SWITCH(input_data.type_flag_, DType, {
         // set parameters
         split_tensor_data<DType> params{};
-        params.num_sections = std::min<size_t>(remaining_sections, params.max_sections);
+        params.num_sections = std::min<size_t>(remaining_sections, params.MaxSections);
         params.inputs[0] = input_data.dptr<DType>();
         for (size_t i = 0; i < params.num_sections; ++i) {
           params.outputs[i] = outputs[sections_processed + i].dptr<DType>();
