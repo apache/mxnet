@@ -1875,6 +1875,17 @@ def test_cross():
     assert inp.grad[-1, 0] == 5 and inp.grad[-1, 1] == -4 and inp.grad[-1, 2] == -1
 
 
+def test_array_split():
+    inp = np.ones((INT_OVERFLOW, 2))
+    inp[0][0] = 0
+    inp[-1][-1] = 2
+    out = np.array_split(inp, 2)
+    assert out[0].shape ==(HALF_INT_OVERFLOW, 2)
+    assert out[1].shape ==(HALF_INT_OVERFLOW, 2)
+    assert out[0][0][0] == 0
+    assert out[1][-1][-1] == 2
+
+
 @use_np
 def test_std():
     N = 2*20
@@ -1906,3 +1917,4 @@ def test_var():
 
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1, -1] == 0
+
