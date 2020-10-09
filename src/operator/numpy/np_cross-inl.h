@@ -90,8 +90,8 @@ struct NumpyCrossParam : public dmlc::Parameter<NumpyCrossParam> {
 
 struct CrossInAssign {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType *in_ptr, DType *out_ptr,
-                                  const int stride, const int index, const int msize) {
+  MSHADOW_XINLINE static void Map(index_t i, const DType *in_ptr, DType *out_ptr,
+                                  const index_t stride, const index_t index, const size_t msize) {
     if (index < stride && i * stride + index < msize) {
       out_ptr[i] = in_ptr[i * stride + index];
     }
@@ -101,9 +101,9 @@ struct CrossInAssign {
 template<int req>
 struct CrossOutAssign {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType *in_ptr, DType *out_ptr,
-                                  const int positive, const int stride,
-                                  const int index, const int msize) {
+  MSHADOW_XINLINE static void Map(index_t i, const DType *in_ptr, DType *out_ptr,
+                                  const int positive, const index_t stride,
+                                  const index_t index, const size_t msize) {
     if (index < stride && i * stride + index < msize) {
       KERNEL_ASSIGN(out_ptr[i * stride + index], req, positive == 1 ? in_ptr[i] : -in_ptr[i]);
     }
@@ -113,7 +113,7 @@ struct CrossOutAssign {
 template<int req>
 struct ResAssign {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, const DType *in_data, DType *out_data) {
+  MSHADOW_XINLINE static void Map(index_t i, const DType *in_data, DType *out_data) {
     KERNEL_ASSIGN(out_data[i], req, in_data[i]);
   }
 };
@@ -153,7 +153,7 @@ inline mxnet::TShape GetMoveaxisShape(const Tuple<int>& moveaxis_index,
   const int ndim = org_shape.ndim();
   if (ndim == 0) { return mxnet::TShape(0, 0); }
   CHECK_EQ(moveaxis_index.ndim(), org_shape.ndim()) << "moveaxis index dismatch original shape.";
-  std::vector<int> moveaxis_shape_vec(ndim, -1);
+  std::vector<size_t> moveaxis_shape_vec(ndim, -1);
   for (int i = 0; i < ndim; ++i) {
     moveaxis_shape_vec[i] = org_shape[moveaxis_index[i]];
   }
