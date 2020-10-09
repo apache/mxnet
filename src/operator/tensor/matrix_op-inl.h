@@ -2958,8 +2958,8 @@ inline bool SplitOpShapeImpl(const nnvm::NodeAttrs& attrs,
   squeezed_dshape = mxnet::TShape(&squeezed_dshape[0], &squeezed_dshape[squeezed_dshape.ndim()-1]);
   // Assign shape to every output
   for (int i = 0; i < num_outputs; ++i) {
-    int start = indices[i];
-    int end = (i < num_outputs - 1) ? indices[i + 1] : ishape[real_axis];
+    index_t start = indices[i];
+    index_t end = (i < num_outputs - 1) ? indices[i + 1] : ishape[real_axis];
     if (ishape[real_axis] == 0U) {
       end = start;
     } else {

@@ -443,9 +443,9 @@ struct NumpyRollParam : public dmlc::Parameter<NumpyRollParam> {
 template<int req>
 struct RollAxisNone_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
-                                  const int size, const int shift) {
-    int new_index = i - shift < 0 ? i - shift + size : i - shift;
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
+                                  const index_t size, const index_t shift) {
+    index_t new_index = i - shift < 0 ? i - shift + size : i - shift;
     KERNEL_ASSIGN(out_data[i], req, in_data[new_index]);
   }
 };
@@ -453,7 +453,7 @@ struct RollAxisNone_forward {
 template<int req>
 struct RollAxis_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
                                   const size_t* new_index) {
     KERNEL_ASSIGN(out_data[i], req, in_data[new_index[i]]);
   }
@@ -462,7 +462,7 @@ struct RollAxis_forward {
 inline void RollDfs(const std::vector<std::vector<size_t>>& new_axes,
                     const std::vector<size_t>& value,
                     std::vector<size_t>* new_index,
-                    int index, int ndim, int mid) {
+                    index_t index, int ndim, index_t mid) {
   for (int a : new_axes[index]) {
     if (index == ndim - 1) {
       std::vector<size_t>& out = (*new_index);
@@ -487,12 +487,12 @@ void NumpyRollCompute(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(req.size(), 1U);
   if (inputs[0].Size() == 0U) return;
   const NumpyRollParam& param = nnvm::get<NumpyRollParam>(attrs.parsed);
-  const index_t ndim(inputs[0].shape_.ndim());
+  const int ndim(inputs[0].shape_.ndim());
   Stream<xpu> *s = ctx.get_stream<xpu>();
-  std::vector<int> shifts(ndim, 0);
+  std::vector<index_t> shifts(ndim, 0);
   index_t input_size = inputs[0].Size();
   if (!param.axis.has_value()) {
-    int shift = param.shift.value()[0];
+    index_t shift = param.shift.value()[0];
     shift = shift % input_size;
     if (shift < 0) {
       shift += inputs[0].shape_.Size();
@@ -533,7 +533,7 @@ void NumpyRollCompute(const nnvm::NodeAttrs& attrs,
     }
     // keep shift in a legal range
     for (int i = 0; i < ndim; ++i) {
-      int trans_shift = shifts[i] % inputs[0].shape_[i];
+      index_t trans_shift = shifts[i] % inputs[0].shape_[i];
       if (trans_shift < 0) {
         trans_shift = shifts[i] + inputs[0].shape_[i];
       }
@@ -544,15 +544,15 @@ void NumpyRollCompute(const nnvm::NodeAttrs& attrs,
     std::vector<size_t> new_index;
     std::vector<size_t> temp;
     std::vector<size_t> value(ndim, 0);
-    int mid_val = 1;
+    index_t mid_val = 1;
     for (int i = 0; i < ndim; ++i) {
       if (shifts[i] != 0) {
-        for (int j = 0; j < inputs[0].shape_[i]; ++j) {
-          int new_axis = (j + inputs[0].shape_[i] - shifts[i]) % inputs[0].shape_[i];
+        for (index_t j = 0; j < inputs[0].shape_[i]; ++j) {
+          index_t new_axis = (j + inputs[0].shape_[i] - shifts[i]) % inputs[0].shape_[i];
           temp.push_back(new_axis);
         }
       } else {
-        for (int j = 0; j < inputs[0].shape_[i]; ++j) {
+        for (index_t j = 0; j < inputs[0].shape_[i]; ++j) {
           temp.push_back(j);
         }
       }
