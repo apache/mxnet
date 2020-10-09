@@ -1894,3 +1894,4 @@ def test_vstack():
     assert out2[0, -1] == 0 and out2[1, -1] == 1
     assert inp2.grad.shape == inp2.shape
     assert inp2.grad[-1, -1] == 1
+    
