@@ -137,15 +137,15 @@ void SliceDimTwoCsrImpl<gpu>(const mxnet::TShape &begin, const mxnet::TShape &en
   });
 }
 
-constexpr size_t split_max_sections = 128;
 template <typename DType>
 struct split_tensor_data {
+  static const int max_sections = 128;
   size_t num_sections;
-  DType* outputs[split_max_sections];
-  size_t indices[split_max_sections+1];
+  DType* outputs[max_sections];
+  size_t indices[max_sections+1];
   DType* inputs[1];
 };
-    
+
 template <bool split_last_axis, typename LType, typename DType>
 __global__ void split_tensor_kernel(size_t input_size,
                                     const split_tensor_data<DType> params,
@@ -200,7 +200,7 @@ __global__ void split_tensor_kernel(size_t input_size,
                          last_axis_size_aligned;
     size_t input_offset = input_offset_leading + input_offset_split_axis + offset_tail +
                           (blockIdx.x % blocks_last_axis) * blockDim.x;
-    // Binary search to find section for this block 
+    // Binary search to find section for this block
     size_t lower = 0;
     size_t upper = params.num_sections - 1;
     while (lower < upper) {
@@ -235,8 +235,8 @@ int get_load_type_split(size_t last_axis_size,
                         size_t* indices) {
   using namespace mshadow;
   int sections_largest_multiple = 8;
-  if(splitting_last_axis) {
-    for(size_t i = 0; i < n_sections; ++i){
+  if (splitting_last_axis) {
+    for (size_t i = 0; i < n_sections; ++i) {
       size_t size_section = indices[i+1] - indices[i];
       if (size_section * sizeof(DType) % 8)
         sections_largest_multiple = std::min(sections_largest_multiple, 4);
@@ -303,15 +303,15 @@ inline void SplitOpForwardGPU(const nnvm::NodeAttrs& attrs,
       MSHADOW_TYPE_SWITCH(input_data.type_flag_, DType, {
         // set parameters
         split_tensor_data<DType> params{};
-        params.num_sections = std::min<size_t>(remaining_sections, split_max_sections);
+        params.num_sections = std::min<size_t>(remaining_sections, params.max_sections);
         params.inputs[0] = input_data.dptr<DType>();
         for (size_t i = 0; i < params.num_sections; ++i) {
           params.outputs[i] = outputs[sections_processed + i].dptr<DType>();
           params.indices[i] = indices[sections_processed + i];
         }
         params.indices[params.num_sections] = indices[sections_processed + params.num_sections];
-        // load type: we need to check that last axis size is multiple of ltype 
-        // and if splitting_last_axis, all section sizes as well 
+        // load type: we need to check that last axis size is multiple of ltype
+        // and if splitting_last_axis, all section sizes as well
         int ltype = get_load_type_split<DType>(last_axis_size, splitting_last_axis,
                                                params.num_sections, params.indices);
         MXNET_LOAD_TYPE_SWITCH(ltype, LType, {
@@ -340,10 +340,12 @@ inline void SplitOpForwardGPU(const nnvm::NodeAttrs& attrs,
           }
           if (splitting_last_axis) {
             split_tensor_kernel<true, LType><<<n_blocks, block_size, 0, s->stream_>>>
-              (input_data.Size(), params, split_axis_size, tail_size, last_axis_size, blocks_last_axis);
+              (input_data.Size(), params, split_axis_size, tail_size,
+               last_axis_size, blocks_last_axis);
           } else {
             split_tensor_kernel<false, LType><<<n_blocks, block_size, 0, s->stream_>>>
-              (input_data.Size(), params, split_axis_size, tail_size, last_axis_size, blocks_last_axis);
+              (input_data.Size(), params, split_axis_size, tail_size,
+               last_axis_size, blocks_last_axis);
           }
         });
         sections_processed += params.num_sections;
