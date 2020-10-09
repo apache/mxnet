@@ -1202,28 +1202,21 @@ def test_subtract():
 
 
 @use_np
-def test_vstack():
-    inp1 = np.zeros((INT_OVERFLOW, 1))
-    inp2 = np.ones((INT_OVERFLOW, 1))
-    inp1.attach_grad()
-    inp2.attach_grad()
+def test_roll():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = 1
+    inp.attach_grad()
     with mx.autograd.record():
-        out1 = np.vstack((inp1, inp2))
-        out1.backward()
-    assert out1.shape == (DOUBLE_INT_OVERFLOW, 1)
-    assert out1[INT_OVERFLOW-1, 0] == 0 and out1[-1, 0] == 1
-    assert inp1.grad.shape == inp1.shape
-    assert inp1.grad[-1, -1] == 1
-    with mx.autograd.record():
-        out2 = np.vstack((inp1.flatten(), inp2.flatten()))
-        out2.backward()
-    assert out2.shape == (2, INT_OVERFLOW)
-    assert out2[0, -1] == 0 and out2[1, -1] == 1
-    assert inp2.grad.shape == inp2.shape
-    assert inp2.grad[-1, -1] == 1
+        out = np.roll(inp, 1)
+        # equivalent but slower
+        # out = np.roll(inp, shift=(1, 1), axis=(0, 1))
+        out.backward()
+    assert out.shape == (2, INT_OVERFLOW)
+    assert out[0, 0] == 1, out[-1, -1] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
 
-
-@use_np
+    
 def test_polyval():
     poly = np.array([1, 1, 5])
     inp = np.zeros((2, INT_OVERFLOW))
@@ -1852,3 +1845,52 @@ def test_cumsum():
     assert input.grad.shape == input.shape
     assert input.grad[0, 0] == INT_OVERFLOW
     assert input.grad[-1, -1] == 1
+
+
+@use_np
+def test_round():
+    input = np.ones((INT_OVERFLOW, 2))
+    input[INT_OVERFLOW-1][0] = 1.6
+    output = np.round(input)
+    assert output.shape == (INT_OVERFLOW, 2)
+    assert output[-1][0] == 2
+
+
+@use_np
+def test_cross():
+    inp = np.ones((INT_OVERFLOW, 3))
+    inp2 = np.ones((INT_OVERFLOW, 2))
+    inp[-1] = np.array([1, 2, 3])
+    inp2[-1] = np.array([4, 5])
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.cross(inp, inp2)
+        out.backward()
+    assert out.shape == (INT_OVERFLOW, 3)
+    assert out[0, 0] == -1 and out[0, 1] == 1 and out[0, 2] == 0
+    assert out[-1, 0] == -15 and out[-1, 1] == 12 and out[-1, 2] == -3
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == 1 and inp.grad[0, 1] == -1 and inp.grad[0, 2] == 0
+    assert inp.grad[-1, 0] == 5 and inp.grad[-1, 1] == -4 and inp.grad[-1, 2] == -1
+
+
+@use_np
+def test_vstack():
+    inp1 = np.zeros((INT_OVERFLOW, 1))
+    inp2 = np.ones((INT_OVERFLOW, 1))
+    inp1.attach_grad()
+    inp2.attach_grad()
+    with mx.autograd.record():
+        out1 = np.vstack((inp1, inp2))
+        out1.backward()
+    assert out1.shape == (DOUBLE_INT_OVERFLOW, 1)
+    assert out1[INT_OVERFLOW-1, 0] == 0 and out1[-1, 0] == 1
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1, -1] == 1
+    with mx.autograd.record():
+        out2 = np.vstack((inp1.flatten(), inp2.flatten()))
+        out2.backward()
+    assert out2.shape == (2, INT_OVERFLOW)
+    assert out2[0, -1] == 0 and out2[1, -1] == 1
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[-1, -1] == 1
