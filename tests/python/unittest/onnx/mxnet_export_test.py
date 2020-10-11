@@ -23,7 +23,7 @@ import logging
 import tempfile
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '..'))
-from common import setup_module, teardown_module, with_seed
+from common import with_seed
 from mxnet import nd, sym
 from mxnet.test_utils import set_default_context
 from mxnet.gluon import nn

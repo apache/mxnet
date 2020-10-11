@@ -34,7 +34,7 @@ from mxnet import autograd
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied
+from common import with_seed, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied
 from common import run_in_spawned_process
 from test_operator import check_sequence_reverse, allclose_function
 from test_operator import *

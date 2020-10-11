@@ -16,7 +16,7 @@
 # under the License.
 
 from mxnet import np, npx, use_np, autograd, initializer, gluon
-from common import setup_module, teardown_module, with_environment
+from common import with_environment
 import pytest
 
 @use_np
