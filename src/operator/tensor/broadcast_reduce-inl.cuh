@@ -28,7 +28,7 @@
 
 using namespace mshadow::cuda;
 
-template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP, int unroll>
+template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP, int unroll, bool use_index = false>
 __launch_bounds__(nthread_reduce)
 __global__ void reduce_kernel(const int N, const int M, const bool addto,
                               const DType* __restrict big, OType *small,
@@ -60,16 +60,18 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           for (int u=0;u < unroll;u++) {
             idx_big[u] = idx_big0 + mxnet_op::unravel_dot(k + u*by, big_shape, big_stride);
           }
-          DType tmp[unroll];
+          AType tmp[unroll];
           #pragma unroll
           for (int u=0;u < unroll;u++) {
             if (k + u*by < Mend) {
               tmp[u] = OP::Map(big[idx_big[u]]);
+              if (use_index)
+                *(reinterpret_cast<int*>(&tmp[u])) = k + u*by;
             }
           }
           #pragma unroll
           for (int u=0;u < unroll;u++) {
-            if (k + u*by < Mend) Reducer::Reduce(val, AType(tmp[u]), residual);
+            if (k + u*by < Mend) Reducer::Reduce(val, tmp[u], residual);
           }
         }
       }
@@ -225,9 +227,9 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
   for (int idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
     Shape<ndim> coord = mxnet_op::unravel(idx, sshape);
     int j = mxnet_op::ravel(coord, bshape);
-    AType val, residual;
+    AType val, residual, temp = OP::Map(big[j]);
     Reducer::SetInitValue(val, residual);
-    Reducer::Reduce(val, AType(OP::Map(big[j])), residual);
+    Reducer::Reduce(val, temp, residual);
     Reducer::Finalize(val, residual);
     assign(&small[idx], addto, OType(val));
   }
