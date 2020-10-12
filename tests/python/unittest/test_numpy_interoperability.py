@@ -143,6 +143,18 @@ def _add_workload_bincount():
     OpArgMngr.add_workload('bincount', y2, minlength=5)
 
 
+def _add_workload_unpackbits():
+    a = np.array([[2], [7], [23]], dtype=np.uint8)
+    OpArgMngr.add_workload('unpackbits', a)
+    OpArgMngr.add_workload('unpackbits', a, axis=None)
+    OpArgMngr.add_workload('unpackbits', a, axis=0)
+    OpArgMngr.add_workload('unpackbits', a, axis=1)
+    OpArgMngr.add_workload('unpackbits', a, bitorder="little")
+    OpArgMngr.add_workload('unpackbits', a, bitorder="big")
+    OpArgMngr.add_workload('unpackbits', np.array(100, dtype=np.uint8), bitorder="big")
+    OpArgMngr.add_workload('unpackbits', np.array(100, dtype=np.uint8), axis=-1, bitorder="big")
+
+
 def _add_workload_cross():
     shapes = [
         # (a_shape, b_shape, (a_axis, b_axis, c_axis))
@@ -2892,12 +2904,6 @@ def _add_workload_union1d():
     y = np.array([0, 1, 2, 3, 4])
     OpArgMngr.add_workload('union1d', a, b)
     OpArgMngr.add_workload('union1d', x, y)
-
-
-def _add_workload_unpackbits():
-    a = np.array([[2], [7], [23]], dtype=np.uint8)
-    OpArgMngr.add_workload('unpackbits', a)
-    OpArgMngr.add_workload('unpackbits', a, axis=1)
 
 
 def _add_workload_unwrap():

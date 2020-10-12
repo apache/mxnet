@@ -102,7 +102,6 @@ __all__ = [
     'tril_indices_from',
     'trim_zeros',
     'union1d',
-    'unpackbits',
     'unwrap',
     'vander',
 ]
@@ -191,6 +190,5 @@ trapz = onp.trapz
 tril_indices_from = onp.tril_indices_from
 trim_zeros = onp.trim_zeros
 union1d = onp.union1d
-unpackbits = onp.unpackbits
 unwrap = onp.unwrap
 vander = onp.vander
