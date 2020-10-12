@@ -38,8 +38,11 @@ MXNET_OPERATOR_REGISTER_UNARY(_npx_relu)
 
 MXNET_OPERATOR_REGISTER_UNARY(_npx_sigmoid)
 .describe(R"code(Computes sigmoid of x element-wise.
+
 .. math::
+
    y = 1 / (1 + exp(-x))
+
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::sigmoid>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"});

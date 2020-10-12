@@ -1,3 +1,20 @@
+.. Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing,
+   software distributed under the License is distributed on an
+   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+   KIND, either express or implied.  See the License for the
+   specific language governing permissions and limitations
+   under the License.
+
 .. _arrays.ndarray:
 
 ******************************************
@@ -11,7 +28,7 @@ container of items of the same type and size. The number of dimensions
 and items in an array is defined by its :attr:`shape <ndarray.shape>`,
 which is a :class:`tuple` of *N* non-negative integers that specify the
 sizes of each dimension. The type of items in the array is specified by
-a separate :ref:`data-type object (dtype) <arrays.dtypes>`, one of which
+a separate data-type object (dtype), one of which
 is associated with each ndarray.
 
 As with other container objects in Python, the contents of an
@@ -65,19 +82,15 @@ New arrays can be constructed using the routines detailed in
 :class:`ndarray` constructor:
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray
-
-::
 
 
 Indexing arrays
 ===============
 
 Arrays can be indexed using an extended Python slicing syntax,
-``array[selection]``.  Similar syntax is also used for accessing
-fields in a :term:`structured data type`.
+``array[selection]``.
 
 .. seealso:: :ref:`Array Indexing <arrays.indexing>`.
 
@@ -92,8 +105,8 @@ some other object), combined with an indexing scheme that maps *N*
 integers into the location of an item in the block.  The ranges in
 which the indices can vary is specified by the :obj:`shape
 <ndarray.shape>` of the array. How many bytes each item takes and how
-the bytes are interpreted is defined by the :ref:`data-type object
-<arrays.dtypes>` associated with the array.
+the bytes are interpreted is defined by the data-type object
+associated with the array.
 
 .. index:: C-order, Fortran-order, row-major, column-major, stride,
   offset
@@ -116,9 +129,9 @@ corresponds to the offset (in bytes):
 
 from the beginning of the memory block associated with the
 array. Here, :math:`s_k` are integers which specify the :obj:`strides
-<ndarray.strides>` of the array. The :term:`column-major` order (used,
+<ndarray.strides>` of the array. The column-major order (used,
 for example, in the Fortran language and in *Matlab*) and
-:term:`row-major` order (used in C) schemes are just specific kinds of
+row-major order (used in C) schemes are just specific kinds of
 strided scheme, and correspond to memory that can be *addressed* by the strides:
 
 .. math::
@@ -130,7 +143,7 @@ strided scheme, and correspond to memory that can be *addressed* by the strides:
 
 where :math:`d_j` `= self.shape[j]`.
 
-Both the C and Fortran orders are :term:`contiguous`, *i.e.,*
+Both the C and Fortran orders are contiguous, *i.e.,*
 single-segment, memory layouts, in which every part of the
 memory block can be accessed by some combination of the indices.
 
@@ -175,9 +188,9 @@ base offset itself is a multiple of `self.itemsize`. Understanding
     for C-style contiguous arrays or ``self.strides[0] == self.itemsize`` for
     Fortran-style contiguous arrays is true.
 
-Data in new :class:`ndarrays <ndarray>` is in the :term:`row-major`
+Data in new :class:`ndarrays <ndarray>` is in the row-major
 (C) order, unless otherwise specified, but, for example, :ref:`basic
-array slicing <arrays.indexing>` often produces :term:`views <view>`
+array slicing <arrays.indexing>` often produces views
 in a different scheme.
 
 .. seealso: :ref:`Indexing <arrays.ndarray.indexing>`_
@@ -208,48 +221,20 @@ The following attributes contain information about the memory layout
 of the array:
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.shape
    ndarray.ndim
    ndarray.size
 
-::
-
-   ndarray.flags
-   ndarray.strides
-   ndarray.data
-   ndarray.itemsize
-   ndarray.nbytes
-   ndarray.base
-
 Data type
 ---------
-
-.. seealso:: :ref:`Data type objects <arrays.dtypes>`
 
 The data type object associated with the array can be found in the
 :attr:`dtype <ndarray.dtype>` attribute:
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.dtype
-
-Other attributes
-----------------
-
-.. autosummary::
-   :toctree: generated/
-
-   ndarray.T
-
-::
-
-   ndarray.real
-   ndarray.imag
-   ndarray.flat
-   ndarray.ctypes
 
 .. _array.ndarray.methods:
 
@@ -277,26 +262,12 @@ Array conversion
 ----------------
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.item
    ndarray.copy
    ndarray.tolist
    ndarray.astype
 
-::
-
-   ndarray.itemset
-   ndarray.tostring
-   ndarray.tobytes
-   ndarray.tofile
-   ndarray.dump
-   ndarray.dumps
-   ndarray.byteswap
-   ndarray.view
-   ndarray.getfield
-   ndarray.setflags
-   ndarray.fill
 
 Shape manipulation
 ------------------
@@ -305,18 +276,12 @@ For reshape, resize, and transpose, the single tuple argument may be
 replaced with ``n`` integers which will be interpreted as an n-tuple.
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.reshape
    ndarray.transpose
    ndarray.swapaxes
    ndarray.flatten
    ndarray.squeeze
-
-::
-
-   ndarray.resize
-   ndarray.ravel
 
 Item selection and manipulation
 -------------------------------
@@ -327,24 +292,12 @@ array. Any other value for *axis* represents the dimension along which
 the operation should proceed.
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.nonzero
    ndarray.take
    ndarray.repeat
-
-
-::
-
    ndarray.argsort
    ndarray.sort
-   ndarray.put
-   ndarray.choose
-   ndarray.partition
-   ndarray.argpartition
-   ndarray.searchsorted
-   ndarray.compress
-   ndarray.diagonal
 
 Calculation
 -----------
@@ -407,7 +360,6 @@ elements. It can have a different data type in which case casting will
 be performed.
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.max
    ndarray.argmax
@@ -420,14 +372,7 @@ be performed.
    ndarray.cumsum
    ndarray.var
    ndarray.std
-
-::
-
    ndarray.round
-   ndarray.ptp
-   ndarray.conj
-   ndarray.trace
-   ndarray.cumprod
    ndarray.all
    ndarray.any
 
@@ -444,14 +389,11 @@ Each of the arithmetic operations (``+``, ``-``, ``*``, ``/``, ``//``,
 ``%``, ``divmod()``, ``**`` or ``pow()``, ``<<``, ``>>``, ``&``,
 ``^``, ``|``, ``~``) and the comparisons (``==``, ``<``, ``>``,
 ``<=``, ``>=``, ``!=``) is equivalent to the corresponding
-universal function (or :term:`ufunc` for short) in NumPy.  For
-more information, see the section on :ref:`Universal Functions
-<ufuncs>`.
+universal function (or ufunc for short) in NumPy.
 
 Comparison operators:
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.__lt__
    ndarray.__le__
@@ -463,7 +405,6 @@ Comparison operators:
 Truth value of an array (:func:`bool()`):
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.__bool__
 
@@ -478,20 +419,14 @@ Truth value of an array (:func:`bool()`):
 Unary operations:
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.__neg__
-
-::
-
-   ndarray.__pos__
    ndarray.__abs__
    ndarray.__invert__
 
 Arithmetic:
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.__add__
    ndarray.__sub__
@@ -499,13 +434,6 @@ Arithmetic:
    ndarray.__truediv__
    ndarray.__mod__
    ndarray.__pow__
-
-::
-
-   ndarray.__floordiv__
-   ndarray.__divmod__
-   ndarray.__lshift__
-   ndarray.__rshift__
    ndarray.__and__
    ndarray.__or__
    ndarray.__xor__
@@ -528,42 +456,34 @@ Arithmetic:
 Arithmetic, in-place:
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.__iadd__
    ndarray.__isub__
    ndarray.__imul__
    ndarray.__itruediv__
    ndarray.__imod__
-
-::
-
-   ndarray.__ifloordiv__
-   ndarray.__ipow__
-   ndarray.__ilshift__
-   ndarray.__irshift__
    ndarray.__iand__
    ndarray.__ior__
    ndarray.__ixor__
+
 
 .. warning::
 
    In place operations will perform the calculation using the
    precision decided by the data type of the two operands, but will
    silently downcast the result (if necessary) so it can fit back into
-   the array.  Therefore, for mixed precision calculations, ``A {op}=
-   B`` can be different than ``A = A {op} B``. For example, suppose
-   ``a = ones((3,3))``. Then, ``a += 3j`` is different than ``a = a +
-   3j``: while they both perform the same computation, ``a += 3``
+   the array.  Therefore, for mixed precision calculations,
+   ``A {op}= B`` can be different than ``A = A {op} B``. For example, suppose
+   ``a = ones((3,3))``. Then, ``a += 3j`` is different than ``a = a + 3j``:
+   while they both perform the same computation, ``a += 3``
    casts the result to fit back in ``a``, whereas ``a = a + 3j``
    re-binds the name ``a`` to the result.
 
+
 Matrix Multiplication:
 
-.. autosummary::
-   :toctree: generated/
 
-::
+.. autosummary::
 
    ndarray.__matmul__
 
@@ -574,58 +494,36 @@ Special methods
 For standard library functions:
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.__reduce__
    ndarray.__setstate__
 
-::
-
-   ndarray.__copy__
-   ndarray.__deepcopy__
-
 Basic customization:
 
 .. autosummary::
-   :toctree: generated/
 
-::
-
-   ndarray.__array__
    ndarray.__new__
-   ndarray.__array_wrap__
 
 Container customization: (see :ref:`Indexing <arrays.indexing>`)
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.__len__
    ndarray.__getitem__
    ndarray.__setitem__
-
-::
-
-   ndarray.__contains__
 
 Conversion; the operations :func:`int()` and :func:`float()`.
 They work only on arrays that have one element in them
 and return the appropriate scalar.
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.__int__
    ndarray.__float__
 
-::
-
-   ndarray.__complex__
-
 String representations:
 
 .. autosummary::
-   :toctree: generated/
 
    ndarray.__str__
    ndarray.__repr__
