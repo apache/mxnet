@@ -191,15 +191,15 @@ std::tuple<std::vector<int>, int> GetCompatibleSubsets(
             set_mapping[their_set] = my_set;
             first_node_in_set[my_set] = std::min(first_node_in_set[my_set],
                                                  first_node_in_set[their_set]);
-            CheckAndUpdateCombinedExcludedSets(&(combined_excluded_sets[my_set]),
-                                               combined_excluded_sets[their_set],
+            CheckAndUpdateCombinedExcludedSets(&(combined_excluded_sets[their_set]),
+                                               combined_excluded_sets[my_set],
                                                &excluded_sets,
                                                my_set,
                                                first_node_in_set[my_set],
                                                i,
                                                set_assignment,
                                                &set_mapping,
-                                               *(inverse_set_mapping[their_set]),
+                                               *(inverse_set_mapping[my_set]),
                                                &storage);
           }
         }
