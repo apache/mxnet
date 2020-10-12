@@ -487,7 +487,8 @@ void NumpyArgMinMaxReduce(mshadow::Stream<cpu> *s, const TBlob& in_data, const T
   Shape<NDim> rshape, rstride;
   broadcast::diff<NDim>(out_data.shape_.get<NDim>(), in_data.shape_.get<NDim>(), &rshape, &rstride);
   size_t N = out_data.shape_.Size(), M = rshape.Size();
-  broadcast::seq_reduce_compute<Reducer, NDim, OType, DType, OType, mxnet::op::mshadow_op::arg_min_max_map<DType, OType>, true> (
+  broadcast::seq_reduce_compute<Reducer, NDim, OType, DType, OType,
+    mxnet::op::mshadow_op::arg_min_max_map<DType, OType>, true> (
     N, M, false, in_data.dptr<DType>(), static_cast<OType*>(out_data.dptr_),
     in_data.shape_.get<NDim>(), out_data.shape_.get<NDim>(), rshape, rstride);
 }
@@ -540,11 +541,11 @@ void NumpyArgMinMaxCompute(const nnvm::NodeAttrs& attrs,
     typedef mxnet::op::mshadow_op::IndexedNum<IType, DType> OType;
     // request a work space
     size_t workspace_size = sizeof(OType) * out.shape_.Size();
-    Tensor<xpu, 1, char> workspace = 
+    Tensor<xpu, 1, char> workspace =
               ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
     // set up intermediate output
     TBlob intermediate = out;
-    intermediate.dptr_ = (int64_t*)workspace.dptr_;
+    intermediate.dptr_ = reinterpret_cast<int64_t*>workspace.dptr_;
     // reshape the input and intermediate output tensor
     const TBlob in_data = in.reshape(src_shape);
     const TBlob intermediate_out_data = intermediate.reshape(dst_shape);
@@ -554,7 +555,8 @@ void NumpyArgMinMaxCompute(const nnvm::NodeAttrs& attrs,
         s, intermediate_out_data.shape_, req[0], in_data.shape_, sizeof(OType));
       Tensor<xpu, 1, char> workspace =
         ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-      NumpyArgMinMaxReduce<mshadow_op::argmax, NDim, DType, OType>(s, in_data, intermediate_out_data, workspace);
+      NumpyArgMinMaxReduce<mshadow_op::argmax, NDim, DType, OType>(s, in_data,
+        intermediate_out_data, workspace);
     });
     // parse the indices from the intermediate tensor back to the actual output tensor
     using namespace mxnet_op;

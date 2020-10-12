@@ -135,15 +135,15 @@ struct IndexedNum {
 
   IndexedNum& operator+=(const IndexedNum& rhs){
     return *this;
-  }  
+  }
 };
 
-template<typename DType, typename OType> 
-struct arg_min_max_map : public mxnet_op::tunable { 
+template<typename DType, typename OType>
+struct arg_min_max_map : public mxnet_op::tunable {
   MSHADOW_XINLINE static OType Map(DType a) {
     OType temp;
     temp.num = a;
-    return temp; 
+    return temp;
   }
 };
 
