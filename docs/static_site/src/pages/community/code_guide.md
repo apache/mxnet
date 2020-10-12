@@ -68,6 +68,29 @@ Testing
 
 Our tests are maintained in the [/tests](https://github.com/apache/incubator-mxnet/tree/master/tests) folder. We use the following testing tools:
 -   For Python, we use [pytest](https://pytest.org).
+    -   An example of setting up and running tests (tested on MacOS with Python 3.6):
+        -   follow the [build from source](https://mxnet.apache.org/get_started/build_from_source) guide to build MXNet
+        -   install python libraries
+            ```
+            python3 -m pip install opencv-python
+            python3 -m pip install -r ci/docker/install/requirements
+            ```
+        -   install MXNet Python bindings:
+            ```
+            python3 -m pip install -e ./python
+            ```
+        -   run tests in a specific module
+            ```
+            python3 -m pytest tests/python/unittest/test_smoke.py
+            ```
+        -   or run a specific test in a module
+            ```
+            python3 -m pytest tests/python/unittest/test_smoke.py::test_18927
+            ```
+        -   or run all the Python unittests
+            ```
+            python3 -m pytest tests/python/unittest/
+            ```
 -   For C++, we use [gtest](https://github.com/google/googletest).
 
 Our CI pipelines check for a wide variety of configuration on all platforms. To locate and reproduce
