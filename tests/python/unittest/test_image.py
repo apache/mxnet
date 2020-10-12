@@ -20,6 +20,7 @@ import mxnet as mx
 import numpy as np
 import scipy.ndimage
 from mxnet.test_utils import *
+from common import xfail_when_nonstandard_decimal_separator
 import shutil
 import tempfile
 import unittest

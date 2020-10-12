@@ -28,7 +28,7 @@ from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
 import mxnet.numpy as _mx_np
 from common import assertRaises, assert_raises_cudnn_not_satisfied, \
-    xfail_when_nonstandard_decimal_separator, environment)
+    xfail_when_nonstandard_decimal_separator, environment
 import numpy as np
 from numpy.testing import assert_array_equal
 import pytest
