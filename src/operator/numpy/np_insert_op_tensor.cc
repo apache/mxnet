@@ -88,11 +88,11 @@ bool NumpyInsertTensorShape(const nnvm::NodeAttrs& attrs,
     axis += (axis < 0) ? arrshape.ndim() : 0;
   }
 
-  int seq_cnt = objShape.Size();
+  size_t seq_cnt = objShape.Size();
 
   mxnet::TShape newshape(arrshape);
   mxnet::TShape val_newshape(arrshape.ndim(), -1);
-  int numnew = 0;  // amount of new column insert to 'arr' in 'axis'
+  index_t numnew = 0;  // amount of new column insert to 'arr' in 'axis'
   // modify values's ndim to arr's ndim, for broadcast easily later
   // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
   for (int i = valshape.ndim() - 1, j = arrshape.ndim() - 1; i >= 0 || j >= 0; --i, --j) {

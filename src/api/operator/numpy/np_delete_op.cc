@@ -45,9 +45,9 @@ MXNET_REGISTER_API("_npi.delete")
     if (args[1].type_code() == kDLInt ||
         args[1].type_code() == kDLFloat) {
       if (args[1].type_code() == kDLInt) {
-        param.int_ind = args[1].operator int();
+        param.int_ind = args[1].operator int64_t();
       } else if (args[1].type_code() == kDLFloat) {
-        param.int_ind = static_cast<int>(args[1].operator double());
+        param.int_ind = static_cast<int64_t>(args[1].operator double());
       }
       if (args[2].type_code() == kDLInt) {
         param.axis = args[2].operator int();
@@ -66,19 +66,19 @@ MXNET_REGISTER_API("_npi.delete")
   } else {
     num_inputs = 1;
     if (args[1].type_code() == kDLInt) {
-      param.start = args[1].operator int();
+      param.start = args[1].operator int64_t();
     } else if (args[1].type_code() == kDLFloat) {
-      param.start = static_cast<int>(args[1].operator double());
+      param.start = static_cast<int64_t>(args[1].operator double());
     }
     if (args[2].type_code() == kDLInt) {
-      param.stop = args[2].operator int();
+      param.stop = args[2].operator int64_t();
     } else if (args[2].type_code() == kDLFloat) {
-      param.stop = static_cast<int>(args[2].operator double());
+      param.stop = static_cast<int64_t>(args[2].operator double());
     }
     if (args[3].type_code() == kDLInt) {
-      param.step = args[3].operator int();
+      param.step = args[3].operator int64_t();
     } else if (args[3].type_code() == kDLFloat) {
-      param.step = static_cast<int>(args[3].operator double());
+      param.step = static_cast<int64_t>(args[3].operator double());
     }
     if (args[4].type_code() == kDLInt) {
       param.axis = args[4].operator int();
