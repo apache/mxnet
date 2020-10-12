@@ -268,7 +268,7 @@ MSHADOW_XINLINE void binary_broadcast_assign(const index_t idx, const bool addto
 }
 
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType,
-	 typename OP, bool use_index = false>
+         typename OP, bool use_index = false>
 MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const bool addto,
                                        const DType* __restrict big, OType *small,
                                        const Shape<ndim>& bshape, const Shape<ndim>& sshape,
@@ -317,7 +317,7 @@ void BinaryBroadcastComputeImpl(Stream<cpu> *s, const OpReqType req,
 }
 
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP,
-	 bool use_index = false>
+         bool use_index = false>
 void seq_reduce_compute(const size_t N, const size_t M, const bool addto,
                         const DType *big, OType *small, const Shape<ndim> bshape,
                         const Shape<ndim> sshape, const Shape<ndim> rshape,
