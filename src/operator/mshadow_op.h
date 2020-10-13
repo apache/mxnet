@@ -133,7 +133,7 @@ struct IndexedNum {
   IType idx;
   DType num;
 
-  IndexedNum& operator+=(const IndexedNum& rhs){
+  MSHADOW_XINLINE IndexedNum& operator+=(const IndexedNum& rhs){
     return *this;
   }
 };

@@ -26,12 +26,18 @@
 #ifndef MXNET_OPERATOR_NUMPY_NP_BROADCAST_REDUCE_OP_CUH_
 #define MXNET_OPERATOR_NUMPY_NP_BROADCAST_REDUCE_OP_CUH_
 
-#include "../tensor/broadcast_reduce-inl.cuh"
-#include "../tensor/broadcast_reduce-inl.h"
-
 using namespace mshadow::cuda;
 using namespace mshadow;
 using namespace broadcast;
+
+template<typename DType>
+MSHADOW_XINLINE void assign(DType* dst, const bool addto, const DType src) {
+  if (addto) {
+    *dst += src;
+  } else {
+    *dst = src;
+  }
+}
 
 #define KERNEL_UNROLL_SWITCH(do_unroll, unrollAmount, unrollVar, ...) \
   if (do_unroll) {                                                    \
