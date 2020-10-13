@@ -62,9 +62,9 @@ MXNET_REGISTER_API("_npi.laplace")
     param.size = dmlc::nullopt;
   } else {
     if (args[2].type_code() == kDLInt) {
-      param.size = mxnet::Tuple<int>(1, args[2].operator int64_t());
+      param.size = mxnet::Tuple<index_t>(1, args[2].operator int64_t());
     } else {
-      param.size = mxnet::Tuple<int>(args[2].operator ObjectRef());
+      param.size = mxnet::Tuple<index_t>(args[2].operator ObjectRef());
     }
   }
 
@@ -73,7 +73,7 @@ MXNET_REGISTER_API("_npi.laplace")
   } else {
     param.dtype = String2MXNetTypeWithBool(args[3].operator std::string());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyLaplaceParam>(&attrs);
   if (args[4].type_code() != kNull) {

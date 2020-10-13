@@ -20,5 +20,5 @@
 """Recurrent neural network module."""
 
 from .rnn_cell import *
-
+from .conv_rnn_cell import *
 from .rnn_layer import *

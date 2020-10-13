@@ -24,7 +24,7 @@ import numpy as np
 import random
 from mxnet import gluon
 import platform
-from common import setup_module, with_seed, teardown_module
+from common import with_seed
 from mxnet.gluon.data import DataLoader
 import mxnet.ndarray as nd
 from mxnet import context
@@ -52,7 +52,7 @@ def test_array_dataset():
 def prepare_record(tmpdir_factory):
     test_images = tmpdir_factory.mktemp("test_images")
     test_images_tar = test_images.join("test_images.tar.gz")
-    gluon.utils.download("http://data.mxnet.io/data/test_images.tar.gz", str(test_images_tar))
+    gluon.utils.download("https://repo.mxnet.io/gluon/dataset/test/test_images-9cebe48a.tar.gz", str(test_images_tar))
     tarfile.open(test_images_tar).extractall(str(test_images))
     imgs = os.listdir(str(test_images.join("test_images")))
     record = mx.recordio.MXIndexedRecordIO(str(test_images.join("test.idx")), str(test_images.join("test.rec")), 'w')
@@ -612,3 +612,9 @@ def test_batchify_group():
                          [[ 4.,  5.,  6., -1.], [-1., -1., -1., -1.]],
                          [[ 9., 10., -1., -1.], [-1., -1., -1., -1.]]])
     assert mx.test_utils.almost_equal(d[1].asnumpy(), expected)
+
+def test_sampler():
+    interval_sampler = mx.gluon.data.IntervalSampler(10, 3)
+    assert sorted(list(interval_sampler)) == list(range(10))
+    interval_sampler = mx.gluon.data.IntervalSampler(10, 3, rollover=False)
+    assert list(interval_sampler) == [0, 3, 6, 9]

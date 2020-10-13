@@ -71,10 +71,6 @@ from . import rtc
 # Attribute scope to add attributes to symbolic graphs
 from .attribute import AttrScope
 
-from . import torch
-# use mx.th as short for mx.torch
-from . import torch as th
-
 from . import profiler
 from . import log
 
@@ -95,7 +91,9 @@ from . import _deferred_compute
 # checks the __version__ attr of MXNet, which is not set on kvstore server due to the
 # fact that kvstore-server module is imported before the __version__ attr is set.
 # use mx.kv as short for mx.kvstore
+from . import kvstore
 from . import kvstore as kv
+from .kvstore import kvstore_server
 
 # Dynamic library module should be done after ndarray and symbol are initialized
 from . import library

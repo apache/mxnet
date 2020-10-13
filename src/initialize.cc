@@ -23,17 +23,8 @@
  * \brief initialize mxnet library
  */
 #include "initialize.h"
-#include <signal.h>
-#include <dmlc/logging.h>
-#include <mxnet/engine.h>
-#include "./engine/openmp.h"
-#include "./operator/custom/custom-inl.h"
-#if MXNET_USE_OPENCV
-#include <opencv2/opencv.hpp>
-#endif  // MXNET_USE_OPENCV
-#include "common/utils.h"
-#include "engine/openmp.h"
-
+#include <algorithm>
+#include <csignal>
 
 #if defined(_WIN32) || defined(_WIN64) || defined(__WINDOWS__)
 #include <windows.h>
@@ -54,18 +45,28 @@ void win_err(char **err) {
         0, nullptr);
 }
 #else
+#include <cxxabi.h>
 #include <dlfcn.h>
+#if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
+#include <execinfo.h>
 #endif
+#include <cerrno>
+#endif
+
+#include <dmlc/logging.h>
+#include <mxnet/engine.h>
+#include <mxnet/c_api.h>
+#include "./engine/openmp.h"
+#include "./operator/custom/custom-inl.h"
+#if MXNET_USE_OPENCV
+#include <opencv2/opencv.hpp>
+#endif  // MXNET_USE_OPENCV
+#include "common/utils.h"
+#include "engine/openmp.h"
+
+
 
 namespace mxnet {
-
-#if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
-static void SegfaultLogger(int sig) {
-  fprintf(stderr, "\nSegmentation fault: %d\n\n", sig);
-  fprintf(stderr, "%s", dmlc::StackTrace().c_str());
-  abort();
-}
-#endif
 
 // pthread_atfork handlers, delegated to LibraryInitializer members.
 
@@ -93,13 +94,10 @@ LibraryInitializer::LibraryInitializer()
     mp_cv_num_threads_(dmlc::GetEnv("MXNET_MP_OPENCV_NUM_THREADS", 0)) {
   dmlc::InitLogging("mxnet");
   engine::OpenMP::Get();   // force OpenMP initialization
-  install_signal_handlers();
   install_pthread_atfork_handlers();
 }
 
-LibraryInitializer::~LibraryInitializer() {
-  close_open_libs();
-}
+LibraryInitializer::~LibraryInitializer() = default;
 
 bool LibraryInitializer::lib_is_loaded(const std::string& path) const {
   return loaded_libs.count(path) > 0;
@@ -125,7 +123,13 @@ void* LibraryInitializer::lib_load(const char* path) {
       return nullptr;
     }
 #else
-    handle = dlopen(path, RTLD_LAZY);
+    /* library loading flags:
+     *  RTLD_LAZY - Perform lazy binding. Only resolve symbols as the code that
+     *              references them is executed.
+     *  RTLD_LOCAL - Symbols defined in this library are not made available to
+     *              resolve references in subsequently loaded libraries.
+     */
+    handle = dlopen(path, RTLD_LAZY | RTLD_LOCAL);
     if (!handle) {
       LOG(FATAL) << "Error loading library: '" << path << "'\n" << dlerror();
       return nullptr;
@@ -224,15 +228,158 @@ void LibraryInitializer::install_pthread_atfork_handlers() {
 #endif
 }
 
-void LibraryInitializer::install_signal_handlers() {
+
+
+
 #if MXNET_USE_SIGNAL_HANDLER && DMLC_LOG_STACK_TRACE
-  struct sigaction sa;
-  sigaction(SIGSEGV, nullptr, &sa);
-  if (sa.sa_handler == nullptr) {
-      signal(SIGSEGV, SegfaultLogger);
+
+static inline void printStackTrace(FILE *out = stderr,
+    const unsigned int max_frames = 63) {
+
+#if !defined(_WIN32) && !defined(_WIN64) && !defined(__WINDOWS__)
+  // storage array for stack trace address data
+  void* addrlist[max_frames+1];
+
+  // retrieve current stack addresses
+  size_t addrlen = backtrace(addrlist, sizeof(addrlist)/sizeof(void*));
+
+  if (addrlen < 5) {
+    return;
+  } else {
+    addrlen = std::min(addrlen, dmlc::LogStackTraceLevel());
   }
+  fprintf(out, "Stack trace:\n");
+
+
+  // resolve addresses into strings containing "filename(function+address)",
+  // Actually it will be ## program address function + offset
+  // this array must be free()-ed
+  char** symbollist = backtrace_symbols(addrlist, addrlen);
+
+  size_t funcnamesize = 1024;
+  char funcname[1024];
+
+  // iterate over the returned symbol lines. skip the first, it is the
+  // address of this function.
+  for (unsigned int i = 4; i < addrlen ; i++) {
+    char* begin_name   = nullptr;
+    char* begin_offset = nullptr;
+    char* end_offset   = nullptr;
+
+    // find parentheses and +address offset surrounding the mangled name
+#ifdef DARWIN
+    // OSX style stack trace
+    for (char *p = symbollist[i]; *p; ++p) {
+      if (*p == '_' && *(p-1) == ' ') {
+        begin_name = p-1;
+      } else if (*p == '+') {
+        begin_offset = p-1;
+      }
+    }
+
+    if (begin_name && begin_offset && begin_name < begin_offset) {
+      *begin_name++ = '\0';
+      *begin_offset++ = '\0';
+
+      // mangled name is now in [begin_name, begin_offset) and caller
+      // offset in [begin_offset, end_offset). now apply
+      // __cxa_demangle():
+      int status;
+      char* ret = abi::__cxa_demangle(begin_name, &funcname[0],
+                                      &funcnamesize, &status);
+      if (status == 0) {
+        funcname = ret;  // use possibly realloc()-ed string
+        fprintf(out, "  %-30s %-40s %s\n",
+                symbollist[i], funcname, begin_offset);
+      } else {
+        // demangling failed. Output function name as a C function with
+        // no arguments.
+        fprintf(out, "  %-30s %-38s() %s\n",
+                symbollist[i], begin_name, begin_offset);
+      }
+    } else {
+       // couldn't parse the line? print the whole line.
+       fprintf(out, "  %-40s\n", symbollist[i]);
+    }
+#else
+    for (char *p = symbollist[i]; *p; ++p) {
+      if (*p == '(') {
+        begin_name = p;
+      } else if (*p == '+') {
+        begin_offset = p;
+      } else if (*p == ')' && (begin_offset || begin_name)) {
+        end_offset = p;
+      }
+    }
+
+    if (begin_name && end_offset && begin_name < end_offset) {
+      *begin_name++ = '\0';
+      *end_offset++ = '\0';
+      if (begin_offset) {
+        *begin_offset++ = '\0';
+      }
+
+      // mangled name is now in [begin_name, begin_offset) and caller
+      // offset in [begin_offset, end_offset). now apply
+      // __cxa_demangle():
+
+      int status = 0;
+      char* ret = abi::__cxa_demangle(begin_name, funcname,
+                                      &funcnamesize, &status);
+      char* fname = begin_name;
+      if (status == 0) {
+        fname = ret;
+      }
+
+      if (begin_offset) {
+        fprintf(out, "  %-30s ( %-40s  + %-6s) %s\n",
+                symbollist[i], fname, begin_offset, end_offset);
+      } else {
+        fprintf(out, "  %-30s ( %-40s    %-6s) %s\n",
+                symbollist[i], fname, "", end_offset);
+      }
+    } else {
+       // couldn't parse the line? print the whole line.
+       fprintf(out, "  %-40s\n", symbollist[i]);
+    }
+#endif  // !DARWIN - but is posix
+  }
+  free(symbollist);
 #endif
 }
+
+#define SIGNAL_HANDLER(SIGNAL, HANDLER_NAME, IS_FATAL)               \
+std::shared_ptr<void(int)> HANDLER_NAME(                             \
+  signal(SIGNAL, [](int signum) {                                    \
+    if (IS_FATAL) {                                                  \
+      printf("\nFatal Error: %s\n", strsignal(SIGNAL));              \
+      printStackTrace();                                             \
+      signal(signum, SIG_DFL);                                       \
+      raise(signum);                                                 \
+    } else {                                                         \
+      switch (signum) {                                              \
+        case SIGSEGV:                                                \
+          LOG(FATAL) << "InternalError: " << strsignal(SIGNAL);      \
+          break;                                                     \
+        case SIGFPE:                                                 \
+          LOG(FATAL) << "FloatingPointError: " << strsignal(SIGNAL); \
+          break;                                                     \
+        case SIGBUS:                                                 \
+          LOG(FATAL) << "IOError: " << strsignal(SIGNAL);            \
+          break;                                                     \
+        default:                                                     \
+          LOG(FATAL) << "RuntimeError: " << strsignal(SIGNAL);       \
+          break;                                                     \
+      }                                                              \
+    }                                                                \
+  }),                                                                \
+  [](auto f) { signal(SIGNAL, f); });
+
+SIGNAL_HANDLER(SIGSEGV, SIGSEGVHandler, true);
+SIGNAL_HANDLER(SIGFPE, SIGFPEHandler, false);
+SIGNAL_HANDLER(SIGBUS, SIGBUSHandler, false);
+
+#endif
 
 void LibraryInitializer::close_open_libs() {
   for (const auto& l : loaded_libs) {

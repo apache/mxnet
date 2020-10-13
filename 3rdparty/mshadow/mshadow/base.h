@@ -124,6 +124,13 @@ typedef unsigned __int64 uint64_t;
 #endif
 
 /*!
+ * \brief use CUTENSOR support, must ensure that the cutensor include path is correct
+ */
+#ifndef MSHADOW_USE_CUTENSOR
+  #define MSHADOW_USE_CUTENSOR 0
+#endif
+
+/*!
  * \brief use CUSOLVER support
  */
 #ifndef MSHADOW_USE_CUSOLVER
@@ -185,6 +192,10 @@ extern "C" {
 
 #if MSHADOW_USE_CUDNN == 1
   #include <cudnn.h>
+#endif
+
+#if MSHADOW_USE_CUTENSOR == 1
+  #include <cutensor.h>
 #endif
 
 #if MSHADOW_USE_CUSOLVER == 1
@@ -272,7 +283,6 @@ extern "C" {
   }
 
 #include "./half.h"
-#include "./half2.h"
 #include "./bfloat.h"
 #define MSHADOW_HALF_BF_OPERATOR(RTYPE, OP)                                               \
   MSHADOW_XINLINE RTYPE operator OP(mshadow::half::half_t a, mshadow::bfloat::bf16_t b) { \
@@ -385,11 +395,6 @@ struct DataType<half::half_t> {
   typedef float ScaleType;
 #endif
 #endif
-};
-template<>
-struct DataType<half::half2_t> {
-  static const int kFlag = kFloat16;
-  static const int kLanes = 2;
 };
 template<>
 struct DataType<bfloat::bf16_t> {
@@ -1143,48 +1148,6 @@ struct minimum {
     LOG(FATAL) << "Unknown type enum " << type;     \
   }
 #endif
-
-#define MSHADOW_TYPE_SWITCH_WITH_HALF2(type, DType, ...)  \
-  switch (type) {                                         \
-  case mshadow::kFloat32:                                 \
-    {                                                     \
-      typedef float DType;                                \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  case mshadow::kFloat64:                                 \
-    {                                                     \
-      typedef double DType;                               \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  case mshadow::kFloat16:                                 \
-    {                                                     \
-      typedef mshadow::half::half2_t DType;               \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  case mshadow::kUint8:                                   \
-    {                                                     \
-      typedef uint8_t DType;                              \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  case mshadow::kInt32:                                   \
-    {                                                     \
-      typedef int32_t DType;                              \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  case mshadow::kInt64:                                   \
-    {                                                     \
-      typedef int64_t DType;                              \
-      {__VA_ARGS__}                                       \
-    }                                                     \
-    break;                                                \
-  default:                                                \
-    LOG(FATAL) << "Unknown type enum " << type;           \
-  }
 
 #define MSHADOW_SGL_DBL_TYPE_SWITCH(type, DType, ...)  \
   switch (type) {                                      \

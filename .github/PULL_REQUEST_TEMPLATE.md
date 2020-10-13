@@ -3,19 +3,10 @@
 
 ## Checklist ##
 ### Essentials ###
-Please feel free to remove inapplicable items for your PR.
-- [ ] The PR title starts with [MXNET-$JIRA_ID], where $JIRA_ID refers to the relevant [JIRA issue](https://issues.apache.org/jira/projects/MXNET/issues) created (except PRs with tiny changes)
+- [ ] PR's title starts with a category (e.g. [BUGFIX], [MODEL], [TUTORIAL], [FEATURE], [DOC], etc)
 - [ ] Changes are complete (i.e. I finished coding on this PR)
-- [ ] All changes have test coverage:
-- Unit tests are added for small changes to verify correctness (e.g. adding a new operator)
-- Nightly tests are added for complicated/long-running ones (e.g. changing distributed kvstore)
-- Build tests will be added for build configuration changes (e.g. adding a new build option with NCCL)
-- [ ] Code is well-documented: 
-- For user-facing API changes, API doc string has been updated. 
-- For new C++ functions in header files, their functionalities and arguments are documented. 
-- For new examples, README.md is added to explain the what the example does, the source of the dataset, expected performance on test set and reference to the original paper if applicable
-- Check the API doc at https://mxnet-ci-doc.s3-accelerate.dualstack.amazonaws.com/PR-$PR_ID/$BUILD_ID/index.html
-- [ ] To the best of my knowledge, examples are either not affected by this change, or have been fixed to be compatible with this change
+- [ ] All changes have test coverage
+- [ ] Code is well-documented
 
 ### Changes ###
 - [ ] Feature1, tests, (and when applicable, API doc)

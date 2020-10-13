@@ -22,7 +22,7 @@ import numpy as np
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
-from common import setup_module, with_seed, assertRaises, xfail_when_nonstandard_decimal_separator
+from common import with_seed, assertRaises, xfail_when_nonstandard_decimal_separator
 from copy import deepcopy
 import pytest
 
@@ -359,3 +359,43 @@ def test_trainer_allreduce_hybridsequential():
             out = net(mx.nd.ones((1, 1), ctx=ctx))
         out.backward()
     trainer.allreduce_grads()
+
+
+def test_trainer_share_parameters():
+    class Net(gluon.Block):
+        def __init__(self, **kwargs):
+            super(Net, self).__init__(**kwargs)
+            self.dense1 = gluon.nn.Dense(5, in_units=2, use_bias=False)
+            params = self.dense1.collect_params()
+            self.dense2 = gluon.nn.Dense(5, in_units=2,
+                                         use_bias=False).share_parameters(params)
+            self.dense3 = gluon.nn.Dense(5, in_units=5, use_bias=False)
+
+        def forward(self, x):
+            hidden = self.dense1(x) + self.dense2(x)
+            out = self.dense3(hidden)
+            return out
+
+    net = Net()
+    ctxes = [mx.cpu(0), mx.cpu(1)]
+    net.initialize(mx.init.One(), ctx=ctxes)
+    trainer = gluon.Trainer(net.collect_params(), 'sgd', {'learning_rate': 1})
+    data = mx.nd.array([[1, 1], [1, 1]])
+    xs = gluon.utils.split_and_load(data, ctxes)
+    ys = []
+    with mx.autograd.record():
+        for x in xs:
+            y = net(x)
+            ys.append(y)
+    for y in ys:
+        y.backward()
+    trainer.step(1)
+    params = net.collect_params()
+    shared_params = []
+    for param in params.values():
+        p = param.data(mx.cpu(0)).asnumpy()
+        if p.shape[1] == 2:
+            shared_params.append(p)
+
+    assert((shared_params[0] == shared_params[1]).all())
+

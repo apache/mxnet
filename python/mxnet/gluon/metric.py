@@ -373,6 +373,7 @@ class Accuracy(EvalMetric):
     The accuracy score is defined as
 
     .. math::
+
         \\text{accuracy}(y, \\hat{y}) = \\frac{1}{n} \\sum_{i=0}^{n-1}
         \\text{1}(\\hat{y_i} == y_i)
 
@@ -947,6 +948,7 @@ class MCC(EvalMetric):
     MCC of 0 is uncorrelated, 1 is completely correlated, and -1 is negatively correlated.
 
     .. math::
+
         \\text{MCC} = \\frac{ TP \\times TN - FP \\times FN }
         {\\sqrt{ (TP + FP) ( TP + FN ) ( TN + FP ) ( TN + FN ) } }
 
@@ -1039,6 +1041,7 @@ class MAE(EvalMetric):
     The mean absolute error is given by
 
     .. math::
+
         \\frac{\\sum_i^n |y_i - \\hat{y}_i|}{n}
 
     Parameters
@@ -1099,6 +1102,7 @@ class MSE(EvalMetric):
     The mean squared error is given by
 
     .. math::
+
         \\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}
 
     Parameters
@@ -1158,6 +1162,7 @@ class RMSE(MSE):
     The root mean squared error is given by
 
     .. math::
+
         \\sqrt{\\frac{\\sum_i^n (y_i - \\hat{y}_i)^2}{n}}
 
     Parameters
@@ -1200,6 +1205,7 @@ class MeanPairwiseDistance(EvalMetric):
     The mean pairwise distance is given by
 
     .. math::
+
         \\sqrt{\\frac{(\\sum_i^n (y_i - \\hat{y}_i)^p)^\\frac{1}{p}}{n}}
 
     Parameters
@@ -1261,13 +1267,15 @@ class MeanPairwiseDistance(EvalMetric):
 @register
 @use_np
 class MeanCosineSimilarity(EvalMetric):
-    """Computes Mean Cosine Similarity.
+    r"""Computes Mean Cosine Similarity.
 
     The mean cosine similarity is given by
 
     .. math::
+
         cos_sim(label, pred) = \frac{{label}.{pred}}{max(||label||.||pred||, eps)}
-    (calculating on the last dimension of label and pred.)
+
+    Calculation happens on the last dimension of label and pred.
 
     Parameters
     ----------
@@ -1338,6 +1346,7 @@ class CrossEntropy(EvalMetric):
     The cross entropy over a batch of sample size :math:`N` is given by
 
     .. math::
+
        -\\sum_{n=1}^{N}\\sum_{k=1}^{K}t_{nk}\\log (y_{nk}),
 
     where :math:`t_{nk}=1` if and only if sample :math:`n` belongs to class :math:`k`.
@@ -1431,6 +1440,7 @@ class Perplexity(CrossEntropy):
     The perplexity of a model q is defined as
 
     .. math::
+
         b^{\\big(-\\frac{1}{N} \\sum_{i=1}^N \\log_b q(x_i) \\big)}
         = \\exp \\big(-\\frac{1}{N} \\sum_{i=1}^N \\log q(x_i)\\big)
 
@@ -1497,6 +1507,7 @@ class PearsonCorrelation(EvalMetric):
     The pearson correlation is given by
 
     .. math::
+
         \\frac{cov(y, \\hat{y})}{\\sigma{y}\\sigma{\\hat{y}}}
 
     Parameters
@@ -1588,6 +1599,7 @@ class PCC(EvalMetric):
     from a discrete solution to the Pearson correlation coefficient.
 
     .. math::
+
         \\text{PCC} = \\frac {\\sum _{k}\\sum _{l}\\sum _{m}C_{kk}C_{lm}-C_{kl}C_{mk}}
         {{\\sqrt {\\sum _{k}(\\sum _{l}C_{kl})(\\sum _{k'|k'\\neq k}\\sum _{l'}C_{k'l'})}}
          {\\sqrt {\\sum _{k}(\\sum _{l}C_{lk})(\\sum _{k'|k'\\neq k}\\sum _{l'}C_{l'k'})}}}

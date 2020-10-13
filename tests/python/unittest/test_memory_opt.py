@@ -19,7 +19,7 @@
 import mxnet as mx
 import os
 import sys
-from common import setup_module, teardown_module, with_environment
+from common import with_environment
 from mxnet.test_utils import environment
 
 num_hidden = 4096

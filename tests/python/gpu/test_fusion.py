@@ -26,7 +26,7 @@ from mxnet.test_utils import *
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, teardown_module, with_seed
+from common import with_seed
 
 def check_fused_symbol(sym, **kwargs):
     inputs = sym.list_inputs()
@@ -110,6 +110,7 @@ def check_unary_ops():
             'gammaln',
             'erf',
             'negative',
+            'logical_not',
             ]
 
     def announce_check(op_name):
@@ -159,6 +160,9 @@ def check_unary_ops():
     # clip requires a_min, a_max
     announce_check('clip')
     check_fused_symbol(mx.sym.clip(a, a_min=0.3, a_max=0.7), a=arr)
+    check_fused_symbol(mx.sym.clip(a, a_min=-np.inf, a_max=0.7), a=arr)
+    check_fused_symbol(mx.sym.clip(a, a_min=-np.inf, a_max=np.inf), a=arr)
+    check_fused_symbol(mx.sym.clip(a, a_min=0, a_max=np.nan), a=arr)
 
     # smooth_l1 requires a scalar
     announce_check('smooth_l1')

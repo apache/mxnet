@@ -115,6 +115,7 @@ If any input holds int8, then the output will be int8. Otherwise output will be 
 .set_attr<nnvm::FListInputNames>("FListInputNames", [](const NodeAttrs& attrs) {
   const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
   std::vector<std::string> ret;
+  ret.reserve(params.num_args);
   for (int i = 0; i < params.num_args; ++i) {
     ret.push_back(std::string("arg") + std::to_string(i));
   }

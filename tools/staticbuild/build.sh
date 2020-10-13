@@ -50,8 +50,8 @@ export MAKE="make $ADD_MAKE_FLAG"
 
 export CC="gcc"
 export CXX="g++"
-export CFLAGS="-fPIC -mno-avx"
-export CXXFLAGS="-fPIC -mno-avx"
+export CFLAGS="${CFLAGS:+${CFLAGS}} -fPIC -mno-avx"
+export CXXFLAGS="${CXXFLAGS:+${CXXFLAGS}} -fPIC -mno-avx"
 export FC="gfortran"
 export PKG_CONFIG_PATH=$DEPS_PATH/lib/pkgconfig:$DEPS_PATH/lib64/pkgconfig:$DEPS_PATH/lib/x86_64-linux-gnu/pkgconfig:$PKG_CONFIG_PATH
 export CPATH=$DEPS_PATH/include:$CPATH

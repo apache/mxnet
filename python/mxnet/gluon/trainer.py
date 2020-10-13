@@ -56,7 +56,7 @@ class Trainer(object):
         constructor for a list of additional supported arguments.
     kvstore : str or KVStore
         kvstore type for multi-gpu and distributed training. See help on
-        :any:`mxnet.kvstore.create` for more information.
+        :func:`mxnet.kvstore.create` for more information.
     compression_params : dict
         Specifies type of gradient compression and additional arguments depending
         on the type of compression being used. For example, 2bit compression requires a threshold.
@@ -388,25 +388,25 @@ class Trainer(object):
             return
         for i, param in enumerate(self._params):
             if param.grad_req != 'null':
-
+                idx = self._param2idx[param._uuid]
                 grad_list = param.list_grad()
                 # sparse gradients, call push and pull separately
                 if grad_list[0].stype != 'default':
-                    self._kvstore.push(i, grad_list, priority=-i)
+                    self._kvstore.push(idx, grad_list, priority=-i)
                     if param._stype == 'default':
                         if self._update_on_kvstore:
                             pull_list = param.list_data()
                         else:
                             pull_list = param.list_grad()
-                        self._kvstore.pull(i, pull_list, priority=-i,
+                        self._kvstore.pull(idx, pull_list, priority=-i,
                                            ignore_sparse=self._distributed)
                 else:
                     # allreduce dense gradients if not update_on_kvstore,
                     # otherwise push dense gradients, pull dense weights
                     if self._update_on_kvstore:
-                        self._kvstore.pushpull(i, grad_list, out=param.list_data(), priority=-i)
+                        self._kvstore.pushpull(idx, grad_list, out=param.list_data(), priority=-i)
                     else:
-                        self._kvstore.pushpull(i, grad_list, priority=-i)
+                        self._kvstore.pushpull(idx, grad_list, priority=-i)
 
     def update(self, batch_size, ignore_stale_grad=False):
         """Makes one step of parameter update.
@@ -442,6 +442,11 @@ class Trainer(object):
         self._update(ignore_stale_grad)
 
     def _update(self, ignore_stale_grad=False):
+        loss_scaler = getattr(self, '_amp_loss_scaler', None)
+        if loss_scaler is not None:
+            if loss_scaler.has_overflow(self._params):
+                return  # skip on overflow
+
         updates = [[] for _ in self._updaters]
 
         for i, param in enumerate(self._params):

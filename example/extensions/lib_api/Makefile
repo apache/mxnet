@@ -16,7 +16,7 @@
 # under the License.
 
 all:
-	g++ -std=c++11 -shared -fPIC init_lib.cc -o libinit_lib.so -I ../../../include/mxnet
+	g++ -std=c++11 -shared -fPIC init_lib.cc ../../../src/lib_api.cc -o libinit_lib.so -I ../../../include
 
 test:
 	g++ -std=c++11 -O3 -o libtest libtest.cc -ldl -I ../../../include/mxnet

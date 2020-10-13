@@ -110,7 +110,7 @@ def _test_imageiter_last_batch(imageiter_list, assert_data_shape):
 
 
 class TestImage(unittest.TestCase):
-    IMAGES_URL = "http://data.mxnet.io/data/test_images.tar.gz"
+    IMAGES_URL = "https://repo.mxnet.io/gluon/dataset/test/test_images-9cebe48a.tar.gz"
 
     def setUp(self):
         self.IMAGES_DIR = tempfile.mkdtemp()

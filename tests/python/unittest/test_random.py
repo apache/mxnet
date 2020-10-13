@@ -22,7 +22,7 @@ import mxnet as mx
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_almost_equal
 import numpy as np
 import random as rnd
-from common import setup_module, with_seed, retry, random_seed, teardown_module
+from common import with_seed, retry, random_seed
 import scipy.stats as ss
 import unittest
 import pytest
@@ -572,7 +572,7 @@ def test_parallel_random_seed_setting_for_context():
 def test_sample_multinomial(dtype, x):
     x = mx.nd.array(x) / 10.0
     dx = mx.nd.ones_like(x)
-    mx.contrib.autograd.mark_variables([x], [dx])
+    mx.autograd.mark_variables([x], [dx])
     # Adding rtol and increasing samples needed to pass with seed 2951820647
     samples = 10000
     with mx.autograd.record():

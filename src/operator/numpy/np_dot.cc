@@ -101,7 +101,7 @@ inline bool NumpyDotShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(*in_attrs) && shape_is_known(*out_attrs);
 }
 
-NNVM_REGISTER_OP(_np_dot)
+NNVM_REGISTER_OP(_npi_dot)
 .describe(R"doc(Dot product of two arrays. Specifically,
 
 - If both a and b are 1-D arrays, it is inner product of vectors.
@@ -133,11 +133,11 @@ NNVM_REGISTER_OP(_np_dot)
   })
 .set_attr<THasDeterministicOutput>("THasDeterministicOutput", true)
 .set_attr<FCompute>("FCompute<cpu>", NumpyDotForward<cpu>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_np_dot"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_npi_dot"})
 .add_argument("a", "NDArray-or-Symbol", "First input")
 .add_argument("b", "NDArray-or-Symbol", "Second input");
 
-NNVM_REGISTER_OP(_backward_np_dot)
+NNVM_REGISTER_OP(_backward_npi_dot)
 .set_num_inputs(3)
 .set_num_outputs(2)
 .set_attr<nnvm::TIsBackward>("TIsBackward", true)

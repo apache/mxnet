@@ -19,7 +19,7 @@ import mxnet as mx
 import numpy as np
 from mxnet import gluon, autograd
 from mxnet.test_utils import assert_almost_equal, default_context
-from common import setup_module, with_seed, teardown_module, xfail_when_nonstandard_decimal_separator
+from common import with_seed, xfail_when_nonstandard_decimal_separator
 import unittest
 
 

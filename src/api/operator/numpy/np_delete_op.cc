@@ -87,10 +87,11 @@ MXNET_REGISTER_API("_npi.delete")
     }
   }
   std::vector<NDArray*> inputs;
+  inputs.reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyDeleteParam>(&attrs);
   int num_outputs = 0;

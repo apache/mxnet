@@ -25,10 +25,11 @@ from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
 from mxnet import image
 from mxnet.test_utils import *
-from common import assertRaises, setup_module, with_seed, teardown_module, \
+from common import assertRaises, with_seed, \
     xfail_when_nonstandard_decimal_separator
 
 import numpy as np
+import pytest
 
 @with_seed()
 def test_to_tensor():
@@ -194,18 +195,20 @@ def test_crop_resize():
 
 @with_seed()
 def test_flip_left_right():
-    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    flip_in = data_in[:, ::-1, :]
-    data_trans = nd.image.flip_left_right(nd.array(data_in, dtype='uint8'))
-    assert_almost_equal(flip_in, data_trans.asnumpy())
+    for width in range(3, 301, 7):
+        data_in = np.random.uniform(0, 255, (300, width, 3)).astype(dtype=np.uint8)
+        flip_in = data_in[:, ::-1, :]
+        data_trans = nd.image.flip_left_right(nd.array(data_in, dtype='uint8'))
+        assert_almost_equal(flip_in, data_trans.asnumpy())
 
 
 @with_seed()
 def test_flip_top_bottom():
-    data_in = np.random.uniform(0, 255, (300, 300, 3)).astype(dtype=np.uint8)
-    flip_in = data_in[::-1, :, :]
-    data_trans = nd.image.flip_top_bottom(nd.array(data_in, dtype='uint8'))
-    assert_almost_equal(flip_in, data_trans.asnumpy())
+    for height in range(3, 301, 7):
+        data_in = np.random.uniform(0, 255, (height, 300, 3)).astype(dtype=np.uint8)
+        flip_in = data_in[::-1, :, :]
+        data_trans = nd.image.flip_top_bottom(nd.array(data_in, dtype='uint8'))
+        assert_almost_equal(flip_in, data_trans.asnumpy())
 
 
 @with_seed()
@@ -379,17 +382,19 @@ def test_random_rotation():
 def test_random_transforms():
     from mxnet.gluon.data.vision import transforms
 
-    tmp_t = transforms.Compose([transforms.Resize(300), transforms.RandomResizedCrop(224)])
-    transform = transforms.Compose([transforms.RandomApply(tmp_t, 0.5)])
+    counter = 0
+    def transform_fn(x):
+        nonlocal counter
+        counter += 1
+        return x
+    transform = transforms.Compose([transforms.RandomApply(transform_fn, 0.5)])
 
-    img = mx.nd.ones((10, 10, 3), dtype='uint8')
-    iteration = 1000
+    img = mx.np.ones((10, 10, 3), dtype='uint8')
+    iteration = 10000
     num_apply = 0
     for _ in range(iteration):
         out = transform(img)
-        if out.shape[0] == 224:
-            num_apply += 1
-    assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
+    assert counter == pytest.approx(5000, 1e-1)
 
 @xfail_when_nonstandard_decimal_separator
 @with_seed()
@@ -445,4 +450,3 @@ def test_bbox_crop():
     im_out, im_bbox = transform(img, bbox)
     assert im_out.shape == (3, 3, 3)
     assert im_bbox[0][2] == 3
-

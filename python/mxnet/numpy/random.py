@@ -18,13 +18,15 @@
 """Namespace for ops used in imperative programming."""
 
 from ..ndarray import numpy as _mx_nd_np
+from ..random import seed
 
 
 __all__ = ["randint", "uniform", "normal", "choice", "rand", "multinomial", "multivariate_normal",
            "logistic", "gumbel", "f",
            "laplace",
            "shuffle", "randn", "gamma", "beta", "chisquare", "exponential", "lognormal",
-           "weibull", "pareto", "power", "rayleigh"]
+           "weibull", "pareto", "power", "rayleigh",
+           "seed"]
 
 
 def randint(low, high=None, size=None, dtype=None, ctx=None, out=None):
@@ -430,7 +432,7 @@ def multivariate_normal(mean, cov, size=None, check_valid=None, tol=None):
 
     This operator is a little different from the one in official NumPy.
     The official NumPy operator only accepts 1-D ndarray as mean and 2-D ndarray as cov,
-    whereas the operator in DeepNumPy supports batch operation and auto-broadcasting.
+    whereas the operator in MXNet np supports batch operation and auto-broadcasting.
 
     Both `mean` and `cov` may have any number of leading dimensions, which correspond
     to a batch shape. They are not necessarily assumed to have the same batch shape,

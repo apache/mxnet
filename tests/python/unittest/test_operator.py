@@ -29,7 +29,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
-from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
+from common import with_seed, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
 from common import xfail_when_nonstandard_decimal_separator, with_environment
 import pytest
 import os
@@ -498,11 +498,11 @@ def test_relu():
     def frelu(x):
         return np.maximum(x, 0.0)
     def frelu_grad(x):
-        return 1.0 * (x > 0.0)
+        return np.float32(1.0) * (x > np.float32(0.0))
     shape = (3, 4)
     x = mx.symbol.Variable("x")
     y = mx.sym.relu(x)
-    xa = np.random.uniform(low=-1.0,high=1.0,size=shape)
+    xa = np.random.uniform(low=-1.0,high=1.0,size=shape).astype('float32')
     eps = 1e-4
     # Avoid finite difference method inaccuracies due to discontinuous gradient at the origin.
     # Here we replace small problematic inputs with 1.0.  Repro issue with seed 97264195.
@@ -3231,7 +3231,15 @@ def test_correlation():
         unittest_correlation((5,1,4,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
         unittest_correlation((5,1,6,4), kernel_size = 3,max_displacement = 1,stride1 = 2,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
         unittest_correlation((5,1,11,11), kernel_size = 5,max_displacement = 1,stride1 = 1,stride2 = 1,pad_size = 2,is_multiply = False, dtype = dtype)
-
+        
+        with pytest.raises(MXNetError):
+            unittest_correlation((1,3,10,10), kernel_size = 1,max_displacement = 4,stride1 = 0,stride2 = 1,pad_size = 4,is_multiply = False, dtype = dtype)
+        with pytest.raises(MXNetError):
+            unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 0,pad_size = 5,is_multiply = False, dtype = dtype)
+        with pytest.raises(MXNetError):
+            unittest_correlation((5,1,15,15), kernel_size = 1,max_displacement = 5,stride1 = 1,stride2 = 0,pad_size = 5,is_multiply = True, dtype = dtype)
+        with pytest.raises(MXNetError):
+            unittest_correlation((1,3,10,10), kernel_size = 1,max_displacement = 4,stride1 = 0,stride2 = 1,pad_size = 4,is_multiply = True, dtype = dtype)
 
 # Seed set because the test is not robust enough to operate on random data
 @with_seed(1234)
@@ -5798,16 +5806,16 @@ def test_deformable_convolution():
                         weight = np.random.normal(0, 0.001, (num_channel_data, num_channel_data, 3, 3))
                         bias = np.zeros(num_channel_data)
 
-                        im_data_var = mx.symbol.Variable(name="im_data")
-                        offset_data_var = mx.symbol.Variable(name="offset_data")
-                        weight_var = mx.symbol.Variable(name="weight")
-                        bias_var = mx.symbol.Variable(name="bias")
-                        op = mx.sym.contrib.DeformableConvolution(name='test_op', data=im_data_var,
-                                                                  offset=offset_data_var,
-                                                                  weight=weight_var, bias=bias_var,
-                                                                  num_filter=num_channel_data, pad=dilate,
-                                                                  kernel=(3, 3), stride=(1, 1), dilate=dilate,
-                                                                  num_deformable_group=num_deformable_group)
+                        im_data_var = mx.symbol.Variable(name="im_data").as_np_ndarray()
+                        offset_data_var = mx.symbol.Variable(name="offset_data").as_np_ndarray()
+                        weight_var = mx.symbol.Variable(name="weight").as_np_ndarray()
+                        bias_var = mx.symbol.Variable(name="bias").as_np_ndarray()
+                        op = mx.sym.npx.deformable_convolution(name='test_op', data=im_data_var,
+                                                               offset=offset_data_var,
+                                                               weight=weight_var, bias=bias_var,
+                                                               num_filter=num_channel_data, pad=dilate,
+                                                               kernel=(3, 3), stride=(1, 1), dilate=dilate,
+                                                               num_deformable_group=num_deformable_group)
                         if grad_nodes[0] == 'offset_data':
                             # wider tolerance needed for coordinate differential
                             rtol, atol = 1.0, 1e-2
@@ -9337,4 +9345,76 @@ def test_elemwise_sum_for_gradient_accumulation():
         assert stored_grad['write'] == stored_grad['add']
         assert stored_grad['write'] == 2 * nrepeat
 
+@with_seed()
+def test_elementwise_ops_on_misaligned_input():
+    a = mx.nd.array([1,2,3,4], dtype='float16')
+    b = mx.nd.array([1,2,3,4], dtype='float16')
+
+    c = a[1:3]
+    d = b[1:3]
+    # Note: testing just elemwise_add since all elemwise_ops
+    #       share the implementation
+    mx.nd.elemwise_add(c, d, out=c)
+    mx.nd.waitall()
+
+    a = mx.nd.array([1,2,3,4], dtype='float16')
+    b = mx.nd.array([1,2,3,4], dtype='float16')
+
+    c = a[0:3]
+    d = b[0:3]
+    mx.nd.elemwise_add(c, d, out=c)
+    mx.nd.waitall()
+    assert a[3].asscalar() == 4.0
+
+@with_seed()
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
+@pytest.mark.parametrize('lead_dim', [2, 3, 4, 6, 10])
+@pytest.mark.parametrize('both_ways', [False, True])
+def test_broadcast_ops_on_misaligned_input(dtype, lead_dim, both_ways):
+    shape = list(rand_shape_2d()) + [lead_dim]
+    small_shape = [shape[0], 1, lead_dim]
+    if both_ways:
+        # Broadcast in both ways [1, K, L] x [M, 1, L]
+        big_shape = [1, shape[1], lead_dim]
+    else:
+        big_shape = shape
+    size = np.product(shape)
+    small_size = np.product(small_shape)
+    big_size = np.product(big_shape)
+    a = mx.nd.arange(5000)
+    b = mx.nd.arange(5000)
+    e = mx.nd.arange(5000)
+    c = a[1:big_size + 1].reshape(big_shape)
+    d = b[1:small_size + 1].reshape(small_shape)
+    f = e[1:size + 1].reshape(shape)
+    mx.nd.broadcast_add(c, d, out=f)
+    expected = c.asnumpy() + d.asnumpy()
+    mx.nd.waitall()
+    assert_almost_equal(f, expected)
+
+@with_seed()
+@pytest.mark.parametrize('dtype', ['float16', 'float32', 'float64'])
+@pytest.mark.parametrize('lead_dim', [2, 3, 4, 6, 10])
+@pytest.mark.parametrize('both_ways', [False, True])
+def test_broadcast_ops_on_misaligned_input_oneside(dtype, lead_dim, both_ways):
+    shape = list(rand_shape_2d()) + [lead_dim]
+    small_shape = [shape[0], shape[1], 1]
+    if both_ways:
+        # Broadcast in both ways [1, K, L] x [M, 1, 1]
+        big_shape = [1, shape[1], lead_dim]
+    else:
+        big_shape = shape
+    size = np.product(shape)
+    small_size = np.product(small_shape)
+    big_size = np.product(big_shape)
+    a = mx.nd.arange(5000)
+    b = mx.nd.arange(5000)
+    e = mx.nd.arange(5000)
+    c = a[1:big_size + 1].reshape(big_shape)
+    d = b[1:small_size + 1].reshape(small_shape)
+    f = e[1:size + 1].reshape(shape)
+    mx.nd.broadcast_add(c, d, out=f)
+    expected = c.asnumpy() + d.asnumpy()
+    mx.nd.waitall()
+    assert_almost_equal(f, expected)
 

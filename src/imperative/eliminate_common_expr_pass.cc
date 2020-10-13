@@ -50,6 +50,7 @@ using NodeInput = std::pair<const Node*, uint32_t>;
  */
 std::vector<NodeInput> ConvertInputs(const std::vector<nnvm::NodeEntry>& inputs) {
   std::vector<NodeInput> ret;
+  ret.reserve(inputs.size());
   for (const auto& entry : inputs) {
     ret.emplace_back(entry.node.get(), entry.index);
   }
@@ -184,10 +185,10 @@ void EliminateCommonNodes(Graph* g,
   // insert Copy nodes as appropriate
   const Op* copy_op = Op::Get("_copy");
   nnvm::NodeEntryMap<size_t> unique_outputs;
-  for (size_t i = 0; i < g->outputs.size(); ++i) {
-    auto kv = unique_outputs.find(g->outputs[i]);
+  for (auto & output : g->outputs) {
+    auto kv = unique_outputs.find(output);
     if (kv == unique_outputs.end()) {
-      unique_outputs.emplace(g->outputs[i], 0);
+      unique_outputs.emplace(output, 0);
     } else {
       ObjectPtr copy_node = Node::Create();
       std::ostringstream os;
@@ -196,7 +197,7 @@ void EliminateCommonNodes(Graph* g,
       copy_node->attrs.op = copy_op;
       copy_node->attrs.name = os.str();
       copy_node->inputs.emplace_back(kv->first);
-      g->outputs[i] = nnvm::NodeEntry{copy_node, 0, 0};
+      output = nnvm::NodeEntry{copy_node, 0, 0};
     }
   }
 }

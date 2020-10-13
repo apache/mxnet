@@ -19,7 +19,7 @@ import mxnet as mx
 import numpy as np
 import scipy.ndimage
 from mxnet.test_utils import *
-from common import assertRaises, with_seed, setup_module, teardown_module
+from common import assertRaises, with_seed
 import shutil
 import tempfile
 import unittest
@@ -51,7 +51,7 @@ def _generate_objects():
 
 
 class TestImage(unittest.TestCase):
-    IMAGES_URL = "http://data.mxnet.io/data/test_images.tar.gz"
+    IMAGES_URL = "https://repo.mxnet.io/gluon/dataset/test/test_images-9cebe48a.tar.gz"
 
     def setUp(self):
         self.IMAGES_DIR = tempfile.mkdtemp()
@@ -146,3 +146,4 @@ class TestImage(unittest.TestCase):
             max_attempts=50)
         for batch in det_iter:
             pass
+        mx.nd.waitall()

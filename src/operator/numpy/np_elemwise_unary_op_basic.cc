@@ -38,13 +38,16 @@ MXNET_OPERATOR_REGISTER_UNARY(_npx_relu)
 
 MXNET_OPERATOR_REGISTER_UNARY(_npx_sigmoid)
 .describe(R"code(Computes sigmoid of x element-wise.
+
 .. math::
+
    y = 1 / (1 + exp(-x))
+
 )code" ADD_FILELINE)
 .set_attr<FCompute>("FCompute<cpu>", UnaryOp::Compute<cpu, mshadow_op::sigmoid>)
 .set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseOut{"_backward_sigmoid"});
 
-NNVM_REGISTER_OP(_np_copy)
+NNVM_REGISTER_OP(_npi_copy)
 .describe(R"code(Return an array copy of the given object.)code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -228,7 +231,7 @@ The sign function returns -1 if x < 0, 0 if x==0, 1 if x > 0.
 Example::
    sign([-2, 0, 3]) = [-1, 0, 1]
 )code" ADD_FILELINE)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseIn{"_backward_sign"});
+.set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes);
 
 // rint
 MXNET_OPERATOR_REGISTER_NUMPY_MIXED_TYPE_UNARY(_npi_rint, "x", mshadow_op::rint)

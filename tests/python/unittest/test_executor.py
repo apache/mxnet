@@ -17,7 +17,7 @@
 
 import numpy as np
 import mxnet as mx
-from common import setup_module, with_seed, teardown_module
+from common import with_seed
 from mxnet.test_utils import assert_almost_equal, environment
 
 

@@ -185,11 +185,11 @@ def dumps(reset=False, format='table', sort_by='total', ascending=False):
             "Invalid value provided for ascending: {0}. Support: False, True".format(ascending)
     assert  reset in reset_to_int.keys(),\
             "Invalid value provided for reset: {0}. Support: False, True".format(reset)
-    check_call(_LIB.MXAggregateProfileStatsPrintEx(ctypes.byref(debug_str),
-                                                   reset_to_int[reset],
-                                                   format_to_int[format],
-                                                   sort_by_to_int[sort_by],
-                                                   asc_to_int[ascending]))
+    check_call(_LIB.MXAggregateProfileStatsPrint(ctypes.byref(debug_str),
+                                                 reset_to_int[reset],
+                                                 format_to_int[format],
+                                                 sort_by_to_int[sort_by],
+                                                 asc_to_int[ascending]))
     return py_str(debug_str.value)
 
 
@@ -504,7 +504,7 @@ class Marker(object):
 
 
 @contextlib.contextmanager
-def scope(name='<unk>:', append_mode=False):
+def scope(name='<unk>:', append_mode=True):
     """Assign the profiler scope for the GPU memory profiler.
 
     It is implicitly invoked when the Gluon API is used.
@@ -516,7 +516,9 @@ def scope(name='<unk>:', append_mode=False):
 
     """
     name = name + ":" if not name.endswith(":") else name
-    token = _current_scope.set(_current_scope.get() + name if append_mode else name)
+    if append_mode and _current_scope.get() != "<unk>:":
+        name = _current_scope.get() + name
+    token = _current_scope.set(name)
     # Invoke the C API to propagate the profiler scope information to the
     # C++ backend.
     check_call(_LIB.MXSetProfilerScope(c_str(name)))

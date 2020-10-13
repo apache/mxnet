@@ -30,7 +30,7 @@ import pytest
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, run_in_spawned_process
+from common import with_seed, assert_raises_cudnn_not_satisfied, run_in_spawned_process
 from test_gluon import *
 from test_loss import *
 from test_numpy_loss import *
@@ -93,9 +93,9 @@ def test_lstmp():
     weights = {k: rand_ndarray(v) for k, v in shapes.items()}
     lstm_layer = gluon.rnn.LSTM(hidden_size, projection_size=projection_size,
                                 input_size=input_size)
-    lstm_cell = gluon.contrib.rnn.LSTMPCell(hidden_size=hidden_size,
-                                            projection_size=projection_size,
-                                            input_size=input_size)
+    lstm_cell = gluon.rnn.LSTMPCell(hidden_size=hidden_size,
+                                    projection_size=projection_size,
+                                    input_size=input_size)
     lstm_layer.initialize(ctx=ctx)
     lstm_cell.initialize(ctx=ctx)
     layer_params = lstm_layer.collect_params()
@@ -351,9 +351,9 @@ def test_global_norm_clip_multi_device():
 def _check_batchnorm_result(input, num_devices=1, cuda=False):
     from mxnet.gluon.utils import split_and_load
     def _find_bn(module):
-        if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+        if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.nn.SyncBatchNorm)):
             return module
-        elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+        elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.nn.SyncBatchNorm)):
             return module.module
 
         raise RuntimeError('BN not found')
@@ -376,7 +376,7 @@ def _check_batchnorm_result(input, num_devices=1, cuda=False):
 
     nch = input.shape[1]
     bn1 = mx.gluon.nn.BatchNorm(in_channels=nch)
-    bn2 = mx.gluon.contrib.nn.SyncBatchNorm(in_channels=nch, num_devices=num_devices)
+    bn2 = mx.gluon.nn.SyncBatchNorm(in_channels=nch, num_devices=num_devices)
 
     bn1.initialize(ctx=ctx_list[0])
     bn2.initialize(ctx=ctx_list)
@@ -646,4 +646,32 @@ def test_gemms_true_fp16():
     rtol = 1e-2
     assert_almost_equal(ref_results.asnumpy(), results_trueFP16.asnumpy(),
                         atol=atol, rtol=rtol)
+
+@with_seed()
+def test_cudnn_dropout_reproducibility():
+    d = nn.Dropout(0.5)
+    d.initialize()
+    a = mx.random.uniform(shape=(100,100))
+    b = a.copy()
+    a.attach_grad()
+    b.attach_grad()
+    seed = np.random.randint(0, 100000)
+    N = 10
+    mx.random.seed(seed)
+    out1 = []
+    for _ in range(N):
+        with autograd.record():
+            out1.append(d(a))
+    out1[0].backward()
+    mx.random.seed(seed)
+    out2 = []
+    for _ in range(N):
+        with autograd.record():
+            out2.append(d(b))
+    out2[0].backward()
+
+    for first, second in zip(out1, out2):
+        assert_almost_equal(first, second)
+
+    assert_almost_equal(a.grad, b.grad)
 

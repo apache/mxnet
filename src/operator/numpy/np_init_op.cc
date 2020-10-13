@@ -161,6 +161,7 @@ NNVM_REGISTER_OP(_npi_atleast_##N##d)                                      \
 [](const nnvm::NodeAttrs& attrs) {                                        \
   int num_args = nnvm::get<AtleastNDParam>(attrs.parsed).num_args;        \
   std::vector<std::string> ret;                                           \
+  ret.reserve(num_args);                                                  \
   for (int i = 0; i < num_args; i++) {                                    \
     ret.push_back(std::string("ary") + std::to_string(i));                \
   }                                                                       \

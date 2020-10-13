@@ -690,6 +690,7 @@ NNVM_REGISTER_OP(_npi_concatenate)
   [](const NodeAttrs& attrs) {
     const NumpyConcatenateParam& params = nnvm::get<NumpyConcatenateParam>(attrs.parsed);
     std::vector<std::string> ret;
+    ret.reserve(params.num_args);
     for (int i = 0; i < params.num_args; ++i) {
       ret.push_back(std::string("data") + std::to_string(i));
     }
@@ -878,6 +879,7 @@ NNVM_REGISTER_OP(_npi_column_stack)
   [](const nnvm::NodeAttrs& attrs) {
     int num_args = dmlc::get<NumpyColumnStackParam>(attrs.parsed).num_args;
     std::vector<std::string> ret;
+    ret.reserve(num_args);
     for (int i = 0; i < num_args; ++i) {
       ret.push_back(std::string("arg") + std::to_string(i));
     }
@@ -1020,6 +1022,7 @@ NNVM_REGISTER_OP(_npi_vstack)
   [](const nnvm::NodeAttrs& attrs) {
     int num_args = dmlc::get<NumpyVstackParam>(attrs.parsed).num_args;
     std::vector<std::string> ret;
+    ret.reserve(num_args);
     for (int i = 0; i < num_args; i++) {
       ret.push_back(std::string("arg") + std::to_string(i));
     }
@@ -1055,6 +1058,7 @@ NNVM_REGISTER_OP(_npi_hstack)
   [](const NodeAttrs& attrs) {
     const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
     std::vector<std::string> ret;
+    ret.reserve(params.num_args);
     for (int i = 0; i < params.num_args; ++i) {
       ret.push_back(std::string("data") + std::to_string(i));
     }
@@ -1093,6 +1097,7 @@ NNVM_REGISTER_OP(_npi_dstack)
   [](const NodeAttrs& attrs) {
     const ConcatParam& params = nnvm::get<ConcatParam>(attrs.parsed);
     std::vector<std::string> ret;
+    ret.reserve(params.num_args);
     for (int i = 0; i < params.num_args; ++i) {
       ret.push_back(std::string("data") + std::to_string(i));
     }
@@ -1391,7 +1396,7 @@ bool NumpyMoveaxisShape(const nnvm::NodeAttrs& attrs,
   return shape_is_known(ret);
 }
 
-NNVM_REGISTER_OP(_np_moveaxis)
+NNVM_REGISTER_OP(_npi_moveaxis)
 .describe(R"code(Move axes of an array to new positions.
 Other axes remain in their original order.
 )code" ADD_FILELINE)
@@ -1407,7 +1412,7 @@ Other axes remain in their original order.
      os1 << param.source;
      std::ostringstream os2;
      os2 << param.destination;
-     return MakeNonlossGradNode("_np_moveaxis", n, ograds, {},
+     return MakeNonlossGradNode("_npi_moveaxis", n, ograds, {},
                                 {{"source", os2.str()}, {"destination", os1.str()}});
 })
 .set_attr<FCompute>("FCompute<cpu>", NumpyMoveaxisCompute<cpu>)

@@ -57,10 +57,11 @@ MXNET_REGISTER_API("_npi.insert_scalar")
   } else {
     param.axis = args[3].operator int();
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyInsertParam>(&attrs);
   std::vector<NDArray*> inputs;
+  inputs.reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
@@ -105,10 +106,11 @@ MXNET_REGISTER_API("_npi.insert_slice")
   } else {
     param.axis = args[5].operator int();
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyInsertParam>(&attrs);
   std::vector<NDArray*> inputs;
+  inputs.reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }
@@ -141,10 +143,11 @@ MXNET_REGISTER_API("_npi.insert_tensor")
   } else {
     param.axis = args[3].operator int();
   }
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::NumpyInsertParam>(&attrs);
   std::vector<NDArray*> inputs;
+  inputs.reserve(num_inputs);
   for (int i = 0; i < num_inputs; ++i) {
     inputs.push_back(args[i].operator mxnet::NDArray*());
   }

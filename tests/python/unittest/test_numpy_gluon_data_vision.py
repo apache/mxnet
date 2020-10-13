@@ -26,12 +26,12 @@ import numpy as _np
 import mxnet as mx
 from mxnet import gluon, autograd, np, npx
 from mxnet.test_utils import use_np, assert_almost_equal, check_gluon_hybridize_consistency, same, check_symbolic_backward
-from common import assertRaises, setup_module, with_seed, teardown_module, \
-    xfail_when_nonstandard_decimal_separator
+from common import assertRaises, with_seed, xfail_when_nonstandard_decimal_separator
 import random
 from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
 from mxnet import image
+import pytest
 
 @with_seed()
 @use_np
@@ -341,16 +341,19 @@ def test_random_transforms():
     from mxnet.gluon.data.vision import transforms
 
     tmp_t = transforms.Compose([transforms.Resize(300), transforms.RandomResizedCrop(224)])
-    transform = transforms.Compose([transforms.RandomApply(tmp_t, 0.5)])
+    counter = 0
+    def transform_fn(x):
+        nonlocal counter
+        counter += 1
+        return x
+    transform = transforms.Compose([transforms.RandomApply(transform_fn, 0.5)])
 
     img = mx.np.ones((10, 10, 3), dtype='uint8')
-    iteration = 1000
+    iteration = 10000
     num_apply = 0
     for _ in range(iteration):
         out = transform(img)
-        if out.shape[0] == 224:
-            num_apply += 1
-    assert_almost_equal(num_apply/float(iteration), 0.5, 0.1)
+    assert counter == pytest.approx(5000, 1e-1)
 
 @xfail_when_nonstandard_decimal_separator
 @with_seed()

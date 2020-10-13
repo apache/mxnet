@@ -87,6 +87,18 @@ def network_structure_7():
     ret = ret1 + ret2
     return (ret, ['data'], [(1,)])
 
+def network_structure_8():
+    # in this graph, two nodes in the subgraph consume the same input, and
+    # and two nodes outside the subgraph consume a single output from the subgraph
+    data = mx.sym.Variable('data', shape=(1,))
+    sin1 = mx.sym.sin(data)
+    sin2 = mx.sym.sin(data)
+    plus = sin1 + sin2
+    ret1 = mx.sym.cos(plus)
+    ret2 = mx.sym.cos(plus)
+    ret = ret1 - ret2
+    return (ret, ['data'], [(1,)])
+
 def get_graphs():
     return [
             (network_structure_1(), ['Convolution']),
@@ -104,7 +116,8 @@ def get_graphs():
             (network_structure_6(), [mx.sym.sin.__name__]),
             (network_structure_6(), [mx.sym.Convolution.__name__]),
             (network_structure_6(), [mx.sym.sin.__name__, mx.sym.Convolution.__name__]),
-            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus'])
+            (network_structure_7(), ['sin', 'elemwise_add', '_plus', '_Plus']),
+            (network_structure_8(), ['sin', 'elemwise_add'])
             ]
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
@@ -158,7 +171,6 @@ def test_subgraph_exe2(sym, subgraph_backend, op_names):
         exe.forward()
         return exe
     sym, _, _ = sym
-
     original_exec = get_executor(sym)
     with environment('MXNET_SUBGRAPH_BACKEND', subgraph_backend):
         check_call(_LIB.MXSetSubgraphPropertyOpNames(c_str(subgraph_backend), mx_uint(len(op_names)),
@@ -372,6 +384,37 @@ def test_subgraph_exe8(sym, subgraph_backend, op_names):
 
 @pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
 @pytest.mark.parametrize('sym,op_names', get_graphs())
+def test_subgraph_exe9(sym, subgraph_backend, op_names):
+    """Call optimize_for to infer shapes, types and dtypes followed by graph partitioning and
+    dedup subgraph, then bind and compare results of the partitioned sym and the original sym."""
+    # bind
+    sym, _, _ = sym
+    arg_shapes, _, aux_shapes = sym.infer_shape()
+    arg_names = sym.list_arguments()
+    aux_names = sym.list_auxiliary_states()
+    arg_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(arg_names,arg_shapes)}
+    aux_dict = {name:mx.nd.random.uniform(shape=shape) for name,shape in zip(aux_names,aux_shapes)}
+    exe1 = sym._bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe1.forward()
+
+    # infer shape/type before partition before bind
+    check_call(_LIB.MXSetSubgraphPropertyOpNamesV2(c_str(subgraph_backend), mx_uint(len(op_names)),
+                                                   c_str_array(op_names)))
+    part_sym = sym.optimize_for(subgraph_backend, arg_dict, aux_dict, dedup_subgraph=True)
+    check_call(_LIB.MXRemoveSubgraphPropertyOpNamesV2(c_str(subgraph_backend)))
+
+    exe2 = part_sym._bind(ctx=mx.current_context(), args=arg_dict, aux_states=aux_dict, grad_req='null')
+    exe2.forward()
+
+    # compare outputs
+    outputs1 = exe1.outputs
+    outputs2 = exe2.outputs
+    assert len(outputs1) == len(outputs2)
+    for i in range(len(outputs1)):
+        assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
+        
+@pytest.mark.parametrize('subgraph_backend', ['default', 'default_v2'])
+@pytest.mark.parametrize('sym,op_names', get_graphs())
 def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir):
     """Call hybridize() to partition the graph, and then compare results of the partitioned
     sym and the original sym. Here do an inference before hybridizing with the subgraph_backend
@@ -407,7 +450,7 @@ def test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir):
 # Test Gluon HybridBlocks for graph partitioning a network created by HybridSequential.
 @pytest.mark.serial
 def test_subgraph_backend_gluon_ext1(tmpdir):
-    def get_net():
+    def get_net():  
         net = nn.HybridSequential()  # Here we use the class HybridSequential.
         net.add(nn.Dense(256, activation='relu'),
                 nn.Dense(128, activation='relu'),
@@ -476,3 +519,24 @@ def test_subgraph_backend_gluon_ext2(tmpdir):
     for i in range(len(outputs1)):
         assert_almost_equal((outputs1[i] - outputs2[i]).abs().sum().asnumpy(), np.zeros(shape=(1,)))
 
+
+if __name__ == "__main__":
+    import datetime
+    tmpdir = datetime.datetime.now().strftime('mylogfile_%H_%M_%S_%f_%d_%m_%Y.log')
+    os.mkdir(tmpdir)
+    subgraph_backends = ['default', 'default_v2']
+    graphs = get_graphs()
+    for subgraph_backend in subgraph_backends:
+        for sym,op_names in graphs:
+            test_subgraph_exe1(sym, subgraph_backend, op_names)
+            test_subgraph_exe2(sym, subgraph_backend, op_names)
+            test_subgraph_exe3(sym, subgraph_backend, op_names)
+            test_subgraph_exe4(sym, subgraph_backend, op_names)
+            test_subgraph_exe5(sym, subgraph_backend, op_names)
+            test_subgraph_exe6(sym, subgraph_backend, op_names)
+            test_subgraph_exe7(sym, subgraph_backend, op_names)
+            test_subgraph_exe8(sym, subgraph_backend, op_names)
+            test_subgraph_exe9(sym, subgraph_backend, op_names)
+            test_subgraph_backend_gluon(sym, subgraph_backend, op_names, tmpdir)
+            test_subgraph_backend_gluon_ext1(tmpdir)
+            test_subgraph_backend_gluon_ext2(tmpdir)

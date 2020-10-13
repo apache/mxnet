@@ -22,12 +22,12 @@ import mxnet as mx
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.base import py_str, MXNetError
-from mxnet.test_utils import assert_almost_equal, default_context
+from mxnet.test_utils import assert_almost_equal, default_context, assert_allclose
 from mxnet.util import is_np_array
 from mxnet.ndarray.ndarray import _STORAGE_TYPE_STR_TO_ID
 from mxnet.test_utils import use_np
 import mxnet.numpy as _mx_np
-from common import (setup_module, with_seed, assertRaises, teardown_module,
+from common import (with_seed, assertRaises,
                     assert_raises_cudnn_not_satisfied, xfail_when_nonstandard_decimal_separator, environment)
 import numpy as np
 from numpy.testing import assert_array_equal
@@ -192,11 +192,11 @@ def test_parameter_str():
 
     net = Net()
     lines = str(net.collect_params()).splitlines()
-    
+
     assert 'dense0.weight' in lines[0]
     assert '(10, 5)' in lines[0]
     assert 'float32' in lines[0]
-    
+
 
 @with_seed()
 def test_collect_parameters():
@@ -259,7 +259,8 @@ def test_hybrid_sequential_unique_internals():
 
 
 @with_seed()
-def test_symbol_block(tmpdir):
+@pytest.mark.parametrize('compute_before_cast', [True, False])
+def test_symbol_block(tmpdir, compute_before_cast):
     model = nn.HybridSequential()
     model.add(nn.Dense(128, activation='tanh'))
     model.add(nn.Dropout(0.5))
@@ -309,10 +310,14 @@ def test_symbol_block(tmpdir):
     ctx = mx.cpu(0)
 
     net_fp32 = mx.gluon.model_zoo.vision.resnet34_v2(pretrained=True, ctx=ctx, root=tmp)
+    if compute_before_cast:
+        # Compute before casting to catch bugs where symbol dtype isn't casted correctly GH-18843
+        net_fp32.initialize()
+        net_fp32(mx.nd.zeros((1,3,224,224), ctx=ctx))
     net_fp32.cast('float64')
     net_fp32.hybridize()
     data = mx.nd.zeros((1,3,224,224), dtype='float64', ctx=ctx)
-    net_fp32.forward(data)
+    net_fp32(data)
     sym_file, params_file = net_fp32.export(tmpfile, 0)
 
     # 2.a Load the saved model and verify if all the params are loaded correctly.
@@ -709,9 +714,9 @@ def test_sync_batchnorm():
         from mxnet.gluon.utils import split_and_load
 
         def _find_bn(module):
-            if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+            if isinstance(module, (mx.gluon.nn.BatchNorm, mx.gluon.nn.SyncBatchNorm)):
                 return module
-            elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.contrib.nn.SyncBatchNorm)):
+            elif isinstance(module.module, (mx.gluon.nn.BatchNorm, mx.gluon.nn.SyncBatchNorm)):
                 return module.module
 
             raise RuntimeError('BN not found')
@@ -734,7 +739,7 @@ def test_sync_batchnorm():
 
         nch = input.shape[1] if input.ndim > 1 else 1
         bn1 = mx.gluon.nn.BatchNorm(in_channels=nch)
-        bn2 = mx.gluon.contrib.nn.SyncBatchNorm(
+        bn2 = mx.gluon.nn.SyncBatchNorm(
             in_channels=nch, num_devices=num_devices)
 
         bn1.initialize(ctx=ctx_list[0])
@@ -1119,23 +1124,26 @@ def test_embedding():
     check_embedding_large_input(False)
 
 @with_seed()
-def test_export():
+def test_export(tmpdir):
+    tmpfile = os.path.join(str(tmpdir), 'gluon')
     ctx = mx.context.current_context()
     model = gluon.model_zoo.vision.resnet18_v1(
-        ctx=ctx, pretrained=True)
+        ctx=ctx, pretrained=False)
+    model.initialize()
     model.hybridize()
     data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out = model(data)
 
-    symbol_filename, params_filename = model.export('gluon')
-    assert symbol_filename == 'gluon-symbol.json'
-    assert params_filename == 'gluon-0000.params'
+    symbol_filename, params_filename = model.export(tmpfile)
+    assert symbol_filename == tmpfile+'-symbol.json'
+    assert params_filename == tmpfile+'-0000.params'
 
 @with_seed()
 def test_import():
     ctx = mx.context.current_context()
     net1 = gluon.model_zoo.vision.resnet18_v1(
-        ctx=ctx, pretrained=True)
+        ctx=ctx, pretrained=False)
+    net1.initialize()
     net1.hybridize()
     data = mx.nd.random.normal(shape=(1, 3, 32, 32))
     out1 = net1(data)
@@ -1440,7 +1448,9 @@ def test_req():
 
 @with_seed()
 def test_save_load(tmpdir):
-    net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=True, root=str(tmpdir))
+    net = mx.gluon.model_zoo.vision.get_resnet(1, 18, pretrained=False, root=str(tmpdir))
+    net.initialize()
+    net(mx.nd.ones((1,3,224,224)))
     net.save_parameters(os.path.join(str(tmpdir), 'test_save_load.params'))
 
     net = mx.gluon.model_zoo.vision.get_resnet(1, 18)
@@ -1522,8 +1532,10 @@ def test_symbol_block_save_load(tmpdir):
             backbone.initialize()
             backbone.hybridize()
             backbone(mx.nd.random.normal(shape=(1, 3, 32, 32)))
-            sym_file, params_file = backbone.export(tmpfile)
-            self.backbone = gluon.SymbolBlock.imports(sym_file, 'data', params_file)
+            sym, params = backbone.export(None)
+            data = mx.sym.var('data')
+            self.backbone = gluon.SymbolBlock(sym, data)
+            self.backbone.load_dict(params)
             self.body = nn.Conv2D(3, 1)
 
         def hybrid_forward(self, F, x):
@@ -1598,17 +1610,19 @@ def test_zero_grad():
                     _test_grad_reset(ctx, dtype=type, sparse=sparse, embeddingType=embType)
 
 
-def check_hybrid_static_memory(**kwargs):
+@with_seed()
+@pytest.mark.parametrize('static_alloc', [False, True])
+@pytest.mark.parametrize('static_shape', [False, True])
+def test_hybrid_static_memory(static_alloc, static_shape):
+    if static_shape and not static_alloc:
+        pytest.skip()
     x = mx.nd.random.uniform(shape=(2, 3, 32, 32))
     x.attach_grad()
 
-    net1 = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
-    net2 = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
-    net2.hybridize(**kwargs)
-    net1(x)
-    net2(x)
+    net = gluon.model_zoo.vision.get_resnet(
+        1, 18, pretrained=False, ctx=mx.context.current_context())
+    net.initialize()
+    net(x)
 
     def test(net, x):
         with mx.autograd.record():
@@ -1619,23 +1633,25 @@ def check_hybrid_static_memory(**kwargs):
 
         return y, grads
 
-    y1, grads1 = test(net1, x)
-    y2, grads2 = test(net2, x)
+    y1, grads1 = test(net, x)
+    net.hybridize(static_alloc=static_alloc, static_shape=static_shape)
+    y2, grads2 = test(net, x)
 
     assert_almost_equal(y1.asnumpy(), y2.asnumpy(), rtol=1e-3, atol=1e-5)
     for key in grads1:
         assert_almost_equal(grads1[key].asnumpy(), grads2[key].asnumpy(), rtol=1e-3, atol=1e-4)
 
-@with_seed()
-def test_hybrid_static_memory():
-    check_hybrid_static_memory()
-    check_hybrid_static_memory(static_alloc=True)
-    check_hybrid_static_memory(static_alloc=True, static_shape=True)
 
-def check_hybrid_static_memory_switching(**kwargs):
+@with_seed()
+@pytest.mark.parametrize('static_alloc', [False, True])
+@pytest.mark.parametrize('static_shape', [False, True])
+def test_hybrid_static_memory_switching(static_alloc, static_shape):
+    if static_shape and not static_alloc:
+        pytest.skip()
     net = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
-    net.hybridize(**kwargs)
+        1, 18, pretrained=False, ctx=mx.context.current_context())
+    net.initialize()
+    net.hybridize(static_alloc=static_alloc, static_shape=static_shape)
 
     x = mx.nd.random.uniform(shape=(4, 3, 32, 32))
     net(x)
@@ -1648,12 +1664,6 @@ def check_hybrid_static_memory_switching(**kwargs):
         y = net(x)
         y.backward()
     mx.nd.waitall()
-
-@with_seed()
-def test_hybrid_static_memory_switching():
-    check_hybrid_static_memory_switching()
-    check_hybrid_static_memory_switching(static_alloc=True)
-    check_hybrid_static_memory_switching(static_alloc=True, static_shape=True)
 
 @with_seed()
 def test_hook():
@@ -1734,7 +1744,7 @@ def test_op_hook_output_names():
     model.add(mx.gluon.nn.AvgPool1D())
     model.initialize()
     model.hybridize()
-    check_name(model, ['hybridsequential_avgpool1d0_fwd_data', 'hybridsequential_avgpool1d0_fwd_output'], 
+    check_name(model, ['hybridsequential_avgpool1d0_fwd_data', 'hybridsequential_avgpool1d0_fwd_output'],
                expected_opr_names=["Pooling"], monitor_all=True)
 
     # stack two layers and test
@@ -1850,7 +1860,8 @@ def test_sparse_hybrid_block():
 
 def test_hybrid_static_memory_recording():
     net = gluon.model_zoo.vision.get_resnet(
-        1, 18, pretrained=True, ctx=mx.context.current_context())
+        1, 18, pretrained=False, ctx=mx.context.current_context())
+    net.initialize()
     net.hybridize(static_alloc=True)
 
     x = mx.nd.random.uniform(shape=(1, 3, 32, 32))
@@ -2057,8 +2068,7 @@ def test_concat():
                      kernel,
                      **kwargs):
             super(Net, self).__init__(**kwargs)
-            from mxnet.gluon.contrib.nn import HybridConcurrent
-            self.concat = HybridConcurrent(axis=check_dim)
+            self.concat = nn.HybridConcatenate(axis=check_dim)
             for i in range(input_num):
                 self.concat.add(gluon.nn.Conv2D(chn_num, (kernel, kernel)))
 
@@ -3082,3 +3092,181 @@ def test_no_memory_leak_in_gluon():
             self.net = mx.gluon.nn.Dense(10, in_units=10)
     net = MyNet()
     net.initialize()
+
+def test_DeformableConvolution():
+    """test of the deformable convolution layer with possible combinations of arguments,
+    currently this layer only supports gpu
+    """
+    try:
+        ctx = mx.gpu()
+        _ = mx.nd.array([0], ctx=ctx)
+    except mx.base.MXNetError:
+        pytest.skip("deformable_convolution only supports GPU")
+    net = nn.HybridSequential()
+    net.add(
+        nn.DeformableConvolution(10, kernel_size=(3, 3), strides=1, padding=0),
+        nn.DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                                  offset_use_bias=False, use_bias=False),
+        nn.DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                                  offset_use_bias=False),
+        nn.DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                                  use_bias=False),
+        nn.DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False, use_bias=False),
+        nn.DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False),
+        nn.DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False),
+        nn.DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
+    )
+
+    net.initialize(force_reinit=True, ctx=ctx)
+    net.hybridize()
+
+    x = mx.nd.random.uniform(shape=(8, 5, 30, 31), ctx=ctx)
+    with mx.autograd.record():
+        y = net(x)
+        y.backward()
+
+@with_seed()
+def test_ModulatedDeformableConvolution():
+    """test of the deformable convolution layer with possible combinations of arguments,
+    currently this layer only supports gpu
+    """
+    net = nn.HybridSequential()
+    net.add(
+        nn.DeformableConvolution(10, kernel_size=(3, 3), strides=1, padding=0),
+        nn.DeformableConvolution(10, kernel_size=(1, 1), strides=1, padding=0),
+        nn.DeformableConvolution(10, kernel_size=(5, 5), strides=1, padding=0),
+        nn.DeformableConvolution(10, kernel_size=(3, 5), strides=1, padding=0),
+        nn.DeformableConvolution(10, kernel_size=(5, 1), strides=1, padding=0, num_deformable_group=2),
+        nn.DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                                 offset_use_bias=False, use_bias=False),
+        nn.DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                                 offset_use_bias=False),
+        nn.DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, activation='relu',
+                                 use_bias=False),
+        nn.DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False, use_bias=False),
+        nn.DeformableConvolution(10, kernel_size=(3, 2), strides=1, padding=0, offset_use_bias=False),
+        nn.DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False),
+        nn.DeformableConvolution(12, kernel_size=(3, 2), strides=1, padding=0, use_bias=False, num_deformable_group=4),
+    )
+
+    ctx = default_context()
+    net.initialize(force_reinit=True, ctx=ctx)
+    net.hybridize()
+
+    x = mx.nd.random.uniform(shape=(8, 5, 30, 31), ctx=ctx)
+    with mx.autograd.record():
+        y = net(x)
+
+def test_concatenate():
+    model = nn.HybridConcatenate(axis=1)
+    model.add(nn.Dense(128, activation='tanh', in_units=10))
+    model.add(nn.Dense(64, activation='tanh', in_units=10))
+    model.add(nn.Dense(32, in_units=10))
+    model2 = nn.Concatenate(axis=1)
+    model2.add(nn.Dense(128, activation='tanh', in_units=10))
+    model2.add(nn.Dense(64, activation='tanh', in_units=10))
+    model2.add(nn.Dense(32, in_units=10))
+
+    # symbol
+    x = mx.sym.var('data')
+    y = model(x)
+    assert len(y.list_arguments()) == 7
+
+    # ndarray
+    model.initialize(mx.init.Xavier(magnitude=2.24))
+    model2.initialize(mx.init.Xavier(magnitude=2.24))
+    x = model(mx.nd.zeros((32, 10)))
+    x2 = model2(mx.nd.zeros((32, 10)))
+    assert x.shape == (32, 224)
+    assert x2.shape == (32, 224)
+    x.wait_to_read()
+    x2.wait_to_read()
+
+@with_seed()
+def test_identity():
+    model = nn.Identity()
+    x = mx.nd.random.uniform(shape=(128, 33, 64))
+    assert_almost_equal(model(x), x)
+
+def test_pixelshuffle1d():
+    nchan = 2
+    up_x = 2
+    nx = 3
+    shape_before = (1, nchan * up_x, nx)
+    shape_after = (1, nchan, nx * up_x)
+    layer = nn.PixelShuffle1D(up_x)
+    x = mx.nd.arange(np.prod(shape_before)).reshape(shape_before)
+    y = layer(x)
+    assert y.shape == shape_after
+    assert_allclose(
+        y,
+        [[[0, 3, 1, 4, 2, 5],
+          [6, 9, 7, 10, 8, 11]]]
+    )
+
+def test_pixelshuffle2d():
+    nchan = 2
+    up_x = 2
+    up_y = 3
+    nx = 2
+    ny = 3
+    shape_before = (1, nchan * up_x * up_y, nx, ny)
+    shape_after = (1, nchan, nx * up_x, ny * up_y)
+    layer = nn.PixelShuffle2D((up_x, up_y))
+    x = mx.nd.arange(np.prod(shape_before)).reshape(shape_before)
+    y = layer(x)
+    assert y.shape == shape_after
+    # - Channels are reshaped to form 2x3 blocks
+    # - Within each block, the increment is `nx * ny` when increasing the column
+    #   index by 1
+    # - Increasing the block index adds an offset of 1
+    # - Increasing the channel index adds an offset of `nx * up_x * ny * up_y`
+    assert_allclose(
+        y,
+        [[[[ 0,  6, 12,  1,  7, 13,  2,  8, 14],
+           [18, 24, 30, 19, 25, 31, 20, 26, 32],
+           [ 3,  9, 15,  4, 10, 16,  5, 11, 17],
+           [21, 27, 33, 22, 28, 34, 23, 29, 35]],
+
+          [[36, 42, 48, 37, 43, 49, 38, 44, 50],
+           [54, 60, 66, 55, 61, 67, 56, 62, 68],
+           [39, 45, 51, 40, 46, 52, 41, 47, 53],
+           [57, 63, 69, 58, 64, 70, 59, 65, 71]]]]
+    )
+
+def test_pixelshuffle3d():
+    nchan = 1
+    up_x = 2
+    up_y = 1
+    up_z = 2
+    nx = 2
+    ny = 3
+    nz = 4
+    shape_before = (1, nchan * up_x * up_y * up_z, nx, ny, nz)
+    shape_after = (1, nchan, nx * up_x, ny * up_y, nz * up_z)
+    layer = nn.PixelShuffle3D((up_x, up_y, up_z))
+    x = mx.nd.arange(np.prod(shape_before)).reshape(shape_before)
+    y = layer(x)
+    assert y.shape == shape_after
+    # - Channels are reshaped to form 2x1x2 blocks
+    # - Within each block, the increment is `nx * ny * nz` when increasing the
+    #   column index by 1, e.g. the block [[[ 0, 24]], [[48, 72]]]
+    # - Increasing the block index adds an offset of 1
+    assert_allclose(
+        y,
+        [[[[[ 0, 24,  1, 25,  2, 26,  3, 27],
+            [ 4, 28,  5, 29,  6, 30,  7, 31],
+            [ 8, 32,  9, 33, 10, 34, 11, 35]],
+
+           [[48, 72, 49, 73, 50, 74, 51, 75],
+            [52, 76, 53, 77, 54, 78, 55, 79],
+            [56, 80, 57, 81, 58, 82, 59, 83]],
+
+           [[12, 36, 13, 37, 14, 38, 15, 39],
+            [16, 40, 17, 41, 18, 42, 19, 43],
+            [20, 44, 21, 45, 22, 46, 23, 47]],
+
+           [[60, 84, 61, 85, 62, 86, 63, 87],
+            [64, 88, 65, 89, 66, 90, 67, 91],
+            [68, 92, 69, 93, 70, 94, 71, 95]]]]]
+    )
