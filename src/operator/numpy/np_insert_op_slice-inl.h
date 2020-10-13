@@ -173,7 +173,8 @@ void NumpyInsertSliceCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 1, index_t> order(order_ptr, Shape1(indices_len), s);
     int num_bits = 8 * sizeof(int64_t);
     Kernel<SliceToIndices, xpu>::Launch(s, indices_len, indices_ptr, start, step);
-    Kernel<range_fwd, xpu>::Launch(s, indices_len, index_t{1}, index_t{0}, index_t{1}, kWriteTo, order_ptr);
+    Kernel<range_fwd, xpu>::Launch(s, indices_len, index_t{1}, index_t{0}, index_t{1},
+                                   kWriteTo, order_ptr);
     mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, &sorted_indices);
     Kernel<IndicesModify, xpu>::Launch(s, indices_len, indices_ptr, order_ptr);
 
