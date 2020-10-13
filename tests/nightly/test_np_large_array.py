@@ -1886,3 +1886,16 @@ def test_array_split():
     assert out[0][0][0] == 0
     assert out[1][-1][-1] == 2
 
+
+@use_np
+def test_rollaxis():
+    inp = np.zeros((1, 1, 2, INT_OVERFLOW, 1))
+    inp[-1, -1, -1, -1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.rollaxis(inp, 3)
+        out.backward()
+    assert out.shape == (INT_OVERFLOW, 1, 1, 2, 1)
+    assert out[-1, -1, -1, -1, -1] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1, -1, -1, -1] == 1
