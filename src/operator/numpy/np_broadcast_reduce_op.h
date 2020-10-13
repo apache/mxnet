@@ -545,7 +545,7 @@ void NumpyArgMinMaxCompute(const nnvm::NodeAttrs& attrs,
               ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
     // set up intermediate output
     TBlob intermediate = out;
-    intermediate.dptr_ = reinterpret_cast<int64_t*>workspace.dptr_;
+    intermediate.dptr_ = reinterpret_cast<int64_t*>(workspace.dptr_);
     // reshape the input and intermediate output tensor
     const TBlob in_data = in.reshape(src_shape);
     const TBlob intermediate_out_data = intermediate.reshape(dst_shape);
