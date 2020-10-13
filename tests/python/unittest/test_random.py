@@ -22,7 +22,7 @@ import mxnet as mx
 from mxnet.test_utils import verify_generator, gen_buckets_probs_with_ppf, assert_almost_equal
 import numpy as np
 import random as rnd
-from common import setup_module, with_seed, retry, random_seed, teardown_module
+from common import with_seed, retry, random_seed
 import scipy.stats as ss
 import unittest
 import pytest

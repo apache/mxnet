@@ -20,6 +20,7 @@ gluon.contrib
 
 This document lists the contrib APIs in Gluon:
 
+.. currentmodule:: mxnet.gluon.contrib
 
 .. autosummary::
     :nosignatures:

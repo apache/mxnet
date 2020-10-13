@@ -21,7 +21,7 @@ import mxnet as mx
 import numpy as np
 import random
 import string
-from common import setup_module, with_seed, teardown_module
+from common import with_seed
 
 @with_seed()
 def test_recordio(tmpdir):

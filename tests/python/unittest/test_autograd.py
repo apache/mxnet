@@ -21,7 +21,7 @@ from mxnet.ndarray import zeros_like
 from mxnet.autograd import *
 from mxnet.test_utils import *
 
-from common import setup_module, with_seed, teardown_module, xfail_when_nonstandard_decimal_separator
+from common import with_seed, xfail_when_nonstandard_decimal_separator
 from mxnet.test_utils import environment
 
 import pytest

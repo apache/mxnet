@@ -20,7 +20,7 @@ import pickle as pkl
 from mxnet.ndarray import NDArray
 import mxnet as mx
 from mxnet.test_utils import *
-from common import setup_module, with_seed, random_seed, teardown_module
+from common import with_seed, random_seed
 from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
