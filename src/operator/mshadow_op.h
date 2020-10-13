@@ -132,7 +132,7 @@ template <typename IType, typename DType>
 struct IndexedNum {
   IType idx;
   DType num;
-
+  
   MSHADOW_XINLINE IndexedNum& operator+=(const IndexedNum& rhs){
     return *this;
   }
@@ -1572,12 +1572,18 @@ struct argmax {
   /*! \brief combine the results of two reducers */
   template<typename DType>
   MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
-    Reduce(dst_val, src_val);
+    if (dst_val.num < src_val.num) {
+      dst_val.num = src_val.num;
+      dst_val.idx = src_val.idx;
+    }
   }
   /*! \brief combine the results of two reducers */
   template<typename DType>
   MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
-    Reduce(dst_val, src_val);
+    if (dst_val.num < src_val.num) {
+      dst_val.num = src_val.num;
+      dst_val.idx = src_val.idx;
+    }
   }
   /*! \brief finalize reduction */
   template<typename DType>
