@@ -34,5 +34,3 @@ Comparison Guides
    :maxdepth: 1
 
    pytorch
-
-.. disqus::

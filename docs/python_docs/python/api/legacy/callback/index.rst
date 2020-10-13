@@ -16,7 +16,7 @@
    under the License.
 
 mxnet.callback
-===============
+==============
 
 .. automodule:: mxnet.callback
     :members:

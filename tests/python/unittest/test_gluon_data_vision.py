@@ -25,7 +25,7 @@ from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms
 from mxnet import image
 from mxnet.test_utils import *
-from common import assertRaises, setup_module, with_seed, teardown_module, \
+from common import assertRaises, with_seed, \
     xfail_when_nonstandard_decimal_separator
 
 import numpy as np

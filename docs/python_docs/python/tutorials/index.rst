@@ -16,7 +16,7 @@
    under the License.
 
 Python Tutorials
-=====
+================
 
 Getting started
 ---------------
@@ -138,7 +138,6 @@ Deployment
 
 Customization
 -------------
-.. container:: cards
 
 Coming Soon (CustomOps and Custom Operators)
 
