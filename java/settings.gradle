@@ -4,9 +4,9 @@ pluginManagement {
         mavenCentral()
         maven { url 'https://oss.sonatype.org/content/repositories/snapshots/' }
         gradlePluginPortal()
-   }
+    }
 }
 
 rootProject.name = 'mxnet'
 
-gradle.rootProject { ext.javacppVersion = '1.5.4' }
+gradle.rootProject { ext.javacppVersion = '1.5.5-SNAPSHOT' }

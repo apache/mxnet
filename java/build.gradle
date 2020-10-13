@@ -1,6 +1,8 @@
 plugins {
     id 'java-library'
-    id 'org.bytedeco.gradle-javacpp-build' version '1.5.4'
+    id 'org.bytedeco.gradle-javacpp-build' version '1.5.5-SNAPSHOT'
+    id 'maven-publish'
+    id 'signing'
 }
 
 group = 'org.apache'
@@ -14,7 +16,11 @@ repositories {
 
 dependencies {
     api "org.bytedeco:javacpp:$javacppVersion"
-    api "org.bytedeco:javacpp:$javacppVersion:$javacppPlatform"
+    javacppPlatform "org.bytedeco:javacpp-platform:$javacppVersion"
+    javacppPlatform "org.apache:mxnet:$version:linux-x86_64"
+    javacppPlatform "org.apache:mxnet:$version:macosx-x86_64"
+    javacppPlatform "org.apache:mxnet:$version:windows-x86_64"
+    testRuntimeOnly "org.bytedeco:javacpp:$javacppVersion:$javacppPlatform"
     testImplementation 'junit:junit:4.12'
 }
 
@@ -34,4 +40,98 @@ javacppBuildParser {
 
 javacppBuildCompiler {
     copyLibs = true
+}
+
+jar {
+    manifest {
+        attributes 'Class-Path': configurations.runtimeClasspath.collect { it.getName() }.join(' ')
+    }
+}
+
+javadoc {
+    failOnError = false
+    options.links = ['http://bytedeco.org/javacpp/apidocs']
+}
+
+//doesn't work with Gradle 5.x
+//java {
+//    withJavadocJar()
+//    withSourcesJar()
+//}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+task sourcesJar(type: Jar, dependsOn: classes) {
+    classifier = 'sources'
+    from sourceSets.main.allSource
+}
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
+}
+
+def pomClosure = {
+    name = 'Apache MXNet Java'
+    delegate.description = 'Apache MXNet Java package and language binding'
+    url = 'https://mxnet.apache.org/'
+    licenses {
+        license {
+            name = 'Apache License, Version 2.0'
+            url = 'http://www.apache.org/licenses/LICENSE-2.0'
+            distribution = 'repo'
+        }
+    }
+    developers {
+        developer {
+            name = 'Contributors'
+            email = 'dev@mxnet.apache.org'
+            organization = 'Apache MXNet'
+            organizationUrl = 'https://mxnet.apache.org/'
+        }
+    }
+    scm {
+        url = 'https://github.com/apache/incubator-mxnet'
+        connection = 'scm:git:git://github.com/apache/incubator-mxnet.git'
+        developerConnection = 'scm:git:ssh://git@github.com/apache/incubator-mxnet.git'
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from components.java
+            artifacts = [jar, javacppJar, javadocJar, sourcesJar] + javacppBuild.existingArtifacts(configurations.javacppPlatform)
+            pom pomClosure
+        }
+        mavenJavacppPlatform(MavenPublication) {
+            groupId project.group
+            artifactId project.name + "-platform"
+            artifacts = [javacppPlatformJar, javacppPlatformJavadocJar, javacppPlatformSourcesJar]
+            pom pomClosure
+            pom.withXml javacppBuild.xmlAction(configurations.javacppPlatform)
+        }
+    }
+    repositories {
+        maven {
+            def releasesRepoUrl = 'https://oss.sonatype.org/service/local/staging/deploy/maven2/'
+            def snapshotsRepoUrl = 'https://oss.sonatype.org/content/repositories/snapshots/'
+            url = version.endsWith('SNAPSHOT') ? snapshotsRepoUrl : releasesRepoUrl
+            credentials {
+                username System.getenv('CI_DEPLOY_USERNAME')
+                password System.getenv('CI_DEPLOY_PASSWORD')
+            }
+        }
+    }
+}
+
+signing {
+    useGpgCmd()
+    if (!version.endsWith('SNAPSHOT')) {
+        sign publishing.publications.mavenJava
+        sign publishing.publications.mavenJavacppPlatform
+    }
 }

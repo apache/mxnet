@@ -30,7 +30,7 @@ import org.bytedeco.javacpp.tools.InfoMapper;
 @Properties(
     value = {
         @Platform(
-            value = {"linux", "mac", "windows"},
+            value = {"linux-x86_64", "macosx-x86_64", "windows-x86_64"},
             compiler = "cpp11",
             define = {"DMLC_USE_CXX11 1", "MSHADOW_USE_CBLAS 1", "MSHADOW_IN_CXX11 1", "MSHADOW_USE_CUDA 0", "MSHADOW_USE_F16C 0", "MXNET_USE_TVM_OP 0"},
             include = {"dlpack/dlpack.h", "mxnet/c_api.h", "mxnet/runtime/c_runtime_api.h", "nnvm/c_api.h"},
