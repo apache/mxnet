@@ -29,7 +29,7 @@ sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 # They will be detected by test framework, as long as the current file has a different filename
 from test_profiler import *
 
-
+@pytest.mark.skip(reason='https://github.com/apache/incubator-mxnet/issues/18564')
 def test_gpu_memory_profiler_symbolic():
     enable_profiler('test_profiler.json')
     profiler.set_state('run')
