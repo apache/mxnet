@@ -24,7 +24,7 @@ import pickle as pkl
 import random
 import functools
 import pytest
-from common import with_seed, assertRaises, TemporaryDirectory, setup_module, teardown_module
+from common import with_seed, assertRaises, TemporaryDirectory
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context

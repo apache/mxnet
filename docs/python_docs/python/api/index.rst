@@ -27,7 +27,7 @@ following categories:
 
 
 Imperative API
----------------
+--------------
 .. container:: cards
 
    .. card::
@@ -187,12 +187,6 @@ Legacy
       Functions to track various statuses during an epoch.
 
    .. card::
-      :title: mxnet.monitor
-      :link: legacy/monitor/index.html
-
-      Outputs, weights, and gradients for debugging
-
-   .. card::
       :title: mxnet.image
       :link: legacy/image/index.html
 
@@ -229,12 +223,7 @@ Legacy
    initializer/index
    optimizer/index
    lr_scheduler/index
-   metric/index
    kvstore/index
-   module/index
    contrib/index
-   image/index
-   ndarray/index
-   symbol/index
    legacy/index
    */index*

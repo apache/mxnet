@@ -1905,3 +1905,33 @@ def test_take():
     assert indices[0, 0] == 0
 
 
+@use_np
+def test_rollaxis():
+    inp = np.zeros((1, 1, 2, INT_OVERFLOW, 1))
+    inp[-1, -1, -1, -1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.rollaxis(inp, 3)
+        out.backward()
+    assert out.shape == (INT_OVERFLOW, 1, 1, 2, 1)
+    assert out[-1, -1, -1, -1, -1] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1, -1, -1, -1] == 1
+
+
+@use_np
+def test_take():
+    inp = np.zeros((INT_OVERFLOW, 2))
+    inp[0], inp[-1] = 1, 2
+    indices = np.array([[0],[INT_OVERFLOW-1]], dtype='int64')
+    inp.attach_grad()
+    indices.attach_grad()
+    with mx.autograd.record():
+        out = np.take(inp, indices, axis=0)
+        out.backward()
+    assert out.shape == (2, 1, 2)
+    assert out[0, 0, 0] == 1 and out[1, 0, 0] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == 1 and inp.grad[-1, 0] == 1
+    assert indices.grad.shape == indices.shape
+    assert indices[0, 0] == 0

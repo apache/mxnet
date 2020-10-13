@@ -91,7 +91,9 @@ from . import _deferred_compute
 # checks the __version__ attr of MXNet, which is not set on kvstore server due to the
 # fact that kvstore-server module is imported before the __version__ attr is set.
 # use mx.kv as short for mx.kvstore
+from . import kvstore
 from . import kvstore as kv
+from .kvstore import kvstore_server
 
 # Dynamic library module should be done after ndarray and symbol are initialized
 from . import library

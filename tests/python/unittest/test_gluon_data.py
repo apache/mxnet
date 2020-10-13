@@ -24,7 +24,7 @@ import numpy as np
 import random
 from mxnet import gluon
 import platform
-from common import setup_module, with_seed, teardown_module
+from common import with_seed
 from mxnet.gluon.data import DataLoader
 import mxnet.ndarray as nd
 from mxnet import context

@@ -32,7 +32,7 @@ from mxnet.contrib.amp import amp
 from mxnet.operator import get_all_registered_operators_grouped
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import with_seed, teardown_module, assert_raises_cudnn_not_satisfied
+from common import with_seed, assert_raises_cudnn_not_satisfied
 sys.path.insert(0, os.path.join(curr_path, '../train'))
 set_default_context(mx.gpu(0))
 

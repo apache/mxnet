@@ -126,7 +126,7 @@ _LANGS = {'.cc':'*', '.h':'*', '.cu':'*', '.cuh':'*', '.py':'#',
           '.java':'*', '.sh':'#', '.cpp':'*', '.hpp':'*', '.c':'*',
           '.bat':'rem', '.pl':'#', '.m':'%', '.R':'#', '.mk':'#', '.cfg':'#',
           '.t':'#', '.ps1':'#', '.jl':'#', '.clj':';;', '.pyx':'#', '.js':'*',
-          '.md':'<!---'}
+          '.md':'<!---', '.rst':'.. '}
 
 # Previous license header, which will be removed
 _OLD_LICENSE = re.compile('.*Copyright.*by Contributors')
@@ -305,7 +305,7 @@ def main():
 
     if action == 'check':
         logging.info("Start to check %d files", (len(files)))
-        if False in list(map(file_has_license, files)):
+        if False in [file_has_license(f) for f in files if os.path.exists(f)]:
             return 1
         else:
             logging.info("All known and whitelisted files have license")

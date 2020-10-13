@@ -1,22 +1,27 @@
+.. Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing,
+   software distributed under the License is distributed on an
+   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+   KIND, either express or implied.  See the License for the
+   specific language governing permissions and limitations
+   under the License.
+
 .. _numpyrandom:
 
 .. currentmodule:: mxnet.np.random
 
 np.random
-============
+=========
 
-..
-  remove a large part about generator here, this page contains a part of generator.rst
-
-
-Accessing the BitGenerator
---------------------------
-.. autosummary::
-   :toctree: generated/
-
-::
-
-   bit_generator
 
 Simple random data
 ------------------
@@ -25,12 +30,6 @@ Simple random data
 
    choice
 
-::
-
-   random
-   integers
-   bytes
-
 Permutations
 ------------
 .. autosummary::
@@ -38,53 +37,27 @@ Permutations
 
    shuffle
 
-::
-
-   permutation
-
 Distributions
 -------------
 .. autosummary::
    :toctree: generated/
 
-
    normal
    uniform
    rand
    randint
-
-::
-
    beta
-   binomial
    chisquare
-   dirichlet
    exponential
    f
    gamma
-   geometric
    gumbel
-   hypergeometric
    laplace
    logistic
    lognormal
-   logseries
    multinomial
    multivariate_normal
-   negative_binomial
-   noncentral_chisquare
-   noncentral_f
    pareto
-   poisson
    power
    rayleigh
-   standard_cauchy
-   standard_exponential
-   standard_gamma
-   standard_normal
-   standard_t
-   triangular
-   vonmises
-   wald
    weibull
-   zipf

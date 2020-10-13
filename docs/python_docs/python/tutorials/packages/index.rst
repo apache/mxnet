@@ -52,6 +52,7 @@ Shared APIs
    .. card::
       :title: Learning Rate
       :link: gluon/training/learning_rates/learning_rate_schedules.html
+
       How to use the Learning Rate Scheduler.
 
    .. card::

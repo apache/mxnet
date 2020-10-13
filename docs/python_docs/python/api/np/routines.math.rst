@@ -1,3 +1,20 @@
+.. Licensed to the Apache Software Foundation (ASF) under one
+   or more contributor license agreements.  See the NOTICE file
+   distributed with this work for additional information
+   regarding copyright ownership.  The ASF licenses this file
+   to you under the Apache License, Version 2.0 (the
+   "License"); you may not use this file except in compliance
+   with the License.  You may obtain a copy of the License at
+
+     http://www.apache.org/licenses/LICENSE-2.0
+
+   Unless required by applicable law or agreed to in writing,
+   software distributed under the License is distributed on an
+   "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+   KIND, either express or implied.  See the License for the
+   specific language governing permissions and limitations
+   under the License.
+
 Mathematical functions
 **********************
 
@@ -28,10 +45,8 @@ Trigonometric functions
    arctan2
    deg2rad
    rad2deg
-
-::
-
    unwrap
+
 
 Hyperbolic functions
 --------------------
@@ -45,6 +60,7 @@ Hyperbolic functions
    arccosh
    arctanh
 
+
 Rounding
 --------
 .. autosummary::
@@ -56,9 +72,6 @@ Rounding
    ceil
    trunc
    around
-
-::
-
    round_
 
 
@@ -70,9 +83,6 @@ Sums, products, differences
    sum
    prod
    cumsum
-
-::
-
    nanprod
    nansum
    cumprod
@@ -80,9 +90,9 @@ Sums, products, differences
    nancumsum
    diff
    ediff1d
-   gradient
    cross
    trapz
+
 
 Exponents and logarithms
 ------------------------
@@ -96,22 +106,14 @@ Exponents and logarithms
    log2
    log1p
 
-::
-
-   exp2
-   logaddexp
-   logaddexp2
 
 Other special functions
 -----------------------
 .. autosummary::
    :toctree: generated/
 
-
-::
-
    i0
-   sinc
+
 
 Floating point routines
 -----------------------
@@ -119,14 +121,11 @@ Floating point routines
    :toctree: generated/
 
    ldexp
-
-::
-
    signbit
    copysign
    frexp
-   nextafter
    spacing
+
 
 Rational routines
 -----------------
@@ -135,9 +134,6 @@ Rational routines
 
    lcm
 
-::
-
-   gcd
 
 Arithmetic operations
 ---------------------
@@ -154,30 +150,11 @@ Arithmetic operations
    multiply
    true_divide
    remainder
-
-::
-
    positive
-   floor_divide
    float_power
-
    fmod
    modf
    divmod
-
-Handling complex numbers
-------------------------
-.. autosummary::
-   :toctree: generated/
-
-
-::
-
-   angle
-   real
-   imag
-   conj
-   conjugate
 
 
 Miscellaneous
@@ -186,28 +163,17 @@ Miscellaneous
    :toctree: generated/
 
    clip
-
    sqrt
    cbrt
    square
-
    absolute
    sign
    maximum
    minimum
-
-::
-
-   convolve
-
    fabs
-
    heaviside
-
    fmax
    fmin
-
    nan_to_num
-   real_if_close
-
    interp
+
