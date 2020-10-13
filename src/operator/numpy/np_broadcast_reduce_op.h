@@ -516,7 +516,7 @@ void NumpyArgMinMaxCompute(const nnvm::NodeAttrs& attrs,
     if (param.axis.has_value()) {
       // cannot do argmax in an empty dimension
       int axis = param.axis.value();
-      CheckAxis(axis, in.shape_.ndim());
+      axis = CheckAxis(axis, in.shape_.ndim());
       CHECK_NE(in.shape_[axis], 0)
           << "searching input tensor of shape " << inputs[0].shape_
           << " along axis = " << axis << " of zero dim-size is not allowed";
