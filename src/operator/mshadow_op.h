@@ -132,7 +132,7 @@ template <typename IType, typename DType>
 struct IndexedNum {
   IType idx;
   DType num;
-  
+
   MSHADOW_XINLINE IndexedNum& operator+=(const IndexedNum& rhs){
     return *this;
   }
