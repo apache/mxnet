@@ -87,6 +87,31 @@ std::string GetPtx(nvrtcProgram program) {
   return ptx;
 }
 
+std::string GetArchString(const int sm_arch) {
+#if CUDA_VERSION < 10000
+  constexpr int max_supported_sm_arch = 70;
+#elif CUDA_VERSION < 11000
+  constexpr int max_supported_sm_arch = 75;
+#elif CUDA_VERSION < 11010
+  constexpr int max_supported_sm_arch = 80;
+#else
+  constexpr int max_supported_sm_arch = 86;
+#endif
+
+#if CUDA_VERSION <= 11000
+  // Always use PTX for CUDA <= 11.0
+  const bool known_arch = false;
+#else
+  const bool known_arch = sm_arch <= max_supported_sm_arch;
+#endif
+  const int actual_sm_arch = std::min(sm_arch, max_supported_sm_arch);
+  if (known_arch) {
+    return "sm_" + std::to_string(actual_sm_arch);
+  } else {
+    return "compute_" + std::to_string(actual_sm_arch);
+  }
+}
+
 }  // namespace
 
 CUfunction get_function(const std::string &parameters,
@@ -141,8 +166,7 @@ CUfunction get_function(const std::string &parameters,
                                   0,                                         // num headers
                                   nullptr,                                   // headers
                                   nullptr));                                 // include names
-
-    std::string gpu_arch_arg = "--gpu-architecture=compute_" + std::to_string(sm_arch);
+    std::string gpu_arch_arg = "--gpu-architecture=" + GetArchString(sm_arch);
     const char *opts[] = {gpu_arch_arg.c_str(),
 #if NDEBUG == 0
                           "-G",
