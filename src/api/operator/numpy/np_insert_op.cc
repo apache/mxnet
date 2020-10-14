@@ -51,7 +51,11 @@ MXNET_REGISTER_API("_npi.insert_scalar")
     param.val = dmlc::nullopt;
     num_inputs = 2;
   }
-  param.int_ind = args[2].operator int64_t();
+  if(features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    param.int_ind = args[2].operator int64_t();
+  } else {
+    param.int_ind = args[2].operator int();
+  }
   if (args[3].type_code() == kNull) {
     param.axis = dmlc::nullopt;
   } else {

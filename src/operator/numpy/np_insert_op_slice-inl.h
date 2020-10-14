@@ -154,24 +154,24 @@ void NumpyInsertSliceCompute(const nnvm::NodeAttrs& attrs,
       CHECK((values.shape_[i] == 1) || (values.shape_[i] == sz));
     }
     size_t temp_storage_bytes, temp_mem_size;
-    temp_storage_bytes = SortByKeyWorkspaceSize<int64_t, int, xpu>(indices_len, false, true);
-    temp_mem_size = indices_len * sizeof(int64_t) * 2 +
-                    indices_len * sizeof(int) +
-                    outshape[axis] * sizeof(int) * 2 +
+    temp_storage_bytes = SortByKeyWorkspaceSize<index_t, int, xpu>(indices_len, false, true);
+    temp_mem_size = indices_len * sizeof(index_t) * 2 +
+                    indices_len * sizeof(index_t) +
+                    outshape[axis] * sizeof(index_t) * 2 +
                     temp_storage_bytes;
     Tensor<xpu, 1, char> temp_mem =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
-    int64_t* indices_ptr = reinterpret_cast<int64_t*>(temp_mem.dptr_);
-    int64_t* sorted_indices_ptr = reinterpret_cast<int64_t*>(indices_ptr + indices_len);
+    index_t* indices_ptr = reinterpret_cast<index_t*>(temp_mem.dptr_);
+    index_t* sorted_indices_ptr = reinterpret_cast<index_t*>(indices_ptr + indices_len);
     index_t* order_ptr = reinterpret_cast<index_t*>(sorted_indices_ptr + indices_len);
     index_t* is_insert = reinterpret_cast<index_t*>(order_ptr + indices_len);
     index_t* origin_idx = reinterpret_cast<index_t*>(is_insert + outshape[axis]);
     Tensor<xpu, 1, char> temp_storage(reinterpret_cast<char*>(origin_idx + outshape[axis]),
                                       Shape1(temp_storage_bytes), s);
-    Tensor<xpu, 1, int64_t> indices(indices_ptr, Shape1(indices_len), s);
-    Tensor<xpu, 1, int64_t> sorted_indices(sorted_indices_ptr, Shape1(indices_len), s);
+    Tensor<xpu, 1, index_t> indices(indices_ptr, Shape1(indices_len), s);
+    Tensor<xpu, 1, index_t> sorted_indices(sorted_indices_ptr, Shape1(indices_len), s);
     Tensor<xpu, 1, index_t> order(order_ptr, Shape1(indices_len), s);
-    int num_bits = 8 * sizeof(int64_t);
+    int num_bits = 8 * sizeof(index_t);
     Kernel<SliceToIndices, xpu>::Launch(s, indices_len, indices_ptr, start, step);
     Kernel<range_fwd, xpu>::Launch(s, indices_len, index_t{1}, index_t{0}, index_t{1},
                                    kWriteTo, order_ptr);

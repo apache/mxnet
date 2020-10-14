@@ -97,7 +97,7 @@ struct SliceToIndices {
    * \brief transfer slice to indices array
    */
   template<typename IType>
-  MSHADOW_XINLINE static void Map(int i, IType* indices, int start, int step) {
+  MSHADOW_XINLINE static void Map(index_t i, IType* indices, int start, int step) {
     indices[i] = start + i * step;
   }
 };
@@ -125,7 +125,7 @@ struct OutPosCal {
    *          is_delete         F T T F F
    *          out_position      0 - - 1 2
    */
-  MSHADOW_XINLINE static void Map(index_t i, int64_t* out_pos, const bool* is_delete) {
+  MSHADOW_XINLINE static void Map(index_t i, index_t* out_pos, const bool* is_delete) {
     if (!is_delete[i]) {
       int cnt = 0;
       for (int j = 0; j < i; ++j) {
@@ -154,7 +154,7 @@ struct DeleteKernel {
   MSHADOW_XINLINE static void Map(index_t i, DType* out_data,
                                   const DType* in_arr,
                                   const bool* is_delete,
-                                  const int64_t* out_pos,
+                                  const index_t* out_pos,
                                   const mshadow::Shape<ndim> arrshape,
                                   const mshadow::Shape<ndim> out_stride,
                                   const int axis) {
@@ -162,7 +162,7 @@ struct DeleteKernel {
     mshadow::Shape<ndim> arr_idx = mxnet_op::unravel(i, arrshape);
     if (!is_delete[arr_idx[axis]]) {
       arr_idx[axis] = out_pos[arr_idx[axis]];
-      int64_t dest_idx = mxnet_op::dot(arr_idx, out_stride);
+      index_t dest_idx = mxnet_op::dot(arr_idx, out_stride);
       KERNEL_ASSIGN(out_data[dest_idx], req, in_arr[i]);
     }
   }
@@ -282,14 +282,14 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
   char* is_delete_ptr = nullptr;
   MSHADOW_TYPE_SWITCH(((inputs.size() == 2U) ?  // obj is tensor
                       inputs[delete_::kObj].dtype() :
-                      mshadow::DataType<int64_t>::kFlag), IType, {
-    size_t temp_mem_size = sizeof(int64_t) * arr.shape()[axis] +
+                      mshadow::DataType<index_t>::kFlag), IType, {
+    size_t temp_mem_size = sizeof(index_t) * arr.shape()[axis] +
                            sizeof(IType) * numtodel +
                            sizeof(bool) * arr.shape()[axis];
     Tensor<xpu, 1, char> temp_mem =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
     out_pos_ptr = temp_mem.dptr_;
-    indices_ptr = out_pos_ptr + sizeof(int64_t) * arr.shape()[axis];
+    indices_ptr = out_pos_ptr + sizeof(index_t) * arr.shape()[axis];
     is_delete_ptr = indices_ptr + sizeof(IType) * numtodel;
     if (param.step.has_value()) {  // obj is slice, transfer slice to tensor
       Kernel<SliceToIndices, xpu>::Launch(
@@ -311,7 +311,7 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
       reinterpret_cast<IType*>(indices_ptr));
     // calculate output data's original position in input arr
     Kernel<OutPosCal, xpu>::Launch(
-      s, arr.shape()[axis], reinterpret_cast<int64_t*>(out_pos_ptr),
+      s, arr.shape()[axis], reinterpret_cast<index_t*>(out_pos_ptr),
       reinterpret_cast<bool*>(is_delete_ptr));
   });
 
@@ -336,7 +336,7 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
 
   MSHADOW_TYPE_SWITCH(((inputs.size() == 2U) ?  // obj is tensor
                       inputs[delete_::kObj].dtype() :
-                      mshadow::DataType<int64_t>::kFlag), IType, {
+                      mshadow::DataType<index_t>::kFlag), IType, {
     MXNET_NDIM_SWITCH(outshape.ndim(), ndim, {
       mshadow::Shape<ndim> out_strides = mxnet_op::calc_stride(outshape.get<ndim>());
       MSHADOW_TYPE_SWITCH(outputs[delete_::kOut].dtype(), DType, {
@@ -346,7 +346,7 @@ void NumpyDeleteCompute(const nnvm::NodeAttrs& attrs,
             outputs[delete_::kOut].data().dptr<DType>(),
             arr.data().dptr<DType>(),
             reinterpret_cast<bool*>(is_delete_ptr),
-            reinterpret_cast<int64_t*>(out_pos_ptr),
+            reinterpret_cast<index_t*>(out_pos_ptr),
             arr.shape().get<ndim>(),
             out_strides, axis);
         });

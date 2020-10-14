@@ -42,7 +42,7 @@ bool NumpyInsertTensorType(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_type->size(), 1U);
   int obj_pos = input_count;
   CHECK_NE((*in_type)[obj_pos], -1) << "Index type must be set for insert operator\n";
-  CHECK_EQ((*in_type)[obj_pos], mshadow::DataType<int64_t>::kFlag)
+  CHECK_EQ((*in_type)[obj_pos], mshadow::DataType<index_t>::kFlag)
     << "Index type only support int64.\n";
   TYPE_ASSIGN_CHECK(*out_type, 0, (*in_type)[0]);  // output type equals to input arr's
   TYPE_ASSIGN_CHECK(*in_type, 0, (*out_type)[0]);

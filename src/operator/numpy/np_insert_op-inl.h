@@ -156,7 +156,7 @@ struct InsertSingleIndexKernel {
                                   const VType* in_val, const DType* in_arr,
                                   const mshadow::Shape<ndim> outshape,
                                   const mshadow::Shape<ndim> valshape,
-                                  const int N, const int64_t* in_obj, const int numnew,
+                                  const int N, const index_t* in_obj, const int numnew,
                                   const mshadow::Shape<ndim> val_stride,
                                   const mshadow::Shape<ndim> old_val_stride,
                                   const mshadow::Shape<ndim> arr_stride,
@@ -165,10 +165,10 @@ struct InsertSingleIndexKernel {
     // i is the global flattened index in the output
     // out_idx: i -> position in output's shape
     mshadow::Shape<ndim> out_idx = mxnet_op::unravel(i, outshape);
-    int64_t dest_idx;
-    int64_t index = in_obj[0];
-    if (static_cast<int64_t>(index) < 0) {
-      index += static_cast<int64_t>(N);
+    index_t dest_idx;
+    index_t index = in_obj[0];
+    if (static_cast<index_t>(index) < 0) {
+      index += static_cast<index_t>(N);
     }
     if (out_idx[axis] >= index && out_idx[axis] < index + numnew) {  // from 'value'
       int idx_val = out_idx[axis] - index;
@@ -264,10 +264,10 @@ struct InsertSeqIndicesKernel {
 
 struct ObjToIndices {
   MSHADOW_XINLINE static void Map(index_t i, index_t* indices,
-                                  int N, const int64_t* obj) {
+                                  int N, const index_t* obj) {
     indices[i] = obj[i];
     if (indices[i] < 0) {
-      indices[i] += static_cast<int64_t>(N);
+      indices[i] += static_cast<index_t>(N);
     }
   }
 };
@@ -350,7 +350,7 @@ void InsertSizeOneTensorImpl(mshadow::Stream<xpu> *s, const TBlob& output,
       Kernel<InsertSingleIndexKernel<ndim>, xpu>::Launch(
         s, len, output.dptr<DType>(),
         values.dptr<VType>(), arr.dptr<DType>(),
-        k_outshape, k_valshape, N, index.dptr<int64_t>(), numnew,
+        k_outshape, k_valshape, N, index.dptr<index_t>(), numnew,
         val_strides, old_val_strides, arr_strides, out_strides,
         axis, moveaxis, req);
     });
