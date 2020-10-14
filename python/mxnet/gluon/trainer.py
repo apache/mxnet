@@ -56,7 +56,7 @@ class Trainer(object):
         constructor for a list of additional supported arguments.
     kvstore : str or KVStore
         kvstore type for multi-gpu and distributed training. See help on
-        :any:`mxnet.kvstore.create` for more information.
+        :func:`mxnet.kvstore.create` for more information.
     compression_params : dict
         Specifies type of gradient compression and additional arguments depending
         on the type of compression being used. For example, 2bit compression requires a threshold.

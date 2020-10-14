@@ -25,8 +25,7 @@ import unittest
 import pytest
 import math
 from mxnet.test_utils import *
-from common import setup_module, with_seed, teardown_module, retry, \
-    xfail_when_nonstandard_decimal_separator
+from common import with_seed, retry, xfail_when_nonstandard_decimal_separator
 
 @with_seed()
 def test_learning_rate():

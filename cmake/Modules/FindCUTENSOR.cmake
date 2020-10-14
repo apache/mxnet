@@ -15,12 +15,19 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import mxnet as mx
-from mxnet.test_utils import set_default_context
-import os
-import sys
-curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
-sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from test_tvm_op import *
+include(FindPackageHandleStandardArgs)
 
-set_default_context(mx.gpu(0))
+set(CUTENSOR_ROOT "/usr/local/cuda" CACHE PATH "cuTensor root folder")
+
+find_path(CUTENSOR_INCLUDE cutensor.h
+        PATHS ${CUTENSOR_ROOT} $ENV{CUTENSOR_ROOT}
+        DOC "Path to cuTensor include directory." )
+
+find_library(CUTENSOR_LIBRARY NAMES libcutensor.so # libcutensor_static.a
+        PATHS ${CUTENSOR_ROOT} $ENV{CUTENSOR_ROOT} ${CUTENSOR_INCLUDE}
+        PATH_SUFFIXES lib lib/x64  cuda/lib cuda/lib64 lib/x64
+        DOC "Path to cuTensor library.")
+
+find_package_handle_standard_args(CUTENSOR DEFAULT_MSG CUTENSOR_LIBRARY CUTENSOR_INCLUDE)
+
+mark_as_advanced(CUTENSOR_ROOT CUTENSOR_INCLUDE CUTENSOR_LIBRARY)

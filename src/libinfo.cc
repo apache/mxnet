@@ -40,6 +40,7 @@ class FeatureSet {
     feature_bits.set(CUDNN, MXNET_USE_CUDNN);
     feature_bits.set(NCCL, MXNET_USE_NCCL);
     feature_bits.set(TENSORRT, MXNET_USE_TENSORRT);
+    feature_bits.set(CUTENSOR, MXNET_USE_CUTENSOR);
 
     // Check flags for example with gcc -msse3 -mavx2 -dM -E - < /dev/null | egrep "SSE|AVX"
 #if __SSE__
@@ -133,6 +134,7 @@ const std::vector<std::string> EnumNames::names = {
   "CUDNN",
   "NCCL",
   "TENSORRT",
+  "CUTENSOR",
   "CPU_SSE",
   "CPU_SSE2",
   "CPU_SSE3",

@@ -29,7 +29,7 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.operator import *
 from mxnet.base import py_str, MXNetError, _as_list
-from common import setup_module, with_seed, teardown_module, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
+from common import with_seed, assert_raises_cudnn_not_satisfied, assert_raises_cuda_not_satisfied, assertRaises
 from common import xfail_when_nonstandard_decimal_separator, with_environment
 import pytest
 import os

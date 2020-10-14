@@ -46,6 +46,7 @@ build/%: %
 html: $(OBJ)
 	mkdir -p build;
 	cp Makefile_sphinx build/Makefile;
+	cp -n -r ../_static build/ || true;
 	sphinx-autogen build/api/*.rst build/api/**/*.rst   -t build/_templates/;
 	# make -C build linkcheck doctest html
 	make -C build html;
