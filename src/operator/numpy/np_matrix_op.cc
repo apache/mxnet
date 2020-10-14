@@ -956,7 +956,7 @@ bool NumpyVstackShape(const nnvm::NodeAttrs& attrs,
   if (dshape.ndim() == -1) {
     return false;
   }
-  int cnt = 0, sum = 0, pos = -1;
+  index_t cnt = 0, sum = 0, pos = -1;
   for (int i = 0; i < param.num_args; i++) {
     TShape tmp = in_attrs_tmp[i];
     if (!dim_size_is_known(tmp, 0)) {
