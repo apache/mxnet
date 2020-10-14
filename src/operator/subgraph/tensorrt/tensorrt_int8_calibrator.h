@@ -75,6 +75,8 @@ struct TRTInt8Calibrator : public nvinfer1::IInt8EntropyCalibrator2 {
   // TODO(spanev): determine if we need to serialize it
   const std::string& getCalibrationTableAsString() { return calibration_table_; }
 
+  void setDone();
+
   void waitAndSetDone();
 
   bool isCacheEmpty();
