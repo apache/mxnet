@@ -18,7 +18,7 @@
 # coding: utf-8
 """Lists of functions whitelisted/blacklisted for automatic mixed precision in symbol API."""
 
-from ....runtime import Features
+from ...runtime import Features
 
 
 # Functions that should be cast to lower precision

@@ -23,12 +23,11 @@ from random import randint
 import warnings
 import collections
 import ctypes
-import mxnet.contrib.amp as amp
+from mxnet import amp
 import pytest
 from mxnet.test_utils import set_default_context, same_symbol_structure, assert_almost_equal
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
-from mxnet.contrib.amp import amp
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 from common import with_seed
@@ -76,7 +75,7 @@ def test_amp_coverage():
 
     if ret1 != set():
         warnings.warn("Operators " + str(ret1) + " do not exist in AMP lists (in "
-                       "python/mxnet/contrib/amp/lists/symbol_bf16.py) - please add them. "
+                       "python/mxnet/amp/lists/symbol_bf16.py) - please add them. "
                        """Please follow these guidelines for choosing a proper list:
                        - if your operator is not to be used in a computational graph
                          (e.g. image manipulation operators, optimizers) or does not have
