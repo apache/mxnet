@@ -2304,4 +2304,5 @@ def test_insert():
     assert out2.shape == (INT_OVERFLOW * 2 + 2,)
     assert out[0, 1] == 1 and out[-1, 1] == 2
     assert out2[1] == 5 and out2[2] == 6
+    assertRaises(MXNetError, np.insert, arr=inp3, obj=np.array([2, 2], dtype=np.int64), values=np.array([5, 6]))
 

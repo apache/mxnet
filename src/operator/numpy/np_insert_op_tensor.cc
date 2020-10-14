@@ -81,6 +81,8 @@ bool NumpyInsertTensorShape(const nnvm::NodeAttrs& attrs,
         << "alueError: assignment to 0-d array.";
       out_shape->push_back(valshape);
     }
+    CHECK_LT((*out_shape)[0].Size(), (int64_t{1} << 31) - 1) <<
+        "Large Tensor Support is not support for [insert_tensor] variant of insert operator";
     return shape_is_known(out_shape[0]);
   } else {
     CHECK(axis >= -1 * arrshape.ndim() && axis < arrshape.ndim())
@@ -114,6 +116,8 @@ bool NumpyInsertTensorShape(const nnvm::NodeAttrs& attrs,
 
   newshape[axis] += numnew;
   out_shape->push_back(newshape);
+  CHECK_LT((*out_shape)[0].Size(), (int64_t{1} << 31) - 1) <<
+      "Large Tensor Support is not support for [insert_tensor] variant of insert operator";
   return shape_is_known(newshape);
 }
 
