@@ -143,6 +143,7 @@ struct arg_min_max_map : public mxnet_op::tunable {
   MSHADOW_XINLINE static OType Map(DType a) {
     OType temp;
     temp.num = a;
+    temp.idx = 0;
     return temp;
   }
 };
