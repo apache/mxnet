@@ -156,7 +156,7 @@ struct InsertSingleIndexKernel {
                                   const VType* in_val, const DType* in_arr,
                                   const mshadow::Shape<ndim> outshape,
                                   const mshadow::Shape<ndim> valshape,
-                                  const int N, const index_t* in_obj, const int numnew,
+                                  const index_t N, const int64_t* in_obj, const size_t numnew,
                                   const mshadow::Shape<ndim> val_stride,
                                   const mshadow::Shape<ndim> old_val_stride,
                                   const mshadow::Shape<ndim> arr_stride,
@@ -263,8 +263,8 @@ struct InsertSeqIndicesKernel {
 };
 
 struct ObjToIndices {
-  MSHADOW_XINLINE static void Map(index_t i, index_t* indices,
-                                  int N, const index_t* obj) {
+  MSHADOW_XINLINE static void Map(index_t i, int64_t* indices,
+                                  int N, const int64_t* obj) {
     indices[i] = obj[i];
     if (indices[i] < 0) {
       indices[i] += static_cast<index_t>(N);
@@ -273,19 +273,19 @@ struct ObjToIndices {
 };
 
 struct IndicesModify {
-  MSHADOW_XINLINE static void Map(index_t i, index_t* indices, const index_t* order) {
+  MSHADOW_XINLINE static void Map(index_t i, int64_t* indices, const index_t* order) {
     indices[order[i]] += i;
   }
 };
 
 struct SetIsInsert {
-  MSHADOW_XINLINE static void Map(index_t i, index_t* indices, index_t* is_insert) {
+  MSHADOW_XINLINE static void Map(index_t i, int64_t* indices, index_t* is_insert) {
     is_insert[static_cast<index_t>(indices[i])] = 1;
   }
 };
 
 struct SetOriginValuesIdx {
-  MSHADOW_XINLINE static void Map(index_t i, const index_t* indices, index_t* origin_idx) {
+  MSHADOW_XINLINE static void Map(index_t i, const int64_t* indices, index_t* origin_idx) {
     origin_idx[static_cast<index_t>(indices[i])] = i;
   }
 };
@@ -350,7 +350,7 @@ void InsertSizeOneTensorImpl(mshadow::Stream<xpu> *s, const TBlob& output,
       Kernel<InsertSingleIndexKernel<ndim>, xpu>::Launch(
         s, len, output.dptr<DType>(),
         values.dptr<VType>(), arr.dptr<DType>(),
-        k_outshape, k_valshape, N, index.dptr<index_t>(), numnew,
+        k_outshape, k_valshape, N, index.dptr<int64_t>(), numnew,
         val_strides, old_val_strides, arr_strides, out_strides,
         axis, moveaxis, req);
     });
