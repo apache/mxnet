@@ -67,7 +67,7 @@ NNVM_REGISTER_OP(_npi_argmax)
   [](const NodeAttrs& attrs) {
     return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
   })
-.set_attr<FCompute>("FCompute<cpu>", NumpyArgMinMaxCompute<cpu, size_t>)
+.set_attr<FCompute>("FCompute<cpu>", NumpyArgMinMaxCompute<cpu, index_t>)
 .set_attr<nnvm::FGradient>("FGradient", MakeZeroGradNodes)
 .add_arguments(ReduceAxisParam::__FIELDS__());
 

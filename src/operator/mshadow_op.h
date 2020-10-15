@@ -133,6 +133,10 @@ struct IndexedNum {
   IType idx;
   DType num;
 
+  MSHADOW_XINLINE IndexedNum() : idx(0), num(0) {}
+
+  MSHADOW_XINLINE IndexedNum(DType n) : idx(0), num(n) {}
+
   MSHADOW_XINLINE IndexedNum& operator+=(const IndexedNum& rhs){
     return *this;
   }
@@ -141,10 +145,7 @@ struct IndexedNum {
 template<typename DType, typename OType>
 struct arg_min_max_map : public mxnet_op::tunable {
   MSHADOW_XINLINE static OType Map(DType a) {
-    OType temp;
-    temp.num = a;
-    temp.idx = 0;
-    return temp;
+    return OType(a);
   }
 };
 
@@ -1606,14 +1607,13 @@ struct argmax {
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
     initv.num = mshadow::red::limits::NegInfValue<decltype(initv.num)>();
-    initv.idx = 0;
   }
   /*!
    *\brief set the initial value during reduction
    */
   template<typename DType>
   MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
-    SetInitValue(initv);
+    initv.num = mshadow::red::limits::NegInfValue<decltype(initv.num)>();
   }
 };
 

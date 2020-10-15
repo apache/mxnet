@@ -30,15 +30,6 @@ using namespace mshadow::cuda;
 using namespace mshadow;
 using namespace broadcast;
 
-template<typename DType>
-MSHADOW_XINLINE void assign(DType* dst, const bool addto, const DType src) {
-  if (addto) {
-    *dst += src;
-  } else {
-    *dst = src;
-  }
-}
-
 #define KERNEL_UNROLL_SWITCH(do_unroll, unrollAmount, unrollVar, ...) \
   if (do_unroll) {                                                    \
     const int unrollVar = unrollAmount;                               \

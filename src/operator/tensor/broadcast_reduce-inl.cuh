@@ -65,7 +65,8 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           for (int u=0;u < unroll;u++) {
             if (k + u*by < Mend) {
               tmp[u] = OP::Map(big[idx_big[u]]);
-              if (use_index)
+              // argmin/max, set IndexedNum.idx
+	      if (use_index)
                 *(reinterpret_cast<int*>(&tmp[u])) = k + u*by;
             }
           }
