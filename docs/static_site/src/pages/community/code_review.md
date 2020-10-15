@@ -160,7 +160,7 @@ existing reviews are sufficient.
 Get Started
 -----------
 
-Checkout the following [PRs that need review](https://github.com/apache/incubator-mxnet/labels/pr-awaiting-review)"
+Checkout the following [PRs that need review](https://github.com/apache/mxnet/labels/pr-awaiting-review)"
 
 <script async defer src="https://buttons.github.io/buttons.js"></script>
 <script src="https://apis.google.com/js/platform.js"></script>
