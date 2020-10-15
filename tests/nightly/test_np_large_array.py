@@ -2001,3 +2001,32 @@ def test_vstack():
     assert out2[0, -1] == 0 and out2[1, -1] == 1
     assert inp2.grad.shape == inp2.shape
     assert inp2.grad[-1, -1] == 1
+
+
+@use_np
+def test_kron():
+    # tensor tensor case
+    inp1 = np.array([5, 10], dtype="float64")
+    inp2 = np.ones((INT_OVERFLOW), dtype = 'float64')
+    inp2[-1] = 3
+    inp1.attach_grad()
+    inp2.attach_grad()
+    with mx.autograd.record():
+        out1 = np.kron(inp1, inp2)
+        out1.backward()
+    assert out1.shape == (DOUBLE_INT_OVERFLOW, )
+    assert out1[INT_OVERFLOW-1] == 15 and out1[-1] == 30
+    assert inp1.grad.shape == inp1.shape and inp2.grad.shape == inp2.shape
+    assert inp1.grad[0] == INT_OVERFLOW + 2
+    assert inp2.grad[-1] == 15
+    # scalar tensor case
+    inp3 = np.array([3], dtype='float64')
+    inp3.attach_grad()
+    with mx.autograd.record():
+        out2 = np.kron(inp3, inp2)
+        out2.backward()
+    assert out2.shape == (INT_OVERFLOW, )
+    assert out2[INT_OVERFLOW-1] == 9
+    assert inp3.grad.shape == inp3.shape and inp2.grad.shape == inp2.shape
+    assert inp3.grad[0] == INT_OVERFLOW + 2
+    assert inp2.grad[-1] == 3

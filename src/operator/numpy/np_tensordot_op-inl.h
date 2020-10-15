@@ -198,7 +198,7 @@ void MatrixDot(const OpContext& ctx,
 template<int req>
 struct scalar_mul_kernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType *out, const DType* tensor, const DType *scalar) {
+  MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType* tensor, const DType *scalar) {
     KERNEL_ASSIGN(out[i], req, tensor[i] * scalar[0]);
   }
 };
