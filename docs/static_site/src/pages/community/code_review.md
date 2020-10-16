@@ -157,5 +157,10 @@ changes. Code owner can decide if the code can be merged in case by case
 if some of the reviewers did not respond in time(e.g. a week) and
 existing reviews are sufficient.
 
+Get Started
+-----------
+
+Checkout the following [PRs that need review](https://github.com/apache/mxnet/labels/pr-awaiting-review)"
+
 <script async defer src="https://buttons.github.io/buttons.js"></script>
 <script src="https://apis.google.com/js/platform.js"></script>
