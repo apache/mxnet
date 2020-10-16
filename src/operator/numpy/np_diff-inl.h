@@ -156,8 +156,8 @@ struct diff_backward {
     if (coor[axis] != 0) return;
     index_t j = ravel(coor, ishape);
     // initialize the elements of output array
-    for (int k = 0; k < oshape[axis]; ++k) igrad[i + k * stride] = 0;
-    for (int k = 0; k < ishape[axis]; ++k) {
+    for (index_t k = 0; k < oshape[axis]; ++k) igrad[i + k * stride] = 0;
+    for (index_t k = 0; k < ishape[axis]; ++k) {
       int indicator = 1;
       for (int m = n; m >= 0; --m) {
         igrad[i + (m + k) * stride] +=

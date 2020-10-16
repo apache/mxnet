@@ -2001,3 +2001,24 @@ def test_vstack():
     assert out2[0, -1] == 0 and out2[1, -1] == 1
     assert inp2.grad.shape == inp2.shape
     assert inp2.grad[-1, -1] == 1
+
+
+@use_np
+def test_diff():
+    inp = np.zeros((2, INT_OVERFLOW+1))
+    inp[-1, -1] = 100
+    inp.attach_grad()
+    with mx.autograd.record():
+        out1 = np.diff(inp)
+        out1.backward()
+    assert out1.shape == (2, INT_OVERFLOW)
+    assert out1[-1, -1] == 100
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
+    with mx.autograd.record():
+        out2 = np.diff(inp, axis=0)
+        out2.backward()
+    assert out2.shape == (1, INT_OVERFLOW+1)
+    assert out2[-1, -1] == 100
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[1, -1] == 1, inp.grad[0, -1] == 1
