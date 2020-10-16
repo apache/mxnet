@@ -78,16 +78,23 @@ std::string GetCompileLog(nvrtcProgram program) {
 }
 
 // Obtain compilation result (ptx assembly) from the program.
-std::string GetPtx(nvrtcProgram program) {
+std::string GetCompiledCode(nvrtcProgram program, bool use_cubin) {
+#if CUDA_VERSION >= 11010
+  const auto getSize = use_cubin ? nvrtcGetCUBINSize : nvrtcGetPTXSize;
+  const auto getFunc = use_cubin ? nvrtcGetCUBIN : nvrtcGetPTX;
+#else
+  const auto getSize = nvrtcGetPTXSize;
+  const auto getFunc = nvrtcGetPTX;
+#endif
   size_t ptx_size_including_null;
-  NVRTC_CALL(nvrtcGetPTXSize(program, &ptx_size_including_null));
+  NVRTC_CALL(getSize(program, &ptx_size_including_null));
   std::string ptx(ptx_size_including_null - 1, '\0');
   // Room for terminating null character ensured since C++11
-  NVRTC_CALL(nvrtcGetPTX(program, &ptx[0]));
+  NVRTC_CALL(getFunc(program, &ptx[0]));
   return ptx;
 }
 
-std::string GetArchString(const int sm_arch) {
+std::tuple<bool, std::string> GetArchString(const int sm_arch) {
 #if CUDA_VERSION < 10000
   constexpr int max_supported_sm_arch = 70;
 #elif CUDA_VERSION < 11000
@@ -106,9 +113,9 @@ std::string GetArchString(const int sm_arch) {
 #endif
   const int actual_sm_arch = std::min(sm_arch, max_supported_sm_arch);
   if (known_arch) {
-    return "sm_" + std::to_string(actual_sm_arch);
+    return {known_arch, "sm_" + std::to_string(actual_sm_arch)};
   } else {
-    return "compute_" + std::to_string(actual_sm_arch);
+    return {known_arch, "compute_" + std::to_string(actual_sm_arch)};
   }
 }
 
@@ -166,13 +173,14 @@ CUfunction get_function(const std::string &parameters,
                                   0,                                         // num headers
                                   nullptr,                                   // headers
                                   nullptr));                                 // include names
-    std::string gpu_arch_arg = "--gpu-architecture=" + GetArchString(sm_arch);
+    const auto [use_cubin, gpu_arch] = GetArchString(sm_arch);
+    std::string gpu_arch_arg = "--gpu-architecture=" + gpu_arch;
     const char *opts[] = {gpu_arch_arg.c_str(),
 #if NDEBUG == 0
                           "-G",
 #endif
                           "--std=c++14"};
-    const std::string kernel_name_demangled = kernel_name;
+    const std::string& kernel_name_demangled = kernel_name;
     NVRTC_CALL(nvrtcAddNameExpression(program, (kernel_name_demangled).c_str()));
 
     nvrtcResult compileResult = nvrtcCompileProgram(program,                         // prog
@@ -189,7 +197,7 @@ CUfunction get_function(const std::string &parameters,
         << "The generated code was stored in " << dump_file << "\n"
         << GetCompileLog(program);
 
-    kinfo.ptx = GetPtx(program);
+    kinfo.ptx = GetCompiledCode(program, use_cubin);
     const char *mangled_name;
     NVRTC_CALL(nvrtcGetLoweredName(program,
                                    kernel_name_demangled.c_str(),
