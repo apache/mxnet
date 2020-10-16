@@ -41,6 +41,7 @@
 #---------------------------------------------
 set(USE_CUDA ON CACHE BOOL "Build with CUDA support")
 set(USE_CUDNN ON CACHE BOOL "Build with cudnn support, if found")
+set(USE_CUTENSOR ON CACHE BOOL "Build with cutensor support, if found")
 
 # Target NVIDIA GPU achitecture.
 # Valid options are:
