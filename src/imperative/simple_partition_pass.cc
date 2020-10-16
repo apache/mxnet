@@ -33,20 +33,6 @@ namespace exec {
 
 namespace detail {
 
-void PrintSets(const IntervalVec* const sets_p) {
-  if (sets_p == nullptr || sets_p->size() == 0) {
-    std::cout << "{}" << std::endl;
-    return;
-  }
-  const auto& sets = *sets_p;
-  std::cout << "{";
-  for (size_t i = 0; i < sets.size() - 1; ++i) {
-    std::cout << "[" << sets[i].first << "," << sets[i].second << "], ";
-  }
-  std::cout << "[" << sets[sets.size()-1].first << ","
-            << sets[sets.size()-1].second << "]}" << std::endl;
-}
-
 const IntervalVec* LargerSet(const IntervalVec* const first,
                              const IntervalVec* const second) noexcept {
   const IntervalVec* ret = nullptr;
@@ -151,11 +137,11 @@ void MergeSets(const IntervalVec** const my_set,
     } else if (other.first > mine.second + 1) {
       // other interval is after ours
       if (last_end >= mine.first - 1) {
-        new_set.back().second = std::max(mine.second, last_end);
+        new_set.back().second = mine.second;
       } else {
         new_set.emplace_back(mine);
       }
-      last_end = new_set.back().second;
+      last_end = mine.second;
       ++my_iter;
     } else {
       // Intervals can be merged together
@@ -175,25 +161,12 @@ void MergeSets(const IntervalVec** const my_set,
       }
     }
   }
+  auto remaining_iter = my_iter == (*my_set)->cend() ? other_iter : my_iter;
+  auto remaining_end = my_iter == (*my_set)->cend() ? other_set->cend() : (*my_set)->cend();
   // Add the rest of entries
-  for (; my_iter != (*my_set)->cend(); ++my_iter) {
+  for (; remaining_iter != remaining_end; ++remaining_iter) {
     auto& mine = new_set.back();
-    const auto& other = *my_iter;
-    if (other.second < mine.first - 1) {
-      // other interval is before ours, should never happen
-      continue;
-    } else if (other.first > mine.second + 1) {
-      // other interval is after ours
-      new_set.emplace_back(other);
-    } else {
-      // Intervals can be merged together
-      mine.first = std::min(mine.first, other.first);
-      mine.second = std::max(mine.second, other.second);
-    }
-  }
-  for (; other_iter != other_set->cend(); ++other_iter) {
-    auto& mine = new_set.back();
-    const auto& other = *other_iter;
+    const auto& other = *remaining_iter;
     if (other.second < mine.first - 1) {
       // other interval is before ours, should never happen
       continue;

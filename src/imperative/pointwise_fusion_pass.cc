@@ -298,7 +298,7 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
     for (size_t dep_num = 0; dep_num < idx[i].control_deps.size(); ++dep_num) {
       const auto& dep = idx[i].control_deps[dep_num];
       const int their_subgraph_id = subgraph_assignment[dep];
-      if (subgraph_assignment[i] != -1 && subgraph_assignment[dep] == -1) {
+      if (subgraph_id != -1 && their_subgraph_id == -1) {
         // Not in any subgraph, use FusedOpOutHelper
         auto& info = subgraphs[subgraph_id];
         size_t node_id = info.subgraph_node->control_deps.size();
