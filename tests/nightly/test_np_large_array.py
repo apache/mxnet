@@ -2005,7 +2005,6 @@ def test_vstack():
 
 @use_np
 def test_ediff1d():
-    INT_OVERFLOW = 2**31
     inp = np.zeros((2, INT_OVERFLOW))
     inp[0, -1], inp[1, 0] = 1, 3
     inp.attach_grad()
