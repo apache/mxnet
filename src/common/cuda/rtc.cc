@@ -28,6 +28,8 @@
 #include <fstream>
 #include <unordered_map>
 #include <vector>
+#include <tuple>
+#include <algorithm>
 
 #include "rtc.h"
 #include "rtc/half-inl.h"
@@ -173,7 +175,7 @@ CUfunction get_function(const std::string &parameters,
                                   0,                                         // num headers
                                   nullptr,                                   // headers
                                   nullptr));                                 // include names
-    const auto [use_cubin, gpu_arch] = GetArchString(sm_arch);
+    const auto [use_cubin, gpu_arch] = GetArchString(sm_arch);  // NOLINT(*)
     std::string gpu_arch_arg = "--gpu-architecture=" + gpu_arch;
     const char *opts[] = {gpu_arch_arg.c_str(),
 #if NDEBUG == 0
