@@ -143,6 +143,7 @@ enum : unsigned {
   CUDNN,
   NCCL,
   TENSORRT,
+  CUTENSOR,
 
   // CPU Features / optimizations
   CPU_SSE,
