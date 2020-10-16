@@ -2012,7 +2012,7 @@ def test_ediff1d():
     with mx.autograd.record():
         out = np.ediff1d(inp, to_begin=-99, to_end=np.array([88, 99]))
         out.backward()
-    assert out.shape == (2*INT_OVERFLOW-1+1+2, )
+    assert out.shape == (2 * INT_OVERFLOW - 1 + 1 + 2, )
     assert out[INT_OVERFLOW-1] == 1 and out[INT_OVERFLOW] == 2 and\
             out[INT_OVERFLOW+1] == -3
     assert inp.grad.shape == inp.shape
