@@ -4368,6 +4368,8 @@ def test_np_argmin_argmax():
         ((5, 0, 3), -1, False),
         ((5, 0, 3), None, True),
         ((5, 0, 3), 1, True),
+        ((5, 3, 8999), -1, False),
+        ((4, 3, 9999), -1, False),
     ]
     dtypes = ['float16', 'float32', 'float64']
     ops = ['argmin', 'argmax']
