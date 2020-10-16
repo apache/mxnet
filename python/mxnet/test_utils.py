@@ -377,6 +377,11 @@ def assign_each2(input1, input2, function):
 
     return output
 
+def create_2d_np_tensor(rows, columns, dtype=np.int64):
+    inp = mx.np.arange(0, rows, dtype=dtype).reshape(rows, 1)
+    inp = mx.np.broadcast_to(inp, shape=(inp.shape[0], columns))
+    return inp
+
 # For testing Large Tensors having total size > 2^32 elements
 def create_2d_tensor(rows, columns, dtype=np.int64):
     a = mx.nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
