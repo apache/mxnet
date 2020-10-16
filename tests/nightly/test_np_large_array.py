@@ -2035,7 +2035,6 @@ def test_vstack():
 
 
 @use_np
-<<<<<<< HEAD
 def test_ediff1d():
     inp = np.zeros((2, INT_OVERFLOW))
     inp[0, -1], inp[1, 0] = 1, 3

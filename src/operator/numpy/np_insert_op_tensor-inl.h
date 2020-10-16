@@ -182,8 +182,8 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
       CHECK((values.shape_[i] == 1) || (values.shape_[i] == sz));
     }
     size_t temp_storage_bytes, temp_mem_size;
-    temp_storage_bytes = SortByKeyWorkspaceSize<index_t, index_t, xpu>(indices_len, false, true);
-    temp_mem_size = indices_len * sizeof(index_t) * 2 +
+    temp_storage_bytes = SortByKeyWorkspaceSize<int64_t, index_t, xpu>(indices_len, false, true);
+    temp_mem_size = indices_len * sizeof(int64_t) * 2 +
                     indices_len * sizeof(index_t) +
                     outshape[axis] * sizeof(index_t) * 2 +
                     temp_storage_bytes;
