@@ -29,7 +29,6 @@ COPY install/deb_ubuntu_ccache.sh /work/
 RUN /work/deb_ubuntu_ccache.sh
 
 COPY install/ubuntu_r.sh /work/
-COPY install/r.gpg /work/
 RUN /work/ubuntu_r.sh
 
 # Always last
