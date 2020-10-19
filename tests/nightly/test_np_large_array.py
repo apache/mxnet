@@ -2096,3 +2096,10 @@ def test_dsplit():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1][-1][0] == 0 and inp.grad[0][1][1] == 1
 
+
+@use_np
+def test_tril_indices():
+    N = 2**16
+    data = np.tril_indices(N, -1)
+    assert data[0].shape == (((1 + (N-1)) * (N-1) / 2), )
+    assert data[0][-1] == N - 1 and data[1][-1] == N - 2
