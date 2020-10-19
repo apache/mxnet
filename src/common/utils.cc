@@ -73,6 +73,12 @@ void ExecuteMonInputCallback(
     if (state_arrays[idx.entry_id(input)]->is_none()) {
       continue;
     }
+    if (input.node->is_variable()) {
+    // Monitor variable
+      NDArray *cpy = new NDArray(*state_arrays[idx.entry_id(input)]);
+      std::string name = input.node->attrs.name;
+      monitor_callback(name.c_str(), inode.source->op()->name.c_str(), reinterpret_cast<void*>(cpy));
+    }
     NDArray *cpy = new NDArray(*state_arrays[idx.entry_id(input)]);
     std::string name = inode.source->attrs.name + "_" + input_names[i];
     monitor_callback(name.c_str(), inode.source->op()->name.c_str(),

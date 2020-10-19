@@ -263,6 +263,7 @@ def _collect_layer_statistics(sym_block, data, collector, max_num_examples=None,
     for batch in data:
         if not isinstance(batch, list):
             batch = [batch]
+        batch = [b.as_in_context(mx.cpu()) for b in batch]
         sym_block(*batch)
         num_batches += 1
         num_examples += data._batch_sampler._batch_size
@@ -270,7 +271,7 @@ def _collect_layer_statistics(sym_block, data, collector, max_num_examples=None,
             break
     if logger is not None:
         logger.info("Collected statistics from %d batches with batch_size=%d"
-                    % (num_batches, data.batch_size))
+                    % (num_batches, data._batch_sampler._batch_size))
     return num_examples
 
 
@@ -849,8 +850,9 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     backend = None
     if ctx == mx.cpu():
         backend = 'MKLDNN_QUANTIZE'
-
-    network.hybridize(backend=backend, backend_opts={'dedup_subgraph': False, 'skip_infer': True})
+    network.hybridize(static_alloc=False, static_shape=False,
+                      backend=backend,
+                      backend_opts={'dedup_subgraph': False, 'skip_infer': True})
 
     if data_shapes is None:
         if calib_data is None:
@@ -932,12 +934,10 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
 
     from ..gluon import SymbolBlock
     net = SymbolBlock(qsym, inputs)
-    net.hybridize(backend=backend, backend_opts={'dedup_subgraph': False, 'skip_infer': True})
-
     all_params = {('arg:%s' % k): v.as_in_context(cpu()) for k, v in qarg_params.items()}
     all_params.update({('aux:%s' % k): v.as_in_context(cpu()) for k, v in aux_params.items()})
     net.load_dict(all_params, cast_dtype=True, dtype_source='saved')
-    net.reset_ctx(ctx)
+    net.optimize_for(data_nd, backend=backend, backend_opts={'dedup_subgraph': False, 'skip_infer': True})
     return net
 
 def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
