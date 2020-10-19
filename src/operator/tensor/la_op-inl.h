@@ -26,6 +26,8 @@
 #ifndef MXNET_OPERATOR_TENSOR_LA_OP_INL_H_
 #define MXNET_OPERATOR_TENSOR_LA_OP_INL_H_
 
+#include <limits>
+#include <vector>
 #include "../linalg.h"
 
 namespace mxnet {
@@ -65,6 +67,84 @@ struct Scale {
     data[i] *= scale;
   }
 };
+
+
+template<
+  typename xpu,
+  typename IndexT,
+  std::enable_if_t<!std::is_same<IndexT, lapack_index_t>::value, int> = 0>
+inline void convert_to_int_if_needed(
+              Stream<xpu> *s,
+              const Tensor<xpu, 2, IndexT>& tensor) {
+}
+
+// convertion to int is required only for GPU when IndexT is equal lapack_index_t (int64_t)
+template<
+  typename xpu,
+  typename IndexT,
+  std::enable_if_t<std::is_same<IndexT, lapack_index_t>::value, int> = 0>
+inline void convert_to_int_if_needed(
+              Stream<xpu> *s,
+              const Tensor<xpu, 2, IndexT>& tensor) {
+#ifdef __CUDACC__
+  CHECK_LE(tensor.shape_[0], std::numeric_limits<int>::max())
+    << "Tensor has size greater than supported.";
+  CHECK_LE(tensor.shape_[1], std::numeric_limits<int>::max())
+    << "Tensor has size greater than supported.";
+  cudaStream_t stream = Stream<xpu>::GetStream(s);
+  size_t elements =  tensor.shape_.Size();
+  std::vector<IndexT> vec(elements, 0);
+  IndexT* ptr = vec.data();
+  int* ptr_int = reinterpret_cast<int*>(vec.data());
+
+  CUDA_CALL(cudaMemcpyAsync(ptr, reinterpret_cast<IndexT*>(tensor.dptr_),
+                            tensor.MSize() * sizeof(IndexT),
+                            cudaMemcpyDeviceToHost, stream));
+  for (IndexT i = 0; i < elements; ++i) {
+    ptr_int[i] = static_cast<int>(ptr[i]);
+  }
+  CUDA_CALL(cudaMemcpyAsync(tensor.dptr_, ptr,
+                            tensor.MSize() * sizeof(IndexT),
+                            cudaMemcpyHostToDevice, stream));
+#endif
+}
+
+
+template<
+  typename xpu,
+  typename IndexT,
+  std::enable_if_t<!std::is_same<IndexT, lapack_index_t>::value, int> = 0>
+inline void convert_to_int64_if_needed(
+              Stream<xpu> *s,
+              const Tensor<xpu, 2, IndexT>& tensor) {
+}
+
+// convertion  from int to int64_t (lapack_index_t) is required for GPU only
+template<
+  typename xpu,
+  typename IndexT,
+  std::enable_if_t<std::is_same<IndexT, lapack_index_t>::value, int> = 0>
+inline void convert_to_int64_if_needed(
+              Stream<xpu> *s,
+              const Tensor<xpu, 2, IndexT>& tensor) {
+#ifdef __CUDACC__
+  cudaStream_t stream = Stream<xpu>::GetStream(s);
+  size_t elements =  tensor.shape_.Size();
+  std::vector<IndexT> vec(elements, 0);
+  IndexT* ptr = vec.data();
+  int* ptr_int = reinterpret_cast<int*>(vec.data());
+  CUDA_CALL(cudaMemcpyAsync(ptr, reinterpret_cast<int*>(tensor.dptr_),
+                            tensor.MSize() * sizeof(int),
+                            cudaMemcpyDeviceToHost, stream));
+  for (IndexT i = elements - 1; i >= 0; --i) {
+    ptr[i] = static_cast<IndexT>(ptr_int[i]);
+  }
+  CUDA_CALL(cudaMemcpyAsync(tensor.dptr_, ptr,
+                            tensor.MSize() * sizeof(IndexT),
+                            cudaMemcpyHostToDevice, stream));
+#endif
+}
+
 
 // Forward computations (always using batched processing)
 // CHANGE: Added xyz::op(..., ctx, attrs), which calls xyz::op(..., s, attrs)
@@ -512,7 +592,11 @@ struct det {
       .get_space_typed<xpu, 1, DType>(det.shape_, s);
     Copy(LU, A, s);
     // since det(A) = det(trans(A)), so we'll use col-major blas routines here
-    linalg_batch_getrf(LU, pivot, false, s);
+     // Calculations on the GPU path are internally done on int type.
+    using IndexInternalT = typename LapackIndex<xpu>::IndexT;
+    linalg_batch_getrf(LU, reinterpret_cast<const Tensor<xpu, 2, IndexInternalT>&>(pivot),
+                       false, s);
+    convert_to_int64_if_needed(s, pivot);
     using namespace mxnet_op;
     using namespace mshadow::expr;
     Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
@@ -534,7 +618,11 @@ struct slogdet {
     }
     Stream<xpu> *s = ctx.get_stream<xpu>();
     Copy(LU, A, s);
-    linalg_batch_getrf(LU, pivot, false, s);
+    // Calculations on the GPU path are internally done on int type.
+    using IndexInternalT = typename LapackIndex<xpu>::IndexT;
+    linalg_batch_getrf(LU,  reinterpret_cast<const Tensor<xpu, 2, IndexInternalT>&>(pivot),
+                       false, s);
+    convert_to_int64_if_needed(s, pivot);
     using namespace mxnet_op;
     using namespace mshadow::expr;
     Kernel<SignedLogDet, xpu>::Launch(s, pivot.size(0), pivot.size(1), pivot.dptr_,
@@ -932,15 +1020,20 @@ struct det_backward {
     if (dA.shape_.Size() == 0U) {
       return;
     }
-    // compute inverse(A) and stores it to LU
-    linalg_batch_det_backward_helper(LU, pivot, det, dA, DType(0), ctx);
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    convert_to_int_if_needed(s, pivot);
+    // Calculations on the GPU path are internally done on int type.
+    using IndexInternalT = typename LapackIndex<xpu>::IndexT;
+    linalg_batch_det_backward_helper(LU,
+                                     reinterpret_cast<const Tensor<xpu, 2, IndexInternalT>&>(pivot),
+                                     det, dA, DType(0), ctx);
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(det * ddet, \
       Shape3(det.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
-    Stream<xpu> *s = ctx.get_stream<xpu>();
     // stop grad for zero det temporarily
     Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
                                          dA.dptr_, det.dptr_, DType(0));
+    convert_to_int64_if_needed(s, pivot);
   }
 };
 
@@ -963,15 +1056,21 @@ struct slogdet_backward {
     if (dA.shape_.Size() == 0U) {
       return;
     }
+    Stream<xpu> *s = ctx.get_stream<xpu>();
+    convert_to_int_if_needed(s, pivot);
     // compute inverse(A) and stores it to LU
-    linalg_batch_det_backward_helper(LU, pivot, logabsdet, dA, DType(-INFINITY), ctx);
+    // Calculations on the GPU path are internally done on int type.
+    using IndexInternalT = typename LapackIndex<xpu>::IndexT;
+    linalg_batch_det_backward_helper(LU,
+                                     reinterpret_cast<const Tensor<xpu, 2, IndexInternalT>&>(pivot),
+                                     logabsdet, dA, DType(-INFINITY), ctx);
     const_cast<Tensor<xpu, 3, DType>&>(dA) = broadcast_to(reshape(dlogabsdet, \
       Shape3(logabsdet.size(0), 1, 1)), mxnet::TShape(LU.shape_)) * \
       transpose(LU, Shape3(0, 2, 1));
-    Stream<xpu> *s = ctx.get_stream<xpu>();
     // stop grad for zero det
     Kernel<StopZeroDetGrad, xpu>::Launch(s, dA.shape_.Size(), dA.size(1) * dA.size(2), \
                                          dA.dptr_, logabsdet.dptr_, DType(-INFINITY));
+    convert_to_int64_if_needed(s, pivot);
   }
 };
 

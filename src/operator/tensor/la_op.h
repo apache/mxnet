@@ -855,7 +855,7 @@ void LaOpDetForward(const nnvm::NodeAttrs& attrs,
                     const std::vector<OpReqType>& req,
                     const std::vector<TBlob>& outputs) {
   using namespace mshadow;
-  using IndexT = typename LapackIndex<xpu>::IndexT;
+  using IndexT = lapack_index_t;
   CHECK_EQ(inputs.size(), 1);
   CHECK_EQ(outputs.size(), onum + 2);
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, OType, {
@@ -908,7 +908,7 @@ void LaOpDetBackward(const nnvm::NodeAttrs& attrs,
                      const std::vector<OpReqType>& req,
                      const std::vector<TBlob>& outputs) {
   using namespace mshadow;
-  using IndexT = typename LapackIndex<xpu>::IndexT;
+  using IndexT = lapack_index_t;
   if (outputs[0].shape_.Size() == 0U) {
     return;
   }

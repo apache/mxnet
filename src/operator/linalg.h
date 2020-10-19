@@ -251,10 +251,10 @@ void linalg_getri(const Tensor<xpu, 2, DType>& LU,
 // Note that this function only implements GPU version with "getriBatched" in cuBLAS.
 // Unlike lapack routines in cpu, it is computed out-of-place, so the final matrix
 // inverse is stored in A.
-template<typename xpu, typename DType>
+template<typename xpu, typename DType, typename IndexT>
 void linalg_batch_getri(const Tensor<xpu, 3, DType>& A,
                         const Tensor<xpu, 3, DType>& LU,
-                        const Tensor<xpu, 2, int>& pivot,
+                        const Tensor<xpu, 2, IndexT>& pivot,
                         Stream<xpu> *s = 0);
 
 //////////////////////////////// INVERSE ////////////////////////////////////////////
