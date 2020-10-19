@@ -118,6 +118,10 @@ void TRTInt8Calibrator::writeCalibrationCache(const void* ptr,
           << " length=" << length;
 }
 
+void TRTInt8Calibrator::setDone() {
+  done_ = true;
+}
+
 void TRTInt8Calibrator::waitAndSetDone() {
   std::unique_lock<std::mutex> lk(mutex_);
   cv_.wait(lk, [&]{ return (!batch_is_set_ && !calib_running_) || done_; });

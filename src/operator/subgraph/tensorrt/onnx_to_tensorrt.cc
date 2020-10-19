@@ -143,6 +143,7 @@ std::tuple<unique_ptr<nvinfer1::ICudaEngine>,
       builder_config->setInt8Calibrator(calibrator);
     } else {
       LOG(WARNING) << "TensorRT can't use int8 on this platform";
+      calibrator->setDone();
       calibrator = nullptr;
     }
   }
@@ -177,6 +178,7 @@ std::tuple<unique_ptr<nvinfer1::ICudaEngine>,
       trt_builder->setInt8Calibrator(calibrator);
     } else {
       LOG(WARNING) << "TensorRT can't use int8 on this platform";
+      calibrator->setDone();
       calibrator = nullptr;
     }
   }

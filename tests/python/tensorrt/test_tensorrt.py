@@ -143,12 +143,6 @@ def get_top1(logits):
 
 def test_tensorrt_symbol_int8():
     ctx = mx.gpu(0)
-    cuda_arch = get_cuda_compute_capability(ctx)
-    cuda_arch_min = 70
-    if cuda_arch < cuda_arch_min:
-        print('Bypassing test_tensorrt_symbol_int8 on cuda arch {}, need arch >= {}).'.format(
-              cuda_arch, cuda_arch_min))
-        return
 
     # INT8 engine output are not lossless, so we don't expect numerical uniformity,
     # but we have to compare the TOP1 metric
