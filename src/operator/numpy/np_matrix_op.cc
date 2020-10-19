@@ -1150,7 +1150,7 @@ inline bool TrilindicesOpShape(const nnvm::NodeAttrs& attrs,
   int n = param.n;
   int m = param.m;
   int k = param.k;
-  
+
   index_t length = 0;
   int end = k;
   for (int i = 0; i < n; i++) {

@@ -382,7 +382,7 @@ void TrilindicesOpForward(const nnvm::NodeAttrs& attrs,
   int n = param.n;
   int m = param.m;
   int k = param.k;
-  
+
   int end = k;
   index_t idx = 0;
   for (int i = 0; i < n; i++) {
