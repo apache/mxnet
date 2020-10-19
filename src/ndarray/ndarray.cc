@@ -402,7 +402,8 @@ NDArray NDArray::AtWithRecord(index_t idx) {
         attrs.op = nnvm::Op::Get("Reshape");;
         attrs.dict.insert({"shape", os.str()});
     } else {
-        os << mxnet::TShape({-3, -4});  // See NumpyXReshapeInferShape for definition of magic numbers
+        // See NumpyXReshapeInferShape for definition of magic numbers
+        os << mxnet::TShape({-3, -4});
         attrs.op = nnvm::Op::Get("_npx_reshape");;
         attrs.dict.insert({"newshape", os.str()});
     }
