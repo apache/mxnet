@@ -337,6 +337,26 @@ def test_fusion_reshape_executor():
     out = f.forward(is_train=False, data1=data, data2=data)
     assert out[0].sum().asscalar() == 150
 
+@with_seed()
+def test_fusion_cycle():
+    class Test(gluon.nn.HybridBlock):
+        def __init__(self, **kwargs):
+            super(Test, self).__init__(**kwargs)
+
+        def hybrid_forward(self, F, x, y):
+            x = F.relu(x)
+            y = F.relu(y)
+            z1 = F.expand_dims(F.sum_axis(x, axis=1), axis=1)
+            z2 = F.expand_dims(F.sum_axis(y, axis=1), axis=1)
+            return x + z2, y + z1
+
+    t = Test()
+    a = mx.nd.zeros(shape=(10,1), ctx=mx.gpu())
+    b = mx.nd.zeros(shape=(10,1), ctx=mx.gpu())
+    t.hybridize(static_alloc=True, static_shape=True)
+    out = t(a, b)
+    mx.nd.waitall()
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
