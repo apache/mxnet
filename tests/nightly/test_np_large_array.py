@@ -25,7 +25,7 @@ import mxnet as mx
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor, use_np
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_np_tensor, use_np
 from mxnet import gluon, np, npx
 from common import with_seed
 import pytest
@@ -1256,7 +1256,7 @@ def test_diagflat():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1, -1] == 1
 
-    
+
 @use_np
 def test_diagonal():
     inp = np.zeros((2, INT_OVERFLOW+2))
@@ -1968,6 +1968,38 @@ def test_array_split():
 
 
 @use_np
+def test_std():
+    N = 2*20
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = N
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.std(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    ref = ((float(N)/INT_OVERFLOW)**2 * (INT_OVERFLOW-1))**0.5
+    assert_almost_equal(out[1], ref, rtol=1e-5, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+
+@use_np
+def test_var():
+    N = 2*20
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = N
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.var(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    ref = (float(N)/INT_OVERFLOW)**2 * (INT_OVERFLOW-1)
+    assert_almost_equal(out[1], ref, rtol=1e-5, atol=1e-5)
+
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+@use_np
 def test_rollaxis():
     inp = np.zeros((1, 1, 2, INT_OVERFLOW, 1))
     inp[-1, -1, -1, -1, -1] = 1
@@ -2004,6 +2036,83 @@ def test_vstack():
 
 
 @use_np
+def test_ediff1d():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[0, -1], inp[1, 0] = 1, 3
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.ediff1d(inp, to_begin=-99, to_end=np.array([88, 99]))
+        out.backward()
+    assert out.shape == (2 * INT_OVERFLOW - 1 + 1 + 2, )
+    assert out[INT_OVERFLOW-1] == 1 and out[INT_OVERFLOW] == 2 and\
+            out[INT_OVERFLOW+1] == -3
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == -1 and inp.grad[-1, -1] == 1
+
+
+@use_np
+def test_split():
+    inp = np.ones((INT_OVERFLOW, 2))
+    inp[INT_OVERFLOW // 2] = 2
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.split(inp, 2, axis = 0)
+        out[1].backward()
+    assert out[0].shape == (INT_OVERFLOW // 2, 2)
+    assert out[1].shape == (INT_OVERFLOW // 2, 2)
+    assert out[0][0, 0] == 1
+    assert out[1][0, 0] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0][0] == 0 and inp.grad[-1][-1] == 1
+
+
+@use_np
+def test_hsplit():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.hsplit(inp, 2)
+        out[1].backward()
+    assert out[1].shape == (INT_OVERFLOW, 2)
+    assert out[0].shape == (INT_OVERFLOW, 2)
+    assert out[1][-1][0] == INT_OVERFLOW-1
+    assert out[0][-1][1] == INT_OVERFLOW-1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0][0] == 0 and inp.grad[-1][-1] == 1
+
+
+@use_np
+def test_vsplit():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.vsplit(inp, 2)
+        out[1].backward()
+    assert out[1].shape == (INT_OVERFLOW//2, 4)
+    assert out[0].shape == (INT_OVERFLOW//2, 4)
+    assert out[0][-1][0] == INT_OVERFLOW // 2 -1
+    assert out[1][-1][1] == INT_OVERFLOW - 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[INT_OVERFLOW//2 - 1][-1] == 0 and inp.grad[-1][-1] == 1
+
+
+@use_np
+def test_dsplit():
+    inp = np.arange(INT_OVERFLOW, dtype=np.int64).reshape(INT_OVERFLOW, 1, 1)
+    inp = np.broadcast_to(inp, shape=(inp.shape[0], 2, 2))
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.dsplit(inp, 2)
+        out[1].backward()
+    assert out[1].shape == (INT_OVERFLOW, 2, 1)
+    assert out[0].shape == (INT_OVERFLOW, 2, 1)
+    assert out[0][-1][0][0] == INT_OVERFLOW - 1
+    assert out[1][0][1][0] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1][-1][0] == 0 and inp.grad[0][1][1] == 1
+
+
+@use_np
 def test_logspace():
     data = np.logspace(1.0, 10.0, INT_OVERFLOW)
     assert data.shape == (INT_OVERFLOW, )
@@ -2017,3 +2126,4 @@ def test_linspace():
     assert data.shape == (INT_OVERFLOW, )
     assert data[0] == 0 and data[-1] == 1000
     assert data[HALF_INT_OVERFLOW] == 500
+    
