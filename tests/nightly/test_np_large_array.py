@@ -2111,3 +2111,19 @@ def test_dsplit():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1][-1][0] == 0 and inp.grad[0][1][1] == 1
 
+
+@use_np
+def test_unique():
+    inp = np.zeros((2, HALF_INT_OVERFLOW))
+    assertRaises(ValueError, np.unique, inp, axis=1)
+
+
+@use_np
+def test_repeat():
+    inp = np.ones((2, HALF_INT_OVERFLOW))
+    assertRaises(ValueError, np.repeat, inp, repeats=2, axis=1)
+
+
+@use_np
+def test_indices():
+    assertRaises(ValueError, np.indices, (2, HALF_INT_OVERFLOW))
