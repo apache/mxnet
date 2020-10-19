@@ -2987,8 +2987,10 @@ def test_np_binary_funcs():
                 if isinstance(dtype, tuple):
                     assert len(dtype) == 2
                     ldtype, rdtype = dtype
-                np_test_x1 = _np.random.uniform(low, high, lshape).astype(ldtype)
-                np_test_x2 = _np.random.uniform(low, high, rshape).astype(rdtype)
+                npldtype = ldtype if dtype != _np.float16 else _np.float32
+                nprdtype = rdtype if dtype != _np.float16 else _np.float32
+                np_test_x1 = _np.random.uniform(low, high, lshape).astype(ldtype).astype(npldtype)
+                np_test_x2 = _np.random.uniform(low, high, rshape).astype(rdtype).astype(nprdtype)
                 mx_test_x1 = mx.numpy.array(np_test_x1, dtype=ldtype)
                 mx_test_x2 = mx.numpy.array(np_test_x2, dtype=rdtype)
                 for hybridize in [True, False]:

@@ -700,6 +700,44 @@ void ReduceAxesCompute(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeImpl<xpu, reducer, false, normalize, OP>(ctx, inputs, req, outputs, small);
 }
 
+#if MXNET_USE_CUDA
+
+template <typename Param, int init>
+struct ReduceAxesRTCCompute {
+  std::string OP;
+  std::string reducer;
+  bool normalize;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
+void ReduceAxesRTCComputeImpl(const OpContext& ctx,
+                              const std::vector<TBlob>& inputs,
+                              const std::vector<OpReqType>& req,
+                              const std::vector<TBlob>& outputs,
+                              const mxnet::TShape& small,
+                              const std::string& reducer,
+                              const bool normalize = false,
+                              const std::string& OP = "identity",
+                              const int ddof = 0);
+
+void ReduceAxesRTCComputeWithWorkspaceImpl(const OpContext& ctx,
+                                           const std::vector<TBlob>& inputs,
+                                           const std::vector<OpReqType>& req,
+                                           const std::vector<TBlob>& outputs,
+                                           const std::string& reducer,
+                                           const bool normalize,
+                                           const std::string& OP,
+                                           const mshadow::Tensor<gpu, 1, char>& workspace,
+                                           const mxnet::TShape& src_shape,
+                                           const mxnet::TShape& dst_shape,
+                                           const int ddof = 0);
+#endif
+
 template <typename red_op, int req, int axis>
 struct ReduceCsrKernel;
 
@@ -1480,7 +1518,8 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   } else {
     small = ReduceAxesShapeImpl(inputs[0].shape_, param.axis, true, false);
   }
-  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
+#if !defined(__CUDACC__)
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
   if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
     common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for LpNorm with float16 inputs. "
                     "See https://mxnet.apache.org/api/faq/env_var "
@@ -1503,6 +1542,15 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
         ctx, inputs, req, outputs, small);
     }
   }
+#else
+  const std::string &red = param.ord == 1
+                           ? "red::sum{}"
+                           : "red::nrm2{}";
+  const std::string &op = param.ord == 1
+                          ? "abs"
+                          : "identity";
+  ReduceAxesRTCComputeImpl(ctx, inputs, req, outputs, small, red, false, op);
+#endif
 }
 
 template<int req>

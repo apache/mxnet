@@ -607,11 +607,22 @@ void PdfOpBackward(const nnvm::NodeAttrs& attrs,
     }
     Tensor<xpu, 1, char> red_work(
             tmp_space.dptr_ + pnum * outputs[0].Size() * sizeof(DType), Shape1(red_work_size), s);
-    broadcast::Reduce<red::sum, 2, DType, op::mshadow_op::identity>(
-       s, outputs[1].reshape(dst_shape), req[1], red_work, grads[1].reshape(src_shape));
-    if (pnum == 2) {
+    if constexpr (std::is_same<xpu, cpu>::value) {
       broadcast::Reduce<red::sum, 2, DType, op::mshadow_op::identity>(
-       s, outputs[2].reshape(dst_shape), req[2], red_work, grads[2].reshape(src_shape));
+         s, outputs[1].reshape(dst_shape), req[1], red_work, grads[1].reshape(src_shape));
+      if (pnum == 2) {
+        broadcast::Reduce<red::sum, 2, DType, op::mshadow_op::identity>(
+         s, outputs[2].reshape(dst_shape), req[2], red_work, grads[2].reshape(src_shape));
+      }
+    } else {
+#if MXNET_USE_CUDA
+      broadcast::RTCReduce(ctx, outputs[1].reshape(dst_shape), req[1], red_work,
+                           grads[1].reshape(src_shape), "red::sum{}", 2, "identity");
+      if (pnum == 2) {
+        broadcast::RTCReduce(ctx, outputs[2].reshape(dst_shape), req[2], red_work,
+                             grads[2].reshape(src_shape), "red::sum{}", 2, "identity");
+      }
+#endif
     }
   });
 }

@@ -904,7 +904,7 @@ template<>
 MSHADOW_XINLINE mshadow::half::half_t mod_rgrad::Map<mshadow::half::half_t>
                                                     (mshadow::half::half_t a,
                                                      mshadow::half::half_t b) {
-  return mshadow::half::half_t(-::floorf(static_cast<float>(a/b)));
+  return mshadow::half::half_t(-::floorf(static_cast<float>(a)/static_cast<float>(b)));
 }
 
 struct rmod : public mxnet_op::tunable {

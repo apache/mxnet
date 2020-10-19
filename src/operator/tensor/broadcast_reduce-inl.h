@@ -652,10 +652,6 @@ inline size_t ReduceWorkspaceSize(Stream<gpu> *s, const ::mxnet::TShape& small, 
   return config.workspace_size;
 }
 
-#ifdef __CUDACC__
-#include "broadcast_reduce-inl.cuh"
-#endif
-
 #endif  // MXNET_USE_CUDA
 
 template<typename Reducer, int ndim, typename DType, typename OP1, typename OP2>

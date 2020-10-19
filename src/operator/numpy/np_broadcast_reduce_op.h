@@ -298,7 +298,7 @@ void NumpyReduceAxesCompute(const nnvm::NodeAttrs& attrs,
                             const std::vector<TBlob>& outputs) {
   using namespace mshadow;
   if (req[0] == kNullOp) return;
-  const NumpyReduceAxesParam& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
+  const auto& param = nnvm::get<NumpyReduceAxesParam>(attrs.parsed);
   if (param.initial.has_value()) {
     LOG(FATAL) << "initial is not supported yet";
   }
@@ -839,13 +839,25 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
 
     // Compute weighted data
     TBlob wa = TBlob(temp_data_ptr, data.shape_, xpu::kDevMask);
-    NP_BROADCAST_REDUCE_OP_BROADCAST(mul)(
-      attrs, ctx, {data, weights}, {kWriteTo}, {wa});
+    TBlob sum_of_wa;
+    if constexpr (std::is_same<xpu, cpu>::value) {
+      BinaryBroadcastCompute<xpu, mshadow_op::mul>(
+        attrs, ctx, {data, weights}, {kWriteTo}, {wa});
 
-    // Compute sum of weighted data
-    TBlob sum_of_wa = TBlob(temp_sum_ptr, small1, xpu::kDevMask);
-    ReduceAxesComputeWithWorkspaceImpl<xpu, mshadow_op::sum, true>(
-      ctx, {wa}, {kWriteTo}, {sum_of_wa}, workspace, src_shape, dst_shape);
+      // Compute sum of weighted data
+      sum_of_wa = TBlob(temp_sum_ptr, small1, xpu::kDevMask);
+      ReduceAxesComputeWithWorkspaceImpl<xpu, mshadow_op::sum, true>(
+        ctx, {wa}, {kWriteTo}, {sum_of_wa}, workspace, src_shape, dst_shape);
+    } else {
+#if MXNET_USE_CUDA
+      BinaryBroadcastRTCCompute {"mul"}(attrs, ctx, {data, weights}, {kWriteTo}, {wa});
+
+      // Compute sum of weighted data
+      sum_of_wa = TBlob(temp_sum_ptr, small1, xpu::kDevMask);
+      ReduceAxesRTCComputeWithWorkspaceImpl(ctx, {wa}, {kWriteTo}, {sum_of_wa}, "red::sum{}",
+                                            false, "identity", workspace, src_shape, dst_shape);
+#endif
+    }
     if (!back) {
       const TBlob& avg = outputs[0];
       const TBlob& sum_of_weights = outputs[1];
@@ -853,12 +865,22 @@ void NumpyWeightedAverageComputeImpl(const nnvm::NodeAttrs& attrs,
       BroadcastReduceShapeCompact(weights.shape_, small2, &w_src_shape, &w_dst_shape);
       // Compute sum of weight
       TBlob scl = sum_of_weights.reshape(small2);
-      ReduceAxesComputeWithWorkspaceImpl<xpu, mshadow_op::sum, true>(
-        ctx, {weights}, {kWriteTo}, {scl}, workspace, w_src_shape, w_dst_shape);
-
-      // Compute avg and assign output
-      NP_BROADCAST_REDUCE_OP_BROADCAST(div)(
-        attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
+      if constexpr (std::is_same<xpu, cpu>::value) {
+        ReduceAxesComputeWithWorkspaceImpl<xpu, mshadow_op::sum, true>(
+          ctx, {weights}, {kWriteTo}, {scl}, workspace, w_src_shape, w_dst_shape);
+        // Compute avg and assign output
+        BinaryBroadcastCompute<xpu, mshadow_op::div>(
+          attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
+      } else {
+#if MXNET_USE_CUDA
+        ReduceAxesRTCComputeWithWorkspaceImpl(ctx, {weights}, {kWriteTo}, {scl}, "red::sum{}",
+                                              false, "identity", workspace, w_src_shape,
+                                              w_dst_shape);
+        // Compute avg and assign output
+        BinaryBroadcastRTCCompute {"div"}(
+          attrs, ctx, {sum_of_wa, scl}, req, {avg.reshape(small1)});
+#endif
+      }
     } else {
       // Compute and assign the derivatives of a and weights
       const TBlob& igrad_a = outputs[0];
@@ -924,8 +946,14 @@ void NumpyWeightedAverageForward(const nnvm::NodeAttrs& attrs,
       auto ret = outputs[1].FlatTo1D<xpu, DType>(s);
       ret = scalar<DType>(data.shape_.Size()/small.Size());
       // Compute mean
-      ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, true>(
-        ctx, inputs, req, {outputs[0]}, small);
+      if constexpr (std::is_same<xpu, cpu>::value) {
+        ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, true>(
+          ctx, inputs, req, {outputs[0]}, small);
+      } else {
+#if MXNET_USE_CUDA
+        ReduceAxesRTCComputeImpl(ctx, inputs, req, {outputs[0]}, small, "red::sum{}", true);
+#endif
+      }
     } else {
       NumpyWeightedAverageComputeImpl<xpu>(
         attrs, ctx, inputs, req, outputs, param.axis);
@@ -1010,8 +1038,15 @@ void NumpyMomentsForward(const nnvm::NodeAttrs& attrs,
       char *workspace_ptr = temp_mem.dptr_ + temp_data_size;
       Tensor<xpu, 1, char> workspace(workspace_ptr, Shape1(workspace_size), s);
       // Compute mean
-      ReduceAxesComputeWithWorkspaceImpl<xpu, mshadow_op::sum, true, true>(
-        ctx, inputs, {kWriteTo}, {mean}, workspace, src_shape, dst_shape);
+      if constexpr (std::is_same<xpu, cpu>::value) {
+        ReduceAxesComputeWithWorkspaceImpl<xpu, mshadow_op::sum, true, true>(
+          ctx, inputs, {kWriteTo}, {mean}, workspace, src_shape, dst_shape);
+      } else {
+#if MXNET_USE_CUDA
+        ReduceAxesRTCComputeWithWorkspaceImpl(ctx, inputs, {kWriteTo}, {mean}, "red::sum{}",
+                                              true, "identity", workspace, src_shape, dst_shape);
+#endif
+      }
       // Compute data - mean
       Shape<6> data_shape, mean_shape;
       for (int i = 0; i < 6; ++i) {
@@ -1022,11 +1057,22 @@ void NumpyMomentsForward(const nnvm::NodeAttrs& attrs,
         data.dptr<DType>(), mean.dptr<DType>(), data_shape, mean_shape);
       Tensor<xpu, 1, DType> temp_data_tensor(temp_data_ptr, Shape1(data.shape_.Size()), s);
       TBlob temp_data_blob = TBlob(temp_data_tensor).reshape(data.shape_);
-      ReduceAxesComputeWithWorkspaceImpl<xpu, mshadow_op::sum, true, true>(
-        ctx, {temp_data_blob}, {req[0]}, {moment}, workspace, src_shape, dst_shape, param.ddof);
-      if (sqrt) {
-        Tensor<xpu, 1, OType> moment_tensor = moment.FlatTo1D<xpu, OType>(s);
-        moment_tensor = F<mshadow_op::square_root>(moment_tensor);
+      if constexpr (std::is_same<xpu, cpu>::value) {
+        ReduceAxesComputeWithWorkspaceImpl<xpu, mshadow_op::sum, true, true>(
+          ctx, {temp_data_blob}, {req[0]}, {moment}, workspace, src_shape, dst_shape, param.ddof);
+        if (sqrt && req[0] != kNullOp) {
+          Tensor<xpu, 1, OType> moment_tensor = moment.FlatTo1D<xpu, OType>(s);
+          moment_tensor = F<mshadow_op::square_root>(moment_tensor);
+        }
+      } else {
+#if MXNET_USE_CUDA
+        ReduceAxesRTCComputeWithWorkspaceImpl(ctx, {temp_data_blob}, {req[0]}, {moment},
+                                              "red::sum{}", true, "identity", workspace,
+                                              src_shape, dst_shape, param.ddof);
+        if (sqrt && req[0] != kNullOp) {
+          UnaryRTCCompute {"sqrt"}({}, ctx, {moment}, {kWriteInplace}, {moment});
+        }
+#endif
       }
     });
   });
@@ -1065,6 +1111,7 @@ void NumpyBroadcastToBackward(const nnvm::NodeAttrs& attrs,
   for (int i = 0; i < igrad_shape.ndim(); ++i) {
     expanded_igrad_shape[i + ndim_delta] = igrad_shape[i];
   }
+#if !defined(__CUDACC__)
   if (NeedSafeAcc<true>(inputs[0].type_flag_, outputs[0].type_flag_)) {
     ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
         ctx, inputs, req, {outputs[0].reshape(expanded_igrad_shape)}, expanded_igrad_shape);
@@ -1072,6 +1119,10 @@ void NumpyBroadcastToBackward(const nnvm::NodeAttrs& attrs,
     ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(
         ctx, inputs, req, {outputs[0].reshape(expanded_igrad_shape)}, expanded_igrad_shape);
   }
+#else
+  ReduceAxesRTCComputeImpl(ctx, inputs, req, {outputs[0].reshape(expanded_igrad_shape)},
+                           expanded_igrad_shape, "red::sum{}", false);
+#endif
 }
 
 template<typename xpu, typename OP>

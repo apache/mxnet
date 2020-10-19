@@ -285,18 +285,10 @@ void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
     } else if (param.ord == std::numeric_limits<double>::infinity()) {  // inf norm
       LOG(FATAL) << "inf norm handled in front-end.";
     } else {
+#ifndef __CUDACC__
       mshadow_op::nrmlp host_reducer(param.ord);
       mshadow_op::nrmlp *reducer_instance = nullptr;
-#ifdef __CUDACC__
-      Stream<xpu> *s = ctx.get_stream<xpu>();
-      cudaStream_t copy_stream = mshadow::Stream<gpu>::GetStream(s);
-      cudaMalloc(reinterpret_cast<void**>(&reducer_instance), sizeof(mshadow_op::nrmlp));
-      cudaMemcpyAsync(reducer_instance, &host_reducer, sizeof(mshadow_op::nrmlp),
-                      cudaMemcpyHostToDevice, copy_stream);
-      cudaStreamSynchronize(copy_stream);
-#else
       reducer_instance = &host_reducer;
-#endif
       if (safe_acc) {
         ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrmlp, true, mshadow_op::abs>(
           ctx, inputs, req, outputs, small, reducer_instance);
@@ -304,8 +296,10 @@ void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
         ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrmlp, false, mshadow_op::abs>(
           ctx, inputs, req, outputs, small, reducer_instance);
       }
-#ifdef __CUDACC__
-      cudaFree(reducer_instance);
+#else
+      ReduceAxesRTCComputeImpl(
+        ctx, inputs, req, outputs, small, "red::nrmlp{" + std::to_string(param.ord) + "}",
+        false, "abs");
 #endif
     }
   }
@@ -443,8 +437,13 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   }
 
   if (param.flag == 1) {  // Frobenius norm
-    ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrm2, false, mshadow_op::identity>(
+#if !defined(__CUDACC__)
+    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
       ctx, inputs, req, outputs, reduced_shape);
+#else
+    ReduceAxesRTCComputeImpl(
+      ctx, inputs, req, outputs, reduced_shape, "red::nrm2{}", false, "identity");
+#endif
     return;
   }
 
@@ -456,6 +455,7 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
     MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       TBlob temp = outputs[1].reshape(sum_shape);
       std::vector<TBlob> sum_output({temp});
+#if !defined(__CUDACC__)
       ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false, mshadow_op::abs>(
         ctx, inputs, req, sum_output, sum_shape);
       if (param.ord > 0) {
@@ -465,6 +465,16 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
         ReduceAxesComputeImpl<xpu, mshadow::red::minimum, false, false, mshadow_op::identity>(
           ctx, sum_output, req, outputs, reduced_shape);
       }
+#else
+      ReduceAxesRTCComputeImpl(ctx, inputs, req, sum_output, sum_shape, "red::sum{}", false, "abs");
+      if (param.ord > 0) {
+        ReduceAxesRTCComputeImpl(ctx, sum_output, req, outputs, reduced_shape,
+                                 "red::maximum{}", false);
+      } else {
+        ReduceAxesRTCComputeImpl(ctx, sum_output, req, outputs, reduced_shape,
+                                 "red::minimum{}", false);
+      }
+#endif  // MXNET_USE_CUDA
     });
     return;
   }
@@ -500,6 +510,7 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
     L_trans[mat_axis[1]] = 1;
   }
 
+  std::vector<TBlob> eigen;
   MSHADOW_SGL_DBL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
     Tensor<xpu, 3, DType> UT =
       outputs[1].get_with_shape<xpu, 3, DType>(Shape3(batch_dim, row_dim, row_dim), s);
@@ -523,32 +534,46 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
     Tensor<xpu, 3, DType> svd_input =
       workspace.get_with_shape<xpu, 3, DType>(Shape3(batch_dim, row_dim, col_dim), s);
     gesvd::op(svd_input, UT, L, V, ctx, attrs, &svd_workspace);
-
     TBlob workspace0(reinterpret_cast<DType*>(temp.dptr_), L_trans,
                      temp.dev_mask(), temp.dev_id());
     TransposeImpl<xpu>(ctx.run_ctx, TBlob(L).reshape(L_shape), workspace0, reduce_axes);
-    std::vector<TBlob> eigen({ workspace0 });
-    if (param.flag == 2) {  // nuclear norm
-      ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false, mshadow_op::identity>(
-        ctx, eigen, req, outputs, reduced_shape);
-    } else if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true)) {
-      if (ord == 2) {
-        ReduceAxesComputeImpl<xpu, mshadow::red::maximum, true, false, mshadow_op::abs>(
-          ctx, eigen, req, outputs, reduced_shape);
-      } else if (ord == -2) {
-        ReduceAxesComputeImpl<xpu, mshadow::red::minimum, true, false, mshadow_op::abs>(
-          ctx, eigen, req, outputs, reduced_shape);
-      }
-    } else {
-      if (ord == 2) {
-        ReduceAxesComputeImpl<xpu, mshadow::red::maximum, false, false, mshadow_op::abs>(
-          ctx, eigen, req, outputs, reduced_shape);
-      } else if (ord == -2) {
-        ReduceAxesComputeImpl<xpu, mshadow::red::minimum, false, false, mshadow_op::abs>(
-          ctx, eigen, req, outputs, reduced_shape);
-      }
-    }
+    eigen.emplace_back(workspace0);
   });
+
+#if !defined(__CUDACC__)
+  if (param.flag == 2) {  // nuclear norm
+    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false, mshadow_op::identity>(
+      ctx, eigen, req, outputs, reduced_shape);
+  } else if (dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true)) {
+    if (ord == 2) {
+      ReduceAxesComputeImpl<xpu, mshadow::red::maximum, true, false, mshadow_op::abs>(
+        ctx, eigen, req, outputs, reduced_shape);
+    } else if (ord == -2) {
+      ReduceAxesComputeImpl<xpu, mshadow::red::minimum, true, false, mshadow_op::abs>(
+        ctx, eigen, req, outputs, reduced_shape);
+    }
+  } else {
+    if (ord == 2) {
+      ReduceAxesComputeImpl<xpu, mshadow::red::maximum, false, false, mshadow_op::abs>(
+        ctx, eigen, req, outputs, reduced_shape);
+    } else if (ord == -2) {
+      ReduceAxesComputeImpl<xpu, mshadow::red::minimum, false, false, mshadow_op::abs>(
+        ctx, eigen, req, outputs, reduced_shape);
+    }
+  }
+#else
+  if (param.flag == 2) {  // nuclear norm
+    ReduceAxesRTCComputeImpl(ctx, eigen, req, outputs, reduced_shape, "red::sum{}", false);
+  } else {
+    if (ord == 2) {
+      ReduceAxesRTCComputeImpl(ctx, eigen, req, outputs, reduced_shape,
+                               "red::maximum{}", false, "abs");
+    } else if (ord == -2) {
+      ReduceAxesRTCComputeImpl(ctx, eigen, req, outputs, reduced_shape,
+                               "red::minimum{}", false, "abs");
+    }
+  }
+#endif
 }
 
 template<typename xpu>
@@ -784,8 +809,13 @@ void NumpyNormComputeForward(const nnvm::NodeAttrs& attrs,
     std::vector<TBlob> flat_outputs({
       outputs[0].reshape(TShape(1, 1))
     });
-    ReduceAxesComputeImplWithReducer<xpu, mshadow_op::nrm2, false, mshadow_op::identity>(
+#if !defined(__CUDACC__)
+    ReduceAxesComputeImpl<xpu, mshadow_op::nrm2, false, false, mshadow_op::identity>(
       ctx, flat_inputs, req, flat_outputs, TShape(1, 1));
+#else
+    ReduceAxesRTCComputeImpl(
+      ctx, flat_inputs, req, flat_outputs, TShape(1, 1), "red::nrm2{}", false, "identity");
+#endif
     return;
   }
 

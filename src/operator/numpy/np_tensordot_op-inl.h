@@ -424,8 +424,16 @@ void TensordotBackwardImpl(const Tuple<int>& a_axes_summed,
                               workspace.stream_);
       ASSIGN_DISPATCH(dtypespace, kWriteTo, tensor_ * out_grad_);
 
-      ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
-        ctx, {TBlob(dtypespace)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
+      if constexpr (std::is_same<xpu, mshadow::cpu>::value) {
+        ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
+          ctx, {TBlob(dtypespace)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
+      } else {
+#if MXNET_USE_CUDA
+        ReduceAxesRTCComputeImpl(ctx, {TBlob(dtypespace)}, {scalar_req},
+                                 {TBlob(scalar_grad_)}, scalar_grad_.shape_,
+                                 "red::sum{}");
+#endif
+      }
     } else {
       // Two tensors of at least 1 dimensions.
       Tuple<int> a_axes_remained;
@@ -734,8 +742,15 @@ void TensordotIntAxesBackwardImpl(const int axes,
         ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(out_grad.shape_.Size()), s);
       ASSIGN_DISPATCH(workspace, kWriteTo, tensor_ * out_grad_);
 
-      ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
-        ctx, {TBlob(workspace)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
+      if constexpr (std::is_same<xpu, mshadow::cpu>::value) {
+        ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
+          ctx, {TBlob(workspace)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
+      } else {
+#if MXNET_USE_CUDA
+        ReduceAxesRTCComputeImpl(ctx, {TBlob(workspace)}, {scalar_req}, {TBlob(scalar_grad_)},
+                                 scalar_grad_.shape_, "red::sum{}");
+#endif
+      }
     } else {
       // Two tensors of at least 1 dimensions.
       Tuple<int> a_axes_summed;

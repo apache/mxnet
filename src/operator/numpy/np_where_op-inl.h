@@ -245,12 +245,19 @@ inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
         mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, true>, xpu>::Launch(
           s, ograd.Size(), req[0], cstride, oshape,
           cond.dptr<CType>(), ograd.dptr<DType>(), workspace.dptr_);
-        if (NeedSafeAcc<true>(dx.type_flag_, dx.type_flag_)) {
-          ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[0]},
-              {dx.reshape(expanded_lshape)}, expanded_lshape);
+        if constexpr (std::is_same<xpu, cpu>::value) {
+          if (NeedSafeAcc<true>(dx.type_flag_, dx.type_flag_)) {
+            ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[0]},
+                {dx.reshape(expanded_lshape)}, expanded_lshape);
+          } else {
+            ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[0]},
+                {dx.reshape(expanded_lshape)}, expanded_lshape);
+          }
         } else {
-          ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[0]},
-              {dx.reshape(expanded_lshape)}, expanded_lshape);
+#if MXNET_USE_CUDA
+          ReduceAxesRTCComputeImpl(ctx, {TBlob(workspace)}, {req[0]},
+              {dx.reshape(expanded_lshape)}, expanded_lshape, "red::sum{}");
+#endif  // MXNET_USE_CUDA
         }
       }
       // process right output
@@ -267,12 +274,19 @@ inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
         mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, false>, xpu>::Launch(
           s, ograd.Size(), req[1], cstride, oshape,
           cond.dptr<CType>(), ograd.dptr<DType>(), workspace.dptr_);
-        if (NeedSafeAcc<true>(dy.type_flag_, dy.type_flag_)) {
-          ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[1]},
-              {dy.reshape(expanded_rshape)}, expanded_rshape);
+        if constexpr (std::is_same<xpu, cpu>::value) {
+          if (NeedSafeAcc<true>(dy.type_flag_, dy.type_flag_)) {
+            ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[1]},
+                {dy.reshape(expanded_rshape)}, expanded_rshape);
+          } else {
+            ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[1]},
+                {dy.reshape(expanded_rshape)}, expanded_rshape);
+          }
         } else {
-          ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[1]},
-              {dy.reshape(expanded_rshape)}, expanded_rshape);
+#if MXNET_USE_CUDA
+            ReduceAxesRTCComputeImpl(ctx, {TBlob(workspace)}, {req[1]},
+                {dy.reshape(expanded_rshape)}, expanded_rshape, "red::sum{}");
+#endif  // MXNET_USE_CUDA
         }
       }
     });
@@ -383,12 +397,19 @@ inline void NumpyWhereScalarOpBackward(const nnvm::NodeAttrs& attrs,
         mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, !is_lscalar>, xpu>::Launch(
           s, ograd.Size(), req[0], cstride, oshape,
           cond.dptr<CType>(), ograd.dptr<DType>(), workspace.dptr_);
-        if (NeedSafeAcc<true>(dx.type_flag_, dx.type_flag_)) {
-          ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[0]},
-              {dx.reshape(expanded_lshape)}, expanded_lshape);
+        if constexpr (std::is_same<xpu, cpu>::value) {
+          if (NeedSafeAcc<true>(dx.type_flag_, dx.type_flag_)) {
+            ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[0]},
+                {dx.reshape(expanded_lshape)}, expanded_lshape);
+          } else {
+            ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[0]},
+                {dx.reshape(expanded_lshape)}, expanded_lshape);
+          }
         } else {
-          ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[0]},
-              {dx.reshape(expanded_lshape)}, expanded_lshape);
+#if MXNET_USE_CUDA
+          ReduceAxesRTCComputeImpl(ctx, {TBlob(workspace)}, {req[0]},
+              {dx.reshape(expanded_lshape)}, expanded_lshape, "red::sum{}");
+#endif  // MXNET_USE_CUDA
         }
       }
     });

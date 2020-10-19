@@ -107,7 +107,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
       }
 
       AType val, residual;
-      REDUCER::SetInitValue(val, residual);
+      REDUCER.SetInitValue(val, residual);
       if (idx < N) {
         for (index_t k = tidy + Mstart; k < Mend; k += by*UNROLL) {
           index_t idx_big[UNROLL];
@@ -133,7 +133,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
           }
           #pragma unroll
           for (int u=0;u < UNROLL;u++) {
-            if (k + u*by < Mend) REDUCER::Reduce(val, tmp[u], residual);
+            if (k + u*by < Mend) REDUCER.Reduce(val, tmp[u], residual);
           }
         }
       }
@@ -148,17 +148,17 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         __syncthreads();
         for (int t=1;t < by;t <<= 1) {
           AType tmp, tmp_residual;
-          REDUCER::SetInitValue(tmp, tmp_residual);
+          REDUCER.SetInitValue(tmp, tmp_residual);
           if (tidy + t < by) {
             tmp = shTile[(it0 + t*fbx) * 2];
             tmp_residual = shTile[(it0 + t*fbx) * 2 + 1];
           }
           __syncthreads();
-          REDUCER::Merge(shTile[it0 * 2], shTile[it0 * 2 + 1], tmp, tmp_residual);
+          REDUCER.Merge(shTile[it0 * 2], shTile[it0 * 2 + 1], tmp, tmp_residual);
           __syncthreads();
         }
         if (idx < N && tidy == 0) {
-          REDUCER::Finalize(shTile[tidx * 2], shTile[tidx * 2 + 1]);
+          REDUCER.Finalize(shTile[tidx * 2], shTile[tidx * 2 + 1]);
           if (addto) {
             small[idx + m0 * N] = OType::to(op::add(OType::from(small[idx + m0 * N]),
                                                     shTile[tidx * 2]));
@@ -168,7 +168,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
         }
       } else {
         if (idx < N) {
-          REDUCER::Finalize(val, residual);
+          REDUCER.Finalize(val, residual);
           if (addto) {
             small[idx + m0 * N] = OType::to(op::add(OType::from(small[idx + m0 * N]),
                                                     val));
@@ -191,15 +191,15 @@ __global__ void reduce_lines_kernel(const index_t N, const index_t M,
   using OType = AccType<OutputType0>;
   for (index_t idx = threadIdx.x + blockIdx.x*blockDim.x; idx < N; idx += blockDim.x*gridDim.x) {
     typename OType::type val, residual;
-    REDUCER::SetInitValue(val, residual);
+    REDUCER.SetInitValue(val, residual);
     for (int k = 0; k < M; k++) {
-      REDUCER::Reduce(val,
+      REDUCER.Reduce(val,
         OType::from(reinterpret_cast<const OutputType0*>(small_in)[idx + k*small_in_stride]),
         residual);
     }
 
     if (idx < N) {
-      REDUCER::Finalize(val, residual);
+      REDUCER.Finalize(val, residual);
       if (req == OpReqType::kAddTo) {
         small_out[idx] = OType::to(op::add(OType::from(small_out[idx]), val));
       } else {
@@ -359,10 +359,10 @@ __global__ void reduce_kernel_M1(const int N,
       idx_rhs[0] = util::ravel(coord, params.rhs_shape);
     }
     typename OType::type val, residual;
-    REDUCER::SetInitValue(val, residual);
+    REDUCER.SetInitValue(val, residual);
     const int u = 0;
-    REDUCER::Reduce(val, FUNC, residual);
-    REDUCER::Finalize(val, residual);
+    REDUCER.Reduce(val, FUNC, residual);
+    REDUCER.Finalize(val, residual);
     if (req == OpReqType::kAddTo) {
       const auto temp = op::add(val, OType::from(small[idx]));
       small[idx] = OType::to(temp);

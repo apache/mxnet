@@ -230,8 +230,15 @@ void KronOpBackwardImpl(const OpContext& ctx,
         ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(ograd.shape_.Size()), s);
       ASSIGN_DISPATCH(workspace, kWriteTo, tensor_ * ograd_);
 
-      ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
-        ctx, {TBlob(workspace)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
+      if constexpr (std::is_same<xpu, cpu>::value) {
+        ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(
+          ctx, {TBlob(workspace)}, {scalar_req}, {TBlob(scalar_grad_)}, scalar_grad_.shape_);
+      } else {
+#if MXNET_USE_CUDA
+        ReduceAxesRTCComputeImpl(ctx, {TBlob(workspace)}, {scalar_req}, {TBlob(scalar_grad_)},
+                                 scalar_grad_.shape_, "red::sum{}", false);
+#endif
+      }
     } else {
       MXNET_NDIM_SWITCH(oshape.ndim(), ndim, {
         Shape<ndim> ashape_ = oshape.get<ndim>();
