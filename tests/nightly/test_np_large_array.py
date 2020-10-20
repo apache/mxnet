@@ -2125,4 +2125,3 @@ def test_nan_to_num():
     assert inp.grad.shape == inp.shape
     assert inp.grad[0, -1] == 0 and inp.grad[1, -1] == 0
     assert inp.grad[0, 0] == 1 and inp.grad[2, -1] == 0
-    
