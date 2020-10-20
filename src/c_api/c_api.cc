@@ -1433,7 +1433,7 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       // this temp workspace holds memory allocated by custom library via OpResource
       auto ndarray_alloc = [&](const mxnet::TShape &shape, Context ctx, int dtype,
                                std::string name, bool isArg) {
-        NDArray* arr = new NDArray(shape, ctx, dtype);
+        NDArray* arr = new NDArray(shape, ctx, false, dtype);
         if (isArg) {
           new_args.push_back(arr);
           new_arg_names.push_back(name);
