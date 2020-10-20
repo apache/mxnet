@@ -1256,7 +1256,7 @@ def test_diagflat():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1, -1] == 1
 
-    
+
 @use_np
 def test_diagonal():
     inp = np.zeros((2, INT_OVERFLOW+2))
@@ -1968,6 +1968,38 @@ def test_array_split():
 
 
 @use_np
+def test_std():
+    N = 2*20
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = N
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.std(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    ref = ((float(N)/INT_OVERFLOW)**2 * (INT_OVERFLOW-1))**0.5
+    assert_almost_equal(out[1], ref, rtol=1e-5, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+
+@use_np
+def test_var():
+    N = 2*20
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = N
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.var(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    ref = (float(N)/INT_OVERFLOW)**2 * (INT_OVERFLOW-1)
+    assert_almost_equal(out[1], ref, rtol=1e-5, atol=1e-5)
+
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+@use_np
 def test_rollaxis():
     inp = np.zeros((1, 1, 2, INT_OVERFLOW, 1))
     inp[-1, -1, -1, -1, -1] = 1
@@ -2001,6 +2033,21 @@ def test_vstack():
     assert out2[0, -1] == 0 and out2[1, -1] == 1
     assert inp2.grad.shape == inp2.shape
     assert inp2.grad[-1, -1] == 1
+
+
+@use_np
+def test_ediff1d():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[0, -1], inp[1, 0] = 1, 3
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.ediff1d(inp, to_begin=-99, to_end=np.array([88, 99]))
+        out.backward()
+    assert out.shape == (2 * INT_OVERFLOW - 1 + 1 + 2, )
+    assert out[INT_OVERFLOW-1] == 1 and out[INT_OVERFLOW] == 2 and\
+            out[INT_OVERFLOW+1] == -3
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == -1 and inp.grad[-1, -1] == 1
 
 
 @use_np
