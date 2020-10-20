@@ -44,7 +44,7 @@ class StorageImpl : public Storage {
 
   void SharedIncrementRefCount(Handle handle) override;
   StorageImpl() = default;
-  virtual ~StorageImpl() = default;
+  ~StorageImpl() override = default;
 
  private:
   std::shared_ptr<StorageManager> storage_manager(const Context &ctx) {
@@ -67,8 +67,9 @@ StorageManager *CreateStorageManager(const Context &ctx, const char *context,
                                      int num_gpu_device, std::string *pStrategy) {
   const auto env_var = env_var_name(context, pool_type);
   const char *type = getenv(env_var.c_str());
-  if (type == nullptr)
+  if (type == nullptr) {
     type = "Naive";   // default pool
+  }
 
   *pStrategy = type;
   StorageManager *ptr = nullptr;

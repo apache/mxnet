@@ -28,7 +28,7 @@ import unittest
 import pytest
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import setup_module, with_seed, teardown_module
+from common import with_seed
 
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -36,7 +36,7 @@ def eprint(*args, **kwargs):
 VAL_DATA='data/val-5k-256.rec'
 def download_data():
     return mx.test_utils.download(
-        'http://data.mxnet.io/data/val-5k-256.rec', VAL_DATA)
+        'https://repo.mxnet.io/gluon/dataset/test/val-5k-256-9e70d85e0.rec', VAL_DATA)
 
 @with_seed()
 @pytest.mark.serial

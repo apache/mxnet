@@ -238,6 +238,8 @@ inline bool CTCLossOpShape(const nnvm::NodeAttrs &attrs,
     CHECK_GE(dshape[0], lshape[1]) << "The max number of labels cannot exceed "
                                       "the maximum sequence length of the "
                                       "data.";
+    CHECK_LT(dshape.Size(), INT32_MAX) << "ValueError: CTC Loss does not support large"
+        << " tensors where total size >= 2^31.";
 
     mxnet::TShape oshape(1, -1);
     oshape[0] = dshape[1];  // batch size
@@ -348,7 +350,7 @@ void CTCLossOpForward(const nnvm::NodeAttrs& attrs,
                                batch_size, data.kDevCPU ? false : true, &size_bytes);
 
     // round-up so there are enough elems in memory
-    int num_tmp_elems = (size_bytes + sizeof(real_t) - 1) / sizeof(real_t);
+    size_t num_tmp_elems = (size_bytes + sizeof(real_t) - 1) / sizeof(real_t);
     Tensor<xpu, 1, real_t> workspace =
       ctx.requested[0].get_space_typed<xpu, 1, real_t>(Shape1(num_tmp_elems), s);
 
@@ -394,4 +396,3 @@ void CTCLossOpBackward(const nnvm::NodeAttrs& attrs,
 }  // namespace mxnet
 
 #endif  // MXNET_OPERATOR_NN_CTC_LOSS_INL_H_
-

@@ -98,7 +98,7 @@ MXNET_REGISTER_API("_npi.around")
   nnvm::NodeAttrs attrs;
   op::AroundParam param;
   param.decimals = args[1].operator int64_t();
-  attrs.parsed = std::move(param);
+  attrs.parsed = param;
   attrs.op = op;
   SetAttrDict<op::AroundParam>(&attrs);
   int num_inputs = 1;
@@ -112,6 +112,19 @@ MXNET_REGISTER_API("_npi.around")
   } else {
     *ret = ndoutputs[0];
   }
+});
+
+MXNET_REGISTER_API("_npi.copy")
+.set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
+  using namespace runtime;
+  const nnvm::Op* op = Op::Get("_npi_copy");
+  nnvm::NodeAttrs attrs;
+  attrs.op = op;
+  NDArray* inputs[] = {args[0].operator NDArray*()};
+  int num_inputs = 1;
+  int num_outputs = 0;
+  auto ndoutputs = Invoke(op, &attrs, num_inputs, inputs, &num_outputs, nullptr);
+  *ret = ndoutputs[0];
 });
 
 }  // namespace mxnet

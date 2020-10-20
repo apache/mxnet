@@ -22,7 +22,6 @@
  * \file threaded_engine_test.cc
  * \brief threaded engine tests
 */
-#include <time.h>
 #include <dmlc/logging.h>
 #include <dmlc/thread_group.h>
 #include <dmlc/omp.h>
@@ -31,6 +30,7 @@
 #include <mxnet/engine.h>
 #include <mxnet/ndarray.h>
 #include <dmlc/timer.h>
+#include <ctime>
 #include <cstdio>
 #include <thread>
 #include <chrono>
@@ -107,7 +107,7 @@ double EvaluateWorkloads(const std::vector<Workload>& workloads,
 
   for (const auto& wl : workloads) {
     if (wl.reads.size() == 0) continue;
-    if (engine == NULL) {
+    if (engine == nullptr) {
       EvaluateWorkload(wl, data);
     } else {
       auto func = [wl, data](RunContext ctx, Engine::CallbackOnComplete cb) {
@@ -152,13 +152,13 @@ TEST(Engine, RandSumExpr) {
   std::vector<double> t(num_engine, 0.0);
   std::vector<mxnet::Engine*> engine(num_engine);
 
-  engine[0] = NULL;
+  engine[0] = nullptr;
   engine[1] = mxnet::engine::CreateNaiveEngine();
   engine[2] = mxnet::engine::CreateThreadedEnginePooled();
   engine[3] = mxnet::engine::CreateThreadedEnginePerDevice();
 
   for (int repeat = 0; repeat < num_repeat; ++repeat) {
-    srand(time(NULL) + repeat);
+    srand(time(nullptr) + repeat);
     int num_var = 100;
     GenerateWorkload(10000, num_var, 2, 20, 1, 10, &workloads);
     std::vector<std::vector<double>> data(num_engine);

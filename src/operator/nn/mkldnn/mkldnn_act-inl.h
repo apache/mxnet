@@ -74,13 +74,6 @@ MKLDNNActForward &GetActForward(const MKLDNNActParam& param,
                                 const OpContext &ctx, const NDArray &in_data,
                                 const mkldnn::memory &in_mem);
 
-void MKLDNNActivationForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                             const NDArray &in_data, const OpReqType &req,
-                             const NDArray &out_data);
-void MKLDNNLeakyReluForward(const nnvm::NodeAttrs& attrs, const OpContext &ctx,
-                            const NDArray &in_data, const OpReqType &req,
-                            const NDArray &out_data);
-
 mkldnn::eltwise_backward::primitive_desc GetActBwdDescImpl(
     const MKLDNNActParam &param, const mkldnn::memory &input_mem,
     const mkldnn::memory &diff_dst_memory);

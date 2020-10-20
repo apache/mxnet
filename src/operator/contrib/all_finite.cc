@@ -97,6 +97,7 @@ inline void MultiAllFiniteCPU(const nnvm::NodeAttrs& attrs,
 DMLC_REGISTER_PARAMETER(AllFiniteParam);
 
 NNVM_REGISTER_OP(all_finite)
+.add_alias("_npi_all_finite")
 .describe(R"code(Check if all the float numbers in the array are finite (used for AMP)
 )code" ADD_FILELINE)
 .set_num_inputs(1)
@@ -129,6 +130,7 @@ NNVM_REGISTER_OP(all_finite)
 DMLC_REGISTER_PARAMETER(MultiAllFiniteParam);
 
 NNVM_REGISTER_OP(multi_all_finite)
+.add_alias("_npi_multi_all_finite")
 .describe(R"code(Check if all the float numbers in all the arrays are finite (used for AMP)
 )code" ADD_FILELINE)
 .set_num_inputs([](const nnvm::NodeAttrs& attrs) {

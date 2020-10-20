@@ -61,7 +61,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
@@ -76,7 +75,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
@@ -91,7 +89,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
@@ -106,7 +103,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=OFF '
         '-DUSE_CUDNN=OFF '
-        '-DENABLE_CUDA_RTC=OFF '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=mkl '
@@ -121,7 +117,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
-        '-DENABLE_CUDA_RTC=ON '
         '-DUSE_OPENCV=ON  '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
@@ -136,7 +131,6 @@ CMAKE_FLAGS = {
         '-DCMAKE_CXX_COMPILER=cl '
         '-DUSE_CUDA=ON '
         '-DUSE_CUDNN=ON '
-        '-DENABLE_CUDA_RTC=ON '
         '-DUSE_OPENCV=ON '
         '-DUSE_OPENMP=ON '
         '-DUSE_BLAS=open '
@@ -298,8 +292,8 @@ def main():
             os.environ["OpenCV_DIR"] = "C:\\Program Files\\OpenCV-v3.4.1\\build"
         if 'CUDA_PATH' not in os.environ:
             os.environ["CUDA_PATH"] = "C:\\Program Files\\NVIDIA GPU Computing Toolkit\\CUDA\\v10.2"
-        if 'MKL_ROOT' not in os.environ:
-            os.environ["MKL_ROOT"] = "C:\\Program Files (x86)\\IntelSWTools\\compilers_and_libraries\\windows\\mkl"
+        if 'MKLROOT' not in os.environ:
+            os.environ["MKLROOT"] = "C:\\Program Files (x86)\\IntelSWTools\\compilers_and_libraries\\windows\\mkl"
         windows_build(args)
 
     elif system == 'Linux' or system == 'Darwin':

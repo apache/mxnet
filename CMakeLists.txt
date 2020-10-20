@@ -51,6 +51,7 @@ Format: Auto | Common | All | LIST(ARCH_AND_PTX ...)
 option(USE_NCCL "Use NVidia NCCL with CUDA" OFF)
 option(USE_OPENCV "Build with OpenCV support" ON)
 option(USE_OPENMP "Build with Openmp support" ON)
+option(USE_FATBIN_COMPRESSION "Compress nvcc fatbin output" ON)
 cmake_dependent_option(USE_NVML "Build with nvml support if found" ON "USE_CUDA" OFF)
 cmake_dependent_option(USE_CUDNN "Build with cudnn support" ON "USE_CUDA" OFF) # one could set CUDNN_ROOT for search path
 cmake_dependent_option(USE_NVTX "Build with nvtx support if found" ON "USE_CUDA" OFF)
@@ -64,6 +65,7 @@ if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PR
 else()
   option(USE_MKLDNN "Build with MKL-DNN support" OFF)
 endif()
+cmake_dependent_option(USE_INTGEMM "Build with x86_64 intgemm library for low-precision multiplication" ON "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64" OFF)
 if(NOT MSVC)
   option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON)
 else()
@@ -79,7 +81,6 @@ option(USE_MXNET_LIB_NAMING "Use MXNet library naming conventions." ON)
 option(USE_GPROF "Compile with gprof (profiling) flag" OFF)
 option(USE_VTUNE "Enable use of Intel Amplifier XE (VTune)" OFF) # one could set VTUNE_ROOT for search path
 option(USE_TVM_OP "Enable use of TVM operator build system." OFF)
-option(ENABLE_CUDA_RTC "Build with CUDA runtime compilation support" ON)
 option(BUILD_CPP_EXAMPLES "Build cpp examples" ON)
 option(INSTALL_EXAMPLES "Install the example source files." OFF)
 option(USE_SIGNAL_HANDLER "Print stack traces on segfaults." ON)
@@ -141,12 +142,15 @@ else()
   execute_process(COMMAND uname -m COMMAND tr -d '\n' OUTPUT_VARIABLE SYSTEM_ARCHITECTURE)
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Distribution" AND UNIX AND NOT APPLE)
-  set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
-  set(CMAKE_INSTALL_RPATH $\{ORIGIN\})
-  # Enforce DT_PATH instead of DT_RUNPATH
-  set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--disable-new-dtags")
-  set(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+if(CMAKE_BUILD_TYPE STREQUAL "Distribution")
+  if(UNIX AND NOT APPLE)
+    set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+    set(CMAKE_INSTALL_RPATH $\{ORIGIN\})
+    # Enforce DT_PATH instead of DT_RUNPATH
+    set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--disable-new-dtags")
+    set(CMAKE_EXE_LINKER_FLAGS "-Wl,--disable-new-dtags")
+  endif()
+  set(Protobuf_USE_STATIC_LIBS ON)
 endif()
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake/upstream;${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules;${CMAKE_MODULE_PATH}")
@@ -228,6 +232,7 @@ if(USE_TENSORRT)
   include_directories(3rdparty/onnx-tensorrt/third_party/onnx/)
   add_definitions(-DMXNET_USE_TENSORRT=1)
   add_definitions(-DONNX_NAMESPACE=onnx)
+  add_definitions(-DONNX_ML=1)
 
   find_package(Protobuf REQUIRED)
 
@@ -237,14 +242,11 @@ if(USE_TENSORRT)
   find_library(ONNX_PROTO_LIBRARY NAMES libonnx_proto.so REQUIRED
           PATHS ${ONNX_PATH}
           DOC "Path to onnx_proto library.")
-  find_library(ONNX_TRT_RUNTIME_LIBRARY NAMES libnvonnxparser_runtime.so REQUIRED
-          PATHS ${ONNX_TRT_PATH}
-          DOC "Path to onnx_proto library.")
   find_library(ONNX_TRT_PARSER_LIBRARY NAMES libnvonnxparser.so REQUIRED
           PATHS ${ONNX_TRT_PATH}
-          DOC "Path to onnx_proto library.")
+          DOC "Path to onnx_proto parser library.")
 
-  list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY} ${ONNX_TRT_RUNTIME_LIBRARY}
+  list(APPEND mxnet_LINKER_LIBS libnvinfer.so ${ONNX_TRT_PARSER_LIBRARY}
           ${ONNX_PROTO_LIBRARY} ${ONNX_LIBRARY} ${PROTOBUF_LIBRARY})
 endif()
 
@@ -262,6 +264,7 @@ if(USE_MKLDNN)
     set(MKLDNN_ENABLE_JIT_PROFILING OFF CACHE INTERNAL "" FORCE)
     set(MKLDNN_LIBRARY_TYPE STATIC CACHE INTERNAL "" FORCE)
     set(DNNL_ENABLE_CONCURRENT_EXEC ON CACHE INTERNAL "" FORCE)
+    set(DNNL_ENABLE_PRIMITIVE_CACHE ON CACHE INTERNAL "" FORCE)
 
     if(NOT USE_OPENMP)
       set(MKLDNN_CPU_RUNTIME SEQ CACHE INTERNAL "" FORCE)
@@ -275,6 +278,23 @@ if(USE_MKLDNN)
   include_directories(${PROJECT_BINARY_DIR}/3rdparty/mkldnn/include)
   add_definitions(-DMXNET_USE_MKLDNN=1)
   list(APPEND mxnet_LINKER_LIBS dnnl)
+  set_target_properties(dnnl PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+endif()
+
+if(USE_INTGEMM)
+  message(STATUS "Using intgemm")
+  include(FetchContent)
+  FetchContent_Declare(
+    intgemm
+    GIT_REPOSITORY https://github.com/kpu/intgemm.git
+    GIT_TAG        02f671cf537fdbc818cf8111d1d9e557a8650d7a
+  )
+  FetchContent_GetProperties(intgemm)
+  if(NOT intgemm_POPULATED)
+    FetchContent_Populate(intgemm)
+  endif()
+  add_subdirectory(${intgemm_SOURCE_DIR} ${intgemm_BINARY_DIR} EXCLUDE_FROM_ALL)
+  add_definitions(-DMXNET_USE_INTGEMM=1)
 endif()
 
 # Allow Cuda compiles outside of src tree to find things in 'src' and 'include'
@@ -302,20 +322,6 @@ include_directories("3rdparty/tvm/nnvm/include")
 include_directories("3rdparty/tvm/include")
 include_directories("3rdparty/dmlc-core/include")
 include_directories("3rdparty/dlpack/include")
-
-# commented out until PR goes through
-#if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack)
-#  add_subdirectory(3rdparty/dlpack)
-#endif()
-
-# Prevent stripping out symbols (operator registrations, for example)
-if(NOT MSVC AND NOT APPLE)
-  set(BEGIN_WHOLE_ARCHIVE -Wl,--whole-archive)
-  set(END_WHOLE_ARCHIVE -Wl,--no-whole-archive)
-elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  # using regular Clang or AppleClang
-  set(BEGIN_WHOLE_ARCHIVE -Wl,-force_load)
-endif()
 
 if(UNIX)
   find_library(RTLIB rt)
@@ -405,6 +411,7 @@ if(USE_OPENMP)
      AND NOT CMAKE_CROSSCOMPILING)
     load_omp()
     list(APPEND mxnet_LINKER_LIBS omp)
+    set_target_properties(omp PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
     if(UNIX)
       list(APPEND mxnet_LINKER_LIBS pthread)
     endif()
@@ -462,6 +469,8 @@ set(GTEST_MAIN_LIBRARY gtest_main)
 set(GTEST_LIBRARY gtest)
 
 add_subdirectory(${GTEST_ROOT})
+set_target_properties(gtest PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+set_target_properties(gtest_main PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 find_package(GTest REQUIRED)
 
 # cudnn detection
@@ -476,12 +485,30 @@ if(USE_CUDNN)
   endif()
 endif()
 
+# cutensor detection
+if(USE_CUTENSOR)
+  find_package(CUTENSOR)
+  if(CUTENSOR_FOUND)
+    add_definitions(-DUSE_CUTENSOR)
+    include_directories(SYSTEM ${CUTENSOR_INCLUDE})
+    list(APPEND mxnet_LINKER_LIBS ${CUTENSOR_LIBRARY})
+  else()
+    set(USE_CUTENSOR OFF)
+  endif()
+endif()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/cmake)
   add_subdirectory("3rdparty/dmlc-core")
+  set_target_properties(dmlc PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
 
 FILE(GLOB_RECURSE SOURCE "src/*.cc" "src/*.h" "include/*.h")
 FILE(GLOB_RECURSE CUDA "src/*.cu" "src/*.cuh")
+
+if(NOT USE_INTGEMM)
+  FILE(GLOB_RECURSE INTGEMM_OPERATOR_SOURCE "src/operator/contrib/intgemm/*.cc" "src/operator/contrib/intgemm/*.h")
+  list(REMOVE_ITEM SOURCE ${INTGEMM_OPERATOR_SOURCE})
+endif()
 
 # add nnvm to source
 FILE(GLOB_RECURSE NNVMSOURCE
@@ -492,7 +519,9 @@ FILE(GLOB_RECURSE NNVMSOURCE
   3rdparty/tvm/nnvm/src/core/*.h
   3rdparty/tvm/nnvm/src/pass/*.h
   3rdparty/tvm/nnvm/include/*.h)
-list(APPEND SOURCE ${NNVMSOURCE})
+add_library(nnvm OBJECT ${NNVMSOURCE})
+set_target_properties(nnvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+list(APPEND SOURCE $<TARGET_OBJECTS:nnvm>)
 
 # add source group
 FILE(GLOB_RECURSE GROUP_SOURCE "src/*.cc" "3rdparty/tvm/nnvm/*.cc" "plugin/*.cc")
@@ -553,18 +582,11 @@ if(USE_CUDA)
 
   string(REPLACE ";" " " CUDA_ARCH_FLAGS_SPACES "${CUDA_ARCH_FLAGS}")
 
-  find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand
-    OPTIONAL_COMPONENTS nvToolsExt nvrtc)
+  find_package(CUDAToolkit REQUIRED cublas cufft cusolver curand nvrtc cuda_driver
+    OPTIONAL_COMPONENTS nvToolsExt)
 
-  list(APPEND mxnet_LINKER_LIBS CUDA::cudart CUDA::cublas CUDA::cufft CUDA::cusolver CUDA::curand)
-  if(ENABLE_CUDA_RTC)
-    if(CUDA_nvrtc_LIBRARY)
-      list(APPEND mxnet_LINKER_LIBS CUDA::nvrtc cuda)
-      add_definitions(-DMXNET_ENABLE_CUDA_RTC=1)
-    else()
-      message(FATAL_ERROR "ENABLE_CUDA_RTC=ON, but failed to find NVRTC. CMake will exit." )
-    endif()
-  endif()
+  list(APPEND mxnet_LINKER_LIBS CUDA::cudart CUDA::cublas CUDA::cufft CUDA::cusolver CUDA::curand
+                                CUDA::nvrtc CUDA::cuda_driver)
   list(APPEND SOURCE ${CUDA})
   add_definitions(-DMXNET_USE_CUDA=1)
 
@@ -623,6 +645,10 @@ endif()
 # Add cmake targets
 add_subdirectory("3rdparty/mshadow")
 
+if(USE_CUDA AND USE_FATBIN_COMPRESSION)
+  string(APPEND CMAKE_CUDA_FLAGS " --fatbin-options --compress-all")
+  message("-- CUDA: Adding NVCC options: --fatbin-options --compress-all")
+endif()
 if(UNIX)
   string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
   # Create dummy file since we want an empty shared library before linking
@@ -635,7 +661,6 @@ if(UNIX)
   endif()
   target_link_libraries(mxnet PUBLIC mshadow)
   target_link_libraries(mxnet PUBLIC ${CMAKE_DL_LIBS})
-  target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
   if(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
     target_compile_options(mxnet PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:-Werror>")
     # Ignore erroneous compiler warnings:
@@ -651,6 +676,11 @@ if(UNIX)
     target_compile_options(mxnet PUBLIC "--coverage")
     target_link_libraries(mxnet PUBLIC gcov)
   endif()
+  if(APPLE)
+    set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,-exported_symbols_list,${PROJECT_SOURCE_DIR}/cmake/libmxnet.sym")
+  else()
+    set_target_properties(mxnet PROPERTIES LINK_FLAGS "-Wl,--exclude-libs,ALL")
+  endif()
 elseif(MSVC)
   if(USE_CUDA)
     if(USE_SPLIT_ARCH_DLL)
@@ -662,7 +692,6 @@ elseif(MSVC)
       foreach(arch ${arch_code_list})
         add_library(mxnet_${arch} SHARED ${SOURCE})
         target_link_libraries(mxnet_${arch} PUBLIC mshadow)
-        target_compile_definitions(mxnet_${arch} PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
         target_compile_options(
           mxnet_${arch}
           PRIVATE
@@ -686,7 +715,7 @@ elseif(MSVC)
         COMMAND gen_warp $<TARGET_FILE:mxnet_${mxnet_first_arch}> WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/ DEPENDS $<TARGET_FILE:mxnet_${mxnet_first_arch}>)
     else(USE_SPLIT_ARCH_DLL)
       string(REPLACE ";" " " NVCC_FLAGS_ARCH "${NVCC_FLAGS_ARCH}")
-      set(CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
+      string(APPEND CMAKE_CUDA_FLAGS " ${CUDA_ARCH_FLAGS_SPACES}")
       add_library(mxnet SHARED ${SOURCE})
       target_link_libraries(mxnet PUBLIC mshadow)
       target_compile_options(
@@ -698,25 +727,26 @@ elseif(MSVC)
     endif(USE_SPLIT_ARCH_DLL)
   else()
     add_library(mxnet SHARED ${SOURCE})
-    target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
     target_link_libraries(mxnet PUBLIC mshadow)
   endif()
 endif()
+target_compile_definitions(mxnet PUBLIC DMLC_LOG_FATAL_THROW=$<BOOL:${LOG_FATAL_THROW}>)
 
 # extension libraries (custom operators, custom subgraphs) are built by default
-add_library(customop_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc)
-add_library(transposecsr_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/transposecsr_lib.cc)
-add_library(transposerowsp_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/transposerowsp_lib.cc)
-add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_subgraph/subgraph_lib.cc)
-add_library(pass_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_pass/pass_lib.cc)
+add_library(customop_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/gemm_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
+add_library(transposecsr_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/transposecsr_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
+add_library(transposerowsp_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/transposerowsp_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
+add_library(subgraph_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_subgraph/subgraph_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
+add_library(pass_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_pass/pass_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
+
 target_include_directories(customop_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 target_include_directories(transposecsr_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 target_include_directories(transposerowsp_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 target_include_directories(subgraph_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 target_include_directories(pass_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
 if(USE_CUDA)
-  add_library(customop_gpu_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/relu_lib.cu)
-  target_include_directories(customop_gpu_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet)
+  add_library(customop_gpu_lib SHARED ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/relu_lib.cu ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op/relu_lib.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/lib_api.cc)
+  target_include_directories(customop_gpu_lib PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/mxnet ${CMAKE_CURRENT_SOURCE_DIR}/example/extensions/lib_custom_op)
 endif()
 if(UNIX)
   if (USE_CUDA)
@@ -734,7 +764,9 @@ elseif(MSVC)
   set_target_properties(subgraph_lib PROPERTIES PREFIX "lib")
   set_target_properties(pass_lib PROPERTIES PREFIX "lib")
   if(USE_CUDA)
-    target_compile_options(customop_gpu_lib PUBLIC "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-fPIC>")
+    target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-LD -MT>")
+    target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/LD>")
+    target_compile_options(customop_gpu_lib PRIVATE "$<$<COMPILE_LANGUAGE:CXX>:/MT>")
     set_target_properties(customop_gpu_lib PROPERTIES PREFIX "lib")
   endif()
 endif()
@@ -743,6 +775,7 @@ if(USE_DIST_KVSTORE)
   add_subdirectory("3rdparty/ps-lite")
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
   list(APPEND mxnet_LINKER_LIBS pslite)
+  set_target_properties(pslite PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endif()
 
 if(USE_MKLDNN)
@@ -753,10 +786,17 @@ if(USE_MKLDNN)
       ${CMAKE_BINARY_DIR}/3rdparty/mkldnn/include/dnnl_version.h  ${CMAKE_SOURCE_DIR}/include/mkldnn/)
 endif()
 
+if(USE_INTGEMM)
+  target_link_libraries(mxnet PRIVATE intgemm)
+endif()
+
 function(BuildTVMOP)
   # scope the variables in BuildTVM.cmake to avoid conflict
   include(cmake/BuildTVM.cmake)
   add_subdirectory("3rdparty/tvm")
+  set_target_properties(tvm PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+  set_target_properties(tvm_topi PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
+  set_target_properties(tvm_runtime PROPERTIES CXX_CLANG_TIDY "")  # don't lint 3rdparty dependency
 endfunction()
 
 if(USE_TVM_OP)
@@ -817,8 +857,12 @@ endif()
 include(GNUInstallDirs)
 install(TARGETS mxnet
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+          COMPONENT   MXNET_Runtime
   LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          COMPONENT            MXNET_Runtime
+          NAMELINK_COMPONENT   MXNET_Development
   ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+          COMPONENT   MXNET_Development
 )
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dlpack/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/3rdparty/dmlc-core/include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
@@ -859,7 +903,10 @@ if(INSTALL_PYTHON_VERSIONS)
   endforeach()
 endif()
 
-add_subdirectory(tests)
+if(NOT CMAKE_BUILD_TYPE STREQUAL "Distribution")
+  # Staticbuild applies linker version script to hide private symbols, breaking unit tests
+  add_subdirectory(tests)
+endif()
 
 # ---[ Linter target
 find_package(Python3)

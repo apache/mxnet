@@ -34,7 +34,7 @@
 #include "../mxnet_op.h"
 #include "../operator_common.h"
 #include "../tensor/broadcast_reduce_op.h"
-#include "../../common/cuda_utils.h"
+#include "../../common/cuda/utils.h"
 
 namespace mxnet {
 namespace op {
@@ -350,7 +350,7 @@ __global__ void softmax_stride1_compute_kernel(const DType *in, OType *out, ITyp
     __syncthreads();
   }
   if (my_id < warp_size) {
-    AType my_value = warp_reduce(scratch[threadIdx.x],
+    AType my_value = common::cuda::warp_reduce(scratch[threadIdx.x],
                                  [](AType x, AType y) { return ::max(x, y); });
     scratch[threadIdx.x] = my_value;
   }
@@ -374,7 +374,7 @@ __global__ void softmax_stride1_compute_kernel(const DType *in, OType *out, ITyp
     __syncthreads();
   }
   if (my_id < warp_size) {
-    AType my_value = warp_reduce(scratch[threadIdx.x],
+    AType my_value = common::cuda::warp_reduce(scratch[threadIdx.x],
                                  [](AType x, AType y) { return x + y;});
     scratch[threadIdx.x] = my_value;
   }
@@ -488,7 +488,7 @@ __global__ void softmax_stride1_grad_kernel(const OType *out, const OType *ograd
     __syncthreads();
   }
   if (my_id < warp_size) {
-    AType my_value = warp_reduce(scratch[threadIdx.x],
+    AType my_value = common::cuda::warp_reduce(scratch[threadIdx.x],
                                  [](AType x, AType y) { return x + y; });
     scratch[threadIdx.x] = my_value;
   }
@@ -786,7 +786,7 @@ void SoftmaxCompute(const nnvm::NodeAttrs& attrs,
   const double temperature = param.temperature.has_value() ?
     param.temperature.value() : 1.0;
   mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
-  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
   if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
     common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for softmax with float16 inputs. "
                     "See https://mxnet.apache.org/api/faq/env_var "
@@ -862,7 +862,7 @@ void SoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
 
   int out_idx = softmax_has_dtype_override(attrs) ? 2 : 1;
   out_idx = softmax_use_length(attrs) ? 3 : out_idx;
-  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", false);
+  bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
 
   MXNET_REAL_ACC_TYPE_SWITCH(inputs[0].type_flag_, OType, AType, {
     MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {

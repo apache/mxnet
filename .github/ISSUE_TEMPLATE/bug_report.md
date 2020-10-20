@@ -10,7 +10,7 @@ assignees: ''
 (A clear and concise description of what the bug is.)
 
 ### Error Message
-(Paste the complete error message. Please also include stack trace by setting environment variable `DMLC_LOG_STACK_TRACE_DEPTH=10` before running your script.)
+(Paste the complete error message. Please also include stack trace by setting environment variable `DMLC_LOG_STACK_TRACE_DEPTH=100` before running your script.)
 
 ## To Reproduce
 (If you developed your own code, please provide a short script that reproduces the error. For existing examples, please provide link.)
@@ -28,9 +28,14 @@ assignees: ''
 
 ## Environment
 
-We recommend using our script for collecting the diagnositc information. Run the following command and paste the outputs below:
-```
-curl --retry 10 -s https://raw.githubusercontent.com/dmlc/gluon-nlp/master/tools/diagnose.py | python
+***We recommend using our script for collecting the diagnostic information with the following command***
+`curl --retry 10 -s https://raw.githubusercontent.com/apache/incubator-mxnet/master/tools/diagnose.py | python3`
 
-# paste outputs here
+<details>
+<summary>Environment Information</summary>
+
 ```
+# Paste the diagnose.py command output here
+```
+
+</details>

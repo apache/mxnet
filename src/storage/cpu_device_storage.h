@@ -50,7 +50,7 @@ class CPUDeviceStorage {
   /*!
    * \brief Alignment of allocation.
    */
-#if MXNET_USE_MKLDNN == 1
+#if MXNET_USE_MKLDNN == 1 || MXNET_USE_INTGEMM == 1
   // MKLDNN requires special alignment. 64 is used by the MKLDNN library in
   // memory allocation.
   static constexpr size_t alignment_ = kMKLDNNAlign;
@@ -60,21 +60,12 @@ class CPUDeviceStorage {
 };  // class CPUDeviceStorage
 
 inline void CPUDeviceStorage::Alloc(Storage::Handle* handle) {
-#if _MSC_VER
-  handle->dptr = _aligned_malloc(handle->size, alignment_);
-  if (handle->dptr == nullptr) LOG(FATAL) << "Failed to allocate CPU Memory";
-#else
-  int ret = posix_memalign(&handle->dptr, alignment_, handle->size);
-  if (ret != 0) LOG(FATAL) << "Failed to allocate CPU Memory";
-#endif
+  bool success = mxnet::common::AlignedMemAlloc(&(handle->dptr), handle->size, alignment_);
+  if (!success) LOG(FATAL) << "Failed to allocate CPU Memory";
 }
 
 inline void CPUDeviceStorage::Free(Storage::Handle handle) {
-#if _MSC_VER
-  _aligned_free(handle.dptr);
-#else
-  free(handle.dptr);
-#endif
+  mxnet::common::AlignedMemFree(handle.dptr);
 }
 
 }  // namespace storage

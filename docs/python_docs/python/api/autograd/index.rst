@@ -16,7 +16,7 @@
    under the License.
 
 mxnet.autograd
-===============
+==============
 
 .. automodule:: mxnet.autograd
     :members:

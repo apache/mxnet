@@ -20,25 +20,15 @@
 
 
 import ctypes
-from .. util import is_np_array, is_np_shape
-from .. base import _LIB, check_call, string_types, c_str_array, DLPackHandle
-from .. base import c_handle_array, c_str, mx_uint, NDArrayHandle, py_str
-from ..numpy import ndarray
+from ..util import is_np_array, is_np_shape
+from ..base import _LIB, check_call, string_types, c_str_array
+from ..base import c_handle_array, c_str, mx_uint, NDArrayHandle, py_str
+from ..dlpack import ndarray_to_dlpack_for_read, ndarray_to_dlpack_for_write
+from ..dlpack import ndarray_from_dlpack, ndarray_from_numpy
+from ..numpy import ndarray, array
 
-__all__ = ['save', 'load', 'to_dlpack_for_read', 'to_dlpack_for_write', 'from_dlpack']
-
-PyCapsuleDestructor = ctypes.CFUNCTYPE(None, ctypes.c_void_p)
-_c_str_dltensor = c_str('dltensor')
-_c_str_used_dltensor = c_str('used_dltensor')
-
-def _dlpack_deleter(pycapsule):
-    pycapsule = ctypes.c_void_p(pycapsule)
-    if ctypes.pythonapi.PyCapsule_IsValid(pycapsule, _c_str_dltensor):
-        ptr = ctypes.c_void_p(
-            ctypes.pythonapi.PyCapsule_GetPointer(pycapsule, _c_str_dltensor))
-        check_call(_LIB.MXNDArrayCallDLPackDeleter(ptr))
-
-_c_dlpack_deleter = PyCapsuleDestructor(_dlpack_deleter)
+__all__ = ['save', 'load', 'to_dlpack_for_read', 'to_dlpack_for_write',
+           'from_dlpack', 'from_numpy']
 
 def save(file, arr):
     """Saves a list of `ndarray`s or a dict of `str`->`ndarray` to file.
@@ -132,9 +122,8 @@ def load(file):
             (py_str(names[i]), ndarray(NDArrayHandle(handles[i])))
             for i in range(out_size.value))
 
-
-def from_dlpack(dlpack):
-    """Returns a np.ndarray backed by a dlpack tensor.
+from_dlpack = ndarray_from_dlpack(ndarray)
+from_dlpack_doc = """Returns a np.ndarray backed by a dlpack tensor.
 
     Parameters
     ----------
@@ -168,21 +157,36 @@ def from_dlpack(dlpack):
     array([[2., 2., 2.],
            [2., 2., 2.]])
     """
-    handle = NDArrayHandle()
-    dlpack = ctypes.py_object(dlpack)
-    assert ctypes.pythonapi.PyCapsule_IsValid(dlpack, _c_str_dltensor), ValueError(
-        'Invalid DLPack Tensor. DLTensor capsules can be consumed only once.')
-    dlpack_handle = ctypes.c_void_p(ctypes.pythonapi.PyCapsule_GetPointer(dlpack, _c_str_dltensor))
-    check_call(_LIB.MXNDArrayFromDLPackEx(dlpack_handle, False, ctypes.byref(handle)))
-    # Rename PyCapsule (DLPack)
-    ctypes.pythonapi.PyCapsule_SetName(dlpack, _c_str_used_dltensor)
-    # delete the deleter of the old dlpack
-    ctypes.pythonapi.PyCapsule_SetDestructor(dlpack, None)
-    return ndarray(handle=handle)
+from_dlpack.__doc__ = from_dlpack_doc
 
-def to_dlpack_for_read(data):
-    """Returns a reference view of np.ndarray that represents as DLManagedTensor until
-       all previous write operations on the current array are finished.
+
+from_numpy = ndarray_from_numpy(ndarray, array)
+from_numpy_doc = """Returns an MXNet's np.ndarray backed by numpy's ndarray.
+    When `zero_copy` is set to be true,
+    this API consumes numpy's ndarray and produces MXNet's np.ndarray
+    without having to copy the content. In this case, we disallow
+    users to modify the given numpy ndarray, and it is suggested
+    not to read the numpy ndarray as well for internal correctness.
+
+    Parameters
+    ----------
+    ndarray: np.ndarray
+        input data
+    zero_copy: bool
+        Whether we use DLPack's zero-copy conversion to convert to MXNet's
+        np.ndarray.
+        This is only available for c-contiguous arrays, i.e. array.flags[C_CONTIGUOUS] == True.
+
+    Returns
+    -------
+    np.ndarray
+        a np.ndarray backed by a dlpack tensor
+    """
+from_numpy.__doc__ = from_numpy_doc
+
+to_dlpack_for_read = ndarray_to_dlpack_for_read()
+to_dlpack_for_read_doc = """Returns a reference view of np.ndarray that represents
+as DLManagedTensor until all previous write operations on the current array are finished.
 
     Parameters
     ----------
@@ -205,14 +209,11 @@ def to_dlpack_for_read(data):
     array([[1., 1., 1.],
            [1., 1., 1.]])
     """
-    data.wait_to_read()
-    dlpack = DLPackHandle()
-    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
-    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
+to_dlpack_for_read.__doc__ = to_dlpack_for_read_doc
 
-def to_dlpack_for_write(data):
-    """Returns a reference view of ndarray that represents as DLManagedTensor until
-       all previous read/write operations on the current array are finished.
+to_dlpack_for_write = ndarray_to_dlpack_for_write()
+to_dlpack_for_write_doc = """Returns a reference view of ndarray that represents
+as DLManagedTensor until all previous read/write operations on the current array are finished.
 
     Parameters
     ----------
@@ -236,7 +237,4 @@ def to_dlpack_for_write(data):
     array([[2., 2., 2.],
            [2., 2., 2.]])
     """
-    check_call(_LIB.MXNDArrayWaitToWrite(data.handle))
-    dlpack = DLPackHandle()
-    check_call(_LIB.MXNDArrayToDLPack(data.handle, ctypes.byref(dlpack)))
-    return ctypes.pythonapi.PyCapsule_New(dlpack, _c_str_dltensor, _c_dlpack_deleter)
+to_dlpack_for_write.__doc__ = to_dlpack_for_write_doc

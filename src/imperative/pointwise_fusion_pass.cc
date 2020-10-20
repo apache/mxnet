@@ -48,13 +48,13 @@ void WarnFusionNotSupported() {
                  << "Unset env var MXNET_USE_FUSION=1 to quiet this message.";
 #else
     LOG(WARNING) << "Omitting dynamic fused op creation- needs MXNet lib built with "
-                   << "USE_CUDA=1 and ENABLE_CUDA_RTC=1.  Unset env var MXNET_USE_FUSION=1 "
+                   << "USE_CUDA=1.  Unset env var MXNET_USE_FUSION=1 "
                    << "to quiet this message.";
 #endif  // defined(_WIN32)
   }
 }
 
-#if MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#if MXNET_USE_CUDA
 
 namespace {
   bool IsFusionCompatible(nnvm::Node* n) {
@@ -334,7 +334,7 @@ Graph FusePointwiseBackward(Graph &&g) {
   ret.outputs = g.outputs;
   return ret;
 }
-#endif  // MXNET_USE_CUDA && MXNET_ENABLE_CUDA_RTC
+#endif  // MXNET_USE_CUDA
 
 }  // namespace exec
 }  // namespace mxnet

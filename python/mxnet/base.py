@@ -276,7 +276,12 @@ class MXCallbackList(ctypes.Structure):
 def _load_lib():
     """Load library by searching possible path."""
     lib_path = libinfo.find_lib_path()
-    lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
+    if sys.version_info >= (3, 8) and os.name == "nt":
+        # use LOAD_WITH_ALTERED_SEARCH_PATH, For simplicity, let's just fill the numbers.
+        # pylint: disable=E1123
+        lib = ctypes.CDLL(lib_path[0], winmode=0x00000008)
+    else:
+        lib = ctypes.CDLL(lib_path[0], ctypes.RTLD_LOCAL)
     # DMatrix functions
     lib.MXGetLastError.restype = ctypes.c_char_p
     return lib
@@ -309,7 +314,6 @@ RtcHandle = ctypes.c_void_p
 CudaModuleHandle = ctypes.c_void_p
 CudaKernelHandle = ctypes.c_void_p
 ProfileHandle = ctypes.c_void_p
-DLPackHandle = ctypes.c_void_p
 
 
 #----------------------------

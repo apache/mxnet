@@ -77,18 +77,28 @@ def _reshape_like(F, x, y):
 def _batch_mean(F, loss, batch_axis):
     """Return mean on the specified batch axis, not keeping the axis"""
     if is_np_array():
-        axes = list(range(loss.ndim))
-        del axes[batch_axis]
-        return F.np.mean(loss, axis=axes)
+        if F is ndarray:
+            axes = list(range(loss.ndim))
+            del axes[batch_axis]
+            return F.np.mean(loss, axis=axes)
+        else:
+            assert batch_axis == 0, 'Currently, we have not supported the "exclude" ' \
+                                    'flag in mean. So we only support batch_axis=0.'
+            return F.npx.batch_flatten(loss).mean(axis=1)
     else:
         return F.mean(loss, axis=batch_axis, exclude=True)
 
 def _batch_sum(F, loss, batch_axis):
     """Return sum on the specified batch axis, not keeping the axis"""
     if is_np_array():
-        axes = list(range(loss.ndim))
-        del axes[batch_axis]
-        return F.np.sum(loss, axis=axes)
+        if F is ndarray:
+            axes = list(range(loss.ndim))
+            del axes[batch_axis]
+            return F.np.sum(loss, axis=axes)
+        else:
+            assert batch_axis == 0, 'Currently, we have not supported the "exclude" ' \
+                                    'flag in mean. So we only support batch_axis=0.'
+            return F.npx.batch_flatten(loss).sum(axis=1)
     else:
         return F.sum(loss, axis=batch_axis, exclude=True)
 
@@ -364,7 +374,7 @@ class SoftmaxCrossEntropyLoss(Loss):
           `sparse_label` is False, `label`'s shape must be the same as `pred`
           and values should be floats in the range `[0, 1]`.
         - **sample_weight**: element-wise weighting tensor. Must be broadcastable
-          to the same shape as label. For example, if label has shape (64, 10)
+          to the same shape as pred. For example, if pred has shape (64, 10)
           and you want to weigh each sample in the batch separately,
           sample_weight should have shape (64, 1).
 
@@ -899,8 +909,8 @@ class PoissonNLLLoss(Loss):
             stirling_factor = target * \
                 log_fn(target) - target + 0.5 * log_fn(2 * target * np.pi)
             target_gt_1 = target > 1
-            stirling_factor *= target_gt_1
-            loss += stirling_factor
+            stirling_factor = stirling_factor * target_gt_1
+            loss = loss + stirling_factor
         loss = _apply_weighting(F, loss, self._weight, sample_weight)
         return _batch_mean(F, loss, self._batch_axis)
 
@@ -1023,7 +1033,8 @@ class SDMLLoss(Loss):
     def __init__(self, smoothing_parameter=0.3, weight=1., batch_axis=0, **kwargs):
         super(SDMLLoss, self).__init__(weight, batch_axis, **kwargs)
         self.kl_loss = KLDivLoss(from_logits=True)
-        self.smoothing_parameter = smoothing_parameter # Smoothing probability mass
+        # Smoothing probability mass
+        self.smoothing_parameter = smoothing_parameter
 
     def _compute_distances(self, F, x1, x2):
         """
@@ -1032,17 +1043,13 @@ class SDMLLoss(Loss):
         """
         if is_np_array():
             expand_dims_fn = F.np.expand_dims
-            broadcast_to_fn = F.np.broadcast_to
         else:
             expand_dims_fn = F.expand_dims
-            broadcast_to_fn = F.broadcast_to
 
-        # extracting sizes expecting [batch_size, dim]
-        assert x1.shape == x2.shape
-        batch_size, dim = x1.shape
-        # expanding both tensor form [batch_size, dim] to [batch_size, batch_size, dim]
-        x1_ = broadcast_to_fn(expand_dims_fn(x1, 1), [batch_size, batch_size, dim])
-        x2_ = broadcast_to_fn(expand_dims_fn(x2, 0), [batch_size, batch_size, dim])
+        # expanding x1 form [batch_size, dim] to [batch_size, 1, dim]
+        # and x2 to [1, batch_size, dim]
+        x1_ = expand_dims_fn(x1, 1)
+        x2_ = expand_dims_fn(x2, 0)
         # pointwise squared differences
         squared_diffs = (x1_ - x2_)**2
         # sum of squared differences distance
@@ -1073,7 +1080,6 @@ class SDMLLoss(Loss):
         labels = gold * (1 - self.smoothing_parameter) + (1 - gold) * self.smoothing_parameter / (batch_size - 1)
         return labels
 
-
     def hybrid_forward(self, F, x1, x2):
         """
         the function computes the kl divergence between the negative distances
@@ -1092,6 +1098,7 @@ class SDMLLoss(Loss):
         learn to predict french president comparing it with all the other
         vectors in batch 2
         """
+        assert F is ndarray, 'SDMLLoss does not support symbolic '
         if is_np_array():
             log_softmax_fn = F.npx.log_softmax
         else:

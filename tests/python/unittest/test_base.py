@@ -20,12 +20,14 @@ from numpy.testing import assert_equal
 from mxnet.base import data_dir
 from mxnet.test_utils import environment
 from mxnet.util import getenv
-from common import setup_module, teardown_module, with_environment
+from common import with_environment
 import os
 import logging
 import os.path as op
 import platform
+import pytest
 
+@pytest.mark.garbage_expected
 def test_environment():
     name1 = 'MXNET_TEST_ENV_VAR_1'
     name2 = 'MXNET_TEST_ENV_VAR_2'

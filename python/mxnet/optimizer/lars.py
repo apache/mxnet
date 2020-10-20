@@ -39,12 +39,16 @@ class LARS(Optimizer):
 
     Behave mostly like SGD with momentum and weight decay but is scaling \
     adaptively the learning for each layer:
-    w_norm = L2norm(weights)
-    g_norm = L2norm(gradients)
-    if w_norm > 0 and g_norm > 0:
-        lr_layer = lr * w_norm / (g_norm + weight_decay * w_norm + epsilon)
-    else:
-        lr_layer = lr
+
+    .. code-block::
+
+       w_norm = L2norm(weights)
+       g_norm = L2norm(gradients)
+       if w_norm > 0 and g_norm > 0:
+           lr_layer = lr * w_norm / (g_norm + weight_decay * w_norm + epsilon)
+       else:
+           lr_layer = lr
+
 
     Parameters
     ----------

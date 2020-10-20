@@ -37,7 +37,8 @@ mx_tensorrt_lib = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, buil
 mx_lib_cpp_examples = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/openmp/runtime/src/libomp.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 mx_lib_cpp_examples_no_tvm_op = 'build/libmxnet.so, build/libcustomop_lib.so, build/libcustomop_gpu_lib.so, build/libsubgraph_lib.so, build/3rdparty/openmp/runtime/src/libomp.so, python/mxnet/_cy3/*.so, python/mxnet/_ffi/_cy3/*.so'
 mx_lib_cpp_examples_cpu = 'build/libmxnet.so, build/3rdparty/tvm/libtvm_runtime.so, build/libtvmop.so, build/tvmop.conf, build/3rdparty/openmp/runtime/src/libomp.so'
-mx_cd_lib = 'lib/libmxnet.so, licenses/*, lib/libgfortran.so.4, lib/libquadmath.so.0, lib/libopenblas.so.0, include/mkldnn/dnnl_version.h, include/mkldnn/dnnl_config.h'
+mx_cd_lib = 'lib/libmxnet.so, licenses/*, lib/libgfortran.so.*, lib/libopenblas.so.0, include/mkldnn/dnnl_version.h, include/mkldnn/dnnl_config.h'
+
 
 // Python unittest for CPU
 // Python 3
@@ -258,27 +259,13 @@ def compile_unix_cmake_gpu(lib_name) {
     }]
 }
 
-def compile_unix_cmake_gpu_no_rtc(lib_name) {
-    return ['GPU: CMake CUDA RTC OFF': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/build-cmake-gpu-no-rtc') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_cmake_no_rtc', false)
-            utils.pack_lib(lib_name, mx_cmake_lib)
-          }
-        }
-      }
-    }]
-}
-
 def compile_unix_tensorrt_gpu(lib_name) {
     return ['TensorRT': {
       node(NODE_LINUX_CPU) {
         ws('workspace/build-tensorrt') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('ubuntu_gpu_cu101', 'build_ubuntu_gpu_tensorrt', false)
+            utils.docker_run('ubuntu_gpu_cu102', 'build_ubuntu_gpu_tensorrt', false)
             utils.pack_lib(lib_name, mx_tensorrt_lib)
           }
         }
@@ -319,7 +306,7 @@ def compile_centos7_gpu(lib_name) {
         ws('workspace/build-centos7-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_gpu_cu92', 'build_centos7_gpu', false)
+            utils.docker_run('centos7_gpu_cu102', 'build_centos7_gpu', false)
             utils.pack_lib(lib_name, mx_lib)
           }
         }
@@ -648,7 +635,7 @@ def compile_static_python_gpu() {
         ws('workspace/ut-publish-python-gpu') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.init_git()
-            utils.docker_run('centos7_gpu_cu92', 'build_static_python_cu92')
+            utils.docker_run('centos7_gpu_cu102', 'build_static_python_cu102')
           }
         }
     }
@@ -925,7 +912,7 @@ def test_centos7_python3_gpu(lib_name) {
           timeout(time: max_time, unit: 'MINUTES') {
             try {
               utils.unpack_and_init(lib_name, mx_lib)
-              utils.docker_run('centos7_gpu_cu92', 'unittest_centos7_gpu', true)
+              utils.docker_run('centos7_gpu_cu102', 'unittest_centos7_gpu', true)
               utils.publish_test_coverage()
             } finally {
               utils.collect_test_results_unix('tests_gpu.xml', 'tests_python3_centos7_gpu.xml')
@@ -1044,22 +1031,6 @@ def test_qemu_armv8_cpu(lib_name) {
     }]
 }
 
-// This creates the MXNet binary needed for generating different docs sets
-def compile_unix_lite(lib_name) {
-    return ['MXNet lib': {
-      node(NODE_LINUX_CPU) {
-        ws('workspace/docs') {
-          timeout(time: max_time, unit: 'MINUTES') {
-            utils.init_git()
-            utils.docker_run('ubuntu_cpu', 'build_ubuntu_cpu_docs', false)
-            utils.pack_lib(lib_name, mx_lib, false)
-          }
-        }
-      }
-    }]
-}
-
-
 def should_pack_website() {
   if (env.BRANCH_NAME) {
     if (env.BRANCH_NAME == "master" || env.BRANCH_NAME.startsWith("new_")) {
@@ -1081,7 +1052,7 @@ def docs_python(lib_name) {
         ws('workspace/docs') {
           timeout(time: max_time, unit: 'MINUTES') {
             utils.unpack_and_init(lib_name, mx_lib, false)
-            utils.docker_run('ubuntu_cpu_python', 'build_python_docs', false)
+            utils.docker_run('ubuntu_cpu', 'build_python_docs', false)
             if (should_pack_website()) {
               utils.pack_lib('python-artifacts', 'docs/_build/python-artifacts.tgz', false)
             }

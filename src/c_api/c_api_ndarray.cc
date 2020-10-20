@@ -143,22 +143,8 @@ int MXImperativeInvoke(AtomicSymbolCreator creator,
                        NDArrayHandle **outputs,
                        int num_params,
                        const char **param_keys,
-                       const char **param_vals) {
-  API_BEGIN();
-  MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
-                         num_params, param_keys, param_vals);
-  API_END();
-}
-
-int MXImperativeInvokeEx(AtomicSymbolCreator creator,
-                         int num_inputs,
-                         NDArrayHandle *inputs,
-                         int *num_outputs,
-                         NDArrayHandle **outputs,
-                         int num_params,
-                         const char **param_keys,
-                         const char **param_vals,
-                         const int **out_stypes) {  // outputs storage types
+                       const char **param_vals,
+                       const int **out_stypes) {  // outputs storage types
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   MXImperativeInvokeImpl(creator, num_inputs, inputs, num_outputs, outputs,
@@ -174,44 +160,15 @@ int MXImperativeInvokeEx(AtomicSymbolCreator creator,
 }
 
 int MXCreateCachedOp(SymbolHandle handle,
-                     CachedOpHandle *out) {
-  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
-
-  API_BEGIN();
-  auto inputs = sym->ListInputs(nnvm::Symbol::kAll);
-  std::vector<std::string> input_names;
-  input_names.reserve(inputs.size());
-  for (const auto& i : inputs) input_names.push_back(i->attrs.name);
-  *out = new CachedOpPtr(new CachedOp(
-      *sym, std::vector<std::pair<std::string, std::string> >()));
-  API_END();
-}
-
-int MXCreateCachedOpEx(SymbolHandle handle,
-                       int num_flags,
-                       const char** keys,
-                       const char** vals,
-                       CachedOpHandle *out) {
-  nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
-
-  API_BEGIN();
-  std::vector<std::pair<std::string, std::string> > flags;
-  for (int i = 0; i < num_flags; ++i) {
-    flags.emplace_back(keys[i], vals[i]);
-  }
-  *out = new CachedOpPtr(new CachedOp(*sym, flags));
-  API_END();
-}
-
-int MXCreateCachedOpEX(SymbolHandle handle,
-                       int num_flags,
-                       const char** keys,
-                       const char** vals,
-                       CachedOpHandle *out,
-                       bool thread_safe) {
+                     int num_flags,
+                     const char** keys,
+                     const char** vals,
+                     CachedOpHandle *out,
+                     bool thread_safe) {
   nnvm::Symbol* sym = static_cast<nnvm::Symbol*>(handle);
   API_BEGIN();
   std::vector<std::pair<std::string, std::string> > flags;
+  flags.reserve(num_flags);
   for (int i = 0; i < num_flags; ++i) {
     flags.emplace_back(keys[i], vals[i]);
   }
@@ -243,14 +200,14 @@ int MXCachedOpGetOptimizedSymbol(CachedOpHandle handle,
   API_END_HANDLE_ERROR(delete s);
 }
 
-int MXInvokeCachedOpEx(CachedOpHandle handle,
-                       int num_inputs,
-                       NDArrayHandle *inputs,
-                       int default_dev_type,
-                       int default_dev_id,
-                       int *num_outputs,
-                       NDArrayHandle **outputs,
-                       const int **out_stypes) {  // outputs storage types
+int MXInvokeCachedOp(CachedOpHandle handle,
+                     int num_inputs,
+                     NDArrayHandle *inputs,
+                     int default_dev_type,
+                     int default_dev_id,
+                     int *num_outputs,
+                     NDArrayHandle **outputs,
+                     const int **out_stypes) {  // outputs storage types
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
 
   API_BEGIN();

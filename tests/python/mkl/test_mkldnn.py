@@ -219,6 +219,28 @@ def test_flatten_slice_after_conv():
     print(p[0])
 
 
+def test_mkldnn_sum_with_mkldnn_layout():
+
+    x_shape = (32, 3, 224, 224)
+    x_npy = np.ones(x_shape, dtype='float32')
+    w_shape = (32, 3, 3, 3)
+    w_npy = np.ones(w_shape, dtype='float32')
+
+    x = mx.sym.Variable("x")
+    w = mx.sym.Variable("w")
+    z = mx.symbol.Convolution(data=x, weight=w, num_filter=32, kernel=(3, 3))
+    num_inputs = [2, 3, 4, 5]
+    for i in num_inputs:
+        inputs = []
+        for n in range(i):
+            inputs.append(z)
+        y = mx.sym.add_n(*inputs) # (only MKLDNN data input)
+        exe = y._simple_bind(ctx=mx.cpu(), x=x_shape, w=w_shape)
+        out = exe.forward(is_train=False, x=x_npy, w=np.ones(w_shape))[0]
+        #conv with kernel (3,3) on ones should give result=27
+        single_cov = 27.0
+        assert_almost_equal(out[0].asnumpy()[0, 0, 0], single_cov*i)
+
 def test_mkldnn_sum_inplace_with_cpu_layout():
     x_shape = (32, 3, 224, 224)
     x_npy = np.ones(x_shape, dtype='float32')
@@ -227,7 +249,7 @@ def test_mkldnn_sum_inplace_with_cpu_layout():
     x = mx.sym.Variable("x")
     y = mx.sym.Variable("y")
     z = mx.symbol.Convolution(data=x, num_filter=32, kernel=(3, 3))
-    z = mx.sym.add_n(z, y)
+    z = mx.sym.add_n(z, y) # (MKLDNN data, cpu data)
     exe = z._simple_bind(ctx=mx.cpu(), x=x_shape, y=y_shape)
     out = exe.forward(is_train=False, x=x_npy, y=y_npy)[0]
     assert_almost_equal(out[0].asnumpy()[0, 0, 0], 1.0)

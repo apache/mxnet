@@ -27,12 +27,13 @@
 #include <dmlc/logging.h>
 #include <dmlc/concurrency.h>
 #include <cassert>
+#include <memory>
 #include <utility>
 #include "./threaded_engine.h"
 #include "./thread_pool.h"
 #include "./stream_manager.h"
 #if MXNET_USE_CUDA
-#include "../common/cuda_utils.h"
+#include "../common/cuda/utils.h"
 #endif
 
 namespace mxnet {
@@ -50,7 +51,7 @@ class ThreadedEnginePooled : public ThreadedEngine {
     this->Start();
   }
 
-  ~ThreadedEnginePooled() noexcept(false) {
+  ~ThreadedEnginePooled() noexcept(false) override {
     StopNoWait();
   }
 
@@ -71,17 +72,17 @@ class ThreadedEnginePooled : public ThreadedEngine {
   }
 
   void Start() override {
-    streams_.reset(new StreamManager<kMaxNumGpus, kNumStreamsPerGpu>());
+    streams_ = std::make_unique<StreamManager<kMaxNumGpus, kNumStreamsPerGpu>>();
     task_queue_.reset(new dmlc::ConcurrentBlockingQueue<OprBlock*>());
     io_task_queue_.reset(new dmlc::ConcurrentBlockingQueue<OprBlock*>());
-    thread_pool_.reset(new ThreadPool(kNumWorkingThreads,
+    thread_pool_ = std::make_unique<ThreadPool>(kNumWorkingThreads,
                                       [this](std::shared_ptr<dmlc::ManualEvent> ready_event) {
                                         ThreadWorker(task_queue_, ready_event); },
-                                      true));
-    io_thread_pool_.reset(new ThreadPool(1,
+                                      true);
+    io_thread_pool_ = std::make_unique<ThreadPool>(1,
                                          [this](std::shared_ptr<dmlc::ManualEvent> ready_event) {
                                            ThreadWorker(io_task_queue_, ready_event); },
-                                         true));
+                                         true);
   }
 
  protected:
