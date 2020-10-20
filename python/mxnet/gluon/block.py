@@ -1059,7 +1059,7 @@ class HybridBlock(Block):
             out = [out]
         return _regroup(out, self._out_format)
 
-    def optimize_for(self, x, *args, backend=None, backend_opts=None, clear=True, **kwargs):
+    def optimize_for(self, x, *args, backend=None, clear=True, static_alloc=False, static_shape=False, **kwargs):
         """Partitions the current HybridBlock and optimizes it for a given backend
         without executing a forward pass. Modifies the HybridBlock in-place.
 
@@ -1087,8 +1087,6 @@ class HybridBlock(Block):
             other inputs to model
         backend : str
             The name of backend, as registered in `SubgraphBackendRegistry`, default None
-        backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
-            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         clear : clears any previous optimizations
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
@@ -1096,10 +1094,12 @@ class HybridBlock(Block):
             Optimize for invariant input shapes between iterations. Must also
             set static_alloc to True. Change of input shapes is still allowed
             but slower.
+        **kwargs: The backend options, optional
+            Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         """
 
         # do hybrize API call
-        self.hybridize(True, backend, backend_opts, clear, **kwargs)
+        self.hybridize(True, backend, kwargs, clear, static_alloc=static_alloc, static_shape=static_shape)
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
