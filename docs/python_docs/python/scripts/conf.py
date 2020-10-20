@@ -66,6 +66,9 @@ import mxnet as mx
 from mxnet import np, npx
 '''
 
+autosummary_generate = True
+numpydoc_show_class_members = False
+
 autodoc_member_order = 'alphabetical'
 
 autodoc_default_flags = ['members', 'show-inheritance']
@@ -118,7 +121,7 @@ exclude_patterns = ['templates',
 
 # If true, the current module name will be prepended to all description
 # unit titles (such as .. function::).
-#add_module_names = True
+add_module_names = False
 
 # If true, sectionauthor and moduleauthor directives will be shown in the
 # output. They are ignored by default.

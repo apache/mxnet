@@ -26,8 +26,7 @@ import numpy as _np
 import mxnet as mx
 from mxnet import gluon, autograd, np, npx
 from mxnet.test_utils import use_np, assert_almost_equal, check_gluon_hybridize_consistency, same, check_symbolic_backward
-from common import assertRaises, setup_module, with_seed, teardown_module, \
-    xfail_when_nonstandard_decimal_separator
+from common import assertRaises, with_seed, xfail_when_nonstandard_decimal_separator
 import random
 from mxnet.base import MXNetError
 from mxnet.gluon.data.vision import transforms

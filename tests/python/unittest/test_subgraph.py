@@ -22,7 +22,7 @@ import mxnet as mx
 import copy
 from mxnet.test_utils import *
 import pytest
-from common import setup_module, with_seed, teardown_module
+from common import with_seed
 from mxnet.gluon.model_zoo.vision import get_model
 
 def make_subgraph(subg, *args):

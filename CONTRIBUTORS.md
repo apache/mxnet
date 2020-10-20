@@ -137,6 +137,7 @@ List of Contributors
 --------------------
 * [Top-100 Contributors](https://github.com/apache/incubator-mxnet/graphs/contributors)
   - To contributors: please add your name to the list when you submit a patch to the project:)
+* [Aditya Trivedi](https://github.com/iadi7ya)
 * [Feng Wang](https://github.com/happynear)
   - Feng makes MXNet compatible with Windows Visual Studio.
 * [Jack Deng](https://github.com/jdeng)

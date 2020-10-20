@@ -19,7 +19,7 @@ from __future__ import print_function
 import mxnet as mx
 from mxnet.gluon.model_zoo.vision import get_model
 import sys
-from common import setup_module, with_seed, teardown_module
+from common import with_seed
 import multiprocessing
 import pytest
 

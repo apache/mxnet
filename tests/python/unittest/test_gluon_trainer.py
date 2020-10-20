@@ -22,7 +22,7 @@ import numpy as np
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
-from common import setup_module, with_seed, assertRaises, xfail_when_nonstandard_decimal_separator
+from common import with_seed, assertRaises, xfail_when_nonstandard_decimal_separator
 from copy import deepcopy
 import pytest
 
