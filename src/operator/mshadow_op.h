@@ -142,13 +142,6 @@ struct IndexedNum {
   }
 };
 
-template<typename DType, typename OType>
-struct arg_min_max_map : public mxnet_op::tunable {
-  MSHADOW_XINLINE static OType Map(DType a) {
-    return OType(a);
-  }
-};
-
 template<typename AType, typename IType>
 struct set_index_no_op : public mxnet_op::tunable {
   const static bool do_op = false;

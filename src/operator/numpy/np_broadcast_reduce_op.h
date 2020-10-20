@@ -488,7 +488,7 @@ void NumpyArgMinMaxReduce(mshadow::Stream<cpu> *s, const TBlob& in_data, const T
   broadcast::diff<NDim>(out_data.shape_.get<NDim>(), in_data.shape_.get<NDim>(), &rshape, &rstride);
   size_t N = out_data.shape_.Size(), M = rshape.Size();
   broadcast::seq_reduce_compute<Reducer, NDim, OType, DType, OType,
-    mxnet::op::mshadow_op::arg_min_max_map<DType, OType>,
+    mxnet::op::mshadow_op::identity,
     mxnet::op::mshadow_op::arg_min_max_set_index<OType, index_t>> (
     N, M, false, in_data.dptr<DType>(), static_cast<OType*>(out_data.dptr_),
     in_data.shape_.get<NDim>(), out_data.shape_.get<NDim>(), rshape, rstride);

@@ -270,18 +270,19 @@ __global__ void reduce_kernel_M1(const int N, const bool addto,
     {__VA_ARGS__}                                                     \
   }
 
-template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP>
+template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP,
+	 typename IndexOP = mxnet::op::mshadow_op::set_index_no_op<AType, int>>
 void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
                 const TBlob& big, const Tensor<gpu, 1, char>& workspace,
                 const ReduceImplConfig& config) {
   if (config.M == 1) {
     reduce_kernel_M1<Reducer, ndim, AType, DType, OType, OP>
     <<< config.kernel_1.gridDim, config.kernel_1.blockDim, 0, stream >>>(
-      config.N, req == kAddTo, big.dptr<DType>(), small.dptr<OType>(), big.shape_.get<ndim>(),
-      small.shape_.get<ndim>());
+      config.N, req == kAddTo, big.dptr<DType>(), reinterpret_cast<OType*>(small.dptr_),
+      big.shape_.get<ndim>(), small.shape_.get<ndim>());
     MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel_M1);
   } else {
-    OType* small_dptr = small.dptr<OType>();
+    OType* small_dptr = reinterpret_cast<OType*>(small.dptr_);
     bool addto = (req == kAddTo);
     if (config.Mnext > 1) {
       // small_dptr[] is N*Mnext*sizeof(DType) bytes
@@ -297,7 +298,7 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
       config.kernel_1.blockDim.x : config.kernel_1.blockDim.y;
     const bool do_unroll = ( config.M / (by*config.Mnext) >= unroll_reduce );
     KERNEL_UNROLL_SWITCH(do_unroll, unroll_reduce, UNROLL, {
-      reduce_kernel<Reducer, ndim, AType, DType, OType, OP, UNROLL>
+      reduce_kernel<Reducer, ndim, AType, DType, OType, OP, UNROLL, IndexOP>
       <<< config.kernel_1.gridDim, config.kernel_1.blockDim, config.kernel_1.shMemSize, stream>>>(
         config.N, config.M, addto, big.dptr<DType>(), small_dptr, big.shape_.get<ndim>(),
         small.shape_.get<ndim>(), config.rshape.get<ndim>(), config.rstride.get<ndim>(),
@@ -308,7 +309,8 @@ void ReduceImpl(cudaStream_t stream, const TBlob& small, const OpReqType req,
     if (config.Mnext > 1) {
       reduce_lines_kernel<Reducer, OType>
       <<< config.kernel_2.gridSize, config.kernel_2.blockSize, 0, stream >>>
-        (config.N, config.Mnext, req == kAddTo, config.N, small_dptr, small.dptr<OType>());
+        (config.N, config.Mnext, req == kAddTo, config.N, small_dptr,
+         reinterpret_cast<OType*>(small.dptr_));
       MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_lines_kernel);
     }
   }

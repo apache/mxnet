@@ -30,58 +30,15 @@ using namespace mshadow::cuda;
 using namespace mshadow;
 using namespace broadcast;
 
-#define KERNEL_UNROLL_SWITCH(do_unroll, unrollAmount, unrollVar, ...) \
-  if (do_unroll) {                                                    \
-    const int unrollVar = unrollAmount;                               \
-    {__VA_ARGS__}                                                     \
-  } else {                                                            \
-    const int unrollVar = 1;                                          \
-    {__VA_ARGS__}                                                     \
-  }
-
 template<typename Reducer, int NDim, typename DType, typename OType>
 void NumpyArgMinMaxReduce(Stream<gpu> *s, const TBlob& in_data, const TBlob& out_data,
                           const Tensor<gpu, 1, char>& workspace) {
- cudaStream_t stream = Stream<gpu>::GetStream(s);
- ReduceImplConfig config(out_data.shape_, in_data.shape_, nullptr, nullptr, sizeof(OType));
-  if (config.M == 1) {
-    reduce_kernel_M1<Reducer, NDim, OType, DType, OType, mxnet::op::mshadow_op::arg_min_max_map<DType, OType>>
-    <<< config.kernel_1.gridDim, config.kernel_1.blockDim, 0, stream >>>(
-      config.N, false, in_data.dptr<DType>(), reinterpret_cast<OType*>(out_data.dptr_), in_data.shape_.get<NDim>(),
-      out_data.shape_.get<NDim>());
-    MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel_M1);
-  }
-  else {
-    OType* out_dptr = reinterpret_cast<OType*>(out_data.dptr_);
-    bool addto = false;
-    if (config.Mnext > 1) {
-      // out_dptr[] is N*Mnext*sizeof(DType) bytes
-      out_dptr = reinterpret_cast<OType*>(workspace.dptr_);
-      addto = false;
-      // Check that the workspace is contigiuous
-      CHECK_EQ(workspace.CheckContiguous(), true);
-      // Check that we have enough storage
-      CHECK_GE(workspace.size(0), config.workspace_size);
-    }
-    const int by = (config.kernel_1.do_transpose) ?
-      config.kernel_1.blockDim.x : config.kernel_1.blockDim.y;
-    const bool do_unroll = ( config.M / (by*config.Mnext) >= unroll_reduce );
-    KERNEL_UNROLL_SWITCH(do_unroll, unroll_reduce, UNROLL, {
-      reduce_kernel<Reducer, NDim, OType, DType, OType, mxnet::op::mshadow_op::arg_min_max_map<DType, OType>, UNROLL,
-          mxnet::op::mshadow_op::arg_min_max_set_index<OType, int>>
-      <<< config.kernel_1.gridDim, config.kernel_1.blockDim, config.kernel_1.shMemSize, stream>>>(
-        config.N, config.M, addto, in_data.dptr<DType>(), out_dptr, in_data.shape_.get<NDim>(),
-        out_data.shape_.get<NDim>(), config.rshape.get<NDim>(), config.rstride.get<NDim>(),
-        config.Mnext, config.kernel_1.do_transpose);
-    });
-    MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_kernel);
-    if (config.Mnext > 1) {
-      reduce_lines_kernel<Reducer, OType>
-      <<< config.kernel_2.gridSize, config.kernel_2.blockSize, 0, stream >>>
-        (config.N, config.Mnext, false, config.N, out_dptr, reinterpret_cast<OType*>(out_data.dptr_));
-      MSHADOW_CUDA_POST_KERNEL_CHECK(reduce_lines_kernel);
-    }
-  }
+  cudaStream_t stream = Stream<gpu>::GetStream(s);
+  ReduceImplConfig config(out_data.shape_, in_data.shape_, nullptr, nullptr, sizeof(OType));
+
+  ReduceImpl<Reducer, NDim, OType, DType, OType, mxnet::op::mshadow_op::identity,
+             mxnet::op::mshadow_op::arg_min_max_set_index<OType, int>>
+            (stream, out_data, kWriteTo, in_data, workspace, config);
 }
 
 #endif // MXNET_OPERATOR_NUMPY_NP_BROADCAST_REDUCE_OP_CUH_
