@@ -69,8 +69,7 @@ RUN aws s3 cp s3://mxnet-ci-prod-private-slave-data/nvidia/sdkm_downloads/cuda-r
     dpkg -i cuda-repo-cross-aarch64-10-0-local-10.0.326_1.0-1_all.deb && \
     rm cuda-repo-cross-aarch64-10-0-local-10.0.326_1.0-1_all.deb && \
     apt-get update && \
-    apt-get install -y -f && \
-    apt-get install -y cuda-cross-aarch64 cuda-cross-aarch64-10-0 && \
+    apt-get install -y cuda-cross-aarch64 cuda-cross-aarch64-10-0 cuda-toolkit-10-0 && \
     rm -rf /var/lib/apt/lists/*
 
 ARG USER_ID=0
