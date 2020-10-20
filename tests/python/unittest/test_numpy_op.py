@@ -10261,6 +10261,50 @@ def test_np_rollaxis():
 
 @with_seed()
 @use_np
+@pytest.mark.parametrize('op_name', ['sum', 'mean', 'min', 'max',
+    'argmin', 'argmax'])
+@pytest.mark.parametrize('dtype, decimal', [
+    (np.int8, 0), (np.uint8, 0), (np.int32, 0), (np.int64, 0),
+    (np.float16, 1), (np.float32, 4), (np.float64, 6)])
+@pytest.mark.parametrize('shape', [(), (1,), (5,),
+    (4, 3), (3, 5), (4, 4),
+    (4, 5, 6), (2, 3, 4, 5)])
+def test_np_reduce(op_name, dtype, decimal, shape):
+    from numpy.testing import assert_array_equal, assert_array_almost_equal
+
+    def _get_data(case, dtype, shape):
+        data = _np.random.uniform(-1.0, 1.0, shape).astype(dtype)
+        assert data.size > 0
+        for v in case:
+            i = _np.random.randint(0, data.size)
+            data.ravel()[i] = v
+        return data
+
+    def _get_cases(decimal):
+        if decimal == 0:
+            # integer
+            return [()]
+        options = [_np.inf, -_np.inf, _np.nan]
+        for num in range(len(options)+1):
+            for case in itertools.permutations(options, num):
+                yield case
+
+    _np_op = getattr(_np, op_name)
+    mx_np_op = getattr(np, op_name)
+    for case in _get_cases(decimal):
+        _np_data = _get_data(case, dtype, shape)
+        mx_np_data = np.array(_np_data)
+        np_out = _np_op(_np_data)
+        mx_out = mx_np_op(mx_np_data)
+        if decimal == 0:
+            assert_array_equal(mx_out.asnumpy(), np_out)
+        else:
+            assert_array_almost_equal(
+                mx_out.asnumpy(), np_out, decimal=decimal)
+
+
+@with_seed()
+@use_np
 def test_npx_stop_gradient():
     class TestStopGradient(HybridBlock):
         def hybrid_forward(self, F, a):

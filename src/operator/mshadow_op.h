@@ -1282,29 +1282,23 @@ struct fmin : public mxnet_op::tunable {
   }
 };
 
-/*! \brief boolean any/all kernel that determines whether elem is NonZero */
-struct NonZero {
-  template<typename DType>
-  MSHADOW_XINLINE static bool Map(DType a) {
-    return (a != DType(0));
-  }
-};
-
-/*! \brief sum reducer that ignores NaN values in the input */
-struct nansum {
+/*! \brief sum reducer */
+struct sum {
   /*! \brief do reduction into dst */
-  template<typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
-    if (IsNan(src)) return;
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src) { // NOLINT(*)
     dst += src;
   }
-  /*! \brief do reduction into dst */
-  template<typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& residual) { // NOLINT(*)
-    if (IsNan(src)) return;
+  /*! \brief do stable reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
     DType y = src - residual;
     DType t = dst + y;
-    residual = (t - dst) - y;
+    if (IsInf(t)) {
+      residual = 0;
+    } else {
+      residual = (t - dst) - y;
+    }
     dst = t;
   }
   /*! \brief combine the results of two reducers */
@@ -1316,10 +1310,15 @@ struct nansum {
   template<typename DType>
   MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
     DType t1 = dst_val + src_val;
-    DType e = t1 - src_val;
-    DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
-    dst_val = t1 + t2;
-    dst_residual = t2 - (dst_val - t1);
+    if (IsInf(t1)) {
+      dst_val = t1;
+      dst_residual = 0;
+    } else {
+      DType e = t1 - dst_val;
+      DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
+      dst_val = t1 + t2;
+      dst_residual = t2 - (dst_val - t1);
+    }
   }
   /*! \brief finalize reduction */
   template<typename DType>
@@ -1328,11 +1327,19 @@ struct nansum {
   template<typename DType>
   MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
   /*!
-  *\brief set the initial value during reduction
-  */
+   *\brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
   template<typename DType>
-  MSHADOW_XINLINE static void SetInitValue(DType & initv) { // NOLINT(*)
-      initv = 0;
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return 1;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
+    initv = 0;
   }
   /*!
    *\brief set the initial value during reduction
@@ -1341,6 +1348,30 @@ struct nansum {
   MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
     SetInitValue(initv);
     residual = 0;
+  }
+};
+
+/*! \brief boolean any/all kernel that determines whether elem is NonZero */
+struct NonZero {
+  template<typename DType>
+  MSHADOW_XINLINE static bool Map(DType a) {
+    return (a != DType(0));
+  }
+};
+
+/*! \brief sum reducer that ignores NaN values in the input */
+struct nansum : public sum {
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src) { // NOLINT(*)
+    if (IsNan(src)) return;
+    sum::Reduce(dst, src);
+  }
+  /*! \brief do reduction into dst */
+  template<typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile DType& dst, volatile DType src, volatile DType& residual) { // NOLINT(*)
+    if (IsNan(src)) return;
+    sum::Reduce(dst, src, residual);
   }
 };
 
@@ -1469,66 +1500,6 @@ struct nrm2 {
   MSHADOW_XINLINE static void SetInitValue(DType &sum_of_squares, DType &scale) { // NOLINT(*)
     SetInitValue(sum_of_squares);
     scale = 0;
-  }
-};
-
-/*! \brief sum reducer */
-struct sum {
-  /*! \brief do reduction into dst */
-  template<typename AType, typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src) { // NOLINT(*)
-    dst += src;
-  }
-  /*! \brief do stable reduction into dst */
-  template<typename AType, typename DType>
-  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
-    DType y = src - residual;
-    DType t = dst + y;
-    residual = (t - dst) - y;
-    dst = t;
-  }
-  /*! \brief combine the results of two reducers */
-  template<typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
-    Reduce(dst_val, src_val);
-  }
-  /*! \brief combine the results of two reducers */
-  template<typename DType>
-  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
-    DType t1 = dst_val + src_val;
-    DType e = t1 - dst_val;
-    DType t2 = ((src_val - e) + (dst_val - (t1 - e))) + dst_residual + src_residual;
-    dst_val = t1 + t2;
-    dst_residual = t2 - (dst_val - t1);
-  }
-  /*! \brief finalize reduction */
-  template<typename DType>
-  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
-  /*! \brief finalize reduction */
-  template<typename DType>
-  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
-  /*!
-   *\brief calculate gradient of redres with respect to redsrc,
-   * redres: reduced result, redsrc: one of reduction element
-   */
-  template<typename DType>
-  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
-    return 1;
-  }
-  /*!
-   *\brief set the initial value during reduction
-   */
-  template<typename DType>
-  MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
-    initv = 0;
-  }
-  /*!
-   *\brief set the initial value during reduction
-   */
-  template<typename DType>
-  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
-    SetInitValue(initv);
-    residual = 0;
   }
 };
 
