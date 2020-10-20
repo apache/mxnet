@@ -282,7 +282,7 @@ MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const 
     AType temp = OP::Map(big[j + mxnet_op::dot(coord, rstride)]);
     // argmin/max, set IndexedNum.idx
     if (IndexOP::do_op)
-      IndexOP::Op(temp, k);
+      IndexOP::Op(&temp, k);
     Reducer::Reduce(val, temp, residual);
   }
   Reducer::Finalize(val, residual);

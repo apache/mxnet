@@ -67,9 +67,9 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
             if (k + u*by < Mend) {
               tmp[u] = OP::Map(big[idx_big[u]]);
               // argmin/max, set IndexedNum.idx
-	      if (IndexOP::do_op)
-	        IndexOP::Op(tmp[u], k+u*by);
-	    }
+              if (IndexOP::do_op)
+                IndexOP::Op(&tmp[u], k+u*by);
+            }
           }
           #pragma unroll
           for (int u=0;u < unroll;u++) {

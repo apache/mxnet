@@ -498,7 +498,7 @@ void NumpyArgMinMaxReduce(mshadow::Stream<cpu> *s, const TBlob& in_data, const T
 #include "np_broadcast_reduce_op.cuh"
 #endif
 
-template<typename xpu, typename IType>
+template<typename Reducer, typename xpu, typename IType>
 void NumpyArgMinMaxCompute(const nnvm::NodeAttrs& attrs,
                         const OpContext& ctx,
                         const std::vector<TBlob>& inputs,
@@ -556,7 +556,7 @@ void NumpyArgMinMaxCompute(const nnvm::NodeAttrs& attrs,
         s, intermediate_out_data.shape_, req[0], in_data.shape_, sizeof(OType));
       Tensor<xpu, 1, char> workspace =
         ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-      NumpyArgMinMaxReduce<mshadow_op::argmax, NDim, DType, OType>(s, in_data,
+      NumpyArgMinMaxReduce<Reducer, NDim, DType, OType>(s, in_data,
         intermediate_out_data, workspace);
     });
     // parse the indices from the intermediate tensor back to the actual output tensor
