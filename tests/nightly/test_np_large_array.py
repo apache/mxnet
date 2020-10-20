@@ -2036,6 +2036,21 @@ def test_vstack():
 
 
 @use_np
+def test_ediff1d():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[0, -1], inp[1, 0] = 1, 3
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.ediff1d(inp, to_begin=-99, to_end=np.array([88, 99]))
+        out.backward()
+    assert out.shape == (2 * INT_OVERFLOW - 1 + 1 + 2, )
+    assert out[INT_OVERFLOW-1] == 1 and out[INT_OVERFLOW] == 2 and\
+            out[INT_OVERFLOW+1] == -3
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == -1 and inp.grad[-1, -1] == 1
+
+
+@use_np
 def test_split():
     inp = np.ones((INT_OVERFLOW, 2))
     inp[INT_OVERFLOW // 2] = 2
