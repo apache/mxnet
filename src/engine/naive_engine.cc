@@ -74,7 +74,6 @@ class NaiveEngine final : public Engine {
     LOG(INFO) << "Engine shutdown";
     for (size_t i = 0; i < streams_.size(); ++i) {
       if (streams_[i] != nullptr) {
-        // Catch exception for CUDA driver shutdown
         streams_[i] = nullptr;
       }
     }
