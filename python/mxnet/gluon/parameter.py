@@ -401,7 +401,7 @@ class Parameter(object):
         if self._stype == 'default':
             block = self.list_data()
             if len(block) > 1:
-                if is_np_array():                
+                if is_np_array():
                     data = sum([w.copyto(ctx) for w in block]) / len(block)
                 else:
                     data = ndarray.add_n(*(w.copyto(ctx) for w in block)) / len(block)
