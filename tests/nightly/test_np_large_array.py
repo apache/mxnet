@@ -2036,22 +2036,6 @@ def test_vstack():
 
 
 @use_np
-def test_logspace():
-    data = np.logspace(1.0, 10.0, INT_OVERFLOW)
-    assert data.shape == (INT_OVERFLOW, )
-    assert data[0] == 10 and data[-1] == 10000000000
-    assert_almost_equal(data[HALF_INT_OVERFLOW], np.array(10**5.5), \
-                rtol=1e-3, atol=1e-5)
-
-@use_np
-def test_linspace():
-    data = np.linspace(0, 1000, INT_OVERFLOW)
-    assert data.shape == (INT_OVERFLOW, )
-    assert data[0] == 0 and data[-1] == 1000
-    assert data[HALF_INT_OVERFLOW] == 500
-
-
-@use_np
 def test_ediff1d():
     inp = np.zeros((2, INT_OVERFLOW))
     inp[0, -1], inp[1, 0] = 1, 3
@@ -2127,3 +2111,18 @@ def test_dsplit():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1][-1][0] == 0 and inp.grad[0][1][1] == 1
 
+
+@use_np
+def test_logspace():
+    data = np.logspace(1.0, 10.0, INT_OVERFLOW)
+    assert data.shape == (INT_OVERFLOW, )
+    assert data[0] == 10 and data[-1] == 10000000000
+    assert_almost_equal(data[HALF_INT_OVERFLOW], np.array(10**5.5), \
+                rtol=1e-3, atol=1e-5)
+
+@use_np
+def test_linspace():
+    data = np.linspace(0, 1000, INT_OVERFLOW)
+    assert data.shape == (INT_OVERFLOW, )
+    assert data[0] == 0 and data[-1] == 1000
+    assert data[HALF_INT_OVERFLOW] == 500
