@@ -2111,3 +2111,13 @@ def test_dsplit():
     assert inp.grad.shape == inp.shape
     assert inp.grad[-1][-1][0] == 0 and inp.grad[0][1][1] == 1
 
+
+@use_np
+def test_histogram():
+    INT_OVERFLOW = 2**31
+    A = np.ones((INT_OVERFLOW, 2))
+    A[-1, -1] = 2
+    A.attach_grad()
+    hist, _ = np.histogram(A, np.array([0.5, 1.5, 2.5, 3.5]))
+    assert hist.shape == (3, )
+    assert hist[0] == int(2 * INT_OVERFLOW - 1) and hist[1] == 1
