@@ -268,7 +268,7 @@ MSHADOW_XINLINE void binary_broadcast_assign(const index_t idx, const bool addto
 }
 
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType,
-         typename OP, bool use_index = false>
+         typename OP, typename IndexOP = mxnet::op::mshadow_op::set_index_no_op<AType, index_t>>
 MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const bool addto,
                                        const DType* __restrict big, OType *small,
                                        const Shape<ndim>& bshape, const Shape<ndim>& sshape,
@@ -281,8 +281,8 @@ MSHADOW_XINLINE void seq_reduce_assign(const index_t idx, const size_t M, const 
     coord = mxnet_op::unravel(k, rshape);
     AType temp = OP::Map(big[j + mxnet_op::dot(coord, rstride)]);
     // argmin/max, set IndexedNum.idx
-    if (use_index)
-      memcpy(reinterpret_cast<char*>(&temp), &k, sizeof(index_t));
+    if (IndexOP::do_op)
+      IndexOP::Op(temp, k);
     Reducer::Reduce(val, temp, residual);
   }
   Reducer::Finalize(val, residual);
@@ -318,14 +318,14 @@ void BinaryBroadcastComputeImpl(Stream<cpu> *s, const OpReqType req,
 }
 
 template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP,
-         bool use_index = false>
+         typename IndexOP = mxnet::op::mshadow_op::set_index_no_op<AType, index_t>>
 void seq_reduce_compute(const size_t N, const size_t M, const bool addto,
                         const DType *big, OType *small, const Shape<ndim> bshape,
                         const Shape<ndim> sshape, const Shape<ndim> rshape,
                         const Shape<ndim> rstride) {
   #pragma omp parallel for num_threads(engine::OpenMP::Get()->GetRecommendedOMPThreadCount())
   for (index_t idx = 0; idx < static_cast<index_t>(N); ++idx) {
-    seq_reduce_assign<Reducer, ndim, AType, DType, OType, OP, use_index>(idx, M, addto, big, small,
+    seq_reduce_assign<Reducer, ndim, AType, DType, OType, OP, IndexOP>(idx, M, addto, big, small,
         bshape, sshape, rshape, rstride);
   }
 }

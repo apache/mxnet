@@ -28,7 +28,8 @@
 
 using namespace mshadow::cuda;
 
-template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP, int unroll, bool use_index = false>
+template<typename Reducer, int ndim, typename AType, typename DType, typename OType, typename OP, int unroll,
+         typename IndexOP = mxnet::op::mshadow_op::set_index_no_op<AType, int>>
 __launch_bounds__(nthread_reduce)
 __global__ void reduce_kernel(const int N, const int M, const bool addto,
                               const DType* __restrict big, OType *small,
@@ -66,9 +67,9 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
             if (k + u*by < Mend) {
               tmp[u] = OP::Map(big[idx_big[u]]);
               // argmin/max, set IndexedNum.idx
-	      if (use_index)
-                *(reinterpret_cast<int*>(&tmp[u])) = k + u*by;
-            }
+	      if (IndexOP::do_op)
+	        IndexOP::Op(tmp[u], k+u*by);
+	    }
           }
           #pragma unroll
           for (int u=0;u < unroll;u++) {

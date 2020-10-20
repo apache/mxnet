@@ -149,6 +149,24 @@ struct arg_min_max_map : public mxnet_op::tunable {
   }
 };
 
+template<typename AType, typename IType>
+struct set_index_no_op : public mxnet_op::tunable {
+  const static bool do_op = false;
+
+  MSHADOW_XINLINE static void Op(AType& a, IType i) {
+  }
+};
+
+template<typename AType, typename IType>
+struct arg_min_max_set_index : public mxnet_op::tunable {
+  const static bool do_op = true;
+
+  MSHADOW_XINLINE static void Op(AType& a, IType i) {
+    a.idx = i;
+  }
+};
+
+
 MXNET_UNARY_MATH_OP(identity_grad, 1);
 
 struct identity_with_cast {
