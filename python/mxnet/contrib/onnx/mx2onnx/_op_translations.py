@@ -827,6 +827,43 @@ def convert_leakyrelu(node, **kwargs):
             inputs=input_nodes,
             outputs=[name],
             name=name)
+    elif act_type in ('gelu'):
+        nodes = []
+        sqrt2 = np.float32(1.4142135623730951)
+        nodes.append(create_const_scalar_node(name+"_sqrt2", sqrt2, kwargs))
+        nodes.append(onnx.helper.make_node(
+            "Div",
+            inputs=[input_nodes[0], name+"_sqrt2"],
+            outputs=[name+"_div0_out"],
+            name=name+"_div0"
+        ))
+        nodes.append(onnx.helper.make_node(
+            "Erf",
+            inputs=[name+"_div0_out"],
+            outputs=[name+"_erf0_out"],
+            name=name+"_erf0"
+        ))
+        nodes.append(create_const_scalar_node(name+"_one", np.float32(1.0), kwargs))
+        nodes.append(create_const_scalar_node(name+"_half", np.float32(0.5), kwargs))
+        nodes.append(onnx.helper.make_node(
+            "Add",
+            inputs=[name+"_erf0_out", name+"_one"],
+            outputs=[name+"_add0_out"],
+            name=name+"_add0"
+        ))
+        nodes.append(onnx.helper.make_node(
+            "Mul",
+            inputs=[input_nodes[0], name+"_add0_out"],
+            outputs=[name+"_mul0_out"],
+            name=name+"_mul0"
+        ))
+        nodes.append(onnx.helper.make_node(
+            "Mul",
+            inputs=[name+"_mul0_out", name+"_half"],
+            outputs=[name],
+            name=name
+        ))
+        return nodes
     else:
         node = onnx.helper.make_node(
             act_name[act_type],
