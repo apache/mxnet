@@ -1587,6 +1587,55 @@ def docs_jekyll() {
     }]
 }
 
+// This is for building the full website
+// Assumes you have run all of the docs generation functions
+def docs_full_website() {
+    return ['Build artifacts full_website.tgz': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            utils.init_git()
+
+            unstash 'jekyll-artifacts'
+            unstash 'c-artifacts'
+            unstash 'python-artifacts'
+            unstash 'r-artifacts'
+            unstash 'julia-artifacts'
+            unstash 'scala-artifacts'
+            unstash 'java-artifacts'
+            unstash 'clojure-artifacts'
+
+            utils.docker_run('ubuntu_cpu_jekyll', 'build_docs', false)
+            utils.pack_lib('full_website', 'docs/_build/full_website.tgz', false)
+          }
+        }
+      }
+    }]
+}
+
+// This is for uploading website artifacts to S3 bucket
+// Assumes you have run docs_full_website function
+def docs_upload_s3() {
+    return ['Upload artifacts to s3 bucket': {
+      node(NODE_LINUX_CPU) {
+        ws('workspace/docs') {
+          timeout(time: max_time, unit: 'MINUTES') {
+            if(env.FOLDER_NAME) {
+              utils.unpack_and_init('full_website', 'docs/_build/full_website.tgz')
+
+              utils.docker_run('ubuntu_cpu', "push_docs ${env.FOLDER_NAME}", false)
+
+              archiveArtifacts 'docs/_build/versions.zip'
+            } else {
+              sh 'echo Can not find website version for release. Please specify env var FOLDER_NAME in Jenkins pipeline'
+              sh 'exit 1'
+            }
+
+          }
+        }
+      }
+    }]
+}
 
 // This is for publishing the full website
 // Assumes you have run all of the docs generation functions
