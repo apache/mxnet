@@ -143,6 +143,8 @@ cdef class CachedOp:
 
     def __call__(self, *args, out=None, default_ctx=None):
         """ctypes implementation of imperative invoke wrapper"""
+        from ..base import c_handle_array
+        from api import invoke_cachedOp
         cdef vector[NDArrayHandle] ndvars
         cdef vector[NDArrayHandle] output_vars
         cdef NDArrayHandle* p_output_vars
@@ -175,15 +177,16 @@ cdef class CachedOp:
         else:
             p_output_vars = &output_vars[0]
 
-        CALL(MXInvokeCachedOp(
-            self.chandle,
-            <int>len(args),
-            &ndvars[0] if ndvars.size() != 0 else NULL,
-            <int>(default_ctx.device_typeid),
-            <int>(default_ctx.device_id),
-            &num_output,
-            &p_output_vars,
-            &p_output_stypes))
+        invoke_cachedOp(
+                       self.handle, 
+                       len(args), 
+                       _ctypes.cast(<unsigned long long>&ndvars[0], _ctypes.c_void_p), 
+                       default_ctx.device_typeid, 
+                       default_ctx.device_id, 
+                       _ctypes.cast(<unsigned long long>&num_output, _ctypes.c_void_p),
+                       _ctypes.cast(<unsigned long long>&p_output_vars, _ctypes.c_void_p),
+                       _ctypes.cast(<unsigned long long>&p_output_stypes, _ctypes.c_void_p)
+        )
 
         if original_output is not None:
             return original_output

@@ -13,8 +13,8 @@
 # "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
-# under the License.
-"""
-Acknowledgement: This file originates from incubator-tvm
-"""
-from .function import _init_api, get_global_func
+# under the License
+
+from .._ffi._cy3.core import get_global_func
+
+invoke_cachedOp = get_global_func("_cached_op.invoke")

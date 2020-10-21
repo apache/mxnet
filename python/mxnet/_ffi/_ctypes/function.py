@@ -136,3 +136,9 @@ def __init_handle_by_constructor__(fconstructor, args):
     return handle
 
 _object.__init_by_constructor__ = __init_handle_by_constructor__
+
+_CLASS_PACKED_FUNC = None
+
+def _set_class_packed_func(packed_func_class):
+    global _CLASS_PACKED_FUNC
+    _CLASS_PACKED_FUNC = packed_func_class

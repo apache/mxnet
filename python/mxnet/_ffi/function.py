@@ -29,14 +29,17 @@ from .base import py_str, c_str
 try:
     if int(os.environ.get("MXNET_ENABLE_CYTHON", True)) == 0:
         from ._ctypes.function import FunctionBase as _FunctionBase
+        from ._ctypes.function import _set_class_packed_func
         # To set RETURN_SWITCH for OBJECT_HANDLE
         from . import object
     else:
         from ._cy3.core import FunctionBase as _FunctionBase
+        from ._cy3.core import _set_class_packed_func
 except ImportError:
     if int(os.environ.get("MXNET_ENFORCE_CYTHON", False)) != 0:
         raise ImportError("Cython Module cannot be loaded but MXNET_ENFORCE_CYTHON=1")
     from ._ctypes.function import FunctionBase as _FunctionBase
+    from ._ctypes.function import _set_class_packed_func
     # To set RETURN_SWITCH for OBJECT_HANDLE
     from . import object
 
@@ -160,3 +163,5 @@ def _init_api_prefix(module_name, prefix):
         ff.__name__ = fname
         ff.__doc__ = ("MXNet PackedFunc %s. " % fname)
         setattr(target_module, ff.__name__, ff)
+
+_set_class_packed_func(Function)

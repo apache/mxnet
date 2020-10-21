@@ -14,7 +14,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-"""
-Acknowledgement: This file originates from incubator-tvm
-"""
-from .function import _init_api, get_global_func
+
+"""FFI APIs for CachedOp."""
+
+import mxnet._ffi
+
+mxnet._ffi._init_api("_cached_op", __name__)
