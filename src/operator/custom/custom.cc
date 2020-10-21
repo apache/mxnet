@@ -128,7 +128,7 @@ bool InferShape(const NodeAttrs& attrs,
   const CustomParam& params = nnvm::get<CustomParam>(attrs.parsed);
 
   size_t total = params.num_args + params.num_outs + params.num_auxs;
-  std::vector<int*> shapes(total);
+  std::vector<int64_t*> shapes(total);
   std::vector<int> ndims(total);
   size_t buff_size = 0;
   for (const auto& i : *in_shape) {
@@ -136,8 +136,8 @@ bool InferShape(const NodeAttrs& attrs,
       buff_size += i.ndim();
     }
   }
-  std::vector<int> buff(buff_size);
-  int *ptr = buff.data();
+  std::vector<int64_t> buff(buff_size);
+  int64_t *ptr = buff.data();
   for (size_t i = 0; i < in_shape->size(); ++i) {
     shapes[i] = ptr;
     ndims[i] = (*in_shape)[i].ndim();

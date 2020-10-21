@@ -187,7 +187,7 @@ typedef int (*CustomOpFBFunc)(int /*size*/, void** /*ptrs*/, int* /*tags*/,
 typedef int (*CustomOpDelFunc)(void* /*state*/);
 typedef int (*CustomOpListFunc)(char*** /*args*/, void* /*state*/);
 typedef int (*CustomOpInferShapeFunc)(int /*num_input*/, int* /*ndims*/,
-                                      int** /*shapes*/, void* /*state*/);
+                                      int64_t** /*shapes*/, void* /*state*/);
 typedef int (*CustomOpInferStorageTypeFunc)(int /*num_input*/, int* /*stypes*/, void* /*state*/);
 typedef int (*CustomOpBackwardInferStorageTypeFunc)(int /*num_input*/,
                                                     int * /*stypes*/,
