@@ -101,6 +101,8 @@ shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mshadow/mshadow'
                 os.path.join(CURRENT_DIR, 'mxnet/include/mshadow'))
 shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/tvm/nnvm/include/nnvm'),
                 os.path.join(CURRENT_DIR, 'mxnet/include/nnvm'))
+shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet/src/lib_api.cc'),
+                os.path.join(CURRENT_DIR, 'mxnet/src'))
 
 package_name = 'mxnet'
 
