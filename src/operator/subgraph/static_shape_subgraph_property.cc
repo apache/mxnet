@@ -67,8 +67,6 @@ class StaticShapeOpSelector: public SubgraphSelector {
 class StaticShapeSubgraphProperty: public SubgraphProperty {
  public:
   StaticShapeSubgraphProperty() {
-    // flag to recursively partition dynamic shape op nodes containing subgraphs
-    attrs_["recursive_partition"] = std::make_shared<dmlc::any>(true);
     // flag to ensure subgraph CachedOp has at least one external input
     // as required by CachedOp::Forward
     attrs_["ensure_CachedOp_input"] = std::make_shared<dmlc::any>(true);
@@ -149,15 +147,15 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
       if (node->attrs.dict["isArg"] == "True"
           && param_name_set_.count(node->attrs.dict["argName"]) > 0) {
         if (param_indices.compare("[") == 0) {
-          param_indices = param_indices + std::to_string(i);
+          param_indices += std::to_string(i);
         } else {
-          param_indices = param_indices + ", " + std::to_string(i);
+          param_indices += ", " + std::to_string(i);
         }
       } else {
         if (data_indices.compare("[") == 0) {
-          data_indices = data_indices + std::to_string(i);
+          data_indices += std::to_string(i);
         } else {
-          data_indices = data_indices + ", " + std::to_string(i);
+          data_indices += ", " + std::to_string(i);
         }
       }
     }

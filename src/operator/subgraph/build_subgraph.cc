@@ -68,11 +68,9 @@ void PrintNodeEntries(const std::vector<nnvm::NodeEntry*>& entries) {
  * \brief Given a MXNet computational graph, create an undirected graph from it.
  * \param g the MXNet computational graph
  * \param simple_nodes the nodes of undirected graph in top sorted order
- * \param nodes_to_partition_inside the dynamic shape nodes that need to be partitioned recursively
  */
 void CreateSimpleGraph(const nnvm::Graph& g,
-                       std::vector<BiDirectedNodePtr>* simple_nodes,
-                       std::vector<std::shared_ptr<nnvm::Node>>* nodes_to_partition_inside) {
+                       std::vector<BiDirectedNodePtr>* simple_nodes) {
   const auto& indexed_graph = g.indexed_graph();
   simple_nodes->reserve(indexed_graph.num_nodes());
   DFSVisit(g.outputs, [&](const nnvm::ObjectPtr& node) {
@@ -89,12 +87,6 @@ void CreateSimpleGraph(const nnvm::Graph& g,
       } else {
         it->second.push_back(i);
       }
-    }
-    // store nodes to be partitioned recursively
-    const auto& infershape = nnvm::Op::GetAttr<mxnet::FInferShape>("FInferShape");
-    if (!node->is_variable() && !infershape.count(node->op()) &&
-      node->attrs.subgraphs.size() > 0) {
-      nodes_to_partition_inside->emplace_back(node);
     }
     simple_nodes->emplace_back(std::move(sn));
   });
@@ -853,9 +845,7 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
 
   // Create double directional graph for ease of finding subgraphs
   std::vector<BiDirectedNodePtr> simple_nodes;
-  // Store all control flow ops in the graph for recursive partitioning
-  std::vector<std::shared_ptr<nnvm::Node>> nodes_to_partition_inside;
-  CreateSimpleGraph(g, &simple_nodes, &nodes_to_partition_inside);
+  CreateSimpleGraph(g, &simple_nodes);
   std::vector<std::vector<BiDirectedNode*>> subgraph_nodes;
   std::vector<SubgraphSelectorV2Ptr> subgraph_selectors;
   FindSubgraphs(&g, *subg_prop, simple_nodes, &subgraph_nodes, &subgraph_selectors);
@@ -873,46 +863,6 @@ nnvm::Graph BuildSubgraph(nnvm::Graph&& g) {
     } else {
       CHECK_EQ(ptype, SubgraphProperty::SgPropertyType::kAdjust);
       AdjustSubgraphNode(&g, subgraph_nodes[i], subgraph_selectors[i], i);
-    }
-  }
-
-  // Partition recursively for control flow ops
-  if (subg_prop->HasAttr("recursive_partition")
-      && subg_prop->GetAttr<bool>("recursive_partition")) {
-    std::set<std::string> param_name_set;
-    // get param node names from subg_prop
-    if (subg_prop->HasAttr("param_name_set")) {
-      for (auto name : subg_prop->GetAttr<std::set<std::string>>("param_name_set")) {
-        param_name_set.emplace(name);
-      }
-    }
-    auto backend = mxnet::op::SubgraphBackendRegistry::Get()->GetSubgraphBackend("static_shape");
-    const auto& subgraph_prop_list = backend->GetSubgraphProperties();
-    for (auto& n : nodes_to_partition_inside) {
-      for (const auto& subg_sym : n->attrs.subgraphs) {
-        // convert symbol to graph
-        nnvm::Graph subg_g = Symbol2Graph(*subg_sym);
-        // find param_indice for the subgraph
-        std::vector<int> subg_param_indice_list;
-        std::vector<std::string> input_names =
-                    subg_sym->ListInputNames(nnvm::Symbol::ListInputOption(0));
-        for (int i = 0; i < input_names.size(); i++) {
-          if (param_name_set.count(input_names[i]) > 0) {
-            subg_param_indice_list.emplace_back(i);
-          }
-        }
-        // call BuildSubgraph recursively
-        for (const auto& property : subgraph_prop_list) {
-          std::unordered_map<std::string, std::string> options_map;
-          subg_g.attrs["subgraph_property"] = std::make_shared<nnvm::any>(property);
-          subg_g.attrs["param_indice_list"] = std::make_shared<nnvm::any>(subg_param_indice_list);
-          property->PrePartition(subg_g, options_map);
-          subg_g = BuildSubgraph(std::move(subg_g));
-          subg_g.attrs.erase("subgraph_property");
-          subg_g.attrs.erase("param_indice_list");
-        }
-        subg_sym->outputs = subg_g.outputs;
-      }
     }
   }
   return std::move(g);
