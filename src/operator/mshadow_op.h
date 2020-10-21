@@ -1628,6 +1628,70 @@ struct argmax {
   }
 };
 
+/*! \brief arg max reducer */
+struct argmin {
+  /*! \brief do reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src) { // NOLINT(*)
+    if (dst.num > src.num) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
+    if (dst.num > src.num) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    if (dst_val.num > src_val.num) {
+      dst_val.num = src_val.num;
+      dst_val.idx = src_val.idx;
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    if (dst_val.num > src_val.num) {
+      dst_val.num = src_val.num;
+      dst_val.idx = src_val.idx;
+    }
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
+  /*!
+   *\brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return 1;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
+    initv.num = mshadow::red::limits::PosInfValue<decltype(initv.num)>();
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
+    initv.num = mshadow::red::limits::PosInfValue<decltype(initv.num)>();
+  }
+};
+
 struct nanprod_grad : public mxnet_op::tunable {
   template<typename DType>
   MSHADOW_XINLINE static DType Map(DType a, DType b) {
