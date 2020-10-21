@@ -1791,6 +1791,42 @@ def test_sparse_dot():
     assert out.shape == (2, 2)
 
 
+def test_custom_op_large_tensor():
+    class AddOne(mx.operator.CustomOp):
+        def forward(self, is_train, req, in_data, out_data, aux):
+            self.assign(out_data[0], req[0], in_data[0]+1)
+
+        def backward(self, req, out_grad, in_data, out_data, in_grad, aux):
+            self.assign(in_grad[0], req[0], nd.ones(in_data[0].shape))
+
+    @mx.operator.register("add_one")
+    class AddOneProp(mx.operator.CustomOpProp):
+        def __init__(self):
+            super(AddOneProp, self).__init__(need_top_grad=True)
+
+        def list_arguments(self):
+            return ['input']
+
+        def list_outputs(self):
+            return ['output']
+
+        def infer_shape(self, in_shape):
+            return in_shape, [in_shape[0]], []
+
+        def create_operator(self, ctx, shapes, dtypes):
+            return AddOne()
+
+    inp = nd.ones((2, 2**31))
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = mx.nd.Custom(inp, name='add_one', op_type='add_one')
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[-1, -1] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
