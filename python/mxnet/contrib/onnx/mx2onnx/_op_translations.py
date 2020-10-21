@@ -154,6 +154,17 @@ def create_basic_op_node(op_name, node, kwargs):
     )
     return [node]
 
+def create_const_scalar_node(input_name, value, kwargs):
+    """Helper function to create a tensor value node and a
+    initializer tensor node with constant value."""
+    from onnx.helper import make_tensor, make_tensor_value_info
+    initializer = kwargs["initializer"]
+    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
+    value_node = make_tensor_value_info(input_name, input_type, ())
+    tensor_node = make_tensor(input_name, input_type, (), (value,))
+    initializer.append(tensor_node)
+    return value_node
+
 @mx_op.register("null")
 def convert_weights_and_inputs(node, **kwargs):
     """Helper function to convert weights and inputs.
