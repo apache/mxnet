@@ -4375,7 +4375,6 @@ def test_np_argmin_argmax_large_tensor():
         single_run(d)
 
 
-@with_seed()
 @use_np
 def test_np_clip():
     workloads = [

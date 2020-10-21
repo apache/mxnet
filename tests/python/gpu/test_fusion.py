@@ -348,7 +348,6 @@ def test_input_reorder():
         for key in ['result'] + list(range(len(arg_data))):
             assert_allclose(arrays['0'][key].asnumpy(), arrays['1'][key].asnumpy())
 
-@with_seed()
 def test_fusion_cycle():
     class Test(gluon.nn.HybridBlock):
         def __init__(self, **kwargs):
