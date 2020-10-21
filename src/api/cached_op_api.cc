@@ -28,7 +28,7 @@
 
 namespace mxnet {
 
-MXNET_REGISTER_GLOBAL("_cached_op.invoke")
+MXNET_REGISTER_GLOBAL("_api._cached_op_invoke")
 .set_body([](runtime::MXNetArgs args, runtime::MXNetRetValue* ret) {
   MXAPIThreadLocalEntry<> *local_ret = MXAPIThreadLocalStore<>::Get();
   CachedOpHandle handle = static_cast<CachedOpHandle>(static_cast<void*>(args[0]));

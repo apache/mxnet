@@ -15,8 +15,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
-"""FFI APIs for CachedOp."""
+"""FFI APIs exposed from C++."""
 
 import mxnet._ffi
 
-mxnet._ffi._init_api("_cached_op", __name__)
+mxnet._ffi._init_api("_api", __name__)

@@ -105,15 +105,15 @@ class CachedOp(object):
         else:
             default_ctx = args[0].ctx if default_ctx is None else default_ctx
 
-        _api_internal.invoke(
-                            self.handle, 
-                            len(args), 
-                            ctypes.cast(c_handle_array(args), ctypes.c_void_p), 
-                            default_ctx.device_typeid, 
-                            default_ctx.device_id, 
-                            ctypes.cast(ctypes.byref(num_output), ctypes.c_void_p),
-                            ctypes.cast(ctypes.byref(output_vars), ctypes.c_void_p),
-                            ctypes.cast(ctypes.byref(out_stypes), ctypes.c_void_p)
+        _api_internal._cached_op_invoke(
+            self.handle,
+            len(args),
+            ctypes.cast(c_handle_array(args), ctypes.c_void_p),
+            default_ctx.device_typeid,
+            default_ctx.device_id,
+            ctypes.cast(ctypes.byref(num_output), ctypes.c_void_p),
+            ctypes.cast(ctypes.byref(output_vars), ctypes.c_void_p),
+            ctypes.cast(ctypes.byref(out_stypes), ctypes.c_void_p)
         )
 
         if original_output is not None:
