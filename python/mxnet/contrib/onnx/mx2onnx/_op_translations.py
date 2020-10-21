@@ -2262,3 +2262,31 @@ def convert_take(node, **kwargs):
         name=name,
     )
     return [node]
+
+@mx_op.register("LayerNorm")
+def convert_layer_norm(node, **kwargs):
+    """Map MXNet's LayerNorm operator attributes to onnx operators.
+    """
+    from onnx.helper import make_node
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+
+    in_shape = kwargs['in_shape']
+    axes = [-i for i in range(len(in_shape), 0, -1)]
+    eps = attrs.get('eps')
+    nodes = [
+        make_node("ReduceMean", [input_nodes[0]], [name+"_rm0_out"], axes=axes),
+        make_node("Sub", [input_nodes[0], name+"_rm0_out"], [name+"_sub0_out"]),
+        create_const_scalar_node(name+"_two", np.float32(2.), kwargs),
+        make_node("Pow", [name+"_sub0_out", name+"_two"], [name+"_pow0_out"]),
+        make_node("ReduceMean", [name+"_pow0_out"], [name+"_rm1_out"], axes=axes),
+        create_const_scalar_node(name+"_eps", np.float32(eps), kwargs),
+        make_node("Add", [name+"_rm1_out", name+"_eps"], [name+"_add0_out"]),
+        make_node("Sqrt", [name+"_add0_out"], [name+"_sqrt0_out"]),
+        make_node("Div", [name+"_sub0_out", name+"_sqrt0_out"], [name+"_div0_out"]),
+        make_node("Mul", [name+"_div0_out", input_nodes[1]], [name+"_mul0_out"]),
+        make_node("Add", [name+"_mul0_out", input_nodes[2]], [name], name)
+    ]
+
+    return nodes
+
+
