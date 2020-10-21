@@ -1094,7 +1094,7 @@ inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
     for (int i = 0; i < param.begin.ndim(); ++i) {
-      const int b = begin[i], e = end[i], s = step[i];
+      const index_t b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(dshape, i, b, e, s, &vshape);
     }
   })
@@ -1137,7 +1137,7 @@ void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
     }
     MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        int num_threads = val.shape_.FlatTo2D()[0];
+        index_t num_threads = val.shape_.FlatTo2D()[0];
         if (std::is_same<xpu, gpu>::value) {
           num_threads *= val.shape_.get<ndim>()[ndim - 1];
         }
@@ -1241,7 +1241,7 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
       return;  // slice_assign of zero-sized subspaced needs no operation.
     }
     for (index_t i = 0; i < param.begin.ndim(); ++i) {
-      const int b = begin[i], e = end[i], s = step[i];
+      const index_t b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(data.shape_, i, b, e, s, &vshape);
     }
     MSHADOW_TYPE_SWITCH_WITH_BOOL(out.type_flag_, DType, {
