@@ -169,7 +169,7 @@ def test_np_tensordot(a_shape, b_shape, axes, hybridize, dtype):
         mx_sym = mx.sym.np.tensordot(a_sym, b_sym, axes).as_nd_ndarray()
         check_numeric_gradient(mx_sym, [a.as_nd_ndarray(), b.as_nd_ndarray()],
           rtol=1e-1, atol=1e-1, dtype = dtype)
-    
+
     # General Gradient Test
     for a_grad_status in ['add', 'write']:
         for b_grad_status in ['add', 'write']:
@@ -4303,6 +4303,11 @@ def test_np_argmin_argmax():
         ((5, 0, 3), -1, False),
         ((5, 0, 3), None, True),
         ((5, 0, 3), 1, True),
+        ((3, 5, 7), None, False),
+        ((3, 5, 7), 0, False),
+        ((3, 5, 7), 1, False),
+        ((3, 5, 7), 2, False),
+        ((3, 5, 7, 9, 11), -3, False),
     ]
     dtypes = ['float16', 'float32', 'float64']
     ops = ['argmin', 'argmax']
@@ -4354,6 +4359,23 @@ def test_np_argmin_argmax():
                         assert same(mx_ret.asnumpy(), np_ret)
 
 
+@use_np
+def test_np_argmin_argmax_large_tensor():
+    # compare inp[arg] with ext directly because along one axis there might 
+    # be multiple extrema
+    def single_run(dtype):
+        inp = np.random.normal(0, 10, size=(200, 30000), dtype=dtype)
+        arg = np.argmax(inp, 1)
+        ext = np.amax(inp, 1)
+        for i, idx in enumerate(arg):
+            assert inp[i, idx] == ext[i]
+
+    dtypes = ['float16', 'float32', 'float64']
+    for d in dtypes:
+        single_run(d)
+
+
+@with_seed()
 @use_np
 def test_np_clip():
     workloads = [
@@ -5654,7 +5676,25 @@ def test_np_linalg_norm():
 
 
 @use_np
-def test_np_linalg_svd():
+@pytest.mark.parametrize('shape', [
+    (3, 3),
+    (3, 5),
+    (4, 4),
+    (4, 5),
+    (5, 5),
+    (5, 6),
+    (6, 6),
+    (0, 1),
+    (6, 5, 6),
+    (2, 3, 3, 4),
+    (4, 2, 1, 2),
+    (0, 5, 3, 3),
+    (5, 0, 3, 3),
+    (3, 3, 0, 0),
+])
+@pytest.mark.parametrize('dtype', ['float32', 'float64'])
+@pytest.mark.parametrize('hybridize', [False, True])
+def test_np_linalg_svd(shape, dtype, hybridize):
     class TestSVD(HybridBlock):
         def __init__(self):
             super(TestSVD, self).__init__()
@@ -5704,60 +5744,40 @@ def test_np_linalg_svd():
         assert I.shape == I_np.shape
         assert_almost_equal(I, I_np, rtol=rtol, atol=atol)
 
-    shapes = [
-        (3, 3),
-        (3, 5),
-        (4, 4),
-        (4, 5),
-        (5, 5),
-        (5, 6),
-        (6, 6),
-        (0, 1),
-        (6, 5, 6),
-        (2, 3, 3, 4),
-        (4, 2, 1, 2),
-        (0, 5, 3, 3),
-        (5, 0, 3, 3),
-        (3, 3, 0, 0),
-    ]
-    dtypes = ['float32', 'float64']
-    for hybridize in [True, False]:
-        for dtype in dtypes:
-            for shape in shapes:
-                rtol = atol = 0.01
-                test_svd = TestSVD()
-                if hybridize:
-                    test_svd.hybridize()
-                data_np = _np.random.uniform(-10.0, 10.0, shape)
-                data_np = _np.array(data_np, dtype=dtype)
-                data = np.array(data_np, dtype=dtype)
-                if effective_dtype(data) == np.dtype(np.float16):
-                    continue
-                data.attach_grad()
-                with mx.autograd.record():
-                    ret = test_svd(data)
-                UT = ret[0].asnumpy()
-                L = ret[1].asnumpy()
-                V = ret[2].asnumpy()
-                # check svd validity
-                check_svd(UT, L, V, data_np)
-                # check descending singular values
-                s = [L[..., i] - L[..., i + 1] for i in range(L.shape[-1] - 1)]
-                s = _np.array(s)
-                assert (s >= -1e-5).all()
-                if L.size > 0:
-                    assert (L[..., -1] >= -1e-5).all()
-                # check backward
-                mx.autograd.backward(ret)
-                if ((s > 1e-5).all() and (L.size == 0 or (L > 1e-5).all())):
-                    backward_expected = get_grad(ret[0].asnumpy(), ret[1].asnumpy(), ret[2].asnumpy())
-                    assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
-                # Test imperative once again
-                ret = np.linalg.svd(data)
-                UT = ret[0].asnumpy()
-                L = ret[1].asnumpy()
-                V = ret[2].asnumpy()
-                check_svd(UT, L, V, data_np)
+    rtol = atol = 0.01
+    test_svd = TestSVD()
+    if hybridize:
+        test_svd.hybridize()
+    data_np = _np.random.uniform(-10.0, 10.0, shape)
+    data_np = _np.array(data_np, dtype=dtype)
+    data = np.array(data_np, dtype=dtype)
+    if effective_dtype(data) == _np.dtype(np.float16):
+        pytest.skip()
+    data.attach_grad()
+    with mx.autograd.record():
+        ret = test_svd(data)
+    UT = ret[0].asnumpy()
+    L = ret[1].asnumpy()
+    V = ret[2].asnumpy()
+    # check svd validity
+    check_svd(UT, L, V, data_np)
+    # check descending singular values
+    s = [L[..., i] - L[..., i + 1] for i in range(L.shape[-1] - 1)]
+    s = _np.array(s)
+    assert (s >= -1e-5).all()
+    if L.size > 0:
+        assert (L[..., -1] >= -1e-5).all()
+    # check backward
+    mx.autograd.backward(ret)
+    if ((s > 1e-5).all() and (L.size == 0 or (L > 1e-5).all())):
+        backward_expected = get_grad(ret[0].asnumpy(), ret[1].asnumpy(), ret[2].asnumpy())
+        assert_almost_equal(data.grad.asnumpy(), backward_expected, rtol=rtol, atol=atol)
+    # Test imperative once again
+    ret = np.linalg.svd(data)
+    UT = ret[0].asnumpy()
+    L = ret[1].asnumpy()
+    V = ret[2].asnumpy()
+    check_svd(UT, L, V, data_np)
 
 
 @use_np

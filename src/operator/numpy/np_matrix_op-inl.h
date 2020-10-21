@@ -1250,7 +1250,7 @@ void NumpyConcatenateBackward(const nnvm::NodeAttrs& attrs,
 }
 
 struct NumpyDiagParam : public dmlc::Parameter<NumpyDiagParam> {
-  int k;
+  index_t k;
   DMLC_DECLARE_PARAMETER(NumpyDiagParam) {
     DMLC_DECLARE_FIELD(k).set_default(0)
       .describe("Diagonal in question. The default is 0. "
@@ -1265,7 +1265,7 @@ struct NumpyDiagParam : public dmlc::Parameter<NumpyDiagParam> {
 };
 
 inline mxnet::TShape NumpyDiagShapeImpl(const mxnet::TShape &ishape,
-                                        const int k) {
+                                        const index_t k) {
   CHECK_LE(ishape.ndim(), 2) << "Input must be 1- or 2-d";
 
   if (ishape.ndim() == 1) {
@@ -1344,7 +1344,7 @@ template <int req, bool back>
 struct diag_gen {
   template <typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType *out, const DType *a,
-                                  mshadow::Shape<2> oshape, int k) {
+                                  mshadow::Shape<2> oshape, index_t k) {
     using namespace mxnet_op;
 
     auto j = unravel(i, oshape);
@@ -1367,7 +1367,7 @@ void NumpyDiagOpImpl(const TBlob &in_data,
                      const mxnet::TShape &ishape,
                      const mxnet::TShape &oshape,
                      index_t dsize,
-                     const int &k,
+                     const index_t &k,
                      mxnet_op::Stream<xpu> *s,
                      const OpReqType &req) {
   using namespace mxnet_op;
@@ -1455,7 +1455,7 @@ void NumpyDiagOpBackward(const nnvm::NodeAttrs &attrs,
 }
 
 struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
-  int offset;
+  index_t offset;
   int axis1;
   int axis2;
   DMLC_DECLARE_PARAMETER(NumpyDiagonalParam) {
@@ -1485,7 +1485,7 @@ struct NumpyDiagonalParam : public dmlc::Parameter<NumpyDiagonalParam> {
   }
 };
 
-inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const int k,
+inline mxnet::TShape NumpyDiagonalShapeImpl(const mxnet::TShape& ishape, const index_t k,
                                             const int axis1, const int axis2) {
   int x1 = CheckAxis(axis1, ishape.ndim());
   int x2 = CheckAxis(axis2, ishape.ndim());
@@ -1609,7 +1609,7 @@ void NumpyDiagonalOpImpl(const TBlob& in_data,
 
   if (x1 == maxx) std::swap(stride1, stride2);
   index_t offset;
-  int k = param.offset;
+  index_t k = param.offset;
   if (k > 0) {
     offset = stride2 * k;
   } else if (k < 0) {

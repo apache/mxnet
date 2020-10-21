@@ -23,12 +23,11 @@ from random import randint
 import warnings
 import collections
 import ctypes
-import mxnet.contrib.amp as amp
+from mxnet import amp
 import pytest
 from mxnet.test_utils import set_default_context, same_symbol_structure
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
-from mxnet.contrib.amp import amp
 from mxnet.operator import get_all_registered_operators_grouped
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
@@ -94,7 +93,7 @@ def test_amp_coverage(amp_tests):
                      safest option"""
     diff = required - covered
     assert not diff, f"{len(diff)} operators {sorted(diff)} do not exist in AMP lists (in " \
-        f"python/mxnet/contrib/amp/lists/symbol_fp16.py) - please add them. " \
+        f"python/mxnet/amp/lists/symbol_fp16.py) - please add them. " \
         f"\n{guidelines}"
 
 @pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')

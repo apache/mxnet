@@ -39,32 +39,14 @@ DMLC_REGISTER_PARAMETER(RandomResizedCropParam);
 NNVM_REGISTER_OP(_image_crop)
 .add_alias("_npx__image_crop")
 .describe(R"code(Crop an image NDArray of shape (H x W x C) or (N x H x W x C)
-to the given size.
-Example:
-    .. code-block:: python
-        image = mx.nd.random.uniform(0, 255, (4, 2, 3)).astype(dtype=np.uint8)
-        mx.nd.image.crop(image, 1, 1, 2, 2)
-            [[[144  34   4]
-              [ 82 157  38]]
+to the given size. Example:
+.. code-block:: python
 
-             [[156 111 230]
-              [177  25  15]]]
-            <NDArray 2x2x3 @cpu(0)>
-        image = mx.nd.random.uniform(0, 255, (2, 4, 2, 3)).astype(dtype=np.uint8)
-        mx.nd.image.crop(image, 1, 1, 2, 2)
-            [[[[ 35 198  50]
-               [242  94 168]]
+    image = mx.nd.random.uniform(0, 255, (4, 2, 3)).astype(dtype=np.uint8)
+    mx.nd.image.crop(image, 1, 1, 2, 2).shape # (2, 2, 3)
+    image = mx.nd.random.uniform(0, 255, (2, 4, 2, 3)).astype(dtype=np.uint8)
+    mx.nd.image.crop(image, 1, 1, 2, 2) # (2, 2, 2, 3)
 
-              [[223 119 129]
-               [249  14 154]]]
-
-
-              [[[137 215 106]
-                [ 79 174 133]]
-
-               [[116 142 109]
-                [ 35 239  50]]]]
-            <NDArray 2x2x2x3 @cpu(0)>
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)
@@ -86,13 +68,13 @@ NNVM_REGISTER_OP(_backward_image_crop)
 NNVM_REGISTER_OP(_image_random_crop)
 .add_alias("_npx__image_random_crop")
 .describe(R"code(Randomly crop an image NDArray of shape (H x W x C) or (N x H x W x C)
-to the given size. Upsample result if `src` is smaller than `size`.
-Example:
-    .. code-block:: python
-        im = mx.nd.array(cv2.imread("flower.jpg"))
-        cropped_im, rect  = mx.nd.image.random_crop(im, (100, 100))
-        print(cropped_im)
-        <NDArray 100x100x1 @cpu(0)>
+to the given size. Upsample result if `src` is smaller than `size`. Example:
+
+.. code-block:: python
+
+    im = mx.nd.array(cv2.imread("flower.jpg"))
+    cropped_im, rect  = mx.nd.image.random_crop(im, (100, 100))
+
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(2)
@@ -123,11 +105,11 @@ NNVM_REGISTER_OP(_image_random_resized_crop)
 .describe(R"code(Randomly crop an image NDArray of shape (H x W x C) or (N x H x W x C)
 to the given size. Randomize area and aspect ratio. Upsample result if `src` is smaller than `size`.
 Example:
-    .. code-block:: python
-        im = mx.nd.array(cv2.imread("flower.jpg"))
-        cropped_im, rect  = mx.nd.image.random_resized_crop(im, (100, 100))
-        print(cropped_im)
-        <NDArray 100x100x1 @cpu(0)>
+.. code-block:: python
+
+    im = mx.nd.array(cv2.imread("flower.jpg"))
+    cropped_im, rect  = mx.nd.image.random_resized_crop(im, (100, 100))
+
 )code" ADD_FILELINE)
 .set_num_inputs(1)
 .set_num_outputs(1)

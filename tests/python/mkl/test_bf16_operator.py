@@ -24,11 +24,10 @@ import warnings
 import collections
 import ctypes
 import itertools
-import mxnet.contrib.amp as amp
+from mxnet import amp
 from mxnet.test_utils import set_default_context, same_symbol_structure, assert_almost_equal_with_err, rand_shape_nd
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
-from mxnet.contrib.amp import amp
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
 import pytest
