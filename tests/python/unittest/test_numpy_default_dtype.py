@@ -21,7 +21,6 @@ import mxnet
 from mxnet import npx
 from mxnet import numpy as np
 from mxnet.test_utils import use_np, use_np_default_dtype
-from common import with_seed
 
 
 class DtypeOpArgMngr(object):
@@ -188,7 +187,6 @@ def check_default_dtype(op_list):
             check_deepnp_default_dtype(op, *workload['args'], **workload['kwargs'])
 
 
-@with_seed()
 def test_default_float_dtype():
     import platform
     if 'Windows' not in platform.system():
