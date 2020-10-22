@@ -2289,4 +2289,45 @@ def convert_layer_norm(node, **kwargs):
 
     return nodes
 
+@mx_op.register("Embedding")
+def convert_embedding(node, **kwargs):
+    """Map MXNet's Embedding operator attributes to onnx's
+    Gather operator."""
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    axis = int(attrs.get('axis', 0))
+    node = onnx.helper.make_node(
+        "Gather",
+        input_nodes,
+        [name],
+        axis=axis,
+        name=name
+    )
+    return [node]
+
+@mx_op.register("stack")
+def convert_stack(node, **kwargs):
+    """Map MXNet's stack operator to onnx operators.
+    """
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    axis = int(attrs.get('axis'))
+    idx = 0
+    nodes = []
+    for input_node in input_nodes:
+        nodes.append(onnx.helper.make_node(
+            "Unsqueeze",
+            inputs=[input_node],
+            outputs=[name+"_unsqueeze"+str(idx)],
+            axes=[axis]
+        ))
+        idx += 1
+
+    concat_node = onnx.helper.make_node(
+        "Concat",
+        inputs=[name+"_unsqueeze"+str(i) for i in range(len(nodes))],
+        outputs=[name],
+        name=name,
+        axis=axis
+    )
+    nodes.append(concat_node)
+    return nodes
 
