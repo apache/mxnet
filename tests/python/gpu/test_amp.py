@@ -23,16 +23,15 @@ from random import randint
 import warnings
 import collections
 import ctypes
-import mxnet.contrib.amp as amp
+from mxnet import amp
 import pytest
 from mxnet.test_utils import set_default_context, same_symbol_structure
 from mxnet.gluon.model_zoo.vision import get_model
 from mxnet.gluon import SymbolBlock, nn, rnn
-from mxnet.contrib.amp import amp
 from mxnet.operator import get_all_registered_operators_grouped
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import with_seed, assert_raises_cudnn_not_satisfied
+from common import assert_raises_cudnn_not_satisfied
 sys.path.insert(0, os.path.join(curr_path, '../train'))
 set_default_context(mx.gpu(0))
 
@@ -94,10 +93,9 @@ def test_amp_coverage(amp_tests):
                      safest option"""
     diff = required - covered
     assert not diff, f"{len(diff)} operators {sorted(diff)} do not exist in AMP lists (in " \
-        f"python/mxnet/contrib/amp/lists/symbol_fp16.py) - please add them. " \
+        f"python/mxnet/amp/lists/symbol_fp16.py) - please add them. " \
         f"\n{guidelines}"
 
-@with_seed()
 @pytest.mark.skip(reason='Error during waitall(). Tracked in #18099')
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_amp_conversion_rnn(amp_tests):
@@ -113,7 +111,6 @@ def test_amp_conversion_rnn(amp_tests):
         mx.test_utils.assert_almost_equal(out.asnumpy(), out2.asnumpy(), atol=1e-2, rtol=1e-2)
 
 
-@with_seed()
 def test_fp16_casting(amp_tests):
     data = mx.sym.var("data")
     out1 = mx.sym.amp_cast(data, dtype="float16")

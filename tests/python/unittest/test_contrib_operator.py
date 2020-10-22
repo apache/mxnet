@@ -23,8 +23,7 @@ import random
 import itertools
 from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
-from common import with_seed, assert_raises_cudnn_not_satisfied, \
-    xfail_when_nonstandard_decimal_separator
+from common import assert_raises_cudnn_not_satisfied, xfail_when_nonstandard_decimal_separator
 import unittest
 
 def test_box_nms_op():
@@ -354,7 +353,6 @@ def test_box_decode_op():
     assert_allclose(Y.asnumpy(), np.array([[[-0.0562755, -0.00865743, 0.26227552, 0.42465743], \
         [0.13240421, 0.17859563, 0.93759584, 1.1174043 ]]]), atol=1e-5, rtol=1e-5)
 
-@with_seed()
 def test_op_mrcnn_mask_target():
     if default_context().device_type != 'gpu':
         return
@@ -411,7 +409,6 @@ def test_op_mrcnn_mask_target():
     assert_almost_equal(mask_targets.asnumpy(), gt_mask_targets.asnumpy())
     assert_almost_equal(mask_cls.asnumpy(), gt_mask_cls.asnumpy())
 
-@with_seed()
 def test_dynamic_reshape():
     def dynamic_reshape_testcases(src_shape, shape_arg, dst_shape):
         data = mx.sym.Variable('data')
