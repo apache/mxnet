@@ -2348,6 +2348,7 @@ def convert_stack(node, **kwargs):
 
 @mx_op.register("slice")
 def convert_slice(node, **kwargs):
+    """Map MXNet's slice operator to onnx Slice operator."""
     name, input_nodes, attrs = get_inputs(node, kwargs)
     starts = convert_string_to_list(attrs.get("begin"))
     ends = convert_string_to_list(attrs.get("end"))
