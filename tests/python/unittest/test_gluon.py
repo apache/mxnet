@@ -20,6 +20,7 @@ import gc
 
 import mxnet as mx
 from mxnet import gluon
+from mxnet import init
 from mxnet.gluon import nn
 from mxnet.base import py_str, MXNetError
 from mxnet.test_utils import assert_almost_equal, default_context, assert_allclose
@@ -1976,6 +1977,39 @@ def test_batchnorm_16c():
             x = mx.nd.random.uniform(-1.0, 1.0, shape=shape)
             net = Net(chn_list[i], 1, 1)
             check_layer_forward_withinput(net, x)
+
+
+def test_batchnorm_chnls():
+    chn_list = [1024, 512, 256, 128, 64, 45, 32, 16, 3]
+    class Net(gluon.HybridBlock):
+        def __init__(self,
+                     chn_num,
+                     norm_kwargs=None,
+                     in_channels=3,
+                     **kwargs):
+            super(Net, self).__init__(**kwargs)
+            self.in_channels = in_channels
+            self.conv1 = gluon.nn.Conv3D(
+                    in_channels=self.in_channels,
+                    channels=chn_num,
+                    kernel_size=(1, 7, 7),
+                    strides=(1, 2, 2),
+                    padding=(0, 3, 3),
+                    use_bias=False,
+                    )
+            self.bn1 = gluon.nn.BatchNorm(in_channels=chn_num, **({} if norm_kwargs is None else norm_kwargs))
+
+        def hybrid_forward(self, F, x):
+            """Hybrid forward of R2+1D net"""
+            conv = self.conv1(x)
+            out = self.bn1(conv)
+            return out
+
+    for i in range(len(chn_list)):
+        net = Net(chn_list[i])
+        net.initialize(init=init.Constant(1))
+        x = mx.nd.zeros((1, 3, 8, 160, 160), ctx=mx.cpu())
+        net(x).asnumpy()
 
 
 def test_concat():
