@@ -2113,6 +2113,15 @@ def test_dsplit():
 
 
 @use_np
+def test_histogram():
+    inp = np.ones((INT_OVERFLOW, 2))
+    inp[-1, -1] = 2
+    hist, _ = np.histogram(inp, np.array([0.5, 1.5, 2.5, 3.5]))
+    assert hist.shape == (3, )
+    assert hist[0] == int(2 * INT_OVERFLOW - 1) and hist[1] == 1
+
+
+@use_np
 def test_nan_to_num():
     inp = np.zeros((3, INT_OVERFLOW))
     inp[:, -1] = np.array([np.nan, np.inf, -np.inf])
