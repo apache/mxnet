@@ -2356,7 +2356,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxCustomOpRegister
 
     // infer_shape callback
     auto opPropInferShape = [](int numInput, int *ndims,
-      unsigned **shapes, void *state) {
+      int64_t **shapes, void *state) {
       int success = true;
       std::string key(reinterpret_cast<char *>(state));
       if (globalOpPropMap.find(key) == globalOpPropMap.end()) {
@@ -2366,7 +2366,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxCustomOpRegister
         JNIEnv *env;
         _jvm->AttachCurrentThread(reinterpret_cast<void **>(&env), NULL);
         jclass opPropClass = env->GetObjectClass(globalOpPropMap.at(key));
-        jmethodID midInferShape = env->GetMethodID(opPropClass, "inferShapeEntry", "(I[[I)[[I");
+        jmethodID midInferShape = env->GetMethodID(opPropClass, "inferShapeEntry", "(I[[J)[[J");
         if (NULL == midInferShape) {
           LOG(WARNING) << "could not find opProp method inferShapeEntry.";
           success = false;
@@ -2376,15 +2376,15 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxCustomOpRegister
           jobjectArray jargs = (jobjectArray)(env->CallObjectMethod(
             globalOpPropMap.at(key), midListArguments));
           int intLen = env->GetArrayLength(jargs);
-          jintArray *ts = new jintArray[intLen];
-          auto tmp = env->NewIntArray(1);
+          jlongArray *ts = new jlongArray[intLen];
+          auto tmp = env->NewLongArray(1);
           jclass arrayClass = env->GetObjectClass(tmp);
           env->DeleteLocalRef(tmp);
           jobjectArray tensorShapes = env->NewObjectArray(intLen, arrayClass, NULL);
           for (int i = 0; i < intLen; ++i) {
-            ts[i] = env->NewIntArray(ndims[i]);
+            ts[i] = env->NewLongArray(ndims[i]);
             env->SetIntArrayRegion(
-              ts[i], (jsize)0, (jsize)ndims[i], reinterpret_cast<int *>(shapes[i]));
+              ts[i], (jsize)0, (jsize)ndims[i], reinterpret_cast<int64_t *>(shapes[i]));
             env->SetObjectArrayElement(tensorShapes, i, (jobject)(ts[i]));
           }
           jobjectArray ret = (jobjectArray)(env->CallObjectMethod(
@@ -2392,12 +2392,12 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxCustomOpRegister
             numInput,
             tensorShapes));
           for (int i = 0; i < numInput; ++i) {
-            jintArray jarr = reinterpret_cast<jintArray>(env->GetObjectArrayElement(ret, i));
+            jlongArray jarr = reinterpret_cast<jlongArray>(env->GetObjectArrayElement(ret, i));
             int len = env->GetArrayLength(jarr);
-            jint *arr = env->GetIntArrayElements(jarr, NULL);
+            jlong *arr = env->GetLongArrayElements(jarr, NULL);
             ndims[i] = len;
-            shapes[i] = new unsigned[len];
-            for (int j = 0; j < len; ++j) shapes[i][j] = (unsigned)(arr[j]);
+            shapes[i] = new int64_t[len];
+            for (int j = 0; j < len; ++j) shapes[i][j] = (int64_t)(arr[j]);
             env->DeleteLocalRef(jarr);
           }
           for (int i = 0; i < intLen; ++i) {
@@ -2679,7 +2679,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxCustomOpRegister
         static_cast<int(*)(char***, void*)>(opPropListAuxStates));
     ret->callbacks[kCustomOpPropInferShape] =
       reinterpret_cast<int(*)(void)>(
-        static_cast<int (*)(int, int*, unsigned**, void*)>(opPropInferShape));
+        static_cast<int (*)(int, int*, int64_t**, void*)>(opPropInferShape));
     ret->callbacks[kCustomOpPropDeclareBackwardDependency] =
       reinterpret_cast<int(*)(void)>(
         static_cast<int(*)(const int*, const int*, const int*, int* num_deps, int**, void*)>(

@@ -160,7 +160,7 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
    * Scala Callback for CustomOp::InferShape
    */
   private[mxnet] def inferShapeEntry(
-    numTensor: Int, intputShapes: Array[Array[Int]]): Array[Array[Int]] = {
+    numTensor: Int, intputShapes: Array[Array[Long]]): Array[Array[Long]] = {
     val nIn = this.listArguments().length
     val nOut = this.listOutputs().length
     val nAux = {
@@ -171,12 +171,12 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
       s"Shape inference failed. $numTensor tensors expected, but got " +
         s"$nIn args, $nOut ouputs and $nAux aux states")
     val (inShapes, outShapes, auxShapes) =
-      inferShape(intputShapes.map(Shape(_)))
+      inferShape(intputShapes.map(Shape(_.map(_.toInt))))
     require(inShapes != null && inShapes.length != 0, "InputShape is undefined or empty")
     require(outShapes != null && outShapes.length != 0, "OutputShape is undefined or empty")
     if (auxShapes != null && auxShapes.length != 0) {
       inShapes.map(_.toArray) ++ outShapes.map(_.toArray) ++ auxShapes.map(_.toArray)
-    } else inShapes.map(_.toArray) ++ outShapes.map(_.toArray)
+    } else inShapes.map(_.toArray.map(_.toLong)) ++ outShapes.map(_.toArray.map(_.toLong))
   }
 
   /**
