@@ -165,6 +165,17 @@ def create_const_scalar_node(input_name, value, kwargs):
     initializer.append(tensor_node)
     return value_node
 
+def create_const_node(input_name, value, kwargs):
+    """Helper function to create a tensor value node and a
+    initializer tensor node with constant value."""
+    from onnx.helper import make_tensor, make_tensor_value_info
+    initializer = kwargs["initializer"]
+    input_type = onnx.mapping.NP_TYPE_TO_TENSOR_TYPE[value.dtype]
+    value_node = make_tensor_value_info(input_name, input_type, ())
+    tensor_node = make_tensor(input_name, input_type, (), value)
+    initializer.append(tensor_node)
+    return value_node
+
 @mx_op.register("null")
 def convert_weights_and_inputs(node, **kwargs):
     """Helper function to convert weights and inputs.
@@ -2263,6 +2274,7 @@ def convert_take(node, **kwargs):
     )
     return [node]
 
+
 @mx_op.register("LayerNorm")
 def convert_layer_norm(node, **kwargs):
     """Map MXNet's LayerNorm operator attributes to onnx operators.
@@ -2289,6 +2301,7 @@ def convert_layer_norm(node, **kwargs):
 
     return nodes
 
+
 @mx_op.register("Embedding")
 def convert_embedding(node, **kwargs):
     """Map MXNet's Embedding operator attributes to onnx's
@@ -2303,6 +2316,7 @@ def convert_embedding(node, **kwargs):
         name=name
     )
     return [node]
+
 
 @mx_op.register("stack")
 def convert_stack(node, **kwargs):
@@ -2330,4 +2344,24 @@ def convert_stack(node, **kwargs):
     )
     nodes.append(concat_node)
     return nodes
+
+
+@mx_op.register("slice")
+def convert_slice(node, **kwargs):
+    name, input_nodes, attrs = get_inputs(node, kwargs)
+    starts = convert_string_to_list(attrs.get("begin"))
+    ends = convert_string_to_list(attrs.get("end"))
+    steps = attrs.get("step", [])
+    in_shape = kwargs['in_shape'][0]
+    nodes = [
+        create_const_node(name+"_begin", np.array(starts, dtype='int64'), kwargs),
+        create_const_node(name+"_end", np.array(ends, dtype='int64'), kwargs)
+    ]
+    inputs = [input_nodes[0], name+"_begin", name+"_end"]
+    if len(steps) > 0:
+        nodes.append(create_const_node(name+"_steps", np.array(steps, dtype='int64'), kwargs))
+        inputs.append(name+"_steps")
+    nodes.append(onnx.helper.make_node("Slice", inputs, [name], name=name))
+    return nodes
+
 
