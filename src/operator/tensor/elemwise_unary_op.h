@@ -749,7 +749,7 @@ struct NumpyNanToNumParam : public dmlc::Parameter<NumpyNanToNumParam> {
 template<int req>
 struct nan_to_num_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   DType* out_data,
                                   const DType* in_data,
                                   const DType nan,
@@ -810,7 +810,7 @@ void NumpyNanToNumOpForward(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct nan_to_num_backward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   DType* in_grad,
                                   const DType* out_grad,
                                   const DType* in_data) {

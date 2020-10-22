@@ -588,5 +588,6 @@ def test_indexing_empty_shape():
     try:
         mx.npx.set_np()
         net(mx.np.zeros((2, 2, 4, 0, 128)))
+        net(mx.np.zeros((2, 2, 4, 2, 128)))  # test indexing after input shape change
     finally:
         mx.npx.reset_np()

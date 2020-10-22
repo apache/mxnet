@@ -27,7 +27,6 @@ sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_np_tensor, use_np
 from mxnet import gluon, np, npx
-from common import with_seed
 import pytest
 from tests.python.unittest.common import assertRaises
 from mxnet.base import MXNetError
@@ -2036,6 +2035,21 @@ def test_vstack():
 
 
 @use_np
+def test_ediff1d():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[0, -1], inp[1, 0] = 1, 3
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.ediff1d(inp, to_begin=-99, to_end=np.array([88, 99]))
+        out.backward()
+    assert out.shape == (2 * INT_OVERFLOW - 1 + 1 + 2, )
+    assert out[INT_OVERFLOW-1] == 1 and out[INT_OVERFLOW] == 2 and\
+            out[INT_OVERFLOW+1] == -3
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == -1 and inp.grad[-1, -1] == 1
+
+
+@use_np
 def test_split():
     inp = np.ones((INT_OVERFLOW, 2))
     inp[INT_OVERFLOW // 2] = 2
@@ -2116,3 +2130,28 @@ def test_diff():
     assert out2[-1, -1] == 100
     assert inp.grad.shape == inp.shape
     assert inp.grad[1, -1] == 1, inp.grad[0, -1] == 1
+
+
+@use_np
+def test_histogram():
+    inp = np.ones((INT_OVERFLOW, 2))
+    inp[-1, -1] = 2
+    hist, _ = np.histogram(inp, np.array([0.5, 1.5, 2.5, 3.5]))
+    assert hist.shape == (3, )
+    assert hist[0] == int(2 * INT_OVERFLOW - 1) and hist[1] == 1
+
+
+@use_np
+def test_nan_to_num():
+    inp = np.zeros((3, INT_OVERFLOW))
+    inp[:, -1] = np.array([np.nan, np.inf, -np.inf])
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.nan_to_num(inp, nan=0, posinf=1, neginf=-1)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[0, -1] == 0 and out[1, -1] == 1 and out[2, -1] == -1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, -1] == 0 and inp.grad[1, -1] == 0
+    assert inp.grad[0, 0] == 1 and inp.grad[2, -1] == 0
+

@@ -21,7 +21,6 @@ import mxnet as mx
 import numpy as np
 import unittest
 import ctypes
-from common import with_seed
 import pytest
 
 def test_float64_fallback():
