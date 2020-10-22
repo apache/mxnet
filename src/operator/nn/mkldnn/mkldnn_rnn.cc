@@ -47,11 +47,12 @@ inline int GetRnnGatesNum(int mode) {
   }
 }
 
-// Bug in oneDNN >= 1.6  in memory descriptor comparision operators.
+// Bug in oneDNN <= 1.6  in memory descriptor comparision operators.
 // for specific dims and strides in descriptors == operator can return `true`
 // but get_size() function will return different size
 // TODO(bgawrych): Remove with oneDNN 1.7 upgrade
-bool CheckMemDescEquality(const mkldnn::memory::desc &left, const mkldnn::memory::desc &right) {
+static inline bool CheckMemDescEquality(const mkldnn::memory::desc &left,
+                                        const mkldnn::memory::desc &right) {
   return left == right && left.get_size() == right.get_size();
 }
 
