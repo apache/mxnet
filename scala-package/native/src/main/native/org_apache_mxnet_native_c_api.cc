@@ -2383,7 +2383,7 @@ JNIEXPORT jint JNICALL Java_org_apache_mxnet_LibInfo_mxCustomOpRegister
           jobjectArray tensorShapes = env->NewObjectArray(intLen, arrayClass, NULL);
           for (int i = 0; i < intLen; ++i) {
             ts[i] = env->NewLongArray(ndims[i]);
-            env->SetIntArrayRegion(
+            env->SetLongArrayRegion(
               ts[i], (jsize)0, (jsize)ndims[i], reinterpret_cast<int64_t *>(shapes[i]));
             env->SetObjectArrayElement(tensorShapes, i, (jobject)(ts[i]));
           }
