@@ -2150,3 +2150,19 @@ def test_nan_to_num():
     assert inp.grad[0, -1] == 0 and inp.grad[1, -1] == 0
     assert inp.grad[0, 0] == 1 and inp.grad[2, -1] == 0
 
+
+@use_np
+def test_interp():
+    xp = np.array([1, 2, 3])
+    fp = np.array([3, 2, 1])
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = 2.5
+    inp.attach_grad()
+    with mx.autograd.record():
+        B = np.interp(inp, xp, fp)
+        B.backward()
+    assert B.shape == inp.shape
+    assert B[-1, -1] == 1.5
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
