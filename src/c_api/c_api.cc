@@ -869,7 +869,13 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       auto in_first = in_shape->begin();
       auto in_last  = in_first + in_shape->size() - extra_inputs;
       mxnet::ShapeVector *sg_in_shapes = new mxnet::ShapeVector(in_first, in_last);
-      return mxnet::op::DefaultSubgraphOpShape(attrs, sg_in_shapes, out_shape);
+      bool res = mxnet::op::DefaultSubgraphOpShape(attrs, sg_in_shapes, out_shape);
+
+      // assign modified input shapes to ShapeVector
+      for (unsigned i = 0; i < sg_in_shapes->size(); ++i) {
+        SHAPE_ASSIGN_CHECK(*in_shape, i, sg_in_shapes->at(i));
+      }
+      return res;
     };
 
     // lambda function to call infer type
@@ -933,7 +939,12 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       auto in_last  = in_first + in_type->size() - extra_inputs;
       std::vector<int> *sg_in_types = new std::vector<int>(in_first, in_last);
 
-      return mxnet::op::DefaultSubgraphOpType(attrs, sg_in_types, out_type);
+      bool res = mxnet::op::DefaultSubgraphOpType(attrs, sg_in_types, out_type);
+      // copy and assign modified input types
+      for (size_t i = 0; i < sg_in_types->size(); i++) {
+        TYPE_ASSIGN_CHECK(*in_type, i, sg_in_types->at(i));
+      }
+      return res;
     };
 
     // lambda function to convert from external mutate_inputs to internal MXNet types
@@ -1033,8 +1044,13 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         auto in_last  = in_first + in_stypes->size() - extra_inputs;
         std::vector<int> *sg_in_stypes = new std::vector<int>(in_first, in_last);
 
-        return mxnet::op::DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
-                                                       sg_in_stypes, out_stypes);
+        bool res = mxnet::op::DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
+                                                           sg_in_stypes, out_stypes);
+        // copy and assign modified input storage types
+        for (size_t i = 0; i < sg_in_stypes->size(); i++) {
+          STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, sg_in_stypes->at(i));
+        }
+        return res;
     };
 
     // FGradient register lambda
@@ -1416,7 +1432,7 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       // this temp workspace holds memory allocated by custom library via OpResource
       auto ndarray_alloc = [&](const mxnet::TShape &shape, Context ctx, int dtype,
                                std::string name, bool isArg) {
-        NDArray* arr = new NDArray(shape, ctx, dtype);
+        NDArray* arr = new NDArray(shape, ctx, false, dtype);
         if (isArg) {
           new_args.push_back(arr);
           new_arg_names.push_back(name);
