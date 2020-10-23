@@ -264,7 +264,7 @@ std::tuple<std::vector<int>, int> GetCompatibleSubsets(
     }
   }
 
-  return {set_assignment, final_num_sets};
+  return std::make_tuple(std::move(set_assignment), final_num_sets);
 }
 
 }  // namespace exec
