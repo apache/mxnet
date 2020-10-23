@@ -314,17 +314,7 @@ endif()
 
 if(USE_INTGEMM)
   message(STATUS "Using intgemm")
-  include(FetchContent)
-  FetchContent_Declare(
-    intgemm
-    GIT_REPOSITORY https://github.com/kpu/intgemm.git
-    GIT_TAG        4172dcc209e6793dd920dec9cf9c9fc81605bd9d
-  )
-  FetchContent_GetProperties(intgemm)
-  if(NOT intgemm_POPULATED)
-    FetchContent_Populate(intgemm)
-  endif()
-  add_subdirectory(${intgemm_SOURCE_DIR} ${intgemm_BINARY_DIR} EXCLUDE_FROM_ALL)
+  add_subdirectory(3rdparty/intgemm EXCLUDE_FROM_ALL)
   add_definitions(-DMXNET_USE_INTGEMM=1)
 endif()
 
