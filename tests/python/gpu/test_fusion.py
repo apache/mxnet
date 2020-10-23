@@ -339,7 +339,8 @@ def test_fusion_reshape_executor():
 
 @with_seed()
 def test_fusion_cycle():
-    class Test(gluon.nn.HybridBlock):
+    from mxnet.gluon import HybridBlock
+    class Test(HybridBlock):
         def __init__(self, **kwargs):
             super(Test, self).__init__(**kwargs)
 
