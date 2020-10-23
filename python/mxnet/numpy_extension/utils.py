@@ -33,12 +33,6 @@ __all__ = ['save', 'load', 'to_dlpack_for_read', 'to_dlpack_for_write',
 def save(file, arr):
     """Saves a list of `ndarray`s or a dict of `str`->`ndarray` to file.
 
-    Examples of filenames:
-
-    - ``/path/to/file``
-    - ``s3://my-bucket/path/to/file`` (if compiled with AWS S3 supports)
-    - ``hdfs://path/to/file`` (if compiled with HDFS supports)
-
     Parameters
     ----------
     file : str

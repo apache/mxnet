@@ -538,34 +538,32 @@ def test_sparse_nd_pickle():
 # @kalyc: Getting rid of fixed seed as flakiness could not be reproduced
 # tracked at https://github.com/apache/incubator-mxnet/issues/11741
 def test_sparse_nd_save_load():
-    repeat = 1
     stypes = ['default', 'row_sparse', 'csr']
     stype_dict = {'default': NDArray, 'row_sparse': RowSparseNDArray, 'csr': CSRNDArray}
     num_data = 20
     densities = [0, 0.5]
-    fname = 'tmp_list.bin'
-    for _ in range(repeat):
-        data_list1 = []
-        for i in range(num_data):
-            stype = stypes[np.random.randint(0, len(stypes))]
-            shape = rand_shape_2d(dim0=40, dim1=40)
-            density = densities[np.random.randint(0, len(densities))]
-            data_list1.append(rand_ndarray(shape, stype, density))
-            assert isinstance(data_list1[-1], stype_dict[stype])
-        mx.nd.save(fname, data_list1)
+    fname = 'tmp_list.npz'
+    data_list1 = []
+    for i in range(num_data):
+        stype = stypes[np.random.randint(0, len(stypes))]
+        shape = rand_shape_2d(dim0=40, dim1=40)
+        density = densities[np.random.randint(0, len(densities))]
+        data_list1.append(rand_ndarray(shape, stype, density))
+        assert isinstance(data_list1[-1], stype_dict[stype])
+    mx.nd.save(fname, data_list1)
 
-        data_list2 = mx.nd.load(fname)
-        assert len(data_list1) == len(data_list2)
-        for x, y in zip(data_list1, data_list2):
-            assert same(x.asnumpy(), y.asnumpy())
+    data_list2 = mx.nd.load(fname)
+    assert len(data_list1) == len(data_list2)
+    for x, y in zip(data_list1, data_list2):
+        assert same(x.asnumpy(), y.asnumpy())
 
-        data_map1 = {'ndarray xx %s' % i: x for i, x in enumerate(data_list1)}
-        mx.nd.save(fname, data_map1)
-        data_map2 = mx.nd.load(fname)
-        assert len(data_map1) == len(data_map2)
-        for k, x in data_map1.items():
-            y = data_map2[k]
-            assert same(x.asnumpy(), y.asnumpy())
+    data_map1 = {'ndarray xx %s' % i: x for i, x in enumerate(data_list1)}
+    mx.nd.save(fname, data_map1)
+    data_map2 = mx.nd.load(fname)
+    assert len(data_map1) == len(data_map2)
+    for k, x in data_map1.items():
+        y = data_map2[k]
+        assert same(x.asnumpy(), y.asnumpy())
     os.remove(fname)
 
 

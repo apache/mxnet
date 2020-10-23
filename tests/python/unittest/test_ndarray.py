@@ -372,7 +372,7 @@ def test_ndarray_pickle():
 
 def test_ndarray_saveload():
     nrepeat = 10
-    fname = 'tmp_list.bin'
+    fname = 'tmp_list'
     for repeat in range(nrepeat):
         data = []
         # test save/load as list
@@ -381,7 +381,7 @@ def test_ndarray_saveload():
         mx.nd.save(fname, data)
         data2 = mx.nd.load(fname)
         assert len(data) == len(data2)
-        for x, y in zip(data, data2):
+        for x, y in zip(data, data2.values()):  # TODO consider not to return names if no explicit names were saved
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
         # test save/load as dict
         dmap = {'ndarray xx %s' % i : x for i, x in enumerate(data)}
@@ -391,14 +391,22 @@ def test_ndarray_saveload():
         for k, x in dmap.items():
             y = dmap2[k]
             assert np.sum(x.asnumpy() != y.asnumpy()) == 0
+
         # test save/load as ndarray
         # we expect the single ndarray to be converted into a list containing the ndarray
         single_ndarray = data[0]
         mx.nd.save(fname, single_ndarray)
+
+        # Test loading with numpy
+        single_ndarray_loaded = np.load(fname)
+        assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded) == 0
+
+        # Test loading with mxnet backend
         single_ndarray_loaded = mx.nd.load(fname)
         assert len(single_ndarray_loaded) == 1
         single_ndarray_loaded = single_ndarray_loaded[0]
         assert np.sum(single_ndarray.asnumpy() != single_ndarray_loaded.asnumpy()) == 0
+
     os.remove(fname)
 
 

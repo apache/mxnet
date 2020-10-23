@@ -772,6 +772,9 @@ elseif(MSVC)
   endif()
 endif()
 
+add_subdirectory("3rdparty/libzip" EXCLUDE_FROM_ALL)  # used for numpy-compatible serialization
+target_link_libraries(mxnet PRIVATE libzip::zip)
+
 if(USE_DIST_KVSTORE)
   add_subdirectory("3rdparty/ps-lite")
   add_definitions(-DMXNET_USE_DIST_KVSTORE)
