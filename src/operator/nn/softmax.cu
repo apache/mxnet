@@ -35,5 +35,8 @@ NNVM_REGISTER_OP(_backward_softmax)
 .set_attr<FCompute>("FCompute<gpu>", SoftmaxGradCompute<gpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
 
+NNVM_REGISTER_OP(masked_softmax)
+.set_attr<FCompute>("FCompute<gpu>", MaskedSoftmaxCompute<gpu, mxnet_op::softmax_fwd>);
+
 }  // namespace op
 }  // namespace mxnet

@@ -34,6 +34,7 @@
 namespace mxnet {
 namespace op {
 DMLC_REGISTER_PARAMETER(SoftmaxParam);
+DMLC_REGISTER_PARAMETER(MaskedSoftmaxParam);
 
 #if MXNET_USE_MKLDNN == 1
 static void SoftmaxComputeExCPU(const nnvm::NodeAttrs& attrs,
@@ -187,5 +188,33 @@ NNVM_REGISTER_OP(_backward_softmax)
 #endif
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, op::mshadow_op::mul,
                                                         mxnet_op::softmax_bwd>);
+
+NNVM_REGISTER_OP(masked_softmax)
+.add_alias("_npx_masked_softmax")
+.describe(R"code(Applies the softmax function. A mask is expected, and elements)code" ADD_FILELINE)
+.set_attr_parser(ParamParser<MaskedSoftmaxParam>)
+.set_attr<nnvm::FListOutputNames>("FListInputNames",
+    [](const NodeAttrs& attrs){
+    return std::vector<std::string>{"data", "mask"};
+})
+.set_attr<nnvm::FListOutputNames>("FListOutputNames",
+    [](const NodeAttrs& attrs) {
+    return std::vector<std::string>{"output"};
+})
+.set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxCompute<cpu, mxnet_op::softmax_fwd>)
+//.set_attr<nnvm::FGradient>("FGradient", MaskedSoftmaxFGradient{"_backward_masked_softmax"})
+.set_attr<nnvm::FInferType>("FInferType", MaskedSoftmaxOpType)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<mxnet::FInferShape>("FInferShape", MaskedSoftmaxOpShape)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("data", "NDArray-or-Symbol", "The input array.")
+.add_argument("mask", "NDArray-or-Symbol", "Mask to apply.")
+.add_argument("scale", "NDArray-or-Symbol", "Scaling factor.")
+.add_arguments(MaskedSoftmaxParam::__FIELDS__());
+
 }  // namespace op
 }  // namespace mxnet
