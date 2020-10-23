@@ -862,8 +862,8 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
           (state, inputs, outputs,
            req, ctx, false);
       state.tempspace.reset<NDArray>(new NDArray(TShape(Shape1(op.temp_ouputs_size_aligned)),
-                                               ctx.run_ctx.ctx, false,
-                                               outputs[0].type_flag_));
+                                                 ctx.run_ctx.ctx, false,
+                                                 outputs[0].type_flag_));
       op.Forward(state, ctx, inputs, outputs);
     });
   }
