@@ -104,6 +104,10 @@ shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/mshadow/mshadow'
 shutil.copytree(os.path.join(CURRENT_DIR, 'mxnet-build/3rdparty/tvm/nnvm/include/nnvm'),
                 os.path.join(CURRENT_DIR, 'mxnet/include/nnvm'))
 
+# copy cc file for mxnet extensions
+shutil.copy(os.path.join(CURRENT_DIR, 'mxnet-build/src/lib_api.cc'),
+            os.path.join(CURRENT_DIR, 'mxnet/src'))
+
 package_name = 'mxnet'
 
 variant = os.environ['mxnet_variant'].upper()
