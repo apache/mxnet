@@ -361,9 +361,11 @@ Graph CopyAndReplaceSubgraphs(const Graph& g,
 
 Graph FusePointwise(const Graph &g, const size_t num_forward_outputs) {
   auto start = std::chrono::steady_clock::now();
-  auto [subset_assignment, num_subsets] = GetCompatibleSubsets(g, num_forward_outputs,  // NOLINT(*)
-                                                               IsFusionCompatible,
-                                                               IsInputsOnlyCompatible);
+  std::vector<int> subset_assignment;
+  int num_subsets;
+  std::tie(subset_assignment, num_subsets) = GetCompatibleSubsets(g, num_forward_outputs,  // NOLINT(*)
+                                                                  IsFusionCompatible,
+                                                                  IsInputsOnlyCompatible);
   Graph ret = CopyAndReplaceSubgraphs(g, subset_assignment, num_subsets,
                                       CreateSubgraphNode);
   auto end = std::chrono::steady_clock::now();
