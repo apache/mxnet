@@ -2210,7 +2210,7 @@ def test_batchnorm_chnls():
     for i in range(len(chn_list)):
         net = Net(chn_list[i])
         net.initialize(init=init.Constant(1))
-        x = mx.nd.zeros((1, 3, 8, 160, 160), ctx=mx.cpu())
+        x = mx.nd.zeros((1, 3, 8, 160, 160))
         net(x).asnumpy()
 
 
