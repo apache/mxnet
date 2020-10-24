@@ -18,12 +18,10 @@
 import mxnet as mx
 from mxnet import np, npx
 from mxnet.test_utils import same, use_np, assert_almost_equal
-from common import with_seed
 import random
 import pytest
 
 @use_np
-@with_seed()
 @pytest.mark.parametrize('shape',
     [(3, 2), (9,17), (2, 7, 1, 8)] + [(i,) for i in range(1,65)])
 def test_contrib_intgemm_maxabsolute(shape):
@@ -41,7 +39,6 @@ def test_contrib_intgemm_maxabsolute(shape):
     assert same(fast, slow)
 
 @use_np
-@with_seed()
 @pytest.mark.parametrize('shape', [(i,) for i in range(1, 67)] + [(2,3), (130, 12)])
 @pytest.mark.parametrize('max_quant', [2.0])
 def test_contrib_intgemm_prepare_data(shape, max_quant):
@@ -70,7 +67,6 @@ def test_contrib_intgemm_prepare_data(shape, max_quant):
     assert same(test, ref.as_np_ndarray())
 
 @use_np  
-@with_seed()
 @pytest.mark.parametrize('shape', [(8, 64), (16, 64), (8, 128), (16, 128), (2, 4, 64)])
 @pytest.mark.parametrize('max_quant', [0.2, 3.0])
 @pytest.mark.parametrize('api', [(mx.nd.contrib, mx.nd), (npx, np)])
@@ -92,7 +88,6 @@ def test_contrib_intgemm_weight_consistent(shape, max_quant, api):
     assert same(direct, indirect)
     
 @use_np
-@with_seed()
 @pytest.mark.parametrize('indices', [
         [0,1,2,3,4,5,6,7],
         [1,2,1,2,1,2,1,2],

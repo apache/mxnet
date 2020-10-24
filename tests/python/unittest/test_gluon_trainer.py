@@ -22,7 +22,7 @@ import numpy as np
 from mxnet import gluon
 from mxnet.gluon import nn
 from mxnet.test_utils import assert_almost_equal
-from common import with_seed, assertRaises, xfail_when_nonstandard_decimal_separator
+from common import assertRaises, xfail_when_nonstandard_decimal_separator
 from copy import deepcopy
 import pytest
 
@@ -31,7 +31,6 @@ def dict_equ(a, b):
     for k in a:
         assert (a[k].asnumpy() == b[k].asnumpy()).all()
 
-@with_seed()
 def test_multi_trainer():
     x = gluon.Parameter('x', shape=(10,), stype='row_sparse')
     x.initialize()
@@ -46,7 +45,6 @@ def test_multi_trainer():
         # multiple trainers for a sparse Parameter is not allowed
         trainer1 = gluon.Trainer([x], 'sgd')
 
-@with_seed()
 def test_trainer_with_sparse_grad_on_single_context():
     x = gluon.Parameter('x', shape=(10,), grad_stype='row_sparse')
     x.initialize(ctx=[mx.cpu(0)], init='zeros')
@@ -61,7 +59,6 @@ def test_trainer_with_sparse_grad_on_single_context():
     assert trainer._kvstore is None  # No kvstore created for single-device training
     assert (x.data(mx.cpu(0)).asnumpy() == -1).all()
 
-@with_seed()
 def test_trainer_with_teststore():
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
@@ -80,7 +77,6 @@ def test_trainer_with_teststore():
     invalid_trainer = gluon.Trainer([x], 'sgd', kvstore=kv, update_on_kvstore=True)
     pytest.raises(ValueError, invalid_trainer._init_kvstore)
 
-@with_seed()
 def test_trainer():
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
@@ -132,7 +128,6 @@ def test_trainer():
 
     assert (x.data(mx.cpu(1)).asnumpy() == -1).all(), x.data(mx.cpu(1)).asnumpy()
 
-@with_seed()
 def test_trainer_save_load():
     previous_update_on_kvstore = os.getenv('MXNET_UPDATE_ON_KVSTORE', "1")
     os.putenv('MXNET_UPDATE_ON_KVSTORE', '1')
@@ -153,7 +148,6 @@ def test_trainer_save_load():
     assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
     os.putenv('MXNET_UPDATE_ON_KVSTORE', previous_update_on_kvstore)
 
-@with_seed()
 def test_trainer_sparse_save_load():
     x = gluon.Parameter('x', shape=(10, 1), lr_mult=1.0,
                         stype='row_sparse', grad_stype='row_sparse')
@@ -172,7 +166,6 @@ def test_trainer_sparse_save_load():
     # check if parameter dict is correctly associated with optimizer after load_state
     assert trainer._kvstore._updater.optimizer._get_lr(0) == 0.2
 
-@with_seed()
 def test_trainer_multi_layer_init():
     class Net(gluon.Block):
         def __init__(self, **kwargs):
@@ -217,7 +210,6 @@ def test_trainer_multi_layer_init():
     check_init([mx.cpu(1)])
 
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 def test_trainer_reset_kv():
     def check_trainer_reset_kv(kv):
         x = gluon.Parameter('x', shape=(10,), lr_mult=1.0)
@@ -252,7 +244,6 @@ def test_trainer_reset_kv():
         check_trainer_reset_kv(kv)
 
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 def test_trainer_sparse_kv():
     def check_trainer_sparse_kv(kv, stype, grad_stype, update_on_kv, expected):
         x = mx.gluon.Parameter('x', shape=(10,1), lr_mult=1.0, stype=stype, grad_stype=grad_stype)
@@ -289,7 +280,6 @@ def test_trainer_sparse_kv():
         check_trainer_sparse_kv(kv, 'row_sparse', 'row_sparse', None, True)
         check_trainer_sparse_kv(kv, 'row_sparse', 'row_sparse', False, ValueError)
 
-@with_seed()
 def test_trainer_lr_sched():
     x = gluon.Parameter('x', shape=(10,))
     x.initialize(ctx=[mx.cpu(0), mx.cpu(1)], init='zeros')
@@ -329,7 +319,6 @@ def test_trainer_lr_sched():
             lr *= factor
     mx.nd.waitall()
 
-@with_seed()
 def test_gluon_trainer_param_order():
     net = mx.gluon.nn.Sequential()
     # layers may be added in a random order for all workers
