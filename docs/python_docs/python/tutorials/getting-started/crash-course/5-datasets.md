@@ -38,7 +38,6 @@ You will first start by generating random data `X` (with 3 variables) and corres
 
 
 
-
 ```python
 mx.random.seed(42) # Fix the seed for reproducibility
 X = mx.random.uniform(shape=(10, 3))
@@ -62,14 +61,6 @@ assert sample[1].shape == (1, )
 print(sample)
 ```
 
-    (
-    [0.74707687 0.37641123 0.46362457]
-    <NDArray 3 @cpu(0)>, 
-    [0.35440788]
-    <NDArray 1 @cpu(0)>)
-
-
-
 You get a tuple of a data sample and its corresponding label, which makes sense because you passed the data `X` and the labels `y` in that order when you instantiated the `ArrayDataset`. You don't usually retrieve individual samples from `Dataset` objects though (unless you're quality checking the output samples). Instead you use a `DataLoader`.
 
 ## Introduction to `DataLoader`
@@ -92,10 +83,6 @@ data_loader = mx.gluon.data.DataLoader(dataset, batch_size=5, num_workers=CPU_CO
 for X_batch, y_batch in data_loader:
     print("X_batch has shape {}, and y_batch has shape {}".format(X_batch.shape, y_batch.shape))
 ```
-
-    X_batch has shape (5, 3), and y_batch has shape (5, 1)
-    X_batch has shape (5, 3), and y_batch has shape (5, 1)
-
 
 You can see 2 mini-batches of data (and labels), each with 5 samples, which makes sense given that you started with a dataset of 10 samples. When comparing the shape of the batches to the samples returned by the `Dataset`,you've gained an extra dimension at the start which is sometimes called the batch axis.
 
@@ -140,13 +127,6 @@ print("Label description: {}".format(label_desc[label]))
 imshow(data[:,:,0].asnumpy(), cmap='gray')
 ```
 
-    Data type: <class 'numpy.float32'>
-    Label: 8
-    Label description: Bag
-
-
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/fashion_mnist_bag.png)
-
 When training machine learning models it is important to shuffle the training samples every time you pass through the dataset (i.e. each epoch). Sometimes the order of your samples will have a spurious relationship with the target variable, and shuffling the samples helps remove this. With [DataLoader](/api/python/docs/api/gluon/data/index.html#dataloader) it's as simple as adding `shuffle=True`. You don't need to shuffle the validation and testing data though.
 
 If you have more complex shuffling requirements (e.g. when handling sequential data), take a look at [mxnet.gluon.data.BatchSampler](/api/python/docs/api/gluon/data/index.html#mxnet.gluon.data.BatchSampler) and pass this to your `DataLoader` instead.
@@ -166,14 +146,13 @@ With both `DataLoader`s defined, you can now train a model to classify each imag
 Gluon has a number of different [Dataset](https://mxnet.incubator.apache.org/api/python/gluon/data.html?highlight=dataset#mxnet.gluon.data.Dataset) classes for working with your own image data straight out-of-the-box. You can get started quickly using the [mxnet.gluon.data.vision.datasets.ImageFolderDataset](/api/python/docs/api/gluon/data/vision/datasets/index.html#mxnet.gluon.data.vision.datasets.ImageFolderDataset) which loads images directly from a user-defined folder, and infers the label (i.e. class) from the folders.
 
 Here you will run through an example for image classification, but a similar process applies for other vision tasks. If you already have your own collection of images to work with you should partition your data into training and test sets, and place all objects of the same class into seperate folders. Similar to:
-```
-    ./images/train/car/abc.jpg
-    ./images/train/car/efg.jpg
-    ./images/train/bus/hij.jpg
-    ./images/train/bus/klm.jpg
-    ./images/test/car/xyz.jpg
-    ./images/test/bus/uvw.jpg
-```
+
+./images/train/car/abc.jpg
+./images/train/car/efg.jpg
+./images/train/bus/hij.jpg
+./images/train/bus/klm.jpg
+./images/test/car/xyz.jpg
+./images/tt/bus/uvw.jpg
 
 You can download the Caltech 101 dataset if you don't already have images to work with for this example, but please note the download is 126MB.
 
@@ -207,18 +186,9 @@ Optionally, you can pass a `transform` parameter to these `Dataset`'s as you've 
 ```python
 cd data
 ```
-
-    /home/ec2-user/SageMaker/data
-
-
-
 ```python
 !ls
 ```
-
-    101_ObjectCategories  101_ObjectCategories.tar.gz  101_ObjectCategories_test
-
-
 
 ```python
 training_path='/home/ec2-user/SageMaker/data/101_ObjectCategories'
@@ -247,12 +217,6 @@ assert label == 1
 imshow(data.asnumpy(), cmap='gray')
 ```
 
-    Data type: <class 'numpy.uint8'>
-    Label: 1
-    Label description: Faces_easy
-
-
-![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/caltech101_face.png)<!--notebook-skip-line-->
 
 # Using your own data with custom `Dataset`s
 ------
@@ -268,8 +232,7 @@ See [original issue](https://github.com/apache/incubator-mxnet/issues/17269), [p
 
 The current data loading pipeline is the major bottleneck for many training tasks. The flow can be summarized as:
 
-
-```python
+```
 | Dataset.__getitem__ -> 
 | Transform.__call__()/forward() ->
 | Batchify ->
@@ -309,11 +272,6 @@ for _ in range(3):
 print('Elapsed time for backend dataloader:', time.time() - start)
 ```
 
-    1563
-    1563
-    1563
-    Elapsed time for backend dataloader: 2.421664237976074
-
 
 ### Using the Python backend:
 
@@ -332,12 +290,6 @@ for _ in range(3):
         pass
 print('Elapsed time for python dataloader:', time.time() - start)
 ```
-
-    1563
-    1563
-    1563
-    Elapsed time for python dataloader: 6.896752119064331
-
 
 ### The C++ backend loader was almost 3X faster for this particular use case
 This improvement in performance will not be seen in all cases, but when possible you are encouraged to compare the dataloader throughput for these two options.
