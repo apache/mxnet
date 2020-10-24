@@ -519,7 +519,7 @@ class EinsumOpGPU {
       }
     } else {
       // backward
-      std::vector<TBlob> temp_inputs; // inputs ignoring grad
+      std::vector<TBlob> temp_inputs;  // inputs ignoring grad
       for (int i = 1; i < inputs.size(); ++i) {
           temp_inputs.push_back(inputs[i]);
       }
