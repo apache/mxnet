@@ -80,6 +80,15 @@ struct quantize_v2_unsigned {
                                   const double max_limit) {
     Map(i, out, omin_range, omax_range, in, *imin_range, *imax_range, min_limit, max_limit);
   }
+
+  template <typename DstDType, typename SrcDType, typename RgDType>
+  MSHADOW_XINLINE static void Map(int i, DstDType *out, float *omin_range, float *omax_range,
+                                  const SrcDType *in, const RgDType *imin_range,
+                                  const RgDType *imax_range, const double min_limit,
+                                  const double max_limit) {
+    Map(i, out, omin_range, omax_range, in, static_cast<float>(*imin_range),
+        static_cast<float>(*imax_range), min_limit, max_limit);
+  }
 };
 
 // keep zero-center
@@ -90,7 +99,7 @@ struct quantize_v2_zero_centered {
                                   const float imax_range, const float quantized_range) {
     float real_range = MaxAbs(imin_range, imax_range);
     float scale = quantized_range / real_range;
-    SrcDType x = in[i];
+    float x = static_cast<float>(in[i]);
     out[i] = static_cast<DstDType>(Sign(x) * Min(Abs(x) * scale + 0.5f, quantized_range));
     *omin_range = -real_range;
     *omax_range = real_range;
@@ -101,6 +110,14 @@ struct quantize_v2_zero_centered {
                                   const SrcDType *in, const float *imin_range,
                                   const float *imax_range, const float quantized_range) {
     Map(i, out, omin_range, omax_range, in, *imin_range, *imax_range, quantized_range);
+  }
+
+  template <typename DstDType, typename SrcDType, typename RgDType>
+  MSHADOW_XINLINE static void Map(int i, DstDType *out, float *omin_range, float *omax_range,
+                                  const SrcDType *in, const RgDType *imin_range,
+                                  const RgDType *imax_range, const float quantized_range) {
+    Map(i, out, omin_range, omax_range, in, static_cast<float>(*imin_range),
+        static_cast<float>(*imax_range), quantized_range);
   }
 };
 
@@ -127,8 +144,8 @@ static inline bool QuantizeV2Type(const nnvm::NodeAttrs &attrs, std::vector<int>
   CHECK_EQ(in_attrs->size(), 1U);
   CHECK_EQ(out_attrs->size(), 3U);
   const QuantizeV2Param &param = nnvm::get<QuantizeV2Param>(attrs.parsed);
-  CHECK(in_attrs->at(0) == mshadow::kFloat32 || in_attrs->at(0) == mshadow::kUint8 ||
-        in_attrs->at(0) == mshadow::kInt8);
+  CHECK(in_attrs->at(0) == mshadow::kFloat32 ||in_attrs->at(0) == mshadow::kFloat16 ||
+        in_attrs->at(0) == mshadow::kUint8 || in_attrs->at(0) == mshadow::kInt8);
   auto out_type = GetQuantizeOutputType(param);
   if (out_type == mshadow::kUint8) {
     TYPE_ASSIGN_CHECK(*out_attrs, 0, mshadow::kUint8);
@@ -151,7 +168,6 @@ class QuantizeV2Operator {
                const std::vector<OpReqType> &req, const std::vector<TBlob> &outputs) {
     using namespace mshadow;
     using namespace mxnet_op;
-    typedef float SrcDType;
     using mshadow::red::limits::MaxValue;
     using mshadow::red::limits::MinValue;
     Stream<xpu> *s = ctx.get_stream<xpu>();
@@ -160,6 +176,10 @@ class QuantizeV2Operator {
     if (out_type == mshadow::kUint8 && std::is_same<xpu, gpu>::value) {
       LOG(FATAL) << "currently, uint8 quantization is only supported by CPU, "
                     "please switch to the context of CPU or int8 data type for GPU.";
+    }
+    if (inputs[0].type_flag_ == mshadow::kFloat16 && std::is_same<xpu, cpu>::value) {
+      LOG(FATAL) << "currently, fp16 input quantization is only supported by GPU, "
+                    "please switch to the context of GPU or fp32 data input type for CPU.";
     }
 
     if (inputs[0].type_flag_ == mshadow::kUint8 || inputs[0].type_flag_ == mshadow::kInt8) {
@@ -176,7 +196,8 @@ class QuantizeV2Operator {
         }
       }
       UnaryOp::IdentityCompute<xpu>(attrs_, ctx, {inputs[0]}, req, outputs);
-    } else {
+    } else if (inputs[0].type_flag_ == mshadow::kFloat32) {
+      typedef float SrcDType;
       if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
         if (out_type == mshadow::kUint8) {
           Kernel<quantize_v2_unsigned, xpu>::Launch(
@@ -223,6 +244,56 @@ class QuantizeV2Operator {
           LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
         }
       }
+    } else if (inputs[0].type_flag_ == mshadow::kFloat16) {
+      typedef mshadow::half::half_t FP16DType;
+      if (param.min_calib_range.has_value() && param.max_calib_range.has_value()) {
+        if (out_type == mshadow::kUint8) {
+          Kernel<quantize_v2_unsigned, xpu>::Launch(
+              s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
+              outputs[2].dptr<float>(), inputs[0].dptr<FP16DType>(), param.min_calib_range.value(),
+              param.max_calib_range.value(), MinValue<uint8_t>(), MaxValue<uint8_t>());
+        } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
+          Kernel<quantize_v2_zero_centered, xpu>::Launch(
+              s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
+              outputs[2].dptr<float>(), inputs[0].dptr<FP16DType>(), param.min_calib_range.value(),
+              param.max_calib_range.value(), MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
+        } else {
+          LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
+        }
+      } else {  // model is not calibrated
+        mxnet::TShape src_shape, dst_shape;
+        const size_t actual_float16_size = sizeof(FP16DType);
+        const size_t temp_reduce_size = ConfigReduce<xpu, FP16DType>(
+            s, inputs[0].shape_, mxnet::TShape(1, 1), &src_shape, &dst_shape);
+        Tensor<xpu, 1, char> temp_space = ctx.requested[0].get_space_typed<xpu, 1, char>(
+            Shape1(2 * actual_float16_size + temp_reduce_size), s);
+        const int dev_id = ctx.run_ctx.ctx.dev_id;
+        TBlob in_min_t(reinterpret_cast<FP16DType *>(temp_space.dptr_),
+                        Shape1(1), xpu::kDevMask, dev_id);
+        TBlob in_max_t(reinterpret_cast<FP16DType *>(temp_space.dptr_) + 1,
+                        Shape1(1), xpu::kDevMask, dev_id);
+        Tensor<xpu, 1, char> workspace(temp_space.dptr_ + 2 * actual_float16_size,
+                                       Shape1(temp_reduce_size), s);
+        broadcast::Reduce<red::minimum, 2, FP16DType, mshadow::op::identity>(
+            s, in_min_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
+        broadcast::Reduce<red::maximum, 2, FP16DType, mshadow::op::identity>(
+            s, in_max_t.reshape(dst_shape), kWriteTo, workspace, inputs[0].reshape(src_shape));
+        if (out_type == mshadow::kUint8) {
+          Kernel<quantize_v2_unsigned, xpu>::Launch(
+              s, outputs[0].Size(), outputs[0].dptr<uint8_t>(), outputs[1].dptr<float>(),
+              outputs[2].dptr<float>(), inputs[0].dptr<FP16DType>(), in_min_t.dptr<FP16DType>(),
+              in_max_t.dptr<FP16DType>(), MinValue<uint8_t>(), MaxValue<uint8_t>());
+        } else if (out_type == mshadow::kInt8) {  // zero-centered quantization
+          Kernel<quantize_v2_zero_centered, xpu>::Launch(
+              s, outputs[0].Size(), outputs[0].dptr<int8_t>(), outputs[1].dptr<float>(),
+              outputs[2].dptr<float>(), inputs[0].dptr<FP16DType>(), in_min_t.dptr<FP16DType>(),
+              in_max_t.dptr<FP16DType>(), MinAbs(MaxValue<int8_t>(), MinValue<int8_t>()));
+        } else {
+          LOG(FATAL) << "quantize op only supports int8 and uint8 as output type";
+        }
+      }
+    } else {
+      LOG(FATAL) << "quantize op only supports int8, uint8, float32 and float16 as input type";
     }
   }
 

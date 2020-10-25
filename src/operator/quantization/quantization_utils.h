@@ -187,7 +187,7 @@ inline size_t ConfigReduce(mshadow::Stream<xpu>* s,
   return broadcast::ReduceWorkspaceSize<NDim, DType>(s, *dst_shape, kWriteTo, *src_shape);
 }
 
-enum QuantizeOutType { kAuto = 0, kInt8, kUint8 };
+enum QuantizeOutType { kAuto = 0, kInt8, kUint8, kFloat32, kFloat16 };
 
 template<typename Param>
 static mshadow::TypeFlag GetQuantizeOutputType(const Param &param) {
@@ -204,6 +204,10 @@ static mshadow::TypeFlag GetQuantizeOutputType(const Param &param) {
     out_type = mshadow::kInt8;
   } else if (param.out_type == QuantizeOutType::kUint8) {
     out_type = mshadow::kUint8;
+  } else if (param.out_type == QuantizeOutType::kFloat32) {
+    out_type = mshadow::kFloat32;
+  } else if (param.out_type == QuantizeOutType::kFloat16) {
+    out_type = mshadow::kFloat16;
   } else {
     LOG(FATAL) << "Unsupported out_type in params: " <<param.out_type;
   }

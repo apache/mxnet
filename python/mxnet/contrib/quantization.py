@@ -899,7 +899,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         raise ValueError('data_shapes required')
     data_nd = []
     for shape in data_shapes:
-        data_nd.append(mx.nd.zeros(shape.shape))
+        data_nd.append(mx.nd.zeros(shape.shape, ctx=ctx))
     while True:
         try:
             network(*data_nd)
@@ -963,7 +963,8 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy', 'customize']:
             data_names = [pair[0] for pair in calib_data.provide_data]
-            mod = Module(symbol=symnet, context=ctx,
+            # in GPU case the context of this module is still on CPU for calibration
+            mod = Module(symbol=symnet,
                          data_names=data_names, label_names=None)
             mod.bind(for_training=False, data_shapes=data_shapes)
             mod.set_params(args, auxs, allow_missing=False, force_init=True)
