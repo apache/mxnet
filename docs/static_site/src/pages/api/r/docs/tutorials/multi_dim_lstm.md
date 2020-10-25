@@ -55,7 +55,8 @@ PM2.5 concentration levels.
 
 Load and pre-process the data
 ---------
-The first step is to load in the data and preprocess it. It is assumed that the data has been downloaded in a .csv file: data.csv from the [pollution dataset](https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data).
+
+First load the required packages.
 
  ```r
 ## Loading required packages
@@ -63,13 +64,24 @@ library("readr")
 library("dplyr")
 library("mxnet")
 library("abind")
+library("tidyverse")
+library("reshape2")
  ```
 
+Now download the data from the [pollution dataset](https://archive.ics.uci.edu/ml/datasets/Beijing+PM2.5+Data) and 
+save it in a .csv file: data.csv
 
+
+```r
+dir.create('data_dir')
+download.file(url='https://archive.ics.uci.edu/ml/machine-learning-databases/00381/PRSA_data_2010.1.1-2014.12.31.csv',
+              destfile=paste0('data_dir/data.csv'),method='wget')
+```
+Now read the data and preprocess it.
 
  ```r
 ## Preprocessing steps
-Data <- read.csv(file = "/Users/khedia/Downloads/data.csv",
+Data <- read.csv(file = "data_dir/data.csv",
                  header = TRUE,
                  sep = ",")
 
@@ -245,9 +257,25 @@ Start training with 1 devices
    user  system elapsed
  21.937   1.914  13.402
 ```
-We can see how mean squared error varies with epochs below.
 
-![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/loss.png?raw=true)<!--notebook-skip-line-->
+Then create a figure to show how mean squared error varies with epochs below.
+
+```r
+## Create a data frame
+dattrain <- data.frame(Epochs =1:100,
+                       train_MSE = logger$train,
+                       eval_MSE = logger$eval)
+## reshape the data frame to a long format
+dattrain_long <- melt(dattrain,id="Epochs")
+## make a plot
+ggplot(dattrain_long, 
+  aes(x=Epochs, y=value, colour=variable)) +
+  geom_line()
+```
+
+![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/loss.png?raw=true)
+
+
 
 Inference on the network
 ---------
@@ -316,11 +344,11 @@ for (i in 1:pred_length) {
 ```
 Now predicted contains the predicted 100 values. We use ggplot to plot the actual and predicted values as shown below.
 
-![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/sample_401.png?raw=true)<!--notebook-skip-line-->
+![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/sample_401.png?raw=true)
 
 We also repeated the above experiments to generate the next 100 samples to 301st time series and we got the following results.
 
-![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/sample_301.png?raw=true)<!--notebook-skip-line-->
+![png](https://github.com/dmlc/web-data/blob/master/mxnet/doc/tutorials/r/images/sample_301.png?raw=true)
 
 The above tutorial is just for demonstration purposes and has not been tuned extensively for accuracy.
 
