@@ -59,12 +59,12 @@ MSHADOW_XINLINE index_t rravel(const mshadow::Shape<ndim>& coord,
 
 /* Compute coordinates from flattened index given shape */
 template<int ndim>
-MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(const int idx,
+MSHADOW_XINLINE mshadow::Shape<ndim> uunravel(const index_t idx,
                                               const index_t* shape) {
   mshadow::Shape<ndim> ret;
   #pragma unroll
-  for (int i = ndim-1, j = idx; i >=0; --i) {
-    auto tmp = j / shape[i];
+  for (index_t i = ndim-1, j = idx; i >=0; --i) {
+    index_t tmp = j / shape[i];
     ret[i] = j - tmp*shape[i];
     j = tmp;
   }
@@ -158,13 +158,13 @@ struct NumpyPadParam : public dmlc::Parameter<NumpyPadParam> {
 inline mxnet::TShape NumpyPadShapeImpl(const mxnet::TShape& ishape,
                                        const mxnet::Tuple<Tuple<int>> pad_width) {
   if (ishape.ndim() == 1) {
-    auto s = ishape[0] + pad_width[0][0] + pad_width[1][0];
+    index_t s = ishape[0] + pad_width[0][0] + pad_width[1][0];
     return mxnet::TShape({s});
   } else if (ishape.ndim() >= 2) {
     int i;
     mxnet::TShape oshape(ishape.ndim(), -1);
     for (i = ishape.ndim() - 1; i >=0; i--) {
-      int base = ishape[i];
+      index_t base = ishape[i];
       base = base + pad_width[i][0] + pad_width[i][1];
       oshape[i] = base;
     }
@@ -231,7 +231,7 @@ struct pad_copy {
       for (m = 0; m < ndim; m++) {
         indexshape[m] = indexshape[m] - indexwidth[m * 2];
       }
-      int l = rravel<ndim>(j, ishape);
+      index_t l = rravel<ndim>(j, ishape);
       KERNEL_ASSIGN(out[i], req, a[l]);
     } else {
       return;
@@ -274,11 +274,11 @@ struct symmetric_pad {
     }
     if (indexshape[index] < indexwidth[index * 2]) {
     // we need to do the assignment
-      int distance = indexwidth[index * 2] - indexshape[index];
-      int total = ishape[index];
+      index_t distance = indexwidth[index * 2] - indexshape[index];
+      index_t total = ishape[index];
       // the round of this element
-      int round = (distance - 1) / total;
-      int position = distance % total;
+      index_t round = (distance - 1) / total;
+      index_t position = distance % total;
       if (position == 0) {
         position = ishape[index];
       }
@@ -287,13 +287,13 @@ struct symmetric_pad {
       } else {
         indexshape[index] = indexwidth[index * 2] + ishape[index] - 1 - (position - 1);
       }
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
     } else if (indexshape[index] >= (indexwidth[index * 2]+ishape[index])) {
-      int distance = (indexshape[index]+1) - (indexwidth[index * 2]+ishape[index]);
-      int total = ishape[index];
-      int position = distance % total;
-      int round = (distance - 1) / total;
+      index_t distance = (indexshape[index]+1) - (indexwidth[index * 2]+ishape[index]);
+      index_t total = ishape[index];
+      index_t position = distance % total;
+      index_t round = (distance - 1) / total;
       if (position == 0) {
         position = ishape[index];
       }
@@ -302,7 +302,7 @@ struct symmetric_pad {
       } else {
         indexshape[index] = indexwidth[index * 2] + position - 1;
       }
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
     }
   }
@@ -345,11 +345,11 @@ struct edge_pad {
     if (indexshape[index] < indexwidth[index * 2]) {
     // we need to do the assignment
       indexshape[index] = indexwidth[index * 2];
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
     } else if (indexshape[index] >= (indexwidth[index * 2]+ishape[index])) {
       indexshape[index] = indexwidth[index * 2] + ishape[index] - 1;
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
     }
   }
@@ -391,42 +391,42 @@ struct reflect_pad {
     }
     if (indexshape[index] < indexwidth[index * 2]) {
       // we need to do the assignment
-      int distance = indexwidth[index * 2] - indexshape[index];
-      int total = ishape[index];
+      index_t distance = indexwidth[index * 2] - indexshape[index];
+      index_t total = ishape[index];
       if (total == 1) {
         indexshape[index] = indexwidth[index * 2];
-        int l = rravel<ndim>(j, oshape);
+        index_t l = rravel<ndim>(j, oshape);
         KERNEL_ASSIGN(out[i], req, out[l]);
         return;
       }
-      int round = (distance - 1) / (total - 1);
+      index_t round = (distance - 1) / (total - 1);
       if (round % 2 == 0) {
-        int position = (distance + round) % total;
+        index_t position = (distance + round) % total;
         indexshape[index] = indexwidth[index * 2] + position;
       } else {
-        int position = (distance + round) % total;
+        index_t position = (distance + round) % total;
         indexshape[index] = indexwidth[index * 2] + ishape[index] - 1 - (position);
       }
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
     } else if (indexshape[index] >= (indexwidth[index * 2] + ishape[index])) {
-      int distance = (indexshape[index]+1) - (indexwidth[index * 2] + ishape[index]);
-      int total = ishape[index];
+      index_t distance = (indexshape[index]+1) - (indexwidth[index * 2] + ishape[index]);
+      index_t total = ishape[index];
       if (total == 1) {
         indexshape[index] = indexwidth[index * 2];
-        int l = rravel<ndim>(j, oshape);
+        index_t l = rravel<ndim>(j, oshape);
         KERNEL_ASSIGN(out[i], req, out[l]);
         return;
       }
-      int round = (distance - 1) / (total - 1);
+      index_t round = (distance - 1) / (total - 1);
       if (round % 2 == 0) {
-        int position = (distance + round) % total;
+        index_t position = (distance + round) % total;
         indexshape[index] = indexwidth[index * 2] + ishape[index] - 1 - (position);
       } else {
-        int position = (distance + round) % total;
+        index_t position = (distance + round) % total;
         indexshape[index] = indexwidth[index * 2] + position;
       }
-      int l = rravel<ndim>(j, oshape);
+      index_t l = rravel<ndim>(j, oshape);
       KERNEL_ASSIGN(out[i], req, out[l]);
   }
   }
@@ -470,8 +470,8 @@ struct max_pad {
     if (indexshape[index] < indexwidth[index * 2] ||
         indexshape[index] >= indexwidth[index * 2] + ishape[index]) {
       indexshape[index] = indexwidth[index * 2];
-      int l = rravel<ndim>(j, oshape);
-      int max_count = 0;
+      index_t l = rravel<ndim>(j, oshape);
+      index_t max_count = 0;
       auto max_value = out[l];
       for (max_count = 0; max_count < ishape[index]; max_count++) {
         indexshape[index] = indexwidth[index * 2] + max_count;
@@ -522,8 +522,8 @@ struct min_pad {
     if (indexshape[index] < indexwidth[index * 2] ||
         indexshape[index] >= (indexwidth[index * 2] + ishape[index])) {
       indexshape[index] = indexwidth[index * 2];
-      int l = rravel<ndim>(j, oshape);
-      int min_count = 0;
+      index_t l = rravel<ndim>(j, oshape);
+      index_t min_count = 0;
       auto min_value = out[l];
       for (min_count = 0; min_count < ishape[index]; min_count++) {
         indexshape[index] = indexwidth[index * 2] + min_count;

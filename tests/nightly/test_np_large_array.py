@@ -2141,6 +2141,22 @@ def test_kron():
 
 
 @use_np
+def test_logspace():
+    data = np.logspace(1.0, 10.0, INT_OVERFLOW)
+    assert data.shape == (INT_OVERFLOW, )
+    assert data[0] == 10 and data[-1] == 10000000000
+    assert_almost_equal(data[HALF_INT_OVERFLOW], np.array(10**5.5), \
+                rtol=1e-3, atol=1e-5)
+
+@use_np
+def test_linspace():
+    data = np.linspace(0, 1000, INT_OVERFLOW)
+    assert data.shape == (INT_OVERFLOW, )
+    assert data[0] == 0 and data[-1] == 1000
+    assert data[HALF_INT_OVERFLOW] == 500
+
+
+@use_np
 def test_histogram():
     inp = np.ones((INT_OVERFLOW, 2))
     inp[-1, -1] = 2
@@ -2162,3 +2178,65 @@ def test_nan_to_num():
     assert inp.grad.shape == inp.shape
     assert inp.grad[0, -1] == 0 and inp.grad[1, -1] == 0
     assert inp.grad[0, 0] == 1 and inp.grad[2, -1] == 0
+
+
+@use_np
+def test_interp():
+    xp = np.array([1, 2, 3])
+    fp = np.array([3, 2, 1])
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = 2.5
+    inp.attach_grad()
+    with mx.autograd.record():
+        B = np.interp(inp, xp, fp)
+        B.backward()
+    assert B.shape == inp.shape
+    assert B[-1, -1] == 1.5
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+
+@use_np
+def test_edge_padding():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
+    out = np.pad(inp, ((1, 1), (1, 1)), "edge")
+    assert out[0][0] == 0
+    assert out[-1][-1] == INT_OVERFLOW - 1
+    assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
+
+
+@use_np
+def test_constant_padding():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
+    out = np.pad(inp, ((1, 1), (1, 1)), "constant")
+    assert out[0][0] == 0
+    assert out[-1][-1] == 0
+    assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
+
+
+@use_np
+def test_minimum_padding():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
+    out = np.pad(inp, ((1, 1), (1, 1)), "minimum")
+    assert out[0][-1] == 0
+    assert out[-1][-1] == 0
+    assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
+
+
+@use_np
+def test_reflection_padding():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
+    out = np.pad(inp, ((1, 1), (1, 1)), "reflect")
+    assert out[0][-1] == 0 + 1
+    assert out[-1][0] == INT_OVERFLOW - 1 - 1
+    assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
+
+
+@use_np
+def test_symmetric_padding():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
+    out = np.pad(inp, ((1, 1), (1, 1)), "symmetric")
+    assert out[0][0] == 0
+    assert out[-1][-1] == INT_OVERFLOW - 1
+    assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
+
