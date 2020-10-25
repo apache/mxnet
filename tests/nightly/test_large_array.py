@@ -2020,6 +2020,17 @@ def test_sparse_dot():
     assert out.shape == (2, 2)
 
 
+def test_slice_assign():
+    # test _slice_assign
+    A = np.zeros((2**31, 2))
+    A[-1] = np.ones((1))
+    assert A[-1, 0] == 1 and A[-1, 1] == 1
+    # test _slice_assign_scalar
+    B = np.zeros((2**31, 2))
+    B[-1] = 2
+    assert B[-1, 0] == 2 and B[-1, 1] == 2
+
+
 if __name__ == '__main__':
     import nose
     nose.runmodule()
