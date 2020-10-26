@@ -35,6 +35,7 @@ ctc_include/*
 dlpack/*
 dmlc-core/*
 googletest/*
+intgemm/*
 mkldnn/*
 nvidia_cub/*
 onnx-tensorrt/*

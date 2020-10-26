@@ -22,7 +22,7 @@ import scipy
 from scipy.stats import pearsonr
 import json
 import math
-from common import with_seed, xfail_when_nonstandard_decimal_separator
+from common import xfail_when_nonstandard_decimal_separator
 from copy import deepcopy
 
 def check_metric(metric, *args, **kwargs):

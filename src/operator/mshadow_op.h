@@ -128,6 +128,38 @@ using std::is_integral;
 
 MXNET_UNARY_MATH_OP_NC(identity, a);
 
+template <typename IType, typename DType>
+struct IndexedNum {
+  IType idx;
+  DType num;
+
+  MSHADOW_XINLINE IndexedNum() : idx(0), num(0) {}
+
+  MSHADOW_XINLINE IndexedNum(DType n) : idx(0), num(n) {}
+
+  MSHADOW_XINLINE IndexedNum& operator+=(const IndexedNum& rhs){
+    return *this;
+  }
+};
+
+template<typename AType, typename IType>
+struct set_index_no_op : public mxnet_op::tunable {
+  static const bool do_op = false;
+
+  MSHADOW_XINLINE static void Op(AType* const a, IType i) {
+  }
+};
+
+template<typename AType, typename IType>
+struct arg_min_max_set_index : public mxnet_op::tunable {
+  static const bool do_op = true;
+
+  MSHADOW_XINLINE static void Op(AType* const a, IType i) {
+    a->idx = i;
+  }
+};
+
+
 MXNET_UNARY_MATH_OP(identity_grad, 1);
 
 struct identity_with_cast {
@@ -1529,6 +1561,134 @@ struct sum {
   MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
     SetInitValue(initv);
     residual = 0;
+  }
+};
+
+/*! \brief arg max reducer */
+struct argmax {
+  /*! \brief do reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src) { // NOLINT(*)
+    if (dst.num < src.num) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
+    if (dst.num < src.num) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    if (dst_val.num < src_val.num) {
+      dst_val.num = src_val.num;
+      dst_val.idx = src_val.idx;
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    if (dst_val.num < src_val.num) {
+      dst_val.num = src_val.num;
+      dst_val.idx = src_val.idx;
+    }
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
+  /*!
+   *\brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return 1;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
+    initv.num = mshadow::red::limits::NegInfValue<decltype(initv.num)>();
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
+    initv.num = mshadow::red::limits::NegInfValue<decltype(initv.num)>();
+  }
+};
+
+/*! \brief arg max reducer */
+struct argmin {
+  /*! \brief do reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src) { // NOLINT(*)
+    if (dst.num > src.num) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename AType, typename DType>
+  MSHADOW_XINLINE static void Reduce(volatile AType& dst,  volatile DType src, volatile DType& residual) { // NOLINT(*)
+    if (dst.num > src.num) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& src_val) { // NOLINT(*)
+    if (dst_val.num > src_val.num) {
+      dst_val.num = src_val.num;
+      dst_val.idx = src_val.idx;
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  MSHADOW_XINLINE static void Merge(volatile DType& dst_val, volatile DType& dst_residual, volatile DType& src_val, volatile DType& src_residual) { // NOLINT(*)
+    if (dst_val.num > src_val.num) {
+      dst_val.num = src_val.num;
+      dst_val.idx = src_val.idx;
+    }
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst) {} // NOLINT(*)
+  /*! \brief finalize reduction */
+  template<typename DType>
+  MSHADOW_XINLINE static void Finalize(volatile DType& dst, volatile DType& residual) {} // NOLINT(*)
+  /*!
+   *\brief calculate gradient of redres with respect to redsrc,
+   * redres: reduced result, redsrc: one of reduction element
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static DType PartialGrad(DType redres, DType redsrc) {
+    return 1;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv) { // NOLINT(*)
+    initv.num = mshadow::red::limits::PosInfValue<decltype(initv.num)>();
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  MSHADOW_XINLINE static void SetInitValue(DType &initv, DType &residual) { // NOLINT(*)
+    initv.num = mshadow::red::limits::PosInfValue<decltype(initv.num)>();
   }
 };
 
