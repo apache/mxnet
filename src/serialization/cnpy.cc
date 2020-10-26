@@ -386,8 +386,9 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(const std:
     std::vector<std::string_view> dense_names;  // root-level files
     std::unordered_map<std::string_view, std::vector<std::string_view>> sparse_names;
     for (zip_uint64_t i = 0; i < num_entries; i++) {
-        // TODO skip if file doesn't end in .npy
         std::string_view entry_name = zip_get_name(archive, i, ZIP_FL_ENC_STRICT);
+        // only consider .npy files
+        if (entry_name.substr(entry_name.size() - 4).compare(".npy") != 0) continue;
         auto dir_sep_search = entry_name.rfind("/");
         if (dir_sep_search != std::string::npos) {
             // Array in a folder; may be part of sparse ndarray
