@@ -25,6 +25,8 @@ from mxnet.base import mx_real_t
 from numpy.testing import assert_allclose
 import numpy.random as rnd
 import numpy as np
+import scipy.sparse as spsp
+
 from common import assertRaises, xfail_when_nonstandard_decimal_separator
 from mxnet.ndarray.sparse import RowSparseNDArray, CSRNDArray
 
@@ -567,6 +569,23 @@ def test_sparse_nd_save_load():
     os.remove(fname)
 
 
+def test_sparse_ndarray_load_scipy_csr_npz(tmp_path):
+    csr_sp = spsp.rand(50, 100, density=0.5, format="csr")
+    spsp.save_npz(tmp_path / "csr.npz", csr_sp)
+
+    csr_mx = mx.nd.load(str(tmp_path / "csr.npz"))['']
+    assert np.sum(csr_mx.data.asnumpy() != csr_sp.data) == 0
+    assert np.sum(csr_mx.indices.asnumpy() != csr_sp.indices) == 0
+    assert np.sum(csr_mx.indptr.asnumpy() != csr_sp.indptr) == 0
+
+    # TODO implement writing shape.npy and format.npy in npz::save_array
+    # csr_mx = mx.nd.save(str(tmp_path / "csr_mx.npz"), csr_mx)
+    # csr_mx_loaded = mx.nd.load(str(tmp_path / "csr_mx.npz"))[0]
+    # assert np.sum(csr_mx_loaded.data.asnumpy() != csr_sp.data) == 0
+    # assert np.sum(csr_mx_loaded.indices.asnumpy() != csr_sp.indices) == 0
+    # assert np.sum(csr_mx_loaded.indptr.asnumpy() != csr_sp.indptr) == 0
+
+
 def test_sparse_nd_unsupported():
     nd = mx.nd.zeros((2,2), stype='row_sparse')
     fn_slice = lambda x: x._slice(None, None)
@@ -627,24 +646,20 @@ def test_create_csr():
             assert_almost_equal(sp_csr.indices, sp.indices)
             assert(sp.dtype == sp_csr.dtype), (sp.dtype, sp_csr.dtype)
 
-        try:
-            import scipy.sparse as spsp
-            # random canonical csr
-            csr_sp = spsp.rand(shape[0], shape[1], density, format="csr")
-            csr_nd = f(csr_sp)
-            assert_csr_almost_equal(csr_nd, csr_sp)
-            # non-canonical csr which contains duplicates and unsorted indices
-            indptr = np.array([0, 2, 3, 7])
-            indices = np.array([0, 2, 2, 0, 1, 2, 1])
-            data = np.array([1, 2, 3, 4, 5, 6, 1])
-            non_canonical_csr = spsp.csr_matrix((data, indices, indptr), shape=(3, 3), dtype=csr_nd.dtype)
-            canonical_csr_nd = f(non_canonical_csr, dtype=csr_nd.dtype)
-            canonical_csr_sp = non_canonical_csr.copy()
-            canonical_csr_sp.sum_duplicates()
-            canonical_csr_sp.sort_indices()
-            assert_csr_almost_equal(canonical_csr_nd, canonical_csr_sp)
-        except ImportError:
-            print("Could not import scipy.sparse. Skipping unit tests for scipy csr creation")
+        # random canonical csr
+        csr_sp = spsp.rand(shape[0], shape[1], density, format="csr")
+        csr_nd = f(csr_sp)
+        assert_csr_almost_equal(csr_nd, csr_sp)
+        # non-canonical csr which contains duplicates and unsorted indices
+        indptr = np.array([0, 2, 3, 7])
+        indices = np.array([0, 2, 2, 0, 1, 2, 1])
+        data = np.array([1, 2, 3, 4, 5, 6, 1])
+        non_canonical_csr = spsp.csr_matrix((data, indices, indptr), shape=(3, 3), dtype=csr_nd.dtype)
+        canonical_csr_nd = f(non_canonical_csr, dtype=csr_nd.dtype)
+        canonical_csr_sp = non_canonical_csr.copy()
+        canonical_csr_sp.sum_duplicates()
+        canonical_csr_sp.sort_indices()
+        assert_csr_almost_equal(canonical_csr_nd, canonical_csr_sp)
 
     dim0 = 20
     dim1 = 20
@@ -769,12 +784,8 @@ def test_create_sparse_nd_from_sparse():
     ones = mx.nd.ones(shape, dtype=src_dtype)
     csr_arrs = [ones.tostype('csr')]
     rsp_arrs = [ones.tostype('row_sparse')]
-    try:
-        import scipy.sparse as spsp
-        csr_sp = spsp.csr_matrix(np.ones(shape, dtype=src_dtype))
-        csr_arrs.append(csr_sp)
-    except ImportError:
-        print("Could not import scipy.sparse. Skipping unit tests for scipy csr creation")
+    csr_sp = spsp.csr_matrix(np.ones(shape, dtype=src_dtype))
+    csr_arrs.append(csr_sp)
     f_csr = mx.nd.sparse.csr_matrix
     f_rsp = mx.nd.sparse.row_sparse_array
     for sp_arr in csr_arrs:
