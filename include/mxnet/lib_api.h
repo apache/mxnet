@@ -912,25 +912,25 @@ class Registry {
 
 /*! \brief declare a variable with custom name */
 #define MX_REGISTER_NAME_(Name) MXNet ## _CustomOp ## _
-#define MX_REGISTER_DEF_(Name) CustomOp MX_REGISTER_NAME_(Name)
+#define MX_REGISTER_DEF_(Name) mxnet::ext::CustomOp MX_REGISTER_NAME_(Name)
 
 #define MX_REGISTER_PROP_NAME_(Name) MXNet ## _CustomSubProp ## _
-#define MX_REGISTER_PROP_DEF_(Name) CustomPartitioner MX_REGISTER_PROP_NAME_(Name)
+#define MX_REGISTER_PROP_DEF_(Name) mxnet::ext::CustomPartitioner MX_REGISTER_PROP_NAME_(Name)
 
 #define MX_REGISTER_PASS_NAME_(Name) MXNet ## _CustomPass ## _
-#define MX_REGISTER_PASS_DEF_(Name) CustomPass MX_REGISTER_PASS_NAME_(Name)
+#define MX_REGISTER_PASS_DEF_(Name) mxnet::ext::CustomPass MX_REGISTER_PASS_NAME_(Name)
 
 /*! \brief assign a var to a value */
 #define REGISTER_OP(Name) MX_STR_CONCAT(MX_REGISTER_DEF_(Name), __COUNTER__) = \
-    Registry<CustomOp>::get()->add(MX_TOSTRING(Name))
+    mxnet::ext::Registry<mxnet::ext::CustomOp>::get()->add(MX_TOSTRING(Name))
 
 #define REGISTER_PARTITIONER(Name) \
   MX_STR_CONCAT(MX_REGISTER_PROP_DEF_(Name), __COUNTER__) = \
-    Registry<CustomPartitioner>::get()->add(MX_TOSTRING(Name))
+    mxnet::ext::Registry<mxnet::ext::CustomPartitioner>::get()->add(MX_TOSTRING(Name))
 
 #define REGISTER_PASS(Name) \
   MX_STR_CONCAT(MX_REGISTER_PASS_DEF_(Name), __COUNTER__) = \
-    Registry<CustomPass>::get()->add(MX_TOSTRING(Name))
+    mxnet::ext::Registry<mxnet::ext::CustomPass>::get()->add(MX_TOSTRING(Name))
 
 /* -------------- BELOW ARE CTYPE FUNCTIONS PROTOTYPES --------------- */
 
