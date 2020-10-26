@@ -2211,3 +2211,15 @@ def test_symmetric_padding():
     assert out[-1][-1] == INT_OVERFLOW - 1
     assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
 
+
+@use_np
+def test_fill_diagonal():
+    # test 2d square matrix case
+    N = 2**16
+    data1 = np.zeros((N, N))
+    np.fill_diagonal(data1, [1, 2, 3, 4])
+    assert data1[0, 0] == 1 and data1[-1, -1] == 4
+    # test 2d long matrix case with wrap
+    data2 = np.zeros((INT_OVERFLOW, 2))
+    np.fill_diagonal(data2, [1, 2], wrap=True)
+    assert data2[0, 0] == 1 and data2[-1, -1] == 2
