@@ -77,18 +77,18 @@ inline bool MomentsType(const nnvm::NodeAttrs& attrs,
 
 struct VarBroadcastKernel {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   DType *out,
                                   const DType *data,
                                   const DType *mean,
                                   mshadow::Shape<6> data_shape,
                                   mshadow::Shape<6> mean_shape) {
-    size_t data_idx = i;
-    size_t mean_idx = i;
-    size_t data_stride = 1;
-    size_t mean_stride = 1;
+    index_t data_idx = i;
+    index_t mean_idx = i;
+    index_t data_stride = 1;
+    index_t mean_stride = 1;
     for (int axis = 5; axis >= 0; --axis) {
-      size_t axis_idx = data_idx % data_shape[axis];
+      index_t axis_idx = data_idx % data_shape[axis];
       mean_idx -= axis_idx * data_stride;
       if (mean_shape[axis] != 1) {
         mean_idx += axis_idx * mean_stride;

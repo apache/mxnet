@@ -51,31 +51,6 @@ struct CuTensorTypeTraits<mshadow::half::half_t> {
   static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_16F;
   typedef float ScalarType;
 };
-template<>
-struct CuTensorTypeTraits<int64_t> {
-  static const cudaDataType_t cudaType = CUDA_R_64I;
-  static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_32I;
-  typedef int ScalarType;
-};
-template<>
-struct CuTensorTypeTraits<int32_t> {
-  static const cudaDataType_t cudaType = CUDA_R_32I;
-  static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_32I;
-  typedef int ScalarType;
-};
-template<>
-struct CuTensorTypeTraits<int8_t> {
-  static const cudaDataType_t cudaType = CUDA_R_8I;
-  static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_8I;
-  typedef int ScalarType;
-};
-template<>
-struct CuTensorTypeTraits<uint8_t> {
-  static const cudaDataType_t cudaType = CUDA_R_8U;
-  static const cutensorComputeType_t cutensorType = CUTENSOR_COMPUTE_8U;
-  typedef int ScalarType;
-};
-using ModeType = int32_t;
 
 // Round num elements 'x' to be mem aligned according to 'multiple' and 'dtype_size'
 size_t RoundToMultiple(size_t x, size_t multiple, size_t dtype_size) {
@@ -867,7 +842,7 @@ inline void NumpyEinsumForwardGpu(const OpStatePtr& state_ptr,
     for (size_t i = 0; i < in_shape.size(); i++)
       in_shape[i] = inputs[i].shape_;
 
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
           (state, in_shape, out_shape,
            req, ctx, false);
@@ -902,7 +877,7 @@ inline void NumpyEinsumBackwardGpu(const OpStatePtr& state_ptr,
       in_shape[i] = inputs[i].shape_;
     for (size_t i = 0; i < out_shape.size(); i++)
       out_shape[i] = outputs[i].shape_;
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
+    MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
       EinsumOpGPU<DType> &op = GetEinsumOpGPU<DType>
           (state, in_shape, out_shape,
            req, ctx, true);
