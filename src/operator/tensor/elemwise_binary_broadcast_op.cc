@@ -425,10 +425,10 @@ void BinaryBroadcastRTCBackwardUseIn::operator()(const nnvm::NodeAttrs& attrs,
         const TBlob rhs = inputs[2].reshape(new_rshape);
         size_t workspace_size_l = broadcast::ReduceWorkspaceSize(
             s, lgrad.shape_, req[0], ograd.shape_, lhs.shape_,
-            rhs.shape_, common::mshadow_type_info(outputs[0].type_flag_).size);
+            rhs.shape_);
         size_t workspace_size_r = broadcast::ReduceWorkspaceSize(
             s, rgrad.shape_, req[1], ograd.shape_, lhs.shape_,
-            rhs.shape_, common::mshadow_type_info(outputs[1].type_flag_).size);
+            rhs.shape_);
         size_t workspace_size = std::max(workspace_size_l, workspace_size_r);
         Tensor<gpu, 1, char> workspace =
             ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);

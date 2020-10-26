@@ -57,6 +57,33 @@ const char reduce_function_use_input_code[] = R"code(
                      IType2::from(rhs[idx_rhs[u]])))
 )code";
 
+const char reduce_function_index_code[] = R"code(
+#define FUNC OP(IType0::from(big[idx_big[u]], k + u*by))
+
+template <typename T>
+struct AccTypeIndex {
+  using type = AccTypeIndex<T>;
+  index_t idx;
+  typename AccType<T>::type num;
+
+  __device__ static inline type from(const T& val, const index_t i) {
+    return {AccType<T>::from(val), i};
+  }
+
+  __device__ static inline index_t to(const type& val) {
+    return val.idx;
+  }
+
+  template <typename U>
+  __device__ inline type& operator=(const AccTypeIndex<U>& other) {
+    idx = other.idx;
+    num = other.num;
+  }
+}
+
+#define AccType AccTypeIndex
+)code";
+
 const char reduce_kernel_code[] = R"code(
 struct reduce_kernel_params {
   index_t big_shape[util::MAX_DIM];
@@ -84,7 +111,8 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
   using IType1 = AccType<InputType1>;
   using IType2 = AccType<InputType2>;
   using OType = AccType<OutputType0>;
-  using AType = typename IType0::type;
+  using MixedType = typename type_util::mixed_type<InputType0, OutputType0>::type;
+  using AType = typename AccType<MixedType>::type;
   AType* shTile = (AType*)(shTileChar);
   const int tid = threadIdx.x + threadIdx.y*blockDim.x;
   const int bx = (do_transpose) ? blockDim.y : blockDim.x;
@@ -124,7 +152,7 @@ __global__ void reduce_kernel(const int N, const int M, const bool addto,
                                                               params.rhs_stride);
             }
           }
-          typename OType::type tmp[UNROLL];
+          AType tmp[UNROLL];
           #pragma unroll
           for (int u=0;u < UNROLL;u++) {
             if (k + u*by < Mend) {
@@ -215,7 +243,8 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
                 const TBlob& big, const Tensor<gpu, 1, char>& workspace,
                 const ReduceImplConfig& config, const int ndim,
                 const std::string &common_code, int dev_id,
-                const TBlob *lhs = nullptr, const TBlob *rhs = nullptr) {
+                const TBlob *lhs = nullptr, const TBlob *rhs = nullptr,
+                const bool use_index = false) {
   using namespace common::cuda::rtc;
   void* small_dptr = small.dptr_;
   bool first_kernel_addto = addto;
@@ -295,7 +324,7 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
   args.emplace_back(&config.Mnext);
 
   const auto &function_code = (lhs == nullptr)
-                            ? reduce_function_code
+                            ? (use_index ? reduce_function_index_code : reduce_function_code)
                             : reduce_function_use_input_code;
   auto reduce_kernel_func = get_function(code + function_code,
                                          "reduce_kernel",
@@ -376,7 +405,8 @@ __global__ void reduce_kernel_M1(const int N,
 void RTCReduceM1Impl(Stream<gpu> *s, const TBlob &small, const TBlob &big,
                      const TBlob *lhs, const TBlob *rhs,
                      const ReduceImplConfig &config, const int ndim,
-                     const std::string &common_code, int dev_id) {
+                     const std::string &common_code, int dev_id,
+                     const bool use_index = false) {
   using namespace common::cuda::rtc;
 
   std::string code = common_code +
@@ -427,7 +457,7 @@ void RTCReduceM1Impl(Stream<gpu> *s, const TBlob &small, const TBlob &big,
   args.emplace_back(&param);
 
   const auto &function_code = (lhs == nullptr)
-                            ? reduce_function_code
+                            ? (use_index ? reduce_function_index_code : reduce_function_code)
                             : reduce_function_use_input_code;
   auto reduce_kernel_M1_func = get_function(code + function_code,
                                             "reduce_kernel_M1",
@@ -447,14 +477,12 @@ void RTCReduce(const OpContext& ctx,
                const TBlob& big,
                const std::string& reducer,
                int ndim,
-               const std::string& OP) {
+               const std::string& OP,
+               const bool use_index) {
   using namespace mxnet::common::cuda::rtc;
   if (req == kNullOp) return;
   Stream<gpu> *s = ctx.get_stream<gpu>();
-  size_t big_type_size = common::mshadow_type_info(big.type_flag_).acc_size;
-  size_t small_type_size = common::mshadow_type_info(small.type_flag_).acc_size;
-  size_t type_size = std::max(big_type_size, small_type_size);
-  ReduceImplConfig config(small.shape_, big.shape_, nullptr, nullptr, type_size);
+  ReduceImplConfig config(small.shape_, big.shape_, nullptr, nullptr);
   std::string common_code = std::string("const OpReqType req = ") +
                             util::to_string(req) +
                             ";\n"
@@ -469,10 +497,12 @@ void RTCReduce(const OpContext& ctx,
                             ";\n";
   if (config.M == 1) {
     RTCReduceM1Impl(s, small, big, nullptr, nullptr, config,
-                    ndim, common_code, ctx.run_ctx.ctx.dev_id);
+                    ndim, common_code, ctx.run_ctx.ctx.dev_id,
+                    use_index);
   } else {
     RTCReduceImpl(s, small, req == kAddTo, big, workspace, config,
-                  ndim, common_code, ctx.run_ctx.ctx.dev_id);
+                  ndim, common_code, ctx.run_ctx.ctx.dev_id,
+                  nullptr, nullptr, use_index);
   }
 }
 
@@ -490,10 +520,7 @@ void RTCReduce(const OpContext& ctx,
   using namespace mxnet::common::cuda::rtc;
   if (req == kNullOp) return;
   Stream<gpu> *s = ctx.get_stream<gpu>();
-  size_t big_type_size = common::mshadow_type_info(big.type_flag_).acc_size;
-  size_t small_type_size = common::mshadow_type_info(small.type_flag_).acc_size;
-  size_t type_size = std::max(big_type_size, small_type_size);
-  ReduceImplConfig config(small.shape_, big.shape_, &lhs.shape_, &rhs.shape_, type_size);
+  ReduceImplConfig config(small.shape_, big.shape_, &lhs.shape_, &rhs.shape_);
   std::string common_code = std::string("const OpReqType req = ") +
                             util::to_string(req) +
                             ";\n"

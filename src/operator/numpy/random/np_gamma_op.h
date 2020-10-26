@@ -420,7 +420,7 @@ inline void GammaReparamBackwardImpl(const OpContext& ctx,
   const TBlob alpha = inputs[1].reshape(new_ishape);
   TBlob samples = inputs[2].reshape(new_oshape);
   size_t workspace_size =
-      ReduceWorkspaceSize(s, igrad.shape_, req[0], ograd.shape_, sizeof(DType));
+      ReduceWorkspaceSize(s, igrad.shape_, req[0], ograd.shape_);
   // Convert samples to standard gamma
   Kernel<op_with_req<mshadow_op::div, kWriteTo>, xpu>::Launch(
     s, samples.Size(), samples.dptr<DType>(), samples.dptr<DType>(), DType(scale));

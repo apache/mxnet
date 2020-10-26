@@ -493,6 +493,64 @@ struct nrmlp {
     scale = 0;
   }
 };
+
+/*! \brief arg max reducer */
+struct argmax {
+  /*! \brief do reduction into dst */
+  template<typename AType, typename DType>
+  __device__ inline static void Reduce(volatile AType& dst,  volatile DType src) {
+    if (dst.num < src.num) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename AType, typename DType>
+  __device__ inline static void Reduce(volatile AType& dst,  volatile DType src,
+                                       volatile DType& residual) {
+    if (dst.num < src.num) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  __device__ inline static void Merge(volatile DType& dst_val, volatile DType& src_val) {
+    if (dst_val.num < src_val.num) {
+      dst_val.num = src_val.num;
+      dst_val.idx = src_val.idx;
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  __device__ inline static void Merge(volatile DType& dst_val, volatile DType& dst_residual,
+                                      volatile DType& src_val, volatile DType& src_residual) {
+    if (dst_val.num < src_val.num) {
+      dst_val.num = src_val.num;
+      dst_val.idx = src_val.idx;
+    }
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  __device__ inline static void Finalize(volatile DType& dst) {}
+  /*! \brief finalize reduction */
+  template<typename DType>
+  __device__ inline static void Finalize(volatile DType& dst, volatile DType&) {}
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  __device__ inline static void SetInitValue(DType &initv) {
+    initv.num = -2 * DBL_MAX;
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  __device__ inline static void SetInitValue(DType &initv, DType &) {
+    initv.num = -2 * DBL_MAX;
+  }
+};
 }  // namespace red
 
 )code";

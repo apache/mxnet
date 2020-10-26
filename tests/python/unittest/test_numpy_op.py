@@ -4370,6 +4370,11 @@ def test_np_argmin_argmax():
         ((5, 0, 3), -1, False),
         ((5, 0, 3), None, True),
         ((5, 0, 3), 1, True),
+        ((3, 5, 7), None, False),
+        ((3, 5, 7), 0, False),
+        ((3, 5, 7), 1, False),
+        ((3, 5, 7), 2, False),
+        ((3, 5, 7, 9, 11), -3, False),
     ]
     dtypes = ['float16', 'float32', 'float64']
     ops = ['argmin', 'argmax']
@@ -4419,6 +4424,23 @@ def test_np_argmin_argmax():
                         mx_ret = net(a)
                         assert mx_ret.dtype == np_ret.dtype
                         assert same(mx_ret.asnumpy(), np_ret)
+
+
+@with_seed()
+@use_np
+def test_np_argmin_argmax_large_tensor():
+    # compare inp[arg] with ext directly because along one axis there might 
+    # be multiple extrema
+    def single_run(dtype):
+        inp = np.random.normal(0, 10, size=(200, 30000), dtype=dtype)
+        arg = np.argmax(inp, 1)
+        ext = np.amax(inp, 1)
+        for i, idx in enumerate(arg):
+            assert inp[i, idx] == ext[i]
+
+    dtypes = ['float16', 'float32', 'float64']
+    for d in dtypes:
+        single_run(d)
 
 
 @with_seed()

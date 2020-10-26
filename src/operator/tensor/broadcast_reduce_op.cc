@@ -66,12 +66,9 @@ void ReduceAxesRTCComputeImpl(const OpContext& ctx,
 
   mxnet::TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
-  const TBlob in_data = inputs[0].reshape(src_shape);
-  const TBlob out_data = outputs[0].reshape(dst_shape);
   Stream<gpu>* s = ctx.get_stream<gpu>();
   size_t workspace_size = broadcast::ReduceWorkspaceSize(
-      s, out_data.shape_, req[0], in_data.shape_,
-      common::mshadow_type_info(inputs[0].type_flag_).size);
+      s, dst_shape, req[0], src_shape);
   Tensor<gpu, 1, char> workspace =
       ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
   ReduceAxesRTCComputeWithWorkspaceImpl(ctx, inputs, req, outputs, reducer, normalize,

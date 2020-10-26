@@ -107,12 +107,8 @@ void LayerNormComputeGeneral(const nnvm::NodeAttrs& attrs,
   int channel_size = red_src_shape.Size() / red_dst_shape.Size();
   // Initialize the workspace
   Tensor<xpu, 1, char> workspace;
-  size_t workspace_size = 0;
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    workspace_size =
-      broadcast::ReduceWorkspaceSize(s, mean_data.shape_, req[0],
-                                     in_data.shape_, sizeof(DType));
-  });
+  size_t workspace_size = broadcast::ReduceWorkspaceSize(s, mean_data.shape_, req[0],
+                                                         in_data.shape_);
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
 
 #if !defined(__CUDACC__)
@@ -484,26 +480,17 @@ void LayerNormGradComputeGeneral(const nnvm::NodeAttrs& attrs,
   int channel_size = red_src_shape.Size() / red_dst_shape.Size();
   // Initialize the workspace + Construct the temporary TBlobs
   Tensor<xpu, 1, char> workspace;
-  size_t reduce_workspace_size = 0;
-  size_t data_size = 0;
-  size_t red_out_size = 0;
-  MSHADOW_REAL_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-    data_size = sizeof(DType) * data.Size();
-    red_out_size = sizeof(DType) * mean.Size();
-    // There are two types of reduction workloads: reduce over axis and reduce exclude axis
-    // We take the maximum of the workspace sizes required by these workloads.
-    // Also, we explicitly set the req_type=kAddto in case we want to use it.
-    reduce_workspace_size =
-      std::max(reduce_workspace_size,
-               broadcast::ReduceWorkspaceSize(s, red_dst_shape,
-                                              kAddTo, red_src_shape,
-                                              sizeof(DType)));
-    reduce_workspace_size =
-      std::max(reduce_workspace_size,
+  size_t dtype_size = common::mshadow_type_info(outputs[0].type_flag_).size;
+  size_t data_size = data.Size() * dtype_size;
+  size_t red_out_size = mean.Size() * dtype_size;
+  // There are two types of reduction workloads: reduce over axis and reduce exclude axis
+  // We take the maximum of the workspace sizes required by these workloads.
+  // Also, we explicitly set the req_type=kAddto in case we want to use it.
+  size_t reduce_workspace_size =
+      std::max(broadcast::ReduceWorkspaceSize(s, red_dst_shape,
+                                              kAddTo, red_src_shape),
                broadcast::ReduceWorkspaceSize(s, red_exclude_dst_shape, kAddTo,
-                                              red_exclude_src_shape,
-                                              sizeof(DType)));
-  });
+                                              red_exclude_src_shape));
   workspace = ctx.requested[0].get_space_typed<xpu, 1, char>(
     Shape1(reduce_workspace_size + data_size * 2 + red_out_size), s);
   const TBlob normalized_data = TBlob(workspace.dptr_ + reduce_workspace_size,

@@ -677,8 +677,7 @@ struct ReduceImplWrap {
     std::vector<int> reduce_axis = GetReduceAxis(out_move_shape, in_move_shape);
     if (reduce_axis.empty() || req == kNullOp) { return 0U; }
     ws_reduce = broadcast::ReduceWorkspaceSize(ctx.get_stream<xpu>(),
-                                               out_shape, req, in_shape,
-                                               sizeof(DType));
+                                               out_shape, req, in_shape);
     return ws_reduce;
   }
 
