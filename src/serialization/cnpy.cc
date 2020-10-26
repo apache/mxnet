@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "cnpy.h"
+#include <algorithm>
 #include <stdint.h>
 #include <fstream>
 #include <complex>
@@ -32,9 +32,39 @@
 #include <string_view>
 #include <typeinfo>
 #include <vector>
+
+#include "cnpy.h"
 #include "zip.h"
 
+#include <mxnet/op_attr_types.h>
+#include <mxnet/imperative.h>
+
+
 namespace mxnet {
+
+void fortran_order_transpose_prepare(std::vector<dim_t>& shape) {
+    std::reverse(std::begin(shape), std::end(shape));
+}
+
+NDArray fortran_order_transpose(std::vector<dim_t>& shape, int type_flag, NDArray& array) {
+    std::reverse(std::begin(shape), std::end(shape));
+    TShape tshape(shape);
+    NDArray transposed(tshape, Context::CPU(), false, type_flag);
+    const std::vector<NDArray*> inputs {&array};
+    const std::vector<NDArray*> outputs {&transposed};
+    const std::vector<OpReqType> reqs {kWriteTo};  // Transpose does not support kWriteInplace
+    nnvm::NodeAttrs attrs;
+    if (!Imperative::Get()->is_np_shape()) {
+        attrs.op = nnvm::Op::Get("transpose");
+    } else {
+        attrs.op = nnvm::Op::Get("_npi_transpose");
+    }
+    attrs.op->attr_parser(&attrs);
+    Imperative::Get()->InvokeOp(Context::CPU(), attrs, inputs, outputs,
+                                reqs, DispatchMode::kFCompute, OpStatePtr());
+    return transposed;
+}
+
 
 namespace npy {
 
@@ -171,15 +201,11 @@ uint32_t parse_npy_header_len(std::ifstream& strm) {
     return header_len;
 }
 
-std::pair<int, mxnet::TShape> parse_npy_header_descr(const std::string& header) {
+std::tuple<int, int, std::vector<dim_t>> parse_npy_header_descr(const std::string& header) {
     // Fortran order
     std::string::size_type loc = header.find("fortran_order");
     CHECK_NE(loc, std::string::npos) << "failed to find NPY header keyword: 'fortran_order'";
     bool fortran_order = (header.substr(loc + 16, 4) == "True" ? true : false);
-    // TODO: support fortran order
-    CHECK_EQ(fortran_order, false) << "Loading files in fortran_order is not yet supported. "
-                                   << "Please open the file with numpy.load and convert "
-                                   << "to non-fortran order";
 
     // Shape
     loc = header.find("(");
@@ -189,9 +215,9 @@ std::pair<int, mxnet::TShape> parse_npy_header_descr(const std::string& header) 
     std::string shape_str = header.substr(loc+1, end_loc-loc-1);
     std::regex num_regex("[0-9][0-9]*");
     std::smatch sm;
-    std::vector<dim_t> shape_;
+    std::vector<dim_t> shape;
     while(std::regex_search(shape_str, sm, num_regex)) {
-        shape_.push_back(std::stoi(sm[0].str()));
+        shape.push_back(std::stoi(sm[0].str()));
         shape_str = sm.suffix().str();
     }
 
@@ -206,8 +232,7 @@ std::pair<int, mxnet::TShape> parse_npy_header_descr(const std::string& header) 
                                                     << "convert endianness and re-save the file.";
 
     int type_flag = dtype_descr(header);
-    mxnet::TShape shape(shape_);
-    return std::pair(type_flag, shape);
+    return std::tuple(type_flag, fortran_order, shape);
 }
 
 
@@ -245,11 +270,21 @@ NDArray load_array(const std::string& fname) {
     uint32_t header_len = parse_npy_header_len(strm);
     std::string header(header_len, ' ');
     strm.read(header.data(), header_len);
-    auto [type_flag, shape] = parse_npy_header_descr(header);
+    auto [type_flag, fortran_order, shape] = parse_npy_header_descr(header);
 
-    NDArray array(shape, Context::CPU(), false, type_flag);
+    if (fortran_order) {
+        fortran_order_transpose_prepare(shape);
+    }
+
+    TShape tshape(shape);
+    NDArray array(tshape, Context::CPU(), false, type_flag);
     const TBlob& blob = array.data();
     strm.read(reinterpret_cast<char*>(blob.dptr_), blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_));
+
+    if(fortran_order) {
+        array = fortran_order_transpose(shape, type_flag, array);
+    }
+
     return array;
 }
 
@@ -426,14 +461,23 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(const std:
         if (bytesread != header_len) {
             LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
         }
-        auto [type_flag, shape] = npy::parse_npy_header_descr(header);
+        auto [type_flag, fortran_order, shape] = npy::parse_npy_header_descr(header);
 
-        NDArray array(shape, Context::CPU(), false, type_flag);
+        if (fortran_order) {
+            fortran_order_transpose_prepare(shape);
+        }
+
+        TShape tshape(shape);
+        NDArray array(tshape, Context::CPU(), false, type_flag);
         const TBlob& blob = array.data();
         bytesread = zip_fread(file, blob.dptr_, blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_));
         if (bytesread != blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_)) {
             LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
         }
+
+        // if(fortran_order) {
+        //     array = fortran_order_transpose(shape, type_flag, array);
+        // }
 
         arrays.push_back(array);
         names.emplace_back(fname);

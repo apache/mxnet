@@ -410,6 +410,17 @@ def test_ndarray_saveload():
     os.remove(fname)
 
 
+def test_ndarray_load_fortran_order(tmp_path):
+    arr = np.arange(20).reshape((2, 10)).T
+    assert np.isfortran(arr)
+    np.save(tmp_path / 'fortran_order.npy', arr)
+
+    mx_arr = mx.nd.load(str(tmp_path / 'fortran_order.npy'))[0]
+    np_mx_arr = mx_arr.asnumpy()
+    assert not np.isfortran(np_mx_arr)
+    assert np.sum(np_mx_arr != arr) == 0
+
+
 def test_ndarray_legacy_load():
     data = []
     for i in range(6):
