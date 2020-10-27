@@ -171,7 +171,7 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
       s"Shape inference failed. $numTensor tensors expected, but got " +
         s"$nIn args, $nOut ouputs and $nAux aux states")
     val (inShapes, outShapes, auxShapes) =
-      inferShape(intputShapes.map(Shape(_.map(_.toInt))))
+      inferShape(intputShapes.map(x => Shape(x.map(_.toInt))))
     require(inShapes != null && inShapes.length != 0, "InputShape is undefined or empty")
     require(outShapes != null && outShapes.length != 0, "OutputShape is undefined or empty")
     if (auxShapes != null && auxShapes.length != 0) {
