@@ -2120,6 +2120,14 @@ def test_tril_indices():
 
 
 @use_np
+def test_tril_indices_extreme():
+    data = np.tril_indices(n=2, m=INT_OVERFLOW+2, k=INT_OVERFLOW)
+    assert data[0].shape == (INT_OVERFLOW + 1 + INT_OVERFLOW + 2, )
+    assert data[0][-1] == 1 and data[1][-1] == INT_OVERFLOW + 1
+    assert data[0][INT_OVERFLOW] == 0 and data[1][INT_OVERFLOW] == INT_OVERFLOW
+
+
+@use_np
 def test_kron():
     # tensor tensor case
     inp1 = np.array([5, 10], dtype="float64")

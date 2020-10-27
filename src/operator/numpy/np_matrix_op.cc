@@ -1147,14 +1147,14 @@ inline bool TrilindicesOpShape(const nnvm::NodeAttrs& attrs,
   const NumpyTrilindicesParam& param =
     nnvm::get<NumpyTrilindicesParam>(attrs.parsed);
 
-  int n = param.n;
-  int m = param.m;
-  int k = param.k;
+  index_t n = param.n;
+  index_t m = param.m;
+  index_t k = param.k;
 
   index_t length = 0;
-  int end = k;
-  for (int i = 0; i < n; i++) {
-    int mi = std::min(end, m - 1);
+  index_t end = k;
+  for (index_t i = 0; i < n; i++) {
+    index_t mi = std::min(end, m - 1);
     if (mi >= 0)
       length += mi + 1;
     end++;

@@ -317,9 +317,9 @@ void NumpyVstackBackward(const nnvm::NodeAttrs& attrs,
 }
 
 struct NumpyTrilindicesParam : public dmlc::Parameter<NumpyTrilindicesParam> {
-  int n;
-  int k;
-  int m;
+  index_t n;
+  index_t k;
+  index_t m;
   DMLC_DECLARE_PARAMETER(NumpyTrilindicesParam) {
     DMLC_DECLARE_FIELD(n)
       .describe("The row dimension of the arrays for which"
@@ -379,14 +379,14 @@ void TrilindicesOpForward(const nnvm::NodeAttrs& attrs,
     ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(total_temp_size), s);
   index_t* indices = reinterpret_cast<index_t*>(temp_space.dptr_);
 
-  int n = param.n;
-  int m = param.m;
-  int k = param.k;
+  index_t n = param.n;
+  index_t m = param.m;
+  index_t k = param.k;
 
-  int end = k;
+  index_t end = k;
   index_t idx = 0;
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j <= std::min(end, m - 1); j++) {
+  for (index_t i = 0; i < n; i++) {
+    for (index_t j = 0; j <= std::min(end, m - 1); j++) {
       indices_cpu[idx] = i;
       indices_cpu[idx + length] = j;
       idx++;
@@ -397,7 +397,7 @@ void TrilindicesOpForward(const nnvm::NodeAttrs& attrs,
   if (ctx.run_ctx.ctx.dev_mask() == gpu::kDevMask) {
   #if MXNET_USE_CUDA
     cudaMemcpyAsync(indices, indices_cpu.data(),
-                    indices_cpu.size() * sizeof(int),
+                    indices_cpu.size() * sizeof(index_t),
                     cudaMemcpyHostToDevice,
                     Stream<gpu>::GetStream(ctx.get_stream<gpu>()));
   #else
