@@ -226,7 +226,7 @@
     5. 3rdparty/dlpack - For details, see, 3rdparty/dlpack/LICENSE
          Copyright 2017 by Contributors
     6. 3rdparty/dmlc-core - For details, see, 3rdparty/dmlc-core/LICENSE
-         Copyright (c) 2015 by Contributors
+         Copyright (c) 2015-2018 by Contributors
          Copyright 2015 by dmlc-core developers
          Copyright by Contributors
     7. 3rdparty/mshadow - For details, see, 3rdparty/mshadow/LICENSE
