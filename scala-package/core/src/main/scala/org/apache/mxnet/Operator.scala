@@ -175,7 +175,8 @@ abstract class CustomOpProp(needTopGrad: Boolean = false) {
     require(inShapes != null && inShapes.length != 0, "InputShape is undefined or empty")
     require(outShapes != null && outShapes.length != 0, "OutputShape is undefined or empty")
     if (auxShapes != null && auxShapes.length != 0) {
-      inShapes.map(_.toArray.map(_.toLong)) ++ outShapes.map(_.toArray.map(_.toLong)) ++ auxShapes.map(_.toArray.map(_.toLong))
+      inShapes.map(_.toArray.map(_.toLong)) ++ outShapes.map(_.toArray.map(_.toLong)) ++
+          auxShapes.map(_.toArray.map(_.toLong))
     } else inShapes.map(_.toArray.map(_.toLong)) ++ outShapes.map(_.toArray.map(_.toLong))
   }
 
