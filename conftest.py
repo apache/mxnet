@@ -204,7 +204,7 @@ def function_scope_seed(request):
     except:
         logging.warning('Unable to import numpy/mxnet. Skip setting function-level seed.')
 
-    seed_message = 'np/mx/python random seeds are set to {}, use MXNET_TEST_SEED={} to reproduce.'
+    seed_message = 'Setting np/mx/python random seeds to {}. Use MXNET_TEST_SEED={} to reproduce.'
     seed_message = seed_message.format(seed, seed)
 
     # Always log seed on DEBUG log level. This makes sure we can find out the
@@ -215,12 +215,13 @@ def function_scope_seed(request):
     yield  # run the test
 
     if request.node.rep_setup.failed:
-        logging.info("Setting up a test failed: {}", request.node.nodeid)
+        logging.error("Setting up a test failed: {}", request.node.nodeid)
     elif request.node.rep_call.outcome == 'failed':
-        # Either request.node.rep_setup.failed or request.node.rep_setup.passed
-        # should be True
+        # Either request.node.rep_setup.failed or request.node.rep_setup.passed should be True
         assert request.node.rep_setup.passed
-        # On failure also log seed on INFO log level
-        logging.info(seed_message)
+        # On failure also log seed on WARNING log level
+        error_message = 'Error seen with seeded test, use MXNET_TEST_SEED={} to reproduce'
+        error_message = error_message.format(seed)
+        logging.warning(error_message)
 
     random.setstate(old_state)
