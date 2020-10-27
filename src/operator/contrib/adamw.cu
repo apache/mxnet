@@ -41,15 +41,31 @@ void GetScaleFloat<gpu>(mshadow::Stream<gpu> *s, const TBlob &scale_blob, float 
 }
 
 NNVM_REGISTER_OP(_adamw_update)
+.set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+    [](const NodeAttrs&, const bool) {
+      return false;
+    })
 .set_attr<FCompute>("FCompute<gpu>", MPUpdate<gpu, AdamWUpdate<gpu>>);
 
 NNVM_REGISTER_OP(_mp_adamw_update)
+.set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+    [](const NodeAttrs&, const bool) {
+      return false;
+    })
 .set_attr<FCompute>("FCompute<gpu>", MPUpdate<gpu, MPAdamWUpdate<gpu>>);
 
 NNVM_REGISTER_OP(_multi_adamw_update)
+.set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+    [](const NodeAttrs&, const bool) {
+      return false;
+    })
 .set_attr<FCompute>("FCompute<gpu>", multiMPUpdate<gpu, false>);
 
 NNVM_REGISTER_OP(_multi_mp_adamw_update)
+.set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+    [](const NodeAttrs&, const bool) {
+      return false;
+    })
 .set_attr<FCompute>("FCompute<gpu>", multiMPUpdate<gpu, true>);
 
 }  // namespace op

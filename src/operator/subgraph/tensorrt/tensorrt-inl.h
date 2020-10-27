@@ -20,18 +20,23 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2019-2020 by Contributors
  * \file tensorrt-inl.h
  * \brief TensorRT operation registration
- * \author Marek Kolodziej, Clement Fuji Tsang
+ * \author Marek Kolodziej, Clement Fuji Tsang, Serge Panev
 */
 
 #if MXNET_USE_TENSORRT
 
 #include <onnx-tensorrt/NvOnnxParser.h>
 
+#include <algorithm>
+#include <future>
+#include <iterator>
 #include <utility>
+#include <sstream>
 #include <string>
+#include <unordered_set>
 #include <vector>
 
 #include "../../nn/activation-inl.h"
@@ -46,6 +51,7 @@
 #include "../subgraph_property.h"
 #include "nnvm_to_onnx-inl.h"
 #include "./onnx_to_tensorrt.h"
+#include "./tensorrt_int8_calibrator.h"
 
 namespace mxnet {
 namespace op {
@@ -56,17 +62,29 @@ struct TRTParam {
   std::unordered_map<std::string, uint32_t> inputs_to_idx;
   std::unordered_map<std::string, uint32_t> outputs_to_idx;
   std::unordered_map<std::string, NDArray> params_map;
+  bool fp16_mode;
+  bool int8_mode;
+  int calibration_iters;
 };
 
 struct TRTEngineParam {
-  TRTEngineParam(onnx_to_tensorrt::unique_ptr<nvinfer1::ICudaEngine> _trt_engine,
+  using EnginePtr = onnx_to_tensorrt::unique_ptr<nvinfer1::ICudaEngine>;
+  TRTEngineParam(EnginePtr _trt_engine,
                  onnx_to_tensorrt::unique_ptr<nvonnxparser::IParser> _trt_parser,
                  std::unique_ptr<onnx_to_tensorrt::TRT_Logger> _trt_logger,
                  const std::unordered_map<std::string, uint32_t>& input_map,
-                 const std::unordered_map<std::string, uint32_t>& output_map) {
+                 const std::unordered_map<std::string, uint32_t>& output_map,
+                 int _max_batch_size,
+                 std::unique_ptr<::onnx_to_tensorrt::TRTInt8Calibrator> _calibrator = {},
+                 std::future<EnginePtr> _future_int8_engine = {}) {
     trt_engine = std::move(_trt_engine);
     trt_logger = std::move(_trt_logger);
     trt_parser = std::move(_trt_parser);
+    calibrator = std::move(_calibrator);
+    future_int8_engine = std::move(_future_int8_engine);
+    calibration_mode = future_int8_engine.valid();
+    max_batch_size = _max_batch_size;
+    input_name_to_idx = input_map;
     binding_order = std::make_shared<std::vector<std::pair<uint32_t, bool> > >();
     bindings = std::make_shared<std::vector<void*> >();
     binding_order->reserve(trt_engine->getNbBindings());
@@ -82,12 +100,36 @@ struct TRTEngineParam {
     trt_executor = onnx_to_tensorrt::InferObject(trt_engine->createExecutionContext());
   }
 
-  onnx_to_tensorrt::unique_ptr<nvinfer1::ICudaEngine> trt_engine;
+  void ResetEngine(EnginePtr _trt_engine,
+                   bool _calibration_mode = false) {
+    trt_executor.reset();
+    trt_engine.reset();
+    trt_engine = std::move(_trt_engine);
+    trt_executor = onnx_to_tensorrt::InferObject(trt_engine->createExecutionContext());
+    calibration_mode = _calibration_mode;
+  }
+
+  ~TRTEngineParam() {
+    if (future_int8_engine.valid()) {
+      calibrator->waitAndSetDone();
+      future_int8_engine.wait();
+    }
+  }
+
+  EnginePtr trt_engine;
   onnx_to_tensorrt::unique_ptr<nvinfer1::IExecutionContext> trt_executor;
   onnx_to_tensorrt::unique_ptr<nvonnxparser::IParser> trt_parser;
   std::unique_ptr<onnx_to_tensorrt::TRT_Logger> trt_logger;
   std::shared_ptr<std::vector<std::pair<uint32_t, bool> > > binding_order;
   std::shared_ptr<std::vector<void*> > bindings;
+
+  // needed by the int8 calibrator
+  std::unique_ptr<::onnx_to_tensorrt::TRTInt8Calibrator> calibrator;
+  std::future<EnginePtr> future_int8_engine;
+  bool calibration_mode;
+  int max_batch_size;
+  std::unordered_map<std::string, uint32_t> input_name_to_idx;
+  std::unordered_map<std::string, NDArray> params_map;
 };
 
 class TensorrtSelector : public SubgraphSelector {
@@ -268,6 +310,52 @@ class TensorrtProperty : public SubgraphProperty {
     return std::make_shared<TensorrtProperty>();
   }
 
+  void PrePartition(const nnvm::Graph& g,
+    const std::unordered_map<std::string, std::string>& options_map) override {
+    auto it_precision = options_map.find("precision");
+    if (it_precision != options_map.end()) {
+      auto precision_string = it_precision->second;
+      std::replace(precision_string.begin(), precision_string.end(), '_', ' ');
+      std::istringstream iss(precision_string);
+      std::unordered_set<std::string> precision_list((std::istream_iterator<std::string>(iss)),
+                                                      std::istream_iterator<std::string>());
+      for (auto &precision : precision_list) {
+        if (precision == "fp16") {
+          fp16_mode_  = true;
+        } else if (precision == "int8") {
+          int8_mode_ = true;
+        } else {
+          CHECK(precision == "fp32")
+            << "TensorRT Op: `precision` only accepts combination of 'fp32`, 'fp16' and 'int8'. "
+               "e.g. precision='fp16_int8', precision='int8', precision='fp32_int8'\n"
+               "`Notes:\n"
+               "Omitting `fp16` or `fp32` is equivalent to `fp32` (`fp32_int8` <=> `int8')\n"
+               "fp16` overrides `fp32` (`fp32_fp16` <=> `fp16`)";
+        }
+      }
+    }
+
+    if (int8_mode_) {
+      auto it_iters = options_map.find("calibration_iters");
+      CHECK(it_iters != options_map.end())
+        << "TensorRT Op: `calibration_iters` has to be set when using `int8_mode`.";
+      calibration_iters_ = std::stoi(it_iters->second);
+    }
+    auto& in_arg_names = g.GetAttr<std::vector<std::string>>("in_arg_names");
+    auto& in_aux_names = g.GetAttr<std::vector<std::string>>("in_aux_names");
+    NDArray **in_args_ptr = g.GetAttr<NDArray**>("in_args");
+    NDArray **in_aux_ptr = g.GetAttr<NDArray**>("in_aux");
+    in_args_dict_.clear();
+    in_aux_dict_.clear();
+    // we trust the Python API, len(in_arg_names) == len(in_args_ptr)
+    for (unsigned i = 0; i < in_arg_names.size(); ++i) {
+      in_args_dict_[in_arg_names[i]] = in_args_ptr[i];
+    }
+    for (unsigned i = 0; i < in_aux_names.size(); ++i) {
+      in_aux_dict_[in_aux_names[i]] = in_aux_ptr[i];
+    }
+  }
+
   nnvm::ObjectPtr CreateSubgraphNode(const nnvm::Symbol &sym,
                                    const int subgraph_id) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
@@ -281,16 +369,36 @@ class TensorrtProperty : public SubgraphProperty {
     n->attrs.op = Op::Get("_TensorRT");
     CHECK(n->attrs.op);
     n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
+
+    // Mapping subgraph params with NDArrays
+    TRTParam param;
+    param.fp16_mode = fp16_mode_;
+    param.int8_mode = int8_mode_;
+    param.calibration_iters = calibration_iters_;
     std::ostringstream params_oss;
-    for (auto &e : new_sym.ListInputNames(nnvm::Symbol::kAll)) {
-      params_oss << e << ";";
+    for (auto &param_name : new_sym.ListInputNames(nnvm::Symbol::kAll)) {
+      NDArray *cache = nullptr;
+      auto it_args = in_args_dict_.find(param_name);
+      if (it_args != in_args_dict_.end()) {
+        cache = it_args->second;
+      } else {
+        auto it_aux = in_aux_dict_.find(param_name);
+        if (it_aux != in_aux_dict_.end()) {
+          cache = it_aux->second;
+        }
+      }
+      if (cache != nullptr) {
+        param.params_map.emplace(param_name, cache->Copy(Context()));
+        param.params_map[param_name].WaitToRead();
+        params_oss << param_name << ";";
+      }
     }
     auto tensorrt_params_names = params_oss.str();
-    tensorrt_params_names.pop_back();
-    n->attrs.dict["subgraph_params_names"] = tensorrt_params_names;
-    TRTParam param;
+    if (!tensorrt_params_names.empty()) {
+      tensorrt_params_names.pop_back();
+    }
     n->attrs.parsed = param;
-    n->op()->attr_parser(&(n->attrs));
+    n->attrs.dict["subgraph_params_names"] = tensorrt_params_names;
     return n;
   }
 
@@ -329,6 +437,27 @@ class TensorrtProperty : public SubgraphProperty {
     }
     subgraph_node->attrs.parsed = std::move(_params);
   }
+
+  void PostPartition(const nnvm::Graph& g) override {
+    if (int8_mode_) {
+      int n_trt_engines = 0;
+      nnvm::DFSVisit(g.outputs, [&n_trt_engines](const std::shared_ptr<nnvm::Node>& n) {
+          if (n->attrs.op != nullptr && n->attrs.op->name == "_TensorRT") {
+            n_trt_engines++;
+          }
+      });
+      LOG(INFO) << "[TensorRT op] " << n_trt_engines << " INT8 engines have been created. "
+            << "They are set in calibration mode for the next " << calibration_iters_
+            << " iterations. Please feed calibration data reprensenting the inference data "
+            << "(performance is low during calibration).";
+    }
+  }
+
+ private:
+  std::unordered_map<std::string, NDArray*> in_args_dict_, in_aux_dict_;
+  bool fp16_mode_;
+  bool int8_mode_;
+  int calibration_iters_;
 };
 
 

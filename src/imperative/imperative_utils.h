@@ -26,6 +26,7 @@
 #include <map>
 #include <string>
 #include "../executor/graph_executor.h"
+#include "../executor/cuda_graphs.h"
 #include "../executor/exec_pass.h"
 #include "../c_api/c_api_common.h"
 #include "../common/utils.h"
@@ -985,12 +986,25 @@ inline Engine::OprHandle CreateEngineOp(
   bool is_gpu = default_ctx.dev_mask() == gpu::kDevMask;
   bool is_async = execs.size() > 1 ? false : execs[0]->exec_type() == ExecType::kAsync;
 
+#if CUDA_GRAPHS_AVAILABLE
+  // Provide initialized `cuda_graphs_exec`, which when captured
+  // by exec_fun, acts like a static variable inside the mutable closure.
+  cuda_graphs::CudaGraphsExec cuda_graphs_exec(execs, is_gpu, opr_names);
+  auto exec_fun = [cuda_graphs_exec, execs, is_async, is_gpu] (
+      RunContext ctx, Engine::CallbackOnComplete on_complete) mutable {
+    if (is_async) {
+      execs[0]->op_ctx.async_on_complete = on_complete;
+    }
+    // Run all opr in the sub-graph with CUDA graphs executor if possible
+    cuda_graphs_exec.RunAll(execs, ctx, is_gpu);
+#else
   auto exec_fun = [execs, is_async, is_gpu] (
       RunContext ctx, Engine::CallbackOnComplete on_complete) {
     if (is_async) {
       execs[0]->op_ctx.async_on_complete = on_complete;
     }
-    for (const auto& exec : execs) exec->Run(ctx, is_gpu);
+    exec::OpExecutor::RunAll(execs, ctx, is_gpu);
+#endif
     // call on complete only if it is async op
     if (!is_async) {
       if (is_gpu) {

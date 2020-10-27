@@ -18,13 +18,21 @@
 Prerequisites
 -------------
 This package supports Linux and Windows platforms. You may also want to check:
+- [mxnet-cu110](https://pypi.python.org/pypi/mxnet-cu110/) with CUDA-11.0 support.
+- [mxnet-cu101](https://pypi.python.org/pypi/mxnet-cu101/) with CUDA-10.1 support.
+- [mxnet-cu100](https://pypi.python.org/pypi/mxnet-cu100/) with CUDA-10.0 support.
 - [mxnet-cu92](https://pypi.python.org/pypi/mxnet-cu92/) with CUDA-9.2 support.
-- [mxnet-cu90](https://pypi.python.org/pypi/mxnet-cu90/) with CUDA-9.0 support.
-- [mxnet-cu80](https://pypi.python.org/pypi/mxnet-cu80/) with CUDA-8.0 support.
-- [mxnet-cu75](https://pypi.python.org/pypi/mxnet-cu75/) with CUDA-7.5 support.
 - [mxnet](https://pypi.python.org/pypi/mxnet/).
 
 To download CUDA, check [CUDA download](https://developer.nvidia.com/cuda-downloads). For more instructions, check [CUDA Toolkit online documentation](http://docs.nvidia.com/cuda/index.html).
+
+To use this package on Linux you need the `libquadmath.so.0` shared library. On
+Debian based systems, including Ubuntu, run `sudo apt install libquadmath0` to
+install the shared library. On RHEL based systems, including CentOS, run `sudo
+yum install libquadmath` to install the shared library. As `libquadmath.so.0` is
+a GPL library and MXNet part of the Apache Software Foundation, MXNet must not
+redistribute `libquadmath.so.0` as part of the Pypi package and users must
+manually install it.
 
 To install for other platforms (e.g. Windows, Raspberry Pi/ARM) or other versions, check [Installing MXNet](https://mxnet.incubator.apache.org/versions/master/install/index.html) for instructions on building from source.
 
@@ -33,11 +41,4 @@ Installation
 To install:
 ```bash
 pip install mxnet-cu102
-```
-
-Nightly Builds
---------------
-To install the latest nightly build, use:
-```bash
-pip install --pre mxnet-cu102 -f https://dist.mxnet.io/python
 ```

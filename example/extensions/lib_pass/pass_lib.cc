@@ -26,79 +26,29 @@
 #include <math.h>
 #include <iostream>
 #include <algorithm>
-#include "lib_api.h"
+#include "mxnet/lib_api.h"
 
-/* \brief a basic pass that copies the input to the output */
-MXReturnValue myPass(const std::string& in_graph, const std::string** out_graph,
-                     const std::unordered_map<std::string, std::string>& options,
-                     const std::unordered_map<std::string, MXTensor>& args,
-                     const std::unordered_map<std::string, MXTensor>& aux,
-                     const PassResource& res) {
+using namespace mxnet::ext;
+
+/* \brief a basic pass that prints out the options and the graph */
+MXReturnValue myPass(mxnet::ext::Graph *g,
+                     const std::unordered_map<std::string, std::string>& options) {
   for (auto kv : options) {
     std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
   }
-
-  *out_graph = new std::string(in_graph);
+  g->print();
   return MX_SUCCESS;
 }
 
 REGISTER_PASS(myPass)
 .setBody(myPass);
 
-/* \brief a basic pass that parses the input string to JSON and then dumps it back */
-MXReturnValue jsonPass(const std::string& in_graph, const std::string** out_graph,
-                       const std::unordered_map<std::string, std::string>& options,
-                       const std::unordered_map<std::string, MXTensor>& args,
-                       const std::unordered_map<std::string, MXTensor>& aux,
-                       const PassResource& res) {
-  for (auto kv : options)
-    std::cout << "option: " << kv.first << " ==> " << kv.second << std::endl;
-
-  // add test arg/aux
-  
-  MXTensor* arg_ = res.alloc_arg("test_arg",{1},MXContext::CPU(0),kFloat32);
-  MXTensor* aux_ = res.alloc_aux("test_aux",{1},MXContext::CPU(0),kFloat32);
-  
-  // convert json string to json object
-  JsonParser parser;
-  JsonVal json_val = parser.parse_to_json(in_graph);
-
-  // get nodes list
-  JsonVal nodes = json_val.map[JsonVal("nodes")];
-
-  // loop over nodes
-  for(int i=0; i<nodes.list.size(); i++) {
-    JsonVal node = nodes.list[i];
-    // get the op name
-    std::string op = node.map[JsonVal("op")].str;
-    // get node ID inputs to op
-    JsonVal node_inputs = node.map[JsonVal("inputs")];
-
-    //get shape/type if available
-    std::string shape;
-    int dtype = -1;
-    if(node.map.find(JsonVal("attrs")) != node.map.end()) {
-      JsonVal attrs = node.map[JsonVal("attrs")];
-      if(attrs.map.find(JsonVal("shape")) != attrs.map.end()) 
-        shape = attrs.map[JsonVal("shape")].str;
-      if(attrs.map.find(JsonVal("dtype")) != attrs.map.end())
-        dtype = std::stoi(attrs.map[JsonVal("dtype")].str);
-    }
-  }
-  
-  *out_graph = new std::string(parser.dump(json_val));
-  return MX_SUCCESS;
-}
-
-REGISTER_PASS(jsonPass)
-.setBody(jsonPass);
-
 MXReturnValue initialize(int version) {
-  if (version >= 10700) {
+  if (version >= 10900) {
     std::cout << "MXNet version " << version << " supported" << std::endl;
     return MX_SUCCESS;
   } else {
-    std::cout << "MXNet version " << version << " not supported" << std::endl;
+    MX_ERROR_MSG << "MXNet version " << version << " not supported" << std::endl;
     return MX_FAIL;
   }
 }

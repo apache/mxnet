@@ -29,7 +29,7 @@ node('utility') {
   utils = load('ci/Jenkinsfile_utils.groovy')
   custom_steps = load('ci/jenkins/Jenkins_steps.groovy')
 }
-utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3')
+utils.assign_node_labels(utility: 'utility', linux_cpu: 'mxnetlinux-cpu', linux_gpu: 'mxnetlinux-gpu', linux_gpu_p3: 'mxnetlinux-gpu-p3', linux_gpu_g4: 'mxnetlinux-gpu-g4')
 
 utils.main_wrapper(
 core_logic: {
@@ -41,8 +41,6 @@ core_logic: {
     custom_steps.compile_unix_cmake_gpu(),
     custom_steps.compile_unix_tensorrt_gpu(),
     custom_steps.compile_unix_int64_gpu(),
-    custom_steps.compile_unix_full_gpu_no_tvm_op(),
-    custom_steps.compile_unix_cmake_gpu_no_tvm_op(),
     custom_steps.compile_unix_cmake_gpu_no_rtc(),
     custom_steps.compile_unix_full_gpu_mkldnn_cpp_test()
   ])
@@ -52,8 +50,8 @@ core_logic: {
     custom_steps.test_unix_python3_quantize_gpu(),
     custom_steps.test_unix_python3_mkldnn_gpu(),
     custom_steps.test_unix_python3_mkldnn_nocudnn_gpu(),
-    custom_steps.test_unix_python3_tensorrt_gpu(),
     custom_steps.test_unix_perl_gpu(),
+    custom_steps.test_unix_python3_tensorrt_gpu(),
     custom_steps.test_unix_r_gpu(),
     custom_steps.test_unix_cpp_gpu(),
     custom_steps.test_unix_cpp_mkldnn_gpu(),
@@ -63,7 +61,6 @@ core_logic: {
     custom_steps.test_unix_distributed_kvstore_gpu(),
     custom_steps.test_static_python_gpu(),
     custom_steps.test_static_python_gpu_cmake(),
-    custom_steps.test_unix_python3_gpu_no_tvm_op(),
     custom_steps.test_unix_capi_cpp_package(),
 
     // Disabled due to: https://github.com/apache/incubator-mxnet/issues/11407

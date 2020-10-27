@@ -278,11 +278,11 @@ def test_multi_worker_dataloader_release_pool():
         del D
 
 
+@with_seed()
 def test_dataloader_context():
     X = np.random.uniform(size=(10, 20))
     dataset = gluon.data.ArrayDataset(X)
     default_dev_id = 0
-    custom_dev_id = 1
 
     # use non-pinned memory
     loader1 = gluon.data.DataLoader(dataset, 8)
@@ -294,11 +294,15 @@ def test_dataloader_context():
     for _, x in enumerate(loader2):
         assert x.context == context.cpu_pinned(default_dev_id)
 
-    # use pinned memory with custom device id
-    loader3 = gluon.data.DataLoader(dataset, 8, pin_memory=True,
-                                    pin_device_id=custom_dev_id)
-    for _, x in enumerate(loader3):
-        assert x.context == context.cpu_pinned(custom_dev_id)
+    if mx.context.num_gpus() <= 1:
+        print('Bypassing custom_dev_id pinned mem test on system with < 2 gpus.')
+    else:
+        custom_dev_id = 1
+        # use pinned memory with custom device id
+        loader3 = gluon.data.DataLoader(dataset, 8, pin_memory=True,
+                                        pin_device_id=custom_dev_id)
+        for _, x in enumerate(loader3):
+            assert x.context == context.cpu_pinned(custom_dev_id)
 
 def batchify(a):
     return a

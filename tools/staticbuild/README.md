@@ -27,7 +27,7 @@ environment variable settings. Here are examples you can run with this script:
 ```
 tools/staticbuild/build.sh cu102
 ```
-This would build the mxnet package based on CUDA 10.2. Currently, we support variants cpu, native, cu90, cu92, cu100, and cu101. All of these variants expect native have MKL-DNN backend enabled. 
+This would build the mxnet package based on CUDA 10.2. Currently, we support variants cpu, native, cu92, cu100, cu101, cu102 and cu110. All of these variants expect native have MKL-DNN backend enabled. 
 
 ```
 tools/staticbuild/build.sh cpu

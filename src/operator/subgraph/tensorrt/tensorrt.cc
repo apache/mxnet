@@ -18,15 +18,17 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2019-2020 by Contributors
  * \file tensorrt.cc
  * \brief TensorRT operation registration
- * \author Marek Kolodziej, Clement Fuji Tsang
+ * \author Marek Kolodziej, Clement Fuji Tsang, Serge Panev
 */
 
 #if MXNET_USE_TENSORRT
 
 #include "./tensorrt-inl.h"
+
+#include <NvInfer.h>
 
 namespace mxnet {
 namespace op {
@@ -264,6 +266,7 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
                           const std::vector<TShape>& in_shape,
                           const std::vector<int>& in_type) {
   const auto& node_param = nnvm::get<TRTParam>(attrs.parsed);
+  const bool tensorrt_int8 = node_param.int8_mode;
   nnvm::Graph graph;
   graph.outputs = attrs.subgraphs[0]->outputs;
   uint32_t max_batch_size = dmlc::GetEnv("MXNET_TENSORRT_MAX_BATCH_SIZE", in_shape[0][0]);
@@ -277,9 +280,12 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
   const auto& outputs_to_idx = node_param.outputs_to_idx;
   const auto& idx_g = graph.indexed_graph();
   const auto& input_nids = idx_g.input_nodes();
+
+  // needed by the int8 calibrator
+  std::unordered_map<std::string, std::pair<void*, size_t>> input_buffers;
   mxnet::ShapeVector shape_inputs(input_nids.size());
   nnvm::DTypeVector dtype_inputs(input_nids.size());
-  for (int i = 0; i < input_nids.size(); ++i) {
+  for (size_t i = 0; i < input_nids.size(); ++i) {
     auto node = idx_g[input_nids[i]].source;
     auto it_params = params_map.find(node->attrs.name);
     auto it_inputs = inputs_to_idx.find(node->attrs.name);
@@ -289,6 +295,21 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
     } else if (it_inputs != inputs_to_idx.end()) {
       shape_inputs[i] = in_shape[it_inputs->second];
       dtype_inputs[i] = in_type[it_inputs->second];
+      if (tensorrt_int8) {
+        int dtype_size;
+        if (dtype_inputs[i] == mshadow::kFloat32) {
+          dtype_size = 4;
+        } else if (dtype_inputs[i] == mshadow::kFloat16) {
+          dtype_size = 2;
+        } else {
+          LOG(FATAL) << "TensorRT op supports only float32 and float16 inputs.";
+        }
+        size_t buffer_size = shape_inputs[i].Size() * dtype_size;
+        void *ptr;
+        MSHADOW_CUDA_CALL(cudaMalloc(&ptr, buffer_size));
+        input_buffers.emplace(node->attrs.name,
+                              std::make_pair(ptr, buffer_size));
+      }
     } else {
       LOG(FATAL) << node->attrs.name << " attribute is missing for attributes inference";
     }
@@ -301,7 +322,7 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
   TRTInferType(attrs, &_in_type, &out_type);
   nnvm::DTypeVector dtypes(idx_g.num_node_entries());
   mxnet::ShapeVector shapes(idx_g.num_node_entries());
-  for (int i = 0; i < graph.outputs.size(); ++i) {
+  for (size_t i = 0; i < graph.outputs.size(); ++i) {
     auto eid = idx_g.entry_id(graph.outputs[i]);
     dtypes[eid] = out_type[i];
     shapes[eid] = out_shape[i];
@@ -310,12 +331,32 @@ OpStatePtr TRTCreateState(const nnvm::NodeAttrs& attrs, Context ctx,
   graph.attrs["shape_inputs"] = std::make_shared<nnvm::any>(std::move(shape_inputs));
   graph.attrs["dtype"]        = std::make_shared<nnvm::any>(std::move(dtypes));
   graph.attrs["shape"]        = std::make_shared<nnvm::any>(std::move(shapes));
+
+  std::unique_ptr<::onnx_to_tensorrt::TRTInt8Calibrator> calibrator;
+  if (tensorrt_int8) {
+    calibrator.reset(
+      new ::onnx_to_tensorrt::TRTInt8Calibrator(params_map, std::move(input_buffers),
+                                                max_batch_size, node_param.calibration_iters));
+  }
   auto onnx_graph = op::nnvm_to_onnx::ConvertNnvmGraphToOnnx(graph, &params_map);
-  auto trt_tuple = ::onnx_to_tensorrt::onnxToTrtCtx(onnx_graph, max_batch_size, 1 << 30);
+  uint32_t verbose = dmlc::GetEnv("MXNET_TENSORRT_VERBOSE", 0);
+  auto log_lvl = nvinfer1::ILogger::Severity::kWARNING;
+  if (verbose != 0) {
+    log_lvl = nvinfer1::ILogger::Severity::kVERBOSE;
+  }
+
+  auto trt_tuple = ::onnx_to_tensorrt::onnxToTrtCtx(onnx_graph, node_param.fp16_mode,
+                                                    max_batch_size, 1 << 30,
+                                                    calibrator.get(),
+                                                    log_lvl);
+
   return OpStatePtr::Create<TRTEngineParam>(std::move(std::get<0>(trt_tuple)),
                                             std::move(std::get<1>(trt_tuple)),
                                             std::move(std::get<2>(trt_tuple)),
-                                            inputs_to_idx, outputs_to_idx);
+                                            inputs_to_idx, outputs_to_idx,
+                                            max_batch_size,
+                                            std::move(calibrator),
+                                            std::move(std::get<3>(trt_tuple)));
 }
 
 NNVM_REGISTER_OP(_TensorRT)
@@ -329,6 +370,11 @@ NNVM_REGISTER_OP(_TensorRT)
     .set_attr<nnvm::FListInputNames>("FListInputNames", TRTListInputNames)
     .set_attr<nnvm::FListOutputNames>("FListOutputNames", DefaultSubgraphOpListOutputs)
     .set_attr<FCreateOpState>("FCreateOpState", TRTCreateState)
+    .set_attr<FIsCUDAGraphsCompatible>("FIsCUDAGraphsCompatible",
+        [](const NodeAttrs& attrs, const bool) {
+          const TRTParam& param = nnvm::get<TRTParam>(attrs.parsed);
+          return !param.int8_mode;
+        })
     .set_attr<FInferStorageType>("FInferStorageType", TRTInferStorageType);
 
 MXNET_REGISTER_SUBGRAPH_BACKEND(TensorRT);

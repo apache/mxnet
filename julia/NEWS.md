@@ -15,8 +15,11 @@
 <!--- specific language governing permissions and limitations -->
 <!--- under the License. -->
 
-# v1.7.0
+# v1.9.0
 
+# v1.8.0
+
+# v1.7.0
 
 # v1.6.0
 

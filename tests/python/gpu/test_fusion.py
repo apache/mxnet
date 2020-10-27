@@ -15,15 +15,17 @@
 # specific language governing permissions and limitations
 # under the License.
 
+import sys
 import os
 import random
+import itertools
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import *
 
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import with_seed
+from common import setup_module, teardown, with_seed
 
 def check_fused_symbol(sym, **kwargs):
     inputs = sym.list_inputs()
@@ -43,10 +45,10 @@ def check_fused_symbol(sym, **kwargs):
         data = {inp : kwargs[inp].astype(dtype) for inp in inputs}
         for grad_req in ['write', 'add']:
             type_dict = {inp : dtype for inp in inputs}
-            os.environ["MXNET_USE_FUSION"] = "0"
-            orig_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
-            os.environ["MXNET_USE_FUSION"] = "1"
-            fused_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
+            with environment('MXNET_USE_FUSION', '0'):
+                orig_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
+            with environment('MXNET_USE_FUSION', '1'):
+                fused_exec = test_sym.simple_bind(ctx=ctx, grad_req=grad_req, type_dict=type_dict, **shapes)
             fwd_orig = orig_exec.forward(is_train=True, **data)
             out_grads = [mx.nd.ones_like(arr) for arr in fwd_orig]
             orig_exec.backward(out_grads=out_grads)
@@ -136,6 +138,9 @@ def check_unary_ops():
     for act_type in ['relu', 'sigmoid', 'tanh', 'softrelu', 'softsign']:
         announce_check("Activation(act_type='{}')".format(act_type))
         check_fused_symbol(mx.sym.Activation(a, act_type=act_type), a=arr)
+        if act_type == 'softrelu':
+            # Check that softrelu implementation doesn't overflow on large inputs
+            check_fused_symbol(mx.sym.Activation(a, act_type=act_type), a=1000 * arr)
 
     # Cast requires dtype
     for dtype in ['float16', 'float32', 'float64', 'int32']:
@@ -226,6 +231,7 @@ def check_other_ops():
     arr1 = mx.random.uniform(shape=(1,1,2,3))
     arr2 = mx.random.uniform(shape=(2,2,2,3))
     check_fused_symbol(mx.sym.broadcast_like(a, b, lhs_axes=[0], rhs_axes=[0]), a=arr1, b=arr2)
+
 
 def check_leakyrelu_ops():
     a = mx.sym.Variable('a')

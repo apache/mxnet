@@ -24,7 +24,7 @@ import pickle as pkl
 import random
 import functools
 from nose.tools import assert_raises, raises
-from common import with_seed, assertRaises, TemporaryDirectory
+from common import with_seed, assertRaises, TemporaryDirectory, setup_module, teardown
 from mxnet.test_utils import almost_equal
 from mxnet.test_utils import assert_almost_equal, assert_exception
 from mxnet.test_utils import default_context
@@ -237,7 +237,8 @@ def test_ndarray_reshape():
     assert same(tensor.reshape(-1, 15).reshape(0, -4, 3, -1).asnumpy(), true_res.reshape(2, 3, 5).asnumpy())
     assert same(tensor.reshape(-1, 0).asnumpy(), true_res.reshape(10, 3).asnumpy())
     assert same(tensor.reshape(-1, 0, reverse=True).asnumpy(), true_res.reshape(6, 5).asnumpy())
-
+    # https://github.com/apache/incubator-mxnet/issues/18886
+    assertRaises(ValueError, tensor.reshape, (2, 3))
 
 @with_seed()
 def test_ndarray_flatten():

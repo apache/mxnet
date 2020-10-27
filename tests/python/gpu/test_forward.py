@@ -74,7 +74,7 @@ def test_consistency(dump=False):
     ctx_list = [{'ctx': mx.gpu(0), 'data': data.shape, 'type_dict': {'data': data.dtype}},
                 {'ctx': mx.cpu(0), 'data': data.shape, 'type_dict': {'data': data.dtype}}]
     gt = check_consistency(sym, ctx_list, arg_params=arg_params, aux_params=aux_params,
-                           tol=1e-3, grad_req='null', raise_on_err=False, ground_truth=gt)
+                           rtol=1e-3, atol=1e-3, grad_req='null', raise_on_err=False, ground_truth=gt)
     if dump:
         np.savez('data/inception-v3-dump.npz', **{n: a.asnumpy() for n, a in gt.items()})
 

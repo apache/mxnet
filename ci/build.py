@@ -66,23 +66,18 @@ def get_dockerfile(platform: str, path=get_dockerfiles_path()) -> str:
     return os.path.join(path, "Dockerfile.{0}".format(platform))
 
 
-def get_docker_binary(use_nvidia_docker: bool) -> str:
-    return "nvidia-docker" if use_nvidia_docker else "docker"
-
-
-def build_docker(platform: str, docker_binary: str, registry: str, num_retries: int, no_cache: bool,
+def build_docker(platform: str, registry: str, num_retries: int, no_cache: bool,
                  cache_intermediate: bool) -> str:
     """
     Build a container for the given platform
     :param platform: Platform
-    :param docker_binary: docker binary to use (docker/nvidia-docker)
     :param registry: Dockerhub registry name
     :param num_retries: Number of retries to build the docker image
     :param no_cache: pass no-cache to docker to rebuild the images
     :return: Id of the top level image
     """
     tag = get_docker_tag(platform=platform, registry=registry)
-    logging.info("Building docker container tagged '%s' with %s", tag, docker_binary)
+    logging.info("Building docker container tagged '%s'", tag)
     #
     # We add a user with the same group as the executing non-root user so files created in the
     # container match permissions of the local user. Same for the group.
@@ -99,7 +94,7 @@ def build_docker(platform: str, docker_binary: str, registry: str, num_retries: 
     #
     # This doesn't work with multi head docker files.
     #
-    cmd = [docker_binary, "build",
+    cmd = ["docker", "build",
            "-f", get_dockerfile(platform),
            "--build-arg", "USER_ID={}".format(os.getuid()),
            "--build-arg", "GROUP_ID={}".format(os.getgid())]
@@ -119,19 +114,19 @@ def build_docker(platform: str, docker_binary: str, registry: str, num_retries: 
     run_cmd()
     # Get image id by reading the tag. It's guaranteed (except race condition) that the tag exists. Otherwise, the
     # check_call would have failed
-    image_id = _get_local_image_id(docker_binary=docker_binary, docker_tag=tag)
+    image_id = _get_local_image_id(docker_tag=tag)
     if not image_id:
         raise FileNotFoundError('Unable to find docker image id matching with {}'.format(tag))
     return image_id
 
 
-def _get_local_image_id(docker_binary, docker_tag):
+def _get_local_image_id(docker_tag):
     """
     Get the image id of the local docker layer with the passed tag
     :param docker_tag: docker tag
     :return: Image id as string or None if tag does not exist
     """
-    cmd = [docker_binary, "images", "-q", docker_tag]
+    cmd = ["docker", "images", "-q", docker_tag]
     image_id_b = check_output(cmd)
     image_id = image_id_b.decode('utf-8').strip()
     if not image_id:
@@ -196,8 +191,9 @@ def container_run(docker_client: SafeDockerClient,
 
     # Equivalent command
     docker_cmd_list = [
-        get_docker_binary(nvidia_runtime),
+        "docker",
         'run',
+        "--gpus all" if nvidia_runtime else "",
         "--cap-add",
         "SYS_PTRACE", # Required by ASAN
         '--rm',
@@ -352,7 +348,6 @@ def main() -> int:
     args = parser.parse_args()
 
     command = list(chain(*args.command))
-    docker_binary = get_docker_binary(args.nvidiadocker)
     docker_client = SafeDockerClient()
 
     environment = dict([(e.split('=')[:2] if '=' in e else (e, os.environ[e]))
@@ -366,7 +361,7 @@ def main() -> int:
         if args.docker_registry:
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
         if not args.run_only:
-            build_docker(platform=platform, docker_binary=docker_binary, registry=args.docker_registry,
+            build_docker(platform=platform, registry=args.docker_registry,
                          num_retries=args.docker_build_retries, no_cache=args.no_cache,
                          cache_intermediate=args.cache_intermediate)
         else:
@@ -410,7 +405,7 @@ def main() -> int:
         for platform in platforms:
             tag = get_docker_tag(platform=platform, registry=args.docker_registry)
             load_docker_cache(tag=tag, docker_registry=args.docker_registry)
-            build_docker(platform, docker_binary=docker_binary, registry=args.docker_registry,
+            build_docker(platform, registry=args.docker_registry,
                          num_retries=args.docker_build_retries, no_cache=args.no_cache)
             if args.build_only:
                 continue

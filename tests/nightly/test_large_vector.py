@@ -27,13 +27,14 @@ sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
 from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, create_vector
 from mxnet import gluon, nd
-from tests.python.unittest.common import with_seed
-from nose.tools import with_setup
+from common import with_seed, assertRaises
+from mxnet.base import MXNetError
 import unittest
 
 # dimension constants
 LARGE_X = 4300000000
 MEDIUM_X = 1000000000
+INT32_MAX = 2**31-1
 
 
 def test_nn():
@@ -1062,6 +1063,53 @@ def test_basic():
     check_modulo()
     check_maximum()
     check_minimum()
+
+
+# openblas and cublas are known to not work well with large
+# matrix dims under current configuration. checks are added
+# to exit from such use cases
+def test_linalg_large_dim():
+    def check_gemm():
+        A = nd.ones(shape=(1, INT32_MAX + 1, 1))
+        B = nd.ones(shape=(1, INT32_MAX + 1, 1))
+        C = nd.ones(shape=(1, 1, 1))
+        assertRaises(MXNetError, nd.linalg.gemm, \
+            A, B, C, transpose_b=True)
+
+    def check_gemm2():
+        A = nd.ones(shape=(1, 1, INT32_MAX + 1))
+        B = nd.ones(shape=(1, 1, INT32_MAX + 1))
+        assertRaises(MXNetError, nd.linalg.gemm2, \
+            A, B, transpose_b=True)
+
+    def check_trmm():
+        A = nd.ones(shape=(1, 1, 1))
+        B = nd.ones(shape=(1, INT32_MAX + 1, 1))
+        assertRaises(MXNetError, nd.linalg.trmm, \
+            A, B, rightside=True)
+
+    def check_trsm():
+        A = nd.ones(shape=(1, 1, 1))
+        B = nd.ones(shape=(1, 1, INT32_MAX + 1))
+        assertRaises(MXNetError, nd.linalg.trsm, \
+            A, B, rightside=False)
+
+    def check_syrk():
+        A = nd.ones(shape=(1, INT32_MAX + 1, 1))
+        assertRaises(MXNetError, nd.linalg.syrk, A)
+        assertRaises(MXNetError, nd.linalg.syrk, A, transpose=True)
+
+    def check_gelqf():
+        A = nd.ones(shape=(1, 1, INT32_MAX + 1))
+        assertRaises(MXNetError, nd.linalg.gelqf, A)
+
+    # batch input
+    check_gemm()
+    check_gemm2()
+    check_trmm()
+    check_trsm()
+    check_syrk()
+    check_gelqf()
 
 
 if __name__ == '__main__':

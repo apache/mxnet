@@ -16,13 +16,14 @@
 # under the License.
 
 from __future__ import print_function
-import sys, os, logging
+import sys, os, logging, functools
 import multiprocessing as mp
 import mxnet as mx
 import numpy as np
 import random
 import shutil
 from mxnet.base import MXNetError
+from mxnet.test_utils import environment
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../common/'))
 sys.path.insert(0, os.path.join(curr_path, '../../../python'))
@@ -208,17 +209,21 @@ def with_seed(seed=None):
                 logger = default_logger()
                 # 'nosetests --logging-level=DEBUG' shows this msg even with an ensuing core dump.
                 test_count_msg = '{} of {}: '.format(i+1,test_count) if test_count > 1 else ''
-                test_msg = ('{}Setting test np/mx/python random seeds, use MXNET_TEST_SEED={}'
-                            ' to reproduce.').format(test_count_msg, this_test_seed)
-                logger.log(log_level, test_msg)
+                pre_test_msg = ('{}Setting test np/mx/python random seeds, use MXNET_TEST_SEED={}'
+                                ' to reproduce.').format(test_count_msg, this_test_seed)
+                on_err_test_msg = ('{}Error seen with seeded test, use MXNET_TEST_SEED={}'
+                                ' to reproduce.').format(test_count_msg, this_test_seed)
+                logger.log(log_level, pre_test_msg)
                 try:
                     orig_test(*args, **kwargs)
                 except:
-                    # With exceptions, repeat test_msg at INFO level to be sure it's seen.
-                    if log_level < logging.INFO:
-                        logger.info(test_msg)
+                    # With exceptions, repeat test_msg at WARNING level to be sure it's seen.
+                    if log_level < logging.WARNING:
+                        logger.warning(on_err_test_msg)
                     raise
                 finally:
+                    # Provide test-isolation for any test having this decorator
+                    mx.nd.waitall()
                     np.random.set_state(post_test_state)
         return test_new
     return test_helper
@@ -277,7 +282,7 @@ def setup_module():
         seed = np.random.randint(0, np.iinfo(np.int32).max)
     else:
         seed = int(module_seed_str)
-        logger.warn('*** module-level seed is set: all tests running deterministically ***')
+        logger.warning('*** module-level seed is set: all tests running deterministically ***')
     logger.info('Setting module np/mx/python random seeds, use MXNET_MODULE_SEED=%s to reproduce.', seed)
     np.random.seed(seed)
     mx.random.seed(seed)
@@ -285,7 +290,7 @@ def setup_module():
     # The MXNET_TEST_SEED environment variable will override MXNET_MODULE_SEED for tests with
     #  the 'with_seed()' decoration.  Inform the user of this once here at the module level.
     if os.getenv('MXNET_TEST_SEED') is not None:
-        logger.warn('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
+        logger.warning('*** test-level seed set: all "@with_seed()" tests run deterministically ***')
 
 try:
     from tempfile import TemporaryDirectory
@@ -309,27 +314,20 @@ def teardown():
     """
     mx.nd.waitall()
 
-
-def with_post_test_cleanup():
+def with_environment(*args_):
     """
-    Helper function that cleans up memory by releasing it from memory pool
-    Required especially by large tensor tests that have memory footprints in GBs.
+    Helper function that takes a dictionary of environment variables and their
+    desired settings and changes the environment in advance of running the
+    decorated code.  The original environment state is reinstated afterwards,
+    even if exceptions are raised.
     """
     def test_helper(orig_test):
-        @make_decorator(orig_test)
+        @functools.wraps(orig_test)
         def test_new(*args, **kwargs):
-            logger = default_logger()
-            try:
+            with environment(*args_):
                 orig_test(*args, **kwargs)
-            except:
-                logger.info(test_msg)
-                raise
-            finally:
-                mx.nd.waitall()
-                mx.cpu().empty_cache()
         return test_new
     return test_helper
-
 
 def run_in_spawned_process(func, env, *args):
     """
@@ -361,16 +359,10 @@ def run_in_spawned_process(func, env, *args):
         return False
     else:
         seed = np.random.randint(0,1024*1024*1024)
-        orig_environ = os.environ.copy()
-        try:
-            for (key, value) in env.items():
-                os.environ[key] = str(value)
+        with environment(env):
             # Prepend seed as first arg
             p = mpctx.Process(target=func, args=(seed,)+args)
             p.start()
             p.join()
             assert p.exitcode == 0, "Non-zero exit code %d from %s()." % (p.exitcode, func.__name__)
-        finally:
-            os.environ.clear()
-            os.environ.update(orig_environ)
     return True

@@ -18,10 +18,10 @@
  */
 
 /*!
- * Copyright (c) 2019 by Contributors
+ * Copyright (c) 2019-2020 by Contributors
  * \file onnx_to_tensorrt.cc
  * \brief TensorRT integration with the MXNet executor
- * \author Marek Kolodziej, Clement Fuji Tsang
+ * \author Marek Kolodziej, Clement Fuji Tsang, Serge Panev
  */
 
 #if MXNET_USE_TENSORRT
@@ -35,12 +35,10 @@
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
 #include <onnx-tensorrt/NvOnnxParser.h>
-#include <onnx-tensorrt/NvOnnxParserRuntime.h>
 #include <dmlc/logging.h>
 #include <dmlc/parameter.h>
 
-#include <onnx-tensorrt/PluginFactory.hpp>
-#include <onnx-tensorrt/plugin_common.hpp>
+#include <future>
 
 using std::cout;
 using std::cerr;
@@ -68,17 +66,22 @@ void PrintVersion() {
 
 std::tuple<unique_ptr<nvinfer1::ICudaEngine>,
            unique_ptr<nvonnxparser::IParser>,
-           std::unique_ptr<TRT_Logger> > onnxToTrtCtx(
+           std::unique_ptr<TRT_Logger>,
+           std::future<onnx_to_tensorrt::unique_ptr<nvinfer1::ICudaEngine> > > onnxToTrtCtx(
         const std::string& onnx_model,
+        bool fp16_mode,
         int32_t max_batch_size,
         size_t max_workspace_size,
+        TRTInt8Calibrator* calibrator,
         nvinfer1::ILogger::Severity verbosity,
         bool debug_builder) {
   GOOGLE_PROTOBUF_VERIFY_VERSION;
 
   auto trt_logger = std::unique_ptr<TRT_Logger>(new TRT_Logger(verbosity));
   auto trt_builder = InferObject(nvinfer1::createInferBuilder(*trt_logger));
-  auto trt_network = InferObject(trt_builder->createNetwork());
+  const auto explicitBatch = 1U << static_cast<uint32_t>(
+                             nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
+  auto trt_network = InferObject(trt_builder->createNetworkV2(explicitBatch));
   auto trt_parser  = InferObject(nvonnxparser::createParser(*trt_network, *trt_logger));
   ::ONNX_NAMESPACE::ModelProto parsed_model;
   // We check for a valid parse, but the main effect is the side effect
@@ -114,18 +117,85 @@ std::tuple<unique_ptr<nvinfer1::ICudaEngine>,
       }
       throw dmlc::Error("Cannot parse ONNX into TensorRT Engine");
   }
-  if (dmlc::GetEnv("MXNET_TENSORRT_USE_FP16", true)) {
+  trt_builder->setMaxBatchSize(max_batch_size);
+  std::future<onnx_to_tensorrt::unique_ptr<nvinfer1::ICudaEngine>> future_int8_engine;
+#if NV_TENSORRT_MAJOR > 6
+  auto builder_config = InferObject(trt_builder->createBuilderConfig());
+
+  if (fp16_mode) {
+    if (trt_builder->platformHasFastFp16()) {
+      builder_config->setFlag(nvinfer1::BuilderFlag::kFP16);
+    } else {
+      LOG(WARNING) << "TensorRT can't use fp16 on this platform";
+    }
+  }
+
+  builder_config->setMaxWorkspaceSize(max_workspace_size);
+  if (debug_builder) {
+    builder_config->setFlag(nvinfer1::BuilderFlag::kDEBUG);
+  }
+
+  auto trt_engine = InferObject(trt_builder->buildEngineWithConfig(*trt_network, *builder_config));
+
+  if (calibrator != nullptr) {
+    if (trt_builder->platformHasFastInt8()) {
+      builder_config->setFlag(nvinfer1::BuilderFlag::kINT8);
+      builder_config->setInt8Calibrator(calibrator);
+    } else {
+      LOG(WARNING) << "TensorRT can't use int8 on this platform";
+      calibrator->setDone();
+      calibrator = nullptr;
+    }
+  }
+
+  // if the cache is null, we are in calibration mode
+  if (calibrator != nullptr && calibrator->isCacheEmpty()) {
+    future_int8_engine = std::async([trt_builder = std::move(trt_builder),
+                                     trt_network = std::move(trt_network),
+                                     builder_config = std::move(builder_config)]() {
+      // Calibration is blocking so we need to have it in a different thread.
+      // The engine will be calling calibrator.setBatch until it returns false
+      auto int8_engine = InferObject(trt_builder->buildEngineWithConfig(*trt_network,
+                                                                        *builder_config));
+      return std::move(int8_engine);
+    });
+  }
+#else
+  if (fp16_mode) {
     if (trt_builder->platformHasFastFp16()) {
       trt_builder->setFp16Mode(true);
     } else {
       LOG(WARNING) << "TensorRT can't use fp16 on this platform";
     }
   }
-  trt_builder->setMaxBatchSize(max_batch_size);
+
   trt_builder->setMaxWorkspaceSize(max_workspace_size);
   trt_builder->setDebugSync(debug_builder);
+
+  if (calibrator != nullptr) {
+    if (trt_builder->platformHasFastInt8()) {
+      trt_builder->setInt8Mode(true);
+      trt_builder->setInt8Calibrator(calibrator);
+    } else {
+      LOG(WARNING) << "TensorRT can't use int8 on this platform";
+      calibrator->setDone();
+      calibrator = nullptr;
+    }
+  }
   auto trt_engine = InferObject(trt_builder->buildCudaEngine(*trt_network));
-  return std::make_tuple(std::move(trt_engine), std::move(trt_parser), std::move(trt_logger));
+  // if the cache is null, we are in calibration mode
+  if (calibrator != nullptr && calibrator->isCacheEmpty()) {
+    future_int8_engine = std::async([trt_builder = std::move(trt_builder),
+                                     trt_network = std::move(trt_network)]() {
+      // Calibration is blocking so we need to have it in a different thread.
+      // The engine will be calling calibrator.setBatch until it returns false
+      auto int8_engine = InferObject(trt_builder->buildCudaEngine(*trt_network));
+      return std::move(int8_engine);
+    });
+  }
+#endif
+  return std::make_tuple(std::move(trt_engine), std::move(trt_parser),
+         std::move(trt_logger), std::move(future_int8_engine));
 }
 
 }  // namespace onnx_to_tensorrt
