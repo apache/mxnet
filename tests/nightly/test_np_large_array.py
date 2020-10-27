@@ -2128,6 +2128,27 @@ def test_tril_indices_extreme():
 
 
 @use_np
+def test_diff():
+    inp = np.zeros((2, INT_OVERFLOW+1))
+    inp[-1, -1] = 100
+    inp.attach_grad()
+    with mx.autograd.record():
+        out1 = np.diff(inp)
+        out1.backward()
+    assert out1.shape == (2, INT_OVERFLOW)
+    assert out1[-1, -1] == 100
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
+    with mx.autograd.record():
+        out2 = np.diff(inp, axis=0)
+        out2.backward()
+    assert out2.shape == (1, INT_OVERFLOW+1)
+    assert out2[-1, -1] == 100
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[1, -1] == 1, inp.grad[0, -1] == 1
+
+
+@use_np
 def test_kron():
     # tensor tensor case
     inp1 = np.array([5, 10], dtype="float64")
@@ -2256,3 +2277,15 @@ def test_symmetric_padding():
     assert out[-1][-1] == INT_OVERFLOW - 1
     assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
 
+
+@use_np
+def test_fill_diagonal():
+    # test 2d square matrix case
+    N = 2**16
+    data1 = np.zeros((N, N))
+    np.fill_diagonal(data1, [1, 2, 3, 4])
+    assert data1[0, 0] == 1 and data1[-1, -1] == 4
+    # test 2d long matrix case with wrap
+    data2 = np.zeros((INT_OVERFLOW, 2))
+    np.fill_diagonal(data2, [1, 2], wrap=True)
+    assert data2[0, 0] == 1 and data2[-1, -1] == 2
