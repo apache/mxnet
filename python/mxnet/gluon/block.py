@@ -1102,7 +1102,6 @@ class HybridBlock(Block):
             self._first_forward = False
             data, out = self._cached_graph
             out, is_dynamic = out._optimize_for_dynamic_shape_op(is_np_array(), self._flags)
-            self._cached_graph = data, out
 
             # update data_indices and param_indices
             data_indices = []
