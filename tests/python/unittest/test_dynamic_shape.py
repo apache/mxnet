@@ -22,7 +22,6 @@ from numpy.testing import assert_allclose, assert_array_equal
 from mxnet.test_utils import *
 from mxnet.base import _as_list
 from mxnet.attribute import AttrScope
-from common import with_seed
 
 
 def test_dynamic_shape():

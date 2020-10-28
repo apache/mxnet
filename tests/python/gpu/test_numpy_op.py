@@ -24,11 +24,10 @@ from mxnet.test_utils import assert_almost_equal, use_np, set_default_context, e
 import os
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.insert(0, os.path.join(curr_path, '../unittest'))
-from common import assertRaises, with_seed
+from common import assertRaises
 
 set_default_context(mx.gpu(0))
 
-@with_seed()
 @use_np
 def test_np_einsum():
     class TestEinsum(HybridBlock):
