@@ -439,4 +439,4 @@ model.save_parameters('leaf_models.params')
 ```
 
 This is the end of this tutorial, to see how you can speed up the training by
-using GPU hardware continue to the [next tutorial]("7-use_gpus.md")
+using GPU hardware continue to the [next tutorial]("7-use-gpus.md")
