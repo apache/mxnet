@@ -281,6 +281,8 @@
           Copyright (c) 2007, Apostolos Syropoulos (<asyropoulos@yahoo.com>)
     28. material-design-icons - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/material-design-icons-3.0.1/iconfont/
     29. Roboto fonts - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/font/Roboto/
+    30. OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
+          Copyright (c) 1997-2019 Intel Corporation
 
     =======================================================================================
     MIT licenses
@@ -292,24 +294,22 @@
          Copyright (c) 2015 Microsoft Corporation
     3. tree_lstm - For details, see example/gluon/tree_lstm/LICENSE
          Copyright (c) 2017 Riddhiman Dasgupta, Sheng Zha
-    4. OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
-         Copyright (c) 1997-2019 Intel Corporation
-    6. HalideIR - For details, see 3rdparty/tvm/3rdparty/HalideIR/LICENSE
+    4. HalideIR - For details, see 3rdparty/tvm/3rdparty/HalideIR/LICENSE
          Copyright (c) 2016 HalideIR contributors
          Copyright (c) 2012-2014 MIT CSAIL, Google Inc., and other contributors
          Copyright (c) 2016-2018 by Contributors
-    7. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/LICENSE
+    5. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/LICENSE
          Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
          Copyright (c) 2018 Open Neural Network Exchange
-    8. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/LICENSE
+    6. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/LICENSE
          Copyright (c) Facebook, Inc. and Microsoft Corporation.
-    9. clipboard.js - Refer to https://zenorocha.github.io/clipboard.js
+    7. clipboard.js - Refer to https://zenorocha.github.io/clipboard.js
          Licensed MIT © Zeno Rocha
-    10. clipboard.min.js - Refer to https://zenorocha.github.io/clipboard.js
+    8. clipboard.min.js - Refer to https://zenorocha.github.io/clipboard.js
          Licensed MIT © Zeno Rocha
-    11. mx-theme - For details, see docs/python_docs/themes/mx-theme/LICENSE
+    9. mx-theme - For details, see docs/python_docs/themes/mx-theme/LICENSE
          Copyright (c) 2016 myyasuda
-    12. intgemm - Refer to 3rdparty/intgemm/LICENSE
+    10. intgemm - Refer to 3rdparty/intgemm/LICENSE
          Copyright (c) 2017--2019 University of Edinburgh, Nikolay Bogoychev, Mateusz Chudyk, Kenneth Heafield, and Microsoft Corporation
          (Except 3rdparty/intgemm/test/3rd_party/catch.hpp is under the Boost license, listed separately)
 
@@ -1004,6 +1004,25 @@
     FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
     DEALINGS IN THE SOFTWARE.
+
+    =======================================================================================
+
+    22. OpenMP - Apache License v2.0 with LLVM Exceptions:
+
+    ---- LLVM Exceptions to the Apache 2.0 License ----
+    As an exception, if, as a result of your compiling your source code, portions
+    of this Software are embedded into an Object form of such source code, you
+    may redistribute such embedded portions in such Object form without complying
+    with the conditions of Sections 4(a), 4(b) and 4(d) of the License.
+
+    In addition, if you combine or link compiled forms of this Software with
+    software that is licensed under the GPLv2 ("Combined Software") and if a
+    court of competent jurisdiction determines that the patent provision (Section
+    3), the indemnity provision (Section 9) or other Section of the License
+    conflicts with the conditions of the GPLv2, you may retroactively and
+    prospectively choose to deem waived or otherwise exclude such Section(s) of
+    the License, but only in their entirety and only with respect to the Combined
+    Software.
 
     =======================================================================================
     Appendix
