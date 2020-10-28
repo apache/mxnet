@@ -9421,8 +9421,6 @@ def test_broadcast_ops_on_misaligned_input_oneside(dtype, lead_dim, both_ways):
 
 def test_sldwin_selfatten_operators():
     def gen_sliding_window_mask_full(batch_size, num_heads, seq_length, w, symmetric, d):
-        """Generate sliding_window attention mask for the full attention matrix ( seq_len^2 ).
-        """
         mask_np = np.zeros((batch_size, num_heads, seq_length, seq_length))
         for i in range(seq_length):
             end = (i + 1 + w * d) if symmetric else (i + 1)
@@ -9440,14 +9438,12 @@ def test_sldwin_selfatten_operators():
         valid_length = np.zeros((batch_size,))
         valid_length[:] = seq_length
 
-        ctx = mx.gpu(0)
-        #ctx = mx.cpu()
-        query = mx.np.array(query, ctx=ctx, dtype=np.float32)
-        key = mx.np.array(key, ctx=ctx, dtype=np.float32)
-        value = mx.np.array(value, ctx=ctx, dtype=np.float32)
-        dilation = mx.np.ones((num_heads,), ctx=ctx, dtype=np.int32)
+        query = mx.np.array(query, dtype=np.float32)
+        key = mx.np.array(key, dtype=np.float32)
+        value = mx.np.array(value, dtype=np.float32)
+        dilation = mx.np.ones((num_heads,), dtype=np.int32)
         dilation[:] = d
-        valid_length = mx.np.array(valid_length, ctx=ctx, dtype=np.int32)
+        valid_length = mx.np.array(valid_length, dtype=np.int32)
 
         query.attach_grad()
         key.attach_grad()
@@ -9472,9 +9468,9 @@ def test_sldwin_selfatten_operators():
         key.grad[:] = 0
         value.grad[:] = 0
 
-        mask_np = gen_sliding_window_mask_full(batch_size, num_heads, seq_length, w,
-                                               symmetric, d)
-        mask = mx.np.array(mask_np, ctx=ctx, dtype=np.float32)
+        mask_np = gen_sliding_window_mask_full(batch_size, num_heads, seq_length,
+                                               w, symmetric, d)
+        mask = mx.np.array(mask_np, dtype=np.float32)
 
         with mx.autograd.record():
             score = mx.npx.batch_dot(mx.np.swapaxes(query, 1, 2),
@@ -9497,6 +9493,6 @@ def test_sldwin_selfatten_operators():
 
     for symmetric in [True, False]:
         for d in [1, 2, 3]:
-            test_sldwin_atten_op_impl(8, 128, 12, 64, 32, symmetric, d)
+            test_sldwin_atten_op_impl(2, 128, 2, 8, 16, symmetric, d)
             test_sldwin_atten_op_impl(1, 8, 2, 4, 2, symmetric, d)
 

@@ -70,7 +70,7 @@ struct SldWinAttenParam : public dmlc::Parameter<SldWinAttenParam> {
     DMLC_DECLARE_FIELD(w)
     .describe("The one-sided window length");
     DMLC_DECLARE_FIELD(symmetric)
-    .describe("Whether to use causal attention");
+    .describe("If false, each token will only attend to itself and the previous tokens.");
   }
 };
 
