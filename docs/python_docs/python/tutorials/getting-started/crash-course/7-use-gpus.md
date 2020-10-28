@@ -21,7 +21,7 @@ In this step, you will learn how to use graphics processing units (GPUs) with MX
 
 ## Prerequisites
 
-Before you start the steps, make sure you have at least one Nvidia GPU on your machine and make sure that you have CUDA properly installed. GPUs from AMD and Intel are not supported. Additionally, you will need to install the GPU-enabled version of MXNet. You can find information about how to install the GPU version of MXNet for your system [here](https://mxnet.apache.org/versions/1.7/get_started/?).
+Before you start the steps, make sure you have at least one Nvidia GPU on your machine and make sure that you have CUDA properly installed. GPUs from AMD and Intel are not supported. Additionally, you will need to install the GPU-enabled version of MXNet. You can find information about how to install the GPU version of MXNet for your system [here](https://mxnet.apache.org/versions/1.4.1/install/ubuntu_setup.html).
 
 You can use the following command to view the number GPUs that are available to MXNet.
 
@@ -71,7 +71,7 @@ Remember that if the inputs are not on the same GPU, you will get an error.
 
 ## Run a neural network on a GPU
 
-To run a neural network on a GPU, you only need to copy and move the input data and parameters to the GPU. To demonstrate this you can reuse the previously defined LeafNetwork in [Training Neural Networks](trainNN.md). The following code example shows this.
+To run a neural network on a GPU, you only need to copy and move the input data and parameters to the GPU. To demonstrate this you can reuse the previously defined LeafNetwork in [Training Neural Networks](6-train-nn.md). The following code example shows this.
 
 ```{.python .input  n=16}
 # The convolutional block has a convolution layer, a max pool layer and a batch normalization layer
@@ -132,7 +132,7 @@ net(x)
 
 Finally, you will see how you can use multiple GPUs to jointly train a neural network through data parallelism. To elaborate on what data parallelism is, assume there are *n* GPUs, then you can split each data batch into *n* parts, and use a GPU on each of these parts to run the forward and backward passes on the seperate chunks of the data.
 
-First copy the data definitions with the following commands, and the transform functions from the tutorial [Training Neural Networks](trainNN.md).
+First copy the data definitions with the following commands, and the transform functions from the tutorial [Training Neural Networks](6-train-nn.md).
 
 ```{.python .input}
 # Import transforms as compose a series of transformations to the images
@@ -250,4 +250,4 @@ for epoch in range(10):
 
 ## Next steps
 
-Now that you have completed training and predicting with a neural network on GPUs, you can dive deep into the guides: [What is NP on MXNet](../deepnumpy/index.html) and [gluon](../gluon_from_experiment_to_deployment.md) if you want to understand those better. Otherwise, this is the conclusion of the crash course.
+Now that you have completed training and predicting with a neural network on GPUs, you can dive deep into other gluon packages: [GluonCV](https://cv.gluon.ai/tutorials/index.html) and [GluonNLP](https://nlp.gluon.ai) if you want to understand those better. Otherwise, this is the conclusion of the crash course.
