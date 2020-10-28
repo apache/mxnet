@@ -296,7 +296,7 @@
          Copyright (c) 2017 Riddhiman Dasgupta, Sheng Zha
     4. OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
          Copyright (c) 1997-2016 Intel Corporation
-    5. cma.h, cma_api_impl.h - For details, see 3rdparty/tvm/3rdparty/cma/LICENSE
+    5. cma.h, cma_api_impl.h - For details, see 3rdparty/tvm/3rdparty/cma/cma.h
          COPYRIGHT (C) 2017 Institute of Electronics and Computer Science (EDI), Latvia.
     6. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/LICENSE
          Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
