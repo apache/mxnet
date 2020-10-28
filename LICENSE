@@ -281,6 +281,8 @@
           Copyright (c) 2007, Apostolos Syropoulos (<asyropoulos@yahoo.com>)
     28. material-design-icons - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/material-design-icons-3.0.1/iconfont/
     29. Roboto fonts - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/font/Roboto/
+    30. bfloat16 - For details, see 3rdparty/tvm/3rdparty/bfloat16/bfloat16.cc
+          Copyright (c) 2019 by Contributors
 
     =======================================================================================
     MIT licenses
@@ -294,24 +296,24 @@
          Copyright (c) 2017 Riddhiman Dasgupta, Sheng Zha
     4. OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
          Copyright (c) 1997-2016 Intel Corporation
-    6. HalideIR - For details, see 3rdparty/tvm/3rdparty/HalideIR/LICENSE
-         Copyright (c) 2016 HalideIR contributors
-         Copyright (c) 2012-2014 MIT CSAIL, Google Inc., and other contributors
-         Copyright (c) 2016-2018 by Contributors
-    7. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/LICENSE
+    5. cma.h, cma_api_impl.h - For details, see 3rdparty/tvm/3rdparty/cma/LICENSE
+         COPYRIGHT (C) 2017 Institute of Electronics and Computer Science (EDI), Latvia.
+    6. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/LICENSE
          Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
          Copyright (c) 2018 Open Neural Network Exchange
-    8. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/LICENSE
+    7. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/LICENSE
          Copyright (c) Facebook, Inc. and Microsoft Corporation.
-    9. clipboard.js - Refer to https://zenorocha.github.io/clipboard.js
+    8. clipboard.js - Refer to https://zenorocha.github.io/clipboard.js
          Licensed MIT © Zeno Rocha
-    10. clipboard.min.js - Refer to https://zenorocha.github.io/clipboard.js
+    9. clipboard.min.js - Refer to https://zenorocha.github.io/clipboard.js
          Licensed MIT © Zeno Rocha
-    11. mx-theme - For details, see docs/python_docs/themes/mx-theme/LICENSE
+    10. mx-theme - For details, see docs/python_docs/themes/mx-theme/LICENSE
          Copyright (c) 2016 myyasuda
-    12. intgemm - Refer to 3rdparty/intgemm/LICENSE
+    11. intgemm - Refer to 3rdparty/intgemm/LICENSE
          Copyright (c) 2017--2019 University of Edinburgh, Nikolay Bogoychev, Mateusz Chudyk, Kenneth Heafield, and Microsoft Corporation
          (Except 3rdparty/intgemm/test/3rd_party/catch.hpp is under the Boost license, listed separately)
+    12. builtin_fp16.h - For details, see 3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
+         Copyright (c) 2009-2015 by llvm/compiler-rt contributors
 
 
     =======================================================================================
@@ -372,6 +374,9 @@
     6. PyBind11 FindPythonLibsNew.cmake - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindPythonLibsNew.cmake
          Copyright 2001-2009 Kitware, Inc.
          Copyright 2012 Continuum Analytics, Inc.
+    7. picojson.h - For details, see 3rdparty/tvm/3rdparty/picojson/picojson.h
+         Copyright 2009-2010 Cybozu Labs, Inc.
+         Copyright 2011-2014 Kazuho Oku
 
 
 
