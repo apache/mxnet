@@ -97,6 +97,7 @@ SET(EXTRA_OPERATORS "" CACHE PATH "EXTRA OPERATORS PATH")
 #---------------------------------------------
 set(USE_CUDA OFF CACHE BOOL "Build with CUDA support")
 set(USE_CUDNN OFF CACHE BOOL "Build with cudnn support, if found")
+set(USE_CUTENSOR OFF CACHE BOOL "Build with cutensor support, if found")
 
 # Target NVIDIA GPU achitecture.
 # Valid options are "Auto" for autodetection, "All" for all available

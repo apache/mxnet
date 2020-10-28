@@ -25,9 +25,8 @@ import mxnet as mx
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../python/unittest/'))
 
-from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_tensor, use_np
+from mxnet.test_utils import rand_ndarray, assert_almost_equal, rand_coord_2d, default_context, check_symbolic_forward, create_2d_np_tensor, use_np
 from mxnet import gluon, np, npx
-from common import with_seed
 import pytest
 from tests.python.unittest.common import assertRaises
 from mxnet.base import MXNetError
@@ -1200,8 +1199,89 @@ def test_subtract():
     assert B.grad.shape == (INT_OVERFLOW, 2)
     assert B.grad[0][0] == -1
 
+
+@use_np
+def test_diag():
+    # test diag extraction
+    inp = np.zeros((2, INT_OVERFLOW+2))
+    inp[-1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.diag(inp, k=INT_OVERFLOW)
+        out.backward()
+    assert out.shape == (2, )
+    assert out[1] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[1, -1] == 1 and inp.grad[0, -2] == 1
+    # now test mat generation
+    N = 2**16
+    inp = np.ones((N))
+    inp[-1] = 2
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.diag(inp)
+        out.backward()
+    assert out.shape == (N, N)
+    assert out[-1, -1] == 2 and out[0, 0] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1] == 1
+
     
 @use_np
+def test_diag_indices_from():
+    N = 2**16
+    inp = np.zeros((N, N))
+    inp.attach_grad()
+    with mx.autograd.record():
+        dim1, dim2 = np.diag_indices_from(inp)
+        dim1.backward()
+    assert dim1.shape == (N, ) and dim2.shape == (N, )
+    assert dim1[-1] == N-1 and dim2[-1] == N-1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == 0
+
+    
+@use_np
+def test_diagflat():
+    N = 2**15
+    inp = np.ones((2, N))
+    inp[-1, -1] = 2
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.diagflat(inp)
+        out.backward()
+    assert out.shape == (N*2, N*2)
+    assert out[-1, -1] == 2 and out[-1, -2] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
+
+
+@use_np
+def test_diagonal():
+    inp = np.zeros((2, INT_OVERFLOW+2))
+    inp[-1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.diagonal(inp, offset=INT_OVERFLOW)
+        out.backward()
+    assert out.shape == (2, )
+    assert out[1] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[1, -1] == 1 and inp.grad[0, -2] == 1
+    # now test with axes specified
+    N = 2**16
+    inp = np.zeros((N, N, 2))
+    inp[-1, -1] = np.array([1, 2])
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.diagonal(inp, offset=0, axis1=0, axis2=1)
+        out.backward()
+    assert out.shape == (2, N)
+    assert out[0, -1] == 1 and out[1, -1] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1, 0] == 1 and inp.grad[-1, -1, 1] == 1
+
+
 def test_roll():
     inp = np.zeros((2, INT_OVERFLOW))
     inp[-1, -1] = 1
@@ -1232,7 +1312,6 @@ def test_polyval():
     assert inp.grad[-1, -1] == 5
     assert poly.grad.shape == poly.shape
     assert poly.grad[0] == 4
-
 
 '''
                                      _               _
@@ -1886,3 +1965,311 @@ def test_array_split():
     assert out[0][0][0] == 0
     assert out[1][-1][-1] == 2
 
+
+@use_np
+def test_std():
+    N = 2*20
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = N
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.std(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    ref = ((float(N)/INT_OVERFLOW)**2 * (INT_OVERFLOW-1))**0.5
+    assert_almost_equal(out[1], ref, rtol=1e-5, atol=1e-5)
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+
+@use_np
+def test_var():
+    N = 2*20
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[-1, -1] = N
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.var(inp, axis=1)
+        out.backward()
+    assert out.shape == (2, )
+    ref = (float(N)/INT_OVERFLOW)**2 * (INT_OVERFLOW-1)
+    assert_almost_equal(out[1], ref, rtol=1e-5, atol=1e-5)
+
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+@use_np
+def test_rollaxis():
+    inp = np.zeros((1, 1, 2, INT_OVERFLOW, 1))
+    inp[-1, -1, -1, -1, -1] = 1
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.rollaxis(inp, 3)
+        out.backward()
+    assert out.shape == (INT_OVERFLOW, 1, 1, 2, 1)
+    assert out[-1, -1, -1, -1, -1] == 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1, -1, -1, -1] == 1
+
+
+@use_np
+def test_vstack():
+    inp1 = np.zeros((INT_OVERFLOW, 1))
+    inp2 = np.ones((INT_OVERFLOW, 1))
+    inp1.attach_grad()
+    inp2.attach_grad()
+    with mx.autograd.record():
+        out1 = np.vstack((inp1, inp2))
+        out1.backward()
+    assert out1.shape == (DOUBLE_INT_OVERFLOW, 1)
+    assert out1[INT_OVERFLOW-1, 0] == 0 and out1[-1, 0] == 1
+    assert inp1.grad.shape == inp1.shape
+    assert inp1.grad[-1, -1] == 1
+    with mx.autograd.record():
+        out2 = np.vstack((inp1.flatten(), inp2.flatten()))
+        out2.backward()
+    assert out2.shape == (2, INT_OVERFLOW)
+    assert out2[0, -1] == 0 and out2[1, -1] == 1
+    assert inp2.grad.shape == inp2.shape
+    assert inp2.grad[-1, -1] == 1
+
+
+@use_np
+def test_ediff1d():
+    inp = np.zeros((2, INT_OVERFLOW))
+    inp[0, -1], inp[1, 0] = 1, 3
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.ediff1d(inp, to_begin=-99, to_end=np.array([88, 99]))
+        out.backward()
+    assert out.shape == (2 * INT_OVERFLOW - 1 + 1 + 2, )
+    assert out[INT_OVERFLOW-1] == 1 and out[INT_OVERFLOW] == 2 and\
+            out[INT_OVERFLOW+1] == -3
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, 0] == -1 and inp.grad[-1, -1] == 1
+
+
+@use_np
+def test_split():
+    inp = np.ones((INT_OVERFLOW, 2))
+    inp[INT_OVERFLOW // 2] = 2
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.split(inp, 2, axis = 0)
+        out[1].backward()
+    assert out[0].shape == (INT_OVERFLOW // 2, 2)
+    assert out[1].shape == (INT_OVERFLOW // 2, 2)
+    assert out[0][0, 0] == 1
+    assert out[1][0, 0] == 2
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0][0] == 0 and inp.grad[-1][-1] == 1
+
+
+@use_np
+def test_hsplit():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.hsplit(inp, 2)
+        out[1].backward()
+    assert out[1].shape == (INT_OVERFLOW, 2)
+    assert out[0].shape == (INT_OVERFLOW, 2)
+    assert out[1][-1][0] == INT_OVERFLOW-1
+    assert out[0][-1][1] == INT_OVERFLOW-1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0][0] == 0 and inp.grad[-1][-1] == 1
+
+
+@use_np
+def test_vsplit():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4)
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.vsplit(inp, 2)
+        out[1].backward()
+    assert out[1].shape == (INT_OVERFLOW//2, 4)
+    assert out[0].shape == (INT_OVERFLOW//2, 4)
+    assert out[0][-1][0] == INT_OVERFLOW // 2 -1
+    assert out[1][-1][1] == INT_OVERFLOW - 1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[INT_OVERFLOW//2 - 1][-1] == 0 and inp.grad[-1][-1] == 1
+
+
+@use_np
+def test_dsplit():
+    inp = np.arange(INT_OVERFLOW, dtype=np.int64).reshape(INT_OVERFLOW, 1, 1)
+    inp = np.broadcast_to(inp, shape=(inp.shape[0], 2, 2))
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.dsplit(inp, 2)
+        out[1].backward()
+    assert out[1].shape == (INT_OVERFLOW, 2, 1)
+    assert out[0].shape == (INT_OVERFLOW, 2, 1)
+    assert out[0][-1][0][0] == INT_OVERFLOW - 1
+    assert out[1][0][1][0] == 0
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1][-1][0] == 0 and inp.grad[0][1][1] == 1
+
+
+@use_np
+def test_diff():
+    inp = np.zeros((2, INT_OVERFLOW+1))
+    inp[-1, -1] = 100
+    inp.attach_grad()
+    with mx.autograd.record():
+        out1 = np.diff(inp)
+        out1.backward()
+    assert out1.shape == (2, INT_OVERFLOW)
+    assert out1[-1, -1] == 100
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 1
+    with mx.autograd.record():
+        out2 = np.diff(inp, axis=0)
+        out2.backward()
+    assert out2.shape == (1, INT_OVERFLOW+1)
+    assert out2[-1, -1] == 100
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[1, -1] == 1, inp.grad[0, -1] == 1
+
+
+@use_np
+def test_kron():
+    # tensor tensor case
+    inp1 = np.array([5, 10], dtype="float64")
+    inp2 = np.ones((INT_OVERFLOW), dtype = 'float64')
+    inp2[-1] = 3
+    inp1.attach_grad()
+    inp2.attach_grad()
+    with mx.autograd.record():
+        out1 = np.kron(inp1, inp2)
+        out1.backward()
+    assert out1.shape == (DOUBLE_INT_OVERFLOW, )
+    assert out1[INT_OVERFLOW-1] == 15 and out1[-1] == 30
+    assert inp1.grad.shape == inp1.shape and inp2.grad.shape == inp2.shape
+    assert inp1.grad[0] == INT_OVERFLOW + 2
+    assert inp2.grad[-1] == 15
+    # scalar tensor case
+    inp3 = np.array([3], dtype='float64')
+    inp3.attach_grad()
+    with mx.autograd.record():
+        out2 = np.kron(inp3, inp2)
+        out2.backward()
+    assert out2.shape == (INT_OVERFLOW, )
+    assert out2[INT_OVERFLOW-1] == 9
+    assert inp3.grad.shape == inp3.shape and inp2.grad.shape == inp2.shape
+    assert inp3.grad[0] == INT_OVERFLOW + 2
+    assert inp2.grad[-1] == 3
+
+
+@use_np
+def test_logspace():
+    data = np.logspace(1.0, 10.0, INT_OVERFLOW)
+    assert data.shape == (INT_OVERFLOW, )
+    assert data[0] == 10 and data[-1] == 10000000000
+    assert_almost_equal(data[HALF_INT_OVERFLOW], np.array(10**5.5), \
+                rtol=1e-3, atol=1e-5)
+
+@use_np
+def test_linspace():
+    data = np.linspace(0, 1000, INT_OVERFLOW)
+    assert data.shape == (INT_OVERFLOW, )
+    assert data[0] == 0 and data[-1] == 1000
+    assert data[HALF_INT_OVERFLOW] == 500
+
+
+@use_np
+def test_histogram():
+    inp = np.ones((INT_OVERFLOW, 2))
+    inp[-1, -1] = 2
+    hist, _ = np.histogram(inp, np.array([0.5, 1.5, 2.5, 3.5]))
+    assert hist.shape == (3, )
+    assert hist[0] == int(2 * INT_OVERFLOW - 1) and hist[1] == 1
+
+
+@use_np
+def test_nan_to_num():
+    inp = np.zeros((3, INT_OVERFLOW))
+    inp[:, -1] = np.array([np.nan, np.inf, -np.inf])
+    inp.attach_grad()
+    with mx.autograd.record():
+        out = np.nan_to_num(inp, nan=0, posinf=1, neginf=-1)
+        out.backward()
+    assert out.shape == inp.shape
+    assert out[0, -1] == 0 and out[1, -1] == 1 and out[2, -1] == -1
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[0, -1] == 0 and inp.grad[1, -1] == 0
+    assert inp.grad[0, 0] == 1 and inp.grad[2, -1] == 0
+
+
+@use_np
+def test_interp():
+    xp = np.array([1, 2, 3])
+    fp = np.array([3, 2, 1])
+    inp = np.ones((2, INT_OVERFLOW))
+    inp[-1, -1] = 2.5
+    inp.attach_grad()
+    with mx.autograd.record():
+        B = np.interp(inp, xp, fp)
+        B.backward()
+    assert B.shape == inp.shape
+    assert B[-1, -1] == 1.5
+    assert inp.grad.shape == inp.shape
+    assert inp.grad[-1, -1] == 0
+
+
+@use_np
+def test_edge_padding():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
+    out = np.pad(inp, ((1, 1), (1, 1)), "edge")
+    assert out[0][0] == 0
+    assert out[-1][-1] == INT_OVERFLOW - 1
+    assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
+
+
+@use_np
+def test_constant_padding():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
+    out = np.pad(inp, ((1, 1), (1, 1)), "constant")
+    assert out[0][0] == 0
+    assert out[-1][-1] == 0
+    assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
+
+
+@use_np
+def test_minimum_padding():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
+    out = np.pad(inp, ((1, 1), (1, 1)), "minimum")
+    assert out[0][-1] == 0
+    assert out[-1][-1] == 0
+    assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
+
+
+@use_np
+def test_reflection_padding():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
+    out = np.pad(inp, ((1, 1), (1, 1)), "reflect")
+    assert out[0][-1] == 0 + 1
+    assert out[-1][0] == INT_OVERFLOW - 1 - 1
+    assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
+
+
+@use_np
+def test_symmetric_padding():
+    inp = create_2d_np_tensor(rows=INT_OVERFLOW, columns=4, dtype=np.int64)
+    out = np.pad(inp, ((1, 1), (1, 1)), "symmetric")
+    assert out[0][0] == 0
+    assert out[-1][-1] == INT_OVERFLOW - 1
+    assert out.shape == (INT_OVERFLOW + 2, 4 + 2)
+
+
+@use_np
+def test_fill_diagonal():
+    # test 2d square matrix case
+    N = 2**16
+    data1 = np.zeros((N, N))
+    np.fill_diagonal(data1, [1, 2, 3, 4])
+    assert data1[0, 0] == 1 and data1[-1, -1] == 4
+    # test 2d long matrix case with wrap
+    data2 = np.zeros((INT_OVERFLOW, 2))
+    np.fill_diagonal(data2, [1, 2], wrap=True)
+    assert data2[0, 0] == 1 and data2[-1, -1] == 2

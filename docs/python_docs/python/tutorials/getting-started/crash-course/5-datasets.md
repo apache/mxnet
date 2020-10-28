@@ -340,4 +340,4 @@ This improvement in performance will not be seen in all cases, but when possible
 
 ## Next Steps
 -----
-Now that you have some experience with MXNet's datasets and dataloaders, it's time to use them for [Step 6: Training a Neural Network](6-train-nn.md).
+Now that you have some experience with MXNet's datasets and dataloaders, it's time to use them for [Step 6: Training a Neural Network](https://github.com/vidyaravipati/incubator-mxnet/blob/mxnet2.0_crashcourse/docs/python_docs/python/tutorials/getting-started/crash-course/6-train-nn.md).

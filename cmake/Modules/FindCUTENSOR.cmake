@@ -15,25 +15,19 @@
 # specific language governing permissions and limitations
 # under the License.
 
-import sys
-import os
-import mxnet as mx
-import numpy as np
-import unittest
-import ctypes
-import pytest
+include(FindPackageHandleStandardArgs)
 
-def test_float64_fallback():
-    sym = mx.sym.FullyConnected(
-        mx.sym.Variable('in'),
-        mx.sym.Variable('w'),
-        mx.sym.Variable('b'),
-        num_hidden=2)
+set(CUTENSOR_ROOT "/usr/local/cuda" CACHE PATH "cuTensor root folder")
 
-    dtype = 'float64'
-    args = {'in': mx.nd.array([[2, 3, 4]], dtype=dtype),
-        'w': mx.nd.array([[1, 2, 3], [4, 5, 6]], dtype=dtype),
-        'b': mx.nd.array([7, 8], dtype=dtype)}
-    ex = sym._bind(mx.cpu(), args, args_grad=None, grad_req='write')
-    ex.forward()
-    ex.outputs[0].wait_to_read()
+find_path(CUTENSOR_INCLUDE cutensor.h
+        PATHS ${CUTENSOR_ROOT} $ENV{CUTENSOR_ROOT}
+        DOC "Path to cuTensor include directory." )
+
+find_library(CUTENSOR_LIBRARY NAMES libcutensor.so # libcutensor_static.a
+        PATHS ${CUTENSOR_ROOT} $ENV{CUTENSOR_ROOT} ${CUTENSOR_INCLUDE}
+        PATH_SUFFIXES lib lib/x64  cuda/lib cuda/lib64 lib/x64
+        DOC "Path to cuTensor library.")
+
+find_package_handle_standard_args(CUTENSOR DEFAULT_MSG CUTENSOR_LIBRARY CUTENSOR_INCLUDE)
+
+mark_as_advanced(CUTENSOR_ROOT CUTENSOR_INCLUDE CUTENSOR_LIBRARY)
