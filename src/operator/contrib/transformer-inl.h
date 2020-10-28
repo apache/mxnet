@@ -80,12 +80,12 @@ struct SldWinAttenMaskLike {
                                   bool symmetric, int w, int seq_length, int num_heads) {
     out[i] = 1;
     int w_len = symmetric ? (w + w + 1) : (w + 1);
-    int idx_0 = i / (seq_length * num_heads * w_len); // batch idx
+    int idx_0 = i / (seq_length * num_heads * w_len);  // batch idx
     int tmp = i % (seq_length * num_heads * w_len);
-    int idx_1 = tmp / (num_heads * w_len); // sequence idx
+    int idx_1 = tmp / (num_heads * w_len);  // sequence idx
     tmp = tmp % (num_heads * w_len);
-    int idx_2 = tmp / w_len; // head idx
-    int idx_3 = tmp % w_len; // win idx
+    int idx_2 = tmp / w_len;  // head idx
+    int idx_3 = tmp % w_len;  // win idx
 
     bool is_zero = idx_3 < (w - idx_1/dilation[idx_2]) || idx_1 >= val_length[idx_0] \
       || (symmetric && (w_len-idx_3-1) < (w - (val_length[idx_0]-idx_1-1)/dilation[idx_2]));
@@ -132,13 +132,13 @@ struct DiagMM {
                                   int w_right, bool diagonal_lhs, bool transpose_lhs) {
     out[tid] = 0;
     int stride = seq_length * num_heads * out_last_dim;
-    int idx_0 = tid / stride; // batch idx
+    int idx_0 = tid / stride;  // batch idx
     int tmp = tid % stride;
     stride = num_heads * out_last_dim;
-    int idx_1 = tmp / stride; // sequence idx
+    int idx_1 = tmp / stride;  // sequence idx
     tmp = tmp % stride;
-    int idx_2 = tmp / out_last_dim; // head idx
-    int idx_3 = tmp % out_last_dim; // window idx or hidden feature idx
+    int idx_2 = tmp / out_last_dim;  // head idx
+    int idx_3 = tmp % out_last_dim;  // window idx or hidden feature idx
 
     if (!diagonal_lhs) {
       int tmp_idx = idx_1 + dilation[idx_2] * (idx_3 - w);
@@ -198,7 +198,6 @@ void DiagMMImpl(const OpContext& ctx, const TBlob& out, const TBlob& lhs,
   int seq_length = lhs.shape_[1];
   int num_heads = lhs.shape_[2];
   int lhs_last_dim = lhs.shape_[3];
-  //int num_hidden = rhs.shape_[3];
   int out_last_dim = out.shape_[3];
   int num_threads = out.Size();
 
