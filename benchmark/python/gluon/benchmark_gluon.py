@@ -46,9 +46,9 @@ parser.add_argument('--gpus', type=str, default='',
                          'By default, use CPU only.')
 parser.add_argument('--type', type=str, default='inference', choices=['all', 'training', 'inference'])
 
-opt = parser.parse_args()
+args = parser.parse_args()
 
-num_batches = opt.num_batches
+num_batches = args.num_batches
 dry_run = 10  # use 10 iterations to warm up
 batch_inf = [1, 32, 64, 128, 256]
 batch_train = [1, 32, 64, 128, 256]
@@ -116,10 +116,10 @@ def train(network, batch_size, ctx):
     return bwd
 
 if __name__ == '__main__':
-    runtype = opt.type
-    bs = opt.batch_size
+    runtype = args.type
+    bs = args.batch_size
 
-    if opt.model == 'all':
+    if args.model == 'all':
         networks = ['alexnet', 'densenet121', 'densenet161', 'densenet169', 'densenet201',
                     'inceptionv3', 'mobilenet0.25', 'mobilenet0.5', 'mobilenet0.75',
                     'mobilenet1.0', 'mobilenetv2_0.25', 'mobilenetv2_0.5', 'mobilenetv2_0.75',
@@ -130,9 +130,9 @@ if __name__ == '__main__':
         logging.info('It may take some time to run all models, '
                      'set --network to run a specific one')
     else:
-        networks = [opt.model]
+        networks = [args.model]
     
-    devs = [mx.gpu(int(i)) for i in opt.gpus.split(',')] if opt.gpus.strip() else [mx.cpu()]
+    devs = [mx.gpu(int(i)) for i in args.gpus.split(',')] if args.gpus.strip() else [mx.cpu()]
     num_gpus = len(devs)
 
     for network in networks:

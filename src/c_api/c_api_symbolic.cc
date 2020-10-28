@@ -854,10 +854,14 @@ int MXGenAtomicSymbolFromSymbol(SymbolHandle sym_handle, SymbolHandle *ret_sym_h
   nnvm::Symbol *s = new nnvm::Symbol();
   API_BEGIN();
   nnvm::Symbol *source = static_cast<nnvm::Symbol *>(sym_handle);
-  CHECK_EQ(source->outputs.size(), 1U)
-    << "Generating atomic symbol from other symbol only works for nongrouped symbol.";
-  const auto& node = source->outputs[0];
-  const auto *op = node.node->op();
+  CHECK_GE(source->outputs.size(), 1) << "Input symbol does not have outputs.";
+  const auto &node = source->outputs[0].node;
+  for (const auto &other_node : source->outputs) {
+    if (node.get() != other_node.node.get()) {
+      LOG(FATAL) << "Generating atomic symbol from other symbol only works for nongrouped symbol.";
+    }
+  }
+  const auto *op = node->op();
   const auto attrs = source->ListAttrs(nnvm::Symbol::ListAttrOption::kShallow);
   *s = nnvm::Symbol::CreateFunctor(op, attrs);
   *ret_sym_handle = s;

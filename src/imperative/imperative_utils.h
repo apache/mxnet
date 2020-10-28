@@ -60,6 +60,9 @@ struct EngineOprSeg {
 
 using MemoryPlanVector = std::vector<MemoryPlanInfo>;
 
+// cached segment operator name (needs a longer lifecycle than cached_seg_opr_)
+static std::unordered_set<std::string> cached_seg_opr_names_;
+
 inline Context GetContext(const nnvm::NodeAttrs& attrs,
                 const std::vector<NDArray*>& inputs,
                 const std::vector<NDArray*>& outputs,
@@ -405,6 +408,8 @@ inline void PushFCompute(const FCompute& fn,
   using namespace common;
   static auto& fexec_type = nnvm::Op::GetAttr<FExecType>("FExecType");
 
+  auto iter = cached_seg_opr_names_.insert(attrs.name).first;
+
   bool is_train = Imperative::Get()->is_training();
   bool need_grad = Imperative::Get()->is_recording();
   ExecType exec_type = fexec_type.count(op) ? fexec_type[op](attrs) : ExecType::kSync;
@@ -445,7 +450,8 @@ inline void PushFCompute(const FCompute& fn,
         rctx.get_stream<gpu>()->Wait();
       }
     }, ctx, read_vars, write_vars, FnProperty::kNormal,
-    0, op->name.c_str());
+    *iter != "" ? 1 : 0,                              // change the priority
+    *iter != "" ? iter->c_str() : op->name.c_str());  // append attribute name to make profiling unique
 }
 
 inline void PushFComputeEx(const FComputeEx& fn,
@@ -513,6 +519,8 @@ inline void PushOperator(const OpStatePtr& state,
   std::vector<NDArray> inputs, outputs;
   DerefInputOutput(p_inputs, p_outputs, &inputs, &outputs);
 
+  auto iter = cached_seg_opr_names_.insert(attrs.name).first;
+
   auto fcompute =
       common::GetFCompute<FStatefulCompute>(op, "FStatefulCompute", ctx);
   auto fcompute_ex =
@@ -546,13 +554,11 @@ inline void PushOperator(const OpStatePtr& state,
     } else if (exec_type == ExecType::kSync) {
       Engine::Get()->PushSync(
           [=](RunContext rctx) { run(rctx, engine::CallbackOnComplete()); },
-          ctx, read_vars, write_vars, FnProperty::kNormal, 0,
-          op->name.c_str());
+          ctx, read_vars, write_vars, FnProperty::kNormal, 0, *iter != "" ? iter->c_str() : op->name.c_str());  // append attribute name to make profiling unique
     } else {
       CHECK(exec_type == ExecType::kAsync);
       Engine::Get()->PushAsync(run, ctx, read_vars, write_vars,
-                               FnProperty::kAsync, 0,
-                               op->name.c_str());
+                               FnProperty::kAsync, 0, *iter != "" ? iter->c_str() : op->name.c_str());  // append attribute name to make profiling unique
     }
   } else {
     CHECK(fcompute != nullptr)
@@ -603,12 +609,12 @@ inline void PushOperator(const OpStatePtr& state,
           [=](RunContext rctx) {
             run(rctx, engine::CallbackOnComplete());
           }, ctx, read_vars, write_vars, FnProperty::kNormal,
-          0, op->name.c_str());
+          0, *iter != "" ? iter->c_str() : op->name.c_str());  // append attribute name to make profiling unique
     } else {
       CHECK(exec_type == ExecType::kAsync);
       Engine::Get()->PushAsync(
           run, ctx, read_vars, write_vars, FnProperty::kAsync,
-          0, op->name.c_str());
+          0, *iter != "" ? iter->c_str() : op->name.c_str());  // append attribute name to make profiling unique
     }
   }
 }
@@ -934,7 +940,8 @@ inline void SetupOpExec(
 
 inline Engine::OprHandle CreateEngineOp(
     const Context& default_ctx,
-    const std::vector<std::shared_ptr<exec::OpExecutor> >& execs) {
+    const std::vector<std::shared_ptr<exec::OpExecutor> >& execs,
+    const std::string opr_name) {
   CHECK_GT(execs.size(), 0);
   std::vector<Engine::VarHandle> use_vars, mutate_vars;
 
@@ -982,8 +989,10 @@ inline Engine::OprHandle CreateEngineOp(
     }
   };
 
+  auto iter = cached_seg_opr_names_.insert(opr_name).first;
+
   return Engine::Get()->NewOperator(
-      exec_fun, use_vars, mutate_vars, FnProperty::kNormal);
+      exec_fun, use_vars, mutate_vars, FnProperty::kNormal, iter->c_str());  // append attribute name to make profiling unique
 }
 
 inline void CreateEngineOpSeg(
@@ -997,6 +1006,9 @@ inline void CreateEngineOpSeg(
     std::vector<EngineOprSeg> *opr_segs) {
   size_t seg_start = start_nid;
   std::vector<std::shared_ptr<exec::OpExecutor> > seg_execs;
+
+  std::string opr_name;
+
   for (size_t nid = start_nid; nid < end_nid; ++nid) {
     const auto& node = idx[nid];
     if (node.source->is_variable()) continue;
@@ -1012,8 +1024,9 @@ inline void CreateEngineOpSeg(
     if (stop && nid > seg_start) {
       auto& seg = (*opr_segs)[seg_start];
       if (seg_execs.size()) {
+        opr_name = idx[seg_start].source->attrs.name;
         seg = EngineOprSeg{false, nid};
-        seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+        seg.opr.reset(CreateEngineOp(default_ctx, seg_execs, opr_name));  // append attribute name to make profiling unique
       } else {
         seg = EngineOprSeg{true, nid, nullptr};
       }
@@ -1029,18 +1042,20 @@ inline void CreateEngineOpSeg(
       seg_execs.clear();
       seg_start = nid + 1;
     } else if (is_async) {
+      opr_name = node.source->attrs.name;
       seg = EngineOprSeg{false, nid + 1};
-      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs, opr_name));  // append attribute name to make profiling unique
       seg_execs.clear();
       seg_start = nid + 1;
     }
   }
   // The last segment
   if (end_nid > seg_start) {
+    opr_name = idx[seg_start].source->attrs.name;
     auto& seg = (*opr_segs)[seg_start];
     if (seg_execs.size()) {
       seg = EngineOprSeg{false, end_nid};
-      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs));
+      seg.opr.reset(CreateEngineOp(default_ctx, seg_execs, opr_name));  // append attribute name to make profiling unique
     } else {
       seg = EngineOprSeg{true, end_nid, nullptr};
     }

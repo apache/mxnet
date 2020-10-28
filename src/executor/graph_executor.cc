@@ -1175,7 +1175,7 @@ void GraphExecutor::InitCachedOps() {
   for (uint32_t nid = 0; nid < idx.num_nodes(); ++nid) {
     const auto& inode = idx[nid];
     if (inode.source->is_variable()) continue;
-    op_nodes_[nid].opr_name = inode.source->op()->name.c_str();
+    op_nodes_[nid].opr_name = inode.source->attrs.name.c_str();
     if (skip_plus_node.at(nid)) {
       op_nodes_[nid].skip_exec_node = true; continue;
     }
@@ -1557,7 +1557,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     std::copy(op_node.use_vars.begin(), op_node.use_vars.end(),
               std::inserter(use_vars, use_vars.end()));
     ret.exec_list.push_back(exec);
-    opr_names += inode.source->op()->name + ",";
+    opr_names += inode.source->attrs.name + ",";
   }
 
   if (pctx == nullptr) return ret;
@@ -1581,7 +1581,7 @@ GraphExecutor::CachedSegOpr GraphExecutor::CreateCachedSegOpr(size_t topo_start,
     }
     on_complete();
   };
-  opr_names.pop_back();
+  opr_names.pop_back();  // delete the last ','
   opr_names += "]";
   auto iter = cached_seg_opr_names_.insert(opr_names).first;
   ret.opr = Engine::Get()->NewOperator(
