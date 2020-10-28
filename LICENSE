@@ -251,8 +251,8 @@
           Copyright 2016-2019 Intel Corporation
           Copyright 2018 YANDEX LLC
     13. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
-          Copyright [2007-2009] Neal Norwitz
-          Portions Copyright [2007-2009] Google Inc.
+          Copyright [2007] Neal Norwitz
+          Portions Copyright [2007] Google Inc.
     14. MXNet clojure-package - For details, see, contrib/clojure-package/LICENSE
           Copyright 2018 by Contributors
     15. MXNet R-package - For details, see, R-package/LICENSE
@@ -331,9 +331,9 @@
     5. CUB mersenne.h - For details, see 3rdparty/nvidia_cub/test/mersenne.h
          Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
     6. Googlemock - For details, see, 3rdparty/googletest/googlemock/LICENSE
-         Copyright 2006-2015, Google Inc.
+         Copyright 2008, Google Inc.
     7. Googletest - For details, see, 3rdparty/googletest/googletest/LICENSE
-         Copyright 2005-2015, Google Inc.
+         Copyright 2008, Google Inc.
     8. OpenMP Testsuite - For details, see, 3rdparty/openmp/testsuite/LICENSE
          Copyright (c) 2011, 2012 University of Houston System
     9. CMake FindCUDAToolkit.cmake, FindOpenCL.cmake - For details, see,
