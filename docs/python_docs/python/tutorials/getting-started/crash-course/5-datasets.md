@@ -48,7 +48,6 @@ A key feature of a `Dataset` is the __*ability to retrieve a single sample given
 
 
 
-
 ```python
 
 sample_idx = 4
@@ -59,13 +58,6 @@ assert sample[0].shape == (3, )
 assert sample[1].shape == (1, )
 print(sample)
 ```
-
-    (
-    [0.74707687 0.37641123 0.46362457]
-    <NDArray 3 @cpu(0)>, 
-    [0.35440788]
-    <NDArray 1 @cpu(0)>)
-
 
 
 You get a tuple of a data sample and its corresponding label, which makes sense because you passed the data `X` and the labels `y` in that order when you instantiated the `ArrayDataset`. You don't usually retrieve individual samples from `Dataset` objects though (unless you're quality checking the output samples). Instead you use a `DataLoader`.
@@ -91,8 +83,6 @@ for X_batch, y_batch in data_loader:
     print("X_batch has shape {}, and y_batch has shape {}".format(X_batch.shape, y_batch.shape))
 ```
 
-    X_batch has shape (5, 3), and y_batch has shape (5, 1)
-    X_batch has shape (5, 3), and y_batch has shape (5, 1)
 
 
 You can see 2 mini-batches of data (and labels), each with 5 samples, which makes sense given that you started with a dataset of 10 samples. When comparing the shape of the batches to the samples returned by the `Dataset`,you've gained an extra dimension at the start which is sometimes called the batch axis.
@@ -138,10 +128,6 @@ print("Label description: {}".format(label_desc[label]))
 imshow(data[:,:,0].asnumpy(), cmap='gray')
 ```
 
-    Data type: <class 'numpy.float32'>
-    Label: 8
-    Label description: Bag
-
 
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/fashion_mnist_bag.png)
 
@@ -162,13 +148,14 @@ With both `DataLoader`s defined, you can now train a model to classify each imag
 Gluon has a number of different Dataset classes for working with your own image data straight out-of-the-box. You can get started quickly using the mxnet.gluon.data.vision.datasets.ImageFolderDataset which loads images directly from a user-defined folder, and infers the label (i.e. class) from the folders.
 
 Here you will run through an example for image classification, but a similar process applies for other vision tasks. If you already have your own collection of images to work with you should partition your data into training and test sets, and place all objects of the same class into seperate folders. Similar to:
+
 ```
-    ./images/train/car/abc.jpg
-    ./images/train/car/efg.jpg
-    ./images/train/bus/hij.jpg
-    ./images/train/bus/klm.jpg
-    ./images/test/car/xyz.jpg
-    ./images/test/bus/uvw.jpg
+ ./images/train/car/abc.jpg
+ ./images/train/car/efg.jpg
+ ./images/train/bus/hij.jpg
+ ./images/train/bus/klm.jpg
+ ./images/test/car/xyz.jpg
+ ./images/test/bus/uvw.jpg
 ```
 
 You can download the Caltech 101 dataset if you don't already have images to work with for this example, but please note the download is 126MB.
@@ -204,16 +191,10 @@ Optionally, you can pass a `transform` parameter to these `Dataset`'s as you've 
 cd data
 ```
 
-    /home/ec2-user/SageMaker/data
-
-
 
 ```python
 !ls
 ```
-
-    101_ObjectCategories  101_ObjectCategories.tar.gz  101_ObjectCategories_test
-
 
 
 ```python
@@ -242,10 +223,6 @@ assert label == 1
 
 imshow(data.asnumpy(), cmap='gray')
 ```
-
-    Data type: <class 'numpy.uint8'>
-    Label: 1
-    Label description: Faces_easy
 
 
 ![png](https://raw.githubusercontent.com/dmlc/web-data/master/mxnet/doc/tutorials/gluon/datasets/caltech101_face.png)<!--notebook-skip-line-->
@@ -305,11 +282,6 @@ for _ in range(3):
 print('Elapsed time for backend dataloader:', time.time() - start)
 ```
 
-    1563
-    1563
-    1563
-    Elapsed time for backend dataloader: 2.421664237976074
-
 
 ### Using the Python backend:
 
@@ -328,11 +300,6 @@ for _ in range(3):
         pass
 print('Elapsed time for python dataloader:', time.time() - start)
 ```
-
-    1563
-    1563
-    1563
-    Elapsed time for python dataloader: 6.896752119064331
 
 
 ### The C++ backend loader was almost 3X faster for this particular use case

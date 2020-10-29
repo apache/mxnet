@@ -17,23 +17,6 @@
 
 # Introduction
 
-## About this course
-
-This crash course will give you a quick overview of MXNet. You will review core concepts like NDArray (manipulating multiple dimensional arrays) and Gluon (create and train neural networks on CPU and GPU). The intended audience for this crash course is people already familiar with deep learning theory or other deep learning frameworks. For a deep dive into MXNet and deep learning architectures, please refer to [Dive Into Deep learning](http://d2l.ai/) textbook or [Introduction to Deep Learning Course](https://courses.d2l.ai/berkeley-stat-157/index.html)
-
-The course is structured in different sections that can be studied independently or as a whole. If you have a particular question you can consult only the section related to your question, but if you are new to the framework and have time, you can do the course from start to end.
-
-### Outline of the course
-
-* [Introduction](0-introduction.md)
-* [Arrays (nparray)](1-nparray.md)
-* [Create neural networks](2-create-nn.md)
-* [Autograd](3-autograd.md)
-* [Initialization, losses, optimizers and metrics](4-components.md)
-* [Datasets](5-datasets.md)
-* [Train neural networks](6-train-nn.md)
-* [Train neural networks on GPUs](7-use-gpus.md)
-
 
 ## About MXNet
 

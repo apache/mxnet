@@ -126,7 +126,7 @@ datasets
 Now, you need to create three different Dataset objects from the `train`,
 `validation`, and `test` folders, and the `ImageFolderDataset` class takes
 care of inferring the classes from the directory names. If you don't remember
-how the `ImageFolderDataset` works, take a look at [Step 5]("5-datasets.md") 
+how the `ImageFolderDataset` works, take a look at [Step 5](5-datasets.md) 
 of this course for a deeper description.
 
 ```{.python .input}
@@ -260,7 +260,7 @@ architecture**.
 Convolutional neural networks are a great tool to capture the spatial
 relationship of pixel values within images, for this reason they have become the
 gold standard for computer vision. In this example you will create a small convolutional neural
-network using what you learned from [Step 2]("2-create-nn.md") of this crash course series.
+network using what you learned from [Step 2](2-create-nn.md) of this crash course series.
 First, you can set up two functions that will generate the two types of blocks
 you intend to use, the convolution block and the dense block. Then you can create an
 entire network based on these two blocks using a custom class.
@@ -311,7 +311,7 @@ class LeafNetwork(nn.HybridBlock):
 
 You have concluded the architecting part of the network, so now you can actually
 build a model from that architecture for training. As you have seen
-previously on [Step 4]("4-components.md") of this
+previously on [Step 4](4-components.md) of this
 crash course series, to use the network you need to initialize the parameters and
 hybridize the model.
 
@@ -439,4 +439,4 @@ model.save_parameters('leaf_models.params')
 ```
 
 This is the end of this tutorial, to see how you can speed up the training by
-using GPU hardware continue to the [next tutorial]("7-use-gpus.md")
+using GPU hardware continue to the [next tutorial](7-use-gpus.md)
