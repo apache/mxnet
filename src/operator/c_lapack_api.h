@@ -259,8 +259,28 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   #define MXNET_LAPACK_dpotri LAPACKE_dpotri
   #define mxnet_lapack_sposv  LAPACKE_sposv
   #define mxnet_lapack_dposv  LAPACKE_dposv
-  #define MXNET_LAPACK_dgesv  LAPACKE_dgesv
-  #define MXNET_LAPACK_sgesv  LAPACKE_sgesv
+  //#define MXNET_LAPACK_dgesv  LAPACKE_dgesv
+  //#define MXNET_LAPACK_sgesv  LAPACKE_sgesv
+
+  #define MXNET_LAPACK_CWRAP_GESV(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##gesv(int matrix_layout, int n, int nrhs, \
+                                         dtype* a, int lda, int* ipiv, \
+                                         dtype* b, int ldb) { \
+    std::cout << "in gesv" << std::endl; \
+    if (!std::is_same<lapack_index_t, int>::value) { \
+      auto temp_ipiv = std::make_unique<lapack_index_t[]>(n); \
+      int ret = LAPACKE_##prefix##gesv(matrix_layout, n, nrhs, a, lda, temp_ipiv.get(), b, ldb); \
+      for (int i=0; i < n; i++) { \
+        ipiv[i] = temp_ipiv[i]; \
+        std::cout  << i << ": " << ipiv[i] << std::endl; \
+      } \
+      return ret; \
+    } \
+      return LAPACKE_##prefix##gesv(matrix_layout, n, nrhs, a, lda, \
+                                    reinterpret_cast<lapack_index_t*>(ipiv), b, ldb); \
+  }
+  MXNET_LAPACK_CWRAP_GESV(s, float)
+  MXNET_LAPACK_CWRAP_GESV(d, double)
 
   // The following functions differ in signature from the
   // MXNET_LAPACK-signature and have to be wrapped.
@@ -336,8 +356,28 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_SYEVD(s, float)
   MXNET_LAPACK_CWRAP_SYEVD(d, double)
 
-  #define MXNET_LAPACK_sgetrf LAPACKE_sgetrf
-  #define MXNET_LAPACK_dgetrf LAPACKE_dgetrf
+  //#define MXNET_LAPACK_sgetrf LAPACKE_sgetrf
+  //#define MXNET_LAPACK_dgetrf LAPACKE_dgetrf
+
+  #define MXNET_LAPACK_CWRAP_GETRF(prefix, dtype) \
+  inline int MXNET_LAPACK_##prefix##getrf(int matrix_layout, int m, int n, \
+                                          dtype* a, int lda, int* ipiv) { \
+    std::cout << "in getrf" << std::endl; \
+    if (!std::is_same<lapack_index_t, int>::value) { \
+      int temp_size = std::min(m, n); \
+      auto temp_ipiv = std::make_unique<lapack_index_t[]>(temp_size); \
+      int ret = LAPACKE_##prefix##getrf(matrix_layout, m, n, a, lda, temp_ipiv.get()); \
+      for (int i=0; i<temp_size; i++) { \
+        ipiv[i] = temp_ipiv[i]; \
+        std::cout  << i << ": " << ipiv[i] << std::endl; \
+      } \
+      return ret;\
+    } \
+    return LAPACKE_##prefix##getrf(matrix_layout, m, n, a, lda, \
+                                   reinterpret_cast<lapack_index_t*>(ipiv)); \
+  }
+  MXNET_LAPACK_CWRAP_GETRF(s, float)
+  MXNET_LAPACK_CWRAP_GETRF(d, double)
 
   // Internally A is factorized as U * L * VT, and (according to the tech report)
   // we want to factorize it as UT * L * V, so we pass ut as u and v as vt.
@@ -378,8 +418,18 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   #define MXNET_LAPACK_CWRAP_GETRI(prefix, dtype) \
   inline int MXNET_LAPACK_##prefix##getri(int matrix_layout, int n, dtype *a, int lda, \
                                           int *ipiv, dtype *work, int lwork) { \
+    std::cout << "in getri" << std::endl; \
     if (lwork != -1) { \
-      return LAPACKE_##prefix##getri(matrix_layout, n, a, lda, ipiv); \
+      if (!std::is_same<lapack_index_t, int>::value) { \
+        auto temp_ipiv = std::make_unique<lapack_index_t[]>(n); \
+        for (int i=0; i < n; i++) { \
+          temp_ipiv[i] = ipiv[i]; \
+          std::cout  << i << ": " << temp_ipiv[i] << std::endl; \
+        } \
+        return LAPACKE_##prefix##getri(matrix_layout, n, a, lda, temp_ipiv.get()); \
+      } \
+      return LAPACKE_##prefix##getri(matrix_layout, n, a, lda, \
+                                     reinterpret_cast<lapack_index_t*>(ipiv)); \
     } \
     *work = 0; \
     return 0; \
@@ -408,9 +458,18 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
                                           dtype *a, int lda, dtype *b, int ldb, \
                                           dtype *s, dtype rcond, int *rank, \
                                           dtype *work, int lwork, int *iwork) { \
+    std::cout << "in gelsd" << std::endl; \
     if (lwork != -1) { \
+      if (!std::is_same<lapack_index_t, int>::value) { \
+        lapack_index_t temp_rank; \
+        int ret = LAPACKE_##prefix##gelsd(matrix_layout, m, n, nrhs, a, lda, b, ldb, \
+                                          s, rcond, &temp_rank); \
+        *rank = temp_rank; \
+        std::cout << "rank is " << *rank << std::endl; \
+        return ret; \
+      } \
       return LAPACKE_##prefix##gelsd(matrix_layout, m, n, nrhs, a, lda, b, ldb, \
-                                     s, rcond, rank); \
+                                     s, rcond, reinterpret_cast<lapack_index_t*>(rank)); \
     } \
     *work = 0; \
     *iwork = 0; \
