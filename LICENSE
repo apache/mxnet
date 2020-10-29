@@ -300,9 +300,7 @@
          Copyright (c) 2018 Open Neural Network Exchange
     ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/LICENSE
          Copyright (c) Facebook, Inc. and Microsoft Corporation.
-    clipboard.js - Refer to https://zenorocha.github.io/clipboard.js
-         Licensed MIT © Zeno Rocha
-    clipboard.min.js - Refer to https://zenorocha.github.io/clipboard.js
+    clipboard.js - For details, see docs/static_site/src/assets/js/clipboard.js
          Licensed MIT © Zeno Rocha
     mx-theme - For details, see docs/python_docs/themes/mx-theme/LICENSE
          Copyright (c) 2016 myyasuda
