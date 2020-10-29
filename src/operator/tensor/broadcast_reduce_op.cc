@@ -18,6 +18,7 @@
  */
 
 #include "broadcast_reduce_op.h"
+#include <limits>
 #include "../numpy/np_broadcast_reduce_op.h"
 #include "elemwise_binary_scalar_op.h"
 #include "mxnet/tuple.h"
