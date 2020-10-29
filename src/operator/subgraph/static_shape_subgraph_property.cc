@@ -79,26 +79,35 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
 
   void PrePartition(const nnvm::Graph& g,
                     const std::unordered_map<std::string, std::string>& options_map) override {
-    // update static_alloc and static_shape flags
-    if (options_map_.size() == 0) {
-      for (auto& kv : options_map) {
-        options_map_.emplace_back(kv);
+    options_map_.clear();
+    param_name_set_.clear();
+    const auto& indexed_graph = g.indexed_graph();
+    for (auto& kv : options_map) {
+      // update static_alloc and static_shape flags
+      if (kv.first == "static_alloc" || kv.first == "static_shape") {
+        if (kv.second == "True") {
+          options_map_.emplace_back(kv.first, "true");
+        } else {
+          options_map_.emplace_back(kv.first, "false");
+        }
+      // update param_name_set_ for data_indices and param_indices
+      } else if (kv.first == "param_indices") {
+        std::string param_str = kv.second;
+        int temp = 0;
+        for (int i = 0; param_str[i] != '\0'; i++) {
+          if (param_str[i] == ',' || param_str[i] == '[') {
+            continue;
+          }
+          if (param_str[i] == ' ' || param_str[i] == ']') {
+              auto nid = indexed_graph.input_nodes()[temp];
+              nnvm::Node n = *(indexed_graph[nid].source);
+              param_name_set_.emplace(n.attrs.name);
+              temp = 0;
+          } else {
+              temp = temp * 10 + (param_str[i] - 48);
+          }
+        }
       }
-    }
-    if (param_name_set_.size() > 0) {
-      param_name_set_.clear();
-    }
-    // generate param_name_set_ for data_indices and param_indices
-    if (g.HasAttr("param_indices_list")) {
-      const std::vector<int>& param_indices_list
-          = g.GetAttr<std::vector<int>>("param_indices_list");
-      const auto& indexed_graph = g.indexed_graph();
-      for (const auto index : param_indices_list) {
-          auto nid = indexed_graph.input_nodes()[index];
-          nnvm::Node n = *(indexed_graph[nid].source);
-          param_name_set_.emplace(n.attrs.name);
-      }
-      attrs_["param_name_set"] = std::make_shared<nnvm::any>(param_name_set_);
     }
   }
 
