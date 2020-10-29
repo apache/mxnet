@@ -1072,7 +1072,7 @@ class HybridBlock(Block):
                                            'added to the parameter dicts.\n'
                                            'Please check the backend.')
 
-                    param = Parameter(name)
+                    param = Parameter(name, dtype=param_data.dtype)
                     param._var_name = name
                     serialization_name = name  # HybridBlock.export
                     param._load_init(param_data, args[0].context)

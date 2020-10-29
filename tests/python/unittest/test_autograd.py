@@ -21,7 +21,7 @@ from mxnet.ndarray import zeros_like
 from mxnet.autograd import *
 from mxnet.test_utils import *
 
-from common import with_seed, xfail_when_nonstandard_decimal_separator
+from common import xfail_when_nonstandard_decimal_separator
 from mxnet.test_utils import environment
 
 import pytest
@@ -111,7 +111,6 @@ def autograd_assert(*args, **kwargs):
         assert same(a.asnumpy(), b.asnumpy())
 
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 def test_unary_func():
     def check_unary_func(x):
         f_exp         = lambda x: nd.exp(x)
@@ -129,7 +128,6 @@ def test_unary_func():
         for stype in stypes:
             check_unary_func(uniform.tostype(stype))
 
-@with_seed()
 def test_binary_func():
     def check_binary_func(x, y):
         f_add      = lambda x, y: x+y
@@ -152,7 +150,6 @@ def test_binary_func():
                 check_binary_func(x, y)
 
 
-@with_seed()
 def test_operator_with_state():
     def f_fc(a, b, weight, bias):
         x = a*b
@@ -169,7 +166,6 @@ def test_operator_with_state():
     grad_vals, outputs = grad_func(a, b, weight, bias)
     # (TODO) assert
 
-@with_seed()
 def test_argnum():
     def f_with_mode(a, b, mode):
         if mode:
@@ -187,7 +183,6 @@ def test_argnum():
         argnum=[0, 1], func=f_with_mode, grad_func=f_mul_grad)
 
 
-@with_seed()
 def test_training():
     x = nd.ones((10, 10))
     with record():
@@ -198,7 +193,6 @@ def test_training():
             assert (y.asnumpy() == x.asnumpy()).all()
 
 
-@with_seed()
 def test_out_grads():
     x = nd.ones((3, 5))
     dx = nd.zeros_like(x)
@@ -217,7 +211,6 @@ def test_out_grads():
          [5,4,3,2,1]])).all()
 
 
-@with_seed()
 def test_detach_updated_grad():
     x = nd.ones((2, 2))
     dx = nd.zeros_like(x)
@@ -250,7 +243,6 @@ def test_detach_updated_grad():
     assert x._fresh_grad == False
 
 
-@with_seed()
 def test_retain_grad():
     x = mx.nd.ones((2, 2))
     dx = mx.nd.zeros((2, 2))
@@ -282,7 +274,6 @@ def test_retain_grad():
         "differentiating the same graph twice without retain_graph should fail")
 
 
-@with_seed()
 def test_attach_grad():
     def check_attach_grad(x):
         assert x.grad is None
@@ -299,7 +290,6 @@ def test_attach_grad():
         check_attach_grad(x)
 
 
-@with_seed()
 def test_is_train():
     x = mx.nd.ones((10, 10))
     x.attach_grad()
@@ -346,7 +336,6 @@ def test_is_train():
         y = mx.nd.Dropout(x, p=0.5)
         assert y.asnumpy().max() == 2 and y.asnumpy().min() == 0
 
-@with_seed()
 @pytest.mark.garbage_expected
 def test_function():
     class func(Function):
@@ -383,7 +372,6 @@ def test_function():
     assert_almost_equal(y.grad.asnumpy(), dy1, atol=atol)
 
 
-@with_seed()
 @pytest.mark.garbage_expected
 def test_function1():
     class Foo(mx.autograd.Function):
@@ -405,7 +393,6 @@ def test_function1():
         X.wait_to_read()
 
 
-@with_seed()
 @pytest.mark.garbage_expected
 @use_np
 def test_np_function():
@@ -443,7 +430,6 @@ def test_np_function():
     assert_almost_equal(y.grad.asnumpy(), dy1, atol=atol)
 
 
-@with_seed()
 @pytest.mark.garbage_expected
 @use_np
 def test_np_function1():
@@ -466,7 +452,6 @@ def test_np_function1():
         X.wait_to_read()
 
 
-@with_seed()
 @pytest.mark.garbage_expected
 def test_get_symbol():
     x = mx.nd.ones((1,))
@@ -481,7 +466,6 @@ def test_get_symbol():
         y = x*x + 2*z - 1
     assert len(get_symbol(y).list_arguments()) == 2
 
-@with_seed()
 @pytest.mark.garbage_expected
 def test_grad_with_stype():
     def check_grad_with_stype(array_stype, grad_stype, expected_stype):
@@ -501,7 +485,6 @@ def test_grad_with_stype():
             # check the stype of the gradient when provided
             check_grad_with_stype(stype, grad_stype, grad_stype)
 
-@with_seed()
 @pytest.mark.garbage_expected
 def test_sparse_dot_grad():
     def check_sparse_dot_grad(rhs):
@@ -525,7 +508,6 @@ def test_sparse_dot_grad():
     dns.attach_grad(stype='row_sparse')
     check_sparse_dot_grad(dns)
 
-@with_seed()
 def test_gradient():
     x = mx.nd.ones((1,))
     x.attach_grad()

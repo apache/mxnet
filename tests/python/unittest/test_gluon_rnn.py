@@ -24,7 +24,7 @@ from functools import partial
 from numpy.testing import assert_allclose
 import pytest
 from mxnet.test_utils import almost_equal, assert_almost_equal, default_context
-from common import assert_raises_cudnn_not_satisfied, with_seed, retry
+from common import assert_raises_cudnn_not_satisfied, retry
 
 
 def check_rnn_states(fused_states, stack_states, num_layers, bidirectional=False, is_lstm=True):
@@ -76,7 +76,6 @@ def test_lstm():
     assert outs == [(10, 100), (10, 100), (10, 100)]
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='7.2.1')
 @pytest.mark.serial
 def test_lstmp():
@@ -338,7 +337,6 @@ def test_bidirectional():
 
 
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
-@with_seed()
 @pytest.mark.serial
 def test_layer_bidirectional():
     class RefBiLSTM(gluon.Block):
@@ -760,7 +758,6 @@ def check_rnn_bidir_layer_gradients(mode, input_size, hidden_size, num_layers, l
     check_rnn_consistency(fused_layer, stack_layer, loss, input_size, hidden_size, bidirectional=True)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_fused_lstm_layer():
     input_sizes = [8]
@@ -772,7 +769,6 @@ def test_fused_lstm_layer():
         check_rnn_bidir_layer_gradients('lstm', input_size, hidden_size, num_layers, loss)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_fused_gru_layer():
     input_sizes = [8]
@@ -784,7 +780,6 @@ def test_fused_gru_layer():
         check_rnn_bidir_layer_gradients('gru', input_size, hidden_size, num_layers, loss)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_fused_rnnrelu_layer():
     input_sizes = [8]
@@ -796,7 +791,6 @@ def test_fused_rnnrelu_layer():
         check_rnn_bidir_layer_gradients('rnn_relu', input_size, hidden_size, num_layers, loss)
 
 
-@with_seed()
 @assert_raises_cudnn_not_satisfied(min_version='5.1.10')
 def test_fused_rnntanh_layer():
     input_sizes = [8]
@@ -937,7 +931,6 @@ def check_rnn_forward(layer, inputs):
     mx.nd.waitall()
 
 
-@with_seed()
 def test_rnn_cells():
     check_rnn_forward(gluon.rnn.Conv1DLSTMCell((5, 7), 10, (3,), (3,)),
                       mx.nd.ones((8, 3, 5, 7)))
@@ -953,7 +946,6 @@ def test_rnn_cells():
     check_rnn_forward(net, mx.nd.ones((8, 3, 5, 7)))
 
 
-@with_seed()
 def test_convrnn():
     cell = gluon.rnn.Conv1DRNNCell((10, 50), 100, 3, 3)
     check_rnn_cell(cell, in_shape=(1, 10, 50), out_shape=(1, 100, 48))
@@ -965,7 +957,6 @@ def test_convrnn():
     check_rnn_cell(cell, in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
-@with_seed()
 def test_convlstm():
     cell = gluon.rnn.Conv1DLSTMCell((10, 50), 100, 3, 3)
     check_rnn_cell(cell, in_shape=(1, 10, 50), out_shape=(1, 100, 48))
@@ -977,7 +968,6 @@ def test_convlstm():
     check_rnn_cell(cell, in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
-@with_seed()
 def test_convgru():
     cell = gluon.rnn.Conv1DGRUCell((10, 50), 100, 3, 3)
     check_rnn_cell(cell, in_shape=(1, 10, 50), out_shape=(1, 100, 48))
@@ -989,7 +979,6 @@ def test_convgru():
     check_rnn_cell(cell, in_shape=(1, 10, 20, 30, 50), out_shape=(1, 100, 18, 28, 48))
 
 
-@with_seed()
 def test_conv_fill_shape():
     cell = gluon.rnn.Conv1DLSTMCell((0, 7), 10, (3,), (3,))
     cell.hybridize()
@@ -997,7 +986,6 @@ def test_conv_fill_shape():
     assert cell.i2h_weight.shape[1] == 5, cell.i2h_weight.shape[1]
 
 
-@with_seed()
 def test_lstmp():
     nhid = 100
     nproj = 64
@@ -1014,7 +1002,6 @@ def test_lstmp():
     assert outs == [(10, nproj), (10, nproj), (10, nproj)]
 
 
-@with_seed()
 def test_vardrop():
     def check_vardrop(drop_inputs, drop_states, drop_outputs):
         cell = gluon.rnn.VariationalDropoutCell(mx.gluon.rnn.RNNCell(100),
@@ -1049,7 +1036,6 @@ def test_vardrop():
     check_vardrop(0.5, 0, 0.5)
 
 
-@with_seed()
 @pytest.mark.parametrize('cell_type,num_states', [
     (gluon.rnn.RNNCell, 1),
     (gluon.rnn.LSTMCell, 2),
