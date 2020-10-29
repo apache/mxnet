@@ -27,6 +27,7 @@ namespace common {
 namespace cuda {
 namespace rtc {
 
+
 const char reducer[] = R"code(
 
 namespace red {
@@ -132,7 +133,7 @@ struct maximum {
    */
   template<typename DType>
   __device__ inline static void SetInitValue(DType &initv) {
-    initv = -2*DBL_MAX;
+    initv = limits::NegInfValue<DType>();
   }
   /*!
    *\brief set the initial value during reduction
@@ -180,7 +181,7 @@ struct minimum {
    */
   template<typename DType>
   __device__ inline static void SetInitValue(DType &initv) {
-    initv = 2*DBL_MAX;
+    initv = limits::PosInfValue<DType>();
   }
   /*!
    *\brief set the initial value during reduction
@@ -499,7 +500,7 @@ struct argmax {
   /*! \brief do reduction into dst */
   template<typename AType, typename DType>
   __device__ inline static void Reduce(volatile AType& dst,  volatile DType src) {
-    if (dst.num < src.num) {
+    if (dst.num < src.num || (dst.num == src.num && dst.idx > src.idx)) {
       dst.num = src.num;
       dst.idx = src.idx;
     }
@@ -507,27 +508,27 @@ struct argmax {
   /*! \brief do stable reduction into dst */
   template<typename AType, typename DType>
   __device__ inline static void Reduce(volatile AType& dst,  volatile DType src,
-                                       volatile DType& residual) {
-    if (dst.num < src.num) {
+                                       volatile DType&) {
+    if (dst.num < src.num || (dst.num == src.num && dst.idx > src.idx)) {
       dst.num = src.num;
       dst.idx = src.idx;
     }
   }
   /*! \brief combine the results of two reducers */
   template<typename DType>
-  __device__ inline static void Merge(volatile DType& dst_val, volatile DType& src_val) {
-    if (dst_val.num < src_val.num) {
-      dst_val.num = src_val.num;
-      dst_val.idx = src_val.idx;
+  __device__ inline static void Merge(volatile DType& dst, volatile DType& src) {
+    if (dst.num < src.num || (dst.num == src.num && dst.idx > src.idx)) {
+      dst.num = src.num;
+      dst.idx = src.idx;
     }
   }
   /*! \brief combine the results of two reducers */
   template<typename DType>
-  __device__ inline static void Merge(volatile DType& dst_val, volatile DType& dst_residual,
-                                      volatile DType& src_val, volatile DType& src_residual) {
-    if (dst_val.num < src_val.num) {
-      dst_val.num = src_val.num;
-      dst_val.idx = src_val.idx;
+  __device__ inline static void Merge(volatile DType& dst, volatile DType&,
+                                      volatile DType& src, volatile DType&) {
+    if (dst.num < src.num || (dst.num == src.num && dst.idx > src.idx)) {
+      dst.num = src.num;
+      dst.idx = src.idx;
     }
   }
   /*! \brief finalize reduction */
@@ -541,14 +542,71 @@ struct argmax {
    */
   template<typename DType>
   __device__ inline static void SetInitValue(DType &initv) {
-    initv.num = -2 * DBL_MAX;
+    initv.num = limits::NegInfValue<decltype(initv.num)>();
   }
   /*!
    *\brief set the initial value during reduction
    */
   template<typename DType>
   __device__ inline static void SetInitValue(DType &initv, DType &) {
-    initv.num = -2 * DBL_MAX;
+    initv.num = limits::NegInfValue<decltype(initv.num)>();
+  }
+};
+
+struct argmin {
+  /*! \brief do reduction into dst */
+  template<typename AType, typename DType>
+  __device__ inline static void Reduce(volatile AType& dst,  volatile DType src) {
+    if (dst.num > src.num || (dst.num == src.num && dst.idx > src.idx)) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief do stable reduction into dst */
+  template<typename AType, typename DType>
+  __device__ inline static void Reduce(volatile AType& dst,  volatile DType src,
+                                       volatile DType& residual) {
+    if (dst.num > src.num || (dst.num == src.num && dst.idx > src.idx)) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  __device__ inline static void Merge(volatile DType& dst, volatile DType& src) {
+    if (dst.num > src.num || (dst.num == src.num && dst.idx > src.idx)) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief combine the results of two reducers */
+  template<typename DType>
+  __device__ inline static void Merge(volatile DType& dst, volatile DType&,
+                                      volatile DType& src, volatile DType&) {
+    if (dst.num > src.num || (dst.num == src.num && dst.idx > src.idx)) {
+      dst.num = src.num;
+      dst.idx = src.idx;
+    }
+  }
+  /*! \brief finalize reduction */
+  template<typename DType>
+  __device__ inline static void Finalize(volatile DType& dst) {}
+  /*! \brief finalize reduction */
+  template<typename DType>
+  __device__ inline static void Finalize(volatile DType& dst, volatile DType& residual) {}
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  __device__ inline static void SetInitValue(DType &initv) {
+    initv.num = limits::PosInfValue<decltype(initv.num)>();
+  }
+  /*!
+   *\brief set the initial value during reduction
+   */
+  template<typename DType>
+  __device__ inline static void SetInitValue(DType &initv, DType &residual) {
+    initv.num = limits::PosInfValue<decltype(initv.num)>();
   }
 };
 }  // namespace red

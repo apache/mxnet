@@ -507,7 +507,8 @@ struct ReduceImplConfig {
     lhs_shape(small.ndim(), 1), lhs_stride(small.ndim(), 1),
     rhs_shape(small.ndim(), 1), rhs_stride(small.ndim(), 1) {
     // The largest reduction type currently is (index_t, double) struct
-    constexpr size_t max_type_size = sizeof(double) + sizeof(index_t);
+    // aligned to 16B
+    constexpr size_t max_type_size = 2 * sizeof(double);
     constexpr int maxLoopPerTB = 64;
     int ndim = small.ndim();
 

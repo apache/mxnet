@@ -116,6 +116,7 @@ CUfunction get_function(const std::string &parameters,
         std::string(fp16_support_string) + "\n" +
         type_support_string + "\n" +
         util_string + "\n" +
+        limits + "\n" +
         special_functions_definitions + '\n' +
         vectorization_support_string + "\n" +
         function_definitions_util + "\n" +

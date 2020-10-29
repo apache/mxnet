@@ -536,7 +536,6 @@ void NumpyArgMinMaxCompute(const nnvm::NodeAttrs& attrs,
   const TBlob in_data = in.reshape(src_shape);
   // request a work space
   size_t workspace_size = broadcast::ReduceWorkspaceSize(s, dst_shape, req[0], src_shape);
-#ifndef __CUDACC__
   MSHADOW_TYPE_SWITCH_WITH_BOOL(in.type_flag_, DType, {
     // define OType
     typedef mxnet::op::mshadow_op::IndexedNum<IType, DType> OType;
@@ -564,15 +563,21 @@ void NumpyArgMinMaxCompute(const nnvm::NodeAttrs& attrs,
           static_cast<OType*>(intermediate_out_data.dptr_));
     });
   });
-#else
-  Tensor<xpu, 1, char> workspace =
-            ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
-  BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-      broadcast::RTCReduce(ctx, outputs[0].reshape(dst_shape), req[0], workspace, in_data,
-                           "red::argmax{}", NDim, "identity", true);
-  });
-#endif
 }
+
+#if MXNET_USE_CUDA
+
+struct NumpyArgMinMaxRTCCompute {
+  std::string reducer;
+
+  void operator()(const nnvm::NodeAttrs& attrs,
+                  const OpContext& ctx,
+                  const std::vector<TBlob>& inputs,
+                  const std::vector<OpReqType>& req,
+                  const std::vector<TBlob>& outputs);
+};
+
+#endif
 
 template<typename xpu, bool normalize = false>
 inline void NumpyReduceAxesBackwardUseNone(const nnvm::NodeAttrs& attrs,

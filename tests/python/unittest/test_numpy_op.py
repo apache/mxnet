@@ -4311,7 +4311,7 @@ def test_np_argmin_argmax():
         ((3, 5, 7), 2, False),
         ((3, 5, 7, 9, 11), -3, False),
     ]
-    dtypes = ['float16', 'float32', 'float64']
+    dtypes = ['float16', 'float32', 'float64', 'bool', 'int32']
     ops = ['argmin', 'argmax']
 
     class TestArgExtreme(HybridBlock):
@@ -4326,7 +4326,7 @@ def test_np_argmin_argmax():
     for op_name in ops:
         for shape, axis, throw_exception in workloads:
             for dtype in dtypes:
-                a = np.random.uniform(size=shape, dtype=dtype)
+                a = np.random.uniform(low=0, high=100, size=shape).astype(dtype)
                 if throw_exception:
                     # Cannot use assert_exception because sometimes the main thread
                     # proceeds to `assert False` before the exception is thrown
