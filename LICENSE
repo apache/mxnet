@@ -247,7 +247,7 @@
           Copyright by Contributors
           Copyright (c) 2018-2019 Bytedance Inc.
     3rdparty/mkldnn - For details, see, 3rdparty/mkldnn/LICENSE
-          Copyright 2016-2019 Intel Corporation
+          Copyright 2016-2020 Intel Corporation
           Copyright 2018 YANDEX LLC
     googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
           Copyright [2007] Neal Norwitz
@@ -264,7 +264,7 @@
     MXNet Julia Package - For details, see julia/LICENSE.md
           Copyright (c) 2015-2018 by Chiyuan Zhang
     Benchdnn - For details, see 3rdparty/mkldnn/tests/benchdnn/README.md
-          Copyright 2017-2018 Intel Corporation
+          Copyright 2017-2020 Intel Corporation
     MXNet perl-package - For details, see perl-package/README
     MXNet perl-package AI-MXNET - For details, see perl-package/AI-MXNet/README
     MXNet perl-package AI-MXNET Gluon Contrib - For details, see perl-package/AI-MXNet-Gluon-Contrib/README
@@ -319,6 +319,7 @@
          Copyright 2016-2018 Intel Corporation
     gtest - For details, see, 3rdparty/mkldnn/tests/gtests/gtest/LICENSE
          Copyright 2005-2008, Google Inc.
+         Copyright 2015, Google Inc.
     Moderngpu - For details, see, 3rdparty/ctc_include/contrib/moderngpu/LICENSE
          Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
     CUB Library - For details, see, 3rdparty/nvidia_cub/LICENSE.TXT
@@ -336,7 +337,7 @@
          cmake/upstream/FindCUDAToolkit.cmake
          cmake/upstream/select_compute_arch.cmake
          3rdparty/mkldnn/cmake/FindOpenCL.cmake
-         Copyright 2000-2019 Kitware, Inc. and Contributors
+         Copyright 2000-2020 Kitware, Inc. and Contributors
     ittnotify - For details, see, 3rdparty/mkldnn/src/cpu/jit_utils/jitprofiling/
          Copyright (c) 2011, Intel Corporation
     Numpy einsum operator - For details, see src/operator/numpy/np_einsum_op-inl.h
@@ -410,6 +411,10 @@
     9. modulated_deformable_im2col.cuh - For details, see, src/operator/contrib/nn/modulated_deformable_im2col.cuh
          Copyright (c) 2014-2017 The Regents of the University of California (Regents)
          Copyright (c) 2014-2017, the respective contributors
+    10. .drone.yml - For details, see, 3rdparty/mkldnn/.github/automation/.drone.yml
+         Copyright 2020 Arm Limited and affiliates.
+    11. blas.cmake - For details, see, 3rdparty/mkldnn/cmake/blas.cmake
+         Copyright 2020 Arm Limited and affiliates.
 
 
     COPYRIGHT
@@ -451,7 +456,7 @@
 
     =======================================================================================
 
-    8. MS COCO API
+    12. MS COCO API
     For details, see, example/rcnn/LICENSE
     Copyright (c) 2014, Piotr Dollar and Tsung-Yi Lin
 
@@ -481,14 +486,14 @@
 
     =======================================================================================
 
-    9. Semaphore implementation in blockingconcurrentqueue.h
+    13. Semaphore implementation in blockingconcurrentqueue.h
     This file uses a semaphore implementation under the terms of its separate zlib license.
     For details, see, 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
     Copyright Jeff Preshing
 
     =======================================================================================
 
-    10. ONNX Export module
+    14. ONNX Export module
     For details, see, python/mxnet/contrib/onnx/mx2onnx/LICENSE
 
     This module is based on https://github.com/NVIDIA/mxnet_to_onnx/blob/master/mx2onnx_converter/#
@@ -569,7 +574,7 @@
 
     =======================================================================================
 
-    11. ONNX python bindings
+    15. ONNX python bindings
     For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/LICENSE
       Copyright (c) 2015-2017 Wenzel Jakob <wenzel.jakob@epfl.ch>, All rights reserved.
       Copyright (c) 2016 Trent Houliston <trent@houliston.me> and Wenzel Jakob <wenzel.jakob@epfl.ch>
@@ -620,7 +625,7 @@
 
     =======================================================================================
 
-    12. Clang
+    16. Clang
     For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/clang/LICENSE.TXT
 
     LLVM Release License
@@ -685,7 +690,7 @@
 
     =======================================================================================
 
-    13. FindJeMalloc.cmake
+    17. FindJeMalloc.cmake
     For details, see cmake/Modules/FindJeMalloc.cmake
 
     This file is based on https://github.com/STEllAR-GROUP/hpx/blob/master/cmake/FindJemalloc.cmake
@@ -776,7 +781,7 @@
 
     =======================================================================================
 
-    14. FindPythonLibsNew.cmake
+    18. FindPythonLibsNew.cmake
 
     For details, see 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindPythonLibsNew.cmake
 
@@ -815,7 +820,7 @@
 
     =======================================================================================
 
-    15. erfinv-inl.h
+    19. erfinv-inl.h
 
     For details, see /src/operator/contrib/erfinv-inl.h
 
@@ -858,7 +863,7 @@
 
     =======================================================================================
 
-    16. mersenne.h
+    20. mersenne.h
 
     For details, see /3rdparty/nvidia_cub/test/mersenne.h
 
@@ -907,7 +912,7 @@
 
     =======================================================================================
 
-    17. FindEigen3.cmake
+    21. FindEigen3.cmake
 
     For details, see /3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindEigen3.cmake
 
@@ -918,7 +923,7 @@
 
     =======================================================================================
 
-    18. protoc-gen-mypy.py
+    22. protoc-gen-mypy.py
 
     For details, see /3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py
 
@@ -934,7 +939,7 @@
 
     =======================================================================================
 
-    19. rang
+    23. rang
 
     For details, see /3rdparty/tvm/3rdparty/rang/LICENSE
 
@@ -965,7 +970,7 @@
 
     =======================================================================================
 
-    20. Font-Awesome, SIL Open Font License(OFL)
+    24. Font-Awesome, SIL Open Font License(OFL)
 
     For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/webfonts/
 
@@ -977,7 +982,7 @@
 
     =======================================================================================
 
-    21. Catch
+    25. Catch
     
     Only the file 3rdparty/intgemm/test/3rd_party/catch.hpp
 
@@ -1008,7 +1013,39 @@
     FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
     DEALINGS IN THE SOFTWARE.
+
+    26. Boost C++ Libraries
+
+    Only the file 3rdparty/mkldnn/src/common/primitive_hashing.hpp
+
+    Copyright 2005-2014 Daniel James.
+    Distributed under the Boost Software License, Version 1.0. (See below
+    or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Boost Software License - Version 1.0 - August 17th, 2003
     
+    Permission is hereby granted, free of charge, to any person or organization
+    obtaining a copy of the software and accompanying documentation covered by
+    this license (the "Software") to use, reproduce, display, distribute,
+    execute, and transmit the Software, and to prepare derivative works of the
+    Software, and to permit third-parties to whom the Software is furnished to
+    do so, all subject to the following:
+    
+    The copyright notices in the Software and this entire statement, including
+    the above license grant, this restriction and the following disclaimer,
+    must be included in all copies of the Software, in whole or in part, and
+    all derivative works of the Software, unless such copies or derivative
+    works are solely in the form of machine-executable object code generated by
+    a source language processor.
+    
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT
+    SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE
+    FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
+    ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+
     =======================================================================================
     Appendix
     =======================================================================================
