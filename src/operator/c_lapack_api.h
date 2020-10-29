@@ -259,8 +259,8 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   #define MXNET_LAPACK_dpotri LAPACKE_dpotri
   #define mxnet_lapack_sposv  LAPACKE_sposv
   #define mxnet_lapack_dposv  LAPACKE_dposv
-  //#define MXNET_LAPACK_dgesv  LAPACKE_dgesv
-  //#define MXNET_LAPACK_sgesv  LAPACKE_sgesv
+  // #define MXNET_LAPACK_dgesv  LAPACKE_dgesv
+  // #define MXNET_LAPACK_sgesv  LAPACKE_sgesv
 
   #define MXNET_LAPACK_CWRAP_GESV(prefix, dtype) \
   inline int MXNET_LAPACK_##prefix##gesv(int matrix_layout, int n, int nrhs, \
@@ -270,7 +270,7 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
     if (!std::is_same<lapack_index_t, int>::value) { \
       auto temp_ipiv = std::make_unique<lapack_index_t[]>(n); \
       int ret = LAPACKE_##prefix##gesv(matrix_layout, n, nrhs, a, lda, temp_ipiv.get(), b, ldb); \
-      for (int i=0; i < n; i++) { \
+      for (int i = 0; i < n; i++) { \
         ipiv[i] = temp_ipiv[i]; \
         std::cout  << i << ": " << ipiv[i] << std::endl; \
       } \
@@ -356,18 +356,18 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
   MXNET_LAPACK_CWRAP_SYEVD(s, float)
   MXNET_LAPACK_CWRAP_SYEVD(d, double)
 
-  //#define MXNET_LAPACK_sgetrf LAPACKE_sgetrf
-  //#define MXNET_LAPACK_dgetrf LAPACKE_dgetrf
+  // #define MXNET_LAPACK_sgetrf LAPACKE_sgetrf
+  // #define MXNET_LAPACK_dgetrf LAPACKE_dgetrf
 
   #define MXNET_LAPACK_CWRAP_GETRF(prefix, dtype) \
   inline int MXNET_LAPACK_##prefix##getrf(int matrix_layout, int m, int n, \
                                           dtype* a, int lda, int* ipiv) { \
     std::cout << "in getrf" << std::endl; \
     if (!std::is_same<lapack_index_t, int>::value) { \
-      int temp_size = std::min(m, n); \
+      int temp_size = m < n ? m : n; \
       auto temp_ipiv = std::make_unique<lapack_index_t[]>(temp_size); \
       int ret = LAPACKE_##prefix##getrf(matrix_layout, m, n, a, lda, temp_ipiv.get()); \
-      for (int i=0; i<temp_size; i++) { \
+      for (int i = 0; i < temp_size; i++) { \
         ipiv[i] = temp_ipiv[i]; \
         std::cout  << i << ": " << ipiv[i] << std::endl; \
       } \
@@ -422,7 +422,7 @@ inline void flip(int m, int n, DType *b, int ldb, DType *a, int lda) {
     if (lwork != -1) { \
       if (!std::is_same<lapack_index_t, int>::value) { \
         auto temp_ipiv = std::make_unique<lapack_index_t[]>(n); \
-        for (int i=0; i < n; i++) { \
+        for (int i = 0; i < n; i++) { \
           temp_ipiv[i] = ipiv[i]; \
           std::cout  << i << ": " << temp_ipiv[i] << std::endl; \
         } \
