@@ -141,7 +141,7 @@ def check_quantize(sym, data_shape, out_type, name='conv',
 
   if name in config:
     name = config[name][OP_NAME]
-  sym_sg = sym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=False, skip_infer=True)
+  sym_sg = sym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
 
   inputs = mx.sym.var('data', dtype='float32')
   sym_block = mx.gluon.SymbolBlock(sym, inputs)
@@ -174,7 +174,7 @@ def check_quantize(sym, data_shape, out_type, name='conv',
                                                                     num_calib_examples=1,
                                                                     quantize_mode='full',
                                                                     quantize_granularity=quantize_granularity)
-    qsym = qsym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=False, skip_infer=True)
+    qsym = qsym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
     if check_calibration:
       check_qsym_calibrated(qsym, out_type, name=name)
     if check_scale_align:
@@ -228,7 +228,8 @@ def test_quantize_whole_model_with_forward(qdtype):
 
 
 @with_seed()
-def check_fusion(sym, data_shape, attrs_dict, check_fp32_fusion=True, check_quantization=True, out_types=['uint8', 'int8', 'auto']):
+def check_fusion(sym, data_shape, attrs_dict, check_fp32_fusion=True, check_quantization=True,
+                 out_types=['uint8', 'int8', 'auto'], dedup_subgraph=True):
   if check_fp32_fusion:
     data_min = -1.0
     data_max = 1.0
@@ -236,7 +237,7 @@ def check_fusion(sym, data_shape, attrs_dict, check_fp32_fusion=True, check_quan
       check_quantization = False
       data_min = 0
 
-    sym_sg = sym.optimize_for(SG_PASS_NAME, dedup_subgraph=False, skip_infer=True)
+    sym_sg = sym.optimize_for(SG_PASS_NAME, dedup_subgraph=dedup_subgraph, skip_infer=True)
     for name, attrs in attrs_dict.items():
       if name in config:
         op_name = config[name][OP_NAME]
@@ -277,7 +278,7 @@ def check_neg_fusion(syms, attrs_name=None, excluded_attrs=None,
   op_name = config[name][OP_NAME]
 
   for sym, attrs, excluded_attr in zip(syms, attrs_name, excluded_attrs):
-    sym_sg = sym.optimize_for(SG_PASS_NAME, dedup_subgraph=False, skip_infer=True)
+    sym_sg = sym.optimize_for(SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
     exe_sg = sym_sg._simple_bind(mx.cpu(), data=date_shape, grad_req='null')
 
     attrs_dict = sym_sg.attr_dict()
@@ -439,6 +440,46 @@ def test_pos_conv_bn_sum_act(no_bias, data_shape, alg, quantize):
     relu = mx.symbol.Activation(data=sum1, name=alg, act_type=alg)
   check_fusion(relu, data_shape, attr, check_quantization=quantize)
 
+def run_sym_block(model, data_nd, dedup_subgraph):
+  data = mx.symbol.Variable('data', shape=data_nd.shape, dtype='float32')
+  sym = model.optimize_for(backend='MKLDNN', dedup_subgraph = dedup_subgraph, skip_infer = True)
+  sym_block = mx.gluon.SymbolBlock(sym, data)
+  initialize_block_params(sym_block, mx.init.One())
+  return sym_block(data_nd)
+
+def conv_bn_sum(data_shape, reverse_sum_order):
+  attr = {'sg_mkldnn_conv_bn_add_0' : {'with_bn': 'true'}}
+  data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
+  weight = mx.symbol.Variable('conv_weight', dtype='float32')
+  conv = mx.symbol.Convolution(data=data, weight=weight, name='conv', num_filter=4,
+                            kernel=(1, 1), stride=(1, 1), no_bias=True)
+  bn = mx.symbol.BatchNorm(data=conv, name="bn")
+  sum = bn + data if reverse_sum_order else data + bn
+  return sum, attr
+
+@with_seed()
+@pytest.mark.parametrize('reverse_sum_order', [True, False])
+@pytest.mark.parametrize('dedup_subgraph', [True, False])
+def test_conv_bn_sum(reverse_sum_order, dedup_subgraph):
+  data_shape=(64, 4, 10, 10)
+  net, attrs = conv_bn_sum(data_shape=data_shape, reverse_sum_order=reverse_sum_order)
+  check_fusion(net, data_shape, attrs, out_types=['int8', 'auto'], dedup_subgraph=dedup_subgraph)
+
+@with_seed()
+@pytest.mark.parametrize('reverse_sum_order', [False, True])
+@pytest.mark.parametrize('model_name', ['conv_bn_sum', 'mobilenetv2_struct'])
+def test_dedup(reverse_sum_order, model_name):
+  shape = (64, 4, 10, 10)
+  data = mx.symbol.Variable('data', shape=shape, dtype='float32')
+  data_nd = mx.random.uniform(-1, 1, shape=shape, ctx=mx.cpu())
+  if (model_name == 'mobilenetv2_struct'):
+    model, _ = mobilenetv2_struct(data_shape=shape, reverse_sum_order=reverse_sum_order)
+  else:
+    model, _ = conv_bn_sum(data_shape=shape, reverse_sum_order=reverse_sum_order)
+  out = run_sym_block(model, data_nd, dedup_subgraph = False)
+  out_dedup = run_sym_block(model, data_nd, dedup_subgraph = True)
+  assert_almost_equal(out.asnumpy(), out_dedup.asnumpy(), rtol=1e-3, atol=1e-1)
+
 # single concat case
 @with_seed()
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
@@ -490,7 +531,7 @@ def test_pos_concat_scale_align(data_shape, out_type):
 
 
 # mobilenetv2 case
-def mobilenetv2_struct(data_shape):
+def mobilenetv2_struct(data_shape, reverse_sum_order=False):
   attr = {'sg_mkldnn_conv_bn_0' : {'with_bn': 'true'}}
   data = mx.symbol.Variable('data', shape=data_shape, dtype='float32')
   weight1 = mx.symbol.Variable('conv1_weight', dtype='float32')
@@ -501,7 +542,7 @@ def mobilenetv2_struct(data_shape):
   conv2 = mx.symbol.Convolution(data=bn1, weight=weight2, name='conv2', num_filter=64,
                                kernel=(1, 1), stride=(1, 1), no_bias=True)
   bn2 = mx.symbol.BatchNorm(data=conv2, name="bn2")
-  sum = bn1 + bn2
+  sum = bn2 + bn1 if reverse_sum_order else bn1 + bn2
   return sum, attr
 
 def tail_neg_symbol(sym1, sym2):
@@ -762,9 +803,11 @@ def test_pos_conv_bn():
 
 @with_seed()
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
-def test_mobilenetv2_struct(data_shape):
-      net, attrs = mobilenetv2_struct(data_shape)
-      check_fusion(net, data_shape, attrs, out_types=['int8', 'auto'])
+@pytest.mark.parametrize('reverse_sum_order', [True, False])
+@pytest.mark.parametrize('dedup_subgraph', [True, False])
+def test_mobilenetv2_struct(data_shape, reverse_sum_order, dedup_subgraph):
+      net, attrs = mobilenetv2_struct(data_shape, reverse_sum_order=reverse_sum_order)
+      check_fusion(net, data_shape, attrs, out_types=['int8', 'auto'], dedup_subgraph=dedup_subgraph)
 
 @with_seed()
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
@@ -848,7 +891,7 @@ def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max
   ex = sym._bind(mx.cpu(), arg_params, args_grad=None)
   ex.forward(data = data_nd)
   ex.outputs[0].wait_to_read()
-  sym_sg = sym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=False, skip_infer=True)
+  sym_sg = sym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
   
   calib_data = mx.gluon.data.DataLoader(data_nd, batch_size=data_shape[0])
   qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
@@ -863,7 +906,7 @@ def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max
                                                                    label_names=None,
                                                                    num_calib_examples=1,
                                                                    quantize_mode='full')
-  qsym = qsym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=False, skip_infer=True)
+  qsym = qsym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
   qarg_params['data'] = data_nd
   qex = qsym._bind(mx.cpu(), qarg_params, args_grad=None)
   qex.forward()
@@ -897,7 +940,7 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
   ex = sym._bind(mx.cpu(), arg_params, args_grad=None)
   ex.forward(data = data_nd)
   ex.outputs[0].wait_to_read()
-  sym_sg = sym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=False, skip_infer=True)
+  sym_sg = sym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
   
   calib_data = mx.gluon.data.DataLoader(data_nd, batch_size=1)
   qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym_sg,
@@ -913,7 +956,7 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
                                                                    num_calib_examples=1,
                                                                    quantize_mode='full')
   qarg_params['data'] = data_nd
-  qsym = qsym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=False, skip_infer=True)
+  qsym = qsym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
   qex = qsym._bind(mx.cpu(), qarg_params, args_grad=None)
   qex.forward()
   qex.outputs[0].wait_to_read()

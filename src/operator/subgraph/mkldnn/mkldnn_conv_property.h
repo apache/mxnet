@@ -219,7 +219,6 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
         node_name << "add_";
         n->attrs.dict["with_sum"] = "true";
         _with_sum = true;
-
       } else if (sub_name == "Activation" || sub_name == "LeakyReLU" || sub_name == "clip") {
         node_name << "act_";
         if (!_with_sum) {
@@ -259,10 +258,20 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
       std::vector<nnvm::NodeEntry> *orig_input_entries) const override {
     auto sym = n->attrs.subgraphs[0];
     std::unordered_set<const nnvm::Node *> node_sets;
+    nnvm::Node* conv_input = nullptr;
     DFSVisit(sym->outputs, [&](const nnvm::ObjectPtr &node) {
       if (node->is_variable()) return;
       node_sets.insert(node.get());
-      if (node->op()->name == "elemwise_add") {
+      if (node->op()->name == "Convolution") {
+        conv_input = node->inputs[0].node.get();
+      } else if (node->op()->name == "elemwise_add") {
+        if (dedup_subgraph &&
+          (conv_input == node->inputs[1].node.get() ||
+           conv_input == node->inputs[0].node.get())) {
+            n->attrs.dict["dedup_sum"] = "true";
+            n->op()->attr_parser(&(n->attrs));
+            return;
+        }
         // Make sure n is the left operand of sum, if not,
         // switch sum operands sequence to ensure that
         // the extra sum operand stays in the last of inputs.
