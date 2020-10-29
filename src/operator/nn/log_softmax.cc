@@ -159,5 +159,43 @@ NNVM_REGISTER_OP(_backward_log_softmax)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, mshadow_op::left,
                                                         mxnet_op::log_softmax_bwd>);
 
+NNVM_REGISTER_OP(log_masked_softmax)
+.add_alias("_npx_log_masked_softmax")
+.describe(R"code(Computes the log masked softmax of the input.
+This is equivalent to computing masked softmax followed by log.)code")
+.set_attr_parser(ParamParser<MaskedSoftmaxParam>)
+.set_attr<nnvm::FListOutputNames>("FListInputNames",
+    [](const NodeAttrs& attrs){
+    return std::vector<std::string>{"data", "mask"};
+})
+.set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxCompute<cpu, mxnet_op::log_softmax_fwd>)
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_log_masked_softmax"})
+.set_attr<nnvm::FInferType>("FInferType", MaskedSoftmaxOpType)
+.set_num_inputs(2)
+.set_num_outputs(1)
+.set_attr<mxnet::FInferShape>("FInferShape", MaskedSoftmaxOpShape)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption",
+  [](const NodeAttrs& attrs){
+    return std::vector<std::pair<int, int> >{{0, 0}};
+  })
+.add_argument("data", "NDArray-or-Symbol", "The input array.")
+.add_argument("mask", "NDArray-or-Symbol", "Mask to apply.")
+.add_arguments(MaskedSoftmaxParam::__FIELDS__());
+
+NNVM_REGISTER_OP(_backward_log_masked_softmax)
+.set_num_inputs(4)
+.set_num_outputs(2)
+.set_attr<nnvm::FListOutputNames>("FListInputNames",
+    [](const NodeAttrs& attrs){
+    return std::vector<std::string>{"ograd", "data", "mask", "output"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", MaskedSoftmaxGradOpShape)
+.set_attr<nnvm::FInferType>("FInferType", MaskedSoftmaxGradOpType)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", MaskedSoftmaxGradOpInplaceOption)
+.add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
+.set_attr_parser(ParamParser<MaskedSoftmaxParam>)
+.set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxGradCompute<cpu, mshadow_op::left,
+                                                              mxnet_op::log_softmax_bwd>);
+
 }  // namespace op
 }  // namespace mxnet

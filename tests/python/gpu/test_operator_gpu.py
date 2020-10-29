@@ -2339,78 +2339,79 @@ def test_split_v2_fwd(dtype):
     check_symbolic_forward(sym, {"data": mx_data}, np_out, rtol=1e-3, atol=1e-5)
 
 def np_softmax(x, axis=-1, scale_factor=1.0, temperature=1.0, normalize=True):
-    #print(scale_factor)
     x = x / scale_factor
     if normalize:
         x = x - np.max(x, axis=axis, keepdims=True)
-    x = np.exp(x/temperature)
+    x = np.exp(x / temperature)
     x /= np.sum(x, axis=axis, keepdims=True)
     return x
 
-@with_seed()
-def test_masked_softmax():
-    #fails: export MXNET_TEST_SEED=2123604119
-    def np_masked_softmax(data, mask, axis, scale_factor=1.0, temperature=1.0, normalize=True):
-        if axis < 0:
-            axis = axis + 3
-        assert axis < 3 and axis >=0
-        non_axis_shape = list(data.shape)
-        non_axis_shape.pop(axis)
-        res = np.zeros(data.shape)
-        for i in range(non_axis_shape[0]):
-            for j in range(non_axis_shape[1]):
-                if axis == 0:
-                    my_data = data[:, i, j]
-                elif  axis == 1:
-                    my_data = data[i, :, j]
-                else:
-                    my_data = data[i, j, :]
-                # Fill in the masked scores with a very small value
-                neg = -1e18
-                if np.dtype(dtype) == np.float16:
-                    neg = -1e4
-                my_data = np.where(mask, my_data, neg)
-                my_res = np_softmax(my_data, scale_factor=scale,
-                                    temperature=temperature,
-                                    normalize=normalize) * mask
-                if axis == 0:
-                    res[:, i, j] = my_res
-                elif  axis == 1:
-                    res[i, :, j] = my_res
-                else:
-                    res[i, j, :] = my_res
-        return res
+def np_masked_softmax(data, mask, axis, scale_factor=1.0, temperature=1.0, normalize=True):
+    neg = -1e18
+    if data.dtype == np.float16:
+        neg = -1e4
+    temp = np.where(mask, data, neg)
+    result = np_softmax(temp, axis=axis, 
+                        scale_factor=scale_factor,
+                        temperature=temperature,
+                        normalize=normalize) * mask
+    return result
+def np_masked_softmax_grad(out, grad_out, axis, scale_factor=1.0, temperature=1.0):
+    temp = np.sum(out * grad_out, axis=axis, keepdims=True)
+    result = out * (grad_out - temp) / (temperature * scale_factor)
+    return result
 
+@pytest.mark.parametrize('dtype', [np.float16, np.float32, np.float64])
+@pytest.mark.parametrize('axis', [0, 1, 2, -1, -2, -3])
+@pytest.mark.parametrize('temperature', [1, 2, 5, 7, 9 ,11])
+@pytest.mark.parametrize('scale', [1, 2, 5, 7, 9 ,11])
+@pytest.mark.parametrize('normalize', [True])
+@with_seed()
+def test_masked_softmax(dtype, axis, temperature, scale, normalize):
     ndim = 3
     shape = rand_shape_nd(ndim, dim=10)
-    print('shape', shape)
+    mx_data = rand_ndarray(shape, dtype=dtype)
+    np_data = mx_data.asnumpy()
+    np_mask = np.random.randint(0, 2, shape)
+    mx_mask = mx.nd.array(np_mask, dtype=np.int32)
+    mx_grad = rand_ndarray(shape, dtype=dtype)
+    np_grad = mx_grad.asnumpy()
 
-    for dtype in [np.float16, np.float32, np.float64]:
-        for axis in [0, 1, 2, -1, -2, -3]:
-            for temp in range(1, 11):
-                for scale in range(1, 7):
-                    for normalize in [True, False]:
-                        mx_data = rand_ndarray(shape, dtype=dtype)
-                        np_data = mx_data.asnumpy()
-                        mask_shape = [shape[axis]]
-                        print('axis', axis, 'mask_shape', mask_shape, 'scale', scale, 'temp', temp, 'NORM', normalize)
-                        np_mask = np.random.randint(0, 2, mask_shape)
-                        mx_mask = mx.nd.array(np_mask, dtype=np.int32)
-                        #print('MASK', np_mask)
+    np_out = np_masked_softmax(np_data, np_mask, axis,
+                                scale, temperature, normalize)
+    np_grad_out = np_masked_softmax_grad(np_out, np_grad,
+                                         axis, scale, temperature)
+    data = mx.sym.Variable("data")
+    mask = mx.sym.Variable("mask")
+    mx_sym = mx.sym.masked_softmax(data=data, mask=mask, scale_factor=scale,
+                                   temperature=temperature, axis=axis,
+                                   normalize=normalize)
+    location = {"data": mx_data, "mask": mx_mask}
+    rtol = 1e-2 if dtype == np.float16 else 1e-3
+    atol = 1e-4 if dtype == np.float16 else 1e-5
+    check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol,
+                           dtype="asnumpy", equal_nan=True)
+    check_symbolic_backward(mx_sym, location, [mx_grad],
+                            [np_grad_out, np.zeros(shape, dtype=np.int32)],
+                            rtol=1e-2, atol=2e-3 if dtype == np.float16 else 1e-3,
+                            dtype="asnumpy", equal_nan=True)
 
-                        np_out = np_masked_softmax(np_data, np_mask, axis,
-                                                   scale, temp, normalize)
-                        #print('NP results:', np_out)
-
-                        data = mx.sym.Variable("data")
-                        mask = mx.sym.Variable("mask")
-                        mx_sym = mx.sym.masked_softmax(data=data, mask=mask, scale_factor=scale,
-                                                       temperature=temp, axis=axis,
-                                                       normalize=normalize)
-                        location = {"data": mx_data, "mask": mx_mask}
-                        rtol = 1e-2 if dtype == np.float16 else 1e-3
-                        atol = 1e-4 if dtype == np.float16 else 1e-5
-                        check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol, dtype="asnumpy")
-                        #check_symbolic_backward(mx_sym, location, [np.ones(shape, dtype=dtype)],
-                        #                        [np.zeros(shape), np.zeros(len_shape, dtype=np.int32)],
-                        #                        rtol=1e-2, atol=2e-3 if dtype == np.float16 else 1e-3, dtype="asnumpy")
+@pytest.mark.parametrize('dtype', ['float32'])
+@pytest.mark.parametrize('ndim', [1, 2, 3, 4, 5])
+@with_seed()
+def test_log_masked_softmax(dtype, ndim):
+    shape = np.random.randint(1, 5, size=ndim)
+    axis = np.random.randint(0, ndim)
+    mx_data = rand_ndarray(shape, dtype=dtype)
+    np_data = mx_data.asnumpy()
+    np_mask = np.random.randint(0, 2, shape)
+    mx_mask = mx.nd.array(np_mask, dtype=np.int32)
+    np_out = np.log(np_masked_softmax(np_data, np_mask, axis)+1e-20) * np_mask
+    data = mx.sym.Variable("data")
+    mask = mx.sym.Variable("mask")
+    mx_sym = mx.sym.log_masked_softmax(data=data, mask=mask, axis=axis-ndim)
+    location = {"data": mx_data, "mask": mx_mask}
+    rtol = 1e-2 if dtype == np.float16 else 1e-3
+    atol = 1e-4 if dtype == np.float16 else 1e-5
+    check_symbolic_forward(mx_sym, location, [np_out], rtol=rtol, atol=atol, dtype="asnumpy")
+    check_numeric_gradient(mx_sym, location, rtol=1e-1, atol=1e-2)

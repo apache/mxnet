@@ -191,7 +191,7 @@ NNVM_REGISTER_OP(_backward_softmax)
 
 NNVM_REGISTER_OP(masked_softmax)
 .add_alias("_npx_masked_softmax")
-.describe(R"code(Applies the softmax function. A mask is expected, and elements)code" ADD_FILELINE)
+.describe(R"code(Applies the softmax function and the mask provided)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<MaskedSoftmaxParam>)
 .set_attr<nnvm::FListOutputNames>("FListInputNames",
     [](const NodeAttrs& attrs){
@@ -202,7 +202,7 @@ NNVM_REGISTER_OP(masked_softmax)
     return std::vector<std::string>{"output"};
 })
 .set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxCompute<cpu, mxnet_op::softmax_fwd>)
-//.set_attr<nnvm::FGradient>("FGradient", MaskedSoftmaxFGradient{"_backward_masked_softmax"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_masked_softmax"})
 .set_attr<nnvm::FInferType>("FInferType", MaskedSoftmaxOpType)
 .set_num_inputs(2)
 .set_num_outputs(1)
@@ -213,8 +213,21 @@ NNVM_REGISTER_OP(masked_softmax)
   })
 .add_argument("data", "NDArray-or-Symbol", "The input array.")
 .add_argument("mask", "NDArray-or-Symbol", "Mask to apply.")
-.add_argument("scale", "NDArray-or-Symbol", "Scaling factor.")
 .add_arguments(MaskedSoftmaxParam::__FIELDS__());
 
+NNVM_REGISTER_OP(_backward_masked_softmax)
+.set_num_inputs(4)
+.set_num_outputs(2)
+.set_attr<nnvm::FListOutputNames>("FListInputNames",
+    [](const NodeAttrs& attrs){
+    return std::vector<std::string>{"ograd", "data", "mask", "output"};
+})
+.set_attr<mxnet::FInferShape>("FInferShape", MaskedSoftmaxGradOpShape)
+.set_attr<nnvm::FInferType>("FInferType", MaskedSoftmaxGradOpType)
+.set_attr<nnvm::FInplaceOption>("FInplaceOption", MaskedSoftmaxGradOpInplaceOption)
+.add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
+.set_attr_parser(ParamParser<MaskedSoftmaxParam>)
+.set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxGradCompute<cpu, op::mshadow_op::mul,
+                                                              mxnet_op::softmax_bwd>);
 }  // namespace op
 }  // namespace mxnet
