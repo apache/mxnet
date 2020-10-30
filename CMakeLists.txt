@@ -66,7 +66,7 @@ if(USE_MKL_IF_AVAILABLE AND (NOT APPLE) AND (NOT MSVC) AND (CMAKE_HOST_SYSTEM_PR
 else()
   option(USE_MKLDNN "Build with MKL-DNN support" OFF)
 endif()
-cmake_dependent_option(USE_INTGEMM "Build with x86_64 intgemm library for low-precision multiplication" OFF "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64" OFF)
+cmake_dependent_option(USE_INTGEMM "Build with x86_64 intgemm library for low-precision multiplication" ON "CMAKE_SYSTEM_PROCESSOR STREQUAL x86_64" OFF)
 if(NOT MSVC)
   option(USE_OPERATOR_TUNING  "Enable auto-tuning of operators" ON)
 else()
