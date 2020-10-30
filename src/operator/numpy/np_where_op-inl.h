@@ -175,6 +175,12 @@ inline void NumpyWhereOpForward(const nnvm::NodeAttrs& attrs,
   });
 }
 
+#if !defined(__CUDACC__)
+#define NP_WHERE_REDUCE_AXES(safe_acc, ...) ReduceAxesComputeImpl<xpu, mshadow_op::sum, safe_acc>(__VA_ARGS__)
+#else
+#define NP_WHERE_REDUCE_AXES(safe_acc, ...) ReduceAxesRTCComputeImpl(__VA_ARGS__, "red::sum{}")
+#endif
+
 template<typename xpu>
 inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
                                  const OpContext& ctx,
@@ -245,19 +251,12 @@ inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
         mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, true>, xpu>::Launch(
           s, ograd.Size(), req[0], cstride, oshape,
           cond.dptr<CType>(), ograd.dptr<DType>(), workspace.dptr_);
-        if constexpr (std::is_same<xpu, cpu>::value) {
-          if (NeedSafeAcc<true>(dx.type_flag_, dx.type_flag_)) {
-            ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[0]},
-                {dx.reshape(expanded_lshape)}, expanded_lshape);
-          } else {
-            ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[0]},
-                {dx.reshape(expanded_lshape)}, expanded_lshape);
-          }
+        if (NeedSafeAcc<true>(dx.type_flag_, dx.type_flag_)) {
+          NP_WHERE_REDUCE_AXES(true, ctx, {TBlob(workspace)}, {req[0]},
+              {dx.reshape(expanded_lshape)}, expanded_lshape);
         } else {
-#if MXNET_USE_CUDA
-          ReduceAxesRTCComputeImpl(ctx, {TBlob(workspace)}, {req[0]},
-              {dx.reshape(expanded_lshape)}, expanded_lshape, "red::sum{}");
-#endif  // MXNET_USE_CUDA
+          NP_WHERE_REDUCE_AXES(false, ctx, {TBlob(workspace)}, {req[0]},
+              {dx.reshape(expanded_lshape)}, expanded_lshape);
         }
       }
       // process right output
@@ -274,19 +273,12 @@ inline void NumpyWhereOpBackward(const nnvm::NodeAttrs& attrs,
         mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, false>, xpu>::Launch(
           s, ograd.Size(), req[1], cstride, oshape,
           cond.dptr<CType>(), ograd.dptr<DType>(), workspace.dptr_);
-        if constexpr (std::is_same<xpu, cpu>::value) {
-          if (NeedSafeAcc<true>(dy.type_flag_, dy.type_flag_)) {
-            ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[1]},
-                {dy.reshape(expanded_rshape)}, expanded_rshape);
-          } else {
-            ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[1]},
-                {dy.reshape(expanded_rshape)}, expanded_rshape);
-          }
+        if (NeedSafeAcc<true>(dy.type_flag_, dy.type_flag_)) {
+          NP_WHERE_REDUCE_AXES(true, ctx, {TBlob(workspace)}, {req[1]},
+              {dy.reshape(expanded_rshape)}, expanded_rshape);
         } else {
-#if MXNET_USE_CUDA
-            ReduceAxesRTCComputeImpl(ctx, {TBlob(workspace)}, {req[1]},
-                {dy.reshape(expanded_rshape)}, expanded_rshape, "red::sum{}");
-#endif  // MXNET_USE_CUDA
+          NP_WHERE_REDUCE_AXES(false, ctx, {TBlob(workspace)}, {req[1]},
+              {dy.reshape(expanded_rshape)}, expanded_rshape);
         }
       }
     });
@@ -397,24 +389,19 @@ inline void NumpyWhereScalarOpBackward(const nnvm::NodeAttrs& attrs,
         mxnet_op::Kernel<numpy_where_backward_kernel<broadcast::MAX_DIM, !is_lscalar>, xpu>::Launch(
           s, ograd.Size(), req[0], cstride, oshape,
           cond.dptr<CType>(), ograd.dptr<DType>(), workspace.dptr_);
-        if constexpr (std::is_same<xpu, cpu>::value) {
-          if (NeedSafeAcc<true>(dx.type_flag_, dx.type_flag_)) {
-            ReduceAxesComputeImpl<xpu, mshadow_op::sum, true>(ctx, {TBlob(workspace)}, {req[0]},
-                {dx.reshape(expanded_lshape)}, expanded_lshape);
-          } else {
-            ReduceAxesComputeImpl<xpu, mshadow_op::sum, false>(ctx, {TBlob(workspace)}, {req[0]},
-                {dx.reshape(expanded_lshape)}, expanded_lshape);
-          }
+        if (NeedSafeAcc<true>(dx.type_flag_, dx.type_flag_)) {
+          NP_WHERE_REDUCE_AXES(true, ctx, {TBlob(workspace)}, {req[0]},
+              {dx.reshape(expanded_lshape)}, expanded_lshape);
         } else {
-#if MXNET_USE_CUDA
-          ReduceAxesRTCComputeImpl(ctx, {TBlob(workspace)}, {req[0]},
-              {dx.reshape(expanded_lshape)}, expanded_lshape, "red::sum{}");
-#endif  // MXNET_USE_CUDA
+          NP_WHERE_REDUCE_AXES(false, ctx, {TBlob(workspace)}, {req[0]},
+              {dx.reshape(expanded_lshape)}, expanded_lshape);
         }
       }
     });
   });
 }
+
+#undef NP_WHERE_REDUCE_AXES
 
 template<typename xpu>
 inline void NumpyWhereScalar2OpForward(const nnvm::NodeAttrs& attrs,

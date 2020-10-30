@@ -299,7 +299,7 @@ void NumpyLpNormCompute(const nnvm::NodeAttrs& attrs,
 #else
       ReduceAxesRTCComputeImpl(
         ctx, inputs, req, outputs, small, "red::nrmlp{" + std::to_string(param.ord) + "}",
-        false, "abs");
+        nullptr, false, "abs");
 #endif
     }
   }
@@ -442,7 +442,7 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
       ctx, inputs, req, outputs, reduced_shape);
 #else
     ReduceAxesRTCComputeImpl(
-      ctx, inputs, req, outputs, reduced_shape, "red::nrm2{}", false, "identity");
+      ctx, inputs, req, outputs, reduced_shape, "red::nrm2{}", nullptr, false, "identity");
 #endif
     return;
   }
@@ -466,13 +466,14 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
           ctx, sum_output, req, outputs, reduced_shape);
       }
 #else
-      ReduceAxesRTCComputeImpl(ctx, inputs, req, sum_output, sum_shape, "red::sum{}", false, "abs");
+      ReduceAxesRTCComputeImpl(ctx, inputs, req, sum_output, sum_shape,
+                               "red::sum{}", nullptr, false, "abs");
       if (param.ord > 0) {
         ReduceAxesRTCComputeImpl(ctx, sum_output, req, outputs, reduced_shape,
-                                 "red::maximum{}", false);
+                                 "red::maximum{}", nullptr, false);
       } else {
         ReduceAxesRTCComputeImpl(ctx, sum_output, req, outputs, reduced_shape,
-                                 "red::minimum{}", false);
+                                 "red::minimum{}", nullptr, false);
       }
 #endif  // MXNET_USE_CUDA
     });
@@ -563,14 +564,14 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   }
 #else
   if (param.flag == 2) {  // nuclear norm
-    ReduceAxesRTCComputeImpl(ctx, eigen, req, outputs, reduced_shape, "red::sum{}", false);
+    ReduceAxesRTCComputeImpl(ctx, eigen, req, outputs, reduced_shape, "red::sum{}", nullptr, false);
   } else {
     if (ord == 2) {
       ReduceAxesRTCComputeImpl(ctx, eigen, req, outputs, reduced_shape,
-                               "red::maximum{}", false, "abs");
+                               "red::maximum{}", nullptr, false, "abs");
     } else if (ord == -2) {
       ReduceAxesRTCComputeImpl(ctx, eigen, req, outputs, reduced_shape,
-                               "red::minimum{}", false, "abs");
+                               "red::minimum{}", nullptr, false, "abs");
     }
   }
 #endif
@@ -814,7 +815,7 @@ void NumpyNormComputeForward(const nnvm::NodeAttrs& attrs,
       ctx, flat_inputs, req, flat_outputs, TShape(1, 1));
 #else
     ReduceAxesRTCComputeImpl(
-      ctx, flat_inputs, req, flat_outputs, TShape(1, 1), "red::nrm2{}", false, "identity");
+      ctx, flat_inputs, req, flat_outputs, TShape(1, 1), "red::nrm2{}", nullptr, false, "identity");
 #endif
     return;
   }

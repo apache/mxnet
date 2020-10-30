@@ -28,37 +28,13 @@ namespace op {
 
 #if MXNET_USE_CUDA
 
-void ReduceAxesRTCComputeWithWorkspaceImpl(const OpContext& ctx,
-                                           const std::vector<TBlob>& inputs,
-                                           const std::vector<OpReqType>& req,
-                                           const std::vector<TBlob>& outputs,
-                                           const std::string& reducer,
-                                           const bool normalize,
-                                           const std::string& OP,
-                                           const mshadow::Tensor<gpu, 1, char>& workspace,
-                                           const mxnet::TShape& src_shape,
-                                           const mxnet::TShape& dst_shape,
-                                           const int ddof) {
-  const TBlob in_data = inputs[0].reshape(src_shape);
-  const TBlob out_data = outputs[0].reshape(dst_shape);
-  BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-    broadcast::RTCReduce(ctx, out_data, req[0], workspace, in_data, reducer, NDim, OP);
-  });
-  if (normalize) {
-    NumpyBinaryScalarParam p{};
-    p.scalar = static_cast<double>(src_shape.Size()/dst_shape.Size() - ddof);
-    NodeAttrs a;
-    a.parsed = p;
-    BinaryScalarRTCCompute {"div"}(a, ctx, {out_data}, {kWriteInplace}, {out_data});
-  }
-}
-
 void ReduceAxesRTCComputeImpl(const OpContext& ctx,
                               const std::vector<TBlob>& inputs,
                               const std::vector<OpReqType>& req,
                               const std::vector<TBlob>& outputs,
                               const mxnet::TShape& small,
                               const std::string& reducer,
+                              const mshadow::Tensor<gpu, 1, char>* workspace,
                               const bool normalize,
                               const std::string& OP,
                               const int ddof) {
@@ -67,12 +43,25 @@ void ReduceAxesRTCComputeImpl(const OpContext& ctx,
   mxnet::TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(inputs[0].shape_, small, &src_shape, &dst_shape);
   Stream<gpu>* s = ctx.get_stream<gpu>();
-  size_t workspace_size = broadcast::ReduceWorkspaceSize(
-      s, dst_shape, req[0], src_shape);
-  Tensor<gpu, 1, char> workspace =
-      ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
-  ReduceAxesRTCComputeWithWorkspaceImpl(ctx, inputs, req, outputs, reducer, normalize,
-                                        OP, workspace, src_shape, dst_shape, ddof);
+  Tensor<gpu, 1, char> w;
+  if (workspace == nullptr) {
+    size_t workspace_size = broadcast::ReduceWorkspaceSize(
+        s, dst_shape, req[0], src_shape);
+    w = ctx.requested[0].get_space_typed<gpu, 1, char>(Shape1(workspace_size), s);
+    workspace = &w;
+  }
+  const TBlob in_data = inputs[0].reshape(src_shape);
+  const TBlob out_data = outputs[0].reshape(dst_shape);
+  BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
+    broadcast::RTCReduce(ctx, out_data, req[0], *workspace, in_data, reducer, NDim, OP);
+  });
+  if (normalize) {
+    NumpyBinaryScalarParam p{};
+    p.scalar = static_cast<double>(src_shape.Size()/dst_shape.Size() - ddof);
+    NodeAttrs a;
+    a.parsed = p;
+    BinaryScalarRTCCompute {"div"}(a, ctx, {out_data}, {kWriteInplace}, {out_data});
+  }
 }
 
 namespace {
@@ -182,7 +171,7 @@ void ReduceAxesRTCCompute<Param, init>::operator()(const nnvm::NodeAttrs& attrs,
     return;
   }
 
-  ReduceAxesRTCComputeImpl(ctx, inputs, req, outputs, small, reducer, normalize, OP, ddof);
+  ReduceAxesRTCComputeImpl(ctx, inputs, req, outputs, small, reducer, nullptr, normalize, OP, ddof);
 }
 
 template struct ReduceAxesRTCCompute<ReduceAxesParam, 0>;

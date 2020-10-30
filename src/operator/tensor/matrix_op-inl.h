@@ -2050,7 +2050,8 @@ void RepeatOpBackward(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false>(
       ctx, newInputs, req, newOutputs, rshapes.first);
 #else
-  ReduceAxesRTCComputeImpl(ctx, newInputs, req, newOutputs, rshapes.first, "red::sum{}", false);
+  ReduceAxesRTCComputeImpl(ctx, newInputs, req, newOutputs, rshapes.first,
+                           "red::sum{}", nullptr, false);
 #endif
 }
 
@@ -2246,7 +2247,8 @@ void TileOpBackward(const nnvm::NodeAttrs& attrs,
   ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false>(
       ctx, newInputs, req, newOutputs, rshapes.first);
 #else
-  ReduceAxesRTCComputeImpl(ctx, newInputs, req, newOutputs, rshapes.first, "red::sum{}", false);
+  ReduceAxesRTCComputeImpl(ctx, newInputs, req, newOutputs, rshapes.first,
+                           "red::sum{}", nullptr, false);
 #endif
 }
 

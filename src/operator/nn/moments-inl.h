@@ -129,7 +129,7 @@ inline void MomentsForwardImpl(const OpContext& ctx,
 #if !defined(__CUDACC__)
   ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, true>(ctx, {data}, {req[0]}, {mean}, small);
 #else
-  ReduceAxesRTCComputeImpl(ctx, {data}, {req[0]}, {mean}, small, "red::sum{}", true);
+  ReduceAxesRTCComputeImpl(ctx, {data}, {req[0]}, {mean}, small, "red::sum{}", nullptr, true);
 #endif
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
     Shape<6> data_shape, mean_shape;
@@ -146,7 +146,7 @@ inline void MomentsForwardImpl(const OpContext& ctx,
       ctx, {TBlob(temp_data).reshape(data.shape_)}, {kWriteTo}, {var}, small);
 #else
     ReduceAxesRTCComputeImpl(ctx, {TBlob(temp_data).reshape(data.shape_)},
-                             {kWriteTo}, {var}, small, "red::sum{}", true);
+                             {kWriteTo}, {var}, small, "red::sum{}", nullptr, true);
 #endif
   });
 }

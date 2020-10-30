@@ -622,7 +622,9 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
                            const std::vector<TBlob>& inputs,
                            const std::vector<OpReqType>& req,
                            const std::vector<TBlob>& outputs,
-                           const mxnet::TShape& small) {
+                           const mxnet::TShape& small,
+                           const mshadow::Tensor<xpu, 1, char>* workspace = nullptr,
+                           const int ddof = 0) {
   using namespace mshadow;
   using namespace mshadow::expr;
 
@@ -634,15 +636,18 @@ void ReduceAxesComputeImpl(const OpContext& ctx,
       const TBlob in_data = inputs[0].reshape(src_shape);
       const TBlob out_data = outputs[0].reshape(dst_shape);
       BROADCAST_NDIM_SWITCH(dst_shape.ndim(), NDim, {
-        size_t workspace_size = broadcast::ReduceWorkspaceSize(
-            s, out_data.shape_, req[0], in_data.shape_);
-        Tensor<xpu, 1, char> workspace =
-            ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+        Tensor<xpu, 1, char> w;
+        if (workspace == nullptr) {
+          size_t workspace_size = broadcast::ReduceWorkspaceSize(
+              s, out_data.shape_, req[0], in_data.shape_);
+          w = ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
+          workspace = &w;
+        }
         broadcast::Reduce<reducer, NDim, DType, OP, safe_acc>(
-            s, out_data, req[0], workspace, in_data);
+            s, out_data, req[0], *workspace, in_data);
         if (normalize) {
           auto out = out_data.FlatTo2D<xpu, OType>(s);
-          out /= scalar<OType>(src_shape.Size()/dst_shape.Size());
+          out /= scalar<OType>(src_shape.Size()/dst_shape.Size() - ddof);
         }
       });
     });
@@ -721,21 +726,12 @@ void ReduceAxesRTCComputeImpl(const OpContext& ctx,
                               const std::vector<TBlob>& outputs,
                               const mxnet::TShape& small,
                               const std::string& reducer,
+                              const mshadow::Tensor<gpu, 1, char>* workspace = nullptr,
+
                               const bool normalize = false,
                               const std::string& OP = "identity",
                               const int ddof = 0);
 
-void ReduceAxesRTCComputeWithWorkspaceImpl(const OpContext& ctx,
-                                           const std::vector<TBlob>& inputs,
-                                           const std::vector<OpReqType>& req,
-                                           const std::vector<TBlob>& outputs,
-                                           const std::string& reducer,
-                                           const bool normalize,
-                                           const std::string& OP,
-                                           const mshadow::Tensor<gpu, 1, char>& workspace,
-                                           const mxnet::TShape& src_shape,
-                                           const mxnet::TShape& dst_shape,
-                                           const int ddof = 0);
 #endif
 
 template <typename red_op, int req, int axis>
@@ -1549,7 +1545,7 @@ void LpNormCompute(const nnvm::NodeAttrs& attrs,
   const std::string &op = param.ord == 1
                           ? "abs"
                           : "identity";
-  ReduceAxesRTCComputeImpl(ctx, inputs, req, outputs, small, red, false, op);
+  ReduceAxesRTCComputeImpl(ctx, inputs, req, outputs, small, red, nullptr, false, op);
 #endif
 }
 
