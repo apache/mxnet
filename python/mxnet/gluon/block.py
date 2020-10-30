@@ -1105,8 +1105,14 @@ class HybridBlock(Block):
             # partition static shape ops if the graph contains any dynamic shape op
             self._first_forward = False
             data, out = self._cached_graph
-            out, is_dynamic = out._optimize_for_dynamic_shape_op(is_np_array(), self._flags)
+            is_dynamic = out._check_dynamic_shape_op()
             if is_dynamic:
+                backend_opts = {k : v for k, v in self._flags}
+                # partition for static shape ops
+                is_np = is_np_array()
+                out = out.optimize_for('static_shape', **backend_opts)
+                if is_np:
+                    out = out.as_np_ndarray()
                 # update data_indices and param_indices
                 data_indices = []
                 param_indices = []
