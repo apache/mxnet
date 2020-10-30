@@ -251,7 +251,7 @@ def test_mkldnn_sum_inplace_with_cpu_layout():
 
 def test_batchnorm():
     def check_batchnorm_training(stype):
-        for shape in [(2, 3), (2, 3, 2, 2)]:
+        for shape in [(2, 3), (2, 4), (2, 3, 2, 2), (2, 4, 2, 2)]:
             data_tmp = np.random.normal(-0.1, 0.1, size=shape)
             s = shape[1],
             gamma = np.ones(s)
