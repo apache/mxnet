@@ -243,7 +243,7 @@ inline bool FlattenShape(const nnvm::NodeAttrs& attrs,
   CHECK_EQ(out_attrs->size(), 1U);
   const mxnet::TShape &dshape = (*in_attrs)[0];
   if (!shape_is_known(dshape)) return false;
-  int target_dim = 1;
+  size_t target_dim = 1;
   for (int i = 1; i < dshape.ndim(); ++i) {
     target_dim *= dshape[i];
   }
@@ -443,7 +443,7 @@ struct TransposeExKernel {
    * \param ndim     the number of dimension
    */
   template <typename DType>
-  MSHADOW_XINLINE static void Map(int tid,
+  MSHADOW_XINLINE static void Map(index_t tid,
       DType *out_data,
       const DType *in_data,
       const dim_t *strides,
@@ -451,8 +451,8 @@ struct TransposeExKernel {
       ) {
     // tid is the index of input data
     const dim_t* const out_strides = strides + ndim;
-    int k = tid;
-    int out_id = 0;
+    index_t k = tid;
+    index_t out_id = 0;
     for (int i = 0; i < ndim; ++i) {
       out_id += (k / strides[i]) * out_strides[i];
       k %= strides[i];
@@ -1223,7 +1223,7 @@ inline bool SliceAssignOpShape(const nnvm::NodeAttrs& attrs,
     common::StaticArray<index_t, ndim> begin, end, step;
     GetIndexRange(dshape, param.begin, param.end, param.step, &begin, &end, &step);
     for (int i = 0; i < param.begin.ndim(); ++i) {
-      const int b = begin[i], e = end[i], s = step[i];
+      const index_t b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(dshape, i, b, e, s, &vshape);
     }
   })
@@ -1266,7 +1266,7 @@ void SliceAssignOpForward(const nnvm::NodeAttrs& attrs,
     }
     MSHADOW_TYPE_SWITCH(out.type_flag_, DType, {
       MXNET_ASSIGN_REQ_SWITCH(req[0], Req, {
-        int num_threads = val.shape_.FlatTo2D()[0];
+        index_t num_threads = val.shape_.FlatTo2D()[0];
         if (std::is_same<xpu, gpu>::value) {
           num_threads *= val.shape_.get<ndim>()[ndim - 1];
         }
@@ -1370,7 +1370,7 @@ void SliceAssignScalarOpForward(const nnvm::NodeAttrs& attrs,
       return;  // slice_assign of zero-sized subspaced needs no operation.
     }
     for (index_t i = 0; i < param.begin.ndim(); ++i) {
-      const int b = begin[i], e = end[i], s = step[i];
+      const index_t b = begin[i], e = end[i], s = step[i];
       SetSliceOpOutputDimSize(data.shape_, i, b, e, s, &vshape);
     }
     MSHADOW_TYPE_SWITCH_WITH_BOOL(out.type_flag_, DType, {
@@ -2958,8 +2958,8 @@ inline bool SplitOpShapeImpl(const nnvm::NodeAttrs& attrs,
   squeezed_dshape = mxnet::TShape(&squeezed_dshape[0], &squeezed_dshape[squeezed_dshape.ndim()-1]);
   // Assign shape to every output
   for (int i = 0; i < num_outputs; ++i) {
-    int start = indices[i];
-    int end = (i < num_outputs - 1) ? indices[i + 1] : ishape[real_axis];
+    index_t start = indices[i];
+    index_t end = (i < num_outputs - 1) ? indices[i + 1] : ishape[real_axis];
     if (ishape[real_axis] == 0U) {
       end = start;
     } else {

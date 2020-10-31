@@ -537,33 +537,49 @@ void FindOutputEntries(nnvm::Graph* g,
  */
 void CutGraphInputs(const std::vector<nnvm::NodeEntry*> &input_entries,
                     std::vector<nnvm::NodeEntry> *orig_entries,
-                    const bool skip_var = false) {
+                    std::vector<nnvm::NodeEntry> *unique_orig_entries,
+                    std::vector<nnvm::NodeEntry*> *unique_input_entries,
+                    const bool skip_var = false,
+                    const bool dedup = false) {
   orig_entries->resize(input_entries.size());
   // map for creating unique var nodes for deduplicating entries from the same node
+  std::unordered_map<std::string, nnvm::NodeEntry> name_map;
   std::unordered_map<std::string, int> name_count_map;
+
   for (size_t i = 0; i < input_entries.size(); ++i) {
     nnvm::NodeEntry *e = input_entries[i];
     // If the node is a variable itself, we may want to skip the node.
     if (e->node->is_variable() && skip_var) {
       continue;
     }
-
+    // save all original entries
     orig_entries->at(i) = *e;
+    // get unique name for this entry
     nnvm::Symbol sym;
     sym.outputs.push_back(*e);
     const auto output_names = sym.ListOutputNames();
     CHECK_EQ(output_names.size(), 1U);
     const std::string& var_name = output_names[0];
-    auto it = name_count_map.find(var_name);
-    if (name_count_map.end() == it) {
+    // check if this entry is a duplicate
+    if (name_count_map.count(var_name) == 0) {
+      // first use of this node as input to subgraph
       name_count_map.emplace(var_name, 0);
+      unique_orig_entries->push_back(*e);
+      unique_input_entries->push_back(e);
+      nnvm::ObjectPtr n = nnvm::CreateVariableNode(var_name + std::to_string(0));
+      name_map.emplace(var_name, nnvm::NodeEntry{n, 0, 0});
     } else {
-      ++(it->second);
+      // other use of same node as input to subgraph
+      name_count_map[var_name]++;
     }
-    nnvm::ObjectPtr n = nnvm::CreateVariableNode(
-        var_name + std::to_string(name_count_map[var_name]));
 
-    *e = nnvm::NodeEntry{n, 0, 0};
+    if (dedup) {
+      *e = name_map[var_name];
+    } else {
+      nnvm::ObjectPtr n = nnvm::CreateVariableNode(
+        var_name + std::to_string(name_count_map[var_name]));
+      *e = nnvm::NodeEntry{n, 0, 0};
+    }
   }
 }
 
@@ -593,10 +609,14 @@ void CreateSubgraphNode(nnvm::Graph* g,
 #if DEBUG_SUBGRAPH
   LOG(INFO) << "Searching for input entries...";
 #endif
-  std::vector<nnvm::NodeEntry*> input_entries;
+  bool dedup_subgraph = g->HasAttr("dedup_subgraph");
+  std::vector<nnvm::NodeEntry*> input_entries;  // nodes that produce inputs to subgraph nodes
   FindInputEntries(*g, simple_nodes, subgraph_nodes, *entry_top_order_map, &input_entries);
-  std::vector<nnvm::NodeEntry> orig_input_entries;
-  CutGraphInputs(input_entries, &orig_input_entries, false);
+  std::vector<nnvm::NodeEntry> orig_input_entries;  // original input entries (dupes)
+  std::vector<nnvm::NodeEntry> unique_orig_entries;  // unique original input entries
+  std::vector<nnvm::NodeEntry*> unique_input_entries;  // unique modified subgraph inputs
+  CutGraphInputs(input_entries, &orig_input_entries, &unique_orig_entries,
+                 &unique_input_entries, false, dedup_subgraph);
 #if DEBUG_SUBGRAPH
   PrintNodeEntries(input_entries);
   LOG(INFO) << "Searching for output entries...";
@@ -605,20 +625,42 @@ void CreateSubgraphNode(nnvm::Graph* g,
   FindOutputEntries(g, simple_nodes, subgraph_nodes, *entry_top_order_map, &output_entries);
 
   // Create a subgraph for the subgraph node
+  // entries are in topological order, with duplicates being neighbors
   nnvm::Symbol sym;
+  size_t idx = 0;
+  nnvm::NodeEntryEqual node_equal;
   sym.outputs.resize(output_entries.size());
   for (size_t i = 0; i < output_entries.size(); ++i) {
-    sym.outputs[i] = *output_entries[i];
+    if (dedup_subgraph) {
+      if (i == 0) {  // add first entry
+        sym.outputs[idx] = *output_entries[i];
+      } else if (!node_equal(sym.outputs[idx], *output_entries[i])) {  // compare to see if diff
+        // add new entries
+        idx++;
+        sym.outputs[idx] = *output_entries[i];
+      }  // else skip over dupe entries
+    } else {
+      sym.outputs[i] = *output_entries[i];
+    }
   }
+  if (dedup_subgraph)
+    sym.outputs.resize(idx+1);
+
   const SubgraphPropertyPtr& subg_prop = g->GetAttr<SubgraphPropertyPtr>("subgraph_property");
-  subg_prop->InitSubgraphInputs(&input_entries, &orig_input_entries);
+  if (dedup_subgraph)
+    subg_prop->InitSubgraphInputs(&unique_input_entries, &unique_orig_entries);
+  else
+    subg_prop->InitSubgraphInputs(&input_entries, &orig_input_entries);
   nnvm::ObjectPtr n = subg_prop->CreateSubgraphNode(sym, subgraph_selector, subgraph_id);
   // CreateSubgraphNode returns NULL if subgraph property determines that subgraph is sub-optimal
   // In that case, subgraph node is not created and graph is not modified
   if (n) {
     // Connect the external nodes to the subgraph node.
     subg_prop->ConnectSubgraphOutputs(n, &output_entries);
-    subg_prop->ConnectSubgraphInputs(n, &input_entries, &orig_input_entries);
+    if (dedup_subgraph)
+      subg_prop->ConnectSubgraphInputs(n, &unique_input_entries, &unique_orig_entries);
+    else
+      subg_prop->ConnectSubgraphInputs(n, &input_entries, &orig_input_entries);
 
     const auto& indexed_graph = g->indexed_graph();
     for (size_t i = 0; i < n->inputs.size(); ++i) {
@@ -661,6 +703,7 @@ void AdjustSubgraphNode(nnvm::Graph* g,
                         const SubgraphSelectorV2Ptr& subgraph_selector,
                         const size_t subgraph_id) {
   std::vector<nnvm::Node*> node_list;
+  node_list.reserve(subgraph_nodes.size());
   for (auto node : subgraph_nodes) {
     node_list.push_back(node->node);
   }

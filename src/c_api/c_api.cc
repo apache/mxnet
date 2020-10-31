@@ -870,7 +870,13 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       auto in_first = in_shape->begin();
       auto in_last  = in_first + in_shape->size() - extra_inputs;
       mxnet::ShapeVector *sg_in_shapes = new mxnet::ShapeVector(in_first, in_last);
-      return mxnet::op::DefaultSubgraphOpShape(attrs, sg_in_shapes, out_shape);
+      bool res = mxnet::op::DefaultSubgraphOpShape(attrs, sg_in_shapes, out_shape);
+
+      // assign modified input shapes to ShapeVector
+      for (unsigned i = 0; i < sg_in_shapes->size(); ++i) {
+        SHAPE_ASSIGN_CHECK(*in_shape, i, sg_in_shapes->at(i));
+      }
+      return res;
     };
 
     // lambda function to call infer type
@@ -934,7 +940,12 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       auto in_last  = in_first + in_type->size() - extra_inputs;
       std::vector<int> *sg_in_types = new std::vector<int>(in_first, in_last);
 
-      return mxnet::op::DefaultSubgraphOpType(attrs, sg_in_types, out_type);
+      bool res = mxnet::op::DefaultSubgraphOpType(attrs, sg_in_types, out_type);
+      // copy and assign modified input types
+      for (size_t i = 0; i < sg_in_types->size(); i++) {
+        TYPE_ASSIGN_CHECK(*in_type, i, sg_in_types->at(i));
+      }
+      return res;
     };
 
     // lambda function to convert from external mutate_inputs to internal MXNet types
@@ -982,7 +993,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         // InferSType is defined in customized lib.
         // convert attributes to vector of char*
         std::vector<const char*> attr_keys, attr_vals;
-        for (auto kv : attrs.dict) {
+        for (const auto& kv : attrs.dict) {
           attr_keys.push_back(kv.first.c_str());
           attr_vals.push_back(kv.second.c_str());
         }
@@ -1034,8 +1045,13 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         auto in_last  = in_first + in_stypes->size() - extra_inputs;
         std::vector<int> *sg_in_stypes = new std::vector<int>(in_first, in_last);
 
-        return mxnet::op::DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
-                                                       sg_in_stypes, out_stypes);
+        bool res = mxnet::op::DefaultSubgraphOpStorageType(attrs, dev_mask, dispatch_mode,
+                                                           sg_in_stypes, out_stypes);
+        // copy and assign modified input storage types
+        for (size_t i = 0; i < sg_in_stypes->size(); i++) {
+          STORAGE_TYPE_ASSIGN_CHECK(*in_stypes, i, sg_in_stypes->at(i));
+        }
+        return res;
     };
 
     // FGradient register lambda
@@ -1047,7 +1063,7 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       p->attrs.name = n->attrs.name + "_backward";
       // copy attributes and subgraphs
       p->attrs.dict = n->attrs.dict;
-      for (auto s : n->attrs.subgraphs)
+      for (const auto& s : n->attrs.subgraphs)
         p->attrs.subgraphs.push_back(s);
       // set control dependency and attr parser
       p->control_deps.emplace_back(n);
@@ -1093,6 +1109,28 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         attr_vals.push_back(kv.second.c_str());
       }
 
+      // string repr of supported context for custom library, currently only "cpu" and "gpu"
+      const char* ctx_str = ctx.dev_mask() == Context::kCPU ? "cpu" : "gpu";
+
+      std::vector<uint32_t*> inshapes(in_shapes.size());
+      std::vector<int> indims(in_shapes.size());
+
+      // determine amount of memory needed to store all the input shapes
+      size_t buff_size = 0;
+      for (const auto & in_shape : in_shapes)
+        buff_size += in_shape.ndim();
+
+      // copy input shapes to raw memory layout
+      std::vector<uint32_t> inbuff(buff_size);
+      uint32_t *ptr = inbuff.data();
+      for (size_t i = 0; i < in_shapes.size(); ++i) {
+        inshapes[i] = ptr;
+        indims[i] = in_shapes[i].ndim();
+        for (int j = 0; j < in_shapes[i].ndim(); ++j, ++ptr) {
+          *ptr = static_cast<uint32_t>(in_shapes[i][j]);
+        }
+      }
+
       // convert subgraph symbol from node attributes to char*
       std::string subgraph_json;
       if (!attrs.subgraphs.empty()) {
@@ -1111,7 +1149,9 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         CHECK(createop_map.count("cpu") > 0)
           << "CPU CreateOpState not implemented for '" << name_str << "'";
         int retval = callCreateOpState(createop_map.at("cpu"), attr_keys.data(), attr_vals.data(),
-                                       attr_keys.size(), &state_op_inst);
+                                       attr_keys.size(), ctx_str, ctx.real_dev_id(),
+                                       inshapes.data(), indims.data(),
+                                       in_shapes.size(), in_types.data(), &state_op_inst);
         std::string msgs = getExtensionMsgs(msgSize, msgGet);
         CHECK(retval) << "Error calling CreateOpState CPU for custom operator '" << name_str << "'"
                       << msgs;
@@ -1119,7 +1159,9 @@ void registerOperators(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
         CHECK(createop_map.count("gpu") > 0)
           << "GPU CreateOpState not implemented for '" << name_str << "'";
         int retval = callCreateOpState(createop_map.at("gpu"), attr_keys.data(), attr_vals.data(),
-                                       attr_keys.size(), &state_op_inst);
+                                       attr_keys.size(), ctx_str, ctx.real_dev_id(),
+                                       inshapes.data(), indims.data(),
+                                       in_shapes.size(), in_types.data(), &state_op_inst);
         std::string msgs = getExtensionMsgs(msgSize, msgGet);
         CHECK(retval) << "Error calling CreateOpState GPU for custom operator '" << name_str << "'"
         << msgs;
@@ -1391,7 +1433,7 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
       // this temp workspace holds memory allocated by custom library via OpResource
       auto ndarray_alloc = [&](const mxnet::TShape &shape, Context ctx, int dtype,
                                std::string name, bool isArg) {
-        NDArray* arr = new NDArray(shape, ctx, dtype);
+        NDArray* arr = new NDArray(shape, ctx, false, dtype);
         if (isArg) {
           new_args.push_back(arr);
           new_arg_names.push_back(name);
@@ -1462,15 +1504,15 @@ void registerPasses(void *lib, int verbose, mxnet::ext::msgSize_t msgSize,
  * \brief Loads dynamic custom library and initializes it
  * \param path library path
  */
-int MXLoadLib(const char *path, unsigned verbose) {
+int MXLoadLib(const char *path, unsigned verbose, void** lib) {
   API_BEGIN();
-  void *lib = LibraryInitializer::Get()->lib_load(path);
-  if (!lib)
+  *lib = LibraryInitializer::Get()->lib_load(path);
+  if (!*lib)
     LOG(FATAL) << "Unable to load library";
 
   // check that library and MXNet use same version of library API
   mxnet::ext::opVersion_t opVersion =
-    get_func<mxnet::ext::opVersion_t>(lib, const_cast<char*>(MXLIB_OPVERSION_STR));
+    get_func<mxnet::ext::opVersion_t>(*lib, const_cast<char*>(MXLIB_OPVERSION_STR));
   int libVersion =  opVersion();
   if (MX_LIBRARY_VERSION != libVersion)
     LOG(FATAL) << "Library version (" << libVersion << ") does not match MXNet version ("
@@ -1478,22 +1520,22 @@ int MXLoadLib(const char *path, unsigned verbose) {
 
   // get error messaging APIs
   mxnet::ext::msgSize_t msgSize =
-    get_func<mxnet::ext::msgSize_t>(lib, const_cast<char*>(MXLIB_MSGSIZE_STR));
+    get_func<mxnet::ext::msgSize_t>(*lib, const_cast<char*>(MXLIB_MSGSIZE_STR));
   mxnet::ext::msgGet_t msgGet =
-    get_func<mxnet::ext::msgGet_t>(lib, const_cast<char*>(MXLIB_MSGGET_STR));
+    get_func<mxnet::ext::msgGet_t>(*lib, const_cast<char*>(MXLIB_MSGGET_STR));
 
   // initialize library by passing MXNet version
   mxnet::ext::initialize_t initialize =
-    get_func<mxnet::ext::initialize_t>(lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
+    get_func<mxnet::ext::initialize_t>(*lib, const_cast<char*>(MXLIB_INITIALIZE_STR));
   if (!initialize(static_cast<int>(MXNET_VERSION))) {
     std::string msgs = getExtensionMsgs(msgSize, msgGet);
     LOG(FATAL) << "Library failed to initialize" << msgs;
   }
 
   // find ops, partitioners, and passes in library
-  registerOperators(lib, verbose, msgSize, msgGet);
-  registerPartitioners(lib, verbose, msgSize, msgGet);
-  registerPasses(lib, verbose, msgSize, msgGet);
+  registerOperators(*lib, verbose, msgSize, msgGet);
+  registerPartitioners(*lib, verbose, msgSize, msgGet);
+  registerPasses(*lib, verbose, msgSize, msgGet);
   API_END();
 }
 
@@ -1647,41 +1689,25 @@ void CreateNDArray(const DataType* shape,
   *out = nd;
 }
 
-int MXNDArrayCreate(const uint32_t *shape,
-                    uint32_t ndim,
-                    int dev_type,
-                    int dev_id,
-                    int delay_alloc,
-                    NDArrayHandle *out) {
-  API_BEGIN();
-  NDArray* nd = new NDArray(mxnet::TShape(shape, shape + ndim),
-                            Context::Create(static_cast<Context::DeviceType>(dev_type), dev_id),
-                            delay_alloc != 0);
-  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
-                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
-  *out = nd;
-  API_END();
-}
-
-int MXNDArrayCreateEx64(const int64_t *shape,
-                        int ndim,
-                        int dev_type,
-                        int dev_id,
-                        int delay_alloc,
-                        int dtype,
-                        NDArrayHandle *out) {
-  API_BEGIN();
-  CreateNDArray<int64_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
-  API_END();
-}
-
-int MXNDArrayCreateEx(const uint32_t *shape,
-                      uint32_t ndim,
+int MXNDArrayCreate64(const int64_t *shape,
+                      int ndim,
                       int dev_type,
                       int dev_id,
                       int delay_alloc,
                       int dtype,
                       NDArrayHandle *out) {
+  API_BEGIN();
+  CreateNDArray<int64_t>(shape, ndim, dev_type, dev_id, delay_alloc, dtype, out);
+  API_END();
+}
+
+int MXNDArrayCreate(const uint32_t *shape,
+                    uint32_t ndim,
+                    int dev_type,
+                    int dev_id,
+                    int delay_alloc,
+                    int dtype,
+                    NDArrayHandle *out) {
   API_BEGIN();
   CreateNDArray<uint32_t>(shape, static_cast<int>(ndim), dev_type, dev_id, delay_alloc, dtype, out);
   API_END();
@@ -2050,25 +2076,6 @@ int MXNDArrayGetStorageType(NDArrayHandle handle,
   API_END();
 }
 
-int MXNDArrayGetShape(NDArrayHandle handle,
-                      uint32_t *out_dim,
-                      const uint32_t **out_pdata) {
-  MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
-  API_BEGIN();
-  NDArray *arr = static_cast<NDArray*>(handle);
-  if (!arr->is_none()) {
-    const mxnet::TShape &s = arr->shape();
-    *out_dim = s.ndim();
-    std::vector<uint32_t>& buffer = ret->arg_shape_buffer;
-    buffer.resize(s.ndim());
-    nnvm::ShapeTypeCast(s.begin(), s.end(), buffer.data());
-    *out_pdata = buffer.data();
-  } else {
-    *out_dim = 0;
-  }
-  API_END();
-}
-
 template<typename dtype>
 inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim,
                      MXAPIThreadLocalEntry<dtype>* ret) {
@@ -2108,18 +2115,18 @@ inline void GetShape(NDArrayHandle handle, const dtype** out_pdata, int* out_dim
   }
 }
 
-int MXNDArrayGetShapeEx(NDArrayHandle handle,
-                        int *out_dim,
-                        const int **out_pdata) {
+int MXNDArrayGetShape(NDArrayHandle handle,
+                      int *out_dim,
+                      const int **out_pdata) {
   MXAPIThreadLocalEntry<> *ret = MXAPIThreadLocalStore<>::Get();
   API_BEGIN();
   GetShape<int>(handle, out_pdata, out_dim, ret);
   API_END();
 }
 
-int MXNDArrayGetShapeEx64(NDArrayHandle handle,
-                          int *out_dim,
-                          const int64_t **out_pdata) {
+int MXNDArrayGetShape64(NDArrayHandle handle,
+                        int *out_dim,
+                        const int64_t **out_pdata) {
   MXAPIThreadLocalEntry<int64_t> *ret = MXAPIThreadLocalStore<int64_t>::Get();
   API_BEGIN();
   GetShape<int64_t>(handle, out_pdata, out_dim, ret);
@@ -2153,13 +2160,8 @@ int MXNDArrayToDLPack(NDArrayHandle handle,
 }
 
 int MXNDArrayFromDLPack(DLManagedTensorHandle dlpack,
+                        const bool transient_handle,
                         NDArrayHandle *out_handle) {
-  return MXNDArrayFromDLPackEx(dlpack, false, out_handle);
-}
-
-int MXNDArrayFromDLPackEx(DLManagedTensorHandle dlpack,
-                          const bool transient_handle,
-                          NDArrayHandle *out_handle) {
   API_BEGIN();
   *out_handle = new NDArray(NDArray::FromDLPack(
               static_cast<DLManagedTensor*>(dlpack),
@@ -2319,21 +2321,6 @@ int MXFuncDescribe(FunctionHandle fun,
 }
 
 int MXFuncInvoke(FunctionHandle fun,
-                 NDArrayHandle *use_vars,
-                 float *scalar_args,
-                 NDArrayHandle *mutate_vars) {
-  API_BEGIN();
-  auto *f = static_cast<const NDArrayFunctionReg*>(fun);
-  f->body((NDArray**)(use_vars),  //  NOLINT(*)
-          scalar_args,
-          (NDArray**)(mutate_vars),  //  NOLINT(*)
-          0,
-          nullptr,
-          nullptr);
-  API_END();
-}
-
-int MXFuncInvokeEx(FunctionHandle fun,
                  NDArrayHandle *use_vars,
                  float *scalar_args,
                  NDArrayHandle *mutate_vars,
@@ -3356,18 +3343,8 @@ int MXNDArrayGetSharedMemHandle(NDArrayHandle handle, int* shared_pid, int* shar
   API_END();
 }
 
-int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const uint32_t *shape,
-                                 uint32_t ndim, int dtype, NDArrayHandle *out) {
-  API_BEGIN();
-  NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
-  nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),
-                        MXNET_STORAGE_DEFAULT_NAME_CSTR);
-  *out = nd;
-  API_END();
-}
-
-int MXNDArrayCreateFromSharedMemEx(int shared_pid, int shared_id, const int *shape,
-                                   int ndim, int dtype, NDArrayHandle *out) {
+int MXNDArrayCreateFromSharedMem(int shared_pid, int shared_id, const int *shape,
+                                 int ndim, int dtype, NDArrayHandle *out) {
   API_BEGIN();
   NDArray* nd = new NDArray(shared_pid, shared_id, mxnet::TShape(shape, shape + ndim), dtype);
   nd->AssignStorageInfo(profiler::ProfilerScope::Get()->GetCurrentProfilerScope(),

@@ -99,6 +99,7 @@ class _Symbol(Symbol):
                 raise TypeError('indices of symbol group must be integers or slices, not {}'
                                 .format(type(key)))
         else:
+            all = __builtins__['all']  # pylint: disable=redefined-outer-name
             if isinstance(key, integer_types):
                 if key == -1:
                     sliced = _npi.slice(self, [key], [None])
@@ -112,15 +113,20 @@ class _Symbol(Symbol):
                     return _npi.slice(self, start, stop, key.step)
                 else:
                     raise ValueError("slice step cannot be zero")
+            elif isinstance(key, Symbol):
+                return _npi.advanced_indexing(self, key)
+            elif isinstance(key, tuple) and len(key) == 0:
+                return self
+            elif isinstance(key, tuple) and all(isinstance(k, Symbol) for k in key):
+                key = _npi.stack(*[i for i in key])
+                sliced = _npi.advanced_indexing_multiple(self, key)
+                return sliced
             elif isinstance(key, tuple):
                 begin = []
                 end = []
                 step = []
                 new_shape = ()
-                result = self
-                is_symbol_tuple = False
-                if len(key) == 0:
-                    return self
+                assert len(key)  # len(key) == 0 handled above
                 for index in key:
                     if isinstance(index, py_slice):
                         if index.step is not None and index.step == 0:
@@ -139,25 +145,12 @@ class _Symbol(Symbol):
                             end.append(index - 1)
                             step.append(-1)
                         new_shape += (-3,)
-                    elif isinstance(index, Symbol):
-                        if new_shape != ():
-                            new_shape += (-4,)
-                            sliced = _npi.slice(result, begin, end, step)
-                            result = _npi.reshape(sliced, new_shape)
-                        if not is_symbol_tuple:
-                            is_symbol_tuple = True
                     else:
                         raise IndexError('Only integer, slice, symbol or tuple of these types'
                                          ' are supported! Received key={}'.format(key))
-                if is_symbol_tuple:
-                    key = _npi.stack(*[i for i in key])
-                    sliced = _npi.advanced_indexing_multiple(self, key)
-                    return sliced
                 new_shape += (-4,)
                 sliced = _npi.slice(self, begin, end, step)
                 return _npi.reshape(sliced, new_shape)
-            elif isinstance(key, Symbol):
-                return _npi.advanced_indexing(self, key)
             else:
                 raise IndexError('Only integer, slice, tuple or Symbol of these types are supported! '
                                  'Received key={}'.format(key))
@@ -702,6 +695,16 @@ class _Symbol(Symbol):
         this array as data.
         """
         raise AttributeError('_Symbol object has no attribute diag')
+
+    def diagonal(self, offset=0, axis1=0, axis2=1):  # pylint: disable=arguments-differ
+        """Return the diagonal with the given offset.
+
+        If array has more than two dimensions, then the axes specified by axis1 and
+        axis2 are used to determine the 2-D sub-array whose diagonal is returned.
+
+        Refer to `mxnet.symbol.numpy.diagonal` for full documents.
+        """
+        return diagonal(self, offset=offset, axis1=axis1, axis2=axis2)
 
     def sum(self, axis=None, dtype=None, out=None, keepdims=False):  # pylint: disable=arguments-differ
         """Return the sum of the array elements over the given axis."""

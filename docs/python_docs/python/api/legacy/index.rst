@@ -41,12 +41,6 @@ This document hosts API for legacy modules that are being deprecated in MXNet 2.
       Functions to track various statuses during an epoch.
 
    .. card::
-      :title: mxnet.monitor
-      :link: monitor/index.html
-
-      Outputs, weights, and gradients for debugging
-
-   .. card::
       :title: mxnet.io
       :link: io/index.html
 

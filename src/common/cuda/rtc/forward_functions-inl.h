@@ -148,7 +148,7 @@ __device__ inline vector::VectorizedStorage<DType, nvec> load_slice(const DType 
   vector::VectorizedStorage<DType, nvec> ret;
   #pragma unroll
   for (int j = 0; j < nvec; j++) {
-      ret.scratch_.separate[j] = *(input + idx[j]);
+      ret.scratch_.separate[j] = idx[j] < shape.size ? *(input + idx[j]) : DType {};
   }
   return ret;
 }
@@ -214,6 +214,31 @@ __device__ inline void store_add_index(const vector::VectorizedStorage<DType, nv
 
 const char function_definitions_binary[] = R"code(
 namespace op {
+
+template <typename DType>
+__device__ inline bool isnan(const DType val) {
+  return util::isnan(val);
+}
+
+template <typename DType>
+__device__ inline bool_t isinf(const DType val) {
+  return util::isinf(val);
+}
+
+template <typename DType>
+__device__ inline bool_t isposinf(const DType val) {
+  return util::isinf(val) && (val > 0);
+}
+
+template <typename DType>
+__device__ inline bool_t isneginf(const DType val) {
+  return util::isinf(val) && (val < 0);
+}
+
+template <typename DType>
+__device__ inline bool_t isfinite(const DType val) {
+  return !op::isnan(val) && !op::isinf(val);
+}
 
 template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type
@@ -810,7 +835,13 @@ __device__ inline DType trunc(const DType val) {
 
 template <typename DType>
 __device__ inline DType clip(const DType val, const float a_min, const float a_max) {
-  return max(min(val, a_max), a_min);
+  if (val > a_max) {
+    return a_max;
+  } else if (val < a_min) {
+    return a_min;
+  } else {
+    return val;
+  }
 }
 
 template <typename DType>
@@ -865,31 +896,6 @@ __device__ inline DType logical_not(const DType val) {
 template <typename DType>
 __device__ inline bool_t np_logical_not(const DType val) {
   return !static_cast<bool>(val);
-}
-
-template <typename DType>
-__device__ inline bool isnan(const DType val) {
-  return util::isnan(val);
-}
-
-template <typename DType>
-__device__ inline bool_t isinf(const DType val) {
-  return util::isinf(val);
-}
-
-template <typename DType>
-__device__ inline bool_t isposinf(const DType val) {
-  return util::isinf(val) && (val > 0);
-}
-
-template <typename DType>
-__device__ inline bool_t isneginf(const DType val) {
-  return util::isinf(val) && (val < 0);
-}
-
-template <typename DType>
-__device__ inline bool_t isfinite(const DType val) {
-  return !op::isnan(val) && !op::isinf(val);
 }
 
 #undef DEFINE_UNARY_MATH_FUNC

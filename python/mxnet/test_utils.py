@@ -377,6 +377,11 @@ def assign_each2(input1, input2, function):
 
     return output
 
+def create_2d_np_tensor(rows, columns, dtype=np.int64):
+    inp = mx.np.arange(0, rows, dtype=dtype).reshape(rows, 1)
+    inp = mx.np.broadcast_to(inp, shape=(inp.shape[0], columns))
+    return inp
+
 # For testing Large Tensors having total size > 2^32 elements
 def create_2d_tensor(rows, columns, dtype=np.int64):
     a = mx.nd.arange(0, rows, dtype=dtype).reshape(rows, 1)
@@ -751,8 +756,6 @@ def assert_almost_equal_with_err(a, b, rtol=None, atol=None, etol=None,
         The relative threshold. Default threshold will be used if set to ``None``.
     atol : None or float or dict of dtype -> float
         The absolute threshold. Default threshold will be used if set to ``None``.
-    threshold : None or float
-        The checking threshold. Default threshold will be used if set to ``None``.
     etol : None or float
         The error rate threshold. If etol is float, return true if error_rate < etol even if
         any error is found.
@@ -1514,7 +1517,7 @@ def check_consistency(sym, ctx_list, scale=1.0, grad_req='write',
         Provided ideal result to be compared against
     equal_nan : bool, optional, defaults to False
         Should nans be treated as equal in the comparison
-    use_unifrom: bool
+    use_uniform: bool
         Optional, When flag set to true,
         random input data generated follows uniform distribution,
         not normal distribution

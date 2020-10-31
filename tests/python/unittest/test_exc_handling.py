@@ -19,14 +19,12 @@ import os
 import mxnet as mx
 import numpy as np
 from mxnet import gluon
-from common import setup_module, with_seed, teardown_module
 from mxnet.gluon import nn
 from mxnet.base import MXNetError
 from mxnet.test_utils import assert_exception, default_context, set_default_context, use_np
 import pytest
 
 
-@with_seed()
 @pytest.mark.skipif(os.environ.get('MXNET_ENGINE_TYPE') == 'NaiveEngine',
                     reason="This test assumes asynchronous execution.")
 def test_exc_imperative():
@@ -40,7 +38,6 @@ def test_exc_imperative():
     imperative(exec_numpy=False)
     pytest.raises(MXNetError, imperative, exec_numpy=True)
 
-@with_seed()
 def test_exc_symbolic():
     def symbolic(exec_backward=True, waitall=True):
         x = mx.sym.Variable('x')
@@ -78,7 +75,6 @@ def test_exc_symbolic():
     pytest.raises(MXNetError, symbolic, exec_backward=False, waitall=True)
     pytest.raises(MXNetError, symbolic, exec_backward=True, waitall=True)
 
-@with_seed()
 @pytest.mark.skipif(os.environ.get('MXNET_ENGINE_TYPE') == 'NaiveEngine',
                     reason="This test assumes asynchronous execution.")
 def test_exc_gluon():
@@ -102,7 +98,6 @@ def test_exc_gluon():
 
     pytest.raises(MXNetError, gluon, waitall=True)
 
-@with_seed()
 def test_exc_multiple_waits():
     def multiple_waits(waitall=False):
         # Test calling failed op followed by wait_to_read or waitall twice
@@ -131,7 +126,6 @@ def test_exc_multiple_waits():
     multiple_waits(waitall=False)
     multiple_waits(waitall=True)
 
-@with_seed()
 @pytest.mark.skipif(os.environ.get('MXNET_ENGINE_TYPE') == 'NaiveEngine',
                     reason="This test assumes asynchronous execution.")
 def test_exc_post_fail():
@@ -150,7 +144,6 @@ def test_exc_post_fail():
     post_fail(waitall=False)
     post_fail(waitall=True)
 
-@with_seed()
 def test_exc_mutable_var_fail():
     def mutable_var_check(waitall=False):
         a, b = mx.nd.random_normal(0, -1, (2, 2)).copyto(default_context())
@@ -162,7 +155,6 @@ def test_exc_mutable_var_fail():
     pytest.raises(MXNetError, mutable_var_check, waitall=False)
     pytest.raises(MXNetError, mutable_var_check, waitall=True)
 
-@with_seed()
 def test_multiple_waitalls():
     caught = False
     try:
@@ -173,7 +165,6 @@ def test_multiple_waitalls():
     assert caught, "No exception thrown"
     mx.nd.waitall()
 
-@with_seed()
 def run_training_iteration(data):
     output = net(data)
 
@@ -189,7 +180,6 @@ def run_training_iteration(data):
     mx.profiler.set_state("stop")
 
 
-@with_seed()
 def test_opencv_exception():
     def check_resize():
         img = mx.nd.ones((1200, 1600, 3))
@@ -198,7 +188,6 @@ def test_opencv_exception():
     pytest.raises(MXNetError, check_resize)
 
 
-@with_seed()
 def test_np_reshape_exception():
     a = mx.np.ones((10, 10))
     a.reshape((-1,)).asnumpy()  # Check no-raise
@@ -207,7 +196,6 @@ def test_np_reshape_exception():
     pytest.raises(MXNetError, lambda: mx.np.reshape(a, (-1, 3)))
 
 
-@with_seed()
 @use_np
 def test_np_random_incorrect_named_arguments():
     random_ops = ['uniform', 'normal', 'randint', 'choice']

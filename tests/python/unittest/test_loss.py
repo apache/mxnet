@@ -19,12 +19,11 @@ import mxnet as mx
 import numpy as np
 from mxnet import gluon, autograd
 from mxnet.test_utils import assert_almost_equal, default_context
-from common import setup_module, with_seed, teardown_module, xfail_when_nonstandard_decimal_separator
+from common import xfail_when_nonstandard_decimal_separator
 import unittest
 
 
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 def test_loss_ndarray():
     output = mx.nd.array([1, 2, 3, 4])
     label = mx.nd.array([1, 3, 5, 7])
@@ -56,7 +55,6 @@ def test_loss_ndarray():
     assert_almost_equal(L, np.array([ 1.06346405,  0.04858733]), rtol=1e-3, atol=1e-4)
 
 
-@with_seed()
 def test_bce_equal_ce2():
     N = 100
     loss1 = gluon.loss.SigmoidBCELoss(from_sigmoid=True)
@@ -77,7 +75,6 @@ def test_logistic_loss_equal_bce():
     assert_almost_equal(loss_signed(data, 2 * label - 1), loss_bce(data, label), atol=1e-6)
 
 
-@with_seed()
 def test_ctc_loss():
     loss = gluon.loss.CTCLoss()
     l = loss(mx.nd.ones((2,20,4)), mx.nd.array([[1,0,-1,-1],[2,1,1,-1]]))
@@ -105,7 +102,6 @@ def test_ctc_loss():
 
 
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 def test_sdml_loss():
 
     N = 5 # number of samples
@@ -138,7 +134,6 @@ def test_sdml_loss():
     avg_loss = loss.sum()/len(loss)
     assert(avg_loss < 0.05)
 
-@with_seed()
 def test_cosine_loss():
     #Generating samples
     input1 = mx.nd.random.randn(3, 2)

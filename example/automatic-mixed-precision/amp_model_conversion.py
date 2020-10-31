@@ -22,7 +22,7 @@ import mxnet as mx
 from common import modelzoo
 import gluoncv
 from gluoncv.model_zoo import get_model
-from mxnet.contrib.amp import amp
+from mxnet import amp
 import numpy as np
 
 

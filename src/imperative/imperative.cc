@@ -233,7 +233,11 @@ void Imperative::RecordOp(
 
   nnvm::ObjectPtr node = nnvm::Node::Create();
   node->attrs = std::move(attrs);
-  node->attrs.name = "node_" + std::to_string(node_count_++);
+  if (node->attrs.name == "") {
+    node->attrs.name = "node_" + std::to_string(node_count_++);
+  } else {
+    node_count_++;
+  }
   AGInfo& info = AGInfo::Create(node);
   info.state = state;
   info.ctx = outputs[0]->ctx();
@@ -322,7 +326,11 @@ void Imperative::RecordDeferredCompute(nnvm::NodeAttrs &&attrs,
   }
   node->attrs = std::move(attrs);
   // Need to support NameManager in imperative API to better name node->attrs.name
-  node->attrs.name = "node_" + std::to_string(node_count_++);
+  if (node->attrs.name == "") {
+    node->attrs.name = "node_" + std::to_string(node_count_++);
+  } else {
+    node_count_++;
+  }
 
   for (uint32_t i = 0; i < outputs.size(); ++i) {
     outputs[i]->deferredcompute_entry_ = nnvm::NodeEntry{node, i, 0};
@@ -592,15 +600,21 @@ std::vector<NDArray*> Imperative::Backward(
     auto num_outputs = idx[i].source->num_outputs();
     for (size_t j = 0; j < num_outputs; ++j) {
       auto eid = idx.entry_id(i, j);
-      if (!arrays[eid]->is_none()) continue;
-      if (stypes[eid] == kDefaultStorage) {
-        *arrays[eid] = NDArray(shapes[eid], vctx[i], true, dtypes[eid]);
-      } else {
-        *arrays[eid] = NDArray(static_cast<NDArrayStorageType>(stypes[eid]),
-                               shapes[eid], vctx[i], true, dtypes[eid]);
-      }
+      if (arrays[eid]->is_none())
+        arrays[eid]->ReInit(static_cast<NDArrayStorageType>(stypes[eid]),
+                            shapes[eid], vctx[i], dtypes[eid]);
     }
   }
+
+  for (size_t nid = num_forward_nodes;
+       nid < idx.num_nodes(); ++nid) {
+    const nnvm::NodeAttrs& attrs = idx[nid].source->attrs;
+    for (size_t oid = 0; oid < idx[nid].source->num_outputs(); ++oid) {
+      size_t eid = idx.entry_id(nid, oid);
+      arrays[eid]->AssignStorageInfo(common::NodeAttrsGetProfilerScope(attrs),
+                                     attrs.name);
+    }
+  }  // for (nid ∈ [num_forward_nodes, idx.num_nodes()))
 
   if (dmlc::GetEnv("MXNET_MEM_PLAN_VERBOSE_LOGGING", false)) {
     common::LogMemoryPlan(graph);

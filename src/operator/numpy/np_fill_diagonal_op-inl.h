@@ -89,7 +89,7 @@ template<int req>
 struct FillDiagonalOpForwardImpl {
   template<typename DType>
   MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
-                                  const double* val, int length, int step, int end){
+                                  const double* val, int length, index_t step, index_t end){
     using namespace mxnet_op;
     if (i < end) {
       if (i % step == 0) {

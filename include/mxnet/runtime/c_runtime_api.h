@@ -26,7 +26,6 @@
 #define MXNET_RUNTIME_C_RUNTIME_API_H_
 
 #include <dlpack/dlpack.h>
-#include <string>
 
 #ifdef __cplusplus
 extern "C" {
@@ -178,50 +177,4 @@ MXNET_DLL int MXNetObjectTypeKey2Index(const char* type_key, unsigned* out_tinde
 #ifdef __cplusplus
 }  // extern "C"
 #endif
-
-
-/*!
- * \brief Macros to guard beginning and end section of all functions
- * every function starts with API_BEGIN()
- * and finishes with API_END() or API_END_HANDLE_ERROR()
- * The finally clause contains procedure to cleanup states when an error happens.
- */
-#define MX_API_BEGIN()                                                         \
-  try {                                                                        \
-    on_enter_api(__FUNCTION__);
-#define MX_API_END()                                                           \
-  }                                                                            \
-  catch (const std::exception &_except_) {                                     \
-    on_exit_api();                                                             \
-    return MXAPIHandleException(_except_);                                     \
-  }                                                                            \
-  on_exit_api();                                                               \
-  return 0; // NOLINT(*)
-#define MX_API_END_HANDLE_ERROR(Finalize)                                      \
-  }                                                                            \
-  catch (const std::exception &_except_) {                                     \
-    Finalize;                                                                  \
-    on_exit_api();                                                             \
-    return MXAPIHandleException(_except_);                                     \
-  }                                                                            \
-  on_exit_api();                                                               \
-  return 0; // NOLINT(*)
-
-/*!
- * \brief Set the last error message needed by C API
- * \param msg The error message to set.
- */
-void MXAPISetLastError(const char* msg);
-/*!
- * \brief handle exception throwed out
- * \param e the exception
- * \return the return value of API after exception is handled
- */
-int MXAPIHandleException(const std::exception &e);
-
-namespace mxnet {
-extern void on_enter_api(const char *function);
-extern void on_exit_api();
-}
-
 #endif  // MXNET_RUNTIME_C_RUNTIME_API_H_

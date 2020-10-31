@@ -636,7 +636,7 @@ struct AroundParam : public dmlc::Parameter<AroundParam> {
 template<int req>
 struct around_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i, DType* out_data, const DType* in_data,
+  MSHADOW_XINLINE static void Map(index_t i, DType* out_data, const DType* in_data,
                                   const int decimals) {
     int d = 0;
     DType temp = in_data[i];
@@ -653,9 +653,9 @@ struct around_forward {
     roundtemp = (DType)round(static_cast<double>(temp));
     // If temp is x.5 and roundtemp is odd number, decrease or increase roundtemp by 1.
     // For example, in numpy, around(0.5) should be 0 but in c, round(0.5) is 1.
-    if (roundtemp - temp == 0.5 && (static_cast<int>(roundtemp)) % 2 != 0) {
+    if (roundtemp - temp == 0.5 && (static_cast<index_t>(roundtemp)) % 2 != 0) {
       roundtemp -= 1;
-    } else if (temp - roundtemp == 0.5 && (static_cast<int>(roundtemp)) % 2 != 0) {
+    } else if (temp - roundtemp == 0.5 && (static_cast<index_t>(roundtemp)) % 2 != 0) {
       roundtemp += 1;
     }
     while (d != 0) {
@@ -749,7 +749,7 @@ struct NumpyNanToNumParam : public dmlc::Parameter<NumpyNanToNumParam> {
 template<int req>
 struct nan_to_num_forward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   DType* out_data,
                                   const DType* in_data,
                                   const DType nan,
@@ -810,7 +810,7 @@ void NumpyNanToNumOpForward(const nnvm::NodeAttrs& attrs,
 template<int req>
 struct nan_to_num_backward {
   template<typename DType>
-  MSHADOW_XINLINE static void Map(int i,
+  MSHADOW_XINLINE static void Map(index_t i,
                                   DType* in_grad,
                                   const DType* out_grad,
                                   const DType* in_data) {

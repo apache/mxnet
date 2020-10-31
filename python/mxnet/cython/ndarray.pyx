@@ -116,12 +116,13 @@ cdef class CachedOp:
         from ..symbol.numpy._symbol import _Symbol
         self.is_np_sym = bool(isinstance(sym, _Symbol))
 
-        CALL(MXCreateCachedOpEx(
+        CALL(MXCreateCachedOp(
             <SymbolHandle>(<unsigned long long>sym.handle.value),
             len(flags),
             CBeginPtr(c_flag_keys),
             CBeginPtr(c_flag_vals),
-            &self.chandle))
+            &self.chandle,
+            False))
 
     def __del__(self):
         CALL(MXFreeCachedOp(self.chandle))
@@ -174,7 +175,7 @@ cdef class CachedOp:
         else:
             p_output_vars = &output_vars[0]
 
-        CALL(MXInvokeCachedOpEx(
+        CALL(MXInvokeCachedOp(
             self.chandle,
             <int>len(args),
             &ndvars[0] if ndvars.size() != 0 else NULL,
@@ -239,7 +240,7 @@ def _imperative_invoke(handle, ndargs, keys, vals, out, is_np_op=0, output_is_li
     cdef vector[const char*] param_keys = SVec2Ptr(ckeys)
     cdef vector[const char*] param_vals = SVec2Ptr(cvals)
 
-    CALL(MXImperativeInvokeEx(
+    CALL(MXImperativeInvoke(
         chandle,
         <int>ndvars.size(),
         &ndvars[0] if ndvars.size() != 0 else NULL,

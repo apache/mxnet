@@ -24,14 +24,15 @@ __all__ = ['Conv1D', 'Conv2D', 'Conv3D',
            'AvgPool1D', 'AvgPool2D', 'AvgPool3D',
            'GlobalMaxPool1D', 'GlobalMaxPool2D', 'GlobalMaxPool3D',
            'GlobalAvgPool1D', 'GlobalAvgPool2D', 'GlobalAvgPool3D',
-           'ReflectionPad2D']
+           'ReflectionPad2D', 'DeformableConvolution', 'ModulatedDeformableConvolution',
+           'PixelShuffle1D', 'PixelShuffle2D', 'PixelShuffle3D']
 
 from ..block import HybridBlock
 from ..parameter import Parameter
 from ... import symbol
 from ...base import numeric_types
 from .activations import Activation
-from ...util import is_np_array
+from ...util import is_np_array, np_array
 
 
 def _infer_weight_shape(op_name, data_shape, kwargs):
@@ -84,7 +85,7 @@ class _Conv(HybridBlock):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias: bool
@@ -169,8 +170,12 @@ class _Conv(HybridBlock):
             s += ', {}'.format(self.act)
         s += ')'
         shape = self.weight.shape
+        if 'Transpose' in self.__class__.__name__:
+            mapping = '{1} -> {0}'
+        else:
+            mapping = '{0} -> {1}'
         return s.format(name=self.__class__.__name__,
-                        mapping='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]),
+                        mapping=mapping.format(shape[1] if shape[1] else None, shape[0]),
                         **self._kwargs)
 
 
@@ -218,7 +223,7 @@ class Conv1D(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -299,7 +304,7 @@ class Conv2D(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -383,7 +388,7 @@ class Conv3D(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -472,7 +477,7 @@ class Conv1DTranspose(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -563,7 +568,7 @@ class Conv2DTranspose(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -657,7 +662,7 @@ class Conv3DTranspose(_Conv):
         initialization will be deferred to the first time `forward` is called
         and `in_channels` will be inferred from the shape of input data.
     activation : str
-        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        Activation function to use. See :func:`~mxnet.npx.activation`.
         If you don't specify anything, no activation is applied
         (ie. "linear" activation: `a(x) = x`).
     use_bias : bool
@@ -1236,3 +1241,575 @@ class ReflectionPad2D(HybridBlock):
 
     def hybrid_forward(self, F, x):
         return F.pad(x, mode='reflect', pad_width=self._padding)
+
+
+class DeformableConvolution(HybridBlock):
+    """2-D Deformable Convolution v_1 (Dai, 2017).
+    Normal Convolution uses sampling points in a regular grid, while the sampling
+    points of Deformablem Convolution can be offset. The offset is learned with a
+    separate convolution layer during the training. Both the convolution layer for
+    generating the output features and the offsets are included in this gluon layer.
+
+    Parameters
+    ----------
+    channels : int,
+        The dimensionality of the output space
+        i.e. the number of output channels in the convolution.
+    kernel_size : int or tuple/list of 2 ints, (Default value = (1,1))
+        Specifies the dimensions of the convolution window.
+    strides : int or tuple/list of 2 ints, (Default value = (1,1))
+        Specifies the strides of the convolution.
+    padding : int or tuple/list of 2 ints, (Default value = (0,0))
+        If padding is non-zero, then the input is implicitly zero-padded
+        on both sides for padding number of points.
+    dilation : int or tuple/list of 2 ints, (Default value = (1,1))
+        Specifies the dilation rate to use for dilated convolution.
+    groups : int, (Default value = 1)
+        Controls the connections between inputs and outputs.
+        At groups=1, all inputs are convolved to all outputs.
+        At groups=2, the operation becomes equivalent to having two convolution
+        layers side by side, each seeing half the input channels, and producing
+        half the output channels, and both subsequently concatenated.
+    num_deformable_group : int, (Default value = 1)
+        Number of deformable group partitions.
+    layout : str, (Default value = NCHW)
+        Dimension ordering of data and weight. Can be 'NCW', 'NWC', 'NCHW',
+        'NHWC', 'NCDHW', 'NDHWC', etc. 'N', 'C', 'H', 'W', 'D' stands for
+        batch, channel, height, width and depth dimensions respectively.
+        Convolution is performed over 'D', 'H', and 'W' dimensions.
+    use_bias : bool, (Default value = True)
+        Whether the layer for generating the output features uses a bias vector.
+    in_channels : int, (Default value = 0)
+        The number of input channels to this layer. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and input channels will be inferred from the shape of input data.
+    activation : str, (Default value = None)
+        Activation function to use. See :func:`~mxnet.npx.activation`.
+        If you don't specify anything, no activation is applied
+        (ie. "linear" activation: `a(x) = x`).
+    weight_initializer : str or `Initializer`, (Default value = None)
+        Initializer for the `weight` weights matrix for the convolution layer
+        for generating the output features.
+    bias_initializer : str or `Initializer`, (Default value = zeros)
+        Initializer for the bias vector for the convolution layer
+        for generating the output features.
+    offset_weight_initializer : str or `Initializer`, (Default value = zeros)
+        Initializer for the `weight` weights matrix for the convolution layer
+        for generating the offset.
+    offset_bias_initializer : str or `Initializer`, (Default value = zeros),
+        Initializer for the bias vector for the convolution layer
+        for generating the offset.
+    offset_use_bias: bool, (Default value = True)
+        Whether the layer for generating the offset uses a bias vector.
+
+    Inputs:
+        - **data**: 4D input tensor with shape
+          `(batch_size, in_channels, height, width)` when `layout` is `NCHW`.
+          For other layouts shape is permuted accordingly.
+
+    Outputs:
+        - **out**: 4D output tensor with shape
+          `(batch_size, channels, out_height, out_width)` when `layout` is `NCHW`.
+          out_height and out_width are calculated as::
+
+              out_height = floor((height+2*padding[0]-dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1
+              out_width = floor((width+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
+    """
+
+    def __init__(self, channels, kernel_size=(1, 1), strides=(1, 1), padding=(0, 0), dilation=(1, 1), groups=1,
+                 num_deformable_group=1, layout='NCHW', use_bias=True, in_channels=0, activation=None,
+                 weight_initializer=None, bias_initializer='zeros',
+                 offset_weight_initializer='zeros', offset_bias_initializer='zeros', offset_use_bias=True,
+                 op_name='DeformableConvolution', adj=None):
+        super(DeformableConvolution, self).__init__()
+        self._channels = channels
+        self._in_channels = in_channels
+
+        assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
+        if isinstance(kernel_size, numeric_types):
+            kernel_size = (kernel_size,) * 2
+        if isinstance(strides, numeric_types):
+            strides = (strides,) * len(kernel_size)
+        if isinstance(padding, numeric_types):
+            padding = (padding,) * len(kernel_size)
+        if isinstance(dilation, numeric_types):
+            dilation = (dilation,) * len(kernel_size)
+        self._op_name = op_name
+
+        offset_channels = 2 * kernel_size[0] * kernel_size[1] * num_deformable_group
+        self._kwargs_offset = {
+            'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
+            'pad': padding, 'num_filter': offset_channels, 'num_group': groups,
+            'no_bias': not offset_use_bias, 'layout': layout}
+
+        self._kwargs_deformable_conv = {
+            'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
+            'pad': padding, 'num_filter': channels, 'num_group': groups,
+            'num_deformable_group': num_deformable_group,
+            'no_bias': not use_bias, 'layout': layout}
+
+        if adj:
+            self._kwargs_offset['adj'] = adj
+            self._kwargs_deformable_conv['adj'] = adj
+
+        dshape = [0] * (len(kernel_size) + 2)
+        dshape[layout.find('N')] = 1
+        dshape[layout.find('C')] = in_channels
+
+        op_name = 'convolution' if is_np_array() else 'Convolution'
+        offsetshapes = _infer_weight_shape(op_name, dshape, self._kwargs_offset)
+
+        self.offset_weight = Parameter('offset_weight', shape=offsetshapes[1],
+                                       init=offset_weight_initializer,
+                                       allow_deferred_init=True)
+
+        if offset_use_bias:
+            self.offset_bias = Parameter('offset_bias', shape=offsetshapes[2],
+                                         init=offset_bias_initializer,
+                                         allow_deferred_init=True)
+        else:
+            self.offset_bias = None
+
+        deformable_conv_weight_shape = [0] * (len(kernel_size) + 2)
+        deformable_conv_weight_shape[0] = channels
+        deformable_conv_weight_shape[2] = kernel_size[0]
+        deformable_conv_weight_shape[3] = kernel_size[1]
+
+        self.deformable_conv_weight = Parameter('deformable_conv_weight',
+                                                shape=deformable_conv_weight_shape,
+                                                init=weight_initializer,
+                                                allow_deferred_init=True)
+
+        if use_bias:
+            self.deformable_conv_bias = Parameter('deformable_conv_bias', shape=(channels,),
+                                                  init=bias_initializer,
+                                                  allow_deferred_init=True)
+        else:
+            self.deformable_conv_bias = None
+
+        if activation:
+            self.act = Activation(activation)
+        else:
+            self.act = None
+
+    def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
+        if not is_np_array():
+            x = x.as_np_ndarray()
+            offset_weight = offset_weight.as_np_ndarray()
+            deformable_conv_weight = deformable_conv_weight.as_np_ndarray()
+            if offset_bias is not None:
+                offset_bias = offset_bias.as_np_ndarray()
+            if deformable_conv_bias is not None:
+                deformable_conv_bias = deformable_conv_bias.as_np_ndarray()
+        if offset_bias is None:
+            offset = F.npx.convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
+        else:
+            offset = F.npx.convolution(x, offset_weight, offset_bias, cudnn_off=True, **self._kwargs_offset)
+
+        if deformable_conv_bias is None:
+            act = F.npx.deformable_convolution(data=x, offset=offset, weight=deformable_conv_weight,
+                                               name='fwd', **self._kwargs_deformable_conv)
+        else:
+            act = F.npx.deformable_convolution(data=x, offset=offset, weight=deformable_conv_weight,
+                                               bias=deformable_conv_bias, name='fwd',
+                                               **self._kwargs_deformable_conv)
+
+        if self.act:
+            with np_array(True):
+                act = self.act(act)
+        return act if is_np_array() else act.as_nd_ndarray()
+
+    def _alias(self):
+        return 'deformable_conv'
+
+    def __repr__(self):
+        s = '{name}({mapping}, kernel_size={kernel}, stride={stride}'
+        len_kernel_size = len(self._kwargs_deformable_conv['kernel'])
+        if self._kwargs_deformable_conv['pad'] != (0,) * len_kernel_size:
+            s += ', padding={pad}'
+        if self._kwargs_deformable_conv['dilate'] != (1,) * len_kernel_size:
+            s += ', dilation={dilate}'
+        if hasattr(self, 'out_pad') and self.out_pad != (0,) * len_kernel_size:
+            s += ', output_padding={out_pad}'.format(out_pad=self.out_pad)
+        if self._kwargs_deformable_conv['num_group'] != 1:
+            s += ', groups={num_group}'
+        if self.deformable_conv_bias is None:
+            s += ', bias=False'
+        if self.act:
+            s += ', {}'.format(self.act)
+        s += ')'
+        shape = self.deformable_conv_weight.shape
+        return s.format(name=self.__class__.__name__,
+                        mapping='{0} -> {1}'.format(shape[1] if shape[1] else None, shape[0]),
+                        **self._kwargs_deformable_conv)
+
+
+class ModulatedDeformableConvolution(HybridBlock):
+    """2-D Deformable Convolution v2 (Dai, 2018).
+
+    The modulated deformable convolution operation is described in https://arxiv.org/abs/1811.11168
+
+    Parameters
+    ----------
+    channels : int,
+        The dimensionality of the output space
+        i.e. the number of output channels in the convolution.
+    kernel_size : int or tuple/list of 2 ints, (Default value = (1,1))
+        Specifies the dimensions of the convolution window.
+    strides : int or tuple/list of 2 ints, (Default value = (1,1))
+        Specifies the strides of the convolution.
+    padding : int or tuple/list of 2 ints, (Default value = (0,0))
+        If padding is non-zero, then the input is implicitly zero-padded
+        on both sides for padding number of points.
+    dilation : int or tuple/list of 2 ints, (Default value = (1,1))
+        Specifies the dilation rate to use for dilated convolution.
+    groups : int, (Default value = 1)
+        Controls the connections between inputs and outputs.
+        At groups=1, all inputs are convolved to all outputs.
+        At groups=2, the operation becomes equivalent to having two convolution
+        layers side by side, each seeing half the input channels, and producing
+        half the output channels, and both subsequently concatenated.
+    num_deformable_group : int, (Default value = 1)
+        Number of deformable group partitions.
+    layout : str, (Default value = NCHW)
+        Dimension ordering of data and weight. Can be 'NCW', 'NWC', 'NCHW',
+        'NHWC', 'NCDHW', 'NDHWC', etc. 'N', 'C', 'H', 'W', 'D' stands for
+        batch, channel, height, width and depth dimensions respectively.
+        Convolution is performed over 'D', 'H', and 'W' dimensions.
+    use_bias : bool, (Default value = True)
+        Whether the layer for generating the output features uses a bias vector.
+    in_channels : int, (Default value = 0)
+        The number of input channels to this layer. If not specified,
+        initialization will be deferred to the first time `forward` is called
+        and input channels will be inferred from the shape of input data.
+    activation : str, (Default value = None)
+        Activation function to use. See :func:`~mxnet.ndarray.Activation`.
+        If you don't specify anything, no activation is applied
+        (ie. "linear" activation: `a(x) = x`).
+    weight_initializer : str or `Initializer`, (Default value = None)
+        Initializer for the `weight` weights matrix for the convolution layer
+        for generating the output features.
+    bias_initializer : str or `Initializer`, (Default value = zeros)
+        Initializer for the bias vector for the convolution layer
+        for generating the output features.
+    offset_weight_initializer : str or `Initializer`, (Default value = zeros)
+        Initializer for the `weight` weights matrix for the convolution layer
+        for generating the offset.
+    offset_bias_initializer : str or `Initializer`, (Default value = zeros),
+        Initializer for the bias vector for the convolution layer
+        for generating the offset.
+    offset_use_bias: bool, (Default value = True)
+        Whether the layer for generating the offset uses a bias vector.
+
+    Inputs:
+        - **data**: 4D input tensor with shape
+          `(batch_size, in_channels, height, width)` when `layout` is `NCHW`.
+          For other layouts shape is permuted accordingly.
+
+    Outputs:
+        - **out**: 4D output tensor with shape
+          `(batch_size, channels, out_height, out_width)` when `layout` is `NCHW`.
+          out_height and out_width are calculated as::
+
+              out_height = floor((height+2*padding[0]-dilation[0]*(kernel_size[0]-1)-1)/stride[0])+1
+              out_width = floor((width+2*padding[1]-dilation[1]*(kernel_size[1]-1)-1)/stride[1])+1
+    """
+
+    def __init__(self, channels, kernel_size=(1, 1), strides=(1, 1), padding=(0, 0), dilation=(1, 1), groups=1,
+                 num_deformable_group=1, layout='NCHW', use_bias=True, in_channels=0, activation=None,
+                 weight_initializer=None, bias_initializer='zeros',
+                 offset_weight_initializer='zeros', offset_bias_initializer='zeros', offset_use_bias=True,
+                 op_name='ModulatedDeformableConvolution', adj=None):
+        super(ModulatedDeformableConvolution, self).__init__()
+        self._channels = channels
+        self._in_channels = in_channels
+
+        assert layout in ('NCHW', 'NHWC'), "Only supports 'NCHW' and 'NHWC' layout for now"
+        if isinstance(kernel_size, numeric_types):
+            kernel_size = (kernel_size,) * 2
+        if isinstance(strides, numeric_types):
+            strides = (strides,) * len(kernel_size)
+        if isinstance(padding, numeric_types):
+            padding = (padding,) * len(kernel_size)
+        if isinstance(dilation, numeric_types):
+            dilation = (dilation,) * len(kernel_size)
+        self._op_name = op_name
+
+        offset_channels = num_deformable_group * 3 * kernel_size[0] * kernel_size[1]
+        self.offset_split_index = num_deformable_group * 2 * kernel_size[0] * kernel_size[1]
+        self._kwargs_offset = {
+            'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
+            'pad': padding, 'num_filter': offset_channels, 'num_group': groups,
+            'no_bias': not offset_use_bias, 'layout': layout}
+
+        self._kwargs_deformable_conv = {
+            'kernel': kernel_size, 'stride': strides, 'dilate': dilation,
+            'pad': padding, 'num_filter': channels, 'num_group': groups,
+            'num_deformable_group': num_deformable_group,
+            'no_bias': not use_bias, 'layout': layout}
+
+        if adj:
+            self._kwargs_offset['adj'] = adj
+            self._kwargs_deformable_conv['adj'] = adj
+
+        deformable_conv_weight_shape = [0] * (len(kernel_size) + 2)
+        deformable_conv_weight_shape[0] = channels
+        deformable_conv_weight_shape[2] = kernel_size[0]
+        deformable_conv_weight_shape[3] = kernel_size[1]
+
+        self.deformable_conv_weight = Parameter('deformable_conv_weight',
+                                                shape=deformable_conv_weight_shape,
+                                                init=weight_initializer,
+                                                allow_deferred_init=True)
+
+        if use_bias:
+            self.deformable_conv_bias = Parameter('deformable_conv_bias', shape=(channels,),
+                                                  init=bias_initializer,
+                                                  allow_deferred_init=True)
+        else:
+            self.deformable_conv_bias = None
+
+        dshape = [0] * (len(kernel_size) + 2)
+        dshape[layout.find('N')] = 1
+        dshape[layout.find('C')] = in_channels
+
+        op = getattr(symbol, 'Convolution')
+        offset = op(symbol.var('data', shape=dshape), **self._kwargs_offset)
+
+        offsetshapes = offset.infer_shape_partial()[0]
+
+        self.offset_weight = Parameter('offset_weight', shape=offsetshapes[1],
+                                       init=offset_weight_initializer,
+                                       allow_deferred_init=True)
+
+        if offset_use_bias:
+            self.offset_bias = Parameter('offset_bias', shape=offsetshapes[2],
+                                         init=offset_bias_initializer,
+                                         allow_deferred_init=True)
+        else:
+            self.offset_bias = None
+
+        if activation:
+            self.act = Activation(activation)
+        else:
+            self.act = None
+
+    def hybrid_forward(self, F, x, offset_weight, deformable_conv_weight, offset_bias=None, deformable_conv_bias=None):
+        if not is_np_array():
+            x = x.as_np_ndarray()
+            offset_weight = offset_weight.as_np_ndarray()
+            deformable_conv_weight = deformable_conv_weight.as_np_ndarray()
+            if offset_bias is not None:
+                offset_bias = offset_bias.as_np_ndarray()
+            if deformable_conv_bias is not None:
+                deformable_conv_bias = deformable_conv_bias.as_np_ndarray()
+        if offset_bias is None:
+            offset = F.npx.convolution(x, offset_weight, cudnn_off=True, **self._kwargs_offset)
+        else:
+            offset = F.npx.convolution(x, offset_weight, offset_bias, cudnn_off=True, **self._kwargs_offset)
+
+        offset_t = F.npx.slice_axis(offset, axis=1, begin=0, end=self.offset_split_index)
+        mask = F.npx.slice_axis(offset, axis=1, begin=self.offset_split_index, end=None)
+        mask = F.npx.sigmoid(mask) * 2
+
+        if deformable_conv_bias is None:
+            act = F.npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
+                                                         weight=deformable_conv_weight,
+                                                         name='fwd', **self._kwargs_deformable_conv)
+        else:
+            act = F.npx.modulated_deformable_convolution(data=x, offset=offset_t, mask=mask,
+                                                         weight=deformable_conv_weight,
+                                                         bias=deformable_conv_bias, name='fwd',
+                                                         **self._kwargs_deformable_conv)
+
+        if self.act:
+            with np_array(True):
+                act = self.act(act)
+        return act if is_np_array() else act.as_nd_ndarray()
+
+    def _alias(self):
+        return 'modulated_deformable_conv'
+
+
+class PixelShuffle1D(HybridBlock):
+
+    r"""Pixel-shuffle layer for upsampling in 1 dimension.
+
+    Pixel-shuffling is the operation of taking groups of values along
+    the *channel* dimension and regrouping them into blocks of pixels
+    along the ``W`` dimension, thereby effectively multiplying that dimension
+    by a constant factor in size.
+
+    For example, a feature map of shape :math:`(fC, W)` is reshaped
+    into :math:`(C, fW)` by forming little value groups of size :math:`f`
+    and arranging them in a grid of size :math:`W`.
+
+    Parameters
+    ----------
+    factor : int or 1-tuple of int
+        Upsampling factor, applied to the ``W`` dimension.
+
+    Inputs:
+        - **data**: Tensor of shape ``(N, f*C, W)``.
+    Outputs:
+        - **out**: Tensor of shape ``(N, C, W*f)``.
+
+    Examples
+    --------
+    >>> pxshuf = PixelShuffle1D(2)
+    >>> x = mx.nd.zeros((1, 8, 3))
+    >>> pxshuf(x).shape
+    (1, 4, 6)
+    """
+
+    def __init__(self, factor):
+        super(PixelShuffle1D, self).__init__()
+        self._factor = int(factor)
+
+    def hybrid_forward(self, F, x):
+        """Perform pixel-shuffling on the input."""
+        f = self._factor
+        if not is_np_array():
+            x = x.as_np_ndarray()
+                                             # (N, C*f, W)
+        x = F.npx.reshape(x, (-2, -6, -1, f, -2))  # (N, C, f, W)
+        x = F.np.transpose(x, (0, 1, 3, 2))     # (N, C, W, f)
+        x = F.npx.reshape(x, (-2, -2, -5))         # (N, C, W*f)
+        return x if is_np_array() else x.as_nd_ndarray()
+
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__, self._factor)
+
+
+class PixelShuffle2D(HybridBlock):
+
+    r"""Pixel-shuffle layer for upsampling in 2 dimensions.
+
+    Pixel-shuffling is the operation of taking groups of values along
+    the *channel* dimension and regrouping them into blocks of pixels
+    along the ``H`` and ``W`` dimensions, thereby effectively multiplying
+    those dimensions by a constant factor in size.
+
+    For example, a feature map of shape :math:`(f^2 C, H, W)` is reshaped
+    into :math:`(C, fH, fW)` by forming little :math:`f \times f` blocks
+    of pixels and arranging them in an :math:`H \times W` grid.
+
+    Pixel-shuffling together with regular convolution is an alternative,
+    learnable way of upsampling an image by arbitrary factors. It is reported
+    to help overcome checkerboard artifacts that are common in upsampling with
+    transposed convolutions (also called deconvolutions). See the paper
+    `Real-Time Single Image and Video Super-Resolution Using an Efficient
+    Sub-Pixel Convolutional Neural Network <https://arxiv.org/abs/1609.05158>`_
+    for further details.
+
+    Parameters
+    ----------
+    factor : int or 2-tuple of int
+        Upsampling factors, applied to the ``H`` and ``W`` dimensions,
+        in that order.
+
+    Inputs:
+        - **data**: Tensor of shape ``(N, f1*f2*C, H, W)``.
+    Outputs:
+        - **out**: Tensor of shape ``(N, C, H*f1, W*f2)``.
+
+    Examples
+    --------
+    >>> pxshuf = PixelShuffle2D((2, 3))
+    >>> x = mx.nd.zeros((1, 12, 3, 5))
+    >>> pxshuf(x).shape
+    (1, 2, 6, 15)
+    """
+
+    def __init__(self, factor):
+        super(PixelShuffle2D, self).__init__()
+        try:
+            self._factors = (int(factor),) * 2
+        except TypeError:
+            self._factors = tuple(int(fac) for fac in factor)
+            assert len(self._factors) == 2, "wrong length {}".format(len(self._factors))
+
+    def hybrid_forward(self, F, x):
+        """Perform pixel-shuffling on the input."""
+        f1, f2 = self._factors
+        if not is_np_array():
+            x = x.as_np_ndarray()
+                                                      # (N, f1*f2*C, H, W)
+        x = F.npx.reshape(x, (-2, -6, -1, f1 * f2, -2, -2))  # (N, C, f1*f2, H, W)
+        x = F.npx.reshape(x, (-2, -2, -6, f1, f2, -2, -2))    # (N, C, f1, f2, H, W)
+        x = F.np.transpose(x, (0, 1, 4, 2, 5, 3))        # (N, C, H, f1, W, f2)
+        x = F.npx.reshape(x, (-2, -2, -5, -5))              # (N, C, H*f1, W*f2)
+        return x if is_np_array() else x.as_nd_ndarray()
+
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__, self._factors)
+
+
+class PixelShuffle3D(HybridBlock):
+
+    r"""Pixel-shuffle layer for upsampling in 3 dimensions.
+
+    Pixel-shuffling (or voxel-shuffling in 3D) is the operation of taking
+    groups of values along the *channel* dimension and regrouping them into
+    blocks of voxels along the ``D``, ``H`` and ``W`` dimensions, thereby
+    effectively multiplying those dimensions by a constant factor in size.
+
+    For example, a feature map of shape :math:`(f^3 C, D, H, W)` is reshaped
+    into :math:`(C, fD, fH, fW)` by forming little :math:`f \times f \times f`
+    blocks of voxels and arranging them in a :math:`D \times H \times W` grid.
+
+    Pixel-shuffling together with regular convolution is an alternative,
+    learnable way of upsampling an image by arbitrary factors. It is reported
+    to help overcome checkerboard artifacts that are common in upsampling with
+    transposed convolutions (also called deconvolutions). See the paper
+    `Real-Time Single Image and Video Super-Resolution Using an Efficient
+    Sub-Pixel Convolutional Neural Network <https://arxiv.org/abs/1609.05158>`_
+    for further details.
+
+    Parameters
+    ----------
+    factor : int or 3-tuple of int
+        Upsampling factors, applied to the ``D``, ``H`` and ``W``
+        dimensions, in that order.
+
+    Inputs:
+        - **data**: Tensor of shape ``(N, f1*f2*f3*C, D, H, W)``.
+    Outputs:
+        - **out**: Tensor of shape ``(N, C, D*f1, H*f2, W*f3)``.
+
+    Examples
+    --------
+    >>> pxshuf = PixelShuffle3D((2, 3, 4))
+    >>> x = mx.nd.zeros((1, 48, 3, 5, 7))
+    >>> pxshuf(x).shape
+    (1, 2, 6, 15, 28)
+    """
+
+    def __init__(self, factor):
+        super(PixelShuffle3D, self).__init__()
+        try:
+            self._factors = (int(factor),) * 3
+        except TypeError:
+            self._factors = tuple(int(fac) for fac in factor)
+            assert len(self._factors) == 3, "wrong length {}".format(len(self._factors))
+
+    def hybrid_forward(self, F, x):
+        """Perform pixel-shuffling on the input."""
+        # `transpose` doesn't support 8D, need other implementation
+        f1, f2, f3 = self._factors
+        if not is_np_array():
+            x = x.as_np_ndarray()
+                                                              # (N, C*f1*f2*f3, D, H, W)
+        x = F.npx.reshape(x, (-2, -6, -1, f1 * f2 * f3, -2, -2, -2))  # (N, C, f1*f2*f3, D, H, W)
+        x = F.np.swapaxes(x, 2, 3)                               # (N, C, D, f1*f2*f3, H, W)
+        x = F.npx.reshape(x, (-2, -2, -2, -6, f1, f2*f3, -2, -2))      # (N, C, D, f1, f2*f3, H, W)
+        x = F.npx.reshape(x, (-2, -2, -5, -2, -2, -2))                 # (N, C, D*f1, f2*f3, H, W)
+        x = F.np.swapaxes(x, 3, 4)                               # (N, C, D*f1, H, f2*f3, W)
+        x = F.npx.reshape(x, (-2, -2, -2, -2, -6, f2, f3, -2))         # (N, C, D*f1, H, f2, f3, W)
+        x = F.npx.reshape(x, (-2, -2, -2, -5, -2, -2))                 # (N, C, D*f1, H*f2, f3, W)
+        x = F.np.swapaxes(x, 4, 5)                               # (N, C, D*f1, H*f2, W, f3)
+        x = F.npx.reshape(x, (-2, -2, -2, -2, -5))                    # (N, C, D*f1, H*f2, W*f3)
+        return x if is_np_array() else x.as_nd_ndarray()
+
+    def __repr__(self):
+        return "{}({})".format(self.__class__.__name__, self._factors)

@@ -33,6 +33,8 @@ doc/html
 doc/latex
 doc/doc
 docs/web-data
+.jekyll-cache
+*.lock
 
 #dmlc
 config.mk

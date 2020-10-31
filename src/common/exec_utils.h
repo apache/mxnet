@@ -36,6 +36,13 @@
 namespace mxnet {
 namespace common {
 
+#if MXNET_USE_MKLDNN == 1
+     // We have to make sure it's default storage and default layout.
+#define DEFAULT_DATA(x)    x.IsDefaultData()
+#else
+#define DEFAULT_DATA(x)    (x.storage_type() == kDefaultStorage)
+#endif
+
 /*
  * \brief setup default-storage tblobs from source NDArrays. If any source NDArray has non-default
  *        storage, it creates a temp NDArray with default storage and uses the temp tblob. The
@@ -57,13 +64,8 @@ inline bool SetupDefaultBlobsIn(const std::vector<NDArray>& src,
                                 std::unordered_map<uint32_t, uint32_t> *idx_map) {
   bool require_cast = false;
   for (size_t i = 0; i < src.size(); i++) {
-    auto& nd = src[i];
-    bool is_default = nd.storage_type() == kDefaultStorage;
-#if MXNET_USE_MKLDNN == 1
-    // We have to make sure it's default storage and default layout.
-    is_default = nd.IsDefaultData();
-#endif
-    if (!is_default) {
+    const auto& nd = src[i];
+    if (!DEFAULT_DATA(nd)) {
       (*idx_map)[i] = temp_dst->size();
       NDArray temp = bufs != nullptr ? bufs->at(i) : NDArray(nd.shape(), nd.ctx(),
                                                              true, nd.dtype());
@@ -89,8 +91,8 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
                                  std::vector<NDArray> *temp_dst) {
   bool require_cast = false;
   for (size_t i = 0; i < src.size(); i++) {
-    auto& nd = src[i];
-    bool is_default = nd.storage_type() == kDefaultStorage;
+    const auto& nd = src[i];
+
 #if MXNET_USE_MKLDNN == 1
     if (req->at(i) == kWriteInplace && nd.IsMKLDNNData())
       // If it's write inplace and the output array doesn't use the default
@@ -99,17 +101,14 @@ inline bool SetupDefaultBlobsOut(const std::vector<NDArray>& src,
       // we should change the request type.
       req->at(i) = kWriteTo;
     // We have to make sure it's default storage and default layout.
-    is_default = nd.IsDefaultData();
 #endif
-    if (!is_default) {
+    if (!DEFAULT_DATA(nd)) {
 #if MXNET_USE_MKLDNN == 1
       NDArray temp;
       if (bufs != nullptr) {
         temp = bufs->at(i);
-      } else if (kAddTo == req->at(i) && nd.IsMKLDNNData()) {
-        temp = nd.Reorder2Default();
       } else if (kAddTo == req->at(i)) {
-        temp = nd;
+        temp = nd.IsMKLDNNData()? nd.Reorder2Default() : nd;
       } else {
         temp = NDArray(nd.shape(), nd.ctx(), true, nd.dtype());
       }

@@ -29,7 +29,7 @@ from mxnet import np
 from mxnet.test_utils import assert_almost_equal
 from mxnet.test_utils import use_np
 from mxnet.test_utils import is_op_runnable
-from common import assertRaises, with_seed, random_seed, setup_module, teardown_module
+from common import assertRaises, random_seed
 from mxnet.numpy_dispatch_protocol import with_array_function_protocol, with_array_ufunc_protocol
 from mxnet.numpy_dispatch_protocol import _NUMPY_ARRAY_FUNCTION_LIST, _NUMPY_ARRAY_UFUNC_LIST
 
@@ -2397,6 +2397,13 @@ def _add_workload_cov():
     OpArgMngr.add_workload('cov', y, rowvar=False, bias=True)
 
 
+def _add_workload_cumprod():
+    a = np.array([[1, 2], [3, 5]])
+    OpArgMngr.add_workload('cumprod', a)
+    OpArgMngr.add_workload('cumprod', a, axis=0)
+    OpArgMngr.add_workload('cumprod', a, axis=1)
+
+
 def _add_workload_digitize():
     a = np.array([1, 2, 3, 4])
     b = np.array([1, 3])
@@ -2660,6 +2667,40 @@ def _add_workload_nanquantile():
     OpArgMngr.add_workload('nanquantile', a, 0.4, interpolation='nearest')
 
 
+def _add_workload_nanstd():
+    OpArgMngr.add_workload('nanstd', np.random.uniform(size=(4, 1)))
+    A = np.array([[1, 2, 3], [4, np.nan, 6]])
+    OpArgMngr.add_workload('nanstd', A)
+    OpArgMngr.add_workload('nanstd', A, 0)
+    OpArgMngr.add_workload('nanstd', A, 1)
+    OpArgMngr.add_workload('nanstd', np.array([1, -1, 1, -1]))
+    OpArgMngr.add_workload('nanstd', np.array([1, -1, 1, -1]), ddof=1)
+    OpArgMngr.add_workload('nanstd', np.array([1, -1, 1, -1]), ddof=2)
+    OpArgMngr.add_workload('nanstd', np.arange(10), out=np.array(0.))
+
+
+def _add_workload_nansum():
+    a = 1
+    b = np.array([1, np.nan])
+    c = np.array([[1, 2], [3, np.nan]])
+    OpArgMngr.add_workload('nansum', a)
+    OpArgMngr.add_workload('nansum', b)
+    OpArgMngr.add_workload('nansum', c)
+    OpArgMngr.add_workload('nansum', c, axis=0)
+
+
+def _add_workload_nanvar():
+    OpArgMngr.add_workload('nanvar', np.random.uniform(size=(4, 1)))
+    A = np.array([[1, 2, 3], [4, np.nan, 6]])
+    OpArgMngr.add_workload('nanvar', A)
+    OpArgMngr.add_workload('nanvar', A, 0)
+    OpArgMngr.add_workload('nanvar', A, 1)
+    OpArgMngr.add_workload('nanvar', np.array([1, -1, 1, -1]))
+    OpArgMngr.add_workload('nanvar', np.array([1, -1, 1, -1]), ddof=1)
+    OpArgMngr.add_workload('nanvar', np.array([1, -1, 1, -1]), ddof=2)
+    OpArgMngr.add_workload('nanvar', np.arange(10), out=np.array(0.))
+
+
 def _add_workload_ndim():
     a = 1
     b = np.array([[1,2,3],[4,5,6]])
@@ -2696,6 +2737,10 @@ def _add_workload_packbits():
     OpArgMngr.add_workload('packbits', a)
     OpArgMngr.add_workload('packbits', a, axis=-1)
     OpArgMngr.add_workload('packbits', a, bitorder='little')
+
+
+def _add_workload_pmt():
+    OpArgMngr.add_workload('pmt', 0.1 / 12, 1, 60, 55000)
 
 
 def _add_workload_poly():
@@ -3118,6 +3163,7 @@ def _prepare_workloads():
     _add_workload_correlate()
     _add_workload_count_nonzero()
     _add_workload_cov()
+    _add_workload_cumprod()
     _add_workload_digitize()
     _add_workload_divmod()
     _add_workload_extract()
@@ -3149,12 +3195,16 @@ def _prepare_workloads():
     _add_workload_nanpercentile()
     _add_workload_nanprod()
     _add_workload_nanquantile()
+    _add_workload_nanstd()
+    _add_workload_nansum()
+    _add_workload_nanvar()
     _add_workload_ndim()
     _add_workload_npv()
+    _add_workload_packbits()
     _add_workload_pad()
     _add_workload_partition()
     _add_workload_piecewise()
-    _add_workload_packbits()
+    _add_workload_pmt()
     _add_workload_poly()
     _add_workload_polyadd()
     _add_workload_polydiv()
@@ -3258,7 +3308,6 @@ def check_interoperability(op_list):
             _check_interoperability_helper(name, rel_tol, abs_tol, *workload['args'], **workload['kwargs'])
 
 
-@with_seed()
 @use_np
 @with_array_function_protocol
 @pytest.mark.serial
@@ -3272,7 +3321,6 @@ def test_np_memory_array_function():
         assert op(data_mx, np.ones((5, 0))) == op(data_np, _np.ones((5, 0)))
 
 
-@with_seed()
 @use_np
 @with_array_function_protocol
 @pytest.mark.serial
@@ -3280,7 +3328,6 @@ def test_np_array_function_protocol():
     check_interoperability(_NUMPY_ARRAY_FUNCTION_LIST)
 
 
-@with_seed()
 @use_np
 @with_array_ufunc_protocol
 @pytest.mark.serial
@@ -3288,7 +3335,6 @@ def test_np_array_ufunc_protocol():
     check_interoperability(_NUMPY_ARRAY_UFUNC_LIST)
 
 
-@with_seed()
 @use_np
 @pytest.mark.serial
 def test_np_fallback_ops():

@@ -29,9 +29,8 @@ from mxnet.gluon import nn
 from mxnet.test_utils import *
 curr_path = os.path.dirname(os.path.abspath(os.path.expanduser(__file__)))
 sys.path.append(os.path.join(curr_path, '../unittest/'))
-from common import with_seed
 
-@with_seed(1234)
+@pytest.mark.seed(1234)
 def test_mkldnn_ndarray_slice():
     ctx = mx.cpu()
     net = gluon.nn.HybridSequential()
@@ -43,7 +42,7 @@ def test_mkldnn_ndarray_slice():
     # trigger computation on ndarray slice
     assert_almost_equal(y[0].asnumpy()[0, 0, 0], np.array(0.056331709))
 
-@with_seed(1234)
+@pytest.mark.seed(1234)
 def test_mkldnn_engine_threading():
     net = gluon.nn.HybridSequential()
     net.add(gluon.nn.Conv2D(channels=32, kernel_size=3, activation=None))
@@ -68,7 +67,6 @@ def test_mkldnn_engine_threading():
         assert_almost_equal(y[0, 0, 0, 0], np.array(0.056331709))
         break
 
-@with_seed()
 def test_mkldnn_reshape():
     def test_reshape_after_conv(dst_shape):
         shape = (1,1,4,4)
@@ -100,7 +98,6 @@ def test_mkldnn_reshape():
         test_reshape_after_conv(test_case)
 
 
-@with_seed()
 def test_reshape_before_conv():
     class Net(gluon.HybridBlock):
         """
@@ -133,7 +130,6 @@ def test_reshape_before_conv():
     assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
-@with_seed()
 def test_slice_before_conv():
     class Net(gluon.HybridBlock):
         """
@@ -166,7 +162,6 @@ def test_slice_before_conv():
     assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
-@with_seed()
 def test_slice_reshape_before_conv():
     class Net(gluon.HybridBlock):
         """
@@ -199,7 +194,6 @@ def test_slice_reshape_before_conv():
     assert_almost_equal(out1, out2, rtol=1e-5, atol=1e-6)
 
 
-@with_seed()
 def test_flatten_slice_after_conv():
     data = mx.symbol.Variable('data')
     weight = mx.symbol.Variable('weight')
@@ -255,10 +249,9 @@ def test_mkldnn_sum_inplace_with_cpu_layout():
     assert_almost_equal(out[0].asnumpy()[0, 0, 0], 1.0)
 
 
-@with_seed()
 def test_batchnorm():
     def check_batchnorm_training(stype):
-        for shape in [(2, 3), (2, 3, 2, 2)]:
+        for shape in [(2, 3), (2, 4), (2, 3, 2, 2), (2, 4, 2, 2)]:
             data_tmp = np.random.normal(-0.1, 0.1, size=shape)
             s = shape[1],
             gamma = np.ones(s)
@@ -281,7 +274,6 @@ def test_batchnorm():
     for stype in stypes:
         check_batchnorm_training(stype)
 
-@with_seed()
 def test_batchnorm_relu_fusion():
     def check_batchnorm_relu_fusion(shape):
         x = mx.sym.Variable('x')
@@ -341,7 +333,6 @@ def test_batchnorm_relu_fusion():
     check_batchnorm_relu_fusion_gluon((1, 3, 224, 224))
     check_batchnorm_relu_fusion_gluon((8, 3, 224, 224))
 
-@with_seed()
 def test_softmax():
     def check_softmax_training(stype):
         for shape in [(2, 3), (2, 3, 2, 2)]:
@@ -358,7 +349,6 @@ def test_softmax():
         check_softmax_training(stype)
 
 
-@with_seed()
 def test_pooling():
     def check_pooling_training(stype):
         for shape in [(3, 3, 10), (3, 3, 20, 20), (3, 3, 10, 20, 20)]:
@@ -381,7 +371,6 @@ def test_pooling():
         check_pooling_training(stype)
 
 
-@with_seed()
 def test_activation():
     def check_activation_training(stype):
         for shape in [(2, 3, 3), (2, 3, 2, 2)]:
@@ -402,7 +391,6 @@ def test_activation():
         check_activation_training(stype)
 
 
-@with_seed()
 def test_convolution():
     def check_convolution_training(stype):
         for shape in [(3, 3, 10), (3, 3, 10, 10), (3, 3, 10, 10, 10)]:
@@ -430,7 +418,6 @@ def test_convolution():
         check_convolution_training(stype)
 
 
-@with_seed()
 @pytest.mark.skip(reason="Flaky test https://github.com/apache/incubator-mxnet/issues/12579")
 def test_Deconvolution():
     def check_Deconvolution_training(stype):
@@ -456,7 +443,6 @@ def test_Deconvolution():
         check_Deconvolution_training(stype)
 
 
-@with_seed()
 def test_LRN():
     def check_LRN_training(stype):
         for shape in [(3, 4, 5, 5)]:
@@ -472,7 +458,6 @@ def test_LRN():
         check_LRN_training(stype)
 
 
-@with_seed()
 def test_fullyconnected():
     def check_fullyconnected_training(stype):
         data_shape = rand_shape_nd(2)
@@ -505,7 +490,6 @@ def test_softmax_with_large_inputs():
     softmax_forward(mx.nd.array([[[[-3.4e38,-3.4e38]]]]), np.array([1.0,1.0]))
     softmax_forward(mx.nd.array([[[[3.4e38,3.4e38]]]]), np.array([1.0,1.0]))
 
-@with_seed()
 def test_non_mkldnn_fcomputeex():
     # test special case where MKLDNN formatted NDArray feeds into non-mkldnn fcomputeex operator
     # conv is example where MKLDNN NDArray is created from regular NDArrays
@@ -549,7 +533,6 @@ def test_non_mkldnn_fcomputeex():
     exec1 = custom._bind(mx.cpu(), args={'data': mx.nd.ones([10,3,96,96]), 'conv_weight': mx.nd.ones([8,3,5,5])})
     exec1.forward()[0].wait_to_read()
 
-@with_seed()
 def test_conv_transpose():
     axes = [(0,2,1,3), (0,2,3,1), (1,2,3,0), (3,2,1,0)]
     a = np.random.rand(10, 16, 50, 50)
@@ -566,7 +549,6 @@ def test_conv_transpose():
 
 
 # This test case is contributed by @awsbillz in https://github.com/apache/incubator-mxnet/issues/14766
-@with_seed()
 def test_reshape_transpose_6d():
     class Reshape2D(gluon.HybridBlock):
         def __init__(self, factor):
@@ -601,7 +583,6 @@ def test_reshape_transpose_6d():
     output = net(data)
     a = output.asnumpy()
 
-@with_seed()
 def test_concat():
     def ref_concat(a, b, axis):
       return np.concatenate((a, b), axis=axis)
@@ -636,7 +617,6 @@ def test_concat():
     for stype in stypes:
         check_concat_training(stype)
 
-@with_seed()
 def test_elemwise_add():
     def ref_add(a, b):
       return np.add(a, b)

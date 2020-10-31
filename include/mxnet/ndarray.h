@@ -104,8 +104,10 @@ class NDArray {
    */
   NDArray(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx,
           bool delay_alloc = true, int dtype = mshadow::default_type_flag,
-          std::vector<int> aux_types = {}, mxnet::ShapeVector aux_shapes = {},
-          mxnet::TShape storage_shape = mxnet::TShape(mshadow::Shape1(0)));
+          const std::vector<int> &aux_types = {}, const mxnet::ShapeVector &aux_shapes = {},
+          const mxnet::TShape &storage_shape = mxnet::TShape(mshadow::Shape1(0))) {
+    ReInit(stype, shape, ctx, dtype, delay_alloc, &aux_types, &aux_shapes, &storage_shape);
+  }
   /*!
    * \brief constructs a new dynamic NDArray whose shape is unknown,
    *        hence the NDArray is inherently lazily created
@@ -187,6 +189,21 @@ class NDArray {
     ptr_->Init(shape, this->dtype_);
     this->shape_ = shape;
   }
+
+  void InitDetached(const NDArray *src) {
+    *this = *src;
+    autograd_entry_ = nnvm::NodeEntry(nullptr);
+  }
+  inline void ReInit() {
+    ptr_ = nullptr;
+    Init(kUndefinedStorage, TShape(), -1);
+  }
+  void ReInit(const NDArrayStorageType stype, const mxnet::TShape &shape, Context ctx, int dtype,
+              bool delay_alloc = true, const std::vector<int> *aux_types = nullptr,
+              const mxnet::ShapeVector *aux_shapes = nullptr,
+              const mxnet::TShape *storage_shape = nullptr);
+
+  void SelfReorder2Default();
   /*!
    * \brief set the correct shape of NDArray directly from the storage_shape of its own chunk.
    */
@@ -569,6 +586,20 @@ class NDArray {
     ret.dtype_ = dtype;
     ret.reuse_ = true;
     return ret;
+  }
+
+  inline void InitAsArray(const NDArray &src, const mxnet::TShape &shape, int dtype) {
+    CHECK_EQ(src.storage_type(), kDefaultStorage)
+      << "AsArray is intended only for kDefaultStorage.";
+    CHECK_GE(src.ptr_->shandle.size,
+             shape.Size() * mshadow::mshadow_sizeof(dtype))
+      << "NDArray.AsArray: target memory size is bigger than what was allocated.";
+    // We can't reuse memory in a view.
+    CHECK(!src.IsView());
+    *this = src;
+    shape_ = shape;
+    dtype_ = dtype;
+    reuse_ = true;
   }
 
   /*!
@@ -1089,6 +1120,18 @@ class NDArray {
     /*! \brief destructor */
     ~Chunk();
   };  // struct Chunk
+
+  /*!
+   * \brief initialize the NDArray
+  */
+  inline void Init(const NDArrayStorageType stype, const mxnet::TShape &shape, int dtype) {
+    shape_ = shape;
+    dtype_ = dtype;
+    storage_type_ = stype;
+    reuse_ = false;
+    byte_offset_ = 0;
+    autograd_entry_ = nnvm::NodeEntry(nullptr);
+  }
 
   void SetTBlob() const;
 

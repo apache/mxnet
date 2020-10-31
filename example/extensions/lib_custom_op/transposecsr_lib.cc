@@ -25,7 +25,7 @@
 
 #include <iostream>
 #include <utility>
-#include "lib_api.h"
+#include "mxnet/lib_api.h"
 
 using namespace mxnet::ext;
 
@@ -176,6 +176,9 @@ class MyStatefulTransposeCSR : public CustomStatefulOp {
 };
 
 MXReturnValue createOpState(const std::unordered_map<std::string, std::string>& attrs,
+                            const MXContext& ctx,
+                            const std::vector<std::vector<unsigned int> >& in_shapes,
+                            const std::vector<int> in_types,
                             CustomStatefulOp** op_inst) {
   // testing passing of keyword arguments
   int count = attrs.count("test_kw") > 0 ? std::stoi(attrs.at("test_kw")) : 0;

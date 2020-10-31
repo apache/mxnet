@@ -603,5 +603,5 @@ Neural Information Processing Systems. 2017.
 stochastic approximation by averaging." SIAM Journal on Control and
 Optimization. 1992.
 
-.. |transformer| image:: transformer.png
+.. |transformer| image:: /_static/transformer.png
 

@@ -52,7 +52,7 @@ void UFuncHelper(NDArray* lhs, NDArray* rhs, NDArray* out,
   }
 }
 
-void UFuncHelper(NDArray* lhs, int rhs, NDArray* out,
+void UFuncHelper(NDArray* lhs, int64_t rhs, NDArray* out,
                  runtime::MXNetRetValue* ret, const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
@@ -96,7 +96,7 @@ void UFuncHelper(NDArray* lhs, double rhs, NDArray* out,
   }
 }
 
-void UFuncHelper(int lhs, NDArray* rhs, NDArray* out,
+void UFuncHelper(int64_t lhs, NDArray* rhs, NDArray* out,
                  runtime::MXNetRetValue* ret, const nnvm::Op* op) {
   using namespace runtime;
   nnvm::NodeAttrs attrs;
@@ -151,12 +151,12 @@ void UFuncHelper(runtime::MXNetArgs args,
     if (args[1].type_code() == kNDArrayHandle) {
       UFuncHelper(args[0].operator NDArray*(), args[1].operator NDArray*(), out, ret, fn_array);
     } else if (args[1].type_code() == kDLInt) {
-      UFuncHelper(args[0].operator NDArray*(), args[1].operator int(), out, ret, lfn_scalar);
+      UFuncHelper(args[0].operator NDArray*(), args[1].operator int64_t(), out, ret, lfn_scalar);
     } else {
       UFuncHelper(args[0].operator NDArray*(), args[1].operator double(), out, ret, lfn_scalar);
     }
   } else if (args[0].type_code() == kDLInt) {
-    UFuncHelper(args[0].operator int(), args[1].operator NDArray*(), out, ret,
+    UFuncHelper(args[0].operator int64_t(), args[1].operator NDArray*(), out, ret,
                 rfn_scalar ? rfn_scalar : lfn_scalar);
   } else {
     UFuncHelper(args[0].operator double(), args[1].operator NDArray*(), out, ret,

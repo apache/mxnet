@@ -24,6 +24,17 @@ from .base import _LIB, check_call, MXNetError, _init_op_module, mx_uint
 from .ndarray.register import _make_ndarray_function
 from .symbol.register import _make_symbol_function
 
+class MXlib:
+    """Holds a pointed to a loaded shared library and closes it on destruction"""
+    def __init__(self, handle):
+        self.handle = handle
+    def __del__(self):
+        libdl = ctypes.CDLL("libdl.so")
+        libdl.dlclose(self.handle)
+
+# set of libraries loaded
+loaded_libs = []
+
 def load(path, verbose=True):
     """Loads library dynamically.
 
@@ -39,6 +50,8 @@ def load(path, verbose=True):
     ---------
     void
     """
+    global loaded_libs
+
     #check if path exists
     if not os.path.exists(path):
         raise MXNetError("load path %s does NOT exist" % path)
@@ -53,7 +66,10 @@ def load(path, verbose=True):
     verbose_val = 1 if verbose else 0
     byt_obj = path.encode('utf-8')
     chararr = ctypes.c_char_p(byt_obj)
-    check_call(_LIB.MXLoadLib(chararr, mx_uint(verbose_val)))
+    lib_ptr = ctypes.c_void_p(0)
+    check_call(_LIB.MXLoadLib(chararr, mx_uint(verbose_val), ctypes.byref(lib_ptr)))
+    # add library pointer to list so it can be closed later
+    loaded_libs.append(MXlib(lib_ptr))
 
     #regenerate operators
     _init_op_module('mxnet', 'ndarray', _make_ndarray_function)
@@ -72,7 +88,6 @@ def load(path, verbose=True):
     for op in dir(mx_sym_op):
         func = getattr(mx_sym_op, op)
         setattr(mx_sym, op, func)
-
 
 def compiled_with_gcc_cxx11_abi():
     """Check if the library is compiled with _GLIBCXX_USE_CXX11_ABI.
