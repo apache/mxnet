@@ -46,7 +46,7 @@ This example shows compiling a custom backend operator and then dynamically load
 
 1. Touch or modify the **min_ex.cc** and/or **min_ex-inl.h** file(s)
 2. Go into the **build** directory that was created when building MXNet.
-3. Run `cmake .. -DBUILD_EXTENSION=$(pwd)/../example/extensions/lib_external_ops`
+3. Run `cmake .. -DBUILD_EXTENSION_PATH=$(pwd)/../example/extensions/lib_external_ops`
 4. Run `cmake --build .`
 5. Go to the **example/extensions/lib_external_ops** directory again
 6. Run `python test_loading.py` to execute the test program. You should see the following output:
@@ -67,4 +67,4 @@ add_library(external_lib SHARED ${SRCS})
 target_link_libraries(external_lib PUBLIC mxnet)
 ```
 
-Next, build MXNet and set the path to your directory with the CMakeLists.txt file via the `BUILD_EXTENSION` option. This will build your library with all of the MXNet includes. 
+Next, build MXNet and set the path to your directory with the CMakeLists.txt file via the `BUILD_EXTENSION_PATH` option. This will build your library with all of the MXNet includes. 
