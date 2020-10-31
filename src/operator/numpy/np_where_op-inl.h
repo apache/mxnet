@@ -176,7 +176,8 @@ inline void NumpyWhereOpForward(const nnvm::NodeAttrs& attrs,
 }
 
 #if !defined(__CUDACC__)
-#define NP_WHERE_REDUCE_AXES(safe_acc, ...) ReduceAxesComputeImpl<xpu, mshadow_op::sum, safe_acc>(__VA_ARGS__)
+#define NP_WHERE_REDUCE_AXES(safe_acc, ...) \
+  ReduceAxesComputeImpl<xpu, mshadow_op::sum, safe_acc>(__VA_ARGS__)
 #else
 #define NP_WHERE_REDUCE_AXES(safe_acc, ...) ReduceAxesRTCComputeImpl(__VA_ARGS__, "red::sum{}")
 #endif
