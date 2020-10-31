@@ -419,6 +419,28 @@ def test_hybridize_boolean_dtype():
     assert mx.test_utils.same(out1.asnumpy(), out2.asnumpy())
 
 
+
+@use_np
+def test_hybridize_boolean_dtype():
+    class TestBlock(HybridBlock):
+        def __init__(self):
+            super(TestBlock, self).__init__()
+            self.d = mx.gluon.nn.Dense(1)
+        def hybrid_forward(self, F, a, b, *args):
+            res = self.d.hybrid_forward(F, a, b)
+            return res
+
+    a = mx.np.random.uniform(low=-1, high=1, size=(1,1))
+    b = mx.np.random.uniform(low=-1, high=1, size=(1,1))
+
+    net = TestBlock()
+    net.initialize()
+    net.hybridize()
+
+    out = net(a, b)
+    net.optimize_for(a, b, backend="MKLDNN")
+    out2 = net(a, b)
+
 @use_np
 def test_activations_leakyrelu():
     # Currently, all the activation tests, we will just test for runnable.
