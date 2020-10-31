@@ -397,7 +397,6 @@ def test_net_symbol_save_load():
     check_gluon_save_load(Case2, [mx.np.random.normal(0, 1, (10, 5, 8)),
                                   mx.np.random.normal(0, 1, (10, 5, 8))])
 
-
 @use_np
 def test_hybridize_boolean_dtype():
     class Foo(gluon.HybridBlock):
@@ -419,9 +418,8 @@ def test_hybridize_boolean_dtype():
     assert mx.test_utils.same(out1.asnumpy(), out2.asnumpy())
 
 
-
 @use_np
-def test_hybridize_boolean_dtype():
+def test_optimize_for():
     class TestBlock(HybridBlock):
         def __init__(self):
             super(TestBlock, self).__init__()
@@ -440,6 +438,7 @@ def test_hybridize_boolean_dtype():
     out = net(a, b)
     net.optimize_for(a, b, backend="MKLDNN")
     out2 = net(a, b)
+
 
 @use_np
 def test_activations_leakyrelu():
