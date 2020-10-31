@@ -1114,6 +1114,7 @@ def test_contrib_rnn():
         check_contrib_rnn(cell_type, num_states)
 
 
+@pytest.mark.garbage_expected
 def test_foreach():
     v3 = mx.sym.var("v0")
     v4 = mx.sym.var("v1")
