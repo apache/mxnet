@@ -459,7 +459,8 @@ __global__ void masked_softmax_kernel(DType *in, OType *out, IType *in_mask,
   for (index_t i = x; i < M; i += x_size) {
     val = (negate ? -in[base + i*sa] : in[base + i*sa]) / scale;
     out[base + i*sa] =
-      in_mask[base + i*sa] ? OType(OP::Map((val - smax)/static_cast<DType>(temperature), ssum)) : OType(0.0f);
+      in_mask[base + i*sa] ? OType(OP::Map((val - smax)/static_cast<DType>(temperature), ssum)) :
+                             OType(0.0f);
   }
 }
 
@@ -471,10 +472,13 @@ __global__ void masked_softmax_stride1_kernel(const DType *in, OType *out, IType
                                               const index_t total_rows) {
   const int entries_per_load = sizeof(LType)/sizeof(DType);
   extern __shared__ int shared[];
-  LType* persistent_storage = reinterpret_cast<LType*>(shared); // rows_per_block * M (DType)
+  LType* persistent_storage = reinterpret_cast<LType*>(shared);
+  // rows_per_block * M (DType)
   size_t offset_shared = entries_per_load > 0 ? (rows_per_block * M) / entries_per_load : 0;
-  AType* scratch = (AType*)&persistent_storage[offset_shared];  // softmax_threads_per_block
-  IType* mask = (IType*)&scratch[softmax_threads_per_block]; // rows_per_block * M
+  AType* scratch = reinterpret_cast<AType*>(&persistent_storage[offset_shared]);
+  // softmax_threads_per_block
+  IType* mask = reinterpret_cast<IType*>(&scratch[softmax_threads_per_block]);
+  // rows_per_block * M
 
   const int warp_size = 32;
   const int threads_per_row = softmax_threads_per_block / rows_per_block;
@@ -621,7 +625,7 @@ inline void MaskedSoftmax(Stream<gpu> *s, DType *in, OType *out, IType *mask,
 
   const size_t DSize = sizeof(DType);
   // Using max of 20 kB of shared memory for (Data + Mask) in the optimized case
-  const size_t max_opt_M = 10 * 1024 / DSize; // 10KB Data, 10KB Mask
+  const size_t max_opt_M = 10 * 1024 / DSize;  // 10KB Data, 10KB Mask
   if (stride[axis] == 1 &&
       static_cast<size_t>(M) <= max_opt_M &&
       std::is_same<DType, OType>::value) {
@@ -630,18 +634,20 @@ inline void MaskedSoftmax(Stream<gpu> *s, DType *in, OType *out, IType *mask,
       int rows_per_block = mxnet::common::cuda::get_rows_per_block(M *
                                                                    sizeof(DType) / sizeof(LType),
                                                                    softmax_threads_per_block);
-      size_t amount_shared = rows_per_block * M * sizeof(DType) + 
+      size_t amount_shared = rows_per_block * M * sizeof(DType) +
                              rows_per_block * M * sizeof(IType) +
                              softmax_threads_per_block * sizeof(AType);
       int nblocks = (N + rows_per_block - 1) / rows_per_block;
       CHECK_LE(sizeof(DType), sizeof(LType));
       if (normalize) {
         masked_softmax_stride1_kernel<true, OP, negate, AType, LType>
-          <<<nblocks, softmax_threads_per_block, amount_shared, mshadow::Stream<gpu>::GetStream(s)>>>(
+          <<<nblocks, softmax_threads_per_block, amount_shared,
+             mshadow::Stream<gpu>::GetStream(s)>>>(
             in, out, mask, M, scale, temperature, rows_per_block, N);
       } else {
         masked_softmax_stride1_kernel<false, OP, negate, AType, LType>
-          <<<nblocks, softmax_threads_per_block, amount_shared, mshadow::Stream<gpu>::GetStream(s)>>>(
+          <<<nblocks, softmax_threads_per_block, amount_shared,
+             mshadow::Stream<gpu>::GetStream(s)>>>(
             in, out, mask, M, scale, temperature, rows_per_block, N);
       }
     });
@@ -786,10 +792,13 @@ __global__ void masked_softmax_stride1_grad_kernel(const OType *out, const OType
                                                    const index_t total_rows) {
   const int entries_per_load = sizeof(LType)/sizeof(DType);
   extern __shared__ int shared[];
-  LType* persistent_storage = reinterpret_cast<LType*>(shared); // 2 * rows_per_block * M (DType)
+  LType* persistent_storage = reinterpret_cast<LType*>(shared);
+  // 2 * rows_per_block * M (DType)
   size_t offset_shared = entries_per_load > 0 ? (2 * rows_per_block * M) / entries_per_load : 0;
-  AType* scratch = (AType*)&persistent_storage[offset_shared];  // softmax_threads_per_block
-  IType* mask = (IType*)&scratch[softmax_threads_per_block]; // rows_per_block * M
+  AType* scratch = reinterpret_cast<AType*>(&persistent_storage[offset_shared]);
+  // softmax_threads_per_block
+  IType* mask = reinterpret_cast<IType*>(&scratch[softmax_threads_per_block]);
+  // rows_per_block * M
 
   const int warp_size = 32;
   const int threads_per_row = softmax_threads_per_block / rows_per_block;
@@ -964,9 +973,9 @@ inline void MaskedSoftmaxGrad(Stream<gpu> *s, OType *out, OType *ograd,
       int rows_per_block = mxnet::common::cuda::get_rows_per_block(M *
                                                                    sizeof(DType) / sizeof(LType),
                                                                    softmax_threads_per_block);
-      size_t amount_shared = 2 * rows_per_block * M * sizeof(DType) + 
+      size_t amount_shared = 2 * rows_per_block * M * sizeof(DType) +
                              rows_per_block * M * sizeof(IType) +
-                             softmax_threads_per_block * sizeof(AType);  
+                             softmax_threads_per_block * sizeof(AType);
       int nblocks = (N + rows_per_block - 1) / rows_per_block;
       CHECK_LE(sizeof(DType), sizeof(LType));
       masked_softmax_stride1_grad_kernel<OP1, OP2, Req, negate, AType, LType>
@@ -1256,8 +1265,6 @@ static inline bool MaskedSoftmaxGradOpType(const nnvm::NodeAttrs& attrs,
 static inline std::vector<std::pair<int, int> >
 MaskedSoftmaxGradOpInplaceOption(const nnvm::NodeAttrs& attrs) {
   return std::vector<std::pair<int, int> >{{0, 0}, {1, 0}, {2, 1}, {3, 0}};
-
-
 }
 
 template<typename xpu, typename OP, bool negate = false>
