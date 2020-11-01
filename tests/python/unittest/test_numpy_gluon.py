@@ -420,7 +420,7 @@ def test_hybridize_boolean_dtype():
 
 @use_np
 def test_optimize_for():
-    class TestBlock(HybridBlock):
+    class TestBlock(gluon.HybridBlock):
         def __init__(self):
             super(TestBlock, self).__init__()
             self.d = mx.gluon.nn.Dense(1)
