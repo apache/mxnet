@@ -51,8 +51,9 @@ class SgMKLDNNBNReLUSelector : public SubgraphSelector {
 
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
     if (n.op() && n.op()->name == "BatchNorm") {
-      if (new_node.op() && new_node.op()->name == "Activation" && status_ == kStart &&
-          nnvm::get<ActivationParam>(new_node.attrs.parsed).act_type == activation::kReLU) {
+      if (new_node.op() && status_ == kStart &&
+          (new_node.op()->name=="relu" || (new_node.op()->name == "Activation" &&
+           nnvm::get<ActivationParam>(new_node.attrs.parsed).act_type == activation::kReLU))) {
         status_ = kSuccess;
         return true;
       } else {
@@ -87,7 +88,7 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
   }
 
   void PrePartition(const nnvm::Graph& g, 
-    const std::unordered_map<std::string, std::string>& options_map) {
+    const std::unordered_map<std::string, std::string>& options_map) override {
     dedup_subgraph = true;
   }
 
