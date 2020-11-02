@@ -452,31 +452,29 @@ void NumpyMatrixNormCompute(const nnvm::NodeAttrs& attrs,
   if (param.ord != 2 && param.ord != -2) {  // row norm or col norm
     TShape sum_shape = inputs[0].shape_;
     sum_shape[mat_axis[!(param.ord == 1 || param.ord == -1)]] = 1;
-    MSHADOW_TYPE_SWITCH(outputs[0].type_flag_, DType, {
-      TBlob temp = outputs[1].reshape(sum_shape);
-      std::vector<TBlob> sum_output({temp});
+    TBlob temp = outputs[1].reshape(sum_shape);
+    std::vector<TBlob> sum_output({temp});
 #if !defined(__CUDACC__)
-      ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false, mshadow_op::abs>(
-        ctx, inputs, req, sum_output, sum_shape);
-      if (param.ord > 0) {
-        ReduceAxesComputeImpl<xpu, mshadow::red::maximum, false, false, mshadow_op::identity>(
-          ctx, sum_output, req, outputs, reduced_shape);
-      } else {
-        ReduceAxesComputeImpl<xpu, mshadow::red::minimum, false, false, mshadow_op::identity>(
-          ctx, sum_output, req, outputs, reduced_shape);
-      }
+    ReduceAxesComputeImpl<xpu, mshadow::red::sum, false, false, mshadow_op::abs>(
+      ctx, inputs, req, sum_output, sum_shape);
+    if (param.ord > 0) {
+      ReduceAxesComputeImpl<xpu, mshadow::red::maximum, false, false, mshadow_op::identity>(
+        ctx, sum_output, req, outputs, reduced_shape);
+    } else {
+      ReduceAxesComputeImpl<xpu, mshadow::red::minimum, false, false, mshadow_op::identity>(
+        ctx, sum_output, req, outputs, reduced_shape);
+    }
 #else
-      ReduceAxesRTCComputeImpl(ctx, inputs, req, sum_output, sum_shape,
-                               "red::sum{}", nullptr, false, "abs");
-      if (param.ord > 0) {
-        ReduceAxesRTCComputeImpl(ctx, sum_output, req, outputs, reduced_shape,
-                                 "red::maximum{}", nullptr, false);
-      } else {
-        ReduceAxesRTCComputeImpl(ctx, sum_output, req, outputs, reduced_shape,
-                                 "red::minimum{}", nullptr, false);
-      }
-#endif  // MXNET_USE_CUDA
-    });
+    ReduceAxesRTCComputeImpl(ctx, inputs, req, sum_output, sum_shape,
+                             "red::sum{}", nullptr, false, "abs");
+    if (param.ord > 0) {
+      ReduceAxesRTCComputeImpl(ctx, sum_output, req, outputs, reduced_shape,
+                               "red::maximum{}", nullptr, false);
+    } else {
+      ReduceAxesRTCComputeImpl(ctx, sum_output, req, outputs, reduced_shape,
+                               "red::minimum{}", nullptr, false);
+    }
+#endif
     return;
   }
 

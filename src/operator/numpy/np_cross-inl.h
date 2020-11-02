@@ -689,15 +689,17 @@ struct ReduceImplWrap {
                  const Tensor<xpu, 1, char> workspace_tensor) {
     Stream<xpu> *s = ctx.get_stream<xpu>();
     // Reduce work_in to work_out.
-    SUM_NDIM_SWITCH(work_out.ndim(), NDim, {
 #if !defined(__CUDACC__)
+    SUM_NDIM_SWITCH(work_out.ndim(), NDim, {
       op::broadcast::Reduce<mshadow_op::sum, NDim, DType, op::mshadow_op::identity, false>(
         s, work_out, kWriteTo, workspace_tensor, work_in);
+    });
 #else
+    SUM_NDIM_SWITCH(work_out.ndim(), NDim, {
       op::broadcast::RTCReduce(ctx, work_out, kWriteTo, workspace_tensor, work_in,
                                "red::sum{}", NDim, "identity");
-#endif
     });
+#endif
     // Copy work_out to out_data.
     MXNET_ASSIGN_REQ_SWITCH(out_req, req_type, {
       mxnet_op::Kernel<ResAssign<req_type>, xpu>::Launch(
