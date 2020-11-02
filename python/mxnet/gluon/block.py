@@ -1038,6 +1038,10 @@ class HybridBlock(Block):
             # Partition the graph.
             out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
 
+            # convert to numpy symbol if needed
+            if _mx_npx.is_np_array():
+                out = out.as_np_ndarray()
+
             #update cached graph with partitioned graph
             self._cached_graph = data, out
 
