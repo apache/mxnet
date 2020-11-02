@@ -1089,19 +1089,14 @@ void NumpyMomentsForward(const nnvm::NodeAttrs& attrs,
   mxnet::TShape src_shape, dst_shape;
   BroadcastReduceShapeCompact(data.shape_, small, &src_shape, &dst_shape);
 
-  Tensor<xpu, 1, char> temp_mem;
-  Tensor<xpu, 1, char> workspace;
-  MSHADOW_TYPE_SWITCH(inputs[0].type_flag_, DType, {
-    // Get workspace and temp space for data - mean
-    size_t workspace_size = 0;
-    workspace_size = broadcast::ReduceWorkspaceSize(
-      s, dst_shape, req[0], src_shape);
-    size_t temp_data_size = data.shape_.Size() * sizeof(DType);
-    size_t temp_mem_size = temp_data_size + workspace_size;
-    temp_mem = ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
-    char *workspace_ptr = temp_mem.dptr_ + temp_data_size;
-    workspace = Tensor<xpu, 1, char>(workspace_ptr, Shape1(workspace_size), s);
-  });
+  // Get workspace and temp space for data - mean
+  size_t workspace_size = broadcast::ReduceWorkspaceSize(s, dst_shape, req[0], src_shape);
+  size_t temp_data_size = data.shape_.Size() * common::mshadow_type_info(inputs[0].type_flag_).size;
+  size_t temp_mem_size = temp_data_size + workspace_size;
+  Tensor<xpu, 1, char> temp_mem =
+    ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
+  char *workspace_ptr = temp_mem.dptr_ + temp_data_size;
+  Tensor<xpu, 1, char> workspace(workspace_ptr, Shape1(workspace_size), s);
   // Compute mean
 #if !defined(__CUDACC__)
   ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, true>(
