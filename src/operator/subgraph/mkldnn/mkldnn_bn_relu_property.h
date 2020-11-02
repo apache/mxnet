@@ -106,11 +106,6 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
                                    const int subgraph_id = 0) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
 
-    // Remove duplicated outputs if subgraph is an input to multiple ops
-    // auto last_node = sym.outputs[0].node;
-    // nnvm::Symbol new_sym;
-    // new_sym.outputs.emplace_back(last_node);
-
     std::ostringstream node_name;
     node_name << "sg_mkldnn_batch_norm_relu_" << std::to_string(subgraph_id);
 
@@ -134,16 +129,6 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
     auto selector = std::make_shared<SgMKLDNNBNReLUSelector>(disable_bn_relu_);
     return selector;
   }
-
-  // void ConnectSubgraphOutputs(
-  //     const nnvm::ObjectPtr n,
-  //     std::vector<nnvm::NodeEntry *> *output_entries) const override {
-  //   // Connect all extern output entries to output[0]
-  //   for (size_t i = 0; i < output_entries->size(); ++i) {
-  //     auto entry_ptr = output_entries->at(i);
-  //     *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
-  //   }
-  // }
 
  private:
   bool disable_bn_relu_;
