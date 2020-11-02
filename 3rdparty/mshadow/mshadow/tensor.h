@@ -432,7 +432,7 @@ struct Tensor: public TRValue<Tensor<Device, dimension, DType>,
   // struct memembers
   //--------------------------------
   /*! \brief pointer to the data */
-  DType *dptr_ = nullptr;
+  DType *dptr_;
   /*! \brief shape of the tensor */
   Shape<dimension> shape_;
   /*!
@@ -449,13 +449,13 @@ struct Tensor: public TRValue<Tensor<Device, dimension, DType>,
   // functions
   //--------------------------------
   /*! \brief default constructor */
-  MSHADOW_XINLINE Tensor(void) : stream_(NULL) {}
+  MSHADOW_XINLINE Tensor(void) : dptr_(nullptr), stream_(nullptr) {}
   /*! \brief constructor from shape  */
   MSHADOW_XINLINE Tensor(const Shape<dimension> &shape)
-      : shape_(shape), stream_(NULL) {}
+      : dptr_(nullptr), shape_(shape), stream_(nullptr) {}
   /*! \brief constructor from data pointer and shape, without stride */
   MSHADOW_XINLINE Tensor(DType *dptr, const Shape<dimension> &shape)
-      : dptr_(dptr), shape_(shape), stride_(shape[kSubdim]), stream_(NULL) {}
+      : dptr_(dptr), shape_(shape), stride_(shape[kSubdim]), stream_(nullptr) {}
   /*! \brief constructor from data pointer and shape, without stride */
   MSHADOW_XINLINE Tensor(DType *dptr, const Shape<dimension> &shape,
                          Stream<Device> *stream)
