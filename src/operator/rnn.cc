@@ -198,7 +198,7 @@ inline static bool RNNStorageType(const nnvm::NodeAttrs& attrs,
                                   std::vector<int> *in_attrs,
                                   std::vector<int> *out_attrs) {
   const RNNParam& param = nnvm::get<RNNParam>(attrs.parsed);
-  const bool support_mkldnn_rnn = 
+  const bool support_mkldnn_rnn =
       !param.use_sequence_length && dmlc::GetEnv("MXNET_USE_MKLDNN_RNN", 1);
   return MKLDNNStorageType(attrs, dev_mask, support_mkldnn_rnn,
                            dispatch_mode, in_attrs, out_attrs);
