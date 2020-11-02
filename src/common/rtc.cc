@@ -72,7 +72,7 @@ CudaModule::Chunk::Chunk(
 #if CUDA_VERSION >= 11010
     size_t cubin_size;
     NVRTC_CALL(nvrtcGetCUBINSize(prog_, &cubin_size));
-    ptx_.resize(ptx_size);
+    ptx_.resize(cubin_size);
     NVRTC_CALL(nvrtcGetCUBIN(prog_, ptx_.data()));
 #else
     LOG(FATAL) << "Your CUDA version does not support compiling for sm_XX target. "

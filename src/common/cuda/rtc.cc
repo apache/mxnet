@@ -98,7 +98,7 @@ std::string GetCompiledCode(nvrtcProgram program, bool use_cubin) {
 
 std::tuple<bool, std::string> GetArchString(const int sm_arch) {
 #if CUDA_VERSION < 10000
-  constexpr int max_supported_sm_arch = 70;
+  constexpr int max_supported_sm_arch = 72;
 #elif CUDA_VERSION < 11000
   constexpr int max_supported_sm_arch = 75;
 #elif CUDA_VERSION < 11010
