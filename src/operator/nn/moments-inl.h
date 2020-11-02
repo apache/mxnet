@@ -131,6 +131,7 @@ inline void MomentsForwardImpl(const OpContext& ctx,
 #else
   ReduceAxesRTCComputeImpl(ctx, {data}, {req[0]}, {mean}, small, "red::sum{}", nullptr, true);
 #endif
+  TBlob temp;
   MSHADOW_TYPE_SWITCH(data.type_flag_, DType, {
     Shape<6> data_shape, mean_shape;
     for (int i = 0; i < 6; ++i) {
@@ -141,14 +142,15 @@ inline void MomentsForwardImpl(const OpContext& ctx,
       ctx.requested[0].get_space_typed<xpu, 1, DType>(Shape1(data.shape_.Size()), s);;
     Kernel<VarBroadcastKernel, xpu>::Launch(s, data.shape_.Size(), temp_data.dptr_,
       data.dptr<DType>(), mean.dptr<DType>(), data_shape, mean_shape);
-#if !defined(__CUDACC__)
-    ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, true>(
-      ctx, {TBlob(temp_data).reshape(data.shape_)}, {kWriteTo}, {var}, small);
-#else
-    ReduceAxesRTCComputeImpl(ctx, {TBlob(temp_data).reshape(data.shape_)},
-                             {kWriteTo}, {var}, small, "red::sum{}", nullptr, true);
-#endif
+    temp = TBlob(temp_data);
   });
+#if !defined(__CUDACC__)
+  ReduceAxesComputeImpl<xpu, mshadow_op::sum, true, true>(
+    ctx, {temp.reshape(data.shape_)}, {kWriteTo}, {var}, small);
+#else
+  ReduceAxesRTCComputeImpl(ctx, {temp.reshape(data.shape_)},
+                           {kWriteTo}, {var}, small, "red::sum{}", nullptr, true);
+#endif
 }
 
 template<typename xpu>
