@@ -32,8 +32,14 @@ namespace op {
 
 class SgMKLDNNBNReLUSelector : public SubgraphSelector {
  public:
+  enum SelectStatus {
+    kStart,
+    kSuccess,
+    kFail
+  };
+
   explicit SgMKLDNNBNReLUSelector(const bool disable_bn_relu) :
-      disable_bn_relu_(disable_bn_relu), relu_after_bn_(false) {}
+      disable_bn_relu_(disable_bn_relu), status_(kStart) {}
 
   bool Select(const nnvm::Node &n) override {
     return n.op() && n.op()->name == "BatchNorm";
@@ -44,17 +50,26 @@ class SgMKLDNNBNReLUSelector : public SubgraphSelector {
   }
 
   bool SelectOutput(const nnvm::Node &n, const nnvm::Node &new_node) override {
-    if (new_node.op() && new_node.op()->name == "Activation" && !relu_after_bn_ &&
-        nnvm::get<ActivationParam>(new_node.attrs.parsed).act_type == activation::kReLU) {
-      relu_after_bn_ = true;
-      return true;
+    if (n.op() && n.op()->name == "BatchNorm") {
+      if (new_node.op() && new_node.op()->name == "Activation" && status_ == kStart &&
+          nnvm::get<ActivationParam>(new_node.attrs.parsed).act_type == activation::kReLU) {
+        status_ = kSuccess;
+        return true;
+      } else {
+        // Do not fuse if BatchNorm is connected to other nodes
+        // e.g: ->- BN --- ReLU --- elementwise_add ->- 
+        //           \                   /
+        //            \-------->--------/
+        status_ = kFail;
+        return false;
+      }
     }
     return false;
   }
 
   std::vector<nnvm::Node *> Filter(
       const std::vector<nnvm::Node *> &candidates) override {
-    if (!disable_bn_relu_ && relu_after_bn_)
+    if (!disable_bn_relu_ && status_ == kSuccess)
       return candidates;
     else
       return std::vector<nnvm::Node *>();
@@ -62,13 +77,18 @@ class SgMKLDNNBNReLUSelector : public SubgraphSelector {
 
  private:
   bool disable_bn_relu_;
-  bool relu_after_bn_;
+  SelectStatus status_;
 };
 
 class SgMKLDNNBNReLUProperty : public SubgraphProperty {
  public:
   SgMKLDNNBNReLUProperty() {
     disable_bn_relu_ = dmlc::GetEnv("MXNET_DISABLE_MKLDNN_FUSE_BN_RELU", false);
+  }
+
+  void PrePartition(const nnvm::Graph& g, 
+    const std::unordered_map<std::string, std::string>& options_map) {
+    dedup_subgraph = true;
   }
 
   static SubgraphPropertyPtr Create() {
@@ -86,16 +106,18 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
                                    const int subgraph_id = 0) const override {
     nnvm::ObjectPtr n = nnvm::Node::Create();
 
-    // This op has single output, remove duplicated.
-    auto last_node = sym.outputs[0].node;
-    nnvm::Symbol new_sym;
-    new_sym.outputs.emplace_back(last_node);
+    // Remove duplicated outputs if subgraph is an input to multiple ops
+    // auto last_node = sym.outputs[0].node;
+    // nnvm::Symbol new_sym;
+    // new_sym.outputs.emplace_back(last_node);
+
     std::ostringstream node_name;
     node_name << "sg_mkldnn_batch_norm_relu_" << std::to_string(subgraph_id);
 
+    // Copy params from BatchNorm node into subgraph BatchNormReLU node
     BatchNormParam param;
-    DFSVisit(new_sym.outputs, [&](const nnvm::ObjectPtr &node) {
-      if (!node->is_variable() && node->op()->name == "BatchNorm") {
+    DFSVisit(sym.outputs, [&](const nnvm::ObjectPtr &node) {
+      if (node->op() && node->op()->name == "BatchNorm") {
         param = nnvm::get<BatchNormParam>(node->attrs.parsed);
       }
     });
@@ -103,7 +125,7 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
     n->attrs.name = node_name.str();
     n->attrs.op = Op::Get("_contrib_BatchNormWithReLU");
     CHECK(n->attrs.op);
-    n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(new_sym));
+    n->attrs.subgraphs.emplace_back(std::make_shared<nnvm::Symbol>(sym));
     n->attrs.parsed = param;
     return n;
   }
@@ -113,15 +135,15 @@ class SgMKLDNNBNReLUProperty : public SubgraphProperty {
     return selector;
   }
 
-  void ConnectSubgraphOutputs(
-      const nnvm::ObjectPtr n,
-      std::vector<nnvm::NodeEntry *> *output_entries) const override {
-    // Connect all extern output entries to output[0]
-    for (size_t i = 0; i < output_entries->size(); ++i) {
-      auto entry_ptr = output_entries->at(i);
-      *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
-    }
-  }
+  // void ConnectSubgraphOutputs(
+  //     const nnvm::ObjectPtr n,
+  //     std::vector<nnvm::NodeEntry *> *output_entries) const override {
+  //   // Connect all extern output entries to output[0]
+  //   for (size_t i = 0; i < output_entries->size(); ++i) {
+  //     auto entry_ptr = output_entries->at(i);
+  //     *entry_ptr = nnvm::NodeEntry{n, entry_ptr->index, 0};
+  //   }
+  // }
 
  private:
   bool disable_bn_relu_;
