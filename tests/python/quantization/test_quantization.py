@@ -23,7 +23,7 @@ import mxnet as mx
 import numpy as np
 from mxnet.gluon.model_zoo import vision
 from mxnet.test_utils import assert_almost_equal, assert_exception, rand_ndarray, rand_shape_nd, same, DummyIter
-from common import with_seed, xfail_when_nonstandard_decimal_separator
+from common import xfail_when_nonstandard_decimal_separator
 from mxnet.io import NDArrayIter
 import unittest
 import operator
@@ -60,7 +60,6 @@ def is_test_for_native_cpu():
             and os.environ.get('ENABLE_MKLDNN_QUANTIZATION_TEST') == None)
 
 
-@with_seed()
 def test_quantize_float32_to_int8():
     shape = rand_shape_nd(4)
     data = rand_ndarray(shape, 'default', dtype='float32')
@@ -82,7 +81,6 @@ def test_quantize_float32_to_int8():
     assert_almost_equal(qdata.asnumpy(), qdata_np, atol = 1)
 
 
-@with_seed()
 def test_dequantize_int8_to_float32():
 
     def get_test_data(real_range, qdata_np):
@@ -125,7 +123,6 @@ def test_dequantize_int8_to_float32():
     test_symbolic_api_dequantization(qdata, min_range, max_range, expected_result)
 
 
-@with_seed()
 def test_requantize_int32_to_int8():
     def quantized_int32_to_float(qdata, min_range, max_range):
         assert qdata.dtype == 'int32'
@@ -215,7 +212,6 @@ def test_requantize_int32_to_int8():
     check_requantize((32, 3, 23, 23), min_calib_range=-134.349, max_calib_range=523.43)
 
 
-@with_seed()
 def test_quantized_conv():
     def check_quantized_conv(data_shape, kernel, num_filter, pad, stride, dilate, no_bias, qdtype):
         if is_test_for_native_cpu():
@@ -306,7 +302,6 @@ def test_quantized_conv():
         check_quantized_conv((1, 3, 4, 28, 28), (1, 3, 3), 128, (1, 1, 1), (1, 1, 1), (2, 2, 2), True, qdtype)
 
 
-@with_seed()
 def test_quantized_elemwise_add():
     def check_quantized_elemwise_add(data_shape, qtype):
         if is_test_for_native_cpu():
@@ -369,7 +364,7 @@ def test_quantized_elemwise_add():
         # check_quantized_elemwise_add((3, 4, 56, 56), qtype)
         # check_quantized_elemwise_add((32, 56, 64, 11), qtype)
 
-@with_seed()
+
 def test_quantized_elemwise_mul():
     def check_quantized_elemwise_mul(data_shape, qtype):
         if is_test_for_native_cpu():
@@ -430,7 +425,7 @@ def test_quantized_elemwise_mul():
         check_quantized_elemwise_mul((3, 4, 56, 56), qtype)
         check_quantized_elemwise_mul((32, 56, 64, 11), qtype)
 
-@with_seed()
+
 def test_quantized_pooling():
     def check_quantized_pooling(data_shape, kernel, pool_type, pad, stride, global_pool, qdtype, convention='valid'):
         if is_test_for_native_cpu():
@@ -503,7 +498,6 @@ def test_quantized_pooling():
         check_quantized_pooling((3, 512, 3, 7, 7), (1, 7, 7), 'avg', (0, 0, 0), (1, 2, 2), True, qdtype, 'full')
 
 
-@with_seed()
 def test_quantized_fc():
     def check_quantized_fc(data_shape, num_hidden, no_bias, qdtype, flatten=True):
         if is_test_for_native_cpu():
@@ -616,7 +610,7 @@ def test_quantized_fc():
         check_quantized_fc((256, 2048, 2, 2), 800, True, qdtype)
         check_quantized_fc((256, 111, 2, 2), 800, True, qdtype)
 
-@with_seed()
+
 def test_quantized_embedding():
     def check_quantized_embedding(data_shape, input_dim, output_dim):
         if is_test_for_gpu():
@@ -663,7 +657,6 @@ def test_quantized_embedding():
     check_quantized_embedding((32,), 1024, 512)
 
 
-@with_seed()
 def test_quantized_flatten():
     def check_quantized_flatten(shape, qdtype):
         if qdtype == 'uint8':
@@ -689,7 +682,7 @@ def test_quantized_flatten():
         check_quantized_flatten((10, 15, 18), qdtype)
         check_quantized_flatten((3, 4, 23, 23), qdtype)
 
-@with_seed()
+
 def test_quantized_act():
     def check_quantized_act(data_shape, qdtype):
         if is_test_for_native_cpu():
@@ -742,7 +735,6 @@ def test_quantized_act():
         check_quantized_act((3, 4, 23, 23), qdtype)
 
 
-@with_seed()
 def test_quantized_bn():
     def get_mean_var(data):
         mean = mx.ndarray.mean(data, axis=1, exclude=1)
@@ -821,7 +813,7 @@ def test_quantized_bn():
       check_quantized_bn((32, 1024, 8, 8), qdtype)
       check_quantized_bn((32, 3, 224, 224), qdtype)
 
-@with_seed()
+
 def test_quantize_params():
     if is_test_for_native_cpu():
         print('skipped testing quantized_params for native cpu since it is not supported yet')
@@ -903,8 +895,8 @@ def get_fp32_sym_with_multiple_inputs():
     sum = bn2 + bn1
     return sum
 
+
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 def test_quantize_model():
     def check_params(params, qparams, qsym=None):
         if qsym is None:
@@ -1047,7 +1039,6 @@ def test_quantize_model():
         check_quantize_model_multiple_inputs(qdtype)
 
 
-@with_seed()
 def test_quantize_gluon_with_forward():
     def check_quantize_net(qdtype):
         if is_test_for_native_cpu():
@@ -1094,8 +1085,8 @@ def test_quantize_gluon_with_forward():
     for qdtype in ['int8', 'uint8']:
         check_quantize_net(qdtype)
 
+
 @xfail_when_nonstandard_decimal_separator
-@with_seed()
 def test_quantize_sym_with_calib():
     if is_test_for_native_cpu():
         print('skipped testing quantized_pooling for native cpu since it is not supported yet')
@@ -1122,7 +1113,6 @@ def test_quantize_sym_with_calib():
         assert_almost_equal(np.array([lhs]), np.array([rhs]), rtol=1e-3, atol=1e-4)
 
 
-@with_seed()
 def test_smooth_distribution():
     assert_exception(lambda: mx.contrib.quant._smooth_distribution(np.zeros((2,)), eps=1e-3), ValueError)
     dirac_delta = np.zeros((5,))
@@ -1133,7 +1123,6 @@ def test_smooth_distribution():
     assert_almost_equal(mx.contrib.quant._smooth_distribution(dirac_delta, eps=1e-3), smooth_dirac_delta)
 
 
-@with_seed()
 def test_optimal_threshold_adversarial_case():
     # The worst case for the optimal_threshold function is when the values are concentrated
     # at one edge: [0, 0, ..., 1000]. (histogram)
@@ -1156,7 +1145,6 @@ def test_optimal_threshold_adversarial_case():
         assert abs(res[2] - 2) < 1e-5
 
 
-@with_seed()
 def test_get_optimal_thresholds():
     # Given an ndarray with elements following a uniform distribution, the optimal threshold
     # for quantizing the ndarray should be either abs(min(nd)) or abs(max(nd)).

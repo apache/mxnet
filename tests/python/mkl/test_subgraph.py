@@ -188,7 +188,7 @@ def check_quantize(sym, data_shape, out_type, name='conv',
       assert_almost_equal_with_err(quantized_out[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
     check_qsym_dummy_forward(qsym, data, data_shape)
 
-@with_seed()
+
 @pytest.mark.parametrize('qdtype', ['uint8', 'int8', 'auto'])
 def test_quantize_whole_model_with_forward(qdtype):
     batch_size = 4
@@ -227,7 +227,7 @@ def test_quantize_whole_model_with_forward(qdtype):
         assert_almost_equal_with_err(outputs[i].asnumpy(), ref_out[i].asnumpy(), rtol=0.1, atol=atol, etol=0.2)
 
 
-@with_seed()
+
 def check_fusion(sym, data_shape, attrs_dict, check_fp32_fusion=True, check_quantization=True,
                  out_types=['uint8', 'int8', 'auto'], dedup_subgraph=True):
   if check_fp32_fusion:
@@ -294,7 +294,7 @@ def head_symbol(data_shape):
   weight = mx.symbol.Variable('weight', dtype='float32')
   return data, weight
 
-@with_seed()
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('no_bias', [True, False])
 def test_pos_single_conv(no_bias, data_shape):
@@ -349,8 +349,8 @@ def conv_act_sum(no_bias, data_shape, alg):
   sum = relu + conv1
   return sum, attr
 
+
 # conv + add fusion case
-@with_seed()
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('no_bias', [True, False])
 def test_pos_conv_add(no_bias, data_shape):
@@ -364,8 +364,8 @@ def test_pos_conv_add(no_bias, data_shape):
     sum = conv1 + pool
     check_fusion(sum, data_shape, attr)
 
+
 # conv + add fusion case 2
-@with_seed()
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('no_bias', [True, False])
 def test_pos_conv_add2(no_bias, data_shape):
@@ -379,8 +379,8 @@ def test_pos_conv_add2(no_bias, data_shape):
     sum = pool + conv1
     check_fusion(sum, data_shape, attr)
 
+
 # conv + bn + act fusion case
-@with_seed()
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", True),
@@ -408,8 +408,8 @@ def test_pos_conv_bn_act(no_bias, data_shape, alg, quantize):
     relu = mx.symbol.Activation(data=bn1, name=alg, act_type=alg)
   check_fusion(relu, data_shape, attr, check_quantization=quantize)
 
+
 # conv + bn + add + act fusion case
-@with_seed()
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('alg,quantize', [
     ("relu", True),
@@ -457,7 +457,7 @@ def conv_bn_sum(data_shape, reverse_sum_order):
   sum = bn + data if reverse_sum_order else data + bn
   return sum, attr
 
-@with_seed()
+
 @pytest.mark.parametrize('reverse_sum_order', [True, False])
 @pytest.mark.parametrize('dedup_subgraph', [True, False])
 def test_conv_bn_sum(reverse_sum_order, dedup_subgraph):
@@ -465,7 +465,7 @@ def test_conv_bn_sum(reverse_sum_order, dedup_subgraph):
   net, attrs = conv_bn_sum(data_shape=data_shape, reverse_sum_order=reverse_sum_order)
   check_fusion(net, data_shape, attrs, out_types=['int8', 'auto'], dedup_subgraph=dedup_subgraph)
 
-@with_seed()
+
 @pytest.mark.parametrize('reverse_sum_order', [False, True])
 @pytest.mark.parametrize('model_name', ['conv_bn_sum', 'mobilenetv2_struct'])
 def test_dedup(reverse_sum_order, model_name):
@@ -480,8 +480,8 @@ def test_dedup(reverse_sum_order, model_name):
   out_dedup = run_sym_block(model, data_nd, dedup_subgraph = True)
   assert_almost_equal(out.asnumpy(), out_dedup.asnumpy(), rtol=1e-3, atol=1e-1)
 
+
 # single concat case
-@with_seed()
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('input_num,dim', [
     (2, -1),
@@ -510,9 +510,8 @@ def test_pos_single_concat_pos_neg(data_shape, out_type):
     concat = mx.symbol.Concat(*inputs, name="concat", dim=1)
     check_quantize(concat, data_shape, out_type, name='', check_calibration=False)
 
-# concat scale alignment case
 
-@with_seed()
+# concat scale alignment case
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('out_type', ['int8', 'auto'])
 def test_pos_concat_scale_align(data_shape, out_type):
@@ -777,7 +776,7 @@ def neg_fc_relu(no_bias, data_shape, flatten=True):
   excluded_attrs.append([])
   return syms, attrs, excluded_attrs
 
-@with_seed()
+
 def test_pos_conv_act():
   act_list = {"relu": True,
               "sigmoid": True,
@@ -793,7 +792,7 @@ def test_pos_conv_act():
       net, attrs = conv_act(True, data_shape, alg)
       check_fusion(net, data_shape, attrs, check_quantization=quantize)
 
-@with_seed()
+
 def test_pos_conv_bn():
   for data_shape in DATA_SHAPE:
     net, attrs = conv_bn(False, data_shape)
@@ -801,7 +800,7 @@ def test_pos_conv_bn():
     net, attrs = conv_bn(True, data_shape)
     check_fusion(net, data_shape, attrs)
 
-@with_seed()
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('reverse_sum_order', [True, False])
 @pytest.mark.parametrize('dedup_subgraph', [True, False])
@@ -809,37 +808,37 @@ def test_mobilenetv2_struct(data_shape, reverse_sum_order, dedup_subgraph):
       net, attrs = mobilenetv2_struct(data_shape, reverse_sum_order=reverse_sum_order)
       check_fusion(net, data_shape, attrs, out_types=['int8', 'auto'], dedup_subgraph=dedup_subgraph)
 
-@with_seed()
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 def test_neg_conv_bn(data_shape):
     syms, attrs, excluded_attrs = neg_conv_bn(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
-@with_seed()
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 def test_neg_conv_relu(data_shape):
     syms, attrs, excluded_attrs = neg_conv_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
-@with_seed()
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 def test_neg_conv_add(data_shape):
     syms, attrs, excluded_attrs = neg_conv_add(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
-@with_seed()
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 def test_neg_conv_bn_relu(data_shape):
     syms, attrs, excluded_attrs = neg_conv_bn_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
-@with_seed()
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 def test_neg_conv_bn_add_relu(data_shape):
     syms, attrs, excluded_attrs = neg_conv_bn_add_relu(data_shape)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape)
 
-@with_seed()
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('no_bias', [True, False])
 @pytest.mark.parametrize('flatten', [True, False])
@@ -847,7 +846,7 @@ def test_single_fc(data_shape, no_bias, flatten):
     syms, attrs = single_fc(no_bias, data_shape, flatten)
     check_fusion(syms, data_shape, attrs, check_quantization=flatten)
 
-@with_seed()
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('no_bias', [True, False])
 @pytest.mark.parametrize('flatten', [True, False])
@@ -856,7 +855,7 @@ def test_fc_eltwise(data_shape, no_bias, flatten, alg):
     syms, attrs = fc_eltwise(no_bias, data_shape, flatten, alg)
     check_fusion(syms, data_shape, attrs, check_quantization=flatten)
 
-@with_seed()
+
 @pytest.mark.parametrize('data_shape', DATA_SHAPE)
 @pytest.mark.parametrize('no_bias', [True, False])
 @pytest.mark.parametrize('flatten', [True, False])
@@ -864,7 +863,7 @@ def test_neg_fc_relu(data_shape, no_bias, flatten):
     syms, attrs, excluded_attrs = neg_fc_relu(no_bias, data_shape, flatten)
     check_neg_fusion(syms, attrs, excluded_attrs, data_shape, name='fc')
 
-@with_seed()
+
 @pytest.mark.parametrize('data_min,data_max,weight_min,weight_max', [
     (-1, 1, 0, 0),
     (-1, 1, -1e-6, +1e-6),
@@ -914,7 +913,7 @@ def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max
   assert_almost_equal_with_err(ex.outputs[0].asnumpy(), qex.outputs[0].asnumpy(),
                                rtol=1e-2, atol=1e-2, etol=0.01)
 
-@with_seed()
+
 @pytest.mark.parametrize('data_min,data_max,weight_min,weight_max', [
     (-1, 1, 0, 0),
     (-1, 1, -1e-6, +1e-6),
