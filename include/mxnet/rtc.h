@@ -60,7 +60,7 @@ class CudaModule {
     /*! \brief nvrtc program handle. */
     nvrtcProgram prog_;
     /*! \brief compiled cuda PTX */
-    char* ptx_;
+    std::vector<char> ptx_;
     /*! \brief lazily loaded cuda module */
     std::unordered_map<int, CUmodule> mod_;
     /*! \brief exported names */
