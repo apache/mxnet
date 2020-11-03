@@ -42,6 +42,24 @@ using nnvm::ObjectPtr;
 using nnvm::NodeEntry;
 using nnvm::Graph;
 
+static inline std::string GetOutputName(const nnvm::Node* node, int index) {
+  // Map where Key is Op and Value is function registered by FListOutputNames
+  static const auto& flist_outputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
+  std::vector<std::string> output_names;
+
+  // If operator has registered FListOutputNames function
+  // get names by calling it with passed node attributes as argument
+  // else return output index as a string
+  if (flist_outputs.count(node->op())) {
+    output_names = flist_outputs[node->op()](node->attrs);
+    CHECK_GT(output_names.size(), index);
+    return output_names[index];
+  }
+
+  CHECK_GT(node->num_outputs(), index);
+  return std::to_string(index);
+}
+
 static inline size_t GetNumOutputs(ObjectPtr node) {
   // Get NumOutputs, check if current node has NumVisibleOutputs function, if yes, return
   // num_visible_outputs
@@ -265,7 +283,6 @@ static void MarkQuantizedNodes(const Graph& src,
 }
 
 Graph QuantizeGraph(Graph &&src) {
-  static const auto& flist_outputs = nnvm::Op::GetAttr<nnvm::FListOutputNames>("FListOutputNames");
   static const auto& need_requantize_map = Op::GetAttr<mxnet::FNeedRequantize>("FNeedRequantize");
   static const auto& avoid_quantize_input_map =
       Op::GetAttr<mxnet::FAvoidQuantizeInput>("FAvoidQuantizeInput");
@@ -323,13 +340,8 @@ Graph QuantizeGraph(Graph &&src) {
             // to better align with calibration phase. No need to change name to weights/bias.
             std::string suffix = "";
             if (mirror_node->op() != nullptr) {
-              auto list_output_names_func = flist_outputs.get(e.node->op(), nullptr);
-              if (list_output_names_func != nullptr) {
-                std::vector<std::string> names = list_output_names_func(e.node->attrs);
-                suffix = "_" + names[e.index];
-              } else {
-                suffix = "_" + std::to_string(e.index);
-              }
+              auto name = GetOutputName(e.node.get(), e.index);
+              suffix = "_" + name;
             }
 
             ObjectPtr quantize_node = InsertNode("_contrib_quantize_v2",
@@ -492,8 +504,9 @@ Graph QuantizeGraph(Graph &&src) {
       const auto calib_idx = need_calib_input_map[node->op()](node->attrs);
       for (const auto &idx : calib_idx) {
         if (reverse_mirror_map.count(node)) {
-          calib_nodes.push_back(common::GetOutputName(
-              {reverse_mirror_map[node], node->inputs[idx].index, node->inputs[idx].version}));
+          const auto& fp32_in_node = reverse_mirror_map[node];
+          auto name = GetOutputName(fp32_in_node.get(), node->inputs[idx].index);
+          calib_nodes.push_back(fp32_in_node->attrs.name + "_" + name);
         } else {
           const auto& e = node->inputs[idx];
           if (e.node->is_variable()) {
@@ -501,7 +514,8 @@ Graph QuantizeGraph(Graph &&src) {
           } else {
             if (reverse_mirror_map.count(e.node)) {
               const auto& fp32_in_node = reverse_mirror_map.at(e.node);
-              calib_nodes.push_back(common::GetOutputName({fp32_in_node, e.index, e.version}));
+              auto name = GetOutputName(fp32_in_node.get(), e.index);
+              calib_nodes.push_back(fp32_in_node->attrs.name + "_" + name);
             } else {
               LOG(FATAL) << "Can't find calibration node for " << node->attrs.name;
             }
@@ -512,10 +526,12 @@ Graph QuantizeGraph(Graph &&src) {
       const auto calib_idx = need_calib_output_map[node->op()](node->attrs);
       for (const auto& idx : calib_idx) {
         if (reverse_mirror_map.count(node)) {
-          calib_nodes.push_back(
-              common::GetOutputName({reverse_mirror_map[node], static_cast<uint32_t>(idx), 0}));
+          const auto& fp32_in_node = reverse_mirror_map[node];
+          auto name = GetOutputName(fp32_in_node.get(), static_cast<uint32_t>(idx));
+          calib_nodes.push_back(fp32_in_node->attrs.name + "_" + name);
         } else {
-          calib_nodes.push_back(common::GetOutputName({node, static_cast<uint32_t>(idx), 0}));
+          auto name = GetOutputName(node.get(), static_cast<uint32_t>(idx));
+          calib_nodes.push_back(node->attrs.name + "_" + name);
         }
       }
     }
@@ -527,12 +543,18 @@ Graph QuantizeGraph(Graph &&src) {
 static inline void SetCalibTableForEntry(
     const NodeEntry& e, const ObjectPtr& node,
     const std::unordered_map<std::string, std::pair<float, float>>& calib_table) {
-  std::string out_data_name = common::GetOutputName(e);
+  std::string out_name = GetOutputName(e.node.get(), e.index);
+  std::string full_node_name = e.node->attrs.name;
+
+  if (!e.node->is_variable()) {
+    full_node_name += "_" + out_name;
+  }
+
   const std::string prefix = "quantized_";
   if (e.node->attrs.name.rfind(prefix, 0) == 0) {
-    out_data_name = out_data_name.substr(prefix.size());
+    full_node_name = full_node_name.substr(prefix.size());
   }
-  const auto calib_table_iter = calib_table.find(out_data_name);
+  const auto calib_table_iter = calib_table.find(full_node_name);
   static int verbose = dmlc::GetEnv("MXNET_QUANTIZATION_VERBOSE", 0);
   if (calib_table_iter != calib_table.end()) {
     if (verbose) {

@@ -98,22 +98,24 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
 
     // Use status_ machine to do selection. The status_ change is
     // kStart -> kBN -> kSum -> kSuccess
+    const auto node_name = new_node.op()->name;
     switch (status_) {
       case kStart:
-        if ((!disable_conv_bn_) && new_node.op()->name == "BatchNorm") {
+        if ((!disable_conv_bn_) && node_name == "BatchNorm") {
           matched_list_.push_back(&new_node);
           status_ = kBN;
           return true;
         }
       case kBN:
-        if ((!disable_conv_sum_) && new_node.op()->name == "elemwise_add") {
+        if ((!disable_conv_sum_) && 
+        (node_name == "elemwise_add" || node_name == "_npi_add")) {
           matched_list_.push_back(&new_node);
           status_ = kSum;
           return true;
         }
       case kSum:
       default:
-        if ((!disable_conv_act_) && new_node.op()->name == "Activation") {
+        if ((!disable_conv_act_) && node_name == "Activation") {
           const ActivationParam &param =
               nnvm::get<ActivationParam>(new_node.attrs.parsed);
           if ((quantize_ && SupportQuantizedMKLDNNAct(param)) ||
@@ -123,7 +125,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
             status_ = kSuccess;
             return true;
           }
-        } else if ((!disable_conv_act_) && new_node.op()->name == "LeakyReLU") {
+        } else if ((!disable_conv_act_) && node_name == "LeakyReLU") {
           const LeakyReLUParam &param =
               nnvm::get<LeakyReLUParam>(new_node.attrs.parsed);
           if (param.act_type == leakyrelu::kLeakyReLU ||
@@ -133,7 +135,7 @@ class SgMKLDNNConvSelector : public SubgraphSelector {
             status_ = kSuccess;
             return true;
           }
-        } else if ((!disable_conv_act_) && new_node.op()->name == "clip") {
+        } else if ((!disable_conv_act_) && node_name == "clip") {
           if (!(quantize_ && (status_ == kSum))) {
             // TODO(zhennan): doesn't support int8 conv+sum+relu6 at moment. To support this, we
             // need to fuse conv+sum first, and calibrate with it. Then fuse int8 relu6 into fused
@@ -215,7 +217,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
       } else if (sub_name == "BatchNorm") {
         node_name << "bn_";
         n->attrs.dict["with_bn"] = "true";
-      } else if (sub_name == "elemwise_add") {
+      } else if (sub_name == "elemwise_add" || sub_name == "_npi_add") {
         node_name << "add_";
         n->attrs.dict["with_sum"] = "true";
         _with_sum = true;
@@ -264,7 +266,7 @@ class SgMKLDNNConvProperty : public SubgraphProperty {
       node_sets.insert(node.get());
       if (node->op()->name == "Convolution") {
         conv_input = node->inputs[0].node.get();
-      } else if (node->op()->name == "elemwise_add") {
+      } else if (node->op()->name == "elemwise_add" || node->op()->name == "_npi_add") {
         if (dedup_subgraph &&
           (conv_input == node->inputs[1].node.get() ||
            conv_input == node->inputs[0].node.get())) {

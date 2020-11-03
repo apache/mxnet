@@ -191,6 +191,7 @@ static inline bool CalibrateType(const nnvm::NodeAttrs& attrs, std::vector<int>*
 }
 
 NNVM_REGISTER_OP(_contrib_calibrate_entropy)
+.add_alias("_npx_contrib_calibrate_entropy")
 .describe(R"code(Provide calibrated min/max for input histogram.
 
 .. Note::

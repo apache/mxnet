@@ -16,16 +16,9 @@
 # under the License.
 """Quantization module for generating quantized (INT8) models from FP32 models."""
 
-
-try:
-    from scipy import stats
-except ImportError:
-    stats = None
-
 import ctypes
 import logging
 import os
-import shutil
 import warnings
 import numpy as np
 import mxnet as mx
@@ -33,13 +26,11 @@ from ..base import _LIB, check_call, py_str
 from ..base import c_array, c_str, mx_uint, c_str_array
 from ..base import NDArrayHandle, SymbolHandle
 from ..symbol import Symbol
-from ..symbol import load as sym_load
 from .. import ndarray
-from ..ndarray import load as nd_load
-from ..ndarray import save as nd_save
 from ..ndarray import NDArray
 from ..io import DataIter, DataDesc, DataBatch
 from ..context import cpu, Context
+from ..util import is_np_array
 
 def _quantize_params(qsym, params, th_dict):
     """Given a quantized symbol and a dict of params that have not been quantized,
@@ -58,15 +49,28 @@ def _quantize_params(qsym, params, th_dict):
     """
     inputs_name = qsym.list_arguments()
     quantized_params = {}
+    if is_np_array():
+        quantize_fn = mx.npx.contrib_quantize
+        min_fn = lambda arr: mx.np.array([mx.np.min(arr)])
+        max_fn = lambda arr: mx.np.array([mx.np.max(arr)])
+        array_cls = mx.np
+    else:
+        quantize_fn = mx.nd.contrib.quantize
+        min_fn = mx.nd.min
+        max_fn = mx.nd.max
+        array_cls = mx.nd
+
     for name in inputs_name:
         if name.endswith(('weight_quantize', 'bias_quantize')):
             original_name = name[:-len('_quantize')]
             param = params[original_name]
             # pylint: disable=unbalanced-tuple-unpacking
-            val, vmin, vmax = ndarray.contrib.quantize(data=param,
-                                                       min_range=ndarray.min(param),
-                                                       max_range=ndarray.max(param),
-                                                       out_type='int8')
+            param_min = min_fn(param)
+            param_max = max_fn(param)
+            val, vmin, vmax = quantize_fn(data=param,
+                                          min_range=param_min,
+                                          max_range=param_max,
+                                          out_type='int8')
             quantized_params[name] = val
             quantized_params[name+'_min'] = vmin
             quantized_params[name+'_max'] = vmax
@@ -75,11 +79,11 @@ def _quantize_params(qsym, params, th_dict):
         elif name.endswith(('_min')):
             output = name[: - len('_min')]
             if output in th_dict:
-                quantized_params[name] = ndarray.array([th_dict[output][0]])
+                quantized_params[name] = array_cls.array([th_dict[output][0]])
         elif name.endswith(('_max')):
             output = name[: - len('_min')]
             if output in th_dict:
-                quantized_params[name] = ndarray.array([th_dict[output][1]])
+                quantized_params[name] = array_cls.array([th_dict[output][1]])
     return quantized_params
 
 def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
@@ -152,9 +156,9 @@ def _quantize_symbol(sym, ctx, excluded_symbols=None, excluded_operators=None,
                                      c_str(quantize_granularity),
                                      ctypes.byref(size),
                                      ctypes.byref(calib_str)))
-    calib_layer = []
-    calib_layer = [py_str(calib_str[i]) for i in range(size.value)]
-    return Symbol(out), calib_layer
+    calib_layers = []
+    calib_layers = [py_str(calib_str[i]) for i in range(size.value)]
+    return Symbol(out), calib_layers
 
 def combine_histogram(old_hist, arr, new_min, new_max, new_th):
     """ Collect layer histogram for arr and combine it with old histogram.
@@ -294,26 +298,6 @@ def _collect_layer_histogram(sym_block, data, include_layer=None,
     return collector.hist_dict, num_examples
 
 
-def _smooth_distribution(p, eps=0.0001):
-    """Given a discrete distribution (may have not been normalized to 1),
-    smooth it by replacing zeros with eps multiplied by a scaling factor and taking the
-    corresponding amount off the non-zero values.
-    Ref: http://web.engr.illinois.edu/~hanj/cs412/bk3/KL-divergence.pdf
-    """
-    is_zeros = (p == 0).astype(np.float32)
-    is_nonzeros = (p != 0).astype(np.float32)
-    n_zeros = is_zeros.sum()
-    n_nonzeros = p.size - n_zeros
-    if not n_nonzeros:
-        raise ValueError('The discrete probability distribution is malformed. All entries are 0.')
-    eps1 = eps * float(n_zeros) / float(n_nonzeros)
-    assert eps1 < 1.0, 'n_zeros=%d, n_nonzeros=%d, eps1=%f' % (n_zeros, n_nonzeros, eps1)
-    hist = p.astype(np.float32)
-    hist += eps * is_zeros + (-eps1) * is_nonzeros
-    assert (hist <= 0).sum() == 0
-    return hist
-
-
 # pylint: disable=line-too-long
 def _get_optimal_threshold(hist_data, quantized_dtype, num_quantized_bins=255):
     """Given a dataset, find the optimal threshold for quantizing it.
@@ -340,10 +324,6 @@ def _get_optimal_threshold(hist_data, quantized_dtype, num_quantized_bins=255):
 
 def _get_optimal_thresholds(hist_dict, quantized_dtype, num_quantized_bins=255, logger=None):
     """Given a ndarray dict, find the optimal threshold for quantizing each value of the key."""
-    if stats is None:
-        raise ImportError('scipy.stats is required for running entropy mode of calculating'
-                          ' the optimal thresholds for quantizing FP32 ndarrays into int8.'
-                          ' Please check if the scipy python bindings are installed.')
     assert isinstance(hist_dict, dict)
     if logger is not None:
         logger.info('Calculating optimal thresholds for quantization using KL divergence'
@@ -367,54 +347,14 @@ def _get_optimal_thresholds(hist_dict, quantized_dtype, num_quantized_bins=255, 
     return th_dict
 
 
-def _load_sym(sym, logger=None):
-    """Given a str as a path the symbol .json file or a symbol, returns a Symbol object."""
-    if isinstance(sym, str):  # sym is a symbol file path
-        cur_path = os.path.dirname(os.path.realpath(__file__))
-        symbol_file_path = os.path.join(cur_path, sym)
-        if logger:
-            logger.info('Loading symbol from file %s' % symbol_file_path)
-        return sym_load(symbol_file_path)
-    elif isinstance(sym, Symbol):
-        return sym
-    else:
-        raise ValueError('_load_sym only accepts Symbol or path to the symbol file,'
-                         ' while received type %s' % str(type(sym)))
-
-
-def _load_params(params, logger=None):
-    """Given a str as a path to the .params file or a pair of params,
-    returns two dictionaries representing arg_params and aux_params.
-    """
-    if isinstance(params, str):
-        cur_path = os.path.dirname(os.path.realpath(__file__))
-        param_file_path = os.path.join(cur_path, params)
-        if logger:
-            logger.info('Loading params from file %s' % param_file_path)
-        save_dict = nd_load(param_file_path)
-        arg_params = {}
-        aux_params = {}
-        for k, v in save_dict.items():
-            tp, name = k.split(':', 1)
-            if tp == 'arg':
-                arg_params[name] = v
-            if tp == 'aux':
-                aux_params[name] = v
-        return arg_params, aux_params
-    elif isinstance(params, (tuple, list)) and len(params) == 2:
-        return params[0], params[1]
-    else:
-        raise ValueError('Unsupported params provided. Must be either a path to the param file or'
-                         ' a pair of dictionaries representing arg_params and aux_params')
-
-
-def _list_of_tuple_to_list_of_data_desc(data_shapes):
+def _generate_list_of_data_desc(data_shapes, data_types):
     """"Convert list ot tuples to list of DataDesc."""
     if isinstance(data_shapes, list) and all(isinstance(x, tuple) for x in data_shapes):
         if len(data_shapes) == 1:
-            data_shapes = [DataDesc(name='data', shape=data_shapes[0])]
+            data_shapes = [DataDesc(name='data', shape=data_shapes[0], dtype=data_types[0])]
         else:
-            data_shapes = [DataDesc(name='data' + str(i), shape=data_shapes[i]) for i in range(len(data_shapes))]
+            data_shapes = [DataDesc(name='data' + str(i), shape=data_shapes[i], dtype=data_types[i])
+                             for i in range(len(data_shapes))]
         return data_shapes
     if not (isinstance(data_shapes, list) and all(isinstance(x, DataDesc) for x in data_shapes)):
         raise ValueError('data_shapes must be either a list of DataDesc or a list of Tuple')
@@ -516,12 +456,12 @@ def quantize_model(sym, arg_params, aux_params,
     if quantize_granularity not in ('tensor-wise', 'channel-wise'):
         raise ValueError('unkonwn quantize_granularity %s received,'
                          ' expected `tensor-wise` or `channel-wise`.' % quantize_granularity)
-    qsym, calib_layer = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
-                                         excluded_operators=excluded_op_names,
-                                         offline_params=list(arg_params.keys()),
-                                         quantized_dtype=quantized_dtype,
-                                         quantize_mode=quantize_mode,
-                                         quantize_granularity=quantize_granularity)
+    qsym, calib_layers = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
+                                          excluded_operators=excluded_op_names,
+                                          offline_params=list(arg_params.keys()),
+                                          quantized_dtype=quantized_dtype,
+                                          quantize_mode=quantize_mode,
+                                          quantize_granularity=quantize_granularity)
     th_dict = {}
     if calib_mode is not None and calib_mode != 'none':
         if not isinstance(ctx, Context):
@@ -540,7 +480,7 @@ def quantize_model(sym, arg_params, aux_params,
 
         if calib_mode == 'entropy':
             hist_dict, num_examples = _collect_layer_histogram(sym_block, calib_data,
-                                                               include_layer=calib_layer,
+                                                               include_layer=calib_layers,
                                                                max_num_examples=num_calib_examples,
                                                                logger=logger)
             if logger:
@@ -549,8 +489,10 @@ def quantize_model(sym, arg_params, aux_params,
             th_dict = _get_optimal_thresholds(hist_dict, quantized_dtype, logger=logger)
         elif calib_mode == 'naive':
             th_dict, num_examples = _collect_layer_output_min_max(
-                sym_block, calib_data, quantized_dtype, include_layer=calib_layer, max_num_examples=num_calib_examples,
-                logger=logger)
+                                        sym_block, calib_data, quantized_dtype,
+                                        include_layer=calib_layers,
+                                        max_num_examples=num_calib_examples,
+                                        logger=logger)
             if logger:
                 logger.info('Collected layer output min/max values from FP32 model using %d examples'
                             % num_examples)
@@ -680,10 +622,9 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
     if quantize_granularity not in ('tensor-wise', 'channel-wise'):
         raise ValueError('unkonwn quantize_granularity %s received,'
                          ' expected `tensor-wise` or `channel-wise`.' % quantize_granularity)
-    qsym, calib_layer = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
+    qsym, calib_layers = _quantize_symbol(sym, ctx, excluded_symbols=excluded_sym_names,
                                          excluded_operators=excluded_op_names,
-                                         offline_params=list(
-                                             arg_params.keys()),
+                                         offline_params=list(arg_params.keys()),
                                          quantized_dtype=quantized_dtype,
                                          quantize_mode=quantize_mode,
                                          quantize_granularity=quantize_granularity)
@@ -693,13 +634,13 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
     if calib_mode is not None and calib_mode != 'none':
         if calib_mode == 'entropy':
             collector = _LayerHistogramCollector(
-                include_layer=calib_layer, logger=logger)
+                include_layer=calib_layers, logger=logger)
             if logger:
                 logger.info(
                     'Create a layer output collector for entropy calibration.')
         elif calib_mode == 'naive':
             collector = _LayerOutputMinMaxCollector(quantized_dtype=quantized_dtype,
-                                                    include_layer=calib_layer, logger=logger)
+                                                    include_layer=calib_layers, logger=logger)
             if logger:
                 logger.info(
                     'Create a layer output minmax collector for naive calibration')
@@ -719,7 +660,7 @@ def quantize_graph(sym, arg_params, aux_params, ctx=cpu(),
         logger.info('Quantizing parameters')
     qarg_params = _quantize_params(qsym, arg_params, th_dict)
 
-    return qsym, qarg_params, aux_params, collector
+    return qsym, qarg_params, aux_params, collector, calib_layers
 
 def calib_graph(qsym, arg_params, aux_params, collector,
                 calib_mode='entropy', quantized_dtype='int8', logger=logging):
@@ -763,8 +704,7 @@ def calib_graph(qsym, arg_params, aux_params, collector,
         if calib_mode == 'entropy':
             if logger:
                 logger.info('Calculating optimal thresholds for quantization')
-            th_dict = _get_optimal_thresholds(
-                collector.hist_dict, quantized_dtype, logger=logger)
+            th_dict = _get_optimal_thresholds(collector.hist_dict, quantized_dtype, logger=logger)
         elif calib_mode == 'naive':
             th_dict = collector.min_max_dict
         elif calib_mode == 'customize':
@@ -844,16 +784,20 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         Defines the structure of a neural network for INT8 data types.
     -------
     """
+    from ..gluon import SymbolBlock
+
     if logger:
         logger.info('Export HybridBlock')
 
     backend = None
     if ctx == mx.cpu():
         backend = 'MKLDNN_QUANTIZE'
+
     network.hybridize(static_alloc=False, static_shape=False,
                       backend=backend,
-                      backend_opts={'dedup_subgraph': False, 'skip_infer': True})
+                      backend_opts={'dedup_subgraph': True, 'skip_infer': True})
 
+    data_types = None
     if data_shapes is None:
         if calib_data is None:
             raise ValueError('At least one of data_shapes or calib_data has to be provided.')
@@ -863,24 +807,38 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
                 batch = next(x)
                 if isinstance(batch, list):
                     data_shapes = [b.shape for b in batch]
+                    data_types = [b.dtype for b in batch]
                 else:
                     data_shapes = [batch.shape]
+                    data_types = [batch.dtype]
             else:
                 raise ValueError('calib_data expects mx.gluon.data.DataLoader')
+
+    if data_types is None:
+        data_types = [mx_real_t] * len(data_shapes)
+    data_descs = _generate_list_of_data_desc(data_shapes, data_types)
+
     data_nd = []
-    data_shapes = _list_of_tuple_to_list_of_data_desc(data_shapes)
-    for shape in data_shapes:
-        data_nd.append(mx.nd.zeros(shape.shape))
+    for desc in data_descs:
+        if is_np_array():
+            data_nd.append(mx.np.zeros(shape=desc.shape, dtype=desc.dtype))
+        else:
+            data_nd.append(mx.nd.zeros(shape=desc.shape, dtype=desc.dtype))
     while True:
         try:
             network(*data_nd)
-        except TypeError:
+        except TypeError as err:
+            if logger:
+                logger.warning(err)
+                logger.warning("Deduced input data descriptors failed to run forward pass."
+                               " Trying again with one less input.")
             del data_nd[-1]
             continue
         else:
             break
 
     symnet, params = network.export(None)
+
     args, auxs = dict(), dict()
     for k, v in params.items():
         ptype, pname = k[:3], k[4:]
@@ -902,7 +860,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     if logger:
         logger.info('These layers have been excluded %s' % exclude_layers)
 
-    qsym, qarg_params, aux_params, collector = quantize_graph(
+    qsym, qarg_params, aux_params, collector, calib_layers = quantize_graph(
         sym=symnet, arg_params=args, aux_params=auxs, ctx=ctx,
         excluded_sym_names=exclude_layers, excluded_op_names=exclude_operators,
         calib_mode=calib_mode, quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
@@ -917,7 +875,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
             raise ValueError(
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy', 'customize']:
-            inputs = [mx.sym.var(d.name) for d in data_shapes]
+            inputs = [mx.sym.var(desc.name) for desc in data_descs]
             num_examples = _collect_layer_statistics(network, calib_data, collector,
                                                      num_calib_examples, logger)
             if logger:
@@ -930,14 +888,13 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
             raise ValueError(
                 'please set calibration mode to naive or entropy.')
     elif calib_mode is not None and calib_mode == 'none':
-        inputs = [mx.sym.var(d.name) for d in data_shapes]
+        inputs = [mx.sym.var(desc.name) for desc in data_descs]
 
-    from ..gluon import SymbolBlock
     net = SymbolBlock(qsym, inputs)
     all_params = {('arg:%s' % k): v.as_in_context(cpu()) for k, v in qarg_params.items()}
     all_params.update({('aux:%s' % k): v.as_in_context(cpu()) for k, v in aux_params.items()})
     net.load_dict(all_params, cast_dtype=True, dtype_source='saved')
-    net.optimize_for(data_nd, backend=backend, backend_opts={'dedup_subgraph': False, 'skip_infer': True})
+    net.optimize_for(data_nd, backend=backend, backend_opts={'dedup_subgraph': True, 'skip_infer': True})
     return net
 
 def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
