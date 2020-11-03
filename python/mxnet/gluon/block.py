@@ -1308,7 +1308,7 @@ class HybridBlock(Block):
             self._backend_opts = backend_opts
 
         self._active = active
-        self._partition_if_dynamic : partition_if_dynamic
+        self._partition_if_dynamic = partition_if_dynamic
         self._flags = list(kwargs.items())
         if clear:
             self._clear_cached_op()
