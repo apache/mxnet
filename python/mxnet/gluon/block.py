@@ -913,6 +913,7 @@ class HybridBlock(Block):
         self._backend = None
         self._backend_opts = {}
         self._first_forward = True
+        self._partition_if_dynamic = True
         self._cached_op_args = []
 
     def __setattr__(self, name, value):
@@ -1101,7 +1102,7 @@ class HybridBlock(Block):
         if not self._cached_op_args or not self._cached_graph:
             self._build_cache(*args)
 
-        if self._first_forward:
+        if self._first_forward and self._partition_if_dynamic:
             # partition static shape ops if the graph contains any dynamic shape op
             self._first_forward = False
             data, out = self._cached_graph
@@ -1191,7 +1192,7 @@ class HybridBlock(Block):
             out = [out]
         return _regroup(out, self._out_format)
 
-    def optimize_for(self, x, *args, backend=None, backend_opts=None, clear=True, **kwargs):
+    def optimize_for(self, x, *args, backend=None, backend_opts=None, clear=True, partition_if_dynamic=True, **kwargs):
         """Partitions the current HybridBlock and optimizes it for a given backend
         without executing a forward pass. Modifies the HybridBlock in-place.
 
@@ -1222,6 +1223,8 @@ class HybridBlock(Block):
         backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         clear : clears any previous optimizations
+        partition_if_dynamic : bool
+            whether to partition the graph when dynamic shape op exists
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
         static_shape : bool, default False
@@ -1231,7 +1234,7 @@ class HybridBlock(Block):
         """
 
         # do hybrize API call
-        self.hybridize(True, backend, backend_opts, clear, **kwargs)
+        self.hybridize(True, backend, backend_opts, clear, partition_if_dynamic, **kwargs)
 
         # do part of forward API call
         has_symbol, has_ndarray, ctx_set, _ = _gather_type_ctx_info([x] + list(args))
@@ -1275,7 +1278,7 @@ class HybridBlock(Block):
             self._active = False
         self._clear_cached_op()
 
-    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True, **kwargs):
+    def hybridize(self, active=True, backend=None, backend_opts=None, clear=True, partition_if_dynamic=True, **kwargs):
         """Activates or deactivates :py:class:`HybridBlock` s recursively. Has no effect on
         non-hybrid children.
 
@@ -1288,6 +1291,8 @@ class HybridBlock(Block):
         backend_opts : dict of user-specified options to pass to the backend for partitioning, optional
             Passed on to `PrePartition` and `PostPartition` functions of `SubgraphProperty`
         clear : clears any previous optimizations
+        partition_if_dynamic : bool
+            whether to partition the graph when dynamic shape op exists
         static_alloc : bool, default False
             Statically allocate memory to improve speed. Memory usage may increase.
         static_shape : bool, default False
@@ -1303,6 +1308,7 @@ class HybridBlock(Block):
             self._backend_opts = backend_opts
 
         self._active = active
+        self._partition_if_dynamic : partition_if_dynamic
         self._flags = list(kwargs.items())
         if clear:
             self._clear_cached_op()
