@@ -31,7 +31,7 @@ cdef class NDArrayBase:
     # handle for symbolic operator.
     cdef NDArrayHandle chandle
     cdef int cwritable
-    cdef bool _alive
+    cdef bint _alive
 
     cdef _set_handle(self, handle):
         cdef unsigned long long ptr

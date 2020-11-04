@@ -31,7 +31,7 @@ cdef class SymbolBase:
     """Symbol is symbolic graph."""
     # handle for symbolic operator.
     cdef SymbolHandle chandle
-    cdef bool _alive
+    cdef bint _alive
 
     cdef _set_handle(self, handle):
         cdef unsigned long long ptr
