@@ -1262,6 +1262,7 @@ class HybridBlock(Block):
     def _clear_cached_op(self):
         self._cached_graph = ()
         self._cached_op = None
+        self._cached_op_args = []
         self._first_forward = True
 
     def register_child(self, block, name=None):
