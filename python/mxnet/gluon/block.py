@@ -1030,15 +1030,15 @@ class HybridBlock(Block):
         arg_dict, aux_dict = dict(), dict()
         if self._backend:
             # set context for inputs
-            _,_, ctx_set, _ = _gather_type_ctx_info(list(args))
-            ctx = a.pop() if len(ctx_set) > 0 else None
+            _, _, ctx_set, _ = _gather_type_ctx_info(list(args))
+            ctx = ctx_set.pop() if len(ctx_set) > 0 else None
             # get list of params in the order of out.list_arguments
             input_shapes = dict()
             for name in out.list_arguments():
                 if name in data_names.keys() and data_names[name] < len(args):
-                    if isinstance(args[data_names[name]],NDArray):
+                    if isinstance(args[data_names[name]], NDArray):
                         arg_dict[name] = args[data_names[name]]
-                    elif (isinstance(args[data_names[name]],symbol.Symbol) and
+                    elif (isinstance(args[data_names[name]], symbol.Symbol) and
                           '__shape__' in args[data_names[name]].list_attr()):
                         shape_str = args[data_names[name]].list_attr()['__shape__']
                         input_shapes[name] = tuple(map(int, shape_str.strip('()').split(',')))
@@ -1047,9 +1047,9 @@ class HybridBlock(Block):
 
             for name in out.list_auxiliary_states():
                 if name in data_names.keys() and data_names[name] < len(args):
-                    if isinstance(args[data_names[name]],NDArray):
+                    if isinstance(args[data_names[name]], NDArray):
                         aux_dict[name] = args[data_names[name]]
-                    elif (isinstance(args[data_names[name]],symbol.Symbol) and
+                    elif (isinstance(args[data_names[name]], symbol.Symbol) and
                           '__shape__' in args[data_names[name]].list_attr()):
                         shape_str = args[data_names[name]].list_attr()['__shape__']
                         input_shapes[name] = tuple(map(int, shape_str.strip('()').split(',')))
