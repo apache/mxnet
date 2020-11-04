@@ -1038,8 +1038,8 @@ class HybridBlock(Block):
                 if name in data_names.keys() and data_names[name] < len(args):
                     if isinstance(args[data_names[name]],NDArray):
                         arg_dict[name] = args[data_names[name]]
-                    elif isinstance(args[data_names[name]],symbol.Symbol) and
-                         '__shape__' in args[data_names[name]].list_attr():
+                    elif (isinstance(args[data_names[name]],symbol.Symbol) and
+                          '__shape__' in args[data_names[name]].list_attr()):
                         shape_str = args[data_names[name]].list_attr()['__shape__']
                         input_shapes[name] = tuple(map(int, shape_str.strip('()').split(',')))
                 elif name in params:
@@ -1049,8 +1049,8 @@ class HybridBlock(Block):
                 if name in data_names.keys() and data_names[name] < len(args):
                     if isinstance(args[data_names[name]],NDArray):
                         aux_dict[name] = args[data_names[name]]
-                    elif isinstance(args[data_names[name]],symbol.Symbol) and
-                         '__shape__' in args[data_names[name]].list_attr():
+                    elif (isinstance(args[data_names[name]],symbol.Symbol) and
+                          '__shape__' in args[data_names[name]].list_attr()):
                         shape_str = args[data_names[name]].list_attr()['__shape__']
                         input_shapes[name] = tuple(map(int, shape_str.strip('()').split(',')))
                 elif name in params:
