@@ -661,9 +661,15 @@ MXNET_REGISTER_API("_npi.tril_indices")
   const nnvm::Op* op = Op::Get("_npi_tril_indices");
   nnvm::NodeAttrs attrs;
   op::NumpyTrilindicesParam param;
-  param.n = args[0].operator int();
-  param.k = args[1].operator int();
-  param.m = args[2].operator int();
+  if (features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    param.n = args[0].operator int64_t();
+    param.k = args[1].operator int64_t();
+    param.m = args[2].operator int64_t();
+  } else {
+    param.n = args[0].operator int();
+    param.k = args[1].operator int();
+    param.m = args[2].operator int();
+  }
 
   attrs.parsed = param;
   attrs.op = op;

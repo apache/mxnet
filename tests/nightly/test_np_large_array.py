@@ -2112,6 +2112,22 @@ def test_dsplit():
 
 
 @use_np
+def test_tril_indices():
+    N = 2**16
+    data = np.tril_indices(N, -1)
+    assert data[0].shape == (((1 + (N-1)) * (N-1) / 2), )
+    assert data[0][-1] == N - 1 and data[1][-1] == N - 2
+
+
+@use_np
+def test_tril_indices_extreme():
+    data = np.tril_indices(n=2, m=INT_OVERFLOW+2, k=INT_OVERFLOW)
+    assert data[0].shape == (INT_OVERFLOW + 1 + INT_OVERFLOW + 2, )
+    assert data[0][-1] == 1 and data[1][-1] == INT_OVERFLOW + 1
+    assert data[0][INT_OVERFLOW] == 0 and data[1][INT_OVERFLOW] == INT_OVERFLOW
+
+
+@use_np
 def test_diff():
     inp = np.zeros((2, INT_OVERFLOW+1))
     inp[-1, -1] = 100
