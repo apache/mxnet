@@ -81,7 +81,7 @@ class Symbol(SymbolBase):
             else:
                 return '<%s %s>' % (self.__class__.__name__, name)
         else:
-            return 'FREED Symbol'
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __iter__(self):
         """Returns a generator object of symbol.

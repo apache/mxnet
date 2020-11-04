@@ -167,7 +167,7 @@ class _Symbol(Symbol):
             else:
                 return '<%s %s>' % (self.__class__.__name__, self.name)
         else:
-            return 'FREED _Symbol'
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     @property
     def name(self):

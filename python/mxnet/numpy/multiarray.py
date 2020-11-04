@@ -1365,7 +1365,7 @@ class ndarray(NDArray):
                 return array_str
             return array_str[:-1] + ', ctx={})'.format(str(context))
         else:
-            return 'FREED ndarray'
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __str__(self):
         """Returns a string representation of the array."""

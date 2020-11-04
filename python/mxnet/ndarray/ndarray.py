@@ -288,7 +288,7 @@ fixed-size items.
                                           self.__class__.__name__,
                                           shape_info, self.ctx)
         else:
-            return 'FREED NDArray'
+            return '<FREED {}>'.format(self.__class__.__name__)
 
     def __reduce__(self):
         return NDArray, (None,), self.__getstate__()
