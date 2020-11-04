@@ -23,12 +23,13 @@ __all__ = ['Sequential', 'HybridSequential', 'Dense', 'Dropout', 'Embedding',
            'Flatten', 'Lambda', 'HybridLambda', 'Concatenate', 'HybridConcatenate', 'Identity']
 import warnings
 import uuid
+import inspect
 import numpy as np
 
 from .activations import Activation
 from ..block import Block, HybridBlock
 from ..utils import _indent
-from ... import ndarray as nd, symbol as sym, context
+from ... import ndarray as nd, np as mxnp, symbol as sym, context, _deferred_compute as dc
 from ...util import is_np_array
 from ..parameter import Parameter
 
@@ -111,14 +112,40 @@ class HybridSequential(HybridBlock):
         net.hybridize()
     """
     def __init__(self):
-        super(HybridSequential, self).__init__()
+        super().__init__()
         self._layers = []
+        self._v2_checked = False
 
     def add(self, *blocks):
         """Adds block on top of the stack."""
         for block in blocks:
             self._layers.append(block)
             self.register_child(block)
+
+    def __call__(self, *args, **kwargs):
+        if self._active  and not self._v2_checked and not dc.is_deferred_compute():
+            # If any of the child Blocks implements the Gluon 2 interface, the
+            # container must not pass a Symbol to them
+            if any(inspect.unwrap(chld().hybrid_forward.__func__) is
+                   HybridBlock.hybrid_forward for chld in self._children.values()):
+                self._v2 = True
+                self._v2_checked = True
+                self.forward = self._forward
+
+        return super().__call__(*args, **kwargs)
+
+
+    def _forward(self, x, *args):
+        for block in self._children.values():
+            x = block()(x, *args)
+            args = []
+            if isinstance(x, (tuple, list)):
+                args = x[1:]
+                x = x[0]
+        if args:
+            x = tuple([x] + list(args))
+        return x
+
 
     def hybrid_forward(self, F, x, *args):
         for block in self._children.values():
@@ -997,8 +1024,18 @@ class HybridConcatenate(HybridSequential):
         The axis on which to concatenate the outputs.
     """
     def __init__(self, axis=-1):
-        super(HybridConcatenate, self).__init__()
+        super().__init__()
         self.axis = axis
+
+    def _forward(self, x):
+        out = []
+        for block in self._children.values():
+            out.append(block()(x))
+        if is_np_array():
+            out = mxnp.concatenate(out, axis=self.axis)
+        else:
+            out = nd.concat(*out, dim=self.axis)
+        return out
 
     def hybrid_forward(self, F, x):
         out = []
