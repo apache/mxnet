@@ -901,6 +901,7 @@ class HybridBlock(Block):
     """
     def __init__(self):
         super(HybridBlock, self).__init__()
+        self._v2 = inspect.unwrap(self.hybrid_forward.__func__) is HybridBlock.hybrid_forward
         self._cached_graph = ()
         self._cached_op = None
         self._out_format = None
@@ -985,7 +986,7 @@ class HybridBlock(Block):
 
     def _get_graph(self, *args):
         if not self._cached_graph:
-            if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
+            if not self._v2:
                 return self._get_graph_v1(*args)
             else:  # Gluon 2 based on deferred compute mode
                 return self._get_graph_v2(*args)
@@ -1282,7 +1283,7 @@ class HybridBlock(Block):
 
     def infer_shape(self, *args):
         """Infers shape of Parameters from inputs."""
-        if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
+        if not self._v2:
             # Gluon 1 based on F:  hybrid_forward is defined by user
             self._infer_attrs('infer_shape', 'shape', *args)
         else:
@@ -1406,7 +1407,7 @@ class HybridBlock(Block):
             cld()._monitor_all = monitor_all
 
     def __call__(self, x, *args):
-        if inspect.unwrap(self.hybrid_forward.__func__) is not HybridBlock.hybrid_forward:
+        if not self._v2:
             # Gluon 1 based on F:  hybrid_forward is defined by user
             return super().__call__(x, *args)
         else:  # Gluon 2 based on deferred compute mode

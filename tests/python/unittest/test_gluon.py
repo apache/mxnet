@@ -1011,16 +1011,47 @@ def check_sequential(net):
     net.add(dense2)
     dense3 = gluon.nn.Dense(10)
     net.add(dense3)
+    net.initialize()
 
+    net(mx.nd.zeros((10, 10)))
+    net.hybridize()
     assert net[1] is dense2
     assert net[-1] is dense3
     slc = net[1:3]
     assert len(slc) == 2 and slc[0] is dense2 and slc[1] is dense3
     assert isinstance(slc, type(net))
 
+def check_sequential_dc(net):
+    class MyBlock(mx.gluon.HybridBlock):
+        def __init__(self):
+            super().__init__()
+            self.dense = mx.gluon.nn.Dense(units=10, in_units=10)
+            self.weight = mx.gluon.Parameter('weight', shape=(10, ))
+
+        def forward(self, x):
+            return self.dense(x) + self.weight.data()
+
+    dense1 = MyBlock()
+    net.add(dense1)
+    dense2 = MyBlock()
+    net.add(dense2)
+    dense3 = MyBlock()
+    net.add(dense3)
+
+    net.initialize()
+    net.hybridize()
+    net(mx.nd.zeros((10, 10)))
+    assert net[1] is dense2
+    assert net[-1] is dense3
+    slc = net[1:3]
+    assert len(slc) == 2 and slc[0] is dense2 and slc[1] is dense3
+    assert isinstance(slc, type(net))
+
+@pytest.mark.garbage_expected
 def test_sequential():
     check_sequential(gluon.nn.Sequential())
     check_sequential(gluon.nn.HybridSequential())
+    check_sequential_dc(gluon.nn.HybridSequential())
 
 def test_sequential_warning():
     with warnings.catch_warnings(record=True) as w:
@@ -3075,24 +3106,43 @@ def test_ModulatedDeformableConvolution():
     with mx.autograd.record():
         y = net(x)
 
-def test_concatenate():
+
+@pytest.mark.parametrize('dc', [True, False])
+@pytest.mark.parametrize('hybridize', [True, False])
+@pytest.mark.garbage_expected
+def test_concatenate(dc, hybridize):
+    if dc:
+        class MyBlock(mx.gluon.HybridBlock):
+            def __init__(self, units, activation=None, in_units=0):
+                super().__init__()
+                self.dense = mx.gluon.nn.Dense(units, activation=activation, in_units=in_units)
+
+            def forward(self, x):
+                return self.dense(x)
+    else:
+        MyBlock = nn.Dense
+
     model = nn.HybridConcatenate(axis=1)
-    model.add(nn.Dense(128, activation='tanh', in_units=10))
-    model.add(nn.Dense(64, activation='tanh', in_units=10))
-    model.add(nn.Dense(32, in_units=10))
+    model.add(MyBlock(128, activation='tanh', in_units=10))
+    model.add(MyBlock(64, activation='tanh', in_units=10))
+    model.add(MyBlock(32, in_units=10))
     model2 = nn.Concatenate(axis=1)
-    model2.add(nn.Dense(128, activation='tanh', in_units=10))
-    model2.add(nn.Dense(64, activation='tanh', in_units=10))
-    model2.add(nn.Dense(32, in_units=10))
+    model2.add(MyBlock(128, activation='tanh', in_units=10))
+    model2.add(MyBlock(64, activation='tanh', in_units=10))
+    model2.add(MyBlock(32, in_units=10))
 
     # symbol
-    x = mx.sym.var('data')
-    y = model(x)
-    assert len(y.list_arguments()) == 7
+    if not dc:
+        x = mx.sym.var('data')
+        y = model(x)
+        assert len(y.list_arguments()) == 7
 
     # ndarray
     model.initialize(mx.init.Xavier(magnitude=2.24))
     model2.initialize(mx.init.Xavier(magnitude=2.24))
+    if hybridize:
+        model.hybridize()
+        model2.hybridize()
     x = model(mx.nd.zeros((32, 10)))
     x2 = model2(mx.nd.zeros((32, 10)))
     assert x.shape == (32, 224)
