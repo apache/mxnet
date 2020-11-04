@@ -1350,19 +1350,22 @@ class ndarray(NDArray):
          [0.84426576 0.60276335 0.85794562]] @gpu(0)
 
         """
-        array_str = self.asnumpy().__repr__()
-        dtype = self.dtype
-        default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
-        if 'dtype=' in array_str:
-            if dtype == default_dtype:
-                array_str = array_str[:array_str.rindex(',')] + ')'
-        elif dtype not in (default_dtype, _np.bool_):
-            array_str = array_str[:-1] + ', dtype={})'.format(dtype)
+        if self._alive:
+            array_str = self.asnumpy().__repr__()
+            dtype = self.dtype
+            default_dtype = _np.float64 if is_np_default_dtype() else _np.float32
+            if 'dtype=' in array_str:
+                if dtype == default_dtype:
+                    array_str = array_str[:array_str.rindex(',')] + ')'
+            elif dtype not in (default_dtype, _np.bool_):
+                array_str = array_str[:-1] + ', dtype={})'.format(dtype)
 
-        context = self.ctx
-        if context.device_type == 'cpu':
-            return array_str
-        return array_str[:-1] + ', ctx={})'.format(str(context))
+            context = self.ctx
+            if context.device_type == 'cpu':
+                return array_str
+            return array_str[:-1] + ', ctx={})'.format(str(context))
+        else:
+            return 'FREED ndarray'
 
     def __str__(self):
         """Returns a string representation of the array."""

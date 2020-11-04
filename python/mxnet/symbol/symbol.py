@@ -73,12 +73,15 @@ class Symbol(SymbolBase):
 
     def __repr__(self):
         """Gets a string representation of the symbol."""
-        name = self.name
-        if name is None:
-            name = ', '.join([i.name for i in self])
-            return '<%s group [%s]>' % (self.__class__.__name__, name)
+        if self._alive:
+            name = self.name
+            if name is None:
+                name = ', '.join([i.name for i in self])
+                return '<%s group [%s]>' % (self.__class__.__name__, name)
+            else:
+                return '<%s %s>' % (self.__class__.__name__, name)
         else:
-            return '<%s %s>' % (self.__class__.__name__, name)
+            return 'FREED Symbol'
 
     def __iter__(self):
         """Returns a generator object of symbol.
