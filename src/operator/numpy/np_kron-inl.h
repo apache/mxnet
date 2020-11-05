@@ -246,7 +246,7 @@ void KronOpBackwardImpl(const OpContext& ctx,
         ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(workspace_size), s);
       Tensor<xpu, 1, DType> temp(reinterpret_cast<DType*>(workspace.dptr_ +
                                                           aligned_first_workspace_size),
-                                 Shape1(ograd.shape_.Size()));
+                                 Shape1(ograd.shape_.Size()), s);
       ASSIGN_DISPATCH(temp, kWriteTo, tensor_ * ograd_);
 
       NP_KRON_REDUCE_AXES(true, workspace, ctx, {TBlob(temp)}, {scalar_req},
