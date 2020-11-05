@@ -993,7 +993,7 @@ class HybridBlock(Block):
                 return self._get_graph_v2(*args)
         return self._cached_graph
 
-    def _build_cache(self, update_graph=True, *args):
+    def _build_cache(self, *args, update_graph=True):
         data, out = self._get_graph(*args)
         data_names = {data.name: i for i, data in enumerate(data)}
         params = {p.var().name: p for p in self.collect_params().values()}
@@ -1109,7 +1109,7 @@ class HybridBlock(Block):
             if is_dynamic:
                 self._backend = 'static_shape'
                 self._backend_opts = {k : v for k, v in self._flags}
-                self._build_cache(update_graph=False, *args)
+                self._build_cache(*args, False)
 
         assert self._cached_op, "Gluon failed to build the cache. " \
                                 "This should never happen. " \
