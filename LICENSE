@@ -210,170 +210,175 @@
     licenses (full text in Appendix).
 
     =======================================================================================
-    Apache-2.0 licenses
+    Apache-2.0 license
     =======================================================================================
 
-    The following components are provided under an Apache 2.0 license.
-
-    1. MXNet Cpp-package - For details, /cpp-package/LICENSE
+    MXNet Cpp-package - For details, /cpp-package/LICENSE
          Copyright (c) 2015-2016 by Contributors
-    2. MXNet rcnn - For details, see, example/rcnn/LICENSE
+    MXNet rcnn - For details, see, example/rcnn/LICENSE
          Copyright (c) 2014, 2015, The Regents of the University of California (Regents)
-    3. MXNet scala-package - For details, see, scala-package/LICENSE
+    MXNet scala-package - For details, see, scala-package/LICENSE
          Copyright (c) 2014, 2015, the respective contributors
-    4. Warp-CTC - For details, see, 3rdparty/ctc_include/LICENSE
+    Warp-CTC - For details, see, 3rdparty/ctc_include/LICENSE
          Copyright 2015-2016, Baidu USA LLC.
-    5. 3rdparty/dlpack - For details, see, 3rdparty/dlpack/LICENSE
+    3rdparty/dlpack - For details, see, 3rdparty/dlpack/LICENSE
          Copyright 2017 by Contributors
-    6. 3rdparty/dmlc-core - For details, see, 3rdparty/dmlc-core/LICENSE
-         Copyright (c) 2015 by Contributors
+         Copyright by contributors
+    3rdparty/dmlc-core - For details, see, 3rdparty/dmlc-core/LICENSE
+         Copyright (c) 2015-2018 by Contributors
          Copyright 2015 by dmlc-core developers
          Copyright by Contributors
-    7. 3rdparty/mshadow - For details, see, 3rdparty/mshadow/LICENSE
+    3rdparty/mshadow - For details, see, 3rdparty/mshadow/LICENSE
          Copyright (c) 2014-2016 by Contributors
          Copyright by Contributors
-    8. 3rdparty/tvm - For details, see, 3rdparty/tvm/LICENSE
+    3rdparty/tvm - For details, see, 3rdparty/tvm/LICENSE
          Copyright (c) 2016-2018 by Contributors
          Copyright 2018 by Contributors
          Copyright (c) 2018 by Xilinx, Contributors
-    9. 3rdparty/tvm/dmlc-core - For details, see, 3rdparty/tvm/3rdparty/dmlc-core/LICENSE
+    3rdparty/tvm/dmlc-core - For details, see, 3rdparty/tvm/3rdparty/dmlc-core/LICENSE
          Copyright (c) 2015 by Contributors
-    10. 3rdparty/tvm/dlpack - For details, see, 3rdparty/tvm/3rdparty/dlpack/LICENSE
+    3rdparty/tvm/dlpack - For details, see, 3rdparty/tvm/3rdparty/dlpack/LICENSE
          Copyright (c) 2015-2017 by Contributors
          Copyright by Contributors
-    11. 3rdparty/ps-lite - For details, see, 3rdparty/ps-lite/LICENSE
+    3rdparty/ps-lite - For details, see, 3rdparty/ps-lite/LICENSE
           Copyright 2015 Carnegie Mellon University
           Copyright 2016, ps-lite developers
           Copyright (c) 2015-2016 by Contributors
           Copyright by Contributors
           Copyright (c) 2018-2019 Bytedance Inc.
-    12. 3rdparty/mkldnn - For details, see, 3rdparty/mkldnn/LICENSE
-          Copyright 2016-2019 Intel Corporation
+    3rdparty/mkldnn - For details, see, 3rdparty/mkldnn/LICENSE
+          Copyright 2016-2020 Intel Corporation
           Copyright 2018 YANDEX LLC
-    13. googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
-          Copyright [2007-2009] Neal Norwitz
-          Portions Copyright [2007-2009] Google Inc.
-    14. MXNet clojure-package - For details, see, contrib/clojure-package/LICENSE
+    googlemock scripts/generator - For details, see, 3rdparty/googletest/googlemock/scripts/generator/LICENSE
+          Copyright [2007] Neal Norwitz
+          Portions Copyright [2007] Google Inc.
+    MXNet clojure-package - For details, see, contrib/clojure-package/LICENSE
           Copyright 2018 by Contributors
-    15. MXNet R-package - For details, see, R-package/LICENSE
+    MXNet R-package - For details, see, R-package/LICENSE
           Copyright (c) 2015 by Contributors
-    16. ONNX-TensorRT benchmark package - For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark/LICENSE
+    ONNX-TensorRT benchmark package - For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/benchmark/LICENSE
           Copyright 2015 Google Inc. All rights reserved.
           Copyright 2016 Ismael Jimenez Martinez. All rights reserved.
           Copyright 2017 Roman Lebedev. All rights reserved.
-    17. Dockerfiles - For details, see docker/Dockerfiles/License.md
-    18. MXNet Julia Package - For details, see julia/LICENSE.md
+    Dockerfiles - For details, see docker/Dockerfiles/License.md
+    MXNet Julia Package - For details, see julia/LICENSE.md
           Copyright (c) 2015-2018 by Chiyuan Zhang
-    19. Benchdnn - For details, see 3rdparty/mkldnn/tests/benchdnn/README.md
-          Copyright 2017-2018 Intel Corporation
-    20. MXNet perl-package - For details, see perl-package/README
-    21. MXNet perl-package AI-MXNET - For details, see perl-package/AI-MXNet/README
-    22. MXNet perl-package AI-MXNET Gluon Contrib - For details, see perl-package/AI-MXNet-Gluon-Contrib/README
-    23. MXNet perl-package AI-MXNET Gluon ModelZoo - For details, see perl-package/AI-MXNet-Gluon-ModelZoo/README
-    24. MXNet perl-package AI-MXNETCAPI - For details, see perl-package/AI-MXNetCAPI/README
-    25. MXNet perl-package AI-NNVMCAPI - For details, see perl-package/AI-NNVMCAPI/README
-    26. Cephes Library Functions - For details, see src/operator/special_functions-inl.h
+    Benchdnn - For details, see 3rdparty/mkldnn/tests/benchdnn/README.md
+          Copyright 2017-2020 Intel Corporation
+    MXNet perl-package - For details, see perl-package/README
+    MXNet perl-package AI-MXNET - For details, see perl-package/AI-MXNet/README
+    MXNet perl-package AI-MXNET Gluon Contrib - For details, see perl-package/AI-MXNet-Gluon-Contrib/README
+    MXNet perl-package AI-MXNET Gluon ModelZoo - For details, see perl-package/AI-MXNet-Gluon-ModelZoo/README
+    MXNet perl-package AI-MXNETCAPI - For details, see perl-package/AI-MXNetCAPI/README
+    MXNet perl-package AI-NNVMCAPI - For details, see perl-package/AI-NNVMCAPI/README
+    Cephes Library Functions - For details, see src/operator/special_functions-inl.h
           Copyright (c) 2015 by Contributors
           Copyright 1984, 1987, 1992 by Stephen L. Moshier
-    27. MathJax (3rdparty/mkldnn/doc/assets/mathjax)
+    MathJax (3rdparty/mkldnn/doc/assets/mathjax)
           Copyright (c) 2009-2018 The MathJax Consortium
           Copyright (c) 2015-2017 Martin Hensel
           Copyright (c) 2007, Apostolos Syropoulos (<asyropoulos@yahoo.com>)
-    28. material-design-icons - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/material-design-icons-3.0.1/iconfont/
-    29. Roboto fonts - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/font/Roboto/
+    material-design-icons - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/material-design-icons-3.0.1/iconfont/
+    Roboto fonts - For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/font/Roboto/
+    bfloat16 - For details, see 3rdparty/tvm/3rdparty/bfloat16/bfloat16.cc
+          Copyright (c) 2019 by Contributors
 
     =======================================================================================
-    MIT licenses
+    MIT license
     =======================================================================================
 
-    1. Fast R-CNN  - For details, see example/rcnn/LICENSE
+    Fast R-CNN  - For details, see example/rcnn/LICENSE
          Copyright (c) Microsoft Corporation
-    2. Faster R-CNN - For details, see example/rcnn/LICENSE
+    Faster R-CNN - For details, see example/rcnn/LICENSE
          Copyright (c) 2015 Microsoft Corporation
-    3. tree_lstm - For details, see example/gluon/tree_lstm/LICENSE
+    tree_lstm - For details, see example/gluon/tree_lstm/LICENSE
          Copyright (c) 2017 Riddhiman Dasgupta, Sheng Zha
-    4. OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
-         Copyright (c) 1997-2016 Intel Corporation
-    6. HalideIR - For details, see 3rdparty/tvm/3rdparty/HalideIR/LICENSE
-         Copyright (c) 2016 HalideIR contributors
-         Copyright (c) 2012-2014 MIT CSAIL, Google Inc., and other contributors
-         Copyright (c) 2016-2018 by Contributors
-    7. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/LICENSE
+    cma.h, cma_api_impl.h - For details, see 3rdparty/tvm/3rdparty/cma/cma.h
+         COPYRIGHT (C) 2017 Institute of Electronics and Computer Science (EDI), Latvia.
+    ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/LICENSE
          Copyright (c) 2018, NVIDIA CORPORATION. All rights reserved.
          Copyright (c) 2018 Open Neural Network Exchange
-    8. ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/LICENSE
+    ONNX-TensorRT - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/LICENSE
          Copyright (c) Facebook, Inc. and Microsoft Corporation.
-    9. clipboard.js - Refer to https://zenorocha.github.io/clipboard.js
+    clipboard.js - For details, see docs/static_site/src/assets/js/clipboard.js
          Licensed MIT © Zeno Rocha
-    10. clipboard.min.js - Refer to https://zenorocha.github.io/clipboard.js
-         Licensed MIT © Zeno Rocha
-    11. mx-theme - For details, see docs/python_docs/themes/mx-theme/LICENSE
+    mx-theme - For details, see docs/python_docs/themes/mx-theme/LICENSE
          Copyright (c) 2016 myyasuda
-    12. intgemm - Refer to 3rdparty/intgemm/LICENSE
+    intgemm - Refer to 3rdparty/intgemm/LICENSE
          Copyright (c) 2017--2019 University of Edinburgh, Nikolay Bogoychev, Mateusz Chudyk, Kenneth Heafield, and Microsoft Corporation
          (Except 3rdparty/intgemm/test/3rd_party/catch.hpp is under the Boost license, listed separately)
-
+    builtin_fp16.h - For details, see 3rdparty/tvm/3rdparty/compiler-rt/builtin_fp16.h
+         Copyright (c) 2009-2015 by llvm/compiler-rt contributors
 
     =======================================================================================
-    3-clause BSD licenses
+    3-clause BSD license
     =======================================================================================
 
-    1. Xbyak - For details, see 3rdparty/mkldnn/src/cpu/xbyak/COPYRIGHT
+    Xbyak - For details, see 3rdparty/mkldnn/src/cpu/xbyak/COPYRIGHT
          Copyright (c) 2007 MITSUNARI Shigeo
          Copyright 2016-2018 Intel Corporation
-    2. gtest - For details, see, 3rdparty/mkldnn/tests/gtests/gtest/LICENSE
+    gtest - For details, see, 3rdparty/mkldnn/tests/gtests/gtest/LICENSE
          Copyright 2005-2008, Google Inc.
-    3. Moderngpu - For details, see, 3rdparty/ctc_include/contrib/moderngpu/LICENSE
+         Copyright 2015, Google Inc.
+    Moderngpu - For details, see, 3rdparty/ctc_include/contrib/moderngpu/LICENSE
          Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
-    4. CUB Library - For details, see, 3rdparty/nvidia_cub/LICENSE.TXT
+    CUB Library - For details, see, 3rdparty/nvidia_cub/LICENSE.TXT
          Copyright (c) 2010-2011, Duane Merrill.  All rights reserved.
          Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
-    5. CUB mersenne.h - For details, see 3rdparty/nvidia_cub/test/mersenne.h
+    CUB mersenne.h - For details, see 3rdparty/nvidia_cub/test/mersenne.h
          Copyright (C) 1997 - 2002, Makoto Matsumoto and Takuji Nishimura,
-    6. Googlemock - For details, see, 3rdparty/googletest/googlemock/LICENSE
-         Copyright 2006-2015, Google Inc.
-    7. Googletest - For details, see, 3rdparty/googletest/googletest/LICENSE
-         Copyright 2005-2015, Google Inc.
-    8. OpenMP Testsuite - For details, see, 3rdparty/openmp/testsuite/LICENSE
+    Googlemock - For details, see, 3rdparty/googletest/googlemock/LICENSE
+         Copyright 2008, Google Inc.
+    Googletest - For details, see, 3rdparty/googletest/googletest/LICENSE
+         Copyright 2008, Google Inc.
+    OpenMP Testsuite - For details, see, 3rdparty/openmp/testsuite/LICENSE
          Copyright (c) 2011, 2012 University of Houston System
-    9. CMake FindCUDAToolkit.cmake, FindOpenCL.cmake - For details, see,
+    CMake FindCUDAToolkit.cmake, FindOpenCL.cmake - For details, see,
          cmake/upstream/FindCUDAToolkit.cmake
          cmake/upstream/select_compute_arch.cmake
          3rdparty/mkldnn/cmake/FindOpenCL.cmake
-         Copyright 2000-2019 Kitware, Inc. and Contributors
-    10. ittnotify - For details, see, 3rdparty/mkldnn/src/cpu/jit_utils/jitprofiling/
+         Copyright 2000-2020 Kitware, Inc. and Contributors
+    ittnotify - For details, see, 3rdparty/mkldnn/src/cpu/jit_utils/jitprofiling/
          Copyright (c) 2011, Intel Corporation
-    11. Numpy einsum operator - For details, see src/operator/numpy/np_einsum_op-inl.h
+    Numpy einsum operator - For details, see src/operator/numpy/np_einsum_op-inl.h
          Copyright (c) 2005-2019, NumPy Developers.
          Copyright (c) 2019, The Apache Software Foundation.
-    12. Numpy einsum operator - For details, see src/operator/numpy/np_einsum_path_op-inl.h
+    Numpy einsum operator - For details, see src/operator/numpy/np_einsum_path_op-inl.h
          Copyright (c) 2005-2019, NumPy Developers.
          Copyright (c) 2019, The Apache Software Foundation.
-    13. Numpy einsum operator - For details, see src/operator/numpy/np_einsum_op.cc
+    Numpy einsum operator - For details, see src/operator/numpy/np_einsum_op.cc
          Copyright (c) 2005-2019, NumPy Developers.
          Copyright (c) 2019, The Apache Software Foundation.
 
     =======================================================================================
-    2-clause BSD licenses
+    2-clause BSD license
     =======================================================================================
 
-    1. Sphinx JavaScript utilties for the full-text search - For details, see, docs/_static/searchtools_custom.js
+    Sphinx JavaScript utilties for the full-text search - For details, see, docs/_static/searchtools_custom.js
          Copyright (c) 2007-2017 by the Sphinx team
-    2. blockingconcurrentqueue.h - For details, see, 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
+    blockingconcurrentqueue.h - For details, see, 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
          ©2015-2016 Cameron Desrochers
-    3. concurrentqueue.h - For details, see, 3rdparty/dmlc-core/include/dmlc/concurrentqueue.h
+    concurrentqueue.h - For details, see, 3rdparty/dmlc-core/include/dmlc/concurrentqueue.h
          Copyright (c) 2013-2016, Cameron Desrochers.
-    4. MSCOCO Toolbox - For details, see, example/ssd/dataset/pycocotools/coco.py
+    MSCOCO Toolbox - For details, see, example/ssd/dataset/pycocotools/coco.py
          Code written by Piotr Dollar and Tsung-Yi Lin, 2014.
-    5. PyBind11 FindEigen3.cmake - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindEigen3.cmake
+    PyBind11 FindEigen3.cmake - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindEigen3.cmake
          Copyright (c) 2006, 2007 Montel Laurent, <montel@kde.org>
          Copyright (c) 2008, 2009 Gael Guennebaud, <g.gael@free.fr>
          Copyright (c) 2009 Benoit Jacob <jacob.benoit.1@gmail.com>
-    6. PyBind11 FindPythonLibsNew.cmake - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindPythonLibsNew.cmake
+    PyBind11 FindPythonLibsNew.cmake - For details, see 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindPythonLibsNew.cmake
          Copyright 2001-2009 Kitware, Inc.
          Copyright 2012 Continuum Analytics, Inc.
+    picojson.h - For details, see 3rdparty/tvm/3rdparty/picojson/picojson.h
+         Copyright 2009-2010 Cybozu Labs, Inc.
+         Copyright 2011-2014 Kazuho Oku
 
+    =======================================================================================
+    Apache-2.0 license + LLVM Exceptions
+    =======================================================================================
 
+    OpenMP - For details, see 3rdparty/openmp/LICENSE.txt
+         Copyright (c) 1997-2016 Intel Corporation
 
     =======================================================================================
     Other Licenses
@@ -406,6 +411,10 @@
     9. modulated_deformable_im2col.cuh - For details, see, src/operator/contrib/nn/modulated_deformable_im2col.cuh
          Copyright (c) 2014-2017 The Regents of the University of California (Regents)
          Copyright (c) 2014-2017, the respective contributors
+    10. .drone.yml - For details, see, 3rdparty/mkldnn/.github/automation/.drone.yml
+         Copyright 2020 Arm Limited and affiliates.
+    11. blas.cmake - For details, see, 3rdparty/mkldnn/cmake/blas.cmake
+         Copyright 2020 Arm Limited and affiliates.
 
 
     COPYRIGHT
@@ -447,7 +456,7 @@
 
     =======================================================================================
 
-    8. MS COCO API
+    12. MS COCO API
     For details, see, example/rcnn/LICENSE
     Copyright (c) 2014, Piotr Dollar and Tsung-Yi Lin
 
@@ -477,14 +486,14 @@
 
     =======================================================================================
 
-    9. Semaphore implementation in blockingconcurrentqueue.h
+    13. Semaphore implementation in blockingconcurrentqueue.h
     This file uses a semaphore implementation under the terms of its separate zlib license.
     For details, see, 3rdparty/dmlc-core/include/dmlc/blockingconcurrentqueue.h
     Copyright Jeff Preshing
 
     =======================================================================================
 
-    10. ONNX Export module
+    14. ONNX Export module
     For details, see, python/mxnet/contrib/onnx/mx2onnx/LICENSE
 
     This module is based on https://github.com/NVIDIA/mxnet_to_onnx/blob/master/mx2onnx_converter/#
@@ -565,7 +574,7 @@
 
     =======================================================================================
 
-    11. ONNX python bindings
+    15. ONNX python bindings
     For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/LICENSE
       Copyright (c) 2015-2017 Wenzel Jakob <wenzel.jakob@epfl.ch>, All rights reserved.
       Copyright (c) 2016 Trent Houliston <trent@houliston.me> and Wenzel Jakob <wenzel.jakob@epfl.ch>
@@ -616,7 +625,7 @@
 
     =======================================================================================
 
-    12. Clang
+    16. Clang
     For details, see, 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/clang/LICENSE.TXT
 
     LLVM Release License
@@ -681,7 +690,7 @@
 
     =======================================================================================
 
-    13. FindJeMalloc.cmake
+    17. FindJeMalloc.cmake
     For details, see cmake/Modules/FindJeMalloc.cmake
 
     This file is based on https://github.com/STEllAR-GROUP/hpx/blob/master/cmake/FindJemalloc.cmake
@@ -772,7 +781,7 @@
 
     =======================================================================================
 
-    14. FindPythonLibsNew.cmake
+    18. FindPythonLibsNew.cmake
 
     For details, see 3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindPythonLibsNew.cmake
 
@@ -811,7 +820,7 @@
 
     =======================================================================================
 
-    15. erfinv-inl.h
+    19. erfinv-inl.h
 
     For details, see /src/operator/contrib/erfinv-inl.h
 
@@ -854,7 +863,7 @@
 
     =======================================================================================
 
-    16. mersenne.h
+    20. mersenne.h
 
     For details, see /3rdparty/nvidia_cub/test/mersenne.h
 
@@ -903,7 +912,7 @@
 
     =======================================================================================
 
-    17. FindEigen3.cmake
+    21. FindEigen3.cmake
 
     For details, see /3rdparty/onnx-tensorrt/third_party/onnx/third_party/pybind11/tools/FindEigen3.cmake
 
@@ -914,7 +923,7 @@
 
     =======================================================================================
 
-    18. protoc-gen-mypy.py
+    22. protoc-gen-mypy.py
 
     For details, see /3rdparty/onnx-tensorrt/third_party/onnx/tools/protoc-gen-mypy.py
 
@@ -930,7 +939,7 @@
 
     =======================================================================================
 
-    19. rang
+    23. rang
 
     For details, see /3rdparty/tvm/3rdparty/rang/LICENSE
 
@@ -961,7 +970,7 @@
 
     =======================================================================================
 
-    20. Font-Awesome, SIL Open Font License(OFL)
+    24. Font-Awesome, SIL Open Font License(OFL)
 
     For details, see ./docs/python_docs/themes/mx-theme/mxtheme/static/webfonts/
 
@@ -973,7 +982,7 @@
 
     =======================================================================================
 
-    21. Catch
+    25. Catch
     
     Only the file 3rdparty/intgemm/test/3rd_party/catch.hpp
 
@@ -1004,7 +1013,39 @@
     FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
     DEALINGS IN THE SOFTWARE.
+
+    26. Boost C++ Libraries
+
+    Only the file 3rdparty/mkldnn/src/common/primitive_hashing.hpp
+
+    Copyright 2005-2014 Daniel James.
+    Distributed under the Boost Software License, Version 1.0. (See below
+    or copy at http://www.boost.org/LICENSE_1_0.txt)
+
+    Boost Software License - Version 1.0 - August 17th, 2003
     
+    Permission is hereby granted, free of charge, to any person or organization
+    obtaining a copy of the software and accompanying documentation covered by
+    this license (the "Software") to use, reproduce, display, distribute,
+    execute, and transmit the Software, and to prepare derivative works of the
+    Software, and to permit third-parties to whom the Software is furnished to
+    do so, all subject to the following:
+    
+    The copyright notices in the Software and this entire statement, including
+    the above license grant, this restriction and the following disclaimer,
+    must be included in all copies of the Software, in whole or in part, and
+    all derivative works of the Software, unless such copies or derivative
+    works are solely in the form of machine-executable object code generated by
+    a source language processor.
+    
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+    FITNESS FOR A PARTICULAR PURPOSE, TITLE AND NON-INFRINGEMENT. IN NO EVENT
+    SHALL THE COPYRIGHT HOLDERS OR ANYONE DISTRIBUTING THE SOFTWARE BE LIABLE
+    FOR ANY DAMAGES OR OTHER LIABILITY, WHETHER IN CONTRACT, TORT OR OTHERWISE,
+    ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+    DEALINGS IN THE SOFTWARE.
+
     =======================================================================================
     Appendix
     =======================================================================================
