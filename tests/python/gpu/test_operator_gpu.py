@@ -2362,17 +2362,28 @@ def np_masked_softmax_grad(out, grad_out, axis, scale_factor=1.0, temperature=1.
     return result
 
 @pytest.mark.parametrize('dtype', [np.float16, np.float32, np.float64])
-@pytest.mark.parametrize('axis', [0, 1, 2, -1, -2, -3])
-@pytest.mark.parametrize('temperature', [1, 2, 5, 7, 9 ,11])
-@pytest.mark.parametrize('scale', [1, 2, 5, 7, 9 ,11])
+@pytest.mark.parametrize('axis', [0, -1, -2, -3])
+@pytest.mark.parametrize('ndims', [3, 4, 5])
+@pytest.mark.parametrize('n_broadcast_axis', [0, 1, 2])
+@pytest.mark.parametrize('temperature', [1, 5, 9 ,11])
+@pytest.mark.parametrize('scale', [1, 2, 7, 12])
 @pytest.mark.parametrize('normalize', [True])
 @with_seed()
-def test_masked_softmax(dtype, axis, temperature, scale, normalize):
-    ndim = 3
-    shape = rand_shape_nd(ndim, dim=10)
+def test_masked_softmax(dtype, axis, ndims, n_broadcast_axis, temperature, scale, normalize):
+    n_broadcast_axis = min(n_broadcast_axis, ndims - 1)
+    shape = rand_shape_nd(ndims, dim=10)
     mx_data = rand_ndarray(shape, dtype=dtype)
+    bcst_dims = []
+    while len(bcst_dims) < n_broadcast_axis:
+            ax = np.random.randint(0, ndims)
+            if ax not in bcst_dims :
+                bcst_dims.append(ax)
+    shape_mask = list(shape)
+    for i in bcst_dims:
+        shape_mask[i] = 1
+
     np_data = mx_data.asnumpy()
-    np_mask = np.random.randint(0, 2, shape)
+    np_mask = np.random.randint(0, 2, shape_mask)
     mx_mask = mx.nd.array(np_mask, dtype=np.int32)
     mx_grad = rand_ndarray(shape, dtype=dtype)
     np_grad = mx_grad.asnumpy()
@@ -2397,11 +2408,11 @@ def test_masked_softmax(dtype, axis, temperature, scale, normalize):
                             dtype="asnumpy", equal_nan=True)
 
 @pytest.mark.parametrize('dtype', ['float32'])
-@pytest.mark.parametrize('ndim', [1, 2, 3, 4, 5])
+@pytest.mark.parametrize('ndims', [1, 2, 3, 4, 5])
 @with_seed()
-def test_log_masked_softmax(dtype, ndim):
-    shape = np.random.randint(1, 5, size=ndim)
-    axis = np.random.randint(0, ndim)
+def test_log_masked_softmax(dtype, ndims):
+    shape = np.random.randint(1, 5, size=ndims)
+    axis = np.random.randint(0, ndims)
     mx_data = rand_ndarray(shape, dtype=dtype)
     np_data = mx_data.asnumpy()
     np_mask = np.random.randint(0, 2, shape)
@@ -2409,7 +2420,7 @@ def test_log_masked_softmax(dtype, ndim):
     np_out = np.log(np_masked_softmax(np_data, np_mask, axis)+1e-20) * np_mask
     data = mx.sym.Variable("data")
     mask = mx.sym.Variable("mask")
-    mx_sym = mx.sym.log_masked_softmax(data=data, mask=mask, axis=axis-ndim)
+    mx_sym = mx.sym.log_masked_softmax(data=data, mask=mask, axis=axis-ndims)
     location = {"data": mx_data, "mask": mx_mask}
     rtol = 1e-2 if dtype == np.float16 else 1e-3
     atol = 1e-4 if dtype == np.float16 else 1e-5
