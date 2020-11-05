@@ -69,7 +69,7 @@ class StaticShapeSubgraphProperty: public SubgraphProperty {
   StaticShapeSubgraphProperty() {
     // flag to ensure subgraph CachedOp has at least one external input
     // as required by CachedOp::Forward
-    attrs_["ensure_CachedOp_input"] = std::make_shared<dmlc::any>(true);
+    attrs_["require_subgraph_inputs"] = std::make_shared<dmlc::any>(true);
   }
   static SubgraphPropertyPtr Create() { return std::make_shared<StaticShapeSubgraphProperty>(); }
 

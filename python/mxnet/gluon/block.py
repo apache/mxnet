@@ -912,7 +912,6 @@ class HybridBlock(Block):
         self._monitor_all = False
         self._backend = None
         self._backend_opts = {}
-        self._first_forward = True
         self._partition_if_dynamic = True
         self._cached_op_args = []
 
@@ -994,7 +993,7 @@ class HybridBlock(Block):
                 return self._get_graph_v2(*args)
         return self._cached_graph
 
-    def _build_cache(self, *args):
+    def _build_cache(self, update_graph=True, *args):
         data, out = self._get_graph(*args)
         data_names = {data.name: i for i, data in enumerate(data)}
         params = {p.var().name: p for p in self.collect_params().values()}
@@ -1043,7 +1042,8 @@ class HybridBlock(Block):
             out = out.optimize_for(self._backend, arg_dict, aux_dict, ctx, **self._backend_opts)
 
             #update cached graph with partitioned graph
-            self._cached_graph = data, out
+            if update_graph:
+                self._cached_graph = data, out
 
         input_names = out.list_inputs()
         data_indices = []
@@ -1089,6 +1089,7 @@ class HybridBlock(Block):
             if kv[0] in ['data_indices', 'param_indices']:
                 self._flags.remove(kv)
         self._flags = [('data_indices', data_indices), ('param_indices', param_indices)] + self._flags
+        self._cached_op = ndarray.CachedOp(out, self._flags)
 
     def _deferred_infer_shape(self, *args):
         try:
@@ -1099,61 +1100,16 @@ class HybridBlock(Block):
             raise ValueError(error_msg)
 
     def _call_cached_op(self, *args):
-        if not self._cached_op_args or not self._cached_graph:
+        if self._cached_op is None:
             self._build_cache(*args)
-
-        if self._first_forward and self._partition_if_dynamic:
+        if self._partition_if_dynamic:
             # partition static shape ops if the graph contains any dynamic shape op
-            self._first_forward = False
             data, out = self._cached_graph
             is_dynamic = out._check_dynamic_shape_op()
             if is_dynamic:
-                backend_opts = {k : v for k, v in self._flags}
-                # partition for static shape ops
-                is_np = is_np_array()
-                out = out.optimize_for('static_shape', **backend_opts)
-                if is_np:
-                    out = out.as_np_ndarray()
-                # update data_indices and param_indices
-                data_indices = []
-                param_indices = []
-                input_names = out.list_inputs()
-                data_names = {data.name: i for i, data in enumerate(data)}
-                params = {p.var().name: p for p in self.collect_params().values()}
-                param_serialization_names = {p.var().name: n for n, p in self.collect_params().items()}
-                param_dict = {n: p for b, n, p in self._cached_op_args if not b}
-                self._cached_op_args = []
-                for i, name in enumerate(input_names):
-                    triple = None
-                    if name in data_names:
-                        data_indices.append(i)
-                        triple = (True, name, data_names[name])
-                    else:
-                        param_indices.append(i)
-                        if name in params:
-                            param = params[name]
-                            serialization_name = param_serialization_names[name]  # HybridBlock.export
-                        elif name in param_dict:
-                            serialization_name = name
-                            param = param_dict[name]
-                        else:
-                            raise RuntimeError('A parameter was added to the graph during '
-                                               'optimization but it was not '
-                                               'added to the parameter dicts.\n'
-                                               'Please check the backend.')
-                        triple = (False, serialization_name, param)
-
-                    self._cached_op_args.append(triple)
-
-                # update flags
-                for i in range(len(self._flags) - 1, -1, -1):
-                    kv = self._flags[i]
-                    if kv[0] in ['data_indices', 'param_indices']:
-                        self._flags.remove(kv)
-                self._flags = [('data_indices', data_indices), ('param_indices', param_indices),
-                               ('is_dynamic', is_dynamic)] + self._flags
-
-            self._cached_op = ndarray.CachedOp(out, self._flags)
+                self._backend = 'static_shape'
+                self._backend_opts = {k : v for k, v in self._flags}
+                self._build_cache(update_graph=False, *args)
 
         assert self._cached_op, "Gluon failed to build the cache. " \
                                 "This should never happen. " \
@@ -1252,8 +1208,7 @@ class HybridBlock(Block):
                              'Find all contexts = {}'.format(ctx_set))
 
         self._build_cache(x, *args)
-        self._first_forward = True
-        assert self._cached_op_args, "Gluon failed to build the cache. " \
+        assert self._cached_op, "Gluon failed to build the cache. " \
                                 "This should never happen. " \
                                 "Please submit an issue on Github" \
                                 " https://github.com/apache/incubator-mxnet."
@@ -1263,7 +1218,6 @@ class HybridBlock(Block):
         self._cached_graph = ()
         self._cached_op = None
         self._cached_op_args = []
-        self._first_forward = True
 
     def register_child(self, block, name=None):
         if not isinstance(block, HybridBlock):

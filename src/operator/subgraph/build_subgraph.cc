@@ -369,13 +369,12 @@ void PreSelectSubgraphNodes(const nnvm::Graph& g, SubgraphSelectorV2Ptr subgraph
     ++count;
   }
   if (success) {
-    // CachedOp requires external input during forward pass
     // check subgraph input. If none, reject the first op (in top order) from the subgraph
-    // to make sure CachedOp gets external input.
-    // this feature can be switched off by setting ensure_CachedOp_input to false
+    // to make sure the subgraph gets external input.
+    // this feature can be switched off by setting require_subgraph_inputs to false
     const SubgraphPropertyPtr& subg_prop = g.GetAttr<SubgraphPropertyPtr>("subgraph_property");
-    if (subg_prop->HasAttr("ensure_CachedOp_input")
-        && subg_prop->GetAttr<bool>("ensure_CachedOp_input")) {
+    if (subg_prop->HasAttr("require_subgraph_inputs")
+        && subg_prop->GetAttr<bool>("require_subgraph_inputs")) {
       if (subgraph_nodes->size() > 0 && !HasInputEntries(g, simple_nodes, *subgraph_nodes)) {
         // relabel the node to -1
         (*subgraph_nodes)[0]->label = -1;
