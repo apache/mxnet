@@ -24,11 +24,10 @@ import numpy as np
 import mxnet as mx
 from ..base import _LIB, check_call, py_str
 from ..base import c_array, c_str, mx_uint, c_str_array
-from ..base import NDArrayHandle, SymbolHandle
+from ..base import SymbolHandle
 from ..symbol import Symbol
 from .. import ndarray
-from ..ndarray import NDArray
-from ..io import DataIter, DataDesc, DataBatch
+from ..io import DataDesc
 from ..context import cpu, Context
 from ..util import is_np_array
 
@@ -257,7 +256,7 @@ def _calibrate_quantized_sym(qsym, th_dict):
     return Symbol(calibrated_sym)
 
 
-def _collect_layer_statistics(sym_block, data, collector, max_num_examples=None, logger=None):
+def _collect_layer_statistics(sym_block, data, collector, num_inputs, max_num_examples=None, logger=None):
     if not isinstance(data, mx.gluon.data.DataLoader):
         raise ValueError('Only supports data as a type of DataLoader, while received type %s'
                          % str(type(data)))
@@ -268,7 +267,7 @@ def _collect_layer_statistics(sym_block, data, collector, max_num_examples=None,
         if not isinstance(batch, list):
             batch = [batch]
         batch = [b.as_in_context(mx.cpu()) for b in batch]
-        sym_block(*batch)
+        sym_block(*batch[:num_inputs])
         num_batches += 1
         num_examples += data._batch_sampler._batch_size
         if max_num_examples is not None and num_examples >= max_num_examples:
@@ -349,15 +348,17 @@ def _get_optimal_thresholds(hist_dict, quantized_dtype, num_quantized_bins=255, 
 
 def _generate_list_of_data_desc(data_shapes, data_types):
     """"Convert list ot tuples to list of DataDesc."""
-    if isinstance(data_shapes, list) and all(isinstance(x, tuple) for x in data_shapes):
-        if len(data_shapes) == 1:
-            data_shapes = [DataDesc(name='data', shape=data_shapes[0], dtype=data_types[0])]
-        else:
-            data_shapes = [DataDesc(name='data' + str(i), shape=data_shapes[i], dtype=data_types[i])
-                             for i in range(len(data_shapes))]
-        return data_shapes
-    if not (isinstance(data_shapes, list) and all(isinstance(x, DataDesc) for x in data_shapes)):
-        raise ValueError('data_shapes must be either a list of DataDesc or a list of Tuple')
+    if isinstance(data_shapes, list):
+        if all(isinstance(x, DataDesc) for x in data_shapes):
+            return data_shapes
+        if all(isinstance(x, tuple) for x in data_shapes):
+            if len(data_shapes) == 1:
+                data_shapes = [DataDesc(name='data', shape=data_shapes[0], dtype=data_types[0])]
+            else:
+                data_shapes = [DataDesc(name='data' + str(i), shape=data_shapes[i],
+                                        dtype=data_types[i]) for i in range(len(data_shapes))]
+            return data_shapes
+    raise ValueError('data_shapes must be either a list of DataDesc or a list of Tuple')
 
 
 def quantize_model(sym, arg_params, aux_params,
@@ -818,6 +819,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         data_types = [mx_real_t] * len(data_shapes)
     data_descs = _generate_list_of_data_desc(data_shapes, data_types)
 
+    num_inputs = len(data_descs)
     data_nd = []
     for desc in data_descs:
         if is_np_array():
@@ -833,6 +835,10 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
                 logger.warning("Deduced input data descriptors failed to run forward pass."
                                " Trying again with one less input.")
             del data_nd[-1]
+            num_inputs -= 1
+            data_shapes = [b.shape for b in data_nd]
+            data_types = [b.dtype for b in data_nd]
+            data_descs = _generate_list_of_data_desc(data_shapes, data_types)
             continue
         else:
             break
@@ -876,7 +882,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy', 'customize']:
             inputs = [mx.sym.var(desc.name) for desc in data_descs]
-            num_examples = _collect_layer_statistics(network, calib_data, collector,
+            num_examples = _collect_layer_statistics(network, calib_data, collector, num_inputs,
                                                      num_calib_examples, logger)
             if logger:
                 logger.info('Collected layer output values from FP32 model using %d examples'
