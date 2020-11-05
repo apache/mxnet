@@ -1113,14 +1113,54 @@ def test_quantize_sym_with_calib():
         assert_almost_equal(np.array([lhs]), np.array([rhs]), rtol=1e-3, atol=1e-4)
 
 
-def test_smooth_distribution():
-    assert_exception(lambda: mx.contrib.quant._smooth_distribution(np.zeros((2,)), eps=1e-3), ValueError)
-    dirac_delta = np.zeros((5,))
-    dirac_delta[2] = 1
-    smooth_dirac_delta = dirac_delta.copy()
-    smooth_dirac_delta += 1e-3
-    smooth_dirac_delta[2] -= 5e-3
-    assert_almost_equal(mx.contrib.quant._smooth_distribution(dirac_delta, eps=1e-3), smooth_dirac_delta)
+def test_quantization_net_with_different_data_inputs_options():
+    if is_test_for_native_cpu():
+        print('skipped testing test_quantization_net_with_different_data_inputs_options for native cpu since it is not supported yet')
+        return
+    elif is_test_for_gpu():
+        print('skipped testing test_quantization_net_with_different_data_inputs_options for gpu since it is not supported yet')
+        return
+
+    sym = get_fp32_sym()
+    net = mx.gluon.SymbolBlock(sym, mx.sym.var('data'))
+    initialize_block_params(net, mx.init.Normal(0.2))
+
+    batch_size = 32
+    data_shape = (batch_size, 3, 224, 224)
+    random_data = mx.random.uniform(shape=data_shape)
+
+    # pass data_shapes as list of tuples
+    quantized_net = mx.contrib.quant.quantize_net_v2(net,
+                                                     quantized_dtype='auto',
+                                                     data_shapes=[data_shape],
+                                                     ctx=mx.current_context())
+    out = quantized_net(random_data)
+    out.wait_to_read()
+
+
+    # pass data_shapes as list of DataDescs
+    net2 = mx.gluon.SymbolBlock(sym, mx.sym.var('data'))
+    initialize_block_params(net2, mx.init.Normal(0.2))
+    data_desc = mx.io.DataDesc('data', data_shape)
+    quantized_net2 = mx.contrib.quant.quantize_net_v2(net,
+                                                     quantized_dtype='auto',
+                                                     data_shapes=[data_desc],
+                                                     ctx=mx.current_context())
+    out2 = quantized_net2(random_data)
+    out2.wait_to_read()
+
+
+    # pass data as DataLoader
+    net3 = mx.gluon.SymbolBlock(sym, mx.sym.var('data'))
+    initialize_block_params(net3, mx.init.Normal(0.2))
+    data_loader = mx.gluon.data.DataLoader(random_data, batch_size=batch_size)
+    quantized_net3 = mx.contrib.quant.quantize_net_v2(net,
+                                                      quantized_dtype='auto',
+                                                      calib_data=data_loader,
+                                                      ctx=mx.current_context())
+    out3 = quantized_net3(random_data)
+    out3.wait_to_read()
+
 
 
 def test_optimal_threshold_adversarial_case():

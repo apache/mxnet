@@ -23,7 +23,7 @@ import warnings
 import numpy as np
 import mxnet as mx
 from ..base import _LIB, check_call, py_str
-from ..base import c_array, c_str, mx_uint, c_str_array
+from ..base import c_array, c_str, mx_uint, mx_real_t, c_str_array
 from ..base import SymbolHandle
 from ..symbol import Symbol
 from .. import ndarray
