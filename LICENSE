@@ -309,7 +309,8 @@
     Apache-2.0 license + 3-clause BSD license
     =======================================================================================
 
-    python/mxnet/contrib/onnx/mx2onnx
+    python/mxnet/contrib/onnx/mx2onnx/_op_translations.py
+    python/mxnet/contrib/onnx/mx2onnx/export_onnx.py
 
     =======================================================================================
     Apache-2.0 license + MIT License
