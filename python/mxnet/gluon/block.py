@@ -913,7 +913,6 @@ class HybridBlock(Block):
         self._backend = None
         self._backend_opts = {}
         self._partition_if_dynamic = True
-        self._cached_op_args = []
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -1217,7 +1216,6 @@ class HybridBlock(Block):
     def _clear_cached_op(self):
         self._cached_graph = ()
         self._cached_op = None
-        self._cached_op_args = []
 
     def register_child(self, block, name=None):
         if not isinstance(block, HybridBlock):
@@ -1510,7 +1508,7 @@ class HybridBlock(Block):
             copy will be made for each context.
         """
         params = self.collect_params()
-        if self._cached_op_args:
+        if self._cached_op:
             for p in self._cached_op_args:
                 # resetting parameters creating by the partitioning backend
                 if p.name not in params:
