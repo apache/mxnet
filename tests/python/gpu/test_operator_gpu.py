@@ -2410,7 +2410,7 @@ def test_masked_softmax(dtype, axis, ndims, n_broadcast_axis, temperature, scale
 @pytest.mark.parametrize('dtype', ['float32'])
 @pytest.mark.parametrize('ndims', [1, 2, 3, 4, 5])
 @with_seed()
-def test_log_masked_softmax(dtype, ndims):
+def test_masked_log_softmax(dtype, ndims):
     shape = np.random.randint(1, 5, size=ndims)
     axis = np.random.randint(0, ndims)
     mx_data = rand_ndarray(shape, dtype=dtype)
@@ -2420,7 +2420,7 @@ def test_log_masked_softmax(dtype, ndims):
     np_out = np.log(np_masked_softmax(np_data, np_mask, axis)+1e-20) * np_mask
     data = mx.sym.Variable("data")
     mask = mx.sym.Variable("mask")
-    mx_sym = mx.sym.log_masked_softmax(data=data, mask=mask, axis=axis-ndims)
+    mx_sym = mx.sym.masked_log_softmax(data=data, mask=mask, axis=axis-ndims)
     location = {"data": mx_data, "mask": mx_mask}
     rtol = 1e-2 if dtype == np.float16 else 1e-3
     atol = 1e-4 if dtype == np.float16 else 1e-5

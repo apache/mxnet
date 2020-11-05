@@ -417,18 +417,18 @@ __global__ void softmax_stride1_compute_kernel(const DType *in, OType *out, ITyp
 }
 
 template<int ndim>
-MSHADOW_XINLINE index_t mask_pos(const index_t idx, const Shape<ndim>& data_shape,
-  const Shape<ndim>& mask_shape, int axis, index_t& stride_axis) {
+MSHADOW_XINLINE index_t get_mask_position(const index_t idx, const Shape<ndim>& data_shape,
+  const Shape<ndim>& mask_shape, int axis, index_t* stride_axis) {
   index_t ret = 0;
   index_t stride = 1;
-  stride_axis = 1;
+  *stride_axis = 1;
   #pragma unroll
   for (index_t i = ndim-1, j = idx; i >=0; --i) {
     auto tmp = j / data_shape[i];
-    if (i!=axis && mask_shape[i]  != 1) {
+    if (i != axis && mask_shape[i] != 1) {
       ret += (j - tmp  * mask_shape[i]) * stride;
       if (i > axis)
-        stride_axis *= mask_shape[i];
+        *stride_axis *= mask_shape[i];
     }
     stride *= mask_shape[i];
     j = tmp;
@@ -449,7 +449,7 @@ __global__ void masked_softmax_kernel(DType *in, OType *out, IType *in_mask,
   index_t sa = stride[axis];
   index_t base = unravel_dot(blockIdx.x, sshape, stride);
   index_t sa_mask = 0;
-  index_t base_mask = mask_pos(blockIdx.x, sshape, mask_shape, axis, sa_mask);
+  index_t base_mask = get_mask_position(blockIdx.x, sshape, mask_shape, axis, &sa_mask);
   bool bcst_mask_axis = (mask_shape[axis] == 1);
   index_t x = threadIdx.x;
 
@@ -937,7 +937,7 @@ __global__ void masked_softmax_grad_kernel(OType *out, OType *ograd, DType *igra
   index_t sa = stride[axis];
   index_t base = unravel_dot(blockIdx.x, sshape, stride);
   index_t sa_mask = 0;
-  index_t base_mask = mask_pos(blockIdx.x, sshape, mask_shape, axis, sa_mask);
+  index_t base_mask = get_mask_position(blockIdx.x, sshape, mask_shape, axis, &sa_mask);
   bool bcst_mask_axis = (mask_shape[axis] == 1);
   index_t x = threadIdx.x;
 
@@ -1040,8 +1040,10 @@ inline void MaskedSoftmaxGrad(Stream<gpu> *s, OType *out, OType *ograd,
       int nblocks = (N + rows_per_block - 1) / rows_per_block;
       CHECK_LE(sizeof(DType), sizeof(LType));
       masked_softmax_stride1_grad_kernel<OP1, OP2, Req, negate, AType, LType>
-        <<<nblocks, softmax_threads_per_block, amount_shared, mshadow::Stream<gpu>::GetStream(s)>>>(
-          out, ograd, igrad, mask, M, axis, sshape, mask_shape, scale, temperature, rows_per_block, N);
+        <<<nblocks, softmax_threads_per_block, amount_shared,
+           mshadow::Stream<gpu>::GetStream(s)>>>(
+          out, ograd, igrad, mask, M, axis, sshape, mask_shape,
+          scale, temperature, rows_per_block, N);
     });
     MSHADOW_CUDA_POST_KERNEL_CHECK(masked_softmax_stride1_grad_kernel);
   } else {
@@ -1438,7 +1440,6 @@ void MaskedSoftmaxCompute(const nnvm::NodeAttrs& attrs,
     param.scale_factor.value() : 1.0;
   const double temperature = param.temperature.has_value() ?
     param.temperature.value() : 1.0;
-  //mxnet::TShape shape = AxisShapeCompact(inputs[0].shape_, &axis, true);
   bool safe_acc = dmlc::GetEnv("MXNET_SAFE_ACCUMULATION", true);
   if (!safe_acc && inputs[0].type_flag_ == mshadow::kFloat16) {
     common::LogOnce("MXNET_SAFE_ACCUMULATION=1 is recommended for masked_softmax with "

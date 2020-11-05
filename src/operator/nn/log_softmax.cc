@@ -159,9 +159,9 @@ NNVM_REGISTER_OP(_backward_log_softmax)
 .set_attr<FCompute>("FCompute<cpu>", SoftmaxGradCompute<cpu, mshadow_op::left,
                                                         mxnet_op::log_softmax_bwd>);
 
-NNVM_REGISTER_OP(log_masked_softmax)
-.add_alias("_npx_log_masked_softmax")
-.describe(R"code(Computes the log masked softmax of the input.
+NNVM_REGISTER_OP(masked_log_softmax)
+.add_alias("_npx_masked_log_softmax")
+.describe(R"code(Computes the masked log softmax of the input.
 This is equivalent to computing masked softmax followed by log.)code")
 .set_attr_parser(ParamParser<MaskedSoftmaxParam>)
 .set_attr<nnvm::FListOutputNames>("FListInputNames",
@@ -169,7 +169,7 @@ This is equivalent to computing masked softmax followed by log.)code")
     return std::vector<std::string>{"data", "mask"};
 })
 .set_attr<FCompute>("FCompute<cpu>", MaskedSoftmaxCompute<cpu, mxnet_op::log_softmax_fwd>)
-.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_log_masked_softmax"})
+.set_attr<nnvm::FGradient>("FGradient", ElemwiseGradUseInOut{"_backward_masked_log_softmax"})
 .set_attr<nnvm::FInferType>("FInferType", MaskedSoftmaxOpType)
 .set_num_inputs(2)
 .set_num_outputs(1)
@@ -182,7 +182,7 @@ This is equivalent to computing masked softmax followed by log.)code")
 .add_argument("mask", "NDArray-or-Symbol", "Mask to apply.")
 .add_arguments(MaskedSoftmaxParam::__FIELDS__());
 
-NNVM_REGISTER_OP(_backward_log_masked_softmax)
+NNVM_REGISTER_OP(_backward_masked_log_softmax)
 .set_num_inputs(4)
 .set_num_outputs(2)
 .set_attr<nnvm::FListOutputNames>("FListInputNames",

@@ -35,10 +35,10 @@ NNVM_REGISTER_OP(_backward_log_softmax)
 .set_attr<FCompute>("FCompute<gpu>", SoftmaxGradCompute<gpu, mshadow_op::left,
                                                         mxnet_op::log_softmax_bwd>);
 
-NNVM_REGISTER_OP(log_masked_softmax)
+NNVM_REGISTER_OP(masked_log_softmax)
 .set_attr<FCompute>("FCompute<gpu>", MaskedSoftmaxCompute<gpu, mxnet_op::log_softmax_fwd>);
 
-NNVM_REGISTER_OP(_backward_log_masked_softmax)
+NNVM_REGISTER_OP(_backward_masked_log_softmax)
 .set_attr<FCompute>("FCompute<gpu>", MaskedSoftmaxGradCompute<gpu, mshadow_op::left,
                                                               mxnet_op::log_softmax_bwd>);
 
