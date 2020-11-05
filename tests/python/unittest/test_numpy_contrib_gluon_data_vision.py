@@ -18,6 +18,7 @@
 import mxnet as mx
 import numpy as np
 from mxnet.test_utils import *
+import sys
 import shutil
 import tempfile
 import unittest
