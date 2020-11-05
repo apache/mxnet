@@ -58,7 +58,7 @@ def check_leak_ndarray(request):
             if element in seen:
                 return False
             seen.add(element)
-        except (TypeError, ValueError):  # unhashable
+        except (TypeError, ValueError, NotImplementedError):  # unhashable
             pass
 
         if isinstance(element, mx.nd._internal.NDArrayBase):
