@@ -232,6 +232,98 @@ backward_square(const DTypeGrad grad, const DType val) {
 }
 
 template <typename DType, typename DType2>
+__device__ inline DType div_rgrad(const DType val,
+                                  const DType2 val2) {
+  return -val / (val2 * val2);
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
+backward_clip(const DTypeGrad grad, const DType val,
+              const float a_min, const float a_max) {
+  if (val > a_max || val < a_min) {
+    return 0;
+  } else {
+    return grad;
+  }
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
+backward_reciprocal(const DTypeGrad grad, const DType val) {
+  return -grad / (val * val);
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
+backward_erf(const DTypeGrad grad, const DType val) {
+  using mixed_type = typename type_util::mixed_type<DTypeGrad, DType>::type;
+  const mixed_type v = val;
+  constexpr mixed_type my_pi = pi;
+  return 2.0f / op::sqrt(my_pi) * op::exp(-(v*v)) * grad;
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
+backward_erfinv(const DTypeGrad grad, const DType val) {
+  using mixed_type = typename type_util::mixed_type<DTypeGrad, DType>::type;
+  constexpr mixed_type my_pi = pi;
+  const mixed_type g = grad;
+  const mixed_type v = val;
+  return 0.5f * op::sqrt(my_pi) * op::exp(v * v) * g;
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
+backward_gamma(const DTypeGrad grad, const DType val) {
+  using mixed_type = typename type_util::mixed_type<DTypeGrad, DType>::type;
+  const mixed_type v = val;
+  if (type_util::is_same<DTypeGrad, double>::value) {
+    return grad * op::gamma(v) * op::special_functions::cephes::psi<double>(v);
+  } else {
+    return grad * op::gamma(v) * op::special_functions::cephes::psi<float>(v);
+  }
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
+backward_gammaln(const DTypeGrad grad, const DType val) {
+  using mixed_type = typename type_util::mixed_type<DTypeGrad, DType>::type;
+  const mixed_type v = val;
+  if (type_util::is_same<DTypeGrad, double>::value) {
+    return grad * op::special_functions::cephes::psi<double>(v);
+  } else {
+    return grad * op::special_functions::cephes::psi<float>(v);
+  }
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
+backward_digamma(const DTypeGrad grad, const DType val) {
+  using mixed_type = typename type_util::mixed_type<DTypeGrad, DType>::type;
+  const mixed_type v = val;
+  if (type_util::is_same<DTypeGrad, double>::value) {
+    return grad * op::special_functions::trigamma<double>(v);
+  } else {
+    return grad * op::special_functions::trigamma<float>(v);
+  }
+}
+
+template <typename DType, typename DTypeGrad>
+__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
+backward_gelu(const DTypeGrad grad, const DType val) {
+  return 0.5f * (grad + grad * op::erf(val / op::sqrt(2.0f)) +
+                 val * backward_erf(grad, val / op::sqrt(2.0f)) / op::sqrt(2.0f));
+}
+
+}  // namespace op
+
+)code";
+
+const char grad_function_definitions[] = R"code(
+namespace op {
+
+template <typename DType, typename DType2>
 __device__ inline typename type_util::mixed_type<DType, DType2>::type
 rdiv_grad(const DType val,
           const DType2 val2) {
@@ -244,12 +336,6 @@ div_grad(const DType val,
          const DType2 val2) {
   const typename type_util::mixed_type<DType, DType2>::type temp = val2;
   return op::reciprocal(temp);
-}
-
-template <typename DType, typename DType2>
-__device__ inline DType div_rgrad(const DType val,
-                                  const DType2 val2) {
-  return -val / (val2 * val2);
 }
 
 template <typename DType, typename DType2>
@@ -362,85 +448,6 @@ rldexp_grad(const DType val,
   return val2 * op::power(static_cast<mixed_type>(2), val) * op::log(static_cast<mixed_type>(2));
 }
 
-template <typename DType, typename DTypeGrad>
-__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
-backward_clip(const DTypeGrad grad, const DType val,
-              const float a_min, const float a_max) {
-  if (val > a_max || val < a_min) {
-    return 0;
-  } else {
-    return grad;
-  }
-}
-
-template <typename DType, typename DTypeGrad>
-__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
-backward_reciprocal(const DTypeGrad grad, const DType val) {
-  return -grad / (val * val);
-}
-
-template <typename DType, typename DTypeGrad>
-__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
-backward_erf(const DTypeGrad grad, const DType val) {
-  using mixed_type = typename type_util::mixed_type<DTypeGrad, DType>::type;
-  const mixed_type v = val;
-  constexpr mixed_type my_pi = pi;
-  return 2.0f / op::sqrt(my_pi) * op::exp(-(v*v)) * grad;
-}
-
-template <typename DType, typename DTypeGrad>
-__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
-backward_erfinv(const DTypeGrad grad, const DType val) {
-  using mixed_type = typename type_util::mixed_type<DTypeGrad, DType>::type;
-  constexpr mixed_type my_pi = pi;
-  const mixed_type g = grad;
-  const mixed_type v = val;
-  return 0.5f * op::sqrt(my_pi) * op::exp(v * v) * g;
-}
-
-template <typename DType, typename DTypeGrad>
-__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
-backward_gamma(const DTypeGrad grad, const DType val) {
-  using mixed_type = typename type_util::mixed_type<DTypeGrad, DType>::type;
-  const mixed_type v = val;
-  if (type_util::is_same<DTypeGrad, double>::value) {
-    return grad * op::gamma(v) * op::special_functions::cephes::psi<double>(v);
-  } else {
-    return grad * op::gamma(v) * op::special_functions::cephes::psi<float>(v);
-  }
-}
-
-template <typename DType, typename DTypeGrad>
-__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
-backward_gammaln(const DTypeGrad grad, const DType val) {
-  using mixed_type = typename type_util::mixed_type<DTypeGrad, DType>::type;
-  const mixed_type v = val;
-  if (type_util::is_same<DTypeGrad, double>::value) {
-    return grad * op::special_functions::cephes::psi<double>(v);
-  } else {
-    return grad * op::special_functions::cephes::psi<float>(v);
-  }
-}
-
-template <typename DType, typename DTypeGrad>
-__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
-backward_digamma(const DTypeGrad grad, const DType val) {
-  using mixed_type = typename type_util::mixed_type<DTypeGrad, DType>::type;
-  const mixed_type v = val;
-  if (type_util::is_same<DTypeGrad, double>::value) {
-    return grad * op::special_functions::trigamma<double>(v);
-  } else {
-    return grad * op::special_functions::trigamma<float>(v);
-  }
-}
-
-template <typename DType, typename DTypeGrad>
-__device__ inline typename type_util::mixed_type<DTypeGrad, DType>::type
-backward_gelu(const DTypeGrad grad, const DType val) {
-  return 0.5f * (grad + grad * op::erf(val / op::sqrt(2.0f)) +
-                 val * backward_erf(grad, val / op::sqrt(2.0f)) / op::sqrt(2.0f));
-}
-
 template <typename DType, typename DType2>
 __device__ inline DType smooth_l1_grad(const DType val, const DType2 scalar) {
   auto bsq = scalar * scalar;
@@ -534,7 +541,6 @@ gamma_implicit_grad(const DType a_in, const DType2 x_in) {
 }
 
 }  // namespace op
-
 )code";
 
 }  // namespace rtc

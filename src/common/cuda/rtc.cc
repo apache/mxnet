@@ -123,7 +123,9 @@ CUfunction get_function(const std::string &parameters,
         function_definitions_binary + "\n" +
         function_definitions_unary + "\n" +
         backward_function_definitions + "\n" +
-        reducer + "\n";
+        grad_function_definitions + "\n" +
+        reducer + "\n" +
+        logic_reducer + "\n";
     std::string code_with_header = common_header + parameters + code;
     // If verbose mode, output kernel source, though not including the common header
     if (dmlc::GetEnv("MXNET_RTC_VERBOSE", false)) {
