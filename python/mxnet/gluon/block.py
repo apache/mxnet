@@ -1104,7 +1104,7 @@ class HybridBlock(Block):
             self._build_cache(*args)
         if self._partition_if_dynamic:
             # partition static shape ops if the graph contains any dynamic shape op
-            data, out = self._cached_graph
+            _, out = self._cached_graph
             is_dynamic = out._check_dynamic_shape_op()
             if is_dynamic:
                 self._backend = 'static_shape'
