@@ -798,7 +798,7 @@ def test_quantized_bn():
                                                                          quantize_mode='full',
                                                                          calib_mode='naive',
                                                                          calib_data=calib_data,
-                                                                         num_calib_examples=20)
+                                                                         num_calib_batches=1)
 
         sym_block = mx.gluon.SymbolBlock(outputs=qsym, inputs=data_sym)
         params = qarg_params
@@ -983,7 +983,7 @@ def test_quantize_model():
                                                                              quantized_dtype=qdtype,
                                                                              calib_mode='naive',
                                                                              calib_data=calib_data,
-                                                                             num_calib_examples=20,
+                                                                             num_calib_batches=1,
                                                                              quantize_mode='full')
             check_params(arg_params, qarg_params, qsym)
             check_params(aux_params, qaux_params)
@@ -1019,15 +1019,15 @@ def test_quantize_model():
                       mx.nd.random.uniform(shape=dshape)]
         calib_data = mx.gluon.data.DataLoader(mx.gluon.data.ArrayDataset(*calib_data), batch_size=4)
         qsym, qarg_params, qaux_params = mx.contrib.quant.quantize_model(sym=sym,
-                                                                            arg_params=arg_params,
-                                                                            aux_params=aux_params,
-                                                                            ctx=mx.current_context(),
-                                                                            quantized_dtype=qdtype,
-                                                                            calib_mode='naive',
-                                                                            calib_data=calib_data,
-                                                                            data_names=["data1","data2"],
-                                                                            num_calib_examples=20,
-                                                                            quantize_mode='full')
+                                                                         arg_params=arg_params,
+                                                                         aux_params=aux_params,
+                                                                         ctx=mx.current_context(),
+                                                                         quantized_dtype=qdtype,
+                                                                         calib_mode='naive',
+                                                                         calib_data=calib_data,
+                                                                         data_names=["data1","data2"],
+                                                                         num_calib_batches=1,
+                                                                         quantize_mode='full')
         check_params(arg_params, qarg_params, qsym)
         check_params(aux_params, qaux_params)
         check_qsym_calibrated(qsym)
@@ -1055,7 +1055,7 @@ def test_quantize_gluon_with_forward():
         excluded_names_match = []
         if mx.current_context() == mx.gpu():
             excluded_names_match += ['activation', 'relu', 'conv0']
-        num_calib_examples = 5
+        num_calib_batches = 1
 
         random_data = mx.random.uniform(shape=data_shape)
         calib_data = mx.gluon.data.DataLoader(random_data, batch_size=batch_size)
@@ -1076,7 +1076,7 @@ def test_quantize_gluon_with_forward():
                                                                      exclude_layers_match=excluded_names_match,
                                                                      calib_data=calib_data,
                                                                      calib_mode=mode,
-                                                                     num_calib_examples=num_calib_examples,
+                                                                     num_calib_batches=num_calib_batches,
                                                                      ctx=mx.current_context())
 
             quantized_resnet18_v1.hybridize(static_alloc=True, static_shape=True)

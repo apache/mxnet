@@ -245,7 +245,7 @@ if __name__ == '__main__':
                                           transforms.Normalize(mean=rgb_mean, std=rgb_std)])
         data_loader = DataLoader(dataset.transform_first(transformer), batch_size, shuffle=args.shuffle_dataset, num_workers=data_nthreads)
         qsym = quantize_net_v2(net, ctx=ctx, exclude_layers_match=excluded_sym_names,
-                        calib_mode=calib_mode, calib_data=data_loader, num_calib_examples=num_calib_batches*batch_size,
+                        calib_mode=calib_mode, calib_data=data_loader, num_calib_batches=num_calib_batches,
                         quantized_dtype=args.quantized_dtype, logger=logger)
         if calib_mode == 'entropy':
             suffix = '-quantized-%dbatches-entropy' % num_calib_batches

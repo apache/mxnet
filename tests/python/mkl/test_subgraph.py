@@ -171,7 +171,7 @@ def check_quantize(sym, data_shape, out_type, name='conv',
                                                                     calib_mode='naive',
                                                                     calib_data=calib_data,
                                                                     label_names=None,
-                                                                    num_calib_examples=1,
+                                                                    num_calib_batches=1,
                                                                     quantize_mode='full',
                                                                     quantize_granularity=quantize_granularity)
     qsym = qsym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
@@ -213,7 +213,7 @@ def test_quantize_whole_model_with_forward(qdtype):
                                                    quantized_dtype=qdtype,
                                                    calib_mode='naive',
                                                    calib_data=calib_data,
-                                                   num_calib_examples=1,
+                                                   num_calib_batches=1,
                                                    quantize_mode='full')
 
     outputs = qsym(in_data)
@@ -903,7 +903,7 @@ def test_quantized_conv_bias_overflow(data_min, data_max, weight_min, weight_max
                                                                    calib_mode='naive',
                                                                    calib_data=calib_data,
                                                                    label_names=None,
-                                                                   num_calib_examples=1,
+                                                                   num_calib_batches=1,
                                                                    quantize_mode='full')
   qsym = qsym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)
   qarg_params['data'] = data_nd
@@ -952,7 +952,7 @@ def test_quantized_fc_bias_overflow(data_min, data_max, weight_min, weight_max):
                                                                    calib_mode='naive',
                                                                    calib_data=calib_data,
                                                                    label_names=None,
-                                                                   num_calib_examples=1,
+                                                                   num_calib_batches=1,
                                                                    quantize_mode='full')
   qarg_params['data'] = data_nd
   qsym = qsym.optimize_for(QUANTIZE_SG_PASS_NAME, dedup_subgraph=True, skip_infer=True)

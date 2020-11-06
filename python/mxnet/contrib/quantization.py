@@ -256,45 +256,42 @@ def _calibrate_quantized_sym(qsym, th_dict):
     return Symbol(calibrated_sym)
 
 
-def _collect_layer_statistics(sym_block, data, collector, num_inputs, max_num_examples=None, logger=None):
+def _collect_layer_statistics(sym_block, data, collector, num_inputs, num_calib_batches=None, logger=None):
     if not isinstance(data, mx.gluon.data.DataLoader):
         raise ValueError('Only supports data as a type of DataLoader, while received type %s'
                          % str(type(data)))
     sym_block.register_op_hook(collector.collect, monitor_all=True)
     num_batches = 0
-    num_examples = 0
     for batch in data:
         if not isinstance(batch, list):
             batch = [batch]
         batch = [b.as_in_context(mx.cpu()) for b in batch]
         sym_block(*batch[:num_inputs])
         num_batches += 1
-        num_examples += data._batch_sampler._batch_size
-        if max_num_examples is not None and num_examples >= max_num_examples:
+        if num_calib_batches is not None and num_batches >= num_calib_batches:
             break
     if logger is not None:
-        logger.info("Collected statistics from %d batches with batch_size=%d"
-                    % (num_batches, data._batch_sampler._batch_size))
-    return num_examples
+        logger.info("Collected statistics from %d batches" % (num_batches))
+    return num_batches
 
 
-def _collect_layer_output_min_max(sym_block, data, quantized_dtype, include_layer=None,
-                                  max_num_examples=None, logger=None):
+def _collect_layer_output_min_max(sym_block, data, quantized_dtype, num_inputs,
+                                  include_layer=None, num_calib_batches=None, logger=None):
     """Collect min and max values from layer outputs and save them in
     a dictionary mapped by layer names.
     """
     collector = _LayerOutputMinMaxCollector(quantized_dtype=quantized_dtype,
                                             include_layer=include_layer, logger=logger)
-    num_examples = _collect_layer_statistics(sym_block, data, collector, max_num_examples, logger)
-    return collector.min_max_dict, num_examples
+    num_batches = _collect_layer_statistics(sym_block, data, collector, num_inputs, num_calib_batches, logger)
+    return collector.min_max_dict, num_batches
 
 
-def _collect_layer_histogram(sym_block, data, include_layer=None,
-                             max_num_examples=None, logger=None):
+def _collect_layer_histogram(sym_block, data, num_inputs, include_layer=None,
+                             num_calib_batches=None, logger=None):
     """Collect layer outputs and save them in a dictionary mapped by layer names."""
     collector = _LayerHistogramCollector(include_layer=include_layer, logger=logger)
-    num_examples = _collect_layer_statistics(sym_block, data, collector, max_num_examples, logger)
-    return collector.hist_dict, num_examples
+    num_batches = _collect_layer_statistics(sym_block, data, collector, num_inputs, num_calib_batches, logger)
+    return collector.hist_dict, num_batches
 
 
 # pylint: disable=line-too-long
@@ -364,7 +361,7 @@ def _generate_list_of_data_desc(data_shapes, data_types):
 def quantize_model(sym, arg_params, aux_params,
                    data_names=('data',), label_names=('softmax_label',),
                    ctx=cpu(), excluded_sym_names=None, excluded_op_names=None, calib_mode='entropy',
-                   calib_data=None, num_calib_examples=None,
+                   calib_data=None, num_calib_batches=None,
                    quantized_dtype='int8', quantize_mode='smart',
                    quantize_granularity='tensor-wise', logger=None):
     """User-level API for generating a quantized model from a FP32 model w/ or w/o calibration.
@@ -411,8 +408,8 @@ def quantize_model(sym, arg_params, aux_params,
         quantized layer outputs is minimized based upon the calibration dataset.
     calib_data : DataLoader
         A DataLoader initialized by the calibration dataset.
-    num_calib_examples : int or None
-        The maximum number of examples that user would like to use for calibration. If not provided,
+    num_calib_batches : int or None
+        The maximum number of batches that user would like to use for calibration. If not provided,
         the whole calibration dataset will be used.
     quantized_dtype : str
         The quantized destination type for input data. Currently support 'int8', 'uint8' and 'auto'.
@@ -480,23 +477,23 @@ def quantize_model(sym, arg_params, aux_params,
         sym_block.load_dict(param_dict)
 
         if calib_mode == 'entropy':
-            hist_dict, num_examples = _collect_layer_histogram(sym_block, calib_data,
-                                                               include_layer=calib_layers,
-                                                               max_num_examples=num_calib_examples,
-                                                               logger=logger)
+            hist_dict, num_batches = _collect_layer_histogram(sym_block, calib_data, len(inputs),
+                                                              include_layer=calib_layers,
+                                                              num_calib_batches=num_calib_batches,
+                                                              logger=logger)
             if logger:
-                logger.info('Collected layer outputs from FP32 model using %d examples' % num_examples)
+                logger.info('Collected layer outputs from FP32 model using %d batches' % num_batches)
                 logger.info('Calculating optimal thresholds for quantization')
             th_dict = _get_optimal_thresholds(hist_dict, quantized_dtype, logger=logger)
         elif calib_mode == 'naive':
-            th_dict, num_examples = _collect_layer_output_min_max(
+            th_dict, num_batches = _collect_layer_output_min_max(
                                         sym_block, calib_data, quantized_dtype,
-                                        include_layer=calib_layers,
-                                        max_num_examples=num_calib_examples,
+                                        len(inputs), include_layer=calib_layers,
+                                        num_calib_batches=num_calib_batches,
                                         logger=logger)
             if logger:
-                logger.info('Collected layer output min/max values from FP32 model using %d examples'
-                            % num_examples)
+                logger.info('Collected layer output min/max values from FP32 model using %d batches'
+                            % num_batches)
         else:
             raise ValueError('unknown calibration mode %s received,'
                              ' expected `none`, `naive`, or `entropy`' % calib_mode)
@@ -511,7 +508,7 @@ def quantize_model(sym, arg_params, aux_params,
 def quantize_model_mkldnn(sym, arg_params, aux_params,
                           data_names=('data',), label_names=('softmax_label',),
                           ctx=cpu(), excluded_sym_names=None, excluded_op_names=None,
-                          calib_mode='entropy', calib_data=None, num_calib_examples=None,
+                          calib_mode='entropy', calib_data=None, num_calib_batches=None,
                           quantized_dtype='int8', quantize_mode='smart',
                           quantize_granularity='tensor-wise', logger=None):
     """User-level API for generating a fusion + quantized model from a FP32 model
@@ -542,7 +539,7 @@ def quantize_model_mkldnn(sym, arg_params, aux_params,
                                                    ctx=ctx, excluded_sym_names=excluded_sym_names,
                                                    excluded_op_names=excluded_op_names,
                                                    calib_mode=calib_mode, calib_data=calib_data,
-                                                   num_calib_examples=num_calib_examples,
+                                                   num_calib_batches=num_calib_batches,
                                                    quantized_dtype=quantized_dtype, quantize_mode=quantize_mode,
                                                    quantize_granularity=quantize_granularity, logger=logger)
 
@@ -726,7 +723,7 @@ def calib_graph(qsym, arg_params, aux_params, collector,
 def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quantize_granularity='tensor-wise',
                     exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
                     calib_data=None, data_shapes=None, calib_mode='none',
-                    num_calib_examples=None, ctx=cpu(), LayerOutputCollector=None, logger=None):
+                    num_calib_batches=None, ctx=cpu(), LayerOutputCollector=None, logger=None):
     """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
     The backend quantized operators are only enabled for Linux systems. Please do not run
     inference using the quantized models on Windows for now.
@@ -768,8 +765,8 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
         If calib_mode='entropy' (default mode), the thresholds for quantization will be
         derived such that the KL divergence between the distributions of FP32 layer outputs and
         quantized layer outputs is minimized based upon the calibration dataset.
-    num_calib_examples : int or None
-        The maximum number of examples that user would like to use for calibration. If not provided,
+    num_calib_batches : int or None
+        The maximum number of batches that user would like to use for calibration. If not provided,
         the whole calibration dataset will be used.
     ctx : Context
         Defines the device that users want to run forward propagation on the calibration
@@ -883,12 +880,12 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
             calib_net = SymbolBlock(symnet, inputs)
             calib_net.load_dict(params, cast_dtype=True, dtype_source='saved')
             calib_net.hybridize(static_alloc=False, static_shape=False)
-            num_examples = _collect_layer_statistics(calib_net, calib_data, collector, num_inputs,
-                                                     num_calib_examples, logger)
+            num_batches = _collect_layer_statistics(calib_net, calib_data, collector, num_inputs,
+                                                     num_calib_batches, logger)
 
             if logger:
-                logger.info('Collected layer output values from FP32 model using %d examples'
-                            % num_examples)
+                logger.info('Collected layer output values from FP32 model using %d batches'
+                            % num_batches)
             qsym, qarg_params, aux_params = calib_graph(
                 qsym=qsym, arg_params=args, aux_params=auxs, collector=collector,
                 calib_mode=calib_mode, quantized_dtype=quantized_dtype, logger=logger)
@@ -908,7 +905,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
 def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
                  exclude_layers=None, exclude_layers_match=None, exclude_operators=None,
                  calib_data=None, data_shapes=None, calib_mode='none',
-                 num_calib_examples=None, ctx=cpu(), logger=None):
+                 num_calib_batches=None, ctx=cpu(), logger=None):
     """User-level API for Gluon users to generate a quantized SymbolBlock from a FP32 HybridBlock w/ or w/o calibration.
        Will be deprecated after MXNet 2.0, please use quantize_net_v2.
     """
@@ -920,5 +917,5 @@ def quantize_net(network, quantized_dtype='auto', quantize_mode='full',
                            exclude_layers_match=exclude_layers_match,
                            exclude_operators=exclude_operators,
                            calib_data=calib_data, data_shapes=data_shapes,
-                           calib_mode=calib_mode, num_calib_examples=num_calib_examples,
+                           calib_mode=calib_mode, num_calib_batches=num_calib_batches,
                            ctx=ctx, LayerOutputCollector=None, logger=logger)
