@@ -1680,6 +1680,7 @@ class Symbol(SymbolBase):
             else:
                 warnings.warn('A param was deleted during optimization, but no args dictionary was provided.\n' +
                               'Please ensure that your model weights match the newly optimized model.')
+
         return new_sym
 
     # pylint: disable=too-many-locals

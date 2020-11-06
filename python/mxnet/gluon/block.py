@@ -913,6 +913,7 @@ class HybridBlock(Block):
         self._backend = None
         self._backend_opts = {}
         self._partition_if_dynamic = True
+        self._first_forward = True
 
     def __setattr__(self, name, value):
         """Registers parameters."""
@@ -1029,7 +1030,6 @@ class HybridBlock(Block):
                     params[name]._finish_deferred_init()
 
         arg_dict, aux_dict = dict(), dict()
-
         if self._backend:
             ctx = args[0].context
             # get list of params in the order of out.list_arguments
@@ -1101,7 +1101,9 @@ class HybridBlock(Block):
     def _call_cached_op(self, *args):
         if self._cached_op is None:
             self._build_cache(*args)
-        if self._partition_if_dynamic:
+
+        if self._first_forward and self._partition_if_dynamic:
+            self._first_forward = False
             # partition static shape ops if the graph contains any dynamic shape op
             _, out = self._cached_graph
             is_dynamic = out._check_dynamic_shape_op()
@@ -1213,9 +1215,12 @@ class HybridBlock(Block):
                                 " https://github.com/apache/incubator-mxnet."
         # do not actually call the cached_op
 
+        self._first_forward = True
+
     def _clear_cached_op(self):
         self._cached_graph = ()
         self._cached_op = None
+        self._first_forward = True
 
     def register_child(self, block, name=None):
         if not isinstance(block, HybridBlock):
