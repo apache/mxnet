@@ -253,9 +253,6 @@ __global__ void reduce_kernel_multi(const int N, const int M,
 )code";
 
 const char reduce_lines_kernel_code[] = R"code(
-using MixedType = typename type_util::mixed_type<InputType0, OutputType0>::type;
-using AType = typename AccType<MixedType>::type;
-
 __launch_bounds__(kRTCMaxThreadsPerBlock)
 __global__ void reduce_lines_kernel(const index_t N, const index_t M,
                                     const index_t small_in_stride,
@@ -385,7 +382,7 @@ void RTCReduceImpl(Stream<gpu> *s, const TBlob& small, const bool addto,
     args.emplace_back(&small_dptr);
     args.emplace_back(&small.dptr_);
 
-    auto reduce_lines_kernel_func = get_function(code,
+    auto reduce_lines_kernel_func = get_function(code + function_code,
                                                  "reduce_lines_kernel",
                                                  reduce_lines_kernel_code,
                                                  dev_id);
