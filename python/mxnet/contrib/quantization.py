@@ -794,10 +794,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
     if ctx == mx.cpu():
         backend = 'MKLDNN_QUANTIZE'
 
-    network.hybridize(static_alloc=False, static_shape=False,
-                      backend=backend,
-                      backend_opts={'dedup_subgraph': True, 'skip_infer': True})
-
+    network.hybridize(static_alloc=False, static_shape=False)
     data_types = None
     if data_shapes is None:
         if calib_data is None:
@@ -844,6 +841,7 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
             break
 
     symnet, params = network.export(None)
+    symnet = symnet.optimize_for(backend=backend)
 
     args, auxs = dict(), dict()
     for k, v in params.items():
@@ -882,8 +880,12 @@ def quantize_net_v2(network, quantized_dtype='auto', quantize_mode='full', quant
                 'calib_data must be provided when calib_mode=%s' % calib_mode)
         if calib_mode in ['naive', 'entropy', 'customize']:
             inputs = [mx.sym.var(desc.name) for desc in data_descs]
-            num_examples = _collect_layer_statistics(network, calib_data, collector, num_inputs,
+            calib_net = SymbolBlock(symnet, inputs)
+            calib_net.load_dict(params, cast_dtype=True, dtype_source='saved')
+            calib_net.hybridize(static_alloc=False, static_shape=False)
+            num_examples = _collect_layer_statistics(calib_net, calib_data, collector, num_inputs,
                                                      num_calib_examples, logger)
+
             if logger:
                 logger.info('Collected layer output values from FP32 model using %d examples'
                             % num_examples)
