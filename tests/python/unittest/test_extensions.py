@@ -28,8 +28,8 @@ from mxnet.test_utils import download, is_cd_run, assert_almost_equal, default_c
 import pytest
 
 base_path = os.path.join(os.path.dirname(__file__), "../../..")
-def check_platform():
-    return platform.machine() not in ['x86_64', 'AMD64']
+def check_platform(supported_platforms=['x86_64', 'AMD64']):
+    return platform.machine() not in supported_platforms
 
 @pytest.mark.skipif(check_platform(), reason="not all machine types supported")
 @pytest.mark.skipif(is_cd_run(), reason="continuous delivery run - ignoring test")
@@ -179,3 +179,24 @@ def test_subgraph():
     out5 = sym_block3(a_data, b_data)
     # check that result matches one executed by MXNet
     assert_almost_equal(out[0].asnumpy(), out5[0].asnumpy(), rtol=1e-3, atol=1e-3)
+
+@pytest.mark.skipif(check_platform(['x86_64']), reason="not all machine types supported")
+@pytest.mark.skipif(is_cd_run(), reason="continuous delivery run - ignoring test")
+def test_external_op():
+    # check if operator already exists
+    if hasattr(mx.nd, 'min_ex'):
+        raise MXNetError('Operator already loaded')
+
+    lib = 'libexternal_lib.so'
+    fname = os.path.join(base_path,'example/extensions/lib_external_ops/build/'+lib)
+    if not os.path.exists(fname):
+        raise MXNetError("library %s not found " % lib)
+
+    fname = os.path.abspath(fname)
+    mx.library.load(fname, False)
+
+    # execute operator
+    try:
+        mx.nd.min_ex()
+    except:
+        raise MXNetError('Operator not loaded successfully')
