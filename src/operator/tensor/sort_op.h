@@ -29,6 +29,7 @@
 #include <mshadow/tensor.h>
 #include <vector>
 #include <type_traits>
+#include "./init_op.h"
 
 namespace mxnet {
 
@@ -58,6 +59,7 @@ template<typename KDType, typename VDType>
 inline void SortByKey(mshadow::Tensor<cpu, 1, KDType> keys, mshadow::Tensor<cpu, 1, VDType> values,
                       bool is_ascend = true, mshadow::Tensor<cpu, 1, char>* workspace = nullptr,
                       const int begin_bit = 0, const int end_bit = sizeof(KDType)*8,
+                      const int batch_size = 1,
                       mshadow::Tensor<cpu, 1, KDType>* sorted_keys = nullptr,
                       mshadow::Tensor<cpu, 1, VDType>* sorted_values = nullptr) {
   CHECK_EQ(keys.CheckContiguous(), true);
@@ -123,16 +125,19 @@ SortByKeyWorkspaceSize(const size_t num_keys,
  * \param end_bit The ending bit of the different values in keys. Default to 8 * sizeof(dtype of key).
  * \param sorted_keys If specified, keys will be sorted out of place.
  * \param sorted_values If specified, values will be sorted out of place.
- */
+ * \param batch_size number of segments to sort
+*/
 template<typename KDType, typename VDType>
 inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu, 1, VDType> values,
                       bool is_ascend = true, mshadow::Tensor<gpu, 1, char>* workspace = nullptr,
                       const int begin_bit = 0, const int end_bit = sizeof(KDType)*8,
+                      const int batch_size = 1,
                       mshadow::Tensor<gpu, 1, KDType>* sorted_keys = nullptr,
                       mshadow::Tensor<gpu, 1, VDType>* sorted_values = nullptr);
 /*!
  * \brief CPU/GPU: Return the amount of temporary storage in bytes required for SortByKey
  * \param num_keys number of keys to sort
+ * \param batch_size number of segments to sort
  * \param keys_in_place Whether the sorting of keys will happen in place.
  *                      Default true. If set to false, subsequent
  *                      call to SortByKey needs to specify the
@@ -145,6 +150,7 @@ inline void SortByKey(mshadow::Tensor<gpu, 1, KDType> keys, mshadow::Tensor<gpu,
 template <typename KDType, typename VDType, typename xpu>
 inline typename std::enable_if<std::is_same<xpu, gpu>::value, size_t>::type
 SortByKeyWorkspaceSize(const size_t num_keys,
+                       const size_t batch_size = 1,
                        const bool keys_in_place = true,
                        const bool values_in_place = true);
 
