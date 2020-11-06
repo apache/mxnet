@@ -36,6 +36,8 @@
 #include "../tensor/broadcast_reduce_op.h"
 #include "../../common/cuda/utils.h"
 
+using mshadow::red::limits::MinValue;
+
 namespace mxnet {
 namespace op {
 namespace mxnet_op {
@@ -161,23 +163,48 @@ inline void Softmax(Stream<cpu> *s, DType *in, OType *out, IType *length,
   }
 }
 
+struct masked_softmax_where_scale {
+  template<typename DType, typename IType, int ndim>
+  MSHADOW_XINLINE static void Map(index_t id, DType* out, const IType* cond,
+                                  const DType* x, const double y,
+                                  Shape<ndim> data_shape, Shape<ndim> mask_shape,
+                                  const double scale) {
+    index_t mask_pos = 0;
+    index_t stride = 1;
+    for (index_t i = ndim-1, j = id; i >=0; --i) {
+      auto tmp = j / data_shape[i];
+      if (mask_shape[i] != 1) {
+        mask_pos += (j - tmp  * mask_shape[i]) * stride;
+      }
+      stride *= mask_shape[i];
+      j = tmp;
+    }
+    KERNEL_ASSIGN(out[id], kWriteTo, (cond[mask_pos] ? x[id] / static_cast<DType>(scale) :
+                                                       static_cast<DType>(y)));
+  }
+};
+
 template<typename OP, bool negate, typename AType, typename DType,
          typename OType, typename IType, int ndim>
 inline void MaskedSoftmax(Stream<cpu> *s, DType *in, OType *out, IType *mask,
                           Shape<ndim> data_shape, Shape<ndim> mask_shape,
                           int axis, const double scale,
-                          const double temperature, bool normalize) {
-  common::LogOnce("masked_softmax is not supported on CPU");
-  return;
-}
-template<typename OP1, typename OP2, int Req, bool negate, typename AType, int ndim,
-         typename DType, typename OType, typename IType>
-inline void MaskedSoftmaxGrad(Stream<cpu> *s, OType *out, OType *ograd,
-                              DType *igrad, IType *mask, Shape<ndim> shape,
-                              Shape<ndim> mask_shape, int axis,
-                              const double scale, const double temperature) {
-  common::LogOnce("masked_softmax is not supported on CPU");
-  return;
+                          const double temperature, bool normalize,
+                          const OpContext& ctx) {
+  Tensor<cpu, 1, DType> workspace = ctx.requested[0].get_space_typed<cpu, 1, DType>(
+      Shape1(data_shape.Size()), s);
+  DType* masked_scaled_input = TBlob(workspace).dptr<DType>();
+
+  double neg = MinValue<DType>();
+  Kernel<masked_softmax_where_scale, cpu>::Launch(s, data_shape.Size(), masked_scaled_input,
+                                                  mask, in, neg, data_shape, mask_shape,
+                                                  scale);
+  IType* max_lenghts = nullptr;
+  Softmax<OP, negate, AType, DType>(s, masked_scaled_input, out, max_lenghts,
+                                    data_shape, axis, temperature);
+  Kernel<masked_softmax_where_scale, cpu>::Launch(s, data_shape.Size(), out,
+                                                  mask, out, 0.0, data_shape, mask_shape,
+                                                  1.0);
 }
 
 struct softmax_bwd {
@@ -277,6 +304,28 @@ inline void SoftmaxGrad(Stream<cpu> *s, OType *out, OType *ograd,
   }
 }
 
+template<typename OP1, typename OP2, int Req, bool negate, typename AType, int ndim,
+         typename DType, typename OType, typename IType>
+inline void MaskedSoftmaxGrad(Stream<cpu> *s, OType *out, OType *ograd,
+                              DType *igrad, IType *mask, Shape<ndim> data_shape,
+                              Shape<ndim> mask_shape, int axis,
+                              const double scale, const double temperature,
+                              const OpContext& ctx) {
+  Tensor<cpu, 1, OType> workspace = ctx.requested[0].get_space_typed<cpu, 1, OType>(
+    Shape1(data_shape.Size()), s);
+  OType* masked_ograd = TBlob(workspace).dptr<OType>();
+  Kernel<masked_softmax_where_scale, cpu>::Launch(s, data_shape.Size(), masked_ograd,
+                                                  mask, ograd, 0.0, data_shape, mask_shape,
+                                                  1.0);
+  IType* max_lenghts = nullptr;
+  SoftmaxGrad<OP1, OP2, Req, negate, AType, DType, OType, IType, ndim>(
+      s, out, masked_ograd, igrad,
+      max_lenghts, data_shape,
+      axis, temperature);
+  Kernel<masked_softmax_where_scale, cpu>::Launch(s, data_shape.Size(), igrad,
+                                                  mask, igrad, 0.0, data_shape, mask_shape,
+                                                  scale);
+}
 
 #ifdef __CUDACC__
 template<int x_bits, typename OP, bool negate, typename AType, int ndim,
@@ -654,7 +703,7 @@ template<typename OP, bool negate, typename AType, typename DType,
 inline void MaskedSoftmax(Stream<gpu> *s, DType *in, OType *out, IType *mask,
                           Shape<ndim> data_shape, Shape<ndim> mask_shape,
                           int axis, const double scale, const double temperature,
-                          bool normalize) {
+                          bool normalize, const OpContext& ctx) {
   const int x_bits = 7;
   const int x_size = 1 << x_bits;
   index_t M = data_shape[axis];
@@ -957,14 +1006,13 @@ __global__ void masked_softmax_grad_kernel(OType *out, OType *ograd, DType *igra
   AType temperature_scale = static_cast<AType>(temperature) *
                             static_cast<AType>(scale);
   for (index_t i = x; i < M; i += x_size) {
-     IType mask_value = bcst_mask_axis ? in_mask[base_mask] : in_mask[base_mask + i*sa_mask];
+    IType mask_value = bcst_mask_axis ? in_mask[base_mask] : in_mask[base_mask + i*sa_mask];
     final_result =
       negate ?
       -OP2::Map(ograd[base + i*sa], out[base + i*sa], ssum):
       OP2::Map(ograd[base + i*sa], out[base + i*sa], ssum);
-    final_result = mask_value ? final_result : DType(0.0f);
-    final_result = mask_value ? final_result : DType(0.0f);
-    KERNEL_ASSIGN(igrad[base + i*sa], Req, final_result /static_cast<DType>(temperature_scale));
+    final_result = mask_value ? final_result / static_cast<DType>(temperature_scale) : DType(0.0f);
+    KERNEL_ASSIGN(igrad[base + i*sa], Req, final_result);
   }
 }
 
@@ -1009,12 +1057,14 @@ inline void SoftmaxGrad(Stream<gpu> *s, OType *out, OType *ograd,
     MSHADOW_CUDA_POST_KERNEL_CHECK(softmax_grad_kernel);
   }
 }
+
 template<typename OP1, typename OP2, int Req, bool negate, typename AType, int ndim,
          typename DType, typename OType, typename IType>
 inline void MaskedSoftmaxGrad(Stream<gpu> *s, OType *out, OType *ograd,
                               DType *igrad, IType *mask, Shape<ndim> data_shape,
                               Shape<ndim> mask_shape, int axis,
-                              const double scale, const double temperature) {
+                              const double scale, const double temperature,
+                              const OpContext& ctx) {
   const int x_bits = 7;
   const int x_size = 1 << x_bits;
   index_t M = data_shape[axis];
@@ -1458,13 +1508,13 @@ void MaskedSoftmaxCompute(const nnvm::NodeAttrs& attrs,
               ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
               outputs[0].dptr<OType>(), mask_ptr,
               inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
-              axis, scale, temperature, param.normalize.value());
+              axis, scale, temperature, param.normalize.value(), ctx);
           } else {
             MaskedSoftmax<OP, negate, DType>(
               ctx.get_stream<xpu>(), inputs[0].dptr<DType>(),
               outputs[0].dptr<OType>(), mask_ptr,
               inputs[0].shape_.get<ndim>(), inputs[1].shape_.get<ndim>(),
-              axis, scale, temperature, param.normalize.value());
+              axis, scale, temperature, param.normalize.value(), ctx);
           }
         });
       });
@@ -1582,14 +1632,14 @@ void MaskedSoftmaxGradCompute(const nnvm::NodeAttrs& attrs,
                   ograd_ptr, grad_data, mask_ptr,
                   inputs[1].shape_.get<ndim>(), inputs[2].shape_.get<ndim>(),
                   axis, static_cast<DType>(scale),
-                  static_cast<DType>(temperature));
+                  static_cast<DType>(temperature), ctx);
             } else {
               MaskedSoftmaxGrad<OP1, OP2, Req, negate, DType>(
                   ctx.get_stream<xpu>(), out_ptr,
                   ograd_ptr, grad_data, mask_ptr,
                   inputs[1].shape_.get<ndim>(), inputs[2].shape_.get<ndim>(),
                   axis, static_cast<DType>(scale),
-                  static_cast<DType>(temperature));
+                  static_cast<DType>(temperature), ctx);
             }
           });
         });

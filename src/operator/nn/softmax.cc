@@ -191,7 +191,7 @@ NNVM_REGISTER_OP(_backward_softmax)
 
 NNVM_REGISTER_OP(masked_softmax)
 .add_alias("_npx_masked_softmax")
-.describe(R"code(Applies the softmax function and the mask provided)code" ADD_FILELINE)
+.describe(R"code(Applies the softmax function masking elements according to the mask provided)code" ADD_FILELINE)
 .set_attr_parser(ParamParser<MaskedSoftmaxParam>)
 .set_attr<nnvm::FListOutputNames>("FListInputNames",
     [](const NodeAttrs& attrs){
@@ -207,6 +207,10 @@ NNVM_REGISTER_OP(masked_softmax)
 .set_num_inputs(2)
 .set_num_outputs(1)
 .set_attr<mxnet::FInferShape>("FInferShape", MaskedSoftmaxOpShape)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FInplaceOption>("FInplaceOption",
   [](const NodeAttrs& attrs){
     return std::vector<std::pair<int, int> >{{0, 0}};
@@ -224,6 +228,10 @@ NNVM_REGISTER_OP(_backward_masked_softmax)
 })
 .set_attr<mxnet::FInferShape>("FInferShape", MaskedSoftmaxGradOpShape)
 .set_attr<nnvm::FInferType>("FInferType", MaskedSoftmaxGradOpType)
+.set_attr<FResourceRequest>("FResourceRequest",
+  [](const NodeAttrs& attrs) {
+    return std::vector<ResourceRequest>{ResourceRequest::kTempSpace};
+  })
 .set_attr<nnvm::FInplaceOption>("FInplaceOption", MaskedSoftmaxGradOpInplaceOption)
 .add_argument("args", "NDArray-or-Symbol[]", "Positional input arguments")
 .set_attr_parser(ParamParser<MaskedSoftmaxParam>)
