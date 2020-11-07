@@ -1882,14 +1882,19 @@ int MXNDArraySave(const char* fname,
 
   CHECK_NOTNULL(fname);
 
-  if (num_args == 1 && static_cast<NDArray *>(args[0])->storage_type() == kDefaultStorage) {
+  if (num_args == 1) {
       NDArray *array = static_cast<NDArray *>(args[0]);
-      npy::save_array(fname, *array);
+      if (array->storage_type() == kDefaultStorage) {
+          npy::save_array(fname, *array);
+      } else {
+          int write_mode = ZIP_TRUNCATE | ZIP_CREATE;
+          npz::save_array(write_mode, fname, "", *array);
+      }
   } else {
       int write_mode = ZIP_TRUNCATE | ZIP_CREATE;
       for (uint32_t i = 0; i < num_args; ++i) {
           NDArray *array = static_cast<NDArray *>(args[i]);
-          const std::string array_key = keys == nullptr ? std::to_string(i) : keys[i];
+          const std::string array_key = keys == nullptr ? "arr_" + std::to_string(i) : keys[i];
           npz::save_array(write_mode, fname, array_key, *array);
 
           // Append to the created zip file going forward

@@ -334,6 +334,150 @@ void save_blob(int zip_open_flags, const std::string& zip_fname, const std::stri
   }
 }
 
+
+// Save shape of sparse ndarray in to scipy compatible shape.npy with int64 data
+void save_shape_array(int zip_open_flags, const std::string& zip_fname, const std::string& blob_name,
+                      const mxnet::TShape& shape) {
+  int error;
+  zip_t* archive = zip_open(zip_fname.c_str(), zip_open_flags, &error);
+  if (archive == nullptr) {
+    zip_error_t e;
+    zip_error_init_with_code(&e, error);
+    throw std::runtime_error(zip_error_strerror(&e));
+  }
+
+  // Special case of create_npy_header for TShape data
+  std::string dict;
+  dict += "{'descr': '<i8', 'fortran_order': False, 'shape': (";
+  dict += std::to_string(shape.ndim());
+  dict += ",), }";
+  // pad with spaces so that preamble+dict is modulo 64 bytes. preamble is
+  // 10 bytes. dict needs to end with \n
+  int remainder = 64 - (10 + dict.size() + 1) % 64;
+  dict.insert(dict.end(), remainder, ' ');
+  dict.push_back('\n');
+  assert((dict.size() + 10) % 64 == 0);
+  std::string npy;
+  npy += (char)0x93;
+  npy += "NUMPY";
+  std::string::size_type size = dict.size();
+  CHECK(size <= std::numeric_limits<uint32_t>::max()) << "Shape too large for NPY serialization";
+  if (size <= std::numeric_limits<uint16_t>::max()) {
+      npy += (char)0x01;  //major version of numpy format
+      npy += (char)0x00;  //minor version of numpy format
+      uint16_t size_ = dict.size();
+      npy += (char) (size_ & 0xFF);
+      npy += (char) (size_ >> 8);
+  } else {
+      npy += (char)0x02;  //major version of numpy format
+      npy += (char)0x00;  //minor version of numpy format
+      uint32_t size_ = dict.size();
+      npy += (char) (size_ & 0xFF);
+      npy += (char) ((size_ >> 8) & 0xFF);
+      npy += (char) ((size_ >> 16) & 0xFF);
+      npy += (char) ((size_ >> 24) & 0xFF);
+  }
+  npy += dict;
+
+  // Add shape data
+  for (const uint64_t value : shape) {
+      npy += (char) (value & 0xFF);
+      npy += (char) ((value >> 8) & 0xFF);
+      npy += (char) ((value >> 16) & 0xFF);
+      npy += (char) ((value >> 24) & 0xFF);
+      npy += (char) ((value >> 32) & 0xFF);
+      npy += (char) ((value >> 40) & 0xFF);
+      npy += (char) ((value >> 48) & 0xFF);
+      npy += (char) ((value >> 56) & 0xFF);
+  }
+
+  zip_error_t e;
+  zip_source_t* source = zip_source_buffer_create(npy.data(), npy.size(), 0, &e);
+  if (source == nullptr) {
+      throw std::runtime_error(zip_error_strerror(&e));
+  }
+  zip_int64_t index = zip_file_add(archive, (blob_name + ".npy").data(), source, ZIP_FL_ENC_UTF_8);
+  if (index < 0) {
+    zip_source_free(source);
+    throw std::runtime_error(zip_strerror(archive));
+  }
+
+  // Write everything
+  error = zip_close(archive);
+  if (error != 0) {
+    std::string strerror{zip_strerror(archive)};
+    zip_discard(archive);
+    throw std::runtime_error(strerror);
+  }
+}
+
+
+void save_format_array(int zip_open_flags, const std::string& zip_fname, const std::string& blob_name,
+                       const std::string_view& format) {
+  int error;
+  zip_t* archive = zip_open(zip_fname.c_str(), zip_open_flags, &error);
+  if (archive == nullptr) {
+    zip_error_t e;
+    zip_error_init_with_code(&e, error);
+    throw std::runtime_error(zip_error_strerror(&e));
+  }
+
+  // Special case of create_npy_header for TShape data
+  std::string dict;
+  dict += "{'descr': '|s";
+  dict += std::to_string(format.size());
+  dict += "{'descr': '<i8', 'fortran_order': False, 'shape': (), }";
+  // pad with spaces so that preamble+dict is modulo 64 bytes. preamble is
+  // 10 bytes. dict needs to end with \n
+  int remainder = 64 - (10 + dict.size() + 1) % 64;
+  dict.insert(dict.end(), remainder, ' ');
+  dict.push_back('\n');
+  assert((dict.size() + 10) % 64 == 0);
+  std::string npy;
+  npy += (char)0x93;
+  npy += "NUMPY";
+  std::string::size_type size = dict.size();
+  CHECK(size <= std::numeric_limits<uint32_t>::max());
+  if (size <= std::numeric_limits<uint16_t>::max()) {
+      npy += (char)0x01;  //major version of numpy format
+      npy += (char)0x00;  //minor version of numpy format
+      uint16_t size_ = dict.size();
+      npy += (char) (size_ & 0xFF);
+      npy += (char) (size_ >> 8);
+  } else {
+      npy += (char)0x02;  //major version of numpy format
+      npy += (char)0x00;  //minor version of numpy format
+      uint32_t size_ = dict.size();
+      npy += (char) (size_ & 0xFF);
+      npy += (char) ((size_ >> 8) & 0xFF);
+      npy += (char) ((size_ >> 16) & 0xFF);
+      npy += (char) ((size_ >> 24) & 0xFF);
+  }
+  npy += dict;
+
+  npy += format;
+
+  zip_error_t e;
+  zip_source_t* source = zip_source_buffer_create(npy.data(), npy.size(), 0, &e);
+  if (source == nullptr) {
+      throw std::runtime_error(zip_error_strerror(&e));
+  }
+  zip_int64_t index = zip_file_add(archive, (blob_name + ".npy").data(), source, ZIP_FL_ENC_UTF_8);
+  if (index < 0) {
+    zip_source_free(source);
+    throw std::runtime_error(zip_strerror(archive));
+  }
+
+  // Write everything
+  error = zip_close(archive);
+  if (error != 0) {
+    std::string strerror{zip_strerror(archive)};
+    zip_discard(archive);
+    throw std::runtime_error(strerror);
+  }
+}
+
+
 void save_array(int write_mode, const std::string& zip_fname, const std::string& array_name,
                 const NDArray& array_) {
   NDArray array;  // a copy on cpu
@@ -351,28 +495,28 @@ void save_array(int write_mode, const std::string& zip_fname, const std::string&
   }
 
   switch (array.storage_type()) {
-    case kDefaultStorage: {
-      save_blob(write_mode, zip_fname, array_name, array.data());
-      break;
-    }
-    case kCSRStorage: {
-      save_blob(write_mode, zip_fname, array_name + "/data", array.data());
-      write_mode = 0;  // Append to the created zip file going forward
-      save_blob(write_mode, zip_fname, array_name + "/indptr", array.aux_data(csr::kIndPtr));
-      save_blob(write_mode, zip_fname, array_name + "/indices", array.aux_data(csr::kIdx));
-      // TODO shape array
-      // TODO format ("csr")
-      break;
-    }
-    case kRowSparseStorage: {
-        save_blob(write_mode, zip_fname, array_name + "/data", array.data());
-      write_mode = 0;  // Append to the created zip file going forward
-      save_blob(write_mode, zip_fname, array_name + "/indices", array.aux_data(rowsparse::kIdx));
-      // TODO shape array
-      // TODO format ("rowsparse")
-      break;
-    }
-    default: LOG(FATAL) << "Unknown storage type " << array.storage_type() << "encountered.";
+  case kDefaultStorage: {
+    save_blob(write_mode, zip_fname, array_name, array.data());
+    break;
+  }
+  case kCSRStorage: {
+    save_blob(write_mode, zip_fname, array_name + "/data", array.data());
+    write_mode = 0;  // Append to the created zip file going forward
+    save_blob(write_mode, zip_fname, array_name + "/indptr", array.aux_data(csr::kIndPtr));
+    save_blob(write_mode, zip_fname, array_name + "/indices", array.aux_data(csr::kIdx));
+    save_shape_array(write_mode, zip_fname, array_name + "/shape", array.shape());
+    save_format_array(write_mode, zip_fname, array_name + "/format", "csr");
+    break;
+  }
+  case kRowSparseStorage: {
+    save_blob(write_mode, zip_fname, array_name + "/data", array.data());
+    write_mode = 0;  // Append to the created zip file going forward
+    save_blob(write_mode, zip_fname, array_name + "/indices", array.aux_data(rowsparse::kIdx));
+    save_shape_array(write_mode, zip_fname, array_name + "/shape", array.shape());
+    save_format_array(write_mode, zip_fname, array_name + "/format", "row_sparse");
+    break;
+  }
+  default: LOG(FATAL) << "Unknown storage type " << array.storage_type() << "encountered.";
   }
 }
 
@@ -433,7 +577,7 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(const std:
             [[maybe_unused]] auto [iter, inserted] = names[""].insert(entry_name);
             CHECK(inserted);
         } else {  // file inside a folder
-          std::string_view dirname = entry_name.substr(0, dir_sep_search);
+          std::string_view dirname = entry_name.substr(0, dir_sep_search + 1);
           std::string_view fname = entry_name.substr(dir_sep_search + 1);
           [[maybe_unused]] auto [iter, inserted] = names[dirname].insert(fname);
           CHECK(inserted);
@@ -444,9 +588,11 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(const std:
     std::vector<NDArray> arrays;
     std::vector<std::string> return_names;
 
-    // Patterns used by Scipy to save respective sparse matrix formats to a file
+    // Patterns used by SciPy to save respective sparse matrix formats to a file
     const std::set<std::string_view> bsr_csr_csc_pattern
         {"data.npy", "indices.npy", "indptr.npy", "format.npy", "shape.npy"};
+    const std::set<std::string_view> row_sparse_pattern  // MXNet specific format not part of SciPy
+      {"data.npy", "indices.npy", "format.npy", "shape.npy"};
     const std::set<std::string_view> coo_pattern
         {"data.npy", "row.npy", "col.npy", "format.npy", "shape.npy"};
     const std::set<std::string_view> dia_pattern
@@ -601,7 +747,133 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(const std:
                 }
 
                 arrays.push_back(array);
-                return_names.emplace_back(dirname);
+                return_names.emplace_back(dirname.size() ?   // Exclude "/"
+                                          dirname.substr(0, dirname.size() - 1) : dirname);
+
+            } else {
+                throw std::runtime_error("Loading " + format + " sparse matrix format is unsupported.");
+            }
+        } else if (dircontents == row_sparse_pattern) {
+            // Check format
+            std::string fname(dirname);
+            fname += "format.npy";
+            zip_file_t* file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+            if (file == nullptr) {
+                throw std::runtime_error(zip_strerror(archive));
+            }
+
+            // In the special case of format.npy we ignore the header as it
+            // specifies the string datatype which is unsupported by MXNet
+            uint32_t header_len = parse_npy_header_len(file, fname, zip_fname);
+            std::string header;
+            header.resize(header_len);
+            zip_int64_t bytesread = zip_fread(file, header.data(), header_len);
+            if (bytesread != header_len) {
+                LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+            }
+            // and simply look at the next 10 bytes containing the format string
+            std::string format;
+            format.resize(10);
+            bytesread = zip_fread(file, format.data(), 10);
+
+            if (format == "row_sparse") {
+                // Prepare reading storage data array
+                fname = dirname;
+                fname += "data.npy";
+                zip_file_t* data_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+                if (data_file == nullptr) {
+                    throw std::runtime_error(zip_strerror(archive));
+                }
+                uint32_t header_len = parse_npy_header_len(data_file, fname, zip_fname);
+                std::string header;
+                header.resize(header_len);
+                zip_int64_t bytesread = zip_fread(data_file, header.data(), header_len);
+                if (bytesread != header_len) {
+                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+                }
+                auto [storage_type_flag, storage_fortran_order, storage_shape] = npy::parse_npy_header_descr(header);
+                if (storage_fortran_order) {
+                    LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented." ;
+                }
+                TShape storage_tshape(storage_shape);
+
+                // Prepare reading indices aux array
+                fname = dirname;
+                fname += "indices.npy";
+                zip_file_t* indices_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+                if (indices_file == nullptr) {
+                    throw std::runtime_error(zip_strerror(archive));
+                }
+                header_len = parse_npy_header_len(indices_file, fname, zip_fname);
+                header.resize(header_len);
+                bytesread = zip_fread(indices_file, header.data(), header_len);
+                if (bytesread != header_len) {
+                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+                }
+                auto [indices_type_flag, indices_fortran_order, indices_shape] = npy::parse_npy_header_descr(header);
+                if (indices_fortran_order) {
+                    LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented." ;
+                }
+                TShape indices_tshape(indices_shape);
+
+                // Read shape data array
+                fname = dirname;
+                fname += "shape.npy";
+                zip_file_t* shape_file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+                if (shape_file == nullptr) {
+                    throw std::runtime_error(zip_strerror(archive));
+                }
+                header_len = parse_npy_header_len(shape_file, fname, zip_fname);
+                header.resize(header_len);
+                bytesread = zip_fread(shape_file, header.data(), header_len);
+                if (bytesread != header_len) {
+                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+                }
+                auto [shape_type_flag, shape_fortran_order, shape_shape] = npy::parse_npy_header_descr(header);
+                if (shape_fortran_order) {
+                    LOG(FATAL) << "Reading fortran order data for sparse arrays not yet implemented.";
+                }
+                CHECK_EQ(shape_type_flag, mshadow::kInt64) << "Expected shape information in int64 format.";
+                CHECK_EQ(shape_shape.size(), 1) << "Expected shape of shape information to be one-dimensional.";
+                TShape tshape(shape_shape.at(0), -1);
+                for (dim_t i = 0; i < shape_shape.at(0); i++) {
+                    int64_t dim;
+                    bytesread = zip_fread(shape_file, &dim, 8);
+                    if (bytesread != 8) {
+                        LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+                    }
+                    tshape[i] = dim;
+                }
+
+                // Construct aux datastructures
+                static_assert(rowsparse::RowSparseAuxType::kIdx == 0);
+                const std::vector<int> aux_types {indices_type_flag};
+                const mxnet::ShapeVector aux_shapes {indices_tshape};
+
+                // Allocate NDArray
+                NDArray array(NDArrayStorageType::kRowSparseStorage, tshape, Context::CPU(), false,
+                              storage_type_flag, aux_types, aux_shapes, storage_tshape);
+
+                // Read data array
+                const TBlob& blob = array.data();
+                zip_uint64_t nbytes = blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_);
+                bytesread = zip_fread(data_file, blob.dptr_, nbytes);
+                if (bytesread != nbytes) {
+                    LOG(FATAL) << "Failed to read from data.npy member of " << zip_fname;
+                }
+
+                // Read indices array
+                const TBlob& indices_blob = array.aux_data(rowsparse::RowSparseAuxType::kIdx);
+                nbytes = indices_blob.Size() * mshadow::mshadow_sizeof(indices_blob.type_flag_);
+                bytesread = zip_fread(indices_file, indices_blob.dptr_, nbytes);
+                if (bytesread != nbytes) {
+                    LOG(FATAL) << "Failed to read from indices.npy member of " << zip_fname;
+                }
+
+                arrays.push_back(array);
+                return_names.emplace_back(dirname.size() ?   // Exclude "/"
+                                          dirname.substr(0, dirname.size() - 1) : dirname);
+
             } else {
                 throw std::runtime_error("Loading " + format + " sparse matrix format is unsupported.");
             }
@@ -611,19 +883,22 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(const std:
             throw std::runtime_error("Loading DIA sparse matrix format is unsupported.");
         } else {  // Folder does not match scipy sparse pattern; treat containing files as dense
             for (const std::string_view& fname : dircontents) {
+                std::string path(dirname);
+                path += fname;
+
                 // The string_view points to a null-terminated character array
                 // owned by zip_get_name and thus conversion to C char* is valid
-                zip_file_t* file = zip_fopen(archive, fname.data(), ZIP_FL_UNCHANGED);
+                zip_file_t* file = zip_fopen(archive, path.data(), ZIP_FL_UNCHANGED);
                 if (file == nullptr) {
                     throw std::runtime_error(zip_strerror(archive));
                 }
 
-                uint32_t header_len = parse_npy_header_len(file, fname, zip_fname);
+                uint32_t header_len = parse_npy_header_len(file, path, zip_fname);
                 std::string header;
                 header.resize(header_len);
                 zip_int64_t bytesread = zip_fread(file, header.data(), header_len);
                 if (bytesread != header_len) {
-                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+                    LOG(FATAL) << "Failed to read from " << path << " member of " << zip_fname;
                 }
                 auto [type_flag, fortran_order, shape] = npy::parse_npy_header_descr(header);
 
@@ -636,7 +911,7 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(const std:
                 const TBlob& blob = array.data();
                 bytesread = zip_fread(file, blob.dptr_, blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_));
                 if (bytesread != blob.Size() * mshadow::mshadow_sizeof(blob.type_flag_)) {
-                    LOG(FATAL) << "Failed to read from " << fname << " member of " << zip_fname;
+                    LOG(FATAL) << "Failed to read from " << path << " member of " << zip_fname;
                 }
 
                 if(fortran_order) {
@@ -644,7 +919,7 @@ std::pair<std::vector<NDArray>, std::vector<std::string>> load_arrays(const std:
                 }
 
                 arrays.push_back(array);
-                return_names.emplace_back(fname);
+                return_names.emplace_back(path.substr(0, path.size() - 4));  // Skip .npy
             }
         }
     }

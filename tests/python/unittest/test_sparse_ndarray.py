@@ -554,7 +554,8 @@ def test_sparse_nd_save_load():
         assert isinstance(data_list1[-1], stype_dict[stype])
     mx.nd.save(fname, data_list1)
 
-    data_list2 = mx.nd.load(fname)
+    data_dict2 = mx.nd.load(fname)
+    data_list2 = [data_dict2['arr_' + str(i)] for i in range(num_data)]
     assert len(data_list1) == len(data_list2)
     for x, y in zip(data_list1, data_list2):
         assert same(x.asnumpy(), y.asnumpy())
@@ -569,7 +570,7 @@ def test_sparse_nd_save_load():
     os.remove(fname)
 
 
-def test_sparse_ndarray_load_scipy_csr_npz(tmp_path):
+def test_sparse_ndarray_load_csr_npz_scipy(tmp_path):
     csr_sp = spsp.rand(50, 100, density=0.5, format="csr")
     spsp.save_npz(tmp_path / "csr.npz", csr_sp)
 
@@ -578,12 +579,11 @@ def test_sparse_ndarray_load_scipy_csr_npz(tmp_path):
     assert np.sum(csr_mx.indices.asnumpy() != csr_sp.indices) == 0
     assert np.sum(csr_mx.indptr.asnumpy() != csr_sp.indptr) == 0
 
-    # TODO implement writing shape.npy and format.npy in npz::save_array
-    # csr_mx = mx.nd.save(str(tmp_path / "csr_mx.npz"), csr_mx)
-    # csr_mx_loaded = mx.nd.load(str(tmp_path / "csr_mx.npz"))[0]
-    # assert np.sum(csr_mx_loaded.data.asnumpy() != csr_sp.data) == 0
-    # assert np.sum(csr_mx_loaded.indices.asnumpy() != csr_sp.indices) == 0
-    # assert np.sum(csr_mx_loaded.indptr.asnumpy() != csr_sp.indptr) == 0
+    csr_mx = mx.nd.save(str(tmp_path / "csr_mx.npz"), csr_mx)
+    csr_mx_loaded = mx.nd.load(str(tmp_path / "csr_mx.npz"))['']
+    assert np.sum(csr_mx_loaded.data.asnumpy() != csr_sp.data) == 0
+    assert np.sum(csr_mx_loaded.indices.asnumpy() != csr_sp.indices) == 0
+    assert np.sum(csr_mx_loaded.indptr.asnumpy() != csr_sp.indptr) == 0
 
 
 def test_sparse_nd_unsupported():
