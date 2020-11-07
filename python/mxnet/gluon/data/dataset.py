@@ -173,7 +173,7 @@ class Dataset(object):
         Parameters
         ----------
         fn : callable
-            A transformer function that takes the first elemtn of a sample
+            A transformer function that takes the first element of a sample
             as input and returns the transformed element.
         lazy : bool, default True
             If False, transforms all samples at once. Otherwise,
