@@ -51,7 +51,11 @@ MXNET_REGISTER_API("_npi.insert_scalar")
     param.val = dmlc::nullopt;
     num_inputs = 2;
   }
-  param.int_ind = args[2].operator int();
+  if (features::is_enabled(features::INT64_TENSOR_SIZE)) {
+    param.int_ind = args[2].operator int64_t();
+  } else {
+    param.int_ind = args[2].operator int();
+  }
   if (args[3].type_code() == kNull) {
     param.axis = dmlc::nullopt;
   } else {
@@ -89,17 +93,17 @@ MXNET_REGISTER_API("_npi.insert_slice")
   if (args[2].type_code() == kNull) {
     param.start = dmlc::nullopt;
   } else {
-    param.start = args[2].operator int();
+    param.start = args[2].operator int64_t();
   }
   if (args[3].type_code() == kNull) {
     param.stop = dmlc::nullopt;
   } else {
-    param.stop = args[3].operator int();
+    param.stop = args[3].operator int64_t();
   }
   if (args[4].type_code() == kNull) {
     param.step = dmlc::nullopt;
   } else {
-    param.step = args[4].operator int();
+    param.step = args[4].operator int64_t();
   }
   if (args[5].type_code() == kNull) {
     param.axis = dmlc::nullopt;

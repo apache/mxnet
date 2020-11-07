@@ -90,15 +90,15 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
     axis += (axis < 0) ? arr.shape_.ndim() : 0;
   }
 
-  int N = arr.shape_[axis];
+  size_t N = arr.shape_[axis];
   size_t indices_len = inputs[obj_pos].shape_.Size();  // indices amount
 
   // get and check indices from tensor
-  int numnew = 0;  // numnew = output.shape[axis] - arr.shape[axis]
+  size_t numnew = 0;  // numnew = output.shape[axis] - arr.shape[axis]
   mxnet::TShape val_newshape(arr.shape_.ndim(), -1);
   // modify values's ndim to arr's ndim, for broadcast easily later
   // e.g. value shape: (2,) arr shape: (3, 2) => value shape: (1, 2)
-  for (int i = values.shape_.ndim() - 1, j = arr.shape_.ndim() - 1;
+  for (index_t i = values.shape_.ndim() - 1, j = arr.shape_.ndim() - 1;
         i >= 0 || j >= 0;
         --i, --j) {
     if (i >= 0 && j >= 0) {
@@ -133,7 +133,7 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
   } else if (indices_len == 1) {  // tensor with only one element
     numnew = values.shape_[axis];
   } else {
-    numnew = static_cast<int>(indices_len);
+    numnew = static_cast<index_t>(indices_len);
   }
 
   const mxnet::TShape& outshape = outputs[out_pos].shape_;
@@ -175,34 +175,35 @@ void NumpyInsertTensorCompute(const nnvm::NodeAttrs& attrs,
   } else {
     // broadcast check
     for (int i = outshape.ndim() - 1; i >= 0; --i) {
-      int sz = outshape[i];
+      size_t sz = outshape[i];
       if (i == axis) {
         sz = numnew;
       }
       CHECK((values.shape_[i] == 1) || (values.shape_[i] == sz));
     }
     size_t temp_storage_bytes, temp_mem_size;
-    temp_storage_bytes = SortByKeyWorkspaceSize<int64_t, int, xpu>(indices_len, false, true);
+    temp_storage_bytes = SortByKeyWorkspaceSize<int64_t, index_t, xpu>(indices_len, false, true);
     temp_mem_size = indices_len * sizeof(int64_t) * 2 +
-                    indices_len * sizeof(int) +
-                    outshape[axis] * sizeof(int) * 2 +
+                    indices_len * sizeof(index_t) +
+                    outshape[axis] * sizeof(index_t) * 2 +
                     temp_storage_bytes;
     Tensor<xpu, 1, char> temp_mem =
       ctx.requested[0].get_space_typed<xpu, 1, char>(Shape1(temp_mem_size), s);
     int64_t* indices_ptr = reinterpret_cast<int64_t*>(temp_mem.dptr_);
     int64_t* sorted_indices_ptr = reinterpret_cast<int64_t*>(indices_ptr + indices_len);
-    int* order_ptr = reinterpret_cast<int*>(sorted_indices_ptr + indices_len);
-    int* is_insert = reinterpret_cast<int*>(order_ptr + indices_len);
-    int* origin_idx = reinterpret_cast<int*>(is_insert + outshape[axis]);
+    index_t* order_ptr = reinterpret_cast<index_t*>(sorted_indices_ptr + indices_len);
+    index_t* is_insert = reinterpret_cast<index_t*>(order_ptr + indices_len);
+    index_t* origin_idx = reinterpret_cast<index_t*>(is_insert + outshape[axis]);
     Tensor<xpu, 1, char> temp_storage(reinterpret_cast<char*>(origin_idx + outshape[axis]),
                                       Shape1(temp_storage_bytes), s);
     Tensor<xpu, 1, int64_t> indices(indices_ptr, Shape1(indices_len), s);
     Tensor<xpu, 1, int64_t> sorted_indices(sorted_indices_ptr, Shape1(indices_len), s);
-    Tensor<xpu, 1, int> order(order_ptr, Shape1(indices_len), s);
+    Tensor<xpu, 1, index_t> order(order_ptr, Shape1(indices_len), s);
     int num_bits = 8 * sizeof(int64_t);
     Kernel<ObjToIndices, xpu>::Launch(s, indices_len, indices_ptr, N,
                                       inputs[obj_pos].dptr<int64_t>());
-    Kernel<range_fwd, xpu>::Launch(s, indices_len, 1, 0, 1, kWriteTo, order_ptr);
+    Kernel<range_fwd, xpu>::Launch(s, indices_len, index_t{1}, index_t{0}, index_t{1},
+                                   kWriteTo, order_ptr);
     mxnet::op::SortByKey(indices, order, true, &temp_storage, 0, num_bits, &sorted_indices);
     Kernel<IndicesModify, xpu>::Launch(s, indices_len, indices_ptr, order_ptr);
 

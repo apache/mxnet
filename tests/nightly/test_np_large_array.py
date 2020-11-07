@@ -2289,3 +2289,19 @@ def test_fill_diagonal():
     data2 = np.zeros((INT_OVERFLOW, 2))
     np.fill_diagonal(data2, [1, 2], wrap=True)
     assert data2[0, 0] == 1 and data2[-1, -1] == 2
+
+
+@use_np
+def test_insert():
+    inp = np.zeros((INT_OVERFLOW, 2))
+    inp2 = np.ones((INT_OVERFLOW))
+    inp2[-1] = 2
+    inp3 = inp.flatten()
+    out = np.insert(inp, 1, inp2, axis=1)
+    out2 = np.insert(inp3, slice(1, 2), np.array([5, 6]))
+    assert out.shape == (INT_OVERFLOW, 3)
+    assert out2.shape == (INT_OVERFLOW * 2 + 2,)
+    assert out[0, 1] == 1 and out[-1, 1] == 2
+    assert out2[1] == 5 and out2[2] == 6
+    assertRaises(MXNetError, np.insert, arr=inp3, obj=np.array([2, 2], dtype=np.int64), values=np.array([5, 6]))
+
